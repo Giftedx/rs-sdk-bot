@@ -24,6 +24,11 @@ export const PRESETS: Record<string, SaveConfig> = {
     bank_draynor: { position: { x: 3092, z: 3247, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // Inside the Lumbridge cow field (centre 3253,3290 per learnings/combat.md). Sword 1277, shrimps 315.
     fight_lumbridge: { position: { x: 3253, z: 3285, level: 0 }, inventory: [{ id: 1277, count: 1 }, { id: 315, count: 5 }] },
+    // Measurement spots from vendor/rs-sdk/learnings (woodcutting.md, mining.md, fishing.md).
+    measure_trees: { position: { x: 3195, z: 3220, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
+    measure_oaks: { position: { x: 3190, z: 3458, level: 0 }, skills: { Woodcutting: 15 }, inventory: [{ id: 1351, count: 1 }] },
+    measure_mine: { position: { x: 3285, z: 3365, level: 0 }, inventory: [{ id: 1265, count: 1 }] },
+    measure_shrimp: { position: { x: 3087, z: 3230, level: 0 }, inventory: [{ id: 303, count: 1 }] },
     // Trade pair: giver holds 100 coins, receiver stands one tile east (3223,3218).
     trade_giver: { position: LUMBRIDGE, coins: 100 },
     trade_receiver: { position: { x: 3223, z: 3218, level: 0 } },

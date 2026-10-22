@@ -91,13 +91,14 @@ export interface InProcessOptions {
     runs: number;
     preset?: string;
     companions?: { suffix: string; preset: string }[];
+    scriptArgs?: string[]; // passed after the bot name
     pass: (stdout: string) => boolean;
     timeoutMs?: number;
 }
 
 export interface InProcessDeps {
     prepare(bot: string, preset?: string): Promise<void>;
-    run(script: string, bot: string, timeoutMs: number): Promise<{ stdout: string; exitCode: number }>;
+    run(script: string, bot: string, timeoutMs: number, args?: string[]): Promise<{ stdout: string; exitCode: number }>;
     cleanup(bot: string): Promise<void>;
 }
 
@@ -110,7 +111,7 @@ export const realInProcessDeps: InProcessDeps = {
             await applyPreset(bot, p);
         }
     },
-    run: (script, bot, timeoutMs) => runBun([resolve(script), bot], timeoutMs),
+    run: (script, bot, timeoutMs, args = []) => runBun([resolve(script), bot, ...args], timeoutMs),
     async cleanup(bot) {
         rmSync(join(rsSdkRoot(), 'bots', bot), { recursive: true, force: true });
     },
@@ -135,7 +136,7 @@ export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps
         try {
             await deps.prepare(bot, opts.preset);
             for (const c of opts.companions ?? []) await deps.prepare(bot + c.suffix, c.preset);
-            const { stdout, exitCode } = await deps.run(opts.script, bot, opts.timeoutMs ?? 300_000);
+            const { stdout, exitCode } = await deps.run(opts.script, bot, opts.timeoutMs ?? 300_000, opts.scriptArgs);
             const start = startMatches(stdout, opts.preset);
             const ok = exitCode === 0 && start.ok && opts.pass(stdout);
             const tail = stdout.split(/\r?\n/).filter(l => /^(START|RESULT|ERR|WARN)/.test(l) || l.includes('Error')).slice(-8).join('\n');

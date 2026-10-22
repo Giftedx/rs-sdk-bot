@@ -91,3 +91,11 @@ test('run bot names are new on every invocation, so no earlier save can win over
     expect(a).not.toBe(b);
     expect(a).toMatch(/^[a-zA-Z0-9]{1,12}$/);
 });
+
+test('in-process mode passes extra script arguments after the bot name', async () => {
+    const { proveInProcess } = await import('../src/prove');
+    let seen: string[] = [];
+    const deps = { prepare: async () => {}, run: async (_s: string, _b: string, _t: number, args?: string[]) => { seen = args ?? []; return { stdout: 'START 3224 3245 0\nRESULT ok', exitCode: 0 }; }, cleanup: async () => {} };
+    await proveInProcess({ bot: 'm', script: 's', scriptArgs: ['oaks', '600'], runs: 1, preset: 'wc_lumbridge', pass: () => true }, deps);
+    expect(seen).toEqual(['oaks', '600']);
+});
