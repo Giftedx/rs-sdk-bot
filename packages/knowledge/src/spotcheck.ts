@@ -16,7 +16,10 @@ export type Fact =
     | { kind: 'spawn'; record: Spawn }
     | { kind: 'stock'; record: Stock }
     | { kind: 'transport'; record: Edge }
-    | { kind: 'door'; record: Door };
+    | { kind: 'door'; record: Door }
+    | { kind: 'skill'; record: { level: number; xp: number | null; src: { level: string; xp?: string } } }
+    | { kind: 'quest'; record: { varp: string; xp: { skill: string; xp: number; src: string }[]; src: string } }
+    | { kind: 'drop'; record: { item?: string; table?: string; src: string } };
 
 type Door = { id: number; loc: string; x: number; z: number; level: number; kind: string; trigger: string; src: string };
 
@@ -103,6 +106,30 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
             const want = r.restockTicks === null ? `${r.item},${r.count}` : `${r.item},${r.count},${r.restockTicks}`;
             return { src: r.src, label: want, ok: () => /^stock\d+=/.test(lineAt(r.src)) && lineAt(r.src).split('=')[1] === want };
         }
+        case 'skill': {
+            const r = f.record;
+            // dbrow lines are `data=<column>,<value>`; XP is stored in tenths.
+            return {
+                src: r.src.level,
+                label: `level ${r.level} xp ${r.xp}`,
+                ok: () => /^data=\w+,/.test(lineAt(r.src.level)) && lineAt(r.src.level).endsWith(`,${r.level}`)
+                    && (r.xp === null || (!!r.src.xp && lineAt(r.src.xp).endsWith(`,${Math.round(r.xp * 10)}`))),
+            };
+        }
+        case 'quest': {
+            const r = f.record;
+            return {
+                src: r.src,
+                label: `${r.varp} ${r.xp.map(x => `${x.skill}:${x.xp}`).join(' ')}`,
+                ok: () => lineAt(r.src).includes(`%${r.varp}`)
+                    && r.xp.every(x => lineAt(x.src).replace(/\s+/g, '').includes(`stat_advance(${x.skill},${Math.round(x.xp * 10)})`)),
+            };
+        }
+        case 'drop': {
+            const r = f.record;
+            const what = r.item === 'death_drop' ? 'npc_param(death_drop)' : r.table ? `~${r.table}` : r.item;
+            return { src: r.src, label: `${what}`, ok: () => lineAt(r.src).replace(/\s+/g, '').includes(`obj_add(npc_coord,${what}`) };
+        }
         case 'door': {
             const r = f.record;
             const head = `${r.level} ${r.x % 64} ${r.z % 64}: ${r.id}`;
@@ -171,6 +198,9 @@ export function allFacts(): Fact[] {
         ...shops.flatMap(s => s.stock.map(record => ({ kind: 'stock', record }) as Fact)),
         ...edges.map(record => ({ kind: 'transport', record }) as Fact),
         ...load<Door[]>('doors.json').map(record => ({ kind: 'door', record }) as Fact),
+        ...load<any[]>('skills.json').map(record => ({ kind: 'skill', record }) as Fact),
+        ...load<any[]>('quests.json').map(record => ({ kind: 'quest', record }) as Fact),
+        ...load<any[]>('drops.json').flatMap(d => [...d.rolls, ...d.always].map((record: any) => ({ kind: 'drop', record }) as Fact)),
     ];
 }
 
