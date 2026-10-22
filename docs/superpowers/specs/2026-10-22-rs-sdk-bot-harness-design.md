@@ -77,7 +77,7 @@ Playtime is counted in game ticks (`formatPlaytime`). Accounts with `staffmodlev
 - **Subscription limits** are unknown numbers. They also change over time. The harness measures its own use and treats every model call as scarce.
 - **Demo server:**
   - We do not control its tick rate or cheats. The tick rate is 300 ms per `fly.toml`, as read by a subagent and not checked by us.
-  - XP is 25x, with a flattened curve: 99 is about 1.07 M XP.
+  - XP is 25x, with a flattened curve: 99 is 998,458 XP.
   - Run energy is infinite, and there are no random events.
   - There is a Grand Exchange at Varrock west bank, with a 5 % seller tax.
 - **Game data** is rev 289. Use `vendor/rs-sdk/server/content` or the `289` branch clones. 274 data is wrong for this server.
