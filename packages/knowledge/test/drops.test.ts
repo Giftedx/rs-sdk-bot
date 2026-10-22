@@ -49,3 +49,21 @@ test('category triggers and shared-table labels are kept', () => {
     expect(d.find(x => x.trigger === '_cow')!.always.map(a => a.item)).toEqual(['death_drop', 'cow_hide']);
     expect(d.find(x => x.trigger === 'goblin_armed')!.uses).toBe('goblin_drop_table');
 });
+
+test('shared [label,...] drop tables are parsed too, so ai_queue3 users of @label get real rolls', () => {
+    const text = `[ai_queue3,goblin_greenarmour] @goblin_village_drop_table;
+
+[label,goblin_village_drop_table]
+gosub(npc_death);
+def_int $dropint = random(128);
+if ($dropint < 106) {
+    obj_add(npc_coord, goblin_armour, 1, ^lootdrop_duration);
+} else if ($dropint < 107) {
+    obj_add(npc_coord, grapes, 1, ^lootdrop_duration);
+}
+`;
+    const d = parseDrops(text, 'g.rs2');
+    const table = d.find(x => x.trigger === 'label:goblin_village_drop_table')!;
+    expect(table.rolls.map(r => [r.item, r.chance * 128])).toEqual([['goblin_armour', 106], ['grapes', 1]]);
+    expect(d.find(x => x.trigger === 'goblin_greenarmour')!.uses).toBe('goblin_village_drop_table');
+});

@@ -41,8 +41,9 @@ export function parseDrops(text: string, file: string): DropTable[] {
         const head = line.match(/^\[(\w+),([^\]]+)\](.*)$/);
         if (head) {
             cur = null;
-            if (head[1] === 'ai_queue3') {
-                cur = { trigger: head[2]!, always: [], rolls: [], src };
+            // Shared tables are labels (`[label,goblin_drop_table]`) that ai_queue3 triggers jump to with @label.
+            if (head[1] === 'ai_queue3' || head[1] === 'label') {
+                cur = { trigger: head[1] === 'label' ? `label:${head[2]}` : head[2]!, always: [], rolls: [], src };
                 const label = head[3]!.match(/@(\w+)/);
                 if (label) cur.uses = label[1];
                 out.push(cur);
@@ -84,5 +85,6 @@ export function parseDrops(text: string, file: string): DropTable[] {
         depth += opens - closes;
         if (inChain && depth === chainDepth && closes > opens) { inChain = false; slot = null; }
     });
-    return out;
+    // Labels are used everywhere in content; keep only those that actually drop something.
+    return out.filter(d => !d.trigger.startsWith('label:') || d.rolls.length > 0 || d.always.length > 0);
 }
