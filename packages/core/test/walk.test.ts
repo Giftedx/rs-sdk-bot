@@ -118,3 +118,17 @@ test('a walk refused right after a climb (arrival delay) waits before retrying, 
     g.stop();
     expect(r.ok).toBe(true);
 });
+
+test('a walk leg lets walkTo deal with a refused step (a shut door) instead of stopping on the refusal', async () => {
+    const g = fakeGame({ x: 3205, z: 3209, level: 0 });
+    // walkTo first bumps into a shut door (server refuses a step), then opens it and arrives, as rs-sdk walkTo does.
+    g.bot.walkTo = async (x: number, z: number) => {
+        g.state.opFeedback.opRejectedCount++;
+        await Bun.sleep(5);
+        g.state.player.worldX = x; g.state.player.worldZ = z;
+        return { success: true };
+    };
+    const r = await walkRoute(g as any, [{ kind: 'walk', to: { x: 3222, z: 3218, level: 0 } }], { maxRetriesPerLeg: 1 });
+    g.stop();
+    expect(r.ok).toBe(true);
+});

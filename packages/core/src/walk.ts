@@ -81,6 +81,7 @@ function walkLegInner(s: Walker, to: Tile, opts: WalkOptions, wrap: (f: () => Pr
         name: `walk to ${to.x},${to.z},${to.level}`,
         pre: st => (st?.player?.level === to.level ? null : `on level ${st?.player?.level}, leg is on level ${to.level}`),
         send: wrap(() => s.bot.walkTo(to.x, to.z, 2)),
+        rejectOnFeedback: false,
         effect: atTile(to.x, to.z, to.level, 2),
         timeoutTicks: budget,
         signal: opts.signal,

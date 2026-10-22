@@ -13,6 +13,9 @@ export interface CheckedSpec {
     effect: Effect;
     timeoutTicks: number;
     signal?: AbortSignal;
+    // Default true: a silent server refusal ends the action. Walk legs turn it off, because bot.walkTo already
+    // handles a refused step (it opens the shut door and walks on); stopping on the refusal cut that short.
+    rejectOnFeedback?: boolean;
 }
 
 const rejectedCount = (st: any): number => st?.opFeedback?.opRejectedCount ?? 0;
@@ -38,7 +41,7 @@ export async function checked(s: TickSource, spec: CheckedSpec): Promise<Outcome
             ticks++;
             const now = s.sdk.getState();
             if (spec.effect(before, now)) return finish({ ok: true, ticks });
-            if (rejectedCount(now) > base) return finish({ ok: false, reason: 'rejected', detail: `${spec.name}: server refused the op`, ticks });
+            if (spec.rejectOnFeedback !== false && rejectedCount(now) > base) return finish({ ok: false, reason: 'rejected', detail: `${spec.name}: server refused the op`, ticks });
             if (ticks >= spec.timeoutTicks) return finish({ ok: false, reason: 'timeout', detail: `${spec.name}: no effect in ${ticks} ticks`, ticks });
         });
     });
