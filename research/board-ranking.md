@@ -37,3 +37,7 @@ Margin = leader ticks - our ticks. Positive means winnable on time alone. Supply
 - Runecraft: a model-written script (scripts/generated/rcair.ts) crafted 27 essence into 27 air runes for 3,375 XP in
   5-7 ticks at the altar (3/3 runs). With the measured 12-tick helper trade (research/crafting-board.md), one cycle is
   about 17-19 ticks per pack. The research model assumed 8-14 ticks per trip at the law altar; the law altar is members.
+- Thieving: a model-written script (scripts/generated/thieve300.ts, first try) pickpocketed men and women in south
+  Varrock from level 1 for 300 ticks, 3/3 runs: 5,600 / 6,000 / 5,800 XP (about 19 XP per tick), 83-98 tries,
+  47-54 stuns, HP as low as 3. Stuns cost ticks and HP; longer runs need more food and a safer HP line. Higher tiers
+  (warriors 25, guards 40, knights 55) are not measured yet.
