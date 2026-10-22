@@ -43,3 +43,10 @@ test('a wrong stair destination is reported', () => {
     const bad = { ...e, to: { ...e.to, z: e.to.z - 4 } };
     expect(checkFacts([{ kind: 'transport', record: bad }]).wrong.length).toBe(1);
 });
+
+test('door facts check the spawn line and the trigger header', () => {
+    const doors = JSON.parse(readFileSync(join(knowledgeDir(), 'doors.json'), 'utf8'));
+    const d = doors.find((x: { kind: string }) => x.kind === 'skill');
+    expect(checkFacts([{ kind: 'door', record: d } as any]).wrong).toEqual([]);
+    expect(checkFacts([{ kind: 'door', record: { ...d, x: d.x + 1 } } as any]).wrong.length).toBe(1);
+});

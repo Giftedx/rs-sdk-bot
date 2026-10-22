@@ -15,7 +15,10 @@ export type Fact =
     | { kind: 'npc'; record: Npc }
     | { kind: 'spawn'; record: Spawn }
     | { kind: 'stock'; record: Stock }
-    | { kind: 'transport'; record: Edge };
+    | { kind: 'transport'; record: Edge }
+    | { kind: 'door'; record: Door };
+
+type Door = { id: number; loc: string; x: number; z: number; level: number; kind: string; trigger: string; src: string };
 
 const fileCache = new Map<string, string[]>();
 function lineAt(src: string): string {
@@ -100,6 +103,20 @@ function expected(f: Fact): { src: string; ok: () => boolean; label: string } {
             const want = r.restockTicks === null ? `${r.item},${r.count}` : `${r.item},${r.count},${r.restockTicks}`;
             return { src: r.src, label: want, ok: () => /^stock\d+=/.test(lineAt(r.src)) && lineAt(r.src).split('=')[1] === want };
         }
+        case 'door': {
+            const r = f.record;
+            const head = `${r.level} ${r.x % 64} ${r.z % 64}: ${r.id}`;
+            return {
+                src: r.src,
+                label: `${r.loc} ${r.kind} at ${head}`,
+                ok: () => {
+                    const shape = Number(lineAt(r.src).slice(head.length).trim().split(' ')[0]);
+                    const trig = r.trigger ? lineAt(r.trigger) : '';
+                    return lineAt(r.src).startsWith(`${head} `) && shape >= 0 && shape <= 3
+                        && (r.kind === 'unknown' || /^\[(oploc1|oplocu),/.test(trig));
+                },
+            };
+        }
         case 'transport': {
             const r = f.record;
             return {
@@ -153,6 +170,7 @@ export function allFacts(): Fact[] {
         ...npcs.flatMap(n => n.spawns.map(s => ({ kind: 'spawn', record: { ...s, id: n.id } }) as Fact)),
         ...shops.flatMap(s => s.stock.map(record => ({ kind: 'stock', record }) as Fact)),
         ...edges.map(record => ({ kind: 'transport', record }) as Fact),
+        ...load<Door[]>('doors.json').map(record => ({ kind: 'door', record }) as Fact),
     ];
 }
 
