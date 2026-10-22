@@ -1,6 +1,6 @@
 import { xpForLevel } from '../packages/planner/src/curve';
 const p=(lo:number,hi:number,l:number)=>(Math.floor(lo*(99-l)/98)+Math.floor(hi*(l-1)/98)+1)/256;
-const S=2,F=6.7;
+const S = Number(process.env.S ?? 2), F = Number(process.env.F ?? 12.8);
 const r=(xp:number,lo:number,hi:number,l:number)=>{const q=p(lo,hi,l);return q*xp*2.5/(q*S+(1-q)*F)};
 function total(ladder:(l:number)=>number){let t=0;const legs:number[]=[];for(let l=1;l<99;l++){const d=(xpForLevel(l+1)-xpForLevel(l))/ladder(l);t+=d;legs.push(t)}return {t,legs}}
 const A=total(l=>l<40?r(80,180,240,l):l<55?r(468,50,240,l):r(843,50,240,l));

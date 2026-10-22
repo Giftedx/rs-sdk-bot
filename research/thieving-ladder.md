@@ -93,3 +93,18 @@ Lumbridge stuns and no food. Milestone ticks of the passing runs with full logs:
 Forecast to 99: 1,437-1,816 (fresh to 55, measured) + about 2,400 (55 to 99: model scaled by the measured
 knight rate, 330 -> 207) = about 3,850-4,200 ticks. The leader has 99 at 2,935.
 **With this method, the Thieving board is not winnable.** The +600 margin in board-ranking.md is wrong.
+
+## Pickpocket cycle tests (`scripts/measure/pick-cycle.ts`, knights from 55, 150 ms tick)
+
+K = ticks waited after a failed pick before the next try. One run each unless noted.
+
+| Preset | Ticks | K=1 | K=5 | K=6 | K=7 | K=8 | K=9 |
+|---|---|---|---|---|---|---|---|
+| HP 10, 20 lobsters | 300 | 196.0 | 118.6 | 90.7 | 196.0 | - | - |
+| HP 10, 20 lobsters (food ran out) | 1500 | 133.5 | - | - | 244.1 | 127.9 | 122.2 |
+| HP 99, 27 lobsters | 1500 | 321.3 | - | 243.1 | 203.0, 186.7 | - | - |
+
+The K results disagree between rows: one run per cell is too few. No K setting is proven better.
+What holds in both 1500-tick rows: HP 99 (mean about 239 XP/tick) beats HP 10 (mean about 157). A 10 HP
+account eats about every 2 knight fails. Model with corrected rates (S=2, F=12.8, fits guard 76 and
+knight 207): 2,852 ticks of pickpocketing to 99, plus about 400 for tutorial and boat. Leader: 2,935.
