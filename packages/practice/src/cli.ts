@@ -13,7 +13,7 @@ const flag = (name: string) => {
 switch (cmd) {
     case 'up': {
         const tick = flag('tick');
-        const stack = await startStack({ tickMs: tick ? Number(tick) : 300 });
+        const stack = await startStack(tick ? { tickMs: Number(tick) } : {});
         console.log(`up: engine :8888, gateway :7780, logs ${stack.logs.engine}`);
         break;
     }

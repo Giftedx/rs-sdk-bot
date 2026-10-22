@@ -11,6 +11,11 @@ export interface Stack {
     logs: Record<'engine' | 'gateway', string>;
 }
 
+// Proof tick. Measured 2026-10-22 on scripts/generated/thieveguards.ts, 3 runs each: 150 ms gives the same tries
+// (114-121 vs 118-124) and XP range as 300 ms, in 68 s instead of 108 s per run. 50 ms does not: every run read
+// the same 46209 XP, so the bot loses ticks at that speed.
+export const PROOF_TICK_MS = 150;
+
 export interface StackOptions {
     tickMs?: number;
     xpRate?: number;
@@ -68,7 +73,7 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     // Spawn the server files directly (package.json `quickstart` and `gateway` are plain `bun run <file>`),
     // so the saved PID is the server itself, not a wrapper whose child could outlive it.
     const engine = spawn(join(root, 'server', 'engine'), ['bun', MARKERS.engine], {
-        NODE_TICKRATE: String(opts.tickMs ?? 300),
+        NODE_TICKRATE: String(opts.tickMs ?? PROOF_TICK_MS),
         NODE_XPRATE: String(opts.xpRate ?? 25),
         WEB_PORT: String(ports.engine),
     }, logs.engine);
