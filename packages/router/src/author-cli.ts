@@ -18,6 +18,21 @@ const TASKS: Record<string, AuthorTask> = {
         spot: 'Draynor net fishing spot (3087, 3230) (vendor/rs-sdk/learnings/fishing.md). Small fishing net in the pack. Dark wizards nearby.',
     },
 };
+const MORE: Record<string, AuthorTask> = {
+    thieve300: {
+        id: "thieve300",
+        goal: "Pickpocket men and women for 300 game ticks, eating shrimps when Hitpoints is low. Print a line \"RATE thieving <xpGained> <ticks>\" before finish. Pass when Thieving XP rose and the bot never died.",
+        preset: "thieve_varrock",
+        spot: "South Varrock: man at (3237,3406) and (3223,3398), woman at (3223,3401) (knowledge/npcs.json). Pickpocket level 1, 8 XP; failing stuns and hits. 5 shrimps in the pack.",
+    },
+    rcair: {
+        id: "rcair",
+        goal: "Craft air runes from all rune essence in the pack at the air altar. Pass when the pack holds air runes, no rune essence is left, and Runecraft XP rose. Print \"RATE runecraft <xpGained> <ticks>\" before finish.",
+        preset: "rc_air_inside",
+        spot: "Already inside the air altar area (arrival tile 2841,4830, runecraft_table in knowledge/dbtables.json). The altar is a nearby loc; use its craft option. Air talisman and 27 rune essence in the pack.",
+    },
+};
+Object.assign(TASKS, MORE);
 const task = TASKS[process.argv[2] ?? ''];
 if (!task) { console.log(`tasks: ${Object.keys(TASKS).join(', ')}`); process.exit(2); }
 const r = await authorLoop(task, { maxFixes: 2, proveRuns: 3 }, {
