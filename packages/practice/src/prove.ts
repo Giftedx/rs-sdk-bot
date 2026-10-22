@@ -32,10 +32,14 @@ export function wcPass(stdout: string): boolean {
     return m !== null && Number(m[1]) > 0;
 }
 
-// rs-sdk usernames are at most 12 alphanumeric chars.
+// rs-sdk usernames are at most 12 alphanumeric chars. A name that played before can keep its old save over a
+// fresh preset (seen 2026-10-22: florr1 started where the previous run ended), so every name gets a token
+// from the clock and a counter and is never reused.
+let nameCounter = 0;
 export function runBotName(base: string, i: number): string {
-    const suffix = `r${i}`;
-    return base.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12 - suffix.length) + suffix;
+    const token = ((Date.now() % 1_679_616) * 36 + (nameCounter++ % 36)).toString(36).slice(-4);
+    const suffix = `${token}${i}`;
+    return base.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12 - suffix.length - 1) + 'x' + suffix;
 }
 
 async function runBun(args: string[], timeoutMs: number): Promise<{ stdout: string; exitCode: number }> {
@@ -76,6 +80,72 @@ export const realDeps: ProveDeps = {
         rmSync(join(rsSdkRoot(), 'bots', bot), { recursive: true, force: true });
     },
 };
+
+// ---- In-process mode: the script logs in itself (no lite runner, no gateway) ----
+
+export const okPass = (stdout: string) => /^RESULT ok\b/m.test(stdout);
+
+export interface InProcessOptions {
+    bot: string;
+    script: string;
+    runs: number;
+    preset?: string;
+    companions?: { suffix: string; preset: string }[];
+    pass: (stdout: string) => boolean;
+    timeoutMs?: number;
+}
+
+export interface InProcessDeps {
+    prepare(bot: string, preset?: string): Promise<void>;
+    run(script: string, bot: string, timeoutMs: number): Promise<{ stdout: string; exitCode: number }>;
+    cleanup(bot: string): Promise<void>;
+}
+
+export const realInProcessDeps: InProcessDeps = {
+    async prepare(bot, preset) {
+        await createBot(bot);
+        if (preset) {
+            const p = PRESETS[preset];
+            if (!p) throw new Error(`unknown preset ${preset}`);
+            await applyPreset(bot, p);
+        }
+    },
+    run: (script, bot, timeoutMs) => runBun([resolve(script), bot], timeoutMs),
+    async cleanup(bot) {
+        rmSync(join(rsSdkRoot(), 'bots', bot), { recursive: true, force: true });
+    },
+};
+
+// The script prints `START x z level` right after login; it must equal the preset position.
+function startMatches(stdout: string, preset?: string): { ok: boolean; detail: string } {
+    const m = stdout.match(/^START (\d+) (\d+) (\d+)/m);
+    if (!m) return { ok: false, detail: 'no START line' };
+    const p = preset ? PRESETS[preset]?.position : undefined;
+    if (!p) return { ok: true, detail: m[0] };
+    const ok = Number(m[1]) === p.x && Number(m[2]) === p.z && Number(m[3]) === (p.level ?? 0);
+    return { ok, detail: `${m[0]}, preset ${p.x} ${p.z} ${p.level ?? 0}` };
+}
+
+export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps = realInProcessDeps): Promise<ProveReport> {
+    const results: ProveReport['results'] = [];
+    for (let i = 1; i <= opts.runs; i++) {
+        const bot = runBotName(opts.bot, i);
+        const names = [bot, ...(opts.companions ?? []).map(c => bot + c.suffix)];
+        const t0 = Date.now();
+        try {
+            await deps.prepare(bot, opts.preset);
+            for (const c of opts.companions ?? []) await deps.prepare(bot + c.suffix, c.preset);
+            const { stdout, exitCode } = await deps.run(opts.script, bot, opts.timeoutMs ?? 300_000);
+            const start = startMatches(stdout, opts.preset);
+            const ok = exitCode === 0 && start.ok && opts.pass(stdout);
+            const tail = stdout.split(/\r?\n/).filter(l => /^(START|RESULT|ERR|WARN)/.test(l) || l.includes('Error')).slice(-8).join('\n');
+            results.push({ ok, seconds: (Date.now() - t0) / 1000, tail: start.ok ? tail : `preset not loaded: ${start.detail}\n${tail}` });
+        } finally {
+            for (const n of names) await deps.cleanup(n);
+        }
+    }
+    return { runs: opts.runs, passes: results.filter(r => r.ok).length, results };
+}
 
 export async function prove(opts: ProveOptions, deps: ProveDeps = realDeps): Promise<ProveReport> {
     const results: ProveReport['results'] = [];

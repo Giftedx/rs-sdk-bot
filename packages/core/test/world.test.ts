@@ -70,3 +70,17 @@ test('a short route does not measure every far-away stair (lazy search)', () => 
     expect(r.ok).toBe(true);
     expect(calls).toBeLessThanOrEqual(10);
 });
+
+test('a menu op1 is dropped when the same stair has direct op2/op3 links', () => {
+    const mid = { x: 10, z: 0, level: 1 };
+    const t = [
+        { ...stairA },
+        { locName: 'mid', option: 'op1', from: mid, to: { x: 10, z: 2, level: 2 }, exact: true, src: 'm1', toSrc: 'm1', handler: 'm' },
+        { locName: 'mid', option: 'op2', from: mid, to: { x: 10, z: 6, level: 2 }, exact: true, src: 'm2', toSrc: 'm2', handler: 'm' },
+    ];
+    const w = createWorld({ transports: t, doors: [], pathLength: flat });
+    const r = w.route({ x: 0, z: 0, level: 0 }, { x: 10, z: 2, level: 2 }, acct());
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.legs.filter(l => l.kind === 'transport').map(l => (l as any).option)).toEqual(['op1', 'op2']);
+    // the first op1 is stairA (no op2 sibling), the second climb must be op2, never mid's op1 menu
+});

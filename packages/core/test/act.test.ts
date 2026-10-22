@@ -52,3 +52,12 @@ test('effect helpers read tiles, levels and inventory', () => {
     expect(levelIs(1)(before, at(0, 0, 1) as any)).toBe(true);
     expect(invGained(/logs/i)(before, at(0, 0, 0, { inventory: [{ slot: 0, id: 1511, name: 'Logs', count: 1 }] }) as any)).toBe(true);
 });
+
+test('a send that itself reports failure ends at once as rejected, with its message', async () => {
+    const s = fakeSession([at(0, 0)]);
+    const p = checked(s as any, { name: 'climb', send: async () => ({ success: false, message: "I can't reach that!" }), effect: xpGained('Woodcutting'), timeoutTicks: 50 });
+    await s.run(1);
+    const r = await p;
+    expect(r).toMatchObject({ ok: false, reason: 'rejected' });
+    if (!r.ok) expect(r.detail).toContain("I can't reach that!");
+});

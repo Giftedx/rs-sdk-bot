@@ -101,7 +101,11 @@ function loadJson<T>(name: string): T {
 }
 
 export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; pathLength: PathLength }): World {
-    const transports = opts.transports ?? loadJson<Transport[]>('transports.json');
+    // A stair with direct op2/op3 links (Climb-up / Climb-down) uses op1 for a "which way?" menu
+    // (e.g. spiralstairsmiddle op1=Climb). Clicking op1 opens a dialog and never changes floor, so drop it.
+    const all = opts.transports ?? loadJson<Transport[]>('transports.json');
+    const hasDirect = new Set(all.filter(t => t.option !== 'op1').map(t => `${t.locName}@${key(t.from)}`));
+    const transports = all.filter(t => !(t.option === 'op1' && hasDirect.has(`${t.locName}@${key(t.from)}`)));
     const doors = opts.doors ?? loadJson<Door[]>('doors.json');
     const byAt = new Map<string, Transport[]>();
     for (const t of transports) byAt.set(key(t.from), [...(byAt.get(key(t.from)) ?? []), t]);

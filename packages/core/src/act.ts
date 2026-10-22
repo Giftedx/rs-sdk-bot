@@ -26,10 +26,11 @@ export async function checked(s: TickSource, spec: CheckedSpec): Promise<Outcome
     if (spec.signal?.aborted) return { ok: false, reason: 'aborted', detail: String(spec.signal.reason ?? 'aborted'), ticks: 0 };
 
     const base = rejectedCount(before);
+    let ticks = 0;
+    let finish: (o: Outcome) => void = () => {};
     const result = new Promise<Outcome>(resolve => {
-        let ticks = 0;
         let done = false;
-        const finish = (o: Outcome) => { if (!done) { done = true; off(); spec.signal?.removeEventListener('abort', onAbort); resolve(o); } };
+        finish = (o: Outcome) => { if (!done) { done = true; off(); spec.signal?.removeEventListener('abort', onAbort); resolve(o); } };
         const onAbort = () => finish({ ok: false, reason: 'aborted', detail: String(spec.signal?.reason ?? 'aborted'), ticks });
         spec.signal?.addEventListener('abort', onAbort);
         const off = s.onTick(() => {
@@ -40,7 +41,11 @@ export async function checked(s: TickSource, spec: CheckedSpec): Promise<Outcome
             if (ticks >= spec.timeoutTicks) return finish({ ok: false, reason: 'timeout', detail: `${spec.name}: no effect in ${ticks} ticks`, ticks });
         });
     });
-    await spec.send();
+    // A bot.* call that itself reports failure (e.g. "I can't reach that!") ends the action now, with its message.
+    const reply: any = await spec.send();
+    if (reply && typeof reply === 'object' && reply.success === false) {
+        finish({ ok: false, reason: 'rejected', detail: `${spec.name}: ${reply.message ?? reply.reason ?? 'failed'}`, ticks });
+    }
     return result;
 }
 

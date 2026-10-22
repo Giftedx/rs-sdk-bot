@@ -6,6 +6,7 @@ export interface Walker extends TickSource {
     bot: {
         walkTo(x: number, z: number, tolerance?: number): Promise<unknown>;
         interactLoc(target: unknown, option?: number | string | RegExp): Promise<unknown>;
+        openDoor?(target?: unknown): Promise<unknown>;
     };
 }
 
@@ -24,10 +25,22 @@ export async function walkRoute(s: Walker, legs: Leg[], opts: WalkOptions = {}):
             last = leg.kind === 'walk' ? await walkLeg(s, leg.to, opts) : await climbLeg(s, leg, opts);
             total += last.ticks;
             if (last.ok || last.reason === 'aborted') break;
+            // rs-sdk's pathfinder treats every door as open, so a walk can stop behind a shut one and the
+            // client then refuses the climb with "Can't reach". Open the shut door nearest the stair and retry.
+            if (leg.kind === 'transport' && last.reason === 'rejected' && /reach/i.test(last.detail)) await openNearestDoor(s, leg.at);
         }
         if (!last!.ok) return { ...last!, ticks: total };
     }
     return { ok: true, ticks: total };
+}
+
+async function openNearestDoor(s: Walker, near: Tile): Promise<void> {
+    const doors = (s.sdk.getState()?.nearbyLocs ?? [])
+        .filter((l: any) => l.level === near.level && (l.options ?? []).some((o: string) => /^open$/i.test(o)))
+        .map((l: any) => ({ l, d: Math.max(Math.abs(l.x - near.x), Math.abs(l.z - near.z)) }))
+        .filter((x: { d: number }) => x.d <= 8)
+        .sort((a: { d: number }, b: { d: number }) => a.d - b.d);
+    if (doors.length > 0 && s.bot.openDoor) await s.bot.openDoor(doors[0].l);
 }
 
 function walkLeg(s: Walker, to: Tile, opts: WalkOptions): Promise<Outcome> {
@@ -53,7 +66,8 @@ function climbLeg(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: Wal
         pre: st => (findLoc(st) ? null : `no loc at ${leg.at.x},${leg.at.z},${leg.at.level}`),
         send: () => s.bot.interactLoc(findLoc(s.sdk.getState()), Number(leg.option.replace(/^op/, ''))),
         effect: (b, n) => onLevel(b, n) && arrive(b, n),
-        timeoutTicks: opts.legTimeoutTicks ?? 30,
+        // interactLoc first walks round to a usable side of the loc (24 ticks measured for a 2x2 staircase).
+        timeoutTicks: opts.legTimeoutTicks ?? 60,
         signal: opts.signal,
     });
 }

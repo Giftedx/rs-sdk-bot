@@ -12,7 +12,7 @@ export function fakeGame(start: { x: number; z: number; level: number; hp?: numb
     const pending: (() => void)[] = [];
     const calls: string[] = [];
     // Hooks so a test can make the next walk land off target, or a climb do nothing.
-    const quirks = { walkOffBy: 0, climbFails: 0, climbTo: null as null | { x: number; z: number; level: number } };
+    const quirks = { walkOffBy: 0, climbFails: 0, climbDelayTicks: 0, doorShut: false, climbTo: null as null | { x: number; z: number; level: number } };
     const timer = setInterval(() => {
         tick++;
         for (const f of pending.splice(0)) f();
@@ -32,11 +32,17 @@ export function fakeGame(start: { x: number; z: number; level: number; hp?: numb
                 pending.push(() => { st.player.worldX = x + off; st.player.worldZ = z; });
                 return { success: true };
             },
+            async openDoor(loc: any) {
+                calls.push(`open ${loc?.x},${loc?.z}`);
+                quirks.doorShut = false;
+                return { success: true };
+            },
             async interactLoc(loc: any, option: number) {
                 calls.push(`interact ${loc?.x},${loc?.z} op${option}`);
+                if (quirks.doorShut) return { success: false, message: "Can't reach Staircase" };
                 if (quirks.climbFails > 0) { quirks.climbFails--; return { success: true }; }
                 const to = quirks.climbTo;
-                if (to) pending.push(() => { st.player.worldX = to.x; st.player.worldZ = to.z; st.player.level = to.level; });
+                if (to) { const at = tick + quirks.climbDelayTicks; const apply = () => { if (tick >= at) { st.player.worldX = to.x; st.player.worldZ = to.z; st.player.level = to.level; } else pending.push(apply); }; pending.push(apply); }
                 return { success: true };
             },
             async eatFood(re: RegExp) {
