@@ -33,6 +33,7 @@ export async function checked(s: TickSource, spec: CheckedSpec): Promise<Outcome
         finish = (o: Outcome) => { if (!done) { done = true; off(); spec.signal?.removeEventListener('abort', onAbort); resolve(o); } };
         const onAbort = () => finish({ ok: false, reason: 'aborted', detail: String(spec.signal?.reason ?? 'aborted'), ticks });
         spec.signal?.addEventListener('abort', onAbort);
+        void s.ended?.then(e => finish({ ok: false, reason: 'aborted', detail: `${spec.name}: session ended (${e.reason})`, ticks }));
         const off = s.onTick(() => {
             ticks++;
             const now = s.sdk.getState();
@@ -41,11 +42,17 @@ export async function checked(s: TickSource, spec: CheckedSpec): Promise<Outcome
             if (ticks >= spec.timeoutTicks) return finish({ ok: false, reason: 'timeout', detail: `${spec.name}: no effect in ${ticks} ticks`, ticks });
         });
     });
-    // A bot.* call that itself reports failure (e.g. "I can't reach that!") ends the action now, with its message.
-    const reply: any = await spec.send();
-    if (reply && typeof reply === 'object' && reply.success === false) {
-        finish({ ok: false, reason: 'rejected', detail: `${spec.name}: ${reply.message ?? reply.reason ?? 'failed'}`, ticks });
-    }
+    // The send runs alongside the tick watch and is never awaited here: a long bot.walkTo must not hold back an
+    // outcome the ticks already decided. A reply with success=false (e.g. "I can't reach that!") or a throw
+    // ends the action now, with its message.
+    void Promise.resolve()
+        .then(() => spec.send())
+        .then((reply: any) => {
+            if (reply && typeof reply === 'object' && reply.success === false) {
+                finish({ ok: false, reason: 'rejected', detail: `${spec.name}: ${reply.message ?? reply.reason ?? 'failed'}`, ticks });
+            }
+        })
+        .catch(e => finish({ ok: false, reason: 'rejected', detail: `${spec.name}: ${String(e)}`, ticks }));
     return result;
 }
 

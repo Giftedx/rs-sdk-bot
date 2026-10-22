@@ -17,3 +17,18 @@ test('logout reports a timeout when the server never ends the session (e.g. in c
     const s = { sdk: { sendClickComponent: async () => ({ success: true }) }, ended: new Promise<{ reason: string }>(() => {}) };
     expect(await logout(s as any, 50)).toBe('timeout');
 });
+
+test('logout keeps clicking until the server accepts it (the first clicks fall in the combat window)', async () => {
+    let clicks = 0;
+    let end!: (v: { reason: string }) => void;
+    const s = { sdk: { sendClickComponent: async () => { clicks++; if (clicks === 3) setTimeout(() => end({ reason: 'logged-out' }), 1); return { success: true }; } }, ended: new Promise<{ reason: string }>(r => { end = r; }) };
+    expect(await logout(s as any, 2000, { retryMs: 10 })).toBe('logged-out');
+    expect(clicks).toBe(3);
+});
+
+test('a click that never resolves cannot hang logout past its deadline', async () => {
+    const s = { sdk: { sendClickComponent: () => new Promise(() => {}) }, ended: new Promise<{ reason: string }>(() => {}) };
+    const t0 = Date.now();
+    expect(await logout(s as any, 100, { retryMs: 20 })).toBe('timeout');
+    expect(Date.now() - t0).toBeLessThan(1000);
+});

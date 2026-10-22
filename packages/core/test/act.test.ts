@@ -61,3 +61,17 @@ test('a send that itself reports failure ends at once as rejected, with its mess
     expect(r).toMatchObject({ ok: false, reason: 'rejected' });
     if (!r.ok) expect(r.detail).toContain("I can't reach that!");
 });
+
+test('a known outcome returns at once even while send() is still running (e.g. a long walkTo)', async () => {
+    const s = fakeSession([at(0, 0), at(0, 0, 0, { opFeedback: { opRejectedCount: 1 } })]);
+    const p = checked(s as any, { name: 'walk', send: () => new Promise(() => {}), effect: xpGained('Woodcutting'), timeoutTicks: 50 });
+    await s.run(2);
+    const r = await Promise.race([p, Bun.sleep(200).then(() => 'still waiting')]);
+    expect(r).toMatchObject({ ok: false, reason: 'rejected' });
+});
+
+test('a send() that throws becomes a rejected outcome, not an exception', async () => {
+    const s = fakeSession([at(0, 0)]);
+    const r = await checked(s as any, { name: 'boom', send: async () => { throw new Error('socket gone'); }, effect: () => false, timeoutTicks: 50 });
+    expect(r).toMatchObject({ ok: false, reason: 'rejected', detail: expect.stringContaining('socket gone') });
+});

@@ -19,6 +19,9 @@ export interface Shim {
     stop(reason: string): void;
     tick(): number;
     onTick(cb: () => void): () => void;
+    // Sends one action straight to the client, skipping the queue (used for logout, which must not wait
+    // behind a slow or stuck action).
+    direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
 }
 
 type Queued = { actionId: string; action: { type: string; ticks?: number } };
@@ -109,6 +112,10 @@ export function createShim(client: ClientLike, sdk: BotSDK): Shim {
             listeners.add(cb);
             return () => listeners.delete(cb);
         },
+        async direct(action) {
+            if (stopped) return { success: false, message: 'session stopped' };
+            return client.executeBotAction(action);
+        },
     };
 }
 
@@ -118,6 +125,7 @@ export interface Session {
     bot: BotActions;
     tick(): number;
     onTick(cb: () => void): () => void;
+    direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
     close(): Promise<void>;
     ended: Promise<{ reason: string }>;
 }
@@ -168,6 +176,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
         bot,
         tick: () => sh.tick(),
         onTick: cb => sh.onTick(cb),
+        direct: a => sh.direct(a),
         ended,
         async close() {
             sh.stop('stopped');

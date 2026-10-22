@@ -71,3 +71,21 @@ test('after a can\'t-reach climb the walker also walks up to the stair tile befo
     expect(g.calls).toContain('walk 3204,3207');
     expect(r.ok).toBe(true);
 });
+
+test('aborting the walk (reflex) cancels the in-flight bot.walkTo through the SDK execution context', async () => {
+    const { executionContext } = await import('../../../vendor/rs-sdk/sdk/execution-context');
+    const g = fakeGame({ x: 0, z: 0, level: 0 });
+    let cancelled = false;
+    g.bot.walkTo = async () => new Promise(resolve => {
+        const sig = executionContext.getStore()?.signal;
+        sig?.addEventListener('abort', () => { cancelled = true; resolve({ success: false }); });
+    });
+    const ac = new AbortController();
+    const p = walkRoute(g as any, [{ kind: 'walk', to: { x: 50, z: 50, level: 0 } }], { signal: ac.signal, maxRetriesPerLeg: 1 });
+    await Bun.sleep(10);
+    ac.abort('reflex');
+    const r = await p;
+    g.stop();
+    expect(r).toMatchObject({ ok: false, reason: 'aborted' });
+    expect(cancelled).toBe(true);
+});

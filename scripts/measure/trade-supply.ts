@@ -5,7 +5,8 @@ import { waitUntil } from '../../packages/core/src/ticks';
 
 const specName = process.argv[2]!;
 const spec = await openBot(specName);
-const helper = await openBot(`${specName}b`);
+// If the helper login fails, the specialist must still log out (finish does that).
+const helper = await openBot(`${specName}b`).catch(async e => finish([spec], false, `helper login: ${String(e)}`));
 try {
     await waitUntil(helper, st => (st?.inventory?.length ?? 0) > 0, { timeoutTicks: 20 });
     const gems = (s: typeof spec) => (s.sdk.getState()?.inventory ?? []).filter(i => /^uncut /i.test(i.name)).length;

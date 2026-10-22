@@ -5,7 +5,8 @@ import { waitUntil } from '../../packages/core/src/ticks';
 
 const giverName = process.argv[2]!;
 const a = await openBot(giverName);
-const b = await openBot(`${giverName}b`);
+// If the second login fails, the first account must still log out (finish does that).
+const b = await openBot(`${giverName}b`).catch(async e => finish([a], false, `partner login: ${String(e)}`));
 try {
     // A partner who just logged in is not in the nearby-players list for a few ticks ("Player not found nearby").
     const seen = await waitUntil(a, st => (st?.nearbyPlayers ?? []).some((p: { name: string }) => p.name.toLowerCase() === `${giverName}b`.toLowerCase()), { timeoutTicks: 30 });

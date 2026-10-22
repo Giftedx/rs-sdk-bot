@@ -24,9 +24,24 @@ export function componentId(name: string): number {
     return id;
 }
 
-// Clicks logout and waits up to `ms` for the server to end the session. Returns the end reason or 'timeout'.
-export async function logout(s: { sdk: { sendClickComponent(id: number): Promise<unknown> }; ended: Promise<{ reason: string }> }, ms: number): Promise<string> {
-    await s.sdk.sendClickComponent(componentId('logout:try_logout'));
-    const r = await Promise.race([s.ended, Bun.sleep(ms).then(() => ({ reason: 'timeout' }))]);
-    return r.reason;
+// Clicks logout, and keeps clicking every `retryMs` until the server ends the session or `ms` runs out.
+// One click is not enough: World.ts:844-853 drops a logout request made inside the combat window
+// (preventLogoutUntil, 16 ticks after combat per logout.rs2:27) instead of keeping it. No click is ever
+// awaited past the deadline, so a stuck action queue cannot hang this. Returns the end reason or 'timeout'.
+export async function logout(
+    s: { sdk: { sendClickComponent(id: number): Promise<unknown> }; ended: Promise<{ reason: string }> },
+    ms: number,
+    opts: { retryMs?: number } = {},
+): Promise<string> {
+    const id = componentId('logout:try_logout');
+    const retry = opts.retryMs ?? 1500; // 5 ticks at 300 ms
+    const deadline = Date.now() + ms;
+    let ended: string | null = null;
+    void s.ended.then(e => { ended = e.reason; });
+    while (ended === null && Date.now() < deadline) {
+        void s.sdk.sendClickComponent(id).catch(() => {});
+        const wait = Math.min(retry, Math.max(0, deadline - Date.now()));
+        await Promise.race([s.ended, Bun.sleep(wait)]);
+    }
+    return ended ?? 'timeout';
 }

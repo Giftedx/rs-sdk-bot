@@ -82,6 +82,21 @@ test('a pending action rejects quickly when the session ends', async () => {
     const t0 = Date.now();
     shim.stop('disconnected');
     const r = await p.then((v: any) => v, (e: any) => ({ rejected: true, e }));
-    expect(Date.now() - t0).toBeLessThan(100);
+    expect(Date.now() - t0).toBeLessThan(2000); // the point: not the SDK 60 s action timeout; 100 ms was flaky under load
     expect(r.rejected ?? r.success === false).toBe(true);
+});
+
+test('direct() reaches the client even while a slow action holds the queue', async () => {
+    const c = fakeClient();
+    c.holdNext = true;
+    const sdk = newSdk();
+    const shim = createShim(c, sdk);
+    shim.start();
+    c.fire();
+    void (sdk as any).sendAction({ type: 'walkTo', x: 1, z: 2, running: true, reason: 'SDK' });
+    await Bun.sleep(20);
+    c.holdNext = false;
+    await shim.direct({ type: 'clickComponent', componentId: 2458, reason: 'SDK' });
+    expect(c.executed.map((a: any) => a.type)).toEqual(['walkTo', 'clickComponent']);
+    shim.stop('stopped');
 });

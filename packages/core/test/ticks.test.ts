@@ -26,3 +26,16 @@ test('waitUntil resolves false after its tick budget', async () => {
     await s.run(3);
     expect(await p).toBe(false);
 });
+
+test('waits and checked actions end at once when the session ends (no more ticks will come)', async () => {
+    const { checked } = await import('../src/act');
+    let end!: (v: { reason: string }) => void;
+    const s: any = { ...fakeSession([at(0, 0)]), ended: new Promise<{ reason: string }>(r => { end = r; }) };
+    const w = waitUntil(s, () => false, { timeoutTicks: 1000 });
+    const t = waitTicks(s, 1000);
+    const c = checked(s, { name: 'chop', send: async () => {}, effect: () => false, timeoutTicks: 1000 });
+    end({ reason: 'disconnected' });
+    expect(await w).toBe(false);
+    await t;
+    expect(await c).toMatchObject({ ok: false, reason: 'aborted', detail: expect.stringContaining('session ended') });
+});

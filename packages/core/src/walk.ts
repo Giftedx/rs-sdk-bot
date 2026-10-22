@@ -1,3 +1,4 @@
+import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { atTile, checked, levelIs, type Outcome } from './act';
 import type { TickSource } from './ticks';
 import type { Account, Leg, Tile, World } from './world';
@@ -47,14 +48,34 @@ async function openNearestDoor(s: Walker, near: Tile): Promise<void> {
     if (doors.length > 0 && s.bot.openDoor) await s.bot.openDoor(doors[0].l);
 }
 
+// Runs one leg's bot.* call inside its own SDK execution context (sdk/execution-context.ts). The context's
+// signal fires when the leg's outcome is decided or the caller aborts (reflex), so a long bot.walkTo stops
+// instead of fighting the flee walk.
+async function cancellable(opts: WalkOptions, leg: (send: (f: () => Promise<unknown>) => () => Promise<unknown>, signal: AbortSignal) => Promise<Outcome>): Promise<Outcome> {
+    const ac = new AbortController();
+    const onAbort = () => ac.abort(opts.signal?.reason ?? 'aborted');
+    if (opts.signal?.aborted) onAbort(); else opts.signal?.addEventListener('abort', onAbort);
+    const wrap = (f: () => Promise<unknown>) => () => executionContext.run({ signal: ac.signal }, f).catch(e => ({ success: false, message: String(e) }));
+    try {
+        return await leg(wrap, ac.signal);
+    } finally {
+        opts.signal?.removeEventListener('abort', onAbort);
+        if (!ac.signal.aborted) ac.abort('leg done');
+    }
+}
+
 function walkLeg(s: Walker, to: Tile, opts: WalkOptions): Promise<Outcome> {
+    return cancellable(opts, (wrap, signal) => walkLegInner(s, to, { ...opts, signal }, wrap));
+}
+
+function walkLegInner(s: Walker, to: Tile, opts: WalkOptions, wrap: (f: () => Promise<unknown>) => () => Promise<unknown>): Promise<Outcome> {
     const p = s.sdk.getState()?.player;
     // A long walk keeps running inside walkTo, so the budget grows with distance.
     const budget = opts.legTimeoutTicks ?? (p ? cheb(to, p) * 2 + 30 : 60);
     return checked(s, {
         name: `walk to ${to.x},${to.z},${to.level}`,
         pre: st => (st?.player?.level === to.level ? null : `on level ${st?.player?.level}, leg is on level ${to.level}`),
-        send: () => s.bot.walkTo(to.x, to.z, 2),
+        send: wrap(() => s.bot.walkTo(to.x, to.z, 2)),
         effect: atTile(to.x, to.z, to.level, 2),
         timeoutTicks: budget,
         signal: opts.signal,
@@ -62,13 +83,17 @@ function walkLeg(s: Walker, to: Tile, opts: WalkOptions): Promise<Outcome> {
 }
 
 function climbLeg(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: WalkOptions): Promise<Outcome> {
+    return cancellable(opts, (wrap, signal) => climbLegInner(s, leg, { ...opts, signal }, wrap));
+}
+
+function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: WalkOptions, wrap: (f: () => Promise<unknown>) => () => Promise<unknown>): Promise<Outcome> {
     const findLoc = (st: any) => (st?.nearbyLocs ?? []).find((l: any) => l.x === leg.at.x && l.z === leg.at.z && l.level === leg.at.level);
     const arrive = atTile(leg.to.x, leg.to.z, leg.to.level, leg.exact ? 2 : 3);
     const onLevel = levelIs(leg.to.level);
     return checked(s, {
         name: `${leg.loc} ${leg.option} at ${leg.at.x},${leg.at.z},${leg.at.level}`,
         pre: st => (findLoc(st) ? null : `no loc at ${leg.at.x},${leg.at.z},${leg.at.level}`),
-        send: () => s.bot.interactLoc(findLoc(s.sdk.getState()), Number(leg.option.replace(/^op/, ''))),
+        send: wrap(() => s.bot.interactLoc(findLoc(s.sdk.getState()), Number(leg.option.replace(/^op/, '')))),
         effect: (b, n) => onLevel(b, n) && arrive(b, n),
         // interactLoc first walks round to a usable side of the loc (24 ticks measured for a 2x2 staircase).
         timeoutTicks: opts.legTimeoutTicks ?? 60,
