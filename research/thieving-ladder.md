@@ -62,3 +62,12 @@ Boat route (not measured yet), from game scripts and knowledge/npcs.json:
 3. Customs officer, fare 30 coins, sails to Ardougne (1_41_51_59_4 = 2683,3268, ship deck level 1)
    (`areas/area_karamja/scripts/customs_officer.rs2:81-82`). Then about 40 tiles to the market.
 Total walk about 420 tiles. Needs 60 coins: men pay 3 per pick, so about 20 picks in Lumbridge first.
+
+## Boat route measured (2026-10-22)
+
+`scripts/generated/boatardy.ts`, 3/3 runs, fresh 10 HP account with 60 coins: Lumbridge to the Ardougne
+market in 380 / 380 / 385 ticks, no death. Boat jumps at tick ~189 (Port Sarim -> Musa Point) and ~350
+(Brimhaven -> Ardougne). The land route died 4 times in 2,198 ticks.
+
+New budget: tutorial 13 + coins in Lumbridge (counted in the ladder) + boat 385 + ladder about 2,000 (model)
+= about 2,400 ticks against the leader's 2,935. Proof in progress: author task `thieving60`.
