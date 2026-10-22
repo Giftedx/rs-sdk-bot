@@ -27,3 +27,38 @@ Limits:
 - Knight rate is a model. `bun packages/router/src/author-cli.ts thieveknights` writes and proves
   the measuring script (preset `thieve_knights`).
 - Knights hit 3 per fail: about 0.3 HP per tick at 55. 300 ticks needs about 90 HP of food.
+
+## Measured knight rate (2026-10-22)
+
+`scripts/generated/thieveknights.ts`, 3/3 runs from Thieving 55: median 378.6 XP/tick (model said 330).
+
+## Live plan: one trip to Ardougne, then stay
+
+Everything for the ladder is in the Ardougne market (knowledge/npcs.json):
+- Men: ardougnian_male1 at (2614,3318), (2621,3293). Woman at (2612,3316).
+- Guards: ardougne_guard at (2651-2665, 3300-3318), 7 spawns.
+- Knights: knight_of_ardougne at (2652,3318), (2653,3300), (2669,3298), (2671,3313).
+- Food: bread and cake in the Ardougne bakery shop (`area_ardougne_east/configs/ardougne_east.inv:15`).
+
+So the specialist travels once, at level 1, and never walks far again. Death respawns in Lumbridge,
+which costs the whole trip again, so it must eat. A fresh account has 10 HP.
+
+Router route from Lumbridge (3222,3222) to the market (2654,3304): 3 walk legs via (3099,3266) and
+(2884,3397), 880 tiles. No wolves on that corridor. Hobgoblins (28) and dark wizards (20) are near it.
+
+Budget against the leader (99 at 2,935 ticks):
+- Tutorial 13 + trip (measuring) + ladder about 2,000 (model, knight leg scaled by the measured rate).
+- If the trip is about 600 ticks with running, the total is about 2,600: a margin of about 300 ticks.
+
+## Trip measured on the practice server (2026-10-22)
+
+`scripts/measure/travel.ts` with a fresh account (preset floors_lumbridge, 10 HP), router land route:
+FAIL after 2,198 ticks. The account died 4 times and ended in Lumbridge. The land route is not usable at 10 HP.
+
+Boat route (not measured yet), from game scripts and knowledge/npcs.json:
+1. Lumbridge to Port Sarim seamen (seaman_lorris 3028,3221 / seaman_thresnor 3026,3217): about 195 tiles.
+   Fare 30 coins (`areas/area_port_sarim/scripts/sailors.rs2`).
+2. Ship lands at Musa Point. Walk to the Brimhaven customs officer (2772,3225-3231): about 185 tiles.
+3. Customs officer, fare 30 coins, sails to Ardougne (1_41_51_59_4 = 2683,3268, ship deck level 1)
+   (`areas/area_karamja/scripts/customs_officer.rs2:81-82`). Then about 40 tiles to the market.
+Total walk about 420 tiles. Needs 60 coins: men pay 3 per pick, so about 20 picks in Lumbridge first.
