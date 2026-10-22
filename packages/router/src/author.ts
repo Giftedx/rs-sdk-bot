@@ -46,7 +46,9 @@ export function claudeArgs(prompt: string): string[] {
         '-p', prompt,
         '--output-format', 'json',
         '--permission-mode', 'acceptEdits',
-        '--allowedTools', 'Read', 'Glob', 'Grep', 'Write', 'Edit', 'Bash(bun:*)', 'Bash(bunx tsc:*)',
+        // Claude Code on Windows may run commands through its PowerShell tool, so allow both forms.
+        '--allowedTools', 'Read', 'Glob', 'Grep', 'Write', 'Edit',
+        'Bash(bun:*)', 'Bash(bunx tsc:*)', 'PowerShell(bun:*)', 'PowerShell(bunx tsc:*)',
     ];
 }
 

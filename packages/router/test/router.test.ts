@@ -49,3 +49,10 @@ test('authorLoop gives up after maxFixes and reports the last failure', async ()
     const r = await authorLoop(task, { maxFixes: 1, proveRuns: 3 }, deps);
     expect(r).toMatchObject({ ok: false, attempts: 2 });
 });
+
+test('on Windows the model gets the PowerShell form of the bun and tsc tools too', () => {
+    // A live run reported: "The type check did not run, because PowerShell asked for approval".
+    const a = claudeArgs('x').join(' ');
+    expect(a).toContain('PowerShell(bun:*)');
+    expect(a).toContain('PowerShell(bunx tsc:*)');
+});
