@@ -16,3 +16,18 @@
 - Live GE (api/market/items/1987): bids for 98,738 grapes at 1,000 gp, zero sellers, last price 1,000 gp.
   Other operators already use this method and are buying every grape.
 - Verdict: a supply war. Not a first target.
+
+## Update: the login timer (proven 2026-10-22)
+- Every login runs `~ferment_wines_login` (`login_logout/login.rs2:70`), which sets the 20-tick
+  `fermenting_wine` timer (`wine.rs2:72`) with **no level check**.
+- Practice server, account with no Cooking levels and 600 unfermented wines banked, doing nothing after login:
+  two runs, both **99 Cooking at session tick 22** (+1,650,000 and +1,320,000 XP). At level 1 most batch rolls
+  fail, so the count matters: 600 was enough twice; fewer is untested.
+
+## Plan to beat the 38-tick #1
+1. Session A (scored): new account clears the tutorial, takes a trade of noted unfermented wine from a helper
+   next to a bank, deposits it. Budget: under ~15 ticks. Tutorial-skip ticks are not measured yet.
+2. Log out (in game, so playtime stops).
+3. Session B (scored): log in, wait 20 ticks, 99 at about tick 22. Total = A + ~22.
+4. Supply: 600 grapes. GE has zero sellers. Ground spawn (2509,3493) x10 is the helper job; its respawn time
+   and contention are not measured yet.

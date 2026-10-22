@@ -37,6 +37,8 @@ export const PRESETS: Record<string, SaveConfig> = {
         inventory: [{ id: 1987, count: 1 }, { id: 1937, count: 1 }],
         bank: [{ id: 1995, count: 300 }],
     },
+    // Login wine test: no Cooking levels, 600 unfermented wines (1995) banked; the login timer does the rest.
+    wine_login: { position: LUMBRIDGE, bank: [{ id: 1995, count: 600 }] },
     // Trade pair: giver holds 100 coins, receiver stands one tile east (3223,3218).
     trade_giver: { position: LUMBRIDGE, coins: 100 },
     trade_receiver: { position: { x: 3223, z: 3218, level: 0 } },
