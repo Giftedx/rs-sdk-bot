@@ -42,5 +42,16 @@
   "source": "measured",
   "evidence": "scripts/measure/gems.ts (27 cuts in 7 ticks, +92812 XP, 2 runs) + scripts/measure/trade-supply.ts (12-tick resupply, 2 runs) = 19 ticks per pack",
   "note": "excludes level-up dialogs, about 2.7 ticks per level when a trade or bank follows (research/levelup-cost.md)"
+ },
+ {
+  "method": "pickpocket_guard",
+  "skill": "thieving",
+  "level": 40,
+  "xpPerTick": 130.63,
+  "runs": 3,
+  "tickMs": 300,
+  "source": "measured",
+  "evidence": "scripts/generated/thieveguards.ts, 3/3 runs: 39189 / 47379 / 38019 XP in 300-304 ticks from Thieving 40 (median 39189)",
+  "note": "Varrock palace guards; about 60% of tries stunned; 6-8 shrimps eaten per 300 ticks at HP 30; level rises during the run"
  }
 ]
