@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import type { Subprocess } from 'bun';
 import { practiceDir, rsSdkRoot } from './paths';
 import { portInUse } from './ports';
+import { killTree, safeKill } from './proc';
 import { isReady, type Service } from './ready';
 
 export interface Stack {
@@ -38,14 +39,11 @@ export async function waitReady(proc: Subprocess, service: Service, logFile: str
     throw new Error(`${service} not ready after ${timeoutMs} ms\n${tail(logFile)}`);
 }
 
-// On Windows, killing the `bun run` parent leaves the real server running, so kill the whole tree.
-export async function killTree(pid: number): Promise<void> {
-    if (process.platform === 'win32') {
-        Bun.spawnSync(['taskkill', '/PID', String(pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' });
-    } else {
-        try { process.kill(-pid, 'SIGTERM'); } catch { try { process.kill(pid, 'SIGTERM'); } catch {} }
-    }
-}
+export { killTree } from './proc';
+
+// Saved with each PID so a stale pids.json never kills an unrelated process (Windows reuses PIDs).
+export const MARKERS = { engine: 'src/app.ts', gateway: 'gateway.ts' } as const;
+type Saved = Record<string, { pid: number; marker: string }>;
 
 function pidsFile(): string {
     return join(practiceDir(), 'pids.json');
@@ -67,12 +65,15 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
         return Bun.spawn(cmd, { cwd, env: { ...process.env, ...env }, stdout: Bun.file(log), stderr: Bun.file(log) });
     };
 
-    const engine = spawn(join(root, 'server', 'engine'), ['bun', 'run', 'quickstart'], {
+    // Spawn the server files directly (package.json `quickstart` and `gateway` are plain `bun run <file>`),
+    // so the saved PID is the server itself, not a wrapper whose child could outlive it.
+    const engine = spawn(join(root, 'server', 'engine'), ['bun', MARKERS.engine], {
         NODE_TICKRATE: String(opts.tickMs ?? 300),
         NODE_XPRATE: String(opts.xpRate ?? 25),
         WEB_PORT: String(ports.engine),
     }, logs.engine);
-    writeFileSync(pidsFile(), JSON.stringify({ engine: engine.pid }));
+    const saved: Saved = { engine: { pid: engine.pid, marker: MARKERS.engine } };
+    writeFileSync(pidsFile(), JSON.stringify(saved));
     try {
         await waitReady(engine, 'engine', logs.engine, timeout);
     } catch (e) {
@@ -80,11 +81,12 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
         throw e;
     }
 
-    const gateway = spawn(join(root, 'server', 'gateway'), ['bun', 'run', 'gateway'], {
+    const gateway = spawn(join(root, 'server', 'gateway'), ['bun', MARKERS.gateway], {
         GATEWAY_HOSTNAME: '127.0.0.1',
         AGENT_PORT: String(ports.gateway),
     }, logs.gateway);
-    writeFileSync(pidsFile(), JSON.stringify({ engine: engine.pid, gateway: gateway.pid }));
+    saved.gateway = { pid: gateway.pid, marker: MARKERS.gateway };
+    writeFileSync(pidsFile(), JSON.stringify(saved));
     try {
         await waitReady(gateway, 'gateway', logs.gateway, timeout);
     } catch (e) {
@@ -98,7 +100,9 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
 
 export async function stopStack(): Promise<void> {
     if (!existsSync(pidsFile())) return;
-    const pids = JSON.parse(readFileSync(pidsFile(), 'utf8')) as Record<string, number>;
-    for (const pid of Object.values(pids)) await killTree(pid);
+    const saved = JSON.parse(readFileSync(pidsFile(), 'utf8')) as Saved;
+    for (const [name, p] of Object.entries(saved)) {
+        if (!(await safeKill(p.pid, p.marker))) console.warn(`stop: ${name} pid ${p.pid} is not running ${p.marker}; left alone`);
+    }
     rmSync(pidsFile());
 }

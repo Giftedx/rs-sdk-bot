@@ -22,7 +22,7 @@ test('createBot writes a local env with telemetry and chat off', async () => {
 });
 
 test('applyPreset refuses while the bot has a live lite runner', async () => {
-    writeFileSync(join(practiceDir(), 'lite.json'), JSON.stringify({ [NAME]: process.pid }));
+    writeFileSync(join(practiceDir(), 'lite.json'), JSON.stringify({ [NAME]: { pid: process.pid, marker: 'bun' } }));
     await expect(applyPreset(NAME, PRESETS.fresh_lumbridge!)).rejects.toThrow(`bot ${NAME} is logged in`);
 });
 
