@@ -9,11 +9,27 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 
 // Opens an in-process session for a bot created by packages/practice (reads its bot.env),
 // waits until it is in game, and prints `START x z level` for the proving harness.
+// The bot's server from its bot.env SERVER line; empty or missing means our local practice server.
+export function serverFromEnv(env: string): string {
+    const v = env.match(/^SERVER=(.*)$/m)?.[1]?.trim();
+    return v ? v : 'localhost:8888';
+}
+
+// rs-sdk's bot.env template defaults to the public demo server, so a practice bot whose --local rewrite failed
+// would silently log in there. Anything but our local server needs DEMO_OK=1, set on purpose by the caller.
+export function assertServerAllowed(server: string, env: Record<string, string | undefined> = process.env): void {
+    if (/^(localhost|127\.)/.test(server)) return;
+    if (env.DEMO_OK === '1') return;
+    throw new Error(`refusing to connect to ${server}: not the local practice server; set DEMO_OK=1 to allow it on purpose`);
+}
+
 export async function openBot(name: string): Promise<Session> {
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
     if (!password) throw new Error(`no PASSWORD in bots/${name}/bot.env`);
-    const s = await connectInProcess({ name, password });
+    const server = serverFromEnv(env);
+    assertServerAllowed(server);
+    const s = await connectInProcess({ name, password, server });
     const ready = await waitUntil(s, st => st?.inGame && (st.skills?.length ?? 0) > 0 && !!st.player, { timeoutTicks: 100 });
     if (!ready) {
         // Logged in but not usable: log out before failing, or the account lingers and adds playtime.
