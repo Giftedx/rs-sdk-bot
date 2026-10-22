@@ -18,3 +18,19 @@ Live #1: `nickgemcut`, 99 in 197 ticks of playtime (research/hiscores-2026-10-22
 - Next: a one-click deposit-all of one item (bank interface option) and re-measure. If a cycle reaches ~10 ticks, the
   board is winnable with ~50 ticks to spare.
 - Lower gems (opal, jade, red topaz) can smash; the ladder needs those amounts plus a margin.
+
+## Bank-loop step timing (5 cycles, same numbers in two runs)
+| Step | Cycle 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| open bank (`bot.openBank`) | 3 | 40 | 10 | 10 | 10 |
+| deposit / withdraw 27 / close / cut 27 | 0/3/2/7 | 2/3/2/7 | 2/3/2/7 | 2/3/2/7 | 2/3/2/7 |
+
+- Everything but opening the bank is a steady ~14 ticks per cycle.
+- The slow opens follow the cycles with many level-ups (each 27 dragonstones is +92,812 XP). A dialog was open after
+  cycles 1 and 2. Working theory: level-up dialogs block the bank click and are cleared one by one. `sendCloseModal`
+  did not clear it within 5 ticks.
+- A direct booth click (`sendInteractLoc` on the nearest "Bank booth" with Use-quickly) never opened the bank in 6
+  ticks; every open fell back to `bot.openBank`. Removed.
+- Next: find how to clear queued level-up dialogs in one go (or avoid triggering them), then re-measure. Target cycle:
+  14 ticks + a 3-tick open = 17, which with the gem ladder is still about the trade loop. The board needs both a fast
+  open and fewer cycles (e.g. noted gems withdrawn in bigger effective batches is not possible: 27 per pack).
