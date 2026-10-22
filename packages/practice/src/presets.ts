@@ -28,6 +28,9 @@ export const PRESETS: Record<string, SaveConfig> = {
     measure_trees: { position: { x: 3195, z: 3220, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     measure_oaks: { position: { x: 3190, z: 3458, level: 0 }, skills: { Woodcutting: 15 }, inventory: [{ id: 1351, count: 1 }] },
     measure_mine: { position: { x: 3285, z: 3365, level: 0 }, inventory: [{ id: 1265, count: 1 }] },
+    // Iron at the SE Varrock mine: (3286,3368) touches the iron rocks at (3285,3368), (3285,3369), (3286,3369): Mining 15 with a bronze pickaxe (1265), Mining 41 with rune (1275).
+    measure_iron_bronze: { position: { x: 3286, z: 3368, level: 0 }, skills: { Mining: 15 }, inventory: [{ id: 1265, count: 1 }] },
+    measure_iron_rune: { position: { x: 3286, z: 3368, level: 0 }, skills: { Mining: 41 }, inventory: [{ id: 1275, count: 1 }] },
     measure_shrimp: { position: { x: 3087, z: 3230, level: 0 }, inventory: [{ id: 303, count: 1 }] },
     // Wine batch test (skill_cooking/.../wine/wine.rs2): Cooking 35, one grapes + jug of water to start the
     // 20-tick fermenting timer, and 300 unfermented wines (1995) in the bank that ferment when it fires.
