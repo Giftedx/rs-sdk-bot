@@ -1,0 +1,39 @@
+RS-sdk is a 2026 project by Max Bittker that turns LostCity into a testbed for new AI experiments. LostCity is an open source implementation of the RuneScape. This project taught him about how to design libraries for coding agents, how to build and think about evals, and the world of LLM post-training. There were also lessons in game design, simulated economics, and has even been a testbed for exploring the future of multi-agent systems, when agents are tasked with trading and trusting one another in a shared world. 
+
+Max Bittker is a game designer and a founding member of Websim — he's built games such as Sandspiel and Orb.farm, and teaches a course on building and designing creative tools at NYU ITP. Max researches multi-agent systems and is the creator of rs-sdk and runebench.
+
+Max is a 2016 Recurse Center alum.
+----
+Read more:
+- https://github.com/MaxBittker/rs-sdk/
+- https://maxbittker.github.io/runebench/
+
+Join the Discord Server:
+- https://discord.com/invite/3DcuU5cMJN
+----
+Localhost is a series of technical talks in NYC given by members of the Recurse Center community. For every event, we set aside seats for the public.
+
+The Recurse Center is the retreat for curious programmers. Spend 6 or 12 weeks in Brooklyn or online working alongside a cohort of curious and kind people. Work at the edge of your abilities on the projects that excite you.
+
+The (soft) deadline to apply to the upcoming Winter 1 Batch (beginning on Nov 2) is through Sunday October 18. New batches begin every 6 weeks.
+
+Apply here: https://www.recurse.com/apply
+Learn more: https://www.recurse.com/
+---
+0:00 A RuneScape server controlled by AI agents and bots
+1:25 The world of RuneScape
+5:30 AutoHotkey, botting, and automation
+8:14 Why AI is good at coding
+12:03 RS-SDK: Building agent harnesses
+16:32 Agent "farming" practices
+19:13 API Design & Architecture 
+22:08 AI Benchmarking
+28:21 RuneBench: 10 months of progress since Opus 4.5
+31:29 Accidentally multi-agent present?
+33:38 Breaking containment
+35:34 AI macro economics -- what's valuable?
+38:36 Agent scammers
+42:15 Emergent Collusion & Market Betrayal Experiments 
+45:25 How to try it out
+---
+Thumbnail designed by Eva Khoury.

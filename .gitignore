@@ -1,0 +1,8 @@
+# Third-party clones. Re-create with scripts/clone-vendor.sh
+/vendor/
+# YouTube auto-captions: private study copy, do not publish
+/research/video/transcript.md
+node_modules/
+.env
+bot.env
+.claude/settings.local.json
