@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { connectInProcess, type Session } from './inprocess';
+import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 
@@ -45,9 +46,12 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
     return { closed, timedOut };
 }
 
-// Prints exactly one RESULT line, closes every session (5 s limit each), and exits with 0 on ok.
+// Prints exactly one RESULT line, logs every account out in game (so playtime stops at once), closes every
+// session (5 s limit each), and exits with 0 on ok.
 export async function finish(sessions: Session[], ok: boolean, detail: string): Promise<never> {
     console.log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
+    const outs = await Promise.all(sessions.map(s => logout(s, 15_000).catch(e => `error ${String(e)}`)));
+    console.log(`LOGOUT ${outs.join(' ')}`);
     const c = await closeWithin(sessions, 5000);
     if (c.timedOut > 0) console.log(`WARN ${c.timedOut} session close(s) timed out`);
     process.exit(ok ? 0 : 1);
