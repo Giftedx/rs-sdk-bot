@@ -40,7 +40,7 @@ Talisman sources (game scripts):
 - So the order is: free altars first (3,749 ticks to 99). Add nature and law only when a talisman is in hand.
 
 Helper rotation estimate (not measured):
-- Air ruins exit: 0_46_51_39_24 = (2983, 3288). Falador east bank is about (3012, 3355). Distance about 67 tiles.
+- Air ruins exit: 0_46_51_39_24 = (2983, 3288). Nearest bankers: Falador east (3011-3015, 3353), knowledge/npcs.json banker1/banker2. Distance 65 tiles.
 - Walking round trip about 134 ticks, plus bank and ruins about 15: about 150 ticks per helper per pack.
 - To keep one crafter at 19 ticks per pack: about 150 / 19 = 8 helpers. The design caps online accounts at 30.
 - Running halves the walk, but run energy runs out. Measure a real helper trip before sizing the team.
