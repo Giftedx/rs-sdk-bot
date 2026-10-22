@@ -9,6 +9,7 @@ export interface AuthorTask {
     goal: string; // what the script must achieve, in game terms
     preset: string; // practice preset the proof starts from (packages/practice/src/presets.ts)
     spot?: string; // where, with the source of that fact
+    timeoutMs?: number; // per proof run; long tasks (a whole ladder) need more than the 300 s default
 }
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');

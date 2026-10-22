@@ -43,6 +43,13 @@ const MORE: Record<string, AuthorTask> = {
         preset: "boat_ardougne",
         spot: "Route from game scripts: (1) walk to the Port Sarim seamen, seaman_lorris (3028,3221) or seaman_thresnor (3026,3217); talk, pay 30 coins (vendor/lostcity-content/scripts/areas/area_port_sarim/scripts/sailors.rs2); the ship lands at Musa Point on Karamja, on the ship deck (level 1): cross the gangplank to level 0. (2) Walk to the Brimhaven customs officer (2772,3225-3231); talk, choose to journey, pay 30 coins (areas/area_karamja/scripts/customs_officer.rs2). (3) The ship lands at Ardougne (2683,3268, level 1); cross the gangplank, walk to the market. The bot has 10 HP and no food; the land route kills it (measured), so do not walk overland. Use bot.talkTo and sdk.getDialog / clickDialogByText (vendor/rs-sdk/sdk/API.md, vendor/rs-sdk/learnings/dialogs.md). 60 coins in the pack.",
     },
+    thieving60: {
+        id: "thieving60",
+        timeoutMs: 1_200_000,
+        goal: "From a fresh account (Thieving 1, 10 Hitpoints, no items, in Lumbridge), reach Thieving level 60 as fast as possible in game ticks, without dying. Steps: (1) pickpocket men in Lumbridge until the pack has at least 60 coins; (2) travel to the Ardougne market by boat (copy scripts/generated/boatardy.ts, proven: 380 ticks); (3) in Ardougne pickpocket the best target for the current level: men below 40, guards from 40, knights from 55 (copy the loops of scripts/generated/thieve300.ts, thieveguards.ts, thieveknights.ts); (4) eat bread when Hitpoints is 5 or less: buy bread from the Baker (baker_merchant at 2654,3311, shop 'bakery': bread 12 coins, 10 in stock) with the coins you steal; keep 3-5 bread. Print a line \"MILESTONE <name> <tick>\" at: coins60, ardougne, level40, level55, level60. Print \"RATE thieving <xpGained> <ticks>\" before finish. Pass when Thieving is 60 or more and the bot never died (a death respawns it in Lumbridge: a jump of more than 20 tiles in one tick that is not a boat ride; the boat rides land on level 1 near (2956,3143) and (2683,3268)). Hard cap: 2500 game ticks.",
+        preset: "floors_lumbridge",
+        spot: "Lumbridge men: knowledge/npcs.json 'man' spawns near (3222,3218). Ardougne: ardougnian_male1 (2614,3318), (2621,3293); ardougne_guard (2651-2665, 3300-3318); knight_of_ardougne (2652,3318), (2653,3300), (2669,3298), (2671,3313). Pickpocket levels: man 1, guard 40, knight 55 (vendor/lostcity-content/scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow). Shops: vendor/rs-sdk/learnings/shops.md.",
+    },
     rcair: {
         id: "rcair",
         goal: "Craft air runes from all rune essence in the pack at the air altar. Pass when the pack holds air runes, no rune essence is left, and Runecraft XP rose. Print \"RATE runecraft <xpGained> <ticks>\" before finish.",
@@ -56,7 +63,7 @@ if (!task) { console.log(`tasks: ${Object.keys(TASKS).join(', ')}`); process.exi
 const r = await authorLoop(task, { maxFixes: 2, proveRuns: 3 }, {
     runModel: async p => { const m = await runClaude(p); console.log(`MODEL ok=${m.ok} cost=$${m.costUsd.toFixed(3)} ${m.text.slice(0, 200).replace(/\n/g, ' ')}`); return m; },
     prove: async (file, t, runs) => {
-        const p = await proveInProcess({ bot: `g${t.id.slice(0, 4)}`, script: file, runs, preset: t.preset, pass: okPass });
+        const p = await proveInProcess({ bot: `g${t.id.slice(0, 4)}`, script: file, runs, preset: t.preset, pass: okPass, timeoutMs: t.timeoutMs });
         const tail = p.results.map((x, i) => `run ${i + 1} ${x.ok ? 'PASS' : 'FAIL'}: ${x.tail.replace(/\n/g, ' | ')}`).join('\n');
         console.log(`PROOF ${p.passes}/${p.runs}\n${tail}`);
         return { passes: p.passes, runs: p.runs, tail };
