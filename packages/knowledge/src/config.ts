@@ -6,6 +6,7 @@ import { cleanLines } from './text';
 export interface ConfigBlock {
     name: string;
     props: Record<string, string[]>;
+    propLines: Record<string, number[]>; // 1-based line of each value in props
     file: string;
     line: number; // 1-based line of the [name] header
 }
@@ -16,7 +17,7 @@ export function parseConfigs(text: string, file: string): ConfigBlock[] {
     cleanLines(text).forEach((line, i) => {
         if (!line) return;
         if (line.startsWith('[') && line.endsWith(']')) {
-            cur = { name: line.slice(1, -1), props: {}, file, line: i + 1 };
+            cur = { name: line.slice(1, -1), props: {}, propLines: {}, file, line: i + 1 };
             out.push(cur);
             return;
         }
@@ -24,6 +25,7 @@ export function parseConfigs(text: string, file: string): ConfigBlock[] {
         if (cur && eq > 0) {
             const key = line.slice(0, eq);
             (cur.props[key] ??= []).push(line.slice(eq + 1));
+            (cur.propLines[key] ??= []).push(i + 1);
         }
     });
     return out;
