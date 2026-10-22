@@ -1,0 +1,934 @@
+[
+ {
+  "varp": "runemysteries",
+  "folder": "quest_runemysteries",
+  "complete": 6,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:98"
+ },
+ {
+  "varp": "doricquest",
+  "folder": "quest_doric",
+  "complete": 100,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "mining",
+    "xp": 1300,
+    "src": "scripts/quests/quest_doric/scripts/quest_doric.rs2:99"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:101"
+ },
+ {
+  "varp": "cookquest",
+  "folder": "quest_cook",
+  "complete": 2,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "cooking",
+    "xp": 300,
+    "src": "scripts/quests/quest_cook/scripts/quest_cook.rs2:89"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:104"
+ },
+ {
+  "varp": "rjquest",
+  "folder": "quest_romeojuliet",
+  "complete": 100,
+  "questPoints": 5,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:107"
+ },
+ {
+  "varp": "hetty",
+  "folder": "quest_hetty",
+  "complete": 3,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "magic",
+    "xp": 325,
+    "src": "scripts/quests/quest_hetty/scripts/quest_hetty.rs2:11"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:110"
+ },
+ {
+  "varp": "chompybird",
+  "folder": "quest_chompybird",
+  "complete": 65,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "fletching",
+    "xp": 262,
+    "src": "scripts/quests/quest_chompybird/scripts/quest_chompybird.rs2:46"
+   },
+   {
+    "skill": "cooking",
+    "xp": 1470,
+    "src": "scripts/quests/quest_chompybird/scripts/quest_chompybird.rs2:47"
+   },
+   {
+    "skill": "ranged",
+    "xp": 735,
+    "src": "scripts/quests/quest_chompybird/scripts/quest_chompybird.rs2:48"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:113"
+ },
+ {
+  "varp": "prieststart",
+  "folder": "quest_priest",
+  "complete": 5,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "prayer",
+    "xp": 1125,
+    "src": "scripts/quests/quest_priest/scripts/quest_priest.rs2:98"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:116"
+ },
+ {
+  "varp": "squire",
+  "folder": "quest_squire",
+  "complete": 7,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "smithing",
+    "xp": 12725,
+    "src": "scripts/quests/quest_squire/scripts/quest_squire.rs2:223"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:119"
+ },
+ {
+  "varp": "imp",
+  "folder": "quest_imp",
+  "complete": 2,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "magic",
+    "xp": 875,
+    "src": "scripts/quests/quest_imp/scripts/quest_imp.rs2:4"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:122"
+ },
+ {
+  "varp": "druidquest",
+  "folder": "quest_druid",
+  "complete": 4,
+  "questPoints": 4,
+  "xp": [
+   {
+    "skill": "herblore",
+    "xp": 250,
+    "src": "scripts/quests/quest_druid/scripts/quest_druid.rs2:3"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:125"
+ },
+ {
+  "varp": "goblinquest",
+  "folder": null,
+  "complete": 6,
+  "questPoints": 5,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:128"
+ },
+ {
+  "varp": "sheep",
+  "folder": "quest_sheep",
+  "complete": 22,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 150,
+    "src": "scripts/quests/quest_sheep/scripts/quest_sheep.rs2:5"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:131"
+ },
+ {
+  "varp": "fluffs",
+  "folder": "quest_fluffs",
+  "complete": 6,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:134"
+ },
+ {
+  "varp": "demonstart",
+  "folder": "quest_demon",
+  "complete": 30,
+  "questPoints": 3,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:137"
+ },
+ {
+  "varp": "princequest",
+  "folder": "quest_prince",
+  "complete": 110,
+  "questPoints": 3,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:140"
+ },
+ {
+  "varp": "spy",
+  "folder": "quest_blackknight",
+  "complete": 4,
+  "questPoints": 3,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:143"
+ },
+ {
+  "varp": "haunted",
+  "folder": "quest_haunted",
+  "complete": 3,
+  "questPoints": 4,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:146"
+ },
+ {
+  "varp": "hunt",
+  "folder": "quest_hunt",
+  "complete": 4,
+  "questPoints": 2,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:149"
+ },
+ {
+  "varp": "drunkmonkquest",
+  "folder": "quest_drunkmonk",
+  "complete": 80,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "woodcutting",
+    "xp": 2000,
+    "src": "scripts/quests/quest_drunkmonk/scripts/quest_drunkmonk.rs2:89"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:152"
+ },
+ {
+  "varp": "vampire",
+  "folder": "quest_vampire",
+  "complete": 3,
+  "questPoints": 3,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:155"
+ },
+ {
+  "varp": "totemquest",
+  "folder": "quest_totem",
+  "complete": 5,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "thieving",
+    "xp": 1775,
+    "src": "scripts/quests/quest_totem/scripts/quest_totem.rs2:163"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:158"
+ },
+ {
+  "varp": "fishingcompo",
+  "folder": "quest_fishingcompo",
+  "complete": 5,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "fishing",
+    "xp": 2437,
+    "src": "scripts/quests/quest_fishingcompo/scripts/quest_fishingcompo.rs2:112"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:161"
+ },
+ {
+  "varp": "scorpcatcher",
+  "folder": "quest_scorpcatcher",
+  "complete": 6,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "strength",
+    "xp": 6625,
+    "src": "scripts/quests/quest_scorpcatcher/scripts/quest_scorpcatcher.rs2:60"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:164"
+ },
+ {
+  "varp": "zanaris",
+  "folder": "quest_zanaris",
+  "complete": 6,
+  "questPoints": 3,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:167"
+ },
+ {
+  "varp": "blackarmgang",
+  "alternatives": [
+   "phoenixgang"
+  ],
+  "folder": "quest_blackarmgang",
+  "complete": 4,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:170"
+ },
+ {
+  "varp": "elenaquest",
+  "folder": null,
+  "complete": 29,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:173"
+ },
+ {
+  "varp": "dragonquest",
+  "folder": "quest_dragon",
+  "complete": 10,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "strength",
+    "xp": 18650,
+    "src": "scripts/quests/quest_dragon/scripts/quest_dragon.rs2:33"
+   },
+   {
+    "skill": "defence",
+    "xp": 18650,
+    "src": "scripts/quests/quest_dragon/scripts/quest_dragon.rs2:34"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:176"
+ },
+ {
+  "varp": "seaslugquest",
+  "folder": "quest_seaslug",
+  "complete": 12,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:179"
+ },
+ {
+  "varp": "arthur",
+  "folder": "quest_arthur",
+  "complete": 7,
+  "questPoints": 6,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:182"
+ },
+ {
+  "varp": "treequest",
+  "folder": "quest_tree",
+  "complete": 9,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 11450,
+    "src": "scripts/quests/quest_tree/scripts/quest_tree.rs2:98"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:185"
+ },
+ {
+  "varp": "waterfall_quest",
+  "folder": null,
+  "complete": 10,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:188"
+ },
+ {
+  "varp": "grail",
+  "folder": "quest_grail",
+  "complete": 10,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "prayer",
+    "xp": 11000,
+    "src": "scripts/quests/quest_grail/scripts/quest_grail.rs2:116"
+   },
+   {
+    "skill": "defence",
+    "xp": 15300,
+    "src": "scripts/quests/quest_grail/scripts/quest_grail.rs2:117"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:191"
+ },
+ {
+  "varp": "ballquest",
+  "folder": "quest_ball",
+  "complete": 7,
+  "questPoints": 4,
+  "xp": [
+   {
+    "skill": "hitpoints",
+    "xp": 6325,
+    "src": "scripts/quests/quest_ball/scripts/quest_ball.rs2:202"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:194"
+ },
+ {
+  "varp": "murderquest",
+  "folder": "quest_murder",
+  "complete": 2,
+  "questPoints": 3,
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 1406,
+    "src": "scripts/quests/quest_murder/scripts/quest_murder.rs2:428"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:197"
+ },
+ {
+  "varp": "hazeelcultquest",
+  "folder": "quest_hazeelcult",
+  "complete": 9,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "thieving",
+    "xp": 1500,
+    "src": "scripts/quests/quest_hazeelcult/scripts/quest_hazeelcult.rs2:172"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:200"
+ },
+ {
+  "varp": "heroquest",
+  "folder": "quest_hero",
+  "complete": 15,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 3075,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:29"
+   },
+   {
+    "skill": "defence",
+    "xp": 3075,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:30"
+   },
+   {
+    "skill": "strength",
+    "xp": 3075,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:31"
+   },
+   {
+    "skill": "hitpoints",
+    "xp": 3075,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:32"
+   },
+   {
+    "skill": "ranged",
+    "xp": 2075,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:33"
+   },
+   {
+    "skill": "fishing",
+    "xp": 2725,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:34"
+   },
+   {
+    "skill": "cooking",
+    "xp": 2825,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:35"
+   },
+   {
+    "skill": "woodcutting",
+    "xp": 1575,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:36"
+   },
+   {
+    "skill": "firemaking",
+    "xp": 1575,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:37"
+   },
+   {
+    "skill": "smithing",
+    "xp": 2275,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:38"
+   },
+   {
+    "skill": "mining",
+    "xp": 2575,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:39"
+   },
+   {
+    "skill": "herblore",
+    "xp": 1325,
+    "src": "scripts/quests/quest_hero/scripts/quest_hero.rs2:40"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:203"
+ },
+ {
+  "varp": "itgronigen",
+  "folder": "quest_itgronigen",
+  "complete": 7,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "strength",
+    "xp": 875,
+    "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:225"
+   },
+   {
+    "skill": "defence",
+    "xp": 875,
+    "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:228"
+   },
+   {
+    "skill": "hitpoints",
+    "xp": 875,
+    "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:241"
+   },
+   {
+    "skill": "attack",
+    "xp": 875,
+    "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:244"
+   },
+   {
+    "skill": "crafting",
+    "xp": 2250,
+    "src": "scripts/quests/quest_itgronigen/scripts/quest_itgronigen.rs2:261"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:206"
+ },
+ {
+  "varp": "arenaquest",
+  "folder": "quest_arena",
+  "complete": 14,
+  "questPoints": 2,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:209"
+ },
+ {
+  "varp": "junglepotion",
+  "folder": "quest_junglepotion",
+  "complete": 12,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "herblore",
+    "xp": 775,
+    "src": "scripts/quests/quest_junglepotion/scripts/quest_junglepotion.rs2:74"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:212"
+ },
+ {
+  "varp": "ikov",
+  "folder": "quest_ikov",
+  "complete": 80,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "ranged",
+    "xp": 10500,
+    "src": "scripts/quests/quest_ikov/scripts/quest_ikov.rs2:62"
+   },
+   {
+    "skill": "fletching",
+    "xp": 8000,
+    "src": "scripts/quests/quest_ikov/scripts/quest_ikov.rs2:63"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:215"
+ },
+ {
+  "varp": "biohazard",
+  "folder": "quest_biohazard",
+  "complete": 16,
+  "questPoints": 3,
+  "xp": [
+   {
+    "skill": "thieving",
+    "xp": 1250,
+    "src": "scripts/quests/quest_biohazard/scripts/quest_biohazard.rs2:159"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:218"
+ },
+ {
+  "varp": "sheepherderquest",
+  "folder": "quest_sheepherder",
+  "complete": 3,
+  "questPoints": 4,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:221"
+ },
+ {
+  "varp": "mcannon",
+  "folder": "quest_mcannon",
+  "complete": 11,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 750,
+    "src": "scripts/quests/quest_mcannon/scripts/quest_mcannon.rs2:25"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:224"
+ },
+ {
+  "varp": "grandtree",
+  "folder": "quest_grandtree",
+  "complete": 160,
+  "questPoints": 5,
+  "xp": [
+   {
+    "skill": "agility",
+    "xp": 7900,
+    "src": "scripts/quests/quest_grandtree/scripts/quest_grandtree.rs2:199"
+   },
+   {
+    "skill": "attack",
+    "xp": 18400,
+    "src": "scripts/quests/quest_grandtree/scripts/quest_grandtree.rs2:200"
+   },
+   {
+    "skill": "magic",
+    "xp": 2150,
+    "src": "scripts/quests/quest_grandtree/scripts/quest_grandtree.rs2:201"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:230"
+ },
+ {
+  "varp": "upass",
+  "folder": "quest_upass",
+  "complete": 10,
+  "questPoints": 5,
+  "xp": [
+   {
+    "skill": "agility",
+    "xp": 3000,
+    "src": "scripts/quests/quest_upass/scripts/quest_upass.rs2:800"
+   },
+   {
+    "skill": "attack",
+    "xp": 3000,
+    "src": "scripts/quests/quest_upass/scripts/quest_upass.rs2:801"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:233"
+ },
+ {
+  "varp": "zombiequeen",
+  "folder": "quest_zombiequeen",
+  "complete": 15,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 3875,
+    "src": "scripts/quests/quest_zombiequeen/scripts/quest_zombiequeen.rs2:1632"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:236"
+ },
+ {
+  "varp": "crestquest",
+  "folder": "quest_crest",
+  "complete": 11,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:239"
+ },
+ {
+  "varp": "itexamlevel",
+  "folder": "quest_itexam",
+  "complete": 9,
+  "questPoints": 2,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:242"
+ },
+ {
+  "varp": "desertrescue",
+  "folder": "quest_desertrescue",
+  "complete": 30,
+  "questPoints": 2,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:245"
+ },
+ {
+  "varp": "itwatchtower",
+  "folder": "quest_itwatchtower",
+  "complete": 13,
+  "questPoints": 4,
+  "xp": [
+   {
+    "skill": "magic",
+    "xp": 15300,
+    "src": "scripts/quests/quest_itwatchtower/scripts/quest_itwatchtower.rs2:533"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:248"
+ },
+ {
+  "varp": "misc_quest",
+  "folder": "quest_misc",
+  "complete": 100,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:251"
+ },
+ {
+  "varp": "legendsquest",
+  "folder": "quest_legends",
+  "complete": 75,
+  "questPoints": 4,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:254"
+ },
+ {
+  "varp": "priestperil",
+  "folder": "quest_priestperil",
+  "complete": 60,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:260"
+ },
+ {
+  "varp": "druidspirit",
+  "folder": "quest_druidspirit",
+  "complete": 110,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 3000,
+    "src": "scripts/quests/quest_druidspirit/scripts/quest_druidspirit.rs2:423"
+   },
+   {
+    "skill": "hitpoints",
+    "xp": 2000,
+    "src": "scripts/quests/quest_druidspirit/scripts/quest_druidspirit.rs2:424"
+   },
+   {
+    "skill": "defence",
+    "xp": 2000,
+    "src": "scripts/quests/quest_druidspirit/scripts/quest_druidspirit.rs2:425"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:263"
+ },
+ {
+  "varp": "death_equiproom",
+  "folder": "quest_death",
+  "complete": 80,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 3000,
+    "src": "scripts/quests/quest_death/scripts/quest_death.rs2:221"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:266"
+ },
+ {
+  "varp": "troll_quest",
+  "folder": "quest_troll",
+  "complete": 50,
+  "questPoints": 1,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:269"
+ },
+ {
+  "varp": "tbwt_main",
+  "folder": "quest_tbwt",
+  "complete": 6,
+  "questPoints": 2,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:275"
+ },
+ {
+  "varp": "morttonquest",
+  "folder": "quest_mortton",
+  "complete": 85,
+  "questPoints": 3,
+  "xp": [
+   {
+    "skill": "crafting",
+    "xp": 2000,
+    "src": "scripts/quests/quest_mortton/scripts/quest_mortton.rs2:65"
+   },
+   {
+    "skill": "herblore",
+    "xp": 2000,
+    "src": "scripts/quests/quest_mortton/scripts/quest_mortton.rs2:66"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:278"
+ },
+ {
+  "varp": "regicide_quest",
+  "folder": "quest_regicide",
+  "complete": 15,
+  "questPoints": 3,
+  "xp": [
+   {
+    "skill": "agility",
+    "xp": 13750,
+    "src": "scripts/quests/quest_regicide/scripts/quest_regicide.rs2:852"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:281"
+ },
+ {
+  "varp": "viking",
+  "folder": "quest_viking",
+  "complete": 10,
+  "questPoints": 3,
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:135"
+   },
+   {
+    "skill": "defence",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:136"
+   },
+   {
+    "skill": "strength",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:137"
+   },
+   {
+    "skill": "hitpoints",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:138"
+   },
+   {
+    "skill": "woodcutting",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:139"
+   },
+   {
+    "skill": "fletching",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:140"
+   },
+   {
+    "skill": "fishing",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:141"
+   },
+   {
+    "skill": "crafting",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:142"
+   },
+   {
+    "skill": "agility",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:143"
+   },
+   {
+    "skill": "thieving",
+    "xp": 2812.4,
+    "src": "scripts/quests/quest_viking/scripts/quest_viking.rs2:144"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:284"
+ },
+ {
+  "varp": "horrorquest",
+  "folder": null,
+  "complete": 10,
+  "questPoints": 2,
+  "xp": [],
+  "src": "scripts/general/scripts/quests.rs2:287"
+ },
+ {
+  "varp": "eadgar_quest",
+  "folder": "quest_eadgar",
+  "complete": 110,
+  "questPoints": 1,
+  "xp": [
+   {
+    "skill": "herblore",
+    "xp": 11000,
+    "src": "scripts/quests/quest_eadgar/scripts/quest_eadgar.rs2:595"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:290"
+ },
+ {
+  "varp": "routequest",
+  "folder": "quest_routequest",
+  "complete": 105,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 600,
+    "src": "scripts/quests/quest_routequest/scripts/quest_routequest.rs2:26"
+   },
+   {
+    "skill": "defence",
+    "xp": 600,
+    "src": "scripts/quests/quest_routequest/scripts/quest_routequest.rs2:27"
+   },
+   {
+    "skill": "strength",
+    "xp": 600,
+    "src": "scripts/quests/quest_routequest/scripts/quest_routequest.rs2:28"
+   },
+   {
+    "skill": "hitpoints",
+    "xp": 600,
+    "src": "scripts/quests/quest_routequest/scripts/quest_routequest.rs2:29"
+   },
+   {
+    "skill": "crafting",
+    "xp": 600,
+    "src": "scripts/quests/quest_routequest/scripts/quest_routequest.rs2:30"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:296"
+ },
+ {
+  "varp": "hauntedmine",
+  "folder": "quest_hauntedmine",
+  "complete": 11,
+  "questPoints": 2,
+  "xp": [
+   {
+    "skill": "strength",
+    "xp": 22000,
+    "src": "scripts/quests/quest_hauntedmine/scripts/hauntedmine_crystals.rs2:54"
+   }
+  ],
+  "src": "scripts/general/scripts/quests.rs2:299"
+ }
+]
