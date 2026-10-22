@@ -19,6 +19,8 @@ const GOAL_TOL = 1;
 
 export interface World {
     route(from: Tile, to: Tile, acct: Account): { ok: true; legs: Leg[]; cost: number } | { ok: false; reason: 'no_route' };
+    // Door tiles this account cannot pass (doorBlocks), for the walker to block in the SDK pathfinder too.
+    blockedDoors(acct: Account): Tile[];
 }
 
 const TRANSPORT_COST = 3; // ticks to climb or descend, roughly
@@ -112,6 +114,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; pa
     const portals = transports.map(t => t.from);
 
     return {
+        blockedDoors: acct => doors.filter(d => doorBlocks(d, acct)).map(d => ({ x: d.x, z: d.z, level: d.level })),
         route(from, to, acct) {
             const blocked: Tile[] = doors.filter(d => doorBlocks(d, acct)).map(d => ({ x: d.x, z: d.z, level: d.level }));
             const cache = new Map<string, number | null>();
@@ -124,7 +127,10 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; pa
             // tolerance; a path can never be shorter). The real pathfinder runs only when that entry reaches
             // the front of the queue. Most far-away stairs are therefore never measured.
             const goal = key(to);
-            const h = (t: Tile) => (t.level === to.level ? Math.max(0, cheb(t, to) - GOAL_TOL) : 0);
+            // Underground areas share the level number but sit at z + 6400, and ladders link the two planes in a few
+            // tiles. A straight-line bound across planes would overestimate by ~6400, so it is 0 there.
+            const samePlane = (t: Tile) => t.level === to.level && Math.abs(t.z - to.z) <= 3200;
+            const h = (t: Tile) => (samePlane(t) ? Math.max(0, cheb(t, to) - PORTAL_TOL) : 0);
             type Entry = { k: string; tile: Tile; g: number; f: number; prev: string | null; leg: Leg | null; from?: Tile; tol?: number };
             const heap = new MinHeap<Entry>(e => e.f);
             const done = new Set<string>();

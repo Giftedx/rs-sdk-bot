@@ -84,3 +84,17 @@ test('a menu op1 is dropped when the same stair has direct op2/op3 links', () =>
     if (r.ok) expect(r.legs.filter(l => l.kind === 'transport').map(l => (l as any).option)).toEqual(['op1', 'op2']);
     // the first op1 is stairA (no op2 sibling), the second climb must be op2, never mid's op1 menu
 });
+
+test('dungeon tiles (z + 6400) do not mislead the search into a far exit', () => {
+    // Optimal: walk 60 in the dungeon to exit A, land 5 tiles from the goal. Exit B is a shorter dungeon walk
+    // but lands 250 tiles away (inside the 300-tile walk limit). With a raw Chebyshev bound, B's dungeon tile looks closer to the surface goal.
+    const exitA = { locName: 'ladderA', option: 'op1', from: { x: 100, z: 6560, level: 0 }, to: { x: 100, z: 105, level: 0 }, exact: true, src: 'a', toSrc: 'a', handler: 'a' };
+    const exitB = { locName: 'ladderB', option: 'op1', from: { x: 100, z: 6450, level: 0 }, to: { x: 350, z: 100, level: 0 }, exact: true, src: 'b', toSrc: 'b', handler: 'b' };
+    const w = createWorld({ transports: [exitA, exitB], doors: [], pathLength: (a, b) => (Math.abs(a.z - b.z) > 3200 ? null : flat(a, b)) });
+    const r = w.route({ x: 100, z: 6500, level: 0 }, { x: 100, z: 100, level: 0 }, acct());
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+        expect(r.legs.find(l => l.kind === 'transport')).toMatchObject({ loc: 'ladderA' });
+        expect(r.cost).toBeLessThan(100);
+    }
+});

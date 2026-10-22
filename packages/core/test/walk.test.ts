@@ -89,3 +89,18 @@ test('aborting the walk (reflex) cancels the in-flight bot.walkTo through the SD
     expect(r).toMatchObject({ ok: false, reason: 'aborted' });
     expect(cancelled).toBe(true);
 });
+
+test('goTo blocks, in the SDK pathfinder, the doors this account cannot pass near the route', async () => {
+    const { goTo } = await import('../src/walk');
+    const g = fakeGame({ x: 0, z: 0, level: 0 });
+    const blocked: string[] = [];
+    (g.sdk as any).blockDoorTemporarily = (level: number, x: number, z: number) => { blocked.push(`${x},${z},${level}`); return true; };
+    const world: any = {
+        route: () => ({ ok: true, cost: 10, legs: [{ kind: 'walk', to: { x: 10, z: 10, level: 0 } }] }),
+        blockedDoors: () => [{ x: 5, z: 5, level: 0 }, { x: 900, z: 900, level: 0 }],
+    };
+    const r = await goTo(g as any, world, { x: 10, z: 10, level: 0 }, { skills: {}, varps: {}, items: [] });
+    g.stop();
+    expect(r.ok).toBe(true);
+    expect(blocked).toEqual(['5,5,0']); // the far door is outside the route's area and is skipped
+});

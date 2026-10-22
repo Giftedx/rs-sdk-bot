@@ -4,6 +4,7 @@ import type { TickSource } from './ticks';
 import type { Account, Leg, Tile, World } from './world';
 
 export interface Walker extends TickSource {
+    sdk: TickSource['sdk'] & { blockDoorTemporarily?(level: number, x: number, z: number, ttlMs?: number): boolean };
     bot: {
         walkTo(x: number, z: number, tolerance?: number): Promise<unknown>;
         interactLoc(target: unknown, option?: number | string | RegExp): Promise<unknown>;
@@ -104,7 +105,17 @@ function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts
 export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opts: WalkOptions = {}): Promise<Outcome> {
     const p = s.sdk.getState()?.player;
     if (!p) return { ok: false, reason: 'precondition', detail: 'no player state', ticks: 0 };
-    const r = world.route({ x: p.worldX, z: p.worldZ, level: p.level }, to, acct);
+    const from = { x: p.worldX, z: p.worldZ, level: p.level };
+    const r = world.route(from, to, acct);
     if (!r.ok) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    // The router priced a detour around doors this account cannot pass, but bot.walkTo uses the SDK pathfinder,
+    // which treats every door as open. Block those doors there too, for the area this route covers.
+    const pts = [from, to, ...r.legs.flatMap(l => (l.kind === 'walk' ? [l.to] : [l.at, l.to]))];
+    const MARGIN = 32;
+    const minX = Math.min(...pts.map(t => t.x)) - MARGIN, maxX = Math.max(...pts.map(t => t.x)) + MARGIN;
+    const minZ = Math.min(...pts.map(t => t.z)) - MARGIN, maxZ = Math.max(...pts.map(t => t.z)) + MARGIN;
+    for (const d of world.blockedDoors(acct)) {
+        if (d.x >= minX && d.x <= maxX && d.z >= minZ && d.z <= maxZ) s.sdk.blockDoorTemporarily?.(d.level, d.x, d.z, 600_000);
+    }
     return walkRoute(s, r.legs, opts);
 }
