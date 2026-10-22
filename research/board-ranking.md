@@ -32,3 +32,8 @@ Margin = leader ticks - our ticks. Positive means winnable on time alone. Supply
 - Only the Crafting numbers include measured cycle times; every other estimate is the research model.
 - "need" counts top-tier inputs only (lower tiers on the way up are extra).
 - Sellers 0 with many wanted means other operators are already buying that input.
+
+## Measured since (2026-10-22)
+- Runecraft: a model-written script (scripts/generated/rcair.ts) crafted 27 essence into 27 air runes for 3,375 XP in
+  5-7 ticks at the altar (3/3 runs). With the measured 12-tick helper trade (research/crafting-board.md), one cycle is
+  about 17-19 ticks per pack. The research model assumed 8-14 ticks per trip at the law altar; the law altar is members.
