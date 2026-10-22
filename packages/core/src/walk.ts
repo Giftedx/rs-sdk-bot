@@ -1,5 +1,6 @@
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { atTile, checked, levelIs, type Outcome } from './act';
+import { waitTicks } from './ticks';
 import type { TickSource } from './ticks';
 import type { Account, Leg, Tile, World } from './world';
 
@@ -27,6 +28,9 @@ export async function walkRoute(s: Walker, legs: Leg[], opts: WalkOptions = {}):
             last = leg.kind === 'walk' ? await walkLeg(s, leg.to, opts) : await climbLeg(s, leg, opts);
             total += last.ticks;
             if (last.ok || last.reason === 'aborted') break;
+            // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
+            // retries all refused within 11 ticks). Wait a little longer before each retry.
+            if (last.reason === 'rejected') await waitTicks(s, 2 * (attempt + 1));
             // rs-sdk's pathfinder treats every door as open, so a walk can stop behind a shut one and the
             // client then refuses the climb with "Can't reach". Open the shut door nearest the stair and retry.
             if (leg.kind === 'transport' && last.reason === 'rejected' && /reach/i.test(last.detail)) {

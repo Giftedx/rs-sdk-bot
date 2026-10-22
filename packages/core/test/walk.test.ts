@@ -104,3 +104,17 @@ test('goTo blocks, in the SDK pathfinder, the doors this account cannot pass nea
     expect(r.ok).toBe(true);
     expect(blocked).toEqual(['5,5,0']); // the far door is outside the route's area and is skipped
 });
+
+test('a walk refused right after a climb (arrival delay) waits before retrying, then succeeds', async () => {
+    const g = fakeGame({ x: 3205, z: 3209, level: 0 });
+    const startTick = g.tick();
+    const origWalk = g.bot.walkTo;
+    // The server refuses movement for the first 6 ticks, signalled as a silent op rejection.
+    g.bot.walkTo = async (x: number, z: number) => {
+        if (g.tick() - startTick < 6) { g.state.opFeedback.opRejectedCount++; return { success: true }; }
+        return origWalk(x, z);
+    };
+    const r = await walkRoute(g as any, [{ kind: 'walk', to: { x: 3222, z: 3218, level: 0 } }], { maxRetriesPerLeg: 3 });
+    g.stop();
+    expect(r.ok).toBe(true);
+});
