@@ -1,0 +1,15 @@
+{
+  "name": "rs-sdk-bot",
+  "private": true,
+  "type": "module",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "bun test ./scripts ./packages",
+    "typecheck": "tsc --noEmit",
+    "check-pin": "bun scripts/check-pin.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.6",
+    "typescript": "5.8.3"
+  }
+}
