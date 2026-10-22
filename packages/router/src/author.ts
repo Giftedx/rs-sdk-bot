@@ -77,7 +77,15 @@ export interface AuthorDeps {
     exists(file: string): boolean;
 }
 
-export interface AuthorResult { ok: boolean; attempts: number; passes: number; runs: number; costUsd: number; file: string; lastTail: string }
+export interface AuthorResult { ok: boolean; infra?: boolean; attempts: number; passes: number; runs: number; costUsd: number; file: string; lastTail: string }
+
+// No run printed START: the bot never got into the game, so the server or harness failed, not the script.
+// Seen live: the practice server shut down mid-job and the loop asked the model to "fix" a working script.
+export function isInfraFailure(p: { passes: number; runs: number; tail: string }): boolean {
+    if (p.passes > 0) return false;
+    const runs = p.tail.split('\n').filter(l => /^run \d+/.test(l));
+    return runs.length > 0 && runs.every(l => /no START line/.test(l));
+}
 
 export async function authorLoop(task: AuthorTask, opts: { maxFixes: number; proveRuns: number }, deps: AuthorDeps): Promise<AuthorResult> {
     const file = `scripts/generated/${task.id}.ts`;
@@ -93,6 +101,7 @@ export async function authorLoop(task: AuthorTask, opts: { maxFixes: number; pro
         }
         last = await deps.prove(file, task, opts.proveRuns);
         if (last.passes === last.runs) return { ok: true, attempts: attempt, passes: last.passes, runs: last.runs, costUsd: cost, file, lastTail: last.tail };
+        if (isInfraFailure(last)) return { ok: false, infra: true, attempts: attempt, passes: 0, runs: last.runs, costUsd: cost, file, lastTail: last.tail };
         failure = `${last.passes}/${last.runs} runs passed. Output of the failing runs:\n${last.tail}`;
     }
     return { ok: false, attempts: opts.maxFixes + 1, passes: last.passes, runs: last.runs, costUsd: cost, file, lastTail: last.tail };

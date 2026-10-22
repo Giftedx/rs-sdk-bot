@@ -56,3 +56,15 @@ test('on Windows the model gets the PowerShell form of the bun and tsc tools too
     expect(a).toContain('PowerShell(bun:*)');
     expect(a).toContain('PowerShell(bunx tsc:*)');
 });
+
+test('a proof where no run printed START is an infrastructure failure: not sent to the model, loop stops', async () => {
+    const prompts: string[] = [];
+    const deps: AuthorDeps = {
+        runModel: async p => { prompts.push(p); return { ok: true, text: '', costUsd: 0 }; },
+        prove: async () => ({ passes: 0, runs: 3, tail: 'run 1 FAIL: preset not loaded: no START line | \nrun 2 FAIL: preset not loaded: no START line | \nrun 3 FAIL: preset not loaded: no START line | ' }),
+        exists: () => true,
+    };
+    const r = await authorLoop(task, { maxFixes: 2, proveRuns: 3 }, deps);
+    expect(r).toMatchObject({ ok: false, infra: true, attempts: 1 });
+    expect(prompts).toHaveLength(1); // the model was never asked to "fix" a server outage
+});
