@@ -27,7 +27,8 @@ test('prove counts passing runs', async () => {
 test('each run uses a fresh account so no old session can take over', async () => {
     const deps = fakeDeps();
     await prove({ bot: 'practice', script: 's.ts', runs: 3, preset: 'wc_lumbridge', pass: () => true }, deps);
-    expect(deps.names).toEqual(['practicer1', 'practicer2', 'practicer3']);
+    expect(deps.names.map(n => n.slice(-1))).toEqual(['1', '2', '3']);
+    expect(deps.names.every(n => /^[a-zA-Z0-9]{1,12}$/.test(n))).toBe(true);
     expect(new Set(deps.names).size).toBe(3);
 });
 
@@ -39,7 +40,8 @@ test('a run whose start does not match the preset fails even if the script passe
 });
 
 test('runBotName stays within the 12-char alphanumeric limit', () => {
-    expect(runBotName('practice1', 10)).toBe('practice1r10');
+    expect(runBotName('practice1', 10)).toMatch(/^[a-zA-Z0-9]{1,12}$/);
+    expect(runBotName('practice1', 10).endsWith('10')).toBe(true);
     expect(runBotName('averylongname', 3)).toMatch(/^[a-z0-9]{1,12}$/);
 });
 
@@ -53,4 +55,47 @@ test('wcPass needs positive Woodcutting XP', () => {
     expect(wcPass('RESULT chops=7 wcXpGained=4375 seconds=63.9')).toBe(true);
     expect(wcPass('RESULT chops=0 wcXpGained=0 seconds=10')).toBe(false);
     expect(wcPass('crashed')).toBe(false);
+});
+
+test('in-process mode: passes on START matching the preset and RESULT ok', async () => {
+    const { proveInProcess, okPass } = await import('../src/prove');
+    const made: string[] = [];
+    const cleaned: string[] = [];
+    const deps = {
+        prepare: async (bot: string) => { made.push(bot); },
+        run: async () => ({ stdout: 'START 3224 3245 0\nRESULT ok chopped 5', exitCode: 0 }),
+        cleanup: async (bot: string) => { cleaned.push(bot); },
+    };
+    const r = await proveInProcess({ bot: 'gath', script: 's.ts', runs: 2, preset: 'wc_lumbridge', companions: [{ suffix: 'b', preset: 'fresh_lumbridge' }], pass: okPass }, deps);
+    expect(r.passes).toBe(2);
+    expect(made.length).toBe(4);
+    expect(made[1]).toBe(made[0] + 'b');
+    expect(made[3]).toBe(made[2] + 'b');
+    expect(new Set(made).size).toBe(4);
+    expect(cleaned).toEqual(made);
+});
+
+test('in-process mode: a missing or wrong START line fails the run', async () => {
+    const { proveInProcess, okPass } = await import('../src/prove');
+    const deps = (out: string) => ({ prepare: async () => {}, run: async () => ({ stdout: out, exitCode: 0 }), cleanup: async () => {} });
+    expect((await proveInProcess({ bot: 'g', script: 's', runs: 1, preset: 'wc_lumbridge', pass: okPass }, deps('RESULT ok'))).passes).toBe(0);
+    expect((await proveInProcess({ bot: 'g', script: 's', runs: 1, preset: 'wc_lumbridge', pass: okPass }, deps('START 1 2 0\nRESULT ok'))).passes).toBe(0);
+    expect((await proveInProcess({ bot: 'g', script: 's', runs: 1, preset: 'wc_lumbridge', pass: okPass }, deps('START 3224 3245 0\nRESULT fail no tree'))).passes).toBe(0);
+});
+
+test('run bot names are new on every invocation, so no earlier save can win over the preset', async () => {
+    const { runBotName } = await import('../src/prove');
+    const a = runBotName('flor', 1);
+    await Bun.sleep(5);
+    const b = runBotName('flor', 1);
+    expect(a).not.toBe(b);
+    expect(a).toMatch(/^[a-zA-Z0-9]{1,12}$/);
+});
+
+test('in-process mode passes extra script arguments after the bot name', async () => {
+    const { proveInProcess } = await import('../src/prove');
+    let seen: string[] = [];
+    const deps = { prepare: async () => {}, run: async (_s: string, _b: string, _t: number, args?: string[]) => { seen = args ?? []; return { stdout: 'START 3224 3245 0\nRESULT ok', exitCode: 0 }; }, cleanup: async () => {} };
+    await proveInProcess({ bot: 'm', script: 's', scriptArgs: ['oaks', '600'], runs: 1, preset: 'wc_lumbridge', pass: () => true }, deps);
+    expect(seen).toEqual(['oaks', '600']);
 });

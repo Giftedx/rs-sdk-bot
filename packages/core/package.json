@@ -1,0 +1,5 @@
+{
+  "name": "@rsbot/core",
+  "private": true,
+  "type": "module"
+}

@@ -1,0 +1,6917 @@
+[
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "normal_tree_table",
+  "level": 0,
+  "xp": 25,
+  "inputs": [],
+  "outputs": [
+   "logs"
+  ],
+  "at": {
+   "locs": [
+    "tree",
+    "lighttree",
+    "tree2",
+    "tree3",
+    "lighttree2",
+    "deadtree1",
+    "deadtree1_large",
+    "deadtree4",
+    "lightdeadtree1",
+    "deadtree2",
+    "deadtree2_dark",
+    "deadtree3",
+    "deadtree2_snowy",
+    "snowtree1",
+    "snowtree2",
+    "snowtree3",
+    "deadtree2_swamp",
+    "deadtree6",
+    "evergreen_snowy_large",
+    "evergreen_vsnowy_large",
+    "evergreen_large",
+    "evergreen",
+    "regicide_tree_large",
+    "regicide_tree_large2",
+    "regicide_tree_large3",
+    "regicide_tree_small",
+    "mm_bush_kharazi_jungle_tree1",
+    "mm_bush_kharazi_jungle_tree2"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:31",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:32",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:1"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "jungle_tree_table",
+  "level": 0,
+  "xp": 100,
+  "inputs": [],
+  "outputs": [
+   "logs"
+  ],
+  "at": {
+   "locs": [
+    "kharazi_jungle_tree_logs",
+    "kharazi_jungle_tree1",
+    "kharazi_jungle_tree2",
+    "kharazi_jungle_plant1",
+    "kharazi_jungle_plant2"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:50",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:51",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:43"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "burnt_tree_table",
+  "level": 0,
+  "xp": 25,
+  "inputs": [],
+  "outputs": [
+   "charcoal"
+  ],
+  "at": {
+   "locs": [
+    "deadtree_burnt"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:58",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:59",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:55"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "achey_tree_table",
+  "level": 0,
+  "xp": 25,
+  "inputs": [],
+  "outputs": [
+   "achey_tree_logs"
+  ],
+  "at": {
+   "locs": [
+    "achey_tree"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:73",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:74",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:70"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "oak_tree_table",
+  "level": 15,
+  "xp": 37.5,
+  "inputs": [],
+  "outputs": [
+   "oak_logs"
+  ],
+  "at": {
+   "locs": [
+    "oaktree"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:88",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:89",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:85"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "willow_tree_table",
+  "level": 30,
+  "xp": 67.5,
+  "inputs": [],
+  "outputs": [
+   "willow_logs"
+  ],
+  "at": {
+   "locs": [
+    "willowtree"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:103",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:104",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:100"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "maple_tree_table",
+  "level": 45,
+  "xp": 100,
+  "inputs": [],
+  "outputs": [
+   "maple_logs"
+  ],
+  "at": {
+   "locs": [
+    "mapletree"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:118",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:119",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:115"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "yew_tree_table",
+  "level": 60,
+  "xp": 175,
+  "inputs": [],
+  "outputs": [
+   "yew_logs"
+  ],
+  "at": {
+   "locs": [
+    "yewtree"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:133",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:134",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:130"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "magic_tree_table",
+  "level": 75,
+  "xp": 250,
+  "inputs": [],
+  "outputs": [
+   "magic_logs"
+  ],
+  "at": {
+   "locs": [
+    "magictree"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:148",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:149",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:145"
+  }
+ },
+ {
+  "skill": "woodcutting",
+  "table": "woodcutting_trees",
+  "row": "hollow_tree_table",
+  "level": 45,
+  "xp": 82.5,
+  "inputs": [],
+  "outputs": [
+   "hollow_bark"
+  ],
+  "at": {
+   "locs": [
+    "hollow_tree",
+    "hollow_tree_big"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_woodcutting/configs/trees.dbrow:164",
+   "xp": "scripts/skill_woodcutting/configs/trees.dbrow:165",
+   "row": "scripts/skill_woodcutting/configs/trees.dbrow:160"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "rune_essence_table",
+  "level": 1,
+  "xp": 5,
+  "inputs": [],
+  "outputs": [
+   "blankrune"
+  ],
+  "at": {
+   "locs": [
+    "blankrunestone"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:6",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:7",
+   "row": "scripts/skill_mining/configs/mine.dbrow:1"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "clay_rock_table",
+  "level": 1,
+  "xp": 5,
+  "inputs": [],
+  "outputs": [
+   "clay"
+  ],
+  "at": {
+   "locs": [
+    "clayrock1",
+    "clayrock2",
+    "macro_clayrock1",
+    "macro_clayrock2",
+    "loc_4994",
+    "loc_4995",
+    "loc_4996"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:21",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:22",
+   "row": "scripts/skill_mining/configs/mine.dbrow:10"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "copper_rock_table",
+  "level": 1,
+  "xp": 17.5,
+  "inputs": [],
+  "outputs": [
+   "copper_ore"
+  ],
+  "at": {
+   "locs": [
+    "copperrock1",
+    "copperrock2",
+    "macro_copperrock1",
+    "macro_copperrock2",
+    "loc_4976",
+    "loc_4977",
+    "loc_4978"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:37",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:38",
+   "row": "scripts/skill_mining/configs/mine.dbrow:26"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "tin_rock_table",
+  "level": 1,
+  "xp": 17.5,
+  "inputs": [],
+  "outputs": [
+   "tin_ore"
+  ],
+  "at": {
+   "locs": [
+    "tinrock1",
+    "tinrock2",
+    "macro_tinrock1",
+    "macro_tinrock2",
+    "loc_4979",
+    "loc_4980",
+    "loc_4981"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:53",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:54",
+   "row": "scripts/skill_mining/configs/mine.dbrow:42"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "iron_rock_table",
+  "level": 15,
+  "xp": 35,
+  "inputs": [],
+  "outputs": [
+   "iron_ore"
+  ],
+  "at": {
+   "locs": [
+    "ironrock1",
+    "ironrock2",
+    "macro_ironrock1",
+    "macro_ironrock2",
+    "loc_4982",
+    "loc_4983",
+    "loc_4984"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:69",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:70",
+   "row": "scripts/skill_mining/configs/mine.dbrow:58"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "coal_rock_table",
+  "level": 30,
+  "xp": 50,
+  "inputs": [],
+  "outputs": [
+   "coal"
+  ],
+  "at": {
+   "locs": [
+    "coalrock1",
+    "coalrock2",
+    "macro_coalrock1",
+    "macro_coalrock2",
+    "misc_dummy_coalrock1",
+    "loc_4985",
+    "loc_4986",
+    "loc_4987"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:86",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:87",
+   "row": "scripts/skill_mining/configs/mine.dbrow:74"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "gold_rock_table",
+  "level": 40,
+  "xp": 65,
+  "inputs": [],
+  "outputs": [
+   "gold_ore"
+  ],
+  "at": {
+   "locs": [
+    "goldrock1",
+    "goldrock2",
+    "macro_goldrock1",
+    "macro_goldrock2"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:99",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:100",
+   "row": "scripts/skill_mining/configs/mine.dbrow:91"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "silver_rock_table",
+  "level": 20,
+  "xp": 40,
+  "inputs": [],
+  "outputs": [
+   "silver_ore"
+  ],
+  "at": {
+   "locs": [
+    "silverrock1",
+    "silverrock2",
+    "macro_silverrock1",
+    "macro_silverrock2"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:112",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:113",
+   "row": "scripts/skill_mining/configs/mine.dbrow:104"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "mithril_rock_table",
+  "level": 55,
+  "xp": 80,
+  "inputs": [],
+  "outputs": [
+   "mithril_ore"
+  ],
+  "at": {
+   "locs": [
+    "mithrilrock1",
+    "mithrilrock2",
+    "macro_mithrilrock1",
+    "macro_mithrilrock2",
+    "loc_4988",
+    "loc_4989",
+    "loc_4990"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:128",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:129",
+   "row": "scripts/skill_mining/configs/mine.dbrow:117"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "adamantite_rock_table",
+  "level": 70,
+  "xp": 95,
+  "inputs": [],
+  "outputs": [
+   "adamantite_ore"
+  ],
+  "at": {
+   "locs": [
+    "adamantiterock1",
+    "adamantiterock2",
+    "macro_adamantiterock1",
+    "macro_adamantiterock2",
+    "loc_4991",
+    "loc_4992",
+    "loc_4993"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:144",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:145",
+   "row": "scripts/skill_mining/configs/mine.dbrow:133"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "runite_rock_table",
+  "level": 85,
+  "xp": 125,
+  "inputs": [],
+  "outputs": [
+   "runite_ore"
+  ],
+  "at": {
+   "locs": [
+    "runiterock1",
+    "runiterock2",
+    "macro_runiterock1",
+    "macro_runiterock2"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:157",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:158",
+   "row": "scripts/skill_mining/configs/mine.dbrow:149"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "blurite_rock",
+  "level": 10,
+  "xp": 17.5,
+  "inputs": [],
+  "outputs": [
+   "blurite_ore"
+  ],
+  "at": {
+   "locs": [
+    "bluriterock",
+    "macro_bluriterock"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:170",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:171",
+   "row": "scripts/skill_mining/configs/mine.dbrow:164"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "gem_rock",
+  "level": 40,
+  "xp": 65,
+  "inputs": [],
+  "outputs": [],
+  "at": {
+   "locs": [
+    "gemrock",
+    "macro_gemrock"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:180",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:181",
+   "row": "scripts/skill_mining/configs/mine.dbrow:175"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "desertrescue_rock",
+  "level": 1,
+  "xp": 1,
+  "inputs": [],
+  "outputs": [
+   "thpunishrock"
+  ],
+  "at": {
+   "locs": [
+    "punishrocks"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:190",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:191",
+   "row": "scripts/skill_mining/configs/mine.dbrow:185"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "limestone_rock3",
+  "level": 10,
+  "xp": 26.5,
+  "inputs": [],
+  "outputs": [
+   "limestone"
+  ],
+  "at": {
+   "locs": [
+    "loc_4027"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:200",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:201",
+   "row": "scripts/skill_mining/configs/mine.dbrow:195"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "limestone_rock2",
+  "level": 10,
+  "xp": 26.5,
+  "inputs": [],
+  "outputs": [
+   "limestone"
+  ],
+  "at": {
+   "locs": [
+    "loc_4028"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:210",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:211",
+   "row": "scripts/skill_mining/configs/mine.dbrow:205"
+  }
+ },
+ {
+  "skill": "mining",
+  "table": "mining_table",
+  "row": "limestone_rock1",
+  "level": 10,
+  "xp": 26.5,
+  "inputs": [],
+  "outputs": [
+   "limestone"
+  ],
+  "at": {
+   "locs": [
+    "loc_4029"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_mining/configs/mine.dbrow:220",
+   "xp": "scripts/skill_mining/configs/mine.dbrow:221",
+   "row": "scripts/skill_mining/configs/mine.dbrow:215"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_ugthanki_meat",
+  "level": 1,
+  "xp": 40,
+  "inputs": [
+   "raw_ugthanki_meat"
+  ],
+  "outputs": [
+   "cooked_ugthanki_meat"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:8",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:9",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:3"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_stew",
+  "level": 25,
+  "xp": 117,
+  "inputs": [
+   "uncooked_stew"
+  ],
+  "outputs": [
+   "stew"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:22",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:23",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:17"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_curry",
+  "level": 60,
+  "xp": 280,
+  "inputs": [
+   "uncooked_curry"
+  ],
+  "outputs": [
+   "curry"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:32",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:33",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:27"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_beef",
+  "level": 1,
+  "xp": 30,
+  "inputs": [
+   "raw_beef"
+  ],
+  "outputs": [
+   "cooked_meat"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:41",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:42",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:36"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_burn_meat",
+  "level": 0,
+  "xp": 0,
+  "inputs": [
+   "cooked_meat"
+  ],
+  "outputs": [
+   "burnt_meat"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:54",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:55",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:50"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_rat_meat",
+  "level": 1,
+  "xp": 30,
+  "inputs": [
+   "raw_rat_meat"
+  ],
+  "outputs": [
+   "cooked_meat"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:67",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:68",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:62"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_bear_meat",
+  "level": 1,
+  "xp": 30,
+  "inputs": [
+   "raw_bear_meat"
+  ],
+  "outputs": [
+   "cooked_meat"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:82",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:83",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:77"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_chicken",
+  "level": 1,
+  "xp": 30,
+  "inputs": [
+   "raw_chicken"
+  ],
+  "outputs": [
+   "cooked_chicken"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:97",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:98",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:92"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_lava_eel",
+  "level": 53,
+  "xp": 140,
+  "inputs": [
+   "raw_lava_eel"
+  ],
+  "outputs": [
+   "lava_eel"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:110",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:111",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:105"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_wrapped_oomlie",
+  "level": 50,
+  "xp": 30,
+  "inputs": [
+   "wrapped_oomlie"
+  ],
+  "outputs": [
+   "cooked_oomlie"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:119",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:120",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:114"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_pitta_bread",
+  "level": 58,
+  "xp": 40,
+  "inputs": [
+   "uncooked_pitta_bread"
+  ],
+  "outputs": [
+   "pitta_bread"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:136",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:137",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:131"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_cake",
+  "level": 40,
+  "xp": 180,
+  "inputs": [
+   "uncooked_cake"
+  ],
+  "outputs": [
+   "cake"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:147",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:148",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:141"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_pizza",
+  "level": 35,
+  "xp": 143,
+  "inputs": [
+   "uncooked_pizza"
+  ],
+  "outputs": [
+   "plain_pizza"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:159",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:160",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:154"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_bread",
+  "level": 1,
+  "xp": 40,
+  "inputs": [
+   "bread_dough"
+  ],
+  "outputs": [
+   "bread"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:171",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:172",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:166"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_apple_pie",
+  "level": 30,
+  "xp": 130,
+  "inputs": [
+   "uncooked_apple_pie"
+  ],
+  "outputs": [
+   "apple_pie"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:181",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:182",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:176"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_meat_pie",
+  "level": 20,
+  "xp": 110,
+  "inputs": [
+   "uncooked_meat_pie"
+  ],
+  "outputs": [
+   "meat_pie"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:193",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:194",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:188"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_redberry_pie",
+  "level": 10,
+  "xp": 78,
+  "inputs": [
+   "uncooked_redberry_pie"
+  ],
+  "outputs": [
+   "redberry_pie"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:206",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:207",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:201"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_shrimp",
+  "level": 1,
+  "xp": 30,
+  "inputs": [
+   "raw_shrimp"
+  ],
+  "outputs": [
+   "shrimp"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:219",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:220",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:214"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_anchovies",
+  "level": 1,
+  "xp": 30,
+  "inputs": [
+   "raw_anchovies"
+  ],
+  "outputs": [
+   "anchovies"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:230",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:231",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:225"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_sardine",
+  "level": 1,
+  "xp": 40,
+  "inputs": [
+   "raw_sardine"
+  ],
+  "outputs": [
+   "sardine"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:241",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:242",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:236"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_salmon",
+  "level": 25,
+  "xp": 90,
+  "inputs": [
+   "raw_salmon"
+  ],
+  "outputs": [
+   "salmon"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:251",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:252",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:246"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_trout",
+  "level": 15,
+  "xp": 70,
+  "inputs": [
+   "raw_trout"
+  ],
+  "outputs": [
+   "trout"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:261",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:262",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:256"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_giant_carp",
+  "level": 10,
+  "xp": 0,
+  "inputs": [
+   "raw_giant_carp"
+  ],
+  "outputs": [
+   "giant_carp"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:271",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:272",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:266"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_cod",
+  "level": 18,
+  "xp": 75,
+  "inputs": [
+   "raw_cod"
+  ],
+  "outputs": [
+   "cod"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:281",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:282",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:276"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_herring",
+  "level": 5,
+  "xp": 50,
+  "inputs": [
+   "raw_herring"
+  ],
+  "outputs": [
+   "herring"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:292",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:293",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:287"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_pike",
+  "level": 20,
+  "xp": 80,
+  "inputs": [
+   "raw_pike"
+  ],
+  "outputs": [
+   "pike"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:302",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:303",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:297"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_mackerel",
+  "level": 10,
+  "xp": 60,
+  "inputs": [
+   "raw_mackerel"
+  ],
+  "outputs": [
+   "mackerel"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:312",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:313",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:307"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_tuna",
+  "level": 30,
+  "xp": 100,
+  "inputs": [
+   "raw_tuna"
+  ],
+  "outputs": [
+   "tuna"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:322",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:323",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:317"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_bass",
+  "level": 43,
+  "xp": 130,
+  "inputs": [
+   "raw_bass"
+  ],
+  "outputs": [
+   "bass"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:331",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:332",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:326"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_swordfish",
+  "level": 45,
+  "xp": 140,
+  "inputs": [
+   "raw_swordfish"
+  ],
+  "outputs": [
+   "swordfish"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:340",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:341",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:335"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_lobster",
+  "level": 40,
+  "xp": 120,
+  "inputs": [
+   "raw_lobster"
+  ],
+  "outputs": [
+   "lobster"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:351",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:352",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:346"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_shark",
+  "level": 80,
+  "xp": 210,
+  "inputs": [
+   "raw_shark"
+  ],
+  "outputs": [
+   "shark"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:361",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:362",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:356"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_mantaray",
+  "level": 91,
+  "xp": 216.3,
+  "inputs": [
+   "raw_mantaray"
+  ],
+  "outputs": [
+   "mantaray"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:372",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:373",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:367"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_seaturtle",
+  "level": 82,
+  "xp": 211.3,
+  "inputs": [
+   "raw_seaturtle"
+  ],
+  "outputs": [
+   "seaturtle"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:382",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:383",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:377"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_seaweed",
+  "level": 1,
+  "xp": 0,
+  "inputs": [
+   "seaweed"
+  ],
+  "outputs": [
+   "soda_ash"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:392",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:393",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:387"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_half_baked_gnomebowl",
+  "level": 1,
+  "xp": 3,
+  "inputs": [
+   "raw_gnomebowl"
+  ],
+  "outputs": [
+   "half_baked_bowl"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:407",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:408",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:401"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_half_baked_crunchies",
+  "level": 1,
+  "xp": 3,
+  "inputs": [
+   "raw_crunchies"
+  ],
+  "outputs": [
+   "half_baked_crunchy"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:421",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:422",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:415"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_half_baked_batta",
+  "level": 1,
+  "xp": 3,
+  "inputs": [
+   "raw_batta"
+  ],
+  "outputs": [
+   "half_baked_batta"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:435",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:436",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:429"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_chocolate_saturday",
+  "level": 1,
+  "xp": 0,
+  "inputs": [
+   "unfinished_chocolate_saturday2"
+  ],
+  "outputs": [
+   "unfinished_chocolate_saturday3"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:448",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:449",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:443"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_drunk_dragon",
+  "level": 1,
+  "xp": 60,
+  "inputs": [
+   "unfinished_drunk_dragon3"
+  ],
+  "outputs": [
+   "drunk_dragon"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:460",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:461",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:455"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_unfinished_gnome_batta",
+  "level": 1,
+  "xp": 0,
+  "inputs": [
+   "half_baked_batta"
+  ],
+  "outputs": [
+   "spoilt_batta"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:473",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:474",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:467"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_unfinished_gnome_crunchies",
+  "level": 1,
+  "xp": 0,
+  "inputs": [
+   "half_baked_crunchy"
+  ],
+  "outputs": [
+   "spoilt_crunchies"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:486",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:487",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:480"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_unfinished_gnomebowl",
+  "level": 1,
+  "xp": 0,
+  "inputs": [
+   "half_baked_bowl"
+  ],
+  "outputs": [
+   "spoilt_gnomebowl"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:499",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:500",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:493"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_raw_swamp_paste",
+  "level": 1,
+  "xp": 2,
+  "inputs": [
+   "rawswamppaste"
+  ],
+  "outputs": [
+   "swamppaste"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:511",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:512",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:506"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_rabbit",
+  "level": 1,
+  "xp": 30,
+  "inputs": [
+   "raw_rabbit"
+  ],
+  "outputs": [
+   "cooked_rabbit"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:523",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:524",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:518"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_karambwanji",
+  "level": 1,
+  "xp": 10,
+  "inputs": [
+   "tbwt_raw_karambwanji"
+  ],
+  "outputs": [
+   "tbwt_cooked_karambwanji"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:537",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:538",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:532"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_karambwan",
+  "level": 1,
+  "xp": 190,
+  "inputs": [
+   "tbwt_raw_karambwan"
+  ],
+  "outputs": [
+   "tbwt_cooked_karambwan"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:551",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:552",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:545"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_poor_karambwan",
+  "level": 1,
+  "xp": 80,
+  "inputs": [
+   "tbwt_raw_karambwan"
+  ],
+  "outputs": [
+   "tbwt_poorly_cooked_karambwan"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:564",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:565",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:559"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_jogre_bones_in_raw_karambwanji_paste",
+  "level": 30,
+  "xp": 100,
+  "inputs": [
+   "tbwt_jogre_bones_in_raw_karambwanji_paste"
+  ],
+  "outputs": [
+   "tbwt_jogre_bones_marinated_in_karambwanji"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:578",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:580",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:573"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_burnt_jogre_bones_in_raw_karambwanji_paste",
+  "level": 30,
+  "xp": 100,
+  "inputs": [
+   "tbwt_burnt_jogre_bones_in_raw_karambwanji_paste"
+  ],
+  "outputs": [
+   "tbwt_burnt_jogre_bones_marinated_in_karambwanji"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:592",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:594",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:587"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_jogre_bones",
+  "level": 0,
+  "xp": 0,
+  "inputs": [
+   "tbwt_jogre_bones"
+  ],
+  "outputs": [
+   "tbwt_jogre_bones"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:605",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:606",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:600"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_burnt_jogre_bones",
+  "level": 0,
+  "xp": 0,
+  "inputs": [
+   "tbwt_burnt_jogre_bones"
+  ],
+  "outputs": [
+   "tbwt_burnt_jogre_bones"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:615",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:616",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:610"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_snail_corpse1",
+  "level": 12,
+  "xp": 70,
+  "inputs": [
+   "snail_corpse1"
+  ],
+  "outputs": [
+   "snail_corpse_cooked1"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:625",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:626",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:620"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_snail_corpse2",
+  "level": 17,
+  "xp": 80,
+  "inputs": [
+   "snail_corpse2"
+  ],
+  "outputs": [
+   "snail_corpse_cooked2"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:640",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:641",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:635"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_snail_corpse3",
+  "level": 22,
+  "xp": 95,
+  "inputs": [
+   "snail_corpse3"
+  ],
+  "outputs": [
+   "snail_corpse_cooked3"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:656",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:657",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:651"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_mort_slimey_eel",
+  "level": 28,
+  "xp": 95,
+  "inputs": [
+   "mort_slimey_eel"
+  ],
+  "outputs": [
+   "mort_slimey_eel_cooked"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:671",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:672",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:666"
+  }
+ },
+ {
+  "skill": "cooking",
+  "table": "cooking_generic",
+  "row": "cooking_generic_troll_thistle",
+  "level": 1,
+  "xp": 0,
+  "inputs": [
+   "eadgar_troll_thistle"
+  ],
+  "outputs": [
+   "eadgar_dried_troll_thistle"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:684",
+   "xp": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:685",
+   "row": "scripts/skill_cooking/configs/cooking_source/cooking_generic.dbrow:679"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_dagger",
+  "level": 1,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_dagger"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:6",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_dagger",
+  "level": 15,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_dagger"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:17",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:12"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_dagger",
+  "level": 30,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_dagger"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:28",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:23"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_dagger",
+  "level": 50,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_dagger"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:39",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:34"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_dagger",
+  "level": 70,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_dagger"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:50",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:45"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_dagger",
+  "level": 85,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_dagger"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:61",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:56"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_sword",
+  "level": 4,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:72",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:67"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_sword",
+  "level": 19,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:83",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:78"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_sword",
+  "level": 34,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:94",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:89"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_sword",
+  "level": 54,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:105",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:100"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_sword",
+  "level": 74,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:116",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:111"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_sword",
+  "level": 89,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:127",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:122"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_scimitar",
+  "level": 5,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_scimitar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:138",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:133"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_scimitar",
+  "level": 20,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_scimitar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:149",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:144"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_scimitar",
+  "level": 35,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_scimitar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:160",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:155"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_scimitar",
+  "level": 55,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_scimitar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:171",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:166"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_scimitar",
+  "level": 75,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_scimitar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:182",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:177"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_scimitar",
+  "level": 90,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_scimitar"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:193",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:188"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_longsword",
+  "level": 6,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_longsword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:204",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:199"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_longsword",
+  "level": 21,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_longsword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:215",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:210"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_longsword",
+  "level": 36,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_longsword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:226",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:221"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_longsword",
+  "level": 56,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_longsword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:237",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:232"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_longsword",
+  "level": 76,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_longsword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:248",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:243"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_longsword",
+  "level": 91,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_longsword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:259",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:254"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_2h_sword",
+  "level": 14,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_2h_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:270",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:265"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_2h_sword",
+  "level": 29,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_2h_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:281",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:276"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_2h_sword",
+  "level": 44,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_2h_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:292",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:287"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_2h_sword",
+  "level": 64,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_2h_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:303",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:298"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_2h_sword",
+  "level": 84,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_2h_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:314",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:309"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_2h_sword",
+  "level": 99,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_2h_sword"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:325",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:320"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_axe",
+  "level": 1,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_axe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:336",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:331"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_axe",
+  "level": 16,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_axe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:347",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:342"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_axe",
+  "level": 31,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_axe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:358",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:353"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_axe",
+  "level": 51,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_axe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:369",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:364"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_axe",
+  "level": 71,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_axe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:380",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:375"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_axe",
+  "level": 86,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_axe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:391",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:386"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_mace",
+  "level": 2,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_mace"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:402",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:397"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_mace",
+  "level": 17,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_mace"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:413",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:408"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_mace",
+  "level": 32,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_mace"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:424",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:419"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_mace",
+  "level": 52,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_mace"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:435",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:430"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_mace",
+  "level": 72,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_mace"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:446",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:441"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_mace",
+  "level": 87,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_mace"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:457",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:452"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_warhammer",
+  "level": 9,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_warhammer"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:468",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:463"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_warhammer",
+  "level": 24,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_warhammer"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:479",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:474"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_warhammer",
+  "level": 39,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_warhammer"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:490",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:485"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_warhammer",
+  "level": 59,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_warhammer"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:501",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:496"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_warhammer",
+  "level": 79,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamnt_warhammer"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:512",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:507"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_warhammer",
+  "level": 94,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_warhammer"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:523",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:518"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_battleaxe",
+  "level": 10,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_battleaxe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:534",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:529"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_battleaxe",
+  "level": 25,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_battleaxe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:545",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:540"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_battleaxe",
+  "level": 40,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_battleaxe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:556",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:551"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_battleaxe",
+  "level": 60,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_battleaxe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:567",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:562"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_battleaxe",
+  "level": 80,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_battleaxe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:578",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:573"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_battleaxe",
+  "level": 95,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_battleaxe"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:589",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:584"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_chainbody",
+  "level": 11,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_chainbody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:600",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:595"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_chainbody",
+  "level": 26,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_chainbody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:611",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:606"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_chainbody",
+  "level": 41,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_chainbody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:622",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:617"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_chainbody",
+  "level": 61,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_chainbody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:633",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:628"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_chainbody",
+  "level": 81,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_chainbody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:644",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:639"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_chainbody",
+  "level": 96,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_chainbody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:655",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:650"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_platelegs",
+  "level": 16,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_platelegs"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:666",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:661"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_platelegs",
+  "level": 31,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_platelegs"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:677",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:672"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_platelegs",
+  "level": 46,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_platelegs"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:688",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:683"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_platelegs",
+  "level": 66,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_platelegs"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:699",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:694"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_platelegs",
+  "level": 86,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_platelegs"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:710",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:705"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_platelegs",
+  "level": 99,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_platelegs"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:721",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:716"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_plateskirt",
+  "level": 16,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_plateskirt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:732",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:727"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_plateskirt",
+  "level": 31,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_plateskirt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:743",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:738"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_plateskirt",
+  "level": 46,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_plateskirt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:754",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:749"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_plateskirt",
+  "level": 66,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_plateskirt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:765",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:760"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_plateskirt",
+  "level": 86,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_plateskirt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:776",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:771"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_plateskirt",
+  "level": 99,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_plateskirt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:787",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:782"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_platebody",
+  "level": 18,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_platebody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:798",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:793"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_platebody",
+  "level": 33,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_platebody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:809",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:804"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_platebody",
+  "level": 48,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_platebody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:820",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:815"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_platebody",
+  "level": 68,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_platebody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:831",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:826"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_platebody",
+  "level": 88,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_platebody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:842",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:837"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_platebody",
+  "level": 99,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_platebody"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:853",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:848"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_med_helm",
+  "level": 3,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_med_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:864",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:859"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_med_helm",
+  "level": 18,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_med_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:875",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:870"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_med_helm",
+  "level": 33,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_med_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:886",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:881"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_med_helm",
+  "level": 53,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_med_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:897",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:892"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_med_helm",
+  "level": 73,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_med_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:908",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:903"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_med_helm",
+  "level": 88,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_med_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:919",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:914"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_full_helm",
+  "level": 7,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_full_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:930",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:925"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_full_helm",
+  "level": 22,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_full_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:941",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:936"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_full_helm",
+  "level": 37,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_full_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:952",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:947"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_full_helm",
+  "level": 57,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_full_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:963",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:958"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_full_helm",
+  "level": 77,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_full_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:974",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:969"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_full_helm",
+  "level": 92,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_full_helm"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:985",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:980"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_sq_shield",
+  "level": 8,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_sq_shield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:996",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:991"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_sq_shield",
+  "level": 23,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_sq_shield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1007",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1002"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_sq_shield",
+  "level": 38,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_sq_shield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1018",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1013"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_sq_shield",
+  "level": 58,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_sq_shield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1029",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1024"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_sq_shield",
+  "level": 78,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_sq_shield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1040",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1035"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_sq_shield",
+  "level": 93,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_sq_shield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1051",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1046"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_kiteshield",
+  "level": 12,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_kiteshield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1062",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1057"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_kiteshield",
+  "level": 27,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_kiteshield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1073",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1068"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_kiteshield",
+  "level": 42,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_kiteshield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1084",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1079"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_kiteshield",
+  "level": 62,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_kiteshield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1095",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1090"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_kiteshield",
+  "level": 82,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_kiteshield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1106",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1101"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_kiteshield",
+  "level": 97,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_kiteshield"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1117",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1112"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_dart_tip",
+  "level": 4,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_dart_tip"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1128",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1123"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_dart_tip",
+  "level": 19,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_dart_tip"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1139",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1134"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_dart_tip",
+  "level": 34,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_dart_tip"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1150",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1145"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_dart_tip",
+  "level": 54,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_dart_tip"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1161",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1156"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_dart_tip",
+  "level": 74,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_dart_tip"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1172",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1167"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_dart_tip",
+  "level": 89,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_dart_tip"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1183",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1178"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_arrowheads",
+  "level": 5,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_arrowheads"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1194",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1189"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_arrowheads",
+  "level": 20,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_arrowheads"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1205",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1200"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_arrowheads",
+  "level": 35,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_arrowheads"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1216",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1211"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_arrowheads",
+  "level": 55,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_arrowheads"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1227",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1222"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_arrowheads",
+  "level": 75,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_arrowheads"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1238",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1233"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_arrowheads",
+  "level": 90,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_arrowheads"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1249",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1244"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_knife",
+  "level": 7,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_knife"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1260",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1255"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_knife",
+  "level": 22,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_knife"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1271",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1266"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_knife",
+  "level": 37,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_knife"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1282",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1277"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_knife",
+  "level": 57,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_knife"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1293",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1288"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_knife",
+  "level": 77,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_knife"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1304",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1299"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_knife",
+  "level": 92,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_knife"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1315",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1310"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_wire",
+  "level": 4,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronzecraftwire"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1326",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1321"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_studs",
+  "level": 36,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "studs"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1337",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1332"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "nails",
+  "level": 34,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "nails"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1348",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1343"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "bronze_claws",
+  "level": 13,
+  "xp": null,
+  "inputs": [
+   "bronze_bar"
+  ],
+  "outputs": [
+   "bronze_claws"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1359",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1354"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "iron_claws",
+  "level": 28,
+  "xp": null,
+  "inputs": [
+   "iron_bar"
+  ],
+  "outputs": [
+   "iron_claws"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1370",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1365"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "steel_claws",
+  "level": 43,
+  "xp": null,
+  "inputs": [
+   "steel_bar"
+  ],
+  "outputs": [
+   "steel_claws"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1381",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1376"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "mithril_claws",
+  "level": 63,
+  "xp": null,
+  "inputs": [
+   "mithril_bar"
+  ],
+  "outputs": [
+   "mithril_claws"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1392",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1387"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "adamant_claws",
+  "level": 83,
+  "xp": null,
+  "inputs": [
+   "adamantite_bar"
+  ],
+  "outputs": [
+   "adamant_claws"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1403",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1398"
+  }
+ },
+ {
+  "skill": "smithing",
+  "table": "smithing",
+  "row": "rune_claws",
+  "level": 98,
+  "xp": null,
+  "inputs": [
+   "runite_bar"
+  ],
+  "outputs": [
+   "rune_claws"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1414",
+   "row": "scripts/skill_smithing/configs/smithing/smithing.dbrow:1409"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_bronze_arrow",
+  "level": 1,
+  "xp": 1.3,
+  "inputs": [
+   "bronze_arrowheads"
+  ],
+  "outputs": [
+   "bronze_arrow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/arrows/arrows.dbrow:6",
+   "xp": "scripts/skill_fletching/configs/arrows/arrows.dbrow:7",
+   "row": "scripts/skill_fletching/configs/arrows/arrows.dbrow:1"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_iron_arrow",
+  "level": 15,
+  "xp": 2.5,
+  "inputs": [
+   "iron_arrowheads"
+  ],
+  "outputs": [
+   "iron_arrow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/arrows/arrows.dbrow:14",
+   "xp": "scripts/skill_fletching/configs/arrows/arrows.dbrow:15",
+   "row": "scripts/skill_fletching/configs/arrows/arrows.dbrow:9"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_steel_arrow",
+  "level": 30,
+  "xp": 5,
+  "inputs": [
+   "steel_arrowheads"
+  ],
+  "outputs": [
+   "steel_arrow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/arrows/arrows.dbrow:22",
+   "xp": "scripts/skill_fletching/configs/arrows/arrows.dbrow:23",
+   "row": "scripts/skill_fletching/configs/arrows/arrows.dbrow:17"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_mithril_arrow",
+  "level": 45,
+  "xp": 7.5,
+  "inputs": [
+   "mithril_arrowheads"
+  ],
+  "outputs": [
+   "mithril_arrow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/arrows/arrows.dbrow:30",
+   "xp": "scripts/skill_fletching/configs/arrows/arrows.dbrow:31",
+   "row": "scripts/skill_fletching/configs/arrows/arrows.dbrow:25"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_adamant_arrow",
+  "level": 60,
+  "xp": 10,
+  "inputs": [
+   "adamant_arrowheads"
+  ],
+  "outputs": [
+   "adamant_arrow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/arrows/arrows.dbrow:38",
+   "xp": "scripts/skill_fletching/configs/arrows/arrows.dbrow:39",
+   "row": "scripts/skill_fletching/configs/arrows/arrows.dbrow:33"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_rune_arrow",
+  "level": 75,
+  "xp": 12.5,
+  "inputs": [
+   "rune_arrowheads"
+  ],
+  "outputs": [
+   "rune_arrow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/arrows/arrows.dbrow:46",
+   "xp": "scripts/skill_fletching/configs/arrows/arrows.dbrow:47",
+   "row": "scripts/skill_fletching/configs/arrows/arrows.dbrow:41"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_opal_tips",
+  "level": 11,
+  "xp": 1.5,
+  "inputs": [
+   "opal"
+  ],
+  "outputs": [
+   "opal_bolttips"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/bolts/bolts.dbrow:5",
+   "xp": "scripts/skill_fletching/configs/bolts/bolts.dbrow:6",
+   "row": "scripts/skill_fletching/configs/bolts/bolts.dbrow:1"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_oyster_pearl_tips",
+  "level": 41,
+  "xp": 3.2,
+  "inputs": [
+   "smalloysterpearls"
+  ],
+  "outputs": [
+   "pearl_bolttips"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/bolts/bolts.dbrow:14",
+   "xp": "scripts/skill_fletching/configs/bolts/bolts.dbrow:15",
+   "row": "scripts/skill_fletching/configs/bolts/bolts.dbrow:10"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_oyster_pearls_tips",
+  "level": 41,
+  "xp": 3.2,
+  "inputs": [
+   "bigoysterpearls"
+  ],
+  "outputs": [
+   "pearl_bolttips"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/bolts/bolts.dbrow:21",
+   "xp": "scripts/skill_fletching/configs/bolts/bolts.dbrow:22",
+   "row": "scripts/skill_fletching/configs/bolts/bolts.dbrow:17"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_opal_bolts",
+  "level": 11,
+  "xp": 1.6,
+  "inputs": [
+   "opal_bolttips"
+  ],
+  "outputs": [
+   "opal_bolt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/bolts/bolts.dbrow:28",
+   "xp": "scripts/skill_fletching/configs/bolts/bolts.dbrow:29",
+   "row": "scripts/skill_fletching/configs/bolts/bolts.dbrow:24"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_pearl_bolts",
+  "level": 41,
+  "xp": 3.2,
+  "inputs": [
+   "pearl_bolttips"
+  ],
+  "outputs": [
+   "pearl_bolt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/bolts/bolts.dbrow:35",
+   "xp": "scripts/skill_fletching/configs/bolts/bolts.dbrow:36",
+   "row": "scripts/skill_fletching/configs/bolts/bolts.dbrow:31"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_barb_bolts",
+  "level": 51,
+  "xp": 9.5,
+  "inputs": [
+   "barbed_bolttips"
+  ],
+  "outputs": [
+   "barbed_bolt"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/bolts/bolts.dbrow:42",
+   "xp": "scripts/skill_fletching/configs/bolts/bolts.dbrow:43",
+   "row": "scripts/skill_fletching/configs/bolts/bolts.dbrow:38"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_bronze_dart",
+  "level": 1,
+  "xp": 1.8,
+  "inputs": [
+   "bronze_dart_tip"
+  ],
+  "outputs": [
+   "bronze_dart"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/darts/darts.dbrow:6",
+   "xp": "scripts/skill_fletching/configs/darts/darts.dbrow:7",
+   "row": "scripts/skill_fletching/configs/darts/darts.dbrow:1"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_iron_dart",
+  "level": 22,
+  "xp": 3.8,
+  "inputs": [
+   "iron_dart_tip"
+  ],
+  "outputs": [
+   "iron_dart"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/darts/darts.dbrow:13",
+   "xp": "scripts/skill_fletching/configs/darts/darts.dbrow:14",
+   "row": "scripts/skill_fletching/configs/darts/darts.dbrow:9"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_steel_dart",
+  "level": 37,
+  "xp": 7.5,
+  "inputs": [
+   "steel_dart_tip"
+  ],
+  "outputs": [
+   "steel_dart"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/darts/darts.dbrow:20",
+   "xp": "scripts/skill_fletching/configs/darts/darts.dbrow:21",
+   "row": "scripts/skill_fletching/configs/darts/darts.dbrow:16"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_mithril_dart",
+  "level": 52,
+  "xp": 11.2,
+  "inputs": [
+   "mithril_dart_tip"
+  ],
+  "outputs": [
+   "mithril_dart"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/darts/darts.dbrow:27",
+   "xp": "scripts/skill_fletching/configs/darts/darts.dbrow:28",
+   "row": "scripts/skill_fletching/configs/darts/darts.dbrow:23"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_adamant_dart",
+  "level": 67,
+  "xp": 15,
+  "inputs": [
+   "adamant_dart_tip"
+  ],
+  "outputs": [
+   "adamant_dart"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/darts/darts.dbrow:34",
+   "xp": "scripts/skill_fletching/configs/darts/darts.dbrow:35",
+   "row": "scripts/skill_fletching/configs/darts/darts.dbrow:30"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "fletching_rune_dart",
+  "level": 81,
+  "xp": 18.8,
+  "inputs": [
+   "rune_dart_tip"
+  ],
+  "outputs": [
+   "rune_dart"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/darts/darts.dbrow:41",
+   "xp": "scripts/skill_fletching/configs/darts/darts.dbrow:42",
+   "row": "scripts/skill_fletching/configs/darts/darts.dbrow:37"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_normal_shortbow",
+  "level": 5,
+  "xp": 5,
+  "inputs": [
+   "unstrung_shortbow"
+  ],
+  "outputs": [
+   "shortbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:5",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:6",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:1"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_normal_longbow",
+  "level": 10,
+  "xp": 10,
+  "inputs": [
+   "unstrung_longbow"
+  ],
+  "outputs": [
+   "longbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:12",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:13",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:8"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_oak_shortbow",
+  "level": 20,
+  "xp": 16.5,
+  "inputs": [
+   "unstrung_oak_shortbow"
+  ],
+  "outputs": [
+   "oak_shortbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:19",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:20",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:15"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_oak_longbow",
+  "level": 25,
+  "xp": 25,
+  "inputs": [
+   "unstrung_oak_longbow"
+  ],
+  "outputs": [
+   "oak_longbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:26",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:27",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:22"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_willow_shortbow",
+  "level": 35,
+  "xp": 33.2,
+  "inputs": [
+   "unstrung_willow_shortbow"
+  ],
+  "outputs": [
+   "willow_shortbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:33",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:34",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:29"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_willow_longbow",
+  "level": 40,
+  "xp": 41.5,
+  "inputs": [
+   "unstrung_willow_longbow"
+  ],
+  "outputs": [
+   "willow_longbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:40",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:41",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:36"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_maple_shortbow",
+  "level": 50,
+  "xp": 50,
+  "inputs": [
+   "unstrung_maple_shortbow"
+  ],
+  "outputs": [
+   "maple_shortbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:47",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:48",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:43"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_maple_longbow",
+  "level": 55,
+  "xp": 58.2,
+  "inputs": [
+   "unstrung_maple_longbow"
+  ],
+  "outputs": [
+   "maple_longbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:54",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:55",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:50"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_yew_shortbow",
+  "level": 65,
+  "xp": 67.5,
+  "inputs": [
+   "unstrung_yew_shortbow"
+  ],
+  "outputs": [
+   "yew_shortbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:61",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:62",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:57"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_yew_longbow",
+  "level": 70,
+  "xp": 75,
+  "inputs": [
+   "unstrung_yew_longbow"
+  ],
+  "outputs": [
+   "yew_longbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:68",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:69",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:64"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_magic_shortbow",
+  "level": 80,
+  "xp": 83.2,
+  "inputs": [
+   "unstrung_magic_shortbow"
+  ],
+  "outputs": [
+   "magic_shortbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:75",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:76",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:71"
+  }
+ },
+ {
+  "skill": "fletching",
+  "table": "fletching_table",
+  "row": "stringing_magic_longbow",
+  "level": 85,
+  "xp": 91.5,
+  "inputs": [
+   "unstrung_magic_longbow"
+  ],
+  "outputs": [
+   "magic_longbow"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_fletching/configs/stringing/bows.dbrow:82",
+   "xp": "scripts/skill_fletching/configs/stringing/bows.dbrow:83",
+   "row": "scripts/skill_fletching/configs/stringing/bows.dbrow:78"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_leather_gloves",
+  "level": 1,
+  "xp": 13.8,
+  "inputs": [
+   "leather"
+  ],
+  "outputs": [
+   "leather_gloves"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:4",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:8",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:1"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_leather_boots",
+  "level": 7,
+  "xp": 16.3,
+  "inputs": [
+   "leather"
+  ],
+  "outputs": [
+   "leather_boots"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:13",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:17",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:10"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_leather_vambraces",
+  "level": 11,
+  "xp": 22,
+  "inputs": [
+   "leather"
+  ],
+  "outputs": [
+   "leather_vambraces"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:22",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:26",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:19"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_vamb",
+  "level": 57,
+  "xp": 62,
+  "inputs": [
+   "dragon_leather"
+  ],
+  "outputs": [
+   "dragon_vambraces"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:31",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:35",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:28"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_leather_chaps",
+  "level": 18,
+  "xp": 27,
+  "inputs": [
+   "leather"
+  ],
+  "outputs": [
+   "leather_chaps"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:40",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:44",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:37"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_chaps",
+  "level": 60,
+  "xp": 124,
+  "inputs": [
+   "dragon_leather"
+  ],
+  "outputs": [
+   "dragonhide_chaps"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:49",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:53",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:46"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_leather_body",
+  "level": 14,
+  "xp": 25,
+  "inputs": [
+   "leather"
+  ],
+  "outputs": [
+   "leather_armour"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:58",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:62",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:55"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_hardleather_body",
+  "level": 28,
+  "xp": 35,
+  "inputs": [
+   "hard_leather"
+  ],
+  "outputs": [
+   "hardleather_body"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:67",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:71",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:64"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_body",
+  "level": 63,
+  "xp": 186,
+  "inputs": [
+   "dragon_leather"
+  ],
+  "outputs": [
+   "dragonhide_body"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:76",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:80",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:73"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_leather_cowl",
+  "level": 9,
+  "xp": 18.5,
+  "inputs": [
+   "leather"
+  ],
+  "outputs": [
+   "leather_cowl"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:85",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:89",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:82"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_coif",
+  "level": 38,
+  "xp": 37,
+  "inputs": [
+   "leather"
+  ],
+  "outputs": [
+   "coif"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:94",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:98",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:91"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_vamb_blue",
+  "level": 66,
+  "xp": 70,
+  "inputs": [
+   "dragon_leather_blue"
+  ],
+  "outputs": [
+   "blue_dragon_vambraces"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:103",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:107",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:100"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_vamb_red",
+  "level": 73,
+  "xp": 78,
+  "inputs": [
+   "dragon_leather_red"
+  ],
+  "outputs": [
+   "red_dragon_vambraces"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:112",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:116",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:109"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_vamb_black",
+  "level": 79,
+  "xp": 86,
+  "inputs": [
+   "dragon_leather_black"
+  ],
+  "outputs": [
+   "black_dragon_vambraces"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:121",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:125",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:118"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_chaps_blue",
+  "level": 68,
+  "xp": 140,
+  "inputs": [
+   "dragon_leather_blue"
+  ],
+  "outputs": [
+   "blue_dragonhide_chaps"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:130",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:134",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:127"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_chaps_red",
+  "level": 75,
+  "xp": 156,
+  "inputs": [
+   "dragon_leather_red"
+  ],
+  "outputs": [
+   "red_dragonhide_chaps"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:139",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:143",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:136"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_chaps_black",
+  "level": 82,
+  "xp": 172,
+  "inputs": [
+   "dragon_leather_black"
+  ],
+  "outputs": [
+   "black_dragonhide_chaps"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:148",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:152",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:145"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_body_blue",
+  "level": 71,
+  "xp": 210,
+  "inputs": [
+   "dragon_leather_blue"
+  ],
+  "outputs": [
+   "blue_dragonhide_body"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:157",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:161",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:154"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_body_red",
+  "level": 77,
+  "xp": 234,
+  "inputs": [
+   "dragon_leather_red"
+  ],
+  "outputs": [
+   "red_dragonhide_body"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:166",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:170",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:163"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "craft_leather_table",
+  "row": "craft_dragonhide_body_black",
+  "level": 84,
+  "xp": 258,
+  "inputs": [
+   "dragon_leather_black"
+  ],
+  "outputs": [
+   "black_dragonhide_body"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/leather/leather.dbrow:175",
+   "xp": "scripts/skill_crafting/configs/leather/leather.dbrow:179",
+   "row": "scripts/skill_crafting/configs/leather/leather.dbrow:172"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "diamond_cutting",
+  "level": 43,
+  "xp": 107.5,
+  "inputs": [
+   "uncut_diamond"
+  ],
+  "outputs": [
+   "diamond"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:5",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:6",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:1"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "emerald_cutting",
+  "level": 27,
+  "xp": 67.5,
+  "inputs": [
+   "uncut_emerald"
+  ],
+  "outputs": [
+   "emerald"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:13",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:14",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:9"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "ruby_cutting",
+  "level": 34,
+  "xp": 85,
+  "inputs": [
+   "uncut_ruby"
+  ],
+  "outputs": [
+   "ruby"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:21",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:22",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:17"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "sapphire_cutting",
+  "level": 20,
+  "xp": 50,
+  "inputs": [
+   "uncut_sapphire"
+  ],
+  "outputs": [
+   "sapphire"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:29",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:30",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:25"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "opal_cutting",
+  "level": 1,
+  "xp": 15,
+  "inputs": [
+   "uncut_opal"
+  ],
+  "outputs": [
+   "opal"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:37",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:38",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:33"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "red_topaz_cutting",
+  "level": 16,
+  "xp": 25,
+  "inputs": [
+   "uncut_red_topaz"
+  ],
+  "outputs": [
+   "red_topaz"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:46",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:47",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:42"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "jade_cutting",
+  "level": 13,
+  "xp": 20,
+  "inputs": [
+   "uncut_jade"
+  ],
+  "outputs": [
+   "jade"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:57",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:58",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:53"
+  }
+ },
+ {
+  "skill": "crafting",
+  "table": "gem_cutting_table",
+  "row": "dragonstone_cutting",
+  "level": 55,
+  "xp": 137.5,
+  "inputs": [
+   "uncut_dragonstone"
+  ],
+  "outputs": [
+   "dragonstone"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_crafting/configs/gem/gem.dbrow:66",
+   "xp": "scripts/skill_crafting/configs/gem/gem.dbrow:67",
+   "row": "scripts/skill_crafting/configs/gem/gem.dbrow:62"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_air",
+  "level": 1,
+  "xp": 5,
+  "inputs": [],
+  "outputs": [
+   "airrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:5",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:6",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:1"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_mind",
+  "level": 2,
+  "xp": 5.5,
+  "inputs": [],
+  "outputs": [
+   "mindrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:19",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:20",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:15"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_water",
+  "level": 5,
+  "xp": 6,
+  "inputs": [],
+  "outputs": [
+   "waterrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:33",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:34",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:29"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_earth",
+  "level": 9,
+  "xp": 6.5,
+  "inputs": [],
+  "outputs": [
+   "earthrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:47",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:48",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:43"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_fire",
+  "level": 14,
+  "xp": 7,
+  "inputs": [],
+  "outputs": [
+   "firerune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:61",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:62",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:57"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_body",
+  "level": 20,
+  "xp": 7.5,
+  "inputs": [],
+  "outputs": [
+   "bodyrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:75",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:76",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:71"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_cosmic",
+  "level": 27,
+  "xp": 8,
+  "inputs": [],
+  "outputs": [
+   "cosmicrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:89",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:90",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:85"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_chaos",
+  "level": 35,
+  "xp": 8.5,
+  "inputs": [],
+  "outputs": [
+   "chaosrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:106",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:107",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:102"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_nature",
+  "level": 44,
+  "xp": 9,
+  "inputs": [],
+  "outputs": [
+   "naturerune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:128",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:129",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:124"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_law",
+  "level": 54,
+  "xp": 9.5,
+  "inputs": [],
+  "outputs": [
+   "lawrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:142",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:143",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:138"
+  }
+ },
+ {
+  "skill": "runecraft",
+  "table": "runecraft_table",
+  "row": "runecraft_death",
+  "level": 65,
+  "xp": 10,
+  "inputs": [],
+  "outputs": [
+   "deathrune"
+  ],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_runecraft/configs/runecraft.dbrow:155",
+   "xp": "scripts/skill_runecraft/configs/runecraft.dbrow:156",
+   "row": "scripts/skill_runecraft/configs/runecraft.dbrow:151"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_wind_strike",
+  "level": 1,
+  "xp": 5.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:7",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:9",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:1"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_water_strike",
+  "level": 5,
+  "xp": 7.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:26",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:28",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:20"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_earth_strike",
+  "level": 9,
+  "xp": 9.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:45",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:47",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:39"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_fire_strike",
+  "level": 13,
+  "xp": 11.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:64",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:66",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:58"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_wind_bolt",
+  "level": 17,
+  "xp": 13.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:83",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:85",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:77"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_water_bolt",
+  "level": 23,
+  "xp": 16.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:102",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:104",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:96"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_earth_bolt",
+  "level": 29,
+  "xp": 19.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:121",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:123",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:115"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_fire_bolt",
+  "level": 35,
+  "xp": 22.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:140",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:142",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:134"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_wind_blast",
+  "level": 41,
+  "xp": 25.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:159",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:161",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:153"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_water_blast",
+  "level": 47,
+  "xp": 28.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:178",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:180",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:172"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_earth_blast",
+  "level": 53,
+  "xp": 31.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:197",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:199",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:191"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_fire_blast",
+  "level": 59,
+  "xp": 34.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:216",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:218",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:210"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_wind_wave",
+  "level": 62,
+  "xp": 36,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:235",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:237",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:229"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_water_wave",
+  "level": 65,
+  "xp": 37.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:254",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:256",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:248"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_earth_wave",
+  "level": 70,
+  "xp": 40,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:273",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:275",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:267"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_fire_wave",
+  "level": 75,
+  "xp": 42.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:292",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:294",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:286"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_bind",
+  "level": 20,
+  "xp": 30,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:310",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:312",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:305"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_snare",
+  "level": 50,
+  "xp": 60,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:327",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:329",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:322"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_entangle",
+  "level": 79,
+  "xp": 89,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:345",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:347",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:340"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_confuse",
+  "level": 3,
+  "xp": 13,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:363",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:365",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:358"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_weaken",
+  "level": 11,
+  "xp": 21,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:380",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:382",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:375"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_curse",
+  "level": 19,
+  "xp": 29,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:397",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:399",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:392"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_vulnerability",
+  "level": 66,
+  "xp": 76,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:414",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:416",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:409"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_enfeeble",
+  "level": 73,
+  "xp": 83,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:431",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:433",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:426"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_stun",
+  "level": 80,
+  "xp": 90,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:448",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:450",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:443"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_crumble_undead",
+  "level": 39,
+  "xp": 24.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:466",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:468",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:461"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_saradomin_strike",
+  "level": 60,
+  "xp": 35,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:483",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:487",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:478"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_claws_of_guthix",
+  "level": 60,
+  "xp": 35,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:501",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:505",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:496"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_flames_of_zamorak",
+  "level": 60,
+  "xp": 35,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:519",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:523",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:514"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_iban_blast",
+  "level": 50,
+  "xp": 30,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:537",
+   "xp": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:541",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:532"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_skeleton_mage",
+  "level": 0,
+  "xp": null,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:554",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:551"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_nezikchened",
+  "level": 0,
+  "xp": null,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:571",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:568"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_saradomin_strike_npc",
+  "level": 0,
+  "xp": null,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:584",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:581"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_claws_of_guthix_npc",
+  "level": 0,
+  "xp": null,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:595",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:592"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_flames_of_zamorak_npc",
+  "level": 0,
+  "xp": null,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:606",
+   "row": "scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:603"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_enchant_level1",
+  "level": 7,
+  "xp": 17.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:5",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:7",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:1"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_enchant_level2",
+  "level": 27,
+  "xp": 37,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:18",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:20",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:14"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_enchant_level3",
+  "level": 49,
+  "xp": 59,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:30",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:32",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:26"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_enchant_level4",
+  "level": 57,
+  "xp": 67,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:42",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:44",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:38"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_enchant_level5",
+  "level": 68,
+  "xp": 78,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:54",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:56",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:50"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_teleport_varrock",
+  "level": 25,
+  "xp": 35,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:66",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:68",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:62"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_teleport_lumbridge",
+  "level": 31,
+  "xp": 41,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:75",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:77",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:71"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_teleport_falador",
+  "level": 37,
+  "xp": 48,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:84",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:86",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:80"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_teleport_camelot",
+  "level": 45,
+  "xp": 55.5,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:93",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:95",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:89"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_teleport_ardougne",
+  "level": 51,
+  "xp": 61,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:102",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:104",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:98"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_teleport_watchtower",
+  "level": 58,
+  "xp": 68,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:111",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:113",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:107"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_teleport_trollheim",
+  "level": 61,
+  "xp": 68,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:120",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:122",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:116"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_charge_air_orb",
+  "level": 66,
+  "xp": 76,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:129",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:131",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:125"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_charge_water_orb",
+  "level": 56,
+  "xp": 66,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:139",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:141",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:135"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_charge_earth_orb",
+  "level": 60,
+  "xp": 70,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:149",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:151",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:145"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_charge_fire_orb",
+  "level": 63,
+  "xp": 73,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:159",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:161",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:155"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_low_alch",
+  "level": 21,
+  "xp": 31,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:169",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:171",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:165"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_high_alch",
+  "level": 55,
+  "xp": 65,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:177",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:179",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:173"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_superheat",
+  "level": 43,
+  "xp": 53,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:185",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:187",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:181"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_bones_to_bananas",
+  "level": 15,
+  "xp": 25,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:193",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:195",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:189"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_telegrab",
+  "level": 33,
+  "xp": 43,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:202",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:204",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:198"
+  }
+ },
+ {
+  "skill": "magic",
+  "table": "magic_spell_table",
+  "row": "magic_spell_charge",
+  "level": 80,
+  "xp": 180,
+  "inputs": [],
+  "outputs": [],
+  "at": {},
+  "src": {
+   "level": "scripts/skill_magic/configs/magic_spells.dbrow:210",
+   "xp": "scripts/skill_magic/configs/magic_spells.dbrow:212",
+   "row": "scripts/skill_magic/configs/magic_spells.dbrow:206"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_man",
+  "level": 1,
+  "xp": 8,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "npcs": [
+    "man",
+    "man2",
+    "man3",
+    "al_kharid_man",
+    "ardougnian_male1"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:8",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:9",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:1"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_woman",
+  "level": 1,
+  "xp": 8,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "npcs": [
+    "woman",
+    "woman2",
+    "woman3",
+    "ardougnian_female1"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:22",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:23",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:16"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_farmer",
+  "level": 10,
+  "xp": 14.5,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "npcs": [
+    "farmer1"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:33",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:34",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:30"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_warrior",
+  "level": 25,
+  "xp": 26,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "npcs": [
+    "warrior_woman",
+    "al_kharid_warrior"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:45",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:46",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:41"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_rogue",
+  "level": 32,
+  "xp": 36.5,
+  "inputs": [],
+  "outputs": [
+   "coins",
+   "airrune",
+   "jug_wine",
+   "lockpick",
+   "iron_dagger_p"
+  ],
+  "at": {
+   "npcs": [
+    "rogue"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:56",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:57",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:53"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_guard",
+  "level": 40,
+  "xp": 46.8,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "npcs": [
+    "guard1",
+    "guard2",
+    "ardougne_guard"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:73",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:74",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:68"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_knight_of_ardougne",
+  "level": 55,
+  "xp": 84.3,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "npcs": [
+    "knight_of_ardougne",
+    "knight_of_ardougne2"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:85",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:86",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:81"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_watchman",
+  "level": 65,
+  "xp": 137.5,
+  "inputs": [],
+  "outputs": [
+   "coins",
+   "bread"
+  ],
+  "at": {
+   "npcs": [
+    "yanille_watchman"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:96",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:97",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:93"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_paladin",
+  "level": 70,
+  "xp": 151.8,
+  "inputs": [],
+  "outputs": [
+   "coins",
+   "chaosrune"
+  ],
+  "at": {
+   "npcs": [
+    "paladin"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:108",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:109",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:105"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_gnome",
+  "level": 75,
+  "xp": 198.3,
+  "inputs": [],
+  "outputs": [
+   "king_worm",
+   "coins",
+   "swamp_toad",
+   "gold_ore",
+   "earthrune",
+   "fire_orb"
+  ],
+  "at": {
+   "npcs": [
+    "gnome",
+    "browclothedgnome",
+    "darkskinned_gnome",
+    "gnomechildgreen",
+    "gnomechildblue",
+    "gnomechild",
+    "gnomefemale",
+    "gnomefemale_dskinned"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:127",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:128",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:117"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_hero",
+  "level": 80,
+  "xp": 273.3,
+  "inputs": [],
+  "outputs": [
+   "coins",
+   "deathrune",
+   "jug_wine",
+   "bloodrune",
+   "fire_orb",
+   "diamond",
+   "gold_ore"
+  ],
+  "at": {
+   "npcs": [
+    "hero"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:143",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:144",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:140"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "pickpocket",
+  "row": "pickpocket_viking",
+  "level": 45,
+  "xp": 65,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "npcs": [
+    "viking_man",
+    "viking_man2",
+    "viking_man3",
+    "viking_man4",
+    "viking_man5",
+    "viking_woman",
+    "viking_woman2",
+    "viking_woman3",
+    "viking_woman4",
+    "viking_woman_indoors"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:169",
+   "xp": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:170",
+   "row": "scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:157"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_bakery_stall",
+  "level": 5,
+  "xp": 16,
+  "inputs": [],
+  "outputs": [
+   "cake",
+   "bread",
+   "chocolate_slice"
+  ],
+  "at": {
+   "locs": [
+    "bakers_stall_stealing"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:6",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:7",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:1"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_tea_stall",
+  "level": 5,
+  "xp": 16,
+  "inputs": [],
+  "outputs": [
+   "cup_of_tea"
+  ],
+  "at": {
+   "locs": [
+    "tea_stall"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:20",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:21",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:16"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_silk_stall",
+  "level": 20,
+  "xp": 24,
+  "inputs": [],
+  "outputs": [
+   "silk"
+  ],
+  "at": {
+   "locs": [
+    "silk_stall_stealing"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:36",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:37",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:29"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_fur_stall",
+  "level": 35,
+  "xp": 36,
+  "inputs": [],
+  "outputs": [
+   "grey_wolf_fur"
+  ],
+  "at": {
+   "locs": [
+    "fur_stall_stealing"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:52",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:53",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:45"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_silver_stall",
+  "level": 50,
+  "xp": 54,
+  "inputs": [],
+  "outputs": [
+   "silver_ore"
+  ],
+  "at": {
+   "locs": [
+    "silver_stall_stealing"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:69",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:70",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:60"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_spice_stall",
+  "level": 65,
+  "xp": 81,
+  "inputs": [],
+  "outputs": [
+   "spicespot"
+  ],
+  "at": {
+   "locs": [
+    "spice_stall_stealing"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:86",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:87",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:77"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_gem_stall",
+  "level": 75,
+  "xp": 16,
+  "inputs": [],
+  "outputs": [
+   "uncut_sapphire",
+   "uncut_emerald",
+   "uncut_ruby",
+   "uncut_diamond"
+  ],
+  "at": {
+   "locs": [
+    "gem_stall_stealing"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:103",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:106",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:94"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_viking_fur_stall",
+  "level": 35,
+  "xp": 36,
+  "inputs": [],
+  "outputs": [
+   "grey_wolf_fur"
+  ],
+  "at": {
+   "locs": [
+    "viking_fur_market"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:123",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:124",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:117"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_viking_fish_stall",
+  "level": 42,
+  "xp": 42,
+  "inputs": [],
+  "outputs": [
+   "raw_lobster",
+   "raw_tuna",
+   "raw_salmon"
+  ],
+  "at": {
+   "locs": [
+    "viking_fish_market"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:137",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:138",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:131"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_misc_fish_market",
+  "level": 42,
+  "xp": 4.2,
+  "inputs": [],
+  "outputs": [
+   "raw_salmon",
+   "raw_tuna",
+   "raw_lobster"
+  ],
+  "at": {
+   "locs": [
+    "misc_fish_market"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:154",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:155",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:147"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_misc_veg_market",
+  "level": 2,
+  "xp": 1,
+  "inputs": [],
+  "outputs": [
+   "potato",
+   "cabbage",
+   "onion",
+   "tomato",
+   "garlic"
+  ],
+  "at": {
+   "locs": [
+    "misc_veg_market"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:171",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:172",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:164"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_etc_fish_market",
+  "level": 42,
+  "xp": 4.2,
+  "inputs": [],
+  "outputs": [
+   "raw_salmon",
+   "raw_tuna",
+   "raw_lobster"
+  ],
+  "at": {
+   "locs": [
+    "etc_fish_market"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:190",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:191",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:183"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "stealing",
+  "row": "stealing_etc_veg_market",
+  "level": 2,
+  "xp": 1,
+  "inputs": [],
+  "outputs": [
+   "potato",
+   "cabbage",
+   "onion",
+   "tomato",
+   "garlic"
+  ],
+  "at": {
+   "locs": [
+    "etc_veg_market"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/stalls/stealing.dbrow:207",
+   "xp": "scripts/skill_thieving/configs/stalls/stealing.dbrow:208",
+   "row": "scripts/skill_thieving/configs/stalls/stealing.dbrow:200"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "trapped_chest",
+  "row": "trapped_chest_chest_10_coins",
+  "level": 13,
+  "xp": 7.8,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "locs": [
+    "chest_10_coins"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:4",
+   "xp": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:5",
+   "row": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:1"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "trapped_chest",
+  "row": "trapped_chest_chest_nature_rune",
+  "level": 28,
+  "xp": 25,
+  "inputs": [],
+  "outputs": [
+   "naturerune",
+   "coins"
+  ],
+  "at": {
+   "locs": [
+    "chest_nature_rune"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:12",
+   "xp": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:13",
+   "row": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:9"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "trapped_chest",
+  "row": "trapped_chest_chest_50_coins",
+  "level": 43,
+  "xp": 125,
+  "inputs": [],
+  "outputs": [
+   "coins"
+  ],
+  "at": {
+   "locs": [
+    "chest_50_coins"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:21",
+   "xp": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:22",
+   "row": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:18"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "trapped_chest",
+  "row": "trapped_chest_chest_steel_arrowtips",
+  "level": 47,
+  "xp": 150,
+  "inputs": [],
+  "outputs": [
+   "steel_arrowheads",
+   "coins"
+  ],
+  "at": {
+   "locs": [
+    "chest_steel_arrowtips"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:29",
+   "xp": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:30",
+   "row": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:26"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "trapped_chest",
+  "row": "trapped_chest_chest_blood_runes",
+  "level": 59,
+  "xp": 250,
+  "inputs": [],
+  "outputs": [
+   "bloodrune",
+   "coins"
+  ],
+  "at": {
+   "locs": [
+    "chest_blood_runes"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:38",
+   "xp": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:39",
+   "row": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:35"
+  }
+ },
+ {
+  "skill": "thieving",
+  "table": "trapped_chest",
+  "row": "trapped_chest_chest_ardougne_castle",
+  "level": 72,
+  "xp": 500,
+  "inputs": [],
+  "outputs": [
+   "coins",
+   "raw_shark",
+   "adamantite_ore",
+   "uncut_sapphire"
+  ],
+  "at": {
+   "locs": [
+    "chest_ardougne_castle"
+   ]
+  },
+  "src": {
+   "level": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:48",
+   "xp": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:49",
+   "row": "scripts/skill_thieving/configs/chests/trapped_chest.dbrow:45"
+  }
+ }
+]

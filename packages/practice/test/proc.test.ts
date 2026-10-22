@@ -9,7 +9,7 @@ test('processMatches checks the command line, not just the PID', () => {
     expect(processMatches(process.pid, 'bun')).toBe(true);
     expect(processMatches(process.pid, 'zzz-not-in-cmdline')).toBe(false);
     expect(processMatches(999999, 'bun')).toBe(false);
-});
+}, 30_000); // each lookup is a PowerShell CIM call of ~1.5 s
 
 test('safeKill leaves a process alone when the marker does not match, and kills it when it does', async () => {
     const child = Bun.spawn(['bun', '-e', 'setTimeout(() => {}, 60000) // marker-sleeper'], { stdout: 'ignore' });

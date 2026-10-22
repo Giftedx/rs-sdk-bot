@@ -1,0 +1,5 @@
+{
+  "name": "@rsbot/router",
+  "private": true,
+  "type": "module"
+}

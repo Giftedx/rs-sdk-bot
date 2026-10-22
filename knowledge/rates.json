@@ -1,0 +1,57 @@
+[
+ {
+  "method": "pickpocket_man",
+  "skill": "thieving",
+  "level": 1,
+  "xpPerTick": 19.33,
+  "runs": 3,
+  "tickMs": 300,
+  "source": "measured",
+  "evidence": "scripts/generated/thieve300.ts, 3/3 runs: 5600 / 6000 / 5800 XP in 300 ticks from level 1 (median 5800)",
+  "note": "includes stuns (about half the tries) and eating; level rises during the run"
+ },
+ {
+  "method": "mine_copper",
+  "skill": "mining",
+  "level": 1,
+  "xpPerTick": 26.35,
+  "runs": 3,
+  "tickMs": 300,
+  "source": "measured",
+  "evidence": "scripts/generated/copper5.ts, 3/3 runs: 2187 XP for 5 ores in 75 / 83 / 123 ticks (median 83)",
+  "note": "SE Varrock mine, bronze pickaxe, rocks deplete after one ore"
+ },
+ {
+  "method": "craft_air_runes_trade_loop",
+  "skill": "runecraft",
+  "level": 1,
+  "xpPerTick": 177.6,
+  "runs": 3,
+  "tickMs": 300,
+  "source": "measured",
+  "evidence": "scripts/generated/rcair.ts, 3/3 runs: 27 essence -> 3375 XP in 5-7 ticks at the altar; plus the measured 12-tick helper trade (scripts/measure/trade-supply.ts) = 19 ticks per pack",
+  "note": "assumes a helper inside the altar trades each pack; excludes level-up dialogs (research/levelup-cost.md)"
+ },
+ {
+  "method": "cut_dragonstone_trade_loop",
+  "skill": "crafting",
+  "level": 55,
+  "xpPerTick": 4884.8,
+  "runs": 2,
+  "tickMs": 300,
+  "source": "measured",
+  "evidence": "scripts/measure/gems.ts (27 cuts in 7 ticks, +92812 XP, 2 runs) + scripts/measure/trade-supply.ts (12-tick resupply, 2 runs) = 19 ticks per pack",
+  "note": "excludes level-up dialogs, about 2.7 ticks per level when a trade or bank follows (research/levelup-cost.md)"
+ },
+ {
+  "method": "pickpocket_guard",
+  "skill": "thieving",
+  "level": 40,
+  "xpPerTick": 130.63,
+  "runs": 3,
+  "tickMs": 300,
+  "source": "measured",
+  "evidence": "scripts/generated/thieveguards.ts, 3/3 runs: 39189 / 47379 / 38019 XP in 300-304 ticks from Thieving 40 (median 39189)",
+  "note": "Varrock palace guards; about 60% of tries stunned; 6-8 shrimps eaten per 300 ticks at HP 30; level rises during the run"
+ }
+]
