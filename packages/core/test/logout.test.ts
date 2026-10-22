@@ -26,6 +26,14 @@ test('logout keeps clicking until the server accepts it (the first clicks fall i
     expect(clicks).toBe(3);
 });
 
+test('logout clicks again within one tick by default (a skilling delay drops clicks that land in it)', async () => {
+    let clicks = 0;
+    const s = { sdk: { sendClickComponent: async () => { clicks++; return { success: true }; } }, ended: new Promise<{ reason: string }>(() => {}) };
+    expect(await logout(s as any, 1300)).toBe('timeout');
+    // 300 ms ticks: 1300 ms must give at least 4 clicks, not the 1 a 1500 ms retry gives.
+    expect(clicks).toBeGreaterThanOrEqual(4);
+});
+
 test('a click that never resolves cannot hang logout past its deadline', async () => {
     const s = { sdk: { sendClickComponent: () => new Promise(() => {}) }, ended: new Promise<{ reason: string }>(() => {}) };
     const t0 = Date.now();

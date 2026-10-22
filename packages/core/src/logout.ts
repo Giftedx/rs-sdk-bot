@@ -34,7 +34,9 @@ export async function logout(
     opts: { retryMs?: number } = {},
 ): Promise<string> {
     const id = componentId('logout:try_logout');
-    const retry = opts.retryMs ?? 1500; // 5 ticks at 300 ms
+    // One tick at 300 ms. try_logout ends silently while the player is delayed (p_finduid -> canAccess), and a
+    // skilling loop is delayed most ticks, so a 5-tick retry could keep landing in the delay (gather 9/10).
+    const retry = opts.retryMs ?? 300;
     const deadline = Date.now() + ms;
     let ended: string | null = null;
     void s.ended.then(e => { ended = e.reason; });
