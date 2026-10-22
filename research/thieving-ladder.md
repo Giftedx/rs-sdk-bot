@@ -108,3 +108,13 @@ The K results disagree between rows: one run per cell is too few. No K setting i
 What holds in both 1500-tick rows: HP 99 (mean about 239 XP/tick) beats HP 10 (mean about 157). A 10 HP
 account eats about every 2 knight fails. Model with corrected rates (S=2, F=12.8, fits guard 76 and
 knight 207): 2,852 ticks of pickpocketing to 99, plus about 400 for tutorial and boat. Leader: 2,935.
+
+## Leader facts and more cycle tests (2026-10-22, late)
+
+- Live tick is 400 ms: miner3 Mining 99 at 3,964 ticks shows as 26m 25s (1,585 s / 3,964 = 0.400 s).
+  jackalopeth8 Thieving 99: 2,935 ticks = 19m 34s.
+- jackalopeth8 reached Attack, Strength, Defence, Hitpoints 40 at about 4h 50m, long after Thieving 99.
+  So it thieved with low HP. Its method is faster than ours; we do not know it yet.
+- Stalls cap low: XP x 25 / respawn ticks per stall. Best is the bakery stall: 400 XP per 8 ticks = 50 XP/tick.
+- Eating inside the stun (EATSTUN=1), HP 10, knights, 600 ticks, 4 bots sharing the knights:
+  normal 231.4 and 259.5 XP/tick; eat-in-stun 216.3 and 158.1 (ran out of 20 lobsters). No gain.

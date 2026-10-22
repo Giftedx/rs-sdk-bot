@@ -16,6 +16,13 @@ try {
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const eatAt = Math.ceil((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10) / 2);
     const xp0 = xp();
+    // EATSTUN=1: top up inside the 8-tick stun after each fail, so eating costs no pickpocket ticks.
+    const eatStun = process.env.EATSTUN === "1";
+    const maxHp = s.sdk.getSkill("Hitpoints")?.baseLevel ?? 10;
+    const onFail = async () => {
+        if (eatStun && hp() <= maxHp - 3 && countItems(s, FOOD) > 0 && (await s.bot.eatFood(FOOD)).success) eaten++;
+        await waitTicks(s, K);
+    };
     const t0 = s.tick();
     let ok = 0, fail = 0, other = 0, eaten = 0;
     const otherWhy: Record<string, number> = {};
@@ -26,13 +33,13 @@ try {
         const before = xp();
         const r = await s.bot.pickpocketNpc(npc);
         if (xp() > before) { ok++; continue; }
-        if (/fail to pick|stunned/i.test(r.message ?? '') && r.reason !== 'stunned') { fail++; await waitTicks(s, K); continue; }
-        if (r.reason === 'stunned' || /stun/i.test(r.message ?? '')) { fail++; await waitTicks(s, K); continue; }
+        if (/fail to pick|stunned/i.test(r.message ?? '') && r.reason !== 'stunned') { fail++; await onFail(); continue; }
+        if (r.reason === 'stunned' || /stun/i.test(r.message ?? '')) { fail++; await onFail(); continue; }
         other++; otherWhy[r.reason ?? r.message ?? '?'] = (otherWhy[r.reason ?? r.message ?? '?'] ?? 0) + 1;
         await waitTicks(s, 1);
     }
     const ticks = s.tick() - t0;
     const gained = xp() - xp0;
     console.log(`RATE thieving ${gained} ${ticks}`);
-    await finish([s], gained > 0 && hp() > 0, `K=${K} xp0=${xp0} gained=${gained} ticks=${ticks} perTick=${(gained / ticks).toFixed(1)} ok=${ok} fail=${fail} other=${other} ${JSON.stringify(otherWhy)} eaten=${eaten} hp=${hp()}`);
+    await finish([s], gained > 0 && hp() > 0, `K=${K} eatStun=${eatStun} xp0=${xp0} gained=${gained} ticks=${ticks} perTick=${(gained / ticks).toFixed(1)} ok=${ok} fail=${fail} other=${other} ${JSON.stringify(otherWhy)} eaten=${eaten} hp=${hp()}`);
 } catch (e) { await finish([s], false, String(e)); }
