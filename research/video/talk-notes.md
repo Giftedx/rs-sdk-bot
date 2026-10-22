@@ -1,6 +1,6 @@
 # Talk notes: Max Bittker, "RS-SDK" (Recurse Center Localhost, 2026)
 
-Source: https://www.youtube.com/watch?v=cNm4zyUtWj0. Full captions: `transcript.md`.
+Source: https://www.youtube.com/watch?v=cNm4zyUtWj0. Captions were read from YouTube; only these notes are kept.
 Projects: https://github.com/MaxBittker/rs-sdk, https://github.com/MaxBittker/runebench
 
 ## What the talk says
