@@ -63,7 +63,7 @@ if (!task) { console.log(`tasks: ${Object.keys(TASKS).join(', ')}`); process.exi
 const r = await authorLoop(task, { maxFixes: 2, proveRuns: 3 }, {
     runModel: async p => { const m = await runClaude(p); console.log(`MODEL ok=${m.ok} cost=$${m.costUsd.toFixed(3)} ${m.text.slice(0, 200).replace(/\n/g, ' ')}`); return m; },
     prove: async (file, t, runs) => {
-        const p = await proveInProcess({ bot: `g${t.id.slice(0, 4)}`, script: file, runs, preset: t.preset, pass: okPass, timeoutMs: t.timeoutMs });
+        const p = await proveInProcess({ bot: `g${t.id.slice(0, 4)}`, script: file, runs, preset: t.preset, pass: okPass, timeoutMs: t.timeoutMs, parallel: runs });
         const tail = p.results.map((x, i) => `run ${i + 1} ${x.ok ? 'PASS' : 'FAIL'}: ${x.tail.replace(/\n/g, ' | ')}`).join('\n');
         console.log(`PROOF ${p.passes}/${p.runs}\n${tail}`);
         return { passes: p.passes, runs: p.runs, tail };

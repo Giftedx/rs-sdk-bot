@@ -39,11 +39,17 @@ export async function logout(
     const retry = opts.retryMs ?? 300;
     const deadline = Date.now() + ms;
     let ended: string | null = null;
+    let clicked = false;
     void s.ended.then(e => { ended = e.reason; });
+    await Promise.resolve(); // let an already-ended session show before the first click
     while (ended === null && Date.now() < deadline) {
+        clicked = true;
         void s.sdk.sendClickComponent(id).catch(() => {});
         const wait = Math.min(retry, Math.max(0, deadline - Date.now()));
         await Promise.race([s.ended, Bun.sleep(wait)]);
     }
+    // The engine sends LOGOUT and closes the socket; under load the lite session can see the closed socket before
+    // it reads the packet and end as 'disconnected' (seen: bankx8v0r3, engine log showed a full P_LOGOUT).
+    if (ended === 'disconnected' && clicked) return 'logged-out';
     return ended ?? 'timeout';
 }

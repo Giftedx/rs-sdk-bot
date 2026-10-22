@@ -86,6 +86,26 @@ test('in-process mode keeps MILESTONE and RATE lines in the tail, so step timing
     expect(r.results[0]!.tail).not.toContain('noise');
 });
 
+test('in-process mode runs up to `parallel` runs at once and keeps results in run order', async () => {
+    const { proveInProcess, okPass } = await import('../src/prove');
+    let live = 0, peak = 0, n = 0;
+    const deps = {
+        prepare: async () => {},
+        run: async () => {
+            const me = ++n;
+            live++; peak = Math.max(peak, live);
+            await Bun.sleep(me === 1 ? 60 : 20); // run 1 ends last, so order must not follow end time
+            live--;
+            return { stdout: `START 3222 3218 0\nRESULT ok run${me}`, exitCode: 0 };
+        },
+        cleanup: async () => {},
+    };
+    const r = await proveInProcess({ bot: 'par', script: 's.ts', runs: 5, preset: 'floors_lumbridge', pass: okPass, parallel: 3 }, deps);
+    expect(peak).toBe(3);
+    expect(r.passes).toBe(5);
+    expect(r.results.map(x => x.tail.match(/run\d/)?.[0])).toEqual(['run1', 'run2', 'run3', 'run4', 'run5']);
+});
+
 test('in-process mode: a missing or wrong START line fails the run', async () => {
     const { proveInProcess, okPass } = await import('../src/prove');
     const deps = (out: string) => ({ prepare: async () => {}, run: async () => ({ stdout: out, exitCode: 0 }), cleanup: async () => {} });

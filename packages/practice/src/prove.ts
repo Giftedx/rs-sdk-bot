@@ -94,6 +94,7 @@ export interface InProcessOptions {
     scriptArgs?: string[]; // passed after the bot name
     pass: (stdout: string) => boolean;
     timeoutMs?: number;
+    parallel?: number; // runs at once; default 1. Runs that share a resource (rocks, NPCs) can affect each other.
 }
 
 export interface InProcessDeps {
@@ -128,8 +129,8 @@ function startMatches(stdout: string, preset?: string): { ok: boolean; detail: s
 }
 
 export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps = realInProcessDeps): Promise<ProveReport> {
-    const results: ProveReport['results'] = [];
-    for (let i = 1; i <= opts.runs; i++) {
+    const results: ProveReport['results'] = new Array(opts.runs);
+    const one = async (i: number) => {
         const bot = runBotName(opts.bot, i);
         const names = [bot, ...(opts.companions ?? []).map(c => bot + c.suffix)];
         const t0 = Date.now();
@@ -140,11 +141,15 @@ export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps
             const start = startMatches(stdout, opts.preset);
             const ok = exitCode === 0 && start.ok && opts.pass(stdout);
             const tail = stdout.split(/\r?\n/).filter(l => /^(START|RESULT|ERR|WARN|MILESTONE|RATE)/.test(l) || l.includes('Error')).slice(-16).join('\n');
-            results.push({ ok, seconds: (Date.now() - t0) / 1000, tail: start.ok ? tail : `preset not loaded: ${start.detail}\n${tail}` });
+            results[i - 1] = { ok, seconds: (Date.now() - t0) / 1000, tail: start.ok ? tail : `preset not loaded: ${start.detail}\n${tail}` };
         } finally {
             for (const n of names) await deps.cleanup(n);
         }
-    }
+    };
+    // Each run is its own account and process, so runs can share the server. `parallel` of them run at once.
+    let next = 1;
+    const worker = async () => { while (next <= opts.runs) await one(next++); };
+    await Promise.all(Array.from({ length: Math.max(1, Math.min(opts.parallel ?? 1, opts.runs)) }, worker));
     return { runs: opts.runs, passes: results.filter(r => r.ok).length, results };
 }
 

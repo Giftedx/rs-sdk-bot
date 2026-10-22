@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
+import { loadPathfinding } from './pathcache';
 
 // Runs BotSDK + BotActions in the same process as a LiteClient, with no gateway.
 // BotSDK only speaks WebSocket (sdk/index.ts:272), so the shim fakes a connected socket and feeds it the
@@ -147,8 +148,8 @@ export async function connectInProcess(opts: { name: string; password: string; s
     const { BotSDK } = await import(vendor('sdk/index.ts'));
     const { BotActions } = await import(vendor('sdk/actions.ts'));
     if (!pathfindingReady) {
-        const { initPathfinding } = await import(vendor('sdk/pathfinding.ts'));
-        initPathfinding();
+        // Restores a saved rsmod memory snapshot when one matches (1.6 s instead of about 14 s).
+        await loadPathfinding();
         pathfindingReady = true;
     }
     const cacheDir = join(repoRoot, '.practice', 'cache');
