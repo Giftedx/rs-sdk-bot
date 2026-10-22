@@ -27,7 +27,11 @@ export async function walkRoute(s: Walker, legs: Leg[], opts: WalkOptions = {}):
             if (last.ok || last.reason === 'aborted') break;
             // rs-sdk's pathfinder treats every door as open, so a walk can stop behind a shut one and the
             // client then refuses the climb with "Can't reach". Open the shut door nearest the stair and retry.
-            if (leg.kind === 'transport' && last.reason === 'rejected' && /reach/i.test(last.detail)) await openNearestDoor(s, leg.at);
+            if (leg.kind === 'transport' && last.reason === 'rejected' && /reach/i.test(last.detail)) {
+                await openNearestDoor(s, leg.at);
+                // walkTo opens doors on its own route, which covers a shut door outside the 8-tile search.
+                await s.bot.walkTo(leg.at.x, leg.at.z, 1);
+            }
         }
         if (!last!.ok) return { ...last!, ticks: total };
     }

@@ -41,6 +41,11 @@ export const PRESETS: Record<string, SaveConfig> = {
     wine_login: { position: LUMBRIDGE, bank: [{ id: 1995, count: 600 }] },
     // Gem throughput test: Crafting 55, chisel (1755) and 27 uncut dragonstones (1631).
     gems_dragonstone: { position: LUMBRIDGE, skills: { Crafting: 55 }, inventory: [{ id: 1755, count: 1 }, ...Array.from({ length: 27 }, () => ({ id: 1631, count: 1 }))] },
+    // Resupply test: helper next to the specialist with 27 uncut dragonstones.
+    supply_spec: { position: LUMBRIDGE, skills: { Crafting: 55 } },
+    supply_helper: { position: { x: 3223, z: 3218, level: 0 }, inventory: Array.from({ length: 27 }, () => ({ id: 1631, count: 1 })) },
+    // Bank-loop test at Draynor bank (3092,3243, learnings/walking.md): chisel in pack, 270 uncut dragonstones banked.
+    bank_gems: { position: { x: 3092, z: 3243, level: 0 }, skills: { Crafting: 55 }, inventory: [{ id: 1755, count: 1 }], bank: [{ id: 1631, count: 270 }] },
     // Trade pair: giver holds 100 coins, receiver stands one tile east (3223,3218).
     trade_giver: { position: LUMBRIDGE, coins: 100 },
     trade_receiver: { position: { x: 3223, z: 3218, level: 0 } },

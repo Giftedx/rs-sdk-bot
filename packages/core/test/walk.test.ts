@@ -59,3 +59,15 @@ test('a climb refused with can\'t reach opens the closed door nearest the stairs
     expect(g.calls).toContain('open 3208,3211');
     expect(g.calls).not.toContain('open 3230,3230');
 });
+
+test('after a can\'t-reach climb the walker also walks up to the stair tile before retrying', async () => {
+    const g = fakeGame({ x: 3205, z: 3206, level: 0, nearbyLocs: [{ id: 1738, name: 'Staircase', x: 3204, z: 3207, level: 0, options: ['Climb-up'], optionsWithIndex: [] }] });
+    g.quirks.climbTo = { x: 3205, z: 3209, level: 1 };
+    g.quirks.doorShut = true; // no door in range to open, so only the walk can help
+    const origWalk = g.bot.walkTo;
+    g.bot.walkTo = async (x: number, z: number) => { const r = await origWalk(x, z); if (x === 3204 && z === 3207) g.quirks.doorShut = false; return r; };
+    const r = await walkRoute(g as any, [{ kind: 'transport', loc: 'spiralstairs', option: 'op1', at: { x: 3204, z: 3207, level: 0 }, to: { x: 3205, z: 3209, level: 1 }, exact: true }], { maxRetriesPerLeg: 3 });
+    g.stop();
+    expect(g.calls).toContain('walk 3204,3207');
+    expect(r.ok).toBe(true);
+});

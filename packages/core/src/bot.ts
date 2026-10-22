@@ -50,6 +50,9 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
 // session (5 s limit each), and exits with 0 on ok.
 export async function finish(sessions: Session[], ok: boolean, detail: string): Promise<never> {
     console.log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
+    // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
+    // Logout runs first, so the account leaves the world either way; this only bounds the process.
+    setTimeout(() => { console.log('WARN finish backstop exit'); process.exit(ok ? 0 : 1); }, 30_000).unref?.();
     const outs = await Promise.all(sessions.map(s => logout(s, 15_000).catch(e => `error ${String(e)}`)));
     console.log(`LOGOUT ${outs.join(' ')}`);
     const c = await closeWithin(sessions, 5000);
