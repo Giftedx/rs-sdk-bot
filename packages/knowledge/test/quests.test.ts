@@ -27,7 +27,7 @@ test('quests join the questpoint proc, the constants and the XP rewards in each 
         varpFolders: new Map([['cookquest', 'quest_cook'], ['dragonquest', 'quest_dragon']]),
         folderScripts: new Map([
             ['quest_cook', [{ text: '[queue,cook_done]\n%cookquest = ^cook_complete;\nstat_advance(cooking, 3000);\n', file: 'quests/quest_cook/scripts/quest_cook.rs2' }]],
-            ['quest_dragon', [{ text: 'stat_advance(strength, 186500);\nstat_advance(defence, 186500);\n', file: 'quests/quest_dragon/scripts/quest_dragon.rs2' }]],
+            ['quest_dragon', [{ text: '[queue,dragon_done]\n%dragonquest = ^dragon_complete;\nstat_advance(strength, 186500);\nstat_advance(defence, 186500);\n', file: 'quests/quest_dragon/scripts/quest_dragon.rs2' }]],
         ]),
     });
     expect(q.quests.find(x => x.varp === 'cookquest')).toMatchObject({ folder: 'quest_cook', complete: 2, questPoints: 1, xp: [{ skill: 'cooking', xp: 300, src: 'quests/quest_cook/scripts/quest_cook.rs2:3' }] });
