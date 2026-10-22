@@ -31,6 +31,12 @@ const MORE: Record<string, AuthorTask> = {
         preset: "thieve_guards",
         spot: "Outside Varrock palace: guards at (3206,3462), (3211,3463), (3212,3462), (3213,3465) (knowledge/npcs.json). Thieving 40 is the guard level; a fail stuns and hits harder than a man. 20 shrimps in the pack, Hitpoints 30.",
     },
+    thieveknights: {
+        id: "thieveknights",
+        goal: "Pickpocket knights of Ardougne for 300 game ticks, eating lobsters when Hitpoints is low. Print a line \"RATE thieving <xpGained> <ticks>\" before finish. Pass when Thieving XP rose and the bot never died.",
+        preset: "thieve_knights",
+        spot: "Ardougne market: knight_of_ardougne spawns at (2652,3318) and (2653,3300) (knowledge/npcs.json); knights wander. Thieving 55 is the knight level; a fail stuns 8 ticks and hits for 3. 20 lobsters in the pack, Hitpoints 50. scripts/generated/thieveguards.ts is a proven script for guards.",
+    },
     rcair: {
         id: "rcair",
         goal: "Craft air runes from all rune essence in the pack at the air altar. Pass when the pack holds air runes, no rune essence is left, and Runecraft XP rose. Print \"RATE runecraft <xpGained> <ticks>\" before finish.",
