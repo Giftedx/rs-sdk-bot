@@ -34,6 +34,7 @@ export function buildBrief(task: AuthorTask, file: string, failure?: string): st
         '- The bot name is process.argv[2]. Call openBot first; it prints START. End every path with finish(),',
         '  which prints exactly one line "RESULT ok <detail>" or "RESULT fail <reason>" and logs out.',
         '- Pass only when the goal is met, checked from game state (inventory, skills, position), never assumed.',
+        '- Preset stats can arrive a few ticks after START. Read any base XP or level after waitTicks(s, 5).',
         '- Count time in game ticks. Give every loop a bound. Wrap the body in try/catch and call finish on errors.',
         `- Check it type-checks: run "bunx tsc --noEmit -p ." from the repo root and fix errors in ${file}.`,
         '- Do not start or stop servers. Do not run the script; the harness proves it on a live server.',

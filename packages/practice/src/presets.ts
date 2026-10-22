@@ -55,6 +55,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Thieving tier 3: Ardougne market knights (knowledge/npcs.json knight_of_ardougne at 2652,3318 and 2653,3300).
     // Pickpocket knight needs Thieving 55 (84.3 XP); a fail hits for 3, so HP 50 and 20 lobsters (379).
     thieve_knights: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55, Hitpoints: 50 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })) },
+    // Same as thieve_knights but with a fresh account's 10 HP: isolates the cost of a low HP cap at knights.
+    thieve_knights_hp10: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })) },
     // Runecraft: inside the air altar (runecraft_table enter_coord 2841,4830,0), air talisman (1438), 27 rune essence (1436).
     rc_air_inside: { position: { x: 2841, z: 4830, level: 0 }, inventory: [{ id: 1438, count: 1 }, ...Array.from({ length: 27 }, () => ({ id: 1436, count: 1 }))] },
     // Thieving specialist trip: a fresh account (10 HP, no gear) with 60 coins for two 30-coin boat fares.

@@ -8,14 +8,19 @@ import { waitTicks } from '../../packages/core/src/ticks';
 const SPOT = { x: 2654, z: 3306 };
 const TARGET = /^knight of ardougne$/i;
 const FOOD = /lobster/i;
-const EAT_AT = 25;
+// Eat at half of max HP, capped at 25: a fresh account has max HP 10, so a fixed 25 would eat forever.
+let EAT_AT = 25;
 // A login failure must still print one RESULT line, or the proof sees no output at all.
 console.log(`ERR-TRACE opening ${process.argv[2]}`);
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     const xp = () => s.sdk.getSkillXp('Thieving') ?? 0;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
+    // Preset stats can arrive a few ticks after START; read the base XP after they settle.
+    await waitTicks(s, 5);
+    EAT_AT = Math.min(25, Math.ceil((s.sdk.getSkill("Hitpoints")?.baseLevel ?? 10) / 2));
     const xp0 = xp();
+    console.log(`XP0 thieving ${xp0} eatAt ${EAT_AT}`);
     const t0 = s.tick();
     let died = false;
     const off = s.onTick(() => {
@@ -52,7 +57,7 @@ try {
     const ticks = s.tick() - t0;
     const gained = xp() - xp0;
     console.log(`RATE thieving ${gained} ${ticks}`);
-    const detail = `thievingXp=${gained} ticks=${ticks} tries=${tries} stuns=${stuns} eaten=${eaten} hp=${hp()} lobsters=${countItems(s, FOOD)} died=${died}`;
+    const detail = `xp0=${xp0} eatAt=${EAT_AT} thievingXp=${gained} ticks=${ticks} tries=${tries} stuns=${stuns} eaten=${eaten} hp=${hp()} lobsters=${countItems(s, FOOD)} died=${died}`;
     const ok = gained > 0 && !died;
     await finish([s], ok, ok ? detail : `${detail} last=${lastFail}`);
 } catch (e) { await finish([s], false, String(e)); }

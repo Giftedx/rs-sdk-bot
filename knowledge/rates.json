@@ -47,22 +47,22 @@
   "method": "pickpocket_guard",
   "skill": "thieving",
   "level": 40,
-  "xpPerTick": 130.63,
+  "xpPerTick": 73.85,
   "runs": 3,
-  "tickMs": 300,
+  "tickMs": 150,
   "source": "measured",
-  "evidence": "scripts/generated/thieveguards.ts, 3/3 runs: 39189 / 47379 / 38019 XP in 300-304 ticks from Thieving 40 (median 39189)",
-  "note": "Varrock palace guards; about 60% of tries stunned; 6-8 shrimps eaten per 300 ticks at HP 30; level rises during the run"
+  "evidence": "scripts/generated/thieveguards.ts (base XP read after 5 ticks), 3/3 runs at 150 ms: 22230 / 26910 / 16380 XP in 300-301 ticks from Thieving 40 (median 22230 / 301)",
+  "note": "Old value 130.63 counted the preset base XP (15789) as gained: the script read XP before the preset stats arrived. About 63% of tries stunned."
  },
  {
   "method": "pickpocket_knight",
   "skill": "thieving",
   "level": 55,
-  "xpPerTick": 378.65,
-  "runs": 3,
-  "tickMs": 300,
+  "xpPerTick": 206.9,
+  "runs": 6,
+  "tickMs": 150,
   "source": "measured",
-  "evidence": "scripts/generated/thieveknights.ts, 3/3 runs: 118189 / 99221 / 113974 XP in 300-301 ticks from Thieving 55 (median 113974)",
-  "note": "Ardougne market knights; 58-72% of tries stunned; 2-3 lobsters eaten per 300 ticks at HP 50; level rises during the run. Model in research/thieving-ladder.md predicted 330 at 55"
+  "evidence": "scripts/generated/thieveknights.ts (base XP read after 5 ticks), 6/6 runs at 150 ms: HP 10: 75870 / 69547 / 61117 XP; HP 50: 63225 / 59010 / 56902 XP, each in 300-303 ticks from Thieving 55 (median of the 6 rates)",
+  "note": "Old value 378.65 counted the preset base XP (46534) as gained. HP 10 is not slower than HP 50 when eating lobsters at half HP."
  }
 ]

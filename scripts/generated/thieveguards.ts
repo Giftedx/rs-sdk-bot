@@ -14,6 +14,8 @@ const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: $
 try {
     const xp = () => s.sdk.getSkillXp('Thieving') ?? 0;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
+    // Preset stats can arrive a few ticks after START; read the base XP after they settle.
+    await waitTicks(s, 5);
     const xp0 = xp();
     const t0 = s.tick();
     let died = false;
@@ -51,7 +53,7 @@ try {
     const ticks = s.tick() - t0;
     const gained = xp() - xp0;
     console.log(`RATE thieving ${gained} ${ticks}`);
-    const detail = `thievingXp=${gained} ticks=${ticks} tries=${tries} stuns=${stuns} eaten=${eaten} hp=${hp()} shrimps=${countItems(s, /shrimps/i)} died=${died}`;
+    const detail = `xp0=${xp0} thievingXp=${gained} ticks=${ticks} tries=${tries} stuns=${stuns} eaten=${eaten} hp=${hp()} shrimps=${countItems(s, /shrimps/i)} died=${died}`;
     const ok = gained > 0 && !died;
     await finish([s], ok, ok ? detail : `${detail} last=${lastFail}`);
 } catch (e) { await finish([s], false, String(e)); }

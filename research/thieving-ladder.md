@@ -71,3 +71,25 @@ market in 380 / 380 / 385 ticks, no death. Boat jumps at tick ~189 (Port Sarim -
 
 New budget: tutorial 13 + coins in Lumbridge (counted in the ladder) + boat 385 + ladder about 2,000 (model)
 = about 2,400 ticks against the leader's 2,935. Proof in progress: author task `thieving60`.
+
+## Correction (2026-10-22, later): the guard and knight rates were too high
+
+`thieveguards.ts` and `thieveknights.ts` read the base XP right after START. Preset stats arrive a few
+ticks later, so the base read 0 and the preset XP counted as gained. With the base read after 5 ticks:
+- Guard at 40: median 73.9 XP/tick (old 130.6). Runs: 22230 / 26910 / 16380 XP in 300 ticks.
+- Knight at 55: median 206.9 XP/tick (old 378.6). HP 10 is not slower than HP 50.
+The model fit (F = 6.7) used the wrong guard rate, so its tables above are too high as well.
+
+## Fresh-account runs (`scripts/generated/thieving60.ts`, 150 ms tick, 6 runs)
+
+4 of 6 passed. 2 died on the walk to Port Sarim near Draynor (3120,3254), with HP worn down by the
+Lumbridge stuns and no food. Milestone ticks of the passing runs with full logs:
+
+| Run | Ardougne | Level 40 | Level 55 | Level 60 |
+|---|---|---|---|---|
+| d | 553 | 1020 | 1816 | 2188 |
+| e | 553 | 1090 | 1437 | 1589 |
+
+Forecast to 99: 1,437-1,816 (fresh to 55, measured) + about 2,400 (55 to 99: model scaled by the measured
+knight rate, 330 -> 207) = about 3,850-4,200 ticks. The leader has 99 at 2,935.
+**With this method, the Thieving board is not winnable.** The +600 margin in board-ranking.md is wrong.
