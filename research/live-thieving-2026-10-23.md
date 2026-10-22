@@ -23,3 +23,17 @@ server one bot has the bakery to itself; live, the bakery's stock (bread 10, cak
 
 Next fix: a food supply that does not depend on one shop's stock. Options: bring food from the start, a helper
 that trades food, or a second food source in Ardougne.
+
+## Food options checked
+
+- Bakery restock (knowledge/shops.json): bread 1 per 100 ticks, cake 1 per 800, chocolate slice 1 per 200. Knights
+  cost about 0.3 HP per tick (about 30 HP per 100 ticks); one bread heals 5. The shop cannot keep up even alone.
+- Baker's stall (`scripts/generated/cakestall.ts`, model-written, 0/3): 1 steal per 300 ticks. A baker_merchant or
+  ardougne_guard is almost always within 5 tiles (stealing.rs2:98-121); one run was hit by a guard. Not usable.
+- Live GE (2026-10-23): Lobster 258 for sale, ask 160. Swordfish, tuna, trout, salmon, cake, cooked meat: 0 for sale.
+  GE stand: (3181,3443), Varrock (`vendor/rs-sdk/sdk/ge-actions.ts:9`).
+- Ardougne banks: bankers at (2657,3280-3286) and (2614-2619,3330), next to the market.
+
+Plan: a helper carries lobster notes from the GE to Ardougne (boat route) and trades them to the specialist,
+who banks the notes and withdraws lobsters. Only the specialist's playtime counts on its board. Food need from
+Thieving 66 to 99 is roughly 110-180 lobsters (18-29k coins); knights pay 50 coins per success.

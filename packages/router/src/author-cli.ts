@@ -50,6 +50,12 @@ const MORE: Record<string, AuthorTask> = {
         preset: "floors_lumbridge",
         spot: "Lumbridge men: knowledge/npcs.json 'man' spawns near (3222,3218). Ardougne: ardougnian_male1 (2614,3318), (2621,3293); ardougne_guard (2651-2665, 3300-3318); knight_of_ardougne (2652,3318), (2653,3300), (2669,3298), (2671,3313). Pickpocket levels: man 1, guard 40, knight 55 (vendor/lostcity-content/scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow). Shops: vendor/rs-sdk/learnings/shops.md.",
     },
+    cakestall: {
+        id: "cakestall",
+        goal: "Steal food from the Ardougne baker's stall for 300 game ticks without being attacked. Print \"RATE thieving <xpGained> <ticks>\" and a line \"FOOD <cakes> <bread> <chocolateSlices> <ticks>\" before finish. Pass when at least 6 food items were stolen, the bot was never attacked (Hitpoints never fell), and it never died.",
+        preset: "cake_stall",
+        spot: "Rules from vendor/lostcity-content/scripts/skill_thieving/scripts/stalls/stealing.rs2:98-121 and configs/stalls/stealing.dbrow [stealing_bakery_stall]: a steal is refused when the owner (baker_merchant) is within 5 tiles with line of sight, and an ardougne_guard within 5 tiles with line of sight shouts and attacks. So only steal when no baker_merchant and no ardougne_guard is within 5 tiles; otherwise wait or step to another stall side. Stalls: bakers_stall_stealing, one touching (2654,3310) and one touching (2654,3311); bakers stand at (2654,3311) and (2669,3310) and may wander; guards spawn at (2651,3307), (2659-2661,3309), (2663,3301), (2665,3300), (2664,3318). The stall refills 8 ticks after a steal. Loot: cake 13/20, bread 5/20, chocolate slice 2/20. Thieving 5 is the stall level, HP 10. Find the stall with sdk.getState().nearbyLocs and its steal option.",
+    },
     rcair: {
         id: "rcair",
         goal: "Craft air runes from all rune essence in the pack at the air altar. Pass when the pack holds air runes, no rune essence is left, and Runecraft XP rose. Print \"RATE runecraft <xpGained> <ticks>\" before finish.",
