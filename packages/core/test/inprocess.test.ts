@@ -100,3 +100,10 @@ test('direct() reaches the client even while a slow action holds the queue', asy
     expect(c.executed.map((a: any) => a.type)).toEqual(['walkTo', 'clickComponent']);
     shim.stop('stopped');
 });
+
+test('login jitter is 0 only for a local server; any other host keeps the upstream default', async () => {
+    const { loginJitterFor } = await import('../src/inprocess');
+    expect(loginJitterFor('localhost:8888')).toBe(0);
+    expect(loginJitterFor('127.0.0.1:8888')).toBe(0);
+    expect(loginJitterFor('rs-sdk-demo.fly.dev')).toBeUndefined(); // undefined = session.ts default (5 s for remote)
+});

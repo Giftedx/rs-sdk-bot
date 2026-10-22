@@ -23,3 +23,12 @@ test('the reflex aborts and flees when HP is very low and there is no food', asy
     expect(r.aborted.aborted).toBe(true);
     expect(g.calls).toContain('walk 3222,3218');
 });
+
+test('missing Hitpoints state counts as unknown, not as full health: the reflex still flees', async () => {
+    const g = fakeGame({ x: 0, z: 0, level: 0, hp: 10 });
+    g.state.skills = []; // no Hitpoints entry
+    const r = startReflexes(g as any, rules);
+    await Bun.sleep(20);
+    r.stop(); g.stop();
+    expect(r.aborted.aborted).toBe(true);
+});

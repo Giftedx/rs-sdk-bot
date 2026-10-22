@@ -827,6 +827,7 @@
     "chance": 0.0390625,
     "item": "adamantite_bar",
     "count": 1,
+    "countMax": 2,
     "conditional": false,
     "src": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:51"
    },
@@ -3760,7 +3761,8 @@
    {
     "chance": 0.0546875,
     "item": "bolt",
-    "count": 1,
+    "count": 2,
+    "countMax": 12,
     "conditional": true,
     "src": "scripts/drop tables/scripts/dwarf.rs2:25"
    },
@@ -6896,6 +6898,7 @@
     "chance": 0.015625,
     "item": "naturerune",
     "count": 1,
+    "countMax": 4,
     "conditional": false,
     "src": "scripts/drop tables/scripts/kalphite_soldier.rs2:26"
    },
@@ -7351,7 +7354,8 @@
    {
     "chance": 0.171875,
     "item": "bolt",
-    "count": 1,
+    "count": 2,
+    "countMax": 12,
     "conditional": true,
     "src": "scripts/drop tables/scripts/man.rs2:31"
    },
@@ -8517,7 +8521,8 @@
    {
     "chance": 0.171875,
     "item": "bolt",
-    "count": 1,
+    "count": 2,
+    "countMax": 12,
     "conditional": false,
     "src": "scripts/drop tables/scripts/rogue.rs2:25"
    },
@@ -10303,7 +10308,8 @@
    {
     "chance": 0.0234375,
     "item": "bodyrune",
-    "count": 1,
+    "count": 9,
+    "countMax": 13,
     "conditional": false,
     "src": "scripts/drop tables/scripts/white_knight.rs2:23"
    },
@@ -10317,7 +10323,8 @@
    {
     "chance": 0.0234375,
     "item": "waterrune",
-    "count": 1,
+    "count": 25,
+    "countMax": 30,
     "conditional": false,
     "src": "scripts/drop tables/scripts/white_knight.rs2:27"
    },
@@ -10379,7 +10386,8 @@
    {
     "chance": 0.078125,
     "item": "coins",
-    "count": 1,
+    "count": 45,
+    "countMax": 53,
     "conditional": false,
     "src": "scripts/drop tables/scripts/white_knight.rs2:47"
    },
@@ -11876,6 +11884,7 @@
     "chance": 0.0625,
     "item": "steel_bar",
     "count": 1,
+    "countMax": 3,
     "conditional": false,
     "src": "scripts/macro events/scripts/thieving/macro_event_watchman.rs2:79"
    },
@@ -13793,7 +13802,8 @@
    {
     "chance": 0.171875,
     "item": "bolt",
-    "count": 1,
+    "count": 2,
+    "countMax": 12,
     "conditional": true,
     "src": "scripts/quests/quest_mortton/scripts/afflicted.rs2:19"
    },

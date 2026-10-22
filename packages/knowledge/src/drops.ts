@@ -3,7 +3,7 @@ import { cleanLines } from './text';
 // NPC drop tables from [ai_queue3,<npc or _category>] scripts. Each table rolls `def_int $x = random(N)` once
 // and branches on cumulative `if ($x < T)` thresholds, so a slot's chance is (T - previous T) / N.
 // Drops nested in a further `if` inside a slot (members world, quest stage) are marked conditional.
-export interface Roll { chance: number; item?: string; table?: string; count?: number; conditional: boolean; src: string }
+export interface Roll { chance: number; item?: string; table?: string; count?: number; countMax?: number; conditional: boolean; src: string }
 export interface DropTable {
     trigger: string; // npc debugname, or _category
     always: { item: string; count: number; conditional: boolean; src: string }[]; // conditional: nested in an if
@@ -14,12 +14,15 @@ export interface DropTable {
 
 const OBJ_ADD = /obj_add\(npc_coord,\s*([^,]+?),\s*([^,)]+?)(?:,\s*[^)]+)?\)/;
 
-function parseObj(line: string): { item?: string; table?: string; count?: number } | null {
+function parseObj(line: string): { item?: string; table?: string; count?: number; countMax?: number } | null {
     const m = line.match(OBJ_ADD);
     if (!m) return null;
     const what = m[1]!.trim();
     if (what.startsWith('~')) return { table: what.slice(1) };
     const item = what === 'npc_param(death_drop)' ? 'death_drop' : what;
+    // A ranged amount, e.g. obj_add(npc_coord, coins, ~random_range(100, 500), ...): keep both ends.
+    const range = line.match(/~random_range\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    if (range) return { item, count: Number(range[1]), countMax: Number(range[2]) };
     const count = Number(m[2]!.trim());
     return { item, count: Number.isFinite(count) ? count : 1 };
 }

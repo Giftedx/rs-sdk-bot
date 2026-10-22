@@ -10,7 +10,8 @@ export interface Reflexive extends TickSource {
     };
 }
 
-const hp = (st: any): number => (st?.skills ?? []).find((k: any) => k.name === 'Hitpoints')?.level ?? 99;
+// Missing Hitpoints state is unknown, not healthy: treat it as 0 so the reflex errs toward fleeing.
+const hp = (st: any): number => (st?.skills ?? []).find((k: any) => k.name === 'Hitpoints')?.level ?? 0;
 const hasFood = (st: any, re: RegExp): boolean => (st?.inventory ?? []).some((i: any) => re.test(i.name));
 
 // Checked every tick. Eating comes first; with no food left and HP below the flee line, the signal aborts

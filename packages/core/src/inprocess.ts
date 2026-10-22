@@ -130,6 +130,12 @@ export interface Session {
     ended: Promise<{ reason: string }>;
 }
 
+// The lite session spreads logins with a random jitter on remote servers (session.ts:122, 5 s default) to spare the
+// login server. Skip it only for our own local practice server.
+export function loginJitterFor(host: string): number | undefined {
+    return /^(localhost|127\.)/.test(host) ? 0 : undefined;
+}
+
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const vendor = (p: string) => join(repoRoot, 'vendor', 'rs-sdk', p);
 let pathfindingReady = false;
@@ -158,7 +164,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
         password: opts.password,
         cacheDir,
         quiet: true,
-        loginJitterMs: 0,
+        ...(loginJitterFor(host) !== undefined ? { loginJitterMs: loginJitterFor(host) } : {}),
         ...(opts.members !== undefined ? { members: opts.members } : {}),
         onEnd: (end: { reason: string }) => {
             shim?.stop(end.reason);

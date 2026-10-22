@@ -91,3 +91,14 @@ if ($dropint < 5)
     expect(d.rolls.map(r => [r.table ?? r.item, r.chance * 128])).toEqual([['ultrarare_getitem', 1], ['rune_longsword', 4]]);
     expect(d.always.map(a => [a.item, a.conditional])).toEqual([['death_drop', false], ['dragon_platelegs', true]]);
 });
+
+test('a ~random_range(a, b) count keeps both ends instead of becoming 1', () => {
+    const text = `[ai_queue3,testkbd]
+def_int $r = random(128);
+if ($r < 10) {
+    obj_add(npc_coord, coins, ~random_range(100, 500), ^lootdrop_duration);
+}
+`;
+    const roll = parseDrops(text, 'k.rs2').find(x => x.trigger === 'testkbd')!.rolls[0]!;
+    expect([roll.item, roll.count, roll.countMax]).toEqual(['coins', 100, 500]);
+});
