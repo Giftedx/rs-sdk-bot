@@ -11,9 +11,9 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - npcSpawns: 8142
 - shops: 206
 - shopStockLines: 1696
-- transportHandlers: 59
-- transportEdges: 914
-- transportSkipped: 5
+- transportHandlers: 48
+- transportEdges: 542
+- transportSkipped: 16
 - unmatchedAngles: 0
 
 ## Notes
@@ -24,8 +24,19 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 
 ## Skipped transport handlers (shape not understood, not guessed)
 
+- ladder (scripts/ladders+stairs/scripts/ladders.rs2:49)
+- laddertop_directional (scripts/ladders+stairs/scripts/ladders.rs2:68)
 - spiralstairs_wooden (scripts/ladders+stairs/scripts/stairs.rs2:345)
 - spiralstairstop_wooden (scripts/ladders+stairs/scripts/stairs.rs2:355)
+- spiralstairsmiddle_wooden (scripts/ladders+stairs/scripts/stairs.rs2:365)
+- spiralstairsmiddle_wooden (scripts/ladders+stairs/scripts/stairs.rs2:375)
+- spiralstairsmiddle_wooden (scripts/ladders+stairs/scripts/stairs.rs2:386)
+- balance40up (scripts/ladders+stairs/scripts/stairs.rs2:397)
+- cryptstairsdown (scripts/ladders+stairs/scripts/stairs.rs2:408)
 - board_game_stairs_top2 (scripts/ladders+stairs/scripts/stairs.rs2:465)
 - board_game_stairs_base2 (scripts/ladders+stairs/scripts/stairs.rs2:479)
+- board_game_stairs_grey_all (scripts/ladders+stairs/scripts/stairs.rs2:485)
+- board_game_stairs_grey_base2 (scripts/ladders+stairs/scripts/stairs.rs2:509)
 - castlewars_topstair_linked (scripts/ladders+stairs/scripts/stairs.rs2:561)
+- castlewars_outsidestairs_saradomin_linked (scripts/ladders+stairs/scripts/stairs.rs2:583)
+- castlewars_outsidestairs_zamorak_linked (scripts/ladders+stairs/scripts/stairs.rs2:602)

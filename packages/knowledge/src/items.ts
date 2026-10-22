@@ -7,7 +7,8 @@ export interface Item {
     cost: number; // static config value; the Equipment and Bank boards score this, not market price
     members: boolean;
     tradeable: boolean;
-    src: string;
+    src: string; // the cost= line (or the header when cost is absent)
+    def: string; // the [debugname] header line
 }
 
 export function invert(pack: Map<number, string>): Map<string, number> {
@@ -29,8 +30,9 @@ export function buildItems(blocks: ConfigBlock[], pack: Map<number, string>): It
             debugname: b.name,
             cost: Number(b.props.cost?.[0] ?? 1), // engine default when cost= is absent
             members: b.props.members?.[0] === 'yes',
-            tradeable: b.props.tradeable?.[0] === 'yes',
+            tradeable: b.props.tradeable?.[0] !== 'no', // engine default true (ObjType.ts:181); content only writes =no
             src: `${b.file}:${costLine ?? b.line}`,
+            def: `${b.file}:${b.line}`,
         });
     }
     return out.sort((a, b) => a.id - b.id);

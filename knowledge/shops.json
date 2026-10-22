@@ -7145,37 +7145,37 @@
    {
     "item": "logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:3"
    },
    {
     "item": "oak_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:4"
    },
    {
     "item": "willow_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:5"
    },
    {
     "item": "maple_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:6"
    },
    {
     "item": "yew_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:7"
    },
    {
     "item": "magic_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:8"
    }
   ]
@@ -7188,43 +7188,43 @@
    {
     "item": "swamp_toad",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:12"
    },
    {
     "item": "ball_gnomeball_game",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:13"
    },
    {
     "item": "agilityarena_ticket",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:14"
    },
    {
     "item": "agilityarena_ticket",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:15"
    },
    {
     "item": "steel_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:16"
    },
    {
     "item": "agilityarena_ticket",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:17"
    },
    {
     "item": "skull",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:18"
    }
   ]
@@ -7237,49 +7237,49 @@
    {
     "item": "bronze_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:22"
    },
    {
     "item": "iron_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:23"
    },
    {
     "item": "steel_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:24"
    },
    {
     "item": "black_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:25"
    },
    {
     "item": "mithril_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:26"
    },
    {
     "item": "adamant_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:27"
    },
    {
     "item": "rune_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:28"
    },
    {
     "item": "dragon_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:29"
    }
   ]
@@ -7292,49 +7292,49 @@
    {
     "item": "bronze_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:33"
    },
    {
     "item": "iron_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:34"
    },
    {
     "item": "steel_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:35"
    },
    {
     "item": "black_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:36"
    },
    {
     "item": "mithril_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:37"
    },
    {
     "item": "adamant_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:38"
    },
    {
     "item": "rune_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:39"
    },
    {
     "item": "dragon_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:40"
    }
   ]
@@ -7347,139 +7347,139 @@
    {
     "item": "cooked_meat",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:50"
    },
    {
     "item": "shrimp",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:51"
    },
    {
     "item": "cooked_chicken",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:52"
    },
    {
     "item": "anchovies",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:53"
    },
    {
     "item": "sardine",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:54"
    },
    {
     "item": "herring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:55"
    },
    {
     "item": "mackerel",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:56"
    },
    {
     "item": "snail_corpse_cooked1",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:57"
    },
    {
     "item": "trout",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:58"
    },
    {
     "item": "snail_corpse_cooked2",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:59"
    },
    {
     "item": "cod",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:60"
    },
    {
     "item": "pike",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:61"
    },
    {
     "item": "snail_corpse_cooked3",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:62"
    },
    {
     "item": "salmon",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:63"
    },
    {
     "item": "mort_slimey_eel_cooked",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:64"
    },
    {
     "item": "tuna",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:65"
    },
    {
     "item": "cooked_chompy",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:66"
    },
    {
     "item": "lobster",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:67"
    },
    {
     "item": "bass",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:68"
    },
    {
     "item": "swordfish",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:69"
    },
    {
     "item": "shark",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:70"
    },
    {
     "item": "seaturtle",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:71"
    },
    {
     "item": "mantaray",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:72"
    }
   ]
@@ -7492,7 +7492,7 @@
    {
     "item": "bread",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:76"
    }
   ]
@@ -7505,13 +7505,13 @@
    {
     "item": "cake",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:80"
    },
    {
     "item": "chocolate_cake",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:81"
    }
   ]
@@ -7524,25 +7524,25 @@
    {
     "item": "plain_pizza",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:85"
    },
    {
     "item": "meat_pizza",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:86"
    },
    {
     "item": "anchovie_pizza",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:87"
    },
    {
     "item": "pineapple_pizza",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:88"
    }
   ]
@@ -7555,19 +7555,19 @@
    {
     "item": "redberry_pie",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:92"
    },
    {
     "item": "meat_pie",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:93"
    },
    {
     "item": "apple_pie",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:94"
    }
   ]
@@ -7580,13 +7580,13 @@
    {
     "item": "stew",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:98"
    },
    {
     "item": "curry",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:99"
    }
   ]
@@ -7599,7 +7599,7 @@
    {
     "item": "jug_wine",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:103"
    }
   ]
@@ -7612,13 +7612,13 @@
    {
     "item": "ball_of_wool",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:110"
    },
    {
     "item": "bow_string",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:111"
    }
   ]
@@ -7631,19 +7631,19 @@
    {
     "item": "pot_empty",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:115"
    },
    {
     "item": "piedish",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:116"
    },
    {
     "item": "bowl_empty",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:117"
    }
   ]
@@ -7656,19 +7656,19 @@
    {
     "item": "beer_glass",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:121"
    },
    {
     "item": "vial_empty",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:122"
    },
    {
     "item": "stafforb",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:123"
    }
   ]
@@ -7681,169 +7681,169 @@
    {
     "item": "opal",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:127"
    },
    {
     "item": "gold_ring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:128"
    },
    {
     "item": "gold_necklace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:129"
    },
    {
     "item": "strung_gold_amulet",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:130"
    },
    {
     "item": "jade",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:131"
    },
    {
     "item": "blessedstar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:132"
    },
    {
     "item": "red_topaz",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:133"
    },
    {
     "item": "blessedsnake",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:134"
    },
    {
     "item": "sapphire",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:135"
    },
    {
     "item": "sapphire_ring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:136"
    },
    {
     "item": "sapphire_necklace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:137"
    },
    {
     "item": "strung_sapphire_amulet",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:138"
    },
    {
     "item": "emerald",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:139"
    },
    {
     "item": "emerald_ring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:140"
    },
    {
     "item": "emerald_necklace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:141"
    },
    {
     "item": "strung_emerald_amulet",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:142"
    },
    {
     "item": "ruby",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:143"
    },
    {
     "item": "ruby_ring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:144"
    },
    {
     "item": "ruby_necklace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:145"
    },
    {
     "item": "diamond",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:146"
    },
    {
     "item": "diamond_ring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:147"
    },
    {
     "item": "strung_ruby_amulet",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:148"
    },
    {
     "item": "dragonstone",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:149"
    },
    {
     "item": "dragonstone_ring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:150"
    },
    {
     "item": "diamond_necklace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:151"
    },
    {
     "item": "strung_diamond_amulet",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:152"
    },
    {
     "item": "dragonstone_necklace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:153"
    },
    {
     "item": "strung_dragonstone_amulet",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:154"
    }
   ]
@@ -7856,25 +7856,25 @@
    {
     "item": "water_battlestaff",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:158"
    },
    {
     "item": "earth_battlestaff",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:159"
    },
    {
     "item": "fire_battlestaff",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:160"
    },
    {
     "item": "air_battlestaff",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:161"
    }
   ]
@@ -7887,127 +7887,127 @@
    {
     "item": "raw_shrimp",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:165"
    },
    {
     "item": "raw_sardine",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:166"
    },
    {
     "item": "tbwt_raw_karambwanji",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:167"
    },
    {
     "item": "raw_herring",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:168"
    },
    {
     "item": "raw_anchovies",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:169"
    },
    {
     "item": "raw_mackerel",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:170"
    },
    {
     "item": "oystershell",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:171"
    },
    {
     "item": "casket",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:172"
    },
    {
     "item": "raw_trout",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:173"
    },
    {
     "item": "raw_cod",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:174"
    },
    {
     "item": "raw_pike",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:175"
    },
    {
     "item": "mort_slimey_eel",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:176"
    },
    {
     "item": "raw_salmon",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:177"
    },
    {
     "item": "raw_tuna",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:178"
    },
    {
     "item": "raw_lobster",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:179"
    },
    {
     "item": "raw_bass",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:180"
    },
    {
     "item": "raw_swordfish",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:181"
    },
    {
     "item": "tbwt_raw_karambwan",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:182"
    },
    {
     "item": "raw_shark",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:183"
    },
    {
     "item": "raw_seaturtle",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:184"
    },
    {
     "item": "raw_mantaray",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:185"
    }
   ]
@@ -8020,73 +8020,73 @@
    {
     "item": "shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:189"
    },
    {
     "item": "longbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:190"
    },
    {
     "item": "oak_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:191"
    },
    {
     "item": "oak_longbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:192"
    },
    {
     "item": "willow_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:193"
    },
    {
     "item": "willow_longbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:194"
    },
    {
     "item": "maple_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:195"
    },
    {
     "item": "maple_longbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:196"
    },
    {
     "item": "yew_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:197"
    },
    {
     "item": "yew_longbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:198"
    },
    {
     "item": "magic_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:199"
    },
    {
     "item": "magic_longbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:200"
    }
   ]
@@ -8099,37 +8099,37 @@
    {
     "item": "bronze_arrow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:204"
    },
    {
     "item": "iron_arrow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:205"
    },
    {
     "item": "steel_arrow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:206"
    },
    {
     "item": "mithril_arrow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:207"
    },
    {
     "item": "adamant_arrow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:208"
    },
    {
     "item": "rune_arrow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:209"
    }
   ]
@@ -8142,37 +8142,37 @@
    {
     "item": "bronze_dart",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:213"
    },
    {
     "item": "iron_dart",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:214"
    },
    {
     "item": "steel_dart",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:215"
    },
    {
     "item": "mithril_dart",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:216"
    },
    {
     "item": "adamant_dart",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:217"
    },
    {
     "item": "rune_dart",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:218"
    }
   ]
@@ -8185,19 +8185,19 @@
    {
     "item": "opal_bolt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:222"
    },
    {
     "item": "pearl_bolt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:223"
    },
    {
     "item": "barbed_bolt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:224"
    }
   ]
@@ -8210,97 +8210,97 @@
    {
     "item": "guam_leaf",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:228"
    },
    {
     "item": "rogues_purse",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:229"
    },
    {
     "item": "snake_weed",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:230"
    },
    {
     "item": "marentill",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:231"
    },
    {
     "item": "tarromin",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:232"
    },
    {
     "item": "harralander",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:233"
    },
    {
     "item": "ranarr_weed",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:234"
    },
    {
     "item": "toadflax",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:235"
    },
    {
     "item": "irit_leaf",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:236"
    },
    {
     "item": "avantoe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:237"
    },
    {
     "item": "kwuarm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:238"
    },
    {
     "item": "snapdragon",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:239"
    },
    {
     "item": "cadantine",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:240"
    },
    {
     "item": "lantadyme",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:241"
    },
    {
     "item": "dwarf_weed",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:242"
    },
    {
     "item": "torstol",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:243"
    }
   ]
@@ -8313,121 +8313,121 @@
    {
     "item": "eye_of_newt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:247"
    },
    {
     "item": "unicorn_horn_dust",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:248"
    },
    {
     "item": "limpwurt_root",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:249"
    },
    {
     "item": "red_spiders_eggs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:250"
    },
    {
     "item": "chocolate_dust",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:251"
    },
    {
     "item": "white_berries",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:252"
    },
    {
     "item": "toads_legs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:253"
    },
    {
     "item": "snape_grass",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:254"
    },
    {
     "item": "eye_of_newt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:255"
    },
    {
     "item": "unicorn_horn_dust",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:256"
    },
    {
     "item": "snape_grass",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:257"
    },
    {
     "item": "mortmyremushroom",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:258"
    },
    {
     "item": "limpwurt_root",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:259"
    },
    {
     "item": "dragon_scale_dust",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:260"
    },
    {
     "item": "red_spiders_eggs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:261"
    },
    {
     "item": "white_berries",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:262"
    },
    {
     "item": "dragon_scale_dust",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:263"
    },
    {
     "item": "wine_of_zamorak",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:264"
    },
    {
     "item": "cactus_potato",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:265"
    },
    {
     "item": "jangerberries",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:266"
    }
   ]
@@ -8440,67 +8440,67 @@
    {
     "item": "blankrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:270"
    },
    {
     "item": "clay",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:271"
    },
    {
     "item": "copper_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:272"
    },
    {
     "item": "tin_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:273"
    },
    {
     "item": "iron_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:274"
    },
    {
     "item": "silver_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:275"
    },
    {
     "item": "coal",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:276"
    },
    {
     "item": "gold_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:277"
    },
    {
     "item": "mithril_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:278"
    },
    {
     "item": "adamantite_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:279"
    },
    {
     "item": "runite_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:280"
    }
   ]
@@ -8513,37 +8513,37 @@
    {
     "item": "bronze_pickaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:284"
    },
    {
     "item": "iron_pickaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:285"
    },
    {
     "item": "steel_pickaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:286"
    },
    {
     "item": "mithril_pickaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:287"
    },
    {
     "item": "adamant_pickaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:288"
    },
    {
     "item": "rune_pickaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:289"
    }
   ]
@@ -8556,43 +8556,43 @@
    {
     "item": "crossbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:293"
    },
    {
     "item": "shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:294"
    },
    {
     "item": "oak_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:295"
    },
    {
     "item": "willow_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:296"
    },
    {
     "item": "maple_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:297"
    },
    {
     "item": "yew_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:298"
    },
    {
     "item": "magic_shortbow",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:299"
    }
   ]
@@ -8605,43 +8605,43 @@
    {
     "item": "bronze_knife",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:303"
    },
    {
     "item": "iron_knife",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:304"
    },
    {
     "item": "steel_knife",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:305"
    },
    {
     "item": "black_knife",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:306"
    },
    {
     "item": "mithril_knife",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:307"
    },
    {
     "item": "adamant_knife",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:308"
    },
    {
     "item": "rune_knife",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:309"
    }
   ]
@@ -8654,115 +8654,115 @@
    {
     "item": "leather_armour",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:313"
    },
    {
     "item": "hardleather_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:314"
    },
    {
     "item": "studded_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:315"
    },
    {
     "item": "studded_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:316"
    },
    {
     "item": "coif",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:317"
    },
    {
     "item": "boots_ranger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:318"
    },
    {
     "item": "robinhoodhat",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:319"
    },
    {
     "item": "dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:320"
    },
    {
     "item": "dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:321"
    },
    {
     "item": "dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:322"
    },
    {
     "item": "blue_dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:323"
    },
    {
     "item": "blue_dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:324"
    },
    {
     "item": "blue_dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:325"
    },
    {
     "item": "red_dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:326"
    },
    {
     "item": "red_dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:327"
    },
    {
     "item": "red_dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:328"
    },
    {
     "item": "black_dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:329"
    },
    {
     "item": "black_dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:330"
    },
    {
     "item": "black_dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:331"
    }
   ]
@@ -8775,61 +8775,61 @@
    {
     "item": "airrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:335"
    },
    {
     "item": "mindrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:336"
    },
    {
     "item": "waterrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:337"
    },
    {
     "item": "earthrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:338"
    },
    {
     "item": "firerune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:339"
    },
    {
     "item": "bodyrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:340"
    },
    {
     "item": "cosmicrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:341"
    },
    {
     "item": "chaosrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:342"
    },
    {
     "item": "naturerune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:343"
    },
    {
     "item": "lawrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:344"
    }
   ]
@@ -8842,49 +8842,49 @@
    {
     "item": "bronze_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:348"
    },
    {
     "item": "iron_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:349"
    },
    {
     "item": "silver_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:350"
    },
    {
     "item": "steel_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:351"
    },
    {
     "item": "gold_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:352"
    },
    {
     "item": "mithril_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:353"
    },
    {
     "item": "adamantite_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:354"
    },
    {
     "item": "runite_bar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:355"
    }
   ]
@@ -8897,133 +8897,133 @@
    {
     "item": "bronze_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:359"
    },
    {
     "item": "bronze_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:360"
    },
    {
     "item": "bronze_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:361"
    },
    {
     "item": "bronze_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:362"
    },
    {
     "item": "bronze_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:363"
    },
    {
     "item": "bronze_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:364"
    },
    {
     "item": "bronzecraftwire",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:365"
    },
    {
     "item": "bronze_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:366"
    },
    {
     "item": "bronze_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:367"
    },
    {
     "item": "bronze_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:368"
    },
    {
     "item": "bronze_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:369"
    },
    {
     "item": "bronze_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:370"
    },
    {
     "item": "bronze_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:371"
    },
    {
     "item": "bronze_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:372"
    },
    {
     "item": "bronze_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:373"
    },
    {
     "item": "bronze_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:374"
    },
    {
     "item": "bronze_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:375"
    },
    {
     "item": "bronze_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:376"
    },
    {
     "item": "bronze_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:377"
    },
    {
     "item": "bronze_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:378"
    },
    {
     "item": "bronze_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:379"
    },
    {
     "item": "bronze_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:380"
    }
   ]
@@ -9036,127 +9036,127 @@
    {
     "item": "iron_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:384"
    },
    {
     "item": "iron_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:385"
    },
    {
     "item": "iron_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:386"
    },
    {
     "item": "iron_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:387"
    },
    {
     "item": "iron_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:388"
    },
    {
     "item": "iron_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:389"
    },
    {
     "item": "iron_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:390"
    },
    {
     "item": "iron_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:391"
    },
    {
     "item": "iron_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:392"
    },
    {
     "item": "iron_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:393"
    },
    {
     "item": "iron_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:394"
    },
    {
     "item": "iron_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:395"
    },
    {
     "item": "iron_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:396"
    },
    {
     "item": "iron_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:397"
    },
    {
     "item": "iron_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:398"
    },
    {
     "item": "iron_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:399"
    },
    {
     "item": "iron_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:400"
    },
    {
     "item": "iron_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:401"
    },
    {
     "item": "iron_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:402"
    },
    {
     "item": "iron_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:403"
    },
    {
     "item": "iron_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:404"
    }
   ]
@@ -9169,133 +9169,133 @@
    {
     "item": "steel_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:408"
    },
    {
     "item": "steel_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:409"
    },
    {
     "item": "steel_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:410"
    },
    {
     "item": "steel_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:411"
    },
    {
     "item": "steel_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:412"
    },
    {
     "item": "steel_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:413"
    },
    {
     "item": "steel_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:414"
    },
    {
     "item": "steel_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:415"
    },
    {
     "item": "mcannonball",
     "count": 4,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:416"
    },
    {
     "item": "steel_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:417"
    },
    {
     "item": "steel_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:418"
    },
    {
     "item": "steel_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:419"
    },
    {
     "item": "steel_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:420"
    },
    {
     "item": "steel_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:421"
    },
    {
     "item": "steel_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:422"
    },
    {
     "item": "steel_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:423"
    },
    {
     "item": "steel_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:424"
    },
    {
     "item": "steel_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:425"
    },
    {
     "item": "steel_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:426"
    },
    {
     "item": "steel_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:427"
    },
    {
     "item": "steel_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:428"
    },
    {
     "item": "steel_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:429"
    }
   ]
@@ -9308,127 +9308,127 @@
    {
     "item": "mithril_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:433"
    },
    {
     "item": "mithril_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:434"
    },
    {
     "item": "mithril_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:435"
    },
    {
     "item": "mithril_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:436"
    },
    {
     "item": "mithril_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:437"
    },
    {
     "item": "mithril_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:438"
    },
    {
     "item": "mithril_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:439"
    },
    {
     "item": "mithril_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:440"
    },
    {
     "item": "mithril_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:441"
    },
    {
     "item": "mithril_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:442"
    },
    {
     "item": "mithril_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:443"
    },
    {
     "item": "mithril_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:444"
    },
    {
     "item": "mithril_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:445"
    },
    {
     "item": "mithril_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:446"
    },
    {
     "item": "mithril_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:447"
    },
    {
     "item": "mithril_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:448"
    },
    {
     "item": "mithril_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:449"
    },
    {
     "item": "mithril_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:450"
    },
    {
     "item": "mithril_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:451"
    },
    {
     "item": "mithril_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:452"
    },
    {
     "item": "mithril_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:453"
    }
   ]
@@ -9441,127 +9441,127 @@
    {
     "item": "adamant_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:457"
    },
    {
     "item": "adamant_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:458"
    },
    {
     "item": "adamant_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:459"
    },
    {
     "item": "adamant_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:460"
    },
    {
     "item": "adamant_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:461"
    },
    {
     "item": "adamant_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:462"
    },
    {
     "item": "adamant_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:463"
    },
    {
     "item": "adamant_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:464"
    },
    {
     "item": "adamant_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:465"
    },
    {
     "item": "adamant_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:466"
    },
    {
     "item": "adamant_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:467"
    },
    {
     "item": "adamant_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:468"
    },
    {
     "item": "adamnt_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:469"
    },
    {
     "item": "adamant_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:470"
    },
    {
     "item": "adamant_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:471"
    },
    {
     "item": "adamant_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:472"
    },
    {
     "item": "adamant_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:473"
    },
    {
     "item": "adamant_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:474"
    },
    {
     "item": "adamant_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:475"
    },
    {
     "item": "adamant_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:476"
    },
    {
     "item": "adamant_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:477"
    }
   ]
@@ -9574,127 +9574,127 @@
    {
     "item": "rune_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:481"
    },
    {
     "item": "rune_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:482"
    },
    {
     "item": "rune_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:483"
    },
    {
     "item": "rune_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:484"
    },
    {
     "item": "rune_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:485"
    },
    {
     "item": "rune_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:486"
    },
    {
     "item": "rune_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:487"
    },
    {
     "item": "rune_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:488"
    },
    {
     "item": "rune_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:489"
    },
    {
     "item": "rune_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:490"
    },
    {
     "item": "rune_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:491"
    },
    {
     "item": "rune_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:492"
    },
    {
     "item": "rune_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:493"
    },
    {
     "item": "rune_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:494"
    },
    {
     "item": "rune_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:495"
    },
    {
     "item": "rune_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:496"
    },
    {
     "item": "rune_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:497"
    },
    {
     "item": "rune_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:498"
    },
    {
     "item": "rune_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:499"
    },
    {
     "item": "rune_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:500"
    },
    {
     "item": "rune_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:501"
    }
   ]
@@ -9707,79 +9707,79 @@
    {
     "item": "cabbage",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:505"
    },
    {
     "item": "cake",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:506"
    },
    {
     "item": "cup_of_tea",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:507"
    },
    {
     "item": "chisel",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:508"
    },
    {
     "item": "banana",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:509"
    },
    {
     "item": "silk",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:510"
    },
    {
     "item": "fur",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:511"
    },
    {
     "item": "raw_salmon",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:512"
    },
    {
     "item": "silver_ore",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:513"
    },
    {
     "item": "airrune",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:514"
    },
    {
     "item": "iron_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:515"
    },
    {
     "item": "gnome_spice",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:516"
    },
    {
     "item": "sapphire",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:517"
    }
   ]
@@ -9792,67 +9792,67 @@
    {
     "item": "pickpocket_guide_man",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:521"
    },
    {
     "item": "pickpocket_guide_farmer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:522"
    },
    {
     "item": "pickpocket_guide_warrior",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:523"
    },
    {
     "item": "pickpocket_guide_rogue",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:524"
    },
    {
     "item": "pickpocket_guide_guard",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:525"
    },
    {
     "item": "pickpocket_guide_fremennik_citizen",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:526"
    },
    {
     "item": "pickpocket_guide_knight",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:527"
    },
    {
     "item": "pickpocket_guide_watchman",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:528"
    },
    {
     "item": "pickpocket_guide_paladin",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:529"
    },
    {
     "item": "pickpocket_guide_gnome",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:530"
    },
    {
     "item": "pickpocket_guide_hero",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:531"
    }
   ]
@@ -9865,139 +9865,139 @@
    {
     "item": "leather_gloves",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:535"
    },
    {
     "item": "leather_boots",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:536"
    },
    {
     "item": "leather_cowl",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:537"
    },
    {
     "item": "leather_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:538"
    },
    {
     "item": "leather_armour",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:539"
    },
    {
     "item": "snelm_round_swamp",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:540"
    },
    {
     "item": "leather_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:541"
    },
    {
     "item": "hardleather_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:542"
    },
    {
     "item": "coif",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:543"
    },
    {
     "item": "studded_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:544"
    },
    {
     "item": "studded_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:545"
    },
    {
     "item": "dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:546"
    },
    {
     "item": "dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:547"
    },
    {
     "item": "dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:548"
    },
    {
     "item": "blue_dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:549"
    },
    {
     "item": "blue_dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:550"
    },
    {
     "item": "blue_dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:551"
    },
    {
     "item": "red_dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:552"
    },
    {
     "item": "red_dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:553"
    },
    {
     "item": "red_dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:554"
    },
    {
     "item": "black_dragon_vambraces",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:555"
    },
    {
     "item": "black_dragonhide_chaps",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:556"
    },
    {
     "item": "black_dragonhide_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:557"
    }
   ]
@@ -10010,37 +10010,37 @@
    {
     "item": "logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:561"
    },
    {
     "item": "oak_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:562"
    },
    {
     "item": "willow_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:563"
    },
    {
     "item": "maple_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:564"
    },
    {
     "item": "yew_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:565"
    },
    {
     "item": "magic_logs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:566"
    }
   ]
@@ -10053,37 +10053,37 @@
    {
     "item": "boots_wizard",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:570"
    },
    {
     "item": "splitbark_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:571"
    },
    {
     "item": "splitbark_body",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:572"
    },
    {
     "item": "splitbark_legs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:573"
    },
    {
     "item": "splitbark_gauntlets",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:574"
    },
    {
     "item": "splitbark_greaves",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/player/configs/skill_guide.inv:575"
    }
   ]
@@ -10599,31 +10599,31 @@
    {
     "item": "bronze_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:3"
    },
    {
     "item": "bronze_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:4"
    },
    {
     "item": "bronze_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:5"
    },
    {
     "item": "bronze_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:6"
    },
    {
     "item": "bronze_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:7"
    }
   ]
@@ -10636,25 +10636,25 @@
    {
     "item": "bronze_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:11"
    },
    {
     "item": "bronze_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:12"
    },
    {
     "item": "bronze_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:13"
    },
    {
     "item": "bronze_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:14"
    }
   ]
@@ -10667,25 +10667,25 @@
    {
     "item": "bronze_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:18"
    },
    {
     "item": "bronze_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:19"
    },
    {
     "item": "bronze_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:20"
    },
    {
     "item": "bronze_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:21"
    }
   ]
@@ -10698,25 +10698,25 @@
    {
     "item": "bronze_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:25"
    },
    {
     "item": "bronze_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:26"
    },
    {
     "item": "bronze_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:27"
    },
    {
     "item": "bronze_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:28"
    }
   ]
@@ -10729,25 +10729,25 @@
    {
     "item": "bronze_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:32"
    },
    {
     "item": "bronze_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:33"
    },
    {
     "item": "bronze_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:34"
    },
    {
     "item": "bronzecraftwire",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:35"
    }
   ]
@@ -10760,31 +10760,31 @@
    {
     "item": "iron_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:39"
    },
    {
     "item": "iron_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:40"
    },
    {
     "item": "iron_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:41"
    },
    {
     "item": "iron_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:42"
    },
    {
     "item": "iron_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:43"
    }
   ]
@@ -10797,25 +10797,25 @@
    {
     "item": "iron_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:47"
    },
    {
     "item": "iron_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:48"
    },
    {
     "item": "iron_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:49"
    },
    {
     "item": "iron_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:50"
    }
   ]
@@ -10828,25 +10828,25 @@
    {
     "item": "iron_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:54"
    },
    {
     "item": "iron_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:55"
    },
    {
     "item": "iron_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:56"
    },
    {
     "item": "iron_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:57"
    }
   ]
@@ -10859,25 +10859,25 @@
    {
     "item": "iron_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:61"
    },
    {
     "item": "iron_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:62"
    },
    {
     "item": "iron_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:63"
    },
    {
     "item": "iron_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:64"
    }
   ]
@@ -10890,19 +10890,19 @@
    {
     "item": "iron_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:68"
    },
    {
     "item": "iron_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:69"
    },
    {
     "item": "iron_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:70"
    }
   ]
@@ -10915,31 +10915,31 @@
    {
     "item": "steel_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:74"
    },
    {
     "item": "steel_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:75"
    },
    {
     "item": "steel_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:76"
    },
    {
     "item": "steel_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:77"
    },
    {
     "item": "steel_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:78"
    }
   ]
@@ -10952,25 +10952,25 @@
    {
     "item": "steel_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:82"
    },
    {
     "item": "steel_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:83"
    },
    {
     "item": "steel_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:84"
    },
    {
     "item": "steel_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:85"
    }
   ]
@@ -10983,25 +10983,25 @@
    {
     "item": "steel_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:89"
    },
    {
     "item": "steel_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:90"
    },
    {
     "item": "steel_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:91"
    },
    {
     "item": "steel_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:92"
    }
   ]
@@ -11014,25 +11014,25 @@
    {
     "item": "steel_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:96"
    },
    {
     "item": "steel_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:97"
    },
    {
     "item": "steel_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:98"
    },
    {
     "item": "steel_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:99"
    }
   ]
@@ -11045,31 +11045,31 @@
    {
     "item": "steel_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:103"
    },
    {
     "item": "steel_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:104"
    },
    {
     "item": "steel_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:105"
    },
    {
     "item": "nails",
     "count": 2,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:106"
    },
    {
     "item": "studs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:107"
    }
   ]
@@ -11082,31 +11082,31 @@
    {
     "item": "mithril_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:111"
    },
    {
     "item": "mithril_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:112"
    },
    {
     "item": "mithril_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:113"
    },
    {
     "item": "mithril_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:114"
    },
    {
     "item": "mithril_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:115"
    }
   ]
@@ -11119,25 +11119,25 @@
    {
     "item": "mithril_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:119"
    },
    {
     "item": "mithril_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:120"
    },
    {
     "item": "mithril_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:121"
    },
    {
     "item": "mithril_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:122"
    }
   ]
@@ -11150,25 +11150,25 @@
    {
     "item": "mithril_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:126"
    },
    {
     "item": "mithril_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:127"
    },
    {
     "item": "mithril_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:128"
    },
    {
     "item": "mithril_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:129"
    }
   ]
@@ -11181,25 +11181,25 @@
    {
     "item": "mithril_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:133"
    },
    {
     "item": "mithril_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:134"
    },
    {
     "item": "mithril_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:135"
    },
    {
     "item": "mithril_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:136"
    }
   ]
@@ -11212,19 +11212,19 @@
    {
     "item": "mithril_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:140"
    },
    {
     "item": "mithril_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:141"
    },
    {
     "item": "mithril_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:142"
    }
   ]
@@ -11237,31 +11237,31 @@
    {
     "item": "adamant_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:146"
    },
    {
     "item": "adamant_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:147"
    },
    {
     "item": "adamant_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:148"
    },
    {
     "item": "adamant_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:149"
    },
    {
     "item": "adamant_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:150"
    }
   ]
@@ -11274,25 +11274,25 @@
    {
     "item": "adamant_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:154"
    },
    {
     "item": "adamant_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:155"
    },
    {
     "item": "adamnt_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:156"
    },
    {
     "item": "adamant_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:157"
    }
   ]
@@ -11305,25 +11305,25 @@
    {
     "item": "adamant_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:161"
    },
    {
     "item": "adamant_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:162"
    },
    {
     "item": "adamant_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:163"
    },
    {
     "item": "adamant_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:164"
    }
   ]
@@ -11336,25 +11336,25 @@
    {
     "item": "adamant_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:168"
    },
    {
     "item": "adamant_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:169"
    },
    {
     "item": "adamant_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:170"
    },
    {
     "item": "adamant_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:171"
    }
   ]
@@ -11367,19 +11367,19 @@
    {
     "item": "adamant_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:175"
    },
    {
     "item": "adamant_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:176"
    },
    {
     "item": "adamant_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:177"
    }
   ]
@@ -11392,31 +11392,31 @@
    {
     "item": "rune_dagger",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:181"
    },
    {
     "item": "rune_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:182"
    },
    {
     "item": "rune_scimitar",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:183"
    },
    {
     "item": "rune_longsword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:184"
    },
    {
     "item": "rune_2h_sword",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:185"
    }
   ]
@@ -11429,25 +11429,25 @@
    {
     "item": "rune_axe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:189"
    },
    {
     "item": "rune_mace",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:190"
    },
    {
     "item": "rune_warhammer",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:191"
    },
    {
     "item": "rune_battleaxe",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:192"
    }
   ]
@@ -11460,25 +11460,25 @@
    {
     "item": "rune_chainbody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:196"
    },
    {
     "item": "rune_platelegs",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:197"
    },
    {
     "item": "rune_plateskirt",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:198"
    },
    {
     "item": "rune_platebody",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:199"
    }
   ]
@@ -11491,25 +11491,25 @@
    {
     "item": "rune_med_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:203"
    },
    {
     "item": "rune_full_helm",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:204"
    },
    {
     "item": "rune_sq_shield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:205"
    },
    {
     "item": "rune_kiteshield",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:206"
    }
   ]
@@ -11522,19 +11522,19 @@
    {
     "item": "rune_dart_tip",
     "count": 10,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:210"
    },
    {
     "item": "rune_arrowheads",
     "count": 15,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:211"
    },
    {
     "item": "rune_knife",
     "count": 5,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:212"
    }
   ]
@@ -11547,7 +11547,7 @@
    {
     "item": "bronze_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:216"
    }
   ]
@@ -11560,7 +11560,7 @@
    {
     "item": "iron_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:220"
    }
   ]
@@ -11573,7 +11573,7 @@
    {
     "item": "steel_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:224"
    }
   ]
@@ -11586,7 +11586,7 @@
    {
     "item": "mithril_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:228"
    }
   ]
@@ -11599,7 +11599,7 @@
    {
     "item": "adamant_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:232"
    }
   ]
@@ -11612,7 +11612,7 @@
    {
     "item": "rune_claws",
     "count": 1,
-    "restockTicks": 0,
+    "restockTicks": null,
     "src": "scripts/skill_smithing/configs/smithing/smithing.inv:236"
    }
   ]

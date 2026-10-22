@@ -3,7 +3,7 @@
   "id": 0,
   "name": "Hans",
   "debugname": "hans",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:135",
   "spawns": [
    {
@@ -2118,7 +2118,7 @@
   "id": 28,
   "name": "Zoo keeper",
   "debugname": "zoo_keeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:41",
   "spawns": [
    {
@@ -2153,7 +2153,7 @@
   "id": 30,
   "name": "Barman",
   "debugname": "ardounge_barman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:100",
   "spawns": []
  },
@@ -2161,7 +2161,7 @@
   "id": 31,
   "name": "Priest",
   "debugname": "orbon_priest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:121",
   "spawns": [
    {
@@ -2245,7 +2245,7 @@
   "id": 33,
   "name": "Door man",
   "debugname": "doorman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:21",
   "spawns": [
    {
@@ -2482,7 +2482,7 @@
   "id": 36,
   "name": "Wyson the gardener",
   "debugname": "wyson",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:44",
   "spawns": [
    {
@@ -2497,7 +2497,7 @@
   "id": 37,
   "name": "Sigbert the Adventurer",
   "debugname": "sigbert_the_adventurer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/yanille.npc:87",
   "spawns": [
    {
@@ -3028,7 +3028,7 @@
   "id": 42,
   "name": "Sheep",
   "debugname": "sheepsheered",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:1053",
   "spawns": [
    {
@@ -3067,7 +3067,7 @@
   "id": 43,
   "name": "Sheep",
   "debugname": "sheepunsheered",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:1067",
   "spawns": [
    {
@@ -7336,7 +7336,7 @@
   "id": 57,
   "name": "Fairy",
   "debugname": "fairy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:1",
   "spawns": [
    {
@@ -11725,7 +11725,7 @@
   "id": 80,
   "name": "Camel",
   "debugname": "camel",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_desert/configs/desert.npc:1",
   "spawns": [
    {
@@ -14850,7 +14850,7 @@
   "id": 98,
   "name": "Dog",
   "debugname": "dog",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:2465",
   "spawns": [
    {
@@ -23012,7 +23012,7 @@
   "id": 146,
   "name": "Gull",
   "debugname": "seabird1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3695",
   "spawns": [
    {
@@ -23087,7 +23087,7 @@
   "id": 147,
   "name": "Cormorant",
   "debugname": "seabird2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3723",
   "spawns": [
    {
@@ -23102,7 +23102,7 @@
   "id": 148,
   "name": "Albatross",
   "debugname": "seabird3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3749",
   "spawns": [
    {
@@ -23123,7 +23123,7 @@
   "id": 149,
   "name": "Gull",
   "debugname": "gull1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:1",
   "spawns": [
    {
@@ -23168,7 +23168,7 @@
   "id": 150,
   "name": "Gull",
   "debugname": "gull2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:31",
   "spawns": [
    {
@@ -23225,7 +23225,7 @@
   "id": 151,
   "name": "Fly trap",
   "debugname": "flytrap",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3775",
   "spawns": [
    {
@@ -23246,7 +23246,7 @@
   "id": 152,
   "name": "Tree",
   "debugname": "nasty_tree",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3797",
   "spawns": [
    {
@@ -23339,7 +23339,7 @@
   "id": 153,
   "name": "Butterfly",
   "debugname": "butterfly",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3824",
   "spawns": [
    {
@@ -23954,7 +23954,7 @@
   "id": 154,
   "name": "Butterfly",
   "debugname": "butterfly2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3834",
   "spawns": [
    {
@@ -24311,7 +24311,7 @@
   "id": 155,
   "name": "Butterfly",
   "debugname": "butterfly_bluemorpo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3844",
   "spawns": [
    {
@@ -24392,7 +24392,7 @@
   "id": 156,
   "name": "Butterfly",
   "debugname": "butterfly_tigerswallowtail",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3860",
   "spawns": [
    {
@@ -24431,7 +24431,7 @@
   "id": 157,
   "name": "Butterfly",
   "debugname": "butterfly_viceroy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:3876",
   "spawns": [
    {
@@ -24878,7 +24878,7 @@
   "id": 162,
   "name": "Gnome trainer",
   "debugname": "gnometrainer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:194",
   "spawns": [
    {
@@ -25385,7 +25385,7 @@
   "id": 165,
   "name": "Gnome shop keeper",
   "debugname": "gnomeshopkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:459",
   "spawns": []
  },
@@ -25393,7 +25393,7 @@
   "id": 166,
   "name": "Gnome banker",
   "debugname": "gnomebanker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:474",
   "spawns": [
    {
@@ -25456,7 +25456,7 @@
   "id": 167,
   "name": "Gnome baller",
   "debugname": "gnomeballer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:495",
   "spawns": []
  },
@@ -25884,7 +25884,7 @@
   "id": 170,
   "name": "Gnome pilot",
   "debugname": "gnomepilot",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:590",
   "spawns": [
    {
@@ -25929,7 +25929,7 @@
   "id": 171,
   "name": "Brimstail",
   "debugname": "gnome_brimstail",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:605",
   "spawns": [
    {
@@ -27922,7 +27922,7 @@
   "id": 198,
   "name": "Guild master",
   "debugname": "guildmaster",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/champions_guild.npc:65",
   "spawns": [
    {
@@ -28123,7 +28123,7 @@
   "id": 207,
   "name": "Dwarf youngster",
   "debugname": "dwarfchildtw1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mcannon/configs/quest_mcannon.npc:41",
   "spawns": []
  },
@@ -28131,7 +28131,7 @@
   "id": 208,
   "name": "Dwarf Commander",
   "debugname": "lawgof2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mcannon/configs/quest_mcannon.npc:61",
   "spawns": [
    {
@@ -28146,7 +28146,7 @@
   "id": 209,
   "name": "Nulodion",
   "debugname": "nulodion",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mcannon/configs/quest_mcannon.npc:80",
   "spawns": [
    {
@@ -28161,7 +28161,7 @@
   "id": 210,
   "name": "Grail Maiden",
   "debugname": "grail_maiden",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:1",
   "spawns": [
    {
@@ -28230,7 +28230,7 @@
   "id": 211,
   "name": "Sir Percival",
   "debugname": "sir_percival",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:27",
   "spawns": []
  },
@@ -28238,7 +28238,7 @@
   "id": 212,
   "name": "King Percival",
   "debugname": "king_percival",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:57",
   "spawns": [
    {
@@ -28253,7 +28253,7 @@
   "id": 213,
   "name": "Merlin",
   "debugname": "merlin2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:319",
   "spawns": []
  },
@@ -28261,7 +28261,7 @@
   "id": 214,
   "name": "Peasant",
   "debugname": "unhappy_peasant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:89",
   "spawns": [
    {
@@ -28300,7 +28300,7 @@
   "id": 215,
   "name": "Peasant",
   "debugname": "happy_peasant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:117",
   "spawns": [
    {
@@ -28339,7 +28339,7 @@
   "id": 216,
   "name": "High Priest",
   "debugname": "high_priest_of_entrana",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_entrana/configs/entrana.npc:24",
   "spawns": [
    {
@@ -28354,7 +28354,7 @@
   "id": 217,
   "name": "Crone",
   "debugname": "grail_crone",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:145",
   "spawns": []
  },
@@ -28362,7 +28362,7 @@
   "id": 218,
   "name": "Galahad",
   "debugname": "brother_galahad",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:170",
   "spawns": [
    {
@@ -28377,7 +28377,7 @@
   "id": 219,
   "name": "Fisherman",
   "debugname": "grail_fisherman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:200",
   "spawns": [
    {
@@ -28392,7 +28392,7 @@
   "id": 220,
   "name": "The Fisher King",
   "debugname": "fisher_king",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grail/configs/fisher_realm.npc:235",
   "spawns": [
    {
@@ -28461,7 +28461,7 @@
   "id": 223,
   "name": "Brother Kojo",
   "debugname": "brother_kojo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:183",
   "spawns": [
    {
@@ -28551,7 +28551,7 @@
   "id": 225,
   "name": "Bonzo",
   "debugname": "bonzo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/hemenster/hemenster.npc:26",
   "spawns": [
    {
@@ -28566,7 +28566,7 @@
   "id": 226,
   "name": "A Sinister Stranger",
   "debugname": "sinister_stranger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/hemenster/hemenster.npc:84",
   "spawns": [
    {
@@ -28581,7 +28581,7 @@
   "id": 227,
   "name": "Morris",
   "debugname": "morris",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/hemenster/hemenster.npc:1",
   "spawns": [
    {
@@ -28596,7 +28596,7 @@
   "id": 228,
   "name": "Big Dave",
   "debugname": "bigdave",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/hemenster/hemenster.npc:115",
   "spawns": [
    {
@@ -28611,7 +28611,7 @@
   "id": 229,
   "name": "Joshua",
   "debugname": "joshua",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/hemenster/hemenster.npc:139",
   "spawns": [
    {
@@ -28626,7 +28626,7 @@
   "id": 230,
   "name": "Grandpa Jack",
   "debugname": "grandpa_jack",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/hemenster/hemenster.npc:55",
   "spawns": [
    {
@@ -28641,7 +28641,7 @@
   "id": 231,
   "name": "Forester",
   "debugname": "mcgruborforester",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:4759",
   "spawns": [
    {
@@ -28674,7 +28674,7 @@
   "id": 232,
   "name": "Mountain Dwarf",
   "debugname": "tunnel_dwarf",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_white_wolf_mountain/configs/white_wolf_mountain.npc:1",
   "spawns": [
    {
@@ -28707,7 +28707,7 @@
   "id": 233,
   "name": "Fishing spot",
   "debugname": "0_41_53_compofishspot",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:1",
   "spawns": [
    {
@@ -28722,7 +28722,7 @@
   "id": 234,
   "name": "Fishing spot",
   "debugname": "0_41_53_sinisterfishspot",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:17",
   "spawns": [
    {
@@ -28737,7 +28737,7 @@
   "id": 235,
   "name": "Fishing spot",
   "debugname": "0_41_53_bigdavefishspot",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:33",
   "spawns": [
    {
@@ -28752,7 +28752,7 @@
   "id": 236,
   "name": "Fishing spot",
   "debugname": "0_41_53_joshuafishspot",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:49",
   "spawns": [
    {
@@ -28832,7 +28832,7 @@
   "id": 239,
   "name": "Sir Lancelot",
   "debugname": "sir_lancelot",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:32",
   "spawns": [
    {
@@ -28847,7 +28847,7 @@
   "id": 240,
   "name": "Sir Gawain",
   "debugname": "sir_gawain",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:63",
   "spawns": [
    {
@@ -28862,7 +28862,7 @@
   "id": 241,
   "name": "Sir Kay",
   "debugname": "sir_kay",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:1",
   "spawns": [
    {
@@ -28877,7 +28877,7 @@
   "id": 242,
   "name": "Sir Bedivere",
   "debugname": "sir_bedivere",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:94",
   "spawns": [
    {
@@ -28892,7 +28892,7 @@
   "id": 243,
   "name": "Sir Tristram",
   "debugname": "sir_tristram",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:125",
   "spawns": [
    {
@@ -28907,7 +28907,7 @@
   "id": 244,
   "name": "Sir Pelleas",
   "debugname": "sir_pelleas",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:155",
   "spawns": [
    {
@@ -28922,7 +28922,7 @@
   "id": 245,
   "name": "Sir Lucan",
   "debugname": "sir_lucan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:187",
   "spawns": [
    {
@@ -28937,7 +28937,7 @@
   "id": 246,
   "name": "Sir Palomedes",
   "debugname": "sir_palomedes",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:219",
   "spawns": [
    {
@@ -28967,7 +28967,7 @@
   "id": 248,
   "name": "Morgan Le Faye",
   "debugname": "morgan_le_faye",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arthur/configs/keep_le_faye.npc:93",
   "spawns": []
  },
@@ -28975,7 +28975,7 @@
   "id": 249,
   "name": "Merlin",
   "debugname": "merlin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:251",
   "spawns": []
  },
@@ -28983,7 +28983,7 @@
   "id": 250,
   "name": "The Lady of the Lake",
   "debugname": "ladyofthelake",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_taverly/configs/taverly.npc:118",
   "spawns": [
    {
@@ -28998,7 +28998,7 @@
   "id": 251,
   "name": "King Arthur",
   "debugname": "king_arthur",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_camelot/configs/camelot.npc:285",
   "spawns": [
    {
@@ -29013,7 +29013,7 @@
   "id": 252,
   "name": "Beggar",
   "debugname": "lake_beggar",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arthur/configs/beggar.npc:1",
   "spawns": []
  },
@@ -29284,7 +29284,7 @@
   "id": 259,
   "name": "Khazard barman",
   "debugname": "khazard_barman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:225",
   "spawns": [
    {
@@ -29299,7 +29299,7 @@
   "id": 260,
   "name": "Kelvin",
   "debugname": "fightslave_kelvin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:250",
   "spawns": [
    {
@@ -29314,7 +29314,7 @@
   "id": 261,
   "name": "Joe",
   "debugname": "fightslave_joe",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:274",
   "spawns": [
    {
@@ -29329,7 +29329,7 @@
   "id": 262,
   "name": "Fightslave",
   "debugname": "fightslave",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:303",
   "spawns": [
    {
@@ -29356,7 +29356,7 @@
   "id": 263,
   "name": "Hengrad",
   "debugname": "hengrad",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:325",
   "spawns": [
    {
@@ -29371,7 +29371,7 @@
   "id": 264,
   "name": "Lady Servil",
   "debugname": "lady_servil",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:349",
   "spawns": [
    {
@@ -29386,7 +29386,7 @@
   "id": 265,
   "name": "Jeremy Servil",
   "debugname": "jeremy_servil",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:371",
   "spawns": [
    {
@@ -29401,7 +29401,7 @@
   "id": 266,
   "name": "Jeremy Servil",
   "debugname": "jeremy_servil_arena",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:390",
   "spawns": [
    {
@@ -29416,7 +29416,7 @@
   "id": 267,
   "name": "Justin Servil",
   "debugname": "justin_servil",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:409",
   "spawns": [
    {
@@ -29431,7 +29431,7 @@
   "id": 268,
   "name": "Local",
   "debugname": "arena_spectator",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_arena/configs/quest_arena.npc:433",
   "spawns": [
    {
@@ -29506,7 +29506,7 @@
   "id": 273,
   "name": "Lucien",
   "debugname": "ikov_lucien1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_ikov/configs/quest_ikov.npc:46",
   "spawns": [
    {
@@ -29569,7 +29569,7 @@
   "id": 276,
   "name": "Winelda",
   "debugname": "ikov_winelda",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_ikov/configs/quest_ikov.npc:179",
   "spawns": [
    {
@@ -29592,7 +29592,7 @@
   "id": 278,
   "name": "Cook",
   "debugname": "cook",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:25",
   "spawns": [
    {
@@ -29607,7 +29607,7 @@
   "id": 279,
   "name": "Brother Omad",
   "debugname": "brother_omad",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:203",
   "spawns": [
    {
@@ -29622,7 +29622,7 @@
   "id": 280,
   "name": "Brother Cedric",
   "debugname": "brother_cedric",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:224",
   "spawns": [
    {
@@ -29706,7 +29706,7 @@
   "id": 284,
   "name": "Doric",
   "debugname": "doric",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:4900",
   "spawns": [
    {
@@ -29721,7 +29721,7 @@
   "id": 285,
   "name": "Veronica",
   "debugname": "veronica",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:226",
   "spawns": [
    {
@@ -29736,7 +29736,7 @@
   "id": 286,
   "name": "Professor Oddenstein",
   "debugname": "professor_oddenstein",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:248",
   "spawns": [
    {
@@ -29751,7 +29751,7 @@
   "id": 287,
   "name": "Ernest",
   "debugname": "ernest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_haunted/configs/ernest.npc:1",
   "spawns": []
  },
@@ -29759,7 +29759,7 @@
   "id": 288,
   "name": "Ernest",
   "debugname": "questchicken",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_haunted/configs/ernest.npc:24",
   "spawns": [
    {
@@ -29774,7 +29774,7 @@
   "id": 289,
   "name": "Councillor Halgrive",
   "debugname": "councillor_halgrive",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_sheepherder/configs/quest_sheepherder.npc:1",
   "spawns": [
    {
@@ -29789,7 +29789,7 @@
   "id": 290,
   "name": "Doctor Orbon",
   "debugname": "doctor_orbon",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_sheepherder/configs/quest_sheepherder.npc:34",
   "spawns": [
    {
@@ -29804,7 +29804,7 @@
   "id": 291,
   "name": "Farmer Brumty",
   "debugname": "farmer_brumty",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_sheepherder/configs/quest_sheepherder.npc:59",
   "spawns": [
    {
@@ -29819,7 +29819,7 @@
   "id": 292,
   "name": "Diseased sheep 1",
   "debugname": "plaguesheep_1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_sheepherder/configs/quest_sheepherder.npc:87",
   "spawns": [
    {
@@ -29846,7 +29846,7 @@
   "id": 293,
   "name": "Diseased sheep 2",
   "debugname": "plaguesheep_2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_sheepherder/configs/quest_sheepherder.npc:106",
   "spawns": [
    {
@@ -29873,7 +29873,7 @@
   "id": 294,
   "name": "Diseased sheep 3",
   "debugname": "plaguesheep_3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_sheepherder/configs/quest_sheepherder.npc:125",
   "spawns": [
    {
@@ -29900,7 +29900,7 @@
   "id": 295,
   "name": "Diseased sheep 4",
   "debugname": "plaguesheep_4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_sheepherder/configs/quest_sheepherder.npc:144",
   "spawns": [
    {
@@ -29927,7 +29927,7 @@
   "id": 296,
   "name": "General Bentnoze",
   "debugname": "general_bentnoze",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/goblin_village/goblin_village.npc:1",
   "spawns": [
    {
@@ -29942,7 +29942,7 @@
   "id": 297,
   "name": "General Wartface",
   "debugname": "general_wartface",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/goblin_village/goblin_village.npc:23",
   "spawns": [
    {
@@ -30101,7 +30101,7 @@
   "id": 300,
   "name": "Sedridor",
   "debugname": "head_wizard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_runemysteries/configs/quest_runemysteries.npc:1",
   "spawns": [
    {
@@ -30116,7 +30116,7 @@
   "id": 301,
   "name": "Twig",
   "debugname": "floatingtwig_broken1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:4921",
   "spawns": []
  },
@@ -30124,7 +30124,7 @@
   "id": 302,
   "name": "Hadley",
   "debugname": "hadley_waterfall_quest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_waterfall/configs/waterfall.npc:1",
   "spawns": [
    {
@@ -30139,7 +30139,7 @@
   "id": 303,
   "name": "Gerald",
   "debugname": "gerald_waterfall_quest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_waterfall/configs/waterfall.npc:24",
   "spawns": [
    {
@@ -30154,7 +30154,7 @@
   "id": 304,
   "name": "Almera",
   "debugname": "almera_waterfall_quest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_waterfall/configs/waterfall.npc:46",
   "spawns": [
    {
@@ -30169,7 +30169,7 @@
   "id": 305,
   "name": "Hudon",
   "debugname": "hudon_waterfall_quest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_waterfall/configs/waterfall.npc:70",
   "spawns": [
    {
@@ -30184,7 +30184,7 @@
   "id": 306,
   "name": "Golrie",
   "debugname": "golrie_waterfall_quest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_waterfall/configs/waterfall.npc:86",
   "spawns": [
    {
@@ -30199,7 +30199,7 @@
   "id": 307,
   "name": "Hetty",
   "debugname": "hetty",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_rimmington/configs/rimmington.npc:1",
   "spawns": [
    {
@@ -30214,7 +30214,7 @@
   "id": 308,
   "name": "Master fisher",
   "debugname": "master_fisher",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing_guild/fishing_guild.npc:1",
   "spawns": [
    {
@@ -30229,7 +30229,7 @@
   "id": 309,
   "name": "Fishing spot",
   "debugname": "0_37_53_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:65",
   "spawns": [
    {
@@ -30280,7 +30280,7 @@
   "id": 310,
   "name": "Fishing spot",
   "debugname": "0_39_53_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:86",
   "spawns": [
    {
@@ -30325,7 +30325,7 @@
   "id": 311,
   "name": "Fishing spot",
   "debugname": "0_40_52_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:107",
   "spawns": [
    {
@@ -30346,7 +30346,7 @@
   "id": 312,
   "name": "Fishing spot",
   "debugname": "0_40_53_rarefish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:128",
   "spawns": [
    {
@@ -30421,7 +30421,7 @@
   "id": 313,
   "name": "Fishing spot",
   "debugname": "0_40_53_memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:149",
   "spawns": [
    {
@@ -30466,7 +30466,7 @@
   "id": 314,
   "name": "Fishing spot",
   "debugname": "0_41_73_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:170",
   "spawns": [
    {
@@ -30493,7 +30493,7 @@
   "id": 315,
   "name": "Fishing spot",
   "debugname": "0_42_55_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:191",
   "spawns": [
    {
@@ -30526,7 +30526,7 @@
   "id": 316,
   "name": "Fishing spot",
   "debugname": "0_43_51_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:212",
   "spawns": [
    {
@@ -30559,7 +30559,7 @@
   "id": 317,
   "name": "Fishing spot",
   "debugname": "0_44_46_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:233",
   "spawns": [
    {
@@ -30586,7 +30586,7 @@
   "id": 318,
   "name": "Fishing spot",
   "debugname": "0_44_52_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:254",
   "spawns": [
    {
@@ -30619,7 +30619,7 @@
   "id": 319,
   "name": "Fishing spot",
   "debugname": "0_44_52_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:275",
   "spawns": [
    {
@@ -30652,7 +30652,7 @@
   "id": 320,
   "name": "Fishing spot",
   "debugname": "0_44_53_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:296",
   "spawns": [
    {
@@ -30673,7 +30673,7 @@
   "id": 321,
   "name": "Fishing spot",
   "debugname": "0_44_53_rarefish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:317",
   "spawns": [
    {
@@ -30694,7 +30694,7 @@
   "id": 322,
   "name": "Fishing spot",
   "debugname": "0_44_53_memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:338",
   "spawns": [
    {
@@ -30721,7 +30721,7 @@
   "id": 323,
   "name": "Fishing spot",
   "debugname": "0_45_49_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:359",
   "spawns": [
    {
@@ -30748,7 +30748,7 @@
   "id": 324,
   "name": "Fishing spot",
   "debugname": "0_45_49_rarefish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:380",
   "spawns": [
    {
@@ -30775,7 +30775,7 @@
   "id": 325,
   "name": "Fishing spot",
   "debugname": "0_46_49_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:401",
   "spawns": [
    {
@@ -30796,7 +30796,7 @@
   "id": 326,
   "name": "Fishing spot",
   "debugname": "0_47_57_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:422",
   "spawns": [
    {
@@ -30811,7 +30811,7 @@
   "id": 327,
   "name": "Fishing spot",
   "debugname": "0_48_50_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:443",
   "spawns": [
    {
@@ -30832,7 +30832,7 @@
   "id": 328,
   "name": "Fishing spot",
   "debugname": "0_48_53_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:464",
   "spawns": [
    {
@@ -30853,7 +30853,7 @@
   "id": 329,
   "name": "Fishing spot",
   "debugname": "0_50_50_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:485",
   "spawns": [
    {
@@ -30874,7 +30874,7 @@
   "id": 330,
   "name": "Fishing spot",
   "debugname": "0_51_49_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:506",
   "spawns": [
    {
@@ -30895,7 +30895,7 @@
   "id": 331,
   "name": "Fishing spot",
   "debugname": "freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:4927",
   "spawns": []
  },
@@ -30903,7 +30903,7 @@
   "id": 332,
   "name": "Fishing spot",
   "debugname": "saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:4943",
   "spawns": []
  },
@@ -30911,7 +30911,7 @@
   "id": 333,
   "name": "Fishing spot",
   "debugname": "rarefish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:4959",
   "spawns": []
  },
@@ -30919,7 +30919,7 @@
   "id": 334,
   "name": "Fishing spot",
   "debugname": "memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:4975",
   "spawns": []
  },
@@ -30927,7 +30927,7 @@
   "id": 335,
   "name": "Elena",
   "debugname": "elena2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/elena.npc:1",
   "spawns": [
    {
@@ -30942,7 +30942,7 @@
   "id": 336,
   "name": "DeVinci",
   "debugname": "artist1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:1",
   "spawns": [
    {
@@ -30957,7 +30957,7 @@
   "id": 337,
   "name": "DeVinci",
   "debugname": "artist2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:21",
   "spawns": [
    {
@@ -30972,7 +30972,7 @@
   "id": 338,
   "name": "Chancy",
   "debugname": "gambler1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:42",
   "spawns": [
    {
@@ -30987,7 +30987,7 @@
   "id": 339,
   "name": "Chancy",
   "debugname": "gambler2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:66",
   "spawns": [
    {
@@ -31002,7 +31002,7 @@
   "id": 340,
   "name": "Hops",
   "debugname": "drunk1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:91",
   "spawns": [
    {
@@ -31017,7 +31017,7 @@
   "id": 341,
   "name": "Hops",
   "debugname": "drunk2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:117",
   "spawns": [
    {
@@ -31032,7 +31032,7 @@
   "id": 342,
   "name": "Guidor's wife",
   "debugname": "guidors_wife",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:144",
   "spawns": [
    {
@@ -31047,7 +31047,7 @@
   "id": 343,
   "name": "Guidor",
   "debugname": "guidor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:168",
   "spawns": [
    {
@@ -31062,7 +31062,7 @@
   "id": 344,
   "name": "Guard",
   "debugname": "lathastrainer1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_combat_training/configs/combat_training_camp.npc:1",
   "spawns": [
    {
@@ -31113,7 +31113,7 @@
   "id": 345,
   "name": "Guard",
   "debugname": "lathastrainer2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_combat_training/configs/combat_training_camp.npc:24",
   "spawns": [
    {
@@ -31140,7 +31140,7 @@
   "id": 346,
   "name": "Guard",
   "debugname": "lathastrainer3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_combat_training/configs/combat_training_camp.npc:46",
   "spawns": [
    {
@@ -31269,7 +31269,7 @@
   "id": 349,
   "name": "Kilron",
   "debugname": "kilron",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/kilron.npc:1",
   "spawns": [
    {
@@ -31284,7 +31284,7 @@
   "id": 350,
   "name": "Omart",
   "debugname": "omart",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/omart.npc:1",
   "spawns": [
    {
@@ -31479,7 +31479,7 @@
   "id": 355,
   "name": "Child",
   "debugname": "w_ardoungechild1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/child.npc:1",
   "spawns": [
    {
@@ -31584,7 +31584,7 @@
   "id": 356,
   "name": "Child",
   "debugname": "dskin_w_ardoungechild1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/child.npc:18",
   "spawns": [
    {
@@ -31674,7 +31674,7 @@
   "id": 358,
   "name": "Priest",
   "debugname": "w_ardoungepriest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/priest.npc:1",
   "spawns": [
    {
@@ -31689,7 +31689,7 @@
   "id": 359,
   "name": "Man",
   "debugname": "w_ardougnecitizen6",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/man.npc:32",
   "spawns": []
  },
@@ -31871,7 +31871,7 @@
   "id": 364,
   "name": "King Lathas",
   "debugname": "kinglathas",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:272",
   "spawns": [
    {
@@ -31894,7 +31894,7 @@
   "id": 366,
   "name": "Jerico",
   "debugname": "jerico",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:199",
   "spawns": [
    {
@@ -31909,7 +31909,7 @@
   "id": 367,
   "name": "Chemist",
   "debugname": "chemist",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:224",
   "spawns": [
    {
@@ -31924,7 +31924,7 @@
   "id": 368,
   "name": "Guard",
   "debugname": "bioguard1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_biohazard/configs/quest_biohazard.npc:255",
   "spawns": [
    {
@@ -32038,7 +32038,7 @@
   "id": 372,
   "name": "Mourner",
   "debugname": "mournerwatchtower",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/mourner.npc:213",
   "spawns": [
    {
@@ -32071,7 +32071,7 @@
   "id": 373,
   "name": "Nurse Sarah",
   "debugname": "bionurse",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/nurse_sarah.npc:1",
   "spawns": [
    {
@@ -32143,7 +32143,7 @@
   "id": 375,
   "name": "Redbeard Frank",
   "debugname": "redbeard_frank",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:126",
   "spawns": [
    {
@@ -32158,7 +32158,7 @@
   "id": 376,
   "name": "Captain Tobias",
   "debugname": "captain_tobias",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:44",
   "spawns": [
    {
@@ -32173,7 +32173,7 @@
   "id": 377,
   "name": "Seaman Lorris",
   "debugname": "seaman_lorris",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:72",
   "spawns": [
    {
@@ -32188,7 +32188,7 @@
   "id": 378,
   "name": "Seaman Thresnor",
   "debugname": "seaman_thresnor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:99",
   "spawns": [
    {
@@ -32203,7 +32203,7 @@
   "id": 379,
   "name": "Luthas",
   "debugname": "luthas",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:1",
   "spawns": [
    {
@@ -32218,7 +32218,7 @@
   "id": 380,
   "name": "Customs officer",
   "debugname": "customs_officer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:28",
   "spawns": [
    {
@@ -32257,7 +32257,7 @@
   "id": 381,
   "name": "Captain Barnaby",
   "debugname": "captain_barnaby",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:590",
   "spawns": [
    {
@@ -32272,7 +32272,7 @@
   "id": 382,
   "name": "Dwarf",
   "debugname": "guilddwarf",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:5037",
   "spawns": [
    {
@@ -32311,7 +32311,7 @@
   "id": 383,
   "name": "Stankers",
   "debugname": "stankers",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/seers.npc:65",
   "spawns": [
    {
@@ -32326,7 +32326,7 @@
   "id": 384,
   "name": "Barbarian guard",
   "debugname": "barbguard1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_barbarian_outpost/configs/barbarian_outpost.npc:47",
   "spawns": [
    {
@@ -32347,7 +32347,7 @@
   "id": 385,
   "name": "Kharid Scorpion",
   "debugname": "questscorpiona",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_scorpcatcher/configs/quest_scorpcatcher.npc:1",
   "spawns": [
    {
@@ -32362,7 +32362,7 @@
   "id": 386,
   "name": "Kharid Scorpion",
   "debugname": "questscorpionb",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_scorpcatcher/configs/quest_scorpcatcher.npc:14",
   "spawns": [
    {
@@ -32377,7 +32377,7 @@
   "id": 387,
   "name": "Kharid Scorpion",
   "debugname": "questscorpionc",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_scorpcatcher/configs/quest_scorpcatcher.npc:26",
   "spawns": [
    {
@@ -32392,7 +32392,7 @@
   "id": 388,
   "name": "Seer",
   "debugname": "seer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/seers.npc:1",
   "spawns": [
    {
@@ -32425,7 +32425,7 @@
   "id": 389,
   "name": "Thormac",
   "debugname": "thormac",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:5060",
   "spawns": [
    {
@@ -32440,7 +32440,7 @@
   "id": 390,
   "name": "Big fish",
   "debugname": "macro_bigfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1408",
   "spawns": []
  },
@@ -32504,7 +32504,7 @@
   "id": 398,
   "name": "Legends Guard",
   "debugname": "legends_guild_guard1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/legends_guild/legends_guild.npc:52",
   "spawns": [
    {
@@ -32519,7 +32519,7 @@
   "id": 399,
   "name": "Legends Guard",
   "debugname": "legends_guild_guard2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/legends_guild/legends_guild.npc:91",
   "spawns": [
    {
@@ -32534,7 +32534,7 @@
   "id": 400,
   "name": "Radimus Erkle",
   "debugname": "radimus_erkle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/legends_guild/legends_guild.npc:130",
   "spawns": [
    {
@@ -32555,7 +32555,7 @@
   "id": 401,
   "name": "Jungle Forester",
   "debugname": "jungleforester_m",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:5130",
   "spawns": [
    {
@@ -32588,7 +32588,7 @@
   "id": 402,
   "name": "Jungle Forester",
   "debugname": "jungleforester_f",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:5161",
   "spawns": [
    {
@@ -32627,7 +32627,7 @@
   "id": 403,
   "name": "Fishing spot",
   "debugname": "macro_whirlpool_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1613",
   "spawns": []
  },
@@ -32635,7 +32635,7 @@
   "id": 404,
   "name": "Fishing spot",
   "debugname": "macro_whirlpool_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1632",
   "spawns": []
  },
@@ -32643,7 +32643,7 @@
   "id": 405,
   "name": "Fishing spot",
   "debugname": "macro_whirlpool_rarefish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1651",
   "spawns": []
  },
@@ -32651,7 +32651,7 @@
   "id": 406,
   "name": "Fishing spot",
   "debugname": "macro_whirlpool_memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1670",
   "spawns": []
  },
@@ -32659,7 +32659,7 @@
   "id": 407,
   "name": "Strange plant",
   "debugname": "macro_triffidseed",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1",
   "spawns": []
  },
@@ -32667,7 +32667,7 @@
   "id": 408,
   "name": "Strange plant",
   "debugname": "macro_triffidseed_angry",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:17",
   "spawns": []
  },
@@ -32675,7 +32675,7 @@
   "id": 409,
   "name": "Genie",
   "debugname": "macro_geni",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:44",
   "spawns": []
  },
@@ -32683,7 +32683,7 @@
   "id": 410,
   "name": "Mysterious Old Man",
   "debugname": "macro_mage",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:79",
   "spawns": []
  },
@@ -32691,7 +32691,7 @@
   "id": 411,
   "name": "Swarm",
   "debugname": "macro_swarm",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:113",
   "spawns": []
  },
@@ -33164,7 +33164,7 @@
   "id": 437,
   "name": "Cap'n Izzy No-Beard",
   "debugname": "agilityarena_clerk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_agilityarena/configs/agilityarena.npc:1",
   "spawns": [
    {
@@ -33227,7 +33227,7 @@
   "id": 444,
   "name": "Tree",
   "debugname": "macro_ent_tree1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1200",
   "spawns": []
  },
@@ -33235,7 +33235,7 @@
   "id": 445,
   "name": "Tree",
   "debugname": "macro_ent_tree2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1220",
   "spawns": []
  },
@@ -33243,7 +33243,7 @@
   "id": 446,
   "name": "Dead tree",
   "debugname": "macro_ent_dead_tree1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1240",
   "spawns": []
  },
@@ -33251,7 +33251,7 @@
   "id": 447,
   "name": "Dead tree",
   "debugname": "macro_ent_dead_tree2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1260",
   "spawns": []
  },
@@ -33259,7 +33259,7 @@
   "id": 448,
   "name": "Oak",
   "debugname": "macro_ent_oak",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1279",
   "spawns": []
  },
@@ -33267,7 +33267,7 @@
   "id": 449,
   "name": "Willow",
   "debugname": "macro_ent_willow",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1299",
   "spawns": []
  },
@@ -33275,7 +33275,7 @@
   "id": 450,
   "name": "Yew",
   "debugname": "macro_ent_yew",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1319",
   "spawns": []
  },
@@ -33283,7 +33283,7 @@
   "id": 451,
   "name": "Maple tree",
   "debugname": "macro_ent_maple",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1339",
   "spawns": []
  },
@@ -33291,7 +33291,7 @@
   "id": 452,
   "name": "Magic tree",
   "debugname": "macro_ent_magic",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1359",
   "spawns": []
  },
@@ -33307,7 +33307,7 @@
   "id": 454,
   "name": "Sanfew",
   "debugname": "sanfew",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_taverly/configs/taverly.npc:1",
   "spawns": [
    {
@@ -33322,7 +33322,7 @@
   "id": 455,
   "name": "Kaqemeex",
   "debugname": "kaqemeex",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_taverly/configs/taverly.npc:26",
   "spawns": [
    {
@@ -33337,7 +33337,7 @@
   "id": 456,
   "name": "Father Aereck",
   "debugname": "father_aereck",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:52",
   "spawns": [
    {
@@ -33352,7 +33352,7 @@
   "id": 457,
   "name": "Restless ghost",
   "debugname": "ghostx",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_priest/configs/quest_priest.npc:1",
   "spawns": []
  },
@@ -33360,7 +33360,7 @@
   "id": 458,
   "name": "Father Urhney",
   "debugname": "father_urhney",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:75",
   "spawns": [
    {
@@ -33383,7 +33383,7 @@
   "id": 460,
   "name": "Wizard Frumscone",
   "debugname": "wizard_frumscone",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/magic_guild/magic_guild.npc:1",
   "spawns": [
    {
@@ -33398,7 +33398,7 @@
   "id": 461,
   "name": "Magic Store owner",
   "debugname": "magic_store_owner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/magic_guild/magic_guild.npc:31",
   "spawns": [
    {
@@ -33413,7 +33413,7 @@
   "id": 462,
   "name": "Wizard Distentor",
   "debugname": "guild_wizard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/magic_guild/magic_guild.npc:68",
   "spawns": [
    {
@@ -33428,7 +33428,7 @@
   "id": 463,
   "name": "Murphy",
   "debugname": "murphy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:57",
   "spawns": [
    {
@@ -33443,7 +33443,7 @@
   "id": 464,
   "name": "Murphy",
   "debugname": "murphy_normal",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:92",
   "spawns": [
    {
@@ -33458,7 +33458,7 @@
   "id": 465,
   "name": "Murphy",
   "debugname": "murphy_halfsunk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:131",
   "spawns": [
    {
@@ -33473,7 +33473,7 @@
   "id": 466,
   "name": "Murphy",
   "debugname": "murphy_sunk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:170",
   "spawns": [
    {
@@ -33488,7 +33488,7 @@
   "id": 467,
   "name": "Shark",
   "debugname": "fin1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:206",
   "spawns": [
    {
@@ -33503,7 +33503,7 @@
   "id": 468,
   "name": "Shark",
   "debugname": "fin2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_trawler/configs/trawler.npc:216",
   "spawns": [
    {
@@ -33518,7 +33518,7 @@
   "id": 469,
   "name": "King Bolren",
   "debugname": "king_bolren",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:743",
   "spawns": [
    {
@@ -33533,7 +33533,7 @@
   "id": 470,
   "name": "Commander Montai",
   "debugname": "commander_montai",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:761",
   "spawns": [
    {
@@ -33548,7 +33548,7 @@
   "id": 471,
   "name": "Bolkoy",
   "debugname": "treevillage_shopkeeper1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:780",
   "spawns": [
    {
@@ -33563,7 +33563,7 @@
   "id": 472,
   "name": "Remsai",
   "debugname": "remsai",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:801",
   "spawns": [
    {
@@ -33578,7 +33578,7 @@
   "id": 473,
   "name": "Elkoy",
   "debugname": "elkoy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:819",
   "spawns": [
    {
@@ -33593,7 +33593,7 @@
   "id": 474,
   "name": "Elkoy",
   "debugname": "elkoy_village",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:838",
   "spawns": [
    {
@@ -34100,7 +34100,7 @@
   "id": 481,
   "name": "Gnome",
   "debugname": "tracker1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tree/configs/tracker_gnome.npc:1",
   "spawns": [
    {
@@ -34115,7 +34115,7 @@
   "id": 482,
   "name": "Gnome",
   "debugname": "tracker2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tree/configs/tracker_gnome.npc:19",
   "spawns": [
    {
@@ -34130,7 +34130,7 @@
   "id": 483,
   "name": "Gnome",
   "debugname": "tracker3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tree/configs/tracker_gnome.npc:37",
   "spawns": [
    {
@@ -34145,7 +34145,7 @@
   "id": 484,
   "name": "Local Gnome",
   "debugname": "localgnome",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:857",
   "spawns": []
  },
@@ -34153,7 +34153,7 @@
   "id": 485,
   "name": "Local Gnome",
   "debugname": "chantergnome",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:878",
   "spawns": [
    {
@@ -34186,7 +34186,7 @@
   "id": 486,
   "name": "Kalron",
   "debugname": "lostgnome",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:899",
   "spawns": [
    {
@@ -34201,7 +34201,7 @@
   "id": 487,
   "name": "Observatory assistant",
   "debugname": "observatory_assistant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itgronigen/configs/quest_itgronigen.npc:1",
   "spawns": [
    {
@@ -34216,7 +34216,7 @@
   "id": 488,
   "name": "Observatory professor",
   "debugname": "observatory_professor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itgronigen/configs/quest_itgronigen.npc:26",
   "spawns": [
    {
@@ -34246,7 +34246,7 @@
   "id": 490,
   "name": "Observatory professor",
   "debugname": "observatory_professor2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itgronigen/configs/quest_itgronigen.npc:87",
   "spawns": [
    {
@@ -34306,7 +34306,7 @@
   "id": 492,
   "name": "Spirit of Scorpius",
   "debugname": "spirit_of_scorpius",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itgronigen/configs/grave_of_scorpius.npc:28",
   "spawns": [
    {
@@ -34360,7 +34360,7 @@
   "id": 494,
   "name": "Banker",
   "debugname": "banker1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/banker.npc:1",
   "spawns": [
    {
@@ -34567,7 +34567,7 @@
   "id": 495,
   "name": "Banker",
   "debugname": "banker2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/banker.npc:31",
   "spawns": [
    {
@@ -34726,7 +34726,7 @@
   "id": 496,
   "name": "Banker",
   "debugname": "kharidbanker1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/banker.npc:59",
   "spawns": [
    {
@@ -34753,7 +34753,7 @@
   "id": 497,
   "name": "Banker",
   "debugname": "kharidbanker2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/banker.npc:91",
   "spawns": [
    {
@@ -34774,7 +34774,7 @@
   "id": 498,
   "name": "Banker",
   "debugname": "fairy_banker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/banker.npc:122",
   "spawns": [
    {
@@ -34807,7 +34807,7 @@
   "id": 499,
   "name": "Banker",
   "debugname": "shilobanker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/banker.npc:137",
   "spawns": [
    {
@@ -34828,7 +34828,7 @@
   "id": 500,
   "name": "Mosol Rei",
   "debugname": "mosol_rei",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_zombiequeen/configs/quest_zombiequeen.npc:1",
   "spawns": [
    {
@@ -34843,7 +34843,7 @@
   "id": 501,
   "name": "Zadimus' spirit.",
   "debugname": "zadimus_ghost",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_zombiequeen/configs/quest_zombiequeen.npc:28",
   "spawns": []
  },
@@ -35283,7 +35283,7 @@
   "id": 506,
   "name": "Rashiliyia",
   "debugname": "zqzombiequeen",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_zombiequeen/configs/quest_zombiequeen.npc:197",
   "spawns": []
  },
@@ -35315,7 +35315,7 @@
   "id": 510,
   "name": "Hajedy",
   "debugname": "brimhavencartdriver",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_brimhaven/configs/brimhaven.npc:124",
   "spawns": [
    {
@@ -35330,7 +35330,7 @@
   "id": 511,
   "name": "Vigroy",
   "debugname": "shilocartdriver",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_shilo/configs/shilo.npc:117",
   "spawns": [
    {
@@ -35345,7 +35345,7 @@
   "id": 512,
   "name": "Kaleb Paramaya",
   "debugname": "shiloinnowner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_shilo/configs/shilo.npc:1",
   "spawns": [
    {
@@ -35360,7 +35360,7 @@
   "id": 513,
   "name": "Yohnus",
   "debugname": "shilofurnaceowner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_shilo/configs/shilo.npc:27",
   "spawns": [
    {
@@ -35375,7 +35375,7 @@
   "id": 514,
   "name": "Seravel",
   "debugname": "shiloshiptickets",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_shilo/configs/shilo.npc:145",
   "spawns": [
    {
@@ -35390,7 +35390,7 @@
   "id": 515,
   "name": "Yanni Salika",
   "debugname": "shiloantiques",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_shilo/configs/shilo.npc:174",
   "spawns": [
    {
@@ -35405,7 +35405,7 @@
   "id": 516,
   "name": "Obli",
   "debugname": "shilogeneralstore",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_shilo/configs/shilo.npc:57",
   "spawns": [
    {
@@ -35420,7 +35420,7 @@
   "id": 517,
   "name": "Fernahei",
   "debugname": "shilofishowner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_shilo/configs/shilo.npc:86",
   "spawns": [
    {
@@ -35435,7 +35435,7 @@
   "id": 518,
   "name": "Captain Shanks",
   "debugname": "captain_shanks",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:5237",
   "spawns": [
    {
@@ -35450,7 +35450,7 @@
   "id": 519,
   "name": "Bob",
   "debugname": "bob",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:98",
   "spawns": [
    {
@@ -35465,7 +35465,7 @@
   "id": 520,
   "name": "Shop keeper",
   "debugname": "generalshopkeeper1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:199",
   "spawns": [
    {
@@ -35480,7 +35480,7 @@
   "id": 521,
   "name": "Shop assistant",
   "debugname": "generalassistant1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:235",
   "spawns": [
    {
@@ -35495,7 +35495,7 @@
   "id": 522,
   "name": "Shop keeper",
   "debugname": "generalshopkeeper2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:167",
   "spawns": [
    {
@@ -35510,7 +35510,7 @@
   "id": 523,
   "name": "Shop assistant",
   "debugname": "generalassistant2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:203",
   "spawns": [
    {
@@ -35525,7 +35525,7 @@
   "id": 524,
   "name": "Shop keeper",
   "debugname": "generalshopkeeper3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:157",
   "spawns": [
    {
@@ -35540,7 +35540,7 @@
   "id": 525,
   "name": "Shop assistant",
   "debugname": "generalassistant3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:193",
   "spawns": [
    {
@@ -35555,7 +35555,7 @@
   "id": 526,
   "name": "Shop keeper",
   "debugname": "generalshopkeeper4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:72",
   "spawns": [
    {
@@ -35570,7 +35570,7 @@
   "id": 527,
   "name": "Shop assistant",
   "debugname": "generalassistant4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:108",
   "spawns": [
    {
@@ -35585,7 +35585,7 @@
   "id": 528,
   "name": "Shop keeper",
   "debugname": "generalshopkeeper5",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_edgeville/configs/edgeville.npc:1",
   "spawns": [
    {
@@ -35600,7 +35600,7 @@
   "id": 529,
   "name": "Shop assistant",
   "debugname": "generalassistant5",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_edgeville/configs/edgeville.npc:35",
   "spawns": [
    {
@@ -35615,7 +35615,7 @@
   "id": 530,
   "name": "Shop keeper",
   "debugname": "generalshopkeeper6",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_rimmington/configs/rimmington.npc:29",
   "spawns": [
    {
@@ -35630,7 +35630,7 @@
   "id": 531,
   "name": "Shop assistant",
   "debugname": "generalassistant6",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_rimmington/configs/rimmington.npc:66",
   "spawns": [
    {
@@ -35645,7 +35645,7 @@
   "id": 532,
   "name": "Shop keeper",
   "debugname": "generalshopkeeper7",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:59",
   "spawns": [
    {
@@ -35660,7 +35660,7 @@
   "id": 533,
   "name": "Shop assistant",
   "debugname": "generalassistant7",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:97",
   "spawns": [
    {
@@ -35675,7 +35675,7 @@
   "id": 534,
   "name": "Fairy shop keeper",
   "debugname": "generalshopkeeper8",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:141",
   "spawns": [
    {
@@ -35690,7 +35690,7 @@
   "id": 535,
   "name": "Fairy shop assistant",
   "debugname": "generalassistant8",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:164",
   "spawns": [
    {
@@ -35705,7 +35705,7 @@
   "id": 536,
   "name": "Valaine",
   "debugname": "valaine",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/champions_guild.npc:1",
   "spawns": [
    {
@@ -35720,7 +35720,7 @@
   "id": 537,
   "name": "Scavvo",
   "debugname": "scavvo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/champions_guild.npc:32",
   "spawns": [
    {
@@ -35735,7 +35735,7 @@
   "id": 538,
   "name": "Peksa",
   "debugname": "peksa",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_barbarian_village/configs/barbarian_village.npc:1",
   "spawns": [
    {
@@ -35750,7 +35750,7 @@
   "id": 539,
   "name": "Silk trader",
   "debugname": "silk_trader",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:401",
   "spawns": [
    {
@@ -35765,7 +35765,7 @@
   "id": 540,
   "name": "Gem trader",
   "debugname": "gem_trader",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:228",
   "spawns": [
    {
@@ -35780,7 +35780,7 @@
   "id": 541,
   "name": "Zeke",
   "debugname": "zeke",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:1",
   "spawns": [
    {
@@ -35795,7 +35795,7 @@
   "id": 542,
   "name": "Louie legs",
   "debugname": "louie_legs",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:264",
   "spawns": [
    {
@@ -35810,7 +35810,7 @@
   "id": 543,
   "name": "Kebab seller",
   "debugname": "kebab_seller",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:69",
   "spawns": [
    {
@@ -35825,7 +35825,7 @@
   "id": 544,
   "name": "Ranael",
   "debugname": "ranael",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:297",
   "spawns": [
    {
@@ -35840,7 +35840,7 @@
   "id": 545,
   "name": "Dommik",
   "debugname": "dommik",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:334",
   "spawns": [
    {
@@ -35855,7 +35855,7 @@
   "id": 546,
   "name": "Zaff",
   "debugname": "zaff",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:237",
   "spawns": [
    {
@@ -35870,7 +35870,7 @@
   "id": 547,
   "name": "Baraek",
   "debugname": "baraek",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:493",
   "spawns": [
    {
@@ -35885,7 +35885,7 @@
   "id": 548,
   "name": "Thessalia",
   "debugname": "thessalia",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:265",
   "spawns": [
    {
@@ -35900,7 +35900,7 @@
   "id": 549,
   "name": "Horvik",
   "debugname": "horvik_the_armourer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:297",
   "spawns": [
    {
@@ -35915,7 +35915,7 @@
   "id": 550,
   "name": "Lowe",
   "debugname": "lowe",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:332",
   "spawns": [
    {
@@ -35930,7 +35930,7 @@
   "id": 551,
   "name": "Shop keeper",
   "debugname": "swordshop1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:400",
   "spawns": [
    {
@@ -35945,7 +35945,7 @@
   "id": 552,
   "name": "Shop assistant",
   "debugname": "swordshop2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:435",
   "spawns": [
    {
@@ -35960,7 +35960,7 @@
   "id": 553,
   "name": "Aubury",
   "debugname": "aubury",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:1",
   "spawns": [
    {
@@ -35975,7 +35975,7 @@
   "id": 554,
   "name": "Fancy dress shop owner",
   "debugname": "tailorp",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:363",
   "spawns": [
    {
@@ -35990,7 +35990,7 @@
   "id": 555,
   "name": "Shop keeper",
   "debugname": "khazard_shopkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/port_khazard/port_khazard.npc:1",
   "spawns": [
    {
@@ -36011,7 +36011,7 @@
   "id": 556,
   "name": "Grum",
   "debugname": "grum",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:225",
   "spawns": [
    {
@@ -36026,7 +36026,7 @@
   "id": 557,
   "name": "Wydin",
   "debugname": "wydin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:155",
   "spawns": [
    {
@@ -36041,7 +36041,7 @@
   "id": 558,
   "name": "Gerrant",
   "debugname": "gerrant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:256",
   "spawns": [
    {
@@ -36056,7 +36056,7 @@
   "id": 559,
   "name": "Brian",
   "debugname": "brian",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:291",
   "spawns": [
    {
@@ -36071,7 +36071,7 @@
   "id": 560,
   "name": "Jiminua",
   "debugname": "jiminua",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:168",
   "spawns": [
    {
@@ -36086,7 +36086,7 @@
   "id": 561,
   "name": "Shop keeper",
   "debugname": "lathas_shopkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_combat_training/configs/combat_training_camp.npc:98",
   "spawns": [
    {
@@ -36101,7 +36101,7 @@
   "id": 562,
   "name": "Candle maker",
   "debugname": "candle_maker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_catherby/configs/catherby.npc:39",
   "spawns": [
    {
@@ -36116,7 +36116,7 @@
   "id": 563,
   "name": "Arhein",
   "debugname": "arhein",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_catherby/configs/catherby.npc:1",
   "spawns": [
    {
@@ -36131,7 +36131,7 @@
   "id": 564,
   "name": "Jakut",
   "debugname": "jakut",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:51",
   "spawns": [
    {
@@ -36146,7 +36146,7 @@
   "id": 565,
   "name": "Lunderwin",
   "debugname": "fairy_lunderwin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:121",
   "spawns": [
    {
@@ -36161,7 +36161,7 @@
   "id": 566,
   "name": "Irksol",
   "debugname": "irksol",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:74",
   "spawns": [
    {
@@ -36176,7 +36176,7 @@
   "id": 567,
   "name": "Fairy",
   "debugname": "fairy_ladder_attendant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:101",
   "spawns": [
    {
@@ -36191,7 +36191,7 @@
   "id": 568,
   "name": "Zambo",
   "debugname": "zambo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:133",
   "spawns": [
    {
@@ -36206,7 +36206,7 @@
   "id": 569,
   "name": "Silver merchant",
   "debugname": "silver_merchant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:305",
   "spawns": [
    {
@@ -36221,7 +36221,7 @@
   "id": 570,
   "name": "Gem merchant",
   "debugname": "gem_merchant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:344",
   "spawns": [
    {
@@ -36236,7 +36236,7 @@
   "id": 571,
   "name": "Baker",
   "debugname": "baker_merchant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:383",
   "spawns": [
    {
@@ -36257,7 +36257,7 @@
   "id": 572,
   "name": "Spice seller",
   "debugname": "spice_merchant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:416",
   "spawns": [
    {
@@ -36272,7 +36272,7 @@
   "id": 573,
   "name": "Fur trader",
   "debugname": "fur_merchant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:453",
   "spawns": [
    {
@@ -36287,7 +36287,7 @@
   "id": 574,
   "name": "Silk merchant",
   "debugname": "silk_merchant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:479",
   "spawns": [
    {
@@ -36302,7 +36302,7 @@
   "id": 575,
   "name": "Hickton",
   "debugname": "hickton",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_catherby/configs/catherby.npc:77",
   "spawns": [
    {
@@ -36317,7 +36317,7 @@
   "id": 576,
   "name": "Harry",
   "debugname": "harry",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_catherby/configs/catherby.npc:114",
   "spawns": [
    {
@@ -36332,7 +36332,7 @@
   "id": 577,
   "name": "Cassie",
   "debugname": "cassie",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:143",
   "spawns": [
    {
@@ -36347,7 +36347,7 @@
   "id": 578,
   "name": "Frincos",
   "debugname": "frincos",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_entrana/configs/entrana.npc:104",
   "spawns": [
    {
@@ -36362,7 +36362,7 @@
   "id": 579,
   "name": "Drogo dwarf",
   "debugname": "drogo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/dwarven_mine.npc:1",
   "spawns": [
    {
@@ -36377,7 +36377,7 @@
   "id": 580,
   "name": "Flynn",
   "debugname": "flynn",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:179",
   "spawns": [
    {
@@ -36392,7 +36392,7 @@
   "id": 581,
   "name": "Wayne",
   "debugname": "wayne",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:212",
   "spawns": [
    {
@@ -36407,7 +36407,7 @@
   "id": 582,
   "name": "Dwarf",
   "debugname": "dwarven_shopkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/dwarven_mine.npc:28",
   "spawns": [
    {
@@ -36422,7 +36422,7 @@
   "id": 583,
   "name": "Betty",
   "debugname": "betty",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:187",
   "spawns": [
    {
@@ -36437,7 +36437,7 @@
   "id": 584,
   "name": "Herquin",
   "debugname": "herquin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:246",
   "spawns": [
    {
@@ -36452,7 +36452,7 @@
   "id": 585,
   "name": "Rommik",
   "debugname": "rommik",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_rimmington/configs/rimmington.npc:101",
   "spawns": [
    {
@@ -36467,7 +36467,7 @@
   "id": 586,
   "name": "Gaius",
   "debugname": "gaius",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_taverly/configs/taverly.npc:50",
   "spawns": [
    {
@@ -36482,7 +36482,7 @@
   "id": 587,
   "name": "Jatix",
   "debugname": "jatix",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_taverly/configs/taverly.npc:84",
   "spawns": [
    {
@@ -36497,7 +36497,7 @@
   "id": 588,
   "name": "Davon",
   "debugname": "davon",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_brimhaven/configs/brimhaven.npc:86",
   "spawns": [
    {
@@ -36512,7 +36512,7 @@
   "id": 589,
   "name": "Zenesha",
   "debugname": "zenesha",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:715",
   "spawns": [
    {
@@ -36527,7 +36527,7 @@
   "id": 590,
   "name": "Aemad",
   "debugname": "aemad",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:622",
   "spawns": [
    {
@@ -36542,7 +36542,7 @@
   "id": 591,
   "name": "Kortan",
   "debugname": "kortan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:660",
   "spawns": [
    {
@@ -36557,7 +36557,7 @@
   "id": 592,
   "name": "Roachey",
   "debugname": "fishguildshop",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing_guild/fishing_guild.npc:30",
   "spawns": [
    {
@@ -36572,7 +36572,7 @@
   "id": 593,
   "name": "Frenita",
   "debugname": "frenita",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/yanille.npc:134",
   "spawns": [
    {
@@ -36587,7 +36587,7 @@
   "id": 594,
   "name": "Nurmof",
   "debugname": "nurmof",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/dwarven_mine.npc:59",
   "spawns": [
    {
@@ -36602,7 +36602,7 @@
   "id": 595,
   "name": "Tea seller",
   "debugname": "tea_seller",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:880",
   "spawns": [
    {
@@ -36617,7 +36617,7 @@
   "id": 596,
   "name": "Fat tony",
   "debugname": "fat_tony",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_wilderness/configs/bandit_camp.npc:1",
   "spawns": [
    {
@@ -36632,7 +36632,7 @@
   "id": 597,
   "name": "Noterazzo",
   "debugname": "noterazzo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_wilderness/configs/bandit_camp.npc:36",
   "spawns": [
    {
@@ -36647,7 +36647,7 @@
   "id": 598,
   "name": "Hairdresser",
   "debugname": "hairdresser",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:285",
   "spawns": [
    {
@@ -36662,7 +36662,7 @@
   "id": 599,
   "name": "Make-over mage",
   "debugname": "makeover_mage",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:310",
   "spawns": [
    {
@@ -36677,7 +36677,7 @@
   "id": 600,
   "name": "Hudo",
   "debugname": "gnome_hudo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:629",
   "spawns": [
    {
@@ -36692,7 +36692,7 @@
   "id": 601,
   "name": "Rometti",
   "debugname": "gnome_rometti",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:658",
   "spawns": [
    {
@@ -36707,7 +36707,7 @@
   "id": 602,
   "name": "Gulluck",
   "debugname": "gnome_gulluck",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:689",
   "spawns": [
    {
@@ -36722,7 +36722,7 @@
   "id": 603,
   "name": "Heckel Funch",
   "debugname": "gnome_heckelfunch",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:714",
   "spawns": [
    {
@@ -36737,7 +36737,7 @@
   "id": 604,
   "name": "Thurgo",
   "debugname": "thurgo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:25",
   "spawns": [
    {
@@ -36752,7 +36752,7 @@
   "id": 605,
   "name": "Sir Vyvin",
   "debugname": "sir_vyvin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:341",
   "spawns": [
    {
@@ -36767,7 +36767,7 @@
   "id": 606,
   "name": "Squire",
   "debugname": "squire",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:373",
   "spawns": [
    {
@@ -36782,7 +36782,7 @@
   "id": 607,
   "name": "Gunnjorn",
   "debugname": "gunnjorn",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_barbarian_outpost/configs/barbarian_outpost.npc:80",
   "spawns": [
    {
@@ -36797,7 +36797,7 @@
   "id": 608,
   "name": "Sir Amik Varze",
   "debugname": "sir_amik_varze",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:406",
   "spawns": [
    {
@@ -36857,7 +36857,7 @@
   "id": 610,
   "name": "Black Knight",
   "debugname": "grillknight",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_blackknight/configs/quest_blackknight.npc:42",
   "spawns": [
    {
@@ -36872,7 +36872,7 @@
   "id": 611,
   "name": "Witch",
   "debugname": "fortwitch",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_blackknight/configs/quest_blackknight.npc:68",
   "spawns": [
    {
@@ -36887,7 +36887,7 @@
   "id": 612,
   "name": "Greldo",
   "debugname": "greldo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_blackknight/configs/quest_blackknight.npc:94",
   "spawns": [
    {
@@ -36902,7 +36902,7 @@
   "id": 613,
   "name": "Digsite workman",
   "debugname": "digworkman1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:1",
   "spawns": [
    {
@@ -37013,7 +37013,7 @@
   "id": 614,
   "name": "Digsite workman",
   "debugname": "digworkman2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:24",
   "spawns": [
    {
@@ -37034,7 +37034,7 @@
   "id": 615,
   "name": "Student",
   "debugname": "student1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:47",
   "spawns": [
    {
@@ -37067,7 +37067,7 @@
   "id": 616,
   "name": "Student",
   "debugname": "student3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:70",
   "spawns": [
    {
@@ -37100,7 +37100,7 @@
   "id": 617,
   "name": "Student",
   "debugname": "student2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:96",
   "spawns": [
    {
@@ -37133,7 +37133,7 @@
   "id": 618,
   "name": "Examiner",
   "debugname": "examiner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:119",
   "spawns": [
    {
@@ -37160,7 +37160,7 @@
   "id": 619,
   "name": "Archaeological expert",
   "debugname": "archaeological_expert",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:143",
   "spawns": [
    {
@@ -37175,7 +37175,7 @@
   "id": 620,
   "name": "Panning guide",
   "debugname": "panning_guide",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_itexam/configs/quest_itexam.npc:170",
   "spawns": [
    {
@@ -37190,7 +37190,7 @@
   "id": 621,
   "name": "Gnome baller",
   "debugname": "gnomeballer_red",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:1",
   "spawns": [
    {
@@ -37235,7 +37235,7 @@
   "id": 622,
   "name": "Gnome baller",
   "debugname": "gnomeballer_red_withball",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:24",
   "spawns": []
  },
@@ -37243,7 +37243,7 @@
   "id": 623,
   "name": "Gnome baller",
   "debugname": "gnomeballer_red_tackled",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:44",
   "spawns": []
  },
@@ -37251,7 +37251,7 @@
   "id": 624,
   "name": "Gnome baller",
   "debugname": "gnomeballer_red_tackled2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:61",
   "spawns": []
  },
@@ -37259,7 +37259,7 @@
   "id": 625,
   "name": "Gnome baller",
   "debugname": "gnomeballer_orange",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:78",
   "spawns": [
    {
@@ -37292,7 +37292,7 @@
   "id": 626,
   "name": "Gnome baller",
   "debugname": "gnomeballer_orange_withball",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:101",
   "spawns": []
  },
@@ -37300,7 +37300,7 @@
   "id": 627,
   "name": "Gnome baller",
   "debugname": "gnomeballer_orange_tackled",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:121",
   "spawns": []
  },
@@ -37308,7 +37308,7 @@
   "id": 628,
   "name": "Gnome baller",
   "debugname": "gnomeballer_orange_tackled2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:138",
   "spawns": []
  },
@@ -37316,7 +37316,7 @@
   "id": 629,
   "name": "Gnome baller",
   "debugname": "gnomeballer_yellow",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:155",
   "spawns": [
    {
@@ -37349,7 +37349,7 @@
   "id": 630,
   "name": "Gnome baller",
   "debugname": "gnomeballer_yellow_withball",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:178",
   "spawns": []
  },
@@ -37357,7 +37357,7 @@
   "id": 631,
   "name": "Gnome baller",
   "debugname": "gnomeballer_yellow_tackled",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:198",
   "spawns": []
  },
@@ -37365,7 +37365,7 @@
   "id": 632,
   "name": "Gnome baller",
   "debugname": "gnomeballer_yellow_tackled2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:215",
   "spawns": []
  },
@@ -37373,7 +37373,7 @@
   "id": 633,
   "name": "Gnome winger",
   "debugname": "gnomeballer_green",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:232",
   "spawns": [
    {
@@ -37394,7 +37394,7 @@
   "id": 634,
   "name": "Gnome winger",
   "debugname": "gnomeballer_green_withball",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:250",
   "spawns": []
  },
@@ -37402,7 +37402,7 @@
   "id": 635,
   "name": "Gnome ball referee",
   "debugname": "gnomereferee",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:268",
   "spawns": [
    {
@@ -37417,7 +37417,7 @@
   "id": 636,
   "name": "Cheerleader",
   "debugname": "gnomecheerleader",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gnomeball/configs/gnomeball.npc:291",
   "spawns": [
    {
@@ -37438,7 +37438,7 @@
   "id": 637,
   "name": "Juliet",
   "debugname": "juliet",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:721",
   "spawns": [
    {
@@ -37453,7 +37453,7 @@
   "id": 638,
   "name": "Apothecary",
   "debugname": "apothecary",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:744",
   "spawns": [
    {
@@ -37468,7 +37468,7 @@
   "id": 639,
   "name": "Romeo",
   "debugname": "romeo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:771",
   "spawns": [
    {
@@ -37483,7 +37483,7 @@
   "id": 640,
   "name": "Father Lawrence",
   "debugname": "father_lawrence",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:795",
   "spawns": [
    {
@@ -37498,7 +37498,7 @@
   "id": 641,
   "name": "Tramp",
   "debugname": "tramppg",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:577",
   "spawns": [
    {
@@ -37513,7 +37513,7 @@
   "id": 642,
   "name": "Katrine",
   "debugname": "katrine",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:522",
   "spawns": [
    {
@@ -37573,7 +37573,7 @@
   "id": 646,
   "name": "Curator",
   "debugname": "curator",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:548",
   "spawns": [
    {
@@ -37588,7 +37588,7 @@
   "id": 647,
   "name": "Reldo",
   "debugname": "reldo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:58",
   "spawns": [
    {
@@ -37603,7 +37603,7 @@
   "id": 648,
   "name": "King Roald",
   "debugname": "king_roald",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:695",
   "spawns": [
    {
@@ -37618,7 +37618,7 @@
   "id": 649,
   "name": "Archer",
   "debugname": "archeradventurerpg",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:270",
   "spawns": [
    {
@@ -37633,7 +37633,7 @@
   "id": 650,
   "name": "Warrior",
   "debugname": "warrioradventurerpg",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:301",
   "spawns": [
    {
@@ -37648,7 +37648,7 @@
   "id": 651,
   "name": "Monk",
   "debugname": "monkadventurerpg",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:327",
   "spawns": [
    {
@@ -37663,7 +37663,7 @@
   "id": 652,
   "name": "Wizard",
   "debugname": "wizardadventuterpg",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:347",
   "spawns": [
    {
@@ -37678,7 +37678,7 @@
   "id": 653,
   "name": "Fairy Queen",
   "debugname": "fairy_queen",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lostcity/configs/lostcity.npc:10",
   "spawns": [
    {
@@ -37693,7 +37693,7 @@
   "id": 654,
   "name": "Shamus",
   "debugname": "zanarisleprechaun",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_zanaris/configs/shamus.npc:1",
   "spawns": []
  },
@@ -37709,7 +37709,7 @@
   "id": 656,
   "name": "Cave monk",
   "debugname": "cave_monk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_entrana/configs/entrana.npc:1",
   "spawns": [
    {
@@ -37724,7 +37724,7 @@
   "id": 657,
   "name": "Monk of Entrana",
   "debugname": "shipmonk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:324",
   "spawns": [
    {
@@ -37751,7 +37751,7 @@
   "id": 658,
   "name": "Monk of Entrana",
   "debugname": "shipmonk2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_entrana/configs/entrana.npc:53",
   "spawns": [
    {
@@ -37778,7 +37778,7 @@
   "id": 659,
   "name": "Party Pete",
   "debugname": "partyroom_pete",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_partyroom/configs/partyroom.npc:1",
   "spawns": [
    {
@@ -37793,7 +37793,7 @@
   "id": 660,
   "name": "Knight",
   "debugname": "partyroom_knight",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_partyroom/configs/partyroom.npc:30",
   "spawns": []
  },
@@ -37801,7 +37801,7 @@
   "id": 661,
   "name": "Megan",
   "debugname": "partyroom_barmaid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_partyroom/configs/partyroom.npc:48",
   "spawns": [
    {
@@ -37816,7 +37816,7 @@
   "id": 662,
   "name": "Lucy",
   "debugname": "partyroom_barmaid2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_partyroom/configs/partyroom.npc:71",
   "spawns": [
    {
@@ -37831,7 +37831,7 @@
   "id": 663,
   "name": "Man",
   "debugname": "avan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_crest/configs/quest_crest.npc:1",
   "spawns": [
    {
@@ -37846,7 +37846,7 @@
   "id": 664,
   "name": "Dimintheis",
   "debugname": "dimintheis",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:819",
   "spawns": [
    {
@@ -37861,7 +37861,7 @@
   "id": 665,
   "name": "Boot",
   "debugname": "boot_the_dwarf",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/dwarven_mine.npc:91",
   "spawns": [
    {
@@ -37876,7 +37876,7 @@
   "id": 666,
   "name": "Caleb",
   "debugname": "caleb_fitzharmon",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_catherby/configs/catherby.npc:148",
   "spawns": [
    {
@@ -37906,7 +37906,7 @@
   "id": 668,
   "name": "Johnathon",
   "debugname": "johnathon_fitzharmon",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:851",
   "spawns": [
    {
@@ -37921,7 +37921,7 @@
   "id": 669,
   "name": "Hazelmere",
   "debugname": "grandtree_hazelmere",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grandtree/configs/quest_grandtree.npc:1",
   "spawns": [
    {
@@ -37936,7 +37936,7 @@
   "id": 670,
   "name": "King Narnode Shareen",
   "debugname": "grandtree_narnode",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grandtree/configs/quest_grandtree.npc:24",
   "spawns": [
    {
@@ -37957,7 +37957,7 @@
   "id": 671,
   "name": "Glough",
   "debugname": "grandtree_glough",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grandtree/configs/quest_grandtree.npc:39",
   "spawns": [
    {
@@ -37972,7 +37972,7 @@
   "id": 672,
   "name": "Anita",
   "debugname": "grandtree_anita",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grandtree/configs/quest_grandtree.npc:57",
   "spawns": [
    {
@@ -37987,7 +37987,7 @@
   "id": 673,
   "name": "Charlie",
   "debugname": "grandtree_charlie",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grandtree/configs/quest_grandtree.npc:74",
   "spawns": []
  },
@@ -38010,7 +38010,7 @@
   "id": 675,
   "name": "Shipyard worker",
   "debugname": "grandtree_shipyardguard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grandtree/configs/quest_grandtree.npc:137",
   "spawns": [
    {
@@ -38025,7 +38025,7 @@
   "id": 676,
   "name": "Femi",
   "debugname": "grandtree_femi",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_grandtree/configs/quest_grandtree.npc:169",
   "spawns": [
    {
@@ -38123,7 +38123,7 @@
   "id": 679,
   "name": "Ranging Guild Doorman",
   "debugname": "ranging_guild_doorman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:46",
   "spawns": [
    {
@@ -38138,7 +38138,7 @@
   "id": 680,
   "name": "Leatherworker",
   "debugname": "ranging_guild_leatherworker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:72",
   "spawns": [
    {
@@ -38153,7 +38153,7 @@
   "id": 681,
   "name": "Weapon poison salesman",
   "debugname": "ranging_guild_poison_salesman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:101",
   "spawns": []
  },
@@ -38161,7 +38161,7 @@
   "id": 682,
   "name": "Armour salesman",
   "debugname": "ranging_guild_armour_salesman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:122",
   "spawns": [
    {
@@ -38176,7 +38176,7 @@
   "id": 683,
   "name": "Bow and Arrow salesman",
   "debugname": "ranging_guild_bow_salesman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:156",
   "spawns": [
    {
@@ -38191,7 +38191,7 @@
   "id": 684,
   "name": "Tower Advisor",
   "debugname": "ranging_advisor1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:184",
   "spawns": [
    {
@@ -38206,7 +38206,7 @@
   "id": 685,
   "name": "Tower Advisor",
   "debugname": "ranging_advisor2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:207",
   "spawns": [
    {
@@ -38221,7 +38221,7 @@
   "id": 686,
   "name": "Tower Advisor",
   "debugname": "ranging_advisor3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:230",
   "spawns": [
    {
@@ -38236,7 +38236,7 @@
   "id": 687,
   "name": "Tower Advisor",
   "debugname": "ranging_advisor4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:253",
   "spawns": [
    {
@@ -38283,7 +38283,7 @@
   "id": 692,
   "name": "Tribal Weapon Salesman",
   "debugname": "ranging_guild_tribal_salesman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:442",
   "spawns": [
    {
@@ -38298,7 +38298,7 @@
   "id": 693,
   "name": "Competition Judge",
   "debugname": "ranging_guild_competition_judge",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:472",
   "spawns": [
    {
@@ -38313,7 +38313,7 @@
   "id": 694,
   "name": "Ticket Merchant",
   "debugname": "ranging_guild_ticket_exchange",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_ranging/configs/ranging.npc:494",
   "spawns": [
    {
@@ -38334,7 +38334,7 @@
   "id": 695,
   "name": "Bailey",
   "debugname": "bailey",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:1",
   "spawns": [
    {
@@ -38349,7 +38349,7 @@
   "id": 696,
   "name": "Caroline",
   "debugname": "caroline",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:744",
   "spawns": [
    {
@@ -38364,7 +38364,7 @@
   "id": 697,
   "name": "Kennith",
   "debugname": "kennith",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:27",
   "spawns": [
    {
@@ -38379,7 +38379,7 @@
   "id": 698,
   "name": "Holgart",
   "debugname": "holgartsunkboat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:44",
   "spawns": [
    {
@@ -38394,7 +38394,7 @@
   "id": 699,
   "name": "Holgart",
   "debugname": "holgartplatform",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:68",
   "spawns": [
    {
@@ -38409,7 +38409,7 @@
   "id": 700,
   "name": "Holgart",
   "debugname": "holgartland",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:767",
   "spawns": [
    {
@@ -38424,7 +38424,7 @@
   "id": 701,
   "name": "Kent",
   "debugname": "kent",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:92",
   "spawns": [
    {
@@ -38439,7 +38439,7 @@
   "id": 702,
   "name": "Fisherman",
   "debugname": "fishplatform1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:116",
   "spawns": [
    {
@@ -38484,7 +38484,7 @@
   "id": 703,
   "name": "Fisherman",
   "debugname": "fishplatform2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:139",
   "spawns": [
    {
@@ -38523,7 +38523,7 @@
   "id": 704,
   "name": "Fisherman",
   "debugname": "fishplatform3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:162",
   "spawns": [
    {
@@ -38556,7 +38556,7 @@
   "id": 705,
   "name": "Fisherman",
   "debugname": "fishplatform4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:185",
   "spawns": []
  },
@@ -38564,7 +38564,7 @@
   "id": 706,
   "name": "Wizard Mizgog",
   "debugname": "wizard_mizgog",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_wizard_tower/configs/wizard_tower.npc:1",
   "spawns": [
    {
@@ -38893,7 +38893,7 @@
   "id": 710,
   "name": "Alrena",
   "debugname": "alrena",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/alrena.npc:1",
   "spawns": [
    {
@@ -38908,7 +38908,7 @@
   "id": 711,
   "name": "Bravek",
   "debugname": "bravek",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/bravek.npc:1",
   "spawns": [
    {
@@ -38923,7 +38923,7 @@
   "id": 712,
   "name": "Carla",
   "debugname": "carla",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/carla.npc:1",
   "spawns": [
    {
@@ -38938,7 +38938,7 @@
   "id": 713,
   "name": "Clerk",
   "debugname": "clerk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/clerk.npc:1",
   "spawns": [
    {
@@ -38953,7 +38953,7 @@
   "id": 714,
   "name": "Edmond",
   "debugname": "edmond",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/edmond.npc:1",
   "spawns": [
    {
@@ -38974,7 +38974,7 @@
   "id": 715,
   "name": "Elena",
   "debugname": "elenap",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/elena.npc:26",
   "spawns": [
    {
@@ -38989,7 +38989,7 @@
   "id": 716,
   "name": "Head mourner",
   "debugname": "headmourner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/mourner.npc:239",
   "spawns": [
    {
@@ -39004,7 +39004,7 @@
   "id": 717,
   "name": "Mourner",
   "debugname": "mourner1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/mourner.npc:265",
   "spawns": [
    {
@@ -39043,7 +39043,7 @@
   "id": 718,
   "name": "Mourner",
   "debugname": "mournertwa",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/mourner.npc:1",
   "spawns": [
    {
@@ -39058,7 +39058,7 @@
   "id": 719,
   "name": "Mourner",
   "debugname": "mournertwb",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/mourner.npc:290",
   "spawns": [
    {
@@ -39091,7 +39091,7 @@
   "id": 720,
   "name": "Recruiter",
   "debugname": "recruiter",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/recruiter.npc:1",
   "spawns": [
    {
@@ -39106,7 +39106,7 @@
   "id": 721,
   "name": "Ted Rehnison",
   "debugname": "ted_rehnison",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/rehnisons.npc:1",
   "spawns": [
    {
@@ -39121,7 +39121,7 @@
   "id": 722,
   "name": "Martha Rehnison",
   "debugname": "martha_rehnison",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/rehnisons.npc:23",
   "spawns": [
    {
@@ -39136,7 +39136,7 @@
   "id": 723,
   "name": "Billy Rehnison",
   "debugname": "billy_rehnison",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/rehnisons.npc:45",
   "spawns": [
    {
@@ -39151,7 +39151,7 @@
   "id": 724,
   "name": "Milli Rehnison",
   "debugname": "milli",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_elena/configs/rehnisons.npc:65",
   "spawns": [
    {
@@ -39166,7 +39166,7 @@
   "id": 725,
   "name": "Jethick",
   "debugname": "jethick",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/jethick.npc:1",
   "spawns": [
    {
@@ -39181,7 +39181,7 @@
   "id": 726,
   "name": "Man",
   "debugname": "w_ardougnecitizen1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/man.npc:56",
   "spawns": []
  },
@@ -39189,7 +39189,7 @@
   "id": 727,
   "name": "Man",
   "debugname": "w_ardougnecitizen2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/man.npc:77",
   "spawns": []
  },
@@ -39197,7 +39197,7 @@
   "id": 728,
   "name": "Man",
   "debugname": "w_ardougnecitizen3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/man.npc:100",
   "spawns": [
    {
@@ -39218,7 +39218,7 @@
   "id": 729,
   "name": "Man",
   "debugname": "w_ardougnecitizen4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/man.npc:123",
   "spawns": [
    {
@@ -39239,7 +39239,7 @@
   "id": 730,
   "name": "Man",
   "debugname": "w_ardougnecitizen5",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/man.npc:146",
   "spawns": []
  },
@@ -39247,7 +39247,7 @@
   "id": 731,
   "name": "Bartender",
   "debugname": "jollyboar_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:469",
   "spawns": [
    {
@@ -39262,7 +39262,7 @@
   "id": 732,
   "name": "Bartender",
   "debugname": "donkey_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:5296",
   "spawns": [
    {
@@ -39277,7 +39277,7 @@
   "id": 733,
   "name": "Bartender",
   "debugname": "bluemoon_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:34",
   "spawns": [
    {
@@ -39292,7 +39292,7 @@
   "id": 734,
   "name": "Bartender",
   "debugname": "rustyanchor_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:1",
   "spawns": [
    {
@@ -39307,7 +39307,7 @@
   "id": 735,
   "name": "Bartender",
   "debugname": "deadmans_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_brimhaven/configs/brimhaven.npc:61",
   "spawns": [
    {
@@ -39322,7 +39322,7 @@
   "id": 736,
   "name": "Barmaid",
   "debugname": "risingsun_barmaid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_falador/configs/falador.npc:440",
   "spawns": [
    {
@@ -39343,7 +39343,7 @@
   "id": 737,
   "name": "Bartender",
   "debugname": "foresters_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/seers.npc:24",
   "spawns": [
    {
@@ -39358,7 +39358,7 @@
   "id": 738,
   "name": "Bartender",
   "debugname": "flyinghorse_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:697",
   "spawns": [
    {
@@ -39373,7 +39373,7 @@
   "id": 739,
   "name": "Bartender",
   "debugname": "dragon_bartender",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/yanille.npc:117",
   "spawns": [
    {
@@ -39394,7 +39394,7 @@
   "id": 740,
   "name": "Trufitus",
   "debugname": "trufitus",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:204",
   "spawns": [
    {
@@ -39409,7 +39409,7 @@
   "id": 741,
   "name": "Duke Horacio",
   "debugname": "duke_of_lumbridge",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:1",
   "spawns": [
    {
@@ -39439,7 +39439,7 @@
   "id": 743,
   "name": "Ned",
   "debugname": "dragonslayer_ned",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_dragon/configs/quest_dragon.npc:37",
   "spawns": [
    {
@@ -39460,7 +39460,7 @@
   "id": 744,
   "name": "Klarense",
   "debugname": "klarense",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_port_sarim/configs/port_sarim.npc:369",
   "spawns": [
    {
@@ -39490,7 +39490,7 @@
   "id": 746,
   "name": "Oracle",
   "debugname": "oracle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_edgeville/configs/edgeville.npc:68",
   "spawns": [
    {
@@ -39505,7 +39505,7 @@
   "id": 747,
   "name": "Oziach",
   "debugname": "oziach",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_edgeville/configs/edgeville.npc:97",
   "spawns": [
    {
@@ -39610,7 +39610,7 @@
   "id": 754,
   "name": "Cabin Boy Jenkins",
   "debugname": "cabin_boy_jenkins",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_dragon/configs/quest_dragon.npc:256",
   "spawns": [
    {
@@ -39625,7 +39625,7 @@
   "id": 755,
   "name": "Morgan",
   "debugname": "morgan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:273",
   "spawns": [
    {
@@ -39640,7 +39640,7 @@
   "id": 756,
   "name": "Dr Harlow",
   "debugname": "dr_harlow",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_vampire/configs/quest_vampire.npc:42",
   "spawns": [
    {
@@ -39663,7 +39663,7 @@
   "id": 758,
   "name": "Fred the Farmer",
   "debugname": "fred_the_farmer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_lumbridge/configs/lumbridge.npc:177",
   "spawns": [
    {
@@ -39678,7 +39678,7 @@
   "id": 759,
   "name": "Gertrudes cat",
   "debugname": "gertrudescat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:14",
   "spawns": [
    {
@@ -39693,7 +39693,7 @@
   "id": 760,
   "name": "Kitten",
   "debugname": "lostkitten",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:30",
   "spawns": []
  },
@@ -39701,7 +39701,7 @@
   "id": 761,
   "name": "Kitten",
   "debugname": "kittenpet1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:42",
   "spawns": []
  },
@@ -39709,7 +39709,7 @@
   "id": 762,
   "name": "Kitten",
   "debugname": "kittenpet_light",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:65",
   "spawns": []
  },
@@ -39717,7 +39717,7 @@
   "id": 763,
   "name": "Kitten",
   "debugname": "kittenpet_brown",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:94",
   "spawns": []
  },
@@ -39725,7 +39725,7 @@
   "id": 764,
   "name": "Kitten",
   "debugname": "kittenpet_black",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:123",
   "spawns": []
  },
@@ -39733,7 +39733,7 @@
   "id": 765,
   "name": "Kitten",
   "debugname": "kittenpet_browngrey",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:152",
   "spawns": []
  },
@@ -39741,7 +39741,7 @@
   "id": 766,
   "name": "Kitten",
   "debugname": "kittenpet_bluegrey",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:179",
   "spawns": []
  },
@@ -39749,7 +39749,7 @@
   "id": 767,
   "name": "Crate",
   "debugname": "kittens_mew",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:1",
   "spawns": [
    {
@@ -39794,7 +39794,7 @@
   "id": 768,
   "name": "Cat",
   "debugname": "growncat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:205",
   "spawns": []
  },
@@ -39802,7 +39802,7 @@
   "id": 769,
   "name": "Cat",
   "debugname": "growncat_light",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:228",
   "spawns": []
  },
@@ -39810,7 +39810,7 @@
   "id": 770,
   "name": "Cat",
   "debugname": "growncat_brown",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:257",
   "spawns": []
  },
@@ -39818,7 +39818,7 @@
   "id": 771,
   "name": "Cat",
   "debugname": "growncat_black",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:286",
   "spawns": []
  },
@@ -39826,7 +39826,7 @@
   "id": 772,
   "name": "Cat",
   "debugname": "growncat_browngrey",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:315",
   "spawns": []
  },
@@ -39834,7 +39834,7 @@
   "id": 773,
   "name": "Cat",
   "debugname": "growncat_bluegrey",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:342",
   "spawns": []
  },
@@ -39842,7 +39842,7 @@
   "id": 774,
   "name": "Overgrown cat",
   "debugname": "overgrowncat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:369",
   "spawns": []
  },
@@ -39850,7 +39850,7 @@
   "id": 775,
   "name": "Overgrown cat",
   "debugname": "overgrowncat_light",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:391",
   "spawns": []
  },
@@ -39858,7 +39858,7 @@
   "id": 776,
   "name": "Overgrown cat",
   "debugname": "overgrowncat_brown",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:419",
   "spawns": []
  },
@@ -39866,7 +39866,7 @@
   "id": 777,
   "name": "Overgrown cat",
   "debugname": "overgrowncat_black",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:447",
   "spawns": []
  },
@@ -39874,7 +39874,7 @@
   "id": 778,
   "name": "Overgrown cat",
   "debugname": "overgrowncat_browngrey",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:475",
   "spawns": []
  },
@@ -39882,7 +39882,7 @@
   "id": 779,
   "name": "Overgrown cat",
   "debugname": "overgrowncat_bluegrey",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_fluffs/configs/quest_fluffs.npc:501",
   "spawns": []
  },
@@ -39890,7 +39890,7 @@
   "id": 780,
   "name": "Gertrude",
   "debugname": "gertrude",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:914",
   "spawns": [
    {
@@ -39905,7 +39905,7 @@
   "id": 781,
   "name": "Shilop",
   "debugname": "shilop",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:942",
   "spawns": [
    {
@@ -39920,7 +39920,7 @@
   "id": 782,
   "name": "Philop",
   "debugname": "philop",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:965",
   "spawns": [
    {
@@ -39935,7 +39935,7 @@
   "id": 783,
   "name": "Wilough",
   "debugname": "wilough",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:985",
   "spawns": [
    {
@@ -39950,7 +39950,7 @@
   "id": 784,
   "name": "Kanel",
   "debugname": "kanel",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_varrock/configs/varrock.npc:1004",
   "spawns": [
    {
@@ -39965,7 +39965,7 @@
   "id": 785,
   "name": "Civillian",
   "debugname": "wantcat1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/civilian.npc:1",
   "spawns": [
    {
@@ -39998,7 +39998,7 @@
   "id": 786,
   "name": "Civillian",
   "debugname": "wantcat2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/civilian.npc:23",
   "spawns": [
    {
@@ -40031,7 +40031,7 @@
   "id": 787,
   "name": "Civillian",
   "debugname": "wantcat3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/civilian.npc:44",
   "spawns": [
    {
@@ -40064,7 +40064,7 @@
   "id": 788,
   "name": "Garv",
   "debugname": "garv",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hero/configs/quest_hero.npc:98",
   "spawns": [
    {
@@ -40079,7 +40079,7 @@
   "id": 789,
   "name": "Grubor",
   "debugname": "grubor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hero/configs/quest_hero.npc:1",
   "spawns": [
    {
@@ -40094,7 +40094,7 @@
   "id": 790,
   "name": "Trobert",
   "debugname": "trobert",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hero/configs/quest_hero.npc:36",
   "spawns": [
    {
@@ -40109,7 +40109,7 @@
   "id": 791,
   "name": "Seth",
   "debugname": "seth",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/225/all.npc:5321",
   "spawns": []
  },
@@ -40132,7 +40132,7 @@
   "id": 793,
   "name": "Alfonse the waiter",
   "debugname": "alfonse_the_waiter",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_brimhaven/configs/brimhaven.npc:26",
   "spawns": [
    {
@@ -40147,7 +40147,7 @@
   "id": 794,
   "name": "Charlie the cook",
   "debugname": "charlie_the_cook",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hero/configs/quest_hero.npc:166",
   "spawns": [
    {
@@ -40177,7 +40177,7 @@
   "id": 796,
   "name": "Achietties",
   "debugname": "achietties",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/areas_heroes_guild/configs/heroes_guild.npc:1",
   "spawns": [
    {
@@ -40192,7 +40192,7 @@
   "id": 797,
   "name": "Helemos",
   "debugname": "helemos",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/areas_heroes_guild/configs/heroes_guild.npc:35",
   "spawns": [
    {
@@ -40207,7 +40207,7 @@
   "id": 798,
   "name": "Velrak the explorer",
   "debugname": "velrak_the_explorer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_taverly/dungeon/configs/taverly_dungeon.npc:1",
   "spawns": [
    {
@@ -40273,7 +40273,7 @@
   "id": 800,
   "name": "Fishing spot",
   "debugname": "0_45_152_lavafish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:527",
   "spawns": [
    {
@@ -40300,7 +40300,7 @@
   "id": 801,
   "name": "Abbot Langley",
   "debugname": "abbot_langley",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/monastery/configs/prayer_guild.npc:1",
   "spawns": [
    {
@@ -40315,7 +40315,7 @@
   "id": 802,
   "name": "Brother Jered",
   "debugname": "brother_jered",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/monastery/configs/prayer_guild.npc:32",
   "spawns": [
    {
@@ -40375,7 +40375,7 @@
   "id": 804,
   "name": "Tanner",
   "debugname": "tanner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:39",
   "spawns": [
    {
@@ -40396,7 +40396,7 @@
   "id": 805,
   "name": " Master crafter",
   "debugname": "master_crafter",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_crafting/configs/crafting_guild/crafting_guild.npc:1",
   "spawns": [
    {
@@ -40423,7 +40423,7 @@
   "id": 806,
   "name": "Donovan the Family Handyman",
   "debugname": "donovan_the_family_handyman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:1",
   "spawns": [
    {
@@ -40438,7 +40438,7 @@
   "id": 807,
   "name": "Pierre",
   "debugname": "pierre_the_family_dog_handler",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:30",
   "spawns": [
    {
@@ -40453,7 +40453,7 @@
   "id": 808,
   "name": "Hobbes",
   "debugname": "hobbes_the_butler",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:57",
   "spawns": [
    {
@@ -40468,7 +40468,7 @@
   "id": 809,
   "name": "Louisa",
   "debugname": "louisa_the_cook",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:87",
   "spawns": [
    {
@@ -40483,7 +40483,7 @@
   "id": 810,
   "name": "Mary",
   "debugname": "mary_the_maid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:111",
   "spawns": [
    {
@@ -40498,7 +40498,7 @@
   "id": 811,
   "name": "Stanford",
   "debugname": "stanford_the_gardener",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:136",
   "spawns": [
    {
@@ -40513,7 +40513,7 @@
   "id": 812,
   "name": "Guard",
   "debugname": "murderguard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:165",
   "spawns": [
    {
@@ -40534,7 +40534,7 @@
   "id": 813,
   "name": "Gossip",
   "debugname": "gossipy_man",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:191",
   "spawns": [
    {
@@ -40555,7 +40555,7 @@
   "id": 814,
   "name": "Anna",
   "debugname": "anna_sinclair",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:214",
   "spawns": [
    {
@@ -40570,7 +40570,7 @@
   "id": 815,
   "name": "Bob",
   "debugname": "bob_sinclair",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:240",
   "spawns": [
    {
@@ -40585,7 +40585,7 @@
   "id": 816,
   "name": "Carol",
   "debugname": "carol_sinclair",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:265",
   "spawns": [
    {
@@ -40600,7 +40600,7 @@
   "id": 817,
   "name": "David",
   "debugname": "david_sinclair",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:291",
   "spawns": [
    {
@@ -40615,7 +40615,7 @@
   "id": 818,
   "name": "Elizabeth",
   "debugname": "elizabeth_sinclair",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:315",
   "spawns": [
    {
@@ -40630,7 +40630,7 @@
   "id": 819,
   "name": "Frank",
   "debugname": "frank_sinclair",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_murder/configs/sinclair_mansion.npc:340",
   "spawns": [
    {
@@ -40645,7 +40645,7 @@
   "id": 820,
   "name": "Poison Salesman",
   "debugname": "poison_salesman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_seers/configs/seers.npc:42",
   "spawns": [
    {
@@ -40681,7 +40681,7 @@
   "id": 822,
   "name": "Ana",
   "debugname": "ana",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_desertrescue/configs/desertrescue.npc:1",
   "spawns": [
    {
@@ -40696,7 +40696,7 @@
   "id": 823,
   "name": "anabarrel",
   "debugname": "anabarrel",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_desertrescue/configs/desertrescue.npc:24",
   "spawns": []
  },
@@ -40704,7 +40704,7 @@
   "id": 824,
   "name": "Female slave",
   "debugname": "mining_slave_female",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_desertrescue/configs/desertrescue.npc:38",
   "spawns": [
    {
@@ -40833,7 +40833,7 @@
   "id": 825,
   "name": "Male slave",
   "debugname": "mining_slave_male",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_desertrescue/configs/desertrescue.npc:59",
   "spawns": [
    {
@@ -41022,7 +41022,7 @@
   "id": 826,
   "name": "Escaping slave",
   "debugname": "escaped_slave",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_desertrescue/configs/desertrescue.npc:82",
   "spawns": []
  },
@@ -41192,7 +41192,7 @@
   "id": 831,
   "name": "Captain Siad",
   "debugname": "capt_siad",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_desertrescue/configs/desertrescue.npc:306",
   "spawns": [
    {
@@ -41207,7 +41207,7 @@
   "id": 832,
   "name": "Al Shabim",
   "debugname": "al_shabim",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_desert/configs/bedabincamp.npc:1",
   "spawns": [
    {
@@ -41222,7 +41222,7 @@
   "id": 833,
   "name": "Bedabin Nomad",
   "debugname": "bedabin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_desert/configs/bedabincamp.npc:36",
   "spawns": [
    {
@@ -41279,7 +41279,7 @@
   "id": 834,
   "name": "Bedabin Nomad Guard",
   "debugname": "bedabin_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_desert/configs/bedabincamp.npc:75",
   "spawns": [
    {
@@ -41294,7 +41294,7 @@
   "id": 835,
   "name": "Irena",
   "debugname": "irena",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_desert/configs/shantaypass.npc:1",
   "spawns": [
    {
@@ -41309,7 +41309,7 @@
   "id": 836,
   "name": "Shantay",
   "debugname": "shantay",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_desert/configs/shantaypass.npc:26",
   "spawns": [
    {
@@ -41858,7 +41858,7 @@
   "id": 841,
   "name": "Mine cart driver",
   "debugname": "mining_cart_driver",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_desertrescue/configs/desertrescue.npc:337",
   "spawns": [
    {
@@ -41936,7 +41936,7 @@
   "id": 843,
   "name": "RPDT employee",
   "debugname": "rpdt_employee",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:511",
   "spawns": [
    {
@@ -41963,7 +41963,7 @@
   "id": 844,
   "name": "Wizard Cromperty",
   "debugname": "ardounge_wizard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:539",
   "spawns": [
    {
@@ -41978,7 +41978,7 @@
   "id": 845,
   "name": "Horacio",
   "debugname": "horacio",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/ardougne_east.npc:567",
   "spawns": [
    {
@@ -41993,7 +41993,7 @@
   "id": 846,
   "name": "Kangai Mau",
   "debugname": "kangai_mau",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_brimhaven/configs/brimhaven.npc:1",
   "spawns": [
    {
@@ -42008,7 +42008,7 @@
   "id": 847,
   "name": "Head chef",
   "debugname": "head_chef",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_cooking/configs/cooking_guild/cooking_guild.npc:1",
   "spawns": [
    {
@@ -42023,7 +42023,7 @@
   "id": 848,
   "name": "Blurberry",
   "debugname": "blurberry",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:210",
   "spawns": [
    {
@@ -42038,7 +42038,7 @@
   "id": 849,
   "name": "Barman",
   "debugname": "blurberrybarmen",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:231",
   "spawns": [
    {
@@ -42065,7 +42065,7 @@
   "id": 850,
   "name": "Aluft Gianne",
   "debugname": "aluft_gianne",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:254",
   "spawns": [
    {
@@ -42080,7 +42080,7 @@
   "id": 851,
   "name": "Gnome Waiter",
   "debugname": "gnome_waiter",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_gnome/configs/gnome.npc:269",
   "spawns": [
    {
@@ -42176,7 +42176,7 @@
   "id": 853,
   "name": "Og",
   "debugname": "og",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:114",
   "spawns": [
    {
@@ -42191,7 +42191,7 @@
   "id": 854,
   "name": "Grew",
   "debugname": "grew",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:128",
   "spawns": [
    {
@@ -42206,7 +42206,7 @@
   "id": 855,
   "name": "Toban",
   "debugname": "toban",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:142",
   "spawns": [
    {
@@ -42355,7 +42355,7 @@
   "id": 863,
   "name": "Scared skavid",
   "debugname": "scared_skavid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:371",
   "spawns": [
    {
@@ -42370,7 +42370,7 @@
   "id": 864,
   "name": "Mad skavid",
   "debugname": "mad_skavid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:384",
   "spawns": [
    {
@@ -42385,7 +42385,7 @@
   "id": 865,
   "name": "Skavid",
   "debugname": "skavidtalker1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:399",
   "spawns": [
    {
@@ -42400,7 +42400,7 @@
   "id": 866,
   "name": "Skavid",
   "debugname": "skavidtalker2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:412",
   "spawns": [
    {
@@ -42415,7 +42415,7 @@
   "id": 867,
   "name": "Skavid",
   "debugname": "skavidtalker3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:425",
   "spawns": [
    {
@@ -42430,7 +42430,7 @@
   "id": 868,
   "name": "Skavid",
   "debugname": "skavidtalker4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:438",
   "spawns": [
    {
@@ -42445,7 +42445,7 @@
   "id": 869,
   "name": "Skavid",
   "debugname": "skavidtalker5",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/ogre.npc:451",
   "spawns": []
  },
@@ -42519,7 +42519,7 @@
   "id": 872,
   "name": "Watchtower wizard",
   "debugname": "watchtower_wizard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_yanille/configs/yanille.npc:242",
   "spawns": [
    {
@@ -42773,7 +42773,7 @@
   "id": 885,
   "name": "Ceril Carnillean",
   "debugname": "sir_ceril_carnillean",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hazeelcult/configs/quest_hazeelcult.npc:1",
   "spawns": [
    {
@@ -42794,7 +42794,7 @@
   "id": 886,
   "name": "Claus the chef",
   "debugname": "claus_carnillean",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hazeelcult/configs/quest_hazeelcult.npc:31",
   "spawns": [
    {
@@ -42809,7 +42809,7 @@
   "id": 887,
   "name": "Guard",
   "debugname": "guard_carnillean",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hazeelcult/configs/quest_hazeelcult.npc:61",
   "spawns": [
    {
@@ -42824,7 +42824,7 @@
   "id": 888,
   "name": "Philipe Carnillean",
   "debugname": "philipe_carnillean",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hazeelcult/configs/quest_hazeelcult.npc:81",
   "spawns": [
    {
@@ -42839,7 +42839,7 @@
   "id": 889,
   "name": "Henryeta Carnillean",
   "debugname": "carnillean_wife",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hazeelcult/configs/quest_hazeelcult.npc:106",
   "spawns": [
    {
@@ -42854,7 +42854,7 @@
   "id": 890,
   "name": "Butler Jones",
   "debugname": "butler_jones_hazeel_cultist",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hazeelcult/configs/quest_hazeelcult.npc:138",
   "spawns": [
    {
@@ -42952,7 +42952,7 @@
   "id": 895,
   "name": "Boy",
   "debugname": "ballboy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_taverly/configs/taverly.npc:145",
   "spawns": [
    {
@@ -42967,7 +42967,7 @@
   "id": 896,
   "name": "Nora T. Hagg",
   "debugname": "nora_t_hagg",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_ball/configs/witches_house.npc:1",
   "spawns": [
    {
@@ -43014,7 +43014,7 @@
   "id": 901,
   "name": "Mouse",
   "debugname": "witchrat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_ball/configs/witches_house.npc:149",
   "spawns": []
  },
@@ -43022,7 +43022,7 @@
   "id": 902,
   "name": "Gundai",
   "debugname": "magearena_banker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:1",
   "spawns": [
    {
@@ -43037,7 +43037,7 @@
   "id": 903,
   "name": "Lundail",
   "debugname": "magearena_runeshop",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:24",
   "spawns": [
    {
@@ -43052,7 +43052,7 @@
   "id": 904,
   "name": "Chamber guardian",
   "debugname": "magearena_guardian",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:47",
   "spawns": [
    {
@@ -43067,7 +43067,7 @@
   "id": 905,
   "name": "Kolodion",
   "debugname": "arenamage1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:79",
   "spawns": [
    {
@@ -43082,7 +43082,7 @@
   "id": 906,
   "name": "Kolodion",
   "debugname": "arenamage2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:112",
   "spawns": []
  },
@@ -43090,7 +43090,7 @@
   "id": 907,
   "name": "Kolodion",
   "debugname": "kolhuman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:145",
   "spawns": []
  },
@@ -43098,7 +43098,7 @@
   "id": 908,
   "name": "Kolodion",
   "debugname": "kologre",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:185",
   "spawns": []
  },
@@ -43106,7 +43106,7 @@
   "id": 909,
   "name": "Kolodion",
   "debugname": "kolspider",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:225",
   "spawns": []
  },
@@ -43114,7 +43114,7 @@
   "id": 910,
   "name": "Kolodion",
   "debugname": "kolethereal",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mage_arena/configs/mage_arena.npc:257",
   "spawns": []
  },
@@ -43211,7 +43211,7 @@
   "id": 915,
   "name": "Leela",
   "debugname": "leela",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:28",
   "spawns": [
    {
@@ -43226,7 +43226,7 @@
   "id": 916,
   "name": "Joe",
   "debugname": "joe",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:53",
   "spawns": [
    {
@@ -43274,7 +43274,7 @@
   "id": 918,
   "name": "Ned",
   "debugname": "ned",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:1",
   "spawns": [
    {
@@ -43289,7 +43289,7 @@
   "id": 919,
   "name": "Lady Keli",
   "debugname": "lady_keli",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:102",
   "spawns": [
    {
@@ -43304,7 +43304,7 @@
   "id": 920,
   "name": "Prince Ali",
   "debugname": "prince_ali_prison",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:124",
   "spawns": [
    {
@@ -43319,7 +43319,7 @@
   "id": 921,
   "name": "Prince Ali",
   "debugname": "prince_ali_disguised",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_prince/configs/quest_prince.npc:1",
   "spawns": []
  },
@@ -43327,7 +43327,7 @@
   "id": 922,
   "name": "Aggie",
   "debugname": "aggie",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:76",
   "spawns": [
    {
@@ -43342,7 +43342,7 @@
   "id": 923,
   "name": "Hassan",
   "debugname": "hassan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:99",
   "spawns": [
    {
@@ -43357,7 +43357,7 @@
   "id": 924,
   "name": "Osman",
   "debugname": "osman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/alkharid.npc:132",
   "spawns": [
    {
@@ -43372,7 +43372,7 @@
   "id": 925,
   "name": "Border Guard",
   "debugname": "borderguard1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/border_guard.npc:1",
   "spawns": [
    {
@@ -43393,7 +43393,7 @@
   "id": 926,
   "name": "Border Guard",
   "debugname": "borderguard2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_alkharid/configs/border_guard.npc:42",
   "spawns": [
    {
@@ -43414,7 +43414,7 @@
   "id": 927,
   "name": "Fishing spot",
   "debugname": "0_38_49_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:543",
   "spawns": [
    {
@@ -43453,7 +43453,7 @@
   "id": 928,
   "name": "Gujuo",
   "debugname": "gujuo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_legends/configs/quest_legends.npc:63",
   "spawns": []
  },
@@ -43607,7 +43607,7 @@
   "id": 932,
   "name": "Fionella",
   "debugname": "fionella",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/legends_guild/legends_guild.npc:164",
   "spawns": [
    {
@@ -43622,7 +43622,7 @@
   "id": 933,
   "name": "Siegfried Erkle",
   "debugname": "siegfried_erkle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_east/configs/legends_guild/legends_guild.npc:204",
   "spawns": [
    {
@@ -43752,7 +43752,7 @@
   "id": 939,
   "name": "Boulder",
   "debugname": "boulder_legends",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_legends/configs/quest_legends.npc:442",
   "spawns": [
    {
@@ -43826,7 +43826,7 @@
   "id": 942,
   "name": "Master Chef",
   "debugname": "newbie_cook_instructor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:1",
   "spawns": [
    {
@@ -43841,7 +43841,7 @@
   "id": 943,
   "name": "Survival Expert",
   "debugname": "newbie_survival_instructor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:36",
   "spawns": [
    {
@@ -43871,7 +43871,7 @@
   "id": 945,
   "name": "RuneScape Guide",
   "debugname": "newbie_basics_instructor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:102",
   "spawns": [
    {
@@ -43886,7 +43886,7 @@
   "id": 946,
   "name": "Magic Instructor",
   "debugname": "newbie_magic_instructor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:136",
   "spawns": [
    {
@@ -43901,7 +43901,7 @@
   "id": 947,
   "name": "Financial Advisor",
   "debugname": "newbie_account_instructor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:172",
   "spawns": [
    {
@@ -43916,7 +43916,7 @@
   "id": 948,
   "name": "Mining Instructor",
   "debugname": "newbie_mining_instructor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:204",
   "spawns": [
    {
@@ -43931,7 +43931,7 @@
   "id": 949,
   "name": "Quest Guide",
   "debugname": "newbie_quest_instructor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:235",
   "spawns": [
    {
@@ -44072,7 +44072,7 @@
   "id": 952,
   "name": "Fishing spot",
   "debugname": "0_48_48_newbiefishing",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:311",
   "spawns": [
    {
@@ -44099,7 +44099,7 @@
   "id": 953,
   "name": "Banker",
   "debugname": "noobbanker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:327",
   "spawns": [
    {
@@ -44120,7 +44120,7 @@
   "id": 954,
   "name": "Brother Brace",
   "debugname": "brother_noob",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/tutorial/configs/tutorial.npc:356",
   "spawns": [
    {
@@ -44143,7 +44143,7 @@
   "id": 956,
   "name": "Drunken Dwarf",
   "debugname": "macro_dwarf",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/macro events/configs/antimacro.npc:1379",
   "spawns": []
  },
@@ -44151,7 +44151,7 @@
   "id": 957,
   "name": "Mubariz",
   "debugname": "duel_mubariz",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:1",
   "spawns": [
    {
@@ -44166,7 +44166,7 @@
   "id": 958,
   "name": "Fadli",
   "debugname": "duel_fadli",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:33",
   "spawns": [
    {
@@ -44181,7 +44181,7 @@
   "id": 959,
   "name": "A'abla",
   "debugname": "duel_nurse1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:67",
   "spawns": [
    {
@@ -44196,7 +44196,7 @@
   "id": 960,
   "name": "Sabreen",
   "debugname": "duel_nurse2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:102",
   "spawns": [
    {
@@ -44211,7 +44211,7 @@
   "id": 961,
   "name": "Tafani",
   "debugname": "duel_nurse3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:135",
   "spawns": [
    {
@@ -44226,7 +44226,7 @@
   "id": 962,
   "name": "Jaraah",
   "debugname": "duel_jaraah",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:168",
   "spawns": [
    {
@@ -44241,7 +44241,7 @@
   "id": 963,
   "name": "Zahwa",
   "debugname": "duel_injured1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:203",
   "spawns": [
    {
@@ -44256,7 +44256,7 @@
   "id": 964,
   "name": "Ima",
   "debugname": "duel_crowdmale1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:235",
   "spawns": [
    {
@@ -44271,7 +44271,7 @@
   "id": 965,
   "name": "Sabeil",
   "debugname": "duel_crowdmale2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:267",
   "spawns": [
    {
@@ -44286,7 +44286,7 @@
   "id": 966,
   "name": "Jadid",
   "debugname": "duel_crowdmale3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:299",
   "spawns": [
    {
@@ -44301,7 +44301,7 @@
   "id": 967,
   "name": "Dalal",
   "debugname": "duel_crowdfemale1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:331",
   "spawns": [
    {
@@ -44316,7 +44316,7 @@
   "id": 968,
   "name": "Afrah",
   "debugname": "duel_crowdfemale2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:361",
   "spawns": [
    {
@@ -44331,7 +44331,7 @@
   "id": 969,
   "name": "Jeed",
   "debugname": "duel_crowdfemale3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:391",
   "spawns": [
    {
@@ -44346,7 +44346,7 @@
   "id": 970,
   "name": "Diango",
   "debugname": "aprilfoolshorsesalesman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_draynor/configs/draynor.npc:296",
   "spawns": [
    {
@@ -44361,7 +44361,7 @@
   "id": 971,
   "name": "Chadwell",
   "debugname": "chadwell",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/chadwell.npc:1",
   "spawns": [
    {
@@ -44376,7 +44376,7 @@
   "id": 972,
   "name": "Koftik",
   "debugname": "caveguide1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:1",
   "spawns": [
    {
@@ -44391,7 +44391,7 @@
   "id": 973,
   "name": "Koftik",
   "debugname": "caveguide2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:19",
   "spawns": [
    {
@@ -44406,7 +44406,7 @@
   "id": 974,
   "name": "Koftik",
   "debugname": "caveguide3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:37",
   "spawns": [
    {
@@ -44421,7 +44421,7 @@
   "id": 975,
   "name": "Koftik",
   "debugname": "caveguide4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:56",
   "spawns": []
  },
@@ -44429,7 +44429,7 @@
   "id": 976,
   "name": "Koftik",
   "debugname": "caveguide5",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:74",
   "spawns": [
    {
@@ -44798,7 +44798,7 @@
   "id": 979,
   "name": "Slave",
   "debugname": "cave_slave1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:150",
   "spawns": [
    {
@@ -44813,7 +44813,7 @@
   "id": 980,
   "name": "Slave",
   "debugname": "cave_slave2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:172",
   "spawns": [
    {
@@ -44834,7 +44834,7 @@
   "id": 981,
   "name": "Slave",
   "debugname": "cave_slave3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:194",
   "spawns": [
    {
@@ -44849,7 +44849,7 @@
   "id": 982,
   "name": "Slave",
   "debugname": "cave_slave4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:216",
   "spawns": [
    {
@@ -44864,7 +44864,7 @@
   "id": 983,
   "name": "Slave",
   "debugname": "cave_slave5",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:238",
   "spawns": [
    {
@@ -44885,7 +44885,7 @@
   "id": 984,
   "name": "Slave",
   "debugname": "cave_slave6",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:262",
   "spawns": [
    {
@@ -44906,7 +44906,7 @@
   "id": 985,
   "name": "Slave",
   "debugname": "cave_slave7",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:284",
   "spawns": [
    {
@@ -44921,7 +44921,7 @@
   "id": 986,
   "name": "Boulder",
   "debugname": "boulder_upass",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:306",
   "spawns": [
    {
@@ -45101,7 +45101,7 @@
   "id": 992,
   "name": "Kardia",
   "debugname": "cavewitch",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:504",
   "spawns": [
    {
@@ -45116,7 +45116,7 @@
   "id": 993,
   "name": "Witches cat",
   "debugname": "cavewitchcat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:532",
   "spawns": [
    {
@@ -45131,7 +45131,7 @@
   "id": 994,
   "name": "Nilhoof",
   "debugname": "upassdwarf1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:548",
   "spawns": [
    {
@@ -45146,7 +45146,7 @@
   "id": 995,
   "name": "Klank",
   "debugname": "upassdwarf2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:573",
   "spawns": [
    {
@@ -45161,7 +45161,7 @@
   "id": 996,
   "name": "Kamen",
   "debugname": "upassdwarf3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:595",
   "spawns": [
    {
@@ -45236,7 +45236,7 @@
   "id": 1001,
   "name": "Dark mage",
   "debugname": "upassmage",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_ardougne_west/configs/darkmage.npc:1",
   "spawns": [
    {
@@ -45416,7 +45416,7 @@
   "id": 1003,
   "name": "Lord Iban",
   "debugname": "iban",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:775",
   "spawns": [
    {
@@ -45740,7 +45740,7 @@
   "id": 1005,
   "name": "Giant bat",
   "debugname": "non_combat_bat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_upass/configs/upass.npc:841",
   "spawns": [
    {
@@ -45797,7 +45797,7 @@
   "id": 1006,
   "name": "Sea slug",
   "debugname": "seaslug",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_fishing_platform/configs/fishing_platform.npc:206",
   "spawns": [
    {
@@ -46012,7 +46012,7 @@
   "id": 1008,
   "name": "Hamid",
   "debugname": "duel_monk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_duelarena/configs/duelarena.npc:419",
   "spawns": [
    {
@@ -46035,7 +46035,7 @@
   "id": 1010,
   "name": "Rantz",
   "debugname": "rantz",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_chompybird/configs/quest_chompybird.npc:1",
   "spawns": [
    {
@@ -46050,7 +46050,7 @@
   "id": 1011,
   "name": "Fycie",
   "debugname": "fycie",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_chompybird/configs/quest_chompybird.npc:17",
   "spawns": [
    {
@@ -46065,7 +46065,7 @@
   "id": 1012,
   "name": "Bugs",
   "debugname": "bugs",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_chompybird/configs/quest_chompybird.npc:38",
   "spawns": [
    {
@@ -46080,7 +46080,7 @@
   "id": 1013,
   "name": "Swamp toad",
   "debugname": "toad",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_chompybird/configs/quest_chompybird.npc:59",
   "spawns": [
    {
@@ -46191,7 +46191,7 @@
   "id": 1014,
   "name": "Bloated Toad",
   "debugname": "bloated_toad",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_chompybird/configs/quest_chompybird.npc:69",
   "spawns": []
  },
@@ -46207,7 +46207,7 @@
   "id": 1016,
   "name": "Chompy bird",
   "debugname": "chompybird_dead",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_chompybird/configs/quest_chompybird.npc:103",
   "spawns": []
  },
@@ -46709,7 +46709,7 @@
   "id": 1036,
   "name": "Banker",
   "debugname": "werewolfbanker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/banker.npc:168",
   "spawns": [
    {
@@ -46730,7 +46730,7 @@
   "id": 1037,
   "name": "Man",
   "debugname": "werewolfroadblocker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_canifis/configs/canifis.npc:470",
   "spawns": []
  },
@@ -46738,7 +46738,7 @@
   "id": 1038,
   "name": "Rufus",
   "debugname": "werewolfshopkeeper1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_canifis/configs/canifis.npc:495",
   "spawns": [
    {
@@ -46753,7 +46753,7 @@
   "id": 1039,
   "name": "Barker",
   "debugname": "werewolfshopkeeper2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_canifis/configs/canifis.npc:528",
   "spawns": [
    {
@@ -46768,7 +46768,7 @@
   "id": 1040,
   "name": "Fidelio",
   "debugname": "werewolfshopkeeper3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_canifis/configs/canifis.npc:561",
   "spawns": [
    {
@@ -46783,7 +46783,7 @@
   "id": 1041,
   "name": "Sbott",
   "debugname": "werewolftanner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_canifis/configs/canifis.npc:587",
   "spawns": [
    {
@@ -46798,7 +46798,7 @@
   "id": 1042,
   "name": "Roavar",
   "debugname": "werewolfinnkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_canifis/configs/canifis.npc:613",
   "spawns": [
    {
@@ -46813,7 +46813,7 @@
   "id": 1043,
   "name": "Willow the wisp",
   "debugname": "willothewisp",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_canifis/configs/canifis.npc:638",
   "spawns": [
    {
@@ -47332,7 +47332,7 @@
   "id": 1048,
   "name": "Drezel",
   "debugname": "priestperiltrappedmonk",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_priestperil/configs/priestperil.npc:113",
   "spawns": [
    {
@@ -47347,7 +47347,7 @@
   "id": 1049,
   "name": "Drezel",
   "debugname": "priestperiltrappedmonk2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_priestperil/configs/priestperil.npc:134",
   "spawns": [
    {
@@ -47362,7 +47362,7 @@
   "id": 1050,
   "name": "Filliman Tarlock",
   "debugname": "filliman_tarlock_spirit",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_druidspirit/configs/quest_druidspirit.npc:1",
   "spawns": []
  },
@@ -47370,7 +47370,7 @@
   "id": 1051,
   "name": "Nature Spirit",
   "debugname": "filliman_tarlock_ns",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_druidspirit/configs/quest_druidspirit.npc:31",
   "spawns": []
  },
@@ -47378,7 +47378,7 @@
   "id": 1052,
   "name": "Ghast",
   "debugname": "ghast_invis",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_druidspirit/configs/quest_druidspirit.npc:64",
   "spawns": [
    {
@@ -48481,7 +48481,7 @@
   "id": 1054,
   "name": "Ulizius",
   "debugname": "mort_myre_gate_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_druidspirit/configs/quest_druidspirit.npc:113",
   "spawns": [
    {
@@ -48496,7 +48496,7 @@
   "id": 1055,
   "name": "Pirate Jackie the Fruit",
   "debugname": "agilityarena_tickettrader",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_agilityarena/configs/agilityarena.npc:35",
   "spawns": [
    {
@@ -48526,7 +48526,7 @@
   "id": 1057,
   "name": "Strange watcher",
   "debugname": "macro_theatre_saradomin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/254/all.npc:57",
   "spawns": [
    {
@@ -48541,7 +48541,7 @@
   "id": 1058,
   "name": "Strange watcher",
   "debugname": "macro_theatre_guthix",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/254/all.npc:83",
   "spawns": [
    {
@@ -48556,7 +48556,7 @@
   "id": 1059,
   "name": "Strange watcher",
   "debugname": "macro_theatre_zamorak",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/254/all.npc:107",
   "spawns": [
    {
@@ -48571,7 +48571,7 @@
   "id": 1060,
   "name": "Denulth",
   "debugname": "death_ig_commander",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:1",
   "spawns": [
    {
@@ -48586,7 +48586,7 @@
   "id": 1061,
   "name": "Sergeant",
   "debugname": "death_ig_sergeant_drilling",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:30",
   "spawns": [
    {
@@ -48601,7 +48601,7 @@
   "id": 1062,
   "name": "Sergeant",
   "debugname": "death_ig_sergeant_training",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:65",
   "spawns": [
    {
@@ -48616,7 +48616,7 @@
   "id": 1063,
   "name": "Soldier",
   "debugname": "death_ig_solider_drilling",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:98",
   "spawns": [
    {
@@ -48685,7 +48685,7 @@
   "id": 1064,
   "name": "Soldier",
   "debugname": "death_ig_solider_training",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:130",
   "spawns": [
    {
@@ -48745,7 +48745,7 @@
   "id": 1066,
   "name": "Soldier",
   "debugname": "death_ig_solider_sitting1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:212",
   "spawns": [
    {
@@ -48760,7 +48760,7 @@
   "id": 1067,
   "name": "Soldier",
   "debugname": "death_ig_solider_sitting2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:244",
   "spawns": [
    {
@@ -48775,7 +48775,7 @@
   "id": 1068,
   "name": "Soldier",
   "debugname": "death_ig_solider_sitting3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:276",
   "spawns": [
    {
@@ -48790,7 +48790,7 @@
   "id": 1069,
   "name": "Soldier",
   "debugname": "death_ig_solider_wounded",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:308",
   "spawns": [
    {
@@ -48805,7 +48805,7 @@
   "id": 1070,
   "name": "Saba",
   "debugname": "death_hermit",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:340",
   "spawns": [
    {
@@ -48820,7 +48820,7 @@
   "id": 1071,
   "name": "Tenzing",
   "debugname": "death_sherpa",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:369",
   "spawns": [
    {
@@ -48967,7 +48967,7 @@
   "id": 1078,
   "name": "Harold",
   "debugname": "death_guard_equiproom",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:690",
   "spawns": [
    {
@@ -48982,7 +48982,7 @@
   "id": 1079,
   "name": "Tostig",
   "debugname": "death_barman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:712",
   "spawns": [
    {
@@ -48997,7 +48997,7 @@
   "id": 1080,
   "name": "Eohric",
   "debugname": "death_headservant",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:748",
   "spawns": [
    {
@@ -49027,7 +49027,7 @@
   "id": 1082,
   "name": "Dunstan",
   "debugname": "death_smithy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:817",
   "spawns": [
    {
@@ -49042,7 +49042,7 @@
   "id": 1083,
   "name": "Wistan",
   "debugname": "death_shopkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:846",
   "spawns": [
    {
@@ -49162,7 +49162,7 @@
   "id": 1091,
   "name": "Bob",
   "debugname": "death_growncat_black",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:1139",
   "spawns": [
    {
@@ -49192,7 +49192,7 @@
   "id": 1093,
   "name": "Billy",
   "debugname": "death_mountain_goat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:1203",
   "spawns": [
    {
@@ -49207,7 +49207,7 @@
   "id": 1094,
   "name": "Mountain Goat",
   "debugname": "mountain_goat2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:1219",
   "spawns": [
    {
@@ -49288,7 +49288,7 @@
   "id": 1099,
   "name": "Dung",
   "debugname": "death_troll_cook1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:1431",
   "spawns": [
    {
@@ -49303,7 +49303,7 @@
   "id": 1100,
   "name": "Ash",
   "debugname": "death_troll_cook2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_death/configs/quest_death.npc:1455",
   "spawns": [
    {
@@ -49762,7 +49762,7 @@
   "id": 1113,
   "name": "Eadgar",
   "debugname": "troll_eadgar",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:1",
   "spawns": [
    {
@@ -49783,7 +49783,7 @@
   "id": 1114,
   "name": "Godric",
   "debugname": "troll_godric",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:33",
   "spawns": [
    {
@@ -50084,7 +50084,7 @@
   "id": 1135,
   "name": "Cook",
   "debugname": "troll_cook",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:1014",
   "spawns": [
    {
@@ -50099,7 +50099,7 @@
   "id": 1136,
   "name": "Cook",
   "debugname": "troll_cook2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:1036",
   "spawns": [
    {
@@ -50114,7 +50114,7 @@
   "id": 1137,
   "name": "Cook",
   "debugname": "troll_cook3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:1056",
   "spawns": [
    {
@@ -50162,7 +50162,7 @@
   "id": 1139,
   "name": "Mushroom",
   "debugname": "troll_stronghold_camp_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:1124",
   "spawns": [
    {
@@ -50177,7 +50177,7 @@
   "id": 1140,
   "name": "Mountain Goat",
   "debugname": "troll_mountain_goat",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:1149",
   "spawns": [
    {
@@ -50252,7 +50252,7 @@
   "id": 1141,
   "name": "Mountain Goat",
   "debugname": "troll_mountain_goat_smaller",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll/configs/quest_troll.npc:1166",
   "spawns": [
    {
@@ -50279,7 +50279,7 @@
   "id": 1142,
   "name": "Guard",
   "debugname": "troll_sguard1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:28",
   "spawns": [
    {
@@ -50294,7 +50294,7 @@
   "id": 1143,
   "name": "Guard",
   "debugname": "troll_sguard2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:57",
   "spawns": [
    {
@@ -50309,7 +50309,7 @@
   "id": 1144,
   "name": "Guard",
   "debugname": "troll_sguard3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:86",
   "spawns": [
    {
@@ -50324,7 +50324,7 @@
   "id": 1145,
   "name": "Guard",
   "debugname": "troll_sguard4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:116",
   "spawns": [
    {
@@ -50339,7 +50339,7 @@
   "id": 1146,
   "name": "Guard",
   "debugname": "troll_sguard5",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:147",
   "spawns": [
    {
@@ -50354,7 +50354,7 @@
   "id": 1147,
   "name": "Guard",
   "debugname": "troll_sguard6",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:179",
   "spawns": [
    {
@@ -50369,7 +50369,7 @@
   "id": 1148,
   "name": "Guard",
   "debugname": "troll_sguard7",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:210",
   "spawns": [
    {
@@ -50384,7 +50384,7 @@
   "id": 1149,
   "name": "Guard",
   "debugname": "troll_sguard8",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:239",
   "spawns": [
    {
@@ -50399,7 +50399,7 @@
   "id": 1150,
   "name": "Guard",
   "debugname": "eadgar_storeroom_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:271",
   "spawns": [
    {
@@ -50414,7 +50414,7 @@
   "id": 1151,
   "name": "Burntmeat",
   "debugname": "eadgar_troll_chief_cook",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_eadgar/configs/quest_eadgar.npc:1",
   "spawns": [
    {
@@ -50429,7 +50429,7 @@
   "id": 1152,
   "name": "Weird Old Man",
   "debugname": "kalphite_oldman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_kalphite/configs/kalphite.npc:1",
   "spawns": [
    {
@@ -50663,7 +50663,7 @@
   "id": 1161,
   "name": "Kalphite Larva",
   "debugname": "kalphite_larva",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_kalphite/configs/kalphite.npc:270",
   "spawns": [
    {
@@ -50732,7 +50732,7 @@
   "id": 1162,
   "name": "Timfraku",
   "debugname": "tbwt_timfraku",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:1",
   "spawns": [
    {
@@ -50747,7 +50747,7 @@
   "id": 1163,
   "name": "Tiadeche",
   "debugname": "tbwt_tiadeche",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:32",
   "spawns": [
    {
@@ -50768,7 +50768,7 @@
   "id": 1164,
   "name": "Tiadeche",
   "debugname": "tbwt_tiadeche_final",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:62",
   "spawns": [
    {
@@ -50783,7 +50783,7 @@
   "id": 1165,
   "name": "Tinsay",
   "debugname": "tbwt_tinsay",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:98",
   "spawns": [
    {
@@ -50798,7 +50798,7 @@
   "id": 1166,
   "name": "Tinsay",
   "debugname": "tbwt_tinsay_final",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:130",
   "spawns": [
    {
@@ -50813,7 +50813,7 @@
   "id": 1167,
   "name": "Tamayu",
   "debugname": "tbwt_tamayu",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:162",
   "spawns": [
    {
@@ -50828,7 +50828,7 @@
   "id": 1168,
   "name": "Tamayu",
   "debugname": "tbwt_tamayu_final",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:187",
   "spawns": [
    {
@@ -50843,7 +50843,7 @@
   "id": 1169,
   "name": "Tamayu",
   "debugname": "tbwt_tamayu_hunter",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:220",
   "spawns": [
    {
@@ -50858,7 +50858,7 @@
   "id": 1170,
   "name": "Tamayu",
   "debugname": "tbwt_tamayu_final_hunter",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:247",
   "spawns": [
    {
@@ -50873,7 +50873,7 @@
   "id": 1171,
   "name": "Lubufu",
   "debugname": "tbwt_lubufu",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_tbwt/configs/quest_tbwt.npc:273",
   "spawns": [
    {
@@ -50924,7 +50924,7 @@
   "id": 1174,
   "name": "Fishing spot",
   "debugname": "0_43_47_karambwanji",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:564",
   "spawns": [
    {
@@ -50951,7 +50951,7 @@
   "id": 1175,
   "name": "Fishing spot",
   "debugname": "general_karambwanji",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:580",
   "spawns": []
  },
@@ -50959,7 +50959,7 @@
   "id": 1176,
   "name": "Fishing spot",
   "debugname": "0_45_48_karambwan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:595",
   "spawns": [
    {
@@ -50980,7 +50980,7 @@
   "id": 1177,
   "name": "Fishing spot",
   "debugname": "general_karambwan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:610",
   "spawns": [
    {
@@ -51001,7 +51001,7 @@
   "id": 1178,
   "name": "Fishing spot",
   "debugname": "lubufu_karambwan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:625",
   "spawns": [
    {
@@ -51016,7 +51016,7 @@
   "id": 1179,
   "name": "Gull",
   "debugname": "0_45_48_seabird1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:1",
   "spawns": [
    {
@@ -51031,7 +51031,7 @@
   "id": 1180,
   "name": "Cormorant",
   "debugname": "0_45_48_seabird2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:28",
   "spawns": [
    {
@@ -51046,7 +51046,7 @@
   "id": 1181,
   "name": "Albatross",
   "debugname": "0_45_48_seabird3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:55",
   "spawns": [
    {
@@ -51067,7 +51067,7 @@
   "id": 1182,
   "name": "Lord Iorwerth",
   "debugname": "lord_iorwerth",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:1",
   "spawns": [
    {
@@ -51172,7 +51172,7 @@
   "id": 1185,
   "name": "Elven city guard",
   "debugname": "elf_city_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:93",
   "spawns": [
    {
@@ -51193,7 +51193,7 @@
   "id": 1186,
   "name": "Idris",
   "debugname": "regicide_good_elf1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:108",
   "spawns": []
  },
@@ -51201,7 +51201,7 @@
   "id": 1187,
   "name": "Essyllt",
   "debugname": "regicide_evil_elf1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:125",
   "spawns": []
  },
@@ -51209,7 +51209,7 @@
   "id": 1188,
   "name": "Morvran",
   "debugname": "regicide_evil_elf2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:139",
   "spawns": []
  },
@@ -51217,7 +51217,7 @@
   "id": 1189,
   "name": "Fishing spot",
   "debugname": "0_34_50_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:640",
   "spawns": [
    {
@@ -51250,7 +51250,7 @@
   "id": 1190,
   "name": "Fishing spot",
   "debugname": "0_35_50_freshfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:661",
   "spawns": [
    {
@@ -51289,7 +51289,7 @@
   "id": 1191,
   "name": "Fishing spot",
   "debugname": "0_33_51_memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:682",
   "spawns": [
    {
@@ -51871,7 +51871,7 @@
   "id": 1199,
   "name": "Elf Tracker",
   "debugname": "regicide_old_camp_tracker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:362",
   "spawns": [
    {
@@ -51913,7 +51913,7 @@
   "id": 1201,
   "name": "Elf warrior",
   "debugname": "elf_overpass_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:432",
   "spawns": [
    {
@@ -51934,7 +51934,7 @@
   "id": 1202,
   "name": "Arianwyn",
   "debugname": "regicide_good_elf3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:447",
   "spawns": []
  },
@@ -51990,7 +51990,7 @@
   "id": 1205,
   "name": "Tyras guard",
   "debugname": "regicide_tyras_lazy_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:559",
   "spawns": [
    {
@@ -52005,7 +52005,7 @@
   "id": 1206,
   "name": "Tyras guard",
   "debugname": "regicide_tyras_camp_tent_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:589",
   "spawns": [
    {
@@ -52020,7 +52020,7 @@
   "id": 1207,
   "name": "General Hining",
   "debugname": "regicide_general_hining",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:620",
   "spawns": [
    {
@@ -52035,7 +52035,7 @@
   "id": 1208,
   "name": "Quartermaster",
   "debugname": "regicidegeneralshopkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:652",
   "spawns": [
    {
@@ -52050,7 +52050,7 @@
   "id": 1209,
   "name": "Koftik",
   "debugname": "caveguide6",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:689",
   "spawns": [
    {
@@ -52065,7 +52065,7 @@
   "id": 1210,
   "name": "Kings messenger",
   "debugname": "regicide_kings_messenger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:707",
   "spawns": []
  },
@@ -52073,7 +52073,7 @@
   "id": 1211,
   "name": "Willow the wisp",
   "debugname": "regicide_willothewisp1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:724",
   "spawns": [
    {
@@ -52238,7 +52238,7 @@
   "id": 1212,
   "name": "Willow the wisp",
   "debugname": "regicide_willothewisp2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_regicide/configs/quest_regicide.npc:739",
   "spawns": [
    {
@@ -52373,7 +52373,7 @@
   "id": 1213,
   "name": "Tegid",
   "debugname": "eadgar_druid_washing",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:82",
   "spawns": [
    {
@@ -52388,7 +52388,7 @@
   "id": 1214,
   "name": "Thistle",
   "debugname": "eadgar_troll_thistle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:110",
   "spawns": [
    {
@@ -52403,7 +52403,7 @@
   "id": 1215,
   "name": "Parrots",
   "debugname": "eadgar_parrotts",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:121",
   "spawns": [
    {
@@ -52424,7 +52424,7 @@
   "id": 1216,
   "name": "Parroty Pete",
   "debugname": "eadgar_zoo_keeper_aviary",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:130",
   "spawns": [
    {
@@ -52774,7 +52774,7 @@
   "id": 1221,
   "name": "Spider",
   "debugname": "vampire_spider",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mortmyre/configs/mortmyre.npc:506",
   "spawns": [
    {
@@ -52954,7 +52954,7 @@
   "id": 1226,
   "name": "Tree",
   "debugname": "nasty_tree_swamp",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_mortmyre/configs/mortmyre.npc:620",
   "spawns": [
    {
@@ -53908,7 +53908,7 @@
   "id": 1236,
   "name": "Fishing spot",
   "debugname": "0_54_53_slimey_eel",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:765",
   "spawns": [
    {
@@ -53947,7 +53947,7 @@
   "id": 1237,
   "name": "Fishing spot",
   "debugname": "0_53_53_slimey_eel",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:784",
   "spawns": [
    {
@@ -53992,7 +53992,7 @@
   "id": 1238,
   "name": "Fishing spot",
   "debugname": "0_53_51_slimey_eel",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:803",
   "spawns": [
    {
@@ -54249,7 +54249,7 @@
   "id": 1242,
   "name": "Shade Spirit",
   "debugname": "shade_heaven",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_mortton/configs/mortton_shades.npc:72",
   "spawns": []
  },
@@ -54715,7 +54715,7 @@
   "id": 1251,
   "name": "Afflicted(Ulsquire)",
   "debugname": "ulsquire_shauncy_afflicted",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mortton/configs/quest_mortton.npc:1",
   "spawns": [
    {
@@ -54730,7 +54730,7 @@
   "id": 1252,
   "name": "Ulsquire Shauncy",
   "debugname": "ulsquire_shauncy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mortton/configs/quest_mortton.npc:33",
   "spawns": []
  },
@@ -54738,7 +54738,7 @@
   "id": 1253,
   "name": "Afflicted(Razmire)",
   "debugname": "razmire_keelgan_afflicted",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mortton/configs/quest_mortton.npc:59",
   "spawns": [
    {
@@ -54753,7 +54753,7 @@
   "id": 1254,
   "name": "Razmire Keelgan",
   "debugname": "razmire_keelgan",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mortton/configs/quest_mortton.npc:92",
   "spawns": []
  },
@@ -55003,7 +55003,7 @@
   "id": 1263,
   "name": "Wizard",
   "debugname": "armourmaking_wizard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/274/all.npc:236",
   "spawns": [
    {
@@ -55034,7 +55034,7 @@
   "id": 1266,
   "name": "Rocks",
   "debugname": "horror_rockcrab_inactive",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/horror_rockcrab.npc:23",
   "spawns": [
    {
@@ -55141,7 +55141,7 @@
   "id": 1268,
   "name": "Rocks",
   "debugname": "horror_rockcrab_small_inactive",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/horror_rockcrab.npc:70",
   "spawns": [
    {
@@ -55264,7 +55264,7 @@
   "id": 1269,
   "name": "Olaf the Bard",
   "debugname": "viking_olaf",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1",
   "spawns": [
    {
@@ -55279,7 +55279,7 @@
   "id": 1270,
   "name": "Lalli",
   "debugname": "viking_lalli_troll",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:36",
   "spawns": [
    {
@@ -55294,7 +55294,7 @@
   "id": 1271,
   "name": "Golden sheep",
   "debugname": "viking_golden_sheepsheered",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:57",
   "spawns": [
    {
@@ -55321,7 +55321,7 @@
   "id": 1272,
   "name": "Golden sheep",
   "debugname": "viking_golden_sheepunsheered",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:73",
   "spawns": [
    {
@@ -55354,7 +55354,7 @@
   "id": 1273,
   "name": "Fossegrimen",
   "debugname": "viking_lake_spirit",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:89",
   "spawns": []
  },
@@ -55362,7 +55362,7 @@
   "id": 1274,
   "name": "Ospak",
   "debugname": "viking_heckler",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:115",
   "spawns": [
    {
@@ -55377,7 +55377,7 @@
   "id": 1275,
   "name": "Styrmir",
   "debugname": "viking_heckler_2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:146",
   "spawns": [
    {
@@ -55392,7 +55392,7 @@
   "id": 1276,
   "name": "Torbrund",
   "debugname": "viking_heckler_3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:177",
   "spawns": [
    {
@@ -55407,7 +55407,7 @@
   "id": 1277,
   "name": "Fridgeir",
   "debugname": "viking_heckler_4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:208",
   "spawns": [
    {
@@ -55422,7 +55422,7 @@
   "id": 1278,
   "name": "Longhall Bouncer",
   "debugname": "viking_longhall_bouncer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:239",
   "spawns": [
    {
@@ -55445,7 +55445,7 @@
   "id": 1280,
   "name": "Butterfly",
   "debugname": "viking_draugen_safe",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:300",
   "spawns": []
  },
@@ -55453,7 +55453,7 @@
   "id": 1281,
   "name": "Sigli the Huntsman",
   "debugname": "viking_sigli",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:314",
   "spawns": [
    {
@@ -55468,7 +55468,7 @@
   "id": 1282,
   "name": "Sigmund The Merchant",
   "debugname": "viking_sigmund",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:346",
   "spawns": [
    {
@@ -55483,7 +55483,7 @@
   "id": 1283,
   "name": "Swensen the Navigator",
   "debugname": "viking_hallifred",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:381",
   "spawns": [
    {
@@ -55498,7 +55498,7 @@
   "id": 1284,
   "name": "Bjorn",
   "debugname": "viking_reveller",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:412",
   "spawns": [
    {
@@ -55513,7 +55513,7 @@
   "id": 1285,
   "name": "Eldgrim",
   "debugname": "viking_reveller_2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:442",
   "spawns": [
    {
@@ -55528,7 +55528,7 @@
   "id": 1286,
   "name": "Manni the Reveller",
   "debugname": "viking_reveller_3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:472",
   "spawns": [
    {
@@ -55543,7 +55543,7 @@
   "id": 1287,
   "name": "Council workman",
   "debugname": "vt_council_workmen",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:503",
   "spawns": [
    {
@@ -55558,7 +55558,7 @@
   "id": 1288,
   "name": "Peer the Seer",
   "debugname": "viking_peer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:534",
   "spawns": [
    {
@@ -55573,7 +55573,7 @@
   "id": 1289,
   "name": "Thorvald the Warrior",
   "debugname": "viking_thorvald",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:565",
   "spawns": [
    {
@@ -55588,7 +55588,7 @@
   "id": 1290,
   "name": "Koschei the deathless",
   "debugname": "viking_enemy1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:597",
   "spawns": []
  },
@@ -55596,7 +55596,7 @@
   "id": 1291,
   "name": "Koschei the deathless",
   "debugname": "viking_enemy2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:641",
   "spawns": []
  },
@@ -55604,7 +55604,7 @@
   "id": 1292,
   "name": "Koschei the deathless",
   "debugname": "viking_enemy3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:685",
   "spawns": []
  },
@@ -55612,7 +55612,7 @@
   "id": 1293,
   "name": "Koschei the deathless",
   "debugname": "viking_enemy4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:729",
   "spawns": []
  },
@@ -55620,7 +55620,7 @@
   "id": 1294,
   "name": "Brundt the Chieftain",
   "debugname": "viking_brundt",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:769",
   "spawns": [
    {
@@ -55635,7 +55635,7 @@
   "id": 1295,
   "name": "Askeladden",
   "debugname": "viking_askelapen",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:805",
   "spawns": [
    {
@@ -55650,7 +55650,7 @@
   "id": 1296,
   "name": "Guard",
   "debugname": "viking_longhall_guard1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:831",
   "spawns": [
    {
@@ -55665,7 +55665,7 @@
   "id": 1297,
   "name": "Guard",
   "debugname": "viking_longhall_guard2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:868",
   "spawns": [
    {
@@ -55680,7 +55680,7 @@
   "id": 1298,
   "name": "Town Guard",
   "debugname": "viking_town_entrance_guard1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:905",
   "spawns": [
    {
@@ -55695,7 +55695,7 @@
   "id": 1299,
   "name": "Town Guard",
   "debugname": "viking_town_entrance_guard2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:942",
   "spawns": [
    {
@@ -55710,7 +55710,7 @@
   "id": 1300,
   "name": "Thora the Barkeep",
   "debugname": "viking_longhall_barkeep",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:979",
   "spawns": [
    {
@@ -55725,7 +55725,7 @@
   "id": 1301,
   "name": "Yrsa",
   "debugname": "viking_clothing_shopkeeper",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1012",
   "spawns": [
    {
@@ -55740,7 +55740,7 @@
   "id": 1302,
   "name": "Fisherman",
   "debugname": "viking_fisherman1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1050",
   "spawns": [
    {
@@ -55755,7 +55755,7 @@
   "id": 1303,
   "name": "Skulgrimen",
   "debugname": "viking_weapons_salesman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1085",
   "spawns": [
    {
@@ -55770,7 +55770,7 @@
   "id": 1304,
   "name": "Sailor",
   "debugname": "viking_sailor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1120",
   "spawns": [
    {
@@ -55935,7 +55935,7 @@
   "id": 1315,
   "name": "Fish monger",
   "debugname": "viking_fish_monger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1577",
   "spawns": [
    {
@@ -55950,7 +55950,7 @@
   "id": 1316,
   "name": "Fur trader",
   "debugname": "viking_fur_monger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1617",
   "spawns": [
    {
@@ -56097,7 +56097,7 @@
   "id": 1319,
   "name": "Fox",
   "debugname": "viking_fox",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1766",
   "spawns": [
    {
@@ -56184,7 +56184,7 @@
   "id": 1322,
   "name": "Gull",
   "debugname": "viking_seagull",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1865",
   "spawns": [
    {
@@ -56229,7 +56229,7 @@
   "id": 1323,
   "name": "Gull",
   "debugname": "viking_seagull2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1898",
   "spawns": [
    {
@@ -56274,7 +56274,7 @@
   "id": 1324,
   "name": "Gull",
   "debugname": "viking_seagull3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1930",
   "spawns": [
    {
@@ -56313,7 +56313,7 @@
   "id": 1325,
   "name": "Gull",
   "debugname": "viking_seagull4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_viking/configs/viking.npc:1962",
   "spawns": [
    {
@@ -56511,7 +56511,7 @@
   "id": 1331,
   "name": "Fishing spot",
   "debugname": "0_41_57_saltfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:702",
   "spawns": [
    {
@@ -56538,7 +56538,7 @@
   "id": 1332,
   "name": "Fishing spot",
   "debugname": "0_41_57_rarefish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:723",
   "spawns": [
    {
@@ -56571,7 +56571,7 @@
   "id": 1333,
   "name": "Fishing spot",
   "debugname": "0_41_57_memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:744",
   "spawns": [
    {
@@ -56604,7 +56604,7 @@
   "id": 1334,
   "name": "Jossik",
   "debugname": "horror_lighthousekeeeper_well",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_horror/configs/quest_horror.npc:1",
   "spawns": [
    {
@@ -56619,7 +56619,7 @@
   "id": 1335,
   "name": "Jossik",
   "debugname": "horror_lighthousekeeeper_injured",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_horror/configs/quest_horror.npc:40",
   "spawns": [
    {
@@ -56634,7 +56634,7 @@
   "id": 1336,
   "name": "Larrissa",
   "debugname": "horror_girlfriend_prequest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_horror/configs/quest_horror.npc:77",
   "spawns": [
    {
@@ -56649,7 +56649,7 @@
   "id": 1337,
   "name": "Larrissa",
   "debugname": "horror_girlfriend_postquest",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_horror/configs/quest_horror.npc:112",
   "spawns": [
    {
@@ -56954,7 +56954,7 @@
   "id": 1357,
   "name": "Sam",
   "debugname": "boardgames_barmaid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gamesroom/general/configs/boardgames.npc:1",
   "spawns": [
    {
@@ -56969,7 +56969,7 @@
   "id": 1358,
   "name": "Rachael",
   "debugname": "boardgames_barmaid2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/minigames/game_gamesroom/general/configs/boardgames.npc:31",
   "spawns": [
    {
@@ -56984,7 +56984,7 @@
   "id": 1359,
   "name": "Queen Sigrid",
   "debugname": "misc_queen_sigrid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1",
   "spawns": [
    {
@@ -56999,7 +56999,7 @@
   "id": 1360,
   "name": "Banker",
   "debugname": "misc_banker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:31",
   "spawns": [
    {
@@ -57134,7 +57134,7 @@
   "id": 1369,
   "name": "Fishmonger",
   "debugname": "etc_fish_monger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:366",
   "spawns": [
    {
@@ -57149,7 +57149,7 @@
   "id": 1370,
   "name": "Greengrocer",
   "debugname": "etc_veg_monger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:404",
   "spawns": [
    {
@@ -57164,7 +57164,7 @@
   "id": 1371,
   "name": "Prince Brand",
   "debugname": "misc_prince_brand",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:441",
   "spawns": [
    {
@@ -57179,7 +57179,7 @@
   "id": 1372,
   "name": "Princess Astrid",
   "debugname": "misc_princess_astrid",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:473",
   "spawns": [
    {
@@ -57194,7 +57194,7 @@
   "id": 1373,
   "name": "King Vargas",
   "debugname": "misc_king_vargas",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:500",
   "spawns": [
    {
@@ -57209,7 +57209,7 @@
   "id": 1374,
   "name": "Guard",
   "debugname": "misc_ulby_doorguard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:517",
   "spawns": [
    {
@@ -57230,7 +57230,7 @@
   "id": 1375,
   "name": "Advisor Ghrim",
   "debugname": "misc_advisor_ghrim",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:550",
   "spawns": [
    {
@@ -57245,7 +57245,7 @@
   "id": 1376,
   "name": "Derrik",
   "debugname": "misc_smithy",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:586",
   "spawns": [
    {
@@ -57260,7 +57260,7 @@
   "id": 1377,
   "name": "Farmer",
   "debugname": "misc_farmer",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:615",
   "spawns": [
    {
@@ -57275,7 +57275,7 @@
   "id": 1378,
   "name": "Flower Girl",
   "debugname": "misc_flowergirl",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:676",
   "spawns": [
    {
@@ -57373,7 +57373,7 @@
   "id": 1385,
   "name": "Sailor",
   "debugname": "misc_sailor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:945",
   "spawns": [
    {
@@ -57493,7 +57493,7 @@
   "id": 1393,
   "name": "Fishmonger",
   "debugname": "misc_fish_monger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1325",
   "spawns": [
    {
@@ -57508,7 +57508,7 @@
   "id": 1394,
   "name": "Greengrocer",
   "debugname": "misc_veg_monger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1364",
   "spawns": [
    {
@@ -57523,7 +57523,7 @@
   "id": 1395,
   "name": "Lumberjack Leif",
   "debugname": "misc_lumberjack",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1401",
   "spawns": [
    {
@@ -57538,7 +57538,7 @@
   "id": 1396,
   "name": "Miner Magnus",
   "debugname": "misc_miner",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1434",
   "spawns": [
    {
@@ -57553,7 +57553,7 @@
   "id": 1397,
   "name": "Fisherman Frodi",
   "debugname": "misc_fisherman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1467",
   "spawns": [
    {
@@ -57568,7 +57568,7 @@
   "id": 1398,
   "name": "Gardener Gunnhild",
   "debugname": "misc_gardener",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1502",
   "spawns": [
    {
@@ -57583,7 +57583,7 @@
   "id": 1399,
   "name": "Fishing spot",
   "debugname": "0_40_60_rarefish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1533",
   "spawns": [
    {
@@ -57616,7 +57616,7 @@
   "id": 1400,
   "name": "Gull",
   "debugname": "misc_seagull",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_miscellania/configs/miscellania.npc:1554",
   "spawns": []
  },
@@ -57804,7 +57804,7 @@
   "id": 1405,
   "name": "Fishing spot",
   "debugname": "0_43_42_memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:822",
   "spawns": [
    {
@@ -57819,7 +57819,7 @@
   "id": 1406,
   "name": "Fishing spot",
   "debugname": "0_42_42_memberfish",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/skill_fishing/configs/fishing.npc:843",
   "spawns": [
    {
@@ -57834,7 +57834,7 @@
   "id": 1407,
   "name": "Daero",
   "debugname": "mm_daero",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:1",
   "spawns": [
    {
@@ -57867,7 +57867,7 @@
   "id": 1408,
   "name": "Waydar",
   "debugname": "mm_waydar",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:16",
   "spawns": [
    {
@@ -57900,7 +57900,7 @@
   "id": 1409,
   "name": "Waydar",
   "debugname": "mm_waydar_cutscene",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:29",
   "spawns": [
    {
@@ -57921,7 +57921,7 @@
   "id": 1410,
   "name": "Waydar",
   "debugname": "npc_1410",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:45",
   "spawns": []
  },
@@ -57929,7 +57929,7 @@
   "id": 1411,
   "name": "Garkor",
   "debugname": "mm_garkor",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:57",
   "spawns": [
    {
@@ -57944,7 +57944,7 @@
   "id": 1412,
   "name": "Garkor",
   "debugname": "mm_garkor_final_battle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:75",
   "spawns": []
  },
@@ -57952,7 +57952,7 @@
   "id": 1413,
   "name": "Lumo",
   "debugname": "mm_lumo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:95",
   "spawns": [
    {
@@ -57967,7 +57967,7 @@
   "id": 1414,
   "name": "Lumo",
   "debugname": "mm_lumo_final_battle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:115",
   "spawns": []
  },
@@ -57975,7 +57975,7 @@
   "id": 1415,
   "name": "Bunkdo",
   "debugname": "mm_bunkdo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:136",
   "spawns": [
    {
@@ -57990,7 +57990,7 @@
   "id": 1416,
   "name": "Bunkdo",
   "debugname": "mm_bunkdo_final_battle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:154",
   "spawns": []
  },
@@ -57998,7 +57998,7 @@
   "id": 1417,
   "name": "Carado",
   "debugname": "mm_carado",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:173",
   "spawns": [
    {
@@ -58013,7 +58013,7 @@
   "id": 1418,
   "name": "Carado",
   "debugname": "mm_carado_final_battle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:191",
   "spawns": []
  },
@@ -58021,7 +58021,7 @@
   "id": 1419,
   "name": "Lumdo",
   "debugname": "mm_lumdo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:211",
   "spawns": [
    {
@@ -58042,7 +58042,7 @@
   "id": 1420,
   "name": "Karam",
   "debugname": "mm_karam",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:229",
   "spawns": [
    {
@@ -58063,7 +58063,7 @@
   "id": 1421,
   "name": "Karam",
   "debugname": "mm_karam_final_battle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:244",
   "spawns": []
  },
@@ -58071,7 +58071,7 @@
   "id": 1422,
   "name": "Karam",
   "debugname": "mm_karam_talker",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:259",
   "spawns": [
    {
@@ -58086,7 +58086,7 @@
   "id": 1423,
   "name": "Bunkwicket",
   "debugname": "mm_bunkwicket",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:273",
   "spawns": [
    {
@@ -58101,7 +58101,7 @@
   "id": 1424,
   "name": "Waymottin",
   "debugname": "mm_waymottin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:294",
   "spawns": [
    {
@@ -58116,7 +58116,7 @@
   "id": 1425,
   "name": "Zooknock",
   "debugname": "mm_zooknock",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:315",
   "spawns": [
    {
@@ -58131,7 +58131,7 @@
   "id": 1426,
   "name": "Zooknock",
   "debugname": "mm_zooknock_final_battle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:339",
   "spawns": []
  },
@@ -58139,7 +58139,7 @@
   "id": 1427,
   "name": "G.L.O. Caranock",
   "debugname": "mm_caranock",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:364",
   "spawns": [
    {
@@ -58154,7 +58154,7 @@
   "id": 1428,
   "name": "G.L.O. Caranock",
   "debugname": "mm_caranock_cutscene",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:382",
   "spawns": [
    {
@@ -58181,7 +58181,7 @@
   "id": 1429,
   "name": "Dugopul",
   "debugname": "mm_dugopul",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:401",
   "spawns": [
    {
@@ -58196,7 +58196,7 @@
   "id": 1430,
   "name": "Salenab",
   "debugname": "mm_salenab",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:420",
   "spawns": []
  },
@@ -58204,7 +58204,7 @@
   "id": 1431,
   "name": "Trefaji",
   "debugname": "mm_trefaji",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:429",
   "spawns": [
    {
@@ -58219,7 +58219,7 @@
   "id": 1432,
   "name": "Aberab",
   "debugname": "mm_aberab",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:450",
   "spawns": [
    {
@@ -58234,7 +58234,7 @@
   "id": 1433,
   "name": "Solihib",
   "debugname": "mm_solihib",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:472",
   "spawns": [
    {
@@ -58249,7 +58249,7 @@
   "id": 1434,
   "name": "Daga",
   "debugname": "mm_daga",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:497",
   "spawns": [
    {
@@ -58264,7 +58264,7 @@
   "id": 1435,
   "name": "Tutab",
   "debugname": "mm_tutab",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:522",
   "spawns": [
    {
@@ -58279,7 +58279,7 @@
   "id": 1436,
   "name": "Ifaba",
   "debugname": "mm_ifaba",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:547",
   "spawns": [
    {
@@ -58294,7 +58294,7 @@
   "id": 1437,
   "name": "Hamab",
   "debugname": "mm_hamab",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:570",
   "spawns": [
    {
@@ -58309,7 +58309,7 @@
   "id": 1438,
   "name": "Hafuba",
   "debugname": "mm_hafuba",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:593",
   "spawns": [
    {
@@ -58324,7 +58324,7 @@
   "id": 1439,
   "name": "Denadu",
   "debugname": "mm_denadu",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:608",
   "spawns": [
    {
@@ -58339,7 +58339,7 @@
   "id": 1440,
   "name": "Lofu",
   "debugname": "mm_lofu",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:622",
   "spawns": [
    {
@@ -58424,7 +58424,7 @@
   "id": 1448,
   "name": "Awowogei",
   "debugname": "mm_awowogei_cutscene",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:865",
   "spawns": [
    {
@@ -58439,7 +58439,7 @@
   "id": 1449,
   "name": "Uwogo",
   "debugname": "mm_uwogo",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:880",
   "spawns": [
    {
@@ -58454,7 +58454,7 @@
   "id": 1450,
   "name": "Muruwoi",
   "debugname": "mm_murowoi",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:895",
   "spawns": [
    {
@@ -58469,7 +58469,7 @@
   "id": 1451,
   "name": "Sleeping Monkey",
   "debugname": "mm_sleeping_monkey_guard",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:910",
   "spawns": [
    {
@@ -58484,7 +58484,7 @@
   "id": 1452,
   "name": "Monkey Child",
   "debugname": "mm_monkey_child",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:926",
   "spawns": [
    {
@@ -58499,7 +58499,7 @@
   "id": 1453,
   "name": "The Monkey's Uncle",
   "debugname": "mm_monkeys_uncle",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:940",
   "spawns": [
    {
@@ -58514,7 +58514,7 @@
   "id": 1454,
   "name": "The Monkey's Aunt",
   "debugname": "mm_monkeys_aunt",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:955",
   "spawns": [
    {
@@ -58876,7 +58876,7 @@
   "id": 1461,
   "name": "Elder Guard",
   "debugname": "mm_elder_guard_1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:1181",
   "spawns": [
    {
@@ -58891,7 +58891,7 @@
   "id": 1462,
   "name": "Elder Guard",
   "debugname": "mm_elder_guard_2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:1202",
   "spawns": [
    {
@@ -59430,7 +59430,7 @@
   "id": 1468,
   "name": "Bonzara",
   "debugname": "mm_bonzara",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:1358",
   "spawns": [
    {
@@ -59445,7 +59445,7 @@
   "id": 1469,
   "name": "Monkey Minder",
   "debugname": "mm_monkey_minder",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:1378",
   "spawns": [
    {
@@ -59472,7 +59472,7 @@
   "id": 1470,
   "name": "Foreman",
   "debugname": "mm_foreman_cutscene",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_mm/configs/quest_mm.npc:1409",
   "spawns": [
    {
@@ -61117,7 +61117,7 @@
   "id": 1526,
   "name": "Lanthus",
   "debugname": "castlewars_judge",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/289/all.npc:1",
   "spawns": [
    {
@@ -61132,7 +61132,7 @@
   "id": 1527,
   "name": "Mine cart",
   "debugname": "puzzle_cart",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:1",
   "spawns": []
  },
@@ -61140,7 +61140,7 @@
   "id": 1528,
   "name": "Zealot",
   "debugname": "saradominist_zealot",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:10",
   "spawns": [
    {
@@ -61179,7 +61179,7 @@
   "id": 1532,
   "name": "Barricade",
   "debugname": "castlewars_barricade_saradomin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/289/all.npc:90",
   "spawns": []
  },
@@ -61187,7 +61187,7 @@
   "id": 1533,
   "name": "Barricade",
   "debugname": "castlewars_barricade_burning_saradomin",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/289/all.npc:109",
   "spawns": []
  },
@@ -61195,7 +61195,7 @@
   "id": 1534,
   "name": "Barricade",
   "debugname": "castlewars_barricade_zamorak",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/289/all.npc:134",
   "spawns": []
  },
@@ -61203,7 +61203,7 @@
   "id": 1535,
   "name": "Barricade",
   "debugname": "castlewars_barricade_burning_zamorak",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/_unpack/289/all.npc:153",
   "spawns": []
  },
@@ -61219,7 +61219,7 @@
   "id": 1537,
   "name": "Bronze pickaxe",
   "debugname": "possessed_pickaxe_stationary",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:73",
   "spawns": [
    {
@@ -61318,7 +61318,7 @@
   "id": 1538,
   "name": "Corpse",
   "debugname": "skeletal_miner_sitting",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:108",
   "spawns": [
    {
@@ -61477,7 +61477,7 @@
   "id": 1542,
   "name": "Loading crane",
   "debugname": "crane_posessed_mine",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:258",
   "spawns": [
    {
@@ -61510,7 +61510,7 @@
   "id": 1543,
   "name": "Innocent looking key",
   "debugname": "hauntedmine_boss_key",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:271",
   "spawns": [
    {
@@ -61525,7 +61525,7 @@
   "id": 1544,
   "name": "Mine cart",
   "debugname": "hauntedmine_boss_cart",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:287",
   "spawns": [
    {
@@ -61576,7 +61576,7 @@
   "id": 1545,
   "name": "Mine cart",
   "debugname": "hauntedmine_cart1",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:300",
   "spawns": [
    {
@@ -61591,7 +61591,7 @@
   "id": 1546,
   "name": "Mine cart",
   "debugname": "hauntedmine_cart2",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:314",
   "spawns": [
    {
@@ -61606,7 +61606,7 @@
   "id": 1547,
   "name": "Mine cart",
   "debugname": "hauntedmine_cart3",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:328",
   "spawns": [
    {
@@ -61621,7 +61621,7 @@
   "id": 1548,
   "name": "Mine cart",
   "debugname": "hauntedmine_cart4",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:342",
   "spawns": [
    {
@@ -61644,7 +61644,7 @@
   "id": 1550,
   "name": "Haze",
   "debugname": "hauntedmine_suprise_ghost_hidden",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:389",
   "spawns": [
    {
@@ -61707,7 +61707,7 @@
   "id": 1551,
   "name": "Mischievous Ghost",
   "debugname": "hauntedmine_cheeky_ghost",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_hauntedmine/configs/hauntedmine.npc:423",
   "spawns": []
  },
@@ -61715,7 +61715,7 @@
   "id": 1552,
   "name": "Santa",
   "debugname": "santa_claus",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/holidayevents/xmas2004/configs/santa_clause.npc:1",
   "spawns": []
  },
@@ -61723,7 +61723,7 @@
   "id": 1553,
   "name": "Ug",
   "debugname": "trollromance_ug",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll_love/configs/quest_troll_love.npc:2",
   "spawns": [
    {
@@ -61738,7 +61738,7 @@
   "id": 1554,
   "name": "Aga",
   "debugname": "trollromance_aga",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_troll_love/configs/quest_troll_love.npc:24",
   "spawns": [
    {
@@ -62033,7 +62033,7 @@
   "id": 1567,
   "name": "Cyreg Paddlehorn",
   "debugname": "route_cyreg_paddlehorn",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:1",
   "spawns": [
    {
@@ -62048,7 +62048,7 @@
   "id": 1568,
   "name": "Curpile Fyod",
   "debugname": "route_curpile_fyod",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:33",
   "spawns": [
    {
@@ -62063,7 +62063,7 @@
   "id": 1569,
   "name": "Veliaf Hurtz",
   "debugname": "route_veliaf_hurtz",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:65",
   "spawns": [
    {
@@ -62084,7 +62084,7 @@
   "id": 1570,
   "name": "Sani Piliu",
   "debugname": "route_sani_piliu",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:98",
   "spawns": [
    {
@@ -62099,7 +62099,7 @@
   "id": 1571,
   "name": "Harold Evans",
   "debugname": "route_harold_evans",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:129",
   "spawns": [
    {
@@ -62114,7 +62114,7 @@
   "id": 1572,
   "name": "Radigad Ponfit",
   "debugname": "route_radigad_ponfit",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:162",
   "spawns": [
    {
@@ -62135,7 +62135,7 @@
   "id": 1573,
   "name": "Polmafi Ferdygris",
   "debugname": "route_polmafi_ferdygris",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:193",
   "spawns": [
    {
@@ -62156,7 +62156,7 @@
   "id": 1574,
   "name": "Ivan Strom",
   "debugname": "route_ivan_strom",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:227",
   "spawns": [
    {
@@ -62185,7 +62185,7 @@
   "id": 1576,
   "name": "Stranger",
   "debugname": "canafis_stranger",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:286",
   "spawns": []
  },
@@ -62193,7 +62193,7 @@
   "id": 1577,
   "name": "Vanstrom Klause",
   "debugname": "route_vanstrom_klause_sitting",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:311",
   "spawns": [
    {
@@ -62208,7 +62208,7 @@
   "id": 1578,
   "name": "Mist",
   "debugname": "route_vanstrom_klause_vamp_misty",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:333",
   "spawns": []
  },
@@ -62216,7 +62216,7 @@
   "id": 1579,
   "name": "Vanstrom Klause",
   "debugname": "route_vanstrom_klause_normal",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:346",
   "spawns": []
  },
@@ -62224,7 +62224,7 @@
   "id": 1580,
   "name": "Vanstrom Klause",
   "debugname": "route_vanstrom_klause_vamp_wingsgrow",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:368",
   "spawns": []
  },
@@ -62232,7 +62232,7 @@
   "id": 1581,
   "name": "Vanstrom Klause",
   "debugname": "route_vanstrom_klause_vamp",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/quests/quest_routequest/configs/quest_routequest.npc:391",
   "spawns": []
  },
@@ -62860,7 +62860,7 @@
   "id": 1595,
   "name": "Saniboch",
   "debugname": "tribesman_doorman",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/areas/area_karamja/configs/karamja.npc:739",
   "spawns": [
    {
@@ -62875,7 +62875,7 @@
   "id": 1596,
   "name": "Grand Exchange teller",
   "debugname": "grand_exchange_teller",
-  "combat": null,
+  "combat": 0,
   "src": "scripts/interface_bank/configs/grand_exchange.npc:1",
   "spawns": [
    {

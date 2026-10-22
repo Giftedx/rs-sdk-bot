@@ -11,6 +11,13 @@ export interface Npc {
     spawns: { x: number; z: number; level: number; src: string }[];
 }
 
+// Matches tools/pack/config/NpcConfig.ts: `hide` packs as 0, an absent vislevel as 1.
+function combatLevel(v: string | undefined): number {
+    if (v === undefined) return 1;
+    if (v === 'hide') return 0;
+    return Number(v);
+}
+
 export function buildNpcs(blocks: ConfigBlock[], pack: Map<number, string>, spawns: Spawn[]): Npc[] {
     const ids = invert(pack);
     const byId = new Map<number, Npc['spawns']>();
@@ -23,7 +30,7 @@ export function buildNpcs(blocks: ConfigBlock[], pack: Map<number, string>, spaw
             id,
             name: b.props.name?.[0] ?? b.name,
             debugname: b.name,
-            combat: Number(b.props.vislevel?.[0] ?? 0),
+            combat: combatLevel(b.props.vislevel?.[0]),
             src: `${b.file}:${b.line}`,
             spawns: byId.get(id) ?? [],
         });
