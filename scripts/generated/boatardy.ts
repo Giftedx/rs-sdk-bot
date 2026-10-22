@@ -93,7 +93,7 @@ try {
     };
 
     // Leg 1: Lumbridge -> Port Sarim seamen (3028,3221 / 3026,3217) through Draynor.
-    if (!(await walk([[3105, 3250, 4], [3047, 3240, 4], [3028, 3219, 3]]))) await fail('walk to Port Sarim');
+    if (!(await walk([[3225, 3240, 3], [3180, 3258, 3], [3100, 3285, 3], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3]]))) await fail('walk to Port Sarim');
     if (!(await sail(/^(seaman|captain tobias)/i, [/^yes please/i], MUSA_DECK))) await fail('sail to Karamja');
     if (!(await disembark())) await fail('Musa Point gangplank');
 

@@ -12,7 +12,9 @@ const MARKET = { x: 2654, z: 3304 };
 const BAKER = { x: 2654, z: 3311 };
 const MUSA_DECK = { x: 2956, z: 3143 };
 const ARDY_DECK = { x: 2683, z: 3268 };
-const CAP = 2500;
+// TARGET and CAP (game ticks) come from the environment so the same script runs a short proof or a live run to 99.
+const TARGET = Number(process.env.TARGET ?? 60);
+const CAP = Number(process.env.CAP ?? 2500);
 const EAT_AT = 5;
 const BREAD = /^bread$/i;
 const COINS = /^coins$/i;
@@ -26,6 +28,14 @@ const KNIGHTS: Target = { name: 'knight', re: /^knight of ardougne$/i, dmg: 3, s
 console.log(`ERR-TRACE opening ${process.argv[2]}`);
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
+    // A new live account starts on Tutorial Island (seen: START 3094 3106 0 on the demo server). Skip it first.
+    await waitTicks(s, 5);
+    const p0 = s.sdk.getState()?.player;
+    if (p0 && p0.worldX < 3160 && p0.worldZ < 3130) {
+        const t = await s.bot.skipTutorial();
+        console.log(`MILESTONE tutorial ${t.success ? 'ok' : 'fail'}`);
+        if (!t.success) await finish([s], false, `tutorial skip failed: ${t.message}`);
+    }
     const xp = () => s.sdk.getSkillXp('Thieving') ?? 0;
     const lvl = () => s.sdk.getSkill('Thieving')?.baseLevel ?? 0;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
@@ -63,7 +73,8 @@ try {
     const checkLevels = () => {
         if (lvl() >= 40) mark('level40');
         if (lvl() >= 55) mark('level55');
-        if (lvl() >= 60) mark('level60');
+        for (let l = 60; l <= 99; l += 5) if (lvl() >= l) mark(`level${l}`);
+        if (lvl() >= 99) mark('level99');
     };
 
     let tries = 0, stuns = 0, eaten = 0, bought = 0, waits = 0;
@@ -161,7 +172,9 @@ try {
         return landed();
     };
 
-    if (!(await walk([[3105, 3250, 4], [3047, 3240, 4], [3028, 3219, 3]]))) await end(false, 'walk to Port Sarim');
+    // Route from research/route-danger.ts: 357 tiles, clear of the jail guards (26), brown bear (21) and dark wizards;
+    // the old route (3105,3250) passed 2 tiles from a jail guard, and two fresh runs died there.
+    if (!(await walk([[3225, 3240, 3], [3180, 3258, 3], [3100, 3285, 3], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3]]))) await end(false, 'walk to Port Sarim');
     if (!(await sail(/^(seaman|captain tobias)/i, [/^yes please/i], MUSA_DECK))) await end(false, 'sail to Karamja');
     if (!(await disembark())) await end(false, 'Musa Point gangplank');
     if (!(await walk([[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]]))) await end(false, 'walk to Brimhaven');
@@ -189,7 +202,7 @@ try {
         if (got < want) shopRetryAt = s.tick() + 50;
     };
 
-    for (let i = 0; i < 3000 && lvl() < 60 && !died && left() > 0; i++) {
+    for (let i = 0; i < 100_000 && lvl() < TARGET && !died && left() > 0; i++) {
         checkLevels();
         const t = lvl() >= 55 ? KNIGHTS : lvl() >= 40 ? GUARDS : MEN;
         if (hp() <= EAT_AT && bread() > 0) {
@@ -211,6 +224,6 @@ try {
     }
     checkLevels();
 
-    const ok = lvl() >= 60 && !died;
-    await end(ok, died ? 'died' : `thieving ${lvl()} < 60`);
+    const ok = lvl() >= TARGET && !died;
+    await end(ok, died ? 'died' : `thieving ${lvl()} < ${TARGET}`);
 } catch (e) { await finish([s], false, String(e)); }
