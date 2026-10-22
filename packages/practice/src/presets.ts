@@ -16,7 +16,8 @@ const LUMBRIDGE = { x: 3222, z: 3218, level: 0 };
 
 export const PRESETS: Record<string, SaveConfig> = {
     fresh_lumbridge: { position: LUMBRIDGE },
-    wc_lumbridge: { position: LUMBRIDGE, inventory: [{ id: 1351, count: 1 }] },
+    // Trees within reach, measured by the 2026-10-22 spike run.
+    wc_lumbridge: { position: { x: 3224, z: 3245, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
 };
 
 // The engine writes the save on logout, so a preset written while logged in is lost.
