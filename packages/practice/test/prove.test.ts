@@ -75,6 +75,17 @@ test('in-process mode: passes on START matching the preset and RESULT ok', async
     expect(cleaned).toEqual(made);
 });
 
+test('in-process mode keeps MILESTONE and RATE lines in the tail, so step timings reach the report', async () => {
+    const { proveInProcess, okPass } = await import('../src/prove');
+    const out = ['START 3222 3218 0', 'noise', 'MILESTONE coins60 210', 'MILESTONE ardougne 540', 'RATE thieving 900 600', 'RESULT ok done'].join('\n');
+    const deps = { prepare: async () => {}, run: async () => ({ stdout: out, exitCode: 0 }), cleanup: async () => {} };
+    const r = await proveInProcess({ bot: 'mile', script: 's.ts', runs: 1, preset: 'floors_lumbridge', pass: okPass }, deps);
+    expect(r.results[0]!.tail).toContain('MILESTONE coins60 210');
+    expect(r.results[0]!.tail).toContain('MILESTONE ardougne 540');
+    expect(r.results[0]!.tail).toContain('RATE thieving 900 600');
+    expect(r.results[0]!.tail).not.toContain('noise');
+});
+
 test('in-process mode: a missing or wrong START line fails the run', async () => {
     const { proveInProcess, okPass } = await import('../src/prove');
     const deps = (out: string) => ({ prepare: async () => {}, run: async () => ({ stdout: out, exitCode: 0 }), cleanup: async () => {} });

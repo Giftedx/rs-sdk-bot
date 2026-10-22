@@ -139,7 +139,7 @@ export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps
             const { stdout, exitCode } = await deps.run(opts.script, bot, opts.timeoutMs ?? 300_000, opts.scriptArgs);
             const start = startMatches(stdout, opts.preset);
             const ok = exitCode === 0 && start.ok && opts.pass(stdout);
-            const tail = stdout.split(/\r?\n/).filter(l => /^(START|RESULT|ERR|WARN)/.test(l) || l.includes('Error')).slice(-8).join('\n');
+            const tail = stdout.split(/\r?\n/).filter(l => /^(START|RESULT|ERR|WARN|MILESTONE|RATE)/.test(l) || l.includes('Error')).slice(-16).join('\n');
             results.push({ ok, seconds: (Date.now() - t0) / 1000, tail: start.ok ? tail : `preset not loaded: ${start.detail}\n${tail}` });
         } finally {
             for (const n of names) await deps.cleanup(n);
