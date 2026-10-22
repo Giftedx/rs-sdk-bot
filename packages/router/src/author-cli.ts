@@ -37,6 +37,12 @@ const MORE: Record<string, AuthorTask> = {
         preset: "thieve_knights",
         spot: "Ardougne market: knight_of_ardougne spawns at (2652,3318) and (2653,3300) (knowledge/npcs.json); knights wander. Thieving 55 is the knight level; a fail stuns 8 ticks and hits for 3. 20 lobsters in the pack, Hitpoints 50. scripts/generated/thieveguards.ts is a proven script for guards.",
     },
+    boatardy: {
+        id: "boatardy",
+        goal: "Travel from Lumbridge to Ardougne market (2654,3304,0) by boat, without dying. Print a line \"TRAVEL <ticks> <hpMin>\" before finish. Pass when the bot stands within 10 tiles of (2654,3304,0) and never died (a death respawns it in Lumbridge, so a jump of more than 20 tiles in one tick is a death).",
+        preset: "boat_ardougne",
+        spot: "Route from game scripts: (1) walk to the Port Sarim seamen, seaman_lorris (3028,3221) or seaman_thresnor (3026,3217); talk, pay 30 coins (vendor/lostcity-content/scripts/areas/area_port_sarim/scripts/sailors.rs2); the ship lands at Musa Point on Karamja, on the ship deck (level 1): cross the gangplank to level 0. (2) Walk to the Brimhaven customs officer (2772,3225-3231); talk, choose to journey, pay 30 coins (areas/area_karamja/scripts/customs_officer.rs2). (3) The ship lands at Ardougne (2683,3268, level 1); cross the gangplank, walk to the market. The bot has 10 HP and no food; the land route kills it (measured), so do not walk overland. Use bot.talkTo and sdk.getDialog / clickDialogByText (vendor/rs-sdk/sdk/API.md, vendor/rs-sdk/learnings/dialogs.md). 60 coins in the pack.",
+    },
     rcair: {
         id: "rcair",
         goal: "Craft air runes from all rune essence in the pack at the air altar. Pass when the pack holds air runes, no rune essence is left, and Runecraft XP rose. Print \"RATE runecraft <xpGained> <ticks>\" before finish.",
