@@ -1,0 +1,67 @@
+import { atTile, checked, levelIs, type Outcome } from './act';
+import type { TickSource } from './ticks';
+import type { Account, Leg, Tile, World } from './world';
+
+export interface Walker extends TickSource {
+    bot: {
+        walkTo(x: number, z: number, tolerance?: number): Promise<unknown>;
+        interactLoc(target: unknown, option?: number | string | RegExp): Promise<unknown>;
+    };
+}
+
+export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal }
+
+const cheb = (a: Tile, b: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - b.worldX), Math.abs(a.z - b.worldZ));
+
+// Runs route legs in order. Each leg is a checked action; a leg is retried from wherever the bot really is,
+// so a non-exact arrival (Review Focus 4) just becomes the next leg's start.
+export async function walkRoute(s: Walker, legs: Leg[], opts: WalkOptions = {}): Promise<Outcome> {
+    const retries = opts.maxRetriesPerLeg ?? 3;
+    let total = 0;
+    for (const leg of legs) {
+        let last: Outcome | null = null;
+        for (let attempt = 0; attempt < retries; attempt++) {
+            last = leg.kind === 'walk' ? await walkLeg(s, leg.to, opts) : await climbLeg(s, leg, opts);
+            total += last.ticks;
+            if (last.ok || last.reason === 'aborted') break;
+        }
+        if (!last!.ok) return { ...last!, ticks: total };
+    }
+    return { ok: true, ticks: total };
+}
+
+function walkLeg(s: Walker, to: Tile, opts: WalkOptions): Promise<Outcome> {
+    const p = s.sdk.getState()?.player;
+    // A long walk keeps running inside walkTo, so the budget grows with distance.
+    const budget = opts.legTimeoutTicks ?? (p ? cheb(to, p) * 2 + 30 : 60);
+    return checked(s, {
+        name: `walk to ${to.x},${to.z},${to.level}`,
+        pre: st => (st?.player?.level === to.level ? null : `on level ${st?.player?.level}, leg is on level ${to.level}`),
+        send: () => s.bot.walkTo(to.x, to.z, 2),
+        effect: atTile(to.x, to.z, to.level, 2),
+        timeoutTicks: budget,
+        signal: opts.signal,
+    });
+}
+
+function climbLeg(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: WalkOptions): Promise<Outcome> {
+    const findLoc = (st: any) => (st?.nearbyLocs ?? []).find((l: any) => l.x === leg.at.x && l.z === leg.at.z && l.level === leg.at.level);
+    const arrive = atTile(leg.to.x, leg.to.z, leg.to.level, leg.exact ? 2 : 3);
+    const onLevel = levelIs(leg.to.level);
+    return checked(s, {
+        name: `${leg.loc} ${leg.option} at ${leg.at.x},${leg.at.z},${leg.at.level}`,
+        pre: st => (findLoc(st) ? null : `no loc at ${leg.at.x},${leg.at.z},${leg.at.level}`),
+        send: () => s.bot.interactLoc(findLoc(s.sdk.getState()), Number(leg.option.replace(/^op/, ''))),
+        effect: (b, n) => onLevel(b, n) && arrive(b, n),
+        timeoutTicks: opts.legTimeoutTicks ?? 30,
+        signal: opts.signal,
+    });
+}
+
+export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opts: WalkOptions = {}): Promise<Outcome> {
+    const p = s.sdk.getState()?.player;
+    if (!p) return { ok: false, reason: 'precondition', detail: 'no player state', ticks: 0 };
+    const r = world.route({ x: p.worldX, z: p.worldZ, level: p.level }, to, acct);
+    if (!r.ok) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    return walkRoute(s, r.legs, opts);
+}
