@@ -29,6 +29,14 @@ export const PRESETS: Record<string, SaveConfig> = {
     measure_oaks: { position: { x: 3190, z: 3458, level: 0 }, skills: { Woodcutting: 15 }, inventory: [{ id: 1351, count: 1 }] },
     measure_mine: { position: { x: 3285, z: 3365, level: 0 }, inventory: [{ id: 1265, count: 1 }] },
     measure_shrimp: { position: { x: 3087, z: 3230, level: 0 }, inventory: [{ id: 303, count: 1 }] },
+    // Wine batch test (skill_cooking/.../wine/wine.rs2): Cooking 35, one grapes + jug of water to start the
+    // 20-tick fermenting timer, and 300 unfermented wines (1995) in the bank that ferment when it fires.
+    wine_specialist: {
+        position: LUMBRIDGE,
+        skills: { Cooking: 35 },
+        inventory: [{ id: 1987, count: 1 }, { id: 1937, count: 1 }],
+        bank: [{ id: 1995, count: 300 }],
+    },
     // Trade pair: giver holds 100 coins, receiver stands one tile east (3223,3218).
     trade_giver: { position: LUMBRIDGE, coins: 100 },
     trade_receiver: { position: { x: 3223, z: 3218, level: 0 } },
