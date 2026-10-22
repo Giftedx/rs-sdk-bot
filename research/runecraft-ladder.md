@@ -31,3 +31,10 @@ Hidden cost (not in the 19-tick rate):
   A helper must bank and come back each pack. So the 19-tick cycle needs a rotation of several helpers.
   The helper trip time is not measured.
 - Each altar needs a talisman to enter, for the crafter and for each helper inside.
+
+Talisman sources (game scripts):
+- Nature and chaos talismans: only from the shared rare drop table
+  (`vendor/lostcity-content/scripts/drop tables/scripts/shared_droptables.rs2:71-74`). Chaos below z 6400 is
+  not dropped, nature is. Rare: plan to buy them from players.
+- Law talisman: Troll Stronghold quest reward (`quests/quest_troll/scripts/quest_troll.rs2:368`), or buy.
+- So the order is: free altars first (3,749 ticks to 99). Add nature and law only when a talisman is in hand.
