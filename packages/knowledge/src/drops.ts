@@ -6,7 +6,7 @@ import { cleanLines } from './text';
 export interface Roll { chance: number; item?: string; table?: string; count?: number; conditional: boolean; src: string }
 export interface DropTable {
     trigger: string; // npc debugname, or _category
-    always: { item: string; count: number; src: string }[];
+    always: { item: string; count: number; conditional: boolean; src: string }[]; // conditional: nested in an if
     rolls: Roll[];
     uses?: string; // label of a shared table, e.g. goblin_drop_table
     src: string;
@@ -54,11 +54,13 @@ export function parseDrops(text: string, file: string): DropTable[] {
         if (!cur || !line) return;
         const c: DropTable = cur;
         const def = line.match(/^def_int \$(\w+) = random\((\d+)\);$/);
-        if (def) { rollVar = def[1]!; die = Number(def[2]); return; }
+        if (def) { rollVar = def[1]!; die = Number(def[2]); prev = 0; return; }
 
-        const branch = line.match(/^(?:\}\s*else\s+)?if \(\$(\w+) < (\d+)\) \{$/);
+        // `{` may sit on the same line or the next. Tables written as separate `if ($x < T) { ...; return(); }`
+        // blocks keep counting from the previous threshold, because each earlier block returns.
+        const branch = line.match(/^(?:\}\s*else\s+)?if \(\$(\w+) < (\d+)\)\s*\{?$/);
         if (branch && branch[1] === rollVar) {
-            if (!inChain) { inChain = true; chainDepth = depth; prev = 0; }
+            if (!inChain) { inChain = true; chainDepth = depth; }
             const t = Number(branch[2]);
             slot = { chance: (t - prev) / die, depth: chainDepth + 1 };
             prev = t;
@@ -72,7 +74,7 @@ export function parseDrops(text: string, file: string): DropTable[] {
             if (inChain && slot) {
                 c.rolls.push({ chance: slot.chance, ...obj, conditional: depth > slot.depth, src });
             } else if (!inChain && obj.item) {
-                c.always.push({ item: obj.item, count: obj.count ?? 1, src });
+                c.always.push({ item: obj.item, count: obj.count ?? 1, conditional: depth > 0, src });
             }
         }
         if (!c.uses) {

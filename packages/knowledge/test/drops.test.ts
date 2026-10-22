@@ -67,3 +67,27 @@ if ($dropint < 106) {
     expect(table.rolls.map(r => [r.item, r.chance * 128])).toEqual([['goblin_armour', 106], ['grapes', 1]]);
     expect(d.find(x => x.trigger === 'goblin_greenarmour')!.uses).toBe('goblin_village_drop_table');
 });
+
+test('brace-on-next-line tables with independent if blocks ending in return are roll slots', () => {
+    const text = `[ai_queue3,testdragon]
+gosub(npc_death);
+obj_add(npc_coord, npc_param(death_drop), 1, ^lootdrop_duration);
+if (random(1024) = 0) {
+    obj_add(npc_coord, dragon_platelegs, 1, ^lootdrop_duration);
+}
+def_int $dropint = random(128);
+if ($dropint < 1)
+{
+    obj_add(npc_coord, ~ultrarare_getitem, ^lootdrop_duration);
+    return();
+}
+if ($dropint < 5)
+{
+    obj_add(npc_coord, rune_longsword, 1, ^lootdrop_duration);
+    return();
+}
+`;
+    const d = parseDrops(text, 'd.rs2').find(x => x.trigger === 'testdragon')!;
+    expect(d.rolls.map(r => [r.table ?? r.item, r.chance * 128])).toEqual([['ultrarare_getitem', 1], ['rune_longsword', 4]]);
+    expect(d.always.map(a => [a.item, a.conditional])).toEqual([['death_drop', false], ['dragon_platelegs', true]]);
+});

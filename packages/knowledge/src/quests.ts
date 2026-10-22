@@ -58,7 +58,10 @@ export function buildQuests(input: {
         if (!complete) { skipped.push({ line: `${input.proc.file}:${i + 1}`, text: l }); return; }
         const varp = first![1]!;
         const folder = input.varpFolders.get(varp) ?? null;
-        const setsComplete = new RegExp(`%${varp}\\s*=\\s*\\^${first![2]}\\b`);
+        // Completion is set directly (`%varp = ^x_complete`) or through a setter proc that takes the complete
+        // constant (`~quest_vampire_set_progress(^vampire_complete)`, quest_vampire.rs2:41-43).
+        const c = first![2]!;
+        const setsComplete = new RegExp(`%${varp}\\s*=\\s*\\^${c}\\b|~\\w+\\(\\s*\\^${c}\\s*\\)`);
         const xp: Quest['xp'] = [];
         for (const f of folder ? input.folderScripts.get(folder) ?? [] : []) {
             for (const b of blocks(f.text)) {

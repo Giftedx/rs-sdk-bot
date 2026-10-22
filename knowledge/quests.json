@@ -226,7 +226,13 @@
   "folder": "quest_vampire",
   "complete": 3,
   "questPoints": 3,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "attack",
+    "xp": 4825,
+    "src": "scripts/quests/quest_vampire/scripts/quest_vampire.rs2:42"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:155"
  },
  {
@@ -666,7 +672,18 @@
   "folder": "quest_itexam",
   "complete": 9,
   "questPoints": 2,
-  "xp": [],
+  "xp": [
+   {
+    "skill": "mining",
+    "xp": 15300,
+    "src": "scripts/quests/quest_itexam/scripts/quest_itexam.rs2:41"
+   },
+   {
+    "skill": "herblore",
+    "xp": 2000,
+    "src": "scripts/quests/quest_itexam/scripts/quest_itexam.rs2:42"
+   }
+  ],
   "src": "scripts/general/scripts/quests.rs2:242"
  },
  {

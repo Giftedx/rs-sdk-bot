@@ -61,3 +61,13 @@ if (%elenaquest >= ^elena_complete) {
     ]);
     expect(q.skipped).toEqual([]);
 });
+
+test('XP is found when completion is set through a setter proc that takes the complete constant', () => {
+    const q = buildQuests({
+        constants: parseConstants('^vampire_complete = 3\n^vampire_questpoints = 3\n', 'c'),
+        proc: { text: 'if (%vampire = ^vampire_complete) {\n    $questpoints = add($questpoints, ^vampire_questpoints);\n}\n', file: 'q' },
+        varpFolders: new Map([['vampire', 'quest_vampire']]),
+        folderScripts: new Map([['quest_vampire', [{ text: '[queue,quest_vampire_complete]\nstat_advance(attack, 48250);\n~quest_vampire_set_progress(^vampire_complete);\n', file: 'v.rs2' }]]]),
+    });
+    expect(q.quests[0]!.xp).toEqual([{ skill: 'attack', xp: 4825, src: 'v.rs2:2' }]);
+});

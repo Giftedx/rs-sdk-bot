@@ -11,111 +11,133 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:9"
    },
    {
     "item": "steel_warhammer",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:16"
    },
    {
     "item": "mithril_warhammer",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:17"
    },
    {
     "item": "mithril_platebody",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:18"
    },
    {
     "item": "mithril_full_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:19"
    },
    {
     "item": "bronze_arrow",
     "count": 14,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:20"
    },
    {
     "item": "firerune",
     "count": 22,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:21"
    },
    {
     "item": "earthrune",
     "count": 23,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:22"
    },
    {
     "item": "airrune",
     "count": 25,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:23"
    },
    {
     "item": "steel_arrow",
     "count": 12,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:24"
    },
    {
     "item": "bloodrune",
     "count": 3,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:25"
    },
    {
     "item": "chaosrune",
     "count": 3,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:26"
    },
    {
     "item": "naturerune",
     "count": 4,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:27"
    },
    {
     "item": "coins",
     "count": 4,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:28"
    },
    {
     "item": "coins",
     "count": 12,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:29"
    },
    {
     "item": "coins",
     "count": 18,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:30"
    },
    {
     "item": "coins",
     "count": 32,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:31"
    },
    {
     "item": "coins",
     "count": 45,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:32"
    },
    {
     "item": "coins",
     "count": 50,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:33"
    },
    {
     "item": "coins",
     "count": 2,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:34"
    },
    {
     "item": "earth_talisman",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:35"
    },
    {
     "item": "mithril_ore",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_burthorpe/scripts/death_guard.rs2:36"
    }
   ],
@@ -134,6 +156,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_canifis/scripts/canafis_citizen.rs2:33"
    }
   ],
@@ -559,11 +582,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_mortmyre/scripts/snail.rs2:44"
    },
    {
     "item": "snail_corpse1",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_mortmyre/scripts/snail.rs2:45"
    }
   ],
@@ -576,11 +601,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_mortmyre/scripts/snail.rs2:52"
    },
    {
     "item": "snail_corpse2",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_mortmyre/scripts/snail.rs2:53"
    }
   ],
@@ -593,11 +620,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_mortmyre/scripts/snail.rs2:60"
    },
    {
     "item": "snail_corpse3",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_mortmyre/scripts/snail.rs2:61"
    }
   ],
@@ -610,6 +639,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_mortmyre/scripts/vampire.rs2:16"
    }
   ],
@@ -698,11 +728,13 @@
    {
     "item": "dragon_bones",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:9"
    },
    {
     "item": "dragonhide_black",
     "count": 1,
+    "conditional": false,
     "src": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:10"
    }
   ],
@@ -881,6 +913,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bandit.rs2:9"
    }
   ],
@@ -1025,6 +1058,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bandit_camp_leaders.rs2:8"
    }
   ],
@@ -1162,6 +1196,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/barbarian.rs2:9"
    }
   ],
@@ -1308,6 +1343,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/barbarian.rs2:65"
    }
   ],
@@ -1467,16 +1503,19 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bear.rs2:8"
    },
    {
     "item": "fur",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bear.rs2:11"
    },
    {
     "item": "raw_bear_meat",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bear.rs2:12"
    }
   ],
@@ -1489,6 +1528,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/black_demon.rs2:8"
    }
   ],
@@ -1653,11 +1693,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/black_dragon.rs2:8"
    },
    {
     "item": "dragonhide_black",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/black_dragon.rs2:9"
    }
   ],
@@ -1823,6 +1865,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/black_knight.rs2:12"
    }
   ],
@@ -1995,11 +2038,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/blue_dragon.rs2:8"
    },
    {
     "item": "dragonhide_blue",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/blue_dragon.rs2:9"
    }
   ],
@@ -2151,120 +2196,176 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:7"
    },
    {
     "item": "bronze_bar",
     "count": 5,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:8"
    },
    {
     "item": "dragon_platelegs",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:12"
+   }
+  ],
+  "rolls": [
+   {
+    "chance": 0.0078125,
+    "table": "ultrarare_getitem",
+    "conditional": false,
+    "src": "scripts/drop tables/scripts/bronze_dragon.rs2:22"
    },
    {
+    "chance": 0.03125,
+    "table": "randomjewel",
+    "conditional": false,
+    "src": "scripts/drop tables/scripts/bronze_dragon.rs2:28"
+   },
+   {
+    "chance": 0.0078125,
     "item": "rune_longsword",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:34"
    },
    {
+    "chance": 0.0078125,
     "item": "adamant_dart_p",
     "count": 16,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:40"
    },
    {
+    "chance": 0.03125,
     "item": "mithril_2h_sword",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:46"
    },
    {
+    "chance": 0.0234375,
     "item": "mithril_axe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:52"
    },
    {
+    "chance": 0.0234375,
     "item": "mithril_battleaxe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:58"
    },
    {
+    "chance": 0.0234375,
     "item": "rune_knife",
     "count": 2,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:64"
    },
    {
+    "chance": 0.0078125,
     "item": "mithril_kiteshield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:70"
    },
    {
+    "chance": 0.0078125,
     "item": "adamant_platebody",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:76"
    },
    {
+    "chance": 0.15625,
     "item": "adamant_javelin",
     "count": 30,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:82"
    },
    {
+    "chance": 0.0625,
     "item": "firerune",
     "count": 50,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:88"
    },
    {
+    "chance": 0.046875,
     "item": "bolts",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:94"
    },
    {
+    "chance": 0.0390625,
     "item": "lawrune",
     "count": 10,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:100"
    },
    {
+    "chance": 0.0234375,
     "item": "bloodrune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:106"
    },
    {
+    "chance": 0.0078125,
     "item": "lawrune",
     "count": 25,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:112"
    },
    {
+    "chance": 0.3125,
     "item": "coins",
     "count": 196,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:118"
    },
    {
+    "chance": 0.078125,
     "item": "coins",
     "count": 330,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:124"
    },
    {
+    "chance": 0.0078125,
     "item": "coins",
     "count": 690,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:130"
    },
    {
+    "chance": 0.0234375,
     "item": "adamantite_bar",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:136"
    },
    {
+    "chance": 0.015625,
     "item": "swordfish",
     "count": 2,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:142"
    },
    {
+    "chance": 0.0078125,
     "item": "swordfish",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:148"
    }
   ],
-  "rolls": [],
   "src": "scripts/drop tables/scripts/bronze_dragon.rs2:2"
  },
  {
@@ -2273,17 +2374,20 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/chaos_druid.rs2:8"
-   },
-   {
-    "item": "lawrune",
-    "count": 2,
-    "src": "scripts/drop tables/scripts/chaos_druid.rs2:13"
    }
   ],
   "rolls": [
    {
-    "chance": 0.078125,
+    "chance": 0.0546875,
+    "item": "lawrune",
+    "count": 2,
+    "conditional": false,
+    "src": "scripts/drop tables/scripts/chaos_druid.rs2:13"
+   },
+   {
+    "chance": 0.0234375,
     "item": "airrune",
     "count": 36,
     "conditional": false,
@@ -2406,6 +2510,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/chaos_druid_warrior.rs2:8"
    }
   ],
@@ -2555,6 +2660,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/chaos_dwarf.rs2:7"
    }
   ],
@@ -2728,11 +2834,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/chicken.rs2:8"
    },
    {
     "item": "raw_chicken",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/chicken.rs2:14"
    }
   ],
@@ -2760,16 +2868,19 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/cow.rs2:8"
    },
    {
     "item": "raw_beef",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/cow.rs2:11"
    },
    {
     "item": "cow_hide",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/cow.rs2:12"
    }
   ],
@@ -2782,6 +2893,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/dark_warrior.rs2:8"
    }
   ],
@@ -2927,6 +3039,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/dark_wizard.rs2:7"
    }
   ],
@@ -3143,6 +3256,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/dark_wizard.rs2:79"
    }
   ],
@@ -3359,71 +3473,85 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:6"
    },
    {
     "item": "steel_full_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:10"
    },
    {
     "item": "black_dart",
     "count": 6,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:11"
    },
    {
     "item": "black_knife",
     "count": 6,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:12"
    },
    {
     "item": "steel_claws",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:13"
    },
    {
     "item": "black_claws",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:14"
    },
    {
     "item": "steel_bar",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:15"
    },
    {
     "item": "mithril_bar",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:16"
    },
    {
     "item": "bloodrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:18"
    },
    {
     "item": "coins",
     "count": 3,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:19"
    },
    {
     "item": "coins",
     "count": 5,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:20"
    },
    {
     "item": "coins",
     "count": 18,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:21"
    },
    {
     "item": "coins",
     "count": 50,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:22"
    },
    {
     "item": "coins",
     "count": 115,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/death_ig_solider_wander.rs2:23"
    }
   ],
@@ -3436,6 +3564,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/druid.rs2:7"
    }
   ],
@@ -3595,6 +3724,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/dwarf.rs2:11"
    }
   ],
@@ -3822,11 +3952,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/entrana_firebird.rs2:7"
    },
    {
     "item": "hot_feather",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/entrana_firebird.rs2:10"
    }
   ],
@@ -3839,6 +3971,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/farmer.rs2:7"
    }
   ],
@@ -3970,6 +4103,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/fire_giant.rs2:7"
    }
   ],
@@ -4127,6 +4261,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/giant.rs2:7"
    }
   ],
@@ -4306,11 +4441,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/giant_rat.rs2:7"
    },
    {
     "item": "raw_rat_meat",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/giant_rat.rs2:8"
    }
   ],
@@ -4351,6 +4488,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/goblin.rs2:14"
    }
   ],
@@ -4490,6 +4628,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/goblin.rs2:70"
    }
   ],
@@ -4656,6 +4795,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/greater_demon.rs2:8"
    }
   ],
@@ -4801,11 +4941,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/green_dragon.rs2:8"
    },
    {
     "item": "dragonhide_green",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/green_dragon.rs2:9"
    }
   ],
@@ -4963,6 +5105,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/guard.rs2:12"
    }
   ],
@@ -5137,6 +5280,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/guard_dog.rs2:9"
    }
   ],
@@ -5149,6 +5293,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/hellhound.rs2:8"
    }
   ],
@@ -5161,11 +5306,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/highwayman.rs2:8"
    },
    {
     "item": "black_cape",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/highwayman.rs2:11"
    }
   ],
@@ -5178,6 +5325,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/hobgoblin.rs2:7"
    }
   ],
@@ -5371,6 +5519,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/hobgoblin.rs2:77"
    }
   ],
@@ -5536,6 +5685,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/ice_giant.rs2:7"
    }
   ],
@@ -5730,6 +5880,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/ice_warrior.rs2:7"
    }
   ],
@@ -5832,6 +5983,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/imp.rs2:8"
    }
   ],
@@ -6069,110 +6221,162 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:6"
    },
    {
     "item": "iron_bar",
     "count": 5,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:7"
    },
    {
     "item": "dragon_platelegs",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:10"
-   },
+   }
+  ],
+  "rolls": [
    {
+    "chance": 0.0546875,
     "item": "rune_dart_p",
     "count": 9,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:20"
    },
    {
+    "chance": 0.03125,
     "item": "adamant_2h_sword",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:26"
    },
    {
+    "chance": 0.0234375,
     "item": "adamant_axe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:32"
    },
    {
+    "chance": 0.0234375,
     "item": "adamant_battleaxe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:38"
    },
    {
+    "chance": 0.0234375,
     "item": "rune_knife",
     "count": 5,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:44"
    },
    {
+    "chance": 0.0078125,
     "item": "adamant_sq_shield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:50"
    },
    {
+    "chance": 0.0078125,
     "item": "rune_med_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:56"
    },
    {
+    "chance": 0.0078125,
     "item": "rune_battleaxe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:62"
    },
    {
+    "chance": 0.15625,
     "item": "rune_javelin",
     "count": 4,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:68"
    },
    {
+    "chance": 0.1484375,
     "item": "bloodrune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:74"
    },
    {
+    "chance": 0.046875,
     "item": "bolts",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:80"
    },
    {
+    "chance": 0.0390625,
     "item": "soulrune",
     "count": 3,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:86"
    },
    {
+    "chance": 0.15625,
     "item": "coins",
     "count": 270,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:92"
    },
    {
+    "chance": 0.078125,
     "item": "coins",
     "count": 550,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:98"
    },
    {
+    "chance": 0.0078125,
     "item": "coins",
     "count": 990,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:104"
    },
    {
+    "chance": 0.0625,
     "item": "1dose2strength",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:110"
    },
    {
+    "chance": 0.0234375,
     "item": "adamantite_bar",
     "count": 2,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:115"
    },
    {
+    "chance": 0.0234375,
     "item": "curry",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:121"
+   },
+   {
+    "chance": 0.015625,
+    "table": "ultrarare_getitem",
+    "conditional": false,
+    "src": "scripts/drop tables/scripts/iron_dragon.rs2:127"
+   },
+   {
+    "chance": 0.0234375,
+    "table": "randomjewel",
+    "conditional": false,
+    "src": "scripts/drop tables/scripts/iron_dragon.rs2:133"
    }
   ],
-  "rolls": [],
   "src": "scripts/drop tables/scripts/iron_dragon.rs2:1"
  },
  {
@@ -6181,11 +6385,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/jailer.rs2:7"
    },
    {
     "item": "jail_key",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/jailer.rs2:10"
    }
   ],
@@ -6198,76 +6404,91 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/jogre.rs2:13"
    },
    {
     "item": "bronze_spear",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:20"
    },
    {
     "item": "iron_spear",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:22"
    },
    {
     "item": "naturerune",
     "count": 2,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:24"
    },
    {
     "item": "naturerune",
     "count": 10,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:26"
    },
    {
     "item": "naturerune",
     "count": 5,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:28"
    },
    {
     "item": "steel_javelin",
     "count": 5,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:30"
    },
    {
     "item": "pineapple",
     "count": 2,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:34"
    },
    {
     "item": "knife",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:36"
    },
    {
     "item": "bones",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:38"
    },
    {
     "item": "big_bones",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:40"
    },
    {
     "item": "big_bones",
     "count": 3,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:42"
    },
    {
     "item": "bones",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:44"
    },
    {
     "item": "unidentified_snake_weed",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:48"
    },
    {
     "item": "unidentified_rogues_purse",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/jogre.rs2:50"
    }
   ],
@@ -6280,11 +6501,13 @@
    {
     "item": "intelligence_report",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/jonny_the_beard.rs2:10"
    },
    {
     "item": "bones",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/jonny_the_beard.rs2:11"
    }
   ],
@@ -6919,6 +7142,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/lesser_demon.rs2:9"
    }
   ],
@@ -7105,6 +7329,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/man.rs2:17"
    }
   ],
@@ -7236,6 +7461,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/moss_giant.rs2:8"
    }
   ],
@@ -7442,6 +7668,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/mugger.rs2:8"
    }
   ],
@@ -7545,6 +7772,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/necromancer.rs2:8"
    }
   ],
@@ -7740,11 +7968,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/oomlie_bird.rs2:7"
    },
    {
     "item": "raw_oomlie",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/oomlie_bird.rs2:10"
    }
   ],
@@ -7757,6 +7987,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/otherworldly_being.rs2:8"
    }
   ],
@@ -7852,6 +8083,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/paladin.rs2:7"
    }
   ],
@@ -7864,6 +8096,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/pirate.rs2:10"
    }
   ],
@@ -8023,6 +8256,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/possessed_pickaxe.rs2:8"
    }
   ],
@@ -8071,11 +8305,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/rabbit.rs2:6"
    },
    {
     "item": "raw_rabbit",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/rabbit.rs2:7"
    }
   ],
@@ -8088,6 +8324,7 @@
    {
     "item": "rats_tail",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/rat.rs2:11"
    }
   ],
@@ -8100,11 +8337,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/red_dragon.rs2:8"
    },
    {
     "item": "dragonhide_red",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/red_dragon.rs2:9"
    }
   ],
@@ -8256,6 +8495,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/rogue.rs2:11"
    }
   ],
@@ -8387,6 +8627,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/salarin_the_twisted.rs2:15"
    }
   ],
@@ -8503,6 +8744,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/shadow_warrior.rs2:8"
    }
   ],
@@ -8612,6 +8854,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/skeletal_miner.rs2:8"
    }
   ],
@@ -8770,6 +9013,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/skeleton.rs2:10"
    }
   ],
@@ -8949,6 +9193,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/skeleton.rs2:69"
    }
   ],
@@ -9093,105 +9338,143 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:6"
    },
    {
     "item": "steel_bar",
     "count": 5,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:7"
    },
    {
     "item": "dragon_platelegs",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:10"
-   },
+   }
+  ],
+  "rolls": [
    {
+    "chance": 0.0546875,
     "item": "rune_dart_p",
     "count": 12,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:20"
    },
    {
+    "chance": 0.03125,
     "item": "rune_mace",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:26"
    },
    {
+    "chance": 0.015625,
     "item": "adamant_kiteshield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:32"
    },
    {
+    "chance": 0.0234375,
     "item": "rune_knife",
     "count": 7,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:38"
    },
    {
+    "chance": 0.015625,
     "item": "rune_axe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:44"
    },
    {
+    "chance": 0.0078125,
     "item": "rune_full_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:50"
    },
    {
+    "chance": 0.1484375,
     "item": "bloodrune",
     "count": 20,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:56"
    },
    {
+    "chance": 0.15625,
     "item": "rune_javelin",
     "count": 7,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:62"
    },
    {
+    "chance": 0.046875,
     "item": "bolts",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:68"
    },
    {
+    "chance": 0.0390625,
     "item": "soulrune",
     "count": 5,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:74"
    },
    {
+    "chance": 0.1328125,
     "item": "coins",
     "count": 470,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:80"
    },
    {
+    "chance": 0.0390625,
     "item": "coins",
     "count": 650,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:86"
    },
    {
+    "chance": 0.1015625,
     "item": "3dose2attack",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:92"
    },
    {
+    "chance": 0.0234375,
     "item": "runite_bar",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:98"
    },
    {
+    "chance": 0.0234375,
     "item": "2dose2defense",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:104"
    },
    {
+    "chance": 0.0078125,
     "item": "curry",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:110"
    },
    {
+    "chance": 0.0078125,
     "item": "curry",
     "count": 2,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:116"
    }
   ],
-  "rolls": [],
   "src": "scripts/drop tables/scripts/steel_dragon.rs2:1"
  },
  {
@@ -9200,6 +9483,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/thug.rs2:8"
    }
   ],
@@ -9324,17 +9608,20 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/tribesman.rs2:8"
-   },
-   {
-    "item": "bronze_spear",
-    "count": 1,
-    "src": "scripts/drop tables/scripts/tribesman.rs2:14"
    }
   ],
   "rolls": [
    {
-    "chance": 0.07246376811594203,
+    "chance": 0.050724637681159424,
+    "item": "bronze_spear",
+    "count": 1,
+    "conditional": false,
+    "src": "scripts/drop tables/scripts/tribesman.rs2:14"
+   },
+   {
+    "chance": 0.021739130434782608,
     "item": "steel_javelin",
     "count": 10,
     "conditional": false,
@@ -9494,111 +9781,133 @@
    {
     "item": "troll_key_prison",
     "count": 1,
+    "conditional": true,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:5"
    },
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:13"
    },
    {
     "item": "steel_platebody",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:16"
    },
    {
     "item": "black_warhammer",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:17"
    },
    {
     "item": "steel_warhammer",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:18"
    },
    {
     "item": "adamant_axe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:19"
    },
    {
     "item": "adamant_sq_shield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:20"
    },
    {
     "item": "granite_shield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:21"
    },
    {
     "item": "mithril_platebody",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:22"
    },
    {
     "item": "rune_warhammer",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:23"
    },
    {
     "item": "earthrune",
     "count": 80,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:24"
    },
    {
     "item": "naturerune",
     "count": 16,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:25"
    },
    {
     "item": "lawrune",
     "count": 4,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:26"
    },
    {
     "item": "earthrune",
     "count": 65,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:27"
    },
    {
     "item": "earthrune",
     "count": 25,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:28"
    },
    {
     "item": "coins",
     "count": 40,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:30"
    },
    {
     "item": "coins",
     "count": 135,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:31"
    },
    {
     "item": "coins",
     "count": 190,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:32"
    },
    {
     "item": "coins",
     "count": 20,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:33"
    },
    {
     "item": "coins",
     "count": 420,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:34"
    },
    {
     "item": "cert_coal",
     "count": 6,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:35"
    },
    {
     "item": "cert_raw_tuna",
     "count": 4,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/troll_commander.rs2:36"
    }
   ],
@@ -9611,11 +9920,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/ugthanki.rs2:8"
    },
    {
     "item": "raw_ugthanki_meat",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/ugthanki.rs2:11"
    }
   ],
@@ -9628,11 +9939,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/unicorn.rs2:8"
    },
    {
     "item": "unicorn_horn",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/unicorn.rs2:11"
    }
   ],
@@ -9659,6 +9972,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/viking_guard.rs2:11"
    }
   ],
@@ -9831,91 +10145,109 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:6"
    },
    {
     "item": "steel_scimitar",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:9"
    },
    {
     "item": "steel_axe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:10"
    },
    {
     "item": "steel_full_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:11"
    },
    {
     "item": "mithril_chainbody",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:12"
    },
    {
     "item": "mithril_sq_shield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:13"
    },
    {
     "item": "rune_med_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:14"
    },
    {
     "item": "jug_wine",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:16"
    },
    {
     "item": "raw_chicken",
     "count": 5,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:17"
    },
    {
     "item": "raw_beef",
     "count": 5,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:18"
    },
    {
     "item": "raw_bear_meat",
     "count": 5,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:19"
    },
    {
     "item": "coins",
     "count": 10,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:20"
    },
    {
     "item": "coins",
     "count": 90,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:21"
    },
    {
     "item": "coins",
     "count": 120,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:22"
    },
    {
     "item": "coins",
     "count": 222,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:23"
    },
    {
     "item": "coins",
     "count": 364,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:24"
    },
    {
     "item": "fur",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:25"
    },
    {
     "item": "grey_wolf_fur",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/werewolf.rs2:26"
    }
   ],
@@ -9928,6 +10260,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/white_knight.rs2:8"
    }
   ],
@@ -10128,6 +10461,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/wizard.rs2:7"
    }
   ],
@@ -10344,6 +10678,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/yanille_soldier_tower_guard.rs2:11"
    }
   ],
@@ -10511,6 +10846,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/zombie.rs2:10"
    }
   ],
@@ -10656,6 +10992,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/zombie.rs2:58"
    }
   ],
@@ -10807,6 +11144,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/drop tables/scripts/zombie.rs2:107"
    }
   ],
@@ -11013,7 +11351,7 @@
     "src": "scripts/macro events/scripts/fishing/macro_event_river_troll.rs2:70"
    },
    {
-    "chance": 0.2109375,
+    "chance": -0.7890625,
     "item": "fishing_bait",
     "count": 5,
     "conditional": false,
@@ -11335,6 +11673,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/macro events/scripts/prayer/macro_event_zombie.rs2:34"
    }
   ],
@@ -11507,6 +11846,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/macro events/scripts/thieving/macro_event_watchman.rs2:48"
    }
   ],
@@ -11753,6 +12093,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/minigames/game_mortton/scripts/mortton_shades.rs2:13"
    }
   ],
@@ -11789,11 +12130,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/minigames/game_trail/scripts/hard/saradomin_wizard.rs2:68"
    },
    {
     "item": "water_battlestaff",
     "count": 1,
+    "conditional": true,
     "src": "scripts/minigames/game_trail/scripts/hard/saradomin_wizard.rs2:73"
    }
   ],
@@ -11947,6 +12290,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/minigames/game_trail/scripts/hard/zamorak_wizard.rs2:48"
    }
   ],
@@ -12186,11 +12530,13 @@
    {
     "item": "johnathon_crest",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_crest/scripts/crest_chronozon.rs2:5"
    },
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_crest/scripts/crest_chronozon.rs2:9"
    }
   ],
@@ -12204,111 +12550,133 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:22"
    },
    {
     "item": "studded_chaps",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:26"
    },
    {
     "item": "dragonhide_chaps",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:27"
    },
    {
     "item": "willow_longbow",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:28"
    },
    {
     "item": "maple_shortbow",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:29"
    },
    {
     "item": "bronze_arrow",
     "count": 14,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:30"
    },
    {
     "item": "earthrune",
     "count": 18,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:31"
    },
    {
     "item": "steel_arrow",
     "count": 14,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:32"
    },
    {
     "item": "firerune",
     "count": 17,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:33"
    },
    {
     "item": "airrune",
     "count": 29,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:34"
    },
    {
     "item": "naturerune",
     "count": 6,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:35"
    },
    {
     "item": "bloodrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:36"
    },
    {
     "item": "chaosrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:37"
    },
    {
     "item": "coins",
     "count": 5,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:38"
    },
    {
     "item": "coins",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:39"
    },
    {
     "item": "coins",
     "count": 12,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:40"
    },
    {
     "item": "coins",
     "count": 28,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:41"
    },
    {
     "item": "coins",
     "count": 42,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:42"
    },
    {
     "item": "coins",
     "count": 46,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:43"
    },
    {
     "item": "coins",
     "count": 3,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:44"
    },
    {
     "item": "earth_talisman",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:45"
    },
    {
     "item": "mithril_ore",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_death/scripts/death_archer.rs2:46"
    }
   ],
@@ -12327,6 +12695,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_desertrescue/scripts/mercenary_captain.rs2:201"
    }
   ],
@@ -12339,21 +12708,25 @@
    {
     "item": "slave_shirt",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_desertrescue/scripts/mining_slave.rs2:251"
    },
    {
     "item": "slave_robe",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_desertrescue/scripts/mining_slave.rs2:255"
    },
    {
     "item": "slave_boots",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_desertrescue/scripts/mining_slave.rs2:259"
    },
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_desertrescue/scripts/mining_slave.rs2:267"
    }
   ],
@@ -12372,16 +12745,19 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:75"
    },
    {
     "item": "raw_rat_meat",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:76"
    },
    {
     "item": "redkey",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:78"
    }
   ],
@@ -12394,6 +12770,7 @@
    {
     "item": "orangekey",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:88"
    }
   ],
@@ -12406,11 +12783,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:98"
    },
    {
     "item": "yellowkey",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:100"
    }
   ],
@@ -12423,11 +12802,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:110"
    },
    {
     "item": "bluekey",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:112"
    }
   ],
@@ -12440,11 +12821,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:122"
    },
    {
     "item": "magentakey",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:124"
    }
   ],
@@ -12457,11 +12840,13 @@
    {
     "item": "ashes",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:134"
    },
    {
     "item": "greenkey",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:136"
    }
   ],
@@ -12474,11 +12859,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/wormbrain.rs2:8"
    },
    {
     "item": "mappart2",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_dragon/scripts/wormbrain.rs2:10"
    }
   ],
@@ -12491,86 +12878,103 @@
    {
     "item": "iron_mace",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:111"
    },
    {
     "item": "iron_dagger",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:112"
    },
    {
     "item": "bronze_kiteshield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:113"
    },
    {
     "item": "airrune",
     "count": 4,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:114"
    },
    {
     "item": "bodyrune",
     "count": 3,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:115"
    },
    {
     "item": "chaosrune",
     "count": 4,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:116"
    },
    {
     "item": "cosmicrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:117"
    },
    {
     "item": "firerune",
     "count": 7,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:118"
    },
    {
     "item": "coins",
     "count": 18,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:120"
    },
    {
     "item": "coins",
     "count": 10,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:121"
    },
    {
     "item": "coins",
     "count": 26,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:122"
    },
    {
     "item": "coins",
     "count": 35,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:123"
    },
    {
     "item": "coins",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:124"
    },
    {
     "item": "fishing_bait",
     "count": 7,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:125"
    },
    {
     "item": "tinderbox",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:126"
    },
    {
     "item": "eye_of_newt",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:127"
    },
    {
     "item": "tin_ore",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_druidspirit/scripts/ghast.rs2:128"
    }
   ],
@@ -12583,51 +12987,61 @@
    {
     "item": "airrune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:8"
    },
    {
     "item": "naturerune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:9"
    },
    {
     "item": "chaosrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:10"
    },
    {
     "item": "lawrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:11"
    },
    {
     "item": "deathrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:12"
    },
    {
     "item": "airrune",
     "count": 20,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:13"
    },
    {
     "item": "bloodrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:14"
    },
    {
     "item": "coins",
     "count": 12,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:16"
    },
    {
     "item": "coins",
     "count": 42,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:17"
    },
    {
     "item": "staff_of_air",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_air.rs2:18"
    }
   ],
@@ -12640,11 +13054,13 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:6"
    },
    {
     "item": "elemental_workshop_ore",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:7"
    }
   ],
@@ -12657,56 +13073,67 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:14"
    },
    {
     "item": "earthrune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:18"
    },
    {
     "item": "naturerune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:19"
    },
    {
     "item": "chaosrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:20"
    },
    {
     "item": "lawrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:21"
    },
    {
     "item": "deathrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:22"
    },
    {
     "item": "earthrune",
     "count": 20,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:23"
    },
    {
     "item": "bloodrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:24"
    },
    {
     "item": "coins",
     "count": 12,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:26"
    },
    {
     "item": "coins",
     "count": 42,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:27"
    },
    {
     "item": "staff_of_earth",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_earth.rs2:28"
    }
   ],
@@ -12719,56 +13146,67 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:6"
    },
    {
     "item": "firerune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:9"
    },
    {
     "item": "naturerune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:10"
    },
    {
     "item": "chaosrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:11"
    },
    {
     "item": "lawrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:12"
    },
    {
     "item": "deathrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:13"
    },
    {
     "item": "firerune",
     "count": 20,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:14"
    },
    {
     "item": "bloodrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:15"
    },
    {
     "item": "coins",
     "count": 12,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:17"
    },
    {
     "item": "coins",
     "count": 42,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:18"
    },
    {
     "item": "staff_of_fire",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_fire.rs2:19"
    }
   ],
@@ -12781,56 +13219,67 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:6"
    },
    {
     "item": "waterrune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:9"
    },
    {
     "item": "naturerune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:10"
    },
    {
     "item": "chaosrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:11"
    },
    {
     "item": "lawrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:12"
    },
    {
     "item": "deathrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:13"
    },
    {
     "item": "waterrune",
     "count": 20,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:14"
    },
    {
     "item": "bloodrune",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:15"
    },
    {
     "item": "coins",
     "count": 12,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:17"
    },
    {
     "item": "coins",
     "count": 42,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:18"
    },
    {
     "item": "staff_of_water",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_elemental_workshop/scripts/elemental_water.rs2:19"
    }
   ],
@@ -12849,6 +13298,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_grail/scripts/black_knight_titan.rs2:46"
    }
   ],
@@ -13035,6 +13485,7 @@
    {
     "item": "bones",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_grandtree/scripts/foreman.rs2:130"
    }
   ],
@@ -13066,6 +13517,7 @@
    {
     "item": "carnillean_armour",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_hazeelcult/scripts/alomone.rs2:121"
    }
   ],
@@ -13090,121 +13542,145 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:277"
    },
    {
     "item": "iron_spear",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:282"
    },
    {
     "item": "bronze_spear",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:283"
    },
    {
     "item": "mithril_spear",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:284"
    },
    {
     "item": "waterrune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:285"
    },
    {
     "item": "steel_arrow",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:286"
    },
    {
     "item": "mithril_javelin",
     "count": 3,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:287"
    },
    {
     "item": "lobster_pot",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:288"
    },
    {
     "item": "raw_herring",
     "count": 3,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:289"
    },
    {
     "item": "raw_sardine",
     "count": 5,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:290"
    },
    {
     "item": "harpoon",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:291"
    },
    {
     "item": "feather",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:292"
    },
    {
     "item": "fishing_bait",
     "count": 50,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:293"
    },
    {
     "item": "raw_lobster",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:294"
    },
    {
     "item": "raw_tuna",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:295"
    },
    {
     "item": "seaweed",
     "count": 10,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:296"
    },
    {
     "item": "bigoysterpearls",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:297"
    },
    {
     "item": "smalloysterpearls",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:298"
    },
    {
     "item": "coins",
     "count": 56,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:299"
    },
    {
     "item": "coins",
     "count": 25,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:300"
    },
    {
     "item": "coins",
     "count": 44,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:301"
    },
    {
     "item": "coins",
     "count": 41,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:302"
    },
    {
     "item": "opal_bolttips",
     "count": 12,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:303"
    },
    {
     "item": "casket",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_horror/scripts/horror_dagannoth.rs2:304"
    }
   ],
@@ -13229,6 +13705,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_itwatchtower/scripts/gorad.rs2:28"
    }
   ],
@@ -13268,6 +13745,7 @@
    {
     "item": "ashes",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_mm/scripts/mm_demon.rs2:380"
    }
   ],
@@ -13280,6 +13758,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_mm/scripts/mm_skeleton.rs2:6"
    }
   ],
@@ -13292,6 +13771,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_mortton/scripts/afflicted.rs2:7"
    }
   ],
@@ -13423,11 +13903,13 @@
    {
     "item": "pipkey_gold",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_priestperil/scripts/evil_monks.rs2:49"
    },
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_priestperil/scripts/evil_monks.rs2:56"
    }
   ],
@@ -13440,86 +13922,103 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:15"
    },
    {
     "item": "dragonhide_body",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:21"
    },
    {
     "item": "dragonhide_chaps",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:22"
    },
    {
     "item": "mithril_spear",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:23"
    },
    {
     "item": "mithril_kiteshield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:24"
    },
    {
     "item": "adamant_full_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:25"
    },
    {
     "item": "rune_dagger",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:26"
    },
    {
     "item": "waterrune",
     "count": 70,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:27"
    },
    {
     "item": "naturerune",
     "count": 12,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:28"
    },
    {
     "item": "lawrune",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:29"
    },
    {
     "item": "firerune",
     "count": 37,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:30"
    },
    {
     "item": "coins",
     "count": 44,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:32"
    },
    {
     "item": "coins",
     "count": 180,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:33"
    },
    {
     "item": "coins",
     "count": 20,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:34"
    },
    {
     "item": "bass",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:35"
    },
    {
     "item": "shark",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:36"
    },
    {
     "item": "adamantite_ore",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/regicide_darkelf.rs2:37"
    }
   ],
@@ -13532,96 +14031,115 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:38"
    },
    {
     "item": "steel_2h_sword",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:41"
    },
    {
     "item": "steel_axe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:42"
    },
    {
     "item": "steel_battleaxe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:43"
    },
    {
     "item": "mithril_kiteshield",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:44"
    },
    {
     "item": "adamant_platelegs",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:45"
    },
    {
     "item": "rune_full_helm",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:46"
    },
    {
     "item": "firerune",
     "count": 75,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:47"
    },
    {
     "item": "chaosrune",
     "count": 15,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:48"
    },
    {
     "item": "deathrune",
     "count": 5,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:49"
    },
    {
     "item": "firerune",
     "count": 37,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:50"
    },
    {
     "item": "coins",
     "count": 132,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:51"
    },
    {
     "item": "coins",
     "count": 44,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:52"
    },
    {
     "item": "coins",
     "count": 220,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:53"
    },
    {
     "item": "coins",
     "count": 11,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:54"
    },
    {
     "item": "coins",
     "count": 460,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:55"
    },
    {
     "item": "tuna",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:56"
    },
    {
     "item": "gold_bar",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:57"
    },
    {
     "item": "thread",
     "count": 10,
+    "conditional": false,
     "src": "scripts/quests/quest_regicide/scripts/tyras_guard.rs2:58"
    }
   ],
@@ -13634,6 +14152,7 @@
    {
     "item": "big_bones",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_routequest/scripts/routequest_myreque.rs2:604"
    }
   ],
@@ -13646,6 +14165,7 @@
    {
     "item": "$npc_bones",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_sheepherder/scripts/npcs/diseased_sheep.rs2:164"
    }
   ],
@@ -13658,11 +14178,13 @@
    {
     "item": "tbwt_monkey_corpse",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_tbwt/scripts/monkey.rs2:71"
    },
    {
     "item": "mm_normal_monkey_bones",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_tbwt/scripts/monkey.rs2:73"
    }
   ],
@@ -13682,6 +14204,7 @@
    {
     "item": "bones",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_tree/scripts/khazard_warlord.rs2:52"
    }
   ],
@@ -13712,11 +14235,13 @@
    {
     "item": "ashes",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_upass/scripts/doomion.rs2:7"
    },
    {
     "item": "doomion_amulet",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_upass/scripts/doomion.rs2:9"
    }
   ],
@@ -13729,11 +14254,13 @@
    {
     "item": "ashes",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_upass/scripts/holthion.rs2:7"
    },
    {
     "item": "holthion_amulet",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_upass/scripts/holthion.rs2:9"
    }
   ],
@@ -13746,21 +14273,25 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_upass/scripts/iban_disciple.rs2:28"
    },
    {
     "item": "zamrobebottom",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_upass/scripts/iban_disciple.rs2:30"
    },
    {
     "item": "zamrobetop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_upass/scripts/iban_disciple.rs2:31"
    },
    {
     "item": "brokenibanstaff",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_upass/scripts/iban_disciple.rs2:34"
    }
   ],
@@ -13779,11 +14310,13 @@
    {
     "item": "ashes",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_upass/scripts/othainian.rs2:7"
    },
    {
     "item": "othainian_amulet",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_upass/scripts/othainian.rs2:9"
    }
   ],
@@ -13796,6 +14329,7 @@
    {
     "item": "paladinbadge2",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_upass/scripts/sir_carl.rs2:8"
    }
   ],
@@ -13808,6 +14342,7 @@
    {
     "item": "paladinbadge3",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_upass/scripts/sir_harry.rs2:8"
    }
   ],
@@ -13820,6 +14355,7 @@
    {
     "item": "paladinbadge1",
     "count": 1,
+    "conditional": true,
     "src": "scripts/quests/quest_upass/scripts/sir_jerro.rs2:8"
    }
   ],
@@ -13853,111 +14389,133 @@
    {
     "item": "bronze_pickaxe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:24"
    },
    {
     "item": "iron_pickaxe",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:25"
    },
    {
     "item": "seaweed",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:26"
    },
    {
     "item": "seaweed",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:27"
    },
    {
     "item": "seaweed",
     "count": 5,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:28"
    },
    {
     "item": "seaweed",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:29"
    },
    {
     "item": "oystershell",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:30"
    },
    {
     "item": "oystershell",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:31"
    },
    {
     "item": "oysterempty",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:32"
    },
    {
     "item": "oysterempty",
     "count": 3,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:33"
    },
    {
     "item": "smalloysterpearls",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:34"
    },
    {
     "item": "coins",
     "count": 4,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:35"
    },
    {
     "item": "coins",
     "count": 36,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:36"
    },
    {
     "item": "coins",
     "count": 8,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:37"
    },
    {
     "item": "fishing_bait",
     "count": 10,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:38"
    },
    {
     "item": "opal_bolttips",
     "count": 5,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:39"
    },
    {
     "item": "spinach_roll",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:40"
    },
    {
     "item": "casket",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:41"
    },
    {
     "item": "tin_ore",
     "count": 3,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:43"
    },
    {
     "item": "iron_ore",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:44"
    },
    {
     "item": "coal",
     "count": 2,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:45"
    },
    {
     "item": "copper_ore",
     "count": 3,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/horror_rockcrab.rs2:46"
    }
   ],
@@ -13970,6 +14528,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_viking/scripts/viking_citizen.rs2:159"
    }
   ],
@@ -14225,6 +14784,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": false,
     "src": "scripts/quests/quest_zombiequeen/scripts/undead_one.rs2:10"
    }
   ],
@@ -14244,6 +14804,7 @@
    {
     "item": "death_drop",
     "count": 1,
+    "conditional": true,
     "src": "scripts/tutorial/scripts/npcs/tut_giant_rat.rs2:7"
    }
   ],
