@@ -136,6 +136,24 @@ test('the real table loads, schedules without blocks, and covers all 24 boards',
     expect(r.boards.every(b => b.finish !== null)).toBe(true);
 });
 
+test('content level gates: gold superheat after Smithing 40, herb rows after Druidic Ritual (Herblore 3)', () => {
+    // superheat.rs2:37 + smelting.struct:63 (gold 40); identify.param:1-3 and brew_potion.param:1-3 (Herblore 3).
+    const acts = haggisActivities();
+    const byId = new Map(acts.map(a => [a.id, a]));
+    expect(byId.get('superheat')!.minLevel?.smithing).toBe(40);
+    for (const id of ['herb-drops', 'herb-unf', 'herblore-10']) {
+        expect(byId.get(id)!.minLevel?.herblore).toBe(3);
+        expect(byId.get(id)!.requires).toContain('druid');
+    }
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
+    for (const mode of ['floor', 'realistic'] as const) {
+        const r = schedule(boards, acts, { mode, tricks: new Set(), force: { 'magic-smithing': 'superheat' } });
+        const at = (id: string) => r.order.find(p => p.id === id)!;
+        expect(at('smith-40').end).toBeLessThanOrEqual(at('superheat').start);
+        expect(at('druid').landsAt).toBeLessThanOrEqual(at('herb-drops').start);
+    }
+});
+
 test('a guest fills the dead ticks of its host; the rest runs right after the host', () => {
     const boards = [clock('thieving', 10_000), clock('magic', 10_000)];
     const acts: Activity[] = [

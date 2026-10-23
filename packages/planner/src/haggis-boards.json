@@ -774,8 +774,14 @@
     "herblore": "to99"
    },
    "requires": [
-    "tutorial"
+    "tutorial",
+    "druid",
+    "herb-unf"
    ],
+   "minLevel": {
+    "herblore": 3
+   },
+   "minLevelSource": "every herb and potion action needs Herblore 3: identify default identified_herb_level 3 (skill_herblore/configs/identifying/identify.param:1-3, checked at identify.rs2:66-72) and brew default brew_potion_level 3 (brewing/brew_potion.param:1-3; unf_guam_potion and 3dose1attack set no level, brew_potion.struct:1-6, 84-89; checked at brew_potion.rs2:121-132). No route row gives Herblore XP before Druidic Ritual (quest_druid.rs2:3, 6,250 XP = Herblore 28); rev 289 has no quest gate on Herblore (identify.rs2:65), only this level gate",
    "evidence": "MEASURED",
    "source": "randomherb drop mix of 1,080 herb rolls (shared_droptables.rs2:2-34 CODE-READ), each herb made into its best potion with a secondary that exists at scale (research/supply-logistics.md, Herblore replacement detail); time MEASURED practice 3 runs (scripts/measure/floor-herblore.ts LADDER=drops)",
    "supplies": [
@@ -825,6 +831,29 @@
     }
    ],
    "leadTime": "ESTIMATE: about 2,420 chaos druid kills (0.445 herb rolls per kill, knowledge/drops.json) by N4a and N4b in the Edgeville dungeon: Waterfall Quest 0.3 h, then 2.5 h each at 500 kills per hour (not measured), about 5.6 helper-hours; secondaries and 644 vials by Bigpackage, about 2.0 h (research/supply-logistics.md, jobs 10 and 11). Contested spawn: measure 1 live hour first",
+   "at": "bank"
+  },
+  {
+   "id": "herb-unf",
+   "label": "Identify the dropped herbs and mix the unfinished potions for herb-drops (interleaved with it, priced as one block)",
+   "serves": [
+    "herblore"
+   ],
+   "ticks": {
+    "floor": 0,
+    "realistic": 150,
+    "evidence": "ESTIMATE",
+    "source": "research/supply-logistics.md:142-145: identify needs the herb's level (identify.rs2:66-72; herbs.obj harralander 20, ranarr 25, irit 40, avantoe 48, kwuarm 54) and each unf potion its struct level (brew_potion.rs2:121-132; brew_potion.struct harralander 22, ranarr 30, irit 45, avantoe 50, kwuarm 55); the herb-drops helpers (N4a, N4b) are combat accounts. Realistic: the main identifies and mixes 644 herbs, about +100 to +200 ticks (150; identify and mix have no p_delay, herblore.rs2:2-20); floor: a helper with Herblore 55 does it off the main's clock. Not measured. The herb-drops MEASURED ticks start from unf potions"
+   },
+   "requires": [
+    "druid"
+   ],
+   "minLevel": {
+    "herblore": 3
+   },
+   "minLevelSource": "Herblore 3 for any identify or mix (identify.param:1-3, brew_potion.param:1-3 defaults)",
+   "evidence": "ESTIMATE",
+   "source": "split from herb-drops: the measured row starts from unf potions (its supplies); the +150 realistic that row had before the measurement (commit b4fb3e6 removed it) is restored here as its own ESTIMATE",
    "at": "bank"
   },
   {
@@ -1292,6 +1321,63 @@
    "leadTime": "ESTIMATE: 15 law runes and 36 mind runes from the GE or a rune shop (research/supply-logistics.md); staff of air from a shop (job 16)"
   },
   {
+   "id": "smith-40",
+   "label": "Superheat bronze to Smithing 15, then iron to 40 (gold needs 40)",
+   "serves": [
+    "smithing",
+    "magic"
+   ],
+   "train": {
+    "skill": "smithing",
+    "toLevel": 40,
+    "xpPerTick": {
+     "floor": 87,
+     "realistic": 79.8,
+     "evidence": "ESTIMATE",
+     "source": "CODE-READ XP, ESTIMATE ticks: Superheat Item on a bar's ore needs the bar's Smithing level (superheat.rs2:37; smelting.struct levelrequired: bronze 1 :8, iron 15 :24, gold 40 :63) and gives productexp in tenths x25 (bronze 62 :9 = 155, iron 125 :25 = 312.5 per cast; no fail roll in superheat.rs2). Smithing 15 = 1,860 XP = 12 bronze casts, 15 -> 40 (15,789 XP, curve.ts) = 45 iron casts: 57 casts, 15,922 XP. Ticks per cast: floor 3.21 = the MEASURED gold cycle of the superheat row (one ore type, 26 per trip) = 183 ticks; realistic 3.5 (copper + tin take 2 slots per cast, so the bronze trips hold 13) = 200 ticks; not measured. Side Magic 57 x 1,325 (magic_spells.dbrow:187 experience 530 x25 / 10) = 75,525 = 4.743 per Smithing XP"
+    },
+    "side": {
+     "magic": 4.743
+    }
+   },
+   "requires": [
+    "magic-43"
+   ],
+   "minLevel": {
+    "magic": 43
+   },
+   "minLevelSource": "Superheat Item needs Magic 43 (magic_spells.dbrow:185 levelrequired, superheat.rs2:7 check_spell_requirements)",
+   "variant": {
+    "group": "magic-smithing",
+    "option": "superheat"
+   },
+   "evidence": "ESTIMATE",
+   "source": "the superheat row's gold needs Smithing 40 (superheat.rs2:37, smelting.struct:63); this row trains 1 -> 40 with the same spell on bronze and iron ore (no gauntlet bonus: superheat.rs2:57 applies 2.5x to gold only); ticks not measured",
+   "supplies": [
+    {
+     "item": "copper ore",
+     "count": 12
+    },
+    {
+     "item": "tin ore",
+     "count": 12
+    },
+    {
+     "item": "iron ore",
+     "count": 45
+    },
+    {
+     "item": "nature rune",
+     "count": 57
+    },
+    {
+     "item": "fire rune",
+     "count": 228
+    }
+   ],
+   "at": "bank"
+  },
+  {
    "id": "superheat",
    "label": "Superheat gold with gauntlets, 3 ticks per cast",
    "serves": [
@@ -1305,7 +1391,7 @@
      "floor": 437.7,
      "realistic": 436.7,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-23: Smithing 40 -> 99 (983,500 XP) in 2,247, 2,249, 2,252 ticks = 437.7 / 437.3 / 436.7 XP/tick (floor best, realistic worst); 700 casts, 3.21 ticks per cast with 27 bank trips of 26 ores; side Magic 927,500 XP = 0.943 per Smithing XP (scripts/measure/floor-superheat.ts burst, preset floor_superheat: Draynor booth, goldsmith gauntlets worn; .practice/results.jsonl floorxiyh12, floorxghn23, floorxkr901). OPEN: gold needs Smithing 40 (smelting.struct:63, superheat.rs2 levelrequired check); no row gives Smithing 1-40 before this one"
+     "source": "MEASURED practice 2026-10-23: Smithing 40 -> 99 (983,500 XP) in 2,247, 2,249, 2,252 ticks = 437.7 / 437.3 / 436.7 XP/tick (floor best, realistic worst); 700 casts, 3.21 ticks per cast with 27 bank trips of 26 ores; side Magic 927,500 XP = 0.943 per Smithing XP (scripts/measure/floor-superheat.ts burst, preset floor_superheat: Draynor booth, goldsmith gauntlets worn; .practice/results.jsonl floorxiyh12, floorxghn23, floorxkr901). Gold needs Smithing 40 (smelting.struct:63, superheat.rs2:37): row smith-40 trains 1 -> 40 first"
     },
     "side": {
      "magic": 0.9430604982206405
@@ -1313,14 +1399,20 @@
    },
    "requires": [
     "crest",
-    "magic-43"
+    "magic-43",
+    "smith-40"
    ],
+   "minLevel": {
+    "smithing": 40,
+    "magic": 43
+   },
+   "minLevelSource": "gold bar levelrequired 40 (smelting.struct:63), checked by superheat.rs2:37 before the cast; Superheat Item needs Magic 43 (magic_spells.dbrow:185)",
    "variant": {
     "group": "magic-smithing",
     "option": "superheat"
    },
    "evidence": "MEASURED",
-   "source": "superheat.rs2:55-67: 53 Magic + 56.25 Smithing per cast (gauntlets 2.5x), p_delay(1); rate MEASURED practice 3 runs (scripts/measure/floor-superheat.ts). OPEN: gold needs Smithing 40 (smelting.struct:63)",
+   "source": "superheat.rs2:55-67: 53 Magic + 56.25 Smithing per cast (gauntlets 2.5x), p_delay(1); rate MEASURED practice 3 runs (scripts/measure/floor-superheat.ts). Gold needs Smithing 40 (smelting.struct:63): row smith-40",
    "supplies": [
     {
      "item": "gold ore",
@@ -1711,8 +1803,13 @@
     }
    },
    "requires": [
-    "tutorial"
+    "tutorial",
+    "druid"
    ],
+   "minLevel": {
+    "herblore": 3
+   },
+   "minLevelSource": "the attack potion needs Herblore 3 (brew_potion.param:1-3 default, 3dose1attack sets no level, brew_potion.struct:84-89; brew_potion.rs2:121-132); Druidic Ritual gives the first Herblore XP (quest_druid.rs2:3)",
    "evidence": "CODE-READ",
    "source": "attack potion 625 XP x 5 per tick (brew_potion.struct); realistic adds a trade (ESTIMATE)",
    "at": "anywhere"
@@ -1907,7 +2004,7 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "XP: quest_druid.rs2:3 stat_advance(herblore, 2500) = 6,250 at 25x, measured 6,250 per run; QP quest.constant druid_questpoints 4; ticks research/quest-plan.md; serves only questpoints: 6,250 Herblore is 0.6% of 99 and rev 289 has no Druidic Ritual gate on Herblore (skill_herblore/scripts/identifying/identify.rs2:65), so the row must not pull a Taverley trip to the Herblore deadline",
+   "source": "XP: quest_druid.rs2:3 stat_advance(herblore, 2500) = 6,250 at 25x, measured 6,250 per run; QP quest.constant druid_questpoints 4; ticks research/quest-plan.md; serves only questpoints, but herb-unf, herb-drops and herblore-10 require it: rev 289 has no quest gate on Herblore (skill_herblore/scripts/identifying/identify.rs2:65), yet every identify and mix needs Herblore 3 (identify.param:1-3, brew_potion.param:1-3) and this quest is the only route source of Herblore XP below 3, so its deadline is the Herblore deadline. OPEN: the MEASURED runs had every skill 99; at the Herblore deadline the main has combat 3 and 10 HP, and opening the cauldron door wakes 2 suits of armour (vislevel 19, areas/area_taverly/dungeon/scripts/prison_doors.rs2:1-22); not run at low combat",
    "at": "kaqemeex",
    "xp": {
     "herblore": 6250
