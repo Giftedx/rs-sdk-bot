@@ -11,7 +11,8 @@
 // ticks calls the guards (area_ardougne_east/scripts/baker.rs2), so this script never talks to him.
 // Loot (stealing.dbrow): cake 13/20, bread 5/20, chocolate slice 2/20; respawn 8 ticks. A cake eats in 3 bites.
 // Preset goldfarm_knights (goldfarm_nofood for the stall). Copies the 2-tick direct click and eating inside the stun from scripts/generated/thieving60.ts.
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { openBot, finish, randomEventsOf } from '../packages/core/src/bot';
 import { waitTicks } from '../packages/core/src/ticks';
 
@@ -61,7 +62,8 @@ try {
     const notes = () => inv().filter(i => LOBSTER.test(i.name) && !edible(i));
     const coins = () => inv().filter(i => COINS.test(i.name)).reduce((n, i) => n + i.count, 0);
     const cheb = (a: Tile, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
-    const eatAt = () => Math.max(DMG, maxHp() - 12);
+    // Eat with two failed picks of margin (a 10 HP thief at HP 3 has none); the bigger loss is a death, not a bite.
+    const eatAt = () => Math.max(2 * DMG, maxHp() - 12);
     const t0 = s.tick();
     const now = () => s.tick() - t0;
     const coins0 = coins();
@@ -72,6 +74,10 @@ try {
     const banned = new Map<number, number>();
     let noopRun = 0, noopTarget = -1, bans = 0, stunUntil = 0;
     let shopTrips = 0, shopTicks = 0, bought = 0, shopRetryAt = 0, lastSteal = -1_000_000;
+    const stealFile = join(import.meta.dir, '..', '.practice', 'goldfarm', `steal-${process.argv[2]}.json`);
+    let lastStealAt = 0;
+    try { lastStealAt = JSON.parse(readFileSync(stealFile, 'utf8')).at ?? 0; } catch { /* no theft recorded */ }
+    const saveSteal = () => { lastStealAt = Date.now(); try { mkdirSync(dirname(stealFile), { recursive: true }); writeFileSync(stealFile, JSON.stringify({ at: lastStealAt })); } catch { /* best effort */ } };
     let hpMin = hp(), died = false, bankEmpty = false, warned = false, lastFail = '';
     let last = pos();
     const off = s.onTick(() => {
@@ -231,7 +237,7 @@ try {
                 await s.direct({ type: 'interactLoc', x: best.loc.x, z: best.loc.z, locId: best.loc.id, optionIndex: op, reason: 'SDK' } as any);
                 let got = false;
                 for (let i = 0; i < 3 && !got; i++) { await waitTicks(s, 1); got = food() > before; }
-                if (got) { stolen++; lastSteal = s.tick(); }
+                if (got) { stolen++; lastSteal = s.tick(); saveSteal(); }
                 else { refused++; badUntil.set(key(best.tile), s.tick() + 6); }
             }
         } finally {
@@ -246,7 +252,11 @@ try {
     // the Baker then calls the guards (area_ardougne_east/scripts/baker.rs2). Buy clicks go straight to the client,
     // at most 5 per tick (copied from scripts/generated/thieving60.ts).
     const SHOP_FOOD = /^(bread|cake|chocolate slice)$/i;
-    const shopOk = () => s.tick() - lastSteal > 1500 + 20 && s.tick() >= shopRetryAt && coins() >= 12;
+    // The Baker calls the guards for 1,500 ticks after a stall theft (baker.rs2). The last theft is kept in a file, so a
+    // restart remembers it: three farmers died on 2026-10-23 walking into the shop right after a restart. The live
+    // shop was empty on every trip that day (bought=0), so live runs skip it unless SHOP=1.
+    const shopOk = () => (process.env.SHOP === '1' || process.env.DEMO_OK !== '1')
+        && Date.now() - lastStealAt > (1500 + 20) * 400 && s.tick() - lastSteal > 1500 + 20 && s.tick() >= shopRetryAt && coins() >= 12;
     const shopTrip = async () => {
         shopTrips++;
         const before = food();
