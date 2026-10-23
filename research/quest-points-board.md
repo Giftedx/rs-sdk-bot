@@ -204,6 +204,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Vampire Slayer | `scripts/generated/quest-vampire.ts` | 338, 330, 331 | MEASURED 3/3 |
 | Gertrude's Cat | `scripts/generated/quest-fluffs.ts` | 369, 385, 397 | MEASURED 3/3 |
 | Monk's Friend | `scripts/generated/quest-drunkmonk.ts` | 327, 328, 327 | MEASURED 3/3 |
+| Fishing Contest | `scripts/generated/quest-fishingcompo.ts` | 415, 415, 415 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -317,12 +318,40 @@ be happy to!" (60), the logs (70) 188-261 (`brother_cedric.rs2:21-70`); Omad's p
 `stat_advance` comes after the completion message (`:87-89`). Helper items: jug of water, logs. The blanket is
 `tradeable=no`.
 
+### Fishing Contest
+
+`RESULT ok qp=1 xp=magic=1387,fishing=60925 ... ticks=415 ... walkTicks=267 retries=1 died=false` in all 3 runs,
+each with `You catch a giant carp.` and `Congratulations! Quest complete!`. Steps (trial MILESTONE ticks): the west
+tunnel dwarf's friend chain gives the pass 0-47 (`areas/area_white_wolf_mountain/scripts/mountain_dwarf.rs2:8-71`);
+the walk to McGrubor's Wood, in through the loose railing from its west side (51 at 2662,3500), one red vine worm
+with the spade (`areas/area_seers/scripts/mcgrubors_wood.rs2:12-48`), out again 47-191; the walk to Hemenster,
+Morris's gate with the pass 191-302 (`quests/quest_fishingcompo/scripts/quest_fishingcompo.rs2:22-44`); Bonzo's 5 gp
+fee 302-324 (`hemenster/bonzo.rs2:16-45`); garlic in the pipe (41 at 2638,3446), which moves the stranger off the
+pipes spot 324-339 (`quest_fishingcompo.rs2:85-106`); three catches at the pipes spot: the worm gives a giant carp,
+the bait 2 sardines, and the third catch ends the contest with the trophy 339-363 (`hemenster_fishing.rs2:26-53`,
+`bonzo.rs2:56-64`); Camelot teleport, the dwarf takes the trophy 363-415 (`mountain_dwarf.rs2:91-101`). No random
+step: the carp is certain with a red vine worm at the pipes spot. Helper items: spade, fishing rod, 2 fishing bait,
+garlic, 5 coins, Camelot teleport runes. The red vine worm, pass and trophy are `tradeable=no`.
+Findings:
+- The SDK plan treats the forester's gate (52/53 at 2649-2650,3469) as open. The forester stops the player there
+  (`mcgrubors_wood.rs2:1-8`); a trial stood 1,900 ticks in his dialog. The script walks waypoints that keep off it.
+- Morris's pages must be clicked through before the gate teleport.
+- The garlic pipe is a wall decoration on the north edge of 2636-2638,3446; only 2638,3446 is a walkable tile. From
+  3445 the use gives "I can't reach that!".
+
 ### Planner change for the short quests
 
-New row `quests-short` in `packages/planner/src/haggis-boards.json` (MEASURED): the 9 short quests proved above,
-11 QP, floor 2,190 ticks (sum of best runs), realistic 2,249 (sum of worst runs). Row `quests-rest` loses them: 46
--> 37 quests, `qp` 90 -> 79, ticks 57,600 / 86,700 -> 55,350 / 83,100 (9 x 250 / 400 out of the short class), burst
-patch 51,188 / 76,851. The QP total stays 145. `bun test packages/planner`: 42 pass, 0 fail.
-`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`: QP at end 145; Quest Points WIN at 102,494
-floor / 137,162 realistic (deadline 1,022,262). The 9 measured quests take 2,190-2,249 ticks against 3,600 for 9 x
-400 in the realistic estimate.
+New row `quests-short` in `packages/planner/src/haggis-boards.json` (MEASURED): the 10 short quests proved above,
+12 QP, floor 2,605 ticks (sum of best runs), realistic 2,664 (sum of worst runs). Row `quests-rest` loses them: 46
+-> 36 quests, `qp` 90 -> 78, ticks 57,600 / 86,700 -> 55,100 / 82,700 (the whole short class, 10 x 250 / 400),
+burst patch 50,956 / 76,481. The QP total stays 145. `bun test packages/planner`: 42 pass, 0 fail.
+`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`: QP at end 145; Quest Points WIN at 102,677
+floor / 137,207 realistic (deadline 1,022,262). The 10 measured quests take 2,605-2,664 ticks against the
+estimate of 2,500 / 4,000.
+
+### Risks for a bot (short quests)
+
+No short quest needs a second player, an unreachable area or a random reward. Two have random parts that the
+scripts cover: the kitten crate in Gertrude's Cat (`random(6)`, a search of up to 6 crates) and the boys'
+line-of-sight check (a retry). The other risk is on the `rest` row, not here: Shield of Arrav and Heroes' Quest need
+a second account in the other gang (see "Risks and open items").

@@ -13,7 +13,7 @@ const RAILING = { id: 51, x: 2662, z: 3500 };              // mcgruborlooseraili
 const VINE = { id: 58, x: 2631, z: 3498 };                 // red_worm_vine
 const GATE = { id: 47, x: 2642, z: 3442 };                 // fishinggateclosedl (Morris checks the pass)
 const BONZO = { x: 2641, z: 3439 };
-const PIPE = { id: 41, x: 2637, z: 3446 };                 // garlicpipe
+const PIPE = { id: 41, x: 2638, z: 3446 };                 // garlicpipe (2636-2638; only 2638 is a walkable tile)
 const SPOT = { x: 2637, z: 3444 };                         // 0_41_53_sinisterfishspot
 const ITEM = { pass: 27, trophy: 26, worm: 25, garlic: 1550, carp: 338 };
 
@@ -58,8 +58,10 @@ try {
     q.milestone(2);
 
     // 4. Garlic in the pipe moves the stranger off the pipes spot (quest_fishingcompo.rs2:85-106).
-    await q.walk('to pipe', [{ x: PIPE.x, z: PIPE.z - 1, tol: 1 }]);
-    await q.step('garlic', () => q.useOnLoc(ITEM.garlic, q.findLoc(l => l.id === PIPE.id && l.distance <= 4) ?? PIPE), () => !q.has(ITEM.garlic), 8, 4);
+    // The pipe is a wall decoration on the north edge of 2636-2638,3446; from 3445 the use gets "I can't reach that!" and 2636-2637 are blocked, so
+    // the bot stands on the pipe's own tile.
+    await q.dash('to pipe', PIPE.x, PIPE.z, 0);
+    await q.step('garlic', () => q.useOnLoc(ITEM.garlic, q.locAt(PIPE.x, PIPE.z) ?? PIPE), () => !q.has(ITEM.garlic), 8, 4);
     await q.converse([], () => !q.dialogOpen(), 15);
     q.milestone(3);
 
