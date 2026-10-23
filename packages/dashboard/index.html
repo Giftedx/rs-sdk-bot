@@ -6,15 +6,15 @@
 <title>Swarm Control</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Barlow+Semi+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
 <style>
 :root{--bg:#090806;--p1:#12100c;--p2:#1a1711;--p3:#221e16;--ln:#2a2419;--ln2:#3a3222;--tx:#ece2c6;--dm:#9a8c6e;--fa:#5a5040;
 --gold:#e9b949;--gold2:#a07b2a;--parch:#d9c48f;--grn:#7ed36a;--red:#ec5a40;--blu:#6ea9ea;--tea:#4fc9b2;--vio:#b590f2;--org:#f0943c;
---ui:"Barlow Semi Condensed",system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace;--rs:Cinzel,Georgia,serif}
+--ui:"Barlow Semi Condensed",system-ui,sans-serif;--mono:"Barlow Semi Condensed",system-ui,sans-serif;--rs:Cinzel,Georgia,serif}
 *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.25 var(--ui);overflow:hidden}
 body{background:radial-gradient(ellipse at 50% -20%,#2a210f55,transparent 60%),var(--bg)}
 .app{display:grid;grid-template-rows:40px 26px minmax(0,1fr);height:100vh;gap:5px;padding:0 6px 6px}
-.mono{font-family:var(--mono);font-size:.92em}.dm{color:var(--dm)}.fa{color:var(--fa)}.g{color:var(--gold)}.up{color:var(--grn)}.dn{color:var(--red)}
+.mono{font-family:var(--ui);font-variant-numeric:tabular-nums}.dm{color:var(--dm)}.fa{color:var(--fa)}.g{color:var(--gold)}.up{color:var(--grn)}.dn{color:var(--red)}
 .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 /* header */
 header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln);padding:0 4px}
@@ -22,15 +22,15 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .brand small{font:500 11px var(--ui);color:var(--dm);letter-spacing:.04em;margin-left:8px}
 .kpis{display:flex;gap:0;margin-left:4px}
 .kpi{padding:1px 9px;border-left:1px solid var(--ln);min-width:62px}.kpi b{display:block;font:700 14px var(--mono);color:var(--tx);line-height:1.15;white-space:nowrap}
-.kpi span{font:600 9px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);white-space:nowrap}.kpi.gd b{color:var(--gold)}
+.kpi span{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);white-space:nowrap}.kpi.gd b{color:var(--gold)}
 .links{margin-left:auto;display:flex;gap:12px;align-items:center;font-weight:600}.links a{color:var(--parch);text-decoration:none;border-bottom:1px dotted var(--gold2)}
 .pulse{width:8px;height:8px;border-radius:50%;background:var(--grn);animation:pl 2s infinite}.pulse.off{background:var(--red);animation:none}
 @keyframes pl{0%{box-shadow:0 0 0 0 #7ed36aaa}70%{box-shadow:0 0 0 7px #7ed36a00}100%{box-shadow:0 0 0 0 #7ed36a00}}
 /* alerts */
 .alerts{display:flex;gap:5px;align-items:center;overflow:hidden;white-space:nowrap}
-.alerts .lbl{font:700 10px var(--rs);letter-spacing:.14em;color:var(--parch);margin-right:2px}
+.alerts .lbl{font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);margin-right:2px}
 .al{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--ln2);background:var(--p1);border-radius:4px;padding:1px 7px;font-size:12px;cursor:pointer;flex:none}
-.al:hover{border-color:var(--gold2)}.al .t{font:700 9.5px var(--ui);letter-spacing:.1em;padding:0 4px;border-radius:2px;color:#120e06}
+.al:hover{border-color:var(--gold2)}.al .t{font:700 11px var(--ui);letter-spacing:.1em;padding:0 4px;border-radius:2px;color:#120e06}
 .al.death .t{background:var(--red)}.al.stuck .t{background:var(--org)}.al.idle .t{background:#e86a8a}.al.logout .t{background:var(--vio)}
 .allclear{color:var(--grn);font-size:12px}
 /* layout */
@@ -39,18 +39,18 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .card{background:linear-gradient(180deg,#15120d,#100e0a);border:1px solid var(--ln);border-radius:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
 .card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,#e9b94944,transparent)}
 .card>h2{margin:0;padding:4px 9px 3px;font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);border-bottom:1px solid var(--ln);display:flex;gap:8px;align-items:center;flex:none;white-space:nowrap}
-.card>h2 em{font:500 10.5px var(--ui);font-style:normal;margin-left:auto;color:var(--dm);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis}
+.card>h2 em{font:500 11px var(--ui);font-style:normal;margin-left:auto;color:var(--dm);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis}
 .scroll{overflow:auto;min-height:0;flex:1}
 .scroll::-webkit-scrollbar,.bankg::-webkit-scrollbar{width:6px;height:6px}.scroll::-webkit-scrollbar-thumb,.bankg::-webkit-scrollbar-thumb{background:var(--ln2);border-radius:3px}
-.sub{font:700 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--dm);display:flex;justify-content:space-between;gap:6px;margin:0 0 2px;white-space:nowrap}
+.sub{font:700 11px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--dm);display:flex;justify-content:space-between;gap:6px;margin:0 0 2px;white-space:nowrap}
 /* shared marks */
 .lb{display:flex;height:6px;border-radius:2px;overflow:hidden;background:#221d14;flex:none}.lb i{display:block;height:100%}
 .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}.on{background:var(--grn);box-shadow:0 0 6px var(--grn)}.wd{background:var(--gold)}.off{background:var(--fa)}
-.pill{font:600 10px var(--ui);padding:0 5px;border-radius:3px;line-height:15px;background:#2a2312;color:var(--parch);letter-spacing:.03em;white-space:nowrap;flex:none}
+.pill{font:600 11px var(--ui);padding:0 5px;border-radius:3px;line-height:15px;background:#2a2312;color:var(--parch);letter-spacing:.03em;white-space:nowrap;flex:none}
 .pill.inf{background:#10241f;color:var(--tea);font-style:italic}.pill.res{background:#3a2a0c;color:var(--gold)}.pill.bk{background:#26173a;color:var(--vio)}
-.job{font:600 10px var(--ui);padding:0 5px;border-radius:3px;line-height:15px;border:1px solid;white-space:nowrap;flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.job{font:600 11px var(--ui);padding:0 5px;border-radius:3px;line-height:15px;border:1px solid;white-space:nowrap;flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis}
 .job.running{color:var(--grn);border-color:#3d6b33}.job.disabled{color:var(--dm);border-color:var(--ln2)}.job.ended{color:var(--org);border-color:#6b4520}.job.external{color:var(--blu);border-color:#2f4a6b}.job.waiting,.job.starting,.job.stopping{color:var(--vio);border-color:#4a3570}
-.act{font:600 10px var(--mono);padding:0 5px;border-radius:3px;line-height:15px;color:#111;flex:none}
+.act{font:600 11px var(--mono);padding:0 5px;border-radius:3px;line-height:15px;color:#111;flex:none}
 .oc{font:700 11px var(--mono);width:14px;text-align:center;flex:none}.oc.ok{color:var(--grn)}.oc.fail{color:var(--red)}.oc.died{color:#fff;background:var(--red);border-radius:2px}
 /* roster */
 .bot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 8px;padding:4px 8px 4px 10px;border-bottom:1px solid #1d1912;cursor:pointer;position:relative}
@@ -59,13 +59,13 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .bot .l,.bot .r{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}.bot .r{justify-content:flex-end}
 .nm{font-weight:700;font-size:14px}
 .gbar{position:relative;flex:1;height:14px;background:#221d14;border-radius:2px;overflow:hidden;min-width:0}.gbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#5c4614,var(--gold2))}
-.gbar span{position:relative;font:600 10.5px var(--mono);padding:0 5px;line-height:14px;color:var(--tx);text-shadow:0 1px 0 #000;white-space:nowrap}
+.gbar span{position:relative;font:600 11px var(--mono);padding:0 5px;line-height:14px;color:var(--tx);text-shadow:0 1px 0 #000;white-space:nowrap}
 .since{color:var(--dm);font-family:var(--mono);font-size:11px;flex:none}.idl{font:700 11px var(--mono)}.idl.bad{color:var(--red)}.idl.ok{color:var(--grn)}
 .pace{font:600 11px var(--mono);flex:none}
-.why{font:600 9.5px var(--ui);letter-spacing:.04em;color:#120e06;background:var(--parch);border-radius:3px;padding:0 5px;line-height:14px;white-space:nowrap;flex:none;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.why{font:600 11px var(--ui);letter-spacing:.04em;color:#120e06;background:var(--parch);border-radius:3px;padding:0 5px;line-height:14px;white-space:nowrap;flex:none;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .off1{display:flex;align-items:center;gap:6px;padding:2px 8px 2px 10px;border-bottom:1px solid #1a1610;cursor:pointer;position:relative;white-space:nowrap;color:var(--dm);font-size:12.5px}
 .off1:hover{background:#17130d}.off1 .nm{font-size:13px;color:#b3a786;font-weight:600}.off1 .note{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--fa)}
-.grp{font:700 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--fa);padding:3px 10px 1px;border-bottom:1px solid #1a1610}
+.grp{font:700 11px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--fa);padding:3px 10px 1px;border-bottom:1px solid #1a1610}
 #tip{position:fixed;z-index:9;pointer-events:none;background:#0d0b08f5;border:1px solid var(--gold2);border-radius:6px;padding:6px 9px;display:none;max-width:420px;box-shadow:0 8px 30px #000c;font-size:12px}
 #tip td{padding:1px 6px;font:12px var(--mono)}#tip .w{color:var(--red);font-weight:700;margin-top:4px}
 /* practice */
@@ -74,10 +74,10 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .pc .gb{flex:1;height:3px;background:#221d14;border-radius:2px;overflow:hidden;min-width:12px}.pc .gb i{display:block;height:100%;background:var(--gold2)}
 /* requests */
 .rq{padding:4px 8px;display:flex;flex-direction:column;gap:3px;min-height:0;flex:1}
-.seg{display:flex;height:16px;border-radius:3px;overflow:hidden;font:700 10px var(--ui);flex:none}.seg i{display:flex;align-items:center;justify-content:center;font-style:normal;color:#120e06;white-space:nowrap;overflow:hidden}
+.seg{display:flex;height:16px;border-radius:3px;overflow:hidden;font:700 11px var(--ui);flex:none}.seg i{display:flex;align-items:center;justify-content:center;font-style:normal;color:#120e06;white-space:nowrap;overflow:hidden}
 .k-DONE{background:#4f8f43}.k-PARTIAL{background:#c99a3a}.k-NOT{background:#c4513c}.k-BLOCKED{background:#8a63c9}.k-NEW{background:#4aa3c9}.k-RULE{background:#5a5040}
 .rqi{display:grid;grid-template-columns:22px 62px minmax(0,1fr);gap:5px;font-size:12px;border-bottom:1px dashed #241f15;align-items:center;white-space:nowrap}
-.rqi .st{font:700 9px var(--ui);letter-spacing:.06em;border-radius:2px;text-align:center;color:#120e06;line-height:14px}
+.rqi .st{font:700 11px var(--ui);letter-spacing:.06em;border-radius:2px;text-align:center;color:#120e06;line-height:14px}
 /* machine */
 .mach{padding:4px 9px;display:flex;flex-direction:column;gap:3px;min-height:0;flex:1}
 .bar{display:grid;grid-template-columns:40px minmax(0,1fr) 88px;gap:6px;align-items:center;font-size:12px}
@@ -87,7 +87,7 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .mapwrap{position:relative;flex:1;min-height:0;background:#050504}
 #map{width:100%;height:100%;display:none;cursor:crosshair}#rsw{width:100%;height:100%;border:0;display:block;background:#000}
 .mapwrap.d2 #map{display:block}.mapwrap.d2 #rsw{display:none}
-.tog{display:flex;border:1px solid var(--ln2);border-radius:4px;overflow:hidden}.tog button{background:none;border:0;color:var(--dm);font:700 10.5px var(--ui);letter-spacing:.08em;padding:1px 9px;cursor:pointer}
+.tog{display:flex;border:1px solid var(--ln2);border-radius:4px;overflow:hidden}.tog button{background:none;border:0;color:var(--dm);font:700 11px var(--ui);letter-spacing:.08em;padding:1px 9px;cursor:pointer}
 .tog button.on{background:var(--gold);color:#1a1408}
 .legend{position:absolute;right:8px;bottom:8px;display:flex;gap:10px;font-size:11px;color:var(--dm);background:#090806cc;padding:3px 8px;border-radius:4px}
 .legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
@@ -96,14 +96,14 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .boards{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;padding:4px 5px 3px}
 .bd{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:2px 6px 3px;min-width:0;cursor:default}
 .bd.win{border-color:var(--gold);box-shadow:inset 0 0 12px #e9b94933}
-.bd h4{margin:0;font:700 10px var(--rs);letter-spacing:.05em;color:var(--parch);display:flex;justify-content:space-between;white-space:nowrap;gap:4px}
+.bd h4{margin:0;font:700 11px var(--rs);letter-spacing:.05em;color:var(--parch);display:flex;justify-content:space-between;white-space:nowrap;gap:4px}
 .bd .t{display:flex;justify-content:space-between;gap:4px;font-size:11.5px;white-space:nowrap}.bd .t span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .bd .o{display:flex;justify-content:space-between;gap:4px;font-size:11.5px;white-space:nowrap}.bd .o span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .gapb{height:4px;background:#221d14;border-radius:2px;overflow:hidden;margin:2px 0 1px}.gapb i{display:block;height:100%}
 .hag{display:grid;grid-template-columns:auto repeat(24,minmax(0,1fr));gap:2px;padding:2px 5px 5px;align-items:stretch}
-.hag .h{font:700 10px var(--rs);color:var(--gold);letter-spacing:.08em;display:flex;align-items:center;padding-right:4px}
-.hc{border-radius:3px;font:600 9.5px var(--ui);text-align:center;line-height:13px;padding:1px 0;color:#120e06;overflow:hidden;white-space:nowrap}
-.hc small{display:block;font:500 8.5px var(--ui);opacity:.8}
+.hag .h{font:700 11px var(--rs);color:var(--gold);letter-spacing:.08em;display:flex;align-items:center;padding-right:4px}
+.hc{border-radius:3px;font:600 11px var(--ui);text-align:center;line-height:13px;padding:1px 0;color:#120e06;overflow:hidden;white-space:nowrap}
+.hc small{display:block;font:500 11px var(--ui);opacity:.8}
 .ps-0{background:#3a3328;color:var(--dm)}.ps-1{background:#3d6a9a}.ps-2{background:#c27c2c}.ps-3{background:#5aa64a}
 /* vault */
 .vtop{display:flex;align-items:baseline;gap:12px;padding:3px 9px;border-bottom:1px solid var(--ln);white-space:nowrap}
@@ -113,12 +113,12 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 #flow{flex:1;min-height:0}#flow svg{display:block}
 .it{display:grid;grid-template-columns:20px minmax(0,1fr) 46px 50px;gap:4px;align-items:center;line-height:20px;font-size:12px;border-bottom:1px dashed #241f15}
 .hold{padding:2px 0;border-bottom:1px dashed #241f15;font-size:12px}.hold .h1{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
-.hold .h2{white-space:nowrap;overflow:hidden;line-height:17px}.hold .h2 .mono{font-size:10.5px;margin-right:3px}
-.src{font:600 9px var(--ui);letter-spacing:.08em;color:var(--fa);text-transform:uppercase}
+.hold .h2{white-space:nowrap;overflow:hidden;line-height:17px}.hold .h2 .mono{font-size:11px;margin-right:3px}
+.src{font:600 11px var(--ui);letter-spacing:.08em;color:var(--fa);text-transform:uppercase}
 .warn{color:var(--org);font-size:11px}
 /* items */
 .ico{display:inline-block;background-image:url(/items.png);background-repeat:no-repeat;image-rendering:pixelated;vertical-align:middle;flex:none}
-.ico.none{background:#2a2419;border:1px dashed #5a5040;border-radius:3px;color:var(--dm);font:700 9px/1 var(--ui);display:inline-flex;align-items:center;justify-content:center;font-style:normal;overflow:hidden}
+.ico.none{background:#2a2419;border:1px dashed #5a5040;border-radius:3px;color:var(--dm);font:700 11px/1 var(--ui);display:inline-flex;align-items:center;justify-content:center;font-style:normal;overflow:hidden}
 .q{position:absolute;left:2px;top:0;font:700 11px/1 var(--ui);letter-spacing:-.02em;text-shadow:1px 1px 0 #000,0 0 2px #000;pointer-events:none}
 .q.y{color:#ffff00}.q.w{color:#fff}.q.gr{color:#00ff80}
 .pack{display:grid;grid-template-columns:repeat(4,40px);grid-auto-rows:32px;gap:1px;padding:4px;background:#3e3529;border:2px solid #2b241a;border-radius:4px;box-shadow:inset 0 0 0 1px #5a4d3a,0 0 0 1px #0008}
@@ -129,7 +129,7 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .d{padding:5px 9px;display:flex;flex-direction:column;gap:5px}
 .dh{display:flex;align-items:center;gap:7px;white-space:nowrap}.dh h3{margin:0;font:700 20px var(--rs);color:var(--gold);letter-spacing:.03em}
 .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}.stat{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:0 6px;min-width:0}
-.stat span{display:block;font:600 9px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);white-space:nowrap}.stat b{font:700 12.5px var(--mono);white-space:nowrap}
+.stat span{display:block;font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);white-space:nowrap}.stat b{font:700 12.5px var(--mono);white-space:nowrap}
 .strip{display:flex;height:12px;border-radius:2px;overflow:hidden;background:#0c0a07}.strip i{flex:1;min-width:1px}
 .k-x{background:var(--grn)}.k-m{background:var(--blu)}.k-a{background:var(--tea)}.k-d{background:var(--vio)}.k-s{background:var(--org)}.k-i{background:var(--red)}
 .hx0{background:#15120d}.hx1{background:#4a3a14}.hx2{background:#7d5f18}.hx3{background:#b88a22}.hx4{background:#e9b949}.hx5{background:#fff1b8}
@@ -148,6 +148,27 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .feed>div{display:grid;grid-template-columns:52px 14px 96px minmax(0,1fr);gap:5px;font-size:12px;padding:0 8px;border-bottom:1px solid #1b1710;white-space:nowrap;line-height:17px}
 .feed>div span:last-child{overflow:hidden;text-overflow:ellipsis}
 .secret{filter:blur(4px);user-select:none;cursor:pointer;color:var(--gold,#dfc080);letter-spacing:-1px}.secret:hover{filter:blur(3px)}.secret.shown{filter:none;user-select:text;letter-spacing:normal}
+/* round 4: header hero numbers, mini strip, race, economy, role rows */
+.kpi.hero b{font:700 20px var(--ui);font-variant-numeric:proportional-nums;color:var(--gold);letter-spacing:.01em}
+.kpi.hero b small{font:600 13px var(--ui);color:var(--dm);margin-left:3px}
+.mini{display:flex;gap:12px;font:500 11px var(--ui);color:var(--dm);white-space:nowrap;margin-left:10px}.mini b{color:var(--tx);font-weight:600;font-variant-numeric:tabular-nums}
+.rhead{display:flex;align-items:center;gap:10px;padding:4px 9px;border-bottom:1px solid var(--ln);white-space:nowrap;flex-wrap:nowrap;overflow:hidden}
+.gate{display:inline-flex;align-items:center;gap:4px;font:600 11px var(--ui);color:var(--dm)}.gate i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.gate.ok i{background:var(--grn)}.gate.no i{background:transparent;border:2px solid var(--red)}.gate.ok{color:var(--tx)}
+.rk{font:500 13px var(--ui);color:var(--dm)}.rk b{font:700 13px var(--ui);color:var(--tx);font-variant-numeric:tabular-nums}.rk small{font-size:11px}
+.race{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;padding:4px 9px 6px}
+.rr{display:grid;grid-template-columns:96px minmax(0,1fr) 92px;gap:6px;align-items:center;height:17px;border-bottom:1px solid #1b1710}
+.rr .rl{font:600 12px var(--ui);color:var(--parch);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr .rs{font:600 12px var(--ui);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rr svg{display:block;width:100%;height:12px}
+.st-win{color:var(--grn)}.st-floor{color:var(--org)}.st-late{color:var(--red)}.st-none{color:var(--dm)}
+.egrid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.9fr);flex:1;min-height:0}
+.egrid>div{display:flex;flex-direction:column;min-height:0;padding:3px 8px;border-right:1px solid var(--ln)}.egrid>div:last-child{border-right:0}
+.fr{display:grid;grid-template-columns:minmax(0,1fr) 50px 54px 74px;gap:4px;font:500 12px var(--ui);border-bottom:1px dashed #241f15;line-height:18px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fr span{overflow:hidden;text-overflow:ellipsis}.fr .n{text-align:right}
+.sup{display:grid;grid-template-columns:18px minmax(0,1fr) 46px 52px;gap:4px;align-items:center;font:500 12px var(--ui);line-height:18px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gold{font:600 12px var(--ui);color:var(--gold);white-space:nowrap;font-variant-numeric:tabular-nums}
+.al.more{border-style:dashed;color:var(--dm)}
 </style>
 </head>
 <body>
@@ -155,17 +176,14 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 <header>
   <div class="brand">SWARM CONTROL<small>rs-sdk demo</small></div>
   <div class="kpis">
-    <div class="kpi"><b id="k-w">0</b><span>in world</span></div>
-    <div class="kpi"><b id="k-sw">-</b><span>swarm bots</span></div>
-    <div class="kpi"><b id="k-a">0</b><span>accounts</span></div>
-    <div class="kpi"><b id="k-t">-</b><span>server tick</span></div>
-    <div class="kpi"><b id="k-p">0</b><span>players</span></div>
-    <div class="kpi gd"><b id="k-99">0</b><span>99s</span></div>
-    <div class="kpi gd"><b id="k-best">-</b><span id="k-bestb">best rank</span></div>
-    <div class="kpi"><b id="k-xp">-</b><span>swarm xp/hr</span></div>
-    <div class="kpi gd"><b id="k-gp">-</b><span>vault gp</span></div>
-    <div class="kpi"><b id="k-cpu">-</b><span>cpu</span></div>
+    <div class="kpi hero" title="boards where the realistic plan beats the live #1 (floor plan in brackets)"><b id="k-win">-</b><span>boards won by plan</span></div>
+    <div class="kpi hero" title="Overall board: realistic finish against the live #1, in ticks (game time in brackets)"><b id="k-gap">-</b><span>overall gap</span></div>
+    <div class="kpi hero" title="go/no-go gates for the main run (the gate file in .practice)"><b id="k-gates">-</b><span>go gates</span></div>
+    <div class="kpi hero" title="coins per hour of the live gold farmers, measured over the last 2 minutes"><b id="k-gold">-</b><span>gold per hour</span></div>
+    <div class="kpi"><b id="k-gp">-</b><span>vault value</span></div>
+    <div class="kpi"><b id="k-xp">-</b><span>swarm xp per hour</span></div>
   </div>
+  <div class="mini" id="mini"></div>
   <div class="links"><span class="pulse" id="pulse" title="live, every 2 s"></span><span class="mono dm" id="clock"></span>
     <a href="https://rs-sdk-demo.fly.dev/hiscores" target="_blank">Hiscores</a><a href="https://rs-sdk-demo.fly.dev/market" target="_blank">Market</a></div>
 </header>
@@ -181,8 +199,8 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
     <section class="card" style="flex:1"><h2>World <em id="map-h"></em><span class="tog"><button id="bt" title="fly to the next most interesting bot every 60 s">TOUR</button></span><span class="tog"><button id="b3" class="on">3D</button><button id="b2">2D</button></span></h2>
       <div class="mapwrap" id="mw"><iframe id="rsw" allow="cross-origin-isolated; fullscreen" title="rs-world 3D viewer"></iframe><canvas id="map"></canvas><div class="follow" id="follow"></div>
       <div class="legend" id="legend" style="display:none"><span><b class="on"></b>playing</span><span><b class="wd"></b>in world / local</span><span><b class="off"></b>offline</span></div></div></section>
-    <section class="card" style="flex:none"><h2>Boards <em id="bd-h"></em></h2><div class="boards" id="boards"></div><div class="hag" id="hag"></div></section>
-    <section class="card" style="height:252px;flex:none"><h2>Vault <em id="vsum"></em></h2><div id="vault" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
+    <section class="card" style="flex:none"><h2>Main account race <em id="race-h"></em></h2><div class="rhead" id="rhead"></div><div class="race" id="race"></div></section>
+    <section class="card" style="height:262px;flex:none"><h2>Economy <em id="vsum"></em></h2><div id="vault" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
   </div>
   <div class="col">
     <section class="card" style="flex:1"><h2>Account <em id="dupd"></em></h2><div class="scroll d" id="detail"></div></section>
@@ -214,7 +232,7 @@ const hm=at=>new Date(at).toLocaleTimeString('en-GB').slice(0,5);
 const actChip=a=>a?`<span class="act" style="background:${KC[a]}">${a}</span>`:'';
 const ocIcon=o=>o==='ok'?'<span class="oc ok" title="last run ok">✔</span>':o==='died'?'<span class="oc died" title="last run: died">✝</span>':o==='fail'?'<span class="oc fail" title="last run failed">✘</span>':'<span class="oc fa">·</span>';
 function jobPill(j){if(!j)return'';const c=/^ended/.test(j.state)?'ended':/^external/.test(j.state)?'external':/^waiting/.test(j.state)?'waiting':j.state;return`<span class="job ${E(c)}" title="${E(j.state)} · ${E(j.goal)}${j.note?' · '+E(j.note):''}">${E(j.state.replace(/\s*\(.*\)$/,''))}</span>`}
-function icon(name,sz=32){const id=S.icons?.[name];if(id==null||id>=3904)return`<i class="ico none" style="width:${sz}px;height:${sz}px;font-size:${Math.max(7,sz*.32)}px" title="${E(name)} (no sprite in the local sheet)">${E(String(name).split(/\s+/).map(w=>w[0]).join('').slice(0,3))}</i>`;const k=sz/32;
+function icon(name,sz=32){const id=S.icons?.[name];if(id==null||id>=3904)return`<i class="ico none" style="width:${sz}px;height:${sz}px;font-size:${Math.max(9,sz*.32)}px" title="${E(name)} (no sprite in the local sheet)">${E(String(name).split(/\s+/).map(w=>w[0]).join('').slice(0,3))}</i>`;const k=sz/32;
   return`<i class="ico" style="width:${sz}px;height:${sz}px;background-size:${2048*k}px auto;background-position:-${(id%64)*sz}px -${Math.floor(id/64)*sz}px" title="${E(name)}"></i>`}
 // Stack numbers as the game draws them: yellow below 100K, white K up to 10M, green M above.
 const qty=n=>n<1e5?['y',String(n)]:n<1e7?['w',Math.floor(n/1e3)+'K']:['gr',Math.floor(n/1e6)+'M'];
@@ -248,9 +266,9 @@ function rowLive(b){const[c,t]=st(b),sk=goalOf(b),L=running(b)?ledger(b):null,id
   return`<i hidden data-c="bot ${sel===b.name?'sel':''} ${bad?'idle':''}"></i>
   <div class="l"><span class="dot ${c}" title="${t}"></span><span class="nm">${E(b.name)}</span><span class="pill ${pc}" ${b.roleInferred?'title="inferred from the highest non-Hitpoints skill"':''}>${E(role)}</span>${jobPill(b.job)}${IR[b.name]?.why?`<span class="why" title="interest score ${IR[b.name].score.toFixed(0)}: ${E(IR[b.name].all)}">${E(IR[b.name].why)}</span>`:''}</div>
   <div class="r">${actChip(b.action)}<span class="mono dm" title="status file age">${b.at?ago(S.now-b.at):''}</span></div>
-  <div class="l">${sk?`<span class="gbar"><i style="width:${pct.toFixed(1)}%"></i><span>${E(b.goalSkill)} ${sk.level} / ${tgt}</span></span>${paceTxt(b)}`:`<span class="dm ell">${E(b.job?.goal||b.goal||'')}</span>`}</div>
-  <div class="r">${b.xpPerHour!=null?`<span class="mono">${gp(b.xpPerHour)}/h</span>`:''}${b.spark?.length>1?svgSpark(b.spark,52,14):''}</div>
-  <div class="l"><span class="ell" title="${E(b.phase||'')}">${E(b.phaseShort||'')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}</div>
+  <div class="l">${roleLine(b)??''}${!roleLine(b)&&sk?`<span class="gbar"><i style="width:${pct.toFixed(1)}%"></i><span>${E(b.goalSkill)} ${sk.level} / ${tgt}</span></span>${paceTxt(b)}${b.role4?.kind==='fish'?`<span class="dm" title="feathers in the pack">${nf(b.role4.feathers)} feathers</span>`:''}${b.role4?.kind==='wood'&&b.hp?`<span class="${b.hp.now<=b.hp.max/3?'dn':'dm'}">HP ${b.hp.now}/${b.hp.max}</span>`:''}`:(roleLine(b)?'':`<span class="dm ell">${E(b.job?.goal||b.goal||'')}</span>`)}</div>
+  <div class="r">${b.role4?.kind==='gold'?(b.role4.coinsPerTick!=null?`<span class="mono gold">${gp(b.role4.coinsPerTick*9000)} gp/h</span>`:''):b.xpPerHour!=null?`<span class="mono">${gp(b.xpPerHour)} xp/h</span>`:''}${b.spark?.length>1?svgSpark(b.spark,52,14):''}</div>
+  <div class="l"><span class="ell" title="${E(b.phase||'')}">${/^\s*\w+=\S+(\s+\w+=\S+){2,}/.test(b.phaseShort||'')?'':E(b.phaseShort||'')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}</div>
   <div class="r">${L?`${lbar(L,'70px')}<span class="idl ${bad?'bad':'ok'}">idle ${idle.toFixed(0)}%</span>`:''}</div>`}
 function rowOff(b){const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':b.name===S.vault?.banker?'bk':'';
   const why=b.job?.note||(b.reserved?'reserved for the main run':b.at?'':'no status file yet');
@@ -275,7 +293,7 @@ function interest(b){const r=[];let s=0;const now=S.now,al=(S.alerts||[]).filter
   if(al.some(a=>a.kind==='death')){s+=100;r.push('died')}else if(al.length){s+=60;r.push(al[0].kind)}
   if(b.phaseSince&&b.phaseExact&&now-b.phaseSince<3*60e3){s+=40;r.push('new: '+String(b.phaseShort||'').slice(0,18))}
   if(b.pace&&b.xpLeft>0){if(b.pace.ahead){s+=70;r.push('ahead of #1')}else{s+=25;r.push('chasing #1')}}
-  if(b.xpPerHour>0){s+=Math.min(30,b.xpPerHour/2e5);if(!r.length)r.push(gp(b.xpPerHour)+' xp/h')}
+  const cpt=b.role4?.kind==='gold'?b.role4.coinsPerTick:null;if(cpt>0){s+=Math.min(30,cpt*2);if(!r.length)r.push(cpt.toFixed(1)+' c/tick')}else if(b.role4?.kind!=='gold'&&b.xpPerHour>0){s+=Math.min(30,b.xpPerHour/2e5);if(!r.length)r.push(gp(b.xpPerHour)+' xp/h')}
   if(b.action==='idle'){s-=20;r.push('idle')}
   return{score:s,why:r[0]||'',all:r.join(' · ')||'nothing special'}}
 function ranked(){const on=S.bots.filter(b=>!b.practice&&running(b)&&!b.reserved);IR={};for(const b of on)IR[b.name]=interest(b);
@@ -294,8 +312,6 @@ function tip(){const el=$('#tip'),b=tipFor&&S.bots.find(q=>q.name===tipFor);if(!
   el.innerHTML=`<div class="sub"><span>${E(b.name)}</span><span>${b.job?E(b.job.state):''}</span></div>${b.job?.note?`<div class="dm" style="margin-bottom:3px">${E(b.job.note)}</div>`:''}`+(L?`<table>${Object.values(K).map(n=>`<tr><td><span class="dot" style="background:${KC[n]}"></span> ${n}</td><td style="text-align:right">${nf(b.ledger[n])}</td><td style="text-align:right;${n==='idle'&&L.p.idle>10?'color:var(--red);font-weight:700':''}">${L.p[n].toFixed(1)}%</td></tr>`).join('')}</table>${L.p.idle>10?'<div class="w">idle over 10%: standing still is a warcrime</div>':''}`:b.result?`<div class="mono dm" style="white-space:normal;font-size:11px">${E(b.result)}</div>`:'');
   el.style.display='block';const[px,py]=tipXY;el.style.left=Math.min(innerWidth-el.offsetWidth-8,px+14)+'px';el.style.top=Math.min(innerHeight-el.offsetHeight-8,py+10)+'px'}
 
-function alertsBar(){const P=new Map((S.alerts||[]).map(x=>[x.name,x.practice])),isP=n=>P.get(n),a=S.alerts||[];
-  put('#alerts',`<span class="lbl">ALERTS</span>`+(a.length?a.map(x=>`<span class="al ${x.kind}" style="${isP(x.name)?'opacity:.55':''}" data-n="${E(x.name)}" title="${E(when(x.at))} · ${E(x.text)}"><span class="t">${x.kind.toUpperCase()}</span><b>${E(x.name)}</b>${isP(x.name)?'<span class="fa">practice</span>':''}<span class="dm ell" style="max-width:220px">${E(x.text)}</span><span class="mono fa">${hm(x.at)}</span></span>`).join(''):'<span class="allclear">all clear: no deaths, stuck bots, idle streaks or logout failures</span>'))}
 $('#alerts').onclick=e=>{const a=e.target.closest('.al');if(a)pick(a.dataset.n)};
 
 const PS=['not started','method known','prep needed','rehearsed'],AB={Overall:'OVR',Attack:'ATT',Defence:'DEF',Strength:'STR',Hitpoints:'HP',Ranged:'RNG',Prayer:'PRA',Magic:'MAG',Cooking:'COO',Woodcutting:'WC',Fletching:'FLE',Fishing:'FSH',Firemaking:'FM',Crafting:'CRA',Smithing:'SMI',Mining:'MIN',Herblore:'HER',Agility:'AGI',Thieving:'THI',Runecraft:'RC','Quest Points':'QP',Equipment:'EQP',Bank:'BNK',Runite:'RUN'};
@@ -304,7 +320,7 @@ function boards(){
   put('#boards',S.boards.map(r=>{const t=r.top,b=r.best,win=b&&b.rank===1,g=r.gap,cl=g?g.close:0,col=cl>=1?'var(--gold)':cl>=.75?'var(--grn)':cl>=.4?'var(--org)':'var(--red)';
     const delta=b&&b.delta?`<span class="${b.delta>0?'up':'dn'}">${b.delta>0?'▲':'▼'}${nf(Math.abs(b.delta))}</span>`:'';
     return`<div class="bd ${win?'win':''}" title="${E(r.board)}: #1 ${E(t?.name||'?')} ${E(t?.time||'')}${b?` · ours ${E(b.name)} #${b.rank} lvl ${b.level} ${E(b.time)}`:''}${g?` · ${g.kind==='time'?(g.ahead?'ahead by ':'behind by ')+g.text:g.text+' short'}`:''}">
-    <h4><span>${E(r.board)}</span>${t?.level?`<span class="fa" style="font:500 10px var(--mono)">${t.level}</span>`:''}</h4>
+    <h4><span>${E(r.board)}</span>${t?.level?`<span class="fa" style="font:500 11px var(--mono)">${t.level}</span>`:''}</h4>
     <div class="t"><span class="dm">${E(t?.name||'—')}</span><span class="mono g">${E(t?.time||'-')}</span></div>
     <div class="gapb">${g?`<i style="width:${(Math.max(.03,cl)*100).toFixed(0)}%;background:${col}"></i>`:''}</div>
     <div class="o">${b?`<span>${E(b.name)} <span class="mono ${b.rank<=10?'g':''}">#${nf(b.rank)}</span> ${delta}</span><span class="mono" style="color:${col}">${g?(g.kind==='time'?(g.ahead?'−':'+')+E(g.text):E(g.text)):''}</span>`:`<span class="fa">${r.kind==='value'?'not ranked':'no rank'}</span>`}</div></div>`}).join(''));
@@ -359,15 +375,6 @@ function flowSvg(v,W,H){const fl=v.flow||[];if(!fl.length)return`<div class="dm"
   const hb=v.holders.find(h=>h.banker);
   s+=`<rect x="${X1}" y="${by}" width="${X2-X1}" height="${bh}" rx="2" fill="#b590f2"/><text x="${W/2}" y="13" text-anchor="middle" fill="#b590f2" font-size="12" font-weight="700" font-family="Barlow Semi Condensed">${E(bk)} holds ${gp(hb?.value||0)}</text></svg>`;
   return s}
-function vault(){const v=S.vault;if(!v)return;const live=v.holders.length,seen=v.holders.filter(h=>h.bankSeen).length;
-  $('#vsum').textContent=`${live} holders · banks known ${seen}/${live} · banker ${v.banker} (from vault-log)`;$('#k-gp').textContent=gp(v.value);
-  const fw=Math.max(300,($('#flow')?.clientWidth||520)),fh=Math.max(120,($('#flow')?.clientHeight||180));
-  const items=v.items.map(i=>`<div class="it" title="${E(i.holders.map(h=>h.name+' '+nf(h.count)).join(', '))}${i.price!=null?' · '+nf(Math.round(i.price))+' gp each':' · no price'}">${icon(i.name,20)}<span class="ell">${E(i.name)}</span><span class="mono" style="text-align:right">${gp(i.count)}</span><span class="mono ${i.value?'g':'fa'}" style="text-align:right">${i.value!=null?gp(i.value):'?'}</span></div>`).join('')||'<span class="dm">Nothing held.</span>';
-  const hold=v.holders.map(h=>`<div class="hold" title="${E(h.items.map(i=>i.name+' '+nf(i.count)).join(', '))}"><div class="h1"><b style="${h.banker?'color:var(--vio)':''}">${E(h.name)}</b><span class="mono g">${gp(h.value)}</span><span class="src">${h.source==='log'?'from log':h.source==='snapshot+log'?'snap + log':h.bankSeen?'snapshot':'pack only'}</span><span class="mono fa" style="margin-left:auto">${h.age!=null?ago(h.age):''}</span></div><div class="h2">${h.coins?`${icon('Coins',16)}<span class="mono">${gp(h.coins)}</span>`:''}${h.items.slice(0,9).map(i=>`${icon(i.name,16)}<span class="mono">${gp(i.count)}</span>`).join('')}${h.items.length>9?`<span class="fa">+${h.items.length-9}</span>`:''}${!h.coins&&!h.items.length?'<span class="fa">empty</span>':''}</div></div>`).join('');
-  if(!$('#vg')){$('#vault').innerHTML=`<div class="vtop" id="vt"></div><div class="vgrid" id="vg"><div><div class="sub"><span>Flow</span><span>givers → banker → receivers</span></div><div id="flow"></div></div><div><div class="sub"><span>Items</span><span>count · value</span></div><div class="scroll" id="vit"></div></div><div><div class="sub"><span>Who holds what</span><span>age</span></div><div class="scroll" id="vho"></div></div></div>`}
-  put('#vt',`<span><span class="vbig">${gp(v.value)}</span><small>est. value</small></span><span>${icon('Coins',16)}<b class="mono g">${nf(v.coins)}</b><small>coins</small></span><span><b class="mono">${v.items.length}</b><small>kinds</small></span><span><b class="mono">${v.log.length}</b><small>transfers</small></span>${seen<live?`<span class="warn" style="margin-left:auto">${live-seen} bank${live-seen>1?'s':''} never opened</span>`:''}`);
-  put('#flow',flowSvg(v,$('#flow').clientWidth||fw,$('#flow').clientHeight||fh));put('#vit',items);put('#vho',hold)}
-
 function activity(){
   put('#scripts',S.scripts.slice(0,8).map(s=>`<div class="scr" title="${s.runs} runs · ${s.ok} ok · last ${when(s.last)} · ${s.streak}× ${s.streakOk?'pass':'fail'} streak"><span class="ell">${E(s.goal)}</span><span class="mono dm" style="text-align:right">${s.runs}</span><span class="mono ${s.ok===s.runs?'up':s.ok?'':'dn'}" style="text-align:right">${Math.round(100*s.ok/s.runs)}%</span><span class="pips">${s.recent.map(o=>`<i style="background:${o?'var(--grn)':'var(--red)'}"></i>`).join('')}</span></div>`).join('')||'<span class="dm">No RESULT lines yet.</span>');
   const feed=[...S.events.map(e=>({at:e.at,name:e.name,ic:'<span class="g">▸</span>',text:e.text})),...S.results.map(r=>({at:r.at,name:r.name,ic:ocIcon(r.text&&/died/.test(r.text)&&!/died=false/.test(r.text)?'died':r.ok?'ok':'fail'),text:r.text}))].sort((a,b)=>b.at-a.at).slice(0,120);
@@ -404,23 +411,85 @@ function syncWorld(){const b=S.bots.find(x=>x.name===sel);$('#follow').textConte
   // fps=20 and scale=0.75 keep its CPU and GPU cost down on a busy box.
   if(mode!=='3d')return;
   const f=$('#rsw');
-  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed${Q.get('flight')==='0'?'&flight=0':''}${Q.get('cache')==='0'?'&cache=0':''}&embed=1&fps=20&scale=0.75&hideNamesFrom=${encodeURIComponent(location.origin+'/api/hidden-names')}${sel?'&follow='+encodeURIComponent(sel):''}`}
+  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed${Q.get('flight')==='0'?'&flight=0':''}${Q.get('cache')==='0'?'&cache=0':''}&embed=1&fps=20&scale=0.75&hideNamesFrom=${encodeURIComponent(location.origin+'/api/hidden-names')}&highlightFrom=${encodeURIComponent(location.origin+'/api/our-names')}${sel?'&follow='+encodeURIComponent(sel):''}`}
   else if(rswFor!==sel&&sel){rswFor=sel;f.contentWindow?.postMessage({follow:sel},'http://localhost:3000')}}
+
+// ---- round 4: header, alerts, main race, economy ----
+const TICK_MS=400,tickTime=t=>t==null?'-':dur(Math.abs(t)*TICK_MS);
+function header(){const R=S.race,G=S.gates?.gates||[],E2=S.economy,w=S.world||{},sw=S.swarm,bots=S.bots,live=bots.filter(b=>!b.practice);
+  $('#k-win').innerHTML=R&&!R.error?`${R.wins}<small>/ 24 · floor ${R.floorWins}</small>`:'-';
+  $('#k-gap').innerHTML=R&&R.gap!=null?`<span class="${R.gap>=0?'up':'dn'}">${R.gap>0?'+':''}${nf(R.gap)}</span><small>ticks · ${tickTime(R.gap)}</small>`:'-';
+  $('#k-gates').innerHTML=G.length?`${G.filter(g=>g.pass).length}<small>/ ${G.length}</small>`:'-';
+  $('#k-gold').textContent=E2?gp(E2.goldPerTick*3600e3/TICK_MS):'-';
+  $('#k-xp').textContent=gp(live.reduce((n,b)=>n+(b.fresh&&b.xpPerHour>0?b.xpPerHour:0),0));
+  put('#mini',`<span><b>${bots.filter(b=>b.inWorld).length}</b> in world</span><span><b>${sw?sw.running+' / '+sw.maxBots:'-'}</b> swarm</span><span><b>${live.length}</b> accounts</span><span><b>${nf(S.worldPlayers)}</b> players</span><span>tick <b>${w.tick!=null?nf(w.tick):'-'}</b></span><span>cpu <b>${S.sys?.cpu!=null?S.sys.cpu.toFixed(0)+'%':'-'}</b></span>`)}
+
+// Alerts: the last 60 minutes plus the unresolved ones (stuck, idle now); older ones fold into "N earlier".
+// Practice alerts only as a muted count.
+function alertsBar(){const now=S.now,all=S.alerts||[],live=all.filter(a=>!a.practice),prac=all.filter(a=>a.practice);
+  const recent=live.filter(a=>now-a.at<60*60e3||a.kind==='stuck'||a.kind==='idle'),older=live.filter(a=>!recent.includes(a));
+  const chip=x=>`<span class="al ${x.kind}" data-n="${E(x.name)}" title="${E(when(x.at))} · ${E(x.text)}"><span class="t">${x.kind.toUpperCase()}</span><b>${E(x.name)}</b><span class="dm ell" style="max-width:240px">${E(x.text)}</span><span class="fa">${hm(x.at)}</span></span>`;
+  const list=l=>E(l.map(x=>hm(x.at)+' '+x.kind+' '+x.name+': '+x.text).join('\n'));
+  put('#alerts',`<span class="lbl">ALERTS</span>`+(recent.length?recent.map(chip).join(''):'<span class="allclear">no live alert in the last hour</span>')+
+    (older.length?`<span class="al more" title="${list(older)}">${older.length} earlier</span>`:'')+(prac.length?`<span class="al more" title="${list(prac)}">practice ${prac.length}</span>`:''))}
+
+// Main account race: for each board, the realistic plan's finish (bar), the floor plan's finish (tick) and the
+// live #1's time (gold line), all in ticks from the start of the run.
+function raceView(){const R=S.race,G=S.gates?.gates||[];
+  if(!R||R.error){put('#rhead','');put('#race',`<span class="dm">Plan not available: ${E(R?.error||'no research/hiscores-live.json')}</span>`);return}
+  $('#race-h').textContent=`plan vs live #1 · ${R.source} · bar realistic, tick floor, gold line #1 · ticks of 0.4 s`;
+  const gh=(S.gapHistory||[]).filter(v=>v!=null),mn=Math.min(0,...gh);
+  put('#rhead',G.map(g=>`<span class="gate ${g.pass?'ok':'no'}" title="${E(g.detail)}"><i></i>${E(g.name)}</span>`).join('')+
+    `<span class="rk" style="margin-left:auto">won <b>${R.wins}</b> / 24 <small>(floor ${R.floorWins})</small></span>`+
+    `<span class="rk" title="Overall board: realistic finish against #1">overall <b class="${R.gap>=0?'up':'dn'}">${R.gap>0?'+':''}${nf(R.gap)}</b> <small>${tickTime(R.gap)}</small></span>`+
+    `<span class="rk" title="planner inputs that are ESTIMATE or CODE-READ, not MEASURED">${R.unmeasured} <small>unmeasured</small></span>`+
+    (gh.length>1?`<span class="rk" title="overall gap over time (${gh.length} changes)">${svgSpark(gh.map(v=>v-mn),70,16,'#e9b949')}</span>`:''));
+  put('#race',R.rows.map(r=>{const re=r.real,fl=r.floor,dl=r.deadline;
+    const cls=re.status==='WIN'?'st-win':fl.status==='WIN'?'st-floor':re.status==='LATE'||fl.status==='LATE'?'st-late':'st-none';
+    const ic=re.status==='WIN'?'✔':fl.status==='WIN'?'◐':re.status==='LATE'?'✘':'·';
+    const best=(S.boards||[]).find(b=>b.board===r.label||(r.id==='runite'&&b.board==='Runite'))?.best;
+    const tip=`${r.label}: #1 ${r.holder||'?'}${dl!=null?' at '+nf(dl)+' ticks ('+tickTime(dl)+')':''} · realistic ${re.finish!=null?nf(re.finish):'never'} (${re.status}) · floor ${fl.finish!=null?nf(fl.finish):'never'} (${fl.status})${best?' · our best now: '+best.name+' #'+nf(best.rank):''}`;
+    let bar,slack;
+    if(dl==null||re.status==='NO-CLOCK'){const mx=Math.max(re.finish||1,fl.finish||1)*1.04,x=t=>(t/mx*300).toFixed(1);
+      bar=`<rect width="300" height="12" fill="#1d1912"/>${re.finish!=null?`<rect y="3" width="${x(re.finish)}" height="6" fill="#5a5040"/>`:''}${fl.finish!=null?`<rect x="${x(fl.finish)-1}" y="1" width="2" height="10" fill="#d9c48f"/>`:''}`;
+      slack=re.status==='NEVER'?'never':'no clock'}
+    else{const mx=Math.max(dl,re.finish||0,fl.finish||0)*1.04,x=t=>(Math.min(t,mx)/mx*300).toFixed(1),col=re.status==='WIN'?'#7ed36a':'#ec5a40';
+      bar=`<rect width="300" height="12" fill="#1d1912"/><rect width="${x(dl)}" height="12" fill="#e9b94922"/>${re.finish!=null?`<rect y="3" width="${x(re.finish)}" height="6" fill="${col}"/>`:''}${fl.finish!=null?`<rect x="${x(fl.finish)-1}" y="1" width="2" height="10" fill="#d9c48f"/>`:''}<rect x="${x(dl)-0.75}" width="1.5" height="12" fill="#e9b949"/>`;
+      slack=re.slack!=null?`${re.slack>0?'+':''}${nf(re.slack)}`:'never'}
+    return`<div class="rr" title="${E(tip)}"><span class="rl">${E(r.label)}</span><svg viewBox="0 0 300 12" preserveAspectRatio="none">${bar}</svg><span class="rs ${cls}">${ic} ${slack}</span></div>`}).join(''))}
+
+// Economy: the vault flow, gold farmers (coins per tick, made this run, food and time to empty) with the GE stock
+// of the main run's key supplies, items held, and who holds them.
+function economy(){const v=S.vault,X=S.economy;if(!v||!X)return;const live=v.holders.length,seen=v.holders.filter(h=>h.bankSeen).length;
+  $('#vsum').textContent=`${live} holders · banks known ${seen}/${live} · banker ${v.banker} (vault-log) · GE quotes ${X.pricesAt?ago(S.now-X.pricesAt)+' old':'loading'}`;$('#k-gp').textContent=gp(v.value);
+  if(!$('#eg')){$('#vault').innerHTML=`<div class="vtop" id="vt"></div><div class="egrid" id="eg"><div><div class="sub"><span>Flow</span><span>givers → banker → receivers</span></div><div id="flow"></div></div><div><div class="sub"><span>Gold farmers</span><span>c/tick · made · food left</span></div><div id="farm"></div><div class="sub" style="margin-top:4px"><span>GE stock · key supplies</span><span id="suph"></span></div><div class="scroll" id="sup"></div></div><div><div class="sub"><span>Items</span><span>count · value</span></div><div class="scroll" id="vit"></div></div><div><div class="sub"><span>Who holds what</span><span>age</span></div><div class="scroll" id="vho"></div></div></div>`}
+  const tr=X.trend||[],tmin=Math.min(...tr,0);
+  put('#vt',`<span><span class="vbig">${gp(v.value)}</span><small>est. value</small></span>${tr.length>1?`<span title="vault value, one point a minute">${svgSpark(tr.map(t=>t-tmin),80,18,'#e9b949')}</span>`:''}<span>${icon('Coins',16)}<b class="g">${nf(v.coins)}</b><small>coins</small></span><span><b class="gold">${gp(X.goldPerTick*3600e3/TICK_MS)}</b><small>gold per hour (${X.goldPerTick.toFixed(1)} c/tick)</small></span><span><b>${v.items.length}</b><small>kinds</small></span>${seen<live?`<span class="warn" style="margin-left:auto">${live-seen} bank${live-seen>1?'s':''} never opened</span>`:''}`);
+  put('#farm',X.farmers.length?X.farmers.map(f=>{const low=f.emptyMs!=null&&f.emptyMs<30*60e3;
+    return`<div class="fr" title="${E(f.name)}: ${nf(f.coins)} coins held · food ${f.food} in pack, ${f.bankFood} in bank${f.eatPerTick?' · eats '+(f.eatPerTick*9000).toFixed(0)+' an hour':''}"><span><b>${E(f.name)}</b></span><span class="n">${f.coinsPerTick!=null?f.coinsPerTick.toFixed(1):'–'}</span><span class="n">${f.made!=null?gp(f.made):'–'}</span><span class="n ${low?'dn':''}">${f.food}${f.emptyMs!=null?' · '+dur(f.emptyMs):''}${low?' ⚠':''}</span></div>`}).join(''):'<span class="dm">No gold farmer running.</span>');
+  const sup=(X.supplies||[]),inStock=sup.filter(s=>s.stock>0).sort((a,b)=>b.stock-a.stock);
+  $('#suph').textContent=`${inStock.length} of ${sup.length} in stock`;
+  put('#sup',inStock.map(s=>`<div class="sup" title="${E(s.name)} · ${nf(s.stock)} for sale${s.ask!=null?' · ask '+nf(s.ask):''}${s.vwap!=null?' · 7-day avg '+nf(Math.round(s.vwap)):''}">${icon(s.name,16)}<span class="ell">${E(s.name)}</span><span class="n" style="text-align:right">${gp(s.stock)}</span><span class="dm" style="text-align:right">${s.ask!=null?gp(s.ask):'–'}</span></div>`).join('')||'<span class="dm">None of the key supplies is for sale.</span>');
+  const items=v.items.map(i=>`<div class="it" title="${E(i.holders.map(h=>h.name+' '+nf(h.count)).join(', '))}${i.price!=null?' · '+nf(Math.round(i.price))+' gp each':' · no price'}">${icon(i.name,20)}<span class="ell">${E(i.name)}</span><span style="text-align:right">${gp(i.count)}</span><span class="${i.value?'g':'fa'}" style="text-align:right">${i.value!=null?gp(i.value):'?'}</span></div>`).join('')||'<span class="dm">Nothing held.</span>';
+  const hold=v.holders.map(h=>`<div class="hold" title="${E(h.items.map(i=>i.name+' '+nf(i.count)).join(', '))}"><div class="h1"><b style="${h.banker?'color:var(--vio)':''}">${E(h.name)}</b><span class="g">${gp(h.value)}</span><span class="src">${h.source==='log'?'from log':h.source==='snapshot+log'?'snap + log':h.bankSeen?'snapshot':'pack only'}</span><span class="fa" style="margin-left:auto">${h.age!=null?ago(h.age):''}</span></div></div>`).join('');
+  put('#flow',flowSvg(v,$('#flow').clientWidth||280,$('#flow').clientHeight||150));put('#vit',items);put('#vho',hold)}
+
+// Role-aware second line of a running row, picked from the swarm job's goal.
+function roleLine(b){const r=b.role4;if(!r)return null;
+  if(r.kind==='gold'){const low=r.emptyMs!=null&&r.emptyMs<30*60e3;
+    return`<span class="gold">${icon('Coins',14)} ${r.coinsPerTick!=null?r.coinsPerTick.toFixed(1)+' c/tick':'– c/tick'} · made ${r.made!=null?gp(r.made):'–'}</span><span class="${low?'dn':'dm'}" title="food in pack at the measured eat rate">food ${r.food}${r.emptyMs!=null?' · '+dur(r.emptyMs):''}${low?' ⚠':''}</span>`}
+  if(r.kind==='bank')return`<span class="gold">${icon('Coins',14)} vault ${gp(S.vault?.value||0)}</span>`;
+  return null}
 
 function render(){
   const bots=S.bots,w=S.world||{},sw=S.swarm,live=bots.filter(b=>!b.practice);
-  $('#k-w').textContent=bots.filter(b=>b.inWorld).length;$('#k-a').textContent=live.length;$('#k-p').textContent=nf(S.worldPlayers);
-  $('#k-sw').textContent=sw?`${sw.running} / ${sw.maxBots}`:'-';$('#k-sw').parentElement.title=sw?`swarm controller: ${sw.running} running of ${sw.maxBots} max, ${sw.jobs} jobs, ${sw.freeGB.toFixed(1)} GB free at its last check`:'';
-  $('#k-t').textContent=w.tick!=null?nf(w.tick):'-';$('#k-cpu').textContent=S.sys?.cpu!=null?S.sys.cpu.toFixed(0)+'%':'-';
-  $('#k-99').textContent=live.reduce((n,b)=>n+skills(b).filter(k=>k.level>=99).length,0);
-  const best=S.boards.filter(r=>r.best&&r.board!=='Overall').sort((a,b)=>a.best.rank-b.best.rank)[0];$('#k-best').textContent=best?'#'+nf(best.best.rank):'-';$('#k-bestb').textContent=best?'best · '+best.board:'best rank';
-  $('#k-xp').textContent=gp(live.reduce((n,b)=>n+(b.fresh&&b.xpPerHour>0?b.xpPerHour:0),0));
+  header();
   $('#clock').textContent=new Date(S.now).toLocaleTimeString('en-GB');$('#pulse').className='pulse'+(w.connected===false?' off':'');
   const first=ranked()[0]||live.find(b=>b.inWorld&&!b.reserved)||live.find(b=>b.fresh&&!b.reserved)||live.find(b=>!b.reserved)||bots[0];
   if((!sel||!bots.some(b=>b.name===sel))&&first)sel=first.name;tourStep();
-  alertsBar();roster();boards();detail();vault();activity();requests();machine();syncWorld();loadMap();drawMap();if(tipFor)tip();
+  alertsBar();roster();raceView();detail();economy();activity();requests();machine();syncWorld();loadMap();drawMap();if(tipFor)tip();
 }
-window.addEventListener('resize',()=>{drawMap();if($('#flow'))$('#flow')._h=null;vault()});
+window.addEventListener('resize',()=>{drawMap();if($('#flow'))$('#flow')._h=null;economy()});
 // Errors show in the header instead of failing silently.
 window.onerror=(m,src,l)=>{const c=$('#clock');c.textContent='JS error: '+m+' @'+l;c.style.color='var(--red)'};
 // Static mode (screenshots) renders twice so the second, diffing render is exercised too.

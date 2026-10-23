@@ -12,6 +12,7 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 
 import { join, resolve } from 'node:path';
 import { cpus, freemem, totalmem } from 'node:os';
 import { xpForLevel } from '../planner/src/curve';
+import { applyLevers, haggisActivities, loadSnapshot, schedule } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
 const practice = join(root, '.practice');
@@ -128,7 +129,14 @@ function readStatuses(): Map<string, Status> {
 
 // XP rate samples, xp/tick history (sparkline), phase start times.
 // Each sample keeps every skill's XP, so a rate can be taken for one skill (the goal) and not the sum of all.
-type Sample = { at: number; tick: number; xp: number; sk: Record<string, number> };
+type Sample = { at: number; tick: number; xp: number; sk: Record<string, number>; coins: number; food: number };
+// Food a gold farmer eats: the pack items the thieving scripts eat (lobsters, cakes, bread, chocolate, fish).
+const FOOD_RE = /lobster|cake|bread|chocolate|shrimp|anchov|trout|salmon|tuna|swordfish|pike|herring|sardine|meat|chicken/i;
+const coinsOf = (s: Status) => [...(s.inventory ?? []), ...(s.bank ?? [])].filter((i: any) => i?.name === 'Coins').reduce((n: number, i: any) => n + i.count, 0);
+const foodOf = (l: any[] | null | undefined) => (l ?? []).filter((i: any) => i?.name && FOOD_RE.test(i.name) && !/noted/i.test(i.name)).reduce((n: number, i: any) => n + i.count, 0);
+// Coins at the first status of each run (name + started), so "made this run" survives a dashboard restart only
+// within one process; it restarts from the next status after that.
+const runStartCoins = new Map<string, number>();
 const samples = new Map<string, Sample[]>();
 const spark = new Map<string, number[]>();
 type Ev = { at: number; name: string; text: string };
@@ -141,8 +149,12 @@ function track(s: Status) {
     const sk: Record<string, number> = {};
     for (const k of s.skills ?? []) sk[k.name] = k.xp ?? 0;
     const list = samples.get(s.name) ?? [];
-    if (!list.length || list[list.length - 1]!.tick !== s.tick) {
-        list.push({ at: s.at, tick: s.tick, xp, sk });
+    // A status written before the game state loaded has 0 XP in every skill; as a sample it would make the next
+    // real one look like a jump of the account's whole XP (214M xp/h on a level-99 thief).
+    if (xp > 0 && (!list.length || list[list.length - 1]!.tick !== s.tick)) {
+        list.push({ at: s.at, tick: s.tick, xp, sk, coins: coinsOf(s), food: foodOf(s.inventory) });
+        const rk = s.name + '|' + s.started;
+        if (!runStartCoins.has(rk)) runStartCoins.set(rk, coinsOf(s));
         const r = rate(s.name, goalSkillOf(s), list);
         if (r != null && Date.now() - s.at < 20_000) { const sp = spark.get(s.name) ?? []; sp.push(Math.round(r * 10) / 10); if (sp.length > 60) sp.shift(); spark.set(s.name, sp); }
     }
@@ -167,6 +179,13 @@ function rate(name: string, skill: string | null, l = samples.get(name) ?? []) {
     const a = l[0]!, b = l[l.length - 1]!;
     const xa = skill ? a.sk[skill] ?? 0 : a.xp, xb = skill ? b.sk[skill] ?? 0 : b.xp;
     return b.tick > a.tick ? (xb - xa) / (b.tick - a.tick) : null;
+}
+// Coins and food per tick over the last 2 minutes (food is eaten: a positive number is food used per tick).
+function flowRate(name: string, key: 'coins' | 'food') {
+    const l = samples.get(name) ?? [];
+    if (l.length < 2) return null;
+    const a = l[0]!, b = l[l.length - 1]!;
+    return b.tick > a.tick ? (key === 'food' ? a.food - b.food : b.coins - a.coins) / (b.tick - a.tick) : null;
 }
 function goalSkillOf(s: Status): string | null {
     const known = ROLE_SKILL[s.role];
@@ -215,8 +234,10 @@ setInterval(() => {
     cpuPct = all ? 100 * busy / all : 0;
     cpuPrev = now;
 }, 4000);
-async function scanProcs() {
-    if (!clients.size) return; // nobody watching: no PowerShell
+let procsAt = 0;
+async function scanProcs(force = false) {
+    if (!clients.size && !force) return; // nobody watching: no PowerShell
+    procsAt = Date.now();
     try {
         const ps = "Get-CimInstance Win32_Process -Filter \"Name='bun.exe'\" | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.WorkingSetSize, $_.CommandLine }";
         const p = Bun.spawn(['powershell', '-NoProfile', '-Command', ps], { stdout: 'pipe', stderr: 'ignore' });
@@ -360,6 +381,10 @@ const itemIds = new Map<string, number>(Object.entries((() => { try { return JSO
 const marketIds = new Map<string, number>();
 const iconId = (name: string) => marketIds.get(name.toLowerCase()) ?? itemIds.get(name.toLowerCase()) ?? null;
 const prices = new Map<string, number>();
+const marketById = new Map<number, { name: string; ask: number | null; bid: number | null; stock: number; vwap: number | null; base: number | null }>();
+// Key supplies for the main run: the ids in research/market-2026-10-23.json.
+const KEY_SUPPLY_FILE = join(root, 'research', 'market-2026-10-23.json');
+const keySupplyIds = () => cached<number[]>(KEY_SUPPLY_FILE, t => Object.values(JSON.parse(t).items ?? {}).map((x: any) => Number(x.id)).filter(n => !isNaN(n)), []);
 let pricesAt = 0;
 async function refreshPrices() {
     try {
@@ -370,11 +395,11 @@ async function refreshPrices() {
             // The market is thin: one trade set Bread's lastPrice to 1,000,000. Use the 7-day VWAP when the item
             // traded at least 3 times, else the shop base price.
             for (const i of j.items ?? []) {
-                if (i.id != null) marketIds.set(String(i.name).toLowerCase(), Number(i.id));
+                if (i.id != null) { marketIds.set(String(i.name).toLowerCase(), Number(i.id)); marketById.set(Number(i.id), { name: i.name, ask: i.ask ?? null, bid: i.bid ?? null, stock: i.sellQuantity ?? 0, vwap: i.vwap ?? null, base: i.basePrice ?? null }); }
                 const p = i.vwap != null && (i.trades ?? 0) >= 3 ? i.vwap : i.basePrice;
                 if (p != null) prices.set(String(i.name).toLowerCase(), Number(p));
             }
-            await Bun.sleep(200);
+            await Bun.sleep(500); // 2 requests a second at most
         }
         pricesAt = Date.now();
     } catch { /* next round */ }
@@ -566,6 +591,71 @@ function alerts(bots: any[], now: number): Alert[] {
     return out.filter(a => !a.practice || now - a.at < 3_600_000).sort((a, b) => Number(!!a.practice) - Number(!!b.practice) || b.at - a.at).filter(a => { const k = a.name + a.kind + a.text; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 30);
 }
 
+// ---------- role-aware row data, picked from the swarm job's goal ----------
+function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: number | null) {
+    const goal = String(job?.goal ?? s.goal ?? '');
+    const pack = s.inventory ?? [];
+    if (/^gold farm/i.test(goal)) {
+        const coins = coinsOf(s), start = runStartCoins.get(s.name + '|' + s.started);
+        const cpt = fresh ? flowRate(s.name, 'coins') : null, eat = fresh ? flowRate(s.name, 'food') : null;
+        const food = foodOf(pack), bankFood = foodOf(s.bank);
+        // Time until the pack's food is gone at the measured eat rate (game time, 0.4 s a tick).
+        const emptyTicks = eat && eat > 0 ? food / eat : null;
+        return { kind: 'gold', coins, made: start != null ? coins - start : null, coinsPerTick: cpt, food, bankFood, eatPerTick: eat, emptyMs: emptyTicks != null ? emptyTicks * world.tickMs : null };
+    }
+    if (/fish/i.test(goal) || s.role === 'fishing') return { kind: 'fish', xpPerTick: xpRate, feathers: pack.filter((i: any) => i?.name === 'Feather').reduce((n: number, i: any) => n + i.count, 0) };
+    if (/woodcut|chop/i.test(goal) || s.role === 'woodcutting') return { kind: 'wood', xpPerTick: xpRate, hp: s.hp ?? null };
+    if (/bank/i.test(goal) || s.name === BANKER) return { kind: 'bank' };
+    return { kind: 'xp', xpPerTick: xpRate };
+}
+
+// ---------- main account race: the planner's schedule against the live #1 deadlines ----------
+const LIVE_HISCORES = join(root, 'research', 'hiscores-live.json');
+const BOARDS_FILE = join(root, 'packages', 'planner', 'src', 'haggis-boards.json');
+const GATE_FILE = join(practice, 'haggis-go.json');
+const GAP_FILE = join(practice, 'gap-history.jsonl');
+type GapRec = { at: number; gap: number | null; wins: number; floorWins: number };
+const gapHistory: GapRec[] = tailJsonl<GapRec>(GAP_FILE, 300);
+let raceCache: { key: string; value: any } | null = null;
+function race() {
+    let key = '';
+    try { key = statSync(LIVE_HISCORES).mtimeMs + '|' + statSync(BOARDS_FILE).mtimeMs; } catch { return null; }
+    if (raceCache?.key === key) return raceCache.value;
+    try {
+        const boards = loadSnapshot(LIVE_HISCORES);
+        // Safe levers on, owner-decision levers off, no tricks: the plan the gate judges, with the levers applied.
+        const acts = applyLevers(haggisActivities(), {});
+        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { mode, tricks: new Set() }).boards;
+        const fl = run('floor'), re = run('realistic');
+        const rows = re.map(r => {
+            const f = fl.find(x => x.id === r.id)!;
+            const [label, holder] = [r.label.replace(/\s*\(.*\)$/, ''), (r.label.match(/\(#1 ([^,)]+)/) ?? [])[1] ?? null];
+            return { id: r.id, label, holder, deadline: r.deadline, real: { finish: r.finish, slack: r.slack, status: r.status }, floor: { finish: f.finish, slack: f.slack, status: f.status } };
+        });
+        const unmeasured = (readFileSync(BOARDS_FILE, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length;
+        const overall = rows.find(r => r.id === 'overall');
+        const value = { rows, unmeasured, wins: rows.filter(r => r.real.status === 'WIN').length, floorWins: rows.filter(r => r.floor.status === 'WIN').length, gap: overall?.real.slack ?? null, at: Date.now(), source: 'research/hiscores-live.json' };
+        raceCache = { key, value };
+        const last = gapHistory[gapHistory.length - 1];
+        if (!last || last.gap !== value.gap || last.wins !== value.wins) {
+            const rec = { at: Date.now(), gap: value.gap, wins: value.wins, floorWins: value.floorWins };
+            gapHistory.push(rec); if (gapHistory.length > 300) gapHistory.shift();
+            append(GAP_FILE, rec);
+        }
+        return value;
+    } catch (e) { return { error: String(e) }; }
+}
+// The 5 go/no-go gates: scripts/haggis-gate.ts every 10 minutes; it writes .practice/haggis-go.json.
+async function runGate() {
+    try { await Bun.spawn(['bun', join(root, 'scripts', 'haggis-gate.ts')], { stdout: 'ignore', stderr: 'ignore', cwd: root }).exited; } catch { /* next round */ }
+}
+setInterval(() => void runGate(), 600_000);
+setTimeout(() => void runGate(), 20_000);
+const gates = () => cached<{ go: boolean; at: number; gates: { name: string; pass: boolean; detail: string }[] } | null>(GATE_FILE, t => JSON.parse(t), null);
+
+// Vault value over time (in memory, one point a minute) for the economy sparkline.
+const vaultTrend: { at: number; value: number; coins: number }[] = [];
+
 // ---------- state ----------
 function shortPhase(ph: string) {
     // "gave 1 Shortbow, 1 Bronze sword, ..." -> "gave 19 items": never ship item lists to the roster.
@@ -617,6 +707,7 @@ function buildState() {
             uptime: s.started && s.at ? s.at - s.started : null,
             outcome: !res ? null : died(res) ? 'died' : /^ok\b/.test(res) ? 'ok' : 'fail',
             job, reserved: name === MAIN,
+            role4: roleView(s, job, fresh, r),
         };
     });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
@@ -638,6 +729,15 @@ function buildState() {
         return { board: e.board, top: t ? { name: t.name, level: null, time: t.value, ticks: null } : null, best: null, gap: null, kind: 'value' };
     })];
     const v = vault(bots, now);
+    if (!vaultTrend.length || now - vaultTrend[vaultTrend.length - 1]!.at > 60_000) { vaultTrend.push({ at: now, value: Math.round(v.value), coins: v.coins }); if (vaultTrend.length > 240) vaultTrend.shift(); }
+    const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
+    const economy = {
+        goldPerTick: farmers.reduce((n, b) => n + (b.fresh && b.role4.coinsPerTick > 0 ? b.role4.coinsPerTick : 0), 0),
+        farmers: farmers.map(b => ({ name: b.name, fresh: b.fresh, ...b.role4 })),
+        trend: vaultTrend.map(t => t.value),
+        supplies: keySupplyIds().map(id => ({ id, ...(marketById.get(id) ?? { name: '?', ask: null, bid: null, stock: 0, vwap: null, base: null }) })).filter(x => x.name !== '?'),
+        pricesAt,
+    };
     const icons: Record<string, number | null> = {};
     const see = (l: any) => { for (const i of l ?? []) if (i?.name && !(i.name in icons)) icons[i.name] = iconId(i.name); };
     for (const b of bots as any[]) { see(b.inventory); see(b.bank); }
@@ -652,6 +752,7 @@ function buildState() {
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
         viewerTimings: viewerTimings.slice(0, 20),
+        race: race(), gates: gates(), gapHistory: gapHistory.slice(-120).map(g => g.gap), economy,
         pageVersion: (() => { try { return statSync(join(import.meta.dir, 'index.html')).mtimeMs; } catch { return 0; } })(),
         icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
@@ -688,9 +789,12 @@ Bun.serve({
                 return new Response('ok');
             }).catch(() => new Response('bad', { status: 400 }));
         }
+        if (url.pathname === '/api/state' && Date.now() - procsAt > 60_000) void scanProcs(true);
         if (url.pathname === '/api/state') return new Response(current(), { headers: { 'content-type': 'application/json' } });
         // The 3D viewer (localhost:3000) fetches the names whose nameplates it must hide, so the dashboard page
         // never holds the name: the iframe URL carries only this endpoint.
+        // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
+        if (url.pathname === '/api/our-names') return Response.json(liveAccounts().filter(n => n !== MAIN), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/reveal') return new Response(MAIN, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
