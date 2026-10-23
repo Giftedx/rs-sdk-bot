@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import { loadPathfinding } from './pathcache';
+import { assertLoginAllowed } from './haggisgate';
 
 // Runs BotSDK + BotActions in the same process as a LiteClient, with no gateway.
 // BotSDK only speaks WebSocket (sdk/index.ts:272), so the shim fakes a connected socket and feeds it the
@@ -142,6 +143,7 @@ const vendor = (p: string) => join(repoRoot, 'vendor', 'rs-sdk', p);
 let pathfindingReady = false;
 
 export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean }): Promise<Session> {
+    assertLoginAllowed(opts.name);
     // dom-shim must load before any webclient `#/` module (session.ts:15 does the same).
     await import(vendor('server/webclient/src/lite/dom-shim.ts'));
     const { startSession } = await import(vendor('server/webclient/src/lite/session.ts'));
