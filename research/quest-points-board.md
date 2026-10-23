@@ -197,6 +197,7 @@ a time, each run on a fresh account that is deleted after the run.
 |---|---|---|---|
 | Sheep Shearer | `scripts/generated/quest-sheep.ts` | 70, 70, 70 | MEASURED 3/3 |
 | Doric's Quest | `scripts/generated/quest-doric.ts` | 30, 30, 30 | MEASURED 3/3 |
+| Imp Catcher | `scripts/generated/quest-imp.ts` | 38, 38, 38 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -212,3 +213,10 @@ items: 20 balls of wool.
 runs, each with `Congratulations! Quest complete!`. Two talks: "I wanted to use your anvils.", "Yes, I will get you
 materials." (`quest_doric/scripts/quest_doric.rs2:36-62`, varp 10), then the hand-in (`:68-84`) queues the
 completion. Helper items: 6 clay, 4 copper ore, 2 iron ore (12 pack slots).
+
+### Imp Catcher
+
+`RESULT ok qp=1 xp=magic=21875 at=3104,3163,2 ticks=38 hpMin=99 eats=0 walkTicks=0 retries=0 died=false` in all 3
+runs, each with `Congratulations! Quest complete!`. "Give me a quest!", "Give me a quest please."
+(`areas/area_wizard_tower/scripts/wizard_mizgog.rs2:39-52`), then the hand-in (`:6-19`). Helper items: the red,
+yellow, black and white beads (imp drops; the obj configs have no `tradeable=no`).
