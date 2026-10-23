@@ -82,7 +82,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Throne of Miscellania (`misc`) | 1 (111) | rest | Heroes' Quest, Fremennik Trials (`quest_misc/scripts/misc_journal.rs2:8-17`, `misc_door_guard.rs2:10`) | none found | XL |
 | Murder Mystery (`murder`) | 3 (112) | rest | none found | none found | M |
 | The Restless Ghost (`priest`) | 1 (113) | rest | none found | level 13 skeleton (`quest_priest/scripts/priest_journal.rs2:8`) | S |
-| Priest in Peril (`priestperil`) | 1 (114) | rest | none found | level 30 (`quest_priestperil/scripts/priestperil_journal.rs2:7`) | M |
+| Priest in Peril (`priestperil`) | 1 (114) | rest | none found; 50 rune essence to Drezel (`areas/area_mausoleum/scripts/drezel.rs2:96-113`); MEASURED 993-1011 ticks in row `quests-medium` | level 30 (`quest_priestperil/scripts/priestperil_journal.rs2:7`) | M |
 | Prince Ali Rescue (`prince`) | 3 (115) | `qp-filler` | none found | none found | - |
 | Romeo & Juliet (`romeojuliet`) | 5 (116) | `rj` | none | none | - |
 | Rune Mysteries (`runemysteries`) | 1 (117) | rest | none found | none | S |
@@ -431,6 +431,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Pirate's Treasure | `scripts/generated/quest-hunt.ts` | 474, 471, 460 | MEASURED 3/3 |
 | The Knight's Sword | `scripts/generated/quest-squire.ts` | 893, 887, 922 | MEASURED 3/3 |
 | Plague City | `scripts/generated/quest-elena.ts` | 780, 784, 749 | MEASURED 3/3 |
+| Priest in Peril | `scripts/generated/quest-priestperil.ts` | 1010, 993, 1011 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -483,8 +484,6 @@ Findings:
 - 680 of the about 890 ticks are walks: the Falador-Thurgo leg three times. No teleport lands nearer to Thurgo.
 - Helper items: redberry pie, 2 iron bars, rune pickaxe, Varrock and two Falador teleport runes (all tradeable).
 
-Next medium quest: Priest in Peril (`quests/quest_priestperil`; it opens Morytania for Nature Spirit, Haunted Mine and Shades of Mort'ton). Not started: no script and no preset yet.
-
 ### Plague City
 
 `RESULT ok qp=1 xp=mining=60625 ... ticks=780 ... walkTicks=227 retries=3 died=false` (runs: 780, 784, 749 ticks; a
@@ -519,15 +518,54 @@ Findings:
   chocolaty milk (`knowledge/items.json`). Helper items: dwellberries, 4 buckets of water, spade, rope, chocolate dust,
   bucket of milk, snape grass (all tradeable).
 
+### Priest in Peril
+
+`RESULT ok qp=1 xp=attack=7000,hitpoints=2317,prayer=35150,magic=1750 ... ticks=1010 ... walkTicks=539 retries=2
+died=false` (runs: 1010, 993, 1011 ticks; a passing trial before the proof: 1039), each with `You give the priest your
+blank runes.` and `Congratulations! Quest complete!`. Steps (proof run 1 MILESTONE ticks; quest truth in
+`quests/quest_priestperil/scripts/` and `areas/area_mausoleum/scripts/`): King Roald "Sure." (1,
+`areas/area_varrock/scripts/king_roald.rs2:46-55`) 0-24; the walk to the temple, Knock-at on the door (3489 at
+3408,3489), "Roald sent me to check on Drezel.", "Sure." (2, `temple_doors.rs2:22-31,63-82`) 24-174; the trapdoor north of
+the temple (1568 at 3405,3507), the temple guardian killed (3, `temple_guardian.rs2:1-11`) 174-225; Varrock teleport,
+Roald (4, `king_roald.rs2:69-81`) 225-282; the temple doors open now, a level 30 monk (`priestperilevilmonk3`) killed for
+the golden key (`evil_monks.rs2:52-56`) 282-426; the spiral stairs (1738 at 3417,3484), the ladder (1747 at 3410,3485),
+Talk-through on the cell door (3463 at 3415,3489,2), "Tell me anyway.", "Yes." (5, `trapped_drezel.rs2:54-67,85-119`)
+426-537; the trapdoor, gate 1 (3444 at 3405,9895, open at 5, `gates.rs2`), the golden key on each monument until it swaps
+for the iron key (`monuments.rs2:52-66`), the bucket on the well (3485 at 3423,9890, `well.rs2`) 537-611; back up, the
+iron key on the cell door (6), Drezel blesses the murky water, the blessed water on the coffin (3480 at 3413,3486,2; 7,
+`vampire_coffin.rs2:8-17`), Drezel (8) 611-711; the trapdoor, gates 1 and 2 (3445 at 3431,9897, open at 8), Drezel by the
+monuments (10, `drezel.rs2:30-56`), 23 essence used on him 711-831; Varrock teleport, 27 essence from the east bank
+(booths at 3252-3256,3419), the walk back, the rest of the essence queues the completion 831-1010.
+Findings:
+- Drezel takes 50 unnoted essence (`drezel.rs2:96-113`; notes get only a dialogue, `:73-79`). 28 slots hold one
+  batch, so a single-account run makes a bank trip (about 180 ticks: 831-1010). In the swarm run a helper at the
+  mausoleum with 27 essence would save most of it (not measured).
+- The iron key lies in one of 7 monuments at random (`monuments.rs2:31-33`); the golden key swaps only on that one,
+  and "Nothing interesting happens." on the others. The script tries them nearest first (at most 7 clicks).
+- East of Varrock the SDK plans past `lockeddoor1` at 3268,3435 (`maps/m51_53.jm2`). The server does not let the bot
+  through, and the walker clicks the locked door: 251 ticks lost twice per run in two trials. Three waypoints
+  (3272,3421; 3282,3428; 3285,3442) take the other way out. A temporary door block did not change the plan.
+- King Roald stands west of the throne room wall (door `loc_1536` at 3219,3472); a talk from the throne room is
+  rejected, so the preset starts in his room.
+- Gates 1 and 2, the cell door and the temple doors walk the bot through when opened (`open_and_close_metal_gate`,
+  `open_and_close_double_door2`), so the script checks the side of the door, not the door state.
+- Helper items: bucket, 50 rune essence (23 in the pack, 27 in the bank), runes for two Varrock teleports (all
+  tradeable). No food: hpMin 98 against the level 30 guardian and monk.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
-Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922) and Plague City (1 QP, 749 / 784): 4 QP, floor
-2,096 ticks (sum of best runs), realistic 2,180 (sum of worst runs), the same under `rival-dialogue-burst`. Row
-`quests-rest` loses them: 35 -> 32 quests, `qp` 77 -> 73, three medium classes less: 54,200 / 81,400 -> 51,500 /
-77,500 (burst 50,124 / 75,279 -> 47,627 / 71,672). The QP total stays 145. `bun test packages/planner`: 42 pass, 0
-fail. `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
-at 101,678 floor / 134,815 realistic (deadline 1,022,262). Overall unchanged (40,212 / 45,105).
+Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922), Plague City (1 QP, 749 / 784) and Priest in Peril
+(1 QP, 993 / 1,011): 5 QP, floor 3,089 ticks (sum of best runs), realistic 3,191 (sum of worst runs), the same under
+`rival-dialogue-burst`. Row `quests-rest` loses them: 35 -> 31 quests, `qp` 77 -> 72, four medium classes less:
+54,200 / 81,400 -> 50,600 / 76,200 (burst 50,124 / 75,279 -> 46,795 / 70,470). The QP total stays 145. The row is
+written by the helper's `medium-row.ts` from its QUESTS list. `bun test packages/planner`: 42 pass, 0 fail.
+`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers` after Priest in Peril: QP at end 145;
+Quest Points WIN at 101,857 floor / 134,626 realistic (deadline 1,022,262). Overall 40,230 / 45,107, the same with
+and without this change (the HEAD boards file gives the same Overall line).
+
+Next medium quest: Biohazard (`quests/quest_biohazard`; script `scripts/generated/quest-biohazard.ts` and preset
+`quest_biohazard` written from the content read, not yet run).
 
 ## Cook's Assistant, Witch's House, Lost City (MEASURED practice, 3/3 each)
 

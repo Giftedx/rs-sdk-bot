@@ -36,10 +36,10 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     quest_squire: medium({ x: 2978, z: 3342 }, [2325, 2351, 2351, 1275, [563, 3], [556, 9], [554, 1], [555, 2]], 6),
     // Priest in Peril: in Varrock palace beside King Roald (spawn 3222,3476, maps/m50_54.jm2; he stands in the room
     // west of the throne room wall, door loc_1536 at 3219,3472); a bucket (1925) for the well, runes for two Varrock
-    // teleports (2 law 563, 6 air 556, 2 fire 554), 22 rune essence (1436) in the pack and 28 in the bank (Drezel takes
-    // 50, drezel.rs2:96-113; 28 slots hold one batch). The golden key, iron key and the murky and blessed water are
-    // quest items (quest_priestperil/configs/priestperil.obj).
-    quest_priestperil: { ...medium({ x: 3218, z: 3474 }, [1925, [563, 2], [556, 6], [554, 2], ...Array(22).fill(1436)], 1), bank: [{ id: 1436, count: 28 }] },
+    // teleports (2 law 563, 6 air 556, 2 fire 554), 23 rune essence (1436) in the pack and 27 in the bank, no food
+    // (Drezel takes 50, drezel.rs2:96-113; 28 slots hold one batch, and the golden key needs a slot). The golden key,
+    // iron key and the murky and blessed water are quest items (quest_priestperil/configs/priestperil.obj).
+    quest_priestperil: { ...medium({ x: 3218, z: 3474 }, [1925, [563, 2], [556, 6], [554, 2], ...Array(23).fill(1436)], 0), bank: [{ id: 1436, count: 27 }] },
     // Biohazard: in Elena's house, East Ardougne (elena2 spawn 2592,3336, maps/m40_52.jm2); Plague City done (165 = 30,
     // quest_elena.constant:21; the Ardougne teleport needs it, teleport.rs2:35); priest gown (426) and robe (428) for
     // Guidor's door; runes for a Falador, a Varrock and an Ardougne teleport (4 law 563, 6 air 556, 3 water 555, 1 fire

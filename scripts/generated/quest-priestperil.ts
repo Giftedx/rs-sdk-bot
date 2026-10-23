@@ -1,5 +1,5 @@
 // Priest in Peril from preset quest_priestperil (Varrock palace beside King Roald; every skill 99; a bucket, two Varrock
-// teleports, 22 rune essence in the pack and 28 in the bank). Reward: 1 QP, 1,406 Prayer XP before 25x, the wolfbane
+// teleports, 23 rune essence in the pack and 27 in the bank). Reward: 1 QP, 1,406 Prayer XP before 25x, the wolfbane
 // dagger (quests/quest_priestperil/scripts/priestperil.rs2:7-11).
 // Varp %priestperil (302, priestperil.constant): 1 Roald, 2 the temple door knock, 3 the temple guardian killed,
 // 4 Roald again (the temple doors open), 5 Drezel through the cell door, 6 the iron key on the cell door, 7 the
@@ -40,9 +40,10 @@ try {
     const x = () => q.pos()?.worldX ?? 0;
     const z = () => q.pos()?.worldZ ?? 0;
     const roald = /^king roald$/i;
-    // lockeddoor1 at 3268,3435 (maps/m51_53.jm2) never opens; the SDK plans through it east of Varrock, and the walk
-    // stalled there for 251 ticks in a trial. As a wall the plan takes the east gate.
-    if (!q.blockDoor(0, 3268, 3435)) console.log('WARN blockDoor 3268,3435');
+    // East of Varrock the SDK plans past lockeddoor1 at 3268,3435 (maps/m51_53.jm2); the server does not let the bot
+    // through there, and the walk stalled for 251 ticks in two trials (the walker clicks the locked door). These
+    // waypoints take the planner's other way out, east of the castle-side fence (3275-3285,3428).
+    const EAST = [{ x: 3272, z: 3421, tol: 2 }, { x: 3282, z: 3428, tol: 2 }, { x: 3285, z: 3442, tol: 2 }];
 
     // A door or gate that walks the bot through when opened (open_and_close_metal_gate, double_door2).
     const cross = async (label: string, l: { id: number; x: number; z: number }, op: RegExp, through: () => boolean): Promise<void> => {
@@ -59,7 +60,7 @@ try {
         if (!done()) await q.fail(`kill ${label}`);
     };
     const toTrapdoor = async (label: string): Promise<void> => {
-        await q.walk(`${label} to trapdoor`, [{ x: NORTH_TRAPDOOR.x, z: NORTH_TRAPDOOR.z - 1, tol: 1 }]);
+        await q.walk(`${label} to trapdoor`, [...(x() < 3290 ? EAST : []), { x: NORTH_TRAPDOOR.x, z: NORTH_TRAPDOOR.z - 1, tol: 1 }]);
         await q.climb(`${label} trapdoor`, () => q.locAt(NORTH_TRAPDOOR.x, NORTH_TRAPDOOR.z) ?? NORTH_TRAPDOOR, /climb-down|^open$/i, under, 6);
     };
     const upCellar = async (label: string): Promise<void> => {
@@ -67,7 +68,7 @@ try {
         await q.climb(`${label} cellar ladder`, () => q.locAt(CELLAR_LADDER.x, CELLAR_LADDER.z) ?? CELLAR_LADDER, /climb-up/i, () => !under());
     };
     const intoTemple = async (label: string): Promise<void> => {
-        await q.walk(`${label} to temple`, [{ x: TEMPLE_DOOR.x - 1, z: TEMPLE_DOOR.z, tol: 1 }]);
+        await q.walk(`${label} to temple`, [...(x() < 3290 ? EAST : []), { x: TEMPLE_DOOR.x - 1, z: TEMPLE_DOOR.z, tol: 1 }]);
         await cross(`${label} temple door`, TEMPLE_DOOR, /^open$/i, () => x() >= TEMPLE_DOOR.x + 1 && !under());
     };
     const upToDrezel = async (label: string): Promise<void> => {
@@ -83,7 +84,7 @@ try {
     await q.talk('roald 1', roald, [/^sure\.?$/i], () => q.sawText(/many thanks adventurer/i), ROALD, 60);
     q.milestone(1);
     // 2. The temple door, Knock-at: "Roald sent me to check on Drezel.", "Sure." sets 2 (temple_doors.rs2:22-31,63-82).
-    await q.walk('to temple', [{ x: TEMPLE_DOOR.x - 1, z: TEMPLE_DOOR.z, tol: 1 }]);
+    await q.walk('to temple', [...EAST, { x: TEMPLE_DOOR.x - 1, z: TEMPLE_DOOR.z, tol: 1 }]);
     await q.step('knock', () => { const k = q.locAt(TEMPLE_DOOR.x, TEMPLE_DOOR.z) ?? TEMPLE_DOOR; return q.opLoc(k, q.opIndex(k, /knock/i)); }, () => q.dialogOpen(), 12, 4);
     await q.converse([/roald sent me to check on drezel/i, /^sure\.?$/i], () => q.sawText(/one dead dog coming up/i), 60);
     await q.converse([], () => !q.dialogOpen(), 6);
@@ -168,13 +169,13 @@ try {
     };
     await giveEss('essence 1');
     q.milestone(32);
-    // 9. Varrock teleport, the east bank (28 essence), the walk back to Drezel; the rest completes the quest.
+    // 9. Varrock teleport, the east bank (27 essence), the walk back to Drezel; the rest completes the quest.
     await q.teleport('varrock teleport 2', 'magic:varrock_teleport', 3212, 3424);
     await q.walk('to bank', [{ x: BANK.x, z: BANK.z, tol: 1 }]);
     const o = await q.s.bot.openBank();
     if (!o.success) await q.fail(`openBank ${o.message}`);
     await q.waitTicks(1);
-    const w = await q.s.bot.withdrawItem(/^rune essence$/i, 28);
+    const w = await q.s.bot.withdrawItem(/^rune essence$/i, 27);
     if (!w.success) console.log(`WARN withdraw ${w.message}`);
     await q.s.bot.closeBank();
     if (!q.has(ITEM.ess)) await q.fail('no essence from bank');
