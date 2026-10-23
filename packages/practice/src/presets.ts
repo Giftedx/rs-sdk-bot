@@ -233,6 +233,15 @@ export const PRESETS: Record<string, SaveConfig> = {
         };
         return [[`combat_${spot}_${lv}`, base], [`combat_${spot}_${lv}_cannon`, cannon]];
     }))),
+    // Defence top-up as the Haggis plan reaches it (research/combat-measure.md section 7): Attack, Strength, Hitpoints 99,
+    // Defence 93 (Monkey Madness 500,000 + longrange side 179,700 = 679,700 XP), same gear and food as combat_<spot>_<band>.
+    // Run with STYLE=3 (scimitar "block", defensive: Defence XP).
+    ...Object.fromEntries([['gb', { x: 2525, z: 3242, level: 0 }], ['iw', { x: 2866, z: 9946, level: 0 }], ['sk', { x: 2650, z: 9889, level: 0 }]].map(([spot, position]) => [`combat_${spot}_def93`, {
+        position: position as { x: number; z: number; level: number },
+        skills: { Attack: 99, Strength: 99, Defence: 93, Hitpoints: 99 },
+        equipment: [[1163, 0], [1725, 2], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! })),
+        inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig])),
     // Ranged with a bow at the Gnome battlefield (spot gb), bands 40 / 70 / 90 in Ranged, Defence and Hitpoints. Band 40:
     // yew shortbow 857 (Ranged 40, tier40.rs2:64) and green d'hide body 1135, chaps 1099, vambraces 1065; bands 70 and 90:
     // magic shortbow 861 (Ranged 50) and black d'hide body 2503 (Ranged 70, Defence 40), chaps 2497, vambraces 2491.

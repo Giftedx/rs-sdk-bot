@@ -271,8 +271,102 @@ foodUsed=0`.
 - Logout: `combat-melee.ts` now walks 18 tiles away and waits until 17 ticks pass with no hit before logout. All 27
   runs in this section ended `exit=0`.
 
+## 7. Why Defence finished last, and two levers that fix it
+
+Planner run: `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`, scenario a.
+Before this section (HEAD 3a53608): Overall 37,851 floor (late 1,935) / 45,149 realistic (late 9,233), Defence last,
+then Hitpoints (36,137 / 43,260).
+
+### Why Defence was last (ESTIMATE, planner)
+
+Defence XP in the plan before Overall comes from 3 rows only:
+
+| Source | Defence XP | Row |
+|---|---|---|
+| Monkey Madness, reward option 1 (`quest_mm/scripts/mm_daero.rs2:296`, 20,000 x 25) | 500,000 | `rival-mm`, lands at 16,971 realistic |
+| Longrange side XP, 0.180 per Ranged XP (section 6) | 179,700 | `ranged`, 34,887-38,480 realistic |
+| Melee top-up, Defence 93 to 99 | 318,758 | `def-top` |
+
+EDF puts `def-top` (deadline 7,974) after the Agility rows (deadline 6,772). So the plan walks from the Ranged spot to
+the Wilderness course (335 ticks), trains Agility, walks back (335 ticks), and then trains Defence (1,957 ticks
+realistic). Agility ended at 42,857 and Hitpoints at 43,260; only Defence was later.
+
+### Every Defence XP source in rev 289 content (CODE-READ, `stat_advance` is in tenths, x25 on this server)
+
+| Source | Defence XP at 25x | Cite | In the plan |
+|---|---|---|---|
+| Monkey Madness, option 1 / option 2 | 500,000 / 875,000 | `quest_mm/scripts/mm_daero.rs2:296`, `:305` | option 1 (row `rival-mm`) |
+| Dragon Slayer | 466,250 | `quest_dragon/scripts/quest_dragon.rs2:34` | after Overall (`combat-hp-bound`) |
+| Holy Grail | 382,500 | `quest_grail/scripts/quest_grail.rs2:117` | after Overall |
+| Hero's Quest | 76,875 | `quest_hero/scripts/quest_hero.rs2:30` | inside `quests-rest` |
+| The Fremennik Trials | 70,310 | `quest_viking/scripts/quest_viking.rs2:136` | inside `quests-rest` |
+| Nature Spirit | 50,000 | `quest_druidspirit/scripts/quest_druidspirit.rs2:425` | inside `quests-rest` |
+| Observatory, Virgo sign only (random sign) | 21,875 | `quest_itgronigen/scripts/quest_itgronigen.rs2:228` | inside `quests-rest` |
+| In Search of the Myreque | 15,000 | `quest_routequest/scripts/quest_routequest.rs2:27` | inside `quests-rest` |
+| Genie lamp (random event only), base level x 10 | 23,250 at Defence 93 | `general/scripts/xplamp/xplamp.rs2:110-111` | no: not plannable |
+| Melee, defensive style: 4 x base per damage | 100 per damage | `skill_combat/scripts/combat.rs2:150` | `def-top` |
+| Melee, controlled: 1.33 x base each to Attack, Strength, Defence | 33.25 per damage | `combat.rs2:154` | no |
+| Ranged, longrange: 2 x base each to Ranged and Defence | 50 per damage | `combat.rs2:159` | `ranged` side XP |
+| Magic with the defensive melee style set: 1.33 Magic + 1 Defence x base | 25 per damage | `combat.rs2:164`, `player/player_magic.rs2:205-208` | no: a quarter of melee |
+
+Checked and rejected (planner, realistic): Monkey Madness option 2 gives +375,000 Defence (no `def-top` at all) but
+-375,000 Strength and -375,000 Hitpoints, which costs a 835-tick Strength top-up and about 5,300 ticks of Hitpoints (ESTIMATE, hand count).
+Dragon Slayer before Overall needs 32 QP first (`qp-filler`, `druid`, `gobdip`). The cannon during `def-top` is the
+retired `cannon-melee` lever (an LP check with the measured rates: its value per tick is 0.92 of the bow + melee mix).
+
+### Measurement: Defence style at the plan's stats (MEASURED practice)
+
+Presets `combat_gb_def93`, `combat_iw_def93` (new; Attack, Strength, Hitpoints 99, Defence 93, the section 1 gear,
+20 lobsters), `STYLE=3` (rune scimitar "block", Defence XP), 3 x 300 ticks each, `RANDOM_EVENTS=0`:
+
+| Spot | Defence XP/tick (runs) | Mean | HP XP/tick (runs) | Food | In combat |
+|---|---|---|---|---|---|
+| Ice warriors (iw) | 192.3 / 171.0 / 145.3 | **169.5** | 63.8 / 56.7 / 48.1 | 0 | 0.95 |
+| Gnome battlefield (gb) | 158.3 / 153.0 / 144.0 | **151.8** | 52.4 / 50.6 / 47.6 | 0 | 0.91-0.92 |
+
+Example lines:
+`RESULT ok cannon=false ticks=300 styleXp=57700 styleXpPerTick=192.3 hpXp=19130 hpXpPerTick=63.8 ... inCombatShare=0.950 attacks=14 ... foodUsed=0 ... lv=99/99/94/99/1` (iw run 1)
+`RESULT ok cannon=false ticks=300 styleXp=47500 styleXpPerTick=158.3 hpXp=15730 hpXpPerTick=52.4 ... inCombatShare=0.913 attacks=25 ... foodUsed=0 ... lv=99/99/94/99/1` (gb run 1)
+
+- The defensive style at Attack and Strength 99 is near the band 90 aggressive rate (iw 185.3, gb 139.6): the higher
+  levels make up for the lost +3 Strength style bonus.
+- The `def-top` row used a 1-99 XP-weighted rate (179.5 / 162.9). With Monkey Madness on, the row starts at
+  Defence 93, so only the band 90 rate applies.
+
+### Levers (`packages/planner/src/haggis.ts` LEVERS, `owner: false`; patches in `haggis-boards.json`)
+
+- **`def-at-ranged-spot`**: `def-top` requires `ranged`; `agility-52` requires `def-top`. Defence trains at the
+  Ranged spot right after the Ranged row (both rows are at the same place), so the walk back from the Wilderness course
+  is gone. Rate: the gb measurement above (158.3 / 151.8), because the Ranged row is measured at the Gnome battlefield.
+- **`waterfall-late`**: Waterfall serves Quest Points only, so it moves after Overall; `att-top` and `str-top` require
+  `tree`, `grandtree` and `rival-mm` in place of `waterfall`. Attack is 99 without Waterfall: Tree Gnome Village
+  286,250 + The Grand Tree 460,000 + Fight Arena 304,375 = 1,050,625. Strength: Monkey Madness 875,000, then a
+  123,458 XP top-up (667 ticks at 185.3) in place of Waterfall (1,037 ticks) and its 535 walk ticks.
+
+Overall finish (scenario a, all safe levers; the same numbers from HEAD + these rows and from the working tree with
+other agents' uncommitted rows):
+
+| Table | Floor | Realistic | Last skill, then |
+|---|---|---|---|
+| Before (HEAD 3a53608) | 37,851 (late 1,935) | 45,149 (late 9,233) | Defence; Hitpoints 36,137 / 43,260 |
+| `def-at-ranged-spot` only | 37,434 (late 1,518) | 44,784 (late 8,868) | Defence; Agility 35,323 / 42,492 |
+| `waterfall-late` only | 37,754 (late 1,838) | 44,957 (late 9,041) | Agility; Defence 33,865 / 40,580 |
+| **Both (committed)** | **37,337 (late 1,421)** | **44,592 (late 8,676)** | **Agility; Defence 33,448 / 40,215** |
+
+Saved as the last lever: `waterfall-late` 417 / 365, `def-at-ranged-spot` 97 / 192 (CLI `--levers`).
+
+- Agility is now the last skill. Its rows are ESTIMATE (lap times not measured). Hitpoints 99 lands at
+  30,468 / 37,105.
+- The iw rate in the same order would save 356 / 219 more ticks than the gb rate (planner, without `waterfall-late`), but the Ranged row is at the
+  battlefield, and the walk into the Ice Queen lair is not checked. Not modelled.
+- Scorpion Catcher (165,625 Strength) in place of the Strength top-up: 277 floor ticks against 608, but 832
+  realistic against 667 (ESTIMATE quest time). Not modelled.
+
 ## Open
 
+- Measure Agility lap times (the Wilderness course row is now on the critical path).
+- The real places of the combat rows: `str-top`, `ranged`, `def-top` are all at `falador-white-knights` in the
+  travel model, but the rates come from the Gnome battlefield and the Ice Queen lair.
 - Ranged 1 to 40 with a lower bow (1.6% of the XP; not measured).
 - The walk into the Ice Queen lair and the Temple of Ikov dungeon (access rules not checked).
 - The fixed cannon handling at bands 40 and 70 (only band 90 measured; `def-top` uses the band 90 cannon rate).

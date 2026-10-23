@@ -1449,7 +1449,17 @@
    "evidence": "MEASURED",
    "source": "XP: quest_waterfall.rs2:491-492, measured 343,750 Attack + 343,750 Strength per run; ticks research/quest-plan.md",
    "at": "almera",
-   "endAt": "baxtorian-falls"
+   "endAt": "baxtorian-falls",
+   "patches": [
+    {
+     "lever": "waterfall-late",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "tree",
@@ -1920,6 +1930,16 @@
        }
       }
      }
+    },
+    {
+     "lever": "waterfall-late",
+     "set": {
+      "requires": [
+       "tree",
+       "grandtree",
+       "rival-mm"
+      ]
+     }
     }
    ],
    "at": "falador-white-knights"
@@ -1975,6 +1995,16 @@
         "hitpoints": 0.331
        }
       }
+     }
+    },
+    {
+     "lever": "waterfall-late",
+     "set": {
+      "requires": [
+       "tree",
+       "grandtree",
+       "rival-mm"
+      ]
      }
     }
    ],
@@ -2092,6 +2122,12 @@
        "agility-25"
       ]
      }
+    },
+    {
+     "lever": "def-at-ranged-spot",
+     "addRequires": [
+      "def-top"
+     ]
     }
    ],
    "at": "gnome-course",
@@ -2396,6 +2432,27 @@
         "realistic": 86.7,
         "evidence": "MEASURED",
         "source": "research/combat-measure.md: section 5, band 90 cannon rate used for all of Defence 1 -> 99 (bands 40 and 70 with the fixed cannon handling not measured)"
+       },
+       "side": {
+        "hitpoints": 0.331
+       }
+      }
+     }
+    },
+    {
+     "lever": "def-at-ranged-spot",
+     "addRequires": [
+      "ranged"
+     ],
+     "set": {
+      "train": {
+       "skill": "defence",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 158.3,
+        "realistic": 151.8,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md section 7: Gnome battlefield (the ranged row spot), preset combat_gb_def93 (Attack, Strength, Hitpoints 99, Defence 93 as the plan reaches this row), rune scimitar block style (STYLE=3), practice, 3 x 300 ticks: 158.3 / 153.0 / 144.0 Defence XP per tick (floor = best run, realistic = mean)"
        },
        "side": {
         "hitpoints": 0.331

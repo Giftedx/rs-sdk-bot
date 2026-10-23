@@ -599,6 +599,11 @@ export const LEVERS: { id: string; owner: boolean; label: string; retired?: bool
     // (research/combat-measure.md section 6); bow + cannon carries Ranged instead.
     { id: 'cannon-melee', owner: false, retired: true, label: 'Cannon fires for Ranged XP during every melee top-up (RETIRED: loses ticks)' },
     { id: 'stun-guests', owner: false, label: 'Prayer and Magic inside the pickpocket stuns' },
+    // research/combat-measure.md section 7. Attack is 99 from Tree Gnome Village, The Grand Tree and Fight Arena before
+    // Monkey Madness, so Waterfall adds only Strength; a melee top-up after Monkey Madness gives it in fewer ticks.
+    { id: 'waterfall-late', owner: false, label: 'Waterfall Quest after Overall; Strength 99 from Monkey Madness + melee top-up' },
+    // Defence trains at the ranged row spot right after the Ranged row, before the walk to the Wilderness course.
+    { id: 'def-at-ranged-spot', owner: false, label: 'Defence top-up at the Gnome battlefield right after the Ranged row (no walk back)' },
     { id: 'flinch-gather', owner: false, label: '2-tick flinch woodcutting and fishing (tick manipulation, UNVERIFIED live)' },
     // Owner rule: accepted mechanics yes, content bugs no. charge.rs2 has no p_delay (5 casts a tick) and no "2005"
     // note for that, so it counts as a content bug (research/rival-gap-list.md); kept here only to show its size.

@@ -284,3 +284,25 @@ test('every row of the real table has a known place, and the travel schedule has
     expect(r.blocked).toEqual([]);
     expect(r.travel).toBeGreaterThan(0);
 });
+
+test('waterfall-late and def-at-ranged-spot (research/combat-measure.md section 7): each saves Overall ticks as the last lever', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
+    const acts = haggisActivities();
+    const travel = haggisTravel();
+    for (const mode of ['floor', 'realistic'] as const) {
+        const run = (disable: string[]) => schedule(boards, acts, { mode, tricks: new Set(), travel, disable: new Set(disable) });
+        const all = run([]);
+        expect(all.blocked).toEqual([]);
+        const overall = finish(all, 'overall').finish!;
+        // Defence trains right after the Ranged row, at the same place: no walk between them.
+        const ids = all.order.map(p => p.id);
+        const def = all.order[ids.indexOf('def-top')]!;
+        expect(ids.indexOf('def-top')).toBe(ids.indexOf('ranged') + 1);
+        expect(def.travel ?? 0).toBe(0);
+        expect(finish(all, 'defence').finish!).toBeLessThan(overall);
+        // Waterfall runs after Overall; Strength still reaches 99 before Overall.
+        expect(all.order.find(p => p.id === 'waterfall')!.start).toBeGreaterThanOrEqual(overall);
+        expect(finish(all, 'strength').finish!).toBeLessThan(overall);
+        for (const lever of ['waterfall-late', 'def-at-ranged-spot']) expect(finish(run([lever]), 'overall').finish!).toBeGreaterThan(overall);
+    }
+});
