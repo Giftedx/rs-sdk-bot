@@ -12,7 +12,7 @@
         "CAP": "15000"
       },
       "enabled": true,
-      "note": "fix 81f31bb proved 2/2 on practice"
+      "note": "81f31bb proved only: resume to Fishing 40 (trips=0, events=0) and fresh to 31; feather refill, rod rebuy and events never ran; XP-curve bug found (ece5dc2), fix in progress"
     },
     {
       "account": "Moneyshot",

@@ -6,7 +6,7 @@
 // Usage: DEMO_OK=1 bun scripts/banker.ts [banker=Moneyshot]. Runs until .practice/stop-<banker> exists.
 // Skill boards store the playtime tick each level was reached at (server engine/entity/Player.ts levelPlaytime),
 // so a finished account that logs in to give does not lose board time.
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish } from '../packages/core/src/bot';
 import { waitTicks } from '../packages/core/src/ticks';
@@ -47,8 +47,16 @@ try {
     // Payouts: a bot that needs stock writes .practice/withdraw/<bot>.json ({items:[{name,count}]}) and comes to trade
     // (scripts/take-from-banker.ts). The banker withdraws it, gives it in one trade, and deletes the request.
     const reqDir = join(root, '.practice', 'withdraw');
+    // A request whose giver died or was killed must not block the banker: drop it after 10 minutes or 2 failed tries.
+    const fails = new Map<string, number>();
     const payOut = async (bot: string) => {
         const file = join(reqDir, `${bot}.json`);
+        if (Date.now() - statSync(file).mtimeMs > 10 * 60_000 || (fails.get(bot) ?? 0) >= 2) {
+            console.log(`WARN dropped stale payout request from ${bot}`);
+            rmSync(file, { force: true });
+            fails.delete(bot);
+            return;
+        }
         const want: { name: string; count: number }[] = JSON.parse(readFileSync(file, 'utf8')).items;
         const exact = (n: string) => new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
         const o = await s.bot.openBank();
@@ -65,7 +73,7 @@ try {
             appendFileSync(logFile, JSON.stringify({ at: Date.now(), from: name, to: bot, items }) + '\n');
             console.log(`MILESTONE paid ${bot} ${items.map(i => `${i.count} ${i.name}`).join(', ')}`);
             rmSync(file);
-        } else console.log(`WARN payout to ${bot} not taken: ${r.message}`);
+        } else { fails.set(bot, (fails.get(bot) ?? 0) + 1); console.log(`WARN payout to ${bot} not taken: ${r.message}`); }
         await bankAll();
     };
     while (!existsSync(stop)) {
@@ -73,7 +81,11 @@ try {
         // A bot with an open payout request is skipped here, so its trade goes to payOut on the next pass.
         const pending = new Set((existsSync(reqDir) ? readdirSync(reqDir) : []).map(f => f.slice(0, -5).toLowerCase()));
         const from = new RegExp(`^(${ourAccounts().filter(n => n.toLowerCase() !== name.toLowerCase() && !pending.has(n.toLowerCase())).join('|')})$`, 'i');
-        const r = await s.bot.serveTrades({ from, maxTrades: 1, timeout: 6_000 });
+        // A long window so a donor's trade is never cut off mid-session (the SDK caps a session at the window's time
+        // left); `until` ends it early when a payout request appears or the stop file is written.
+        const hasRequest = () => existsSync(reqDir) && readdirSync(reqDir).some(f => f.endsWith('.json'));
+        const r = await s.bot.serveTrades({ from, maxTrades: 1, timeout: 120_000, until: () => hasRequest() || existsSync(stop) });
+        for (const t of r.trades.filter(t => !t.success)) console.log(`WARN donor trade failed: ${t.partner ?? '?'} ${t.reason ?? ''} ${t.message}`);
         for (const t of r.trades.filter(t => t.success)) {
             trades++;
             const items = t.received.map(i => ({ name: i.name, count: i.count }));
