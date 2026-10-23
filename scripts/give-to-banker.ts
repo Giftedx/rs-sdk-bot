@@ -20,7 +20,20 @@ try {
     if (!p || Math.max(Math.abs(p.worldX - BANK_SPOT.x), Math.abs(p.worldZ - 3300)) > 80) {
         await finish([s], false, `not in Ardougne (${p?.worldX},${p?.worldZ})`);
     }
-    await s.bot.walkTo(BANK_SPOT.x, BANK_SPOT.z, 2);
+    // Up to 3 tries, as in goldfarm.ts: from the knights' spot the first walk can stop at a door (2026-10-23 live:
+    // "cant_reach ... loc 376 - no route" and no trade).
+    for (let i = 0; i < 3; i++) {
+        const q = s.sdk.getState()?.player;
+        if (q && Math.max(Math.abs(q.worldX - BANK_SPOT.x), Math.abs(q.worldZ - BANK_SPOT.z)) <= 3) break;
+        await s.bot.walkTo(BANK_SPOT.x, BANK_SPOT.z, 2);
+    }
+    const wantCoins = only?.find(g => /^coins$/i.test(g.name))?.count ?? 0;
+    if (only && wantCoins > 0 && countItems(s, /^coins$/i) < wantCoins) {
+        // GIVE=Coins:n with fewer coins in the pack: take the rest from the bank (a farmer banks its coins).
+        const o = await s.bot.openBank();
+        if (o.success) { await s.bot.withdrawItem(/^coins$/i, wantCoins - countItems(s, /^coins$/i)); await s.bot.closeBank(); }
+        else console.log(`WARN openBank ${o.message}`);
+    }
     if (!only) {
         // Banked coins come out too: coins stack, so they take one slot.
         const o = await s.bot.openBank();
