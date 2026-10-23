@@ -115,8 +115,8 @@ Ticks are the handler's cost, measured on the local test engine (section 5) wher
 | Drunken dwarf | npc 956, op "Talk-to" | Follows. Warnings every 10 ticks; at 50 ticks he attacks (maxrange 10000) | Talk at once | 4 (measured) | He attacks until he despawns | Kebab and beer |
 | Mysterious old man, gift | npc 410, op "Talk-to" | Follows. Warnings at 20, 40, 60; at 80 a fail teleport | Talk once he stays 3 ticks (the other variants vanish in 1-2 ticks) | 4 to 7 (measured) | Fail teleport | Kebab, spinach roll, 240 coins or a casket (members table 150) |
 | Strange box | obj 3062 "Strange box", interface 6554 | Put in the pack. It cannot be dropped. Every 150 ticks it copies itself (up to 28) | Open it, read the question and the three model objs, click the right answer | about 4 per box | A wrong answer adds a box; boxes fill the pack | Coins (80-640), uncut sapphire/emerald/ruby/diamond, 240 coins, key half |
-| Mime | npc 1056, region x 1984-2047, z 4736-4799 | Teleport to the theatre. Copy the mime's emote 4 times in a row | Read the mime's emote animation, click the matching button (6546-6553) when the panel opens | 4 cycles of 32 ticks, about 130 | None: the player stays until it is done | A mime costume piece, an emote, or 500 coins |
-| Maze | region x 2880-2943, z 4544-4607 | Teleport to the maze. Touch the centre shrine (loc 3634 at 2911,4575) to return | Path to the shrine through the wall-doors (op "Open"), block a door that says "not the right way", touch the shrine | not measured | None: the player stays until it is done; the reward drops 1% each 5 ticks | 3 rolls of coins, feathers, arrows, runes, noted coal or mithril ore, scaled by total level and time left |
+| Mime | npc 1056, region x 1984-2047, z 4736-4799 | Teleport to the theatre. Copy the mime's emote 4 times in a row | Read the mime's emote animation, click the matching button (6546-6553) when the panel opens | 4 cycles of 32 ticks at best (about 130); NOT RELIABLE, see section 5 | None: the player stays until it is done | A mime costume piece, an emote, or 500 coins |
+| Maze | region x 2880-2943, z 4544-4607 | Teleport to the maze. Touch the centre shrine (loc 3634 at 2911,4575) to return | Path to the shrine through the wall-doors (op "Open"), block a door that says "not the right way", stand at local (30,32), open its door, touch the shrine | 183 measured (17 doors) | None: the player stays until it is done; the reward drops 1% each 5 ticks | 3 rolls of coins, feathers, arrows, runes, noted coal or mithril ore, scaled by total level and time left |
 | Strange plant (triffid), members | npc 407 "Strange plant", then 408 | Grows for 45 ticks, ripe until 90 ticks, then attacks (maxrange 3) | Pick it at 47-86 ticks after it appears (needs one free slot); if it turns, flee to 5 | 2 | Damage | Strange fruit (464) |
 
 ## 4. Fail teleports
@@ -170,8 +170,11 @@ Faults the live test found and fixed:
 - Every maze wall is a "Wall" with op Open, so the door index takes all 1,459 permanent walls (loc 3626) for
   doors. They are passed as blocked doors. The shrine fills its walled room; the way in is the door on the east
   edge of local (30,32).
-- The lite client drops the mime's emote animation before a state sample, so the mime job reads which emote seqs
-  the client looks up in `SeqType.list` (a Proxy, only while the bot is in the mime theatre).
+
+Not solved: the mime. The job clicks the right button when it knows the emote, but the mime's emote is
+seldom visible to the bot: the state showed it in 3 to 5 of about 10 cycles in two runs, and in 0 of 3 cycles in
+a third. A Proxy on the lite client's `SeqType.list` saw no emote lookup either. The event needs 4 correct
+answers in a row, so a bot can stay in the mime theatre for a long time. Chance per general event: 1/32.
 
 ## 6. Giant spiders at the castle river (not an event)
 
