@@ -161,7 +161,7 @@ function track(s: Status) {
     // A status written before the game state loaded has 0 XP in every skill; as a sample it would make the next
     // real one look like a jump of the account's whole XP (214M xp/h on a level-99 thief).
     if (xp > 0 && (!list.length || list[list.length - 1]!.tick !== s.tick)) {
-        list.push({ at: s.at, tick: s.tick, xp, sk, coins: coinsOf(s), food: foodOf(s.inventory) });
+        list.push({ at: s.at, tick: s.tick, xp, sk, coins: coinsOf(s), food: foodOf(s.inventory) + foodOf(s.bank) });
         const rk = s.name + '|' + s.started;
         // Only a status that lists the bank: before the first bank view, the whole old bank would count as "made".
         if (!runStartCoins.has(rk) && s.bank != null) runStartCoins.set(rk, coinsOf(s));
@@ -195,7 +195,10 @@ function flowRate(name: string, key: 'coins' | 'food') {
     const l = samples.get(name) ?? [];
     if (l.length < 2) return null;
     const a = l[0]!, b = l[l.length - 1]!;
-    return b.tick > a.tick ? (key === 'food' ? a.food - b.food : b.coins - a.coins) / (b.tick - a.tick) : null;
+    if (b.tick <= a.tick) return null;
+    // Food is counted in the pack and the bank; a rise means a trade or a new bank view, not negative eating.
+    if (key === 'food') return a.food >= b.food ? (a.food - b.food) / (b.tick - a.tick) : null;
+    return (b.coins - a.coins) / (b.tick - a.tick);
 }
 function goalSkillOf(s: Status): string | null {
     const known = SCRIPT_ROLE[String(s.goal ?? '')]?.skill ?? ROLE_SKILL[s.role];

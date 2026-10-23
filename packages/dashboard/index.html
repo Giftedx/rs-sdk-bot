@@ -204,7 +204,7 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
 /* The main account's name: a designed redaction chip, never the name, unless revealed on this PC. */
 .secret{display:inline-block;user-select:none;font:700 10px/14px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding:0 6px;border:1px solid var(--gold3);border-radius:3px;background:repeating-linear-gradient(135deg,#2a210f 0 4px,#1a150b 4px 8px);vertical-align:1px}.secret.shown{text-transform:none;letter-spacing:normal;font:inherit;background:none;border-color:transparent;padding:0;user-select:text}
 /* 2560 x 1440: wider side columns, same structure */
-@media (min-width:2200px){#roster{max-height:none}.grid{grid-template-columns:500px minmax(0,1fr) 600px}html,body{font-size:14px}.rr{height:22px}.dv{height:22px}.dv .sb{top:8px}.dv .fl{top:5px}}
+
 </style>
 </head>
 <body>
@@ -601,6 +601,10 @@ function chainHud(){const el=$('#chain'),c=S.chain;if(!c){el.style.display='none
    +'<span class="ar">▸</span>'+node(r?.name,r?.fresh,'courier',`${icon('Salmon',18)}${nf(r?.fish??0)}`,E(r?.fresh?(r.place||'on the road'):'parked · '+ago(S.now-r.at)),'fish notes carried; boats Ardougne ⇄ Port Sarim, walk to Draynor')
    +'<span class="ar">▸</span>'+(fs.length?fs.map(f=>node(f.name,f.fresh,'gold farm',`${icon('Salmon',18)}${nf(f.food+f.bankFood)}`,'food','food in pack and bank; no stall, no shop')).join(''):'<div class="cn cnoff"><span class="cap">gold farm</span><b>–</b><span class="dm">no farmer running</span></div>'))}
 $('#chain').addEventListener('click',e=>{const n=e.target.closest('[data-pick]');if(n)pick(n.dataset.pick)});
+// The layout is drawn for 1920 x 1080. A larger screen scales the whole page up (2560 x 1440: 1.33), so every
+// screen shows the same picture; the tooltip sits outside .app and keeps viewport pixels.
+function fitZoom(){const z=Math.max(1,Math.min(innerWidth/1920,innerHeight/1080)),a=$('.app');a.style.zoom=z>1.02?z.toFixed(3):'';a.style.height=z>1.02?(innerHeight/z).toFixed(1)+'px':''}
+addEventListener('resize',()=>{fitZoom();if(S)render()});fitZoom();
 function fades(){for(const el of document.querySelectorAll('.scroll,#sup,#vit,#vho'))el.classList.toggle('more',el.scrollHeight>el.clientHeight+2&&el.scrollTop+el.clientHeight<el.scrollHeight-2)}
 document.addEventListener('scroll',fades,true);
 function render(){
