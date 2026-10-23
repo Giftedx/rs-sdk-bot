@@ -90,7 +90,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Sea Slug (`seaslug`) | 1 (119) | `rival-seaslug` (qp 0) | Firemaking 30 (`quest_seaslug/scripts/quest_seaslug.rs2:43`) | none found | - |
 | Sheep Shearer (`sheep`) | 1 (120) | rest | none | none | S |
 | Sheep Herder (`sheepherder`) | 4 (121) | `qp-filler` | none found | none found | - |
-| The Knight's Sword (`squire`) | 1 (122) | rest | Mining 10 (`quest_squire/scripts/squire_journal.rs2:7`) | none found | M |
+| The Knight's Sword (`squire`) | 1 (122) | rest | Mining 10 (`quest_squire/scripts/squire_journal.rs2:7`); the portrait, blurite ore and sword are untradeable (`quest_squire/configs/quest_squire.obj`); MEASURED 887-922 ticks in row `quests-medium` | none found | M |
 | Tribal Totem (`totem`) | 1 (123) | rest | Thieving 21 (`quest_totem/scripts/quest_totem.rs2:125`) | none found | M |
 | Tree Gnome Village (`tree`) | 2 (124) | `tree` | none found | level 112 warlord (`quest_tree/scripts/tree_journal.rs2:6`) | - |
 | Underground Pass (`upass`) | 5 (125) | rest | Biohazard (`quest_upass/scripts/quest_upass.rs2:81`), Thieving 50 (`:248`) | Iban's undead, others | XL |
@@ -429,6 +429,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Quest | Script | RESULT ticks (3 runs) | Status |
 |---|---|---|---|
 | Pirate's Treasure | `scripts/generated/quest-hunt.ts` | 474, 471, 460 | MEASURED 3/3 |
+| The Knight's Sword | `scripts/generated/quest-squire.ts` | 893, 887, 922 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -456,11 +457,37 @@ Findings:
 - Helper items: 10 bananas, white apron, spade, 200 coins (two fares and the rum), Varrock and Falador teleport
   runes. All are tradeable (`knowledge/items.json`).
 
+### The Knight's Sword
+
+`RESULT ok qp=1 xp=magic=3275,smithing=318125,mining=437 ... ticks=893 ... walkTicks=685 retries=0 died=false` (runs:
+893, 887, 922 ticks; a passing trial before the proof: 897), each with `You manage to mine some blurite.` and
+`Congratulations! Quest complete!`. Steps (trial MILESTONE ticks): the squire "And how is life as a squire?", "I can
+make a new sword if you like...", "So would these dwarves make another one?", "Ok, I'll give it a go." 0-36
+(`quests/quest_squire/scripts/quest_squire.rs2:1-60`); Varrock teleport, Reldo "What do you know about the Imcando
+dwarves?" 36-107 (`areas/area_varrock/scripts/reldo.rs2:6-9`, `quest_squire.rs2:113-123`); Falador teleport, the
+walk to Thurgo, the redberry pie (3) and "Can you make me a special sword?" (4) 107-273 (`areas/area_port_sarim/
+scripts/thurgo.rs2:1-6`, `quest_squire.rs2:125-161`); the cellar ladder (1759 at 3008,3150), one blurite ore
+(bluriterock 2110 at 3049,9566, `maps/m47_149.jm2`; Mining 10, `skill_mining/configs/mine.dbrow:164-173`), the
+ladder up 273-416; the walk to the squire (5) 416-578 (`quest_squire.rs2:75-78`); the tower ladder (1747 at
+2994,3341), the stairs (1722 at 2984,3337,1), Vyvin's door `loc_1530` at 2982,3337,2, the cupboard (2271 at
+2984,3336,2, `general_use/scripts/cupboards.rs2:22-30`) 578-635; the walk to Thurgo, the portrait (6), the blurite
+and 2 iron bars give the sword 635-860 (`quest_squire.rs2:163-207`); Falador teleport, the sword to the squire
+860-897 (`quest_squire.rs2:94-104`).
+Findings:
+- The portrait, blurite ore and sword are `tradeable=no` (`quest_squire.obj`). The blurite is mined on the first
+  Thurgo visit (the rock has no quest check), so the second visit gets the sword at once.
+- Vyvin's room door is shut; with it shut the cupboard click gets "I can't reach that!" (first trial failed at
+  858 ticks). The script opens it by tile. Vyvin within 1 tile stops the search (`quest_squire.rs2:209-217`); the
+  script waits while he stands within 2 tiles. In 4 runs he did not block it.
+- 680 of the about 890 ticks are walks: the Falador-Thurgo leg three times. No teleport lands nearer to Thurgo.
+- Helper items: redberry pie, 2 iron bars, rune pickaxe, Varrock and two Falador teleport runes (all tradeable).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
-Treasure, 2 QP, floor 460 ticks (best run), realistic 474 (worst run), the same under `rival-dialogue-burst`. Row
-`quests-rest` loses it: 35 -> 34 quests, `qp` 77 -> 75, one medium class less: 54,200 / 81,400 -> 53,300 / 80,100
-(burst 50,124 / 75,279 -> 49,292 / 74,076). The QP total stays 145. `bun test packages/planner`: 42 pass, 0 fail.
+Treasure (2 QP, 460 / 474) and The Knight's Sword (1 QP, 887 / 922): 3 QP, floor 1,347 ticks (sum of best runs),
+realistic 1,396 (sum of worst runs), the same under `rival-dialogue-burst`. Row `quests-rest` loses them: 35 -> 33
+quests, `qp` 77 -> 74, two medium classes less: 54,200 / 81,400 -> 52,400 / 78,800 (burst 50,124 / 75,279 ->
+48,460 / 72,874). The QP total stays 145. `bun test packages/planner`: 42 pass, 0 fail.
 `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at
-101,707 floor / 135,513 realistic (deadline 1,022,262). Overall unchanged (40,212 / 45,105).
+101,762 floor / 135,233 realistic (deadline 1,022,262). Overall unchanged (40,212 / 45,105).
