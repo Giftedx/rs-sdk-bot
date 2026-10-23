@@ -12,6 +12,8 @@ import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { componentId } from '../../packages/core/src/logout';
 
 const CAP = Number(process.env.CAP ?? 3000);
+// Target level from the environment, so the same script proves to 30 and runs live to 99.
+const TARGET = Number(process.env.TARGET ?? 30);
 const XP30 = 13363;
 const LUMBRIDGE = { x: 3222, z: 3218 };
 const KNIFE_AT = { x: 3224, z: 3202 };
@@ -317,7 +319,7 @@ try {
     chain = null;
     lastXp = xp(); lastGain = now();
     const f0 = now();
-    for (let i = 0; i < 5000 && lvl() < 30 && !died && left() > 0; i++) {
+    for (let i = 0; i < 200_000 && lvl() < TARGET && !died && left() > 0; i++) {
         const feathers = countItems(s, FEATHER);
         const fish = countItems(s, /^raw (trout|salmon)$/i);
         const need = XP30 - xp();
@@ -361,7 +363,8 @@ try {
     }
     fishTicks += now() - f0 - tripTicks;
     await closeDialog();
-    if (lvl() >= 30) mark('fishing30');
-    const ok = lvl() >= 30 && !died;
-    await end(ok, died ? 'died' : `fishing ${lvl()} < 30`);
+    if (lvl() >= 30) mark("fishing30");
+    if (lvl() >= TARGET) mark(`fishing${TARGET}`);
+    const ok = lvl() >= TARGET && !died;
+    await end(ok, died ? 'died' : `fishing ${lvl()} < ${TARGET}`);
 } catch (e) { await finish([s], false, String(e)); }
