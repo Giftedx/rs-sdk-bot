@@ -403,6 +403,12 @@
      "set": {
       "inside": "thieve"
      }
+    },
+    {
+     "lever": "rival-bury-in-knife-wc",
+     "set": {
+      "inside": "woodcut"
+     }
     }
    ]
   },
@@ -528,7 +534,21 @@
     "owner": true
    },
    "evidence": "CODE-READ",
-   "source": "charge.rs2:4 needs %magearena >= mage_arena_staff_given; research/gap-closers.md"
+   "source": "charge.rs2:4 needs %magearena >= mage_arena_staff_given; research/gap-closers.md",
+   "patches": [
+    {
+     "lever": "charge-spam",
+     "owner": true,
+     "set": {
+      "ticks": {
+       "floor": 336,
+       "realistic": 581,
+       "evidence": "ESTIMATE",
+       "source": "floor = rival fastest burst run 336, expected 382 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S16, Kolodion at base 76 under Protect from Magic); realistic = their fixed figure 581 (docs/speedrun/quests/README.md section 3)"
+      }
+     }
+    }
+   ]
   },
   {
    "id": "charge",
@@ -725,6 +745,19 @@
      "item": "air/fire/body/nature/law talismans",
      "count": 1
     }
+   ],
+   "patches": [
+    {
+     "lever": "rival-altar-room-rc",
+     "set": {
+      "ticks": {
+       "floor": 1196,
+       "realistic": 1554,
+       "evidence": "ESTIMATE",
+       "source": "rival: air 1-44 in 60 + nature/body 44-99 in 1,136 = 1,196 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06, S21, lab 7-tick cycle, 22 givers); realistic adds their legs T05-06 64 + T20-21 160 = 1,554 (docs/speedrun/skills/runecraft.md section 1: about 1,330 from 1)"
+      }
+     }
+    }
    ]
   },
   {
@@ -768,6 +801,27 @@
        "source": "stunned share 3,584 of 6,169 ticks MEASURED live (live-thieving-2026-10-23.md:74); usable 0.75 x 0.9 (eat, restock trade) ESTIMATE; floor = 0.58 x 3,850 x 0.675; research/gap-closers.md"
       }
      }
+    },
+    {
+     "lever": "rival-stun-pack",
+     "set": {
+      "ticks": {
+       "floor": 1908,
+       "realistic": 2098,
+       "evidence": "ESTIMATE",
+       "source": "rival lab: Thieving 57-99 on Ardougne knights with the stun pack in 1,908 / 2,098 / 1,997 ticks (3 runs, 84-93 fails, HP 97 after Monkey Madness; bleugreen/rs-sdk@3bd2ab0a docs/speedrun/research/stun-pack.md section 1); 300 ms lite client, not our live rate"
+      },
+      "deadTicks": {
+       "floor": 670,
+       "realistic": 605,
+       "evidence": "ESTIMATE",
+       "source": "rival stun count 84-93 x 8 ticks x 0.9 usable (stun-pack.md section 1; thieving-ladder.md stun 8 ticks)"
+      }
+     },
+     "addRequires": [
+      "rival-fight-arena",
+      "rival-mm"
+     ]
     }
    ]
   },
@@ -814,6 +868,17 @@
        "realistic": 2957,
        "evidence": "ESTIMATE",
        "source": "3-tick ticks / 1.4 (floor) or / 1.15 (realistic); flinch UNVERIFIED live; research/gap-closers.md"
+      }
+     }
+    },
+    {
+     "lever": "rival-bury-in-knife-wc",
+     "set": {
+      "deadTicks": {
+       "floor": 1054,
+       "realistic": 1155,
+       "evidence": "ESTIMATE",
+       "source": "prayer ticks less the rival cost of burying inside the knife loop: 1,169 - 115 and 1,300 - 145 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S25b; docs/speedrun/skills/interleaving.md rule 6); measured by them on the 3-tick loop, not on our 2-tick flinch"
       }
      }
     }
@@ -868,6 +933,20 @@
        "source": "3-tick ticks / 1.4 (floor) or / 1.15 (realistic); flinch UNVERIFIED live; research/gap-closers.md"
       }
      }
+    },
+    {
+     "lever": "rival-sea-slug",
+     "set": {
+      "ticks": {
+       "floor": 1788,
+       "realistic": 2568,
+       "evidence": "ESTIMATE",
+       "source": "flinch-gather ticks 2179/3130 x 0.8203: Sea Slug's 179,375 Fishing lands first, so only 819,083 XP is left (this row has fixed ticks, so prior XP does not shorten it by itself)"
+      }
+     },
+     "addRequires": [
+      "rival-seaslug"
+     ]
     }
    ]
   },
@@ -913,7 +992,15 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "knowledge/rates.json pickpocket_man 19.33 XP/tick from level 1 (3 runs)"
+   "source": "knowledge/rates.json pickpocket_man 19.33 XP/tick from level 1 (3 runs)",
+   "patches": [
+    {
+     "lever": "rival-stun-pack",
+     "addRequires": [
+      "rival-fight-arena"
+     ]
+    }
+   ]
   },
   {
    "id": "herblore-10",
@@ -994,6 +1081,17 @@
        "questpoints"
       ]
      }
+    },
+    {
+     "lever": "rival-grandtree-agility",
+     "set": {
+      "ticks": {
+       "floor": 665,
+       "realistic": 1500,
+       "evidence": "ESTIMATE",
+       "source": "floor = rival fastest burst run 665 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S10b, Fire Blast under Protect from Melee); realistic is our earlier ESTIMATE"
+      }
+     }
     }
    ]
   },
@@ -1057,6 +1155,21 @@
        "questpoints"
       ]
      }
+    },
+    {
+     "lever": "rival-grandtree-agility",
+     "set": {
+      "serves": [
+       "agility",
+       "questpoints"
+      ],
+      "ticks": {
+       "floor": 1259,
+       "realistic": 3000,
+       "evidence": "ESTIMATE",
+       "source": "floor = rival fastest browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b, Fire Bolt + Protect from Melee); realistic is our earlier ESTIMATE"
+      }
+     }
     }
    ]
   },
@@ -1101,6 +1214,17 @@
        "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md"
       }
      }
+    },
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 2220,
+       "realistic": 6659,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200"
+      }
+     }
     }
    ]
   },
@@ -1130,7 +1254,20 @@
     "role": "add"
    },
    "evidence": "CODE-READ",
-   "source": "quest_ball.rs2:202 stat_advance(hitpoints, 63250); quest.constant:74 ball_questpoints 4; research/gap-closers.md"
+   "source": "quest_ball.rs2:202 stat_advance(hitpoints, 63250); quest.constant:74 ball_questpoints 4; research/gap-closers.md",
+   "patches": [
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 277,
+       "realistic": 832,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 300/900"
+      }
+     }
+    }
+   ]
   },
   {
    "id": "dragon",
@@ -1180,6 +1317,17 @@
        "questpoints"
       ]
      }
+    },
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 1387,
+       "realistic": 3699,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 1500/4000"
+      }
+     }
     }
    ]
   },
@@ -1216,6 +1364,17 @@
       "serves": [
        "questpoints"
       ]
+     }
+    },
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 277,
+       "realistic": 832,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 300/900"
+      }
      }
     }
    ]
@@ -1325,7 +1484,20 @@
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "quest_mcannon; time not measured"
+   "source": "quest_mcannon; time not measured",
+   "patches": [
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 277,
+       "realistic": 832,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 300/900"
+      }
+     }
+    }
+   ]
   },
   {
    "id": "ranged",
@@ -1428,6 +1600,23 @@
      "item": "lobster",
      "count": 50
     }
+   ],
+   "patches": [
+    {
+     "lever": "rival-agility-lap",
+     "set": {
+      "train": {
+       "skill": "agility",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 224,
+        "realistic": 197,
+        "evidence": "ESTIMATE",
+        "source": "realistic: rival S17 Agility 75-99 in 4,114 ticks with falls = (998,458 - 188,722) / 4,114 = 197 XP/tick (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S17; docs/speedrun/skills/agility.md section 1, 74-tick demo lap inferred); floor unchanged"
+       }
+      }
+     }
+    }
    ]
   },
   {
@@ -1457,6 +1646,17 @@
       "serves": [
        "questpoints"
       ]
+     }
+    },
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 555,
+       "realistic": 1387,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 600/1500"
+      }
      }
     }
    ]
@@ -1497,6 +1697,17 @@
        "questpoints"
       ]
      }
+    },
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 1110,
+       "realistic": 2774,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 1200/3000"
+      }
+     }
     }
    ]
   },
@@ -1530,7 +1741,20 @@
     "thieving": 25
    },
    "evidence": "ESTIMATE",
-   "source": "XP: quest_itexam.rs2:41-42 (CODE-READ); time not measured"
+   "source": "XP: quest_itexam.rs2:41-42 (CODE-READ); time not measured",
+   "patches": [
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 555,
+       "realistic": 1387,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 600/1500"
+      }
+     }
+    }
+   ]
   },
   {
    "id": "mine",
@@ -1572,6 +1796,21 @@
         "realistic": 162,
         "evidence": "ESTIMATE",
         "source": "3-rock rates 120 / 97 scaled by 5/3 (iron-spots.ts: only 5-rock tile (3100,3767) is in the Wilderness); research/gap-closers.md"
+       }
+      }
+     }
+    },
+    {
+     "lever": "rival-knife-mine",
+     "set": {
+      "train": {
+       "skill": "mining",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 292,
+        "realistic": 250,
+        "evidence": "ESTIMATE",
+        "source": "rival lab: knife starter on the 6-rock Ardougne zoo iron rotation (2602-2605,3233-3237), 3.00 ticks/ore at respawn 13 = 11.67 base x25 = 292; 3.50 ticks/ore at respawn 19 = 10.0 base x25 = 250 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/skills/mining.md section 1, skills/tick-manipulation.md section 1); third-party lab, not run by us; respawn depends on player count (player_count.rs2:4)"
        }
       }
      }
@@ -1687,7 +1926,20 @@
    ],
    "evidence": "ESTIMATE",
    "source": "145 QP over 68 quests (tick-tricks-web.md 15); the route quests give 54 QP, 88 more needed from about 40 quests; 400-1,200 ticks each, not measured",
-   "pending": "replace with research/boards-special.md when it lands"
+   "pending": "replace with research/boards-special.md when it lands",
+   "patches": [
+    {
+     "lever": "rival-dialogue-burst",
+     "set": {
+      "ticks": {
+       "floor": 14797,
+       "realistic": 44390,
+       "evidence": "ESTIMATE",
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 16000/48000"
+      }
+     }
+    }
+   ]
   },
   {
    "id": "equip",
@@ -1757,6 +2009,102 @@
    "evidence": "ESTIMATE",
    "source": "mine.dbrow:157-160 roll 1..18, respawn 2,400 x (4000-players)/4000 ticks; Wilderness PvP risk; #1 count unknown",
    "pending": "replace with research/boards-special.md when it lands"
+  },
+  {
+   "id": "rival-fight-arena",
+   "label": "Fight Arena (Thieving 1-57, Attack)",
+   "serves": [
+    "thieving",
+    "attack",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 499,
+    "realistic": 720,
+    "evidence": "ESTIMATE",
+    "source": "floor = rival fastest browser chain 499, expected 526 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S12); realistic = their stock-client figure 720 (docs/speedrun/quests/README.md section 3)"
+   },
+   "lump": true,
+   "xp": {
+    "attack": 304375,
+    "thieving": 54375
+   },
+   "qp": 0,
+   "requires": [
+    "tutorial"
+   ],
+   "lever": {
+    "id": "rival-stun-pack",
+    "role": "add"
+   },
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_arena.rs2:270-271 stat_advance(attack, 121750), (thieving, 21750) (CODE-READ); ticks rival (ESTIMATE for us); its 2 QP stay inside quests-rest (the 142-QP total), so qp is 0 here"
+  },
+  {
+   "id": "rival-mm",
+   "label": "Monkey Madness, reward option 1 (35,000 Strength and Hitpoints, 20,000 Attack and Defence)",
+   "serves": [
+    "strength",
+    "hitpoints",
+    "attack",
+    "defence",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 4566,
+    "realistic": 5052,
+    "evidence": "ESTIMATE",
+    "source": "floor = rival best fixed basis 4,565.7; realistic = expected 4,790.5 + bad case 261.3 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S15 and headline); never run end to end by them; Ape Atoll hazards at low combat"
+   },
+   "lump": true,
+   "xp": {
+    "strength": 875000,
+    "hitpoints": 875000,
+    "attack": 500000,
+    "defence": 500000
+   },
+   "qp": 0,
+   "requires": [
+    "tree",
+    "grandtree"
+   ],
+   "lever": {
+    "id": "rival-monkey-madness",
+    "role": "add"
+   },
+   "evidence": "ESTIMATE",
+   "source": "XP: mm_daero.rs2:294-302 option 1 (CODE-READ); gate %grandtree and %treequest complete (king_narnode.rs2:7-10 per rival, not traced by us); ticks rival; its 3 QP stay inside quests-rest (the 142-QP total), so qp is 0 here"
+  },
+  {
+   "id": "rival-seaslug",
+   "label": "Sea Slug (Fishing 1-74)",
+   "serves": [
+    "fishing",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 304,
+    "realistic": 495,
+    "evidence": "ESTIMATE",
+    "source": "floor = rival fastest browser run 304 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S19); realistic = their stock-client figure 495 (docs/speedrun/quests/README.md section 3)"
+   },
+   "lump": true,
+   "xp": {
+    "fishing": 179375
+   },
+   "qp": 0,
+   "minLevel": {
+    "firemaking": 30
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "lever": {
+    "id": "rival-sea-slug",
+    "role": "add"
+   },
+   "evidence": "ESTIMATE",
+   "source": "XP: caroline.rs2:45 stat_advance(fishing, 71750) (CODE-READ); Firemaking 30 gate quest_seaslug.rs2:43 (CODE-READ); ticks rival; its 1 QP stay inside quests-rest (the 142-QP total), so qp is 0 here"
   }
  ],
  "tickMs": {

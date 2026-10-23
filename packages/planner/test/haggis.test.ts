@@ -180,3 +180,24 @@ test('quest points: all points before the leader playtime is a secure win; more 
     // Leader already at the maximum (live: avery 145 at 1,022,262): only an earlier 145 wins.
     expect(finish(schedule([qp(5, 31)], acts, opts), 'questpoints')).toMatchObject({ status: 'WIN', finish: 30, slack: 1 });
 });
+
+test('rival levers (research/rival-gap-list.md): ESTIMATE rows, no blocks on or off, no extra quest points', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
+    const acts = haggisActivities();
+    const ids = new Set<string>();
+    for (const a of acts) {
+        if (a.lever?.id.startsWith('rival-')) ids.add(a.lever.id);
+        for (const p of a.patches ?? []) if (p.lever.startsWith('rival-')) ids.add(p.lever);
+    }
+    expect(ids.size).toBe(9);
+    for (const a of acts.filter(x => x.id.startsWith('rival-'))) {
+        expect(a.ticks?.evidence).toBe('ESTIMATE');
+        expect(a.ticks?.source).toContain('bleugreen/rs-sdk@3bd2ab0a');
+        expect(a.qp).toBe(0); // their points are inside quests-rest
+    }
+    for (const disable of [new Set<string>(), ids]) {
+        const r = schedule(boards, acts, { mode: 'realistic', tricks: new Set(), disable });
+        expect(r.blocked).toEqual([]);
+        expect(r.qp).toBe(142);
+    }
+});
