@@ -476,8 +476,112 @@ Findings:
   route stays west of it.
 - Prayer is the margin: 4-13 points were left. A third potion would remove the risk (not run).
 
-Still open: The Grand Tree and Monkey Madness have no script (`grandtree`, `rival-mm` stay ESTIMATE); the walk to
-Bolren is not counted.
+Still open: Monkey Madness has no proved script (`rival-mm` stays ESTIMATE; The Grand Tree is section 1g); the walk
+to Bolren is not counted.
+
+## 1g. Measured: The Grand Tree (the `grandtree` row)
+
+Script `scripts/generated/quest-grandtree.ts`, preset `quest_grandtree` (beside King Narnode, 2466,3494). The preset
+is the planner state at the row (after `tree` and `agility-25`): Attack 60 (the 286,250 XP of Tree Gnome Village),
+Strength, Defence 1, 10 Hitpoints, Magic 43, Prayer 43, Agility 25, varp 111 = 9 (Tree Gnome Village complete, so the
+village spirit tree works). Staff of fire worn; 80 chaos, 250 air and 2 law runes (Fire Bolt, Varrock Teleport); 3
+prayer potions, 1 antipoison, 4 lobsters. Debug presets `quest_grandtree_s50/s80/s90/s120/s140` set varp 150 to a later
+stage (`GT_FROM=<stage>`). Practice server, one bot at a time.
+
+### Stages (CODE-READ)
+
+Varp `%grandtree` is 150 (`pack/varp.pack:151`); stage values are in `quest_grandtree/configs/quest_grandtree.constant`.
+Paths below are under `vendor/rs-sdk/server/content/scripts/`; `qgt/` is `quests/quest_grandtree/scripts/`.
+
+| Varp | Step | Where | Evidence |
+|---|---|---|---|
+| 0 -> 10 | Narnode: "You seem worried", "I'd be happy to help!"; he walks the player under the trapdoor (2463,3497) and back up; bark sample (783), translation book (784) | Grand Tree l0, 2466,3497 | `qgt/king_narnode.rs2:199-246, 271-307` |
+| 10 -> 20 | Hazelmere takes the bark and writes the scroll (786) | island east of Yanille, l1, 2678,3086 (ladder 2677,3087) | `areas/area_gnome/scripts/hazelmere.rs2:5-36` |
+| 20 -> 30 | Narnode, the translation: "I think so!", "None of the above." twice, "A man came to me with the King's seal.", "I gave the man Daconia rocks.", "And Daconia rocks will kill the tree!" | Grand Tree l0 | `qgt/king_narnode.rs2:170-192, 324-413` |
+| 30 -> 40 | Glough in his tree house | l1, 2478,3463 (ladder 2476,3463) | `qgt/glough.rs2:69-81` |
+| 40 -> 50 | Narnode: the prisoner is at the top of the tree | Grand Tree l0 | `qgt/king_narnode.rs2:157-165` |
+| 50 -> 60 | Charlie in the cage; the l2 ladder's Climb-up adds him for 500 ticks | Grand Tree l3, 2464,3495 | `qgt/charlie.rs2:38-53`, `qgt/quest_grandtree.rs2:17-21`, `ladders+stairs/scripts/ladders.rs2:128-144` |
+| 60 -> 70 | Glough's cupboard: Open, Search, the journal (785) | l1, 2476,3465 | `qgt/quest_grandtree.rs2:94-107` |
+| 70 -> 80 | Glough calls a guard; the jail with Charlie; Narnode lets the player out | l1 -> l3 | `qgt/glough.rs2:33-68`, `qgt/charlie.rs2:58-83`, `qgt/king_narnode.rs2:420-426` |
+| 80 | Gnome pilot: "Take me to Karamja please!"; the glider lands at 2917,3058 | Grand Tree l3, 2464,3501 | `areas/area_gnome/scripts/gnome_glider.rs2:86-114` |
+| 80 -> 90 | Shipyard gate: "Glough sent me.", "Ka.", "Lu.", "Min."; the foreman: "Sadly his wife is no longer with us!", "He loves worm holes.", "Anita."; the lumber order (787). A wrong answer starts a fight | Karamja, gate 2945,3041, foreman 2999,3043 | `qgt/shipyardworker.rs2:65-142`, `qgt/foreman.rs2:1-116`, `qgt/quest_grandtree.rs2:112-151` |
+| 90 | The stronghold gate guard turns the player away (Femi sneaks the player in) | gate 2459,3383 | `areas/area_gnome/scripts/gnome_gate.rs2:13-20`, `qgt/femi.rs2:8-73` |
+| 90 -> 100 | Charlie: Glough's key is at his girlfriend's | Grand Tree l3 | `qgt/charlie.rs2:9-20` |
+| 100 | Anita gives Glough's key (788) | l1, 2390,3514 (stairs 2389,3512) | `qgt/anita.rs2:1-21` |
+| 100 -> 110 | Key on Glough's chest: the invasion plans (794) | l1, 2482,3462 | `qgt/quest_grandtree.rs2:71-91` |
+| 110 -> 120 | Narnode takes the plans and gives 4 twigs (789-792; needs 4 free slots) | Grand Tree l0 | `qgt/king_narnode.rs2:100-118` |
+| 120 -> 130 | Up Glough's tree (Agility 25) to l2; twig T, U, Z, O on the pillars 2485, 2486, 2487, 2488 (z 3467) | l1 2484,3464 -> l2 | `qgt/quest_grandtree.rs2:23-51` |
+| 130 -> 140 | The trapdoor (2487,3464 l2) to 2491,9864; Glough's cutscene; the black demon (157 HP, melee, `magicdefence -10`) attacks only this player; its death sets 140 | roots | `qgt/quest_grandtree.rs2:53-66`, `qgt/glough.rs2:92-126`, `qgt/grandtree_black_demon.rs2:1-39`, `quest_grandtree/configs/quest_grandtree.npc:190-216` |
+| 140 -> 150 | Narnode in the roots; `%daconia_rock_root = random_range(1, 15)` | roots, 2464,9897 | `qgt/king_narnode.rs2:41-72` |
+| 150 | Search the roots; the one in `daconia_coords` with that value gives the rock (793) | 15 roots in 2439-2490, 9872-9904 | `qgt/quest_grandtree.rs2:170-193`, `quest_grandtree/configs/daconia_coords.enum` |
+| 150 -> 160 | Narnode takes the rock and queues the completion: 197,500 Agility, 460,000 Attack, 53,750 Magic at 25x, 5 QP | roots | `qgt/king_narnode.rs2:15-36`, `qgt/quest_grandtree.rs2:195-203`, `general/configs/quest.constant:96` |
+
+`daconia_coords.enum` gives index 0 and 1 the same tile (2456,9886); `EnumType.values` is a `Map`, so the later entry
+(1) wins (`engine/src/cache/config/EnumType.ts:66-87`) and all 15 values 1-15 have a root.
+
+### Proof
+
+3/3 PASS (MEASURED practice, 2026-10-23):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | Demon casts | Roots searched |
+|---|---|---|---|---|---|
+| p1 | `RESULT ok qp=5 questMsg=true roots=13 potions=2 prayerLeft=25 xp=attack=460000,hitpoints=5225,magic=76025,agility=197500 at=2463,9895,0 ticks=2079 hpMin=10 eats=0 walkTicks=1003 retries=6 died=false` | 2,079 | 289 (13.9%) | 28 | 13 |
+| p2 | `RESULT ok qp=5 questMsg=true roots=1 potions=2 prayerLeft=9 xp=attack=460000,hitpoints=5222,magic=76587,agility=197500 at=2466,9896,0 ticks=2001 hpMin=10 eats=0 walkTicks=895 retries=5 died=false` | 2,001 | 332 (16.6%) | 29 | 1 |
+| p3 | `RESULT ok qp=5 questMsg=true roots=13 potions=2 prayerLeft=22 xp=attack=460000,hitpoints=5222,magic=78837,agility=197500 at=2464,9896,0 ticks=2083 hpMin=10 eats=0 walkTicks=1005 retries=4 died=false` | 2,083 | 296 (14.2%) | 32 | 13 |
+
+Every run ends with `Congratulations! Quest complete!` and the quest XP (460,000 Attack, 197,500 Agility; the Magic
+above includes the Fire Bolts). No damage in any run (HP min 10). Planned: 1,811 / 3,000 (ESTIMATE; 1,811 is the
+rival's UNVERIFIED live leg); measured 2,001-2,083.
+
+Route (run p1, MILESTONE ticks): Narnode 0-91; out of the stronghold gate 91-158; walk to Hazelmere 158-433; Elkoy,
+the railing, the village spirit tree, Narnode (translation) 433-706; Glough 706-756; Narnode 756-800; Charlie 800-835;
+journal 835-886; jail and release 886-952; glider 952-974; shipyard gate and foreman 974-1149; Varrock Teleport, the
+Varrock and village spirit trees, Charlie 1149-1337; Anita 1337-1419; chest 1419-1489; Narnode, twigs 1489-1539;
+pillars 1539-1589; trapdoor and cutscene 1589-1626; black demon 1626-1783; Narnode in the roots 1783-1885; roots
+1885-2024; completion 2024-2079.
+
+Findings:
+
+- The walk out to Hazelmere is the largest leg (about 275 ticks). The SDK path runs east along the road under the
+  Combat Training Camp gate (2517-2518,3356, locked before Biohazard, `area_combat_training/scripts/combat_training_camp.rs2:36-43`).
+  `walkPath` takes the gate for a door on its path and clicked it for 410 ticks in one test run (the guard's page each
+  time); `blockDoorTemporarily` on the gate does not change `findLongPath` (path test in the scratchpad: the same 89
+  points). A client-routed click from 2509,3355 to 2526,3353 goes past it.
+- Hazelmere's island is full of jungle spiders (melee, no poison param, `_unpack/225/all.npc:1585-1607`); a test run
+  died there at 10 HP. Protect from Melee is on from 2638,3089 to the ladder and back.
+- From the east the SDK path to the village runs through the maze, out at 2549,3171 and south past the giants at
+  2545,3144 (one test run: 10 -> 7 HP). Elkoy at the maze entrance (2504,3192) puts the player at 2515,3159 after
+  Tree Gnome Village too (`areas/area_gnome/scripts/elkoy.rs2:160-180`); the loose railing is the way in.
+- The Grand Tree doors (treedoorl/r at 2464-2466,3492, shape 10, `areas/area_gnome/scripts/gnome_gate.rs2:62-76`)
+  are solid to the SDK pathfinder; from the south it routed outside the trunk and failed. Inside, `walkPath` takes the
+  trapdoor (2463,3497) for a shut door ("The trapdoor won't open!" for 210 ticks). The script uses the tree doors.
+- Charlie's talk is an ap op (`qgt/charlie.rs2:1`): it needs line of sight. The prison door has `blockrange=no`
+  (`_unpack/225/all.loc:15100-15105`) but the laddertop (2466,3495) blocks it; from 2465,3495 the talk works.
+- Charlie lives 500 ticks; the second visit comes 480-570 ticks after the first, and one test run found him gone.
+  No Charlie: down one ladder and up again adds a new one.
+- Dialogs with `if_close` + `p_delay` gaps (Glough's guard, Narnode's guard in the roots, 7 ticks) restart when a
+  second Talk-to is sent; `quest-lib`'s `talk` sends one after 3 closed ticks. The script sends one Talk-to and then
+  clicks pages (`talkOnce`).
+- Two jogres hit at the Karamja landing (10 -> 4 HP in one test run): the prayer goes on before the flight. A prayer
+  toggle sent during Glough's cutscene did not take, so the prayer goes on before the trapdoor.
+- The demon took 28-32 Fire Bolts (about 155 ticks); 2 potions in every run, 9-25 points left.
+- After the lumber order the stronghold gate is shut. Varrock Teleport, the young spirit tree at 3177,3506 and the
+  village tree (Gnome stronghold) land at 2461,3443, inside the gate, so Femi is not needed.
+
+Planner: row `grandtree` 2,001 / 2,083 MEASURED (also in the `rival-grandtree-agility` lever patch). Scenario a,
+`research/hiscores-live.json` (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`):
+
+| Model | Overall floor | Overall realistic |
+|---|---|---|
+| Before (grandtree 1,811 / 3,000 ESTIMATE) | 39,239 | 45,758 |
+| Grand Tree MEASURED (2,001 / 2,083) | 39,981 | 44,841 |
+
+The floor rises 742 ticks because the old floor was the rival's UNVERIFIED 1,811; the realistic finish drops 917
+ticks.
+
+Still open: the root search is random (1-13 roots, 12-139 ticks); a better tour from the trapdoor (search before
+Narnode is not possible, the root is set at 150) is not tried. The walk to Narnode is not counted. The preset has
+10 HP; the planner does not model Hitpoints.
 
 ## 2. Combat boards: what quests give and what the leaders need
 

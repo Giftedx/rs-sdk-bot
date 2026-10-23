@@ -21,9 +21,9 @@ const TREE_LADDER = { x: 2466, z: 3495 };             // ladder l0, laddermiddle
 const GLOUGH_LADDER = { x: 2476, z: 3463 };           // Glough's tree house, l0 -> l1 (m38_54 loc 1747)
 const CUPBOARD = { x: 2476, z: 3465 };                // l1, loc 2434
 const CHEST = { x: 2482, z: 3462 };                   // l1, loc 2436
-const CLIMBTREE = { x: 2484, z: 3464 };               // l1, loc 2447, Agility 25 (quest_grandtree.rs2:22-28)
+const CLIMBTREE = { x: 2484, z: 3464 };               // l1, loc 2447, Agility 25 (quest_grandtree.rs2:23-29)
 const TRAPDOOR = { x: 2487, z: 3464 };                // l2, loc 2444
-const PILLARS: [number, number][] = [[ITEM.twigT, 2485], [ITEM.twigU, 2486], [ITEM.twigZ, 2487], [ITEM.twigO, 2488]]; // z 3467, l2 (quest_grandtree.rs2:39-46)
+const PILLARS: [number, number][] = [[ITEM.twigT, 2485], [ITEM.twigU, 2486], [ITEM.twigZ, 2487], [ITEM.twigO, 2488]]; // z 3467, l2 (quest_grandtree.rs2:35-51)
 const GATE = { x: 2459, z: 3383 };                    // gnome_areagate (m38_52 loc 190); north side 2461,3385
 const HAZEL_LADDER = { x: 2677, z: 3087 };            // m41_48, Hazelmere on l1 at 2678,3086
 const VILLAGE_TREE = { x: 2543, z: 3168 };            // stronghold_ent (m39_49 loc 1294)
@@ -249,7 +249,7 @@ try {
 
     // Charlie is behind the prison door (2465,3495-3496 l3, blockrange=no, _unpack/225/all.loc:15100-15105); his talk is
     // an ap op (charlie.rs2:1), so it needs line of sight. The laddertop (2466,3495) blocks it from the ladder tile.
-    // Charlie lives 500 ticks from the Climb-up that adds him (npc_add, quest_grandtree.rs2:14-19); one test run came
+    // Charlie lives 500 ticks from the Climb-up that adds him (npc_add, quest_grandtree.rs2:17-21); one test run came
     // back at the end of that window and he was gone. No Charlie: down one ladder and up again adds a new one.
     const toBars = async (): Promise<void> => {
         await q.waitUntil(() => !!q.npc(/^charlie/i), 3);

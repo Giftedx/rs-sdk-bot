@@ -1838,10 +1838,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1811,
-    "realistic": 3000,
-    "evidence": "ESTIMATE",
-    "source": "floor = rival live leg 1811 ticks, research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED); realistic is our ESTIMATE; not measured by us"
+    "floor": 2001,
+    "realistic": 2083,
+    "evidence": "MEASURED",
+    "source": "MEASURED practice 2026-10-23 (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), 3/3 PASS at 2,079, 2,001, 2,083 ticks (floor = best run, realistic = worst run); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival live leg 1,811 (research/rival-atlas-2026-10-16.md:28) is UNVERIFIED"
    },
    "lump": true,
    "xp": {
@@ -1859,8 +1859,8 @@
     "prayer": 43,
     "magic": 35
    },
-   "evidence": "ESTIMATE",
-   "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ); time not measured",
+   "evidence": "MEASURED",
+   "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ), and the 3 proof runs gained 460,000 Attack, 197,500 Agility, 53,750 Magic from the quest; time MEASURED (research/quest-plan.md section 1g)",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -1878,10 +1878,10 @@
        "questpoints"
       ],
       "ticks": {
-       "floor": 1259,
-       "realistic": 3000,
-       "evidence": "ESTIMATE",
-       "source": "floor = rival fastest browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b, Fire Bolt + Protect from Melee); realistic is our earlier ESTIMATE"
+       "floor": 2001,
+       "realistic": 2083,
+       "evidence": "MEASURED",
+       "source": "MEASURED practice 2026-10-23 (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), 3/3 PASS at 2,079, 2,001, 2,083 ticks (floor = best run, realistic = worst run); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b) is not measured by us"
       }
      }
     }
