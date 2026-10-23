@@ -4,6 +4,7 @@
 // Stun damage (skill_thieving pickpocket.dbrow): man 1, guard 2, knight 3. The bot only pickpockets a target
 // when Hitpoints is above that damage, so one failed attempt cannot kill it.
 // Food: bread from the Baker (2654,3311, shop 'bakery', 12 coins), eaten at 5 Hitpoints or less.
+import { existsSync } from 'node:fs';
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 
@@ -190,38 +191,50 @@ try {
     }
     mark('ardougne');
 
-    // ---- Steps 3 and 4: Ardougne pickpocketing with bread from the Baker.
-    // Buys bread up to 5. After an empty or failed visit, waits `shopRetry` ticks before the next visit.
+    // ---- Steps 3 and 4: Ardougne pickpocketing with food from the Baker.
+    // One trip fills the pack with every food line in stock (bread, cake, chocolate slice); the next trip comes
+    // only when all food is gone. A cake eats in 3 bites (cake -> 2/3 cake -> slice of cake).
+    const FOOD = /^(bread|cake|2\/3 cake|slice of cake|chocolate slice)$/i;
+    const SHOP_FOOD = /^(bread|cake|chocolate slice)$/i;
+    const food = () => countItems(s, FOOD);
     let shopRetryAt = 0;
-    const buyBread = async (): Promise<void> => {
-        const want = Math.min(5 - bread(), Math.floor(coins() / 12));
-        if (want <= 0) return;
+    const stockUp = async (): Promise<void> => {
         const p = pos();
         if (p && cheb(BAKER, p) > 6) await s.bot.walkTo(BAKER.x, BAKER.z, 3);
         const o = await s.bot.openShop(/^baker$/i);
         if (!o.success) { lastFail = `shop:${o.message}`; shopRetryAt = s.tick() + 30; return; }
-        const before = bread();
-        const b = await s.bot.buyFromShop(BREAD, want);
+        const before = food();
+        for (const item of s.sdk.getState()?.shop?.shopItems ?? []) {
+            if (!SHOP_FOOD.test(item.name) || item.count <= 0) continue;
+            const free = 28 - (s.sdk.getState()?.inventory?.length ?? 28);
+            const n = Math.min(item.count, free, Math.floor(coins() / 12));
+            if (n <= 0) break;
+            const b = await s.bot.buyFromShop(item.name, n);
+            if (!b.success) lastFail = `buy:${b.reason}:${b.message}`;
+        }
         await s.bot.closeShop();
-        const got = bread() - before;
+        const got = food() - before;
         bought += Math.max(0, got);
-        if (!b.success) lastFail = `buy:${b.reason}:${b.message}`;
-        if (got < want) shopRetryAt = s.tick() + 50;
+        // An empty shelf restocks one bread per 100 ticks: do not walk back before some has returned.
+        if (got === 0) shopRetryAt = s.tick() + 100;
     };
 
+    if (food() === 0) await stockUp();
+    // A file .practice/stop-<bot> asks for a clean in-game logout, so a run can be swapped without the 500-tick linger.
+    const stopFile = `.practice/stop-${process.argv[2]}`;
     for (let i = 0; i < 100_000 && lvl() < TARGET && !died && left() > 0; i++) {
+        if (existsSync(stopFile)) { await end(false, 'stop file'); }
         checkLevels();
         const t = lvl() >= 55 ? KNIGHTS : lvl() >= 40 ? GUARDS : MEN;
-        if (hp() <= EAT_AT && bread() > 0) {
-            const e = await s.bot.eatFood(BREAD);
+        if (hp() <= EAT_AT && food() > 0) {
+            const e = await s.bot.eatFood(FOOD);
             if (e.success) eaten++;
             else await waitTicks(s, 1);
             continue;
         }
-        const canShop = s.tick() >= shopRetryAt && coins() >= 12;
-        // Refill when the pack is low, or at once when food is gone and Hitpoints is low.
-        if (canShop && ((bread() < 3 && coins() >= 12 * (5 - bread())) || (bread() === 0 && hp() <= EAT_AT))) {
-            await buyBread();
+        // Refill only when all food is gone.
+        if (food() === 0 && s.tick() >= shopRetryAt && coins() >= 12) {
+            await stockUp();
             continue;
         }
         if (hp() > t.dmg) { await steal(t); continue; }
