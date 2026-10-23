@@ -82,6 +82,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).
     courier_ardougne: { position: { x: 2655, z: 3304, level: 0 }, coins: 20000 },
+    // Gold farm (scripts/goldfarm.ts): Thieving 99, 10 HP, 20 lobsters (379) in the pack and 40 in the bank, at the market knights.
+    goldfarm_knights: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 99 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })), bank: [{ id: 379, count: 40 }] },
     // Stun-trade test: a food-less thief at the knights and a helper one tile east with 26 lobsters.
     stun_thief: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 } },
     stun_feeder: { position: { x: 2655, z: 3304, level: 0 }, inventory: Array.from({ length: 26 }, () => ({ id: 379, count: 1 })) },
