@@ -3246,10 +3246,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 4566,
-    "realistic": 5052,
-    "evidence": "ESTIMATE",
-    "source": "floor = rival best fixed basis 4,565.7; realistic = expected 4,790.5 + bad case 261.3 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S15 and headline); never run end to end by them; Ape Atoll hazards at low combat. Parts MEASURED practice 3/3 (scripts/generated/quest-mm.ts, research/quest-plan.md section 1h): chapter 1 to the atoll 692-720 ticks, battle to training reward 634-798 ticks; stages 80-120 not run, so the row stays ESTIMATE"
+    "floor": 5071,
+    "realistic": 5458,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1h: scripts/generated/quest-mm.ts, preset quest_mm (Narnode, Magic 99, Prayer 43, Thieving 43, Agility 57, Hitpoints 35 ESTIMATE; helper pack: Fire Wave runes, 3 law, gold bar, wool, monkey bones, 7 prayer potions, super antipoison, 12 sharks), practice, 3 full passes at 5,125, 5,458, 5,071 ticks (floor = best, realistic = worst), Narnode to Daero's training reward; 6 earlier full tries failed while the atoll was fixed (deaths, a boxed temple landing). Was ESTIMATE 4,566 / 5,052 (rival)"
    },
    "lump": true,
    "xp": {
@@ -3267,14 +3267,14 @@
     "id": "rival-monkey-madness",
     "role": "add"
    },
-   "evidence": "ESTIMATE",
-   "source": "XP: mm_daero.rs2:294-302 option 1 (CODE-READ); gate %grandtree and %treequest complete (king_narnode.rs2:7-10 per rival, not traced by us); ticks rival; its 3 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
+   "evidence": "MEASURED",
+   "source": "XP: mm_daero.rs2:294-302 option 1 (CODE-READ), MEASURED practice (875,000 Strength and Hitpoints, 500,000 Attack and Defence in every full pass); gate %grandtree and %treequest complete (king_narnode.rs2:7-10 per rival, not traced by us); ticks rival; its 3 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
    "at": "narnode",
    "minLevel": {
     "prayer": 43,
     "magic": 75
    },
-   "minLevelSource": "damage source MEASURED practice (scripts/generated/quest-mm.ts stage 140, preset quest_mm_s130, research/quest-plan.md section 1h): Fire Wave (Magic 75, magic_combat_spells.dbrow) under Protect from Magic from 4+ tiles kills the demon with 0 damage taken; combat gate (CODE-READ): jungle demon 170 attack, strength, magic, 170 HP (quest_mm/configs/quest_mm.npc), casts waves with max hit 31, set to 0 under Protect from Magic (Prayer 37) (quest_mm/scripts/mm_demon.rs2:349-353), melee only within 2 tiles (mm_demon.rs2:332-336); Prayer 43 also gives Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Protect from Missiles (Prayer 40) zeroes the ravine archers (npc_combat_ranged.rs2:47-51); Ape Atoll stages 80-120 not run"
+   "minLevelSource": "damage source MEASURED practice (scripts/generated/quest-mm.ts stage 140, preset quest_mm_s130, research/quest-plan.md section 1h): Fire Wave (Magic 75, magic_combat_spells.dbrow) under Protect from Magic from 4+ tiles kills the demon with 0 damage taken; combat gate (CODE-READ): jungle demon 170 attack, strength, magic, 170 HP (quest_mm/configs/quest_mm.npc), casts waves with max hit 31, set to 0 under Protect from Magic (Prayer 37) (quest_mm/scripts/mm_demon.rs2:349-353), melee only within 2 tiles (mm_demon.rs2:332-336); Prayer 43 also gives Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Protect from Missiles (Prayer 40) zeroes the ravine archers (npc_combat_ranged.rs2:47-51); Ape Atoll stages 80-120 MEASURED in the full passes"
   },
   {
    "id": "rival-seaslug",
