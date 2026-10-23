@@ -1,7 +1,7 @@
 // Melee XP per tick at a multiway spot, with or without a dwarf cannon.
 // Usage: CANNON=1 bun scripts/measure/combat-melee.ts <bot> [ticks=300]
 // Env: TARGET = NPC name regex (default ^white knight$), STYLE = combat style index (default 1, aggressive on a
-// scimitar: Strength XP), RELOAD = ticks between cannon top-ups (default 20), CANNON=1 to set up the cannon first.
+// scimitar: Strength XP), RELOAD = ticks between cannon top-ups (default 30), CANNON=1 to set up the cannon first.
 // Presets: combat_wk_40, combat_wk_70, combat_wk_90 (Falador castle courtyard, multiway, maps/multiway.csv "falador")
 // and the *_cannon variants (%mcannon varp 0 = 11 complete, cannon parts 6/8/10/12, cannonballs 2).
 //
@@ -20,9 +20,9 @@ const CAP = Number(tArg ?? 300);
 const TARGET = new RegExp(process.env.TARGET ?? '^white knight$', 'i');
 const STYLE = Number(process.env.STYLE ?? 1);
 const CANNON = process.env.CANNON === '1';
-const RELOAD = Number(process.env.RELOAD ?? 20);
-// Cannon policy: NEAR = fight only NPCs within NEAR tiles of the cannon centre (default 10); TOPUP_ADJ=1 = top up only
-// from a tile next to the cannon (Chebyshev <= 2 from the centre) or between targets, never by breaking off a fight.
+const RELOAD = Number(process.env.RELOAD ?? 30);
+// Cannon policy: NEAR = fight only NPCs within NEAR tiles of the cannon centre (default 10); TOPUP_ADJ=1 = a timed top-up
+// waits until the bot stands next to the cannon (Chebyshev <= 2 from the centre) or is between targets.
 const NEAR = Number(process.env.NEAR ?? 10);
 const TOPUP_ADJ = process.env.TOPUP_ADJ === '1';
 const FOOD = /^(lobster|swordfish|shark)$/i;
@@ -105,7 +105,7 @@ try {
     const x0: Record<string, number> = Object.fromEntries(skills.map(k => [k, xp(k)]));
     const t0 = s.tick();
     let inCombat = 0, attacks = 0, eats = 0, reloads = 0, refires = 0, kills = 0, idle = 0;
-    let lastReload = t0, target = -1, ammoMsgAt = msgs.length;
+    let lastReload = t0, target = -1, ammoMsgAt = msgs.length, loadPending = -1, loadMsgAt = 0, needFire = false, firePending = -1;
     let dmgTaken = 0, lastStyleXp = xp('Attack') + xp('Strength') + xp('Defence'), lastGain = -99, attackAt = -99;
     const bad = new Map<number, number>();
     const seenHit = new Set<string>();
@@ -134,24 +134,25 @@ try {
                 const f = slotOf(FOOD);
                 if (f) { void s.direct({ type: 'useInventoryItem', slot: f.slot, optionIndex: 1, reason: 'SDK' }); eats++; target = -1; return; }
             }
-            // 2. Cannon: top up every RELOAD ticks; re-fire after "out of ammo".
+            // 2. Cannon (fixed handling): a load is pending until "You load the cannon" / "already full" or 8 ticks;
+            //    no attack click in that time (an attack click replaces the walk to the cannon). After "out of ammo",
+            //    Fire once the load lands.
             if (cannon) {
-                if (sawMsg(/out of ammo/i, ammoMsgAt)) {
-                    const balls = slotOf(/^cannonball$/i);
-                    ammoMsgAt = msgs.length;
-                    if (balls) {
-                        void s.direct({ type: 'useItemOnLoc', itemSlot: balls.slot, x: cannon.x, z: cannon.z, locId: cannon.id, reason: 'SDK' });
-                        reloads++; lastReload = now; target = -2; return;
-                    }
+                if (loadPending >= 0) {
+                    if (sawMsg(/load the cannon|already full/i, loadMsgAt) || now - loadPending >= 8) {
+                        loadPending = -1;
+                        if (needFire) { needFire = false; void s.direct({ type: 'interactLoc', x: cannon.x, z: cannon.z, locId: cannon.id, optionIndex: 1, reason: 'SDK' }); refires++; target = -1; firePending = now; return; }
+                    } else return;
                 }
-                if (target === -2) { // just reloaded after empty: fire again
-                    void s.direct({ type: 'interactLoc', x: cannon.x, z: cannon.z, locId: cannon.id, optionIndex: 1, reason: 'SDK' });
-                    refires++; target = -1; return;
-                }
+                if (firePending >= 0 && now - firePending < 2) return;
+                firePending = -1;
+                const empty = sawMsg(/out of ammo/i, ammoMsgAt);
                 const adj = cheb({ x: cannon.x + 1, z: cannon.z + 1 }, { x: p.worldX, z: p.worldZ }) <= 2;
-                if (now - lastReload >= RELOAD && (!TOPUP_ADJ || adj || !fighting)) {
+                if (empty || (now - lastReload >= RELOAD && (!TOPUP_ADJ || adj || !fighting))) {
                     const balls = slotOf(/^cannonball$/i);
                     if (balls) {
+                        if (empty) { needFire = true; ammoMsgAt = msgs.length; }
+                        loadMsgAt = msgs.length; loadPending = now;
                         void s.direct({ type: 'useItemOnLoc', itemSlot: balls.slot, x: cannon.x, z: cannon.z, locId: cannon.id, reason: 'SDK' });
                         reloads++; lastReload = now; target = -1; return;
                     }
