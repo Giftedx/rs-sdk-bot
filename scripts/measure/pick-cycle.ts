@@ -30,6 +30,16 @@ try {
         if (hp() <= eatAt && countItems(s, FOOD) > 0) { if ((await s.bot.eatFood(FOOD)).success) eaten++; continue; }
         const npc = s.sdk.findNearbyNpc(TARGET, { reachable: true });
         if (!npc) { await waitTicks(s, 1); continue; }
+        // DIRECT=1: the leader's rhythm (Jackalopett1, recorded 2026-10-23): a pickpocket click every 2 ticks, sent
+        // straight to the client. The server drops clicks that land in a stun, so no stun tracking is needed.
+        if (process.env.DIRECT === '1') {
+            const op = (npc as any).optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))!.opIndex;
+            const x1 = xp();
+            await s.direct({ type: 'interactNpc', npcIndex: (npc as any).index, optionIndex: op, reason: 'SDK' });
+            await waitTicks(s, 2);
+            if (xp() > x1) ok++; else other++;
+            continue;
+        }
         const before = xp();
         const r = await s.bot.pickpocketNpc(npc);
         if (xp() > before) { ok++; continue; }
@@ -41,5 +51,5 @@ try {
     const ticks = s.tick() - t0;
     const gained = xp() - xp0;
     console.log(`RATE thieving ${gained} ${ticks}`);
-    await finish([s], gained > 0 && hp() > 0, `K=${K} eatStun=${eatStun} xp0=${xp0} gained=${gained} ticks=${ticks} perTick=${(gained / ticks).toFixed(1)} ok=${ok} fail=${fail} other=${other} ${JSON.stringify(otherWhy)} eaten=${eaten} hp=${hp()}`);
+    await finish([s], gained > 0 && hp() > 0, `direct=${process.env.DIRECT === '1'} K=${K} eatStun=${eatStun} xp0=${xp0} gained=${gained} ticks=${ticks} perTick=${(gained / ticks).toFixed(1)} ok=${ok} fail=${fail} other=${other} ${JSON.stringify(otherWhy)} eaten=${eaten} hp=${hp()}`);
 } catch (e) { await finish([s], false, String(e)); }
