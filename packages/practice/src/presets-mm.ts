@@ -8,18 +8,20 @@ import type { SaveConfig } from './presets';
 // Quest varps: %treequest (111) = 9 and %grandtree (150) = 160 (^grandtree_complete, quest.constant:28), set directly:
 // the Grand Tree is scripted by another helper.
 // Worn (Defence 1): wizard hat 579, amulet of magic 1727, staff of fire 1387, wizard robe 577, blue skirt 1011.
-// Inventory (helper items): Fire Wave runes (1 blood 565 + 5 air 556, fire from the staff) for 150 casts (one test run used 60 without the kill); 2 law runes
-// 563 (Varrock Teleport); gold bar 2357, ball of wool 1759, monkey bones 3183 (a Karamja monkey's,
-// quest_tbwt/scripts/monkey.rs2:73), 5 bananas 1963 (the child checks for more than 4, mm_monkey_child.rs2:136);
-// 4 prayer potions 2434; 1 antipoison 2446 (Karamja jungle spiders poison); 8 sharks 385.
+// Inventory (helper items): Fire Wave runes (1 blood 565 + 5 air 556, fire from the staff) for 200 casts (one test
+// run used 60 without the kill; Ape Atoll pests take some); 2 law runes 563 (Varrock Teleport); gold bar 2357, ball
+// of wool 1759, monkey bones 3183 (a Karamja monkey's, quest_tbwt/scripts/monkey.rs2:73); 7 prayer potions 2434;
+// 1 antipoison 2446 (Karamja jungle spiders, Ape Atoll wildlife); 12 sharks 385. No bananas: the child's garden has
+// banana trees (2741-2746,2792-2797) and the script picks 5 there (banana_tree.rs2). The full run at HP 35 with
+// 4 potions and 10 sharks died in the dungeon (practice, 2026-10-23).
 const MM_SKILLS = {
     Attack: 99, Hitpoints: 35, Magic: 99, Prayer: 43, Agility: 57, Thieving: 43, Smithing: 99, Cooking: 35,
     Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99,
 };
 const MM_WORN = [[579, 0], [1727, 2], [1387, 3], [577, 4], [1011, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
 const MM_PACK = [[565, 200], [556, 1000], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
-    .concat([2357, 1759, 3183, 1963, 1963, 1963, 1963, 1963, 2434, 2434, 2434, 2434, 2446].map(id => ({ id, count: 1 })),
-        Array.from({ length: 10 }, () => ({ id: 385, count: 1 })));
+    .concat([2357, 1759, 3183, 2434, 2434, 2434, 2434, 2434, 2434, 2434, 2446].map(id => ({ id, count: 1 })),
+        Array.from({ length: 12 }, () => ({ id: 385, count: 1 })));
 
 // mm_gnomes (varp 372) bit fields, quest_mm.varbit: narnode 0-3, caranock 4-6, daero 7-10, waydar 11-12,
 // lumdo 13-15, garkor 16-19, zooknock 20-23.
@@ -83,7 +85,7 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
     quest_mm_s107: {
         ...mmPreset({ x: 2746, z: 2800, level: 0 },
             { 365: 3, 371: (1 << 7) | (1 << 8) | (1 << 9) | (1 << 11) | (1 << 13), 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2, zooknock: 5 }), 374: (2 << 2) | (5 << 12) },
-            [4020, 1727, 1963, 1963, 1963, 1963, 1963, 2446], MM_PACK_LATE),
+            [4020, 1727, 2446], MM_PACK_LATE),
         equipment: MM_WORN.map(e => e.slot === 2 ? { ...e, id: 4021 } : e),
     },
     // Debug: in Awowogei's hall after his mission, as a monkey (%mm_garkor 4 seek_alliance; mm_monkeys: kruk 1,

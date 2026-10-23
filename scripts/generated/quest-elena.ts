@@ -42,9 +42,16 @@ try {
     const inSewer = () => (q.pos()?.worldZ ?? 0) > 9000;
 
     // 1. Edmond: "What's happened to her?", "Can I help find her?" sets 1 (edmond.rs2:2-8,52-66).
+    // Edmond wanders between the garden and the house (door loc_1530 at 2570,3333): with the door shut the talk is
+    // rejected (opRejectedCount), so the door is opened before each Edmond talk.
+    await q.openDoor('house door 0', 2570, 3333);
     await q.talk('edmond 1', edmond, [/what's happened to her/i, /can i help find her/i], () => q.sawText(/mcgrubor's wood to the north/i), EDMOND, 60);
     q.milestone(1);
-    // The picture on the table (obj 1510), for Jethick.
+    // The picture on the table (obj 1510) in the house east of the garden, behind the door loc_1530 at 2570,3333
+    // and the inner door loc_1530 at 2574,3333 (maps/m40_52.jm2): with a door shut the pickup gets "I can't reach that!".
+    await q.openDoor('house door', 2570, 3333);
+    await q.walk('to inner door', [{ x: 2573, z: 3333, tol: 0 }]);
+    await q.openDoor('inner door', 2574, 3333);
     for (let i = 0; i < 12 && !q.has(ITEM.picture); i++) {
         const g = (q.st()?.groundItems ?? []).find((x: any) => x.id === ITEM.picture);
         if (g && i % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
@@ -55,6 +62,8 @@ try {
     await q.talk('alrena', /^alrena$/i, [], () => q.has(ITEM.mask), ALRENA, 60);
     q.milestone(2);
     // 3. Edmond: 3 (edmond.rs2:18-22).
+    await q.openDoor('inner door out', 2574, 3333);
+    await q.openDoor('house door out', 2570, 3333);
     await q.talk('edmond 2', edmond, [], () => q.sawText(/pour on some buckets of water/i), EDMOND, 40);
     // 4. Four buckets on the mud patch (4-7), the spade: into the sewer (8) (mud_patch.rs2:1-46).
     for (let i = 0; i < 16 && q.has(ITEM.water); i++) {
@@ -88,9 +97,9 @@ try {
     await q.walk('to rehnisons', [{ x: REHNISON_DOOR.x, z: REHNISON_DOOR.z, tol: 0 }]);
     await q.step('rehnison door', () => q.opLoc(q.findLoc(l => l.x === REHNISON_DOOR.x && l.z === REHNISON_DOOR.z && /door/i.test(l.name)) ?? { id: 2537, ...REHNISON_DOOR }, 1), () => !q.has(ITEM.book), 10, 4);
     await q.converse([], () => !q.dialogOpen(), 6);
-    await q.talk('ted', /^(ted|martha) rehnison$/i, [], () => q.sawText(/milli/i) && !q.dialogOpen(), TED, 60);
+    await q.talk('ted', /^(ted|martha) rehnison$/i, [], () => q.sawText(/milli is upstairs/i) && !q.dialogOpen(), TED, 60);
     await q.climb('stairs up', () => q.locAt(STAIRS.x, STAIRS.z), /walk-up|climb|up/i, () => q.lvl() === 1);
-    await q.talk('milli', /^milli rehnison$/i, [], () => q.sawText(/plague house/i) && !q.dialogOpen(), MILLI, 60);
+    await q.talk('milli', /^milli rehnison$/i, [], () => q.sawText(/mossy windowless building/i) && !q.dialogOpen(), MILLI, 60);
     q.milestone(23);
     await q.climb('stairs down', () => q.findLoc(l => /stair/i.test(l.name) && l.distance <= 5), /walk-down|climb|down/i, () => q.lvl() === 0);
     // 9. The plague house door with a mourner near: "I fear not a mere plague." (24, doors.rs2:11-19,51-67).
@@ -101,7 +110,20 @@ try {
     q.milestone(24);
     // 10. The clerk: "I need permission to enter a plague house.", "This is urgent though!" (25, clerk.rs2:1-60);
     // Bravek: "This is really important though!", "Do you know what is in the cure?" (26, bravek.rs2).
-    await q.talk('clerk', /^clerk$/i, [/need permission to enter a plague house/i, /this is urgent though/i], () => q.sawText(/if they keep it short/i), CLERK, 60);
+    // "This is urgent though!" sets 25 only with Bravek within 7 tiles of the player (clerk.rs2:48-55). The clerk is
+    // talked to from the west side of his desk (from the east side the talk is rejected), 9 tiles from Bravek's spawn
+    // (2536,3314), so the bot holds the option page until Bravek walks within 6 tiles.
+    const bravekNear = () => { const b = q.npc(/^bravek$/i); return !!b && q.cheb(b.x, b.z) <= 6; };
+    const urgentPage = () => { const d: any = q.s.sdk.getDialog(); return !!d?.isOpen && (d.options ?? []).some((o: any) => /this is urgent though/i.test(o.text)); };
+    for (let tryN = 0; tryN < 4 && !q.sawText(/if they keep it short/i); tryN++) {
+        await q.talk('clerk', /^clerk$/i, [/need permission to enter a plague house/i], urgentPage, CLERK, 60, true);
+        await q.waitUntil(bravekNear, 120);
+        const d: any = q.s.sdk.getDialog();
+        const opt = (d?.options ?? []).find((o: any) => /this is urgent though/i.test(o.text));
+        if (opt && d?.isOpen) void q.s.sdk.sendClickDialog(opt.index);
+        await q.converse([], () => !q.dialogOpen(), 20);
+    }
+    if (!q.sawText(/if they keep it short/i)) await q.fail('clerk');
     q.milestone(25);
     await q.openDoor('bravek door', BRAVEK_DOOR.x, BRAVEK_DOOR.z);
     await q.talk('bravek 1', /^bravek$/i, [/this is really important though/i, /do you know what is in the cure/i], () => q.has(ITEM.note), BRAVEK, 60);
@@ -119,7 +141,14 @@ try {
     await q.openDoor('bravek door out', BRAVEK_DOOR.x, BRAVEK_DOOR.z);
     await q.walk('to plague house 2', [{ x: PLAGUE_DOOR.x, z: PLAGUE_DOOR.z + 1, tol: 1 }]);
     const inHouse = () => (q.pos()?.worldZ ?? 9999) < PLAGUE_DOOR.z && !inSewer();
-    await q.step('plague door 2', () => q.opLoc(q.locAt(PLAGUE_DOOR.x, PLAGUE_DOOR.z) ?? PLAGUE_DOOR, 1), inHouse, 10, 4);
+    // With the warrant the mourner talks for 3 pages, then the door lets the bot in (doors.rs2:23-50).
+    for (let i = 0; i < 3 && !inHouse(); i++) {
+        await q.guard('plague door 2');
+        await q.opLoc(q.locAt(PLAGUE_DOOR.x, PLAGUE_DOOR.z) ?? PLAGUE_DOOR, 1);
+        await q.waitUntil(() => q.dialogOpen() || inHouse(), 8);
+        await q.converse([], inHouse, 30);
+    }
+    if (!inHouse()) await q.fail('plague door 2');
     await q.converse([], () => !q.dialogOpen(), 6);
     await q.step('barrel', () => q.opLoc(q.locAt(BARREL.x, BARREL.z) ?? BARREL, 1), () => q.has(ITEM.key), 10, 4);
     await q.converse([], () => !q.dialogOpen(), 6);
@@ -144,6 +173,8 @@ try {
     if (!inSewer()) await q.fail('manhole');
     await q.walk('to mud pile', [{ x: MUD_PILE.x - 1, z: MUD_PILE.z, tol: 1 }]);
     await q.step('mud pile', () => q.opLoc(q.locAt(MUD_PILE.x, MUD_PILE.z) ?? MUD_PILE, 1), () => !inSewer(), 10, 4);
+    await q.openDoor('house door 3', 2570, 3333);
+    await q.openDoor('inner door 3', 2574, 3333);
     await q.talk('edmond 3', edmond, [], () => questDone, EDMOND, 60, true);
     await q.converse([], () => !q.dialogOpen(), 10);
     q.milestone(100);

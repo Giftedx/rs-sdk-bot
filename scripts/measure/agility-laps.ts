@@ -1,15 +1,20 @@
 // Agility laps as fast as the engine allows, on the LOCAL practice server.
 // Usage: bun scripts/measure/agility-laps.ts <bot> <course: gnome|barbarian|wilderness> [laps=10] [cap=600]
 // Presets: agility_<course>_<level> in packages/practice/src/presets.ts.
+// Env: AGI_V1=1 runs the first version (research/agility.md matrices). AGI_POTION=1 drinks an agility potion at the
+// Wilderness ridge gate when the level is below 52. AGI_DEBUG=1 prints clicks and messages, AGI_TRACE=1 one line per tick.
 //
 // Code facts (rev 289, CODE-READ):
-// - OpLocHandler drops a loc click while the player is delayed (OpLocHandler.ts:14-18), so the earliest useful
-//   click is on the first tick after the obstacle script ends. The bot sends the next click on the tick it sees the
-//   obstacle XP (the script grants XP at its end), and re-sends it after 2 still ticks with no progress.
+// - OpLocHandler drops a loc click while the player is delayed (OpLocHandler.ts:14-18), and the server reads client
+//   packets before it ends a delay (World.ts:402,425,776). So the earliest useful click is on the first tick after the
+//   obstacle script ends. V1 sends the next click on the tick it sees the obstacle XP; on 4 of the 5 Wilderness obstacles
+//   that click is 1 tick late. V2 (Wilderness) sends the next obstacle's click on every tick after the current obstacle
+//   script has started, so the first tick that accepts a click gets one.
 // - Fail chance: stat_random(agility, low, high) succeeds when floor(low*(99-L)/98)+floor(high*(L-1)/98)+1 > rand(256)
-//   (PlayerOps.ts:591-600).
+//   (PlayerOps.ts:591-600). The roll uses the current (boosted) level.
 // - XP is in tenths (stat_advance), x25 on this server (WorldConfig.ts:102).
-// Prints LAP lines and one RESULT line: laps, ticks, ticksPerLap, xpPerTick, fails, hpLost, eats.
+// Prints CYCLE and NOTE LAP lines (ticks and falls per lap) and one RESULT line: laps, ticks, xpPerTick, fails,
+// fallTicks, pitTicks, bonusLost and XP/ticks per level band (b<low>_<high>=<xp>/<ticks>).
 import { openBot, finish } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
 

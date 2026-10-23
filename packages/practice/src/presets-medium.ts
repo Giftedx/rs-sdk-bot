@@ -28,5 +28,10 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // (2325) for Thurgo, 2 iron bars (2351), rune pickaxe (1275) for the blurite, runes for a Varrock and two Falador
     // teleports (3 law 563, 9 air 556, 1 fire 554, 2 water 555). Portrait, blurite ore and sword are untradeable
     // (quest_squire.obj).
+    // Plague City: in Edmond's house, East Ardougne (edmond spawn 2568,3334, maps/m40_52.jm2); dwellberries (2126) for
+    // Alrena, 4 buckets of water (1929), spade (952), rope (954), chocolate dust (1975), bucket of milk (1927) and snape
+    // grass (231) for the hangover cure. Gas mask, picture, book, key, warrant, chocolaty milk and the cure are
+    // untradeable (quest_elena configs, knowledge/items.json).
+    quest_elena: medium({ x: 2569, z: 3333 }, [2126, 1929, 1929, 1929, 1929, 952, 954, 1975, 1927, 231], 2),
     quest_squire: medium({ x: 2978, z: 3342 }, [2325, 2351, 2351, 1275, [563, 3], [556, 9], [554, 1], [555, 2]], 6),
 };

@@ -405,11 +405,11 @@ try {
     // A village walk as a human: a patrol guard or a summoned guard can knock the bot back into the cell on the way, so
     // a jailing picks the lock again and walks on (up to 3 times).
     let rejails = 0;
-    const walkAtoll = async (label: string, pts0: { x: number; z: number; tol?: number }[]): Promise<void> => {
+    const walkAtoll = async (label: string, pts0: { x: number; z: number; tol?: number }[], retry?: { x: number; z: number; tol?: number }[]): Promise<void> => {
         const g = pts0[pts0.length - 1]!;
         for (let i = 0; i < 7 && !q.near(g.x, g.z, g.tol ?? 2); i++) {
             if (inCell()) { rejails++; await knockout(`${label} rejail`); }
-            await walkStop(label, pts0, inCell);
+            await walkStop(label, i === 0 ? pts0 : (retry ?? [g]), inCell);
         }
         if (!q.near(g.x, g.z, (g.tol ?? 2) + 1)) await q.fail(`walk ${label}`);
     };
@@ -483,10 +483,12 @@ try {
             await q.waitTicks(1);
         }
     };
+    class Jailed extends Error {}
     const locOp = async (label: string, at: { x: number; z: number }, re: RegExp, op: RegExp, pats: RegExp[], ok: () => boolean, ticks = 30, tries = 8, pests = true): Promise<void> => {
         for (let i = 0; i < tries && !ok(); i++) {
             await q.guard(label);
             if (i > 0) q.stats.retries++;
+            if (inCell()) throw new Jailed(label);
             if (pests && q.near(at.x, at.z, 5)) await clearPests(label, 1);
             if (i > 0) console.log(`NOTE ${label} try ${i} npcs=${(q.st()?.nearbyNpcs ?? []).filter((k: any) => k.distance <= 6).map((k: any) => `${k.name}@${k.x},${k.z}`).join(' ')}`);
             const l = q.findLoc(k => k.x === at.x && k.z === at.z && re.test(k.name)) ?? q.findLoc(k => Math.max(Math.abs(k.x - at.x), Math.abs(k.z - at.z)) <= 2 && re.test(k.name) && (k.optionsWithIndex ?? []).some((o: any) => op.test(o.text)));
@@ -510,12 +512,23 @@ try {
         await walkAtoll('to garkor', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
         await talkChoose('garkor', /^garkor$/i, () => -1, () => q.sawText(/just go and find my squad mage/i) && !q.dialogOpen(), 80, { x: 2805, z: 2762 });
         q.milestone('garkor');
-        await walkAtoll('to denture crate', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, { x: 2764, z: 2763, tol: 0 }, { x: 2765, z: 2765, tol: 0 }, { x: 2769, z: 2766, tol: 0 }, { x: 2769, z: 2768, tol: 0 }, { x: 2768, z: 2769, tol: 0 }]);
+        const inWh = [{ x: 2764, z: 2763, tol: 0 }, { x: 2765, z: 2765, tol: 0 }, { x: 2769, z: 2766, tol: 0 }, { x: 2769, z: 2768, tol: 0 }, { x: 2768, z: 2769, tol: 0 }];
+        // A guard call in the warehouse means the jail: lock, walk back, try again (up to 3 times).
+        for (let wh = 0; ; wh++) {
+          try {
+        await walkAtoll('to denture crate', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, ...inWh], [{ x: 2779, z: 2764, tol: 1 }, ...inWh]);
         await locOp('dentures', { x: 2767, z: 2769 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.dentures) && !q.dialogOpen(), 30, 10);
         // The hole crate from its south tile: the warehouse spider (2 HP, respawnrate 4, huntrange 1) spawns at 2770,2766,
         // beside the north and east tiles, and each of its hits closes the crate's choice.
         await walk('to hole south', [{ x: 2770, z: 2765, tol: 0 }, { x: 2769, z: 2764, tol: 0 }]);
         await locOp('hole', { x: 2769, z: 2765 }, /crate/i, /search/i, [/^yes, i'm sure/i], () => inCellar(), 40, 10);
+            break;
+          } catch (e) {
+            if (!(e instanceof Jailed) || wh >= 2) throw e;
+            rejails++;
+            await knockout('jail warehouse');
+          }
+        }
         q.milestone('cellar');
         await walk('to mould crate', [{ x: 2782, z: 9171, tol: 1 }]);
         await locOp('mould', { x: 2782, z: 9172 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.mould) && !q.dialogOpen());
@@ -538,7 +551,11 @@ try {
     const toDungeon = async (label: string): Promise<void> => {
         if (inCell()) await knockout(`${label} jail`);
         if (z() < 6400 && z() > 2727) {
-            await walkAtoll(`${label} to bridge ladder`, [{ x: 2803, z: 2735, tol: 1 }]);
+            // From the west of the village (the child's garden) the SDK plans through the eastern warehouse and the
+            // sleeping guard's zone, so the walk goes round it by the jail lane.
+            const west = (q.pos()?.worldX ?? 9999) < 2760;
+            const via = west ? [{ x: 2749, z: 2800, tol: 1 }, { x: 2751, z: 2792, tol: 1 }, { x: 2751, z: 2787, tol: 1 }, { x: 2765, z: 2786, tol: 1 }, { x: 2770, z: 2782, tol: 1 }, { x: 2770, z: 2776, tol: 1 }, { x: 2771, z: 2770, tol: 1 }, { x: 2776, z: 2769, tol: 1 }, { x: 2779, z: 2764, tol: 1 }, { x: 2786, z: 2758, tol: 1 }] : [];
+            await walkAtoll(`${label} to bridge ladder`, via.concat([{ x: 2803, z: 2735, tol: 1 }]));
             await locOp(`${label} bridge ladder`, { x: 2803, z: 2734 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
             await walk(`${label} bridge`, [{ x: 2803, z: 2728, tol: 0 }]);
             await locOp(`${label} jump`, { x: 2803, z: 2727 }, /end of bridge/i, /jump/i, [], () => level() === 0 && z() <= 2725, 10);
@@ -547,7 +564,11 @@ try {
             await walk(`${label} to dungeon ladder`, [{ x: 2763, z: 2704, tol: 1 }]);
             await locOp(`${label} dungeon down`, { x: 2763, z: 2703 }, /ladder/i, /climb/i, [], () => z() > 9000, 10);
         }
+        // Protect from Melee for the whole human pass: the auto toggle came a tick late for the zombies (practice run 1:
+        // 80 damage from 22 zombie hits, death on the next pass with the food gone).
+        const w0 = want; if (!greegree()) want = PFM;
         await walk(`${label} to zooknock`, DUNGEON_IN.slice(0, -1).concat([{ x: 2803, z: 9145, tol: 1 }]));
+        want = w0;
     };
     const ZOOKNOCK = { x: 2804, z: 9145 };
     const giveZooknock = async (label: string, id: number, ok: () => boolean): Promise<void> => {
@@ -638,7 +659,9 @@ try {
     if (FROM < 105) {
         want = 'auto';
         if (z() > 6400) {
+            want = PFM;
             await walk('to dungeon exit', DUNGEON_OUT);
+            want = 'auto';
             await locOp('dungeon up', { x: 2763, z: 9103 }, /ladder/i, /climb/i, [], () => z() < 6400, 10);
         }
         await knockout('jail2');
@@ -736,6 +759,21 @@ try {
             if (!ok()) await q.fail(`${label}: not done`);
         };
         auntWatch = true;
+        // Five bananas from the garden's banana trees (2x2, one banana per pick, banana_tree.rs2:1-12), picked while the
+        // aunt is away; the child takes them when the pack holds more than 4 (mm_monkey_child.rs2:186).
+        const bad = new Set<string>();
+        for (let i = 0; i < 20 && q.cnt(ITEM.banana) < 5; i++) {
+            await q.guard('bananas');
+            await toOutside();
+            await auntClear(150);
+            const t = q.findLoc(l => /banana tree/i.test(l.name) && l.x >= 2740 && l.x <= 2747 && l.z >= 2791 && l.z <= 2798 && !bad.has(`${l.x},${l.z}`) && (l.optionsWithIndex ?? []).length > 0);
+            if (!t) { await q.waitTicks(1); continue; }
+            const n0 = q.cnt(ITEM.banana);
+            await q.opLoc(t, 1);
+            await q.waitUntil(() => q.cnt(ITEM.banana) > n0, 8);
+            if (q.cnt(ITEM.banana) === n0) bad.add(`${t.x},${t.z}`);
+        }
+        if (q.cnt(ITEM.banana) < 5) await q.fail(`bananas: ${q.cnt(ITEM.banana)}`);
         await childTalk('child', [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana), 10);
         const gaveAt = q.T();
         await converse1([], () => !q.dialogOpen(), 20);
