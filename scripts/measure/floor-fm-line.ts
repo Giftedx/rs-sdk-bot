@@ -29,6 +29,7 @@ if (import.meta.main) {
     const plan = planOf(rowsArg!);
     const nHelpers = Number(nArg ?? Math.ceil((plan.length - PACK) / CHUNK));
     const LEAD = Number(process.env.FM_LEAD ?? 36);
+    const FM_EARLY = process.env.FM_EARLY !== '0';
     const s = await openBot(bot!);
     const helpers: Session[] = [];
     const suffix = 'bcdefgh';
@@ -82,6 +83,7 @@ if (import.meta.main) {
             const p = plan[i]!;
             if (i === 0 || plan[i - 1]!.row !== p.row) tRow[p.row] = s.tick();
             const before = xp(s, 'Firemaking'), lvl0 = level(s, 'Firemaking');
+            let early = false;
             const tl = s.tick();
             if (i < PACK) {
                 // Pack log: the fire is lit on the player's tile, so walk there first at a row change.
@@ -112,15 +114,23 @@ if (import.meta.main) {
                 waitTicks += s.tick() - tw;
                 if (dialogOpen(s)) await send(s, m, { type: 'closeModal' });
                 await send(s, m, { type: 'interactGroundItem', x: p.x, z: p.z, itemId: p.id, optionIndex: 4 });
-                while (xp(s, 'Firemaking') === before && s.tick() - tl < 120) {
+                // Success = the log leaves the ground (obj_del in firemaking_success). The push (a teleport) shows one
+                // tick before that, so at a row end the next op goes out as soon as the player leaves the tile.
+                const turnNext = plan[i + 1] && plan[i + 1]!.row !== p.row;
+                let onTile = false;
+                while (visible() && s.tick() - tl < 120) {
                     await tick(s);
+                    const me = pos(s);
+                    if (me.x === p.x && me.z === p.z) onTile = true;
+                    else if (onTile && turnNext && FM_EARLY) { early = true; break; }
+                    if (process.env.FM_TRACE === '1' && (plan[i - 1]!.row !== p.row || (i >= 30 && i <= 31))) console.log(`NOTE trace job ${i} dt=${s.tick() - tl} me=${JSON.stringify(pos(s))} run=${(s.sdk.getState() as any)?.player?.runEnergy ?? '?'} msgs=${msgs(s)}`);
                     if (dialogOpen(s)) await send(s, m, { type: 'closeModal' });
                     if (/can't light a fire here/i.test(msgs(s))) { console.log(`WARN can't light at ${p.x},${p.z} job ${i}`); ok = false; break; }
                     if ((s.tick() - tl) % 6 === 0 && visible()) await send(s, m, { type: 'interactGroundItem', x: p.x, z: p.z, itemId: p.id, optionIndex: 4 });
                 }
             }
             if (!ok) break;
-            if (xp(s, 'Firemaking') === before) { console.log(`WARN log ${i} at ${p.x},${p.z} not lit me=${JSON.stringify(pos(s))} msgs=${msgs(s)}`); ok = false; break; }
+            if (i < PACK ? xp(s, 'Firemaking') === before : (!early && ground(s).some(g => g.id === p.id && g.x === p.x && g.z === p.z))) { console.log(`WARN log ${i} at ${p.x},${p.z} not lit me=${JSON.stringify(pos(s))} msgs=${msgs(s)}`); ok = false; break; }
             const dt = s.tick() - tl;
             worst = Math.max(worst, dt);
             // At level 45+ every roll succeeds (stat_random(64, 512)), so a log over 4 ticks is overhead, not a fail.

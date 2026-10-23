@@ -21,7 +21,7 @@ const root = join(import.meta.dir, '..', '..');
 const content = join(root, 'vendor/rs-sdk/server/content');
 const args = process.argv.slice(2);
 const arg = (k: string, d: number) => { const i = args.indexOf(k); return i >= 0 ? Number(args[i + 1]) : d; };
-const NEED = arg('--need', 157), TOP = arg('--top', 10), TURN = arg('--turn', 6), MAXTURNS = arg('--turns', 3), MARGIN = 3;
+const NEED = arg('--need', 157), TOP = arg('--top', 10), TURN = arg('--turn', 4), MAXTURNS = arg('--turns', 3), MARGIN = 3;
 const SAFE = args.includes('--safe'); // drop Wilderness and desert-heat candidates
 const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : undefined;
 
@@ -200,18 +200,27 @@ for (const z of zs) {
     if (start >= 0 && start - prev + 1 >= 20) rows.push({ z, sx: start, ex: prev, len: start - prev + 1 });
 }
 
-// ---- Short walk between the end of one row and the start of the next (4-way BFS on walk flags, at most TURN steps;
-// running covers 2 steps a tick, and the next roll comes 4 ticks after the last success, so 6 steps should be free).
+// ---- Short walk between the end of one row and the start of the next (BFS on walk flags, at most TURN steps,
+// 8-way steps). MEASURED on practice (scripts/measure/floor-fm-line.ts): with run on and the next op sent when the push
+// shows, a turn of up to 4 steps (2 ticks running) costs 0 ticks; 6 steps (3 ticks) cost 4 ticks (a fresh 3-tick attempt).
+// One step, rsmod rules: a diagonal needs both orthogonal steps open as well.
+const stepOk = (x: number, z: number, dx: number, dz: number) => {
+    const b = dx < 0 ? BLOCK.W : dx > 0 ? BLOCK.E : dz < 0 ? BLOCK.S : BLOCK.N;
+    return (flag(x + dx, z + dz) & b) === 0;
+};
+const step = (x: number, z: number, dx: number, dz: number): boolean => {
+    if (dx === 0 || dz === 0) return stepOk(x, z, dx, dz);
+    return stepOk(x, z, dx, 0) && stepOk(x + dx, z, 0, dz) && stepOk(x, z, 0, dz) && stepOk(x, z + dz, dx, 0);
+};
 const walkSteps = (ax: number, az: number, bx: number, bz: number, max: number) => {
     let frontier = [[ax, az]], seen = new Set([key(ax, az)]);
     for (let d = 0; d <= max; d++) {
         const next: number[][] = [];
         for (const [x, z] of frontier) {
             if (x === bx && z === bz) return d;
-            const steps: [number, number, number][] = [[-1, 0, BLOCK.W], [1, 0, BLOCK.E], [0, -1, BLOCK.S], [0, 1, BLOCK.N]];
-            for (const [dx, dz, b] of steps) {
+            for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]] as const) {
                 const nx = x! + dx, nz = z! + dz;
-                if (seen.has(key(nx, nz)) || !loaded(nx, nz) || (flag(nx, nz) & b) !== 0) continue;
+                if (seen.has(key(nx, nz)) || !loaded(nx, nz) || !step(x!, z!, dx, dz)) continue;
                 seen.add(key(nx, nz)); next.push([nx, nz]);
             }
         }

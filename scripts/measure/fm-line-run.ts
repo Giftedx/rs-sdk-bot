@@ -2,7 +2,8 @@
 // time, each on fresh accounts with saves built here from the line (no entry in packages/practice/src/presets.ts).
 // Usage: RANDOM_EVENTS=0 bun scripts/measure/fm-line-run.ts "<z,sx,ex;...>" <runs>
 // Firemaker: Firemaking 1 on the first tile, tinderbox + the first 27 logs. Helper k (<bot>b, c, ...): on the first
-// tile of its 28-log chunk with that chunk in the pack.
+// tile of its 28-log chunk with that chunk in the pack. Both have run on (varp 173 option_run = 1), so a turn walk
+// between rows takes half the ticks.
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createBot } from '../../packages/practice/src/bots';
@@ -34,11 +35,11 @@ for (let i = 1; i <= runs; i++) {
     const t0 = Date.now();
     try {
         await createBot(bot);
-        await applyPreset(bot, { position: { x: plan[0]!.x, z: plan[0]!.z, level: 0 }, inventory: [{ id: 590, count: 1 }, ...plan.slice(0, PACK).map(p => ({ id: p.id, count: 1 }))] });
+        await applyPreset(bot, { position: { x: plan[0]!.x, z: plan[0]!.z, level: 0 }, varps: { 173: 1 }, inventory: [{ id: 590, count: 1 }, ...plan.slice(0, PACK).map(p => ({ id: p.id, count: 1 }))] });
         for (let k = 0; k < nHelpers; k++) {
             const chunk = plan.slice(PACK + k * CHUNK, PACK + (k + 1) * CHUNK);
             await createBot(names[k + 1]!);
-            await applyPreset(names[k + 1]!, { position: { x: chunk[0]!.x, z: chunk[0]!.z, level: 0 }, inventory: chunk.map(p => ({ id: p.id, count: 1 })) });
+            await applyPreset(names[k + 1]!, { position: { x: chunk[0]!.x, z: chunk[0]!.z, level: 0 }, varps: { 173: 1 }, inventory: chunk.map(p => ({ id: p.id, count: 1 })) });
         }
         const proc = Bun.spawn(['bun', join(import.meta.dir, 'floor-fm-line.ts'), bot, rows!, String(nHelpers)], { cwd: repo, stdout: 'pipe', stderr: 'pipe', env: process.env });
         const timer = setTimeout(() => proc.kill(), 900_000);
