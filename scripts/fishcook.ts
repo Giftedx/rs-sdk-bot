@@ -25,6 +25,9 @@ const CHICKEN_CAP = Number(process.env.CHICKEN_CAP ?? 400);
 const GIVE_TO = process.env.GIVE_TO?.trim() || '';
 const HANDOFF_ONLY = process.env.HANDOFF_ONLY === '1';
 const WAIT = Number(process.env.WAIT ?? 900);
+// TICK3=0: no knife-on-logs 3-tick step; the first bank visit banks the knife and logs (3 more fish per pack).
+// Measured worse (practice 2026-10-23, 3 x 2,500 ticks: 36.6, 48.1, 24.0 food per 1,000 ticks against 34.2, 52.0, 39.5).
+const TICK3 = process.env.TICK3 !== '0';
 
 const FLY_SPOT: Tile = { x: 3239, z: 3251 };
 const FIREPLACE: Tile = { x: 3214, z: 3249 };
@@ -85,7 +88,7 @@ try {
 
     let fishTicks = 0, cookTicks = 0, walkTicks = 0, bankTicks = 0, chickenTicks = 0, idleTicks = 0, giveTicks = 0;
     // noSpot: ticks in a row with no allowed fishing spot; spotWaits: times that wait was used to cook, bank or fetch feathers.
-    let noSpot = 0, spotWaits = 0;
+    let noSpot = 0, spotWaits = 0, reclicks = 0;
     let caught = 0, cooked = 0, burnt = 0, banked = 0, bankFish = 0, packs = 0, cycles = 0, kills = 0, feathersGot = 0, given = 0, events = 0, eats = 0;
     const cook0 = cook(), fishXp0 = fishXp();
 
@@ -96,7 +99,7 @@ try {
         const tries = cooked + burnt;
         const detail = `ticks=${ticks} caught=${caught} cooked=${cooked} burnt=${burnt} burnPct=${(100 * burnt / Math.max(1, tries)).toFixed(1)} banked=${banked} bankFish=${bankFish} given=${given} `
             + `foodPerKTicks=${(1000 * banked / Math.max(1, ticks)).toFixed(1)} cooking=${cook0}->${cook()} fishXp=${fishXp() - fishXp0} packs=${packs} cycles=${cycles} kills=${kills} feathersGot=${feathersGot} `
-            + `fishTicks=${fishTicks} cookTicks=${cookTicks} walkTicks=${walkTicks} bankTicks=${bankTicks} chickenTicks=${chickenTicks} giveTicks=${giveTicks} idleTicks=${idleTicks} spotWaits=${spotWaits} `
+            + `fishTicks=${fishTicks} cookTicks=${cookTicks} walkTicks=${walkTicks} bankTicks=${bankTicks} chickenTicks=${chickenTicks} giveTicks=${giveTicks} idleTicks=${idleTicks} spotWaits=${spotWaits} reclicks=${reclicks} `
             + `events=${events} eats=${eats} feathers=${countItems(s, FEATHER)} packCooked=${cookedInPack()} hp=${hp()} hpMin=${hpMin} died=${died} at=${p?.worldX},${p?.worldZ},${p?.level}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
@@ -230,7 +233,8 @@ try {
             // Raw fish the level cannot cook yet (salmon below 25) goes in too, or it would fill the pack for good.
             // One deposit-all per item name (a second call on a name already gone waits for its timeout: 614 bank
             // ticks in the first practice run).
-            const DEPOSIT = /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon)$/i;
+            const DEPOSIT = TICK3 ? /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon)$/i
+                : /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon|knife|logs|arrow shaft)$/i;
             for (const name of [...new Set(inv().filter(i => DEPOSIT.test(i.name)).map(i => i.name as string))]) {
                 const re = new RegExp(`^${name}$`, 'i');
                 const before = countItems(s, re);
@@ -291,6 +295,7 @@ try {
     if (slotOf(ROD) === undefined) await end(false, 'no fly fishing rod');
 
     let chain: { index: number } | null = null;
+    let stillAnim = 0;
     while (!over()) {
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
         if (await eatIfLow()) continue;
@@ -330,9 +335,10 @@ try {
                 await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); chain = null;
                 continue;
             } else if (noSpot > 5 && invLen() <= 18) {
-                // No raw fish to cook: chickens give feathers, and the raw chicken is cooked at once (Cooking XP).
+                // No raw fish to cook: chickens give feathers. Raw chicken only below Cooking 15 (it trains Cooking to
+                // trout; above that, waiting for 8 raw chickens cost 359-407 ticks per 2,500 in practice).
                 noSpot = 0; spotWaits++;
-                await chickenTrip(feathers + 10, 8); await go(FIRE_TO_FLY, 'back to the river'); chain = null;
+                await chickenTrip(feathers + 10, cook() < 15 ? 8 : 0); await go(FIRE_TO_FLY, 'back to the river'); chain = null;
                 continue;
             } else { idleTicks++; await waitTicks(s, 1); }
             fishTicks += s.tick() - f0;
@@ -347,15 +353,21 @@ try {
         } else {
             const knife = slotOf(/^knife$/i), log = slotOf(/^logs$/i);
             if (s.sdk.getDialog()?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
-            if (knife !== undefined && log !== undefined) {
+            if (TICK3 && knife !== undefined && log !== undefined) {
                 await s.direct({ type: 'useItemOnItem', sourceSlot: knife, targetSlot: log, reason: 'SDK' });
                 await s.direct({ type: 'clickComponent', componentId: make1, reason: 'SDK' });
                 await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
                 cycles++;
                 await waitTicks(s, 3);
             } else {
-                // No knife or logs: one click per spot, then wait while it fishes.
-                if (chain?.index !== sp.index) { await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' }); chain = { index: sp.index }; }
+                // No knife or logs: click the spot once, and again when the player stops fishing (2 ticks with no
+                // animation). A level-up dialog stops fishing; before this check the bot stood 317 ticks next to a
+                // spot that did not move (practice 2026-10-23; live Mightyrod 456 ticks at 3239,3254).
+                stillAnim = (pos()?.animId ?? -1) === -1 ? stillAnim + 1 : 0;
+                if (chain?.index !== sp.index || stillAnim >= 2) {
+                    await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
+                    chain = { index: sp.index }; stillAnim = 0; reclicks++;
+                }
                 await waitTicks(s, 1);
             }
         }
