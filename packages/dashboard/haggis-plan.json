@@ -1,0 +1,29 @@
+{
+  "note": "Plan status per board for Haggis's single run. Status: not started | method known | prep needed | rehearsed. research/haggis-run.md wins when it has a board table.",
+  "boards": [
+    { "board": "Overall", "status": "not started" },
+    { "board": "Attack", "status": "not started" },
+    { "board": "Defence", "status": "not started" },
+    { "board": "Strength", "status": "not started" },
+    { "board": "Hitpoints", "status": "not started" },
+    { "board": "Ranged", "status": "not started" },
+    { "board": "Prayer", "status": "not started" },
+    { "board": "Magic", "status": "not started" },
+    { "board": "Cooking", "status": "not started" },
+    { "board": "Woodcutting", "status": "not started" },
+    { "board": "Fletching", "status": "not started" },
+    { "board": "Fishing", "status": "not started" },
+    { "board": "Firemaking", "status": "not started" },
+    { "board": "Crafting", "status": "not started" },
+    { "board": "Smithing", "status": "not started" },
+    { "board": "Mining", "status": "not started" },
+    { "board": "Herblore", "status": "not started" },
+    { "board": "Agility", "status": "not started" },
+    { "board": "Thieving", "status": "not started" },
+    { "board": "Runecraft", "status": "not started" },
+    { "board": "Quest Points", "status": "not started" },
+    { "board": "Equipment", "status": "not started" },
+    { "board": "Bank", "status": "not started" },
+    { "board": "Runite", "status": "not started" }
+  ]
+}
