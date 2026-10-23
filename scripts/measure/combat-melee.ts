@@ -21,6 +21,10 @@ const TARGET = new RegExp(process.env.TARGET ?? '^white knight$', 'i');
 const STYLE = Number(process.env.STYLE ?? 1);
 const CANNON = process.env.CANNON === '1';
 const RELOAD = Number(process.env.RELOAD ?? 20);
+// Cannon policy: NEAR = fight only NPCs within NEAR tiles of the cannon centre (default 10); TOPUP_ADJ=1 = top up only
+// from a tile next to the cannon (Chebyshev <= 2 from the centre) or between targets, never by breaking off a fight.
+const NEAR = Number(process.env.NEAR ?? 10);
+const TOPUP_ADJ = process.env.TOPUP_ADJ === '1';
 const FOOD = /^(lobster|swordfish|shark)$/i;
 const s = await openBot(bot!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
@@ -144,7 +148,8 @@ try {
                     void s.direct({ type: 'interactLoc', x: cannon.x, z: cannon.z, locId: cannon.id, optionIndex: 1, reason: 'SDK' });
                     refires++; target = -1; return;
                 }
-                if (now - lastReload >= RELOAD) {
+                const adj = cheb({ x: cannon.x + 1, z: cannon.z + 1 }, { x: p.worldX, z: p.worldZ }) <= 2;
+                if (now - lastReload >= RELOAD && (!TOPUP_ADJ || adj || !fighting)) {
                     const balls = slotOf(/^cannonball$/i);
                     if (balls) {
                         void s.direct({ type: 'useItemOnLoc', itemSlot: balls.slot, x: cannon.x, z: cannon.z, locId: cannon.id, reason: 'SDK' });
@@ -157,7 +162,7 @@ try {
             //    combat with us is fine.
             const anchor = cannon ? { x: cannon.x + 1, z: cannon.z + 1 } : { x: p.worldX, z: p.worldZ };
             const cand = npcs
-                .filter(n => TARGET.test(n.name) && (n.hp ?? 1) > 0 && !((bad.get(n.index) ?? 0) > now) && n.optionsWithIndex?.some((o: any) => /attack/i.test(o.text)) && cheb({ x: n.x, z: n.z }, anchor) <= (cannon ? 10 : 20))
+                .filter(n => TARGET.test(n.name) && (n.hp ?? 1) > 0 && !((bad.get(n.index) ?? 0) > now) && n.optionsWithIndex?.some((o: any) => /attack/i.test(o.text)) && cheb({ x: n.x, z: n.z }, anchor) <= (cannon ? NEAR : 20))
                 .sort((a, b) => (a.reachable === false ? 1 : 0) - (b.reachable === false ? 1 : 0) || (b.targetIndex >= 0 ? 1 : 0) - (a.targetIndex >= 0 ? 1 : 0) || a.distance - b.distance)[0];
             if (!cand) {
                 if (idle++ % 20 === 0) console.log('NOTE idle t=' + (now - t0) + ' at ' + p.worldX + ',' + p.worldZ + ' knights=' + npcs.filter(n => TARGET.test(n.name)).map(n => n.x + ',' + n.z + ':hp' + n.hp + ':r' + n.reachable + ':bad' + ((bad.get(n.index) ?? 0) > now)).join(' '));
@@ -180,5 +185,5 @@ try {
         `cannon=${CANNON} ticks=${ticks} styleXp=${style} styleXpPerTick=${(style / ticks).toFixed(1)} hpXp=${g.Hitpoints} hpXpPerTick=${(g.Hitpoints! / ticks).toFixed(1)} ` +
         `rangedXp=${g.Ranged} rangedXpPerTick=${(g.Ranged! / ticks).toFixed(1)} meleeDmgPerTick=${(meleeDmg / ticks).toFixed(3)} cannonDmgPerTick=${(cannonDmg / ticks).toFixed(3)} ` +
         `inCombat=${inCombat} inCombatShare=${(inCombat / ticks).toFixed(3)} attacks=${attacks} kills=${kills} idle=${idle} eats=${eats} food=${countItems(s, FOOD)} dmgTaken=${dmgTaken} ` +
-        `reloads=${reloads} refires=${refires} setupTicks=${setupTicks} balls=${countItems(s, /^cannonball$/i)} hp=${hp()}/${maxHp} lv=${lvl('Attack')}/${lvl('Strength')}/${lvl('Defence')}/${lvl('Hitpoints')}/${lvl('Ranged')}`);
+        `near=${NEAR} topupAdj=${TOPUP_ADJ} reload=${RELOAD} reloads=${reloads} refires=${refires} setupTicks=${setupTicks} balls=${countItems(s, /^cannonball$/i)} hp=${hp()}/${maxHp} lv=${lvl('Attack')}/${lvl('Strength')}/${lvl('Defence')}/${lvl('Hitpoints')}/${lvl('Ranged')}`);
 } catch (e) { await finish([s], false, String(e)); }
