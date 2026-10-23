@@ -2548,17 +2548,17 @@
     "skill": "agility",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 202.6,
-     "realistic": 178,
+     "floor": 212.9,
+     "realistic": 190.9,
      "evidence": "MEASURED",
-     "source": "research/agility.md: Wilderness course practice runs, 10-lap cap 800 ticks; floor = best runs 202.6 XP/tick (705 ticks, 0-1 fails, Agility 70 and 90); realistic = mean of 9 runs at Agility 70 and 90 (147.4-202.6) = 178"
+     "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 30 runs of 20 laps from Agility 52, 60, 76 (10 each); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-99 192.5 = 190.9 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)"
     }
    },
    "requires": [
     "agility-52"
    ],
    "evidence": "MEASURED",
-   "source": "research/agility.md: Wilderness course practice runs, 10-lap cap 800 ticks; floor = best runs 202.6 XP/tick (705 ticks, 0-1 fails, Agility 70 and 90); realistic = mean of 9 runs at Agility 70 and 90 (147.4-202.6) = 178",
+   "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 30 runs of 20 laps from Agility 52, 60, 76 (10 each); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-99 192.5 = 190.9 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)",
    "supplies": [
     {
      "item": "lobster",
@@ -2573,10 +2573,10 @@
        "skill": "agility",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 202.6,
-        "realistic": 178,
+        "floor": 212.9,
+        "realistic": 190.9,
         "evidence": "MEASURED",
-        "source": "research/agility.md: Wilderness course practice runs, 10-lap cap 800 ticks; floor = best runs 202.6 XP/tick (705 ticks, 0-1 fails, Agility 70 and 90); realistic = mean of 9 runs at Agility 70 and 90 (147.4-202.6) = 178; superseded the rival S17 ESTIMATE of 197 (our clean lap is 66-71 ticks, shorter than the rival's 74)"
+        "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 30 runs of 20 laps from Agility 52, 60, 76 (10 each); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-99 192.5 = 190.9 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71); superseded the rival S17 ESTIMATE of 197 (our clean lap is 66-71 ticks, shorter than the rival's 74)"
        }
       }
      }

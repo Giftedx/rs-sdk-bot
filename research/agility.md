@@ -5,6 +5,9 @@ Boards: Agility, Overall.
 
 ## Result
 
+- **Update (V2 script, 60 runs of 20 laps, section "Wilderness V2"):** the Wilderness rate from Agility 52 to 99 is
+  190.9 XP/tick (band-weighted, V2), against 178.9 for the first script with the same method. The planner row now
+  uses 190.9 realistic and 212.9 floor.
 - Agility stays the last skill on the Haggis clock. The Wilderness course is the fastest route.
   Measured on practice: 202.6 XP/tick in the best runs, 178 XP/tick as the mean of 9 runs at Agility 70 and 90.
 - The plan reaches the Wilderness step at Agility 76 (202,363 XP: gnome laps to 25 = 4,863 XP, then
@@ -32,6 +35,90 @@ them the working tree gives 38,427 / 47,313 for the measured table.
 
 The Overall #1 is stunbaron at 35,916. The no-Wilderness row does not model the trip to Brimhaven or the
 200-coin entry fee (`agilityarena_clerk.rs2:19`).
+
+## Wilderness V2 (MEASURED practice, 2026-10-23)
+
+Script: `scripts/measure/agility-laps.ts`. `AGI_V1=1` runs the first version ("before"); the default is V2 ("after").
+Runner: `RANDOM_EVENTS=0 bun scripts/measure/floor-run.ts scripts/measure/agility-laps.ts agility_wilderness_<L> 10 wilderness 20 2600`.
+Each run is a new account, 20 laps. The level climbs in the run (52 to 82, 60 to 83, 76 to 88), so the band rates
+below split the XP and ticks by the current level at the start of each obstacle.
+
+### Before and after (10 runs per row)
+
+| Start level | Script | Mean XP/tick | SD | Min-max | Median | Clean lap (median) | Fall messages | Lap bonuses lost |
+|---|---|---|---|---|---|---|---|---|
+| 52 | V1 | 174.9 | 12.7 | 143.7-194.2 | 176.9 | 71 | 64 | 16 |
+| 52 | V2 | **184.2** | 13.3 | 166.1-205.5 | 183.8 | 66 | 77 | 18 |
+| 60 | V1 | 177.9 | 12.3 | 152.6-192.2 | 180.4 | 71 | 58 | 17 |
+| 60 | V2 | **192.8** | 11.1 | 175.1-214.8 | 192.9 | 66 | 46 | 16 |
+| 76 | V1 | 183.7 | 6.2 | 175.7-192.2 | 184.4 | 71 | 39 | 11 |
+| 76 | V2 | **194.9** | 13.5 | 171.2-212.9 | 198.4 | 66 | 39 | 17 |
+
+Per run (XP/tick). V1 52: 172.6 194.2 177.1 176.9 143.7 188.7 166.9 177.1 176.9 175.3. V1 60: 192.2 178.8 182.1
+190.5 174.1 186.8 188.8 152.6 164.0 168.7. V1 76: 175.7 188.7 186.8 175.8 192.2 190.6 175.8 182.1 188.5 180.3.
+V2 52: 195.1 175.1 166.1 195.8 205.5 198.1 182.3 171.7 167.0 185.3. V2 60: 205.5 195.2 181.3 190.0 214.8 175.1 190.6
+195.2 197.9 182.8. V2 76: 212.9 203.6 210.7 178.9 171.2 201.6 179.6 195.2 191.3 203.6.
+Quote: `run1 RESULT ok wilderness agility=76->88 laps=20 ticks=1342 ... xpPerTick=212.9 ... mode=v2` (V2 76 run 1).
+Logs: scratchpad `agi2/before.log`, `agi2/after.log`; parser `agi2/parse.py`.
+
+Pooled band rates (all 30 runs of each script):
+
+| Band | V1 XP/tick (XP / ticks) | V2 XP/tick (XP / ticks) |
+|---|---|---|
+| 52-59 | 152.7 (293,321 / 1,921) | 172.8 (288,820 / 1,671) |
+| 60-75 | 176.3 (2,881,187 / 16,346) | 186.1 (2,870,937 / 15,425) |
+| 76-99 (measured to 88) | 180.5 (5,470,172 / 30,314) | 192.5 (5,452,674 / 28,322) |
+| **52-99, weighted by the XP of each band** | **178.9** | **190.9** |
+
+Weighted rate = 960,842 / (28,577 / r52 + 136,124 / r60 + 796,141 / r76). The V1 value 178.9 agrees with the old
+planner row (178). The 76-99 band has no data above Agility 88; the fail chance falls with level, so 192.5 is low
+for 88-99.
+
+### Where the ticks went, and the fixes
+
+1. **Click latency, 5 ticks per lap (fixed).** In a per-tick trace (`AGI_TRACE=1`), V1's click on the XP tick moved
+   the player only after one more still tick on 4 of the 5 obstacles (rope swing, stones, log, rocks). V2 sends the
+   next obstacle's click on every tick once the current obstacle script has visibly started (start tiles in
+   `STARTED`). The server drops a click while the player is delayed (`OpLocHandler.ts:14-18`) and reads packets before
+   it ends a delay (`World.ts:402,425,776`), so the extra clicks do nothing until the first tick that can accept one.
+   Clean lap: 71 to 66 ticks (medians; 137 / 136 / 147 clean V1 laps, 141 / 160 / 165 clean V2 laps).
+2. **Rope swing falls: the lap bonus (not fixable).** A rope swing fall leaves progress at 1, so that loop gives no
+   4,989-tenths bonus (12,472 XP, `wilderness_course.rs2:170-178`). Each costs about 65 ticks. There were 16-18 per
+   200 laps. No route goes back to the swing's start side: from the stones' west end the client routes only to the
+   swing's north landing ("You cannot do that from here", `:82-84`), and the log ends on a ledge that leads only to the
+   rocks. The full loop (log, rocks, pipe) is the only way back.
+3. **Pit falls (fixed in part).** V2 clicks the ladder on the landing tick (`agility_instant_fail` has no delay,
+   `agility.rs2:142-145`) and clicks the next obstacle on the ladder exit tick. Out of the pit it walks north of the
+   lava to the log (the ladder exit and the stones' west end join by land, z 3962-3966) and does not do the stepping
+   stones again: after a fall the stones add no progress (progress is 1 or 3). That saves about 5 ticks and one 15%
+   (Agility 52) stones roll per pit fall, for 500 XP.
+4. **Not losses:** run energy stayed at 100 in every run (`energyMin=100`). Eating: 0.8-2.1 eats per run in V1,
+   1.0-5.5 in V2. NPCs in the course also hit the player (block animation 424); V1 counted those HP drops as falls,
+   V2 counts the fail messages.
+5. **Stones falls** cost 16.5-17 ticks each (fall to the stones XP); the bot already clicks on the first useful tick.
+
+RNG: practice has one global `JavaRandom` seeded once from `Math.random` at server start
+(`engine/src/util/JavaRandom.ts:65-70,126`), shared by every player and NPC. There is no per-run seed. No two of the
+60 runs had the same lap sequence (parser check), so Open 2 (repeated runs) did not occur in these matrices.
+
+### Agility potion at base 49 (MEASURED practice)
+
+Preset `agility_wilderness_49pot`: Agility 49 south of the ridge gate (2998,3916), 2 agility potion(4) (obj 3032).
+`AGI_POTION=1` drinks one dose, then clicks the gate. 5 runs of 10 laps, plus 1 run of 3 laps at base 49 inside the
+course with no potion (preset `agility_wilderness_49`).
+
+- **The gate opens at boosted 52 with base 49: 5 of 5 runs.** Quote: `NOTE potion Agility potion(4) agility 49->52 base=49`,
+  `NOTE GATE inside=true ticks=20 agility=52 base=49 doses=1`. One dose per run. Gate ticks 20, 45, 45, 20, 20: the
+  45-tick runs lost the first gate click on the tick after the drink and clicked again after 3 still ticks.
+  The ridge did not fail in these 5 runs (roll 200/250 at the current level, `wilderness_course.rs2:12`).
+- **The pipe works at base 49 with no boost** (`stat(agility) < 49` check, `:53`): the no-potion run did the pipe at
+  Agility 49 (`step pipe done t=13`), and every pipe in all 6 runs gave XP. In the potion runs the level is never below
+  52 while the boost lasts; one lap (14,285 XP) takes the base past 52 (7,249 XP) before the boost decays
+  (1 level per 100 ticks, `login.rs2:36`, `stat.rs2:45`).
+- **Rate:** potion runs 185.1, 200.9, 204.7, 179.1, 179.1 XP/tick (mean 189.8, 10 laps from 49 to 73).
+  Band 49-51: 198.7 XP/tick in the potion runs (70,738 XP / 356 ticks), 186.0 with the no-potion run (85,023 / 457).
+  The band is the first lap only, so it is a small sample.
+- Planner effect (lever 3, gnome to 49, then the Wilderness row): see `research/agility-gap.md`.
 
 ## Method
 

@@ -8,6 +8,13 @@ the working tree move the baseline to 40,213 / 44,956; the Agility rows are the 
 
 ## Result
 
+- **Update (measurement 1 done, `research/agility.md` section "Wilderness V2"):** the V2 lap script measures 190.9 XP/tick
+  over 52-99 (band-weighted, 30 runs of 20 laps), against 178.9 for the old script. The planner row is now 190.9
+  realistic / 212.9 floor. Agility first, pure laps (same method as below, `final.ts` on the new rows):
+  **6,436 floor / 6,959 realistic, gap +336 / -187** (was 6,665 / 7,323, +107 / -551). With the potion lever
+  (gnome to 49, Wilderness from 49): 6,250 / 6,777, gap +522 / **-5**. Overall with Agility first: 42,407 / 47,359.
+  The gap is not closed at realistic: 198.3 XP/tick was the target, 190.9 is measured.
+
 - **#1 is stunagile at 6,772 ticks** (`research/hiscores-live.json`, taken 2026-10-23T16:56Z). The deadline rule is
   finish tick < deadline (`packages/planner/src/haggis.ts:96`).
 - **Agility last (the current plan): Agility 99 at 40,016 floor / 44,859 realistic**, gap -33,244 / -38,087

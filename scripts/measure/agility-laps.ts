@@ -176,14 +176,20 @@ try {
                 }
             }
             await s.direct({ type: 'interactLoc', x: 2998, z: 3917, locId: 2309, optionIndex: 1, reason: 'SDK' } as any);
-            let ok = false;
-            for (let k = 0; k < 25 && !ok; k++) { await waitTicks(s, 1); ok = me().worldZ >= 3930; }
+            // Re-click after 3 still ticks: a click on the tick after the drink can be lost.
+            let ok = false, stillG = 0, lp = `${me().worldX},${me().worldZ}`;
+            for (let k = 0; k < 25 && !ok && stillG < 3; k++) {
+                await waitTicks(s, 1); ok = me().worldZ >= 3930;
+                const q = `${me().worldX},${me().worldZ}`; stillG = q === lp ? stillG + 1 : 0; lp = q;
+            }
             console.log(`NOTE gate try=${tries} at=${me().worldX},${me().worldZ} agility=${agi()} ok=${ok} t=${s.tick() - g0}`);
             if (!ok && st().dialog?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' } as any);
         }
         gateTicks = s.tick() - g0;
         console.log(`NOTE GATE inside=${me().worldZ >= 3930} ticks=${gateTicks} agility=${agi()} base=${s.sdk.getSkill('Agility')?.baseLevel} doses=${potionDoses}`);
         if (me().worldZ < 3930) await finish([s], false, `gate closed agility=${agi()}`);
+        // The ridge XP (stat_advance 150, wilderness_course.rs2:17) lands after the end tile: let it land before the lap count starts.
+        await waitTicks(s, 3);
     }
 
     const xpStart = xp();
