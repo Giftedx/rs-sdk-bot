@@ -657,7 +657,7 @@ function buildState() {
     };
 }
 
-const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number }[] = [];
+const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number; holdFrames: number }[] = [];
 
 // One state for everyone: built every 2 s only while a client watches, serialized once, sent to each SSE client.
 const clients = new Set<ReadableStreamDefaultController>();
@@ -684,7 +684,7 @@ Bun.serve({
         // The page relays the 3D viewer's follow-change timings (time until the destination is loaded).
         if (url.pathname === '/api/viewer-timing' && req.method === 'POST') {
             return req.json().then((t: any) => {
-                if (t && typeof t.ms === 'number') { viewerTimings.unshift({ at: Date.now(), mode: String(t.mode), ms: t.ms, tiles: Number(t.tiles) || 0, frames: Number(t.frames) || 0, blankFrames: Number(t.blankFrames) || 0 }); viewerTimings.length = Math.min(viewerTimings.length, 40); }
+                if (t && typeof t.ms === 'number') { viewerTimings.unshift({ at: Date.now(), mode: String(t.mode), ms: t.ms, tiles: Number(t.tiles) || 0, frames: Number(t.frames) || 0, blankFrames: Number(t.blankFrames) || 0, holdFrames: Number(t.holdFrames) || 0 }); viewerTimings.length = Math.min(viewerTimings.length, 40); }
                 return new Response('ok');
             }).catch(() => new Response('bad', { status: 400 }));
         }
