@@ -161,16 +161,21 @@ try {
         await q.walk('to chronozon', [{ x: CHRONOZON.x, z: CHRONOZON.z - 4, tol: 3 }]);
         const chz = () => q.npc(/^chronozon$/i);
         if (!chz()) await q.waitUntil(() => !!chz(), 30);
+        // Game messages are a capped list, so a message counts as new by its observation id, not by a count.
+        const lastMsg = (re: RegExp): number => Math.max(-1, ...(q.st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).map((m: any) => m.observationId ?? m.tick));
+        const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
         // Single-way combat: a poison spider (3088-3090,9943-9945) that attacks first blocks every cast on Chronozon
         // ("I'm already under attack!"). Kill the attacker with the scimitar, then go on.
-        const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
-        let underAttack = q.msgCount(/already under attack/i);
+        let blocked = lastMsg(/already under attack/i);
         const clearAttackers = async (): Promise<void> => {
-            if (q.msgCount(/already under attack/i) <= underAttack) return;
-            underAttack = q.msgCount(/already under attack/i);
-            const foe = (q.st()?.nearbyNpcs ?? []).filter((n: any) => !/chronozon/i.test(n.name) && n.distance <= 3 && (n.inCombat || n.targetIndex >= 0)).sort((x: any, y: any) => x.distance - y.distance)[0];
-            if (!foe) { console.log(`WARN under attack, no attacker found: ${(q.st()?.nearbyNpcs ?? []).slice(0, 4).map((n: any) => `${n.name} d=${n.distance} c=${n.inCombat} t=${n.targetIndex}`).join('; ')}`); return; }
-            console.log(`NOTE attacker ${foe.name} (${foe.combatLevel}) at ${q.T()}`);
+            const b = lastMsg(/already under attack/i);
+            if (b <= blocked) return;
+            blocked = b;
+            const npcs: any[] = (q.st()?.nearbyNpcs ?? []).filter((n: any) => !/chronozon/i.test(n.name));
+            const foe = npcs.filter(n => n.distance <= 6 && n.targetIndex >= 32768).sort((x, y) => x.distance - y.distance)[0]
+                ?? npcs.filter(n => n.distance <= 1 && /poison spider/i.test(n.name)).sort((x, y) => x.distance - y.distance)[0];
+            if (!foe) { console.log(`WARN under attack, no attacker found: ${npcs.slice(0, 4).map(n => `${n.name} d=${n.distance} c=${n.inCombat} t=${n.targetIndex}`).join('; ')}`); return; }
+            console.log(`NOTE attacker ${foe.name} (${foe.combatLevel}) d=${foe.distance} t=${foe.targetIndex} at ${q.T()}`);
             for (let t = 0; t < 120; t++) {
                 await q.guard(`fight ${foe.name}`);
                 const n = (q.st()?.nearbyNpcs ?? []).find((x: any) => x.index === foe.index);
@@ -180,31 +185,41 @@ try {
             }
             await q.waitTicks(2);
         };
-        let weak = q.msgCount(/chronozon weakens/i);
+        // A blast that splashes sets no bit (pvm_spell_success only). In the rune set (magic bonus about -50) 3 of 6
+        // proof runs splashed until the runes ran out; Chronozon has no magic level, so with the helm, body, shield and
+        // legs off the hit chance is about 90%. Each blast is cast until "Chronozon weakens".
+        const ARMOUR = [0, 4, 5, 7];                     // helm, body, shield, legs (equipment slots)
+        for (const slot of ARMOUR) {
+            await q.step(`remove ${slot}`, () => q.s.direct({ type: 'useEquipmentItem', slot, optionIndex: 1, reason: 'SDK' }), () => !(q.st()?.equipment ?? []).some((e: any) => e.slot === slot && e.id > 0), 3, 3);
+        }
         for (let b = 0; b < BLASTS.length; b++) {
             let ok = false;
             for (let t = 0; t < 12 && !ok; t++) {
                 await q.guard(`blast ${b}`);
                 const n = chz();
                 if (!n) { await q.waitTicks(1); continue; }
+                const w0 = lastMsg(/chronozon weakens/i);
                 await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId(BLASTS[b]!), reason: 'SDK' });
-                await q.waitUntil(() => q.msgCount(/chronozon weakens/i) > weak || q.msgCount(/already under attack/i) > underAttack, 8);
-                await clearAttackers();
-                if (q.msgCount(/chronozon weakens/i) > weak) { ok = true; weak = q.msgCount(/chronozon weakens/i); }
-                else stats(`blast ${b} miss`);
+                await q.waitUntil(() => lastMsg(/chronozon weakens/i) > w0 || lastMsg(/already under attack|do not have enough/i) > blocked, 8);
+                if (lastMsg(/do not have enough/i) > blocked) await q.fail(`blast ${b}: out of runes`);
+                ok = lastMsg(/chronozon weakens/i) > w0;
+                if (!ok) { console.log(`WARN blast ${b} no weaken at ${q.T()}`); await clearAttackers(); }
             }
             if (!ok) await q.fail(`blast ${b}`);
         }
         q.milestone('blasts');
-        // Kill: melee with the scimitar, re-sent while he lives. A regenerate message means a bit is missing.
+        // Kill: fire blasts while the runes last (Fire Blast is the strongest hit here), then the scimitar.
+        // "Chronozon regenerates" means a bit is missing.
+        const regen0 = lastMsg(/chronozon regenerates/i);
         const pieceOnGround = () => (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.johnPiece);
-        for (let t = 0; t < 200 && !pieceOnGround() && !q.has(ITEM.johnPiece); t++) {
+        for (let t = 0; t < 300 && !pieceOnGround() && !q.has(ITEM.johnPiece); t++) {
             await q.guard('kill chronozon');
             const n = chz();
-            if (n && t % 4 === 0) await attack(n);
+            const fireLeft = q.cnt(554) >= 5 && q.cnt(556) >= 4 && q.cnt(560) >= 1;
+            if (n && t % 5 === 0) await (fireLeft ? q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: componentId('magic:fire_blast'), reason: 'SDK' }) : attack(n));
             await q.waitTicks(1);
             await clearAttackers();
-            if (q.msgCount(/chronozon regenerates/i) > 0) await q.fail('chronozon regenerates');
+            if (lastMsg(/chronozon regenerates/i) > regen0) await q.fail('chronozon regenerates');
         }
         await q.step('take piece', () => { const g = pieceOnGround(); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.johnPiece), 12, 5);
         q.milestone('piece');
@@ -225,5 +240,4 @@ try {
     offDone();
     await q.end(q.has(ITEM.gold) && questDone, `qp=1 gauntlets=${q.has(ITEM.gold)} questMsg=${questDone}`);
 
-    function stats(m: string): void { console.log(`WARN ${m} at ${q.T()}`); }
 } catch (e) { await q.fail(String(e)); }

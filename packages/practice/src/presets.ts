@@ -142,7 +142,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     // set worn, QP 13 (Cook's Assistant 1, Tree Gnome Village 2, Grand Tree 5, Fight Arena 2, Monkey Madness 3).
     // Helper items: swordfish 373, bass 365, tuna 361, salmon 329, shrimp 315 (cooked, for Caleb); 2 perfect gold
     // bars 2365 (tradeable); 2 rubies 1603; ring mould 1592; necklace mould 1597; antipoison 2446; runes for the 4
-    // blasts, 6 spare fire blasts and 6 teleports (60 air, 4 water, 6 earth, 40 fire, 10 death, 6 law); 100 coins
+    // blasts with 2 splashes each, 10 fire blasts for the kill and 6 teleports (100 air, 12 water, 15 earth, 70 fire, 24 death, 6 law); 100 coins
     // (the Al Kharid toll twice); 8 lobsters.
     quest_crest: {
         position: { x: 3280, z: 3403, level: 0 },
@@ -151,7 +151,7 @@ export const PRESETS: Record<string, SaveConfig> = {
         varps: { 101: 13 },
         coins: 100,
         inventory: [373, 365, 361, 329, 315, 2365, 2365, 1603, 1603, 1592, 1597, 2446].map(id => ({ id, count: 1 }))
-            .concat([[556, 60], [555, 4], [557, 6], [554, 40], [560, 10], [563, 6]].map(([id, count]) => ({ id: id!, count: count! })), Array.from({ length: 8 }, () => ({ id: 379, count: 1 }))),
+            .concat([[556, 100], [555, 12], [557, 15], [554, 70], [560, 24], [563, 6]].map(([id, count]) => ({ id: id!, count: count! })), Array.from({ length: 8 }, () => ({ id: 379, count: 1 }))),
     },
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
