@@ -64,8 +64,9 @@ try {
     // 5. Omad: the party (about 15 ticks of p_delay) queues the completion (quest_drunkmonk.rs2:14-42).
     await q.walk('to omad', [{ x: 2606, z: 3220, tol: 1 }]);
     await q.openDoor('monastery north door 2', 2606, 3219);
-    await q.talk('omad 4', omad, [], () => questDone, OMAD, 80, true);
-    await q.converse([], () => !q.dialogOpen(), 10);
+    // The party closes the dialog and runs about 15 ticks of p_delay; a talk click inside it is rejected, so the bot waits.
+    await q.talk('omad 4', omad, [], () => questDone || q.sawText(/let's party/i), OMAD, 80, true);
+    await q.converse([], () => questDone, 40);
     q.milestone(100);
     off();
     await q.end(questDone, 'qp=1');

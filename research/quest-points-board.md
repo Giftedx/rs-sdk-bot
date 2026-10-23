@@ -203,6 +203,7 @@ a time, each run on a fresh account that is deleted after the run.
 | The Restless Ghost | `scripts/generated/quest-priest.ts` | 519, 516, 519 | MEASURED 3/3 |
 | Vampire Slayer | `scripts/generated/quest-vampire.ts` | 338, 330, 331 | MEASURED 3/3 |
 | Gertrude's Cat | `scripts/generated/quest-fluffs.ts` | 369, 385, 397 | MEASURED 3/3 |
+| Monk's Friend | `scripts/generated/quest-drunkmonk.ts` | 327, 328, 327 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -301,3 +302,17 @@ Findings:
   away on that page loses the 100 coins and the stage (3 of 3 runs failed with "The cat doesn't seem to be
   thirsty."). The script waits for the dialog to close.
 - The npc list lags the ladder by a tick: right after the climb down the bot saw only the level-1 cat.
+
+### Monk's Friend
+
+`RESULT ok qp=1 ... ticks=327 hpMin=99 eats=0 walkTicks=138 retries=0 died=false` (runs: 327, 328, 327 ticks),
+each with `A ladder mysteriously appears.` and `Congratulations! Quest complete!`. Steps (trial MILESTONE ticks):
+Omad "Why can't you sleep, what's wrong?", "Can I help at all?" 0-29 (`areas/area_ardougne_east/scripts/
+brother_omad.rs2:12-38`; this starts the `blanket_ladder` timer); the ring of stones (the ladder appears within 2
+tiles of 2561,3222, `quests/quest_drunkmonk/scripts/quest_drunkmonk.rs2:1-6`), the thieves' den, door `loc_1530` at
+2565,9612, the blanket (obj 90 at 2570,9604, `maps/m40_150.jm2`) 29-89; back to Omad twice: the blanket (20), "Who's
+Brother Cedric?", "Where should I look?" (30) 89-188; Cedric in the forest three times: 40, the water and "Yes, I'd
+be happy to!" (60), the logs (70) 188-261 (`brother_cedric.rs2:21-70`); Omad's party queues the completion
+261-327 (`quest_drunkmonk.rs2:14-42`, about 15 ticks of `p_delay`). The XP in RESULT is empty because
+`stat_advance` comes after the completion message (`:87-89`). Helper items: jug of water, logs. The blanket is
+`tradeable=no`.
