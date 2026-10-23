@@ -518,7 +518,16 @@ try {
     if (FROM < 90) {
         want = 'auto';
         await walkAtoll('to garkor', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
-        await talkChoose('garkor', /^garkor$/i, () => -1, () => q.sawText(/just go and find my squad mage/i) && !q.dialogOpen(), 80, { x: 2805, z: 2762 });
+        // A hit (an archer, a scorpion) closes his pages and his varp keeps the place (mm_garkor.rs2:95-126), so the talk
+        // goes on from the north tile until the last line.
+        for (let i = 0; i < 10 && !q.sawText(/just go and find my squad mage/i); i++) {
+            if (inCell()) { rejails++; await knockout('garkor jail'); }
+            await walkAtoll('to garkor', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
+            await clearPests('garkor', 2);
+            await talk1('garkor', /^garkor$/i, [], () => q.sawText(/just go and find my squad mage/i), 80, { x: 2805, z: 2762 }, 1, false);
+        }
+        if (!q.sawText(/just go and find my squad mage/i)) await q.fail('talk garkor');
+        await shutDialog();
         q.milestone('garkor');
         const inWh = [{ x: 2764, z: 2763, tol: 0 }, { x: 2765, z: 2765, tol: 0 }, { x: 2769, z: 2766, tol: 0 }, { x: 2769, z: 2768, tol: 0 }, { x: 2768, z: 2769, tol: 0 }];
         // A guard call in the warehouse means the jail: lock, walk back, try again (up to 3 times).
