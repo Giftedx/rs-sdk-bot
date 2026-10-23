@@ -206,3 +206,9 @@ events, a live run of any part.
 - Mightyrod: `BANK pack=7 banked=138 bankFish=129 t=3553`, then `MILESTONE gave 58 Trout, 71 Salmon t=3582`. Cooking 1 to 80 in 3,455 ticks.
 - Pocketrocket: `TRADE max_trades Completed 1 trade(s) (1 session(s)) notes=129 bigFood=1 t=2999`. It waited 155 ticks with 1 food.
 - Eat rate: Pocketrocket ate 15 food in its first 2,000 ticks (7.5 per 1,000 ticks). 129 fish last about 17,000 ticks.
+
+## Live run 3 (2026-10-23)
+
+- Courier: `RESULT ok ticks=809 received=179 ... coins=260 walkTicks=444 boatTicks=118 waitTicks=247`.
+- mmtha0205 started `goldfarm.ts` with `FOOD_FROM=Bigpackage FOOD_ONLY_TRADE=1`: `TRADE max_trades Completed 1 trade(s) (1 session(s)) notes=179 bigFood=0 t=55`. Two farmers now eat courier food (Pocketrocket, mmtha0205).
+- `give-to-banker.ts` without `GIVE=` also gave the courier's 765 coins (`MILESTONE gave 765 Coins, 98 Trout, 81 Salmon`). Always pass `GIVE=Trout:n,Salmon:m`. The courier's bank still holds 500 coins for fares.
