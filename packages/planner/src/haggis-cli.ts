@@ -85,7 +85,7 @@ for (const b of boards) {
 
 // Gap-closer levers (research/gap-closers.md): Overall finish with each lever alone, and with all of them.
 if (args.includes('--levers')) {
-    const safe = LEVERS.filter(l => !l.owner).map(l => l.id);
+    const safe = LEVERS.filter(l => !l.owner && !l.retired).map(l => l.id);
     const owner = LEVERS.filter(l => l.owner).map(l => l.id);
     const run = (mode: Mode, disable: string[], own: string[] = [], tricks: boolean = false) => {
         const r = schedule(boards, activities, { mode, tricks: new Set(tricks ? TRICKS : []), disable: new Set(disable), owner: new Set(own) });

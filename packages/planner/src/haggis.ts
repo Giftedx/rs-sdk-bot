@@ -117,8 +117,9 @@ export interface LeverPatch {
     addSide?: Partial<Record<Skill, number>>;
 }
 
+// A retired lever was measured and loses ticks; it stays off unless named in opts.owner (to show its size).
 const isOn = (id: string, owner: boolean | undefined, opts: Pick<ScheduleOptions, 'disable' | 'owner'>) =>
-    owner ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
+    owner || LEVERS.some(l => l.id === id && l.retired) ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
 
 // The activity table with the levers of `opts` applied: rows filtered, patches merged.
 // OUT rows are removed. A lever whose 'add' rows are all OUT is dead: its patches and 'drop' rows act as if it were off.
@@ -592,9 +593,11 @@ export function haggisTravel(path = BOARDS_FILE): TravelModel {
 
 export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];
 // Gap-closer levers used in haggis-boards.json (research/gap-closers.md). Owner levers are off unless named.
-export const LEVERS: { id: string; owner: boolean; label: string }[] = [
+export const LEVERS: { id: string; owner: boolean; label: string; retired?: boolean }[] = [
     { id: 'combat-hp-bound', owner: false, label: "Melee by combat (HP-bound); melee-only quests after Overall; Witch's House split out" },
-    { id: 'cannon-melee', owner: false, label: 'Cannon fires for Ranged XP during every melee top-up' },
+    // Retired 2026-10-23: measured, it slows Defence to 86.7 style XP/tick and loses ticks in every table
+    // (research/combat-measure.md section 6); bow + cannon carries Ranged instead.
+    { id: 'cannon-melee', owner: false, retired: true, label: 'Cannon fires for Ranged XP during every melee top-up (RETIRED: loses ticks)' },
     { id: 'stun-guests', owner: false, label: 'Prayer and Magic inside the pickpocket stuns' },
     { id: 'flinch-gather', owner: false, label: '2-tick flinch woodcutting and fishing (tick manipulation, UNVERIFIED live)' },
     // Owner rule: accepted mechanics yes, content bugs no. charge.rs2 has no p_delay (5 casts a tick) and no "2005"
