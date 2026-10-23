@@ -1608,10 +1608,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 167,
-    "realistic": 172,
+    "floor": 169,
+    "realistic": 177,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md (Goblin Diplomacy): scripts/generated/quest-gobdip.ts, preset quest_gobdip (Haggis at the qp-filler row: every skill 99, rune set, 3 goblin mail, orange and blue dye, Falador teleport runes from a helper), practice, 3/3 PASS at 172, 167, 172 ticks (floor = best run, realistic = worst run); bartender to General Wartface with a Falador teleport; one earlier run of the same script failed (3 talk tries at Wartface opened no dialog, cause not found)"
+    "source": "research/quest-plan.md (Goblin Diplomacy): scripts/generated/quest-gobdip.ts, preset quest_gobdip (Haggis at the qp-filler row: every skill 99, rune set, 3 goblin mail, orange and blue dye, Falador teleport runes from a helper), practice, 3/3 PASS at 174, 169, 177 ticks (floor = best run, realistic = worst run); bartender to General Wartface with a Falador teleport; the script opens the shut double door of the generals' hut (2957-2958,3509), without which 3 of 3 talks failed"
    },
    "lump": true,
    "qp": 5,
@@ -1627,8 +1627,30 @@
    "endAt": "goblin-village"
   },
   {
+   "id": "rj",
+   "label": "Romeo & Juliet",
+   "serves": [
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 307,
+    "realistic": 314,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md (Romeo & Juliet): scripts/generated/quest-rj.ts, preset quest_rj (Haggis at the qp-filler row: every skill 99, rune set, cadava berries and Varrock teleport runes from a helper), practice, 3/3 PASS at 314, 311, 307 ticks (floor = best run, realistic = worst run); Romeo to Romeo, Juliet first, Varrock teleport for the last leg"
+   },
+   "lump": true,
+   "qp": 5,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "QP: quest.constant romeojuliet_questpoints 5, no XP; ticks research/quest-plan.md",
+   "at": "romeo",
+   "xp": {}
+  },
+  {
    "id": "qp-filler",
-   "label": "Short quests to 32 QP: Romeo & Juliet, Witch's House, Ernest, Sheep Herder, Black Knights' Fortress, Prince Ali",
+   "label": "Short quests to 32 QP: Witch's House, Ernest, Sheep Herder, Black Knights' Fortress, Prince Ali",
    "serves": [
     "strength",
     "defence",
@@ -1636,21 +1658,21 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1800,
-    "realistic": 5400,
+    "floor": 1500,
+    "realistic": 4500,
     "evidence": "ESTIMATE",
-    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ); Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed"
+    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ); Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed; Romeo & Juliet split out to row rj (MEASURED), one equal share of the ESTIMATE removed"
    },
    "lump": true,
    "xp": {
     "hitpoints": 158125
    },
-   "qp": 23,
+   "qp": 18,
    "requires": [
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7); Druidic Ritual is row druid; Goblin Diplomacy is row gobdip",
+   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7); Druidic Ritual is row druid; Goblin Diplomacy is row gobdip; Romeo & Juliet is row rj",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -1659,12 +1681,12 @@
        "questpoints"
       ],
       "xp": {},
-      "qp": 19,
+      "qp": 14,
       "ticks": {
-       "floor": 1500,
-       "realistic": 4500,
+       "floor": 1200,
+       "realistic": 3600,
        "evidence": "ESTIMATE",
-       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed"
+       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed; Romeo & Juliet split out to row rj (MEASURED), one equal share of the ESTIMATE removed"
       }
      }
     },
@@ -1672,10 +1694,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 1665,
-       "realistic": 4995,
+       "floor": 1388,
+       "realistic": 4163,
        "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed"
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed; Romeo & Juliet split out to row rj (MEASURED), one equal share of the ESTIMATE removed"
       }
      }
     }
@@ -1748,7 +1770,8 @@
    "requires": [
     "qp-filler",
     "druid",
-    "gobdip"
+    "gobdip",
+    "rj"
    ],
    "minQp": 32,
    "evidence": "ESTIMATE",

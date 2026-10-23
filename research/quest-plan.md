@@ -275,29 +275,66 @@ realistic). Still open in that row: its `rival-dialogue-burst` patch (8 quests x
 Script `scripts/generated/quest-gobdip.ts`, preset `quest_gobdip` (beside the Rusty Anchor bartender, Port Sarim;
 3 goblin mail 288, orange dye 1769, blue dye 1767, and 1 law, 3 air, 1 water for a Falador teleport, all from a
 helper; the dyed mails are untradeable). Route: bartender, both dyes, Falador teleport, run north to General
-Wartface (2957,3511), four talks with him.
+Wartface (2957,3511), the hut's double door, four talks with him.
+
+Proof with the final script (runs q1-q3):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle |
 |---|---|---|---|
-| p1 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2956,3511,0 ticks=172 hpMin=99 eats=0 walkTicks=70 retries=0 died=false` | 172 | 20 (11.4%) |
-| p2 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2956,3509,0 ticks=167 hpMin=99 eats=0 walkTicks=66 retries=0 died=false` | 167 | 16 (9.4%) |
-| p3 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2957,3510,0 ticks=172 hpMin=99 eats=0 walkTicks=71 retries=0 died=false` | 172 | 20 (11.4%) |
+| q1 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2956,3511,0 ticks=174 hpMin=99 eats=0 walkTicks=70 retries=0 died=false` | 174 | 22 (12.4%) |
+| q2 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2958,3511,0 ticks=169 hpMin=99 eats=0 walkTicks=67 retries=0 died=false` | 169 | 15 (8.7%) |
+| q3 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2956,3511,0 ticks=177 hpMin=99 eats=0 walkTicks=72 retries=0 died=false` | 177 | 22 (12.2%) |
 
 Every run ends with `Congratulations! Quest complete!`. 5,000 Crafting XP (`stat_advance(crafting, 2000)`), a gold
 bar, 5 QP (CODE-READ), 1,200 Magic XP from the teleport. No damage, 0 deaths. Planned: about 951 (ESTIMATE share);
-measured 167-172. The rival's figure is 51.7 ticks without travel (UNVERIFIED).
+measured 169-177. The rival's figure is 51.7 ticks without travel (UNVERIFIED).
 
-Steps (p1): bartender 0-13, dyes 13-17, teleport and run 17-92, Wartface 92-172 (4 talks of about 20 ticks; 80
+Steps (q1): bartender 0-13, dyes 13-17, teleport and run 17-97, Wartface 97-174 (4 talks of about 20 ticks; 80
 dialogue ticks in the LEDGER). The dialogue is the largest part left; a burst sender would cut most of it.
 
-Open: one earlier run of the same script (before a WARN line was added, no other change) failed:
-`RESULT fail talk wartface 1 ... at=2958,3509,0 ticks=202`. Three talk tries at Wartface opened no dialog, and 118
-ticks were idle at 2957-2959,3509. The cause is not found (the talk result was not logged then). So the script is
-4/5 overall, 3/3 in the proof.
+The generals' hut has a shut double door in its south wall (loc 1516 at 2957,3509 and 1519 at 2958,3509,
+`maps/m46_54.jm2`). The SDK plan treats it as open. Shut, the client cannot route a talk to Wartface, and the click
+does nothing: `WARN talk wartface 1 no dialog: npc 2956,3511 d=2 me 2957,3509` in 3 of 3 tries, 4 failed runs in
+all. The first proof (172, 167, 172 ticks, committed in 883641e) passed only because an earlier run had left the
+door open. The script now opens both leaves by tile (`openDoor`).
 
-Planner: new row `gobdip` (167 / 172 MEASURED, 5 QP, places `rusty-anchor` to `goblin-village`, serves Quest
-Points only). Overall with HEAD plus this change (scenario a): 38,235 / 45,443, unchanged, because the short quests
-come after the last 99.
+Planner: row `gobdip` (169 / 177 MEASURED, 5 QP, places `rusty-anchor` to `goblin-village`, serves Quest Points
+only).
+
+### Romeo & Juliet (MEASURED practice, 3/3)
+
+Script `scripts/generated/quest-rj.ts`, preset `quest_rj` (beside Romeo, Varrock Square, at 3211,3424; cadava
+berries 753 and Varrock teleport runes from a helper). Juliet first: at stage 0 "I guess I could find him." gives
+her message at once (`juliet.rs2`), so Romeo's opening talk is skipped. Then Romeo, Father Lawrence, the Apothecary
+twice (berries asked, then the potion), Juliet, a Varrock teleport, Romeo.
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle |
+|---|---|---|---|
+| p1 | `RESULT ok qp=5 xp=magic=875 at=3210,3424,0 ticks=314 hpMin=99 eats=0 walkTicks=163 retries=0 died=false milestones=20,30,40,50,potion,60,100` | 314 | 27 (8.5%) |
+| p2 | `RESULT ok qp=5 xp=magic=875 at=3213,3422,0 ticks=311 hpMin=99 eats=0 walkTicks=162 retries=0 died=false milestones=20,30,40,50,potion,60,100` | 311 | 28 (8.9%) |
+| p3 | `RESULT ok qp=5 xp=magic=875 at=3213,3421,0 ticks=307 hpMin=99 eats=0 walkTicks=161 retries=0 died=false milestones=20,30,40,50,potion,60,100` | 307 | 21 (6.8%) |
+
+Every run ends with `Congratulations! Quest complete!`. 5 QP (CODE-READ), no quest XP; 875 Magic XP from the
+teleport. No damage, 0 deaths. Planned: about 951 (ESTIMATE share); measured 307-314. The rival's figure is 300
+fixed without a teleport (UNVERIFIED).
+
+Steps (p1, milestones): Juliet 0-68; Romeo 68-121; Father Lawrence 121-169; Apothecary twice 169-246; Juliet
+246-295; teleport and Romeo 295-314. About 93 ticks are dialogue (LEDGER).
+
+Findings:
+
+- Juliet's house: the SDK plan finds no way into the stairs room (`PATHFINDING FAILED: no waypoints` to 3157,3434),
+  and walkPath stood 224 ticks at 3162,3439. The doors (`loc_1533` / `loc_1530`) are opened by tile: the north door
+  3160,3440, and upstairs 3156,3431 and 3159,3427. Then the stairs (3156,3435) are clicked from outside.
+- The preset tile 3212,3427 is blocked in the SDK collision (the plan from it is empty), so the bot never moved; the
+  preset starts at 3211,3424.
+- `getDialog().text` is empty and `recentDialogs` held 1 page in a whole run, so `quest-lib.ts` now keeps each
+  tick's page text (`text` plus `allComponents[].text`) for `sawText`. Druidic Ritual passed again with it (248
+  ticks, 1 run).
+
+Planner: new row `rj` (307 / 314 MEASURED, 5 QP, place `romeo`, Quest Points only). Overall with HEAD (b224452)
+plus these rows, scenario a: 37,851 / 45,149, the same as HEAD alone. The short quests come after the last 99, so
+they do not move Overall; they move Quest Points and the start of Dragon Slayer (51,262 realistic after these rows).
 
 ## 2. Combat boards: what quests give and what the leaders need
 

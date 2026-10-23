@@ -26,6 +26,11 @@ try {
     // 3. Falador teleport (2965,3378), then the run north to the generals.
     await q.teleport('falador teleport', 'magic:falador_teleport', 2965, 3378);
     await q.walk('to generals', [{ x: WARTFACE.x, z: WARTFACE.z - 2, tol: 2 }]);
+    // The generals' hut has a shut double door in its south wall (loc 1516 at 2957,3509 and 1519 at 2958,3509,
+    // maps/m46_54.jm2). Shut, the client cannot route a talk to Wartface and the click does nothing (3 of 3 talks
+    // failed so); the SDK plan treats it as open.
+    await q.openDoor('hut door', 2957, 3509);
+    await q.openDoor('hut door r', 2958, 3509);
     q.milestone('village');
 
     // 4. Wartface four times: orange asked (2), orange (3), blue (4), plain mail (5 -> 6, the reward queued).

@@ -128,6 +128,9 @@ export const PRESETS: Record<string, SaveConfig> = {
             // (288), orange dye (1769), blue dye (1767), and Falador teleport runes (1 law 563, 3 air 556, 1 water 555)
             // for the trip to the generals (npc 297 Wartface at 2957,3511). The dyed mails are untradeable.
             quest_gobdip: q({ x: 3047, z: 3256 }, [{ id: 288, count: 1 }, { id: 288, count: 1 }, { id: 288, count: 1 }, { id: 1769, count: 1 }, { id: 1767, count: 1 }, { id: 563, count: 1 }, { id: 556, count: 3 }, { id: 555, count: 1 }]),
+            // Romeo & Juliet: beside Romeo (npc 639 spawn 3211,3425, Varrock Square); cadava berries (753) and Varrock
+            // teleport runes (1 law 563, 3 air 556, 1 fire 554) for the last leg from Juliet's room back to the square.
+            quest_rj: q({ x: 3211, z: 3424 }, [{ id: 753, count: 1 }, { id: 563, count: 1 }, { id: 556, count: 3 }, { id: 554, count: 1 }]),
         };
     })(),
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.

@@ -30,9 +30,19 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
     const near = (x: number, z: number, r: number): boolean => cheb(x, z) <= r;
     const lvl = (): number => pos()?.level ?? -1;
     const dialogOpen = (): boolean => !!s.sdk.getDialog()?.isOpen;
-    const sawText = (re: RegExp): boolean => {
+    // Dialog text seen so far: getDialog().text is often empty and recentDialogs keeps few pages, so every tick's page
+    // text (text plus allComponents[].text) is kept here (last 400 pages).
+    const pages: string[] = [];
+    let lastPage = '';
+    const pageText = (): string => {
         const d: any = s.sdk.getDialog();
-        if (d?.text && re.test(d.text)) return true;
+        if (!d?.isOpen) return '';
+        return [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].filter(Boolean).join(' ');
+    };
+    const sawText = (re: RegExp): boolean => {
+        const now = pageText();
+        if (now && re.test(now)) return true;
+        if (pages.some(p => re.test(p))) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
     };
     const msgCount = (re: RegExp): number => (st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).length;
@@ -73,9 +83,12 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
         if (TRACE) {
             const d: any = s.sdk.getDialog();
             const m = (st()?.gameMessages ?? []).filter((x: any) => x.type === 0).slice(-1)[0]?.text ?? '';
-            const line = `${p?.worldX},${p?.worldZ},${p?.level} dlg=${d?.isOpen ? (d.isWaiting ? 'wait' : 'open') : '-'} txt=${(d?.text ?? '').slice(0, 50)} opts=${(d?.options ?? []).map((o: any) => o.text).join('|')} msg=${m}`;
+            const rd = { tick: pages.length, text: [lastPage] };
+            const line = `rd=${rd ? rd.tick + ":" + (rd.text ?? []).join(" ").slice(0, 40) : "-"} ${p?.worldX},${p?.worldZ},${p?.level} dlg=${d?.isOpen ? (d.isWaiting ? 'wait' : 'open') : '-'} txt=${(d?.text ?? '').slice(0, 50)} opts=${(d?.options ?? []).map((o: any) => o.text).join('|')} msg=${m}`;
             if (line !== lastTrace) { console.log(`TRACE ${T()} ${line}`); lastTrace = line; }
         }
+        const pt = pageText();
+        if (pt && pt !== lastPage) { pages.push(pt); if (pages.length > 400) pages.shift(); lastPage = pt; }
         if (eatCool > 0) eatCool--;
         if (h > 0 && h <= EAT_AT && eatCool === 0) {
             const food = inv().find(i => FOOD.includes(i.id));
@@ -176,6 +189,7 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
                     if (still >= 3) break;
                 }
             }
+            if (!dialogOpen()) { const m: any = npc(re); const p = pos(); console.log(`WARN talk ${label} no dialog: npc ${m?.x},${m?.z} d=${m?.distance} me ${p?.worldX},${p?.worldZ} op=${JSON.stringify(st()?.opFeedback ?? {})}`); }
             let shut = 0;
             await converse(pats, () => { shut = dialogOpen() ? 0 : shut + 1; return (ok() && (stopOpen || !dialogOpen())) || shut >= 3; }, maxTicks);
             if (ok()) return;
@@ -194,11 +208,24 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
         await step(label, () => s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => near(x, z, 6), 8, 3);
     };
+    // Opens the shut door on tile (x, z) on the bot's level; nothing if it is open. walkPath does not see every
+    // door (a diagonal door, a door the SDK plan never crosses), so a quest names its doors by tile.
+    const shutAt = (x: number, z: number): any => findLoc(l => l.x === x && l.z === z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)));
+    const openDoor = async (label: string, x: number, z: number): Promise<void> => {
+        if (!shutAt(x, z)) return;
+        await step(label, () => { const d = shutAt(x, z); return d ? opLoc(d, opIndex(d, /^open$/i)) : undefined; }, () => !shutAt(x, z), 12, 4);
+    };
+    // Client-routed walk click (the client routes round walls but not through shut doors), retried until near.
+    const dash = async (label: string, x: number, z: number, tol = 1, ticks = 30): Promise<void> => {
+        const t1 = T();
+        await step(label, () => s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' }), () => near(x, z, tol), ticks, 3);
+        stats.walkTicks += T() - t1;
+    };
 
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, waitTicks: (n: number) => waitTicks(s, n),
+        step, converse, walk, talk, climb, teleport, openDoor, shutAt, dash, waitTicks: (n: number) => waitTicks(s, n),
         waitUntil: (f: () => boolean, ticks: number) => waitUntil(s, () => f() || stats.died, { timeoutTicks: ticks }),
     };
 }
