@@ -115,10 +115,14 @@ try {
     // ---- Measured window ----
     const skills = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged'];
     const x0: Record<string, number> = Object.fromEntries(skills.map(k => [k, xp(k)]));
+    const arrows = () => (s.sdk.getEquipment() ?? []).filter((i: any) => /arrow/i.test(i.name)).reduce((n: number, i: any) => n + i.count, 0) + countItems(s, /arrow/i);
+    const balls = () => countItems(s, /^cannonball$/i);
+    const arrows0 = arrows(), food0 = countItems(s, FOOD);
+    let balls0 = balls();
     const t0 = s.tick();
     let inCombat = 0, attacks = 0, eats = 0, reloads = 0, refires = 0, kills = 0, idle = 0;
     let lastReload = t0, target = -1, ammoMsgAt = msgs.length, loadPending = -1, loadMsgAt = 0, needFire = false, firePending = -1;
-    let dmgTaken = 0, lastStyleXp = xp('Attack') + xp('Strength') + xp('Defence'), lastGain = -99, attackAt = -99;
+    let dmgTaken = 0, lastStyleXp = xp('Hitpoints'), lastGain = -99, attackAt = -99;
     const bad = new Map<number, number>();
     const seenHit = new Set<string>();
     await new Promise<void>(resolve => {
@@ -136,7 +140,7 @@ try {
             const npcs = (st().nearbyNpcs ?? []) as any[];
             const cur = npcs.find(n => n.index === target);
             // Fighting = our target is alive and style XP came in within the last 10 ticks (or the attack is under 10 ticks old).
-            const sx = xp('Attack') + xp('Strength') + xp('Defence');
+            const sx = xp('Hitpoints'); // own hits only: melee and bow give Hitpoints XP, the cannon gives none
             if (sx > lastStyleXp) { lastStyleXp = sx; lastGain = now; }
             const fighting = !!cur && (cur.hp ?? 1) > 0 && (now - lastGain < 10 || now - attackAt < 10);
             if (!fighting && cur && now - attackAt >= 10 && now - lastGain >= 10) bad.set(target, now + 60);
@@ -189,14 +193,24 @@ try {
     });
     const ticks = s.tick() - t0;
     const g: Record<string, number> = Object.fromEntries(skills.map(k => [k, xp(k) - x0[k]!]));
+    const ballsEnd = balls(), arrowsEnd = arrows(), foodEnd = countItems(s, FOOD);
     if (cannon) { await s.direct({ type: 'interactLoc', x: cannon.x, z: cannon.z, locId: cannon.id, optionIndex: 2, reason: 'SDK' }); await waitTicks(s, 6); }
+    // Leave the NPCs before logout: a player hit in the last 10 s cannot log out, so walk away until no hit for 17 ticks.
+    const startTile = { x: me().worldX, z: me().worldZ };
+    for (const [dx, dz] of [[18, 0], [-18, 0], [0, 18], [0, -18], [12, 12], [-12, -12]]) {
+        const w = await s.bot.walkTo(startTile.x + dx!, startTile.z + dz!, 2);
+        if (w.success) break;
+    }
+    await waitUntil(s, () => { const lt = me().combat?.lastDamageTick ?? -1; return lt < 0 || s.tick() - lt >= 17; }, { timeoutTicks: 60 });
     for (const k of skills) if (g[k]) console.log(`RATE ${k.toLowerCase()} ${g[k]} ${ticks}`);
     const style = g.Attack! + g.Strength! + g.Defence!;
     const meleeDmg = style / 100, cannonDmg = g.Ranged! / 50;
     const lvl = (k: string) => s.sdk.getSkill(k)?.baseLevel;
-    await finish([s], style > 0 && hp() > 0,
+    const rx = g.Ranged!, per1k = (n: number) => (rx > 0 ? (n * 1000 / rx).toFixed(2) : '-');
+    const usedArrows = arrows0 - arrowsEnd, usedBalls = balls0 - ballsEnd, usedFood = food0 - foodEnd;
+    await finish([s], style + rx > 0 && hp() > 0,
         `cannon=${CANNON} ticks=${ticks} styleXp=${style} styleXpPerTick=${(style / ticks).toFixed(1)} hpXp=${g.Hitpoints} hpXpPerTick=${(g.Hitpoints! / ticks).toFixed(1)} ` +
         `rangedXp=${g.Ranged} rangedXpPerTick=${(g.Ranged! / ticks).toFixed(1)} meleeDmgPerTick=${(meleeDmg / ticks).toFixed(3)} cannonDmgPerTick=${(cannonDmg / ticks).toFixed(3)} ` +
         `inCombat=${inCombat} inCombatShare=${(inCombat / ticks).toFixed(3)} attacks=${attacks} kills=${kills} idle=${idle} eats=${eats} food=${countItems(s, FOOD)} dmgTaken=${dmgTaken} ` +
-        `near=${NEAR} topupAdj=${TOPUP_ADJ} reload=${RELOAD} reloads=${reloads} refires=${refires} setupTicks=${setupTicks} balls=${countItems(s, /^cannonball$/i)} hp=${hp()}/${maxHp} lv=${lvl('Attack')}/${lvl('Strength')}/${lvl('Defence')}/${lvl('Hitpoints')}/${lvl('Ranged')}`);
+        `arrowsUsed=${usedArrows} arrowsPer1kRanged=${per1k(usedArrows)} ballsUsed=${usedBalls} ballsPer1kRanged=${per1k(usedBalls)} foodUsed=${usedFood} near=${NEAR} topupAdj=${TOPUP_ADJ} reload=${RELOAD} reloads=${reloads} refires=${refires} setupTicks=${setupTicks} balls=${countItems(s, /^cannonball$/i)} hp=${hp()}/${maxHp} lv=${lvl('Attack')}/${lvl('Strength')}/${lvl('Defence')}/${lvl('Hitpoints')}/${lvl('Ranged')}`);
 } catch (e) { await finish([s], false, String(e)); }

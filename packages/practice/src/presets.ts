@@ -207,6 +207,27 @@ export const PRESETS: Record<string, SaveConfig> = {
         };
         return [[`combat_${spot}_${lv}`, base], [`combat_${spot}_${lv}_cannon`, cannon]];
     }))),
+    // Ranged with a bow at the Gnome battlefield (spot gb), bands 40 / 70 / 90 in Ranged, Defence and Hitpoints. Band 40:
+    // yew shortbow 857 (Ranged 40, tier40.rs2:64) and green d'hide body 1135, chaps 1099, vambraces 1065; bands 70 and 90:
+    // magic shortbow 861 (Ranged 50) and black d'hide body 2503 (Ranged 70, Defence 40), chaps 2497, vambraces 2491.
+    // All: coif 1169, amulet of power 1731, leather boots 1061, 3,000 rune arrows 892 in the ammo slot (13), 20 lobsters.
+    // The _cannon variant swaps 4 lobsters for the cannon parts and 1,000 cannonballs, as above.
+    ...Object.fromEntries([40, 70, 90].flatMap(lv => {
+        const [bow, body, chaps, vamb] = lv < 70 ? [857, 1135, 1099, 1065] : [861, 2503, 2497, 2491];
+        const base: SaveConfig = {
+            position: { x: 2525, z: 3242, level: 0 },
+            skills: { Ranged: lv, Defence: lv, Hitpoints: lv },
+            equipment: [[1169, 0], [1731, 2], [bow, 3], [body, 4], [chaps, 7], [vamb, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }))
+                .concat([{ id: 892, count: 3000, slot: 13 }]),
+            inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })),
+        };
+        const cannon: SaveConfig = {
+            ...base,
+            varps: { 0: 11, 4: -1 },
+            inventory: [6, 8, 10, 12].map(id => ({ id, count: 1 })).concat([{ id: 2, count: 1000 }], Array.from({ length: 16 }, () => ({ id: 379, count: 1 }))),
+        };
+        return [[`combat_rb_${lv}`, base], [`combat_rb_${lv}_cannon`, cannon]];
+    })),
     // ---- Stun guests (scripts/measure/stun-guest.ts): Thieving 99 at the Ardougne knights, 10 HP, 5 lobsters.
     // Bury arm: 22 dragon bones (536), Prayer 99 so no level-up page opens. Enchant arm: Magic 99, 300 water (555),
     // 300 cosmic (564), 20 sapphire rings (1637) for Lvl-1 Enchant. Baseline: no guest items.
