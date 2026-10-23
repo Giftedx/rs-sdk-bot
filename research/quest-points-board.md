@@ -316,3 +316,13 @@ be happy to!" (60), the logs (70) 188-261 (`brother_cedric.rs2:21-70`); Omad's p
 261-327 (`quest_drunkmonk.rs2:14-42`, about 15 ticks of `p_delay`). The XP in RESULT is empty because
 `stat_advance` comes after the completion message (`:87-89`). Helper items: jug of water, logs. The blanket is
 `tradeable=no`.
+
+### Planner change for the short quests
+
+New row `quests-short` in `packages/planner/src/haggis-boards.json` (MEASURED): the 9 short quests proved above,
+11 QP, floor 2,190 ticks (sum of best runs), realistic 2,249 (sum of worst runs). Row `quests-rest` loses them: 46
+-> 37 quests, `qp` 90 -> 79, ticks 57,600 / 86,700 -> 55,350 / 83,100 (9 x 250 / 400 out of the short class), burst
+patch 51,188 / 76,851. The QP total stays 145. `bun test packages/planner`: 42 pass, 0 fail.
+`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`: QP at end 145; Quest Points WIN at 102,494
+floor / 137,162 realistic (deadline 1,022,262). The 9 measured quests take 2,190-2,249 ticks against 3,600 for 9 x
+400 in the realistic estimate.
