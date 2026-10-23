@@ -294,6 +294,10 @@ export const PRESETS: Record<string, SaveConfig> = {
     floor_fm75: { position: { x: 3092, z: 3243, level: 0 }, skills: { Firemaking: 75 }, inventory: [{ id: 590, count: 1 }], bank: [{ id: 1513, count: 30 }] },
     // Same at Firemaking 45 with 30 maple logs (1517).
     floor_fm45: { position: { x: 3092, z: 3243, level: 0 }, skills: { Firemaking: 45 }, inventory: [{ id: 590, count: 1 }], bank: [{ id: 1517, count: 30 }] },
+    // Smithing with a helper (scripts/measure/floor-smith-trade.ts): the smither beside the Varrock west smithy anvil
+    // (3188,3426) with a hammer (2347); the helper <bot>b at Varrock west bank with the SMITHING bars banked.
+    floor_smith_trade: { position: { x: 3188, z: 3427, level: 0 }, inventory: [{ id: 2347, count: 1 }] },
+    floor_smith_helper: { position: { x: 3185, z: 3436, level: 0 }, bank: [{ id: 2349, count: 20 }, { id: 2351, count: 37 }, { id: 2353, count: 96 }, { id: 2359, count: 281 }, { id: 2361, count: 341 }] },
 };
 
 // The engine writes the save on logout, so a preset written while logged in is lost.
