@@ -34,6 +34,15 @@ const BANKER = 'Moneyshot';
 const MAIN = 'Haggis';
 const SECRET_RE = new RegExp(MAIN, 'gi');
 const SECRET_MARK = '⟦MAIN⟧';
+// A script started by hand (outside the swarm) reports its file name as the goal, and the swarm still lists the
+// account's old job. This map names what the script does, so the roster shows the run, not the stale job.
+const SCRIPT_ROLE: Record<string, { role: string; skill?: string; goal: string }> = {
+    'fishcook.ts': { role: 'cooking', skill: 'Cooking', goal: 'food chain: fish and cook' },
+    'foodcourier.ts': { role: 'courier', goal: 'food chain: courier' },
+    'goldfarm.ts': { role: 'thieving', goal: 'gold farm: knights, food by trade' },
+    'banker.ts': { role: 'bank', goal: 'bank' },
+    'give-to-banker.ts': { role: 'give', goal: 'give to the bank' },
+};
 const ROLE_SKILL: Record<string, string> = { thieving: 'Thieving', fishing: 'Fishing', woodcutting: 'Woodcutting', mining: 'Mining', runecraft: 'Runecraft', cooking: 'Cooking', crafting: 'Crafting', combat: 'Attack' };
 const NL = String.fromCharCode(10);
 
@@ -154,7 +163,8 @@ function track(s: Status) {
     if (xp > 0 && (!list.length || list[list.length - 1]!.tick !== s.tick)) {
         list.push({ at: s.at, tick: s.tick, xp, sk, coins: coinsOf(s), food: foodOf(s.inventory) });
         const rk = s.name + '|' + s.started;
-        if (!runStartCoins.has(rk)) runStartCoins.set(rk, coinsOf(s));
+        // Only a status that lists the bank: before the first bank view, the whole old bank would count as "made".
+        if (!runStartCoins.has(rk) && s.bank != null) runStartCoins.set(rk, coinsOf(s));
         const r = rate(s.name, goalSkillOf(s), list);
         if (r != null && Date.now() - s.at < 20_000) { const sp = spark.get(s.name) ?? []; sp.push(Math.round(r * 10) / 10); if (sp.length > 60) sp.shift(); spark.set(s.name, sp); }
     }
@@ -188,7 +198,7 @@ function flowRate(name: string, key: 'coins' | 'food') {
     return b.tick > a.tick ? (key === 'food' ? a.food - b.food : b.coins - a.coins) / (b.tick - a.tick) : null;
 }
 function goalSkillOf(s: Status): string | null {
-    const known = ROLE_SKILL[s.role];
+    const known = SCRIPT_ROLE[String(s.goal ?? '')]?.skill ?? ROLE_SKILL[s.role];
     if (known) return known;
     if (NO_ROLE.has(s.role) && s.name !== MAIN) return inferRole(s, ranks.get(s.name)?.rows ?? []);
     return null;
@@ -642,6 +652,17 @@ function alerts(bots: any[], now: number): Alert[] {
     return out.filter(a => !a.practice || now - a.at < 3_600_000).sort((a, b) => Number(!!a.practice) - Number(!!b.practice) || b.at - a.at).filter(a => { const k = a.name + a.kind + a.text; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 30);
 }
 
+// Named places on the food-chain route (scripts/foodcourier.ts), by box; null elsewhere.
+const PLACES: [string, number, number, number, number][] = [
+    ['Ardougne', 2560, 3200, 2720, 3340], ['Brimhaven', 2740, 3140, 2960, 3240], ['Port Sarim', 2990, 3140, 3070, 3270],
+    ['Draynor', 3071, 3200, 3130, 3300], ['Lumbridge', 3130, 3140, 3280, 3300], ['at sea', 2700, 3100, 3000, 3290],
+];
+function placeOf(p: { x: number; z: number } | undefined | null): string | null {
+    if (!p) return null;
+    const hit = PLACES.find(([, x0, z0, x1, z1]) => p.x >= x0 && p.x <= x1 && p.z >= z0 && p.z <= z1);
+    return hit ? hit[0] : null;
+}
+
 // ---------- role-aware row data, picked from the swarm job's goal ----------
 function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: number | null) {
     const goal = String(job?.goal ?? s.goal ?? '');
@@ -654,6 +675,10 @@ function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: numbe
         const emptyTicks = eat && eat > 0 ? food / eat : null;
         return { kind: 'gold', coins, made: start != null ? coins - start : null, coinsPerTick: cpt, food, bankFood, eatPerTick: eat, emptyMs: emptyTicks != null ? emptyTicks * world.tickMs : null };
     }
+    // Food chain (research/food-chain.md): the cook banks cooked fish at Draynor; the courier carries them as notes.
+    const fishCount = (l: any[] | null | undefined, re: RegExp) => (l ?? []).filter((i: any) => re.test(i?.name ?? '')).reduce((n: number, i: any) => n + i.count, 0);
+    if (/^food chain: fish/i.test(goal)) return { kind: 'cook', cooked: fishCount(s.bank, /^(trout|salmon)$/i), raw: fishCount(pack, /^raw (trout|salmon)$/i), cookedPack: fishCount(pack, /^(trout|salmon)$/i), burnt: fishCount(s.bank, /^burnt fish$/i), feathers: fishCount(pack, /^feather$/i), xpPerTick: xpRate };
+    if (/^food chain: courier/i.test(goal)) return { kind: 'courier', fish: fishCount(pack, /^(trout|salmon)$/i), coins: coinsOf(s), at: placeOf(s.pos) };
     if (/fish/i.test(goal) || s.role === 'fishing') return { kind: 'fish', xpPerTick: xpRate, feathers: pack.filter((i: any) => i?.name === 'Feather').reduce((n: number, i: any) => n + i.count, 0) };
     if (/woodcut|chop/i.test(goal) || s.role === 'woodcutting') return { kind: 'wood', xpPerTick: xpRate, hp: s.hp ?? null };
     if (/bank/i.test(goal) || s.name === BANKER) return { kind: 'bank' };
@@ -725,16 +750,54 @@ async function runGate() {
 }
 setInterval(() => void runGate(), 600_000);
 setTimeout(() => void runGate(), 20_000);
-const gates = () => cached<{ go: boolean; at: number; gates: { name: string; pass: boolean; detail: string }[] } | null>(GATE_FILE, t => JSON.parse(t), null);
+// Gate details name files by absolute path; the page shows only the file name.
+const gates = () => cached<{ go: boolean; at: number; gates: { name: string; pass: boolean; detail: string }[] } | null>(GATE_FILE, t => {
+    const g = JSON.parse(t);
+    for (const x of g?.gates ?? []) x.detail = String(x.detail ?? '').replace(/[A-Za-z]:[\\/](?:[^\s\\/]+[\\/])*/g, '');
+    return g;
+}, null);
 
 // Vault value over time (in memory, one point a minute) for the economy sparkline.
 const vaultTrend: { at: number; value: number; coins: number }[] = [];
+
+// Food chain card (research/food-chain.md): the newest fish cook, courier and gold farmers in the live status files
+// of the last 6 hours. A courier that last ran give-to-banker.ts with fish still counts as the courier.
+function foodChain(st: Map<string, Status>, now: number) {
+    const recent = [...st.values()].filter(s => now - s.at < 6 * 3_600_000 && !/^localhost/.test(s.server) && s.name !== MAIN);
+    const newest = (f: (s: Status) => boolean) => recent.filter(f).sort((a, b) => b.at - a.at)[0] ?? null;
+    const n = (l: any[] | null | undefined, re: RegExp) => (l ?? []).filter((i: any) => re.test(i?.name ?? '')).reduce((k: number, i: any) => k + i.count, 0);
+    const FISH = /^(trout|salmon)$/i, fresh = (s: Status) => now - s.at < 20_000;
+    const cook = newest(s => s.goal === 'fishcook.ts');
+    const courier = newest(s => s.goal === 'foodcourier.ts' || (s.goal === 'give-to-banker.ts' && /trout|salmon/i.test(String(s.phase ?? ''))));
+    if (!cook && !courier) return null;
+    const farmers = recent.filter(s => s.goal === 'goldfarm.ts' && fresh(s)).map(s => ({ name: s.name, fresh: true, food: foodOf(s.inventory), bankFood: foodOf(s.bank) }));
+    return {
+        cook: cook && { name: cook.name, fresh: fresh(cook), at: cook.at, cooked: n(cook.bank, FISH), pack: n(cook.inventory, FISH), raw: n(cook.inventory, /^raw (trout|salmon)$/i), level: (cook.skills ?? []).find((k: any) => k.name === 'Cooking')?.level ?? null },
+        courier: courier && { name: courier.name, fresh: fresh(courier), at: courier.at, fish: n(courier.inventory, FISH), place: placeOf(courier.pos), phase: shortPhase(String(courier.phase ?? '')) },
+        farmers,
+    };
+}
 
 // ---------- state ----------
 function shortPhase(ph: string) {
     // "gave 1 Shortbow, 1 Bronze sword, ..." -> "gave 19 items": never ship item lists to the roster.
     const m = ph.match(/^(\w+(?: \w+)?)\s+\d+ [A-Za-z][^,]*(?:,\s*\d+ [^,]+)+/);
-    if (m) return `${m[1]} ${ph.split(',').length} items`;
+    if (m) {
+        const parts = m[0].slice(m[1]!.length).split(',').map(p => p.trim().match(/^(\d+) (.+?)(?: t=\d+)?$/));
+        const n = parts.reduce((k, p) => k + Number(p?.[1] ?? 0), 0);
+        const fish = parts.every(p => p && /^(trout|salmon|lobster|tuna|swordfish|shark)$/i.test(p[2]!));
+        return `${m[1]} ${n} ${fish ? 'fish' : 'items'}`;
+    }
+    // A key=value progress line ("t=2000 banked=28850 packCoins=5100 ... food=10"): the two numbers a viewer wants.
+    if (/^t=\d+ \w+=/.test(ph)) {
+        const kv = Object.fromEntries([...ph.matchAll(/(\w+)=(-?\d+)/g)].map(x => [x[1], Number(x[2])]));
+        const k = (v: number) => v >= 1e6 ? (v / 1e6).toFixed(2) + 'M' : v >= 1e4 ? (v / 1e3).toFixed(1) + 'K' : String(v);
+        const out = [kv.banked != null ? `banked ${k(kv.banked)}` : '', kv.food != null ? `food ${kv.food}` : '', kv.picks != null ? `${k(kv.picks)} picks` : ''].filter(Boolean);
+        if (out.length) return out.join(' · ');
+    }
+    // A courier leg milestone ("received129 708", "sarim 204"): drop the run tick.
+    const leg = ph.match(/^([a-z]+?)(\d*) \d+$/);
+    if (leg) return leg[2] ? `${leg[1]} ${leg[2]}` : leg[1]!;
     return ph;
 }
 function buildState() {
@@ -743,13 +806,17 @@ function buildState() {
     const sw = swarm();
     const names = new Set([...liveAccounts(), ...st.keys()]);
     const bots = [...names].map(name => {
-        const s = st.get(name) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
+        const s0 = st.get(name) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
         const live = roster.get(name.toLowerCase());
         const inWorld = !!live && now - live.seen < 30_000;
-        const fresh = now - s.at < 20_000;
+        const fresh = now - s0.at < 20_000;
+        const mine = (sw?.jobs ?? []).filter(j => j.account.toLowerCase() === name.toLowerCase());
+        // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
+        const byHand = fresh && !/^localhost/.test(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
+        const s = byHand ? { ...s0, role: byHand.role, goal: byHand.goal } : s0;
         const rankRows = ranks.get(name)?.rows ?? [];
         const guess = NO_ROLE.has(s.role) && name !== MAIN ? inferRole(s, rankRows) : null;
-        const skill = ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
+        const skill = byHand ? byHand.skill ?? null : ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
         const sk = skill ? (s.skills ?? []).find((k: any) => k.name === skill) : null;
         const target = Number(s.env?.target ?? 99) || 99;
         const r = fresh ? rate(name, skill) : null;
@@ -768,9 +835,8 @@ function buildState() {
         const last = String(s.timeline ?? '').slice(-1);
         // An account can have two entries (an old disabled single job and a host job): the enabled one wins.
         // An entry without a script is a reservation (the main account), not a job.
-        const mine = (sw?.jobs ?? []).filter(j => j.account.toLowerCase() === name.toLowerCase());
         const jobRaw = mine.find(j => j.enabled && j.script) ?? mine.filter(j => j.script).pop() ?? null;
-        const job = jobRaw;
+        const job = byHand ? { ...(jobRaw ?? { account: name, repeat: false, since: null }), script: String(s0.goal), role: byHand.role, goal: byHand.goal, enabled: true, state: 'manual', note: `started by hand: ${s0.goal}` } as SwarmJob : jobRaw;
         const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
         return {
@@ -838,7 +904,7 @@ function buildState() {
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
         viewerTimings: viewerTimings.slice(0, 20),
-        race: race(), gates: gates(), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
+        race: race(), gates: gates(), chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
         pageVersion: (() => { try { return statSync(join(import.meta.dir, 'index.html')).mtimeMs; } catch { return 0; } })(),
         icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
@@ -866,7 +932,7 @@ const ISO = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedde
 Bun.serve({
     port: PORT,
     idleTimeout: 0,
-    fetch(req) {
+    fetch(req, server) {
         const url = new URL(req.url);
         // The page relays the 3D viewer's follow-change timings (time until the destination is loaded).
         if (url.pathname === '/api/viewer-timing' && req.method === 'POST') {
@@ -882,6 +948,8 @@ Bun.serve({
         // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
         if (url.pathname === '/api/our-names') return Response.json(liveAccounts().filter(n => n !== MAIN), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
+        // The server listens on every address; only this PC may read the main account's name.
+        if (url.pathname === '/api/reveal' && !/^(127\.|::1$|::ffff:127\.)/.test(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
         if (url.pathname === '/api/reveal') return new Response(MAIN, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
         if (url.pathname === '/events') {

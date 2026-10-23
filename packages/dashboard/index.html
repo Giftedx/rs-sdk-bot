@@ -52,6 +52,8 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
 .card>h2{margin:0;height:26px;padding:0 10px;font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);border-bottom:1px solid var(--ln);display:flex;gap:8px;align-items:center;flex:none;white-space:nowrap}
 .card>h2 em{font:500 11px var(--ui);font-style:normal;margin-left:auto;color:var(--dm);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .scroll{overflow:auto;min-height:0;flex:1}
+/* A list with rows below the fold fades out at the bottom, so a cut row reads as "more", not as a clipping bug. */
+.more{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 22px),transparent)}
 .scroll::-webkit-scrollbar,.bankg::-webkit-scrollbar{width:6px;height:6px}.scroll::-webkit-scrollbar-thumb,.bankg::-webkit-scrollbar-thumb{background:var(--ln2);border-radius:3px}
 .sub{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);display:flex;justify-content:space-between;gap:8px;margin:0 0 4px;white-space:nowrap}
 .sub>span:last-child{letter-spacing:.04em;text-transform:none;overflow:hidden;text-overflow:ellipsis}
@@ -64,7 +66,7 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
 .pill{font:600 11px var(--ui);padding:0 6px;border-radius:3px;line-height:16px;background:#2a2312;color:var(--parch);letter-spacing:.03em;white-space:nowrap;flex:none}
 .pill.inf{background:#1d1a12;color:var(--dm);font-style:italic}.pill.res{background:#3a2a0c;color:var(--gold)}
 .job{font:600 11px var(--ui);padding:0 6px;border-radius:3px;line-height:14px;border:1px solid var(--ln2);color:var(--dm);white-space:nowrap;flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis}
-.job.running{color:var(--win);border-color:#3d6b33}.job.ended{color:var(--warn);border-color:#6b4520}
+.job.running,.job.manual{color:var(--win);border-color:#3d6b33}.job.manual{border-style:dashed}.job.ended{color:var(--warn);border-color:#6b4520}
 .act{font:600 11px var(--ui);padding:0 6px;border-radius:3px;line-height:16px;color:#111;flex:none}
 .oc{font:700 11px var(--ui);width:14px;text-align:center;flex:none}.oc.ok{color:var(--win)}.oc.fail{color:var(--warn)}.oc.died{color:var(--late)}
 /* roster */
@@ -106,6 +108,12 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
 .tog button.on{background:var(--gold);color:#1a1408}
 .legend{position:absolute;right:8px;bottom:8px;display:flex;gap:12px;font-size:11px;color:var(--dm);background:#090806cc;padding:4px 8px;border-radius:4px}
 .legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
+.showb{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;background:none;border:1px solid var(--ln2);color:var(--dm);border-radius:3px;padding:1px 8px;cursor:pointer;margin-right:10px}.showb.on{color:#120e06;background:var(--gold);border-color:var(--gold)}
+.tb{display:grid;grid-template-columns:minmax(0,1fr) 62px minmax(0,1.1fr) 52px 54px;gap:6px;align-items:center;font:500 12px var(--ui);line-height:19px;white-space:nowrap}.tb b{text-align:right;font-weight:700}
+.hud{position:absolute;right:8px;bottom:8px;display:flex;align-items:stretch;gap:0;background:#090806e0;border:1px solid var(--gold3);border-radius:4px;padding:5px 8px 6px;font:500 12px var(--ui);color:var(--tx);backdrop-filter:blur(3px)}
+.hud .cap{display:block;margin-bottom:1px}.hud .cn{display:flex;flex-direction:column;padding:0 8px;cursor:pointer;min-width:0}.hud .cn:hover b{color:var(--gold)}
+.hud .cn b{font:700 16px var(--ui);font-variant-numeric:tabular-nums;color:var(--parch);display:flex;align-items:center;gap:4px}.hud .cn.cnoff{opacity:.55}
+.hud .ar{align-self:center;color:var(--gold2);font-size:14px}.hud .t{writing-mode:vertical-rl;transform:rotate(180deg);font:600 10px var(--ui);letter-spacing:.14em;color:var(--gold2);text-transform:uppercase;padding-right:6px;border-right:1px solid var(--ln2);margin-right:2px}
 .follow{position:absolute;left:8px;bottom:8px;background:#090806d0;border:1px solid var(--gold2);border-radius:4px;padding:2px 10px;font:600 12px var(--ui);color:var(--parch);pointer-events:none}
 /* race */
 .rhead{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:0;align-items:stretch;border-bottom:1px solid var(--ln);flex:none}
@@ -206,19 +214,19 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
   <div class="kpi" id="kh-xp"><b id="k-xp">–</b><span class="cap" id="k-xp-l">xp / tick · training</span></div>
   <div class="mini" id="mini"></div>
   <div class="links"><span class="pulse" id="pulse" title="live, every 2 s"></span><span class="num dm" id="clock"></span>
-    <a href="https://rs-sdk-demo.fly.dev/hiscores" target="_blank">Hiscores</a><a href="https://rs-sdk-demo.fly.dev/market" target="_blank">Market</a></div>
+    <button id="showb" class="showb" title="Show mode: for screen sharing. Hides owner-request quotes, file paths and the name reveal.">show</button><a href="https://rs-sdk-demo.fly.dev/hiscores" target="_blank">Hiscores</a><a href="https://rs-sdk-demo.fly.dev/market" target="_blank">Market</a></div>
 </header>
 <div class="alerts" id="alerts"><span class="lbl">ALERTS</span><span class="loading">loading</span></div>
 <div class="grid">
   <div class="col">
     <section class="card" style="flex:0 1 auto;max-height:440px"><h2>Live accounts <em id="cnt"></em></h2><div class="scroll" id="roster"><div class="loading">loading</div></div></section>
     <section class="card" style="height:100px;flex:none"><h2>Practice <em id="pcnt"></em></h2><div class="prac" id="prac"></div></section>
-    <section class="card" style="flex:1 1 200px"><h2>Owner requests <em id="rqh"></em></h2><div class="rq" id="rq"><div class="loading">loading</div></div></section>
+    <section class="card" style="flex:1 1 200px"><h2><span id="rqt">Owner requests</span> <em id="rqh"></em></h2><div class="rq" id="rq"><div class="loading">loading</div></div></section>
     <section class="card" style="height:166px;flex:none"><h2>Machine <em id="mach-h"></em></h2><div class="mach" id="mach"><div class="loading">loading</div></div></section>
   </div>
   <div class="col">
     <section class="card" style="flex:1"><h2>World <em id="map-h"></em><span class="tog"><button id="bt" title="fly to the next most interesting bot every 60 s">TOUR</button></span><span class="tog"><button id="b3" class="on">3D</button><button id="b2">2D</button></span></h2>
-      <div class="mapwrap" id="mw"><iframe id="rsw" allow="cross-origin-isolated; fullscreen" title="rs-world 3D viewer"></iframe><canvas id="map"></canvas><div class="follow" id="follow"></div>
+      <div class="mapwrap" id="mw"><iframe id="rsw" allow="cross-origin-isolated; fullscreen" title="rs-world 3D viewer"></iframe><canvas id="map"></canvas><div class="follow" id="follow"></div><div class="hud" id="chain"></div>
       <div class="legend" id="legend" style="display:none"><span><b class="on"></b>playing</span><span><b class="wd"></b>in world / local</span><span><b class="off"></b>offline</span></div></div></section>
     <section class="card" style="flex:none"><h2>Main account race <em id="race-h"></em></h2><div class="rhead" id="rhead"></div><div class="race" id="race"><div class="loading">loading the plan</div></div><div class="rspecial" id="rspecial"></div></section>
     <section class="card" style="height:252px;flex:none"><h2>Economy <em id="vsum"></em></h2><div id="vault" style="display:flex;flex-direction:column;flex:1;min-height:0"><div class="loading">loading</div></div></section>
@@ -270,13 +278,13 @@ function put(el,html){if(typeof el==='string')el=$(el);if(el._h!==html){el._h=ht
 // Main account name: the server sends a marker instead of it. Draw each marker as a blurred block with no name inside;
 // a click fetches the name for this tab only (a reload hides it again), so a screenshot never shows it by accident.
 const MARK='⟦MAIN⟧';let REVEAL=null;
-function secretSpan(){const s=document.createElement('span');s.className='secret'+(REVEAL?' shown':'');s.textContent=REVEAL||'██████';s.title=REVEAL?'main account':'click to reveal name';return s}
+function secretSpan(){const s=document.createElement('span');s.className='secret'+(REVEAL?' shown':'');s.textContent=REVEAL||'██████';s.title=REVEAL?'main account':SHOW?'main account (hidden)':'Shift+click to reveal the name';return s}
 function hideSecrets(root){
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.includes(MARK)?1:3});const hits=[];while(w.nextNode())hits.push(w.currentNode);
   for(const t of hits){const parts=t.nodeValue.split(MARK);const f=document.createDocumentFragment();parts.forEach((p,i)=>{if(i)f.appendChild(secretSpan());if(p)f.appendChild(document.createTextNode(p))});t.replaceWith(f)}
   for(const el of root.querySelectorAll('*'))for(const a of el.attributes)if(/^(title|alt|aria-label|placeholder|data-tt)$/.test(a.name)&&a.value.includes(MARK))a.value=a.value.split(MARK).join(REVEAL||'main account');
 }
-document.addEventListener('click',async e=>{const s=e.target.closest&&e.target.closest('.secret');if(!s||REVEAL)return;e.stopPropagation();e.preventDefault();
+document.addEventListener('click',async e=>{const s=e.target.closest&&e.target.closest('.secret');if(!s||REVEAL||SHOW||!e.shiftKey)return;e.stopPropagation();e.preventDefault();
   REVEAL=await (await fetch('/api/reveal',{cache:'no-store'})).text();for(const x of document.querySelectorAll('.secret')){x.textContent=REVEAL;x.classList.add('shown');x.title='main account'}},true);
 new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType===3&&n.nodeValue.includes(MARK))hideSecrets(n.parentNode);else if(n.nodeType===1)hideSecrets(n)}}).observe(document.documentElement,{childList:true,subtree:true,characterData:false});
 function keyed(el,rows){const have=new Map([...el.children].filter(c=>c.dataset.k).map(c=>[c.dataset.k,c]));for(const c of [...el.children])if(!c.dataset.k)c.remove();let prev=null;
@@ -340,7 +348,10 @@ function ranked(){const on=S.bots.filter(b=>!b.practice&&running(b)&&!b.reserved
   if(S.now-ORDER_AT>30e3||lastAlert>ORDER_ALERT||on.some(b=>!ORDER.includes(b.name))){ORDER=[...on].sort((a,b)=>IR[b.name].score-IR[a.name].score||a.name.localeCompare(b.name)).map(b=>b.name);ORDER_AT=S.now;ORDER_ALERT=lastAlert}
   return ORDER.map(n=>on.find(b=>b.name===n)).filter(Boolean)}
 // Tour: when on, fly to the next most interesting bot every 60 s (?tourEvery=N seconds for testing).
-const Q=new URLSearchParams(location.search);let TOUR=Q.has('tour'),TOUR_AT=0;const TOUR_MS=(Number(Q.get('tourEvery'))||60)*1e3;
+const Q=new URLSearchParams(location.search);
+let SHOW=Q.has('show');try{if(!Q.has('show'))SHOW=localStorage.getItem('show')==='1'}catch{}
+function setShow(v){SHOW=v;try{localStorage.setItem('show',v?'1':'0')}catch{}document.body.classList.toggle('show',v);$('#showb').classList.toggle('on',v);$('#rq')._h=null;if(S)render()}
+$('#showb').addEventListener('click',()=>setShow(!SHOW));setShow(SHOW);if(Q.get('bot')){sel=Q.get('bot');picked=true}let TOUR=Q.has('tour'),TOUR_AT=0;const TOUR_MS=(Number(Q.get('tourEvery'))||60)*1e3;
 function tourStep(){if(!TOUR||S.now-TOUR_AT<TOUR_MS)return;TOUR_AT=S.now;const l=ranked();if(!l.length)return;const i=l.findIndex(b=>b.name===sel);sel=l[(i+1)%l.length].name}
 // The viewer reports follow-change timings; keep them on the server for the Machine panel and measurements.
 window.addEventListener('message',e=>{if(e.origin!=='http://localhost:3000'||!e.data?.viewerTiming)return;fetch('/api/viewer-timing',{method:'POST',body:JSON.stringify(e.data.viewerTiming)}).catch(()=>{})});
@@ -360,12 +371,16 @@ $('#alerts').onclick=e=>{const a=e.target.closest('.al[data-n]');if(a)pick(a.dat
 // ---- account detail: the layout follows the bot's role ----
 const stat=(k,v,cls='',tt='')=>`<div class="stat"${tt?` title="${E(tt)}"`:''}><span>${k}</span><b class="${cls}">${v}</b></div>`;
 const hero=(k,v,tt='')=>`<div${tt?` title="${E(tt)}"`:''}><span class="cap">${k}</span><b>${v}</b></div>`;
-function roleOf(b){if(b.reserved)return'main';if(isGold(b))return'gold';if(isBank(b)||b.name===S.vault?.banker)return'bank';if(b.goalSkill&&b.xpLeft===0)return'done';if(b.goalSkill)return'train';return'other'}
+function roleOf(b){if(b.reserved)return'main';if(b.role4?.kind==='cook'||b.role4?.kind==='courier')return b.role4.kind;if(isGold(b))return'gold';if(isBank(b)||b.name===S.vault?.banker)return'bank';if(b.goalSkill&&b.xpLeft===0)return'done';if(b.goalSkill)return'train';return'other'}
 function detailHero(b){const k=roleOf(b),r=b.role4||{},sk=goalOf(b),et=etaTicks(b);
   if(k==='main'){const G=S.gates?.gates||[],R=S.race;return`<div class="dhero">${hero('go gates',`${G.filter(g=>g.pass).length}<small>/ ${G.length}</small>`,G.map(g=>(g.pass?'✔ ':'✘ ')+g.name+': '+g.detail).join('\n'))}${hero('overall gap · realistic',R?.gap!=null?`<span class="${R.gap>=0?'i-win':''}">${sgn(R.gap)}</span><small>ticks</small>`:'–',R?.gap!=null?tickTime(R.gap)+' of game time':'')}${hero('boards won · realistic',R?`${R.wins}<small>/ 24</small>`:'–')}</div>
     <div class="dnote"><span>Reserved for the main run. It logs in only when the go/no-go gate script prints GO (5 of 5 gates).</span></div>`}
   if(k==='gold'){const per=r.coinsPerTick,emptyT=r.emptyMs!=null?r.emptyMs/TICK_MS:null;return`<div class="dhero">${hero('coins / tick',per!=null?per.toFixed(1):'–',per!=null?gp(per*9000)+' coins an hour':'needs 2 fresh status samples')}${hero('made this run',r.made!=null?gp(r.made):'–','coins gained since the first status of this run')}${hero('food left',`${r.food}<small>${emptyT!=null?ticksTxt(emptyT)+' t':'pack'}</small>`,emptyT!=null?`empty in ${ticksTxt(emptyT)} ticks (${tickTime(emptyT)}) at the measured eat rate`:'no eat rate measured yet')}</div>
     <div class="stats">${stat('coins held',gp(r.coins),'g',nf(r.coins)+' coins')}${stat('food in bank',r.bankFood??'–')}${stat('eats / 1k t',r.eatPerTick!=null?(r.eatPerTick*1000).toFixed(1):'–')}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp&&b.hp.now<=b.hp.max/3?'i-late':'')}${stat('run up',b.uptime!=null?ticksTxt(b.uptime/TICK_MS)+' t':'–','',b.uptime!=null?dur(b.uptime):'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}</div>`}
+  if(k==='cook'){return`<div class="dhero">${hero('cooked fish in bank',nf(r.cooked),'trout and salmon in the Draynor bank, ready for the courier')}${hero('xp / tick · Cooking',b.xpPerTick!=null?b.xpPerTick.toFixed(1):'–',b.xpPerHour!=null?gp(b.xpPerHour)+' xp an hour':'needs 2 fresh status samples')}${hero('to level '+(b.goalLevel||99),et!=null?`${ticksTxt(et)}<small>ticks</small>`:sk?.level>=(b.goalLevel||99)?'<span class="i-win">✔</span>':'–',et!=null?tickTime(et)+' of game time at this rate':'')}</div>
+    <div class="stats">${stat('Cooking',sk?`${sk.level} / ${b.goalLevel||99}`:'–')}${stat('raw in pack',r.raw)}${stat('cooked in pack',r.cookedPack)}${stat('burnt in bank',r.burnt)}${stat('feathers',nf(r.feathers),r.feathers<100?'i-warn':'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}</div>`}
+  if(k==='courier'){return`<div class="dhero">${hero('fish carried',nf(r.fish),'trout and salmon notes in the pack')}${hero('at',E(r.at||'on the road'),b.pos?`${b.pos.x},${b.pos.z}`:'')}${hero('coins',gp(r.coins),'four boat fares a trip: 120 coins')}</div>
+    <div class="stats">${stat('last step',E(b.phaseShort||'–'))}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp&&b.hp.now<=b.hp.max/3?'i-late':'')}${stat('run up',b.uptime!=null?ticksTxt(b.uptime/TICK_MS)+' t':'–','',b.uptime!=null?dur(b.uptime):'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'–')}${stat('last run',b.outcome||'–')}</div>`}
   if(k==='bank'){const v=S.vault||{},age=v.lastTransferAt?S.now-v.lastTransferAt:null;return`<div class="dhero">${hero('vault value',gp(v.value))}${hero('coins',gp(v.coins),nf(v.coins)+' coins')}${hero('last transfer',age!=null?ago(age):'–',v.lastTransferAt?when(v.lastTransferAt):'no transfer logged')}</div>
     <div class="stats">${stat('holders',(v.holders||[]).length)}${stat('item kinds',(v.items||[]).length)}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–')}${stat('run up',dur(b.uptime))}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('last run',b.outcome||'–')}</div>`}
   if(k==='done'){return`<div class="dhero">${hero('goal reached',`${E(b.goalSkill)} ${sk?.level??''}`)}${hero('vs #1',b.pace?`<span class="${b.pace.ahead?'i-win':''}">${b.pace.ahead?'ahead':'behind'}</span><small>${E(b.pace.gap)}</small>`:'–',b.pace?`#1 ${b.pace.top} ${b.pace.topTime}`:'no #1 time for this target')}${hero('last run',b.lastRes?(b.lastRes.died?'<span class="i-late">✝ died</span>':b.lastRes.ok?'<span class="i-win">✔</span> ok':'<span class="i-warn">✘</span> fail'):E(b.outcome||'–'))}</div>
@@ -435,7 +450,12 @@ $('#pfeed').addEventListener('click',e=>{if(e.target.closest('#pline')){PRAC_OPE
 
 // ---- owner requests: counts, the newest 3 changes, then the open rows in priority order ----
 const RK=['NOT STARTED','PARTIAL','BLOCKED','NEW','DONE','RULE'],RC={'NOT STARTED':'k-NOT',PARTIAL:'k-PARTIAL',BLOCKED:'k-BLOCKED',NEW:'k-NEW',DONE:'k-DONE',RULE:'k-RULE'};
-function requests(){const r=S.requests;if(!r)return;const tot=r.total||1;
+// Show mode: the team's best rank on each board instead of the owner's request list.
+function teamBoards(){const best=new Map();
+  for(const b of S.bots)if(!b.practice&&!b.reserved)for(const x of b.ranks||[]){const o=best.get(x.board);if(x.rank>0&&(!o||x.rank<o.rank))best.set(x.board,{...x,name:b.name})}
+  const l=[...best.values()].sort((a,b)=>a.rank-b.rank);$('#rqt').textContent='Team on the boards';$('#rqh').textContent=`best rank on ${l.length} boards · Δ since first seen`;
+  put('#rq',`<div class="scroll">${l.map(x=>`<div class="tb" title="${E(x.board)}: #${nf(x.rank)} ${E(x.name)}, level ${x.level}, time ${E(x.time)}${x.delta?` · ${x.delta>0?'up':'down'} ${nf(Math.abs(x.delta))} places since ${when(x.since)}`:''}"><span class="ell">${E(x.board)}</span><b class="num${x.rank<=10?' g':''}">#${nf(x.rank)}</b><span class="ell dm">${E(x.name)} · ${x.level}</span><span class="num ${x.delta>0?'i-win':x.delta<0?'i-late':'dm'}" style="text-align:right">${x.delta>0?'▲':x.delta<0?'▼':''}${x.delta?nf(Math.abs(x.delta)):'–'}</span>${svgSpark((x.hist||[]).map(v=>-v),54,14)}</div>`).join('')||'<div class="empty-st">No team rank yet.</div>'}</div>`)}
+function requests(){if(SHOW)return teamBoards();$('#rqt').textContent='Owner requests';const r=S.requests;if(!r)return;const tot=r.total||1;
   $('#rqh').textContent=`${r.open.length} open of ${r.total} · owner-requests.md`;
   const ch=(r.changes||[]).map(x=>`<div class="rqc" title="${E(x.request)} · ${E(x.where)} · ${E(when(x.at))}"><span class="dm num">#${E(x.id)}</span><span class="st ${RC[x.kind]||'k-RULE'}" style="font:700 11px var(--ui);border-radius:2px;text-align:center;color:#120e06;line-height:14px">${E(x.kind)}</span><span class="ell">${E(x.request)}</span><span class="dm num" style="text-align:right">${ago(S.now-x.at)}</span></div>`).join('');
   put('#rq',`<div class="seg">${RK.filter(k=>r.counts[k]).map(k=>`<i class="${RC[k]}" style="width:${100*r.counts[k]/tot}%" title="${k}: ${r.counts[k]}">${r.counts[k]/tot>.07?r.counts[k]+' '+({'NOT STARTED':'NOT',PARTIAL:'PARTIAL',BLOCKED:'BLK',NEW:'NEW',DONE:'DONE',RULE:'RULE'})[k]:r.counts[k]}</i>`).join('')}</div>
@@ -551,16 +571,28 @@ function economy(){const v=S.vault,X=S.economy;if(!v||!X)return;const live=v.hol
 function roleLine(b){const r=b.role4;if(!r)return null;
   if(r.kind==='gold'){const emptyT=r.emptyMs!=null?r.emptyMs/TICK_MS:null,low=emptyT!=null&&emptyT<4500;
     return`<span class="gold">${icon('Coins',14)} made ${r.made!=null?gp(r.made):'–'}</span><span class="dm num" title="${emptyT!=null?'food in the pack lasts '+tickTime(emptyT)+' at the measured eat rate':'food in the pack'}">${low?'<span class="i-warn">⚠</span> ':''}food ${r.food}${emptyT!=null?' · '+ticksTxt(emptyT)+' t':''}</span>`}
+  if(r.kind==='cook')return`<span class="gold">${icon('Salmon',14)} ${nf(r.cooked)} cooked</span><span class="dm num">raw ${r.raw}${r.feathers<100?' · <span class="i-warn">⚠</span> feathers '+r.feathers:''}</span>`;
+  if(r.kind==='courier')return`<span class="gold">${icon('Salmon',14)} carries ${nf(r.fish)}</span><span class="dm">${E(r.at||'on the road')}</span>`;
   if(r.kind==='bank')return`<span class="gold">${icon('Coins',14)} vault ${gp(S.vault?.value||0)}</span>`;
   return null}
 
+// Food chain card on the world view: cook -> courier -> farmers. A click flies the camera to that bot.
+function chainHud(){const el=$('#chain'),c=S.chain;if(!c){el.style.display='none';return}el.style.display='';
+  const node=(n,fresh,cap,main,sub,tt)=>n?`<div class="cn${fresh?'':' cnoff'}" data-pick="${E(n)}" title="${E(tt)}"><span class="cap">${cap}</span><b>${main}</b><span class="dm ell">${E(n)}${sub?' · '+sub:''}</span></div>`:'';
+  const k=c.cook,r=c.courier,fs=c.farmers||[];
+  put(el,`<span class="t">food chain</span>`+node(k?.name,k?.fresh,'fish + cook',`${icon('Salmon',18)}${nf(k?.cooked??0)}`,`Cooking ${k?.level??'?'}${k?.fresh?'':' · '+ago(S.now-k.at)}`,'cooked trout and salmon in the Draynor bank')
+   +'<span class="ar">▸</span>'+node(r?.name,r?.fresh,'courier',`${icon('Salmon',18)}${nf(r?.fish??0)}`,E(r?.fresh?(r.place||'on the road'):'parked · '+ago(S.now-r.at)),'fish notes carried; boats Ardougne ⇄ Port Sarim, walk to Draynor')
+   +'<span class="ar">▸</span>'+(fs.length?fs.map(f=>node(f.name,f.fresh,'gold farm',`${icon('Salmon',18)}${nf(f.food+f.bankFood)}`,'food','food in pack and bank; no stall, no shop')).join(''):'<div class="cn cnoff"><span class="cap">gold farm</span><b>–</b><span class="dm">no farmer running</span></div>'))}
+$('#chain').addEventListener('click',e=>{const n=e.target.closest('[data-pick]');if(n)pick(n.dataset.pick)});
+function fades(){for(const el of document.querySelectorAll('.scroll,#sup,#vit,#vho'))el.classList.toggle('more',el.scrollHeight>el.clientHeight+2&&el.scrollTop+el.clientHeight<el.scrollHeight-2)}
+document.addEventListener('scroll',fades,true);
 function render(){
   const bots=S.bots,w=S.world||{},live=bots.filter(b=>!b.practice);
   header();
   $('#clock').textContent=new Date(S.now).toLocaleTimeString('en-GB');$('#pulse').className='pulse'+(w.connected===false?' off':'');
   const first=ranked()[0]||live.find(b=>b.inWorld&&!b.reserved)||live.find(b=>b.fresh&&!b.reserved)||live.find(b=>!b.reserved)||bots[0];
   if((!sel||!bots.some(b=>b.name===sel))&&first)sel=first.name;tourStep();
-  alertsBar();roster();raceView();detail();economy();activity();requests();machine();syncWorld();loadMap();drawMap();if(tipFor)tip();
+  alertsBar();roster();raceView();detail();economy();activity();requests();machine();syncWorld();loadMap();drawMap();if(tipFor)tip();chainHud();fades();
 }
 window.addEventListener('resize',()=>{if(!S)return;drawMap();if($('#flow'))$('#flow')._h=null;economy()});
 // Errors show in the header instead of failing silently.
