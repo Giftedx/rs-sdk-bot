@@ -158,15 +158,24 @@ try {
 
     // 6. The 4 forms: each death spawns the next, which attacks (witches_experiement.rs2:37-81).
     const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
-    const exp = () => q.npc(/^witches experiment/i);
+    // Each form spawns on the death of the last and attacks at once (opplayer2). Auto retaliate is on for the fight:
+    // with it off (openQuest) the attack click on the new form got "I'm already under attack!" and each form stood
+    // 20-30 ticks in a trial. The target is the latest form in sight (the dying one stays in the list for its death
+    // animation).
+    const FORMS = [/^witches experiment$/i, /second form/i, /third form/i, /fourth form/i];
+    const exp = (): any => { for (let i = FORMS.length - 1; i >= 0; i--) { const n = q.npc(FORMS[i]!); if (n) return n; } return undefined; };
+    const retaliate = () => q.s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
+    await retaliate();
     let killed = false;
+    let lastTarget = -1;
     for (let t = 0; t < 400 && !killed; t++) {
         await q.guard('experiment');
         if (q.msgCount(/kill the shapeshifter once and for all/i) > 0) { killed = true; break; }
         const n = exp();
-        if (n && t % 4 === 0 && q.pos()?.targetIndex !== n.index) await attack(n);
+        if (n && (n.index !== lastTarget || t % 6 === 0) && q.pos()?.targetIndex !== n.index) { await attack(n); lastTarget = n.index; }
         await q.waitTicks(1);
     }
+    await retaliate();
     if (!killed) await q.fail('experiment not killed');
     q.milestone(6);
     if (wantPfm) await setPfm(false);

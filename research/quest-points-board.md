@@ -581,6 +581,7 @@ Runner: `proveInProcess` with `okPass`, one bot at a time, each run on a fresh a
 | Quest | Script | Main (3 runs) | Partner (3 runs) | Status |
 |---|---|---|---|---|
 | Cook's Assistant | `scripts/generated/quest-cook.ts` | 30, 30, 30 | 30, 30, 30 | MEASURED 3/3 both |
+| Witch's House | `scripts/generated/quest-ball.ts` | 485, 448, 444 | 522, 454, 448 | MEASURED 3/3 both |
 
 ### Cook's Assistant
 
@@ -596,3 +597,42 @@ Planner: row `cooks-assistant` 12 / 28 ESTIMATE -> 30 / 30 MEASURED. The row is 
 the Cooking board and Overall move by 18 floor / 2 realistic ticks: Overall 40,212 / 45,105 -> 40,230 / 45,107,
 Cooking 148 / 177 -> 166 / 179 (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`). The
 rival's 12-tick floor is not reached: it needs the burst dialog (5 pages per tick), which this script does not use.
+
+### Witch's House
+
+`RESULT ok qp=4 caught=0 witchWait=111 xp=attack=14400,hitpoints=162895 ... ticks=485 ... retries=4 died=false
+milestones=1,key,2,3,shedkey,shed,6,ball,7` (main runs: 485, 448, 444 ticks; partner runs: 522, 454, 448), each
+with `You finally kill the shapeshifter once and for all.` and `Congratulations! Quest complete!`. The partner runs
+had `hpMin=10`: Protect from Melee blocked every hit at 10 HP and Defence 1. Steps (main trial MILESTONE ticks,
+`quests/quest_ball/scripts/`): the boy "What's the matter?", "Ok, I'll see what I can do." (1,
+`areas/area_taverly/scripts/boy.rs2:3-15`) 0-18; the door key under the pot (2867 at 2900,3474) and the front door
+(2861 at 2901,3473) with the key in the pack (`quest_ball.rs2:1-31`) 18-57; the ladder (1754 at 2907,3476), the
+electric gate (2865/2866 at 2902,9873-9874) with leather gloves worn (`:33-58`; without them it shocks for HP/10 + 1),
+the cupboard (2868 at 2898,9873): Open, then Search gives the magnet (2, `:61-78`) 57-88; the ladder up, the cheese on
+the mouse hole (2870 at 2903,3466) spawns the mouse, the magnet on the mouse (3, `:80-117`) 88-117; the back door
+(2862 at 2901,3465), the garden to the fountain (2864 at 2909,3470, op2 Check: the shed key, `:162-169`) 117-213; the
+shed door (2863 at 2934,3463) with the key spawns the experiment (`:134-160`) 213-235; the 4 forms, each spawned by
+the death of the last (`witches_experiement.rs2:37-81`, 21 + 31 + 41 + 51 HP) 235-342; the ball (2407 at 2935,3460,
+`quest_ball.rs2:171-183`), the garden back, the house, the boy queues the completion (`boy.rs2:28-33`) 342-460.
+Findings:
+- The witch (Nora T. Hagg) patrols z 3463 between x 2904 and 2930 (`witches_house.npc`). Each tick she catches a
+  player within 3 tiles in line of sight who is north or south of her and has no hedge on the next tile toward her
+  row (`witch.rs2:1-34`). A catch takes the shed key and the ball, sets 3 back to 1, and puts the player outside at
+  2929,3456. A trial walked the SDK route along z 3460 past her and was caught at tick 133.
+- Her row is in a shut pen (z 3462-3464, x 2904-2930). The gaps in the hedge rows z 3461 and 3465 hold soil and grass
+  patches (ground decoration 316, 1244, 1245, `maps/m45_54.jm2`) that block walking: the client rejected every walk
+  into the pen (`client_rejected`), and the SDK collision agrees. So the garden is 4 corridors round the pen: x 2901,
+  z 3460, x 2933 and z 3466. The fountain is reached only by the loop past the shed.
+- The script walks the corridors in hops between hidden tiles (a hedge toward her row, or out of her reach). A hop
+  goes only when no tile of it is exposed to any position she can reach by then, from her last seen position (the
+  npc list covers about 15 tiles; a trial that took "out of sight" as "safe" was caught at tick 183). The waits are
+  61-111 ticks of each run and are the spread of the runs.
+- Each new form attacks at once, and the attack click on it got "I'm already under attack!". The forms took 7, 32,
+  33 and 35 ticks. Auto retaliate on and the latest form as the target did not shorten it.
+- Untradeable: door key, magnet, shed key, ball (`quest_ball.obj`). Helper items: leather gloves (1059), cheese (1985).
+
+
+Planner: row `witch` 300 / 900 ESTIMATE -> 444 / 485 MEASURED (best / worst main run), the same under
+`rival-dialogue-burst` (was 277 / 832). The row is not in `quests-rest`, so the QP total stays 145. `bun test
+packages/planner`: 42 pass, 0 fail. `haggis-cli --levers`: Quest Points WIN at 102,024 floor / 134,279 realistic
+(was 101,857 / 134,626); Overall and Hitpoints unchanged.

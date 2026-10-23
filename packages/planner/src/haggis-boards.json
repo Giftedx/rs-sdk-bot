@@ -2122,10 +2122,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 300,
-    "realistic": 900,
-    "evidence": "ESTIMATE",
-    "source": "quest time not measured"
+    "floor": 444,
+    "realistic": 485,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, 3/3 PASS on practice from preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted): 485/448/444 ticks; also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); floor = best main run, realistic = worst main run; was 300/900 ESTIMATE"
    },
    "lump": true,
    "xp": {
@@ -2146,10 +2146,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 277,
-       "realistic": 832,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 300/900"
+       "floor": 444,
+       "realistic": 485,
+       "evidence": "MEASURED",
+       "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, 3/3 PASS on practice from preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted): 485/448/444 ticks; also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); floor = best main run, realistic = worst main run; the rival burst run is not measured by us; was 277/832 ESTIMATE"
       }
      }
     }
