@@ -3,16 +3,16 @@
 // ARRAV_HELPER_READY=1, quest_arrav_helper_ready (the helper's part done). Every skill 99, rune set worn.
 //
 // Why two accounts (server truth, quests/quest_blackarmgang/scripts/quest_blackarmgang.rs2): the Phoenix half
-// (arravshield1) is in the chest inside the Phoenix HQ, behind a door that opens only at %phoenixgang >= 9 (:22-26,
-// :40-48); the Black Arm half (arravshield2) is in the cupboard upstairs in the Black Arm HQ, behind a door that opens
-// only at %blackarmgang >= 3 (:108-118). Straven and Katrine refuse a member of the other gang (straven.rs2:2-5,
+// (arravshield1) is in the chest inside the Phoenix HQ, behind a door that opens only at %phoenixgang >= 9 (:14-30,
+// :34-41); the Black Arm half (arravshield2) is in the cupboard upstairs in the Black Arm HQ, behind a door that opens
+// only at %blackarmgang >= 3 (:99-105, 110-116). Straven and Katrine refuse a member of the other gang (straven.rs2:2-5,
 // katrine.rs2:1-7), and the curator needs both halves in one pack (curator.rs2:7-23). The halves, the crossbows and the
 // certificates are tradeable (quest_blackarmgang.obj).
 //
 // Method: the main joins the Black Arm Gang, which is the short side: the tramp (tramp.rs2:26-47), Katrine (katrine.rs2
-// :184-248), 2 Phoenix crossbows to Katrine (:260-276). The helper does the Phoenix side once: Reldo, the book, Reldo,
+// :14-78), 2 Phoenix crossbows to Katrine (:90-106). The helper does the Phoenix side once: Reldo, the book, Reldo,
 // Baraek (20 coins), Straven, Jonny the Beard's report, Straven (key 759), the chest (shield half 763), the weapon store
-// (the weaponsmaster blocks the crossbow pickup while he is within 10 tiles, quest_blackarmgang.rs2:50-58 and
+// (the weaponsmaster blocks the crossbow pickup while he is within 10 tiles, quest_blackarmgang.rs2:88-97 and
 // weaponsmaster.rs2:18-24, so the helper kills him first). The helper hands the main 2 crossbows and the Phoenix half in
 // one trade beside the tramp. The main takes the Black Arm half, gets 2 certificates from the curator, claims the reward
 // from King Roald (king_roald.rs2:9-28), then gives the second certificate to the helper, who claims too: both accounts
@@ -32,7 +32,7 @@ const AT = {
     meet: { x: 3208, z: 3390 },
 };
 const LOC = {
-    bookcase: { id: 2402, x: 3212, z: 3493 },          // questbookcase op2 Check (quest_blackarmgang.rs2:1-13)
+    bookcase: { id: 2402, x: 3212, z: 3493 },          // questbookcase op2 Check (quest_blackarmgang.rs2:1-12)
     cellar: { id: 1754, x: 3244, z: 3383 },            // ladder_cellar down to the Phoenix HQ (z + 6400)
     hqLadder: { id: 2405, x: 3244, z: 9783 },          // phoenixladder up to 3244,3382 (ladders.rs2:124-126)
     hqDoor: { id: 2397, x: 3247, z: 9779 },            // phoenixdoor, north wall; opens at %phoenixgang >= 9
@@ -71,16 +71,18 @@ async function killAndLoot(q: Q, label: string, re: RegExp, home: { x: number; z
 }
 
 // Open a chest or cupboard (it becomes `openId`), then Search it; the half comes after the message boxes
-// (quest_blackarmgang.rs2:40-48, 108-114).
+// (quest_blackarmgang.rs2:34-41, 110-116).
 async function searchFor(q: Q, label: string, l: { id: number; x: number; z: number }, openId: number, item: number): Promise<void> {
     for (let i = 0; i < 6 && !q.has(item); i++) {
         await q.guard(label);
         if (i > 0) q.stats.retries++;
-        const c = q.locAt(l.x, l.z);
-        const isOpen = c?.id === openId;
-        await q.opLoc(c ?? l, isOpen ? q.opIndex(c, /search/i) : 1);
-        await q.waitUntil(() => q.has(item) || q.dialogOpen() || (!isOpen && q.locAt(l.x, l.z)?.id === openId), 10);
-        await q.converse([], () => q.has(item) && !q.dialogOpen(), 12);
+        // The open loc is found by its Search option near the tile (by id on the tile, a trial waited 10 ticks).
+        const open = () => q.locs().find((o: any) => o.x === l.x && o.z === l.z && (o.id === openId || (o.optionsWithIndex ?? []).some((p: any) => /^search$/i.test(p.text))));
+        const c = open();
+        await q.opLoc(c ?? q.locAt(l.x, l.z) ?? l, c ? q.opIndex(c, /search/i) : 1);
+        // The walk to the loc is part of the click, so the wait covers it (10 ticks was short in a trial).
+        await q.waitUntil(() => q.has(item) || q.dialogOpen() || (!c && !!open()), 25);
+        if (q.dialogOpen()) await q.converse([], () => q.has(item) && !q.dialogOpen(), 12);
     }
     if (!q.has(item)) await q.fail(`${label}: no item ${item}`);
 }
@@ -90,7 +92,7 @@ async function helperPart(q: Q): Promise<void> {
     const under = () => (q.pos()?.worldZ ?? 0) > 6000;
     await q.talk('reldo 1', NPC.reldo, [/in search of a quest/i], () => q.sawText(/a book called 'the shield of arrav'/i), AT.reldo);
     q.milestone('h-reldo');
-    // The take is after a chat page and a message box (quest_blackarmgang.rs2:10-12).
+    // The take is after a chat page and a message box (quest_blackarmgang.rs2:8-12).
     await q.step('bookcase', () => q.opLoc(loc(q, LOC.bookcase), 2), () => q.has(ITEM.book) || q.dialogOpen(), 15, 4);
     await q.converse([], () => q.has(ITEM.book) && !q.dialogOpen(), 15);
     if (!q.has(ITEM.book)) await q.fail('no book');
@@ -121,7 +123,7 @@ async function helperPart(q: Q): Promise<void> {
     await downCellar('straven 2');
     await q.talk('straven 2', NPC.straven, [], () => q.has(ITEM.key), AT.straven);
     q.milestone('h-joined');
-    // The HQ door (joined: it opens and moves the player through, quest_blackarmgang.rs2:22-26, 70-93), the chest.
+    // The HQ door (joined: it opens and moves the player through, quest_blackarmgang.rs2:14-30, 66-86), the chest.
     await q.walk('hq door', [{ x: LOC.hqDoor.x, z: LOC.hqDoor.z + 1, tol: 1 }]);
     await q.step('hq door in', () => q.opLoc(loc(q, LOC.hqDoor), 1), () => (q.pos()?.worldZ ?? 9999) <= LOC.hqDoor.z, 10, 4);
     await q.walk('to chest', [{ x: LOC.chest.x, z: LOC.chest.z + 1, tol: 0 }]);
@@ -202,8 +204,8 @@ try {
     await q.climb('ba stairs up', () => loc(q, LOC.baStairs, /stair/i), /climb-up/i, () => q.lvl() === 1);
     await searchFor(q, 'cupboard', LOC.cupboard, 2401, ITEM.half2);
     q.milestone('half2');
-    await q.climb('ba stairs down', () => q.findLoc(l => l.x === LOC.baStairsTop.x && l.z === LOC.baStairsTop.z) ?? LOC.baStairsTop, /climb-down/i, () => q.lvl() === 0);
-    await q.step('ba door out', () => q.opLoc(loc(q, LOC.baDoor), 1), () => (q.pos()?.worldZ ?? 9999) < LOC.baDoor.z, 10, 4);
+    // Varrock teleport from the cupboard (3212,3424, 43 tiles from the museum): the walk from the HQ door was 56 ticks.
+    await q.teleport('varrock teleport', 'magic:varrock_teleport', 3212, 3424);
     // 6. The curator: both halves give 2 certificates (curator.rs2:7-23).
     await q.walk('to curator', [{ x: AT.curator.x, z: AT.curator.z - 1, tol: 3 }]);
     await q.talk('curator', NPC.curator, [], () => q.cnt(ITEM.cert) >= 2, AT.curator);

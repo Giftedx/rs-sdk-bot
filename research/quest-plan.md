@@ -867,6 +867,73 @@ Still open: the walk to Camelot and the bank trip for the rune armour are not co
 Seers' Village is still a 75-tick walk; the two Barnaby trips cost about 260 ticks; super attack and strength
 potions would shorten the Titan fight.
 
+## 1l. Shield of Arrav and Heroes' Quest: the two-account method
+
+Shield of Arrav is MEASURED as a pair: main 234 / 235 / 237 ticks, helper part 371-400 ticks, 3/3 on practice
+(`scripts/generated/quest-arrav.ts`, row `quest-arrav`; evidence and method in `research/quest-points-board.md`,
+"Shield of Arrav as a pair"). Haggis joins the Black Arm Gang; the helper joins the Phoenix Gang and gets the second
+certificate, so both accounts finish Shield of Arrav. The gang choice is fixed for Heroes' Quest: Haggis does the
+Black Arm side and the helper does the Phoenix side.
+
+### Heroes' Quest: what each side needs (CODE-READ, `quests/quest_hero/`)
+
+- Start (both accounts): Achietties sets `%heroquest` 1 only when `has_hero_quest_requirements` is true: 55 QP,
+  Lost City, Dragon Slayer, Merlin's Crystal, and Shield of Arrav in either gang (`quest_hero.rs2:1-7`,
+  `areas_heroes_guild/scripts/achietties.rs2:39-44`). No other script sets stage 1; every later stage needs it
+  (grep of `%heroquest =`). The end needs a firebird feather, a master thief armband and a cooked lava eel
+  (`achietties.rs2:12-21`).
+- Phoenix side: Straven at stage 1 sets 2 and names Alfonse and the word "gherkin" (`straven.rs2:152-159`);
+  Alfonse "Do you sell Gherkins?" sets 3 (`area_brimhaven/scripts/alfonse_the_waiter.rs2:4-19`); the kitchen door
+  (2628 at 2788,3189) needs stage >= 3 and `%phoenixgang` 10 (`locs/brimhaven_restaurant.rs2:1-6`); Charlie "I want
+  to steal Scarface Pete's candlesticks." sets 4 (`npcs/charlie_the_cook.rs2:22-25`); the panel (2629 at 2787,3190)
+  opens at >= 4. Grip can be attacked only by a player at stage >= 4 with `%phoenixgang` 10
+  (`npcs/grip.rs2:59-65`, called from `skill_combat/scripts/npc/npc_combat.rs2:147-148` and `:234-235`). His death
+  sets the killer to 5 and drops `grip_keys` for anyone (`drop tables/scripts/grip.rs2:1-10`). Straven takes a
+  candlestick from a player at stage 5 and gives the armband (`straven.rs2:95-101`, `:139-149`).
+- Black Arm side: Katrine at stage 1 sets 7 and gives "four leafed clover" (`katrine.rs2:120-133`); the Brimhaven
+  HQ door (2626 at 2811,3170) needs `%blackarmgang` 4 (`locs/brimhaven_blackarm_hq.rs2:1-6`); Grubor "Four leaved
+  clover." sets 8 (`npcs/grubor.rs2:22-29`); Trobert "I volunteer to undertake that mission!" gives the ID papers
+  and sets 9 (`npcs/trobert.rs2:15-26`); Garv lets in a player at 9 who wears a black full helm, platebody and
+  platelegs and has the papers, and sets 10 (`npcs/garv.rs2:39-57`, `quest_hero.rs2:21-25`); Grip takes the papers
+  and sets 11 (`npcs/grip.rs2:1-17`); "So what do my duties involve?" then "Anything I can do now?" gives `misc_key`
+  (`grip.rs2:38-56`); Grip's keys open the treasure door (2621 at 2764,3197) only at >= 11
+  (`locs/brimhaven_scarface_mansion.rs2:61-71`); the chest (2632 at 2766,3199) gives 2 candlesticks and sets 12
+  (`:79-91`); Katrine takes a candlestick at stage 12 and gives the armband (`katrine.rs2:134-144`).
+- Tradeable (`quest_hero.obj`): `misc_key`, the candlesticks. Untradeable: `grip_keys`, `id_papers`, the armband,
+  the feather.
+
+So a Black Arm player cannot kill Grip, and a Phoenix player cannot open the treasure room. One account cannot
+finish. Unlike Shield of Arrav, the helper must also pass the 55 QP start check.
+
+### The pair plan (Haggis Black Arm, helper Phoenix)
+
+The helper is a second questing account with 55 QP, Lost City, Dragon Slayer and Merlin's Crystal done, and
+Shield of Arrav done in the Phoenix Gang (the certificate from the `quest-arrav` pair). Its Heroes' stages do not
+cost Haggis ticks if they are done before Haggis reaches Brimhaven.
+
+| Stage | Haggis (Black Arm) | Helper (Phoenix) |
+|---|---|---|
+| H0 | Achietties (Heroes' Guild, Burthorpe): start, stage 1 | Achietties: stage 1 |
+| H1 | Katrine (Varrock): "Is there any way I can get the rank of master thief?", stage 7 | Straven (Phoenix HQ): stage 2 |
+| H2 | Brimhaven HQ door, Grubor "Four leaved clover.", stage 8; Trobert: ID papers, stage 9 | Alfonse "Do you sell Gherkins?" (3); the kitchen, Charlie (4); the panel; wait in Mr Olbors' garden at the side door (2622 at 2781,3197) |
+| H3 | Wear black full helm, platebody, platelegs (helper items); Garv, stage 10; Grip: papers (11), duties, "Anything I can do now?" (`misc_key`) | wait |
+| H4 | Open the side door from the mansion, or trade `misc_key` to the helper (`oplocu` with `misc_key`, `brimhaven_scarface_mansion.rs2:45-50`) | enter; attack Grip (2774,3192) until he dies (stage 5) |
+| H5 | Take `grip_keys` from the floor; the treasure door; the chest: 2 candlesticks (12); trade 1 candlestick to the helper | Straven later: the armband (optional for the helper) |
+| H6 | Katrine (Varrock): "I have a candlestick now!", the armband | done |
+| H7 | Firebird feather (Entrana firebird drop, `drop tables/scripts/entrana_firebird.rs2:10`; ice gloves worn to pick it up, `objs/fire_feather.rs2:1-13`); lava eel (blamish oil = harralander potion (unf) + blamish snail slime, Herblore 25, `skill_herblore/configs/brewing/brew_potion.struct:207-213`; oil on a fishing rod, `objs/oily_fishing_rod.rs2:4-14`; lava eel spot `skill_fishing/scripts/fishing_spots/lavafish.rs2`; cook it); Achietties with the three items | - |
+
+Open points before a script: the side door rule `coordz(coord) = coordz(loc_coord)` (`brimhaven_scarface_mansion.rs2:
+37-43`) compares z coordinates, so which side opens without `misc_key` must be checked in a run; Grip wanders
+in a guarded house, and the pirate guards' reaction to the attack is not read; the source of the ice gloves in rev
+289 is the Ice Queen's death drop (`_unpack/225/all.npc:5348-5388`), not checked. The feather, the armband, the
+cooked lava eel and the blamish oil are untradeable (`quest_hero.obj`, `skill_cooking/configs/cooking_generic/
+food_cooked.obj`, `skill_herblore/configs/brewing/potions.obj`), so Haggis gets each one itself; the oily fishing
+rod and the ice gloves are not marked untradeable (not found in a non-unpack `.obj` file).
+
+Cost: Haggis's Heroes' row stays ESTIMATE inside `quests-rest` (class XL). The real cost is the helper's 55 QP of
+quests, which is not on Haggis's clock but is a full second questing account. Without it, Heroes' Quest (1 QP), Throne of
+Miscellania (1) and Legends' Quest (4) are lost (both need Heroes'), and the total stops at 139 QP (`quest_misc/scripts/misc_journal.rs2:8-17`, `quest_legends/scripts/legends_guard.rs2:50-53`).
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,

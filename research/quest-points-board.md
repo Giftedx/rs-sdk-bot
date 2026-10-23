@@ -44,7 +44,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Merlin's Crystal (`arthur`) | 6 (73) | `merlin` | none found | level 39 (`quest_arthur/scripts/arthur_journal.rs2:10`) | - |
 | Witch's House (`ball`) | 4 (74) | `witch` | none found | level 53 (`quest_ball/scripts/ball_journal.rs2:7`) | - |
 | Biohazard (`biohazard`) | 3 (75) | rest | Plague City (OSRS; `quest_elena/scripts/mud_patch.rs2:15` reads `%biohazard`) | none found | L |
-| Shield of Arrav (`blackarmgang`) | 1 (76) | rest | one gang only (`general/scripts/quests.rs2:170`); a second account in the other gang (OSRS) | none found | M |
+| Shield of Arrav (`blackarmgang`) | 1 (76) | rest | one gang only (`general/scripts/quests.rs2:170`); a second account in the other gang (rev 289 code, see "Shield of Arrav as a pair"); MEASURED 234-237 ticks in row `quest-arrav` | Jonny the Beard, weaponsmaster (helper) | M |
 | Black Knights' Fortress (`blackknight`) | 3 (77) | `qp-filler` | 12 QP (`quest_blackknight/scripts/blackknight_journal.rs2:9-10`) | level 33 knights (same) | - |
 | Big Chompy Bird Hunting (`chompybird`) | 2 (78) | rest | Fletching 5, Cooking 30, Ranged 30 (`quest_chompybird/scripts/chompybird_journal.rs2:10-28`) | none found | M |
 | Clock Tower (`cog`) | 1 (79) | rest | none found | none found | M |
@@ -175,9 +175,12 @@ same QP result (WIN at 101,766 / 139,233 in c).
 - The margin is large: the realistic finish could be 7x longer (139,537 -> about 1,000,000) before the board is
   lost. The risk is not time. It is any one of the 68 quests that the bots cannot finish. Then the total stays
   at 144 or below, and the board is lost.
-- Shield of Arrav and Heroes' Quest need a second account in the other gang (OSRS guide; the Heroes' journal says
-  "Maybe another player can help me discreetly defeat Grip?", `quest_hero/scripts/hero_journal.rs2:190`). A
-  helper account must do the other gang's part. Not checked in a run.
+- Shield of Arrav and Heroes' Quest need a second account in the other gang (rev 289 code; "Shield of Arrav as a
+  pair" below and `research/quest-plan.md` section 1l). Arrav is MEASURED as a pair. Heroes' Quest is not scripted:
+  its helper must itself have started Heroes' Quest (55 QP, Lost City, Merlin's Crystal, Dragon Slayer and Shield of
+  Arrav in the Phoenix Gang), because Grip can be attacked only at `%heroquest >= 3` (`quest_hero/scripts/npcs/
+  grip.rs2:59-65`), and every `%heroquest` stage after 0 follows Achietties' requirement check
+  (`areas_heroes_guild/scripts/achietties.rs2:39-44`). That is a second questing account of about 55 QP.
 - If a lever turns off `rival-fight-arena`, `rival-seaslug` or `rival-mm`, or the route drops `crest`, the
   planner still counts their QP inside `quests-rest` but not their ticks. The QP result is then optimistic by
   that quest's time (720-5,052 ticks), which the 880,000-tick margin covers.
@@ -355,3 +358,63 @@ No short quest needs a second player, an unreachable area or a random reward. Tw
 scripts cover: the kitten crate in Gertrude's Cat (`random(6)`, a search of up to 6 crates) and the boys'
 line-of-sight check (a retry). The other risk is on the `rest` row, not here: Shield of Arrav and Heroes' Quest need
 a second account in the other gang (see "Risks and open items").
+
+## Shield of Arrav as a pair (MEASURED practice, 3/3)
+
+What each gang needs from the other (server truth, `quests/quest_blackarmgang/scripts/quest_blackarmgang.rs2`):
+- The Phoenix half (`arravshield1`, 763) is in the chest in the Phoenix HQ. The HQ door opens only at
+  `%phoenixgang >= 9` (`:14-30`). The chest gives the half to anyone who has none and has not finished (`:34-41`).
+- The Black Arm half (`arravshield2`, 765) is in the cupboard upstairs in the Black Arm HQ. The door opens only at
+  `%blackarmgang >= 3` (`:99-105`, `:110-116`).
+- Katrine refuses a Phoenix member (`areas/area_varrock/scripts/katrine.rs2:1-7`) and Straven refuses a Black Arm
+  member (`straven.rs2:2-5`), so one account cannot join both gangs. Katrine wants 2 Phoenix crossbows
+  (`katrine.rs2:90-106`). The crossbows are in the Phoenix weapon store. Its door opens only with the Phoenix key 759
+  (`quest_blackarmgang.rs2:45-64`), and the pickup is blocked while the weaponsmaster is within 10 tiles
+  (`:88-97`, `weaponsmaster.rs2:18-24`). No other content gives the crossbows or the halves.
+- The curator needs both halves in one pack and a joined gang (`curator.rs2:7-23`). He gives 2 certificates. The
+  king needs a joined gang and a certificate (`king_roald.rs2:9-28`). The halves, the crossbows, key 759 and the
+  certificates have no `tradeable=no` (`quest_blackarmgang.obj`). The book (757) and key 758 are untradeable.
+
+So one account cannot finish alone in rev 289. The pair:
+- The main (Haggis) joins the Black Arm Gang, which is the short side: the tramp ("Is there anything down this
+  alleyway?", "Do you think they would let me join?", `tramp.rs2:26-47`); Katrine ("I've heard you're the Black Arm
+  Gang.", "I'd rather not reveal my sources.", "I want to become a member of your gang.", "Well, you can give me a
+  try can't you?", "Ok, no problem."); Katrine again with the crossbows; the HQ door; the stairs (1722 at
+  3188,3389); the cupboard (2400 at 3188,3385,1: Open, then Search); a Varrock teleport; the curator; King Roald.
+- The helper joins the Phoenix Gang once, before the main arrives: Reldo; the bookcase (2402 at 3212,3493); read
+  the book; Reldo; Baraek (20 coins); the cellar ladder (1754 at 3244,3383); Straven; kill Jonny the Beard (8 HP)
+  for the report; Straven (key 759); the HQ door (2397 at 3247,9779) and the chest (2403 at 3235,9761); the key on
+  the weapon store door (2398 at 3251,3385); the ladder; kill the weaponsmaster (20 HP, respawn 700); take both
+  crossbows. It waits beside the tramp and gives 2 crossbows and the Phoenix half in one trade.
+- After the main's quest, the main trades the second certificate to the helper, and the helper claims it from the
+  king. Both accounts finish Shield of Arrav. The Heroes' Quest pair needs this (`quest_hero/scripts/quest_hero.rs2:1-7`).
+- The main's extra cost is one trade (14 ticks). The certificate trade comes after the main's quest complete
+  message and is not in its ticks. A helper serves only one main: after it finishes, its chest is empty (`:36`).
+
+Script `scripts/generated/quest-arrav.ts` (both roles in one process; `ARRAV_HELPER_READY=1` starts from the debug
+preset `quest_arrav_helper_ready`). Presets in `packages/practice/src/presets-gang.ts`: every skill 99, rune set,
+4 lobsters; the main has runes for one Varrock teleport. Runner: two fresh practice accounts per run, deleted after
+the run.
+
+| Run | Main ticks (`mainTicks`) | Helper part (ticks) | Both finished |
+|---|---|---|---|
+| 1 | 234 | 400 | yes |
+| 2 | 235 | 371 | yes |
+| 3 | 237 | 383 | yes |
+
+`RESULT ok qp=1 mainTicks=234 helperPrep=400 helper=ok helperDone=true helperTicks=675 xp=magic=875 ... retries=1
+died=false milestones=trade,1,2,3,half2,4,5` (run 1; run 2 `mainTicks=235 helperPrep=371`, run 3 `mainTicks=237
+helperPrep=383`). Main milestones in a trial: trade 14, tramp 33, Katrine 95-104, joined 105-114, Black Arm half
+133-138, certificates 187, king 233-238. The Varrock teleport from the cupboard cut the main from 267-277 to 232-237
+ticks (the walk from the HQ door to the museum was 56 ticks).
+
+Findings:
+- Katrine's room is reached from the east through two shut doors (`loc_1530` at 3196,3384 and 3190,3384,
+  `maps/m49_52.jm2`). With them shut, the SDK reported "no route" and the talk failed.
+- The alley north of the Black Arm stairs is a dead end (a trial stopped at 3189,3397).
+- The bookcase, the chest and the cupboard give the item after their message boxes. The script clicks them through.
+
+Planner: new row `quest-arrav` (qp 1, 234 / 237 MEASURED, the same under `rival-dialogue-burst`). `quests-rest`:
+78 -> 77 QP, 36 -> 35 quests, one medium class less: 55,100 / 82,700 -> 54,200 / 81,400 (burst 50,956 / 76,481 ->
+50,124 / 75,279). Scenario a (`research/hiscores-live.json`, `--levers`): Quest Points WIN at 102,677 / 137,207
+before, 102,079 / 136,242 after. Overall unchanged (40,212 / 45,105). `bun test packages/planner`: 42 pass, 0 fail.
