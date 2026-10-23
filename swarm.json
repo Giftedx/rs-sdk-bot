@@ -74,15 +74,15 @@
     },
     {
       "account": "Pocketrocket",
-      "script": "scripts/goldfarm-stable.ts",
+      "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
+      "enabled": true,
+      "note": "re-enabled ~09:25: first 2 farmers ran 10.9-11.3 coins/tick live on the stall-food path with no deaths",
       "env": {
         "TICKS": "9000"
       },
-      "repeat": false
+      "repeat": true
     },
     {
       "account": "mmtha0205",
@@ -98,15 +98,15 @@
     },
     {
       "account": "mmthv2350",
-      "script": "scripts/goldfarm-stable.ts",
+      "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
+      "enabled": true,
+      "note": "re-enabled ~09:25: first 2 farmers ran 10.9-11.3 coins/tick live on the stall-food path with no deaths",
       "env": {
         "TICKS": "9000"
       },
-      "repeat": false
+      "repeat": true
     },
     {
       "account": "Haggis",
