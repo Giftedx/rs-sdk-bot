@@ -191,3 +191,10 @@ events, a live run of any part.
 - Cooking runs at 4.3 ticks per item; the content allows 2 (`p_delay(1)`); not found why.
 - The courier hand-out needs the farmers to serve at the right time; the lead sequences it by hand.
 - Farmer eat rate per 1,000 ticks: live 5-6 vs practice 9.2; measure on the first live run.
+
+## Live run 1 (2026-10-23)
+
+- Mightyrod `fishcook.ts` with `GIVE_TO=Bigpackage`: Cooking 1 to 45 by t=377. It gave 2 Trout and 7 Salmon at t=511. This proves the hand-off inside the normal loop on live.
+- Bigpackage `foodcourier.ts`: `RESULT ok ticks=741 received=9 ... coins=5 ... feathersBought=260 ... hpMin=9 died=false`. The round trip took 741 ticks. `FEATHERS=300` spent 1,500 of its 1,505 coins. Later trips must use `FEATHERS=0`.
+- Pocketrocket `goldfarm.ts` with `FOOD_FROM=Bigpackage FOOD_ONLY_TRADE=1`: `TRADE max_trades Completed 1 trade(s) ... notes=9` at t=90 (from `give-to-banker.ts` with `GIVE=Trout:2,Salmon:7`).
+- The first trip carried only 9 fish because Mightyrod had cooked only 9 by then. The next trip waits for a full load.
