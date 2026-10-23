@@ -26,7 +26,14 @@ export function meter(s: Session, skill: string): Meter {
 }
 
 export async function send(s: Session, m: Meter, a: Act): Promise<boolean> {
-    const r: any = await s.direct({ reason: 'SDK', ...a });
+    let r: any = await s.direct({ reason: 'SDK', ...a });
+    // The client refuses a bank button (no packet) until the bank side inventory has its items, which can be a tick
+    // after bank.isOpen reads true. Retry those on the next ticks instead of losing them.
+    for (let k = 0; k < 3 && r?.success === false && /^bank(Deposit|Withdraw)$/.test(a.type); k++) {
+        m.refused++;
+        await waitTicks(s, 1);
+        r = await s.direct({ reason: 'SDK', ...a });
+    }
     const ok = r?.success !== false;
     if (ok) { m.sent++; m.perTickSent.set(s.tick(), (m.perTickSent.get(s.tick()) ?? 0) + 1); } else m.refused++;
     return ok;
