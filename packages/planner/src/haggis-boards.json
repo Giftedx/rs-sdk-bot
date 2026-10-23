@@ -2947,7 +2947,8 @@
     "dig",
     "cannon",
     "scorpion",
-    "waterfall"
+    "waterfall",
+    "quest-arrav"
    ],
    "evidence": "ESTIMATE",
    "source": "145 QP over 68 quests (quest.constant:72-139); quest list, requirements and size classes in research/quest-points-board.md; not measured",
