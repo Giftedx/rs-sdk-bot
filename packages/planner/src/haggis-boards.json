@@ -2592,18 +2592,18 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 600,
-    "realistic": 1500,
-    "evidence": "ESTIMATE",
-    "source": "quest.constant:73; time not measured"
+    "floor": 868,
+    "realistic": 897,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts, preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), practice, 3/3 PASS at 886, 868, 897 ticks (floor = best run, realistic = worst run); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73"
    },
    "lump": true,
    "qp": 6,
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "quest.constant:73; time not measured",
+   "evidence": "MEASURED",
+   "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts, preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), practice, 3/3 PASS at 886, 868, 897 ticks (floor = best run, realistic = worst run); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -2617,10 +2617,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 555,
-       "realistic": 1387,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 600/1500"
+       "floor": 868,
+       "realistic": 897,
+       "evidence": "MEASURED",
+       "source": "research/quest-plan.md section 1j: scripts/generated/quest-merlin.ts, preset quest_merlin (beside King Arthur; every skill 99, Dragon Slayer done), practice, 3/3 PASS at 886, 868, 897 ticks (floor = best run, realistic = worst run); Arthur to Arthur, the walk to Camelot not counted; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, teleport runes; QP: quest.constant:73; the rival burst run is not measured by us"
       }
      }
     }

@@ -756,10 +756,40 @@ packages/planner`: 42 pass.
 Still open: the walk to the Champions' Guild is not counted; the route uses the Lumbridge teleport for the Duke
 (about 175 tiles from Lumbridge to Port Sarim).
 
-## 1j. Merlin's Crystal (the `merlin` row): CODE-READ, script written, not proven
+## 1j. Measured: Merlin's Crystal (the `merlin` row)
 
-Script `scripts/generated/quest-merlin.ts` and debug presets `quest_merlin`, `quest_merlin_s3` ... `_s8`
-(`presets-dragon.ts`) are written from the content below; no practice run yet.
+Script `scripts/generated/quest-merlin.ts`, preset `quest_merlin` (`presets-dragon.ts`, beside King Arthur; every
+skill 99, Dragon Slayer done; helper items bucket of wax, bat bones, bread, tinderbox, 500 coins, runes for two
+Falador, one Varrock and one Camelot teleport, 6 lobsters). Debug presets `quest_merlin_s3` ... `_s8`
+(`MC_FROM=<milestone>`). Practice server, one bot at a time.
+
+3/3 PASS (MEASURED practice, 2026-10-23):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | HP min |
+|---|---|---|---|---|
+| 1 | `RESULT ok qp=6 excalibur=true questMsg=true xp=attack=7700,hitpoints=2552,magic=4662 at=2763,3512,0 ticks=886 hpMin=99 eats=0 walkTicks=448 retries=1 died=false` | 886 | 95 (10.7%) | 99 |
+| 2 | `RESULT ok qp=6 excalibur=true questMsg=true xp=attack=3900,hitpoints=1295,magic=4662 at=2766,3512,0 ticks=868 hpMin=99 eats=0 walkTicks=446 retries=1 died=false` | 868 | 91 (10.4%) | 99 |
+| 3 | `RESULT ok qp=6 excalibur=true questMsg=true xp=attack=7600,hitpoints=2517,magic=4662 at=2766,3514,0 ticks=897 hpMin=99 eats=0 walkTicks=444 retries=2 died=false` | 897 | 102 (11.3%) | 99 |
+
+Every run ends with `Congratulations! Quest complete!` and Excalibur in the pack. Planned: 555 / 1,387 (ESTIMATE);
+measured 868-897. Run 2 MILESTONE ticks: 1 Arthur 20; 2 Gawain 43; 3 Lancelot 104; 4 Morgan 265; 5 candle 369;
+6 Excalibur 564; 7 chaos altar 718; 8 Thrantax 778; 9 crystal and Arthur 868.
+
+Findings:
+
+- The Lady of the Lake's name is "The Lady of the Lake"; Lancelot's room on level 1 has the double doors at
+  2761-2762,3505 (`maps/m43_54.jm2 1 9 49`); Keep Le Faye has double doors at 2776,3400-3401 between the jetty and
+  the stairs (`maps/m43_53.jm2 0 24 8`); the crystal tower door is at 2766,3495.
+- The keep crate (64 at 2779,3401) is on map level 1 of the jetty, which is walked as level 0: the bot lands at
+  2778,3401,0 and clicks the crate by id and tile from there (like the Lady Lumbridge gangplank in 1i).
+- Lancelot's line is "They get all their deliveries by boat from Catherby."
+- The chaos altar's op 2 is "Check".
+- No damage in any run: Mordred and the renegade knights are melee, and Protect from Melee is on in the keep and at
+  the Wilderness altar.
+
+Planner: row `merlin` 868 / 897 MEASURED (base and `rival-dialogue-burst` patch; was 600 / 1,500 and 555 / 1,387
+ESTIMATE). Scenario a Overall finish 40,212 floor / 45,105 realistic, unchanged (the row runs after the last 99).
+`bun test packages/planner`: 42 pass.
 
 | # | Stage (varp `%arthur` 14; bits in varp 15) | Where | Evidence |
 |---|---|---|---|
@@ -773,8 +803,7 @@ Script `scripts/generated/quest-merlin.ts` and debug presets `quest_merlin`, `qu
 | 8 | Bat bones dropped within 1 tile of the magic symbol with the lit black candle; Thrantax; "Snarthon Candtrick Termanto" (%arthur 5) | 2780,3515 | `quest_arthur.rs2:150-206` |
 | 9 | Tower ladders 2769,3493 and 2767,3491; Excalibur on the crystal (62 at 2767,3493,2) (%arthur 6); King Arthur queues the completion, 6 QP | 2767,3493,2 | `quest_arthur.rs2:239-276` |
 
-**Next stage:** run `quest-merlin.ts` from `quest_merlin` with `MC_STOP=3` (the Camelot knights and the Lancelot
-stairs), then stages 4-9 from the debug presets in order. Then 3 proof runs and the `merlin` row.
+Still open: the walk to Camelot is not counted; the route crosses the Wilderness to the only chaos altar (3239,3608).
 
 ## 1k. Holy Grail (the `grail` row): not started
 
@@ -785,6 +814,11 @@ whistle given (9); the magic whistle from the Draynor Manor door `whistledoor` (
 napkin), used in the Karamja zone 2740-2743,3234-3237 to reach the Fisher Realm; the grail bell; the Holy Grail;
 Arthur queues the completion (110,000 Prayer and 153,000 Defence before 25x, `quest_grail.rs2:115-120`). Not read:
 `sir_percival.rs2`, `grail_crone.rs2`, `fisher_king.rs2`, Galahad, Entrana (no weapons or armour allowed).
+
+**Next stage:** read `quest_grail/scripts/*.rs2` and the NPC scripts with `%grail` (King Arthur's grail branch is in
+`king_arthur.rs2`, Gawain's and Lancelot's in `sir_gawain.rs2` and `sir_lancelot.rs2`); then write
+`scripts/generated/quest-grail.ts` from a `quest_grail` preset in `presets-dragon.ts` (every skill 99, `%arthur` 7,
+Excalibur in the pack, the `merlin()` QP varps plus 14 = 7), and prove it 3/3 like 1i and 1j.
 
 ## 2. Combat boards: what quests give and what the leaders need
 
