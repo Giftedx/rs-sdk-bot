@@ -107,7 +107,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | The Fremennik Trials (`viking`) | 3 (136) | rest | Woodcutting 40, Crafting 40, Fletching 25 (`quest_viking/scripts/viking_journal.rs2:7`) | level 69, unarmed (`:8`) | XL |
 | Horror from the Deep (`horror`) | 2 (137) | rest | Agility 35 (`quest_horror/scripts/horror_journal.rs2:6`); Prayer 50 for the god book (`horror_godbook.rs2:253`) | level 100 enemies (`horror_journal.rs2:6`) | L |
 | Monkey Madness (`mm`) | 3 (138) | `rival-mm` (qp 0) | The Grand Tree (`quest_mm/scripts/mm_journal.rs2:4`) | level 195 jungle demon (`:5`) | - |
-| In Search of the Myreque (`routequest`) | 2 (139) | rest | Nature Spirit (`quest_routequest/scripts/routequest_journal.rs2:18-23`), Agility 25 (`routequest_myreque.rs2:125`) | level 97 (`routequest_journal.rs2:24`) | L |
+| In Search of the Myreque (`routequest`) | 2 (139) | rest | Nature Spirit (`quest_routequest/scripts/routequest_journal.rs2:18-23`), Agility 25 (`routequest_myreque.rs2:125`); MEASURED 819-852 ticks in row `quests-medium` | level 97 (`routequest_journal.rs2:24`) | L |
 | **Total** | **145** | | | | |
 
 ## The planner's QP rows (before this change)
@@ -434,6 +434,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Priest in Peril | `scripts/generated/quest-priestperil.ts` | 1010, 993, 1011 | MEASURED 3/3 |
 | Biohazard | `scripts/generated/quest-biohazard.ts` | 1662, 1655, 1672 | MEASURED 3/3 |
 | Nature Spirit | `scripts/generated/quest-druidspirit.ts` | 823, 830, 791 | MEASURED 3/3 |
+| In Search of the Myreque | `scripts/generated/quest-routequest.ts` | 819, 852, 846 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -642,15 +643,56 @@ Findings:
   spells and harvests are not (`quest_druidspirit.obj`). Helper items: silver sickle. The wolfbane dagger must be in the
   pack, bank or worn, or Drezel gives a new one first (`drezel.rs2:9-18`).
 
+### In Search of the Myreque
+
+`RESULT ok qp=2 pouch=8 xp=attack=20500,strength=15000,defence=15000,hitpoints=16822,crafting=15000 ... ticks=819 ...
+walkTicks=302 retries=2 died=false` (runs: 819, 852, 846 ticks; a passing trial before the proof: 824), each with
+`Congratulations! Quest complete!`. Class L in `quests-rest`, but the row `quests-medium` holds it with the other
+measured `rest` quests. Preset `quest_routequest`: in the Hair of the Dog inn, Canifis, beside Vanstrom Klause (spawn
+3503,3477), Nature Spirit done (307 = 110) with the blessed sickle and a druid pouch of 6 charges, 302 = 61; helper items
+the 6 steel weapons, 6 planks, 30 steel nails, a hammer and 20 coins. Steps (proof run 1 MILESTONE ticks;
+`quests/quest_routequest/scripts/` unless named): Vanstrom "Why do they need help? Are they in trouble?", "Perhaps I
+could help you out here.", "Yes, I'll do it!" (5, `routequest_vanstorm.rs2:74-153`) 0-36; the Mort Myre gate, the walk to
+the Nature Spirit bloom spot (3430,3330), the sickle's Cast Bloom and the pouch filled (`quest_druidspirit/scripts/
+quest_druidspirit.rs2:235-331`) 36-183; the walk to Mort'ton, Cyreg Paddlehorn "Well, I guess they'll just die without
+weapons.", "Resourceful enough to get their own steel weapons?", "If you don't tell me, their deaths are on your
+head!", "What kind of a man are you to say that you don't care?" (10, 15), the pouch and "Give wooden planks to Cyreg."
+(20, `routequest_morton.rs2:57-221`) 183-373; the boat (5051 at 3523,3284), "Yes, I'll pay ten gold." to the Hollows
+(25, `:1-55`) 373-395; the tree (5005 at 3502,3426) up, the three rungs at 3502,3428-3430 repaired, the tree at 3502,3431
+down (52, `routequest_hollow.rs2:48-185`) 395-458; Curpile Fyod "I've come to help the Myreque, I've brought weapons.",
+three questions (55, `:236-395`) 458-504; the door (5060/5061 at 3509-3510,3447) to 3500,9811 (60, `:1-29`) 504-518; the
+stalagmite (5050 at 3492,9824) to level 3, Veliaf (65), Sani, Harold, Radigad, Polmafi and Ivan, each "Ok, thanks."
+(`routequest_myreque.rs2:118-407`) 518-652; Veliaf takes the weapons, the cutscene (70, 80, `route_cutscene.rs2`)
+652-715; the skeleton hellhound (level 97) killed (85, `routequest_myreque.rs2:584-616`) 715-739; Veliaf "How do I get
+out of here?" (90, `:502-527`) 739-761; the tunnel (5046 at 3505,9831), the wall (5052 at 3480,9837; 95), the ladder
+(5054 at 3477,9846) to Canifis (97, `:29-53,100-112`) 761-787; the stranger in the inn queues the completion
+(`routequest_vanstorm.rs2:33-72`) 787-819.
+Findings:
+- Cyreg wants a druid pouch with 5 charges or more (`routequest_morton.rs2:191-200`), and each ghast attack in Mort Myre
+  spends a charge (`ghast.rs2:24-26`). The walk from Canifis to Mort'ton goes through the swamp past Filliman's bridge,
+  so the script tops up the pouch at the Nature Spirit bloom spot with the blessed sickle (inside the 147-tick
+  leg from Vanstrom; the top-up alone is not timed). The pouch had 11-12 charges after the top-up and at Cyreg; it
+  ended with 8-11.
+- The rope bridge rungs (`swamp_bridge1` 5002 at 3502,3427-3430, a bridge level in `maps/m54_53.jm2`) are not in the
+  SDK's nearby locs (`WARN rung locs: 5005@3502,3426 Climb up/Climb down`). The script sends Repair (op5) by tile.
+- Curpile asks 3 of 6 questions at random (`routequest_hollow.rs2:357-366`); the answer depends on the question, and
+  "Sani Piliu" is an option in 4 of them, so the script reads the question header before it picks.
+- The 5 members stand on level 3 before the ambush and on level 0 after it (`knowledge/npcs.json` spawns); the cutscene
+  ends on level 0 with the hellhound at 3506,9834 (`route_cutscene.rs2:183-189`).
+- Helper items (all tradeable): steel longsword, 2 steel swords, steel dagger, steel mace, steel warhammer, 6 wooden
+  planks, 30 steel nails, a hammer. The blessed sickle and the pouch come from Nature Spirit.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
 Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922), Plague City (1 QP, 749 / 784), Priest in Peril
-(1 QP, 993 / 1,011), Biohazard (3 QP, 1,655 / 1,672) and Nature Spirit (2 QP, 791 / 830): 10 QP, floor 5,535 ticks
-(sum of best runs), realistic 5,693 (sum of worst runs), the same under `rival-dialogue-burst`. Nature Spirit left
-`quests-rest` as a delta on the committed row: 28 quests, 64 QP, 47,900 / 72,300 (burst 44,298 / 66,863), 9 medium.
-`bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145;
-Quest Points WIN at 102,883 floor / 134,402 realistic. Row `quests-rest` loses them one medium class (900 /
+(1 QP, 993 / 1,011), Biohazard (3 QP, 1,655 / 1,672), Nature Spirit (2 QP, 791 / 830) and In Search of the Myreque
+(2 QP, 819 / 852): 12 QP, floor 6,354 ticks (sum of best runs), realistic 6,545 (sum of worst runs), the same under
+`rival-dialogue-burst`. Each left `quests-rest` as a delta on the committed row: after Nature Spirit (medium, 900 /
+1,300) 28 quests, 64 QP, 47,900 / 72,300; after In Search of the Myreque (long, 1,800 / 2,600) 27 quests, 62 QP,
+46,100 / 69,700 (burst 42,633 / 64,459), 9 medium and 10 long. `bun test packages/planner`: 42 pass, 0 fail.
+`haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 102,037 floor / 132,741
+realistic. Row `quests-rest` loses them one medium class (900 /
 1,300) each; with Lost City also moved out by another helper it was 29 quests after Biohazard, 66 QP, 48,800 / 73,600 (burst
 45,130 / 68,065). The QP total stays 145. The helper's `medium-row.ts` writes `quests-medium`; for `quests-rest` it
 assumed a fixed base, so after Lost City moved the Biohazard step was applied as a delta on the committed row
@@ -658,22 +700,14 @@ instead. `bun test packages/planner`: 42 pass, 0 fail. `bun packages/planner/src
 research/hiscores-live.json --levers` after Biohazard: QP at end 145; Quest Points WIN at 102,924 floor / 134,446
 realistic (deadline 1,022,262); Overall 40,545 / 45,211 at this commit (the other rows moved since Priest in Peril).
 
-Next medium quest: In Search of the Myreque (`quests/quest_routequest`; 2 QP; class L; needs Nature Spirit and Agility
-25, `routequest_journal.rs2:18-24`, `routequest_myreque.rs2:125`). Not started: no script and no preset. Content read:
-Vanstrom Klause in the Hair of the Dog inn, Canifis (3503,3477) starts it (`routequest_vanstorm.rs2:74-153`); steel
-longsword, 2 steel swords, steel dagger, steel mace and steel warhammer (`quest_routequest.rs2:17-22`); Cyreg Paddlehorn
-in Mort'ton (3522,3284) with "Well, I guess they'll just die without weapons.", "Resourceful enough to get their own
-steel weapons?", "If you don't tell me, their deaths are on your head!", "What kind of a man are you to say that you
-don't care?", then a druid pouch with 5 charges or more and 3 wooden planks (`routequest_morton.rs2:57-221`); the boat
-(5051 at 3523,3284, 10 coins) to the Hollows (3498,3380); the tree (5005 at 3502,3426), three bridge rungs at
-3502,3428-3430 (1 plank and 10 steel nails each, a hammer, `routequest_hollow.rs2:99-234`), the tree at 3502,3431;
-Curpile Fyod (3508,3440) asks 3 of 6 questions with fixed answers (`routequest_hollow.rs2:287-395`); the door
-(5060/5061 at 3509-3510,3447); the stalagmite (5050 at 3492,9824) to the members on level 3; Veliaf, the 5 members,
-Veliaf with the weapons starts the cutscene; the level 97 skeleton hellhound (`route_cutscene.rs2:183-189`); Veliaf
-"How do I get out of here?"; the wall (5052 at 3480,9837), the ladder (5054 at 3477,9846) to Canifis; the stranger in
-the inn queues the completion (`routequest_vanstorm.rs2:47-72`). After it: Haunted Mine (the cart points puzzle,
-`quest_hauntedmine/scripts/hauntedmine_points.rs2`) and Shades of Mort'ton (the Flamtaer temple build and sanctity,
-`minigames/game_mortton/scripts/flamtaer_temple.rs2`), both class L.
+Next medium quest: Haunted Mine (`quests/quest_hauntedmine`; 2 QP; class L; Agility 15, Crafting 35, Morytania access,
+a level 95 boss, `hauntedmine_journal.rs2:5-19`). Not started: no script and no preset. Content to read: the Zealot
+start (`zealot.rs2`), the secondary entrance (`hauntedmine_locs.rs2:6-10`), the cart points puzzle on the
+`hauntedmine_controls` interface (8 levers in `%hauntedmine_bits`, randomized on first use, `hauntedmine_points.rs2`),
+the lift and its valve (`hauntedmine_lift.rs2`), the glowing fungus (`hauntedmine_fungus.rs2`), the dark stairs
+(`hauntedmine_darkstairs.rs2`), the boss Treus Dayth with cart, crane and pickaxe attacks (`hauntedmine_boss_ghost.rs2`)
+and the crystals (`hauntedmine_crystals.rs2`). After it: Shades of Mort'ton (the Flamtaer temple build to 100% repair
+and the sanctity for the sacred oil, `minigames/game_mortton/scripts/flamtaer_temple.rs2:44-160,280-330`), class L.
 
 ## Cook's Assistant, Witch's House, Lost City (MEASURED practice, 3/3 each)
 
