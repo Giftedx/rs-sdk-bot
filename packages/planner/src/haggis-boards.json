@@ -1190,10 +1190,10 @@
      "lever": "stun-guests",
      "set": {
       "deadTicks": {
-       "floor": 1509,
-       "realistic": 2419,
-       "evidence": "ESTIMATE",
-       "source": "stunned share 3,584 of 6,169 ticks MEASURED live (live-thieving-2026-10-23.md:74); usable 0.75 x 0.9 (eat, restock trade) ESTIMATE; floor = 0.58 x 3,850 x 0.675; research/gap-closers.md"
+       "floor": 1511,
+       "realistic": 2611,
+       "evidence": "MEASURED",
+       "source": "research/combat-measure.md: usable share of a stun MEASURED practice (Thieving 99 knights, 3 runs each): bury 2.83 bones per 8-tick stun = 0.71 of the 2-tick bury row, enchant 2.5 casts per stun = 0.94 of the 3-tick enchant row; no thieving-rate drop seen. Stunned ticks 3,584 realistic (live-thieving-2026-10-23.md:74), 0.58 x 3,850 floor; x 0.9 for refill trades inside stuns (ESTIMATE). Prayer fills first (1,169 / 1,300 row ticks need 1,646 / 1,831 stun ticks), Magic takes the rest at 0.94"
       }
      }
     },
@@ -1791,13 +1791,13 @@
     "skill": "strength",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 400,
-     "realistic": 250,
-     "evidence": "ESTIMATE",
-     "source": "combat.rs2:88-150: 100 XP/dmg x25 + 33.25 HP/dmg; 2.5-4 dmg per tick assumed"
+     "floor": 156.7,
+     "realistic": 139.6,
+     "evidence": "MEASURED",
+     "source": "research/combat-measure.md: Khazard troopers, Gnome battlefield (multiway), band 90, rune scimitar aggressive, 3 x 300 ticks practice: 126.0 / 156.7 / 136.0 style XP per tick (floor = best run)"
     },
     "side": {
-     "hitpoints": 0.3325
+     "hitpoints": 0.331
     }
    },
    "requires": [
@@ -1805,8 +1805,8 @@
     "dragon",
     "scorpion"
    ],
-   "evidence": "ESTIMATE",
-   "source": "combat.rs2:88-150: 100 XP/dmg x25 + 33.25 HP/dmg; 2.5-4 dmg per tick assumed",
+   "evidence": "MEASURED",
+   "source": "research/combat-measure.md (band 90 melee, 3 runs)",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -1822,7 +1822,22 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 0.6
+      "ranged": 0.585
+     },
+     "set": {
+      "train": {
+       "skill": "strength",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 120.7,
+        "realistic": 113.8,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md: same spot with a dwarf cannon, band 90: 119.0 / 120.7 / 101.7 style XP per tick"
+       },
+       "side": {
+        "hitpoints": 0.33
+       }
+      }
      }
     }
    ],
@@ -1838,13 +1853,13 @@
     "skill": "attack",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 400,
-     "realistic": 250,
-     "evidence": "ESTIMATE",
-     "source": "combat.rs2:143-167 4 x base per damage, HP 1.33 x base; 2.5-4 dmg per tick assumed"
+     "floor": 156.7,
+     "realistic": 139.6,
+     "evidence": "MEASURED",
+     "source": "research/combat-measure.md: Khazard troopers, Gnome battlefield (multiway), band 90, rune scimitar aggressive, 3 x 300 ticks practice: 126.0 / 156.7 / 136.0 style XP per tick (floor = best run)"
     },
     "side": {
-     "hitpoints": 0.3325
+     "hitpoints": 0.331
     }
    },
    "requires": [
@@ -1854,8 +1869,8 @@
     "id": "combat-hp-bound",
     "role": "add"
    },
-   "evidence": "ESTIMATE",
-   "source": "replaces Tree Gnome Village + Grand Tree Attack before Overall; research/gap-closers.md",
+   "evidence": "MEASURED",
+   "source": "research/combat-measure.md (band 90 melee, 3 runs)",
    "patches": [
     {
      "lever": "cannon-melee",
@@ -1863,7 +1878,22 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 0.6
+      "ranged": 0.585
+     },
+     "set": {
+      "train": {
+       "skill": "attack",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 120.7,
+        "realistic": 113.8,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md: same spot with a dwarf cannon, band 90: 119.0 / 120.7 / 101.7 style XP per tick"
+       },
+       "side": {
+        "hitpoints": 0.33
+       }
+      }
      }
     }
    ],
@@ -2240,21 +2270,21 @@
     "skill": "defence",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 400,
-     "realistic": 250,
-     "evidence": "ESTIMATE",
-     "source": "combat.rs2:88-150"
+     "floor": 150.6,
+     "realistic": 134.5,
+     "evidence": "MEASURED",
+     "source": "research/combat-measure.md: Defence 1 -> 99 weighted by XP share (4.7% band 40, 22.1% band 70, 73.2% band 90): bands 40 / 70 / 90 means 81.3 / 137.2 / 139.6, best runs 88.0 / 154.0 / 156.7 style XP per tick"
     },
     "side": {
-     "hitpoints": 0.3325
+     "hitpoints": 0.331
     }
    },
    "requires": [
     "dragon",
     "grail"
    ],
-   "evidence": "ESTIMATE",
-   "source": "combat.rs2:88-150",
+   "evidence": "MEASURED",
+   "source": "research/combat-measure.md (bands 40, 70, 90 melee, 3 runs each)",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -2270,7 +2300,22 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 0.6
+      "ranged": 0.693
+     },
+     "set": {
+      "train": {
+       "skill": "defence",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 113.3,
+        "realistic": 103.1,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md: with the cannon, same weights: bands 40 / 70 / 90 means 62.3 / 87.8 / 113.8, best runs 82.0 / 101.0 / 120.7"
+       },
+       "side": {
+        "hitpoints": 0.33
+       }
+      }
      }
     }
    ],
@@ -2286,17 +2331,17 @@
     "skill": "hitpoints",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 133,
-     "realistic": 83,
-     "evidence": "ESTIMATE",
-     "source": "combat.rs2: 33.25 HP XP per damage x25; 2.5-4 dmg per tick"
+     "floor": 51.8,
+     "realistic": 46.2,
+     "evidence": "MEASURED",
+     "source": "research/combat-measure.md: Hitpoints XP per tick at band 90 melee: 41.7 / 51.8 / 45.0 (3 x 300 ticks)"
     }
    },
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "combat.rs2: 33.25 HP XP per damage x25; 2.5-4 dmg per tick",
+   "evidence": "MEASURED",
+   "source": "research/combat-measure.md (band 90 melee, 3 runs)",
    "supplies": [
     {
      "item": "lobster",
@@ -2310,7 +2355,19 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 1.8
+      "ranged": 1.77
+     },
+     "set": {
+      "train": {
+       "skill": "hitpoints",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 39.9,
+        "realistic": 37.6,
+        "evidence": "MEASURED",
+        "source": "research/combat-measure.md: Hitpoints XP per tick at band 90 with the cannon: 39.4 / 39.9 / 33.6"
+       }
+      }
      }
     }
    ],

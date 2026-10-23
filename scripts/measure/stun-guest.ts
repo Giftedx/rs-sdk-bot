@@ -18,6 +18,8 @@ const CAP = Number(tArg ?? 600);
 const MODE = (process.env.MODE ?? 'base') as 'base' | 'bury' | 'enchant';
 const KNIGHT = /^knight of ardougne$/i;
 const ENCHANT_LVL1 = 1155; // vendor/rs-sdk/sdk/spells.ts
+// Ticks between bury clicks. 2 matches p_delay(0); 1 resends every tick (the server drops a click while delayed).
+const BURY_GAP = Number(process.env.BURY_GAP ?? 2);
 const s = await openBot(bot!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 3);
@@ -71,7 +73,7 @@ try {
                     if (!b) { itemsOut++; return; }
                     const op = b.optionsWithIndex?.find((o: any) => /bury/i.test(o.text))?.opIndex ?? 1;
                     void s.direct({ type: 'useInventoryItem', slot: b.slot, optionIndex: op, reason: 'SDK' });
-                    guests++; guestThisStun++; nextGuest = now + 2; return;
+                    guests++; guestThisStun++; nextGuest = now + BURY_GAP; return;
                 }
                 if (MODE === 'enchant' && now + 2 <= stunEnd) {
                     const r = slotOf(/^sapphire ring$/i);
@@ -103,8 +105,8 @@ try {
     const stunTicks = stuns * 8;
     const guestXp = gn.Prayer! + gn.Magic!;
     await finish([s], gn.Thieving! > 0 && hp() > 0,
-        `mode=${MODE} ticks=${ticks} thievXp=${gn.Thieving} thievXpPerTick=${(gn.Thieving! / ticks).toFixed(1)} stuns=${stuns} stunTicks=${stunTicks} ` +
-        `guests=${guests} guestsPerStun=${(guests / Math.max(1, stuns)).toFixed(2)} prayerXp=${gn.Prayer} magicXp=${gn.Magic} guestXpPerStunTick=${(guestXp / Math.max(1, stunTicks)).toFixed(1)} ` +
+        `mode=${MODE} buryGap=${BURY_GAP} ticks=${ticks} thievXp=${gn.Thieving} thievXpPerTick=${(gn.Thieving! / ticks).toFixed(1)} stuns=${stuns} stunTicks=${stunTicks} ` +
+        `guests=${guests} buried=${gn.Prayer! / 1800} cast=${gn.Magic! / 437.5} guestsPerStun=${(guests / Math.max(1, stuns)).toFixed(2)} prayerXp=${gn.Prayer} magicXp=${gn.Magic} guestXpPerStunTick=${(guestXp / Math.max(1, stunTicks)).toFixed(1)} ` +
         `guestXpInStunWindow=${guestXpInStun} perStun=${perStun.join(',')} itemsOut=${itemsOut} eats=${eats} clicks=${clicks} hp=${hp()} lobsters=${countItems(s, /^lobster$/i)} ` +
         `bones=${countItems(s, /bones$/i)} rings=${countItems(s, /^sapphire ring$/i)} recoil=${countItems(s, /ring of recoil/i)}`);
 } catch (e) { await finish([s], false, String(e)); }
