@@ -23,6 +23,10 @@ const args = process.argv.slice(2);
 const arg = (k: string, d: number) => { const i = args.indexOf(k); return i >= 0 ? Number(args[i + 1]) : d; };
 const NEED = arg('--need', 157), TOP = arg('--top', 10), TURN = arg('--turn', 4), MAXTURNS = arg('--turns', 3), MARGIN = 3;
 const SAFE = args.includes('--safe'); // drop Wilderness and desert-heat candidates
+// --from x,z: rank by the distance from that tile to the line start (where the burner stands when it starts), and
+// only start chains within --radius tiles of it. A row may then start at any of its tiles.
+const FROM = args.includes('--from') ? args[args.indexOf('--from') + 1]!.split(',').map(Number) as [number, number] : undefined;
+const RADIUS = arg('--radius', 40);
 const jsonOut = args.includes('--json') ? args[args.indexOf('--json') + 1] : undefined;
 
 const F = { WALL_EAST: 0x8, LOC: 0x100, FLOOR_DECORATION: 0x40000, FLOOR: 0x200000 };
@@ -254,7 +258,14 @@ const extend = (c: Chain) => {
         }
     }
 };
-for (const r of rows) if (r.len >= 40) extend({ rows: [r], len: r.len, turns: 0, walk: 0 });
+if (FROM) {
+    const [ax, az] = FROM;
+    for (const r of rows) {
+        if (Math.abs(r.z - az) > RADIUS) continue;
+        for (let sx = Math.min(r.sx, ax + RADIUS); sx - r.ex + 1 >= 20 && sx >= ax - RADIUS; sx -= 2)
+            extend({ rows: [{ ...r, sx, len: sx - r.ex + 1 }], len: sx - r.ex + 1, turns: 0, walk: 0 });
+    }
+} else for (const r of rows) if (r.len >= 40) extend({ rows: [r], len: r.len, turns: 0, walk: 0 });
 
 // ---- Score: the first NEED tiles of the chain (a long row is cut at its best NEED-tile window later).
 const nearBooth = (x: number, z: number) => booths.reduce((b, p) => Math.min(b, Math.max(Math.abs(p.x - x), Math.abs(p.z - z))), 1e9);
@@ -266,7 +277,7 @@ const dangerOf = (tiles: { x: number; z: number }[]) => {
     }
     return { count: hits.size, wild: tiles.some(t => wild(t.x, t.z)), desert: tiles.some(t => desert(t.x, t.z)), list: [...hits.keys()].slice(0, 6) };
 };
-type Cand = Chain & { tiles: number; bank: number; danger: ReturnType<typeof dangerOf>; start: { x: number; z: number }; end: { x: number; z: number } };
+type Cand = Chain & { tiles: number; bank: number; from: number; danger: ReturnType<typeof dangerOf>; start: { x: number; z: number }; end: { x: number; z: number } };
 const cands: Cand[] = [];
 for (const c of chains.filter(c => c.len >= NEED || c.turns === 0)) {
     // A single long row: try every NEED-tile window and keep the one nearest a bank.
@@ -282,13 +293,15 @@ for (const c of chains.filter(c => c.len >= NEED || c.turns === 0)) {
         const used = tiles.slice(0, NEED);
         const start = used[0]!, end = used[used.length - 1]!;
         const bank = Math.min(nearBooth(start.x, start.z), ...w.rows.map(r => nearBooth(r.sx, r.z)));
-        const cand = { ...w, tiles: Math.min(w.len, NEED), bank, danger: dangerOf(used), start, end };
-        if (!best || cand.bank < best.bank || (cand.bank === best.bank && cand.danger.count < best.danger.count)) best = cand;
+        const from = FROM ? Math.max(Math.abs(start.x - FROM[0]), Math.abs(start.z - FROM[1])) : 0;
+        const cand = { ...w, tiles: Math.min(w.len, NEED), bank, from, danger: dangerOf(used), start, end };
+        const key2 = (c: Cand) => (FROM ? c.from : c.bank) * 10 + c.danger.count;
+        if (!best || key2(cand) < key2(best)) best = cand;
     }
     if (best) cands.push(best);
 }
 // Rank: enough tiles, no Wilderness, fewest danger spawns, fewest turns, nearest bank.
-const score = (c: Cand) => (c.tiles >= NEED ? 0 : 1e6 * (NEED - c.tiles)) + (c.danger.wild ? 1e5 : 0) + (c.danger.desert ? 5e4 : 0) + c.danger.count * 1000 + c.turns * 200 + c.walk * 50 + c.bank;
+const score = (c: Cand) => (c.tiles >= NEED ? 0 : 1e6 * (NEED - c.tiles)) + (c.danger.wild ? 1e5 : 0) + (c.danger.desert ? 5e4 : 0) + c.danger.count * 1000 + c.turns * 20 + c.walk * 5 + (FROM ? c.from * 20 : c.bank);
 cands.sort((a, b) => score(a) - score(b));
 // One candidate per area (start tile within 10 tiles of a better one counts as the same line).
 const picked: Cand[] = [];
@@ -301,6 +314,6 @@ for (const c of cands) {
 console.log(`SCAN rows>=20: ${rows.length}, longest row ${Math.max(...rows.map(r => r.len))}, chains ${chains.length}, reachable ${reach.size}, booths ${booths.length}, danger spawns ${spawns.length}, unsafe-loc tiles ${unsafe.size}`);
 picked.forEach((c, i) => {
     const rs = c.rows.map(r => `z${r.z}:x${r.sx}->${r.ex}(${r.len})`).join(' + ');
-    console.log(`LINE ${i + 1} tiles=${c.tiles} turns=${c.turns} turnWalk=${c.walk} start=${c.start.x},${c.start.z} end=${c.end.x},${c.end.z} bank=${c.bank} danger=${c.danger.count}${c.danger.wild ? ' WILD' : ''}${c.danger.desert ? ' DESERT' : ''} rows=${rs}${c.danger.list.length ? ` npcs=${c.danger.list.join(',')}` : ''}`);
+    console.log(`LINE ${i + 1} tiles=${c.tiles} turns=${c.turns} turnWalk=${c.walk} start=${c.start.x},${c.start.z} end=${c.end.x},${c.end.z} bank=${c.bank}${FROM ? ` from=${c.from}` : ''} danger=${c.danger.count}${c.danger.wild ? ' WILD' : ''}${c.danger.desert ? ' DESERT' : ''} rows=${rs}${c.danger.list.length ? ` npcs=${c.danger.list.join(',')}` : ''}`);
 });
 if (jsonOut) writeFileSync(jsonOut, JSON.stringify(picked, null, 1));
