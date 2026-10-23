@@ -24,14 +24,17 @@ const WAIT = Number(process.env.WAIT ?? 1500);
 const CAP = Number(process.env.CAP ?? 3000);
 const FARMERS = (process.env.FARMERS ?? '').split(',').map(x => x.trim()).filter(Boolean);
 const PER = process.env.PER ? Number(process.env.PER) : 0;
-const START_DRAYNOR = process.env.START === 'draynor';
+// HOME_ONLY=1: an account near Lumbridge or Draynor (a respawn) walks to Draynor bank, takes fares from its bank,
+// and goes home to Ardougne on the same boats; no trade.
+const HOME_ONLY = process.env.HOME_ONLY === '1';
+const START_DRAYNOR = process.env.START === 'draynor' || HOME_ONLY;
 const FEATHERS = Number(process.env.FEATHERS ?? 0);
 const FISH = /^(trout|salmon)$/i;
 // Port Sarim <-> Draynor bank: north round the water, then the x 3089-3092 lane (fishing30.ts BANK_TO_SARIM).
 const SARIM_TO_DRAYNOR: Pt[] = [[3047, 3237, 3], [3060, 3265, 3], [3089, 3266, 2], [3092, 3250, 1], [DRAYNOR.x, DRAYNOR.z, 2]];
 const DRAYNOR_TO_SARIM: Pt[] = [[3092, 3250, 1], [3089, 3266, 2], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3]];
 
-if (!FROM) { console.log('RESULT fail FROM=<fish cook account> is required'); process.exit(1); }
+if (!FROM && !HOME_ONLY) { console.log('RESULT fail FROM=<fish cook account> is required'); process.exit(1); }
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
@@ -167,11 +170,20 @@ try {
         leg('draynor');
     }
 
+    if (HOME_ONLY) {
+        if (!(await walk([[DRAYNOR.x, DRAYNOR.z, 2]]))) await fail('walk to Draynor bank');
+        if (coins() < 60) {
+            const o = await s.bot.openBank();
+            if (o.success) { await s.bot.withdrawItem(/^coins$/i, 200); await s.bot.closeBank(); }
+        }
+        leg(`draynor coins=${coins()}`);
+        if (coins() < 60) await fail('needs 60 coins for the two fares home');
+    }
     // Take the notes: the cook starts the trade when it sees this bot (fishcook.ts handOff).
     const before = fishNotes();
     const who = new RegExp(`^${FROM.replace(/[^a-zA-Z0-9 _-]/g, '')}$`, 'i');
     await timed(n => waitTicksAt += n, async () => {
-        const deadline = s.tick() + WAIT;
+        const deadline = s.tick() + (HOME_ONLY ? 0 : WAIT);
         while (fishNotes() <= before && s.tick() < deadline && !died) {
             const give = countItems(s, FEATHER) > 0 ? [{ item: FEATHER, amount: -1 }] : [];
             const r = await s.bot.serveTrades({ from: who, maxTrades: 1, give, timeout:Math.max(1000, (deadline - s.tick()) * 400) });
@@ -180,7 +192,7 @@ try {
     });
     received = fishNotes() - before;
     leg(`received${received}`);
-    if (received <= 0) await fail('no fish notes from the cook');
+    if (received <= 0 && !HOME_ONLY) await fail('no fish notes from the cook');
     if (coins() < 60 && !START_DRAYNOR) await fail('needs 60 coins for the two fares home');
 
     if (!(await walk(DRAYNOR_TO_SARIM))) await fail('walk to Port Sarim');
@@ -208,6 +220,6 @@ try {
     });
     off();
     const p = pos();
-    const ok = !died && received > 0 && !!p && cheb(ARDY_BANK, p) <= 6 && (FARMERS.length === 0 || handed > 0);
+    const ok = !died && (received > 0 || HOME_ONLY) && !!p && cheb(ARDY_BANK, p) <= 6 && (FARMERS.length === 0 || handed > 0);
     await finish([s], ok, `${detail()} at=${p?.worldX},${p?.worldZ},${p?.level}`);
 } catch (e) { await finish([s], false, String(e)); }
