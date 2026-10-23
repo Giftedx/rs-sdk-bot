@@ -34,4 +34,8 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Rune Mysteries: beside Duke Horacio on level 1 of Lumbridge castle (duke_of_lumbridge spawn 3212,3220,1,
     // maps/m50_50.jm2); runes for a Varrock and a Lumbridge teleport (2 law 563, 6 air 556, 1 fire 554, 1 earth 557).
     quest_runemysteries: short({ x: 3210, z: 3221, level: 1 }, [[563, 2], [556, 6], [554, 1], [557, 1]]),
+    // The Restless Ghost: in Lumbridge church beside Father Aereck (spawn 3244,3206, maps/m50_50.jm2); runes for a
+    // Lumbridge teleport (1 law 563, 3 air 556, 1 earth 557) for the way back from the Wizards' Tower basement. The amulet
+    // of ghostspeak and the skull are untradeable (quest_priest.obj), so Urhney and the skull are part of the run.
+    quest_priest: short({ x: 3243, z: 3206 }, [[563, 1], [556, 3], [557, 1]]),
 };

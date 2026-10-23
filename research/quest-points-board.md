@@ -200,6 +200,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Imp Catcher | `scripts/generated/quest-imp.ts` | 38, 38, 38 | MEASURED 3/3 |
 | Witch's Potion | `scripts/generated/quest-hetty.ts` | 80, 78, 79 | MEASURED 3/3 |
 | Rune Mysteries | `scripts/generated/quest-runemysteries.ts` | 449, 432, 441 | MEASURED 3/3 |
+| The Restless Ghost | `scripts/generated/quest-priest.ts` | 519, 516, 519 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -246,3 +247,17 @@ teleport; Aubury twice (shop door `loc_1531` at 3253,3399; `area_varrock/scripts
 teleport; the tower again; Sedridor queues the completion (`sedridor.rs2:140-180`). The two walks from Lumbridge to
 the tower basement are about 120 ticks each, more than half the quest. The item `research_notes` is named "Notes".
 Helper items: runes for one Varrock and one Lumbridge teleport.
+
+### The Restless Ghost
+
+`RESULT ok qp=1 xp=prayer=28125,magic=1025 ... ticks=519 ... walkTicks=370 retries=1 died=false` (runs: 519, 516,
+519 ticks), each with `Congratulations! Quest complete!`. Steps (run 1 MILESTONE ticks): Aereck "I'm looking for a
+quest!" 0-26 (`areas/area_lumbridge/scripts/father_aereck.rs2:40-50`); church door (`loc_1533` at 3238,3210), the
+walk round the swamp to Urhney's hut (door `loc_1530` at 3234,3156), "Father Aereck sent me to talk to you.",
+"He's got a ghost haunting his graveyard." 26-177 (`father_urhney.rs2:30-57`); wear the amulet; the graveyard shed
+(door 3247,3193), open the coffin (2145 at 3249,3192), which spawns the ghost, "Yep, now tell me what the problem
+is." 177-343 (`quests/quest_priest/scripts/restless_ghost.rs2:16-29,130-139`); the Wizards' Tower basement, door
+`loc_1530` at 3111,9559, take the skull (obj 553 at 3120,9567, `maps/m48_149.jm2`; a skeleton spawns and is left)
+343-479 (`quest_priest.rs2:68-80`); Lumbridge teleport, open the coffin again, the skull on it 479-519 (`:53-65`).
+The amulet and the skull are `tradeable=no` (`quest_priest.obj:18,32`), so no step can be skipped with helper
+items. The walks are 370 of the 519 ticks. `retries=1` is the second coffin click.
