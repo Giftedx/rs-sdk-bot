@@ -187,8 +187,9 @@ export const PRESETS: Record<string, SaveConfig> = {
     // spiders poison through the prayer), 4 lobsters.
     quest_grandtree: gtPreset(0, { x: 2466, z: 3494, level: 0 }),
     // Debug: The Grand Tree at a later varp 150 stage (GT_FROM=<stage>), with that stage's quest items.
+    quest_grandtree_s50: gtPreset(50, { x: 2467, z: 3495, level: 0 }, [784]),
     quest_grandtree_s80: gtPreset(80, { x: 2465, z: 3496, level: 3 }, [784]),
-    quest_grandtree_s90: gtPreset(90, { x: 2999, z: 3040, level: 0 }, [784, 787]),
+    quest_grandtree_s90: gtPreset(90, { x: 2461, z: 3443, level: 0 }, [784, 787]),
     quest_grandtree_s120: gtPreset(120, { x: 2476, z: 3461, level: 0 }, [784, 787, 789, 790, 791, 792]),
     quest_grandtree_s140: gtPreset(140, { x: 2464, z: 9893, level: 0 }, [784, 787]),
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.

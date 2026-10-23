@@ -67,9 +67,6 @@ try {
     const level = (): number => q.lvl();
     const z = (): number => q.pos()?.worldZ ?? 0;
     const shutDialog = () => q.converse([], () => !q.dialogOpen(), 10);
-    // The Combat Training Camp gate (2517-2518,3356, combat_training_camp.rs2:36-43) is locked before Biohazard; the
-    // SDK plans through it and the guard's page held one test walk for 470 ticks.
-    for (const x of [2517, 2518]) if (!q.blockDoor(0, x, 3356)) console.log(`WARN camp gate ${x} not blocked`);
     // A page that opens during a walk (a guard, a level-up) is clicked through, so the walk goes on.
     let walking = false;
     const offWalk = q.s.onTick(() => {
@@ -77,7 +74,17 @@ try {
         const d: any = q.s.sdk.getDialog();
         if (d?.isOpen && !d.isWaiting && !(d.options ?? []).some((o: any) => !/click here to continue/i.test(o.text))) void q.s.sdk.sendClickDialog(0);
     });
+    // Inside the Grand Tree trunk (l0). walkPath takes the trapdoor (2463,3497) for a shut door and clicked it for
+    // 210 ticks ("The trapdoor won't open!") in a test run, so the trunk is left and entered by the tree doors.
+    const inTrunk = (x: number, zz: number): boolean => x >= 2463 && x <= 2468 && zz >= 3493 && zz <= 3498;
+    const exitTree = async (): Promise<void> => {
+        await q.dash('to tree door inside', 2465, 3493, 0, 12);
+        await q.step('tree door out', () => { const d = q.findLoc(l => /tree door/i.test(l.name) && near3(l, { x: 2465, z: 3492 }, 2)); return d ? q.opLoc(d, q.opIndex(d, /open/i)) : q.waitTicks(1); }, () => z() <= 3491, 10, 4);
+    };
     const walk = async (label: string, pts: { x: number; z: number; tol?: number }[]): Promise<void> => {
+        const g = pts[pts.length - 1]!;
+        const p0 = q.pos();
+        if (level() === 0 && p0 && inTrunk(p0.worldX, p0.worldZ) && !inTrunk(g.x, g.z)) await exitTree();
         walking = true;
         try { await q.walk(label, pts); } finally { walking = false; }
     };
@@ -88,15 +95,33 @@ try {
     const lastMsg = (re: RegExp): number => Math.max(-1, ...(q.st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).map((m: any) => m.observationId ?? m.tick));
 
     // A ladder or stairs click at (p) on the bot's level, retried until the level changes to `to`.
+    // A ladder with Climb / Climb-up / Climb-down takes the direct op; a plain Climb opens "Climb Up." / "Climb Down."
+    // (ladders.rs2:128-139), answered here.
     const ladder = async (label: string, p: { x: number; z: number }, dir: 'up' | 'down', to: number): Promise<void> => {
-        await q.climb(label, () => q.findLoc(l => /ladder|stair|tree/i.test(l.name) && near3(l, p, 1) && (l.optionsWithIndex ?? []).some((o: any) => /climb/i.test(o.text))),
-            dir === 'up' ? /climb-up|climb up|^climb$/i : /climb-down|climb down|^climb$/i, () => level() === to, 5);
+        const direct = dir === 'up' ? /^climb[- ]up/i : /^climb[- ]down/i;
+        await q.step(label, async () => {
+            const k = q.findLoc(l => /ladder|stair|tree/i.test(l.name) && near3(l, p, 1) && (l.optionsWithIndex ?? []).some((o: any) => /climb/i.test(o.text)));
+            if (!k) return q.waitTicks(1);
+            const op = (k.optionsWithIndex ?? []).find((o: any) => direct.test(o.text)) ?? (k.optionsWithIndex ?? []).find((o: any) => /climb/i.test(o.text));
+            await q.opLoc(k, op.opIndex);
+            await q.waitUntil(() => level() === to || q.dialogOpen(), 12);
+            if (q.dialogOpen()) await q.converse([dir === 'up' ? /^climb up/i : /^climb down/i], () => level() === to, 8);
+        }, () => level() === to, 4, 5);
         await shutDialog();
+    };
+    // The Grand Tree doors (treedoorl/r 2464-2466,3492, shape 10, gnome_gate.rs2:62-76) are solid to the SDK
+    // pathfinder: from the south it routed to 2470,3494, outside the trunk, and failed. Op1 moves the player 2 tiles north.
+    const enterTree = async (): Promise<void> => {
+        if (level() !== 0 || z() >= 3493 || z() > 6400) return;
+        await walk('to tree door', [{ x: 2465, z: 3490, tol: 1 }]);
+        await q.step('tree door', () => { const d = q.findLoc(l => /tree door/i.test(l.name) && near3(l, { x: 2465, z: 3492 }, 2)); return d ? q.opLoc(d, q.opIndex(d, /open/i)) : q.waitTicks(1); }, () => z() >= 3493, 10, 4);
     };
     // Grand Tree ladders: l0 ladder, l1 laddermiddle, l2 grandtree_laddermiddle (op2 Climb-up spawns Charlie), l3 top.
     const treeTo = async (to: number): Promise<void> => {
         if (level() < 0) return;
-        if (level() === 0 && to > 0) await walk('to tree ladder', [{ x: TREE_LADDER.x, z: TREE_LADDER.z + 1, tol: 1 }]);
+        // 2467,3495 is the walkable tile east of the ladder (2466,3496 has no path: walkTo PATHFINDING FAILED).
+        if (level() === 0 && to > 0) await enterTree();
+        if (level() === 0 && to > 0) await walk('to tree ladder', [{ x: TREE_LADDER.x + 1, z: TREE_LADDER.z, tol: 1 }]);
         while (level() < to) await ladder(`tree up ${level()}`, TREE_LADDER, 'up', level() + 1);
         while (level() > to) await ladder(`tree down ${level()}`, TREE_LADDER, 'down', level() - 1);
     };
@@ -113,9 +138,24 @@ try {
             await ladder('glough ladder down', GLOUGH_LADDER, 'down', 0);
         }
     };
+    // One Talk-to, then pages until ok(): for dialogs with if_close + p_delay gaps (Narnode's guard, 7 ticks,
+    // king_narnode.rs2:51-56), where q.talk's 3-shut-tick retry sends a new Talk-to and restarts the dialog.
+    const talkOnce = async (label: string, re: RegExp, pats: RegExp[], ok: () => boolean, max: number): Promise<void> => {
+        for (let i = 0; i < 3 && !ok(); i++) {
+            await q.guard(label);
+            if (i > 0) q.stats.retries++;
+            const n = q.npc(re);
+            if (!n) { await q.waitTicks(2); continue; }
+            await q.talkTo(n);
+            await q.waitUntil(() => q.dialogOpen(), 20);
+            await q.converse(pats, ok, max);
+        }
+        if (!ok()) await q.fail(`talk ${label}`);
+    };
     const narnode = async (label: string, pats: RegExp[], ok: () => boolean, max = 150): Promise<void> => {
         if (level() > 0 && z() < 6400) await treeTo(0);
-        if (z() < 6400) await walk(`to ${label}`, [{ x: NARNODE.x, z: NARNODE.z - 2, tol: 2 }]);
+        if (z() < 6400) await enterTree();
+        if (z() < 6400) await walk(`to ${label}`, [{ x: TREE_LADDER.x + 1, z: TREE_LADDER.z, tol: 2 }]);
         await q.talk(label, /^king narnode/i, pats, ok, z() > 6400 ? NARNODE_UNDER : NARNODE, max);
     };
     // A spirit tree: op1, then the dialog choices, until the bot lands near `land`.
@@ -140,7 +180,7 @@ try {
 
     // 10. Narnode: "You seem worried", "I'd be happy to help!"; he takes the player under the trapdoor and back up.
     if (FROM < 10) {
-        await q.talk('narnode 1', /^king narnode/i, [/you seem worried/i, /happy to help/i], () => q.has(ITEM.bark) && q.has(ITEM.book) && z() < 6400 && !q.dialogOpen(), NARNODE, 200);
+        await talkOnce('narnode 1', /^king narnode/i, [/you seem worried/i, /happy to help/i], () => q.has(ITEM.bark) && q.has(ITEM.book) && z() < 6400 && !q.dialogOpen(), 200);
         await ms(10);
     }
 
@@ -153,6 +193,11 @@ try {
         q.milestone('gate');
         // Jungle spiders (melee, no poison param, _unpack/225/all.npc:1585-1607) cover the island: the prayer goes on
         // west of it (test runs took hits at 2679,3102 and 2683,3116; one died there).
+        // The road east passes under the Combat Training Camp gate (2517-2518,3356, locked before Biohazard,
+        // combat_training_camp.rs2:36-43). walkPath takes the gate for a door on its path and clicked it for 410 ticks
+        // (the guard's page each time); a door block does not change the long path. A client-routed click goes past.
+        await walk('to camp road', [{ x: 2509, z: 3355, tol: 1 }]);
+        await q.dash('past camp gate', 2526, 3353, 1, 20);
         await walk('to hazelmere island', [{ x: 2638, z: 3089, tol: 4 }]);
         await usePrayerWalk('to hazelmere', [{ x: HAZEL_LADDER.x, z: HAZEL_LADDER.z + 1, tol: 1 }]);
         await ladder('hazelmere ladder up', HAZEL_LADDER, 'up', 1);
@@ -166,8 +211,12 @@ try {
 
     // The village fence: the loose railing (loc 2186 at 2515,3161, gnomevillage_fence.rs2) from the south side, then
     // the west side of the village to the spirit tree beside King Bolren (route proved in quest-tree.ts).
+    // From the east the SDK path runs through the maze, out at 2549,3171 and south past the giants at 2545,3144
+    // (one test run: 10 -> 7 HP). Elkoy outside the maze puts the player at 2515,3159 (elkoy.rs2:160-180).
     const villageIn = async (): Promise<void> => {
-        await walk('to railing', [{ x: 2515, z: 3159, tol: 1 }]);
+        await walk('to elkoy', [{ x: 2504, z: 3194, tol: 2 }]);
+        await q.talk('elkoy', /^elkoy$/i, [/^yes please/i], () => q.cheb(2515, 3159) <= 4, { x: 2504, z: 3192 }, 40);
+        await shutDialog();
         await q.dash('to railing tile', 2515, 3160, 0, 10);
         const rail = () => q.findLoc(l => l.id === 2186 || /loose railing/i.test(l.name));
         await q.step('squeeze railing', () => { const r = rail(); return r ? q.opLoc(r, q.opIndex(r, /squeeze/i)) : q.waitTicks(1); }, () => z() >= 3161, 8, 4);
@@ -198,9 +247,16 @@ try {
         await ms(50);
     }
 
+    // Charlie is behind the prison door (2465,3495-3496 l3, blockrange=no, _unpack/225/all.loc:15100-15105); his talk is
+    // an ap op (charlie.rs2:1), so it needs line of sight. The laddertop (2466,3495) blocks it from the ladder tile.
+    const toBars = async (): Promise<void> => {
+        await q.dash('to prison bars', 2465, 3495, 0, 12);
+    };
+
     // 60. Charlie at the top (l3); the l2 ladder's Climb-up spawns him (ladders.rs2:141-144).
     if (FROM < 60) {
         await treeTo(3);
+        await toBars();
         await q.talk('charlie 1', /^charlie/i, [], () => q.sawText(/search his home|good luck/i) && !q.dialogOpen(), { x: 2464, z: 3495 }, 60);
         await ms(60);
     }
@@ -223,7 +279,19 @@ try {
 
     // 80. Glough calls the guards; the jail, Charlie, Narnode lets the player out (l3, 2465,3496).
     if (FROM < 80) {
-        await q.talk('glough 2', /^glough/i, [], () => q.sawText(/sorry again traveller/i) && !q.dialogOpen(), { x: 2478, z: 3463 }, 200);
+        // The dialog closes between the guard, Charlie and Narnode pages (glough.rs2:40-68, charlie.rs2:58-83).
+        // One Talk-to only: a second one during the guard's p_delay (if_close, then 4 ticks) restarts Glough's dialog.
+        for (let i = 0; i < 3 && level() !== 3; i++) {
+            await q.guard('glough 2');
+            const g = q.npc(/^glough/i);
+            if (!g) { await q.waitTicks(1); continue; }
+            await q.talkTo(g);
+            await q.waitUntil(() => q.dialogOpen(), 15);
+            await q.converse([], () => level() === 3, 60);
+        }
+        if (level() !== 3) await q.fail('glough 2: not jailed');
+        await q.converse([], () => q.sawText(/sorry again traveller/i) && !q.dialogOpen(), 80);
+        if (!q.sawText(/sorry again traveller/i)) await q.fail('jail: no release');
         await ms(80);
     }
 
@@ -231,9 +299,12 @@ try {
     if (FROM < 90) {
         await treeTo(3);
         await walk('to pilot', [{ x: PILOT.x + 1, z: PILOT.z - 1, tol: 1 }]);
-        await q.talk('pilot', /^gnome pilot/i, [/take me to karamja/i], () => q.near(CRASH.x, CRASH.z, 10) && !q.dialogOpen(), PILOT, 80);
+        // A jogre hit the bot for 6 (10 -> 4 HP) on the landing tile in a test run: the prayer goes on before the flight.
+        await setPfm(true);
+        await talkOnce('pilot', /^gnome pilot/i, [/take me to karamja/i], () => q.near(CRASH.x, CRASH.z, 10) && !q.dialogOpen(), 80);
         q.milestone('karamja');
         // Jogres and jungle spiders stand by the way to the gate (research/route-danger.ts): melee, so the prayer is on.
+        await keepPrayer();
         await usePrayerWalk('to shipyard gate', [{ x: SHIP_GATE.x - 2, z: SHIP_GATE.z, tol: 1 }]);
         for (let i = 0; i < 3 && (q.pos()?.worldX ?? 0) < SHIP_GATE.x; i++) {
             await q.guard('shipyard gate');
@@ -246,7 +317,7 @@ try {
         if ((q.pos()?.worldX ?? 0) < SHIP_GATE.x) await q.fail('shipyard gate');
         await setPfm(false);
         await walk('to foreman', [{ x: FOREMAN.x - 2, z: FOREMAN.z, tol: 3 }]);
-        await q.talk('foreman', /^foreman/i, [/no longer with us/i, /worm holes/i, /^anita\.$/i], () => q.has(ITEM.order) && !q.dialogOpen(), FOREMAN, 120);
+        await talkOnce('foreman', /^foreman/i, [/no longer with us/i, /worm holes/i, /^anita\.$/i], () => q.has(ITEM.order) && !q.dialogOpen(), 120);
         await ms(90);
     }
 
@@ -256,6 +327,7 @@ try {
         await spiritTree('varrock tree', VARROCK_TREE, [/^yes please/i], { x: 2542, z: 3169 });
         await spiritTree('village tree 2', VILLAGE_TREE, [/where can i go/i, /gnome stronghold/i], STRONGHOLD_LAND);
         await treeTo(3);
+        await toBars();
         await q.talk('charlie 2', /^charlie/i, [], () => q.sawText(/toad swamp|see what i can find/i) && !q.dialogOpen(), { x: 2464, z: 3495 }, 60);
         await ms(100);
     }
@@ -309,8 +381,10 @@ try {
     // 140. The trapdoor, Glough's cutscene, the black demon under Protect from Melee with Fire Bolt.
     if (FROM < 140) {
         await walk('to trapdoor', [{ x: TRAPDOOR.x, z: TRAPDOOR.z + 1, tol: 1 }]);
-        await q.step('trapdoor', () => { const t = locNear(/trapdoor/i, TRAPDOOR, 1); return t ? q.opLoc(t, q.opIndex(t, /open|climb/i)) : q.waitTicks(1); }, () => z() > 6400, 10, 4);
+        // The prayer goes on before the trapdoor: a toggle sent during Glough's cutscene (p_delay) did not take.
+        await keepPrayer();
         await setPfm(true);
+        await q.step('trapdoor', () => { const t = locNear(/trapdoor/i, TRAPDOOR, 1); return t ? q.opLoc(t, q.opIndex(t, /open|climb/i)) : q.waitTicks(1); }, () => z() > 6400, 10, 4);
         const demon = () => q.npc(/^black demon$/i);
         // Glough's 4 pages, then the demon (glough.rs2:92-126).
         for (let t = 0; t < 60 && !demon(); t++) {
@@ -326,7 +400,7 @@ try {
             await q.guard('demon');
             if (q.dialogOpen()) { const d: any = q.s.sdk.getDialog(); if (!d.isWaiting) void q.s.sdk.sendClickDialog(0); }
             await keepPrayer();
-            if (!pfmOn() && points() > 0) await setPfm(true);
+            if (!pfmOn() && points() > 0 && t % 2 === 0) void q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
             const n = demon();
             gone = n ? 0 : gone + 1;
             if (n && !q.dialogOpen() && q.T() - lastCast >= 5) { casts++; lastCast = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: BOLT, reason: 'SDK' }); }
@@ -342,7 +416,8 @@ try {
 
     // 150. Narnode in the roots; then the roots, searched in a tour from him, until the Daconia rock.
     if (FROM < 150) {
-        await narnode('narnode 5', [], () => q.sawText(/little time/i) && !q.dialogOpen(), 200);
+        await walk('to narnode under', [{ x: NARNODE_UNDER.x, z: NARNODE_UNDER.z - 2, tol: 2 }]);
+        await talkOnce('narnode 5', /^king narnode/i, [], () => q.sawText(/little time/i) && !q.dialogOpen(), 120);
         await ms(150);
     }
     let searched = 0;
