@@ -67,6 +67,20 @@ if (import.meta.main) {
     const runs = new Map<string, Run>();
     // Per account: why its last run ended.
     const ended = new Map<string, { at: number; reason: string }>();
+    // Deaths outlive a swarm restart: .practice/swarm-deaths.json keeps them, and an account in it is never started
+    // (2026-10-23: a restart forgot Mightyrod's death and sent it back to the spot that killed it). To clear an
+    // account after its route is fixed, delete its key from that file before (re)starting the swarm.
+    const deathsFile = join(prac, 'swarm-deaths.json');
+    try { for (const [a, r] of Object.entries(JSON.parse(readFileSync(deathsFile, 'utf8')))) ended.set(a, r as { at: number; reason: string }); } catch { /* no deaths yet */ }
+    const setEnded = ended.set.bind(ended);
+    ended.set = (a, r) => {
+        setEnded(a, r);
+        if (/^died/.test(r.reason)) {
+            const dead = Object.fromEntries([...ended].filter(([, v]) => /^died/.test(v.reason)));
+            writeFileSync(deathsFile, JSON.stringify(dead, null, 1));
+        }
+        return ended;
+    };
     const stopFile = (a: string) => join(prac, `stop-${a}`);
     const statusAge = (a: string) => { try { return Date.now() - statSync(join(prac, 'status', `${a}.json`)).mtimeMs; } catch { return Infinity; } };
     const botsRunning = () => [...runs.values()].reduce((n, r) => n + r.accounts.length, 0);

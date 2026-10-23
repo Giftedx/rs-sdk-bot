@@ -11,8 +11,8 @@
         "TARGET": "99",
         "CAP": "15000"
       },
-      "enabled": true,
-      "note": "fixed XP curve + false-death rule (uncommitted, git broken): fish_resume TARGET=50 3/3 (drop path, trips=0), TARGET=55 1/1 (feather trip). Random-event paths never ran.",
+      "enabled": false,
+      "note": "STOPPED: died live at 3240,3243 (giant-spider bank) at Fishing 96; fix: only fish spots with z >= 3248 (research/random-events.md safe box), persist deaths across swarm restarts",
       "repeat": true
     },
     {

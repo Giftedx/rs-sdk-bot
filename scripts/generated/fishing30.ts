@@ -181,7 +181,9 @@ try {
     // the rod or net onto the ground; a river troll attacks. Never click a whirlpool; pause clicks during an event.
     const WHIRLPOOL = new Set([403, 404, 405, 406]);
     const spot = (opt: RegExp, maxZ = 99999) => (st()?.nearbyNpcs ?? [])
-        .filter((n: any) => /fishing spot/i.test(n.name) && !WHIRLPOOL.has(n.id) && n.z <= maxZ && n.optionsWithIndex?.some((o: any) => opt.test(o.text)))
+        // Fly (Lure) spots south of z 3248 sit on the giant spiders' bank (spawns 3243,3236 and 3245,3232; they attack a
+        // combat-3 player; research/random-events.md). Mightyrod died there live at 3240,3243 on 2026-10-23: skip them.
+        .filter((n: any) => /fishing spot/i.test(n.name) && !WHIRLPOOL.has(n.id) && n.z <= maxZ && !(/lure/i.test(opt.source) && n.z < 3248) && n.optionsWithIndex?.some((o: any) => opt.test(o.text)))
         .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
     // True when a fishing random event is active: the caller sends no fishing click this tick.
     let events = 0;
