@@ -148,25 +148,32 @@ try {
         await go(TO_FIRE, 'to fireplace');
         const c0 = s.tick();
         try {
+            // MODE=wait (COOK_MODE) clicks again only after the raw item is gone; the default clicks every tick, so the
+            // next use is already queued when the p_delay ends.
+            const waitMode = process.env.COOK_MODE === 'wait';
             let stall = 0;
+            const raw0 = countItems(s, RAW_ANY), burnt0 = countItems(s, BURNT);
+            let rawPrev = raw0;
             while (cookable().length > 0 && stall < 12 && !died) {
                 if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
                 const fire = (st()?.nearbyLocs ?? []).find((l: any) => /^fireplace$/i.test(l.name) && l.x === FIREPLACE.x && l.z === FIREPLACE.z) as any;
                 if (!fire) { lastFail = 'no fireplace'; stall++; await waitTicks(s, 1); continue; }
-                // Chicken first below 15, then the best fish the level allows.
+                // The best item the level allows first (salmon, trout, then chicken).
                 const items = cookable().sort((a, b) => (NEED[b.name.toLowerCase()] ?? 0) - (NEED[a.name.toLowerCase()] ?? 0));
                 const item = items[0]!;
-                const n0 = countItems(s, RAW_ANY), x0 = cookXp(), burnt0 = countItems(s, BURNT);
                 if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
                 await s.direct({ type: 'useItemOnLoc', itemSlot: item.slot, x: fire.x, z: fire.z, locId: fire.id, reason: 'SDK' });
-                let done = false;
-                for (let i = 0; i < 5 && !done && !died; i++) { await waitTicks(s, 1); done = countItems(s, RAW_ANY) < n0; }
-                if (!done) { stall++; continue; }
-                stall = 0;
-                if (cookXp() > x0) cooked++;
-                else if (countItems(s, BURNT) > burnt0) burnt++;
+                if (waitMode) { for (let i = 0; i < 5 && countItems(s, RAW_ANY) >= rawPrev && !died; i++) await waitTicks(s, 1); }
+                else await waitTicks(s, 1);
+                const raw = countItems(s, RAW_ANY);
+                if (raw < rawPrev) stall = 0; else stall++;
+                rawPrev = raw;
             }
             if (stall >= 12) console.log(`WARN cooking stalled: ${lastFail}`);
+            // Burnt items have their own names; every other raw item that went is a success.
+            const b = countItems(s, BURNT) - burnt0;
+            burnt += b;
+            cooked += raw0 - countItems(s, RAW_ANY) - b;
         } finally { cookTicks += s.tick() - c0; }
         console.log(`COOK cooked=${cooked} burnt=${burnt} cooking=${cook()} t=${now()}`);
     };
@@ -219,13 +226,16 @@ try {
             const o = await s.bot.openBank();
             if (!o.success) { lastFail = `bank:${o.message}`; await waitTicks(s, 1); return; }
             // Raw fish the level cannot cook yet (salmon below 25) goes in too, or it would fill the pack for good.
-            for (const re of [COOKED, BURNT, /^(raw chicken|cooked chicken|bones|raw trout|raw salmon)$/i]) {
-                for (const it of inv().filter(i => re.test(i.name))) {
-                    const before = it.count;
-                    const d = await s.bot.depositItem(it, -1);
-                    if (!d.success) lastFail = `deposit ${it.name}:${d.message}`;
-                    else if (COOKED.test(it.name)) banked += d.amountDeposited ?? before;
-                }
+            // One deposit-all per item name (a second call on a name already gone waits for its timeout: 614 bank
+            // ticks in the first practice run).
+            const DEPOSIT = /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon)$/i;
+            for (const name of [...new Set(inv().filter(i => DEPOSIT.test(i.name)).map(i => i.name as string))]) {
+                const re = new RegExp(`^${name}$`, 'i');
+                const before = countItems(s, re);
+                if (before === 0) continue;
+                const d = await s.bot.depositItem(re, -1);
+                if (!d.success) lastFail = `deposit ${name}:${d.message}`;
+                else if (COOKED.test(name)) banked += d.amountDeposited ?? (before - countItems(s, re));
             }
             bankFish = ['Trout', 'Salmon'].reduce((n, name) => n + (s.sdk.findBankItem(new RegExp(`^${name}$`, 'i'))?.count ?? 0), 0);
             packs++;
