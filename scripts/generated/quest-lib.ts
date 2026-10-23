@@ -11,7 +11,8 @@ export interface Loc { id: number; x: number; z: number }
 export const LUMBRIDGE = { x: 3222, z: 3218 };
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
 
-export async function openQuest(opts: { cap?: number; eatAt?: number; food?: number[]; trace?: boolean } = {}) {
+// lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
+export async function openQuest(opts: { cap?: number; eatAt?: number; food?: number[]; trace?: boolean; lumbridgeOk?: boolean } = {}) {
     const CAP = opts.cap ?? 3000;
     const EAT_AT = opts.eatAt ?? 40;
     const FOOD = opts.food ?? [379];
@@ -77,7 +78,7 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) stats.died = true;
         if (p && last && Math.max(Math.abs(p.worldX - last.worldX), Math.abs(p.worldZ - last.worldZ)) > 20) {
             jumps.push(`${T()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
-            if (Math.max(Math.abs(p.worldX - LUMBRIDGE.x), Math.abs(p.worldZ - LUMBRIDGE.z)) <= 15 && T() > 5) stats.died = true;
+            if (!opts.lumbridgeOk && Math.max(Math.abs(p.worldX - LUMBRIDGE.x), Math.abs(p.worldZ - LUMBRIDGE.z)) <= 15 && T() > 5) stats.died = true;
         }
         if (p) last = p;
         if (TRACE) {
