@@ -1,0 +1,5714 @@
+{
+ "generatedFrom": "world.json fb264971634d877c8d7f8dc3d93c608d6d879a0f; rs-sdk findLongPath",
+ "legs": {
+  "air-ruins>almera": {
+   "tiles": 736,
+   "runTicks": 368,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>ardougne-market": {
+   "tiles": 589,
+   "runTicks": 294.5,
+   "locked": [
+    "loc_2550",
+    "membergatel"
+   ]
+  },
+  "air-ruins>bank:al-kharid-bank:0": {
+   "tiles": 360,
+   "runTicks": 190,
+   "toll": 10
+  },
+  "air-ruins>bank:ardougne-north-bank:0": {
+   "tiles": 628,
+   "runTicks": 314,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>bank:ardougne-south-bank:0": {
+   "tiles": 627,
+   "runTicks": 313.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>bank:catherby-bank:0": {
+   "tiles": 390,
+   "runTicks": 195,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>bank:draynor-bank:0": {
+   "tiles": 127,
+   "runTicks": 63.5
+  },
+  "air-ruins>bank:edgeville-bank:0": {
+   "tiles": 261,
+   "runTicks": 130.5
+  },
+  "air-ruins>bank:falador-east-bank:0": {
+   "tiles": 78,
+   "runTicks": 39
+  },
+  "air-ruins>bank:falador-west-bank:0": {
+   "tiles": 137,
+   "runTicks": 68.5
+  },
+  "air-ruins>bank:seers-village-bank:0": {
+   "tiles": 486,
+   "runTicks": 243,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>bank:varrock-east-bank:0": {
+   "tiles": 367,
+   "runTicks": 183.5
+  },
+  "air-ruins>bank:varrock-west-bank:0": {
+   "tiles": 297,
+   "runTicks": 148.5
+  },
+  "air-ruins>barbarian-course": {
+   "tiles": 827,
+   "runTicks": 413.5,
+   "locked": [
+    "barbariangater",
+    "membergatel"
+   ]
+  },
+  "air-ruins>barbarian-fly-spot": {
+   "tiles": 211,
+   "runTicks": 105.5
+  },
+  "air-ruins>body-ruins": {
+   "tiles": 206,
+   "runTicks": 103
+  },
+  "air-ruins>camelot": {
+   "tiles": 482,
+   "runTicks": 241,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>caroline": {
+   "tiles": 558,
+   "runTicks": 279,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>catherby-shore": {
+   "tiles": 353,
+   "runTicks": 176.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>dimintheis": {
+   "tiles": 387,
+   "runTicks": 193.5,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "air-ruins>draynor-willows": {
+   "tiles": 135,
+   "runTicks": 67.5
+  },
+  "air-ruins>earth-ruins": {
+   "tiles": 429,
+   "runTicks": 214.5
+  },
+  "air-ruins>exam-centre": {
+   "tiles": 426,
+   "runTicks": 213,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "air-ruins>falador-castle": {
+   "tiles": 143,
+   "runTicks": 71.5
+  },
+  "air-ruins>falador-white-knights": {
+   "tiles": 146,
+   "runTicks": 73
+  },
+  "air-ruins>fire-ruins": {
+   "tiles": 340,
+   "runTicks": 180,
+   "toll": 10
+  },
+  "air-ruins>guildmaster": {
+   "tiles": 309,
+   "runTicks": 154.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "air-ruins>lady-servil": {
+   "tiles": 710,
+   "runTicks": 355,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>lava-maze-runite": {
+   "tiles": 634,
+   "runTicks": 317
+  },
+  "air-ruins>lawgof": {
+   "tiles": 678,
+   "runTicks": 339,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>lumbridge-kitchen": {
+   "tiles": 302,
+   "runTicks": 151
+  },
+  "air-ruins>lumbridge-spawn": {
+   "tiles": 280,
+   "runTicks": 140
+  },
+  "air-ruins>mage-arena-lever": {
+   "tiles": 797,
+   "runTicks": 398.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>mind-ruins": {
+   "tiles": 240,
+   "runTicks": 120
+  },
+  "air-ruins>port-sarim-dock": {
+   "tiles": 81,
+   "runTicks": 40.5
+  },
+  "air-ruins>port-sarim-monks": {
+   "tiles": 79,
+   "runTicks": 39.5
+  },
+  "air-ruins>romeo": {
+   "tiles": 317,
+   "runTicks": 158.5
+  },
+  "air-ruins>thormac": {
+   "tiles": 510,
+   "runTicks": 255,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "air-ruins>varrock-east-iron": {
+   "tiles": 379,
+   "runTicks": 189.5
+  },
+  "air-ruins>varrock-west-anvil": {
+   "tiles": 293,
+   "runTicks": 146.5
+  },
+  "air-ruins>water-ruins": {
+   "tiles": 232,
+   "runTicks": 116
+  },
+  "air-ruins>wilderness-course": {
+   "tiles": 729,
+   "runTicks": 364.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "air-ruins>witch-house": {
+   "tiles": 187,
+   "runTicks": 93.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>ardougne-market": {
+   "tiles": 240,
+   "runTicks": 120
+  },
+  "almera>bank:al-kharid-bank:0": {
+   "tiles": 1090,
+   "runTicks": 555,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>bank:ardougne-north-bank:0": {
+   "tiles": 191,
+   "runTicks": 95.5
+  },
+  "almera>bank:ardougne-south-bank:0": {
+   "tiles": 262,
+   "runTicks": 131
+  },
+  "almera>bank:catherby-bank:0": {
+   "tiles": 354,
+   "runTicks": 177
+  },
+  "almera>bank:draynor-bank:0": {
+   "tiles": 857,
+   "runTicks": 428.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>bank:edgeville-bank:0": {
+   "tiles": 858,
+   "runTicks": 429,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>bank:falador-east-bank:0": {
+   "tiles": 749,
+   "runTicks": 374.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>bank:falador-west-bank:0": {
+   "tiles": 724,
+   "runTicks": 362,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>bank:seers-village-bank:0": {
+   "tiles": 299,
+   "runTicks": 149.5
+  },
+  "almera>bank:varrock-east-bank:0": {
+   "tiles": 964,
+   "runTicks": 482,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>bank:varrock-west-bank:0": {
+   "tiles": 894,
+   "runTicks": 447,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>barbarian-course": {
+   "tiles": 106,
+   "runTicks": 53,
+   "locked": [
+    "barbariangater"
+   ]
+  },
+  "almera>barbarian-fly-spot": {
+   "tiles": 808,
+   "runTicks": 404,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>body-ruins": {
+   "tiles": 758,
+   "runTicks": 379,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>camelot": {
+   "tiles": 356,
+   "runTicks": 178
+  },
+  "almera>caroline": {
+   "tiles": 292,
+   "runTicks": 146,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "almera>catherby-shore": {
+   "tiles": 384,
+   "runTicks": 192
+  },
+  "almera>dimintheis": {
+   "tiles": 984,
+   "runTicks": 492,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "almera>draynor-willows": {
+   "tiles": 865,
+   "runTicks": 432.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>earth-ruins": {
+   "tiles": 1026,
+   "runTicks": 513,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>exam-centre": {
+   "tiles": 1074,
+   "runTicks": 537,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>falador-castle": {
+   "tiles": 743,
+   "runTicks": 371.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>falador-white-knights": {
+   "tiles": 746,
+   "runTicks": 373,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>fire-ruins": {
+   "tiles": 1070,
+   "runTicks": 545,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>guildmaster": {
+   "tiles": 906,
+   "runTicks": 453,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "almera>lady-servil": {
+   "tiles": 325,
+   "runTicks": 162.5
+  },
+  "almera>lava-maze-runite": {
+   "tiles": 1097,
+   "runTicks": 548.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>lawgof": {
+   "tiles": 66,
+   "runTicks": 33
+  },
+  "almera>lumbridge-kitchen": {
+   "tiles": 1032,
+   "runTicks": 516,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>lumbridge-spawn": {
+   "tiles": 1010,
+   "runTicks": 505,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>mage-arena-lever": {
+   "tiles": 1260,
+   "runTicks": 630,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "almera>mind-ruins": {
+   "tiles": 740,
+   "runTicks": 370,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>port-sarim-dock": {
+   "tiles": 805,
+   "runTicks": 402.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>port-sarim-monks": {
+   "tiles": 803,
+   "runTicks": 401.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>romeo": {
+   "tiles": 914,
+   "runTicks": 457,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>thormac": {
+   "tiles": 252,
+   "runTicks": 126
+  },
+  "almera>varrock-east-iron": {
+   "tiles": 994,
+   "runTicks": 497,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>varrock-west-anvil": {
+   "tiles": 890,
+   "runTicks": 445,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>water-ruins": {
+   "tiles": 962,
+   "runTicks": 481,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "almera>wilderness-course": {
+   "tiles": 1192,
+   "runTicks": 596,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "almera>witch-house": {
+   "tiles": 622,
+   "runTicks": 311
+  },
+  "ardougne-market>bank:al-kharid-bank:0": {
+   "tiles": 943,
+   "runTicks": 481.5,
+   "toll": 10,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>bank:ardougne-north-bank:0": {
+   "tiles": 60,
+   "runTicks": 30
+  },
+  "ardougne-market>bank:ardougne-south-bank:0": {
+   "tiles": 49,
+   "runTicks": 24.5
+  },
+  "ardougne-market>bank:catherby-bank:0": {
+   "tiles": 207,
+   "runTicks": 103.5,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "ardougne-market>bank:draynor-bank:0": {
+   "tiles": 710,
+   "runTicks": 355,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>bank:edgeville-bank:0": {
+   "tiles": 711,
+   "runTicks": 355.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>bank:falador-east-bank:0": {
+   "tiles": 602,
+   "runTicks": 301,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>bank:falador-west-bank:0": {
+   "tiles": 577,
+   "runTicks": 288.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>bank:seers-village-bank:0": {
+   "tiles": 208,
+   "runTicks": 104
+  },
+  "ardougne-market>bank:varrock-east-bank:0": {
+   "tiles": 817,
+   "runTicks": 408.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>bank:varrock-west-bank:0": {
+   "tiles": 747,
+   "runTicks": 373.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>barbarian-course": {
+   "tiles": 331,
+   "runTicks": 165.5,
+   "locked": [
+    "barbariangater"
+   ]
+  },
+  "ardougne-market>barbarian-fly-spot": {
+   "tiles": 661,
+   "runTicks": 330.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>body-ruins": {
+   "tiles": 611,
+   "runTicks": 305.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>camelot": {
+   "tiles": 247,
+   "runTicks": 123.5,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "ardougne-market>caroline": {
+   "tiles": 55,
+   "runTicks": 27.5,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "ardougne-market>catherby-shore": {
+   "tiles": 237,
+   "runTicks": 118.5,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "ardougne-market>dimintheis": {
+   "tiles": 837,
+   "runTicks": 418.5,
+   "locked": [
+    "guidorgaterclosed",
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>draynor-willows": {
+   "tiles": 718,
+   "runTicks": 359,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>earth-ruins": {
+   "tiles": 879,
+   "runTicks": 439.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>exam-centre": {
+   "tiles": 927,
+   "runTicks": 463.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>falador-castle": {
+   "tiles": 596,
+   "runTicks": 298,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>falador-white-knights": {
+   "tiles": 599,
+   "runTicks": 299.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>fire-ruins": {
+   "tiles": 923,
+   "runTicks": 471.5,
+   "toll": 10,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>guildmaster": {
+   "tiles": 759,
+   "runTicks": 379.5,
+   "locked": [
+    "championdoor",
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>lady-servil": {
+   "tiles": 140,
+   "runTicks": 70
+  },
+  "ardougne-market>lava-maze-runite": {
+   "tiles": 950,
+   "runTicks": 475,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>lawgof": {
+   "tiles": 184,
+   "runTicks": 92
+  },
+  "ardougne-market>lumbridge-kitchen": {
+   "tiles": 885,
+   "runTicks": 442.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>lumbridge-spawn": {
+   "tiles": 863,
+   "runTicks": 431.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>mage-arena-lever": {
+   "tiles": 1113,
+   "runTicks": 556.5,
+   "locked": [
+    "loc_2550",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "ardougne-market>mind-ruins": {
+   "tiles": 593,
+   "runTicks": 296.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>port-sarim-dock": {
+   "tiles": 658,
+   "runTicks": 329,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>port-sarim-monks": {
+   "tiles": 656,
+   "runTicks": 328,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>romeo": {
+   "tiles": 767,
+   "runTicks": 383.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>thormac": {
+   "tiles": 127,
+   "runTicks": 63.5,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "ardougne-market>varrock-east-iron": {
+   "tiles": 847,
+   "runTicks": 423.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>varrock-west-anvil": {
+   "tiles": 743,
+   "runTicks": 371.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>water-ruins": {
+   "tiles": 815,
+   "runTicks": 407.5,
+   "locked": [
+    "loc_2550",
+    "membergater"
+   ]
+  },
+  "ardougne-market>wilderness-course": {
+   "tiles": 1045,
+   "runTicks": 522.5,
+   "locked": [
+    "loc_2309",
+    "loc_2550",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "ardougne-market>witch-house": {
+   "tiles": 475,
+   "runTicks": 237.5,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "bank:al-kharid-bank:0>bank:ardougne-north-bank:0": {
+   "tiles": 982,
+   "runTicks": 501,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>bank:ardougne-south-bank:0": {
+   "tiles": 981,
+   "runTicks": 500.5,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>bank:catherby-bank:0": {
+   "tiles": 744,
+   "runTicks": 382,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>bank:draynor-bank:0": {
+   "tiles": 247,
+   "runTicks": 133.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>bank:edgeville-bank:0": {
+   "tiles": 382,
+   "runTicks": 201,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>bank:falador-east-bank:0": {
+   "tiles": 400,
+   "runTicks": 210,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>bank:falador-west-bank:0": {
+   "tiles": 459,
+   "runTicks": 239.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>bank:seers-village-bank:0": {
+   "tiles": 840,
+   "runTicks": 430,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 297,
+   "runTicks": 148.5
+  },
+  "bank:al-kharid-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 287,
+   "runTicks": 153.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>barbarian-course": {
+   "tiles": 1181,
+   "runTicks": 600.5,
+   "toll": 10,
+   "locked": [
+    "barbariangater",
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>barbarian-fly-spot": {
+   "tiles": 310,
+   "runTicks": 165,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>body-ruins": {
+   "tiles": 364,
+   "runTicks": 192,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>camelot": {
+   "tiles": 836,
+   "runTicks": 428,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>caroline": {
+   "tiles": 912,
+   "runTicks": 466,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>catherby-shore": {
+   "tiles": 707,
+   "runTicks": 363.5,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>dimintheis": {
+   "tiles": 298,
+   "runTicks": 159,
+   "toll": 10,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "bank:al-kharid-bank:0>draynor-willows": {
+   "tiles": 248,
+   "runTicks": 134,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>earth-ruins": {
+   "tiles": 314,
+   "runTicks": 157
+  },
+  "bank:al-kharid-bank:0>exam-centre": {
+   "tiles": 248,
+   "runTicks": 124,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:al-kharid-bank:0>falador-castle": {
+   "tiles": 465,
+   "runTicks": 242.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>falador-white-knights": {
+   "tiles": 468,
+   "runTicks": 244,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>fire-ruins": {
+   "tiles": 90,
+   "runTicks": 45
+  },
+  "bank:al-kharid-bank:0>guildmaster": {
+   "tiles": 209,
+   "runTicks": 114.5,
+   "toll": 10,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "bank:al-kharid-bank:0>lady-servil": {
+   "tiles": 1064,
+   "runTicks": 542,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>lava-maze-runite": {
+   "tiles": 751,
+   "runTicks": 375.5
+  },
+  "bank:al-kharid-bank:0>lawgof": {
+   "tiles": 1032,
+   "runTicks": 526,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>lumbridge-kitchen": {
+   "tiles": 133,
+   "runTicks": 76.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>lumbridge-spawn": {
+   "tiles": 111,
+   "runTicks": 65.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>mage-arena-lever": {
+   "tiles": 883,
+   "runTicks": 441.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:al-kharid-bank:0>mind-ruins": {
+   "tiles": 494,
+   "runTicks": 257,
+   "toll": 10,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "bank:al-kharid-bank:0>port-sarim-dock": {
+   "tiles": 346,
+   "runTicks": 183,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>port-sarim-monks": {
+   "tiles": 326,
+   "runTicks": 173,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>romeo": {
+   "tiles": 265,
+   "runTicks": 142.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>thormac": {
+   "tiles": 864,
+   "runTicks": 442,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>varrock-east-iron": {
+   "tiles": 215,
+   "runTicks": 107.5
+  },
+  "bank:al-kharid-bank:0>varrock-west-anvil": {
+   "tiles": 278,
+   "runTicks": 149,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>water-ruins": {
+   "tiles": 253,
+   "runTicks": 136.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>wilderness-course": {
+   "tiles": 846,
+   "runTicks": 423,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "bank:al-kharid-bank:0>witch-house": {
+   "tiles": 482,
+   "runTicks": 251,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>bank:ardougne-south-bank:0": {
+   "tiles": 80,
+   "runTicks": 40
+  },
+  "bank:ardougne-north-bank:0>bank:catherby-bank:0": {
+   "tiles": 246,
+   "runTicks": 123
+  },
+  "bank:ardougne-north-bank:0>bank:draynor-bank:0": {
+   "tiles": 749,
+   "runTicks": 374.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>bank:edgeville-bank:0": {
+   "tiles": 750,
+   "runTicks": 375,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>bank:falador-east-bank:0": {
+   "tiles": 641,
+   "runTicks": 320.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>bank:falador-west-bank:0": {
+   "tiles": 616,
+   "runTicks": 308,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>bank:seers-village-bank:0": {
+   "tiles": 195,
+   "runTicks": 97.5
+  },
+  "bank:ardougne-north-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 856,
+   "runTicks": 428,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 786,
+   "runTicks": 393,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>barbarian-course": {
+   "tiles": 282,
+   "runTicks": 141,
+   "locked": [
+    "barbariangater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>barbarian-fly-spot": {
+   "tiles": 700,
+   "runTicks": 350,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>body-ruins": {
+   "tiles": 650,
+   "runTicks": 325,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>camelot": {
+   "tiles": 248,
+   "runTicks": 124
+  },
+  "bank:ardougne-north-bank:0>caroline": {
+   "tiles": 112,
+   "runTicks": 56,
+   "locked": [
+    "loc_2550"
+   ]
+  },
+  "bank:ardougne-north-bank:0>catherby-shore": {
+   "tiles": 276,
+   "runTicks": 138
+  },
+  "bank:ardougne-north-bank:0>dimintheis": {
+   "tiles": 876,
+   "runTicks": 438,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>draynor-willows": {
+   "tiles": 757,
+   "runTicks": 378.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>earth-ruins": {
+   "tiles": 918,
+   "runTicks": 459,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>exam-centre": {
+   "tiles": 966,
+   "runTicks": 483,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>falador-castle": {
+   "tiles": 635,
+   "runTicks": 317.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>falador-white-knights": {
+   "tiles": 638,
+   "runTicks": 319,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>fire-ruins": {
+   "tiles": 962,
+   "runTicks": 491,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>guildmaster": {
+   "tiles": 798,
+   "runTicks": 399,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>lady-servil": {
+   "tiles": 156,
+   "runTicks": 78
+  },
+  "bank:ardougne-north-bank:0>lava-maze-runite": {
+   "tiles": 989,
+   "runTicks": 494.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>lawgof": {
+   "tiles": 135,
+   "runTicks": 67.5
+  },
+  "bank:ardougne-north-bank:0>lumbridge-kitchen": {
+   "tiles": 924,
+   "runTicks": 462,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>lumbridge-spawn": {
+   "tiles": 902,
+   "runTicks": 451,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>mage-arena-lever": {
+   "tiles": 1152,
+   "runTicks": 576,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>mind-ruins": {
+   "tiles": 632,
+   "runTicks": 316,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>port-sarim-dock": {
+   "tiles": 697,
+   "runTicks": 348.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>port-sarim-monks": {
+   "tiles": 695,
+   "runTicks": 347.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>romeo": {
+   "tiles": 806,
+   "runTicks": 403,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>thormac": {
+   "tiles": 141,
+   "runTicks": 70.5
+  },
+  "bank:ardougne-north-bank:0>varrock-east-iron": {
+   "tiles": 886,
+   "runTicks": 443,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>varrock-west-anvil": {
+   "tiles": 782,
+   "runTicks": 391,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>water-ruins": {
+   "tiles": 854,
+   "runTicks": 427,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>wilderness-course": {
+   "tiles": 1084,
+   "runTicks": 542,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-north-bank:0>witch-house": {
+   "tiles": 514,
+   "runTicks": 257
+  },
+  "bank:ardougne-south-bank:0>bank:catherby-bank:0": {
+   "tiles": 245,
+   "runTicks": 122.5
+  },
+  "bank:ardougne-south-bank:0>bank:draynor-bank:0": {
+   "tiles": 748,
+   "runTicks": 374,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>bank:edgeville-bank:0": {
+   "tiles": 749,
+   "runTicks": 374.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>bank:falador-east-bank:0": {
+   "tiles": 640,
+   "runTicks": 320,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>bank:falador-west-bank:0": {
+   "tiles": 615,
+   "runTicks": 307.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>bank:seers-village-bank:0": {
+   "tiles": 240,
+   "runTicks": 120
+  },
+  "bank:ardougne-south-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 855,
+   "runTicks": 427.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 785,
+   "runTicks": 392.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>barbarian-course": {
+   "tiles": 353,
+   "runTicks": 176.5,
+   "locked": [
+    "barbariangater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>barbarian-fly-spot": {
+   "tiles": 699,
+   "runTicks": 349.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>body-ruins": {
+   "tiles": 649,
+   "runTicks": 324.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>camelot": {
+   "tiles": 285,
+   "runTicks": 142.5
+  },
+  "bank:ardougne-south-bank:0>caroline": {
+   "tiles": 93,
+   "runTicks": 46.5
+  },
+  "bank:ardougne-south-bank:0>catherby-shore": {
+   "tiles": 275,
+   "runTicks": 137.5
+  },
+  "bank:ardougne-south-bank:0>dimintheis": {
+   "tiles": 875,
+   "runTicks": 437.5,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>draynor-willows": {
+   "tiles": 756,
+   "runTicks": 378,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>earth-ruins": {
+   "tiles": 917,
+   "runTicks": 458.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>exam-centre": {
+   "tiles": 965,
+   "runTicks": 482.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>falador-castle": {
+   "tiles": 634,
+   "runTicks": 317,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>falador-white-knights": {
+   "tiles": 637,
+   "runTicks": 318.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>fire-ruins": {
+   "tiles": 961,
+   "runTicks": 490.5,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>guildmaster": {
+   "tiles": 797,
+   "runTicks": 398.5,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>lady-servil": {
+   "tiles": 120,
+   "runTicks": 60
+  },
+  "bank:ardougne-south-bank:0>lava-maze-runite": {
+   "tiles": 988,
+   "runTicks": 494,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>lawgof": {
+   "tiles": 206,
+   "runTicks": 103
+  },
+  "bank:ardougne-south-bank:0>lumbridge-kitchen": {
+   "tiles": 923,
+   "runTicks": 461.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>lumbridge-spawn": {
+   "tiles": 901,
+   "runTicks": 450.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>mage-arena-lever": {
+   "tiles": 1151,
+   "runTicks": 575.5,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>mind-ruins": {
+   "tiles": 631,
+   "runTicks": 315.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>port-sarim-dock": {
+   "tiles": 696,
+   "runTicks": 348,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>port-sarim-monks": {
+   "tiles": 694,
+   "runTicks": 347,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>romeo": {
+   "tiles": 805,
+   "runTicks": 402.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>thormac": {
+   "tiles": 165,
+   "runTicks": 82.5
+  },
+  "bank:ardougne-south-bank:0>varrock-east-iron": {
+   "tiles": 885,
+   "runTicks": 442.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>varrock-west-anvil": {
+   "tiles": 781,
+   "runTicks": 390.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>water-ruins": {
+   "tiles": 853,
+   "runTicks": 426.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>wilderness-course": {
+   "tiles": 1083,
+   "runTicks": 541.5,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:ardougne-south-bank:0>witch-house": {
+   "tiles": 513,
+   "runTicks": 256.5
+  },
+  "bank:catherby-bank:0>bank:draynor-bank:0": {
+   "tiles": 511,
+   "runTicks": 255.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>bank:edgeville-bank:0": {
+   "tiles": 512,
+   "runTicks": 256,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>bank:falador-east-bank:0": {
+   "tiles": 403,
+   "runTicks": 201.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>bank:falador-west-bank:0": {
+   "tiles": 378,
+   "runTicks": 189,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>bank:seers-village-bank:0": {
+   "tiles": 106,
+   "runTicks": 53
+  },
+  "bank:catherby-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 618,
+   "runTicks": 309,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 548,
+   "runTicks": 274,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>barbarian-course": {
+   "tiles": 445,
+   "runTicks": 222.5,
+   "locked": [
+    "barbariangater"
+   ]
+  },
+  "bank:catherby-bank:0>barbarian-fly-spot": {
+   "tiles": 462,
+   "runTicks": 231,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>body-ruins": {
+   "tiles": 412,
+   "runTicks": 206,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>camelot": {
+   "tiles": 102,
+   "runTicks": 51
+  },
+  "bank:catherby-bank:0>caroline": {
+   "tiles": 176,
+   "runTicks": 88
+  },
+  "bank:catherby-bank:0>catherby-shore": {
+   "tiles": 38,
+   "runTicks": 19
+  },
+  "bank:catherby-bank:0>dimintheis": {
+   "tiles": 638,
+   "runTicks": 319,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>draynor-willows": {
+   "tiles": 519,
+   "runTicks": 259.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>earth-ruins": {
+   "tiles": 680,
+   "runTicks": 340,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>exam-centre": {
+   "tiles": 728,
+   "runTicks": 364,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>falador-castle": {
+   "tiles": 397,
+   "runTicks": 198.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>falador-white-knights": {
+   "tiles": 400,
+   "runTicks": 200,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>fire-ruins": {
+   "tiles": 724,
+   "runTicks": 372,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>guildmaster": {
+   "tiles": 560,
+   "runTicks": 280,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>lady-servil": {
+   "tiles": 328,
+   "runTicks": 164
+  },
+  "bank:catherby-bank:0>lava-maze-runite": {
+   "tiles": 751,
+   "runTicks": 375.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>lawgof": {
+   "tiles": 296,
+   "runTicks": 148
+  },
+  "bank:catherby-bank:0>lumbridge-kitchen": {
+   "tiles": 686,
+   "runTicks": 343,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>lumbridge-spawn": {
+   "tiles": 664,
+   "runTicks": 332,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>mage-arena-lever": {
+   "tiles": 914,
+   "runTicks": 457,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>mind-ruins": {
+   "tiles": 394,
+   "runTicks": 197,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>port-sarim-dock": {
+   "tiles": 459,
+   "runTicks": 229.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>port-sarim-monks": {
+   "tiles": 457,
+   "runTicks": 228.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>romeo": {
+   "tiles": 568,
+   "runTicks": 284,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>thormac": {
+   "tiles": 128,
+   "runTicks": 64
+  },
+  "bank:catherby-bank:0>varrock-east-iron": {
+   "tiles": 648,
+   "runTicks": 324,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>varrock-west-anvil": {
+   "tiles": 544,
+   "runTicks": 272,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>water-ruins": {
+   "tiles": 616,
+   "runTicks": 308,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>wilderness-course": {
+   "tiles": 846,
+   "runTicks": 423,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:catherby-bank:0>witch-house": {
+   "tiles": 276,
+   "runTicks": 138
+  },
+  "bank:draynor-bank:0>bank:edgeville-bank:0": {
+   "tiles": 260,
+   "runTicks": 130
+  },
+  "bank:draynor-bank:0>bank:falador-east-bank:0": {
+   "tiles": 167,
+   "runTicks": 83.5
+  },
+  "bank:draynor-bank:0>bank:falador-west-bank:0": {
+   "tiles": 226,
+   "runTicks": 113
+  },
+  "bank:draynor-bank:0>bank:seers-village-bank:0": {
+   "tiles": 607,
+   "runTicks": 303.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 345,
+   "runTicks": 172.5
+  },
+  "bank:draynor-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 275,
+   "runTicks": 137.5
+  },
+  "bank:draynor-bank:0>barbarian-course": {
+   "tiles": 948,
+   "runTicks": 474,
+   "locked": [
+    "barbariangater",
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>barbarian-fly-spot": {
+   "tiles": 191,
+   "runTicks": 95.5
+  },
+  "bank:draynor-bank:0>body-ruins": {
+   "tiles": 208,
+   "runTicks": 104
+  },
+  "bank:draynor-bank:0>camelot": {
+   "tiles": 603,
+   "runTicks": 301.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>caroline": {
+   "tiles": 679,
+   "runTicks": 339.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>catherby-shore": {
+   "tiles": 474,
+   "runTicks": 237,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>dimintheis": {
+   "tiles": 352,
+   "runTicks": 176,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "bank:draynor-bank:0>draynor-willows": {
+   "tiles": 24,
+   "runTicks": 12
+  },
+  "bank:draynor-bank:0>earth-ruins": {
+   "tiles": 373,
+   "runTicks": 186.5
+  },
+  "bank:draynor-bank:0>exam-centre": {
+   "tiles": 318,
+   "runTicks": 159,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:draynor-bank:0>falador-castle": {
+   "tiles": 232,
+   "runTicks": 116
+  },
+  "bank:draynor-bank:0>falador-white-knights": {
+   "tiles": 235,
+   "runTicks": 117.5
+  },
+  "bank:draynor-bank:0>fire-ruins": {
+   "tiles": 227,
+   "runTicks": 123.5,
+   "toll": 10
+  },
+  "bank:draynor-bank:0>guildmaster": {
+   "tiles": 263,
+   "runTicks": 131.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "bank:draynor-bank:0>lady-servil": {
+   "tiles": 831,
+   "runTicks": 415.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>lava-maze-runite": {
+   "tiles": 668,
+   "runTicks": 334
+  },
+  "bank:draynor-bank:0>lawgof": {
+   "tiles": 799,
+   "runTicks": 399.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>lumbridge-kitchen": {
+   "tiles": 189,
+   "runTicks": 94.5
+  },
+  "bank:draynor-bank:0>lumbridge-spawn": {
+   "tiles": 167,
+   "runTicks": 83.5
+  },
+  "bank:draynor-bank:0>mage-arena-lever": {
+   "tiles": 811,
+   "runTicks": 405.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:draynor-bank:0>mind-ruins": {
+   "tiles": 329,
+   "runTicks": 164.5
+  },
+  "bank:draynor-bank:0>port-sarim-dock": {
+   "tiles": 113,
+   "runTicks": 56.5
+  },
+  "bank:draynor-bank:0>port-sarim-monks": {
+   "tiles": 93,
+   "runTicks": 46.5
+  },
+  "bank:draynor-bank:0>romeo": {
+   "tiles": 295,
+   "runTicks": 147.5
+  },
+  "bank:draynor-bank:0>thormac": {
+   "tiles": 631,
+   "runTicks": 315.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>varrock-east-iron": {
+   "tiles": 271,
+   "runTicks": 135.5
+  },
+  "bank:draynor-bank:0>varrock-west-anvil": {
+   "tiles": 271,
+   "runTicks": 135.5
+  },
+  "bank:draynor-bank:0>water-ruins": {
+   "tiles": 116,
+   "runTicks": 58
+  },
+  "bank:draynor-bank:0>wilderness-course": {
+   "tiles": 763,
+   "runTicks": 381.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "bank:draynor-bank:0>witch-house": {
+   "tiles": 276,
+   "runTicks": 138,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>bank:falador-east-bank:0": {
+   "tiles": 251,
+   "runTicks": 125.5
+  },
+  "bank:edgeville-bank:0>bank:falador-west-bank:0": {
+   "tiles": 226,
+   "runTicks": 113
+  },
+  "bank:edgeville-bank:0>bank:seers-village-bank:0": {
+   "tiles": 608,
+   "runTicks": 304,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 242,
+   "runTicks": 121
+  },
+  "bank:edgeville-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 172,
+   "runTicks": 86
+  },
+  "bank:edgeville-bank:0>barbarian-course": {
+   "tiles": 949,
+   "runTicks": 474.5,
+   "locked": [
+    "barbariangater",
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>barbarian-fly-spot": {
+   "tiles": 77,
+   "runTicks": 38.5
+  },
+  "bank:edgeville-bank:0>body-ruins": {
+   "tiles": 117,
+   "runTicks": 58.5
+  },
+  "bank:edgeville-bank:0>camelot": {
+   "tiles": 604,
+   "runTicks": 302,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>caroline": {
+   "tiles": 680,
+   "runTicks": 340,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>catherby-shore": {
+   "tiles": 475,
+   "runTicks": 237.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>dimintheis": {
+   "tiles": 262,
+   "runTicks": 131,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "bank:edgeville-bank:0>draynor-willows": {
+   "tiles": 268,
+   "runTicks": 134
+  },
+  "bank:edgeville-bank:0>earth-ruins": {
+   "tiles": 233,
+   "runTicks": 116.5
+  },
+  "bank:edgeville-bank:0>exam-centre": {
+   "tiles": 352,
+   "runTicks": 176,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>falador-castle": {
+   "tiles": 245,
+   "runTicks": 122.5
+  },
+  "bank:edgeville-bank:0>falador-white-knights": {
+   "tiles": 248,
+   "runTicks": 124
+  },
+  "bank:edgeville-bank:0>fire-ruins": {
+   "tiles": 362,
+   "runTicks": 181
+  },
+  "bank:edgeville-bank:0>guildmaster": {
+   "tiles": 184,
+   "runTicks": 92,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "bank:edgeville-bank:0>lady-servil": {
+   "tiles": 832,
+   "runTicks": 416,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>lava-maze-runite": {
+   "tiles": 417,
+   "runTicks": 208.5
+  },
+  "bank:edgeville-bank:0>lawgof": {
+   "tiles": 800,
+   "runTicks": 400,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>lumbridge-kitchen": {
+   "tiles": 358,
+   "runTicks": 179
+  },
+  "bank:edgeville-bank:0>lumbridge-spawn": {
+   "tiles": 336,
+   "runTicks": 168
+  },
+  "bank:edgeville-bank:0>mage-arena-lever": {
+   "tiles": 557,
+   "runTicks": 278.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>mind-ruins": {
+   "tiles": 136,
+   "runTicks": 68
+  },
+  "bank:edgeville-bank:0>port-sarim-dock": {
+   "tiles": 292,
+   "runTicks": 146
+  },
+  "bank:edgeville-bank:0>port-sarim-monks": {
+   "tiles": 275,
+   "runTicks": 137.5
+  },
+  "bank:edgeville-bank:0>romeo": {
+   "tiles": 192,
+   "runTicks": 96
+  },
+  "bank:edgeville-bank:0>thormac": {
+   "tiles": 632,
+   "runTicks": 316,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:edgeville-bank:0>varrock-east-iron": {
+   "tiles": 272,
+   "runTicks": 136
+  },
+  "bank:edgeville-bank:0>varrock-west-anvil": {
+   "tiles": 168,
+   "runTicks": 84
+  },
+  "bank:edgeville-bank:0>water-ruins": {
+   "tiles": 362,
+   "runTicks": 181
+  },
+  "bank:edgeville-bank:0>wilderness-course": {
+   "tiles": 512,
+   "runTicks": 256,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "bank:edgeville-bank:0>witch-house": {
+   "tiles": 236,
+   "runTicks": 118,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>bank:falador-west-bank:0": {
+   "tiles": 77,
+   "runTicks": 38.5
+  },
+  "bank:falador-east-bank:0>bank:seers-village-bank:0": {
+   "tiles": 499,
+   "runTicks": 249.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 357,
+   "runTicks": 178.5
+  },
+  "bank:falador-east-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 287,
+   "runTicks": 143.5
+  },
+  "bank:falador-east-bank:0>barbarian-course": {
+   "tiles": 840,
+   "runTicks": 420,
+   "locked": [
+    "barbariangater",
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>barbarian-fly-spot": {
+   "tiles": 201,
+   "runTicks": 100.5
+  },
+  "bank:falador-east-bank:0>body-ruins": {
+   "tiles": 158,
+   "runTicks": 79
+  },
+  "bank:falador-east-bank:0>camelot": {
+   "tiles": 495,
+   "runTicks": 247.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>caroline": {
+   "tiles": 571,
+   "runTicks": 285.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>catherby-shore": {
+   "tiles": 366,
+   "runTicks": 183,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>dimintheis": {
+   "tiles": 377,
+   "runTicks": 188.5,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "bank:falador-east-bank:0>draynor-willows": {
+   "tiles": 175,
+   "runTicks": 87.5
+  },
+  "bank:falador-east-bank:0>earth-ruins": {
+   "tiles": 419,
+   "runTicks": 209.5
+  },
+  "bank:falador-east-bank:0>exam-centre": {
+   "tiles": 466,
+   "runTicks": 233,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>falador-castle": {
+   "tiles": 83,
+   "runTicks": 41.5
+  },
+  "bank:falador-east-bank:0>falador-white-knights": {
+   "tiles": 86,
+   "runTicks": 43
+  },
+  "bank:falador-east-bank:0>fire-ruins": {
+   "tiles": 380,
+   "runTicks": 200,
+   "toll": 10
+  },
+  "bank:falador-east-bank:0>guildmaster": {
+   "tiles": 299,
+   "runTicks": 149.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "bank:falador-east-bank:0>lady-servil": {
+   "tiles": 723,
+   "runTicks": 361.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>lava-maze-runite": {
+   "tiles": 574,
+   "runTicks": 287
+  },
+  "bank:falador-east-bank:0>lawgof": {
+   "tiles": 691,
+   "runTicks": 345.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>lumbridge-kitchen": {
+   "tiles": 342,
+   "runTicks": 171
+  },
+  "bank:falador-east-bank:0>lumbridge-spawn": {
+   "tiles": 320,
+   "runTicks": 160
+  },
+  "bank:falador-east-bank:0>mage-arena-lever": {
+   "tiles": 737,
+   "runTicks": 368.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:falador-east-bank:0>mind-ruins": {
+   "tiles": 180,
+   "runTicks": 90
+  },
+  "bank:falador-east-bank:0>port-sarim-dock": {
+   "tiles": 150,
+   "runTicks": 75
+  },
+  "bank:falador-east-bank:0>port-sarim-monks": {
+   "tiles": 141,
+   "runTicks": 70.5
+  },
+  "bank:falador-east-bank:0>romeo": {
+   "tiles": 307,
+   "runTicks": 153.5
+  },
+  "bank:falador-east-bank:0>thormac": {
+   "tiles": 523,
+   "runTicks": 261.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-east-bank:0>varrock-east-iron": {
+   "tiles": 387,
+   "runTicks": 193.5
+  },
+  "bank:falador-east-bank:0>varrock-west-anvil": {
+   "tiles": 283,
+   "runTicks": 141.5
+  },
+  "bank:falador-east-bank:0>water-ruins": {
+   "tiles": 272,
+   "runTicks": 136
+  },
+  "bank:falador-east-bank:0>wilderness-course": {
+   "tiles": 669,
+   "runTicks": 334.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "bank:falador-east-bank:0>witch-house": {
+   "tiles": 127,
+   "runTicks": 63.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>bank:seers-village-bank:0": {
+   "tiles": 474,
+   "runTicks": 237,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 332,
+   "runTicks": 166
+  },
+  "bank:falador-west-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 262,
+   "runTicks": 131
+  },
+  "bank:falador-west-bank:0>barbarian-course": {
+   "tiles": 815,
+   "runTicks": 407.5,
+   "locked": [
+    "barbariangater",
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>barbarian-fly-spot": {
+   "tiles": 176,
+   "runTicks": 88
+  },
+  "bank:falador-west-bank:0>body-ruins": {
+   "tiles": 133,
+   "runTicks": 66.5
+  },
+  "bank:falador-west-bank:0>camelot": {
+   "tiles": 470,
+   "runTicks": 235,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>caroline": {
+   "tiles": 546,
+   "runTicks": 273,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>catherby-shore": {
+   "tiles": 341,
+   "runTicks": 170.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>dimintheis": {
+   "tiles": 352,
+   "runTicks": 176,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "bank:falador-west-bank:0>draynor-willows": {
+   "tiles": 234,
+   "runTicks": 117
+  },
+  "bank:falador-west-bank:0>earth-ruins": {
+   "tiles": 394,
+   "runTicks": 197
+  },
+  "bank:falador-west-bank:0>exam-centre": {
+   "tiles": 442,
+   "runTicks": 221,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>falador-castle": {
+   "tiles": 54,
+   "runTicks": 27
+  },
+  "bank:falador-west-bank:0>falador-white-knights": {
+   "tiles": 57,
+   "runTicks": 28.5
+  },
+  "bank:falador-west-bank:0>fire-ruins": {
+   "tiles": 439,
+   "runTicks": 229.5,
+   "toll": 10
+  },
+  "bank:falador-west-bank:0>guildmaster": {
+   "tiles": 274,
+   "runTicks": 137,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "bank:falador-west-bank:0>lady-servil": {
+   "tiles": 698,
+   "runTicks": 349,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>lava-maze-runite": {
+   "tiles": 549,
+   "runTicks": 274.5
+  },
+  "bank:falador-west-bank:0>lawgof": {
+   "tiles": 666,
+   "runTicks": 333,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>lumbridge-kitchen": {
+   "tiles": 401,
+   "runTicks": 200.5
+  },
+  "bank:falador-west-bank:0>lumbridge-spawn": {
+   "tiles": 379,
+   "runTicks": 189.5
+  },
+  "bank:falador-west-bank:0>mage-arena-lever": {
+   "tiles": 712,
+   "runTicks": 356,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "bank:falador-west-bank:0>mind-ruins": {
+   "tiles": 155,
+   "runTicks": 77.5
+  },
+  "bank:falador-west-bank:0>port-sarim-dock": {
+   "tiles": 209,
+   "runTicks": 104.5
+  },
+  "bank:falador-west-bank:0>port-sarim-monks": {
+   "tiles": 200,
+   "runTicks": 100
+  },
+  "bank:falador-west-bank:0>romeo": {
+   "tiles": 282,
+   "runTicks": 141
+  },
+  "bank:falador-west-bank:0>thormac": {
+   "tiles": 498,
+   "runTicks": 249,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:falador-west-bank:0>varrock-east-iron": {
+   "tiles": 362,
+   "runTicks": 181
+  },
+  "bank:falador-west-bank:0>varrock-west-anvil": {
+   "tiles": 258,
+   "runTicks": 129
+  },
+  "bank:falador-west-bank:0>water-ruins": {
+   "tiles": 331,
+   "runTicks": 165.5
+  },
+  "bank:falador-west-bank:0>wilderness-course": {
+   "tiles": 644,
+   "runTicks": 322,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "bank:falador-west-bank:0>witch-house": {
+   "tiles": 102,
+   "runTicks": 51,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>bank:varrock-east-bank:0": {
+   "tiles": 714,
+   "runTicks": 357,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 644,
+   "runTicks": 322,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>barbarian-course": {
+   "tiles": 390,
+   "runTicks": 195,
+   "locked": [
+    "barbariangater"
+   ]
+  },
+  "bank:seers-village-bank:0>barbarian-fly-spot": {
+   "tiles": 558,
+   "runTicks": 279,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>body-ruins": {
+   "tiles": 508,
+   "runTicks": 254,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>camelot": {
+   "tiles": 74,
+   "runTicks": 37
+  },
+  "bank:seers-village-bank:0>caroline": {
+   "tiles": 193,
+   "runTicks": 96.5
+  },
+  "bank:seers-village-bank:0>catherby-shore": {
+   "tiles": 134,
+   "runTicks": 67
+  },
+  "bank:seers-village-bank:0>dimintheis": {
+   "tiles": 734,
+   "runTicks": 367,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>draynor-willows": {
+   "tiles": 615,
+   "runTicks": 307.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>earth-ruins": {
+   "tiles": 776,
+   "runTicks": 388,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>exam-centre": {
+   "tiles": 824,
+   "runTicks": 412,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>falador-castle": {
+   "tiles": 493,
+   "runTicks": 246.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>falador-white-knights": {
+   "tiles": 496,
+   "runTicks": 248,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>fire-ruins": {
+   "tiles": 820,
+   "runTicks": 420,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>guildmaster": {
+   "tiles": 656,
+   "runTicks": 328,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>lady-servil": {
+   "tiles": 335,
+   "runTicks": 167.5
+  },
+  "bank:seers-village-bank:0>lava-maze-runite": {
+   "tiles": 847,
+   "runTicks": 423.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>lawgof": {
+   "tiles": 241,
+   "runTicks": 120.5
+  },
+  "bank:seers-village-bank:0>lumbridge-kitchen": {
+   "tiles": 782,
+   "runTicks": 391,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>lumbridge-spawn": {
+   "tiles": 760,
+   "runTicks": 380,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>mage-arena-lever": {
+   "tiles": 1010,
+   "runTicks": 505,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>mind-ruins": {
+   "tiles": 490,
+   "runTicks": 245,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>port-sarim-dock": {
+   "tiles": 555,
+   "runTicks": 277.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>port-sarim-monks": {
+   "tiles": 553,
+   "runTicks": 276.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>romeo": {
+   "tiles": 664,
+   "runTicks": 332,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>thormac": {
+   "tiles": 124,
+   "runTicks": 62
+  },
+  "bank:seers-village-bank:0>varrock-east-iron": {
+   "tiles": 744,
+   "runTicks": 372,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>varrock-west-anvil": {
+   "tiles": 640,
+   "runTicks": 320,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>water-ruins": {
+   "tiles": 712,
+   "runTicks": 356,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>wilderness-course": {
+   "tiles": 942,
+   "runTicks": 471,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "bank:seers-village-bank:0>witch-house": {
+   "tiles": 372,
+   "runTicks": 186
+  },
+  "bank:varrock-east-bank:0>bank:varrock-west-bank:0": {
+   "tiles": 88,
+   "runTicks": 44
+  },
+  "bank:varrock-east-bank:0>barbarian-course": {
+   "tiles": 1055,
+   "runTicks": 527.5,
+   "locked": [
+    "barbariangater",
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>barbarian-fly-spot": {
+   "tiles": 170,
+   "runTicks": 85
+  },
+  "bank:varrock-east-bank:0>body-ruins": {
+   "tiles": 224,
+   "runTicks": 112
+  },
+  "bank:varrock-east-bank:0>camelot": {
+   "tiles": 710,
+   "runTicks": 355,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>caroline": {
+   "tiles": 786,
+   "runTicks": 393,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>catherby-shore": {
+   "tiles": 581,
+   "runTicks": 290.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>dimintheis": {
+   "tiles": 51,
+   "runTicks": 25.5,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "bank:varrock-east-bank:0>draynor-willows": {
+   "tiles": 353,
+   "runTicks": 176.5
+  },
+  "bank:varrock-east-bank:0>earth-ruins": {
+   "tiles": 77,
+   "runTicks": 38.5
+  },
+  "bank:varrock-east-bank:0>exam-centre": {
+   "tiles": 182,
+   "runTicks": 91,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>falador-castle": {
+   "tiles": 351,
+   "runTicks": 175.5
+  },
+  "bank:varrock-east-bank:0>falador-white-knights": {
+   "tiles": 354,
+   "runTicks": 177
+  },
+  "bank:varrock-east-bank:0>fire-ruins": {
+   "tiles": 213,
+   "runTicks": 106.5
+  },
+  "bank:varrock-east-bank:0>guildmaster": {
+   "tiles": 106,
+   "runTicks": 53,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "bank:varrock-east-bank:0>lady-servil": {
+   "tiles": 938,
+   "runTicks": 469,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>lava-maze-runite": {
+   "tiles": 491,
+   "runTicks": 245.5
+  },
+  "bank:varrock-east-bank:0>lawgof": {
+   "tiles": 906,
+   "runTicks": 453,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>lumbridge-kitchen": {
+   "tiles": 285,
+   "runTicks": 142.5
+  },
+  "bank:varrock-east-bank:0>lumbridge-spawn": {
+   "tiles": 263,
+   "runTicks": 131.5
+  },
+  "bank:varrock-east-bank:0>mage-arena-lever": {
+   "tiles": 627,
+   "runTicks": 313.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>mind-ruins": {
+   "tiles": 354,
+   "runTicks": 177,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "bank:varrock-east-bank:0>port-sarim-dock": {
+   "tiles": 383,
+   "runTicks": 191.5
+  },
+  "bank:varrock-east-bank:0>port-sarim-monks": {
+   "tiles": 364,
+   "runTicks": 182
+  },
+  "bank:varrock-east-bank:0>romeo": {
+   "tiles": 50,
+   "runTicks": 25
+  },
+  "bank:varrock-east-bank:0>thormac": {
+   "tiles": 738,
+   "runTicks": 369,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-east-bank:0>varrock-east-iron": {
+   "tiles": 95,
+   "runTicks": 47.5
+  },
+  "bank:varrock-east-bank:0>varrock-west-anvil": {
+   "tiles": 79,
+   "runTicks": 39.5
+  },
+  "bank:varrock-east-bank:0>water-ruins": {
+   "tiles": 370,
+   "runTicks": 185
+  },
+  "bank:varrock-east-bank:0>wilderness-course": {
+   "tiles": 586,
+   "runTicks": 293,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "bank:varrock-east-bank:0>witch-house": {
+   "tiles": 342,
+   "runTicks": 171,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>barbarian-course": {
+   "tiles": 985,
+   "runTicks": 492.5,
+   "locked": [
+    "barbariangater",
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>barbarian-fly-spot": {
+   "tiles": 100,
+   "runTicks": 50
+  },
+  "bank:varrock-west-bank:0>body-ruins": {
+   "tiles": 154,
+   "runTicks": 77
+  },
+  "bank:varrock-west-bank:0>camelot": {
+   "tiles": 640,
+   "runTicks": 320,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>caroline": {
+   "tiles": 716,
+   "runTicks": 358,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>catherby-shore": {
+   "tiles": 511,
+   "runTicks": 255.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>dimintheis": {
+   "tiles": 108,
+   "runTicks": 54,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "bank:varrock-west-bank:0>draynor-willows": {
+   "tiles": 283,
+   "runTicks": 141.5
+  },
+  "bank:varrock-west-bank:0>earth-ruins": {
+   "tiles": 150,
+   "runTicks": 75
+  },
+  "bank:varrock-west-bank:0>exam-centre": {
+   "tiles": 224,
+   "runTicks": 112,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>falador-castle": {
+   "tiles": 281,
+   "runTicks": 140.5
+  },
+  "bank:varrock-west-bank:0>falador-white-knights": {
+   "tiles": 284,
+   "runTicks": 142
+  },
+  "bank:varrock-west-bank:0>fire-ruins": {
+   "tiles": 235,
+   "runTicks": 117.5
+  },
+  "bank:varrock-west-bank:0>guildmaster": {
+   "tiles": 84,
+   "runTicks": 42,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "bank:varrock-west-bank:0>lady-servil": {
+   "tiles": 868,
+   "runTicks": 434,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>lava-maze-runite": {
+   "tiles": 517,
+   "runTicks": 258.5
+  },
+  "bank:varrock-west-bank:0>lawgof": {
+   "tiles": 836,
+   "runTicks": 418,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>lumbridge-kitchen": {
+   "tiles": 271,
+   "runTicks": 135.5
+  },
+  "bank:varrock-west-bank:0>lumbridge-spawn": {
+   "tiles": 249,
+   "runTicks": 124.5
+  },
+  "bank:varrock-west-bank:0>mage-arena-lever": {
+   "tiles": 653,
+   "runTicks": 326.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>mind-ruins": {
+   "tiles": 284,
+   "runTicks": 142,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "bank:varrock-west-bank:0>port-sarim-dock": {
+   "tiles": 313,
+   "runTicks": 156.5
+  },
+  "bank:varrock-west-bank:0>port-sarim-monks": {
+   "tiles": 294,
+   "runTicks": 147
+  },
+  "bank:varrock-west-bank:0>romeo": {
+   "tiles": 38,
+   "runTicks": 19
+  },
+  "bank:varrock-west-bank:0>thormac": {
+   "tiles": 668,
+   "runTicks": 334,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "bank:varrock-west-bank:0>varrock-east-iron": {
+   "tiles": 142,
+   "runTicks": 71
+  },
+  "bank:varrock-west-bank:0>varrock-west-anvil": {
+   "tiles": 18,
+   "runTicks": 9
+  },
+  "bank:varrock-west-bank:0>water-ruins": {
+   "tiles": 356,
+   "runTicks": 178
+  },
+  "bank:varrock-west-bank:0>wilderness-course": {
+   "tiles": 612,
+   "runTicks": 306,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "bank:varrock-west-bank:0>witch-house": {
+   "tiles": 272,
+   "runTicks": 136,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>body-ruins": {
+   "tiles": 68,
+   "runTicks": 34
+  },
+  "barbarian-fly-spot>camelot": {
+   "tiles": 554,
+   "runTicks": 277,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>caroline": {
+   "tiles": 630,
+   "runTicks": 315,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>catherby-shore": {
+   "tiles": 425,
+   "runTicks": 212.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>dimintheis": {
+   "tiles": 190,
+   "runTicks": 95,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "barbarian-fly-spot>draynor-willows": {
+   "tiles": 199,
+   "runTicks": 99.5
+  },
+  "barbarian-fly-spot>earth-ruins": {
+   "tiles": 232,
+   "runTicks": 116
+  },
+  "barbarian-fly-spot>exam-centre": {
+   "tiles": 280,
+   "runTicks": 140,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>falador-castle": {
+   "tiles": 195,
+   "runTicks": 97.5
+  },
+  "barbarian-fly-spot>falador-white-knights": {
+   "tiles": 198,
+   "runTicks": 99
+  },
+  "barbarian-fly-spot>fire-ruins": {
+   "tiles": 290,
+   "runTicks": 145
+  },
+  "barbarian-fly-spot>guildmaster": {
+   "tiles": 112,
+   "runTicks": 56,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "barbarian-fly-spot>lady-servil": {
+   "tiles": 782,
+   "runTicks": 391,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>lava-maze-runite": {
+   "tiles": 488,
+   "runTicks": 244
+  },
+  "barbarian-fly-spot>lawgof": {
+   "tiles": 750,
+   "runTicks": 375,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>lumbridge-kitchen": {
+   "tiles": 286,
+   "runTicks": 143
+  },
+  "barbarian-fly-spot>lumbridge-spawn": {
+   "tiles": 264,
+   "runTicks": 132
+  },
+  "barbarian-fly-spot>mage-arena-lever": {
+   "tiles": 628,
+   "runTicks": 314,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>mind-ruins": {
+   "tiles": 198,
+   "runTicks": 99,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "barbarian-fly-spot>port-sarim-dock": {
+   "tiles": 229,
+   "runTicks": 114.5
+  },
+  "barbarian-fly-spot>port-sarim-monks": {
+   "tiles": 210,
+   "runTicks": 105
+  },
+  "barbarian-fly-spot>romeo": {
+   "tiles": 120,
+   "runTicks": 60
+  },
+  "barbarian-fly-spot>thormac": {
+   "tiles": 582,
+   "runTicks": 291,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "barbarian-fly-spot>varrock-east-iron": {
+   "tiles": 200,
+   "runTicks": 100
+  },
+  "barbarian-fly-spot>varrock-west-anvil": {
+   "tiles": 96,
+   "runTicks": 48
+  },
+  "barbarian-fly-spot>water-ruins": {
+   "tiles": 290,
+   "runTicks": 145
+  },
+  "barbarian-fly-spot>wilderness-course": {
+   "tiles": 583,
+   "runTicks": 291.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "barbarian-fly-spot>witch-house": {
+   "tiles": 186,
+   "runTicks": 93,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>camelot": {
+   "tiles": 504,
+   "runTicks": 252,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>caroline": {
+   "tiles": 580,
+   "runTicks": 290,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>catherby-shore": {
+   "tiles": 375,
+   "runTicks": 187.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>dimintheis": {
+   "tiles": 244,
+   "runTicks": 122,
+   "locked": [
+    "guidorgaterclosed"
+   ]
+  },
+  "body-ruins>draynor-willows": {
+   "tiles": 216,
+   "runTicks": 108
+  },
+  "body-ruins>earth-ruins": {
+   "tiles": 286,
+   "runTicks": 143
+  },
+  "body-ruins>exam-centre": {
+   "tiles": 334,
+   "runTicks": 167,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>falador-castle": {
+   "tiles": 152,
+   "runTicks": 76
+  },
+  "body-ruins>falador-white-knights": {
+   "tiles": 155,
+   "runTicks": 77.5
+  },
+  "body-ruins>fire-ruins": {
+   "tiles": 344,
+   "runTicks": 172
+  },
+  "body-ruins>guildmaster": {
+   "tiles": 166,
+   "runTicks": 83,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "body-ruins>lady-servil": {
+   "tiles": 732,
+   "runTicks": 366,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>lava-maze-runite": {
+   "tiles": 463,
+   "runTicks": 231.5
+  },
+  "body-ruins>lawgof": {
+   "tiles": 700,
+   "runTicks": 350,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>lumbridge-kitchen": {
+   "tiles": 322,
+   "runTicks": 161
+  },
+  "body-ruins>lumbridge-spawn": {
+   "tiles": 300,
+   "runTicks": 150
+  },
+  "body-ruins>mage-arena-lever": {
+   "tiles": 610,
+   "runTicks": 305,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>mind-ruins": {
+   "tiles": 132,
+   "runTicks": 66,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "body-ruins>port-sarim-dock": {
+   "tiles": 237,
+   "runTicks": 118.5
+  },
+  "body-ruins>port-sarim-monks": {
+   "tiles": 220,
+   "runTicks": 110
+  },
+  "body-ruins>romeo": {
+   "tiles": 174,
+   "runTicks": 87
+  },
+  "body-ruins>thormac": {
+   "tiles": 532,
+   "runTicks": 266,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "body-ruins>varrock-east-iron": {
+   "tiles": 254,
+   "runTicks": 127
+  },
+  "body-ruins>varrock-west-anvil": {
+   "tiles": 150,
+   "runTicks": 75
+  },
+  "body-ruins>water-ruins": {
+   "tiles": 310,
+   "runTicks": 155
+  },
+  "body-ruins>wilderness-course": {
+   "tiles": 558,
+   "runTicks": 279,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "body-ruins>witch-house": {
+   "tiles": 136,
+   "runTicks": 68,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>caroline": {
+   "tiles": 221,
+   "runTicks": 110.5
+  },
+  "camelot>catherby-shore": {
+   "tiles": 130,
+   "runTicks": 65
+  },
+  "camelot>dimintheis": {
+   "tiles": 730,
+   "runTicks": 365,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "camelot>draynor-willows": {
+   "tiles": 611,
+   "runTicks": 305.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>earth-ruins": {
+   "tiles": 772,
+   "runTicks": 386,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>exam-centre": {
+   "tiles": 820,
+   "runTicks": 410,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>falador-castle": {
+   "tiles": 489,
+   "runTicks": 244.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>falador-white-knights": {
+   "tiles": 492,
+   "runTicks": 246,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>fire-ruins": {
+   "tiles": 816,
+   "runTicks": 418,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>guildmaster": {
+   "tiles": 652,
+   "runTicks": 326,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "camelot>lady-servil": {
+   "tiles": 368,
+   "runTicks": 184
+  },
+  "camelot>lava-maze-runite": {
+   "tiles": 843,
+   "runTicks": 421.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>lawgof": {
+   "tiles": 298,
+   "runTicks": 149
+  },
+  "camelot>lumbridge-kitchen": {
+   "tiles": 778,
+   "runTicks": 389,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>lumbridge-spawn": {
+   "tiles": 756,
+   "runTicks": 378,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>mage-arena-lever": {
+   "tiles": 1006,
+   "runTicks": 503,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "camelot>mind-ruins": {
+   "tiles": 486,
+   "runTicks": 243,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>port-sarim-dock": {
+   "tiles": 551,
+   "runTicks": 275.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>port-sarim-monks": {
+   "tiles": 549,
+   "runTicks": 274.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>romeo": {
+   "tiles": 660,
+   "runTicks": 330,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>thormac": {
+   "tiles": 155,
+   "runTicks": 77.5
+  },
+  "camelot>varrock-east-iron": {
+   "tiles": 740,
+   "runTicks": 370,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>varrock-west-anvil": {
+   "tiles": 636,
+   "runTicks": 318,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>water-ruins": {
+   "tiles": 708,
+   "runTicks": 354,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "camelot>wilderness-course": {
+   "tiles": 938,
+   "runTicks": 469,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "camelot>witch-house": {
+   "tiles": 368,
+   "runTicks": 184
+  },
+  "caroline>catherby-shore": {
+   "tiles": 206,
+   "runTicks": 103
+  },
+  "caroline>dimintheis": {
+   "tiles": 806,
+   "runTicks": 403,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "caroline>draynor-willows": {
+   "tiles": 687,
+   "runTicks": 343.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>earth-ruins": {
+   "tiles": 848,
+   "runTicks": 424,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>exam-centre": {
+   "tiles": 896,
+   "runTicks": 448,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>falador-castle": {
+   "tiles": 565,
+   "runTicks": 282.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>falador-white-knights": {
+   "tiles": 568,
+   "runTicks": 284,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>fire-ruins": {
+   "tiles": 892,
+   "runTicks": 456,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>guildmaster": {
+   "tiles": 728,
+   "runTicks": 364,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "caroline>lady-servil": {
+   "tiles": 176,
+   "runTicks": 88
+  },
+  "caroline>lava-maze-runite": {
+   "tiles": 919,
+   "runTicks": 459.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>lawgof": {
+   "tiles": 235,
+   "runTicks": 117.5
+  },
+  "caroline>lumbridge-kitchen": {
+   "tiles": 854,
+   "runTicks": 427,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>lumbridge-spawn": {
+   "tiles": 832,
+   "runTicks": 416,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>mage-arena-lever": {
+   "tiles": 1082,
+   "runTicks": 541,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "caroline>mind-ruins": {
+   "tiles": 562,
+   "runTicks": 281,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>port-sarim-dock": {
+   "tiles": 627,
+   "runTicks": 313.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>port-sarim-monks": {
+   "tiles": 625,
+   "runTicks": 312.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>romeo": {
+   "tiles": 736,
+   "runTicks": 368,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>thormac": {
+   "tiles": 104,
+   "runTicks": 52
+  },
+  "caroline>varrock-east-iron": {
+   "tiles": 816,
+   "runTicks": 408,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>varrock-west-anvil": {
+   "tiles": 712,
+   "runTicks": 356,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>water-ruins": {
+   "tiles": 784,
+   "runTicks": 392,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "caroline>wilderness-course": {
+   "tiles": 1014,
+   "runTicks": 507,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "caroline>witch-house": {
+   "tiles": 444,
+   "runTicks": 222
+  },
+  "catherby-shore>dimintheis": {
+   "tiles": 601,
+   "runTicks": 300.5,
+   "locked": [
+    "guidorgaterclosed",
+    "membergater"
+   ]
+  },
+  "catherby-shore>draynor-willows": {
+   "tiles": 482,
+   "runTicks": 241,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>earth-ruins": {
+   "tiles": 643,
+   "runTicks": 321.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>exam-centre": {
+   "tiles": 691,
+   "runTicks": 345.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>falador-castle": {
+   "tiles": 360,
+   "runTicks": 180,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>falador-white-knights": {
+   "tiles": 363,
+   "runTicks": 181.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>fire-ruins": {
+   "tiles": 687,
+   "runTicks": 353.5,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>guildmaster": {
+   "tiles": 523,
+   "runTicks": 261.5,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "catherby-shore>lady-servil": {
+   "tiles": 358,
+   "runTicks": 179
+  },
+  "catherby-shore>lava-maze-runite": {
+   "tiles": 714,
+   "runTicks": 357,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>lawgof": {
+   "tiles": 326,
+   "runTicks": 163
+  },
+  "catherby-shore>lumbridge-kitchen": {
+   "tiles": 649,
+   "runTicks": 324.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>lumbridge-spawn": {
+   "tiles": 627,
+   "runTicks": 313.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>mage-arena-lever": {
+   "tiles": 877,
+   "runTicks": 438.5,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "catherby-shore>mind-ruins": {
+   "tiles": 357,
+   "runTicks": 178.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>port-sarim-dock": {
+   "tiles": 422,
+   "runTicks": 211,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>port-sarim-monks": {
+   "tiles": 420,
+   "runTicks": 210,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>romeo": {
+   "tiles": 531,
+   "runTicks": 265.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>thormac": {
+   "tiles": 158,
+   "runTicks": 79
+  },
+  "catherby-shore>varrock-east-iron": {
+   "tiles": 611,
+   "runTicks": 305.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>varrock-west-anvil": {
+   "tiles": 507,
+   "runTicks": 253.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>water-ruins": {
+   "tiles": 579,
+   "runTicks": 289.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "catherby-shore>wilderness-course": {
+   "tiles": 809,
+   "runTicks": 404.5,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "catherby-shore>witch-house": {
+   "tiles": 239,
+   "runTicks": 119.5
+  },
+  "dimintheis>draynor-willows": {
+   "tiles": 354,
+   "runTicks": 177,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>earth-ruins": {
+   "tiles": 90,
+   "runTicks": 45,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>exam-centre": {
+   "tiles": 192,
+   "runTicks": 96,
+   "locked": [
+    "guidorgatelclosed",
+    "membergater"
+   ]
+  },
+  "dimintheis>falador-castle": {
+   "tiles": 371,
+   "runTicks": 185.5,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>falador-white-knights": {
+   "tiles": 374,
+   "runTicks": 187,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>fire-ruins": {
+   "tiles": 223,
+   "runTicks": 111.5,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>guildmaster": {
+   "tiles": 103,
+   "runTicks": 51.5,
+   "locked": [
+    "championdoor",
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>lady-servil": {
+   "tiles": 958,
+   "runTicks": 479,
+   "locked": [
+    "guidorgatelclosed",
+    "membergater"
+   ]
+  },
+  "dimintheis>lava-maze-runite": {
+   "tiles": 523,
+   "runTicks": 261.5,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>lawgof": {
+   "tiles": 926,
+   "runTicks": 463,
+   "locked": [
+    "guidorgatelclosed",
+    "membergater"
+   ]
+  },
+  "dimintheis>lumbridge-kitchen": {
+   "tiles": 282,
+   "runTicks": 141,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>lumbridge-spawn": {
+   "tiles": 260,
+   "runTicks": 130,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>mage-arena-lever": {
+   "tiles": 656,
+   "runTicks": 328,
+   "locked": [
+    "guidorgatelclosed",
+    "membergater"
+   ]
+  },
+  "dimintheis>mind-ruins": {
+   "tiles": 374,
+   "runTicks": 187,
+   "locked": [
+    "bkfortressdoor1",
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>port-sarim-dock": {
+   "tiles": 403,
+   "runTicks": 201.5,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>port-sarim-monks": {
+   "tiles": 384,
+   "runTicks": 192,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>romeo": {
+   "tiles": 70,
+   "runTicks": 35,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>thormac": {
+   "tiles": 758,
+   "runTicks": 379,
+   "locked": [
+    "guidorgatelclosed",
+    "membergater"
+   ]
+  },
+  "dimintheis>varrock-east-iron": {
+   "tiles": 105,
+   "runTicks": 52.5,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>varrock-west-anvil": {
+   "tiles": 99,
+   "runTicks": 49.5,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>water-ruins": {
+   "tiles": 367,
+   "runTicks": 183.5,
+   "locked": [
+    "guidorgatelclosed"
+   ]
+  },
+  "dimintheis>wilderness-course": {
+   "tiles": 618,
+   "runTicks": 309,
+   "locked": [
+    "guidorgatelclosed",
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "dimintheis>witch-house": {
+   "tiles": 362,
+   "runTicks": 181,
+   "locked": [
+    "guidorgatelclosed",
+    "membergater"
+   ]
+  },
+  "draynor-willows>earth-ruins": {
+   "tiles": 375,
+   "runTicks": 187.5
+  },
+  "draynor-willows>exam-centre": {
+   "tiles": 320,
+   "runTicks": 160,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "draynor-willows>falador-castle": {
+   "tiles": 240,
+   "runTicks": 120
+  },
+  "draynor-willows>falador-white-knights": {
+   "tiles": 243,
+   "runTicks": 121.5
+  },
+  "draynor-willows>fire-ruins": {
+   "tiles": 228,
+   "runTicks": 124,
+   "toll": 10
+  },
+  "draynor-willows>guildmaster": {
+   "tiles": 265,
+   "runTicks": 132.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "draynor-willows>lady-servil": {
+   "tiles": 839,
+   "runTicks": 419.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "draynor-willows>lava-maze-runite": {
+   "tiles": 676,
+   "runTicks": 338
+  },
+  "draynor-willows>lawgof": {
+   "tiles": 807,
+   "runTicks": 403.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "draynor-willows>lumbridge-kitchen": {
+   "tiles": 190,
+   "runTicks": 95
+  },
+  "draynor-willows>lumbridge-spawn": {
+   "tiles": 168,
+   "runTicks": 84
+  },
+  "draynor-willows>mage-arena-lever": {
+   "tiles": 819,
+   "runTicks": 409.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "draynor-willows>mind-ruins": {
+   "tiles": 337,
+   "runTicks": 168.5
+  },
+  "draynor-willows>port-sarim-dock": {
+   "tiles": 121,
+   "runTicks": 60.5
+  },
+  "draynor-willows>port-sarim-monks": {
+   "tiles": 101,
+   "runTicks": 50.5
+  },
+  "draynor-willows>romeo": {
+   "tiles": 303,
+   "runTicks": 151.5
+  },
+  "draynor-willows>thormac": {
+   "tiles": 639,
+   "runTicks": 319.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "draynor-willows>varrock-east-iron": {
+   "tiles": 273,
+   "runTicks": 136.5
+  },
+  "draynor-willows>varrock-west-anvil": {
+   "tiles": 279,
+   "runTicks": 139.5
+  },
+  "draynor-willows>water-ruins": {
+   "tiles": 106,
+   "runTicks": 53
+  },
+  "draynor-willows>wilderness-course": {
+   "tiles": 771,
+   "runTicks": 385.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "draynor-willows>witch-house": {
+   "tiles": 284,
+   "runTicks": 142,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "earth-ruins>exam-centre": {
+   "tiles": 181,
+   "runTicks": 90.5
+  },
+  "earth-ruins>falador-castle": {
+   "tiles": 413,
+   "runTicks": 206.5
+  },
+  "earth-ruins>falador-white-knights": {
+   "tiles": 416,
+   "runTicks": 208
+  },
+  "earth-ruins>fire-ruins": {
+   "tiles": 230,
+   "runTicks": 115
+  },
+  "earth-ruins>guildmaster": {
+   "tiles": 159,
+   "runTicks": 79.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "earth-ruins>lady-servil": {
+   "tiles": 1000,
+   "runTicks": 500,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "earth-ruins>lava-maze-runite": {
+   "tiles": 468,
+   "runTicks": 234
+  },
+  "earth-ruins>lawgof": {
+   "tiles": 968,
+   "runTicks": 484,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "earth-ruins>lumbridge-kitchen": {
+   "tiles": 303,
+   "runTicks": 151.5
+  },
+  "earth-ruins>lumbridge-spawn": {
+   "tiles": 281,
+   "runTicks": 140.5
+  },
+  "earth-ruins>mage-arena-lever": {
+   "tiles": 585,
+   "runTicks": 292.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "earth-ruins>mind-ruins": {
+   "tiles": 345,
+   "runTicks": 172.5
+  },
+  "earth-ruins>port-sarim-dock": {
+   "tiles": 445,
+   "runTicks": 222.5
+  },
+  "earth-ruins>port-sarim-monks": {
+   "tiles": 426,
+   "runTicks": 213
+  },
+  "earth-ruins>romeo": {
+   "tiles": 112,
+   "runTicks": 56
+  },
+  "earth-ruins>thormac": {
+   "tiles": 800,
+   "runTicks": 400,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "earth-ruins>varrock-east-iron": {
+   "tiles": 112,
+   "runTicks": 56
+  },
+  "earth-ruins>varrock-west-anvil": {
+   "tiles": 141,
+   "runTicks": 70.5
+  },
+  "earth-ruins>water-ruins": {
+   "tiles": 388,
+   "runTicks": 194
+  },
+  "earth-ruins>wilderness-course": {
+   "tiles": 563,
+   "runTicks": 281.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "earth-ruins>witch-house": {
+   "tiles": 404,
+   "runTicks": 202,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "entrana-dock>law-ruins": {
+   "tiles": 65,
+   "runTicks": 32.5
+  },
+  "exam-centre>falador-castle": {
+   "tiles": 461,
+   "runTicks": 230.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>falador-white-knights": {
+   "tiles": 464,
+   "runTicks": 232,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>fire-ruins": {
+   "tiles": 164,
+   "runTicks": 82,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>guildmaster": {
+   "tiles": 178,
+   "runTicks": 89,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "exam-centre>lady-servil": {
+   "tiles": 1048,
+   "runTicks": 524,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>lava-maze-runite": {
+   "tiles": 624,
+   "runTicks": 312
+  },
+  "exam-centre>lawgof": {
+   "tiles": 1016,
+   "runTicks": 508,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>lumbridge-kitchen": {
+   "tiles": 248,
+   "runTicks": 124,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>lumbridge-spawn": {
+   "tiles": 226,
+   "runTicks": 113,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>mage-arena-lever": {
+   "tiles": 741,
+   "runTicks": 370.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>mind-ruins": {
+   "tiles": 464,
+   "runTicks": 232,
+   "locked": [
+    "bkfortressdoor1",
+    "membergater"
+   ]
+  },
+  "exam-centre>port-sarim-dock": {
+   "tiles": 412,
+   "runTicks": 206,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>port-sarim-monks": {
+   "tiles": 392,
+   "runTicks": 196,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>romeo": {
+   "tiles": 202,
+   "runTicks": 101,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>thormac": {
+   "tiles": 848,
+   "runTicks": 424,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>varrock-east-iron": {
+   "tiles": 104,
+   "runTicks": 52,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>varrock-west-anvil": {
+   "tiles": 215,
+   "runTicks": 107.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>water-ruins": {
+   "tiles": 333,
+   "runTicks": 166.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "exam-centre>wilderness-course": {
+   "tiles": 719,
+   "runTicks": 359.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "exam-centre>witch-house": {
+   "tiles": 452,
+   "runTicks": 226,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-castle>falador-white-knights": {
+   "tiles": 6,
+   "runTicks": 3
+  },
+  "falador-castle>fire-ruins": {
+   "tiles": 445,
+   "runTicks": 232.5,
+   "toll": 10
+  },
+  "falador-castle>guildmaster": {
+   "tiles": 293,
+   "runTicks": 146.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "falador-castle>lady-servil": {
+   "tiles": 717,
+   "runTicks": 358.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-castle>lava-maze-runite": {
+   "tiles": 568,
+   "runTicks": 284
+  },
+  "falador-castle>lawgof": {
+   "tiles": 685,
+   "runTicks": 342.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-castle>lumbridge-kitchen": {
+   "tiles": 407,
+   "runTicks": 203.5
+  },
+  "falador-castle>lumbridge-spawn": {
+   "tiles": 385,
+   "runTicks": 192.5
+  },
+  "falador-castle>mage-arena-lever": {
+   "tiles": 731,
+   "runTicks": 365.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "falador-castle>mind-ruins": {
+   "tiles": 174,
+   "runTicks": 87
+  },
+  "falador-castle>port-sarim-dock": {
+   "tiles": 215,
+   "runTicks": 107.5
+  },
+  "falador-castle>port-sarim-monks": {
+   "tiles": 206,
+   "runTicks": 103
+  },
+  "falador-castle>romeo": {
+   "tiles": 301,
+   "runTicks": 150.5
+  },
+  "falador-castle>thormac": {
+   "tiles": 517,
+   "runTicks": 258.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-castle>varrock-east-iron": {
+   "tiles": 381,
+   "runTicks": 190.5
+  },
+  "falador-castle>varrock-west-anvil": {
+   "tiles": 277,
+   "runTicks": 138.5
+  },
+  "falador-castle>water-ruins": {
+   "tiles": 337,
+   "runTicks": 168.5
+  },
+  "falador-castle>wilderness-course": {
+   "tiles": 663,
+   "runTicks": 331.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "falador-castle>witch-house": {
+   "tiles": 121,
+   "runTicks": 60.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-white-knights>fire-ruins": {
+   "tiles": 448,
+   "runTicks": 234,
+   "toll": 10
+  },
+  "falador-white-knights>guildmaster": {
+   "tiles": 296,
+   "runTicks": 148,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "falador-white-knights>lady-servil": {
+   "tiles": 720,
+   "runTicks": 360,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-white-knights>lava-maze-runite": {
+   "tiles": 571,
+   "runTicks": 285.5
+  },
+  "falador-white-knights>lawgof": {
+   "tiles": 688,
+   "runTicks": 344,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-white-knights>lumbridge-kitchen": {
+   "tiles": 410,
+   "runTicks": 205
+  },
+  "falador-white-knights>lumbridge-spawn": {
+   "tiles": 388,
+   "runTicks": 194
+  },
+  "falador-white-knights>mage-arena-lever": {
+   "tiles": 734,
+   "runTicks": 367,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "falador-white-knights>mind-ruins": {
+   "tiles": 177,
+   "runTicks": 88.5
+  },
+  "falador-white-knights>port-sarim-dock": {
+   "tiles": 218,
+   "runTicks": 109
+  },
+  "falador-white-knights>port-sarim-monks": {
+   "tiles": 209,
+   "runTicks": 104.5
+  },
+  "falador-white-knights>romeo": {
+   "tiles": 304,
+   "runTicks": 152
+  },
+  "falador-white-knights>thormac": {
+   "tiles": 520,
+   "runTicks": 260,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "falador-white-knights>varrock-east-iron": {
+   "tiles": 384,
+   "runTicks": 192
+  },
+  "falador-white-knights>varrock-west-anvil": {
+   "tiles": 280,
+   "runTicks": 140
+  },
+  "falador-white-knights>water-ruins": {
+   "tiles": 340,
+   "runTicks": 170
+  },
+  "falador-white-knights>wilderness-course": {
+   "tiles": 666,
+   "runTicks": 333,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "falador-white-knights>witch-house": {
+   "tiles": 124,
+   "runTicks": 62,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "fire-ruins>guildmaster": {
+   "tiles": 182,
+   "runTicks": 91,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "fire-ruins>lady-servil": {
+   "tiles": 1044,
+   "runTicks": 532,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "fire-ruins>lava-maze-runite": {
+   "tiles": 667,
+   "runTicks": 333.5
+  },
+  "fire-ruins>lawgof": {
+   "tiles": 1012,
+   "runTicks": 516,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "fire-ruins>lumbridge-kitchen": {
+   "tiles": 113,
+   "runTicks": 66.5,
+   "toll": 10
+  },
+  "fire-ruins>lumbridge-spawn": {
+   "tiles": 91,
+   "runTicks": 55.5,
+   "toll": 10
+  },
+  "fire-ruins>mage-arena-lever": {
+   "tiles": 799,
+   "runTicks": 399.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "fire-ruins>mind-ruins": {
+   "tiles": 474,
+   "runTicks": 247,
+   "toll": 10,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "fire-ruins>port-sarim-dock": {
+   "tiles": 326,
+   "runTicks": 173,
+   "toll": 10
+  },
+  "fire-ruins>port-sarim-monks": {
+   "tiles": 306,
+   "runTicks": 163,
+   "toll": 10
+  },
+  "fire-ruins>romeo": {
+   "tiles": 213,
+   "runTicks": 106.5
+  },
+  "fire-ruins>thormac": {
+   "tiles": 844,
+   "runTicks": 432,
+   "toll": 10,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "fire-ruins>varrock-east-iron": {
+   "tiles": 131,
+   "runTicks": 65.5
+  },
+  "fire-ruins>varrock-west-anvil": {
+   "tiles": 226,
+   "runTicks": 113
+  },
+  "fire-ruins>water-ruins": {
+   "tiles": 233,
+   "runTicks": 126.5,
+   "toll": 10
+  },
+  "fire-ruins>wilderness-course": {
+   "tiles": 762,
+   "runTicks": 381,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "fire-ruins>witch-house": {
+   "tiles": 462,
+   "runTicks": 241,
+   "toll": 10,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "guildmaster>lady-servil": {
+   "tiles": 880,
+   "runTicks": 440,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "guildmaster>lava-maze-runite": {
+   "tiles": 557,
+   "runTicks": 278.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>lawgof": {
+   "tiles": 848,
+   "runTicks": 424,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "guildmaster>lumbridge-kitchen": {
+   "tiles": 193,
+   "runTicks": 96.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>lumbridge-spawn": {
+   "tiles": 171,
+   "runTicks": 85.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>mage-arena-lever": {
+   "tiles": 693,
+   "runTicks": 346.5,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "guildmaster>mind-ruins": {
+   "tiles": 296,
+   "runTicks": 148,
+   "locked": [
+    "bkfortressdoor1",
+    "championdoor"
+   ]
+  },
+  "guildmaster>port-sarim-dock": {
+   "tiles": 325,
+   "runTicks": 162.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>port-sarim-monks": {
+   "tiles": 306,
+   "runTicks": 153,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>romeo": {
+   "tiles": 70,
+   "runTicks": 35,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>thormac": {
+   "tiles": 680,
+   "runTicks": 340,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "guildmaster>varrock-east-iron": {
+   "tiles": 98,
+   "runTicks": 49,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>varrock-west-anvil": {
+   "tiles": 80,
+   "runTicks": 40,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>water-ruins": {
+   "tiles": 278,
+   "runTicks": 139,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>wilderness-course": {
+   "tiles": 652,
+   "runTicks": 326,
+   "locked": [
+    "championdoor",
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "guildmaster>witch-house": {
+   "tiles": 284,
+   "runTicks": 142,
+   "locked": [
+    "championdoor",
+    "membergater"
+   ]
+  },
+  "lady-servil>lava-maze-runite": {
+   "tiles": 1071,
+   "runTicks": 535.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>lawgof": {
+   "tiles": 269,
+   "runTicks": 134.5
+  },
+  "lady-servil>lumbridge-kitchen": {
+   "tiles": 1006,
+   "runTicks": 503,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>lumbridge-spawn": {
+   "tiles": 984,
+   "runTicks": 492,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>mage-arena-lever": {
+   "tiles": 1234,
+   "runTicks": 617,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "lady-servil>mind-ruins": {
+   "tiles": 714,
+   "runTicks": 357,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>port-sarim-dock": {
+   "tiles": 779,
+   "runTicks": 389.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>port-sarim-monks": {
+   "tiles": 777,
+   "runTicks": 388.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>romeo": {
+   "tiles": 888,
+   "runTicks": 444,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>thormac": {
+   "tiles": 248,
+   "runTicks": 124
+  },
+  "lady-servil>varrock-east-iron": {
+   "tiles": 968,
+   "runTicks": 484,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>varrock-west-anvil": {
+   "tiles": 864,
+   "runTicks": 432,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>water-ruins": {
+   "tiles": 936,
+   "runTicks": 468,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lady-servil>wilderness-course": {
+   "tiles": 1166,
+   "runTicks": 583,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "lady-servil>witch-house": {
+   "tiles": 596,
+   "runTicks": 298
+  },
+  "lava-maze-runite>lawgof": {
+   "tiles": 1039,
+   "runTicks": 519.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "lava-maze-runite>lumbridge-kitchen": {
+   "tiles": 736,
+   "runTicks": 368
+  },
+  "lava-maze-runite>lumbridge-spawn": {
+   "tiles": 714,
+   "runTicks": 357
+  },
+  "lava-maze-runite>mage-arena-lever": {
+   "tiles": 278,
+   "runTicks": 139,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "lava-maze-runite>mind-ruins": {
+   "tiles": 394,
+   "runTicks": 197
+  },
+  "lava-maze-runite>port-sarim-dock": {
+   "tiles": 697,
+   "runTicks": 348.5
+  },
+  "lava-maze-runite>port-sarim-monks": {
+   "tiles": 680,
+   "runTicks": 340
+  },
+  "lava-maze-runite>romeo": {
+   "tiles": 491,
+   "runTicks": 245.5
+  },
+  "lava-maze-runite>thormac": {
+   "tiles": 871,
+   "runTicks": 435.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "lava-maze-runite>varrock-east-iron": {
+   "tiles": 549,
+   "runTicks": 274.5
+  },
+  "lava-maze-runite>varrock-west-anvil": {
+   "tiles": 508,
+   "runTicks": 254
+  },
+  "lava-maze-runite>water-ruins": {
+   "tiles": 770,
+   "runTicks": 385
+  },
+  "lava-maze-runite>wilderness-course": {
+   "tiles": 210,
+   "runTicks": 105,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "lava-maze-runite>witch-house": {
+   "tiles": 475,
+   "runTicks": 237.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "lawgof>lumbridge-kitchen": {
+   "tiles": 974,
+   "runTicks": 487,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>lumbridge-spawn": {
+   "tiles": 952,
+   "runTicks": 476,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>mage-arena-lever": {
+   "tiles": 1202,
+   "runTicks": 601,
+   "locked": [
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "lawgof>mind-ruins": {
+   "tiles": 682,
+   "runTicks": 341,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>port-sarim-dock": {
+   "tiles": 747,
+   "runTicks": 373.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>port-sarim-monks": {
+   "tiles": 745,
+   "runTicks": 372.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>romeo": {
+   "tiles": 856,
+   "runTicks": 428,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>thormac": {
+   "tiles": 194,
+   "runTicks": 97
+  },
+  "lawgof>varrock-east-iron": {
+   "tiles": 936,
+   "runTicks": 468,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>varrock-west-anvil": {
+   "tiles": 832,
+   "runTicks": 416,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>water-ruins": {
+   "tiles": 904,
+   "runTicks": 452,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lawgof>wilderness-course": {
+   "tiles": 1134,
+   "runTicks": 567,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "lawgof>witch-house": {
+   "tiles": 564,
+   "runTicks": 282
+  },
+  "lumbridge-kitchen>lumbridge-spawn": {
+   "tiles": 22,
+   "runTicks": 11
+  },
+  "lumbridge-kitchen>mage-arena-lever": {
+   "tiles": 872,
+   "runTicks": 436,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lumbridge-kitchen>mind-ruins": {
+   "tiles": 453,
+   "runTicks": 226.5,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "lumbridge-kitchen>port-sarim-dock": {
+   "tiles": 288,
+   "runTicks": 144
+  },
+  "lumbridge-kitchen>port-sarim-monks": {
+   "tiles": 268,
+   "runTicks": 134
+  },
+  "lumbridge-kitchen>romeo": {
+   "tiles": 249,
+   "runTicks": 124.5
+  },
+  "lumbridge-kitchen>thormac": {
+   "tiles": 806,
+   "runTicks": 403,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "lumbridge-kitchen>varrock-east-iron": {
+   "tiles": 201,
+   "runTicks": 100.5
+  },
+  "lumbridge-kitchen>varrock-west-anvil": {
+   "tiles": 262,
+   "runTicks": 131
+  },
+  "lumbridge-kitchen>water-ruins": {
+   "tiles": 195,
+   "runTicks": 97.5
+  },
+  "lumbridge-kitchen>wilderness-course": {
+   "tiles": 831,
+   "runTicks": 415.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "lumbridge-kitchen>witch-house": {
+   "tiles": 440,
+   "runTicks": 220,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lumbridge-spawn>mage-arena-lever": {
+   "tiles": 850,
+   "runTicks": 425,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "lumbridge-spawn>mind-ruins": {
+   "tiles": 431,
+   "runTicks": 215.5,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "lumbridge-spawn>port-sarim-dock": {
+   "tiles": 266,
+   "runTicks": 133
+  },
+  "lumbridge-spawn>port-sarim-monks": {
+   "tiles": 246,
+   "runTicks": 123
+  },
+  "lumbridge-spawn>romeo": {
+   "tiles": 227,
+   "runTicks": 113.5
+  },
+  "lumbridge-spawn>thormac": {
+   "tiles": 784,
+   "runTicks": 392,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "lumbridge-spawn>varrock-east-iron": {
+   "tiles": 179,
+   "runTicks": 89.5
+  },
+  "lumbridge-spawn>varrock-west-anvil": {
+   "tiles": 240,
+   "runTicks": 120
+  },
+  "lumbridge-spawn>water-ruins": {
+   "tiles": 173,
+   "runTicks": 86.5
+  },
+  "lumbridge-spawn>wilderness-course": {
+   "tiles": 809,
+   "runTicks": 404.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "lumbridge-spawn>witch-house": {
+   "tiles": 418,
+   "runTicks": 209,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "mind-ruins>port-sarim-dock": {
+   "tiles": 312,
+   "runTicks": 156
+  },
+  "mind-ruins>port-sarim-monks": {
+   "tiles": 303,
+   "runTicks": 151.5
+  },
+  "mind-ruins>romeo": {
+   "tiles": 304,
+   "runTicks": 152,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "mind-ruins>thormac": {
+   "tiles": 514,
+   "runTicks": 257,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "mind-ruins>varrock-east-iron": {
+   "tiles": 384,
+   "runTicks": 192,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "mind-ruins>varrock-west-anvil": {
+   "tiles": 280,
+   "runTicks": 140,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "mind-ruins>water-ruins": {
+   "tiles": 434,
+   "runTicks": 217
+  },
+  "mind-ruins>wilderness-course": {
+   "tiles": 489,
+   "runTicks": 244.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "mind-ruins>witch-house": {
+   "tiles": 118,
+   "runTicks": 59,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "musa-point>nature-ruins": {
+   "tiles": 353,
+   "runTicks": 176.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "port-sarim-dock>port-sarim-monks": {
+   "tiles": 39,
+   "runTicks": 19.5
+  },
+  "port-sarim-dock>romeo": {
+   "tiles": 333,
+   "runTicks": 166.5
+  },
+  "port-sarim-dock>thormac": {
+   "tiles": 579,
+   "runTicks": 289.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "port-sarim-dock>varrock-east-iron": {
+   "tiles": 365,
+   "runTicks": 182.5
+  },
+  "port-sarim-dock>varrock-west-anvil": {
+   "tiles": 309,
+   "runTicks": 154.5
+  },
+  "port-sarim-dock>water-ruins": {
+   "tiles": 218,
+   "runTicks": 109
+  },
+  "port-sarim-dock>wilderness-course": {
+   "tiles": 792,
+   "runTicks": 396,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "port-sarim-dock>witch-house": {
+   "tiles": 259,
+   "runTicks": 129.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "port-sarim-monks>romeo": {
+   "tiles": 314,
+   "runTicks": 157
+  },
+  "port-sarim-monks>thormac": {
+   "tiles": 577,
+   "runTicks": 288.5,
+   "locked": [
+    "membergatel"
+   ]
+  },
+  "port-sarim-monks>varrock-east-iron": {
+   "tiles": 345,
+   "runTicks": 172.5
+  },
+  "port-sarim-monks>varrock-west-anvil": {
+   "tiles": 290,
+   "runTicks": 145
+  },
+  "port-sarim-monks>water-ruins": {
+   "tiles": 198,
+   "runTicks": 99
+  },
+  "port-sarim-monks>wilderness-course": {
+   "tiles": 775,
+   "runTicks": 387.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "port-sarim-monks>witch-house": {
+   "tiles": 250,
+   "runTicks": 125,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "romeo>thormac": {
+   "tiles": 688,
+   "runTicks": 344,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "romeo>varrock-east-iron": {
+   "tiles": 120,
+   "runTicks": 60
+  },
+  "romeo>varrock-west-anvil": {
+   "tiles": 29,
+   "runTicks": 14.5
+  },
+  "romeo>water-ruins": {
+   "tiles": 334,
+   "runTicks": 167
+  },
+  "romeo>wilderness-course": {
+   "tiles": 586,
+   "runTicks": 293,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "romeo>witch-house": {
+   "tiles": 292,
+   "runTicks": 146,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "thormac>varrock-east-iron": {
+   "tiles": 768,
+   "runTicks": 384,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "thormac>varrock-west-anvil": {
+   "tiles": 664,
+   "runTicks": 332,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "thormac>water-ruins": {
+   "tiles": 736,
+   "runTicks": 368,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "thormac>wilderness-course": {
+   "tiles": 966,
+   "runTicks": 483,
+   "locked": [
+    "loc_2309",
+    "membergatel",
+    "membergater"
+   ]
+  },
+  "thormac>witch-house": {
+   "tiles": 396,
+   "runTicks": 198
+  },
+  "varrock-east-iron>varrock-west-anvil": {
+   "tiles": 133,
+   "runTicks": 66.5
+  },
+  "varrock-east-iron>water-ruins": {
+   "tiles": 286,
+   "runTicks": 143
+  },
+  "varrock-east-iron>wilderness-course": {
+   "tiles": 644,
+   "runTicks": 322,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "varrock-east-iron>witch-house": {
+   "tiles": 372,
+   "runTicks": 186,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "varrock-west-anvil>water-ruins": {
+   "tiles": 347,
+   "runTicks": 173.5
+  },
+  "varrock-west-anvil>wilderness-course": {
+   "tiles": 603,
+   "runTicks": 301.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "varrock-west-anvil>witch-house": {
+   "tiles": 268,
+   "runTicks": 134,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "water-ruins>wilderness-course": {
+   "tiles": 865,
+   "runTicks": 432.5,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  },
+  "water-ruins>witch-house": {
+   "tiles": 381,
+   "runTicks": 190.5,
+   "locked": [
+    "membergater"
+   ]
+  },
+  "wilderness-course>witch-house": {
+   "tiles": 570,
+   "runTicks": 285,
+   "locked": [
+    "loc_2309",
+    "membergatel"
+   ]
+  }
+ },
+ "nearestBank": {
+  "lumbridge-spawn": {
+   "bank": "bank:al-kharid-bank:0",
+   "runTicks": 65.5,
+   "method": "path"
+  },
+  "lumbridge-kitchen": {
+   "bank": "bank:draynor-bank:0",
+   "runTicks": 92,
+   "method": "world.json"
+  },
+  "port-sarim-dock": {
+   "bank": "bank:draynor-bank:0",
+   "runTicks": 56.5,
+   "method": "path"
+  },
+  "port-sarim-monks": {
+   "bank": "bank:draynor-bank:0",
+   "runTicks": 46.5,
+   "method": "path"
+  },
+  "varrock-west-anvil": {
+   "bank": "bank:varrock-west-bank:0",
+   "runTicks": 8,
+   "method": "world.json"
+  },
+  "air-ruins": {
+   "bank": "bank:falador-east-bank:0",
+   "runTicks": 39,
+   "method": "path"
+  },
+  "mind-ruins": {
+   "bank": "bank:edgeville-bank:0",
+   "runTicks": 68,
+   "method": "path"
+  },
+  "water-ruins": {
+   "bank": "bank:draynor-bank:0",
+   "runTicks": 58,
+   "method": "path"
+  },
+  "earth-ruins": {
+   "bank": "bank:varrock-east-bank:0",
+   "runTicks": 38.5,
+   "method": "path"
+  },
+  "fire-ruins": {
+   "bank": "bank:al-kharid-bank:0",
+   "runTicks": 45,
+   "method": "path"
+  },
+  "body-ruins": {
+   "bank": "bank:edgeville-bank:0",
+   "runTicks": 58.5,
+   "method": "path"
+  },
+  "ardougne-market": {
+   "bank": "bank:ardougne-south-bank:0",
+   "runTicks": 24.5,
+   "method": "path"
+  },
+  "draynor-willows": {
+   "bank": "bank:draynor-bank:0",
+   "runTicks": 12,
+   "method": "world.json"
+  },
+  "barbarian-fly-spot": {
+   "bank": "bank:edgeville-bank:0",
+   "runTicks": 36,
+   "method": "world.json"
+  },
+  "catherby-shore": {
+   "bank": "bank:catherby-bank:0",
+   "runTicks": 19,
+   "method": "world.json"
+  },
+  "almera": {
+   "bank": "bank:ardougne-north-bank:0",
+   "runTicks": 95.5,
+   "method": "path"
+  },
+  "gnome-course": {
+   "bank": "bank:gnome-stronghold-bank:0",
+   "runTicks": 20,
+   "method": "world.json"
+  },
+  "romeo": {
+   "bank": "bank:varrock-west-bank:0",
+   "runTicks": 19,
+   "method": "path"
+  },
+  "falador-castle": {
+   "bank": "bank:falador-west-bank:0",
+   "runTicks": 27,
+   "method": "path"
+  },
+  "witch-house": {
+   "bank": "bank:catherby-bank:0",
+   "runTicks": 138,
+   "method": "path"
+  },
+  "thormac": {
+   "bank": "bank:seers-village-bank:0",
+   "runTicks": 62,
+   "method": "path"
+  },
+  "falador-white-knights": {
+   "bank": "bank:falador-west-bank:0",
+   "runTicks": 28.5,
+   "method": "path"
+  },
+  "lawgof": {
+   "bank": "bank:ardougne-north-bank:0",
+   "runTicks": 67.5,
+   "method": "path"
+  },
+  "camelot": {
+   "bank": "bank:seers-village-bank:0",
+   "runTicks": 37,
+   "method": "path"
+  },
+  "varrock-east-iron": {
+   "bank": "bank:varrock-east-bank:0",
+   "runTicks": 46,
+   "method": "world.json"
+  },
+  "lady-servil": {
+   "bank": "bank:ardougne-south-bank:0",
+   "runTicks": 60,
+   "method": "path"
+  },
+  "caroline": {
+   "bank": "bank:ardougne-south-bank:0",
+   "runTicks": 46.5,
+   "method": "path"
+  }
+ },
+ "banks": {
+  "bank:al-kharid-bank:0": {
+   "x": 3269,
+   "z": 3167,
+   "level": 0,
+   "site": "bank:al-kharid-bank:0"
+  },
+  "bank:draynor-bank:0": {
+   "x": 3092,
+   "z": 3243,
+   "level": 0,
+   "site": "bank:draynor-bank:0"
+  },
+  "bank:varrock-west-bank:0": {
+   "x": 3185,
+   "z": 3440,
+   "level": 0,
+   "site": "bank:varrock-west-bank:0"
+  },
+  "bank:falador-east-bank:0": {
+   "x": 3013,
+   "z": 3355,
+   "level": 0,
+   "site": "bank:falador-east-bank:0"
+  },
+  "bank:edgeville-bank:0": {
+   "x": 3094,
+   "z": 3491,
+   "level": 0,
+   "site": "bank:edgeville-bank:0"
+  },
+  "bank:varrock-east-bank:0": {
+   "x": 3254,
+   "z": 3420,
+   "level": 0,
+   "site": "bank:varrock-east-bank:0"
+  },
+  "bank:ardougne-south-bank:0": {
+   "x": 2655,
+   "z": 3283,
+   "level": 0,
+   "site": "bank:ardougne-south-bank:0"
+  },
+  "bank:catherby-bank:0": {
+   "x": 2809,
+   "z": 3441,
+   "level": 0,
+   "site": "bank:catherby-bank:0"
+  },
+  "bank:ardougne-north-bank:0": {
+   "x": 2618,
+   "z": 3332,
+   "level": 0,
+   "site": "bank:ardougne-north-bank:0"
+  },
+  "bank:gnome-stronghold-bank:0": {
+   "x": 2445,
+   "z": 3425,
+   "level": 1,
+   "site": "bank:gnome-stronghold-bank:0"
+  },
+  "bank:falador-west-bank:0": {
+   "x": 2947,
+   "z": 3368,
+   "level": 0,
+   "site": "bank:falador-west-bank:0"
+  },
+  "bank:seers-village-bank:0": {
+   "x": 2727,
+   "z": 3493,
+   "level": 0,
+   "site": "bank:seers-village-bank:0"
+  }
+ },
+ "calibration": {
+  "Musa Point -> Brimhaven": {
+   "runTicks": 103,
+   "tiles": 206
+  },
+  "Port Sarim -> GE": {
+   "runTicks": 156,
+   "tiles": 312
+  },
+  "GE -> Port Sarim": {
+   "runTicks": 156,
+   "tiles": 312
+  },
+  "Brimhaven -> Musa Point": {
+   "runTicks": 101,
+   "tiles": 202
+  },
+  "Lumbridge -> Port Sarim": {
+   "runTicks": 133,
+   "tiles": 266
+  }
+ }
+}

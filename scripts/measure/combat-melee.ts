@@ -59,10 +59,22 @@ try {
         const base = slotOf(/^cannon base$/i);
         if (!base) await finish([s], false, 'no cannon base in pack');
         const op = base.optionsWithIndex.find((o: any) => /set-?up/i.test(o.text))?.opIndex ?? 1;
+        // A cannon left by an earlier run (decay 2,500 ticks, cannon.constant) blocks the spot: stand 6+ tiles away from it.
+        const spots = [[0, 0], [8, 0], [-8, 4], [4, 8], [-6, -6], [10, 8]];
+        const p0 = me();
+        for (const [dx, dz] of spots) {
+            const c = findCannon();
+            const sx = p0.worldX + dx!, sz = p0.worldZ + dz!;
+            if (!c || cheb({ x: c.x + 1, z: c.z + 1 }, { x: sx, z: sz }) >= 6) {
+                if (dx || dz) { await s.bot.walkTo(sx, sz, 0); await waitTicks(s, 1); }
+                break;
+            }
+        }
         let m0 = msgs.length;
         await s.direct({ type: 'useInventoryItem', slot: base.slot, optionIndex: op, reason: 'SDK' });
-        await waitUntil(s, () => !!findCannon() || sawMsg(/can't|cannot|isn't enough|won't be happy/i, m0), { timeoutTicks: 8 });
-        if (!findCannon()) await finish([s], false, `cannon base not placed: ${msgs.slice(m0).join(' | ')}`);
+        await waitUntil(s, () => sawMsg(/place the cannon base|can't|cannot|isn't enough|won't be happy/i, m0), { timeoutTicks: 8 });
+        if (!sawMsg(/place the cannon base/i, m0)) await finish([s], false, `cannon base not placed: ${msgs.slice(m0).join(' | ')}`);
+        await waitTicks(s, 1);
         for (const part of [/^cannon stand$/i, /^cannon barrels$/i, /^cannon furnace$/i]) {
             const p = slotOf(part), l = findCannon();
             if (!p || !l) await finish([s], false, `missing ${part} or loc`);
@@ -159,6 +171,7 @@ try {
     });
     const ticks = s.tick() - t0;
     const g: Record<string, number> = Object.fromEntries(skills.map(k => [k, xp(k) - x0[k]!]));
+    if (cannon) { await s.direct({ type: 'interactLoc', x: cannon.x, z: cannon.z, locId: cannon.id, optionIndex: 2, reason: 'SDK' }); await waitTicks(s, 6); }
     for (const k of skills) if (g[k]) console.log(`RATE ${k.toLowerCase()} ${g[k]} ${ticks}`);
     const style = g.Attack! + g.Strength! + g.Defence!;
     const meleeDmg = style / 100, cannonDmg = g.Ranged! / 50;

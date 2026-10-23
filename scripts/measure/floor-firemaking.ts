@@ -42,11 +42,13 @@ try {
         m.bankTicks += s.tick() - tb; m.bankCycles++;
         // Walk to the line start; lines rotate over 3 rows so old fires do not block the next line.
         const tw = s.tick();
+        let lastPos = -1;
         const lz = Z + (cycle % 3);
         await send(s, m, { type: 'walkTo', x: X, z: lz });
         while (s.tick() - tw < 40) {
             const p = s.sdk.getState()!.player!;
-            if (p.worldX === X && p.worldZ === lz) break;
+            if (Math.max(Math.abs(p.worldX - X), Math.abs(p.worldZ - lz)) <= 1 || (s.tick() - tw > 3 && !(p as any).isMoving && lastPos === p.worldX * 1e5 + p.worldZ)) break;
+            lastPos = p.worldX * 1e5 + p.worldZ;
             await tick(s);
         }
         walkTicks += s.tick() - tw;

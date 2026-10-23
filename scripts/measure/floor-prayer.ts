@@ -42,7 +42,8 @@ try {
             }
             k++;
             await tick(s);
-            stall = inv(s).filter(i => i.id === bone).length < before ? 0 : stall + 1;
+            // A level-up page blocks bury (the op waits for the modal); a tick spent closing it is not a stall.
+            stall = inv(s).filter(i => i.id === bone).length < before || dialogOpen(s) ? 0 : stall + 1;
         }
         const buried = n0 - inv(s).filter(i => i.id === bone).length;
         buryTicks += s.tick() - tp;

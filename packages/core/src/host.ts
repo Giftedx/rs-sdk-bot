@@ -124,8 +124,11 @@ async function shareLocIndex(): Promise<void> {
     const memo = new Map<string, Promise<unknown>>();
     L.load = (opts: { cacheDir: string; versionlistCrc: number }) => {
         const k = `${opts.cacheDir}|${opts.versionlistCrc >>> 0}`;
-        let p = memo.get(k);
-        if (!p) { p = orig(opts); memo.set(k, p); p.catch(() => memo.delete(k)); }
+        const hit = memo.get(k);
+        if (hit) return hit;
+        const p: Promise<unknown> = orig(opts);
+        memo.set(k, p);
+        p.catch(() => memo.delete(k));
         return p;
     };
     L.__hostShared = true;

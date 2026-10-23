@@ -82,6 +82,31 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Waterfall Quest from step 6: inside the falls at the key crate (2589,9888), %waterfall_quest (varp 65) = 5,
     // Glarial's amulet (295), urn (296), 6 each of air, earth and water runes, 10 lobsters. Tests the fire giant crossing.
     quest_waterfall_falls: { position: { x: 2589, z: 9887, level: 0 }, varps: { 65: 5 }, inventory: [{ id: 295, count: 1 }, { id: 296, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 10 }, () => ({ id: 379, count: 1 }))] },
+    // Dwarf Cannon (scripts/generated/dwarfcannon.ts): beside the Dwarf Commander (lawgof2 spawn 2571,3463, maps/m40_54.jm2)
+    // with Haggis's levels right after Waterfall in the planner order (bun packages/planner/src/haggis-cli.ts --order:
+    // Waterfall is activity 28, after the supply boards, Thieving, Magic, Woodcutting, Fishing, Mining, the Grand Tree and
+    // Monkey Madness; Attack 1.89M and Strength 1.22M XP, Defence 500,000 = 89, Hitpoints 876,154 = 97, Agility 76, Ranged 1).
+    // Crafting and Smithing 99 make every cannon repair roll succeed (mcannon_broken_cannon.rs2:89-96). Worn: the
+    // combat_* rune set. Pack: the 8 lobsters left after Waterfall, 500 coins, and runes for Falador (1 water, 3 air,
+    // 1 law) and Camelot (5 air, 1 law) teleports, which cut the Nulodion trip from 741 + 741 tiles to 154 + 265.
+    ...((): Record<string, SaveConfig> => {
+        const skills: Record<string, number> = { Attack: 99, Strength: 99, Defence: 89, Hitpoints: 97, Agility: 76 };
+        for (const k of ['Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Thieving', 'Runecraft']) skills[k] = 99;
+        const equipment = [[1163, 0], [1725, 2], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
+        return {
+            quest_dwarfcannon: {
+                position: { x: 2572, z: 3464, level: 0 }, skills, equipment, coins: 500,
+                inventory: [{ id: 563, count: 2 }, { id: 556, count: 8 }, { id: 555, count: 1 }, ...Array.from({ length: 8 }, () => ({ id: 379, count: 1 }))],
+            },
+            // Cannon session after the quest: the same account at the Gnome battlefield (multiway, maps/multiway.csv "gnome
+            // battlefield"; 23 khazard_troop + 16 khazard_troop_spearmen, maps/m39_50.jm2), %mcannon (varp 0) = 11,
+            // %ownedmcannon (varp 4) = -1, cannon base/stand/barrels/furnace (6/8/10/12), 1,000 cannonballs (2), 16 lobsters.
+            quest_dwarfcannon_gb: {
+                position: { x: 2525, z: 3242, level: 0 }, skills, equipment, varps: { 0: 11, 4: -1 },
+                inventory: [6, 8, 10, 12].map(id => ({ id, count: 1 })).concat([{ id: 2, count: 1000 }], Array.from({ length: 16 }, () => ({ id: 379, count: 1 }))),
+            },
+        };
+    })(),
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).
@@ -212,9 +237,11 @@ export const PRESETS: Record<string, SaveConfig> = {
     // (345), trout (335), salmon (331) with spares for burns; 400 grapes (1987) and 400 jugs of water (1937) banked.
     floor_cooking: {
         position: { x: 3092, z: 3243, level: 0 },
-        inventory: [{ id: 590, count: 1 }, { id: 1511, count: 1 }, ...[327, 327, 327, 345, 345, 345, 345, 345, 335, 335, 335, 335, 335, 331, 331, 331, 331, 331, 331, 331].map(id => ({ id, count: 1 }))],
+        inventory: [{ id: 590, count: 1 }, { id: 1511, count: 1 }, ...[327, 327, 327, 327, 327, 327, 327, 327, 327, 327, 345, 345, 345, 345, 345, 335, 335, 335, 335, 335, 331, 331, 331, 331, 331].map(id => ({ id, count: 1 }))],
         bank: [{ id: 1987, count: 400 }, { id: 1937, count: 400 }],
     },
+    // Wine probe (research/supply-floors.md, Cooking): Cooking 35 at Draynor bank, 40 grapes + 40 jugs of water banked.
+    floor_wine35: { position: { x: 3092, z: 3243, level: 0 }, skills: { Cooking: 35 }, bank: [{ id: 1987, count: 40 }, { id: 1937, count: 40 }] },
 };
 
 // The engine writes the save on logout, so a preset written while logged in is lost.

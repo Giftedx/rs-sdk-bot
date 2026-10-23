@@ -1,6 +1,261 @@
 {
- "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward.",
+ "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward. Travel: `at` is the activity's place (a key of `places`, 'anywhere' for inventory work or trades, 'bank' for the nearest bank), `endAt` where it ends, `via` places it visits in order, `bankTrips` round trips to the nearest bank; legs come from haggis-travel.json (bun packages/planner/src/travel-gen.ts). `out` marks a row that relies on a content bug: it is never scheduled.",
  "updated": "2026-10-23",
+ "places": {
+  "lumbridge-spawn": {
+   "x": 3222,
+   "z": 3218,
+   "note": "tutorial skip lands here (research/crafting-board.md); Lumbridge men for pickpocketing"
+  },
+  "lumbridge-kitchen": {
+   "x": 3211,
+   "z": 3215,
+   "site": "range:lumbridge:0",
+   "note": "cook npc 3209,3215 and range:lumbridge:0 = cooksquestrange (quest_cook.rs2:93) (knowledge/ubermouse/world.json)"
+  },
+  "port-sarim-dock": {
+   "x": 3029,
+   "z": 3217,
+   "note": "Port Sarim seaman (research/walking.md legs)"
+  },
+  "musa-point": {
+   "x": 2956,
+   "z": 3146,
+   "island": {
+    "id": "karamja",
+    "port": "port-sarim-dock",
+    "landing": "musa-point",
+    "boatTicks": 18,
+    "source": "research/walking.md boat talk: 18, 20, 17 ticks from the Port Sarim seaman to the Musa Point deck (MEASURED practice)"
+   },
+   "note": "Karamja boat landing (research/walking.md)"
+  },
+  "port-sarim-monks": {
+   "x": 3048,
+   "z": 3236,
+   "note": "Entrana monks at Port Sarim (OSRS position, not verified in world.json)"
+  },
+  "entrana-dock": {
+   "x": 2834,
+   "z": 3335,
+   "island": {
+    "id": "entrana",
+    "port": "port-sarim-monks",
+    "landing": "entrana-dock",
+    "boatTicks": 18,
+    "source": "ESTIMATE: same sail.rs2 p_delay(7) voyage as the Karamja boat (research/walking.md)"
+   },
+   "note": "Entrana landing (OSRS position, not verified in world.json)"
+  },
+  "mortton": {
+   "x": 3489,
+   "z": 3288,
+   "note": "Mort'ton (OSRS position, not verified)"
+  },
+  "varrock-west-anvil": {
+   "x": 3187,
+   "z": 3424,
+   "site": "anvil:varrock:0",
+   "note": "anvil:varrock:0, nearest bank Varrock West 8 run ticks (knowledge/ubermouse/world.json)"
+  },
+  "mage-arena-lever": {
+   "x": 3090,
+   "z": 3956,
+   "note": "Mage Arena lever, Wilderness (OSRS position, not verified)"
+  },
+  "dimintheis": {
+   "x": 3279,
+   "z": 3404,
+   "note": "Family Crest start, npc dimintheis (knowledge/ubermouse/world.json)"
+  },
+  "air-ruins": {
+   "x": 2983,
+   "z": 3291,
+   "site": "rc-ruins:asgarnia:1",
+   "note": "rc-ruins:asgarnia:1 (knowledge/ubermouse/world.json)"
+  },
+  "mind-ruins": {
+   "x": 2980,
+   "z": 3513,
+   "site": "rc-ruins:asgarnia:0",
+   "note": "rc-ruins:asgarnia:0 (knowledge/ubermouse/world.json)"
+  },
+  "water-ruins": {
+   "x": 3183,
+   "z": 3164,
+   "site": "rc-ruins:lumbridge-swamp:0",
+   "note": "rc-ruins:lumbridge-swamp:0 (knowledge/ubermouse/world.json)"
+  },
+  "earth-ruins": {
+   "x": 3305,
+   "z": 3472,
+   "site": "rc-ruins:misthalin:0",
+   "note": "rc-ruins:misthalin:0 (knowledge/ubermouse/world.json)"
+  },
+  "fire-ruins": {
+   "x": 3312,
+   "z": 3253,
+   "site": "rc-ruins:kharidian-desert:0",
+   "note": "rc-ruins:kharidian-desert:0 (knowledge/ubermouse/world.json)"
+  },
+  "body-ruins": {
+   "x": 3051,
+   "z": 3444,
+   "site": "rc-ruins:asgarnia:2",
+   "note": "rc-ruins:asgarnia:2 (knowledge/ubermouse/world.json)"
+  },
+  "nature-ruins": {
+   "x": 2867,
+   "z": 3018,
+   "site": "rc-ruins:karamja:0",
+   "island": {
+    "id": "karamja",
+    "port": "port-sarim-dock",
+    "landing": "musa-point",
+    "boatTicks": 18,
+    "source": "research/walking.md boat talk: 18, 20, 17 ticks from the Port Sarim seaman to the Musa Point deck (MEASURED practice)"
+   },
+   "note": "rc-ruins:karamja:0 (knowledge/ubermouse/world.json)"
+  },
+  "law-ruins": {
+   "x": 2857,
+   "z": 3379,
+   "site": "rc-ruins:entrana:0",
+   "island": {
+    "id": "entrana",
+    "port": "port-sarim-monks",
+    "landing": "entrana-dock",
+    "boatTicks": 18,
+    "source": "ESTIMATE: same sail.rs2 p_delay(7) voyage as the Karamja boat (research/walking.md)"
+   },
+   "note": "rc-ruins:entrana:0 (knowledge/ubermouse/world.json)"
+  },
+  "ardougne-market": {
+   "x": 2662,
+   "z": 3305,
+   "note": "East Ardougne market: knights, guards (research/thieving-ladder.md)"
+  },
+  "draynor-willows": {
+   "x": 3086,
+   "z": 3232,
+   "site": "tree:draynor-willows:0",
+   "note": "tree:draynor-willows:0, oaks and willows (knowledge/ubermouse/world.json)"
+  },
+  "barbarian-fly-spot": {
+   "x": 3103,
+   "z": 3424,
+   "site": "fishing-spot:barbarian-village-fishing:0",
+   "note": "fishing-spot:barbarian-village-fishing:0 (knowledge/ubermouse/world.json)"
+  },
+  "catherby-shore": {
+   "x": 2842,
+   "z": 3432,
+   "site": "fishing-spot:kandarin:8",
+   "note": "fishing-spot:kandarin:8 lobster and harpoon (knowledge/ubermouse/world.json)"
+  },
+  "almera": {
+   "x": 2522,
+   "z": 3498,
+   "note": "Waterfall Quest start, npc almera_waterfall_quest (knowledge/ubermouse/world.json)"
+  },
+  "baxtorian-falls": {
+   "x": 2511,
+   "z": 3463,
+   "note": "Waterfall Quest end, outside the falls (ESTIMATE)"
+  },
+  "bolren": {
+   "x": 2542,
+   "z": 3169,
+   "note": "Tree Gnome Village, npc king_bolren (knowledge/ubermouse/world.json)"
+  },
+  "gnome-course": {
+   "x": 2474,
+   "z": 3436,
+   "site": "agility-course:gnome-agility-course:0",
+   "note": "agility-course:gnome-agility-course:0 (knowledge/ubermouse/world.json)"
+  },
+  "narnode": {
+   "x": 2466,
+   "z": 3497,
+   "note": "Grand Tree, npc grandtree_narnode (knowledge/ubermouse/world.json)"
+  },
+  "romeo": {
+   "x": 3211,
+   "z": 3425,
+   "note": "first short quest, npc romeo (knowledge/ubermouse/world.json)"
+  },
+  "falador-castle": {
+   "x": 2965,
+   "z": 3343,
+   "note": "Black Knights' Fortress hand-in, Sir Amik (OSRS position, not verified)"
+  },
+  "witch-house": {
+   "x": 2928,
+   "z": 3456,
+   "note": "Witch's House, the boy (OSRS position, not verified)"
+  },
+  "guildmaster": {
+   "x": 3191,
+   "z": 3362,
+   "note": "Dragon Slayer start and end, npc guildmaster (knowledge/ubermouse/world.json)"
+  },
+  "thormac": {
+   "x": 2702,
+   "z": 3405,
+   "note": "Scorpion Catcher, npc thormac is on level 3 of the tower; ground tile used (knowledge/ubermouse/world.json)"
+  },
+  "falador-white-knights": {
+   "x": 2970,
+   "z": 3340,
+   "note": "melee measured on Falador White Knights (research/combat-measure.md)"
+  },
+  "lawgof": {
+   "x": 2567,
+   "z": 3460,
+   "note": "Dwarf Cannon, Captain Lawgof (OSRS position, not verified)"
+  },
+  "barbarian-course": {
+   "x": 2550,
+   "z": 3554,
+   "note": "agility-course:barbarian-agility-course:0 (knowledge/ubermouse/world.json)"
+  },
+  "wilderness-course": {
+   "x": 3003,
+   "z": 3938,
+   "note": "agility-course:wilderness-agility-course:0 (knowledge/ubermouse/world.json)"
+  },
+  "camelot": {
+   "x": 2764,
+   "z": 3515,
+   "note": "Merlin's Crystal and Holy Grail, npc king_arthur (knowledge/ubermouse/world.json)"
+  },
+  "exam-centre": {
+   "x": 3363,
+   "z": 3341,
+   "note": "The Dig Site, npc examiner (knowledge/ubermouse/world.json)"
+  },
+  "varrock-east-iron": {
+   "x": 3286,
+   "z": 3365,
+   "site": "rock:varrock-east-mine:0",
+   "note": "rock:varrock-east-mine:0 iron (the 3-rock spot is not named; ESTIMATE) (knowledge/ubermouse/world.json)"
+  },
+  "lava-maze-runite": {
+   "x": 3059,
+   "z": 3884,
+   "note": "Lava Maze runite rocks (research/boards-special.md)"
+  },
+  "lady-servil": {
+   "x": 2566,
+   "z": 3199,
+   "note": "Fight Arena, npc lady_servil (knowledge/ubermouse/world.json)"
+  },
+  "caroline": {
+   "x": 2716,
+   "z": 3302,
+   "note": "Sea Slug, npc caroline (knowledge/ubermouse/world.json)"
+  }
+ },
  "activities": [
   {
    "id": "tutorial",
@@ -15,11 +270,12 @@
     "source": "research/crafting-board.md (fresh account, 10 ticks, lands at Lumbridge)"
    },
    "evidence": "MEASURED",
-   "source": "research/crafting-board.md (fresh account, 10 ticks, lands at Lumbridge)"
+   "source": "research/crafting-board.md (fresh account, 10 ticks, lands at Lumbridge)",
+   "at": "lumbridge-spawn"
   },
   {
    "id": "trade-start",
-   "label": "Trade 1: all stackable early supplies (wine notes, cocktails, fletching tips)",
+   "label": "Trade 1: all stackable early supplies (wine notes, Cook's Assistant items, stew and shrimp, fletching tips)",
    "serves": [
     "cooking",
     "fletching"
@@ -41,44 +297,59 @@
      "count": 600
     },
     {
-     "item": "unfinished pineapple punch (stage 3)",
-     "count": 8
-    },
-    {
-     "item": "orange slices",
-     "count": 8
-    },
-    {
      "item": "grapes",
      "count": 1
     },
     {
      "item": "jug of water",
      "count": 1
+    },
+    {
+     "item": "egg",
+     "count": 1
+    },
+    {
+     "item": "bucket of milk",
+     "count": 1
+    },
+    {
+     "item": "pot of flour",
+     "count": 1
+    },
+    {
+     "item": "uncooked stew",
+     "count": 3
+    },
+    {
+     "item": "raw shrimps",
+     "count": 2
     }
    ],
    "suppliesLadder": {
     "skill": "fletching",
     "margin": 1
-   }
+   },
+   "at": "anywhere"
   },
   {
    "id": "bank-wine",
-   "label": "Open bank, deposit wine notes",
+   "label": "Walk to the nearest bank, deposit the wine notes, make 1 wine at Cooking 35 (starts the 20-tick timer)",
    "serves": [
     "cooking"
    ],
    "ticks": {
-    "floor": 2,
-    "realistic": 5,
+    "floor": 3,
+    "realistic": 6,
     "evidence": "MEASURED",
-    "source": "realistic: bank open 3 + deposit 2 (research/crafting-board.md cycle 1); floor: booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ)"
+    "source": "deposit: realistic bank open 3 + deposit 2 (research/crafting-board.md cycle 1), floor booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ); + 1 tick for grapes on jug (wine.rs2:7-20, no delay, Cooking 35 checked at :8)"
    },
    "requires": [
-    "trade-start"
+    "trade-start",
+    "cook-range-35"
    ],
    "evidence": "MEASURED",
-   "source": "realistic: bank open 3 + deposit 2 (research/crafting-board.md cycle 1); floor: booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ)"
+   "source": "deposit: realistic bank open 3 + deposit 2 (research/crafting-board.md cycle 1), floor booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ); + 1 tick for grapes on jug (wine.rs2:7-20, no delay, Cooking 35 checked at :8)",
+   "at": "bank"
   },
   {
    "id": "cook-35",
@@ -104,7 +375,64 @@
    },
    "evidence": "CODE-READ",
    "source": "gnome_cocktail_finish.rs2:28-29 stat_advance(cooking,600) = 1,500 XP; 10,847 XP for 35; wine.rs2:6-20 make_wine needs 35",
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "out": {
+    "reason": "gnome_cocktail_finish.rs2:29-30 stat_advance(cooking,600) with no Cooking level check (content bug, research/rival-gap-list.md section 5 item 3)",
+    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
+    "replacement": "cooks-assistant + cook-range-35"
+   },
+   "at": "anywhere"
+  },
+  {
+   "id": "cooks-assistant",
+   "label": "Cook's Assistant (Cooking 1 -> 30, 7,500 XP); egg, milk, flour from trade 1",
+   "serves": [
+    "cooking",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 12,
+    "realistic": 28,
+    "evidence": "ESTIMATE",
+    "source": "floor = rival expected step 12 (research/rival-gap-list.md:118, bleugreen/rs-sdk@3bd2ab0a); realistic = about 13 dialogue pages (quest_cook.rs2:1-90) at 2 ticks per page (research/walking.md boat talk) + 2"
+   },
+   "lump": true,
+   "xp": {
+    "cooking": 7500
+   },
+   "qp": 1,
+   "requires": [
+    "trade-start"
+   ],
+   "evidence": "CODE-READ",
+   "source": "quest_cook.rs2:87-91 stat_advance(cooking,3000) = 7,500 XP at x25 = level 30; no level requirement",
+   "at": "lumbridge-kitchen"
+  },
+  {
+   "id": "cook-range-35",
+   "label": "Cook 1 uncooked stew, then 1 raw shrimp, on the Lumbridge cook-o-matic range (Cooking 30 -> 35)",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 6,
+    "realistic": 9,
+    "evidence": "CODE-READ",
+    "source": "cooking.rs2:172 p_delay(1) = 3 ticks per item (research/tick-tricks-web.md rule 2); floor 2 cooks; realistic 3 tries: stew (level 25, 2,925 XP) succeeds 176/256 at level 30 on the cook-o-matic (cooking_generic.dbrow successchance_cookomatic 78,412; PlayerOps.ts:591-599), shrimp (750 XP) 271/256 = always at level 34; expected 2.45 tries"
+   },
+   "xp": {
+    "cooking": 3675
+   },
+   "requires": [
+    "cooks-assistant"
+   ],
+   "variant": {
+    "group": "cooking",
+    "option": "legal"
+   },
+   "evidence": "CODE-READ",
+   "source": "cooking.rs2:80 checks stat(cooking) >= levelrequired; cooksquestrange needs Cook's Assistant done (quest_cook.rs2:93-101); 7,500 + 2,925 + 750 = 11,175 >= 10,847 (Cooking 35)",
+   "at": "lumbridge-kitchen"
   },
   {
    "id": "wine-timer",
@@ -128,7 +456,7 @@
     "cooking": "to99"
    },
    "requires": [
-    "cook-35"
+    "bank-wine"
    ],
    "variant": {
     "group": "cooking",
@@ -136,7 +464,8 @@
    },
    "evidence": "MEASURED",
    "source": "research/cooking-board.md: 300 banked wines took 35 -> 96 in 25 ticks; timer 20 ticks (wine.rs2:22-70)",
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "at": "anywhere"
   },
   {
    "id": "relog",
@@ -159,7 +488,13 @@
     "trick": "loginWine"
    },
    "evidence": "MEASURED",
-   "source": "research/tricks-plan.md: 1 playtime tick per relog"
+   "source": "research/tricks-plan.md: 1 playtime tick per relog",
+   "out": {
+    "reason": "login arms the fermenting_wine timer with no Cooking check (wine.rs2:72-73, login.rs2:70); owner ruled it an exploit (owner-requests.md R10)",
+    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
+    "replacement": "cooks-assistant + cook-range-35 + bank-wine + wine-timer"
+   },
+   "at": "anywhere"
   },
   {
    "id": "login-wine",
@@ -191,7 +526,13 @@
     "trick": "loginWine"
    },
    "evidence": "MEASURED",
-   "source": "research/cooking-board.md: 99 at session tick 22, 2 runs, 600 wines, Cooking 1"
+   "source": "research/cooking-board.md: 99 at session tick 22, 2 runs, 600 wines, Cooking 1",
+   "out": {
+    "reason": "login arms the fermenting_wine timer with no Cooking check (wine.rs2:72-73, login.rs2:70); owner ruled it an exploit (owner-requests.md R10)",
+    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
+    "replacement": "cooks-assistant + cook-range-35 + bank-wine + wine-timer"
+   },
+   "at": "anywhere"
   },
   {
    "id": "fletch",
@@ -213,7 +554,8 @@
    ],
    "evidence": "CODE-READ",
    "source": "tick-tricks-web.md 16.2: 245 actions at 5/tick (arrows.rs2:61-85, darts.rs2); realistic +6 ticks for dropped inputs (ESTIMATE)",
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "at": "anywhere"
   },
   {
    "id": "craft",
@@ -245,7 +587,8 @@
     "skill": "crafting",
     "margin": 1.1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "at": "bank"
   },
   {
    "id": "herb",
@@ -272,7 +615,8 @@
     "skill": "herblore",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "at": "bank"
   },
   {
    "id": "fm-burn",
@@ -308,7 +652,8 @@
     "skill": "firemaking",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "at": "anywhere"
   },
   {
    "id": "mortton-oil",
@@ -332,7 +677,13 @@
     "trick": "sacredOil"
    },
    "evidence": "ESTIMATE",
-   "source": "quest stage 65 gate (quest_mortton.constant:31); quest time not measured"
+   "source": "quest stage 65 gate (quest_mortton.constant:31); quest time not measured",
+   "out": {
+    "reason": "only feeds fm-pyre (OUT)",
+    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
+    "replacement": "fm-burn"
+   },
+   "at": "mortton"
   },
   {
    "id": "fm-pyre",
@@ -368,7 +719,13 @@
      "item": "sacred oil (4)",
      "count": 666
     }
-   ]
+   ],
+   "out": {
+    "reason": "mortton_pyre.rs2:1-41 reads the Firemaking level and never checks it (research/rival-gap-list.md section 5 item 5)",
+    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
+    "replacement": "fm-burn"
+   },
+   "at": "mortton"
   },
   {
    "id": "prayer",
@@ -410,7 +767,8 @@
       "inside": "woodcut"
      }
     }
-   ]
+   ],
+   "at": "bank"
   },
   {
    "id": "smith",
@@ -446,7 +804,10 @@
     "skill": "smithing",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "at": "varrock-west-anvil",
+   "bankTrips": 32,
+   "bankTripsSource": "32 bank trips = 789 bars (SMITHING_TIERS ladder: bronze 34, iron 35, steel 95, mithril 280, adamantite 345) / 25 bars per inventory (hammer + 5 platebodies); the 913/1,100 rate has no walking"
   },
   {
    "id": "magic",
@@ -508,7 +869,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "bank"
   },
   {
    "id": "mage-arena",
@@ -548,7 +910,13 @@
       }
      }
     }
-   ]
+   ],
+   "out": {
+    "reason": "only feeds charge (OUT)",
+    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
+    "replacement": "magic"
+   },
+   "at": "mage-arena-lever"
   },
   {
    "id": "charge",
@@ -592,7 +960,13 @@
      "item": "air rune",
      "count": 2100
     }
-   ]
+   ],
+   "out": {
+    "reason": "charge.rs2:1-27 has no p_delay: 5 casts a tick (research/rival-gap-list.md section 5 item 2; lever charge-spam)",
+    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
+    "replacement": "magic (enchant ladder) or magic-43 + superheat + magic-top"
+   },
+   "at": "mage-arena-lever"
   },
   {
    "id": "crest",
@@ -617,7 +991,8 @@
     "option": "superheat"
    },
    "evidence": "ESTIMATE",
-   "source": "smelting.rs2:216 gauntlets; quest time not measured"
+   "source": "smelting.rs2:216 gauntlets; quest time not measured",
+   "at": "dimintheis"
   },
   {
    "id": "magic-43",
@@ -643,7 +1018,8 @@
     "option": "superheat"
    },
    "evidence": "ESTIMATE",
-   "source": "enchant ladder average below 43"
+   "source": "enchant ladder average below 43",
+   "at": "bank"
   },
   {
    "id": "superheat",
@@ -688,7 +1064,8 @@
      "item": "fire rune",
      "count": 2844
     }
-   ]
+   ],
+   "at": "bank"
   },
   {
    "id": "magic-top",
@@ -714,7 +1091,8 @@
     "option": "superheat"
    },
    "evidence": "ESTIMATE",
-   "source": "enchant 5: 78 XP / 3 ticks x25 = 650"
+   "source": "enchant 5: 78 XP / 3 ticks x25 = 650",
+   "at": "bank"
   },
   {
    "id": "runecraft",
@@ -758,6 +1136,16 @@
       }
      }
     }
+   ],
+   "at": "air-ruins",
+   "via": [
+    "mind-ruins",
+    "water-ruins",
+    "earth-ruins",
+    "fire-ruins",
+    "body-ruins",
+    "nature-ruins",
+    "law-ruins"
    ]
   },
   {
@@ -823,7 +1211,9 @@
       "rival-mm"
      ]
     }
-   ]
+   ],
+   "at": "lumbridge-spawn",
+   "endAt": "ardougne-market"
   },
   {
    "id": "woodcut",
@@ -871,7 +1261,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "draynor-willows"
   },
   {
    "id": "fish",
@@ -934,6 +1325,10 @@
       "rival-seaslug"
      ]
     }
+   ],
+   "at": "barbarian-fly-spot",
+   "via": [
+    "catherby-shore"
    ]
   },
   {
@@ -956,7 +1351,8 @@
     "tutorial"
    ],
    "evidence": "CODE-READ",
-   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)"
+   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)",
+   "at": "bank"
   },
   {
    "id": "thieving-25",
@@ -986,7 +1382,8 @@
       "rival-fight-arena"
      ]
     }
-   ]
+   ],
+   "at": "lumbridge-spawn"
   },
   {
    "id": "herblore-10",
@@ -1008,7 +1405,8 @@
     "tutorial"
    ],
    "evidence": "CODE-READ",
-   "source": "attack potion 625 XP x 5 per tick (brew_potion.struct); realistic adds a trade (ESTIMATE)"
+   "source": "attack potion 625 XP x 5 per tick (brew_potion.struct); realistic adds a trade (ESTIMATE)",
+   "at": "anywhere"
   },
   {
    "id": "waterfall",
@@ -1034,7 +1432,9 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "XP: quest_waterfall.rs2:491-492, measured 343,750 Attack + 343,750 Strength per run; ticks research/quest-plan.md"
+   "source": "XP: quest_waterfall.rs2:491-492, measured 343,750 Attack + 343,750 Strength per run; ticks research/quest-plan.md",
+   "at": "almera",
+   "endAt": "baxtorian-falls"
   },
   {
    "id": "tree",
@@ -1079,7 +1479,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "bolren"
   },
   {
    "id": "agility-25",
@@ -1101,7 +1502,8 @@
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "gnome lap XP (gnome_course.rs2) at about 50 ticks per lap (tick-tricks-web.md 8)"
+   "source": "gnome lap XP (gnome_course.rs2) at about 50 ticks per lap (tick-tricks-web.md 8)",
+   "at": "gnome-course"
   },
   {
    "id": "grandtree",
@@ -1157,7 +1559,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "narnode"
   },
   {
    "id": "qp-filler",
@@ -1212,7 +1615,9 @@
       }
      }
     }
-   ]
+   ],
+   "at": "romeo",
+   "endAt": "falador-castle"
   },
   {
    "id": "witch",
@@ -1253,7 +1658,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "witch-house"
   },
   {
    "id": "dragon",
@@ -1315,7 +1721,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "guildmaster"
   },
   {
    "id": "scorpion",
@@ -1363,7 +1770,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "thormac"
   },
   {
    "id": "str-top",
@@ -1409,7 +1817,8 @@
       "ranged": 0.6
      }
     }
-   ]
+   ],
+   "at": "falador-white-knights"
   },
   {
    "id": "att-top",
@@ -1449,7 +1858,8 @@
       "ranged": 0.6
      }
     }
-   ]
+   ],
+   "at": "falador-white-knights"
   },
   {
    "id": "cannon",
@@ -1483,7 +1893,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "lawgof"
   },
   {
    "id": "ranged",
@@ -1526,7 +1937,8 @@
      "item": "maple shortbow",
      "count": 1
     }
-   ]
+   ],
+   "at": "falador-white-knights"
   },
   {
    "id": "agility-52",
@@ -1558,7 +1970,9 @@
       ]
      }
     }
-   ]
+   ],
+   "at": "gnome-course",
+   "viaNote": "gnome course only: the Barbarian course needs Alfred Grimhand's Barcrawl (world.json reach of agility-course:barbarian-agility-course:0; outpost_gate.rs2:2)"
   },
   {
    "id": "agility",
@@ -1603,7 +2017,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "wilderness-course"
   },
   {
    "id": "merlin",
@@ -1645,7 +2060,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "camelot"
   },
   {
    "id": "grail",
@@ -1695,7 +2111,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "camelot"
   },
   {
    "id": "dig",
@@ -1740,7 +2157,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "exam-centre"
   },
   {
    "id": "mine",
@@ -1801,7 +2219,8 @@
       }
      }
     }
-   ]
+   ],
+   "at": "varrock-east-iron"
   },
   {
    "id": "def-top",
@@ -1846,7 +2265,8 @@
       "ranged": 0.6
      }
     }
-   ]
+   ],
+   "at": "falador-white-knights"
   },
   {
    "id": "hp-top",
@@ -1885,7 +2305,8 @@
       "ranged": 1.8
      }
     }
-   ]
+   ],
+   "at": "falador-white-knights"
   },
   {
    "id": "quests-rest",
@@ -1894,13 +2315,13 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 16000,
-    "realistic": 48000,
+    "floor": 15988,
+    "realistic": 47972,
     "evidence": "ESTIMATE",
-    "source": "145 QP over 68 quests (tick-tricks-web.md 15); the route quests give 54 QP, 88 more needed from about 40 quests; 400-1,200 ticks each, not measured"
+    "source": "145 QP over 68 quests (tick-tricks-web.md 15); the route quests give 54 QP, 88 more needed from about 40 quests; 400-1,200 ticks each, not measured; Cook's Assistant (1 QP, 12/28 ticks) moved to its own row"
    },
    "lump": true,
-   "qp": 88,
+   "qp": 87,
    "requires": [
     "dragon",
     "grail",
@@ -1918,14 +2339,15 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 14797,
-       "realistic": 44390,
+       "floor": 14786,
+       "realistic": 44365,
        "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 16000/48000"
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 15988/47972"
       }
      }
     }
-   ]
+   ],
+   "at": "anywhere"
   },
   {
    "id": "equip",
@@ -1950,7 +2372,8 @@
      "count": 1
     }
    ],
-   "pending": "replace with research/boards-special.md when it lands"
+   "pending": "replace with research/boards-special.md when it lands",
+   "at": "anywhere"
   },
   {
    "id": "bank-value",
@@ -1975,7 +2398,8 @@
      "count": 1
     }
    ],
-   "pending": "replace with research/boards-special.md when it lands"
+   "pending": "replace with research/boards-special.md when it lands",
+   "at": "bank"
   },
   {
    "id": "runite",
@@ -1994,7 +2418,8 @@
    ],
    "evidence": "ESTIMATE",
    "source": "mine.dbrow:157-160 roll 1..18, respawn 2,400 x (4000-players)/4000 ticks; Wilderness PvP risk; #1 count unknown",
-   "pending": "replace with research/boards-special.md when it lands"
+   "pending": "replace with research/boards-special.md when it lands",
+   "at": "lava-maze-runite"
   },
   {
    "id": "rival-fight-arena",
@@ -2024,7 +2449,8 @@
     "role": "add"
    },
    "evidence": "ESTIMATE",
-   "source": "XP: quest_arena.rs2:270-271 stat_advance(attack, 121750), (thieving, 21750) (CODE-READ); ticks rival (ESTIMATE for us); its 2 QP stay inside quests-rest (the 142-QP total), so qp is 0 here"
+   "source": "XP: quest_arena.rs2:270-271 stat_advance(attack, 121750), (thieving, 21750) (CODE-READ); ticks rival (ESTIMATE for us); its 2 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
+   "at": "lady-servil"
   },
   {
    "id": "rival-mm",
@@ -2059,7 +2485,8 @@
     "role": "add"
    },
    "evidence": "ESTIMATE",
-   "source": "XP: mm_daero.rs2:294-302 option 1 (CODE-READ); gate %grandtree and %treequest complete (king_narnode.rs2:7-10 per rival, not traced by us); ticks rival; its 3 QP stay inside quests-rest (the 142-QP total), so qp is 0 here"
+   "source": "XP: mm_daero.rs2:294-302 option 1 (CODE-READ); gate %grandtree and %treequest complete (king_narnode.rs2:7-10 per rival, not traced by us); ticks rival; its 3 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
+   "at": "narnode"
   },
   {
    "id": "rival-seaslug",
@@ -2090,7 +2517,8 @@
     "role": "add"
    },
    "evidence": "ESTIMATE",
-   "source": "XP: caroline.rs2:45 stat_advance(fishing, 71750) (CODE-READ); Firemaking 30 gate quest_seaslug.rs2:43 (CODE-READ); ticks rival; its 1 QP stay inside quests-rest (the 142-QP total), so qp is 0 here"
+   "source": "XP: caroline.rs2:45 stat_advance(fishing, 71750) (CODE-READ); Firemaking 30 gate quest_seaslug.rs2:43 (CODE-READ); ticks rival; its 1 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
+   "at": "caroline"
   }
  ],
  "tickMs": {

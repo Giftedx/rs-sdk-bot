@@ -17,7 +17,7 @@ try {
     // Part 1: fire.
     const tf = s.tick();
     await send(s, m, { type: 'walkTo', x: X, z: Z });
-    while (s.tick() - tf < 40) { const p = s.sdk.getState()!.player!; if (p.worldX === X && p.worldZ === Z) break; await tick(s); }
+    while (s.tick() - tf < 40) { const p = s.sdk.getState()!.player!; if (Math.max(Math.abs(p.worldX - X), Math.abs(p.worldZ - Z)) <= 1) break; await tick(s); }
     const tl = s.tick();
     const tinder = inv(s).find(i => i.id === objId('tinderbox'))!, log = inv(s).find(i => i.id === objId('logs'))!;
     await send(s, m, { type: 'useItemOnItem', sourceSlot: tinder.slot, targetSlot: log.slot });
