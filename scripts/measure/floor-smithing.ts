@@ -43,8 +43,10 @@ try {
         const need = new Map<number, number>();
         for (const j of jobs.slice(i, i + n)) need.set(j.bar, (need.get(j.bar) ?? 0) + j.bars);
         for (const [id, c] of need) {
-            const b = bankItems(s).find(x => x.id === id);
-            if (!b || b.count < c) { console.log(`WARN bank short of ${id}`); ok = false; break; }
+            let b = bankItems(s).find(x => x.id === id);
+            // The bank list can lag the interface by a tick: look again before giving up.
+            for (let r = 0; r < 3 && (!b || b.count < c); r++) { await tick(s); b = bankItems(s).find(x => x.id === id); }
+            if (!b || b.count < c) { console.log(`WARN bank short of ${id}: have ${b?.count ?? 0} need ${c}; open=${bankOpen(s)} bank=${bankItems(s).map(x => x.id + ':' + x.count).join(',')} inv=${inv(s).map(x => x.id).join(',')}`); ok = false; break; }
             await withdrawN(s, m, b.slot, c);
         }
         await send(s, m, { type: 'closeModal' });

@@ -2,13 +2,13 @@
 // firemaking.rs2:98-116: the first attempt rolls 3 ticks later, every later roll 4 ticks after the last success or
 // failure, success = stat_random(64, 512). The push after a success (p_delay(0)) moves the player west, east, south
 // or north. Cycle: clear level-up pages, booth, withdraw logs, close, walk to a line start, then per log: tinderbox
-// on log, wait for the XP. Usage: bun scripts/measure/floor-firemaking.ts <bot> [x=3099] [z=3249] [maxLogs=0]
+// on log, wait for the XP. Usage: bun scripts/measure/floor-firemaking.ts <bot> [x=3101] [z=3249] [maxLogs=0]
 import { openBot, finish } from '../../packages/core/src/bot';
 import { FIREMAKING, ladder, objId } from './floor-bands';
-import { meter, send, tick, xp, level, inv, report, band, clearDialogs, openBank, bankOpen, bankItems, withdrawN, dialogOpen } from './floor-lib';
+import { meter, send, tick, xp, level, inv, report, band, clearDialogs, openBank, bankOpen, bankItems, withdrawN, dialogOpen, nearestLoc } from './floor-lib';
 
 const [bot, xArg, zArg, maxArg] = process.argv.slice(2);
-const X = Number(xArg ?? 3099), Z = Number(zArg ?? 3249);
+const X = Number(xArg ?? 3101), Z = Number(zArg ?? 3249);
 const maxLogs = Number(maxArg ?? 0);
 const s = await openBot(bot!);
 try {
@@ -27,6 +27,11 @@ try {
         const tc = s.tick();
         await clearDialogs(s, m, 'close');
         const tb = s.tick();
+        // The line ends about 27 tiles west of the start, out of sight of the booth: run back first.
+        if (!nearestLoc(s, /bank booth/i, /use-quickly/i)) {
+            await send(s, m, { type: 'walkTo', x: 3092, z: 3246 });
+            while (!nearestLoc(s, /bank booth/i, /use-quickly/i) && s.tick() - tb < 40) await tick(s);
+        }
         if (await openBank(s, m) < 0) { console.log('WARN bank did not open'); ok = false; break; }
         const n = Math.min(27, jobs.length - i);
         const need = new Map<number, number>();
@@ -65,7 +70,7 @@ try {
             const t1 = s.tick();
             let lit = false;
             // A failed roll retries on its own (p_opobj(4)); only resend if the log is still in the pack.
-            while (s.tick() - t1 < 60) {
+            while (s.tick() - t1 < 120) {
                 await tick(s);
                 if (xp(s, 'Firemaking') > x0) { lit = true; break; }
                 const msgs = ((s.sdk.getState() as any)?.gameMessages ?? []).slice(-1).map((g: any) => g.text).join('');

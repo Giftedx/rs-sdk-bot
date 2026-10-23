@@ -227,3 +227,99 @@ This bank loop loses to the #1 (1,337) by 256 ticks. Cuts, not yet measured:
   MEASURED parts.
 
 Supplies: bronze bars 19, iron 36, steel 95, mithril 280, adamantite 340.
+
+## Prayer
+
+| Method | Band | Actions | XP per action (x25) |
+|---|---|---|---|
+| Bury dragon bones | 1-99 | 555 | 1,800 |
+
+Content: `skill_prayer/configs/bones.obj` (`bone_exp` 720 tenths), `scripts/bury_bone.rs2` (`p_delay(0)`, the bone
+is deleted **after** the delay, no level check). No altar or Ectofuntus bonus in rev 289 (`tick-tricks-web.md` 10).
+Big bones (15 XP) would need 2,663 bones and 5,400+ ticks.
+
+Measured (preset `floor_prayer`, Draynor bank, 560 dragon bones banked): **1,260, 1,260, 1,260** ticks.
+
+| Input pattern | Ticks per bone (28 bones) |
+|---|---|
+| `burst`: bury on 5 different bone slots each tick | **2.04** (57 ticks per 28) |
+| `every`: bury on the first bone slot each tick | 3.0 (84 ticks per 28) |
+| `two`: bury every 2 ticks | 4.0 (111 ticks per 28) |
+
+The `every` and `two` patterns lose because the bone under the delay is still in its slot (it is deleted after
+`p_delay(0)`), so a second input on the same slot is wasted. A pro clicks the next bone.
+
+| Item | Measured (burst, full run) |
+|---|---|
+| Bury | 1,130 ticks for 555 bones (2.04 per bone) |
+| Bank trip (booth, withdraw-All 28 = 1 input, close) | 121 ticks for 20 trips (6 per trip) |
+| Level-up pages | 9 ticks per run |
+
+`FLOOR Prayer level=99 xp=999000 ticks=1260 actions=555 ... levelTicks=9 levelClears=3 bankTicks=121 bankCycles=20 mode=burst buryTicks=1130`.
+
+Supplies: 555 dragon bones (0 GE sellers live, `research/board-ranking.md`).
+
+## Magic
+
+| Method | Band | Actions | XP per action (x25) |
+|---|---|---|---|
+| Lvl-1 enchant, sapphire ring | 7-27 | 12 | 437.5 |
+| Lvl-2 enchant, emerald ring | 27-49 | 27 | 925 |
+| Lvl-3 enchant, ruby ring | 49-57 | 16 | 1,475 |
+| Lvl-4 enchant, diamond ring | 57-68 | 37 | 1,675 |
+| Lvl-5 enchant, strung dragonstone amulet | 68-99 | 453 | 1,950 |
+
+Content: `skill_magic/configs/magic_spells.dbrow` (levels 7/27/49/57/68, experience 175-780 tenths, runes),
+`scripts/spells/enchant.rs2` (XP on the cast, then `p_delay(1)`). Low alch (21-27) and superheat (43-49) are left
+out: they save 3-8 casts and superheat needs Smithing 15.
+
+**Magic 1-7 is not a supply band.** Every spell below 7 needs a target (strikes, confuse). ESTIMATE: a few
+casts, or quest XP.
+
+Measured (preset `floor_magic`, Magic 7, Draynor bank, runes as stacks in the pack): **1,762, 1,765** ticks from
+Magic 7 to 99 (run 3 pending).
+
+| Item | Measured |
+|---|---|
+| Cast | 2.96 ticks per cast (1,611 ticks for 545 casts, `burst`: 3 cast inputs on 3 items per tick) |
+| Trip (23 items: 28 slots - 5 rune stacks) | 74 ticks: bank 6, cast 68 |
+| Bank | 151 ticks for 24 trips |
+| XP per tick, lvl-5 band | 605 |
+
+`FLOOR Magic level=99 xp=999732 ticks=1762 actions=545 ... bankTicks=151 bankCycles=24 mode=burst castTicks=1611 ticksPerCast=2.96`.
+
+Supplies: sapphire rings 12, emerald rings 27, ruby rings 16, diamond rings 37, strung dragonstone amulets 453,
+cosmic runes 545, water runes 6,807, earth runes 7,165, air runes 81, fire runes 80. A staff of earth or water
+would free a slot (24 per trip) and the rune counts.
+
+## Cooking (normal method, no login timer)
+
+| Method | Band | Actions | XP per action (x25) |
+|---|---|---|---|
+| Raw sardine on a fire (burns) | 1-5 | 1 + burns | 1,000 |
+| Raw herring | 5-15 | 3 + burns | 1,250 |
+| Raw trout | 15-25 | 3 + burns | 1,750 |
+| Raw salmon | 25-35 | 4 + burns | 2,250 |
+| Hand-made wine (grapes on jug of water) | 35-99 | 366 (60-100% ferment) | 2,750 |
+
+Content: `skill_cooking/scripts/cooking.rs2:99-131` (`p_delay(1)` per item, then the raw item is deleted),
+`configs/cooking_source/cooking_generic.dbrow` (levels, XP, `successchance`), `scripts/cooking_inv/scripts/wine/wine.rs2`
+(instant, Cooking 35, `settimer(fermenting_wine, 20)`, ferments pack and bank at `stat_random(48, 352)`).
+
+Measured (preset `floor_cooking`, Draynor bank, fire lit 6 tiles north): **339, 375, 343** ticks to 99.
+
+| Item | Measured |
+|---|---|
+| Fire | 6-22 ticks to light (Firemaking 1, 25% roll) |
+| Fish 1-35 | 32-44 ticks: 7 cooked + 1-4 burnt, 4.0 ticks per item (one input per tick on the first fish slot; the item is deleted after the delay, so 3 is possible) |
+| Wine 35-99 | 376 wines in 271 ticks: 29 trips of 13 (tinderbox kept), 9-tick cycle (bank 5, make 4) |
+| Timer | XP lands 20 ticks after the last wine (`timerWait=20`, all 3 runs) |
+
+`FLOOR Cooking level=99 xp=1046500 ticks=356 ... bankTicks=152 bankCycles=29 fishTicks=32 wineTicks=291 timerWait=20 wines=376 ticksTo99=339`.
+
+The #1 (38) used the login timer. By the normal method Cooking is about 300 ticks late. The schedule model's legal
+route (helpers bank wine notes, `haggis-boards.json` `bank-wine` + `wine-timer`) avoids the 271 make ticks; this
+file measured only the timer part of it (20 ticks).
+
+Supplies: raw sardine 1, herring 3, trout 3, salmon 4 (plus spares for burns; the runs burnt 3-10), 366 grapes,
+366 jugs of water (376 made; 17 more than needed).

@@ -454,9 +454,9 @@
    },
    "background": {
     "floor": 20,
-    "realistic": 22,
+    "realistic": 20,
     "evidence": "MEASURED",
-    "source": "research/cooking-board.md: 300 banked wines took 35 -> 96 in 25 ticks; timer 20 ticks (wine.rs2:22-70)"
+    "source": "research/supply-floors.md: Cooking 99 lands 20 ticks after the last wine (timerWait=20, 3 runs, 376 wines); a modal (bank, level-up page) holds the NORMAL timer until it closes (probe: 30 ticks, xp+0, bank open)"
    },
    "xp": {
     "cooking": "to99"
@@ -469,8 +469,7 @@
     "option": "legal"
    },
    "evidence": "MEASURED",
-   "source": "research/cooking-board.md: 300 banked wines took 35 -> 96 in 25 ticks; timer 20 ticks (wine.rs2:22-70)",
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "source": "research/supply-floors.md: Cooking 99 lands 20 ticks after the last wine (timerWait=20, 3 runs, 376 wines); a modal (bank, level-up page) holds the NORMAL timer until it closes (probe: 30 ticks, xp+0, bank open)",
    "at": "anywhere"
   },
   {
@@ -737,10 +736,10 @@
     "prayer"
    ],
    "ticks": {
-    "floor": 1169,
-    "realistic": 1300,
-    "evidence": "CODE-READ",
-    "source": "bury_bone.rs2:10-15 p_delay(0); sim 1,169 (xp-per-tick.md); realistic adds bank opens (ESTIMATE)"
+    "floor": 1260,
+    "realistic": 1260,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: 1,260, 1,260, 1,260 ticks Prayer 1 -> 99 on practice (scripts/measure/floor-prayer.ts burst mode, Draynor booth, withdraw-All 28 dragon bones, 2.04 ticks per bone, 6 bank ticks per trip); supply delivery not included"
    },
    "xp": {
     "prayer": "to99"
@@ -748,15 +747,14 @@
    "requires": [
     "tutorial"
    ],
-   "evidence": "CODE-READ",
-   "source": "bury_bone.rs2:10-15 p_delay(0); sim 1,169 (xp-per-tick.md); realistic adds bank opens (ESTIMATE)",
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md: 1,260, 1,260, 1,260 ticks Prayer 1 -> 99 on practice (scripts/measure/floor-prayer.ts burst mode, Draynor booth, withdraw-All 28 dragon bones, 2.04 ticks per bone, 6 bank ticks per trip); supply delivery not included",
    "supplies": [
     {
      "item": "dragon bones",
      "count": 560
     }
    ],
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
    "patches": [
     {
      "lever": "stun-guests",
