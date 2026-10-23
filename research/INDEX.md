@@ -23,6 +23,7 @@ Dates are the last commit date of the file.
 | File | What it establishes | Evidence | Date | Still open | Boards |
 |---|---|---|---|---|---|
 | `audit-2026-10-22-b.md` | Audit after Phase 2: no end-to-end specialist (C1), 460 MB pathfinding per bot process (C2), margins leave out travel and food (H1) | MEASURED practice + CODE-READ | 10-22 | C2 team runner in one process; written list of winnable boards (M3) | all |
+| `boards-special.md` | Equipment, Bank, Runite, Quest Points: full rank rules with file:line; Equipment max 1,366,450 already tied by 2 (no tiebreak); Bank is base cost x count (16.1B = 1.92B air runes etc., not a market price); Runite is ore count then wall-clock last ore; QP leader now 145 at 1,022,262 | CODE-READ + MEASURED live (boards, GE) | 10-23 | Owner decisions E1, B1, R1; quest playtimes unmeasured; Wilderness route to the Lava Maze unchecked | Equipment, Bank, Lava Maze Runite, Quest Points |
 | `board-ranking.md` | First ranking: leader ticks vs model ticks, plus live GE supply per board | ESTIMATE (only Crafting has measured cycles) | 10-22 | Superseded for Thieving, Mining, Cooking by `board-ranking-honest.md` | 19 skills |
 | `board-ranking-honest.md` | With measurement, every leader beats our best method; Thieving and Mining not winnable with those methods; Crafting, Smithing, Herblore, Prayer, Magic blocked by supply | MEASURED practice + ESTIMATE | 10-22 | How the leaders get their times | 19 skills |
 | `bug-report-wine-login.md` | Login runs `~ferment_wines_login` with no Cooking level check: level 1 to 99 about 22 ticks after login | CODE-READ + MEASURED practice | 10-22 | Draft not sent; owner decision (owner-requests #16) | Cooking |
@@ -64,7 +65,7 @@ Dates are the last commit date of the file.
 | `docs/superpowers/ledgers/2026-10-22-phase2-script-core.md` | Rulings made while Phase 2 ran (e.g. Draynor bank, no Lumbridge castle bank in rev 289) | MEASURED practice + CODE-READ | 10-22 | none | infra |
 | `docs/agent-brief.md` | Rules every subagent follows | rules | 10-23 | none | all |
 
-No file yet covers Equipment, Bank or Lava Maze Runite with a plan (owner-requests.md item 1).
+`research/boards-special.md` covers Equipment, Bank, Lava Maze Runite and Quest Points (owner-requests.md item 1).
 
 ## Contradictions
 
@@ -84,6 +85,7 @@ Each row gives both sides with file:line and what would settle it.
 | C10 | Trapped and castle chests are "side income only" (`research/thieving-ladder.md:135-137`) | The Thieving #3 leader loops the castle doors and chests at 12,500 XP each (`research/pro-playbook.md:31-32`) | Measure a door-and-chest loop from Thieving 61 in practice, 3 runs |
 | C11 | "400 bots per IP" (`research/web-research.md:194`, third-party) | `MAX_PLAYERS_PER_IP = "100"` (`vendor/rs-sdk/fly.toml:37`; fly.toml may not be the live config, see C1) | Ask the server owner, or read the live login refusal message |
 | C12 | Cooking is winnable with hand-made wine at 35, margin +3 (`research/board-ranking.md:11`) | Only the login-timer route is fast enough (`research/board-ranking-honest.md:13`); the route to 35 is open and grapes have 0 sellers (`research/cooking-board.md:11-18`); `cooking-board.md:27-33` plans the login timer, which R10 and `research/bug-report-wine-login.md:3` rule out | Owner decision (owner-requests #16); measure the fastest legal route to Cooking 35 |
+| C13 | Vendored hiscores code is the live code: every CODE-READ in `research/` cites `vendor/rs-sdk/server/engine/src`; `web/pages/hiscores.ts:60-69` shows playtime with a plain `N ticks` tooltip | Live Quest Points page tooltip reads `N ticks normalized to 400 ms per tick` (`research/boards-special.md:5-7`), text not in the vendored file, so live runs newer code. Also QP leader: avery 141 at 921,761 (`research/hiscores-2026-10-22.json:2650-2654`) vs live 145 at 1,022,262 (`research/boards-special.md`, Rank rules) | Pull the current rs-sdk upstream and diff `web/pages/hiscores.ts` and `server/login/LoginServer.ts`; re-check every hiscore rule cite |
 
 ## Facts every agent must know
 
