@@ -1,17 +1,28 @@
 // Live account names. Owner rules (2026-10-23): no codes or timestamps, the name fits the job, and every name is a
 // sly double meaning. Server rule (vendor/rs-sdk/bots/create-bot.ts): 1-12 letters or digits. Names are taken in
 // list order; a name someone else already owns fails at login, so the caller moves on to the next one.
+// Do not reorder or remove a name once an account uses it: status.ts finds a bot's role from these lists.
 
 export const NAMES = {
-    thieving: ['Pocketrocket', 'Pocketpython', 'Sneakyshaft', 'Longfingers', 'Quickhandjob'],
-    runecraft: ['Wandwaver', 'Woodenstaff', 'Magicwanda', 'Staffstiffy'],
-    mining: ['Shaftsinker', 'Rockhardpick', 'Deepdigger', 'Hardpickaxe'],
-    woodcutting: ['Morningwood', 'Hardwoodhank', 'Bigwoodbill'],
-    fishing: ['Mightyrod', 'Longrodlarry', 'Rodholder'],
-    cooking: ['Sausageking', 'Meatpacker', 'Hotdogchef'],
-    crafting: ['Familyjewel', 'Crownjewels'],
-    combat: ['Swordinhand', 'Shaftswinger', 'Bigswordguy'],
-    helper: ['Bigpackage', 'Fullsack', 'Deliveryboy', 'Lunchboxlad'],
+    thieving: ['Pocketrocket', 'Pocketpython', 'Sneakyshaft', 'Longfingers', 'Quickhandjob', 'Pickmypocket', 'Stiffpicker', 'Pocketbulge', 'Nutsnatcher', 'Knobpicker', 'Stunnedstiff', 'Purseprober', 'Fingerblastr', 'Stallholder'],
+    runecraft: ['Wandwaver', 'Woodenstaff', 'Magicwanda', 'Staffstiffy', 'Rubmyrunes', 'Pouchstuffer', 'Bigwandvibes', 'Wandtugger', 'Essencepump'],
+    mining: ['Shaftsinker', 'Rockhardpick', 'Deepdigger', 'Hardpickaxe', 'Rockmyshaft', 'Mineshafted', 'Hardrockhank', 'Nuggethunter', 'Pickholder', 'Stonedboner'],
+    woodcutting: ['Morningwood', 'Hardwoodhank', 'Bigwoodbill', 'Woodpecker', 'Bigchopper', 'Wiltedwillow', 'Hardoak', 'Woodenuwant', 'Lumberjohnny', 'Yewlongwood'],
+    fishing: ['Mightyrod', 'Longrodlarry', 'Rodholder', 'Masterbaiter', 'Bigtackle', 'Rodstroker', 'Fishfingerer', 'Reelmyrod', 'Wormwrangler', 'Harpoonhank'],
+    cooking: ['Sausageking', 'Meatpacker', 'Hotdogchef', 'Porksword', 'Saltysausage', 'Beefbaton', 'Sausagefest', 'Bigweiner', 'Meatspinner', 'Spitroaster'],
+    crafting: ['Familyjewel', 'Crownjewels', 'Glassblower', 'Jewelbag', 'Ballspinner', 'Leathertool', 'Gemstoner'],
+    combat: ['Swordinhand', 'Shaftswinger', 'Bigswordguy', 'Pokesword', 'Swordswallow', 'Unsheathed', 'Bigshield', 'Thickskull', 'Rockhardtank'],
+    ranged: ['Earlyshooter', 'Bigquiver', 'Quiverfull', 'Longbowlad', 'Shaftshooter', 'Pullmybow'],
+    magic: ['Abracadickra', 'Hocuspokeus', 'Wizardwand', 'Pointyhat', 'Wandwanker'],
+    prayer: ['Bigboner', 'Bonezone', 'Boneburier', 'Hardboner', 'Altarboy', 'Kneeler'],
+    agility: ['Polevaulter', 'Tightsqueeze', 'Ropeburner', 'Pipecrawler', 'Bigpoledave', 'Logbalancer'],
+    firemaking: ['Firecrotch', 'Tinderballs', 'Woodburner', 'Hotlogger', 'Lightmylog'],
+    fletching: ['Shaftmaker', 'Nockitoff', 'Bowstringer', 'Whittlewood', 'Featherdtip'],
+    smithing: ['Ironrod', 'Steelrod', 'Hammeredhard', 'Anvilpounder', 'Hotforger'],
+    herblore: ['Pestlepound', 'Stirmypot', 'Hardherbs', 'Potionboner'],
+    bank: ['Moneyshot', 'Fatstack', 'Bigdeposit', 'Fullvault'],
+    runite: ['Runitehard', 'Lavarockhard', 'Hotrocks'],
+    helper: ['Bigpackage', 'Fullsack', 'Deliveryboy', 'Lunchboxlad', 'Bulgingsack', 'Heavyload', 'Sackhauler', 'Bigloads', 'Packhorse', 'Ballbag'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type Role = keyof typeof NAMES;

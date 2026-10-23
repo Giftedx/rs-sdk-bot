@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { connectInProcess, type Session } from './inprocess';
 import { logout } from './logout';
@@ -44,8 +44,12 @@ export async function openBot(name: string): Promise<Session> {
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
     ledgers.set(s, led);
+    // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
+    // it (seen: fishing30 under the supervisor, 2026-10-23) still logs out in game.
+    let stopTicks = 0;
+    s.onTick(() => { if (++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`))) void finish([s], false, 'stop file'); });
     // Live status for the dashboard (packages/dashboard).
-    statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }));
+    statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }, () => led.rows.slice(-300).map(r => r.kind[0]).join('')));
     return s;
 }
 

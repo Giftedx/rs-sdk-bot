@@ -29,7 +29,7 @@ function captureMilestones() {
     };
 }
 
-export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number }, server: string, ledgerCounts?: () => Record<string, number>) {
+export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
     captureMilestones();
     mkdirSync(dir, { recursive: true });
     const file = join(dir, `${s.name}.json`);
@@ -49,6 +49,10 @@ export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(
             skills: (st?.skills ?? []).map((k: any) => ({ name: k.name, level: k.baseLevel, xp: k.experience })),
             inventory: (st?.inventory ?? []).map((i: any) => ({ name: i.name, count: i.count })),
             bank, ledger: ledgerCounts?.() ?? null,
+            // Last 300 ticks, one letter per tick: x xp, m move, a anim, d dialog, s stun, i idle.
+            timeline: timeline?.() ?? '',
+            // Every key=value counter from the last RESULT line (shopTicks, walkTicks, stuns, eaten, ...).
+            counters: Object.fromEntries([...lastResult.matchAll(/([A-Za-z]+)=(-?[0-9.]+)/g)].map(m => [m[1], Number(m[2])])),
             env: { target: process.env.TARGET ?? null, cap: process.env.CAP ?? null },
         };
         try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameSync(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }
