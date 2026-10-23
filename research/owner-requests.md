@@ -88,3 +88,19 @@ These files hold work for items above and are not in git (2026-10-23 04:49 UTC):
 - `scripts/generated/woodcutting.ts`: woodcutting specialist, proven 3/3 in practice, not launched live (#2)
 - `scripts/generated/waterfall.ts`: Waterfall Quest, fails at the giant door (2568,9876) in all 3 runs (#13)
 - `scripts/measure/relog-bench.ts`: relog stun-cancel measurement (#15)
+
+## Added 2026-10-23 night (status checked against the repo and live runs)
+
+| # | Request (owner's words, short) | Status | Evidence | Next action |
+|---|---|---|---|---|
+| 37 | "a banker account that all our accounts trade off to" | DONE | Moneyshot; scripts/banker.ts; 4 thieves gave 86,078 coins (.practice/vault-log.jsonl) | Restart on demand only (resources rule) |
+| 38 | "keep track of everything we have" for suppliers and speedrunners | PARTIAL | Dashboard vault panel (14ef247); vault-log.jsonl | Bank contents of each account are only known when it last opened its bank |
+| 39 | "a LOT more funny penis joke names" | DONE | 138 names, 19 roles (f9fdfdb); 135 free on the live server | Add to small roles (runite 3, herblore 4, bank 4) |
+| 40 | "get the lobster helpers going" | PARTIAL | Bigpackage bought 115 lobsters live (2,209 ticks) | Give to banker failed once (timeout); hand lobsters to a thief run |
+| 41 | Dashboard: 3D world default, 2D button, real item icons, all data, dense | PARTIAL | 14ef247, 5032b16 | Owner has not accepted it; 3D scene was black under 100% CPU |
+| 42 | rs-world viewer: stop it constantly reloading, optimize it | DONE (not yet seen by owner) | rs-world bcb984b, 5032b16: loads once, follow by postMessage, fps 20, scale 0.75, 1 fps when hidden | Owner to confirm |
+| 43 | "check CPU and RAM", "check docker" | DONE | Stray Edge (about 70% CPU) and a stuck python stopped; Docker uses about 890 MB, not used by this project | Owner decides on Docker |
+| 44 | "being sloppy and careless about resources is NOT ACCEPTABLE" (standing rule) | RULE | memory feedback-resources.md; shot.ts kills the Edge tree | Shared bot host to cut about 550 MB per bot |
+| 45 | Tell agents they are stinky poo poo bums (in-joke) | DONE | Sent to 4 agents | - |
+| 46 | "yes sir boaby" | DONE | Said in chat | - |
+| 47 | Random events | NEW (found by me) | Woodpecker died to a dryad at WC 49 | Handler being built (agent) |
