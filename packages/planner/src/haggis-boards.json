@@ -1903,36 +1903,29 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 300,
-    "realistic": 900,
-    "evidence": "ESTIMATE",
-    "source": "quest_mcannon; time not measured"
+    "floor": 888,
+    "realistic": 925,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md (Dwarf Cannon): scripts/generated/dwarfcannon.ts, preset quest_dwarfcannon (Haggis levels after Waterfall: Crafting, Smithing, Magic 99), practice, 3/3 PASS at 897, 925, 888 ticks (floor = best run, realistic = worst run); railing rolls (Crafting 99: 151/256) cause the spread; Falador and Camelot teleports for the Nulodion trip; starts beside the Dwarf Commander, so the walk from the Waterfall end is not counted"
    },
    "lump": true,
    "qp": 1,
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "quest_mcannon; time not measured",
-   "patches": [
-    {
-     "lever": "rival-dialogue-burst",
-     "set": {
-      "ticks": {
-       "floor": 277,
-       "realistic": 832,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 300/900"
-      }
-     }
-    }
-   ],
-   "at": "lawgof"
+   "evidence": "MEASURED",
+   "source": "XP: quest_mcannon.rs2:24-26 (stat_advance(crafting, 7500) = 18,750 at 25x), measured 18,870 Crafting per run with the 4 repairs; ticks research/quest-plan.md",
+   "at": "lawgof",
+   "xp": {
+    "crafting": 18870
+   },
+   "minLevel": {
+    "magic": 45
+   }
   },
   {
    "id": "ranged",
-   "label": "Ranged + cannon to 99",
+   "label": "Cannon + melee to Ranged 99",
    "serves": [
     "ranged"
    ],
@@ -1940,20 +1933,21 @@
     "skill": "ranged",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 600,
-     "realistic": 400,
-     "evidence": "ESTIMATE",
-     "source": "cannon_fire.rs2:117-119 (50 XP/dmg) + own shots 100/dmg; damage rate not measured"
+     "floor": 215.7,
+     "realistic": 207.7,
+     "evidence": "MEASURED",
+     "source": "research/quest-plan.md (Dwarf Cannon, cannon session): dwarf cannon while meleeing Khazard troopers at the Gnome battlefield (multiway), preset quest_dwarfcannon_gb (Haggis levels, Ranged 1), cannon topped up every 30 ticks with no attack click until the load lands, practice, 3 x 300 ticks: 208.2 / 215.7 / 199.2 Ranged XP per tick (floor = best run, realistic = mean 207.7); melee 84.0 / 86.0 / 105.0 style XP and 27.8 / 28.4 / 34.8 Hitpoints XP per tick"
     },
     "side": {
-     "hitpoints": 0.2
+     "defence": 0.441,
+     "hitpoints": 0.146
     }
    },
    "requires": [
     "cannon"
    ],
-   "evidence": "ESTIMATE",
-   "source": "cannon_fire.rs2:117-119 (50 XP/dmg) + own shots 100/dmg; damage rate not measured",
+   "evidence": "MEASURED",
+   "source": "Ranged rate MEASURED practice (research/quest-plan.md); side XP = mean style 91.7 and Hitpoints 30.3 per 207.7 Ranged XP; the runs used the aggressive style (Strength), so Defence side XP assumes the defensive style gives the same amount (combat.rs2:143-167, CODE-READ)",
    "supplies": [
     {
      "item": "cannon (base, stand, barrels, furnace)",
@@ -1961,15 +1955,8 @@
     },
     {
      "item": "cannonball",
-     "count": 3000
-    },
-    {
-     "item": "rune arrows",
-     "count": 5000
-    },
-    {
-     "item": "maple shortbow",
-     "count": 1
+     "count": 2500,
+     "note": "2.05 / 2.57 / 2.19 balls per 1,000 Ranged XP measured (mean 2.27): 2,266 for 998,458 XP, plus spare"
     }
    ],
    "at": "falador-white-knights"

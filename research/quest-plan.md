@@ -107,6 +107,115 @@ size-2 fire giant cannot enter. The falls legs use client walk clicks (`dash`), 
 ticks at 2581,9875 among the spiders. A run that starts inside the falls resumes at step 6 (preset
 `quest_waterfall_falls`), so the crossing can be tested alone.
 
+## 1b. Measured: Dwarf Cannon
+
+Script `scripts/generated/dwarfcannon.ts`, preset `quest_dwarfcannon`. The preset starts beside the Dwarf Commander
+(spawn 2571,3463, `maps/m40_54.jm2`) with Haggis's levels right after Waterfall in the planner order: Attack and
+Strength 99, Defence 89, Hitpoints 97, Ranged 1, and Crafting, Smithing and Magic 99. The pack holds 8 lobsters,
+500 coins, 2 law, 8 air and 1 water rune. Practice server, 150 ms tick, one bot at a time.
+
+3/3 PASS (MEASURED practice, 2026-10-23):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | Railing tries / fails | HP min |
+|---|---|---|---|---|---|
+| p1 | `RESULT ok craftingXp=18870 xp=magic=2587,crafting=18870 at=2570,3463,0 ticks=897 hpMin=86 eats=0 railTries=10 railFails=4 inspectFails=0 repairFails=0 walkTicks=432 died=false` | 897 | 219 (24.3%) | 10 / 4 | 86 |
+| p2 | `RESULT ok craftingXp=18870 xp=magic=2587,crafting=18870 at=2569,3464,0 ticks=925 hpMin=80 eats=0 railTries=12 railFails=6 inspectFails=0 repairFails=0 walkTicks=433 died=false` | 925 | 241 (26.0%) | 12 / 6 | 80 |
+| p3 | `RESULT ok craftingXp=18870 xp=magic=2587,crafting=18870 at=2572,3461,0 ticks=888 hpMin=89 eats=0 railTries=9 railFails=3 inspectFails=0 repairFails=0 walkTicks=431 died=false` | 888 | 211 (23.7%) | 9 / 3 | 89 |
+
+Every run ends with `Congratulations! Quest complete!`. XP per run: 18,870 Crafting (18,750 from the reward,
+`quest_mcannon.rs2:24-26`, plus 30 for each of the 4 parts) and 2,587 Magic from the two teleports. No other skill
+gains XP. Hitpoints never fell below 80 of 97, and the bot ate nothing.
+
+Steps and ticks (run p3, MILESTONE lines):
+
+| Step | Ticks | Note |
+|---|---|---|
+| Commander, take 6 railings | 0-24 | 11 dialogue pages, 2 ticks each |
+| Fix 6 railings | 24-175 | about 12 ticks per try; 151-187 ticks over the 3 runs |
+| Commander, watch tower, remains, commander | 175-278 | the fence gate (loc 1557/1558 at 2567-2568,3458) needs walkPath |
+| Goblin cave, crate, free the child | 278-385 | 107 tiles to the cave, 69 tiles inside |
+| Mud pile, walk back, take the tool kit | 385-504 | 109 tiles |
+| Shed door, inspect, 4 repairs, inspect | 504-580 | 15 ticks per part |
+| Commander, Falador teleport, Nulodion | 580-725 | 154 tiles from Falador |
+| Camelot teleport, walk back, commander | 725-888 | 265 tiles from Camelot |
+
+Random parts and how the script handles them:
+
+1. A railing fix rolls `stat_random(crafting, 60, 150)`: 151/256 at Crafting 99 (`railings.rs2:78`). A fail
+   cuts for `stat_base(hitpoints) / 10`, at most 3. The script tries again at once. The fails decide the spread.
+2. An inspect and a repair roll `stat_random(smithing, 80, 300) | stat_random(crafting, 80, 350)`
+   (`mcannon_broken_cannon.rs2:90-96`). At Smithing or Crafting 99 the roll cannot fail. The script still retries
+   both, so it also works at low levels (not run below 99).
+3. A click sent on the tick after "manage to fix it" or a railing success lands inside `p_delay(2)`. The server
+   drops it. The script sends it again every 2 ticks. Before this fix, each part cost 16 more idle ticks.
+
+Findings from the failed attempts:
+
+- A loc click cannot pass the fence gate or the shed door: the client answers `I can't reach that!`. SDK collision
+  treats doors as open, so `walkPath` opens them first.
+- The NPC list reaches about 15 tiles. From the far railing the commander was not in it, so `talk` walks toward his
+  spawn first.
+- The child must finish his last page. `%mcannon = 5` comes after `The dwarf child runs off into the caverns.` A
+  walk click on an earlier page cancels it (`dwarfchildtw1.rs2:13-16`).
+- Teleports cut the Nulodion trip from 741 + 741 tiles to 154 + 265 tiles (`findLongPath`), about 530 ticks saved.
+  They need Magic 45, 2 law, 8 air and 1 water rune.
+
+Still open: a dialogue burst. The lite client sends one continue per page (`webclient/src/lite/actions.ts:466-476`,
+`resumedPauseButton`), so 190 of the 888 ticks are dialogue. A raw `RESUME_PAUSEBUTTON` sender could cut about half.
+The walk from the Waterfall end to the commander is not counted.
+
+### Cannon session after the quest (MEASURED practice)
+
+Preset `quest_dwarfcannon_gb`: the same levels at the Gnome battlefield (multiway, `maps/multiway.csv`, 23
+`khazard_troop` and 16 `khazard_troop_spearmen`), `%mcannon` = 11, cannon parts, 1,000 cannonballs. The bot melees
+Khazard troopers with the rune scimitar (aggressive style). Each run is 300 ticks after a 14-tick setup.
+
+With `scripts/measure/combat-melee.ts` as it is (`CANNON=1 TARGET='^khazard trooper$'`):
+
+| Run | Ranged XP/tick | Style XP/tick | HP XP/tick | Balls used |
+|---|---|---|---|---|
+| c1 | 40.7 | 97.7 | 32.3 | 30 |
+| c2 | 49.7 | 117.7 | 39.0 | 30 |
+| c3 | 105.5 | 66.3 | 21.9 | 60 |
+
+A traced run showed the cause. The cannon fired 30 balls in about 70 ticks, then stood empty. The 20-tick top-up
+never landed: the attack click on the next tick replaces the walk to the cannon. After an empty cannon the reload
+also failed when the Fire click came on the next tick. In that run the cannon gave 0 XP from tick 162 to 300.
+
+With the handling fixed (a scratch copy of the same script: no attack click until `You load the cannon` or 8 ticks,
+Fire after the load lands, top-up every 30 ticks):
+
+| Run | Ranged XP/tick | Style XP/tick | HP XP/tick | Balls used | Balls per 1,000 Ranged XP |
+|---|---|---|---|---|---|
+| g1 | 208.2 | 84.0 | 27.8 | 128 | 2.05 |
+| g2 | 215.7 | 86.0 | 28.4 | 166 | 2.57 |
+| g3 | 199.2 | 105.0 | 34.8 | 131 | 2.19 |
+
+Example line (g1): `RESULT ok cannon=true ticks=300 styleXp=25200 styleXpPerTick=84.0 hpXp=8332 hpXpPerTick=27.8
+rangedXp=62450 rangedXpPerTick=208.2 ... reloads=9 refires=0 setupTicks=14 balls=872 hp=94/97 lv=99/99/89/97/59`.
+
+Mean: 207.7 Ranged, 91.7 style and 30.3 Hitpoints XP per tick, 2.27 balls per 1,000 Ranged XP. Ranged 99 needs
+about 2,270 balls (11,300 coins at the obj cost of 5). The cannon gives no Hitpoints XP, so the Hitpoints XP is
+from melee only. Ranged went from 1 to 58-59 in each run. Per `research/combat-measure.md`, the cannon hit roll uses the melee
+attack roll, so the Ranged level does not change the rate (CODE-READ there, not checked here).
+
+The fix belongs in `scripts/measure/combat-melee.ts` (not changed here). With it, the `cannon-melee` lever patches
+in the melee rows would read about +2.3 Ranged per style XP, not 0.585.
+
+Planner (`packages/planner/src/haggis-boards.json`): row `cannon` is now 888 / 925 ticks MEASURED, needs Magic 45,
+and has no burst patch. Row `ranged` is now "Cannon + melee to Ranged 99" at 215.7 / 207.7 MEASURED, side XP 0.441
+Defence (defensive style, CODE-READ) and 0.146 Hitpoints per Ranged XP. Scenario a, `research/hiscores-live.json`,
+2026-10-23:
+
+| Board | Before (floor / realistic) | After (floor / realistic) |
+|---|---|---|
+| Ranged (#1 5,595) | 29,682 / 37,793 | 33,257 / 40,197 |
+| Hitpoints (#1 17,058) | 29,039 / 36,828 | 32,518 / 39,429 |
+| Overall (#1 35,916) | 38,306 / 47,340 | 37,995 / 45,473 |
+
+Ranged is later because the old row assumed 600 / 400 XP per tick with a bow (ESTIMATE). Overall is earlier because
+the cannon session now feeds Defence. A bow plus the cannon is not measured and could be faster.
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,
@@ -152,7 +261,7 @@ QP, and the QP deadline (921,761) is far away.
 | 8 | Scorpion Catcher | Prayer 31 (OSRS) | scorpion cage, food | 165,625 Strength, 1 QP | 1,500 ESTIMATE | Taverley dungeon: poison spiders, black knights |
 | 9 | The Grand Tree | Agility 25 (`stat(agility) < 25` gate, CODE-READ) | food | 460,000 Attack, 197,500 Agility, 53,750 Magic, 5 QP | 2,500 ESTIMATE | Black demon (172) in the mine: needs protect from melee (Prayer 43) or a safespot |
 | 10 | Merlin's Crystal, Holy Grail | Holy Grail: Merlin's Crystal, Attack 20 (OSRS) | bat bones, black candle, insect repellent, bread | 382,500 Defence, 275,000 Prayer, 8 QP | 4,000 ESTIMATE together | Sir Mordred (39), Black Knight Titan (120, needs Excalibur) |
-| 11 | Dwarf Cannon | none | cannon parts in the quest | 18,750 Crafting, 1 QP; unlocks the cannon for Ranged | not measured | goblins (low) |
+| 11 | Dwarf Cannon | none | 2 law, 8 air, 1 water rune for two teleports | 18,750 Crafting, 1 QP; unlocks the cannon for Ranged | 888-925 MEASURED practice, 3 runs (section 1b) | goblins (low) |
 | 12 | The rest, about 50 quests | see `research/quest-route.md` | per quest | to 145 QP | about 60,000 ESTIMATE | per quest |
 
 ## 4. Quest Points: a dedicated account
@@ -197,8 +306,7 @@ Dragon Slayer (932,500 at about 4,000 ticks = 233 per tick) is the next after th
 
 ## Open
 
-- Quest ticks other than Waterfall are not measured (ESTIMATE). The 8 short quests, Witch's House and Dwarf Cannon
-  have no script yet.
+- Quest ticks other than Waterfall and Dwarf Cannon are not measured (ESTIMATE). The 8 short quests and Witch's House have no script yet.
 - Waterfall ticks are from a preset at Almera. The walk from Lumbridge to Almera and the helper trade are not in
   the count.
 - OSRS requirements (Prayer 31 for Scorpion Catcher, Attack 20 for Holy Grail, Crafting 35 for Haunted Mine) are
