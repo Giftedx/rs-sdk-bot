@@ -441,7 +441,8 @@ failures.sort((a, b) => b.ticks - a.ticks);
 const checks: { fact: string; data: string; pass: boolean; note?: string }[] = [];
 {
     const g = gold.filter(x => liveNames.has(x.name));
-    const lastPer = new Map<string, typeof g[0]>(); for (const x of g) if (!lastPer.has(x.name) || x.at > lastPer.get(x.name)!.at) lastPer.set(x.name, x);
+    // The mark with the largest t per bot: the longest run. A restarted run starts again at t=1000 with its start coins in the pack.
+    const lastPer = new Map<string, typeof g[0]>(); for (const x of g) if (!lastPer.has(x.name) || x.t > lastPer.get(x.name)!.t) lastPer.set(x.name, x);
     const vals = [...lastPer.values()].filter(x => x.t >= 2000);
     const lo = Math.min(...vals.map(x => x.perTick)), hi = Math.max(...vals.map(x => x.perTick));
     const goldRuns = runs.filter(r => r.script === 'goldfarm' && r.env === 'live' && r.ledger);
