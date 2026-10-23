@@ -185,3 +185,22 @@ same QP result (WIN at 101,766 / 139,233 in c).
   a different unit than our playtime, the deadline 1,022,262 moves. The margin covers a unit error of up to 7x.
 - Requirements marked OSRS are not confirmed in the rev 289 code. They change the order inside `quests-rest`,
   not the QP count.
+
+## Short `rest` quests: scripts and proofs (MEASURED practice, 3/3 each)
+
+Presets `quest_<name>` in `packages/practice/src/presets-short.ts`: every skill 99, rune helm, body, legs and scimitar
+worn, the quests before the dragon row plus Dragon Slayer and Merlin's Crystal done, the helper items, and the start
+beside the first NPC (the walk to it is the planner's travel leg). Runner: `proveInProcess` with `okPass`, one bot at
+a time, each run on a fresh account that is deleted after the run.
+
+| Quest | Script | RESULT ticks (3 runs) | Status |
+|---|---|---|---|
+| Sheep Shearer | `scripts/generated/quest-sheep.ts` | 70, 70, 70 | MEASURED 3/3 |
+
+### Sheep Shearer
+
+`RESULT ok qp=1 woolLeft=0 xp=crafting=3750 at=3189,3273,0 ticks=70 hpMin=99 eats=0 walkTicks=0 retries=0
+died=false` in all 3 runs, each with `Congratulations! Quest complete!`. Fred (`area_lumbridge/scripts/
+fred_the_farmer.rs2:57-85`) takes the balls one at a time with `if_close` and `p_delay(1)`, so 38 of the 70 ticks
+are the server's hand-over loop (LEDGER `longestIdle=38`). The script does not talk again during the loop. Helper
+items: 20 balls of wool.
