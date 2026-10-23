@@ -4,6 +4,7 @@ import { connectInProcess, type Session } from './inprocess';
 import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { startLedger, formatLedger } from './ledger';
+import { startStatus } from './status';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
@@ -41,7 +42,10 @@ export async function openBot(name: string): Promise<Session> {
     const p = s.sdk.getState()!.player!;
     console.log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
-    ledgers.set(s, startLedger(s as any));
+    const led = startLedger(s as any);
+    ledgers.set(s, led);
+    // Live status for the dashboard (packages/dashboard).
+    statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }));
     return s;
 }
 
@@ -79,10 +83,11 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
 // Prints exactly one RESULT line, logs every account out in game (so playtime stops at once), closes every
 // session (5 s limit each), and exits with 0 on ok.
 const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
+const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 
 export async function finish(sessions: Session[], ok: boolean, detail: string): Promise<never> {
     console.log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
-    for (const s of sessions) { const l = ledgers.get(s); if (l) console.log(`${formatLedger(l.stop())} bot=${s.name}`); }
+    for (const s of sessions) { const l = ledgers.get(s); if (l) console.log(`${formatLedger(l.stop())} bot=${s.name}`); statuses.get(s)?.stop(); }
     // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
     // Logout runs first, so the account leaves the world either way; this only bounds the process.
     setTimeout(() => { console.log('WARN finish backstop exit'); process.exit(ok ? 0 : 1); }, 30_000).unref?.();
