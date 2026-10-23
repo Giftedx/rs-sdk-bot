@@ -221,7 +221,9 @@ function trackResult(s: Status) {
 }
 function scripts() {
     const by = new Map<string, Res[]>();
-    for (const r of results) { const l = by.get(r.goal) ?? []; l.push(r); by.set(r.goal, l); }
+    // A swarm run reports its job's goal text, a hand run its script name: count both under the script.
+    const key = (g: string) => /^gold farm/i.test(g) ? 'goldfarm' : /^food chain: fish/i.test(g) ? 'fishcook' : /^food chain: courier/i.test(g) ? 'foodcourier' : g;
+    for (const r of results) { const k = key(r.goal), l = by.get(k) ?? []; l.push(r); by.set(k, l); }
     return [...by].map(([goal, l]) => {
         let streak = 0;
         for (const r of l) { if (r.ok === l[0]!.ok) streak++; else break; }
@@ -491,7 +493,10 @@ function vault(bots: any[], now: number) {
     const coins = totals.get('Coins')?.count ?? 0;
     // Flow: one link per giver -> receiver pair, with coins, value and item counts.
     const links = new Map<string, { from: string; to: string; coins: number; value: number; items: Map<string, number>; n: number; last: number }>();
-    for (const t of log) {
+    // The vault log spells some accounts with a capital first letter; use the account's own spelling.
+    const accts = liveAccounts(), canon = (n: string) => accts.find(a => a.toLowerCase() === n.toLowerCase()) ?? n;
+    for (const t0 of log) {
+        const t = { ...t0, from: canon(t0.from), to: canon(t0.to) };
         const k = t.from + '>' + t.to, l = links.get(k) ?? { from: t.from, to: t.to, coins: 0, value: 0, items: new Map(), n: 0, last: 0 };
         for (const i of t.items) { l.items.set(i.name, (l.items.get(i.name) ?? 0) + i.count); l.value += (priceOf(i.name) ?? 0) * i.count; if (i.name === 'Coins') l.coins += i.count; }
         l.n++; l.last = Math.max(l.last, t.at); links.set(k, l);
@@ -671,8 +676,9 @@ function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: numbe
         const coins = coinsOf(s), start = runStartCoins.get(s.name + '|' + s.started);
         const cpt = fresh ? flowRate(s.name, 'coins') : null, eat = fresh ? flowRate(s.name, 'food') : null;
         const food = foodOf(pack), bankFood = foodOf(s.bank);
-        // Time until the pack's food is gone at the measured eat rate (game time, 0.4 s a tick).
-        const emptyTicks = eat && eat > 0 ? food / eat : null;
+        // Time until the pack and bank food is gone at the measured eat rate (game time, 0.4 s a tick); the farmer
+        // refills its pack from the bank, so the pack alone is not the limit.
+        const emptyTicks = eat && eat > 0 ? (food + bankFood) / eat : null;
         return { kind: 'gold', coins, made: start != null ? coins - start : null, coinsPerTick: cpt, food, bankFood, eatPerTick: eat, emptyMs: emptyTicks != null ? emptyTicks * world.tickMs : null };
     }
     // Food chain (research/food-chain.md): the cook banks cooked fish at Draynor; the courier carries them as notes.
@@ -899,7 +905,7 @@ function buildState() {
     };
     return {
         now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards,
-        events: events.slice(0, 160).map(e => ({ ...e, practice: prac.has(e.name) })),
+        events: events.slice(0, 160).map(e => ({ ...e, text: shortPhase(e.text), full: e.text, practice: prac.has(e.name) })),
         results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name) })), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
