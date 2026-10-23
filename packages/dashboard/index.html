@@ -8,114 +8,149 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Barlow+Semi+Condensed:wght@400;500;600;700&display=swap">
 <style>
-:root{--bg:#090806;--p1:#12100c;--p2:#1a1711;--p3:#221e16;--ln:#2a2419;--ln2:#3a3222;--tx:#ece2c6;--dm:#9a8c6e;--fa:#5a5040;
---gold:#e9b949;--gold2:#a07b2a;--parch:#d9c48f;--grn:#7ed36a;--red:#ec5a40;--blu:#6ea9ea;--tea:#4fc9b2;--vio:#b590f2;--org:#f0943c;
---ui:"Barlow Semi Condensed",system-ui,sans-serif;--mono:"Barlow Semi Condensed",system-ui,sans-serif;--rs:Cinzel,Georgia,serif}
-*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.25 var(--ui);overflow:hidden}
+/* Tokens. One accent family (gold). Status colours only for state, always with an icon and a word:
+   win (green), warn (orange), late (red; also death). Categorical colours only for the tick ledger. */
+:root{--bg:#090806;--p1:#12100c;--p2:#1a1711;--p3:#221e16;--ln:#2a2419;--ln2:#3a3222;--grid:#1e1a12;
+--tx:#ece2c6;--dm:#a3957a;--fa:#74684f;
+--gold:#e9b949;--gold2:#a07b2a;--gold3:#5c4614;--parch:#d9c48f;
+--win:#7ed36a;--warn:#f0943c;--late:#e0583f;
+--c-xp:#e9b949;--c-move:#6ea9ea;--c-anim:#4fc9b2;--c-dialog:#b590f2;--c-stun:#c9a27a;--c-idle:#f0943c;
+--ui:"Barlow Semi Condensed",system-ui,sans-serif;--rs:Cinzel,Georgia,serif;--u:4px}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.3 var(--ui);overflow:hidden}
 body{background:radial-gradient(ellipse at 50% -20%,#2a210f55,transparent 60%),var(--bg)}
-.app{display:grid;grid-template-rows:40px 26px minmax(0,1fr);height:100vh;gap:5px;padding:0 6px 6px}
-.mono{font-family:var(--ui);font-variant-numeric:tabular-nums}.dm{color:var(--dm)}.fa{color:var(--fa)}.g{color:var(--gold)}.up{color:var(--grn)}.dn{color:var(--red)}
+.app{display:grid;grid-template-rows:52px 28px minmax(0,1fr);height:100vh;gap:6px;padding:0 8px 8px}
+.num{font-variant-numeric:tabular-nums}.dm{color:var(--dm)}.fa{color:var(--fa)}.g{color:var(--gold)}
 .ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.i-win{color:var(--win)}.i-warn{color:var(--warn)}.i-late{color:var(--late)}
+.cap{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);white-space:nowrap}
 /* header */
-header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln);padding:0 4px}
-.brand{font:800 17px var(--rs);letter-spacing:.12em;color:var(--gold);text-shadow:0 0 18px #e9b94933;white-space:nowrap}
-.brand small{font:500 11px var(--ui);color:var(--dm);letter-spacing:.04em;margin-left:8px}
-.kpis{display:flex;gap:0;margin-left:4px}
-.kpi{padding:1px 9px;border-left:1px solid var(--ln);min-width:62px}.kpi b{display:block;font:700 14px var(--mono);color:var(--tx);line-height:1.15;white-space:nowrap}
-.kpi span{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);white-space:nowrap}.kpi.gd b{color:var(--gold)}
-.links{margin-left:auto;display:flex;gap:12px;align-items:center;font-weight:600}.links a{color:var(--parch);text-decoration:none;border-bottom:1px dotted var(--gold2)}
-.pulse{width:8px;height:8px;border-radius:50%;background:var(--grn);animation:pl 2s infinite}.pulse.off{background:var(--red);animation:none}
+header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
+.brand{display:flex;flex-direction:column;justify-content:center;padding-right:16px}
+.brand b{font:800 18px var(--rs);letter-spacing:.12em;color:var(--gold);text-shadow:0 0 18px #e9b94933;white-space:nowrap;line-height:1}
+.brand small{font:500 11px var(--ui);color:var(--dm);letter-spacing:.06em;margin-top:3px}
+.kpi{display:flex;flex-direction:column;justify-content:center;padding:0 14px;border-left:1px solid var(--ln);white-space:nowrap}
+.kpi b{font:700 22px/1 var(--ui);font-variant-numeric:proportional-nums;color:var(--tx)}.kpi b small{font:600 13px var(--ui);color:var(--dm);margin-left:4px}
+.kpi.hero b{color:var(--gold)}.kpi span{margin-top:3px}
+.mini{display:grid;grid-template-columns:repeat(3,auto);gap:1px 14px;align-content:center;padding:0 14px;border-left:1px solid var(--ln);font:500 11px var(--ui);color:var(--dm);white-space:nowrap}
+.mini b{color:var(--tx);font-weight:600;font-variant-numeric:tabular-nums}
+.links{margin-left:auto;display:flex;gap:14px;align-items:center;font-weight:600;padding-left:12px}.links a{color:var(--parch);text-decoration:none;border-bottom:1px dotted var(--gold2)}
+.pulse{width:8px;height:8px;border-radius:50%;background:var(--win);animation:pl 2s infinite}.pulse.off{background:var(--late);animation:none}
 @keyframes pl{0%{box-shadow:0 0 0 0 #7ed36aaa}70%{box-shadow:0 0 0 7px #7ed36a00}100%{box-shadow:0 0 0 0 #7ed36a00}}
 /* alerts */
-.alerts{display:flex;gap:5px;align-items:center;overflow:hidden;white-space:nowrap}
-.alerts .lbl{font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);margin-right:2px}
-.al{display:inline-flex;gap:5px;align-items:center;border:1px solid var(--ln2);background:var(--p1);border-radius:4px;padding:1px 7px;font-size:12px;cursor:pointer;flex:none}
-.al:hover{border-color:var(--gold2)}.al .t{font:700 11px var(--ui);letter-spacing:.1em;padding:0 4px;border-radius:2px;color:#120e06}
-.al.death .t{background:var(--red)}.al.stuck .t{background:var(--org)}.al.idle .t{background:#e86a8a}.al.logout .t{background:var(--vio)}
-.allclear{color:var(--grn);font-size:12px}
+.alerts{display:flex;gap:6px;align-items:center;overflow:hidden;white-space:nowrap}
+.alerts .lbl{font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);margin-right:4px}
+.al{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--ln2);background:var(--p1);border-radius:4px;padding:2px 8px;font-size:12px;cursor:pointer;flex:none}
+.al:hover{border-color:var(--gold2)}.al .t{font:700 11px var(--ui);letter-spacing:.08em}
+.al.death .t{color:var(--late)}.al.stuck .t,.al.idle .t,.al.logout .t{color:var(--warn)}
+.al.more{border-style:dashed;color:var(--dm)}
+.allclear{color:var(--dm);font-size:12px}
 /* layout */
-.grid{display:grid;grid-template-columns:400px minmax(0,1fr) 470px;gap:6px;min-height:0}
-.col{display:flex;flex-direction:column;gap:6px;min-height:0}
+.grid{display:grid;grid-template-columns:400px minmax(0,1fr) 470px;gap:8px;min-height:0}
+.col{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
 .card{background:linear-gradient(180deg,#15120d,#100e0a);border:1px solid var(--ln);border-radius:6px;display:flex;flex-direction:column;min-height:0;overflow:hidden;position:relative}
 .card::before{content:"";position:absolute;inset:0 0 auto 0;height:1px;background:linear-gradient(90deg,transparent,#e9b94944,transparent)}
-.card>h2{margin:0;padding:4px 9px 3px;font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);border-bottom:1px solid var(--ln);display:flex;gap:8px;align-items:center;flex:none;white-space:nowrap}
-.card>h2 em{font:500 11px var(--ui);font-style:normal;margin-left:auto;color:var(--dm);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis}
+.card>h2{margin:0;height:26px;padding:0 10px;font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);border-bottom:1px solid var(--ln);display:flex;gap:8px;align-items:center;flex:none;white-space:nowrap}
+.card>h2 em{font:500 11px var(--ui);font-style:normal;margin-left:auto;color:var(--dm);letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .scroll{overflow:auto;min-height:0;flex:1}
 .scroll::-webkit-scrollbar,.bankg::-webkit-scrollbar{width:6px;height:6px}.scroll::-webkit-scrollbar-thumb,.bankg::-webkit-scrollbar-thumb{background:var(--ln2);border-radius:3px}
-.sub{font:700 11px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--dm);display:flex;justify-content:space-between;gap:6px;margin:0 0 2px;white-space:nowrap}
+.sub{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);display:flex;justify-content:space-between;gap:8px;margin:0 0 4px;white-space:nowrap}
+.sub>span:last-child{letter-spacing:.04em;text-transform:none;overflow:hidden;text-overflow:ellipsis}
+.empty-st{color:var(--dm);font-size:12px;padding:8px 10px}
+.loading{color:var(--fa);font-size:12px;padding:8px 10px}.loading::after{content:"";display:inline-block;width:24px;animation:dots 1.2s steps(4) infinite;overflow:hidden;vertical-align:bottom}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
 /* shared marks */
-.lb{display:flex;height:6px;border-radius:2px;overflow:hidden;background:#221d14;flex:none}.lb i{display:block;height:100%}
-.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}.on{background:var(--grn);box-shadow:0 0 6px var(--grn)}.wd{background:var(--gold)}.off{background:var(--fa)}
-.pill{font:600 11px var(--ui);padding:0 5px;border-radius:3px;line-height:15px;background:#2a2312;color:var(--parch);letter-spacing:.03em;white-space:nowrap;flex:none}
-.pill.inf{background:#10241f;color:var(--tea);font-style:italic}.pill.res{background:#3a2a0c;color:var(--gold)}.pill.bk{background:#26173a;color:var(--vio)}
-.job{font:600 11px var(--ui);padding:0 5px;border-radius:3px;line-height:15px;border:1px solid;white-space:nowrap;flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis}
-.job.running{color:var(--grn);border-color:#3d6b33}.job.disabled{color:var(--dm);border-color:var(--ln2)}.job.ended{color:var(--org);border-color:#6b4520}.job.external{color:var(--blu);border-color:#2f4a6b}.job.waiting,.job.starting,.job.stopping{color:var(--vio);border-color:#4a3570}
-.act{font:600 11px var(--mono);padding:0 5px;border-radius:3px;line-height:15px;color:#111;flex:none}
-.oc{font:700 11px var(--mono);width:14px;text-align:center;flex:none}.oc.ok{color:var(--grn)}.oc.fail{color:var(--red)}.oc.died{color:#fff;background:var(--red);border-radius:2px}
+.lb{display:flex;height:6px;border-radius:2px;overflow:hidden;background:var(--p3);flex:none;gap:1px}.lb i{display:block;height:100%}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex:none}.on{background:var(--win);box-shadow:0 0 6px var(--win)}.wd{background:var(--gold)}.off{background:var(--fa)}
+.pill{font:600 11px var(--ui);padding:0 6px;border-radius:3px;line-height:16px;background:#2a2312;color:var(--parch);letter-spacing:.03em;white-space:nowrap;flex:none}
+.pill.inf{background:#1d1a12;color:var(--dm);font-style:italic}.pill.res{background:#3a2a0c;color:var(--gold)}
+.job{font:600 11px var(--ui);padding:0 6px;border-radius:3px;line-height:14px;border:1px solid var(--ln2);color:var(--dm);white-space:nowrap;flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.job.running{color:var(--win);border-color:#3d6b33}.job.ended{color:var(--warn);border-color:#6b4520}
+.act{font:600 11px var(--ui);padding:0 6px;border-radius:3px;line-height:16px;color:#111;flex:none}
+.oc{font:700 11px var(--ui);width:14px;text-align:center;flex:none}.oc.ok{color:var(--win)}.oc.fail{color:var(--warn)}.oc.died{color:var(--late)}
 /* roster */
-.bot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 8px;padding:4px 8px 4px 10px;border-bottom:1px solid #1d1912;cursor:pointer;position:relative}
+.bot{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:4px 10px 4px 12px;border-bottom:1px solid #1d1912;cursor:pointer;position:relative}
 .bot:hover{background:#1a160f}.sel{background:linear-gradient(90deg,#2a2110,#14110b 70%)!important}.bot.sel::after,.off1.sel::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
-.bot.idle::before{content:"";position:absolute;left:3px;top:0;bottom:0;width:2px;background:var(--red)}
 .bot .l,.bot .r{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap}.bot .r{justify-content:flex-end}
 .nm{font-weight:700;font-size:14px}
-.gbar{position:relative;flex:1;height:14px;background:#221d14;border-radius:2px;overflow:hidden;min-width:0}.gbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#5c4614,var(--gold2))}
-.gbar span{position:relative;font:600 11px var(--mono);padding:0 5px;line-height:14px;color:var(--tx);text-shadow:0 1px 0 #000;white-space:nowrap}
-.since{color:var(--dm);font-family:var(--mono);font-size:11px;flex:none}.idl{font:700 11px var(--mono)}.idl.bad{color:var(--red)}.idl.ok{color:var(--grn)}
-.pace{font:600 11px var(--mono);flex:none}
-.why{font:600 11px var(--ui);letter-spacing:.04em;color:#120e06;background:var(--parch);border-radius:3px;padding:0 5px;line-height:14px;white-space:nowrap;flex:none;max-width:120px;overflow:hidden;text-overflow:ellipsis}
-.off1{display:flex;align-items:center;gap:6px;padding:2px 8px 2px 10px;border-bottom:1px solid #1a1610;cursor:pointer;position:relative;white-space:nowrap;color:var(--dm);font-size:12.5px}
-.off1:hover{background:#17130d}.off1 .nm{font-size:13px;color:#b3a786;font-weight:600}.off1 .note{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--fa)}
-.grp{font:700 11px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--fa);padding:3px 10px 1px;border-bottom:1px solid #1a1610}
-#tip{position:fixed;z-index:9;pointer-events:none;background:#0d0b08f5;border:1px solid var(--gold2);border-radius:6px;padding:6px 9px;display:none;max-width:420px;box-shadow:0 8px 30px #000c;font-size:12px}
-#tip td{padding:1px 6px;font:12px var(--mono)}#tip .w{color:var(--red);font-weight:700;margin-top:4px}
+.gbar{position:relative;flex:1;height:14px;background:var(--p3);border-radius:2px;overflow:hidden;min-width:0}.gbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--gold3),var(--gold2))}
+.gbar span{position:relative;font:600 11px var(--ui);padding:0 6px;line-height:14px;color:var(--tx);text-shadow:0 1px 0 #000;white-space:nowrap}
+.since{color:var(--dm);font-size:11px;flex:none;font-variant-numeric:tabular-nums}.idl{font:600 11px var(--ui);font-variant-numeric:tabular-nums}.idl.bad{color:var(--warn)}.idl.ok{color:var(--dm)}
+.why{font:600 11px var(--ui);color:var(--gold);border:1px solid var(--gold3);border-radius:3px;padding:0 6px;line-height:14px;white-space:nowrap;flex:none;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.off1{display:grid;grid-template-columns:14px 96px auto minmax(0,1fr) 34px;gap:6px;align-items:center;padding:2px 10px 2px 12px;border-bottom:1px solid #1a1610;cursor:pointer;position:relative;white-space:nowrap;color:var(--dm);font-size:12px}
+.off1:hover{background:#17130d}.off1 .nm{font-size:13px;color:#c0b391;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.off1 .note{min-width:0;overflow:hidden;text-overflow:ellipsis}.off1 .note b{font-weight:600;color:var(--tx)}.off1 .note i{font-style:normal;color:var(--fa)}
+.grp{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--fa);padding:6px 12px 2px;border-bottom:1px solid #1a1610}
+#tip{position:fixed;z-index:9;pointer-events:none;background:#0d0b08f5;border:1px solid var(--gold2);border-radius:6px;padding:8px 10px;display:none;max-width:440px;box-shadow:0 8px 30px #000c;font-size:12px}
+#tip td{padding:1px 8px 1px 0;font:12px var(--ui);font-variant-numeric:tabular-nums}#tip .w{color:var(--warn);font-weight:700;margin-top:4px}#tip h5{margin:0 0 4px;font:700 12px var(--rs);color:var(--gold);letter-spacing:.06em}
 /* practice */
-.prac{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;padding:4px 6px}
-.pc{display:flex;align-items:center;gap:4px;background:var(--p2);border:1px solid var(--ln);border-radius:3px;padding:1px 4px;font-size:11.5px;cursor:pointer;min-width:0}
-.pc .gb{flex:1;height:3px;background:#221d14;border-radius:2px;overflow:hidden;min-width:12px}.pc .gb i{display:block;height:100%;background:var(--gold2)}
+.prac{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:6px 8px}
+.pc{display:flex;align-items:center;gap:4px;background:var(--p2);border:1px solid var(--ln);border-radius:3px;padding:1px 4px;font-size:11.5px;cursor:pointer;min-width:0;height:20px}
+.pc .gb{flex:1;height:3px;background:var(--p3);border-radius:2px;overflow:hidden;min-width:12px}.pc .gb i{display:block;height:100%;background:var(--gold2)}
 /* requests */
-.rq{padding:4px 8px;display:flex;flex-direction:column;gap:3px;min-height:0;flex:1}
-.seg{display:flex;height:16px;border-radius:3px;overflow:hidden;font:700 11px var(--ui);flex:none}.seg i{display:flex;align-items:center;justify-content:center;font-style:normal;color:#120e06;white-space:nowrap;overflow:hidden}
-.k-DONE{background:#4f8f43}.k-PARTIAL{background:#c99a3a}.k-NOT{background:#c4513c}.k-BLOCKED{background:#8a63c9}.k-NEW{background:#4aa3c9}.k-RULE{background:#5a5040}
-.rqi{display:grid;grid-template-columns:22px 62px minmax(0,1fr);gap:5px;font-size:12px;border-bottom:1px dashed #241f15;align-items:center;white-space:nowrap}
+.rq{padding:6px 10px;display:flex;flex-direction:column;gap:4px;min-height:0;flex:1}
+.seg{display:flex;height:16px;border-radius:3px;overflow:hidden;font:700 11px var(--ui);flex:none;gap:2px}.seg i{display:flex;align-items:center;justify-content:center;font-style:normal;color:#120e06;white-space:nowrap;overflow:hidden}
+.k-DONE{background:#5d8a4f}.k-PARTIAL{background:#b8923d}.k-NOT{background:#8a6a4a}.k-BLOCKED{background:#7a6a9a}.k-NEW{background:#4f8aa3}.k-RULE{background:#4a4234;color:var(--tx)!important}
+.rqi{display:grid;grid-template-columns:30px 64px minmax(0,1fr);gap:6px;font-size:12px;border-bottom:1px dashed #241f15;align-items:center;white-space:nowrap;line-height:18px}
 .rqi .st{font:700 11px var(--ui);letter-spacing:.06em;border-radius:2px;text-align:center;color:#120e06;line-height:14px}
+.rqc{display:grid;grid-template-columns:30px 64px minmax(0,1fr) 34px;gap:6px;font-size:12px;align-items:center;white-space:nowrap;line-height:18px}
 /* machine */
-.mach{padding:4px 9px;display:flex;flex-direction:column;gap:3px;min-height:0;flex:1}
-.bar{display:grid;grid-template-columns:40px minmax(0,1fr) 88px;gap:6px;align-items:center;font-size:12px}
-.bar .tr{height:7px;background:#221d14;border-radius:2px;overflow:hidden}.bar .tr i{display:block;height:100%}
-.proc{display:grid;grid-template-columns:minmax(0,1fr) 50px 56px 52px;gap:4px;font-size:11.5px;border-bottom:1px solid #1b1710}
+.mach{padding:6px 10px;display:flex;flex-direction:column;gap:4px;min-height:0;flex:1}
+.mbar{display:grid;grid-template-columns:36px minmax(0,1fr) 84px;gap:8px;align-items:center;font-size:12px}
+.mbar .tr{height:6px;background:var(--p3);border-radius:2px;overflow:hidden}.mbar .tr i{display:block;height:100%}
+.proc{display:grid;grid-template-columns:minmax(0,1fr) 48px 60px 56px;gap:6px;font-size:12px;line-height:17px;border-bottom:1px solid #1b1710;font-variant-numeric:tabular-nums}
 /* map */
 .mapwrap{position:relative;flex:1;min-height:0;background:#050504}
 #map{width:100%;height:100%;display:none;cursor:crosshair}#rsw{width:100%;height:100%;border:0;display:block;background:#000}
 .mapwrap.d2 #map{display:block}.mapwrap.d2 #rsw{display:none}
-.tog{display:flex;border:1px solid var(--ln2);border-radius:4px;overflow:hidden}.tog button{background:none;border:0;color:var(--dm);font:700 11px var(--ui);letter-spacing:.08em;padding:1px 9px;cursor:pointer}
+.tog{display:flex;border:1px solid var(--ln2);border-radius:4px;overflow:hidden}.tog button{background:none;border:0;color:var(--dm);font:700 11px var(--ui);letter-spacing:.08em;padding:1px 10px;cursor:pointer}
 .tog button.on{background:var(--gold);color:#1a1408}
-.legend{position:absolute;right:8px;bottom:8px;display:flex;gap:10px;font-size:11px;color:var(--dm);background:#090806cc;padding:3px 8px;border-radius:4px}
+.legend{position:absolute;right:8px;bottom:8px;display:flex;gap:12px;font-size:11px;color:var(--dm);background:#090806cc;padding:4px 8px;border-radius:4px}
 .legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px}
-.follow{position:absolute;left:8px;bottom:8px;background:#090806d0;border:1px solid var(--gold2);border-radius:4px;padding:2px 9px;font:600 12px var(--ui);color:var(--parch);pointer-events:none}
-/* boards */
-.boards{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;padding:4px 5px 3px}
-.bd{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:2px 6px 3px;min-width:0;cursor:default}
-.bd.win{border-color:var(--gold);box-shadow:inset 0 0 12px #e9b94933}
-.bd h4{margin:0;font:700 11px var(--rs);letter-spacing:.05em;color:var(--parch);display:flex;justify-content:space-between;white-space:nowrap;gap:4px}
-.bd .t{display:flex;justify-content:space-between;gap:4px;font-size:11.5px;white-space:nowrap}.bd .t span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
-.bd .o{display:flex;justify-content:space-between;gap:4px;font-size:11.5px;white-space:nowrap}.bd .o span:first-child{overflow:hidden;text-overflow:ellipsis;min-width:0}
-.gapb{height:4px;background:#221d14;border-radius:2px;overflow:hidden;margin:2px 0 1px}.gapb i{display:block;height:100%}
-.hag{display:grid;grid-template-columns:auto repeat(24,minmax(0,1fr));gap:2px;padding:2px 5px 5px;align-items:stretch}
-.hag .h{font:700 11px var(--rs);color:var(--gold);letter-spacing:.08em;display:flex;align-items:center;padding-right:4px}
-.hc{border-radius:3px;font:600 11px var(--ui);text-align:center;line-height:13px;padding:1px 0;color:#120e06;overflow:hidden;white-space:nowrap}
-.hc small{display:block;font:500 11px var(--ui);opacity:.8}
-.ps-0{background:#3a3328;color:var(--dm)}.ps-1{background:#3d6a9a}.ps-2{background:#c27c2c}.ps-3{background:#5aa64a}
-/* vault */
-.vtop{display:flex;align-items:baseline;gap:12px;padding:3px 9px;border-bottom:1px solid var(--ln);white-space:nowrap}
-.vbig{font:800 19px var(--mono);color:var(--gold)}.vtop small{color:var(--dm);font-size:11px;margin-left:3px}
-.vgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.85fr) minmax(0,1fr);flex:1;min-height:0}
-.vgrid>div{display:flex;flex-direction:column;min-height:0;padding:3px 8px;border-right:1px solid var(--ln)}.vgrid>div:last-child{border-right:0}
-#flow{flex:1;min-height:0}#flow svg{display:block}
-.it{display:grid;grid-template-columns:20px minmax(0,1fr) 46px 50px;gap:4px;align-items:center;line-height:20px;font-size:12px;border-bottom:1px dashed #241f15}
-.hold{padding:2px 0;border-bottom:1px dashed #241f15;font-size:12px}.hold .h1{display:flex;gap:6px;align-items:baseline;white-space:nowrap}
-.hold .h2{white-space:nowrap;overflow:hidden;line-height:17px}.hold .h2 .mono{font-size:11px;margin-right:3px}
-.src{font:600 11px var(--ui);letter-spacing:.08em;color:var(--fa);text-transform:uppercase}
-.warn{color:var(--org);font-size:11px}
+.follow{position:absolute;left:8px;bottom:8px;background:#090806d0;border:1px solid var(--gold2);border-radius:4px;padding:2px 10px;font:600 12px var(--ui);color:var(--parch);pointer-events:none}
+/* race */
+.rhead{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;gap:0;align-items:stretch;border-bottom:1px solid var(--ln);flex:none}
+.rhead>div{padding:6px 12px;border-right:1px solid var(--ln);display:flex;flex-direction:column;justify-content:center;min-width:0}.rhead>div:last-child{border-right:0}
+.rhero{font:700 24px/1 var(--ui);font-variant-numeric:proportional-nums;color:var(--tx);white-space:nowrap}.rhero small{font:600 13px var(--ui);color:var(--dm);margin-left:6px}
+.gates{display:flex;gap:4px 10px;flex-wrap:wrap;font:600 11px var(--ui);color:var(--dm)}.gates span{white-space:nowrap}.gates .ok{color:var(--tx)}
+.race{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;padding:4px 12px 2px}
+.rcol{display:flex;flex-direction:column}
+.raxis{display:grid;grid-template-columns:88px minmax(0,1fr) 58px 50px;gap:8px;font:500 11px var(--ui);color:var(--fa);height:16px;align-items:end}
+.raxis .ax{position:relative;height:14px}.raxis .ax span{position:absolute;transform:translateX(-50%);bottom:0;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rr{display:grid;grid-template-columns:88px minmax(0,1fr) 58px 50px;gap:8px;align-items:center;height:18px;border-bottom:1px solid var(--grid);cursor:default}
+.rr:hover{background:#1a160f}
+.rr .rl{font:600 12px var(--ui);color:var(--parch);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rr .rs{font:600 12px var(--ui);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--tx)}
+.rr .rf{font:500 11px var(--ui);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--dm)}
+.dv{position:relative;height:18px}
+.dv .gl{position:absolute;top:0;bottom:0;width:1px;background:var(--grid)}
+.dv .c0{position:absolute;top:1px;bottom:1px;width:1px;background:var(--gold);left:50%}
+.dv .sb{position:absolute;top:6px;height:6px;border-radius:2px;display:block}
+.dv .sb.late{background:var(--late);opacity:.85;border-radius:4px 0 0 4px}.dv .sb.win{background:var(--win);border-radius:0 4px 4px 0}
+.dv .fl{position:absolute;top:3px;height:12px;width:2px;background:var(--parch);border-radius:1px}
+.dv .clip{position:absolute;top:2px;font:700 11px/14px var(--ui);color:var(--tx);text-shadow:0 1px 0 #000}
+.rspecial{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,2fr);gap:0 20px;padding:6px 12px 8px;border-top:1px solid var(--ln);font-size:12px}
+.rspecial .sub{margin-bottom:2px}
+.nc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.nc>div{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:2px 8px;min-width:0;line-height:16px}
+.nc b{font:600 12px var(--ui);color:var(--parch)}
+.qp{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:2px 8px;line-height:16px}
+.legend2{display:flex;gap:12px;align-items:center;font:500 11px var(--ui);color:var(--dm);white-space:nowrap}
+.legend2 i{display:inline-block;vertical-align:middle;margin-right:4px}
+/* economy */
+.vtop{display:flex;align-items:baseline;gap:16px;padding:4px 10px;border-bottom:1px solid var(--ln);white-space:nowrap}
+.vbig{font:700 22px var(--ui);font-variant-numeric:proportional-nums;color:var(--gold)}.vtop small{color:var(--dm);font-size:11px;margin-left:4px}
+.egrid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.9fr);flex:1;min-height:0}
+.egrid>div{display:flex;flex-direction:column;min-height:0;padding:4px 10px;border-right:1px solid var(--ln)}.egrid>div:last-child{border-right:0}
+#flow{flex:1;min-height:0;transition:opacity .3s}#flow svg{display:block}#flow.stale{opacity:.38;filter:grayscale(.8)}
+.age{font:700 11px var(--ui);letter-spacing:.04em;padding:0 6px;border-radius:3px;line-height:15px;text-transform:none}
+.age.ok{color:var(--win);border:1px solid #3d6b33}.age.old{color:var(--warn);border:1px solid #6b4520}
+.fr{display:grid;grid-template-columns:minmax(0,1fr) 44px 46px 62px;gap:6px;font:500 12px var(--ui);border-bottom:1px dashed #241f15;line-height:18px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.fr span{overflow:hidden;text-overflow:ellipsis}.fr .n{text-align:right}
+.sup{display:grid;grid-template-columns:18px minmax(0,1fr) 46px 46px;gap:6px;align-items:center;font:500 12px var(--ui);line-height:18px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.it{display:grid;grid-template-columns:20px minmax(0,1fr) 42px 46px;gap:6px;align-items:center;line-height:20px;font-size:12px;border-bottom:1px dashed #241f15;font-variant-numeric:tabular-nums}
+.hold{padding:2px 0;border-bottom:1px dashed #241f15;font-size:12px}.hold .h1{display:grid;grid-template-columns:minmax(0,1fr) 40px 66px 30px;gap:6px;align-items:baseline;white-space:nowrap;font-variant-numeric:tabular-nums}
+.src{font:600 11px var(--ui);letter-spacing:.06em;color:var(--fa);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis}
+.gold{font:600 12px var(--ui);color:var(--gold);white-space:nowrap;font-variant-numeric:tabular-nums}
 /* items */
 .ico{display:inline-block;background-image:url(/items.png);background-repeat:no-repeat;image-rendering:pixelated;vertical-align:middle;flex:none}
 .ico.none{background:#2a2419;border:1px dashed #5a5040;border-radius:3px;color:var(--dm);font:700 11px/1 var(--ui);display:inline-flex;align-items:center;justify-content:center;font-style:normal;overflow:hidden}
@@ -124,121 +159,111 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .pack{display:grid;grid-template-columns:repeat(4,40px);grid-auto-rows:32px;gap:1px;padding:4px;background:#3e3529;border:2px solid #2b241a;border-radius:4px;box-shadow:inset 0 0 0 1px #5a4d3a,0 0 0 1px #0008}
 .cell{position:relative;display:flex;align-items:center;justify-content:center}.pack .cell:hover,.bankg .cell:hover{background:#ffffff14}
 .bankg{display:grid;grid-template-columns:repeat(auto-fill,40px);grid-auto-rows:32px;gap:1px;padding:3px;background:#2e271d;border:2px solid #2b241a;border-radius:4px;max-height:104px;overflow:auto;align-content:start}
-.bankg .empty{grid-column:1/-1;color:var(--dm);font-size:12px;padding:3px}
+.bankg .empty{grid-column:1/-1;color:var(--dm);font-size:12px;padding:4px}
 /* detail */
-.d{padding:5px 9px;display:flex;flex-direction:column;gap:5px}
-.dh{display:flex;align-items:center;gap:7px;white-space:nowrap}.dh h3{margin:0;font:700 20px var(--rs);color:var(--gold);letter-spacing:.03em}
-.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}.stat{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:0 6px;min-width:0}
-.stat span{display:block;font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--dm);white-space:nowrap}.stat b{font:700 12.5px var(--mono);white-space:nowrap}
+.d{padding:8px 10px;display:flex;flex-direction:column;gap:8px}
+.dh{display:flex;align-items:center;gap:8px;white-space:nowrap}.dh h3{margin:0;font:700 20px var(--rs);color:var(--gold);letter-spacing:.03em}
+.dline{display:flex;gap:8px;font-size:12.5px;white-space:nowrap;overflow:hidden;align-items:baseline}
+.dnote{font-size:12px;line-height:17px;display:flex;flex-direction:column;gap:1px}
+.dhero{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--ln);border-radius:4px;background:var(--p1)}
+.dhero>div{padding:4px 10px;border-right:1px solid var(--ln);min-width:0}.dhero>div:last-child{border-right:0}
+.dhero b{display:block;font:700 22px/1.1 var(--ui);font-variant-numeric:proportional-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dhero b small{font:600 12px var(--ui);color:var(--dm);margin-left:4px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.stat{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:1px 8px;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:6px;line-height:19px}
+.stat span{font:600 11px var(--ui);letter-spacing:.1em;text-transform:uppercase;color:var(--dm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat b{font:600 13px var(--ui);white-space:nowrap;font-variant-numeric:tabular-nums}
 .strip{display:flex;height:12px;border-radius:2px;overflow:hidden;background:#0c0a07}.strip i{flex:1;min-width:1px}
-.k-x{background:var(--grn)}.k-m{background:var(--blu)}.k-a{background:var(--tea)}.k-d{background:var(--vio)}.k-s{background:var(--org)}.k-i{background:var(--red)}
+.k-x{background:var(--c-xp)}.k-m{background:var(--c-move)}.k-a{background:var(--c-anim)}.k-d{background:var(--c-dialog)}.k-s{background:var(--c-stun)}.k-i{background:var(--c-idle)}
 .hx0{background:#15120d}.hx1{background:#4a3a14}.hx2{background:#7d5f18}.hx3{background:#b88a22}.hx4{background:#e9b949}.hx5{background:#fff1b8}
-.shares{display:grid;grid-template-columns:repeat(6,1fr);gap:3px;margin-top:3px}.shares div{font-size:11.5px;display:flex;gap:4px;align-items:center;justify-content:space-between;background:var(--p2);border-radius:3px;padding:0 5px}
-.skills{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}
-.sk{background:var(--p2);border:1px solid var(--ln);border-radius:3px;padding:0 5px;font-size:11.5px;position:relative;overflow:hidden;display:flex;justify-content:space-between;line-height:16px}
-.sk b{font:600 11.5px var(--mono)}.sk.mx{border-color:var(--gold2);color:var(--gold)}.sk.goal{border-color:var(--tea)}.sk i{position:absolute;left:0;bottom:0;height:2px;background:var(--gold2)}
-.inv2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}
-.list{font-size:12px}.list>div{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dashed #241f15;white-space:nowrap}
+.shares{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:4px}.shares div{font-size:11.5px;display:flex;gap:4px;align-items:center;justify-content:space-between;background:var(--p2);border-radius:3px;padding:0 6px;font-variant-numeric:tabular-nums}
+.skills{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 4px}
+.sk{background:var(--p2);border:1px solid var(--ln);border-radius:3px;padding:0 6px;font-size:11.5px;position:relative;overflow:hidden;display:flex;justify-content:space-between;line-height:17px}
+.sk b{font:600 11.5px var(--ui);font-variant-numeric:tabular-nums}.sk.mx{border-color:var(--gold2);color:var(--gold)}.sk.goal{box-shadow:inset 0 0 0 1px var(--parch)}.sk i{position:absolute;left:0;bottom:0;height:2px;background:var(--gold2)}
+.inv2{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px}
+.list{font-size:12px}.list>div{display:flex;justify-content:space-between;gap:6px;border-bottom:1px dashed #241f15;white-space:nowrap;font-variant-numeric:tabular-nums}
 .list>div>span:first-child{overflow:hidden;text-overflow:ellipsis}
-.cmb{display:grid;grid-template-columns:minmax(0,1fr) 40px 50px;gap:4px;font-size:11.5px;border-bottom:1px dashed #241f15;white-space:nowrap}
-.result{font:10.5px var(--mono);color:var(--dm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmb{display:grid;grid-template-columns:minmax(0,1fr) 40px 50px;gap:6px;font-size:11.5px;border-bottom:1px dashed #241f15;white-space:nowrap;font-variant-numeric:tabular-nums}
+.result{font:11px var(--ui);color:var(--dm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* activity */
-.scr{display:grid;grid-template-columns:minmax(0,1fr) 30px 40px 64px;gap:4px;font-size:12px;align-items:center;white-space:nowrap}
+.scr{display:grid;grid-template-columns:minmax(0,1fr) 28px 36px 64px;gap:6px;font-size:12px;align-items:center;white-space:nowrap;line-height:17px;font-variant-numeric:tabular-nums}
 .pips{display:flex;gap:1px}.pips i{width:4px;height:9px;border-radius:1px}
-.feed>div{display:grid;grid-template-columns:52px 14px 96px minmax(0,1fr);gap:5px;font-size:12px;padding:0 8px;border-bottom:1px solid #1b1710;white-space:nowrap;line-height:17px}
+.feed>div{display:grid;grid-template-columns:38px 14px 96px minmax(0,1fr);gap:6px;font-size:12px;padding:0 10px;border-bottom:1px solid #1b1710;white-space:nowrap;line-height:18px}
 .feed>div span:last-child{overflow:hidden;text-overflow:ellipsis}
+.feed .pline{display:flex;gap:8px;align-items:center;color:var(--dm);cursor:pointer;background:var(--p1);font-size:12px;padding:2px 10px}
+.feed .pline:hover{color:var(--tx)}.feed .fgrp{font:600 11px var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--fa);padding:4px 10px 0;display:block;border:0}
 .secret{filter:blur(4px);user-select:none;cursor:pointer;color:var(--gold,#dfc080);letter-spacing:-1px}.secret:hover{filter:blur(3px)}.secret.shown{filter:none;user-select:text;letter-spacing:normal}
-/* round 4: header hero numbers, mini strip, race, economy, role rows */
-.kpi.hero b{font:700 20px var(--ui);font-variant-numeric:proportional-nums;color:var(--gold);letter-spacing:.01em}
-.kpi.hero b small{font:600 13px var(--ui);color:var(--dm);margin-left:3px}
-.mini{display:flex;gap:12px;font:500 11px var(--ui);color:var(--dm);white-space:nowrap;margin-left:10px}.mini b{color:var(--tx);font-weight:600;font-variant-numeric:tabular-nums}
-.rhead{display:flex;align-items:center;gap:10px;padding:4px 9px;border-bottom:1px solid var(--ln);white-space:nowrap;flex-wrap:nowrap;overflow:hidden}
-.gate{display:inline-flex;align-items:center;gap:4px;font:600 11px var(--ui);color:var(--dm)}.gate i{width:9px;height:9px;border-radius:50%;display:inline-block}
-.gate.ok i{background:var(--grn)}.gate.no i{background:transparent;border:2px solid var(--red)}.gate.ok{color:var(--tx)}
-.rk{font:500 13px var(--ui);color:var(--dm)}.rk b{font:700 13px var(--ui);color:var(--tx);font-variant-numeric:tabular-nums}.rk small{font-size:11px}
-.race{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;padding:4px 9px 6px}
-.rr{display:grid;grid-template-columns:96px minmax(0,1fr) 92px;gap:6px;align-items:center;height:17px;border-bottom:1px solid #1b1710}
-.rr .rl{font:600 12px var(--ui);color:var(--parch);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rr .rs{font:600 12px var(--ui);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.rr svg{display:block;width:100%;height:12px}
-.st-win{color:var(--grn)}.st-floor{color:var(--org)}.st-late{color:var(--red)}.st-none{color:var(--dm)}
-.egrid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.9fr);flex:1;min-height:0}
-.egrid>div{display:flex;flex-direction:column;min-height:0;padding:3px 8px;border-right:1px solid var(--ln)}.egrid>div:last-child{border-right:0}
-.fr{display:grid;grid-template-columns:minmax(0,1fr) 50px 54px 74px;gap:4px;font:500 12px var(--ui);border-bottom:1px dashed #241f15;line-height:18px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.fr span{overflow:hidden;text-overflow:ellipsis}.fr .n{text-align:right}
-.sup{display:grid;grid-template-columns:18px minmax(0,1fr) 46px 52px;gap:4px;align-items:center;font:500 12px var(--ui);line-height:18px;white-space:nowrap;font-variant-numeric:tabular-nums}
-.gold{font:600 12px var(--ui);color:var(--gold);white-space:nowrap;font-variant-numeric:tabular-nums}
-.al.more{border-style:dashed;color:var(--dm)}
+/* 2560 x 1440: wider side columns, same structure */
+@media (min-width:2200px){#roster{max-height:none}.grid{grid-template-columns:500px minmax(0,1fr) 600px}html,body{font-size:14px}.rr{height:22px}.dv{height:22px}.dv .sb{top:8px}.dv .fl{top:5px}}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
-  <div class="brand">SWARM CONTROL<small>rs-sdk demo</small></div>
-  <div class="kpis">
-    <div class="kpi hero" title="boards where the realistic plan beats the live #1 (floor plan in brackets)"><b id="k-win">-</b><span>boards won by plan</span></div>
-    <div class="kpi hero" title="Overall board: realistic finish against the live #1, in ticks (game time in brackets)"><b id="k-gap">-</b><span>overall gap</span></div>
-    <div class="kpi hero" title="go/no-go gates for the main run (the gate file in .practice)"><b id="k-gates">-</b><span>go gates</span></div>
-    <div class="kpi hero" title="coins per hour of the live gold farmers, measured over the last 2 minutes"><b id="k-gold">-</b><span>gold per hour</span></div>
-    <div class="kpi"><b id="k-gp">-</b><span>vault value</span></div>
-    <div class="kpi"><b id="k-xp">-</b><span>swarm xp per hour</span></div>
-  </div>
+  <div class="brand"><b>SWARM CONTROL</b><small>rs-sdk demo · 24-board race</small></div>
+  <div class="kpi hero" id="kh-win"><b id="k-win">–</b><span class="cap">boards won · realistic</span></div>
+  <div class="kpi hero" id="kh-gap"><b id="k-gap">–</b><span class="cap">overall gap · realistic</span></div>
+  <div class="kpi" id="kh-gates"><b id="k-gates">–</b><span class="cap">go gates</span></div>
+  <div class="kpi" id="kh-gold"><b id="k-gold">–</b><span class="cap">coins / tick · farmers</span></div>
+  <div class="kpi" id="kh-gp"><b id="k-gp">–</b><span class="cap">vault value</span></div>
+  <div class="kpi" id="kh-xp"><b id="k-xp">–</b><span class="cap" id="k-xp-l">xp / tick · training</span></div>
   <div class="mini" id="mini"></div>
-  <div class="links"><span class="pulse" id="pulse" title="live, every 2 s"></span><span class="mono dm" id="clock"></span>
+  <div class="links"><span class="pulse" id="pulse" title="live, every 2 s"></span><span class="num dm" id="clock"></span>
     <a href="https://rs-sdk-demo.fly.dev/hiscores" target="_blank">Hiscores</a><a href="https://rs-sdk-demo.fly.dev/market" target="_blank">Market</a></div>
 </header>
-<div class="alerts" id="alerts"></div>
+<div class="alerts" id="alerts"><span class="lbl">ALERTS</span><span class="loading">loading</span></div>
 <div class="grid">
   <div class="col">
-    <section class="card" style="flex:0 1 auto;max-height:520px"><h2>Live accounts <em id="cnt"></em></h2><div class="scroll" id="roster"></div></section>
-    <section class="card" style="height:104px;flex:none"><h2>Practice <em id="pcnt"></em></h2><div class="prac" id="prac"></div></section>
-    <section class="card" style="flex:1 1 200px"><h2>Owner requests <em id="rqh"></em></h2><div class="rq" id="rq"></div></section>
-    <section class="card" style="height:194px;flex:none"><h2>Machine <em id="mach-h"></em></h2><div class="mach" id="mach"></div></section>
+    <section class="card" style="flex:0 1 auto;max-height:440px"><h2>Live accounts <em id="cnt"></em></h2><div class="scroll" id="roster"><div class="loading">loading</div></div></section>
+    <section class="card" style="height:100px;flex:none"><h2>Practice <em id="pcnt"></em></h2><div class="prac" id="prac"></div></section>
+    <section class="card" style="flex:1 1 200px"><h2>Owner requests <em id="rqh"></em></h2><div class="rq" id="rq"><div class="loading">loading</div></div></section>
+    <section class="card" style="height:166px;flex:none"><h2>Machine <em id="mach-h"></em></h2><div class="mach" id="mach"><div class="loading">loading</div></div></section>
   </div>
   <div class="col">
     <section class="card" style="flex:1"><h2>World <em id="map-h"></em><span class="tog"><button id="bt" title="fly to the next most interesting bot every 60 s">TOUR</button></span><span class="tog"><button id="b3" class="on">3D</button><button id="b2">2D</button></span></h2>
       <div class="mapwrap" id="mw"><iframe id="rsw" allow="cross-origin-isolated; fullscreen" title="rs-world 3D viewer"></iframe><canvas id="map"></canvas><div class="follow" id="follow"></div>
       <div class="legend" id="legend" style="display:none"><span><b class="on"></b>playing</span><span><b class="wd"></b>in world / local</span><span><b class="off"></b>offline</span></div></div></section>
-    <section class="card" style="flex:none"><h2>Main account race <em id="race-h"></em></h2><div class="rhead" id="rhead"></div><div class="race" id="race"></div></section>
-    <section class="card" style="height:262px;flex:none"><h2>Economy <em id="vsum"></em></h2><div id="vault" style="display:flex;flex-direction:column;flex:1;min-height:0"></div></section>
+    <section class="card" style="flex:none"><h2>Main account race <em id="race-h"></em></h2><div class="rhead" id="rhead"></div><div class="race" id="race"><div class="loading">loading the plan</div></div><div class="rspecial" id="rspecial"></div></section>
+    <section class="card" style="height:252px;flex:none"><h2>Economy <em id="vsum"></em></h2><div id="vault" style="display:flex;flex-direction:column;flex:1;min-height:0"><div class="loading">loading</div></div></section>
   </div>
   <div class="col">
-    <section class="card" style="flex:1"><h2>Account <em id="dupd"></em></h2><div class="scroll d" id="detail"></div></section>
+    <section class="card" style="flex:1"><h2>Account <em id="dupd"></em></h2><div class="scroll d" id="detail"><div class="loading">loading</div></div></section>
     <section class="card" style="height:262px;flex:none"><h2>Activity <em id="acth"></em></h2>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 10px;padding:3px 8px;border-bottom:1px solid var(--ln);flex:none" id="scripts"></div>
-      <div class="scroll feed" id="feed"></div></section>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 12px;padding:4px 10px;border-bottom:1px solid var(--ln);flex:none" id="scripts"></div>
+      <div class="scroll feed" id="feed"><div class="loading">loading</div></div><div class="feed" id="pfeed" style="flex:none;border-top:1px solid var(--ln)"></div></section>
   </div>
 </div>
 </div>
 <div id="tip"></div>
 <script>
 const $=s=>document.querySelector(s),E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ago=ms=>ms==null||ms<0||!isFinite(ms)?'-':ms<60e3?`${Math.round(ms/1e3)}s`:ms<3600e3?`${Math.round(ms/6e4)}m`:ms<864e5?`${(ms/36e5).toFixed(1)}h`:`${Math.round(ms/864e5)}d`;
-const dur=ms=>ms==null||ms<0?'-':ms<60e3?`${Math.round(ms/1e3)}s`:ms<3600e3?`${Math.floor(ms/6e4)}m ${String(Math.floor(ms%6e4/1e3)).padStart(2,'0')}s`:`${Math.floor(ms/36e5)}h ${String(Math.floor(ms%36e5/6e4)).padStart(2,'0')}m`;
-const nf=n=>Number(n||0).toLocaleString('en-US'),gp=n=>n==null?'-':n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e7?(n/1e6).toFixed(1)+'M':n>=1e5?Math.round(n/1e3)+'K':nf(Math.round(n));
-const K={x:'xp',m:'move',a:'anim',d:'dialog',s:'stun',i:'idle'},KC={xp:'var(--grn)',move:'var(--blu)',anim:'var(--tea)',dialog:'var(--vio)',stun:'var(--org)',idle:'var(--red)'};
-let S={bots:[],boards:[],events:[],results:[],scripts:[],alerts:[]},sel=null,picked=false,mode='3d',MAPI=null,tipFor=null,tipXY=[0,0],rswFor=null;
+const ago=ms=>ms==null||ms<-1e4||!isFinite(ms)?'–':(ms=Math.max(0,ms),0)||ms<60e3?`${Math.round(ms/1e3)}s`:ms<3600e3?`${Math.round(ms/6e4)}m`:ms<864e5?`${(ms/36e5).toFixed(1)}h`:`${Math.round(ms/864e5)}d`;
+const dur=ms=>ms==null||ms<0?'–':ms<60e3?`${Math.round(ms/1e3)}s`:ms<3600e3?`${Math.floor(ms/6e4)}m ${String(Math.floor(ms%6e4/1e3)).padStart(2,'0')}s`:`${Math.floor(ms/36e5)}h ${String(Math.floor(ms%36e5/6e4)).padStart(2,'0')}m`;
+const nf=n=>Number(n||0).toLocaleString('en-US'),gp=n=>n==null?'–':n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e7?(n/1e6).toFixed(1)+'M':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e5?Math.round(n/1e3)+'K':nf(Math.round(n));
+const sgn=n=>n==null?'–':(n>0?'+':n<0?'−':'')+nf(Math.abs(n));
+// Durations are shown in ticks; the game time (0.4 s a tick) goes in the tooltip.
+const TICK_MS=400,tickTime=t=>t==null?'–':dur(Math.abs(t)*TICK_MS),ticksTxt=t=>t==null?'–':nf(Math.round(t));
+const K={x:'xp',m:'move',a:'anim',d:'dialog',s:'stun',i:'idle'},KC={xp:'var(--c-xp)',move:'var(--c-move)',anim:'var(--c-anim)',dialog:'var(--c-dialog)',stun:'var(--c-stun)',idle:'var(--c-idle)'};
+let S=null,sel=null,picked=false,mode='3d',MAPI=null,tipFor=null,tipXY=[0,0],rswFor=null,PRAC_OPEN=false;
 const STATIC=new URLSearchParams(location.search).has('static');
 const PLACES=[['Lumbridge',3222,3218],['Varrock',3212,3428],['Draynor',3093,3244],['Port Sarim',3029,3217],['Falador',2965,3380],['Ardougne',2662,3305],['Brimhaven',2760,3180],['Musa Point',2920,3160],['Catherby',2810,3435],['Seers',2725,3485],['Baxtorian Falls',2521,3495],['GE',3181,3443],['Al Kharid',3293,3175],['Yanille',2590,3090],['Taverley',2895,3440],['Edgeville',3090,3490]];
 const st=b=>b.reserved&&!b.inWorld?['off','reserved']:b.inWorld&&b.fresh?['on','playing']:b.inWorld?['wd','in world']:b.fresh?['wd',b.practice?'practice':'status only']:['off','offline'];
 const running=b=>b.fresh||b.inWorld;
 const skills=b=>(b.skills||[]).filter(k=>!/^Stat\d+$/.test(k.name));
 const ledger=b=>{const l=b.ledger;if(!l)return null;const t=Object.values(l).reduce((a,c)=>a+c,0);if(!t)return null;return{t,p:Object.fromEntries(Object.values(K).map(n=>[n,100*(l[n]||0)/t]))}};
-const lbar=(L,w)=>`<span class="lb" style="width:${w}">${Object.values(K).map(n=>`<i style="width:${L.p[n].toFixed(1)}%;background:${KC[n]}"></i>`).join('')}</span>`;
-function svgSpark(v,w,h,col='#4fc9b2'){if(!v||v.length<2)return`<svg width="${w}" height="${h}"></svg>`;const mx=Math.max(1,...v),pts=v.map((y,i)=>`${(i/(v.length-1)*(w-2)+1).toFixed(1)},${(h-1-y/mx*(h-3)).toFixed(1)}`);
-  return`<svg width="${w}" height="${h}"><polyline points="1,${h} ${pts.join(' ')} ${w-1},${h}" fill="${col}22" stroke="none"/><polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="1.3"/></svg>`}
+const lbar=(L,w)=>`<span class="lb" style="width:${w}">${Object.values(K).map(n=>L.p[n]>0?`<i style="width:${L.p[n].toFixed(1)}%;background:${KC[n]}"></i>`:'').join('')}</span>`;
+function svgSpark(v,w,h,col='#e9b949'){if(!v||v.length<2)return`<svg width="${w}" height="${h}"></svg>`;const mn=Math.min(...v),mx=Math.max(...v),sp=Math.max(1,mx-mn),pts=v.map((y,i)=>`${(i/(v.length-1)*(w-2)+1).toFixed(1)},${(h-1-(y-mn)/sp*(h-3)).toFixed(1)}`);
+  return`<svg width="${w}" height="${h}" style="display:block"><polyline points="1,${h} ${pts.join(' ')} ${w-1},${h}" fill="${col}1f" stroke="none"/><polyline points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="1.5" stroke-linejoin="round"/></svg>`}
 const when=at=>{const d=new Date(at),t=d.toLocaleTimeString('en-GB');return new Date(S.now).toDateString()===d.toDateString()?t:d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+t.slice(0,5)};
 const hm=at=>new Date(at).toLocaleTimeString('en-GB').slice(0,5);
 const actChip=a=>a?`<span class="act" style="background:${KC[a]}">${a}</span>`:'';
-const ocIcon=o=>o==='ok'?'<span class="oc ok" title="last run ok">✔</span>':o==='died'?'<span class="oc died" title="last run: died">✝</span>':o==='fail'?'<span class="oc fail" title="last run failed">✘</span>':'<span class="oc fa">·</span>';
-function jobPill(j){if(!j)return'';const c=/^ended/.test(j.state)?'ended':/^external/.test(j.state)?'external':/^waiting/.test(j.state)?'waiting':j.state;return`<span class="job ${E(c)}" title="${E(j.state)} · ${E(j.goal)}${j.note?' · '+E(j.note):''}">${E(j.state.replace(/\s*\(.*\)$/,''))}</span>`}
+const ocIcon=o=>o==='ok'?'<span class="oc ok" title="last run ok">✔</span>':o==='died'?'<span class="oc died" title="died">✝</span>':o==='fail'?'<span class="oc fail" title="last run failed">✘</span>':'<span class="oc fa">·</span>';
+function jobPill(j){if(!j)return'';const c=/^ended/.test(j.state)?'ended':j.state;return`<span class="job ${E(c)}" title="${E(j.state)} · ${E(j.goal)}${j.note?' · '+E(j.note):''}">${E(j.state.replace(/\s*\(.*\)$/,''))}</span>`}
 function icon(name,sz=32){const id=S.icons?.[name];if(id==null||id>=3904)return`<i class="ico none" style="width:${sz}px;height:${sz}px;font-size:${Math.max(9,sz*.32)}px" title="${E(name)} (no sprite in the local sheet)">${E(String(name).split(/\s+/).map(w=>w[0]).join('').slice(0,3))}</i>`;const k=sz/32;
   return`<i class="ico" style="width:${sz}px;height:${sz}px;background-size:${2048*k}px auto;background-position:-${(id%64)*sz}px -${Math.floor(id/64)*sz}px" title="${E(name)}"></i>`}
 // Stack numbers as the game draws them: yellow below 100K, white K up to 10M, green M above.
 const qty=n=>n<1e5?['y',String(n)]:n<1e7?['w',Math.floor(n/1e3)+'K']:['gr',Math.floor(n/1e6)+'M'];
 function cell(it){if(!it)return'<div class="cell"></div>';const[c,t]=qty(it.count);return`<div class="cell" title="${E(it.name)} × ${nf(it.count)}">${icon(it.name)}${it.count>1?`<span class="q ${c}">${t}</span>`:''}</div>`}
 function goalOf(b){return b.goalSkill?skills(b).find(k=>k.name===b.goalSkill):null}
-function paceTxt(b){if(b.xpLeft===0)return`<span class="pace up" title="${b.pace?'finished: '+(b.pace.ahead?'ahead of':'behind')+' #1 '+E(b.pace.top)+' by '+E(b.pace.gap):'target reached'}">✔ done</span>`;if(!b.pace)return b.eta?`<span class="pace dm">ETA ${E(b.eta)}</span>`:'';return`<span class="pace ${b.pace.ahead?'up':'dn'}" title="projected ${E(b.finish)} vs #1 ${E(b.pace.top)} ${E(b.pace.topTime)}">${b.pace.ahead?'▲':'▼'}${E(b.pace.gap)}</span>`}
+const etaTicks=b=>b.xpPerTick>0&&b.xpLeft!=null?b.xpLeft/b.xpPerTick:null;
+function paceTxt(b){if(b.xpLeft===0)return`<span class="dm" title="${b.pace?'finished: '+(b.pace.ahead?'ahead of':'behind')+' #1 '+E(b.pace.top)+' by '+E(b.pace.gap):'target reached'}"><span class="i-win">✔</span> done</span>`;const et=etaTicks(b);if(!b.pace)return et!=null?`<span class="dm num" title="${tickTime(et)} of game time">ETA ${ticksTxt(et)} t</span>`:'';return`<span class="num" title="projected ${E(b.finish)} vs #1 ${E(b.pace.top)} ${E(b.pace.topTime)}">${b.pace.ahead?'<span class="i-win">▲</span> ahead':'<span class="i-late">▼</span> behind'} ${E(b.pace.gap)}</span>`}
 
 // ---- DOM diff: a container's HTML is rebuilt only when its string changes; keyed lists patch row by row ----
 function put(el,html){if(typeof el==='string')el=$(el);if(el._h!==html){el._h=html;el.innerHTML=html}}
@@ -249,51 +274,65 @@ function secretSpan(){const s=document.createElement('span');s.className='secret
 function hideSecrets(root){
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.includes(MARK)?1:3});const hits=[];while(w.nextNode())hits.push(w.currentNode);
   for(const t of hits){const parts=t.nodeValue.split(MARK);const f=document.createDocumentFragment();parts.forEach((p,i)=>{if(i)f.appendChild(secretSpan());if(p)f.appendChild(document.createTextNode(p))});t.replaceWith(f)}
-  for(const el of root.querySelectorAll('*'))for(const a of el.attributes)if(/^(title|alt|aria-label|placeholder)$/.test(a.name)&&a.value.includes(MARK))a.value=a.value.split(MARK).join(REVEAL||'main account');
+  for(const el of root.querySelectorAll('*'))for(const a of el.attributes)if(/^(title|alt|aria-label|placeholder|data-tt)$/.test(a.name)&&a.value.includes(MARK))a.value=a.value.split(MARK).join(REVEAL||'main account');
 }
 document.addEventListener('click',async e=>{const s=e.target.closest&&e.target.closest('.secret');if(!s||REVEAL)return;e.stopPropagation();e.preventDefault();
   REVEAL=await (await fetch('/api/reveal',{cache:'no-store'})).text();for(const x of document.querySelectorAll('.secret')){x.textContent=REVEAL;x.classList.add('shown');x.title='main account'}},true);
 new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType===3&&n.nodeValue.includes(MARK))hideSecrets(n.parentNode);else if(n.nodeType===1)hideSecrets(n)}}).observe(document.documentElement,{childList:true,subtree:true,characterData:false});
-function keyed(el,rows){const have=new Map([...el.children].map(c=>[c.dataset.k,c]));let prev=null;
+function keyed(el,rows){const have=new Map([...el.children].filter(c=>c.dataset.k).map(c=>[c.dataset.k,c]));for(const c of [...el.children])if(!c.dataset.k)c.remove();let prev=null;
   for(const[k,html]of rows){let c=have.get(k);if(c)have.delete(k);else{c=document.createElement('div');c.dataset.k=k}
     if(c._h!==html){c._h=html;c.innerHTML=html;c.firstElementChild&&(c.className=c.firstElementChild.dataset.c||'')}
     const want=prev?prev.nextSibling:el.firstChild;if(c!==want)el.insertBefore(c,want);prev=c}
   for(const c of have.values())c.remove()}
 
+// ---- roster ----
+const isGold=b=>b.role4?.kind==='gold',isBank=b=>b.role4?.kind==='bank';
 function rowLive(b){const[c,t]=st(b),sk=goalOf(b),L=running(b)?ledger(b):null,idle=L?L.p.idle:null,bad=idle!=null&&idle>10;
-  const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':b.name===S.vault?.banker?'bk':'';
-  const tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0;
-  return`<i hidden data-c="bot ${sel===b.name?'sel':''} ${bad?'idle':''}"></i>
+  const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':'';
+  const tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,rl=roleLine(b);
+  return`<i hidden data-c="bot ${sel===b.name?'sel':''}"></i>
   <div class="l"><span class="dot ${c}" title="${t}"></span><span class="nm">${E(b.name)}</span><span class="pill ${pc}" ${b.roleInferred?'title="inferred from the highest non-Hitpoints skill"':''}>${E(role)}</span>${jobPill(b.job)}${IR[b.name]?.why?`<span class="why" title="interest score ${IR[b.name].score.toFixed(0)}: ${E(IR[b.name].all)}">${E(IR[b.name].why)}</span>`:''}</div>
-  <div class="r">${actChip(b.action)}<span class="mono dm" title="status file age">${b.at?ago(S.now-b.at):''}</span></div>
-  <div class="l">${roleLine(b)??''}${!roleLine(b)&&sk?`<span class="gbar"><i style="width:${pct.toFixed(1)}%"></i><span>${E(b.goalSkill)} ${sk.level} / ${tgt}</span></span>${paceTxt(b)}${b.role4?.kind==='fish'?`<span class="dm" title="feathers in the pack">${nf(b.role4.feathers)} feathers</span>`:''}${b.role4?.kind==='wood'&&b.hp?`<span class="${b.hp.now<=b.hp.max/3?'dn':'dm'}">HP ${b.hp.now}/${b.hp.max}</span>`:''}`:(roleLine(b)?'':`<span class="dm ell">${E(b.job?.goal||b.goal||'')}</span>`)}</div>
-  <div class="r">${b.role4?.kind==='gold'?(b.role4.coinsPerTick!=null?`<span class="mono gold">${gp(b.role4.coinsPerTick*9000)} gp/h</span>`:''):b.xpPerHour!=null?`<span class="mono">${gp(b.xpPerHour)} xp/h</span>`:''}${b.spark?.length>1?svgSpark(b.spark,52,14):''}</div>
-  <div class="l"><span class="ell" title="${E(b.phase||'')}">${/^\s*\w+=\S+(\s+\w+=\S+){2,}/.test(b.phaseShort||'')?'':E(b.phaseShort||'')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}</div>
-  <div class="r">${L?`${lbar(L,'70px')}<span class="idl ${bad?'bad':'ok'}">idle ${idle.toFixed(0)}%</span>`:''}</div>`}
-function rowOff(b){const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':b.name===S.vault?.banker?'bk':'';
-  const why=b.job?.note||(b.reserved?'reserved for the main run':b.at?'':'no status file yet');
-  return`<i hidden data-c="off1 ${sel===b.name?'sel':''}"></i>${ocIcon(b.outcome)}<span class="nm">${E(b.name)}</span><span class="pill ${pc}">${E(role)}</span>${jobPill(b.job)}<span class="note" title="${E(why)}${b.result?' · last RESULT: '+E(b.result):''}">${E(why)}</span><span class="mono fa" title="last seen">${b.lastSeen?ago(S.now-b.lastSeen):'never'}</span>`}
-function roster(){const live=S.bots.filter(b=>!b.practice),on=ranked(),off=live.filter(b=>!(running(b)&&!b.reserved));
-  const rows=[...on.map(b=>['L'+b.name,rowLive(b)])];
-  if(off.length)rows.push(['G-off',`<i hidden data-c="grp"></i>offline · ${off.length} · reason from the swarm plan`]);
+  <div class="r">${actChip(b.action)}<span class="num dm" title="status file age">${b.at?ago(S.now-b.at):''}</span></div>
+  <div class="l">${rl??(sk?`<span class="gbar"><i style="width:${pct.toFixed(1)}%"></i><span>${E(b.goalSkill)} ${sk.level} / ${tgt}</span></span>${paceTxt(b)}${b.role4?.kind==='fish'?`<span class="dm num" title="feathers in the pack">${nf(b.role4.feathers)} feathers</span>`:''}`:`<span class="dm ell">${E(b.job?.goal||b.goal||'')}</span>`)}</div>
+  <div class="r">${isGold(b)?(b.role4.coinsPerTick!=null?`<span class="gold" title="${gp(b.role4.coinsPerTick*9000)} coins an hour">${b.role4.coinsPerTick.toFixed(1)} c/tick</span>`:''):b.training&&b.xpPerTick!=null?`<span class="num" title="${gp(b.xpPerHour)} xp an hour">${b.xpPerTick.toFixed(0)} xp/tick</span>`:''}${b.spark?.length>1&&!isGold(b)&&b.training?svgSpark(b.spark,48,14):''}</div>
+  <div class="l"><span class="ell dm" title="${E(b.phase||'')}">${/^\s*\w+=\S+(\s+\w+=\S+){2,}/.test(b.phaseShort||'')?'':E(b.phaseShort||'')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}</div>
+  <div class="r">${L?`${lbar(L,'64px')}<span class="idl ${bad?'bad':'ok'}" title="share of ledger ticks spent idle">${bad?'⚠ ':''}idle ${idle.toFixed(0)}%</span>`:''}</div>`}
+// Offline: the newest RESULT and any death come first; the swarm note is second (it can be older than the result).
+function offWhy(b){
+  if(b.reserved)return{html:'<b>reserved</b> <i>· the main run starts only on a GO from the gate</i>',tip:'reserved for the main run'};
+  const parts=[],tips=[];
+  if(b.death){parts.push(`<b class="i-late">died</b> <i>${ago(S.now-b.death.at)} ago</i>`);tips.push('death: '+b.death.text)}
+  const r=b.lastRes;if(r&&(!b.death||r.at>b.death.at)){const head=r.text.replace(/^(ok|fail)\s+/,'').split(/\s+/).slice(0,2).join(' ');parts.push(`<b>${r.died?'died':r.ok?'ok':'fail'}</b> ${E(head)} <i>${ago(S.now-r.at)}</i>`);tips.push('last RESULT: '+r.text)}
+  else if(!r&&!b.death&&b.result){parts.push(`<b>${b.outcome||'result'}</b> ${E(String(b.result).replace(/^(ok|fail)\s+/,'').split(/\s+/).slice(0,2).join(' '))}`);tips.push('last RESULT: '+b.result)}
+  if(b.job?.note){parts.push(`<i>${E(b.job.note)}</i>`);tips.push('swarm note: '+b.job.note)}
+  if(!parts.length)parts.push(b.at?'<i>no result yet</i>':'<i>no status file yet</i>');
+  return{html:parts.join(' <i>·</i> '),tip:tips.join(' | ')}}
+function rowOff(b){const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':'',w=offWhy(b);
+  const oc=b.reserved?'<span class="oc fa">◇</span>':ocIcon(b.death&&!(b.lastRes&&b.lastRes.at>b.death.at&&!b.lastRes.died)?'died':b.lastRes?(b.lastRes.died?'died':b.lastRes.ok?'ok':'fail'):b.outcome);
+  return`<i hidden data-c="off1 ${sel===b.name?'sel':''}"></i>${oc}<span class="nm">${E(b.name)}</span><span class="pill ${pc}">${E(role)}</span><span class="note" title="${E(w.tip)}">${w.html}</span><span class="num fa" style="text-align:right" title="last seen">${b.lastSeen?ago(S.now-b.lastSeen):'never'}</span>`}
+function roster(){const live=S.bots.filter(b=>!b.practice),on=ranked(),off=live.filter(b=>!(running(b)&&!b.reserved)).sort((a,b)=>Number(!!b.reserved)-Number(!!a.reserved));
+  const rows=on.map(b=>['L'+b.name,rowLive(b)]);
+  if(!on.length)rows.push(['G-none','<i hidden data-c="empty-st"></i>No live account is running.']);
+  if(off.length)rows.push(['G-off',`<i hidden data-c="grp"></i>offline · ${off.length} · latest result first, swarm note after`]);
   rows.push(...off.map(b=>['O'+b.name,rowOff(b)]));
   keyed($('#roster'),rows);
   const pr=S.bots.filter(b=>b.practice),pRun=pr.filter(running),pDone=pr.filter(b=>!running(b)).sort((a,b)=>(b.at||0)-(a.at||0)),oc=k=>pDone.filter(b=>b.outcome===k).length;
   // 3 rows of 4: running bots first, then the newest finished; older ones are only counted.
   const shown=[...pRun,...pDone].slice(0,12),rest=pr.length-shown.length;
   $('#pcnt').textContent=`${pRun.length} running · ${pDone.length} done (✔${oc('ok')} ✘${oc('fail')} ✝${oc('died')}) · last 30 min${rest>0?' · +'+rest+' not shown':''}`;
+  if(!shown.length){put('#prac','<span class="empty-st" style="grid-column:1/-1;padding:4px 0">No practice bot in the last 30 min.</span>');}else{if($('#prac')._h)$('#prac')._h=null,$('#prac').innerHTML='';
   keyed($('#prac'),shown.map(b=>{const sk=goalOf(b),tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,[c]=st(b);
-    return['P'+b.name,`<i hidden data-c="pc ${sel===b.name?'sel':''}"></i><span class="dot ${c}"></span>${running(b)?'':ocIcon(b.outcome)}<span class="ell" style="flex:none;max-width:62px" title="${E(b.name)} · ${E(b.phase||'')}${b.result?' · '+E(b.result):''}">${E(b.name)}</span><span class="gb" title="${sk?E(b.goalSkill)+' '+sk.level+'/'+tgt:''}"><i style="width:${pct.toFixed(0)}%"></i></span>`]}));
+    return['P'+b.name,`<i hidden data-c="pc ${sel===b.name?'sel':''}"></i><span class="dot ${c}"></span>${running(b)?'':ocIcon(b.outcome)}<span class="ell" style="flex:none;max-width:62px" title="${E(b.name)} · ${E(b.phase||'')}${b.result?' · '+E(b.result):''}">${E(b.name)}</span><span class="gb" title="${sk?E(b.goalSkill)+' '+sk.level+'/'+tgt:''}"><i style="width:${pct.toFixed(0)}%"></i></span>`]}))}
   $('#cnt').textContent=`${on.length} running · ${off.length} offline`}
 // Interest score: what is worth watching now. Recent death or alert, a new phase (level-up or milestone),
-// close to or ahead of a board #1, a high XP rate; idle sinks. The order is kept for 30 s (or until a new alert)
+// close to or ahead of a board #1, a high rate; idle sinks. The order is kept for 30 s (or until a new alert)
 // so rows do not jump every 2 s; the reason shows as a tag on the row.
 let IR={},ORDER=[],ORDER_AT=0,ORDER_ALERT=0;
 function interest(b){const r=[];let s=0;const now=S.now,al=(S.alerts||[]).filter(a=>a.name===b.name&&!a.practice&&now-a.at<15*60e3);
   if(al.some(a=>a.kind==='death')){s+=100;r.push('died')}else if(al.length){s+=60;r.push(al[0].kind)}
   if(b.phaseSince&&b.phaseExact&&now-b.phaseSince<3*60e3){s+=40;r.push('new: '+String(b.phaseShort||'').slice(0,18))}
   if(b.pace&&b.xpLeft>0){if(b.pace.ahead){s+=70;r.push('ahead of #1')}else{s+=25;r.push('chasing #1')}}
-  const cpt=b.role4?.kind==='gold'?b.role4.coinsPerTick:null;if(cpt>0){s+=Math.min(30,cpt*2);if(!r.length)r.push(cpt.toFixed(1)+' c/tick')}else if(b.role4?.kind!=='gold'&&b.xpPerHour>0){s+=Math.min(30,b.xpPerHour/2e5);if(!r.length)r.push(gp(b.xpPerHour)+' xp/h')}
+  const cpt=isGold(b)?b.role4.coinsPerTick:null;if(cpt>0){s+=Math.min(30,cpt*2);if(!r.length)r.push(cpt.toFixed(1)+' c/tick')}else if(b.training&&b.xpPerTick>0){s+=Math.min(30,b.xpPerTick/50);if(!r.length)r.push(b.xpPerTick.toFixed(0)+' xp/tick')}
   if(b.action==='idle'){s-=20;r.push('idle')}
   return{score:s,why:r[0]||'',all:r.join(' · ')||'nothing special'}}
 function ranked(){const on=S.bots.filter(b=>!b.practice&&running(b)&&!b.reserved);IR={};for(const b of on)IR[b.name]=interest(b);
@@ -308,103 +347,121 @@ window.addEventListener('message',e=>{if(e.origin!=='http://localhost:3000'||!e.
 function pick(n){if(!n)return;sel=n;picked=true;render()}
 for(const id of['#roster','#prac']){const el=$(id);el.onclick=e=>{const r=e.target.closest('[data-k]');if(r&&!r.dataset.k.startsWith('G'))pick(r.dataset.k.slice(1))};
   el.onmousemove=e=>{const r=e.target.closest('[data-k]');tipFor=r&&!r.dataset.k.startsWith('G')?r.dataset.k.slice(1):null;tipXY=[e.clientX,e.clientY];tip()};el.onmouseleave=()=>{tipFor=null;tip()}}
-function tip(){const el=$('#tip'),b=tipFor&&S.bots.find(q=>q.name===tipFor);if(!b){el.style.display='none';return}const L=running(b)?ledger(b):null;
-  el.innerHTML=`<div class="sub"><span>${E(b.name)}</span><span>${b.job?E(b.job.state):''}</span></div>${b.job?.note?`<div class="dm" style="margin-bottom:3px">${E(b.job.note)}</div>`:''}`+(L?`<table>${Object.values(K).map(n=>`<tr><td><span class="dot" style="background:${KC[n]}"></span> ${n}</td><td style="text-align:right">${nf(b.ledger[n])}</td><td style="text-align:right;${n==='idle'&&L.p.idle>10?'color:var(--red);font-weight:700':''}">${L.p[n].toFixed(1)}%</td></tr>`).join('')}</table>${L.p.idle>10?'<div class="w">idle over 10%: standing still is a warcrime</div>':''}`:b.result?`<div class="mono dm" style="white-space:normal;font-size:11px">${E(b.result)}</div>`:'');
-  el.style.display='block';const[px,py]=tipXY;el.style.left=Math.min(innerWidth-el.offsetWidth-8,px+14)+'px';el.style.top=Math.min(innerHeight-el.offsetHeight-8,py+10)+'px'}
+// Tooltip for a bot row, or for any element with data-tt (HTML, escaped in the attribute).
+let TT=null;
+function placeTip(el){el.style.display='block';const[px,py]=tipXY;el.style.left=Math.max(8,Math.min(innerWidth-el.offsetWidth-8,px+14))+'px';el.style.top=Math.max(8,Math.min(innerHeight-el.offsetHeight-8,py+12))+'px'}
+document.addEventListener('mousemove',e=>{const t=e.target.closest&&e.target.closest('[data-tt]');if(t){TT=t.getAttribute('data-tt');tipXY=[e.clientX,e.clientY];const el=$('#tip');el.innerHTML=TT;placeTip(el)}else if(TT){TT=null;if(!tipFor)$('#tip').style.display='none'}});
+function tip(){const el=$('#tip'),b=tipFor&&S.bots.find(q=>q.name===tipFor);if(!b){if(!TT)el.style.display='none';return}const L=running(b)?ledger(b):null;
+  el.innerHTML=`<div class="sub"><span>${E(b.name)}</span><span>${b.job?E(b.job.state):b.reserved?'reserved':''}</span></div>${b.job?.note?`<div class="dm" style="margin-bottom:4px">swarm note: ${E(b.job.note)}</div>`:''}`+(L?`<table>${Object.values(K).map(n=>`<tr><td><span class="dot" style="background:${KC[n]}"></span> ${n}</td><td style="text-align:right">${nf(b.ledger[n])}</td><td style="text-align:right">${L.p[n].toFixed(1)}%</td></tr>`).join('')}</table>${L.p.idle>10?'<div class="w">⚠ idle over 10%: standing still is a warcrime</div>':''}`:(b.lastRes||b.result)?`<div class="dm" style="white-space:normal;font-size:11px">${E(b.lastRes?.text||b.result)}</div>`:'');
+  placeTip(el)}
 
-$('#alerts').onclick=e=>{const a=e.target.closest('.al');if(a)pick(a.dataset.n)};
+$('#alerts').onclick=e=>{const a=e.target.closest('.al[data-n]');if(a)pick(a.dataset.n)};
 
-const PS=['not started','method known','prep needed','rehearsed'],AB={Overall:'OVR',Attack:'ATT',Defence:'DEF',Strength:'STR',Hitpoints:'HP',Ranged:'RNG',Prayer:'PRA',Magic:'MAG',Cooking:'COO',Woodcutting:'WC',Fletching:'FLE',Fishing:'FSH',Firemaking:'FM',Crafting:'CRA',Smithing:'SMI',Mining:'MIN',Herblore:'HER',Agility:'AGI',Thieving:'THI',Runecraft:'RC','Quest Points':'QP',Equipment:'EQP',Bank:'BNK',Runite:'RUN'};
-function boards(){
-  $('#bd-h').textContent=`#1 per board: ${S.liveTops?`live, ${S.liveTops} skill boards checked ${ago(S.now-S.liveTopsAt)} ago`:`snapshot ${S.snapshotAt?String(S.snapshotAt).slice(0,16).replace('T',' '):'?'} (${S.snapshotAt?ago(S.now-Date.parse(S.snapshotAt)):'?'} old)`} · times are game time (0.4 s/tick) · bar = how close our best is`;
-  put('#boards',S.boards.map(r=>{const t=r.top,b=r.best,win=b&&b.rank===1,g=r.gap,cl=g?g.close:0,col=cl>=1?'var(--gold)':cl>=.75?'var(--grn)':cl>=.4?'var(--org)':'var(--red)';
-    const delta=b&&b.delta?`<span class="${b.delta>0?'up':'dn'}">${b.delta>0?'▲':'▼'}${nf(Math.abs(b.delta))}</span>`:'';
-    return`<div class="bd ${win?'win':''}" title="${E(r.board)}: #1 ${E(t?.name||'?')} ${E(t?.time||'')}${b?` · ours ${E(b.name)} #${b.rank} lvl ${b.level} ${E(b.time)}`:''}${g?` · ${g.kind==='time'?(g.ahead?'ahead by ':'behind by ')+g.text:g.text+' short'}`:''}">
-    <h4><span>${E(r.board)}</span>${t?.level?`<span class="fa" style="font:500 11px var(--mono)">${t.level}</span>`:''}</h4>
-    <div class="t"><span class="dm">${E(t?.name||'—')}</span><span class="mono g">${E(t?.time||'-')}</span></div>
-    <div class="gapb">${g?`<i style="width:${(Math.max(.03,cl)*100).toFixed(0)}%;background:${col}"></i>`:''}</div>
-    <div class="o">${b?`<span>${E(b.name)} <span class="mono ${b.rank<=10?'g':''}">#${nf(b.rank)}</span> ${delta}</span><span class="mono" style="color:${col}">${g?(g.kind==='time'?(g.ahead?'−':'+')+E(g.text):E(g.text)):''}</span>`:`<span class="fa">${r.kind==='value'?'not ranked':'no rank'}</span>`}</div></div>`}).join(''));
-  const h=S.mainPlan;if(!h)return;const cnt=PS.map(p=>h.boards.filter(b=>b.status===p).length);
-  put('#hag',`<span class="h" title="plan source: ${E(h.source)} · ${PS.map((p,i)=>p+' '+cnt[i]).join(' · ')}">MAIN</span>`+h.boards.map(b=>{const i=Math.max(0,PS.indexOf(b.status));return`<span class="hc ps-${i}" title="${E(b.board)}: ${E(b.status)}${b.note?' · '+E(b.note):''}">${AB[b.board]||E(b.board.slice(0,3))}<small>${['—','method','prep','ready'][i]}</small></span>`}).join(''))}
-
+// ---- account detail: the layout follows the bot's role ----
+const stat=(k,v,cls='',tt='')=>`<div class="stat"${tt?` title="${E(tt)}"`:''}><span>${k}</span><b class="${cls}">${v}</b></div>`;
+const hero=(k,v,tt='')=>`<div${tt?` title="${E(tt)}"`:''}><span class="cap">${k}</span><b>${v}</b></div>`;
+function roleOf(b){if(b.reserved)return'main';if(isGold(b))return'gold';if(isBank(b)||b.name===S.vault?.banker)return'bank';if(b.goalSkill&&b.xpLeft===0)return'done';if(b.goalSkill)return'train';return'other'}
+function detailHero(b){const k=roleOf(b),r=b.role4||{},sk=goalOf(b),et=etaTicks(b);
+  if(k==='main'){const G=S.gates?.gates||[],R=S.race;return`<div class="dhero">${hero('go gates',`${G.filter(g=>g.pass).length}<small>/ ${G.length}</small>`,G.map(g=>(g.pass?'✔ ':'✘ ')+g.name+': '+g.detail).join('\n'))}${hero('overall gap · realistic',R?.gap!=null?`<span class="${R.gap>=0?'i-win':''}">${sgn(R.gap)}</span><small>ticks</small>`:'–',R?.gap!=null?tickTime(R.gap)+' of game time':'')}${hero('boards won · realistic',R?`${R.wins}<small>/ 24</small>`:'–')}</div>
+    <div class="dnote"><span>Reserved for the main run. It logs in only when the go/no-go gate script prints GO (5 of 5 gates).</span></div>`}
+  if(k==='gold'){const per=r.coinsPerTick,emptyT=r.emptyMs!=null?r.emptyMs/TICK_MS:null;return`<div class="dhero">${hero('coins / tick',per!=null?per.toFixed(1):'–',per!=null?gp(per*9000)+' coins an hour':'needs 2 fresh status samples')}${hero('made this run',r.made!=null?gp(r.made):'–','coins gained since the first status of this run')}${hero('food left',`${r.food}<small>${emptyT!=null?ticksTxt(emptyT)+' t':'pack'}</small>`,emptyT!=null?`empty in ${ticksTxt(emptyT)} ticks (${tickTime(emptyT)}) at the measured eat rate`:'no eat rate measured yet')}</div>
+    <div class="stats">${stat('coins held',gp(r.coins),'g',nf(r.coins)+' coins')}${stat('food in bank',r.bankFood??'–')}${stat('eats / 1k t',r.eatPerTick!=null?(r.eatPerTick*1000).toFixed(1):'–')}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp&&b.hp.now<=b.hp.max/3?'i-late':'')}${stat('run up',b.uptime!=null?ticksTxt(b.uptime/TICK_MS)+' t':'–','',b.uptime!=null?dur(b.uptime):'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}</div>`}
+  if(k==='bank'){const v=S.vault||{},age=v.lastTransferAt?S.now-v.lastTransferAt:null;return`<div class="dhero">${hero('vault value',gp(v.value))}${hero('coins',gp(v.coins),nf(v.coins)+' coins')}${hero('last transfer',age!=null?ago(age):'–',v.lastTransferAt?when(v.lastTransferAt):'no transfer logged')}</div>
+    <div class="stats">${stat('holders',(v.holders||[]).length)}${stat('item kinds',(v.items||[]).length)}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–')}${stat('run up',dur(b.uptime))}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('last run',b.outcome||'–')}</div>`}
+  if(k==='done'){return`<div class="dhero">${hero('goal reached',`${E(b.goalSkill)} ${sk?.level??''}`)}${hero('vs #1',b.pace?`<span class="${b.pace.ahead?'i-win':''}">${b.pace.ahead?'ahead':'behind'}</span><small>${E(b.pace.gap)}</small>`:'–',b.pace?`#1 ${b.pace.top} ${b.pace.topTime}`:'no #1 time for this target')}${hero('last run',b.lastRes?(b.lastRes.died?'<span class="i-late">✝ died</span>':b.lastRes.ok?'<span class="i-win">✔</span> ok':'<span class="i-warn">✘</span> fail'):E(b.outcome||'–'))}</div>
+    <div class="stats">${stat('combat',b.combat??'–')}${stat('total lvl',skills(b).reduce((n,k)=>n+k.level,0))}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–')}${stat('tick',b.tick!=null?nf(b.tick):'–')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'–')}</div>`}
+  if(k==='train'){return`<div class="dhero">${hero('xp / tick · '+E(b.goalSkill),b.xpPerTick!=null?b.xpPerTick.toFixed(1):'–',b.xpPerHour!=null?gp(b.xpPerHour)+' xp an hour':'needs 2 fresh status samples')}${hero('to level '+(b.goalLevel||99),et!=null?`${ticksTxt(et)}<small>ticks</small>`:'–',et!=null?tickTime(et)+' of game time at this rate':'')}${hero('vs #1',b.pace?`<span class="${b.pace.ahead?'i-win':'i-late'}">${b.pace.ahead?'▲':'▼'}</span> ${E(b.pace.gap)}`:'–',b.pace?`projected ${b.finish} vs #1 ${b.pace.top} ${b.pace.topTime}`:'no #1 time for this target')}</div>
+    <div class="stats">${stat('level',sk?`${sk.level} / ${b.goalLevel||99}`:'–')}${stat('xp left',b.xpLeft!=null?gp(b.xpLeft):'–')}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp&&b.hp.now<=b.hp.max/3?'i-late':'')}${stat('run up',dur(b.uptime))}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'–')}</div>`}
+  return`<div class="stats">${stat('combat',b.combat??'–')}${stat('total lvl',skills(b).reduce((n,k)=>n+k.level,0))}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–')}${stat('run up',dur(b.uptime))}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('last run',b.outcome||'–')}</div>`}
 function detail(){
-  const b=S.bots.find(x=>x.name===sel);if(!b){put('#detail','<span class="dm">Pick an account.</span>');return}
+  const b=S.bots.find(x=>x.name===sel);if(!b){put('#detail','<div class="empty-st">Pick an account in Live accounts.</div>');return}
   const sks=skills(b),total=sks.reduce((n,k)=>n+k.level,0),run=running(b),L=run?ledger(b):null,[c,t]=st(b);
   const tl=(b.timeline||'').split('').map(ch=>`<i class="k-${ch}"></i>`).join('');
   const inp=b.inputs?.strip||'',heat=inp.split('').map(d=>`<i class="hx${Math.min(5,+d)}"></i>`).join('');
   const inv=(b.inventory||[]).filter(Boolean),pack=Array.from({length:28},(_,i)=>cell(inv[i])).join('');
-  const bank=b.bank?(b.bank.length?b.bank.map(cell).join(''):'<div class="empty">Empty.</div>'):'<div class="empty">Not opened since the bot started.</div>';
-  const rk=(b.ranks||[]).length?b.ranks.map(r=>`<div title="${r.since?'change since '+when(r.since):'no history yet'}"><span>${E(r.board)}</span><span>${r.hist?.length>1?svgSpark(r.hist.map(x=>-x).map((x,i,a)=>x-Math.min(...a)),34,11,'#e9b949'):''} <span class="mono ${r.rank<=10?'g':''}">#${nf(r.rank)}</span> ${r.delta?`<span class="mono ${r.delta>0?'up':'dn'}">${r.delta>0?'▲':'▼'}${nf(Math.abs(r.delta))}</span>`:''} <span class="mono dm">${r.level}</span></span></div>`).join(''):'<span class="dm">No ranks yet.</span>';
+  const bank=b.bank?(b.bank.length?b.bank.map(cell).join(''):'<div class="empty">Empty.</div>'):'';
+  const rk=(b.ranks||[]).length?b.ranks.map(r=>`<div title="${r.since?'change since '+when(r.since):'no history yet'}"><span>${E(r.board)}</span><span>${r.hist?.length>1?svgSpark(r.hist.map(x=>-x),34,11):''} <span class="${r.rank<=10?'g':''}">#${nf(r.rank)}</span> ${r.delta?`<span>${r.delta>0?'<span class="i-win">▲</span>':'▼'}${nf(Math.abs(r.delta))}</span>`:''} <span class="dm">${r.level}</span></span></div>`).join(''):'<span class="dm">No ranks yet.</span>';
   const cmb=(b.inputs?.combos||[]).slice(0,5),cn=cmb.reduce((n,x)=>n+x.n,0)||1;
-  const combos=cmb.length?cmb.map(x=>`<div class="cmb" title="${nf(x.n)} ticks · ${nf(x.xp)} xp"><span class="ell">${x.k==='none'?'<span class="dm">(no input)</span>':E(x.k)}</span><span class="mono dm" style="text-align:right">${(100*x.n/cn).toFixed(0)}%</span><span class="mono ${x.xp?'g':'fa'}" style="text-align:right">${(x.xp/x.n).toFixed(1)}</span></div>`).join(''):'<span class="dm" style="font-size:12px">No input log yet (needs a bot started after the status.ts input recorder).</span>';
-  const stat=(k,v,cls='')=>`<div class="stat"><span>${k}</span><b class="${cls}">${v}</b></div>`;
+  const combos=cmb.length?cmb.map(x=>`<div class="cmb" title="${nf(x.n)} ticks · ${nf(x.xp)} xp"><span class="ell">${x.k==='none'?'<span class="dm">(no input)</span>':E(x.k)}</span><span class="dm" style="text-align:right">${(100*x.n/cn).toFixed(0)}%</span><span class="${x.xp?'g':'fa'}" style="text-align:right">${(x.xp/x.n).toFixed(1)}</span></div>`).join(''):'<span class="dm" style="font-size:12px">No input log yet.</span>';
+  const w=offWhy(b);
   put('#detail',`<div class="dh"><span class="dot ${c}"></span><h3>${E(b.name)}</h3><span class="pill ${b.reserved?'res':b.roleInferred?'inf':''}">${E(b.reserved?'main · reserved':b.role)}</span>${jobPill(b.job)}${actChip(b.action)}<span class="dm ell" style="margin-left:auto">${t} · ${E(b.server)}</span></div>
-  <div style="display:flex;gap:8px;font-size:12.5px;white-space:nowrap;overflow:hidden"><span class="dm">phase</span><b class="ell" title="${E(b.phase||'')}">${E(b.phaseShort||'—')}</b>${b.phaseSince&&run?`<span class="since">for ${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}<span class="dm" style="margin-left:auto">goal</span><b class="ell">${E(b.job?.goal||String(b.goal||'-').replace(/\.ts$/,''))}</b></div>
-  ${b.job?.note?`<div class="dm ell" style="font-size:12px" title="${E(b.job.note)}">swarm: ${E(b.job.note)}</div>`:''}
-  <div class="stats">${stat('xp/hr · '+E(String(b.rateSkill||'').slice(0,8)),b.xpPerHour!=null?gp(b.xpPerHour):'-','g')}${stat('xp / tick',b.xpPerTick!=null?b.xpPerTick.toFixed(1):'-')}${stat('ETA lvl '+(b.goalLevel||99),E(b.eta||(b.xpLeft===0?'done':'-')))}${stat('vs #1',b.pace?`${b.pace.ahead?'▲':'▼'} ${E(b.pace.gap)}`:'-',b.pace?(b.pace.ahead?'up':'dn'):'')}${stat('run up',dur(b.uptime))}${stat('tick',b.tick??'-')}
-  ${stat('combat',b.combat??'-')}${stat('total lvl',total)}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'-',b.hp&&b.hp.now<=b.hp.max/3?'dn':'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'-')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'-')}${stat('last run',b.outcome||'-',b.outcome==='ok'?'up':b.outcome?'dn':'')}</div>
-  <div><div class="sub"><span>Last 300 ticks · outcome / inputs sent (0-5) / xp per tick</span><span>${(b.timeline||'').length} ticks</span></div>
-  <div class="strip">${tl||'<span class="dm" style="font-size:11px;padding:0 5px">no timeline</span>'}</div><div class="strip" style="height:7px;margin-top:2px" title="inputs per tick: dark 0, white 5">${heat||''}</div>
-  ${L?`<div class="shares">${Object.values(K).map(n=>`<div style="${n==='idle'&&L.p.idle>10?'outline:1px solid var(--red)':''}"><span><span class="dot" style="background:${KC[n]}"></span> ${n}</span><b class="mono ${n==='idle'&&L.p.idle>10?'dn':''}">${L.p[n].toFixed(0)}%</b></div>`).join('')}</div>`:''}
-  ${b.spark?.length>1?`<div style="margin-top:2px">${svgSpark(b.spark,450,20)}</div>`:''}</div>
-  <div><div class="sub"><span>Skills</span><span>total ${total}</span></div><div class="skills">${sks.map(k=>`<div class="sk ${k.level>=99?'mx':''} ${k.name===b.goalSkill?'goal':''}" title="${nf(k.xp)} xp"><span>${E(k.name)}</span><b>${k.level}</b><i style="width:${((k.level-1)/98*100).toFixed(0)}%"></i></div>`).join('')}</div></div>
+  <div class="dline"><span class="cap">goal</span><b class="ell">${E(b.reserved?'rank 1 on all 24 boards in one run':b.job?.goal||String(b.goal||'–').replace(/\.ts$/,''))}</b>${run?`<span class="cap" style="margin-left:auto">phase</span><span class="ell" title="${E(b.phase||'')}">${E(b.phaseShort||'–')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}`:''}</div>
+  ${!run&&!b.reserved?`<div class="dnote" title="${E(w.tip)}"><span>${w.html}</span></div>`:''}
+  ${detailHero(b)}
+  ${run?`<div><div class="sub"><span>Last 300 ticks · what each tick did</span><span>${(b.timeline||'').length} ticks · inputs 0-5 below</span></div>
+  <div class="strip">${tl||'<span class="dm" style="font-size:11px;padding:0 6px">no timeline</span>'}</div><div class="strip" style="height:6px;margin-top:2px" title="inputs per tick: dark 0, white 5">${heat||''}</div>
+  ${L?`<div class="shares">${Object.values(K).map(n=>`<div><span>${n==='idle'&&L.p.idle>10?'<span class="i-warn">⚠</span>':`<span class="dot" style="background:${KC[n]}"></span>`} ${n}</span><b class="${n==='idle'&&L.p.idle>10?'i-warn':''}">${L.p[n].toFixed(0)}%</b></div>`).join('')}</div>`:''}</div>`:''}
+  <div><div class="sub"><span>Skills</span><span>total ${total}</span></div><div class="skills">${sks.map(k=>`<div class="sk ${k.level>=99?'mx':''} ${k.name===b.goalSkill?'goal':''}" title="${nf(k.xp)} xp${k.name===b.goalSkill?' · goal skill':''}"><span>${E(k.name)}</span><b>${k.level}</b><i style="width:${((k.level-1)/98*100).toFixed(0)}%"></i></div>`).join('')||'<span class="dm">No skills in the status file.</span>'}</div></div>
   <div class="inv2"><div><div class="sub"><span>Pack</span><span>${inv.length}/28</span></div><div class="pack">${pack}</div></div>
-  <div style="min-width:0;display:flex;flex-direction:column;gap:4px"><div><div class="sub"><span>Bank</span><span>${b.bank?b.bank.length+' kinds'+(b.bankAt?' · '+ago(S.now-b.bankAt)+' old':''):'unseen'}</span></div>${b.bank?`<div class="bankg">${bank}</div>`:'<div class="dm" style="font-size:12px">Not opened since the bot started.</div>'}</div>
-  <div><div class="sub"><span>Action sets per tick</span><span>share · xp/tick</span></div>${combos}</div>
+  <div style="min-width:0;display:flex;flex-direction:column;gap:6px"><div><div class="sub"><span>Bank</span><span>${b.bank?b.bank.length+' kinds'+(b.bankAt?' · '+ago(S.now-b.bankAt)+' old':''):'not seen'}</span></div>${b.bank?`<div class="bankg">${bank}</div>`:'<div class="dm" style="font-size:12px">Not opened since the bot started.</div>'}</div>
+  ${run?`<div><div class="sub"><span>Action sets per tick</span><span>share · xp/tick</span></div>${combos}</div>`:''}
   <div><div class="sub"><span>Live ranks</span><span>Δ 24 h · lvl</span></div><div class="list">${rk}</div></div></div></div>
   ${b.result?`<div class="result" title="${E(b.result)}">${ocIcon(b.outcome)} ${E(b.result)}</div>`:''}`);
   $('#dupd').textContent=b.at?`status ${ago(S.now-b.at)} ago`:'no status file';
 }
 
-// Vault flow: givers -> banker -> receivers, band width by value.
-function flowSvg(v,W,H){const fl=v.flow||[];if(!fl.length)return`<div class="dm" style="padding:6px">No transfers yet. The banker script writes .practice/vault-log.jsonl.</div>`;
+// ---- vault flow: givers -> banker -> receivers, band width by value ----
+function flowSvg(v,W,H){const fl=v.flow||[];if(!fl.length)return`<div class="empty-st">No transfers yet. The banker script writes .practice/vault-log.jsonl.</div>`;
   const bk=v.banker,val=l=>Math.max(1,l.value),lefts=[],rights=[];
   for(const l of fl){if(l.to===bk||l.from!==bk){if(!lefts.includes(l.from))lefts.push(l.from)}if(l.from===bk||l.to!==bk){if(!rights.includes(l.to))rights.push(l.to)}}
   const tot=Math.max(...[fl.filter(l=>l.to===bk).reduce((n,l)=>n+val(l),0),fl.filter(l=>l.from===bk).reduce((n,l)=>n+val(l),0),1]);
-  const pad=4,usable=H-30,k=(usable-pad*Math.max(lefts.length,rights.length))/tot,X0=118,X1=W/2-5,X2=W/2+5,X3=W-118;
+  const pad=4,usable=H-30,k=(usable-pad*Math.max(lefts.length,rights.length))/tot,X0=112,X1=W/2-5,X2=W/2+5,X3=W-112;
   const place=(names,dir)=>{let y=24;const m={};for(const n of names){const h=Math.max(3,fl.filter(l=>(dir==='L'?l.from:l.to)===n).reduce((s,l)=>s+val(l)*k,0));m[n]={y,h,o:0};y+=h+pad}return m};
   const L=place(lefts,'L'),R=place(rights,'R'),bin=fl.filter(l=>l.to===bk).reduce((n,l)=>n+val(l)*k,0),bout=fl.filter(l=>l.from===bk).reduce((n,l)=>n+val(l)*k,0),bh=Math.max(bin,bout,6),by=24,bo={i:0,o:0};
-  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><linearGradient id="fg" x1="0" x2="1"><stop offset="0" stop-color="#e9b949" stop-opacity=".55"/><stop offset="1" stop-color="#e9b949" stop-opacity=".25"/></linearGradient><linearGradient id="fg2" x1="0" x2="1"><stop offset="0" stop-color="#4fc9b2" stop-opacity=".3"/><stop offset="1" stop-color="#4fc9b2" stop-opacity=".6"/></linearGradient></defs>`;
+  let s=`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><linearGradient id="fg" x1="0" x2="1"><stop offset="0" stop-color="#e9b949" stop-opacity=".55"/><stop offset="1" stop-color="#e9b949" stop-opacity=".25"/></linearGradient><linearGradient id="fg2" x1="0" x2="1"><stop offset="0" stop-color="#d9c48f" stop-opacity=".2"/><stop offset="1" stop-color="#d9c48f" stop-opacity=".45"/></linearGradient></defs>`;
   const band=(x0,y0,x1,y1,h,g,title)=>`<path d="M${x0},${y0} C${(x0+x1)/2},${y0} ${(x0+x1)/2},${y1} ${x1},${y1} L${x1},${y1+h} C${(x0+x1)/2},${y1+h} ${(x0+x1)/2},${y0+h} ${x0},${y0+h} Z" fill="url(#${g})"><title>${E(title)}</title></path>`;
   for(const l of fl){const h=Math.max(1.5,val(l)*k),tt=`${l.from} → ${l.to}: ${nf(l.coins)} coins, ${l.items.length} kinds, ${gp(l.value)} gp, ${l.n} trade${l.n>1?'s':''}, last ${when(l.last)}`;
     if(l.to===bk&&L[l.from]){const a=L[l.from];s+=band(X0,a.y+a.o,X1,by+bo.i,h,'fg',tt);a.o+=h;bo.i+=h}
     else if(l.from===bk&&R[l.to]){const a=R[l.to];s+=band(X2,by+bo.o,X3,a.y+a.o,h,'fg2',tt);a.o+=h;bo.o+=h}
     else if(L[l.from]&&R[l.to]){const a=L[l.from],b2=R[l.to];s+=band(X0,a.y+a.o,X3,b2.y+b2.o,h,'fg2',tt);a.o+=h;b2.o+=h}}
-  for(const n of lefts){const a=L[n],g=fl.filter(l=>l.from===n).reduce((x,l)=>x+l.value,0);s+=`<rect x="${X0-4}" y="${a.y}" width="4" height="${a.h}" fill="#e9b949"/><text x="${X0-8}" y="${a.y+a.h/2+4}" text-anchor="end" fill="#ece2c6" font-size="11.5" font-family="Barlow Semi Condensed">${E(n)} <tspan fill="#9a8c6e">${gp(g)}</tspan></text>`}
-  for(const n of rights){const a=R[n],g=fl.filter(l=>l.to===n).reduce((x,l)=>x+l.value,0);s+=`<rect x="${X3}" y="${a.y}" width="4" height="${a.h}" fill="#4fc9b2"/><text x="${X3+8}" y="${a.y+a.h/2+4}" fill="#ece2c6" font-size="11.5" font-family="Barlow Semi Condensed">${E(n)} <tspan fill="#9a8c6e">${gp(g)}</tspan></text>`}
+  for(const n of lefts){const a=L[n],g=fl.filter(l=>l.from===n).reduce((x,l)=>x+l.value,0);s+=`<rect x="${X0-4}" y="${a.y}" width="4" height="${a.h}" fill="#e9b949"/><text x="${X0-8}" y="${a.y+a.h/2+4}" text-anchor="end" fill="#ece2c6" font-size="11.5" font-family="Barlow Semi Condensed">${E(n)} <tspan fill="#a3957a">${gp(g)}</tspan></text>`}
+  for(const n of rights){const a=R[n],g=fl.filter(l=>l.to===n).reduce((x,l)=>x+l.value,0);s+=`<rect x="${X3}" y="${a.y}" width="4" height="${a.h}" fill="#d9c48f"/><text x="${X3+8}" y="${a.y+a.h/2+4}" fill="#ece2c6" font-size="11.5" font-family="Barlow Semi Condensed">${E(n)} <tspan fill="#a3957a">${gp(g)}</tspan></text>`}
   const hb=v.holders.find(h=>h.banker);
-  s+=`<rect x="${X1}" y="${by}" width="${X2-X1}" height="${bh}" rx="2" fill="#b590f2"/><text x="${W/2}" y="13" text-anchor="middle" fill="#b590f2" font-size="12" font-weight="700" font-family="Barlow Semi Condensed">${E(bk)} holds ${gp(hb?.value||0)}</text></svg>`;
+  s+=`<rect x="${X1}" y="${by}" width="${X2-X1}" height="${bh}" rx="2" fill="#e9b949"/><text x="${W/2}" y="13" text-anchor="middle" fill="#e9b949" font-size="12" font-weight="700" font-family="Barlow Semi Condensed">${E(bk)} holds ${gp(hb?.value||0)}</text></svg>`;
   return s}
-function activity(){
-  put('#scripts',S.scripts.slice(0,8).map(s=>`<div class="scr" title="${s.runs} runs · ${s.ok} ok · last ${when(s.last)} · ${s.streak}× ${s.streakOk?'pass':'fail'} streak"><span class="ell">${E(s.goal)}</span><span class="mono dm" style="text-align:right">${s.runs}</span><span class="mono ${s.ok===s.runs?'up':s.ok?'':'dn'}" style="text-align:right">${Math.round(100*s.ok/s.runs)}%</span><span class="pips">${s.recent.map(o=>`<i style="background:${o?'var(--grn)':'var(--red)'}"></i>`).join('')}</span></div>`).join('')||'<span class="dm">No RESULT lines yet.</span>');
-  const feed=[...S.events.map(e=>({at:e.at,name:e.name,ic:'<span class="g">▸</span>',text:e.text})),...S.results.map(r=>({at:r.at,name:r.name,ic:ocIcon(r.text&&/died/.test(r.text)&&!/died=false/.test(r.text)?'died':r.ok?'ok':'fail'),text:r.text}))].sort((a,b)=>b.at-a.at).slice(0,120);
-  $('#acth').textContent=`${S.events.length} phase changes · ${S.results.length} results`;
-  put('#feed',feed.map(f=>`<div title="${E(when(f.at))} · ${E(f.text)}"><span class="mono dm">${E(when(f.at).slice(-8,-3))}</span>${f.ic}<b class="ell">${E(f.name)}</b><span class="dm">${E(f.text)}</span></div>`).join(''))}
 
+// ---- activity: live accounts first; practice folds into one line with counts (click to open) ----
+function activity(){
+  put('#scripts',S.scripts.slice(0,8).map(s=>`<div class="scr" title="${s.runs} runs · ${s.ok} ok · last ${when(s.last)} · ${s.streak}× ${s.streakOk?'pass':'fail'} streak"><span class="ell">${E(s.goal)}</span><span class="dm" style="text-align:right">${s.runs}</span><span style="text-align:right">${Math.round(100*s.ok/s.runs)}%</span><span class="pips">${s.recent.map(o=>`<i style="background:${o?'var(--win)':'var(--warn)'}"></i>`).join('')}</span></div>`).join('')||'<span class="dm">No RESULT lines yet.</span>');
+  const ev=S.events.map(e=>({at:e.at,name:e.name,practice:e.practice,ic:'<span class="g">▸</span>',text:e.text,kind:'ev'})),rs=S.results.map(r=>{const d=/\bdied=true\b/.test(r.text)||/\bdied (?!=)/.test(r.text);return{at:r.at,name:r.name,practice:r.practice,ic:ocIcon(d?'died':r.ok?'ok':'fail'),text:r.text,kind:d?'died':r.ok?'ok':'fail'}});
+  const all=[...ev,...rs].sort((a,b)=>b.at-a.at),live=all.filter(f=>!f.practice).slice(0,80),prac=all.filter(f=>f.practice),hour=prac.filter(f=>S.now-f.at<3600e3);
+  const n=k=>hour.filter(f=>f.kind===k).length;
+  $('#acth').textContent=`${live.length} live · ${prac.length} practice`;
+  const row=f=>`<div title="${E(when(f.at))} · ${E(f.text)}"><span class="dm num">${E(hm(f.at))}</span>${f.ic}<b class="ell">${E(f.name)}</b><span class="dm">${E(f.text)}</span></div>`;
+  put('#feed',(live.length?live.map(row).join(''):'<div class="empty-st" style="display:block">No live events yet.</div>'));
+  put('#pfeed',`<div class="pline" id="pline">${PRAC_OPEN?'▾':'▸'} practice · last hour: <b class="num">${n('ok')}</b> <span class="i-win">✔</span> <b class="num">${n('fail')}</b> <span class="i-warn">✘</span> <b class="num">${n('died')}</b> <span class="i-late">✝</span> · <b class="num">${n('ev')}</b> phase changes <span style="margin-left:auto">${PRAC_OPEN?'hide':'show'} ${prac.length}</span></div>`+
+    (PRAC_OPEN?`<div style="max-height:120px;overflow:auto">${prac.slice(0,80).map(row).join('')}</div>`:''))}
+$('#pfeed').addEventListener('click',e=>{if(e.target.closest('#pline')){PRAC_OPEN=!PRAC_OPEN;activity()}});
+
+// ---- owner requests: counts, the newest 3 changes, then the open rows in priority order ----
 const RK=['NOT STARTED','PARTIAL','BLOCKED','NEW','DONE','RULE'],RC={'NOT STARTED':'k-NOT',PARTIAL:'k-PARTIAL',BLOCKED:'k-BLOCKED',NEW:'k-NEW',DONE:'k-DONE',RULE:'k-RULE'};
 function requests(){const r=S.requests;if(!r)return;const tot=r.total||1;
   $('#rqh').textContent=`${r.open.length} open of ${r.total} · owner-requests.md`;
+  const ch=(r.changes||[]).map(x=>`<div class="rqc" title="${E(x.request)} · ${E(x.where)} · ${E(when(x.at))}"><span class="dm num">#${E(x.id)}</span><span class="st ${RC[x.kind]||'k-RULE'}" style="font:700 11px var(--ui);border-radius:2px;text-align:center;color:#120e06;line-height:14px">${E(x.kind)}</span><span class="ell">${E(x.request)}</span><span class="dm num" style="text-align:right">${ago(S.now-x.at)}</span></div>`).join('');
   put('#rq',`<div class="seg">${RK.filter(k=>r.counts[k]).map(k=>`<i class="${RC[k]}" style="width:${100*r.counts[k]/tot}%" title="${k}: ${r.counts[k]}">${r.counts[k]/tot>.07?r.counts[k]+' '+({'NOT STARTED':'NOT',PARTIAL:'PARTIAL',BLOCKED:'BLK',NEW:'NEW',DONE:'DONE',RULE:'RULE'})[k]:r.counts[k]}</i>`).join('')}</div>
-  <div class="scroll">${r.open.map(x=>`<div class="rqi" title="${E(x.request)}${x.next?' · NEXT: '+E(x.next):''}${x.evidence?' · '+E(x.evidence):''}"><span class="mono dm">#${E(x.id)}</span><span class="st ${RC[x.kind]||'k-RULE'}">${E(x.kind)}</span><span class="ell">${E(x.request)}</span></div>`).join('')}</div>`)}
+  ${ch?`<div class="sub" style="margin:2px 0 0"><span>Newest changes</span><span>git</span></div>${ch}`:''}
+  <div class="sub" style="margin:4px 0 0"><span>Open · priority order</span><span>${r.open.length}</span></div>
+  <div class="scroll">${r.open.map(x=>`<div class="rqi" title="${E(x.request)}${x.next?' · NEXT: '+E(x.next):''}${x.evidence?' · '+E(x.evidence):''}"><span class="dm num">#${E(x.id)}</span><span class="st ${RC[x.kind]||'k-RULE'}">${E(x.kind)}</span><span class="ell">${E(x.request)}</span></div>`).join('')||'<div class="empty-st">No open request.</div>'}</div>`)}
 
 function machine(){const s=S.sys||{},w=S.world||{},mem=s.totalGB?100*(1-s.freeGB/s.totalGB):0,sw=S.swarm;
-  const bar=(k,p,txt,col)=>`<div class="bar"><span class="dm">${k}</span><span class="tr"><i style="width:${Math.min(100,p).toFixed(0)}%;background:${col}"></i></span><span class="mono" style="text-align:right">${txt}</span></div>`;
+  const bar=(k,p,txt,warn)=>`<div class="mbar"><span class="cap">${k}</span><span class="tr"><i style="width:${Math.min(100,p).toFixed(0)}%;background:${warn?'var(--warn)':'var(--gold2)'}"></i></span><span class="num" style="text-align:right">${warn?'<span class="i-warn">⚠</span> ':''}${txt}</span></div>`;
   $('#mach-h').textContent=`${s.cores||'?'} cores · feed ${w.connected?'up':'down'}${sw?' · swarm '+ago(S.now-sw.at)+' ago':''}`;
-  put('#mach',bar('CPU',s.cpu||0,(s.cpu||0).toFixed(0)+'%',s.cpu>85?'var(--red)':s.cpu>60?'var(--org)':'var(--grn)')+bar('RAM',mem,`${(s.totalGB-s.freeGB).toFixed(1)}/${(s.totalGB||0).toFixed(0)} GB`,mem>85?'var(--red)':'var(--blu)')+
-  `<div class="sub"><span>bun processes · ${(s.procs||[]).length} · ${nf((s.procs||[]).reduce((n,p)=>n+p.mb,0))} MB</span><span>top RAM · pid · up</span></div><div>${[...(s.procs||[])].sort((a,b)=>b.mb-a.mb).slice(0,6).map(p=>`<div class="proc"><span class="ell">${E(p.script)}</span><span class="mono dm">${p.pid}</span><span class="mono">${dur(p.up)}</span><span class="mono dm" style="text-align:right">${p.mb} MB</span></div>`).join('')}${(s.procs||[]).length>6?`<div class="dm" style="font-size:11px">+${s.procs.length-6} more · ${nf([...s.procs].sort((a,b)=>b.mb-a.mb).slice(6).reduce((n,p)=>n+p.mb,0))} MB</div>`:''}</div>`)}
+  const pr=[...(s.procs||[])].sort((a,b)=>b.mb-a.mb);
+  put('#mach',bar('CPU',s.cpu||0,(s.cpu||0).toFixed(0)+'%',s.cpu>85)+bar('RAM',mem,`${(s.totalGB-s.freeGB).toFixed(1)} / ${(s.totalGB||0).toFixed(0)} GB`,s.freeGB<5)+
+  `<div class="sub" style="margin-top:2px"><span>bun · ${pr.length} · ${nf(pr.reduce((n,p)=>n+p.mb,0))} MB</span><span>pid · up · RAM</span></div><div>${pr.slice(0,3).map(p=>`<div class="proc"><span class="ell">${E(p.script)}</span><span class="dm">${p.pid}</span><span>${dur(p.up)}</span><span class="dm" style="text-align:right">${p.mb} MB</span></div>`).join('')||'<span class="dm">No process scan yet.</span>'}${pr.length>3?`<div class="dm" style="font-size:11px">+${pr.length-3} more · ${nf(pr.slice(3).reduce((n,p)=>n+p.mb,0))} MB</div>`:''}</div>`)}
 
 async function loadMap(){if(MAPI||!S.map?.ready)return;try{const buf=new Uint8Array(await(await fetch('/api/map')).arrayBuffer());const m=S.map,c=document.createElement('canvas');c.width=m.w;c.height=m.h;const g=c.getContext('2d'),img=g.createImageData(m.w,m.h);
   const col=[[6,6,5],[38,40,26],[14,30,44],[60,56,40]];for(let i=0;i<buf.length;i++){const px=i%m.w,pz=Math.floor(i/m.w),o=((m.h-1-pz)*m.w+px)*4,[r,gg,bb]=col[buf[i]]||col[0];img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=bb;img.data[o+3]=255}g.putImageData(img,0,0);MAPI=c;drawMap()}catch{}}
-function drawMap(){if(mode!=='2d')return;const c=$('#map'),w=c.clientWidth,h=c.clientHeight;if(!w)return;if(c.width!==w||c.height!==h){c.width=w;c.height=h}const g=c.getContext('2d'),m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};
+function drawMap(){if(mode!=='2d'||!S)return;const c=$('#map'),w=c.clientWidth,h=c.clientHeight;if(!w)return;if(c.width!==w||c.height!==h){c.width=w;c.height=h}const g=c.getContext('2d'),m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};
   const sc=Math.min(w/(m.w*m.scale),h/(m.h*m.scale)),ox=(w-m.w*m.scale*sc)/2,oy=(h-m.h*m.scale*sc)/2,X=x=>ox+(x-m.x0)*sc,Z=z=>oy+(m.h*m.scale-(z-m.z0))*sc;
   g.fillStyle='#050504';g.fillRect(0,0,w,h);if(MAPI){g.imageSmoothingEnabled=false;g.drawImage(MAPI,ox,oy,m.w*m.scale*sc,m.h*m.scale*sc)}
-  g.font='11px "Barlow Semi Condensed",sans-serif';for(const[n,x,z]of PLACES){g.fillStyle='#9a8c6e';g.fillRect(X(x)-1.5,Z(z)-1.5,3,3);g.fillText(n,X(x)+5,Z(z)+3)}
-  c._p=[];for(const b of S.bots){const p=b.live||b.pos;if(!p||p.z>6400)continue;const[cl]=st(b),col=cl==='on'?'#7ed36a':cl==='wd'?'#e9b949':'#5a5040',x=X(p.x),z=Z(p.z);c._p.push([x,z,b.name]);
+  g.font='11px "Barlow Semi Condensed",sans-serif';for(const[n,x,z]of PLACES){g.fillStyle='#a3957a';g.fillRect(X(x)-1.5,Z(z)-1.5,3,3);g.fillText(n,X(x)+5,Z(z)+3)}
+  c._p=[];for(const b of S.bots){const p=b.live||b.pos;if(!p||p.z>6400)continue;const[cl]=st(b),col=cl==='on'?'#7ed36a':cl==='wd'?'#e9b949':'#74684f',x=X(p.x),z=Z(p.z);c._p.push([x,z,b.name]);
     if(cl==='on'){g.beginPath();g.arc(x,z,11,0,7);g.fillStyle='#7ed36a26';g.fill()}g.beginPath();g.arc(x,z,sel===b.name?6:4.5,0,7);g.fillStyle=col;g.fill();if(sel===b.name){g.lineWidth=2;g.strokeStyle='#e9b949';g.stroke()}
-    if(cl!=='off'||sel===b.name){g.fillStyle='#ece2c6';g.font='700 12px "Barlow Semi Condensed",sans-serif';g.fillText(b.name,x+8,z-6)}}}
+    if(cl!=='off'||sel===b.name){g.fillStyle='#ece2c6';g.font='700 12px "Barlow Semi Condensed",sans-serif';g.fillText(b.name===MARK?'main':b.name,x+8,z-6)}}}
 $('#map').onclick=e=>{const c=$('#map'),r=c.getBoundingClientRect();let best=null,bd=300;for(const[x,z,n]of c._p||[]){const d=(x-(e.clientX-r.left))**2+(z-(e.clientY-r.top))**2;if(d<bd){bd=d;best=n}}if(best)pick(best)};
-function setMode(m){mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},'http://localhost:3000');$('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';syncWorld();drawMap()}
-$('#bt').onclick=()=>{TOUR=!TOUR;TOUR_AT=0;$('#bt').classList.toggle('on',TOUR);render()};$('#bt').classList.toggle('on',TOUR);$('#b3').onclick=()=>setMode('3d');$('#b2').onclick=()=>setMode('2d');
+function setMode(m){mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},'http://localhost:3000');$('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';if(S){syncWorld();drawMap()}}
+$('#bt').onclick=()=>{TOUR=!TOUR;TOUR_AT=0;$('#bt').classList.toggle('on',TOUR);if(S)render()};$('#bt').classList.toggle('on',TOUR);$('#b3').onclick=()=>setMode('3d');$('#b2').onclick=()=>setMode('2d');
 function syncWorld(){const b=S.bots.find(x=>x.name===sel);$('#follow').textContent=mode==='3d'?(b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${S.bots.filter(b=>b.live||b.pos).length} bots on the map`;
   $('#map-h').textContent=mode==='3d'?'live rs-world viewer · world feed':'collision map · click a dot';
   // Load the viewer once; later follow changes go by postMessage (a new src reloads the whole 3D scene).
@@ -414,87 +471,103 @@ function syncWorld(){const b=S.bots.find(x=>x.name===sel);$('#follow').textConte
   if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed${Q.get('flight')==='0'?'&flight=0':''}${Q.get('cache')==='0'?'&cache=0':''}&embed=1&fps=20&scale=0.75&hideNamesFrom=${encodeURIComponent(location.origin+'/api/hidden-names')}&highlightFrom=${encodeURIComponent(location.origin+'/api/our-names')}${sel?'&follow='+encodeURIComponent(sel):''}`}
   else if(rswFor!==sel&&sel){rswFor=sel;f.contentWindow?.postMessage({follow:sel},'http://localhost:3000')}}
 
-// ---- round 4: header, alerts, main race, economy ----
-const TICK_MS=400,tickTime=t=>t==null?'-':dur(Math.abs(t)*TICK_MS);
-function header(){const R=S.race,G=S.gates?.gates||[],E2=S.economy,w=S.world||{},sw=S.swarm,bots=S.bots,live=bots.filter(b=>!b.practice);
-  $('#k-win').innerHTML=R&&!R.error?`${R.wins}<small>/ 24 · floor ${R.floorWins}</small>`:'-';
-  $('#k-gap').innerHTML=R&&R.gap!=null?`<span class="${R.gap>=0?'up':'dn'}">${R.gap>0?'+':''}${nf(R.gap)}</span><small>ticks · ${tickTime(R.gap)}</small>`:'-';
-  $('#k-gates').innerHTML=G.length?`${G.filter(g=>g.pass).length}<small>/ ${G.length}</small>`:'-';
-  $('#k-gold').textContent=E2?gp(E2.goldPerTick*3600e3/TICK_MS):'-';
-  $('#k-xp').textContent=gp(live.reduce((n,b)=>n+(b.fresh&&b.xpPerHour>0?b.xpPerHour:0),0));
-  put('#mini',`<span><b>${bots.filter(b=>b.inWorld).length}</b> in world</span><span><b>${sw?sw.running+' / '+sw.maxBots:'-'}</b> swarm</span><span><b>${live.length}</b> accounts</span><span><b>${nf(S.worldPlayers)}</b> players</span><span>tick <b>${w.tick!=null?nf(w.tick):'-'}</b></span><span>cpu <b>${S.sys?.cpu!=null?S.sys.cpu.toFixed(0)+'%':'-'}</b></span>`)}
+// ---- header ----
+function header(){const R=S.race,G=S.gates?.gates||[],X=S.economy,w=S.world||{},sw=S.swarm,bots=S.bots,live=bots.filter(b=>!b.practice),ok=R&&!R.error;
+  $('#k-win').innerHTML=ok?`${R.wins}<small>/ 24 · floor ${R.floorWins}</small>`:'–';
+  $('#kh-win').title=ok?`Boards where the plan finishes before the live #1. Realistic plan: ${R.wins}; floor plan: ${R.floorWins}. Source: ${R.options}.`:'';
+  $('#k-gap').innerHTML=ok&&R.gap!=null?`<span class="${R.gap>=0?'i-win':''}">${sgn(R.gap)}</span><small>floor ${sgn(R.floorGap)}</small>`:'–';
+  $('#kh-gap').title=ok?`Overall board, ticks against the live #1. Headline = realistic plan ${sgn(R.gap)} ticks (${tickTime(R.gap)}); floor plan ${sgn(R.floorGap)} ticks (${tickTime(R.floorGap)}). ${R.options}.`:'';
+  $('#k-gates').innerHTML=G.length?`${G.filter(g=>g.pass).length}<small>/ ${G.length}</small>`:'–';
+  $('#kh-gates').title=G.map(g=>(g.pass?'✔ ':'✘ ')+g.name+': '+g.detail).join('\n');
+  $('#k-gold').innerHTML=X?`${X.goldPerTick.toFixed(1)}<small>${gp(X.goldPerTick*3600e3/TICK_MS)}/h</small>`:'–';
+  $('#kh-gold').title='Coins per tick of the live gold farmers, each measured over its last 2 minutes of status files.';
+  // Training XP: only bots whose goal skill is still below its target. Level-99 gold farmers still gain XP; that XP
+  // does not move any board, so it is not counted.
+  const tr=live.filter(b=>b.training&&b.xpPerTick>0);
+  $('#k-xp').innerHTML=tr.length?`${nf(Math.round(tr.reduce((n,b)=>n+b.xpPerTick,0)))}<small>${tr.length} bot${tr.length>1?'s':''}</small>`:'<span class="dm">0</span><small>no bot below its target</small>';
+  $('#kh-xp').title=tr.length?tr.map(b=>`${b.name}: ${b.goalSkill} ${b.goalNow}/${b.goalLevel}, ${b.xpPerTick.toFixed(1)} xp/tick`).join('\n'):'No running bot is training a skill below its target level.';
+  put('#mini',`<span><b>${bots.filter(b=>b.inWorld).length}</b> in world</span><span><b>${sw?sw.running+' / '+sw.maxBots:'–'}</b> swarm</span><span><b>${live.length}</b> accounts</span><span><b>${nf(S.worldPlayers)}</b> players</span><span>tick <b>${w.tick!=null?nf(w.tick):'–'}</b></span><span>cpu <b>${S.sys?.cpu!=null?S.sys.cpu.toFixed(0)+'%':'–'}</b></span>`)}
 
 // Alerts: the last 60 minutes plus the unresolved ones (stuck, idle now); older ones fold into "N earlier".
 // Practice alerts only as a muted count.
 function alertsBar(){const now=S.now,all=S.alerts||[],live=all.filter(a=>!a.practice),prac=all.filter(a=>a.practice);
   const recent=live.filter(a=>now-a.at<60*60e3||a.kind==='stuck'||a.kind==='idle'),older=live.filter(a=>!recent.includes(a));
-  const chip=x=>`<span class="al ${x.kind}" data-n="${E(x.name)}" title="${E(when(x.at))} · ${E(x.text)}"><span class="t">${x.kind.toUpperCase()}</span><b>${E(x.name)}</b><span class="dm ell" style="max-width:240px">${E(x.text)}</span><span class="fa">${hm(x.at)}</span></span>`;
+  const ic={death:'✝',stuck:'⚠',idle:'⚠',logout:'⚠'};
+  const chip=x=>`<span class="al ${x.kind}" data-n="${E(x.name)}" title="${E(when(x.at))} · ${E(x.text)}"><span class="t">${ic[x.kind]||'⚠'} ${x.kind.toUpperCase()}</span><b>${E(x.name)}</b><span class="dm ell" style="max-width:240px">${E(x.text)}</span><span class="fa num">${hm(x.at)}</span></span>`;
   const list=l=>E(l.map(x=>hm(x.at)+' '+x.kind+' '+x.name+': '+x.text).join('\n'));
-  put('#alerts',`<span class="lbl">ALERTS</span>`+(recent.length?recent.map(chip).join(''):'<span class="allclear">no live alert in the last hour</span>')+
+  put('#alerts',`<span class="lbl">ALERTS</span>`+(recent.length?recent.map(chip).join(''):'<span class="allclear"><span class="i-win">✔</span> no live alert in the last hour</span>')+
     (older.length?`<span class="al more" title="${list(older)}">${older.length} earlier</span>`:'')+(prac.length?`<span class="al more" title="${list(prac)}">practice ${prac.length}</span>`:''))}
 
-// Main account race: for each board, the realistic plan's finish (bar), the floor plan's finish (tick) and the
-// live #1's time (gold line), all in ticks from the start of the run.
+// ---- main account race ----
+// One diverging bar per clock board, centred on the live #1's time: slack in ticks (deadline - finish). Late goes
+// left, ahead goes right. The bar is the realistic plan, the tick mark the floor plan. One symmetric scale for all
+// boards, clamped; a clamped bar ends in an arrow and its number is in the column.
+const niceUp=v=>{const p=10**Math.floor(Math.log10(Math.max(1,v))),m=v/p;return(m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p};
+const CLAMP_MAX=40000;
 function raceView(){const R=S.race,G=S.gates?.gates||[];
-  if(!R||R.error){put('#rhead','');put('#race',`<span class="dm">Plan not available: ${E(R?.error||'no research/hiscores-live.json')}</span>`);return}
-  $('#race-h').textContent=`plan vs live #1 · ${R.source} · bar realistic, tick floor, gold line #1 · ticks of 0.4 s`;
-  const gh=(S.gapHistory||[]).filter(v=>v!=null),mn=Math.min(0,...gh);
-  put('#rhead',G.map(g=>`<span class="gate ${g.pass?'ok':'no'}" title="${E(g.detail)}"><i></i>${E(g.name)}</span>`).join('')+
-    `<span class="rk" style="margin-left:auto">won <b>${R.wins}</b> / 24 <small>(floor ${R.floorWins})</small></span>`+
-    `<span class="rk" title="Overall board: realistic finish against #1">overall <b class="${R.gap>=0?'up':'dn'}">${R.gap>0?'+':''}${nf(R.gap)}</b> <small>${tickTime(R.gap)}</small></span>`+
-    `<span class="rk" title="planner inputs that are ESTIMATE or CODE-READ, not MEASURED">${R.unmeasured} <small>unmeasured</small></span>`+
-    (gh.length>1?`<span class="rk" title="overall gap over time (${gh.length} changes)">${svgSpark(gh.map(v=>v-mn),70,16,'#e9b949')}</span>`:''));
-  put('#race',R.rows.map(r=>{const re=r.real,fl=r.floor,dl=r.deadline;
-    const cls=re.status==='WIN'?'st-win':fl.status==='WIN'?'st-floor':re.status==='LATE'||fl.status==='LATE'?'st-late':'st-none';
-    const ic=re.status==='WIN'?'✔':fl.status==='WIN'?'◐':re.status==='LATE'?'✘':'·';
-    const best=(S.boards||[]).find(b=>b.board===r.label||(r.id==='runite'&&b.board==='Runite'))?.best;
-    const tip=`${r.label}: #1 ${r.holder||'?'}${dl!=null?' at '+nf(dl)+' ticks ('+tickTime(dl)+')':''} · realistic ${re.finish!=null?nf(re.finish):'never'} (${re.status}) · floor ${fl.finish!=null?nf(fl.finish):'never'} (${fl.status})${best?' · our best now: '+best.name+' #'+nf(best.rank):''}`;
-    let bar,slack;
-    if(dl==null||re.status==='NO-CLOCK'){const mx=Math.max(re.finish||1,fl.finish||1)*1.04,x=t=>(t/mx*300).toFixed(1);
-      bar=`<rect width="300" height="12" fill="#1d1912"/>${re.finish!=null?`<rect y="3" width="${x(re.finish)}" height="6" fill="#5a5040"/>`:''}${fl.finish!=null?`<rect x="${x(fl.finish)-1}" y="1" width="2" height="10" fill="#d9c48f"/>`:''}`;
-      slack=re.status==='NEVER'?'never':'no clock'}
-    else{const mx=Math.max(dl,re.finish||0,fl.finish||0)*1.04,x=t=>(Math.min(t,mx)/mx*300).toFixed(1),col=re.status==='WIN'?'#7ed36a':'#ec5a40';
-      bar=`<rect width="300" height="12" fill="#1d1912"/><rect width="${x(dl)}" height="12" fill="#e9b94922"/>${re.finish!=null?`<rect y="3" width="${x(re.finish)}" height="6" fill="${col}"/>`:''}${fl.finish!=null?`<rect x="${x(fl.finish)-1}" y="1" width="2" height="10" fill="#d9c48f"/>`:''}<rect x="${x(dl)-0.75}" width="1.5" height="12" fill="#e9b949"/>`;
-      slack=re.slack!=null?`${re.slack>0?'+':''}${nf(re.slack)}`:'never'}
-    return`<div class="rr" title="${E(tip)}"><span class="rl">${E(r.label)}</span><svg viewBox="0 0 300 12" preserveAspectRatio="none">${bar}</svg><span class="rs ${cls}">${ic} ${slack}</span></div>`}).join(''))}
+  if(!R||R.error){put('#rhead','');put('#rspecial','');put('#race',`<div class="empty-st">Plan not available: ${E(R?.error||'research/hiscores-live.json is missing')}</div>`);return}
+  $('#race-h').textContent=`${R.options} · #1 times: ${R.source}, ${ago(S.now-R.sourceAt)} old`;
+  const clock=R.rows.filter(r=>r.rule.kind==='clock'),qp=R.rows.find(r=>r.rule.kind==='qp'),nc=R.rows.filter(r=>r.rule.kind==='value');
+  const maxAbs=Math.max(1,...clock.flatMap(r=>[r.real.slack,r.floor.slack]).filter(v=>v!=null).map(Math.abs)),C=Math.min(CLAMP_MAX,niceUp(maxAbs));
+  const gh=(S.gapHistory||[]).filter(g=>g.gap!=null),last=R.last;
+  const ev=r=>`${r.evidence.measured} MEASURED · ${r.evidence.estimate} ESTIMATE · ${r.evidence.codeRead} CODE-READ`;
+  put('#rhead',`<div title="${E(`Overall board against the live #1 (${R.rows.find(r=>r.id==='overall')?.holder||'?'}). Headline = realistic plan; floor = best case. ${tickTime(R.gap)} / ${tickTime(R.floorGap)} of game time.`)}"><span class="cap">overall · realistic (headline)</span><span class="rhero"><span class="${R.gap>=0?'i-win':''}">${sgn(R.gap)}</span><small>ticks · floor ${sgn(R.floorGap)}</small></span></div>
+    <div title="${E(gh.length>1?`Overall realistic gap at each change of the plan inputs (${gh.length} points, ${when(gh[0].at)} to now)`:'One point so far: the history restarted when the dashboard moved to the planner CLI options.')}"><span class="cap">gap over time</span>${gh.length>1?svgSpark(gh.map(g=>g.gap),96,22):`<span class="dm" style="font-size:12px">${gh.length} point · restarted ${gh[0]?hm(gh[0].at):''}</span>`}</div>
+    <div class="ell"><span class="cap">next lever · finishes last</span><span class="ell" style="font-size:13px" title="${E(last?`${last.board} is the last clock board to finish in the realistic plan, at tick ${nf(last.finish)} (${tickTime(last.finish)}). Its last activity: ${last.activity}.`:'')}">${last?`<b class="g">${E(last.board)}</b> <span class="num">${nf(last.finish)}</span> <span class="dm">t · ${E(last.activity||'')}</span>`:'–'}</span></div>
+    <div><span class="cap">go gates ${G.filter(g=>g.pass).length} / ${G.length}</span><span class="gates">${G.map(g=>`<span class="${g.pass?'ok':''}" title="${E(g.detail)}">${g.pass?'<span class="i-win">✔</span>':'<span class="i-late">✘</span>'} ${E(g.name)}</span>`).join('')}</span></div>`);
+  // Sorted by realistic slack, nearest to a win first; filled down the first column, then the second.
+  const rows=[...clock].sort((a,b)=>(b.real.slack??-1e9)-(a.real.slack??-1e9)),half=Math.ceil(rows.length/2);
+  const pos=v=>50+Math.max(-50,Math.min(50,v/C*50));
+  const axis=`<div class="raxis"><span class="cap" style="letter-spacing:.06em">board</span><div class="ax">${[-C,-C/2,0,C/2,C].map(v=>`<span style="left:${pos(v)}%;transform:translateX(${v===-C?'0':v===C?'-100%':'-50%'})">${v===0?'#1':(v>0?'+':'−')+gp(Math.abs(v))}</span>`).join('')}</div><span class="cap" style="text-align:right;letter-spacing:.06em">realistic</span><span class="cap" style="text-align:right;letter-spacing:.06em">floor</span></div>`;
+  const row=r=>{const re=r.real,fl=r.floor,s=re.slack,f=fl.slack,clip=s!=null&&Math.abs(s)>C,late=s!=null&&s<0;
+    const w=s==null?0:Math.abs(pos(s)-50),bar=s==null?'':`<span class="sb ${late?'late':'win'}" style="${late?`left:${(50-w).toFixed(2)}%`:'left:50%'};width:max(2px,${w.toFixed(2)}%)"></span>`;
+    const tt=`<h5>${E(r.label)}</h5><table><tr><td>#1</td><td>${E(r.holder||'?')}</td><td>${nf(r.deadline)} t</td><td class="dm">${tickTime(r.deadline)}</td></tr><tr><td>realistic</td><td>${re.status==='WIN'?'✔ win':'✘ '+re.status.toLowerCase()}</td><td>${re.finish!=null?nf(re.finish)+' t':'never'}</td><td class="dm">${sgn(s)} t</td></tr><tr><td>floor</td><td>${fl.status==='WIN'?'✔ win':'✘ '+fl.status.toLowerCase()}</td><td>${fl.finish!=null?nf(fl.finish)+' t':'never'}</td><td class="dm">${sgn(f)} t</td></tr></table><div class="dm" style="margin-top:4px">inputs: ${ev(r)}</div>`;
+    return`<div class="rr" data-tt="${E(tt)}"><span class="rl">${r.id==='overall'?'<b class="g">Overall</b>':E(r.label)}</span><div class="dv">${[25,75].map(p=>`<i class="gl" style="left:${p}%"></i>`).join('')}<i class="c0"></i>${bar}${f!=null?`<i class="fl" style="left:calc(${pos(f).toFixed(2)}% - 1px)"></i>`:''}${clip?`<span class="clip" style="${late?'left:2px':'right:2px'}">${late?'◂':'▸'}</span>`:''}</div><span class="rs">${late?'<span class="i-late">✘</span> ':s!=null&&s>=0?'<span class="i-win">✔</span> ':''}${sgn(s)}</span><span class="rf">${sgn(f)}</span></div>`};
+  put('#race',`<div class="rcol">${axis}${rows.slice(0,half).map(row).join('')}</div><div class="rcol">${axis}${rows.slice(half).map(row).join('')}</div>`);
+  const legend=`<span class="legend2"><span><i style="width:14px;height:6px;background:var(--late);border-radius:3px 0 0 3px"></i>late (left)</span><span><i style="width:14px;height:6px;background:var(--win);border-radius:0 3px 3px 0"></i>ahead (right)</span><span><i style="width:2px;height:11px;background:var(--parch)"></i>floor plan</span><span><i style="width:1px;height:11px;background:var(--gold)"></i>#1's time</span><span>scale ±${nf(C)} t${clock.some(r=>Math.abs(r.real.slack??0)>C)?' · ◂ clamped':''}</span></span>`;
+  const qpTxt=qp?`<div class="qp" data-tt="${E(`<h5>Quest Points</h5>Ranks by points, then by the playtime when the total last changed. #1 ${E(qp.holder||'?')} holds ${qp.rule.points} QP, stamped at tick ${nf(qp.rule.ticks)} (${tickTime(qp.rule.ticks)}). A secure win needs ${qp.rule.points} QP before that tick. The plan ends with ${R.qpEnd.realistic} QP (realistic) and ${R.qpEnd.floor} QP (floor).<div class="dm" style="margin-top:4px">inputs: ${ev(qp)}</div>`)}"><b style="color:var(--parch)">QP</b> rule <b>${qp.rule.points} QP by tick ${nf(qp.rule.ticks)}</b> <span class="dm">(#1 ${E(qp.holder||'?')})</span> · plan: <b>${R.qpEnd.realistic} QP</b> ${qp.real.status==='WIN'?'<span class="i-win">✔</span> win':`<span class="i-late">✘</span> ${E(qp.real.status.toLowerCase())}`}</div>`:'';
+  const top=b=>(S.boards||[]).find(x=>x.board===b||(b==='Lava Maze Runite'&&x.board==='Runite'))?.top;
+  const ncTxt=nc.map(r=>{const t=top(r.label),rule=String(r.rule.note||'').replace(/\s*\(.*$/,'').replace(/;.*$/,'');return`<div data-tt="${E(`<h5>${E(r.label)}</h5>No clock: the board ranks by value (${E(r.rule.note||'')}). #1 ${E(t?.name||'?')}: ${E(t?.time||'?')}. The plan reaches its step at tick ${nf(r.real.finish)} realistic, ${nf(r.floor.finish)} floor.<div class="dm" style="margin-top:4px">inputs: ${ev(r)}</div>`)}"><b>${E(r.label.replace('Lava Maze ',''))}</b> <span class="dm">#1 ${E(t?.name||'?')} ${E(t?.time||'')}</span><div class="dm ell" style="font-size:11px">plan step at <span class="num" style="color:var(--tx)">${nf(r.real.finish)}</span> t · ${E(rule)}</div></div>`}).join('');
+  put('#rspecial',`<div><div class="sub"><span>Quest Points · its own clock</span></div>${qpTxt}<div style="margin-top:6px">${legend}</div></div><div><div class="sub"><span>No clock · rank by value</span><span>ties by time</span></div><div class="nc">${ncTxt}</div></div>`)}
 
-// Economy: the vault flow, gold farmers (coins per tick, made this run, food and time to empty) with the GE stock
-// of the main run's key supplies, items held, and who holds them.
+// ---- economy ----
 function economy(){const v=S.vault,X=S.economy;if(!v||!X)return;const live=v.holders.length,seen=v.holders.filter(h=>h.bankSeen).length;
-  $('#vsum').textContent=`${live} holders · banks known ${seen}/${live} · banker ${v.banker} (vault-log) · GE quotes ${X.pricesAt?ago(S.now-X.pricesAt)+' old':'loading'}`;$('#k-gp').textContent=gp(v.value);
-  if(!$('#eg')){$('#vault').innerHTML=`<div class="vtop" id="vt"></div><div class="egrid" id="eg"><div><div class="sub"><span>Flow</span><span>givers → banker → receivers</span></div><div id="flow"></div></div><div><div class="sub"><span>Gold farmers</span><span>c/tick · made · food left</span></div><div id="farm"></div><div class="sub" style="margin-top:4px"><span>GE stock · key supplies</span><span id="suph"></span></div><div class="scroll" id="sup"></div></div><div><div class="sub"><span>Items</span><span>count · value</span></div><div class="scroll" id="vit"></div></div><div><div class="sub"><span>Who holds what</span><span>age</span></div><div class="scroll" id="vho"></div></div></div>`}
-  const tr=X.trend||[],tmin=Math.min(...tr,0);
-  put('#vt',`<span><span class="vbig">${gp(v.value)}</span><small>est. value</small></span>${tr.length>1?`<span title="vault value, one point a minute">${svgSpark(tr.map(t=>t-tmin),80,18,'#e9b949')}</span>`:''}<span>${icon('Coins',16)}<b class="g">${nf(v.coins)}</b><small>coins</small></span><span><b class="gold">${gp(X.goldPerTick*3600e3/TICK_MS)}</b><small>gold per hour (${X.goldPerTick.toFixed(1)} c/tick)</small></span><span><b>${v.items.length}</b><small>kinds</small></span>${seen<live?`<span class="warn" style="margin-left:auto">${live-seen} bank${live-seen>1?'s':''} never opened</span>`:''}`);
-  put('#farm',X.farmers.length?X.farmers.map(f=>{const low=f.emptyMs!=null&&f.emptyMs<30*60e3;
-    return`<div class="fr" title="${E(f.name)}: ${nf(f.coins)} coins held · food ${f.food} in pack, ${f.bankFood} in bank${f.eatPerTick?' · eats '+(f.eatPerTick*9000).toFixed(0)+' an hour':''}"><span><b>${E(f.name)}</b></span><span class="n">${f.coinsPerTick!=null?f.coinsPerTick.toFixed(1):'–'}</span><span class="n">${f.made!=null?gp(f.made):'–'}</span><span class="n ${low?'dn':''}">${f.food}${f.emptyMs!=null?' · '+dur(f.emptyMs):''}${low?' ⚠':''}</span></div>`}).join(''):'<span class="dm">No gold farmer running.</span>');
+  const age=v.lastTransferAt?S.now-v.lastTransferAt:null,stale=age==null||age>3600e3;
+  $('#vsum').textContent=`${live} holders · banks known ${seen}/${live} · GE quotes ${X.pricesAt?ago(S.now-X.pricesAt)+' old':'loading'}`;$('#k-gp').textContent=gp(v.value);
+  if(!$('#eg')){$('#vault').innerHTML=`<div class="vtop" id="vt"></div><div class="egrid" id="eg"><div><div class="sub"><span title="givers → banker → receivers">Flow</span><span id="flowage"></span></div><div id="flow"></div></div><div><div class="sub"><span>Gold farmers</span><span>c/tick · made · food</span></div><div id="farm"></div><div class="sub" style="margin-top:6px"><span>GE stock · key supplies</span><span id="suph"></span></div><div class="scroll" id="sup"></div></div><div><div class="sub"><span>Items</span><span>count · value</span></div><div class="scroll" id="vit"></div></div><div><div class="sub"><span>Who holds what</span><span>value · source · age</span></div><div class="scroll" id="vho"></div></div></div>`}
+  put('#flowage',age!=null?`<span class="age ${stale?'old':'ok'}" title="last vault-log transfer ${when(v.lastTransferAt)}${stale?' · older than 1 h: the flow is greyed out':''}">${stale?'⚠ ':''}last ${ago(age)} ago</span>`:'<span class="age old">no transfer</span>');
+  const tr=X.trend||[];
+  put('#vt',`<span><span class="vbig">${gp(v.value)}</span><small>est. value</small></span>${tr.length>1?`<span title="vault value, one point a minute since the dashboard started">${svgSpark(tr,80,18)}</span>`:''}<span>${icon('Coins',16)} <b class="gold">${nf(v.coins)}</b><small>coins</small></span><span><b class="gold">${X.goldPerTick.toFixed(1)}</b><small>c/tick farmed now · ${gp(X.goldPerTick*3600e3/TICK_MS)}/h</small></span><span><b class="num">${v.items.length}</b><small>kinds</small></span>${seen<live?`<span class="dm" style="margin-left:auto;font-size:11px"><span class="i-warn">⚠</span> ${live-seen} bank${live-seen>1?'s':''} never opened</span>`:''}`);
+  put('#farm',X.farmers.length?X.farmers.map(f=>{const emptyT=f.emptyMs!=null?f.emptyMs/TICK_MS:null,low=emptyT!=null&&emptyT<4500;
+    return`<div class="fr" title="${E(f.name)}: ${nf(f.coins)} coins held · food ${f.food} in pack, ${f.bankFood} in bank${f.eatPerTick?' · eats '+(f.eatPerTick*1000).toFixed(1)+' per 1,000 ticks':''}${emptyT!=null?' · empty in '+tickTime(emptyT):''}"><span>${f.fresh?'':'<span class="fa">○ </span>'}<b style="font-weight:600">${E(f.name)}</b></span><span class="n">${f.coinsPerTick!=null?f.coinsPerTick.toFixed(1):'–'}</span><span class="n">${f.made!=null?gp(f.made):'–'}</span><span class="n">${low?'<span class="i-warn">⚠</span> ':''}${f.food}${emptyT!=null?' · '+ticksTxt(emptyT)+'t':''}</span></div>`}).join(''):'<div class="empty-st">No gold farmer running.</div>');
   const sup=(X.supplies||[]),inStock=sup.filter(s=>s.stock>0).sort((a,b)=>b.stock-a.stock);
-  $('#suph').textContent=`${inStock.length} of ${sup.length} in stock`;
-  put('#sup',inStock.map(s=>`<div class="sup" title="${E(s.name)} · ${nf(s.stock)} for sale${s.ask!=null?' · ask '+nf(s.ask):''}${s.vwap!=null?' · 7-day avg '+nf(Math.round(s.vwap)):''}">${icon(s.name,16)}<span class="ell">${E(s.name)}</span><span class="n" style="text-align:right">${gp(s.stock)}</span><span class="dm" style="text-align:right">${s.ask!=null?gp(s.ask):'–'}</span></div>`).join('')||'<span class="dm">None of the key supplies is for sale.</span>');
-  const items=v.items.map(i=>`<div class="it" title="${E(i.holders.map(h=>h.name+' '+nf(h.count)).join(', '))}${i.price!=null?' · '+nf(Math.round(i.price))+' gp each':' · no price'}">${icon(i.name,20)}<span class="ell">${E(i.name)}</span><span style="text-align:right">${gp(i.count)}</span><span class="${i.value?'g':'fa'}" style="text-align:right">${i.value!=null?gp(i.value):'?'}</span></div>`).join('')||'<span class="dm">Nothing held.</span>';
-  const hold=v.holders.map(h=>`<div class="hold" title="${E(h.items.map(i=>i.name+' '+nf(i.count)).join(', '))}"><div class="h1"><b style="${h.banker?'color:var(--vio)':''}">${E(h.name)}</b><span class="g">${gp(h.value)}</span><span class="src">${h.source==='log'?'from log':h.source==='snapshot+log'?'snap + log':h.bankSeen?'snapshot':'pack only'}</span><span class="fa" style="margin-left:auto">${h.age!=null?ago(h.age):''}</span></div></div>`).join('');
-  put('#flow',flowSvg(v,$('#flow').clientWidth||280,$('#flow').clientHeight||150));put('#vit',items);put('#vho',hold)}
+  $('#suph').textContent=`${inStock.length} of ${sup.length} for sale · stock · ask`;
+  put('#sup',inStock.map(s=>`<div class="sup" title="${E(s.name)} · ${nf(s.stock)} for sale${s.ask!=null?' · ask '+nf(s.ask):''}${s.vwap!=null?' · 7-day avg '+nf(Math.round(s.vwap)):''}">${icon(s.name,16)}<span class="ell">${E(s.name)}</span><span style="text-align:right">${gp(s.stock)}</span><span class="dm" style="text-align:right">${s.ask!=null?gp(s.ask):'–'}</span></div>`).join('')||'<div class="empty-st">None of the key supplies is for sale.</div>');
+  const items=v.items.map(i=>`<div class="it" title="${E(i.holders.map(h=>h.name+' '+nf(h.count)).join(', '))}${i.price!=null?' · '+nf(Math.round(i.price))+' gp each':' · no price'}">${icon(i.name,20)}<span class="ell">${E(i.name)}</span><span style="text-align:right">${gp(i.count)}</span><span class="${i.value?'g':'fa'}" style="text-align:right">${i.value!=null?gp(i.value):'?'}</span></div>`).join('')||'<div class="empty-st">Nothing held.</div>';
+  const hold=v.holders.map(h=>`<div class="hold" title="${E(h.items.map(i=>i.name+' '+nf(i.count)).join(', '))}"><div class="h1"><b class="ell" style="font-weight:${h.banker?700:600};${h.banker?'color:var(--gold)':''}">${E(h.name)}</b><span class="g" style="text-align:right">${gp(h.value)}</span><span class="src">${h.source==='log'?'from log':h.source==='snapshot+log'?'snap + log':h.bankSeen?'snapshot':'pack only'}</span><span class="fa" style="text-align:right">${h.age!=null?ago(h.age):''}</span></div></div>`).join('');
+  const fe=$('#flow');fe.classList.toggle('stale',stale);put(fe,flowSvg(v,fe.clientWidth||280,fe.clientHeight||150));put('#vit',items);put('#vho',hold)}
 
 // Role-aware second line of a running row, picked from the swarm job's goal.
 function roleLine(b){const r=b.role4;if(!r)return null;
-  if(r.kind==='gold'){const low=r.emptyMs!=null&&r.emptyMs<30*60e3;
-    return`<span class="gold">${icon('Coins',14)} ${r.coinsPerTick!=null?r.coinsPerTick.toFixed(1)+' c/tick':'– c/tick'} · made ${r.made!=null?gp(r.made):'–'}</span><span class="${low?'dn':'dm'}" title="food in pack at the measured eat rate">food ${r.food}${r.emptyMs!=null?' · '+dur(r.emptyMs):''}${low?' ⚠':''}</span>`}
+  if(r.kind==='gold'){const emptyT=r.emptyMs!=null?r.emptyMs/TICK_MS:null,low=emptyT!=null&&emptyT<4500;
+    return`<span class="gold">${icon('Coins',14)} made ${r.made!=null?gp(r.made):'–'}</span><span class="dm num" title="${emptyT!=null?'food in the pack lasts '+tickTime(emptyT)+' at the measured eat rate':'food in the pack'}">${low?'<span class="i-warn">⚠</span> ':''}food ${r.food}${emptyT!=null?' · '+ticksTxt(emptyT)+' t':''}</span>`}
   if(r.kind==='bank')return`<span class="gold">${icon('Coins',14)} vault ${gp(S.vault?.value||0)}</span>`;
   return null}
 
 function render(){
-  const bots=S.bots,w=S.world||{},sw=S.swarm,live=bots.filter(b=>!b.practice);
+  const bots=S.bots,w=S.world||{},live=bots.filter(b=>!b.practice);
   header();
   $('#clock').textContent=new Date(S.now).toLocaleTimeString('en-GB');$('#pulse').className='pulse'+(w.connected===false?' off':'');
   const first=ranked()[0]||live.find(b=>b.inWorld&&!b.reserved)||live.find(b=>b.fresh&&!b.reserved)||live.find(b=>!b.reserved)||bots[0];
   if((!sel||!bots.some(b=>b.name===sel))&&first)sel=first.name;tourStep();
   alertsBar();roster();raceView();detail();economy();activity();requests();machine();syncWorld();loadMap();drawMap();if(tipFor)tip();
 }
-window.addEventListener('resize',()=>{drawMap();if($('#flow'))$('#flow')._h=null;economy()});
+window.addEventListener('resize',()=>{if(!S)return;drawMap();if($('#flow'))$('#flow')._h=null;economy()});
 // Errors show in the header instead of failing silently.
-window.onerror=(m,src,l)=>{const c=$('#clock');c.textContent='JS error: '+m+' @'+l;c.style.color='var(--red)'};
+window.onerror=(m,src,l)=>{const c=$('#clock');c.textContent='JS error: '+m+' @'+l;c.style.color='var(--late)'};
 // Static mode (screenshots) renders twice so the second, diffing render is exercised too.
 if(STATIC)fetch('/api/state').then(r=>r.json()).then(j=>{S=j;render();setTimeout(()=>fetch('/api/state').then(r=>r.json()).then(k=>{S=k;render()}),2500);if(TOUR)setInterval(()=>fetch('/api/state').then(r=>r.json()).then(k=>{S=k;render()}),2000)});
-else{let PV=null;const es=new EventSource('/events');es.onmessage=e=>{S=JSON.parse(e.data);if(PV===null)PV=S.pageVersion;else if(S.pageVersion&&S.pageVersion!==PV){location.reload();return}render()}}
+else{let PV=null;const es=new EventSource('/events');es.onmessage=e=>{S=JSON.parse(e.data);if(PV===null)PV=S.pageVersion;else if(S.pageVersion&&S.pageVersion!==PV){location.reload();return}render()};es.onerror=()=>{$('#pulse').className='pulse off';$('#clock').textContent='reconnecting'}}
 if(new URLSearchParams(location.search).get('map')==='2d')setMode('2d');
 </script>
 </body>

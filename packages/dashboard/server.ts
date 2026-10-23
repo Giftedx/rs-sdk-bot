@@ -12,7 +12,7 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 
 import { join, resolve } from 'node:path';
 import { cpus, freemem, totalmem } from 'node:os';
 import { xpForLevel } from '../planner/src/curve';
-import { applyLevers, haggisActivities, loadSnapshot, schedule } from '../planner/src/haggis';
+import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
 const practice = join(root, '.practice');
@@ -489,6 +489,7 @@ function vault(bots: any[], now: number) {
     return {
         coins, value: coins + items.reduce((n, i) => n + (i.value ?? 0), 0), unpriced: items.filter(i => i.price == null).length,
         items, holders, log: log.slice(-20).reverse(), logExists: existsSync(FILES.vault), banker: BANKER, pricesAt,
+        lastTransferAt: log.reduce((n, t) => Math.max(n, t.at), 0) || null,
         flow: [...links.values()].map(l => ({ ...l, items: [...l.items].map(([name, count]) => ({ name, count })).sort((a, z) => z.count - a.count) })),
     };
 }
@@ -499,24 +500,74 @@ type Swarm = { at: number; freeGB: number; running: number; maxBots: number; job
 const swarm = () => cached<Swarm | null>(FILES.swarm, t => JSON.parse(t) as Swarm, null);
 
 // ---------- owner request queue (research/owner-requests.md) ----------
-type Req = { id: string; date: string; request: string; status: string; kind: string; evidence: string; next: string; section: string };
+type Req = { id: string; date: string; request: string; status: string; kind: string; evidence: string; next: string; section: string; line: number };
+const KINDS: [RegExp, string][] = [[/^done/i, 'DONE'], [/^partial/i, 'PARTIAL'], [/^not started/i, 'NOT STARTED'], [/^blocked/i, 'BLOCKED'], [/^new/i, 'NEW'], [/^rule/i, 'RULE'], [/^dropped/i, 'DONE'], [/^(open|in progress)/i, 'PARTIAL']];
+const kindOf = (status: string) => KINDS.find(([re]) => re.test(status))?.[1] ?? status.toUpperCase();
+// Every numbered table row of owner-requests.md. A table's first row is its header only when a separator row
+// follows it; a row appended under a paragraph (no header of its own) is read by position: # | request | status | ...
+// One id can appear more than once (a later correction): the row furthest down the file wins.
 function parseRequests(text: string): Req[] {
-    const out: Req[] = [];
+    const byId = new Map<string, Req>();
     let section = '', header: string[] | null = null;
-    for (const raw of text.split(NL)) {
+    const lines = text.split(NL);
+    const cellsOf = (line: string) => line.slice(1, line.endsWith('|') ? -1 : undefined).split('|').map(c => c.trim());
+    const isSep = (line: string | undefined) => !!line && line.trim().startsWith('|') && cellsOf(line.trim()).every(c => /^:?-+:?$/.test(c));
+    lines.forEach((raw, i) => {
         const line = raw.trim();
-        if (line.startsWith('#')) { section = line.replace(/^#+\s*/, ''); header = null; continue; }
-        if (!line.startsWith('|')) { header = null; continue; }
-        const cells = line.slice(1, line.endsWith('|') ? -1 : undefined).split('|').map(c => c.trim());
-        if (cells.every(c => /^:?-+:?$/.test(c))) continue;
-        if (!header) { header = cells.map(c => c.toLowerCase()); continue; }
-        const col = (re: RegExp) => { const i = header!.findIndex(h => re.test(h)); return i >= 0 ? cells[i] ?? '' : ''; };
-        const status = col(/^status$/);
-        if (!status || !/^\d+$/.test(cells[0] ?? '')) continue;
-        const kind = /^done/i.test(status) ? 'DONE' : /^partial/i.test(status) ? 'PARTIAL' : /^not started/i.test(status) ? 'NOT STARTED' : /^blocked/i.test(status) ? 'BLOCKED' : /^new/i.test(status) ? 'NEW' : /^rule/i.test(status) ? 'RULE' : status.toUpperCase();
-        out.push({ id: cells[0]!, date: col(/^date$/), request: col(/^request/), status, kind, evidence: col(/^evidence/), next: col(/^next/), section });
-    }
-    return out;
+        if (line.startsWith('#')) { section = line.replace(/^#+\s*/, ''); header = null; return; }
+        if (!line.startsWith('|')) { header = null; return; }
+        if (isSep(line)) return;
+        const cells = cellsOf(line);
+        if (!header && isSep(lines[i + 1])) { header = cells.map(c => c.toLowerCase()); return; }
+        if (!/^\d+$/.test(cells[0] ?? '')) return;
+        let r: Req;
+        if (header) {
+            const h = header;
+            const col = (re: RegExp) => { const j = h.findIndex(x => re.test(x)); return j >= 0 ? cells[j] ?? '' : ''; };
+            r = { id: cells[0]!, date: col(/^date$/), request: col(/^request/), status: col(/^status$/), kind: '', evidence: col(/^evidence/), next: col(/^next/), section, line: i + 1 };
+        } else {
+            const si = cells.findIndex((c, j) => j > 0 && KINDS.some(([re]) => re.test(c)));
+            if (si < 0) return;
+            r = { id: cells[0]!, date: '', request: cells.slice(1, si).find(c => c) ?? '', status: cells[si]!, kind: '', evidence: cells[si + 1] ?? '', next: '', section, line: i + 1 };
+        }
+        if (!r.status) return;
+        r.kind = kindOf(r.status);
+        byId.delete(r.id); // re-insert so file order = position of the latest row
+        byId.set(r.id, r);
+    });
+    return [...byId.values()];
+}
+// The newest changes to the request rows: added or changed numbered rows in the last commits of the file and in the
+// working tree, newest first. Read with git, cached on the file's mtime.
+type ReqChange = { id: string; kind: string; request: string; at: number; where: string };
+let changesCache: { mtime: number; value: ReqChange[] } = { mtime: -1, value: [] };
+function requestChanges(all: Req[], mtime: number): ReqChange[] {
+    if (changesCache.mtime === mtime) return changesCache.value;
+    const out: ReqChange[] = [], seen = new Set<string>();
+    const take = (diff: string, at: number, where: string) => {
+        for (const l of diff.split(NL).reverse()) {
+            const m = l.match(/^\+\|\s*(\d+)\s*\|/);
+            if (!m || seen.has(m[1]!)) continue;
+            const r = all.find(x => x.id === m[1]);
+            if (!r) continue;
+            seen.add(m[1]!);
+            out.push({ id: r.id, kind: r.kind, request: r.request, at, where });
+        }
+    };
+    try {
+        const rel = 'research/owner-requests.md';
+        const wt = Bun.spawnSync(['git', 'diff', '-U0', '--', rel], { cwd: root, stdout: 'pipe', stderr: 'ignore' }).stdout.toString();
+        if (wt.trim()) take(wt, mtime, 'uncommitted');
+        const log = Bun.spawnSync(['git', 'log', '-n', '8', '-p', '-U0', '--format=@@C %h %ct', '--', rel], { cwd: root, stdout: 'pipe', stderr: 'ignore' }).stdout.toString();
+        for (const part of log.split(/^@@C /m).filter(Boolean)) {
+            const [head, ...rest] = part.split(NL);
+            const [hash, ct] = head!.split(' ');
+            take(rest.join(NL), Number(ct) * 1000, hash!);
+            if (out.length >= 3) break;
+        }
+    } catch { /* no git */ }
+    changesCache = { mtime, value: out.slice(0, 3) };
+    return changesCache.value;
 }
 function requests() {
     const all = cached<Req[]>(FILES.requests, parseRequests, []);
@@ -525,7 +576,7 @@ function requests() {
     // File order is priority order ("most important to the Haggis goal first", then later additions).
     const open = all.filter(r => !['DONE', 'RULE'].includes(r.kind));
     let mtime = 0; try { mtime = statSync(FILES.requests).mtimeMs; } catch { /* missing */ }
-    return { counts, open, total: all.length, mtime };
+    return { counts, open, total: all.length, mtime, changes: requestChanges(all, mtime) };
 }
 
 // ---------- Haggis plan: research/haggis-run.md board table if it has one, else haggis-plan.json ----------
@@ -610,35 +661,58 @@ function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: numbe
 }
 
 // ---------- main account race: the planner's schedule against the live #1 deadlines ----------
+// One source of truth: exactly the options of `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`,
+// scenario a (no tricks, travel on, every safe lever on, owner levers off). The headline is the realistic plan; the
+// floor plan is shown next to it.
 const LIVE_HISCORES = join(root, 'research', 'hiscores-live.json');
 const BOARDS_FILE = join(root, 'packages', 'planner', 'src', 'haggis-boards.json');
+const TRAVEL_FILE = join(root, 'packages', 'planner', 'src', 'haggis-travel.json');
 const GATE_FILE = join(practice, 'haggis-go.json');
 const GAP_FILE = join(practice, 'gap-history.jsonl');
-type GapRec = { at: number; gap: number | null; wins: number; floorWins: number };
-const gapHistory: GapRec[] = tailJsonl<GapRec>(GAP_FILE, 300);
+// `m: 'cli'` marks points made with the CLI's options; older points used another model (no travel) and are not shown.
+type GapRec = { at: number; gap: number | null; floorGap?: number | null; wins: number; floorWins: number; m?: string };
+const gapHistory: GapRec[] = tailJsonl<GapRec>(GAP_FILE, 300).filter(g => g.m === 'cli');
 let raceCache: { key: string; value: any } | null = null;
+const mt = (f: string) => { try { return statSync(f).mtimeMs; } catch { return 0; } };
 function race() {
-    let key = '';
-    try { key = statSync(LIVE_HISCORES).mtimeMs + '|' + statSync(BOARDS_FILE).mtimeMs; } catch { return null; }
+    const key = [LIVE_HISCORES, BOARDS_FILE, TRAVEL_FILE].map(mt).join('|');
+    if (!mt(LIVE_HISCORES)) return null;
     if (raceCache?.key === key) return raceCache.value;
     try {
         const boards = loadSnapshot(LIVE_HISCORES);
-        // Safe levers on, owner-decision levers off, no tricks: the plan the gate judges, with the levers applied.
-        const acts = applyLevers(haggisActivities(), {});
-        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { mode, tricks: new Set() }).boards;
+        const acts = haggisActivities(), travel = haggisTravel();
+        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { travel, mode, tricks: new Set() });
         const fl = run('floor'), re = run('realistic');
-        const rows = re.map(r => {
-            const f = fl.find(x => x.id === r.id)!;
-            const [label, holder] = [r.label.replace(/\s*\(.*\)$/, ''), (r.label.match(/\(#1 ([^,)]+)/) ?? [])[1] ?? null];
-            return { id: r.id, label, holder, deadline: r.deadline, real: { finish: r.finish, slack: r.slack, status: r.status }, floor: { finish: f.finish, slack: f.slack, status: f.status } };
+        // Evidence of the inputs behind each board: the activities (levers applied) that serve it. Overall: all of them.
+        const live = applyLevers(acts, {});
+        const ev = (id: string) => {
+            const l = live.filter(a => id === 'overall' || a.serves.includes(id as any)).map(a => (a.ticks ?? a.train?.xpPerTick)?.evidence ?? a.evidence);
+            return { measured: l.filter(e => e === 'MEASURED').length, codeRead: l.filter(e => e === 'CODE-READ').length, estimate: l.filter(e => e === 'ESTIMATE').length };
+        };
+        const rows = re.boards.map(r => {
+            const f = fl.boards.find(x => x.id === r.id)!, b = boards.find(x => x.id === r.id)!;
+            const label = r.label.replace(/\s*\(.*\)$/, ''), holder = (r.label.match(/\(#1 ([^,)]+)/) ?? [])[1] ?? null;
+            const rule = b.rule.kind === 'clock' ? { kind: 'clock' } : b.rule.kind === 'qp' ? { kind: 'qp', points: b.rule.leaderPoints, ticks: b.rule.leaderTicks } : { kind: 'value', note: b.rule.note };
+            return { id: r.id, label, holder, deadline: r.deadline, rule, evidence: ev(r.id), real: { finish: r.finish, slack: r.slack, status: r.status }, floor: { finish: f.finish, slack: f.slack, status: f.status } };
         });
-        const unmeasured = (readFileSync(BOARDS_FILE, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length;
         const overall = rows.find(r => r.id === 'overall');
-        const value = { rows, unmeasured, wins: rows.filter(r => r.real.status === 'WIN').length, floorWins: rows.filter(r => r.floor.status === 'WIN').length, gap: overall?.real.slack ?? null, at: Date.now(), source: 'research/hiscores-live.json' };
+        // The board that finishes last in the realistic plan (Overall aside) and the activity that finishes it.
+        const clock = rows.filter(r => r.rule.kind === 'clock' && r.id !== 'overall' && r.real.finish != null);
+        const lastB = clock.reduce((a, r) => (!a || r.real.finish! > a.real.finish! ? r : a), null as (typeof rows)[number] | null);
+        const lastAct = lastB ? [...re.order].reverse().find(p => live.find(a => a.id === p.id)?.serves.includes(lastB.id as any)) : null;
+        const n = (l: typeof rows, k: 'real' | 'floor') => l.filter(r => r[k].status === 'WIN').length;
+        const value = {
+            rows, unmeasured: (readFileSync(BOARDS_FILE, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length,
+            wins: n(rows, 'real'), floorWins: n(rows, 'floor'), gap: overall?.real.slack ?? null, floorGap: overall?.floor.slack ?? null,
+            qpEnd: { realistic: re.qp, floor: fl.qp },
+            last: lastB ? { board: lastB.label, finish: lastB.real.finish, slack: lastB.real.slack, activity: lastAct?.label ?? null } : null,
+            at: Date.now(), source: 'research/hiscores-live.json', sourceAt: mt(LIVE_HISCORES),
+            options: 'planner CLI scenario a: no tricks, travel on, safe levers on, owner levers off',
+        };
         raceCache = { key, value };
         const last = gapHistory[gapHistory.length - 1];
-        if (!last || last.gap !== value.gap || last.wins !== value.wins) {
-            const rec = { at: Date.now(), gap: value.gap, wins: value.wins, floorWins: value.floorWins };
+        if (!last || last.gap !== value.gap || last.floorGap !== value.floorGap || last.wins !== value.wins) {
+            const rec = { at: Date.now(), gap: value.gap, floorGap: value.floorGap, wins: value.wins, floorWins: value.floorWins, m: 'cli' };
             gapHistory.push(rec); if (gapHistory.length > 300) gapHistory.shift();
             append(GAP_FILE, rec);
         }
@@ -692,7 +766,12 @@ function buildState() {
         const ph = s.phase ?? '';
         const since = ph ? phaseSince.get(name + NL + ph) : undefined;
         const last = String(s.timeline ?? '').slice(-1);
-        const job = sw?.jobs.find(j => j.account.toLowerCase() === name.toLowerCase()) ?? null;
+        // An account can have two entries (an old disabled single job and a host job): the enabled one wins.
+        // An entry without a script is a reservation (the main account), not a job.
+        const mine = (sw?.jobs ?? []).filter(j => j.account.toLowerCase() === name.toLowerCase());
+        const jobRaw = mine.find(j => j.enabled && j.script) ?? mine.filter(j => j.script).pop() ?? null;
+        const job = jobRaw;
+        const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
         return {
             ...s, name, fresh, inWorld, live: inWorld ? live : null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
@@ -706,8 +785,13 @@ function buildState() {
             phaseShort: shortPhase(ph), phaseSince: since?.at ?? null, phaseExact: since?.exact ?? false,
             uptime: s.started && s.at ? s.at - s.started : null,
             outcome: !res ? null : died(res) ? 'died' : /^ok\b/.test(res) ? 'ok' : 'fail',
-            job, reserved: name === MAIN,
+            job, reserved: name === MAIN || (reservedEntry && !job),
+            // Training: a fresh bot whose goal skill is still below its target, not a gold farmer or a banker.
+            training: fresh && sk != null && sk.level < target && !/^gold farm|bank/i.test(String(job?.goal ?? s.goal ?? '')),
             role4: roleView(s, job, fresh, r),
+            // Newest RESULT this server saw for the account, and its newest death in the last 24 h.
+            lastRes: (() => { const x = results.find(q => q.name === name); return x ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),
+            death: (() => { const x = results.find(q => q.name === name && died(q.text) && now - q.at < 86_400_000); return x ? { at: x.at, text: x.text } : null; })(),
         };
     });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
@@ -742,17 +826,19 @@ function buildState() {
     const see = (l: any) => { for (const i of l ?? []) if (i?.name && !(i.name in icons)) icons[i.name] = iconId(i.name); };
     for (const b of bots as any[]) { see(b.inventory); see(b.bank); }
     see(v.items); see([{ name: 'Coins' }]); for (const t of v.log) see(t.items); for (const f of v.flow) see(f.items);
+    const prac = practiceNames();
     const sys = {
         freeGB: freemem() / 2 ** 30, totalGB: totalmem() / 2 ** 30, cpu: cpuPct, cores: cpus().length,
         procs: procs.map(p => ({ ...p, up: now - p.started })),
     };
     return {
-        now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards, events: events.slice(0, 120),
-        results: results.slice(0, 60), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
+        now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards,
+        events: events.slice(0, 160).map(e => ({ ...e, practice: prac.has(e.name) })),
+        results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name) })), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
         viewerTimings: viewerTimings.slice(0, 20),
-        race: race(), gates: gates(), gapHistory: gapHistory.slice(-120).map(g => g.gap), economy,
+        race: race(), gates: gates(), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
         pageVersion: (() => { try { return statSync(join(import.meta.dir, 'index.html')).mtimeMs; } catch { return 0; } })(),
         icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
