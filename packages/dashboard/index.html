@@ -146,12 +146,13 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .pips{display:flex;gap:1px}.pips i{width:4px;height:9px;border-radius:1px}
 .feed>div{display:grid;grid-template-columns:52px 14px 96px minmax(0,1fr);gap:5px;font-size:12px;padding:0 8px;border-bottom:1px solid #1b1710;white-space:nowrap;line-height:17px}
 .feed>div span:last-child{overflow:hidden;text-overflow:ellipsis}
+.secret{filter:blur(4px);user-select:none;cursor:pointer;color:var(--gold,#dfc080);letter-spacing:-1px}.secret:hover{filter:blur(3px)}.secret.shown{filter:none;user-select:text;letter-spacing:normal}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
-  <div class="brand">SWARM CONTROL<small>Haggis project · rs-sdk demo</small></div>
+  <div class="brand">SWARM CONTROL<small>rs-sdk demo</small></div>
   <div class="kpis">
     <div class="kpi"><b id="k-w">0</b><span>in world</span></div>
     <div class="kpi"><b id="k-sw">-</b><span>swarm · free</span></div>
@@ -222,6 +223,18 @@ function paceTxt(b){if(!b.pace)return b.eta?`<span class="pace dm">ETA ${E(b.eta
 
 // ---- DOM diff: a container's HTML is rebuilt only when its string changes; keyed lists patch row by row ----
 function put(el,html){if(typeof el==='string')el=$(el);if(el._h!==html){el._h=html;el.innerHTML=html}}
+// Main account name: the server sends a marker instead of it. Draw each marker as a blurred block with no name inside;
+// a click fetches the name for this tab only (a reload hides it again), so a screenshot never shows it by accident.
+const MARK='⟦MAIN⟧';let REVEAL=null;
+function secretSpan(){const s=document.createElement('span');s.className='secret'+(REVEAL?' shown':'');s.textContent=REVEAL||'██████';s.title=REVEAL?'main account':'click to reveal name';return s}
+function hideSecrets(root){
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.includes(MARK)?1:3});const hits=[];while(w.nextNode())hits.push(w.currentNode);
+  for(const t of hits){const parts=t.nodeValue.split(MARK);const f=document.createDocumentFragment();parts.forEach((p,i)=>{if(i)f.appendChild(secretSpan());if(p)f.appendChild(document.createTextNode(p))});t.replaceWith(f)}
+  for(const el of root.querySelectorAll('*'))for(const a of el.attributes)if(a.value.includes(MARK))a.value=a.value.split(MARK).join(REVEAL||'main account');
+}
+document.addEventListener('click',async e=>{const s=e.target.closest&&e.target.closest('.secret');if(!s||REVEAL)return;e.stopPropagation();e.preventDefault();
+  REVEAL=await (await fetch('/api/reveal',{cache:'no-store'})).text();for(const x of document.querySelectorAll('.secret')){x.textContent=REVEAL;x.classList.add('shown');x.title='main account'}},true);
+new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes){if(n.nodeType===3&&n.nodeValue.includes(MARK))hideSecrets(n.parentNode);else if(n.nodeType===1)hideSecrets(n)}}).observe(document.documentElement,{childList:true,subtree:true,characterData:false});
 function keyed(el,rows){const have=new Map([...el.children].map(c=>[c.dataset.k,c]));let prev=null;
   for(const[k,html]of rows){let c=have.get(k);if(c)have.delete(k);else{c=document.createElement('div');c.dataset.k=k}
     if(c._h!==html){c._h=html;c.innerHTML=html;c.firstElementChild&&(c.className=c.firstElementChild.dataset.c||'')}
@@ -239,7 +252,7 @@ function rowLive(b){const[c,t]=st(b),sk=goalOf(b),L=running(b)?ledger(b):null,id
   <div class="l"><span class="ell" title="${E(b.phase||'')}">${E(b.phaseShort||'')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}</div>
   <div class="r">${L?`${lbar(L,'70px')}<span class="idl ${bad?'bad':'ok'}">idle ${idle.toFixed(0)}%</span>`:''}</div>`}
 function rowOff(b){const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':b.name===S.vault?.banker?'bk':'';
-  const why=b.job?.note||(b.reserved?'reserved for the Haggis run':b.at?'':'no status file yet');
+  const why=b.job?.note||(b.reserved?'reserved for the main run':b.at?'':'no status file yet');
   return`<i hidden data-c="off1 ${sel===b.name?'sel':''}"></i>${ocIcon(b.outcome)}<span class="nm">${E(b.name)}</span><span class="pill ${pc}">${E(role)}</span>${jobPill(b.job)}<span class="note" title="${E(why)}${b.result?' · last RESULT: '+E(b.result):''}">${E(why)}</span><span class="mono fa" title="last seen">${b.lastSeen?ago(S.now-b.lastSeen):'never'}</span>`}
 function roster(){const live=S.bots.filter(b=>!b.practice),on=live.filter(b=>running(b)&&!b.reserved),off=live.filter(b=>!(running(b)&&!b.reserved));
   const rows=[...on.map(b=>['L'+b.name,rowLive(b)])];
@@ -272,7 +285,7 @@ function boards(){
     <div class="gapb">${g?`<i style="width:${(Math.max(.03,cl)*100).toFixed(0)}%;background:${col}"></i>`:''}</div>
     <div class="o">${b?`<span>${E(b.name)} <span class="mono ${b.rank<=10?'g':''}">#${nf(b.rank)}</span> ${delta}</span><span class="mono" style="color:${col}">${g?(g.kind==='time'?(g.ahead?'−':'+')+E(g.text):E(g.text)):''}</span>`:`<span class="fa">${r.kind==='value'?'not ranked':'no rank'}</span>`}</div></div>`}).join(''));
   const h=S.haggis;if(!h)return;const cnt=PS.map(p=>h.boards.filter(b=>b.status===p).length);
-  put('#hag',`<span class="h" title="plan source: ${E(h.source)} · ${PS.map((p,i)=>p+' '+cnt[i]).join(' · ')}">HAGGIS</span>`+h.boards.map(b=>{const i=Math.max(0,PS.indexOf(b.status));return`<span class="hc ps-${i}" title="${E(b.board)}: ${E(b.status)}${b.note?' · '+E(b.note):''}">${AB[b.board]||E(b.board.slice(0,3))}<small>${['—','method','prep','ready'][i]}</small></span>`}).join(''))}
+  put('#hag',`<span class="h" title="plan source: ${E(h.source)} · ${PS.map((p,i)=>p+' '+cnt[i]).join(' · ')}">MAIN</span>`+h.boards.map(b=>{const i=Math.max(0,PS.indexOf(b.status));return`<span class="hc ps-${i}" title="${E(b.board)}: ${E(b.status)}${b.note?' · '+E(b.note):''}">${AB[b.board]||E(b.board.slice(0,3))}<small>${['—','method','prep','ready'][i]}</small></span>`}).join(''))}
 
 function detail(){
   const b=S.bots.find(x=>x.name===sel);if(!b){put('#detail','<span class="dm">Pick an account.</span>');return}

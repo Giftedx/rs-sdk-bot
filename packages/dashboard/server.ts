@@ -30,6 +30,8 @@ const PORT = Number(process.env.DASH_PORT ?? 3100);
 const DEMO = 'https://rs-sdk-demo.fly.dev';
 const BANKER = 'Moneyshot';
 const MAIN = 'Haggis';
+const SECRET_RE = new RegExp(MAIN, 'gi');
+const SECRET_MARK = '⟦MAIN⟧';
 const ROLE_SKILL: Record<string, string> = { thieving: 'Thieving', fishing: 'Fishing', woodcutting: 'Woodcutting', mining: 'Mining', runecraft: 'Runecraft', cooking: 'Cooking', crafting: 'Crafting', combat: 'Attack' };
 const XP99 = 998_458; // level 99 on the demo server (Pocketpython hit 99 at 998,500 xp)
 const NL = String.fromCharCode(10);
@@ -600,7 +602,9 @@ function buildState() {
 const clients = new Set<ReadableStreamDefaultController>();
 let latest = { at: 0, json: '' };
 function current() {
-    if (Date.now() - latest.at > 1500) latest = { at: Date.now(), json: JSON.stringify(buildState()) };
+    // The main account's name never leaves the server unasked: every string value has it swapped for a marker, which
+    // the page draws as a blurred block (owner rule: screenshots must not show it). /api/reveal returns it on a click.
+    if (Date.now() - latest.at > 1500) latest = { at: Date.now(), json: JSON.stringify(buildState(), (_k, v) => (typeof v === 'string' ? v.replace(SECRET_RE, SECRET_MARK) : v)) };
     return latest.json;
 }
 setInterval(() => {
@@ -617,6 +621,7 @@ Bun.serve({
     fetch(req) {
         const url = new URL(req.url);
         if (url.pathname === '/api/state') return new Response(current(), { headers: { 'content-type': 'application/json' } });
+        if (url.pathname === '/api/reveal') return new Response(MAIN, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
         if (url.pathname === '/events') {
             let me: ReadableStreamDefaultController;
