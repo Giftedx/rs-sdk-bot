@@ -3,7 +3,10 @@
 // (94% at 99), 50 coins, stun 8 ticks, fail damage 3. Model: about 18.8 coins per tick at level 99.
 // Knights spawn at (2652,3318) and (2653,3300) and wander. Bank spot (2654,3283), bankers at (2657,3280-3286).
 // Env: TICKS (default 9000) game ticks; BANK_AT (default 25000) coins in the pack that start a bank trip;
-// FOOD_FROM=<account>: with no lobsters in the pack or the bank, serve one trade from that account (180 s) first.
+// FOOD_FROM=<account>: with no bank food (trout, salmon, lobster) in the pack or the bank, serve one trade from that
+// account (180 s) first. FOOD_ONLY_TRADE=1: never use the stall or the shop; when the pack and the bank run out of
+// food, serve one more trade from FOOD_FROM at the bank, and end the run (log out) when none comes.
+// Bank food: cooked trout (heals 7) and salmon (9) from scripts/fishcook.ts come before lobsters (12) on withdraw.
 // Food fallback: with no lobsters in the pack or the bank, steal from the Ardougne baker's stall until the pack holds
 // STALL_FILL (default 10) food items. Rules (skill_thieving stealing.rs2:98-121, thieving.rs2:53-73): an ardougne_guard
 // within 5 tiles of the player with line of sight shouts and attacks; the Baker (baker_merchant) within 5 tiles with
@@ -22,6 +25,10 @@ const BANK_SPOT: Tile = { x: 2654, z: 3283 };
 const KNIGHT = /^knight of ardougne$/i;
 const RANGE = 16;
 const LOBSTER = /^lobster$/i;
+// Bank food in withdraw order: the food chain's cooked fish first (research/food-chain.md), then lobsters.
+const BANK_FOOD = [/^trout$/i, /^salmon$/i, LOBSTER];
+const BIG = /^(trout|salmon|lobster)$/i;
+const FOOD_ONLY_TRADE = process.env.FOOD_ONLY_TRADE === '1';
 const COINS = /^coins$/i;
 const TICKS = Number(process.env.TICKS ?? 9000);
 const BANK_AT = Number(process.env.BANK_AT ?? 25000);
@@ -33,8 +40,9 @@ const STALL = /^baker'?s stall$/i;
 const GUARD = /^guard$/i;
 const BAKER = /^baker$/i;
 const GUARD_SAFE = 6;
-// Eat order when the HP loss is small: lowest heal first (cake pieces 4, chocolate slice, bread 5), lobster (12) last.
-const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, LOBSTER];
+// Food types and HP per bite (cake pieces 4, chocolate slice 2, bread 5, trout 7, salmon 9, lobster 12).
+const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER];
+const HEAL = [4, 4, 4, 2, 5, 7, 9, 12];
 const DMG = 3;
 // Click cadence in ticks. A click inside the pick's action delay is queued again by the server (p_opnpc(3),
 // pickpocket.rs2:134-137), so a 1-tick cadence costs nothing and re-paths to a knight that stepped away a tick sooner.
@@ -55,11 +63,11 @@ try {
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const maxHp = () => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
     const inv = () => st()?.inventory ?? [];
-    const edible = (i: any) => LOBSTER.test(i.name) && (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text));
-    const lobsters = () => inv().filter(edible).reduce((n, i) => n + i.count, 0);
+    const edible = (i: any) => BIG.test(i.name) && (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text));
+    const bigFood = () => inv().filter(edible).reduce((n, i) => n + i.count, 0);
     const isFood = (i: any) => FOOD_ORDER.some(re => re.test(i.name)) && (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text));
     const food = () => inv().filter(isFood).reduce((n, i) => n + i.count, 0);
-    const notes = () => inv().filter(i => LOBSTER.test(i.name) && !edible(i));
+    const notes = () => inv().filter(i => BIG.test(i.name) && !edible(i));
     const coins = () => inv().filter(i => COINS.test(i.name)).reduce((n, i) => n + i.count, 0);
     const cheb = (a: Tile, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
     // Eat with two failed picks of margin (a 10 HP thief at HP 3 has none); the bigger loss is a death, not a bite.
@@ -97,18 +105,18 @@ try {
         const detail = `ticks=${ticks} picks=${picks} fails=${fails} noops=${noops} bans=${bans} coinsGained=${gained} coinsPerTick=${(gained / Math.max(1, ticks)).toFixed(2)} `
             + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} stallTrips=${stallTrips} stallTicks=${stallTicks} stallPickTicks=${stallPickTicks} stolen=${stolen} refused=${refused} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
             + `foodTicksPct=${(100 * (bankTicks + stallTicks + shopTicks + eatTicks) / Math.max(1, ticks)).toFixed(1)} `
-            + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} lobsters=${lobsters()} food=${food()} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level}`;
+            + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} tradesIn=${tradesIn} tradeTicks=${tradeTicks} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
 
     const eat = async (): Promise<boolean> => {
         const e0 = s.tick();
-        // A lobster when the loss uses most of its 12 HP, else the smallest food first.
+        // The biggest food that the HP loss uses in full (no heal wasted), else the smallest food.
         const items = inv().filter(isFood);
         const rank = (i: any) => FOOD_ORDER.findIndex(re => re.test(i.name));
         items.sort((a, b) => rank(a) - rank(b));
-        const big = items.find(i => LOBSTER.test(i.name));
-        const pick = maxHp() - hp() >= 12 && big ? big : items[0];
+        const loss = maxHp() - hp();
+        const pick = [...items].reverse().find(i => (HEAL[rank(i)] ?? 99) <= loss) ?? items[0];
         // Every failure waits a tick: callers loop on "HP low and food() > 0", and an instant false return spun the
         // event loop forever (practice proof hung at t=1003 and grew to 2.6 GB on 2026-10-23).
         if (!pick) { lastFail = 'eat: no edible item'; await waitTicks(s, 1); return false; }
@@ -149,34 +157,45 @@ try {
                 const d = await s.bot.depositItem(n, -1);
                 if (!d.success) lastFail = `deposit notes:${d.message}`;
             }
-            const inBank = s.sdk.findBankItem(LOBSTER);
-            const room = 28 - inv().length - KEEP_FREE;
-            if (inBank && inBank.count > 0 && room > 0) {
+            // Cooked fish first, then lobsters, until the pack is full less KEEP_FREE.
+            for (const re of BANK_FOOD) {
+                const inBank = s.sdk.findBankItem(re);
+                const room = 28 - inv().length - KEEP_FREE;
+                if (!inBank || inBank.count <= 0 || room <= 0) continue;
                 const w = await s.bot.withdrawItem(inBank, Math.min(room, inBank.count));
                 if (!w.success) lastFail = `withdraw:${w.message}`;
             }
-            const left = (s.sdk.findBankItem(LOBSTER)?.count ?? 0);
+            const left = BANK_FOOD.reduce((n, re) => n + (s.sdk.findBankItem(re)?.count ?? 0), 0);
             bankEmpty = left === 0;
-            // No lobsters left: take 300 coins back for the Baker's shop (bread 12 coins).
+            // No bank food left: take 300 coins back for the Baker's shop (bread 12 coins); not with FOOD_ONLY_TRADE.
             const bankCoins = s.sdk.findBankItem(COINS);
-            if (bankEmpty && coins() < 300 && bankCoins && bankCoins.count > 0) {
+            if (bankEmpty && !FOOD_ONLY_TRADE && coins() < 300 && bankCoins && bankCoins.count > 0) {
                 const n = Math.min(300 - coins(), bankCoins.count);
                 const w = await s.bot.withdrawItem(bankCoins, n);
                 if (w.success) banked -= w.amountWithdrawn ?? n;
             }
-            console.log(`BANK trip=${bankTrips} banked=${banked} lobsters=${lobsters()} bankLobsters=${left} t=${now()}`);
+            console.log(`BANK trip=${bankTrips} banked=${banked} bigFood=${bigFood()} bankFood=${left} t=${now()}`);
             await s.bot.closeBank();
         } finally { bankTicks += s.tick() - b0; }
     };
 
-    // FOOD_FROM: no lobsters anywhere at startup, so take notes by trade at the bank spot, then bank them.
-    const foodByTrade = async () => {
-        console.log(`MILESTONE waiting for food trade from ${FOOD_FROM}`);
+    // FOOD_FROM: no bank food anywhere, so take notes by trade at the bank spot, then bank them. True when the pack
+    // or the bank holds food afterwards.
+    let lastTradeOk = true, tradeTicks = 0, tradesIn = 0;
+    const foodByTrade = async (): Promise<boolean> => {
+        console.log(`MILESTONE waiting for food trade from ${FOOD_FROM} t=${now()}`);
         await walk(BANK_SPOT, 2);
+        const q0 = s.tick();
         const re = new RegExp(`^${FOOD_FROM.replace(/[^a-zA-Z0-9 _-]/g, '')}$`, 'i');
         const r = await s.bot.serveTrades({ from: re, maxTrades: 1, timeout: 180_000 });
-        console.log(`TRADE ${r.reason} ${r.message} notes=${notes().reduce((n, i) => n + i.count, 0)} lobsters=${lobsters()}`);
+        tradeTicks += s.tick() - q0;
+        if (s.tick() === q0) await waitTicks(s, 1);
+        const got = notes().reduce((n, i) => n + i.count, 0) + bigFood();
+        console.log(`TRADE ${r.reason} ${r.message} notes=${notes().reduce((n, i) => n + i.count, 0)} bigFood=${bigFood()} t=${now()}`);
+        if (got > 0) tradesIn++;
         await refill();
+        lastTradeOk = food() >= 2 || !bankEmpty;
+        return lastTradeOk;
     };
 
     // Stall trip: steal from a baker's stall from a side tile with no guard within GUARD_SAFE tiles (line of sight
@@ -335,24 +354,30 @@ try {
         }
     };
 
-    console.log(`GOLDFARM ticks=${TICKS} pickTicks=${PICK_TICKS} eatAt=${eatAt()} maxHp=${maxHp()} lobsters=${lobsters()} notes=${notes().length} coins=${coins0} foodFrom=${FOOD_FROM || '-'}`);
+    console.log(`GOLDFARM ticks=${TICKS} pickTicks=${PICK_TICKS} eatAt=${eatAt()} maxHp=${maxHp()} bigFood=${bigFood()} notes=${notes().length} coins=${coins0} foodFrom=${FOOD_FROM || '-'}`);
     // Start: notes in the pack, or no food, means a bank visit first.
-    if (lobsters() < 2 || notes().length > 0) {
+    if (bigFood() < 2 || notes().length > 0) {
         await refill();
-        if (lobsters() === 0 && bankEmpty && FOOD_FROM) await foodByTrade();
+        if (bigFood() === 0 && bankEmpty && FOOD_FROM) await foodByTrade();
     }
 
     let nextMark = 1000;
     while (now() < TICKS && !died) {
         if (existsSync(stopFile)) await end(false, 'stop file');
-        if (now() >= nextMark) { console.log(`MILESTONE t=${now()} banked=${banked} packCoins=${coins()} lobsters=${lobsters()} food=${food()} picks=${picks} fails=${fails} eaten=${eaten}`); nextMark += 1000; }
+        if (now() >= nextMark) { console.log(`MILESTONE t=${now()} banked=${banked} packCoins=${coins()} bigFood=${bigFood()} food=${food()} picks=${picks} fails=${fails} eaten=${eaten}`); nextMark += 1000; }
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
         const l = food();
         if (hp() <= eatAt() && l > 0) { if (!(await eat())) await waitTicks(s, 1); continue; }
-        if ((lobsters() < 2 && l < 2 && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
+        if ((bigFood() < 2 && l < 2 && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
             await refill();
             await walk(KNIGHT_SPOT, 3);
             continue;
+        }
+        // FOOD_ONLY_TRADE: no stall, no shop (both killed farmers live on 2026-10-23). Out of food, serve one more trade
+        // from FOOD_FROM when the last one brought food; else log out with HP to spare.
+        if (l < 2 && bankEmpty && FOOD_ONLY_TRADE) {
+            if (FOOD_FROM && lastTradeOk && (await foodByTrade())) { await walk(KNIGHT_SPOT, 3); continue; }
+            await end(false, 'no food (FOOD_ONLY_TRADE)');
         }
         // Bank out of lobsters: the Baker's shop when allowed, else the stall unless 3 trips in a row brought nothing.
         if (l < 2 && bankEmpty && (shopOk() || stallEmptyTrips < 3)) {
