@@ -80,18 +80,22 @@ export function nearestLoc(s: Session, name: RegExp, op: RegExp): { loc: any; op
 }
 
 // Booth click, then wait for the bank interface. Returns ticks, or -1.
-export async function openBank(s: Session, m: Meter, cap = 30): Promise<number> {
+export async function openBank(s: Session, m: Meter, cap = 40): Promise<number> {
     const t0 = s.tick();
     // Use-quickly (op2) opens the bank at once; Use (op1) starts the banker chat (bank_booth.rs2:1-7).
     const b = nearestLoc(s, /bank booth/i, /use-quickly/i);
     if (!b) return -1;
+    const pos = () => { const q = s.sdk.getState()?.player; return q ? q.worldX * 100000 + q.worldZ : 0; };
+    const p0 = pos();
+    const movedSince = (_s: Session, _t: number) => pos() !== p0;
     await send(s, m, { type: 'interactLoc', x: b.loc.x, z: b.loc.z, locId: b.loc.id, optionIndex: b.opIndex });
     while (!bankOpen(s) && s.tick() - t0 < cap) {
         await tick(s); debug(s, 'bank');
         // A queued level-up page opened after the click: it cancels the booth op. Close it and click again.
         if (dialogOpen(s)) { await send(s, m, { type: 'closeModal' }); await send(s, m, { type: 'interactLoc', x: b.loc.x, z: b.loc.z, locId: b.loc.id, optionIndex: b.opIndex }); m.levelTicks++; }
-        // A click lost on the way (seen once at Varrock west after 28 trips): click again every 10 ticks.
-        else if ((s.tick() - t0) % 10 === 0) { await send(s, m, { type: 'interactLoc', x: b.loc.x, z: b.loc.z, locId: b.loc.id, optionIndex: b.opIndex }); console.log(`NOTE booth re-click at +${s.tick() - t0}`); }
+        // A click sent while the player is still delayed (the last anvil p_delay(2)) is dropped: while the player has
+        // not moved, click again every 2 ticks; after that, every 10 ticks.
+        else if (!movedSince(s, t0) ? (s.tick() - t0) % 2 === 0 : (s.tick() - t0) % 10 === 0) { await send(s, m, { type: 'interactLoc', x: b.loc.x, z: b.loc.z, locId: b.loc.id, optionIndex: b.opIndex }); console.log(`NOTE booth re-click at +${s.tick() - t0}`); }
     }
     return bankOpen(s) ? s.tick() - t0 : -1;
 }
