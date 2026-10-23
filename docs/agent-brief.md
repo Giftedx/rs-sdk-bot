@@ -69,6 +69,8 @@ permission. Where the task brief and this file disagree, the task brief wins onl
 - Stop every process you start before you report: bots, servers, browsers, watchers. Report what you stopped.
 - Do not stop processes that you did not start. Name them in your report instead.
 - Put temporary files in the session scratchpad, not in the repo.
+- Before EVERY practice bot launch, read .practice/monitor.json (written by scripts/monitor.ts every 30 s). If practiceBots >= 6 or freeGB < 5, wait 30 s and check again. Run at most ONE practice bot at a time per agent. (2026-10-23: 12 practice bots at once left 3.8 GB free and blocked live jobs.)
+- Never call a script "proved" for a path the proof did not run. Name the paths the proof exercised (e.g. "resume to Fishing 40, trips=0, events=0").
 </resources>
 
 <reporting>
