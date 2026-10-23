@@ -336,6 +336,73 @@ Planner: new row `rj` (307 / 314 MEASURED, 5 QP, place `romeo`, Quest Points onl
 plus these rows, scenario a: 37,851 / 45,149, the same as HEAD alone. The short quests come after the last 99, so
 they do not move Overall; they move Quest Points and the start of Dragon Slayer (51,262 realistic after these rows).
 
+## 1d. Measured: Family Crest (the `crest` row)
+
+Script `scripts/generated/quest-crest.ts`, preset `quest_crest` (beside Dimintheis, 3280,3403). The quest ends at
+Avan with the goldsmith gauntlets that the superheat route needs. Practice server, one bot at a time.
+
+3/3 PASS (MEASURED practice, 2026-10-23):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | HP min | Eats |
+|---|---|---|---|---|---|
+| ra | `RESULT ok qp=1 gauntlets=true questMsg=true xp=hitpoints=40,magic=14635,crafting=3625 at=3293,3282,0 ticks=1182 hpMin=53 eats=4 walkTicks=730 retries=2 died=false` | 1,182 | 124 (10.5%) | 53 | 4 |
+| rb | `RESULT ok qp=1 gauntlets=true questMsg=true xp=attack=6400,hitpoints=2162,magic=11185,crafting=3625 at=3292,3282,0 ticks=1179 hpMin=71 eats=0 walkTicks=728 retries=2 died=false` | 1,179 | 123 (10.4%) | 71 | 0 |
+| rc | `RESULT ok qp=1 gauntlets=true questMsg=true xp=attack=6400,hitpoints=2155,magic=13767,crafting=3625 at=3295,3282,0 ticks=1199 hpMin=59 eats=3 walkTicks=727 retries=2 died=false` | 1,199 | 135 (11.2%) | 59 | 3 |
+
+Every run ends with `Congratulations! Quest complete!` and the goldsmith gauntlets (776) in the pack. 1 QP
+(CODE-READ, `quest_crest.rs2` crest_complete). The quest gives no XP; the XP above is from the blasts (Magic), the
+jewellery (Crafting 3,625) and a poison spider (Attack). 0 deaths in the 3 proof runs. Planned: 1,200 / 3,000
+(ESTIMATE); measured 1,179-1,199.
+
+Route (run ra, MILESTONE ticks): Dimintheis 0-29; Camelot teleport, Caleb twice (fish, "what happened to the rest")
+29-130; Lumbridge teleport, toll gate, gem trader 130-198; Al Kharid furnace, ruby ring and necklace from the
+'perfect' bars 198-243; Avan 243-332; Falador teleport, trapdoor at 3019,3450, Boot 332-474; Lumbridge teleport, toll
+gate, Avan's piece 474-564; Varrock teleport, Jolly Boar Inn, Johnathon, antipoison 564-684; walk to the Edgeville
+trapdoor and through the dungeon 684-827; Chronozon 827-999; Varrock teleport, Dimintheis 999-1059; walk to Avan,
+gauntlets 1059-1182.
+
+Helper items (the preset): the 5 cooked fish for Caleb, 2 'perfect' gold bars (2365, tradeable, so a helper mines
+and smelts them in the Witchaven dungeon), 2 rubies, ring and necklace moulds, 2 antipoisons, 100 air, 12 water, 15
+earth, 70 fire, 24 death and 6 law runes, 100 coins (the toll gate twice), 8 sharks. The crest pieces, the 'perfect'
+jewellery and the gauntlets are untradeable (`quest_crest.obj`), so Haggis does every NPC step itself.
+
+Findings:
+
+- **The row cannot run where the floor order put it.** Before this work the floor order ran `crest` at tick 1,872,
+  after `prayer-31`, with Magic 1 and 10 Hitpoints. Chronozon dies only after one successful hit of each of Wind,
+  Water, Earth and Fire Blast (`crest_chronozon.rs2`, `player_magic.rs2:223`, in `pvm_spell_success`), and Fire
+  Blast needs Magic 59. His room is in the Wilderness part of the Edgeville dungeon with poison spiders (64) beside
+  him and black demons (172) north of him (`bun research/route-danger.ts 3088,9970 3087,9940`). The row now has
+  `minLevel: { magic: 59 }`. The planner does not model Hitpoints; with the gate it puts `crest` after the Grand Tree,
+  where Haggis still has about 10 Hitpoints. The preset is Haggis after Monkey Madness (Hitpoints 97, Defence 89)
+  with Magic 59, so the proof is for that state, not for a 10-HP account (not run).
+- A blast that splashes sets no bit. In the rune set (magic bonus about -50) the blasts splashed until the runes ran
+  out in 2 of 6 earlier runs. Chronozon has no magic level, so the script takes off the helm, body, shield and legs
+  (4 ticks) before the first blast, and casts each blast until "Chronozon weakens". It then kills him with fire blasts.
+- Single-way combat: a poison spider that attacks first blocks every cast ("I'm already under attack!"). The script
+  kills it with the scimitar (NPC `targetIndex` 32768 + player index), then goes on. One earlier run died to the
+  spider's poison after the teleport out, so the script drinks the second antipoison before the fight.
+- Johnathon's `inv_del(inv, last_useitem, 1)` removes the whole 4-dose antipoison.
+- The gameMessages list is capped, so the script tells a new message by its `observationId`, not by a count.
+- `quest-lib.ts` marks a jump to Lumbridge as a death. The new `lumbridgeOk` option turns that off for scripts that
+  use the Lumbridge teleport (respawn count and life id still count).
+- The trapdoor north of Falador (loc 1570 `trapdoor_open` at 3019,3450, `maps/m47_53.jm2`) leads to Boot; it is
+  not a ladder.
+
+Planner: row `crest` 1,179 / 1,199 MEASURED, `minLevel: { magic: 59 }`, qp 0 (its 1 QP stays inside `quests-rest`;
+with qp 1 the realistic end count was 143 and two tests failed). Scenario a, `research/hiscores-live.json`:
+
+| Model | Overall floor | Overall realistic | Route (realistic) |
+|---|---|---|---|
+| Before (crest 1,200 / 3,000 ESTIMATE, no gate) | 38,583 | 47,248 | separate |
+| Measured ticks only, no gate | 38,562 | 46,011 | superheat |
+| Measured ticks and the Magic 59 gate (now) | 39,229 | 46,673 | superheat |
+
+Still open: the crest in the order needs a combat state that the planner does not model (Hitpoints); the walk from
+the previous activity to Dimintheis is not counted; the Al Kharid toll gate dialogue runs twice (not timed separately)
+(a Prince Ali Rescue first makes the gate free); the perfect gold supply (Witchaven dungeon lever puzzle) is not
+scripted for a helper.
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,

@@ -1227,12 +1227,12 @@
     "magic"
    ],
    "ticks": {
-    "floor": 1200,
-    "realistic": 3000,
-    "evidence": "ESTIMATE",
-    "source": "smelting.rs2:216 gauntlets; quest time not measured"
+    "floor": 1179,
+    "realistic": 1199,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1d: scripts/generated/quest-crest.ts, preset quest_crest, 3 practice runs 1,182 / 1,179 / 1,199 ticks (Dimintheis to the goldsmith gauntlets from Avan; helper fish, perfect gold bars, rubies, moulds, 2 antipoisons, runes); needs Magic 59 (Fire Blast on Chronozon) and a combat account (Edgeville dungeon Wilderness, poison spiders): not passable at tick 1,872 with Magic 1 and 10 HP"
    },
-   "qp": 1,
+   "qp": 0,
    "lump": true,
    "requires": [
     "tutorial"
@@ -1241,9 +1241,12 @@
     "group": "magic-smithing",
     "option": "superheat"
    },
-   "evidence": "ESTIMATE",
-   "source": "smelting.rs2:216 gauntlets; quest time not measured",
-   "at": "dimintheis"
+   "evidence": "MEASURED",
+   "source": "research/quest-plan.md section 1d: scripts/generated/quest-crest.ts, preset quest_crest, 3 practice runs 1,182 / 1,179 / 1,199 ticks (Dimintheis to the goldsmith gauntlets from Avan; helper fish, perfect gold bars, rubies, moulds, 2 antipoisons, runes); needs Magic 59 (Fire Blast on Chronozon) and a combat account (Edgeville dungeon Wilderness, poison spiders): not passable at tick 1,872 with Magic 1 and 10 HP; its 1 QP stays inside quests-rest (the 142-QP total), so qp is 0 here",
+   "at": "dimintheis",
+   "minLevel": {
+    "magic": 59
+   }
   },
   {
    "id": "magic-43",

@@ -141,17 +141,18 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Agility 76, Thieving 57, the early 99s, Prayer 31, Cooking 35) with Magic 59 from the teleport ladder, rune
     // set worn, QP 13 (Cook's Assistant 1, Tree Gnome Village 2, Grand Tree 5, Fight Arena 2, Monkey Madness 3).
     // Helper items: swordfish 373, bass 365, tuna 361, salmon 329, shrimp 315 (cooked, for Caleb); 2 perfect gold
-    // bars 2365 (tradeable); 2 rubies 1603; ring mould 1592; necklace mould 1597; antipoison 2446; runes for the 4
-    // blasts with 2 splashes each, 10 fire blasts for the kill and 6 teleports (100 air, 12 water, 15 earth, 70 fire, 24 death, 6 law); 100 coins
-    // (the Al Kharid toll twice); 8 lobsters.
+    // bars 2365 (tradeable); 2 rubies 1603; ring mould 1592; necklace mould 1597; 2 antipoisons 2446 (Johnathon, the
+    // poison spiders); runes for the 4 blasts with 2 splashes each, 10 fire blasts for the kill and 6 teleports (100
+    // air, 12 water, 15 earth, 70 fire, 24 death, 6 law); 100 coins (the Al Kharid toll twice); 8 sharks 385 (8
+    // lobsters ran out in 1 of 3 runs with the armour off).
     quest_crest: {
         position: { x: 3280, z: 3403, level: 0 },
         skills: { Attack: 99, Strength: 98, Defence: 89, Hitpoints: 97, Magic: 59, Prayer: 31, Agility: 76, Thieving: 57, Cooking: 35, Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99 },
         equipment: [[1163, 0], [1725, 2], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! })),
         varps: { 101: 13 },
         coins: 100,
-        inventory: [373, 365, 361, 329, 315, 2365, 2365, 1603, 1603, 1592, 1597, 2446].map(id => ({ id, count: 1 }))
-            .concat([[556, 100], [555, 12], [557, 15], [554, 70], [560, 24], [563, 6]].map(([id, count]) => ({ id: id!, count: count! })), Array.from({ length: 8 }, () => ({ id: 379, count: 1 }))),
+        inventory: [373, 365, 361, 329, 315, 2365, 2365, 1603, 1603, 1592, 1597, 2446, 2446].map(id => ({ id, count: 1 }))
+            .concat([[556, 100], [555, 12], [557, 15], [554, 70], [560, 24], [563, 6]].map(([id, count]) => ({ id: id!, count: count! })), Array.from({ length: 8 }, () => ({ id: 385, count: 1 }))),
     },
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },

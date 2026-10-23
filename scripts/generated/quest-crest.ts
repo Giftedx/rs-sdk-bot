@@ -29,7 +29,7 @@ const ITEM = {
 const COM = { rings: 4233, necklaces: 4239 };            // crafting_jewelry:rings_inv / necklaces_inv, slot 3 = ruby
 const BLASTS = ['magic:wind_blast', 'magic:water_blast', 'magic:earth_blast', 'magic:fire_blast'];
 
-const q = await openQuest({ cap: 4000, eatAt: 55, lumbridgeOk: true });
+const q = await openQuest({ cap: 4000, eatAt: 65, food: [385, 379], lumbridgeOk: true });
 try {
     const FROM = Number(process.env.CREST_FROM ?? 0);
     let questDone = false;
@@ -188,6 +188,10 @@ try {
         // A blast that splashes sets no bit (pvm_spell_success only). In the rune set (magic bonus about -50) 3 of 6
         // proof runs splashed until the runes ran out; Chronozon has no magic level, so with the helm, body, shield and
         // legs off the hit chance is about 90%. Each blast is cast until "Chronozon weakens".
+        // The second antipoison first: the poison spiders poison, and in one run (p7) the poison killed the bot after
+        // the teleport out.
+        const anti2 = ITEM.anti.find(id => q.has(id));
+        if (anti2) await q.step('drink antipoison', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(anti2)!, optionIndex: 1, reason: 'SDK' }), () => !q.has(anti2), 3, 2);
         const ARMOUR = [0, 4, 5, 7];                     // helm, body, shield, legs (equipment slots)
         for (const slot of ARMOUR) {
             await q.step(`remove ${slot}`, () => q.s.direct({ type: 'useEquipmentItem', slot, optionIndex: 1, reason: 'SDK' }), () => !(q.st()?.equipment ?? []).some((e: any) => e.slot === slot && e.id > 0), 3, 3);
