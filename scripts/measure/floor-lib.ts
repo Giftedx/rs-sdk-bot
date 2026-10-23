@@ -95,7 +95,8 @@ export async function openBank(s: Session, m: Meter, cap = 40): Promise<number> 
         if (dialogOpen(s)) { await send(s, m, { type: 'closeModal' }); await send(s, m, { type: 'interactLoc', x: b.loc.x, z: b.loc.z, locId: b.loc.id, optionIndex: b.opIndex }); m.levelTicks++; }
         // A click sent while the player is still delayed (the last anvil p_delay(2)) is dropped: while the player has
         // not moved, click again every 2 ticks; after that, every 10 ticks.
-        else if (!movedSince(s, t0) ? (s.tick() - t0) % 2 === 0 : (s.tick() - t0) % 10 === 0) { await send(s, m, { type: 'interactLoc', x: b.loc.x, z: b.loc.z, locId: b.loc.id, optionIndex: b.opIndex }); console.log(`NOTE booth re-click at +${s.tick() - t0}`); }
+        // Never while the bank interface shows: a booth op then closes the bank and the next inputs are lost.
+        else if (!(s.sdk.getState() as any)?.interface?.isOpen && (!movedSince(s, t0) ? (s.tick() - t0) % 2 === 0 : (s.tick() - t0) % 10 === 0)) { await send(s, m, { type: 'interactLoc', x: b.loc.x, z: b.loc.z, locId: b.loc.id, optionIndex: b.opIndex }); console.log(`NOTE booth re-click at +${s.tick() - t0}`); }
     }
     return bankOpen(s) ? s.tick() - t0 : -1;
 }
@@ -169,7 +170,7 @@ export async function bankProduction(s: Session, m: Meter, jobs: Job[], o: { kee
         await send(s, m, { type: 'closeModal' });
         const want = Object.entries(load);
         const t0 = s.tick();
-        while (s.tick() - t0 < 30 && (bankOpen(s) || !want.every(([id, c]) => countId(s, Number(id)) >= c))) await tick(s);
+        while (s.tick() - t0 < 30 && (bankOpen(s) || !want.every(([id, c]) => countId(s, Number(id)) >= c))) { await tick(s); if (process.env.FLOOR_DEBUG === "1") console.log(`NOTE bankwait +${s.tick() - t0} open=${bankOpen(s)} iface=${(s.sdk.getState() as any)?.interface?.interfaceId} dialog=${dialogOpen(s)} inv=${inv(s).map((x: any) => x.id).join(",")} msgs=${((s.sdk.getState() as any)?.gameMessages ?? []).slice(-1).map((g: any) => g.text)}`); }
         const bankT = s.tick() - tb;
         m.bankTicks += bankT; m.bankCycles++;
         // 2. Produce: up to perTick new jobs per tick, in order, without waiting for the server's answer. A slot that
