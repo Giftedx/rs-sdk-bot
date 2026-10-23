@@ -18,7 +18,11 @@ const prac = join(root, '.practice');
 const logDir = join(prac, 'foodchain-logs');
 const COOK = process.argv[2] ?? 'Mightyrod';
 const COURIER = process.argv[3] ?? 'Bigpackage';
-const FARMERS = (process.argv[4] ?? 'Pocketrocket,mmtha0205').split(',').map(x => x.trim()).filter(Boolean);
+let FARMERS = (process.argv[4] ?? 'Pocketrocket,mmtha0205').split(',').map(x => x.trim()).filter(Boolean);
+// .practice/foodchain.json ({"farmers": [...]}) is read every tick: on Windows, stopping this process also stops every
+// bot it started (2026-10-23: Mightyrod stopped mid-run), so a change of farmers must not need a restart.
+const CONF = join(resolve(import.meta.dir, '..'), '.practice', 'foodchain.json');
+const readConf = () => { try { const f = JSON.parse(readFileSync(CONF, 'utf8')).farmers; if (Array.isArray(f) && f.every(x => typeof x === 'string' && /^[A-Za-z0-9 _-]{1,12}$/.test(x) && !/^haggis$/i.test(x))) { if (f.join() !== FARMERS.join()) say(`farmers ${f.join(',')}`); FARMERS = f; } } catch { /* keep */ } };
 const MIN_FISH = Number(process.env.MIN_FISH ?? 100);
 const LOW = Number(process.env.LOW ?? 40);
 if (process.env.DEMO_OK !== '1') { console.log('foodchain: set DEMO_OK=1 (live server)'); process.exit(2); }
@@ -103,6 +107,7 @@ async function topUpFares() {
 }
 
 async function tick() {
+    readConf();
     if (existsSync(join(prac, 'stop-foodchain'))) {
         if (running.size === 0) { say('stopped (stop-foodchain)'); process.exit(0); }
         return;
