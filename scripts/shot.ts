@@ -10,12 +10,18 @@ const proc = Bun.spawn([EDGE, '--headless=new', '--disable-gpu', `--remote-debug
 // The spawned msedge.exe is only a launcher: it starts the real browser and exits, so killing its pid or tree misses
 // the browser (seen 2026-10-23: 11-16 headless Edge processes left after shots, about 70% CPU). Every exit path kills
 // each Edge process that uses this shot's own profile folder.
+// One pass can miss children Edge starts while it is being killed (seen: 9 left after a shot), so repeat until the
+// query finds none, at most 5 passes.
 const killTree = () => {
-    try {
-        Bun.spawnSync(['powershell', '-NoProfile', '-Command',
-            `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -match 'shot-${port}' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`],
-            { stdout: 'ignore', stderr: 'ignore' });
-    } catch { /* already gone */ }
+    for (let pass = 0; pass < 5; pass++) {
+        try {
+            const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command',
+                `$p = Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -match 'shot-${port}' }; $p | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; @($p).Count`],
+                { stdout: 'pipe', stderr: 'ignore' });
+            if (Number(r.stdout.toString().trim()) === 0) return;
+        } catch { return; }
+        Bun.sleepSync(500);
+    }
 };
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { killTree(); process.exit(1); });
 setTimeout(() => { console.log('shot: gave up after 90 s'); killTree(); process.exit(1); }, 90_000);

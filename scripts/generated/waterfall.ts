@@ -43,6 +43,7 @@ const CAP = 4000;
 // Max hits on the route before the fire giants are 3-5 (hobgoblins, zombies, skeletons, moss and giant skeletons,
 // shadow spiders). Each lobster can only fill 10 HP, so a low threshold makes the 10 lobsters last.
 const EAT_AT = 6;
+const TRACE = process.env.WF_TRACE === "1";
 
 const s = await openBot(process.argv[2]!);
 try {
@@ -127,6 +128,11 @@ try {
             if (Math.max(Math.abs(p.worldX - LUMBRIDGE.x), Math.abs(p.worldZ - LUMBRIDGE.z)) <= 15) died = true;
         }
         if (p) last = p;
+        if (TRACE && crossing && p) {
+            const ns = (st()?.nearbyNpcs ?? []).filter((n: any) => n.distance <= 8).map((n: any) => `${n.name[0]}${n.index}@${n.tileX ?? n.x},${n.tileZ ?? n.z}${n.inCombat ? '*' : ''}t${n.targetIndex}`).join(' ');
+            const hits = (st()?.combatEvents ?? []).filter((e: any) => e.tick >= s.tick() - 1 && e.type === 'damage_taken').map((e: any) => `${e.sourceIndex}:${e.damage}`).join(',');
+            console.log(`TRACE ${T()} ${p.worldX},${p.worldZ} hp=${h} hits=${hits} ${ns}`);
+        }
         eatCheck();
         if (h > 0 && h <= (crossing ? 9 : EAT_AT)) eatNow();
     });
@@ -217,6 +223,30 @@ try {
     const walk = async (label: string, pts: [number, number, number][]): Promise<void> => {
         for (const [x, z, tol] of pts) if (!(await walkPt(x, z, tol))) await fail(`walk ${label} ${x},${z}`);
     };
+    // Client-routed run through waypoints: one walk click per leg, sent again when the bot stands still for 2 ticks or
+    // an eat landed. bot.walkTo stalled 26 ticks at 2581,9875 among the falls spiders (MEASURED practice 2026-10-23).
+    // Falls back to bot.walkTo for a leg the client cannot route.
+    const dash = async (label: string, pts: [number, number][]): Promise<void> => {
+        const end = pts[pts.length - 1]!;
+        if (near(end[0], end[1], 1)) return;
+        for (const [x, z] of pts) {
+            let sent = -99, prev = '', still = 0;
+            for (let i = 0; i < 40 && !near(x, z, 0); i++) {
+                await guard(`dash ${label}`);
+                const at = `${pos()?.worldX},${pos()?.worldZ}`;
+                still = at === prev ? still + 1 : 0;
+                prev = at;
+                if (sent < 0 || still >= 2 || lastEat > sent) {
+                    sent = s.tick();
+                    still = 0;
+                    const w: any = await s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' });
+                    if (w && w.success === false) { await walk(label, [[x, z, 0]]); break; }
+                }
+                await waitTicks(s, 1);
+            }
+            if (!near(x, z, 1)) await fail(`dash ${label} ${x},${z}`);
+        }
+    };
     // One long walkTo; if it stops short, follow the maze waypoints from the nearest one.
     const walkMaze = async (label: string, x: number, z: number, path: [number, number][]): Promise<void> => {
         for (let i = 0; i < 2 && !near(x, z, 2); i++) {
@@ -239,174 +269,179 @@ try {
         }, arrived, 20, 4);
     };
 
-    // 1. Almera: "How can I help?" sets %waterfall_quest = 1 (almera.rs2:14).
-    const talk = await s.bot.talkTo(/^almera$/i);
-    if (!talk.success) await fail(`talk Almera: ${talk.message}`);
-    // Done when her last line is seen, or after the dialog stays shut for 3 ticks. The raft refuses at 0, so it proves 1.
-    let shutFor = 0;
-    await converse([/how can i help/i], () => {
-        shutFor = dialogOpen() ? 0 : shutFor + 1;
-        return (sawText(/you are kind|small raft out back/i) && !dialogOpen()) || shutFor >= 3;
-    }, 60);
-    if (sawText(/you are kind|small raft out back/i)) milestone(1);
-    else console.log(`WARN Almera last line not seen at ${T()}`);
-
-    // 2. The raft lands on Hudon's island (2512,3481); Hudon's forced dialogue sets 2 (quest_waterfall.rs2:178).
-    const onIsland = () => inBox(2510, 3476, 2514, 3482);
-    await walk('raft', [[2511, 3494, 1]]);
-    await step('raft 1', () => opLoc(LOC.raft), onIsland, 20);
-    milestone(1);
-    const hudonDone = () => (sawText(/fine alone/i) || msgCount(/hudon is refusing/i) > 0) && !dialogOpen();
-    let seenOpen = false;
-    let shutAfter = 0;
-    await converse([], () => {
-        if (dialogOpen()) { seenOpen = true; shutAfter = 0; } else if (seenOpen) shutAfter++;
-        return hudonDone() || shutAfter >= 3;
-    }, 20);
-    if (seenOpen && !hudonDone()) console.log(`WARN forced dialogue ended without the Hudon line at ${T()}`);
-    // No forced dialogue (Hudon wandered more than 5 tiles off): talk to him from the island (hudon.rs2:22).
-    for (let i = 0; i < 2 && !hudonDone() && !seenOpen; i++) {
-        await guard('talk Hudon');
-        const h = s.sdk.findNearbyNpc(/^hudon$/i);
-        if (h) await s.direct({ type: 'interactNpc', npcIndex: h.index, optionIndex: h.optionsWithIndex?.find((o: any) => /talk/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
-        await waitUntil(s, () => dialogOpen() || died, { timeoutTicks: 8 });
-        let shut = 0;
-        await converse([], () => { shut = dialogOpen() ? 0 : shut + 1; return hudonDone() || shut >= 3; }, 30);
-    }
-    // The bookcase only gives the book at 2 or more, so the book proves 2 if the dialogue text was missed.
-    if (hudonDone()) milestone(2);
-    else console.log(`WARN Hudon dialogue not seen at ${T()}`);
-
-    // Off the island: rope on the rock, rope on the dead tree to the ledge, then the barrel washes the bot to 2527,3413.
-    const onTreeIsland = () => inBox(2512, 3465, 2513, 3475);
-    const onLedge = () => inBox(2510, 3462, 2513, 3464);
-    const ropeAcross = async (label: string): Promise<void> => {
-        await walkPt(2512, 3477, 0);
-        await step(`${label} rope rock`, async () => {
-            const roped = findLoc(l => l.id === 1997 && l.x === LOC.rock.x && l.z === LOC.rock.z);
-            if (roped) { await waitTicks(s, 3); return; }
-            await useOnLoc(ITEM.rope, LOC.rock);
-        }, () => near(LOC.rock.x + 1, LOC.rock.z, 0), 15, 5);
-        // The rope script ends with two forcemoves to 2513,3468; a click during them can be dropped.
-        await waitTicks(s, 1);
-        if (!onTreeIsland()) await fail(`${label} not on the tree island after the rope`);
-        await step(`${label} rope tree`, () => useOnLoc(ITEM.rope, LOC.tree), onLedge, 15, 4);
-    };
-    await ropeAcross('trip 1');
-    const washed = () => near(2527, 3413, 4);
-    await step('barrel', () => opLoc(LOC.barrel), washed, 12, 3);
-
-    // 3. The south-east bookcase upstairs in Hadley's house; reading the book sets 3 (baxtorian_book.rs2:7).
-    await walk('Hadley', [[2517, 3427, 2]]);
-    await climb('Hadley up', 2517, 3428, /climb-up/i, () => pos()?.level === 1);
-    await step('bookcase', () => opLoc(LOC.bookcase), () => has(ITEM.book), 15, 3);
-    milestone(2);
-    const BOOK_MSG = /book is old/i;
-    const read0 = msgCount(BOOK_MSG);
-    // A missed message is not fatal here: the Golrie crate only gives its key at 3 or more, which proves it later.
-    for (let i = 0; i < 2 && msgCount(BOOK_MSG) <= read0; i++) {
-        await guard('read book');
-        const b = inv().find(x => x.id === ITEM.book);
-        if (b) await s.direct({ type: 'useInventoryItem', slot: b.slot, optionIndex: b.optionsWithIndex?.find((o: any) => /read/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
-        await waitUntil(s, () => msgCount(BOOK_MSG) > read0 || died, { timeoutTicks: 5 });
-    }
-    if (msgCount(BOOK_MSG) > read0) milestone(3);
-    else console.log(`WARN book message not seen at ${T()}`);
-    await s.direct({ type: 'closeModal', reason: 'SDK' });
-    await climb('Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
-
-    // Golrie under the Tree Gnome Village: key from the east crate (needs 3), key on the gate, pebble from Golrie.
-    await walk('gnome village', [[2505, 3190, 2]]);
-    await walkMaze('maze in', 2533, 3156, MAZE);
-    const inCellar = () => (pos()?.worldZ ?? 0) > 9500 && (pos()?.worldZ ?? 0) < 9600;
-    await climb('gnome cellar down', 2533, 3155, /climb-down/i, inCellar);
-    await step('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 40, 3);
-    milestone(3);
-    const inGolrieRoom = () => inBox(2502, 9576, 2523, 9593);
-    // The key only opens the gate from its own tile row (check_axis: z 9575), so stand south of it first; the key
-    // script is p_delay(3) and a door move, about 5 ticks.
-    if (!has(ITEM.golrieKey)) await fail('no Golrie key after the crate');
-    await walk('golrie gate', [[2515, 9574, 0]]);
-    await step('golrie gate', async () => {
-        if (!near(2515, 9574, 1)) await s.bot.walkTo(2515, 9574, 0);
-        await useOnLoc(ITEM.golrieKey, LOC.golrieGate);
-    }, inGolrieRoom, 10, 6);
-    // golrie.rs2 closes the dialogue for p_delay(2) when he takes the key, then talks again: wait for his last line,
-    // or for 5 shut ticks, so the gate click does not land inside that gap.
-    let golrieShut = 0;
-    const gotPebble = () => {
-        golrieShut = dialogOpen() ? 0 : golrieShut + 1;
-        return has(ITEM.pebble) && !has(ITEM.golrieKey) && ((sawText(/take care golrie/i) && !dialogOpen()) || golrieShut >= 5);
-    };
-    await step('Golrie', async () => {
-        const g = s.sdk.findNearbyNpc(/^golrie$/i);
-        if (g) await s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: g.optionsWithIndex?.find((o: any) => /talk/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
-        await converse([], gotPebble, 40);
-    }, gotPebble, 3, 3);
-    await step('gate out', () => opLoc(LOC.golrieGate), () => inCellar() && !inGolrieRoom(), 15, 3);
-    await walk('cellar ladder', [[2533, 9556, 2]]);
-    await climb('gnome cellar up', 2533, 9555, /climb-up/i, () => (pos()?.worldZ ?? 0) < 4000);
-
-    // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
-    // (300-tick drop timer). The pebble opens the tomb and sets 4.
-    await walkMaze('maze out', 2538, 3420, [...MAZE].reverse());
-    await walk('tombstone', [[2557, 3444, 1]]);
-    const RUNES = [ITEM.air, ITEM.earth, ITEM.water];
-    for (let i = 0; i < 3 && RUNES.some(has); i++) await s.bot.dropItem(/^(air|earth|water) rune$/i, 'all');
-    if (RUNES.some(has)) await fail('could not drop the runes');
-    const dropTick = T();
-    const inTomb = () => inBox(2520, 9795, 2560, 9850);
-    await step('pebble', () => useOnLoc(ITEM.pebble, LOC.tombstone), inTomb, 15, 3);
-    milestone(4);
-    // The chest can be open or shut (another player); open it if shut, then search the open one in the same try.
-    const chestLoc = (id: number) => findLoc(l => l.id === id && l.x === LOC.chest.x && l.z === LOC.chest.z);
-    await step('chest', async () => {
-        if (!chestLoc(LOC.chestOpen) && !chestLoc(LOC.chestClosed)) { await s.bot.walkTo(LOC.chest.x, LOC.chest.z + 1, 1); return; }
-        const shut = chestLoc(LOC.chestClosed);
-        if (shut) {
-            await opLoc({ id: shut.id, x: shut.x, z: shut.z }, opIndex(shut, /open/i));
-            await waitUntil(s, () => !!chestLoc(LOC.chestOpen) || died, { timeoutTicks: 25 });
-        }
-        const open = chestLoc(LOC.chestOpen);
-        if (open) await opLoc({ id: open.id, x: open.x, z: open.z }, opIndex(open, /search/i));
-    }, () => has(ITEM.amulet), 10, 5);
-    await step('coffin', () => opLoc(LOC.coffin), () => has(ITEM.urn), 30, 3);
-    await climb('tomb ladder', 2556, 9844, /climb-up/i, () => (pos()?.worldZ ?? 0) < 4000);
-    for (const id of RUNES) {
-        await step(`pick rune ${id}`, async () => {
-            const g = (st()?.groundItems ?? []).filter((i: any) => i.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
-            if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
-        }, () => cnt(id) >= 6, 8, 4);
-    }
-    console.log(`WARN runes back after ${T() - dropTick} ticks on the ground`);
-
-    // 5. Raft again, rope across, the ledge door with the amulet sets 5 (quest_waterfall.rs2:270).
-    await walk('raft 2', [[2511, 3494, 1]]);
-    await step('raft 2', () => opLoc(LOC.raft), onIsland, 20);
-    await ropeAcross('trip 2');
+    // A run that starts inside the falls (preset quest_waterfall_falls: %waterfall_quest 5, amulet, urn, runes) resumes at
+    // step 6, so the fire giant crossing can be tested on its own.
     const inFalls = () => inBox(2550, 9855, 2610, 9925);
-    await step('ledge door', () => opLoc(LOC.ledgeDoor), inFalls, 12, 3);
-    milestone(5);
+    const RUNES = [ITEM.air, ITEM.earth, ITEM.water];
+    const resume = inFalls();
+    if (resume) console.log(`MILESTONE resume-falls ${T()}`);
+    if (!resume) {
+        // 1. Almera: "How can I help?" sets %waterfall_quest = 1 (almera.rs2:14).
+        const talk = await s.bot.talkTo(/^almera$/i);
+        if (!talk.success) await fail(`talk Almera: ${talk.message}`);
+        // Done when her last line is seen, or after the dialog stays shut for 3 ticks. The raft refuses at 0, so it proves 1.
+        let shutFor = 0;
+        await converse([/how can i help/i], () => {
+            shutFor = dialogOpen() ? 0 : shutFor + 1;
+            return (sawText(/you are kind|small raft out back/i) && !dialogOpen()) || shutFor >= 3;
+        }, 60);
+        if (sawText(/you are kind|small raft out back/i)) milestone(1);
+        else console.log(`WARN Almera last line not seen at ${T()}`);
+
+        // 2. The raft lands on Hudon's island (2512,3481); Hudon's forced dialogue sets 2 (quest_waterfall.rs2:178).
+        const onIsland = () => inBox(2510, 3476, 2514, 3482);
+        await walk('raft', [[2511, 3494, 1]]);
+        await step('raft 1', () => opLoc(LOC.raft), onIsland, 20);
+        milestone(1);
+        const hudonDone = () => (sawText(/fine alone/i) || msgCount(/hudon is refusing/i) > 0) && !dialogOpen();
+        let seenOpen = false;
+        let shutAfter = 0;
+        await converse([], () => {
+            if (dialogOpen()) { seenOpen = true; shutAfter = 0; } else if (seenOpen) shutAfter++;
+            return hudonDone() || shutAfter >= 3;
+        }, 20);
+        if (seenOpen && !hudonDone()) console.log(`WARN forced dialogue ended without the Hudon line at ${T()}`);
+        // No forced dialogue (Hudon wandered more than 5 tiles off): talk to him from the island (hudon.rs2:22).
+        for (let i = 0; i < 2 && !hudonDone() && !seenOpen; i++) {
+            await guard('talk Hudon');
+            const h = s.sdk.findNearbyNpc(/^hudon$/i);
+            if (h) await s.direct({ type: 'interactNpc', npcIndex: h.index, optionIndex: h.optionsWithIndex?.find((o: any) => /talk/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
+            await waitUntil(s, () => dialogOpen() || died, { timeoutTicks: 8 });
+            let shut = 0;
+            await converse([], () => { shut = dialogOpen() ? 0 : shut + 1; return hudonDone() || shut >= 3; }, 30);
+        }
+        // The bookcase only gives the book at 2 or more, so the book proves 2 if the dialogue text was missed.
+        if (hudonDone()) milestone(2);
+        else console.log(`WARN Hudon dialogue not seen at ${T()}`);
+
+        // Off the island: rope on the rock, rope on the dead tree to the ledge, then the barrel washes the bot to 2527,3413.
+        const onTreeIsland = () => inBox(2512, 3465, 2513, 3475);
+        const onLedge = () => inBox(2510, 3462, 2513, 3464);
+        const ropeAcross = async (label: string): Promise<void> => {
+            await walkPt(2512, 3477, 0);
+            await step(`${label} rope rock`, async () => {
+                const roped = findLoc(l => l.id === 1997 && l.x === LOC.rock.x && l.z === LOC.rock.z);
+                if (roped) { await waitTicks(s, 3); return; }
+                await useOnLoc(ITEM.rope, LOC.rock);
+            }, () => near(LOC.rock.x + 1, LOC.rock.z, 0), 15, 5);
+            // The rope script ends with two forcemoves to 2513,3468; a click during them can be dropped.
+            await waitTicks(s, 1);
+            if (!onTreeIsland()) await fail(`${label} not on the tree island after the rope`);
+            await step(`${label} rope tree`, () => useOnLoc(ITEM.rope, LOC.tree), onLedge, 15, 4);
+        };
+        await ropeAcross('trip 1');
+        const washed = () => near(2527, 3413, 4);
+        await step('barrel', () => opLoc(LOC.barrel), washed, 12, 3);
+
+        // 3. The south-east bookcase upstairs in Hadley's house; reading the book sets 3 (baxtorian_book.rs2:7).
+        await walk('Hadley', [[2517, 3427, 2]]);
+        await climb('Hadley up', 2517, 3428, /climb-up/i, () => pos()?.level === 1);
+        await step('bookcase', () => opLoc(LOC.bookcase), () => has(ITEM.book), 15, 3);
+        milestone(2);
+        const BOOK_MSG = /book is old/i;
+        const read0 = msgCount(BOOK_MSG);
+        // A missed message is not fatal here: the Golrie crate only gives its key at 3 or more, which proves it later.
+        for (let i = 0; i < 2 && msgCount(BOOK_MSG) <= read0; i++) {
+            await guard('read book');
+            const b = inv().find(x => x.id === ITEM.book);
+            if (b) await s.direct({ type: 'useInventoryItem', slot: b.slot, optionIndex: b.optionsWithIndex?.find((o: any) => /read/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
+            await waitUntil(s, () => msgCount(BOOK_MSG) > read0 || died, { timeoutTicks: 5 });
+        }
+        if (msgCount(BOOK_MSG) > read0) milestone(3);
+        else console.log(`WARN book message not seen at ${T()}`);
+        await s.direct({ type: 'closeModal', reason: 'SDK' });
+        await climb('Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
+
+        // Golrie under the Tree Gnome Village: key from the east crate (needs 3), key on the gate, pebble from Golrie.
+        await walk('gnome village', [[2505, 3190, 2]]);
+        await walkMaze('maze in', 2533, 3156, MAZE);
+        const inCellar = () => (pos()?.worldZ ?? 0) > 9500 && (pos()?.worldZ ?? 0) < 9600;
+        await climb('gnome cellar down', 2533, 3155, /climb-down/i, inCellar);
+        await step('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 40, 3);
+        milestone(3);
+        const inGolrieRoom = () => inBox(2502, 9576, 2523, 9593);
+        // The key only opens the gate from its own tile row (check_axis: z 9575), so stand south of it first; the key
+        // script is p_delay(3) and a door move, about 5 ticks.
+        if (!has(ITEM.golrieKey)) await fail('no Golrie key after the crate');
+        await walk('golrie gate', [[2515, 9574, 0]]);
+        await step('golrie gate', async () => {
+            if (!near(2515, 9574, 1)) await s.bot.walkTo(2515, 9574, 0);
+            await useOnLoc(ITEM.golrieKey, LOC.golrieGate);
+        }, inGolrieRoom, 10, 6);
+        // golrie.rs2 closes the dialogue for p_delay(2) when he takes the key, then talks again: wait for his last line,
+        // or for 5 shut ticks, so the gate click does not land inside that gap.
+        let golrieShut = 0;
+        const gotPebble = () => {
+            golrieShut = dialogOpen() ? 0 : golrieShut + 1;
+            return has(ITEM.pebble) && !has(ITEM.golrieKey) && ((sawText(/take care golrie/i) && !dialogOpen()) || golrieShut >= 5);
+        };
+        await step('Golrie', async () => {
+            const g = s.sdk.findNearbyNpc(/^golrie$/i);
+            if (g) await s.direct({ type: 'interactNpc', npcIndex: g.index, optionIndex: g.optionsWithIndex?.find((o: any) => /talk/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
+            await converse([], gotPebble, 40);
+        }, gotPebble, 3, 3);
+        await step('gate out', () => opLoc(LOC.golrieGate), () => inCellar() && !inGolrieRoom(), 15, 3);
+        await walk('cellar ladder', [[2533, 9556, 2]]);
+        await climb('gnome cellar up', 2533, 9555, /climb-up/i, () => (pos()?.worldZ ?? 0) < 4000);
+
+        // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
+        // (300-tick drop timer). The pebble opens the tomb and sets 4.
+        await walkMaze('maze out', 2538, 3420, [...MAZE].reverse());
+        await walk('tombstone', [[2557, 3444, 1]]);
+        for (let i = 0; i < 3 && RUNES.some(has); i++) await s.bot.dropItem(/^(air|earth|water) rune$/i, 'all');
+        if (RUNES.some(has)) await fail('could not drop the runes');
+        const dropTick = T();
+        const inTomb = () => inBox(2520, 9795, 2560, 9850);
+        await step('pebble', () => useOnLoc(ITEM.pebble, LOC.tombstone), inTomb, 15, 3);
+        milestone(4);
+        // The chest can be open or shut (another player); open it if shut, then search the open one in the same try.
+        const chestLoc = (id: number) => findLoc(l => l.id === id && l.x === LOC.chest.x && l.z === LOC.chest.z);
+        await step('chest', async () => {
+            if (!chestLoc(LOC.chestOpen) && !chestLoc(LOC.chestClosed)) { await s.bot.walkTo(LOC.chest.x, LOC.chest.z + 1, 1); return; }
+            const shut = chestLoc(LOC.chestClosed);
+            if (shut) {
+                await opLoc({ id: shut.id, x: shut.x, z: shut.z }, opIndex(shut, /open/i));
+                await waitUntil(s, () => !!chestLoc(LOC.chestOpen) || died, { timeoutTicks: 25 });
+            }
+            const open = chestLoc(LOC.chestOpen);
+            if (open) await opLoc({ id: open.id, x: open.x, z: open.z }, opIndex(open, /search/i));
+        }, () => has(ITEM.amulet), 10, 5);
+        await step('coffin', () => opLoc(LOC.coffin), () => has(ITEM.urn), 30, 3);
+        await climb('tomb ladder', 2556, 9844, /climb-up/i, () => (pos()?.worldZ ?? 0) < 4000);
+        for (const id of RUNES) {
+            await step(`pick rune ${id}`, async () => {
+                const g = (st()?.groundItems ?? []).filter((i: any) => i.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
+                if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
+            }, () => cnt(id) >= 6, 8, 4);
+        }
+        console.log(`WARN runes back after ${T() - dropTick} ticks on the ground`);
+
+        // 5. Raft again, rope across, the ledge door with the amulet sets 5 (quest_waterfall.rs2:270).
+        await walk('raft 2', [[2511, 3494, 1]]);
+        await step('raft 2', () => opLoc(LOC.raft), onIsland, 20);
+        await ropeAcross('trip 2');
+        await step('ledge door', () => opLoc(LOC.ledgeDoor), inFalls, 12, 3);
+        milestone(5);
+    }
 
     // 6. Key from the crate in the east room, through the fire giant room, key on the puzzle-room door sets 6.
-    await walk('falls crate', [[2589, 9887, 1]]);
+    await dash('falls crate', [[2574, 9873], [2584, 9876], [2589, 9887]]);
     await step('falls crate', () => opLoc(LOC.baxCrate), () => has(ITEM.baxKey), 12, 3);
-    // The only way to the door runs 13 tiles through the west room past three fire giant spawns (2562,9886 2565,9887
-    // 2568,9889), and their hit can kill from full HP. The bot stops south of the room at full HP, then sends one key
-    // use on the door so the server walks it there and opens it without a stop. An eat clears the pending
-    // interaction (OpHeldHandler clearPendingAction), so the key use is sent again after each eat.
-    await walk('fire giant room', [[2565, 9878, 1]]);
-    await topUp('top up', 9);
+    // Cause of the 8 failed runs (MEASURED practice 2026-10-23, quest_waterfall_falls preset): the fire giant room is
+    // shut by a closed large double door (loc 1516/1519 at 2564-2565,9881, maps/m40_154.jm2). The SDK collision masks
+    // doors, so bot.walkTo plans through it, but the client route stops at it: a key use from the south room gets
+    // "I can't reach that!" and a walk click is client_rejected. The bot then stood in the south room until the shadow
+    // spiders and giants killed it. Fix: open the double door from its south tile, run to the door's own tile
+    // (2568,9893), and use the key there. The tiles 2568,9892-9893 are a 1-wide corridor that a size-2 giant cannot enter.
+    const DOUBLE_DOOR = { x: 2564, z: 9881 };
+    const DOOR_TILE = { x: 2568, z: 9893 };
     const pastGiantDoor = () => inBox(2562, 9894, 2572, 9901);
-    crossing = true;
-    // Rat shield. npc_check_notcombat (npc_combat.rs2:387) stops any NPC from attacking a player whom another NPC
-    // attacked in the last 8 ticks (single-way combat), and a fire giant that tries drops its hunt
-    // (npc_default_attack: npc_setmode(null)). A rat has max hit 0 (strengthbonus -53) and 2 HP; auto retaliate is
-    // off, so the bot swings once and the rat keeps attacking it. Once the rat has attacked, the bot runs to the door.
     const npcs = (): any[] => st()?.nearbyNpcs ?? [];
+    const giants = (): any[] => npcs().filter(n => /^fire giant$/i.test(n.name));
+    // Chebyshev gap from a tile to the nearest giant footprint (size 2, SW tile).
     const giantGap = (x: number, z: number): number => {
         let best = 99;
-        for (const g of npcs().filter(n => /^fire giant$/i.test(n.name))) {
+        for (const g of giants()) {
             const gx = g.tileX ?? g.x, gz = g.tileZ ?? g.z, sz = g.size ?? 2;
             const dx = x < gx ? gx - x : x > gx + sz - 1 ? x - (gx + sz - 1) : 0;
             const dz = z < gz ? gz - z : z > gz + sz - 1 ? z - (gz + sz - 1) : 0;
@@ -414,47 +449,45 @@ try {
         }
         return best;
     };
-    const ratHitKeys = (idx: number): Set<string> => new Set((st()?.combatEvents ?? [])
-        .filter((e: any) => e.type === 'damage_taken' && e.sourceType === 'npc' && e.sourceIndex === idx)
-        .map((e: any) => `${e.tick}:${e.observationId ?? ''}`));
-    const ratAttacking = (idx: number, before: Set<string>): boolean => {
-        if ([...ratHitKeys(idx)].some(k => !before.has(k))) return true;
-        // A 0 hit may not publish a damage event; a rat in combat next to the bot has been hit and retaliates (queue 0).
-        const r = npcs().find(n => n.index === idx);
-        return !!r && r.inCombat === true && r.distance <= 1;
-    };
-    const pickRat = (): any => npcs()
-        .filter(n => /^rat$/i.test(n.name) && n.reachable !== false && n.distance <= 10)
-        .filter(n => inBoxXZ(n.tileX ?? n.x, n.tileZ ?? n.z, 2560, 9873, 2571, 9886) && giantGap(n.tileX ?? n.x, n.tileZ ?? n.z) >= 4)
-        .sort((a, b) => a.distance - b.distance)[0];
-    let shield = false;
-    for (let i = 0; i < 20 && !shield && !died; i++) {
-        await guard('rat shield');
-        const rat = pickRat();
-        if (!rat) { await waitTicks(s, 1); continue; }
-        const before = ratHitKeys(rat.index);
-        const op = rat.optionsWithIndex?.find((o: any) => /^attack$/i.test(o.text))?.opIndex ?? 2;
-        await s.direct({ type: 'interactNpc', npcIndex: rat.index, optionIndex: op, reason: 'SDK' });
-        shield = await waitUntil(s, () => ratAttacking(rat.index, before) || died, { timeoutTicks: 10 }) && !died;
-        if (shield) await waitTicks(s, 1);
-        i += 9;
-    }
-    console.log(`${shield ? 'INFO' : 'WARN'} rat shield ${shield ? 'on' : 'not seen'} at ${T()} giantGap=${giantGap(pos()?.worldX ?? 0, pos()?.worldZ ?? 0)}`);
+    const doorShut = () => !!findLoc(l => (l.id === 1516 || l.id === 1519) && l.z === DOUBLE_DOOR.z && Math.abs(l.x - 2564.5) <= 1);
+    await dash('double door', [[2584, 9876], [2569, 9876], [DOUBLE_DOOR.x, DOUBLE_DOOR.z - 1]]);
+    await step('open double door', async () => {
+        const d = findLoc(l => (l.id === 1516 || l.id === 1519) && l.z === DOUBLE_DOOR.z && Math.abs(l.x - 2564.5) <= 1);
+        if (d) await opLoc({ id: d.id, x: d.x, z: d.z }, opIndex(d, /^open$/i));
+    }, () => !doorShut(), 6, 4);
+    await topUp('top up', 9);
+    crossing = true;
+    // No wait for the giants. A shadow spider from the south room usually follows the bot and keeps it in combat, and
+    // single-way combat (npc_check_notcombat, npc_combat.rs2:387) then stops a giant from attacking. A wait only lets
+    // the spiders chip HP (measured: 20 ticks, 4 hits, no giant attack).
+    console.log(`MILESTONE crossing ${T()} hp=${hp()} gap=${giantGap(2564, 9885)}`);
     let lastSend = -99;
     let still = 0;
     let prevAt = '';
+    let keySent = -99;
+    let rejected = 0;
     for (let i = 0; i < 60 && !pastGiantDoor(); i++) {
         await guard('giant door');
         const at = `${pos()?.worldX},${pos()?.worldZ}`;
         still = at === prevAt ? still + 1 : 0;
         prevAt = at;
-        if (lastSend < 0 || lastEat > lastSend || still >= 3) {
+        if (near(DOOR_TILE.x, DOOR_TILE.z, 0)) {
+            if (s.tick() - keySent >= 2) { keySent = s.tick(); await useOnLoc(ITEM.baxKey, LOC.giantDoor); }
+        } else if (lastSend < 0 || lastEat > lastSend || still >= 2) {
             lastSend = s.tick();
             still = 0;
-            await useOnLoc(ITEM.baxKey, LOC.giantDoor);
+            const w: any = await s.direct({ type: 'walkTo', x: DOOR_TILE.x, z: DOOR_TILE.z, running: true, reason: 'SDK' });
+            if (w && w.success === false) {
+                rejected++;
+                // The double door shut again (another player, or its timer): open it from wherever the bot is.
+                const d = findLoc(l => (l.id === 1516 || l.id === 1519) && l.z === DOUBLE_DOOR.z && Math.abs(l.x - 2564.5) <= 1);
+                if (d) await opLoc({ id: d.id, x: d.x, z: d.z }, opIndex(d, /^open$/i));
+            }
+            if (TRACE) console.log(`TRACE walk ${JSON.stringify(w)?.slice(0, 160)}`);
         }
         await waitTicks(s, 1);
     }
+    if (rejected) console.log(`WARN giant door walk rejected ${rejected} times`);
     crossing = false;
     await guard('giant door');
     if (!pastGiantDoor()) await fail('step giant door');
@@ -480,6 +513,12 @@ try {
     milestone(8);
 
     // 10. Urn on the chalice (never op1: that floods the cavern). The reward queue sets 10 and grants the XP.
+    // The reward needs 5 free slots. The danger is over here, so spare lobsters go first.
+    for (let i = 0; i < 6 && inv().length > 23 && has(ITEM.lobster); i++) {
+        const l = inv().find(x => x.id === ITEM.lobster);
+        if (l) await s.direct({ type: 'dropItem', slot: l.slot, reason: 'SDK' });
+        await waitTicks(s, 1);
+    }
     if (inv().length > 23) await fail(`needs 5 free slots, has ${28 - inv().length}`);
     await step('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => atkXp() > atk0, 15, 3);
     milestone(10);

@@ -38,7 +38,7 @@ then every other skill, then the rest of the quests.
 |---|---|---|
 | 19 skills | Level desc, then playtime at the level-up | `RankedHiscoresWorker.ts:19`, `Player.ts:1905`, `LoginServer.ts:155-181` |
 | Overall | Total level desc, then playtime at the last level-up | `LoginServer.ts:120-150` |
-| Quest Points | Points desc, then playtime when the total was reached. #1 `avery` has 141 of 145. 142 QP wins at any time | `hiscores.ts:313`; `quest.constant:72-139` |
+| Quest Points | Points desc, then playtime ascending, stamped at the save after the total changed (`RankedHiscoresWorker.ts:19`, `LoginServer.ts:200-216`). Corrected 2026-10-23: #1 `avery` now has 145 of 145 at 1,022,262 ticks, so the only win is all 145 QP saved at 1,022,261 ticks or less (research/quest-plan.md, research/boards-special.md) | `hiscores.ts:313`; `quest.constant:72-139` |
 | Equipment | Worn value desc. No clock | `hiscores.ts:620` |
 | Bank | Bank value desc. No clock | `hiscores.ts:981` |
 | Lava Maze Runite | Ore count desc, ties by first to reach it. All-time, 7-day and 24-hour windows | `hiscores.ts:781-828` |
@@ -73,7 +73,7 @@ Slack = deadline - finish. Positive = Haggis beats #1. All three scenarios use E
 | Defence | 7,974 | 35,884 | -27,910 | 61,198 | -53,224 |
 | Hitpoints | 17,058 | 40,263 | -23,205 | 68,214 | -51,156 |
 | Overall | 35,916 | 40,263 | -4,347 | 68,214 | -32,298 |
-| Quest Points | 142 QP | 56,263 | win on points | 116,214 | win on points |
+| Quest Points | 145 QP by 1,022,261 | 56,263 (142 QP; stale row, see the rule above) | rerun needed | 116,214 | rerun needed |
 | Equipment, Bank, Runite | no clock | after QP | target unknown | after QP | target unknown |
 
 ### (b) With login wine
@@ -229,7 +229,7 @@ Dragonstone, torstol, adamantite bar and cosmic rune also had 0 sellers on 2026-
 
 ## Decisions the owner must make
 
-1. **Change the goal or keep it.** The rules make "rank 1 on all 24 at once" impossible for one account. Options:
+1. **SUPERSEDED 2026-10-23: the goal is not up for change** (owner: "the goal is the goal", "do not lower the bar"). The infeasibility below is a gap to close, not a decision point; research/gap-closers.md already turns Overall into a win at floor rates. Original text kept for the record. Options:
    (a) Haggis takes the best set (3-6 skill boards + Quest Points + the 3 value boards), or (b) fresh specialist
    accounts take the boards that win alone (14 at floor rates, 4 at realistic rates), and Haggis takes Quest Points, Equipment,
    Bank and Runite.

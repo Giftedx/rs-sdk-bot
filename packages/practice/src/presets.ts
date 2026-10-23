@@ -76,14 +76,20 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Lockpick door test: Thieving 16 beside loc_2551 (2674,3304), east of the Ardougne market.
     door_2551: { position: { x: 2675, z: 3304, level: 0 }, skills: { Thieving: 16 } },
     // Waterfall Quest test: next to Almera at Baxtorian Falls (2521,3495), 10 HP, 2 ropes (954), 6 each of air (556),
-    // earth (557) and water (555) runes, 10 lobsters (379), 500 coins.
-    quest_waterfall: { position: { x: 2522, z: 3494, level: 0 }, coins: 500, inventory: [{ id: 954, count: 1 }, { id: 954, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 10 }, () => ({ id: 379, count: 1 }))] },
+    // earth (557) and water (555) runes, 18 lobsters (379), 500 coins. 10 lobsters ran out in the falls (MEASURED
+    // practice 2026-10-23: eats=10 lobsters=0 at death); a helper hands Haggis the food.
+    quest_waterfall: { position: { x: 2522, z: 3494, level: 0 }, coins: 500, inventory: [{ id: 954, count: 1 }, { id: 954, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 18 }, () => ({ id: 379, count: 1 }))] },
+    // Waterfall Quest from step 6: inside the falls at the key crate (2589,9888), %waterfall_quest (varp 65) = 5,
+    // Glarial's amulet (295), urn (296), 6 each of air, earth and water runes, 10 lobsters. Tests the fire giant crossing.
+    quest_waterfall_falls: { position: { x: 2589, z: 9887, level: 0 }, varps: { 65: 5 }, inventory: [{ id: 295, count: 1 }, { id: 296, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 10 }, () => ({ id: 379, count: 1 }))] },
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).
     courier_ardougne: { position: { x: 2655, z: 3304, level: 0 }, coins: 20000 },
     // Gold farm (scripts/goldfarm.ts): Thieving 99, 10 HP, 20 lobsters (379) in the pack and 40 in the bank, at the market knights.
     goldfarm_knights: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 99 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })), bank: [{ id: 379, count: 40 }] },
+    // Gold farm food fallback: same spot, no lobsters anywhere, so the script steals from the baker's stall.
+    goldfarm_nofood: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 99 }, coins: 300 },
     // Stun-trade test: a food-less thief at the knights and a helper one tile east with 26 lobsters.
     stun_thief: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 } },
     stun_feeder: { position: { x: 2655, z: 3304, level: 0 }, inventory: Array.from({ length: 26 }, () => ({ id: 379, count: 1 })) },
@@ -104,6 +110,87 @@ export const PRESETS: Record<string, SaveConfig> = {
             .concat([{ id: 882, count: 25 }, { id: 556, count: 25 }, { id: 558, count: 15 }, { id: 555, count: 6 }, { id: 557, count: 4 }, { id: 559, count: 2 }, { id: 946, count: 1 }])
             .concat(Array.from({ length: 5 }, () => ({ id: 1511, count: 1 })), [{ id: 309, count: 1 }, { id: 314, count: 24 }], Array.from({ length: 2 }, () => ({ id: 1511, count: 1 }))),
     },
+    // ---- Supply-board floors (scripts/measure/floor-*.ts, research/supply-floors.md). Counts come from
+    // scripts/measure/floor-bands.ts (exact actions to 99 at 25x), plus 1 spare per stack so no bank slot empties.
+    // Herblore 3 -> 99 at Draynor bank (3092,3243): every unfinished potion and secondary of the HERBLORE bands in
+    // the bank. Herblore 3 because nothing in a pack gives XP at 1-2 (identify guam needs 3).
+    floor_herblore: {
+        position: { x: 3092, z: 3243, level: 0 },
+        skills: { Herblore: 3 },
+        bank: [{ id: 91, count: 2 }, { id: 221, count: 4 }, { id: 93, count: 2 }, { id: 235, count: 4 }, { id: 95, count: 3 }, { id: 225, count: 9 }, { id: 97, count: 3 }, { id: 223, count: 7 }, { id: 1975, count: 2 }, { id: 99, count: 7 }, { id: 239, count: 9 }, { id: 3002, count: 3 }, { id: 2152, count: 3 }, { id: 231, count: 7 }, { id: 101, count: 5 }, { id: 103, count: 6 }, { id: 2970, count: 4 }, { id: 105, count: 12 }, { id: 241, count: 14 }, { id: 3004, count: 6 }, { id: 107, count: 7 }, { id: 2483, count: 16 }, { id: 109, count: 13 }, { id: 245, count: 13 }, { id: 3138, count: 8 }, { id: 111, count: 176 }, { id: 247, count: 176 }],
+    },
+    // Delayed-click 3-tick fishing (scripts/measure/fish-delayed.ts): Musa Point rarefish spots (2923,3180 2925,3181
+    // 2926,3179, knowledge/npcs.json id 324), lobster pot (301) or harpoon (311), knife (946), 15 logs (1511): a missed click lets the fletch finish and use a log.
+    lobster_delayed_40: { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: 40 }, inventory: [{ id: 301, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))] },
+    lobster_delayed_70: { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: 70 }, inventory: [{ id: 301, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))] },
+    harpoon_delayed_55: { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: 55 }, inventory: [{ id: 311, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))] },
+    // Catherby memberfish spots (2846,3429 2855,3423 2859,3426, id 322): shark harpoon at Fishing 80.
+    shark_delayed_80: { position: { x: 2850, z: 3431, level: 0 }, skills: { Fishing: 80 }, inventory: [{ id: 311, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))] },
+    // Fly fishing baseline at the same levels (Lumbridge river spot 3238,3252), for scripts/measure/fish-3tick.ts.
+    fly_3tick_40: { position: { x: 3239, z: 3251, level: 0 }, skills: { Fishing: 40 }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 1000 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] },
+    fly_3tick_70: { position: { x: 3239, z: 3251, level: 0 }, skills: { Fishing: 70 }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 1000 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] },
+    // Flinch 2-tick woodcutting (scripts/measure/flinch.ts) and its knife/normal baseline (wc-3tick.ts): Barbarian Village
+    // oak (3074,3422) in a multiway zone (maps/multiway.csv "barbarian village"), barbarians (combat 7, attackrate 4) at
+    // 3076,3414 3078,3419 3080,3423. Steel axe (1353), shortbow (841, no arrows), pot (1931) + bucket (1925) for the
+    // clear input, knife (946) + log (1511) for the knife baseline, 10 lobsters (379). HP 40, Defence 20.
+    flinch_oak_15: { position: { x: 3075, z: 3421, level: 0 }, skills: { Woodcutting: 15, Hitpoints: 40, Defence: 20 }, inventory: [{ id: 1353, count: 1 }, { id: 841, count: 1 }, { id: 1931, count: 1 }, { id: 1925, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 379, count: 1 }))] },
+    flinch_oak_45: { position: { x: 3075, z: 3421, level: 0 }, skills: { Woodcutting: 45, Hitpoints: 40, Defence: 20 }, inventory: [{ id: 1353, count: 1 }, { id: 841, count: 1 }, { id: 1931, count: 1 }, { id: 1925, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 379, count: 1 }))] },
+    // Flinch 2-tick shark (flinch.ts RES=fish AGGRO=1 PRAY=1) and its delayed-click baseline (fish-delayed.ts OPT=harpoon):
+    // Ape Atoll memberfish spot (2780,2741, id 1405) in a multiway zone, aggressive jungle scorpions (combat 38,
+    // attackrate 4, mm_jungle_scorpion) nearby. Fishing 80, Prayer 99 (Protect from Melee), HP 99, Defence 70. Harpoon
+    // (311), shortbow (841), pot + bucket, knife (946) + 15 logs (1511), 5 sharks (385). No Monkey Madness gate in a preset.
+    flinch_shark_80: { position: { x: 2779, z: 2740, level: 0 }, skills: { Fishing: 80, Prayer: 99, Hitpoints: 99, Defence: 70 }, inventory: [{ id: 311, count: 1 }, { id: 841, count: 1 }, { id: 1931, count: 1 }, { id: 1925, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 })), ...Array.from({ length: 5 }, () => ({ id: 385, count: 1 }))] },
+    // Crafting 1 -> 99 at Draynor bank: chisel (1755) in the pack, the CRAFTING gem bands in the bank (opal, jade and
+    // red topaz +2 each for smashes).
+    floor_crafting: {
+        position: { x: 3092, z: 3243, level: 0 },
+        inventory: [{ id: 1755, count: 1 }],
+        bank: [{ id: 1625, count: 11 }, { id: 1627, count: 6 }, { id: 1629, count: 6 }, { id: 1623, count: 4 }, { id: 1621, count: 3 }, { id: 1619, count: 6 }, { id: 1617, count: 11 }, { id: 1631, count: 278 }],
+    },
+    // Smithing 1 -> 99 at Varrock west bank (3185,3436, learnings/banking.md), anvils at (3188,3421-3426): hammer
+    // (2347) in the pack, the SMITHING bar bands in the bank.
+    floor_smithing: {
+        position: { x: 3185, z: 3436, level: 0 },
+        inventory: [{ id: 2347, count: 1 }],
+        bank: [{ id: 2349, count: 20 }, { id: 2351, count: 37 }, { id: 2353, count: 96 }, { id: 2359, count: 281 }, { id: 2361, count: 341 }],
+    },
+    // ---- Combat measurement (scripts/measure/combat-melee.ts, research/combat-measure.md). Falador castle courtyard,
+    // multiway (maps/multiway.csv "falador"), 11 ground-floor White Knights (falador.npc:1-30: HP 52, defence 21,
+    // attackrate 7, not aggressive). Worn: rune full helm 1163, amulet of strength 1725, rune scimitar 1333, rune
+    // chainbody 1113 (the platebody needs Dragon Slayer), rune kiteshield 1201, rune platelegs 1079, leather gloves
+    // 1059, leather boots 1061; all tradeable, so a helper can supply them. 20 lobsters (379).
+    // Spot gb: the Gnome battlefield west of the Tree Gnome Village (maps/multiway.csv "gnome battlefield"), 41 Khazard
+    // troopers (gnome_battlefield.npc:1-40: HP 22, defence 12-13, attackrate 5-6, no huntmode), open ground.
+    ...Object.fromEntries([['wk', { x: 2979, z: 3340, level: 0 }], ['gb', { x: 2525, z: 3242, level: 0 }]].flatMap(([spot, position]) => [40, 70, 90].flatMap(lv => {
+        const base: SaveConfig = {
+            position: position as { x: number; z: number; level: number },
+            skills: { Attack: lv, Strength: lv, Defence: lv, Hitpoints: lv },
+            equipment: [[1163, 0], [1725, 2], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! })),
+            inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })),
+        };
+        // Cannon variant: %mcannon (varp 0) = 11 (^mcannon_complete, quest.constant:43), cannon base/stand/barrels/
+        // furnace (6/8/10/12), 1,000 cannonballs (2), 16 lobsters.
+        const cannon: SaveConfig = {
+            ...base,
+            varps: { 0: 11 },
+            inventory: [6, 8, 10, 12].map(id => ({ id, count: 1 })).concat([{ id: 2, count: 1000 }], Array.from({ length: 16 }, () => ({ id: 379, count: 1 }))),
+        };
+        return [[`combat_${spot}_${lv}`, base], [`combat_${spot}_${lv}_cannon`, cannon]];
+    }))),
+    // ---- Stun guests (scripts/measure/stun-guest.ts): Thieving 99 at the Ardougne knights, 10 HP, 5 lobsters.
+    // Bury arm: 22 dragon bones (536), Prayer 99 so no level-up page opens. Enchant arm: Magic 99, 300 water (555),
+    // 300 cosmic (564), 20 sapphire rings (1637) for Lvl-1 Enchant. Baseline: no guest items.
+    stun_base: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 99 }, inventory: Array.from({ length: 5 }, () => ({ id: 379, count: 1 })) },
+    stun_bury: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 99, Prayer: 99 }, inventory: Array.from({ length: 5 }, () => ({ id: 379, count: 1 })).concat(Array.from({ length: 22 }, () => ({ id: 536, count: 1 }))) },
+    stun_enchant: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 99, Magic: 99 }, inventory: Array.from({ length: 5 }, () => ({ id: 379, count: 1 })).concat([{ id: 555, count: 300 }, { id: 564, count: 300 }], Array.from({ length: 20 }, () => ({ id: 1637, count: 1 }))) },
+    // Fletching 1 -> 99 with stacks only (Lumbridge castle): the FLETCHING band tips, headless arrows (53) and feathers
+    // (314), 2 spare actions per band.
+    floor_fletching: {
+        position: { x: 3222, z: 3218, level: 0 },
+        inventory: [{ id: 39, count: 90 }, { id: 53, count: 1440 }, { id: 40, count: 60 }, { id: 820, count: 60 }, { id: 314, count: 1590 }, { id: 41, count: 165 }, { id: 42, count: 255 }, { id: 43, count: 525 }, { id: 44, count: 345 }, { id: 824, count: 1530 }],
+    },
+    // Prayer 1 -> 99 at Draynor bank: 560 dragon bones (536) in the bank (555 needed).
+    floor_prayer: { position: { x: 3092, z: 3243, level: 0 }, bank: [{ id: 536, count: 560 }] },
 };
 
 // The engine writes the save on logout, so a preset written while logged in is lost.

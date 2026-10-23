@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Subprocess } from 'bun';
 import { practiceDir, rsSdkRoot } from './paths';
-import { portInUse } from './ports';
+import { canBind, portInUse } from './ports';
 import { killTree, safeKill } from './proc';
 import { isReady, type Service } from './ready';
 
@@ -57,7 +57,7 @@ function pidsFile(): string {
 export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const ports = opts.ports ?? DEFAULT_PORTS;
     for (const port of [ports.engine, ports.gateway]) {
-        if (await portInUse(port)) throw new Error(`port ${port} in use`);
+        if (!canBind(port)) throw new Error(`port ${port} in use`);
     }
     const root = rsSdkRoot();
     const logs = {

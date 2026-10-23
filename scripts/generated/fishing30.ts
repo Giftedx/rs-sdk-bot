@@ -14,14 +14,15 @@
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { componentId } from '../../packages/core/src/logout';
+import { xpForLevel } from '../../packages/planner/src/curve';
 
 const CAP = Number(process.env.CAP ?? 3000);
 // Target level from the environment, so the same script proves to 30 and runs live to 99.
 const TARGET = Number(process.env.TARGET ?? 30);
-const XP30 = 13363;
-// Total XP for a level (the standard table: level 30 = 13363).
-const xpFor = (level: number) => { let p = 0; for (let l = 1; l < level; l++) p += Math.floor(l + 300 * 2 ** (l / 7)); return Math.floor(p / 4); };
-const XPT = xpFor(TARGET);
+// This server's curve (2^(L/10), engine Player.ts:77-85): level 30 = 7,345 XP, level 99 = 998,458.
+const XPT = xpForLevel(TARGET);
+// XP per feather before the bot has measured it: a trout at this server's 25x rate (50 * 25).
+const XP_PER_FEATHER_DEFAULT = 1250;
 const GENERAL_STORE = { x: 3212, z: 3246 };
 const NET = /^small fishing net$/i;
 const ROD = /^fly fishing rod$/i;
@@ -85,16 +86,26 @@ try {
     const now = () => s.tick() - t0;
     const left = () => CAP - 20 - now();
 
-    // Death: HP 0 once the stats are known, or a jump of more than 20 tiles in one tick (a respawn).
+    // Death: HP 0 once the stats are known, or a jump to the Lumbridge respawn tile after an HP drop. A bare jump of
+    // more than 20 tiles is not a death: practice runs logged died=true with hpMin=10 (results.jsonl lines 32, 36),
+    // and supervise.ts treats a death as final.
+    const RESPAWN = { x: 3222, z: 3218 };
     let hpMin = hp();
     let died = false;
     let last = pos();
+    let lastHp = hp();
     const off = s.onTick(() => {
         const p = pos();
+        const base = s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0;
         hpMin = Math.min(hpMin, hp());
-        if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
-        if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) { died = true; console.log(`WARN jump ${last.worldX},${last.worldZ},${last.level} -> ${p.worldX},${p.worldZ},${p.level} hp=${hp()}`); }
+        if (base > 0 && hp() <= 0) died = true;
+        if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) {
+            const respawn = p.level === 0 && cheb(RESPAWN, p) <= 3 && lastHp < base;
+            if (respawn) died = true;
+            console.log(`WARN jump ${last.worldX},${last.worldZ},${last.level} -> ${p.worldX},${p.worldZ},${p.level} hp=${lastHp}->${hp()} death=${respawn}`);
+        }
         last = p;
+        lastHp = hp();
     });
 
     const marks: string[] = [];
@@ -115,7 +126,7 @@ try {
         const p = pos();
         const detail = `fishing=${lvl()} xp=${gained} ticks=${ticks} at=${p?.worldX},${p?.worldZ},${p?.level} hp=${hp()} hpMin=${hpMin} died=${died} `
             + `walkTicks=${walkTicks} shopTicks=${shopTicks} fishTicks=${fishTicks} netTicks=${netTicks} flyTicks=${flyTicks} bankTicks=${bankTicks} thiefTicks=${thiefTicks} pickTicks=${pickTicks} tripTicks=${tripTicks} `
-            + `clicks=${clicks} cycles=${cycles} dialogs=${dialogs} banks=${banks} drops=${drops} trips=${trips} steals=${steals} eats=${eats} events=${events} sold=${sold}gp feathersBought=${feathersBought} `
+            + `clicks=${clicks} cycles=${cycles} dialogs=${dialogs} banks=${banks} drops=${drops} trips=${trips} steals=${steals} eats=${eats} events=${events} xpPerFeather=${Math.round(xpPerFeather())} sold=${sold}gp feathersBought=${feathersBought} `
             + `coins=${coins()} feathers=${countItems(s, FEATHER)} logs=${countItems(s, /^logs$/i)} milestones=${marks.join(',')}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
@@ -244,7 +255,10 @@ try {
             await s.bot.closeShop();
         } finally { shopTicks += now() - q0; }
     };
-    const feathersWanted = () => Math.min(200, Math.ceil((XPT - xp()) / 50) + 5);
+    // XP per feather, measured in the fly loop (trout and salmon mix); the default until 3 feathers are used.
+    let flyXp = 0, flyFeathers = 0;
+    const xpPerFeather = () => (flyFeathers >= 3 ? flyXp / flyFeathers : XP_PER_FEATHER_DEFAULT);
+    const feathersWanted = () => Math.max(0, Math.min(200, Math.ceil((XPT - xp()) / xpPerFeather()) + 5));
     const has = (re: RegExp) => countItems(s, re) > 0;
     const isFood = (i: any) => (i.optionsWithIndex ?? []).some((o: any) => /^eat$/i.test(o.text));
     // Eats until HP reaches `atLeast` or the food runs out.
@@ -468,14 +482,20 @@ try {
     chain = null;
     lastXp = xp(); lastGain = now();
     const f0 = now();
+    let prevFeathers = countItems(s, FEATHER), prevXp = xp();
     for (let i = 0; i < 200_000 && lvl() < TARGET && !died && left() > 0; i++) {
         const feathers = countItems(s, FEATHER);
+        // Count only feathers used (a purchase raises the count) and the XP gained with them.
+        if (feathers < prevFeathers) { flyFeathers += prevFeathers - feathers; flyXp += xp() - prevXp; prevXp = xp(); }
+        else if (feathers > prevFeathers) prevXp = xp();
+        prevFeathers = feathers;
         const fish = countItems(s, /^raw (trout|salmon)$/i);
         const need = XPT - xp();
         if (hp() < 5) await eat(8);
         // A trip to Gerrant and back is about 350 ticks; go only when the feathers cannot finish, time remains, and
-        // there is something to pay with (fish to sell, or coins for 5 or more feathers).
-        const refill = feathers * 50 < need && (fish > 0 || coins() >= 10) && left() > 450;
+        // there is something to pay with (fish to sell, or coins for 5 or more feathers). Otherwise a full pack
+        // drops its fish below.
+        const refill = feathers * xpPerFeather() < need && (fish > 0 || coins() >= 10) && left() > 450;
         if (feathers === 0 || invLen() >= 28) {
             if (refill) {
                 const r0 = now();

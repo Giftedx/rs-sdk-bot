@@ -8,6 +8,7 @@ import { existsSync } from 'node:fs';
 import { openBot, finish, countItems, closeWithin } from '../../packages/core/src/bot';
 import { logout } from '../../packages/core/src/logout';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
+import { walkPath, sessionWalker } from '../../packages/core/src/walk';
 
 const LUMBRIDGE = { x: 3222, z: 3218 };
 const MARKET = { x: 2654, z: 3304 };
@@ -189,19 +190,21 @@ try {
     checkLevels();
 
     // ---- Step 2: boat to Ardougne (copy of scripts/generated/boatardy.ts).
-    // Long legs use bot.walkTo per point. glide (packages/core/src/glide.ts) was tried 2026-10-23: 144 vs 159 ticks on
-    // the Lumbridge-Port Sarim bench, but the full boat trip got slower (Ardougne at tick 669-670 vs 499-604).
+    // Long legs use walkPath (packages/core/src/walk.ts): it clicks ahead every few tiles, opens a gate with one
+    // click, and never waits at a corner (research/walking.md). glide (packages/core/src/glide.ts) was slower on the
+    // full boat trip (Ardougne at tick 669-670 vs 499-604). A failed walk gets 2 more tries from where the bot stands.
     const walk = async (points: [number, number, number][]): Promise<boolean> => {
-        for (const [x, z, tol] of points) {
-            for (let i = 0; i < 3 && !died; i++) {
-                const p = pos();
-                if (p && p.level === 0 && cheb({ x, z }, p) <= tol + 1) break;
-                await s.bot.walkTo(x, z, tol);
-            }
+        const [gx, gz, gtol] = points[points.length - 1]!;
+        let left = points.map(([x, z, tol]) => ({ x, z, tol }));
+        for (let i = 0; i < 3 && !died; i++) {
             const p = pos();
-            if (died || !p || cheb({ x, z }, p) > tol + 1) return false;
+            if (p && p.level === 0 && cheb({ x: gx, z: gz }, p) <= gtol + 1) break;
+            const r = await walkPath(await sessionWalker(s), left, { stop: () => died });
+            if (!r.ok) console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
+            left = left.slice(Math.min(r.next, left.length - 1));
         }
-        return true;
+        const p = pos();
+        return !died && !!p && cheb({ x: gx, z: gz }, p) <= gtol + 1;
     };
     const converse = async (pats: RegExp[], done: () => boolean, maxTicks: number): Promise<boolean> => {
         for (let i = 0; i < maxTicks && !died; i++) {

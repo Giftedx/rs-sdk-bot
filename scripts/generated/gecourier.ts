@@ -5,6 +5,7 @@
 // Env: LOBSTERS (default 120), PRICE (default 170), DRY=1 skips the buy (the practice server has no sellers).
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
+import { walkPath, sessionWalker } from '../../packages/core/src/walk';
 
 const MARKET = { x: 2655, z: 3304 };
 const LUMBRIDGE = { x: 3222, z: 3218 };
@@ -58,18 +59,21 @@ try {
     };
     const milestone = (name: string) => console.log(`MILESTONE ${name} ${used()}`);
 
-    // Walks through waypoints; each waypoint gets up to 3 walkTo tries from wherever the bot is.
+    // Walks through waypoints with walkPath (packages/core/src/walk.ts): it clicks ahead every few tiles and never
+    // waits at a corner (research/walking.md: 106-110 ticks vs 125-129 Musa Point to Brimhaven on practice).
+    // A failed walk gets 2 more tries from wherever the bot stands.
     const walk = (points: [number, number, number][]): Promise<boolean> => timed(n => walkTicks += n, async () => {
-        for (const [x, z, tol] of points) {
-            for (let i = 0; i < 3 && !died && !over(); i++) {
-                const p = pos();
-                if (p && p.level === 0 && cheb({ x, z }, p) <= tol + 1) break;
-                await s.bot.walkTo(x, z, tol);
-            }
+        const [gx, gz, gtol] = points[points.length - 1]!;
+        let left = points.map(([x, z, tol]) => ({ x, z, tol }));
+        for (let i = 0; i < 3 && !died && !over(); i++) {
             const p = pos();
-            if (died || !p || cheb({ x, z }, p) > tol + 1) return false;
+            if (p && p.level === 0 && cheb({ x: gx, z: gz }, p) <= gtol + 1) break;
+            const r = await walkPath(await sessionWalker(s), left, { stop: () => died || over() });
+            if (!r.ok) console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
+            left = left.slice(Math.min(r.next, left.length - 1));
         }
-        return true;
+        const p = pos();
+        return !died && !!p && cheb({ x: gx, z: gz }, p) <= gtol + 1;
     });
 
     // Answers a dialog: clicks the first option that matches a pattern, else "continue". Stops when done() holds.

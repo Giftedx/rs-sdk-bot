@@ -40,7 +40,7 @@ function start(job: Job) {
         runs.delete(job.account);
         // supervise.ts ends with "SUPERVISE end <reason> after <n> runs".
         let reason = `exit ${code}`;
-        try { reason = readFileSync(join(logDir, `${job.account}.log`), 'utf8').match(/SUPERVISE end [\w-]+ after \d+ runs/g)?.pop()?.slice(15) ?? reason; } catch { /* no log */ }
+        try { reason = readFileSync(join(logDir, `${job.account}.log`), 'utf8').match(/SUPERVISE end [\w-]+ after \d+ runs/g)?.pop()?.slice(14) ?? reason; } catch { /* no log */ }
         ended.set(job.account, { at: Date.now(), reason });
         console.log(`SWARM end ${job.account} ${reason}`);
         log.end();

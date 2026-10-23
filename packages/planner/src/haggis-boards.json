@@ -946,10 +946,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 600,
-    "realistic": 1500,
-    "evidence": "ESTIMATE",
-    "source": "XP: quest_waterfall.rs2:491-492 (CODE-READ); time not measured (author proof 0/3 at the giant door)"
+    "floor": 1160,
+    "realistic": 1164,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md: scripts/generated/waterfall.ts, preset quest_waterfall, practice, 3/3 PASS at 1160, 1164, 1160 ticks; starts beside Almera, so the walk there and the helper trade are not counted. Rival live leg: 979 (research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED))"
    },
    "lump": true,
    "xp": {
@@ -960,8 +960,8 @@
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "XP: quest_waterfall.rs2:491-492 (CODE-READ); time not measured (author proof 0/3 at the giant door)"
+   "evidence": "MEASURED",
+   "source": "XP: quest_waterfall.rs2:491-492, measured 343,750 Attack + 343,750 Strength per run; ticks research/quest-plan.md"
   },
   {
    "id": "tree",
@@ -971,10 +971,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 600,
+    "floor": 938,
     "realistic": 1500,
     "evidence": "ESTIMATE",
-    "source": "XP: quest_tree.rs2:98 (CODE-READ); time not measured"
+    "source": "floor = rival live leg 938 ticks, research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED); realistic is our ESTIMATE; not measured by us"
    },
    "lump": true,
    "xp": {
@@ -1028,10 +1028,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1200,
+    "floor": 1811,
     "realistic": 3000,
     "evidence": "ESTIMATE",
-    "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ); time not measured"
+    "source": "floor = rival live leg 1811 ticks, research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED); realistic is our ESTIMATE; not measured by us"
    },
    "lump": true,
    "xp": {

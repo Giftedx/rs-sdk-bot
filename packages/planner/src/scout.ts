@@ -6,7 +6,8 @@ export interface BoardRow { rank: number; name: string; level: number; ticks: nu
 
 export function parseBoard(html: string): BoardRow[] {
     const names = [...html.matchAll(/href="\/hiscores\/player\/([^"?]+)\?[^"]*"[^>]*>([^<]*)<\/a><br>/g)].map(m => decodeURIComponent(m[1]!));
-    const ticks = [...html.matchAll(/title="([\d,]+) ticks"/g)].map(m => Number(m[1]!.replace(/,/g, '')));
+    // Live since 2026-10-23 the title reads "2,935 ticks normalized to 400 ms per tick"; older pages end at "ticks".
+    const ticks = [...html.matchAll(/title="([\d,]+) ticks\b/g)].map(m => Number(m[1]!.replace(/,/g, '')));
     // Bare numbers ending in <br>, at a line start or right after a tag (`<td>1<br>`): the rank column comes
     // first, then the level column. Names end in `</a><br>` and times in `</span><br>`, so they never match.
     const nums = [...html.matchAll(/(?:^|>)\s*([\d,]+)<br>/gm)].map(m => Number(m[1]!.replace(/,/g, '')));

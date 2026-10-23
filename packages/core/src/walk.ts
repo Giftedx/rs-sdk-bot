@@ -124,3 +124,220 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     }
     return walkRoute(s, r.legs, opts);
 }
+
+// ---- walkPath: walk through points the way a player clicks ahead on the minimap ----
+// bot.walkTo clicks each path corner and waits until the bot is within 2 tiles of it. The bot then takes 1 step
+// or none in that tick, and at a door it waits for the open, then 1 more tick (research/walking.md). walkPath
+// decides on every tick: it clicks `look` tiles ahead along a precomputed path before the last click runs out,
+// opens a shut door on the path with one loc click and clicks past it on the tick it opens, and clicks again
+// after 1 tick with no step. It sends at most one input per tick.
+
+export interface PathTile { x: number; z: number }
+export interface PathPoint extends PathTile { tol?: number }
+export interface PathLoc { x: number; z: number; id: number; optionsWithIndex?: { text: string; opIndex: number }[] }
+export interface PathDeps {
+    pos(): { x: number; z: number; level: number } | null;
+    onTick(cb: () => void): () => void;
+    ended?: Promise<unknown>;
+    walk(x: number, z: number): unknown;
+    interactLoc(loc: PathLoc, op: number): unknown;
+    // Clicks the run button on (controls:com_5). Sent once, before the first walk click.
+    runOn?(): unknown;
+    locs(): PathLoc[];
+    // Path corners from `from` to `to`, without `from` (the rs-sdk findLongPath format).
+    plan(level: number, from: PathTile, to: PathTile): PathTile[];
+}
+export interface PathOptions {
+    look?: number;          // tiles ahead to click (default 20; the client routes inside its 104x104 scene)
+    reclickAt?: number;     // click again when this many tiles of the last click remain (default 6: 3 ticks running)
+    maxTicks?: number;      // tick budget (default: path tiles + 60)
+    stop?: () => boolean;   // checked on every tick (death, abort)
+    log?: (msg: string) => void;
+}
+// `next` is the index of the first point the bot has not passed yet: a retry can start from points.slice(next).
+export interface PathResult { ok: boolean; ticks: number; still: number; clicks: number; repaths: number; doors: number; next: number; detail?: string }
+
+const d8 = (a: PathTile, b: PathTile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+const openOp = (l: PathLoc) => (l.optionsWithIndex ?? []).find(o => /^open$/i.test(o.text));
+
+// Corners to single tiles. rs-sdk path segments are straight or diagonal, so a step by sign is exact for them.
+export function expandPath(from: PathTile, corners: PathTile[]): PathTile[] {
+    const out: PathTile[] = [];
+    let cx = from.x, cz = from.z;
+    for (const c of corners) {
+        while (cx !== c.x || cz !== c.z) {
+            cx += Math.sign(c.x - cx);
+            cz += Math.sign(c.z - cz);
+            out.push({ x: cx, z: cz });
+        }
+    }
+    return out;
+}
+
+export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions = {}): Promise<PathResult> {
+    const look = opts.look ?? 20;
+    const reclickAt = opts.reclickAt ?? 6;
+    const log = opts.log ?? (() => {});
+    const res: PathResult = { ok: false, ticks: 0, still: 0, clicks: 0, repaths: 0, doors: 0, next: 0 };
+    const start = deps.pos();
+    const goal = points[points.length - 1];
+    if (!start) return Promise.resolve({ ...res, detail: 'no position' });
+    if (!goal) return Promise.resolve({ ...res, ok: true });
+    const level = start.level;
+    const goalTol = goal.tol ?? 2;
+
+    // Path tiles through every point in order. seg[i] is the index of the point that tile i leads to.
+    let tiles: PathTile[] = [];
+    let seg: number[] = [];
+    const build = (from: PathTile, firstPoint: number) => {
+        tiles = []; seg = [];
+        let cur = from;
+        for (let k = firstPoint; k < points.length; k++) {
+            // rs-sdk's collision map can call the bot's own tile blocked (seen: 2774,3228 beside the Brimhaven
+            // customs officer gives 0 waypoints). Then take the straight line: the client routes each click itself.
+            const corners = deps.plan(level, cur, points[k]!);
+            const t = expandPath(cur, corners.length ? corners : [points[k]!]);
+            for (const x of t) { tiles.push(x); seg.push(k); }
+            if (t.length) cur = t[t.length - 1]!;
+        }
+    };
+    build(start, 0);
+    if (tiles.length === 0 && d8(start, goal) > goalTol) return Promise.resolve({ ...res, detail: `no path to ${goal.x},${goal.z}` });
+    const maxTicks = opts.maxTicks ?? tiles.length + 60;
+
+    let idx = -1;          // path tile nearest the bot
+    let target = -1;       // path index of the last walk click
+    let door: { loc: PathLoc; sentAt: number } | null = null;
+    let last = { x: start.x, z: start.z };
+    let still = 0;
+    let ticks = 0;
+    let ranOn = false;
+    let sentThisTick = false;
+
+    const nearest = (p: PathTile): { i: number; d: number } => {
+        let best = { i: Math.max(0, idx), d: Infinity };
+        const hi = Math.min(tiles.length - 1, Math.max(0, idx) + look * 2);
+        for (let i = Math.max(0, idx); i <= hi; i++) {
+            const d = d8(tiles[i]!, p);
+            if (d <= best.d) best = { i, d };   // a tie goes forward
+        }
+        return best;
+    };
+    const shutDoorAhead = (from: number, to: number): PathLoc | null => {
+        const ahead = new Map<string, number>();
+        for (let i = Math.max(0, from); i <= Math.min(tiles.length - 1, to); i++) ahead.set(`${tiles[i]!.x},${tiles[i]!.z}`, i);
+        let best: { l: PathLoc; i: number } | null = null;
+        for (const l of deps.locs()) {
+            const i = ahead.get(`${l.x},${l.z}`);
+            if (i !== undefined && openOp(l) && (!best || i < best.i)) best = { l, i };
+        }
+        return best?.l ?? null;
+    };
+    const send = (what: string, f: () => unknown): boolean => {
+        if (sentThisTick) return false;
+        sentThisTick = true;
+        try {
+            const r = f() as { catch?: (h: () => void) => unknown } | undefined;
+            if (r && typeof r.catch === 'function') r.catch(() => {});
+        } catch { /* the next tick decides again */ }
+        log(what);
+        return true;
+    };
+    const clickAhead = (span: number) => {
+        const i = Math.min(tiles.length - 1, Math.max(0, idx) + span);
+        const t = tiles[i]!;
+        if (send(`walk ${t.x},${t.z}`, () => deps.walk(t.x, t.z))) { target = i; res.clicks++; }
+    };
+    const replan = (p: PathTile, why: string): boolean => {
+        build(p, seg[Math.max(0, idx)] ?? 0);
+        idx = -1; target = -1; res.repaths++;
+        log(`re-plan: ${why}`);
+        if (tiles.length === 0) return false;
+        idx = nearest(p).i;
+        return true;
+    };
+
+    return new Promise<PathResult>(resolve => {
+        let done = false;
+        const finish = (ok: boolean, detail?: string) => {
+            if (done) return;
+            done = true;
+            off();
+            resolve({ ...res, ok, ticks, next: ok ? points.length : (seg[Math.max(0, idx)] ?? 0), detail });
+        };
+        const decide = () => {
+            sentThisTick = false;
+            const p = deps.pos();
+            if (!p) return finish(false, 'no position');
+            if (p.level !== level) return finish(false, `left level ${level}`);
+            if (d8(p, goal) <= goalTol) return finish(true);
+            if (opts.stop?.()) return finish(false, 'stopped');
+            if (ticks > maxTicks) return finish(false, `budget ${maxTicks} ticks at ${p.x},${p.z}`);
+            const moved = p.x !== last.x || p.z !== last.z;
+            last = { x: p.x, z: p.z };
+            still = moved ? 0 : still + 1;
+            if (ticks > 0 && !moved) res.still++;
+
+            // The run button does not count as the tick's input: the server takes 5 per tick, and it goes first.
+            if (!ranOn && deps.runOn) { ranOn = true; send('run on', () => deps.runOn!()); sentThisTick = false; }
+
+            const n = nearest(p);
+            if (n.d > 3) {
+                // Off the planned path (the client routed round something): plan again from here.
+                if (!replan(p, `off path by ${n.d}`)) return finish(false, `no path from ${p.x},${p.z}`);
+            } else idx = n.i;
+
+            // A door the bot asked to open: click past it on the tick it opens.
+            if (door) {
+                const d = door;
+                const shutNow = deps.locs().some(l => l.x === d.loc.x && l.z === d.loc.z && l.id === d.loc.id && openOp(l));
+                if (!shutNow) { door = null; log('door open'); clickAhead(look); return; }
+                // No step for 3 ticks and the door is still shut: click it again.
+                if (still >= 3 && ticks - d.sentAt >= 3) door = null; else return;
+            }
+            const shut = shutDoorAhead(idx, idx + look);
+            if (shut) {
+                const op = openOp(shut)!.opIndex;
+                if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op))) { door = { loc: shut, sentAt: ticks }; res.doors++; target = -1; }
+                return;
+            }
+            // No tile gained for 2 ticks: plan again from where the bot stands.
+            if (still >= 2) {
+                if (!replan(p, `still ${still}`)) return finish(false, `no path from ${p.x},${p.z}`);
+                // The client may have routed the bot to a shut door that is not on the path.
+                const near = deps.locs().find(l => openOp(l) && d8(l, p) <= 1);
+                if (still >= 4 && near) {
+                    if (send(`open near ${near.x},${near.z}`, () => deps.interactLoc(near, openOp(near)!.opIndex))) { door = { loc: near, sentAt: ticks }; res.doors++; }
+                    return;
+                }
+                clickAhead(still >= 3 ? Math.ceil(look / 2) : look);
+                return;
+            }
+            if (still >= 1 || target < 0 || target - idx <= reclickAt) {
+                // The last click already ends at the goal, and the bot is still moving toward it.
+                if (target === tiles.length - 1 && still === 0) return;
+                clickAhead(look);
+            }
+        };
+        const off = deps.onTick(() => { ticks++; decide(); });
+        void deps.ended?.then(() => finish(false, 'session ended'));
+        decide();
+    });
+}
+
+// PathDeps for an in-process session (packages/core/src/inprocess.ts). Inputs go straight to the client, not
+// through the SDK action queue, so a click leaves on the tick it is decided.
+export async function sessionWalker(s: { sdk: any; onTick(cb: () => void): () => void; direct(a: { type: string; [k: string]: unknown }): Promise<unknown>; ended?: Promise<unknown> }): Promise<PathDeps> {
+    const pf: any = await import('../../../vendor/rs-sdk/sdk/pathfinding');
+    return {
+        pos: () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; },
+        onTick: cb => s.onTick(cb),
+        ended: s.ended,
+        walk: (x, z) => s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' }),
+        interactLoc: (l, op) => s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' }),
+        runOn: () => s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' }),
+        locs: () => s.sdk.getState()?.nearbyLocs ?? [],
+        // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
+        plan: (level, from, to) => pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []),
+    };
+}

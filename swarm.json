@@ -12,7 +12,8 @@
         "CAP": "15000"
       },
       "enabled": true,
-      "note": "81f31bb proved only: resume to Fishing 40 (trips=0, events=0) and fresh to 31; feather refill, rod rebuy and events never ran; XP-curve bug found (ece5dc2), fix in progress"
+      "note": "fixed XP curve + false-death rule (uncommitted, git broken): fish_resume TARGET=50 3/3 (drop path, trips=0), TARGET=55 1/1 (feather trip). Random-event paths never ran.",
+      "repeat": true
     },
     {
       "account": "Moneyshot",
@@ -61,11 +62,11 @@
     },
     {
       "account": "Pocketpython",
-      "script": "scripts/goldfarm.ts",
+      "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
       "enabled": true,
-      "note": "fed 28 lobsters by Bigpackage 2026-10-23; about 4,700 ticks of food; next: courier resupply loop",
+      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
       "env": {
         "TICKS": "9000"
       },
@@ -73,11 +74,11 @@
     },
     {
       "account": "Pocketrocket",
-      "script": "scripts/goldfarm.ts",
+      "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
       "enabled": true,
-      "note": "fed 28 lobsters by Bigpackage 2026-10-23; about 4,700 ticks of food; next: courier resupply loop",
+      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
       "env": {
         "TICKS": "9000"
       },
@@ -85,11 +86,11 @@
     },
     {
       "account": "mmtha0205",
-      "script": "scripts/goldfarm.ts",
+      "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
       "enabled": true,
-      "note": "fed 28 lobsters by Bigpackage 2026-10-23; about 4,700 ticks of food; next: courier resupply loop",
+      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
       "env": {
         "TICKS": "9000"
       },
@@ -97,11 +98,11 @@
     },
     {
       "account": "mmthv2350",
-      "script": "scripts/goldfarm.ts",
+      "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
       "enabled": true,
-      "note": "fed 28 lobsters by Bigpackage 2026-10-23; about 4,700 ticks of food; next: courier resupply loop",
+      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
       "env": {
         "TICKS": "9000"
       },

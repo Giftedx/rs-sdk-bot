@@ -177,4 +177,6 @@ test('quest points: all points before the leader playtime is a secure win; more 
     expect(finish(schedule([qp(4, 25)], acts.slice(0, 2), opts), 'questpoints')).toMatchObject({ status: 'WIN', finish: 20, slack: 5 });
     expect(finish(schedule([qp(4, 15)], acts.slice(0, 2), opts), 'questpoints')).toMatchObject({ status: 'LATE', finish: 20 });
     expect(finish(schedule([qp(5, 25)], acts, opts), 'questpoints')).toMatchObject({ status: 'LATE', finish: 30 });
+    // Leader already at the maximum (live: avery 145 at 1,022,262): only an earlier 145 wins.
+    expect(finish(schedule([qp(5, 31)], acts, opts), 'questpoints')).toMatchObject({ status: 'WIN', finish: 30, slack: 1 });
 });
