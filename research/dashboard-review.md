@@ -70,3 +70,32 @@ points marked `m: "cli"`, so the sparkline starts again at 12:01.
 - `scripts/swarm.ts` now writes `reserved` for an entry with no script (test in `scripts/swarm.test.ts`).
   The running swarm process still has the old code until it restarts. The dashboard reads the old
   `bad job: no script` state as a reservation too.
+
+## Round 2, 2026-10-23 (fresh-eyes review, 30 findings)
+
+A helper reviewed the page without my notes. I checked each claim in the code before a fix. Commits 5ca1b60 to 3728250.
+
+| Finding | Fix |
+|---|---|
+| "Made this run" 10-15x too high (463K against about 34K in the bot's log) | The baseline waits for a status with a bank list. |
+| Bots started by hand showed "disabled" and the old swarm job | `SCRIPT_ROLE` in server.ts: "manual" pill, the script's goal and skill. |
+| "gave 2 Trout, 7 Salmon" read "gave 2 items" | `shortPhase` sums the counts: "gave 9 fish". Key=value lines read "banked 46.1K · food 16". |
+| The gate used no travel model (Agility −35,758 against −40,476 on the race) | scripts/haggis-gate.ts passes `haggisTravel()`; both say −40,476. |
+| Flow chip "last 2m" on a flow that was mostly 9.5 h old | "newest 16m · biggest 9.7h". |
+| "Vault value" was team wealth | "team wealth" plus "in vault 103K". |
+| Account names in 2 spellings | The flow uses the account's own spelling. |
+| Tick shares were whole-run under a "last 300 ticks" title | Shares from the same 300 ticks; whole run on hover. |
+| "Δ 24 h" covered 9.5 h | The label gives the real window. |
+| Gap sparkline ended 96 min ago | A "now" point, the start value and the change, red when worse. |
+| Owner quotes and the name reveal on screen | Show mode (button or `?show`): team best ranks replace the requests; no reveal. Reveal needs Shift+click and answers only on this PC. Gate details lose absolute paths. |
+| Race: half the chart empty, Overall among the boards, no difficulty | One-sided axis while no board is ahead, Overall pinned last, "× #1" column. |
+| Half-cut rows | Lists with more rows fade out at the bottom. |
+| Bank #1 "16139M" | 16.14B. |
+| "(no input)" got the top XP rate | No rate for ticks with no input (the XP lands a tick after the input). |
+| Activity table had no headers; goldfarm counted twice | Headers; swarm and hand runs count under the script. |
+| No deaths count | "N ✝ 24 h" in the header. A second bug showed up: the 300-row result list dropped live deaths when practice runs filled it. Per-account newest result and death are now kept. It shows 6. |
+| Blurred blob for the main name | A "MAIN ▮▮▮▮" redaction chip. |
+
+Also new: a food chain card on the world view, cook and courier detail views, `?bot=<name>`, and scaling above 1920 x 1080 (2560 x 1440 shows the 1920 layout at 1.33). Found in my own screenshots: farmer food warnings ignored bank food, and the eat rate went negative after a refill. Both fixed.
+
+Not done: the font-size clean-up (11 / 11.5 / 12 / 12.5 px), legends for "○", "≥" and italic roles, the 14 px coin sprite, and the XP-per-input attribution in the bot ledger. Hover tooltips were not checked in a screenshot.
