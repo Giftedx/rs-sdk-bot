@@ -1,0 +1,174 @@
+// Tree Gnome Village from preset quest_tree (beside King Bolren), at the planner's combat state for the tree row:
+// Attack, Strength, Defence 1, 10 HP, Magic 43, Prayer 43. Reward: 286,250 Attack at 25x (quest_tree.rs2:98), 2 QP.
+// Varp %treequest (111): 1 Bolren, 2 Montai, 3 six logs, 4 Montai "I'll try my best", 5 ballista (fixed answer 0004,
+// 0003, 0005, quest_tree.rs2:10-24, so the trackers are skipped), 6 the orb from the chest, 7 Bolren, 8 the warlord's
+// death (khazard_warlord.rs2), then Bolren queues the completion (king_bolren.rs2:83-100).
+// Combat: every enemy is melee (quest_tree/configs/gnome_battlefield.npc), so Protect from Melee (prayer index 14)
+// sets their damage to 0 (npc_combat_melee.rs2:44-45). Fire Bolt (Magic 35, max 12) with a staff of fire kills the
+// warlord (170 HP, no magic level). The prayer is on only near enemies: 43 points last 215 ticks (prayer.rs2:164-174).
+// Non-melee hazard: Montai's catapult hits 0-3 near 2524,3238 (commander_montai.rs2:74-90).
+// TREE_FROM=<stage> starts later (debug presets with varp 111 set).
+import { openQuest } from './quest-lib';
+import { componentId } from '../../packages/core/src/logout';
+
+const BOLREN = { x: 2542, z: 3169 };
+const ELKOY_OUT = { x: 2504, z: 3191 };                    // elkoy, outside the maze (elkoy_entrance_coord 2504,3192)
+const MONTAI = { x: 2523, z: 3211 };
+const WALL = { x: 2509, z: 3253 };                         // khazzacklowwall, climbed from the south side
+const DOOR = { x: 2502, z: 3250 };                         // khazard_stronghold_door, opens from the north side
+const WARLORD = { x: 2457, z: 3302 };
+const ITEM = { logs: 1511, orb: 587, orbs: 588, amulet: 589, prayerPot: [2434, 139, 141, 143], food: 379 };
+const PFM = 14;                                            // protect_from_melee (sdk PRAYER_INDICES)
+const BOLT = componentId('magic:fire_bolt');
+
+const q = await openQuest({ cap: 3000, eatAt: 6, food: [ITEM.food] });
+try {
+    const FROM = Number(process.env.TREE_FROM ?? 0);
+    let questDone = false;
+    const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+tree gnome village/i) > 0) questDone = true; });
+    const prayers = (): any => q.st()?.prayers;
+    const pfmOn = (): boolean => !!prayers()?.activePrayers?.[PFM];
+    const points = (): number => prayers()?.prayerPoints ?? 0;
+    let potions = 0;
+    const setPfm = async (on: boolean): Promise<void> => {
+        if (pfmOn() === on) return;
+        await q.step(`protect from melee ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn() === on, 3, 3);
+    };
+    // A prayer potion when the points run low, then the prayer back on (it switches off at 0).
+    const keepPrayer = async (): Promise<void> => {
+        if (points() > 8) return;
+        const pot = ITEM.prayerPot.find(id => q.has(id));
+        if (!pot) return;
+        const p0 = points();
+        potions++;
+        await q.step('prayer potion', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' }), () => points() > p0, 3, 2);
+    };
+    const named = (re: RegExp, near?: { x: number; z: number }, r = 6) => q.findLoc(l => re.test(l.name) && (!near || Math.max(Math.abs(l.x - near.x), Math.abs(l.z - near.z)) <= r));
+    const stage = (): number => FROM;  // the varp is not in the SDK state; stages are tracked by dialog text and items
+
+    // 1. Bolren: "Can I help at all?", "I would be glad to help." (1); Elkoy then takes the player out of the maze.
+    if (stage() < 1) {
+        await q.talk('bolren 1', /^king bolren$/i, [/can i help at all/i, /i would be glad to help/i], () => q.sawText(/my assistant shall guide you out|out of the maze now/i) && q.cheb(ELKOY_OUT.x, ELKOY_OUT.z) <= 6, BOLREN, 80);
+        q.milestone(1);
+    }
+
+    // 2-4. Montai: the wood (2), the six logs (3), the trackers (4).
+    if (stage() < 4) {
+        await q.walk('to montai', [{ x: MONTAI.x, z: MONTAI.z - 2, tol: 2 }]);
+        if (stage() < 2) {
+            await q.talk('montai 1', /^commander montai$/i, [/i'll gather some wood/i], () => q.sawText(/as quick as you can/i), MONTAI);
+            q.milestone(2);
+        }
+        if (stage() < 3) {
+            await q.talk('montai logs', /^commander montai$/i, [], () => !q.has(ITEM.logs), MONTAI);
+            q.milestone(3);
+        }
+        await q.talk('montai 2', /^commander montai$/i, [/i'll try my best/i], () => q.sawText(/braver than most|blood spilled/i), MONTAI, 80);
+        q.milestone(4);
+    }
+
+    // 5. The ballista, fixed coordinates: height 0004, x 0003, y 0005.
+    if (stage() < 5) {
+        const bal = () => named(/ballista/i, MONTAI, 15);
+        if (!bal()) console.log(`WARN no ballista: ${q.locs().slice(0, 15).map((l: any) => `${l.name}@${l.x},${l.z}`).join(' ')}`);
+        let fired = false;
+        for (let i = 0; i < 3 && !fired; i++) {
+            await q.guard('ballista');
+            const b = bal();
+            if (!b) { await q.waitTicks(1); continue; }
+            await q.opLoc(b, q.opIndex(b, /fire/i));
+            const answers = [/^0004$/, /^0003$/, /^0005$/];
+            let k = 0;
+            for (let t = 0; t < 60 && !fired; t++) {
+                const d: any = q.s.sdk.getDialog();
+                if (d?.isOpen && !d.isWaiting) {
+                    const opt = (d.options ?? []).find((o: any) => k < 3 && answers[k]!.test(o.text.trim()));
+                    if (opt) { k++; void q.s.sdk.sendClickDialog(opt.index); }
+                    else void q.s.sdk.sendClickDialog(0);
+                }
+                await q.waitTicks(1);
+                if (q.sawText(/reduced to rubble/i)) fired = true;
+                if (q.sawText(/you've missed the target/i)) break;
+            }
+        }
+        if (!fired) await q.fail('ballista');
+        await q.converse([], () => !q.dialogOpen(), 10);
+        q.milestone(5);
+    }
+
+    // 6. Over the crumbled wall, the chest, out by the stronghold door (it opens from the north side).
+    if (stage() < 6) {
+        await q.walk('to wall', [{ x: WALL.x, z: WALL.z - 1, tol: 1 }]);
+        await setPfm(true);
+        const wall = () => q.findLoc(l => l.x === WALL.x && l.z === WALL.z && (l.optionsWithIndex ?? []).length > 0);
+        await q.step('climb wall', () => { const w = wall(); return w ? q.opLoc(w, q.opIndex(w, /climb|cross/i)) : q.waitTicks(1); }, () => (q.pos()?.worldZ ?? 0) > WALL.z, 15, 4);
+        await q.converse([], () => !q.dialogOpen(), 6);
+        q.milestone('wall');
+        const chest = () => named(/chest/i, WALL, 8);
+        if (!chest()) console.log(`WARN no chest: ${q.locs().slice(0, 15).map((l: any) => `${l.name}@${l.x},${l.z}`).join(' ')}`);
+        await q.step('chest', async () => {
+            const c = chest();
+            if (!c) return q.waitTicks(1);
+            await q.opLoc(c, q.opIndex(c, /search|open/i));
+            await q.waitTicks(2);
+            await q.converse([], () => !q.dialogOpen(), 6);
+        }, () => q.has(ITEM.orb), 15, 5);
+        q.milestone(6);
+        await q.walk('to door', [{ x: DOOR.x, z: DOOR.z + 1, tol: 0 }]);
+        const door = () => q.findLoc(l => l.x === DOOR.x && l.z === DOOR.z && (l.optionsWithIndex ?? []).some((o: any) => /open/i.test(o.text)));
+        await q.step('door out', () => { const d = door(); return d ? q.opLoc(d, q.opIndex(d, /open/i)) : q.waitTicks(1); }, () => (q.pos()?.worldZ ?? 9999) < DOOR.z, 10, 4);
+        await q.walk('away from stronghold', [{ x: DOOR.x, z: DOOR.z - 8, tol: 2 }]);
+        await setPfm(false);
+    }
+
+    // 7. Back to Bolren through the maze with Elkoy; he keeps the orb and Elkoy takes the player out again.
+    const elkoyIn = async (label: string): Promise<void> => {
+        await q.walk(`to elkoy ${label}`, [{ x: ELKOY_OUT.x, z: ELKOY_OUT.z + 1, tol: 2 }]);
+        await q.talk(`elkoy ${label}`, /^elkoy$/i, [/^yes please/i], () => q.cheb(2515, 3159) <= 4, ELKOY_OUT, 40);
+        await q.converse([], () => !q.dialogOpen(), 8);
+    };
+    if (stage() < 7) {
+        await elkoyIn('in 1');
+        await q.walk('to bolren 2', [{ x: BOLREN.x, z: BOLREN.z + 2, tol: 2 }]);
+        await q.talk('bolren 2', /^king bolren$/i, [/i will find the warlord/i], () => !q.has(ITEM.orb) && q.cheb(ELKOY_OUT.x, ELKOY_OUT.z) <= 6, BOLREN, 120);
+        q.milestone(7);
+    }
+
+    // 8. The Khazard warlord: Protect from Melee, then Fire Bolt every 5 ticks until he falls and the orbs are in the pack.
+    if (stage() < 8) {
+        await q.walk('to warlord', [{ x: WARLORD.x + 6, z: WARLORD.z - 6, tol: 3 }]);
+        await setPfm(true);
+        const wl = () => q.npc(/^khazard warlord$/i);
+        if (!wl()) await q.waitUntil(() => !!wl(), 20);
+        if (!wl()) await q.fail('no warlord');
+        const lastMsg = (re: RegExp): number => Math.max(-1, ...(q.st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).map((m: any) => m.observationId ?? m.tick));
+        const blocked0 = lastMsg(/already under attack/i);
+        let casts = 0;
+        for (let t = 0; t < 600 && !q.has(ITEM.orbs); t++) {
+            await q.guard('warlord');
+            if (q.dialogOpen()) { const d: any = q.s.sdk.getDialog(); if (!d.isWaiting) void q.s.sdk.sendClickDialog(0); }
+            await keepPrayer();
+            if (!pfmOn() && points() > 0) await setPfm(true);
+            const n = wl();
+            if (n && t % 5 === 0) { casts++; await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: BOLT, reason: 'SDK' }); }
+            if (lastMsg(/do not have enough/i) > blocked0) await q.fail('out of runes');
+            await q.waitTicks(1);
+        }
+        if (!q.has(ITEM.orbs)) await q.fail('warlord: no orbs');
+        await q.converse([], () => !q.dialogOpen(), 8);
+        console.log(`NOTE warlord down at ${q.T()} casts=${casts} prayer=${points()} potions=${potions}`);
+        q.milestone(8);
+        await q.walk('away from warlord', [{ x: WARLORD.x + 12, z: WARLORD.z - 12, tol: 3 }]);
+        await setPfm(false);
+    }
+
+    // 9. Elkoy again, then Bolren takes the orbs and queues the completion.
+    await elkoyIn('in 2');
+    await q.walk('to bolren 3', [{ x: BOLREN.x, z: BOLREN.z + 2, tol: 2 }]);
+    await q.talk('bolren 3', /^king bolren$/i, [], () => !q.has(ITEM.orbs) && (questDone || q.has(ITEM.amulet)), BOLREN, 120);
+    await q.waitUntil(() => questDone, 20);
+    q.milestone('complete');
+    offDone();
+    await q.end(questDone && q.has(ITEM.amulet), `qp=2 amulet=${q.has(ITEM.amulet)} questMsg=${questDone} potions=${potions} prayerLeft=${points()}`);
+
+} catch (e) { await q.fail(String(e)); }

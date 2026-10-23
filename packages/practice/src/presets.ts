@@ -154,6 +154,17 @@ export const PRESETS: Record<string, SaveConfig> = {
         inventory: [373, 365, 361, 329, 315, 2365, 2365, 1603, 1603, 1592, 1597, 2446, 2446].map(id => ({ id, count: 1 }))
             .concat([[556, 100], [555, 12], [557, 15], [554, 70], [560, 24], [563, 6]].map(([id, count]) => ({ id: id!, count: count! })), Array.from({ length: 8 }, () => ({ id: 385, count: 1 }))),
     },
+    // Tree Gnome Village (scripts/generated/quest-tree.ts): beside King Bolren, at the planner's combat state for the
+    // tree row (minLevel prayer 43, magic 35): Attack, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, the skills
+    // trained before it at 99. Staff of fire (1387) worn; 6 logs (1511) for Montai; Fire Bolt runes (1 chaos 562 +
+    // 3 air 556 each, fire from the staff) for 80 casts; 2 prayer potions (2434); 4 lobsters.
+    quest_tree: {
+        position: { x: 2542, z: 3171, level: 0 },
+        skills: { Magic: 43, Prayer: 43, Cooking: 35, Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99 },
+        equipment: [{ id: 1387, count: 1, slot: 3 }],
+        inventory: [[562, 80], [556, 240]].map(([id, count]) => ({ id: id!, count: count! }))
+            .concat(Array.from({ length: 6 }, () => ({ id: 1511, count: 1 })), [2434, 2434].map(id => ({ id, count: 1 })), Array.from({ length: 4 }, () => ({ id: 379, count: 1 }))),
+    },
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).

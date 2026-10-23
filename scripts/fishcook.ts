@@ -84,6 +84,8 @@ try {
     });
 
     let fishTicks = 0, cookTicks = 0, walkTicks = 0, bankTicks = 0, chickenTicks = 0, idleTicks = 0, giveTicks = 0;
+    // noSpot: ticks in a row with no allowed fishing spot; spotWaits: times that wait was used to cook, bank or fetch feathers.
+    let noSpot = 0, spotWaits = 0;
     let caught = 0, cooked = 0, burnt = 0, banked = 0, bankFish = 0, packs = 0, cycles = 0, kills = 0, feathersGot = 0, given = 0, events = 0, eats = 0;
     const cook0 = cook(), fishXp0 = fishXp();
 
@@ -94,7 +96,7 @@ try {
         const tries = cooked + burnt;
         const detail = `ticks=${ticks} caught=${caught} cooked=${cooked} burnt=${burnt} burnPct=${(100 * burnt / Math.max(1, tries)).toFixed(1)} banked=${banked} bankFish=${bankFish} given=${given} `
             + `foodPerKTicks=${(1000 * banked / Math.max(1, ticks)).toFixed(1)} cooking=${cook0}->${cook()} fishXp=${fishXp() - fishXp0} packs=${packs} cycles=${cycles} kills=${kills} feathersGot=${feathersGot} `
-            + `fishTicks=${fishTicks} cookTicks=${cookTicks} walkTicks=${walkTicks} bankTicks=${bankTicks} chickenTicks=${chickenTicks} giveTicks=${giveTicks} idleTicks=${idleTicks} `
+            + `fishTicks=${fishTicks} cookTicks=${cookTicks} walkTicks=${walkTicks} bankTicks=${bankTicks} chickenTicks=${chickenTicks} giveTicks=${giveTicks} idleTicks=${idleTicks} spotWaits=${spotWaits} `
             + `events=${events} eats=${eats} feathers=${countItems(s, FEATHER)} packCooked=${cookedInPack()} hp=${hp()} hpMin=${hpMin} died=${died} at=${p?.worldX},${p?.worldZ},${p?.level}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
@@ -321,10 +323,22 @@ try {
         if (!sp) {
             const p = pos();
             if (!p || cheb(FLY_SPOT, p) > 3) await walk([[FLY_SPOT.x, FLY_SPOT.z, 1]]);
-            else { idleTicks++; await waitTicks(s, 1); }
+            else if (++noSpot > 5 && countItems(s, RAW_FISH) > 0) {
+                // The spots sit south on the spider bank (2026-10-23 live: 828, 231 and 228 idle ticks here). Use the
+                // wait: cook and bank what the pack holds, or fetch feathers, then look again.
+                noSpot = 0; spotWaits++;
+                await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); chain = null;
+                continue;
+            } else if (noSpot > 5 && invLen() <= 18) {
+                // No raw fish to cook: chickens give feathers, and the raw chicken is cooked at once (Cooking XP).
+                noSpot = 0; spotWaits++;
+                await chickenTrip(feathers + 10, 8); await go(FIRE_TO_FLY, 'back to the river'); chain = null;
+                continue;
+            } else { idleTicks++; await waitTicks(s, 1); }
             fishTicks += s.tick() - f0;
             continue;
         }
+        noSpot = 0;
         const lure = sp.optionsWithIndex.find((o: any) => LURE.test(o.text)).opIndex;
         if (sp.distance > 1) {
             await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
