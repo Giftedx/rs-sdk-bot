@@ -49,4 +49,8 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Monk's Friend: in the Ardougne monastery beside Brother Omad (spawn 2604,3209, maps/m40_50.jm2); jug of water (1937)
     // and logs (1511) for Brother Cedric. The child's blanket is untradeable (quest_drunkmonk.obj:12).
     quest_drunkmonk: short({ x: 2605, z: 3209 }, [1937, 1511], 6),
+    // Fishing Contest: beside the west tunnel dwarf on White Wolf Mountain (tunnel_dwarf spawn 2820,3487, maps/m44_54.jm2);
+    // spade (952) for a red vine worm (untradeable, quest_fishingcompo.obj:16), fishing rod (307), 2 fishing bait (313),
+    // garlic (1550) for the pipe, 5 coins for Bonzo, Camelot teleport runes (1 law 563, 5 air 556) for the way back.
+    quest_fishingcompo: short({ x: 2822, z: 3489 }, [952, 307, [313, 2], 1550, [563, 1], [556, 5]], 4, 5),
 };

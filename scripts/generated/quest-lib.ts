@@ -12,12 +12,14 @@ export const LUMBRIDGE = { x: 3222, z: 3218 };
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
 
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
-export async function openQuest(opts: { cap?: number; eatAt?: number; food?: number[]; trace?: boolean; lumbridgeOk?: boolean } = {}) {
+// name: the account (default process.argv[2]). others: more sessions of a two-account quest (quest-arrav.ts); fail()
+// and end() log them out too.
+export async function openQuest(opts: { cap?: number; eatAt?: number; food?: number[]; trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
     const CAP = opts.cap ?? 3000;
     const EAT_AT = opts.eatAt ?? 40;
     const FOOD = opts.food ?? [379];
     const TRACE = opts.trace ?? process.env.Q_TRACE === '1';
-    const s: Session = await openBot(process.argv[2]!);
+    const s: Session = await openBot(opts.name ?? process.argv[2]!);
     await waitTicks(s, 3);
     const st = (): any => s.sdk.getState();
     const pos = (): any => st()?.player;
@@ -103,12 +105,13 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
         return `at=${p?.worldX},${p?.worldZ},${p?.level} ticks=${T()} hpMin=${stats.hpMin} eats=${stats.eats} walkTicks=${stats.walkTicks} retries=${stats.retries} died=${stats.died} milestones=${[...done].join(',')} jumps=${jumps.join(';')} msgs=${msgs}`;
     };
     const gains = (): string => SKILLS.map(k => [k, xp(k) - xp0[k]!] as const).filter(([, g]) => g > 0).map(([k, g]) => `${k.toLowerCase()}=${g}`).join(',');
-    const fail = async (why: string): Promise<never> => { off(); return finish([s], false, `${why} xp=${gains()} ${detail()}`); };
+    const all = (): Session[] => [s, ...(opts.others?.() ?? []).filter(o => o !== s)];
+    const fail = async (why: string): Promise<never> => { off(); return finish(all(), false, `${why} xp=${gains()} ${detail()}`); };
     const guard = async (label: string): Promise<void> => {
         if (stats.died) await fail(`died during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
-    const end = async (ok: boolean, extra = ''): Promise<never> => { off(); return finish([s], ok && !stats.died, `${extra} xp=${gains()} ${detail()}`); };
+    const end = async (ok: boolean, extra = ''): Promise<never> => { off(); return finish(all(), ok && !stats.died, `${extra} xp=${gains()} ${detail()}`); };
 
     const opLoc = (l: Loc, op = 1) => s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' });
     const locs = (): any[] => st()?.nearbyLocs ?? [];

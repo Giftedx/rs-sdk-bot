@@ -39,7 +39,7 @@ if (process.env.MM_LOG) {
     const log0 = console.log.bind(console);
     console.log = (...a: unknown[]) => { log0(...a); try { appendFileSync(process.env.MM_LOG!, a.map(String).join(' ') + '\n'); } catch { /* the log is a debug aid */ } };
 }
-const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 18, food: [ITEM.food] });
+const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 20, food: [ITEM.food] });
 try {
     // HIT lines: each HP drop with the NPCs within 3 tiles, so the damage source on the atoll is in the log.
     let hp0 = q.hp();
@@ -345,8 +345,10 @@ try {
             if (p) {
                 const d = (n: any) => Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ));
                 const npcs: any[] = q.st()?.nearbyNpcs ?? [];
-                if (npcs.some(n => MELEE.test(n.name) && d(n) <= 4)) w = PFM;
-                else if (npcs.some(n => /archer/i.test(n.name) && d(n) <= (n.x <= 2731 && n.z <= 2765 ? 15 : 7))) w = PFMISS;
+                // A posted archer hits up to 18 (26 to 8 in one practice hit), a spider or scorpion about 5-10: the
+                // archer wins.
+                if (npcs.some(n => /archer/i.test(n.name) && d(n) <= (n.x <= 2731 && n.z <= 2765 ? 15 : 7))) w = PFMISS;
+                else if (npcs.some(n => MELEE.test(n.name) && d(n) <= 4)) w = PFM;
             }
         }
         if (w !== null) { quiet = 0; if (!prayOn(w)) void q.s.direct({ type: 'togglePrayer', prayerIndex: w, reason: 'SDK' }); return; }
@@ -444,12 +446,13 @@ try {
     };
     // Talk with converse1: answers `pats`, tolerates a closed tick between pages (a p_delay, a fade), stops at ok() or
     // after 6 shut ticks, then talks again (up to `tries`).
-    const talk1 = async (label: string, re: RegExp, pats: RegExp[], ok: () => boolean, maxTicks: number, home?: { x: number; z: number }, tries = 4): Promise<void> => {
+    const talk1 = async (label: string, re: RegExp | (() => any), pats: RegExp[], ok: () => boolean, maxTicks: number, home?: { x: number; z: number }, tries = 4, must = true): Promise<void> => {
         for (let i = 0; i < tries && !ok(); i++) {
             await q.guard(label);
             if (i > 0) { q.stats.retries++; console.log(`NOTE ${label} talk try ${i}`); }
-            let n = q.npc(re);
-            if (!n && home) { await walk(`${label} approach`, [{ x: home.x, z: home.z, tol: 3 }]); n = q.npc(re); }
+            const find = (): any => typeof re === "function" ? re() : q.npc(re);
+            let n = find();
+            if (!n && home) { await walk(`${label} approach`, [{ x: home.x, z: home.z, tol: 3 }]); n = find(); }
             if (!n) { await q.waitTicks(2); continue; }
             if (!q.dialogOpen()) {
                 await q.talkTo(n);
@@ -458,7 +461,7 @@ try {
             let shut = 0;
             await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 6; }, maxTicks);
         }
-        if (!ok()) await q.fail(`talk ${label}`);
+        if (must && !ok()) await q.fail(`talk ${label}`);
     };
     // A loc on a named tile: op it, click through pages (answers `pats`), until ok().
     // A hit closes the open dialog even at 0 damage (npc_combat_melee.rs2:36, npc_combat_ranged.rs2:48), so the
@@ -545,6 +548,7 @@ try {
     const giveZooknock = async (label: string, id: number, ok: () => boolean): Promise<void> => {
         for (let i = 0; i < 4 && q.has(id); i++) {
             await q.guard(label);
+            await clearPests(label, 1);
             if (q.dialogOpen()) { await (q.s.sdk as any).sendCloseModal?.(); await q.waitTicks(1); }
             const n = q.npc(/^zooknock$/i);
             if (!n) { await walk(`${label} approach`, [{ x: ZOOKNOCK.x, z: ZOOKNOCK.z - 2, tol: 2 }]); continue; }
@@ -552,7 +556,8 @@ try {
             await q.waitUntil(() => !q.has(id) || q.dialogOpen(), 15);
         }
         if (q.has(id)) await q.fail(`${label}: not taken`);
-        await converse1([], () => ok() && !q.dialogOpen(), 40);
+        let shut = 0;
+        await converse1([], () => { shut = q.dialogOpen() ? 0 : shut + 1; return (ok() && !q.dialogOpen()) || shut >= 8; }, 40);
     };
 
     // 100. To Zooknock (2804,9145) through the dungeon (about 535 tiles): his story, and Garkor's request gives the
@@ -592,7 +597,22 @@ try {
         const p = q.pos();
         if (!a || !p) return true;
         const near5 = Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ)) <= 5;
-        return !near5 || inAuntA(a.x, a.z) !== inAuntA(p.worldX, p.worldZ);
+        if (!near5) return true;
+        if (inAuntA(a.x, a.z) !== inAuntA(p.worldX, p.worldZ)) return true;
+        // She in her house (2733-2739,2792-2794) and the bot outside 2732-2739,2789-2796 (mm_monkeys_aunt.rs2:19-21).
+        return a.x >= 2733 && a.x <= 2739 && a.z >= 2792 && a.z <= 2794 && !(p.worldX >= 2732 && p.worldX <= 2739 && p.worldZ >= 2789 && p.worldZ <= 2796);
+    };
+    // Steps across the garden edge (north, away from the house) until auntSafe holds.
+    const auntDodge = async (ticks: number): Promise<void> => {
+        for (let t = 0; t < ticks; t++) {
+            if (auntSafe()) return;
+            {
+                const p = q.pos()!;
+                const to = inAuntA(p.worldX, p.worldZ) ? { x: 2746, z: 2801 } : { x: 2745, z: 2796 };
+                await q.s.direct({ type: 'walkTo', x: to.x, z: to.z, running: true, reason: 'SDK' });
+            }
+            await q.waitTicks(1);
+        }
     };
     const CHILD = { x: 2743, z: 2795 };
 
@@ -636,42 +656,83 @@ try {
     }
     if (FROM < 110) {
         want = PFM;
-        await walk('to temple rope', [{ x: 2807, z: 9201, tol: 1 }]);
-        // The rope is a bridged level-1 loc (map m43_143) and is not in nearbyLocs, so the op goes by id
-        // (mm_climbing_rope_bottom_temple 4881) when the loc is not listed.
-        for (let i = 0; i < 5 && z() > 6400; i++) {
-            await q.guard('temple rope');
-            const r = q.findLoc(l => /rope/i.test(l.name) && Math.abs(l.x - 2808) <= 2 && Math.abs(l.z - 9201) <= 2) ?? { id: 4881, x: 2808, z: 9201 };
-            await q.opLoc(r, 1);
-            await q.waitUntil(() => z() < 6400, 10);
+        // Out of the fire room through the warehouse cellar if the level-1 collision (the fire room and the cellar are
+        // bridged tiles in m43_143) joins them: the client-routed walk to the eastern rope. Else the temple rope.
+        for (let i = 0; i < 6 && !q.near(2797, 9170, 2); i++) {
+            await q.guard('to cellar');
+            await q.s.direct({ type: 'walkTo', x: 2797, z: 9170, running: true, reason: 'SDK' });
+            await q.waitUntil(() => q.near(2797, 9170, 2), 10);
         }
-        if (z() > 6400) await q.fail('temple rope');
+        console.log(`NOTE fire room to cellar: ${q.near(2797, 9170, 2) ? 'joined' : 'not joined'} at ${q.pos()?.worldX},${q.pos()?.worldZ}`);
+        if (q.near(2797, 9170, 2)) {
+            await locOp('east rope 2', { x: 2798, z: 9169 }, /rope/i, /climb/i, [], () => z() < 6400, 10);
+            await q.s.direct({ type: 'walkTo', x: 2764, z: 2765, running: true, reason: 'SDK' });
+            await q.waitUntil(() => z() <= 2766 || inCell(), 4);
+        }
+        if (z() > 6400) await walk('to temple rope', [{ x: 2807, z: 9201, tol: 1 }]);
+        // The rope is a bridged level-1 loc (map m43_143) and is not in nearbyLocs, so the op goes by id
+        // (mm_climbing_rope_bottom_temple 4881). It lands on a random tile within 2 of the trapdoor (mm_temple.rs2:28),
+        // inside the box of the 2x2 trapdoor guards (blockwalk=all, wanderrange 1). The way out is the ladder beside it
+        // (2805,2785) to level 1, then the south ladder top (2794,2773) down; a landing with no way to the ladder goes
+        // back down the trapdoor and up the rope again for a new tile.
+        const ropeUp = async (): Promise<void> => {
+            for (let i = 0; i < 5 && z() > 6400; i++) {
+                await q.guard('temple rope');
+                const r = q.findLoc(l => /rope/i.test(l.name) && Math.abs(l.x - 2808) <= 2 && Math.abs(l.z - 9201) <= 2) ?? { id: 4881, x: 2808, z: 9201 };
+                await q.opLoc(r, 1);
+                await q.waitUntil(() => z() < 6400, 10);
+            }
+            if (z() > 6400) await q.fail('temple rope');
+        };
+        await ropeUp();
+        for (let roll = 0; roll < 6 && level() !== 1 && q.near(2806, 2785, 2); roll++) {
+            for (let t = 0; t < 15 && level() !== 1; t += 3) {
+                await q.guard('temple up');
+                const lad = q.findLoc(l => l.x === 2805 && l.z === 2785 && /ladder/i.test(l.name)) ?? { id: 4772, x: 2805, z: 2785 };
+                await q.opLoc(lad, 1);
+                await q.waitUntil(() => level() === 1, 3);
+            }
+            if (level() === 1) break;
+            console.log(`NOTE temple landing ${q.pos()?.worldX},${q.pos()?.worldZ} boxed: down and up again`);
+            for (let t = 0; t < 20 && z() < 6400; t += 4) {
+                const td = q.findLoc(l => l.x === 2807 && l.z === 2785 && /trapdoor/i.test(l.name));
+                if (td) await q.opLoc(td, q.opIndex(td, /climb|open/i));
+                await q.waitUntil(() => z() > 6400, 4);
+            }
+            if (z() > 6400) { await q.waitTicks(1); await ropeUp(); }
+        }
+        if (level() !== 1) await q.fail('temple up');
+        await walk('temple roof back', [{ x: 2794, z: 2774, tol: 1 }]);
+        await locOp('temple down', { x: 2794, z: 2773 }, /ladder/i, /climb-down/i, [], () => level() === 0, 10);
         want = 'auto';
         await wear('amulet', ITEM.amulet);
         q.milestone('amulet');
-        await walkAtoll('to child', [{ x: 2744, z: 2795, tol: 1 }]);
+        await walkAtoll('to child', [{ x: 2749, z: 2800, tol: 1 }, { x: 2746, z: 2801, tol: 1 }, { x: 2745, z: 2796, tol: 0 }]);
         let gaveAt = -1;
         for (let i = 0; i < 8 && q.has(ITEM.banana); i++) {
             await q.guard('child');
-            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
-            for (let w = 0; w < 30 && !auntSafe(); w++) await q.waitTicks(1);
-            await talk1('child', /^monkey child$/i, [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana) || !q.dialogOpen() && q.T() < 0, 60, CHILD, 1);
+            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2749, z: 2800, tol: 1 }, { x: 2746, z: 2801, tol: 1 }, { x: 2745, z: 2796, tol: 0 }]); }
+            await auntDodge(30);
+            await talk1('child', /^monkey child$/i, [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana), 60, CHILD, 1, false);
         }
         if (q.has(ITEM.banana)) await q.fail('child: bananas');
         gaveAt = q.T();
         await converse1([], () => !q.dialogOpen(), 20);
         console.log(`NOTE bananas given at ${gaveAt}`);
-        await q.waitUntil(() => q.T() - gaveAt >= 100, 110);
+        while (q.T() - gaveAt < 100) { await q.guard('toy timer'); await auntDodge(3); await q.waitTicks(1); }
         for (let i = 0; i < 4 && !q.has(ITEM.talisman); i++) {
-            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
-            for (let w = 0; w < 30 && !auntSafe(); w++) await q.waitTicks(1);
-            await talk1('child toy', /^monkey child$/i, [], () => q.has(ITEM.talisman), 40, CHILD, 1);
+            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2749, z: 2800, tol: 1 }, { x: 2746, z: 2801, tol: 1 }, { x: 2745, z: 2796, tol: 0 }]); }
+            await auntDodge(30);
+            await talk1('child toy', /^monkey child$/i, [], () => q.has(ITEM.talisman), 40, CHILD, 1, false);
         }
         if (!q.has(ITEM.talisman)) await q.fail('child: no talisman');
         await converse1([], () => !q.dialogOpen(), 20);
         q.milestone('talisman');
         await toDungeon('zooknock2');
         await giveZooknock('talisman', ITEM.talisman, () => q.has(ITEM.greegree));
+        // A hit closes his talisman pages before the spell; asking about the talisman runs the same check again
+        // (mm_zooknock.rs2:282-284, both parts are already his).
+        if (!q.has(ITEM.greegree)) await talk1('zooknock greegree', /^zooknock$/i, [/need for the monkey talisman/i], () => q.has(ITEM.greegree), 60, ZOOKNOCK);
         // The chapter 3 cutscene runs in region 0_41_71 (2624-2687, 4544-4607) and returns the player to the coord
         // saved at its start (%mm_cutscene_coord).
         const inCut3 = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2624 && p.worldX < 2688 && p.worldZ >= 4544 && p.worldZ < 4608; };
@@ -680,8 +741,148 @@ try {
         if (!q.has(ITEM.greegree) || inCut3()) await q.fail('chapter 3');
         await ms(110);
     }
-    if (STOP <= 115 || FROM < 130) { offPoison(); offPot(); offWant(); await q.end(true, `stage=110 (stage 120 not scripted) antipoisons=${antipoisons} potions=${potionsAtoll} pestCasts=${pestCasts}`); }
+    // ---- Chapter 3: a monkey. The Karamjan greegree works only in the greegree zones (the atoll, its dungeons, the
+    // Ardougne zoo; quest_mm.rs2:1102-1108) and drops back into the pack outside them (mm_greegree.rs2:12-40); a monkey
+    // is ignored by the archers and the guards (mm_archer.rs2:24, aa_monkey_guard.rs2:27). It takes the weapon slot.
+    const wearGreegree = async (label: string): Promise<void> => {
+        for (let i = 0; i < 12 && !greegree(); i++) {
+            await q.guard(label);
+            const s = q.slot(ITEM.greegree);
+            if (s === undefined) await q.fail(`${label}: no greegree`);
+            await q.s.direct({ type: 'useInventoryItem', slot: s!, optionIndex: 2, reason: 'SDK' });
+            // "You cannot use this whilst in combat" for 10 ticks after a hit (mm_greegree.rs2:6-9).
+            await q.waitUntil(() => greegree(), 3);
+        }
+        if (!greegree()) await q.fail(`${label}: greegree not worn`);
+    };
+    const unwearGreegree = async (): Promise<void> => {
+        await q.step('greegree off', () => q.s.direct({ type: 'useEquipmentItem', slot: 3, optionIndex: 1, reason: 'SDK' } as any), () => !greegree(), 4, 3);
+    };
+    // The west gate (2719-2721,2766) opens only for a monkey (quest_mm.rs2:1110-1146): Kruk's line, then a forcemove
+    // 3 tiles north.
+    const throughGate = async (label: string): Promise<void> => {
+        await walk(`${label} to gate`, [{ x: 2720, z: 2763, tol: 1 }]);
+        await locOp(`${label} gate`, { x: 2719, z: 2766 }, /bamboo gate/i, /open/i, [], () => z() >= 2768 && !q.dialogOpen(), 20, 6, false);
+    };
+    // The village to the landing by the one-way bridge (quest_mm.rs2:1022-1043).
+    const toLanding = async (label: string): Promise<void> => {
+        if (z() < 6400 && z() > 2727) {
+            await walk(`${label} to bridge ladder`, [{ x: 2803, z: 2735, tol: 1 }]);
+            await locOp(`${label} bridge ladder`, { x: 2803, z: 2734 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
+            await walk(`${label} bridge`, [{ x: 2803, z: 2728, tol: 0 }]);
+            await locOp(`${label} jump`, { x: 2803, z: 2727 }, /end of bridge/i, /jump/i, [], () => level() === 0 && z() <= 2725, 10);
+        }
+    };
+    const ELDER = { x: 2801, z: 2757 };
+    // mm_elder_guard_2 (2801,2757) talks; mm_elder_guard_1 (2798,2760) only growls. Both are "Elder Guard".
+    const elder2 = (): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^elder guard$/i.test(n.name))
+        .sort((a: any, b: any) => (Math.abs(a.x - ELDER.x) + Math.abs(a.z - ELDER.z)) - (Math.abs(b.x - ELDER.x) + Math.abs(b.z - ELDER.z)))[0];
+    const inThrone = (): boolean => q.near(2802, 2763, 4) && z() >= 2759;
+    const throne = async (label: string, ok: () => boolean): Promise<void> => {
+        await locOp(label, { x: 2802, z: 2765 }, /awowogei/i, /talk/i, [], ok, 80, 4, false);
+    };
+    const leaveThrone = async (): Promise<void> => {
+        if (!inThrone()) return;
+        await talk1('elder leave', elder2, [/leave now/i], () => !inThrone() && !q.dialogOpen(), 20, undefined, 3);
+    };
+    const inCage = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2598 && p.worldX <= 2606 && p.worldZ >= 3274 && p.worldZ <= 3282; };
+    const spirit = async (label: string, at: { x: number; z: number }, pats: RegExp[], land: { x: number; z: number }): Promise<void> => {
+        await walk(`to ${label}`, [{ x: at.x, z: at.z - 2, tol: 2 }]);
+        for (let i = 0; i < 3 && !q.near(land.x, land.z, 8); i++) {
+            await q.guard(label);
+            const t = q.findLoc(l => /tree/i.test(l.name) && near3(l, at, 2) && (l.optionsWithIndex ?? []).length > 0);
+            if (!t) { await q.waitTicks(1); continue; }
+            await q.opLoc(t, 1);
+            await q.waitUntil(() => q.dialogOpen(), 15);
+            await converse1(pats, () => q.near(land.x, land.z, 8), 40);
+        }
+        if (!q.near(land.x, land.z, 8)) await q.fail(label);
+        await shutDialog();
+    };
 
+    // 115. As a monkey: the dungeon back, the gate, Garkor (the Karamjan monkey: seek an alliance, mm_garkor.rs2:60-76,
+    // 128-140), the elder guard (Kruk's name, mm_elder_guard.rs2:43-51), Kruk on the west watchtower bridge (level 2,
+    // by the west tower ladder 2713,2766, quest_mm.rs2:803-808; he escorts the envoy to Awowogei, mm_kruk.rs2:10-25),
+    // Awowogei's mission (mm_awowogei.rs2:63-92).
+    if (FROM < 115) {
+        want = null;
+        await wearGreegree('greegree');
+        q.milestone('monkey');
+        if (z() > 6400) {
+            await walk('to dungeon exit 2', [{ x: 2763, z: 9104, tol: 1 }]);
+            await locOp('dungeon up 2', { x: 2763, z: 9103 }, /ladder/i, /climb/i, [], () => z() < 6400, 10);
+        }
+        await throughGate('gate1');
+        await walk('to garkor m', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
+        await talk1('garkor monkey', /^garkor$/i, [], () => q.sawText(/must win his trust/i) && !q.dialogOpen(), 60, { x: 2805, z: 2762 });
+        await walk('to elder', [{ x: 2802, z: 2755, tol: 1 }]);
+        await talk1('elder kruk', elder2, [], () => q.sawText(/name of kruk/i) && !q.dialogOpen(), 30, ELDER);
+        await walk('to west tower', [{ x: 2714, z: 2766, tol: 0 }]);
+        await locOp('west tower up', { x: 2713, z: 2766 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
+        await talk1('kruk', /^kruk$/i, [], () => inThrone() && !q.dialogOpen(), 40, { x: 2722, z: 2766 });
+        q.milestone('awowogei');
+        await throne('awowogei mission', () => q.sawText(/with one of the captives/i) && !q.dialogOpen());
+        await ms(115);
+    }
+
+    // 120. The zoo trip: out by the elder guard, the bridge to the landing, Lumdo to Crash Island (mm_lumdo.rs2:5-16;
+    // the greegree drops off), Waydar to the Gnomeball pitch (mm_waydar.rs2:58-68, 121-127), the stronghold spirit tree
+    // to the Battlefield of Khazard (spirit_tree.rs2:1-23), the zoo (2600,3277): the greegree on (the zoo is a greegree
+    // zone), the Monkey Minder cages the "monkey" (mm_monkey_minder.rs2:28-50), a zoo monkey jumps in the backpack
+    // (mm_zoo_monkey.rs2:1-35), the greegree off, the minder lets the human out (:6-25). Back with the monkey (a spirit
+    // tree or a teleport deletes it, teleport.rs2:109-112): walk to the Grand Tree, Daero's blindfold, Waydar, Lumdo,
+    // the gate, the elder guard (Kruk has spoken: straight in, mm_elder_guard.rs2:30-41), Awowogei (:39-51), Garkor:
+    // the chapter 4 cutscene (mm_garkor.rs2:128-138, quest_mm.rs2:211-256) and then the sigil (:25-47).
+    if (FROM < 120) {
+        want = null;
+        await leaveThrone();
+        await toLanding('zoo');
+        await talk1('lumdo out', /^lumdo$/i, [], () => (q.pos()?.worldX ?? 0) > 2880, 20, { x: 2803, z: 2707 });
+        await shutDialog();
+        await talk1('waydar home', /^waydar$/i, [/return to your kingdom/i], () => q.near(2393, 3466, 10), 40, { x: 2897, z: 2727 });
+        await shutDialog();
+        await spirit('stronghold tree', { x: 2461, z: 3444 }, [/where can i go/i, /battlefield of khazard/i], { x: 2555, z: 3259 });
+        await walk('to zoo', [{ x: 2603, z: 3272, tol: 2 }]);
+        await wearGreegree('zoo greegree');
+        const minder = (): any => q.npc(/^monkey minder$/i);
+        await talk1('minder cage', minder, [], () => inCage() && !q.dialogOpen(), 40, { x: 2602, z: 3274 });
+        const zooMonkey = (): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^monkey$/i.test(n.name) && (n.optionsWithIndex ?? []).some((o: any) => /talk/i.test(o.text)))
+            .sort((a: any, b: any) => a.distance - b.distance)[0];
+        await talk1('zoo monkey', zooMonkey, [], () => q.has(ITEM.backpackMonkey) && !q.dialogOpen(), 60);
+        await unwearGreegree();
+        await talk1('minder out', minder, [], () => !inCage() && !q.dialogOpen(), 40);
+        q.milestone('zoo');
+        await walk('zoo to tree', [{ x: 2465, z: 3489, tol: 2 }]);
+        await enterTree();
+        await treeTo(1);
+        await talk1('daero hangar', /^daero$/i, [/^yes/i], () => z() > 4400 && level() === 0, 40, DAERO);
+        await shutDialog();
+        await talk1('waydar back', /^waydar$/i, [/^yes/i], () => q.near(CRASH_ISLAND.x, CRASH_ISLAND.z, 8), 40);
+        await shutDialog();
+        await talk1('lumdo back', /^lumdo$/i, [], () => q.near(2802, 2707, 6), 20, { x: 2891, z: 2724 });
+        await shutDialog();
+        await wearGreegree('atoll greegree');
+        await throughGate('gate2');
+        await walk('to elder 2', [{ x: 2802, z: 2755, tol: 1 }]);
+        await talk1('elder in', elder2, [/speak with awowogei again/i], () => inThrone() && !q.dialogOpen(), 30, ELDER);
+        await throne('awowogei captive', () => q.sawText(/we will contact you when we are ready/i) && !q.dialogOpen());
+        q.milestone('awowogei done');
+        await leaveThrone();
+        await walk('to garkor 3', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
+        // The chapter 4 cutscene runs in 1_41_71 (2624-2687, 4544-4607, level 1) and returns to the saved coord.
+        const inCut4 = (): boolean => { const p = q.pos(); return !!p && p.level === 1 && p.worldX >= 2624 && p.worldX < 2688 && p.worldZ >= 4544 && p.worldZ < 4608; };
+        await talk1('garkor ch4', /^garkor$/i, [], () => inCut4(), 60, { x: 2805, z: 2762 });
+        await converse1([], () => !inCut4() && !q.dialogOpen(), 400);
+        await talk1('garkor sigil', /^garkor$/i, [], () => q.has(ITEM.sigil) && !q.dialogOpen(), 60, { x: 2805, z: 2762 });
+        // The fight gear back: the staff of fire (the greegree comes off with it) and the amulet of magic.
+        await wear('staff', 1387);
+        await wear('amulet of magic', 1727);
+        await ms(120);
+    }
+
+    // The atoll helpers stop here: the battle keeps its own prayer and potions.
+    want = null; offWant(); offPot();
+    console.log(`NOTE atoll done antipoisons=${antipoisons} potions=${potionsAtoll} pestCasts=${pestCasts} rejails=${rejails}`);
     // 140. Wear the sigil (OPHELD2, mm_demon.rs2:1-5; timer 10, then the battle zone 1_42_143, a corner by player count,
     // :35-92). The jungle demon spawns 5-10 tiles away (:160). Its waves (max 31) are 0 under Protect from Magic
     // (:349-354); it melees only within 2 tiles (:332-336), so the bot keeps 4+ tiles away. Fire Wave (Magic 75, max 20)

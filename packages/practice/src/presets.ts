@@ -3,6 +3,7 @@ import { isLiteRunning } from './lite';
 import { MM_PRESETS, extendVarps } from './presets-mm';
 import { DRAGON_PRESETS } from './presets-dragon';
 import { SHORT_PRESETS } from './presets-short';
+import { GANG_PRESETS } from './presets-gang';
 
 // Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
 export interface SaveConfig {
@@ -429,6 +430,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     ...DRAGON_PRESETS,
     // Short quests of the quests-rest row: packages/practice/src/presets-short.ts.
     ...SHORT_PRESETS,
+    // Shield of Arrav as a pair (main Black Arm, helper Phoenix): packages/practice/src/presets-gang.ts.
+    ...GANG_PRESETS,
 };
 
 // Agility laps (scripts/measure/agility-laps.ts): each course at its entry level and at 70 / 90.

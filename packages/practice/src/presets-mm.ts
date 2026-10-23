@@ -69,6 +69,15 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
     quest_mm_s105: mmPreset({ x: 2808, z: 9197, level: 0 },
         { 365: 3, 371: (1 << 7) | (1 << 8) | (1 << 9) | (1 << 11) | (1 << 13), 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2, zooknock: 5 }), 374: (2 << 2) | (5 << 12) },
         [4020, 4021], MM_PACK.filter(i => i.id !== 2357 && i.id !== 3183 && i.id !== 1759)),
+    // Debug: beside Zooknock after the chapter 3 cutscene (%mm_main 4 completed_ch2, %mm_zooknock 6, %mm_garkor 2,
+    // %mm_monkey_child 7) with the Karamjan greegree; the amulet of monkey speak worn, the amulet of magic in the pack:
+    // MM_FROM=110.
+    quest_mm_s110: {
+        ...mmPreset({ x: 2803, z: 9145, level: 0 },
+            { 365: 4, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2, zooknock: 6 }), 373: 7 << 5, 374: 2 << 2 },
+            [4031, 1727], MM_PACK_LATE.concat([{ id: 2446, count: 1 }])),
+        equipment: MM_WORN.map(e => e.slot === 2 ? { ...e, id: 4021 } : e),
+    },
     quest_mm_s40: mmPreset({ x: 2393, z: 9890, level: 0 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 5 }) }, [4004]),
 };
 
