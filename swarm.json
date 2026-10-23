@@ -65,8 +65,8 @@
       "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
+      "enabled": false,
+      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
       "env": {
         "TICKS": "9000"
       },
@@ -77,8 +77,8 @@
       "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
+      "enabled": false,
+      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
       "env": {
         "TICKS": "9000"
       },
@@ -89,8 +89,8 @@
       "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
+      "enabled": false,
+      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
       "env": {
         "TICKS": "9000"
       },
@@ -101,8 +101,8 @@
       "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "after the 2026-10-23 power cut: committed b93a84e version; the in-progress edit (cake fallback, idle fix) is not proven yet",
+      "enabled": false,
+      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
       "env": {
         "TICKS": "9000"
       },
