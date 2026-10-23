@@ -145,7 +145,7 @@ for 18 other boards, and Overall +2,616 (with levers 2 and 3: +1,777).
 ## Planner rows
 
 No planner row was changed. Lever 3 is CODE-READ, but it is a new order with a supply (potions), not a change to an
-existing row, so it waits for measurement 2. `bun test packages/planner`: 41 pass, 0 fail (2026-10-23, on the
+existing row, so it waits for measurement 2. `bun test packages/planner`: 42 pass, 0 fail at commit time (41 earlier; another agent added a test), on the
 working tree).
 
 Scratch script (not committed): `final.ts` in the session scratchpad, run as `bun final.ts boards-head.json`. They copy
