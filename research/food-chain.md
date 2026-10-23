@@ -212,3 +212,4 @@ events, a live run of any part.
 - Courier: `RESULT ok ticks=809 received=179 ... coins=260 walkTicks=444 boatTicks=118 waitTicks=247`.
 - mmtha0205 started `goldfarm.ts` with `FOOD_FROM=Bigpackage FOOD_ONLY_TRADE=1`: `TRADE max_trades Completed 1 trade(s) (1 session(s)) notes=179 bigFood=0 t=55`. Two farmers now eat courier food (Pocketrocket, mmtha0205).
 - `give-to-banker.ts` without `GIVE=` also gave the courier's 765 coins (`MILESTONE gave 765 Coins, 98 Trout, 81 Salmon`). Always pass `GIVE=Trout:n,Salmon:m`. The courier's bank still holds 500 coins for fares.
+- Pocketrocket's first full farm run on courier food: `RESULT ok ticks=9000 ... coinsGained=123300 coinsPerTick=13.70 eaten=71 ... stallTrips=0 ... shopTrips=0 ... hpMin=4 died=false ... tradesIn=2 tradeTicks=181`. Eat rate 7.9 food per 1,000 ticks.
