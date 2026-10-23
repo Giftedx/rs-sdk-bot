@@ -11,6 +11,8 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { cpus, freemem, totalmem } from 'node:os';
+import { xpForLevel } from '../planner/src/curve';
+import { parseBoard } from '../planner/src/scout';
 
 const root = resolve(import.meta.dir, '..', '..');
 const practice = join(root, '.practice');
@@ -33,7 +35,6 @@ const MAIN = 'Haggis';
 const SECRET_RE = new RegExp(MAIN, 'gi');
 const SECRET_MARK = '⟦MAIN⟧';
 const ROLE_SKILL: Record<string, string> = { thieving: 'Thieving', fishing: 'Fishing', woodcutting: 'Woodcutting', mining: 'Mining', runecraft: 'Runecraft', cooking: 'Cooking', crafting: 'Crafting', combat: 'Attack' };
-const XP99 = 998_458; // level 99 on the demo server (Pocketpython hit 99 at 998,500 xp)
 const NL = String.fromCharCode(10);
 
 function tailJsonl<T>(file: string, n: number): T[] {
@@ -127,7 +128,9 @@ function readStatuses(): Map<string, Status> {
 }
 
 // XP rate samples, xp/tick history (sparkline), phase start times.
-const samples = new Map<string, { at: number; tick: number; xp: number }[]>();
+// Each sample keeps every skill's XP, so a rate can be taken for one skill (the goal) and not the sum of all.
+type Sample = { at: number; tick: number; xp: number; sk: Record<string, number> };
+const samples = new Map<string, Sample[]>();
 const spark = new Map<string, number[]>();
 type Ev = { at: number; name: string; text: string };
 const events: Ev[] = tailJsonl<Ev>(FILES.events, 200).reverse();
@@ -136,10 +139,12 @@ const phaseSince = new Map<string, { at: number; exact: boolean }>();
 for (const e of [...events].reverse()) phaseSince.set(e.name + NL + e.text, { at: e.at, exact: true });
 function track(s: Status) {
     const xp = (s.skills ?? []).reduce((n: number, k: any) => n + (k.xp ?? 0), 0);
+    const sk: Record<string, number> = {};
+    for (const k of s.skills ?? []) sk[k.name] = k.xp ?? 0;
     const list = samples.get(s.name) ?? [];
     if (!list.length || list[list.length - 1]!.tick !== s.tick) {
-        list.push({ at: s.at, tick: s.tick, xp });
-        const r = rate(s.name, list);
+        list.push({ at: s.at, tick: s.tick, xp, sk });
+        const r = rate(s.name, goalSkillOf(s), list);
         if (r != null && Date.now() - s.at < 20_000) { const sp = spark.get(s.name) ?? []; sp.push(Math.round(r * 10) / 10); if (sp.length > 60) sp.shift(); spark.set(s.name, sp); }
     }
     while (list.length > 2 && list[0]!.at < s.at - 120_000) list.shift();
@@ -157,10 +162,18 @@ function track(s: Status) {
     }
     trackResult(s);
 }
-function rate(name: string, l = samples.get(name) ?? []) {
+// XP per tick over the last 2 minutes: of the goal skill when there is one, else of all skills.
+function rate(name: string, skill: string | null, l = samples.get(name) ?? []) {
     if (l.length < 2) return null;
     const a = l[0]!, b = l[l.length - 1]!;
-    return b.tick > a.tick ? (b.xp - a.xp) / (b.tick - a.tick) : null;
+    const xa = skill ? a.sk[skill] ?? 0 : a.xp, xb = skill ? b.sk[skill] ?? 0 : b.xp;
+    return b.tick > a.tick ? (xb - xa) / (b.tick - a.tick) : null;
+}
+function goalSkillOf(s: Status): string | null {
+    const known = ROLE_SKILL[s.role];
+    if (known) return known;
+    if (NO_ROLE.has(s.role) && s.name !== MAIN) return inferRole(s, ranks.get(s.name)?.rows ?? []);
+    return null;
 }
 
 // ---------- RESULT lines: every new result a status file shows, with pass/fail streaks per script ----------
@@ -292,6 +305,29 @@ function rankDelta(name: string, board: string) {
     const day = Date.now() - 86_400_000, base = l.find(r => r.at >= day) ?? l[l.length - 2]!, now = l[l.length - 1]!;
     return { delta: base.rank - now.rank, since: base.at, hist: l.slice(-30).map(r => r.rank) };
 }
+// Live #1 per skill board (category = skill index + 1, Quest Points 100: packages/planner/src/scout-cli.ts),
+// refreshed hourly, one request a second. The 2026-10-22 snapshot is only the fallback, with its age shown.
+const CATEGORY: Record<string, number> = { Overall: 0, 'Quest Points': 100 };
+['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', null, null, 'Runecraft']
+    .forEach((b, i) => { if (b) CATEGORY[b] = i + 1; });
+const liveTop = new Map<string, { name: string; level: number; ticks: number; at: number }>();
+async function refreshLiveTops() {
+    for (const b of SKILL_BOARDS) {
+        try {
+            const rows = parseBoard(await (await fetch(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`, { signal: AbortSignal.timeout(15_000) })).text());
+            if (rows[0]) liveTop.set(b, { name: rows[0].name, level: rows[0].level, ticks: rows[0].ticks, at: Date.now() });
+        } catch { /* keep the last value */ }
+        await Bun.sleep(1000);
+    }
+}
+setInterval(() => void refreshLiveTops(), 3_600_000);
+void refreshLiveTops();
+function topOf(board: string): { name: string; level: number; ticks: number; at: number; live: boolean } | null {
+    const l = liveTop.get(board);
+    if (l) return { ...l, live: true };
+    const s = snapshot?.boards?.find((x: any) => x.board === board)?.rows?.[0];
+    return s ? { name: s.name, level: s.level, ticks: s.ticks, at: Date.parse(snapshot.takenAt) || 0, live: false } : null;
+}
 const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
 // Equipment, Bank and Runite boards: #1 holder and value, scraped every 10 min.
 const extraTop = new Map<string, { name: string; value: string; at: number } | null>();
@@ -377,7 +413,10 @@ function vault(bots: any[], now: number) {
         const lastLog = mineLog.reduce((n, t) => Math.max(n, t.at), 0);
         let source: 'snapshot' | 'log' | 'snapshot+log';
         if (isBanker && !(b?.bankAt && b.bankAt > lastLog) && mineLog.length) {
-            for (const t of mineLog) add(t.items, keyName(t.to) === k ? 1 : -1);
+            // Base: the banker's last bank snapshot (what it held before the log, or at bankAt), then every logged
+            // flow after that snapshot. Without bankAt the snapshot's time is unknown, so every flow is added.
+            add(b?.bank);
+            for (const t of mineLog) if (!b?.bankAt || t.at > b.bankAt) add(t.items, keyName(t.to) === k ? 1 : -1);
             source = 'log';
         } else {
             const since = b?.at ?? 0;
@@ -535,11 +574,14 @@ function buildState() {
         const skill = ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
         const sk = skill ? (s.skills ?? []).find((k: any) => k.name === skill) : null;
         const target = Number(s.env?.target ?? 99) || 99;
-        const r = fresh ? rate(name) : null;
-        const xpLeft = sk ? Math.max(0, XP99 - sk.xp) : null;
+        const r = fresh ? rate(name, skill) : null;
+        // XP left to this run's TARGET level on this server's curve (packages/planner/src/curve.ts), not always 99.
+        const xpLeft = sk ? Math.max(0, xpForLevel(target) - sk.xp) : null;
         const ticksLeft = r && r > 0 && xpLeft != null ? xpLeft / r : null;
         // Pace: the account's hiscore time on the goal board (or this run's ticks) plus ticks left, against #1's time.
-        const top = skill ? snapshot?.boards?.find((x: any) => x.board === skill)?.rows?.[0] : null;
+        // Pace only means something when the run's target reaches #1's level.
+        const topRaw = skill ? topOf(skill) : null;
+        const top = topRaw && target >= topRaw.level ? topRaw : null;
         const row = skill ? rankRows.find(x => x.board === skill) : null;
         const played = Math.max(row ? parseTime(row.time) : 0, s.tick ?? 0);
         const finish = ticksLeft != null ? played + ticksLeft : null;
@@ -553,7 +595,7 @@ function buildState() {
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
             practice: /^localhost/.test(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
-            xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: spark.get(name) ?? [],
+            xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: spark.get(name) ?? [], rateSkill: skill ?? "all skills", xpLeft,
             eta: ticksLeft != null ? fmtTicks(ticksLeft) : null, finish: finish != null ? fmtTicks(finish) : null,
             pace: finish != null && top ? { top: top.name, topTime: fmtTicks(top.ticks), ahead: finish < top.ticks, gap: fmtTicks(Math.abs(top.ticks - finish)) } : null,
             action: fresh ? ({ x: 'xp', m: 'move', a: 'anim', d: 'dialog', s: 'stun', i: 'idle' } as Record<string, string>)[last] ?? null : null,
@@ -568,7 +610,7 @@ function buildState() {
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
     // 24 boards: each board's #1 against our best live rank on it.
     const boards = [...SKILL_BOARDS.map(b => {
-        const top = snapshot?.boards?.find((x: any) => x.board === b)?.rows?.[0];
+        const top = topOf(b);
         let best: any = null;
         for (const bot of bots) for (const r of bot.ranks) if (r.board === b && (!best || r.rank < best.rank)) best = { ...r, name: bot.name };
         const ours = best ? parseTime(best.time) : null;
@@ -576,7 +618,7 @@ function buildState() {
         const gap = best && top ? (best.level >= top.level
             ? { kind: 'time', ahead: ours! <= top.ticks, text: fmtTicks(Math.abs(top.ticks - ours!)), close: Math.min(1, top.ticks / Math.max(1, ours!)) }
             : { kind: 'level', ahead: false, text: `${top.level - best.level} lvl`, close: Math.max(0, best.level / top.level) * 0.8 }) : null;
-        return { board: b, top: top ? { name: top.name, level: top.level, time: fmtTicks(top.ticks), ticks: top.ticks } : null, best, gap, kind: 'skill' };
+        return { board: b, top: top ? { name: top.name, level: top.level, time: fmtTicks(top.ticks), ticks: top.ticks, live: top.live, at: top.at } : null, best, gap, kind: 'skill' };
     }), ...EXTRA.map(e => {
         const t = extraTop.get(e.board);
         return { board: e.board, top: t ? { name: t.name, level: null, time: t.value, ticks: null } : null, best: null, gap: null, kind: 'value' };
@@ -594,7 +636,7 @@ function buildState() {
         now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards, events: events.slice(0, 120),
         results: results.slice(0, 60), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), haggis: haggisPlan(),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
-        icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null,
+        icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
 }
 
@@ -621,6 +663,9 @@ Bun.serve({
     fetch(req) {
         const url = new URL(req.url);
         if (url.pathname === '/api/state') return new Response(current(), { headers: { 'content-type': 'application/json' } });
+        // The 3D viewer (localhost:3000) fetches the names whose nameplates it must hide, so the dashboard page
+        // never holds the name: the iframe URL carries only this endpoint.
+        if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/reveal') return new Response(MAIN, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
         if (url.pathname === '/events') {

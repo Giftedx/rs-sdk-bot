@@ -117,7 +117,7 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .warn{color:var(--org);font-size:11px}
 /* items */
 .ico{display:inline-block;background-image:url(/items.png);background-repeat:no-repeat;image-rendering:pixelated;vertical-align:middle;flex:none}
-.ico.none{background:#2a2419;border-radius:3px;opacity:.6}
+.ico.none{background:#2a2419;border:1px dashed #5a5040;border-radius:3px;color:var(--dm);font:700 9px/1 var(--ui);display:inline-flex;align-items:center;justify-content:center;font-style:normal;overflow:hidden}
 .q{position:absolute;left:2px;top:0;font:700 11px/1 var(--ui);letter-spacing:-.02em;text-shadow:1px 1px 0 #000,0 0 2px #000;pointer-events:none}
 .q.y{color:#ffff00}.q.w{color:#fff}.q.gr{color:#00ff80}
 .pack{display:grid;grid-template-columns:repeat(4,40px);grid-auto-rows:32px;gap:1px;padding:4px;background:#3e3529;border:2px solid #2b241a;border-radius:4px;box-shadow:inset 0 0 0 1px #5a4d3a,0 0 0 1px #0008}
@@ -155,14 +155,14 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
   <div class="brand">SWARM CONTROL<small>rs-sdk demo</small></div>
   <div class="kpis">
     <div class="kpi"><b id="k-w">0</b><span>in world</span></div>
-    <div class="kpi"><b id="k-sw">-</b><span>swarm · free</span></div>
+    <div class="kpi"><b id="k-sw">-</b><span>swarm bots</span></div>
     <div class="kpi"><b id="k-a">0</b><span>accounts</span></div>
     <div class="kpi"><b id="k-t">-</b><span>server tick</span></div>
     <div class="kpi"><b id="k-p">0</b><span>players</span></div>
     <div class="kpi gd"><b id="k-99">0</b><span>99s</span></div>
     <div class="kpi gd"><b id="k-best">-</b><span id="k-bestb">best rank</span></div>
     <div class="kpi"><b id="k-xp">-</b><span>swarm xp/hr</span></div>
-    <div class="kpi gd"><b id="k-gp">-</b><span>vault</span></div>
+    <div class="kpi gd"><b id="k-gp">-</b><span>vault gp</span></div>
     <div class="kpi"><b id="k-cpu">-</b><span>cpu</span></div>
   </div>
   <div class="links"><span class="pulse" id="pulse" title="live, every 2 s"></span><span class="mono dm" id="clock"></span>
@@ -172,7 +172,7 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 <div class="grid">
   <div class="col">
     <section class="card" style="flex:0 1 auto;max-height:520px"><h2>Live accounts <em id="cnt"></em></h2><div class="scroll" id="roster"></div></section>
-    <section class="card" style="flex:none"><h2>Practice <em id="pcnt"></em></h2><div class="prac" id="prac"></div></section>
+    <section class="card" style="height:104px;flex:none"><h2>Practice <em id="pcnt"></em></h2><div class="prac" id="prac"></div></section>
     <section class="card" style="flex:1 1 200px"><h2>Owner requests <em id="rqh"></em></h2><div class="rq" id="rq"></div></section>
     <section class="card" style="height:194px;flex:none"><h2>Machine <em id="mach-h"></em></h2><div class="mach" id="mach"></div></section>
   </div>
@@ -213,7 +213,7 @@ const hm=at=>new Date(at).toLocaleTimeString('en-GB').slice(0,5);
 const actChip=a=>a?`<span class="act" style="background:${KC[a]}">${a}</span>`:'';
 const ocIcon=o=>o==='ok'?'<span class="oc ok" title="last run ok">✔</span>':o==='died'?'<span class="oc died" title="last run: died">✝</span>':o==='fail'?'<span class="oc fail" title="last run failed">✘</span>':'<span class="oc fa">·</span>';
 function jobPill(j){if(!j)return'';const c=/^ended/.test(j.state)?'ended':/^external/.test(j.state)?'external':/^waiting/.test(j.state)?'waiting':j.state;return`<span class="job ${E(c)}" title="${E(j.state)} · ${E(j.goal)}${j.note?' · '+E(j.note):''}">${E(j.state.replace(/\s*\(.*\)$/,''))}</span>`}
-function icon(name,sz=32){const id=S.icons?.[name];if(id==null)return`<i class="ico none" style="width:${sz}px;height:${sz}px" title="${E(name)}: no sprite"></i>`;const k=sz/32;
+function icon(name,sz=32){const id=S.icons?.[name];if(id==null||id>=3904)return`<i class="ico none" style="width:${sz}px;height:${sz}px;font-size:${Math.max(7,sz*.32)}px" title="${E(name)} (no sprite in the local sheet)">${E(String(name).split(/\s+/).map(w=>w[0]).join('').slice(0,3))}</i>`;const k=sz/32;
   return`<i class="ico" style="width:${sz}px;height:${sz}px;background-size:${2048*k}px auto;background-position:-${(id%64)*sz}px -${Math.floor(id/64)*sz}px" title="${E(name)}"></i>`}
 // Stack numbers as the game draws them: yellow below 100K, white K up to 10M, green M above.
 const qty=n=>n<1e5?['y',String(n)]:n<1e7?['w',Math.floor(n/1e3)+'K']:['gr',Math.floor(n/1e6)+'M'];
@@ -230,7 +230,7 @@ function secretSpan(){const s=document.createElement('span');s.className='secret
 function hideSecrets(root){
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue.includes(MARK)?1:3});const hits=[];while(w.nextNode())hits.push(w.currentNode);
   for(const t of hits){const parts=t.nodeValue.split(MARK);const f=document.createDocumentFragment();parts.forEach((p,i)=>{if(i)f.appendChild(secretSpan());if(p)f.appendChild(document.createTextNode(p))});t.replaceWith(f)}
-  for(const el of root.querySelectorAll('*'))for(const a of el.attributes)if(a.value.includes(MARK))a.value=a.value.split(MARK).join(REVEAL||'main account');
+  for(const el of root.querySelectorAll('*'))for(const a of el.attributes)if(/^(title|alt|aria-label|placeholder)$/.test(a.name)&&a.value.includes(MARK))a.value=a.value.split(MARK).join(REVEAL||'main account');
 }
 document.addEventListener('click',async e=>{const s=e.target.closest&&e.target.closest('.secret');if(!s||REVEAL)return;e.stopPropagation();e.preventDefault();
   REVEAL=await (await fetch('/api/reveal',{cache:'no-store'})).text();for(const x of document.querySelectorAll('.secret')){x.textContent=REVEAL;x.classList.add('shown');x.title='main account'}},true);
@@ -259,8 +259,11 @@ function roster(){const live=S.bots.filter(b=>!b.practice),on=live.filter(b=>run
   if(off.length)rows.push(['G-off',`<i hidden data-c="grp"></i>offline · ${off.length} · reason from the swarm plan`]);
   rows.push(...off.map(b=>['O'+b.name,rowOff(b)]));
   keyed($('#roster'),rows);
-  const pr=S.bots.filter(b=>b.practice);$('#pcnt').textContent=`${pr.filter(running).length} running · ${pr.length} recent · localhost`;
-  keyed($('#prac'),pr.map(b=>{const sk=goalOf(b),tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,[c]=st(b);
+  const pr=S.bots.filter(b=>b.practice),pRun=pr.filter(running),pDone=pr.filter(b=>!running(b)).sort((a,b)=>(b.at||0)-(a.at||0)),oc=k=>pDone.filter(b=>b.outcome===k).length;
+  // 3 rows of 4: running bots first, then the newest finished; older ones are only counted.
+  const shown=[...pRun,...pDone].slice(0,12),rest=pr.length-shown.length;
+  $('#pcnt').textContent=`${pRun.length} running · ${pDone.length} done (✔${oc('ok')} ✘${oc('fail')} ✝${oc('died')}) · last 30 min${rest>0?' · +'+rest+' not shown':''}`;
+  keyed($('#prac'),shown.map(b=>{const sk=goalOf(b),tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,[c]=st(b);
     return['P'+b.name,`<i hidden data-c="pc ${sel===b.name?'sel':''}"></i><span class="dot ${c}"></span>${running(b)?'':ocIcon(b.outcome)}<span class="ell" style="flex:none;max-width:62px" title="${E(b.name)} · ${E(b.phase||'')}${b.result?' · '+E(b.result):''}">${E(b.name)}</span><span class="gb" title="${sk?E(b.goalSkill)+' '+sk.level+'/'+tgt:''}"><i style="width:${pct.toFixed(0)}%"></i></span>`]}));
   $('#cnt').textContent=`${on.length} running · ${off.length} offline`}
 function pick(n){if(!n)return;sel=n;picked=true;render()}
@@ -270,13 +273,13 @@ function tip(){const el=$('#tip'),b=tipFor&&S.bots.find(q=>q.name===tipFor);if(!
   el.innerHTML=`<div class="sub"><span>${E(b.name)}</span><span>${b.job?E(b.job.state):''}</span></div>${b.job?.note?`<div class="dm" style="margin-bottom:3px">${E(b.job.note)}</div>`:''}`+(L?`<table>${Object.values(K).map(n=>`<tr><td><span class="dot" style="background:${KC[n]}"></span> ${n}</td><td style="text-align:right">${nf(b.ledger[n])}</td><td style="text-align:right;${n==='idle'&&L.p.idle>10?'color:var(--red);font-weight:700':''}">${L.p[n].toFixed(1)}%</td></tr>`).join('')}</table>${L.p.idle>10?'<div class="w">idle over 10%: standing still is a warcrime</div>':''}`:b.result?`<div class="mono dm" style="white-space:normal;font-size:11px">${E(b.result)}</div>`:'');
   el.style.display='block';const[px,py]=tipXY;el.style.left=Math.min(innerWidth-el.offsetWidth-8,px+14)+'px';el.style.top=Math.min(innerHeight-el.offsetHeight-8,py+10)+'px'}
 
-function alertsBar(){const a=S.alerts||[];
-  put('#alerts',`<span class="lbl">ALERTS</span>`+(a.length?a.map(x=>`<span class="al ${x.kind}" data-n="${E(x.name)}" title="${E(when(x.at))} · ${E(x.text)}"><span class="t">${x.kind.toUpperCase()}</span><b>${E(x.name)}</b><span class="dm ell" style="max-width:220px">${E(x.text)}</span><span class="mono fa">${hm(x.at)}</span></span>`).join(''):'<span class="allclear">all clear: no deaths, stuck bots, idle streaks or logout failures</span>'))}
+function alertsBar(){const isP=n=>S.bots.find(b=>b.name===n)?.practice,a=[...(S.alerts||[])].sort((x,y)=>Number(!!isP(x.name))-Number(!!isP(y.name))||y.at-x.at);
+  put('#alerts',`<span class="lbl">ALERTS</span>`+(a.length?a.map(x=>`<span class="al ${x.kind}" style="${isP(x.name)?'opacity:.55':''}" data-n="${E(x.name)}" title="${E(when(x.at))} · ${E(x.text)}"><span class="t">${x.kind.toUpperCase()}</span><b>${E(x.name)}</b>${isP(x.name)?'<span class="fa">practice</span>':''}<span class="dm ell" style="max-width:220px">${E(x.text)}</span><span class="mono fa">${hm(x.at)}</span></span>`).join(''):'<span class="allclear">all clear: no deaths, stuck bots, idle streaks or logout failures</span>'))}
 $('#alerts').onclick=e=>{const a=e.target.closest('.al');if(a)pick(a.dataset.n)};
 
 const PS=['not started','method known','prep needed','rehearsed'],AB={Overall:'OVR',Attack:'ATT',Defence:'DEF',Strength:'STR',Hitpoints:'HP',Ranged:'RNG',Prayer:'PRA',Magic:'MAG',Cooking:'COO',Woodcutting:'WC',Fletching:'FLE',Fishing:'FSH',Firemaking:'FM',Crafting:'CRA',Smithing:'SMI',Mining:'MIN',Herblore:'HER',Agility:'AGI',Thieving:'THI',Runecraft:'RC','Quest Points':'QP',Equipment:'EQP',Bank:'BNK',Runite:'RUN'};
 function boards(){
-  $('#bd-h').textContent=`#1 per board (skills: snapshot ${S.snapshotAt?String(S.snapshotAt).slice(0,10):'2026-10-22'}; Equipment/Bank/Runite live) · bar = how close our best is`;
+  $('#bd-h').textContent=`#1 per board: ${S.liveTops?`live, ${S.liveTops} skill boards checked ${ago(S.now-S.liveTopsAt)} ago`:`snapshot ${S.snapshotAt?String(S.snapshotAt).slice(0,16).replace('T',' '):'?'} (${S.snapshotAt?ago(S.now-Date.parse(S.snapshotAt)):'?'} old)`} · times are game time (0.4 s/tick) · bar = how close our best is`;
   put('#boards',S.boards.map(r=>{const t=r.top,b=r.best,win=b&&b.rank===1,g=r.gap,cl=g?g.close:0,col=cl>=1?'var(--gold)':cl>=.75?'var(--grn)':cl>=.4?'var(--org)':'var(--red)';
     const delta=b&&b.delta?`<span class="${b.delta>0?'up':'dn'}">${b.delta>0?'▲':'▼'}${nf(Math.abs(b.delta))}</span>`:'';
     return`<div class="bd ${win?'win':''}" title="${E(r.board)}: #1 ${E(t?.name||'?')} ${E(t?.time||'')}${b?` · ours ${E(b.name)} #${b.rank} lvl ${b.level} ${E(b.time)}`:''}${g?` · ${g.kind==='time'?(g.ahead?'ahead by ':'behind by ')+g.text:g.text+' short'}`:''}">
@@ -301,7 +304,7 @@ function detail(){
   put('#detail',`<div class="dh"><span class="dot ${c}"></span><h3>${E(b.name)}</h3><span class="pill ${b.reserved?'res':b.roleInferred?'inf':''}">${E(b.reserved?'main · reserved':b.role)}</span>${jobPill(b.job)}${actChip(b.action)}<span class="dm ell" style="margin-left:auto">${t} · ${E(b.server)}</span></div>
   <div style="display:flex;gap:8px;font-size:12.5px;white-space:nowrap;overflow:hidden"><span class="dm">phase</span><b class="ell" title="${E(b.phase||'')}">${E(b.phaseShort||'—')}</b>${b.phaseSince&&run?`<span class="since">for ${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}<span class="dm" style="margin-left:auto">goal</span><b class="ell">${E(b.job?.goal||String(b.goal||'-').replace(/\.ts$/,''))}</b></div>
   ${b.job?.note?`<div class="dm ell" style="font-size:12px" title="${E(b.job.note)}">swarm: ${E(b.job.note)}</div>`:''}
-  <div class="stats">${stat('xp / hr',b.xpPerHour!=null?gp(b.xpPerHour):'-','g')}${stat('xp / tick',b.xpPerTick!=null?b.xpPerTick.toFixed(1):'-')}${stat('ETA 99',E(b.eta||'-'))}${stat('vs #1',b.pace?`${b.pace.ahead?'▲':'▼'} ${E(b.pace.gap)}`:'-',b.pace?(b.pace.ahead?'up':'dn'):'')}${stat('run up',dur(b.uptime))}${stat('tick',b.tick??'-')}
+  <div class="stats">${stat('xp/hr · '+E(String(b.rateSkill||'').slice(0,8)),b.xpPerHour!=null?gp(b.xpPerHour):'-','g')}${stat('xp / tick',b.xpPerTick!=null?b.xpPerTick.toFixed(1):'-')}${stat('ETA lvl '+(b.goalLevel||99),E(b.eta||(b.xpLeft===0?'done':'-')))}${stat('vs #1',b.pace?`${b.pace.ahead?'▲':'▼'} ${E(b.pace.gap)}`:'-',b.pace?(b.pace.ahead?'up':'dn'):'')}${stat('run up',dur(b.uptime))}${stat('tick',b.tick??'-')}
   ${stat('combat',b.combat??'-')}${stat('total lvl',total)}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'-',b.hp&&b.hp.now<=b.hp.max/3?'dn':'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'-')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'-')}${stat('last run',b.outcome||'-',b.outcome==='ok'?'up':b.outcome?'dn':'')}</div>
   <div><div class="sub"><span>Last 300 ticks · outcome / inputs sent (0-5) / xp per tick</span><span>${(b.timeline||'').length} ticks</span></div>
   <div class="strip">${tl||'<span class="dm" style="font-size:11px;padding:0 5px">no timeline</span>'}</div><div class="strip" style="height:7px;margin-top:2px" title="inputs per tick: dark 0, white 5">${heat||''}</div>
@@ -309,7 +312,7 @@ function detail(){
   ${b.spark?.length>1?`<div style="margin-top:2px">${svgSpark(b.spark,450,20)}</div>`:''}</div>
   <div><div class="sub"><span>Skills</span><span>total ${total}</span></div><div class="skills">${sks.map(k=>`<div class="sk ${k.level>=99?'mx':''} ${k.name===b.goalSkill?'goal':''}" title="${nf(k.xp)} xp"><span>${E(k.name)}</span><b>${k.level}</b><i style="width:${((k.level-1)/98*100).toFixed(0)}%"></i></div>`).join('')}</div></div>
   <div class="inv2"><div><div class="sub"><span>Pack</span><span>${inv.length}/28</span></div><div class="pack">${pack}</div></div>
-  <div style="min-width:0;display:flex;flex-direction:column;gap:4px"><div><div class="sub"><span>Bank</span><span>${b.bank?b.bank.length+' kinds'+(b.bankAt?' · '+ago(S.now-b.bankAt)+' old':''):'unseen'}</span></div><div class="bankg">${bank}</div></div>
+  <div style="min-width:0;display:flex;flex-direction:column;gap:4px"><div><div class="sub"><span>Bank</span><span>${b.bank?b.bank.length+' kinds'+(b.bankAt?' · '+ago(S.now-b.bankAt)+' old':''):'unseen'}</span></div>${b.bank?`<div class="bankg">${bank}</div>`:'<div class="dm" style="font-size:12px">Not opened since the bot started.</div>'}</div>
   <div><div class="sub"><span>Action sets per tick</span><span>share · xp/tick</span></div>${combos}</div>
   <div><div class="sub"><span>Live ranks</span><span>Δ 24 h · lvl</span></div><div class="list">${rk}</div></div></div></div>
   ${b.result?`<div class="result" title="${E(b.result)}">${ocIcon(b.outcome)} ${E(b.result)}</div>`:''}`);
@@ -380,13 +383,13 @@ function syncWorld(){const b=S.bots.find(x=>x.name===sel);$('#follow').textConte
   // fps=20 and scale=0.75 keep its CPU and GPU cost down on a busy box.
   if(mode!=='3d')return;
   const f=$('#rsw');
-  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed&fps=20&scale=0.75${sel?'&follow='+encodeURIComponent(sel):''}`}
+  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed&embed=1&fps=20&scale=0.75&hideNamesFrom=${encodeURIComponent(location.origin+'/api/hidden-names')}${sel?'&follow='+encodeURIComponent(sel):''}`}
   else if(rswFor!==sel&&sel){rswFor=sel;f.contentWindow?.postMessage({follow:sel},'http://localhost:3000')}}
 
 function render(){
   const bots=S.bots,w=S.world||{},sw=S.swarm,live=bots.filter(b=>!b.practice);
   $('#k-w').textContent=bots.filter(b=>b.inWorld).length;$('#k-a').textContent=live.length;$('#k-p').textContent=nf(S.worldPlayers);
-  $('#k-sw').textContent=sw?`${sw.running}/${sw.maxBots} · ${sw.freeGB.toFixed(1)}G`:'-';
+  $('#k-sw').textContent=sw?`${sw.running} / ${sw.maxBots}`:'-';$('#k-sw').parentElement.title=sw?`swarm controller: ${sw.running} running of ${sw.maxBots} max, ${sw.jobs} jobs, ${sw.freeGB.toFixed(1)} GB free at its last check`:'';
   $('#k-t').textContent=w.tick!=null?nf(w.tick):'-';$('#k-cpu').textContent=S.sys?.cpu!=null?S.sys.cpu.toFixed(0)+'%':'-';
   $('#k-99').textContent=live.reduce((n,b)=>n+skills(b).filter(k=>k.level>=99).length,0);
   const best=S.boards.filter(r=>r.best&&r.board!=='Overall').sort((a,b)=>a.best.rank-b.best.rank)[0];$('#k-best').textContent=best?'#'+nf(best.best.rank):'-';$('#k-bestb').textContent=best?'best · '+best.board:'best rank';
