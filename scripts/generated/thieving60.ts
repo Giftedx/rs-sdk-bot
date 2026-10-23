@@ -100,6 +100,8 @@ try {
     // Movement rules (2026-10-23, owner: "you move like a total moron"): take the closest target, never walk back
     // to a fixed spot, and only walk to the target area when no target is within `range` of where the bot stands.
     // Targets wander, so waiting a tick for one to come close beats chasing one across the market.
+    // Set in step 3: what to do inside a stun (8 ticks when the bot cannot pickpocket but can walk, shop and eat).
+    let onStun: (() => Promise<void>) | null = null;
     const steal = async (t: Target): Promise<boolean> => {
         const p = pos();
         const near = (s.sdk.getState()?.nearbyNpcs ?? [])
@@ -120,7 +122,8 @@ try {
         if (!r.success) {
             lastFail = `${r.reason}:${r.message}`;
             if (r.reason === 'stunned') stuns++;
-            await waitTicks(s, 1);
+            if (r.reason === 'stunned' && onStun) await onStun();
+            else await waitTicks(s, 1);
         }
         return true;
     };
@@ -233,6 +236,13 @@ try {
         if (got === 0) shopRetryAt = s.tick() + 100;
     };
 
+    // Inside a stun: restock when food is low, else top up Hitpoints. Both cost no pickpocket ticks there.
+    const maxHp = () => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
+    onStun = async () => {
+        if (food() <= 5 && s.tick() >= shopRetryAt && coins() >= 12) { await stockUp(); return; }
+        if (food() > 0 && hp() <= maxHp() - 4) { if ((await s.bot.eatFood(FOOD)).success) eaten++; return; }
+        await waitTicks(s, 1);
+    };
     if (food() === 0) await stockUp();
     // A file .practice/stop-<bot> asks for a clean in-game logout, so a run can be swapped without the 500-tick linger.
     const stopFile = `.practice/stop-${process.argv[2]}`;

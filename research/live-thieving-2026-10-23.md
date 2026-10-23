@@ -66,3 +66,14 @@ outside the board's top 21: most of that playtime came from the slow runs before
 
 Forecast for a fresh account with this script: about 1,400-2,000 ticks to 55 (practice) + about 3,700 ticks
 55 -> 99 at 260 XP/tick = about 5,500 ticks. Board: 7th place 5,666, 8th 7,447 (2026-10-22 snapshot).
+
+## Fresh account on the board (2026-10-23)
+
+`mmtha0205`, fresh, full-pack food: Thieving 99 at 6,169 script ticks, 41m 12s playtime. **Rank 9** on the live
+Thieving board (8th: 37m 46s, 7th: 29m 14s, 1st: 19m 34s). Milestones: Ardougne 568, 40 at 1,295, 55 at 1,833,
+70 at 2,312, 80 at 3,581, 90 at 4,942, 99 at 6,169. Totals: tries 1,224, stuns 448 (about 3,600 ticks stunned),
+eaten 54, bought 44, walkTicks 611, died false.
+
+Next changes (commits 6e4af09 and later): warrior women from 25 (model 1-40: 465 -> 355 ticks), shop and eat
+inside the 8-tick stun. Practice cannot show the stun-shop gain (no shop contention): 261 and 189 XP/tick from
+66, against 199-237 before.
