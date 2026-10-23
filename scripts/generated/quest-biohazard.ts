@@ -47,9 +47,11 @@ try {
         await q.converse([], () => !q.dialogOpen(), 6);
     };
     const pickup = async (label: string, id: number): Promise<void> => {
-        for (let i = 0; i < 15 && !q.has(id); i++) {
+        for (let i = 0; i < 24 && !q.has(id); i++) {
             await q.guard(label);
-            const g = (q.st()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
+            // The next pile on each try: in a proof run the nearest pigeon cage got "I can't reach that!" twice.
+            const gs = (q.st()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => a.distance - b.distance);
+            const g = gs[Math.floor(i / 3) % Math.max(1, gs.length)];
             if (g && i % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
             await q.waitTicks(1);
         }

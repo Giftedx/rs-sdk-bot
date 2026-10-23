@@ -43,7 +43,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Fight Arena (`arena`) | 2 (72) | `rival-fight-arena` (qp 0) | none found | level 137 enemy (`quest_arena/scripts/arena_journal.rs2:8`) | - |
 | Merlin's Crystal (`arthur`) | 6 (73) | `merlin` | none found | level 39 (`quest_arthur/scripts/arthur_journal.rs2:10`) | - |
 | Witch's House (`ball`) | 4 (74) | `witch` | none found | level 53 (`quest_ball/scripts/ball_journal.rs2:7`) | - |
-| Biohazard (`biohazard`) | 3 (75) | rest | Plague City (OSRS; `quest_elena/scripts/mud_patch.rs2:15` reads `%biohazard`) | none found | L |
+| Biohazard (`biohazard`) | 3 (75) | rest | Plague City (OSRS; `quest_elena/scripts/mud_patch.rs2:15` reads `%biohazard`); a teleport destroys the plague sample (`skill_magic/scripts/spells/teleport.rs2:94-97`); MEASURED 1,655-1,672 ticks in row `quests-medium` | none found | L |
 | Shield of Arrav (`blackarmgang`) | 1 (76) | rest | one gang only (`general/scripts/quests.rs2:170`); a second account in the other gang (rev 289 code, see "Shield of Arrav as a pair"); MEASURED 234-237 ticks in row `quest-arrav` | Jonny the Beard, weaponsmaster (helper) | M |
 | Black Knights' Fortress (`blackknight`) | 3 (77) | `qp-filler` | 12 QP (`quest_blackknight/scripts/blackknight_journal.rs2:9-10`) | level 33 knights (same) | - |
 | Big Chompy Bird Hunting (`chompybird`) | 2 (78) | rest | Fletching 5, Cooking 30, Ranged 30 (`quest_chompybird/scripts/chompybird_journal.rs2:10-28`) | none found | M |
@@ -432,6 +432,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | The Knight's Sword | `scripts/generated/quest-squire.ts` | 893, 887, 922 | MEASURED 3/3 |
 | Plague City | `scripts/generated/quest-elena.ts` | 780, 784, 749 | MEASURED 3/3 |
 | Priest in Peril | `scripts/generated/quest-priestperil.ts` | 1010, 993, 1011 | MEASURED 3/3 |
+| Biohazard | `scripts/generated/quest-biohazard.ts` | 1662, 1655, 1672 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -552,20 +553,67 @@ Findings:
 - Helper items: bucket, 50 rune essence (23 in the pack, 27 in the bank), runes for two Varrock teleports (all
   tradeable). No food: hpMin 98 against the level 30 guardian and monk.
 
+### Biohazard
+
+`RESULT ok qp=3 xp=attack=2000,hitpoints=660,magic=3050,thieving=31250 ... ticks=1662 ... walkTicks=1002 retries=9
+died=false` (runs: 1662, 1655, 1672 ticks; a passing trial before the proof: 1559; an earlier 3-run proof was 2/3, the
+first run failed on the pigeon pickup, fixed below), each with `Congratulations! Quest complete!`. Steps (proof run 1
+MILESTONE ticks; `quests/quest_biohazard/scripts/` unless named): Elena "I'll try to retrieve it for you." (1,
+`areas/area_ardougne_east/scripts/elena.rs2:118-134`) 0-24; out of her door (`elenadoor2` 2054 at 2592,3339), Jerico's
+door (`loc_1530` at 2610,3324), Jerico (2, `jerico.rs2:34-44`) 24-90; his cupboard (2056 at 2611,3326) gives the
+birdfeed, a pigeon cage (obj 424 at 2618,3323-3325), the birdfeed on the watch tower (2067, 3), the cage opened in its
+zone (4, `quest_biohazard.rs2:24-52`) 90-183; Omart "Ok, lets do it." over the wall (5, `areas/area_ardougne_west/
+scripts/omart.rs2`) 183-229; the rotten apple (obj 1984 at 2535,3333), the fence climbed (`mournerstewfence` 2068 at
+2541,3331, `general_use/scripts/fence.rs2`), the apple in the cauldron (2043 at 2543,3332, 6) 229-316; the nurse's
+cupboard (2062 at 2517,3276, hut door at 2519,3275) gives the doctors' gown, worn; the HQ door (2036 at 2551,3320), the
+stairs room door (`loc_1530` at 2546,3325), the stairs, the upstairs door (2034); the sick mourner (level 13) killed for
+the key (`areas/area_ardougne_west/scripts/mourner.rs2:68-79`) 316-540; the key on the gate (2060 at 2551,3325,1), the
+crate (2064 at 2554,3327,1) gives the distillator (7) 540-553; Ardougne teleport, Elena (10: three vials and the sample,
+`elena.rs2:61-99`) 553-639; the walk to Rimmington, the chemist's door (`loc_1533` at 2932,3213), "It's ok, I'm Elena's
+friend.", "I just need some touch paper for a guy called Guidor." (12, `chemist.rs2:50-91`) 639-1046; the vials to
+Hops (broline), Chancy (honey), DeVinci (ethenea) 1046-1100; the walk to Varrock, the east gate (2050 at 3264,3405;
+the guard searches, `areas/area_varrock/scripts/east_gate.rs2:9-37`), the vials back at the Dancing Donkey Inn
+1100-1386; the priest gown and robe worn, Guidor's door (2032 at 3282,3382), Guidor (14, `guidor.rs2:15-72`) 1386-1455;
+Ardougne teleport, Elena (15) 1455-1559; the castle stairs (1722 at 2571,3295), King Lathas's door (`loc_1536` at
+2575,3293,1), "I don't understand..." queues the completion (`areas/area_ardougne_east/scripts/king_lathas.rs2:41-68`)
+1559-1662.
+Findings:
+- A teleport destroys the plague sample (`skill_magic/scripts/spells/teleport.rs2:94-97`), and the chemist and Guidor
+  both need it (`chemist.rs2:52-54`, `guidor.rs2:47-50`). So East Ardougne to Rimmington (407 ticks) and Rimmington to
+  Varrock (about 290 ticks with the inn) are walked: 700 of the 1,660 ticks.
+- The Dancing Donkey Inn and Guidor's house are outside the Varrock east gate; from Rimmington the walk can reach them
+  only through that gate. The guard searches the bot on each pass (state 10-13). In a trial the walker clicked the gate
+  again after the search, went back in, and repeated it to the tick cap; the script clicks it once and waits.
+- Elena's script closes the dialog twice with a `p_delay(2)` before it gives the vials (`elena.rs2:70-99`). A new click
+  in that gap cancels it: a trial handed her the distillator twice and got no sample. The script clicks once and waits.
+- Doors shut by default on this route: Elena's (it walks the bot through and shuts behind it), Jerico's, the nurse's
+  hut, the HQ stairs room, the chemist's and King Lathas's. Each shut door gave "I can't reach that!" or a stall of
+  50-270 ticks in a trial; the script opens each by tile.
+- From the HQ upstairs the walk out stalled twice (92 and 272 ticks) in the stairs room with five mourners round the
+  door. An Ardougne teleport from upstairs is quicker and skips Kilron's ladder.
+- The three pigeon cages lie on 2618,3323-3325; the nearest got "I can't reach that!" in proof run 1 of the first proof,
+  so the pickup tries the next pile on each retry.
+- Untradeable: birdfeed, pigeons, key, distillator, the vials, sample, touch paper, doctors' gown
+  (`quest_biohazard.obj`). Helper items: priest gown and robe, runes for two Ardougne teleports (all tradeable).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
-Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922), Plague City (1 QP, 749 / 784) and Priest in Peril
-(1 QP, 993 / 1,011): 5 QP, floor 3,089 ticks (sum of best runs), realistic 3,191 (sum of worst runs), the same under
-`rival-dialogue-burst`. Row `quests-rest` loses them: 35 -> 31 quests, `qp` 77 -> 72, four medium classes less:
-54,200 / 81,400 -> 50,600 / 76,200 (burst 50,124 / 75,279 -> 46,795 / 70,470). The QP total stays 145. The row is
-written by the helper's `medium-row.ts` from its QUESTS list. `bun test packages/planner`: 42 pass, 0 fail.
-`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers` after Priest in Peril: QP at end 145;
-Quest Points WIN at 101,857 floor / 134,626 realistic (deadline 1,022,262). Overall 40,230 / 45,107, the same with
-and without this change (the HEAD boards file gives the same Overall line).
+Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922), Plague City (1 QP, 749 / 784), Priest in Peril
+(1 QP, 993 / 1,011) and Biohazard (3 QP, 1,655 / 1,672): 8 QP, floor 4,744 ticks (sum of best runs), realistic 4,863
+(sum of worst runs), the same under `rival-dialogue-burst`. Row `quests-rest` loses them one medium class (900 /
+1,300) each; with Lost City also moved out by another helper it is now 29 quests, 66 QP, 48,800 / 73,600 (burst
+45,130 / 68,065). The QP total stays 145. The helper's `medium-row.ts` writes `quests-medium`; for `quests-rest` it
+assumed a fixed base, so after Lost City moved the Biohazard step was applied as a delta on the committed row
+instead. `bun test packages/planner`: 42 pass, 0 fail. `bun packages/planner/src/haggis-cli.ts
+research/hiscores-live.json --levers` after Biohazard: QP at end 145; Quest Points WIN at 102,924 floor / 134,446
+realistic (deadline 1,022,262); Overall 40,545 / 45,211 at this commit (the other rows moved since Priest in Peril).
 
-Next medium quest: Biohazard (`quests/quest_biohazard`; script `scripts/generated/quest-biohazard.ts` and preset
-`quest_biohazard` written from the content read, not yet run).
+Next medium quest: Nature Spirit (`quests/quest_druidspirit`; 2 QP; needs The Restless Ghost and Priest in Peril,
+Crafting 18 recommended, `druidspirit_journal.rs2:22-40`; starts with Drezel in the mausoleum under Paterdomus; steps
+to read: `quest_druidspirit.rs2`, `filliman.rs2`, `ghast.rs2` (three ghasts), `swamp_decay.rs2`). Not started: no
+script and no preset. After it: In Search of the Myreque (Nature Spirit), Haunted Mine and Shades of Mort'ton (both
+class L, Morytania).
 
 ## Cook's Assistant, Witch's House, Lost City (MEASURED practice, 3/3 each)
 
