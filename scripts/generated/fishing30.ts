@@ -49,6 +49,13 @@ const FLY_TO_SARIM: Pt[] = [[3225, 3240, 3], [3180, 3258, 3], [3100, 3285, 3], [
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 5);
+    // A new live account starts on Tutorial Island (seen: START 3094 3106 0 on the demo server). Skip it first.
+    const p0 = s.sdk.getState()?.player;
+    if (p0 && p0.worldX < 3160 && p0.worldZ < 3130) {
+        const t = await s.bot.skipTutorial();
+        console.log(`MILESTONE tutorial ${t.success ? 'ok' : 'fail'}`);
+        if (!t.success) await finish([s], false, `tutorial skip failed: ${t.message}`);
+    }
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;
     const xp = () => s.sdk.getSkillXp('Fishing') ?? 0;
