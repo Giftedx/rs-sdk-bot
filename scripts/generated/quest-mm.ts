@@ -324,7 +324,7 @@ try {
     let potCool = 0, potionsAtoll = 0;
     const offPot = q.s.onTick(() => {
         if (potCool > 0) { potCool--; return; }
-        if (pts() > 6) return;
+        if (pts() > 6 || (want === null && !q.st()?.prayers?.activePrayers?.some((a: boolean) => a))) return;
         const pot = ITEM.prayerPot.find(id => q.has(id));
         if (pot === undefined) return;
         potCool = 4; potionsAtoll++;
@@ -530,6 +530,11 @@ try {
     }
     // The village to the landing: the bridge ladder (2803,2734) up to level 2, the end of the bridge (2803,2727) drops
     // to 2803,2724 (quest_mm.rs2:1022-1043); then the dungeon ladder (2763,2703) down to 2763,9103.
+    // The dungeon route (about 535 tiles), every 4th corner of the SDK path from the entrance ladder to Zooknock; a
+    // single far goal sent the walker into a dead end (2786,9090) on a retry.
+    const DUNGEON_IN = '2773,9102 2785,9103 2774,9108 2764,9120 2788,9118 2803,9098 2809,9125 2778,9129 2761,9131 2741,9135 2725,9137 2716,9134 2735,9129 2737,9124 2729,9122 2710,9119 2712,9112 2718,9110 2724,9108 2739,9104 2739,9095 2713,9094 2700,9094 2694,9105 2694,9121 2696,9127 2715,9146 2725,9146 2775,9144 2792,9141 2803,9145'
+        .split(' ').map(s => { const [x, zz] = s.split(',').map(Number); return { x: x!, z: zz!, tol: 2 }; });
+    const DUNGEON_OUT = [...DUNGEON_IN].reverse().slice(1).concat([{ x: 2763, z: 9104, tol: 1 }]);
     const toDungeon = async (label: string): Promise<void> => {
         if (inCell()) await knockout(`${label} jail`);
         if (z() < 6400 && z() > 2727) {
@@ -542,7 +547,7 @@ try {
             await walk(`${label} to dungeon ladder`, [{ x: 2763, z: 2704, tol: 1 }]);
             await locOp(`${label} dungeon down`, { x: 2763, z: 2703 }, /ladder/i, /climb/i, [], () => z() > 9000, 10);
         }
-        await walk(`${label} to zooknock`, [{ x: 2803, z: 9145, tol: 1 }]);
+        await walk(`${label} to zooknock`, DUNGEON_IN.slice(0, -1).concat([{ x: 2803, z: 9145, tol: 1 }]));
     };
     const ZOOKNOCK = { x: 2804, z: 9145 };
     const giveZooknock = async (label: string, id: number, ok: () => boolean): Promise<void> => {
@@ -589,32 +594,39 @@ try {
         await q.step(`wear ${label}`, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), () => !q.has(id), 4, 3);
     };
     const inAuntA = (x: number, zz: number): boolean => x >= 2740 && x <= 2746 && zz >= 2792 && zz <= 2798;
-    // The aunt calls guards on a human within 5 tiles of her when both stand inside her garden (2740-2746,2792-2798)
-    // or both outside it (mm_monkeys_aunt.rs2:5-30). The child (2743,2795) is in the garden, so the bot talks only while
-    // she is outside it.
-    const auntSafe = (): boolean => {
-        const a = q.npc(/monkey's aunt/i);
-        const p = q.pos();
-        if (!a || !p) return true;
-        const near5 = Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ)) <= 5;
-        if (!near5) return true;
-        if (inAuntA(a.x, a.z) !== inAuntA(p.worldX, p.worldZ)) return true;
-        // She in her house (2733-2739,2792-2794) and the bot outside 2732-2739,2789-2796 (mm_monkeys_aunt.rs2:19-21).
-        return a.x >= 2733 && a.x <= 2739 && a.z >= 2792 && a.z <= 2794 && !(p.worldX >= 2732 && p.worldX <= 2739 && p.worldZ >= 2789 && p.worldZ <= 2796);
-    };
-    // Steps across the garden edge (north, away from the house) until auntSafe holds.
-    const auntDodge = async (ticks: number): Promise<void> => {
-        for (let t = 0; t < ticks; t++) {
-            if (auntSafe()) return;
-            {
-                const p = q.pos()!;
-                const to = inAuntA(p.worldX, p.worldZ) ? { x: 2746, z: 2801 } : { x: 2745, z: 2796 };
-                await q.s.direct({ type: 'walkTo', x: to.x, z: to.z, running: true, reason: 'SDK' });
-            }
-            await q.waitTicks(1);
-        }
+    // The aunt calls guards on a human within 5 tiles when both stand inside her garden (2740-2746,2792-2798) or both
+    // outside it (mm_monkeys_aunt.rs2:5-30). She patrols (quest_mm.npc [mm_monkeys_aunt]): 2742,2794 (15 ticks),
+    // 2743,2792 (30) by the child, then south and round through her house (2733-2737) and back in from the west. So the
+    // bot is in the garden only while she is away from it (margin: 2737-2747,2791-2799) and waits at 2746,2800, outside
+    // it and more than 5 tiles from her route, while she is there. A tick hook pulls it out when she comes back.
+    const auntNear = (): boolean => { const a = q.npc(/monkey's aunt/i); return !!a && a.x >= 2737 && a.x <= 2747 && a.z >= 2791 && a.z <= 2799; };
+    const meInA = (): boolean => { const p = q.pos(); return !!p && inAuntA(p.worldX, p.worldZ); };
+    const OUTSIDE = { x: 2746, z: 2800 };
+    let auntWatch = false, auntExits = 0;
+    q.s.onTick(() => {
+        if (!auntWatch || !meInA() || !auntNear()) return;
+        auntExits++;
+        void q.s.direct({ type: 'walkTo', x: OUTSIDE.x, z: OUTSIDE.z, running: true, reason: 'SDK' });
+    });
+    const auntClear = async (max: number): Promise<void> => {
+        for (let t = 0; t < max && auntNear(); t++) await q.waitTicks(1);
     };
     const CHILD = { x: 2743, z: 2795 };
+    // A cutscene (quest_mm.rs2:279-360, 382-482, 510-637) advances one page per click; a page closed by anything else
+    // (an eat, a potion) leaves it waiting for the walktrigger, so a step to the next tile restarts it. Ends when the
+    // player is back outside the cutscene region.
+    const cutscene = async (inCut: () => boolean): Promise<void> => {
+        let shut = 0;
+        for (let t = 0; t < 600 && inCut(); t++) {
+            await q.guard('cutscene');
+            const d: any = q.s.sdk.getDialog();
+            shut = d?.isOpen ? 0 : shut + 1;
+            if (d?.isOpen && !d.isWaiting) void q.s.sdk.sendClickDialog(0);
+            if (shut >= 4) { const p = q.pos()!; shut = 0; void q.s.direct({ type: 'walkTo', x: p.worldX + 1, z: p.worldZ, running: false, reason: 'SDK' }); }
+            await q.waitTicks(1);
+        }
+        await shutDialog();
+    };
 
     // 110. Back to the landing (dungeon exit ladder 2763,9103), the second knockout and lock; the temple: its south
     // ladder (2794,2773) up, level 1 to 2806,2785, the east ladder top (2805,2785) drops on the trapdoor's access tile
@@ -626,7 +638,7 @@ try {
     if (FROM < 105) {
         want = 'auto';
         if (z() > 6400) {
-            await walk('to dungeon exit', [{ x: 2763, z: 9104, tol: 1 }]);
+            await walk('to dungeon exit', DUNGEON_OUT);
             await locOp('dungeon up', { x: 2763, z: 9103 }, /ladder/i, /climb/i, [], () => z() < 6400, 10);
         }
         await knockout('jail2');
@@ -654,7 +666,7 @@ try {
         await q.step('string amulet', () => q.useOnItem(ITEM.wool, ITEM.amuletUnstrung), () => q.has(ITEM.amulet), 6, 3);
         q.milestone(105);
     }
-    if (FROM < 110) {
+    if (FROM < 107) {
         want = PFM;
         // Out of the fire room through the warehouse cellar if the level-1 collision (the fire room and the cellar are
         // bridged tiles in m43_143) joins them: the client-routed walk to the eastern rope. Else the temple rope.
@@ -706,29 +718,37 @@ try {
         await locOp('temple down', { x: 2794, z: 2773 }, /ladder/i, /climb-down/i, [], () => level() === 0, 10);
         want = 'auto';
         await wear('amulet', ITEM.amulet);
-        q.milestone('amulet');
-        await walkAtoll('to child', [{ x: 2749, z: 2800, tol: 1 }, { x: 2746, z: 2801, tol: 1 }, { x: 2745, z: 2796, tol: 0 }]);
-        let gaveAt = -1;
-        for (let i = 0; i < 8 && q.has(ITEM.banana); i++) {
-            await q.guard('child');
-            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2749, z: 2800, tol: 1 }, { x: 2746, z: 2801, tol: 1 }, { x: 2745, z: 2796, tol: 0 }]); }
-            await auntDodge(30);
-            await talk1('child', /^monkey child$/i, [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana), 60, CHILD, 1, false);
-        }
-        if (q.has(ITEM.banana)) await q.fail('child: bananas');
-        gaveAt = q.T();
+        q.milestone(107);
+    }
+    if (FROM < 110) {
+        want = 'auto';
+        const toOutside = async (): Promise<void> => {
+            if (inCell()) await knockout('jail child');
+            if (!q.near(OUTSIDE.x, OUTSIDE.z, 1) && !meInA()) await walkAtoll('to garden', [{ x: 2749, z: 2800, tol: 1 }, { x: OUTSIDE.x, z: OUTSIDE.z, tol: 0 }]);
+        };
+        const childTalk = async (label: string, pats: RegExp[], ok: () => boolean, tries: number): Promise<void> => {
+            for (let i = 0; i < tries && !ok(); i++) {
+                await q.guard(label);
+                await toOutside();
+                await auntClear(150);
+                await talk1(label, /^monkey child$/i, pats, ok, 60, CHILD, 1, false);
+            }
+            if (!ok()) await q.fail(`${label}: not done`);
+        };
+        auntWatch = true;
+        await childTalk('child', [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana), 10);
+        const gaveAt = q.T();
         await converse1([], () => !q.dialogOpen(), 20);
         console.log(`NOTE bananas given at ${gaveAt}`);
-        while (q.T() - gaveAt < 100) { await q.guard('toy timer'); await auntDodge(3); await q.waitTicks(1); }
-        for (let i = 0; i < 4 && !q.has(ITEM.talisman); i++) {
-            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2749, z: 2800, tol: 1 }, { x: 2746, z: 2801, tol: 1 }, { x: 2745, z: 2796, tol: 0 }]); }
-            await auntDodge(30);
-            await talk1('child toy', /^monkey child$/i, [], () => q.has(ITEM.talisman), 40, CHILD, 1, false);
-        }
-        if (!q.has(ITEM.talisman)) await q.fail('child: no talisman');
+        await toOutside();
+        await q.waitUntil(() => q.T() - gaveAt >= 100, 110);
+        await childTalk('child toy', [], () => q.has(ITEM.talisman), 6);
         await converse1([], () => !q.dialogOpen(), 20);
+        auntWatch = false;
+        console.log(`NOTE child done auntExits=${auntExits}`);
         q.milestone('talisman');
         await toDungeon('zooknock2');
+        await topUp(26);   // an eat inside the cutscene closes its page
         await giveZooknock('talisman', ITEM.talisman, () => q.has(ITEM.greegree));
         // A hit closes his talisman pages before the spell; asking about the talisman runs the same check again
         // (mm_zooknock.rs2:282-284, both parts are already his).
@@ -737,7 +757,7 @@ try {
         // saved at its start (%mm_cutscene_coord).
         const inCut3 = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2624 && p.worldX < 2688 && p.worldZ >= 4544 && p.worldZ < 4608; };
         await q.waitUntil(() => inCut3(), 30);
-        await converse1([], () => !inCut3() && !q.dialogOpen(), 400);
+        await cutscene(inCut3);
         if (!q.has(ITEM.greegree) || inCut3()) await q.fail('chapter 3');
         await ms(110);
     }
@@ -770,6 +790,7 @@ try {
             await walk(`${label} to bridge ladder`, [{ x: 2803, z: 2735, tol: 1 }]);
             await locOp(`${label} bridge ladder`, { x: 2803, z: 2734 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
             await walk(`${label} bridge`, [{ x: 2803, z: 2728, tol: 0 }]);
+            if (greegree()) await unwearGreegree();   // "You do not want to do that as a monkey" (quest_mm.rs2:1036-1040)
             await locOp(`${label} jump`, { x: 2803, z: 2727 }, /end of bridge/i, /jump/i, [], () => level() === 0 && z() <= 2725, 10);
         }
     };
@@ -777,12 +798,14 @@ try {
     // mm_elder_guard_2 (2801,2757) talks; mm_elder_guard_1 (2798,2760) only growls. Both are "Elder Guard".
     const elder2 = (): any => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^elder guard$/i.test(n.name))
         .sort((a: any, b: any) => (Math.abs(a.x - ELDER.x) + Math.abs(a.z - ELDER.z)) - (Math.abs(b.x - ELDER.x) + Math.abs(b.z - ELDER.z)))[0];
-    const inThrone = (): boolean => q.near(2802, 2763, 4) && z() >= 2759;
+    // Awowogei's hall: 2800-2804,2759-2765; its door (2802,2759) opens south onto the elder guards.
+    const inThrone = (): boolean => q.near(2802, 2762, 3) && z() >= 2759;
     const throne = async (label: string, ok: () => boolean): Promise<void> => {
         await locOp(label, { x: 2802, z: 2765 }, /awowogei/i, /talk/i, [], ok, 80, 4, false);
     };
     const leaveThrone = async (): Promise<void> => {
         if (!inThrone()) return;
+        await q.dash('to hall door', 2802, 2759, 0, 10);
         await talk1('elder leave', elder2, [/leave now/i], () => !inThrone() && !q.dialogOpen(), 20, undefined, 3);
     };
     const inCage = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2598 && p.worldX <= 2606 && p.worldZ >= 3274 && p.worldZ <= 3282; };
@@ -805,11 +828,11 @@ try {
     // by the west tower ladder 2713,2766, quest_mm.rs2:803-808; he escorts the envoy to Awowogei, mm_kruk.rs2:10-25),
     // Awowogei's mission (mm_awowogei.rs2:63-92).
     if (FROM < 115) {
-        want = null;
+        want = 'auto';
         await wearGreegree('greegree');
         q.milestone('monkey');
         if (z() > 6400) {
-            await walk('to dungeon exit 2', [{ x: 2763, z: 9104, tol: 1 }]);
+            await walk('to dungeon exit 2', DUNGEON_OUT);
             await locOp('dungeon up 2', { x: 2763, z: 9103 }, /ladder/i, /climb/i, [], () => z() < 6400, 10);
         }
         await throughGate('gate1');
@@ -819,7 +842,11 @@ try {
         await talk1('elder kruk', elder2, [], () => q.sawText(/name of kruk/i) && !q.dialogOpen(), 30, ELDER);
         await walk('to west tower', [{ x: 2714, z: 2766, tol: 0 }]);
         await locOp('west tower up', { x: 2713, z: 2766 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
-        await talk1('kruk', /^kruk$/i, [], () => inThrone() && !q.dialogOpen(), 40, { x: 2722, z: 2766 });
+        // Kruk walks the closed yard east of the gate (2726-2732,2760-2769, level 0): over the bridge (level 2) and
+        // down the east tower (2729,2766, quest_mm.rs2:824-829).
+        await walk('tower bridge', [{ x: 2728, z: 2766, tol: 0 }]);
+        await locOp('east tower down', { x: 2729, z: 2766 }, /ladder/i, /climb/i, [], () => level() === 0, 10);
+        await talk1('kruk', /^kruk$/i, [], () => inThrone() && !q.dialogOpen(), 40, { x: 2728, z: 2765 });
         q.milestone('awowogei');
         await throne('awowogei mission', () => q.sawText(/with one of the captives/i) && !q.dialogOpen());
         await ms(115);
@@ -834,7 +861,7 @@ try {
     // the gate, the elder guard (Kruk has spoken: straight in, mm_elder_guard.rs2:30-41), Awowogei (:39-51), Garkor:
     // the chapter 4 cutscene (mm_garkor.rs2:128-138, quest_mm.rs2:211-256) and then the sigil (:25-47).
     if (FROM < 120) {
-        want = null;
+        want = 'auto';
         await leaveThrone();
         await toLanding('zoo');
         await talk1('lumdo out', /^lumdo$/i, [], () => (q.pos()?.worldX ?? 0) > 2880, 20, { x: 2803, z: 2707 });
@@ -842,7 +869,8 @@ try {
         await talk1('waydar home', /^waydar$/i, [/return to your kingdom/i], () => q.near(2393, 3466, 10), 40, { x: 2897, z: 2727 });
         await shutDialog();
         await spirit('stronghold tree', { x: 2461, z: 3444 }, [/where can i go/i, /battlefield of khazard/i], { x: 2555, z: 3259 });
-        await walk('to zoo', [{ x: 2603, z: 3272, tol: 2 }]);
+        // Round the locked door of the Khazard building (2567-2569,3237-3239) that the SDK plans through.
+        await walk('to zoo', [{ x: 2561, z: 3241, tol: 2 }, { x: 2566, z: 3232, tol: 2 }, { x: 2576, z: 3230, tol: 2 }, { x: 2581, z: 3248, tol: 2 }, { x: 2598, z: 3268, tol: 2 }, { x: 2603, z: 3272, tol: 2 }]);
         await wearGreegree('zoo greegree');
         const minder = (): any => q.npc(/^monkey minder$/i);
         await talk1('minder cage', minder, [], () => inCage() && !q.dialogOpen(), 40, { x: 2602, z: 3274 });
@@ -852,7 +880,11 @@ try {
         await unwearGreegree();
         await talk1('minder out', minder, [], () => !inCage() && !q.dialogOpen(), 40);
         q.milestone('zoo');
-        await walk('zoo to tree', [{ x: 2465, z: 3489, tol: 2 }]);
+        // The stronghold's south gate (gnome_areagate 190 at 2459,3383, gnome_gate.rs2) is not a door in the SDK
+        // collision, so the walk goes to it, through it by op, then north to the Grand Tree.
+        await walk('zoo to gate', [{ x: 2604, z: 3294, tol: 2 }, { x: 2593, z: 3306, tol: 2 }, { x: 2571, z: 3322, tol: 2 }, { x: 2559, z: 3337, tol: 2 }, { x: 2512, z: 3340, tol: 2 }, { x: 2482, z: 3358, tol: 2 }, { x: 2463, z: 3369, tol: 2 }, { x: 2461, z: 3381, tol: 1 }]);
+        await q.step('stronghold gate', () => q.opLoc(q.findLoc(l => /gate/i.test(l.name) && near3(l, { x: 2460, z: 3383 }, 2)) ?? { id: 190, x: 2459, z: 3383 }, 1), () => z() >= 3385, 10, 4);
+        await walk('gate to tree', [{ x: 2460, z: 3410, tol: 2 }, { x: 2460, z: 3443, tol: 2 }, { x: 2458, z: 3463, tol: 2 }, { x: 2465, z: 3489, tol: 2 }]);
         await enterTree();
         await treeTo(1);
         await talk1('daero hangar', /^daero$/i, [/^yes/i], () => z() > 4400 && level() === 0, 40, DAERO);
@@ -872,7 +904,7 @@ try {
         // The chapter 4 cutscene runs in 1_41_71 (2624-2687, 4544-4607, level 1) and returns to the saved coord.
         const inCut4 = (): boolean => { const p = q.pos(); return !!p && p.level === 1 && p.worldX >= 2624 && p.worldX < 2688 && p.worldZ >= 4544 && p.worldZ < 4608; };
         await talk1('garkor ch4', /^garkor$/i, [], () => inCut4(), 60, { x: 2805, z: 2762 });
-        await converse1([], () => !inCut4() && !q.dialogOpen(), 400);
+        await cutscene(inCut4);
         await talk1('garkor sigil', /^garkor$/i, [], () => q.has(ITEM.sigil) && !q.dialogOpen(), 60, { x: 2805, z: 2762 });
         // The fight gear back: the staff of fire (the greegree comes off with it) and the amulet of magic.
         await wear('staff', 1387);

@@ -1,6 +1,6 @@
 {
  "base": "https://rs-sdk-demo.fly.dev",
- "takenAt": "2026-10-23T18:56:05.864Z",
+ "takenAt": "2026-10-23T20:26:07.976Z",
  "boards": [
   {
    "board": "Overall",
@@ -1616,105 +1616,105 @@
     },
     {
      "rank": 5,
+     "name": "cairn_zezima",
+     "level": 99,
+     "ticks": 786
+    },
+    {
+     "rank": 6,
      "name": "stunfiremake",
      "level": 99,
      "ticks": 836
     },
     {
-     "rank": 6,
+     "rank": 7,
      "name": "jackalopefm2",
      "level": 99,
      "ticks": 937
     },
     {
-     "rank": 7,
+     "rank": 8,
      "name": "nickember",
      "level": 99,
      "ticks": 1382
     },
     {
-     "rank": 8,
+     "rank": 9,
      "name": "lachfire002",
      "level": 99,
      "ticks": 1676
     },
     {
-     "rank": 9,
+     "rank": 10,
      "name": "nickfm",
      "level": 99,
      "ticks": 1891
     },
     {
-     "rank": 10,
+     "rank": 11,
      "name": "lachfire001",
      "level": 99,
      "ticks": 3547
     },
     {
-     "rank": 11,
+     "rank": 12,
      "name": "nickoverall",
      "level": 99,
      "ticks": 8470
     },
     {
-     "rank": 12,
+     "rank": 13,
      "name": "nickmax",
      "level": 99,
      "ticks": 8494
     },
     {
-     "rank": 13,
+     "rank": 14,
      "name": "buttburnr",
      "level": 99,
      "ticks": 10199
     },
     {
-     "rank": 14,
+     "rank": 15,
      "name": "fm1stgo",
      "level": 99,
      "ticks": 12158
     },
     {
-     "rank": 15,
+     "rank": 16,
      "name": "buttfirer",
      "level": 99,
      "ticks": 12994
     },
     {
-     "rank": 16,
+     "rank": 17,
      "name": "stunlord",
      "level": 99,
      "ticks": 13997
     },
     {
-     "rank": 17,
+     "rank": 18,
      "name": "stunfast",
      "level": 99,
      "ticks": 15891
     },
     {
-     "rank": 18,
+     "rank": 19,
      "name": "stunbaron",
      "level": 99,
      "ticks": 17697
     },
     {
-     "rank": 19,
+     "rank": 20,
      "name": "stunhard",
      "level": 99,
      "ticks": 18156
     },
     {
-     "rank": 20,
+     "rank": 21,
      "name": "stunless",
      "level": 99,
      "ticks": 18358
-    },
-    {
-     "rank": 21,
-     "name": "stunking",
-     "level": 99,
-     "ticks": 18920
     }
    ]
   },

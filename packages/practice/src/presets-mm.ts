@@ -78,6 +78,22 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
             [4031, 1727], MM_PACK_LATE.concat([{ id: 2446, count: 1 }])),
         equipment: MM_WORN.map(e => e.slot === 2 ? { ...e, id: 4021 } : e),
     },
+    // Debug: outside the monkey child's garden (2746,2800) with the amulet of monkey speak worn and 5 bananas:
+    // MM_FROM=107.
+    quest_mm_s107: {
+        ...mmPreset({ x: 2746, z: 2800, level: 0 },
+            { 365: 3, 371: (1 << 7) | (1 << 8) | (1 << 9) | (1 << 11) | (1 << 13), 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2, zooknock: 5 }), 374: (2 << 2) | (5 << 12) },
+            [4020, 1727, 1963, 1963, 1963, 1963, 1963, 2446], MM_PACK_LATE),
+        equipment: MM_WORN.map(e => e.slot === 2 ? { ...e, id: 4021 } : e),
+    },
+    // Debug: in Awowogei's hall after his mission, as a monkey (%mm_garkor 4 seek_alliance; mm_monkeys: kruk 1,
+    // awowogei 1, child 7, elder guard 1); the greegree in the weapon slot, the staff in the pack: MM_FROM=115.
+    quest_mm_s115: {
+        ...mmPreset({ x: 2802, z: 2762, level: 0 },
+            { 365: 4, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 4, zooknock: 6 }), 373: 1 | (1 << 2) | (7 << 5) | (1 << 9), 374: 2 << 2 },
+            [1387, 1727], MM_PACK_LATE.concat([{ id: 2446, count: 1 }])),
+        equipment: MM_WORN.map(e => e.slot === 2 ? { ...e, id: 4021 } : e.slot === 3 ? { ...e, id: 4031 } : e),
+    },
     quest_mm_s40: mmPreset({ x: 2393, z: 9890, level: 0 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 5 }) }, [4004]),
 };
 
