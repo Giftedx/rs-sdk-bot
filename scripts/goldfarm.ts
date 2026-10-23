@@ -212,7 +212,9 @@ try {
                 // No safe tile (guards wander the market): pickpocket a knight close by instead of waiting.
                 if (opts.length === 0) {
                     const k = npcs.some(n => KNIGHT.test(n.name) && d({ x: n.x, z: n.z }, here) <= 6);
-                    if (k && hp() > DMG) { const k0 = s.tick(); await steal(6); stallPickTicks += s.tick() - k0; }
+                    // Keep two failed picks of margin: with no food, a pick at HP 4 left mmtha0205 at 1 and it died
+                    // (live 2026-10-23 09:05, after the shop and the stall both gave 0). The main loop's floor is 6 too.
+                    if (k && hp() > 2 * DMG) { const k0 = s.tick(); await steal(6); stallPickTicks += s.tick() - k0; }
                     else { idleTicks++; await waitTicks(s, 1); }
                     continue;
                 }
