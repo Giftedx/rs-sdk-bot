@@ -403,24 +403,81 @@ the previous activity to Dimintheis is not counted; the Al Kharid toll gate dial
 (a Prince Ali Rescue first makes the gate free); the perfect gold supply (Witchaven dungeon lever puzzle) is not
 scripted for a helper.
 
-## 1e. Tree Gnome Village, The Grand Tree, Monkey Madness: not run yet
+## 1e. Combat gates on the boss quests (CODE-READ)
 
-No script yet for these three rows (`tree`, `grandtree`, `rival-mm`); their ticks stay ESTIMATE. Code read for Tree
-Gnome Village (CODE-READ, `quests/quest_tree/scripts/*.rs2`, `areas/area_gnome/scripts/*.rs2`), for the next script:
+The planner places the boss quests while Haggis has Attack, Strength and Defence 1 and 10 Hitpoints. Every boss on
+the route attacks with melee. Protect from Melee (Prayer 43, `skill_prayer/configs/prayers.dbrow:121-127`) sets NPC
+melee damage to 0 (`skill_combat/scripts/npc/npc_combat_melee.rs2:44-45`). It drains 1 point per 5 ticks
+(`skill_prayer/scripts/prayer.rs2:164-174`, effect 12), so 43 points last 215 ticks. Fire Bolt (Magic 35, max hit 12,
+`skill_combat/configs/magic/magic_combat_spells.dbrow:134-143`) is the damage source. NPC max hit =
+((strength + 9) x (strength bonus + 64) + 320) / 640 (`npc_combat_melee.rs2:2-8`, `combat.rs2:7-12`).
 
-- The ballista (`catabow` op2) takes the fixed answer 0004, 0003, 0005 (height, x, y) at stage 4
-  (`quest_tree.rs2`). The three trackers only tell the player those numbers, so a script can skip them.
-- Stages: Bolren "Can I help at all?", "I would be glad to help." (1); Montai "Ok, I'll gather some wood." (2), then
-  6 logs (3), then "I'll try my best." (4); ballista (5); the crumbled wall `khazzacklowwall` and the chest
-  `chestopen_khazard` give the orb (6); Bolren "I will find the warlord..." (7); the Khazard warlord's death gives the
-  orbs (8); Bolren queues the completion (286,250 Attack at 25x, 2 QP). Elkoy (2504,3191 outside, 2514,3159 inside)
-  takes the player through the maze with "Yes please." (`p_telejump`).
-- The combat problem is the same as for Family Crest. In the floor order (2026-10-23, after the crest gate) `tree`
-  runs at tick 4,126 with Attack, Strength and Defence 1, 10 Hitpoints, Magic 43 and Prayer 31. The Khazard warlord
-  has 170 hitpoints, attack 75, strength 78 (`gnome_battlefield.npc`), and the Khazard commander (48) attacks at the
-  chest. The rival's 665-tick floor uses Fire Blast under Protect from Melee (Magic 59, Prayer 43), which the plan
-  does not have at that point. A safespot for Fire Bolt at Magic 43 is not found yet (the warlord's pen,
-  2440-2458,3285-3304, has a 2-tile wall on its east side at x 2459-2460 in the SDK collision map; not tested).
+| Row | Gate (`minLevel`) | Boss and evidence |
+|---|---|---|
+| `tree` | prayer 43, magic 35 | Khazard warlord: attack 75, strength 78, 170 HP, crush, max hit 9 (`quest_tree/configs/gnome_battlefield.npc:103-108`); commander 50/45, stab (`:114-145`); troopers melee |
+| `grandtree` | agility 25, prayer 43, magic 35 | black demon from Glough (`quest_grandtree/scripts/glough.rs2:119`): attack 145, strength 148, 157 HP, slash, max hit 16 (`quest_grandtree/configs/quest_grandtree.npc:190-216`) |
+| `rival-fight-arena` | prayer 43, magic 35 | ogre 60 HP, scorpion 40, Bouncer 116, General Khazard 170, all melee (`quest_arena/configs/quest_arena.npc`); about 386 HP = about 72 bolts (360 ticks) against 215 ticks of prayer: 2 prayer potions (ESTIMATE) |
+| `rival-mm` | prayer 43 | jungle demon 170 attack, strength, magic, 170 HP; waves with max hit 31, 0 under Protect from Magic (Prayer 37) (`quest_mm/scripts/mm_demon.rs2:349-353`); melee only within 2 tiles (`mm_demon.rs2:332-336`). Ape Atoll guards and the damage source are not read |
+| `crest` | magic 59, prayer 43 | Chronozon: attack 173, strength 172, slash (`quest_crest/configs/quest_crest.npc:45-52`); the MEASURED proof ran at Hitpoints 97, not under the prayer |
+| `merlin` | prayer 43 | Sir Mordred: 33/33, 38 HP, slash, max hit 4 (`quest_arthur/configs/keep_le_faye.npc:77-87`) |
+| `grail` | attack 20, prayer 43 | Black Knight Titan: 91/100, 142 HP, crush, max hit 11 (`quest_grail/configs/fisher_realm.npc:293-308`) |
+| `dragon` | prayer 43 | Elvarg: 70/70, 120 HP, slash, attack range 8 (`quest_dragon/configs/quest_dragon.npc:15-29`); the dragonfire needs the anti-dragon shield |
+
+New train row `prayer-43` (bury dragon bones to 43, rates of `prayer-31`). Train rows only reorder XP, so the cost
+is small. The field `minLevelSource` in `haggis-boards.json` holds each gate's evidence. `Witch's House` (the
+experiment) is not read yet.
+
+Overall finish, scenario a, `research/hiscores-live.json`:
+
+| Model | Overall floor | Overall realistic |
+|---|---|---|
+| Before (crest gate only) | 39,229 | 46,673 |
+| Combat gates and `prayer-43` (commit 53a17eb) | 39,243 | 46,690 |
+| Gates and Tree Gnome Village MEASURED (782 / 829) | 39,360 | 46,019 |
+
+The floor rises because the old `tree` floor was the rival's 938 (and 665 with the `rival-grandtree-agility`
+lever), both UNVERIFIED; the realistic finish drops 671 ticks against the old 1,500 ESTIMATE.
+
+## 1f. Measured: Tree Gnome Village (the `tree` row)
+
+Script `scripts/generated/quest-tree.ts`, preset `quest_tree` (beside King Bolren, 2542,3171). The preset is the
+planner state at the row: Attack, Strength, Defence 1, 10 Hitpoints, Magic 43, Prayer 43; staff of fire, 80 chaos and
+240 air runes (Fire Bolt), 6 logs, 2 prayer potions, 4 lobsters. Practice server, one bot at a time.
+
+3/3 PASS (MEASURED practice, 2026-10-23):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | HP min | Potions |
+|---|---|---|---|---|---|
+| 1 | `RESULT ok qp=2 amulet=true questMsg=true potions=2 prayerLeft=13 xp=attack=286250,hitpoints=5660,magic=23737 at=2542,3170,0 ticks=782 hpMin=10 eats=0 walkTicks=325 retries=3 died=false` | 782 | 117 (14.9%) | 10 | 2 |
+| 2 | `RESULT ok qp=2 amulet=true questMsg=true potions=2 prayerLeft=8 xp=attack=286250,hitpoints=5692,magic=26600 at=2542,3170,0 ticks=810 hpMin=10 eats=0 walkTicks=326 retries=3 died=false` | 810 | 131 (16.1%) | 10 | 2 |
+| 3 | `RESULT ok qp=2 amulet=true questMsg=true potions=2 prayerLeft=4 xp=attack=286250,hitpoints=5697,magic=28287 at=2542,3170,0 ticks=829 hpMin=10 eats=0 walkTicks=326 retries=3 died=false` | 829 | 138 (16.6%) | 10 | 2 |
+
+Every run ends with `Congratulations! Quest complete!`, the gnome amulet and 286,250 Attack (`quest_tree.rs2:98`).
+No damage in any run (HP min 10). Planned: 938 / 1,500 (ESTIMATE); measured 782-829.
+
+Route (run 1, MILESTONE ticks): Bolren 0-42 (Elkoy then puts the player outside the maze); Montai, logs, trackers
+42-116; ballista 116-137; crumbled wall 137-187; ladder, chest, orb 187-229; door out, Elkoy, railing, Bolren
+229-363; battlefield, warlord 363-617; Elkoy, railing, Bolren, completion 617-782.
+
+Findings:
+
+- The ballista takes 0004, 0003, 0005 at stage 4 with no tracker talk (`quest_tree.rs2:10-24`). Ballista loc 2181 at
+  2508,3210 (`maps/m39_50.jm2`).
+- The orb chest is on level 1 (2506,3259). From the crumbled wall the way up is a diagonal door (loc 1530 at
+  2505,3256) and the ladder at 2503,3252. The way out is the stronghold door at 2502,3250, which opens only from the
+  north side; on the door tile the player is already outside.
+- Elkoy drops the player at 2515,3159, south of the village fence. The SDK route from there ends at a fenced dead end
+  (2544,3174). The loose railing (loc 2186 at 2515,3161, `gnomevillage_fence.rs2`) is the way in.
+- A level-up page blocks the cast. With casts at fixed 5-tick slots a test fight took about 500 ticks and ran out of
+  prayer; with the cast sent the tick after the page closes, the battlefield leg (walk and fight, milestones 7 to 8)
+  takes 254-300 ticks.
+- A trooper hit the bot (10 to 8 HP) at 2468,3270 in a test run with the prayer off, so the prayer goes on before
+  the walk through the battlefield. Montai's catapult hits 0-3 near 2524,3238 (`commander_montai.rs2:74-90`); the
+  route stays west of it.
+- Prayer is the margin: 4-13 points were left. A third potion would remove the risk (not run).
+
+Still open: The Grand Tree and Monkey Madness have no script (`grandtree`, `rival-mm` stay ESTIMATE); the walk to
+Bolren is not counted.
 
 ## 2. Combat boards: what quests give and what the leaders need
 
@@ -458,7 +515,7 @@ QP, and the QP deadline (921,761) is far away.
 | # | Quest | Requirements (rev 289 gate, else OSRS guide) | Helper supplies | Reward at 25x | Ticks | Danger |
 |---|---|---|---|---|---|---|
 | 1 | Waterfall Quest | none | 2 ropes, 6 air + 6 earth + 6 water runes, 18 lobsters | 343,750 Attack, 343,750 Strength, 1 QP | 1,160-1,164 MEASURED practice, 3 runs (preset start at Almera; travel from Lumbridge not counted); rival live 979 UNVERIFIED | south falls room: shadow spiders, skeletons (chip damage); fire giants (max 11) if no spider shield; Glarial's tomb skeletons (one earlier run died at the tomb ladder) |
-| 2 | Tree Gnome Village | none (OSRS) | 6 normal logs (Commander Montai), food | 286,250 Attack, 2 QP | 1,200 ESTIMATE; rival live 938 UNVERIFIED (maze, 3 trackers, ballista, fortress) | Khazard warlord (level 112) fight for the orb; Khazard troopers in the fortress |
+| 2 | Tree Gnome Village | Prayer 43 + Magic 35 (combat gate, section 1e) | 6 normal logs (Commander Montai), Fire Bolt runes, staff of fire, 2 prayer potions | 286,250 Attack, 2 QP | 782-829 MEASURED practice, 3 runs (section 1f) | Khazard warlord (level 112) fight for the orb; Khazard troopers in the fortress |
 | 3 | Fight Arena | none (OSRS) | Khazard armour is in the quest; food, a weapon | 304,375 Attack, 54,375 Thieving, 2 QP | 1,300 ESTIMATE | four arena fights: Khazard ogre (63), scorpion (44), Bouncer (137), General Khazard (112); needs HP above 10 or a safespot |
 | 4 | Vampire Slayer | none | garlic, hammer, beer (Dr Harlow), food | 120,625 Attack, 3 QP | 500 ESTIMATE | Count Draynor (34) |
 | 5 | Witch's House | none | cheese, leather gloves, food | 158,125 Hitpoints, 4 QP | 600 ESTIMATE | the experiment (4 forms) |

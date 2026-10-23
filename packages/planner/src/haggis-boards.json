@@ -1763,10 +1763,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 938,
-    "realistic": 1500,
-    "evidence": "ESTIMATE",
-    "source": "floor = rival live leg 938 ticks, research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED); realistic is our ESTIMATE; not measured by us"
+    "floor": 782,
+    "realistic": 829,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1e: scripts/generated/quest-tree.ts, preset quest_tree (beside King Bolren; Attack, Strength, Defence 1, 10 HP, Magic 43, Prayer 43; staff of fire, Fire Bolt runes, 6 logs, 2 prayer potions), practice, 3/3 PASS at 782, 810, 829 ticks (floor = best run, realistic = worst run); Protect from Melee on near the troopers, the commander and the warlord, HP min 10 in every run; Bolren to Bolren, the walk to Bolren not counted"
    },
    "lump": true,
    "xp": {
@@ -1776,8 +1776,8 @@
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "XP: quest_tree.rs2:98 (CODE-READ); time not measured",
+   "evidence": "MEASURED",
+   "source": "XP: quest_tree.rs2:98 stat_advance(attack, 114500) = 286,250 at 25x, measured 286,250 per run; ticks research/quest-plan.md section 1e: scripts/generated/quest-tree.ts, preset quest_tree (beside King Bolren; Attack, Strength, Defence 1, 10 HP, Magic 43, Prayer 43; staff of fire, Fire Bolt runes, 6 logs, 2 prayer potions), practice, 3/3 PASS at 782, 810, 829 ticks (floor = best run, realistic = worst run); Protect from Melee on near the troopers, the commander and the warlord, HP min 10 in every run; Bolren to Bolren, the walk to Bolren not counted",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -1791,10 +1791,10 @@
      "lever": "rival-grandtree-agility",
      "set": {
       "ticks": {
-       "floor": 665,
-       "realistic": 1500,
-       "evidence": "ESTIMATE",
-       "source": "floor = rival fastest burst run 665 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S10b, Fire Blast under Protect from Melee); realistic is our earlier ESTIMATE"
+       "floor": 782,
+       "realistic": 829,
+       "evidence": "MEASURED",
+       "source": "research/quest-plan.md section 1e: scripts/generated/quest-tree.ts, preset quest_tree (beside King Bolren; Attack, Strength, Defence 1, 10 HP, Magic 43, Prayer 43; staff of fire, Fire Bolt runes, 6 logs, 2 prayer potions), practice, 3/3 PASS at 782, 810, 829 ticks (floor = best run, realistic = worst run); Protect from Melee on near the troopers, the commander and the warlord, HP min 10 in every run; Bolren to Bolren, the walk to Bolren not counted; the rival burst run (665, Fire Blast under Protect from Melee, bleugreen/rs-sdk@3bd2ab0a RUN-ORDER.md S10b) is not measured by us"
       }
      }
     }
