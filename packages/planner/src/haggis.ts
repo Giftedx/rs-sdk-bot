@@ -545,8 +545,20 @@ export const LEVERS: { id: string; owner: boolean; label: string }[] = [
     { id: 'cannon-melee', owner: false, label: 'Cannon fires for Ranged XP during every melee top-up' },
     { id: 'stun-guests', owner: false, label: 'Prayer and Magic inside the pickpocket stuns' },
     { id: 'flinch-gather', owner: false, label: '2-tick flinch woodcutting and fishing (tick manipulation, UNVERIFIED live)' },
-    { id: 'charge-spam', owner: true, label: 'Charge spell 80 -> 99, no delay, no recast check' },
+    // Owner rule: accepted mechanics yes, content bugs no. charge.rs2 has no p_delay (5 casts a tick) and no "2005"
+    // note for that, so it counts as a content bug (research/rival-gap-list.md); kept here only to show its size.
+    { id: 'charge-spam', owner: true, label: 'Charge spell 80 -> 99, no delay, no recast check (content bug: OUT)' },
     { id: 'wild-iron', owner: true, label: '5-rock Wilderness iron spot (PvP risk)' },
+    // Rival techniques, priced from bleugreen/rs-sdk@3bd2ab0a (ESTIMATE until we measure them; research/rival-gap-list.md).
+    { id: 'rival-knife-mine', owner: false, label: 'Knife-starter mining, Ardougne zoo iron rotation' },
+    { id: 'rival-altar-room-rc', owner: false, label: '7-tick altar-room runecraft cycle with givers' },
+    { id: 'rival-dialogue-burst', owner: false, label: 'Dialogue bursts (several continue clicks in one tick)' },
+    { id: 'rival-grandtree-agility', owner: false, label: 'Grand Tree first, then agility laps' },
+    { id: 'rival-bury-in-knife-wc', owner: false, label: 'Bury bones inside the knife woodcutting loop' },
+    { id: 'rival-agility-lap', owner: false, label: '66-74 tick agility laps' },
+    { id: 'rival-stun-pack', owner: false, label: 'Stun pack: skill actions inside pickpocket stuns' },
+    { id: 'rival-monkey-madness', owner: false, label: 'Monkey Madness before melee and thieving' },
+    { id: 'rival-sea-slug', owner: false, label: 'Sea Slug for early Fishing' },
 ];
 export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
     { id: 'a', label: 'No unapproved tricks', tricks: [] },
