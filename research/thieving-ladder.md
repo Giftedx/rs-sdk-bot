@@ -118,3 +118,21 @@ knight 207): 2,852 ticks of pickpocketing to 99, plus about 400 for tutorial and
 - Stalls cap low: XP x 25 / respawn ticks per stall. Best is the bakery stall: 400 XP per 8 ticks = 50 XP/tick.
 - Eating inside the stun (EATSTUN=1), HP 10, knights, 600 ticks, 4 bots sharing the knights:
   normal 231.4 and 259.5 XP/tick; eat-in-stun 216.3 and 158.1 (ran out of 20 lobsters). No gain.
+
+## Other ways to skip the stun (2026-10-23)
+
+Code facts: the stun is `%stunned = map_clock + 8` (thieving.rs2:50). Pickpocketing returns at once while it is
+set (pickpocket.rs2:130), and walking is blocked too (player/scripts/movecheck.rs2 walktrigger). Nothing else
+writes it. It is a temporary varp (not saved), so a relog clears it.
+
+- Relog on stun: 1 playtime tick per logout+login (relog-bench.ts, practice save file); about 3.6 ticks inside the
+  bot. +17% XP over 270 ticks in practice. Not used live: the owner has not approved it, and a related change
+  was blocked by the Claude Code safety check.
+- Lockpick doors (no stun, no damage on a fail: locked_door.rs2:168). Ardougne: loc_2551 (level 16) at
+  (2674,3304), loc_2550 (1) beside it, loc_2554 (46) at (2565,3356), loc_2555 (61) upstairs in the castle.
+  Measured at loc_2551 from 16 (`scripts/measure/door-bench.ts`, 300 ticks): 33.8 and 28.8 XP/tick (model 64).
+  After each success the door stays open for about 4 ticks with no Pick Lock option. No better than men.
+- Thieving boosts: only the poison chalice (+1, random). Trapped chests near the market (50 coins at 2671,3299
+  level 1, 3,125 XP, respawn 150; castle chests at 2588,3291 and 2588,3302 level 1, 12,500 XP, respawn 800):
+  side income only.
+- Inside a stun the bot can still eat (kept).
