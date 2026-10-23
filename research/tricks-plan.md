@@ -7,7 +7,7 @@ the code, not measured; **no** = does not work here.
 | Trick | Status | Evidence | Use |
 |---|---|---|---|
 | 3-tick gathering: knife on a log + "Make 1" + click the resource, all in one tick | **proven** for woodcutting: +29% (oaks, 3 runs each: 55.9/49.8/61.4 vs 42.6/42.4/44.5 XP/tick). No log used | `scripts/measure/wc-3tick.ts`; delay set at `skill_fletching/scripts/cut_logs.rs2:83`, log removed only in the queue | Woodcutting board (leader 3,329; model 3,852 x 0.75 = about 2,900). Next: fishing (5-6 -> 3 ticks), mining below rune |
-| 3-tick fly fishing (Lure, knife on log, Make 1, all one tick) | **measured** about +29%: normal 107.0/67.5/106.3, 3-tick 119.2/105.1/139.9 XP/tick (Lumbridge river, from Fishing 20, 300 ticks). 1-2 logs used per 300 ticks (missed clicks let the fletch finish) | `scripts/measure/fish-3tick.ts`; `freshfish.rs2:37-50` | Fishing board (leader 3,425). Net spots: plain and hidden-op clicks both failed on the Draynor net spot (0 XP); not understood yet |
+| 3-tick fly fishing (Lure, knife on log, Make 1, all one tick) | **measured** about +29%: normal 107.0/67.5/106.3, 3-tick 119.2/105.1/139.9 XP/tick (Lumbridge river, from Fishing 20, 300 ticks). 1-2 logs used per 300 ticks (missed clicks let the fletch finish) | `scripts/measure/fish-3tick.ts`; `freshfish.rs2:37-50` | Fishing board (leader 3,425). Net spots: a single direct Net click catches (shrimp in about 15 ticks), but the level-up dialog then stops the fishing chain; bot.interactNpc to a water spot can freeze the process (like mineRock). The knife-on-log setter cannot speed nets: attempt_fish_shrimp has no branch for clock + 2 |
 | The 3 messages must go in one tick | **proven** | shim queue spreads SDK actions over ticks (`packages/core/src/inprocess.ts` pump); `s.direct` gives 3 in one tick | Every tick trick uses `s.direct` |
 | Instant item-on-item, 5 per tick | code | herblore, bow stringing, arrows/darts (15 per action), gem cutting have no delay (`skill_fletching/scripts/arrows.rs2:68-86` and others) | Fletching, Herblore, Crafting boards; supply is the limit |
 | Prayer flicking | code | 5-tick drain timer, cleared when all prayers go off (`skill_prayer/scripts/prayer.rs2:30-43,163`) | Combat accounts: free protection prayers |
@@ -21,3 +21,10 @@ the code, not measured; **no** = does not work here.
 | Lockpick doors (no stun) | measured, no gain | 29-34 XP/tick at 16-36 (`scripts/measure/door-bench.ts`) | none |
 | Relog clears the stun; offline waits are free | measured (practice) | 1 playtime tick per relog; +17% thieving | **Not used live**: not approved by the owner |
 | Attack-delay reset, agility skips, cooking/smithing speed-ups | **no** | fixed `p_delay` / `%action_delay` | none |
+
+## Level-up dialogs
+
+At 25x an account levels every few actions. A level-up dialog stops skilling chains that queue their own next step
+(seen: net fishing stopped for 25+ ticks after "Congratulations, you just advanced a fishing level"). Item-on-item
+actions close it (OpHeldUHandler -> clearPendingAction closes the modal), so tick-trick loops clear level-ups for free.
+Non-trick loops must click through or close the dialog at once.
