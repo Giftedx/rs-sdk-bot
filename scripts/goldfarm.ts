@@ -109,11 +109,13 @@ try {
         items.sort((a, b) => rank(a) - rank(b));
         const big = items.find(i => LOBSTER.test(i.name));
         const pick = maxHp() - hp() >= 12 && big ? big : items[0];
-        if (!pick) return false;
+        // Every failure waits a tick: callers loop on "HP low and food() > 0", and an instant false return spun the
+        // event loop forever (practice proof hung at t=1003 and grew to 2.6 GB on 2026-10-23).
+        if (!pick) { lastFail = 'eat: no edible item'; await waitTicks(s, 1); return false; }
         const r = await s.bot.eatFood(pick);
         eatTicks += s.tick() - e0;
         if (r.success) eaten++;
-        else lastFail = `eat:${r.message}`;
+        else { lastFail = `eat:${r.message}`; if (s.tick() === e0) await waitTicks(s, 1); }
         return r.success;
     };
 
