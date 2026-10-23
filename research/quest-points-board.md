@@ -483,7 +483,8 @@ Findings:
 - 680 of the about 890 ticks are walks: the Falador-Thurgo leg three times. No teleport lands nearer to Thurgo.
 - Helper items: redberry pie, 2 iron bars, rune pickaxe, Varrock and two Falador teleport runes (all tradeable).
 
-Next medium quest: Priest in Peril (`quests/quest_priestperil`; it opens Morytania for Nature Spirit, Haunted Mineand Shades of Mort'ton). Not started: no script and no preset yet.
+Next medium quest: Priest in Peril (`quests/quest_priestperil`; it opens Morytania for Nature Spirit, Haunted Mine and Shades of Mort'ton). Not started: no script and no preset yet.
+
 ### Plague City
 
 `RESULT ok qp=1 xp=mining=60625 ... ticks=780 ... walkTicks=227 retries=3 died=false` (runs: 780, 784, 749 ticks; a
