@@ -721,7 +721,8 @@ export const LEVERS: { id: string; owner: boolean; label: string; retired?: bool
     { id: 'rival-dialogue-burst', owner: false, label: 'Dialogue bursts (several continue clicks in one tick)' },
     { id: 'rival-grandtree-agility', owner: false, label: 'Grand Tree first, then agility laps' },
     { id: 'rival-bury-in-knife-wc', owner: false, label: 'Bury bones inside the knife woodcutting loop' },
-    { id: 'rival-agility-lap', owner: false, label: '66-74 tick agility laps' },
+    // Retired 2026-10-23: our measured laps (research/agility.md) replace the rival's estimate.
+    { id: 'rival-agility-lap', owner: false, retired: true, label: '66-74 tick agility laps (RETIRED: measured rates used)' },
     { id: 'rival-stun-pack', owner: false, label: 'Stun pack: skill actions inside pickpocket stuns' },
     { id: 'rival-monkey-madness', owner: false, label: 'Monkey Madness before melee and thieving' },
     { id: 'rival-sea-slug', owner: false, label: 'Sea Slug for early Fishing' },
