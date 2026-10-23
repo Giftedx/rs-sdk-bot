@@ -75,6 +75,9 @@ export const PRESETS: Record<string, SaveConfig> = {
     resume_ardougne: { position: { x: 2657, z: 3313, level: 0 }, skills: { Thieving: 66 }, coins: 2000 },
     // Lockpick door test: Thieving 16 beside loc_2551 (2674,3304), east of the Ardougne market.
     door_2551: { position: { x: 2675, z: 3304, level: 0 }, skills: { Thieving: 16 } },
+    // Waterfall Quest test: next to Almera at Baxtorian Falls (2521,3495), 10 HP, 2 ropes (954), 6 each of air (556),
+    // earth (557) and water (555) runes, 10 lobsters (379), 500 coins.
+    quest_waterfall: { position: { x: 2522, z: 3494, level: 0 }, coins: 500, inventory: [{ id: 954, count: 1 }, { id: 954, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 10 }, () => ({ id: 379, count: 1 }))] },
     // Runecraft: inside the air altar (runecraft_table enter_coord 2841,4830,0), air talisman (1438), 27 rune essence (1436).
     rc_air_inside: { position: { x: 2841, z: 4830, level: 0 }, inventory: [{ id: 1438, count: 1 }, ...Array.from({ length: 27 }, () => ({ id: 1436, count: 1 }))] },
     // Thieving specialist trip: a fresh account (10 HP, no gear) with 60 coins for two 30-coin boat fares.
