@@ -80,6 +80,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     quest_waterfall: { position: { x: 2522, z: 3494, level: 0 }, coins: 500, inventory: [{ id: 954, count: 1 }, { id: 954, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 10 }, () => ({ id: 379, count: 1 }))] },
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
+    // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).
+    courier_ardougne: { position: { x: 2655, z: 3304, level: 0 }, coins: 20000 },
     // Runecraft: inside the air altar (runecraft_table enter_coord 2841,4830,0), air talisman (1438), 27 rune essence (1436).
     rc_air_inside: { position: { x: 2841, z: 4830, level: 0 }, inventory: [{ id: 1438, count: 1 }, ...Array.from({ length: 27 }, () => ({ id: 1436, count: 1 }))] },
     // Thieving specialist trip: a fresh account (10 HP, no gear) with 60 coins for two 30-coin boat fares.
