@@ -12,7 +12,6 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 
 import { join, resolve } from 'node:path';
 import { cpus, freemem, totalmem } from 'node:os';
 import { xpForLevel } from '../planner/src/curve';
-import { parseBoard } from '../planner/src/scout';
 
 const root = resolve(import.meta.dir, '..', '..');
 const practice = join(root, '.practice');
@@ -310,6 +309,16 @@ function rankDelta(name: string, board: string) {
 const CATEGORY: Record<string, number> = { Overall: 0, 'Quest Points': 100 };
 ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', null, null, 'Runecraft']
     .forEach((b, i) => { if (b) CATEGORY[b] = i + 1; });
+// Same page shape as packages/planner/src/scout.ts parseBoard, but the time title now reads
+// "2,935 ticks normalized to 400 ms per tick", which that parser's `ticks"` pattern misses.
+function parseBoard(html: string): { rank: number; name: string; level: number; ticks: number }[] {
+    const names = [...html.matchAll(/href="\/hiscores\/player\/([^"?]+)\?[^"]*"[^>]*>([^<]*)<\/a><br>/g)].map(m => decodeURIComponent(m[1]!));
+    const ticks = [...html.matchAll(/title="([\d,]+) ticks\b/g)].map(m => Number(m[1]!.replace(/,/g, '')));
+    const nums = [...html.matchAll(/(?:^|>)\s*([\d,]+)<br>/gm)].map(m => Number(m[1]!.replace(/,/g, '')));
+    const n = names.length;
+    if (ticks.length < n || nums.length < 2 * n) return [];
+    return names.map((name, i) => ({ rank: nums[i]!, name, level: nums[n + i]!, ticks: ticks[i]! }));
+}
 const liveTop = new Map<string, { name: string; level: number; ticks: number; at: number }>();
 async function refreshLiveTops() {
     for (const b of SKILL_BOARDS) {
@@ -529,9 +538,12 @@ function haggisPlan() {
 }
 
 // ---------- alerts ----------
-type Alert = { at: number; name: string; kind: 'death' | 'stuck' | 'idle' | 'logout'; text: string };
+type Alert = { at: number; name: string; kind: 'death' | 'stuck' | 'idle' | 'logout'; text: string; practice?: boolean };
+// Practice bots: every status file that ever named a localhost server, including ones too old for the roster.
+const practiceNames = () => new Set([...statusCache.values()].filter(c => /^localhost/.test(c.doc.server)).map(c => c.doc.name));
 function alerts(bots: any[], now: number): Alert[] {
     const out: Alert[] = [];
+    const prac = practiceNames();
     for (const r of results) if (now - r.at < 12 * 3_600_000 && died(r.text)) out.push({ at: r.at, name: r.name, kind: 'death', text: (r.text.match(/died[^=]\S*(?: \S+){0,4}/)?.[0] ?? 'died').slice(0, 60) });
     for (const r of results) if (now - r.at < 86_400_000 && /logout\s*(fail|timeout|stuck)|logoutFail\w*=[1-9]/i.test(r.text)) out.push({ at: r.at, name: r.name, kind: 'logout', text: 'logout failed' });
     for (const b of bots) {
@@ -548,8 +560,10 @@ function alerts(bots: any[], now: number): Alert[] {
             if (/logout fail/i.test(b.phase ?? '')) out.push({ at: b.at, name: b.name, kind: 'logout', text: b.phase });
         }
     }
+    // Live accounts first; practice alerts only for the last hour.
+    for (const a of out) a.practice = prac.has(a.name);
     const seen = new Set<string>();
-    return out.sort((a, b) => b.at - a.at).filter(a => { const k = a.name + a.kind + a.text; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 30);
+    return out.filter(a => !a.practice || now - a.at < 3_600_000).sort((a, b) => Number(!!a.practice) - Number(!!b.practice) || b.at - a.at).filter(a => { const k = a.name + a.kind + a.text; if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 30);
 }
 
 // ---------- state ----------
@@ -617,7 +631,7 @@ function buildState() {
         // close: 1 = level with #1 or faster, toward 0 = far behind (levels, then time).
         const gap = best && top ? (best.level >= top.level
             ? { kind: 'time', ahead: ours! <= top.ticks, text: fmtTicks(Math.abs(top.ticks - ours!)), close: Math.min(1, top.ticks / Math.max(1, ours!)) }
-            : { kind: 'level', ahead: false, text: `${top.level - best.level} lvl`, close: Math.max(0, best.level / top.level) * 0.8 }) : null;
+            : { kind: 'level', ahead: false, text: `-${top.level - best.level} lvl`, close: Math.max(0, best.level / top.level) * 0.8 }) : null;
         return { board: b, top: top ? { name: top.name, level: top.level, time: fmtTicks(top.ticks), ticks: top.ticks, live: top.live, at: top.at } : null, best, gap, kind: 'skill' };
     }), ...EXTRA.map(e => {
         const t = extraTop.get(e.board);
@@ -634,7 +648,7 @@ function buildState() {
     };
     return {
         now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards, events: events.slice(0, 120),
-        results: results.slice(0, 60), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), haggis: haggisPlan(),
+        results: results.slice(0, 60), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
