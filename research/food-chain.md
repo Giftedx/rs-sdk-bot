@@ -198,3 +198,11 @@ events, a live run of any part.
 - Bigpackage `foodcourier.ts`: `RESULT ok ticks=741 received=9 ... coins=5 ... feathersBought=260 ... hpMin=9 died=false`. The round trip took 741 ticks. `FEATHERS=300` spent 1,500 of its 1,505 coins. Later trips must use `FEATHERS=0`.
 - Pocketrocket `goldfarm.ts` with `FOOD_FROM=Bigpackage FOOD_ONLY_TRADE=1`: `TRADE max_trades Completed 1 trade(s) ... notes=9` at t=90 (from `give-to-banker.ts` with `GIVE=Trout:2,Salmon:7`).
 - The first trip carried only 9 fish because Mightyrod had cooked only 9 by then. The next trip waits for a full load.
+
+## Live run 2 (2026-10-23)
+
+- Trip 2 failed first: `RESULT fail needs 120 coins for four boat fares` (coins=5 after trip 1's feathers). Fix 84b83ab: the courier takes 500 coins from its bank when the pack has fewer than 120. mmtha0205 gave 1,000 coins through `banker.ts Bigpackage`.
+- Courier: `RESULT ok ticks=984 received=129 ... coins=380 walkTicks=445 boatTicks=114 waitTicks=418`. It waited 418 ticks at Draynor for Mightyrod's fish.
+- Mightyrod: `BANK pack=7 banked=138 bankFish=129 t=3553`, then `MILESTONE gave 58 Trout, 71 Salmon t=3582`. Cooking 1 to 80 in 3,455 ticks.
+- Pocketrocket: `TRADE max_trades Completed 1 trade(s) (1 session(s)) notes=129 bigFood=1 t=2999`. It waited 155 ticks with 1 food.
+- Eat rate: Pocketrocket ate 15 food in its first 2,000 ticks (7.5 per 1,000 ticks). 129 fish last about 17,000 ticks.
