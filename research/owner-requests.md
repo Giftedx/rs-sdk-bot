@@ -37,7 +37,7 @@ These rules apply to all work. They are not tasks to tick off.
 
 | # | Date | Request (owner's words, short) | Status | Evidence | Next action |
 |---|---|---|---|---|---|
-| 1 | 10-23 03:58, 04:03 | Haggis rank 1 on all 24 boards in one run; "every detail and every action DIALED IN to be PERFECT" | NOT STARTED | Only the memory note has the deadline order. No plan file in `research/`, no scheduler in `packages/planner`. Equipment, Bank, Lava Maze Runite, Quest Points, Overall have no plan at all. | Write `research/haggis-run.md`: one timeline over all 24 boards, each with its #1 deadline, method, supplies, and the helper that brings them. Then a planner module that checks the timeline against measured rates. |
+| 1 | 10-23 03:58, 04:03 | Haggis rank 1 on all 24 boards in one run; "every detail and every action DIALED IN to be PERFECT" | BLOCKED BY RULES | f691ad0 research/haggis-run.md: Overall #1 has 19 skills at 99 in 35,916 ticks; Haggis needs 39,704+ even at best case, so all 24 at once is impossible on one playtime clock | Owner decides: specialist accounts per board (14 winnable best case, 4 realistic) and Haggis takes Quest Points, Equipment, Bank, Runite |
 | 2 | 10-23 04:43, 03:45 | No idle accounts; "standing still is a warcrime" | PARTIAL | Ledger on every bot (61953b2). But no live bot runs now; Mightyrod is stopped, Morningwood never launched. | Relaunch live specialists under `packages/practice/src/supervise.ts` right after #3 and #6. |
 | 3 | 10-23 04:23 | "fix mightyrod" | DONE | 81f31bb (resume logic, eat, sell for coins, no low-HP thieving); proved 2/2 on practice; live again since 06:4x, Fishing 44 -> 62 | Watch its idle share (21% at 07:27) |
 | 4 | 10-23 04:23 | "get the lobster helpers going" | PARTIAL | Bigpackage bought 115 lobsters live (gecourier, 2,209 ticks, bc8a6c9 era) | Feed the gold farmers (C16); cut the walking (C7) |
@@ -121,7 +121,7 @@ Rule: every "I will" in chat gets a row here in the same turn. Close a row only 
 | C8 | Find what killed Woodpecker | OPEN | random-event helper; demo config says events are off (fly.toml:25) |
 | C9 | Put the 4 Thieving 99 accounts to work making gold (knights + lobsters) | IN PROGRESS | helper writing and proving scripts/goldfarm.ts |
 | C10 | Actions-per-tick monitor | IN PROGRESS | dashboard helper, round 2 (status.ts input counts) |
-| C11 | Haggis 24-board schedule | IN PROGRESS | planner helper |
+| C11 | Haggis 24-board schedule | DONE | f691ad0; top 5 experiments routed to the supply-floors and quest helpers |
 | C12 | Research index and shared agent brief | DONE | cbbe5ae; tick length settled 931c784 (399.8 ms) |
 | C13 | Measure supply-board tick floors (Fletching, Crafting, Herblore, Firemaking, Prayer, Smithing, Magic, Cooking) | IN PROGRESS | helper; output research/supply-floors.md |
 | C14 | Live supply cost model: gold needed per board, GE availability | IN PROGRESS | helper; output research/supply-costs.md |
