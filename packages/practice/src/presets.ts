@@ -82,6 +82,9 @@ export const PRESETS: Record<string, SaveConfig> = {
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).
     courier_ardougne: { position: { x: 2655, z: 3304, level: 0 }, coins: 20000 },
+    // Stun-trade test: a food-less thief at the knights and a helper one tile east with 26 lobsters.
+    stun_thief: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 } },
+    stun_feeder: { position: { x: 2655, z: 3304, level: 0 }, inventory: Array.from({ length: 26 }, () => ({ id: 379, count: 1 })) },
     // Runecraft: inside the air altar (runecraft_table enter_coord 2841,4830,0), air talisman (1438), 27 rune essence (1436).
     rc_air_inside: { position: { x: 2841, z: 4830, level: 0 }, inventory: [{ id: 1438, count: 1 }, ...Array.from({ length: 27 }, () => ({ id: 1436, count: 1 }))] },
     // Thieving specialist trip: a fresh account (10 HP, no gear) with 60 coins for two 30-coin boat fares.

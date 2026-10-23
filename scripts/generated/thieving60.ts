@@ -267,15 +267,26 @@ try {
         const o = await s.bot.openShop(/^baker$/i);
         if (!o.success) { lastFail = `shop:${o.message}`; shopRetryAt = now() + 30; return; }
         const before = food();
+        // Direct buy clicks: the tick ledger showed bot.buyFromShop spending about 31 ticks on one trip (it waits
+        // after every item). Send buy-10/5/1 clicks straight to the client, at most 5 per tick (server limit).
+        let free = 28 - (s.sdk.getState()?.inventory?.length ?? 28);
+        let money = coins();
+        let sent = 0;
         for (const item of s.sdk.getState()?.shop?.shopItems ?? []) {
             if (!SHOP_FOOD.test(item.name) || item.count <= 0) continue;
-            const free = 28 - (s.sdk.getState()?.inventory?.length ?? 28);
-            const n = Math.min(item.count, free, Math.floor(coins() / 12));
-            if (n <= 0) break;
-            const b = await s.bot.buyFromShop(item.name, n);
-            if (!b.success) lastFail = `buy:${b.reason}:${b.message}`;
+            let n = Math.min(item.count, free, Math.floor(money / Math.max(1, item.buyPrice || 12)));
+            free -= n; money -= n * (item.buyPrice || 12);
+            for (const chunk of [10, 5, 1]) {
+                while (n >= chunk) {
+                    await s.direct({ type: 'shopBuy', slot: item.slot, amount: chunk, reason: 'SDK' });
+                    n -= chunk;
+                    if (++sent % 5 === 0) await waitTicks(s, 1);
+                }
+            }
+            if (free <= 0) break;
         }
-        await s.bot.closeShop();
+        await waitTicks(s, 1);
+        await s.direct({ type: 'closeShop', reason: 'SDK' });
         const got = food() - before;
         bought += Math.max(0, got);
         // An empty shelf restocks one bread per 100 ticks: do not walk back before some has returned.
