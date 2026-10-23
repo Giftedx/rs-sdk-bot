@@ -59,7 +59,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Nature Spirit (`druidspirit`) | 2 (88) | rest | Restless Ghost, Priest in Peril, Crafting 18 (`quest_druidspirit/scripts/druidspirit_journal.rs2:26,31,37`) | ghasts (`:45`) | M |
 | Monk's Friend (`drunkmonk`) | 1 (89) | rest | none found | none found | S |
 | Elemental Workshop (`elemental_workshop`) | 1 (90) | rest | Mining 20, Smithing 20, Crafting 20 (`quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:172,186,252`) | none found | M |
-| Plague City (`elena`) | 1 (91) | rest | none found | none found | M |
+| Plague City (`elena`) | 1 (91) | rest | none found; gas mask, picture, book, key, warrant, chocolaty milk and hangover cure are untradeable (`quest_elena/configs`, `knowledge/items.json`); MEASURED 749-784 ticks in row `quests-medium` | none found | M |
 | Fishing Contest (`fishingcompo`) | 1 (92) | rest | Fishing 10 (`quest_fishingcompo/scripts/hemenster_fishing.rs2:70`) | none found | S |
 | Gertrude's Cat (`fluffs`) | 1 (93) | rest | none found | none found | S |
 | Goblin Diplomacy (`gobdip`) | 5 (94) | `gobdip` | none | none | - |
@@ -430,6 +430,7 @@ at a time, each run on a fresh account that is deleted after the run.
 |---|---|---|---|
 | Pirate's Treasure | `scripts/generated/quest-hunt.ts` | 474, 471, 460 | MEASURED 3/3 |
 | The Knight's Sword | `scripts/generated/quest-squire.ts` | 893, 887, 922 | MEASURED 3/3 |
+| Plague City | `scripts/generated/quest-elena.ts` | 780, 784, 749 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -482,12 +483,46 @@ Findings:
 - 680 of the about 890 ticks are walks: the Falador-Thurgo leg three times. No teleport lands nearer to Thurgo.
 - Helper items: redberry pie, 2 iron bars, rune pickaxe, Varrock and two Falador teleport runes (all tradeable).
 
+### Plague City
+
+`RESULT ok qp=1 xp=mining=60625 ... ticks=780 ... walkTicks=227 retries=3 died=false` (runs: 780, 784, 749 ticks; a
+passing trial before the proof: 640), each with `You climb up the mud pile.` and `Congratulations! Quest complete!`.
+Steps (trial MILESTONE ticks, `quests/quest_elena/scripts/`): Edmond "What's happened to her?", "Can I help find
+her?" (1, `edmond.rs2:2-8,52-66`); the picture (obj 1510 on the table at 2576,3334, `maps/m40_52.jm2`); Alrena makes
+the gas mask from the dwellberries (2, `alrena.rs2:9-29`); Edmond (3); four buckets of water on the mud patch (2531/
+2532 at 2566,3331-3333) and the spade drop the bot into the sewer (4-8, `mud_patch.rs2:1-46`) 0-111; the rope on the
+grill (2541 at 2530,9701), Edmond pulls it (9-10, `sewerpipe.rs2:24-34`, `edmond.rs2:26-32`) 111-157; the gas mask
+worn, the pipe to West Ardougne 157-174 (`sewerpipe.rs2:1-12,36-48`); Jethick takes the picture and gives the book
+(20, `jethick.rs2`) 174-206; the Rehnison door takes the book (21, `doors.rs2:97-117`), Ted (22), the stairs (2539 at
+2527,3332), Milli (23, `rehnisons.rs2`) 206-334; the plague house door (`loc_2535` at 2533,3272) with a mourner near,
+"I fear not a mere plague." (24, `doors.rs2:11-19,51-67`) 334-393; the clerk "I need permission to enter a plague
+house.", "This is urgent though!" (25, `areas/area_ardougne_west/scripts/clerk.rs2:1-55`) 393-441; Bravek's door
+(2528 at 2530,3314), "This is really important though!", "Do you know what is in the cure?" (26); chocolate dust
+into the milk, snape grass into the chocolaty milk (`skill_cooking/scripts/cooking_inv/scripts/cakes/cakes.rs2:20-24,
+50-54,138-145`), Bravek drinks the cure (27), "They won't listen to me!" gives the warrant (`bravek.rs2`) 441-499;
+the plague house door with the warrant, the barrel key (2530 at 2534,3268), the stairs down, Elena's door with the
+key, Elena (28, `plaguehouse.rs2`, `elena.rs2`) 499-568; the stairs up, the manhole (2543 at 2529,3303) into the
+sewer, the mud pile (2533 at 2561,9738) to the garden, Edmond queues the completion 568-640 (`edmond.rs2:37-40`).
+Findings:
+- "This is urgent though!" sets 25 only with Bravek within 7 tiles of the player (`clerk.rs2:52`, the comment says
+  "yes its possible this doesnt pop off if hes too far"). The clerk can be talked to only from the west side of his
+  desk (from the east the talk is rejected), 9 tiles from Bravek's spawn (2536,3314). The script holds the option
+  page until Bravek walks within 6 tiles. That wait is the spread of the runs: 48 ticks in the trial, 198 in proof
+  run 1. A bot cannot shorten it.
+- Edmond wanders between the garden and his house (door `loc_1530` at 2570,3333; inner door at 2574,3333). With a
+  door shut the talk and the picture pickup are rejected ("I can't reach that!"). The script opens the doors by tile.
+- With the warrant the mourner talks for 3 pages before the door lets the bot in (`doors.rs2:23-50`); a one-click
+  step failed there.
+- Untradeable: gas mask, picture, book, key, warrant, note, hangover cure (`quest_elena/configs/*.obj`) and the
+  chocolaty milk (`knowledge/items.json`). Helper items: dwellberries, 4 buckets of water, spade, rope, chocolate dust,
+  bucket of milk, snape grass (all tradeable).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
-Treasure (2 QP, 460 / 474) and The Knight's Sword (1 QP, 887 / 922): 3 QP, floor 1,347 ticks (sum of best runs),
-realistic 1,396 (sum of worst runs), the same under `rival-dialogue-burst`. Row `quests-rest` loses them: 35 -> 33
-quests, `qp` 77 -> 74, two medium classes less: 54,200 / 81,400 -> 52,400 / 78,800 (burst 50,124 / 75,279 ->
-48,460 / 72,874). The QP total stays 145. `bun test packages/planner`: 42 pass, 0 fail.
-`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at
-101,762 floor / 135,233 realistic (deadline 1,022,262). Overall unchanged (40,212 / 45,105).
+Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922) and Plague City (1 QP, 749 / 784): 4 QP, floor
+2,096 ticks (sum of best runs), realistic 2,180 (sum of worst runs), the same under `rival-dialogue-burst`. Row
+`quests-rest` loses them: 35 -> 32 quests, `qp` 77 -> 73, three medium classes less: 54,200 / 81,400 -> 51,500 /
+77,500 (burst 50,124 / 75,279 -> 47,627 / 71,672). The QP total stays 145. `bun test packages/planner`: 42 pass, 0
+fail. `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
+at 101,678 floor / 134,815 realistic (deadline 1,022,262). Overall unchanged (40,212 / 45,105).
