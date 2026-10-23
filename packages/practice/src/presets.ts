@@ -14,6 +14,17 @@ export interface SaveConfig {
 
 const LUMBRIDGE = { x: 3222, z: 3218, level: 0 };
 
+function gtPreset(stage: number, position: { x: number; z: number; level: number }, quest: number[] = []): SaveConfig {
+    return {
+        position,
+        skills: { Attack: 60, Magic: 43, Prayer: 43, Agility: 25, Cooking: 35, Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99 },
+        equipment: [{ id: 1387, count: 1, slot: 3 }],
+        varps: stage > 0 ? { 111: 9, 150: stage } : { 111: 9 },
+        inventory: [[562, 80], [556, 250], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
+            .concat([2434, 2434, 2434, 2446, 379, 379, 379, 379, ...quest].map(id => ({ id, count: 1 }))),
+    };
+}
+
 export const PRESETS: Record<string, SaveConfig> = {
     fresh_lumbridge: { position: LUMBRIDGE },
     // Trees within reach, measured by the 2026-10-22 spike run.
@@ -168,6 +179,18 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Debug: Tree Gnome Village at stage 7 (varp 111), outside Elkoy (TREE_FROM=7: the warlord, then Bolren).
     quest_tree_s7: { position: { x: 2504, z: 3190, level: 0 }, varps: { 111: 7 }, skills: { Magic: 43, Prayer: 43 }, equipment: [{ id: 1387, count: 1, slot: 3 }],
         inventory: [{ id: 562, count: 80 }, { id: 556, count: 240 }, { id: 2434, count: 1 }, { id: 2434, count: 1 }] },
+    // The Grand Tree (scripts/generated/quest-grandtree.ts): beside King Narnode, at the planner's state for the
+    // grandtree row (after tree and agility-25; minLevel agility 25, prayer 43, magic 35): Attack 60 (the 286,250 XP
+    // of Tree Gnome Village), Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25. Varp 111 = 9 (Tree Gnome
+    // Village complete: the village spirit tree works). Staff of fire worn; Fire Bolt runes (562 + 3 x 556) for 80
+    // casts, 2 law runes (563) for Varrock Teleport; 3 prayer potions (2434), 1 antipoison (2446, the Karamja jungle
+    // spiders poison through the prayer), 4 lobsters.
+    quest_grandtree: gtPreset(0, { x: 2466, z: 3494, level: 0 }),
+    // Debug: The Grand Tree at a later varp 150 stage (GT_FROM=<stage>), with that stage's quest items.
+    quest_grandtree_s80: gtPreset(80, { x: 2465, z: 3496, level: 3 }, [784]),
+    quest_grandtree_s90: gtPreset(90, { x: 2999, z: 3040, level: 0 }, [784, 787]),
+    quest_grandtree_s120: gtPreset(120, { x: 2476, z: 3461, level: 0 }, [784, 787, 789, 790, 791, 792]),
+    quest_grandtree_s140: gtPreset(140, { x: 2464, z: 9893, level: 0 }, [784, 787]),
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).
