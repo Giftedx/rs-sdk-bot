@@ -186,7 +186,11 @@ export const PRESETS: Record<string, SaveConfig> = {
     // 1059, leather boots 1061; all tradeable, so a helper can supply them. 20 lobsters (379).
     // Spot gb: the Gnome battlefield west of the Tree Gnome Village (maps/multiway.csv "gnome battlefield"), 41 Khazard
     // troopers (gnome_battlefield.npc:1-40: HP 22, defence 12-13, attackrate 5-6, no huntmode), open ground.
-    ...Object.fromEntries([['wk', { x: 2979, z: 3340, level: 0 }], ['gb', { x: 2525, z: 3242, level: 0 }]].flatMap(([spot, position]) => [40, 70, 90].flatMap(lv => {
+    // Higher-HP multiway spots (research/combat-measure.md section 4): iw = Ice Queen lair, 6 ice warriors within 4 tiles
+    // (all.npc icewarrior_queen: HP 59, att/str/def 47, huntmode cowardly, huntrange 5); ks = Kalphite lair, 5 soldiers
+    // within 10 tiles on plane 2 (kalphite.npc:62-95: HP 90, att/str/def 70, cowardly, huntrange 5, poison 20);
+    // sk = Temple of Ikov dungeon, 9 skeletons (all.npc skeleton id 93: HP 59, def 36, cowardly, huntrange 1).
+    ...Object.fromEntries([['wk', { x: 2979, z: 3340, level: 0 }], ['gb', { x: 2525, z: 3242, level: 0 }], ['iw', { x: 2866, z: 9946, level: 0 }], ['ks', { x: 3467, z: 9484, level: 2 }], ['sk', { x: 2650, z: 9889, level: 0 }]].flatMap(([spot, position]) => [40, 70, 90].flatMap(lv => {
         const base: SaveConfig = {
             position: position as { x: number; z: number; level: number },
             skills: { Attack: lv, Strength: lv, Defence: lv, Hitpoints: lv },
