@@ -345,7 +345,7 @@ try {
             if (p) {
                 const d = (n: any) => Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ));
                 const npcs: any[] = q.st()?.nearbyNpcs ?? [];
-                if (npcs.some(n => MELEE.test(n.name) && d(n) <= 2)) w = PFM;
+                if (npcs.some(n => MELEE.test(n.name) && d(n) <= (/zombie|skeleton|guard/i.test(n.name) ? 4 : 2))) w = PFM;
                 else if (npcs.some(n => /archer/i.test(n.name) && d(n) <= (n.x <= 2731 && n.z <= 2765 ? 15 : 7))) w = PFMISS;
             }
         }
@@ -412,6 +412,7 @@ try {
         for (let i = 0; i < maxTicks && !q.stats.died; i++) {
             if (ok()) return true;
             const d: any = q.s.sdk.getDialog();
+            if (!d?.isOpen && sig0.includes("|") && !ok()) { const p: any = q.pos(); console.log(`CLOSE t=${q.T()} tick=${q.s.tick()} dmg=${p?.combat?.lastDamageTick} last=${sig0.split("#")[0]} npcs=${(q.st()?.nearbyNpcs ?? []).filter((k: any) => k.distance <= 10).map((k: any) => `${k.name}@${k.x},${k.z}`).join(" ")}`); sig0 = ""; }
             if (d?.isOpen && !d.isWaiting) {
                 const opts: any[] = d.options ?? [];
                 const sig = opts.map(o => o.text).join('|') + '#' + (d.text ?? '') + (d.allComponents ?? []).map((c: any) => c.text ?? '').join('');
@@ -425,6 +426,24 @@ try {
             await q.waitTicks(1);
         }
         return ok();
+    };
+    // Talk with converse1: answers `pats`, tolerates a closed tick between pages (a p_delay, a fade), stops at ok() or
+    // after 6 shut ticks, then talks again (up to `tries`).
+    const talk1 = async (label: string, re: RegExp, pats: RegExp[], ok: () => boolean, maxTicks: number, home?: { x: number; z: number }, tries = 4): Promise<void> => {
+        for (let i = 0; i < tries && !ok(); i++) {
+            await q.guard(label);
+            if (i > 0) { q.stats.retries++; console.log(`NOTE ${label} talk try ${i}`); }
+            let n = q.npc(re);
+            if (!n && home) { await walk(`${label} approach`, [{ x: home.x, z: home.z, tol: 3 }]); n = q.npc(re); }
+            if (!n) { await q.waitTicks(2); continue; }
+            if (!q.dialogOpen()) {
+                await q.talkTo(n);
+                await q.waitUntil(() => q.dialogOpen() || ok(), 20);
+            }
+            let shut = 0;
+            await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 6; }, maxTicks);
+        }
+        if (!ok()) await q.fail(`talk ${label}`);
     };
     // A loc on a named tile: op it, click through pages (answers `pats`), until ok().
     // A hit closes the open dialog even at 0 damage (npc_combat_melee.rs2:36, npc_combat_ranged.rs2:48), so the
@@ -474,16 +493,153 @@ try {
         await talkChoose('garkor', /^garkor$/i, () => -1, () => q.sawText(/just go and find my squad mage/i) && !q.dialogOpen(), 80, { x: 2805, z: 2762 });
         q.milestone('garkor');
         await walk('to denture crate', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, { x: 2764, z: 2763, tol: 0 }, { x: 2765, z: 2765, tol: 0 }, { x: 2769, z: 2766, tol: 0 }, { x: 2769, z: 2768, tol: 0 }, { x: 2768, z: 2769, tol: 0 }]);
-        await locOp('dentures', { x: 2767, z: 2769 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.dentures) && !q.dialogOpen(), 30, 10, false);
-        await locOp('hole', { x: 2769, z: 2765 }, /crate/i, /search/i, [/^yes, i'm sure/i], () => inCellar(), 40, 10, false);
+        await locOp('dentures', { x: 2767, z: 2769 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.dentures) && !q.dialogOpen(), 30, 10);
+        // The hole crate from its south tile: the warehouse spider (2 HP, respawnrate 4, huntrange 1) spawns at 2770,2766,
+        // beside the north and east tiles, and each of its hits closes the crate's choice.
+        await walk('to hole south', [{ x: 2770, z: 2765, tol: 0 }, { x: 2769, z: 2764, tol: 0 }]);
+        await locOp('hole', { x: 2769, z: 2765 }, /crate/i, /search/i, [/^yes, i'm sure/i], () => inCellar(), 40, 10);
         q.milestone('cellar');
         await walk('to mould crate', [{ x: 2782, z: 9171, tol: 1 }]);
         await locOp('mould', { x: 2782, z: 9172 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.mould) && !q.dialogOpen());
-        await walk('to west rope', [{ x: 2764, z: 9166, tol: 1 }]);
-        await locOp('west rope', { x: 2764, z: 9165 }, /rope/i, /climb/i, [], () => z() < 6400, 10);
+        // The eastern rope (2798,9169): the western one lands in a warehouse whose only ground door (2744,2767) is locked
+        // (quest_mm.rs2:1019-1020). The eastern lands within 2 of 2764,2769, inside the sleeping guard's zone, so the bot
+        // runs south out of it at once (a guard call means a knockout and the jail, which toDungeon handles).
+        await walk('to east rope', [{ x: 2797, z: 9169, tol: 1 }]);
+        await locOp('east rope', { x: 2798, z: 9169 }, /rope/i, /climb/i, [], () => z() < 6400, 10);
+        await q.s.direct({ type: 'walkTo', x: 2764, z: 2765, running: true, reason: 'SDK' });
+        await q.waitUntil(() => z() <= 2766 || inCell(), 4);
         await ms(90);
     }
-    if (STOP <= 95 || FROM < 130) { offPoison(); offPot(); offWant(); await q.end(true, `stage=90 (stages 100-120 not scripted) antipoisons=${antipoisons} potions=${potionsAtoll} pestCasts=${pestCasts}`); }
+    // The village to the landing: the bridge ladder (2803,2734) up to level 2, the end of the bridge (2803,2727) drops
+    // to 2803,2724 (quest_mm.rs2:1022-1043); then the dungeon ladder (2763,2703) down to 2763,9103.
+    const toDungeon = async (label: string): Promise<void> => {
+        if (inCell()) await knockout(`${label} jail`);
+        if (z() < 6400 && z() > 2727) {
+            await walk(`${label} to bridge ladder`, [{ x: 2803, z: 2735, tol: 1 }]);
+            await locOp(`${label} bridge ladder`, { x: 2803, z: 2734 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
+            await walk(`${label} bridge`, [{ x: 2803, z: 2728, tol: 0 }]);
+            await locOp(`${label} jump`, { x: 2803, z: 2727 }, /end of bridge/i, /jump/i, [], () => level() === 0 && z() <= 2725, 10);
+        }
+        if (z() < 6400) {
+            await walk(`${label} to dungeon ladder`, [{ x: 2763, z: 2704, tol: 1 }]);
+            await locOp(`${label} dungeon down`, { x: 2763, z: 2703 }, /ladder/i, /climb/i, [], () => z() > 9000, 10);
+        }
+        await walk(`${label} to zooknock`, [{ x: 2804, z: 9143, tol: 2 }]);
+    };
+    const ZOOKNOCK = { x: 2804, z: 9145 };
+    const giveZooknock = async (label: string, id: number, ok: () => boolean): Promise<void> => {
+        for (let i = 0; i < 4 && q.has(id); i++) {
+            await q.guard(label);
+            if (q.dialogOpen()) { await (q.s.sdk as any).sendCloseModal?.(); await q.waitTicks(1); }
+            const n = q.npc(/^zooknock$/i);
+            if (!n) { await walk(`${label} approach`, [{ x: ZOOKNOCK.x, z: ZOOKNOCK.z - 2, tol: 2 }]); continue; }
+            await q.useOnNpc(id, n);
+            await q.waitUntil(() => !q.has(id) || q.dialogOpen(), 15);
+        }
+        if (q.has(id)) await q.fail(`${label}: not taken`);
+        await converse1([], () => ok() && !q.dialogOpen(), 40);
+    };
+
+    // 100. To Zooknock (2804,9145) through the dungeon (about 535 tiles): his story, and Garkor's request gives the
+    // mission (%mm_zooknock 5, mm_zooknock.rs2:304-316, needs %mm_garkor 2). Then the dentures, the gold bar and the mould
+    // (opnpcu, :48-96): the enchanted bar and the mould back (:163-201); the monkey bones go now too (the talisman
+    // half is open from :315).
+    if (FROM < 100) {
+        want = 'auto';
+        await toDungeon('zooknock1');
+        q.milestone('dungeon1');
+        const optSeen = (re: RegExp): boolean => (q.s.sdk.getDialog()?.options ?? []).some((o: any) => re.test(o.text));
+        await talk1('zooknock', /^zooknock$/i, [], () => optSeen(/need for the monkey amulet/i), 200, ZOOKNOCK);
+        await giveZooknock('dentures', ITEM.dentures, () => true);
+        await giveZooknock('gold bar', ITEM.goldBar, () => true);
+        await giveZooknock('mould', ITEM.mould, () => q.has(ITEM.encBar));
+        await giveZooknock('bones', ITEM.bones, () => true);
+        if (!q.has(ITEM.encBar) || !q.has(ITEM.mould)) await q.fail('zooknock: no enchanted bar');
+        await ms(100);
+    }
+    const wear = async (label: string, id: number): Promise<void> => {
+        await q.step(`wear ${label}`, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), () => !q.has(id), 4, 3);
+    };
+    const inAuntA = (x: number, zz: number): boolean => x >= 2740 && x <= 2746 && zz >= 2792 && zz <= 2798;
+    // The aunt calls guards on a human within 5 tiles of her when both stand inside her garden (2740-2746,2792-2798)
+    // or both outside it (mm_monkeys_aunt.rs2:5-30). The child (2743,2795) is in the garden, so the bot talks only while
+    // she is outside it.
+    const auntSafe = (): boolean => {
+        const a = q.npc(/monkey's aunt/i);
+        const p = q.pos();
+        if (!a || !p) return true;
+        const near5 = Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ)) <= 5;
+        return !near5 || inAuntA(a.x, a.z) !== inAuntA(p.worldX, p.worldZ);
+    };
+    const CHILD = { x: 2743, z: 2795 };
+
+    // 110. Back to the landing (dungeon exit ladder 2763,9103), the second knockout and lock; the temple: its south
+    // ladder (2794,2773) up, level 1 to 2806,2785, the east ladder top (2805,2785) drops on the trapdoor's access tile
+    // (quest_mm.rs2:766-771; the 2x2 trapdoor guards box it at level 0); the trapdoor (2807,2785, mm_temple.rs2:1-17);
+    // the enchanted bar on the fire with the mould (quest_mm.rs2:1066-1082), wool on the amulet (:1084-1089); the rope
+    // (2808,9201) up; the amulet worn; the monkey child (mm_monkey_child.rs2): uncle, bananas, the toy after the
+    // 100-tick timer: the talisman; the dungeon to Zooknock: the talisman (the bones went in stage 100): the Karamjan
+    // greegree and the chapter 3 cutscene (mm_zooknock.rs2:203-228, quest_mm.rs2:169-210).
+    if (FROM < 110) {
+        want = 'auto';
+        if (z() > 6400) {
+            await walk('to dungeon exit', [{ x: 2763, z: 9104, tol: 1 }]);
+            await locOp('dungeon up', { x: 2763, z: 9103 }, /ladder/i, /climb/i, [], () => z() < 6400, 10);
+        }
+        await knockout('jail2');
+        want = 'auto';
+        await walk('to temple ladder', [{ x: 2794, z: 2772, tol: 0 }]);
+        await locOp('temple ladder', { x: 2794, z: 2773 }, /ladder/i, /climb/i, [], () => level() === 1, 10);
+        await walk('temple roof', [{ x: 2806, z: 2785, tol: 0 }]);
+        await locOp('temple drop', { x: 2805, z: 2785 }, /ladder/i, /climb/i, [], () => level() === 0, 10);
+        await locOp('trapdoor open', { x: 2807, z: 2785 }, /trapdoor/i, /open/i, [], () => !!q.findLoc(l => l.x === 2807 && l.z === 2785 && /climb/i.test((l.optionsWithIndex ?? []).map((o: any) => o.text).join())), 6);
+        await locOp('trapdoor down', { x: 2807, z: 2785 }, /trapdoor/i, /climb/i, [], () => z() > 9152, 10);
+        q.milestone('fire room');
+        for (let i = 0; i < 4 && q.has(ITEM.encBar); i++) {
+            await q.guard('fire');
+            const f = q.findLoc(l => /flame|fire/i.test(l.name) && l.x >= 2809 && l.x <= 2813 && l.z >= 9189 && l.z <= 9193);
+            if (!f) { await walk('to fire', [{ x: 2809, z: 9195, tol: 1 }]); continue; }
+            await q.useOnLoc(ITEM.encBar, f);
+            await q.waitUntil(() => q.has(ITEM.amuletUnstrung), 15);
+        }
+        if (!q.has(ITEM.amuletUnstrung)) await q.fail('fire: no amulet');
+        await q.step('string amulet', () => q.useOnItem(ITEM.wool, ITEM.amuletUnstrung), () => q.has(ITEM.amulet), 6, 3);
+        await walk('to temple rope', [{ x: 2807, z: 9201, tol: 1 }]);
+        await locOp('temple rope', { x: 2808, z: 9201 }, /rope/i, /climb/i, [], () => z() < 6400, 10);
+        await wear('amulet', ITEM.amulet);
+        q.milestone('amulet');
+        await walk('to child', [{ x: 2744, z: 2795, tol: 1 }]);
+        let gaveAt = -1;
+        for (let i = 0; i < 8 && q.has(ITEM.banana); i++) {
+            await q.guard('child');
+            if (inCell()) { await knockout('jail child'); await walk('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
+            for (let w = 0; w < 30 && !auntSafe(); w++) await q.waitTicks(1);
+            await talk1('child', /^monkey child$/i, [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana) || !q.dialogOpen() && q.T() < 0, 60, CHILD, 1);
+        }
+        if (q.has(ITEM.banana)) await q.fail('child: bananas');
+        gaveAt = q.T();
+        await converse1([], () => !q.dialogOpen(), 20);
+        console.log(`NOTE bananas given at ${gaveAt}`);
+        await q.waitUntil(() => q.T() - gaveAt >= 100, 110);
+        for (let i = 0; i < 4 && !q.has(ITEM.talisman); i++) {
+            if (inCell()) { await knockout('jail child'); await walk('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
+            for (let w = 0; w < 30 && !auntSafe(); w++) await q.waitTicks(1);
+            await talk1('child toy', /^monkey child$/i, [], () => q.has(ITEM.talisman), 40, CHILD, 1);
+        }
+        if (!q.has(ITEM.talisman)) await q.fail('child: no talisman');
+        await converse1([], () => !q.dialogOpen(), 20);
+        q.milestone('talisman');
+        await toDungeon('zooknock2');
+        await giveZooknock('talisman', ITEM.talisman, () => q.has(ITEM.greegree));
+        // The chapter 3 cutscene runs in region 0_41_71 (2624-2687, 4544-4607) and returns the player to the coord
+        // saved at its start (%mm_cutscene_coord).
+        const inCut3 = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2624 && p.worldX < 2688 && p.worldZ >= 4544 && p.worldZ < 4608; };
+        await q.waitUntil(() => inCut3(), 30);
+        await converse1([], () => !inCut3() && !q.dialogOpen(), 400);
+        if (!q.has(ITEM.greegree) || inCut3()) await q.fail('chapter 3');
+        await ms(110);
+    }
+    if (STOP <= 115 || FROM < 130) { offPoison(); offPot(); offWant(); await q.end(true, `stage=110 (stage 120 not scripted) antipoisons=${antipoisons} potions=${potionsAtoll} pestCasts=${pestCasts}`); }
 
     // 140. Wear the sigil (OPHELD2, mm_demon.rs2:1-5; timer 10, then the battle zone 1_42_143, a corner by player count,
     // :35-92). The jungle demon spawns 5-10 tiles away (:160). Its waves (max 31) are 0 under Protect from Magic

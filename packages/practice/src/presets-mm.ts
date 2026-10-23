@@ -56,6 +56,15 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
     quest_mm_s70: mmPreset({ x: 2801, z: 2707, level: 0 }, { 365: 3, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3 }) }, [4004]),
     // Debug: out of the jail, beside Garkor (2805,2762): MM_FROM=80.
     quest_mm_s80: mmPreset({ x: 2806, z: 2764, level: 0 }, { 365: 3, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3 }), 374: 1 << 2 }, [4004]),
+    // Debug: out of the eastern warehouse door (2764,2763) with the dentures and the mould (%mm_garkor 2 speak_zooknock):
+    // MM_FROM=90.
+    quest_mm_s90: mmPreset({ x: 2764, z: 2763, level: 0 }, { 365: 3, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2 }), 374: 1 << 2 }, [4004, 4006, 4020]),
+    // Debug: beside Zooknock after the amulet half (%mm_zooknock 5; mm_flags: gold bar 7, mould 8, dentures 9, relic 11,
+    // collecting for the talisman 13; mm_misc relic type 5 = normal monkey, jail count 1) with the enchanted bar and the
+    // mould: MM_FROM=100.
+    quest_mm_s100: mmPreset({ x: 2803, z: 9143, level: 0 },
+        { 365: 3, 371: (1 << 7) | (1 << 8) | (1 << 9) | (1 << 11) | (1 << 13), 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2, zooknock: 5 }), 374: (1 << 2) | (5 << 12) },
+        [4004, 4007, 4020], MM_PACK.filter(i => i.id !== 2357 && i.id !== 3183)),
     quest_mm_s40: mmPreset({ x: 2393, z: 9890, level: 0 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 5 }) }, [4004]),
 };
 
