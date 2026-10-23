@@ -206,15 +206,19 @@ function goalSkillOf(s: Status): string | null {
 
 // ---------- RESULT lines: every new result a status file shows, with pass/fail streaks per script ----------
 type Res = { at: number; name: string; goal: string; ok: boolean; text: string };
-const results: Res[] = tailJsonl<Res>(FILES.results, 300).reverse();
-const lastResult = new Map<string, string>();
-for (const r of [...results].reverse()) lastResult.set(r.name, r.text);
+const allResults = tailJsonl<Res>(FILES.results, 100_000);
+const results: Res[] = allResults.slice(-300).reverse();
 const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test(text);
+// Per account, the newest result and the newest death. They do not drop out of the 300-row list when practice runs
+// fill it (2026-10-23: three live farmer deaths vanished from the page that way).
+const lastResult = new Map<string, string>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
+const noteRes = (r: Res) => { lastResult.set(r.name, r.text); newestRes.set(r.name, r); if (died(r.text)) newestDeath.set(r.name, r); };
+for (const r of allResults) noteRes(r);
 function trackResult(s: Status) {
     const text = String(s.result ?? '');
     if (!text || lastResult.get(s.name) === text.slice(0, 240)) return;
-    lastResult.set(s.name, text.slice(0, 240));
     const r = { at: s.at, name: s.name, goal: String(s.goal ?? '').replace(/\.ts$/, ''), ok: /^ok\b/.test(text), text: text.slice(0, 240) };
+    noteRes(r);
     results.unshift(r);
     results.length = Math.min(results.length, 300);
     append(FILES.results, r);
@@ -862,8 +866,8 @@ function buildState() {
             training: fresh && sk != null && sk.level < target && !/^gold farm|bank/i.test(String(job?.goal ?? s.goal ?? '')),
             role4: roleView(s, job, fresh, r),
             // Newest RESULT this server saw for the account, and its newest death in the last 24 h.
-            lastRes: (() => { const x = results.find(q => q.name === name); return x ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),
-            death: (() => { const x = results.find(q => q.name === name && died(q.text) && now - q.at < 86_400_000); return x ? { at: x.at, text: x.text } : null; })(),
+            lastRes: (() => { const x = newestRes.get(name); return x ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),
+            death: (() => { const x0 = newestDeath.get(name), x = x0 && now - x0.at < 86_400_000 ? x0 : null; return x ? { at: x.at, text: x.text } : null; })(),
         };
     });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
