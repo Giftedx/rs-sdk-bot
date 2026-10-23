@@ -11,9 +11,9 @@
         "TARGET": "99",
         "CAP": "15000"
       },
-      "enabled": true,
-      "note": "back 2026-10-23 after the spider-bank fix (e1b1fff): practice proof fishing=55 hpMin=10, ended at 3239,3254",
-      "repeat": true
+      "enabled": false,
+      "note": "Fishing 99 reached 2026-10-23; free for a new job",
+      "repeat": false
     },
     {
       "account": "Moneyshot",
