@@ -1245,8 +1245,10 @@
    "source": "research/quest-plan.md section 1d: scripts/generated/quest-crest.ts, preset quest_crest, 3 practice runs 1,182 / 1,179 / 1,199 ticks (Dimintheis to the goldsmith gauntlets from Avan; helper fish, perfect gold bars, rubies, moulds, 2 antipoisons, runes); needs Magic 59 (Fire Blast on Chronozon) and a combat account (Edgeville dungeon Wilderness, poison spiders): not passable at tick 1,872 with Magic 1 and 10 HP; its 1 QP stays inside quests-rest (the 142-QP total), so qp is 0 here",
    "at": "dimintheis",
    "minLevel": {
-    "magic": 59
-   }
+    "magic": 59,
+    "prayer": 43
+   },
+   "minLevelSource": "combat gate (CODE-READ): Fire Blast needs Magic 59 (research/quest-plan.md section 1d); Chronozon attack 173, strength 172, slash (quest_crest/configs/quest_crest.npc:45-52) and the poison spiders are melee, so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); the MEASURED proof ran at Hitpoints 97, not under the prayer"
   },
   {
    "id": "magic-43",
@@ -1639,6 +1641,29 @@
    "at": "bank"
   },
   {
+   "id": "prayer-43",
+   "label": "Bury dragon bones to Prayer 43 (Protect from Melee for the quest bosses)",
+   "serves": [
+    "prayer"
+   ],
+   "train": {
+    "skill": "prayer",
+    "toLevel": 43,
+    "xpPerTick": {
+     "floor": 900,
+     "realistic": 700,
+     "evidence": "CODE-READ",
+     "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "CODE-READ",
+   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE); Prayer 43 = Protect from Melee, the combat gate of the boss quests (prayers.dbrow:121-127)",
+   "at": "bank"
+  },
+  {
    "id": "thieving-25",
    "label": "Pickpocket to Thieving 25 (Dig Site)",
    "serves": [
@@ -1774,7 +1799,12 @@
      }
     }
    ],
-   "at": "bolren"
+   "at": "bolren",
+   "minLevel": {
+    "prayer": 43,
+    "magic": 35
+   },
+   "minLevelSource": "combat gate (CODE-READ): Khazard warlord attack 75, strength 78, 170 HP, crush, max hit 9 (quest_tree/configs/gnome_battlefield.npc:103-108; npc_combat_melee.rs2:2-8, combat.rs2:7-12); commander 50/45 stab at the chest (gnome_battlefield.npc:114-145); troopers melee; all melee, so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Fire Bolt needs Magic 35, max hit 12 (skill_combat/configs/magic/magic_combat_spells.dbrow:134-143). The planner places the row with 10 HP and Defence 1: without the prayer the warlord out-damages 10 HP"
   },
   {
    "id": "agility-25",
@@ -1825,7 +1855,9 @@
     "agility-25"
    ],
    "minLevel": {
-    "agility": 25
+    "agility": 25,
+    "prayer": 43,
+    "magic": 35
    },
    "evidence": "ESTIMATE",
    "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ); time not measured",
@@ -1854,7 +1886,8 @@
      }
     }
    ],
-   "at": "narnode"
+   "at": "narnode",
+   "minLevelSource": "combat gate (CODE-READ): Glough spawns a black demon (quest_grandtree/scripts/glough.rs2:119), attack 145, strength 148, 157 HP, slash, max hit 16 (quest_grandtree/configs/quest_grandtree.npc:190-216); melee only, so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Fire Bolt needs Magic 35, max hit 12 (skill_combat/configs/magic/magic_combat_spells.dbrow:134-143); Agility 25 gate kept"
   },
   {
    "id": "druid",
@@ -2090,7 +2123,11 @@
      }
     }
    ],
-   "at": "guildmaster"
+   "at": "guildmaster",
+   "minLevel": {
+    "prayer": 43
+   },
+   "minLevelSource": "combat gate (CODE-READ): Elvarg attack 70, strength 70, 120 HP, slash, attack range 8 (quest_dragon/configs/quest_dragon.npc:15-29): the melee part is Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); the dragonfire needs the anti-dragon shield (already a supply of this row)"
   },
   {
    "id": "scorpion",
@@ -2491,7 +2528,11 @@
      }
     }
    ],
-   "at": "camelot"
+   "at": "camelot",
+   "minLevel": {
+    "prayer": 43
+   },
+   "minLevelSource": "combat gate (CODE-READ): Sir Mordred attack 33, strength 33, 38 HP, slash, max hit 4 (quest_arthur/configs/keep_le_faye.npc:77-87), so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12)"
   },
   {
    "id": "grail",
@@ -2517,7 +2558,8 @@
     "waterfall"
    ],
    "minLevel": {
-    "attack": 20
+    "attack": 20,
+    "prayer": 43
    },
    "evidence": "ESTIMATE",
    "source": "XP: quest_grail.rs2:116-117 (CODE-READ); time not measured",
@@ -2542,7 +2584,8 @@
      }
     }
    ],
-   "at": "camelot"
+   "at": "camelot",
+   "minLevelSource": "combat gate (CODE-READ): Black Knight Titan attack 91, strength 100, 142 HP, crush, max hit 11 (quest_grail/configs/fisher_realm.npc:293-308), so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Attack 20 kept (OSRS)"
   },
   {
    "id": "dig",
@@ -2928,7 +2971,12 @@
    },
    "evidence": "ESTIMATE",
    "source": "XP: quest_arena.rs2:270-271 stat_advance(attack, 121750), (thieving, 21750) (CODE-READ); ticks rival (ESTIMATE for us); its 2 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
-   "at": "lady-servil"
+   "at": "lady-servil",
+   "minLevel": {
+    "prayer": 43,
+    "magic": 35
+   },
+   "minLevelSource": "combat gate (CODE-READ): Khazard ogre 60 HP crush, scorpion 40 HP stab, Bouncer 116 HP stab, General Khazard 170 HP slash (quest_arena/configs/quest_arena.npc), all melee, so Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Fire Bolt needs Magic 35, max hit 12 (skill_combat/configs/magic/magic_combat_spells.dbrow:134-143); about 386 NPC HP at about 5.4 per bolt = about 72 casts (360 ticks) against 215 ticks of prayer from 43 points, so 2 prayer potions (ESTIMATE, not run)"
   },
   {
    "id": "rival-mm",
@@ -2964,7 +3012,11 @@
    },
    "evidence": "ESTIMATE",
    "source": "XP: mm_daero.rs2:294-302 option 1 (CODE-READ); gate %grandtree and %treequest complete (king_narnode.rs2:7-10 per rival, not traced by us); ticks rival; its 3 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
-   "at": "narnode"
+   "at": "narnode",
+   "minLevel": {
+    "prayer": 43
+   },
+   "minLevelSource": "combat gate (CODE-READ): jungle demon 170 attack, strength, magic, 170 HP (quest_mm/configs/quest_mm.npc), casts waves with max hit 31, set to 0 under Protect from Magic (Prayer 37) (quest_mm/scripts/mm_demon.rs2:349-353), melee only within 2 tiles (mm_demon.rs2:332-336); Prayer 43 also gives Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); Ape Atoll guards and archers not read; damage source for the demon not decided (not run)"
   },
   {
    "id": "rival-seaslug",

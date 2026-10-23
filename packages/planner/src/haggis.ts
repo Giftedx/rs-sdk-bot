@@ -54,6 +54,7 @@ export interface Activity {
     qp?: number;
     requires?: string[];
     minLevel?: Partial<Record<Skill, number>>;
+    minLevelSource?: string; // why the gate exists (file:line evidence), for example a quest boss fight
     minQp?: number;
     // Alternatives: within one group the scheduler uses the eligible option with the fewest total ticks.
     variant?: { group: string; option: string; trick?: Trick };
