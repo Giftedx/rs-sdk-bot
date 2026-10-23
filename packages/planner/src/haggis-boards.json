@@ -1,0 +1,1396 @@
+{
+ "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward.",
+ "updated": "2026-10-23",
+ "activities": [
+  {
+   "id": "tutorial",
+   "label": "Tutorial skip",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 10,
+    "realistic": 10,
+    "evidence": "MEASURED",
+    "source": "research/crafting-board.md (fresh account, 10 ticks, lands at Lumbridge)"
+   },
+   "evidence": "MEASURED",
+   "source": "research/crafting-board.md (fresh account, 10 ticks, lands at Lumbridge)"
+  },
+  {
+   "id": "trade-start",
+   "label": "Trade 1: all stackable early supplies (wine notes, cocktails, fletching tips)",
+   "serves": [
+    "cooking",
+    "fletching"
+   ],
+   "ticks": {
+    "floor": 5,
+    "realistic": 12,
+    "evidence": "MEASURED",
+    "source": "realistic 12 MEASURED (scripts/measure/trade-supply.ts, 2 runs); floor 5 ESTIMATE (request + 2 accept screens)"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "realistic 12 = scripts/measure/trade-supply.ts (2 runs); floor 5 is an ESTIMATE (request + 2 accept screens)",
+   "supplies": [
+    {
+     "item": "unfermented wine (noted)",
+     "count": 600
+    },
+    {
+     "item": "unfinished pineapple punch (stage 3)",
+     "count": 8
+    },
+    {
+     "item": "orange slices",
+     "count": 8
+    },
+    {
+     "item": "grapes",
+     "count": 1
+    },
+    {
+     "item": "jug of water",
+     "count": 1
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "fletching",
+    "margin": 1
+   }
+  },
+  {
+   "id": "bank-wine",
+   "label": "Open bank, deposit wine notes",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 2,
+    "realistic": 5,
+    "evidence": "MEASURED",
+    "source": "realistic: bank open 3 + deposit 2 (research/crafting-board.md cycle 1); floor: booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ)"
+   },
+   "requires": [
+    "trade-start"
+   ],
+   "evidence": "MEASURED",
+   "source": "realistic: bank open 3 + deposit 2 (research/crafting-board.md cycle 1); floor: booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ)"
+  },
+  {
+   "id": "cook-35",
+   "label": "Finish 8 cocktails to Cooking 35, make 1 wine",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 2,
+    "realistic": 3,
+    "evidence": "CODE-READ",
+    "source": "gnome_cocktail_finish.rs2:28-29 stat_advance(cooking,600) = 1,500 XP; 10,847 XP for 35; wine.rs2:6-20 make_wine needs 35"
+   },
+   "xp": {
+    "cooking": 10847
+   },
+   "requires": [
+    "bank-wine"
+   ],
+   "variant": {
+    "group": "cooking",
+    "option": "legal"
+   },
+   "evidence": "CODE-READ",
+   "source": "gnome_cocktail_finish.rs2:28-29 stat_advance(cooking,600) = 1,500 XP; 10,847 XP for 35; wine.rs2:6-20 make_wine needs 35",
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "wine-timer",
+   "label": "Wine timer ferments the bank (background)",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 0,
+    "realistic": 0,
+    "evidence": "MEASURED",
+    "source": "research/cooking-board.md: 300 banked wines took 35 -> 96 in 25 ticks; timer 20 ticks (wine.rs2:22-70)"
+   },
+   "background": {
+    "floor": 20,
+    "realistic": 22,
+    "evidence": "MEASURED",
+    "source": "research/cooking-board.md: 300 banked wines took 35 -> 96 in 25 ticks; timer 20 ticks (wine.rs2:22-70)"
+   },
+   "xp": {
+    "cooking": "to99"
+   },
+   "requires": [
+    "cook-35"
+   ],
+   "variant": {
+    "group": "cooking",
+    "option": "legal"
+   },
+   "evidence": "MEASURED",
+   "source": "research/cooking-board.md: 300 banked wines took 35 -> 96 in 25 ticks; timer 20 ticks (wine.rs2:22-70)",
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "relog",
+   "label": "Log out and in (starts the login wine timer)",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 1,
+    "realistic": 2,
+    "evidence": "MEASURED",
+    "source": "research/tricks-plan.md: 1 playtime tick per relog"
+   },
+   "requires": [
+    "bank-wine"
+   ],
+   "variant": {
+    "group": "cooking",
+    "option": "loginWine",
+    "trick": "loginWine"
+   },
+   "evidence": "MEASURED",
+   "source": "research/tricks-plan.md: 1 playtime tick per relog"
+  },
+  {
+   "id": "login-wine",
+   "label": "Login wine timer (background)",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 0,
+    "realistic": 0,
+    "evidence": "MEASURED",
+    "source": "research/cooking-board.md: 99 at session tick 22, 2 runs, 600 wines, Cooking 1"
+   },
+   "background": {
+    "floor": 21,
+    "realistic": 22,
+    "evidence": "MEASURED",
+    "source": "research/cooking-board.md: 99 at session tick 22, 2 runs, 600 wines, Cooking 1"
+   },
+   "xp": {
+    "cooking": "to99"
+   },
+   "requires": [
+    "relog"
+   ],
+   "variant": {
+    "group": "cooking",
+    "option": "loginWine",
+    "trick": "loginWine"
+   },
+   "evidence": "MEASURED",
+   "source": "research/cooking-board.md: 99 at session tick 22, 2 runs, 600 wines, Cooking 1"
+  },
+  {
+   "id": "fletch",
+   "label": "Fletch arrows and darts, 5 per tick, all stackable",
+   "serves": [
+    "fletching"
+   ],
+   "ticks": {
+    "floor": 49,
+    "realistic": 55,
+    "evidence": "CODE-READ",
+    "source": "tick-tricks-web.md 16.2: 245 actions at 5/tick (arrows.rs2:61-85, darts.rs2); realistic +6 ticks for dropped inputs (ESTIMATE)"
+   },
+   "xp": {
+    "fletching": "to99"
+   },
+   "requires": [
+    "trade-start"
+   ],
+   "evidence": "CODE-READ",
+   "source": "tick-tricks-web.md 16.2: 245 actions at 5/tick (arrows.rs2:61-85, darts.rs2); realistic +6 ticks for dropped inputs (ESTIMATE)",
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "craft",
+   "label": "Cut gems, trade or bank loop",
+   "serves": [
+    "crafting"
+   ],
+   "ticks": {
+    "floor": 80,
+    "realistic": 213,
+    "evidence": "MEASURED",
+    "source": "realistic 213: research/crafting-board.md (measured 19-tick trade cycle, planner); floor 80: tight bank cycle (tick-tricks-web.md 16.3, CODE-READ). Excludes level-up dialog cost (levelup-cost.md)"
+   },
+   "xp": {
+    "crafting": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "realistic 213: research/crafting-board.md (measured 19-tick trade cycle, planner); floor 80: tight bank cycle (tick-tricks-web.md 16.3, CODE-READ). Excludes level-up dialog cost (levelup-cost.md)",
+   "supplies": [
+    {
+     "item": "chisel",
+     "count": 1
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "crafting",
+    "margin": 1.1
+   },
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "herb",
+   "label": "Finish potions (unf + secondary), 14 per inventory",
+   "serves": [
+    "herblore"
+   ],
+   "ticks": {
+    "floor": 95,
+    "realistic": 306,
+    "evidence": "ESTIMATE",
+    "source": "floor: tick-tricks-web.md 16.3 (90-100, CODE-READ); realistic: 18 inventories x 17 ticks (crafting measured cycle as analog)"
+   },
+   "xp": {
+    "herblore": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "floor: tick-tricks-web.md 16.3 (90-100, CODE-READ); realistic: 18 inventories x 17 ticks (crafting measured cycle as analog)",
+   "supplies": [],
+   "suppliesLadder": {
+    "skill": "herblore",
+    "margin": 1
+   },
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "fm-burn",
+   "label": "Burn logs ladder, 4 ticks per log",
+   "serves": [
+    "firemaking"
+   ],
+   "ticks": {
+    "floor": 628,
+    "realistic": 720,
+    "evidence": "CODE-READ",
+    "source": "firemaking.rs2:54-116 (4-tick roll); sim 693 in xp-per-tick.md; live #1 673"
+   },
+   "xp": {
+    "firemaking": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "firemaking",
+    "option": "burn"
+   },
+   "evidence": "CODE-READ",
+   "source": "firemaking.rs2:54-116 (4-tick roll); sim 693 in xp-per-tick.md; live #1 673",
+   "supplies": [
+    {
+     "item": "tinderbox",
+     "count": 1
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "firemaking",
+    "margin": 1
+   },
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "mortton-oil",
+   "label": "Shades of Mort'ton to the sacred-oil stage",
+   "serves": [
+    "firemaking"
+   ],
+   "ticks": {
+    "floor": 800,
+    "realistic": 2000,
+    "evidence": "ESTIMATE",
+    "source": "quest stage 65 gate (quest_mortton.constant:31); quest time not measured"
+   },
+   "qp": 0,
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "firemaking",
+    "option": "sacredOil",
+    "trick": "sacredOil"
+   },
+   "evidence": "ESTIMATE",
+   "source": "quest stage 65 gate (quest_mortton.constant:31); quest time not measured"
+  },
+  {
+   "id": "fm-pyre",
+   "label": "Sacred oil on logs (pyre logs), 5 per tick, no level check",
+   "serves": [
+    "firemaking"
+   ],
+   "ticks": {
+    "floor": 250,
+    "realistic": 330,
+    "evidence": "CODE-READ",
+    "source": "mortton_pyre.rs2:1-41 (level read, never checked); tick-tricks-web.md 16.4: 133 action ticks + banking"
+   },
+   "xp": {
+    "firemaking": "to99"
+   },
+   "requires": [
+    "mortton-oil"
+   ],
+   "variant": {
+    "group": "firemaking",
+    "option": "sacredOil",
+    "trick": "sacredOil"
+   },
+   "evidence": "CODE-READ",
+   "source": "mortton_pyre.rs2:1-41 (level read, never checked); tick-tricks-web.md 16.4: 133 action ticks + banking",
+   "supplies": [
+    {
+     "item": "magic logs",
+     "count": 666
+    },
+    {
+     "item": "sacred oil (4)",
+     "count": 666
+    }
+   ]
+  },
+  {
+   "id": "prayer",
+   "label": "Bury dragon bones, 2 ticks each",
+   "serves": [
+    "prayer"
+   ],
+   "ticks": {
+    "floor": 1169,
+    "realistic": 1300,
+    "evidence": "CODE-READ",
+    "source": "bury_bone.rs2:10-15 p_delay(0); sim 1,169 (xp-per-tick.md); realistic adds bank opens (ESTIMATE)"
+   },
+   "xp": {
+    "prayer": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "CODE-READ",
+   "source": "bury_bone.rs2:10-15 p_delay(0); sim 1,169 (xp-per-tick.md); realistic adds bank opens (ESTIMATE)",
+   "supplies": [
+    {
+     "item": "dragon bones",
+     "count": 560
+    }
+   ],
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "smith",
+   "label": "Smith platebodies ladder, 5 ticks each",
+   "serves": [
+    "smithing"
+   ],
+   "ticks": {
+    "floor": 913,
+    "realistic": 1100,
+    "evidence": "CODE-READ",
+    "source": "smithing.rs2:271-301; sim 913 (xp-per-tick.md); realistic ESTIMATE"
+   },
+   "xp": {
+    "smithing": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "separate"
+   },
+   "evidence": "CODE-READ",
+   "source": "smithing.rs2:271-301; sim 913 (xp-per-tick.md); realistic ESTIMATE",
+   "supplies": [
+    {
+     "item": "hammer",
+     "count": 1
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "smithing",
+    "margin": 1
+   },
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "magic",
+   "label": "Enchant jewellery ladder, 3 ticks per cast",
+   "serves": [
+    "magic"
+   ],
+   "ticks": {
+    "floor": 1708,
+    "realistic": 1900,
+    "evidence": "CODE-READ",
+    "source": "enchant.rs2:7-53 p_delay(1); sim 1,708 (xp-per-tick.md); realistic ESTIMATE"
+   },
+   "xp": {
+    "magic": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "separate"
+   },
+   "evidence": "CODE-READ",
+   "source": "enchant.rs2:7-53 p_delay(1); sim 1,708 (xp-per-tick.md); realistic ESTIMATE",
+   "supplies": [],
+   "suppliesLadder": {
+    "skill": "magic",
+    "margin": 1
+   },
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+  },
+  {
+   "id": "crest",
+   "label": "Family Crest (goldsmith gauntlets)",
+   "serves": [
+    "smithing",
+    "magic"
+   ],
+   "ticks": {
+    "floor": 1200,
+    "realistic": 3000,
+    "evidence": "ESTIMATE",
+    "source": "smelting.rs2:216 gauntlets; quest time not measured"
+   },
+   "qp": 1,
+   "lump": true,
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "superheat"
+   },
+   "evidence": "ESTIMATE",
+   "source": "smelting.rs2:216 gauntlets; quest time not measured"
+  },
+  {
+   "id": "magic-43",
+   "label": "Enchant to Magic 43",
+   "serves": [
+    "magic"
+   ],
+   "train": {
+    "skill": "magic",
+    "toLevel": 43,
+    "xpPerTick": {
+     "floor": 300,
+     "realistic": 250,
+     "evidence": "ESTIMATE",
+     "source": "enchant ladder average below 43"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "superheat"
+   },
+   "evidence": "ESTIMATE",
+   "source": "enchant ladder average below 43"
+  },
+  {
+   "id": "superheat",
+   "label": "Superheat gold with gauntlets, 3 ticks per cast",
+   "serves": [
+    "smithing",
+    "magic"
+   ],
+   "train": {
+    "skill": "smithing",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 468,
+     "realistic": 440,
+     "evidence": "CODE-READ",
+     "source": "superheat.rs2:55-67: 53 Magic + 56.2 Smithing per cast, p_delay(1) = 3 ticks (x25 = 441.7 Magic + 468.3 Smithing per tick)"
+    },
+    "side": {
+     "magic": 0.9430604982206405
+    }
+   },
+   "requires": [
+    "crest",
+    "magic-43"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "superheat"
+   },
+   "evidence": "CODE-READ",
+   "source": "superheat.rs2:55-67: 53 Magic + 56.2 Smithing per cast, p_delay(1) = 3 ticks (x25 = 441.7 Magic + 468.3 Smithing per tick)",
+   "supplies": [
+    {
+     "item": "gold ore",
+     "count": 711
+    },
+    {
+     "item": "nature rune",
+     "count": 711
+    },
+    {
+     "item": "fire rune",
+     "count": 2844
+    }
+   ]
+  },
+  {
+   "id": "magic-top",
+   "label": "Enchant top-up to Magic 99",
+   "serves": [
+    "magic"
+   ],
+   "train": {
+    "skill": "magic",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 650,
+     "realistic": 600,
+     "evidence": "ESTIMATE",
+     "source": "enchant 5: 78 XP / 3 ticks x25 = 650"
+    }
+   },
+   "requires": [
+    "superheat"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "superheat"
+   },
+   "evidence": "ESTIMATE",
+   "source": "enchant 5: 78 XP / 3 ticks x25 = 650"
+  },
+  {
+   "id": "runecraft",
+   "label": "Craft at the highest altar, helpers trade essence in",
+   "serves": [
+    "runecraft"
+   ],
+   "ticks": {
+    "floor": 1256,
+    "realistic": 2976,
+    "evidence": "MEASURED",
+    "source": "realistic 2,976: 19-tick measured cycle with nature + law (runecraft-ladder.md); floor 1,256: 8-tick trip model (ESTIMATE)"
+   },
+   "xp": {
+    "runecraft": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "realistic 2,976: 19-tick measured cycle with nature + law (runecraft-ladder.md); floor 1,256: 8-tick trip model (ESTIMATE)",
+   "supplies": [
+    {
+     "item": "rune essence",
+     "count": 4213
+    },
+    {
+     "item": "air/fire/body/nature/law talismans",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "id": "thieve",
+   "label": "Pickpocket ladder (men, warrior women, guards, knights)",
+   "serves": [
+    "thieving"
+   ],
+   "ticks": {
+    "floor": 3850,
+    "realistic": 6169,
+    "evidence": "MEASURED",
+    "source": "floor: practice fresh run, 1,437-1,816 measured to 55 + about 2,400 model 55->99 = 3,850-4,200 (research/thieving-ladder.md:95); realistic: live mmtha0205 fresh to 99 in 6,169 ticks (research/live-thieving-2026-10-23.md:72)"
+   },
+   "xp": {
+    "thieving": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "trickSpeedup": {
+    "trick": "stunRelog",
+    "factor": 0.8547008547008548
+   },
+   "evidence": "MEASURED",
+   "source": "floor: practice fresh run, 1,437-1,816 measured to 55 + about 2,400 model 55->99 = 3,850-4,200 (research/thieving-ladder.md:95); realistic: live mmtha0205 fresh to 99 in 6,169 ticks (research/live-thieving-2026-10-23.md:72)",
+   "supplies": [
+    {
+     "item": "lobster",
+     "count": 300
+    }
+   ]
+  },
+  {
+   "id": "woodcut",
+   "label": "3-tick woodcutting (knife + log), rune axe from 41",
+   "serves": [
+    "woodcutting"
+   ],
+   "ticks": {
+    "floor": 2900,
+    "realistic": 3400,
+    "evidence": "ESTIMATE",
+    "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md)"
+   },
+   "xp": {
+    "woodcutting": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md)",
+   "supplies": [
+    {
+     "item": "rune axe",
+     "count": 1
+    },
+    {
+     "item": "knife",
+     "count": 1
+    },
+    {
+     "item": "logs",
+     "count": 5
+    }
+   ]
+  },
+  {
+   "id": "fish",
+   "label": "3-tick fly fishing, then delayed-click 3-tick karambwan",
+   "serves": [
+    "fishing"
+   ],
+   "ticks": {
+    "floor": 3050,
+    "realistic": 3600,
+    "evidence": "ESTIMATE",
+    "source": "model 3,940 (xp-per-tick.md) / 1.29 measured fly-fishing gain (tricks-plan.md)"
+   },
+   "xp": {
+    "fishing": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "model 3,940 (xp-per-tick.md) / 1.29 measured fly-fishing gain (tricks-plan.md)",
+   "supplies": [
+    {
+     "item": "fly fishing rod",
+     "count": 1
+    },
+    {
+     "item": "feathers",
+     "count": 800
+    },
+    {
+     "item": "knife",
+     "count": 1
+    },
+    {
+     "item": "logs",
+     "count": 20
+    }
+   ]
+  },
+  {
+   "id": "prayer-31",
+   "label": "Bury dragon bones to Prayer 31 (Scorpion Catcher)",
+   "serves": [
+    "prayer"
+   ],
+   "train": {
+    "skill": "prayer",
+    "toLevel": 31,
+    "xpPerTick": {
+     "floor": 900,
+     "realistic": 700,
+     "evidence": "CODE-READ",
+     "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "CODE-READ",
+   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)"
+  },
+  {
+   "id": "thieving-25",
+   "label": "Pickpocket to Thieving 25 (Dig Site)",
+   "serves": [
+    "thieving"
+   ],
+   "train": {
+    "skill": "thieving",
+    "toLevel": 25,
+    "xpPerTick": {
+     "floor": 25,
+     "realistic": 19.33,
+     "evidence": "MEASURED",
+     "source": "knowledge/rates.json pickpocket_man 19.33 XP/tick from level 1 (3 runs)"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "knowledge/rates.json pickpocket_man 19.33 XP/tick from level 1 (3 runs)"
+  },
+  {
+   "id": "herblore-10",
+   "label": "Finish potions to Herblore 10 (Dig Site)",
+   "serves": [
+    "herblore"
+   ],
+   "train": {
+    "skill": "herblore",
+    "toLevel": 10,
+    "xpPerTick": {
+     "floor": 3000,
+     "realistic": 1000,
+     "evidence": "CODE-READ",
+     "source": "attack potion 625 XP x 5 per tick (brew_potion.struct); realistic adds a trade (ESTIMATE)"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "CODE-READ",
+   "source": "attack potion 625 XP x 5 per tick (brew_potion.struct); realistic adds a trade (ESTIMATE)"
+  },
+  {
+   "id": "waterfall",
+   "label": "Waterfall Quest",
+   "serves": [
+    "attack",
+    "strength",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 600,
+    "realistic": 1500,
+    "evidence": "ESTIMATE",
+    "source": "XP: quest_waterfall.rs2:491-492 (CODE-READ); time not measured (author proof 0/3 at the giant door)"
+   },
+   "lump": true,
+   "xp": {
+    "attack": 343750,
+    "strength": 343750
+   },
+   "qp": 1,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_waterfall.rs2:491-492 (CODE-READ); time not measured (author proof 0/3 at the giant door)"
+  },
+  {
+   "id": "tree",
+   "label": "Tree Gnome Village",
+   "serves": [
+    "attack",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 600,
+    "realistic": 1500,
+    "evidence": "ESTIMATE",
+    "source": "XP: quest_tree.rs2:98 (CODE-READ); time not measured"
+   },
+   "lump": true,
+   "xp": {
+    "attack": 286250
+   },
+   "qp": 2,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_tree.rs2:98 (CODE-READ); time not measured"
+  },
+  {
+   "id": "agility-25",
+   "label": "Gnome course to Agility 25",
+   "serves": [
+    "agility"
+   ],
+   "train": {
+    "skill": "agility",
+    "toLevel": 25,
+    "xpPerTick": {
+     "floor": 60,
+     "realistic": 40,
+     "evidence": "ESTIMATE",
+     "source": "gnome lap XP (gnome_course.rs2) at about 50 ticks per lap (tick-tricks-web.md 8)"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "gnome lap XP (gnome_course.rs2) at about 50 ticks per lap (tick-tricks-web.md 8)"
+  },
+  {
+   "id": "grandtree",
+   "label": "The Grand Tree",
+   "serves": [
+    "attack",
+    "agility",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 1200,
+    "realistic": 3000,
+    "evidence": "ESTIMATE",
+    "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ); time not measured"
+   },
+   "lump": true,
+   "xp": {
+    "attack": 460000,
+    "agility": 197500,
+    "magic": 53750
+   },
+   "qp": 5,
+   "requires": [
+    "tree",
+    "agility-25"
+   ],
+   "minLevel": {
+    "agility": 25
+   },
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ); time not measured"
+  },
+  {
+   "id": "qp-filler",
+   "label": "Short quests to 32 QP: Romeo & Juliet, Goblin Diplomacy, Witch's House, Druidic Ritual, Ernest, Sheep Herder, Black Knights' Fortress, Prince Ali",
+   "serves": [
+    "strength",
+    "defence",
+    "hitpoints",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 2400,
+    "realistic": 7200,
+    "evidence": "ESTIMATE",
+    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ)"
+   },
+   "lump": true,
+   "xp": {
+    "hitpoints": 158125
+   },
+   "qp": 32,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7)"
+  },
+  {
+   "id": "dragon",
+   "label": "Dragon Slayer",
+   "serves": [
+    "strength",
+    "defence",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 1500,
+    "realistic": 4000,
+    "evidence": "ESTIMATE",
+    "source": "XP: quest_dragon.rs2:33-34 (CODE-READ); time not measured"
+   },
+   "lump": true,
+   "xp": {
+    "strength": 466250,
+    "defence": 466250
+   },
+   "qp": 2,
+   "requires": [
+    "qp-filler"
+   ],
+   "minQp": 32,
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_dragon.rs2:33-34 (CODE-READ); time not measured",
+   "supplies": [
+    {
+     "item": "anti-dragon shield (quest)",
+     "count": 1
+    },
+    {
+     "item": "rune armour set",
+     "count": 1
+    },
+    {
+     "item": "lobster",
+     "count": 60
+    }
+   ]
+  },
+  {
+   "id": "scorpion",
+   "label": "Scorpion Catcher",
+   "serves": [
+    "strength",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 300,
+    "realistic": 900,
+    "evidence": "ESTIMATE",
+    "source": "XP: quest_scorpcatcher.rs2:60 (CODE-READ); Prayer 31 is the OSRS requirement"
+   },
+   "lump": true,
+   "xp": {
+    "strength": 165625
+   },
+   "qp": 1,
+   "requires": [
+    "prayer-31"
+   ],
+   "minLevel": {
+    "prayer": 31
+   },
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_scorpcatcher.rs2:60 (CODE-READ); Prayer 31 is the OSRS requirement"
+  },
+  {
+   "id": "str-top",
+   "label": "Melee top-up to Strength 99",
+   "serves": [
+    "strength"
+   ],
+   "train": {
+    "skill": "strength",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 400,
+     "realistic": 250,
+     "evidence": "ESTIMATE",
+     "source": "combat.rs2:88-150: 100 XP/dmg x25 + 33.25 HP/dmg; 2.5-4 dmg per tick assumed"
+    },
+    "side": {
+     "hitpoints": 0.3325
+    }
+   },
+   "requires": [
+    "waterfall",
+    "dragon",
+    "scorpion"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "combat.rs2:88-150: 100 XP/dmg x25 + 33.25 HP/dmg; 2.5-4 dmg per tick assumed"
+  },
+  {
+   "id": "cannon",
+   "label": "Dwarf Cannon quest",
+   "serves": [
+    "ranged",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 300,
+    "realistic": 900,
+    "evidence": "ESTIMATE",
+    "source": "quest_mcannon; time not measured"
+   },
+   "lump": true,
+   "qp": 1,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "quest_mcannon; time not measured"
+  },
+  {
+   "id": "ranged",
+   "label": "Ranged + cannon to 99",
+   "serves": [
+    "ranged"
+   ],
+   "train": {
+    "skill": "ranged",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 600,
+     "realistic": 400,
+     "evidence": "ESTIMATE",
+     "source": "cannon_fire.rs2:117-119 (50 XP/dmg) + own shots 100/dmg; damage rate not measured"
+    },
+    "side": {
+     "hitpoints": 0.2
+    }
+   },
+   "requires": [
+    "cannon"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "cannon_fire.rs2:117-119 (50 XP/dmg) + own shots 100/dmg; damage rate not measured",
+   "supplies": [
+    {
+     "item": "cannon (base, stand, barrels, furnace)",
+     "count": 1
+    },
+    {
+     "item": "cannonball",
+     "count": 3000
+    },
+    {
+     "item": "rune arrows",
+     "count": 5000
+    },
+    {
+     "item": "maple shortbow",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "id": "agility-52",
+   "label": "Gnome/Barbarian to Agility 52",
+   "serves": [
+    "agility"
+   ],
+   "train": {
+    "skill": "agility",
+    "toLevel": 52,
+    "xpPerTick": {
+     "floor": 80,
+     "realistic": 50,
+     "evidence": "ESTIMATE",
+     "source": "course XP CODE-READ; lap times not measured"
+    }
+   },
+   "requires": [
+    "grandtree"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "course XP CODE-READ; lap times not measured"
+  },
+  {
+   "id": "agility",
+   "label": "Wilderness course to Agility 99",
+   "serves": [
+    "agility"
+   ],
+   "train": {
+    "skill": "agility",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 224,
+     "realistic": 167,
+     "evidence": "ESTIMATE",
+     "source": "wilderness_course.rs2:17-176 601.4 XP/lap x25; 67-90 ticks per lap (web, not measured)"
+    }
+   },
+   "requires": [
+    "agility-52"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "wilderness_course.rs2:17-176 601.4 XP/lap x25; 67-90 ticks per lap (web, not measured)",
+   "supplies": [
+    {
+     "item": "lobster",
+     "count": 50
+    }
+   ]
+  },
+  {
+   "id": "merlin",
+   "label": "Merlin's Crystal",
+   "serves": [
+    "defence",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 600,
+    "realistic": 1500,
+    "evidence": "ESTIMATE",
+    "source": "quest.constant:73; time not measured"
+   },
+   "lump": true,
+   "qp": 6,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "quest.constant:73; time not measured"
+  },
+  {
+   "id": "grail",
+   "label": "Holy Grail",
+   "serves": [
+    "defence",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 1200,
+    "realistic": 3000,
+    "evidence": "ESTIMATE",
+    "source": "XP: quest_grail.rs2:116-117 (CODE-READ); time not measured"
+   },
+   "lump": true,
+   "xp": {
+    "defence": 382500,
+    "prayer": 275000
+   },
+   "qp": 2,
+   "requires": [
+    "merlin",
+    "waterfall"
+   ],
+   "minLevel": {
+    "attack": 20
+   },
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_grail.rs2:116-117 (CODE-READ); time not measured"
+  },
+  {
+   "id": "dig",
+   "label": "The Dig Site",
+   "serves": [
+    "mining",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 600,
+    "realistic": 1500,
+    "evidence": "ESTIMATE",
+    "source": "XP: quest_itexam.rs2:41-42 (CODE-READ); time not measured"
+   },
+   "lump": true,
+   "xp": {
+    "mining": 382500,
+    "herblore": 50000
+   },
+   "qp": 2,
+   "requires": [
+    "agility-25",
+    "thieving-25",
+    "herblore-10"
+   ],
+   "minLevel": {
+    "agility": 10,
+    "herblore": 10,
+    "thieving": 25
+   },
+   "evidence": "ESTIMATE",
+   "source": "XP: quest_itexam.rs2:41-42 (CODE-READ); time not measured"
+  },
+  {
+   "id": "mine",
+   "label": "Power-mine iron to 99 (rune pickaxe)",
+   "serves": [
+    "mining"
+   ],
+   "train": {
+    "skill": "mining",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 120,
+     "realistic": 97,
+     "evidence": "MEASURED",
+     "source": "realistic 97 XP/tick measured (board-ranking-honest.md); floor 120 = 3-rock respawn cap (mine.dbrow:72)"
+    }
+   },
+   "requires": [
+    "dig"
+   ],
+   "evidence": "MEASURED",
+   "source": "realistic 97 XP/tick measured (board-ranking-honest.md); floor 120 = 3-rock respawn cap (mine.dbrow:72)",
+   "supplies": [
+    {
+     "item": "rune pickaxe",
+     "count": 1
+    }
+   ]
+  },
+  {
+   "id": "def-top",
+   "label": "Melee top-up to Defence 99",
+   "serves": [
+    "defence"
+   ],
+   "train": {
+    "skill": "defence",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 400,
+     "realistic": 250,
+     "evidence": "ESTIMATE",
+     "source": "combat.rs2:88-150"
+    },
+    "side": {
+     "hitpoints": 0.3325
+    }
+   },
+   "requires": [
+    "dragon",
+    "grail"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "combat.rs2:88-150"
+  },
+  {
+   "id": "hp-top",
+   "label": "Combat top-up to Hitpoints 99",
+   "serves": [
+    "hitpoints"
+   ],
+   "train": {
+    "skill": "hitpoints",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 133,
+     "realistic": 83,
+     "evidence": "ESTIMATE",
+     "source": "combat.rs2: 33.25 HP XP per damage x25; 2.5-4 dmg per tick"
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "combat.rs2: 33.25 HP XP per damage x25; 2.5-4 dmg per tick",
+   "supplies": [
+    {
+     "item": "lobster",
+     "count": 200
+    }
+   ]
+  },
+  {
+   "id": "quests-rest",
+   "label": "Remaining quests to 142 QP",
+   "serves": [
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 16000,
+    "realistic": 48000,
+    "evidence": "ESTIMATE",
+    "source": "145 QP over 68 quests (tick-tricks-web.md 15); the route quests give 54 QP, 88 more needed from about 40 quests; 400-1,200 ticks each, not measured"
+   },
+   "lump": true,
+   "qp": 88,
+   "requires": [
+    "dragon",
+    "grail",
+    "grandtree",
+    "dig",
+    "cannon",
+    "scorpion",
+    "waterfall"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "145 QP over 68 quests (tick-tricks-web.md 15); the route quests give 54 QP, 88 more needed from about 40 quests; 400-1,200 ticks each, not measured",
+   "pending": "replace with research/boards-special.md when it lands"
+  },
+  {
+   "id": "equip",
+   "label": "Wear best-in-slot gear traded in by helpers",
+   "serves": [
+    "equipment"
+   ],
+   "ticks": {
+    "floor": 5,
+    "realistic": 20,
+    "evidence": "ESTIMATE",
+    "source": "trade 12 ticks measured + wear; #1 value unknown"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "trade 12 ticks measured + wear; #1 value unknown",
+   "supplies": [
+    {
+     "item": "best-in-slot worn set (value above the #1 outfit)",
+     "count": 1
+    }
+   ],
+   "pending": "replace with research/boards-special.md when it lands"
+  },
+  {
+   "id": "bank-value",
+   "label": "Receive wealth into the bank",
+   "serves": [
+    "bank"
+   ],
+   "ticks": {
+    "floor": 10,
+    "realistic": 40,
+    "evidence": "ESTIMATE",
+    "source": "trades of 28 slots, 12 ticks each measured; #1 value unknown"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "trades of 28 slots, 12 ticks each measured; #1 value unknown",
+   "supplies": [
+    {
+     "item": "coins and high-value items (above the #1 bank value)",
+     "count": 1
+    }
+   ],
+   "pending": "replace with research/boards-special.md when it lands"
+  },
+  {
+   "id": "runite",
+   "label": "Mine Lava Maze runite (2 rocks), placeholder 10 ores",
+   "serves": [
+    "runite"
+   ],
+   "ticks": {
+    "floor": 500,
+    "realistic": 1500,
+    "evidence": "ESTIMATE",
+    "source": "mine.dbrow:157-160 roll 1..18, respawn 2,400 x (4000-players)/4000 ticks; Wilderness PvP risk; #1 count unknown"
+   },
+   "requires": [
+    "mine"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "mine.dbrow:157-160 roll 1..18, respawn 2,400 x (4000-players)/4000 ticks; Wilderness PvP risk; #1 count unknown",
+   "pending": "replace with research/boards-special.md when it lands"
+  }
+ ],
+ "tickMs": {
+  "value": 399.8,
+  "evidence": "MEASURED",
+  "source": "live tick (research index, commit 931c784)"
+ }
+}
