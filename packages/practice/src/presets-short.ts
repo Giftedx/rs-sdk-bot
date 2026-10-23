@@ -27,4 +27,8 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Imp Catcher: top floor of the Wizards' Tower beside Wizard Mizgog (spawn 3103,3163,2, maps/m48_49.jm2); the
     // red, yellow, black and white beads (1470, 1472, 1474, 1476; imp drops, tradeable).
     quest_imp: short({ x: 3104, z: 3163, level: 2 }, [1470, 1472, 1474, 1476]),
+    // Witch's Potion: in Hetty's house, Rimmington (hetty spawn 2968,3206, maps/m46_50.jm2); onion (1957), eye of newt
+    // (221), burnt meat (2146). The rat's tail is untradeable (quest_hetty.obj) and drops only while %hetty is 1 or 2
+    // (drop tables/scripts/rat.rs2:9-12): the bot kills one of the rats next door (2953-2960,3202-3205).
+    quest_hetty: short({ x: 2966, z: 3206 }, [1957, 221, 2146]),
 };

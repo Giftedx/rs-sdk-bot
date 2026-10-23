@@ -198,6 +198,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Sheep Shearer | `scripts/generated/quest-sheep.ts` | 70, 70, 70 | MEASURED 3/3 |
 | Doric's Quest | `scripts/generated/quest-doric.ts` | 30, 30, 30 | MEASURED 3/3 |
 | Imp Catcher | `scripts/generated/quest-imp.ts` | 38, 38, 38 | MEASURED 3/3 |
+| Witch's Potion | `scripts/generated/quest-hetty.ts` | 80, 78, 79 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -220,3 +221,15 @@ completion. Helper items: 6 clay, 4 copper ore, 2 iron ore (12 pack slots).
 runs, each with `Congratulations! Quest complete!`. "Give me a quest!", "Give me a quest please."
 (`areas/area_wizard_tower/scripts/wizard_mizgog.rs2:39-52`), then the hand-in (`:6-19`). Helper items: the red,
 yellow, black and white beads (imp drops; the obj configs have no `tradeable=no`).
+
+### Witch's Potion
+
+`RESULT ok qp=1 xp=attack=200,hitpoints=65,magic=8125 ... ticks=80 ... retries=1 died=false` (runs: 80, 78, 79
+ticks), each with `Congratulations! Quest complete!`. Steps: Hetty "I am in search of a quest.", "Yes help me
+become one with my darker side." (`areas/area_rimmington/scripts/hetty.rs2:40-83`); one rat in the house next door;
+the hand-in (`:13-26`); drink from the cauldron (loc 2024 at 2967,3205, `quest_hetty/scripts/quest_hetty.rs2:1-4`).
+Helper items: onion, eye of newt, burnt meat. The rat's tail is `tradeable=no` (`quest_hetty.obj`) and drops only
+while `%hetty` is 1 or 2 and no tail is in the pack or bank (`drop tables/scripts/rat.rs2:9-12`), so a helper
+cannot bring it. Both houses have a shut door (`loc_1530` at 2965,3206 and 2956,3205, `maps/m46_50.jm2`). With
+the doors shut, the attack click is rejected (`opRejectedCount`) and the first trial stood 96 ticks. The script
+opens both doors by tile. The `retries=1` is the dash to the rat house door.
