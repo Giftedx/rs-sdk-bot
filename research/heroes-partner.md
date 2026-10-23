@@ -11,12 +11,14 @@ login, practice bot or planner change was made for this file.
 
 - **Partner: Bigchopper.** Woodcutting 99 is done (rank 17 at 11,315 ticks, `research/hiscores-live.json`), so the
   Lost City gate (Woodcutting 36) is met and questing costs it no board time.
-- **Route: 24 quests, 55 QP.** All 24 have a MEASURED practice script. Cook's Assistant, Witch's House and Lost City
-  were proved 3/3 at the partner's state on 2026-10-23 (`research/quest-points-board.md`, "Cook's Assistant, Witch's
-  House, Lost City"; presets `quest_<name>_partner` in `packages/practice/src/presets-partner.ts`).
-- **Ticks: about 13,200 / 13,800 for the quests and the skill gates (floor / realistic).** 12,883 / 13,451 of that
-  is MEASURED (was 11,776 / 12,179 before the 3 new scripts). Travel between quests is not counted. With travel the
-  total is about 16,200-18,300 ticks (ESTIMATE), or 1.8-2.0 hours at 399.8 ms per tick.
+- **Route: 24 quests, 55 QP.** All 24 have a MEASURED practice script. 11 of them are MEASURED 3/3 at the partner's
+  state: Cook's Assistant, Witch's House and Lost City (2026-10-23, `research/quest-points-board.md`, "Cook's
+  Assistant, Witch's House, Lost City"); The Restless Ghost, Pirate's Treasure, Vampire Slayer, Merlin's Crystal, Holy
+  Grail and Dragon Slayer (2026-10-24, section 6 risk 2); Tree Gnome Village and The Grand Tree. Presets
+  `quest_<name>_partner` are in `packages/practice/src/presets-partner.ts`.
+- **Ticks: about 13,300 / 13,800 for the quests and the skill gates (floor / realistic).** 12,924 / 13,482 of that
+  is MEASURED (was 12,883 / 13,451 before the 6 partner-state re-proofs). Travel between quests is not counted. With
+  travel the total is about 16,300-18,300 ticks (ESTIMATE), or 1.8-2.0 hours at 399.8 ms per tick.
 - **Timing rule:** the partner cannot finish Shield of Arrav before Haggis does Arrav, because the partner's
   certificate comes from Haggis's curator visit. So Haggis must do the `quest-arrav` pair early. Today the planner
   puts it after `quests-rest`, which holds Heroes' Quest. That order is wrong for Haggis too (see "Timing").
@@ -86,8 +88,8 @@ Quest XP lumps give the partner its combat (levels from `curve.ts`):
 Before Holy Grail the partner has Defence 1, so it cannot wear the rune armour of the Dragon Slayer proof for the
 early quests. Holy Grail (row 22) gives 382,500 Defence XP (`quest_grail.rs2:117`, `stat_advance(defence, 153000)`),
 Defence 85, and 275,000 Prayer XP (`:116`). So at Lost City and Dragon Slayer (rows 23-24) the partner has Defence
-85 (CODE-READ; corrected 2026-10-23, this paragraph said Defence 1 before Dragon Slayer). The partner uses Protect
-from Melee in Melzar's maze (row 21) and can wear the rune armour on Crandor.
+85 (CODE-READ; corrected 2026-10-23, this paragraph said Defence 1 before Dragon Slayer). The partner wears the rune
+armour in Melzar's maze and on Crandor (both in Dragon Slayer, MEASURED 3/3, section 6 risk 2).
 
 ## 3. Route to Heroes' Quest readiness
 
@@ -118,7 +120,7 @@ maze, Crandor and the tree spirit. The banker supplies the bones (37 for Prayer 
 |---|---|---|---|---|---|---|---|---|
 | 1 | Imp Catcher | 1 | 1 | none | `quest-imp.ts` | 38 / 38 | MEASURED | no |
 | 2 | Rune Mysteries | 1 | 2 | none | `quest-runemysteries.ts` | 432 / 449 | MEASURED | no |
-| 3 | The Restless Ghost | 1 | 3 | none | `quest-priest.ts` | 516 / 519 | MEASURED | yes (the skeleton) |
+| 3 | The Restless Ghost | 1 | 3 | none | `quest-priest.ts` | 530 / 532 | MEASURED at the partner's state (main 516 / 519) | no |
 | 4 | Sheep Shearer | 1 | 4 | none | `quest-sheep.ts` | 70 / 70 | MEASURED | no |
 | 5 | Cook's Assistant | 1 | 5 | none | `quest-cook.ts` | 30 / 30 | MEASURED at the partner's state | no |
 | 6 | Witch's Potion | 1 | 6 | none | `quest-hetty.ts` | 78 / 80 | MEASURED | no (one rat) |
@@ -127,31 +129,31 @@ maze, Crandor and the tree spirit. The banker supplies the bones (37 for Prayer 
 | 9 | Druidic Ritual | 4 | 16 | none | `quest-druid.ts` | 244 / 248 | MEASURED | no |
 | 10 | Waterfall Quest | 1 | 17 | none | `waterfall.ts` | 1,030 / 1,037 | MEASURED at 10 HP | no |
 | 11 | Witch's House | 4 | 21 | none | `quest-ball.ts` | 448 / 522 | MEASURED at the partner's state (Defence 1, 10 HP) | no |
-| 12 | Pirate's Treasure | 2 | 23 | none | `quest-hunt.ts` | 460 / 474 | MEASURED | yes (the gardener) |
-| 13 | Vampire Slayer | 3 | 26 | none | `quest-vampire.ts` | 330 / 338 | MEASURED | yes (Count Draynor) |
+| 12 | Pirate's Treasure | 2 | 23 | none | `quest-hunt.ts` | 449 / 468 | MEASURED at the partner's state (main 460 / 474) | no |
+| 13 | Vampire Slayer | 3 | 26 | none | `quest-vampire.ts` | 329 / 337 | MEASURED at the partner's state (main 330 / 338) | no |
 | 14 | Romeo & Juliet | 5 | 31 | none | `quest-rj.ts` | 307 / 314 | MEASURED | no |
 | 15 | Gertrude's Cat | 1 | 32 | none | `quest-fluffs.ts` | 369 / 397 | MEASURED | no |
-| 16 | Shield of Arrav, Phoenix part | 0 now | 32 | none | `quest-arrav.ts` (helper role) | 371 / 400 | MEASURED | yes (weaponsmaster) |
+| 16 | Shield of Arrav, Phoenix part | 0 now | 32 | none | `quest-arrav.ts` (helper role) | 371 / 400 | MEASURED | yes (weaponsmaster; preset `quest_arrav_helper_partner` ready, not run) |
 | 17 | Monk's Friend | 1 | 33 | none | `quest-drunkmonk.ts` | 327 / 328 | MEASURED | no |
 | 18 | Fishing Contest | 1 | 34 | Fishing 10 | `quest-fishingcompo.ts` | 415 / 415 | MEASURED | no |
 | 19 | Tree Gnome Village | 2 | 36 | Prayer 43, Magic 35 | `quest-tree.ts` | 782 / 829 | MEASURED at the partner's state | no |
 | 20 | The Grand Tree | 5 | 41 | Agility 25, Tree Gnome Village | `quest-grandtree.ts` | 2,001 / 2,083 | MEASURED at the partner's state | no |
-| 21 | Merlin's Crystal | 6 | 47 | Prayer 43 | `quest-merlin.ts` | 868 / 897 | MEASURED | yes (Mordred, Wilderness altar) |
-| 22 | Holy Grail | 2 | 49 | Merlin's Crystal, Attack 20 | `quest-grail.ts` | 1,451 / 1,479 | MEASURED | yes (Titan, HP) |
+| 21 | Merlin's Crystal | 6 | 47 | Prayer 43 | `quest-merlin.ts` | 871 / 877 | MEASURED at the partner's state (main 868 / 897) | no |
+| 22 | Holy Grail | 2 | 49 | Merlin's Crystal, Attack 20 | `quest-grail.ts` | 1,470 / 1,500 | MEASURED at the partner's state (main 1,451 / 1,479) | no |
 | 23 | Lost City | 3 | 52 | Woodcutting 36, Crafting 31 | `quest-zanaris.ts` | 629 / 720 | MEASURED at the partner's state | no |
-| 24 | Dragon Slayer | 2 | 54 | 32 QP, Prayer 43 | `quest-dragon.ts` | 1,488 / 1,577 | MEASURED | yes (no rune armour) |
+| 24 | Dragon Slayer | 2 | 54 | 32 QP, Prayer 43 | `quest-dragon.ts` | 1,505 / 1,601 | MEASURED at the partner's state (main 1,488 / 1,577) | no |
 | 25 | Shield of Arrav, certificate | 1 | **55** | Haggis's Arrav | the king (`king_roald.rs2:11-26`) | about 30 | ESTIMATE | - |
 
 Totals:
 
 | Part | Floor | Realistic | Evidence |
 |---|---|---|---|
-| 24 scripted quest parts (rows 1-24) | 12,883 | 13,451 | MEASURED practice (rows 5, 11, 23 at the partner's state: 1,107 / 1,272; was 1,212 / 2,228 ESTIMATE) |
+| 24 scripted quest parts (rows 1-24) | 12,924 | 13,482 | MEASURED practice (rows 3, 5, 11-13, 19-24 at the partner's state; the other rows at the main state) |
 | Skill gates | about 300 | about 300 | ESTIMATE on MEASURED rates |
 | Certificate claim | about 30 | about 30 | ESTIMATE |
-| **Sum without travel** | **about 13,200** | **about 13,800** | |
+| **Sum without travel** | **about 13,300** | **about 13,800** | |
 | Travel between 24 starts | about 3,000 | about 4,500 | ESTIMATE (about 125-190 ticks per start) |
-| **Sum with travel** | **about 16,200** | **about 18,300** | ESTIMATE |
+| **Sum with travel** | **about 16,300** | **about 18,300** | ESTIMATE |
 
 Order notes:
 
@@ -223,11 +225,29 @@ Holy Grail ends at tick 58,062. `quests-rest` runs 58,062-132,138 and holds Hero
    Bolt is needed: the Entrana zombies drop a bronze axe (50/128), which chops the tree and is the weapon for the
    tree spirit under Protect from Melee (partner `hpMin` 60-69 of 72). Open on live only: the exit portal puts the
    partner in Wilderness level 32, and the walk to level 20 (about 53 ticks) is open to PKers.
-2. **Re-proofs at the partner's levels.** 7 scripts ran only with every skill at 99. Dragon Slayer ran in rune
-   armour. The partner has Defence 1 in Melzar's maze (row 21, before Holy Grail) and must keep the prayer on
-   there; by Crandor (row 24) it has Defence 85 from Holy Grail (section 2). 60 prayer points last
-   300 ticks. The maze leg alone was 334 ticks in the proof, so the script needs prayer potions or a prayer
-   restore stop.
+2. **Re-proofs at the partner's levels: 6 of 7 CLOSED (MEASURED practice 3/3, 2026-10-24).** Presets
+   `quest_<name>_partner` (`presets-partner.ts`) use the route levels and the quest varps of the rows before:
+
+   | Row | Quest | Partner state | Ticks (3 runs) | hpMin | Note |
+   |---|---|---|---|---|---|
+   | 3 | The Restless Ghost | combat 3, 10 HP, Magic 44, nothing worn | 531, 532, 530 | 9-10 | the skeleton is left behind |
+   | 12 | Pirate's Treasure | Attack/Strength 83, Defence 1, HP 72, rune scimitar | 468, 455, 449 | 72 | |
+   | 13 | Vampire Slayer | as row 12 | 334, 329, 337 | 66-69 | |
+   | 21 | Merlin's Crystal | Attack 99, Defence 1, HP 72, Prayer 60, rune scimitar, 41 QP | 876, 871, 877 | 72 | no damage taken |
+   | 22 | Holy Grail | as row 21, nothing worn, Excalibur and scimitar in the pack | 1,489, 1,470, 1,500 | 54-71 | the Titan dies under 3 prayers at Prayer 60 |
+   | 24 | Dragon Slayer | Attack 99, Strength 83, Defence 85, HP 72, Prayer 81, rune set, 52 QP | 1,601, 1,548, 1,505 | 49-56 | script fix below |
+
+   Dragon Slayer fix (`quest-dragon.ts`): Elvarg's death queues `dragon_complete` as a normal queue
+   (`elvarg.rs2:13-15`). The likely cause (inference from the log, the engine's queue code was not read): a normal
+   queue waits while a dialog is open. At 72 HP the partner gets a Hitpoints level-up dialog on
+   the kill, and the first batch failed 1 of 3 runs (quest message not seen within 10 ticks, last message "advanced a
+   hitpoints level"). The script now closes dialogs for up to 30 ticks until the quest completes. The main preset
+   still passes after the fix (1/1, 1,493 ticks). In that failed run the partner also ran out of prayer at Elvarg
+   (Prayer 81), but Elvarg still died; her melee max is 8 against 72 HP.
+   Correction: Melzar's maze is in Dragon Slayer (row 24, Defence 85), not row 21, so no prayer restore is needed.
+   Open: Shield of Arrav, Phoenix part (row 16). Preset `quest_arrav_helper_partner` is ready, but the pair proof
+   needs 2 practice bots at once (`quest-arrav.ts <main>`, helper `<main>p`). The weaponsmaster max hit is 3 against
+   72 HP, so the risk is low (CODE-READ).
 3. **Elvarg's dragonfire is 10 with the shield: CLOSED by Witch's House.** The partner must have more than 10 HP
    before Crandor. Witch's House (HP 72) is MEASURED 3/3 at Defence 1 and 10 HP (`quest-ball.ts`, 448-522 ticks,
    Protect from Melee, `hpMin=10`).

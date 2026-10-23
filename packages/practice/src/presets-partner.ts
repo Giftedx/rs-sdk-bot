@@ -82,6 +82,12 @@ export const PARTNER_PRESETS: Record<string, SaveConfig> = {
         position: { x: 3097, z: 3268, level: 0 }, skills: PARTNER_HUNT, equipment: [SCIMITAR], varps: rows(160, 63, 107, 179, 29, 67, 31, 62, 80, 65, 226, 71),
         inventory: inv([1917, 2347, 1550, [563, 2], [556, 6], [554, 2], ...lobsters(6)]),
     },
+    // Shield of Arrav, Phoenix part (row 16, quest-arrav.ts helper role): beside Reldo as quest_arrav_helper
+    // (presets-gang.ts), 20 coins for Baraek. Rows 1-15 done. Not proved: the pair needs 2 practice bots at once.
+    quest_arrav_helper_partner: {
+        position: { x: 3210, z: 3494, level: 0 }, skills: PARTNER_HUNT, equipment: [SCIMITAR], coins: 20,
+        varps: rows(160, 63, 107, 179, 29, 67, 31, 62, 80, 65, 226, 71, 178, 144, 180), inventory: inv(lobsters(4)),
+    },
     // Dragon Slayer (row 24, quest-dragon.ts): beside the Guild master as quest_dragon, with the helper items of
     // presets-dragon.ts dragon(). Defence 85 from Holy Grail, so the rune set is worn; 52 QP from rows 1-23.
     quest_dragon_partner: {
