@@ -270,6 +270,35 @@ one equal share of each ESTIMATE. Overall (scenario a): 38,191 / 45,540 before, 
 realistic). Still open in that row: its `rival-dialogue-burst` patch (8 quests x 0.9248) overrides the
 `combat-hp-bound` patch (Witch's House split out), so with both levers on the row still counts Witch's House.
 
+### Goblin Diplomacy (MEASURED practice, 3/3)
+
+Script `scripts/generated/quest-gobdip.ts`, preset `quest_gobdip` (beside the Rusty Anchor bartender, Port Sarim;
+3 goblin mail 288, orange dye 1769, blue dye 1767, and 1 law, 3 air, 1 water for a Falador teleport, all from a
+helper; the dyed mails are untradeable). Route: bartender, both dyes, Falador teleport, run north to General
+Wartface (2957,3511), four talks with him.
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle |
+|---|---|---|---|
+| p1 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2956,3511,0 ticks=172 hpMin=99 eats=0 walkTicks=70 retries=0 died=false` | 172 | 20 (11.4%) |
+| p2 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2956,3509,0 ticks=167 hpMin=99 eats=0 walkTicks=66 retries=0 died=false` | 167 | 16 (9.4%) |
+| p3 | `RESULT ok craftingXp=5000 xp=magic=1200,crafting=5000 at=2957,3510,0 ticks=172 hpMin=99 eats=0 walkTicks=71 retries=0 died=false` | 172 | 20 (11.4%) |
+
+Every run ends with `Congratulations! Quest complete!`. 5,000 Crafting XP (`stat_advance(crafting, 2000)`), a gold
+bar, 5 QP (CODE-READ), 1,200 Magic XP from the teleport. No damage, 0 deaths. Planned: about 951 (ESTIMATE share);
+measured 167-172. The rival's figure is 51.7 ticks without travel (UNVERIFIED).
+
+Steps (p1): bartender 0-13, dyes 13-17, teleport and run 17-92, Wartface 92-172 (4 talks of about 20 ticks; 80
+dialogue ticks in the LEDGER). The dialogue is the largest part left; a burst sender would cut most of it.
+
+Open: one earlier run of the same script (before a WARN line was added, no other change) failed:
+`RESULT fail talk wartface 1 ... at=2958,3509,0 ticks=202`. Three talk tries at Wartface opened no dialog, and 118
+ticks were idle at 2957-2959,3509. The cause is not found (the talk result was not logged then). So the script is
+4/5 overall, 3/3 in the proof.
+
+Planner: new row `gobdip` (167 / 172 MEASURED, 5 QP, places `rusty-anchor` to `goblin-village`, serves Quest
+Points only). Overall with HEAD plus this change (scenario a): 38,235 / 45,443, unchanged, because the short quests
+come after the last 99.
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,

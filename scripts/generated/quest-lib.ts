@@ -165,7 +165,8 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
             const n = npc(re);
             if (!n) await fail(`${label}: no npc ${re}`);
             for (let k = 0; k < 8 && !dialogOpen() && !stats.died; k++) {
-                await talkTo(npc(re) ?? n);
+                const tr: any = await talkTo(npc(re) ?? n);
+                if (tr && tr.success === false) console.log(`WARN talk ${label}: ${tr.reason ?? ""} ${tr.message ?? ""}`);
                 let at0 = '', still = 0;
                 for (let w = 0; w < 25 && !dialogOpen() && !stats.died; w++) {
                     await waitTicks(s, 1);

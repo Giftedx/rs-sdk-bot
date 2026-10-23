@@ -259,6 +259,16 @@
    "x": 2924,
    "z": 3486,
    "note": "Druidic Ritual start and end, npc kaqemeex 455 (maps/m45_54.jm2)"
+  },
+  "rusty-anchor": {
+   "x": 3045,
+   "z": 3257,
+   "note": "Goblin Diplomacy start, npc rustyanchor_bartender 734 (Port Sarim)"
+  },
+  "goblin-village": {
+   "x": 2957,
+   "z": 3511,
+   "note": "Goblin Diplomacy end, npc general_wartface 297 (maps/m46_54.jm2)"
   }
  },
  "activities": [
@@ -1592,8 +1602,33 @@
    }
   },
   {
+   "id": "gobdip",
+   "label": "Goblin Diplomacy (5,000 Crafting)",
+   "serves": [
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 167,
+    "realistic": 172,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md (Goblin Diplomacy): scripts/generated/quest-gobdip.ts, preset quest_gobdip (Haggis at the qp-filler row: every skill 99, rune set, 3 goblin mail, orange and blue dye, Falador teleport runes from a helper), practice, 3/3 PASS at 172, 167, 172 ticks (floor = best run, realistic = worst run); bartender to General Wartface with a Falador teleport; one earlier run of the same script failed (3 talk tries at Wartface opened no dialog, cause not found)"
+   },
+   "lump": true,
+   "qp": 5,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "XP: quest_gobdip.rs2 stat_advance(crafting, 2000) = 5,000 at 25x, measured 5,000 per run; QP quest.constant gobdip_questpoints 5; ticks research/quest-plan.md; serves only questpoints: Crafting is 99 long before this row (Crafting #1 deadline 197)",
+   "at": "rusty-anchor",
+   "xp": {
+    "crafting": 5000
+   },
+   "endAt": "goblin-village"
+  },
+  {
    "id": "qp-filler",
-   "label": "Short quests to 32 QP: Romeo & Juliet, Goblin Diplomacy, Witch's House, Ernest, Sheep Herder, Black Knights' Fortress, Prince Ali",
+   "label": "Short quests to 32 QP: Romeo & Juliet, Witch's House, Ernest, Sheep Herder, Black Knights' Fortress, Prince Ali",
    "serves": [
     "strength",
     "defence",
@@ -1601,21 +1636,21 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 2100,
-    "realistic": 6300,
+    "floor": 1800,
+    "realistic": 5400,
     "evidence": "ESTIMATE",
-    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ); Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed"
+    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ); Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed"
    },
    "lump": true,
    "xp": {
     "hitpoints": 158125
    },
-   "qp": 28,
+   "qp": 23,
    "requires": [
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7); Druidic Ritual is row druid",
+   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7); Druidic Ritual is row druid; Goblin Diplomacy is row gobdip",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -1624,12 +1659,12 @@
        "questpoints"
       ],
       "xp": {},
-      "qp": 24,
+      "qp": 19,
       "ticks": {
-       "floor": 1800,
-       "realistic": 5400,
+       "floor": 1500,
+       "realistic": 4500,
        "evidence": "ESTIMATE",
-       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed"
+       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed"
       }
      }
     },
@@ -1637,10 +1672,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 1943,
-       "realistic": 5827,
+       "floor": 1665,
+       "realistic": 4995,
        "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed"
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed"
       }
      }
     }
@@ -1712,7 +1747,8 @@
    "qp": 2,
    "requires": [
     "qp-filler",
-    "druid"
+    "druid",
+    "gobdip"
    ],
    "minQp": 32,
    "evidence": "ESTIMATE",

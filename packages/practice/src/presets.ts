@@ -124,6 +124,10 @@ export const PRESETS: Record<string, SaveConfig> = {
             // Druidic Ritual: beside Kaqemeex (npc 455 spawn 2924,3486, maps/m45_54.jm2); raw beef 2132, rat meat 2134,
             // bear meat 2136, chicken 2138 (helper hand-off; the enchanted meats are untradeable).
             quest_druid: q({ x: 2925, z: 3487 }, [2132, 2134, 2136, 2138].map(id => ({ id, count: 1 }))),
+            // Goblin Diplomacy: beside the Rusty Anchor bartender (npc 734 spawn 3045,3257, Port Sarim); 3 goblin mail
+            // (288), orange dye (1769), blue dye (1767), and Falador teleport runes (1 law 563, 3 air 556, 1 water 555)
+            // for the trip to the generals (npc 297 Wartface at 2957,3511). The dyed mails are untradeable.
+            quest_gobdip: q({ x: 3047, z: 3256 }, [{ id: 288, count: 1 }, { id: 288, count: 1 }, { id: 288, count: 1 }, { id: 1769, count: 1 }, { id: 1767, count: 1 }, { id: 563, count: 1 }, { id: 556, count: 3 }, { id: 555, count: 1 }]),
         };
     })(),
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
