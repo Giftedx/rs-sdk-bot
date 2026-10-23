@@ -31,6 +31,10 @@ export const CRAFTING: Band[] = [
     { from: 43, name: 'diamond', xp: 107.5, inputs: { uncut_diamond: 1 } },
     { from: 55, name: 'dragonstone', xp: 137.5, inputs: { uncut_dragonstone: 1 } },
 ];
+// Substitution ladders of research/supply-logistics.md (Proposed substitutions), for the planner rows that drop an
+// unsourceable item: craft-diamond (no dragonstones), fletch-arrows (no dart tips). Select with LADDER=<name>.
+export const CRAFTING_DIAMOND: Band[] = CRAFTING.filter(b => b.name !== 'dragonstone');
+export const FLETCHING_ARROWS: Band[] = FLETCHING.filter(b => !/dart/.test(b.name));
 // Herblore: skill_herblore/configs/brewing/brew_potion.struct (unfinished potion + secondary, no delay).
 // 1-3: identify guam (identify.rs2, herbs.obj identified_herb_exp 25 = 2.5 XP).
 export const HERBLORE: Band[] = [
@@ -55,6 +59,17 @@ export const HERBLORE: Band[] = [
     { from: 72, name: 'ranging', xp: 162.5, inputs: { dwarfweedvial: 1, wine_of_zamorak: 1 }, out: '3doserangerspotion' },
     { from: 76, name: 'magic', xp: 172.5, inputs: { lantadymevial: 1, cactus_potato: 1 }, out: '3dose1magic' },
     { from: 78, name: 'zamorak', xp: 175, inputs: { torstolvial: 1, jangerberries: 1 }, out: '3dosepotionofzamorak' },
+];
+// herb-drops row: a fixed mix of potions from the randomherb drops (research/supply-logistics.md, Herblore
+// replacement detail), not a level ladder. In this order every potion is legal: 270 attack potions take Herblore 3
+// to about 73, above the highest requirement (super strength 55).
+export const HERB_DROPS: { band: Band; count: number }[] = [
+    { band: HERBLORE.find(b => b.name === 'attack')!, count: 270 },
+    { band: HERBLORE.find(b => b.name === 'restore')!, count: 119 },
+    { band: HERBLORE.find(b => b.name === 'prayer')!, count: 93 },
+    { band: HERBLORE.find(b => b.name === 'super attack')!, count: 68 },
+    { band: HERBLORE.find(b => b.name === 'fishing')!, count: 51 },
+    { band: HERBLORE.find(b => b.name === 'super strength')!, count: 43 },
 ];
 // Firemaking: skill_firemaking/configs/firemaking.obj productexp (no teak or mahogany in rev 289).
 export const FIREMAKING: Band[] = [

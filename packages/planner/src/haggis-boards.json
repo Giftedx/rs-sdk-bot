@@ -640,9 +640,9 @@
    ],
    "ticks": {
     "floor": 49,
-    "realistic": 50,
-    "evidence": "ESTIMATE",
-    "source": "research/supply-floors.md: 49, 49, 49 ticks MEASURED practice with the dart ladder; rune arrows give 187.5 XP per action against rune darts 188 and iron arrows 37.5 against iron darts 38, both 5 per tick (arrows.dbrow, darts.dbrow via supply-floors.md:78-108), so the same actions; not measured with arrows only"
+    "realistic": 49,
+    "evidence": "MEASURED",
+    "source": "MEASURED practice 2026-10-23: 49, 49, 49 ticks Fletching 1 -> 99 (ticksTo99) with arrows only, no dart tips (scripts/measure/floor-fletching.ts LADDER=arrows, args 5 1 1 = open loop 5 inputs per tick, preset floor_fletching_arrows, 240 actions); .practice/results.jsonl, 3 runs; supply delivery not included"
    },
    "xp": {
     "fletching": "to99"
@@ -650,8 +650,8 @@
    "requires": [
     "trade-start"
    ],
-   "evidence": "ESTIMATE",
-   "source": "arrows-only ladder (research/supply-logistics.md, Proposed substitutions); tick count carried from the MEASURED dart-ladder run",
+   "evidence": "MEASURED",
+   "source": "arrows-only ladder (research/supply-logistics.md, Proposed substitutions); MEASURED practice, 3 runs (scripts/measure/floor-fletching.ts LADDER=arrows)",
    "leadTime": "ESTIMATE: rune arrowtips 2,595 are shop-only (GE 0 sellers): Catherby 100@40 (Mightyrod) + Ranging Guild 150@60 (N3, Ranged 40 first, 0.2 h): 250 at once + 375 per hour = 6.3 h (11.1 h Catherby alone), about 1.0M coins. Headless arrows 3,615: Bigchopper chops about 241 logs, cuts and feathers them, about 1.0 h. The critical-path job of the staging (research/supply-logistics.md, jobs 2, 3, 5)",
    "at": "anywhere"
   },
@@ -699,10 +699,10 @@
     "crafting"
    ],
    "ticks": {
-    "floor": 229,
-    "realistic": 230,
-    "evidence": "ESTIMATE",
-    "source": "research/supply-floors.md: 194, 194, 195 MEASURED practice with the dragonstone ladder (12 ticks per 27-gem cycle); 2,687.5 against 3,437.5 XP per gem = 354 diamonds for 55-99 instead of 277 dragonstones, 77 more gems = about 3 cycles = +35 ticks (research/supply-logistics.md, Proposed substitutions); not measured"
+    "floor": 222,
+    "realistic": 231,
+    "evidence": "MEASURED",
+    "source": "MEASURED practice 2026-10-23: 222, 228, 231 ticks Crafting 1 -> 99 (scripts/measure/floor-crafting.ts LADDER=diamond, preset floor_crafting_diamond, Draynor booth, 27 gems per trip, 364 diamonds from 43, no dragonstones); .practice/results.jsonl floorx61001, floorxxui12, floorxqni23; floor = best, realistic = worst; supply delivery not included"
    },
    "xp": {
     "crafting": "to99"
@@ -710,8 +710,8 @@
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "diamond ladder (research/supply-logistics.md, Proposed substitutions); +35 ticks on the MEASURED 194 / 195",
+   "evidence": "MEASURED",
+   "source": "diamond ladder (research/supply-logistics.md, Proposed substitutions); MEASURED practice, 3 runs (scripts/measure/floor-crafting.ts LADDER=diamond, .practice/results.jsonl)",
    "supplies": [
     {
      "item": "chisel",
@@ -765,10 +765,10 @@
     "herblore"
    ],
    "ticks": {
-    "floor": 630,
-    "realistic": 780,
-    "evidence": "ESTIMATE",
-    "source": "research/supply-floors.md: 246 ticks MEASURED practice for 247 potions (about 1 tick per potion, Draynor booth, 14 + 14 per trip); this ladder needs 644 potions = about 630 (research/supply-logistics.md, Proposed substitutions). Realistic adds 150 (of +100 to +200) for the main to identify and mix herbs that a low-level helper cannot (identify.rs2 attempt_identify_herb, brew_potion.rs2:121-132); not measured"
+    "floor": 516,
+    "realistic": 519,
+    "evidence": "MEASURED",
+    "source": "MEASURED practice 2026-10-23: 516, 516, 519 ticks Herblore 3 -> 99 finishing the 644-potion drop mix from unfinished potions (scripts/measure/floor-herblore.ts LADDER=drops, preset floor_herb_drops, Draynor booth, 14 + 14 per trip, 46 bank cycles); .practice/results.jsonl, 3 runs. Not included: identify and unf mixing by the main for herbs a low-level helper cannot identify (was an unmeasured +150 realistic; the row's supplies are unf potions), supply delivery, and Herblore 1-3 (needs Druidic Ritual or other quest XP; the preset starts at 3)"
    },
    "xp": {
     "herblore": "to99"
@@ -776,8 +776,8 @@
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "randomherb drop mix of 1,080 herb rolls (shared_droptables.rs2:2-34 CODE-READ), each herb made into its best potion with a secondary that exists at scale (research/supply-logistics.md, Herblore replacement detail)",
+   "evidence": "MEASURED",
+   "source": "randomherb drop mix of 1,080 herb rolls (shared_droptables.rs2:2-34 CODE-READ), each herb made into its best potion with a secondary that exists at scale (research/supply-logistics.md, Herblore replacement detail); time MEASURED practice 3 runs (scripts/measure/floor-herblore.ts LADDER=drops)",
    "supplies": [
     {
      "item": "guam potion (unf)",

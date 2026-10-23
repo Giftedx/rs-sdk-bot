@@ -339,6 +339,35 @@ export const PRESETS: Record<string, SaveConfig> = {
     },
     // Prayer 1 -> 99 at Draynor bank: 560 dragon bones (536) in the bank (555 needed).
     floor_prayer: { position: { x: 3092, z: 3243, level: 0 }, bank: [{ id: 536, count: 560 }] },
+    // Substitution ladders (scripts/measure/floor-bands.ts, LADDER=...): planner rows craft-diamond, fletch-arrows, herb-drops.
+    // Crafting 1 -> 99 with diamonds from 43 (no dragonstones): ladder counts + 1 spare, opal/jade/red topaz + 2 more.
+    floor_crafting_diamond: {
+        position: { x: 3092, z: 3243, level: 0 },
+        inventory: [{ id: 1755, count: 1 }],
+        bank: [{ id: 1625, count: 11 }, { id: 1627, count: 6 }, { id: 1629, count: 6 }, { id: 1623, count: 4 }, { id: 1621, count: 3 }, { id: 1619, count: 6 }, { id: 1617, count: 366 }],
+    },
+    // Fletching 1 -> 99 with arrows only (no dart tips): ladder tips + 2 spare actions per band, headless arrows.
+    floor_fletching_arrows: {
+        position: { x: 3222, z: 3218, level: 0 },
+        inventory: [{ id: 39, count: 90 }, { id: 53, count: 3780 }, { id: 40, count: 120 }, { id: 41, count: 165 }, { id: 42, count: 255 }, { id: 43, count: 525 }, { id: 44, count: 2625 }],
+    },
+    // Herblore 3 -> 99 with the herb-drops mix (HERB_DROPS): unfinished guam, harralander, ranarr, irit, avantoe, kwuarm
+    // and their secondaries (eye of newt, red spiders' eggs, snape grass, limpwurt root), + 2 spares each.
+    floor_herb_drops: {
+        position: { x: 3092, z: 3243, level: 0 },
+        skills: { Herblore: 3 },
+        bank: [[91, 272], [97, 121], [99, 95], [101, 70], [103, 53], [105, 45], [221, 340], [223, 121], [231, 146], [225, 45]].map(([id, count]) => ({ id: id!, count: count! })),
+    },
+    // Superheat gold (scripts/measure/floor-superheat.ts): Magic 43, Smithing 40 (gold bar levelrequired,
+    // smelting.struct:63), goldsmith gauntlets (776) worn, nature (561) and fire (554) runes in the pack, 720 gold ore
+    // (444) in the bank (699 casts from 40 to 99).
+    floor_superheat: {
+        position: { x: 3092, z: 3243, level: 0 },
+        skills: { Magic: 43, Smithing: 40 },
+        equipment: [{ id: 776, count: 1, slot: 9 }],
+        inventory: [{ id: 561, count: 760 }, { id: 554, count: 3040 }],
+        bank: [{ id: 444, count: 720 }],
+    },
     // Magic 7 -> 99 at Draynor bank: rune stacks in the pack (cosmic 564, water 555, air 556, fire 554, earth 557, with
     // spares), the MAGIC enchant bands' jewellery in the bank (sapphire 1637, emerald 1639, ruby 1641, diamond 1643
     // rings, strung dragonstone amulets 1702). Magic 7 because no supply-only spell gives XP at 1-6.

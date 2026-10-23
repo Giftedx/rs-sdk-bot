@@ -11,14 +11,14 @@ import type { SaveConfig } from './presets';
 // Inventory (helper items): Fire Wave runes (1 blood 565 + 5 air 556, fire from the staff) for 60 casts; 2 law runes
 // 563 (Varrock Teleport); gold bar 2357, ball of wool 1759, monkey bones 3183 (a Karamja monkey's,
 // quest_tbwt/scripts/monkey.rs2:73), 5 bananas 1963 (the child checks for more than 4, mm_monkey_child.rs2:136);
-// 4 prayer potions 2434; 8 sharks 385.
+// 4 prayer potions 2434; 1 antipoison 2446 (Karamja jungle spiders poison); 8 sharks 385.
 const MM_SKILLS = {
     Attack: 99, Hitpoints: 35, Magic: 99, Prayer: 43, Agility: 57, Thieving: 43, Smithing: 99, Cooking: 35,
     Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99,
 };
 const MM_WORN = [[579, 0], [1727, 2], [1387, 3], [577, 4], [1011, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
 const MM_PACK = [[565, 60], [556, 310], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
-    .concat([2357, 1759, 3183, 1963, 1963, 1963, 1963, 1963, 2434, 2434, 2434, 2434].map(id => ({ id, count: 1 })),
+    .concat([2357, 1759, 3183, 1963, 1963, 1963, 1963, 1963, 2434, 2434, 2434, 2434, 2446].map(id => ({ id, count: 1 })),
         Array.from({ length: 8 }, () => ({ id: 385, count: 1 })));
 
 // mm_gnomes (varp 372) bit fields, quest_mm.varbit: narnode 0-3, caranock 4-6, daero 7-10, waydar 11-12,
@@ -28,15 +28,18 @@ export function mmGnomes(f: { narnode?: number; caranock?: number; daero?: numbe
         | ((f.lumdo ?? 0) << 13) | ((f.garkor ?? 0) << 16) | ((f.zooknock ?? 0) << 20);
 }
 
-function mmPreset(position: { x: number; z: number; level: number }, varps: Record<number, number> = {}, extra: number[] = []): SaveConfig {
+function mmPreset(position: { x: number; z: number; level: number }, varps: Record<number, number> = {}, extra: number[] = [], pack = MM_PACK): SaveConfig {
     return {
         position,
         skills: MM_SKILLS,
         equipment: MM_WORN,
         varps: { 111: 9, 150: 160, ...varps },
-        inventory: MM_PACK.concat(extra.map(id => ({ id, count: 1 }))),
+        inventory: pack.concat(extra.map(id => ({ id, count: 1 }))),
     };
 }
+// After chapter 3 the helper items are spent: runes, law runes, prayer potions, sharks stay.
+const MM_PACK_LATE = [[565, 60], [556, 310], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
+    .concat([2434, 2434, 2434, 2434].map(id => ({ id, count: 1 })), Array.from({ length: 8 }, () => ({ id: 385, count: 1 })));
 
 export const MM_PRESETS: Record<string, SaveConfig> = {
     quest_mm: mmPreset({ x: 2466, z: 3494, level: 0 }),
@@ -44,6 +47,10 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
     quest_mm_s30: mmPreset({ x: 2482, z: 3486, level: 1 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3 }) }, [4004, 4005]),
     // Debug: in the hangar after Daero's introduction (%mm_main 1, %mm_narnode 7, %mm_caranock 3, %mm_daero 5):
     // MM_FROM=40 (the puzzle).
+    // Debug: on Ape Atoll (the village west side, 0_42_43_24_32) with the sigil, before the battle: %mm_main 5
+    // (completed_ch3), %mm_garkor 6 (joined_10th_squad), %mm_zooknock 6, %mm_awowogei 2 (mm_monkeys bits 2-4).
+    // MM_FROM=130 (the demon, the way back, the reward).
+    quest_mm_s130: mmPreset({ x: 2712, z: 2784, level: 0 }, { 365: 5, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 6, zooknock: 6 }), 373: 2 << 2 }, [4035], MM_PACK_LATE),
     quest_mm_s40: mmPreset({ x: 2393, z: 9890, level: 0 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 5 }) }, [4004]),
 };
 

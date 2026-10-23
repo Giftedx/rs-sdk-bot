@@ -249,7 +249,14 @@ try {
 
     // Charlie is behind the prison door (2465,3495-3496 l3, blockrange=no, _unpack/225/all.loc:15100-15105); his talk is
     // an ap op (charlie.rs2:1), so it needs line of sight. The laddertop (2466,3495) blocks it from the ladder tile.
+    // Charlie lives 500 ticks from the Climb-up that adds him (npc_add, quest_grandtree.rs2:14-19); one test run came
+    // back at the end of that window and he was gone. No Charlie: down one ladder and up again adds a new one.
     const toBars = async (): Promise<void> => {
+        await q.waitUntil(() => !!q.npc(/^charlie/i), 3);
+        if (!q.npc(/^charlie/i)) {
+            await ladder('respawn charlie down', TREE_LADDER, 'down', 2);
+            await ladder('respawn charlie up', TREE_LADDER, 'up', 3);
+        }
         await q.dash('to prison bars', 2465, 3495, 0, 12);
     };
 
@@ -328,7 +335,16 @@ try {
         await spiritTree('village tree 2', VILLAGE_TREE, [/where can i go/i, /gnome stronghold/i], STRONGHOLD_LAND);
         await treeTo(3);
         await toBars();
-        await q.talk('charlie 2', /^charlie/i, [], () => q.sawText(/toad swamp|see what i can find/i) && !q.dialogOpen(), { x: 2464, z: 3495 }, 60);
+        const ok2 = () => q.sawText(/toad swamp|see what i can find/i) && !q.dialogOpen();
+        for (let i = 0; i < 3 && !ok2(); i++) {
+            if (i > 0) { q.stats.retries++; await toBars(); }
+            const c = q.npc(/^charlie/i);
+            if (!c) continue;
+            await q.talkTo(c);
+            await q.waitUntil(() => q.dialogOpen(), 15);
+            await q.converse([], ok2, 60);
+        }
+        if (!ok2()) await q.fail('talk charlie 2');
         await ms(100);
     }
 

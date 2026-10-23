@@ -2,8 +2,9 @@
 // no delay), up to 5 per tick, bands from floor-bands.ts CRAFTING. Opal, jade and red topaz can smash
 // (gem.dbrow success_rate), so the preset banks 2 extra of each.
 // Usage: bun scripts/measure/floor-crafting.ts <bot> [perLoad=27] [clear=close|click]
+// LADDER=diamond: diamonds from 43 to 99, no dragonstones (planner row craft-diamond, preset floor_crafting_diamond).
 import { openBot, finish } from '../../packages/core/src/bot';
-import { CRAFTING, ladder, objId, odds } from './floor-bands';
+import { CRAFTING, CRAFTING_DIAMOND, ladder, objId, odds } from './floor-bands';
 import { meter, tick, level, report, bankProduction, type Job } from './floor-lib';
 
 const [bot, perLoadArg, clearArg] = process.argv.slice(2);
@@ -13,7 +14,7 @@ try {
     const m = meter(s, 'Crafting');
     const extra: Record<string, number> = { opal: 2, jade: 2, 'red topaz': 2 };
     const jobs: Job[] = [];
-    for (const st of ladder(CRAFTING, 1, 99, odds)) {
+    for (const st of ladder(process.env.LADDER === 'diamond' ? CRAFTING_DIAMOND : CRAFTING, 1, 99, odds)) {
         const gem = objId(Object.keys(st.band.inputs)[0]!);
         for (let i = 0; i < st.actions + (extra[st.band.name] ?? 0); i++) jobs.push({ use: gem, on: objId('chisel'), level: st.band.from, band: st.band.name, xp: st.band.xp });
     }

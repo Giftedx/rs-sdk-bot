@@ -281,8 +281,118 @@ try {
         await ms(70);
     }
 
+    // 80-120 (Ape Atoll as a human and as a monkey, the zoo, Awowogei, the sigil) are not scripted yet:
+    // research/quest-plan.md section 1h, "Next stage".
+    if (FROM < 130) await q.end(true, 'stage=70 (stages 80-120 not scripted)');
+
+    // 140. Wear the sigil (OPHELD2, mm_demon.rs2:1-5; timer 10, then the battle zone 1_42_143, a corner by player count,
+    // :35-92). The jungle demon spawns 5-10 tiles away (:160). Its waves (max 31) are 0 under Protect from Magic
+    // (:349-354); it melees only within 2 tiles (:332-336), so the bot keeps 4+ tiles away. Fire Wave (Magic 75, max 20)
+    // with the staff of fire; the squad's hits (0-1) can never kill it (:403-417), and the kill counts only for the
+    // top damage dealer (npc_findhero, :379).
+    const PFMAGIC = 12;
+    const pmOn = (): boolean => !!q.st()?.prayers?.activePrayers?.[PFMAGIC];
+    const points = (): number => q.st()?.prayers?.prayerPoints ?? 0;
+    let potions = 0;
+    const keepPrayer = async (): Promise<void> => {
+        if (points() > 6) return;
+        const pot = ITEM.prayerPot.find(id => q.has(id));
+        if (!pot) return;
+        const p0 = points();
+        potions++;
+        await q.step('prayer potion', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' }), () => points() > p0, 3, 2);
+    };
+    const inBattle = (): boolean => { const p = q.pos(); return !!p && p.level === 1 && p.worldX >= 2688 && p.worldX < 2752 && p.worldZ >= 9152 && p.worldZ < 9216; };
+    let fightTicks = 0, casts = 0;
+    if (FROM < 140) {
+        await q.step('wear sigil', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.sigil)!, optionIndex: 2, reason: 'SDK' }), () => inBattle(), 40, 2);
+        q.milestone('battle');
+        const demon = () => q.npc(/^jungle demon$/i);
+        // Garkor's "Ready yourself" page comes first (garkor_final_battle, :146-152); the demon queue runs after it.
+        await q.converse([], () => !!demon(), 80);
+        if (!demon()) await q.fail('no jungle demon');
+        await q.step('protect from magic', () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFMAGIC, reason: 'SDK' }), pmOn, 3, 3);
+        const WAVE = componentId('magic:fire_wave');
+        const lastMsg = (re: RegExp): number => Math.max(-1, ...(q.st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).map((m: any) => m.observationId ?? m.tick));
+        const runes0 = lastMsg(/do not have enough/i);
+        const t0 = q.T();
+        let seenDead = 0, lastCast = -99, lastStep = -99;
+        for (let t = 0; t < 1500; t++) {
+            await q.guard('demon');
+            const d: any = q.s.sdk.getDialog();
+            if (d?.isOpen && !d.isWaiting) void q.s.sdk.sendClickDialog(0);
+            await keepPrayer();
+            if (!pmOn() && points() > 0) await q.s.direct({ type: 'togglePrayer', prayerIndex: PFMAGIC, reason: 'SDK' });
+            const n = demon();
+            if (!n) { if (++seenDead >= 3) break; await q.waitTicks(1); continue; }
+            seenDead = 0;
+            const p = q.pos()!;
+            const cx = n.tileX !== undefined ? n.tileX + 1 : n.x, cz = n.tileZ !== undefined ? n.tileZ + 1 : n.z;
+            const dist = Math.max(Math.abs(p.worldX - cx), Math.abs(p.worldZ - cz));
+            if (dist <= 3 && q.T() - lastStep >= 3) {
+                // Step 6 tiles straight away from the demon's centre, inside the zone.
+                const dx = Math.sign(p.worldX - cx) || 1, dz = Math.sign(p.worldZ - cz) || 1;
+                const tx = Math.min(2749, Math.max(2690, p.worldX + 6 * dx)), tz = Math.min(9213, Math.max(9154, p.worldZ + 6 * dz));
+                lastStep = q.T();
+                await q.s.direct({ type: 'walkTo', x: tx, z: tz, running: true, reason: 'SDK' });
+                await q.waitTicks(1);
+                continue;
+            }
+            if (!q.dialogOpen() && q.T() - lastCast >= 5 && q.T() - lastStep >= 2) {
+                casts++; lastCast = q.T();
+                await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: WAVE, reason: 'SDK' });
+            }
+            if (lastMsg(/do not have enough/i) > runes0) await q.fail('out of runes');
+            await q.waitTicks(1);
+        }
+        fightTicks = q.T() - t0;
+        if (demon()) await q.fail('demon: not dead');
+        console.log(`NOTE demon down after ${fightTicks} ticks casts=${casts} prayer=${points()} potions=${potions} hp=${q.hp()}`);
+        await q.s.direct({ type: 'togglePrayer', prayerIndex: PFMAGIC, reason: 'SDK' });
+        await ms(140);
+    }
+
+    // 150. Varrock Teleport out of the battle zone (the squad deletes itself when the player leaves, :212-220; %mm_main
+    // is already 6), the Varrock young tree, the village tree to the stronghold, Narnode (mm_narnode.rs2:14-31).
+    if (FROM < 150) {
+        await q.converse([], () => !q.dialogOpen(), 10);
+        await q.teleport('varrock teleport', 'magic:varrock_teleport', 3213, 3424);
+        const spiritTree = async (label: string, at: { x: number; z: number }, pats: RegExp[], land: { x: number; z: number }): Promise<void> => {
+            await walk(`to ${label}`, [{ x: at.x, z: at.z - 2, tol: 2 }]);
+            for (let i = 0; i < 3 && !q.near(land.x, land.z, 8); i++) {
+                await q.guard(label);
+                const t = q.findLoc(l => /tree/i.test(l.name) && near3(l, at, 2) && (l.optionsWithIndex ?? []).length > 0);
+                if (!t) { await q.waitTicks(1); continue; }
+                await q.opLoc(t, 1);
+                await q.waitUntil(() => q.dialogOpen(), 15);
+                await q.converse(pats, () => q.near(land.x, land.z, 8), 40);
+            }
+            if (!q.near(land.x, land.z, 8)) await q.fail(label);
+            await shutDialog();
+        };
+        await spiritTree('varrock tree', { x: 3177, z: 3506 }, [/^yes please/i], { x: 2542, z: 3169 });
+        await spiritTree('village tree', { x: 2543, z: 3168 }, [/where can i go/i, /gnome stronghold/i], { x: 2461, z: 3443 });
+        await enterTree();
+        await ms(150);
+    }
+
+    // 160. Narnode: the report, the reward (3 free slots, mm_narnode.rs2:89-100), the completion; Daero (l1): option 1
+    // "Focus on increasing strength and stamina" (mm_daero.rs2:240-302): 35,000 Strength and Hitpoints, 20,000 Attack and
+    // Defence base XP (x25).
+    let questDone = false;
+    const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+'?monkey madness/i) > 0) questDone = true; });
+    if (FROM < 160) {
+        await treeTo(0);
+        await talkChoose('narnode report', /^king narnode/i, () => -1, () => (questDone || q.sawText(/sign up for training|you had better sign up/i)) && !q.dialogOpen(), 120, NARNODE);
+        await ms(160);
+    }
+    const str0 = q.xp('Strength');
+    await treeTo(1);
+    await talkChoose('daero training', /^daero$/i, pick(/strength and stamina/i), () => q.xp('Strength') > str0, 80, DAERO);
+    offDone();
+    q.milestone('training');
     offWalk();
-    await q.end(true, `stage=${STOP < 999 ? STOP : 'end'}`);
+    await q.end(q.xp('Strength') > str0, `qp=3 questMsg=${questDone} fightTicks=${fightTicks} casts=${casts} potions=${potions} prayerLeft=${points()}`);
 } catch (e) {
     await q.fail(`error ${String(e).slice(0, 200)}`);
 }

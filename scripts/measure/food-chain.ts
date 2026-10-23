@@ -41,7 +41,7 @@ async function run(script: string, bot: string, env: Record<string, string>, arg
     return text;
 }
 const show = (who: string, text: string) => {
-    for (const l of text.split(/\r?\n/)) if (/^(START|RESULT|MILESTONE|WARN|BANK|COOK|CHICKENS|TRADE|LEDGER)/.test(l) || /Error/.test(l)) console.log(`${who} | ${l}`);
+    for (const l of text.split(/\r?\n/)) if (/^(START|RESULT|MILESTONE|WARN|BANK|COOK|CHICKENS|TRADE|LEDGER|DBG)/.test(l) || /Error/.test(l)) console.log(`${who} | ${l}`);
 };
 
 if (mode === 'fish') {
@@ -52,7 +52,7 @@ if (mode === 'fish') {
             // The live Mightyrod kit (status file 2026-10-23): rod, knife, 2 logs; 300 feathers instead of 27.
             await prep(bot, { position: fly, skills: { Fishing: 99, Cooking: cooking, Attack: 5, Thieving: 51, Fletching: 18 },
                 inventory: [{ id: 309, count: 1 }, { id: 314, count: 300 }, { id: 946, count: 1 }, ...logs(2)] });
-            const out = await run('scripts/fishcook.ts', bot, { TICKS: process.env.TICKS ?? '1500' });
+            const out = await run(process.env.FISH_SCRIPT ?? 'scripts/fishcook.ts', bot, { TICKS: process.env.TICKS ?? '1500' });
             show(`run ${i}`, out);
         } finally { cleanup(bot); }
     }

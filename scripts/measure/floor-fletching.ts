@@ -4,9 +4,10 @@
 // Usage: bun scripts/measure/floor-fletching.ts <bot> [perTick=5] [close=1] [open=0]
 //   open=1: send the planned actions in order, perTick per tick, without waiting to see the level (the server runs
 //   them in order inside one tick, so a level reached by action 3 already counts for action 4).
+// LADDER=arrows: arrows only, no dart tips (planner row fletch-arrows, preset floor_fletching_arrows).
 // Prints BAND lines (XP/tick per method) and the FLOOR line (ticks from the first input to level 99).
 import { openBot, finish } from '../../packages/core/src/bot';
-import { FLETCHING, ladder, objId } from './floor-bands';
+import { FLETCHING, FLETCHING_ARROWS, ladder, objId } from './floor-bands';
 import { meter, send, tick, xp, level, inv, report, band, dialogOpen, clearDialogs } from './floor-lib';
 
 const [bot, perTickArg, closeArg] = process.argv.slice(2);
@@ -19,7 +20,7 @@ const s = await openBot(bot!);
 try {
     await tick(s, 3);
     const m = meter(s, 'Fletching');
-    const steps = ladder(FLETCHING);
+    const steps = ladder(process.env.LADDER === 'arrows' ? FLETCHING_ARROWS : FLETCHING);
     let ok = true;
     if (open) {
         const plan: { tip: number; base: number; band: string }[] = [];
