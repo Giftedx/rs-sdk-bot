@@ -306,6 +306,16 @@ try {
         await converse([], () => !dialogOpen(), 4);
     }, () => sawText(/better fix it with the toolkit/i), 3, 4);
     milestone(7);
+    // The inspect click sent on the tick after "manage to fix it" lands inside p_delay(2) and is dropped (MEASURED
+    // practice: 16 idle ticks per part). So it is sent again every 2 ticks until the inspect message comes.
+    const INSPECT = /you see that there are some damaged|can't quite find the problem|you inspect the multi cannon/i;
+    const inspect = async (): Promise<void> => {
+        const n0 = msgCount(INSPECT);
+        for (let k = 0; k < 10 && msgCount(INSPECT) <= n0 && !died; k++) {
+            await opLoc(LOC.cannon);
+            await waitUntil(s, () => msgCount(INSPECT) > n0 || died, { timeoutTicks: 2 });
+        }
+    };
     const fixedMsg = /manage to fix it|already fixed this part/i;
     for (const part of PARTS) {
         const fixed0 = msgCount(fixedMsg);
@@ -313,7 +323,7 @@ try {
             await guard(`repair ${part}`);
             const noFind0 = msgCount(/can't quite find the problem/i);
             const hard0 = msgCount(/too hard you fail/i);
-            await opLoc(LOC.cannon);
+            await inspect();
             const menu = () => dialogOpen() && (s.sdk.getDialog()?.options ?? []).some((o: any) => new RegExp(`^${part}$`, 'i').test(o.text));
             await waitUntil(s, () => died || menu() || msgCount(/can't quite find the problem/i) > noFind0, { timeoutTicks: 15 });
             if (msgCount(/can't quite find the problem/i) > noFind0) { inspectFails++; continue; }
@@ -327,12 +337,14 @@ try {
     }
     const working = () => sawText(/seems to be in working order/i);
     await step('inspect done', async () => {
-        await opLoc(LOC.cannon);
-        await waitUntil(s, () => working() || died, { timeoutTicks: 10 });
+        await inspect();
+        await waitUntil(s, () => working() || died, { timeoutTicks: 6 });
     }, working, 3, 4);
     milestone(8);
 
-    // 9. Commander: "Ok then, just for you!" sets 9 (lawgof2.rs2:139-175). The talk click walks through the open door.
+    // 9. Commander: "Ok then, just for you!" sets 9 (lawgof2.rs2:139-175). The shed door shuts behind the bot
+    // (~open_and_close_door), so walkPath (which opens it) takes the bot out first.
+    await walk('out of shed', [{ x: LAWGOF.x + 1, z: LAWGOF.z, tol: 2 }]);
     await talk('commander 5', /^dwarf commander$/i, [/just for you/i], () => sawText(/speak to nulodion|nulodion, the dwarf cannon/i), 80);
     milestone(9);
 
