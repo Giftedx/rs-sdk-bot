@@ -583,15 +583,17 @@ Still open: the root search is random (1-13 roots, 12-139 ticks); a better tour 
 Narnode is not possible, the root is set at 150) is not tried. The walk to Narnode is not counted. The preset has
 10 HP; the planner does not model Hitpoints.
 
-## 1h. Monkey Madness (the `rival-mm` row): chapter 1 and the battle MEASURED, Ape Atoll not scripted
+## 1h. Monkey Madness (the `rival-mm` row): MEASURED end to end on practice
 
 Script `scripts/generated/quest-mm.ts` (puzzle solver `scripts/generated/mm-puzzle.ts`), presets in
 `packages/practice/src/presets-mm.ts`. The preset `quest_mm` is the planner state at the row (scenario a, order row
 24, after Fight Arena): Attack 99, Magic 99, Smithing 99, Prayer 43, Agility 57, Thieving 43, Strength, Defence,
 Ranged 1, Hitpoints 35 (ESTIMATE: the planner does not model Hitpoints). The Grand Tree and Tree Gnome Village are set
 complete in the preset (varp 150 = 160, varp 111 = 9); the Grand Tree helper owns that quest. Worn: wizard hat,
-amulet of magic, staff of fire, wizard robe and skirt (all Defence 1). Pack: 150 blood and 760 air runes (Fire Wave),
-2 law runes, gold bar, ball of wool, monkey bones, 5 bananas, 4 prayer potions, 1 antipoison, 8 sharks.
+amulet of magic, staff of fire, wizard robe and skirt (all Defence 1). Pack (helper items, 26 of 28 slots: the seal
+and the orders take the last two in chapter 1): 200 blood and 1,000 air runes (Fire Wave), 3 law runes, gold bar,
+ball of wool, monkey bones, 7 prayer potions, 1 super antipoison, 12 sharks. No bananas: the bot picks 5 from the
+trees in the child's garden. The first version (4 potions, 1 antipoison, 10 sharks, 5 bananas) died on the atoll.
 
 Two tool fixes were needed:
 
@@ -618,11 +620,12 @@ Two tool fixes were needed:
 | 50 | Panel (2394,9883): the 5x5 puzzle, a 255-step random walk (`mm_puzzle.rs2:71-85`); weighted A* (49-79 slides, 4 per tick); the last slide starts the hangar cutscene (`:110-192`) | | MEASURED |
 | 60 | Daero (reinit complete, `mm_daero.rs2:36-49`); Waydar "Yes": Crash Island 2893,2725 (`mm_waydar.rs2:5-20, 112-118`) | | MEASURED |
 | 70 | Waydar; Lumdo refuses (`mm_lumdo.rs2:17-68`); Waydar orders him: chapter 2 cutscene (`mm_waydar.rs2:73-94`, `quest_mm.rs2:123-164, 279-360`); Ape Atoll 2801,2707 | | MEASURED |
-| 80 | Walk west under Protect from Missiles (archer damage 0, `npc_combat_ranged.rs2:47-51`) until a ravine archer knocks you out (1 in 20 arrows, `mm_archer.rs2:51-53`; the knockout is not blocked by the prayer); jail 2770-2776,2793-2794 (`:66-82`); pick the lock 2771,2795 (`mm_jail.rs2:1-11`, `stat_random(thieving, 95, 295)`); the patrol guards knock you back in only within 1 tile in sight (`mm_jail.rs2:181-203`) | | not scripted |
-| 90 | Garkor 2805,2762 (`mm_garkor.rs2:95-126`); denture crate 2767,2769 from the east side (the sleeping guard calls guards in 2758-2763,2767-2772, `mm_sleeping_monkey_guard.rs2:1-14`); crate over the hole 2769,2765 to the cellar (`quest_mm.rs2:964-992`; Agility roll, a fall costs a third of the HP); mould crate 2782,9172; western rope 2764,9165 up | | not scripted |
-| 100 | Bridge ladder 2803,2734 up, jump at 2803,2727,l2 to the landing (`quest_mm.rs2:1022-1043`); dungeon ladder 2763,2703 (`ape_atoll_dungeon.rs2:1-12`); Zooknock 2804,9145 (`mm_zooknock.rs2:1-38, 300-364`); dentures, gold bar, mould on him: enchanted bar and mould back (`:48-96, 163-201`); traps: floor and wall spikes 7%, rocks 3%, spring traps 8% of HP (`ape_atoll_dungeon.rs2:43-110`); monkey zombies (82-129) | | not scripted |
-| 110 | Back up; a second knockout (the landing side does not reach the temple); temple trapdoor 2807,2785 among three 2x2 trapdoor guards (167, `wanderrange` 1; rival: 1 of 3 tries); fire room: bar on the fire with the mould (`quest_mm.rs2:1063-1082`), ball of wool on it (`:1084-1089`); rope 2808,9201 up; amulet worn: the child 2743,2795 ("monkey's uncle", the bananas, timer 100, the talisman: `mm_monkey_child.rs2:1-60, 133-178`; the aunt calls guards on a human, `mm_monkeys_aunt.rs2`); dungeon to Zooknock: talisman and monkey bones, the Karamjan greegree; chapter 3 cutscene (`mm_zooknock.rs2:97-136, 203-228`) | | not scripted |
-| 120 | Greegree worn (guards ignore monkeys, `aa_monkey_guard.rs2:27-33`); Garkor (`mm_garkor.rs2:50-58, 128-140`), elder guard, Kruk, Awowogei's mission; the zoo in Ardougne (`mm_zoo_monkey.rs2`, `mm_monkey_minder.rs2`; spirit trees delete the backpack monkey, so walk or glider back); Awowogei; Garkor: chapter 4 cutscene, the sigil (`mm_garkor.rs2:25-47`) | | not scripted |
+| 80 | Walk west to the ravine (2721,2757) until a ravine archer knocks you out (1 in 20 arrows, `mm_archer.rs2:51-53`; the prayer does not stop it); jail 2770-2776,2793-2794 (`:66-82`); pick the lock 2771,2795 (`mm_jail.rs2:1-11`, `stat_random(thieving, 95, 295)`, 0-3 fails at Thieving 43) when no patrol guard is within 3 tiles. The patrol (`mm_jail.rs2:181-259`, route enum `mm_jail_patrol_route`) walks the only exit lane (2772-2773,2796-2801) and knocks a human back in from 1 tile of its south-west tile, with a flyback that costs a fifth of the HP: 0-5 re-jails a run | `quest-mm.ts` `knockout`, `walkAtoll` | MEASURED |
+| 90 | Garkor (2805,2762) from the north tile (the elder guards south of him knock out a human, `mm_elder_guard.rs2:52-75`); his talk resumes after a hit closes it (`mm_garkor.rs2:95-126`). Dentures crate (2767,2769) from 2768,2769 (outside the sleeping guard's zone 2762-2767,2767-2772, `mm_sleeping_monkey_guard.rs2:1-14`), in by the warehouse door 2764,2764; the crate over the hole (2769,2765) from its south tile 2769,2764: the warehouse spider (2 HP, `respawnrate=4`, spawn 2770,2766) hits from the other tiles, and any hit closes the choice (`npc_combat_melee.rs2:36`). Cellar, mould crate (2782,9172), the **eastern** rope (2798,9169): the western one lands in a warehouse whose only ground door (2744,2767) is locked (`quest_mm.rs2:1019-1020`); the eastern one lands in the sleeping guard's zone, and the bot runs south out of it | `quest-mm.ts` stage 90 | MEASURED |
+| 100 | Bridge ladder 2803,2734 up, jump at 2803,2727,l2 to the landing (`quest_mm.rs2:1022-1043`; not as a monkey); dungeon ladder 2763,2703; Zooknock 2804,9145 by a fixed corner route (about 535 tiles; a single far goal sent the walker into a dead end); Protect from Melee for the whole human pass; his story resumes after hits; dentures, gold bar, mould and the monkey bones on him: enchanted bar and mould back (`mm_zooknock.rs2:48-122, 163-201`) | `quest-mm.ts` stage 100 | MEASURED |
+| 110 | Back up; the second knockout and lock; the temple: south ladder (2794,2773) up, level 1 to 2806,2785, the east ladder top drops on the trapdoor's access tile (`quest_mm.rs2:766-771`); trapdoor (2807,2785, `mm_temple.rs2:1-17`); wall of flame (4765 at 2809,9191, not in `nearbyLocs`) with the bar and the mould, wool on the amulet; the rope (4881 at 2808,9201, by id) lands on a random tile within 2 of the trapdoor (`mm_temple.rs2:28`): 2806,2785 takes the ladder, 2807,2783-2787 walk out on the temple floor, a tile boxed by the engaged trapdoor guards falls back to Varrock Teleport and the way round (1 of 4 full runs). The child (2743,2795): 5 bananas from the garden trees, uncle, how many, the bananas, the toy after 100 ticks; the aunt patrols her garden (`quest_mm.npc` `[mm_monkeys_aunt]`: 2742,2794 15 ticks, 2743,2792 30 ticks, then her house), so the bot waits at 2746,2800 while she is there. The dungeon (Protect from Melee), the talisman on Zooknock: the Karamjan greegree; the chapter 3 cutscene (an eat or a potion inside it closes the page; a step restarts it, `quest_mm.rs2:360-375`) | `quest-mm.ts` stages 105-110 | MEASURED |
+| 115 | Greegree worn (`mm_greegree.rs2:1-10`, not within 10 ticks of combat); the dungeon back (the zombies hit a monkey too: Protect from Melee); the west gate (2719,2766) opens for a monkey; Garkor (Karamjan monkey: seek an alliance); the talking elder guard (2801,2757); Kruk in the yard east of the gate, reached over the watchtower bridge (west tower ladder 2713,2766 to level 2, east tower 2729,2766 down); he escorts the envoy in; Awowogei's mission | `quest-mm.ts` stage 115 | MEASURED |
+| 120 | Out by the elder guard from the hall door 2802,2759; greegree off before the bridge jump; Lumdo to Crash Island; Waydar to the Gnomeball pitch; stronghold spirit tree to the Battlefield; round a locked Khazard door to the zoo; greegree on, the minder cages the "monkey", a zoo monkey in the backpack, greegree off, the minder lets the human out; walk to the stronghold's south gate (`gnome_areagate` 190, op; Femi's boxes: "Sorry, I'm a bit busy") and the Grand Tree; Daero, Waydar, Lumdo; greegree, gate, the elder guard lets Kruk's envoy in; Awowogei; Garkor: chapter 4 cutscene, then the sigil; staff and amulet of magic back on | `quest-mm.ts` stage 120 | MEASURED |
 | 140 | Sigil op2 (`mm_demon.rs2:1-5, 16-143`): the battle zone 1_42_143; Protect from Magic on arrival; Fire Wave every 5 ticks from 4+ tiles; kill (`:377-401`) | | MEASURED |
 | 150 | Varrock Teleport out (the squad deletes itself, `:212-220`); Varrock young tree, village tree, stronghold, Narnode | | MEASURED |
 | 160 | Narnode: report, 10,000 coins and 3 diamonds, completion, 3 QP (`mm_narnode.rs2:14-31, 89-100`, `quest_mm.rs2:1167-1171`); Daero l1, option 1 (`mm_daero.rs2:240-302`) | | MEASURED |
@@ -642,9 +645,15 @@ Two tool fixes were needed:
   (`bleugreen/rs-sdk docs/speedrun/quests/monkey_madness.md`, UNVERIFIED here).
 - Gate: `minLevel: { prayer: 43, magic: 75 }`. Prayer 43 is for Protect from Magic (37), Missiles (40) and Melee (43).
   The Magic gate does not move the order (Magic is 99 before the row).
-- Route on the atoll (CODE-READ, not run): a human cannot walk from the landing into the village (one-way bridge,
-  the west gate opens only for a monkey, `quest_mm.rs2:1022-1043, 1110-1117`), so the way in is the archers'
-  knockout. Protect from Missiles makes the archers harmless (damage 0) but not the knockout.
+- Route on the atoll (MEASURED, full runs below): a human cannot walk from the landing into the village (one-way
+  bridge, the west gate opens only for a monkey, `quest_mm.rs2:1022-1043, 1110-1117`), so the way in is the archers'
+  knockout, twice. Protect from Missiles makes the archers harmless (damage 0) but not the knockout.
+- The atoll is the damage source at Hitpoints 35, not the demon: posted archers hit up to 18, jungle scorpions 15,
+  spiders and snakes 4-10, the jail flyback a fifth of the HP, the dungeon traps 2-3, the wildlife poisons. The
+  overhead prayer follows the nearest threat (melee within 2, else an archer in its hunt range, else melee within 4);
+  Protect from Melee stays on for the temple and every dungeon pass. Even then the 12 sharks are about all a run has:
+  1-4 left at the end. Any hit, even at 0 damage, closes the open dialog, so every long talk and crate is written to
+  resume.
 
 ### Proof (MEASURED practice, 2026-10-23)
 
@@ -676,17 +685,57 @@ Every end run takes 0 damage in the fight (HP min 35), ends with the quest-compl
 - The arrival in the battle zone holds the player in a `p_delay` (`mm_demon.rs2:80-100`): a prayer toggle there is
   dropped, so the script toggles on every tick until it holds.
 
-Planner: row `rival-mm` keeps 4,566 / 5,052 ESTIMATE; `minLevel` gains `magic: 75`; the measured parts are in its
-source. Scenario a, `research/hiscores-live.json`, Overall finish: 39,360 floor / 46,019 realistic at the start of
-this work; 40,212 / 45,105 on the current tree (2026-10-23 17:55Z) both without and with the Magic 75 gate (the change between the two
-pairs is other rows edited at the same time, not this row). `bun test packages/planner`: 42 pass (41 before another session added a test).
+Planner (first pass of this work, 2026-10-23): row `rival-mm` kept 4,566 / 5,052 ESTIMATE; `minLevel` gained
+`magic: 75`.
 
-Still open, and the next stage: **stage 80** (the first knockout and the jail lock). Then 90-120 in order. Debug
-presets for later stages use `mmGnomes()` for varp 372; `quest_mm_s130` shows the pattern. The `rival-mm` row keeps
-its ESTIMATE ticks (4,566 / 5,052) until a full run; the measured parts are chapter 1 (692-720 ticks) and stages
-140-160 (634-798 ticks). The rival's own segment figures for the atoll (stock ticks, `monkey_madness.md` step list,
-UNVERIFIED here) are about 2,000 ticks for stages 80-120 with two jail cycles and the temple trapdoor scrum.
-Hitpoints at the row is not modelled (the preset's 35 is an estimate; the Grand Tree preset has 10).
+### Full runs (MEASURED practice, 2026-10-23)
+
+The whole quest from preset `quest_mm` (Narnode to Daero's training reward), one bot at a time, 150 ms ticks,
+`scratchpad run.ts` = `prove()` with a 50-minute timeout (`cli.ts prove` stops a script at 300 s). Milestone ticks
+are from the start of the run.
+
+| Pass | Script | Ticks | 70 atoll | 80 jail out | 90 cellar, rope | 100 Zooknock | 110 greegree | 115 Awowogei | 120 sigil | 160 Narnode | Fight | Re-jails | HP min | Sharks left |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | c2066f2 | **5,125** | 700 | 772 | 1,144 | 1,651 | 3,006 | 3,622 | 4,498 | 5,062 | 343 (68 casts, 4 potions) | 3 | 11 | 3 |
+| 2 | c2066f2 | **5,458** | 694 | 767 | 1,165 | 1,882 | 3,279 | 3,889 | 4,775 | 5,395 | 399 (79 casts, 5 potions) | 5 | 16 | 2 |
+| 3 | 2d3ec65 | **5,071** | 694 | 775 | 1,018 | 1,698 | 3,047 | 3,660 | 4,523 | 5,008 | 264 (52 casts, 3 potions) | 5 | 20 | 1 |
+
+RESULT lines (cut):
+
+- 1: `RESULT ok qp=3 questMsg=true fightTicks=343 casts=68 potions=4 prayerLeft=11 xp=attack=500000,strength=875000,defence=500000,hitpoints=878470,magic=81562,crafting=5100,thieving=187 at=2482,3481,1 ticks=5125 hpMin=11 eats=15 walkTicks=2399 retries=25 died=false`
+- 2: `RESULT ok qp=3 questMsg=true fightTicks=399 casts=79 potions=5 prayerLeft=13 xp=attack=500000,strength=875000,defence=500000,hitpoints=879630,magic=91812,crafting=5100,thieving=262 at=2482,3481,1 ticks=5458 hpMin=16 eats=16 walkTicks=2429 retries=28 died=false`
+- 3: `RESULT ok qp=3 questMsg=true fightTicks=264 casts=52 potions=3 prayerLeft=18 xp=attack=500000,strength=875000,defence=500000,hitpoints=879637,magic=62062,crafting=5100,thieving=262 at=2482,3481,1 ticks=5071 hpMin=20 eats=17 walkTicks=2392 retries=25 died=false`
+
+Not a clean 3/3 in a row: between passes 2 and 3 one run stopped boxed by the trapdoor guards at 2805,2786
+(`RESULT fail temple out ... ticks=2380`); the Varrock Teleport fallback came after it, and pass 3 did not need it
+(landing 2806,2784). Six earlier full tries failed while the atoll was being fixed: two deaths in the dungeon with the
+food gone (HP 35, 10 sharks, 4 potions), a death at the warehouse door (a 15 hit by a scorpion while the prayer was on
+the archers), a Zooknock talk and a Garkor talk closed by hits, a hole crate and a jail on the way. Each fix is in the
+stage rows above.
+
+Findings:
+
+- The atoll costs about 3,800 ticks (stages 80-120), not the rival's 2,000. The largest items: two dungeon passes
+  each way (about 270 ticks each), the child's garden (the aunt's 45-tick stay by the child, then the 100-tick toy
+  timer), the zoo trip and the walk back (about 880 ticks for stage 120), and 3-5 re-jails (about 40 ticks each).
+- Food is the limit at Hitpoints 35: every pass ended with 1-3 of 12 sharks. More Hitpoints (not modelled) or a
+  smaller atoll exposure is the safety margin; the prayer potions (7) leave 8-18 points after the fight.
+- The demon took 264-399 ticks (52-79 casts), as in the battle-only runs.
+- Untested: logging out inside a cutscene (`mm_login`, `quest_mm.rs2:1-37`, completes the cutscene on login). The
+  three cutscenes cost about 25-60 ticks each here; a relogin in the practice harness is not built. Glough's
+  200,000-coin shortcut (`mm_glough.rs2:28-29`) leaves one slide and the solver needs 14-18 ticks, so it cannot
+  save more than that minus the walk to Glough: not tried.
+
+Planner: row `rival-mm` is now MEASURED 5,071 / 5,458 (best / worst pass; was ESTIMATE 4,566 / 5,052). Scenario a,
+`research/hiscores-live.json`, `bun packages/planner/src/haggis-cli.ts --levers`, Overall finish: 40,040 floor /
+44,805 realistic before the change, 40,545 / 45,211 after (both on the tree of 2026-10-23, the later hour). The
+row is slower than the rival's estimate, so the finish moves out by 505 / 406 ticks. `bun test packages/planner`:
+42 pass (the rival-lever test now accepts a MEASURED rival row that cites this section).
+
+Next stage: cut the atoll. Leads, by size: the stage 120 walk back from the zoo (Ardougne to the Grand Tree, about
+250 tiles; no teleport keeps the backpack monkey, `teleport.rs2:109-112`); the re-jails (pick the lock only in the
+patrol's handover window); the child's garden wait (arrive while the aunt is in her house); the cutscene relogin
+test. Hitpoints at the row is still not modelled (the preset's 35 is an estimate).
 
 ## 1i. Measured: Dragon Slayer (the `dragon` row)
 

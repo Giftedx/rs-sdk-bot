@@ -241,8 +241,12 @@ test('rival levers (research/rival-gap-list.md): ESTIMATE rows, no blocks on or 
     }
     expect(ids.size).toBe(9);
     for (const a of acts.filter(x => x.id.startsWith('rival-'))) {
-        expect(a.ticks?.evidence).toBe('ESTIMATE');
-        expect(a.ticks?.source).toContain('bleugreen/rs-sdk@3bd2ab0a');
+        // A rival row is the rival's estimate until we run it ourselves (rival-mm: research/quest-plan.md 1h).
+        if (a.ticks?.evidence === 'MEASURED') expect(a.ticks.source).toContain('research/quest-plan.md');
+        else {
+            expect(a.ticks?.evidence).toBe('ESTIMATE');
+            expect(a.ticks?.source).toContain('bleugreen/rs-sdk@3bd2ab0a');
+        }
         expect(a.qp).toBe(0); // their points are inside quests-rest
     }
     for (const disable of [new Set<string>(), ids]) {
