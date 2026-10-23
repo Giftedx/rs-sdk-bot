@@ -1,0 +1,114 @@
+# Research index (2026-10-23)
+
+Read this file first. It lists every file in `research/` and `docs/`, what each one establishes, and how strong
+the evidence is. Then it lists the claims that disagree, and the facts every agent must know.
+
+Evidence levels, strongest first:
+
+- **MEASURED live**: measured on rs-sdk-demo.fly.dev (our runs, hiscores, live GE, world feed).
+- **MEASURED practice**: measured on our local copy of the server (150 ms or 300 ms tick, presets possible).
+- **CODE-READ**: read in server, content or SDK code. Not run.
+- **WEB**: from web pages, OSRS guides or third-party summaries.
+- **ESTIMATE**: a model or a simulation.
+
+Boards: the 24 hiscore boards are Overall, Attack, Defence, Strength, Hitpoints, Ranged, Prayer, Magic, Cooking,
+Woodcutting, Fletching, Fishing, Firemaking, Crafting, Smithing, Mining, Herblore, Agility, Thieving, Runecraft,
+Quest Points, Equipment, Bank, Lava Maze Runite. "Infra" means the file serves the harness, not one board.
+Dates are the last commit date of the file.
+
+## Files
+
+### research/
+
+| File | What it establishes | Evidence | Date | Still open | Boards |
+|---|---|---|---|---|---|
+| `audit-2026-10-22-b.md` | Audit after Phase 2: no end-to-end specialist (C1), 460 MB pathfinding per bot process (C2), margins leave out travel and food (H1) | MEASURED practice + CODE-READ | 10-22 | C2 team runner in one process; written list of winnable boards (M3) | all |
+| `board-ranking.md` | First ranking: leader ticks vs model ticks, plus live GE supply per board | ESTIMATE (only Crafting has measured cycles) | 10-22 | Superseded for Thieving, Mining, Cooking by `board-ranking-honest.md` | 19 skills |
+| `board-ranking-honest.md` | With measurement, every leader beats our best method; Thieving and Mining not winnable with those methods; Crafting, Smithing, Herblore, Prayer, Magic blocked by supply | MEASURED practice + ESTIMATE | 10-22 | How the leaders get their times | 19 skills |
+| `bug-report-wine-login.md` | Login runs `~ferment_wines_login` with no Cooking level check: level 1 to 99 about 22 ticks after login | CODE-READ + MEASURED practice | 10-22 | Draft not sent; owner decision (owner-requests #16) | Cooking |
+| `community-and-upstream.md` | Reuse survey of vendor clones; LostCity clones are rev 274, rs-sdk content is rev 289 | CODE-READ | 10-22 | none | infra |
+| `cooking-board.md` | Hand-made wine starts a 20-tick timer that ferments every banked wine; 300 wines took 35 to 96 in 25 ticks; grapes have 0 GE sellers | MEASURED practice + MEASURED live (GE) | 10-22 | Fast legal route to Cooking 35; grape supply | Cooking |
+| `crafting-board.md` | 27 dragonstones cut in 7 ticks; 12-tick helper trade; bank opens slow after level-ups | MEASURED practice | 10-22 | Clear queued level-up pages; fast bank open; uncut dragonstone supply (0 sellers) | Crafting |
+| `demo-smoke-2026-10-22.md` | In-process client logs in to the live server; tutorial skip 13 ticks; 25x XP confirmed; 539 ms per tick with login | MEASURED live (1 run) | 10-22 | Live tick without login (see Contradictions C2) | infra |
+| `hiscores-2026-10-22.json` | Snapshot of 21 boards at 2026-10-22T06:17Z, 21 rows each, playtime in ticks | MEASURED live | 10-22 | No Equipment, Bank or Lava Maze Runite rows; snapshot is a day old | 21 boards |
+| `iron-spots.ts` | Tool: standing tiles next to the most iron rocks, from map files. Only 5-rock tile is (3100,3767), Wilderness | CODE-READ (tool) | 10-22 | none | Mining |
+| `levelup-cost.md` | Level-up dialogs cost about 2.7 ticks per level when the next action is blocked; item-on-item still runs with the dialog open | MEASURED practice | 10-22 | Cheap way to clear queued pages (see C5) | all skills |
+| `live-thieving-2026-10-23.md` | Fresh account `mmtha0205`: Thieving 99 at 6,169 ticks, rank 9; full-pack food raised live rate 45 to 260 XP/tick; Baker stock runs out live | MEASURED live | 10-23 | Warrior women from 25; shop and eat inside the stun; lobster food chain | Thieving |
+| `overall-board.md` | 15 skills by model: 30,575 ticks vs leader 35,916; travel and quests not counted | ESTIMATE | 10-22 | Travel, quest time, melee skills | Overall |
+| `owner-requests.md` | Every owner request and standing rule (R1-R15), with status and evidence | owner transcript + repo check | 10-23 | Items 1-18, 38, 40, 41, 47 | all |
+| `phase2-recon.md` | In-process control, pathfinding, doors, drops, XP per action, quest data locations | CODE-READ | 10-22 | none | infra, Quest Points |
+| `pro-playbook.md` | How pros plan here: quests first, tick tricks, zero-delay production, exact inputs, travel, danger, watch leaders; plan per board | WEB + CODE-READ + MEASURED | 10-23 | Quest requirement map and timings; most board plans are "Plan" | all |
+| `quest-route.md` | Quest sets that reach 99 Attack, Strength, Defence from quest XP alone; quest requirements (OSRS guides) | CODE-READ + WEB | 10-23 | 2004 requirements may differ; quest playtime not measured | Attack, Strength, Defence, Agility, Hitpoints, Quest Points |
+| `quest-xp.md` | All quest XP at 25x per skill, with script cites | CODE-READ | 10-23 | Choice rewards, lamps, requirements, playtime | Attack, Strength, Defence, Agility, Mining, Magic, Herblore, Crafting, Hitpoints, Quest Points |
+| `random-events.md` | **Untracked, written by another agent.** Event rules, rates, tables; says the live server has events on | CODE-READ + MEASURED practice (local engine with events on) | 10-23 (uncommitted) | Live state (see C1) | all |
+| `route-danger.ts` | Tool: lists NPC spawns whose hunt range reaches a path | CODE-READ (tool) | 10-22 | none | all (travel) |
+| `rs-sdk-deep-dive.md` | rs-sdk architecture, state, actions, pathfinding, MCP, server mods, local stack | CODE-READ | 10-22 | Line 351 XP figure is wrong (see C3) | infra |
+| `run-learnings-2026-10-23.md` | 60 run logs: tick ledger shares, top 10 waste causes by ticks lost, recurring errors, fix list | MEASURED live + MEASURED practice | 10-23 | Waste causes 1, 3-6, 8-10 open; relog cost | Thieving, Fishing, Woodcutting, Attack (Waterfall) |
+| `runebench-and-harbor.md` | How RuneBench and Harbor score; benchmark result data per skill | CODE-READ (result files) | 10-22 | Not run in Docker | infra |
+| `runecraft-ladder.md` / `.ts` | Highest altar wins; ticks to 99 per altar set at a 19-tick cycle | ESTIMATE (cycle MEASURED practice) | 10-22 | Helper bank trips; 261k coins of essence; uses 600 ms and 274 content (C2, C4) | Runecraft |
+| `thieving-ladder.md` / `.ts` | Pickpocket model and fits; fresh runs; stun code facts; relog clears the stun; live tick 400 ms from hiscores | ESTIMATE + MEASURED practice | 10-23 | Leader method (castle doors and chests, C10) | Thieving |
+| `tick-tricks-web.md` | Web catalog of tick tricks checked against rev 289; stamp rule; 5 user events per tick; ranked top 10 findings | WEB + CODE-READ | 10-23 | Most rows UNVERIFIED live | all |
+| `tricks-plan.md` | Status of each trick: 3-tick woodcutting and fly fishing +29% measured; `s.direct` needed for same-tick inputs | MEASURED practice + CODE-READ | 10-23 | Relog approval (C8) | Woodcutting, Fishing, Mining, Herblore, Fletching, Crafting, Prayer, Thieving |
+| `video/talk-notes.md`, `video/description.txt` | Notes from Max Bittker's RS-SDK talk | WEB | 10-22 | none | infra |
+| `web-research.md` | Public facts on rs-sdk, RuneBench, demo hiscores and market, community projects | WEB | 10-22 | 400 bots per IP is third-party (C11) | Overall, infra |
+| `wider-ecosystem.md` | Reusable projects outside rs-sdk | WEB | 10-22 | Says build 274 (C4) | infra |
+| `xp-per-tick.md` | Best method and model ticks to 99 per skill; engine facts (25x on all XP, 5 user events, `p_delay` cost, modals) | CODE-READ + ESTIMATE | 10-22 | Thieving and Mining rows are superseded by measurement (C7) | 19 skills |
+
+### docs/
+
+| File | What it establishes | Evidence | Date | Still open | Boards |
+|---|---|---|---|---|---|
+| `docs/superpowers/specs/2026-10-22-rs-sdk-bot-harness-design.md` | Harness design: team of specialists plus helpers, practice server, knowledge miner, layers | design (owner decisions + CODE-READ) | 10-22 | Lines 79-81 tick rate and random events (C1, C2) | all |
+| `docs/superpowers/plans/2026-10-22-phase0-1-practice-and-knowledge.md` | Plan: local practice server and knowledge miner | plan | 10-22 | Done (owner-requests #20-#22) | infra |
+| `docs/superpowers/plans/2026-10-22-phase2-script-core.md` | Plan: in-process bots, checked actions, world graph, reflexes | plan | 10-22 | Done | infra |
+| `docs/superpowers/ledgers/2026-10-22-phase2-script-core.md` | Rulings made while Phase 2 ran (e.g. Draynor bank, no Lumbridge castle bank in rev 289) | MEASURED practice + CODE-READ | 10-22 | none | infra |
+| `docs/agent-brief.md` | Rules every subagent follows | rules | 10-23 | none | all |
+
+No file yet covers Equipment, Bank or Lava Maze Runite with a plan (owner-requests.md item 1).
+
+## Contradictions
+
+Each row gives both sides with file:line and what would settle it.
+
+| # | Claim A | Claim B | What settles it |
+|---|---|---|---|
+| C1 | Random events are **off** on the demo server: `docs/superpowers/specs/2026-10-22-rs-sdk-bot-harness-design.md:81` ("no random events"), `research/rs-sdk-deep-dive.md:353` (engine default false), `research/tick-tricks-web.md:372` (`vendor/rs-sdk/fly.toml:25` sets `NODE_RANDOM_EVENTS = "false"`; live state UNVERIFIED) | Random events are **on** live: `research/owner-requests.md:106` (Woodpecker died to a dryad at WC 49), `research/random-events.md:7` (untracked). Support for B: `vendor/rs-sdk/fly.toml:26` says `NODE_TICKRATE = "300"`, but live is 400 ms (`research/thieving-ladder.md:114`), so the vendored fly.toml is not the live config | The Woodpecker run log line that names the dryad (npc 438-443), or an event NPC seen on our bot in the world feed. Then count events per live hour over several runs |
+| C2 | Live tick is **300 ms**: `docs/superpowers/specs/...design.md:79` (fly.toml), SDK API docs "~300ms" (`research/rs-sdk-deep-dive.md:131`) | Live tick is **400 ms**: `research/thieving-ladder.md:114` (hiscore playtime / ticks = 0.400 s), engine default 400 (`research/rs-sdk-deep-dive.md:130`). 539 ms with login (`research/demo-smoke-2026-10-22.md:18`). Time conversions still use **600 ms**: `research/runecraft-ladder.md:12`, `research/thieving-ladder.md:21` | Log server tick timestamps on one live session for 1,000 ticks after login. Boards count ticks, so only the minute columns are wrong |
+| C3 | Level 99 = **1,070,140** XP: `research/rs-sdk-deep-dive.md:351` | Level 99 = **998,458** XP: `research/tick-tricks-web.md:306-308`, `research/xp-per-tick.md` assumptions, spec line 80 | Settled by code: `xpForLevel(99)` in `packages/planner/src/curve.ts` (copied from `Player.ts:77-99`, with the `floor(acc / 4)` step) returns 998458 (run 2026-10-23). The deep-dive figure leaves out the `/ 4` |
+| C4 | Game data is **rev 289**; 274 data is wrong for this server: spec line 83, `research/community-and-upstream.md:24` | `research/wider-ecosystem.md:3` says "LostCity build 274"; `research/runecraft-ladder.md:4-5`, `research/thieving-ladder.md:4-5` and `research/route-danger.ts:2` cite `vendor/lostcity-content` (rev 274) | Diff each cited file against `vendor/rs-sdk/server/content`; re-cite from the 289 tree |
+| C5 | Item-on-item **closes** the level-up modal, so trick loops clear level-ups free: `research/tricks-plan.md:29` | Dialogs pile up under item-on-item; clearing took 40-42 clicks; `sendCloseModal` did not clear in 5 ticks; "a cheaper way ... not found yet": `research/levelup-cost.md:9-21`, `research/crafting-board.md:29-31` | Practice test: gain one level, send one item-on-item, read the modal state on the next tick; then try a bank open |
+| C6 | A level-up chat **blocks the wine timer**: `research/xp-per-tick.md:38` | Wine timer "pays nothing" for dialogs: `research/levelup-cost.md:19`; overlap the wine timer with fletching (which opens level-up dialogs): `research/tick-tricks-web.md:364-365` | Practice test: start the 20-tick timer, fletch through level-ups, record the tick the wine ferments |
+| C7 | Thieving 99 by model: **2,325** ticks, "Yes" explained (`research/xp-per-tick.md:20`); **2,335**, margin +600 (`research/board-ranking.md:20`) | Measured: fresh to 55 then model gives 3,850-4,200, "not winnable" (`research/thieving-ladder.md:95`, `research/board-ranking-honest.md:9`); live fresh 99 at **6,169** ticks (`research/live-thieving-2026-10-23.md:72`) | Settled by measurement: use the live figure. The model rows are stale. Same for Mining: +353 (`board-ranking.md:23`) vs not winnable at 97 XP/tick measured (`board-ranking-honest.md:10`) |
+| C8 | Relog to clear the stun is **not approved** by the owner: `research/thieving-ladder.md:128-130`, `research/tricks-plan.md:22` | Owner allowed it: R10 "the log out is one" (`research/owner-requests.md:29`); "normal logout use, not a bug" (`research/tick-tricks-web.md:278`). Item #15 is BLOCKED by a Claude Code safety check (`research/owner-requests.md:54`). Relog cost: measured 1 playtime tick (`thieving-ladder.md:128`) vs "run relog-bench to get the relog cost" (`research/run-learnings-2026-10-23.md:173`) | Owner states yes or no in owner-requests.md; rerun `scripts/measure/relog-bench.ts` 3 times in practice |
+| C9 | Eat inside the stun: "eat only inside stuns" (`research/tricks-plan.md:18`); next change "shop and eat inside the 8-tick stun" (`research/live-thieving-2026-10-23.md:77`) | Measured no gain: 216/158 vs 231/260 XP/tick (`research/thieving-ladder.md:119-120`) | 3 paired runs per arm with the ledger, with a shared shop (practice has no shop contention) |
+| C10 | Trapped and castle chests are "side income only" (`research/thieving-ladder.md:135-137`) | The Thieving #3 leader loops the castle doors and chests at 12,500 XP each (`research/pro-playbook.md:31-32`) | Measure a door-and-chest loop from Thieving 61 in practice, 3 runs |
+| C11 | "400 bots per IP" (`research/web-research.md:194`, third-party) | `MAX_PLAYERS_PER_IP = "100"` (`vendor/rs-sdk/fly.toml:37`; fly.toml may not be the live config, see C1) | Ask the server owner, or read the live login refusal message |
+| C12 | Cooking is winnable with hand-made wine at 35, margin +3 (`research/board-ranking.md:11`) | Only the login-timer route is fast enough (`research/board-ranking-honest.md:13`); the route to 35 is open and grapes have 0 sellers (`research/cooking-board.md:11-18`); `cooking-board.md:27-33` plans the login timer, which R10 and `research/bug-report-wine-login.md:3` rule out | Owner decision (owner-requests #16); measure the fastest legal route to Cooking 35 |
+
+## Facts every agent must know
+
+1. 5 successful user events per tick; failed packets count against the client limit of 20 (`research/tick-tricks-web.md:314-317`, `research/xp-per-tick.md:35`).
+2. A board stamps the account's total playtime when it reached the level. All skills of one account share one clock, so board order decides the stamps (`research/tick-tricks-web.md:309-313`).
+3. Boards count logged-in ticks only. Offline time is free; a relog costs about 1 playtime tick (`research/tick-tricks-web.md:278`, `research/thieving-ladder.md:128`).
+4. XP curve is `2^(level/10)`: 99 = 998,458 XP. 25x applies to every XP source, quests included (`research/tick-tricks-web.md:306-308`, `research/xp-per-tick.md:33`).
+5. Live tick is 400 ms (`research/thieving-ladder.md:114`). The practice server runs at 150 ms (`research/owner-requests.md:69`). Compare in ticks, never in seconds.
+6. 3-tick woodcutting (knife on log + Make 1 + click the tree in one tick) is +29%, measured; 3-tick fly fishing is +29%, measured (`research/tricks-plan.md:9-10`).
+7. Same-tick inputs need `s.direct`; the SDK queue spreads actions over ticks (`research/tricks-plan.md:11`).
+8. Item-on-item production (herbs, bow strings, arrows, darts, gems) has no delay: up to 5 per tick. Supply is the limit (`research/tricks-plan.md:12`, `research/pro-playbook.md:17-18`).
+9. A loc click runs in the arrival tick only if the bot took no steps that tick: stand still, then click (`research/pro-playbook.md:20`).
+10. Pickpocket fail: 8-tick stun that blocks pickpocketing and walking; eating still works; a relog clears it (`research/thieving-ladder.md:124-138`).
+11. A pickpocket stun does not block trades: trades work inside a stun, 4-7 ticks lost each with the SDK path; the fast path does not open the trade yet (commit 61953b2).
+12. Level-up dialogs cost about 2.7 ticks per level when the next action is blocked (bank, loc, NPC) (`research/levelup-cost.md:17-19`).
+13. Danger: NPCs hunt a player whose combat level is at most 2x theirs outside the Wilderness; aggression stops after about 1,000 ticks in one area. Check every new walk with `bun research/route-danger.ts` (`research/pro-playbook.md:26-28`).
+14. Known killers of our bots: dark wizards at the Draynor net spot, giant spiders near (3200,3238), the walk Lumbridge to Port Sarim at low HP, fire giants at the Waterfall giant door (max hit 11 vs 10 HP), a dryad at the willows (`research/run-learnings-2026-10-23.md:138-144`, `research/owner-requests.md:106`).
+15. Random events: live state is disputed (C1). Assume they are on. The handler is `packages/core/src/randomevents.ts` (uncommitted).
+16. Run energy is infinite: always run (`research/tricks-plan.md:14`).
+17. Use rev 289 content (`vendor/rs-sdk/server/content`) only. `vendor/lostcity-*` is rev 274 (`research/community-and-upstream.md:24`).
+18. Presets inject levels, food and position. Only a fresh-account run is board evidence (`research/audit-2026-10-22-b.md` C1, `research/board-ranking-honest.md:3-5`).
+19. Live shops are shared: the Ardougne Baker restocks bread 1 per 100 ticks and runs out. Practice hides this (`research/live-thieving-2026-10-23.md:22,29`).
+20. Live GE is at Varrock west bank (3181,3443), 5% seller tax. Top-tier inputs (dragonstones, torstol, dragon bones, adamant bars, grapes) had 0 sellers (`research/board-ranking.md`, `research/rs-sdk-deep-dive.md:357`).
+21. The login wine timer is ruled an exploit and stays out. Community-accepted tricks (flicking, tick tricks, logout) are allowed (`research/owner-requests.md:29`, `research/bug-report-wine-login.md:3`).
+22. A logout that times out keeps the account in the world for up to 500 ticks of scored playtime. Retry it (`research/run-learnings-2026-10-23.md:153`).
+23. One bot process costs about 460-550 MB (pathfinding). Measure free RAM before adding a bot (`research/audit-2026-10-22-b.md` C2, `research/owner-requests.md:103`).
+24. Never test with Haggis. Its login is in a git-ignored `bot.env`; never print or copy the password (`research/owner-requests.md:34`).
+25. Quest XP alone reaches 99 Attack, Strength and Defence at 25x (`research/quest-xp.md`, `research/quest-route.md`).
