@@ -2549,16 +2549,16 @@
     "toLevel": 99,
     "xpPerTick": {
      "floor": 212.9,
-     "realistic": 190.9,
+     "realistic": 196.0,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 30 runs of 20 laps from Agility 52, 60, 76 (10 each); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-99 192.5 = 190.9 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)"
+     "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 2026-10-23 52/60/76 and 2026-10-24 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (was 190.9 with one 76-99 band measured to 88; the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)"
     }
    },
    "requires": [
     "agility-52"
    ],
    "evidence": "MEASURED",
-   "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 30 runs of 20 laps from Agility 52, 60, 76 (10 each); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-99 192.5 = 190.9 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)",
+   "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 2026-10-23 52/60/76 and 2026-10-24 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (was 190.9 with one 76-99 band measured to 88; the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)",
    "supplies": [
     {
      "item": "lobster",
@@ -2574,9 +2574,9 @@
        "toLevel": 99,
        "xpPerTick": {
         "floor": 212.9,
-        "realistic": 190.9,
+        "realistic": 196.0,
         "evidence": "MEASURED",
-        "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 30 runs of 20 laps from Agility 52, 60, 76 (10 each); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-99 192.5 = 190.9 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71); superseded the rival S17 ESTIMATE of 197 (our clean lap is 66-71 ticks, shorter than the rival's 74)"
+        "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 2026-10-23 52/60/76 and 2026-10-24 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (was 190.9 with one 76-99 band measured to 88; the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71); superseded the rival S17 ESTIMATE of 197 (our clean lap is 66-71 ticks, shorter than the rival's 74)"
        }
       }
      }

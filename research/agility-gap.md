@@ -8,6 +8,14 @@ the working tree move the baseline to 40,213 / 44,956; the Agility rows are the 
 
 ## Result
 
+- **Update 2 (2026-10-24, Agility 88-99 measured, `research/agility.md` section "Agility 88-99"):** the 52-99 rate is
+  196.0 XP/tick (88-99 band 202.0). Agility first, pure laps (`gap.ts` = the `final.ts` method, on HEAD 2a9ac6f rows
+  with the new rate): **6,436 floor / 6,828 realistic, gap +336 / -56**. With the potion lever (gnome to 49,
+  Wilderness from 49): **6,250 / 6,645, gap +522 / +127**, a win at realistic (finish < 6,772). The floor does not change
+  (212.9). Overall with Agility first: 42,912 / 47,962 (+2,367 / +2,532 against the baseline on the same rows); with the
+  potion 42,726 / 47,779. The same rows at 190.9 give 6,959 / 6,777 realistic (the old numbers), so only the rate moved.
+  The potion row still uses the 52-99 rate for 49-51 (the 49-51 band, 198.7, is one lap per run). #1 is still
+  stunagile at 6,772 (`research/hiscores-live.json`, 2026-10-23T22:56Z).
 - **Update (measurement 1 done, `research/agility.md` section "Wilderness V2"):** the V2 lap script measures 190.9 XP/tick
   over 52-99 (band-weighted, 30 runs of 20 laps), against 178.9 for the old script. The planner row is now 190.9
   realistic / 212.9 floor. Agility first, pure laps (same method as below, `final.ts` on the new rows):
@@ -158,3 +166,6 @@ working tree).
 Scratch script (not committed): `final.ts` in the session scratchpad, run as `bun final.ts boards-head.json`. They copy
 `haggisActivities()` and change only the Agility deadline, the `grandtree` serves, `agility-52.toLevel` and the
 Wilderness rate.
+
+2026-10-24: the `agility` row realistic rate is now 196.0 (MEASURED, source cites the 2026-10-23 52/60/76 runs and the
+2026-10-24 90 runs). `bun test packages/planner`: 42 pass, 0 fail.

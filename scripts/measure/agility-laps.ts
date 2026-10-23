@@ -93,7 +93,7 @@ const FAIL_MSG = /slip|lose your footing|lost your balance|fall|bites you|stumbl
 const V1 = process.env.AGI_V1 === '1';
 const DEBUG = process.env.AGI_DEBUG === '1', TRACE = process.env.AGI_TRACE === '1';
 // Level bands for the XP-per-tick split (current level when each obstacle starts).
-const BANDS = [[1, 48], [49, 51], [52, 59], [60, 75], [76, 99]] as const;
+const BANDS = [[1, 48], [49, 51], [52, 59], [60, 75], [76, 87], [88, 99]] as const;
 const bandOf = (l: number) => BANDS.findIndex(([a, b]) => l >= a && l <= b);
 // Wilderness: the tiles that show an obstacle script has started (wilderness_course.rs2). Pipe: first exactmove to z 3940 (:68).
 // Rope swing: teleport to the start tile (3005,3953) (:87). Stones: first jump west of 3002 (:109). Log: teleport to (3002,3945)

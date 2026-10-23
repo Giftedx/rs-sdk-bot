@@ -5,6 +5,9 @@ Boards: Agility, Overall.
 
 ## Result
 
+- **Update 2 (2026-10-24, section "Agility 88-99"):** 10 more V2 runs from Agility 90 (90 to 96) measure 202.0 XP/tick
+  for the 88-99 band. With 76-87 at 192.3, the weighted 52-99 rate is 196.0 XP/tick (was 190.9). The planner row
+  now uses 196.0 realistic; the floor stays 212.9.
 - **Update (V2 script, 60 runs of 20 laps, section "Wilderness V2"):** the Wilderness rate from Agility 52 to 99 is
   190.9 XP/tick (band-weighted, V2), against 178.9 for the first script with the same method. The planner row now
   uses 190.9 realistic and 212.9 floor.
@@ -119,6 +122,32 @@ course with no potion (preset `agility_wilderness_49`).
   Band 49-51: 198.7 XP/tick in the potion runs (70,738 XP / 356 ticks), 186.0 with the no-potion run (85,023 / 457).
   The band is the first lap only, so it is a small sample.
 - Planner effect (lever 3, gnome to 49, then the Wilderness row): see `research/agility-gap.md`.
+
+### Agility 88-99 (MEASURED practice, 2026-10-24)
+
+Preset `agility_wilderness_90` (the same kit as the 76 preset: south of the pipe, HP 70, Defence 70, 15 lobsters).
+The script's level bands are now 76-87 and 88-99 (was one 76-99 band). 10 runs of 20 laps, V2, one run per
+`floor-run.ts` call, `RANDOM_EVENTS=0`. Every run went from Agility 90 to 96, so the band has no data at 88-89 or 97-99.
+
+- Per run (XP/tick): 208.7 205.5 208.8 203.1 190.2 198.7 208.8 208.7 194.0 196.9. Mean 202.3, SD 6.6, median 204.3,
+  min 190.2, max 208.8. 10/10 PASS. Quote: `run1 RESULT ok wilderness agility=90->96 laps=20 ticks=1369 ... xpPerTick=208.7 ... b88_99=285700/1369`.
+- Band 88-99: 202.1 (2,862,687 XP / 14,164 ticks). Clean lap median 66 (172 of 200 laps clean, best 62).
+- Falls: 31 fail messages in 200 laps (2-6 per run), against 39 for the 76 runs: stones 15 (recover 16.7 ticks), log 9
+  (42.0), rope swing 7 (33.0). Lap bonuses lost: 7 (16-18 at lower levels). Eats 0-4 per run.
+- Pooled with the 30 V2 runs of 2026-10-23 (`agi2/after.log`): the 10 laps there that start at Agility 88 (lap 20 of each
+  76 run, 142,850 XP / 712 ticks, split by lap start level, not by obstacle) move from 76-99 to 88-99.
+
+| Band | XP / ticks | XP/tick |
+|---|---|---|
+| 52-59 (2026-10-23) | 288,820 / 1,671 | 172.8 |
+| 60-75 (2026-10-23) | 2,870,937 / 15,425 | 186.1 |
+| 76-87 (2026-10-23, less the 10 laps from 88) | 5,309,824 / 27,610 | 192.3 |
+| 88-99 (2026-10-24, plus the 10 laps from 88) | 3,005,537 / 14,876 | 202.0 |
+| **52-99, weighted by the XP of each band** | | **196.0** |
+
+Weighted rate = 960,842 / (28,577 / 172.8 + 136,124 / 186.1 + 263,269 / 192.3 + 532,872 / 202.0) = 195.96. XP per band
+from `packages/planner/src/curve.ts` (level 88 = 465,586). Log: scratchpad `agi3/a90.log`; pooling script `agi3/analyze.py`.
+The 10 new accounts were deleted (bot folders by `floor-run.ts`, server saves by hand).
 
 ## Method
 
