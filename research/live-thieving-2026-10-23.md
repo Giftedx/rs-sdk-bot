@@ -55,3 +55,14 @@ Raising Hitpoints first (`scripts/measure/hp-train.ts`, cows, sword, practice): 
 
 Free food that scales: helper accounts that fish and cook shrimps (heal 3, no overheal waste at 10 HP)
 and trade them in Ardougne. Only the specialist's playtime counts on its board.
+
+## Full-pack food, live (2026-10-23, later)
+
+Owner's direction: fill the pack with food before pickpocketing and refill only when it is empty.
+`thieving60.ts` (commit 77a88c0) buys every food line the Baker has in stock until the pack is full.
+Live result on mmthv2350: Thieving 70 -> 97 in 2,873 ticks (747,855 XP = 260 XP/tick; before: about 45),
+then 97 -> 99 in 143 ticks (44 tries, 0 stuns). Thieving 99 at 1h 31m 45s playtime (about 13,760 ticks),
+outside the board's top 21: most of that playtime came from the slow runs before the fix.
+
+Forecast for a fresh account with this script: about 1,400-2,000 ticks to 55 (practice) + about 3,700 ticks
+55 -> 99 at 260 XP/tick = about 5,500 ticks. Board: 7th place 5,666, 8th 7,447 (2026-10-22 snapshot).
