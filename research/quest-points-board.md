@@ -199,6 +199,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Doric's Quest | `scripts/generated/quest-doric.ts` | 30, 30, 30 | MEASURED 3/3 |
 | Imp Catcher | `scripts/generated/quest-imp.ts` | 38, 38, 38 | MEASURED 3/3 |
 | Witch's Potion | `scripts/generated/quest-hetty.ts` | 80, 78, 79 | MEASURED 3/3 |
+| Rune Mysteries | `scripts/generated/quest-runemysteries.ts` | 449, 432, 441 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -233,3 +234,15 @@ while `%hetty` is 1 or 2 and no tail is in the pack or bank (`drop tables/script
 cannot bring it. Both houses have a shut door (`loc_1530` at 2965,3206 and 2956,3205, `maps/m46_50.jm2`). With
 the doors shut, the attack click is rejected (`opRejectedCount`) and the first trial stood 96 ticks. The script
 opens both doors by tile. The `retries=1` is the dash to the rat house door.
+
+### Rune Mysteries
+
+`RESULT ok qp=1 xp=magic=1900 ... ticks=449 ... walkTicks=253 retries=0 died=false` (runs: 449, 432, 441 ticks),
+each with `Congratulations! Quest complete!`. Route: Duke Horacio (`areas/area_lumbridge/scripts/
+duke_horacio.rs2:22-36`; with Dragon Slayer done the shield option comes first, `:4-5`); the castle stairs; the walk
+to the Wizards' Tower (north door 3109,3166, inner door 3107,3162, ladder 2147 at 3104,3162, basement door
+`loc_1530` at 3108,9570, `maps/m48_149.jm2`); Sedridor (`area_wizard_tower/scripts/sedridor.rs2:52-134`); Varrock
+teleport; Aubury twice (shop door `loc_1531` at 3253,3399; `area_varrock/scripts/aubury.rs2:1-61`); Lumbridge
+teleport; the tower again; Sedridor queues the completion (`sedridor.rs2:140-180`). The two walks from Lumbridge to
+the tower basement are about 120 ticks each, more than half the quest. The item `research_notes` is named "Notes".
+Helper items: runes for one Varrock and one Lumbridge teleport.

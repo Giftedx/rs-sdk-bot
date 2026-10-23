@@ -31,4 +31,7 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // (221), burnt meat (2146). The rat's tail is untradeable (quest_hetty.obj) and drops only while %hetty is 1 or 2
     // (drop tables/scripts/rat.rs2:9-12): the bot kills one of the rats next door (2953-2960,3202-3205).
     quest_hetty: short({ x: 2966, z: 3206 }, [1957, 221, 2146]),
+    // Rune Mysteries: beside Duke Horacio on level 1 of Lumbridge castle (duke_of_lumbridge spawn 3212,3220,1,
+    // maps/m50_50.jm2); runes for a Varrock and a Lumbridge teleport (2 law 563, 6 air 556, 1 fire 554, 1 earth 557).
+    quest_runemysteries: short({ x: 3210, z: 3221, level: 1 }, [[563, 2], [556, 6], [554, 1], [557, 1]]),
 };
