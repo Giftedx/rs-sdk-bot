@@ -382,11 +382,6 @@ try {
     // stat_random(thieving, 95, 295), mm_jail.rs2:1-11). The patrol guards (Aberab, Trefaji) knock a human back in
     // from 1 tile in line of sight (mm_jail.rs2:181-203), so the bot picks only when neither is within 2 tiles.
     const DOOR = { x: 2771, z: 2795 };
-    let laneSeen = -1;
-    q.s.onTick(() => {
-        if (!inCell()) return;
-        if ((q.st()?.nearbyNpcs ?? []).some((n: any) => /^(aberab|trefaji)$/i.test(n.name) && n.x >= 2772 && n.z >= 2796 && n.z <= 2803)) laneSeen = q.T();
-    });
     // MM_TRACE=1: the patrol guards, the aunt and the bot each tick near the jail and the garden (a debug aid).
     if (process.env.MM_TRACE) q.s.onTick(() => {
         const p = q.pos();
@@ -413,21 +408,15 @@ try {
         q.milestone(`${label} jailed`);
         const fails0 = q.msgCount(/fail to pick the lock/i);
         // The only way out is north up the lane (x 2772-2773, z 2796-2802) and west through the guards' room. The
-        // patrol (enum mm_jail_patrol_route) holds the lane for points 2-10 (about 60 ticks), then walks west to the
-        // rest zone and hands over; the next guard walks in about 17 ticks later (practice trace). The bot picks the
-        // lock only in that window: within 8 ticks of a guard leaving the lane (nearbyNpcs x is the 2x2 SW tile + 1).
-        // After 200 ticks with no window seen, the old rule (no guard within 3 of the door) comes back.
+        // patrol (enum mm_jail_patrol_route) holds the lane for points 2-10, then hands over in the rest zone; a pick
+        // only in the handover window (tried 2026-10-24) waited 60-275 ticks a jailing against about 70 for this rule.
         const t0 = q.T();
-        for (let i = 0; i < 400 && inCell(); i++) {
+        for (let i = 0; i < 160 && inCell(); i++) {
             await q.guard(`${label} lock`);
             const d: any = q.s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) { void q.s.sdk.sendClickDialog(0); await q.waitTicks(1); continue; }
-            const guards = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name));
-            const inLane = guards.some((n: any) => n.x >= 2772 && n.z >= 2796 && n.z <= 2803);
-            if (inLane) laneSeen = q.T();
-            const window = !inLane && laneSeen > 0 && q.T() - laneSeen <= 8;
-            const old = q.T() - t0 > 200 && !guards.some((n: any) => Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 3);
-            if (!window && !old) { await q.waitTicks(1); continue; }
+            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 3);
+            if (g.length > 0) { await q.waitTicks(1); continue; }
             const door = q.findLoc(l => l.x === DOOR.x && l.z === DOOR.z && /jail door/i.test(l.name));
             if (!door) { await q.waitTicks(1); continue; }
             await q.opLoc(door, q.opIndex(door, /pick|open/i));
@@ -482,7 +471,7 @@ try {
     };
     // Talk with converse1: answers `pats`, tolerates a closed tick between pages (a p_delay, a fade), stops at ok() or
     // after 6 shut ticks, then talks again (up to `tries`).
-    const talk1 = async (label: string, re: RegExp | (() => any), pats: RegExp[], ok: () => boolean, maxTicks: number, home?: { x: number; z: number }, tries = 4, must = true): Promise<void> => {
+    const talk1 = async (label: string, re: RegExp | (() => any), pats: RegExp[], ok: () => boolean, maxTicks: number, home?: { x: number; z: number }, tries = 4, must = true, shutMax = 6): Promise<void> => {
         for (let i = 0; i < tries && !ok(); i++) {
             await q.guard(label);
             if (i > 0) { q.stats.retries++; console.log(`NOTE ${label} talk try ${i}`); }
@@ -495,7 +484,7 @@ try {
                 await q.waitUntil(() => q.dialogOpen() || ok(), 20);
             }
             let shut = 0;
-            await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 6; }, maxTicks);
+            await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= shutMax; }, maxTicks);
         }
         if (must && !ok()) await q.fail(`talk ${label}`);
     };
@@ -680,7 +669,7 @@ try {
     // it and more than 5 tiles from her route, while she is there. A tick hook pulls it out when she comes back.
     // She calls only when both stand in the garden or both outside it (mm_monkeys_aunt.rs2:13-17), so a bot in the
     // garden is safe while she is outside it. Near = in the garden, walking in (x 2738-2739), or at her last house
-    // stop (2737,2794, 15 ticks) for 9 ticks or more: the bot leaves 6 ticks before she steps in at 2740 (practice
+    // stop (2737,2794) for 13 ticks or more: she steps in at 2740 18 ticks after she arrives there, so the bot is out 5 ticks before (practice
     // trace: the old margin, x >= 2737, pulled the bot out 16 ticks early and cut the child's talk).
     let auntDoorAt = -1;
     q.s.onTick(() => {
@@ -691,7 +680,7 @@ try {
         const a = q.npc(/monkey's aunt/i);
         if (!a) return false;
         if (a.x >= 2738 && a.x <= 2746 && a.z >= 2792 && a.z <= 2798) return true;
-        return auntDoorAt >= 0 && q.T() - auntDoorAt >= 9;
+        return auntDoorAt >= 0 && q.T() - auntDoorAt >= 13;
     };
     const meInA = (): boolean => { const p = q.pos(); return !!p && inAuntA(p.worldX, p.worldZ); };
     const OUTSIDE = { x: 2746, z: 2800 };
@@ -872,7 +861,17 @@ try {
                 await q.guard(label);
                 await toOutside();
                 await auntClear(150);
-                await talk1(label, /^monkey child$/i, pats, ok, 60, CHILD, 1, false);
+                // Each talk ends at a state step (mm_monkey_child.rs2), so 2 shut ticks end it (the default 6 cost 6
+                // ticks a step); once the child wants bananas, the bananas go on him (opnpcu: no greeting pages).
+                const child = q.npc(/^monkey child$/i);
+                if (q.cnt(ITEM.banana) >= 5 && q.sawText(/only if you promise to let me borrow/i) && child && !q.dialogOpen()) {
+                    await q.useOnNpc(ITEM.banana, child);
+                    await q.waitUntil(() => q.dialogOpen() || ok(), 10);
+                    let shut = 0;
+                    await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 2; }, 40);
+                    continue;
+                }
+                await talk1(label, /^monkey child$/i, pats, ok, 60, CHILD, 1, false, 2);
             }
             if (!ok()) await q.fail(`${label}: not done`);
         };

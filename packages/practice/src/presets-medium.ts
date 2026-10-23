@@ -62,4 +62,9 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // hammer (2347) for the rungs (routequest_hollow.rs2:166-185), 10 coins for the boat (routequest_morton.rs2:8-17).
     quest_routequest: medium({ x: 3502, z: 3476 },
         [2963, [2958, 6], 1295, 1281, 1281, 1207, 1424, 1339, 960, 960, 960, 960, 960, 960, [1539, 30], 2347], 6, 20, { 107: 5, 302: 61, 307: 110 }),
+    // Haunted Mine: south of the Zealot outside the Mort Ridge mines (saradominist_zealot spawn 3444,3258,
+    // maps/m53_50.jm2); the state after In Search of the Myreque (107 = 5, 302 = 61, 307 = 110). A chisel (1755) for
+    // the crystal (hauntedmine_crystals.rs2:39-43). No tinderbox (the lift soaks it, hauntedmine_lift.rs2:37-42). The
+    // keys, the fungus and the shard are quest items (quest_hauntedmine/configs/hauntedmine.obj).
+    quest_hauntedmine: medium({ x: 3444, z: 3256 }, [1755], 8, 0, { 107: 5, 302: 61, 307: 110 }),
 };

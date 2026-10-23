@@ -419,6 +419,28 @@ export const PRESETS: Record<string, SaveConfig> = {
         inventory: [{ id: 564, count: 600 }, { id: 555, count: 7000 }, { id: 556, count: 120 }, { id: 554, count: 120 }, { id: 557, count: 7400 }],
         bank: [{ id: 1639, count: 28 }, { id: 1641, count: 17 }, { id: 1643, count: 38 }, { id: 1702, count: 460 }],
     },
+    // Teleport ladder (scripts/measure/floor-teleport.ts): staff of air (1381) worn; law (563), fire (554), earth (557),
+    // water (555) and mind (558) runes in the pack. floor_tele1 starts in the Lumbridge chicken pen for wind strike.
+    ...Object.fromEntries([1, 25, 45, 80].map(l => [`floor_tele${l}`, {
+        position: l === 1 ? { x: 3229, z: 3298, level: 0 } : LUMBRIDGE,
+        skills: { Magic: l },
+        equipment: [{ id: 1381, count: 1, slot: 3 }],
+        inventory: [{ id: 563, count: 1000 }, { id: 554, count: 300 }, { id: 557, count: 300 }, { id: 555, count: 300 }, { id: 558, count: 300 }],
+    }])),
+    // Woodcutting ladder (scripts/measure/floor-woodcut.ts): rune axe (1359), knife (946), one log (1511). Normal trees
+    // and oaks east of Draynor (oaktree 1281 at 3114,3231 and 3114,3239, m48_50.jm2), willows at Draynor (3082-3088,3227-3237).
+    ...Object.fromEntries([1, 45, 72, 85].map(l => [`floor_wc${l}`, {
+        position: l < 72 ? { x: 3110, z: 3228, level: 0 } : { x: 3086, z: 3233, level: 0 },
+        skills: { Woodcutting: l },
+        inventory: [{ id: 1359, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }],
+    }])),
+    // Fishing ladder from the Sea Slug level (scripts/measure/floor-fish.ts): fly at the Lumbridge river (fly rod 309,
+    // feathers 314, knife 946, logs 1511); cage (pot 301) and harpoon (311) at Musa Point.
+    ...Object.fromEntries([74, 85].flatMap(l => [
+        [`floor_fish_fly${l}`, { position: { x: 3239, z: 3251, level: 0 }, skills: { Fishing: l }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 2000 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
+        [`floor_fish_cage${l}`, { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: l }, inventory: [{ id: 301, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
+        [`floor_fish_harpoon${l}`, { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: l }, inventory: [{ id: 311, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
+    ])),
     // Firemaking 1 -> 99 with no banking (scripts/measure/floor-fm-rows.ts): firemaker with a tinderbox at Draynor bank;
     // helper <bot>b at Draynor bank with the FIREMAKING logs banked (2/4/7/13/24/107, 1 spare each) to drop on the path.
     floor_fmr: { position: { x: 3092, z: 3243, level: 0 }, inventory: [{ id: 590, count: 1 }] },
