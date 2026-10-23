@@ -1,0 +1,67 @@
+// Vampire Slayer from preset quest_vampire (in Morgan's house, Draynor; every skill 99, rune scimitar; beer, hammer,
+// garlic and two Varrock teleports from a helper). Reward: 3 QP, 4,825 Attack XP before 25x (quest_vampire.rs2:41-45).
+// Varp %vampire: 0 -> 1 Morgan, 2 Harlow, then the beer gives the stake; Count Draynor killed with stake and hammer
+// in the pack queues the completion (count_draynor.rs2:49-80).
+// Server truth: areas/area_draynor/scripts/morgan.rs2, areas/area_varrock/scripts/harlow.rs2,
+// quests/quest_vampire/scripts/quest_vampire.rs2 (coffin loc_2614 spawns the Count), count_draynor.rs2.
+import { openQuest } from './quest-lib';
+
+const MORGAN = { x: 3098, z: 3268 };
+const HARLOW = { x: 3277, z: 3492 };
+const STAIRS = { id: 2616, x: 3115, z: 3357 };            // cryptstairsdown, to 3077,9771 (stairs.rs2:408-416)
+const COFFIN = { id: 2614, x: 3077, z: 9775 };
+const COUNT = { x: 3078, z: 9774 };
+const ITEM = { beer: 1917, stake: 1549, hammer: 2347, garlic: 1550 };
+
+const q = await openQuest({ cap: 1500 });
+try {
+    let questDone = false;
+    const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
+    const harlow = /^dr harlow$/i;
+
+    // 1. Morgan: "Ok, I'm up for an adventure." sets 1 (morgan.rs2:11-26).
+    await q.talk('morgan', /^morgan$/i, [/up for an adventure/i], () => q.sawText(/look him up then|dr\. harlow/i), MORGAN);
+    q.milestone(1);
+
+    // 2. Varrock teleport; the Jolly Boar Inn. "Morgan needs your help" sets 2; the second talk takes the beer and
+    // gives the stake (harlow.rs2:9-55).
+    await q.teleport('varrock teleport 1', 'magic:varrock_teleport', 3212, 3424);
+    await q.walk('to harlow', [{ x: HARLOW.x, z: HARLOW.z, tol: 3 }]);
+    await q.talk('harlow 1', harlow, [/morgan needs your help/i], () => q.sawText(/buy ush a drink anyway/i), HARLOW);
+    q.milestone(2);
+    await q.talk('harlow 2', harlow, [/ok mate/i], () => q.has(ITEM.stake), HARLOW, 60);
+    q.milestone('stake');
+
+    // 3. Varrock teleport, the walk to Draynor Manor; the front doors open from the south only (quest_haunted.rs2:4-11).
+    await q.teleport('varrock teleport 2', 'magic:varrock_teleport', 3212, 3424);
+    await q.walk('to manor', [{ x: 3108, z: 3352, tol: 1 }]);
+    const inManor = () => (q.pos()?.worldZ ?? 0) >= 3354 && (q.pos()?.worldZ ?? 0) < 9000;
+    await q.step('manor door', () => { const d = q.findLoc(l => (l.id === 134 || l.id === 135) && l.z === 3353); return d ? q.opLoc(d, 1) : q.waitTicks(1); }, inManor, 8, 4);
+    // Inside, the SDK plan goes through closet_door 131 at 3107,3367, which is locked (91-92 ticks stood there in two
+    // trials). The way to the crypt stairs (maps/m48_52.jm2): hall door loc_1530 at 3109,3358, the north room, door
+    // loc_1530 at 3106,3368, the north corridor, the east rooms (3114-3118,3362-3367), the 3118-3119 passage south.
+    await q.openDoor('hall door', 3109, 3358);
+    await q.dash('north room', 3106, 3367, 0);
+    await q.openDoor('corridor door', 3106, 3368);
+    await q.dash('corridor', 3114, 3370, 0);
+    await q.dash('east room', 3118, 3362, 1);
+    await q.dash('to crypt stairs', STAIRS.x, STAIRS.z - 1, 0);
+    await q.climb('crypt stairs', () => q.locAt(STAIRS.x, STAIRS.z) ?? STAIRS, /walk-down|climb-down|go-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
+    q.milestone('crypt');
+
+    // 4. The coffin spawns the Count after p_delay(4) (quest_vampire.rs2:9-31). Garlic in the pack weakens him on his
+    // first hit (count_draynor.rs2:6-17); at 0 HP the stake and hammer finish him (:57-80).
+    await q.step('coffin', () => { const c = q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z); return c ? q.opLoc(c, 1) : q.opLoc(COFFIN, 1); }, () => !!q.npc(/^count draynor$/i), 10, 4);
+    q.milestone('count');
+    const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+    for (let t = 0; t < 200 && !questDone; t++) {
+        await q.guard('count');
+        const n = q.npc(/^count draynor$/i);
+        if (n && q.has(ITEM.stake) && t % 4 === 0) await attack(n);
+        if (!n && q.has(ITEM.stake) && t % 10 === 9) await q.opLoc(COFFIN, 1);
+        await q.waitTicks(1);
+    }
+    q.milestone(3);
+    off();
+    await q.end(questDone, `qp=3 stakeUsed=${!q.has(ITEM.stake)}`);
+} catch (e) { await q.fail(String(e)); }

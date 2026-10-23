@@ -201,6 +201,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Witch's Potion | `scripts/generated/quest-hetty.ts` | 80, 78, 79 | MEASURED 3/3 |
 | Rune Mysteries | `scripts/generated/quest-runemysteries.ts` | 449, 432, 441 | MEASURED 3/3 |
 | The Restless Ghost | `scripts/generated/quest-priest.ts` | 519, 516, 519 | MEASURED 3/3 |
+| Vampire Slayer | `scripts/generated/quest-vampire.ts` | 338, 330, 331 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -261,3 +262,20 @@ is." 177-343 (`quests/quest_priest/scripts/restless_ghost.rs2:16-29,130-139`); t
 343-479 (`quest_priest.rs2:68-80`); Lumbridge teleport, open the coffin again, the skull on it 479-519 (`:53-65`).
 The amulet and the skull are `tradeable=no` (`quest_priest.obj:18,32`), so no step can be skipped with helper
 items. The walks are 370 of the 519 ticks. `retries=1` is the second coffin click.
+
+### Vampire Slayer
+
+`RESULT ok qp=3 stakeUsed=true xp=attack=250,hitpoints=80,magic=1750 ... ticks=338 ... retries=0 died=false` (runs:
+338, 330, 331 ticks), each with `You hammer the stake into the vampire's chest!` and `Congratulations! Quest
+complete!`. Steps (run 1): Morgan "Ok, I'm up for an adventure." 0-19 (`areas/area_draynor/scripts/morgan.rs2:11-26`);
+Varrock teleport, the Jolly Boar Inn, Dr Harlow twice: "Morgan needs your help", then the beer gives the stake
+19-142 (`area_varrock/scripts/harlow.rs2:9-55`); Varrock teleport, the walk to Draynor Manor, the front doors (open
+from the south only, `quests/quest_haunted/scripts/quest_haunted.rs2:4-11`), the route through the manor to the
+crypt stairs (2616 at 3115,3357, `ladders+stairs/scripts/stairs.rs2:408-416`) 142-309; the coffin (`loc_2614` at
+3077,9775) spawns Count Draynor (`quest_vampire.rs2:9-31`); the kill with garlic, stake and hammer in the pack
+309-338 (`count_draynor.rs2:6-17,57-80`). The stake is `tradeable=no` (`stake.obj`), so the Varrock leg stays.
+In the manor the SDK plan goes through `closet_door` 131 at 3107,3367, which is locked: 91-92 ticks stood there in
+two trials, and `blockDoor` did not change the walkPath route. The script walks the rooms by tile instead: hall
+door 3109,3358, north room, door 3106,3368, the north corridor, the east rooms, the 3118-3119 passage south. That
+cut the quest from 429 to 330-338 ticks. The Attack XP in RESULT is the fight only; the quest XP comes 3 ticks
+after the kill (`queue(quest_vampire_complete, 3, 0)`), after the script ends.

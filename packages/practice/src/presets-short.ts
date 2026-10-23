@@ -38,4 +38,15 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Lumbridge teleport (1 law 563, 3 air 556, 1 earth 557) for the way back from the Wizards' Tower basement. The amulet
     // of ghostspeak and the skull are untradeable (quest_priest.obj), so Urhney and the skull are part of the run.
     quest_priest: short({ x: 3243, z: 3206 }, [[563, 1], [556, 3], [557, 1]]),
+    // Vampire Slayer: in Morgan's house, Draynor (morgan spawn 3098,3268, maps/m48_51.jm2); beer (1917) for Dr Harlow,
+    // hammer (2347), garlic (1550), runes for two Varrock teleports (2 law 563, 6 air 556, 2 fire 554). The stake is
+    // untradeable (stake.obj), so the Varrock leg to Harlow stays.
+    quest_vampire: short({ x: 3097, z: 3268 }, [1917, 2347, 1550, [563, 2], [556, 6], [554, 2]], 6),
+    // Gertrude's Cat: in Gertrude's house west of Varrock (gertrude spawn 3151,3410, maps/m49_53.jm2); bucket of milk
+    // (1927), seasoned sardine (1552; tradeable, quest_fluffs.obj), 100 coins for Shilop, Varrock teleport runes (1 law
+    // 563, 3 air 556, 1 fire 554). The kitten (1554) is untradeable and its crate is random(6) (quest_fluffs.rs2:221-228).
+    quest_fluffs: short({ x: 3150, z: 3410 }, [1927, 1552, [563, 1], [556, 3], [554, 1]], 4, 100),
+    // Monk's Friend: in the Ardougne monastery beside Brother Omad (spawn 2604,3209, maps/m40_50.jm2); jug of water (1937)
+    // and logs (1511) for Brother Cedric. The child's blanket is untradeable (quest_drunkmonk.obj:12).
+    quest_drunkmonk: short({ x: 2605, z: 3209 }, [1937, 1511], 6),
 };
