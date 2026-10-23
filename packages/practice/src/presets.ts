@@ -310,7 +310,26 @@ export const PRESETS: Record<string, SaveConfig> = {
     // (3188,3426) with a hammer (2347); the helper <bot>b at Varrock west bank with the SMITHING bars banked.
     floor_smith_trade: { position: { x: 3188, z: 3427, level: 0 }, inventory: [{ id: 2347, count: 1 }] },
     floor_smith_helper: { position: { x: 3185, z: 3436, level: 0 }, bank: [{ id: 2349, count: 20 }, { id: 2351, count: 37 }, { id: 2353, count: 96 }, { id: 2359, count: 281 }, { id: 2361, count: 341 }] },
+    ...agilityPresets(),
 };
+
+// Agility laps (scripts/measure/agility-laps.ts): each course at its entry level and at 70 / 90.
+// Gnome: north of the log (2474,3435). Barbarian: north of the rope swing (2551,3550), already inside the outpost
+// (the gate needs Alfred Grimhand's Barcrawl, outpost_gate.rs2:2). Wilderness: south of the pipe (3004,3938), inside
+// the course. HP 70, Defence 70 and 15 lobsters (379) for the fail damage (15-21.6% of HP + 1 per fail).
+function agilityPresets(): Record<string, SaveConfig> {
+    const food = Array.from({ length: 15 }, () => ({ id: 379, count: 1 }));
+    const at = {
+        gnome: { pos: { x: 2474, z: 3437, level: 0 }, levels: [1, 70, 90] },
+        barbarian: { pos: { x: 2551, z: 3555, level: 0 }, levels: [35, 70, 90] },
+        wilderness: { pos: { x: 3004, z: 3937, level: 0 }, levels: [52, 70, 90] },
+    };
+    const out: Record<string, SaveConfig> = {};
+    for (const [course, c] of Object.entries(at))
+        for (const l of c.levels)
+            out[`agility_${course}_${l}`] = { position: c.pos, skills: { Agility: l, Hitpoints: 70, Defence: 70 }, inventory: food };
+    return out;
+}
 
 // The engine writes the save on logout, so a preset written while logged in is lost.
 export async function applyPreset(name: string, preset: SaveConfig): Promise<string> {
