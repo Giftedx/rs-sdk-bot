@@ -70,12 +70,22 @@ const runOnce = async (account: string, script: string, env: Record<string, stri
 const farmerFood = (a: string) => { const s = status(a); return count(s?.inventory, FOOD) + count(s?.bank, FOOD); };
 const courierFish = () => count(status(COURIER)?.inventory, /^(trout|salmon)$/i);
 const courierCoins = () => count(status(COURIER)?.inventory, /^coins$/i);
-const waitingFarmer = () => FARMERS.find(f => running.has(f) && /waiting for food trade/.test(String(status(f)?.phase ?? '')));
+// A farmer waits when the newest progress line of its own log says so. The status `phase` keeps the last MILESTONE
+// after the trade is done (2026-10-23: four failed hand-outs to a farmer that was already farming again), and a
+// failed hand-out waits 2 minutes before the next try.
+const lastTry = new Map<string, number>();
+const waitingFarmer = () => FARMERS.find(f => {
+    const r = running.get(f);
+    if (!r || Date.now() - (lastTry.get(f) ?? 0) < 120_000) return false;
+    const last = readLog(r.log).split(/\r?\n/).filter(l => /^(MILESTONE|TRADE|BANK|RESULT)\b/.test(l)).pop() ?? '';
+    return /waiting for food trade/.test(last);
+});
 
 // An even share for each farmer that is low on food (2026-10-23: the first hand-out gave all 128 fish to one
 // farmer and the other logged out hungry).
 async function giveFish(farmer: string) {
     courierBusy = true;
+    lastTry.set(farmer, Date.now());
     try {
         const inv = status(COURIER)?.inventory;
         const hungry = Math.max(1, FARMERS.filter(f => !dead.has(f) && farmerFood(f) < LOW).length);
