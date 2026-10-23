@@ -1748,17 +1748,17 @@
     "skill": "agility",
     "toLevel": 25,
     "xpPerTick": {
-     "floor": 60,
-     "realistic": 40,
-     "evidence": "ESTIMATE",
-     "source": "gnome lap XP (gnome_course.rs2) at about 50 ticks per lap (tick-tricks-web.md 8)"
+     "floor": 33,
+     "realistic": 32.9,
+     "evidence": "MEASURED",
+     "source": "research/agility.md: gnome course 9 practice runs of 10 laps at Agility 1, 70, 90: 32.9-33.0 XP/tick (65.6-65.8 ticks per lap, 2,162.5 XP per lap, 0 fails)"
     }
    },
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "gnome lap XP (gnome_course.rs2) at about 50 ticks per lap (tick-tricks-web.md 8)",
+   "evidence": "MEASURED",
+   "source": "research/agility.md: gnome course 9 practice runs of 10 laps at Agility 1, 70, 90: 32.9-33.0 XP/tick (65.6-65.8 ticks per lap, 2,162.5 XP per lap, 0 fails)",
    "at": "gnome-course"
   },
   {
@@ -2334,17 +2334,17 @@
     "skill": "agility",
     "toLevel": 52,
     "xpPerTick": {
-     "floor": 80,
-     "realistic": 50,
-     "evidence": "ESTIMATE",
-     "source": "course XP CODE-READ; lap times not measured"
+     "floor": 33,
+     "realistic": 32.9,
+     "evidence": "MEASURED",
+     "source": "research/agility.md: gnome course 9 practice runs of 10 laps at Agility 1, 70, 90: 32.9-33.0 XP/tick (65.6-65.8 ticks per lap, 2,162.5 XP per lap, 0 fails)"
     }
    },
    "requires": [
     "grandtree"
    ],
-   "evidence": "ESTIMATE",
-   "source": "course XP CODE-READ; lap times not measured",
+   "evidence": "MEASURED",
+   "source": "research/agility.md: gnome course 9 practice runs of 10 laps at Agility 1, 70, 90: 32.9-33.0 XP/tick (65.6-65.8 ticks per lap, 2,162.5 XP per lap, 0 fails); Barbarian (52.4-54.0 XP/tick) needs the Barcrawl",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -2374,17 +2374,17 @@
     "skill": "agility",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 224,
-     "realistic": 167,
-     "evidence": "ESTIMATE",
-     "source": "wilderness_course.rs2:17-176 601.4 XP/lap x25; 67-90 ticks per lap (web, not measured)"
+     "floor": 202.6,
+     "realistic": 178,
+     "evidence": "MEASURED",
+     "source": "research/agility.md: Wilderness course practice runs, 10-lap cap 800 ticks; floor = best runs 202.6 XP/tick (705 ticks, 0-1 fails, Agility 70 and 90); realistic = mean of 9 runs at Agility 70 and 90 (147.4-202.6) = 178"
     }
    },
    "requires": [
     "agility-52"
    ],
-   "evidence": "ESTIMATE",
-   "source": "wilderness_course.rs2:17-176 601.4 XP/lap x25; 67-90 ticks per lap (web, not measured)",
+   "evidence": "MEASURED",
+   "source": "research/agility.md: Wilderness course practice runs, 10-lap cap 800 ticks; floor = best runs 202.6 XP/tick (705 ticks, 0-1 fails, Agility 70 and 90); realistic = mean of 9 runs at Agility 70 and 90 (147.4-202.6) = 178",
    "supplies": [
     {
      "item": "lobster",
@@ -2399,10 +2399,10 @@
        "skill": "agility",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 224,
-        "realistic": 197,
-        "evidence": "ESTIMATE",
-        "source": "realistic: rival S17 Agility 75-99 in 4,114 ticks with falls = (998,458 - 188,722) / 4,114 = 197 XP/tick (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S17; docs/speedrun/skills/agility.md section 1, 74-tick demo lap inferred); floor unchanged"
+        "floor": 202.6,
+        "realistic": 178,
+        "evidence": "MEASURED",
+        "source": "research/agility.md: Wilderness course practice runs, 10-lap cap 800 ticks; floor = best runs 202.6 XP/tick (705 ticks, 0-1 fails, Agility 70 and 90); realistic = mean of 9 runs at Agility 70 and 90 (147.4-202.6) = 178; superseded the rival S17 ESTIMATE of 197 (our clean lap is 66-71 ticks, shorter than the rival's 74)"
        }
       }
      }
