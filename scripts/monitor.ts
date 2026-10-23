@@ -17,13 +17,13 @@ mkdirSync(prac, { recursive: true });
 type Alert = { at: number; level: 'warn' | 'error' | 'fixed'; key: string; text: string; bot?: string };
 const active = new Map<string, Alert>();
 
-function procs(): { pid: number; name: string; ageSec: number; mb: number; cmd: string }[] {
+function procs(): { pid: number; name: string; ageSec: number; mb: number; cpuSec: number; cmd: string }[] {
     // One CIM query per cycle; tasklist has no command lines.
-    const ps = `Get-CimInstance Win32_Process -Filter "Name='msedge.exe' OR Name='python.exe' OR Name='bun.exe'" | ForEach-Object { '{0}|{1}|{2}|{3}|{4}' -f $_.ProcessId, $_.Name, [int]((Get-Date) - $_.CreationDate).TotalSeconds, [int]($_.WorkingSetSize/1MB), ($_.CommandLine -replace '\\|',' ') }`;
+    const ps = `Get-CimInstance Win32_Process -Filter "Name='msedge.exe' OR Name='python.exe' OR Name='bun.exe'" | ForEach-Object { '{0}|{1}|{2}|{3}|{4}|{5}' -f $_.ProcessId, $_.Name, [int]((Get-Date) - $_.CreationDate).TotalSeconds, [int]($_.WorkingSetSize/1MB), [int](($_.KernelModeTime + $_.UserModeTime) / 1e7),($_.CommandLine -replace '\\|',' ') }`;
     const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', ps], { stdout: 'pipe', stderr: 'ignore' });
     return r.stdout.toString().split(/\r?\n/).filter(Boolean).map(l => {
-        const [pid, name, age, mb, ...cmd] = l.split('|');
-        return { pid: Number(pid), name: name!, ageSec: Number(age), mb: Number(mb), cmd: cmd.join('|') };
+        const [pid, name, age, mb, cpu, ...cmd] = l.split('|');
+        return { pid: Number(pid), name: name!, ageSec: Number(age), mb: Number(mb), cpuSec: Number(cpu), cmd: cmd.join('|') };
     });
 }
 
@@ -45,8 +45,13 @@ function cycle() {
         for (const p of stale) Bun.spawnSync(['taskkill', '/PID', String(p.pid), '/F'], { stdout: 'ignore', stderr: 'ignore' });
         raise({ level: 'fixed', key: `edge-${now}`, text: `killed ${stale.length} leaked screenshot Edge processes (${[...new Set(stale.map(p => p.cmd.match(/shot-\d+/)![0]))].join(', ')})` });
     }
+    // A `python -` (script piped from a Bash heredoc) still alive after 10 minutes is stuck; two such processes burned
+    // about one CPU core each on 2026-10-23 (589 and 655 CPU-seconds in 11 minutes). Kill those that use CPU.
     for (const p of list.filter(p => p.name === 'python.exe' && /python(3|\.exe)?"? -\s*$/.test(p.cmd) && p.ageSec > 600)) {
-        raise({ level: 'warn', key: `py-${p.pid}`, text: `python reading stdin for ${Math.round(p.ageSec / 60)} min (pid ${p.pid}), likely stuck` });
+        if (p.cpuSec > 60) {
+            Bun.spawnSync(['taskkill', '/PID', String(p.pid), '/F'], { stdout: 'ignore', stderr: 'ignore' });
+            raise({ level: 'fixed', key: `py-${p.pid}`, text: `killed stuck python - (pid ${p.pid}, ${Math.round(p.ageSec / 60)} min, ${p.cpuSec} CPU-s)` });
+        } else raise({ level: 'warn', key: `py-${p.pid}`, text: `python reading stdin for ${Math.round(p.ageSec / 60)} min (pid ${p.pid}), likely stuck` });
     }
     const freeGB = freemem() / 2 ** 30;
     if (freeGB < 3) raise({ level: 'error', key: 'ram', text: `only ${freeGB.toFixed(1)} GB RAM free` });
