@@ -84,19 +84,21 @@ export const SMITHING: Band[] = [
 // 1-7 has no supply-only spell (strikes need a target): ESTIMATE band, not measured.
 export const MAGIC: Band[] = [
     { from: 7, name: 'enchant 1 sapphire ring', xp: 17.5, inputs: { sapphire_ring: 1, cosmicrune: 1, waterrune: 1 } },
-    { from: 21, name: 'low alch', xp: 31, inputs: { naturerune: 1, firerune: 3 } },
     { from: 27, name: 'enchant 2 emerald ring', xp: 37, inputs: { emerald_ring: 1, cosmicrune: 1, airrune: 3 } },
-    { from: 43, name: 'superheat iron', xp: 53, inputs: { iron_ore: 1, naturerune: 1, firerune: 4 } },
     { from: 49, name: 'enchant 3 ruby ring', xp: 59, inputs: { ruby_ring: 1, cosmicrune: 1, firerune: 5 } },
     { from: 57, name: 'enchant 4 diamond ring', xp: 67, inputs: { diamond_ring: 1, cosmicrune: 1, earthrune: 10 } },
     { from: 68, name: 'enchant 5 dragonstone amulet', xp: 78, inputs: { strung_dragonstone_amulet: 1, cosmicrune: 1, earthrune: 15, waterrune: 15 } },
 ];
-// Cooking (normal method, no login timer): 1-35 on a range (p_delay(1), cooking.rs2:113), 35+ hand-made wine.
+// Left out on purpose: low alch at 21-27 (31 XP, 3 casts saved) and superheat at 43-49 (needs Smithing 15 for iron).
+// Cooking (normal method, no login timer): 1-35 fish on a fire (p_delay(1), cooking.rs2:113; cooking_generic.dbrow
+// successchance), 35+ hand-made wine (wine.rs2: instant, XP when the 20-tick timer ferments every wine).
 export const COOKING: Band[] = [
-    { from: 1, name: 'bread', xp: 40, inputs: { bread_dough: 1 } },
-    { from: 20, name: 'meat pie', xp: 110, inputs: { uncooked_meat_pie: 1 } },
+    { from: 1, name: 'sardine', xp: 40, inputs: { raw_sardine: 1 } },
+    { from: 5, name: 'herring', xp: 50, inputs: { raw_herring: 1 } },
+    { from: 15, name: 'trout', xp: 70, inputs: { raw_trout: 1 } },
+    { from: 25, name: 'salmon', xp: 90, inputs: { raw_salmon: 1 } },
     { from: 35, name: 'wine', xp: 110, inputs: { grapes: 1, jug_water: 1 } },
-];
+]
 
 // stat_random(low, high) chance at a level (engine PlayerOps.ts:591-599).
 export function statRandom(low: number, high: number, lvl: number): number {
@@ -107,7 +109,7 @@ export function statRandom(low: number, high: number, lvl: number): number {
 export const SUCCESS: Record<string, [number, number]> = {
     opal: [128, 250], jade: [90, 240], 'red topaz': [100, 245],
     logs: [64, 512], oak: [64, 512], willow: [64, 512], maple: [64, 512], yew: [64, 512], magic: [64, 512],
-    wine: [48, 352], bread: [118, 492], 'meat pie': [78, 412],
+    wine: [48, 352], sardine: [118, 492], herring: [108, 472], trout: [88, 432], salmon: [68, 392],
 };
 export const odds = (b: Band, lvl: number) => { const r = SUCCESS[b.name]; return r ? statRandom(r[0], r[1], lvl) : 1; };
 

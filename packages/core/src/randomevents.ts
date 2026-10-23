@@ -116,6 +116,23 @@ const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const vendor = (p: string) => join(repoRoot, 'vendor', 'rs-sdk', p);
 
 // Tiles of the maze's permanent walls (loc 3626 in maps/m45_71.jm2, LOC lines "level x z: id shape angle").
+// The lite client drops an NPC animation it cannot age at once (LiteClient.ts:379), so the mime's emote is
+// seldom in a state sample (seen once in 290 ticks). Every animation is looked up in the shared SeqType.list,
+// so while the bot is in the mime theatre that array is wrapped in a Proxy that records which emote seqs were
+// looked up; the job takes the one the player itself is not playing.
+const mimeLookups = new Set<number>();
+let seqRestore: (() => void) | null = null;
+async function watchSeqLookups(): Promise<void> {
+    if (seqRestore) return;
+    const m: any = await import(vendor('server/webclient/src/config/SeqType.ts'));
+    const ST = m.default;
+    if (!ST?.list || seqRestore) return;
+    const orig = ST.list;
+    const wanted = new Set(MIME_ANIMS.map(String));
+    ST.list = new Proxy(orig, { get(t, k, r) { if (typeof k === 'string' && wanted.has(k)) mimeLookups.add(Number(k)); return Reflect.get(t, k, r); } });
+    seqRestore = () => { ST.list = orig; seqRestore = null; };
+}
+
 // Also the loc id of every maze door (3628-3632), keyed "x,z".
 let mazeWallCache: [number, number][] | null = null;
 const mazeDoorIds = new Map<string, number>();
@@ -547,19 +564,26 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
 
     // Mime: copy the mime's emote 4 times in a row (macro_event_mime.rs2), then the server returns the player.
     const mimeJob = (): Omit<Job, 'started'> => {
-        let emote = -1, at = -99, clicks = 0;
+        let emote = -1, at = -99, clicks = 0, clicked = -1;
+        if (opts.ifReader === undefined) void watchSeqLookups().catch(() => {});
+        mimeLookups.clear();
         return {
             name: 'mime', hold: true,
             tick() {
                 const p = me();
-                if (!p || !inRegion(p, MIME_REGION)) { say('mime', 'returned', `clicks=${clicks}`); return true; }
+                if (!p || !inRegion(p, MIME_REGION)) { seqRestore?.(); say('mime', 'returned', `clicks=${clicks}`); return true; }
                 const mime = (st?.nearbyNpcs ?? []).find((n: any) => n.id === MIME_NPC);
                 const i = mime ? MIME_ANIMS.indexOf(mime.animId) : -1;
                 if (i >= 0) emote = i;
+                // Lookups this tick, less the player's own emote (it copies the mime after each click).
+                const looked = [...mimeLookups].filter(a => a !== st.player.animId && !(a === clicked && s.tick() - at < 24));
+                if (process.env.MIME_TRACE) log(`MIMETRACE t=${s.tick()} lookups=${[...mimeLookups]} looked=${looked} stateAnim=${mime?.animId} player=${st.player.animId} dialog=${!!st?.dialog?.isOpen} emote=${emote}`);
+                mimeLookups.clear();
+                if (looked.length === 1) emote = MIME_ANIMS.indexOf(looked[0]!);
                 const panel = st?.dialog?.isOpen && (st.dialog.allComponents ?? []).some((c: any) => c.id >= MIME_FIRST_BUTTON && c.id < MIME_FIRST_BUTTON + 8);
                 if ((panel || (mime?.animId === EMOTE_BOW && emote >= 0)) && emote >= 0 && canSend() && s.tick() - at >= 3) {
                     send({ type: 'clickComponent', componentId: MIME_FIRST_BUTTON + emote });
-                    at = s.tick(); clicks++;
+                    at = s.tick(); clicks++; clicked = MIME_ANIMS[emote]!;
                     say('mime', 'emote', `i=${emote}`);
                     emote = -1;
                 } else if (st?.dialog?.isOpen && !panel) continueDialog();
@@ -823,6 +847,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
         stop() {
             off();
             if (gateOn) { s.direct = rawDirect; if (rawSend) sdkAny.send = rawSend; }
+            if (active?.name === 'mime') seqRestore?.();
             active = null;
             for (const h of held.splice(0)) h.fail();
         },

@@ -8,7 +8,8 @@ Live state is NOT VERIFIED (INDEX C1). Checked on 2026-10-23: the Woodpecker run
 shows `died ... hp=0` at 3233,3243); no event NPC and no event reward (lamp, strange box, axe handle, kebab and
 beer) is in the inventory or bank of any of the 7 demo bots in `.practice/status/`. The vendored
 `vendor/rs-sdk/fly.toml:25` sets `NODE_RANDOM_EVENTS = "false"`, but that file is not the live config (it sets
-tick 300; live runs 400 ms). The likely cause of the Woodpecker death is a giant spider, not a dryad (section 6).
+tick 300; live runs 400 ms). The Woodpecker death was not a giant spider either: the river separates its tile
+from the spiders (section 6). Its cause is still unknown. The handler does nothing when no event spawns.
 Our local practice engine has events off: `NODE_RANDOM_EVENTS` is unset, so `map_random_events` is false.
 The handler is safe either way: with no events it only reads state.
 
@@ -141,5 +142,48 @@ completion (`%macro_event_target_coord`).
 Unit test: `packages/core/test/randomevents.test.ts` (fake session).
 
 Live test on a second local engine with random events on: `NODE_RANDOM_EVENTS=true` and the engine's
-`World.AFK_EVENTRATE` set to 50 ticks with chance 1, on separate ports (8890). The launcher and the skilling
-loop are not in the repo. The loop does not check `busy()`, so it also tests the gate.
+`World.AFK_EVENTRATE` set to 50 ticks with chance 1, on separate ports (8890). For forced events the same engine
+ran with `NODE_DEBUG=true` and staff level 4 for test bots, so `::~macro_event <n>` and `::random` work. The
+launcher and the skilling loop are not in the repo. The loop does not check `busy()`, so it also tests the gate.
+
+Measured on that engine (300 ms ticks), ticks from the first sight of the event:
+
+| Event | Result |
+|---|---|
+| Dryad (2 runs) | escaped in 6 and 7 ticks, one hit taken |
+| River troll | escaped in 9, back at the start tile in 14, no damage |
+| Swarm (4 runs) | escaped in 11-18, back in 21-29 |
+| Genie (5) | talk 4 ticks; lamp rubbed on Woodcutting about 11 ticks later |
+| Drunken dwarf, old man gift (10+ each) | done in 4 to 7 ticks; kebab, beer, casket, coins, gems received |
+| Strange box (6) | every box solved at the first answer |
+| Ent | redirected to another tree in 1 tick |
+| Lost axe | fixed in 9 ticks (pick up head, reattach) |
+| Maze | 17 doors, gate, shrine: returned 183 ticks after the teleport, with the rewards |
+
+Faults the live test found and fixed:
+- During an attack the client can hold the reported player tile still for 20+ ticks while the server walks the
+  player. A flight no longer ends when the NPC leaves view until the position settles.
+- A flight ended 17 tiles away beside aggressive Dark wizards and the bot died there. A flight now walks back to
+  its start tile, and flight tiles score away from NPCs that hunt players (`loadDanger()`: huntmode
+  aggressive, cowardly or ranged in the server `.npc` files).
+- "Click here to continue" has server index 1, not 0.
+- Every maze wall is a "Wall" with op Open, so the door index takes all 1,459 permanent walls (loc 3626) for
+  doors. They are passed as blocked doors. The shrine fills its walled room; the way in is the door on the east
+  edge of local (30,32).
+- The lite client drops the mime's emote animation before a state sample, so the mime job reads which emote seqs
+  the client looks up in `SeqType.list` (a Proxy, only while the bot is in the mime theatre).
+
+## 6. Giant spiders at the castle river (not an event)
+
+`giantspider1` (npc 59, `scripts/_unpack/225/all.npc`): level 2, 5 HP, `huntmode=cowardly`, `huntrange=1`,
+`wanderrange=10` (so maxrange 12). `cowardly` has `check_nottoostrong=outside_wilderness`: the spider attacks a
+player of combat level up to 2 x 2 = 4 (`Npc.ts:1011`), so a fresh combat-3 account is a target. Max hit 1:
+strength 1 + 9, times (strengthbonus -10 + 64) = 540, (540 + 320) / 640 = 1 (`npc_combat_melee.rs2`, `combat.rs2`).
+
+Spawns at 3243,3236 and 3245,3232 (`knowledge/npcs.json`). Both are on the east bank. Paths from 3243,3236
+(rsmod): the fishing tile 3240,3242 is 8 tiles away (in reach); the willow tiles 3233,3238 and 3233,3243 need
+45-50 tiles round the river (out of reach, a spider never leaves 10 tiles of its spawn); the fly spot 3239,3251
+is 15 tiles (Chebyshev) from the spawn, past wander 10 + hunt 1.
+
+Safe rule for a combat 4 or lower account on the east bank: keep more than 11 tiles (Chebyshev) from both
+spawns, that is z >= 3248 for x 3232-3256. The west-bank willows are safe from the spiders.

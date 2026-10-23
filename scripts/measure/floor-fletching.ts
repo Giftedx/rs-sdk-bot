@@ -11,7 +11,9 @@ import { meter, send, tick, xp, level, inv, report, band, dialogOpen, clearDialo
 
 const [bot, perTickArg, closeArg] = process.argv.slice(2);
 const perTick = Number(perTickArg ?? 5);
-const closeWhile = (closeArg ?? '1') === '1';
+const closeWhile = (closeArg ?? '0') === '1';
+// FLOOR_BLIND=1: send 5 per tick without waiting to see the last tick's result (the stock check catches misses).
+const blind = process.env.FLOOR_BLIND !== '0';
 const open = process.argv[5] === '1';
 const s = await openBot(bot!);
 try {
@@ -41,20 +43,23 @@ try {
         const tipId = objId(tipName), baseId = objId(baseName);
         const per = st.band.inputs[tipName]!;
         const tb = s.tick(), xb = xp(s, 'Fletching');
-        let done = 0, stall = 0;
+        const tip0 = inv(s).find(i => i.id === tipId)?.count ?? 0;
+        let done = 0, stall = 0, sentActs = 0;
         while (done < st.actions && stall < 10) {
             if (level(s, 'Fletching') < st.band.from) { await tick(s); stall++; continue; }
             const tip = inv(s).find(i => i.id === tipId), base = inv(s).find(i => i.id === baseId);
             if (!tip || !base) { console.log(`WARN out of ${tipName} or ${baseName}`); ok = false; break; }
             let n = 0;
             if (closeWhile && dialogOpen(s)) { await send(s, m, { type: 'closeModal' }); n++; }
-            const want = Math.min(perTick - n, st.actions - done);
+            const want = Math.min(perTick - n, st.actions - (blind ? sentActs : done));
+            if (want <= 0) { await tick(s); stall++; const a = inv(s).find(i => i.id === tipId)?.count ?? 0; done = Math.round((tip0 - a) / per); if (stall > 3) sentActs = done; continue; }
+            sentActs += want;
             const before = tip.count;
             for (let k = 0; k < want; k++) await send(s, m, { type: 'useItemOnItem', sourceSlot: tip.slot, targetSlot: base.slot });
             await tick(s);
             const after = inv(s).find(i => i.id === tipId)?.count ?? 0;
             const landed = Math.round((before - after) / per);
-            done += landed;
+            done = Math.round((tip0 - after) / per);
             stall = landed > 0 ? 0 : stall + 1;
         }
         band(m, st.band.name, xp(s, 'Fletching') - xb, s.tick() - tb, done);

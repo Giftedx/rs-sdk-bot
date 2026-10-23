@@ -168,11 +168,12 @@ export const PRESETS: Record<string, SaveConfig> = {
             equipment: [[1163, 0], [1725, 2], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! })),
             inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })),
         };
-        // Cannon variant: %mcannon (varp 0) = 11 (^mcannon_complete, quest.constant:43), cannon base/stand/barrels/
+        // Cannon variant: %mcannon (varp 0) = 11 (^mcannon_complete, quest.constant:43), %ownedmcannon (varp 4) = -1 (null;
+        // a 0 save value reads as a placed cannon: "You cannot construct more than one Cannon"), cannon base/stand/barrels/
         // furnace (6/8/10/12), 1,000 cannonballs (2), 16 lobsters.
         const cannon: SaveConfig = {
             ...base,
-            varps: { 0: 11 },
+            varps: { 0: 11, 4: -1 },
             inventory: [6, 8, 10, 12].map(id => ({ id, count: 1 })).concat([{ id: 2, count: 1000 }], Array.from({ length: 16 }, () => ({ id: 379, count: 1 }))),
         };
         return [[`combat_${spot}_${lv}`, base], [`combat_${spot}_${lv}_cannon`, cannon]];
@@ -191,6 +192,29 @@ export const PRESETS: Record<string, SaveConfig> = {
     },
     // Prayer 1 -> 99 at Draynor bank: 560 dragon bones (536) in the bank (555 needed).
     floor_prayer: { position: { x: 3092, z: 3243, level: 0 }, bank: [{ id: 536, count: 560 }] },
+    // Magic 7 -> 99 at Draynor bank: rune stacks in the pack (cosmic 564, water 555, air 556, fire 554, earth 557, with
+    // spares), the MAGIC enchant bands' jewellery in the bank (sapphire 1637, emerald 1639, ruby 1641, diamond 1643
+    // rings, strung dragonstone amulets 1702). Magic 7 because no supply-only spell gives XP at 1-6.
+    floor_magic: {
+        position: { x: 3092, z: 3243, level: 0 },
+        skills: { Magic: 7 },
+        inventory: [{ id: 564, count: 600 }, { id: 555, count: 7000 }, { id: 556, count: 120 }, { id: 554, count: 120 }, { id: 557, count: 7400 }],
+        bank: [{ id: 1637, count: 13 }, { id: 1639, count: 28 }, { id: 1641, count: 17 }, { id: 1643, count: 38 }, { id: 1702, count: 460 }],
+    },
+    // Firemaking 1 -> 99 at Draynor bank: tinderbox (590) in the pack, the FIREMAKING log bands in the bank (logs 1511,
+    // oak 1521, willow 1519, maple 1517, yew 1515, magic 1513), 1 spare each. Lines start at (3099,3249).
+    floor_firemaking: {
+        position: { x: 3092, z: 3243, level: 0 },
+        inventory: [{ id: 590, count: 1 }],
+        bank: [{ id: 1511, count: 3 }, { id: 1521, count: 5 }, { id: 1519, count: 8 }, { id: 1517, count: 14 }, { id: 1515, count: 25 }, { id: 1513, count: 108 }],
+    },
+    // Cooking 1 -> 99 by the normal method at Draynor bank: tinderbox + 1 log for a fire, raw sardine (327), herring
+    // (345), trout (335), salmon (331) with spares for burns; 400 grapes (1987) and 400 jugs of water (1937) banked.
+    floor_cooking: {
+        position: { x: 3092, z: 3243, level: 0 },
+        inventory: [{ id: 590, count: 1 }, { id: 1511, count: 1 }, ...[327, 327, 327, 345, 345, 345, 345, 345, 335, 335, 335, 335, 335, 331, 331, 331, 331, 331, 331, 331].map(id => ({ id, count: 1 }))],
+        bank: [{ id: 1987, count: 400 }, { id: 1937, count: 400 }],
+    },
 };
 
 // The engine writes the save on logout, so a preset written while logged in is lost.

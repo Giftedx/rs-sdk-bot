@@ -8,6 +8,7 @@
 // with hunt range 1-2. The bot never fights; it eats a lobster at 7 HP or less.
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
+import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 
 const LOC = {
     raft: { id: 1987, x: 2509, z: 3493 },
@@ -121,6 +122,10 @@ try {
     const off = s.onTick(() => {
         const p = pos();
         const h = hp();
+        if (h > 0 && h < hpMin && h <= 4) {
+            const ns = (st()?.nearbyNpcs ?? []).filter((n: any) => n.distance <= 3).map((n: any) => `${n.name}@${n.tileX ?? n.x},${n.tileZ ?? n.z}${n.inCombat ? "*" : ""}`).join(" ");
+            console.log(`WARN hp ${h} at ${T()} ${p?.worldX},${p?.worldZ},${p?.level} lobsters=${cnt(ITEM.lobster)} near: ${ns}`);
+        }
         if (h > 0) hpMin = Math.min(hpMin, h);
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) died = true;
         if (p && last && Math.max(Math.abs(p.worldX - last.worldX), Math.abs(p.worldZ - last.worldZ)) > 20) {
@@ -213,7 +218,17 @@ try {
     };
 
     // Each waypoint gets up to 4 walkTo tries from wherever the bot is.
+    // Click-ahead walker (packages/core/src/walk.ts, research/walking.md): one click per tick at most, 20 tiles ahead,
+    // opens shut doors on the path. bot.walkTo stays as the fallback for a leg it cannot finish.
+    const walker = await sessionWalker(s as any);
+    let walkTicks = 0;
+    const fast = async (pts: PathPoint[]): Promise<number> => {
+        const r = await walkPath(walker, pts, { stop: () => died || T() > CAP });
+        walkTicks += r.ticks;
+        return r.ok ? pts.length : r.next;
+    };
     const walkPt = async (x: number, z: number, tol: number): Promise<boolean> => {
+        if (!near(x, z, tol + 1)) await fast([{ x, z, tol }]);
         for (let i = 0; i < 4 && !near(x, z, tol + 1); i++) {
             await guard(`walk ${x},${z}`);
             await s.bot.walkTo(x, z, tol, { timeout: 400_000 });
@@ -221,7 +236,8 @@ try {
         return near(x, z, tol + 1);
     };
     const walk = async (label: string, pts: [number, number, number][]): Promise<void> => {
-        for (const [x, z, tol] of pts) if (!(await walkPt(x, z, tol))) await fail(`walk ${label} ${x},${z}`);
+        const next = await fast(pts.map(([x, z, tol]) => ({ x, z, tol })));
+        for (const [x, z, tol] of pts.slice(next)) if (!(await walkPt(x, z, tol))) await fail(`walk ${label} ${x},${z}`);
     };
     // Client-routed run through waypoints: one walk click per leg, sent again when the bot stands still for 2 ticks or
     // an eat landed. bot.walkTo stalled 26 ticks at 2581,9875 among the falls spiders (MEASURED practice 2026-10-23).
@@ -248,7 +264,8 @@ try {
         }
     };
     // One long walkTo; if it stops short, follow the maze waypoints from the nearest one.
-    const walkMaze = async (label: string, x: number, z: number, path: [number, number][]): Promise<void> => {
+    const walkMaze = async (label: string, x: number, z: number, path: [number, number][], via: [number, number, number][] = []): Promise<void> => {
+        if (!near(x, z, 2)) await fast([...via.map(([vx, vz, tol]) => ({ x: vx, z: vz, tol })), { x, z, tol: 1 }]);
         for (let i = 0; i < 2 && !near(x, z, 2); i++) {
             await guard(label);
             await s.bot.walkTo(x, z, 1, { timeout: 400_000 });
@@ -353,8 +370,7 @@ try {
         await climb('Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
 
         // Golrie under the Tree Gnome Village: key from the east crate (needs 3), key on the gate, pebble from Golrie.
-        await walk('gnome village', [[2505, 3190, 2]]);
-        await walkMaze('maze in', 2533, 3156, MAZE);
+        await walkMaze('maze in', 2533, 3156, MAZE, [[2505, 3190, 2]]);
         const inCellar = () => (pos()?.worldZ ?? 0) > 9500 && (pos()?.worldZ ?? 0) < 9600;
         await climb('gnome cellar down', 2533, 3155, /climb-down/i, inCellar);
         await step('golrie crate', () => opLoc(LOC.golrieCrate), () => has(ITEM.golrieKey), 40, 3);
@@ -386,9 +402,12 @@ try {
 
         // 4. Glarial's tombstone: runes are refused in the tomb (quest_waterfall.rs2:70), so they wait on the ground
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
-        await walkMaze('maze out', 2538, 3420, [...MAZE].reverse());
-        await walk('tombstone', [[2557, 3444, 1]]);
-        for (let i = 0; i < 3 && RUNES.some(has); i++) await s.bot.dropItem(/^(air|earth|water) rune$/i, 'all');
+        await walkMaze('maze out', 2557, 3444, [...MAZE].reverse());
+        // All three stacks in one tick (the server takes 5 inputs per tick); bot.dropItem cost about 15 idle ticks here.
+        for (let i = 0; i < 4 && RUNES.some(has); i++) {
+            for (const r of inv().filter(x => RUNES.includes(x.id))) void s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' });
+            await waitUntil(s, () => !RUNES.some(has) || died, { timeoutTicks: 2 });
+        }
         if (RUNES.some(has)) await fail('could not drop the runes');
         const dropTick = T();
         const inTomb = () => inBox(2520, 9795, 2560, 9850);
@@ -408,12 +427,15 @@ try {
         }, () => has(ITEM.amulet), 10, 5);
         await step('coffin', () => opLoc(LOC.coffin), () => has(ITEM.urn), 30, 3);
         await climb('tomb ladder', 2556, 9844, /climb-up/i, () => (pos()?.worldZ ?? 0) < 4000);
-        for (const id of RUNES) {
-            await step(`pick rune ${id}`, async () => {
-                const g = (st()?.groundItems ?? []).filter((i: any) => i.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
-                if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
-            }, () => cnt(id) >= 6, 8, 4);
+        // One pickup per tick, the next one sent as soon as the last stack lands.
+        for (let i = 0; i < 20 && RUNES.some(id => cnt(id) < 6); i++) {
+            await guard('pick runes');
+            const id = RUNES.find(r => cnt(r) < 6)!;
+            const g = (st()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
+            if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
+            await waitUntil(s, () => cnt(id) >= 6 || died, { timeoutTicks: 3 });
         }
+        if (RUNES.some(id => cnt(id) < 6)) await fail(`runes not picked up: ${RUNES.map(cnt).join('/')}`);
         console.log(`WARN runes back after ${T() - dropTick} ticks on the ground`);
 
         // 5. Raft again, rope across, the ledge door with the amulet sets 5 (quest_waterfall.rs2:270).
@@ -457,10 +479,17 @@ try {
     }, () => !doorShut(), 6, 4);
     await topUp('top up', 9);
     crossing = true;
-    // No wait for the giants. A shadow spider from the south room usually follows the bot and keeps it in combat, and
-    // single-way combat (npc_check_notcombat, npc_combat.rs2:387) then stops a giant from attacking. A wait only lets
-    // the spiders chip HP (measured: 20 ticks, 4 hits, no giant attack).
-    console.log(`MILESTONE crossing ${T()} hp=${hp()} gap=${giantGap(2564, 9885)}`);
+    // Shield: in single-way combat no NPC attacks a player that another NPC attacked in the last 8 ticks
+    // (npc_check_notcombat, npc_combat.rs2:382-391). The run from here to the 1-wide corridor (2568,9891) takes about
+    // 6 ticks. So the bot starts it on the tick after a hit from a spider or rat, never with no shield when one can be
+    // had. Without it a giant hit for 7 in the room (MEASURED practice: `WARN hp 3 at 957 2565,9887`, giant in combat).
+    const giantIdx = () => new Set(giants().map(g => g.index));
+    const shieldHit = (): boolean => (st()?.combatEvents ?? []).some((e: any) => e.type === 'damage_taken' && e.sourceType === 'npc'
+        && !giantIdx().has(e.sourceIndex) && e.tick >= s.tick() - 1);
+    let shieldWait = 0;
+    for (; shieldWait < 12 && !shieldHit() && !died; shieldWait++) { await guard('shield'); await waitTicks(s, 1); }
+    await topUp('top up', 9);
+    console.log(`MILESTONE crossing ${T()} hp=${hp()} shield=${shieldHit()} waited=${shieldWait} gap=${giantGap(2564, 9885)}`);
     let lastSend = -99;
     let still = 0;
     let prevAt = '';
@@ -502,6 +531,7 @@ try {
             const seen0 = msgCount(/remember putting that type/i);
             await step(`pillar ${px},${pz} rune ${id}`, () => useOnLoc(id, { id: LOC.pillar, x: px, z: pz }),
                 () => cnt(id) < before || msgCount(/remember putting that type/i) > seen0, 15, 3);
+            if (TRACE) console.log(`TRACE pillar ${px},${pz} rune ${id} at ${T()} pos=${pos()?.worldX},${pos()?.worldZ}`);
         }
     }
     // A short pillar set makes the statue drop a boulder for 20 damage (quest_waterfall.rs2:435): never risk it.
@@ -527,6 +557,7 @@ try {
     const gained = atkXp() - atk0;
     const strGained = strXp() - str0;
     console.log(`RATE attack ${gained} ${T()}`);
+    console.log(`INFO walkPath ticks=${walkTicks}`);
     const ok = gained >= 300_000 && !died;
     await finish([s], ok, `attackXp=${gained} strengthXp=${strGained} ${detail()}`);
 } catch (e) { await finish([s], false, String(e)); }

@@ -17,6 +17,15 @@ export function roleOf(name: string): string {
 let lastLine = '';
 let lastResult = '';
 let patched = false;
+// Per-bot MILESTONE and RESULT lines, for processes that run several bots (packages/core/src/host.ts). A bot with no
+// entry here uses the process-wide lines above, as before.
+const perBot = new Map<string, { line: string; result: string }>();
+export function noteStatusLine(name: string, line: string): void {
+    const e = perBot.get(name) ?? { line: '', result: '' };
+    if (line.startsWith('MILESTONE ')) e.line = line.slice(10);
+    if (line.startsWith('RESULT ')) e.result = line.slice(7, 300);
+    perBot.set(name, e);
+}
 function captureMilestones() {
     if (patched) return;
     patched = true;
@@ -79,9 +88,12 @@ export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(
         if (st?.bank?.isOpen && Array.isArray(st.bank.items)) { bank = st.bank.items.map((i: any) => ({ name: i.name, count: i.count })); bankAt = Date.now(); }
         const p = st?.player;
         const hp = (st?.skills ?? []).find((k: any) => k.name === 'Hitpoints');
+        const own = perBot.get(s.name);
+        const phaseNow = own ? own.line : lastLine;
+        const resultNow = own ? own.result : lastResult;
         const doc = {
             name: s.name, server, role: roleOf(s.name), goal: process.env.BOT_GOAL ?? process.argv[1]?.split(/[\\/]/).pop() ?? '',
-            phase: lastLine, result: lastResult, at: Date.now(), started, tick: s.tick(),
+            phase: phaseNow, result: resultNow, at: Date.now(), started, tick: s.tick(),
             pos: p ? { x: p.worldX, z: p.worldZ, level: p.level } : null,
             hp: hp ? { now: hp.level, max: hp.baseLevel } : null,
             combat: p?.combatLevel ?? null,
@@ -93,7 +105,7 @@ export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(
             // Inputs sent per tick (last 300 ticks, one digit each) and the top action sets with the XP they gained.
             inputs: inputs(),
             // Every key=value counter from the last RESULT line (shopTicks, walkTicks, stuns, eaten, ...).
-            counters: Object.fromEntries([...lastResult.matchAll(/([A-Za-z]+)=(-?[0-9.]+)/g)].map(m => [m[1], Number(m[2])])),
+            counters: Object.fromEntries([...resultNow.matchAll(/([A-Za-z]+)=(-?[0-9.]+)/g)].map(m => [m[1], Number(m[2])])),
             env: { target: process.env.TARGET ?? null, cap: process.env.CAP ?? null },
         };
         try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameSync(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }

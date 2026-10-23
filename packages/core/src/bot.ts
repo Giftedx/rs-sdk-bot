@@ -26,7 +26,9 @@ export function assertServerAllowed(server: string, env: Record<string, string |
     throw new Error(`refusing to connect to ${server}: not the local practice server; set DEMO_OK=1 to allow it on purpose`);
 }
 
-export async function openBot(name: string): Promise<Session> {
+// `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
+export async function openBot(name: string, opts: { log?: (line: string) => void } = {}): Promise<Session> {
+    const log = opts.log ?? ((l: string) => console.log(l));
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
     if (!password) throw new Error(`no PASSWORD in bots/${name}/bot.env`);
@@ -36,12 +38,12 @@ export async function openBot(name: string): Promise<Session> {
     const ready = await waitUntil(s, st => st?.inGame && (st.skills?.length ?? 0) > 0 && !!st.player, { timeoutTicks: 100 });
     if (!ready) {
         // Logged in but not usable: log out before failing, or the account lingers and adds playtime.
-        console.log(`LOGOUT ${await logoutSession(s)}`);
+        log(`LOGOUT ${await logoutSession(s)}`);
         await closeWithin([s], 5000);
         throw new Error(`${name} not in game after 100 ticks`);
     }
     const p = s.sdk.getState()!.player!;
-    console.log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
+    log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
     ledgers.set(s, led);
@@ -96,21 +98,31 @@ const randomEvents = new Map<Session, RandomEventWatch>();
 export const randomEventsOf = (s: Session): RandomEventWatch | undefined => randomEvents.get(s);
 
 export async function finish(sessions: Session[], ok: boolean, detail: string): Promise<never> {
-    console.log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
+    const final = await settle(sessions, ok, detail, {
+        // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
+        // Logout runs first, so the account leaves the world either way; this only bounds the process.
+        onReported: okNow => { setTimeout(() => { console.log('WARN finish backstop exit'); process.exit(okNow() ? 0 : 1); }, 30_000).unref?.(); },
+    });
+    process.exit(final ? 0 : 1);
+}
+
+// finish() without the exit: prints RESULT, the ledgers and events, logs every account out, closes every session,
+// and returns the final ok. The bot host (host.ts) calls it once per hosted script.
+export async function settle(sessions: Session[], ok: boolean, detail: string, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void } = {}): Promise<boolean> {
+    const log = opts.log ?? ((l: string) => console.log(l));
+    log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
     for (const s of sessions) {
-        const l = ledgers.get(s); if (l) console.log(`${formatLedger(l.stop())} bot=${s.name}`); statuses.get(s)?.stop();
-        const e = randomEvents.get(s); if (e) { e.stop(); console.log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
+        const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`); statuses.get(s)?.stop();
+        const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
-    // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
-    // Logout runs first, so the account leaves the world either way; this only bounds the process.
-    setTimeout(() => { console.log('WARN finish backstop exit'); process.exit(ok ? 0 : 1); }, 30_000).unref?.();
+    opts.onReported?.(() => ok);
     const outs = await Promise.all(sessions.map(s => logoutSession(s)));
-    console.log(`LOGOUT ${outs.join(' ')}`);
+    log(`LOGOUT ${outs.join(' ')}`);
     // A session the server did not end keeps adding scored playtime until its 500-tick timeout, so it fails the run.
-    if (outs.some(o => o !== 'logged-out')) { console.log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }
+    if (outs.some(o => o !== 'logged-out')) { log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }
     const c = await closeWithin(sessions, 5000);
-    if (c.timedOut > 0) console.log(`WARN ${c.timedOut} session close(s) timed out`);
-    process.exit(ok ? 0 : 1);
+    if (c.timedOut > 0) log(`WARN ${c.timedOut} session close(s) timed out`);
+    return ok;
 }
 
 export const countItems = (s: Session, re: RegExp): number =>

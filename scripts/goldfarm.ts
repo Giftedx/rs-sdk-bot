@@ -63,6 +63,8 @@ try {
 
     let picks = 0, noops = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
     let bankFails = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0;
+    const banned = new Map<number, number>();
+    let noopRun = 0, noopTarget = -1, bans = 0, stunUntil = 0;
     let shopTrips = 0, shopTicks = 0, bought = 0, shopRetryAt = 0, lastSteal = -1_000_000;
     let hpMin = hp(), died = false, bankEmpty = false, warned = false, lastFail = '';
     let last = pos();
@@ -80,7 +82,7 @@ try {
         const ticks = now();
         const gained = banked + coins() - coins0;
         const p = pos();
-        const detail = `ticks=${ticks} picks=${picks} fails=${fails} noops=${noops} coinsGained=${gained} coinsPerTick=${(gained / Math.max(1, ticks)).toFixed(2)} `
+        const detail = `ticks=${ticks} picks=${picks} fails=${fails} noops=${noops} bans=${bans} coinsGained=${gained} coinsPerTick=${(gained / Math.max(1, ticks)).toFixed(2)} `
             + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} stallTrips=${stallTrips} stallTicks=${stallTicks} stallPickTicks=${stallPickTicks} stolen=${stolen} refused=${refused} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
             + `foodTicksPct=${(100 * (bankTicks + stallTicks + shopTicks + eatTicks) / Math.max(1, ticks)).toFixed(1)} `
             + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} lobsters=${lobsters()} food=${food()} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level}`;
@@ -285,7 +287,11 @@ try {
         const p = pos();
         const avoid = randomEventsOf(s)?.avoid().npcs;
         const npc = (st()?.nearbyNpcs ?? [])
-            .filter((n: any) => KNIGHT.test(n.name) && !avoid?.has(n.index) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= range))
+            // An unreachable target gets no packet at all (vendor/rs-sdk/CLAUDE.md "Everything succeeds and nothing
+            // happens"): seen 2026-10-24 as 93-tick runs of noops at (2650,3300). Skip it, and rest a knight 15 ticks
+            // after 3 noops in a row on it.
+            .filter((n: any) => KNIGHT.test(n.name) && n.reachable !== false && (banned.get(n.index) ?? 0) <= s.tick()
+                && !avoid?.has(n.index) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= range))
             .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
         if (!npc) {
             if (range === RANGE && p && cheb(KNIGHT_SPOT, p) > RANGE) await walk(KNIGHT_SPOT, 3);
@@ -298,9 +304,15 @@ try {
         await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' } as any);
         await waitTicks(s, PICK_TICKS);
         // picks = attempts the server ran (coins or a hit); a click it dropped (inside a stun, or still walking) is a noop.
-        if (hp() < hp0) { picks++; fails++; await onStun(); }
-        else if (coins() > c0) picks++;
-        else noops++;
+        if (hp() < hp0) { picks++; fails++; noopRun = 0; stunUntil = s.tick() + 8; await onStun(); }
+        else if (coins() > c0) { picks++; noopRun = 0; }
+        else if (s.tick() <= stunUntil) noops++;
+        else {
+            noops++;
+            noopRun = noopTarget === npc.index ? noopRun + 1 : 1;
+            noopTarget = npc.index;
+            if (noopRun >= 3) { banned.set(npc.index, s.tick() + 15); noopRun = 0; bans++; }
+        }
     };
 
     console.log(`GOLDFARM ticks=${TICKS} pickTicks=${PICK_TICKS} eatAt=${eatAt()} maxHp=${maxHp()} lobsters=${lobsters()} notes=${notes().length} coins=${coins0} foodFrom=${FOOD_FROM || '-'}`);
