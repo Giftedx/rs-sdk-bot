@@ -165,6 +165,9 @@ export const PRESETS: Record<string, SaveConfig> = {
         inventory: [[562, 80], [556, 240]].map(([id, count]) => ({ id: id!, count: count! }))
             .concat(Array.from({ length: 6 }, () => ({ id: 1511, count: 1 })), [2434, 2434].map(id => ({ id, count: 1 })), Array.from({ length: 4 }, () => ({ id: 379, count: 1 }))),
     },
+    // Debug: Tree Gnome Village at stage 7 (varp 111), outside Elkoy (TREE_FROM=7: the warlord, then Bolren).
+    quest_tree_s7: { position: { x: 2504, z: 3190, level: 0 }, varps: { 111: 7 }, skills: { Magic: 43, Prayer: 43 }, equipment: [{ id: 1387, count: 1, slot: 3 }],
+        inventory: [{ id: 562, count: 80 }, { id: 556, count: 240 }, { id: 2434, count: 1 }, { id: 2434, count: 1 }] },
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).
