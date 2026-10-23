@@ -147,6 +147,13 @@ try {
     const p0 = pos();
     console.log(`FOODCOURIER from=${FROM} farmers=${FARMERS.join(',') || '-'} coins=${coins()} fishNotes=${fishNotes()} at=${p0?.worldX},${p0?.worldZ}`);
     if (!START_DRAYNOR) {
+        // Fares come from the bank when the pack is short (2026-10-23: a live trip spent the pack on feathers, and
+        // scripts/banker.ts banks the coins a donor gives).
+        if (coins() < 120 && p0 && cheb(ARDY_BANK, p0) <= 10) {
+            const o = await s.bot.openBank();
+            if (o.success) { await s.bot.withdrawItem(/^coins$/i, 500); await s.bot.closeBank(); }
+            console.log(`MILESTONE fares from bank coins=${coins()} t=${used()}`);
+        }
         if (coins() < 120) await fail('needs 120 coins for four boat fares');
         if (!(await walk([[2679, 3275, 3]]))) await fail('walk to Barnaby');
         if (!(await sail(/^captain barnaby$/i, SAILOR, BRIM_DECK))) await fail('sail to Brimhaven');
