@@ -8,6 +8,8 @@
 //                                                                 FOOD_ONLY_TRADE=1); the farmer banks and eats them
 //   bun scripts/measure/food-chain.ts courier                     foodcourier.ts Ardougne -> Draynor -> Ardougne with a
 //                                                                 fishcook.ts HANDOFF_ONLY partner at Draynor bank
+//   bun scripts/measure/food-chain.ts alone                       FOOD_ONLY_TRADE=1 farmer with no food and no trade:
+//                                                                 it must log out, not steal
 // Each run uses new account names, prints the RESULT lines, and deletes the bots afterwards.
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -80,7 +82,14 @@ if (mode === 'fish') {
         show('courier', c);
         show('cook', k);
     } finally { cleanup(cook); cleanup(courier); }
+} else if (mode === 'alone') {
+    // FOOD_ONLY_TRADE end path: no food anywhere and nobody trades, so the farmer must log out, not steal.
+    const farmer = runBotName('farm', 1);
+    try {
+        await prep(farmer, { position: ardyBank, skills: { Thieving: 99 }, coins: 300 });
+        show('farmer', await run('scripts/goldfarm.ts', farmer, { TICKS: '3000', FOOD_FROM: 'nobodyhere', FOOD_ONLY_TRADE: '1' }));
+    } finally { cleanup(farmer); }
 } else {
-    console.log('usage: food-chain.ts fish [runs] [cooking] | handoff | courier');
+    console.log('usage: food-chain.ts fish [runs] [cooking] | handoff | courier | alone');
     process.exit(2);
 }
