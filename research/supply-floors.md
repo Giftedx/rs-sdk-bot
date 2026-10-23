@@ -22,10 +22,10 @@ number of logged-in ticks from the first input to the level-99 stamp.
 | Fletching | **49** (49, 49, 49) | 58 | **+9** | Arrows and darts from stacks, open loop 5 per tick | MEASURED |
 | Crafting | **194** (194, 194, 195) | 197 | **+3** | Gems from a booth, 27 per trip | MEASURED |
 | Herblore | **246** from Herblore 3 (246, 246, 246) | 447 | **+201** (less the ticks to reach 3) | Potions from a booth, 14 per trip | MEASURED |
-| Smithing | **1,572** (1,572, 1,572, 1,572) | 1,337 | **-235** | Platebodies, Varrock west bank + anvil | MEASURED |
+| Smithing | **1,312** (1,312, 1,313, 1,316) with a helper trading at the anvil; bank loop 1,572 x3 | 1,337 | **+25** (bank loop -235) | Platebodies at the Varrock west anvil | MEASURED |
 | Firemaking | **about 780** | 673 (live file 664) | **about -110** | Logs in lines north of Draynor bank | ESTIMATE from MEASURED parts (no full run) |
 | Prayer | **1,260** (1,260, 1,260, 1,260) | 1,281 | **+21** | Bury dragon bones from a booth | MEASURED |
-| Magic | **1,762** from Magic 7 (1,762, 1,765, 1,762) | 1,513 (live file 1,324) | **-249** (-438 against 1,324), plus the ticks to reach 7 | Enchant jewellery from a booth | MEASURED |
+| Magic | **1,762** from Magic 7 (1,762, 1,765, 1,762); 1,670 from 44 (1 run) | 1,513 (live file 1,324) | **-249** (-438 against 1,324), plus the ticks to reach 7 | Enchant jewellery from a booth | MEASURED |
 | Cooking (normal) | **339-375** (339, 375, 343) | 38 | **about -300** | Fish on a fire to 35, then hand-made wine | MEASURED |
 
 Margins are for a one-board account that starts the board at tick 0 with all supplies in place. Haggis has one
@@ -381,3 +381,60 @@ Supplies: logs 2, oak 4, willow 7, maple 13, yew 24, magic 107, tinderbox.
   claim B is right about clicks and is answered: CLOSE_MODAL each tick is the cheap way.
 - **C6**: a modal (bank, level-up page) holds the NORMAL wine timer (probe: 30 ticks, xp +0, bank open);
   with no modal, Cooking 99 lands 20 ticks after the last wine (3 runs). Claim A holds; claim B is wrong.
+
+## Flip attempts for the three losing boards (2026-10-23, second pass)
+
+### Smithing: helper trades bars at the anvil (FLIPPED on practice)
+
+`scripts/measure/floor-smith-trade.ts`, presets `floor_smith_trade` (smither beside the Varrock west anvil, hammer)
+and `floor_smith_helper` (helper `<bot>b` at Varrock west bank with the bars). The smither never banks or walks:
+per load, both players send "Trade with" every tick until the screen opens (the second request opens it,
+`interface_trade/scripts/trade.rs2`), the helper offers All of each bar, the smither offers the products back in
+the same trade, both accept both screens, then the smither uses a bar on the anvil and picks Make 1/5/10. The
+helper banks for the next load while the smither works; its ticks are not on the smither's board.
+
+| Runs | Ticks to 99 | Steady cycle (5 platebodies) |
+|---|---|---|
+| 1,312, 1,313, 1,316 | **1,312** against #1 1,337: **+25** | 37 ticks: trade 11, anvil use 2, smith 24 |
+
+`FLOOR Smithing level=99 xp=998750 ticks=1312 actions=158 ... waitTicks=14 tradeTicks=362 useTicks=157 smithTicks=779`.
+
+- Overlap: a trade cannot open during the smith delay. With the helper requesting every tick through the
+  Make-X (`FLOOR_OVERLAP=1`), 0 of 31 trades opened while smithing (`overlapOpened=0`) and the total stayed
+  1,312. `trade.rs2` refuses a busy partner (`.busy`: delayed or a modal). The pickpocket-stun case differs: a
+  stun is not a `p_delay`.
+- Two harness rules came out of it: a second request after the screen opened resets the trade (the
+  offer-to-confirm switch reads closed for one tick), and Make 5 / Make 10 run on until the bars run out, so ask
+  only for 1, 5 or 10.
+- The margin is 25 ticks for a board trained first. Supply delivery to the helper and the first trade are in
+  the figure; the helper's bank walks are not.
+
+### Firemaking: ground logs, no banking (NOT flipped)
+
+- Measured: a helper drops one log per tile and the firemaker lights each where it lies (`[opobj4,_category_22]`,
+  `scripts/measure/floor-fm-ground.ts`). 27 magic logs on row z=3248 took 110 ticks, **4.07 per log**, the same as
+  from the pack. Player drops show to others after 100 ticks and last 300 (`WorldConfig.ts:115`, `drop.rs2:22`).
+- The hard floor is the roll: 157 logs x 4 ticks + the first 3-tick roll + low-level fails is about 645 ticks
+  against #1 664. Any supply overhead above about 20 ticks loses.
+- Three-row path at Draynor (`floor-fm-rows.ts`, 1 run, failed at log 69): rows heading east cost about 5.7 ticks
+  per log (the push goes west first, so the player walks back to each log), and the start of a new row was out
+  of the firemaker's ground-item view.
+- Snake field (`floor-fm-snake.ts`): the walk map search found one walled rectangle with 168 tiles,
+  x 3041-3068, z 3290-3295. It is a cabbage patch: cabbages stand on every even x of the odd rows
+  (`NOTE locs cabbage@3066,3295 ...`), and lighting there fails with "You can't light a fire here"
+  (`map_locaddunsafe`, active locs). The even rows (3290, 3292, 3294; 84 tiles) are free.
+- Open: a 157-tile snake of lightable tiles with walls at both row ends, or two shorter snakes joined by a short
+  walk. Without it, the best measured route stays at about 780 ticks.
+
+### Magic: legal start and cast rate (NOT flipped)
+
+- Cast rate: enchant is `p_delay(1)` (`enchant.rs2:53`), so a cast every 3 ticks is the engine limit. Measured
+  2.96. Alternating items, more inputs per tick or a helper cannot beat it.
+- Fastest legal start: Imp Catcher, 875 XP x25 = 21,875 (`quests/quest_imp/scripts/quest_imp.rs2:4`), level 44 at
+  once (quest ticks not measured). Without the quest, 1-7 needs a few combat casts on an NPC (strikes; ESTIMATE
+  about 15-20 ticks).
+- Measured from Magic 44 (preset `floor_magic44`, 1 run): **1,670** ticks to 99, 516 casts, 23 trips, bank 142
+  ticks. `FLOOR Magic level=99 xp=999347 ticks=1670 ... bankTicks=142 bankCycles=23 mode=burst castTicks=1528`.
+- Against #1 1,324 this loses by about 346 ticks before the quest time. The leader's route uses Charge at
+  5 per tick (`leader-forensics.md` Magic), which is out (content bug, owner rule). No legal supply method
+  reaches 30 base XP per tick: Lvl-5 enchant gives 26.

@@ -83,7 +83,7 @@ try {
                 await tick(h);
             }
         }
-    })();
+    })().catch(e => { if (!helperStop) console.log(`WARN helper loop: ${String(e)}`); });
 
     // ---- Smither.
     let ok = true, waitTicks = 0, tradeTicks = 0, smithTicks = 0, useTicks = 0;
@@ -137,7 +137,7 @@ try {
             if (level(s, 'Smithing') < j.level) { console.log(`WARN level ${level(s, 'Smithing')} < ${j.level}`); ok = false; break; }
             const anvil = (s.sdk.getState()?.nearbyLocs ?? []).find((x: any) => /^anvil$/i.test(x.name) && x.x === 3188 && x.z === 3426) ?? (s.sdk.getState()?.nearbyLocs ?? []).find((x: any) => /^anvil$/i.test(x.name));
             const tu = s.tick();
-            const use = () => { const bar = inv(s).find(x => x.id === j.bar)!; return send(s, m, { type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil.x, z: anvil.z, locId: anvil.id }); };
+            const use = () => { const bar = inv(s).find(x => x.id === j.bar)!; return send(s, m, { type: 'useItemOnLoc', itemSlot: bar.slot, x: anvil!.x, z: anvil!.z, locId: anvil!.id }); };
             await clearDialogs(s, m, 'close');
             await use();
             while (!(s.sdk.getState() as any)?.interface?.isOpen && s.tick() - tu < 30) {

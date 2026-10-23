@@ -792,10 +792,10 @@
     "smithing"
    ],
    "ticks": {
-    "floor": 1572,
-    "realistic": 1572,
+    "floor": 1312,
+    "realistic": 1316,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: 1,572, 1,572, 1,572 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies: bank 14, walk 9, smith 24; 52% walk + bank)"
+    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)"
    },
    "xp": {
     "smithing": "to99"
@@ -808,7 +808,7 @@
     "option": "separate"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: 1,572, 1,572, 1,572 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies: bank 14, walk 9, smith 24; 52% walk + bank)",
+   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)",
    "supplies": [
     {
      "item": "hammer",
@@ -820,8 +820,8 @@
     "margin": 1
    },
    "at": "varrock-west-anvil",
-   "bankTrips": 32,
-   "bankTripsSource": "32 bank trips = 789 bars (SMITHING_TIERS ladder: bronze 34, iron 35, steel 95, mithril 280, adamantite 345) / 25 bars per inventory (hammer + 5 platebodies); the 913/1,100 rate has no walking; measured 36 trips (research/supply-floors.md), walking is in the measured 1,572"
+   "bankTrips": 0,
+   "bankTripsSource": "helper trades at the anvil replace the bank trips (research/supply-floors.md)"
   },
   {
    "id": "magic",
@@ -833,7 +833,7 @@
     "floor": 1762,
     "realistic": 1765,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: 1,762, 1,765, 1,762 ticks Magic 7 -> 99 on practice (scripts/measure/floor-magic.ts, enchant ladder from a Draynor booth, 2.96 ticks per cast, 23 items per trip); Magic 1-7 not included"
+    "source": "research/supply-floors.md: 1,762, 1,765, 1,762 ticks Magic 7 -> 99 on practice (scripts/measure/floor-magic.ts, enchant ladder from a Draynor booth, 2.96 ticks per cast, 23 items per trip); Magic 1-7 not included; from Magic 44 (Imp Catcher reward) 1,670 ticks, 1 run (floor_magic44); enchant is fixed at 3 ticks per cast (enchant.rs2 p_delay(1)), measured 2.96"
    },
    "xp": {
     "magic": "to99"
@@ -846,7 +846,7 @@
     "option": "separate"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: 1,762, 1,765, 1,762 ticks Magic 7 -> 99 on practice (scripts/measure/floor-magic.ts, enchant ladder from a Draynor booth, 2.96 ticks per cast, 23 items per trip); Magic 1-7 not included",
+   "source": "research/supply-floors.md: 1,762, 1,765, 1,762 ticks Magic 7 -> 99 on practice (scripts/measure/floor-magic.ts, enchant ladder from a Draynor booth, 2.96 ticks per cast, 23 items per trip); Magic 1-7 not included; from Magic 44 (Imp Catcher reward) 1,670 ticks, 1 run (floor_magic44); enchant is fixed at 3 ticks per cast (enchant.rs2 p_delay(1)), measured 2.96",
    "supplies": [],
    "suppliesLadder": {
     "skill": "magic",

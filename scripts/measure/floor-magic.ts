@@ -21,7 +21,7 @@ try {
     await tick(s, 3);
     const m = meter(s, 'Magic');
     const jobs: { item: number; spell: number; band: string; xp: number }[] = [];
-    for (const st of ladder(MAGIC, 7)) {
+    for (const st of ladder(MAGIC, Math.max(7, level(s, 'Magic')))) {
         const item = objId(Object.keys(st.band.inputs)[0]!);
         for (let i = 0; i < st.actions; i++) jobs.push({ item, spell: componentId(SPELL[st.band.name]!), band: st.band.name, xp: st.band.xp });
     }

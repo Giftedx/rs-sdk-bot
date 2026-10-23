@@ -311,6 +311,24 @@ export const PRESETS: Record<string, SaveConfig> = {
     floor_smith_trade: { position: { x: 3188, z: 3427, level: 0 }, inventory: [{ id: 2347, count: 1 }] },
     floor_smith_helper: { position: { x: 3185, z: 3436, level: 0 }, bank: [{ id: 2349, count: 20 }, { id: 2351, count: 37 }, { id: 2353, count: 96 }, { id: 2359, count: 281 }, { id: 2361, count: 341 }] },
     ...agilityPresets(),
+    // Ground-log firemaking (scripts/measure/floor-fm-ground.ts): the firemaker (Firemaking 75, tinderbox)
+    // at Draynor bank, the helper <bot>b on the row start (3098,3248; 3099,3249 is not walkable) with 27 magic logs (1513).
+    floor_fmg: { position: { x: 3092, z: 3243, level: 0 }, skills: { Firemaking: 75 }, inventory: [{ id: 590, count: 1 }] },
+    floor_fmg_helper: { position: { x: 3098, z: 3248, level: 0 }, inventory: Array.from({ length: 27 }, () => ({ id: 1513, count: 1 })) },
+    // Magic from 44 (the Imp Catcher reward, 21,875 XP, quests/quest_imp/scripts/quest_imp.rs2:4) at Draynor bank: the
+    // floor_magic runes, and the jewellery of the bands from 44 (emerald 4, ruby 16, diamond 37, dragonstone 453, +spares).
+    floor_magic44: {
+        position: { x: 3092, z: 3243, level: 0 },
+        skills: { Magic: 44 },
+        inventory: [{ id: 564, count: 600 }, { id: 555, count: 7000 }, { id: 556, count: 120 }, { id: 554, count: 120 }, { id: 557, count: 7400 }],
+        bank: [{ id: 1639, count: 28 }, { id: 1641, count: 17 }, { id: 1643, count: 38 }, { id: 1702, count: 460 }],
+    },
+    // Firemaking 1 -> 99 with no banking (scripts/measure/floor-fm-rows.ts): firemaker with a tinderbox at Draynor bank;
+    // helper <bot>b at Draynor bank with the FIREMAKING logs banked (2/4/7/13/24/107, 1 spare each) to drop on the path.
+    floor_fmr: { position: { x: 3092, z: 3243, level: 0 }, inventory: [{ id: 590, count: 1 }] },
+    floor_fmr_helper: { position: { x: 3092, z: 3243, level: 0 }, bank: [{ id: 1511, count: 3 }, { id: 1521, count: 5 }, { id: 1519, count: 8 }, { id: 1517, count: 14 }, { id: 1515, count: 25 }, { id: 1513, count: 108 }] },
+    // Snake firemaking (scripts/measure/floor-fm-snake.ts): the firemaker with a tinderbox at the snake start (3068,3295).
+    floor_fms: { position: { x: 3068, z: 3295, level: 0 }, inventory: [{ id: 590, count: 1 }] },
 };
 
 // Agility laps (scripts/measure/agility-laps.ts): each course at its entry level and at 70 / 90.
