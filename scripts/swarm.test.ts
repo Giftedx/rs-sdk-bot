@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { endedForGood, parseJob, startable } from './swarm';
+import { endedForGood, isReservation, parseJob, startable } from './swarm';
 
 test('parseJob keeps single-account jobs as before and reads host jobs', () => {
     const one = parseJob({ account: 'Mightyrod', script: 's.ts', enabled: true });
@@ -31,4 +31,11 @@ test('startable leaves out dead and external accounts of a host job, per account
     const r = startable(['dead', 'fine', 'ext', 'new'], true, ended, age);
     expect(r.start).toEqual(['fine', 'new']);
     expect(r.blocked).toEqual({ dead: 'ended: died', ext: 'external (status fresh, not started by swarm)' });
+});
+
+test('an account entry without a script is a reservation, not a bad job', () => {
+    expect(isReservation({ account: 'Main', script: '', enabled: false })).toBe(true);
+    expect(isReservation({ account: 'Main', enabled: false } as any)).toBe(true);
+    expect(isReservation({ account: 'Mightyrod', script: 's.ts', enabled: true })).toBe(false);
+    expect(isReservation({ accounts: ['a'], script: '', host: true, enabled: true })).toBe(false);
 });

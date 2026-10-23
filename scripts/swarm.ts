@@ -21,6 +21,12 @@ export type ParsedJob = { key: string; accounts: string[]; host: boolean; job: J
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
 
+// An entry with an account and no script is a reservation (the main account waits for its own run): the swarm never
+// starts it and reports it as "reserved", not as a bad job.
+export function isReservation(job: Job): boolean {
+    return !!job && typeof job.account === 'string' && !job.accounts && !job.script;
+}
+
 // A host job lists its accounts; a single job names one. Returns an error string for a job the swarm must skip.
 export function parseJob(job: Job): ParsedJob | { error: string } {
     if (!job || typeof job.script !== 'string' || !job.script) return { error: 'no script' };
@@ -141,6 +147,10 @@ if (import.meta.main) {
         const stopAll = existsSync(join(prac, 'stop-swarm'));
         const state: Record<string, unknown>[] = [];
         for (const raw of plan.jobs) {
+            if (isReservation(raw)) {
+                state.push({ account: raw.account, script: '', role: raw.role, goal: raw.goal, enabled: false, repeat: false, note: raw.note, state: 'reserved', since: null });
+                continue;
+            }
             const p = parseJob(raw);
             if ('error' in p) {
                 state.push({ account: raw.account ?? (raw.accounts ?? []).join('+'), script: raw.script, enabled: raw.enabled, state: `bad job: ${p.error}` });
