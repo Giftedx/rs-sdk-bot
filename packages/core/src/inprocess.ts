@@ -130,6 +130,9 @@ export interface Session {
     direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
     close(): Promise<void>;
     ended: Promise<{ reason: string }>;
+    // The LiteClient itself, for packets the action layer has no action for (quest-mm.ts: OPHELD5 on a puzzle
+    // component). Absent on sessions that are not in-process.
+    client?: unknown;
 }
 
 // The lite session spreads logins with a random jitter on remote servers (session.ts:122, 5 s default) to spare the
@@ -187,6 +190,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
         onTick: cb => sh.onTick(cb),
         direct: a => sh.direct(a),
         ended,
+        client: session.client,
         async close() {
             sh.stop('stopped');
             session.stop();
