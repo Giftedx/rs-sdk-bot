@@ -28,10 +28,24 @@ try {
 
     // 2. Shilop in the market (door loc_1530 at 3150,3412): "What will make you tell me?", "Okay then, I'll pay." sets
     // 2 (quest_fluffs.rs2:34-114). The choice comes only when Wilough stands within 3 tiles in line of sight (:39-47);
-    // the talk is retried.
+    // apart, the talk ends with no choice and no progress (3 of 3 failed runs in a proof). The bot talks only when the
+    // two stand within 2 tiles of each other, and talks again on a miss.
     await q.openDoor('gertrude door', 3150, 3412);
     await q.walk('to shilop', [{ x: SHILOP.x, z: SHILOP.z, tol: 3 }]);
-    await q.talk('shilop', /^shilop$/i, [/what will make you tell me/i, /okay then, i'll pay/i], () => q.sawText(/broken fence/i), SHILOP, 80);
+    const paid = () => q.sawText(/broken fence/i);
+    for (let tries = 0; tries < 8 && !paid(); tries++) {
+        await q.guard('shilop');
+        const s = q.npc(/^shilop$/i), w = q.npc(/^wilough$/i);
+        const together = s && w && Math.max(Math.abs(s.x - w.x), Math.abs(s.z - w.z)) <= 2;
+        if (!together) { await q.waitTicks(1); tries--; if (q.T() > 600) break; continue; }
+        const boy = s.distance <= w.distance ? s : w;
+        await q.talkTo(boy);
+        await q.waitUntil(() => q.dialogOpen(), 12);
+        let shut = 0;
+        await q.converse([/what will make you tell me/i, /okay then, i'll pay/i], () => { shut = q.dialogOpen() ? 0 : shut + 1; return (paid() && shut >= 2) || shut >= 3; }, 80);
+    }
+    if (!paid()) await q.fail('shilop not paid');
+    // "broken fence" is the last page before %fluffs = 2 (quest_fluffs.rs2:112-113): the bot waits for the dialog to close.
     q.milestone(2);
 
     // 3. The lumber yard: the broken fence from the south, the ladder, Fluffs on level 1: milk (3), sardine (4).
@@ -55,12 +69,13 @@ try {
 
     // 4. Down, search the crates (op1 on the kittens_mew npc, p_delay(4) each) until the kitten.
     await q.climb('ladder down', () => q.findLoc(l => l.x === LADDER.x && l.z === LADDER.z && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))) ?? { id: 1746, ...LADDER }, /climb-down/i, levelIs(0));
+    // The npc list lags the level change by a tick or two (a trial saw only the level-1 cat right after the ladder).
+    await q.waitUntil(() => (q.st()?.nearbyNpcs ?? []).some((m: any) => /crate/i.test(m.name)), 8);
     const order = [...CRATES].sort((a, b) => q.cheb(a.x, a.z) - q.cheb(b.x, b.z));
     for (const c of order) {
         if (q.has(ITEM.kitten)) break;
         await q.guard('crates');
         const n = (q.st()?.nearbyNpcs ?? []).find((m: any) => m.x === c.x && m.z === c.z && /crate/i.test(m.name));
-        if (!n) console.log(`WARN npcs: ${(q.st()?.nearbyNpcs ?? []).map((m: any) => `${m.name}@${m.x},${m.z}`).join(" ")}`);
         if (!n) { console.log(`WARN no crate npc at ${c.x},${c.z}`); continue; }
         const m0 = q.msgCount(/you find nothing/i);
         await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.[0]?.opIndex ?? 1, reason: 'SDK' });

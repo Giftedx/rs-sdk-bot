@@ -202,6 +202,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Rune Mysteries | `scripts/generated/quest-runemysteries.ts` | 449, 432, 441 | MEASURED 3/3 |
 | The Restless Ghost | `scripts/generated/quest-priest.ts` | 519, 516, 519 | MEASURED 3/3 |
 | Vampire Slayer | `scripts/generated/quest-vampire.ts` | 338, 330, 331 | MEASURED 3/3 |
+| Gertrude's Cat | `scripts/generated/quest-fluffs.ts` | 369, 385, 397 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -279,3 +280,24 @@ two trials, and `blockDoor` did not change the walkPath route. The script walks 
 door 3109,3358, north room, door 3106,3368, the north corridor, the east rooms, the 3118-3119 passage south. That
 cut the quest from 429 to 330-338 ticks. The Attack XP in RESULT is the fight only; the quest XP comes 3 ticks
 after the kill (`queue(quest_vampire_complete, 3, 0)`), after the script ends.
+
+### Gertrude's Cat
+
+`RESULT ok qp=1 xp=magic=875,cooking=38125 ... ticks=369 ... retries=3 died=false` (runs: 369, 385, 397 ticks),
+each with `Congratulations! Quest complete!`. Steps (run 1): Gertrude "Well, I suppose I could." 0-26
+(`areas/area_varrock/scripts/gertrude.rs2:105-113`); her door (`loc_1530` at 3150,3412), Shilop and Wilough in
+the market, "What will make you tell me?", "Okay then, I'll pay." 26-115 (`quests/quest_fluffs/scripts/
+quest_fluffs.rs2:34-114`); the walk, the broken fence (2618 at 3305,3493), the ladder (1747 at 3310,3509), the
+milk and the seasoned sardine on Fluffs (level 1) 115-218 (`:195-228`); the crates (the `kittens_mew` npcs named
+"Crate", op1 Search, `p_delay(4)` each) until the kitten 218-252 (`:271-279`); the kitten on Fluffs, Varrock
+teleport, Gertrude 252-369 (`gertrude.rs2:41-60`). The kitten crate is `random(6)` (`quest_fluffs.rs2:221-228`),
+which gives the spread of 369-397 ticks. Helper items: bucket of milk, seasoned sardine (tradeable), 100 coins,
+Varrock teleport runes.
+Findings:
+- The boys' choice comes only when the other boy stands within 3 tiles in line of sight (`quest_fluffs.rs2:39-47`).
+  Apart, the talk ends with no choice and no progress: 2 of 3 runs failed so in the first proof. The script talks
+  only when the two stand within 2 tiles of each other.
+- The page "you'll have to find the broken fence" comes before `%fluffs = 2` (`:112-113`). A script that walks
+  away on that page loses the 100 coins and the stage (3 of 3 runs failed with "The cat doesn't seem to be
+  thirsty."). The script waits for the dialog to close.
+- The npc list lags the ladder by a tick: right after the climb down the bot saw only the level-1 cat.
