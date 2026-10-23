@@ -1,6 +1,6 @@
 {
  "base": "https://rs-sdk-demo.fly.dev",
- "takenAt": "2026-10-23T12:26:15.004Z",
+ "takenAt": "2026-10-23T14:26:27.299Z",
  "boards": [
   {
    "board": "Overall",
@@ -704,93 +704,93 @@
     },
     {
      "rank": 7,
+     "name": "pevqonir",
+     "level": 99,
+     "ticks": 29779
+    },
+    {
+     "rank": 8,
+     "name": "zamvulqe",
+     "level": 99,
+     "ticks": 29971
+    },
+    {
+     "rank": 9,
      "name": "stunbaron",
      "level": 99,
      "ticks": 35916
     },
     {
-     "rank": 8,
+     "rank": 10,
      "name": "stunhard",
      "level": 99,
      "ticks": 36246
     },
     {
-     "rank": 9,
+     "rank": 11,
      "name": "stunless",
      "level": 99,
      "ticks": 36325
     },
     {
-     "rank": 10,
+     "rank": 12,
      "name": "stunking",
      "level": 99,
      "ticks": 38597
     },
     {
-     "rank": 11,
+     "rank": 13,
      "name": "gh_kadeski",
      "level": 99,
      "ticks": 46681
     },
     {
-     "rank": 12,
+     "rank": 14,
      "name": "woqenula",
      "level": 99,
      "ticks": 52056
     },
     {
-     "rank": 13,
+     "rank": 15,
      "name": "juxarevi",
      "level": 99,
      "ticks": 52059
     },
     {
-     "rank": 14,
+     "rank": 16,
      "name": "neruxoji",
      "level": 99,
      "ticks": 52062
     },
     {
-     "rank": 15,
+     "rank": 17,
      "name": "foqaveli",
      "level": 99,
      "ticks": 52063
     },
     {
-     "rank": 16,
+     "rank": 18,
      "name": "zivqatep",
      "level": 99,
      "ticks": 52066
     },
     {
-     "rank": 17,
+     "rank": 19,
      "name": "saradomin",
      "level": 99,
      "ticks": 82713
     },
     {
-     "rank": 18,
+     "rank": 20,
      "name": "elvemage",
      "level": 99,
      "ticks": 87069
     },
     {
-     "rank": 19,
+     "rank": 21,
      "name": "lavanh1",
      "level": 99,
      "ticks": 156172
-    },
-    {
-     "rank": 20,
-     "name": "b4x30n",
-     "level": 99,
-     "ticks": 161109
-    },
-    {
-     "rank": 21,
-     "name": "roebot1",
-     "level": 99,
-     "ticks": 174404
     }
    ]
   },
@@ -2744,33 +2744,33 @@
     },
     {
      "rank": 17,
-     "name": "sokoalt1",
+     "name": "dotsbot44",
      "level": 111,
-     "ticks": 3509458
+     "ticks": 3175994
     },
     {
      "rank": 18,
-     "name": "sokoalt3",
+     "name": "dotsbot89",
      "level": 111,
-     "ticks": 3532726
+     "ticks": 3184846
     },
     {
      "rank": 19,
-     "name": "dotsbot44",
-     "level": 110,
-     "ticks": 3155100
+     "name": "dotsbot30",
+     "level": 111,
+     "ticks": 3263053
     },
     {
      "rank": 20,
-     "name": "dotsbot89",
-     "level": 110,
-     "ticks": 3167577
+     "name": "dotsbot15",
+     "level": 111,
+     "ticks": 3271265
     },
     {
      "rank": 21,
-     "name": "dotsbot30",
-     "level": 110,
-     "ticks": 3249855
+     "name": "sokoalt1",
+     "level": 111,
+     "ticks": 3509458
     }
    ]
   }

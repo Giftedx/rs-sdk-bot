@@ -7,7 +7,7 @@
 // 5 machine clear: .practice/monitor.json is under 2 minutes old, has no open warn/error alert, and >= 8 GB is free.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { haggisActivities, loadSnapshot, schedule } from '../packages/planner/src/haggis';
+import { haggisActivities, haggisTravel, loadSnapshot, schedule } from '../packages/planner/src/haggis';
 import { GATE_FILE } from '../packages/core/src/haggisgate';
 
 const root = resolve(import.meta.dir, '..');
@@ -23,7 +23,7 @@ try {
     const boardsFile = join(root, 'packages', 'planner', 'src', 'haggis-boards.json');
     const unmeasured = (readFileSync(boardsFile, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length;
     const snapFile = existsSync(snap) ? snap : join(root, 'research', 'hiscores-2026-10-22.json');
-    const r = schedule(loadSnapshot(snapFile), haggisActivities(), { mode: 'realistic', tricks: new Set() }).boards;
+    const r = schedule(loadSnapshot(snapFile), haggisActivities(), { travel: haggisTravel(), mode: 'realistic', tricks: new Set() }).boards;
     const short = r.filter(b => b.status !== 'WIN' || (b.deadline !== null && (b.slack ?? -1) < Math.ceil(b.deadline * 0.02)));
     const worst = [...r].filter(b => b.slack !== null).sort((a, b) => a.slack! - b.slack!)[0];
     gates.push({ name: 'plan wins', pass: short.length === 0 && unmeasured === 0, detail: `${r.length - short.length}/${r.length} boards win with 2% margin; ${unmeasured} inputs not MEASURED; worst ${worst?.label} ${worst?.slack}` });
