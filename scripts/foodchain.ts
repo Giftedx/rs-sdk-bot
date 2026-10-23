@@ -72,9 +72,17 @@ const courierFish = () => count(status(COURIER)?.inventory, /^(trout|salmon)$/i)
 const courierCoins = () => count(status(COURIER)?.inventory, /^coins$/i);
 const waitingFarmer = () => FARMERS.find(f => running.has(f) && /waiting for food trade/.test(String(status(f)?.phase ?? '')));
 
+// An even share for each farmer that is low on food (2026-10-23: the first hand-out gave all 128 fish to one
+// farmer and the other logged out hungry).
 async function giveFish(farmer: string) {
     courierBusy = true;
-    try { await runGive(COURIER, farmer, 'Trout,Salmon'); } finally { courierBusy = false; }
+    try {
+        const inv = status(COURIER)?.inventory;
+        const hungry = Math.max(1, FARMERS.filter(f => !dead.has(f) && farmerFood(f) < LOW).length);
+        const share = (re: RegExp) => Math.ceil(count(inv, re) / hungry);
+        const give = [['Trout', share(/^trout$/i)], ['Salmon', share(/^salmon$/i)]].filter(([, n]) => (n as number) > 0).map(([k, n]) => `${k}:${n}`).join(',');
+        if (give) await runGive(COURIER, farmer, give);
+    } finally { courierBusy = false; }
 }
 // give-to-banker.ts takes the partner as its second argument.
 async function runGive(giver: string, receiver: string, give: string) {
