@@ -118,14 +118,15 @@ export const realInProcessDeps: InProcessDeps = {
     },
 };
 
-// The script prints `START x z level` right after login; it must equal the preset position.
+// The script prints `START x z level` right after login; it must equal the preset position. A pair script
+// (quest-arrav.ts) prints one START per account, the companion's first, so any START line may match.
 function startMatches(stdout: string, preset?: string): { ok: boolean; detail: string } {
-    const m = stdout.match(/^START (\d+) (\d+) (\d+)/m);
-    if (!m) return { ok: false, detail: 'no START line' };
+    const all = [...stdout.matchAll(/^START (\d+) (\d+) (\d+)/gm)];
+    if (!all.length) return { ok: false, detail: 'no START line' };
     const p = preset ? PRESETS[preset]?.position : undefined;
-    if (!p) return { ok: true, detail: m[0] };
-    const ok = Number(m[1]) === p.x && Number(m[2]) === p.z && Number(m[3]) === (p.level ?? 0);
-    return { ok, detail: `${m[0]}, preset ${p.x} ${p.z} ${p.level ?? 0}` };
+    if (!p) return { ok: true, detail: all[0]![0] };
+    const m = all.find(m => Number(m[1]) === p.x && Number(m[2]) === p.z && Number(m[3]) === (p.level ?? 0));
+    return { ok: !!m, detail: `${(m ?? all[0]!)[0]}, preset ${p.x} ${p.z} ${p.level ?? 0}` };
 }
 
 export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps = realInProcessDeps): Promise<ProveReport> {
