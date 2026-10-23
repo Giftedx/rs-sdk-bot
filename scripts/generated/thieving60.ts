@@ -79,7 +79,7 @@ try {
         if (lvl() >= 99) mark('level99');
     };
 
-    let tries = 0, stuns = 0, eaten = 0, bought = 0, waits = 0;
+    let tries = 0, stuns = 0, eaten = 0, bought = 0, waits = 0, walkTicks = 0, chases = 0;
     let lastFail = '';
     const end = async (ok: boolean, why: string): Promise<never> => {
         off();
@@ -88,21 +88,30 @@ try {
         console.log(`RATE thieving ${gained} ${ticks}`);
         const p = pos();
         const detail = `thieving=${lvl()} xp=${gained} ticks=${ticks} at=${p?.worldX},${p?.worldZ},${p?.level} hp=${hp()} hpMin=${hpMin} `
-            + `died=${died} tries=${tries} stuns=${stuns} eaten=${eaten} bought=${bought} waits=${waits} coins=${coins()} bread=${bread()} `
+            + `died=${died} tries=${tries} stuns=${stuns} eaten=${eaten} bought=${bought} waits=${waits} walkTicks=${walkTicks} chases=${chases} coins=${coins()} bread=${bread()} `
             + `milestones=${[...marks].join(',')} jumps=${jumps.join(';')}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
 
     // One pickpocket step on a target near `spot`. Returns false when it did not try (no target in range).
+    // Movement rules (2026-10-23, owner: "you move like a total moron"): take the closest target, never walk back
+    // to a fixed spot, and only walk to the target area when no target is within `range` of where the bot stands.
+    // Targets wander, so waiting a tick for one to come close beats chasing one across the market.
     const steal = async (t: Target): Promise<boolean> => {
-        const npc = s.sdk.findNearbyNpc(t.re, { reachable: true });
         const p = pos();
-        const far = npc && Math.max(Math.abs(npc.x - t.spot.x), Math.abs(npc.z - t.spot.z)) > t.range;
-        if (!npc || far) {
-            if (p && cheb(t.spot, p) > 5) await s.bot.walkTo(t.spot.x, t.spot.z, 3);
-            else await waitTicks(s, 2);
+        const near = (s.sdk.getState()?.nearbyNpcs ?? [])
+            .filter((n: any) => t.re.test(n.name) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= t.range))
+            .sort((a: any, b: any) => a.distance - b.distance);
+        const npc = near[0];
+        if (!npc) {
+            if (p && cheb(t.spot, p) > t.range) {
+                const w0 = s.tick();
+                await s.bot.walkTo(t.spot.x, t.spot.z, 3);
+                walkTicks += s.tick() - w0;
+            } else await waitTicks(s, 1);
             return false;
         }
+        if (npc.distance > 1) chases++;
         tries++;
         const r = await s.bot.pickpocketNpc(npc);
         if (!r.success) {
@@ -132,6 +141,8 @@ try {
     checkLevels();
 
     // ---- Step 2: boat to Ardougne (copy of scripts/generated/boatardy.ts).
+    // Long legs use bot.walkTo per point. glide (packages/core/src/glide.ts) was tried 2026-10-23: 144 vs 159 ticks on
+    // the Lumbridge-Port Sarim bench, but the full boat trip got slower (Ardougne at tick 669-670 vs 499-604).
     const walk = async (points: [number, number, number][]): Promise<boolean> => {
         for (const [x, z, tol] of points) {
             for (let i = 0; i < 3 && !died; i++) {
