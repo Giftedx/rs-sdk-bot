@@ -835,7 +835,7 @@
     "floor": 2900,
     "realistic": 3400,
     "evidence": "ESTIMATE",
-    "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md)"
+    "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md). Knife 3-tick re-measured 62.1/64.1/62.1 XP/tick on oaks from 15; flinch 2-tick FAILS (no two aggressive 4-tick attackers at any tree; one-attacker flinch 53.1/0/59.4): research/gathering-tricks.md"
    },
    "xp": {
     "woodcutting": "to99"
@@ -844,7 +844,7 @@
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md)",
+   "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md). Knife 3-tick re-measured 62.1/64.1/62.1 XP/tick on oaks from 15; flinch 2-tick FAILS (no two aggressive 4-tick attackers at any tree; one-attacker flinch 53.1/0/59.4): research/gathering-tricks.md",
    "supplies": [
     {
      "item": "rune axe",
@@ -861,17 +861,6 @@
    ],
    "patches": [
     {
-     "lever": "flinch-gather",
-     "set": {
-      "ticks": {
-       "floor": 2071,
-       "realistic": 2957,
-       "evidence": "ESTIMATE",
-       "source": "3-tick ticks / 1.4 (floor) or / 1.15 (realistic); flinch UNVERIFIED live; research/gap-closers.md"
-      }
-     }
-    },
-    {
      "lever": "rival-bury-in-knife-wc",
      "set": {
       "deadTicks": {
@@ -886,15 +875,15 @@
   },
   {
    "id": "fish",
-   "label": "3-tick fly fishing, then delayed-click 3-tick karambwan",
+   "label": "3-tick fly fishing to 40, delayed-click 3-tick lobster 40-55 and harpoon 55-70, then fly 3-tick or delayed lobster",
    "serves": [
     "fishing"
    ],
    "ticks": {
-    "floor": 3050,
-    "realistic": 3600,
+    "floor": 4532,
+    "realistic": 5614,
     "evidence": "ESTIMATE",
-    "source": "model 3,940 (xp-per-tick.md) / 1.29 measured fly-fishing gain (tricks-plan.md)"
+    "source": "banded from measured practice rates (research/gathering-tricks.md): fly 3-tick 20-40 121.4, delayed lobster 40-55 137.7, delayed harpoon 55-70 168.7, 70-99 fly 3-tick 182.5 (realistic, mean of 3 runs each) or the best run per band 139.9/169.9/193.5/228.8 (floor); 1-20 at 100 assumed"
    },
    "xp": {
     "fishing": "to99"
@@ -903,7 +892,7 @@
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "model 3,940 (xp-per-tick.md) / 1.29 measured fly-fishing gain (tricks-plan.md)",
+   "source": "banded from measured practice rates (research/gathering-tricks.md): fly 3-tick 20-40 121.4, delayed lobster 40-55 137.7, delayed harpoon 55-70 168.7, 70-99 fly 3-tick 182.5 (realistic, mean of 3 runs each) or the best run per band 139.9/169.9/193.5/228.8 (floor); 1-20 at 100 assumed",
    "supplies": [
     {
      "item": "fly fishing rod",
@@ -920,20 +909,17 @@
     {
      "item": "logs",
      "count": 20
+    },
+    {
+     "item": "lobster pot",
+     "count": 1
+    },
+    {
+     "item": "harpoon",
+     "count": 1
     }
    ],
    "patches": [
-    {
-     "lever": "flinch-gather",
-     "set": {
-      "ticks": {
-       "floor": 2179,
-       "realistic": 3130,
-       "evidence": "ESTIMATE",
-       "source": "3-tick ticks / 1.4 (floor) or / 1.15 (realistic); flinch UNVERIFIED live; research/gap-closers.md"
-      }
-     }
-    },
     {
      "lever": "rival-sea-slug",
      "set": {
@@ -1776,7 +1762,7 @@
     "dig"
    ],
    "evidence": "MEASURED",
-   "source": "realistic 97 XP/tick measured (board-ranking-honest.md); floor 120 = 3-rock respawn cap (mine.dbrow:72)",
+   "source": "realistic 97 XP/tick measured (board-ranking-honest.md); floor 120 = 3-rock respawn cap (mine.dbrow:72); flinch 2-tick FAILS: no runite rock and no aggressive 4-tick attacker in any multiway zone near ore (research/gathering-tricks.md)",
    "supplies": [
     {
      "item": "rune pickaxe",

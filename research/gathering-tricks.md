@@ -11,9 +11,9 @@ account. A preset run is not a fresh-account run and not a live run.
 
 | Trick | Verdict | Measured XP/tick (trick vs baseline) | Evidence |
 |---|---|---|---|
-| (b) Delayed-click 3-tick fishing (knife at T, spot click at T+2) on lobster and harpoon spots | **WORKS** | Lobster from 70: 228.8 / 143.5 / 35.7 vs 101.3 / 89.6 / 101.3 (best run +126%). Harpoon from 55: 133.7 / 193.5 / __H3__ vs 74.6 / 84.3 / __HN3__. Lobster from 40: 145.0 / 169.9 / 98.3 vs 101.3 / 74.6 / 74.6 | MEASURED practice |
+| (b) Delayed-click 3-tick fishing (knife at T, spot click at T+2) on lobster and harpoon spots | **WORKS** | Lobster from 70: 228.8 / 143.5 / 35.7 / 153.5 / 108.0 vs 101.3 / 89.6 / 101.3 (mean 133.9 vs 97.4, +37%; the 2 runs with clean timing 191.2, +96%). Harpoon at Catherby from 80: 193.8 / 164.3 / 103.6 vs 59.1 / 56.5 / 63.7 (mean 153.9 vs 59.8, +157%). Harpoon from 55: 133.7 / 193.5 / 178.9 vs 74.6 / 84.3 / 60.5 (mean 168.7 vs 73.1, +131%). Lobster from 40: 145.0 / 169.9 / 98.3 vs 101.3 / 74.6 / 74.6 | MEASURED practice |
 | (b) Same-tick knife + click on a lobster spot (the fly-fishing method) | **FAILS** | 0 XP in 152 ticks, 49 cycles | MEASURED practice (1 run) + CODE-READ |
-| (a) Flinch 2-tick (two attackers, rapid shortbow, no ammo) | **FAILS on this server for every gathering board** | Not reachable: no place has two aggressive 4-tick attackers next to a resource (see below). One-attacker flinch at Barbarian Village oaks: 53.1 / 0.0 / 59.4 vs knife 3-tick __WCK__ | CODE-READ + MEASURED practice |
+| (a) Flinch 2-tick (two attackers, rapid shortbow, no ammo) | **FAILS on this server for every gathering board** | Not reachable: no place has two aggressive 4-tick attackers next to a resource (see below). One-attacker flinch at Barbarian Village oaks: 53.1 / 0.0 / 59.4 vs knife 3-tick 62.1 / 64.1 / 62.1 (same oak, same preset) | CODE-READ + MEASURED practice |
 
 ## (b) Delayed-click 3-tick: code
 
@@ -42,10 +42,15 @@ the next knife. 3 ticks per roll, against 5 (lobster) or 6 (harpoon) for the bes
 | `lobster_delayed_40` (Musa Point, 40) | normal | 101.3 (600, 27), 74.6 (603, 20), 74.6 (603, 20) |
 | `lobster_delayed_40` | delayed | 145.0 (543, 35, 0 of 5), 169.9 (331, 25, 0 of 15), 98.3 (412, 18, 0 of 15) |
 | `lobster_delayed_70` (Musa Point, 70) | normal | 101.3 (600, 27), 89.6 (603, 24), 101.3 (600, 27) |
-| `lobster_delayed_70` | delayed | 228.8 (600, 61, 15), 143.5 (392, 25, 0), 35.7 (126, 2, 0) __L70X__ |
-| `harpoon_delayed_55` (Musa Point, 55) | normal | 74.6 (603, 21), 84.3 (605, 22), __HN3__ |
-| `harpoon_delayed_55` | delayed | 133.7 (602, 36, 15), 193.5 (602, 53, 15), __H3__ |
-| `shark_delayed_80` (Catherby, 80) | normal / delayed | __SHARK__ |
+| `lobster_delayed_70` | delayed | 228.8 (600, 61, 15), 143.5 (392, 25, 0), 35.7 (126, 2, 0), 153.5 (601, 41, 15), 108.0 (375, 18, 0) |
+| `harpoon_delayed_55` (Musa Point, 55) | normal | 74.6 (603, 21), 84.3 (605, 22), 60.5 (603, 16) |
+| `harpoon_delayed_55` | delayed | 133.7 (602, 36, 15), 193.5 (602, 53, 15), 178.9 (601, 48, 15) |
+| `shark_delayed_80` (Catherby, 80) | normal | 59.1 (605, 13), 56.5 (602, 14), 63.7 (604, 15) |
+| `shark_delayed_80` | delayed | 193.8 (601, 52, 14), 164.3 (601, 41, 15), 103.6 (601, 25, 13) |
+| `fly_3tick_70` (Lumbridge river, 70), `fish-3tick.ts 3tick`, baseline | 3tick | 186.4 (605), 184.8 (602), 176.3 (600) |
+
+The Catherby "Harpoon" option matches both the rarefish (tuna, swordfish) and the memberfish (shark) spots, and the
+script took the nearest, so these runs mix tuna, swordfish and shark (116,500 XP from 52 catches is not 52 sharks).
 
 Quoted lines (examples):
 `RESULT ok mode=delayed opt=^cage$ gap=2 xp0=133230 gained=137250 ticks=600 perTick=228.8 cycles=200 catches=61 drops=61 logs=15 lvl=80`;
@@ -104,7 +109,7 @@ steel axe, HP 40, Defence 20), 300 ticks:
 
 In every run only one barbarian kept attacking, every 5 ticks, so the bot rolled every 5 ticks: the click on hit
 tick + 1 rolled (clicks about equal to hit ticks). Cost: 25-41 HP lost per 300 ticks, 4 lobsters, 49-128 setup ticks.
-Knife 3-tick on the same oak and preset: __WCK__. One-attacker flinch is slower than the knife (5 ticks per roll
+Knife 3-tick on the same oak and preset (`wc-3tick.ts 3tick`): 62.1 / 64.1 / 62.1 XP/tick (`RESULT ok mode=3tick xp0=1860 gained=17812 ticks=278 perTick=64.1 cycles=68 ...`). One-attacker flinch is slower than the knife (5 ticks per roll
 against 3) and costs food. Verdict: FAILS for every board.
 
 ## Best method per gathering board
@@ -112,7 +117,22 @@ against 3) and costs food. Verdict: FAILS for every board.
 Ticks to 99 are banded estimates from measured rates (`xpForLevel` from `packages/planner/src/curve.ts`). They are
 ESTIMATE built on MEASURED practice rates, not a fresh-account run.
 
-__BOARDS__
+| Board | #1 (ticks) | Best measured method | Measured XP/tick | Ticks to 99 (floor / realistic) | Wins? |
+|---|---|---|---|---|---|
+| Fishing | 3,425 | Fly 3-tick 20-40; delayed lobster 40-55; delayed harpoon 55-70; 70-99 fly 3-tick (182.5) or delayed lobster (191.2 with clean timing) | 121.4 / 137.7 / 168.7 / 182.5 (means) | 4,532 / 5,614 | **No**. 70-99 alone is 865,228 XP: 3,782 ticks even at the best run (228.8). #1 averages 291 XP/tick from level 1 |
+| Woodcutting | 3,329 | Knife 3-tick (flinch does not help) | 62.8 on oaks with a steel axe (only oaks measured here) | not measured past oaks; model row stays 2,900 / 3,400 (ESTIMATE) | Not shown. #1 averages 300 XP/tick; needs willow/yew/magic rates measured |
+| Mining | 3,964 | Power-mine iron, rune pickaxe (unchanged); flinch FAILS (no aggressive 4-tick attacker in a multiway zone near ore); delayed-click does not apply (a rune pickaxe already rolls every 3 ticks on fails, `mining.rs2:118-124`) | 97 (board-ranking-honest.md) | unchanged | No (board-ranking-honest.md) |
+| Thieving | 2,935 | not a gathering roll; no change | - | - | - |
+| Lava Maze Runite | counts ores | Flinch FAILS: no runite rock in a multiway zone, so one attacker at most; one 4-tick attacker gives a roll every 4 ticks, slower than the rune pickaxe's 3 | - | - | no change |
+
+Banded calculation (`xpForLevel`): 1-20 at 100 (assumed) = 31; 20-40 at 121.4 = 104; 40-55 at 137.7 = 223; 55-70 at
+168.7 = 514; 70-99 at 182.5 = 4,741; total 5,614. With the best run per band (139.9 / 169.9 / 193.5 / 228.8): 4,532.
+
+**Best fishing method at Fishing 67+ (MEASURED practice).** Fly 3-tick gives 182.5 XP/tick (186.4 / 184.8 / 176.3) but
+needs feathers. Delayed-click 3-tick lobster or harpoon needs no bait: a knife, logs and a pot or harpoon. It gave
+191.2 with clean timing (228.8, 153.5) and 133.9 over all 5 lobster runs; harpoon from 55 gave 168.7 (3 of 3 runs clean).
+For a bot that loses ticks to feather trips, delayed harpoon or lobster at Musa Point is the best measured
+alternative, if its inputs land on time (check: logs stay constant).
 
 ## What a script needs for delayed-click 3-tick fishing
 
