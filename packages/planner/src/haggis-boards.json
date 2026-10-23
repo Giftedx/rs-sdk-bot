@@ -463,10 +463,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 12,
-    "realistic": 28,
-    "evidence": "ESTIMATE",
-    "source": "floor = rival expected step 12 (research/rival-gap-list.md:118, bleugreen/rs-sdk@3bd2ab0a); realistic = about 13 dialogue pages (quest_cook.rs2:1-90) at 2 ticks per page (research/walking.md boat talk) + 2"
+    "floor": 30,
+    "realistic": 30,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-cook.ts, 3/3 PASS on practice from preset quest_cook (every skill 99, egg, milk, flour, start beside the cook; the walk to the kitchen not counted) and 3/3 from quest_cook_partner (Heroes' partner levels): 30/30/30 ticks each, two talks; floor = best run, realistic = worst run; was 12/28 ESTIMATE (rival expected step 12, research/rival-gap-list.md:118)"
    },
    "lump": true,
    "xp": {

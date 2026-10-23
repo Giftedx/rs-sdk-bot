@@ -528,3 +528,33 @@ Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922) and Plague City
 77,500 (burst 50,124 / 75,279 -> 47,627 / 71,672). The QP total stays 145. `bun test packages/planner`: 42 pass, 0
 fail. `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
 at 101,678 floor / 134,815 realistic (deadline 1,022,262). Overall unchanged (40,212 / 45,105).
+
+## Cook's Assistant, Witch's House, Lost City (MEASURED practice, 3/3 each)
+
+The main account and the Heroes' Quest partner both need these 3 quests (`research/heroes-partner.md`). Presets in
+`packages/practice/src/presets-partner.ts`, two per quest:
+- `quest_<name>`: the main account late in the run, on the base of the short quests (every skill 99, the quests
+  before the dragon row plus Dragon Slayer and Merlin's Crystal done, this quest's varp at 0).
+- `quest_<name>_partner`: Bigchopper (Woodcutting 99, Fletching 32, Thieving 35, combat 3, 10 HP) with the quest XP
+  and skill gates of the partner route up to this quest (`heroes-partner.md` section 3).
+
+Runner: `proveInProcess` with `okPass`, one bot at a time, each run on a fresh account that is deleted after the run.
+
+| Quest | Script | Main (3 runs) | Partner (3 runs) | Status |
+|---|---|---|---|---|
+| Cook's Assistant | `scripts/generated/quest-cook.ts` | 30, 30, 30 | 30, 30, 30 | MEASURED 3/3 both |
+
+### Cook's Assistant
+
+`RESULT ok qp=1 xp=cooking=7500 at=3209,3214,0 ticks=30 ... walkTicks=0 retries=0 died=false milestones=1,2` in all 6
+runs (3 main, 3 partner), each with `Congratulations! Quest complete!`. Two talks to the cook in the Lumbridge castle
+kitchen (spawn 3209,3215, `maps/m50_50.jm2`): "What's wrong?", "Yes, I'll help you." sets `%cookquest` 1
+(`quests/quest_cook/scripts/quest_cook.rs2:1-36`, `areas/area_lumbridge/scripts/cook.rs2:7-11`); the second talk with
+an egg, a bucket of milk and a pot of flour in the pack goes to the hand-in and queues the completion
+(`quest_cook.rs2:42-91`). 25 of the 30 ticks are dialog pages (LEDGER `dialog=25`). Helper items: egg (1944), bucket of
+milk (1927), pot of flour (1933); all tradeable. The levels do not matter: no step checks a skill.
+
+Planner: row `cooks-assistant` 12 / 28 ESTIMATE -> 30 / 30 MEASURED. The row is early in the run (Cooking 1 -> 30), so
+the Cooking board and Overall move by 18 floor / 2 realistic ticks: Overall 40,212 / 45,105 -> 40,230 / 45,107,
+Cooking 148 / 177 -> 166 / 179 (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`). The
+rival's 12-tick floor is not reached: it needs the burst dialog (5 pages per tick), which this script does not use.

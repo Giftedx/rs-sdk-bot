@@ -5,6 +5,7 @@ import { DRAGON_PRESETS } from './presets-dragon';
 import { SHORT_PRESETS } from './presets-short';
 import { GANG_PRESETS } from './presets-gang';
 import { MEDIUM_PRESETS } from './presets-medium';
+import { PARTNER_PRESETS } from './presets-partner';
 
 // Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
 export interface SaveConfig {
@@ -435,6 +436,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     ...GANG_PRESETS,
     // Medium quests of the quests-rest row: packages/practice/src/presets-medium.ts.
     ...MEDIUM_PRESETS,
+    // Cook's Assistant, Witch's House, Lost City (main and Heroes' partner): packages/practice/src/presets-partner.ts.
+    ...PARTNER_PRESETS,
 };
 
 // Agility laps (scripts/measure/agility-laps.ts): each course at its entry level and at 70 / 90.
