@@ -11,8 +11,8 @@
         "TARGET": "99",
         "CAP": "15000"
       },
-      "enabled": false,
-      "note": "STOPPED: died live at 3240,3243 (giant-spider bank) at Fishing 96; fix: only fish spots with z >= 3248 (research/random-events.md safe box), persist deaths across swarm restarts",
+      "enabled": true,
+      "note": "back 2026-10-23 after the spider-bank fix (e1b1fff): practice proof fishing=55 hpMin=10, ended at 3239,3254",
       "repeat": true
     },
     {
