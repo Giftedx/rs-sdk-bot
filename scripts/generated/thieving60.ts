@@ -22,6 +22,9 @@ const COINS = /^coins$/i;
 
 type Target = { name: string; re: RegExp; dmg: number; spot: { x: number; z: number }; range: number };
 const MEN: Target = { name: 'man', re: /^(man|woman)$/i, dmg: 1, spot: { x: 2621, z: 3293 }, range: 20 };
+// Warrior women (level 25, 26 XP, stun 2) stand 22 tiles west of the market, next to the men. Model: men only
+// 1-40 = 465 ticks, warriors from 25 = 355 (research/thieving-ladder.md).
+const WARRIORS: Target = { name: 'warrior', re: /^warrior woman$/i, dmg: 2, spot: { x: 2631, z: 3297 }, range: 10 };
 const GUARDS: Target = { name: 'guard', re: /^guard$/i, dmg: 2, spot: { x: 2658, z: 3309 }, range: 14 };
 const KNIGHTS: Target = { name: 'knight', re: /^knight of ardougne$/i, dmg: 3, spot: { x: 2660, z: 3308 }, range: 16 };
 
@@ -236,7 +239,7 @@ try {
     for (let i = 0; i < 100_000 && lvl() < TARGET && !died && left() > 0; i++) {
         if (existsSync(stopFile)) { await end(false, 'stop file'); }
         checkLevels();
-        const t = lvl() >= 55 ? KNIGHTS : lvl() >= 40 ? GUARDS : MEN;
+        const t = lvl() >= 55 ? KNIGHTS : lvl() >= 40 ? GUARDS : lvl() >= 25 ? WARRIORS : MEN;
         if (hp() <= EAT_AT && food() > 0) {
             const e = await s.bot.eatFood(FOOD);
             if (e.success) eaten++;
@@ -248,7 +251,8 @@ try {
             await stockUp();
             continue;
         }
-        if (hp() > t.dmg) { await steal(t); continue; }
+        // Both warriors can be busy (other players); the men stand 10 tiles away, so use them instead of waiting.
+        if (hp() > t.dmg) { if (!(await steal(t)) && t === WARRIORS && hp() > MEN.dmg) await steal(MEN); continue; }
         // Too low for this target and no food: men hit for 1, so use them for coins, else rest.
         if (hp() > MEN.dmg) await steal(MEN);
         else await rest();
