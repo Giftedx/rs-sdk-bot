@@ -1,0 +1,15 @@
+{
+  "maxBots": 6,
+  "minFreeGB": 4,
+  "jobs": [
+    { "account": "Mightyrod", "script": "scripts/generated/fishing30.ts", "role": "fishing", "goal": "Fishing 99", "env": { "TARGET": "99", "CAP": "15000" }, "enabled": true, "note": "fix 81f31bb proved 2/2 on practice" },
+    { "account": "Moneyshot", "script": "scripts/banker.ts", "role": "bank", "goal": "banker: hold the vault", "enabled": false, "repeat": true, "note": "start on demand (payouts, deposits); idle it costs 300-600 MB" },
+    { "account": "Bigpackage", "script": "scripts/generated/gecourier.ts", "role": "helper", "goal": "courier: GE lobsters to Ardougne", "env": { "LOBSTERS": "115", "PRICE": "165" }, "enabled": false, "note": "holds 115 lobster notes; next trip needs coins from the banker" },
+    { "account": "Woodpecker", "script": "scripts/generated/woodcutting.ts", "role": "woodcutting", "goal": "Woodcutting 99", "env": { "TARGET": "99", "CAP": "9000" }, "enabled": false, "note": "died at WC 49, cause not known; wait for the random-event check" },
+    { "account": "Pocketpython", "script": "scripts/give-to-banker.ts", "role": "thieving", "goal": "prep for Haggis", "enabled": false, "note": "Thieving 99, empty; job comes from research/haggis-run.md" },
+    { "account": "Pocketrocket", "script": "scripts/give-to-banker.ts", "role": "thieving", "goal": "prep for Haggis", "enabled": false, "note": "Thieving 99, empty; job comes from research/haggis-run.md" },
+    { "account": "mmtha0205", "script": "scripts/give-to-banker.ts", "role": "thieving", "goal": "prep for Haggis", "enabled": false, "note": "Thieving 99, empty; job comes from research/haggis-run.md" },
+    { "account": "mmthv2350", "script": "scripts/give-to-banker.ts", "role": "thieving", "goal": "prep for Haggis", "enabled": false, "note": "Thieving 99, empty; job comes from research/haggis-run.md" },
+    { "account": "Haggis", "script": "", "role": "main", "goal": "24 boards", "enabled": false, "note": "reserved: runs only the final rehearsed route" }
+  ]
+}
