@@ -403,6 +403,25 @@ the previous activity to Dimintheis is not counted; the Al Kharid toll gate dial
 (a Prince Ali Rescue first makes the gate free); the perfect gold supply (Witchaven dungeon lever puzzle) is not
 scripted for a helper.
 
+## 1e. Tree Gnome Village, The Grand Tree, Monkey Madness: not run yet
+
+No script yet for these three rows (`tree`, `grandtree`, `rival-mm`); their ticks stay ESTIMATE. Code read for Tree
+Gnome Village (CODE-READ, `quests/quest_tree/scripts/*.rs2`, `areas/area_gnome/scripts/*.rs2`), for the next script:
+
+- The ballista (`catabow` op2) takes the fixed answer 0004, 0003, 0005 (height, x, y) at stage 4
+  (`quest_tree.rs2`). The three trackers only tell the player those numbers, so a script can skip them.
+- Stages: Bolren "Can I help at all?", "I would be glad to help." (1); Montai "Ok, I'll gather some wood." (2), then
+  6 logs (3), then "I'll try my best." (4); ballista (5); the crumbled wall `khazzacklowwall` and the chest
+  `chestopen_khazard` give the orb (6); Bolren "I will find the warlord..." (7); the Khazard warlord's death gives the
+  orbs (8); Bolren queues the completion (286,250 Attack at 25x, 2 QP). Elkoy (2504,3191 outside, 2514,3159 inside)
+  takes the player through the maze with "Yes please." (`p_telejump`).
+- The combat problem is the same as for Family Crest. In the floor order (2026-10-23, after the crest gate) `tree`
+  runs at tick 4,126 with Attack, Strength and Defence 1, 10 Hitpoints, Magic 43 and Prayer 31. The Khazard warlord
+  has 170 hitpoints, attack 75, strength 78 (`gnome_battlefield.npc`), and the Khazard commander (48) attacks at the
+  chest. The rival's 665-tick floor uses Fire Blast under Protect from Melee (Magic 59, Prayer 43), which the plan
+  does not have at that point. A safespot for Fire Bolt at Magic 43 is not found yet (the warlord's pen,
+  2440-2458,3285-3304, has a 2-tile wall on its east side at x 2459-2460 in the SDK collision map; not tested).
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,
