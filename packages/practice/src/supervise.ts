@@ -21,6 +21,8 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (d.stopped() || /stop file/.test(result)) return { reason: 'stopped', runs };
         // A death means the route or the food plan failed; a blind restart repeats it.
         if (/died=true|RESULT fail died/.test(result)) return { reason: 'died', runs };
+        // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
+        if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
         if (++fails > d.maxRestarts) return { reason: 'gave-up', runs };
         await d.pause(10_000);
     }
