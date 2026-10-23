@@ -1,0 +1,82 @@
+// Watchdog: every 30 s checks the machine and the swarm, and writes .practice/monitor.json (latest state) plus
+// .practice/alerts.jsonl (one line per new alert) for the dashboard and the lead session.
+// Fixes on its own only what is always safe: headless Edge left by a screenshot (profile folder shot-<port>) older
+// than 2 minutes is killed (2026-10-23: leaks of 5, 11 and 16 Edge processes, up to 70% CPU).
+// Alerts: low RAM, stray `python -` processes, live bots that died, stalled (no status for 2 min without a RESULT)
+// or idle 20+ ticks in a row, and too many practice bots at once.
+// Usage: bun scripts/monitor.ts
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { freemem, totalmem } from 'node:os';
+
+const root = resolve(import.meta.dir, '..');
+const prac = join(root, '.practice');
+const statusDir = join(prac, 'status');
+mkdirSync(prac, { recursive: true });
+
+type Alert = { at: number; level: 'warn' | 'error' | 'fixed'; key: string; text: string; bot?: string };
+const active = new Map<string, Alert>();
+
+function procs(): { pid: number; name: string; ageSec: number; mb: number; cmd: string }[] {
+    // One CIM query per cycle; tasklist has no command lines.
+    const ps = `Get-CimInstance Win32_Process -Filter "Name='msedge.exe' OR Name='python.exe' OR Name='bun.exe'" | ForEach-Object { '{0}|{1}|{2}|{3}|{4}' -f $_.ProcessId, $_.Name, [int]((Get-Date) - $_.CreationDate).TotalSeconds, [int]($_.WorkingSetSize/1MB), ($_.CommandLine -replace '\\|',' ') }`;
+    const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command', ps], { stdout: 'pipe', stderr: 'ignore' });
+    return r.stdout.toString().split(/\r?\n/).filter(Boolean).map(l => {
+        const [pid, name, age, mb, ...cmd] = l.split('|');
+        return { pid: Number(pid), name: name!, ageSec: Number(age), mb: Number(mb), cmd: cmd.join('|') };
+    });
+}
+
+function cycle() {
+    const now = Date.now();
+    const seen = new Set<string>();
+    const raise = (a: Omit<Alert, 'at'>) => {
+        seen.add(a.key);
+        if (active.has(a.key)) return;
+        const full = { ...a, at: now };
+        active.set(a.key, full);
+        appendFileSync(join(prac, 'alerts.jsonl'), JSON.stringify(full) + '\n');
+        console.log(`ALERT ${a.level} ${a.text}`);
+    };
+
+    const list = procs();
+    const stale = list.filter(p => p.name === 'msedge.exe' && /shot-\d+/.test(p.cmd) && p.ageSec > 120);
+    if (stale.length) {
+        for (const p of stale) Bun.spawnSync(['taskkill', '/PID', String(p.pid), '/F'], { stdout: 'ignore', stderr: 'ignore' });
+        raise({ level: 'fixed', key: `edge-${now}`, text: `killed ${stale.length} leaked screenshot Edge processes (${[...new Set(stale.map(p => p.cmd.match(/shot-\d+/)![0]))].join(', ')})` });
+    }
+    for (const p of list.filter(p => p.name === 'python.exe' && /python(3|\.exe)?"? -\s*$/.test(p.cmd) && p.ageSec > 600)) {
+        raise({ level: 'warn', key: `py-${p.pid}`, text: `python reading stdin for ${Math.round(p.ageSec / 60)} min (pid ${p.pid}), likely stuck` });
+    }
+    const freeGB = freemem() / 2 ** 30;
+    if (freeGB < 3) raise({ level: 'error', key: 'ram', text: `only ${freeGB.toFixed(1)} GB RAM free` });
+
+    let practiceBots = 0;
+    const bots: Record<string, unknown>[] = [];
+    for (const f of existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')) : []) {
+        let s: any;
+        try { s = JSON.parse(readFileSync(join(statusDir, f), 'utf8')); } catch { continue; }
+        const age = now - s.at;
+        const live = !/^localhost/.test(s.server ?? '');
+        if (!live) { if (age < 60_000) practiceBots++; continue; }
+        if (age > 6 * 3600_000) continue;
+        const tail = String(s.timeline ?? '').slice(-40);
+        const idleRun = tail.length - tail.replace(/i+$/, '').length;
+        bots.push({ name: s.name, ageSec: Math.round(age / 1000), idleRun, result: s.result ?? '', phase: s.phase ?? '' });
+        if (/died=true|fail died/.test(s.result ?? '')) raise({ level: 'error', key: `died-${s.name}-${s.started}`, bot: s.name, text: `${s.name} died: ${String(s.result).slice(0, 120)}` });
+        else if (!s.result && age > 120_000 && age < 3600_000) raise({ level: 'error', key: `stalled-${s.name}-${s.started}`, bot: s.name, text: `${s.name}: no status for ${Math.round(age / 60_000)} min and no RESULT (crashed or frozen)` });
+        if (age < 30_000 && idleRun >= 20) raise({ level: 'warn', key: `idle-${s.name}-${s.tick - idleRun}`, bot: s.name, text: `${s.name} idle ${idleRun} ticks in a row at ${s.pos?.x},${s.pos?.z} (${s.phase})` });
+    }
+    if (practiceBots > 6) raise({ level: 'warn', key: 'practice-load', text: `${practiceBots} practice bots at once (limit 6)` });
+
+    for (const k of [...active.keys()]) if (!seen.has(k) && !k.startsWith('died-') && !k.startsWith('edge-')) active.delete(k);
+    const bunMB = list.filter(p => p.name === 'bun.exe').reduce((n, p) => n + p.mb, 0);
+    writeFileSync(join(prac, 'monitor.json'), JSON.stringify({
+        at: now, freeGB, totalGB: totalmem() / 2 ** 30, bunProcs: list.filter(p => p.name === 'bun.exe').length, bunMB,
+        edgeProcs: list.filter(p => p.name === 'msedge.exe').length, practiceBots, bots, alerts: [...active.values()].sort((a, b) => b.at - a.at),
+    }));
+}
+
+console.log('monitor: every 30 s -> .practice/monitor.json, .practice/alerts.jsonl');
+cycle();
+setInterval(cycle, 30_000);
