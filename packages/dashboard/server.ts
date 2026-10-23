@@ -651,10 +651,13 @@ function buildState() {
         results: results.slice(0, 60), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
+        viewerTimings: viewerTimings.slice(0, 20),
         pageVersion: (() => { try { return statSync(join(import.meta.dir, 'index.html')).mtimeMs; } catch { return 0; } })(),
         icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
 }
+
+const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number }[] = [];
 
 // One state for everyone: built every 2 s only while a client watches, serialized once, sent to each SSE client.
 const clients = new Set<ReadableStreamDefaultController>();
@@ -678,6 +681,13 @@ Bun.serve({
     idleTimeout: 0,
     fetch(req) {
         const url = new URL(req.url);
+        // The page relays the 3D viewer's follow-change timings (time until the destination is loaded).
+        if (url.pathname === '/api/viewer-timing' && req.method === 'POST') {
+            return req.json().then((t: any) => {
+                if (t && typeof t.ms === 'number') { viewerTimings.unshift({ at: Date.now(), mode: String(t.mode), ms: t.ms, tiles: Number(t.tiles) || 0, frames: Number(t.frames) || 0, blankFrames: Number(t.blankFrames) || 0 }); viewerTimings.length = Math.min(viewerTimings.length, 40); }
+                return new Response('ok');
+            }).catch(() => new Response('bad', { status: 400 }));
+        }
         if (url.pathname === '/api/state') return new Response(current(), { headers: { 'content-type': 'application/json' } });
         // The 3D viewer (localhost:3000) fetches the names whose nameplates it must hide, so the dashboard page
         // never holds the name: the iframe URL carries only this endpoint.

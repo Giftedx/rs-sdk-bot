@@ -62,6 +62,7 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
 .gbar span{position:relative;font:600 10.5px var(--mono);padding:0 5px;line-height:14px;color:var(--tx);text-shadow:0 1px 0 #000;white-space:nowrap}
 .since{color:var(--dm);font-family:var(--mono);font-size:11px;flex:none}.idl{font:700 11px var(--mono)}.idl.bad{color:var(--red)}.idl.ok{color:var(--grn)}
 .pace{font:600 11px var(--mono);flex:none}
+.why{font:600 9.5px var(--ui);letter-spacing:.04em;color:#120e06;background:var(--parch);border-radius:3px;padding:0 5px;line-height:14px;white-space:nowrap;flex:none;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .off1{display:flex;align-items:center;gap:6px;padding:2px 8px 2px 10px;border-bottom:1px solid #1a1610;cursor:pointer;position:relative;white-space:nowrap;color:var(--dm);font-size:12.5px}
 .off1:hover{background:#17130d}.off1 .nm{font-size:13px;color:#b3a786;font-weight:600}.off1 .note{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--fa)}
 .grp{font:700 9.5px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--fa);padding:3px 10px 1px;border-bottom:1px solid #1a1610}
@@ -177,7 +178,7 @@ header{display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--ln)
     <section class="card" style="height:194px;flex:none"><h2>Machine <em id="mach-h"></em></h2><div class="mach" id="mach"></div></section>
   </div>
   <div class="col">
-    <section class="card" style="flex:1"><h2>World <em id="map-h"></em><span class="tog"><button id="b3" class="on">3D</button><button id="b2">2D</button></span></h2>
+    <section class="card" style="flex:1"><h2>World <em id="map-h"></em><span class="tog"><button id="bt" title="fly to the next most interesting bot every 60 s">TOUR</button></span><span class="tog"><button id="b3" class="on">3D</button><button id="b2">2D</button></span></h2>
       <div class="mapwrap" id="mw"><iframe id="rsw" allow="cross-origin-isolated; fullscreen" title="rs-world 3D viewer"></iframe><canvas id="map"></canvas><div class="follow" id="follow"></div>
       <div class="legend" id="legend" style="display:none"><span><b class="on"></b>playing</span><span><b class="wd"></b>in world / local</span><span><b class="off"></b>offline</span></div></div></section>
     <section class="card" style="flex:none"><h2>Boards <em id="bd-h"></em></h2><div class="boards" id="boards"></div><div class="hag" id="hag"></div></section>
@@ -245,7 +246,7 @@ function rowLive(b){const[c,t]=st(b),sk=goalOf(b),L=running(b)?ledger(b):null,id
   const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':b.name===S.vault?.banker?'bk':'';
   const tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0;
   return`<i hidden data-c="bot ${sel===b.name?'sel':''} ${bad?'idle':''}"></i>
-  <div class="l"><span class="dot ${c}" title="${t}"></span><span class="nm">${E(b.name)}</span><span class="pill ${pc}" ${b.roleInferred?'title="inferred from the highest non-Hitpoints skill"':''}>${E(role)}</span>${jobPill(b.job)}</div>
+  <div class="l"><span class="dot ${c}" title="${t}"></span><span class="nm">${E(b.name)}</span><span class="pill ${pc}" ${b.roleInferred?'title="inferred from the highest non-Hitpoints skill"':''}>${E(role)}</span>${jobPill(b.job)}${IR[b.name]?.why?`<span class="why" title="interest score ${IR[b.name].score.toFixed(0)}: ${E(IR[b.name].all)}">${E(IR[b.name].why)}</span>`:''}</div>
   <div class="r">${actChip(b.action)}<span class="mono dm" title="status file age">${b.at?ago(S.now-b.at):''}</span></div>
   <div class="l">${sk?`<span class="gbar"><i style="width:${pct.toFixed(1)}%"></i><span>${E(b.goalSkill)} ${sk.level} / ${tgt}</span></span>${paceTxt(b)}`:`<span class="dm ell">${E(b.job?.goal||b.goal||'')}</span>`}</div>
   <div class="r">${b.xpPerHour!=null?`<span class="mono">${gp(b.xpPerHour)}/h</span>`:''}${b.spark?.length>1?svgSpark(b.spark,52,14):''}</div>
@@ -254,7 +255,7 @@ function rowLive(b){const[c,t]=st(b),sk=goalOf(b),L=running(b)?ledger(b):null,id
 function rowOff(b){const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':b.name===S.vault?.banker?'bk':'';
   const why=b.job?.note||(b.reserved?'reserved for the main run':b.at?'':'no status file yet');
   return`<i hidden data-c="off1 ${sel===b.name?'sel':''}"></i>${ocIcon(b.outcome)}<span class="nm">${E(b.name)}</span><span class="pill ${pc}">${E(role)}</span>${jobPill(b.job)}<span class="note" title="${E(why)}${b.result?' · last RESULT: '+E(b.result):''}">${E(why)}</span><span class="mono fa" title="last seen">${b.lastSeen?ago(S.now-b.lastSeen):'never'}</span>`}
-function roster(){const live=S.bots.filter(b=>!b.practice),on=live.filter(b=>running(b)&&!b.reserved),off=live.filter(b=>!(running(b)&&!b.reserved));
+function roster(){const live=S.bots.filter(b=>!b.practice),on=ranked(),off=live.filter(b=>!(running(b)&&!b.reserved));
   const rows=[...on.map(b=>['L'+b.name,rowLive(b)])];
   if(off.length)rows.push(['G-off',`<i hidden data-c="grp"></i>offline · ${off.length} · reason from the swarm plan`]);
   rows.push(...off.map(b=>['O'+b.name,rowOff(b)]));
@@ -266,6 +267,26 @@ function roster(){const live=S.bots.filter(b=>!b.practice),on=live.filter(b=>run
   keyed($('#prac'),shown.map(b=>{const sk=goalOf(b),tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,[c]=st(b);
     return['P'+b.name,`<i hidden data-c="pc ${sel===b.name?'sel':''}"></i><span class="dot ${c}"></span>${running(b)?'':ocIcon(b.outcome)}<span class="ell" style="flex:none;max-width:62px" title="${E(b.name)} · ${E(b.phase||'')}${b.result?' · '+E(b.result):''}">${E(b.name)}</span><span class="gb" title="${sk?E(b.goalSkill)+' '+sk.level+'/'+tgt:''}"><i style="width:${pct.toFixed(0)}%"></i></span>`]}));
   $('#cnt').textContent=`${on.length} running · ${off.length} offline`}
+// Interest score: what is worth watching now. Recent death or alert, a new phase (level-up or milestone),
+// close to or ahead of a board #1, a high XP rate; idle sinks. The order is kept for 30 s (or until a new alert)
+// so rows do not jump every 2 s; the reason shows as a tag on the row.
+let IR={},ORDER=[],ORDER_AT=0,ORDER_ALERT=0;
+function interest(b){const r=[];let s=0;const now=S.now,al=(S.alerts||[]).filter(a=>a.name===b.name&&!a.practice&&now-a.at<15*60e3);
+  if(al.some(a=>a.kind==='death')){s+=100;r.push('died')}else if(al.length){s+=60;r.push(al[0].kind)}
+  if(b.phaseSince&&b.phaseExact&&now-b.phaseSince<3*60e3){s+=40;r.push('new: '+String(b.phaseShort||'').slice(0,18))}
+  if(b.pace&&b.xpLeft>0){if(b.pace.ahead){s+=70;r.push('ahead of #1')}else{s+=25;r.push('chasing #1')}}
+  if(b.xpPerHour>0){s+=Math.min(30,b.xpPerHour/2e5);if(!r.length)r.push(gp(b.xpPerHour)+' xp/h')}
+  if(b.action==='idle'){s-=20;r.push('idle')}
+  return{score:s,why:r[0]||'',all:r.join(' · ')||'nothing special'}}
+function ranked(){const on=S.bots.filter(b=>!b.practice&&running(b)&&!b.reserved);IR={};for(const b of on)IR[b.name]=interest(b);
+  const lastAlert=Math.max(0,...(S.alerts||[]).filter(a=>!a.practice).map(a=>a.at));
+  if(S.now-ORDER_AT>30e3||lastAlert>ORDER_ALERT||on.some(b=>!ORDER.includes(b.name))){ORDER=[...on].sort((a,b)=>IR[b.name].score-IR[a.name].score||a.name.localeCompare(b.name)).map(b=>b.name);ORDER_AT=S.now;ORDER_ALERT=lastAlert}
+  return ORDER.map(n=>on.find(b=>b.name===n)).filter(Boolean)}
+// Tour: when on, fly to the next most interesting bot every 60 s (?tourEvery=N seconds for testing).
+const Q=new URLSearchParams(location.search);let TOUR=Q.has('tour'),TOUR_AT=0;const TOUR_MS=(Number(Q.get('tourEvery'))||60)*1e3;
+function tourStep(){if(!TOUR||S.now-TOUR_AT<TOUR_MS)return;TOUR_AT=S.now;const l=ranked();if(!l.length)return;const i=l.findIndex(b=>b.name===sel);sel=l[(i+1)%l.length].name}
+// The viewer reports follow-change timings; keep them on the server for the Machine panel and measurements.
+window.addEventListener('message',e=>{if(e.origin!=='http://localhost:3000'||!e.data?.viewerTiming)return;fetch('/api/viewer-timing',{method:'POST',body:JSON.stringify(e.data.viewerTiming)}).catch(()=>{})});
 function pick(n){if(!n)return;sel=n;picked=true;render()}
 for(const id of['#roster','#prac']){const el=$(id);el.onclick=e=>{const r=e.target.closest('[data-k]');if(r&&!r.dataset.k.startsWith('G'))pick(r.dataset.k.slice(1))};
   el.onmousemove=e=>{const r=e.target.closest('[data-k]');tipFor=r&&!r.dataset.k.startsWith('G')?r.dataset.k.slice(1):null;tipXY=[e.clientX,e.clientY];tip()};el.onmouseleave=()=>{tipFor=null;tip()}}
@@ -376,14 +397,14 @@ function drawMap(){if(mode!=='2d')return;const c=$('#map'),w=c.clientWidth,h=c.c
     if(cl!=='off'||sel===b.name){g.fillStyle='#ece2c6';g.font='700 12px "Barlow Semi Condensed",sans-serif';g.fillText(b.name,x+8,z-6)}}}
 $('#map').onclick=e=>{const c=$('#map'),r=c.getBoundingClientRect();let best=null,bd=300;for(const[x,z,n]of c._p||[]){const d=(x-(e.clientX-r.left))**2+(z-(e.clientY-r.top))**2;if(d<bd){bd=d;best=n}}if(best)pick(best)};
 function setMode(m){mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},'http://localhost:3000');$('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';syncWorld();drawMap()}
-$('#b3').onclick=()=>setMode('3d');$('#b2').onclick=()=>setMode('2d');
+$('#bt').onclick=()=>{TOUR=!TOUR;TOUR_AT=0;$('#bt').classList.toggle('on',TOUR);render()};$('#bt').classList.toggle('on',TOUR);$('#b3').onclick=()=>setMode('3d');$('#b2').onclick=()=>setMode('2d');
 function syncWorld(){const b=S.bots.find(x=>x.name===sel);$('#follow').textContent=mode==='3d'?(b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${S.bots.filter(b=>b.live||b.pos).length} bots on the map`;
   $('#map-h').textContent=mode==='3d'?'live rs-world viewer · world feed':'collision map · click a dot';
   // Load the viewer once; later follow changes go by postMessage (a new src reloads the whole 3D scene).
   // fps=20 and scale=0.75 keep its CPU and GPU cost down on a busy box.
   if(mode!=='3d')return;
   const f=$('#rsw');
-  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed&embed=1&fps=20&scale=0.75&hideNamesFrom=${encodeURIComponent(location.origin+'/api/hidden-names')}${sel?'&follow='+encodeURIComponent(sel):''}`}
+  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed${Q.get('flight')==='0'?'&flight=0':''}${Q.get('cache')==='0'?'&cache=0':''}&embed=1&fps=20&scale=0.75&hideNamesFrom=${encodeURIComponent(location.origin+'/api/hidden-names')}${sel?'&follow='+encodeURIComponent(sel):''}`}
   else if(rswFor!==sel&&sel){rswFor=sel;f.contentWindow?.postMessage({follow:sel},'http://localhost:3000')}}
 
 function render(){
@@ -395,15 +416,15 @@ function render(){
   const best=S.boards.filter(r=>r.best&&r.board!=='Overall').sort((a,b)=>a.best.rank-b.best.rank)[0];$('#k-best').textContent=best?'#'+nf(best.best.rank):'-';$('#k-bestb').textContent=best?'best · '+best.board:'best rank';
   $('#k-xp').textContent=gp(live.reduce((n,b)=>n+(b.fresh&&b.xpPerHour>0?b.xpPerHour:0),0));
   $('#clock').textContent=new Date(S.now).toLocaleTimeString('en-GB');$('#pulse').className='pulse'+(w.connected===false?' off':'');
-  const first=live.find(b=>b.inWorld&&!b.reserved)||live.find(b=>b.fresh&&!b.reserved)||live.find(b=>!b.reserved)||bots[0];
-  if((!sel||!bots.some(b=>b.name===sel))&&first)sel=first.name;
+  const first=ranked()[0]||live.find(b=>b.inWorld&&!b.reserved)||live.find(b=>b.fresh&&!b.reserved)||live.find(b=>!b.reserved)||bots[0];
+  if((!sel||!bots.some(b=>b.name===sel))&&first)sel=first.name;tourStep();
   alertsBar();roster();boards();detail();vault();activity();requests();machine();syncWorld();loadMap();drawMap();if(tipFor)tip();
 }
 window.addEventListener('resize',()=>{drawMap();if($('#flow'))$('#flow')._h=null;vault()});
 // Errors show in the header instead of failing silently.
 window.onerror=(m,src,l)=>{const c=$('#clock');c.textContent='JS error: '+m+' @'+l;c.style.color='var(--red)'};
 // Static mode (screenshots) renders twice so the second, diffing render is exercised too.
-if(STATIC)fetch('/api/state').then(r=>r.json()).then(j=>{S=j;render();setTimeout(()=>fetch('/api/state').then(r=>r.json()).then(k=>{S=k;render()}),2500)});
+if(STATIC)fetch('/api/state').then(r=>r.json()).then(j=>{S=j;render();setTimeout(()=>fetch('/api/state').then(r=>r.json()).then(k=>{S=k;render()}),2500);if(TOUR)setInterval(()=>fetch('/api/state').then(r=>r.json()).then(k=>{S=k;render()}),2000)});
 else{let PV=null;const es=new EventSource('/events');es.onmessage=e=>{S=JSON.parse(e.data);if(PV===null)PV=S.pageVersion;else if(S.pageVersion&&S.pageVersion!==PV){location.reload();return}render()}}
 if(new URLSearchParams(location.search).get('map')==='2d')setMode('2d');
 </script>

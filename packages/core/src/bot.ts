@@ -5,6 +5,7 @@ import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { startLedger, formatLedger } from './ledger';
 import { startStatus } from './status';
+import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
@@ -44,6 +45,8 @@ export async function openBot(name: string): Promise<Session> {
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
     ledgers.set(s, led);
+    // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
+    if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor, 2026-10-23) still logs out in game.
     let stopTicks = 0;
@@ -88,10 +91,16 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
 // session (5 s limit each), and exits with 0 on ok.
 const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
+const randomEvents = new Map<Session, RandomEventWatch>();
+// The session's random event watcher, so a script can pause its loop while busy() is true.
+export const randomEventsOf = (s: Session): RandomEventWatch | undefined => randomEvents.get(s);
 
 export async function finish(sessions: Session[], ok: boolean, detail: string): Promise<never> {
     console.log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
-    for (const s of sessions) { const l = ledgers.get(s); if (l) console.log(`${formatLedger(l.stop())} bot=${s.name}`); statuses.get(s)?.stop(); }
+    for (const s of sessions) {
+        const l = ledgers.get(s); if (l) console.log(`${formatLedger(l.stop())} bot=${s.name}`); statuses.get(s)?.stop();
+        const e = randomEvents.get(s); if (e) { e.stop(); console.log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
+    }
     // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
     // Logout runs first, so the account leaves the world either way; this only bounds the process.
     setTimeout(() => { console.log('WARN finish backstop exit'); process.exit(ok ? 0 : 1); }, 30_000).unref?.();

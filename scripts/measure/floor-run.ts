@@ -1,0 +1,37 @@
+// Runs one floor script N times on the LOCAL practice server, one bot at a time, each on a fresh account with a
+// preset. Usage: RANDOM_EVENTS=0 bun scripts/measure/floor-run.ts <script> <preset> <runs> [script args...]
+// Prints each run's START / BAND / FLOOR / CYCLE / NOTE / WARN / RESULT lines.
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { realInProcessDeps, runBotName } from '../../packages/practice/src/prove';
+
+// Shared-machine rule (watchdog): launch only while .practice/monitor.json shows practiceBots < 6 and freeGB >= 5.
+async function waitForRoom(): Promise<void> {
+    const f = join(resolve(import.meta.dir, '..', '..'), '.practice', 'monitor.json');
+    for (;;) {
+        const m = existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : null;
+        if (!m || (m.practiceBots < 6 && m.freeGB >= 5)) return;
+        console.log(`NOTE waiting: practiceBots=${m.practiceBots} freeGB=${m.freeGB.toFixed(1)}`);
+        await Bun.sleep(30_000);
+    }
+}
+
+const [script, preset, runsArg, ...rest] = process.argv.slice(2);
+const runs = Number(runsArg ?? 3);
+let passes = 0;
+for (let i = 1; i <= runs; i++) {
+    await waitForRoom();
+    const bot = runBotName('floor', i);
+    const t0 = Date.now();
+    try {
+        await realInProcessDeps.prepare(bot, preset);
+        const { stdout, exitCode } = await realInProcessDeps.run(script!, bot, 900_000, rest);
+        for (const l of stdout.split(/\r?\n/)) if (/^(START|BAND|FLOOR|LEVELUP|CYCLE|RESULT|WARN|NOTE|LEDGER)/.test(l) || /error/i.test(l)) console.log(`run${i} ${l}`);
+        const ok = exitCode === 0 && /^RESULT ok/m.test(stdout);
+        if (ok) passes++;
+        console.log(`run${i} ${ok ? 'PASS' : 'FAIL'} exit=${exitCode} ${((Date.now() - t0) / 1000).toFixed(1)}s`);
+    } finally {
+        await realInProcessDeps.cleanup(bot);
+    }
+}
+console.log(`passed ${passes}/${runs}`);
