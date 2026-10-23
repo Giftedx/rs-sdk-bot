@@ -33,6 +33,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     measure_iron_rune: { position: { x: 3286, z: 3368, level: 0 }, skills: { Mining: 41 }, inventory: [{ id: 1275, count: 1 }] },
     // 3-tick woodcutting test: the oak preset plus a knife (946) and one log (1511).
     oaks_3tick: { position: { x: 3190, z: 3458, level: 0 }, skills: { Woodcutting: 15 }, inventory: [{ id: 1351, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }] },
+    // 3-tick fishing test: the Draynor net spot, small net (303), knife (946), one log (1511).
+    shrimp_3tick: { position: { x: 3087, z: 3230, level: 0 }, inventory: [{ id: 303, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }] },
     measure_shrimp: { position: { x: 3087, z: 3230, level: 0 }, inventory: [{ id: 303, count: 1 }] },
     // Wine batch test (skill_cooking/.../wine/wine.rs2): Cooking 35, one grapes + jug of water to start the
     // 20-tick fermenting timer, and 300 unfermented wines (1995) in the bank that ferment when it fires.
