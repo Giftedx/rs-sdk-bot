@@ -688,6 +688,104 @@ its ESTIMATE ticks (4,566 / 5,052) until a full run; the measured parts are chap
 UNVERIFIED here) are about 2,000 ticks for stages 80-120 with two jail cycles and the temple trapdoor scrum.
 Hitpoints at the row is not modelled (the preset's 35 is an estimate; the Grand Tree preset has 10).
 
+## 1i. Measured: Dragon Slayer (the `dragon` row)
+
+Script `scripts/generated/quest-dragon.ts`, preset `quest_dragon` (`packages/practice/src/presets-dragon.ts`, beside
+the Guild master inside the Champions' Guild). The planner runs `dragon` after the last 99 (`haggis-cli --order`
+row 48, tick 52,855), so the preset has every skill at 99. The guild door needs `%qp >= 32`
+(`champions_guild.rs2:1-3`), and `%qp` is recounted at login from the quest varps (`count_questpoints`,
+`general/scripts/quests.rs2`), so the preset sets the complete values of 16 quests the planner does earlier (46 QP),
+not varp 101. Worn: rune full helm, platebody, platelegs, scimitar. Practice server, one bot at a time.
+
+3/3 PASS (MEASURED practice, 2026-10-23):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | HP min | Eats |
+|---|---|---|---|---|---|
+| 7 | `RESULT ok qp=2 questMsg=true xp=attack=34000,strength=466250,defence=466250,hitpoints=11255,magic=2225 at=2846,9636,0 ticks=1577 hpMin=54 eats=6 walkTicks=857 retries=2 died=false` | 1,577 | 289 (18.3%) | 54 | 6 |
+| 8 | `RESULT ok qp=2 questMsg=true xp=attack=33900,strength=466250,defence=466250,hitpoints=11220,magic=2225 at=2846,9636,0 ticks=1531 hpMin=59 eats=1 walkTicks=858 retries=1 died=false` | 1,531 | 250 (16.3%) | 59 | 1 |
+| 9 | `RESULT ok qp=2 questMsg=true xp=attack=33900,strength=466250,defence=466250,hitpoints=11225,magic=2225 at=2846,9636,0 ticks=1488 hpMin=66 eats=0 walkTicks=863 retries=1 died=false` | 1,488 | 234 (15.7%) | 66 | 0 |
+
+Every run ends with `Congratulations! Quest complete!` and 466,250 Strength and 466,250 Defence. Planned: 1,387 /
+3,699 (ESTIMATE, the `rival-dialogue-burst` patch of 1,500 / 4,000); measured 1,488-1,577.
+
+Stages (varp `%dragonquest` 176, `quest_dragon.constant`), with run 9 MILESTONE ticks:
+
+| # | Stage | Ticks | Evidence |
+|---|---|---|---|
+| 1 | Guild master: "rune plate mail body" (176 = 1) | 0-16 | `guild_master.rs2` |
+| 2 | Walk to Oziach; the shield, find the dragon, pieces 1-3 (176 = 2, %dragon_shield, %dragon_oracle, %dragon_goblin, maze key) | 16-209 | `oziach.rs2` |
+| 3 | Oracle on Ice Mountain: "I seek a piece of the map" (%dragon_oracle 2) | 209-328 | `oracle.rs2:15-19` |
+| 4 | Ladder at 3019,3450 to the Dwarven mine; magic door (2586 at 3051,9840) takes the mind bomb, unfired bowl, lobster pot, silk; chest (2587 at 3057,9841): map piece 3 | 328-404 | `magic_door.rs2` |
+| 5-9 | Falador teleport; Melzar's maze: rat (red key), ghost (orange), skeleton (yellow), zombie (blue), Melzar (magenta), lesser demon (green); chest (2603 at 2935,9657): piece 1 | 404-738 | `melzars_maze.rs2` |
+| 10 | Lumbridge teleport; the Duke (level 1): anti-dragon shield | 738-800 | `duke_horacio.rs2:4-5,59-64` |
+| 11 | Walk to Port Sarim; Klarense sells the ship, 2,000 coins (176 = 3) | 800-977 | `klarense.rs2:80-95` |
+| 12 | Hull hole: 3 planks, 4 nails each, hammer (176 = 7) | 977-1000 | `lady_lumbridge.rs2` |
+| 13 | Wormbrain in the jail: piece 2 for 10,000 coins; the three pieces join into the map | 1000-1054 | `wormbrain.rs2`, `crandor_map.rs2` |
+| 14 | Ned in Draynor: hired, the map given (176 = 8) | 1054-1185 | `ned.rs2` |
+| 15 | The ship's hull (level 3 with Ned): "Yep lets go!" to Crandor (176 = 9) | 1185-1299 | `dragonslayer_ned.rs2` |
+| 16 | Crandor: the hole (2609 at 2833,3255) down, the gate (2607 at 2847,9636), Elvarg; quest complete on her death | 1299-1488 | `crandor.rs2`, `elvarg.rs2:1-15` |
+
+Helper items (all tradeable): 12,000 coins, 3 planks, 12 steel nails (the content takes 4 per plank, not 30), a
+hammer, the four door items, runes for one Falador and one Lumbridge teleport, 6 lobsters. The map pieces, keys and
+the map are untradeable (`quest_dragon.obj`); the shield is tradeable but only the Duke gives it.
+
+Findings:
+
+- Oziach wanders out through his open door. The open leaf then walls him into the pocket south of the hut: in 2 of
+  5 runs he stood 1 tile from the bot and every talk gave "I can't reach that!". The script shuts the door when he is
+  outside and opens it when he is inside.
+- Picking the dialog options: a "Click here to continue" page must not reset the chosen-options list; Oziach's
+  multi4 menus repeat the shield option.
+- The two chests (Oracle, maze) show the mesbox "You find a map piece" before `inv_add`, so the page is clicked
+  through before the piece is in the pack.
+- The Lady Lumbridge's gangplank (2593 at 3047,3205) is on map level 1 and is not in the SDK loc list from the dock;
+  the click names the loc by id and tile. The ship's ladder 272 is on the deck and is not reachable from the dock.
+- quest-helper zones give the blue door as 2931,9644; the map has it at 2931,9643 (`maps/m45_150.jm2 0 51 43`).
+- Ned's hire and the map can go in one visit only after the repair (`give_map_to_ned` needs 176 = 7).
+- Elvarg: with the shield worn her breath is at most 10 (`elvarg_max_hit`); with Protect from Melee her melee is 0.
+  HP min 54-66 in the proof runs comes from the maze and Crandor before the prayer, not from Elvarg.
+- The save generator keeps varps 0-308 only (`presets.ts` `generateSave`), so Monkey Madness (365) is not in the
+  46 QP.
+
+Planner: row `dragon` 1,488 / 1,577 MEASURED (base ticks and the `rival-dialogue-burst` patch; was 1,500 / 4,000 and
+1,387 / 3,699 ESTIMATE). Scenario a, `research/hiscores-live.json`: Overall finish 40,212 floor / 45,105 realistic
+before and after (the row runs after the last 99, so it moves the quest rows after it, not the Overall finish; the
+39,360 / 46,019 at the start of this work changed because of other rows edited by other sessions). `bun test
+packages/planner`: 42 pass.
+
+Still open: the walk to the Champions' Guild is not counted; the route uses the Lumbridge teleport for the Duke
+(about 175 tiles from Lumbridge to Port Sarim).
+
+## 1j. Merlin's Crystal (the `merlin` row): CODE-READ, script written, not proven
+
+Script `scripts/generated/quest-merlin.ts` and debug presets `quest_merlin`, `quest_merlin_s3` ... `_s8`
+(`presets-dragon.ts`) are written from the content below; no practice run yet.
+
+| # | Stage (varp `%arthur` 14; bits in varp 15) | Where | Evidence |
+|---|---|---|---|
+| 1 | King Arthur: "Knight of the Round Table" | 2764,3515 | `king_arthur.rs2` firstmeet |
+| 2 | Sir Gawain: "how Merlin got trapped" | 2763,3506 | `sir_gawain.rs2` case 4 |
+| 3 | Sir Lancelot (level 1, wooden stairs at 2750,3510): "into Morgan Le Faye's stronghold" | 2759,3515,1 | `sir_lancelot.rs2` case 4 |
+| 4 | Catherby crate (63 at 2801,3442, op 2, "Yes.") to Keep Le Faye 2778,3401; stairs 2769,3404 and 2769,3398 to level 2; Sir Mordred (247); Morgan: "Tell me how to untrap Merlin", "OK I will go do all that." | 2769,3403,2 | `quest_arthur.rs2:2-35`, `sir_mordred.rs2` |
+| 5 | Keep crate (64 at 2779,3401,1) back to Catherby; candle maker: "black candles" (bit 1), then the bucket of wax for the unlit black candle; tinderbox lights it | 2800,3439 | `candle_maker.rs2`, `light_source.rs2` |
+| 6 | Lady of the Lake: "I seek the sword Excalibur" (bit 2); jeweller's door (59 at 3016,3246) spawns the beggar; "Yes certainly." and bread: Excalibur | 2924,3405; 3016,3246 | `lady_of_the_lake.rs2`, `beggar.rs2` |
+| 7 | Chaos altar (thrantaxaltar 61, the only one, at 3239,3608 in the Wilderness), op 2: the words (bit 0) | 3239,3608 | `quest_arthur.rs2:142-148`, `maps/m50_56.jm2 0 39 24` |
+| 8 | Bat bones dropped within 1 tile of the magic symbol with the lit black candle; Thrantax; "Snarthon Candtrick Termanto" (%arthur 5) | 2780,3515 | `quest_arthur.rs2:150-206` |
+| 9 | Tower ladders 2769,3493 and 2767,3491; Excalibur on the crystal (62 at 2767,3493,2) (%arthur 6); King Arthur queues the completion, 6 QP | 2767,3493,2 | `quest_arthur.rs2:239-276` |
+
+**Next stage:** run `quest-merlin.ts` from `quest_merlin` with `MC_STOP=3` (the Camelot knights and the Lancelot
+stairs), then stages 4-9 from the debug presets in order. Then 3 proof runs and the `merlin` row.
+
+## 1k. Holy Grail (the `grail` row): not started
+
+Needs Merlin's Crystal (`%arthur` 7) and Excalibur against the Black Knight Titan (`black_knight_titan.rs2`). Stages
+from `quest_grail.constant` and `quest_grail.rs2`: Arthur (2), Merlin in his workshop (3, door `merlinworkshop`), the
+crone (4), the Titan (7 if failed), Percival in the Goblin Village sacks (8, `percy_sacks`, magic golden feather),
+whistle given (9); the magic whistle from the Draynor Manor door `whistledoor` (spawns at 3107,3359,2 with the
+napkin), used in the Karamja zone 2740-2743,3234-3237 to reach the Fisher Realm; the grail bell; the Holy Grail;
+Arthur queues the completion (110,000 Prayer and 153,000 Defence before 25x, `quest_grail.rs2:115-120`). Not read:
+`sir_percival.rs2`, `grail_crone.rs2`, `fisher_king.rs2`, Galahad, Entrana (no weapons or armour allowed).
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,

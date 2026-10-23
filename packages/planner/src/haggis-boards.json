@@ -2165,10 +2165,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1500,
-    "realistic": 4000,
-    "evidence": "ESTIMATE",
-    "source": "XP: quest_dragon.rs2:33-34 (CODE-READ); time not measured"
+    "floor": 1488,
+    "realistic": 1577,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1g: scripts/generated/quest-dragon.ts, preset quest_dragon (beside the Guild master; every skill 99, 46 QP of quest varps, rune helm, body, legs, scimitar), practice, 3/3 PASS at 1,577, 1,531, 1,488 ticks (floor = best run, realistic = worst run); Guild master to Elvarg's death (quest complete), the walk to the Champions' Guild not counted; helper items 12,000 coins, 3 planks, 12 nails, hammer, mind bomb, unfired bowl, lobster pot, silk, teleport runes"
    },
    "lump": true,
    "xp": {
@@ -2183,8 +2183,8 @@
     "rj"
    ],
    "minQp": 32,
-   "evidence": "ESTIMATE",
-   "source": "XP: quest_dragon.rs2:33-34 (CODE-READ); time not measured",
+   "evidence": "MEASURED",
+   "source": "research/quest-plan.md section 1g: scripts/generated/quest-dragon.ts, preset quest_dragon (beside the Guild master; every skill 99, 46 QP of quest varps, rune helm, body, legs, scimitar), practice, 3/3 PASS at 1,577, 1,531, 1,488 ticks (floor = best run, realistic = worst run); Guild master to Elvarg's death (quest complete), the walk to the Champions' Guild not counted; helper items 12,000 coins, 3 planks, 12 nails, hammer, mind bomb, unfired bowl, lobster pot, silk, teleport runes; XP: quest_dragon.rs2:33-34 (CODE-READ)",
    "supplies": [
     {
      "item": "anti-dragon shield (quest)",
@@ -2212,10 +2212,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 1387,
-       "realistic": 3699,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 1500/4000"
+       "floor": 1488,
+       "realistic": 1577,
+       "evidence": "MEASURED",
+       "source": "research/quest-plan.md section 1g: scripts/generated/quest-dragon.ts, preset quest_dragon (beside the Guild master; every skill 99, 46 QP of quest varps, rune helm, body, legs, scimitar), practice, 3/3 PASS at 1,577, 1,531, 1,488 ticks (floor = best run, realistic = worst run); Guild master to Elvarg's death (quest complete), the walk to the Champions' Guild not counted; helper items 12,000 coins, 3 planks, 12 nails, hammer, mind bomb, unfired bowl, lobster pot, silk, teleport runes; the rival burst run is not measured by us"
       }
      }
     }
