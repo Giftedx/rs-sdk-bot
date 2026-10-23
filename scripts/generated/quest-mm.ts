@@ -382,6 +382,24 @@ try {
     // stat_random(thieving, 95, 295), mm_jail.rs2:1-11). The patrol guards (Aberab, Trefaji) knock a human back in
     // from 1 tile in line of sight (mm_jail.rs2:181-203), so the bot picks only when neither is within 2 tiles.
     const DOOR = { x: 2771, z: 2795 };
+    let laneSeen = -1;
+    q.s.onTick(() => {
+        if (!inCell()) return;
+        if ((q.st()?.nearbyNpcs ?? []).some((n: any) => /^(aberab|trefaji)$/i.test(n.name) && n.x >= 2772 && n.z >= 2796 && n.z <= 2803)) laneSeen = q.T();
+    });
+    // MM_TRACE=1: the patrol guards, the aunt and the bot each tick near the jail and the garden (a debug aid).
+    if (process.env.MM_TRACE) q.s.onTick(() => {
+        const p = q.pos();
+        if (!p || p.worldZ > 6400 || Math.max(Math.abs(p.worldX - 2760), Math.abs(p.worldZ - 2796)) > 18) return;
+        const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji|the monkey's aunt|monkey child)$/i.test(n.name)).map((n: any) => `${n.name.slice(0, 3)}@${n.x},${n.z}`).join(' ');
+        console.log(`JT ${q.T()} me=${p.worldX},${p.worldZ} ${g}`);
+    });
+    let dlg0 = '';
+    if (process.env.MM_TRACE) q.s.onTick(() => {
+        const d: any = q.s.sdk.getDialog();
+        const sig = d?.isOpen ? `${d.isWaiting ? 'W ' : ''}${(d.options ?? []).map((o: any) => o.text).join('|')}#${String(d.text ?? '').slice(0, 40)}` : '-';
+        if (sig !== dlg0) { dlg0 = sig; console.log(`DLG ${q.T()} ${sig}`); }
+    });
     const knockout = async (label: string): Promise<void> => {
         want = 'auto';   // the archers win in auto; jungle spiders and snakes on the way get Protect from Melee
         if (!inCell()) {
@@ -394,12 +412,22 @@ try {
         }
         q.milestone(`${label} jailed`);
         const fails0 = q.msgCount(/fail to pick the lock/i);
-        for (let i = 0; i < 160 && inCell(); i++) {
+        // The only way out is north up the lane (x 2772-2773, z 2796-2802) and west through the guards' room. The
+        // patrol (enum mm_jail_patrol_route) holds the lane for points 2-10 (about 60 ticks), then walks west to the
+        // rest zone and hands over; the next guard walks in about 17 ticks later (practice trace). The bot picks the
+        // lock only in that window: within 8 ticks of a guard leaving the lane (nearbyNpcs x is the 2x2 SW tile + 1).
+        // After 200 ticks with no window seen, the old rule (no guard within 3 of the door) comes back.
+        const t0 = q.T();
+        for (let i = 0; i < 400 && inCell(); i++) {
             await q.guard(`${label} lock`);
             const d: any = q.s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) { void q.s.sdk.sendClickDialog(0); await q.waitTicks(1); continue; }
-            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 3);
-            if (g.length > 0) { await q.waitTicks(1); continue; }
+            const guards = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name));
+            const inLane = guards.some((n: any) => n.x >= 2772 && n.z >= 2796 && n.z <= 2803);
+            if (inLane) laneSeen = q.T();
+            const window = !inLane && laneSeen > 0 && q.T() - laneSeen <= 8;
+            const old = q.T() - t0 > 200 && !guards.some((n: any) => Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 3);
+            if (!window && !old) { await q.waitTicks(1); continue; }
             const door = q.findLoc(l => l.x === DOOR.x && l.z === DOOR.z && /jail door/i.test(l.name));
             if (!door) { await q.waitTicks(1); continue; }
             await q.opLoc(door, q.opIndex(door, /pick|open/i));
@@ -407,7 +435,7 @@ try {
             await q.waitUntil(() => !inCell() || q.msgCount(/fail to pick the lock/i) > f1, 6);
         }
         if (inCell()) await q.fail(`${label}: lock`);
-        console.log(`NOTE ${label} out at ${q.T()} lockFails=${q.msgCount(/fail to pick the lock/i) - fails0}`);
+        console.log(`NOTE ${label} out at ${q.T()} wait=${q.T() - t0} lockFails=${q.msgCount(/fail to pick the lock/i) - fails0}`);
     };
 
     // A village walk as a human: a patrol guard or a summoned guard can knock the bot back into the cell on the way, so
@@ -650,7 +678,21 @@ try {
     // 2743,2792 (30) by the child, then south and round through her house (2733-2737) and back in from the west. So the
     // bot is in the garden only while she is away from it (margin: 2737-2747,2791-2799) and waits at 2746,2800, outside
     // it and more than 5 tiles from her route, while she is there. A tick hook pulls it out when she comes back.
-    const auntNear = (): boolean => { const a = q.npc(/monkey's aunt/i); return !!a && a.x >= 2737 && a.x <= 2747 && a.z >= 2791 && a.z <= 2799; };
+    // She calls only when both stand in the garden or both outside it (mm_monkeys_aunt.rs2:13-17), so a bot in the
+    // garden is safe while she is outside it. Near = in the garden, walking in (x 2738-2739), or at her last house
+    // stop (2737,2794, 15 ticks) for 9 ticks or more: the bot leaves 6 ticks before she steps in at 2740 (practice
+    // trace: the old margin, x >= 2737, pulled the bot out 16 ticks early and cut the child's talk).
+    let auntDoorAt = -1;
+    q.s.onTick(() => {
+        const a = q.npc(/monkey's aunt/i);
+        if (a && a.x === 2737 && a.z === 2794) { if (auntDoorAt < 0) auntDoorAt = q.T(); } else auntDoorAt = -1;
+    });
+    const auntNear = (): boolean => {
+        const a = q.npc(/monkey's aunt/i);
+        if (!a) return false;
+        if (a.x >= 2738 && a.x <= 2746 && a.z >= 2792 && a.z <= 2798) return true;
+        return auntDoorAt >= 0 && q.T() - auntDoorAt >= 9;
+    };
     const meInA = (): boolean => { const p = q.pos(); return !!p && inAuntA(p.worldX, p.worldZ); };
     const OUTSIDE = { x: 2746, z: 2800 };
     let auntWatch = false, auntExits = 0;
@@ -746,18 +788,41 @@ try {
             await locOp('temple down', { x: 2794, z: 2773 }, /ladder/i, /climb-down/i, [], () => level() === 0, 10);
         };
         const floorOut = (): boolean => level() === 0 && !q.near(2806, 2785, 3);
-        console.log(`NOTE temple landing ${q.pos()?.worldX},${q.pos()?.worldZ}`);
-        for (let t = 0; t < 90 && level() === 0 && !floorOut(); t += 3) {
-            await q.guard('temple out');
-            const p = q.pos()!;
-            if (p.worldX === 2806 && p.worldZ === 2785 || t % 12 >= 6) {
-                const lad = q.findLoc(l => l.x === 2805 && l.z === 2785 && /ladder/i.test(l.name)) ?? { id: 4772, x: 2805, z: 2785 };
-                await q.opLoc(lad, 1);
-            } else {
-                const out = p.worldZ <= 2785 ? { x: 2801, z: 2782 } : { x: 2801, z: 2788 };
-                await q.s.direct({ type: 'walkTo', x: out.x, z: out.z, running: true, reason: 'SDK' });
+        // A boxed landing within 1 tile of the trapdoor (it stays open 500 ticks, mm_temple.rs2:6) goes back down
+        // and up the rope again for a new tile (about 12 ticks) instead of the Varrock Teleport (about 700).
+        for (let k = 0; k < 6 && level() === 0 && !floorOut(); k++) {
+            const p0 = q.pos()!;
+            console.log(`NOTE temple landing ${p0.worldX},${p0.worldZ}`);
+            let still = 0;
+            for (let t = 0; t < 90 && level() === 0 && !floorOut(); t += 3) {
+                await q.guard('temple out');
+                const p = q.pos()!;
+                if (p.worldX === 2806 && p.worldZ === 2785 || t % 12 >= 6) {
+                    const lad = q.findLoc(l => l.x === 2805 && l.z === 2785 && /ladder/i.test(l.name)) ?? { id: 4772, x: 2805, z: 2785 };
+                    await q.opLoc(lad, 1);
+                } else {
+                    const out = p.worldZ <= 2785 ? { x: 2801, z: 2782 } : { x: 2801, z: 2788 };
+                    await q.s.direct({ type: 'walkTo', x: out.x, z: out.z, running: true, reason: 'SDK' });
+                }
+                await q.waitUntil(() => level() === 1 || floorOut(), 3);
+                const p1 = q.pos()!;
+                still = p1.worldX === p.worldX && p1.worldZ === p.worldZ ? still + 3 : 0;
+                if (still >= 12 && k < 5) break;
             }
-            await q.waitUntil(() => level() === 1 || floorOut(), 3);
+            if (level() !== 0 || floorOut()) break;
+            const p = q.pos()!;
+            if (Math.max(Math.abs(p.worldX - 2807), Math.abs(p.worldZ - 2785)) > 1 && k > 0) break;
+            console.log(`NOTE temple boxed at ${p.worldX},${p.worldZ}: trapdoor and rope again`);
+            for (let i = 0; i < 4 && z() < 6400; i++) {
+                await q.guard('temple retry');
+                const td = q.findLoc(l => l.x === 2807 && l.z === 2785 && /trapdoor/i.test(l.name));
+                if (!td) { await q.waitTicks(1); continue; }
+                const ops = (td.optionsWithIndex ?? []).map((o: any) => o.text).join();
+                await q.opLoc(td, q.opIndex(td, /climb/i.test(ops) ? /climb/i : /open/i));
+                await q.waitUntil(() => z() > 9152, /climb/i.test(ops) ? 10 : 3);
+            }
+            if (z() < 6400) break;
+            await ropeUp();
         }
         if (level() === 1) await roofWay();
         // Boxed with no way out (the engaged guards do not wander; practice run: 200 ticks at 2805,2786): Varrock
@@ -838,6 +903,7 @@ try {
         auntWatch = false;
         console.log(`NOTE child done auntExits=${auntExits}`);
         q.milestone('talisman');
+        if (STOP <= 108) await q.end(true, 'stopped at talisman');
         await toDungeon('zooknock2');
         await topUp(26);   // an eat inside the cutscene closes its page
         await giveZooknock('talisman', ITEM.talisman, () => q.has(ITEM.greegree));

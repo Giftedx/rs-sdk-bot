@@ -54,4 +54,12 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
         ...medium({ x: 3440, z: 9893 }, [2952, 2961], 4, 0, { 107: 5, 302: 60 }),
         equipment: [...RUNE_SET, { id: 552, count: 1, slot: 2 }],
     },
+    // In Search of the Myreque: in the Hair of the Dog inn, Canifis, beside Vanstrom Klause (spawn 3503,3477,
+    // maps/m54_54.jm2); Nature Spirit done (307 = 110) with its blessed sickle (2963) and a druid pouch of 6 charges
+    // (2958, the proof's end state); 302 = 61 (Drezel's barrier talk). Helper items (all tradeable): steel longsword
+    // (1295), 2 steel swords (1281), steel dagger (1207), steel mace (1424), steel warhammer (1339)
+    // (quest_routequest.rs2:17-22), 6 wooden planks (960; 3 for Cyreg, 1 per bridge rung), 30 steel nails (1539) and a
+    // hammer (2347) for the rungs (routequest_hollow.rs2:166-185), 10 coins for the boat (routequest_morton.rs2:8-17).
+    quest_routequest: medium({ x: 3502, z: 3476 },
+        [2963, [2958, 6], 1295, 1281, 1281, 1207, 1424, 1339, 960, 960, 960, 960, 960, 960, [1539, 30], 2347], 6, 20, { 107: 5, 302: 61, 307: 110 }),
 };
