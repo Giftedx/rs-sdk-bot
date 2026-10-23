@@ -89,8 +89,8 @@
       "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "STOPPED 09:14: died twice live (09:08, 09:11) near 2906,3375 with picks=0; investigating before any restart",
+      "enabled": true,
+      "note": "back in Ardougne 09:30 via thieving60 ARRIVE_ONLY (357 ticks, no damage); farming under a manual supervisor (swarm sees it as external after its death record)",
       "env": {
         "TICKS": "9000"
       },
