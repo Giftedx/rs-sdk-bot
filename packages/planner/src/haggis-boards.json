@@ -3247,9 +3247,9 @@
    ],
    "ticks": {
     "floor": 5071,
-    "realistic": 5458,
+    "realistic": 5786,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1h: scripts/generated/quest-mm.ts, preset quest_mm (Narnode, Magic 99, Prayer 43, Thieving 43, Agility 57, Hitpoints 35 ESTIMATE; helper pack: Fire Wave runes, 3 law, gold bar, wool, monkey bones, 7 prayer potions, super antipoison, 12 sharks), practice, 3 full passes at 5,125, 5,458, 5,071 ticks (floor = best, realistic = worst), Narnode to Daero's training reward; 6 earlier full tries failed while the atoll was fixed (deaths, a boxed temple landing). Was ESTIMATE 4,566 / 5,052 (rival)"
+    "source": "research/quest-plan.md section 1h: scripts/generated/quest-mm.ts, preset quest_mm (Narnode, Magic 99, Prayer 43, Thieving 43, Agility 57, Hitpoints 35 ESTIMATE; helper pack: Fire Wave runes, 3 law, gold bar, wool, monkey bones, 7 prayer potions, super antipoison, 12 sharks), practice, 4 full passes at 5,125, 5,458, 5,071, 5,786 ticks (floor = best, realistic = worst; the 5,786 pass took the Varrock Teleport fallback out of a boxed temple landing), Narnode to Daero's training reward; 6 earlier full tries failed while the atoll was fixed (deaths, a boxed temple landing). Was ESTIMATE 4,566 / 5,052 (rival)"
    },
    "lump": true,
    "xp": {
