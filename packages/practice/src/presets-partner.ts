@@ -38,6 +38,7 @@ const GLOVES = { id: 1059, count: 1, slot: 9 };
 const ZANARIS_ITEMS: Item[] = [1351, 946, 2434, 2434, [563, 1], [556, 3], [557, 1]];
 
 export const PARTNER_PRESETS: Record<string, SaveConfig> = {
+    probe_ball: { position: { x: 2901, z: 3464, level: 0 }, skills: ALL_99, varps: { 226: 3 } },
     // Cook's Assistant: in the Lumbridge castle kitchen beside the cook (spawn 3209,3215, maps/m50_50.jm2 0 9 15); egg
     // (1944), bucket of milk (1927), pot of flour (1933).
     quest_cook: { position: { x: 3208, z: 3214, level: 0 }, skills: ALL_99, equipment: RUNE_SET, varps: { ...DONE, 29: 0 }, inventory: inv([1944, 1927, 1933]) },

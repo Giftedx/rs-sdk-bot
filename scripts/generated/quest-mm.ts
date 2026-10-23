@@ -39,7 +39,7 @@ if (process.env.MM_LOG) {
     const log0 = console.log.bind(console);
     console.log = (...a: unknown[]) => { log0(...a); try { appendFileSync(process.env.MM_LOG!, a.map(String).join(' ') + '\n'); } catch { /* the log is a debug aid */ } };
 }
-const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 20, food: [ITEM.food] });
+const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 22, food: [ITEM.food] });
 try {
     // HIT lines: each HP drop with the NPCs within 3 tiles, so the damage source on the atoll is in the log.
     let hp0 = q.hp();
@@ -345,9 +345,10 @@ try {
             if (p) {
                 const d = (n: any) => Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ));
                 const npcs: any[] = q.st()?.nearbyNpcs ?? [];
-                // A posted archer hits up to 18 (26 to 8 in one practice hit), a spider or scorpion about 5-10: the
-                // archer wins.
-                if (npcs.some(n => /archer/i.test(n.name) && d(n) <= (n.x <= 2731 && n.z <= 2765 ? 15 : 7))) w = PFMISS;
+                // A melee NPC within 2 tiles first (a jungle scorpion hit 15 at the warehouse door while the prayer
+                // was on the archers), then an archer in its hunt range (a posted archer hit 18), then melee within 4.
+                if (npcs.some(n => MELEE.test(n.name) && d(n) <= 2)) w = PFM;
+                else if (npcs.some(n => /archer/i.test(n.name) && d(n) <= (n.x <= 2731 && n.z <= 2765 ? 15 : 7))) w = PFMISS;
                 else if (npcs.some(n => MELEE.test(n.name) && d(n) <= 4)) w = PFM;
             }
         }
@@ -492,7 +493,7 @@ try {
             if (pests && q.near(at.x, at.z, 5)) await clearPests(label, 1);
             if (i > 0) console.log(`NOTE ${label} try ${i} npcs=${(q.st()?.nearbyNpcs ?? []).filter((k: any) => k.distance <= 6).map((k: any) => `${k.name}@${k.x},${k.z}`).join(' ')}`);
             const l = q.findLoc(k => k.x === at.x && k.z === at.z && re.test(k.name)) ?? q.findLoc(k => Math.max(Math.abs(k.x - at.x), Math.abs(k.z - at.z)) <= 2 && re.test(k.name) && (k.optionsWithIndex ?? []).some((o: any) => op.test(o.text)));
-            if (!l) { console.log(`WARN ${label}: no loc at ${at.x},${at.z} near=${q.locs().filter((k: any) => Math.max(Math.abs(k.x - at.x), Math.abs(k.z - at.z)) <= 4).map((k: any) => `${k.name}@${k.x},${k.z}[${(k.optionsWithIndex ?? []).map((o: any) => o.text).join("/")}]`).join(" ")}`); await walk(`${label} approach`, [{ x: at.x, z: at.z, tol: 3 }]); continue; }
+            if (!l) { console.log(`WARN ${label}: no loc at ${at.x},${at.z} near=${q.locs().filter((k: any) => Math.max(Math.abs(k.x - at.x), Math.abs(k.z - at.z)) <= 4).map((k: any) => `${k.name}@${k.x},${k.z}[${(k.optionsWithIndex ?? []).map((o: any) => o.text).join("/")}]`).join(" ")}`); await walkStop(`${label} approach`, [{ x: at.x, z: at.z, tol: 3 }], inCell); if (inCell()) throw new Jailed(label); continue; }
             await q.opLoc(l, q.opIndex(l, op));
             await q.waitUntil(() => q.dialogOpen() || ok(), 15);
             let shut = 0;
@@ -550,16 +551,24 @@ try {
     const DUNGEON_OUT = [...DUNGEON_IN].reverse().slice(1).concat([{ x: 2763, z: 9104, tol: 1 }]);
     const toDungeon = async (label: string): Promise<void> => {
         if (inCell()) await knockout(`${label} jail`);
-        if (z() < 6400 && z() > 2727) {
+        // A guard call near the bridge (Dugopul hunts humans there, mm_dugopul.rs2:1-24) means the jail: lock and again.
+        for (let k = 0; k < 4 && z() < 6400 && z() > 2727; k++) {
+          try {
+            if (inCell()) { rejails++; await knockout(`${label} jail`); }
             // From the west of the village (the child's garden) the SDK plans through the eastern warehouse and the
             // sleeping guard's zone, so the walk goes round it by the jail lane.
             const west = (q.pos()?.worldX ?? 9999) < 2760;
             const via = west ? [{ x: 2749, z: 2800, tol: 1 }, { x: 2751, z: 2792, tol: 1 }, { x: 2751, z: 2787, tol: 1 }, { x: 2765, z: 2786, tol: 1 }, { x: 2770, z: 2782, tol: 1 }, { x: 2770, z: 2776, tol: 1 }, { x: 2771, z: 2770, tol: 1 }, { x: 2776, z: 2769, tol: 1 }, { x: 2779, z: 2764, tol: 1 }, { x: 2786, z: 2758, tol: 1 }] : [];
             await walkAtoll(`${label} to bridge ladder`, via.concat([{ x: 2803, z: 2735, tol: 1 }]));
             await locOp(`${label} bridge ladder`, { x: 2803, z: 2734 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
-            await walk(`${label} bridge`, [{ x: 2803, z: 2728, tol: 0 }]);
+            await walkStop(`${label} bridge`, [{ x: 2803, z: 2728, tol: 0 }], inCell);
+            if (inCell()) throw new Jailed(label);
             await locOp(`${label} jump`, { x: 2803, z: 2727 }, /end of bridge/i, /jump/i, [], () => level() === 0 && z() <= 2725, 10);
+          } catch (e) {
+            if (!(e instanceof Jailed)) throw e;
+          }
         }
+        if (z() > 2727 && z() < 6400) await q.fail(`${label}: bridge`);
         if (z() < 6400) {
             await walk(`${label} to dungeon ladder`, [{ x: 2763, z: 2704, tol: 1 }]);
             await locOp(`${label} dungeon down`, { x: 2763, z: 2703 }, /ladder/i, /climb/i, [], () => z() > 9000, 10);
@@ -595,7 +604,12 @@ try {
         await toDungeon('zooknock1');
         q.milestone('dungeon1');
         const optSeen = (re: RegExp): boolean => (q.s.sdk.getDialog()?.options ?? []).some((o: any) => re.test(o.text));
-        await talk1('zooknock', /^zooknock$/i, [], () => optSeen(/need for the monkey amulet/i), 200, ZOOKNOCK);
+        // A hit closes his pages; his varps keep the story's place, so each new talk goes on from there.
+        for (let i = 0; i < 12 && !optSeen(/need for the monkey amulet/i); i++) {
+            await clearPests('zooknock', 2);
+            await talk1('zooknock', /^zooknock$/i, [], () => optSeen(/need for the monkey amulet/i), 200, ZOOKNOCK, 1, false);
+        }
+        if (!optSeen(/need for the monkey amulet/i)) await q.fail('talk zooknock');
         await giveZooknock('dentures', ITEM.dentures, () => true);
         await giveZooknock('gold bar', ITEM.goldBar, () => true);
         await giveZooknock('mould', ITEM.mould, () => q.has(ITEM.encBar));
@@ -691,20 +705,7 @@ try {
     }
     if (FROM < 107) {
         want = PFM;
-        // Out of the fire room through the warehouse cellar if the level-1 collision (the fire room and the cellar are
-        // bridged tiles in m43_143) joins them: the client-routed walk to the eastern rope. Else the temple rope.
-        for (let i = 0; i < 6 && !q.near(2797, 9170, 2); i++) {
-            await q.guard('to cellar');
-            await q.s.direct({ type: 'walkTo', x: 2797, z: 9170, running: true, reason: 'SDK' });
-            await q.waitUntil(() => q.near(2797, 9170, 2), 10);
-        }
-        console.log(`NOTE fire room to cellar: ${q.near(2797, 9170, 2) ? 'joined' : 'not joined'} at ${q.pos()?.worldX},${q.pos()?.worldZ}`);
-        if (q.near(2797, 9170, 2)) {
-            await locOp('east rope 2', { x: 2798, z: 9169 }, /rope/i, /climb/i, [], () => z() < 6400, 10);
-            await q.s.direct({ type: 'walkTo', x: 2764, z: 2765, running: true, reason: 'SDK' });
-            await q.waitUntil(() => z() <= 2766 || inCell(), 4);
-        }
-        if (z() > 6400) await walk('to temple rope', [{ x: 2807, z: 9201, tol: 1 }]);
+        await walk('to temple rope', [{ x: 2807, z: 9201, tol: 1 }]);
         // The rope is a bridged level-1 loc (map m43_143) and is not in nearbyLocs, so the op goes by id
         // (mm_climbing_rope_bottom_temple 4881). It lands on a random tile within 2 of the trapdoor (mm_temple.rs2:28),
         // inside the box of the 2x2 trapdoor guards (blockwalk=all, wanderrange 1). The way out is the ladder beside it
@@ -730,8 +731,9 @@ try {
             if (level() === 1) break;
             console.log(`NOTE temple landing ${q.pos()?.worldX},${q.pos()?.worldZ} boxed: down and up again`);
             for (let t = 0; t < 20 && z() < 6400; t += 4) {
+                // By id when the loc is not listed: mm_temple_trapdoor_open 4880 (Climb-down), mm_temple_trapdoor 4879 (Open).
                 const td = q.findLoc(l => l.x === 2807 && l.z === 2785 && /trapdoor/i.test(l.name));
-                if (td) await q.opLoc(td, q.opIndex(td, /climb|open/i));
+                await q.opLoc(td ?? { id: (t / 4) % 2 === 0 ? 4880 : 4879, x: 2807, z: 2785 }, td ? q.opIndex(td, /climb|open/i) : 1);
                 await q.waitUntil(() => z() > 6400, 4);
             }
             if (z() > 6400) { await q.waitTicks(1); await ropeUp(); }
