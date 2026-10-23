@@ -41,6 +41,13 @@ if (process.env.MM_LOG) {
 }
 const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 22, food: [ITEM.food] });
 try {
+    // STATUS every 100 ticks: HP, prayer points, the active prayer, potions and sharks left.
+    q.s.onTick(() => {
+        if (q.T() % 100 !== 0) return;
+        const act = (q.st()?.prayers?.activePrayers ?? []).map((a: boolean, i: number) => a ? i : -1).filter((i: number) => i >= 0).join('+');
+        const pots = [2434, 139, 141, 143].reduce((n, id, k) => n + q.cnt(id) * (4 - k), 0);
+        console.log(`STATUS t=${q.T()} hp=${q.hp()} pray=${q.st()?.prayers?.prayerPoints} on=${act || '-'} doses=${pots} sharks=${q.cnt(385)} free=${28 - (q.inv()?.length ?? 0)}`);
+    });
     // HIT lines: each HP drop with the NPCs within 3 tiles, so the damage source on the atoll is in the log.
     let hp0 = q.hp();
     q.s.onTick(() => {
@@ -376,7 +383,7 @@ try {
     // from 1 tile in line of sight (mm_jail.rs2:181-203), so the bot picks only when neither is within 2 tiles.
     const DOOR = { x: 2771, z: 2795 };
     const knockout = async (label: string): Promise<void> => {
-        want = PFMISS;
+        want = 'auto';   // the archers win in auto; jungle spiders and snakes on the way get Protect from Melee
         if (!inCell()) {
             await walkStop(`${label} to ravine`, [{ x: 2721, z: 2757, tol: 2 }], inCell);
             for (let t = 0; t < 400 && !inCell(); t++) {
