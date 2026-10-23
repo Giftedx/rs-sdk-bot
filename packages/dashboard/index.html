@@ -276,11 +276,16 @@ function drawMap(){if(mode!=='2d')return;const c=$('#map'),w=c.clientWidth,h=c.c
     if(cl==='on'){g.beginPath();g.arc(x,z,11,0,7);g.fillStyle='#7ed36a26';g.fill()}g.beginPath();g.arc(x,z,sel===b.name?6:4.5,0,7);g.fillStyle=col;g.fill();if(sel===b.name){g.lineWidth=2;g.strokeStyle='#e9b949';g.stroke()}
     if(cl!=='off'||sel===b.name){g.fillStyle='#ece2c6';g.font='700 12px "Barlow Semi Condensed",sans-serif';g.fillText(b.name,x+8,z-6)}}}
 $('#map').onclick=e=>{const c=$('#map'),r=c.getBoundingClientRect();let best=null,bd=300;for(const[x,z,n]of c._p||[]){const d=(x-(e.clientX-r.left))**2+(z-(e.clientY-r.top))**2;if(d<bd){bd=d;best=n}}if(best){sel=best;picked=true;render()}};
-function setMode(m){mode=m;$('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';syncWorld();drawMap()}
+function setMode(m){mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},'http://localhost:3000');$('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';syncWorld();drawMap()}
 $('#b3').onclick=()=>setMode('3d');$('#b2').onclick=()=>setMode('2d');
 function syncWorld(){const b=S.bots.find(x=>x.name===sel);$('#follow').textContent=mode==='3d'?(b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${S.bots.filter(b=>b.live||b.pos).length} bots on the map`;
   $('#map-h').textContent=mode==='3d'?'live rs-world viewer · world feed':'collision map · click a dot';
-  if(mode==='3d'&&rswFor!==sel){rswFor=sel;$('#rsw').src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed${sel?'&follow='+encodeURIComponent(sel):''}`}}
+  // Load the viewer once; later follow changes go by postMessage (a new src reloads the whole 3D scene).
+  // fps=20 and scale=0.75 keep its CPU and GPU cost down on a busy box.
+  if(mode!=='3d')return;
+  const f=$('#rsw');
+  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed&fps=20&scale=0.75${sel?'&follow='+encodeURIComponent(sel):''}`}
+  else if(rswFor!==sel&&sel){rswFor=sel;f.contentWindow?.postMessage({follow:sel},'http://localhost:3000')}}
 
 function render(){
   const bots=S.bots,w=S.world||{};
