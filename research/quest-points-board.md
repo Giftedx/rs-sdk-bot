@@ -56,7 +56,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Doric's Quest (`doric`) | 1 (85) | rest | none found | none | S |
 | Dragon Slayer (`dragon`) | 2 (86) | `dragon` | 32 QP (`quest_dragon/scripts/dragon_journal.rs2:7`) | level 83 dragon (`:6`) | - |
 | Druidic Ritual (`druid`) | 4 (87) | `druid` | none | none | - |
-| Nature Spirit (`druidspirit`) | 2 (88) | rest | Restless Ghost, Priest in Peril, Crafting 18 (`quest_druidspirit/scripts/druidspirit_journal.rs2:26,31,37`) | ghasts (`:45`) | M |
+| Nature Spirit (`druidspirit`) | 2 (88) | rest | Restless Ghost, Priest in Peril, Crafting 18 (`quest_druidspirit/scripts/druidspirit_journal.rs2:26,31,37`); MEASURED 791-830 ticks in row `quests-medium` | ghasts (`:45`) | M |
 | Monk's Friend (`drunkmonk`) | 1 (89) | rest | none found | none found | S |
 | Elemental Workshop (`elemental_workshop`) | 1 (90) | rest | Mining 20, Smithing 20, Crafting 20 (`quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:172,186,252`) | none found | M |
 | Plague City (`elena`) | 1 (91) | rest | none found; gas mask, picture, book, key, warrant, chocolaty milk and hangover cure are untradeable (`quest_elena/configs`, `knowledge/items.json`); MEASURED 749-784 ticks in row `quests-medium` | none found | M |
@@ -433,6 +433,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Plague City | `scripts/generated/quest-elena.ts` | 780, 784, 749 | MEASURED 3/3 |
 | Priest in Peril | `scripts/generated/quest-priestperil.ts` | 1010, 993, 1011 | MEASURED 3/3 |
 | Biohazard | `scripts/generated/quest-biohazard.ts` | 1662, 1655, 1672 | MEASURED 3/3 |
+| Nature Spirit | `scripts/generated/quest-druidspirit.ts` | 823, 830, 791 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -596,24 +597,83 @@ Findings:
 - Untradeable: birdfeed, pigeons, key, distillator, the vials, sample, touch paper, doctors' gown
   (`quest_biohazard.obj`). Helper items: priest gown and robe, runes for two Ardougne teleports (all tradeable).
 
+### Nature Spirit
+
+`RESULT ok qp=2 pouch=0 xp=attack=13500,hitpoints=4465,prayer=2250,agility=1875 ... ticks=823 ... walkTicks=317 retries=4
+died=false` (runs: 823, 830, 791 ticks; a passing trial before the proof: 795), each with `Congratulations! Quest
+complete!`. Preset `quest_druidspirit`: beside Drezel in the mausoleum (spawn 3440,9895, `maps/m53_154.jm2`), The
+Restless Ghost done (107 = 5) with the amulet of ghostspeak worn, Priest in Peril done (302 = 60), the wolfbane dagger
+and a silver sickle in the pack. Steps (proof run 1 MILESTONE ticks; `quests/quest_druidspirit/scripts/` unless named):
+Drezel twice, the barrier talk (302 = 61, `areas/area_mausoleum/scripts/drezel.rs2:8-19,138-147`), then "Is there
+anything else interesting to do around here?", "Well, what is it, I may be able to help?", "Yes, I'll go and look for
+him.", "Yes, I'm sure." (5, `drezel.rs2:275-332`) 0-55; the holy barrier (3443 at 3440,9886) to 3423,3485
+(`holy_barrier.rs2:1-9`), the Mort Myre gate (3506/3507 at 3443-3444,3458; 10, `quest_druidspirit.rs2:4-16`) 55-83;
+the walk round the swamp to 3440,3327 and the bridge jump (`druidjump_loc` 3522, `quest_druidspirit.rs2:26-61`) 83-160;
+the bowl (obj 2964 at 3437,3337) puts the mirror under it (`:63-78`); the grotto entrance (3516 at 3440,3337) spawns
+Filliman, "How long have you been a ghost?" (20, `filliman.rs2:255-261`) 160-202; the mirror on him (25,
+`filliman.rs2:271-293`) 202-220; the grotto tree (3517 at 3439,3338) gives the journal (`quest_druidspirit.rs2:84-90`),
+the journal on him and "How can I help?" give the bloom spell (30, 35, `filliman.rs2:294-348`) 220-259; the bridge, the
+gate, the trapdoor by the barrier exit (3432 at 3422,3485 to 3440,9887, `holy_barrier.rs2:11-20`), Drezel blesses the
+bot (40, `drezel.rs2:228-245`) 259-394; the barrier, the gate, the bloom spell cast on 3430,3330 next to the rotting log
+(3508 at 3429,3331), the fungus picked (45, 50, `quest_druidspirit.rs2:196-233,383-394`) 394-494; the bridge, the
+grotto entrance, Filliman (55, `filliman.rs2:63-77`) 494-537; the fungus on the nature stone (3527 at 3439,3336), the
+used spell on the spirit stone (3529 at 3441,3336), the bot on the faith stone (3440,3335), "I think I've solved the
+puzzle!" (60, `quest_druidspirit.rs2:135-194`, `filliman.rs2:384-407`) 537-563; the grotto (65), its Search spawns
+Filliman, who transforms (70), a second Search with the sickle blesses it and gives the empty pouch (75,
+`filliman.rs2:26-58,165-195`) 563-611; out, the bridge, the sickle's Cast Bloom on 3430,3330 (80), three harvests (85),
+the pouch filled (90, `quest_druidspirit.rs2:235-331`) 611-650; three ghasts (95-105, `ghast.rs2:1-37,131-142,204-216`)
+650-769; the bridge, the grotto, the Nature Spirit queues the completion (`filliman.rs2:129-160`) 769-823.
+Findings:
+- Filliman's camp (3434-3448,3330-3344) has no walk path from the north: the SDK planner finds none from inside the
+  camp to the swamp. The only way in or out is the bridge jump at 3440-3441,3329-3331. From the camp the bot must click
+  the bridge end at 3440,3331; a click on the far end gets "I can't reach that!" (a trial lost 85 ticks there).
+- The mirror stays in the pack after Filliman takes it (`filliman.rs2:284-291` has no `inv_del`); the journal goes
+  (`:313`). Each of these uses opens a multi-page dialog, so the step waits for the dialog, not the item.
+- The Mort Myre gate walls lie on the south edge of 3443-3444,3458: outside is z 3458 and up, not 3459.
+- Ghasts are aggressive to any combat level (`all.hunt` `aggressive_melee`: `check_nottoostrong=off`) and attack at
+  most once per 26 ticks (`ghast.rs2:14`); with a charged pouch the attacker turns visible. The 3 kills took 93-121
+  ticks in the proof. The script also uses the pouch on a hidden ghast within 6 tiles (`ghast.rs2:39-45`); which of
+  the two turned each ghast visible is not logged.
+- In Search of the Myreque needs a druid pouch with 5 charges or more (`quest_routequest/scripts/
+  routequest_morton.rs2:191-200`). The script picks a pear (3 charges) before a stem (2) or a fungus (1)
+  (`quest_druidspirit.rs2:302-319`); runs 2 and 3 ended with 6 charges, run 1 with 0 (the cause is not logged). The
+  pouch is tradeable (`quest_druidspirit.obj`), so a helper can bring one.
+- The silver sickle is tradeable (`skill_crafting/configs/jewellery/silver.obj`); the blessed sickle, mirror, journal,
+  spells and harvests are not (`quest_druidspirit.obj`). Helper items: silver sickle. The wolfbane dagger must be in the
+  pack, bank or worn, or Drezel gives a new one first (`drezel.rs2:9-18`).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
 Treasure (2 QP, 460 / 474), The Knight's Sword (1 QP, 887 / 922), Plague City (1 QP, 749 / 784), Priest in Peril
-(1 QP, 993 / 1,011) and Biohazard (3 QP, 1,655 / 1,672): 8 QP, floor 4,744 ticks (sum of best runs), realistic 4,863
-(sum of worst runs), the same under `rival-dialogue-burst`. Row `quests-rest` loses them one medium class (900 /
-1,300) each; with Lost City also moved out by another helper it is now 29 quests, 66 QP, 48,800 / 73,600 (burst
+(1 QP, 993 / 1,011), Biohazard (3 QP, 1,655 / 1,672) and Nature Spirit (2 QP, 791 / 830): 10 QP, floor 5,535 ticks
+(sum of best runs), realistic 5,693 (sum of worst runs), the same under `rival-dialogue-burst`. Nature Spirit left
+`quests-rest` as a delta on the committed row: 28 quests, 64 QP, 47,900 / 72,300 (burst 44,298 / 66,863), 9 medium.
+`bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145;
+Quest Points WIN at 102,883 floor / 134,402 realistic. Row `quests-rest` loses them one medium class (900 /
+1,300) each; with Lost City also moved out by another helper it was 29 quests after Biohazard, 66 QP, 48,800 / 73,600 (burst
 45,130 / 68,065). The QP total stays 145. The helper's `medium-row.ts` writes `quests-medium`; for `quests-rest` it
 assumed a fixed base, so after Lost City moved the Biohazard step was applied as a delta on the committed row
 instead. `bun test packages/planner`: 42 pass, 0 fail. `bun packages/planner/src/haggis-cli.ts
 research/hiscores-live.json --levers` after Biohazard: QP at end 145; Quest Points WIN at 102,924 floor / 134,446
 realistic (deadline 1,022,262); Overall 40,545 / 45,211 at this commit (the other rows moved since Priest in Peril).
 
-Next medium quest: Nature Spirit (`quests/quest_druidspirit`; 2 QP; needs The Restless Ghost and Priest in Peril,
-Crafting 18 recommended, `druidspirit_journal.rs2:22-40`; starts with Drezel in the mausoleum under Paterdomus; steps
-to read: `quest_druidspirit.rs2`, `filliman.rs2`, `ghast.rs2` (three ghasts), `swamp_decay.rs2`). Not started: no
-script and no preset. After it: In Search of the Myreque (Nature Spirit), Haunted Mine and Shades of Mort'ton (both
-class L, Morytania).
+Next medium quest: In Search of the Myreque (`quests/quest_routequest`; 2 QP; class L; needs Nature Spirit and Agility
+25, `routequest_journal.rs2:18-24`, `routequest_myreque.rs2:125`). Not started: no script and no preset. Content read:
+Vanstrom Klause in the Hair of the Dog inn, Canifis (3503,3477) starts it (`routequest_vanstorm.rs2:74-153`); steel
+longsword, 2 steel swords, steel dagger, steel mace and steel warhammer (`quest_routequest.rs2:17-22`); Cyreg Paddlehorn
+in Mort'ton (3522,3284) with "Well, I guess they'll just die without weapons.", "Resourceful enough to get their own
+steel weapons?", "If you don't tell me, their deaths are on your head!", "What kind of a man are you to say that you
+don't care?", then a druid pouch with 5 charges or more and 3 wooden planks (`routequest_morton.rs2:57-221`); the boat
+(5051 at 3523,3284, 10 coins) to the Hollows (3498,3380); the tree (5005 at 3502,3426), three bridge rungs at
+3502,3428-3430 (1 plank and 10 steel nails each, a hammer, `routequest_hollow.rs2:99-234`), the tree at 3502,3431;
+Curpile Fyod (3508,3440) asks 3 of 6 questions with fixed answers (`routequest_hollow.rs2:287-395`); the door
+(5060/5061 at 3509-3510,3447); the stalagmite (5050 at 3492,9824) to the members on level 3; Veliaf, the 5 members,
+Veliaf with the weapons starts the cutscene; the level 97 skeleton hellhound (`route_cutscene.rs2:183-189`); Veliaf
+"How do I get out of here?"; the wall (5052 at 3480,9837), the ladder (5054 at 3477,9846) to Canifis; the stranger in
+the inn queues the completion (`routequest_vanstorm.rs2:47-72`). After it: Haunted Mine (the cart points puzzle,
+`quest_hauntedmine/scripts/hauntedmine_points.rs2`) and Shades of Mort'ton (the Flamtaer temple build and sanctity,
+`minigames/game_mortton/scripts/flamtaer_temple.rs2`), both class L.
 
 ## Cook's Assistant, Witch's House, Lost City (MEASURED practice, 3/3 each)
 

@@ -45,4 +45,13 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // Guidor's door; runes for two Ardougne teleports (4 law 563, 4 water 555). A teleport destroys the plague sample
     // (teleport.rs2:94-97), so Rimmington and Varrock are walked. The quest items are untradeable (quest_biohazard.obj).
     quest_biohazard: medium({ x: 2591, z: 3336 }, [426, 428, [563, 4], [555, 4]], 2, 0, { 165: 30 }),
+    // Nature Spirit: in the mausoleum under Paterdomus beside Drezel (priestperiltrappedmonk2 spawn 3440,9895,
+    // maps/m53_154.jm2); The Restless Ghost done (107 = 5, ^priest_complete) with its amulet of ghostspeak (552) worn
+    // (filliman.rs2:4,22); Priest in Peril done (302 = 60; Drezel's barrier talk sets 61, drezel.rs2:8-19,138-147) with
+    // the wolfbane dagger (2952) it gives; a silver sickle (2961, tradeable, skill_crafting/configs/jewellery/silver.obj)
+    // for the Nature Spirit to bless (filliman.rs2:165-195). The quest items are untradeable (quest_druidspirit.obj).
+    quest_druidspirit: {
+        ...medium({ x: 3440, z: 9893 }, [2952, 2961], 4, 0, { 107: 5, 302: 60 }),
+        equipment: [...RUNE_SET, { id: 552, count: 1, slot: 2 }],
+    },
 };
