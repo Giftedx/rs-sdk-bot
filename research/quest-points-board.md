@@ -70,7 +70,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Hazeel Cult (`hazeelcult`) | 1 (99) | rest | none found | none found | M |
 | Heroes' Quest (`hero`) | 1 (100) | rest | 55 QP, Lost City, Merlin's Crystal, Dragon Slayer (`quest_hero/scripts/quest_hero.rs2:2-3`); a gang HQ from Shield of Arrav (`locs/brimhaven_blackarm_hq.rs2:2`, `locs/brimhaven_restaurant.rs2:2`); a second player for Grip (`hero_journal.rs2:190`) | firebird, Grip | XL |
 | Witch's Potion (`hetty`) | 1 (101) | rest | none found | none found | S |
-| Pirate's Treasure (`hunt`) | 2 (102) | rest | none found | none found | M |
+| Pirate's Treasure (`hunt`) | 2 (102) | rest | none found; the rum, key and message are untradeable (`quest_hunt/configs/quest_hunt.obj`); MEASURED 460-474 ticks in row `quests-medium` | none found | M |
 | Temple of Ikov (`ikov`) | 1 (103) | rest | Thieving 42, Ranged 40 (`quest_ikov/scripts/ikov_journal.rs2:14-15`) | fire warrior (`ikov_dungeon.rs2:158`) | L |
 | Imp Catcher (`imp`) | 1 (104) | rest | none found | imps (`quest_imp/scripts/imp_journal.rs2:13`) | S |
 | The Dig Site (`itexam`) | 2 (105) | `dig` | Agility 10, Herblore 10, Thieving 25 (`quest_itexam/scripts/itexam_journal.rs2:10-22`) | none found | - |
@@ -418,3 +418,49 @@ Planner: new row `quest-arrav` (qp 1, 234 / 237 MEASURED, the same under `rival-
 78 -> 77 QP, 36 -> 35 quests, one medium class less: 55,100 / 82,700 -> 54,200 / 81,400 (burst 50,956 / 76,481 ->
 50,124 / 75,279). Scenario a (`research/hiscores-live.json`, `--levers`): Quest Points WIN at 102,677 / 137,207
 before, 102,079 / 136,242 after. Overall unchanged (40,212 / 45,105). `bun test packages/planner`: 42 pass, 0 fail.
+
+## Medium `rest` quests: scripts and proofs (MEASURED practice, 3/3 each)
+
+Presets `quest_<name>` in `packages/practice/src/presets-medium.ts`, on the same base as the short quests (every
+skill 99, rune helm, body, legs and scimitar worn, the quests before the dragon row plus Dragon Slayer and Merlin's
+Crystal done, the helper items, the start beside the first NPC). Runner: `proveInProcess` with `okPass`, one bot
+at a time, each run on a fresh account that is deleted after the run.
+
+| Quest | Script | RESULT ticks (3 runs) | Status |
+|---|---|---|---|
+| Pirate's Treasure | `scripts/generated/quest-hunt.ts` | 474, 471, 460 | MEASURED 3/3 |
+
+### Pirate's Treasure
+
+`RESULT ok qp=2 xp=attack=700,hitpoints=232,magic=2075 ... ticks=474 ... walkTicks=194 retries=4 died=false`
+(runs: 474, 471, 460 ticks; a trial before the proof: 467), each with `and find a little bag of treasure.` and
+`Congratulations! Quest complete!`. Steps (trial MILESTONE ticks): Redbeard Frank "I'm in search of treasure." 0-17
+(`quests/quest_hunt/scripts/redbeard_frank.rs2:57-66`); Wydin "Can I get a job here?" with the apron in the pack
+17-70 (`areas/area_port_sarim/scripts/wydin.rs2:8-10,40-50`); a seaman to Musa Point, 30 coins 70-110
+(`areas/area_port_sarim/scripts/sailors.rs2:10-30`); Zambo's shop, one Karamjan rum 110-136; Luthas "Could you offer
+me employment on your plantation?", the rum and 10 bananas in his crate (2072 at 2943,3151), Luthas pays 30 coins
+and sets `%crate_rum` 2 136-227 (`quest_hunt/scripts/banana_crate.rs2:21-68`, `luthas.rs2:12-33`); the customs
+officer searches a pack with no rum, 30 coins to Port Sarim 227-274 (`areas/area_karamja/scripts/customs_officer.rs2:
+21-95`); the apron worn, Wydin's back door (2069 at 3012,3204), the crate (2071 at 3009,3207) gives the rum 274-300
+(`food_store.rs2:1-37`); Redbeard takes the rum and gives the chest key 300-373 (`redbeard_frank.rs2:32-55`); Varrock
+teleport, the Blue Moon Inn stairs (1725 at 3227,3393), the door `loc_1533` at 3222,3395 on level 1, the key on
+Hector's chest (2079 at 3218,3396,1), read the message 373-426 (`pirate_message.rs2:1-27`); Falador teleport, the
+gardener killed, the spade at 2999,3383 (`general_use/scripts/spade.rs2:3-5`, `dig.rs2:1-24`) 426-467.
+Findings:
+- The Karamjan rum (431), chest key and message are `tradeable=no` (`quest_hunt.obj`), so a helper cannot bring
+  the rum. A teleport breaks it (`skill_magic/scripts/spells/teleport.rs2:88-93`), the customs officer takes it
+  (`customs_officer.rs2:13,48-53`) and the Shilo cart loses it (`areas/area_karamja/scripts/captain_shanks.rs2:67-
+  70`). The banana crate is the only way off the island.
+- A gardener within 10 tiles of the X stops the dig and attacks (`dig.rs2:6-8,26-28`); the spawn at 2996,3381 is 3
+  tiles away (`maps/m46_52.jm2`). The script kills him first (the Attack XP in RESULT) and digs again.
+- Helper items: 10 bananas, white apron, spade, 200 coins (two fares and the rum), Varrock and Falador teleport
+  runes. All are tradeable (`knowledge/items.json`).
+
+### Planner change for the medium quests
+
+New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
+Treasure, 2 QP, floor 460 ticks (best run), realistic 474 (worst run), the same under `rival-dialogue-burst`. Row
+`quests-rest` loses it: 35 -> 34 quests, `qp` 77 -> 75, one medium class less: 54,200 / 81,400 -> 53,300 / 80,100
+(burst 50,124 / 75,279 -> 49,292 / 74,076). The QP total stays 145. `bun test packages/planner`: 42 pass, 0 fail.
+`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at
+101,707 floor / 135,513 realistic (deadline 1,022,262). Overall unchanged (40,212 / 45,105).
