@@ -883,7 +883,14 @@ try {
         // The stronghold's south gate (gnome_areagate 190 at 2459,3383, gnome_gate.rs2) is not a door in the SDK
         // collision, so the walk goes to it, through it by op, then north to the Grand Tree.
         await walk('zoo to gate', [{ x: 2604, z: 3294, tol: 2 }, { x: 2593, z: 3306, tol: 2 }, { x: 2571, z: 3322, tol: 2 }, { x: 2559, z: 3337, tol: 2 }, { x: 2512, z: 3340, tol: 2 }, { x: 2482, z: 3358, tol: 2 }, { x: 2463, z: 3369, tol: 2 }, { x: 2461, z: 3381, tol: 1 }]);
-        await q.step('stronghold gate', () => q.opLoc(q.findLoc(l => /gate/i.test(l.name) && near3(l, { x: 2460, z: 3383 }, 2)) ?? { id: 190, x: 2459, z: 3383 }, 1), () => z() >= 3385, 10, 4);
+        // Femi asks for help with her boxes at the gate the first time (femi.rs2:75-90): "Sorry, I'm a bit busy."
+        for (let i = 0; i < 8 && z() < 3385; i++) {
+            await q.guard('stronghold gate');
+            if (q.dialogOpen()) { await converse1([/bit busy/i], () => !q.dialogOpen(), 20); continue; }
+            await q.opLoc(q.findLoc(l => /gate/i.test(l.name) && near3(l, { x: 2460, z: 3383 }, 2)) ?? { id: 190, x: 2459, z: 3383 }, 1);
+            await q.waitUntil(() => z() >= 3385 || q.dialogOpen(), 8);
+        }
+        if (z() < 3385) await q.fail('stronghold gate');
         await walk('gate to tree', [{ x: 2460, z: 3410, tol: 2 }, { x: 2460, z: 3443, tol: 2 }, { x: 2458, z: 3463, tol: 2 }, { x: 2465, z: 3489, tol: 2 }]);
         await enterTree();
         await treeTo(1);
