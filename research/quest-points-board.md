@@ -582,6 +582,7 @@ Runner: `proveInProcess` with `okPass`, one bot at a time, each run on a fresh a
 |---|---|---|---|---|
 | Cook's Assistant | `scripts/generated/quest-cook.ts` | 30, 30, 30 | 30, 30, 30 | MEASURED 3/3 both |
 | Witch's House | `scripts/generated/quest-ball.ts` | 485, 448, 444 | 522, 454, 448 | MEASURED 3/3 both |
+| Lost City | `scripts/generated/quest-zanaris.ts` | 595, 796, 668 | 629, 678, 720 | MEASURED 3/3 both |
 
 ### Cook's Assistant
 
@@ -636,3 +637,43 @@ Planner: row `witch` 300 / 900 ESTIMATE -> 444 / 485 MEASURED (best / worst main
 `rival-dialogue-burst` (was 277 / 832). The row is not in `quests-rest`, so the QP total stays 145. `bun test
 packages/planner`: 42 pass, 0 fail. `haggis-cli --levers`: Quest Points WIN at 102,024 floor / 134,279 realistic
 (was 101,857 / 134,626); Overall and Hitpoints unchanged.
+
+### Lost City
+
+`RESULT ok qp=3 zombies=1 xp=attack=11500,hitpoints=3802,magic=1025 ... ticks=595 hpMin=87 eats=0 ... died=false
+milestones=1,2,entrana,dungeon,axe,3,4,5,wilderness,6` (main runs: 595, 796, 668 ticks; partner runs: 629, 678,
+720), each with `The world starts to shimmer...` and `Congratulations! Quest complete!`. Partner `hpMin` 60-69 of
+72, no food eaten. Steps (main run 1 MILESTONE ticks): the warrior "What are you camped here for?", "What makes you
+think it's out here?", "If it's hidden how are you planning to find it?", "Looks like you don't know either." (1,
+`areas/area_lumbridge/scripts/warrior_zanaris.rs2:30-72`) 0-40; Shamus's tree (2409 at 3138,3212) with an axe in the
+pack spawns Shamus (`quests/quest_zanaris/scripts/quest_zanaris.rs2:11-26`), "How does it fit in a shed then?" (2,
+`shamus.rs2:15-25,146-153`) 40-78; the axe dropped, the walk to Port Sarim, the monk "Yes, okay, I'm ready to go."
+(`areas/area_port_sarim/scripts/monk_of_entrana.rs2:6-24`), the gangplank 78-186; the cave monk "Well that is a risk
+I will have to take." (`areas/area_entrana/scripts/cave_monk.rs2:3-15`) 186-244; Entrana zombies until a bronze axe
+drops 244-298; the dramen tree (1292 at 2860,9734) spawns the tree spirit, which is killed with the bronze axe worn
+under Protect from Melee (3, `quest_zanaris.rs2:28-55`, `tree_spirit.rs2`) 298-422; the branch (4) and the knife on it
+(5, `:56-87`) 422-433; the staff worn, the magic door (2407 at 2874,9750) to 3250,3772 (`entrana_dungeon.rs2:59-62`)
+433-446; the walk south to 3250,3676, a Lumbridge teleport, the walk to the swamp shed, the door (2406 at 3202,3169)
+with the staff worn queues the completion (`quest_zanaris.rs2:89-106`) 446-595.
+Findings:
+- No axe passes the Entrana monk: `weapon_axe` is on his list with every weapon and armour class
+  (`monk_of_entrana.rs2:26-53`, `axes.obj` category). Shamus's tree needs an axe too (`quest_zanaris.rs2:16`). So the
+  bot brings a bronze axe for Shamus and drops it before the monk. On Entrana the axe comes from the zombies:
+  `zombie_entranan` drops a bronze axe 50 of 128 kills (`drop tables/scripts/zombie.rs2:102-111`). The kills are the
+  spread of the runs (axe at tick 298 / 464 / 324 in the main runs).
+- The cave ladder drains Prayer by 95% (`cave_monk.rs2:14`) and goes one way. The only exit is the magic door to
+  Wilderness level 32 (`entrana_dungeon.rs2:59-62`). Teleports work at level 20 or less (`skill_magic/scripts/spells/
+  teleport.rs2:17`, level = (z - 3520) / 8 + 1), so the bot walks to z 3676 first (about 53 ticks). The practice
+  server had no other players there; on the live server PKers can attack in levels 20-32.
+- A trial without Protect from Melee (the main, 99 HP) fell to 37 HP and ate 3 lobsters; with it the main stayed at
+  87-88 and the partner at 60-69. One prayer potion restores the drained points. The 2 offensive prayers are on while
+  points last.
+- The SDK route from the Lumbridge teleport to the shed goes round the north of the castle and into the swamp from the
+  west (96 ticks). A trial with waypoints south of the castle met a dead end at 3232,3215 and took 118.
+- Untradeable: the dramen branch and the dramen staff (`quest_zanaris.obj`); the run makes both. Helper items: bronze axe (1351), knife (946), 2 prayer potions (2434), runes for one Lumbridge teleport, lobsters.
+
+Planner: new row `quest-zanaris` (qp 3, 595 / 796 MEASURED, the same under `rival-dialogue-burst`). `quests-rest`:
+72 -> 69 QP, 31 -> 30 quests, one medium class less: 50,600 / 76,200 -> 49,700 / 74,900 (burst 46,795 / 70,470 ->
+45,963 / 69,268). The QP total stays 145 (`QP at end 145`). `bun test packages/planner`: 42 pass, 0 fail.
+`haggis-cli --levers`: Quest Points WIN at 101,787 floor / 133,873 realistic (was 102,024 / 134,279).
+
