@@ -15,7 +15,9 @@ import { waitTicks } from '../../packages/core/src/ticks';
 
 type Step = { name: string; id: number; x: number; z: number; xp: number; alt?: { id: number; x: number; z: number }[] };
 // Loc ids: vendor/rs-sdk/server/content/pack/loc.pack. Positions: maps/m<mx>_<mz>.jm2 LOC sections.
-const COURSES: Record<string, { steps: Step[]; bonus: number; pit?: { minZ: number; ladder: { id: number; x: number; z: number } } }> = {
+type Pos = { worldX: number; worldZ: number; level: number };
+// resume: after a fail, the step to retry from (null = retry the same step). afterPit is true on the first still tick out of the pit.
+const COURSES: Record<string, { steps: Step[]; bonus: number; pit?: { minZ: number; ladder: { id: number; x: number; z: number } }; resume?: (p: Pos, i: number, afterPit: boolean) => number | null }> = {
     // gnome_course.rs2: no fail rolls. Lap bonus 39 XP (390 tenths) after the pipe.
     gnome: {
         bonus: 390,
@@ -32,6 +34,10 @@ const COURSES: Record<string, { steps: Step[]; bonus: number; pit?: { minZ: numb
     // barbarian_course.rs2: lap bonus 42 XP at the last wall (2542,3553). Needs Alfred Grimhand's Barcrawl to enter.
     barbarian: {
         bonus: 420,
+        // Rope swing fail: pit at (2550,9949), ladder_from_cellar (2547,9951) up to the course (ladders.rs2:87-94).
+        // Ledge fail: ground floor under the ledge, so the net comes first again.
+        pit: { minZ: 9000, ladder: { id: 1755, x: 2547, z: 9951 } },
+        resume: (p, i) => (i === 3 && p.level === 0 ? 2 : null),
         steps: [
             { name: 'ropeswing', id: 2282, x: 2551, z: 3550, xp: 200 },
             { name: 'log', id: 2294, x: 2550, z: 3546, xp: 125 },
@@ -48,6 +54,9 @@ const COURSES: Record<string, { steps: Step[]; bonus: number; pit?: { minZ: numb
     wilderness: {
         bonus: 4989,
         pit: { minZ: 9000, ladder: { id: 1755, x: 3005, z: 10363 } },
+        // The pit ladder lands north of the rope swing, beside the stepping stones (z - 6400): go on from the stones. After a
+        // rope swing fail the lap bonus is lost (update_wilderness_varp needs the swing), but the course loops on.
+        resume: (p, i, afterPit) => (afterPit || (i === 1 && p.worldZ >= 3955) ? 2 : null),
         steps: [
             { name: 'pipe', id: 2288, x: 3004, z: 3938, xp: 125 },
             { name: 'ropeswing', id: 2283, x: 3005, z: 3952, xp: 200 },
@@ -120,7 +129,7 @@ try {
     const t0 = s.tick();
     let i = 0, laps = 0, fails = 0, hpLost = 0, eats = 0, pitClimbs = 0, lastLapTick = t0, lastHp = hp();
     const lapTicks: number[] = [];
-    let stepXp = xp(), lastPos = '', still = 0;
+    let stepXp = xp(), lastPos = '', still = 0, inPit = false;
     await click(C.steps[0]!);
     while (laps < LAPS && s.tick() - t0 < CAP) {
         await waitTicks(s, 1);
@@ -154,7 +163,12 @@ try {
             const done = step.name === 'ladder' ? p.level === 0 && p.worldX <= 2533 : p.worldZ < step.z - 1 && p.worldZ < 9000;
             if (done) { i = (i + 1) % C.steps.length; stepXp = xp(); await click(C.steps[i]!); continue; }
         }
-        if (C.pit && p.worldZ > C.pit.minZ && still >= 1) { pitClimbs++; await click(C.pit.ladder); still = -2; continue; }
+        if (C.pit && p.worldZ > C.pit.minZ) { inPit = true; if (still >= 1) { pitClimbs++; await click(C.pit.ladder); still = -2; } continue; }
+        if (still >= 1 && C.resume) {
+            const r = C.resume(p, i, inPit);
+            inPit = false;
+            if (r !== null && r !== i) { if (process.env.AGI_DEBUG === '1') console.log(`NOTE resume ${C.steps[i]!.name} -> ${C.steps[r]!.name} at ${pos}`); i = r; stepXp = xp(); await click(C.steps[i]!); still = -1; continue; }
+        }
         if (still >= 2) {
             if (h < maxHp * 0.5) await eat();
             await click(step);
