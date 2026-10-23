@@ -74,10 +74,22 @@ try {
                 break;
             }
         }
-        let m0 = msgs.length;
-        await s.direct({ type: 'useInventoryItem', slot: base.slot, optionIndex: op, reason: 'SDK' });
-        await waitUntil(s, () => sawMsg(/place the cannon base|can't|cannot|isn't enough|won't be happy/i, m0), { timeoutTicks: 8 });
-        if (!sawMsg(/place the cannon base/i, m0)) await finish([s], false, `cannon base not placed: ${msgs.slice(m0).join(' | ')}`);
+        // "There isn't enough space" (a blocked 3x3, cannon_setup.rs2): try the tiles of a spiral up to 6 tiles out.
+        const ring: number[][] = [[0, 0]];
+        for (let r = 1; r <= 6; r++) for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) if (Math.max(Math.abs(dx), Math.abs(dz)) === r) ring.push([dx, dz]);
+        const p1 = me();
+        let m0 = msgs.length, placed = false, tries = 0;
+        for (const [dx, dz] of ring) {
+            if (tries >= 30) break;
+            if (dx || dz) { const w = await s.bot.walkTo(p1.worldX + dx!, p1.worldZ + dz!, 0); if (!w.success) continue; await waitTicks(s, 1); }
+            const bs = slotOf(/^cannon base$/i);
+            m0 = msgs.length; tries++;
+            await s.direct({ type: 'useInventoryItem', slot: bs.slot, optionIndex: op, reason: 'SDK' });
+            await waitUntil(s, () => sawMsg(/place the cannon base|can't|cannot|isn't enough|won't be happy/i, m0), { timeoutTicks: 8 });
+            if (sawMsg(/place the cannon base/i, m0)) { placed = true; break; }
+            if (!sawMsg(/isn't enough space/i, m0)) break;
+        }
+        if (!placed) await finish([s], false, `cannon base not placed after ${tries} tries: ${msgs.slice(m0).join(' | ')}`);
         await waitTicks(s, 1);
         for (const part of [/^cannon stand$/i, /^cannon barrels$/i, /^cannon furnace$/i]) {
             const p = slotOf(part), l = findCannon();
