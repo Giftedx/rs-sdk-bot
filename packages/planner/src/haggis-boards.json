@@ -396,7 +396,15 @@
      "count": 560
     }
    ],
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "patches": [
+    {
+     "lever": "stun-guests",
+     "set": {
+      "inside": "thieve"
+     }
+    }
+   ]
   },
   {
    "id": "smith",
@@ -463,7 +471,108 @@
     "skill": "magic",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands"
+   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "patches": [
+    {
+     "lever": "stun-guests",
+     "set": {
+      "inside": "thieve"
+     }
+    },
+    {
+     "lever": "charge-spam",
+     "owner": true,
+     "set": {
+      "ticks": {
+       "floor": 0,
+       "realistic": 0,
+       "evidence": "CODE-READ",
+       "source": "enchant ladder to 80 only"
+      },
+      "xp": {},
+      "train": {
+       "skill": "magic",
+       "toLevel": 80,
+       "xpPerTick": {
+        "floor": 585,
+        "realistic": 525,
+        "evidence": "CODE-READ",
+        "source": "enchant ladder rate 998,458 / 1,708 and / 1,900"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "mage-arena",
+   "label": "Mage Arena to unlock Charge (Wilderness)",
+   "serves": [
+    "magic"
+   ],
+   "ticks": {
+    "floor": 400,
+    "realistic": 1200,
+    "evidence": "ESTIMATE",
+    "source": "not measured"
+   },
+   "minLevel": {
+    "magic": 60
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "lever": {
+    "id": "charge-spam",
+    "role": "add",
+    "owner": true
+   },
+   "evidence": "CODE-READ",
+   "source": "charge.rs2:4 needs %magearena >= mage_arena_staff_given; research/gap-closers.md"
+  },
+  {
+   "id": "charge",
+   "label": "Spam Charge 80 -> 99 (no delay)",
+   "serves": [
+    "magic"
+   ],
+   "train": {
+    "skill": "magic",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 22500,
+     "realistic": 4500,
+     "evidence": "CODE-READ",
+     "source": "floor 5 casts per tick (USER_EVENT cap 5), realistic 1 per tick; 1,800 tenths x25 = 4,500 XP per cast"
+    }
+   },
+   "requires": [
+    "mage-arena"
+   ],
+   "minLevel": {
+    "magic": 80
+   },
+   "lever": {
+    "id": "charge-spam",
+    "role": "add",
+    "owner": true
+   },
+   "evidence": "CODE-READ",
+   "source": "charge.rs2:1-26; magic_spells.dbrow:206-212; 3 blood + 3 fire + 3 air per cast; research/gap-closers.md",
+   "supplies": [
+    {
+     "item": "blood rune",
+     "count": 2100
+    },
+    {
+     "item": "fire rune",
+     "count": 2100
+    },
+    {
+     "item": "air rune",
+     "count": 2100
+    }
+   ]
   },
   {
    "id": "crest",
@@ -647,6 +756,19 @@
      "item": "lobster",
      "count": 300
     }
+   ],
+   "patches": [
+    {
+     "lever": "stun-guests",
+     "set": {
+      "deadTicks": {
+       "floor": 1509,
+       "realistic": 2419,
+       "evidence": "ESTIMATE",
+       "source": "stunned share 3,584 of 6,169 ticks MEASURED live (live-thieving-2026-10-23.md:74); usable 0.75 x 0.9 (eat, restock trade) ESTIMATE; floor = 0.58 x 3,850 x 0.675; research/gap-closers.md"
+      }
+     }
+    }
    ]
   },
   {
@@ -681,6 +803,19 @@
     {
      "item": "logs",
      "count": 5
+    }
+   ],
+   "patches": [
+    {
+     "lever": "flinch-gather",
+     "set": {
+      "ticks": {
+       "floor": 2071,
+       "realistic": 2957,
+       "evidence": "ESTIMATE",
+       "source": "3-tick ticks / 1.4 (floor) or / 1.15 (realistic); flinch UNVERIFIED live; research/gap-closers.md"
+      }
+     }
     }
    ]
   },
@@ -720,6 +855,19 @@
     {
      "item": "logs",
      "count": 20
+    }
+   ],
+   "patches": [
+    {
+     "lever": "flinch-gather",
+     "set": {
+      "ticks": {
+       "floor": 2179,
+       "realistic": 3130,
+       "evidence": "ESTIMATE",
+       "source": "3-tick ticks / 1.4 (floor) or / 1.15 (realistic); flinch UNVERIFIED live; research/gap-closers.md"
+      }
+     }
     }
    ]
   },
@@ -837,7 +985,17 @@
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "XP: quest_tree.rs2:98 (CODE-READ); time not measured"
+   "source": "XP: quest_tree.rs2:98 (CODE-READ); time not measured",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "agility-25",
@@ -890,7 +1048,17 @@
     "agility": 25
    },
    "evidence": "ESTIMATE",
-   "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ); time not measured"
+   "source": "XP: quest_grandtree.rs2:199-201 (CODE-READ); time not measured",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "qp-filler",
@@ -916,7 +1084,53 @@
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7)"
+   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7)",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "serves": [
+       "questpoints"
+      ],
+      "xp": {},
+      "qp": 28,
+      "ticks": {
+       "floor": 2100,
+       "realistic": 6300,
+       "evidence": "ESTIMATE",
+       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "witch",
+   "label": "Witch's House (158,125 Hitpoints)",
+   "serves": [
+    "hitpoints",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 300,
+    "realistic": 900,
+    "evidence": "ESTIMATE",
+    "source": "quest time not measured"
+   },
+   "lump": true,
+   "xp": {
+    "hitpoints": 158125
+   },
+   "qp": 4,
+   "requires": [
+    "tutorial"
+   ],
+   "lever": {
+    "id": "combat-hp-bound",
+    "role": "add"
+   },
+   "evidence": "CODE-READ",
+   "source": "quest_ball.rs2:202 stat_advance(hitpoints, 63250); quest.constant:74 ball_questpoints 4; research/gap-closers.md"
   },
   {
    "id": "dragon",
@@ -957,6 +1171,16 @@
      "item": "lobster",
      "count": 60
     }
+   ],
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
    ]
   },
   {
@@ -984,7 +1208,17 @@
     "prayer": 31
    },
    "evidence": "ESTIMATE",
-   "source": "XP: quest_scorpcatcher.rs2:60 (CODE-READ); Prayer 31 is the OSRS requirement"
+   "source": "XP: quest_scorpcatcher.rs2:60 (CODE-READ); Prayer 31 is the OSRS requirement",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "str-top",
@@ -1011,7 +1245,66 @@
     "scorpion"
    ],
    "evidence": "ESTIMATE",
-   "source": "combat.rs2:88-150: 100 XP/dmg x25 + 33.25 HP/dmg; 2.5-4 dmg per tick assumed"
+   "source": "combat.rs2:88-150: 100 XP/dmg x25 + 33.25 HP/dmg; 2.5-4 dmg per tick assumed",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "requires": [
+       "waterfall"
+      ]
+     }
+    },
+    {
+     "lever": "cannon-melee",
+     "addRequires": [
+      "cannon"
+     ],
+     "addSide": {
+      "ranged": 0.6
+     }
+    }
+   ]
+  },
+  {
+   "id": "att-top",
+   "label": "Melee to Attack 99",
+   "serves": [
+    "attack"
+   ],
+   "train": {
+    "skill": "attack",
+    "toLevel": 99,
+    "xpPerTick": {
+     "floor": 400,
+     "realistic": 250,
+     "evidence": "ESTIMATE",
+     "source": "combat.rs2:143-167 4 x base per damage, HP 1.33 x base; 2.5-4 dmg per tick assumed"
+    },
+    "side": {
+     "hitpoints": 0.3325
+    }
+   },
+   "requires": [
+    "waterfall"
+   ],
+   "lever": {
+    "id": "combat-hp-bound",
+    "role": "add"
+   },
+   "evidence": "ESTIMATE",
+   "source": "replaces Tree Gnome Village + Grand Tree Attack before Overall; research/gap-closers.md",
+   "patches": [
+    {
+     "lever": "cannon-melee",
+     "addRequires": [
+      "cannon"
+     ],
+     "addSide": {
+      "ranged": 0.6
+     }
+    }
+   ]
   },
   {
    "id": "cannon",
@@ -1097,7 +1390,17 @@
     "grandtree"
    ],
    "evidence": "ESTIMATE",
-   "source": "course XP CODE-READ; lap times not measured"
+   "source": "course XP CODE-READ; lap times not measured",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "requires": [
+       "agility-25"
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "agility",
@@ -1146,7 +1449,17 @@
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "quest.constant:73; time not measured"
+   "source": "quest.constant:73; time not measured",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "grail",
@@ -1175,7 +1488,17 @@
     "attack": 20
    },
    "evidence": "ESTIMATE",
-   "source": "XP: quest_grail.rs2:116-117 (CODE-READ); time not measured"
+   "source": "XP: quest_grail.rs2:116-117 (CODE-READ); time not measured",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "serves": [
+       "questpoints"
+      ]
+     }
+    }
+   ]
   },
   {
    "id": "dig",
@@ -1235,6 +1558,24 @@
      "item": "rune pickaxe",
      "count": 1
     }
+   ],
+   "patches": [
+    {
+     "lever": "wild-iron",
+     "owner": true,
+     "set": {
+      "train": {
+       "skill": "mining",
+       "toLevel": 99,
+       "xpPerTick": {
+        "floor": 200,
+        "realistic": 162,
+        "evidence": "ESTIMATE",
+        "source": "3-rock rates 120 / 97 scaled by 5/3 (iron-spots.ts: only 5-rock tile (3100,3767) is in the Wilderness); research/gap-closers.md"
+       }
+      }
+     }
+    }
    ]
   },
   {
@@ -1261,7 +1602,26 @@
     "grail"
    ],
    "evidence": "ESTIMATE",
-   "source": "combat.rs2:88-150"
+   "source": "combat.rs2:88-150",
+   "patches": [
+    {
+     "lever": "combat-hp-bound",
+     "set": {
+      "requires": [
+       "tutorial"
+      ]
+     }
+    },
+    {
+     "lever": "cannon-melee",
+     "addRequires": [
+      "cannon"
+     ],
+     "addSide": {
+      "ranged": 0.6
+     }
+    }
+   ]
   },
   {
    "id": "hp-top",
@@ -1288,6 +1648,17 @@
     {
      "item": "lobster",
      "count": 200
+    }
+   ],
+   "patches": [
+    {
+     "lever": "cannon-melee",
+     "addRequires": [
+      "cannon"
+     ],
+     "addSide": {
+      "ranged": 1.8
+     }
     }
    ]
   },

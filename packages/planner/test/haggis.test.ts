@@ -103,3 +103,78 @@ test('the real table loads, schedules without blocks, and covers all 24 boards',
     expect(r.blocked).toEqual([]);
     expect(r.boards.every(b => b.finish !== null)).toBe(true);
 });
+
+test('a guest fills the dead ticks of its host; the rest runs right after the host', () => {
+    const boards = [clock('thieving', 10_000), clock('magic', 10_000)];
+    const acts: Activity[] = [
+        job('thieve', 'thieving', 100, { deadTicks: { floor: 60, realistic: 60 } }),
+        job('enchant', 'magic', 80, { inside: 'thieve' }),
+    ];
+    const r = schedule(boards, acts, opts);
+    expect(finish(r, 'thieving').finish).toBe(100);
+    expect(finish(r, 'magic').finish).toBe(120); // 60 of 80 absorbed, 20 after the host
+    expect(r.order.find(p => p.id === 'enchant')!.ticks).toBe(20);
+    // Without the host the guest runs alone.
+    const alone = schedule([clock('magic', 10_000)], [job('enchant', 'magic', 80, { inside: 'thieve' })], opts);
+    expect(finish(alone, 'magic').finish).toBe(80);
+});
+
+test('a guest that fits completely adds no foreground ticks, and waits for its host even with an earlier deadline', () => {
+    const boards = [clock('magic', 50), clock('thieving', 10_000)];
+    const acts: Activity[] = [
+        job('thieve', 'thieving', 100, { deadTicks: { floor: 60, realistic: 60 } }),
+        job('enchant', 'magic', 40, { inside: 'thieve' }),
+    ];
+    const r = schedule(boards, acts, opts);
+    expect(r.order.map(p => p.id)).toEqual(['thieve', 'enchant']);
+    expect(finish(r, 'magic').finish).toBe(100); // XP accrues over the host span
+    expect(r.endTick).toBe(100);
+});
+
+test('stun relog is skipped when the guests use more stun ticks than relog saves', () => {
+    const boards = [clock('thieving', 10_000), clock('magic', 10_000)];
+    const host = job('thieve', 'thieving', 100, { deadTicks: { floor: 60, realistic: 60 }, trickSpeedup: { trick: 'stunRelog', factor: 0.8 } });
+    const relog = { mode: 'floor' as const, tricks: new Set(['stunRelog'] as const) };
+    const withGuest = schedule(boards, [host, job('enchant', 'magic', 50, { inside: 'thieve' })], relog);
+    expect(finish(withGuest, 'thieving').finish).toBe(100); // 50 absorbed > 20 saved by relog
+    const noGuest = schedule(boards, [host, job('enchant', 'magic', 50)], relog);
+    expect(finish(noGuest, 'thieving').finish).toBe(80);
+});
+
+test('levers: add rows exist only when on, drop rows only when off; owner levers are off by default', () => {
+    const boards = [clock('cooking', 100)];
+    const acts: Activity[] = [
+        job('old', 'cooking', 30, { lever: { id: 'L', role: 'drop' } }),
+        job('new', 'cooking', 10, { lever: { id: 'L', role: 'add' } }),
+        job('own', 'cooking', 1, { lever: { id: 'O', role: 'add', owner: true } }),
+    ];
+    expect(schedule(boards, acts, opts).chosen).toEqual(['new']);
+    expect(schedule(boards, acts, { ...opts, disable: new Set(['L']) }).chosen).toEqual(['old']);
+    expect(schedule(boards, acts, { ...opts, owner: new Set(['O']) }).chosen).toEqual(['new', 'own']);
+});
+
+test('lever patches set fields, add requirements and add side XP only while the lever is on', () => {
+    const boards = [clock('defence', 100_000), clock('ranged', 100_000)];
+    const def: Activity = {
+        id: 'def', label: 'def', serves: ['defence'], evidence: 'ESTIMATE', source: 'test',
+        train: { skill: 'defence', toLevel: 99, xpPerTick: { floor: 400, realistic: 400 } },
+        patches: [{ lever: 'cannon', addRequires: ['cq'], addSide: { ranged: 1 } }],
+    };
+    const cq = job('cq', 'ranged', 7, { xp: {} });
+    const on = schedule(boards, [def, cq], opts);
+    expect(on.order.map(p => p.id)).toEqual(['cq', 'def']);
+    expect(finish(on, 'ranged').finish).toBe(7 + Math.ceil(XP99 / 400));
+    const off = schedule(boards, [def, cq], { ...opts, disable: new Set(['cannon']) });
+    expect(finish(off, 'ranged').finish).toBe(null);
+});
+
+test('quest points: all points before the leader playtime is a secure win; more points later only holds', () => {
+    const qp = (leaderPoints: number, leaderTicks: number): Board => ({ id: 'questpoints', label: 'qp', rule: { kind: 'qp', leaderPoints, leaderTicks, maxPoints: 5 } });
+    const q = (id: string, ticks: number, points: number): Activity => ({ id, label: id, serves: ['questpoints'], ticks: { floor: ticks, realistic: ticks }, lump: true, qp: points, evidence: 'ESTIMATE', source: 'test' });
+    const acts = [q('a', 10, 3), q('b', 10, 1), q('c', 10, 1)];
+    expect(finish(schedule([qp(4, 100)], acts, opts), 'questpoints')).toMatchObject({ status: 'WIN', finish: 30, slack: 70, deadline: 100 });
+    expect(finish(schedule([qp(4, 25)], acts, opts), 'questpoints')).toMatchObject({ status: 'HOLD', finish: 30, slack: -5 });
+    expect(finish(schedule([qp(4, 25)], acts.slice(0, 2), opts), 'questpoints')).toMatchObject({ status: 'WIN', finish: 20, slack: 5 });
+    expect(finish(schedule([qp(4, 15)], acts.slice(0, 2), opts), 'questpoints')).toMatchObject({ status: 'LATE', finish: 20 });
+    expect(finish(schedule([qp(5, 25)], acts, opts), 'questpoints')).toMatchObject({ status: 'LATE', finish: 30 });
+});

@@ -17,6 +17,9 @@ import { planSkill, type Method } from './plan';
 // combat Hitpoints). A board whose deadline cannot be met can be moved to the end (Moore-Hodgson style) to find the
 // largest set of boards that can all be won.
 
+// Quest points in rev 289 content: the sum of the quest.constant QP values (the #1 has 141 of 145).
+export const MAX_QP = 145;
+
 export const SKILLS = [
     'attack', 'defence', 'strength', 'hitpoints', 'ranged', 'prayer', 'magic', 'cooking', 'woodcutting', 'fletching',
     'fishing', 'firemaking', 'crafting', 'smithing', 'mining', 'herblore', 'agility', 'thieving', 'runecraft',
@@ -53,6 +56,19 @@ export interface Activity {
     variant?: { group: string; option: string; trick?: Trick };
     // Multiplies the foreground ticks when the trick is on (for example stun relog on thieving).
     trickSpeedup?: { trick: Trick; factor: number };
+    // Host: foreground ticks inside this activity that leave the player free for a different action (for example
+    // the 8-tick pickpocket stun, which blocks only pickpocketing and walking). Guests use them.
+    deadTicks?: Range;
+    // Guest: this activity runs inside the dead ticks of the host activity with this id. The ticks that do not fit
+    // run in the foreground right after the host. Without the host in the scenario, the guest runs alone.
+    inside?: string;
+    // Gap-closer lever (research/gap-closers.md). 'add' rows exist only when the lever is on; 'drop' rows only when it
+    // is off. A lever is on unless ScheduleOptions.disable names it. An `owner` lever (OWNER DECISION) is off unless
+    // ScheduleOptions.owner names it.
+    lever?: { id: string; role: 'add' | 'drop'; owner?: boolean };
+    // Field patches that apply when a lever is on (in table order). `set` replaces fields; `addRequires` and
+    // `addSide` extend the requirement list and the side XP of a `train` activity.
+    patches?: LeverPatch[];
     evidence: Evidence;
     source: string;
     supplies?: Supply[];
@@ -61,7 +77,10 @@ export interface Activity {
 
 export type BoardKind =
     | { kind: 'clock'; deadline: number } // skill or overall: finish tick must be < deadline
-    | { kind: 'qp'; leaderPoints: number; leaderTicks: number } // more points wins; equal points must be earlier
+    // Quest Points ranks by points desc, then playtime asc (RankedHiscoresWorker.ts:19); the playtime is stamped when
+    // the total changes (LoginServer.ts:209-213). The leader can still gain points up to maxPoints, so only reaching
+    // maxPoints before leaderTicks is a secure win (the leader's own maxPoints stamp is later than leaderTicks).
+    | { kind: 'qp'; leaderPoints: number; leaderTicks: number; maxPoints?: number }
     | { kind: 'value'; note: string }; // no clock: value target from a board not in the snapshot
 
 export interface Board { id: BoardId; label: string; rule: BoardKind }
@@ -72,6 +91,40 @@ export interface ScheduleOptions {
     sacrificed?: ReadonlySet<BoardId>;
     startXp?: Partial<Record<Skill, number>>;
     force?: Record<string, string>; // variant group -> option, to compare routes
+    disable?: ReadonlySet<string>; // safe levers to switch off (to measure each lever alone)
+    owner?: ReadonlySet<string>; // owner-decision levers to switch on
+}
+
+export interface LeverPatch {
+    lever: string;
+    owner?: boolean;
+    set?: Partial<Omit<Activity, 'id' | 'patches' | 'lever'>>;
+    addRequires?: string[];
+    addSide?: Partial<Record<Skill, number>>;
+}
+
+const isOn = (id: string, owner: boolean | undefined, opts: Pick<ScheduleOptions, 'disable' | 'owner'>) =>
+    owner ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
+
+// The activity table with the levers of `opts` applied: rows filtered, patches merged.
+export function applyLevers(activities: Activity[], opts: Pick<ScheduleOptions, 'disable' | 'owner'>): Activity[] {
+    return activities.filter(a => leverOn(a, opts)).map(a => {
+        let out = a;
+        for (const p of a.patches ?? []) {
+            if (!isOn(p.lever, p.owner, opts)) continue;
+            out = { ...out, ...(p.set ?? {}) };
+            if (p.addRequires) out = { ...out, requires: [...(out.requires ?? []), ...p.addRequires] };
+            if (p.addSide && out.train) out = { ...out, train: { ...out.train, side: { ...(out.train.side ?? {}), ...p.addSide } } };
+        }
+        return out;
+    });
+}
+
+export function leverOn(a: Activity, opts: Pick<ScheduleOptions, 'disable' | 'owner'>): boolean {
+    if (!a.lever) return true;
+    const id = a.lever.id;
+    const on = isOn(id, a.lever.owner, opts);
+    return a.lever.role === 'add' ? on : !on;
 }
 
 export interface Placed { id: string; label: string; start: number; end: number; landsAt: number; ticks: number; deadline: number }
@@ -81,7 +134,8 @@ export interface BoardResult {
     deadline: number | null;
     finish: number | null; // tick the board's condition was met; null = never
     slack: number | null; // deadline - finish; > 0 beats #1
-    status: 'WIN' | 'LATE' | 'TIE' | 'NEVER' | 'NO-CLOCK';
+    // HOLD: rank 1 on points now, but lost if the leader gains points first (Quest Points only).
+    status: 'WIN' | 'HOLD' | 'LATE' | 'TIE' | 'NEVER' | 'NO-CLOCK';
     sacrificed: boolean;
 }
 export interface ScheduleResult { order: Placed[]; boards: BoardResult[]; blocked: string[]; idle: number; endTick: number; qp: number; chosen: string[] }
@@ -92,6 +146,7 @@ interface XpEvent { start: number; end: number; lump: boolean; xp: Partial<Recor
 // their full 1->target cost at the given rate, a fair proxy because options in a group train the same skills).
 export function chooseVariants(activities: Activity[], opts: ScheduleOptions): Activity[] {
     const groups = new Map<string, Map<string, Activity[]>>();
+    activities = applyLevers(activities, opts);
     for (const a of activities) {
         if (!a.variant) continue;
         if (a.variant.trick && !opts.tricks.has(a.variant.trick)) continue;
@@ -187,12 +242,37 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
     const xpNow = (s: Skill, t: number) => xpAt(events, startXp[s], s, t);
     const qpAt = (t: number) => qpEvents.filter(e => e.at <= t).reduce((s, e) => s + e.qp, 0);
 
+    const placed = new Set<string>();
+    // A guest waits for its host while the host is in the scenario and not placed yet.
+    const waitsForHost = (a: Activity) => a.inside !== undefined && ids.has(a.inside) && !placed.has(a.inside);
+    const canStart = (a: Activity, t: number) =>
+        (a.requires ?? []).every(r => !ids.has(r) || (doneAt.has(r) && doneAt.get(r)! <= t)) &&
+        Object.entries(a.minLevel ?? {}).every(([s, l]) => levelForXp(xpNow(s as Skill, t)) >= l!) &&
+        (a.minQp === undefined || qpAt(t) >= a.minQp);
+    // Foreground ticks and XP of an activity that starts at `start` (speedup not applied).
+    const cost = (a: Activity, start: number) => {
+        const xp: Partial<Record<Skill, number>> = {};
+        let fg = a.ticks ? pick(a.ticks, opts.mode) : 0;
+        if (a.train) {
+            const need = Math.max(0, xpForLevel(a.train.toLevel) - xpNow(a.train.skill, start));
+            fg += need > 0 ? Math.ceil(need / pick(a.train.xpPerTick, opts.mode)) : 0;
+            if (need > 0) {
+                xp[a.train.skill] = need;
+                for (const [s, k] of Object.entries(a.train.side ?? {})) xp[s as Skill] = (xp[s as Skill] ?? 0) + need * k!;
+            }
+        }
+        for (const [s, v] of Object.entries(a.xp ?? {})) {
+            const amount = v === 'to99' ? Math.max(0, XP99 - xpNow(s as Skill, start)) : v!;
+            xp[s as Skill] = (xp[s as Skill] ?? 0) + amount;
+        }
+        return { fg, xp };
+    };
+    const scale = (xp: Partial<Record<Skill, number>>, k: number) =>
+        Object.fromEntries(Object.entries(xp).map(([s, v]) => [s, v! * k])) as Partial<Record<Skill, number>>;
+
     while (pending.length > 0) {
         // Requirements naming an activity that is not in this scenario are ignored (the other variant was chosen).
-        const ready = pending.filter(a =>
-            (a.requires ?? []).every(r => !ids.has(r) || (doneAt.has(r) && doneAt.get(r)! <= clock)) &&
-            Object.entries(a.minLevel ?? {}).every(([s, l]) => levelForXp(xpNow(s as Skill, clock)) >= l!) &&
-            (a.minQp === undefined || qpAt(clock) >= a.minQp));
+        const ready = pending.filter(a => !waitsForHost(a) && canStart(a, clock));
         if (ready.length === 0) {
             // Wait for a background activity whose result something needs, or stop: the rest is blocked.
             const future = [...doneAt.values()].filter(t => t > clock);
@@ -205,29 +285,43 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
         pending.splice(pending.indexOf(a), 1);
 
         const start = clock;
-        const xp: Partial<Record<Skill, number>> = {};
-        let fg = a.ticks ? pick(a.ticks, opts.mode) : 0;
-        if (a.train) {
-            const need = Math.max(0, xpForLevel(a.train.toLevel) - xpNow(a.train.skill, start));
-            fg += need > 0 ? Math.ceil(need / pick(a.train.xpPerTick, opts.mode)) : 0;
-            if (need > 0) {
-                xp[a.train.skill] = need;
-                for (const [s, k] of Object.entries(a.train.side ?? {})) xp[s as Skill] = (xp[s as Skill] ?? 0) + need * k!;
-            }
-        }
-        fg = Math.ceil(fg * speed(a, opts));
-        for (const [s, v] of Object.entries(a.xp ?? {})) {
-            const amount = v === 'to99' ? Math.max(0, XP99 - xpNow(s as Skill, start)) : v!;
-            xp[s as Skill] = (xp[s as Skill] ?? 0) + amount;
-        }
+        const c = cost(a, start);
+        const xp = c.xp;
+        let fg = c.fg;
+        // Guests that can start with the host. They fill its dead ticks in table order.
+        const guests = pending.filter(g => g.inside === a.id && canStart(g, start));
+        const guestCost = guests.map(g => cost(g, start));
+        let cap = a.deadTicks ? pick(a.deadTicks, opts.mode) : 0;
+        const absorbable = guestCost.reduce((s, g) => s + g.fg, 0);
+        // A speedup trick (stun relog) removes the dead ticks. Use it only if it saves more than the guests absorb.
+        const sp = speed(a, opts);
+        if (sp < 1 && guests.length > 0 && Math.min(cap, absorbable) > fg * (1 - sp)) { /* keep the stuns for guests */ }
+        else { fg = Math.ceil(fg * sp); if (sp < 1) cap = 0; }
         const end = start + fg;
         const landsAt = end + (a.background ? pick(a.background, opts.mode) : 0);
         if (a.background) events.push({ start: landsAt, end: landsAt, lump: true, xp });
         else events.push({ start, end, lump: a.lump ?? false, xp });
         if (a.qp) qpEvents.push({ at: landsAt, qp: a.qp });
         doneAt.set(a.id, landsAt);
+        placed.add(a.id);
         order.push({ id: a.id, label: a.label, start, end, landsAt, ticks: fg, deadline: eff.get(a.id)! });
         clock = end;
+        guests.forEach((g, i) => {
+            const gc = guestCost[i]!;
+            const absorbed = Math.min(gc.fg, cap);
+            cap -= absorbed;
+            const rest = gc.fg - absorbed;
+            const share = gc.fg > 0 ? absorbed / gc.fg : 1;
+            if (share > 0) events.push({ start, end, lump: g.lump ?? false, xp: scale(gc.xp, share) });
+            if (rest > 0) events.push({ start: clock, end: clock + rest, lump: g.lump ?? false, xp: scale(gc.xp, 1 - share) });
+            const gEnd = rest > 0 ? clock + rest : end;
+            if (g.qp) qpEvents.push({ at: gEnd, qp: g.qp });
+            doneAt.set(g.id, gEnd);
+            placed.add(g.id);
+            pending.splice(pending.indexOf(g), 1);
+            order.push({ id: g.id, label: `${g.label} (inside ${a.id}: ${absorbed} ticks absorbed)`, start, end: gEnd, landsAt: gEnd, ticks: rest, deadline: eff.get(g.id)! });
+            clock += rest;
+        });
     }
 
     const endTick = Math.max(clock, ...[...doneAt.values()]);
@@ -250,9 +344,13 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
         }
         if (b.rule.kind === 'qp') {
             const { leaderPoints, leaderTicks } = b.rule;
+            const maxPoints = b.rule.maxPoints ?? MAX_QP;
             const reach = (n: number) => { const e = [...qpEvents].sort((x, y) => x.at - y.at); let s = 0; for (const x of e) { s += x.qp; if (s >= n) return x.at; } return null; };
-            const beat = reach(leaderPoints + 1);
-            if (beat !== null) return { id: b.id, label: b.label, deadline: null, finish: beat, slack: null, status: 'WIN', sacrificed: sac };
+            // Secure: every point the content has, before the leader's playtime. A tie at maxPoints goes to the earlier stamp.
+            const full = reach(maxPoints);
+            if (full !== null && full < leaderTicks) return { id: b.id, label: b.label, deadline: leaderTicks, finish: full, slack: leaderTicks - full, status: 'WIN', sacrificed: sac };
+            const beat = leaderPoints < maxPoints ? reach(leaderPoints + 1) : null;
+            if (beat !== null) return { id: b.id, label: b.label, deadline: leaderTicks, finish: beat, slack: full === null ? null : leaderTicks - full, status: 'HOLD', sacrificed: sac };
             const tie = reach(leaderPoints);
             if (tie !== null && tie < leaderTicks) return { id: b.id, label: b.label, deadline: leaderTicks, finish: tie, slack: leaderTicks - tie, status: 'WIN', sacrificed: sac };
             return { id: b.id, label: b.label, deadline: leaderTicks, finish: tie, slack: tie === null ? null : leaderTicks - tie, status: tie === null ? 'NEVER' : 'LATE', sacrificed: sac };
@@ -441,6 +539,15 @@ export function haggisActivities(path = BOARDS_FILE): Activity[] {
 }
 
 export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];
+// Gap-closer levers used in haggis-boards.json (research/gap-closers.md). Owner levers are off unless named.
+export const LEVERS: { id: string; owner: boolean; label: string }[] = [
+    { id: 'combat-hp-bound', owner: false, label: "Melee by combat (HP-bound); melee-only quests after Overall; Witch's House split out" },
+    { id: 'cannon-melee', owner: false, label: 'Cannon fires for Ranged XP during every melee top-up' },
+    { id: 'stun-guests', owner: false, label: 'Prayer and Magic inside the pickpocket stuns' },
+    { id: 'flinch-gather', owner: false, label: '2-tick flinch woodcutting and fishing (tick manipulation, UNVERIFIED live)' },
+    { id: 'charge-spam', owner: true, label: 'Charge spell 80 -> 99, no delay, no recast check' },
+    { id: 'wild-iron', owner: true, label: '5-rock Wilderness iron spot (PvP risk)' },
+];
 export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
     { id: 'a', label: 'No unapproved tricks', tricks: [] },
     { id: 'b', label: 'With login wine', tricks: ['loginWine'] },

@@ -1,7 +1,7 @@
 // Prints the Haggis 24-board schedule for the three trick scenarios.
-// Usage: bun packages/planner/src/haggis-cli.ts [path/to/hiscores.json] [--order] [--supplies] [--evidence]
+// Usage: bun packages/planner/src/haggis-cli.ts [path/to/hiscores.json] [--order] [--supplies] [--evidence] [--levers]
 import { join, resolve } from 'node:path';
-import { bestSet, haggisActivities, loadSnapshot, schedule, SCENARIOS, suppliesFor, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
+import { bestSet, haggisActivities, LEVERS, loadSnapshot, schedule, SCENARIOS, suppliesFor, TRICKS, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
 
 const args = process.argv.slice(2);
 const root = resolve(import.meta.dir, '..', '..', '..');
@@ -73,4 +73,37 @@ for (const b of boards) {
     const one = (mode: Mode) => schedule(boards, activities, { mode, tricks: new Set(SCENARIOS[2]!.tricks), sacrificed: others }).boards.find(x => x.id === b.id)!;
     const f = one('floor'), r = one('realistic');
     console.log(`| ${b.label} | ${fmt(b.rule.deadline)} | ${fmt(f.finish)} | ${sl(f)} | ${fmt(r.finish)} | ${sl(r)} |`);
+}
+
+// Gap-closer levers (research/gap-closers.md): Overall finish with each lever alone, and with all of them.
+if (args.includes('--levers')) {
+    const safe = LEVERS.filter(l => !l.owner).map(l => l.id);
+    const owner = LEVERS.filter(l => l.owner).map(l => l.id);
+    const run = (mode: Mode, disable: string[], own: string[] = [], tricks: boolean = false) => {
+        const r = schedule(boards, activities, { mode, tricks: new Set(tricks ? TRICKS : []), disable: new Set(disable), owner: new Set(own) });
+        const o = r.boards.find(b => b.id === 'overall')!;
+        const wins = r.boards.filter(b => b.status === 'WIN' && b.deadline !== null).map(b => b.id);
+        return { fin: o.finish ?? NaN, slack: o.slack ?? NaN, wins };
+    };
+    console.log('\n## Levers: Overall finish (scenario a order, EDF)\n');
+    console.log('| Lever | Class | Floor finish | Saved alone (floor) | Saved last (floor) | Realistic finish | Saved alone (realistic) | Saved last (realistic) |');
+    console.log('|---|---|---|---|---|---|---|---|');
+    const base = { floor: run('floor', safe), realistic: run('realistic', safe) };
+    const all = { floor: run('floor', []), realistic: run('realistic', []) };
+    console.log(`| none (model before this work) | | ${fmt(base.floor.fin)} | | | ${fmt(base.realistic.fin)} | | |`);
+    for (const l of LEVERS) {
+        const alone = (m: Mode) => l.owner ? run(m, safe, [l.id]) : run(m, safe.filter(s => s !== l.id));
+        const last = (m: Mode) => l.owner ? run(m, [], [l.id]) : run(m, [l.id]);
+        const cell = (m: Mode) => {
+            const a = alone(m), z = last(m);
+            const savedLast = l.owner ? all[m].fin - z.fin : z.fin - all[m].fin;
+            return `${fmt(base[m].fin - a.fin)} | ${fmt(savedLast)}`;
+        };
+        console.log(`| ${l.id} | ${l.owner ? 'OWNER DECISION' : 'safe'} | | ${cell('floor')} | | ${cell('realistic')} |`);
+    }
+    const line = (label: string, f: ReturnType<typeof run>, r: ReturnType<typeof run>) =>
+        console.log(`| ${label} | | ${fmt(f.fin)} (slack ${fmt(f.slack)}; wins ${f.wins.join(', ') || 'none'}) | | | ${fmt(r.fin)} (slack ${fmt(r.slack)}; wins ${r.wins.join(', ') || 'none'}) | | |`);
+    line('all safe levers', all.floor, all.realistic);
+    line('all safe + all owner levers + all tricks', run('floor', [], owner, true), run('realistic', [], owner, true));
+    for (const o of owner) line(`all safe + ${o} + all tricks`, run('floor', [], [o], true), run('realistic', [], [o], true));
 }
