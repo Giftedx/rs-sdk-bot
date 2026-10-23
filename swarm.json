@@ -57,16 +57,16 @@
         "TARGET": "99",
         "CAP": "9000"
       },
-      "enabled": true,
-      "note": "experiment: same script as Woodpecker; does the death at the willows repeat? (C8)"
+      "enabled": false,
+      "note": "Woodcutting 99 reached 2026-10-23; free for a new job"
     },
     {
       "account": "Pocketpython",
       "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "re-enabled 2026-10-23 ~09:00 with the food fallback (Baker shop, then stall): 1 practice run, 16.30 coins/tick from no food; stall path not proven live; 2 of 4 farmers first to limit shop contention",
+      "enabled": false,
+      "note": "moved into the goldfarm host job 2026-10-23",
       "env": {
         "TICKS": "9000"
       },
@@ -77,8 +77,8 @@
       "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "re-enabled ~09:25: first 2 farmers ran 10.9-11.3 coins/tick live on the stall-food path with no deaths",
+      "enabled": false,
+      "note": "moved into the goldfarm host job 2026-10-23",
       "env": {
         "TICKS": "9000"
       },
@@ -89,8 +89,8 @@
       "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "back in Ardougne 09:30 via thieving60 ARRIVE_ONLY (357 ticks, no damage); farming under a manual supervisor (swarm sees it as external after its death record)",
+      "enabled": false,
+      "note": "moved into the goldfarm host job 2026-10-23",
       "env": {
         "TICKS": "9000"
       },
@@ -101,8 +101,8 @@
       "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": true,
-      "note": "re-enabled ~09:25: first 2 farmers ran 10.9-11.3 coins/tick live on the stall-food path with no deaths",
+      "enabled": false,
+      "note": "moved into the goldfarm host job 2026-10-23",
       "env": {
         "TICKS": "9000"
       },
@@ -115,6 +115,24 @@
       "goal": "24 boards",
       "enabled": false,
       "note": "reserved: runs only the final rehearsed route"
+    },
+    {
+      "accounts": [
+        "Pocketpython",
+        "Pocketrocket",
+        "mmtha0205",
+        "mmthv2350"
+      ],
+      "host": true,
+      "script": "scripts/goldfarm.ts",
+      "role": "thieving",
+      "goal": "gold farm: knights (4 bots, one host)",
+      "env": {
+        "TICKS": "9000"
+      },
+      "enabled": true,
+      "repeat": true,
+      "note": "host proven 9,000 ticks on practice: 584 MB for 4 bots, no leak, 4/4 ok (research/bot-host.md)"
     }
   ]
 }
