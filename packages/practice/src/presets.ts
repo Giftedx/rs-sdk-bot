@@ -35,6 +35,9 @@ export const PRESETS: Record<string, SaveConfig> = {
     oaks_3tick: { position: { x: 3190, z: 3458, level: 0 }, skills: { Woodcutting: 15 }, inventory: [{ id: 1351, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }] },
     // 3-tick fishing test: the Draynor net spot, small net (303), knife (946), one log (1511).
     shrimp_3tick: { position: { x: 3087, z: 3230, level: 0 }, inventory: [{ id: 303, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }] },
+    // 3-tick fly fishing test: Lumbridge river spot (0_50_50_freshfish at 3238,3252), Fishing 20, fly fishing rod (309),
+    // 300 feathers (314), knife (946), 10 logs (1511): a missed spot click lets the fletch finish and use a log.
+    fly_3tick: { position: { x: 3239, z: 3251, level: 0 }, skills: { Fishing: 20 }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 300 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] },
     measure_shrimp: { position: { x: 3087, z: 3230, level: 0 }, inventory: [{ id: 303, count: 1 }] },
     // Wine batch test (skill_cooking/.../wine/wine.rs2): Cooking 35, one grapes + jug of water to start the
     // 20-tick fermenting timer, and 300 unfermented wines (1995) in the bank that ferment when it fires.
