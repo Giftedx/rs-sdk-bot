@@ -317,7 +317,12 @@ try {
         const gate = () => q.findLoc(l => /gate/i.test(l.name) && l.x === ELVARG_GATE.x && Math.abs(l.z - ELVARG_GATE.z) <= 1 && (l.optionsWithIndex ?? []).some((o: any) => /open/i.test(o.text)));
         await q.step('elvarg gate', () => { const g = gate(); return g ? q.opLoc(g, q.opIndex(g, /open/i)) : q.waitTicks(1); }, () => (q.pos()?.worldX ?? 0) >= ELVARG_GATE.x, 8, 4);
         await kill('elvarg', NPC.elvarg, undefined, 400);
-        await q.waitUntil(() => questDone, 10);
+        // dragon_complete is a normal queue (elvarg.rs2:13-15): it waits while a level-up dialog is open, so close
+        // dialogs until the quest completes (a partner below 99 Hitpoints levels up on the kill).
+        for (let t = 0; t < 30 && !questDone; t++) {
+            if (q.dialogOpen()) await q.s.sdk.sendClickDialog(0);
+            await q.waitTicks(1);
+        }
         await setPfm(false);
         await ms(16);
     }

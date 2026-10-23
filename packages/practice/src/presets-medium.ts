@@ -42,7 +42,7 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     quest_priestperil: { ...medium({ x: 3218, z: 3474 }, [1925, [563, 2], [556, 6], [554, 2], ...Array(23).fill(1436)], 0), bank: [{ id: 1436, count: 27 }] },
     // Biohazard: in Elena's house, East Ardougne (elena2 spawn 2592,3336, maps/m40_52.jm2); Plague City done (165 = 30,
     // quest_elena.constant:21; the Ardougne teleport needs it, teleport.rs2:35); priest gown (426) and robe (428) for
-    // Guidor's door; runes for a Falador, a Varrock and an Ardougne teleport (4 law 563, 6 air 556, 3 water 555, 1 fire
-    // 554). The quest items are untradeable (quest_biohazard.obj).
-    quest_biohazard: medium({ x: 2591, z: 3336 }, [426, 428, [563, 4], [556, 6], [555, 3], [554, 1]], 2, 0, { 165: 30 }),
+    // Guidor's door; runes for two Ardougne teleports (4 law 563, 4 water 555). A teleport destroys the plague sample
+    // (teleport.rs2:94-97), so Rimmington and Varrock are walked. The quest items are untradeable (quest_biohazard.obj).
+    quest_biohazard: medium({ x: 2591, z: 3336 }, [426, 428, [563, 4], [555, 4]], 2, 0, { 165: 30 }),
 };

@@ -1,6 +1,6 @@
 // Biohazard from preset quest_biohazard (in Elena's house, East Ardougne; every skill 99; Plague City done, %elenaquest
-// 30 for the Ardougne teleport; priest gown and robe, runes for a Falador, a Varrock and an Ardougne teleport from a
-// helper). Reward: 3 QP, 1,250 Thieving XP before 25x (quests/quest_biohazard/scripts/quest_biohazard.rs2:157-162).
+// 30 for the Ardougne teleport; priest gown and robe, runes for two Ardougne teleports from a helper). Reward: 3 QP,
+// 1,250 Thieving XP before 25x (quests/quest_biohazard/scripts/quest_biohazard.rs2:157-162).
 // Varp %biohazard (68, quest_biohazard.constant): 1 Elena, 2 Jerico, 3 birdfeed on the watch tower, 4 the pigeons,
 // 5 Omart's rope ladder, 6 the rotten apple in the mourners' stew, 7 the distillator, 10 Elena (vials and sample),
 // 12 the chemist (touch paper), 14 Guidor, 15 Elena, then King Lathas queues the completion.
@@ -17,7 +17,6 @@ const PIGEONS = { x: 2618, z: 3324 };                      // obj 424 at 2618,33
 const TOWER = { id: 2067, x: 2562, z: 3301 };              // biowatchtower 2559-2563,3301-3306
 const TOWER_SPOT = { x: 2562, z: 3303 };                   // inside inzone(0_39_51_63_35, 0_40_51_5_43)
 const OMART = { x: 2559, z: 3266 };
-const KILRON = { x: 2556, z: 3266 };
 const APPLE = { x: 2535, z: 3333 };                        // obj 1984 (maps/m39_52.jm2)
 const CAULDRON = { id: 2043, x: 2543, z: 3332 };
 const NURSE_CUPBOARD = { id: 2062, x: 2517, z: 3276 };     // bionursescupboardshut -> 2063 (Search)
@@ -149,24 +148,28 @@ try {
     await q.step('gate key', () => q.useOnLoc(ITEM.key, q.locAt(GATE.x, GATE.z) ?? GATE), () => x() > GATE.x, 12, 5);
     await q.step('crate', () => q.opLoc(q.locAt(CRATE.x, CRATE.z) ?? CRATE, 1), () => q.has(ITEM.distillator), 12, 4);
     q.milestone(7);
-    // Out: the gate, the door, the stairs, the HQ door; Kilron: "Yes I do." back over the wall (kilron.rs2:1-12).
-    await cross('gate out', GATE, /^open$/i, () => x() <= GATE.x);
-    await cross('up door out', UP_DOOR, /^open$/i, () => x() < UP_DOOR.x);
-    await q.climb('hq stairs down', () => q.findLoc(l => /stair/i.test(l.name) && l.distance <= 10), /climb-down|^climb$/i, () => q.lvl() === 0);
-    await q.openDoor('stairs door out', 2546, 3325);
-    await q.walk('to hq door out', [{ x: HQ_DOOR.x, z: HQ_DOOR.z + 1, tol: 0 }]);
-    await cross('hq door out', HQ_DOOR, /^open$/i, () => z() <= HQ_DOOR.z);
-    await q.talk('kilron', /^kilron$/i, [/^yes i do/i], () => q.sawText(/yes i do/i) && !q.dialogOpen(), KILRON, 60);
-    await q.waitUntil(() => x() >= 2559, 10);
-    if (x() < 2559) await q.fail('kilron ladder');
+    // Out: Ardougne teleport from the HQ upstairs (East Ardougne, 2661,3301; skillmagic dbrow tele_coord 0_41_51_37_37).
+    // In two trials the walk out stalled in the stairs room (92 and 272 ticks) with five mourners round the door, and
+    // the teleport also skips Kilron's ladder (kilron.rs2:1-12).
+    await q.teleport('ardougne teleport 1', 'magic:ardougne_teleport', 2661, 3301);
     // 8. Elena: the distillator gives three vials and the sample (10) (elena.rs2:61-99).
     await intoElena('elena door in');
-    await q.talk('elena 2', /^elena$/i, [], () => q.has(ITEM.sample) && q.has(ITEM.ethenea), ELENA, 120);
+    // Her script closes the dialog twice with p_delay(2) before it gives the items (elena.rs2:70-99); a new click in
+    // that gap cancels it (a trial handed the distillator twice), so the bot clicks once and waits.
+    await q.step('elena 2', () => { const e = q.npc(/^elena$/i); return e ? q.talkTo(e) : q.waitTicks(1); }, () => q.dialogOpen(), 15, 4);
+    for (let i = 0; i < 80 && !(q.has(ITEM.sample) && !q.dialogOpen()); i++) {
+        await q.converse([], () => !q.dialogOpen(), 1);
+        await q.waitTicks(1);
+    }
+    if (!q.has(ITEM.sample)) await q.fail('elena: no sample');
     q.milestone(10);
-    // 9. Falador teleport, Rimmington: the chemist: "It's ok, I'm Elena's friend.", "I just need some touch paper for a
-    // guy called Guidor." (12, chemist.rs2:50-62,76-91). The errand boys: Hops the broline, Chancy the honey, DeVinci the
+    // 9. The walk to Rimmington: a teleport destroys the plague sample (skill_magic/scripts/spells/teleport.rs2:94-97),
+    // and the chemist and Guidor both need it (chemist.rs2:52-54, guidor.rs2:47-50). The chemist's door (loc_1533 at
+    // 2932,3213, north edge, maps/m45_50.jm2); "It's ok, I'm Elena's friend.", "I just need some touch paper for a guy
+    // called Guidor." (12, chemist.rs2:50-62,76-91). The errand boys: Hops the broline, Chancy the honey, DeVinci the
     // ethenea (hops.rs2, chancy.rs2:32-43, devinci.rs2:21-33).
-    await q.teleport('falador teleport', 'magic:falador_teleport', 2965, 3378);
+    await q.walk('to rimmington', [{ x: 2932, z: 3214, tol: 1 }]);
+    await q.openDoor('chemist door', 2932, 3213);
     await q.talk('chemist', /^chemist$/i, [/i'm elena's friend/i, /touch paper for a guy called guidor/i], () => q.has(ITEM.paper), CHEMIST, 120);
     q.milestone(12);
     const give = async (label: string, re: RegExp, opt: RegExp, item: number): Promise<void> => {
@@ -176,9 +179,22 @@ try {
     await give('chancy', /^chancy$/i, /vial of liquid honey/i, ITEM.honey);
     await give('devinci', /^devinci$/i, /vial of ethenea/i, ITEM.ethenea);
     q.milestone('errands');
-    // 10. Varrock teleport; the three vials back at the Dancing Donkey Inn; the priest gown and robe worn open Guidor's
-    // door (quest_biohazard.rs2:1-15); Guidor (14, guidor.rs2:15-72).
-    await q.teleport('varrock teleport', 'magic:varrock_teleport', 3212, 3424);
+    // 10. The walk to Varrock (the sample again); the three vials back at the Dancing Donkey Inn; the priest gown and
+    // robe worn open Guidor's door (quest_biohazard.rs2:1-15); Guidor (14, guidor.rs2:15-72).
+    // The inn is outside the east gate (guidorgatelclosed 2050 at 3264,3405, west edge); the walk reaches it only
+    // through the gate, and the gate guard searches the bot first (areas/area_varrock/scripts/east_gate.rs2:9-37).
+    // In a trial the walker clicked the gate again after the search and went back in, three times, to the tick cap;
+    // the bot clicks it once and waits.
+    const VGATE = { id: 2050, x: 3264, z: 3405 };
+    await q.walk('to varrock gate', [{ x: VGATE.x - 1, z: VGATE.z, tol: 0 }]);
+    for (let i = 0; i < 3 && x() < VGATE.x; i++) {
+        await q.guard('varrock gate');
+        if (!q.dialogOpen()) { const g = q.locAt(VGATE.x, VGATE.z) ?? VGATE; await q.opLoc(g, q.opIndex(g, /^open$/i)); }
+        for (let k = 0; k < 30 && x() < VGATE.x; k++) { await q.converse([], () => !q.dialogOpen(), 1); await q.waitTicks(1); }
+    }
+    if (x() < VGATE.x) await q.fail('varrock gate');
+    await q.converse([], () => !q.dialogOpen(), 6);
+    await q.dash('to inn', INN.x, INN.z, 3, 30);
     await q.talk('hops 2', /^hops$/i, [], () => q.has(ITEM.broline), INN, 60);
     await q.talk('chancy 2', /^chancy$/i, [], () => q.has(ITEM.honey), INN, 60);
     await q.talk('devinci 2', /^devinci$/i, [], () => q.has(ITEM.ethenea), INN, 60);
@@ -191,13 +207,16 @@ try {
     q.milestone(14);
     // 11. Ardougne teleport; Elena (15, elena.rs2:18-28); King Lathas: "I don't understand..." queues the completion
     // (king_lathas.rs2:41-68).
-    await q.teleport('ardougne teleport', 'magic:ardougne_teleport', 2661, 3301);
+    await q.teleport('ardougne teleport 2', 'magic:ardougne_teleport', 2661, 3301);
     await intoElena('elena door in 2');
     await q.talk('elena 3', /^elena$/i, [], () => q.sawText(/see the king of east ardougne/i), ELENA, 60);
     await outOfElena('elena door out 2');
     q.milestone(15);
     await q.walk('to castle stairs', [{ x: CASTLE_STAIRS.x + 1, z: CASTLE_STAIRS.z, tol: 1 }]);
     await q.climb('castle stairs', () => q.locAt(CASTLE_STAIRS.x, CASTLE_STAIRS.z) ?? CASTLE_STAIRS, /climb-up|^climb$|walk-up/i, () => q.lvl() === 1);
+    // His room door (loc_1536 at 2575,3293, west edge, level 1): shut, the talk is rejected.
+    await q.walk('to lathas door', [{ x: 2574, z: 3293, tol: 0 }]);
+    await q.openDoor('lathas door', 2575, 3293);
     await q.talk('lathas', /^king lathas$/i, [/^i don't understand/i], () => questDone, LATHAS, 120, true);
     await q.converse([], () => !q.dialogOpen(), 10);
     q.milestone(100);

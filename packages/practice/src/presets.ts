@@ -449,7 +449,7 @@ function agilityPresets(): Record<string, SaveConfig> {
     const at = {
         gnome: { pos: { x: 2474, z: 3437, level: 0 }, levels: [1, 70, 90] },
         barbarian: { pos: { x: 2551, z: 3555, level: 0 }, levels: [35, 70, 90] },
-        wilderness: { pos: { x: 3004, z: 3937, level: 0 }, levels: [52, 60, 70, 76, 90] },
+        wilderness: { pos: { x: 3004, z: 3937, level: 0 }, levels: [49, 52, 60, 70, 76, 90] },
         // Brimhaven Agility Arena floor (plane 3, agilityarena.rs2:7), on the east rope swing's start tile.
         arenaswing: { pos: { x: 2764, z: 9569, level: 3 }, levels: [75, 90] },
     };

@@ -24,6 +24,23 @@ const PARTNER_BALL = { ...BIGCHOPPER, Attack: 83, Strength: 83, Prayer: 60, Magi
 // Tree and Vampire Slayer; Holy Grail Defence 85 and Prayer 81 (quest_grail.rs2:116-117); Magic 63, Agility 75.
 const PARTNER_ZANARIS = { ...PARTNER_BALL, Attack: 99, Defence: 85, Hitpoints: 72, Prayer: 81, Magic: 63, Agility: 75, Cooking: 54 };
 
+// Partner quest varps at their complete values (quest.constant), route rows 1-20 (heroes-partner.md section 3):
+// Imp Catcher 160, Rune Mysteries 63, The Restless Ghost 107, Sheep Shearer 179, Cook's Assistant 29, Witch's Potion
+// 67, Doric's Quest 31, Goblin Diplomacy 62, Druidic Ritual 80, Waterfall 65, Witch's House 226, Pirate's Treasure 71,
+// Vampire Slayer 178, Romeo & Juliet 144, Gertrude's Cat 180, Monk's Friend 30, Fishing Contest 11, Tree Gnome
+// Village 111, The Grand Tree 150: 41 QP (count_questpoints recounts varp 101 at login).
+const PARTNER_ROWS_1_20: Record<number, number> = { 160: 2, 63: 6, 107: 5, 179: 22, 29: 2, 67: 3, 31: 100, 62: 6, 80: 4, 65: 10, 226: 7, 71: 4, 178: 3, 144: 100, 180: 6, 30: 80, 11: 5, 111: 9, 150: 160 };
+// Rows 1-20 skills: PARTNER_ZANARIS before Holy Grail, so Defence 1 and Prayer 60 (Holy Grail gives only Prayer and
+// Defence, quest_grail.rs2:116-117).
+const PARTNER_MERLIN = { ...PARTNER_ZANARIS, Defence: 1, Prayer: 60 };
+// Rows 1-23: + Merlin's Crystal (14 = 7, 6 QP), Holy Grail (5 = 10, 2 QP), Lost City (147 = 6, 3 QP): 52 QP.
+const PARTNER_ROWS_1_23: Record<number, number> = { ...PARTNER_ROWS_1_20, 14: 7, 5: 10, 147: 6 };
+
+// Rows 1-11 (Witch's House done): PARTNER_BALL with Hitpoints 72 (quest_ball.rs2:202).
+const PARTNER_HUNT = { ...PARTNER_BALL, Hitpoints: 72 };
+const rows = (...ids: number[]): Record<number, number> => Object.fromEntries(ids.map(id => [id, PARTNER_ROWS_1_20[id]!]));
+const SCIMITAR = { id: 1333, count: 1, slot: 3 };
+
 type Item = number | [number, number];
 const inv = (items: Item[]) => items.map(e => Array.isArray(e) ? { id: e[0], count: e[1] } : { id: e, count: 1 });
 const lobsters = (n: number): number[] => Array.from({ length: n }, () => 379);
@@ -51,4 +68,36 @@ export const PARTNER_PRESETS: Record<string, SaveConfig> = {
     // maps/m49_50.jm2 0 9 2). Nothing worn: the run banks its armour before this leg.
     quest_zanaris: { position: { x: 3144, z: 3203, level: 0 }, skills: ALL_99, varps: { ...DONE, 147: 0 }, inventory: inv([...ZANARIS_ITEMS, ...lobsters(6)]) },
     quest_zanaris_partner: { position: { x: 3144, z: 3203, level: 0 }, skills: PARTNER_ZANARIS, inventory: inv([...ZANARIS_ITEMS, 2434, ...lobsters(10)]) },
+    // The Restless Ghost (row 3, quest-priest.ts): beside Father Aereck as quest_priest. Rows 1-2 done (Imp Catcher
+    // Magic 44); combat 3, 10 HP, nothing worn. The skull spawns a skeleton that the bot leaves.
+    quest_priest_partner: { position: { x: 3243, z: 3206, level: 0 }, skills: { ...BIGCHOPPER, Magic: 44 }, varps: rows(160, 63), inventory: inv([[563, 1], [556, 3], [557, 1], ...lobsters(4)]) },
+    // Pirate's Treasure (row 12, quest-hunt.ts): beside Redbeard Frank as quest_hunt (presets-medium.ts). Rows 1-11 done;
+    // Attack 83 wields the rune scimitar, Defence 1 wears no armour.
+    quest_hunt_partner: {
+        position: { x: 3052, z: 3251, level: 0 }, skills: PARTNER_HUNT, equipment: [SCIMITAR], varps: rows(160, 63, 107, 179, 29, 67, 31, 62, 80, 65, 226), coins: 200,
+        inventory: inv([...Array(10).fill(1963), 1005, 952, [563, 2], [556, 6], [554, 1], [555, 1], ...lobsters(4)]),
+    },
+    // Vampire Slayer (row 13, quest-vampire.ts): in Morgan's house as quest_vampire. Rows 1-12 done.
+    quest_vampire_partner: {
+        position: { x: 3097, z: 3268, level: 0 }, skills: PARTNER_HUNT, equipment: [SCIMITAR], varps: rows(160, 63, 107, 179, 29, 67, 31, 62, 80, 65, 226, 71),
+        inventory: inv([1917, 2347, 1550, [563, 2], [556, 6], [554, 2], ...lobsters(6)]),
+    },
+    // Dragon Slayer (row 24, quest-dragon.ts): beside the Guild master as quest_dragon, with the helper items of
+    // presets-dragon.ts dragon(). Defence 85 from Holy Grail, so the rune set is worn; 52 QP from rows 1-23.
+    quest_dragon_partner: {
+        position: { x: 3190, z: 3358, level: 0 }, skills: PARTNER_ZANARIS, equipment: RUNE_SET, varps: PARTNER_ROWS_1_23, coins: 12000,
+        inventory: inv([[563, 4], [556, 12], [557, 2], [555, 2], [1539, 12], 960, 960, 960, 2347, 1907, 1791, 301, 950, ...lobsters(6)]),
+    },
+    // Merlin's Crystal (row 21, quest-merlin.ts): beside King Arthur as quest_merlin. Defence 1, so only the rune
+    // scimitar (Attack 40) is worn; Prayer 60. Helper items of presets-dragon.ts merlin().
+    quest_merlin_partner: {
+        position: { x: 2763, z: 3513, level: 0 }, skills: PARTNER_MERLIN, equipment: [{ id: 1333, count: 1, slot: 3 }], varps: PARTNER_ROWS_1_20, coins: 500,
+        inventory: inv([[563, 4], [556, 14], [555, 2], [554, 1], 30, 530, 2309, 590, ...lobsters(6)]),
+    },
+    // Holy Grail (row 22, quest-grail.ts): beside King Arthur as quest_grail, Merlin's Crystal done, Excalibur (35) and
+    // the rune scimitar in the pack, nothing worn. Defence 1, Prayer 60.
+    quest_grail_partner: {
+        position: { x: 2763, z: 3513, level: 0 }, skills: PARTNER_MERLIN, varps: { ...PARTNER_ROWS_1_20, 14: 7 }, coins: 100,
+        inventory: inv([[563, 8], [556, 32], [555, 4], 35, 1333, ...lobsters(6)]),
+    },
 };
