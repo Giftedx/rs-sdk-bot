@@ -1,13 +1,18 @@
 // Prints the Haggis 24-board schedule for the three trick scenarios.
-// Usage: bun packages/planner/src/haggis-cli.ts [path/to/hiscores.json] [--order] [--supplies] [--evidence] [--levers]
+// Usage: bun packages/planner/src/haggis-cli.ts [path/to/hiscores.json] [--order] [--supplies] [--evidence] [--levers] [--travel] [--no-travel]
 import { join, resolve } from 'node:path';
-import { bestSet, haggisActivities, LEVERS, loadSnapshot, schedule, SCENARIOS, suppliesFor, TRICKS, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
+import { bestSet as rawBestSet, haggisActivities, haggisTravel, LEVERS, loadSnapshot, schedule as rawSchedule, SCENARIOS, suppliesFor, TRICKS, type Activity, type Board, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
+import { MEASURED_LEGS, RUN_TICKS_PER_TILE, START_TICKS } from './travel';
 
 const args = process.argv.slice(2);
 const root = resolve(import.meta.dir, '..', '..', '..');
 const snap = args.find(a => !a.startsWith('--')) ?? join(root, 'research', 'hiscores-2026-10-22.json');
 const boards = loadSnapshot(snap);
 const activities = haggisActivities();
+// Travel legs are on unless --no-travel (to compare with the model before travel).
+const travel = args.includes('--no-travel') ? undefined : haggisTravel();
+const schedule = (b: Board[], a: Activity[], o: ScheduleOptions) => rawSchedule(b, a, { travel, ...o });
+const bestSet = (b: Board[], a: Activity[], o: ScheduleOptions) => rawBestSet(b, a, { travel, ...o });
 const fmt = (n: number | null) => (n === null ? '-' : n.toLocaleString('en-US'));
 const sl = (r: BoardResult) => (r.slack === null ? (r.status === 'NO-CLOCK' ? 'no clock' : r.status === 'WIN' ? 'points' : '-') : (r.slack > 0 ? '+' : '') + r.slack.toLocaleString('en-US'));
 
@@ -23,7 +28,7 @@ for (const sc of SCENARIOS) {
         const f = floor.boards.find(x => x.id === r.id)!;
         console.log(`| ${r.label} | ${fmt(r.deadline)} | ${fmt(f.finish)} | ${sl(f)} ${f.status} | ${fmt(r.finish)} | ${sl(r)} ${r.status} |`);
     }
-    console.log(`\nRoute: ${real.chosen.filter(id => ['cook-35', 'relog', 'fm-burn', 'fm-pyre', 'smith', 'superheat'].includes(id)).join(', ')}; QP at end ${real.qp}; idle ${real.idle}; blocked ${real.blocked.join(', ') || 'none'}`);
+    console.log(`\nRoute: ${real.chosen.filter(id => ['cook-range-35', 'relog', 'fm-burn', 'fm-pyre', 'smith', 'superheat'].includes(id)).join(', ')}; QP at end ${real.qp}; idle ${real.idle}; travel ${fmt(floor.travel)} floor / ${fmt(real.travel)} realistic; blocked ${real.blocked.join(', ') || 'none'}`);
     for (const mode of ['floor', 'realistic'] as Mode[]) {
         const best = bestSet(boards, activities, { mode, tricks });
         const won = best.result.boards.filter(b => b.status === 'WIN').map(b => b.id);
@@ -32,7 +37,10 @@ for (const sc of SCENARIOS) {
     if (args.includes('--order')) {
         console.log('\n| # | Activity | Start | End | XP lands | Ticks | EDF deadline |');
         console.log('|---|---|---|---|---|---|---|');
-        real.order.forEach((p, i) => console.log(`| ${i + 1} | ${p.label} | ${fmt(p.start)} | ${fmt(p.end)} | ${fmt(p.landsAt)} | ${fmt(p.ticks)} | ${p.deadline === Infinity ? 'none' : fmt(p.deadline)} |`));
+        real.order.forEach((p, i) => {
+            if (p.travel) console.log(`| | walk ${p.from} -> ${p.to} (${p.method}) | ${fmt(p.start - p.travel)} | ${fmt(p.start)} | | ${fmt(p.travel)} | |`);
+            console.log(`| ${i + 1} | ${p.label}${p.inner ? ` (incl. ${fmt(p.inner)} walk/bank ticks)` : ''} | ${fmt(p.start)} | ${fmt(p.end)} | ${fmt(p.landsAt)} | ${fmt(p.ticks)} | ${p.deadline === Infinity ? 'none' : fmt(p.deadline)} |`);
+        });
     }
     if (args.includes('--supplies')) {
         console.log('\n| Supply | Count |');
@@ -106,4 +114,26 @@ if (args.includes('--levers')) {
     line('all safe levers', all.floor, all.realistic);
     line('all safe + all owner levers + all tricks', run('floor', [], owner, true), run('realistic', [], owner, true));
     for (const o of owner) line(`all safe + ${o} + all tricks`, run('floor', [], [o], true), run('realistic', [], [o], true));
+}
+
+// Travel model: calibration against the measured walks, and the OUT rows (content bugs).
+if (args.includes('--travel')) {
+    const cal = haggisTravel().cache.calibration ?? {};
+    console.log('\n## Travel calibration (research/walking.md, MEASURED practice, walkPath, 3 runs per leg)\n');
+    console.log(`Leg model: path tiles / 2 + ${START_TICKS} start ticks (pathfinder cache), else Chebyshev x ${RUN_TICKS_PER_TILE} + ${START_TICKS} (estimate).\n`);
+    console.log('| Leg | Measured ticks | Measured tiles / 2 + start | Pathfinder model | Error | Estimate model | Error | Note |');
+    console.log('|---|---|---|---|---|---|---|---|');
+    const pct = (m: number, x: number) => `${x - m >= 0 ? '+' : ''}${(((x - m) / m) * 100).toFixed(1)}%`;
+    for (const l of MEASURED_LEGS) {
+        const mean = l.runs.reduce((a, b) => a + b, 0) / l.runs.length;
+        const p = cal[l.id];
+        const pm = p ? Math.ceil(p.runTicks) + START_TICKS : NaN;
+        const est = Math.ceil(Math.max(Math.abs(l.from[0] - l.to[0]), Math.abs(l.from[1] - l.to[1])) * RUN_TICKS_PER_TILE) + START_TICKS;
+        const rule = l.tiles ? `${l.tiles / 2 + START_TICKS} (${pct(mean, l.tiles / 2 + START_TICKS)})` : '-';
+        console.log(`| ${l.id} | ${l.runs.join(', ')} (mean ${mean.toFixed(1)}) | ${rule} | ${p ? `${pm} (${p.tiles} tiles)` : '-'} | ${p ? pct(mean, pm) : '-'} | ${est} | ${pct(mean, est)} | ${l.note ?? ''} |`);
+    }
+    console.log('\n## OUT rows (content bugs: never scheduled)\n');
+    console.log('| Row | Why OUT | Legal replacement |');
+    console.log('|---|---|---|');
+    for (const a of activities) if (a.out) console.log(`| ${a.id} | ${a.out.reason} | ${a.out.replacement} |`);
 }

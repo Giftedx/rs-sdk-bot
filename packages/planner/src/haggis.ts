@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { levelForXp, xpForLevel } from './curve';
 import { planSkill, type Method } from './plan';
+import { ANYWHERE, bankTrips, leg, loadTravel, resolve, type Place, type TravelModel } from './travel';
 
 // Haggis 24-board schedule model.
 //
@@ -73,6 +74,17 @@ export interface Activity {
     source: string;
     supplies?: Supply[];
     pending?: string; // an input file that will replace these numbers
+    // Travel (travel.ts). `at`: a place id, 'anywhere' (no move) or 'bank' (nearest bank). Without `at` the activity
+    // does not move the player. `endAt`: where it ends when its own ticks already hold the walk inside it (quests).
+    // `via`: places it walks to in order after `at`; those legs are added to its ticks. `bankTrips`: round trips
+    // from its place to the nearest bank, added to its ticks.
+    at?: string;
+    endAt?: string;
+    via?: string[];
+    bankTrips?: number;
+    // OUT: the row relies on a content bug (a missing level check or a missing delay). Never scheduled unless
+    // ScheduleOptions.includeOut is set (owner rule: accepted mechanics yes, content bugs no).
+    out?: { reason: string; rule?: string; replacement: string };
 }
 
 export type BoardKind =
@@ -93,6 +105,8 @@ export interface ScheduleOptions {
     force?: Record<string, string>; // variant group -> option, to compare routes
     disable?: ReadonlySet<string>; // safe levers to switch off (to measure each lever alone)
     owner?: ReadonlySet<string>; // owner-decision levers to switch on
+    travel?: TravelModel; // price the walks between activities; without it travel is 0
+    includeOut?: boolean; // schedule OUT rows too (to show what a content bug would be worth)
 }
 
 export interface LeverPatch {
@@ -107,8 +121,8 @@ const isOn = (id: string, owner: boolean | undefined, opts: Pick<ScheduleOptions
     owner ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
 
 // The activity table with the levers of `opts` applied: rows filtered, patches merged.
-export function applyLevers(activities: Activity[], opts: Pick<ScheduleOptions, 'disable' | 'owner'>): Activity[] {
-    return activities.filter(a => leverOn(a, opts)).map(a => {
+export function applyLevers(activities: Activity[], opts: Pick<ScheduleOptions, 'disable' | 'owner' | 'includeOut'>): Activity[] {
+    return activities.filter(a => leverOn(a, opts) && (!a.out || opts.includeOut)).map(a => {
         let out = a;
         for (const p of a.patches ?? []) {
             if (!isOn(p.lever, p.owner, opts)) continue;
@@ -127,7 +141,9 @@ export function leverOn(a: Activity, opts: Pick<ScheduleOptions, 'disable' | 'ow
     return a.lever.role === 'add' ? on : !on;
 }
 
-export interface Placed { id: string; label: string; start: number; end: number; landsAt: number; ticks: number; deadline: number }
+// `start` is the start of the activity itself; the walk to it (`travel` ticks from `from` to `to`) ends at `start`.
+// `ticks` includes `inner`: the via legs and bank trips inside the activity.
+export interface Placed { id: string; label: string; start: number; end: number; landsAt: number; ticks: number; deadline: number; travel?: number; from?: string; to?: string; method?: string; inner?: number }
 export interface BoardResult {
     id: BoardId;
     label: string;
@@ -138,7 +154,7 @@ export interface BoardResult {
     status: 'WIN' | 'HOLD' | 'LATE' | 'TIE' | 'NEVER' | 'NO-CLOCK';
     sacrificed: boolean;
 }
-export interface ScheduleResult { order: Placed[]; boards: BoardResult[]; blocked: string[]; idle: number; endTick: number; qp: number; chosen: string[] }
+export interface ScheduleResult { order: Placed[]; boards: BoardResult[]; blocked: string[]; idle: number; endTick: number; qp: number; chosen: string[]; travel: number }
 
 interface XpEvent { start: number; end: number; lump: boolean; xp: Partial<Record<Skill, number>> }
 
@@ -243,6 +259,24 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
     const qpAt = (t: number) => qpEvents.filter(e => e.at <= t).reduce((s, e) => s + e.qp, 0);
 
     const placed = new Set<string>();
+    let here: string | undefined;
+    let travelTotal = 0;
+    // Walk to the activity's place; returns the walk ticks and moves `here`. The via legs and bank trips are inner ticks.
+    const move = (a: Activity): { walk: number; inner: number; from?: string; to?: string; method?: string } => {
+        const m = opts.travel;
+        if (!m || a.at === undefined || a.at === ANYWHERE) return { walk: 0, inner: 0 };
+        if (here === undefined) here = m.start ?? a.at;
+        if (here === 'bank') return { walk: 0, inner: 0 };
+        const from = here;
+        const to = resolve(m, here, a.at);
+        const l = leg(m, from, to);
+        let inner = 0;
+        let cur = to;
+        for (const v of a.via ?? []) { inner += leg(m, cur, v).ticks; cur = v; }
+        if (a.bankTrips) inner += bankTrips(m, to, a.bankTrips).ticks;
+        here = a.endAt ?? cur;
+        return { walk: l.ticks, inner, from, to, method: l.method };
+    };
     // A guest waits for its host while the host is in the scenario and not placed yet.
     const waitsForHost = (a: Activity) => a.inside !== undefined && ids.has(a.inside) && !placed.has(a.inside);
     const canStart = (a: Activity, t: number) =>
@@ -284,10 +318,14 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
         const a = ready[0]!;
         pending.splice(pending.indexOf(a), 1);
 
+        // A train row with nothing left to do (an earlier lump reached its level) does not walk.
+        const mv = a.train && cost(a, clock).fg === 0 ? { walk: 0, inner: 0 } as ReturnType<typeof move> : move(a);
+        clock += mv.walk;
+        travelTotal += mv.walk + mv.inner;
         const start = clock;
         const c = cost(a, start);
         const xp = c.xp;
-        let fg = c.fg;
+        let fg = c.fg + mv.inner;
         // Guests that can start with the host. They fill its dead ticks in table order.
         const guests = pending.filter(g => g.inside === a.id && canStart(g, start));
         const guestCost = guests.map(g => cost(g, start));
@@ -304,7 +342,7 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
         if (a.qp) qpEvents.push({ at: landsAt, qp: a.qp });
         doneAt.set(a.id, landsAt);
         placed.add(a.id);
-        order.push({ id: a.id, label: a.label, start, end, landsAt, ticks: fg, deadline: eff.get(a.id)! });
+        order.push({ id: a.id, label: a.label, start, end, landsAt, ticks: fg, deadline: eff.get(a.id)!, ...(mv.walk || mv.inner ? { travel: mv.walk, from: mv.from, to: mv.to, method: mv.method, inner: mv.inner } : {}) });
         clock = end;
         guests.forEach((g, i) => {
             const gc = guestCost[i]!;
@@ -359,7 +397,7 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
         const finish = served.length ? Math.max(...served.map(p => p.landsAt)) : null;
         return { id: b.id, label: b.label, deadline: null, finish, slack: null, status: finish === null ? 'NEVER' : 'NO-CLOCK', sacrificed: sac };
     });
-    return { order, boards: results, blocked, idle, endTick, qp, chosen: activities.map(a => a.id) };
+    return { order, boards: results, blocked, idle, endTick, qp, chosen: activities.map(a => a.id), travel: travelTotal };
 }
 
 // Largest set of clock boards that can all be won (generalised Moore-Hodgson): schedule EDF; at the first late
@@ -377,7 +415,7 @@ export function bestSet(boards: Board[], activities: Activity[], opts: ScheduleO
         const first = late[0]!;
         const own = (id: BoardId) => result.order
             .filter(p => primary(chosen.find(a => a.id === p.id)!, boards) === id)
-            .reduce((s, p) => s + p.ticks, 0);
+            .reduce((s, p) => s + p.ticks + (p.travel ?? 0), 0);
         const candidates = result.boards
             .filter(r => r.id !== 'overall' && r.deadline !== null && boards.find(b => b.id === r.id)!.rule.kind === 'clock' && !sacrificed.has(r.id) && r.deadline <= first.deadline!)
             .sort((x, y) => own(y.id) - own(x.id) || y.deadline! - x.deadline!);
@@ -536,6 +574,12 @@ export function haggisActivities(path = BOARDS_FILE): Activity[] {
         if (!tiers) throw new Error(`${a.id}: no tier table for ${suppliesLadder.skill}`);
         return { ...a, supplies: [...ladderSupplies(suppliesLadder.skill, tiers, suppliesLadder.margin ?? 1), ...(a.supplies ?? [])] };
     });
+}
+
+// Places of haggis-boards.json and the leg cache haggis-travel.json. The run starts where the tutorial skip lands.
+export function haggisTravel(path = BOARDS_FILE): TravelModel {
+    const data = JSON.parse(readFileSync(path, 'utf8')) as { places?: Record<string, Place> };
+    return { ...loadTravel(data.places ?? {}), start: 'lumbridge-spawn' };
 }
 
 export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];

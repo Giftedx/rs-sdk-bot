@@ -323,6 +323,11 @@
     {
      "item": "raw shrimps",
      "count": 2
+    },
+    {
+     "item": "coins",
+     "count": 10,
+     "note": "Al Kharid toll"
     }
    ],
    "suppliesLadder": {
@@ -333,7 +338,7 @@
   },
   {
    "id": "bank-wine",
-   "label": "Walk to the nearest bank, deposit the wine notes, make 1 wine at Cooking 35 (starts the 20-tick timer)",
+   "label": "Walk to Al Kharid bank (toll gate), deposit the wine notes, make 1 wine at Cooking 35 (starts the 20-tick timer)",
    "serves": [
     "cooking"
    ],
@@ -349,7 +354,8 @@
    ],
    "evidence": "MEASURED",
    "source": "deposit: realistic bank open 3 + deposit 2 (research/crafting-board.md cycle 1), floor booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ); + 1 tick for grapes on jug (wine.rs2:7-20, no delay, Cooking 35 checked at :8)",
-   "at": "bank"
+   "at": "bank:al-kharid-bank:0",
+   "atNote": "Al Kharid bank through the 10-coin toll gate (border_gate.rs2:20-53): 76.5 run ticks + 2 from the kitchen vs Draynor 92 + 2 (world.json nearest.bank of range:lumbridge:0)"
   },
   {
    "id": "cook-35",
@@ -1130,23 +1136,24 @@
      "set": {
       "ticks": {
        "floor": 1196,
-       "realistic": 1554,
+       "realistic": 1330,
        "evidence": "ESTIMATE",
-       "source": "rival: air 1-44 in 60 + nature/body 44-99 in 1,136 = 1,196 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06, S21, lab 7-tick cycle, 22 givers); realistic adds their legs T05-06 64 + T20-21 160 = 1,554 (docs/speedrun/skills/runecraft.md section 1: about 1,330 from 1)"
-      }
+       "source": "rival: air 1-44 in 60 + nature/body 44-99 in 1,136 = 1,196 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06, S21, lab 7-tick cycle, 22 givers); realistic adds their legs T05-06 64 + T20-21 160 = 1,554 (docs/speedrun/skills/runecraft.md section 1: about 1,330 from 1); realistic now 1,554 - 224 legs = 1,330, because the travel model prices the air -> nature leg (was 1,554)"
+      },
+      "via": [
+       "nature-ruins"
+      ]
      }
     }
    ],
    "at": "air-ruins",
    "via": [
-    "mind-ruins",
-    "water-ruins",
-    "earth-ruins",
     "fire-ruins",
     "body-ruins",
     "nature-ruins",
     "law-ruins"
-   ]
+   ],
+   "viaNote": "altars of research/runecraft-ladder.md (air, fire, body, nature, law; chaos skipped: Wilderness, not verified)"
   },
   {
    "id": "thieve",
@@ -1204,7 +1211,8 @@
        "realistic": 605,
        "evidence": "ESTIMATE",
        "source": "rival stun count 84-93 x 8 ticks x 0.9 usable (stun-pack.md section 1; thieving-ladder.md stun 8 ticks)"
-      }
+      },
+      "at": "ardougne-market"
      },
      "addRequires": [
       "rival-fight-arena",

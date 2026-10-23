@@ -1,5 +1,6 @@
 import { test, expect } from 'bun:test';
-import { bestSet, haggisActivities, loadSnapshot, schedule, XP99, type Activity, type Board } from '../src/haggis';
+import { bestSet, haggisActivities, haggisTravel, loadSnapshot, schedule, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
+import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
 
 const clock = (id: Board['id'], deadline: number): Board => ({ id, label: id, rule: { kind: 'clock', deadline } });
@@ -200,4 +201,86 @@ test('rival levers (research/rival-gap-list.md): ESTIMATE rows, no blocks on or 
         expect(r.blocked).toEqual([]);
         expect(r.qp).toBe(142);
     }
+});
+
+// ---------- Travel (packages/planner/src/travel.ts) ----------
+
+const travelModel = (): TravelModel => ({
+    places: { a: { x: 3200, z: 3200 }, b: { x: 3260, z: 3200 }, far: { x: 3200, z: 3500 } },
+    cache: {
+        legs: { 'a>b': { runTicks: 40, tiles: 80 } },
+        nearestBank: { b: { bank: 'bank:x', runTicks: 7, method: 'world.json' } },
+        banks: { 'bank:x': { x: 3265, z: 3205 } },
+    },
+});
+
+test('travel: the walk between two places is added before the second activity', () => {
+    const boards = [clock('cooking', 1000), clock('fletching', 1000)];
+    const acts = [job('cook', 'cooking', 10, { at: 'a' }), job('fletch', 'fletching', 20, { at: 'b', requires: ['cook'] })];
+    const r = schedule(boards, acts, { ...opts, travel: travelModel() });
+    const f = r.order.find(p => p.id === 'fletch')!;
+    expect(f).toMatchObject({ travel: 40 + START_TICKS, from: 'a', to: 'b', method: 'path', start: 10 + 40 + START_TICKS });
+    expect(finish(r, 'fletching').finish).toBe(10 + 42 + 20);
+    expect(r.travel).toBe(42);
+    // Without a cached leg the estimate is Chebyshev x RUN_TICKS_PER_TILE + start ticks.
+    const est = schedule(boards, [job('cook', 'cooking', 10, { at: 'a' }), job('fletch', 'fletching', 20, { at: 'far', requires: ['cook'] })], { ...opts, travel: travelModel() });
+    expect(est.order[1]).toMatchObject({ travel: Math.ceil(300 * RUN_TICKS_PER_TILE) + START_TICKS, method: 'estimate' });
+});
+
+test('travel: activities at the same place, or anywhere, add 0', () => {
+    const boards = [clock('cooking', 1000), clock('fletching', 1000), clock('crafting', 1000)];
+    const acts = [
+        job('cook', 'cooking', 10, { at: 'a' }),
+        job('fletch', 'fletching', 20, { at: 'a', requires: ['cook'] }),
+        job('craft', 'crafting', 5, { at: 'anywhere', requires: ['fletch'] }),
+    ];
+    const r = schedule(boards, acts, { ...opts, travel: travelModel() });
+    expect(r.travel).toBe(0);
+    expect(r.order.map(p => p.travel ?? 0)).toEqual([0, 0, 0]);
+    expect(finish(r, 'crafting').finish).toBe(35);
+});
+
+test('travel: bank = the nearest bank of the place (world.json); bank trips and via legs are inside the activity', () => {
+    const m = travelModel();
+    expect(resolve(m, 'b', 'bank')).toBe('bank:x');
+    expect(leg(m, 'b', 'bank:x')).toEqual({ ticks: 7 + START_TICKS, method: 'world.json' });
+    const boards = [clock('smithing', 10_000)];
+    const r = schedule(boards, [job('smith', 'smithing', 100, { at: 'b', bankTrips: 3 })], { ...opts, travel: m });
+    expect(r.order[0]).toMatchObject({ ticks: 100 + 3 * 2 * 9, inner: 54, travel: 0 });
+    const v = schedule([clock('runecraft', 10_000)], [job('rc', 'runecraft', 100, { at: 'a', via: ['b'] })], { ...opts, travel: m });
+    expect(v.order[0]).toMatchObject({ ticks: 142, inner: 42 });
+});
+
+test('travel: a place on an island is reached through its port by boat', () => {
+    const isl = { id: 'k', port: 'a', landing: 'b', boatTicks: 18, source: 'test' };
+    const m: TravelModel = { places: { a: { x: 3200, z: 3200 }, b: { x: 3100, z: 3100, island: isl }, c: { x: 3110, z: 3100, island: isl } }, cache: { legs: {}, nearestBank: {}, banks: {} } };
+    // a is the port: 0 walk, boat 18, then b -> c (estimate 10 x 0.6 -> 6, + 2)
+    expect(leg(m, 'a', 'c').ticks).toBe(18 + Math.ceil(10 * RUN_TICKS_PER_TILE) + START_TICKS);
+    expect(leg(m, 'b', 'c').method).toBe('estimate');
+});
+
+test('OUT rows (content bugs) are never scheduled; the legal Cooking route replaces cook-35', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
+    const acts = haggisActivities();
+    const out = acts.filter(a => a.out).map(a => a.id).sort();
+    expect(out).toEqual(['charge', 'cook-35', 'fm-pyre', 'login-wine', 'mage-arena', 'mortton-oil', 'relog']);
+    for (const tricks of [new Set<never>(), new Set(TRICKS)]) {
+        const r = schedule(boards, acts, { mode: 'realistic', tricks, owner: new Set(['charge-spam']), travel: haggisTravel() });
+        for (const id of out) expect(r.chosen).not.toContain(id);
+        expect(r.chosen).toEqual(expect.arrayContaining(['cooks-assistant', 'cook-range-35', 'bank-wine', 'wine-timer']));
+        expect(r.blocked).toEqual([]);
+        expect(r.qp).toBe(142);
+    }
+});
+
+test('every row of the real table has a known place, and the travel schedule has no blocks', () => {
+    const m = haggisTravel();
+    for (const a of haggisActivities()) {
+        expect(a.at).toBeDefined();
+        for (const p of [a.at!, a.endAt, ...(a.via ?? [])]) if (p && p !== 'anywhere' && p !== 'bank') expect(() => place(m, p)).not.toThrow();
+    }
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
+    const r = schedule(boards, haggisActivities(), { mode: 'floor', tricks: new Set(), travel: m });
+    expect(r.blocked).toEqual([]);
+    expect(r.travel).toBeGreaterThan(0);
 });

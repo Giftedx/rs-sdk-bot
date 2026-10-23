@@ -41,7 +41,7 @@ export interface TravelCache {
     // Pathfinder run ticks for MEASURED_LEGS (calibration only).
     calibration?: Record<string, { runTicks: number; tiles: number }>;
 }
-export interface TravelModel { places: Record<string, Place>; cache: TravelCache }
+export interface TravelModel { places: Record<string, Place>; cache: TravelCache; start?: string }
 
 export const ANYWHERE = 'anywhere';
 export const BANK = 'bank';
