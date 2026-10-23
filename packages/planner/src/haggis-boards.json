@@ -1987,7 +1987,7 @@
   },
   {
    "id": "ranged",
-   "label": "Cannon + melee to Ranged 99",
+   "label": "Bow (longrange) + cannon to Ranged 99",
    "serves": [
     "ranged"
    ],
@@ -1995,21 +1995,21 @@
     "skill": "ranged",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 215.7,
-     "realistic": 207.7,
+     "floor": 323.4,
+     "realistic": 309.4,
      "evidence": "MEASURED",
-     "source": "research/quest-plan.md (Dwarf Cannon, cannon session): dwarf cannon while meleeing Khazard troopers at the Gnome battlefield (multiway), preset quest_dwarfcannon_gb (Haggis levels, Ranged 1), cannon topped up every 30 ticks with no attack click until the load lands, practice, 3 x 300 ticks: 208.2 / 215.7 / 199.2 Ranged XP per tick (floor = best run, realistic = mean 207.7); melee 84.0 / 86.0 / 105.0 style XP and 27.8 / 28.4 / 34.8 Hitpoints XP per tick"
+     "source": "research/combat-measure.md section 6: rune arrows from a yew (band 40) or magic shortbow (bands 70, 90), longrange style, plus the dwarf cannon (top-up every 30 ticks, the load lands before the next attack), Khazard troopers at the Gnome battlefield (multiway), practice, 3 x 300 ticks per band: 274.2 / 224.5 / 206.0, 331.5 / 282.5 / 295.2, 307.7 / 321.0 / 324.7 Ranged XP per tick at bands 40 / 70 / 90; Ranged 1 -> 99 weighted by XP share 4.7 / 22.1 / 73.2% (floor = best runs, realistic = means)"
     },
     "side": {
-     "defence": 0.441,
-     "hitpoints": 0.146
+     "defence": 0.18,
+     "hitpoints": 0.119
     }
    },
    "requires": [
     "cannon"
    ],
    "evidence": "MEASURED",
-   "source": "Ranged rate MEASURED practice (research/quest-plan.md); side XP = mean style 91.7 and Hitpoints 30.3 per 207.7 Ranged XP; the runs used the aggressive style (Strength), so Defence side XP assumes the defensive style gives the same amount (combat.rs2:143-167, CODE-READ)",
+   "source": "research/combat-measure.md section 6: side XP = measured Defence and Hitpoints per Ranged XP per band (Defence 0.167 / 0.191 / 0.177, Hitpoints 0.110 / 0.126 / 0.117), XP-weighted; longrange splits the bow's XP 2 Ranged + 2 Defence per damage (combat.rs2:157-159). Rapid gives 384.2 realistic with no Defence and made Overall later (section 6). Below Ranged 40 (1.6% of the XP) a lower bow is needed; not measured",
    "supplies": [
     {
      "item": "cannon (base, stand, barrels, furnace)",
@@ -2017,8 +2017,25 @@
     },
     {
      "item": "cannonball",
-     "count": 2500,
-     "note": "2.05 / 2.57 / 2.19 balls per 1,000 Ranged XP measured (mean 2.27): 2,266 for 998,458 XP, plus spare"
+     "count": 1700,
+     "note": "1.40-1.74 balls per 1,000 Ranged XP measured with longrange (mean 1.56): 1,557 for 998,458 XP, plus spare"
+    },
+    {
+     "item": "rune arrow",
+     "count": 850,
+     "note": "0.61-0.89 arrows per 1,000 Ranged XP measured (mean 0.71): 709, plus spare"
+    },
+    {
+     "item": "magic shortbow",
+     "count": 1
+    },
+    {
+     "item": "yew shortbow",
+     "count": 1
+    },
+    {
+     "item": "black d'hide body, chaps, vambraces; coif",
+     "count": 1
     }
    ],
    "at": "falador-white-knights"

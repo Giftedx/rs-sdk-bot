@@ -226,8 +226,54 @@ hpXpPerTick=24.1 rangedXp=57950 rangedXpPerTick=193.2 ... reloads=10 refires=1 s
 - So the choice depends on the board: no cannon at the ice warriors for the melee boards (185 style XP per tick), or
   the cannon at the battlefield when Ranged is the target (184 Ranged + 87 style).
 
+## 6. Ranged: bow plus the fixed cannon
+
+Presets `combat_rb_<band>` and `combat_rb_<band>_cannon` (Gnome battlefield, Ranged, Defence and Hitpoints at the
+band). Band 40: yew shortbow and green d'hide; bands 70 and 90: magic shortbow and black d'hide; coif, amulet of
+power, 3,000 rune arrows. Same script (`TARGET='^khazard trooper$'`), 3 x 300 ticks per arm. The fight signal is
+now Hitpoints XP (own hits only; the cannon gives none). "Balls" counts the balls loaded during the window.
+
+| Arm | Band | Ranged XP/tick (runs) | Mean | Defence XP/tick mean | HP XP/tick mean | Arrows per 1k Ranged XP | Balls per 1k Ranged XP | Food |
+|---|---|---|---|---|---|---|---|---|
+| Bow (rapid) only | 40 | 110.7 / 101.7 / 105.3 | 105.9 | 0 | 34.9 | 2.31-2.53 | 0 | 0 |
+| Bow (rapid) only | 70 | 144.7 / 139.0 / 172.3 | 152.0 | 0 | 50.2 | 1.66-2.13 | 0 | 0 |
+| Bow (rapid) only | 90 | 198.3 / 204.7 / 199.3 | 200.8 | 0 | 66.4 | 1.43-1.49 | 0 | 0 |
+| Bow (rapid) + cannon | 40 | 345.2 / 334.2 / 296.3 | 325.2 | 0 | 31.6 | 0.61-0.72 | 1.22-1.27 | 0-1 |
+| Bow (rapid) + cannon | 70 | 371.5 / 353.3 / 388.5 | 371.1 | 0 | 41.8 | 0.63-0.68 | 1.24-1.46 | 0 |
+| Bow (rapid) + cannon | 90 | 386.7 / 394.7 / 397.3 | **392.9** | 0 | 49.8 | 0.61-0.65 | 1.17-1.29 | 0 |
+| Bow (longrange) + cannon | 40 | 274.2 / 224.5 / 206.0 | 234.9 | 39.2 | 25.9 | 0.69-0.89 | 1.54-1.74 | 0 |
+| Bow (longrange) + cannon | 70 | 331.5 / 282.5 / 295.2 | 303.1 | 57.9 | 38.3 | 0.68-0.75 | 1.41-1.64 | 0 |
+| Bow (longrange) + cannon | 90 | 307.7 / 321.0 / 324.7 | **317.8** | 56.4 | 37.3 | 0.61-0.66 | 1.40-1.58 | 0 |
+| Cannon + melee (section 5) | 90 | 179.8 / 193.2 / 179.5 | 184.2 | (86.7 style) | 28.7 | - | about 2.3 (helper) | 0 |
+
+Example line (rapid + cannon, band 90, run 3): `RESULT ok cannon=true ticks=300 ... hpXp=16837 hpXpPerTick=56.1
+rangedXp=119200 rangedXpPerTick=397.3 ... arrowsUsed=73 arrowsPer1kRanged=0.61 ballsUsed=139 ballsPer1kRanged=1.17
+foodUsed=0`.
+
+- Bow + cannon is about twice cannon + melee for Ranged: 392.9 vs 184.2 at band 90 (rapid). Ranged went up 25-28
+  levels per 300-tick run at band 40, so "band 40" covers about 40-68.
+- Ranged 1 to 99, XP-weighted (4.7 / 22.1 / 73.2%): rapid 392.5 / 384.2 (floor / realistic), longrange
+  323.4 / 309.4 Ranged plus 0.180 Defence and 0.119 Hitpoints per Ranged XP.
+- Planner, scenario a, from HEAD with each `ranged` row (other agents' uncommitted rows left out):
+
+| `ranged` row | Ranged finish, floor / realistic | Overall, all safe levers | Overall, without `cannon-melee` |
+|---|---|---|---|
+| Cannon + melee 215.7 / 207.7, side Defence 0.441 (before) | 33,392 / 40,060 | 38,235 / 45,443 | 37,940 / 45,129 |
+| Bow rapid + cannon 392.5 / 384.2, no Defence | 31,307 / 37,851 | 40,834 / 48,313 | 38,308 / 45,623 |
+| **Bow longrange + cannon 323.4 / 309.4, side Defence 0.180 (committed)** | **31,851 / 38,480** | **39,466 / 46,869** | **37,851 / 45,149** |
+
+- Defence finishes last, so Overall follows Defence. Rapid drops the Defence side XP the old row gave, and Overall
+  gets later. Longrange keeps part of it: Ranged lands 1,541 / 1,580 ticks earlier and Overall is the same as before
+  when `cannon-melee` is off. With `cannon-melee` on, every variant is later, because the lever slows `def-top` to
+  86.7 style XP per tick. `cannon-melee` loses ticks in every table measured; switch it off (the lever list is
+  in `packages/planner/src/haggis.ts`, not changed here).
+- Supplies for Ranged 99 (longrange): about 1,557 cannonballs and 709 rune arrows (row: 1,700 and 850 with spare).
+- Logout: `combat-melee.ts` now walks 18 tiles away and waits until 17 ticks pass with no hit before logout. All 27
+  runs in this section ended `exit=0`.
+
 ## Open
 
+- Ranged 1 to 40 with a lower bow (1.6% of the XP; not measured).
 - The walk into the Ice Queen lair and the Temple of Ikov dungeon (access rules not checked).
 - The fixed cannon handling at bands 40 and 70 (only band 90 measured; `def-top` uses the band 90 cannon rate).
 - Stun guests from a fresh ladder (Thieving 1 to 99), with real Prayer and Magic level-up pages and refill trades.
