@@ -396,7 +396,7 @@ function render(){
   $('#k-xp').textContent=gp(live.reduce((n,b)=>n+(b.fresh&&b.xpPerHour>0?b.xpPerHour:0),0));
   $('#clock').textContent=new Date(S.now).toLocaleTimeString('en-GB');$('#pulse').className='pulse'+(w.connected===false?' off':'');
   const first=live.find(b=>b.inWorld&&!b.reserved)||live.find(b=>b.fresh&&!b.reserved)||live.find(b=>!b.reserved)||bots[0];
-  if((!picked||!bots.some(b=>b.name===sel))&&first)sel=first.name;
+  if((!sel||!bots.some(b=>b.name===sel))&&first)sel=first.name;
   alertsBar();roster();boards();detail();vault();activity();requests();machine();syncWorld();loadMap();drawMap();if(tipFor)tip();
 }
 window.addEventListener('resize',()=>{drawMap();if($('#flow'))$('#flow')._h=null;vault()});
