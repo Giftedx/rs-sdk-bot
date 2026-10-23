@@ -92,6 +92,16 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Trade pair: giver holds 100 coins, receiver stands one tile east (3223,3218).
     trade_giver: { position: LUMBRIDGE, coins: 100 },
     trade_receiver: { position: { x: 3223, z: 3218, level: 0 } },
+    // Fishing resume test, the live Mightyrod state of 2026-10-23: near Bob's Axes (3236,3206), Fishing 22, Thieving 50,
+    // 0 coins, 28 items (starter kit, small net 303, fly fishing rod 309, 24 feathers 314, knife 946, 7 logs 1511,
+    // shrimps 315, bread 2309). A save cannot set current HP, so this starts at 10 HP, not 2.
+    fish_resume: {
+        position: { x: 3236, z: 3206, level: 0 },
+        skills: { Fishing: 22, Thieving: 50 },
+        inventory: [1351, 590, 303, 315, 1925, 1931, 2309, 1265, 1205, 1277, 1171, 841].map(id => ({ id, count: 1 }))
+            .concat([{ id: 882, count: 25 }, { id: 556, count: 25 }, { id: 558, count: 15 }, { id: 555, count: 6 }, { id: 557, count: 4 }, { id: 559, count: 2 }, { id: 946, count: 1 }])
+            .concat(Array.from({ length: 5 }, () => ({ id: 1511, count: 1 })), [{ id: 309, count: 1 }, { id: 314, count: 24 }], Array.from({ length: 2 }, () => ({ id: 1511, count: 1 }))),
+    },
 };
 
 // The engine writes the save on logout, so a preset written while logged in is lost.
