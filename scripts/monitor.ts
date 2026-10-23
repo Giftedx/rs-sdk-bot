@@ -55,6 +55,24 @@ function cycle() {
             raise({ level: 'fixed', key: `py-${p.pid}`, text: `killed stuck python - (pid ${p.pid}, ${Math.round(p.ageSec / 60)} min, ${p.cpuSec} CPU-s)` });
         } else raise({ level: 'warn', key: `py-${p.pid}`, text: `python reading stdin for ${Math.round(p.ageSec / 60)} min (pid ${p.pid}), likely stuck` });
     }
+    // Zombie bots: a bot process whose session was replaced keeps running and leaks memory (2026-10-23: an old
+    // mmtha0205 goldfarm reached 8.5 GB and another 2.6 GB, each beside the live process for the same account).
+    // Two processes running the same script for the same account: the older one is the zombie; kill it. A bot process
+    // over 2 GB is an alert either way.
+    const botKey = (cmd: string) => cmd.match(/(\S+\.ts)\s+([A-Za-z0-9]{1,12})\s*$/)?.slice(1).join(' ') ?? null;
+    const byKey = new Map<string, typeof list>();
+    for (const p of list.filter(p => p.name === 'bun.exe' && !/supervise\.ts|host\.ts|swarm\.ts/.test(p.cmd))) {
+        const k = botKey(p.cmd);
+        if (k) byKey.set(k, [...(byKey.get(k) ?? []), p]);
+    }
+    for (const [k, ps] of byKey) {
+        if (ps.length < 2) continue;
+        for (const old of ps.sort((a, b) => b.ageSec - a.ageSec).slice(0, -1)) {
+            Bun.spawnSync(['taskkill', '/PID', String(old.pid), '/F'], { stdout: 'ignore', stderr: 'ignore' });
+            raise({ level: 'fixed', key: `zombie-${old.pid}`, text: `killed zombie bot process ${old.pid} (${k}, ${old.mb} MB, ${Math.round(old.ageSec / 60)} min old; a newer one runs)` });
+        }
+    }
+    for (const p of list.filter(p => p.name === 'bun.exe' && p.mb > 2048)) raise({ level: 'warn', key: `bigproc-${p.pid}`, text: `bun ${p.pid} uses ${p.mb} MB: ${p.cmd.slice(-60)}` });
     const freeGB = freemem() / 2 ** 30;
     if (freeGB < 3) raise({ level: 'error', key: 'ram', text: `only ${freeGB.toFixed(1)} GB RAM free` });
 
