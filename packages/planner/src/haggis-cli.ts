@@ -28,7 +28,10 @@ for (const sc of SCENARIOS) {
         const f = floor.boards.find(x => x.id === r.id)!;
         console.log(`| ${r.label} | ${fmt(r.deadline)} | ${fmt(f.finish)} | ${sl(f)} ${f.status} | ${fmt(r.finish)} | ${sl(r)} ${r.status} |`);
     }
-    console.log(`\nRoute: ${real.chosen.filter(id => ['cook-range-35', 'relog', 'fm-burn', 'fm-pyre', 'smith', 'superheat'].includes(id)).join(', ')}; QP at end ${real.qp}; idle ${real.idle}; travel ${fmt(floor.travel)} floor / ${fmt(real.travel)} realistic; blocked ${real.blocked.join(', ') || 'none'}`);
+    // The route is chosen per mode for the earliest Overall finish (chooseRoute), so floor and realistic can differ.
+    const route = (r: typeof real) => Object.entries(r.route).map(([g, o]) => `${g}=${o}`).join(', ');
+    console.log(`\nOverall finish: floor ${fmt(floor.overallFinish)} (last 99: ${floor.lastSkill ?? '-'}; route ${route(floor)}); realistic ${fmt(real.overallFinish)} (last 99: ${real.lastSkill ?? '-'}; route ${route(real)})`);
+    console.log(`QP at end ${real.qp}; idle ${real.idle}; travel ${fmt(floor.travel)} floor / ${fmt(real.travel)} realistic; blocked ${real.blocked.join(', ') || 'none'}`);
     for (const mode of ['floor', 'realistic'] as Mode[]) {
         const best = bestSet(boards, activities, { mode, tricks });
         const won = best.result.boards.filter(b => b.status === 'WIN').map(b => b.id);
@@ -43,9 +46,9 @@ for (const sc of SCENARIOS) {
         });
     }
     if (args.includes('--supplies')) {
-        console.log('\n| Supply | Count |');
+        console.log('\nSupplies of the realistic route (items Haggis makes during the run are left out):\n\n| Supply | Count |');
         console.log('|---|---|');
-        for (const s of suppliesFor(activities, { mode: 'realistic', tricks })) console.log(`| ${s.item} | ${fmt(s.count)} |`);
+        for (const s of suppliesFor(activities, { mode: 'realistic', tricks, travel }, boards)) console.log(`| ${s.item} | ${fmt(s.count)} |`);
     }
 }
 

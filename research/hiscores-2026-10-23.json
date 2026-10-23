@@ -1,6 +1,6 @@
 {
  "base": "https://rs-sdk-demo.fly.dev",
- "takenAt": "2026-10-23T11:26:11.736Z",
+ "takenAt": "2026-10-23T12:26:15.004Z",
  "boards": [
   {
    "board": "Overall",
@@ -1328,129 +1328,129 @@
    "rows": [
     {
      "rank": 1,
+     "name": "stunfletchv2",
+     "level": 99,
+     "ticks": 57
+    },
+    {
+     "rank": 2,
      "name": "jackalopefr1",
      "level": 99,
      "ticks": 58
     },
     {
-     "rank": 2,
+     "rank": 3,
      "name": "stunfletch",
      "level": 99,
      "ticks": 66
     },
     {
-     "rank": 3,
+     "rank": 4,
      "name": "nickfeather",
      "level": 99,
      "ticks": 98
     },
     {
-     "rank": 4,
+     "rank": 5,
      "name": "lachbow003",
      "level": 99,
      "ticks": 136
     },
     {
-     "rank": 5,
+     "rank": 6,
      "name": "nickmax",
      "level": 99,
      "ticks": 287
     },
     {
-     "rank": 6,
+     "rank": 7,
      "name": "nickoverall",
      "level": 99,
      "ticks": 312
     },
     {
-     "rank": 7,
+     "rank": 8,
      "name": "nickfletch",
      "level": 99,
      "ticks": 611
     },
     {
-     "rank": 8,
+     "rank": 9,
      "name": "lachbow001",
      "level": 99,
      "ticks": 1274
     },
     {
-     "rank": 9,
+     "rank": 10,
      "name": "edwardfletch",
      "level": 99,
      "ticks": 2873
     },
     {
-     "rank": 10,
+     "rank": 11,
      "name": "stunbaron",
      "level": 99,
      "ticks": 17697
     },
     {
-     "rank": 11,
+     "rank": 12,
      "name": "stunhard",
      "level": 99,
      "ticks": 18156
     },
     {
-     "rank": 12,
+     "rank": 13,
      "name": "stunless",
      "level": 99,
      "ticks": 18358
     },
     {
-     "rank": 13,
+     "rank": 14,
      "name": "stunking",
      "level": 99,
      "ticks": 18920
     },
     {
-     "rank": 14,
+     "rank": 15,
      "name": "achfletch",
      "level": 99,
      "ticks": 26805
     },
     {
-     "rank": 15,
+     "rank": 16,
      "name": "poopy",
      "level": 99,
      "ticks": 27905
     },
     {
-     "rank": 16,
+     "rank": 17,
      "name": "sokoslave2",
      "level": 99,
      "ticks": 36466
     },
     {
-     "rank": 17,
+     "rank": 18,
      "name": "wgu27dqud",
      "level": 99,
      "ticks": 46290
     },
     {
-     "rank": 18,
+     "rank": 19,
      "name": "gh_kadeski",
      "level": 99,
      "ticks": 46681
     },
     {
-     "rank": 19,
+     "rank": 20,
      "name": "soko1",
      "level": 99,
      "ticks": 47376
     },
     {
-     "rank": 20,
+     "rank": 21,
      "name": "creativeou3",
      "level": 99,
      "ticks": 63898
-    },
-    {
-     "rank": 21,
-     "name": "nb9imejnu",
-     "level": 99,
-     "ticks": 65697
     }
    ]
   },
@@ -2762,15 +2762,15 @@
     },
     {
      "rank": 20,
-     "name": "dotsbot15",
+     "name": "dotsbot89",
      "level": 110,
-     "ticks": 3258267
+     "ticks": 3167577
     },
     {
      "rank": 21,
-     "name": "dotsbot19",
+     "name": "dotsbot30",
      "level": 110,
-     "ticks": 3269954
+     "ticks": 3249855
     }
    ]
   }

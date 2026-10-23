@@ -97,6 +97,37 @@ test('variants: a trick option is used only when its flag is on, and only if it 
     expect(schedule(boards, acts, { mode: 'floor', tricks: new Set(['loginWine'] as const) }).chosen).toEqual(['trick']);
 });
 
+test('variants: the route with the earlier Overall finish wins over the raw-tick-best one, per mode', () => {
+    // 'split' trains Magic alone (100 ticks) and leaves Smithing to a 200-tick train row; 'combo' (150 floor, 400
+    // realistic) gives both 99s. Raw ticks pick 'split' (100 < 150); Overall: floor split 300 vs combo 150.
+    const boards = [clock('magic', 1000), clock('smithing', 2000), clock('overall', 5000)];
+    const startXp = Object.fromEntries(['attack', 'defence', 'strength', 'hitpoints', 'ranged', 'prayer', 'cooking', 'woodcutting', 'fletching', 'fishing', 'firemaking', 'crafting', 'mining', 'herblore', 'agility', 'thieving', 'runecraft'].map(s => [s, XP99]));
+    const acts: Activity[] = [
+        job('split', 'magic', 100, { variant: { group: 'g', option: 'split' } }),
+        { ...job('combo', 'magic', 150, { variant: { group: 'g', option: 'combo' } }), serves: ['magic', 'smithing'], ticks: { floor: 150, realistic: 400 }, xp: { magic: 'to99', smithing: 'to99' } },
+        { id: 'smith', label: 'smith', serves: ['smithing'], train: { skill: 'smithing', toLevel: 99, xpPerTick: { floor: XP99 / 200, realistic: XP99 / 200 } }, evidence: 'ESTIMATE', source: 'test' },
+    ];
+    const run = (mode: 'floor' | 'realistic', route?: 'ticks') => schedule(boards, acts, { mode, tricks: new Set(), startXp, route });
+    expect(run('floor', 'ticks').route).toEqual({ g: 'split' });
+    expect(run('floor', 'ticks').overallFinish).toBe(300);
+    expect(run('floor')).toMatchObject({ route: { g: 'combo' }, overallFinish: 150 });
+    // Realistic: combo 400 > split 300, so the modes choose different routes.
+    expect(run('realistic')).toMatchObject({ route: { g: 'split' }, overallFinish: 300, lastSkill: 'smithing' });
+    // A forced option is kept; bestSet reports the same route as schedule.
+    expect(schedule(boards, acts, { mode: 'floor', tricks: new Set(), startXp, force: { g: 'split' } }).route).toEqual({ g: 'split' });
+    expect(bestSet(boards, acts, { mode: 'floor', tricks: new Set(), startXp }).result.route).toEqual({ g: 'combo' });
+});
+
+test('a supply made by a row of the route is not staged by a helper', () => {
+    const boards = [clock('fletching', 100), clock('ranged', 1000)];
+    const acts: Activity[] = [
+        job('fletch', 'fletching', 10, { supplies: [{ item: 'arrowtips', count: 5 }] }),
+        job('range', 'ranged', 50, { requires: ['fletch'], supplies: [{ item: 'arrow', count: 5, from: 'fletch' }, { item: 'bow', count: 1 }] }),
+    ];
+    expect(suppliesFor(acts, opts, boards).map(s => s.item)).toEqual(['arrowtips', 'bow']);
+    expect(suppliesFor(acts.slice(1), opts, boards).map(s => s.item)).toEqual(['arrow', 'bow']);
+});
+
 test('the real table loads, schedules without blocks, and covers all 24 boards', () => {
     const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
     expect(boards).toHaveLength(24);

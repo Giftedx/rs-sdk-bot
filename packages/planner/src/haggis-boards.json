@@ -51,6 +51,11 @@
    "z": 3218,
    "note": "tutorial skip lands here (research/crafting-board.md); Lumbridge men for pickpocketing"
   },
+  "fm-line-lumbridge-north": {
+   "x": 3211,
+   "z": 3306,
+   "note": "start of the 157-tile Firemaking line, 4 west rows joined by turns of at most 4 steps (scripts/measure/fm-line-search.ts --safe --from 3222,3218 --radius 100 --turns 6, LINE 1); helpers drop logs here, no bank"
+  },
   "lumbridge-kitchen": {
    "x": 3211,
    "z": 3215,
@@ -824,15 +829,15 @@
   },
   {
    "id": "fm-burn",
-   "label": "Burn logs ladder, 4 ticks per log",
+   "label": "Burn logs ladder on a 157-tile line, helpers drop logs, 4 ticks per log",
    "serves": [
     "firemaking"
    ],
    "ticks": {
-    "floor": 639,
-    "realistic": 780,
-    "evidence": "ESTIMATE",
-    "source": "research/supply-floors.md: MEASURED 4.07 ticks per log at 100% success (2 runs), first 27-log trip 110-166 ticks (4 runs), trips 5-24 ticks; no full run passed (blocked second line); floor 639 = 157 logs x 4.07 with no banking, realistic about 780 with trips"
+    "floor": 642,
+    "realistic": 667,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md (Firemaking on a line, 2026-10-23): line north of Lumbridge (rows z3306 x3211-3182, z3307 x3185-3171, z3311 x3176-3098, z3312 x3103-3071; scripts/measure/fm-line-search.ts), 27 logs in the pack and 5 helpers dropping the other 130 one per tile ahead, no bank, run on: 662, 646, 678 ticks level 1 -> 99 on practice (scripts/measure/fm-line-run.ts); a 5-row Fremennik line gave 682, 658, 666, 706, 650, 642, 678, 682, 642, 678 (10 runs). Turn and supply overhead 0 at level 45+ in 12 of 13 runs; the spread is the failed rolls below level 45 (stat_random(64, 512)). Floor = best run 642, realistic = mean of the 13 runs 667"
    },
    "xp": {
     "firemaking": "to99"
@@ -844,8 +849,8 @@
     "group": "firemaking",
     "option": "burn"
    },
-   "evidence": "ESTIMATE",
-   "source": "research/supply-floors.md: MEASURED 4.07 ticks per log at 100% success (2 runs), first 27-log trip 110-166 ticks (4 runs), trips 5-24 ticks; no full run passed (blocked second line); floor 639 = 157 logs x 4.07 with no banking, realistic about 780 with trips",
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md (Firemaking on a line, 2026-10-23): line north of Lumbridge (rows z3306 x3211-3182, z3307 x3185-3171, z3311 x3176-3098, z3312 x3103-3071; scripts/measure/fm-line-search.ts), 27 logs in the pack and 5 helpers dropping the other 130 one per tile ahead, no bank, run on: 662, 646, 678 ticks level 1 -> 99 on practice (scripts/measure/fm-line-run.ts); a 5-row Fremennik line gave 682, 658, 666, 706, 650, 642, 678, 682, 642, 678 (10 runs). Turn and supply overhead 0 at level 45+ in 12 of 13 runs; the spread is the failed rolls below level 45 (stat_random(64, 512)). Floor = best run 642, realistic = mean of the 13 runs 667",
    "supplies": [
     {
      "item": "tinderbox",
@@ -856,7 +861,9 @@
     "skill": "firemaking",
     "margin": 1
    },
-   "at": "anywhere"
+   "at": "fm-line-lumbridge-north",
+   "bankTrips": 0,
+   "bankTripsSource": "helpers drop the logs on the line (research/supply-floors.md, Firemaking on a line)"
   },
   {
    "id": "mortton-oil",
@@ -1240,7 +1247,7 @@
   },
   {
    "id": "magic-43",
-   "label": "Enchant to Magic 43",
+   "label": "Teleport ladder to Magic 43 (staff of air)",
    "serves": [
     "magic"
    ],
@@ -1248,10 +1255,10 @@
     "skill": "magic",
     "toLevel": 43,
     "xpPerTick": {
-     "floor": 300,
-     "realistic": 250,
+     "floor": 117.2,
+     "realistic": 89.9,
      "evidence": "ESTIMATE",
-     "source": "enchant ladder average below 43"
+     "source": "magic-teleport ladder to 43 (haggis.ts MAGIC_TELEPORT_TIERS, suppliesLadder toLevel 43): 36 wind strikes 1-25 + 4 Varrock + 5 Lumbridge + 6 Falador teleports = 19,684 XP; 3 ticks per strike and 4 per teleport floor = 168 ticks (117 XP/tick), 4 and 5 realistic = 219 ticks (90 XP/tick) (teleport.rs2:59-66, research/xp-per-tick.md:84); cast rate not measured. The enchant ladder to 43 needs 28 cosmic runes (MAGIC_TIERS), more than the 20 that can be staged (unsourceable)"
     }
    },
    "requires": [
@@ -1262,8 +1269,22 @@
     "option": "superheat"
    },
    "evidence": "ESTIMATE",
-   "source": "enchant ladder average below 43",
-   "at": "bank"
+   "source": "magic-teleport ladder to 43 (haggis.ts MAGIC_TELEPORT_TIERS, suppliesLadder toLevel 43): 36 wind strikes 1-25 + 4 Varrock + 5 Lumbridge + 6 Falador teleports = 19,684 XP; 3 ticks per strike and 4 per teleport floor = 168 ticks (117 XP/tick), 4 and 5 realistic = 219 ticks (90 XP/tick) (teleport.rs2:59-66, research/xp-per-tick.md:84); cast rate not measured. The enchant ladder to 43 needs 28 cosmic runes (MAGIC_TIERS), more than the 20 that can be staged (unsourceable)",
+   "at": "bank",
+   "supplies": [
+    {
+     "item": "staff of air",
+     "count": 1,
+     "note": "shared with magic-teleport (research/supply-costs.md, Magic)"
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "magic",
+    "tiers": "magic-teleport",
+    "margin": 1,
+    "toLevel": 43
+   },
+   "leadTime": "ESTIMATE: 15 law runes and 36 mind runes from the GE or a rune shop (research/supply-logistics.md); staff of air from a shop (job 16)"
   },
   {
    "id": "superheat",
@@ -1313,7 +1334,7 @@
   },
   {
    "id": "magic-top",
-   "label": "Enchant top-up to Magic 99",
+   "label": "Superheat gold top-up to Magic 99",
    "serves": [
     "magic"
    ],
@@ -1321,10 +1342,10 @@
     "skill": "magic",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 650,
-     "realistic": 600,
-     "evidence": "ESTIMATE",
-     "source": "enchant 5: 78 XP / 3 ticks x25 = 650"
+     "floor": 441.7,
+     "realistic": 415,
+     "evidence": "CODE-READ",
+     "source": "superheat gold past Smithing 99 (superheat.rs2:55-67: 53 Magic XP per cast, 3 ticks, x25 = 441.7 Magic XP per tick floor; realistic 440 x 0.943 = 415 as in the superheat row). Replaces the enchant 5 top-up, which needs dragonstone amulets (unsourceable). Need after superheat: 998,458 - 941,606 (superheat side XP) - 19,684 (Magic 43) = 37,168 XP = 29 casts at most"
     }
    },
    "requires": [
@@ -1334,9 +1355,23 @@
     "group": "magic-smithing",
     "option": "superheat"
    },
-   "evidence": "ESTIMATE",
-   "source": "enchant 5: 78 XP / 3 ticks x25 = 650",
-   "at": "bank"
+   "evidence": "CODE-READ",
+   "source": "superheat gold past Smithing 99 (superheat.rs2:55-67: 53 Magic XP per cast, 3 ticks, x25 = 441.7 Magic XP per tick floor; realistic 440 x 0.943 = 415 as in the superheat row). Replaces the enchant 5 top-up, which needs dragonstone amulets (unsourceable). Need after superheat: 998,458 - 941,606 (superheat side XP) - 19,684 (Magic 43) = 37,168 XP = 29 casts at most",
+   "at": "bank",
+   "supplies": [
+    {
+     "item": "gold ore",
+     "count": 30
+    },
+    {
+     "item": "nature rune",
+     "count": 30
+    },
+    {
+     "item": "fire rune",
+     "count": 120
+    }
+   ]
   },
   {
    "id": "runecraft",
@@ -2290,7 +2325,8 @@
     }
    },
    "requires": [
-    "cannon"
+    "cannon",
+    "fletch-arrows"
    ],
    "evidence": "MEASURED",
    "source": "research/combat-measure.md section 6: side XP = measured Defence and Hitpoints per Ranged XP per band (Defence 0.167 / 0.191 / 0.177, Hitpoints 0.110 / 0.126 / 0.117), XP-weighted; longrange splits the bow's XP 2 Ranged + 2 Defence per damage (combat.rs2:157-159). Rapid gives 384.2 realistic with no Defence and made Overall later (section 6). Below Ranged 40 (1.6% of the XP) a lower bow is needed; not measured",
@@ -2307,7 +2343,8 @@
     {
      "item": "rune arrow",
      "count": 850,
-     "note": "0.61-0.89 arrows per 1,000 Ranged XP measured (mean 0.71): 709, plus spare"
+     "note": "0.61-0.89 arrows per 1,000 Ranged XP measured (mean 0.71): 709, plus spare; made by Haggis in fletch-arrows (rune arrowtips 2,595 -> 2,595 rune arrows, FLETCHING_ARROW_TIERS), so no helper stages them when that row is in the route",
+     "from": "fletch-arrows"
     },
     {
      "item": "magic shortbow",

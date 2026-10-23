@@ -15,9 +15,20 @@ of each board. Reprint every table here with
   of every board that comes after it.
 - The Overall #1 (`stunbaron`) has all 19 skills at 99 in 35,916 ticks. With every safe lever, the travel legs,
   the legal Cooking route and the stageable supply rows (2026-10-23, `research/supply-logistics.md`), Haggis
-  reaches Overall at **38,764 ticks at floor rates (slack -2,848)** and **46,856 at realistic rates (slack
+  reaches Overall at **38,114 ticks at floor rates (slack -2,198)** and **46,856 at realistic rates (slack
   -10,940)**. ESTIMATE (the model; most rows are code-read or rival figures). Before the supply rows the same
-  table gave 36,437 / 43,696.
+  table gave 36,437 / 43,696. The last 99 is Agility at both rates.
+- **Route choice by Overall (2026-10-23).** `schedule` now picks the variant combination with the earliest Overall
+  finish for each mode (`chooseRoute` in `haggis.ts`; all combinations when there are 64 or fewer, else one group at
+  a time with a re-check; tie-break: the sum of slack over the clock boards). Only the `magic-smithing` group has
+  two live options. Floor picks `superheat` (38,114; the raw-tick choice `separate` gives 38,764). Realistic keeps
+  `separate` (46,856; `superheat` gives 47,444 there). The CLI prints the route and the last 99 per mode.
+- **Superheat route supplies (2026-10-23).** `magic-43` now trains on the teleport ladder (36 wind strikes, 15
+  teleports; 168 / 219 ticks, ESTIMATE): the enchant ladder to 43 needs 28 cosmic runes, more than the 20 that
+  can be staged. `magic-top` now superheats gold past Smithing 99 (441.7 / 415 Magic XP per tick, 30 gold ore,
+  30 nature runes, 120 fire runes): enchant 5 needs dragonstone amulets. Both rows list their supplies, so the
+  unsourceable test sees them. The `ranged` row's 850 rune arrows now come from `fletch-arrows` (2,595 rune
+  arrowtips fletched by Haggis; `Supply.from`), so no helper stages them.
 - **Supply rows (2026-10-23).** Four rows needed items with no legal source at this scale and are OUT ("no legal
   source at this scale"): `fletch` (rune dart tips 1,520), `craft` (uncut dragonstone 305), `herb` (torstol 176,
   snapdragon 6, toadflax 2), `magic` (cosmic runes 546, dragonstone amulets 453). Replacements, all ESTIMATE:
@@ -25,7 +36,8 @@ of each board. Reprint every table here with
   (chaos-druid herb drops, 630 / 780), `magic-teleport` (722 law runes, 3,000 / 3,750, no longer inside the
   pickpocket stuns). The table field `unsourceable` lists the items, and `haggis.test.ts` fails if an active row
   needs one. Each replacement row has a `leadTime` note for the helper work.
-- Travel adds 4,670 ticks before the last 99 at floor rates (6,851 over the whole run, walks between rows plus
+- Travel adds 4,745 ticks before the last 99 at floor rates (6,926 over the whole run; 4,670 / 6,851 on the
+  realistic route, walks between rows plus
   walks inside rows: bank trips, altar and fishing-spot changes). The same table without travel (`--no-travel`)
   gives 34,094 / 42,186. The rival
   plan prices 2,283 of legs and about 1,789 of allowances (`research/rival-gap-list.md`). Our legs are longer
@@ -34,7 +46,7 @@ of each board. Reprint every table here with
   now finishes at 1,036 / 1,217 against 447.
 - Scenarios (a) and (b) give the same numbers. Login wine, the cocktail route to Cooking 35, pyre logs and
   Charge spam are content bugs (owner rule) and are marked OUT in the table. Scenario (c) is 277 / 304 ticks
-  faster (38,487 / 46,552): with Magic out of the pickpocket stuns, stun relog now saves ticks.
+  faster (37,837 / 46,552, same routes as (a)): with Magic out of the pickpocket stuns, stun relog now saves ticks.
 
 **Best achievable set** (largest set of boards that can all win, generalised Moore-Hodgson in `bestSet`):
 
@@ -61,7 +73,8 @@ A board where Haggis ties the #1 time is not counted as a win (the order of equa
 ## Scenario tables
 
 Slack = deadline - finish. Positive = Haggis beats #1. All three scenarios use EDF order with prerequisites, all
-safe levers on, owner levers off, travel on.
+safe levers on, owner levers off, travel on. Floor columns use the superheat route, realistic columns the
+separate Magic and Smithing rows (route choice by Overall).
 
 ### (a) No unapproved tricks
 
@@ -72,30 +85,30 @@ safe levers on, owner levers off, travel on.
 | Crafting | 197 | 406 | -209 | 437 | -240 |
 | Herblore | 447 | 1,036 | -589 | 1,217 | -770 |
 | Firemaking | 664 | 1,675 | -1,011 | 1,997 | -1,333 |
-| Prayer | 1,281 | 21,354 | -20,073 | 26,479 | -25,198 |
-| Magic | 1,324 | 4,684 | -3,360 | 5,759 | -4,435 |
-| Smithing | 1,337 | 6,147 | -4,810 | 7,226 | -5,889 |
-| Runecraft | 2,354 | 7,732 | -5,378 | 8,945 | -6,591 |
-| Thieving | 2,935 | 17,887 | -14,952 | 22,613 | -19,678 |
-| Woodcutting | 3,181 | 21,148 | -17,967 | 26,374 | -23,193 |
-| Fishing | 3,425 | 24,324 | -20,899 | 30,420 | -26,995 |
-| Mining | 3,964 | 27,391 | -23,427 | 34,673 | -30,709 |
-| Attack | 4,728 | 11,112 | -6,384 | 15,162 | -10,434 |
-| Strength | 4,966 | 28,193 | -23,227 | 35,534 | -30,568 |
-| Ranged | 5,595 | 32,861 | -27,266 | 40,379 | -34,784 |
-| Agility | 6,772 | 38,764 | -31,992 | 46,856 | -40,084 |
-| Defence | 7,974 | 34,875 | -26,901 | 42,479 | -34,505 |
-| Hitpoints | 17,058 | 31,895 | -14,837 | 39,369 | -22,311 |
-| Overall | 35,916 | 38,764 | -2,848 | 46,856 | -10,940 |
+| Prayer | 1,281 | 20,704 | -19,423 | 26,479 | -25,198 |
+| Magic | 1,324 | 5,460 | -4,136 | 5,759 | -4,435 |
+| Smithing | 1,337 | 5,375 | -4,038 | 7,226 | -5,889 |
+| Runecraft | 2,354 | 7,082 | -4,728 | 8,945 | -6,591 |
+| Thieving | 2,935 | 17,237 | -14,302 | 22,613 | -19,678 |
+| Woodcutting | 3,181 | 20,498 | -17,317 | 26,374 | -23,193 |
+| Fishing | 3,425 | 23,674 | -20,249 | 30,420 | -26,995 |
+| Mining | 3,964 | 26,741 | -22,777 | 34,673 | -30,709 |
+| Attack | 4,728 | 10,462 | -5,734 | 15,162 | -10,434 |
+| Strength | 4,966 | 27,543 | -22,577 | 35,534 | -30,568 |
+| Ranged | 5,595 | 32,211 | -26,616 | 40,379 | -34,784 |
+| Agility | 6,772 | 38,114 | -31,342 | 46,856 | -40,084 |
+| Defence | 7,974 | 34,225 | -26,251 | 42,479 | -34,505 |
+| Hitpoints | 17,058 | 31,245 | -14,187 | 39,369 | -22,311 |
+| Overall | 35,916 | 38,114 | -2,198 | 46,856 | -10,940 |
 | Quest Points | 145 QP by 1,022,261 | never 145 (142 QP in the table) | NEVER | never | NEVER |
-| Equipment, Bank, Runite | no clock | 62,015-62,990 | target unknown | 108,420-110,425 | target unknown |
+| Equipment, Bank, Runite | no clock | 61,365-62,340 | target unknown | 108,420-110,425 | target unknown |
 
 Worst five boards (realistic slack): Agility -40,084, Ranged -34,784, Defence -34,505, Mining -30,709,
-Strength -30,568. At floor: Agility -31,992, Ranged -27,266, Defence -26,901, Mining -23,427, Strength -23,227.
+Strength -30,568. At floor: Agility -31,342, Ranged -26,616, Defence -26,251, Mining -22,777, Strength -22,577.
 
 ### (b) With login wine, (c) all tricks
 
-(b) is the same as (a): login wine is OUT (content bug), so the trick has no row to use. (c) gives Overall 38,487
+(b) is the same as (a): login wine is OUT (content bug), so the trick has no row to use. (c) gives Overall 37,837
 floor / 46,552 realistic, 277 / 304 ticks faster than (a): Magic is no longer a stun guest (teleports leave the
 thieving spot), so stun relog now saves ticks. Pyre logs are OUT (content bug).
 
@@ -235,7 +248,7 @@ The staging plan per item, helper and hour is `research/supply-logistics.md`.
 | Herblore, Crafting | Supply-bound: no legal torstol, snapdragon, toadflax or dragonstone at scale (`research/supply-logistics.md`). Drop herbs (630 / 780) and diamonds (229 / 230) are slower than the leaders (447, 197) | -261 / -411 and -110 / -111 alone |
 | Firemaking, Prayer, Smithing, Runecraft | Win alone at floor, but each one comes after 300-6,000 ticks of earlier boards | see table (a) |
 | Woodcutting to Defence | Each needs 3,000-7,000 ticks and comes after 9,000+ ticks of earlier boards | -9,338 to -27,910 at floor |
-| Overall | Late at both rates with every safe lever and the stageable supply rows | -2,848 / -10,940 (a, b); -2,571 / -10,636 (c) |
+| Overall | Late at both rates with every safe lever and the stageable supply rows | -2,198 / -10,940 (a, b); -1,921 / -10,636 (c) |
 
 ## Unknowns and the experiment that closes each
 

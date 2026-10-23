@@ -31,7 +31,9 @@ export type Evidence = 'MEASURED' | 'CODE-READ' | 'ESTIMATE';
 export type Trick = 'loginWine' | 'stunRelog' | 'sacredOil';
 export type Mode = 'floor' | 'realistic';
 export interface Range { floor: number; realistic: number; evidence?: Evidence; source?: string }
-export interface Supply { item: string; count: number; note?: string }
+// `from`: the activity id that makes the item during the run (Haggis keeps the output). When that row is in the
+// route, the item is not staged by a helper (suppliesFor leaves it out).
+export interface Supply { item: string; count: number; note?: string; from?: string }
 
 export const XP99 = xpForLevel(99);
 
@@ -109,6 +111,9 @@ export interface ScheduleOptions {
     owner?: ReadonlySet<string>; // owner-decision levers to switch on
     travel?: TravelModel; // price the walks between activities; without it travel is 0
     includeOut?: boolean; // schedule OUT rows too (to show what a content bug would be worth)
+    // How schedule() picks one option per variant group: 'overall' (default) = the combination with the earliest
+    // Overall finish in this mode (chooseRoute); 'ticks' = each group's option with the fewest raw ticks.
+    route?: 'overall' | 'ticks';
 }
 
 export interface LeverPatch {
@@ -165,35 +170,96 @@ export interface BoardResult {
     status: 'WIN' | 'HOLD' | 'LATE' | 'TIE' | 'NEVER' | 'NO-CLOCK';
     sacrificed: boolean;
 }
-export interface ScheduleResult { order: Placed[]; boards: BoardResult[]; blocked: string[]; idle: number; endTick: number; qp: number; chosen: string[]; travel: number }
+// `route`: the option used in each variant group (group -> option). `overallFinish`: the tick of the last 99 (null =
+// some skill never reaches 99), whether or not `boards` has an Overall board; `lastSkill`: the skill of that 99.
+export interface ScheduleResult { order: Placed[]; boards: BoardResult[]; blocked: string[]; idle: number; endTick: number; qp: number; chosen: string[]; travel: number; route: Record<string, string>; overallFinish: number | null; lastSkill: Skill | null }
 
 interface XpEvent { start: number; end: number; lump: boolean; xp: Partial<Record<Skill, number>> }
 
-// Pick one option per variant group: the eligible option with the fewest total ticks (train activities count by
-// their full 1->target cost at the given rate, a fair proxy because options in a group train the same skills).
-export function chooseVariants(activities: Activity[], opts: ScheduleOptions): Activity[] {
+// Eligible options per variant group after the levers, the tricks and opts.force, in table order.
+function variantGroups(activities: Activity[], opts: ScheduleOptions): Map<string, Map<string, Activity[]>> {
     const groups = new Map<string, Map<string, Activity[]>>();
-    activities = applyLevers(activities, opts);
     for (const a of activities) {
         if (!a.variant) continue;
         if (a.variant.trick && !opts.tricks.has(a.variant.trick)) continue;
+        const forced = opts.force?.[a.variant.group];
+        if (forced !== undefined && forced !== a.variant.option) continue;
         const g = groups.get(a.variant.group) ?? new Map<string, Activity[]>();
         g.set(a.variant.option, [...(g.get(a.variant.option) ?? []), a]);
         groups.set(a.variant.group, g);
     }
-    const keep = new Set<string>();
-    for (const [, options] of groups) {
-        let best: string | null = null;
+    return groups;
+}
+
+// Raw-tick choice: per group the eligible option with the fewest total ticks (train activities count by their full
+// 1->target cost at the given rate). This ignores side XP and order, so it can pick a route with a later Overall.
+function rawRoute(groups: Map<string, Map<string, Activity[]>>, opts: ScheduleOptions): Record<string, string> {
+    const route: Record<string, string> = {};
+    for (const [group, options] of groups) {
         let bestCost = Infinity;
         for (const [option, acts] of options) {
-            const forced = opts.force?.[acts[0]!.variant!.group];
-            if (forced !== undefined && forced !== option) continue;
             const cost = acts.reduce((s, a) => s + roughTicks(a, opts), 0);
-            if (cost < bestCost) { bestCost = cost; best = option; }
+            if (cost < bestCost) { bestCost = cost; route[group] = option; }
         }
-        for (const a of options.get(best!)!) keep.add(a.id);
     }
-    return activities.filter(a => !a.variant || keep.has(a.id));
+    return route;
+}
+
+// Pick one option per variant group: opts.force where given, else the raw-tick choice.
+export function chooseVariants(activities: Activity[], opts: ScheduleOptions): Activity[] {
+    activities = applyLevers(activities, opts);
+    const groups = variantGroups(activities, opts);
+    const route = rawRoute(groups, opts);
+    return activities.filter(a => !a.variant || route[a.variant.group] === a.variant.option);
+}
+
+// At most this many combinations are searched exhaustively; above it, coordinate descent per group.
+export const ROUTE_EXHAUSTIVE_MAX = 64;
+
+// Route score, smaller is better: Overall finish (never = Infinity), then minus the slack sum over the clock boards,
+// then the raw ticks of the chosen options (so a tie keeps the raw-tick choice).
+function routeScore(r: ScheduleResult, boards: Board[], raw: number): number[] {
+    const overall = r.overallFinish ?? Infinity;
+    const slack = r.boards.filter(b => boards.find(x => x.id === b.id)?.rule.kind === 'clock' && b.slack !== null).reduce((s, b) => s + b.slack!, 0);
+    return [overall, -slack, raw];
+}
+const better = (x: number[], y: number[]) => { for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return x[i]! < y[i]!; return false; };
+
+// The variant combination with the earliest Overall finish for opts.mode (see routeScore). Deterministic: groups and
+// options in table order, a candidate replaces the best only when strictly better.
+export function chooseRoute(boards: Board[], activities: Activity[], opts: ScheduleOptions): { route: Record<string, string>; evaluated: number } {
+    const groups = variantGroups(applyLevers(activities, opts), opts);
+    const start = rawRoute(groups, opts);
+    const multi = [...groups].filter(([, o]) => o.size > 1).map(([g, o]) => ({ group: g, options: [...o.keys()] }));
+    if (multi.length === 0) return { route: start, evaluated: 0 };
+    let evaluated = 0;
+    const raw = (route: Record<string, string>) => [...groups].reduce((s, [g, o]) => s + o.get(route[g]!)!.reduce((t, a) => t + roughTicks(a, opts), 0), 0);
+    const score = (route: Record<string, string>) => { evaluated++; return routeScore(scheduleRoute(boards, activities, { ...opts, force: { ...opts.force, ...route } }), boards, raw(route)); };
+    let best = start;
+    let bestScore = score(start);
+    const combos = multi.reduce((n, g) => n * g.options.length, 1);
+    if (combos <= ROUTE_EXHAUSTIVE_MAX) {
+        for (let i = 0; i < combos; i++) {
+            const route = { ...start };
+            let k = i;
+            for (const g of multi) { route[g.group] = g.options[k % g.options.length]!; k = Math.floor(k / g.options.length); }
+            if (multi.every(g => route[g.group] === best[g.group])) continue;
+            const s = score(route);
+            if (better(s, bestScore)) { best = route; bestScore = s; }
+        }
+        return { route: best, evaluated };
+    }
+    // Greedy: change one group at a time while that improves the score; repeat the pass until nothing changes.
+    for (let pass = 0, changed = true; changed && pass < 10; pass++) {
+        changed = false;
+        for (const g of multi) for (const option of g.options) {
+            if (best[g.group] === option) continue;
+            const route = { ...best, [g.group]: option };
+            const s = score(route);
+            if (better(s, bestScore)) { best = route; bestScore = s; changed = true; }
+        }
+    }
+    return { route: best, evaluated };
 }
 
 function pick(r: Range, mode: Mode): number { return mode === 'floor' ? r.floor : r.realistic; }
@@ -237,7 +303,15 @@ function boardDeadline(b: Board, sacrificed: ReadonlySet<BoardId>, overallDeadli
     return Infinity; // qp (wins on points) and value boards have no clock deadline
 }
 
+// Schedule with the route of opts.route (default: the earliest Overall finish, chooseRoute).
 export function schedule(boards: Board[], allActivities: Activity[], opts: ScheduleOptions): ScheduleResult {
+    if (opts.route === 'ticks') return scheduleRoute(boards, allActivities, opts);
+    const { route } = chooseRoute(boards, allActivities, opts);
+    return scheduleRoute(boards, allActivities, { ...opts, force: { ...opts.force, ...route } });
+}
+
+// Schedule with opts.force where given and the raw-tick choice for the other variant groups.
+function scheduleRoute(boards: Board[], allActivities: Activity[], opts: ScheduleOptions): ScheduleResult {
     const sacrificed = opts.sacrificed ?? new Set<BoardId>();
     const activities = chooseVariants(allActivities, opts);
     const ids = new Set(activities.map(a => a.id));
@@ -408,7 +482,11 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
         const finish = served.length ? Math.max(...served.map(p => p.landsAt)) : null;
         return { id: b.id, label: b.label, deadline: null, finish, slack: null, status: finish === null ? 'NEVER' : 'NO-CLOCK', sacrificed: sac };
     });
-    return { order, boards: results, blocked, idle, endTick, qp, chosen: activities.map(a => a.id), travel: travelTotal };
+    const route = Object.fromEntries(activities.filter(a => a.variant).map(a => [a.variant!.group, a.variant!.option]));
+    const f = SKILLS.map(s => skillFinish.get(s)!);
+    const overallFinish = f.some(x => x === null) ? null : Math.max(...(f as number[]));
+    const lastSkill = overallFinish === null ? null : SKILLS[f.lastIndexOf(overallFinish)]!;
+    return { order, boards: results, blocked, idle, endTick, qp, chosen: activities.map(a => a.id), travel: travelTotal, route, overallFinish, lastSkill };
 }
 
 // Largest set of clock boards that can all be won (generalised Moore-Hodgson): schedule EDF; at the first late
@@ -416,9 +494,9 @@ export function schedule(boards: Board[], allActivities: Activity[], opts: Sched
 // Moved boards still get done (Overall needs every 99), but after the boards that can still win.
 export function bestSet(boards: Board[], activities: Activity[], opts: ScheduleOptions): { result: ScheduleResult; sacrificed: BoardId[] } {
     const sacrificed = new Set<BoardId>(opts.sacrificed ?? []);
-    const chosen = chooseVariants(activities, opts);
     for (let i = 0; i <= boards.length; i++) {
         const result = schedule(boards, activities, { ...opts, sacrificed });
+        const chosen = chooseVariants(activities, { ...opts, force: { ...opts.force, ...result.route } });
         const late = result.boards
             .filter(r => r.id !== 'overall' && r.deadline !== null && boards.find(b => b.id === r.id)!.rule.kind === 'clock' && !sacrificed.has(r.id) && r.status !== 'WIN')
             .sort((x, y) => x.deadline! - y.deadline!);
@@ -480,9 +558,9 @@ export function loadSnapshot(path: string): Board[] {
 
 export interface Tier { id: string; level: number; xpPerAction: number; items: Supply[] }
 
-export function ladderSupplies(skill: Skill, tiers: Tier[], margin = 1): Supply[] {
+export function ladderSupplies(skill: Skill, tiers: Tier[], margin = 1, toLevel = 99): Supply[] {
     const methods: Method[] = tiers.map(t => ({ id: t.id, skill, level: t.level, xpPerHour: t.xpPerAction, source: 'estimated' }));
-    const plan = planSkill({ skill, fromXp: 0, toLevel: 99, methods });
+    const plan = planSkill({ skill, fromXp: 0, toLevel, methods });
     const out = new Map<string, number>();
     for (const seg of plan.segments) {
         const tier = tiers.find(t => t.id === seg.method)!;
@@ -585,7 +663,7 @@ export const MAGIC_TELEPORT_TIERS: Tier[] = [
 
 // The activity table lives in haggis-boards.json so that new measurements change the plan without a code change.
 // Each tick count and rate carries `evidence` and `source`. `suppliesLadder` names a tier table above: `tiers`
-// when given, else the skill's full table.
+// when given, else the skill's full table; `toLevel` (default 99) ends the ladder early.
 const LADDERS: Record<string, Tier[]> = {
     fletching: FLETCHING_TIERS, crafting: CRAFTING_TIERS, herblore: HERBLORE_TIERS,
     firemaking: FIREMAKING_TIERS, smithing: SMITHING_TIERS, magic: MAGIC_TIERS,
@@ -594,7 +672,7 @@ const LADDERS: Record<string, Tier[]> = {
 };
 export const BOARDS_FILE = join(import.meta.dir, 'haggis-boards.json');
 
-type ActivityJson = Activity & { suppliesLadder?: { skill: Skill; tiers?: string; margin?: number } };
+type ActivityJson = Activity & { suppliesLadder?: { skill: Skill; tiers?: string; margin?: number; toLevel?: number } };
 
 // Items with no legal source at the scale the run needs (research/supply-logistics.md, Summary item 1-2).
 // No active row may need more than `max` of one (packages/planner/test/haggis.test.ts).
@@ -609,7 +687,7 @@ export function haggisActivities(path = BOARDS_FILE): Activity[] {
         if (!suppliesLadder) return a;
         const tiers = LADDERS[suppliesLadder.tiers ?? suppliesLadder.skill];
         if (!tiers) throw new Error(`${a.id}: no tier table for ${suppliesLadder.tiers ?? suppliesLadder.skill}`);
-        return { ...a, supplies: [...ladderSupplies(suppliesLadder.skill, tiers, suppliesLadder.margin ?? 1), ...(a.supplies ?? [])] };
+        return { ...a, supplies: [...ladderSupplies(suppliesLadder.skill, tiers, suppliesLadder.margin ?? 1, suppliesLadder.toLevel ?? 99), ...(a.supplies ?? [])] };
     });
 }
 
@@ -654,9 +732,13 @@ export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
     { id: 'c', label: 'All tricks optional (login wine, stun relog, sacred oil)', tricks: TRICKS },
 ];
 
-// Supplies of the activities the scenario uses, summed by item.
-export function suppliesFor(activities: Activity[], opts: ScheduleOptions): Supply[] {
+// Supplies a helper stages for the activities the scenario uses, summed by item. With `boards`, the route is the
+// one schedule() uses (chooseRoute); without, the raw-tick choice. An item made by a row of the route is left out.
+export function suppliesFor(activities: Activity[], opts: ScheduleOptions, boards?: Board[]): Supply[] {
+    const route = boards && opts.route !== 'ticks' ? chooseRoute(boards, activities, opts).route : {};
+    const acts = chooseVariants(activities, { ...opts, force: { ...opts.force, ...route } });
+    const ids = new Set(acts.map(a => a.id));
     const out = new Map<string, number>();
-    for (const a of chooseVariants(activities, opts)) for (const s of a.supplies ?? []) out.set(s.item, (out.get(s.item) ?? 0) + s.count);
+    for (const a of acts) for (const s of a.supplies ?? []) if (!s.from || !ids.has(s.from)) out.set(s.item, (out.get(s.item) ?? 0) + s.count);
     return [...out].map(([item, count]) => ({ item, count }));
 }
