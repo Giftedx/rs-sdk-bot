@@ -132,6 +132,17 @@ try {
     // The open main modal (the glider map, the puzzle): state.modalInterface (LiteClient.ts:949-950).
     const isMain = (name: string): boolean => q.st()?.modalInterface === componentId(name);
 
+    // Poison (Karamja jungle spiders): an antipoison on the first "You have been poisoned!" after the last dose.
+    const ANTIPOISON = [2446, 175, 177, 179];
+    let poisonSeen = Math.max(-1, ...(q.st()?.gameMessages ?? []).map((m: any) => m.observationId ?? -1));
+    let antipoisons = 0;
+    const offPoison = q.s.onTick(() => {
+        const m = (q.st()?.gameMessages ?? []).filter((x: any) => x.type === 0 && /you have been poisoned/i.test(x.text) && (x.observationId ?? -1) > poisonSeen);
+        if (m.length === 0) return;
+        poisonSeen = Math.max(...m.map((x: any) => x.observationId ?? -1));
+        const pot = ANTIPOISON.find(id => q.has(id));
+        if (pot !== undefined) { antipoisons++; void q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' }); }
+    });
     const PFM = 14;
     const pfmOn = (): boolean => !!q.st()?.prayers?.activePrayers?.[PFM];
     const setPfm = async (on: boolean): Promise<void> => {
@@ -264,6 +275,8 @@ try {
     if (FROM < 60) {
         await talkChoose('daero reinit', /^daero$/i, () => -1, () => q.sawText(/good luck/i) && !q.dialogOpen(), 60);
         await talkChoose('waydar fly', /^waydar$/i, pick(/^yes$/i), () => q.near(CRASH_ISLAND.x, CRASH_ISLAND.z, 8), 40);
+        // Jungle scorpions (38, melee) roam Crash Island: one took the bot 35 -> 11 HP and broke the Lumdo talk.
+        await setPfm(true);
         await shutDialog();
         await ms(60);
     }
@@ -278,12 +291,13 @@ try {
         await q.converse([], () => q.near(ATOLL.x, ATOLL.z, 6), 250);
         if (!q.near(ATOLL.x, ATOLL.z, 6)) await q.fail('chapter 2 cutscene');
         await shutDialog();
+        await setPfm(false);
         await ms(70);
     }
 
     // 80-120 (Ape Atoll as a human and as a monkey, the zoo, Awowogei, the sigil) are not scripted yet:
     // research/quest-plan.md section 1h, "Next stage".
-    if (FROM < 130) await q.end(true, 'stage=70 (stages 80-120 not scripted)');
+    if (FROM < 130) { offPoison(); await q.end(true, `stage=70 (stages 80-120 not scripted) antipoisons=${antipoisons}`); }
 
     // 140. Wear the sigil (OPHELD2, mm_demon.rs2:1-5; timer 10, then the battle zone 1_42_143, a corner by player count,
     // :35-92). The jungle demon spawns 5-10 tiles away (:160). Its waves (max 31) are 0 under Protect from Magic
@@ -309,7 +323,12 @@ try {
         q.milestone('battle');
         const demon = () => q.npc(/^jungle demon$/i);
         // Garkor's "Ready yourself" page comes first (garkor_final_battle, :146-152); the demon queue runs after it.
-        await q.converse([], () => !!demon(), 80);
+        // The prayer goes on as soon as the arrival delay lets it (a hit for 5 landed before the demon showed in a
+        // test run; a toggle inside the p_delay of :90-100 is dropped).
+        await q.converse([], () => {
+            if (!pmOn() && points() > 0) void q.s.direct({ type: 'togglePrayer', prayerIndex: PFMAGIC, reason: 'SDK' });
+            return !!demon() && pmOn();
+        }, 80);
         if (!demon()) await q.fail('no jungle demon');
         await q.step('protect from magic', () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFMAGIC, reason: 'SDK' }), pmOn, 3, 3);
         const WAVE = componentId('magic:fire_wave');

@@ -417,7 +417,7 @@ melee damage to 0 (`skill_combat/scripts/npc/npc_combat_melee.rs2:44-45`). It dr
 | `tree` | prayer 43, magic 35 | Khazard warlord: attack 75, strength 78, 170 HP, crush, max hit 9 (`quest_tree/configs/gnome_battlefield.npc:103-108`); commander 50/45, stab (`:114-145`); troopers melee |
 | `grandtree` | agility 25, prayer 43, magic 35 | black demon from Glough (`quest_grandtree/scripts/glough.rs2:119`): attack 145, strength 148, 157 HP, slash, max hit 16 (`quest_grandtree/configs/quest_grandtree.npc:190-216`) |
 | `rival-fight-arena` | prayer 43, magic 35 | ogre 60 HP, scorpion 40, Bouncer 116, General Khazard 170, all melee (`quest_arena/configs/quest_arena.npc`); about 386 HP = about 72 bolts (360 ticks) against 215 ticks of prayer: 2 prayer potions (ESTIMATE) |
-| `rival-mm` | prayer 43 | jungle demon 170 attack, strength, magic, 170 HP; waves with max hit 31, 0 under Protect from Magic (Prayer 37) (`quest_mm/scripts/mm_demon.rs2:349-353`); melee only within 2 tiles (`mm_demon.rs2:332-336`). Ape Atoll guards and the damage source are not read |
+| `rival-mm` | prayer 43, magic 75 | jungle demon 170 attack, strength, magic, 170 HP; waves with max hit 31, 0 under Protect from Magic (Prayer 37) (`quest_mm/scripts/mm_demon.rs2:349-353`); melee only within 2 tiles (`mm_demon.rs2:332-336`). Damage source Fire Wave, MEASURED (section 1h) |
 | `crest` | magic 59, prayer 43 | Chronozon: attack 173, strength 172, slash (`quest_crest/configs/quest_crest.npc:45-52`); the MEASURED proof ran at Hitpoints 97, not under the prayer |
 | `merlin` | prayer 43 | Sir Mordred: 33/33, 38 HP, slash, max hit 4 (`quest_arthur/configs/keep_le_faye.npc:77-87`) |
 | `grail` | attack 20, prayer 43 | Black Knight Titan: 91/100, 142 HP, crush, max hit 11 (`quest_grail/configs/fisher_realm.npc:293-308`) |
@@ -582,6 +582,111 @@ ticks.
 Still open: the root search is random (1-13 roots, 12-139 ticks); a better tour from the trapdoor (search before
 Narnode is not possible, the root is set at 150) is not tried. The walk to Narnode is not counted. The preset has
 10 HP; the planner does not model Hitpoints.
+
+## 1h. Monkey Madness (the `rival-mm` row): chapter 1 and the battle MEASURED, Ape Atoll not scripted
+
+Script `scripts/generated/quest-mm.ts` (puzzle solver `scripts/generated/mm-puzzle.ts`), presets in
+`packages/practice/src/presets-mm.ts`. The preset `quest_mm` is the planner state at the row (scenario a, order row
+24, after Fight Arena): Attack 99, Magic 99, Smithing 99, Prayer 43, Agility 57, Thieving 43, Strength, Defence,
+Ranged 1, Hitpoints 35 (ESTIMATE: the planner does not model Hitpoints). The Grand Tree and Tree Gnome Village are set
+complete in the preset (varp 150 = 160, varp 111 = 9); the Grand Tree helper owns that quest. Worn: wizard hat,
+amulet of magic, staff of fire, wizard robe and skirt (all Defence 1). Pack: 150 blood and 760 air runes (Fire Wave),
+2 law runes, gold bar, ball of wool, monkey bones, 5 bananas, 4 prayer potions, 1 antipoison, 8 sharks.
+
+Two tool fixes were needed:
+
+- The save generator writes varps 0-308 only (`vendor/rs-sdk/sdk/test/utils/save-generator.ts:314`); the quest's
+  varps are 365-374 (`content/pack/varp.pack:366-375`). `applyPreset` now rewrites the varp block when a preset has
+  a higher id (`extendVarps` in `presets-mm.ts`; `PlayerLoading.ts:101-111` reads any count).
+- The puzzle moves a tile only on OPHELD5 with the puzzle component (`mm_puzzle.rs2:116-150`,
+  `reinitialisation_puzzle:com_3` = 11130). The lite client sends INV_BUTTON5 for every component except the
+  inventory (`webclient/src/lite/actions.ts:209-220`). The real client sends OPHELD5 with any component id
+  (`webclient/src/client/Client.ts:11553-11583`) and the server accepts any operable component with an inventory
+  (`OpHeldHandler.ts:20-40`). The script writes that packet on the lite client (`Session.client`, new in
+  `packages/core/src/inprocess.ts`) and reads the board from the component's `linkObjType`. It is the packet a person
+  sends by clicking the tile. Glough's 200,000-coin shortcut (`mm_glough.rs2:28-29`) still leaves one slide
+  (`mm_puzzle.rs2:33-35, 73-75`), so it does not remove the need for this packet.
+
+### Stages (CODE-READ; `%mm_main` is varp 365, the others are bit fields, `quest_mm.varbit`)
+
+| # | Stage | Evidence | State |
+|---|---|---|---|
+| 10 | Narnode (Grand Tree l0): "Yes" to "Start Monkey Madness?"; royal seal | `king_narnode.rs2:7-9` (needs `%grandtree` 160 and `%treequest` 9); `mm_narnode.rs2:124-137` | MEASURED |
+| 20 | Glider l3 to Gandius (`glidermap:com_21`, `gnome_glider.rs2:1-24`); shipyard gate: the worker sees the seal (`mm_caranock.rs2:45-61`, `shipyardworker.rs2:69-71`); Caranock (2956,3025) | | MEASURED |
+| 30 | Gandius glider back (`com_22`); Narnode writes the orders (`mm_narnode.rs2:143-202`) | | MEASURED |
+| 40 | Daero (2484,3486,l1): the orders; "Leave" shows only after the three topics (`mm_daero.rs2:129-145`); blindfold to the hangar 2393,9892 (`:230-238`); Daero introduces Waydar (`:66-93`) | | MEASURED |
+| 50 | Panel (2394,9883): the 5x5 puzzle, a 255-step random walk (`mm_puzzle.rs2:71-85`); weighted A* (49-79 slides, 4 per tick); the last slide starts the hangar cutscene (`:110-192`) | | MEASURED |
+| 60 | Daero (reinit complete, `mm_daero.rs2:36-49`); Waydar "Yes": Crash Island 2893,2725 (`mm_waydar.rs2:5-20, 112-118`) | | MEASURED |
+| 70 | Waydar; Lumdo refuses (`mm_lumdo.rs2:17-68`); Waydar orders him: chapter 2 cutscene (`mm_waydar.rs2:73-94`, `quest_mm.rs2:123-164, 279-360`); Ape Atoll 2801,2707 | | MEASURED |
+| 80 | Walk west under Protect from Missiles (archer damage 0, `npc_combat_ranged.rs2:47-51`) until a ravine archer knocks you out (1 in 20 arrows, `mm_archer.rs2:51-53`; the knockout is not blocked by the prayer); jail 2770-2776,2793-2794 (`:66-82`); pick the lock 2771,2795 (`mm_jail.rs2:1-11`, `stat_random(thieving, 95, 295)`); the patrol guards knock you back in only within 1 tile in sight (`mm_jail.rs2:181-203`) | | not scripted |
+| 90 | Garkor 2805,2762 (`mm_garkor.rs2:95-126`); denture crate 2767,2769 from the east side (the sleeping guard calls guards in 2758-2763,2767-2772, `mm_sleeping_monkey_guard.rs2:1-14`); crate over the hole 2769,2765 to the cellar (`quest_mm.rs2:964-992`; Agility roll, a fall costs a third of the HP); mould crate 2782,9172; western rope 2764,9165 up | | not scripted |
+| 100 | Bridge ladder 2803,2734 up, jump at 2803,2727,l2 to the landing (`quest_mm.rs2:1022-1043`); dungeon ladder 2763,2703 (`ape_atoll_dungeon.rs2:1-12`); Zooknock 2804,9145 (`mm_zooknock.rs2:1-38, 300-364`); dentures, gold bar, mould on him: enchanted bar and mould back (`:48-96, 163-201`); traps: floor and wall spikes 7%, rocks 3%, spring traps 8% of HP (`ape_atoll_dungeon.rs2:43-110`); monkey zombies (82-129) | | not scripted |
+| 110 | Back up; a second knockout (the landing side does not reach the temple); temple trapdoor 2807,2785 among three 2x2 trapdoor guards (167, `wanderrange` 1; rival: 1 of 3 tries); fire room: bar on the fire with the mould (`quest_mm.rs2:1063-1082`), ball of wool on it (`:1084-1089`); rope 2808,9201 up; amulet worn: the child 2743,2795 ("monkey's uncle", the bananas, timer 100, the talisman: `mm_monkey_child.rs2:1-60, 133-178`; the aunt calls guards on a human, `mm_monkeys_aunt.rs2`); dungeon to Zooknock: talisman and monkey bones, the Karamjan greegree; chapter 3 cutscene (`mm_zooknock.rs2:97-136, 203-228`) | | not scripted |
+| 120 | Greegree worn (guards ignore monkeys, `aa_monkey_guard.rs2:27-33`); Garkor (`mm_garkor.rs2:50-58, 128-140`), elder guard, Kruk, Awowogei's mission; the zoo in Ardougne (`mm_zoo_monkey.rs2`, `mm_monkey_minder.rs2`; spirit trees delete the backpack monkey, so walk or glider back); Awowogei; Garkor: chapter 4 cutscene, the sigil (`mm_garkor.rs2:25-47`) | | not scripted |
+| 140 | Sigil op2 (`mm_demon.rs2:1-5, 16-143`): the battle zone 1_42_143; Protect from Magic on arrival; Fire Wave every 5 ticks from 4+ tiles; kill (`:377-401`) | | MEASURED |
+| 150 | Varrock Teleport out (the squad deletes itself, `:212-220`); Varrock young tree, village tree, stronghold, Narnode | | MEASURED |
+| 160 | Narnode: report, 10,000 coins and 3 diamonds, completion, 3 QP (`mm_narnode.rs2:14-31, 89-100`, `quest_mm.rs2:1167-1171`); Daero l1, option 1 (`mm_daero.rs2:240-302`) | | MEASURED |
+
+### The damage source and the safe route
+
+- The jungle demon (`quest_mm.npc:1468-1508`): attack, strength, defence, magic 170, 170 HP, +50 slash and magic
+  defence, attack range 10, attack rate 6. At range it casts a random wave (max 31), set to 0 under Protect from Magic
+  (`mm_demon.rs2:342-354`); within 2 tiles half its attacks are melee (`:332-336`). The squad hits 0-1 and a squad
+  killing blow heals it 15 (`:403-417`); the kill counts only if the player is the top damage dealer (`:377-385`).
+- Magic 99 and Ranged 1 at this row, so the damage source is Fire Wave (Magic 75, max 20,
+  `magic_combat_spells.dbrow:292-295`) with the staff of fire. Hit chance (CODE-READ, `player_combat.rs2:52-68`,
+  `npc_combat.rs2:325-334`, `player_combat_stat.rs2:62-89`): player roll (99 + 9) x (bonus + 64), about 9,800 at +27;
+  demon roll (170 + 9) x (50 + 64) = 20,406; about 24% per cast. The script keeps 4+ tiles from the demon's centre and
+  steps 6 tiles away when it is closer.
+- Melee is not a choice: Strength 1 gives a max hit of about 3; the rival's melee test at 70/70/70 died 2 of 2
+  (`bleugreen/rs-sdk docs/speedrun/quests/monkey_madness.md`, UNVERIFIED here).
+- Gate: `minLevel: { prayer: 43, magic: 75 }`. Prayer 43 is for Protect from Magic (37), Missiles (40) and Melee (43).
+  The Magic gate does not move the order (Magic is 99 before the row).
+- Route on the atoll (CODE-READ, not run): a human cannot walk from the landing into the village (one-way bridge,
+  the west gate opens only for a monkey, `quest_mm.rs2:1022-1043, 1110-1117`), so the way in is the archers'
+  knockout. Protect from Missiles makes the archers harmless (damage 0) but not the knockout.
+
+### Proof (MEASURED practice, 2026-10-23)
+
+Chapter 1 (preset `quest_mm`, stages 10-70, Narnode to the Ape Atoll landing), 3/3 PASS:
+
+| Run | RESULT line (cut) | Ticks | Puzzle | LEDGER idle |
+|---|---|---|---|---|
+| 1 | `RESULT ok stage=70 (stages 80-120 not scripted) antipoisons=1 xp= at=2801,2707,0 ticks=692 hpMin=35 eats=0 walkTicks=127 retries=10 died=false` | 692 | 59 slides, 15 ticks | 154 (22.0%) |
+| 2 | `RESULT ok stage=70 (stages 80-120 not scripted) antipoisons=1 xp= at=2801,2707,0 ticks=696 hpMin=35 eats=0 walkTicks=127 retries=10 died=false` | 696 | 53 slides, 14 ticks | |
+| 3 | `RESULT ok stage=70 (stages 80-120 not scripted) antipoisons=1 xp= at=2801,2707,0 ticks=720 hpMin=35 eats=0 walkTicks=127 retries=10 died=false` | 720 | 71 slides, 18 ticks | 173 (23.9%) |
+
+The battle and the end (preset `quest_mm_s130`: `%mm_main` 5, `%mm_garkor` 6, the sigil; stages 140-160), 3/3 PASS:
+
+| Run | RESULT line (cut) | Ticks | Fight | Casts | Potions |
+|---|---|---|---|---|---|
+| 1 | `RESULT ok qp=3 questMsg=true fightTicks=447 casts=89 potions=4 prayerLeft=22 xp=attack=500000,strength=875000,defence=500000,hitpoints=880532,magic=99537 at=2482,3481,1 ticks=746 hpMin=35 eats=0` | 746 | 447 | 89 | 4 |
+| 2 | `RESULT ok qp=3 questMsg=true fightTicks=347 casts=69 potions=2 prayerLeft=8 xp=attack=500000,strength=875000,defence=500000,hitpoints=879302,magic=77500 at=2482,3481,1 ticks=634 hpMin=35 eats=0` | 634 | 347 | 69 | 2 |
+| 3 | `RESULT ok qp=3 questMsg=true fightTicks=514 casts=102 potions=4 prayerLeft=8 xp=attack=500000,strength=875000,defence=500000,hitpoints=880035,magic=111537 at=2482,3481,1 ticks=798 hpMin=35 eats=0` | 798 | 514 | 102 | 4 |
+
+Every end run takes 0 damage in the fight (HP min 35), ends with the quest-complete message and 875,000 Strength,
+875,000 Hitpoints, 500,000 Attack, 500,000 Defence (option 1). Findings:
+
+- The demon is slow to kill: 69-102 casts, 347-514 ticks. The squad's chip damage and the 15 HP heal on a squad
+  killing blow keep it alive until the player lands the last hit. One test run ran out of runes at 60 casts.
+- Prayer is the margin: 2-4 of the 4 potions were used and 8-22 points were left. Six potions would remove the risk
+  (not run).
+- Karamja jungle spiders poison the bot on the way to the shipyard (one antipoison per run); jungle scorpions (38)
+  on Crash Island took one test run from 35 to 11 HP, so Protect from Melee is on there.
+- The arrival in the battle zone holds the player in a `p_delay` (`mm_demon.rs2:80-100`): a prayer toggle there is
+  dropped, so the script toggles on every tick until it holds.
+
+Planner: row `rival-mm` keeps 4,566 / 5,052 ESTIMATE; `minLevel` gains `magic: 75`; the measured parts are in its
+source. Scenario a, `research/hiscores-live.json`, Overall finish: 39,360 floor / 46,019 realistic at the start of
+this work; 40,212 / 45,105 on the current tree (2026-10-23 17:55Z) both without and with the Magic 75 gate (the change between the two
+pairs is other rows edited at the same time, not this row). `bun test packages/planner`: 42 pass (41 before another session added a test).
+
+Still open, and the next stage: **stage 80** (the first knockout and the jail lock). Then 90-120 in order. Debug
+presets for later stages use `mmGnomes()` for varp 372; `quest_mm_s130` shows the pattern. The `rival-mm` row keeps
+its ESTIMATE ticks (4,566 / 5,052) until a full run; the measured parts are chapter 1 (692-720 ticks) and stages
+140-160 (634-798 ticks). The rival's own segment figures for the atoll (stock ticks, `monkey_madness.md` step list,
+UNVERIFIED here) are about 2,000 ticks for stages 80-120 with two jail cycles and the temple trapdoor scrum.
+Hitpoints at the row is not modelled (the preset's 35 is an estimate; the Grand Tree preset has 10).
 
 ## 2. Combat boards: what quests give and what the leaders need
 

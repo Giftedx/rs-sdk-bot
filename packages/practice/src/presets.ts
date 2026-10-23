@@ -1,5 +1,6 @@
 import { rsSdkRoot } from './paths';
 import { isLiteRunning } from './lite';
+import { MM_PRESETS, extendVarps } from './presets-mm';
 
 // Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
 export interface SaveConfig {
@@ -420,6 +421,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     ...agilityPresets(),
     // Snake firemaking (scripts/measure/floor-fm-snake.ts): the firemaker with a tinderbox at the snake start (3068,3295).
     floor_fms: { position: { x: 3068, z: 3295, level: 0 }, inventory: [{ id: 590, count: 1 }] },
+    // Monkey Madness (scripts/generated/quest-mm.ts): packages/practice/src/presets-mm.ts.
+    ...MM_PRESETS,
 };
 
 // Agility laps (scripts/measure/agility-laps.ts): each course at its entry level and at 70 / 90.
@@ -457,5 +460,7 @@ console.log('SAVE=' + p);`;
     const out = r.stdout.toString();
     const m = out.match(/SAVE=(.+)/);
     if (r.exitCode !== 0 || !m) throw new Error(`generateSave failed for ${name}: ${r.stderr.toString()}${out}`);
+    // The generator keeps varps 0-308 only; higher ids (Monkey Madness 365-374) are written here.
+    if (preset.varps && Object.keys(preset.varps).some(k => Number(k) >= 309)) extendVarps(m[1]!.trim(), preset.varps);
     return m[1]!.trim();
 }

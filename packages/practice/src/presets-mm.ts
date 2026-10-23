@@ -8,7 +8,7 @@ import type { SaveConfig } from './presets';
 // Quest varps: %treequest (111) = 9 and %grandtree (150) = 160 (^grandtree_complete, quest.constant:28), set directly:
 // the Grand Tree is scripted by another helper.
 // Worn (Defence 1): wizard hat 579, amulet of magic 1727, staff of fire 1387, wizard robe 577, blue skirt 1011.
-// Inventory (helper items): Fire Wave runes (1 blood 565 + 5 air 556, fire from the staff) for 60 casts; 2 law runes
+// Inventory (helper items): Fire Wave runes (1 blood 565 + 5 air 556, fire from the staff) for 150 casts (one test run used 60 without the kill); 2 law runes
 // 563 (Varrock Teleport); gold bar 2357, ball of wool 1759, monkey bones 3183 (a Karamja monkey's,
 // quest_tbwt/scripts/monkey.rs2:73), 5 bananas 1963 (the child checks for more than 4, mm_monkey_child.rs2:136);
 // 4 prayer potions 2434; 1 antipoison 2446 (Karamja jungle spiders poison); 8 sharks 385.
@@ -17,7 +17,7 @@ const MM_SKILLS = {
     Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99,
 };
 const MM_WORN = [[579, 0], [1727, 2], [1387, 3], [577, 4], [1011, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
-const MM_PACK = [[565, 60], [556, 310], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
+const MM_PACK = [[565, 150], [556, 760], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
     .concat([2357, 1759, 3183, 1963, 1963, 1963, 1963, 1963, 2434, 2434, 2434, 2434, 2446].map(id => ({ id, count: 1 })),
         Array.from({ length: 8 }, () => ({ id: 385, count: 1 })));
 
@@ -38,7 +38,7 @@ function mmPreset(position: { x: number; z: number; level: number }, varps: Reco
     };
 }
 // After chapter 3 the helper items are spent: runes, law runes, prayer potions, sharks stay.
-const MM_PACK_LATE = [[565, 60], [556, 310], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
+const MM_PACK_LATE = [[565, 150], [556, 760], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
     .concat([2434, 2434, 2434, 2434].map(id => ({ id, count: 1 })), Array.from({ length: 8 }, () => ({ id: 385, count: 1 })));
 
 export const MM_PRESETS: Record<string, SaveConfig> = {
@@ -47,10 +47,11 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
     quest_mm_s30: mmPreset({ x: 2482, z: 3486, level: 1 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3 }) }, [4004, 4005]),
     // Debug: in the hangar after Daero's introduction (%mm_main 1, %mm_narnode 7, %mm_caranock 3, %mm_daero 5):
     // MM_FROM=40 (the puzzle).
-    // Debug: on Ape Atoll (the village west side, 0_42_43_24_32) with the sigil, before the battle: %mm_main 5
+    // Debug: with the sigil, before the battle (the sigil works anywhere outside the Wilderness, mm_demon.rs2:7-14;
+    // the preset stands in the Grand Tree because a human on the atoll is poisoned by the wildlife): %mm_main 5
     // (completed_ch3), %mm_garkor 6 (joined_10th_squad), %mm_zooknock 6, %mm_awowogei 2 (mm_monkeys bits 2-4).
     // MM_FROM=130 (the demon, the way back, the reward).
-    quest_mm_s130: mmPreset({ x: 2712, z: 2784, level: 0 }, { 365: 5, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 6, zooknock: 6 }), 373: 2 << 2 }, [4035], MM_PACK_LATE),
+    quest_mm_s130: mmPreset({ x: 2466, z: 3494, level: 0 }, { 365: 5, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 6, zooknock: 6 }), 373: 2 << 2 }, [4035], MM_PACK_LATE),
     quest_mm_s40: mmPreset({ x: 2393, z: 9890, level: 0 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 5 }) }, [4004]),
 };
 
