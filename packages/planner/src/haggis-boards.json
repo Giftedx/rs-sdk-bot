@@ -946,10 +946,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1160,
-    "realistic": 1164,
+    "floor": 1030,
+    "realistic": 1037,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md: scripts/generated/waterfall.ts, preset quest_waterfall, practice, 3/3 PASS at 1160, 1164, 1160 ticks; starts beside Almera, so the walk there and the helper trade are not counted. Rival live leg: 979 (research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED))"
+    "source": "research/quest-plan.md: scripts/generated/waterfall.ts, preset quest_waterfall, practice, 3/3 PASS at 1030, 1037, 1031 ticks with walkPath (was 1160, 1164, 1160); starts beside Almera, so the walk there and the helper trade are not counted. Rival live leg: 979 (research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED))"
    },
    "lump": true,
    "xp": {

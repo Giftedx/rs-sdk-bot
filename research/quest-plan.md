@@ -32,6 +32,35 @@ proof: 1 FAIL with the door fix but 10 lobsters and `bot.walkTo` in the falls
 Run h2 had HP 2. The low point is not traced (no `WF_TRACE` in proof runs). 6 lobsters were left, so food was not
 the limit; one more spider hit at that tick could kill. This is the main risk left.
 
+### Cut 1: click-ahead walking, one-tick rune drops, a combat shield (MEASURED practice, 3/3)
+
+Changes in `waterfall.ts`: every overland and maze walk uses `walkPath` (`packages/core/src/walk.ts`) before the old
+`bot.walkTo` fallback; the three rune stacks drop in one tick and come back one pickup per tick; the bot waits up to
+12 ticks at the giant-room door for a spider or rat hit before it runs, so that single-way combat covers the run;
+low-HP points print as `WARN hp`.
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | walkPath ticks |
+|---|---|---|---|---|
+| m1 | `RESULT ok attackXp=343750 strengthXp=343750 at=2603,9912,0 ticks=1030 hpMin=3 eats=10 lobsters=8 died=false` | 1,030 | 213 (20.6%) | 611 |
+| m2 | `RESULT ok attackXp=343750 strengthXp=343750 at=2603,9912,0 ticks=1037 hpMin=4 eats=9 lobsters=9 died=false` | 1,037 | 223 (21.4%) | 604 |
+| m3 | `RESULT ok attackXp=343750 strengthXp=343750 at=2603,9912,0 ticks=1031 hpMin=4 eats=8 lobsters=10 died=false` | 1,031 | 216 (20.8%) | 609 |
+
+Before: 1,160, 1,164, 1,160. After: 1,030, 1,037, 1,031, so 129 ticks (11%) faster. 343,750 Attack + 343,750
+Strength in 1,033 ticks = **666 combat XP per tick**. The rival's 979 (UNVERIFIED) is now 54 ticks ahead.
+
+The cut by segment (m1 against h1): Hadley to the gnome cellar fell from 270 to 236 ticks (h1 126-396, m1 113-349), the maze out and the walk to the tombstone from 302 to 241
+(h1 522-824, m1 454-695), the tombstone idle from 15 + 14 to 11 + 9 ticks.
+
+Low-HP points, traced (`WARN hp`): HP 3 at 2585,9878 in the south falls room (shadow spider in combat, two
+skeleton mages and a skeleton beside it); HP 4 twice in Glarial's tomb next to a moss giant in combat (2545,9841 and
+2542,9816). One run before the shield (k1) had HP 3 at 2565,9887 inside the giant room with a fire giant in combat:
+a giant hit for 7. In m1 and m2 the shield hit came at once (`shield=true waited=0`); in m3 no spider came and the
+bot waited the full 12 ticks (`shield=false waited=12`, 14 idle ticks at 2564,9881). The run of h2 that fell to HP 2
+was not traced; it ran before the `WARN hp` line existed.
+
+Still open for the rival's time: the 12-tick shield wait when no spider comes (cap it lower or lure one), the
+tombstone idle (20 ticks), the chest in the tomb (up to 20 idle at 2555,9844 in m2), and the Hudon dialogue (7 idle).
+
 ### Where the ticks go, against the rival's 979
 
 `research/rival-atlas-2026-10-16.md:28` gives a live Waterfall leg of 979 ticks (UNVERIFIED third-party). Ours is
