@@ -136,6 +136,68 @@ Reading: per-tick behaviour is the same within run-to-run spread (4 bots share t
 large: host run 2 had one bot at 10.42). The host does not slow ticks: every bot saw 600 ticks in 96-102 s in both
 modes. 4 bots at 600 ticks is a short proof; longer runs, banking trips and more bots per host are not measured.
 
+## 3b. Long proof: 4 bots, 9,000 ticks, food and bank trips
+
+Setup: `scripts/goldfarm.ts` at ab072c3 (no-food HP-7 guard), preset `goldfarm_nofood` (300 coins, no food:
+forces stall, shop and bank trips), `TICKS=9000`, random event watcher on, 4 fresh accounts, one host,
+`--stagger-ms 2000`. The host's working set, private bytes and CPU seconds were sampled every 30 s
+(`Get-Process`; scratchpad `long.ts`). Launched at practiceBots=0, freeGB=11.6.
+
+Memory over 1,358 s (45 samples):
+
+| Window | Working set mean | Private bytes mean |
+|---|---|---|
+| t <= 400 s | 574 MB | 883 MB |
+| t >= 1,000 s | 594 MB | 894 MB |
+| t >= 120 s, all | 584 MB (min 561, max 641) | |
+
+Growth: about 20 MB working set and 11 MB private in about 15 minutes, inside the sample-to-sample spread
+(561-641 MB). No leak trend seen at this length. `HOST done ... peakRssMB=866`.
+
+CPU: 192.6 CPU-seconds in 1,338 s = 14.4% of one core for 4 bots (about 3.6% per bot).
+
+Per bot (`RESULT` and `LEDGER` lines):
+
+| Bot | Ticks | Coins/tick | Idle % | Bank trips | Shop trips | Stall trips | Died | Logout |
+|---|---|---|---|---|---|---|---|---|
+| lgxx2y01 | 9,000 | 13.28 | 8.9 | 5 | 5 | 2 | false | logged-out |
+| lgxx6o12 | 9,001 | 12.46 | 12.1 | 5 | 4 | 3 | false | logged-out |
+| lgxxaa23 | 9,009 | 12.47 | 12.3 | 5 | 3 | 5 | false | logged-out |
+| lgxxdy34 | 9,006 | 13.41 | 11.2 | 5 | 7 | 3 | false | logged-out |
+
+`HOST done ok=4/4 seconds=1358`, exit 0. `EVENTS {}` for every bot (the practice server sends no events).
+The host printed no `[host] unhandled` or `uncaught` line. The SDK printed 45 unprefixed
+`[walkTo] PATHFINDING FAILED: destination tile is blocked` lines near the stall (2669,3311); these are not
+host errors, and the longest idle streaks (53-90 ticks) are at the same tiles (2669,3310). Food took 8.6-17.3% of
+ticks (`foodTicksPct`). These are no-food numbers; the knights preset gave 14-15 coins/tick over 600 ticks.
+
+## 3c. Swarm host jobs
+
+`scripts/swarm.ts` accepts `{"accounts": [...], "script": ..., "host": true, ...}`. It runs
+`packages/practice/src/supervise-host.ts <script> 20 <accounts...>`, which runs the host and applies the
+supervise.ts rules per account: RESULT ok is done; a stop file or `no food` is stopped; `died` is final; any other
+end restarts the host with only the failed accounts (10 s pause, at most 20 failed runs). Each account's end is
+printed as `SUPERVISE-HOST account <name> <reason> after <n> runs` as it happens, and the swarm records it per
+account. Before a start the swarm leaves out each account whose status file is fresh and not its own
+("external"), and each account that died (also with `repeat`). A host counts as its N bots for `maxBots`.
+`swarm-state.json` keeps one row per account (with `host: "host:a+b+..."`), so the dashboard and
+`scripts/learn.ts`, which key rows by account, still work. Single-account jobs keep the old path.
+
+Proof on practice (MEASURED practice, 1 run): 2 accounts under `supervise-host.ts`, `goldfarm_knights`,
+`TICKS=600`; a stop file for the second account at about 45 s:
+
+```
+[svxn2012] RESULT fail stop file ticks=179 ...
+[svxmy201] RESULT ok ticks=600 ...
+SUPERVISE-HOST account svxmy201 done after 1 runs
+SUPERVISE-HOST account svxn2012 stopped after 1 runs
+SUPERVISE-HOST end after 1 runs {"svxmy201":"done","svxn2012":"stopped"}
+```
+
+Both logged out (`LOGOUT logged-out`). The other bot kept running to 600 ticks. The restart and death paths are
+covered by unit tests only (`packages/practice/test/supervise-host.test.ts`, `scripts/swarm.test.ts`).
+`scripts/swarm.ts` itself needs `DEMO_OK=1`, so its loop was not run here.
+
 ## 4. What (b), a slimmer client, would take
 
 The lite client is already browserless. Upstream measured 13.8 MB marginal per bot with 8 bots in one process
@@ -158,5 +220,5 @@ Recommendation: use the host. 4 bots in one host cost about one bot process plus
 ## Open
 
 - More than 4 bots per host not measured. CPU per host not measured.
-- The supervisor and swarm launchers still start one process per bot; moving them to the host is a separate task.
+- Swarm host jobs exist (section 3c); the live farmers are not moved yet (owner switch).
 - Live runs not done (practice only).
