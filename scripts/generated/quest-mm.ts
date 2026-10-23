@@ -157,7 +157,7 @@ try {
     const isMain = (name: string): boolean => q.st()?.modalInterface === componentId(name);
 
     // Poison (Karamja jungle spiders): an antipoison on the first "You have been poisoned!" after the last dose.
-    const ANTIPOISON = [2446, 175, 177, 179];
+    const ANTIPOISON = [2448, 181, 183, 185, 2446, 175, 177, 179];   // super antipoison first
     let poisonSeen = Math.max(-1, ...(q.st()?.gameMessages ?? []).map((m: any) => m.observationId ?? -1));
     let antipoisons = 0;
     const offPoison = q.s.onTick(() => {
@@ -728,26 +728,30 @@ try {
             if (z() > 6400) await q.fail('temple rope');
         };
         await ropeUp();
-        for (let roll = 0; roll < 6 && level() !== 1 && q.near(2806, 2785, 2); roll++) {
-            for (let t = 0; t < 15 && level() !== 1; t += 3) {
-                await q.guard('temple up');
+        // The landing tile decides the way out. The guards' boxes (spawns 2803,2785, 2805,2783, 2805,2786, 2x2) leave
+        // 2806,2785 open only to the ladder (west); 2807,2783-2784 open south by 2807,2782 and 2807,2786-2787 north by
+        // 2807,2788 to the temple floor, which joins the village at level 0. Ladder first from 2806,2785, else the
+        // floor walk; each falls back to the other while a guard stands in the way.
+        const roofWay = async (): Promise<void> => {
+            await walk('temple roof back', [{ x: 2794, z: 2774, tol: 1 }]);
+            await locOp('temple down', { x: 2794, z: 2773 }, /ladder/i, /climb-down/i, [], () => level() === 0, 10);
+        };
+        const floorOut = (): boolean => level() === 0 && !q.near(2806, 2785, 3);
+        console.log(`NOTE temple landing ${q.pos()?.worldX},${q.pos()?.worldZ}`);
+        for (let t = 0; t < 200 && level() === 0 && !floorOut(); t += 3) {
+            await q.guard('temple out');
+            const p = q.pos()!;
+            if (p.worldX === 2806 && p.worldZ === 2785 || t % 12 >= 6) {
                 const lad = q.findLoc(l => l.x === 2805 && l.z === 2785 && /ladder/i.test(l.name)) ?? { id: 4772, x: 2805, z: 2785 };
                 await q.opLoc(lad, 1);
-                await q.waitUntil(() => level() === 1, 3);
+            } else {
+                const out = p.worldZ <= 2785 ? { x: 2801, z: 2782 } : { x: 2801, z: 2788 };
+                await q.s.direct({ type: 'walkTo', x: out.x, z: out.z, running: true, reason: 'SDK' });
             }
-            if (level() === 1) break;
-            console.log(`NOTE temple landing ${q.pos()?.worldX},${q.pos()?.worldZ} boxed: down and up again`);
-            for (let t = 0; t < 20 && z() < 6400; t += 4) {
-                // By id when the loc is not listed: mm_temple_trapdoor_open 4880 (Climb-down), mm_temple_trapdoor 4879 (Open).
-                const td = q.findLoc(l => l.x === 2807 && l.z === 2785 && /trapdoor/i.test(l.name));
-                await q.opLoc(td ?? { id: (t / 4) % 2 === 0 ? 4880 : 4879, x: 2807, z: 2785 }, td ? q.opIndex(td, /climb|open/i) : 1);
-                await q.waitUntil(() => z() > 6400, 4);
-            }
-            if (z() > 6400) { await q.waitTicks(1); await ropeUp(); }
+            await q.waitUntil(() => level() === 1 || floorOut(), 3);
         }
-        if (level() !== 1) await q.fail('temple up');
-        await walk('temple roof back', [{ x: 2794, z: 2774, tol: 1 }]);
-        await locOp('temple down', { x: 2794, z: 2773 }, /ladder/i, /climb-down/i, [], () => level() === 0, 10);
+        if (level() === 1) await roofWay();
+        if (!floorOut()) await q.fail('temple out');
         want = 'auto';
         await wear('amulet', ITEM.amulet);
         q.milestone(107);
@@ -879,7 +883,9 @@ try {
         await wearGreegree('greegree');
         q.milestone('monkey');
         if (z() > 6400) {
+            want = PFM;   // the zombies attack a monkey too (practice: death on this pass with the prayer off)
             await walk('to dungeon exit 2', DUNGEON_OUT);
+            want = 'auto';
             await locOp('dungeon up 2', { x: 2763, z: 9103 }, /ladder/i, /climb/i, [], () => z() < 6400, 10);
         }
         await throughGate('gate1');

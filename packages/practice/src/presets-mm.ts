@@ -11,7 +11,7 @@ import type { SaveConfig } from './presets';
 // Inventory (helper items): Fire Wave runes (1 blood 565 + 5 air 556, fire from the staff) for 200 casts (one test
 // run used 60 without the kill; Ape Atoll pests take some); 2 law runes 563 (Varrock Teleport); gold bar 2357, ball
 // of wool 1759, monkey bones 3183 (a Karamja monkey's, quest_tbwt/scripts/monkey.rs2:73); 7 prayer potions 2434;
-// 1 antipoison 2446 (Karamja jungle spiders, Ape Atoll wildlife); 12 sharks 385 (26 slots: the seal and the orders fill the pack in chapter 1). No bananas: the child's garden has
+// 1 super antipoison 2448 (Karamja jungle spiders, Ape Atoll wildlife: the plain one ran out); 12 sharks 385 (26 slots: the seal and the orders fill the pack in chapter 1). No bananas: the child's garden has
 // banana trees (2741-2746,2792-2797) and the script picks 5 there (banana_tree.rs2). The full run at HP 35 with
 // 4 potions and 10 sharks died in the dungeon (practice, 2026-10-23).
 const MM_SKILLS = {
@@ -20,7 +20,7 @@ const MM_SKILLS = {
 };
 const MM_WORN = [[579, 0], [1727, 2], [1387, 3], [577, 4], [1011, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
 const MM_PACK = [[565, 200], [556, 1000], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
-    .concat([2357, 1759, 3183, 2434, 2434, 2434, 2434, 2434, 2434, 2434, 2446].map(id => ({ id, count: 1 })),
+    .concat([2357, 1759, 3183, 2434, 2434, 2434, 2434, 2434, 2434, 2434, 2448].map(id => ({ id, count: 1 })),
         Array.from({ length: 12 }, () => ({ id: 385, count: 1 })));
 
 // mm_gnomes (varp 372) bit fields, quest_mm.varbit: narnode 0-3, caranock 4-6, daero 7-10, waydar 11-12,
