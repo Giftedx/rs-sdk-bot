@@ -23,7 +23,7 @@ number of logged-in ticks from the first input to the level-99 stamp.
 | Crafting | **194** (194, 194, 195) | 197 | **+3** | Gems from a booth, 27 per trip | MEASURED |
 | Herblore | **246** from Herblore 3 (246, 246, 246) | 447 | **+201** (less the ticks to reach 3) | Potions from a booth, 14 per trip | MEASURED |
 | Smithing | **1,312** (1,312, 1,313, 1,316) with a helper trading at the anvil; bank loop 1,572 x3 | 1,337 | **+25** (bank loop -235) | Platebodies at the Varrock west anvil | MEASURED |
-| Firemaking | **about 780** | 673 (live file 664) | **about -110** | Logs in lines north of Draynor bank | ESTIMATE from MEASURED parts (no full run) |
+| Firemaking | **667** mean of 13 runs on two lines (642-706); north of Lumbridge 662, 646, 678 | 664 (live file) | **-3** mean; 6 of 13 runs under 664 | 157-tile line, 27 logs in the pack, helpers drop the rest; no bank | MEASURED |
 | Prayer | **1,260** (1,260, 1,260, 1,260) | 1,281 | **+21** | Bury dragon bones from a booth | MEASURED |
 | Magic | **1,762** from Magic 7 (1,762, 1,765, 1,762); 1,670 from 44 (1 run) | 1,513 (live file 1,324) | **-249** (-438 against 1,324), plus the ticks to reach 7 | Enchant jewellery from a booth | MEASURED |
 | Cooking (normal) | **339-375** (339, 375, 343) | 38 | **about -300** | Fish on a fire to 35, then hand-made wine | MEASURED |
@@ -425,6 +425,79 @@ helper banks for the next load while the smither works; its ticks are not on the
   (`map_locaddunsafe`, active locs). The even rows (3290, 3292, 3294; 84 tiles) are free.
 - Open: a 157-tile snake of lightable tiles with walls at both row ends, or two shorter snakes joined by a short
   walk. Without it, the best measured route stays at about 780 ticks.
+
+### Firemaking on a line: line search and helper drops (2026-10-23, third pass)
+
+Scripts: `scripts/measure/fm-line-search.ts` (map scan), `scripts/measure/floor-fm-line.ts` (the burn),
+`scripts/measure/fm-line-run.ts` (builds the saves, one firemaker plus 5 helpers in one process, waits for
+`.practice/monitor.json` to show fewer than 6 bots). All runs: practice, `RANDOM_EVENTS=0`, fresh accounts,
+Firemaking 1, run on (varp 173).
+
+Method. The firemaker starts on the line with a tinderbox and the first 27 logs (2 logs, 4 oak, 7 willow, 13 maple,
+1 yew). Helpers `<bot>b`-`<bot>f` each hold one 28-log chunk of the other 130 (23 yew, 107 magic). Helper k drops
+its chunk one log per tile when the firemaker is 36 logs before the chunk (drops show after 100 ticks and last 300).
+The firemaker lights each ground log where it lies. It never banks or trades.
+
+Rules found on the way (CODE-READ `firemaking.rs2`, MEASURED practice):
+- A lightable tile: no active loc on it (`map_locaddunsafe`; a loc is active when it has an op or a model with no
+  shape suffix, `LocType.ts` postDecode), no `WALK_BLOCKED` flag, not in a bank zone (`bank_zones.dbrow`).
+- Fires are `blockwalk=no`, so the push (a teleport west, then east, south, north) never stops on a fire. At a
+  row end it moves the player east onto the fire just lit. East rows therefore need a walk for every log.
+- The push shows in the state one tick before the XP (`p_delay(0)` between the push and `stat_advance`).
+- Turns: a walk that arrives too late starts a fresh 3-tick attempt ("You attempt to light the logs"). With run on
+  and the next op sent when the push shows, a turn of up to 4 steps costs 0 ticks (`turnLogTicks=5/5/5/5`:
+  the turn log is 5 ticks and the log before it 3). A 6-step turn cost 4 ticks (`turnLogTicks=8/8/9`).
+- At level 45+ every roll succeeds (`stat_random(64, 512)`), so the ticks over 4 per log there are overhead
+  (`extraAt45`). It was 0 in 12 of the 13 runs below and 4 in one.
+
+Line search (`bun scripts/measure/fm-line-search.ts`, about 3 min with `--turns 5`): 4,042 west rows of 20+
+tiles on reachable level-0 land. No straight 157-tile row exists outside the Wilderness. Danger = spawns with a
+huntmode within huntrange + wanderrange (default 5); `--safe` drops Wilderness and desert-heat tiles.
+
+| # | Line (rows z: x east -> west) | Turns (steps) | Start | Tiles from Lumbridge spawn (Chebyshev) | Danger |
+|---|---|---|---|---|---|
+| 1 | z3629 2785-2746, z3632 2746-2732, z3630 2735-2682, z3632 2687-2654, z3636 2659-2641 (Fremennik) | 4 (14) | 2785,3629 | 437 | 0 |
+| 2 | z3306 3211-3182, z3307 3185-3171, z3311 3176-3098, z3312 3103-3071 (north of Lumbridge) | 3 (12) | 3211,3306 | 88 | 0 |
+| 3 | z3276 3080-3033, z3277 3038-3022, z3276 3027-2987, z3278 2992-2977, z3279 2978-2944 | 4 (13) | 3080,3276 | 142 | 2 highwaymen |
+| 4 | z3627 2769-2729 ... z3627 2647-2623 (Fremennik) | 5 (20) | 2769,3627 | 453 | 5 viking wolves |
+| 5 | z3588 3220-3064, straight (Wilderness level 9) | 0 | 3220,3588 | 370 | WILD; scorpion, thug |
+| 6 | z3647 3245-3089, straight (Wilderness) | 0 | 3245,3647 | 429 | WILD; brown bear |
+| 7 | z3616 3162-3059, z3614 3062-2984 (Wilderness) | 1 | 3162,3616 | 398 | WILD |
+| 8 | z3398 3026-2942 (85 tiles, too short alone) | - | 3026,3398 | 196 | 0 |
+| 9 | z3311 3181-3098 (84 tiles, part of line 2) | - | 3181,3311 | 93 | 0 |
+| 10 | z3460 3184-3105 (80 tiles, too short alone) | - | 3184,3460 | 242 | 0 |
+
+Runs (`FLOOR Firemaking level=99 xp=1001790 ticks=...`, from the first input to level 99):
+
+| Line | Runs | Ticks to 99 | Overhead at 45+ |
+|---|---|---|---|
+| 2, north of Lumbridge | 3 | **662, 646, 678** | 0, 0, 0 |
+| 1, Fremennik (5 rows) | 10 | 682, 658, 666, 706, 650, 642, 678, 682, 642, 678 | 0 in 9, 4 in 1 |
+| 5, Wilderness straight | 1 | 654 | not logged |
+| Fremennik 4-row variant (6-step turns, run off) | 4 | 663, 667, 651, 643 | 13 each |
+
+`FLOOR Firemaking level=99 xp=1001790 ticks=646 ... waitTicks=0 walkTicks=0 failRetriesEst=5 worstLogTicks=14
+extraAt45=0 turnLogTicks=5/5/5 ... rows=137/60/316/133` (line 2, run 2). In all three line-2 runs the rows after
+the first took the same 60/316/133 ticks; only the first row (levels 1-60) differs.
+
+Result. The line, the turns and the supply cost 0 ticks. What is left is the roll: 157 logs at 4 ticks plus the
+failed rolls below level 45. Mean of the 13 runs (12 with 0 overhead) **667**, best 642; 6 of 13 under 664 (line 2:
+2 of 3). A model of the rolls (curve.ts, `stat_random` from `PlayerOps.ts`, 20,000 trials) gives mean 657,
+5th-95th percentile 635-691, 72% under 664; the measured mean is 10 ticks higher (2 standard errors; cause not
+found). The board is a coin flip for a firemaker that starts at tick 0 on the line. Haggis also has the tutorial
+(10 ticks) and the walk to the line (line 2: 88 tiles from the spawn, 55 ticks in the planner estimate), so Haggis does not win
+Firemaking by burning on this evidence. Planner row `fm-burn`: floor 642, realistic 667, at
+`fm-line-lumbridge-north` (`packages/planner/src/haggis-boards.json`).
+
+- Planner (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`, scenario a, on a tree that also
+  held other uncommitted planner edits): Firemaking finish floor 1,675 -> 1,764, realistic 1,997 -> 1,970;
+  Overall floor 38,556 -> 38,583, realistic 47,313 -> 47,248 (#1 35,916). The floor rises because the old row
+  burned "anywhere" at 639 and the new one walks to the line. Done first, Firemaking alone: 707 floor, 732
+  realistic, against 664.
+- Supply for a live run: 5 helper loads of 28 logs, staged at the line before Haggis arrives (off Haggis's clock).
+  One helper with bank trips also works if the bank is near: a chunk burns for 112 ticks.
+- Open: Wilderness lines are straight but carry PK risk on the live server. The 10-tick gap between the model and
+  the runs. A live measure (400 ms tick).
 
 ### Magic: legal start and cast rate (NOT flipped)
 
