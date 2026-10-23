@@ -6,9 +6,37 @@ does not matter. The quest helper can add cannon rows from Dwarf Cannon under "C
 
 Paths start at `vendor/rs-sdk/server/content/scripts/`.
 
-## Result
+## Result (second pass)
 
-| Planner row (`packages/planner/src/haggis-boards.json`) | Before (ESTIMATE) floor / realistic | Now (MEASURED) floor / realistic |
+| Planner row | First pass, floor / realistic | Now (MEASURED), floor / realistic |
+|---|---|---|
+| `att-top`, `str-top` style XP per tick | 156.7 / 139.6 (Gnome battlefield) | **203.3 / 185.3** (ice warriors, band 90, section 4) |
+| `def-top` style XP per tick (Defence 1 to 99) | 150.6 / 134.5 | **179.5 / 162.9** (best spot per band) |
+| `hp-top` Hitpoints XP per tick | 51.8 / 46.2 | **67.3 / 61.4** (ice warriors) |
+| `cannon-melee` on `att-top`, `str-top` | 120.7 / 113.8, +0.585 Ranged per style XP | **94.0 / 86.7, +2.125** (fixed top-up, section 5) |
+| `cannon-melee` on `def-top` | 113.3 / 103.1, +0.693 | **94.0 / 86.7, +2.125** (band 90 rate for all bands) |
+| `cannon-melee` on `hp-top` | 39.9 / 37.6, +1.77 | **31.1 / 28.7, +6.42** Ranged per HP XP |
+| `thieve` `deadTicks` (stun-guests) | 1,511 / 2,611 | unchanged |
+
+Overall finish (scenario a, all safe levers, `haggis-cli.ts --levers`; the "without" column disables
+`cannon-melee`). Other agents changed the table between the passes (the Dwarf Cannon helper's `ranged` row "Cannon
++ melee to Ranged 99", the Fight Arena row, rival levers), so the first-pass totals below are not comparable.
+
+| Table | Floor | Realistic | Without `cannon-melee`, floor / realistic |
+|---|---|---|---|
+| HEAD before this pass | 37,995 (late 2,079) | 45,473 (late 9,557) | 37,868 / 45,342 |
+| **HEAD + these rows (committed)** | **38,100 (late 2,184)** | **45,580 (late 9,664)** | **37,805 / 45,266** |
+| Working tree (these rows + other agents' uncommitted rows) | 38,191 (late 2,275) | 45,540 (late 9,624) | 37,896 / 45,226 |
+
+Faster melee hardly moves Overall now. In the current schedule, Attack and Strength are already 99 when "Melee to
+Attack 99" starts (0 ticks), "Combat top-up to Hitpoints 99" takes 0 ticks, and Defence needs only 671 ticks after
+the `ranged` row. The critical path is the `ranged` row (4,808 ticks, cannon + melee) and the short quests (6,659
+ticks). `cannon-melee` costs 295 / 314 ticks: it slows `def-top` from 162.9 to 86.7 style XP per tick, and the
+Ranged it adds is not needed at that point.
+
+## Result (first pass)
+
+| Planner row (`packages/planner/src/haggis-boards.json`) | Before (ESTIMATE) floor / realistic | First pass (MEASURED) floor / realistic |
 |---|---|---|
 | `att-top`, `str-top` style XP per tick | 400 / 250 | **156.7 / 139.6** (band 90) |
 | `def-top` style XP per tick (Defence 1 to 99) | 400 / 250 | **150.6 / 134.5** (XP-weighted bands) |
@@ -127,11 +155,81 @@ Example output lines:
   Prayer fills first: 1,300 / 1,169 bury-row ticks need 1,831 / 1,646 stun ticks at 0.71. Magic takes the rest at
   0.94. Capacity 2,611 realistic, 1,511 floor.
 
+## 4. Higher-HP multiway targets (bands 70 and 90)
+
+Search (CODE-READ, a scratch script over `maps/multiway.csv` and the npc configs): every NPC with 35-130 HP in a
+non-Wilderness multiway zone. Quest-locked areas (Legends' death wings, lighthouse dagannoths, Shilo undead ones) and
+single spawns are left out. Measured candidates, same gear and script as section 1, 3 x 300 ticks:
+
+- **iw**: Ice Queen lair, 6 ice warriors at 2864-2868, 9948-9951 (`_unpack/225/all.npc` `icewarrior_queen`: HP 59,
+  attack, strength and defence 47, slash defence 40, `huntmode=cowardly`, huntrange 5, respawn 60). They attack
+  first. Preset `combat_iw_<band>`, start 2866,9946. The walk into the lair was not checked.
+- **ks**: Kalphite lair, 5 soldiers within 10 tiles at 3463-3469, 9476-9489, plane 2 (`kalphite.npc:62-95`: HP 90,
+  attack, strength and defence 70, poison 20, cowardly, huntrange 5). Preset `combat_ks_<band>`.
+- **sk**: Temple of Ikov dungeon, 9 skeletons at 2637-2660, 9885-9894 (`all.npc` id 93: HP 59, defence 36, cowardly,
+  huntrange 1). Preset `combat_sk_<band>`. Entry may need the Temple of Ikov quest (not checked).
+
+| Spot | Band | Style XP/tick (runs) | Mean | HP XP/tick (runs) | Mean | Lobsters used (of 20) | In combat |
+|---|---|---|---|---|---|---|---|
+| iw | 90 | 189.7 / 163.0 / 203.3 | **185.3** | 62.9 / 54.0 / 67.3 | **61.4** | 0 / 0 / 0 | 0.95 |
+| iw | 70 | 136.7 / 127.7 / 110.3 | 124.9 | 45.3 / 42.3 / 36.5 | 41.4 | 0 / 2 / 3 | 0.94 |
+| ks | 90 | 132.3 / 109.3 / 129.7 | 123.8 | 43.8 / 36.2 / 43.0 | 41.0 | 6 / 5 / 5 | 0.92-0.93 |
+| ks | 70 | 84.3 / 95.3 / 75.7 | 85.1 | 27.9 / 31.6 / 25.1 | 28.2 | 8 / 4 / 15 | 0.73-0.90 |
+| sk | 90 | 146.0 / 201.3 / 154.0 | 167.1 | 48.3 / 66.7 / 51.0 | 55.3 | 0 / 0 / 0 | 0.94-0.96 |
+| sk | 70 | 107.3 / 138.0 / 162.7 | 136.0 | 35.5 / 45.7 / 53.9 | 45.0 | 0 / 0 / 0 | 0.93-0.96 |
+| gb (section 1) | 70 | 154.0 / 146.7 / 111.0 | 137.2 | | 45.5 | 0 | 0.92-0.93 |
+| gb (section 1) | 90 | 126.0 / 156.7 / 136.0 | 139.6 | | 46.2 | 0 | 0.91-0.92 |
+
+Example line (iw 90, run 3): `RESULT ok cannon=false ticks=300 styleXp=61000 styleXpPerTick=203.3 hpXp=20200
+hpXpPerTick=67.3 ... inCombat=286 inCombatShare=0.953 attacks=13 ... food=20`.
+
+- Best band 90: the ice warriors, 185.3 (+33% on the battlefield). They stand within 4 tiles and attack first, so
+  the bot hardly walks (13-14 attacks per 300 ticks). Food: 0 at band 90. At band 70, at most 3 lobsters per 300
+  ticks, about 90 per live hour of 9,000 ticks (ESTIMATE from 3 runs).
+- Best band 70: the battlefield (137.2) and the skeletons (136.0) are equal. Kalphite soldiers are worst: high
+  defence and hard hits (up to 15 lobsters in 300 ticks at band 70).
+- Many iw, ks and sk runs ended `exit=1` after `RESULT ok`: the logout did not complete because aggressive NPCs
+  kept the account in combat. The XP numbers are valid. A real run must walk out of reach before it logs out.
+
+## 5. Cannon policy (fixed top-up)
+
+The Dwarf Cannon helper found that the 20-tick top-up in section 2 never landed: the next attack click replaced the
+walk to the cannon, and Fire on the next tick broke the reload after an empty cannon (`research/quest-plan.md`
+section 1b). Its fix is now in `scripts/measure/combat-melee.ts` (commit 2c0f205): no attack click until "You load
+the cannon" or 8 ticks pass, Fire only after the load lands, top-up every 30 ticks. Section 2 numbers come from the
+broken handling. The script also tries a spiral of tiles when the 3x3 is blocked (commit afd2e2b).
+
+Policies, band 90, 3 x 300 ticks:
+
+- **A**: the fixed top-up every 30 ticks, targets within 10 tiles of the cannon (`RELOAD=30`, the default).
+- **B**: as A, but targets only within 2 tiles of the cannon, and a timed top-up only from a tile next to the
+  cannon or between targets (`NEAR=2 TOPUP_ADJ=1`).
+
+| Spot, policy | Style XP/tick (runs) | Mean | Ranged XP/tick (runs) | Mean | HP XP/tick mean | Ranged per style XP | In combat |
+|---|---|---|---|---|---|---|---|
+| gb, none (section 1) | 126.0 / 156.7 / 136.0 | 139.6 | 0 | 0 | 46.2 | - | 0.91-0.92 |
+| gb, A | 94.0 / 73.0 / 93.0 | **86.7** | 179.8 / 193.2 / 179.5 | **184.2** | 28.7 | **2.125** | 0.74-0.77 |
+| gb, B | 50.0 / 52.0 / 59.0 | 53.7 | 195.2 / 152.0 / 178.7 | 175.3 | 17.7 | 3.27 | 0.35-0.49 |
+| iw, none (section 4) | 189.7 / 163.0 / 203.3 | 185.3 | 0 | 0 | 61.4 | - | 0.95 |
+| iw, A | 116.3 / 138.0 / 148.3 | 134.2 | 81.2 / 76.3 / 49.5 | 69.0 | 44.4 | 0.514 | 0.89-0.91 |
+| iw, B | 145.3 / 102.3 / 105.7 | 117.8 | 70.2 / 70.3 / 108.7 | 83.1 | 39.0 | 0.705 | 0.47-0.84 |
+
+Example line (gb, A, run 2): `RESULT ok cannon=true ticks=300 styleXp=21900 styleXpPerTick=73.0 hpXp=7237
+hpXpPerTick=24.1 rangedXp=57950 rangedXpPerTick=193.2 ... reloads=10 refires=1 setupTicks=14 balls=882`.
+
+- Policy A at the battlefield is the best cannon session: 271 XP per tick in all (86.7 style + 184.2 Ranged), and
+  Ranged 1 to 58 in 300 ticks. This agrees with the helper's 207.7 Ranged and 91.7 style (different stats). It
+  costs 38% of the melee rate.
+- Policy B idles while no NPC stands within 2 tiles of the cannon, and it adds no Ranged. Not used.
+- At the ice warriors the cannon sees few targets. The 3x3 had to go 1 tile south of the group (2866,9945), and
+  the cannon scans one of 8 directions per tick (`cannon_fire.rs2:1-91`), so most directions are empty.
+- So the choice depends on the board: no cannon at the ice warriors for the melee boards (185 style XP per tick), or
+  the cannon at the battlefield when Ranged is the target (184 Ranged + 87 style).
+
 ## Open
 
-- Melee at a multiway spot with higher-HP targets for band 90 (Kalphite soldiers, HP 90, `kalphite.npc:62-90`; moss
-  giants in the Varrock sewer, only 4 spawns).
-- Cannon handling that does not break melee (see section 2).
+- The walk into the Ice Queen lair and the Temple of Ikov dungeon (access rules not checked).
+- The fixed cannon handling at bands 40 and 70 (only band 90 measured; `def-top` uses the band 90 cannon rate).
 - Stun guests from a fresh ladder (Thieving 1 to 99), with real Prayer and Magic level-up pages and refill trades.
 - `kills` and `dmgTaken` in the RESULT lines are not reliable (the SDK did not report kill events; damage events
   repeat). The rates use XP deltas only.

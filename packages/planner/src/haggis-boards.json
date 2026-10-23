@@ -1787,10 +1787,10 @@
     "skill": "strength",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 156.7,
-     "realistic": 139.6,
+     "floor": 203.3,
+     "realistic": 185.3,
      "evidence": "MEASURED",
-     "source": "research/combat-measure.md: Khazard troopers, Gnome battlefield (multiway), band 90, rune scimitar aggressive, 3 x 300 ticks practice: 126.0 / 156.7 / 136.0 style XP per tick (floor = best run)"
+     "source": "research/combat-measure.md: section 4, Ice Queen lair ice warriors (multiway, 6 within 4 tiles), band 90, 3 x 300 ticks: 189.7 / 163.0 / 203.3 style XP per tick, no food"
     },
     "side": {
      "hitpoints": 0.331
@@ -1802,7 +1802,7 @@
     "scorpion"
    ],
    "evidence": "MEASURED",
-   "source": "research/combat-measure.md (band 90 melee, 3 runs)",
+   "source": "research/combat-measure.md (band 90 melee at the ice warriors, 3 runs)",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -1818,20 +1818,20 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 0.585
+      "ranged": 2.125
      },
      "set": {
       "train": {
        "skill": "strength",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 120.7,
-        "realistic": 113.8,
+        "floor": 94,
+        "realistic": 86.7,
         "evidence": "MEASURED",
-        "source": "research/combat-measure.md: same spot with a dwarf cannon, band 90: 119.0 / 120.7 / 101.7 style XP per tick"
+        "source": "research/combat-measure.md: section 5, Gnome battlefield band 90 with the cannon (fixed top-up, every 30 ticks): 94.0 / 73.0 / 93.0 style XP per tick, Ranged 179.8 / 193.2 / 179.5"
        },
        "side": {
-        "hitpoints": 0.33
+        "hitpoints": 0.331
        }
       }
      }
@@ -1849,10 +1849,10 @@
     "skill": "attack",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 156.7,
-     "realistic": 139.6,
+     "floor": 203.3,
+     "realistic": 185.3,
      "evidence": "MEASURED",
-     "source": "research/combat-measure.md: Khazard troopers, Gnome battlefield (multiway), band 90, rune scimitar aggressive, 3 x 300 ticks practice: 126.0 / 156.7 / 136.0 style XP per tick (floor = best run)"
+     "source": "research/combat-measure.md: section 4, Ice Queen lair ice warriors (multiway, 6 within 4 tiles), band 90, 3 x 300 ticks: 189.7 / 163.0 / 203.3 style XP per tick, no food"
     },
     "side": {
      "hitpoints": 0.331
@@ -1866,7 +1866,7 @@
     "role": "add"
    },
    "evidence": "MEASURED",
-   "source": "research/combat-measure.md (band 90 melee, 3 runs)",
+   "source": "research/combat-measure.md (band 90 melee at the ice warriors, 3 runs)",
    "patches": [
     {
      "lever": "cannon-melee",
@@ -1874,20 +1874,20 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 0.585
+      "ranged": 2.125
      },
      "set": {
       "train": {
        "skill": "attack",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 120.7,
-        "realistic": 113.8,
+        "floor": 94,
+        "realistic": 86.7,
         "evidence": "MEASURED",
-        "source": "research/combat-measure.md: same spot with a dwarf cannon, band 90: 119.0 / 120.7 / 101.7 style XP per tick"
+        "source": "research/combat-measure.md: section 5, Gnome battlefield band 90 with the cannon (fixed top-up, every 30 ticks): 94.0 / 73.0 / 93.0 style XP per tick, Ranged 179.8 / 193.2 / 179.5"
        },
        "side": {
-        "hitpoints": 0.33
+        "hitpoints": 0.331
        }
       }
      }
@@ -2253,10 +2253,10 @@
     "skill": "defence",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 150.6,
-     "realistic": 134.5,
+     "floor": 179.5,
+     "realistic": 162.9,
      "evidence": "MEASURED",
-     "source": "research/combat-measure.md: Defence 1 -> 99 weighted by XP share (4.7% band 40, 22.1% band 70, 73.2% band 90): bands 40 / 70 / 90 means 81.3 / 137.2 / 139.6, best runs 88.0 / 154.0 / 156.7 style XP per tick"
+     "source": "research/combat-measure.md: section 4, Defence 1 -> 99 weighted by XP share (4.7% band 40, 22.1% band 70, 73.2% band 90), best spot per band: Gnome battlefield 81.3 / 137.2 (best runs 88.0 / 154.0), ice warriors 185.3 (best 203.3)"
     },
     "side": {
      "hitpoints": 0.331
@@ -2267,7 +2267,7 @@
     "grail"
    ],
    "evidence": "MEASURED",
-   "source": "research/combat-measure.md (bands 40, 70, 90 melee, 3 runs each)",
+   "source": "research/combat-measure.md (best spot per band, 3 runs each)",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -2283,20 +2283,20 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 0.693
+      "ranged": 2.125
      },
      "set": {
       "train": {
        "skill": "defence",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 113.3,
-        "realistic": 103.1,
+        "floor": 94,
+        "realistic": 86.7,
         "evidence": "MEASURED",
-        "source": "research/combat-measure.md: with the cannon, same weights: bands 40 / 70 / 90 means 62.3 / 87.8 / 113.8, best runs 82.0 / 101.0 / 120.7"
+        "source": "research/combat-measure.md: section 5, band 90 cannon rate used for all of Defence 1 -> 99 (bands 40 and 70 with the fixed cannon handling not measured)"
        },
        "side": {
-        "hitpoints": 0.33
+        "hitpoints": 0.331
        }
       }
      }
@@ -2314,17 +2314,17 @@
     "skill": "hitpoints",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 51.8,
-     "realistic": 46.2,
+     "floor": 67.3,
+     "realistic": 61.4,
      "evidence": "MEASURED",
-     "source": "research/combat-measure.md: Hitpoints XP per tick at band 90 melee: 41.7 / 51.8 / 45.0 (3 x 300 ticks)"
+     "source": "research/combat-measure.md: section 4, Hitpoints XP per tick at the ice warriors, band 90: 62.9 / 54.0 / 67.3"
     }
    },
    "requires": [
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "research/combat-measure.md (band 90 melee, 3 runs)",
+   "source": "research/combat-measure.md (band 90 melee at the ice warriors, 3 runs)",
    "supplies": [
     {
      "item": "lobster",
@@ -2338,17 +2338,17 @@
       "cannon"
      ],
      "addSide": {
-      "ranged": 1.77
+      "ranged": 6.42
      },
      "set": {
       "train": {
        "skill": "hitpoints",
        "toLevel": 99,
        "xpPerTick": {
-        "floor": 39.9,
-        "realistic": 37.6,
+        "floor": 31.1,
+        "realistic": 28.7,
         "evidence": "MEASURED",
-        "source": "research/combat-measure.md: Hitpoints XP per tick at band 90 with the cannon: 39.4 / 39.9 / 33.6"
+        "source": "research/combat-measure.md: section 5, Hitpoints XP per tick with the cannon at the Gnome battlefield, band 90: 31.1 / 24.1 / 30.8"
        }
       }
      }
