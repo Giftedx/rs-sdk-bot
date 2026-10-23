@@ -107,6 +107,25 @@ export const PRESETS: Record<string, SaveConfig> = {
             },
         };
     })(),
+    // ---- Short quests (scripts/generated/quest-*.ts, research/quest-plan.md section 6). Haggis's state at the
+    // planner's `qp-filler` row (bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --order, activity
+    // 39): every skill 99 (Defence 99 at 45,540, the row starts at 46,584), the combat_* rune set worn, and 22 QP in
+    // varp 101 (qp) from Cook's Assistant 1, Tree Gnome Village 2, Grand Tree 5, Fight Arena 2, Monkey Madness 3,
+    // Sea Slug 1, Dig Site 2, Waterfall 1, Dwarf Cannon 1, Witch's House 4 (quest.constant). Each preset starts beside
+    // the quest's first NPC with the helper-supplied items and 10 lobsters (379).
+    ...((): Record<string, SaveConfig> => {
+        const skills: Record<string, number> = {};
+        for (const k of ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft']) skills[k] = 99;
+        const equipment = [[1163, 0], [1725, 2], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
+        const food = Array.from({ length: 10 }, () => ({ id: 379, count: 1 }));
+        const q = (position: { x: number; z: number; level?: number }, items: Array<{ id: number; count: number }>, coins = 0): SaveConfig =>
+            ({ position: { level: 0, ...position }, skills, equipment, varps: { 101: 22 }, inventory: [...items, ...food], ...(coins ? { coins } : {}) });
+        return {
+            // Druidic Ritual: beside Kaqemeex (npc 455 spawn 2924,3486, maps/m45_54.jm2); raw beef 2132, rat meat 2134,
+            // bear meat 2136, chicken 2138 (helper hand-off; the enchanted meats are untradeable).
+            quest_druid: q({ x: 2925, z: 3487 }, [2132, 2134, 2136, 2138].map(id => ({ id, count: 1 }))),
+        };
+    })(),
     // Fresh woodcutter: Lumbridge castle courtyard with a bronze axe (1351), like a live account after the tutorial.
     wc_fresh: { position: { x: 3222, z: 3218, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // GE courier test: Ardougne market with 20,000 coins (the live couriers are the Thieving 99 accounts).

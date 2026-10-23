@@ -254,6 +254,11 @@
    "x": 2716,
    "z": 3302,
    "note": "Sea Slug, npc caroline (knowledge/ubermouse/world.json)"
+  },
+  "kaqemeex": {
+   "x": 2924,
+   "z": 3486,
+   "note": "Druidic Ritual start and end, npc kaqemeex 455 (maps/m45_54.jm2)"
   }
  },
  "activities": [
@@ -1563,8 +1568,32 @@
    "at": "narnode"
   },
   {
+   "id": "druid",
+   "label": "Druidic Ritual (6,250 Herblore)",
+   "serves": [
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 244,
+    "realistic": 248,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md (Druidic Ritual): scripts/generated/quest-druid.ts, preset quest_druid (Haggis at the qp-filler row: every skill 99, rune set, 4 raw meats from a helper), practice, 3/3 PASS at 244, 248, 244 ticks (floor = best run, realistic = worst run); Kaqemeex to Kaqemeex, the walk to Kaqemeex not counted"
+   },
+   "lump": true,
+   "qp": 4,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "XP: quest_druid.rs2:3 stat_advance(herblore, 2500) = 6,250 at 25x, measured 6,250 per run; QP quest.constant druid_questpoints 4; ticks research/quest-plan.md; serves only questpoints: 6,250 Herblore is 0.6% of 99 and rev 289 has no Druidic Ritual gate on Herblore (skill_herblore/scripts/identifying/identify.rs2:65), so the row must not pull a Taverley trip to the Herblore deadline",
+   "at": "kaqemeex",
+   "xp": {
+    "herblore": 6250
+   }
+  },
+  {
    "id": "qp-filler",
-   "label": "Short quests to 32 QP: Romeo & Juliet, Goblin Diplomacy, Witch's House, Druidic Ritual, Ernest, Sheep Herder, Black Knights' Fortress, Prince Ali",
+   "label": "Short quests to 32 QP: Romeo & Juliet, Goblin Diplomacy, Witch's House, Ernest, Sheep Herder, Black Knights' Fortress, Prince Ali",
    "serves": [
     "strength",
     "defence",
@@ -1572,21 +1601,21 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 2400,
-    "realistic": 7200,
+    "floor": 2100,
+    "realistic": 6300,
     "evidence": "ESTIMATE",
-    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ)"
+    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ); Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed"
    },
    "lump": true,
    "xp": {
     "hitpoints": 158125
    },
-   "qp": 32,
+   "qp": 28,
    "requires": [
     "tutorial"
    ],
    "evidence": "ESTIMATE",
-   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7)",
+   "source": "QP: quest.constant:72-139; Witch's House HP quest_ball.rs2:202; Dragon Slayer needs 32 QP (dragon_journal.rs2:7); Druidic Ritual is row druid",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -1595,12 +1624,12 @@
        "questpoints"
       ],
       "xp": {},
-      "qp": 28,
+      "qp": 24,
       "ticks": {
-       "floor": 2100,
-       "realistic": 6300,
+       "floor": 1800,
+       "realistic": 5400,
        "evidence": "ESTIMATE",
-       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md"
+       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed"
       }
      }
     },
@@ -1608,10 +1637,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 2220,
-       "realistic": 6659,
+       "floor": 1943,
+       "realistic": 5827,
        "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200"
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed"
       }
      }
     }
@@ -1682,7 +1711,8 @@
    },
    "qp": 2,
    "requires": [
-    "qp-filler"
+    "qp-filler",
+    "druid"
    ],
    "minQp": 32,
    "evidence": "ESTIMATE",

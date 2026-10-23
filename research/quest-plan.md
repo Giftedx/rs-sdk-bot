@@ -216,6 +216,60 @@ Defence (defensive style, CODE-READ) and 0.146 Hitpoints per Ranged XP. Scenario
 Ranged is later because the old row assumed 600 / 400 XP per tick with a bow (ESTIMATE). Overall is earlier because
 the cannon session now feeds Defence. A bow plus the cannon is not measured and could be faster.
 
+## 1c. Short quests (the `qp-filler` row)
+
+The schedule (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`, 2026-10-23,
+scenario a) has one ESTIMATE row for the short quests: activity 39, "Short quests to 32 QP", 6,659 ticks
+realistic for 7 quests (Romeo & Juliet, Goblin Diplomacy, Druidic Ritual, Ernest, Sheep Herder, Black Knights'
+Fortress, Prince Ali), about 951 each, and a separate Witch's House row of 832. Order of work: planned ticks, then
+board XP rewards: Druidic Ritual (Herblore), Goblin Diplomacy (Crafting), then the five with no XP, then Witch's
+House (Hitpoints, 832 planned).
+
+Shared parts: `scripts/generated/quest-lib.ts` (the dwarfcannon.ts helpers: walkPath first, re-sent clicks, one
+dialog page per tick, MILESTONE and WARN lines, death check, `blockDoor` for a locked door that the SDK routes
+through). Presets `quest_*` in `packages/practice/src/presets.ts`: Haggis at the `qp-filler` row, every skill 99
+(Defence 99 lands at 45,540, the row starts at 46,584), the rune set worn, 22 QP in varp 101, 10 lobsters, and the
+helper items. Each run starts beside the quest's first NPC; the walk to it is the planner's travel leg.
+
+At these levels the quest XP is wasted: Herblore and Crafting are 99 already. Only the QP count.
+
+### Druidic Ritual (MEASURED practice, 3/3)
+
+Script `scripts/generated/quest-druid.ts`, preset `quest_druid` (beside Kaqemeex, 4 raw meats from a helper:
+beef 2132, rat 2134, bear 2136, chicken 2138; the enchanted meats are untradeable). Practice server, one bot.
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle |
+|---|---|---|---|
+| p1 | `RESULT ok herbloreXp=6250 xp=herblore=6250 at=2924,3485,0 ticks=244 hpMin=99 eats=0 walkTicks=152 retries=0 died=false` | 244 | 27 (10.9%) |
+| p2 | `RESULT ok herbloreXp=6250 xp=herblore=6250 at=2924,3485,0 ticks=248 hpMin=99 eats=0 walkTicks=154 retries=0 died=false` | 248 | 29 (11.6%) |
+| p3 | `RESULT ok herbloreXp=6250 xp=herblore=6250 at=2924,3485,0 ticks=244 hpMin=99 eats=0 walkTicks=152 retries=0 died=false` | 244 | 27 (10.9%) |
+
+Every run ends with `Congratulations! Quest complete!`. 6,250 Herblore XP (`quest_druid.rs2:3`
+`stat_advance(herblore, 2500)`), 4 QP (`druid_questpoints`, CODE-READ; the QP varp is not in the SDK state). No
+damage (HP min 99), 0 deaths, 0 eats. Planned: about 951 (ESTIMATE share); measured 244-248. The rival's lab
+figure is 208 fixed (UNVERIFIED, `docs/speedrun/quests/druidic_ritual.md`).
+
+Steps (run p1, MILESTONE ticks): Kaqemeex 0-24; walk, stairs, Sanfew 24-85; stairs, ladder 85-109; prison door
+109-130; 4 dips 130-140; door, ladder, stairs, Sanfew 140-197; walk back, Kaqemeex 197-244.
+
+Findings:
+
+- The SDK route from the stone circle to Sanfew runs through the Witch's House front door (`witchhousedoor` 2861 at
+  2901,3473), which is locked: up to 211 idle ticks of "The door is locked." in each of the first two tries. The script blocks that
+  door for the session (`blockDoor`), so the plan goes round.
+- The prison door (`prison_doors.rs2`): from the west the first two opens wake the two suits of armour, the third
+  lets the player through. "Inside" is x >= 2889, the door's own tile column. The suits never hit at Defence 99.
+- `getDialog().text` was empty on Sanfew's pages, so the hand-in is checked on the inventory (no enchanted meat).
+- Kaqemeex queues a 14-page Herblore lesson after the reward; the script closes it.
+- Rev 289 has no Druidic Ritual gate on Herblore (`skill_herblore/scripts/identifying/identify.rs2:65`), so the
+  planner row `druid` serves Quest Points only. With `serves: herblore` the scheduler pulled the Taverley trip to
+  tick 856 for the Herblore deadline, and Overall got later (45,540 to 46,094 realistic).
+
+Planner: new row `druid` (244 / 248 MEASURED, 4 QP, place `kaqemeex`); `qp-filler` loses Druidic Ritual, 4 QP and
+one equal share of each ESTIMATE. Overall (scenario a): 38,191 / 45,540 before, 38,235 / 45,443 after (floor /
+realistic). Still open in that row: its `rival-dialogue-burst` patch (8 quests x 0.9248) overrides the
+`combat-hp-bound` patch (Witch's House split out), so with both levers on the row still counts Witch's House.
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,
