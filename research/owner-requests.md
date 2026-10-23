@@ -126,5 +126,6 @@ Rule: every "I will" in chat gets a row here in the same turn. Close a row only 
 | C13 | Measure supply-board tick floors (Fletching, Crafting, Herblore, Firemaking, Prayer, Smithing, Magic, Cooking) | IN PROGRESS | helper; output research/supply-floors.md |
 | C14 | Live supply cost model: gold needed per board, GE availability | IN PROGRESS | helper; output research/supply-costs.md |
 | C15 | Plans for Equipment, Bank, Runite, Quest Points boards | IN PROGRESS | helper; output research/boards-special.md |
-| C16 | Feed the gold farmers (28 lobsters each from Bigpackage) and enable them in swarm.json | WAITING | needs scripts/goldfarm.ts proved on practice |
+| C16 | Feed the gold farmers and enable them in swarm.json | DONE | b93a84e proved 3/3 practice (14.8-15.6 coins/tick); live: 4 thieves fed 28 lobsters each by trade, all farming |
 | C17 | Stop the practice server when all practice helpers finish | OPEN | now used by random events, gold farm, walking, supply floors |
+| C18 | Gold economy loop: farmers bank coins, courier buys lobsters with them, feeds farmers before food runs out (~4,700 ticks) | OPEN | needs a resupply job; measure live coins per tick first |
