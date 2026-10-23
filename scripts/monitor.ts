@@ -16,6 +16,8 @@ mkdirSync(prac, { recursive: true });
 
 type Alert = { at: number; level: 'warn' | 'error' | 'fixed'; key: string; text: string; bot?: string };
 const active = new Map<string, Alert>();
+// Death and fixed-leak alerts stay for 60 minutes, then retire for good (a dead bot's status keeps saying "died").
+const retired = new Set<string>();
 
 function procs(): { pid: number; name: string; ageSec: number; mb: number; cpuSec: number; cmd: string }[] {
     // One CIM query per cycle; tasklist has no command lines.
@@ -32,7 +34,7 @@ function cycle() {
     const seen = new Set<string>();
     const raise = (a: Omit<Alert, 'at'>) => {
         seen.add(a.key);
-        if (active.has(a.key)) return;
+        if (active.has(a.key) || retired.has(a.key)) return;
         const full = { ...a, at: now };
         active.set(a.key, full);
         appendFileSync(join(prac, 'alerts.jsonl'), JSON.stringify(full) + '\n');
@@ -74,7 +76,10 @@ function cycle() {
     }
     if (practiceBots > 6) raise({ level: 'warn', key: 'practice-load', text: `${practiceBots} practice bots at once (limit 6)` });
 
-    for (const k of [...active.keys()]) if (!seen.has(k) && !k.startsWith('died-') && !k.startsWith('edge-')) active.delete(k);
+    for (const [k, a] of [...active]) {
+        const sticky = k.startsWith('died-') || k.startsWith('edge-') || k.startsWith('py-');
+        if (sticky ? now - a.at > 3600_000 : !seen.has(k)) { active.delete(k); if (sticky) retired.add(k); }
+    }
     const bunMB = list.filter(p => p.name === 'bun.exe').reduce((n, p) => n + p.mb, 0);
     writeFileSync(join(prac, 'monitor.json'), JSON.stringify({
         at: now, freeGB, totalGB: totalmem() / 2 ** 30, bunProcs: list.filter(p => p.name === 'bun.exe').length, bunMB,
