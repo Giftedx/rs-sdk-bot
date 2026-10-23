@@ -116,10 +116,10 @@ Rule: every "I will" in chat gets a row here in the same turn. Close a row only 
 | C3 | Stop the practice server when the testing helpers finish | OPEN | random-event helper still uses it |
 | C4 | Shared bot host: many bots in one process, one path map, measure RAM before and after | OPEN | waits for the random-event helper (both touch packages/core/src/bot.ts) |
 | C5 | Fix the black 3D scene in the dashboard | OPEN | dashboard helper, round 2 |
-| C6 | Cut the 18 idle ticks after the Musa Point boat landing | OPEN | measure on practice first: is it a server sailing delay or our wait? |
-| C7 | Cut the courier's walking (1,948 of 2,209 ticks) | OPEN | depends on where the gold farmers and Haggis need supplies |
+| C6 | Cut the 18 idle ticks after the Musa Point boat landing | REFRAMED | one-off on Moneyshot only; the repeat costs are 8 idle ticks per boat talk and 19-25 tick walk stalls; walking helper on it |
+| C7 | Cut the courier's walking (1,948 of 2,209 ticks) | IN PROGRESS | walking helper: stall causes, click-ahead walker, before/after benchmark |
 | C8 | Find what killed Woodpecker | OPEN | random-event helper; demo config says events are off (fly.toml:25) |
 | C9 | Put the 4 Thieving 99 accounts to work making gold (knights + lobsters) | IN PROGRESS | helper writing and proving scripts/goldfarm.ts |
 | C10 | Actions-per-tick monitor | IN PROGRESS | dashboard helper, round 2 (status.ts input counts) |
 | C11 | Haggis 24-board schedule | IN PROGRESS | planner helper |
-| C12 | Research index and shared agent brief | IN PROGRESS | index helper |
+| C12 | Research index and shared agent brief | DONE | cbbe5ae; tick length settled 931c784 (399.8 ms) |
