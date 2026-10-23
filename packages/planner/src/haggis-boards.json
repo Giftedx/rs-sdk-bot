@@ -1302,10 +1302,10 @@
     "skill": "smithing",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 468,
-     "realistic": 440,
-     "evidence": "CODE-READ",
-     "source": "superheat.rs2:55-67: 53 Magic + 56.2 Smithing per cast, p_delay(1) = 3 ticks (x25 = 441.7 Magic + 468.3 Smithing per tick)"
+     "floor": 437.7,
+     "realistic": 436.7,
+     "evidence": "MEASURED",
+     "source": "MEASURED practice 2026-10-23: Smithing 40 -> 99 (983,500 XP) in 2,247, 2,249, 2,252 ticks = 437.7 / 437.3 / 436.7 XP/tick (floor best, realistic worst); 700 casts, 3.21 ticks per cast with 27 bank trips of 26 ores; side Magic 927,500 XP = 0.943 per Smithing XP (scripts/measure/floor-superheat.ts burst, preset floor_superheat: Draynor booth, goldsmith gauntlets worn; .practice/results.jsonl floorxiyh12, floorxghn23, floorxkr901). OPEN: gold needs Smithing 40 (smelting.struct:63, superheat.rs2 levelrequired check); no row gives Smithing 1-40 before this one"
     },
     "side": {
      "magic": 0.9430604982206405
@@ -1319,8 +1319,8 @@
     "group": "magic-smithing",
     "option": "superheat"
    },
-   "evidence": "CODE-READ",
-   "source": "superheat.rs2:55-67: 53 Magic + 56.2 Smithing per cast, p_delay(1) = 3 ticks (x25 = 441.7 Magic + 468.3 Smithing per tick)",
+   "evidence": "MEASURED",
+   "source": "superheat.rs2:55-67: 53 Magic + 56.25 Smithing per cast (gauntlets 2.5x), p_delay(1); rate MEASURED practice 3 runs (scripts/measure/floor-superheat.ts). OPEN: gold needs Smithing 40 (smelting.struct:63)",
    "supplies": [
     {
      "item": "gold ore",
@@ -1347,10 +1347,10 @@
     "skill": "magic",
     "toLevel": 99,
     "xpPerTick": {
-     "floor": 441.7,
-     "realistic": 415,
-     "evidence": "CODE-READ",
-     "source": "superheat gold past Smithing 99 (superheat.rs2:55-67: 53 Magic XP per cast, 3 ticks, x25 = 441.7 Magic XP per tick floor; realistic 440 x 0.943 = 415 as in the superheat row). Replaces the enchant 5 top-up, which needs dragonstone amulets (unsourceable). Need after superheat: 998,458 - 941,606 (superheat side XP) - 19,684 (Magic 43) = 37,168 XP = 29 casts at most"
+     "floor": 412.8,
+     "realistic": 411.9,
+     "evidence": "MEASURED",
+     "source": "MEASURED practice 2026-10-23: Magic XP per tick while superheating gold, 412.8 / 412.4 / 411.9 over 2,247-2,252 ticks (927,500 Magic XP, Magic 43 -> 98; floor best, realistic worst; same runs as the superheat row: scripts/measure/floor-superheat.ts, preset floor_superheat, .practice/results.jsonl). Need after superheat: about 37,168 XP = 29 casts at most"
     }
    },
    "requires": [
@@ -1360,8 +1360,8 @@
     "group": "magic-smithing",
     "option": "superheat"
    },
-   "evidence": "CODE-READ",
-   "source": "superheat gold past Smithing 99 (superheat.rs2:55-67: 53 Magic XP per cast, 3 ticks, x25 = 441.7 Magic XP per tick floor; realistic 440 x 0.943 = 415 as in the superheat row). Replaces the enchant 5 top-up, which needs dragonstone amulets (unsourceable). Need after superheat: 998,458 - 941,606 (superheat side XP) - 19,684 (Magic 43) = 37,168 XP = 29 casts at most",
+   "evidence": "MEASURED",
+   "source": "superheat gold past Smithing 99 (superheat.rs2:55-67: 53 Magic XP per cast); rate MEASURED practice 3 runs (scripts/measure/floor-superheat.ts). Replaces the enchant 5 top-up, which needs dragonstone amulets (unsourceable)",
    "at": "bank",
    "supplies": [
     {
@@ -1627,17 +1627,17 @@
     "skill": "prayer",
     "toLevel": 31,
     "xpPerTick": {
-     "floor": 900,
-     "realistic": 700,
-     "evidence": "CODE-READ",
-     "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)"
+     "floor": 669.7,
+     "realistic": 669.7,
+     "evidence": "MEASURED",
+     "source": "MEASURED practice 2026-10-23: first inventory of scripts/measure/floor-prayer.ts burst (preset floor_prayer, Draynor booth, Prayer 1): bank 7 ticks + 28 bones in 57 ticks, identical in 3 runs (.practice/results.jsonl, FLOOR Prayer level=56 xp=50400 ticks=64). Prayer 1 -> 43 = 11 bones = 7 + 11 x 57/28 = 29.4 ticks for 19,684 XP = 669.7 XP/tick, the same rate for the prayer-31 and prayer-43 rows (they run back to back in one inventory); level split from the per-bone time, not a per-level stamp"
     }
    },
    "requires": [
     "tutorial"
    ],
-   "evidence": "CODE-READ",
-   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)",
+   "evidence": "MEASURED",
+   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; rate MEASURED practice (scripts/measure/floor-prayer.ts, 3 runs)",
    "at": "bank"
   },
   {
@@ -1650,17 +1650,17 @@
     "skill": "prayer",
     "toLevel": 43,
     "xpPerTick": {
-     "floor": 900,
-     "realistic": 700,
-     "evidence": "CODE-READ",
-     "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE)"
+     "floor": 669.7,
+     "realistic": 669.7,
+     "evidence": "MEASURED",
+     "source": "MEASURED practice 2026-10-23: first inventory of scripts/measure/floor-prayer.ts burst (preset floor_prayer, Draynor booth, Prayer 1): bank 7 ticks + 28 bones in 57 ticks, identical in 3 runs (.practice/results.jsonl, FLOOR Prayer level=56 xp=50400 ticks=64). Prayer 1 -> 43 = 11 bones = 7 + 11 x 57/28 = 29.4 ticks for 19,684 XP = 669.7 XP/tick, the same rate for the prayer-31 and prayer-43 rows (they run back to back in one inventory); level split from the per-bone time, not a per-level stamp"
     }
    },
    "requires": [
     "tutorial"
    ],
-   "evidence": "CODE-READ",
-   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; realistic adds a bank open (ESTIMATE); Prayer 43 = Protect from Melee, the combat gate of the boss quests (prayers.dbrow:121-127)",
+   "evidence": "MEASURED",
+   "source": "bury_bone.rs2:10-15: 1,800 XP per bone, 2 ticks; Prayer 43 = Protect from Melee, the combat gate of the boss quests (prayers.dbrow:121-127); rate MEASURED practice (scripts/measure/floor-prayer.ts, 3 runs)",
    "at": "bank"
   },
   {
