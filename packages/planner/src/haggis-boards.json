@@ -548,9 +548,9 @@
    ],
    "ticks": {
     "floor": 49,
-    "realistic": 55,
-    "evidence": "CODE-READ",
-    "source": "tick-tricks-web.md 16.2: 245 actions at 5/tick (arrows.rs2:61-85, darts.rs2); realistic +6 ticks for dropped inputs (ESTIMATE)"
+    "realistic": 49,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: 49, 49, 49 ticks level 1 -> 99 on practice (scripts/measure/floor-fletching.ts open loop, 5 inputs per tick, all stacks in the pack); supply delivery not included"
    },
    "xp": {
     "fletching": "to99"
@@ -558,9 +558,8 @@
    "requires": [
     "trade-start"
    ],
-   "evidence": "CODE-READ",
-   "source": "tick-tricks-web.md 16.2: 245 actions at 5/tick (arrows.rs2:61-85, darts.rs2); realistic +6 ticks for dropped inputs (ESTIMATE)",
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md: 49, 49, 49 ticks level 1 -> 99 on practice (scripts/measure/floor-fletching.ts open loop, 5 inputs per tick, all stacks in the pack); supply delivery not included",
    "at": "anywhere"
   },
   {
@@ -570,10 +569,10 @@
     "crafting"
    ],
    "ticks": {
-    "floor": 80,
-    "realistic": 213,
+    "floor": 194,
+    "realistic": 195,
     "evidence": "MEASURED",
-    "source": "realistic 213: research/crafting-board.md (measured 19-tick trade cycle, planner); floor 80: tight bank cycle (tick-tricks-web.md 16.3, CODE-READ). Excludes level-up dialog cost (levelup-cost.md)"
+    "source": "research/supply-floors.md: 194, 194, 195 ticks level 1 -> 99 on practice (scripts/measure/floor-crafting.ts, Draynor booth, 27 gems per trip, CLOSE_MODAL for level-ups); supply delivery not included"
    },
    "xp": {
     "crafting": "to99"
@@ -582,7 +581,7 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "realistic 213: research/crafting-board.md (measured 19-tick trade cycle, planner); floor 80: tight bank cycle (tick-tricks-web.md 16.3, CODE-READ). Excludes level-up dialog cost (levelup-cost.md)",
+   "source": "research/supply-floors.md: 194, 194, 195 ticks level 1 -> 99 on practice (scripts/measure/floor-crafting.ts, Draynor booth, 27 gems per trip, CLOSE_MODAL for level-ups); supply delivery not included",
    "supplies": [
     {
      "item": "chisel",
@@ -593,7 +592,6 @@
     "skill": "crafting",
     "margin": 1.1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
    "at": "bank"
   },
   {
@@ -603,10 +601,10 @@
     "herblore"
    ],
    "ticks": {
-    "floor": 95,
-    "realistic": 306,
-    "evidence": "ESTIMATE",
-    "source": "floor: tick-tricks-web.md 16.3 (90-100, CODE-READ); realistic: 18 inventories x 17 ticks (crafting measured cycle as analog)"
+    "floor": 246,
+    "realistic": 246,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: 246, 246, 246 ticks Herblore 3 -> 99 on practice (scripts/measure/floor-herblore.ts, Draynor booth, 14 + 14 per trip); Herblore 1-3 needs quest XP; supply delivery not included"
    },
    "xp": {
     "herblore": "to99"
@@ -614,14 +612,13 @@
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "floor: tick-tricks-web.md 16.3 (90-100, CODE-READ); realistic: 18 inventories x 17 ticks (crafting measured cycle as analog)",
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md: 246, 246, 246 ticks Herblore 3 -> 99 on practice (scripts/measure/floor-herblore.ts, Draynor booth, 14 + 14 per trip); Herblore 1-3 needs quest XP; supply delivery not included",
    "supplies": [],
    "suppliesLadder": {
     "skill": "herblore",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
    "at": "bank"
   },
   {
@@ -783,10 +780,10 @@
     "smithing"
    ],
    "ticks": {
-    "floor": 913,
-    "realistic": 1100,
-    "evidence": "CODE-READ",
-    "source": "smithing.rs2:271-301; sim 913 (xp-per-tick.md); realistic ESTIMATE"
+    "floor": 1593,
+    "realistic": 1594,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: 1,593, 1,594, 1,593 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies, 53% walk + bank)"
    },
    "xp": {
     "smithing": "to99"
@@ -798,8 +795,8 @@
     "group": "magic-smithing",
     "option": "separate"
    },
-   "evidence": "CODE-READ",
-   "source": "smithing.rs2:271-301; sim 913 (xp-per-tick.md); realistic ESTIMATE",
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md: 1,593, 1,594, 1,593 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies, 53% walk + bank)",
    "supplies": [
     {
      "item": "hammer",
@@ -810,7 +807,6 @@
     "skill": "smithing",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
    "at": "varrock-west-anvil",
    "bankTrips": 32,
    "bankTripsSource": "32 bank trips = 789 bars (SMITHING_TIERS ladder: bronze 34, iron 35, steel 95, mithril 280, adamantite 345) / 25 bars per inventory (hammer + 5 platebodies); the 913/1,100 rate has no walking"

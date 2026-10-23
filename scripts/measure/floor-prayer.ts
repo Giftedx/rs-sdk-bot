@@ -8,7 +8,7 @@ import { objId } from './floor-bands';
 import { meter, send, tick, xp, level, inv, report, band, clearDialogs, openBank, bankOpen, bankItems, dialogOpen } from './floor-lib';
 
 const [bot, modeArg, maxArg] = process.argv.slice(2);
-const mode = modeArg ?? 'every';
+const mode = modeArg ?? 'burst';
 const maxTicks = Number(maxArg ?? 0);
 const s = await openBot(bot!);
 try {
@@ -21,12 +21,21 @@ try {
         if (inv(s).filter(i => i.id === bone).length === 0) {
             await clearDialogs(s, m, 'close');
             const tb = s.tick();
-            if (await openBank(s, m) < 0) { console.log('WARN bank did not open'); ok = false; break; }
-            const b = bankItems(s).find(i => i.id === bone);
-            if (!b) { console.log('WARN out of bones'); ok = false; break; }
-            await send(s, m, { type: 'bankWithdraw', slot: b.slot, amount: -1 });
+            // Open, withdraw-All, close. A queued level-up page can close the bank before the withdraw lands (seen on the
+            // second trip after 55 level-ups), so retry until the bones are in the pack.
+            let tries = 0;
+            while (!inv(s).some(i => i.id === bone) && s.tick() - tb < 60) {
+                if (dialogOpen(s)) { await send(s, m, { type: 'closeModal' }); await tick(s); continue; }
+                if (!bankOpen(s)) { if (await openBank(s, m) < 0) continue; }
+                const b = bankItems(s).find(i => i.id === bone);
+                if (!b) { console.log('WARN out of bones'); ok = false; break; }
+                await send(s, m, { type: 'bankWithdraw', slot: b.slot, amount: -1 });
+                tries++;
+                await tick(s, 2);
+            }
+            if (tries > 1) console.log(`NOTE withdraw tries=${tries}`);
             await send(s, m, { type: 'closeModal' });
-            while ((bankOpen(s) || !inv(s).some(i => i.id === bone)) && s.tick() - tb < 30) await tick(s);
+            while (bankOpen(s) && s.tick() - tb < 70) await tick(s);
             m.bankTicks += s.tick() - tb; m.bankCycles++;
         }
         const tp = s.tick(), x0 = xp(s, 'Prayer');

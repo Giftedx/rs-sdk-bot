@@ -1,7 +1,8 @@
 // Magic 7 -> 99 floor: enchant jewellery at Draynor bank (preset floor_magic). enchant.rs2: XP on the cast tick,
 // then p_delay(1), so the next cast is accepted 3 ticks later. Magic 1-7 has no supply-only spell (ESTIMATE).
 // Usage: bun scripts/measure/floor-magic.ts <bot> [mode=every|three] [maxCasts=0]
-//   every: one cast input per tick (inputs in the delay are dropped); three: one cast every 3 ticks.
+//   every: one cast input per tick (inputs in the delay are dropped); three: one cast every 3 ticks;
+//   burst: 3 cast inputs per tick on 3 different items (only the first is taken; the rest are dropped by the delay).
 // Runes stay in the pack as stacks; jewellery comes from the bank (withdraw-All fills the free slots).
 import { openBot, finish } from '../../packages/core/src/bot';
 import { MAGIC, ladder, objId } from './floor-bands';
@@ -57,7 +58,10 @@ try {
             const x0 = xp(s, 'Magic');
             if (mode === 'every' || w % 3 === 0) {
                 if (dialogOpen(s)) await send(s, m, { type: 'closeModal' });
-                await send(s, m, { type: 'spellOnItem', slot: target.slot, spellComponent: j.spell });
+                // burst: also cast on the next 2 items in the same tick; the first cast delays the player, so the server drops
+                // the rest, but a cast that the server takes one tick early is not lost.
+                const targets = mode === 'burst' ? inv(s).filter(x => x.id === j.item).slice(0, 3) : [target];
+                for (const tg of targets) await send(s, m, { type: 'spellOnItem', slot: tg.slot, spellComponent: j.spell });
             }
             w++;
             await tick(s);
