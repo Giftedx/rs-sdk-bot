@@ -62,15 +62,15 @@
     },
     {
       "account": "Pocketpython",
-      "script": "scripts/goldfarm-stable.ts",
+      "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
+      "enabled": true,
+      "note": "re-enabled 2026-10-23 ~09:00 with the food fallback (Baker shop, then stall): 1 practice run, 16.30 coins/tick from no food; stall path not proven live; 2 of 4 farmers first to limit shop contention",
       "env": {
         "TICKS": "9000"
       },
-      "repeat": false
+      "repeat": true
     },
     {
       "account": "Pocketrocket",
@@ -86,15 +86,15 @@
     },
     {
       "account": "mmtha0205",
-      "script": "scripts/goldfarm-stable.ts",
+      "script": "scripts/goldfarm.ts",
       "role": "thieving",
       "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "paused 2026-10-23 08:40: out of food (live GE has no fish); restart when the cake-stall fallback in scripts/goldfarm.ts is proven on practice",
+      "enabled": true,
+      "note": "re-enabled 2026-10-23 ~09:00 with the food fallback (Baker shop, then stall): 1 practice run, 16.30 coins/tick from no food; stall path not proven live; 2 of 4 farmers first to limit shop contention",
       "env": {
         "TICKS": "9000"
       },
-      "repeat": false
+      "repeat": true
     },
     {
       "account": "mmthv2350",
