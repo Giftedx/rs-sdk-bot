@@ -21,4 +21,7 @@ function short(position: { x: number; z: number; level?: number }, items: Array<
 export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Sheep Shearer: inside Fred's farmhouse (fred_the_farmer spawn 3189,3273, maps/m49_51.jm2); 20 balls of wool (1759).
     quest_sheep: short({ x: 3190, z: 3272 }, Array.from({ length: 20 }, () => 1759)),
+    // Doric's Quest: inside Doric's house north of Falador (doric spawn 2952,3451, maps/m46_53.jm2); 6 clay (434),
+    // 4 copper ore (436), 2 iron ore (440): the hand-in needs all 12 in the pack (quest_doric.rs2:70).
+    quest_doric: short({ x: 2951, z: 3450 }, [...Array(6).fill(434), ...Array(4).fill(436), 440, 440]),
 };

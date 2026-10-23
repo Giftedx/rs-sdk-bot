@@ -196,6 +196,7 @@ a time, each run on a fresh account that is deleted after the run.
 | Quest | Script | RESULT ticks (3 runs) | Status |
 |---|---|---|---|
 | Sheep Shearer | `scripts/generated/quest-sheep.ts` | 70, 70, 70 | MEASURED 3/3 |
+| Doric's Quest | `scripts/generated/quest-doric.ts` | 30, 30, 30 | MEASURED 3/3 |
 
 ### Sheep Shearer
 
@@ -204,3 +205,10 @@ died=false` in all 3 runs, each with `Congratulations! Quest complete!`. Fred (`
 fred_the_farmer.rs2:57-85`) takes the balls one at a time with `if_close` and `p_delay(1)`, so 38 of the 70 ticks
 are the server's hand-over loop (LEDGER `longestIdle=38`). The script does not talk again during the loop. Helper
 items: 20 balls of wool.
+
+### Doric's Quest
+
+`RESULT ok qp=1 xp=mining=32500 at=2952,3451,0 ticks=30 hpMin=99 eats=0 walkTicks=0 retries=0 died=false` in all 3
+runs, each with `Congratulations! Quest complete!`. Two talks: "I wanted to use your anvils.", "Yes, I will get you
+materials." (`quest_doric/scripts/quest_doric.rs2:36-62`, varp 10), then the hand-in (`:68-84`) queues the
+completion. Helper items: 6 clay, 4 copper ore, 2 iron ore (12 pack slots).
