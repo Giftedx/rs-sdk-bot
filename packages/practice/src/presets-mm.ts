@@ -17,7 +17,7 @@ const MM_SKILLS = {
     Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99,
 };
 const MM_WORN = [[579, 0], [1727, 2], [1387, 3], [577, 4], [1011, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
-const MM_PACK = [[565, 150], [556, 760], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
+const MM_PACK = [[565, 200], [556, 1000], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
     .concat([2357, 1759, 3183, 1963, 1963, 1963, 1963, 1963, 2434, 2434, 2434, 2434, 2446].map(id => ({ id, count: 1 })),
         Array.from({ length: 8 }, () => ({ id: 385, count: 1 })));
 
@@ -52,6 +52,10 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
     // (completed_ch3), %mm_garkor 6 (joined_10th_squad), %mm_zooknock 6, %mm_awowogei 2 (mm_monkeys bits 2-4).
     // MM_FROM=130 (the demon, the way back, the reward).
     quest_mm_s130: mmPreset({ x: 2466, z: 3494, level: 0 }, { 365: 5, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 6, zooknock: 6 }), 373: 2 << 2 }, [4035], MM_PACK_LATE),
+    // Debug: the Ape Atoll landing after the chapter 2 cutscene (%mm_main 3 arrived_atoll, %mm_lumdo 3 travelled): MM_FROM=70.
+    quest_mm_s70: mmPreset({ x: 2801, z: 2707, level: 0 }, { 365: 3, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3 }) }, [4004]),
+    // Debug: out of the jail, beside Garkor (2805,2762): MM_FROM=80.
+    quest_mm_s80: mmPreset({ x: 2806, z: 2764, level: 0 }, { 365: 3, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3 }), 374: 1 << 2 }, [4004]),
     quest_mm_s40: mmPreset({ x: 2393, z: 9890, level: 0 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 5 }) }, [4004]),
 };
 

@@ -437,7 +437,7 @@ function agilityPresets(): Record<string, SaveConfig> {
     const at = {
         gnome: { pos: { x: 2474, z: 3437, level: 0 }, levels: [1, 70, 90] },
         barbarian: { pos: { x: 2551, z: 3555, level: 0 }, levels: [35, 70, 90] },
-        wilderness: { pos: { x: 3004, z: 3937, level: 0 }, levels: [52, 70, 90] },
+        wilderness: { pos: { x: 3004, z: 3937, level: 0 }, levels: [52, 60, 70, 76, 90] },
         // Brimhaven Agility Arena floor (plane 3, agilityarena.rs2:7), on the east rope swing's start tile.
         arenaswing: { pos: { x: 2764, z: 9569, level: 3 }, levels: [75, 90] },
     };
@@ -445,6 +445,13 @@ function agilityPresets(): Record<string, SaveConfig> {
     for (const [course, c] of Object.entries(at))
         for (const l of c.levels)
             out[`agility_${course}_${l}`] = { position: c.pos, skills: { Agility: l, Hitpoints: 70, Defence: 70 }, inventory: food };
+    // Agility 49 south of the ridge gate (loc_2309 at 2998,3917) with 2 agility potion(4) (obj 3032, +3 Agility): the gate
+    // needs stat(agility) >= 52 (wilderness_course.rs2:2), the pipe >= 49 (:53). Run with AGI_POTION=1.
+    out.agility_wilderness_49pot = {
+        position: { x: 2998, z: 3916, level: 0 },
+        skills: { Agility: 49, Hitpoints: 70, Defence: 70 },
+        inventory: [{ id: 3032, count: 1 }, { id: 3032, count: 1 }, ...food.slice(0, 13)],
+    };
     return out;
 }
 

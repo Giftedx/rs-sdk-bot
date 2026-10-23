@@ -66,16 +66,23 @@ try {
         await ms(1);
     }
     if (FROM < 2) {
-        await q.talk('gawain', /^sir gawain$/i, [/how merlin got trapped/i], () => q.sawText(/renegade knights led by sir mordred/i), GAWAIN, 40);
+        await q.talk('gawain', /^sir gawain$/i, [/how merlin got trapped/i, /thank you for the information/i], () => q.sawText(/renegade knights led by sir mordred/i), GAWAIN, 40);
         await ms(2);
     }
     if (FROM < 3) {
         if (q.lvl() === 0) {
-            if (!stairs(/climb-up/i, LANCELOT, 12)()) console.log(`WARN no camelot stairs: ${listLocs(12)}`);
-            await q.climb('camelot stairs up', stairs(/climb-up/i, LANCELOT, 12), /climb-up/i, levelIs(1));
+            // Wooden stairs 1725 at 2750,3510 (maps/m42_54.jm2 0 62 54).
+            await q.walk('to camelot stairs', [{ x: 2752, z: 3510, tol: 1 }]);
+            if (!stairs(/climb-up/i, { x: 2750, z: 3510 }, 3)()) console.log(`WARN no camelot stairs: ${listLocs(5)}`);
+            await q.climb('camelot stairs up', stairs(/climb-up/i, { x: 2750, z: 3510 }, 3), /climb-up/i, levelIs(1));
         }
-        await q.talk('lancelot', /^sir lancelot$/i, [/into morgan le faye's stronghold/i], () => q.sawText(/delivery|impenetrable|candles/i), LANCELOT, 60);
-        await q.climb('camelot stairs down', stairs(/climb-down/i, LANCELOT, 12), /climb-down/i, levelIs(0));
+        // Lancelot's room: double doors 1516/1519 at 2761-2762,3505 level 1, north side (maps/m43_54.jm2 1 9 49).
+        await q.walk('to lancelot door', [{ x: 2761, z: 3504, tol: 0 }]);
+        await q.openDoor('lancelot door', 2761, 3505);
+        await q.dash('into lancelot room', 2761, 3507, 1, 10);
+        await q.talk('lancelot', /^sir lancelot$/i, [/into morgan le faye's stronghold/i], () => q.sawText(/deliveries by boat|sticking out into the sea/i), LANCELOT, 60);
+        await q.walk('to camelot stairs top', [{ x: 2752, z: 3511, tol: 1 }]);
+        await q.climb('camelot stairs down', stairs(/climb-down/i, { x: 2750, z: 3511 }, 3), /climb-down/i, levelIs(0));
         await ms(3);
     }
 
@@ -84,6 +91,9 @@ try {
         await q.walk('to catherby crate', [{ x: CATHERBY_CRATE.x, z: CATHERBY_CRATE.z - 1, tol: 1 }]);
         await crate('catherby crate', 63, CATHERBY_CRATE, () => q.near(2778, 3401, 3) && q.lvl() === 0);
         await setPfm(true);
+        // Double doors 1516/1519 at 2776,3400-3401, west side (maps/m43_53.jm2 0 24 8-9), between the jetty and the keep.
+        await q.dash('to keep door', 2776, 3401, 0, 10);
+        await q.openDoor('keep door', 2776, 3401);
         if (!stairs(/climb-up/i, { x: 2778, z: 3401 }, 15)()) console.log(`WARN no keep stairs: ${listLocs(15)}`);
         await q.climb('keep stairs 1', stairs(/climb-up/i, { x: 2778, z: 3401 }, 15), /climb-up/i, levelIs(1));
         await q.climb('keep stairs 2', stairs(/climb-up/i, { x: 2775, z: 3403 }, 15), /climb-up/i, levelIs(2));
@@ -102,8 +112,11 @@ try {
 
     // 5. The keep crate back to Catherby; the candle maker: "black candles" sets bit 1, then the wax for the candle.
     if (FROM < 5) {
+        // The keep crate is on map level 1 of the jetty, which is walked as level 0 (the bot lands at 2778,3401,0 beside
+        // it), so the bot goes down to the jetty and clicks the crate by id and tile.
         if (q.lvl() === 2) await q.climb('keep stairs down', stairs(/climb-down/i, MORDRED, 15), /climb-down/i, levelIs(1));
-        await q.dash('to keep crate', KEEP_CRATE.x - 1, KEEP_CRATE.z, 1, 25);
+        if (q.lvl() === 1) await q.climb('keep stairs down 2', stairs(/climb-down/i, { x: 2769, z: 3404 }, 15), /climb-down/i, levelIs(0));
+        await q.dash('to keep crate', KEEP_CRATE.x - 1, KEEP_CRATE.z, 0, 25);
         await crate('keep crate', 64, KEEP_CRATE, () => q.near(2802, 3441, 3) && q.lvl() === 0);
         await setPfm(false);
         await q.talk('candle maker 1', /^candle maker$/i, [/any black candles/i], () => q.sawText(/supply you with a black candle/i), CANDLE_MAKER, 40);
@@ -116,7 +129,7 @@ try {
     if (FROM < 6) {
         await tele('falador teleport', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to lady', [{ x: LADY.x, z: LADY.z - 1, tol: 2 }]);
-        await q.talk('lady', /^lady of the lake$/i, [/seek the sword excalibur/i], () => q.sawText(/that seems easy enough/i), LADY, 40);
+        await q.talk('lady', /^(the )?lady of the lake$/i, [/seek the sword excalibur/i], () => q.sawText(/that seems easy enough/i), LADY, 40);
         await tele('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
         await q.walk('to jeweller', [{ x: JEWELLER_DOOR.x, z: JEWELLER_DOOR.z - 1, tol: 0 }]);
         const door = () => q.findLoc(l => l.id === 59 && l.x === JEWELLER_DOOR.x && l.z === JEWELLER_DOOR.z) ?? { id: 59, x: JEWELLER_DOOR.x, z: JEWELLER_DOOR.z };
@@ -133,10 +146,10 @@ try {
         await setPfm(true);
         await q.walk('to chaos altar', [{ x: ALTAR.x, z: ALTAR.z - 2, tol: 2 }]);
         const altar = () => q.findLoc(l => l.id === 61) ?? { id: 61, x: ALTAR.x, z: ALTAR.z };
-        await q.opLoc(altar(), 2);
-        await q.waitUntil(() => q.sawText(/snarthon candtrick termanto/i), 15);
+        await q.step('chaos altar', () => { const a: any = altar(); return q.opLoc(a, a.optionsWithIndex ? q.opIndex(a, /check/i) : 2); }, () => q.dialogOpen() || q.sawText(/snarthon/i), 10, 3);
+        const seen = q.sawText(/snarthon/i) || /snarthon/i.test(JSON.stringify(q.s.sdk.getDialog() ?? {}));
         await q.converse([], () => !q.dialogOpen(), 5);
-        if (!q.sawText(/snarthon candtrick termanto/i)) await q.fail(`chaos altar: ${listLocs()}`);
+        if (!seen && !q.sawText(/snarthon/i)) await q.fail(`chaos altar: msgs=${(q.st()?.gameMessages ?? []).slice(-3).map((m: any) => m.text).join(' / ')}`);
         await setPfm(false);
         await ms(7);
     }
@@ -154,6 +167,9 @@ try {
     // 9. Excalibur on the crystal (level 2), then King Arthur.
     if (FROM < 9) {
         await q.walk('to crystal tower', [{ x: CRYSTAL.x, z: CRYSTAL.z + 3, tol: 4 }]);
+        // Tower door 1533 at 2766,3495 (seen in the loc list), then the ladders.
+        await q.dash('to tower door', 2766, 3496, 0, 15);
+        await q.openDoor('tower door', 2766, 3495);
         if (!stairs(/climb-up/i, CRYSTAL, 10)()) console.log(`WARN no tower stairs: ${listLocs(10)}`);
         await q.climb('tower up 1', stairs(/climb-up/i, CRYSTAL, 10), /climb-up/i, levelIs(1));
         await q.climb('tower up 2', stairs(/climb-up/i, CRYSTAL, 10), /climb-up/i, levelIs(2));

@@ -76,7 +76,7 @@ if (mode === 'fish') {
         // Mightyrod after some packs: 100 cooked trout in the Draynor bank.
         await prep(cook, { position: { x: 3092, z: 3243, level: 0 }, skills: { Fishing: 99, Cooking: 50 }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 100 }], bank: [{ id: 333, count: 100 }] });
         await prep(courier, { position: { x: 2655, z: 3283, level: 0 }, coins: 500 });
-        const ck = run('scripts/fishcook.ts', cook, { GIVE_TO: courier, HANDOFF_ONLY: '1', WAIT: '2000' });
+        const ck = run(process.env.FISH_SCRIPT ?? 'scripts/fishcook.ts', cook, { GIVE_TO: courier, HANDOFF_ONLY: '1', WAIT: '2000' });
         const co = run('scripts/foodcourier.ts', courier, { FROM: cook, CAP: '2500', FEATHERS: '100' });
         const [k, c] = await Promise.all([ck, co]);
         show('courier', c);

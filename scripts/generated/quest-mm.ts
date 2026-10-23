@@ -33,8 +33,25 @@ const PUZZLE_COM = componentId('reinitialisation_puzzle:com_3');
 const GLIDER_GANDIUS = 'glidermap:com_21';
 const GLIDER_TREE = 'glidermap:com_22';
 
+// MM_LOG=<file>: every console line also goes to that file (the prove tail keeps 16 lines).
+if (process.env.MM_LOG) {
+    const { appendFileSync } = await import('node:fs');
+    const log0 = console.log.bind(console);
+    console.log = (...a: unknown[]) => { log0(...a); try { appendFileSync(process.env.MM_LOG!, a.map(String).join(' ') + '\n'); } catch { /* the log is a debug aid */ } };
+}
 const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 15, food: [ITEM.food] });
 try {
+    // HIT lines: each HP drop with the NPCs within 3 tiles, so the damage source on the atoll is in the log.
+    let hp0 = q.hp();
+    q.s.onTick(() => {
+        const h = q.hp();
+        if (h > 0 && h < hp0) {
+            const p = q.pos();
+            const near = (q.st()?.nearbyNpcs ?? []).filter((n: any) => p && Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= 3).map((n: any) => n.name).join('/');
+            console.log(`HIT ${hp0}->${h} t=${q.T()} at=${p?.worldX},${p?.worldZ},${p?.level} near=${near}`);
+        }
+        hp0 = h;
+    });
     const FROM = Number(process.env.MM_FROM ?? 0);
     const STOP = Number(process.env.MM_STOP ?? 999);
     const ms = async (k: number | string): Promise<void> => { q.milestone(k); if (typeof k === 'number' && k >= STOP) await q.end(true, `stopped at ${k}`); };
@@ -295,9 +312,178 @@ try {
         await ms(70);
     }
 
-    // 80-120 (Ape Atoll as a human and as a monkey, the zoo, Awowogei, the sigil) are not scripted yet:
-    // research/quest-plan.md section 1h, "Next stage".
-    if (FROM < 130) { offPoison(); await q.end(true, `stage=70 (stages 80-120 not scripted) antipoisons=${antipoisons}`); }
+    // ---- Ape Atoll (stages 80-120). A human is attacked by most of the island; the overhead prayer follows the
+    // nearest threat (ranged: archers; melee: guards, zombies, scorpions, spiders), and a prayer potion goes in at 6 points.
+    const PFMISS = 13;
+    const prayOn = (i: number): boolean => !!q.st()?.prayers?.activePrayers?.[i];
+    const setPrayer = async (i: number, on: boolean): Promise<void> => {
+        if (prayOn(i) === on) return;
+        await q.step(`prayer ${i} ${on ? 'on' : 'off'}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' }), () => prayOn(i) === on, 3, 4);
+    };
+    const pts = (): number => q.st()?.prayers?.prayerPoints ?? 0;
+    let potCool = 0, potionsAtoll = 0;
+    const offPot = q.s.onTick(() => {
+        if (potCool > 0) { potCool--; return; }
+        if (pts() > 6) return;
+        const pot = ITEM.prayerPot.find(id => q.has(id));
+        if (pot === undefined) return;
+        potCool = 4; potionsAtoll++;
+        void q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' });
+    });
+    // Overhead prayer: `want` is a fixed prayer, null (no choice), or 'auto': Protect from Melee when an aggressive melee
+    // NPC (huntmode aa_aggressive_melee in quest_mm.npc) is within 2 tiles, Protect from Missiles when an archer is in
+    // its hunt range (ravine 15, posted and monkey archers 6), else off after 3 quiet ticks (the drain is 1 point per
+    // 5 ticks for each). A monkey (greegree) needs none (mm_archer.rs2:24, aa_monkey_guard.rs2:27).
+    let want: number | 'auto' | null = null;
+    let quiet = 0;
+    const MELEE = /scorpion|spider|snake|zombie|skeleton|^monkey guard$/i;
+    const offWant = q.s.onTick(() => {
+        if (want === null || pts() <= 0) return;
+        let w: number | null = typeof want === 'number' ? want : null;
+        if (want === 'auto' && !greegree()) {
+            const p = q.pos();
+            if (p) {
+                const d = (n: any) => Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ));
+                const npcs: any[] = q.st()?.nearbyNpcs ?? [];
+                if (npcs.some(n => MELEE.test(n.name) && d(n) <= 2)) w = PFM;
+                else if (npcs.some(n => /archer/i.test(n.name) && d(n) <= (n.x <= 2731 && n.z <= 2765 ? 15 : 7))) w = PFMISS;
+            }
+        }
+        if (w !== null) { quiet = 0; if (!prayOn(w)) void q.s.direct({ type: 'togglePrayer', prayerIndex: w, reason: 'SDK' }); return; }
+        if (++quiet >= 3) for (const i of [PFM, PFMISS]) if (prayOn(i)) { void q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' }); break; }
+    });
+    const greegree = (): boolean => (q.st()?.equipment ?? []).some((e: any) => e?.id === ITEM.greegree);
+    const inCell = (): boolean => { const p = q.pos(); return !!p && p.level === 0 && p.worldX >= 2768 && p.worldX <= 2777 && p.worldZ >= 2792 && p.worldZ <= 2795; };
+    const { walkPath, sessionWalker } = await import('../../packages/core/src/walk');
+    const walker = await sessionWalker(q.s as any);
+    // A walk that stops when `stop()` holds (a knockout teleport, a cutscene).
+    const walkStop = async (label: string, pts0: { x: number; z: number; tol?: number }[], stop: () => boolean): Promise<void> => {
+        const g = pts0[pts0.length - 1]!;
+        for (let i = 0; i < 3 && !stop() && !q.near(g.x, g.z, g.tol ?? 2); i++) {
+            await q.guard(label);
+            walking = true;
+            try {
+                const r = await walkPath(walker, i === 0 ? pts0 : [g], { stop: () => stop() || q.stats.died || q.T() > 20000 });
+                q.stats.walkTicks += r.ticks;
+            } finally { walking = false; }
+        }
+    };
+    // Knockout by the ravine archers (1 in 20 arrows, mm_archer.rs2:51-53), then the cell lock (2771,2795;
+    // stat_random(thieving, 95, 295), mm_jail.rs2:1-11). The patrol guards (Aberab, Trefaji) knock a human back in
+    // from 1 tile in line of sight (mm_jail.rs2:181-203), so the bot picks only when neither is within 2 tiles.
+    const DOOR = { x: 2771, z: 2795 };
+    const knockout = async (label: string): Promise<void> => {
+        want = PFMISS;
+        if (!inCell()) {
+            await walkStop(`${label} to ravine`, [{ x: 2721, z: 2757, tol: 2 }], inCell);
+            for (let t = 0; t < 400 && !inCell(); t++) {
+                await q.guard(label);
+                await q.waitTicks(1);
+            }
+            if (!inCell()) await q.fail(`${label}: no knockout`);
+        }
+        q.milestone(`${label} jailed`);
+        const fails0 = q.msgCount(/fail to pick the lock/i);
+        for (let i = 0; i < 40 && inCell(); i++) {
+            await q.guard(`${label} lock`);
+            const d: any = q.s.sdk.getDialog();
+            if (d?.isOpen && !d.isWaiting) { void q.s.sdk.sendClickDialog(0); await q.waitTicks(1); continue; }
+            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 2);
+            if (g.length > 0) { await q.waitTicks(1); continue; }
+            const door = q.findLoc(l => l.x === DOOR.x && l.z === DOOR.z && /jail door/i.test(l.name));
+            if (!door) { await q.waitTicks(1); continue; }
+            await q.opLoc(door, q.opIndex(door, /pick|open/i));
+            await q.waitUntil(() => !inCell() || q.msgCount(/fail to pick the lock/i) > fails0 + i, 6);
+        }
+        if (inCell()) await q.fail(`${label}: lock`);
+        console.log(`NOTE ${label} out at ${q.T()} lockFails=${q.msgCount(/fail to pick the lock/i) - fails0}`);
+    };
+
+    // 80. Knockout, jail, lock.
+    if (FROM < 80) {
+        await knockout('jail1');
+        want = 'auto';
+        await ms(80);
+    }
+    // converse without the double click: a page that still reads the same one tick after a click is not clicked again
+    // for 3 ticks (a second click on a choice page closed it with no effect in the crate tests).
+    const converse1 = async (pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> => {
+        let sig0 = '', at0 = -9;
+        for (let i = 0; i < maxTicks && !q.stats.died; i++) {
+            if (ok()) return true;
+            const d: any = q.s.sdk.getDialog();
+            if (d?.isOpen && !d.isWaiting) {
+                const opts: any[] = d.options ?? [];
+                const sig = opts.map(o => o.text).join('|') + '#' + (d.text ?? '') + (d.allComponents ?? []).map((c: any) => c.text ?? '').join('');
+                if (!(sig === sig0 && i - at0 < 3)) {
+                    sig0 = sig; at0 = i;
+                    const opt = opts.find(o => pats.some(re => re.test(o.text)));
+                    if (opts.some(o => !/click here to continue/i.test(o.text)) && !opt) console.log(`WARN no option match: ${opts.map(o => o.text).join(' | ')}`);
+                    void q.s.sdk.sendClickDialog(opt ? opt.index : 0);
+                }
+            }
+            await q.waitTicks(1);
+        }
+        return ok();
+    };
+    // A loc on a named tile: op it, click through pages (answers `pats`), until ok().
+    // A hit closes the open dialog even at 0 damage (npc_combat_melee.rs2:36, npc_combat_ranged.rs2:48), so the
+    // aggressive pests within `r` tiles (warehouse spiders 2 HP, scorpions 15, spiders and snakes 35) die by Fire Wave
+    // before a dialog step. Not as a monkey: the greegree hides the spellbook (quest_mm.rs2:1148-1155).
+    const FIRE_WAVE = componentId('magic:fire_wave');
+    let pestCasts = 0;
+    const clearPests = async (label: string, r = 2): Promise<void> => {
+        let last = -99;
+        for (let t = 0; t < 60 && !greegree(); t++) {
+            await q.guard(`${label} pests`);
+            const p = q.pos()!;
+            const dd = (k: any) => Math.max(Math.abs(k.x - p.worldX), Math.abs(k.z - p.worldZ));
+            const n = (q.st()?.nearbyNpcs ?? []).filter((k: any) => (MELEE.test(k.name) && !/monkey guard/i.test(k.name) && dd(k) <= r))
+                .sort((a: any, b: any) => a.distance - b.distance)[0];
+            if (!n) return;
+            if (q.dialogOpen()) void q.s.sdk.sendClickDialog(0);
+            if (q.T() - last >= 5) { last = q.T(); pestCasts++; await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: FIRE_WAVE, reason: 'SDK' }); }
+            await q.waitTicks(1);
+        }
+    };
+    const locOp = async (label: string, at: { x: number; z: number }, re: RegExp, op: RegExp, pats: RegExp[], ok: () => boolean, ticks = 30, tries = 8, pests = true): Promise<void> => {
+        for (let i = 0; i < tries && !ok(); i++) {
+            await q.guard(label);
+            if (i > 0) q.stats.retries++;
+            if (pests && q.near(at.x, at.z, 5)) await clearPests(label, 1);
+            if (i > 0) console.log(`NOTE ${label} try ${i} npcs=${(q.st()?.nearbyNpcs ?? []).filter((k: any) => k.distance <= 6).map((k: any) => `${k.name}@${k.x},${k.z}`).join(' ')}`);
+            const l = q.findLoc(k => k.x === at.x && k.z === at.z && re.test(k.name));
+            if (!l) { console.log(`WARN ${label}: no loc at ${at.x},${at.z}`); await walk(`${label} approach`, [{ x: at.x, z: at.z, tol: 3 }]); continue; }
+            await q.opLoc(l, q.opIndex(l, op));
+            await q.waitUntil(() => q.dialogOpen() || ok(), 15);
+            let shut = 0;
+            await converse1(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 4; }, ticks);
+        }
+        if (!ok()) await q.fail(`loc ${label}`);
+        await shutDialog();
+    };
+    const inCellar = (): boolean => z() > 9152 && z() < 9216 && level() === 0;
+
+    // 90. Garkor (2805,2762): his story sends you to Zooknock (%mm_garkor 2, mm_garkor.rs2:95-126). The dentures from the
+    // crate (2767,2769) from its east tile: the sleeping guard calls guards on a human in 2762-2767,2767-2772
+    // (mm_sleeping_monkey_guard.rs2:1-14). The crate over the hole (2769,2765) drops to the cellar (quest_mm.rs2:964-992),
+    // the mould crate (2782,9172), the western rope (2764,9165) up (quest_mm.rs2:1012-1017).
+    if (FROM < 90) {
+        want = 'auto';
+        await walk('to garkor', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
+        await talkChoose('garkor', /^garkor$/i, () => -1, () => q.sawText(/just go and find my squad mage/i) && !q.dialogOpen(), 80, { x: 2805, z: 2762 });
+        q.milestone('garkor');
+        await walk('to denture crate', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, { x: 2764, z: 2763, tol: 0 }, { x: 2765, z: 2765, tol: 0 }, { x: 2769, z: 2766, tol: 0 }, { x: 2769, z: 2768, tol: 0 }, { x: 2768, z: 2769, tol: 0 }]);
+        await locOp('dentures', { x: 2767, z: 2769 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.dentures) && !q.dialogOpen(), 30, 10, false);
+        await locOp('hole', { x: 2769, z: 2765 }, /crate/i, /search/i, [/^yes, i'm sure/i], () => inCellar(), 40, 10, false);
+        q.milestone('cellar');
+        await walk('to mould crate', [{ x: 2782, z: 9171, tol: 1 }]);
+        await locOp('mould', { x: 2782, z: 9172 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.mould) && !q.dialogOpen());
+        await walk('to west rope', [{ x: 2764, z: 9166, tol: 1 }]);
+        await locOp('west rope', { x: 2764, z: 9165 }, /rope/i, /climb/i, [], () => z() < 6400, 10);
+        await ms(90);
+    }
+    if (STOP <= 95 || FROM < 130) { offPoison(); offPot(); offWant(); await q.end(true, `stage=90 (stages 100-120 not scripted) antipoisons=${antipoisons} potions=${potionsAtoll} pestCasts=${pestCasts}`); }
 
     // 140. Wear the sigil (OPHELD2, mm_demon.rs2:1-5; timer 10, then the battle zone 1_42_143, a corner by player count,
     // :35-92). The jungle demon spawns 5-10 tiles away (:160). Its waves (max 31) are 0 under Protect from Magic
