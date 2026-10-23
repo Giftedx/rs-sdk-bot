@@ -39,7 +39,7 @@ if (process.env.MM_LOG) {
     const log0 = console.log.bind(console);
     console.log = (...a: unknown[]) => { log0(...a); try { appendFileSync(process.env.MM_LOG!, a.map(String).join(' ') + '\n'); } catch { /* the log is a debug aid */ } };
 }
-const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 15, food: [ITEM.food] });
+const q = await openQuest({ cap: Number(process.env.MM_CAP ?? 9000), eatAt: 18, food: [ITEM.food] });
 try {
     // HIT lines: each HP drop with the NPCs within 3 tiles, so the damage source on the atoll is in the log.
     let hp0 = q.hp();
@@ -345,7 +345,7 @@ try {
             if (p) {
                 const d = (n: any) => Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ));
                 const npcs: any[] = q.st()?.nearbyNpcs ?? [];
-                if (npcs.some(n => MELEE.test(n.name) && d(n) <= (/zombie|skeleton|guard/i.test(n.name) ? 4 : 2))) w = PFM;
+                if (npcs.some(n => MELEE.test(n.name) && d(n) <= 4)) w = PFM;
                 else if (npcs.some(n => /archer/i.test(n.name) && d(n) <= (n.x <= 2731 && n.z <= 2765 ? 15 : 7))) w = PFMISS;
             }
         }
@@ -353,7 +353,7 @@ try {
         if (++quiet >= 3) for (const i of [PFM, PFMISS]) if (prayOn(i)) { void q.s.direct({ type: 'togglePrayer', prayerIndex: i, reason: 'SDK' }); break; }
     });
     const greegree = (): boolean => (q.st()?.equipment ?? []).some((e: any) => e?.id === ITEM.greegree);
-    const inCell = (): boolean => { const p = q.pos(); return !!p && p.level === 0 && p.worldX >= 2768 && p.worldX <= 2777 && p.worldZ >= 2792 && p.worldZ <= 2795; };
+    const inCell = (): boolean => { const p = q.pos(); return !!p && p.level === 0 && p.worldX >= 2770 && p.worldX <= 2776 && p.worldZ >= 2793 && p.worldZ <= 2795; };
     const { walkPath, sessionWalker } = await import('../../packages/core/src/walk');
     const walker = await sessionWalker(q.s as any);
     // A walk that stops when `stop()` holds (a knockout teleport, a cutscene).
@@ -384,21 +384,36 @@ try {
         }
         q.milestone(`${label} jailed`);
         const fails0 = q.msgCount(/fail to pick the lock/i);
-        for (let i = 0; i < 40 && inCell(); i++) {
+        for (let i = 0; i < 160 && inCell(); i++) {
             await q.guard(`${label} lock`);
             const d: any = q.s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) { void q.s.sdk.sendClickDialog(0); await q.waitTicks(1); continue; }
-            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 2);
+            const g = (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^(aberab|trefaji)$/i.test(n.name) && Math.max(Math.abs(n.x - DOOR.x), Math.abs(n.z - (DOOR.z + 1))) <= 3);
             if (g.length > 0) { await q.waitTicks(1); continue; }
             const door = q.findLoc(l => l.x === DOOR.x && l.z === DOOR.z && /jail door/i.test(l.name));
             if (!door) { await q.waitTicks(1); continue; }
             await q.opLoc(door, q.opIndex(door, /pick|open/i));
-            await q.waitUntil(() => !inCell() || q.msgCount(/fail to pick the lock/i) > fails0 + i, 6);
+            const f1 = q.msgCount(/fail to pick the lock/i);
+            await q.waitUntil(() => !inCell() || q.msgCount(/fail to pick the lock/i) > f1, 6);
         }
         if (inCell()) await q.fail(`${label}: lock`);
         console.log(`NOTE ${label} out at ${q.T()} lockFails=${q.msgCount(/fail to pick the lock/i) - fails0}`);
     };
 
+    // A village walk as a human: a patrol guard or a summoned guard can knock the bot back into the cell on the way, so
+    // a jailing picks the lock again and walks on (up to 3 times).
+    let rejails = 0;
+    const walkAtoll = async (label: string, pts0: { x: number; z: number; tol?: number }[]): Promise<void> => {
+        const g = pts0[pts0.length - 1]!;
+        for (let i = 0; i < 7 && !q.near(g.x, g.z, g.tol ?? 2); i++) {
+            if (inCell()) { rejails++; await knockout(`${label} rejail`); }
+            await walkStop(label, pts0, inCell);
+        }
+        if (!q.near(g.x, g.z, (g.tol ?? 2) + 1)) await q.fail(`walk ${label}`);
+    };
+    // The royal seal is needed only by the shipyard worker and Lumdo (mm_caranock.rs2:50, mm_lumdo.rs2:39): its slot goes
+    // to food.
+    if (q.has(ITEM.seal)) { await q.s.direct({ type: 'dropItem', slot: q.slot(ITEM.seal)!, reason: 'SDK' } as any); await q.waitTicks(1); }
     // 80. Knockout, jail, lock.
     if (FROM < 80) {
         await knockout('jail1');
@@ -471,8 +486,8 @@ try {
             if (i > 0) q.stats.retries++;
             if (pests && q.near(at.x, at.z, 5)) await clearPests(label, 1);
             if (i > 0) console.log(`NOTE ${label} try ${i} npcs=${(q.st()?.nearbyNpcs ?? []).filter((k: any) => k.distance <= 6).map((k: any) => `${k.name}@${k.x},${k.z}`).join(' ')}`);
-            const l = q.findLoc(k => k.x === at.x && k.z === at.z && re.test(k.name));
-            if (!l) { console.log(`WARN ${label}: no loc at ${at.x},${at.z}`); await walk(`${label} approach`, [{ x: at.x, z: at.z, tol: 3 }]); continue; }
+            const l = q.findLoc(k => k.x === at.x && k.z === at.z && re.test(k.name)) ?? q.findLoc(k => Math.max(Math.abs(k.x - at.x), Math.abs(k.z - at.z)) <= 2 && re.test(k.name) && (k.optionsWithIndex ?? []).some((o: any) => op.test(o.text)));
+            if (!l) { console.log(`WARN ${label}: no loc at ${at.x},${at.z} near=${q.locs().filter((k: any) => Math.max(Math.abs(k.x - at.x), Math.abs(k.z - at.z)) <= 4).map((k: any) => `${k.name}@${k.x},${k.z}[${(k.optionsWithIndex ?? []).map((o: any) => o.text).join("/")}]`).join(" ")}`); await walk(`${label} approach`, [{ x: at.x, z: at.z, tol: 3 }]); continue; }
             await q.opLoc(l, q.opIndex(l, op));
             await q.waitUntil(() => q.dialogOpen() || ok(), 15);
             let shut = 0;
@@ -489,10 +504,10 @@ try {
     // the mould crate (2782,9172), the western rope (2764,9165) up (quest_mm.rs2:1012-1017).
     if (FROM < 90) {
         want = 'auto';
-        await walk('to garkor', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
+        await walkAtoll('to garkor', [{ x: 2804, z: 2770, tol: 1 }, { x: 2806, z: 2764, tol: 1 }]);
         await talkChoose('garkor', /^garkor$/i, () => -1, () => q.sawText(/just go and find my squad mage/i) && !q.dialogOpen(), 80, { x: 2805, z: 2762 });
         q.milestone('garkor');
-        await walk('to denture crate', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, { x: 2764, z: 2763, tol: 0 }, { x: 2765, z: 2765, tol: 0 }, { x: 2769, z: 2766, tol: 0 }, { x: 2769, z: 2768, tol: 0 }, { x: 2768, z: 2769, tol: 0 }]);
+        await walkAtoll('to denture crate', [{ x: 2806, z: 2767, tol: 1 }, { x: 2784, z: 2764, tol: 1 }, { x: 2764, z: 2763, tol: 0 }, { x: 2765, z: 2765, tol: 0 }, { x: 2769, z: 2766, tol: 0 }, { x: 2769, z: 2768, tol: 0 }, { x: 2768, z: 2769, tol: 0 }]);
         await locOp('dentures', { x: 2767, z: 2769 }, /crate/i, /search/i, [/^yes$/i], () => q.has(ITEM.dentures) && !q.dialogOpen(), 30, 10);
         // The hole crate from its south tile: the warehouse spider (2 HP, respawnrate 4, huntrange 1) spawns at 2770,2766,
         // beside the north and east tiles, and each of its hits closes the crate's choice.
@@ -515,7 +530,7 @@ try {
     const toDungeon = async (label: string): Promise<void> => {
         if (inCell()) await knockout(`${label} jail`);
         if (z() < 6400 && z() > 2727) {
-            await walk(`${label} to bridge ladder`, [{ x: 2803, z: 2735, tol: 1 }]);
+            await walkAtoll(`${label} to bridge ladder`, [{ x: 2803, z: 2735, tol: 1 }]);
             await locOp(`${label} bridge ladder`, { x: 2803, z: 2734 }, /ladder/i, /climb/i, [], () => level() === 2, 10);
             await walk(`${label} bridge`, [{ x: 2803, z: 2728, tol: 0 }]);
             await locOp(`${label} jump`, { x: 2803, z: 2727 }, /end of bridge/i, /jump/i, [], () => level() === 0 && z() <= 2725, 10);
@@ -524,7 +539,7 @@ try {
             await walk(`${label} to dungeon ladder`, [{ x: 2763, z: 2704, tol: 1 }]);
             await locOp(`${label} dungeon down`, { x: 2763, z: 2703 }, /ladder/i, /climb/i, [], () => z() > 9000, 10);
         }
-        await walk(`${label} to zooknock`, [{ x: 2804, z: 9143, tol: 2 }]);
+        await walk(`${label} to zooknock`, [{ x: 2803, z: 9145, tol: 1 }]);
     };
     const ZOOKNOCK = { x: 2804, z: 9145 };
     const giveZooknock = async (label: string, id: number, ok: () => boolean): Promise<void> => {
@@ -557,6 +572,14 @@ try {
         if (!q.has(ITEM.encBar) || !q.has(ITEM.mould)) await q.fail('zooknock: no enchanted bar');
         await ms(100);
     }
+    const topUp = async (min: number): Promise<void> => {
+        for (let i = 0; i < 4 && q.hp() < min && q.has(ITEM.food); i++) {
+            const h0 = q.hp();
+            await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.food)!, optionIndex: 1, reason: 'SDK' });
+            await q.waitUntil(() => q.hp() > h0, 3);
+            q.stats.eats++;
+        }
+    };
     const wear = async (label: string, id: number): Promise<void> => {
         await q.step(`wear ${label}`, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), () => !q.has(id), 4, 3);
     };
@@ -580,7 +603,7 @@ try {
     // (2808,9201) up; the amulet worn; the monkey child (mm_monkey_child.rs2): uncle, bananas, the toy after the
     // 100-tick timer: the talisman; the dungeon to Zooknock: the talisman (the bones went in stage 100): the Karamjan
     // greegree and the chapter 3 cutscene (mm_zooknock.rs2:203-228, quest_mm.rs2:169-210).
-    if (FROM < 110) {
+    if (FROM < 105) {
         want = 'auto';
         if (z() > 6400) {
             await walk('to dungeon exit', [{ x: 2763, z: 9104, tol: 1 }]);
@@ -588,7 +611,11 @@ try {
         }
         await knockout('jail2');
         want = 'auto';
-        await walk('to temple ladder', [{ x: 2794, z: 2772, tol: 0 }]);
+        await walkAtoll('to temple ladder', [{ x: 2794, z: 2772, tol: 0 }]);
+        // The temple and the fire room: the religious guards (level 167) and the zombie guards hit 10-12 through a late
+        // toggle, so Protect from Melee stays on and the bot eats up to 30 first.
+        await topUp(30);
+        want = PFM;
         await locOp('temple ladder', { x: 2794, z: 2773 }, /ladder/i, /climb/i, [], () => level() === 1, 10);
         await walk('temple roof', [{ x: 2806, z: 2785, tol: 0 }]);
         await locOp('temple drop', { x: 2805, z: 2785 }, /ladder/i, /climb/i, [], () => level() === 0, 10);
@@ -597,22 +624,36 @@ try {
         q.milestone('fire room');
         for (let i = 0; i < 4 && q.has(ITEM.encBar); i++) {
             await q.guard('fire');
-            const f = q.findLoc(l => /flame|fire/i.test(l.name) && l.x >= 2809 && l.x <= 2813 && l.z >= 9189 && l.z <= 9193);
+            // The wall of flame has no ops, so it may not be in nearbyLocs: mm_iban_firewall_straight (4765) at 2809,9191.
+            const f = q.findLoc(l => /flame|fire/i.test(l.name) && l.x >= 2809 && l.x <= 2813 && l.z >= 9189 && l.z <= 9193) ?? { id: 4765, x: 2809, z: 9191 };
             if (!f) { await walk('to fire', [{ x: 2809, z: 9195, tol: 1 }]); continue; }
             await q.useOnLoc(ITEM.encBar, f);
             await q.waitUntil(() => q.has(ITEM.amuletUnstrung), 15);
         }
         if (!q.has(ITEM.amuletUnstrung)) await q.fail('fire: no amulet');
         await q.step('string amulet', () => q.useOnItem(ITEM.wool, ITEM.amuletUnstrung), () => q.has(ITEM.amulet), 6, 3);
+        q.milestone(105);
+    }
+    if (FROM < 110) {
+        want = PFM;
         await walk('to temple rope', [{ x: 2807, z: 9201, tol: 1 }]);
-        await locOp('temple rope', { x: 2808, z: 9201 }, /rope/i, /climb/i, [], () => z() < 6400, 10);
+        // The rope is a bridged level-1 loc (map m43_143) and is not in nearbyLocs, so the op goes by id
+        // (mm_climbing_rope_bottom_temple 4881) when the loc is not listed.
+        for (let i = 0; i < 5 && z() > 6400; i++) {
+            await q.guard('temple rope');
+            const r = q.findLoc(l => /rope/i.test(l.name) && Math.abs(l.x - 2808) <= 2 && Math.abs(l.z - 9201) <= 2) ?? { id: 4881, x: 2808, z: 9201 };
+            await q.opLoc(r, 1);
+            await q.waitUntil(() => z() < 6400, 10);
+        }
+        if (z() > 6400) await q.fail('temple rope');
+        want = 'auto';
         await wear('amulet', ITEM.amulet);
         q.milestone('amulet');
-        await walk('to child', [{ x: 2744, z: 2795, tol: 1 }]);
+        await walkAtoll('to child', [{ x: 2744, z: 2795, tol: 1 }]);
         let gaveAt = -1;
         for (let i = 0; i < 8 && q.has(ITEM.banana); i++) {
             await q.guard('child');
-            if (inCell()) { await knockout('jail child'); await walk('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
+            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
             for (let w = 0; w < 30 && !auntSafe(); w++) await q.waitTicks(1);
             await talk1('child', /^monkey child$/i, [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana) || !q.dialogOpen() && q.T() < 0, 60, CHILD, 1);
         }
@@ -622,7 +663,7 @@ try {
         console.log(`NOTE bananas given at ${gaveAt}`);
         await q.waitUntil(() => q.T() - gaveAt >= 100, 110);
         for (let i = 0; i < 4 && !q.has(ITEM.talisman); i++) {
-            if (inCell()) { await knockout('jail child'); await walk('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
+            if (inCell()) { await knockout('jail child'); await walkAtoll('to child', [{ x: 2744, z: 2795, tol: 1 }]); }
             for (let w = 0; w < 30 && !auntSafe(); w++) await q.waitTicks(1);
             await talk1('child toy', /^monkey child$/i, [], () => q.has(ITEM.talisman), 40, CHILD, 1);
         }

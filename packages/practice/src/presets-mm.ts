@@ -19,7 +19,7 @@ const MM_SKILLS = {
 const MM_WORN = [[579, 0], [1727, 2], [1387, 3], [577, 4], [1011, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
 const MM_PACK = [[565, 200], [556, 1000], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
     .concat([2357, 1759, 3183, 1963, 1963, 1963, 1963, 1963, 2434, 2434, 2434, 2434, 2446].map(id => ({ id, count: 1 })),
-        Array.from({ length: 8 }, () => ({ id: 385, count: 1 })));
+        Array.from({ length: 10 }, () => ({ id: 385, count: 1 })));
 
 // mm_gnomes (varp 372) bit fields, quest_mm.varbit: narnode 0-3, caranock 4-6, daero 7-10, waydar 11-12,
 // lumdo 13-15, garkor 16-19, zooknock 20-23.
@@ -62,9 +62,13 @@ export const MM_PRESETS: Record<string, SaveConfig> = {
     // Debug: beside Zooknock after the amulet half (%mm_zooknock 5; mm_flags: gold bar 7, mould 8, dentures 9, relic 11,
     // collecting for the talisman 13; mm_misc relic type 5 = normal monkey, jail count 1) with the enchanted bar and the
     // mould: MM_FROM=100.
-    quest_mm_s100: mmPreset({ x: 2803, z: 9143, level: 0 },
+    quest_mm_s100: mmPreset({ x: 2803, z: 9145, level: 0 },
         { 365: 3, 371: (1 << 7) | (1 << 8) | (1 << 9) | (1 << 11) | (1 << 13), 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2, zooknock: 5 }), 374: (1 << 2) | (5 << 12) },
         [4004, 4007, 4020], MM_PACK.filter(i => i.id !== 2357 && i.id !== 3183)),
+    // Debug: in the temple fire room (2807,9201) with the strung amulet of monkey speak: MM_FROM=105.
+    quest_mm_s105: mmPreset({ x: 2808, z: 9197, level: 0 },
+        { 365: 3, 371: (1 << 7) | (1 << 8) | (1 << 9) | (1 << 11) | (1 << 13), 372: mmGnomes({ narnode: 7, caranock: 3, daero: 7, waydar: 1, lumdo: 3, garkor: 2, zooknock: 5 }), 374: (2 << 2) | (5 << 12) },
+        [4020, 4021], MM_PACK.filter(i => i.id !== 2357 && i.id !== 3183 && i.id !== 1759)),
     quest_mm_s40: mmPreset({ x: 2393, z: 9890, level: 0 }, { 365: 1, 372: mmGnomes({ narnode: 7, caranock: 3, daero: 5 }) }, [4004]),
 };
 

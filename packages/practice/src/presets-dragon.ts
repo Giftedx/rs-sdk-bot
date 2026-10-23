@@ -37,6 +37,7 @@ export const DRAGON_PRESETS: Record<string, SaveConfig> = {
     quest_dragon_s12: dragon({ ...MAPS, 176: 7, 177: 3 }, { x: 3047, z: 3204, level: 0 }, [1537, 1535], 10000),
     quest_dragon_s15: dragon({ ...MAPS, 176: 9 }, { x: 2851, z: 3235, level: 0 }, [1540]),
     ...merlinPresets(),
+    ...grailPresets(),
 };
 
 // Merlin's Crystal (scripts/generated/quest-merlin.ts): Dragon Slayer done (varp 176 = 10, +2 QP). Helper items:
@@ -58,5 +59,35 @@ function merlinPresets(): Record<string, SaveConfig> {
         quest_merlin_s5: merlin({ 14: 4 }, { x: 2802, z: 3441, level: 0 }, [32]),
         quest_merlin_s7: merlin({ 14: 4, 15: 0b10101 }, { x: 3239, z: 3605, level: 0 }, [32, 35]),
         quest_merlin_s8: merlin({ 14: 5 }, { x: 2780, z: 3512, level: 0 }, [35]),
+    };
+}
+
+// Holy Grail (scripts/generated/quest-grail.ts): Merlin's Crystal done (varp 14 = 7, +6 QP), Excalibur (35) in the
+// pack with the rune scimitar (1333) of the merlin row's rune set. Nothing worn: Entrana takes no weapons or armour
+// (monk_of_entrana.rs2 has_entrana_restricted_items), so the rune helm, body and legs go to the bank before this row. Helper items: 100 coins (two Ardougne-Brimhaven trips,
+// 30 each), runes for three Falador and four Camelot teleports (8 law, 32 air, 4 water), 6 lobsters.
+// Debug presets quest_grail_s<milestone> (HG_FROM=<milestone>): varp 5 = %grail; napkin 15, whistle 16, grail 19;
+// from s3 on, the scimitar is worn.
+function grail(varps: Record<number, number>, position: { x: number; z: number; level: number }, quest: number[] = [], worn = false): SaveConfig {
+    return {
+        position, skills: ALL_99, equipment: worn ? [{ id: 1333, count: 1, slot: 3 }] : [],
+        varps: { ...QP_BEFORE_DRAGON, 176: 10, 14: 7, ...varps }, coins: 100,
+        inventory: [[563, 8], [556, 32], [555, 4]].map(([id, count]) => ({ id: id!, count: count! }))
+            .concat([...(worn ? [35] : [35, 1333]), ...quest, 379, 379, 379, 379, 379, 379].map(id => ({ id, count: 1 }))),
+    };
+}
+function grailPresets(): Record<string, SaveConfig> {
+    const CAMELOT = { x: 2757, z: 3477, level: 0 };
+    const KARAMJA = { x: 2741, z: 3235, level: 0 };
+    return {
+        quest_grail: grail({}, { x: 2763, z: 3513, level: 0 }),
+        quest_grail_s2: grail({ 5: 3 }, { x: 3046, z: 3237, level: 0 }),
+        quest_grail_s3: grail({ 5: 4 }, CAMELOT, [], true),
+        quest_grail_s4: grail({ 5: 4 }, { x: 3108, z: 3350, level: 0 }, [15], true),
+        quest_grail_s5: grail({ 5: 4 }, CAMELOT, [15, 16, 16], true),
+        quest_grail_s6: grail({ 5: 4 }, { x: 2806, z: 4715, level: 0 }, [15, 16, 16], true),
+        quest_grail_s7: grail({ 5: 8 }, KARAMJA, [15, 16, 16], true),
+        quest_grail_s8: grail({ 5: 9 }, KARAMJA, [15, 16], true),
+        quest_grail_s9: grail({ 5: 9 }, KARAMJA, [15, 16, 19], true),
     };
 }
