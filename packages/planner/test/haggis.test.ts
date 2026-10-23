@@ -248,7 +248,7 @@ test('rival levers (research/rival-gap-list.md): ESTIMATE rows, no blocks on or 
     for (const disable of [new Set<string>(), ids]) {
         const r = schedule(boards, acts, { mode: 'realistic', tricks: new Set(), disable });
         expect(r.blocked).toEqual([]);
-        expect(r.qp).toBe(142);
+        expect(r.qp).toBe(145); // MAX_QP: every quest (research/quest-points-board.md)
     }
 });
 
@@ -318,7 +318,7 @@ test('OUT rows (content bugs) are never scheduled; the legal Cooking route repla
         for (const id of out) expect(r.chosen).not.toContain(id);
         expect(r.chosen).toEqual(expect.arrayContaining(['cooks-assistant', 'cook-range-35', 'bank-wine', 'wine-timer']));
         expect(r.blocked).toEqual([]);
-        expect(r.qp).toBe(142);
+        expect(r.qp).toBe(145); // MAX_QP: every quest (research/quest-points-board.md)
     }
 });
 

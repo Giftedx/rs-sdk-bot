@@ -2928,18 +2928,18 @@
   },
   {
    "id": "quests-rest",
-   "label": "Remaining quests to 142 QP",
+   "label": "Remaining 46 quests to 145 QP (all quests)",
    "serves": [
     "questpoints"
    ],
    "ticks": {
-    "floor": 15988,
-    "realistic": 47972,
+    "floor": 57600,
+    "realistic": 86700,
     "evidence": "ESTIMATE",
-    "source": "145 QP over 68 quests (tick-tricks-web.md 15); the route quests give 54 QP, 88 more needed from about 40 quests; 400-1,200 ticks each, not measured; Cook's Assistant (1 QP, 12/28 ticks) moved to its own row"
+    "source": "46 quests not on another row, 83 QP (research/quest-points-board.md), plus 7 QP of 4 quests whose rows carry qp 0 (crest 1, rival-fight-arena 2, rival-mm 3, rival-seaslug 1): 90 QP, so the run ends at 145 = MAX_QP (quest.constant:72-139, quests.rs2:96-327). Ticks by size class anchored on MEASURED practice runs (research/quest-plan.md): 10 short x 250/400 (Druidic Ritual 244-248, Goblin Diplomacy 169-177, Romeo & Juliet 307-314), 17 medium x 900/1,300 (Merlin 868-897, Dwarf Cannon 888-925, Waterfall 1,030-1,037), 11 long x 1,800/2,600 (Dragon Slayer 1,488-1,577, Grand Tree 2,001-2,083), 8 very long x 2,500/4,000 (no measured anchor); realistic adds walks and unscripted retries; not measured"
    },
    "lump": true,
-   "qp": 87,
+   "qp": 90,
    "requires": [
     "dragon",
     "grail",
@@ -2950,17 +2950,16 @@
     "waterfall"
    ],
    "evidence": "ESTIMATE",
-   "source": "145 QP over 68 quests (tick-tricks-web.md 15); the route quests give 54 QP, 88 more needed from about 40 quests; 400-1,200 ticks each, not measured",
-   "pending": "replace with research/boards-special.md when it lands",
+   "source": "145 QP over 68 quests (quest.constant:72-139); quest list, requirements and size classes in research/quest-points-board.md; not measured",
    "patches": [
     {
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 14786,
-       "realistic": 44365,
+       "floor": 53268,
+       "realistic": 80180,
        "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 15988/47972"
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 57600/86700"
       }
      }
     }
