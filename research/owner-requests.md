@@ -211,3 +211,4 @@ New: `packages/core/src/randomevents.ts` and its test, `packages/core/test/walkp
 1 (BLOCKED BY RULES -> PARTIAL), 3 (DONE -> PARTIAL), 17 (PARTIAL -> NOT STARTED), 39 (DONE -> duplicate of 18, PARTIAL),
 42 (DONE -> PARTIAL), 47 (NEW -> PARTIAL), 49, 50, 51 (IN PROGRESS -> PARTIAL, code committed, not shown), C1 (DONE -> PARTIAL),
 C9 (IN PROGRESS -> DONE), C10 (IN PROGRESS -> DONE), C11 (DONE -> PARTIAL), C15 (IN PROGRESS -> DONE), R2/R22 (marked broken).
+| 66 | Cooking decision (owner gave full permission after double-checking) | DONE | Rule kept: no content bugs. Cooking #1 (20 ticks) needs the login-wine bug; legal route measured 339-375. Bug reported: https://github.com/MaxBittker/rs-sdk/issues/102. Gem cutting / potions / arrows (level checked, no delay) ruled accepted like battlestaves | Watch the issue; if fixed and the board resets, plan the legal Cooking run |

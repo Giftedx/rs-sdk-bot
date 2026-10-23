@@ -1,6 +1,6 @@
 # Bug report draft for Max Bittker (rs-sdk): wine fermentation at login has no level check
 
-Status: draft for the project owner to send. Not sent. We do not use this mechanic on the demo server.
+Status: SENT 2026-10-23 as https://github.com/MaxBittker/rs-sdk/issues/102 (owner decision: no content bugs; Cooking stays lost until fixed). We do not use this mechanic on the demo server.
 
 ## Summary
 A new account with Cooking level 1 and unfermented wine in its bank reaches 99 Cooking about 22 ticks after logging
