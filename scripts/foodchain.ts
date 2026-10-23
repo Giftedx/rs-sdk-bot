@@ -6,7 +6,7 @@
 //   (pack + bank) is under LOW, or a farmer waits for food;
 // - a farmer that prints "waiting for food trade" gets every fish the courier holds (give-to-banker.ts
 //   GIVE=Trout,Salmon: never without GIVE=, which also empties the giver's bank);
-// - the courier's fares: under 240 coins, a logged-out farmer gives it 1,000 (banker.ts + give-to-banker.ts).
+// - the courier's fares: under 120 coins, a logged-out farmer gives it 1,000 (banker.ts + give-to-banker.ts).
 // Never two sessions on one account: an account runs only from here, and not while its status is fresh from another
 // process. An account whose RESULT says it died is never started again. Stop: touch .practice/stop-foodchain.
 // Usage: DEMO_OK=1 bun scripts/foodchain.ts [cook=Mightyrod] [courier=Bigpackage] [farmers=Pocketrocket,mmtha0205]
@@ -148,7 +148,9 @@ async function tick() {
     const ready = count(status(COOK)?.bank, /^(trout|salmon)$/i);
     const low = FARMERS.filter(f => !dead.has(f)).some(f => farmerFood(f) < LOW);
     if (ready < MIN_FISH || !low) return;
-    if (courierCoins() < 240) { if (!(await topUpFares())) return; }
+    // Fares: four boat fares cost 120. A top-up needs a logged-out farmer, so ask only when a trip cannot be paid
+    // (2026-10-23: under 240 it blocked trips while all farmers were busy).
+    if (courierCoins() < 120) { if (!(await topUpFares())) return; }
     courierBusy = true;
     void runOnce(COURIER, 'scripts/foodcourier.ts', { FROM: COOK, FEATHERS: '0', WAIT: '1500' }, 3_600_000).finally(() => { courierBusy = false; });
 }
