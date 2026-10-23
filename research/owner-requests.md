@@ -104,3 +104,22 @@ These files hold work for items above and are not in git (2026-10-23 04:49 UTC):
 | 45 | Tell agents they are stinky poo poo bums (in-joke) | DONE | Sent to 4 agents | - |
 | 46 | "yes sir boaby" | DONE | Said in chat | - |
 | 47 | Random events | NEW (found by me) | Woodpecker died to a dryad at WC 49 | Handler being built (agent) |
+
+## My own commitments (things I said I would do), 2026-10-23
+
+Rule: every "I will" in chat gets a row here in the same turn. Close a row only with evidence.
+
+| # | I said I would | Status | Evidence / next step |
+|---|---|---|---|
+| C1 | Fix the banker payout waste (4 declined trades) | DONE | 6 s serve window, bc8a6c9; not yet re-measured live |
+| C2 | Give Bigpackage's 115 lobsters to the banker | DROPPED | Bigpackage holds them; it hands them to the gold farmers directly (C9) |
+| C3 | Stop the practice server when the testing helpers finish | OPEN | random-event helper still uses it |
+| C4 | Shared bot host: many bots in one process, one path map, measure RAM before and after | OPEN | waits for the random-event helper (both touch packages/core/src/bot.ts) |
+| C5 | Fix the black 3D scene in the dashboard | OPEN | dashboard helper, round 2 |
+| C6 | Cut the 18 idle ticks after the Musa Point boat landing | OPEN | measure on practice first: is it a server sailing delay or our wait? |
+| C7 | Cut the courier's walking (1,948 of 2,209 ticks) | OPEN | depends on where the gold farmers and Haggis need supplies |
+| C8 | Find what killed Woodpecker | OPEN | random-event helper; demo config says events are off (fly.toml:25) |
+| C9 | Put the 4 Thieving 99 accounts to work making gold (knights + lobsters) | IN PROGRESS | helper writing and proving scripts/goldfarm.ts |
+| C10 | Actions-per-tick monitor | IN PROGRESS | dashboard helper, round 2 (status.ts input counts) |
+| C11 | Haggis 24-board schedule | IN PROGRESS | planner helper |
+| C12 | Research index and shared agent brief | IN PROGRESS | index helper |
