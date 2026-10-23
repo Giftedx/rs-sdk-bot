@@ -35,8 +35,8 @@ const PFM = 14;                                            // protect_from_melee
 
 const q = await openQuest({ cap: 6000, eatAt: 60, food: [ITEM.food], lumbridgeOk: true });
 try {
-    const FROM = Number(process.env.DS_FROM ?? 0);
-    const STOP = Number(process.env.DS_STOP ?? 99);
+    const FROM = Number(process.env.DS_FROM || 0);
+    const STOP = Number(process.env.DS_STOP || 99);
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+dragon slayer/i) > 0) questDone = true; });
     const ms = async (k: number): Promise<void> => { q.milestone(k); if (k >= STOP) await q.end(true, `stopped at ${k}`); };
@@ -120,12 +120,28 @@ try {
     // 2. Oziach: the rune plate talk sets 2; the shield, map pieces 1-3 (the maze key) set the side varps.
     if (FROM < 2) {
         // The hut door (loc 1530 at 3070,3515, maps/m47_54.jm2 0 62 59) is on the south wall.
-        await q.walk('to oziach', [{ x: 3070, z: 3514, tol: 1 }]);
-        await q.openDoor('oziach door', 3070, 3515);
-        await q.dash('into hut', 3069, 3516, 0, 10);
+        // Oziach wanders out through the open door. The open door leaf then walls him into the pocket south of the hut
+        // ("I can't reach that!" from 1 tile away in 2 of 5 proof runs), so the door is shut when he is outside and
+        // open when he is inside.
+        await q.walk('to oziach', [{ x: 3070, z: 3514, tol: 0 }]);
         const pick = picker([/sell me some rune plate/i, /guildmaster of the champions/i, /how am i meant to prove/i, /dragon, that sounds like fun/i,
             /antidragon shield/i, /where can i find this dragon/i, /first piece/i, /second piece/i, /third piece/i, /try and get everything together/i]);
-        await q.talk('oziach', /^oziach$/i, [pick], () => q.has(ITEM.melzarKey) && q.sawText(/fare ye well/i), OZIACH, 120);
+        const oz = () => q.npc(/^oziach$/i);
+        const openLeaf = () => q.findLoc(l => /door/i.test(l.name) && Math.max(Math.abs(l.x - 3070), Math.abs(l.z - 3515)) <= 1 && (l.optionsWithIndex ?? []).some((o: any) => /^close$/i.test(o.text)));
+        const done2 = () => q.has(ITEM.melzarKey) && q.sawText(/fare ye well/i);
+        for (let i = 0; i < 6 && !done2(); i++) {
+            await q.guard('oziach');
+            const n = oz();
+            const inside = ((n?.tileZ ?? n?.z) ?? 3517) >= 3515;
+            if (inside) await q.openDoor('oziach door', 3070, 3515);
+            else if (openLeaf()) await q.step('close oziach door', () => { const d = openLeaf(); return d ? q.opLoc(d, q.opIndex(d, /^close$/i)) : undefined; }, () => !openLeaf(), 6, 2);
+            const m = oz();
+            if (m) await q.talkTo(m);
+            await q.waitUntil(() => q.dialogOpen(), 8);
+            if (q.dialogOpen()) { let shut = 0; await q.converse([pick], () => { shut = q.dialogOpen() ? 0 : shut + 1; return (done2() && !q.dialogOpen()) || shut >= 3; }, 120); }
+            else console.log(`WARN oziach no dialog: npc ${m?.tileX ?? m?.x},${m?.tileZ ?? m?.z} inside=${inside} leaf=${!!openLeaf()}`);
+        }
+        if (!done2()) await q.fail('oziach');
         await ms(2);
     }
 
@@ -156,7 +172,7 @@ try {
     // drops its key; a key on its door disintegrates and open_and_close_door moves the player through.
     // Ground floor: rat (red key, door 2926,3253), ladder 2928,3256 up. Level 1: ghost (orange, door 2931,3253),
     // ladder 2934,3254 up. Level 2: skeleton (yellow, door 2924,3249), ladders down 2940,3240 and 2937,3240, then
-    // funladdertop 2932,3240 to the basement. Basement: zombie (blue, door 2931,9644), Melzar (magenta, door
+    // funladdertop 2932,3240 to the basement. Basement: zombie (blue, door 2931,9643), Melzar (magenta, door
     // 2929,9652), lesser demon (green, door 2936,9655), chest 2935,9657.
     const doorAt = (x: number, z: number) => () => q.findLoc(l => l.x === x && l.z === z && /door/i.test(l.name));
     const keyDoor = async (label: string, key: number, x: number, z: number, from: { x: number; z: number }, through: () => boolean): Promise<void> => {
@@ -195,14 +211,115 @@ try {
     if (FROM < 9) {
         await setPfm(true);
         await kill('zombie', NPC.zombie, ITEM.blue);
-        await keyDoor('blue door', ITEM.blue, 2931, 9644, { x: 2931, z: 9643 }, () => (q.pos()?.worldZ ?? 0) >= 9644);
+        await keyDoor('blue door', ITEM.blue, 2931, 9643, { x: 2931, z: 9643 }, () => (q.pos()?.worldX ?? 99999) <= 2930);
         await kill('melzar', NPC.melzar, ITEM.magenta);
         await keyDoor('magenta door', ITEM.magenta, 2929, 9652, { x: 2929, z: 9651 }, () => (q.pos()?.worldZ ?? 0) >= 9652);
         await kill('demon', NPC.demon, ITEM.green);
-        await keyDoor('green door', ITEM.green, 2936, 9655, { x: 2936, z: 9654 }, () => (q.pos()?.worldZ ?? 0) >= 9655);
+        await keyDoor('green door', ITEM.green, 2936, 9655, { x: 2936, z: 9655 }, () => (q.pos()?.worldZ ?? 0) >= 9656);
         await searchChest('maze chest', { x: 2935, z: 9657 }, ITEM.part1);
         await setPfm(false);
         await ms(9);
+    }
+
+    // 10. The Duke on level 1 of Lumbridge castle gives the shield (%dragon_shield 1, duke_horacio.rs2:4-5, 59-64).
+    const wear = async (label: string, id: number, slot: number): Promise<void> => {
+        const worn = () => (q.st()?.equipment ?? []).some((e: any) => e.slot === slot && e.id === id);
+        await q.step(label, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), worn, 3, 3);
+    };
+    const stairs = (re: RegExp) => () => q.findLoc(l => /stair/i.test(l.name) && Math.max(Math.abs(l.x - 3205), Math.abs(l.z - 3209)) <= 3 && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
+    if (FROM < 10) {
+        await tele('lumbridge teleport', 'magic:lumbridge_teleport', 3221, 3218);
+        await q.walk('to castle stairs', [{ x: 3206, z: 3210, tol: 1 }]);
+        await q.climb('castle stairs up', stairs(/climb-up/i), /climb-up/i, levelIs(1));
+        // The Duke's door: loc 1536 at 3207,3222 level 1, east wall (maps/m50_50.jm2 1 7 22).
+        await q.dash('to duke door', 3207, 3222, 0, 15);
+        await q.openDoor('duke door', 3207, 3222);
+        await q.dash('to duke', 3209, 3221, 1, 15);
+        await q.talk('duke', /^duke horacio$/i, [/seek a shield/i], () => q.has(ITEM.shield), DUKE, 40);
+        await wear('wear shield', ITEM.shield, 5);
+        await q.climb('castle stairs down', stairs(/climb-down/i), /climb-down/i, levelIs(0));
+        await ms(10);
+    }
+
+    // 11-12. Klarense sells the Lady Lumbridge (2,000 coins, stage 3); 3 planks with 4 nails each on the hull hole
+    // (stage 7, lady_lumbridge.rs2 add_plank_to_ship_hole), which lifts the player one level.
+    const gangplank = () => q.findLoc(l => /gangplank/i.test(l.name) && (l.optionsWithIndex ?? []).length > 0 && l.distance <= 8);
+    const board = async (label: string): Promise<void> => {
+        await q.walk(`${label} walk`, [{ x: 3047, z: 3204, tol: 1 }]);
+        // The deck is level 1: from the dock the way up is the ship's ladder (loc 272 at 3049,3208); the quest's
+        // gangplank (2593) is on level 1 (maps/m47_50.jm2 1 39 5) and is not shown from the dock.
+        // The SDK loc list does not show it, so the click names the loc by id and tile.
+        await q.step(label, () => q.opLoc({ id: 2593, x: 3047, z: 3205 }, 1), () => q.lvl() >= 1, 6, 4);
+    };
+    if (FROM < 11) {
+        await q.walk('to klarense', [{ x: KLARENSE.x, z: KLARENSE.z, tol: 2 }]);
+        const c0 = q.cnt(ITEM.coins);
+        await q.talk('klarense', /^klarense$/i, [/could buy it/i, /yep, sounds good/i], () => q.cnt(ITEM.coins) <= c0 - 2000, KLARENSE, 40);
+        await ms(11);
+    }
+    if (FROM < 12) {
+        await board('board ship');
+        await q.climb('ship ladder down', () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 6 && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
+        const hole = () => q.findLoc(l => /hole/i.test(l.name) && l.distance <= 6);
+        for (let i = 0; i < 6 && q.has(ITEM.plank); i++) {
+            const n0 = q.cnt(ITEM.plank);
+            await q.step(`plank ${i}`, () => { const h = hole(); return h ? q.useOnLoc(ITEM.plank, h) : q.waitTicks(1); }, () => q.cnt(ITEM.plank) < n0, 6, 3);
+            await q.converse([], () => !q.dialogOpen(), 4);
+        }
+        await q.waitUntil(() => q.lvl() === 2, 4);
+        await q.climb('hull ladder up', () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 6 && (l.optionsWithIndex ?? []).some((o: any) => /climb-up/i.test(o.text))), /climb-up/i, () => (q.pos()?.worldZ ?? 0) < 9000);
+        await q.climb('disembark', gangplank, /cross|walk|disembark/i, () => q.lvl() === 0, 4);
+        await ms(12);
+    }
+
+    // 13. Wormbrain in the Port Sarim jail sells piece 2 for 10,000 coins; the three pieces join into the map.
+    if (FROM < 13) {
+        // Jail door: loc 1530 at 3011,3197, south wall (maps/m47_49.jm2 0 3 61); the cells are east of the corridor.
+        await q.walk('to jail', [{ x: 3011, z: 3197, tol: 0 }]);
+        await q.openDoor('jail door', 3011, 3197);
+        await q.dash('jail corridor', 3011, 3187, 1, 20);
+        await q.talk('wormbrain', /^wormbrain$/i, [/piece of map that i need/i, /could pay you/i, /10,000 it is/i], () => q.has(ITEM.part2), WORMBRAIN, 50);
+        await q.step('join map', () => q.useOnItem(ITEM.part1, ITEM.part2), () => q.has(ITEM.map), 4, 4);
+        await q.converse([], () => !q.dialogOpen(), 4);
+        await ms(13);
+    }
+
+    // 14. Ned in Draynor: the Crandor talk hires him; the map on him sets stage 8 (ned.rs2 give_map_to_ned).
+    if (FROM < 14) {
+        // Ned's door: loc 1530 at 3101,3258, east wall (maps/m48_50.jm2 0 29 58).
+        await q.walk('to ned', [{ x: 3102, z: 3258, tol: 0 }]);
+        await q.openDoor('ned door', 3101, 3258);
+        await q.dash('into ned house', 3100, 3258, 1, 10);
+        await q.talk('ned hire', /^ned$/i, [/could you take me to the island of crandor/i], () => q.sawText(/just show me the map/i), NED, 40);
+        await q.step('map to ned', async () => { const n = q.npc(/^ned$/i); if (n) await q.useOnNpc(ITEM.map, n); }, () => !q.has(ITEM.map), 15, 3);
+        await q.converse([], () => !q.dialogOpen(), 10);
+        await ms(14);
+    }
+
+    // 15. The ship: with the map given and Ned hired the hull ladder goes to level 3, where Ned sails to Crandor.
+    if (FROM < 15) {
+        await board('board ship 2');
+        await q.climb('ship ladder down 2', () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 6 && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
+        await q.talk('ned sail', /^ned$/i, [/yep lets go/i], () => q.near(2851, 3235, 8), { x: 3047, z: 9640 }, 60);
+        // p_delay(11), then the crash mesbox and two chat pages (dragonslayer_ned.rs2:20-30).
+        await q.converse([], () => q.sawText(/gee\.* you think/i) && !q.dialogOpen(), 30);
+        await ms(15);
+    }
+
+    // 16. Crandor: down the hole, through the gate, Elvarg. Her melee is 0 under the prayer; the shield caps the
+    // breath at 10. The quest completes on her death (last hit by the player, elvarg.rs2:1-15).
+    if (FROM < 16) {
+        if (!(q.st()?.equipment ?? []).some((e: any) => e.id === ITEM.shield) && q.has(ITEM.shield)) await wear('wear shield 2', ITEM.shield, 5);
+        await setPfm(true);
+        await q.walk('to crandor hole', [{ x: CRANDOR_HOLE.x + 1, z: CRANDOR_HOLE.z, tol: 1 }]);
+        await q.climb('crandor hole', () => q.findLoc(l => l.id === 2609 || (/opening|hole|rock/i.test(l.name) && l.x === CRANDOR_HOLE.x && l.z === CRANDOR_HOLE.z)), /enter|climb|go/i, () => (q.pos()?.worldZ ?? 0) > 9000);
+        await q.walk('to elvarg gate', [{ x: ELVARG_GATE.x - 1, z: ELVARG_GATE.z, tol: 0 }]);
+        const gate = () => q.findLoc(l => /gate/i.test(l.name) && l.x === ELVARG_GATE.x && Math.abs(l.z - ELVARG_GATE.z) <= 1 && (l.optionsWithIndex ?? []).some((o: any) => /open/i.test(o.text)));
+        await q.step('elvarg gate', () => { const g = gate(); return g ? q.opLoc(g, q.opIndex(g, /open/i)) : q.waitTicks(1); }, () => (q.pos()?.worldX ?? 0) >= ELVARG_GATE.x, 8, 4);
+        await kill('elvarg', NPC.elvarg, undefined, 400);
+        await q.waitUntil(() => questDone, 10);
+        await setPfm(false);
+        await ms(16);
     }
 
     offDone();

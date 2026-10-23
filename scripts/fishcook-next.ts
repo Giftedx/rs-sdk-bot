@@ -10,11 +10,10 @@
 // stops at; CHICKEN_CAP (default 400) ticks per chicken trip; GIVE_TO=<account>: at each bank visit, when that
 // player stands within 12 tiles, withdraw every cooked fish as notes and trade them over; HANDOFF_ONLY=1: walk to
 // the bank, wait up to WAIT (default 900) ticks for GIVE_TO, hand off and stop.
-import { existsSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { openBot, finish, countItems, randomEventsOf, getWorld, accountOf } from '../packages/core/src/bot';
+import { existsSync } from 'node:fs';
+import { openBot, finish, countItems, randomEventsOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
+import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { componentId } from '../packages/core/src/logout';
 
 type Tile = { x: number; z: number };
@@ -26,16 +25,8 @@ const CHICKEN_CAP = Number(process.env.CHICKEN_CAP ?? 400);
 const GIVE_TO = process.env.GIVE_TO?.trim() || '';
 const HANDOFF_ONLY = process.env.HANDOFF_ONLY === '1';
 const WAIT = Number(process.env.WAIT ?? 900);
-// BANK_AT=lumbridge (default) banks at the Lumbridge castle bank (level 2), much nearer the fireplace than Draynor; the
-// cook goes to Draynor only to hand off, when the GIVE_TO status file puts the courier within COURIER_NEAR tiles of
-// Draynor bank. BANK_AT=draynor banks at Draynor every pack (the old route).
-const BANK_AT = (process.env.BANK_AT ?? 'lumbridge').toLowerCase();
-const COURIER_NEAR = Number(process.env.COURIER_NEAR ?? 70);
-const HANDOFF_WAIT = Number(process.env.HANDOFF_WAIT ?? 600);
-// TICK3=0 skips the knife-on-logs 3-tick step and fishes with one click per spot.
+// TICK3=0: no knife-on-logs 3-tick step; the first bank visit banks the knife and logs (3 more fish per pack).
 const TICK3 = process.env.TICK3 !== '0';
-const CASTLE_BANK = { x: 3208, z: 3220, level: 2 };
-const STATUS_DIR = join(resolve(import.meta.dir, '..'), '.practice', 'status');
 
 const FLY_SPOT: Tile = { x: 3239, z: 3251 };
 const FIREPLACE: Tile = { x: 3214, z: 3249 };
@@ -85,20 +76,12 @@ try {
     const make1 = componentId('skill_multi3:make1_a');
 
     let died = false, hpMin = hp(), lastFail = '';
-    let dbgStill = 0;
     let last = pos();
     const off = s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
         if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20 && cheb({ x: 3222, z: 3218 }, p) <= 3) died = true;
-        if (process.env.FC_DEBUG && p && last && p.worldX === last.worldX && p.worldZ === last.worldZ && (p.animId ?? -1) === -1) {
-            if (++dbgStill % 10 === 5) {
-                const spots = (st()?.nearbyNpcs ?? []).filter((n: any) => /fishing spot/i.test(n.name)).map((n: any) => `${n.index}:${n.id}@${n.x},${n.z} d${n.distance} r${n.reachable}`).join(' ');
-                const msgs = (st()?.gameMessages ?? []).slice(-3).map((m: any) => m.text).join(' | ');
-                console.log(`DBG still=${dbgStill} t=${now()} at=${p.worldX},${p.worldZ} dialog=${!!s.sdk.getDialog()?.isOpen} spots=[${spots}] msgs=[${msgs}]`);
-            }
-        } else dbgStill = 0;
         last = p;
     });
 
@@ -240,44 +223,8 @@ try {
     };
 
     // Draynor bank: deposit cooked and burnt food and raw chicken; hand the cooked fish to GIVE_TO when it is here.
-    // The courier is on its way to (or waits at) Draynor bank: its status file is fresh and puts it near Draynor.
-    let courierAt = -999, courierWas = false;
-    const courierComing = () => {
-        if (!GIVE_TO) return false;
-        if (now() - courierAt < 20) return courierWas;
-        courierAt = now();
-        try {
-            const j = JSON.parse(readFileSync(join(STATUS_DIR, `${GIVE_TO}.json`), 'utf8'));
-            courierWas = Date.now() - Number(j.at ?? 0) < 120_000 && !!j.pos && cheb(BANK, { worldX: j.pos.x, worldZ: j.pos.z }) <= COURIER_NEAR;
-        } catch { courierWas = false; }
-        return courierWas;
-    };
-    // A Draynor trip for the hand-off: not again within 1,500 ticks of a trade, or 300 ticks of a try.
-    let lastGive = -9999, lastTry = -9999;
-    const wantDraynor = () => BANK_AT !== 'lumbridge' || (courierComing() && now() - lastGive > 1500 && now() - lastTry > 300);
-    const castleWalk = async (to: { x: number; z: number; level: number }, where: string) => {
-        const w0 = s.tick();
-        try {
-            for (let i = 0; i < 3 && !died; i++) {
-                const r = await goTo(s as any, await getWorld(), to, accountOf(s));
-                if (r.ok) return;
-                lastFail = `goTo ${r.detail}`;
-                await waitTicks(s, 1);
-            }
-        } finally { walkTicks += s.tick() - w0; }
-        await end(false, `walk ${where}`);
-    };
-    // Back to the fly spot from either bank.
-    const backToRiver = async () => {
-        const p = pos();
-        if (p && (p.level > 0 || cheb(CASTLE_BANK, p) <= 25)) await castleWalk({ x: FLY_SPOT.x, z: FLY_SPOT.z, level: 0 }, 'castle to the river');
-        else await go(BANK_TO_FLY, 'back to the river');
-    };
     const bankTrip = async () => {
-        const draynor = wantDraynor();
-        if (draynor) lastTry = now();
-        if (draynor) await go(FIRE_TO_BANK, 'to Draynor bank');
-        else await castleWalk(CASTLE_BANK, 'to Lumbridge castle bank');
+        await go(FIRE_TO_BANK, 'to Draynor bank');
         const b0 = s.tick();
         try {
             const o = await s.bot.openBank();
@@ -285,7 +232,8 @@ try {
             // Raw fish the level cannot cook yet (salmon below 25) goes in too, or it would fill the pack for good.
             // One deposit-all per item name (a second call on a name already gone waits for its timeout: 614 bank
             // ticks in the first practice run).
-            const DEPOSIT = /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon)$/i;
+            const DEPOSIT = TICK3 ? /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon)$/i
+                : /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon|knife|logs|arrow shaft)$/i;
             for (const name of [...new Set(inv().filter(i => DEPOSIT.test(i.name)).map(i => i.name as string))]) {
                 const re = new RegExp(`^${name}$`, 'i');
                 const before = countItems(s, re);
@@ -299,7 +247,7 @@ try {
             console.log(`BANK pack=${packs} banked=${banked} bankFish=${bankFish} t=${now()}`);
             await s.bot.closeBank();
         } finally { bankTicks += s.tick() - b0; }
-        if (GIVE_TO && draynor) await handOff(courierComing() ? HANDOFF_WAIT : 0);
+        if (GIVE_TO) await handOff(0);
     };
 
     // Withdraws every cooked fish as notes and trades them to GIVE_TO. waitTicks > 0 waits for the player to arrive.
@@ -324,7 +272,7 @@ try {
             const n = notes.reduce((a, i) => a + i.count, 0);
             if (n === 0) { lastFail = 'no notes to give'; return; }
             const r = await s.bot.trade(who, { give: notes.map(i => ({ item: new RegExp(`^${i.name}$`, 'i'), amount: i.count })), timeout: 60_000, retryOnBusy: true });
-            if (r.success) { given += n; lastGive = now(); console.log(`MILESTONE gave ${r.gave.map(g => `${g.count} ${g.name}`).join(', ')} t=${now()}`); }
+            if (r.success) { given += n; console.log(`MILESTONE gave ${r.gave.map(g => `${g.count} ${g.name}`).join(', ')} t=${now()}`); }
             else {
                 lastFail = `trade:${r.reason} ${r.message}`;
                 console.log(`WARN trade ${r.reason} ${r.message}`);
@@ -359,7 +307,7 @@ try {
             continue;
         }
         if (feathers < FEATHER_MIN) {
-            if (countItems(s, RAW_FISH) > 0 || cookedInPack() > 0) { await cookAll(); await bankTrip(); await backToRiver(); continue; }
+            if (countItems(s, RAW_FISH) > 0 || cookedInPack() > 0) { await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); continue; }
             await chickenTrip(FEATHER_FILL, 0);
             await go(FIRE_TO_FLY, 'back to the river');
             continue;
@@ -367,12 +315,10 @@ try {
         if (invLen() >= 28) {
             await cookAll();
             await bankTrip();
-            await backToRiver();
+            await go(BANK_TO_FLY, 'back to the river');
             chain = null;
             continue;
         }
-        // The courier comes to Draynor: take the fish there now (Lumbridge banking only).
-        if (BANK_AT === 'lumbridge' && wantDraynor()) { await cookAll(); await bankTrip(); await backToRiver(); chain = null; continue; }
         // Fly fishing. Spots south of z 3248 sit on the spider bank (fishing30.ts).
         const f0 = s.tick();
         const raw0 = countItems(s, RAW_FISH);
@@ -385,7 +331,7 @@ try {
                 // The spots sit south on the spider bank (2026-10-23 live: 828, 231 and 228 idle ticks here). Use the
                 // wait: cook and bank what the pack holds, or fetch feathers, then look again.
                 noSpot = 0; spotWaits++;
-                await cookAll(); await bankTrip(); await backToRiver(); chain = null;
+                await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); chain = null;
                 continue;
             } else if (noSpot > 5 && invLen() <= 18) {
                 // No raw fish to cook: chickens give feathers, and the raw chicken is cooked at once (Cooking XP).
@@ -413,8 +359,8 @@ try {
                 await waitTicks(s, 3);
             } else {
                 // No knife or logs: click the spot once, and again when the player stops fishing (2 ticks with no
-                // animation: a level-up dialog or a random event stops it). Before this check the bot stood
-                // 317-456 ticks next to a spot that did not move (practice 2026-10-23, live Mightyrod t6000).
+                // animation). A level-up dialog stops fishing; before this check the bot stood 317 ticks next to a
+                // spot that did not move (practice 2026-10-23; live Mightyrod 456 ticks at 3239,3254).
                 stillAnim = (pos()?.animId ?? -1) === -1 ? stillAnim + 1 : 0;
                 if (chain?.index !== sp.index || stillAnim >= 2) {
                     await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });

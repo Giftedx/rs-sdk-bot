@@ -1,6 +1,7 @@
 import { rsSdkRoot } from './paths';
 import { isLiteRunning } from './lite';
 import { MM_PRESETS, extendVarps } from './presets-mm';
+import { DRAGON_PRESETS } from './presets-dragon';
 
 // Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
 export interface SaveConfig {
@@ -423,6 +424,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     floor_fms: { position: { x: 3068, z: 3295, level: 0 }, inventory: [{ id: 590, count: 1 }] },
     // Monkey Madness (scripts/generated/quest-mm.ts): packages/practice/src/presets-mm.ts.
     ...MM_PRESETS,
+    // Dragon Slayer, Merlin's Crystal, Holy Grail: packages/practice/src/presets-dragon.ts.
+    ...DRAGON_PRESETS,
 };
 
 // Agility laps (scripts/measure/agility-laps.ts): each course at its entry level and at 70 / 90.

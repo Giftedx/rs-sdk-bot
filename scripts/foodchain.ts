@@ -129,7 +129,9 @@ async function tick() {
     // Farmers: restart while they have food, or while the courier holds fish for them.
     for (const f of FARMERS) {
         if (running.has(f) || external(f) || dead.has(f)) continue;
-        if (farmerFood(f) > 0 || courierFish() > 0) start(f, 'scripts/goldfarm.ts', { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' });
+        // At least 5: the status list does not mark bank notes, and a single noted fish is no food (2026-10-23:
+        // mmtha0205 was restarted every 3.5 min with 1 noted salmon and logged out with "no food" each time).
+        if (farmerFood(f) >= 5 || courierFish() > 0) start(f, 'scripts/goldfarm.ts', { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' });
     }
     // Courier trip: fish ready at the cook and a farmer low (or waiting) and the courier holds none.
     if (running.has(COURIER) || external(COURIER) || dead.has(COURIER) || courierFish() > 0) return;
