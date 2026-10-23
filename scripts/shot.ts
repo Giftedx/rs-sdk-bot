@@ -7,9 +7,16 @@ const W = Number(wArg ?? 1600), H = Number(hArg ?? 1200), WAIT = Number(waitArg 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const port = 9300 + Math.floor(Math.random() * 500);
 const proc = Bun.spawn([EDGE, '--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${process.env.TEMP}\\shot-${port}`, `--window-size=${W},${H}`, 'about:blank'], { stdout: 'ignore', stderr: 'ignore' });
-// Edge starts many child processes, and proc.kill() stops only the first one. A shot killed by a timeout once left
-// 5 headless Edge processes at about 70% CPU in total, so every exit path kills the whole tree.
-const killTree = () => { try { Bun.spawnSync(['taskkill', '/PID', String(proc.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'ignore' }); } catch { /* already gone */ } };
+// The spawned msedge.exe is only a launcher: it starts the real browser and exits, so killing its pid or tree misses
+// the browser (seen 2026-10-23: 11-16 headless Edge processes left after shots, about 70% CPU). Every exit path kills
+// each Edge process that uses this shot's own profile folder.
+const killTree = () => {
+    try {
+        Bun.spawnSync(['powershell', '-NoProfile', '-Command',
+            `Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -match 'shot-${port}' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`],
+            { stdout: 'ignore', stderr: 'ignore' });
+    } catch { /* already gone */ }
+};
 for (const sig of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) process.on(sig, () => { killTree(); process.exit(1); });
 setTimeout(() => { console.log('shot: gave up after 90 s'); killTree(); process.exit(1); }, 90_000);
 try {
