@@ -60,7 +60,9 @@ function tick() {
             st = 'running';
             if (!job.enabled || stopAll) { writeFileSync(stopFile(job.account), 'swarm'); st = 'stopping'; }
         } else if (!job.enabled || stopAll) st = 'disabled';
-        else if (ended.has(job.account) && !job.repeat) st = `ended: ${ended.get(job.account)!.reason}`;
+        // A death ends the job even with repeat on: a restart after a death repeats the route or plan that killed it
+        // (2026-10-23: mmtha0205 respawned in Lumbridge and died twice more walking back to Ardougne).
+        else if (ended.has(job.account) && (!job.repeat || /^died/.test(ended.get(job.account)!.reason))) st = `ended: ${ended.get(job.account)!.reason}`;
         else if (age < 30_000) st = 'external (status fresh, not started by swarm)';
         else if (runs.size >= plan.maxBots) st = 'waiting: maxBots';
         else if (freemem() / 2 ** 30 < plan.minFreeGB) st = `waiting: ${(freemem() / 2 ** 30).toFixed(1)} GB free < ${plan.minFreeGB}`;

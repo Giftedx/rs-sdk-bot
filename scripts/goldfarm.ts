@@ -43,6 +43,12 @@ console.log(`ERR-TRACE opening ${process.argv[2]}`);
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 5);
+    // Farm only where the knights are. After a death the game respawns the bot in Lumbridge; walking from there to
+    // Ardougne killed mmtha0205 twice on 2026-10-23 (near 2906,3375). Getting back is a travel job, not this script's.
+    const p0 = s.sdk.getState()?.player;
+    if (!p0 || Math.max(Math.abs(p0.worldX - 2655), Math.abs(p0.worldZ - 3300)) > 60) {
+        await finish([s], false, `not in Ardougne (${p0?.worldX},${p0?.worldZ}); refusing to walk there`);
+    }
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
