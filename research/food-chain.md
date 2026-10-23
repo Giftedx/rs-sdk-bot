@@ -213,3 +213,10 @@ events, a live run of any part.
 - mmtha0205 started `goldfarm.ts` with `FOOD_FROM=Bigpackage FOOD_ONLY_TRADE=1`: `TRADE max_trades Completed 1 trade(s) (1 session(s)) notes=179 bigFood=0 t=55`. Two farmers now eat courier food (Pocketrocket, mmtha0205).
 - `give-to-banker.ts` without `GIVE=` also gave the courier's 765 coins (`MILESTONE gave 765 Coins, 98 Trout, 81 Salmon`). Always pass `GIVE=Trout:n,Salmon:m`. The courier's bank still holds 500 coins for fares.
 - Pocketrocket's first full farm run on courier food: `RESULT ok ticks=9000 ... coinsGained=123300 coinsPerTick=13.70 eaten=71 ... stallTrips=0 ... shopTrips=0 ... hpMin=4 died=false ... tradesIn=2 tradeTicks=181`. Eat rate 7.9 food per 1,000 ticks.
+
+## Live run 4 (2026-10-23)
+
+- Two failed starts first: the courier's 500 bank coins were gone. `give-to-banker.ts` without `GIVE=` withdraws every banked coin first (`give-to-banker.ts:24-32`), so trip 3's hand-out gave them away. Then Pocketrocket could not reach the bank from 2669,3321 in `give-to-banker.ts` (`cant_reach: Interacting with loc 376 - no route`, three tries). mmtha0205 gave 1,000 coins instead (`MILESTONE got 1000 Coins`).
+- Courier: `RESULT ok ticks=1206 received=192 ... coins=380 walkTicks=445 boatTicks=119 waitTicks=635`. The courier waited 635 ticks at Draynor until Mightyrod's next bank visit.
+- Pocketrocket's `goldfarm.ts` walked to the bank from the same spot (`BANK trip=1 ... t=388`) and took the fish: `TRADE max_trades Completed 1 trade(s) (1 session(s)) notes=192 bigFood=1 t=459`.
+- Next fix: the courier's wait. Mightyrod hands over only when it banks; it could bank as soon as the courier reaches Draynor.
