@@ -310,7 +310,6 @@ export const PRESETS: Record<string, SaveConfig> = {
     // (3188,3426) with a hammer (2347); the helper <bot>b at Varrock west bank with the SMITHING bars banked.
     floor_smith_trade: { position: { x: 3188, z: 3427, level: 0 }, inventory: [{ id: 2347, count: 1 }] },
     floor_smith_helper: { position: { x: 3185, z: 3436, level: 0 }, bank: [{ id: 2349, count: 20 }, { id: 2351, count: 37 }, { id: 2353, count: 96 }, { id: 2359, count: 281 }, { id: 2361, count: 341 }] },
-    ...agilityPresets(),
     // Ground-log firemaking (scripts/measure/floor-fm-ground.ts): the firemaker (Firemaking 75, tinderbox)
     // at Draynor bank, the helper <bot>b on the row start (3098,3248; 3099,3249 is not walkable) with 27 magic logs (1513).
     floor_fmg: { position: { x: 3092, z: 3243, level: 0 }, skills: { Firemaking: 75 }, inventory: [{ id: 590, count: 1 }] },
@@ -327,6 +326,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     // helper <bot>b at Draynor bank with the FIREMAKING logs banked (2/4/7/13/24/107, 1 spare each) to drop on the path.
     floor_fmr: { position: { x: 3092, z: 3243, level: 0 }, inventory: [{ id: 590, count: 1 }] },
     floor_fmr_helper: { position: { x: 3092, z: 3243, level: 0 }, bank: [{ id: 1511, count: 3 }, { id: 1521, count: 5 }, { id: 1519, count: 8 }, { id: 1517, count: 14 }, { id: 1515, count: 25 }, { id: 1513, count: 108 }] },
+    ...agilityPresets(),
     // Snake firemaking (scripts/measure/floor-fm-snake.ts): the firemaker with a tinderbox at the snake start (3068,3295).
     floor_fms: { position: { x: 3068, z: 3295, level: 0 }, inventory: [{ id: 590, count: 1 }] },
 };
@@ -341,6 +341,8 @@ function agilityPresets(): Record<string, SaveConfig> {
         gnome: { pos: { x: 2474, z: 3437, level: 0 }, levels: [1, 70, 90] },
         barbarian: { pos: { x: 2551, z: 3555, level: 0 }, levels: [35, 70, 90] },
         wilderness: { pos: { x: 3004, z: 3937, level: 0 }, levels: [52, 70, 90] },
+        // Brimhaven Agility Arena floor (plane 3, agilityarena.rs2:7), on the east rope swing's start tile.
+        arenaswing: { pos: { x: 2764, z: 9569, level: 3 }, levels: [70, 75, 90] },
     };
     const out: Record<string, SaveConfig> = {};
     for (const [course, c] of Object.entries(at))

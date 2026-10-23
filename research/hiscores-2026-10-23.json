@@ -1,6 +1,6 @@
 {
  "base": "https://rs-sdk-demo.fly.dev",
- "takenAt": "2026-10-23T09:56:08.309Z",
+ "takenAt": "2026-10-23T11:26:11.736Z",
  "boards": [
   {
    "board": "Overall",
@@ -2757,20 +2757,20 @@
     {
      "rank": 19,
      "name": "dotsbot44",
-     "level": 109,
-     "ticks": 3151301
+     "level": 110,
+     "ticks": 3155100
     },
     {
      "rank": 20,
-     "name": "dotsbot61",
-     "level": 109,
-     "ticks": 3314262
+     "name": "dotsbot15",
+     "level": 110,
+     "ticks": 3258267
     },
     {
      "rank": 21,
-     "name": "dotsbot86",
-     "level": 109,
-     "ticks": 3393030
+     "name": "dotsbot19",
+     "level": 110,
+     "ticks": 3269954
     }
    ]
   }

@@ -56,6 +56,16 @@ const COURSES: Record<string, { steps: Step[]; bonus: number; pit?: { minZ: numb
             { name: 'rocks', id: 2328, x: 2994, z: 3936, xp: 0, alt: [{ id: 2328, x: 2993, z: 3936 }, { id: 2328, x: 2995, z: 3936 }] },
         ],
     },
+    // Brimhaven Agility Arena (game_agilityarena/scripts/agilityarena.rs2:119-179): the two rope swings between the
+    // pillars (2761,9568) and (2772,9568) face opposite ways, 20 XP each, no use timer. A "lap" here is one swing each
+    // way (bonus 0: a lap is counted when the step list wraps). Pillar tickets are not taken.
+    arenaswing: {
+        bonus: 0,
+        steps: [
+            { name: 'swingEast', id: 3566, x: 2766, z: 9569, xp: 200 },
+            { name: 'swingWest', id: 3566, x: 2767, z: 9567, xp: 200 },
+        ],
+    },
 };
 
 const [bot, courseArg, lapsArg, capArg] = process.argv.slice(2);
@@ -124,7 +134,7 @@ try {
         const gained = xp() - stepXp;
         if (gained > 0) {
             // A lap bonus arrives in the same tick as the last obstacle's XP.
-            if (gained >= (C.bonus * 25) / 10 * 0.9) {
+            if (C.bonus > 0 ? gained >= (C.bonus * 25) / 10 * 0.9 : i === C.steps.length - 1) {
                 laps++;
                 lapTicks.push(s.tick() - lastLapTick);
                 console.log(`CYCLE lap=${laps} ticks=${s.tick() - lastLapTick} xp=${xp() - xpStart} t=${s.tick() - t0}`);
