@@ -130,9 +130,9 @@
       "env": {
         "TICKS": "9000"
       },
-      "enabled": true,
+      "enabled": false,
       "repeat": true,
-      "note": "host proven 9,000 ticks on practice: 584 MB for 4 bots, no leak, 4/4 ok (research/bot-host.md)"
+      "note": "PAUSED 2026-10-23 ~14:00: stall food trips are lethal live (5 farmer deaths today; guards attack thieves with no food left). Restart only with a safe food supply (lobsters by trade, or another source)"
     }
   ]
 }
