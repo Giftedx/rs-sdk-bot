@@ -249,6 +249,8 @@ try {
     if (!(await walk([[MARKET.x, MARKET.z, 3]]))) await end(false, 'walk to market');
     }
     mark('ardougne');
+    // ARRIVE_ONLY=1: stop at the market (the banker account uses steps 1-2 to reach Ardougne).
+    if (process.env.ARRIVE_ONLY === '1') await end(true, 'arrived in Ardougne');
 
     // ---- Steps 3 and 4: Ardougne pickpocketing with food from the Baker.
     // One trip fills the pack with every food line in stock (bread, cake, chocolate slice); the next trip comes
