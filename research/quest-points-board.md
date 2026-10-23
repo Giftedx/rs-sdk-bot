@@ -63,7 +63,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Fishing Contest (`fishingcompo`) | 1 (92) | rest | Fishing 10 (`quest_fishingcompo/scripts/hemenster_fishing.rs2:70`) | none found | S |
 | Gertrude's Cat (`fluffs`) | 1 (93) | rest | none found | none found | S |
 | Goblin Diplomacy (`gobdip`) | 5 (94) | `gobdip` | none | none | - |
-| Holy Grail (`grail`) | 2 (95) | `grail` | Merlin's Crystal (OSRS; row `requires` it) | Black Knight Titan (`quest_grail/scripts/grail_journal.rs2:11`) | - |
+| Holy Grail (`grail`) | 2 (95) | `grail` (MEASURED 1,451-1,479 ticks, `quest-plan.md` 1k) | Merlin's Crystal (`king_arthur.rs2` grail start needs `%arthur` complete); no weapon or armour on Entrana | Black Knight Titan (`quest_grail/scripts/grail_journal.rs2:11`), needs Excalibur worn at its death | - |
 | The Grand Tree (`grandtree`) | 5 (96) | `grandtree` | Agility 25 (`quest_grandtree/scripts/quest_grandtree.rs2:25`); Tree Gnome Village read at `king_narnode.rs2:8` | level 172 demon (`grandtree_journal.rs2:14`) | - |
 | Ernest the Chicken (`haunted`) | 4 (97) | `qp-filler` | none found | none found | - |
 | Haunted Mine (`hauntedmine`) | 2 (98) | rest | Agility 15, Crafting 35, Morytania access (Priest in Peril) (`quest_hauntedmine/scripts/hauntedmine_journal.rs2:10-16`) | level 95 (`:19`) | L |

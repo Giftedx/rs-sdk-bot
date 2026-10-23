@@ -2639,10 +2639,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1200,
-    "realistic": 3000,
-    "evidence": "ESTIMATE",
-    "source": "XP: quest_grail.rs2:116-117 (CODE-READ); time not measured"
+    "floor": 1451,
+    "realistic": 1479,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1k: scripts/generated/quest-grail.ts, preset quest_grail (beside King Arthur; every skill 99, Merlin's Crystal done, Excalibur and rune scimitar in the pack, nothing worn), practice, 3/3 PASS at 1,473, 1,451, 1,479 ticks (floor = best run, realistic = worst run); Arthur to Arthur, the walk to Camelot and the bank trip for the rune helm, body and legs not counted; helper items 100 coins, teleport runes; QP: quest.constant:95"
    },
    "lump": true,
    "xp": {
@@ -2658,8 +2658,8 @@
     "attack": 20,
     "prayer": 43
    },
-   "evidence": "ESTIMATE",
-   "source": "XP: quest_grail.rs2:116-117 (CODE-READ); time not measured",
+   "evidence": "MEASURED",
+   "source": "research/quest-plan.md section 1k: scripts/generated/quest-grail.ts, preset quest_grail (beside King Arthur; every skill 99, Merlin's Crystal done, Excalibur and rune scimitar in the pack, nothing worn), practice, 3/3 PASS at 1,473, 1,451, 1,479 ticks (floor = best run, realistic = worst run); Arthur to Arthur, the walk to Camelot and the bank trip for the rune helm, body and legs not counted; helper items 100 coins, teleport runes; QP: quest.constant:95; XP: quest_grail.rs2:116-117 (CODE-READ)",
    "patches": [
     {
      "lever": "combat-hp-bound",
@@ -2673,10 +2673,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 1110,
-       "realistic": 2774,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 1200/3000"
+       "floor": 1451,
+       "realistic": 1479,
+       "evidence": "MEASURED",
+       "source": "research/quest-plan.md section 1k: scripts/generated/quest-grail.ts, preset quest_grail (beside King Arthur; every skill 99, Merlin's Crystal done, Excalibur and rune scimitar in the pack, nothing worn), practice, 3/3 PASS at 1,473, 1,451, 1,479 ticks (floor = best run, realistic = worst run); Arthur to Arthur, the walk to Camelot and the bank trip for the rune helm, body and legs not counted; helper items 100 coins, teleport runes; QP: quest.constant:95; the rival burst run is not measured by us"
       }
      }
     }

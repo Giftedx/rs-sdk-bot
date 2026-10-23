@@ -420,7 +420,7 @@ melee damage to 0 (`skill_combat/scripts/npc/npc_combat_melee.rs2:44-45`). It dr
 | `rival-mm` | prayer 43, magic 75 | jungle demon 170 attack, strength, magic, 170 HP; waves with max hit 31, 0 under Protect from Magic (Prayer 37) (`quest_mm/scripts/mm_demon.rs2:349-353`); melee only within 2 tiles (`mm_demon.rs2:332-336`). Damage source Fire Wave, MEASURED (section 1h) |
 | `crest` | magic 59, prayer 43 | Chronozon: attack 173, strength 172, slash (`quest_crest/configs/quest_crest.npc:45-52`); the MEASURED proof ran at Hitpoints 97, not under the prayer |
 | `merlin` | prayer 43 | Sir Mordred: 33/33, 38 HP, slash, max hit 4 (`quest_arthur/configs/keep_le_faye.npc:77-87`) |
-| `grail` | attack 20, prayer 43 | Black Knight Titan: 91/100, 142 HP, crush, max hit 11 (`quest_grail/configs/fisher_realm.npc:293-308`) |
+| `grail` | attack 20, prayer 43 | Black Knight Titan: 91/100, 142 HP, crush, max hit 11 (`quest_grail/configs/fisher_realm.npc:293-308`); MEASURED 1,451-1,479 ticks (section 1k), HP min 99 |
 | `dragon` | prayer 43 | Elvarg: 70/70, 120 HP, slash, attack range 8 (`quest_dragon/configs/quest_dragon.npc:15-29`); the dragonfire needs the anti-dragon shield |
 
 New train row `prayer-43` (bury dragon bones to 43, rates of `prayer-31`). Train rows only reorder XP, so the cost
@@ -805,20 +805,67 @@ ESTIMATE). Scenario a Overall finish 40,212 floor / 45,105 realistic, unchanged 
 
 Still open: the walk to Camelot is not counted; the route crosses the Wilderness to the only chaos altar (3239,3608).
 
-## 1k. Holy Grail (the `grail` row): not started
+## 1k. Measured: Holy Grail (the `grail` row)
 
-Needs Merlin's Crystal (`%arthur` 7) and Excalibur against the Black Knight Titan (`black_knight_titan.rs2`). Stages
-from `quest_grail.constant` and `quest_grail.rs2`: Arthur (2), Merlin in his workshop (3, door `merlinworkshop`), the
-crone (4), the Titan (7 if failed), Percival in the Goblin Village sacks (8, `percy_sacks`, magic golden feather),
-whistle given (9); the magic whistle from the Draynor Manor door `whistledoor` (spawns at 3107,3359,2 with the
-napkin), used in the Karamja zone 2740-2743,3234-3237 to reach the Fisher Realm; the grail bell; the Holy Grail;
-Arthur queues the completion (110,000 Prayer and 153,000 Defence before 25x, `quest_grail.rs2:115-120`). Not read:
-`sir_percival.rs2`, `grail_crone.rs2`, `fisher_king.rs2`, Galahad, Entrana (no weapons or armour allowed).
+Script `scripts/generated/quest-grail.ts`, preset `quest_grail` (`presets-dragon.ts`, beside King Arthur; every
+skill 99, Merlin's Crystal done (varp 14 = 7); Excalibur and the rune scimitar in the pack, nothing worn; helper
+items 100 coins, runes for three Falador and four Camelot teleports (8 law, 32 air, 4 water), 6 lobsters). Debug
+presets `quest_grail_s2` ... `_s9` (`HG_FROM=<milestone>`, `HG_STOP=<milestone>`). Practice server, one bot at a
+time, each run on a fresh account deleted after the run.
 
-**Next stage:** read `quest_grail/scripts/*.rs2` and the NPC scripts with `%grail` (King Arthur's grail branch is in
-`king_arthur.rs2`, Gawain's and Lancelot's in `sir_gawain.rs2` and `sir_lancelot.rs2`); then write
-`scripts/generated/quest-grail.ts` from a `quest_grail` preset in `presets-dragon.ts` (every skill 99, `%arthur` 7,
-Excalibur in the pack, the `merlin()` QP varps plus 14 = 7), and prove it 3/3 like 1i and 1j.
+3/3 PASS (MEASURED practice, 2026-10-23):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | HP min |
+|---|---|---|---|---|
+| 1 | `RESULT ok qp=2 grail=true questMsg=true xp=attack=3575,defence=382500,hitpoints=4745,prayer=275000,magic=9150 at=2766,3512,0 ticks=1473 hpMin=99 eats=0 walkTicks=947 retries=8 died=false` | 1,473 | 261 (17.7%) | 99 |
+| 2 | `RESULT ok qp=2 grail=true questMsg=true xp=attack=3575,defence=382500,hitpoints=4745,prayer=275000,magic=9150 at=2762,3511,0 ticks=1451 hpMin=99 eats=0 walkTicks=939 retries=8 died=false` | 1,451 | 254 (17.5%) | 99 |
+| 3 | `RESULT ok qp=2 grail=true questMsg=true xp=attack=3575,defence=382500,hitpoints=4735,prayer=275000,magic=9150 at=2765,3511,0 ticks=1479 hpMin=99 eats=0 walkTicks=944 retries=8 died=false` | 1,479 | 268 (18.1%) | 99 |
+
+Every run ends with `Congratulations! Quest complete!`, 382,500 Defence and 275,000 Prayer. Planned: 1,110 / 2,774
+(ESTIMATE, the `rival-dialogue-burst` patch of 1,200 / 3,000); measured 1,451-1,479.
+
+Stages (varp `%grail` 5, `quest_grail.constant`), with run 2 MILESTONE ticks:
+
+| # | Stage | Ticks | Evidence |
+|---|---|---|---|
+| 1 | King Arthur: "Tell me of this quest.", "I'd enjoy trying that." (5 = 2) | 0-24 | `king_arthur.rs2:53-72` |
+| 2 | Camelot stairs (2750,3510) to level 1; workshop door (`merlinworkshop` 24 at 2764,3503,1) spawns Merlin; "Thank you for the advice." (5 = 3) | 24-84 | `quest_grail.rs2:1-14`, `merlin.rs2:6-31` |
+| 3 | Falador teleport; Port Sarim: Excalibur and the scimitar dropped (300 ticks, `drop.rs2:22`); the monk's ship; the High Priest spawns the crone, "Ok, I will go searching." (5 = 4); ship back; both picked up | 84-330 | `high_priest_of_entrana.rs2:1-13`, `grail_crone.rs2` |
+| 4 | Camelot teleport; Galahad (2612,3474): "I seek an item from the realm of the Fisher King.": holy table napkin | 330-434 | `brother_galahad.rs2` |
+| 5 | Falador teleport; Draynor Manor front door, stairs (`spookystairs` op "Walk-up"), spiral stairs to level 2; the whistle door (22 at 3106,3361,2) spawns two whistles at 3107,3359,2 | 434-602 | `quest_grail.rs2:28-33` |
+| 6 | Camelot teleport; Captain Barnaby (30 coins) to Brimhaven; the whistle at 2742,3235; the Black Knight Titan; the fisherman's bell; the bell into the castle; two doors on level 1; the Fisher King: "You don't look too well." (5 = 8); the whistle back | 602-1010 | `black_knight_titan.rs2`, `grail_fisherman.rs2`, `fisher_king.rs2` |
+| 7 | Falador teleport; the Goblin Village sacks (23 at 2960,3507, op 2) spawn Sir Percival; "Your father wishes to speak to you."; a whistle given (5 = 9) | 1010-1108 | `quest_grail.rs2:20-27`, `sir_percival.rs2` |
+| 8 | Camelot teleport, Barnaby, the whistle to the restored realm (2678,4715); spiral stairs 2648,4683, ladder 2651,4684 to level 2; the Holy Grail at 2649,4684,2; the whistle back | 1108-1414 | `maps/m41_73.jm2` obj `2 25 12` |
+| 9 | Camelot teleport; King Arthur queues the completion | 1414-1451 | `king_arthur.rs2:26-33` |
+
+Findings:
+
+- Entrana takes no weapon or armour (`monk_of_entrana.rs2` `has_entrana_restricted_items`, Excalibur is
+  `weapon_slash`). The preset has nothing worn: the merlin row's rune helm, body and legs must go to a bank before
+  this row (not counted). The two weapons wait on the Port Sarim dock (about 120 ticks; a drop lasts 300).
+- The Titan's death check reads only the worn slot (`defeat_titan`: `inv_total(worn, excalibur)`). The rune scimitar
+  does the damage (speed 4, slash 45, strength 44) with Ultimate Strength and Incredible Reflexes; Excalibur goes on
+  when the Titan is at 20 HP or less (the scimitar's max hit). Titan fight: about 66 ticks with the scimitar,
+  140-200 with Excalibur alone. Magic and ranged do nothing (magic and ranged defence 1000, `fisher_realm.npc`).
+  Three prayers empty 99 points in about 160 ticks.
+- In the dead realm the fisherman is past the Titan; the bot cannot reach him from the arrival tile.
+- The bell works only with a grail maiden within 4 tiles (`opheld1,grail_bell`); the maidens wander inside the
+  wall, so the script rings when one is within 3 tiles.
+- The Fisher King's room on level 1 is behind door 1530 at 2766,4684 and the diagonal door 1530 at 2766,4688
+  (`maps/m43_73.jm2 1 14 12`, `1 14 16`); the SDK plan does not cross the diagonal door.
+- No Ardougne teleport: it needs Plague City (`teleport.rs2:22`), which is in `quests-rest`. Each Karamja trip is a
+  Camelot teleport and the walk to the Ardougne docks (about 130 ticks to Barnaby).
+- The realm has free whistles on the ground (`maps/m43_73.jm2` obj `0 54 38` and others), so one whistle from the
+  manor is enough if the spare is picked up there.
+
+Planner: row `grail` 1,451 / 1,479 MEASURED (base and `rival-dialogue-burst` patch; was 1,200 / 3,000 and 1,110 /
+2,774 ESTIMATE). Scenario a, `research/hiscores-live.json`: Overall finish 40,212 floor / 45,105 realistic before
+and after (the row runs after the last 99). Quest Points board: WIN at 102,043 / 139,537 before, 102,384 / 138,242
+after. `bun test packages/planner`: 42 pass.
+
+Still open: the walk to Camelot and the bank trip for the rune armour are not counted. Possible cuts: Galahad from
+Seers' Village is still a 75-tick walk; the two Barnaby trips cost about 260 ticks; super attack and strength
+potions would shorten the Titan fight.
 
 ## 2. Combat boards: what quests give and what the leaders need
 
@@ -864,7 +911,7 @@ QP, and the QP deadline (921,761) is far away.
 | 7 | Dragon Slayer | 32 QP (`%qp < 32`, CODE-READ) | anti-dragon shield (Duke Horacio), 3 map pieces, 3 planks, 90 steel nails, hammer, unfired bowl, wizard's mind bomb, lobster pot, silk, 10,000 coins for the boat | 466,250 Strength, 466,250 Defence, 2 QP | 4,000 ESTIMATE | Elvarg (83) dragonfire, Melzar's maze (lesser demon 82, zombies, ghosts), Crandor skeletons |
 | 8 | Scorpion Catcher | Prayer 31 (OSRS) | scorpion cage, food | 165,625 Strength, 1 QP | 1,500 ESTIMATE | Taverley dungeon: poison spiders, black knights |
 | 9 | The Grand Tree | Agility 25 (`stat(agility) < 25` gate, CODE-READ) | food | 460,000 Attack, 197,500 Agility, 53,750 Magic, 5 QP | 2,500 ESTIMATE | Black demon (172) in the mine: needs protect from melee (Prayer 43) or a safespot |
-| 10 | Merlin's Crystal, Holy Grail | Holy Grail: Merlin's Crystal, Attack 20 (OSRS) | bat bones, black candle, insect repellent, bread | 382,500 Defence, 275,000 Prayer, 8 QP | 4,000 ESTIMATE together | Sir Mordred (39), Black Knight Titan (120, needs Excalibur) |
+| 10 | Merlin's Crystal, Holy Grail | Holy Grail: Merlin's Crystal, Attack 20 (OSRS) | bat bones, black candle, insect repellent, bread | 382,500 Defence, 275,000 Prayer, 8 QP | 2,319-2,376 MEASURED practice together (868-897 + 1,451-1,479, sections 1j and 1k) | Sir Mordred (39), Black Knight Titan (120, needs Excalibur) |
 | 11 | Dwarf Cannon | none | 2 law, 8 air, 1 water rune for two teleports | 18,750 Crafting, 1 QP; unlocks the cannon for Ranged | 888-925 MEASURED practice, 3 runs (section 1b) | goblins (low) |
 | 12 | The rest, about 50 quests | see `research/quest-route.md` | per quest | to 145 QP | about 60,000 ESTIMATE | per quest |
 
