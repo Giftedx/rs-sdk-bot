@@ -2,8 +2,9 @@
 
 Model: `packages/planner/src/haggis.ts` with travel (`packages/planner/src/travel.ts`). Inputs:
 `packages/planner/src/haggis-boards.json` (each number has `evidence` and `source`; each row has a place) and the leg
-cache `packages/planner/src/haggis-travel.json`. Deadlines: `research/hiscores-live.json` (taken 2026-10-23T08:26:19.899Z), row 1
-of each board. Reprint every table here with
+cache `packages/planner/src/haggis-travel.json`. Deadlines: `research/hiscores-live.json` (taken 2026-10-23T08:26:19.899Z; the 12:26:15Z snapshot has the same row-1
+times), row 1 of each board. The Verdict and table (a) were reprinted 2026-10-23 after the route choice and the
+measured Agility rows; the order, each-board-alone and lever tables below are older. Reprint every table here with
 `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --order --supplies --evidence --levers --travel`.
 
 ## Verdict
@@ -15,14 +16,15 @@ of each board. Reprint every table here with
   of every board that comes after it.
 - The Overall #1 (`stunbaron`) has all 19 skills at 99 in 35,916 ticks. With every safe lever, the travel legs,
   the legal Cooking route and the stageable supply rows (2026-10-23, `research/supply-logistics.md`), Haggis
-  reaches Overall at **38,114 ticks at floor rates (slack -2,198)** and **46,856 at realistic rates (slack
-  -10,940)**. ESTIMATE (the model; most rows are code-read or rival figures). Before the supply rows the same
-  table gave 36,437 / 43,696. The last 99 is Agility at both rates.
+  reaches Overall at **38,583 ticks at floor rates (slack -2,667)** and **47,248 at realistic rates (slack
+  -11,332)**. ESTIMATE (the model; most rows are code-read or rival figures). Before the supply rows the same
+  table gave 36,437 / 43,696; before the measured Agility rows (`research/agility.md`) and the route choice,
+  38,764 / 46,856. The last 99 is Agility at both rates.
 - **Route choice by Overall (2026-10-23).** `schedule` now picks the variant combination with the earliest Overall
   finish for each mode (`chooseRoute` in `haggis.ts`; all combinations when there are 64 or fewer, else one group at
   a time with a re-check; tie-break: the sum of slack over the clock boards). Only the `magic-smithing` group has
-  two live options. Floor picks `superheat` (38,114; the raw-tick choice `separate` gives 38,764). Realistic keeps
-  `separate` (46,856; `superheat` gives 47,444 there). The CLI prints the route and the last 99 per mode.
+  two live options. Floor picks `superheat` (38,583; the raw-tick choice `separate` gives 39,257). Realistic keeps
+  `separate` (47,248; `superheat` gives 47,812 there). The CLI prints the route and the last 99 per mode.
 - **Superheat route supplies (2026-10-23).** `magic-43` now trains on the teleport ladder (36 wind strikes, 15
   teleports; 168 / 219 ticks, ESTIMATE): the enchant ladder to 43 needs 28 cosmic runes, more than the 20 that
   can be staged. `magic-top` now superheats gold past Smithing 99 (441.7 / 415 Magic XP per tick, 30 gold ore,
@@ -36,17 +38,16 @@ of each board. Reprint every table here with
   (chaos-druid herb drops, 630 / 780), `magic-teleport` (722 law runes, 3,000 / 3,750, no longer inside the
   pickpocket stuns). The table field `unsourceable` lists the items, and `haggis.test.ts` fails if an active row
   needs one. Each replacement row has a `leadTime` note for the helper work.
-- Travel adds 4,745 ticks before the last 99 at floor rates (6,926 over the whole run; 4,670 / 6,851 on the
-  realistic route, walks between rows plus
-  walks inside rows: bank trips, altar and fishing-spot changes). The same table without travel (`--no-travel`)
-  gives 34,094 / 42,186. The rival
+- Travel adds 4,769 ticks before the last 99 at floor rates and 6,950 over the whole run (4,718 / 6,899 on the
+  realistic route): walks between rows plus walks inside rows (bank trips, altar and fishing-spot changes). The
+  same table without travel (`--no-travel`) gives 33,814 / 42,530. The rival
   plan prices 2,283 of legs and about 1,789 of allowances (`research/rival-gap-list.md`). Our legs are longer
   because the EDF order does not group rows by place and the model has no teleports.
 - At floor and at realistic rates all 20 clock boards are late in the EDF order. Herblore (once +95 at floor)
   now finishes at 1,036 / 1,217 against 447.
 - Scenarios (a) and (b) give the same numbers. Login wine, the cocktail route to Cooking 35, pyre logs and
   Charge spam are content bugs (owner rule) and are marked OUT in the table. Scenario (c) is 277 / 304 ticks
-  faster (37,837 / 46,552, same routes as (a)): with Magic out of the pickpocket stuns, stun relog now saves ticks.
+  faster (38,306 / 46,944, same routes as (a)): with Magic out of the pickpocket stuns, stun relog now saves ticks.
 
 **Best achievable set** (largest set of boards that can all win, generalised Moore-Hodgson in `bestSet`):
 
@@ -84,32 +85,32 @@ separate Magic and Smithing rows (route choice by Overall).
 | Fletching | 57 | 177 | -120 | 207 | -150 |
 | Crafting | 197 | 406 | -209 | 437 | -240 |
 | Herblore | 447 | 1,036 | -589 | 1,217 | -770 |
-| Firemaking | 664 | 1,675 | -1,011 | 1,997 | -1,333 |
-| Prayer | 1,281 | 20,704 | -19,423 | 26,479 | -25,198 |
-| Magic | 1,324 | 5,460 | -4,136 | 5,759 | -4,435 |
-| Smithing | 1,337 | 5,375 | -4,038 | 7,226 | -5,889 |
-| Runecraft | 2,354 | 7,082 | -4,728 | 8,945 | -6,591 |
-| Thieving | 2,935 | 17,237 | -14,302 | 22,613 | -19,678 |
-| Woodcutting | 3,181 | 20,498 | -17,317 | 26,374 | -23,193 |
-| Fishing | 3,425 | 23,674 | -20,249 | 30,420 | -26,995 |
-| Mining | 3,964 | 26,741 | -22,777 | 34,673 | -30,709 |
-| Attack | 4,728 | 10,462 | -5,734 | 15,162 | -10,434 |
-| Strength | 4,966 | 27,543 | -22,577 | 35,534 | -30,568 |
-| Ranged | 5,595 | 32,211 | -26,616 | 40,379 | -34,784 |
-| Agility | 6,772 | 38,114 | -31,342 | 46,856 | -40,084 |
-| Defence | 7,974 | 34,225 | -26,251 | 42,479 | -34,505 |
-| Hitpoints | 17,058 | 31,245 | -14,187 | 39,369 | -22,311 |
-| Overall | 35,916 | 38,114 | -2,198 | 46,856 | -10,940 |
+| Firemaking | 664 | 1,764 | -1,100 | 1,970 | -1,306 |
+| Prayer | 1,281 | 20,797 | -19,516 | 26,440 | -25,159 |
+| Magic | 1,324 | 5,487 | -4,163 | 5,803 | -4,479 |
+| Smithing | 1,337 | 5,402 | -4,065 | 7,161 | -5,824 |
+| Runecraft | 2,354 | 7,109 | -4,755 | 8,880 | -6,526 |
+| Thieving | 2,935 | 17,330 | -14,395 | 22,574 | -19,639 |
+| Woodcutting | 3,181 | 20,591 | -17,410 | 26,335 | -23,154 |
+| Fishing | 3,425 | 23,767 | -20,342 | 30,381 | -26,956 |
+| Mining | 3,964 | 26,834 | -22,870 | 34,634 | -30,670 |
+| Attack | 4,728 | 10,555 | -5,827 | 15,123 | -10,395 |
+| Strength | 4,966 | 27,636 | -22,670 | 35,495 | -30,529 |
+| Ranged | 5,595 | 32,304 | -26,709 | 40,340 | -34,745 |
+| Agility | 6,772 | 38,583 | -31,811 | 47,248 | -40,476 |
+| Defence | 7,974 | 34,318 | -26,344 | 42,440 | -34,466 |
+| Hitpoints | 17,058 | 31,338 | -14,280 | 39,330 | -22,272 |
+| Overall | 35,916 | 38,583 | -2,667 | 47,248 | -11,332 |
 | Quest Points | 145 QP by 1,022,261 | never 145 (142 QP in the table) | NEVER | never | NEVER |
-| Equipment, Bank, Runite | no clock | 61,365-62,340 | target unknown | 108,420-110,425 | target unknown |
+| Equipment, Bank, Runite | no clock | 61,834-62,809 | target unknown | 108,812-110,817 | target unknown |
 
-Worst five boards (realistic slack): Agility -40,084, Ranged -34,784, Defence -34,505, Mining -30,709,
-Strength -30,568. At floor: Agility -31,342, Ranged -26,616, Defence -26,251, Mining -22,777, Strength -22,577.
+Worst five boards (realistic slack): Agility -40,476, Ranged -34,745, Defence -34,466, Mining -30,670,
+Strength -30,529. At floor: Agility -31,811, Ranged -26,709, Defence -26,344, Mining -22,870, Strength -22,670.
 
 ### (b) With login wine, (c) all tricks
 
-(b) is the same as (a): login wine is OUT (content bug), so the trick has no row to use. (c) gives Overall 37,837
-floor / 46,552 realistic, 277 / 304 ticks faster than (a): Magic is no longer a stun guest (teleports leave the
+(b) is the same as (a): login wine is OUT (content bug), so the trick has no row to use. (c) gives Overall 38,306
+floor / 46,944 realistic, 277 / 304 ticks faster than (a): Magic is no longer a stun guest (teleports leave the
 thieving spot), so stun relog now saves ticks. Pyre logs are OUT (content bug).
 
 ### Each board alone (a fresh account that trains only this board first)
@@ -248,7 +249,7 @@ The staging plan per item, helper and hour is `research/supply-logistics.md`.
 | Herblore, Crafting | Supply-bound: no legal torstol, snapdragon, toadflax or dragonstone at scale (`research/supply-logistics.md`). Drop herbs (630 / 780) and diamonds (229 / 230) are slower than the leaders (447, 197) | -261 / -411 and -110 / -111 alone |
 | Firemaking, Prayer, Smithing, Runecraft | Win alone at floor, but each one comes after 300-6,000 ticks of earlier boards | see table (a) |
 | Woodcutting to Defence | Each needs 3,000-7,000 ticks and comes after 9,000+ ticks of earlier boards | -9,338 to -27,910 at floor |
-| Overall | Late at both rates with every safe lever and the stageable supply rows | -2,198 / -10,940 (a, b); -1,921 / -10,636 (c) |
+| Overall | Late at both rates with every safe lever and the stageable supply rows | -2,667 / -11,332 (a, b); -2,390 / -11,028 (c) |
 
 ## Unknowns and the experiment that closes each
 
