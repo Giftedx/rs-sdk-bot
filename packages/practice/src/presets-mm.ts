@@ -9,7 +9,7 @@ import type { SaveConfig } from './presets';
 // the Grand Tree is scripted by another helper.
 // Worn (Defence 1): wizard hat 579, amulet of magic 1727, staff of fire 1387, wizard robe 577, blue skirt 1011.
 // Inventory (helper items): Fire Wave runes (1 blood 565 + 5 air 556, fire from the staff) for 200 casts (one test
-// run used 60 without the kill; Ape Atoll pests take some); 2 law runes 563 (Varrock Teleport); gold bar 2357, ball
+// run used 60 without the kill; Ape Atoll pests take some); 3 law runes 563 (Varrock Teleport at the end, and once out of a boxed temple landing); gold bar 2357, ball
 // of wool 1759, monkey bones 3183 (a Karamja monkey's, quest_tbwt/scripts/monkey.rs2:73); 7 prayer potions 2434;
 // 1 super antipoison 2448 (Karamja jungle spiders, Ape Atoll wildlife: the plain one ran out); 12 sharks 385 (26 slots: the seal and the orders fill the pack in chapter 1). No bananas: the child's garden has
 // banana trees (2741-2746,2792-2797) and the script picks 5 there (banana_tree.rs2). The full run at HP 35 with
@@ -19,7 +19,7 @@ const MM_SKILLS = {
     Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99,
 };
 const MM_WORN = [[579, 0], [1727, 2], [1387, 3], [577, 4], [1011, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
-const MM_PACK = [[565, 200], [556, 1000], [563, 2]].map(([id, count]) => ({ id: id!, count: count! }))
+const MM_PACK = [[565, 200], [556, 1000], [563, 3]].map(([id, count]) => ({ id: id!, count: count! }))
     .concat([2357, 1759, 3183, 2434, 2434, 2434, 2434, 2434, 2434, 2434, 2448].map(id => ({ id, count: 1 })),
         Array.from({ length: 12 }, () => ({ id: 385, count: 1 })));
 

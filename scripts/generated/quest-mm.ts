@@ -747,7 +747,7 @@ try {
         };
         const floorOut = (): boolean => level() === 0 && !q.near(2806, 2785, 3);
         console.log(`NOTE temple landing ${q.pos()?.worldX},${q.pos()?.worldZ}`);
-        for (let t = 0; t < 200 && level() === 0 && !floorOut(); t += 3) {
+        for (let t = 0; t < 90 && level() === 0 && !floorOut(); t += 3) {
             await q.guard('temple out');
             const p = q.pos()!;
             if (p.worldX === 2806 && p.worldZ === 2785 || t % 12 >= 6) {
@@ -760,7 +760,38 @@ try {
             await q.waitUntil(() => level() === 1 || floorOut(), 3);
         }
         if (level() === 1) await roofWay();
-        if (!floorOut()) await q.fail('temple out');
+        // Boxed with no way out (the engaged guards do not wander; practice run: 200 ticks at 2805,2786): Varrock
+        // Teleport (a third law rune in the pack) and the long way back to the atoll, the third knockout and lock.
+        if (!floorOut() && level() === 0) {
+            console.log(`NOTE temple boxed at ${q.pos()?.worldX},${q.pos()?.worldZ}: Varrock Teleport and back`);
+            want = null;
+            await q.teleport('box teleport', 'magic:varrock_teleport', 3213, 3424);
+            const tree = async (label: string, at: { x: number; z: number }, pats: RegExp[], land: { x: number; z: number }): Promise<void> => {
+                await walk(`to ${label}`, [{ x: at.x, z: at.z - 2, tol: 2 }]);
+                for (let i = 0; i < 3 && !q.near(land.x, land.z, 8); i++) {
+                    const t = q.findLoc(l => /tree/i.test(l.name) && near3(l, at, 2) && (l.optionsWithIndex ?? []).length > 0);
+                    if (!t) { await q.waitTicks(1); continue; }
+                    await q.opLoc(t, 1);
+                    await q.waitUntil(() => q.dialogOpen(), 15);
+                    await converse1(pats, () => q.near(land.x, land.z, 8), 40);
+                }
+                if (!q.near(land.x, land.z, 8)) await q.fail(label);
+                await shutDialog();
+            };
+            await tree('varrock tree b', { x: 3177, z: 3506 }, [/^yes please/i], { x: 2542, z: 3169 });
+            await tree('village tree b', { x: 2543, z: 3168 }, [/where can i go/i, /gnome stronghold/i], { x: 2461, z: 3443 });
+            await enterTree();
+            await treeTo(1);
+            await talk1('daero back b', /^daero$/i, [/^yes/i], () => z() > 4400 && level() === 0, 40, DAERO);
+            await shutDialog();
+            await talk1('waydar back b', /^waydar$/i, [/^yes/i], () => q.near(CRASH_ISLAND.x, CRASH_ISLAND.z, 8), 40);
+            await shutDialog();
+            await talk1('lumdo back b', /^lumdo$/i, [], () => q.near(2802, 2707, 6), 20, { x: 2891, z: 2724 });
+            await shutDialog();
+            await knockout('jail3');
+            want = 'auto';
+        }
+        if (!floorOut() && !(level() === 0 && z() < 2780)) await q.fail('temple out');
         want = 'auto';
         await wear('amulet', ITEM.amulet);
         q.milestone(107);
