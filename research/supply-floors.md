@@ -22,11 +22,16 @@ number of logged-in ticks from the first input to the level-99 stamp.
 | Fletching | **49** (49, 49, 49) | 58 | **+9** | Arrows and darts from stacks, open loop 5 per tick | MEASURED |
 | Crafting | **194** (194, 194, 195) | 197 | **+3** | Gems from a booth, 27 per trip | MEASURED |
 | Herblore | **246** from Herblore 3 (246, 246, 246) | 447 | **+201** (less the ticks to reach 3) | Potions from a booth, 14 per trip | MEASURED |
-| Smithing | **1,593** (1,593, 1,594, 1,593) | 1,337 | **-256** | Platebodies, Varrock west bank + anvil | MEASURED |
-| Firemaking | see section | 673 | see section | Logs in lines at Draynor | MEASURED (pending runs) |
-| Prayer | see section | 1,281 | see section | Bury dragon bones at a booth | MEASURED (pending runs) |
-| Magic | see section | 1,513 | see section | Enchant jewellery at a booth | MEASURED (pending runs) |
-| Cooking (normal) | see section | 38 | see section | Fish on a fire to 35, then hand-made wine | MEASURED (pending runs) |
+| Smithing | **1,572** (1,572, 1,572, 1,572) | 1,337 | **-235** | Platebodies, Varrock west bank + anvil | MEASURED |
+| Firemaking | **about 780** | 673 (live file 664) | **about -110** | Logs in lines north of Draynor bank | ESTIMATE from MEASURED parts (no full run) |
+| Prayer | **1,260** (1,260, 1,260, 1,260) | 1,281 | **+21** | Bury dragon bones from a booth | MEASURED |
+| Magic | **1,762** from Magic 7 (1,762, 1,765, 1,762) | 1,513 (live file 1,324) | **-249** (-438 against 1,324), plus the ticks to reach 7 | Enchant jewellery from a booth | MEASURED |
+| Cooking (normal) | **339-375** (339, 375, 343) | 38 | **about -300** | Fish on a fire to 35, then hand-made wine | MEASURED |
+
+Margins are for a one-board account that starts the board at tick 0 with all supplies in place. Haggis has one
+clock for all boards (`research/haggis-run.md`), so only the first board it trains can keep these margins.
+#1 ticks are from the task brief; `research/hiscores-live.json` (2026-10-23T09:56Z) has the same values except
+Magic 1,324 and Firemaking 664.
 
 ## Level-up dialogs (settles INDEX C5)
 
@@ -165,7 +170,7 @@ Content: `skill_herblore/configs/brewing/brew_potion.struct` (level, exp), `scri
 
 **Herblore 1-3 is not a supply band.** Identify needs level 3 (`configs/identifying/identify.param` default 3, and
 identify guam measured: "You need a higher Herblore level"), and brewing needs 3 (`brew_potion.param` default 3).
-The account needs quest XP first (Druidic Ritual: 250 XP x25 = 6,250, past level 3; `research/quest-xp.md`).
+The account needs quest XP first (Druidic Ritual: `quests/quest_druid/scripts/quest_druid.rs2:3` `stat_advance(herblore, 2500)` = 250 XP, x25 = 6,250, past level 3).
 
 Measured (preset `floor_herblore`, Herblore 3, Draynor bank): **246, 246, 246** ticks from Herblore 3 to 99.
 
@@ -206,22 +211,21 @@ Content: `skill_smithing/configs/smithing/smithing.dbrow` (`levelrequired`, `bar
 continues on its own). A 5-bar platebody takes the same 5 ticks as a 1-bar dagger.
 
 Measured (preset `floor_smithing`, Varrock west bank (3185,3436) and the smithy anvil (3188,3426)):
-**1,593, 1,594, 1,593** ticks.
+**1,572, 1,572, 1,572** ticks (second series, with the booth fix below; the first series was 1,593, 1,594, 1,593).
 
 | Item | Measured |
 |---|---|
 | Smith | 5 ticks per item exactly (24 ticks for 5 platebodies after the click): `smithTicks=754` for 158 items |
 | Steady cycle (5 platebodies) | 47 ticks: bank 14 (walk back + booth + deposit + withdraw 25 bars), walk to the anvil + interface 9, smith 24 |
-| Walk + bank share | 839 of 1,593 ticks (53%) |
-| Level-up pages | queued during Make-X (the player is delayed), they open after the last item; 99 ticks per run |
-| Booth clicks lost | the first booth click after the last anvil delay is dropped (player still delayed); the script clicked again after 10 ticks: `NOTE booth re-click at +10`, 105 times in 3 runs |
+| Walk + bank share | 818 of 1,572 ticks (52%): bank 494, walk to the anvil 324 |
+| Level-up pages | queued during Make-X (the player is delayed), they open after the last item; 67 ticks per run (99 in the first series) |
+| Booth clicks lost | the first booth click after the last anvil delay is dropped (player still delayed); the first series clicked again after 10 ticks (`NOTE booth re-click at +10`, 105 times in 3 runs); the second clicks again every 2 ticks until the player moves, which saved 21 ticks per run |
 
-`FLOOR Smithing level=99 xp=998750 ticks=1593 actions=158 ... levelTicks=99 bankTicks=515 bankCycles=36 walkTicks=324 smithTicks=754`.
+`FLOOR Smithing level=99 xp=998750 ticks=1572 actions=158 ... refused=35 ... levelTicks=67 bankTicks=494 bankCycles=36 walkTicks=324 smithTicks=754`.
 
-This bank loop loses to the #1 (1,337) by 256 ticks. Cuts, not yet measured:
+This bank loop loses to the #1 (1,337) by 235 ticks. A trip is still 14 bank ticks, because the walk back from the
+anvil (about 10 tiles) is in it. Cut, not yet measured:
 
-- Click the booth again every 2 ticks until the player moves (fix in `floor-lib.ts`, rerun pending): about 6 ticks
-  per trip x 36 = about 216 ticks. ESTIMATE.
 - A helper trades 25 bars at the anvil instead of the bank walk: smith 754 + 36 trades x 12 ticks (realistic,
   `research/crafting-board.md`) + level-up pages = about 1,290 ticks; with 5-tick trades about 1,040. ESTIMATE from
   MEASURED parts.
@@ -276,8 +280,8 @@ out: they save 3-8 casts and superheat needs Smithing 15.
 **Magic 1-7 is not a supply band.** Every spell below 7 needs a target (strikes, confuse). ESTIMATE: a few
 casts, or quest XP.
 
-Measured (preset `floor_magic`, Magic 7, Draynor bank, runes as stacks in the pack): **1,762, 1,765** ticks from
-Magic 7 to 99 (run 3 pending).
+Measured (preset `floor_magic`, Magic 7, Draynor bank, runes as stacks in the pack): **1,762, 1,765, 1,762** ticks from
+Magic 7 to 99.
 
 | Item | Measured |
 |---|---|
@@ -323,3 +327,57 @@ file measured only the timer part of it (20 ticks).
 
 Supplies: raw sardine 1, herring 3, trout 3, salmon 4 (plus spares for burns; the runs burnt 3-10), 366 grapes,
 366 jugs of water (376 made; 17 more than needed).
+
+## Firemaking
+
+| Method | Band | Logs | XP per log (x25) |
+|---|---|---|---|
+| Logs | 1-15 | 2 | 1,000 |
+| Oak logs | 15-30 | 4 | 1,500 |
+| Willow logs | 30-45 | 7 | 2,250 |
+| Maple logs | 45-60 | 13 | 3,375 |
+| Yew logs | 60-75 | 24 | 5,062.5 |
+| Magic logs | 75-99 | 107 | 7,595 |
+
+Content: `skill_firemaking/configs/firemaking.obj` (`levelrequire`, `productexp`; no teak or mahogany in rev 289),
+`scripts/firemaking.rs2:98-131` (first roll 3 ticks after the attempt, every later roll 4 ticks after the last
+success or failure, `stat_random(64, 512)`; a failed roll keeps the log and rolls again, so fails cost ticks, not
+logs). Sacred-oil pyre logs are left out (owner decision, `tick-tricks-web.md` 16.4).
+
+Measured (presets `floor_firemaking` Firemaking 1 and `floor_fm75` Firemaking 75, Draynor bank, line west from
+(3099,3249)):
+
+| Item | Runs | Measured |
+|---|---|---|
+| First trip, 27 logs, levels 1 -> 61 | 4 | 126, 118, 110, 166 burn ticks (4.67, 4.37, 4.07, 6.15 per log) |
+| Magic logs at 75 -> 85, 27 logs | 2 of 3 | 110, 110 burn ticks (**4.07 per log**); run 2 stuck after 4 logs (blocked tile) |
+| Bank trip from the bank side | 5 | 5-7 ticks; walk to the line start 6 |
+| Bank trip from the line end (27 tiles west) | 1 | 18 ticks (walk back + booth), then 6 to the line start |
+
+`CYCLE 1 logs=27 level=85 clear=0 bank=5 walk=6 burn=110 perLog=4.07 total=121`.
+
+No full 1 -> 99 run passed: the second line (rows 3250 and 3251) ran into blocked tiles and old fires
+(`WARN log not lit at job 51`, `CYCLE 2 logs=24 ... burn=331 perLog=13.79`). ESTIMATE from the measured parts:
+first trip 118 + 130 logs x 4.07 = 529 + 5 more trips x 24 = 120 + first bank 13 = **about 780 ticks**.
+A line spot with 27 free tiles in 2-3 rows next to a booth (or a helper who trades 27 logs at the line start)
+is the open item. Even at 4.07 ticks per log and no banking, 157 logs need 639 ticks: Firemaking is at best
+level with the #1 (664-673).
+
+Supplies: logs 2, oak 4, willow 7, maple 13, yew 24, magic 107, tinderbox.
+
+## What these numbers leave out
+
+- Supply delivery: every preset puts the supplies in place. A helper trade is 12 ticks realistic, 5 floor
+  (`research/crafting-board.md`, `haggis-boards.json` `trade-start`).
+- Herblore 1-3 and Magic 1-7 (no supply method; quest XP or a few combat casts).
+- Random events: all runs used `RANDOM_EVENTS=0` (INDEX C1).
+- Practice runs at 150 ms; live is 400 ms. Tick counts carry over only if the live server takes 5 inputs per tick
+  the same way. Not measured live.
+
+## INDEX contradictions settled
+
+- **C5**: CLOSE_MODAL clears level-up pages at 0.53-0.67 ticks per level (3 + 2 runs); continue clicks cost
+  2.6 ticks per level (3 runs); item-on-item does not close the page but runs with it open. Claim A is wrong;
+  claim B is right about clicks and is answered: CLOSE_MODAL each tick is the cheap way.
+- **C6**: a modal (bank, level-up page) holds the NORMAL wine timer (probe: 30 ticks, xp +0, bank open);
+  with no modal, Cooking 99 lands 20 ticks after the last wine (3 runs). Claim A holds; claim B is wrong.

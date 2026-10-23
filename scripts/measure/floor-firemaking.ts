@@ -2,13 +2,13 @@
 // firemaking.rs2:98-116: the first attempt rolls 3 ticks later, every later roll 4 ticks after the last success or
 // failure, success = stat_random(64, 512). The push after a success (p_delay(0)) moves the player west, east, south
 // or north. Cycle: clear level-up pages, booth, withdraw logs, close, walk to a line start, then per log: tinderbox
-// on log, wait for the XP. Usage: bun scripts/measure/floor-firemaking.ts <bot> [x=3101] [z=3249] [maxLogs=0]
+// on log, wait for the XP. Usage: bun scripts/measure/floor-firemaking.ts <bot> [x=3099] [z=3249] [maxLogs=0]
 import { openBot, finish } from '../../packages/core/src/bot';
 import { FIREMAKING, ladder, objId } from './floor-bands';
 import { meter, send, tick, xp, level, inv, report, band, clearDialogs, openBank, bankOpen, bankItems, withdrawN, dialogOpen, nearestLoc } from './floor-lib';
 
 const [bot, xArg, zArg, maxArg] = process.argv.slice(2);
-const X = Number(xArg ?? 3101), Z = Number(zArg ?? 3249);
+const X = Number(xArg ?? 3099), Z = Number(zArg ?? 3249);
 const maxLogs = Number(maxArg ?? 0);
 const s = await openBot(bot!);
 try {
@@ -16,7 +16,7 @@ try {
     const m = meter(s, 'Firemaking');
     const jobs: { log: number; band: string; xp: number }[] = [];
     // A failed roll keeps the log and rolls again 4 ticks later, so every log gives its full XP: fails cost ticks only.
-    for (const st of ladder(FIREMAKING)) {
+    for (const st of ladder(FIREMAKING, Math.max(1, level(s, 'Firemaking')))) {
         const log = objId(Object.keys(st.band.inputs)[0]!);
         for (let i = 0; i < st.actions; i++) jobs.push({ log, band: st.band.name, xp: st.band.xp });
     }
@@ -37,8 +37,10 @@ try {
         const need = new Map<number, number>();
         for (const j of jobs.slice(i, i + n)) need.set(j.log, (need.get(j.log) ?? 0) + 1);
         for (const [id, c] of need) {
-            const b = bankItems(s).find(x => x.id === id);
-            if (!b || b.count < c) { console.log(`WARN bank short of ${id}`); ok = false; break; }
+            let b = bankItems(s).find(x => x.id === id);
+            // The bank list can lag the interface by a tick: look again before giving up.
+            for (let r = 0; r < 3 && (!b || b.count < c); r++) { await tick(s); b = bankItems(s).find(x => x.id === id); }
+            if (!b || b.count < c) { console.log(`WARN bank short of ${id}: have ${b?.count ?? 0} need ${c}`); ok = false; break; }
             if (need.size === 1 && c === 27 && b.count > c) await send(s, m, { type: 'bankWithdraw', slot: b.slot, amount: -1 });
             else await withdrawN(s, m, b.slot, c);
         }

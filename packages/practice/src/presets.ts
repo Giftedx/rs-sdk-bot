@@ -267,6 +267,10 @@ export const PRESETS: Record<string, SaveConfig> = {
     },
     // Wine probe (research/supply-floors.md, Cooking): Cooking 35 at Draynor bank, 40 grapes + 40 jugs of water banked.
     floor_wine35: { position: { x: 3092, z: 3243, level: 0 }, skills: { Cooking: 35 }, bank: [{ id: 1987, count: 40 }, { id: 1937, count: 40 }] },
+    // Firemaking burn-rate test at the top band: Firemaking 75, tinderbox, 30 magic logs (1513) banked; one 27-log line.
+    floor_fm75: { position: { x: 3092, z: 3243, level: 0 }, skills: { Firemaking: 75 }, inventory: [{ id: 590, count: 1 }], bank: [{ id: 1513, count: 30 }] },
+    // Same at Firemaking 45 with 30 maple logs (1517).
+    floor_fm45: { position: { x: 3092, z: 3243, level: 0 }, skills: { Firemaking: 45 }, inventory: [{ id: 590, count: 1 }], bank: [{ id: 1517, count: 30 }] },
 };
 
 // The engine writes the save on logout, so a preset written while logged in is lost.

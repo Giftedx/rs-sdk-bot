@@ -450,7 +450,7 @@
     "floor": 0,
     "realistic": 0,
     "evidence": "MEASURED",
-    "source": "research/cooking-board.md: 300 banked wines took 35 -> 96 in 25 ticks; timer 20 ticks (wine.rs2:22-70)"
+    "source": "research/supply-floors.md: Cooking 99 lands 20 ticks after the last wine (timerWait=20, 3 runs, 376 wines); a modal (bank, level-up page) holds the NORMAL timer until it closes (probe: 30 ticks, xp+0, bank open)"
    },
    "background": {
     "floor": 20,
@@ -627,10 +627,10 @@
     "firemaking"
    ],
    "ticks": {
-    "floor": 628,
-    "realistic": 720,
-    "evidence": "CODE-READ",
-    "source": "firemaking.rs2:54-116 (4-tick roll); sim 693 in xp-per-tick.md; live #1 673"
+    "floor": 639,
+    "realistic": 780,
+    "evidence": "ESTIMATE",
+    "source": "research/supply-floors.md: MEASURED 4.07 ticks per log at 100% success (2 runs), first 27-log trip 110-166 ticks (4 runs), trips 5-24 ticks; no full run passed (blocked second line); floor 639 = 157 logs x 4.07 with no banking, realistic about 780 with trips"
    },
    "xp": {
     "firemaking": "to99"
@@ -642,8 +642,8 @@
     "group": "firemaking",
     "option": "burn"
    },
-   "evidence": "CODE-READ",
-   "source": "firemaking.rs2:54-116 (4-tick roll); sim 693 in xp-per-tick.md; live #1 673",
+   "evidence": "ESTIMATE",
+   "source": "research/supply-floors.md: MEASURED 4.07 ticks per log at 100% success (2 runs), first 27-log trip 110-166 ticks (4 runs), trips 5-24 ticks; no full run passed (blocked second line); floor 639 = 157 logs x 4.07 with no banking, realistic about 780 with trips",
    "supplies": [
     {
      "item": "tinderbox",
@@ -654,7 +654,6 @@
     "skill": "firemaking",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
    "at": "anywhere"
   },
   {
@@ -778,10 +777,10 @@
     "smithing"
    ],
    "ticks": {
-    "floor": 1593,
-    "realistic": 1594,
+    "floor": 1572,
+    "realistic": 1572,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: 1,593, 1,594, 1,593 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies, 53% walk + bank)"
+    "source": "research/supply-floors.md: 1,572, 1,572, 1,572 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies: bank 14, walk 9, smith 24; 52% walk + bank)"
    },
    "xp": {
     "smithing": "to99"
@@ -794,7 +793,7 @@
     "option": "separate"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: 1,593, 1,594, 1,593 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies, 53% walk + bank)",
+   "source": "research/supply-floors.md: 1,572, 1,572, 1,572 ticks level 1 -> 99 on practice (scripts/measure/floor-smithing.ts, Varrock west bank + anvil, 47-tick cycle per 5 platebodies: bank 14, walk 9, smith 24; 52% walk + bank)",
    "supplies": [
     {
      "item": "hammer",
@@ -807,7 +806,7 @@
    },
    "at": "varrock-west-anvil",
    "bankTrips": 32,
-   "bankTripsSource": "32 bank trips = 789 bars (SMITHING_TIERS ladder: bronze 34, iron 35, steel 95, mithril 280, adamantite 345) / 25 bars per inventory (hammer + 5 platebodies); the 913/1,100 rate has no walking"
+   "bankTripsSource": "32 bank trips = 789 bars (SMITHING_TIERS ladder: bronze 34, iron 35, steel 95, mithril 280, adamantite 345) / 25 bars per inventory (hammer + 5 platebodies); the 913/1,100 rate has no walking; measured 36 trips (research/supply-floors.md), walking is in the measured 1,572"
   },
   {
    "id": "magic",
@@ -816,10 +815,10 @@
     "magic"
    ],
    "ticks": {
-    "floor": 1708,
-    "realistic": 1900,
-    "evidence": "CODE-READ",
-    "source": "enchant.rs2:7-53 p_delay(1); sim 1,708 (xp-per-tick.md); realistic ESTIMATE"
+    "floor": 1762,
+    "realistic": 1765,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: 1,762, 1,765, 1,762 ticks Magic 7 -> 99 on practice (scripts/measure/floor-magic.ts, enchant ladder from a Draynor booth, 2.96 ticks per cast, 23 items per trip); Magic 1-7 not included"
    },
    "xp": {
     "magic": "to99"
@@ -831,14 +830,13 @@
     "group": "magic-smithing",
     "option": "separate"
    },
-   "evidence": "CODE-READ",
-   "source": "enchant.rs2:7-53 p_delay(1); sim 1,708 (xp-per-tick.md); realistic ESTIMATE",
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md: 1,762, 1,765, 1,762 ticks Magic 7 -> 99 on practice (scripts/measure/floor-magic.ts, enchant ladder from a Draynor booth, 2.96 ticks per cast, 23 items per trip); Magic 1-7 not included",
    "supplies": [],
    "suppliesLadder": {
     "skill": "magic",
     "margin": 1
    },
-   "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
    "patches": [
     {
      "lever": "stun-guests",
