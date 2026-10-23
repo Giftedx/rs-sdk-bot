@@ -121,11 +121,19 @@ const isOn = (id: string, owner: boolean | undefined, opts: Pick<ScheduleOptions
     owner ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
 
 // The activity table with the levers of `opts` applied: rows filtered, patches merged.
+// OUT rows are removed. A lever whose 'add' rows are all OUT is dead: its patches and 'drop' rows act as if it were off.
 export function applyLevers(activities: Activity[], opts: Pick<ScheduleOptions, 'disable' | 'owner' | 'includeOut'>): Activity[] {
-    return activities.filter(a => leverOn(a, opts) && (!a.out || opts.includeOut)).map(a => {
+    const dead = new Set<string>();
+    if (!opts.includeOut) {
+        const adds = new Map<string, boolean>(); // lever -> has a live add row
+        for (const a of activities) if (a.lever?.role === 'add') adds.set(a.lever.id, (adds.get(a.lever.id) ?? false) || !a.out);
+        for (const [id, live] of adds) if (!live) dead.add(id);
+    }
+    const live = { ...opts, disable: new Set([...(opts.disable ?? []), ...dead]), owner: new Set([...(opts.owner ?? [])].filter(id => !dead.has(id))) };
+    return activities.filter(a => leverOn(a, live) && (!a.out || opts.includeOut)).map(a => {
         let out = a;
         for (const p of a.patches ?? []) {
-            if (!isOn(p.lever, p.owner, opts)) continue;
+            if (!isOn(p.lever, p.owner, live)) continue;
             out = { ...out, ...(p.set ?? {}) };
             if (p.addRequires) out = { ...out, requires: [...(out.requires ?? []), ...p.addRequires] };
             if (p.addSide && out.train) out = { ...out, train: { ...out.train, side: { ...(out.train.side ?? {}), ...p.addSide } } };
