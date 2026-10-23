@@ -55,7 +55,8 @@ try {
     const off = s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
-        if (hp() <= 0) died = true;
+        // HP reads 0 until the stats arrive, so only trust it once max HP is known.
+        if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20) {
             jumps.push(`${s.tick() - t0}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
             const boat = p.level === 1 && (cheb(MUSA_DECK, p) <= 8 || cheb(ARDY_DECK, p) <= 8);
@@ -114,14 +115,18 @@ try {
     // Waits for Hitpoints to regenerate when no food and no coins: pickpocketing could kill the bot.
     const rest = async () => { waits++; await waitTicks(s, 10); };
 
+    // A resumed live account is already in Ardougne (seen 2026-10-23: it started the walk to Port Sarim from there).
+    const p1 = pos();
+    const inArdougne = !!p1 && cheb(MARKET, p1) <= 80;
+    if (inArdougne) mark('ardougne');
     // ---- Step 1: Lumbridge men until 60 coins (the two boat fares, 30 each).
     const LUMB_MEN: Target = { name: 'man', re: /^man$/i, dmg: 1, spot: LUMBRIDGE, range: 15 };
-    for (let i = 0; i < 600 && coins() < 60 && !died && left() > 0; i++) {
+    for (let i = 0; i < 600 && !inArdougne && coins() < 60 && !died && left() > 0; i++) {
         if (hp() <= LUMB_MEN.dmg) { await rest(); continue; }
         await steal(LUMB_MEN);
     }
     if (died) await end(false, 'died in Lumbridge');
-    if (coins() < 60) await end(false, `only ${coins()} coins`);
+    if (!inArdougne && coins() < 60) await end(false, `only ${coins()} coins`);
     mark('coins60');
     checkLevels();
 
@@ -174,6 +179,7 @@ try {
 
     // Route from research/route-danger.ts: 357 tiles, clear of the jail guards (26), brown bear (21) and dark wizards;
     // the old route (3105,3250) passed 2 tiles from a jail guard, and two fresh runs died there.
+    if (!inArdougne) {
     if (!(await walk([[3225, 3240, 3], [3180, 3258, 3], [3100, 3285, 3], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3]]))) await end(false, 'walk to Port Sarim');
     if (!(await sail(/^(seaman|captain tobias)/i, [/^yes please/i], MUSA_DECK))) await end(false, 'sail to Karamja');
     if (!(await disembark())) await end(false, 'Musa Point gangplank');
@@ -181,6 +187,7 @@ try {
     if (!(await sail(/^customs officer$/i, [/journey on this ship/i, /search away/i, /^ok\.?$/i], ARDY_DECK))) await end(false, 'sail to Ardougne');
     if (!(await disembark())) await end(false, 'Ardougne gangplank');
     if (!(await walk([[MARKET.x, MARKET.z, 3]]))) await end(false, 'walk to market');
+    }
     mark('ardougne');
 
     // ---- Steps 3 and 4: Ardougne pickpocketing with bread from the Baker.
