@@ -37,3 +37,21 @@ that trades food, or a second food source in Ardougne.
 Plan: a helper carries lobster notes from the GE to Ardougne (boat route) and trades them to the specialist,
 who banks the notes and withdraws lobsters. Only the specialist's playtime counts on its board. Food need from
 Thieving 66 to 99 is roughly 110-180 lobsters (18-29k coins); knights pay 50 coins per success.
+
+## Food economics (2026-10-23, later)
+
+Food shops near Ardougne (knowledge/shops.json, stock / restock ticks):
+- bakery (east): bread 10/100, cake 3/800, chocolate slice 8/200. adventurershop: cooked meat 2/100.
+- generallegends (swordfish 20/200) needs the Legends quest; upassgeneralshop (West Ardougne) needs a quest to enter.
+- Brimhaven fish restaurant: herring 5/900 ... lobster 3/2600. Karamja junglestore: bread 10/500.
+Sum near the market: about 12 HP of food per 100 ticks. Knights at 10 HP cost about 30 HP per 100 ticks
+(practice). The live rate (about 45 XP/tick, practice 207) matches that food ceiling.
+
+Buying lobsters (live GE ask 160) does not pay at max HP 10: a lobster then heals about 5 (eat at 5, cap 10),
+so food costs about 32 coins per HP, a knight stun (3 HP) about 96 coins, and a success pays 50.
+
+Raising Hitpoints first (`scripts/measure/hp-train.ts`, cows, sword, practice): HP 10 -> 20 in 656 ticks,
+23 at 911 ticks (3.4 HP XP per tick). Costly on a board where the leader's whole run is 2,935 ticks.
+
+Free food that scales: helper accounts that fish and cook shrimps (heal 3, no overheal waste at 10 HP)
+and trade them in Ardougne. Only the specialist's playtime counts on its board.
