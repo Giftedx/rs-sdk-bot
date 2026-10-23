@@ -1,6 +1,50 @@
 {
- "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward. Travel: `at` is the activity's place (a key of `places`, 'anywhere' for inventory work or trades, 'bank' for the nearest bank), `endAt` where it ends, `via` places it visits in order, `bankTrips` round trips to the nearest bank; legs come from haggis-travel.json (bun packages/planner/src/travel-gen.ts). `out` marks a row that relies on a content bug: it is never scheduled.",
+ "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward. Travel: `at` is the activity's place (a key of `places`, 'anywhere' for inventory work or trades, 'bank' for the nearest bank), `endAt` where it ends, `via` places it visits in order, `bankTrips` round trips to the nearest bank; legs come from haggis-travel.json (bun packages/planner/src/travel-gen.ts). `out` marks a row that relies on a content bug, or on an item with no legal source at this scale: it is never scheduled. `unsourceable` lists those items; no active row may need more than `max` of one (haggis.test.ts). `leadTime` on a row is the helper staging work for its supplies (ESTIMATE unless it says otherwise).",
  "updated": "2026-10-23",
+ "unsourceable": [
+  {
+   "item": "torstol potion (unf)",
+   "max": 0,
+   "reason": "only source is the Yanille agility dungeon chest, 1 per sinister key; key 10/128 from Salarin: about 2,250 kills for 176",
+   "source": "research/supply-logistics.md Summary 1; agility_dungeon.rs2:103-120, salarin_the_twisted.rs2:17,45-46 (CODE-READ)"
+  },
+  {
+   "item": "snapdragon potion (unf)",
+   "max": 0,
+   "reason": "no drop, shop, spawn or chest gives snapdragon",
+   "source": "research/supply-logistics.md Summary 1; shared_droptables.rs2:2-34 randomherb (CODE-READ)"
+  },
+  {
+   "item": "toadflax potion (unf)",
+   "max": 0,
+   "reason": "no drop, shop, spawn or chest gives toadflax",
+   "source": "research/supply-logistics.md Summary 1; shared_droptables.rs2:2-34 randomherb (CODE-READ)"
+  },
+  {
+   "item": "uncut dragonstone",
+   "max": 0,
+   "reason": "only source is the Taverley crystal chest, 1 per crystal key (2 halves, each 1/128 of randomjewel); GE 0 sellers",
+   "source": "research/supply-logistics.md Summary 1; crystal_chest.rs2:24, shared_droptables.rs2:58-65 (CODE-READ); GE MEASURED live 2026-10-23"
+  },
+  {
+   "item": "dragonstone amulet",
+   "max": 0,
+   "reason": "made from uncut dragonstones (no source at scale)",
+   "source": "research/supply-logistics.md Summary 1 (CODE-READ)"
+  },
+  {
+   "item": "cosmic rune",
+   "max": 20,
+   "reason": "one shop holds 20 (Mage Arena, 1 per 100 ticks); GE 1 seller at 10,000",
+   "source": "research/supply-logistics.md Summary 1 (CODE-READ shops.json + MEASURED live GE)"
+  },
+  {
+   "item": "rune dart tips",
+   "max": 0,
+   "reason": "no seller and no shop; smithing them needs runite bars, Smithing 89 and Tourist Trap",
+   "source": "research/supply-logistics.md Summary 2; research/supply-costs.md:47-49 (CODE-READ + MEASURED live GE)"
+  }
+ ],
  "places": {
   "lumbridge-spawn": {
    "x": 3222,
@@ -347,9 +391,11 @@
    ],
    "suppliesLadder": {
     "skill": "fletching",
+    "tiers": "fletching-arrows",
     "margin": 1
    },
-   "at": "anywhere"
+   "at": "anywhere",
+   "suppliesNote": "fletching tips: arrows only (fletching-arrows ladder, haggis.ts FLETCHING_ARROW_TIERS); rune and iron darts replaced by rune and iron arrows because rune dart tips have no legal source (research/supply-logistics.md, Proposed substitutions)"
   },
   {
    "id": "bank-wine",
@@ -574,6 +620,34 @@
    ],
    "evidence": "MEASURED",
    "source": "research/supply-floors.md: 49, 49, 49 ticks level 1 -> 99 on practice (scripts/measure/floor-fletching.ts open loop, 5 inputs per tick, all stacks in the pack); supply delivery not included",
+   "at": "anywhere",
+   "out": {
+    "reason": "no legal source at this scale: rune dart tips 1,520 (no seller, no shop; Smithing 89 + Tourist Trap + runite bars) (research/supply-logistics.md, Summary)",
+    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
+    "replacement": "fletch-arrows"
+   }
+  },
+  {
+   "id": "fletch-arrows",
+   "label": "Fletch arrows only (no darts), 5 per tick, all stackable",
+   "serves": [
+    "fletching"
+   ],
+   "ticks": {
+    "floor": 49,
+    "realistic": 50,
+    "evidence": "ESTIMATE",
+    "source": "research/supply-floors.md: 49, 49, 49 ticks MEASURED practice with the dart ladder; rune arrows give 187.5 XP per action against rune darts 188 and iron arrows 37.5 against iron darts 38, both 5 per tick (arrows.dbrow, darts.dbrow via supply-floors.md:78-108), so the same actions; not measured with arrows only"
+   },
+   "xp": {
+    "fletching": "to99"
+   },
+   "requires": [
+    "trade-start"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "arrows-only ladder (research/supply-logistics.md, Proposed substitutions); tick count carried from the MEASURED dart-ladder run",
+   "leadTime": "ESTIMATE: rune arrowtips 2,595 are shop-only (GE 0 sellers): Catherby 100@40 (Mightyrod) + Ranging Guild 150@60 (N3, Ranged 40 first, 0.2 h): 250 at once + 375 per hour = 6.3 h (11.1 h Catherby alone), about 1.0M coins. Headless arrows 3,615: Bigchopper chops about 241 logs, cuts and feathers them, about 1.0 h. The critical-path job of the staging (research/supply-logistics.md, jobs 2, 3, 5)",
    "at": "anywhere"
   },
   {
@@ -606,6 +680,45 @@
     "skill": "crafting",
     "margin": 1.1
    },
+   "at": "bank",
+   "out": {
+    "reason": "no legal source at this scale: uncut dragonstone 305 (crystal chest only, GE 0 sellers) (research/supply-logistics.md, Summary)",
+    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
+    "replacement": "craft-diamond"
+   }
+  },
+  {
+   "id": "craft-diamond",
+   "label": "Cut gems, diamonds from 43 to 99 (no dragonstones), trade or bank loop",
+   "serves": [
+    "crafting"
+   ],
+   "ticks": {
+    "floor": 229,
+    "realistic": 230,
+    "evidence": "ESTIMATE",
+    "source": "research/supply-floors.md: 194, 194, 195 MEASURED practice with the dragonstone ladder (12 ticks per 27-gem cycle); 2,687.5 against 3,437.5 XP per gem = 354 diamonds for 55-99 instead of 277 dragonstones, 77 more gems = about 3 cycles = +35 ticks (research/supply-logistics.md, Proposed substitutions); not measured"
+   },
+   "xp": {
+    "crafting": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "diamond ladder (research/supply-logistics.md, Proposed substitutions); +35 ticks on the MEASURED 194 / 195",
+   "supplies": [
+    {
+     "item": "chisel",
+     "count": 1
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "crafting",
+    "tiers": "crafting-no-dragonstone",
+    "margin": 1.1
+   },
+   "leadTime": "ESTIMATE: uncut diamonds by GE bids over time (Moneyshot, 0.3 h active): 592 diamonds traded in 7 days (MEASURED live), bids must beat the standing 3,500; 4-7 days of waiting and about 1.8M coins for 354 (the 1.1 ladder margin asks 401). Low gems 31 by GE bids, 1-2 days, about 150k (research/supply-logistics.md, job 9)",
    "at": "bank"
   },
   {
@@ -633,6 +746,80 @@
     "skill": "herblore",
     "margin": 1
    },
+   "at": "bank",
+   "out": {
+    "reason": "no legal source at this scale: torstol 176 (Yanille chest only, about 2,250 Salarin kills), snapdragon 6 and toadflax 2 (no source) (research/supply-logistics.md, Summary)",
+    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
+    "replacement": "herb-drops"
+   }
+  },
+  {
+   "id": "herb-drops",
+   "label": "Finish potions from dropped herbs (guam, harralander, ranarr, irit, avantoe, kwuarm), 14 per inventory",
+   "serves": [
+    "herblore"
+   ],
+   "ticks": {
+    "floor": 630,
+    "realistic": 780,
+    "evidence": "ESTIMATE",
+    "source": "research/supply-floors.md: 246 ticks MEASURED practice for 247 potions (about 1 tick per potion, Draynor booth, 14 + 14 per trip); this ladder needs 644 potions = about 630 (research/supply-logistics.md, Proposed substitutions). Realistic adds 150 (of +100 to +200) for the main to identify and mix herbs that a low-level helper cannot (identify.rs2 attempt_identify_herb, brew_potion.rs2:121-132); not measured"
+   },
+   "xp": {
+    "herblore": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "ESTIMATE",
+   "source": "randomherb drop mix of 1,080 herb rolls (shared_droptables.rs2:2-34 CODE-READ), each herb made into its best potion with a secondary that exists at scale (research/supply-logistics.md, Herblore replacement detail)",
+   "supplies": [
+    {
+     "item": "guam potion (unf)",
+     "count": 270
+    },
+    {
+     "item": "harralander potion (unf)",
+     "count": 119
+    },
+    {
+     "item": "ranarr potion (unf)",
+     "count": 93
+    },
+    {
+     "item": "irit potion (unf)",
+     "count": 68
+    },
+    {
+     "item": "avantoe potion (unf)",
+     "count": 51
+    },
+    {
+     "item": "kwuarm potion (unf)",
+     "count": 43
+    },
+    {
+     "item": "eye of newt",
+     "count": 338,
+     "note": "attack (guam) + super attack (irit); Taverley herb shop, 800 stock"
+    },
+    {
+     "item": "red spiders' eggs",
+     "count": 119,
+     "note": "restore (harralander); 15 ground spawns, 7 in the Edgeville dungeon"
+    },
+    {
+     "item": "snape grass",
+     "count": 144,
+     "note": "prayer (ranarr) + fishing (avantoe); 3 spawns, respawn 30 ticks"
+    },
+    {
+     "item": "limpwurt root",
+     "count": 43,
+     "note": "super strength (kwuarm); hill giants 0.0859 per kill, about 500 kills"
+    }
+   ],
+   "leadTime": "ESTIMATE: about 2,420 chaos druid kills (0.445 herb rolls per kill, knowledge/drops.json) by N4a and N4b in the Edgeville dungeon: Waterfall Quest 0.3 h, then 2.5 h each at 500 kills per hour (not measured), about 5.6 helper-hours; secondaries and 644 vials by Bigpackage, about 2.0 h (research/supply-logistics.md, jobs 10 and 11). Contested spawn: measure 1 live hour first",
    "at": "bank"
   },
   {
@@ -883,7 +1070,51 @@
      }
     }
    ],
-   "at": "bank"
+   "at": "bank",
+   "out": {
+    "reason": "no legal source at this scale: cosmic runes 546 (one shop of 20, GE 1 seller) and dragonstone amulets 453 (no dragonstones at scale) (research/supply-logistics.md, Summary)",
+    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
+    "replacement": "magic-teleport"
+   }
+  },
+  {
+   "id": "magic-teleport",
+   "label": "Teleport ladder (Varrock 25, Lumbridge 31, Falador 37, Camelot 45 -> 99), staff of air, no bank trips",
+   "serves": [
+    "magic"
+   ],
+   "ticks": {
+    "floor": 3000,
+    "realistic": 3750,
+    "evidence": "ESTIMATE",
+    "source": "magic-teleport ladder (haggis.ts MAGIC_TELEPORT_TIERS): 722 teleports + 36 wind strikes for 1-25. teleport.rs2:59-66 p_delay(1) + p_delay(0): 4 ticks per cast floor, 5 realistic (research/xp-per-tick.md:84 \"about 4\"); strikes 3 floor, 4 realistic; cast rate not measured"
+   },
+   "xp": {
+    "magic": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "separate"
+   },
+   "evidence": "ESTIMATE",
+   "source": "teleport route of research/supply-costs.md (Magic) and research/supply-logistics.md (Proposed substitutions): 722 law runes; magic_spells.dbrow levels and XP (CODE-READ). Wind strike 1-25 needs a target (not in the tick count of the old enchant row either). Not run inside the pickpocket stuns: a teleport leaves the thieving spot. Travel not priced: the row is anywhere, and the last cast can be a Varrock or Falador teleport to end near the next row",
+   "supplies": [
+    {
+     "item": "staff of air",
+     "count": 1,
+     "note": "shops only, 2 each, base 1,500; GE 0 sellers (research/supply-costs.md, Magic)"
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "magic",
+    "tiers": "magic-teleport",
+    "margin": 1
+   },
+   "leadTime": "ESTIMATE: law runes 722: GE 423 at 2,697 now (MEASURED live), the rest by bids (Moneyshot, 0.3 h active, about 1.2M coins); shops (Magic Guild 66, Mage Arena, Ape Atoll) restock 30 per hour each. Staff of air from a shop by Bigpackage (research/supply-logistics.md, job 16)",
+   "at": "anywhere"
   },
   {
    "id": "mage-arena",

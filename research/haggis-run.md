@@ -13,25 +13,35 @@ of each board. Reprint every table here with
 - Every skill board stamps the account's total playtime at the level-up (`Player.ts:1904-1905`,
   `LoginServer.ts:155-181`). One account has one clock. Each board that Haggis trains adds its ticks to the stamp
   of every board that comes after it.
-- The Overall #1 (`stunbaron`) has all 19 skills at 99 in 35,916 ticks. With every safe lever, the travel legs and
-  the legal Cooking route (2026-10-23), Haggis reaches Overall at **34,208 ticks at floor rates (slack +1,708)** and
-  **44,089 at realistic rates (slack -8,173)**. ESTIMATE (the model; most rows are code-read or rival figures).
-- Travel adds 5,640 ticks before the last 99 (4,545 of walks between rows, 1,095 of walks inside rows: bank trips,
-  altar and fishing-spot changes). The same table without travel (`--no-travel`) gives 28,568 / 38,449. The rival
+- The Overall #1 (`stunbaron`) has all 19 skills at 99 in 35,916 ticks. With every safe lever, the travel legs,
+  the legal Cooking route and the stageable supply rows (2026-10-23, `research/supply-logistics.md`), Haggis
+  reaches Overall at **38,764 ticks at floor rates (slack -2,848)** and **46,856 at realistic rates (slack
+  -10,940)**. ESTIMATE (the model; most rows are code-read or rival figures). Before the supply rows the same
+  table gave 36,437 / 43,696.
+- **Supply rows (2026-10-23).** Four rows needed items with no legal source at this scale and are OUT ("no legal
+  source at this scale"): `fletch` (rune dart tips 1,520), `craft` (uncut dragonstone 305), `herb` (torstol 176,
+  snapdragon 6, toadflax 2), `magic` (cosmic runes 546, dragonstone amulets 453). Replacements, all ESTIMATE:
+  `fletch-arrows` (arrows only, 49 / 50 ticks), `craft-diamond` (diamonds 43-99, 229 / 230), `herb-drops`
+  (chaos-druid herb drops, 630 / 780), `magic-teleport` (722 law runes, 3,000 / 3,750, no longer inside the
+  pickpocket stuns). The table field `unsourceable` lists the items, and `haggis.test.ts` fails if an active row
+  needs one. Each replacement row has a `leadTime` note for the helper work.
+- Travel adds 4,670 ticks before the last 99 at floor rates (6,851 over the whole run, walks between rows plus
+  walks inside rows: bank trips, altar and fishing-spot changes). The same table without travel (`--no-travel`)
+  gives 34,094 / 42,186. The rival
   plan prices 2,283 of legs and about 1,789 of allowances (`research/rival-gap-list.md`). Our legs are longer
   because the EDF order does not group rows by place and the model has no teleports.
-- At floor rates 18 of 20 clock boards are late in the EDF order (only Herblore and Overall win). At realistic
-  rates all 20 are late.
-- The three scenarios now give the same numbers. Login wine, the cocktail route to Cooking 35, pyre logs and
-  Charge spam are content bugs (owner rule) and are marked OUT in the table; stun relog changes nothing in this
-  order.
+- At floor and at realistic rates all 20 clock boards are late in the EDF order. Herblore (once +95 at floor)
+  now finishes at 1,036 / 1,217 against 447.
+- Scenarios (a) and (b) give the same numbers. Login wine, the cocktail route to Cooking 35, pyre logs and
+  Charge spam are content bugs (owner rule) and are marked OUT in the table. Scenario (c) is 277 / 304 ticks
+  faster (38,487 / 46,552): with Magic out of the pickpocket stuns, stun relog now saves ticks.
 
 **Best achievable set** (largest set of boards that can all win, generalised Moore-Hodgson in `bestSet`):
 
 | Rates | Boards Haggis wins | Count |
 |---|---|---|
-| Floor (best case) | Overall, Defence, Hitpoints, Runecraft + Equipment, Bank, Runite (no clock, targets unknown) | 4 + 3 |
-| Realistic | Runecraft + Equipment, Bank, Runite (targets unknown) | 1 + 3 |
+| Floor (best case) | Hitpoints + Equipment, Bank, Runite (no clock, targets unknown) | 1 + 3 |
+| Realistic | Equipment, Bank, Runite (targets unknown) | 0 + 3 |
 
 The set is the same in all three scenarios. Quest Points cannot win: the #1 has all 145 QP (see the rule below).
 
@@ -57,36 +67,37 @@ safe levers on, owner levers off, travel on.
 
 | Board | Deadline | Finish floor | Slack floor | Finish realistic | Slack realistic |
 |---|---|---|---|---|---|
-| Cooking | 38 | 148 | -110 | 179 | -141 |
-| Fletching | 58 | 177 | -119 | 212 | -154 |
-| Crafting | 197 | 257 | -60 | 425 | -228 |
-| Herblore | 447 | 352 | **+95** | 731 | -284 |
-| Firemaking | 664 | 980 | -316 | 1,451 | -787 |
-| Prayer | 1,281 | 18,847 | -17,566 | 23,942 | -22,661 |
-| Magic | 1,324 | 15,471 | -14,147 | 20,036 | -18,712 |
-| Smithing | 1,337 | 2,693 | -1,356 | 3,354 | -2,017 |
-| Runecraft | 2,354 | 4,278 | -1,924 | 5,073 | -2,719 |
-| Thieving | 2,935 | 14,433 | -11,498 | 18,741 | -15,806 |
-| Woodcutting | 3,181 | 18,732 | -15,551 | 23,797 | -20,616 |
-| Fishing | 3,425 | 21,817 | -18,392 | 27,883 | -24,458 |
-| Mining | 3,964 | 24,884 | -20,920 | 32,136 | -28,172 |
-| Attack | 4,728 | 7,658 | -2,930 | 11,290 | -6,562 |
-| Strength | 4,966 | 26,413 | -21,447 | 33,672 | -28,706 |
-| Ranged | 5,595 | 28,737 | -23,142 | 37,383 | -31,788 |
-| Agility | 6,772 | 32,626 | -25,854 | 41,760 | -34,988 |
-| Defence | 7,974 | 34,208 | -26,234 | 44,089 | -36,115 |
-| Hitpoints | 17,058 | 28,094 | -11,036 | 36,418 | -19,360 |
-| Overall | 35,916 | 34,208 | **+1,708** | 44,089 | -8,173 |
+| Cooking | 20 | 148 | -128 | 177 | -157 |
+| Fletching | 57 | 177 | -120 | 207 | -150 |
+| Crafting | 197 | 406 | -209 | 437 | -240 |
+| Herblore | 447 | 1,036 | -589 | 1,217 | -770 |
+| Firemaking | 664 | 1,675 | -1,011 | 1,997 | -1,333 |
+| Prayer | 1,281 | 21,354 | -20,073 | 26,479 | -25,198 |
+| Magic | 1,324 | 4,684 | -3,360 | 5,759 | -4,435 |
+| Smithing | 1,337 | 6,147 | -4,810 | 7,226 | -5,889 |
+| Runecraft | 2,354 | 7,732 | -5,378 | 8,945 | -6,591 |
+| Thieving | 2,935 | 17,887 | -14,952 | 22,613 | -19,678 |
+| Woodcutting | 3,181 | 21,148 | -17,967 | 26,374 | -23,193 |
+| Fishing | 3,425 | 24,324 | -20,899 | 30,420 | -26,995 |
+| Mining | 3,964 | 27,391 | -23,427 | 34,673 | -30,709 |
+| Attack | 4,728 | 11,112 | -6,384 | 15,162 | -10,434 |
+| Strength | 4,966 | 28,193 | -23,227 | 35,534 | -30,568 |
+| Ranged | 5,595 | 32,861 | -27,266 | 40,379 | -34,784 |
+| Agility | 6,772 | 38,764 | -31,992 | 46,856 | -40,084 |
+| Defence | 7,974 | 34,875 | -26,901 | 42,479 | -34,505 |
+| Hitpoints | 17,058 | 31,895 | -14,837 | 39,369 | -22,311 |
+| Overall | 35,916 | 38,764 | -2,848 | 46,856 | -10,940 |
 | Quest Points | 145 QP by 1,022,261 | never 145 (142 QP in the table) | NEVER | never | NEVER |
-| Equipment, Bank, Runite | no clock | 55,608-56,583 | target unknown | 105,440-107,445 | target unknown |
+| Equipment, Bank, Runite | no clock | 62,015-62,990 | target unknown | 108,420-110,425 | target unknown |
 
-Worst five boards (realistic slack): Defence -36,115, Agility -34,988, Ranged -31,788, Strength -28,706,
-Mining -28,172. At floor: Defence -26,234, Agility -25,854, Ranged -23,142, Strength -21,447, Mining -20,920.
+Worst five boards (realistic slack): Agility -40,084, Ranged -34,784, Defence -34,505, Mining -30,709,
+Strength -30,568. At floor: Agility -31,992, Ranged -27,266, Defence -26,901, Mining -23,427, Strength -23,227.
 
 ### (b) With login wine, (c) all tricks
 
-Same as (a). Login wine and pyre logs are OUT (content bugs), so the tricks have no row to use. Stun relog is
-not chosen: the stun guests use more stun ticks than relog saves.
+(b) is the same as (a): login wine is OUT (content bug), so the trick has no row to use. (c) gives Overall 38,487
+floor / 46,552 realistic, 277 / 304 ticks faster than (a): Magic is no longer a stun guest (teleports leave the
+thieving spot), so stun relog now saves ticks. Pyre logs are OUT (content bug).
 
 ### Each board alone (a fresh account that trains only this board first)
 
@@ -94,27 +105,28 @@ This is the specialist view (scenario c, travel on). It shows which leaders our 
 
 | Board | Deadline | Finish floor | Slack floor | Finish realistic | Slack realistic |
 |---|---|---|---|---|---|
-| Attack | 4,728 | 3,934 | **+794** | 6,557 | -1,829 |
-| Defence | 7,974 | 5,811 | **+2,163** | 10,479 | -2,505 |
-| Strength | 4,966 | 6,257 | -1,291 | 10,417 | -5,451 |
-| Hitpoints | 17,058 | 10,403 | **+6,655** | 17,931 | -873 |
-| Ranged | 5,595 | 2,776 | **+2,819** | 4,163 | **+1,432** |
-| Prayer | 1,281 | 7,687 | -6,406 | 9,012 | -7,731 |
-| Magic | 1,324 | 35,728 | -34,404 | 47,358 | -46,034 |
-| Cooking | 38 | 148 | -110 | 179 | -141 |
+| Attack | 4,728 | 3,308 | **+1,420** | 6,145 | -1,417 |
+| Defence | 7,974 | 12,186 | -4,212 | 15,200 | -7,226 |
+| Strength | 4,966 | 8,107 | -3,141 | 11,268 | -6,302 |
+| Hitpoints | 17,058 | 15,721 | **+1,337** | 20,091 | -3,033 |
+| Ranged | 5,595 | 10,878 | -5,283 | 12,131 | -6,536 |
+| Prayer | 1,281 | 11,232 | -9,951 | 12,844 | -11,563 |
+| Magic | 1,324 | 3,010 | -1,686 | 3,760 | -2,436 |
+| Cooking | 20 | 148 | -128 | 177 | -157 |
 | Woodcutting | 3,181 | 2,996 | **+185** | 3,496 | -315 |
-| Fletching | 58 | 64 | -6 | 77 | -19 |
-| Fishing | 3,425 | 4,072 | -647 | 5,514 | -2,089 |
-| Firemaking | 664 | 638 | **+26** | 730 | -66 |
-| Crafting | 197 | 158 | **+39** | 291 | -94 |
-| Smithing | 1,337 | 1,685 | -348 | 1,872 | -535 |
+| Fletching | 57 | 64 | -7 | 72 | -15 |
+| Fishing | 3,425 | 4,767 | -1,342 | 6,060 | -2,635 |
+| Firemaking | 664 | 649 | **+15** | 790 | -126 |
+| Crafting | 197 | 307 | -110 | 308 | -111 |
+| Smithing | 1,337 | 1,444 | -107 | 1,448 | -111 |
 | Mining | 3,964 | 4,433 | -469 | 5,880 | -1,916 |
-| Herblore | 447 | 173 | **+274** | 384 | **+63** |
-| Agility | 6,772 | 6,507 | **+265** | 9,611 | -2,839 |
-| Thieving | 2,935 | 10,083 | -7,148 | 13,596 | -10,661 |
+| Herblore | 447 | 708 | -261 | 858 | -411 |
+| Agility | 6,772 | 16,075 | -9,303 | 19,577 | -12,805 |
+| Thieving | 2,935 | 9,806 | -6,871 | 13,292 | -10,357 |
 | Runecraft | 2,354 | 1,588 | **+766** | 1,722 | **+632** |
 
-Cooking, Fletching, Strength, Prayer, Magic, Smithing, Fishing, Mining and Thieving lose even alone at floor rates.
+Only Attack, Hitpoints, Woodcutting, Firemaking and Runecraft win alone at floor rates; only Runecraft wins alone at
+realistic rates. Herblore alone (+123 before the supply rows) now loses: 708 / 858 against 447.
 Cooking alone is 148 / 179: the legal route is tutorial 10, trade 5-12, walk 13, Cook's Assistant 12-28, 2-3 cooks
 6-9, walk to Al Kharid bank 79, deposit and wine 3-6, timer 20-22.
 
@@ -131,23 +143,24 @@ Tick = Haggis playtime. "Walk" rows are travel legs (`walk A -> B` in `--order`)
 | 4 | Stew, then shrimp, on the cook-o-matic range (Cooking 35) | 63 | 72 | |
 | | Walk kitchen -> Al Kharid bank through the toll gate (79) | 72 | 151 | |
 | 5 | Deposit wine notes, make 1 wine; timer lands 22 later | 151 | 157 | Cooking 179 |
-| 6 | Fletch arrows and darts | 157 | 212 | Fletching 212 |
-| 7 | Cut gems | 212 | 425 | Crafting 425 |
-| 8 | Finish potions | 425 | 731 | Herblore 731 |
-| 9 | Burn logs | 731 | 1,451 | Firemaking 1,451 |
-| 10 | Smith platebodies at the Varrock West anvil (incl. 640 of bank trips; walk 151 before) | 1,614 | 3,354 | Smithing 3,354 |
-| 11 | Runecraft, air then nature (incl. 240 of walk and boat; walk 149 before) | 3,503 | 5,073 | Runecraft 5,073 |
-| 12 | Tree Gnome Village, Agility 25, The Grand Tree, Fight Arena, Monkey Madness | 5,565 | 16,523 | |
-| 13 | Pickpocket ladder (Magic enchants inside the stuns) | 16,643 | 18,741 | Thieving 18,741, Magic 20,036 |
-| 14 | 3-tick woodcutting (Prayer inside) | 20,397 | 23,797 | Woodcutting 23,797, Prayer 23,942 |
-| 15 | Sea Slug, fishing (Barbarian Village, then Catherby) | 24,288 | 27,883 | Fishing 27,883 |
-| 16 | The Dig Site, power-mine iron | 28,231 | 32,136 | Mining 32,136 |
-| 17 | Waterfall, Dwarf Cannon | 32,635 | 34,540 | Strength 33,672 |
-| 18 | Ranged + cannon | 34,886 | 37,383 | Hitpoints 36,418, Ranged 37,383 |
-| 19 | Wilderness course | 37,718 | 41,760 | Agility 41,760 |
-| 20 | Melee top-up to Defence 99 | 42,095 | 44,089 | Defence and Overall 44,089 |
-| 21 | Witch's House, short quests, Dragon Slayer, Scorpion Catcher, Merlin, Grail, the rest of the quests | 44,153 | 105,420 | Quest Points 142 |
-| 22 | Gear, bank wealth, Lava Maze runite | 105,420 | 107,445 | Equipment, Bank, Runite |
+| 6 | Fletch arrows only (no darts) | 157 | 207 | Fletching 207 |
+| 7 | Cut gems, diamonds from 43 | 207 | 437 | Crafting 437 |
+| 8 | Finish potions from dropped herbs | 437 | 1,217 | Herblore 1,217 |
+| 9 | Burn logs | 1,217 | 1,997 | Firemaking 1,997 |
+| 10 | Bury dragon bones to Prayer 31 | 1,997 | 2,009 | |
+| 11 | Teleport ladder to Magic 99 (no longer inside the pickpocket stuns) | 2,009 | 5,759 | Magic 5,759 |
+| 12 | Smith platebodies at the Varrock West anvil (walk 151 before) | 5,910 | 7,226 | Smithing 7,226 |
+| 13 | Runecraft, air then nature (walk 149 before) | 7,375 | 8,945 | Runecraft 8,945 |
+| 14 | Tree Gnome Village, Agility 25, The Grand Tree, Fight Arena, Monkey Madness | 9,437 | 20,395 | Attack 15,162 |
+| 15 | Pickpocket ladder | 20,515 | 22,613 | Thieving 22,613 |
+| 16 | 3-tick woodcutting (Prayer inside) | 22,974 | 26,374 | Woodcutting 26,374, Prayer 26,479 |
+| 17 | Sea Slug, fishing (Barbarian Village, then Catherby) | 26,825 | 30,420 | Fishing 30,420 |
+| 18 | The Dig Site, power-mine iron | 30,768 | 34,673 | Mining 34,673 |
+| 19 | Melee top-up to Strength 99, Dwarf Cannon | 34,867 | 36,805 | Strength 35,534 |
+| 20 | Ranged + cannon, melee top-up to Defence 99 | 37,151 | 42,479 | Hitpoints 39,369, Ranged 40,379, Defence 42,479 |
+| 21 | Wilderness course | 42,814 | 46,856 | Agility and Overall 46,856 |
+| 22 | Witch's House, Waterfall, short quests, Dragon Slayer, Scorpion Catcher, Merlin, Grail, the rest of the quests | 47,143 | 108,400 | Quest Points 142 |
+| 23 | Gear, bank wealth, Lava Maze runite | 108,400 | 110,425 | Equipment, Bank, Runite |
 
 ## Travel model (2026-10-23)
 
@@ -168,19 +181,20 @@ Tick = Haggis playtime. "Walk" rows are travel legs (`walk A -> B` in `--order`)
 ## Method and helper supplies per board
 
 Counts come from the tier tables in `haggis.ts` (greedy best item per level, `planSkill` from `plan.ts`), scenario
-(a). Item names for potion secondaries and enchant runes are the OSRS recipes (ESTIMATE); levels and XP are from
+(a); Herblore is a fixed drop mix in the row. Every row is stageable: no active row needs an item of the
+`unsourceable` list in `haggis-boards.json` (`research/supply-logistics.md`). Item names for potion secondaries and enchant runes are the OSRS recipes (ESTIMATE); levels and XP are from
 this server's config files.
 
 | Board | Method | Helper supplies |
 |---|---|---|
 | Cooking | Cook's Assistant (Cooking 30), 1 stew and 1 shrimp on the cook-o-matic range (35), 1 hand-made wine at Al Kharid bank, 20-tick timer ferments the bank. The cocktail route is OUT (no level check) | 600 noted unfermented wine, egg, bucket of milk, pot of flour, 3 uncooked stew, 2 raw shrimps, 10 coins (toll), 1 grapes, 1 jug of water |
-| Fletching | Arrows (15 per action) and darts (10 per action), 5 per tick, all stackable | 1,290 headless arrows, 2,360 feathers, arrowtips: bronze 60, iron 45, steel 135, mithril 240, adamant 495, rune 315; dart tips: iron 40, rune 1,520 |
-| Crafting | Gem cutting, 5 per tick | Uncut: opal 5, jade 2, red topaz 2, sapphire 3, emerald 3, ruby 5, diamond 11, dragonstone 305 (10% margin); chisel |
-| Herblore | Unf potion + secondary, 5 per tick | 176 torstol (unf) + 176 jangerberries; about 90 lower-tier unf + secondary pairs (CLI `--supplies`) |
+| Fletching | Arrows only (15 per action), 5 per tick, all stackable. Darts are OUT: rune dart tips have no seller or shop | 3,615 headless arrows; arrowtips: bronze 60, iron 90, steel 135, mithril 240, adamant 495, rune 2,595 (shop only, about 6.3 h of restock) |
+| Crafting | Gem cutting, 5 per tick, diamonds from 43. Dragonstones are OUT (crystal chest only) | Uncut: opal 5, jade 2, red topaz 2, sapphire 3, emerald 3, ruby 5, diamond 401 (10% margin; 365 without); chisel. GE bids, 4-7 days |
+| Herblore | Unf potion + secondary, 14 per inventory, herbs from chaos-druid drops (1,080 herb rolls). Torstol, snapdragon and toadflax are OUT (no source at scale) | Unf: guam 270, harralander 119, ranarr 93, irit 68, avantoe 51, kwuarm 43; eye of newt 338, red spiders' eggs 119, snape grass 144, limpwurt root 43. About 2,420 kills, about 5.6 helper-hours |
 | Firemaking | Burn logs, 4 ticks per log | Logs 27, oak 4, willow 7, maple 13, yew 25, magic 107; tinderbox |
 | Prayer | Bury dragon bones, 2 ticks each | 560 dragon bones |
 | Smithing | Platebodies, 5 ticks each | Bars: bronze 34, iron 35, steel 95, mithril 280, adamantite 345; hammer |
-| Magic | Enchant ladder, 3 ticks per cast | 546 cosmic, 6,807 water, 7,175 earth, 86 air, 80 fire, 5 mind runes; 12 sapphire, 27 emerald, 16 ruby, 38 diamond rings; 453 dragonstone amulets |
+| Magic | Teleport ladder (Varrock 25 to Camelot 45-99), 4-5 ticks per cast (ESTIMATE), staff of air. Enchant is OUT: cosmic runes and dragonstone amulets have no source at scale | 722 law runes, 36 mind, 4 fire, 5 earth, 9 water runes; staff of air |
 | Runecraft | Highest altar, helpers trade 27 essence per cycle | 4,213 rune essence; air, fire, body, nature, law talismans; about 8 helpers in rotation (runecraft-ladder.md) |
 | Thieving | Pickpocket ladder, knights from 55 | 300 lobsters |
 | Woodcutting | 3-tick knife + log | Rune axe, knife, 5 logs |
@@ -199,17 +213,17 @@ Haggis pays playtime for every tick it is logged in. Helpers pay nothing that co
 a helper's pack, next to the Lumbridge tutorial exit, before the first login:
 
 1. **Trade 1 (one trade, 28 slots):** 600 noted unfermented wine, egg, bucket of milk, pot of flour, 3 uncooked
-   stew, 2 raw shrimps, 10 coins, 1 grapes, 1 jug of water, and all fletching stock above (9 stack types).
-2. **Trade loop for Crafting:** 305 uncut dragonstones plus the lower gems, packed 27 per trade, with a chisel.
-3. **Trade loop for Herblore:** about 266 unf potions and 266 secondaries, 14 + 14 per trade.
-4. **Logs, bones, bars, jewellery, runes:** packed per inventory, one helper per board, each standing at the next
+   stew, 2 raw shrimps, 10 coins, 1 grapes, 1 jug of water, and all fletching stock above (7 stack types).
+2. **Trade loop for Crafting:** 401 uncut diamonds plus the lower gems, packed 27 per trade, with a chisel.
+3. **Trade loop for Herblore:** 644 unf potions and 644 secondaries, 14 + 14 per trade.
+4. **Logs, bones, bars, law runes and the staff of air:** packed per inventory, one helper per board, each standing at the next
    bank or anvil before Haggis arrives.
 5. **Runecraft:** 4,213 essence and a rotation of about 8 helpers, plus all talismans in Haggis's pack.
 6. **Gear:** rune axe, rune pickaxe, fly rod, knife, tinderbox, hammer, cannon, armour, 610 lobsters in total.
 
 Wine supply is the hardest part: no shop sells grapes, and the live GE had 0 sellers (`cooking-board.md`).
 Dragonstone, torstol, adamantite bar and cosmic rune also had 0 sellers on 2026-10-22 (`board-ranking.md`).
-`research/supply-costs.md` will replace these notes when it lands.
+The staging plan per item, helper and hour is `research/supply-logistics.md`.
 
 ## Infeasible boards and why
 
@@ -217,10 +231,11 @@ Dragonstone, torstol, adamantite bar and cosmic rune also had 0 sellers on 2026-
 |---|---|---|
 | Cooking | Legal route: tutorial, trade, Cook's Assistant, 2 cooks, walk to a bank (79), wine timer. The leader (38) used the login wine or the cocktails, both content bugs | -110 / -141 (alone the same) |
 | Fletching | 49-55 ticks of actions after a 15-22 tick start. The leader's 58 total is below our start + action floor | -6 / -19 alone |
-| Magic, Thieving, Mining | Slower than the leader even as the first board | -205, -366, -2,057 at floor alone |
+| Magic, Thieving, Mining | Slower than the leader even as the first board. Magic: teleports, because enchant needs cosmic runes and dragonstone amulets that have no source at scale | -1,686, -6,871, -469 at floor alone |
+| Herblore, Crafting | Supply-bound: no legal torstol, snapdragon, toadflax or dragonstone at scale (`research/supply-logistics.md`). Drop herbs (630 / 780) and diamonds (229 / 230) are slower than the leaders (447, 197) | -261 / -411 and -110 / -111 alone |
 | Firemaking, Prayer, Smithing, Runecraft | Win alone at floor, but each one comes after 300-6,000 ticks of earlier boards | see table (a) |
 | Woodcutting to Defence | Each needs 3,000-7,000 ticks and comes after 9,000+ ticks of earlier boards | -9,338 to -27,910 at floor |
-| Overall | Wins at floor with every safe lever; late at realistic rates | +1,708 / -8,173 (all scenarios) |
+| Overall | Late at both rates with every safe lever and the stageable supply rows | -2,848 / -10,940 (a, b); -2,571 / -10,636 (c) |
 
 ## Unknowns and the experiment that closes each
 
@@ -231,8 +246,9 @@ Dragonstone, torstol, adamantite bar and cosmic rune also had 0 sellers on 2026-
 | Cooking to 35, legal | Cook's Assistant 12 / 28 + 2-3 cooks 6 / 9 | ESTIMATE / CODE-READ | Cook's Assistant with burst dialogue and the cook-o-matic cooks from a fresh account, 3 runs |
 | Travel legs | 4,545 + 1,095 inside rows | path model, calibrated on MEASURED practice | Time 3 of the long legs (Varrock East mine -> Almera, Ardougne -> Draynor, Lumbridge -> Ardougne) with walkPath |
 | Fletching action ticks | 49 / 55 | CODE-READ | Fletch the full ladder with `s.direct` at 5 per tick, 3 runs |
-| Crafting | 80 / 213 | CODE-READ / MEASURED | Tight bank cycle and level-up dialog clearing (`crafting-board.md`) |
-| Herblore | 95 / 306 | ESTIMATE | Bank cycle with 14 + 14, 3 runs |
+| Crafting, diamonds from 43 | 229 / 230 | ESTIMATE (MEASURED 194 / 195 with dragonstones + 35) | Practice run of the diamond ladder, 3 runs |
+| Herblore, drop herbs | 630 / 780 | ESTIMATE (MEASURED 246 with torstol; realistic adds the main's identify and mix) | Practice run of the substituted herb set, 3 runs; kill rate of chaos druids, 3 runs |
+| Magic, teleports | 3,000 / 3,750 | ESTIMATE (CODE-READ teleport.rs2 p_delay) | Teleport ladder cast rate, 3 runs |
 | Firemaking, Prayer, Smithing, Magic | sims 628-1,708 | CODE-READ | `research/supply-floors.md` (in progress) |
 | Runecraft | 1,256 / 2,976 | ESTIMATE / MEASURED | Helper rotation trip time |
 | Thieving | 3,850 / 6,169 | MEASURED | Knight 2-tick rhythm with courier food, fresh account |
@@ -245,7 +261,8 @@ Dragonstone, torstol, adamantite bar and cosmic rune also had 0 sellers on 2026-
 | Equipment, Bank, Runite #1 values | unknown | none | Read the three boards; `research/boards-special.md` (in progress) |
 
 **Top 5 experiments** (each one can move a board in the best set):
-1. Herblore bank cycle with 14 + 14: decides Herblore (floor +342, realistic +131 alone).
+1. A legal torstol or dragonstone source at scale (none found in rev 289): decides Herblore and Crafting. Without
+   one, the substituted herb set (3 practice runs) only prices the loss.
 2. Dwarf Cannon quest time and cannon + ranged XP per tick: decides Ranged and Hitpoints.
 3. Crafting tight bank cycle and one-step dialog clearing: decides Crafting (floor +107, realistic -26 alone).
 4. Platebody cycle at an anvil fed by trade: decides Smithing (alone +414 / +227).

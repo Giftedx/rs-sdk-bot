@@ -73,6 +73,7 @@ export interface Activity {
     evidence: Evidence;
     source: string;
     supplies?: Supply[];
+    leadTime?: string; // helper staging work for the supplies (research/supply-logistics.md)
     pending?: string; // an input file that will replace these numbers
     // Travel (travel.ts). `at`: a place id, 'anywhere' (no move) or 'bank' (nearest bank). Without `at` the activity
     // does not move the player. `endAt`: where it ends when its own ticks already hold the walk inside it (quests).
@@ -82,8 +83,9 @@ export interface Activity {
     endAt?: string;
     via?: string[];
     bankTrips?: number;
-    // OUT: the row relies on a content bug (a missing level check or a missing delay). Never scheduled unless
-    // ScheduleOptions.includeOut is set (owner rule: accepted mechanics yes, content bugs no).
+    // OUT: the row relies on a content bug (a missing level check or a missing delay), or on an item with no legal
+    // source at this scale (research/supply-logistics.md). Never scheduled unless ScheduleOptions.includeOut is set
+    // (owner rule: accepted mechanics yes, content bugs no).
     out?: { reason: string; rule?: string; replacement: string };
 }
 
@@ -563,24 +565,50 @@ export const MAGIC_TIERS: Tier[] = [
     { id: 'enchant 5 (dragonstone amulet)', level: 68, xpPerAction: 78 * X, items: [each('cosmic rune'), each('water rune', 15), each('earth rune', 15), each('dragonstone amulet')] },
 ];
 
+// Stageable ladders (research/supply-logistics.md, Proposed substitutions). Rune dart tips, uncut dragonstones,
+// dragonstone amulets and cosmic runes have no legal source at the scale of the full ladders above.
+// Arrows only: rune arrows 187.5 XP per action of 15 against rune darts 188 per action of 10, both 5 per tick.
+export const FLETCHING_ARROW_TIERS: Tier[] = FLETCHING_TIERS.filter(t => !t.id.includes('darts'));
+// Diamonds from 43 to 99 (gem.dbrow 107.5 base XP); the GE has sellers for uncut diamonds, not dragonstones.
+export const CRAFTING_NO_DRAGONSTONE_TIERS: Tier[] = CRAFTING_TIERS.filter(t => t.id !== 'dragonstone');
+// Teleports (magic_spells.dbrow levelrequired / experience in tenths / runesrequired). A staff of air pays the
+// air runes (research/supply-costs.md, Magic), so air runes are not listed. Below 25 only combat spells exist.
+export const MAGIC_TELEPORT_TIERS: Tier[] = [
+    { id: 'wind strike', level: 1, xpPerAction: 5.5 * X, items: [each('mind rune')] },
+    { id: 'varrock teleport', level: 25, xpPerAction: 35 * X, items: [each('law rune'), each('fire rune')] },
+    { id: 'lumbridge teleport', level: 31, xpPerAction: 41 * X, items: [each('law rune'), each('earth rune')] },
+    { id: 'falador teleport', level: 37, xpPerAction: 48 * X, items: [each('law rune'), each('water rune')] },
+    { id: 'camelot teleport', level: 45, xpPerAction: 55.5 * X, items: [each('law rune')] },
+];
+
 // ---------- The Haggis activity table ----------
 
 // The activity table lives in haggis-boards.json so that new measurements change the plan without a code change.
-// Each tick count and rate carries `evidence` and `source`. `suppliesLadder` names a tier table above.
+// Each tick count and rate carries `evidence` and `source`. `suppliesLadder` names a tier table above: `tiers`
+// when given, else the skill's full table.
 const LADDERS: Record<string, Tier[]> = {
     fletching: FLETCHING_TIERS, crafting: CRAFTING_TIERS, herblore: HERBLORE_TIERS,
     firemaking: FIREMAKING_TIERS, smithing: SMITHING_TIERS, magic: MAGIC_TIERS,
+    'fletching-arrows': FLETCHING_ARROW_TIERS, 'crafting-no-dragonstone': CRAFTING_NO_DRAGONSTONE_TIERS,
+    'magic-teleport': MAGIC_TELEPORT_TIERS,
 };
 export const BOARDS_FILE = join(import.meta.dir, 'haggis-boards.json');
 
-type ActivityJson = Activity & { suppliesLadder?: { skill: Skill; margin?: number } };
+type ActivityJson = Activity & { suppliesLadder?: { skill: Skill; tiers?: string; margin?: number } };
+
+// Items with no legal source at the scale the run needs (research/supply-logistics.md, Summary item 1-2).
+// No active row may need more than `max` of one (packages/planner/test/haggis.test.ts).
+export interface Unsourceable { item: string; max: number; reason: string; source: string }
+export function haggisUnsourceable(path = BOARDS_FILE): Unsourceable[] {
+    return (JSON.parse(readFileSync(path, 'utf8')) as { unsourceable?: Unsourceable[] }).unsourceable ?? [];
+}
 
 export function haggisActivities(path = BOARDS_FILE): Activity[] {
     const data = JSON.parse(readFileSync(path, 'utf8')) as { activities: ActivityJson[] };
     return data.activities.map(({ suppliesLadder, ...a }) => {
         if (!suppliesLadder) return a;
-        const tiers = LADDERS[suppliesLadder.skill];
-        if (!tiers) throw new Error(`${a.id}: no tier table for ${suppliesLadder.skill}`);
+        const tiers = LADDERS[suppliesLadder.tiers ?? suppliesLadder.skill];
+        if (!tiers) throw new Error(`${a.id}: no tier table for ${suppliesLadder.tiers ?? suppliesLadder.skill}`);
         return { ...a, supplies: [...ladderSupplies(suppliesLadder.skill, tiers, suppliesLadder.margin ?? 1), ...(a.supplies ?? [])] };
     });
 }

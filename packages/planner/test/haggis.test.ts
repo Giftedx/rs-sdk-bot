@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { bestSet, haggisActivities, haggisTravel, loadSnapshot, schedule, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
+import { bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, schedule, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
 import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
 
@@ -263,7 +263,7 @@ test('OUT rows (content bugs) are never scheduled; the legal Cooking route repla
     const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
     const acts = haggisActivities();
     const out = acts.filter(a => a.out).map(a => a.id).sort();
-    expect(out).toEqual(['charge', 'cook-35', 'fm-pyre', 'login-wine', 'mage-arena', 'mortton-oil', 'relog']);
+    expect(out).toEqual(['charge', 'cook-35', 'craft', 'fletch', 'fm-pyre', 'herb', 'login-wine', 'mage-arena', 'magic', 'mortton-oil', 'relog']);
     for (const tricks of [new Set<never>(), new Set(TRICKS)]) {
         const r = schedule(boards, acts, { mode: 'realistic', tricks, owner: new Set(['charge-spam']), travel: haggisTravel() });
         for (const id of out) expect(r.chosen).not.toContain(id);
@@ -271,6 +271,27 @@ test('OUT rows (content bugs) are never scheduled; the legal Cooking route repla
         expect(r.blocked).toEqual([]);
         expect(r.qp).toBe(142);
     }
+});
+
+test('no active row needs an item with no legal source at this scale (research/supply-logistics.md)', () => {
+    const bad = haggisUnsourceable();
+    expect(bad.map(u => u.item)).toEqual(expect.arrayContaining(['torstol potion (unf)', 'snapdragon potion (unf)', 'toadflax potion (unf)', 'uncut dragonstone', 'dragonstone amulet', 'cosmic rune', 'rune dart tips']));
+    const max = new Map(bad.map(u => [u.item, u.max]));
+    const acts = haggisActivities();
+    // Each active row alone, with the supplies its lever patches can set.
+    for (const a of acts.filter(a => !a.out)) {
+        for (const s of [...(a.supplies ?? []), ...(a.patches ?? []).flatMap(p => p.set?.supplies ?? [])]) {
+            if (max.has(s.item)) expect({ row: a.id, item: s.item, count: s.count }).toEqual({ row: a.id, item: s.item, count: Math.min(s.count, max.get(s.item)!) });
+        }
+    }
+    // The summed manifest of every scenario, with and without the safe levers.
+    for (const sc of SCENARIOS) for (const disable of [new Set<string>(), new Set(LEVERS.map(l => l.id))]) {
+        for (const s of suppliesFor(acts, { mode: 'realistic', tricks: new Set(sc.tricks), disable })) {
+            if (max.has(s.item)) expect({ scenario: sc.id, item: s.item, count: s.count }).toEqual({ scenario: sc.id, item: s.item, count: Math.min(s.count, max.get(s.item)!) });
+        }
+    }
+    // Each OUT row for supply names its replacement, and the replacement exists.
+    for (const a of acts.filter(a => a.out?.reason.startsWith('no legal source at this scale'))) expect(acts.some(b => b.id === a.out!.replacement && !b.out)).toBe(true);
 });
 
 test('every row of the real table has a known place, and the travel schedule has no blocks', () => {
