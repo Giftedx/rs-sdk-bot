@@ -26,6 +26,7 @@ const GIVE_TO = process.env.GIVE_TO?.trim() || '';
 const HANDOFF_ONLY = process.env.HANDOFF_ONLY === '1';
 const WAIT = Number(process.env.WAIT ?? 900);
 // TICK3=0: no knife-on-logs 3-tick step; the first bank visit banks the knife and logs (3 more fish per pack).
+// Measured worse (practice 2026-10-23, 3 x 2,500 ticks: 36.6, 48.1, 24.0 food per 1,000 ticks against 34.2, 52.0, 39.5).
 const TICK3 = process.env.TICK3 !== '0';
 
 const FLY_SPOT: Tile = { x: 3239, z: 3251 };
@@ -334,9 +335,10 @@ try {
                 await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); chain = null;
                 continue;
             } else if (noSpot > 5 && invLen() <= 18) {
-                // No raw fish to cook: chickens give feathers, and the raw chicken is cooked at once (Cooking XP).
+                // No raw fish to cook: chickens give feathers. Raw chicken only below Cooking 15 (it trains Cooking to
+                // trout; above that, waiting for 8 raw chickens cost 359-407 ticks per 2,500 in practice).
                 noSpot = 0; spotWaits++;
-                await chickenTrip(feathers + 10, 8); await go(FIRE_TO_FLY, 'back to the river'); chain = null;
+                await chickenTrip(feathers + 10, cook() < 15 ? 8 : 0); await go(FIRE_TO_FLY, 'back to the river'); chain = null;
                 continue;
             } else { idleTicks++; await waitTicks(s, 1); }
             fishTicks += s.tick() - f0;
