@@ -404,7 +404,7 @@ window.addEventListener('resize',()=>{drawMap();if($('#flow'))$('#flow')._h=null
 window.onerror=(m,src,l)=>{const c=$('#clock');c.textContent='JS error: '+m+' @'+l;c.style.color='var(--red)'};
 // Static mode (screenshots) renders twice so the second, diffing render is exercised too.
 if(STATIC)fetch('/api/state').then(r=>r.json()).then(j=>{S=j;render();setTimeout(()=>fetch('/api/state').then(r=>r.json()).then(k=>{S=k;render()}),2500)});
-else{const es=new EventSource('/events');es.onmessage=e=>{S=JSON.parse(e.data);render()}}
+else{let PV=null;const es=new EventSource('/events');es.onmessage=e=>{S=JSON.parse(e.data);if(PV===null)PV=S.pageVersion;else if(S.pageVersion&&S.pageVersion!==PV){location.reload();return}render()}}
 if(new URLSearchParams(location.search).get('map')==='2d')setMode('2d');
 </script>
 </body>

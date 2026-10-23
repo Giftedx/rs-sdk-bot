@@ -650,6 +650,8 @@ function buildState() {
         now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards, events: events.slice(0, 120),
         results: results.slice(0, 60), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
+        // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
+        pageVersion: (() => { try { return statSync(join(import.meta.dir, 'index.html')).mtimeMs; } catch { return 0; } })(),
         icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
 }
