@@ -268,28 +268,50 @@ try {
     // the carts, cranes or pickaxes every 5 ticks (:112-147, 0-15). Fire Wave from range (magic defence -5,
     // hauntedmine.npc:205): no walk to a ghost that stands where melee cannot reach.
     const WAVE = componentId('magic:fire_wave');
-    // Where to stand (rsmod hasLineOfSight, range 9, from the boss spots of hauntedmine_boss_ghost.rs2:308-342):
-    // 2788,4454 sees move spots 0-4; 2786,4452 sees spot 5 (2787,4443-4445). Both are off the cart tracks; a walk
-    // across a track can stop at a boss cart (blockwalk), so the bot does not chase the ghost.
-    let lastCast = -99, casts = 0, lastWalk = -99;
+    // The server walks a caster close to the ghost before Fire Wave lands (the trial runs hit from 1-3 tiles), so per
+    // boss spot (hauntedmine_boss_ghost.rs2:308-342, plus the spawn 2788,4458) the bot first runs to a tile next to
+    // it that is off the cart tracks (a cart pushes a player along its track, :136-142, and the east end of the z 4456
+    // track, 2795,4456, is a dead end while a cart stands beside it), then casts and lets the server close in.
+    const SPOTS: Array<[number, number, number, number]> = [
+        [2794, 4452, 2794, 4454], [2796, 4460, 2796, 4458], [2788, 4463, 2788, 4464], [2780, 4460, 2779, 4458],
+        [2780, 4454, 2782, 4454], [2787, 4444, 2788, 4446], [2788, 4458, 2788, 4456],
+    ];
+    let lastCast = -99, casts = 0, lastWalk = -99, mxp = q.xp('Magic'), noXp = 0, restage = 0, checked = -1, staged = -1, stageFor = -1, stageT = 0, movedT = 0, unstick = 0, lastHere = '', lastGx = 2788, lastGz = 4458;
     for (let i = 0; i < 900 && !killed(); i++) {
         await q.guard('boss');
+        const here = `${q.pos()?.worldX},${q.pos()?.worldZ}`;
+        if (here !== lastHere) { lastHere = here; movedT = q.T(); }
         const b = boss();
         const g: any = b ?? (q.st()?.nearbyNpcs ?? []).find((n: any) => /^ghost$/i.test(n.name));
-        const south = !!g && (g.tileZ ?? g.z) <= 4446;
-        const [hx, hz] = south ? [2786, 4452] : [2788, 4454];
-        // A cast the server finds out of reach walks the bot on (its approach); the bot walks home only while the
-        // ghost is faded (no Attack op) or a cast has had 8 ticks.
-        if (b && !q.dialogOpen() && q.T() - lastCast >= 5 && (q.near(hx, hz, 0) || q.T() - lastCast >= 8 || lastCast < 0)) {
-            casts++; lastCast = q.T();
+        if (g) { lastGx = g.tileX ?? g.x; lastGz = g.tileZ ?? g.z; }
+        const gx = lastGx, gz = lastGz;
+        let si = 0;
+        for (let k = 1; k < SPOTS.length; k++) if (Math.max(Math.abs(SPOTS[k]![0] - gx), Math.abs(SPOTS[k]![1] - gz)) < Math.max(Math.abs(SPOTS[si]![0] - gx), Math.abs(SPOTS[si]![1] - gz))) si = k;
+        const [, , hx, hz] = SPOTS[si]!;
+        if (lastCast > 0 && checked !== lastCast && q.T() - lastCast >= 5) {
+            checked = lastCast;
+            noXp = q.xp('Magic') === mxp ? noXp + 1 : 0;
+            if (noXp >= 2) { staged = -1; stageFor = -1; noXp = 0; restage++; }
+        }
+        // A new spot (or two dry casts): run to its stand tile first; no walk within 8 ticks of a cast (the
+        // server's own approach).
+        if (staged !== si && q.T() - lastCast >= 8) {
+            if (stageFor !== si) { stageFor = si; stageT = q.T(); }
+            if (q.near(hx, hz, 0) || q.T() - stageT > 12) staged = si;
+            else if (q.T() - lastWalk >= 3) {
+                lastWalk = q.T();
+                // No step for 9 ticks: a cart or a crane holds the route; a short walk 2 tiles off in turn first.
+                const [ux, uz] = q.T() - movedT >= 9 ? [[2, 0], [0, 2], [-2, 0], [0, -2]][unstick++ % 4]! : [0, 0];
+                await q.s.direct({ type: 'walkTo', x: (ux ? q.pos()!.worldX : hx) + ux, z: (uz ? q.pos()!.worldZ : hz) + uz, running: true, reason: 'SDK' });
+                if (ux || uz) movedT = q.T();
+            }
+        } else if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
+            casts++; lastCast = q.T(); mxp = q.xp('Magic');
             await q.s.direct({ type: 'spellOnNpc', npcIndex: b.index, spellComponent: WAVE, reason: 'SDK' });
-        } else if (!q.near(hx, hz, 0) && (!b || q.T() - lastCast >= 8) && q.T() - lastWalk >= 4) {
-            lastWalk = q.T();
-            await q.s.direct({ type: 'walkTo', x: hx, z: hz, running: true, reason: 'SDK' });
         }
         if (i % 20 === 0) {
             const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /treus dayth|^ghost$/i.test(n.name));
-            console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} myhp=${q.hp()}`);
+            console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} restage=${restage} spot=${si} myhp=${q.hp()}`);
         }
         await q.waitTicks(1);
     }

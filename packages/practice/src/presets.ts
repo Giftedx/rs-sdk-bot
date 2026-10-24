@@ -19,6 +19,7 @@ export interface SaveConfig {
 }
 
 const LUMBRIDGE = { x: 3222, z: 3218, level: 0 };
+const COMBAT70 = { Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70 };
 
 function gtPreset(stage: number, position: { x: number; z: number; level: number }, quest: number[] = []): SaveConfig {
     return {
@@ -435,12 +436,13 @@ export const PRESETS: Record<string, SaveConfig> = {
         skills: { Woodcutting: l, Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70 },
         inventory: [{ id: 1359, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))],
     }])),
+    // Combat 70s: a Fishing-only preset died at the Lumbridge river spot (practice 2026-10-24, respawned at 3222,3216).
     // Fishing ladder from the Sea Slug level (scripts/measure/floor-fish.ts): fly at the Lumbridge river (fly rod 309,
     // feathers 314, knife 946, logs 1511); cage (pot 301) and harpoon (311) at Musa Point.
     ...Object.fromEntries([74, 85].flatMap(l => [
-        [`floor_fish_fly${l}`, { position: { x: 3239, z: 3251, level: 0 }, skills: { Fishing: l }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 2000 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
-        [`floor_fish_cage${l}`, { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: l }, inventory: [{ id: 301, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
-        [`floor_fish_harpoon${l}`, { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: l }, inventory: [{ id: 311, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
+        [`floor_fish_fly${l}`, { position: { x: 3239, z: 3251, level: 0 }, skills: { Fishing: l, ...COMBAT70 }, inventory: [{ id: 309, count: 1 }, { id: 314, count: 2000 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
+        [`floor_fish_cage${l}`, { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: l, ...COMBAT70 }, inventory: [{ id: 301, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
+        [`floor_fish_harpoon${l}`, { position: { x: 2924, z: 3178, level: 0 }, skills: { Fishing: l, ...COMBAT70 }, inventory: [{ id: 311, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 10 }, () => ({ id: 1511, count: 1 }))] }],
     ])),
     // Firemaking 1 -> 99 with no banking (scripts/measure/floor-fm-rows.ts): firemaker with a tinderbox at Draynor bank;
     // helper <bot>b at Draynor bank with the FIREMAKING logs banked (2/4/7/13/24/107, 1 spare each) to drop on the path.

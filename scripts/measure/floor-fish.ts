@@ -77,6 +77,8 @@ try {
             cycles++;
             await tick(s); account(mode);
         }
+        const pp = s.sdk.getState()?.player;
+        if (pp && Math.abs(pp.worldX - 3222) <= 2 && Math.abs(pp.worldZ - 3218) <= 3) { console.log(`WARN at the Lumbridge respawn at ${s.tick() - t0}: died`); break; }
         if (s.tick() - lastT > 60) { console.log(`WARN no XP for 60 ticks at Fishing ${level(s, 'Fishing')}`); break; }
     }
     const ticks = s.tick() - t0;
