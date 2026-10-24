@@ -10,7 +10,8 @@
 // stops at; CHICKEN_CAP (default 400) ticks per chicken trip; GIVE_TO=<account>: at each bank visit, when that
 // player stands within 12 tiles, withdraw every cooked fish as notes and trade them over; HANDOFF_ONLY=1: walk to
 // the bank, wait up to WAIT (default 900) ticks for GIVE_TO, hand off and stop.
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { openBot, finish, countItems, randomEventsOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
@@ -296,10 +297,28 @@ try {
 
     let chain: { index: number } | null = null;
     let stillAnim = 0;
+    // The courier waits at Draynor bank (its fresh status file says so): hand over now, not at the next full pack
+    // (2026-10-24 live: the courier waited there while the cook had 186 fish banked and three farmers waited for food).
+    const courierStatus = join(resolve(import.meta.dir, '..'), '.practice', 'status', `${GIVE_TO}.json`);
+    let lastCourierTrip = -1e9;
+    const courierWaiting = () => {
+        if (!GIVE_TO || s.tick() - lastCourierTrip < 600) return false;
+        try {
+            const c = JSON.parse(readFileSync(courierStatus, 'utf8'));
+            return Date.now() - c.at < 30_000 && !!c.pos && Math.max(Math.abs(c.pos.x - BANK.x), Math.abs(c.pos.z - BANK.z)) <= 12;
+        } catch { return false; }
+    };
     while (!over()) {
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
         if (await eatIfLow()) continue;
         if (await troll()) continue;
+        if (courierWaiting()) {
+            lastCourierTrip = s.tick();
+            console.log(`MILESTONE courier waiting at Draynor t=${now()}`);
+            await cookAll(); await bankTrip(); await handOff(150);
+            await go(BANK_TO_FLY, 'back to the river'); chain = null;
+            continue;
+        }
         const feathers = countItems(s, FEATHER);
         // Cooking below 15 with nothing cookable: raw chicken first (each success is 750 XP at 25x; 15 = 2,411 XP).
         if (cook() < 15 && cookable().length === 0 && invLen() <= 20) {
