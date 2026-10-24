@@ -2958,18 +2958,18 @@
   },
   {
    "id": "quests-rest",
-   "label": "Remaining 9 quests to 145 QP (all quests)",
+   "label": "Remaining 8 quests to 145 QP (all quests)",
    "serves": [
     "questpoints"
    ],
    "ticks": {
-    "floor": 21100,
-    "realistic": 33200,
+    "floor": 19300,
+    "realistic": 30600,
     "evidence": "ESTIMATE",
-    "source": "9 quests not on another row and not measured (research/quest-points-board.md), 29 QP: the 46 rest quests (83 QP) plus 7 QP of 4 quests whose rows carry qp 0 (crest 1, rival-fight-arena 2, rival-mm 3, rival-seaslug 1), less the 10 short quests (12 QP) MEASURED in row quests-short and Shield of Arrav (1 QP, medium) MEASURED in row quest-arrav; less 19 medium quests (33 QP) MEASURED in row quests-medium; less Lost City (3 QP, medium) MEASURED in row quest-zanaris; less 6 long quests (12 QP) MEASURED in row quests-long; with that row the run ends at 145 = MAX_QP (quest.constant:72-139, quests.rs2:96-327). Ticks by size class anchored on MEASURED practice runs (research/quest-plan.md): 0 short x 250/400, 0 medium x 900/1,300 (Merlin 868-897, Dwarf Cannon 888-925, Waterfall 1,030-1,037), 2 long x 1,800/2,600 (Dragon Slayer 1,488-1,577, Grand Tree 2,001-2,083), 7 very long x 2,500/4,000 (no measured anchor); was 57,600/86,700 for 46 quests; realistic adds walks and unscripted retries; not measured; was 55100/82700 before quest-arrav; was 54200/81400 before quests-medium; was 50600/76200 before quest-zanaris"
+    "source": "8 quests not on another row and not measured (research/quest-points-board.md), 27 QP: the 46 rest quests (83 QP) plus 7 QP of 4 quests whose rows carry qp 0 (crest 1, rival-fight-arena 2, rival-mm 3, rival-seaslug 1), less the 10 short quests (12 QP) MEASURED in row quests-short and Shield of Arrav (1 QP, medium) MEASURED in row quest-arrav; less 19 medium quests (33 QP) MEASURED in row quests-medium; less Lost City (3 QP, medium) MEASURED in row quest-zanaris; less 7 long quests (14 QP) MEASURED in row quests-long; with that row the run ends at 145 = MAX_QP (quest.constant:72-139, quests.rs2:96-327). Ticks by size class anchored on MEASURED practice runs (research/quest-plan.md): 0 short x 250/400, 0 medium x 900/1,300 (Merlin 868-897, Dwarf Cannon 888-925, Waterfall 1,030-1,037), 1 long x 1,800/2,600 (Dragon Slayer 1,488-1,577, Grand Tree 2,001-2,083), 7 very long x 2,500/4,000 (no measured anchor); was 57,600/86,700 for 46 quests; realistic adds walks and unscripted retries; not measured; was 55100/82700 before quest-arrav; was 54200/81400 before quests-medium; was 50600/76200 before quest-zanaris"
    },
    "lump": true,
-   "qp": 29,
+   "qp": 27,
    "requires": [
     "dragon",
     "grail",
@@ -2987,8 +2987,8 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 19513,
-       "realistic": 30703,
+       "floor": 17849,
+       "realistic": 28299,
        "evidence": "ESTIMATE",
        "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 50124/75279 before quests-medium; was 46795/70470 before quest-zanaris"
       }
@@ -3119,18 +3119,18 @@
   },
   {
    "id": "quests-long",
-   "label": "Long quests (6) from quests-rest, MEASURED",
+   "label": "Long quests (7) from quests-rest, MEASURED",
    "serves": [
     "questpoints"
    ],
    "ticks": {
-    "floor": 10327,
-    "realistic": 11099,
+    "floor": 11411,
+    "realistic": 12237,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Long rest quests\": 6 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP)"
+    "source": "research/quest-points-board.md \"Long rest quests\": 7 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP); Troll Romance 1092/1138/1084 (scripts/generated/quest-trolllove.ts, 2 QP)"
    },
    "lump": true,
-   "qp": 12,
+   "qp": 14,
    "requires": [
     "dragon",
     "grail",
@@ -3142,16 +3142,16 @@
     "quests-medium"
    ],
    "evidence": "MEASURED",
-   "source": "research/quest-points-board.md \"Long rest quests\": 6 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP)",
+   "source": "research/quest-points-board.md \"Long rest quests\": 7 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP); Troll Romance 1092/1138/1084 (scripts/generated/quest-trolllove.ts, 2 QP)",
    "patches": [
     {
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 10327,
-       "realistic": 11099,
+       "floor": 11411,
+       "realistic": 12237,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Long rest quests\": 6 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP); the rival burst run is not measured by us"
+       "source": "research/quest-points-board.md \"Long rest quests\": 7 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-long.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Underground Pass 2764/2859/2898 (scripts/generated/quest-upass.ts, 5 QP); Troll Stronghold 847/788/824 (scripts/generated/quest-troll.ts, 1 QP); Shilo Village 2133/2478/2357 (scripts/generated/quest-zombiequeen.ts, 2 QP); The Tourist Trap 1617/1604/1624 (scripts/generated/quest-desertrescue.ts, 2 QP); Eadgar's Ruse 2175/2161/2091 (scripts/generated/quest-eadgar.ts, 1 QP); Temple of Ikov 947/1077/972 (scripts/generated/quest-ikov.ts, 1 QP); Troll Romance 1092/1138/1084 (scripts/generated/quest-trolllove.ts, 2 QP); the rival burst run is not measured by us"
       }
      }
     }
