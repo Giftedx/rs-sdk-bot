@@ -75,7 +75,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Imp Catcher (`imp`) | 1 (104) | rest | none found | imps (`quest_imp/scripts/imp_journal.rs2:13`) | S |
 | The Dig Site (`itexam`) | 2 (105) | `dig`, MEASURED 1,535-1,851 (`research/quest-plan.md` 1p) | Agility 10 at the winch, Herblore 10 in the chemistry, Thieving 25 at the pocket (`quest_itexam/scripts/area_digsite.rs2:617`, `itexam_chemistry.rs2:21`, `digsite_workman.rs2:62`); the rock samples, brush, trowel, talisman, chemicals and tablet are untradeable, so the account fetches them | none found | - |
 | Observatory Quest (`itgronigen`) | 2 (106) | rest | none found; MEASURED 550-555 ticks in row `quests-medium` | none found | M |
-| Watchtower (`itwatchtower`) | 4 (107) | rest | Magic 14, Mining 40, Herblore 14, Thieving 15, Agility 25 (`quest_itwatchtower/scripts/itwatchtower_journal.rs2:8-28`) | ogres; CLAIMED by long-quest helper 3 | XL |
+| Watchtower (`itwatchtower`) | 4 (107) | rest | Magic 14, Mining 40, Herblore 14, Thieving 15, Agility 25 (`quest_itwatchtower/scripts/itwatchtower_journal.rs2:8-28`) | ogres; research notes in "Watchtower: research notes" | XL |
 | Jungle Potion (`junglepotion`) | 1 (108) | rest | Druidic Ritual (`areas/area_karamja/scripts/trufitus.rs2:280` reads `%druidquest`); MEASURED 649-651 ticks in row `quests-medium` | none found | M |
 | Legends' Quest (`legends`) | 4 (109) | rest | 107 QP; Family Crest, Heroes', Underground Pass, Shilo Village, Waterfall (`quest_legends/scripts/legends_guard.rs2:50-53`); Magic 56, Mining 52, Agility, Crafting, Smithing, Strength, Thieving, Woodcutting 50, Herblore 45, Prayer 42 (`legends_journal.rs2:65-128`) | several | XL |
 | Dwarf Cannon (`mcannon`) | 1 (110) | `cannon` | none | goblins | - |
@@ -1795,6 +1795,45 @@ Planner: `quests-long` gets Horror from the Deep (2 QP, floor 678 / realistic 70
 -> 17,500 / 28,000 (burst 16,184 / 25,894); scratchpad `up/long-rows.ts` on the committed rows (Troll Romance
 included). `haggis-cli.ts research/hiscores-live.json --levers`: Quest Points WIN at 102,933 / 118,388 -> 101,946 /
 116,684; QP at end 145. `bun test packages/planner`: 42 pass, 0 fail.
+
+### Watchtower: research notes (not scripted)
+
+Long-quest helper 3 read the content (with a read-only research agent) and stopped before a script (context); the
+claim is released. Not tested in game. Server truth: `quests/quest_itwatchtower/scripts/*.rs2` (`quest_itwatchtower.rs2`
+unless named). Varps: `%itwatchtower` 212 (complete 13, `general/configs/quest.constant:40`; reading the scroll 14),
+`%itwatchtower_bits` 213, `%gutanoth_gold` 214; no coord or obj varp. Reward: 4 QP, 15,300 Magic XP before 25x, 5,000
+coins (`:533-537`).
+- Start: the wall `loc_2299` (2548,3119, Agility 18) and `watchladderup` (2549,3111,1) to the wizard (level 2), because
+  the tower guard blocks the ladder at stage 0 (`:1-8,87-94,261-266`). "What's the matter?", "So how come the spell
+  doesn't work?", "Can I be of help?" sets 1 (`watchtower_wizard.rs2:177-188,332-349`).
+- Fingernails from the bush 2799 (2544,3134) at stage 1 (`:17-29`); to the wizard, "So what do I do?" sets 2.
+- Relic parts: Og (2506,3116) gives Toban's key; `tobancave` (2499,2989) to Toban's island; the key on `tobanchest`
+  (2575,3031) gives stolen gold for Og (part 1, `og.rs2:180-213`); dragon bones (536) to Toban (part 3,
+  `toban.rs2:21-61`); a rope (954) on the branch at 2499,3087 to Grew's island (`:289-311`), Grew: "Don't eat me; I can
+  help you."; Gorad (Toban's island, level 68, 80 hp) dies for the tooth; the tooth to Grew gives part 2 and crystal 1
+  (`grew.rs2:100-126`). The 3 parts on the wizard give the relic (3, `watchtower_wizard.rs2:247-322`).
+- The relic on `ogre_guard2` (2505,3062) opens the west gate (4, `ogre_guard.rs2:60-81`). A gold bar (2357) on
+  `ogre_guard1` (2549,3029) opens the east gate (`:3-37`); the research agent's flood fill says cave 6 needs that gate.
+- A rock cake stolen from the counter (2506,3023, Thieving 15; the trader attacks if within 3 tiles,
+  `area_yanille/scripts/ogre_trader.rs2:21-39`) on `ogre_guard3` (2501,3012); the bridge jump `tanothjump1`
+  (2530,3026, Agility 25, 20 coins, guard4 within 8 tiles, `:392-420`).
+- City guard (2541,3029): "I seek passage into the skavid caves." (5); a death rune on him gives the skavid map (6,
+  `city_guard.rs2:181-209`). Each skavid cave needs the map and a lit light (`:100-188`). The scared skavid (cave 5,
+  2553,3033) first, then Ar, Ig, Cur, Nod from the 4 talkers (caves 3, 2, 4, 1; `skavid.rs2:1-143`). The mad skavid
+  (cave 6, 2527,3011) says one of 3 random lines (`random(3)`, `skavid.rs2:165-194`): "Ar cur..." -> "Gor.", "Bidith
+  ig..." -> "Cur.", "Cur tanath..." -> "Bidith."; the right answer gives crystal 2 (7). Nightshade (2398) lies in
+  caves 2 and 6.
+- Nightshade on the enclave guard (2507,3036) takes the bot into the shaman cave (8, `enclave_guard.rs2:237-255`); the
+  wizard sets 9. Potion: guam on a vial of water, jangerberries on the guam vial, ground bat bones on that vial
+  (`ogre_potion.rs2:251-303`); the wizard makes it magic (10). The magic potion on each of the 6 shamans (never attack:
+  30 damage, `ogre_shaman.rs2:317-371`) gives crystal 3 after the 6th. Mine the Rock of Dalgroth (2590,9449, Mining
+  40, a pickaxe) for crystal 4 (`:470-498`). The wizard with the 4 crystals sets 11; the lever `watchleverup`
+  (2543,3115,2) completes it (13, `:513-546`).
+- Untradeable (the bot makes them): the relic and parts, the map, the tooth, the key, the rock cake, the crystals, the
+  nails, the stolen gold, the potions, the nightshade. A helper can supply: dragon bones, a gold bar, a death rune,
+  guam, jangerberries, a vial of water, bat bones, a pestle and mortar, a lit candle, a pickaxe, 2 ropes, coins.
+- No step found that a bot cannot do. Risks: the trader near the cake counter, guard4 away from the jump, the cave 6
+  route through the gold-bar gate (flood fill only).
 
 ### Regicide
 
