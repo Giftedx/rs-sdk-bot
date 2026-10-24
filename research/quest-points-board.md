@@ -58,7 +58,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Druidic Ritual (`druid`) | 4 (87) | `druid` | none | none | - |
 | Nature Spirit (`druidspirit`) | 2 (88) | rest | Restless Ghost, Priest in Peril, Crafting 18 (`quest_druidspirit/scripts/druidspirit_journal.rs2:26,31,37`); MEASURED 791-830 ticks in row `quests-medium` | ghasts (`:45`) | M |
 | Monk's Friend (`drunkmonk`) | 1 (89) | rest | none found | none found | S |
-| Elemental Workshop (`elemental_workshop`) | 1 (90) | rest | Mining 20, Smithing 20, Crafting 20 (`quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:172,186,252`) | none found | M |
+| Elemental Workshop (`elemental_workshop`) | 1 (90) | rest | Mining 20, Smithing 20, Crafting 20 (`quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:172,186,252`); MEASURED 194-209 ticks in row `quests-medium` | none found | M |
 | Plague City (`elena`) | 1 (91) | rest | none found; gas mask, picture, book, key, warrant, chocolaty milk and hangover cure are untradeable (`quest_elena/configs`, `knowledge/items.json`); MEASURED 749-784 ticks in row `quests-medium` | none found | M |
 | Fishing Contest (`fishingcompo`) | 1 (92) | rest | Fishing 10 (`quest_fishingcompo/scripts/hemenster_fishing.rs2:70`) | none found | S |
 | Gertrude's Cat (`fluffs`) | 1 (93) | rest | none found | none found | S |
@@ -439,6 +439,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Demon Slayer | `scripts/generated/quest-demon.ts` | 899, 877, 882 | MEASURED 3/3 |
 | Jungle Potion | `scripts/generated/quest-junglepotion.ts` | 651, 650, 649 | MEASURED 3/3 |
 | Tribal Totem | `scripts/generated/quest-totem.ts` | 340, 352, 343 | MEASURED 3/3 |
+| Elemental Workshop | `scripts/generated/quest-elemental.ts` | 206, 209, 194 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -806,6 +807,29 @@ Findings:
 - The planner puts `quests-rest` before `quests-medium` (`haggis-cli.ts --order`: rows 54 and 56), so this quest's
   Ardougne Teleport needs Plague City first. In `quests-medium` it comes after Plague City.
 
+### Elemental Workshop
+
+Preset `quest_elemental` in `packages/practice/src/presets-rest.ts`: in the Seers' Village house beside the bookcase; a
+knife, needle, leather, thread, hammer, rune pickaxe, 4 coal and 6 lobsters from a helper. `RESULT ok qp=1
+xp=attack=3500,hitpoints=1157,crafting=125000,smithing=125700 ... ticks=206 ... walkTicks=129 retries=0 died=false` (runs:
+206, 209, 194 ticks; a trial before the proof: 200), each with `You make an Elemental Shield.` and `Congratulations! Quest
+complete!`. The quest has no NPC talk; varp `%elemental_workshop_bits` (299) holds one bit a step. Steps (trial MILESTONE
+ticks): the bookcase gives the battered book, read it, the knife on its spine gives the key 0-5
+(`quests/quest_elemental_workshop/scripts/quest_elemental_workshop.rs2:1-12`, `elemental_workshop_shield_book.rs2:1-24`);
+the key on the odd wall (2709,3495) and the stairs down 5-21 (`quest_elemental_workshop.rs2:14-45`); the stone bowl from
+box 1, the right valve, then the left valve, then the water lever 21-52 (`:46-130`); the bellows (needle, leather,
+thread) and the air lever 52-75 (`:132-183`); lava from the trough into the furnace 75-105 (`:150-162,208-221`); a Mine
+click on an elemental rock wakes an earth elemental, its death drops the elemental ore 105-158 (`:185-206`,
+`elemental_earth.rs2:1-7`); the ore and 4 coal in the furnace, the bar on the workbench with the book and the hammer
+158-200 (`:226-268`).
+Findings:
+- The right valve toggles only while the left one is off (`:85-87`); so the order is right, left, lever.
+- Earth elementals also roam the mine and drop no ore (`elemental_earth.rs2:9-27`). Trial 2 killed roaming ones (28,100 Attack XP) and got no
+  ore, so the bot attacks only the elemental that appears beside it after its own Mine click.
+- The key p_teleports the bot through the double door; trial 1 stopped on the door tile, so the step repeats until the
+  bot is north of the wall.
+- Helper items: knife, needle, leather, thread, hammer, rune pickaxe, coal. All are tradeable (`knowledge/items.json`).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -843,6 +867,11 @@ After Tribal Totem (medium, 900 / 1,300) `quests-rest` is 23 quests, 55 QP, 41,6
 medium and 9 long; `quests-medium` is 11 quests, 19 QP, floor 9,238 / realistic 9,672. `bun test packages/planner`: 42
 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 106,661 floor /
 130,130 realistic.
+
+After Elemental Workshop (medium, 900 / 1,300) `quests-rest` is 22 quests, 54 QP, 40,700 / 61,900 (burst 37,639 /
+57,245), 5 medium and 9 long; `quests-medium` is 12 quests, 20 QP, floor 9,432 / realistic 9,881. `bun test
+packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
+at 106,022 floor / 129,137 realistic.
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached

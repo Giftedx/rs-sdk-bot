@@ -36,4 +36,8 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // runes for one Ardougne Teleport (2 law 563, 2 water 555), 30 coins for Captain Barnaby back to Brimhaven, 4
     // lobsters. The label and the totem are quest items from the run.
     quest_totem: rest({ x: 2791, z: 3183 }, [[563, 2], [555, 2]], 4, 30, { 165: 30 }),
+    // Elemental Workshop: in the Seers' Village house beside the bookcase (2716,3481, maps/m42_54.jm2). Helper items
+    // (tradeable): knife (946) for the book's spine, needle (1733), leather (1741) and thread (1734) for the bellows,
+    // hammer (2347), rune pickaxe (1275), 4 coal (453); 6 lobsters. The book, key, bowl, ore and bar are quest items.
+    quest_elemental: rest({ x: 2715, z: 3481 }, [946, 1733, 1741, 1734, 2347, 1275, 453, 453, 453, 453], 6),
 };
