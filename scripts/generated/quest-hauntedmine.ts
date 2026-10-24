@@ -296,8 +296,9 @@ try {
     type Spot = { name: string; x: number; z: number; cast: Array<[number, number]>; route: (mx: number, mz: number) => Array<[number, number]> | undefined };
     const SPOTS: Spot[] = [
         { name: 'E', x: 2794, z: 4452, cast: [[2794, 4454], [2794, 4453]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
-        // NE: a cast from 2794,4455 or 2791,4455 hits after the server walks the bot to 2794,4457 (lift trials).
-        { name: 'NE', x: 2796, z: 4460, cast: [[2794, 4457], [2794, 4455]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
+        // NE: a cast from 2794,4455-4457 hits after the server walks the bot to 2794-2796,4457 (proof runs); 2796,4457
+        // is outside the crane zone of 2793,4458 (:216-223), so it is the first choice.
+        { name: 'NE', x: 2796, z: 4460, cast: [[2796, 4457], [2794, 4457], [2794, 4455]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
         { name: 'N', x: 2788, z: 4463, cast: [[NORTH.x, NORTH.z]], route: (mx, mz) => mz >= 4459 ? [] : [[2781, 4457], [2781, 4461]] },
         { name: 'NW', x: 2780, z: 4460, cast: [[2780, 4459], [2779, 4458], [2780, 4460]], route: () => [] },
         { name: 'W', x: 2780, z: 4454, cast: [[2786, 4454], [2782, 4454]], route: () => [] },
@@ -347,7 +348,7 @@ try {
             // for that ghost tile either.
             if (castAt && q.T() - lastCast >= 4) {
                 if (q.xp('Magic') === mxp && boss()) { bad.add(`${castAt.split('>')[0]}>${castSpot}`); console.log(`BOSS ${q.T()} dry cast ${castAt} (${castSpot})`); }
-                else if (q.xp('Magic') > mxp) { hitFrom.add(`${castAt.split('>')[0]}>${castSpot}`); console.log(`BOSS ${q.T()} hit ${castAt} (${castSpot})`); }
+                else if (q.xp('Magic') > mxp) { hitFrom.add(`${castAt.split('>')[0]}>${castSpot}`); hitFrom.add(`${mx},${mz}>${castSpot}`); console.log(`BOSS ${q.T()} hit ${castAt} (${castSpot})`); }
                 castAt = '';
             }
             const b = boss();

@@ -40,4 +40,8 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // (tradeable): knife (946) for the book's spine, needle (1733), leather (1741) and thread (1734) for the bellows,
     // hammer (2347), rune pickaxe (1275), 4 coal (453); 6 lobsters. The book, key, bowl, ore and bar are quest items.
     quest_elemental: rest({ x: 2715, z: 3481 }, [946, 1733, 1741, 1734, 2347, 1275, 453, 453, 453, 453], 6),
+    // Clock Tower: beside Brother Kojo, north of the tower (spawn 2569,3249, maps/m40_50.jm2). Helper item: a bucket of
+    // water (1929) for the red-hot black cog (cogs.rs2:30-40); ice gloves also work but are untradeable. The cogs and
+    // the rat poison are quest items from the run.
+    quest_cog: rest({ x: 2568, z: 3249 }, [1929], 4),
 };

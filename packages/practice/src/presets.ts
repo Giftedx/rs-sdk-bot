@@ -9,6 +9,7 @@ import { PARTNER_PRESETS } from './presets-partner';
 import { FILLER_PRESETS } from './presets-filler';
 import { PATH_PRESETS } from './presets-path';
 import { REST_PRESETS } from './presets-rest';
+import { LONG_PRESETS } from './presets-long';
 
 // Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
 export interface SaveConfig {
@@ -471,6 +472,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     ...PATH_PRESETS,
     // Other quests of the quests-rest row: packages/practice/src/presets-rest.ts.
     ...REST_PRESETS,
+    // Long and very long quests of the quests-rest row: packages/practice/src/presets-long.ts.
+    ...LONG_PRESETS,
     // The 4 quests of the qp-filler row: packages/practice/src/presets-filler.ts.
     ...FILLER_PRESETS,
 };
