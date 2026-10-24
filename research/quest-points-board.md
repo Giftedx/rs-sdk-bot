@@ -74,7 +74,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Temple of Ikov (`ikov`) | 1 (103) | rest | Thieving 42, Ranged 40 (`quest_ikov/scripts/ikov_journal.rs2:14-15`) | fire warrior (`ikov_dungeon.rs2:158`) | L |
 | Imp Catcher (`imp`) | 1 (104) | rest | none found | imps (`quest_imp/scripts/imp_journal.rs2:13`) | S |
 | The Dig Site (`itexam`) | 2 (105) | `dig`, MEASURED 1,535-1,851 (`research/quest-plan.md` 1p) | Agility 10 at the winch, Herblore 10 in the chemistry, Thieving 25 at the pocket (`quest_itexam/scripts/area_digsite.rs2:617`, `itexam_chemistry.rs2:21`, `digsite_workman.rs2:62`); the rock samples, brush, trowel, talisman, chemicals and tablet are untradeable, so the account fetches them | none found | - |
-| Observatory Quest (`itgronigen`) | 2 (106) | rest | none found; CLAIMED by short/medium helper | none found | M |
+| Observatory Quest (`itgronigen`) | 2 (106) | rest | none found; MEASURED 550-555 ticks in row `quests-medium` | none found | M |
 | Watchtower (`itwatchtower`) | 4 (107) | rest | Magic 14, Mining 40, Herblore 14, Thieving 15, Agility 25 (`quest_itwatchtower/scripts/itwatchtower_journal.rs2:8-28`) | ogres | XL |
 | Jungle Potion (`junglepotion`) | 1 (108) | rest | Druidic Ritual (`areas/area_karamja/scripts/trufitus.rs2:280` reads `%druidquest`); MEASURED 649-651 ticks in row `quests-medium` | none found | M |
 | Legends' Quest (`legends`) | 4 (109) | rest | 107 QP; Family Crest, Heroes', Underground Pass, Shilo Village, Waterfall (`quest_legends/scripts/legends_guard.rs2:50-53`); Magic 56, Mining 52, Agility, Crafting, Smithing, Strength, Thieving, Woodcutting 50, Herblore 45, Prayer 42 (`legends_journal.rs2:65-128`) | several | XL |
@@ -909,6 +909,30 @@ Findings:
 - Helper items: pots of flour and runes (tradeable). The flypaper is untradeable (`knowledge/items.json` id 1811) and
   comes from the sacks; each sack search is a mesbox, a choice and a mesbox.
 
+### Observatory Quest
+
+Preset `quest_itgronigen` in `packages/practice/src/presets-rest.ts`: beside the professor in the reception (spawn
+2438,3186); 3 planks, a bronze bar, a molten glass and 4 lobsters from a helper. `RESULT ok qp=2 xp=crafting=56250 ...
+ticks=550 ... walkTicks=335 retries=4 died=false` (runs: 550, 555, 550 ticks; a trial before the proof: 549), each with
+`Congratulations! Quest complete!`. Varp `%itgronigen`. Steps (proof run 1 MILESTONE ticks): the professor, "I'd like to
+have a look through that telescope.", "Sounds interesting, what can I do for you?" (1), then one talk each for the
+planks, the bronze bar and the glass (2-4) 0-85 (`quests/quest_itgronigen/scripts/observatory_professor.rs2:16-59,132-180`);
+the reception ladder 2444,3191 down to the cavern, the walk round to the south-east chest 2428,9419, open and search it
+for the keep key 85-223 (`quest_itgronigen.rs2:1-14,40-98`); the key on the keep gate 2391,9457 (locked from the north,
+`:100-150`) and the mould under the sack 2389,9454 223-313 (`:164-172`); back out of the gate, up the ladder 2420,9460,
+the professor takes the mould and gives the glass back (5), the glass on the mould makes the lens, the lens (6) 313-404
+(`observatory_professor.rs2:61-100`, `quest_itgronigen.rs2:174-185`); down again, through the cavern to the ladder
+2423,9439 up into the observatory, the telescope with the second professor near, "I can see a constellation." 404-550
+(`:152-162,187-270`).
+Findings:
+- The observatory has no way in on foot (the SDK plan from the reception ends outside, at 2444,3173); its only way in is
+  the ladder from the cavern, so the cavern is crossed twice.
+- The keep gate is the north wall of 2391,9457 and p_teleports one tile, so the keep side is z <= 9457; trial 1 waited
+  for z < 9457 and stopped there.
+- The constellation gift is random (`quest_itgronigen.rs2:195,220-260`); run 2 drew Virgo (21,875 Defence XP).
+- Helper items: planks, bronze bar, molten glass (tradeable). The keep key, the lens mould and the lens are untradeable
+  (`knowledge/items.json` 601-603).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -967,7 +991,12 @@ After Murder Mystery (medium, 900 / 1,300) `quests-rest` is 19 quests, 49 QP, 38
 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 104,721 floor /
 126,796 realistic.
 
-Next for the `presets-rest.ts` helper: Observatory Quest, Death Plateau and Big Chompy Bird
+After Observatory Quest (medium, 900 / 1,300) `quests-rest` is 18 quests, 47 QP, 37,100 / 56,700 (burst 34,310 /
+52,436), 1 medium and 9 long; `quests-medium` is 16 quests, 27 QP, floor 11,178 / realistic 11,702. `bun test
+packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
+at 104,439 floor / 126,149 realistic.
+
+Next for the `presets-rest.ts` helper: Death Plateau and Big Chompy Bird
 Hunting (class M).
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
