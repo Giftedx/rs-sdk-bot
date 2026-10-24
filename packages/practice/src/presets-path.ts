@@ -1,0 +1,26 @@
+import type { SaveConfig } from './presets';
+
+// Quests on the main account's path that the planner places before the quests-rest block
+// (scripts/generated/quest-<name>.ts, research/quest-plan.md). Each preset is the planner state at the row's start
+// tick (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --order`, scenario a, realistic), beside
+// the quest's first NPC, with the helper-supplied items. Hitpoints is the planner's 10 where the planner has not
+// trained it (the planner does not model Hitpoints).
+
+// Fight Arena (the rival-fight-arena row, tick 12,267, after The Grand Tree): Attack 94, Magic 99, Prayer 43,
+// Agility 76, the 99s of the early route, Strength, Defence, Thieving 1, 10 HP. Tree Gnome Village (111 = 9) and The
+// Grand Tree (150 = 160) done. Staff of fire worn; Fire Wave runes (1 blood 565 + 5 air 556 a cast, the staff gives
+// the fire) for 60 casts; 3 prayer potions (2434); 4 lobsters (379); 20 coins (a Khali brew is 5).
+const ARENA_SKILLS = { Attack: 94, Magic: 99, Prayer: 43, Agility: 76, Cooking: 99, Fletching: 99, Firemaking: 99, Crafting: 99, Smithing: 99, Herblore: 99, Runecraft: 99 };
+function arena(position: { x: number; z: number; level?: number }, stage = 0, quest: number[] = []): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ARENA_SKILLS, equipment: [{ id: 1387, count: 1, slot: 3 }],
+        varps: { 111: 9, 150: 160, ...(stage ? { 17: stage } : {}) }, coins: 20,
+        inventory: [[565, 60], [556, 300]].map(([id, count]) => ({ id: id!, count: count! }))
+            .concat([2434, 2434, 2434, 379, 379, 379, 379, ...quest].map(id => ({ id, count: 1 }))),
+    };
+}
+
+export const PATH_PRESETS: Record<string, SaveConfig> = {
+    // Fight Arena: beside Lady Servil (spawn 2566,3199, maps/m40_49.jm2).
+    quest_arena: arena({ x: 2566, z: 3197 }),
+};

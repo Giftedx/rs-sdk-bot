@@ -6,6 +6,8 @@ import { SHORT_PRESETS } from './presets-short';
 import { GANG_PRESETS } from './presets-gang';
 import { MEDIUM_PRESETS } from './presets-medium';
 import { PARTNER_PRESETS } from './presets-partner';
+import { FILLER_PRESETS } from './presets-filler';
+import { PATH_PRESETS } from './presets-path';
 
 // Mirrors SaveConfig in vendor/rs-sdk/sdk/test/utils/save-generator.ts. createSaveData sets tutorial varp 281 = 1000 itself.
 export interface SaveConfig {
@@ -463,6 +465,11 @@ export const PRESETS: Record<string, SaveConfig> = {
     ...MEDIUM_PRESETS,
     // Cook's Assistant, Witch's House, Lost City (main and Heroes' partner): packages/practice/src/presets-partner.ts.
     ...PARTNER_PRESETS,
+    // Quests on the main account's path before quests-rest (Fight Arena, Sea Slug, The Dig Site, Scorpion Catcher):
+    // packages/practice/src/presets-path.ts.
+    ...PATH_PRESETS,
+    // The 4 quests of the qp-filler row: packages/practice/src/presets-filler.ts.
+    ...FILLER_PRESETS,
 };
 
 // Agility laps (scripts/measure/agility-laps.ts): each course at its entry level and at 70 / 90.

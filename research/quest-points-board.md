@@ -754,7 +754,14 @@ the file is no longer `JSON.stringify` format). `bun test packages/planner`: 42 
 research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 101,946 floor / 130,524 realistic.
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
-`quest_mortton` (presets-medium.ts) are written but not run. Content read: the diary on Herbi Flax's shelf
+`quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached
+MILESTONE 50 at tick 566 (diary 22, serum 26, Razmire 68, 5 remains 416, Razmire's store 444, Ulsquire 495, the temple
+talk 566). It then stopped at the temple. Every Repair gave "You're not sure how you would go about fixing this."
+(`flamtaer_temple.rs2:3-6`), so `%morttonquest` was still under 50, although the script saw Ulsquire's line after
+the stage-50 set (`ulsquire_shauncy.rs2:175-179`). Next step: find why the stage stays under 50. Start by logging
+every dialog page and option of the "ulsquire 2" talk. Fixed in the trials: the book's forward button is `book:com_86`
+(`book.rs2:31-48`); Razmire's plank is named "Plank"; a dead shade (hp 0) is not a target; the bot walks next to an
+NPC before the serum or Talk-to (the two NPCs stand in different houses). Content read: the diary on Herbi Flax's shelf
 (`quest_mortton.rs2:1-11`, read to the last page for 5, `serum_book.rs2:25-28`); serum 207 from tarromin, water and
 ashes (10, `herblore.rs2:16-17`); the serum on Razmire, "What are all these shadow creatures?", "Yes, I'll dispatch"
 (15, `razmire_keelgan.rs2:85-184`); 5 Loar shades and their remains (40, `mortton_shades.rs2:7-46`); Razmire takes 2
@@ -880,3 +887,39 @@ Planner: new row `quest-zanaris` (qp 3, 595 / 796 MEASURED, the same under `riva
 45,963 / 69,268). The QP total stays 145 (`QP at end 145`). `bun test packages/planner`: 42 pass, 0 fail.
 `haggis-cli --levers`: Quest Points WIN at 101,787 floor / 133,873 realistic (was 102,024 / 134,279).
 
+
+## The `qp-filler` row: Black Knights' Fortress, Ernest the Chicken, Sheep Herder, Prince Ali Rescue
+
+The row runs at tick 47,484 (`haggis-cli --order`, scenario a, row 47), after Romeo & Juliet and after the last 99
+(Agility at 44,393). So Haggis has every skill at 99 there; it is not a low-combat row. Presets `quest_<name>` in
+`packages/practice/src/presets-filler.ts`: every skill 99, the combat rune set of the gobdip / rj / druid presets worn,
+the quests before the row done (34 QP; Monkey Madness left out, no quest here reads it), the helper items, the start
+beside the first NPC. Runner: `proveInProcess` with `okPass`, one bot at a time, a fresh account per run, deleted after.
+The walks between the 4 quests are not in the counts.
+
+| Quest | Script | RESULT ticks (3 runs) | Status |
+|---|---|---|---|
+| Black Knights' Fortress | `scripts/generated/quest-blackknight.ts` | 327, 327, 323 | MEASURED 3/3 |
+
+### Black Knights' Fortress
+
+`RESULT ok qp=3 xp=magic=2400 ... ticks=327 hpMin=99 eats=0 walkTicks=138 retries=0 died=false` (runs: 327, 327, 323
+ticks), each with `Congratulations! Quest complete!`. Route: Sir Amik "I seek a quest!", "I laugh in the face of
+danger!" (`areas/area_falador/scripts/sir_amik_varze.rs2:8-57`; the 12 QP check is `:15`) 0-32; Falador teleport, the
+uniform worn, the walk to the fortress 32-130; the guards' door with the uniform (`quest_blackknight.rs2:14-22`); the
+grill 130-196; back to the entrance and the cabbage in the hole 196-280; Falador teleport, the castle stairs, Sir Amik
+queues the completion (`sir_amik_varze.rs2:67-74`) 280-327.
+Findings (`maps/m47_54.jm2`, and the `nearbyLocs` of the trials):
+- The grill (`witchgrill` 2342 at 3025,3507) is in a corridor that only the ladder at 3021,3510 reaches. The way there:
+  the secret wall north of the entrance (2341 at 3016,3517, pushed from 3016,3516), ladders up at 3015,3519 and
+  3016,3519, down at 3017,3516, two shut doors on level 1 (3019,3515 and 3021,3515), up at 3023,3513, down at
+  3025,3513, the sturdy door west (2339 at 3025,3511, the knights there attack, `:24-31`), down at 3021,3510.
+  Shut, the doors give "I can't reach that!" for the next click. The SDK collision joins rooms that the server keeps
+  apart (it plans 3022,3511 -> 3022,3510 in one step), so the script names every ladder and door by tile.
+- The hole (2336 at 3031,3507, level 1) is behind the second secret wall (2341 at 3030,3510), which is reached only
+  from the level 1 corridor over the banquet hall: the hall door (2338 at 3020,3515, the guard's "I don't care. I'm
+  going in anyway." sets the knights on the bot, `:56-81`) and the hall's ladder at 3022,3518. The grill must come
+  first (the cabbage needs `%spy` 2, `:99-117`), so the run goes back through the ladders to the entrance (53 ticks).
+- The Black Knights (level 33) hit the bot to 95 HP at most. No food was eaten.
+- Helper items (tradeable): iron chainbody (1101), bronze med helm (1139), cabbage (1965; the Draynor Manor
+  `magic_cabbage` is the wrong one, `:119-129`), runes for two Falador teleports.

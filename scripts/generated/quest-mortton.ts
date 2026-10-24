@@ -65,8 +65,11 @@ try {
         for (let i = 0; i < 4 && !q.dialogOpen() && !q.st()?.shop?.isOpen; i++) {
             await q.guard(label);
             if (!npcOf(who) || q.cheb(home.x, home.z) > 10) await q.walk(`${label} approach`, [{ x: home.x, z: home.z + 1, tol: 3 }]);
-            const n = npcOf(who);
+            let n = npcOf(who);
             if (!n) { await q.waitTicks(1); continue; }
+            // Razmire and Ulsquire stand in different houses: a use or talk from the other house cannot route
+            // (the client's cant_reach), so the bot walks next to the NPC first (walkPath opens doors).
+            if (n.distance > 2 || i > 0) { await q.walk(`${label} to npc`, [{ x: n.x, z: n.z, tol: 1 }]); n = npcOf(who) ?? n; }
             if (op === 1 && !visible(who)) {
                 const sv = serum();
                 if (!sv) await q.fail(`${label}: no serum`);
@@ -74,17 +77,18 @@ try {
             } else {
                 await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: op, reason: 'SDK' });
             }
-            await q.waitUntil(() => q.dialogOpen() || !!q.st()?.shop?.isOpen, 20);
+            const r: any = await q.waitUntil(() => q.dialogOpen() || !!q.st()?.shop?.isOpen, 20);
+            if (!q.dialogOpen() && !q.st()?.shop?.isOpen) console.log(`WARN open ${label} try ${i}: npc=${n.name}@${n.x},${n.z} d=${n.distance} serum=${serum()} msg=${(q.st()?.gameMessages ?? []).slice(-1)[0]?.text} op=${JSON.stringify(q.st()?.opFeedback ?? {}).slice(0, 120)}`);
         }
         if (!q.dialogOpen() && !q.st()?.shop?.isOpen) await q.fail(`open ${label}`);
     };
 
-    // 1. The diary from Herbi Flax's shelf (quest_mortton.rs2:1-11); read to the last page (5, serum_book.rs2:3-29).
+    // 1. The diary from Herbi Flax's shelf (quest_mortton.rs2:1-11); read to the last page with the forward button book:com_86 (5, serum_book.rs2:3-29, book.rs2:31-48).
     await q.step('shelf', () => q.opLoc(SHELF), () => q.has(ITEM.book), 15, 4);
     await shut();
     await q.step('read', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.book)!, optionIndex: 1, reason: 'SDK' }), () => q.dialogOpen() || q.st()?.modalInterface > 0, 10, 3);
     await chat([], () => q.st()?.modalInterface > 0 && !q.dialogOpen(), 10);
-    for (let i = 0; i < 12; i++) { await q.s.direct({ type: 'clickComponent', componentId: componentId('book:page_right_button'), reason: 'SDK' }); await q.waitTicks(1); }
+    for (let i = 0; i < 12; i++) { await q.s.direct({ type: 'clickComponent', componentId: componentId('book:com_86'), reason: 'SDK' }); await q.waitTicks(1); }
     await q.s.sdk.sendCloseModal();
     await q.waitTicks(1);
     q.milestone(5);
@@ -106,10 +110,10 @@ try {
 
     // 4. Five Loar shades (a Loar Shadow turns when attacked, mortton_shades.rs2:81-111) and their remains (20-40,
     // :7-46). Auto retaliate is off, so the bot attacks each one that is on it.
-    const shadeOn = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shade$/i.test(n.name) && n.targetIndex >= 0).sort((a: any, b: any) => a.distance - b.distance)[0];
-    const shadow = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shad(ow|e)$/i.test(n.name) && n.reachable !== false).sort((a: any, b: any) => a.distance - b.distance)[0];
+    const shadeOn = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shade$/i.test(n.name) && n.targetIndex >= 0 && (n.hp ?? 1) > 0).sort((a: any, b: any) => a.distance - b.distance)[0];
+    const shadow = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shad(ow|e)$/i.test(n.name) && n.reachable !== false && (n.hp ?? 1) > 0).sort((a: any, b: any) => a.distance - b.distance)[0];
     let kills = 0;
-    for (let i = 0; i < 40 && q.cnt(ITEM.remains) < 5; i++) {
+    for (let i = 0; i < 80 && q.cnt(ITEM.remains) < 5; i++) {
         await q.guard('shades');
         const ground = (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.remains && g.distance <= 8);
         if (ground) {
@@ -124,6 +128,9 @@ try {
         const idx = t.index;
         await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === idx && /loar/i.test(n.name) && (n.hp ?? 1) > 0) || (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.remains && g.distance <= 3), 40);
         kills++;
+        // The remains drop after the death animation (obj_add after npc_death, mortton_shades.rs2:7-13).
+        await q.waitUntil(() => (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.remains && g.distance <= 4), 6);
+        if (kills <= 12) console.log(`SHADE ${q.T()} t=${t.name}@${t.x},${t.z} reach=${t.reachable} after=${JSON.stringify((q.st()?.nearbyNpcs ?? []).filter((n: any) => n.index === idx).map((n: any) => [n.name, n.hp, n.maxHp]))} ground=${JSON.stringify((q.st()?.groundItems ?? []).filter((g: any) => g.distance <= 6).map((g: any) => [g.id, g.name]))} msg=${(q.st()?.gameMessages ?? []).slice(-1)[0]?.text}`);
     }
     if (q.cnt(ITEM.remains) < 5) await q.fail(`remains ${q.cnt(ITEM.remains)}`);
     console.log(`SHADES remains=${q.cnt(ITEM.remains)} tries=${kills} at ${q.T()}`);
@@ -131,13 +138,13 @@ try {
 
     // 5. Razmire takes 2 remains (45) and opens his stores (razmire_keelgan.rs2:99-111,201-243).
     const buy = async (label: string) => {
-        // One trip: SETS_PER_TRIP x (1 plank, 1 limestone brick, 5 swamp paste), the add_temple_resources set
+        // One trip: as many sets as the free slots hold (1 plank, 1 limestone brick, 5 swamp paste), the add_temple_resources set
         // (flamtaer_temple.rs2:274-278).
         if (!q.st()?.shop?.isOpen) await open(label, 'razmire', visible('razmire') ? 4 : 1);
         if (!q.st()?.shop?.isOpen) await chat([/building store/i], () => !!q.st()?.shop?.isOpen, 40);
         const free = 28 - q.inv().length;
         const sets = Math.max(1, Math.floor((free - 1) / 7));
-        for (const [re, id, n] of [[/wooden plank/i, ITEM.plank, sets], [/limestone brick/i, ITEM.brick, sets], [/swamp paste/i, ITEM.paste, 5 * sets]] as Array<[RegExp, number, number]>) {
+        for (const [re, id, n] of [[/^plank$/i, ITEM.plank, sets], [/limestone brick/i, ITEM.brick, sets], [/swamp paste/i, ITEM.paste, 5 * sets]] as Array<[RegExp, number, number]>) {
             for (let k = 0; k < 4 && q.cnt(id) < n; k++) {
                 const r: any = await q.s.bot.buyFromShop(re, n - q.cnt(id));
                 if (!r.success) console.log(`WARN buy ${re}: ${r.message}`);
@@ -194,7 +201,11 @@ try {
         const w = wallAt(wx, wz);
         if (!w) { await q.walk('to temple', [{ x: 3506, z: 3313, tol: 1 }]); continue; }
         const l0 = wallLevel(w.id);
-        if (q.dialogOpen()) await shut();
+        if (q.dialogOpen()) {
+            const d: any = q.s.sdk.getDialog();
+            if (ops < 4) console.log(`WARN temple page: ${[d?.text ?? '', ...(d?.allComponents ?? []).map((c: any) => c.text ?? '')].filter(Boolean).join(' | ').slice(0, 300)}`);
+            await shut();
+        }
         await q.opLoc(w, q.opIndex(w, /repair/i));
         ops++;
         await q.waitUntil(() => wallLevel(wallAt(wx, wz)?.id ?? -1) !== l0 || q.dialogOpen() || repairedP() >= 100, l0 === 10 ? 6 : 14);
