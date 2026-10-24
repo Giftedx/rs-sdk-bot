@@ -1871,7 +1871,11 @@ Findings:
 - Arianwyn's zone fires on entry only. Proof attempt 2, run 3 stood in it with no Arianwyn (2/3); the bot now steps
   out and in again if she does not come. No run of the final proof needed that.
 
-Planner: see below.
+Planner: `quests-long` gets Regicide (3 QP, floor 3,525 / realistic 3,592): 9 quests, 19 QP, 15,614 / 16,530 (the same
+under `rival-dialogue-burst`). `quests-rest` loses one very long quest: 7 -> 6 quests, 25 -> 22 QP, 17,500 / 28,000 ->
+15,000 / 24,000 (burst 13,872 / 22,195); scratchpad `up/long-rows.ts` on the committed rows. The floor rises: the
+measured best run is above the 2,500 very-long estimate. `haggis-cli.ts research/hiscores-live.json --levers`: Quest
+Points WIN at 101,946 / 116,684 -> 103,159 / 116,577; QP at end 145. `bun test packages/planner`: 42 pass, 0 fail.
 
 ### Eadgar's Ruse
 
