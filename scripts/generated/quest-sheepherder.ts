@@ -45,7 +45,7 @@ function nextPush(sx: number, sz: number, occ: Set<number>, strict = true): [num
     return null;
 }
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 4000 });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -60,7 +60,8 @@ try {
     // The gate teleports the bot across (sheepherder_gate.rs2:1-21); in from the west needs the suit worn.
     const gateIn = () => q.step('gate in', () => q.opLoc(GATE, 1), () => x() >= 2595, 12, 4);
     const gateOut = () => q.step('gate out', () => q.opLoc(GATE, 1), () => x() <= 2594, 12, 4);
-    const sheep = (n: number): any => (q.st()?.nearbyNpcs ?? []).filter((m: any) => m.name === `Diseased sheep ${n}`).sort((a: any, b: any) => a.distance - b.distance)[0];
+    const banned = new Set<number>();
+    const sheep = (n: number): any => (q.st()?.nearbyNpcs ?? []).filter((m: any) => m.name === `Diseased sheep ${n}` && !banned.has(m.index)).sort((a: any, b: any) => a.distance - b.distance)[0];
     const prod = (m: any) => q.s.direct({ type: 'interactNpc', npcIndex: m.index, optionIndex: m.optionsWithIndex?.find((o: any) => /prod/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
 
     if (process.env.SH_FROM !== 'herd') {
@@ -88,25 +89,37 @@ try {
     const left = new Set([1, 2, 3, 4]);
     while (left.size) {
         const n = [...left].sort((a, b) => q.cheb(SPAWN[a]!.x, SPAWN[a]!.z) - q.cheb(SPAWN[b]!.x, SPAWN[b]!.z))[0]!;
-        if (!sheep(n)) await q.walk(`to sheep ${n}`, [{ x: SPAWN[n]!.x, z: SPAWN[n]!.z, tol: 4 }]);
+        // Sheep 1 grazes south of the pen; the walk round the pen's east side is given as waypoints.
+        // The walks are client-routed dashes: walkPath "opens" the pen gate as a door, and the gate teleports the
+        // suited bot into the pen (one trial stood 224 ticks inside it).
+        const via = n === 1 ? [[2611, 3366], [2613, 3353]] : [];
+        if (!sheep(n) || n === 1) for (const [wx, wz] of [...via, [SPAWN[n]!.x, SPAWN[n]!.z]]) await q.dash(`to sheep ${n}`, wx!, wz!, 3, 40);
         const j0 = jumps();
-        let pushes = 0, stuck = 0, lastAt = '';
+        let pushes = 0, stuck = 0, lastAt = '', noPath = 0;
         while (jumps() === j0) {
             await q.guard(`sheep ${n}`);
             const m = sheep(n);
-            if (!m) { await q.walk(`find sheep ${n}`, [{ x: SPAWN[n]!.x, z: SPAWN[n]!.z, tol: 4 }]); continue; }
+            if (!m) { await q.dash(`find sheep ${n}`, SPAWN[n]!.x, SPAWN[n]!.z, 3, 40); continue; }
             const at = `${m.x},${m.z}`;
             stuck = at === lastAt ? stuck + 1 : 0;
             lastAt = at;
-            if (stuck > 12) await q.fail(`sheep ${n} stuck at ${at}`);
+            if (stuck > 60) await q.fail(`sheep ${n} stuck at ${at}`);
             if (inGateZone(m.x, m.z)) {
                 await prod(m);
                 await q.waitUntil(() => jumps() !== j0, 6);
                 continue;
             }
             const occ = new Set<number>((q.st()?.nearbyNpcs ?? []).filter((o: any) => o.index !== m.index).map((o: any) => key(o.x, o.z)));
-            const d = nextPush(m.x, m.z, occ) ?? nextPush(m.x, m.z, new Set()) ?? nextPush(m.x, m.z, new Set(), false);
-            if (!d) await q.fail(`sheep ${n}: no push path from ${at}`);
+            const d = nextPush(m.x, m.z, occ) ?? nextPush(m.x, m.z, new Set());
+            // A sheep that wandered into a pocket (2594,3357: the pen fence east, a blocked tile south) has no push;
+            // its own wander takes it out, so the bot waits.
+            if (!d) {
+                // 10 tries without a push: another copy of the same sheep (each has 3 spawns) is taken instead.
+                if (++noPath >= 10) { console.log(`NOTE sheep ${n} copy ${m.index} boxed in at ${at}; next copy`); banned.add(m.index); noPath = 0; }
+                await q.waitTicks(3);
+                continue;
+            }
+            noPath = 0;
             const px = m.x - d![0], pz = m.z - d![1];
             // On a straight run the bot is 2 tiles behind and the prod's own approach step lands on the push tile.
             const behind2 = x() === m.x - 2 * d![0] && z() === m.z - 2 * d![1];

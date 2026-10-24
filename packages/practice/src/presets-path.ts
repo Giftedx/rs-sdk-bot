@@ -47,7 +47,30 @@ function scorpion(position: { x: number; z: number; level?: number }, varps: Rec
     };
 }
 
+// The Dig Site (the dig row, tick 28,202, after the fly-fishing row): the Sea Slug state plus Fishing 99; Sea Slug
+// (159 = 12), Cook's Assistant (29 = 2), Druidic Ritual (80 = 4), Family Crest (148 = 11) done. Helper items (all
+// tradeable): cup of tea (1978), opal (1609), 2 ropes (954), vial (229), charcoal (973), pestle and mortar (233),
+// tinderbox (590), runes for 1 Varrock Teleport, 2 lobsters. Debug presets start a stage with its quest items
+// (DIG_FROM=<stage>): %itexamlevel (131) is the stage, the trowel (676), jar (669), brush (670), certificates.
+const DIG_SKILLS = { ...LATE_SKILLS, Fishing: 99 };
+const DIG_VARPS = { 17: 14, 111: 9, 150: 160, 159: 12, 29: 2, 80: 4, 148: 11 };
+function dig(position: { x: number; z: number; level?: number }, items: number[], varps: Record<number, number> = {}): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: DIG_SKILLS, varps: { ...DIG_VARPS, ...varps },
+        inventory: [[563, 1], [556, 3], [554, 1]].map(([id, count]) => ({ id: id!, count: count! }))
+            .concat([...items, 379, 379].map(id => ({ id, count: 1 }))),
+    };
+}
+const DIG_HELPER = [1978, 1609, 954, 954, 229, 973, 233, 590];
+
 export const PATH_PRESETS: Record<string, SaveConfig> = {
+    // The Dig Site: beside the examiner (spawn 3360,3343, maps/m52_52.jm2), in the Exam Centre.
+    quest_dig: dig({ x: 3361, z: 3341 }, DIG_HELPER),
+    // Debug: stage 5 (talisman dig) north of the level 3 site; the trowel, jar, brush, 3 certificates, nitroglycerin
+    // (703) and ground charcoal (704); the tea and the opal used.
+    quest_dig_talisman: dig({ x: 3354, z: 3403 }, [954, 954, 590, 676, 669, 670, 691, 692, 693, 703, 704], { 131: 5, 133: 2 }),
+    // Debug: stage 6 (permit) beside winch 2, the same items.
+    quest_dig_cave: dig({ x: 3370, z: 3427 }, [954, 954, 590, 676, 669, 670, 691, 692, 693, 703, 704], { 131: 6, 133: 2 }),
     // Fight Arena: beside Lady Servil (spawn 2566,3199, maps/m40_49.jm2).
     quest_arena: arena({ x: 2566, z: 3197 }),
     // Sea Slug: beside Caroline (spawn 2716,3302, maps/m42_51.jm2).

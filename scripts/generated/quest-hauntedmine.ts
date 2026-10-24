@@ -284,10 +284,22 @@ try {
     const nearCrane = (px: number, pz: number) => CRANES.some(([cx, cz]) => inz(cx, cz - 1, cx + 2, cz + 3, px, pz) || inz(cx - 1, cz, cx + 3, cz + 2, px, pz));
     const sees = (px: number, pz: number, tx: number, tz: number) => Math.max(Math.abs(px - tx), Math.abs(pz - tz)) <= 8 && !!rs.hasLineOfSight(0, px, pz, tx, tz, 1, 1, 1, 1, 0);
     const HOME = { x: 2785, z: 4453 };
+    // The north-east pocket between the z 4456 and z 4462 tracks beside the crane at 2793,4458: a cart push along the
+    // z 4462 track ends there and a crane hits on (the old deaths, and 1 death in this script's first full proof).
+    const ne = (px: number, pz: number) => px >= 2790 && pz >= 4457 && pz <= 4463;
+    const via = async (pts: Array<[number, number]>) => {
+        for (const [wx, wz] of pts) {
+            await q.s.direct({ type: 'walkTo', x: wx, z: wz, running: true, reason: 'SDK' });
+            await q.waitUntil(() => q.near(wx, wz, 0), 7);
+        }
+    };
+    // The north spot (2788-2789,4463): cast from 2787,4461 (off the track), reached along the z 4461 row from the
+    // west end of the track (the proven route of the earlier fight logic).
+    const NORTH = { x: 2787, z: 4461 };
     // Cast tiles: walkable, off the tracks and the track-end pockets (x >= 2794 at z 4455-4463), the room interior.
     const TILES: Array<{ x: number; z: number; crane: boolean }> = [];
     for (let tx = 2777; tx <= 2797; tx++) for (let tz = 4441; tz <= 4463; tz++) {
-        if (!pf.isTileWalkable(0, tx, tz) || onTrack(tx, tz) || (tx >= 2794 && tz >= 4455)) continue;
+        if (!pf.isTileWalkable(0, tx, tz) || onTrack(tx, tz) || ne(tx, tz) || tz >= 4461) continue;
         // Machinery splits the room: only tiles with a path from home (the end of the path on the tile).
         const path: any[] = (tx === HOME.x && tz === HOME.z) ? [HOME] : pf.findLongPath(0, HOME.x, HOME.z, tx, tz, 200, []);
         const end = path[path.length - 1];
@@ -314,7 +326,7 @@ try {
         prayT = q.T();
         void q.s.direct({ type: 'togglePrayer', prayerIndex: PFMISS, reason: 'SDK' });
     });
-    let lastCast = -99, mxp = 0, casts = 0, moves = 0, pushes = 0, walked = 0, castAt = '', seenT = q.T();
+    let failHere = '', lastCast = -99, mxp = 0, casts = 0, moves = 0, pushes = 0, walked = 0, castAt = '', seenT = q.T();
     await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
     // Up to 3 rounds: the kill page (queue hauntedmine_boss_death, :247-254) sets 9; a key taken at 8 with the ghost
     // gone wakes it again (:18-26,52), so a round ends with the key and the next round fights on.
@@ -331,23 +343,33 @@ try {
             // A cast that made the server walk the bot: that tile does not see the ghost for the engine.
             if (castAt && q.T() - lastCast <= 2 && `${mx},${mz}` !== castAt.split('>')[0]) { bad.add(castAt); console.log(`BOSS ${q.T()} cast walked: ${castAt} now ${mx},${mz}`); castAt = ''; }
             // Pushed onto a track (or into a pocket): back to home at once.
-            if (onTrack(mx, mz) || (mx >= 2794 && mz >= 4455)) {
+            if (onTrack(mx, mz) || ne(mx, mz)) {
                 pushes++;
                 console.log(`BOSS ${q.T()} pushed to ${mx},${mz}`);
-                await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
-                await q.waitUntil(() => { const p = q.pos()!; return !onTrack(p.worldX, p.worldZ) && !(p.worldX >= 2794 && p.worldZ >= 4455); }, 6);
+                // Out of the pocket by its east side (2796,4457-4461); off the west half of the z 4462 track to row 4461.
+                if (ne(mx, mz) || (mz === 4462 && mx >= 2790)) await via([[2796, 4461], [2796, 4457], [2791, 4455], [HOME.x, HOME.z]]);
+                else if (mz >= 4461) await via([[Math.min(mx, 2786), 4461]]);
+                else await via([[HOME.x, HOME.z]]);
                 continue;
             }
             // A cast with no Magic XP after 4 ticks (a splash still gives XP) never fired: that tile does not work
             // for that ghost tile either.
             if (castAt && q.T() - lastCast >= 4) {
                 if (q.xp('Magic') === mxp && boss()) { bad.add(castAt); console.log(`BOSS ${q.T()} dry cast ${castAt}`); }
+                else if (q.xp('Magic') > mxp) console.log(`BOSS ${q.T()} hit ${castAt}`);
                 castAt = '';
             }
             const b = boss();
             if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
                 const gx = b.tileX ?? b.x, gz = b.tileZ ?? b.z;
-                if (!sees(mx, mz, gx, gz) || bad.has(`${mx},${mz}>${gx},${gz}`)) {
+                if (gz >= 4463 && Math.abs(gx - 2788) <= 2) {
+                    if (mx !== NORTH.x || mz !== NORTH.z) {
+                        moves++;
+                        await via(mz >= 4459 ? [[NORTH.x, NORTH.z]] : [[2781, 4461], [NORTH.x, NORTH.z]]);
+                        await q.waitTicks(1);
+                        continue;
+                    }
+                } else if (!sees(mx, mz, gx, gz) || bad.has(`${mx},${mz}>${gx},${gz}`)) {
                     const t = pick(gx, gz);
                     if (t && (t.x !== mx || t.z !== mz)) {
                         moves++;
@@ -355,8 +377,15 @@ try {
                         const t0 = q.T();
                         await q.waitUntil(() => q.near(t.x, t.z, 0) || !boss(), 8);
                         walked += q.T() - t0;
-                        if (!q.near(t.x, t.z, 0) && boss()) { bad.add(`${t.x},${t.z}>${gx},${gz}`); console.log(`BOSS ${q.T()} move to ${t.x},${t.z} failed at ${q.pos()?.worldX},${q.pos()?.worldZ}`); }
-                        else console.log(`BOSS ${q.T()} moved ${mx},${mz} -> ${t.x},${t.z} for ghost ${gx},${gz}`);
+                        if (!q.near(t.x, t.z, 0) && boss()) {
+                            bad.add(`${t.x},${t.z}>${gx},${gz}`);
+                            console.log(`BOSS ${q.T()} move to ${t.x},${t.z} failed at ${q.pos()?.worldX},${q.pos()?.worldZ}`);
+                            // Held in place (a crane or a cart stands in the way; the engine blocks players on NPC
+                            // tiles): two failed moves from one tile, then the walk home by the row 4455-4453 tiles.
+                            const here = `${q.pos()?.worldX},${q.pos()?.worldZ}`;
+                            failHere = failHere.startsWith(`${here}#`) ? `${here}#${Number(failHere.split('#')[1]) + 1}` : `${here}#1`;
+                            if (Number(failHere.split('#')[1]) >= 2) { console.log(`BOSS ${q.T()} held at ${here}: home`); await via([[2785, 4455], [HOME.x, HOME.z]]); failHere = ''; }
+                        } else console.log(`BOSS ${q.T()} moved ${mx},${mz} -> ${t.x},${t.z} for ghost ${gx},${gz}`);
                         await q.waitTicks(1);
                         continue;
                     }
