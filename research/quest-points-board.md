@@ -1726,6 +1726,12 @@ Findings:
   Proof attempt 2 failed 2 runs when the bot waited for Winelda's exact landing tile; it now checks x >= 2660.
 - The ice arrows are spent on the Fire Warrior, so Lucien dies to fists (trial 6: "There is no ammo left").
 
+Planner: `quests-long` gets Temple of Ikov (1 QP, floor 947 / realistic 1,077): 6 quests, 12 QP, 10,327 / 11,099 (the
+same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 10 -> 9 quests, 30 -> 29 QP, 22,900 / 35,800 ->
+21,100 / 33,200 (burst 19,513 / 30,703); scratchpad `up/long-rows.ts`. `haggis-cli.ts research/hiscores-live.json
+--levers`: Quest Points WIN at 104,231 / 120,982 -> 103,513 / 119,654; Overall finish 42,486 / 44,866 unchanged; QP at
+end 145. `bun test packages/planner`: 42 pass, 0 fail.
+
 ### Regicide: research notes (not scripted)
 
 The long-quest helper read the content and stopped before a script (context). Server truth:
