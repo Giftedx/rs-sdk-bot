@@ -427,12 +427,13 @@ export const PRESETS: Record<string, SaveConfig> = {
         equipment: [{ id: 1381, count: 1, slot: 3 }],
         inventory: [{ id: 563, count: 1000 }, { id: 554, count: 300 }, { id: 557, count: 300 }, { id: 555, count: 300 }, { id: 558, count: 300 }],
     }])),
-    // Woodcutting ladder (scripts/measure/floor-woodcut.ts): rune axe (1359), knife (946), one log (1511). Normal trees
+    // Woodcutting ladder (scripts/measure/floor-woodcut.ts): rune axe (1359), knife (946), 15 logs (1511). Normal trees
     // and oaks east of Draynor (oaktree 1281 at 3114,3231 and 3114,3239, m48_50.jm2), willows at Draynor (3082-3088,3227-3237).
     ...Object.fromEntries([1, 45, 72, 85].map(l => [`floor_wc${l}`, {
         position: l < 72 ? { x: 3110, z: 3228, level: 0 } : { x: 3086, z: 3233, level: 0 },
-        skills: { Woodcutting: l },
-        inventory: [{ id: 1359, count: 1 }, { id: 946, count: 1 }, { id: 1511, count: 1 }],
+        // Combat 70s so the jail guards and the black knight near the oaks do not attack (a level-3 preset died there).
+        skills: { Woodcutting: l, Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70 },
+        inventory: [{ id: 1359, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))],
     }])),
     // Fishing ladder from the Sea Slug level (scripts/measure/floor-fish.ts): fly at the Lumbridge river (fly rod 309,
     // feathers 314, knife 946, logs 1511); cage (pot 301) and harpoon (311) at Musa Point.

@@ -51,7 +51,7 @@ try {
         if (x > last) { casts++; band(m, bandName, x - last, s.tick() - lastT, 1); m.actions++; last = x; lastT = s.tick(); }
         const nl = level(s, 'Magic');
         if (nl > curLvl) { for (let q = curLvl + 1; q <= nl; q++) levelAt[q] = s.tick() - t0; curLvl = nl; console.log(`LEVELUP Magic ${nl} at ${s.tick() - t0} xp=${x}`); }
-        if (s.tick() - lastT > 40) { console.log(`WARN no XP for 40 ticks at Magic ${nl} band=${lastBand}`); break; }
+        if (s.tick() - lastT > 40) { const st: any = s.sdk.getState(); console.log(`WARN no XP for 40 ticks at Magic ${nl} band=${lastBand} msgs=${(st?.gameMessages ?? []).slice(-4).map((g: any) => g.text).join(" / ")} npcs=${(st?.nearbyNpcs ?? []).slice(0, 5).map((n: any) => n.name + "@" + n.distance).join(",")} pos=${st?.player?.worldX},${st?.player?.worldZ}`); break; }
     }
     const ticks = s.tick() - t0;
     const line = report(s, m, `casts=${casts} start=${lvl0} cap=${CAP} ticksPerCast=${(ticks / Math.max(1, casts)).toFixed(2)}`);

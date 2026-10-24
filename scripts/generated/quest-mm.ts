@@ -111,7 +111,7 @@ try {
         while (level() > to) await ladder(`tree down ${level()}`, TREE_LADDER, 'down', level() - 1);
     };
     // Talk; answer with `choose` (the option index for this page, or -1 for continue); stop when ok().
-    const talkChoose = async (label: string, re: RegExp, choose: (opts: string[]) => number, ok: () => boolean, max: number, home?: { x: number; z: number }): Promise<void> => {
+    const talkChoose = async (label: string, re: RegExp, choose: (opts: string[]) => number, ok: () => boolean, max: number, home?: { x: number; z: number }, must = true): Promise<void> => {
         for (let i = 0; i < 3 && !ok(); i++) {
             await q.guard(label);
             if (i > 0) q.stats.retries++;
@@ -138,7 +138,7 @@ try {
                 await q.waitTicks(1);
             }
         }
-        if (!ok()) await q.fail(`talk ${label}`);
+        if (must && !ok()) await q.fail(`talk ${label}`);
     };
     const pick = (...res: RegExp[]) => (opts: string[]): number => {
         for (const re of res) { const k = opts.findIndex(o => re.test(o)); if (k >= 0) return k; }
@@ -166,6 +166,14 @@ try {
         poisonSeen = Math.max(...m.map((x: any) => x.observationId ?? -1));
         const pot = ANTIPOISON.find(id => q.has(id));
         if (pot !== undefined) { antipoisons++; void q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' }); }
+    });
+    // Bananas (2 HP) go in on the walks at 31 HP or less, before the sharks (eaten at 22, quest-lib), not in a talk.
+    let bananaCool = 0, eatBananas = false;   // eatBananas: after the child has the quest's five
+    q.s.onTick(() => {
+        if (bananaCool > 0) { bananaCool--; return; }
+        if (!eatBananas || !walking || q.hp() > 31 || q.hp() <= 0 || q.dialogOpen() || !q.has(ITEM.banana)) return;
+        bananaCool = 2;
+        void q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.banana)!, optionIndex: 1, reason: 'SDK' });
     });
     const PFM = 14;
     const pfmOn = (): boolean => !!q.st()?.prayers?.activePrayers?.[PFM];
@@ -311,7 +319,19 @@ try {
         await talkChoose('lumdo', /^lumdo$/i, () => -1, () => q.sawText(/will not take orders from you/i) && !q.dialogOpen(), 60);
         // The cutscene runs in region 0_40_71 (2560-2623, 4544-4607); its pages are continued like any dialog.
         const inCut = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2560 && p.worldX < 2624 && p.worldZ >= 4544 && p.worldZ < 4608; };
-        await talkChoose('waydar lumdo', /^waydar$/i, pick(/cannot convince lumdo/i), () => inCut() || q.near(ATOLL.x, ATOLL.z, 6), 60);
+        // Waydar orders Lumdo only when Lumdo is within 10 tiles of the player (mm_waydar.rs2:83, .npc_find(coord, ...)),
+        // else the talk ends with no cutscene (practice: a full run failed here), so the bot stands near Lumdo first.
+        const cut2 = (): boolean => inCut() || q.near(ATOLL.x, ATOLL.z, 6);
+        for (let i = 0; i < 4 && !cut2(); i++) {
+            const l = q.npc(/^lumdo$/i);
+            const w = q.npc(/^waydar$/i);
+            if (l && w && Math.max(Math.abs(l.x - w.x), Math.abs(l.z - w.z)) <= 12) {
+                const tx = Math.round((l.x + w.x) / 2), tz = Math.round((l.z + w.z) / 2);
+                const p = q.pos();
+                if (p && Math.max(Math.abs(p.worldX - l.x), Math.abs(p.worldZ - l.z)) > 6) await walk('to lumdo side', [{ x: tx, z: tz, tol: 1 }]);
+            }
+            await talkChoose('waydar lumdo', /^waydar$/i, pick(/cannot convince lumdo/i), cut2, 60, undefined, i === 3);
+        }
         await q.converse([], () => q.near(ATOLL.x, ATOLL.z, 6), 250);
         if (!q.near(ATOLL.x, ATOLL.z, 6)) await q.fail('chapter 2 cutscene');
         await shutDialog();
@@ -864,7 +884,7 @@ try {
                 // Each talk ends at a state step (mm_monkey_child.rs2), so 2 shut ticks end it (the default 6 cost 6
                 // ticks a step); once the child wants bananas, the bananas go on him (opnpcu: no greeting pages).
                 const child = q.npc(/^monkey child$/i);
-                if (q.cnt(ITEM.banana) >= 5 && q.sawText(/only if you promise to let me borrow/i) && child && !q.dialogOpen()) {
+                if (!eatBananas && q.cnt(ITEM.banana) >= 5 && q.sawText(/only if you promise to let me borrow/i) && child && !q.dialogOpen()) {
                     await q.useOnNpc(ITEM.banana, child);
                     await q.waitUntil(() => q.dialogOpen() || ok(), 10);
                     let shut = 0;
@@ -893,9 +913,26 @@ try {
         if (q.cnt(ITEM.banana) < 5) await q.fail(`bananas: ${q.cnt(ITEM.banana)}`);
         await childTalk('child', [/monkey's uncle/i, /how many bananas/i], () => !q.has(ITEM.banana), 10);
         const gaveAt = q.T();
+        eatBananas = true;
         await converse1([], () => !q.dialogOpen(), 20);
         console.log(`NOTE bananas given at ${gaveAt}`);
+        // The toy's 100-tick timer: the bot picks the garden's other bananas while the aunt is away (each tree holds 5,
+        // banana_tree.rs2; 2 HP each, eaten on the walks below). Food is the limit at Hitpoints 35: a full pass died in
+        // the 4th dungeon pass with the 12 sharks gone (practice, 2026-10-24).
         await toOutside();
+        let picked = 0;
+        for (let i = 0; i < 200 && q.T() - gaveAt < 100; i++) {
+            await q.guard('extra bananas');
+            const free = 28 - (q.inv()?.length ?? 0);
+            if (free <= 3 || auntNear()) { if (!meInA() && !q.near(OUTSIDE.x, OUTSIDE.z, 1)) await toOutside(); await q.waitTicks(1); continue; }
+            const t = q.findLoc(l => /banana tree/i.test(l.name) && l.x >= 2740 && l.x <= 2747 && l.z >= 2791 && l.z <= 2798 && !bad.has(`${l.x},${l.z}`) && (l.optionsWithIndex ?? []).length > 0);
+            if (!t) { await q.waitTicks(1); continue; }
+            const n0 = q.cnt(ITEM.banana);
+            await q.opLoc(t, 1);
+            await q.waitUntil(() => q.cnt(ITEM.banana) > n0 || auntNear(), 8);
+            if (q.cnt(ITEM.banana) > n0) picked++; else if (!auntNear()) bad.add(`${t.x},${t.z}`);
+        }
+        console.log(`NOTE extra bananas ${picked}`);
         await q.waitUntil(() => q.T() - gaveAt >= 100, 110);
         await childTalk('child toy', [], () => q.has(ITEM.talisman), 6);
         await converse1([], () => !q.dialogOpen(), 20);

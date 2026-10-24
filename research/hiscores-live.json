@@ -1,6 +1,6 @@
 {
  "base": "https://rs-sdk-demo.fly.dev",
- "takenAt": "2026-10-23T23:26:09.737Z",
+ "takenAt": "2026-10-24T00:26:41.246Z",
  "boards": [
   {
    "board": "Overall",
@@ -2474,39 +2474,39 @@
     },
     {
      "rank": 16,
+     "name": "archmage99",
+     "level": 99,
+     "ticks": 8424
+    },
+    {
+     "rank": 17,
      "name": "cairn_e06",
      "level": 99,
      "ticks": 8653
     },
     {
-     "rank": 17,
+     "rank": 18,
      "name": "cairn_e14",
      "level": 99,
      "ticks": 8692
     },
     {
-     "rank": 18,
+     "rank": 19,
      "name": "cairn_e08",
      "level": 99,
      "ticks": 8737
     },
     {
-     "rank": 19,
+     "rank": 20,
      "name": "cairn_e05",
      "level": 99,
      "ticks": 8798
     },
     {
-     "rank": 20,
+     "rank": 21,
      "name": "cairn_e15",
      "level": 99,
      "ticks": 8798
-    },
-    {
-     "rank": 21,
-     "name": "cairn_e07",
-     "level": 99,
-     "ticks": 8799
     }
    ]
   },

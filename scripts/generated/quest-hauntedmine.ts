@@ -78,7 +78,78 @@ try {
         await q.climb(label, () => at(l), /./, arrived, 5);
         await shut();
     };
+    // The haunted carts (hauntedmine_cart1-4, hauntedmine.npc:300-355) patrol one-tile lanes, wait 3 ticks at each
+    // end, and push a player on the tile ahead of them back one tile (hauntedmine_cart.rs2:1-13). The lane tiles with a
+    // side step (SDK collision): cart 1 (x 2727, z 4491-4509) at 2728,4503, 2726,4502, 2726,4496; cart 4 (x 2739, z
+    // 4528-4531) at 2740,4531 and 2738,4529. The bot waits beside a lane until the cart has passed, then runs.
+    const carts: Record<string, { z: number; dir: number; seen: number; moved: number }> = { c1: { z: 0, dir: 0, seen: -1, moved: -1 }, c4: { z: 0, dir: 0, seen: -1, moved: -1 } };
+    const offCart = q.s.onTick(() => {
+        for (const n of (q.st()?.nearbyNpcs ?? []) as any[]) {
+            if (!/^mine cart$/i.test(n.name)) continue;
+            const nx = n.tileX ?? n.x, nz = n.tileZ ?? n.z;
+            const k = nx === 2727 && nz >= 4489 && nz <= 4511 ? 'c1' : nx === 2739 && nz >= 4526 && nz <= 4533 ? 'c4' : '';
+            if (!k) continue;
+            const c = carts[k]!;
+            if (c.seen >= 0 && nz !== c.z) { c.dir = Math.sign(nz - c.z); c.moved = q.T(); }
+            c.z = nz; c.seen = q.T();
+        }
+    });
+    const fresh = (k: string) => carts[k]!.seen === q.T();
+    const waitCart = async (label: string, ok: () => boolean, ticks = 80) => {
+        for (let i = 0; i < ticks; i++) { await q.guard(label); if (ok()) return; await q.waitTicks(1); }
+        await q.fail(`cart wait ${label} ${JSON.stringify(carts)}`);
+    };
+    const run = (x0: number, z0: number) => q.s.direct({ type: 'walkTo', x: x0, z: z0, running: true, reason: 'SDK' });
+    const runTo = async (label: string, x0: number, z0: number, ticks: number) => {
+        await run(x0, z0);
+        for (let i = 0; i < ticks && !q.near(x0, z0, 0); i++) { await q.waitTicks(1); if (i % 4 === 3 && !q.near(x0, z0, 0)) await run(x0, z0); }
+        return q.near(x0, z0, 0);
+    };
+    // Cart 1 lane, north to south (to the fungus-area ladder) or south to north.
+    const lane1 = async (south: boolean) => {
+        for (let a = 0; a < 5; a++) {
+            await q.guard('lane 1');
+            if (a > 0) q.stats.retries++;
+            if (south) {
+                await q.walk('lane 1 north end', [{ x: 2728, z: 4510, tol: 0 }]);
+                await waitCart('lane 1 south a', () => fresh('c1') && carts.c1!.dir === -1 && carts.c1!.z <= 4500);
+                if (!await runTo('lane 1 niche', 2726, 4496, 12)) continue;
+                await waitCart('lane 1 south b', () => fresh('c1') && carts.c1!.dir === 1 && carts.c1!.z >= 4497);
+                if (await runTo('lane 1 out', 2725, 4487, 10)) return;
+            } else {
+                await q.walk('lane 1 south end', [{ x: 2726, z: 4488, tol: 0 }]);
+                await waitCart('lane 1 north a', () => fresh('c1') && carts.c1!.dir === 1 && carts.c1!.z >= 4497);
+                if (!await runTo('lane 1 niche', 2728, 4503, 12)) continue;
+                await waitCart('lane 1 north b', () => fresh('c1') && carts.c1!.dir === -1 && carts.c1!.z <= 4501);
+                if (await runTo('lane 1 out', 2729, 4510, 10)) return;
+            }
+            console.log(`WARN lane 1 try ${a} at ${q.pos()?.worldX},${q.pos()?.worldZ} cart ${JSON.stringify(carts.c1)}`);
+        }
+        await q.fail('lane 1');
+    };
+    // Cart 4 lane, north to south only: from the side step 2740,4531, go when the cart is one tile from its south stop
+    // or has just reached it (the cart is processed before the player, so a later start meets it leaving).
+    const lane4 = async () => {
+        for (let a = 0; a < 5; a++) {
+            await q.guard('lane 4');
+            if (a > 0) q.stats.retries++;
+            await q.walk('lane 4 north', [{ x: 2740, z: 4532, tol: 0 }]);
+            await runTo('lane 4 side', 2740, 4531, 6);
+            await waitCart('lane 4', () => fresh('c4') && carts.c4!.dir === -1 && (carts.c4!.z === 4529 || (carts.c4!.z === 4528 && q.T() - carts.c4!.moved <= 1)));
+            const t1 = q.T();
+            const dbg = q.s.onTick(() => { if (q.T() - t1 <= 8) console.log(`LANE4 ${q.T() - t1} me ${q.pos()?.worldX},${q.pos()?.worldZ} cart ${carts.c4!.z}/${carts.c4!.dir}`); });
+            await runTo('lane 4 step', 2738, 4529, 5);
+            const ok4 = await runTo('lane 4 out', 2737, 4526, 8);
+            dbg();
+            if (ok4) return;
+            console.log(`WARN lane 4 try ${a} at ${q.pos()?.worldX},${q.pos()?.worldZ} cart ${JSON.stringify(carts.c4)}`);
+        }
+        await q.fail('lane 4');
+    };
 
+    // HM_FROM=lift starts at step 6 (debug preset quest_hauntedmine_lift: 42_70 north, the key and a fungus, varp 3).
+    const FROM = process.env.HM_FROM ?? '';
+    if (FROM !== 'lift') {
     // 1. The Zealot: Saradomin, challenges, "What quest is that then?" (1, zealot.rs2:18-26,86-90,185-200); "Is there
     // any other way into the mines?" sets the heard-about-key bit (zealot.rs2:97-102); then out by "I must be going now".
     await q.talk('zealot', /^zealot$/i, [/path of saradomin/i, /challenges and quests/i, /what quest is that/i, /any other way into the mines/i,
@@ -97,7 +168,8 @@ try {
     await go('back 2 in', LOC.back2!, () => z() > 9000, { x: 3428, z: 3225 });
     await go('ladder area 2', LOC.top2!, () => sq() === '43_71', { x: 3421, z: 9625 });
     await go('ladder 43_71 south', LOC.swS!, () => sq() === '42_70', { x: 2798, z: 4568 });
-    await go('ladder fungus area', LOC.eA!, () => sq() === '43_70', { x: 2725, z: 4487 });
+    await lane1(true);
+    await go('ladder fungus area', LOC.eA!, () => sq() === '43_70');
     q.milestone('fungus area');
 
     // 3. A glowing fungus (hauntedmine_fungus.rs2:1-12) into the cart (:54-69).
@@ -152,6 +224,7 @@ try {
     // 5. Out the way the bot came (area 2, back entrance 2 to the ledge), in by back entrance 1 to area 1, to the cart
     // end for the fungus (hauntedmine_fungus.rs2:71-82).
     await go('ladder out of fungus area', LOC.wA!, () => sq() === '42_70', { x: 2789, z: 4487 });
+    await lane1(false);
     await go('ladder 42_70 south', LOC.neS!, () => sq() === '43_71', { x: 2734, z: 4504 });
     await go('ladder to area 2', LOC.lad2!, () => z() > 9000, { x: 2782, z: 4570 });
     await go('back 2 out', LOC.back2In!, () => z() < 4000, { x: 3409, z: 9623 });
@@ -163,10 +236,12 @@ try {
     await q.converse([/^take it/i], () => q.has(ITEM.fungus) && !q.dialogOpen(), 15);
     if (!q.has(ITEM.fungus)) await q.fail('fungus from cart');
     q.milestone('fungus');
+    await go('ladder from cart end', LOC.wC!, () => sq() === '42_70', { x: 2774, z: 4539 });
+    }
 
     // 6. The lift area: the key on the valve (4, then powered, hauntedmine_lift.rs2:63-91); the lift (5) to the flooded
     // level (:8-27). The ghost that shuts the valve starts only north of the lift (:94-111).
-    await go('ladder from cart end', LOC.wC!, () => sq() === '42_70', { x: 2774, z: 4539 });
+    await lane4();
     await go('ladder lift area', LOC.eB!, () => sq() === '43_70', { x: 2732, z: 4530 });
     await q.walk('to valve', [{ x: 2807, z: 4496, tol: 1 }]);
     await q.step('valve', () => q.useOnLoc(ITEM.liftKey, at(LOC.valve!)), () => q.msgCount(/you open the valve|already open/i) > 0, 20, 4);
@@ -190,15 +265,38 @@ try {
     await q.converse([], () => !!boss() && !q.dialogOpen(), 40);
     q.milestone(8);
     // 9. The fight: the ghost moves after hits (ai_queue1, :244-245) and fades (no Attack op) on the way; it hits with
-    // the carts, cranes or pickaxes every 5 ticks (:112-147, 0-15).
-    let lastSend = -99;
+    // the carts, cranes or pickaxes every 5 ticks (:112-147, 0-15). Fire Wave from range (magic defence -5,
+    // hauntedmine.npc:205): no walk to a ghost that stands where melee cannot reach.
+    const WAVE = componentId('magic:fire_wave');
+    // A cast with no Magic XP 6 ticks later had no line of sight (a crane between): the bot runs at the ghost first.
+    let lastCast = -99, casts = 0, mxp = q.xp('Magic'), closer = 0, seen = q.T();
     for (let i = 0; i < 900 && !killed(); i++) {
         await q.guard('boss');
         const b = boss();
-        const c = q.pos()?.combat;
-        if (b && (c?.targetIndex !== b.index || q.T() - lastSend > 12) && q.T() - lastSend > 2) {
-            await q.s.direct({ type: 'interactNpc', npcIndex: b.index, optionIndex: q.opIndex(b, /attack/i), reason: 'SDK' });
-            lastSend = q.T();
+        // Out of the NPC view (15 tiles) from a far corner: back to the room's middle, where every spot is in view.
+        const anyGhost = (q.st()?.nearbyNpcs ?? []).some((n: any) => /treus dayth|^ghost$/i.test(n.name));
+        if (anyGhost) seen = q.T();
+        else if (q.T() - seen >= 3 && !q.near(2788, 4451, 1)) { await q.s.direct({ type: 'walkTo', x: 2788, z: 4451, running: true, reason: 'SDK' }); seen = q.T(); }
+        if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
+            const bx = b.tileX ?? b.x, bz = b.tileZ ?? b.z;
+            if ((lastCast > 0 && q.xp('Magic') === mxp) || q.cheb(bx, bz) > 8) {
+                closer++;
+                // The south spot (move index 5, 2787,4443-4445, hauntedmine_boss_ghost.rs2:335-341) has no line of sight
+                // from the room's middle; 2788,4448 has (a clear column).
+                const [tx, tz] = bz <= 4446 ? [2788, 4448] : [bx, bz];
+                const wr: any = await q.s.direct({ type: 'walkTo', x: tx, z: tz, running: true, reason: 'SDK' });
+                await q.waitUntil(() => { const g = boss(); return !g || q.near(tx, tz, bz <= 4446 ? 0 : 3); }, 8);
+                if (closer % 4 === 1) console.log(`CLOSER ${q.T()} to ${tx},${tz} now ${q.pos()?.worldX},${q.pos()?.worldZ} r=${JSON.stringify(wr).slice(0, 160)}`);
+            }
+            const b2 = boss();
+            if (b2) {
+                casts++; lastCast = q.T(); mxp = q.xp('Magic');
+                await q.s.direct({ type: 'spellOnNpc', npcIndex: b2.index, spellComponent: WAVE, reason: 'SDK' });
+            }
+        }
+        if (i % 20 === 0) {
+            const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /treus dayth|^ghost$/i.test(n.name));
+            console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} closer=${closer} myhp=${q.hp()}`);
         }
         await q.waitTicks(1);
     }
@@ -224,6 +322,6 @@ try {
     await q.waitUntil(() => questDone, 5);
     await shut();
     q.milestone(11);
-    off();
+    off(); offCart();
     await q.end(questDone, `qp=2 shard=${q.has(ITEM.shard)}`);
 } catch (e) { await q.fail(String(e)); }

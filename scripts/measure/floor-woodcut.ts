@@ -1,4 +1,4 @@
-// Woodcutting ladder by delayed-click 3-tick (planner row woodcut). Rune axe, knife, one normal log.
+// Woodcutting ladder by delayed-click 3-tick (planner row woodcut). Rune axe, knife, 15 normal logs (a buffer; a log is used only on a mistimed cycle).
 // Usage: RANDOM_EVENTS=0 bun scripts/measure/floor-woodcut.ts <bot> [capTicks=3000] [stopLevel=99]
 // Env: WILLOW_AT = level to move from oaks to willows (default 72), TREE = force one tree (tree|oak|willow).
 // Presets: floor_wc1, floor_wc45, floor_wc72, floor_wc85 (packages/practice/src/presets.ts).
@@ -39,7 +39,7 @@ try {
     const chopOp = (l: any) => l.optionsWithIndex.find((o: any) => /^chop/i.test(o.text)).opIndex;
     const logsLeft = () => inv(s).filter(i => i.id === 1511).length;
     let last = xp(s, 'Woodcutting'), lastT = s.tick(), curLvl = lvl0, cycles = 0, moves = 0, moveTicks = 0, idleNoTree = 0;
-    let tree: any = null, kind = '';
+    let tree: any = null, kind = '', usedWarn = 0, lastMoveCycle = -1;
     const logs0 = logsLeft();
     const xp0 = xp(s, "Woodcutting");
     const account = (name: string) => {
@@ -62,29 +62,42 @@ try {
                 if (Math.hypot(T.site.x - p.x, T.site.z - p.z) > 8) await send(s, m, { type: 'walkTo', x: T.site.x, z: T.site.z, running: true });
                 await tick(s); idleNoTree++; account(`${want} (move)`); moveTicks += s.tick() - tm; continue;
             }
-            tree = cands[0]; kind = want; moves++;
-            // Plain Chop to walk into reach; stop when the position holds for 2 ticks.
+            tree = cands[0]; kind = want; moves++; lastMoveCycle = cycles;
+            // Plain Chop to walk into reach. On arrival the attempt label prints "You swing your axe" and sets
+            // %action_delay = clock + 3 (woodcut.rs2:55-60, 94-96); the plain roll comes 3 ticks later. A knife before
+            // then queues the fletch with a short delay and can use the log (cut_logs.rs2:83-86), so the first knife
+            // goes 3 ticks after the swing message.
+            const msgs = (): any[] => (s.sdk.getState() as any)?.gameMessages ?? [];
+            const obs0 = Math.max(-1, ...msgs().map(g => g.observationId ?? -1));
+            const swings = () => msgs().filter(g => /swing your axe/i.test(g.text) && (g.observationId ?? -1) > obs0).length;
+            const sw0 = 0;
             await send(s, m, { type: 'interactLoc', x: tree.x, z: tree.z, locId: tree.id, optionIndex: chopOp(tree) });
-            let prev = pos(), still = 0;
-            for (let k = 0; k < 40 && still < 2; k++) { await tick(s); const q = pos(); still = q.x === prev.x && q.z === prev.z ? still + 1 : 0; prev = q; }
+            let k = 0;
+            for (; k < 40 && swings() === sw0; k++) await tick(s);
+            if (k >= 40) console.log('WARN no swing message within 40 ticks of a move');
+            await tick(s, 3);
             account(`${want} (move)`);
             moveTicks += s.tick() - tm;
             continue;
         }
+        const logsBefore = logsLeft();
         const knife = inv(s).find(i => i.id === 946), log = inv(s).find(i => i.id === 1511);
-        if (!knife || !log) { console.log('WARN missing knife or log'); break; }
+        if (!knife || !log) { console.log(`WARN missing knife or log; inv=${inv(s).map((i: any) => i.name + 'x' + i.count).join(',')}`); break; }
         // T: knife on log + Make 1.
         await send(s, m, { type: 'useItemOnItem', sourceSlot: knife.slot, targetSlot: log.slot });
         await send(s, m, { type: 'clickComponent', componentId: make1 });
         await tick(s); account(want);
         // T+1: drop one product log (never the knife log), else close the Make-X modal.
-        const prod = inv(s).find(i => i.id === 1521 || i.id === 1519) ?? (logsLeft() > 1 ? inv(s).filter(i => i.id === 1511)[1] : undefined);
+        const prod = inv(s).find(i => i.id === 1521 || i.id === 1519) ?? (logsLeft() > logs0 ? inv(s).filter(i => i.id === 1511)[logs0] : undefined);
         if (prod) await send(s, m, { type: 'dropItem', slot: prod.slot }); else await send(s, m, { type: 'closeModal' });
         await tick(s); account(want);
         // T+2: Chop rolls at once.
         await send(s, m, { type: 'interactLoc', x: here.x, z: here.z, locId: here.id, optionIndex: chopOp(here) });
         cycles++;
         await tick(s); account(want);
+        const droppedLog = prod?.id === 1511 ? 1 : 0;
+        if (process.env.WCDEBUG === '1') console.log(`NOTE cycle ${cycles} t=${s.tick() - t0} logs ${logsBefore}->${logsLeft()} prod=${prod?.name ?? '-'}@${prod?.slot ?? '-'} msgs=${((s.sdk.getState() as any)?.gameMessages ?? []).slice(-2).map((g: any) => g.text).join(' / ')}`);
+        if (logsLeft() + droppedLog < logsBefore && usedWarn++ < 10) console.log(`WARN log used in cycle ${cycles} at ${s.tick() - t0} (${want}, level ${level(s, 'Woodcutting')}, first cycle after a move: ${cycles - 1 === lastMoveCycle})`);
         if (s.tick() - lastT > 60) { console.log(`WARN no XP for 60 ticks at Woodcutting ${level(s, 'Woodcutting')}`); break; }
     }
     const ticks = s.tick() - t0;

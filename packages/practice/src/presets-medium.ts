@@ -18,6 +18,13 @@ function medium(position: { x: number; z: number; level?: number }, items: Array
     };
 }
 
+// Haunted Mine: a staff of fire (1387) in the weapon slot and Fire Wave runes (1 blood 565 + 5 air 556 a cast) for the
+// boss, 12 lobsters.
+function hauntedmine(position: { x: number; z: number }, items: Array<number | [number, number]>, varps: Record<number, number> = {}): SaveConfig {
+    const c = medium(position, [...items, [565, 40], [556, 200]], 12, 0, { 107: 5, 302: 61, 307: 110, ...varps });
+    return { ...c, equipment: [...RUNE_SET.filter(e => e.slot !== 3), { id: 1387, count: 1, slot: 3 }] };
+}
+
 export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // Pirate's Treasure: on the Port Sarim jetty beside Redbeard Frank (spawn 3053,3250, maps/m47_50.jm2); 10 bananas
     // (1963) for Luthas's crate, white apron (1005) for Wydin, spade (952), 200 coins (two boat fares, the rum), runes
@@ -66,5 +73,8 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // maps/m53_50.jm2); the state after In Search of the Myreque (107 = 5, 302 = 61, 307 = 110). A chisel (1755) for
     // the crystal (hauntedmine_crystals.rs2:39-43). No tinderbox (the lift soaks it, hauntedmine_lift.rs2:37-42). The
     // keys, the fungus and the shard are quest items (quest_hauntedmine/configs/hauntedmine.obj).
-    quest_hauntedmine: medium({ x: 3444, z: 3256 }, [1755], 8, 0, { 107: 5, 302: 61, 307: 110 }),
+    quest_hauntedmine: hauntedmine({ x: 3444, z: 3256 }, [1755]),
+    // Debug start for HM_FROM=lift: 42_70 north beside the cart-end ladder, the lift key (4078) and a fungus (4075),
+    // %hauntedmine = 3 (an entrance crawled).
+    quest_hauntedmine_lift: hauntedmine({ x: 2710, z: 4539 }, [1755, 4078, 4075], { 382: 3 }),
 };
