@@ -121,6 +121,25 @@ function ikov(position: { x: number; z: number; level?: number }, varps: Record<
     return { position: { level: 0, ...position }, skills: ALL_99, equipment, varps: { ...DONE, 28: -1, ...varps }, inventory: items([...IK_ITEMS, ...extra]) };
 }
 
+// Horror from the Deep (scripts/generated/quest-horror.ts): no quest needed (Agility 35, horror_journal.rs2:6);
+// Alfred Grimhand's Barcrawl done (77 = 2, the barcrawl row before Scorpion Catcher) for the Barbarian Outpost gate on
+// the way to Gunnjorn (area_barbarian_outpost/scripts/outpost_gate.rs2:1-5). Worn:
+// the rune set. Helper items (tradeable): 2 planks, 8 nails and a hammer for the bridge (quest_horror.rs2:110-167);
+// swamp tar, a tinderbox and molten glass for the light (:245-289); a bronze dagger and a bronze arrow for the strange
+// wall (:332-427, with one rune of each element from the stacks); air, water, earth, fire and blood runes for the
+// waves on the Dagannoth mother (npc_combat.rs2:402-437); 12 sharks. %deephorror is varp 351 (above 308, so
+// extendVarps writes it): stage in bits 0-10, the bridge halves 12-13, the key 14, the door 15, the wall slots 16-21,
+// tar, glass and light 22-24 (quest_horror.varbit).
+const HD_ITEMS: Array<number | [number, number]> = [960, 960, [1539, 8], 2347, 1939, 1775, 590, 1205, [882, 1], [556, 200], [555, 100], [557, 100], [554, 100], [565, 40]];
+const HD_IN = 2 + (15 << 12);                            // entered; bridges, key and door bits
+const HD_LIT = 4 + (15 << 12) + (7 << 22);               // the light repaired
+function horror(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, inv = HD_ITEMS, food = 12): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment: UP_WORN, varps: { ...DONE, 77: 2, ...varps },
+        inventory: items([...inv, ...Array.from({ length: food }, () => 385)]),
+    };
+}
+
 // Regicide (scripts/generated/quest-regicide.ts): Underground Pass done (161 = 10; %ibanmulti 162 as a finished run
 // leaves it: the doll bits 1-4, the 4 orbs 5-8, the cat 9, started 11, the 3 badges and the horn thrown 14-16 and 18,
 // Koftik 17, the grid path 22-31), %regicide_quest (328) 1 with the King's summons (3206). Worn: the rune set. Helper
@@ -164,6 +183,15 @@ export const LONG_PRESETS: Record<string, SaveConfig> = {
     quest_ikov_arrows: ikov({ x: 2661, z: 9801 }, { 26: 10, 27: 1 }, [], wear([[861, 3], [86, 2], [89, 10]])),
     // Debug (IK_FROM=warrior): south of the trap-lever door, %ikov 30, 10 ice arrows worn.
     quest_ikov_warrior: ikov({ x: 2648, z: 9855 }, { 26: 30, 27: 1 }, [], [...wear([[861, 3], [86, 2], [89, 10]]), { id: 78, count: 10, slot: 13 }]),
+
+    // Beside Larrissa outside the lighthouse (spawn 2508,3635, maps/m39_56.jm2).
+    quest_horror: horror({ x: 2508, z: 3634 }),
+    // Debug (HD_FROM=in): inside the lighthouse (the 38_71 copy), %horrorquest 2.
+    quest_horror_in: horror({ x: 2445, z: 4598 }, { 351: HD_IN }),
+    // Debug (HD_FROM=cave): at the foot of the basement ladder (level 1), the light repaired (%horrorquest 4).
+    quest_horror_cave: horror({ x: 2518, z: 4618, level: 1 }, { 351: HD_LIT }),
+    // Debug (HD_FROM=fight): beside Jossik in the cavern, %horrorquest 4, the wall slots filled.
+    quest_horror_fight: horror({ x: 2516, z: 4634 }, { 351: HD_LIT + (63 << 16) }),
     // Beside Irena, south of the Shantay Pass (spawn 3303,3113, maps/m51_48.jm2).
     quest_desertrescue: tt({ x: 3303, z: 3112 }),
     // Debug (TT_FROM=shabim): beside Al Shabim's tent, %desertrescue 10 (the mine guard asked for a pineapple), the

@@ -184,7 +184,7 @@ try {
 
     // The Underground Pass from West Ardougne to Tirannwn (quest-upass.ts route; the obstacles stay as they are after
     // the quest: a lit arrow for the bridge rope, a rope for the swing, the spike grid by trial, the orbs' well, the
-    // cells, the unicorn's door at 2400,9611 straight to the paladins (quest_upass.rs2:318-327), the skull door with
+    // cells, the unicorn's door at 2375,9611 straight to the paladins (quest_upass.rs2:318-327), the skull door with
     // the badges in the well (:340-405), then Iban's temple door).
     const pass = async (n: number) => {
         await q.walk(`to city doors ${n}`, [{ x: 2559, z: 3300, tol: 1 }]);
@@ -461,10 +461,16 @@ try {
         await q.talk('iorwerth 4', /^lord iorwerth$/i, [], () => q.has(ITEM.message), IORWERTH, 60);
         q.milestone(13);
         await q.teleport('ardougne teleport 2', 'magic:ardougne_teleport', 2661, 3301);
-        await q.walk('to arianwyn zone', [{ x: 2588, z: 3299, tol: 2 }]);
-        for (let i = 0; i < 60 && !q.sawText(/deliver your message, act normal/i); i++) {
-            if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 1);
-            await q.waitTicks(1);
+        // The zone fires on entry only; in proof trial 3 she never came (her spawn needs a free square in line of
+        // sight, quest_regicide.rs2:798-800), so the bot steps out of the zone and in again.
+        for (let k = 0; k < 4 && !q.sawText(/deliver your message, act normal/i); k++) {
+            if (k > 0 && !q.npc(/^arianwyn$/i)) await goTo('out of arianwyn zone', 2595, 3297);
+            await q.walk('to arianwyn zone', [{ x: 2589 - k, z: 3297, tol: 0 }]);
+            for (let i = 0; i < 50 && !q.sawText(/deliver your message, act normal/i); i++) {
+                if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 1);
+                else if (i > 12 && !q.npc(/^arianwyn$/i)) break;
+                await q.waitTicks(1);
+            }
         }
         if (!q.sawText(/deliver your message, act normal/i)) await q.fail('no arianwyn');
         await q.converse([], () => !q.dialogOpen(), 10);
