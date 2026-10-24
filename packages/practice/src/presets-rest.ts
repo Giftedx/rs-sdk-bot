@@ -47,4 +47,8 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // Hazeel Cult (good side): beside Sir Ceril Carnillean in his house (spawn 2565,3271, maps/m40_51.jm2). No helper
     // items; the armour is a quest item from Alomone (alomone.rs2:115-123). 4 lobsters.
     quest_hazeelcult: rest({ x: 2566, z: 3271 }, [], 4),
+    // Murder Mystery: beside the guard inside the Sinclair Mansion (spawn 2739,3577, maps/m42_55.jm2). Helper items
+    // (tradeable): 3 pots of flour (1933) for the dagger and two suspects' items, a law (563) and 5 air runes (556) for
+    // one Camelot Teleport to the poison salesman. The flypaper (untradeable) comes from the mansion's sacks.
+    quest_murder: rest({ x: 2740, z: 3577 }, [1933, 1933, 1933, [563, 1], [556, 5]], 2),
 };

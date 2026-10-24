@@ -80,7 +80,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Legends' Quest (`legends`) | 4 (109) | rest | 107 QP; Family Crest, Heroes', Underground Pass, Shilo Village, Waterfall (`quest_legends/scripts/legends_guard.rs2:50-53`); Magic 56, Mining 52, Agility, Crafting, Smithing, Strength, Thieving, Woodcutting 50, Herblore 45, Prayer 42 (`legends_journal.rs2:65-128`) | several | XL |
 | Dwarf Cannon (`mcannon`) | 1 (110) | `cannon` | none | goblins | - |
 | Throne of Miscellania (`misc`) | 1 (111) | rest | Heroes' Quest, Fremennik Trials (`quest_misc/scripts/misc_journal.rs2:8-17`, `misc_door_guard.rs2:10`) | none found | XL |
-| Murder Mystery (`murder`) | 3 (112) | rest | none found; CLAIMED by short/medium helper | none found | M |
+| Murder Mystery (`murder`) | 3 (112) | rest | none found; MEASURED 302-345 ticks in row `quests-medium` (random murderer) | none found | M |
 | The Restless Ghost (`priest`) | 1 (113) | rest | none found | level 13 skeleton (`quest_priest/scripts/priest_journal.rs2:8`) | S |
 | Priest in Peril (`priestperil`) | 1 (114) | rest | none found; 50 rune essence to Drezel (`areas/area_mausoleum/scripts/drezel.rs2:96-113`); MEASURED 993-1011 ticks in row `quests-medium` | level 30 (`quest_priestperil/scripts/priestperil_journal.rs2:7`) | M |
 | Prince Ali Rescue (`prince`) | 3 (115) | `qp-filler` | none found | none found | - |
@@ -880,6 +880,35 @@ Findings:
   (`quest_hazeelcult.rs2:172`); the run ends on the quest-complete message, so the XP may land after the snapshot. Not
   checked further; the QP comes from the quest varp.
 
+### Murder Mystery
+
+Preset `quest_murder` in `packages/practice/src/presets-rest.ts`: beside the guard inside the Sinclair Mansion (spawn
+2739,3577); 3 pots of flour, a law and 5 air runes (one Camelot Teleport) and 2 lobsters from a helper. `RESULT ok qp=3
+xp=magic=1387,crafting=35150 ... ticks=302 ... walkTicks=133 retries=0 died=false` (runs: 302 (Bob), 345 (David), 338
+(David) ticks; a trial before the proof: 271 (Bob)), each with `The finger prints are an exact match to ...` and
+`Congratulations! Quest complete!`. The guard's start picks the murderer at random (`%murdersus` 1-6,
+`quests/quest_murder/scripts/murder_guard.rs2:8-14`) and the bot cannot read varps, so the script finds the murderer
+from the evidence. Steps (proof run 1 MILESTONE ticks): the guard, "Sure, I'll help." 0-28; the dagger 2746,3578 and the
+thread on the window 2747,3577; its colour names two suspects (green Anna or David, red Bob or Carol, blue Elizabeth or
+Frank) 28-55 (`quest_murder.rs2:228-256`); 2 flypapers from the sacks 2731,3582, flour and flypaper on the dagger give the
+murderer's print 55-97 (`:204-215,292-324`); the first suspect's barrel item, flour, flypaper and the print check; a
+mismatch destroys the print and the bot does the second suspect 97-126 (`:105-175,326-337`); Camelot Teleport, the poison
+salesman 2737,3491, "Who did you sell Poison to at the house?" 126-167 (`area_seers/scripts/poison_salesman.rs2:32-36`);
+the walk back, the murderer's "Why'd you buy poison the other day?" 167-231 (`anna.rs2:34-39`, the same in each suspect's
+script); a search of the murderer's own loc (compost, beehive, drain, spiders' nest, fountain or crest) 231-251
+(`quest_murder.rs2:1-103`); the guard, "I know who did it!" with all three proofs 251-302
+(`murder_guard.rs2:36-53,132-152`).
+Findings:
+- The 3 proof runs drew Bob once and David twice. David is the second suspect of his pair and his barrel is on level 1,
+  so 345 is near the worst case; Elizabeth and Frank (both barrels on level 1) were not drawn, so their run times are not
+  measured.
+- Trial 1 stood west of Bob's barrel (2733,3578) behind the wall: "I can't reach that!". The script now stands on a
+  named tile beside each barrel and the spiders' nest.
+- Trial 2: the print mismatch opens a mesbox before the `inv_del` (`quest_murder.rs2:336-337`), so the item-on-item
+  helper waits a tick after the dialog closes before it checks the inventory.
+- Helper items: pots of flour and runes (tradeable). The flypaper is untradeable (`knowledge/items.json` id 1811) and
+  comes from the sacks; each sack search is a mesbox, a choice and a mesbox.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -933,7 +962,12 @@ medium and 9 long; `quests-medium` is 14 quests, 22 QP, floor 10,326 / realistic
 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 105,252 floor /
 127,654 realistic.
 
-Next for the `presets-rest.ts` helper: Murder Mystery, Observatory Quest, Death Plateau and Big Chompy Bird
+After Murder Mystery (medium, 900 / 1,300) `quests-rest` is 19 quests, 49 QP, 38,000 / 58,000 (burst 35,142 / 53,638),
+2 medium and 9 long; `quests-medium` is 15 quests, 25 QP, floor 10,628 / realistic 11,147. `bun test packages/planner`:
+42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 104,721 floor /
+126,796 realistic.
+
+Next for the `presets-rest.ts` helper: Observatory Quest, Death Plateau and Big Chompy Bird
 Hunting (class M).
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
