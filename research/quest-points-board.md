@@ -435,6 +435,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Biohazard | `scripts/generated/quest-biohazard.ts` | 1662, 1655, 1672 | MEASURED 3/3 |
 | Nature Spirit | `scripts/generated/quest-druidspirit.ts` | 823, 830, 791 | MEASURED 3/3 |
 | In Search of the Myreque | `scripts/generated/quest-routequest.ts` | 819, 852, 846 | MEASURED 3/3 |
+| Haunted Mine | `scripts/generated/quest-hauntedmine.ts` | 1092, 1225, 1018 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -682,6 +683,53 @@ Findings:
 - Helper items (all tradeable): steel longsword, 2 steel swords, steel dagger, steel mace, steel warhammer, 6 wooden
   planks, 30 steel nails, a hammer. The blessed sickle and the pouch come from Nature Spirit.
 
+### Haunted Mine
+
+`RESULT ok qp=2 ... ticks=1092 ... walkTicks=375 retries=5 died=false` (runs: 1,092, 1,225, 1,018 ticks), each with
+`You cut a shard from the crystal. / Congratulations! Quest complete!`. Class L in `quests-rest`; the row
+`quests-medium` holds it. Preset `quest_hauntedmine`: south of the Zealot (spawn 3444,3258, `maps/m53_50.jm2`) at
+3444,3256, the state after In Search of the Myreque (107 = 5, 302 = 61, 307 = 110), a staff of fire (1387) in the weapon
+slot, 40 blood and 200 air runes (Fire Wave), a chisel, 18 lobsters. Debug preset `quest_hauntedmine_lift` with
+`HM_FROM=lift` starts at the cart-end ladder with the lift key and a fungus. Steps (proof run 1 MILESTONE ticks;
+`quests/quest_hauntedmine/scripts/` unless named): the Zealot, Saradomin, "I come seeking challenges and quests.", "What
+quest is that then?" (1), "Is there any other way into the mines?" (the key bit, `zealot.rs2:1-201`), Pickpocket for
+the lift key (`:287-304`) 0-67; over the cart obstacle and in by the secondary entrance (3, `hauntedmine_locs.rs2:1-8`)
+67-87; out by back entrance 1 to the ledge, in by back entrance 2, two ladders and the cart-1 lane to the fungus area
+87-203; a glowing fungus into the cart, the controls read, the levers set, the cart sent (`hauntedmine_points.rs2`,
+`hauntedmine_fungus.rs2:54-69`) 203-349; back out the same way, in by back entrance 1, two ladders to the cart end and
+the fungus (`hauntedmine_fungus.rs2:71-82`) 349-533; the cart-4 lane, the key on the valve (4) and the lift (5,
+`hauntedmine_lift.rs2:8-91`) 533-635; the east dark stairs with the fungus (7, `hauntedmine_darkstairs.rs2:34-47`)
+635-660; the boss door and the key (8, `hauntedmine_boss_ghost.rs2:18-92`) 660-684; Treus Dayth killed with Fire Wave
+(9, `:244-254`) and the key taken 684-973; out, down the light stairs, up the west stairs to the reward door (10,
+`hauntedmine_crystals.rs2:1-29`) 973-1036; a crystal cut (complete, `:39-56`) 1036-1092.
+Findings:
+- The map has four walk areas joined by ladders and crawl holes (SDK collision, `maps/m53_150`, `m43_71`, `m42_70`,
+  `m43_70`): the fungus area (mushrooms, cart start, the controls and the 8 levers) joins the lift side only through the
+  surface, and a fungus crumbles when its carrier crawls out (`hauntedmine_fungus.rs2:38-52`). So the fungus goes by
+  cart: success needs bits b=1, a=1, c=0, d=0, j=0 (`hauntedmine_points.rs2:18-30`), lever n toggles bit n
+  (`:130-148`; a = bit 2, b = 1, c = 3, d = 4, j = 7, `hauntedmine.constant:14-21`). The varp is not transmitted;
+  the script reads the bits from the controls' models (`if_setmodel` 4914-2n, mirrored 4915-2n, `:6-13`) through
+  `LiteClient.ifMutable(com).model1Id`.
+- The haunted carts (`hauntedmine.npc:300-355`) patrol one-tile lanes and push a player on the tile ahead
+  (`hauntedmine_cart.rs2:1-13`). Cart 1 (x 2727, z 4491-4509) blocks the only way to the fungus-area ladder; the
+  script waits beside the lane (side steps 2728,4503 and 2726,4496 from the SDK collision), lets the cart pass and
+  runs. Cart 4 (x 2739, z 4528-4531) blocks the way to the lift area; the script goes when the cart is one tile from
+  its south stop, because NPCs move before players in a tick.
+- The boss fight is the fragile part: 6 earlier 3-run proofs of earlier fight logic passed 2, 2, 1, 0, 2 and 1 runs. The
+  ghost moves after hits and fades on the way (no Attack op); the server walks a Fire Wave caster close before the
+  spell lands; boss carts push a player along the z 4456 and z 4462 tracks into dead-end pockets at their east ends
+  (2795,4456; 2794-2795,4462-4463), where a cart beside the pocket holds the player and the boss hits on (2 deaths).
+  The kept logic: cast from where the bot stands, walk home (2788,4454; 2786,4452 for the south spot) only while the
+  ghost is faded, reach the east spot by row 4454 and the north spot from the west end of the z 4462 track, leave the
+  east pocket by its east side, and take the key in up to 3 rounds (a key taken at 8 with the ghost gone wakes it
+  again, `hauntedmine_boss_ghost.rs2:18-26,52`; the kill page was not seen in 1 of the 3 proof runs, which then fought
+  a second round). Eats 5-6 lobsters, hpMin 29-34.
+- Agility 15 and Crafting 35 are journal text only; no script checks them (`hauntedmine_journal.rs2:77-81`; no
+  `stat` check in the quest scripts). The quest XP is 22,000 Strength (`hauntedmine_crystals.rs2:54`); the RESULT
+  `xp=` field did not show a Strength gain (not explained).
+- Helper items (tradeable): staff of fire, blood and air runes, chisel, lobsters. The keys, fungus and shard are quest
+  items (`hauntedmine.obj`).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -700,14 +748,27 @@ instead. `bun test packages/planner`: 42 pass, 0 fail. `bun packages/planner/src
 research/hiscores-live.json --levers` after Biohazard: QP at end 145; Quest Points WIN at 102,924 floor / 134,446
 realistic (deadline 1,022,262); Overall 40,545 / 45,211 at this commit (the other rows moved since Priest in Peril).
 
-Next medium quest: Haunted Mine (`quests/quest_hauntedmine`; 2 QP; class L; Agility 15, Crafting 35, Morytania access,
-a level 95 boss, `hauntedmine_journal.rs2:5-19`). Not started: no script and no preset. Content to read: the Zealot
-start (`zealot.rs2`), the secondary entrance (`hauntedmine_locs.rs2:6-10`), the cart points puzzle on the
-`hauntedmine_controls` interface (8 levers in `%hauntedmine_bits`, randomized on first use, `hauntedmine_points.rs2`),
-the lift and its valve (`hauntedmine_lift.rs2`), the glowing fungus (`hauntedmine_fungus.rs2`), the dark stairs
-(`hauntedmine_darkstairs.rs2`), the boss Treus Dayth with cart, crane and pickaxe attacks (`hauntedmine_boss_ghost.rs2`)
-and the crystals (`hauntedmine_crystals.rs2`). After it: Shades of Mort'ton (the Flamtaer temple build to 100% repair
-and the sanctity for the sacred oil, `minigames/game_mortton/scripts/flamtaer_temple.rs2:44-160,280-330`), class L.
+After Haunted Mine (long, 1,800 / 2,600) `quests-rest` is 26 quests, 60 QP, 44,300 / 67,100 (burst 40,969 / 62,054),
+9 medium and 9 long; `quests-medium` is 8 quests, 14 QP, floor 7,372 / realistic 7,770 (a text splice of the two rows;
+the file is no longer `JSON.stringify` format). `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts
+research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 101,946 floor / 130,524 realistic.
+
+Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
+`quest_mortton` (presets-medium.ts) are written but not run. Content read: the diary on Herbi Flax's shelf
+(`quest_mortton.rs2:1-11`, read to the last page for 5, `serum_book.rs2:25-28`); serum 207 from tarromin, water and
+ashes (10, `herblore.rs2:16-17`); the serum on Razmire, "What are all these shadow creatures?", "Yes, I'll dispatch"
+(15, `razmire_keelgan.rs2:85-184`); 5 Loar shades and their remains (40, `mortton_shades.rs2:7-46`); Razmire takes 2
+(45) and opens his stores; Ulsquire sees 1 (47) and "What can you tell me about that temple?" (50,
+`ulsquire_shauncy.rs2:73-180`); all 15 temple walls (`maps/m54_51.jm2` 3504-3508,3314-3318) to templewall_10, then
+`%temple_repaired_p` = 100 gives 60 (`flamtaer_temple.rs2:44-92,236-252`); the altar lit, olive oil sanctified (65,
+`:167-304`); the sacred oil on logs (70), the logs, a remains and a tinderbox on a pyre (75, 80, `mortton_pyre.rs2`);
+Ulsquire queues the completion (`ulsquire_shauncy.rs2:106-110`). Risks:
+- About 150 Repair builds (15 walls x 10 stages, one build per 3 ticks) use about 5,000 resources (7-70 a build at
+  Crafting 99, `flamtaer_temple.rs2:94-124`); each set of 1 plank, 1 limestone brick and 5 swamp paste gives 800
+  (`:274-278`), and swamp paste does not stack, so about 7 sets need 3-4 trips to Razmire's builders' store.
+- The temple state is world-wide (`flamtaer_temple.vars`; the wall stages hold 9,000 ticks, `:138-153`), so a second
+  run within 9,000 ticks of a first finds the walls built. Clean 3/3 proofs need runs 9,000+ ticks apart, or the
+  measurement must say which runs found built walls (the script logs a TEMPLE start line).
 
 ## Cook's Assistant, Witch's House, Lost City (MEASURED practice, 3/3 each)
 
