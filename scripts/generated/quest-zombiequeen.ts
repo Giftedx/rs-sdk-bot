@@ -69,10 +69,25 @@ try {
         }
         return ok();
     };
+    // The Undead Ones (level 61) underground attack on sight; a hit during a mesbox drops the click that resumes it
+    // (trial t6: 4 rubble searches, the choice never opened), so the bot kills any within 5 tiles that has a target first.
+    const clearUndead = async (label: string) => {
+        for (let k = 0; k < 6; k++) {
+            const n = (q.st()?.nearbyNpcs ?? []).filter((m: any) => /^undead one$/i.test(m.name) && m.distance <= 5 && (m.targetIndex ?? -1) >= 0).sort((a: any, b: any) => a.distance - b.distance)[0];
+            if (!n) return;
+            for (let j = 0; j < 8 && (q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index); j++) {
+                await q.guard(label);
+                await q.s.bot.attack(n as any);
+                await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index), 6);
+            }
+            await q.waitTicks(1);
+        }
+    };
     // Sends an action, then answers its dialog with pats until ok(); retried.
     const act = async (label: string, send: () => unknown, pats: RegExp[], ok: () => boolean, ticks = 25, tries = 5) => {
         for (let i = 0; i < tries && !ok(); i++) {
             await q.guard(label);
+            if (z() > 9000) await clearUndead(label);
             if (i > 0) q.stats.retries++;
             await send();
             await answer(pats, ok, ticks);
@@ -103,6 +118,27 @@ try {
         }
     };
     const worn = (id: number) => (q.st()?.equipment ?? []).some((e: any) => e.id === id);
+    // The jungle north-east of Shilo (the mound, the waterfall's north exit, Rashiliyia's doors) is cut off by vines
+    // and trees; the stepping stones (zqrockjump 2333-2335 at 2925,2948-2950) cross the river, 1 tile per Cross
+    // (skill_agility/scripts/shortcuts.rs2:228-271; a slip washes the bot back to the bank, so it tries again).
+    const stones = async (north: boolean) => {
+        let started = false;
+        const done = () => started && (north ? z() >= 2951 : z() <= 2947);
+        await q.walk(`to stones ${north ? 'n' : 's'}`, [{ x: 2925, z: north ? 2947 : 2951, tol: 0 }]);
+        started = true;
+        for (let i = 0; i < 16 && !done(); i++) {
+            await q.guard('stones');
+            if (x() !== 2925 || (north ? z() < 2947 : z() > 2951)) { await q.walk('stones bank', [{ x: 2925, z: north ? 2947 : 2951, tol: 0 }]); continue; }
+            const nz = z() + (north ? 1 : -1);
+            const st = q.findLoc((l: any) => l.id >= 2333 && l.id <= 2335 && l.x === 2925 && l.z === nz);
+            const z0 = z();
+            if (st) await q.opLoc(st, 1);
+            else await q.s.direct({ type: 'walkTo', x: 2925, z: nz, running: false, reason: 'SDK' });
+            await q.waitUntil(() => z() !== z0 && !q.pos()?.isMoving, 8);
+            await q.waitTicks(1);
+        }
+        if (!done()) await q.fail('stones');
+    };
     // Cairn Isle: the climbing rocks from the east (2 columns, x 2794 and 2792), the log bridge west along z 2979
     // (a timer rolls Agility every 20 ticks on it, :561-608), the stacked rocks; "Yes Please" crawls to 2760,9389.
     const toBervirius = async () => {
@@ -122,12 +158,25 @@ try {
         await act('crawl', () => q.opLoc(loc(CAIRN), 2), [/yes please/i], () => z() > 9000, 25, 6);
     };
 
+    // Off Cairn Isle: the bridge east, then the climbing rocks from the west side jump 4 tiles east (:544-558).
+    const fromCairn = async () => {
+        await q.walk('cairn bridge back', [{ x: 2770, z: 2979, tol: 1 }, { x: 2791, z: 2979, tol: 0 }]);
+        for (let i = 0; i < 6 && x() < 2795; i++) {
+            await q.guard('cairn climb back');
+            if (x() !== 2791 || z() !== 2979) await q.walk('cairn rocks west', [{ x: 2791, z: 2979, tol: 0 }]);
+            const r = q.findLoc((l: any) => l.id === CLIMB.id && l.x === 2792 && l.z === 2979) ?? { id: CLIMB.id, x: 2792, z: 2979 };
+            await q.opLoc(r, 1);
+            await q.waitUntil(() => x() >= 2795, 12);
+            await q.waitTicks(1);
+        }
+        if (x() < 2795) await q.fail('cairn climb back');
+    };
     if (from('start')) {
         // 1. Mosol Rei: "Why do I need to run?" > "Rashiliyia? Who is she?" > "What can we do?" > "I'll go to see the
         // Shaman." > "Yes, I'm sure..." gives the Wampum belt (mosol_rei.rs2:21-107).
         await q.walk('to mosol', [{ x: MOSOL.x + 1, z: MOSOL.z, tol: 3 }]);
         await act('mosol', () => { const n = q.npc(/^mosol rei$/i); return n ? q.talkTo(n) : q.waitTicks(1); },
-            [/yes, i'm sure/i, /go to see the shaman/i, /what can we do/i, /rashiliyia\? who is she/i, /why do i need to run/i], () => q.has(ITEM.belt), 120, 3);
+            [/yes, i.m sure/i, /go to see the shaman/i, /what can we do/i, /rashiliyia\? who is she/i, /why do i need to run/i], () => q.has(ITEM.belt), 120, 3);
         q.milestone('belt');
         // 2. Trufitus: the belt on him > "Mosol Rei said something about a legend?" > "Why was it called Ah Za
         // Rhoon?" > "I am going to search for Ah Za Rhoon!" > "Yes, I will seriously look..." sets 1 and takes the
@@ -142,6 +191,7 @@ try {
         // 3. The mound: Search sets 3; the spade digs it to the fissure (4); the lit candle into the fissure (5); the
         // rope on the fissure (6); Search > "Yes, I'll give it a go!" lowers the bot into Ah Za Rhoon (7; Agility
         // 32), 2898,9401 (quest_zombiequeen.rs2:329-483).
+        if (from('start')) await stones(true);
         await q.walk('to mound', [{ x: MOUND.x, z: MOUND.z - 2, tol: 2 }]);
         const mound = () => q.findLoc((l: any) => l.id >= 2217 && l.id <= 2219 && Math.abs(l.x - MOUND.x) <= 1 && Math.abs(l.z - MOUND.z) <= 1) ?? { id: 2217, x: MOUND.x, z: MOUND.z };
         let t0 = q.s.tick();
@@ -151,7 +201,7 @@ try {
         await act('candle', () => q.useOnLoc(ITEM.candle, mound()), [], () => !q.has(ITEM.candle), 15, 3);
         await act('rope', () => q.useOnLoc(ITEM.rope, mound()), [], () => !q.has(ITEM.rope), 15, 3);
         q.milestone(6);
-        await act('fissure', () => q.opLoc(mound(), 2), [/yes, i'll give it a go/i], () => z() > 9000, 25, 4);
+        await act('fissure', () => q.opLoc(mound(), 2), [/give it a go/i], () => z() > 9000, 25, 4);
         q.milestone(7);
         await drop('spade', [ITEM.spade]);
     }
@@ -159,10 +209,11 @@ try {
         // 4. Ah Za Rhoon: the rubble (2887,9373) to the lower cave; the hidden bookcase gives the tattered scroll, the
         // sacks the crumpled scroll, the gallows Zadimus' remains; both scrolls read (bits 5 and 6); the rubble back
         // up; the waterfall path out to the jungle (8 on leaving, :1057-1064).
-        await q.walk('to rubble', [{ x: RUBBLE_UP.x + 1, z: RUBBLE_UP.z, tol: 1 }]);
-        await act('rubble down', () => q.opLoc(loc({ id: 2220, ...RUBBLE_UP }), 2), [/yes, i'll wriggle through/i], () => z() < 9300, 20, 4);
+        await q.walk('to rubble', [{ x: RUBBLE_UP.x + 2, z: RUBBLE_UP.z, tol: 0 }]);
+        const rubble = () => q.findLoc((l: any) => l.id === 2220) ?? { id: 2220, ...RUBBLE_UP };
+        await act('rubble down', () => { const r = rubble(); console.log(`DBG rubble ${JSON.stringify({ x: r.x, z: r.z, ops: r.optionsWithIndex })} fb=${JSON.stringify(q.st()?.opFeedback ?? {})}`); return q.opLoc(r, q.opIndex(r, /search/i)); }, [/wriggle through/i], () => z() < 9300, 20, 4);
         await q.walk('to book', [{ x: BOOK.x + 1, z: BOOK.z, tol: 1 }]);
-        await act('book', () => q.opLoc(loc(BOOK), 2), [/yes, i'm quite sure/i], () => q.has(ITEM.tattered), 25, 6);
+        await act('book', () => q.opLoc(loc(BOOK), 2), [/quite sure/i], () => q.has(ITEM.tattered), 25, 6);
         await act('read tattered', () => invOp(ITEM.tattered, /read/i), [/yes please/i], () => q.sawText(/bervirius/i) && !q.dialogOpen(), 15, 3);
         await q.s.direct({ type: 'closeModal', reason: 'SDK' });
         await q.walk('to gallows', [{ x: GALLOWS.x - 1, z: GALLOWS.z, tol: 2 }]);
@@ -173,9 +224,9 @@ try {
         await q.s.direct({ type: 'closeModal', reason: 'SDK' });
         q.milestone('scrolls');
         await q.walk('to rubble up', [{ x: RUBBLE_DN.x + 1, z: RUBBLE_DN.z, tol: 1 }]);
-        await act('rubble up', () => q.opLoc(loc({ id: 2220, ...RUBBLE_DN }), 2), [/yes, i'll wriggle through/i], () => z() > 9340, 20, 4);
+        await act('rubble up', () => { const r = rubble(); return q.opLoc(r, q.opIndex(r, /search/i)); }, [/wriggle through/i], () => z() > 9340, 20, 4);
         await q.walk('to falls', [{ x: FALLS.x - 2, z: FALLS.z, tol: 2 }]);
-        await act('falls', () => q.opLoc(loc(FALLS), 2), [/yes, i'll follow the path/i], () => z() < 4000, 25, 4);
+        await act('falls', () => q.opLoc(loc(FALLS), 2), [/follow the path/i], () => z() < 4000, 25, 4);
         q.milestone(8);
     }
     if (from('cairn')) {
@@ -188,7 +239,7 @@ try {
         await act('dolmen', () => q.opLoc(loc(DOLMEN), 2), [], () => q.has(ITEM.pommel) && q.has(ITEM.notes), 25, 3);
         await act('ivory beads', () => q.useOnItem(ITEM.chisel, ITEM.pommel), [], () => q.has(ITEM.ibeads), 10, 3);
         await act('dead beads', () => q.useOnItem(ITEM.wire, ITEM.ibeads), [], () => q.has(ITEM.dbeads), 10, 3);
-        await drop('tomb leftovers', [ITEM.tattered, ITEM.crumpled, ITEM.notes]);
+        await drop('tomb leftovers', [ITEM.notes]);
         q.milestone('beads');
         await q.walk('to holds', [{ x: HOLDS.x - 1, z: HOLDS.z, tol: 1 }]);
         for (let i = 0; i < 6 && z() > 9000; i++) {
@@ -200,6 +251,7 @@ try {
     }
     if (from('bury')) {
         // 6. Zadimus' remains buried in Tai Bwo Wannai (2794-2798, 3087-3090) give the bone shard (:948-972).
+        if (from('cairn')) await fromCairn();
         await q.walk('to sacred ground', [{ x: SACRED.x, z: SACRED.z, tol: 1 }]);
         await act('bury', () => invOp(ITEM.zbones, /bury|^drop/i), [], () => q.has(ITEM.shard), 20, 4);
         q.milestone('shard');
@@ -208,6 +260,7 @@ try {
         // 7. The palm trees (2915,3092) reveal the doors; Search on the doors sets bit 4 (:161-166); the chisel on the
         // shard makes the bone key (:1283-1299); the key on the doors sets 10 and opens them (:168-199); Open walks
         // into the tomb, 2929,9525 (:180-192).
+        if (from('bury')) await stones(true);
         await q.walk('to trees', [{ x: TREES.x + 1, z: TREES.z + 1, tol: 2 }]);
         const door = () => q.findLoc((l: any) => [2240, 2241, 2238, 2239].includes(l.id));
         await act('trees', () => q.opLoc(loc(TREES), 2), [], () => !!door(), 10, 4);
@@ -215,7 +268,7 @@ try {
         await act('bone key', () => q.useOnItem(ITEM.chisel, ITEM.shard), [], () => q.has(ITEM.key), 10, 3);
         await act('key on door', () => { const d = door(); return d ? q.useOnLoc(ITEM.key, d) : q.opLoc(loc(TREES), 2); }, [], () => !!q.findLoc((l: any) => [2238, 2239].includes(l.id)), 12, 4);
         await wield('beads', ITEM.dbeads);
-        await drop('chisel', [ITEM.chisel, ITEM.wire, ITEM.crystal]);
+        await drop('chisel', [ITEM.chisel, ITEM.wire]);
         await act('enter tomb', () => { const d = q.findLoc((l: any) => [2238, 2239].includes(l.id)); return d ? q.opLoc(d, 1) : q.waitTicks(1); }, [], () => z() > 9000, 12, 4);
         q.milestone(10);
     }
@@ -231,12 +284,15 @@ try {
         q.milestone(11);
         await q.walk('to tomb door', [{ x: 2892, z: 9479, tol: 1 }]);
         const tdoor = () => q.findLoc((l: any) => l.id >= 2246 && l.id <= 2250 && l.z === 9480);
-        for (let i = 0; i < 6 && z() <= 9480; i++) {
+        // After the third bone the doors move the bot in (:1359-1364); a dialog page can leave it on the door tile
+        // (2892,9480, trial t10), where Open walks it in.
+        for (let i = 0; i < 8 && z() <= 9480; i++) {
             await q.guard('tomb door');
             const n0 = q.cnt(ITEM.bones);
             const d = tdoor();
-            if (d) await q.useOnLoc(ITEM.bones, d);
-            await q.converse([], () => q.cnt(ITEM.bones) < n0 || z() > 9480, 10);
+            if (d && n0 > 0) await q.useOnLoc(ITEM.bones, d);
+            else if (d) await q.opLoc(d, 1);
+            await q.converse([], () => (n0 > 0 && q.cnt(ITEM.bones) < n0) || z() > 9480, 10);
             await q.converse([], () => !q.dialogOpen() || z() > 9480, 10);
         }
         if (z() <= 9480) await q.fail('tomb door');
@@ -275,6 +331,7 @@ try {
     }
     if (from('final')) {
         // 10. Back in Bervirius' tomb, the remains on the dolmen queue the completion (:1120-1143, 1630-1635).
+        if (from('tomb')) await stones(false);
         await toBervirius();
         await q.walk('to dolmen 2', [{ x: DOLMEN.x - 1, z: DOLMEN.z + 2, tol: 2 }]);
         await act('remains on dolmen', () => q.useOnLoc(ITEM.corpse, loc(DOLMEN)), [], () => questDone, 25, 4);

@@ -57,7 +57,64 @@ function troll(position: { x: number; z: number; level?: number }, varps: Record
     };
 }
 
+// Eadgar's Ruse (scripts/generated/quest-eadgar.ts): Druidic Ritual (in DONE), Death Plateau, Troll Stronghold done
+// with Eadgar freed and the back door opened (317 = 50, 318 = 63, as the 3 Troll Stronghold proof saves). Worn: the
+// troll set (climbing boots for the rocks). Helper items (tradeable): pineapple chunks (2116) and vodka (2015) for the
+// parrot (eadgar_zoo_keeper_aviary.rs2:21-50), 2 logs (one for Eadgar, one for the fire), 10 grain, 5 raw chickens
+// (quest_eadgar.rs2:224-357), a tinderbox, a pestle and mortar, a ranarr potion (unf) (99) for the troll potion,
+// runes for 3 Falador teleports, a shark. %eadgar_quest 335, %eadgar_bits 336, %eadgar_grain 337, %eadgar_chickens 338.
+const EA_ITEMS: Array<number | [number, number]> = [2116, 2015, 1511, 1511, ...Array(10).fill(1947), ...Array(5).fill(2138), 590, 233, 99, [563, 3], [556, 9], [555, 3], 385];
+const EA_BITS = 1 | (1 << 11) | (1 << 1);   // Pete's 2 talks, the logs given
+function eadgar(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, inv: Array<number | [number, number]> = EA_ITEMS): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment: TROLL_WORN, varps: { ...DONE, 314: 80, 315: 8, 317: 50, 318: 63, ...varps },
+        inventory: items(inv),
+    };
+}
+const EA_LATE: Array<number | [number, number]> = [590, 233, 99, [563, 3], [556, 9], [555, 3], 385];
+
+// The Tourist Trap (scripts/generated/quest-desertrescue.ts): no quest needed. Worn: a rune scimitar for the Mercenary
+// Captain (the bot takes it off before the camp: the guards jail a player with a weapon or armour,
+// quest_desertrescue.rs2:145-186) and the desert shirt, robe and boots (1833/1835/1837, tradeable), which the slave
+// swaps for his clothes in the worn slots (mining_slave.rs2:145-200) and which slow the desert heat
+// (area_desert/scripts/desert_heat.rs2:10-56). Helper items (tradeable): a hammer, 3 bronze bars and 40 feathers for
+// the dart (quest_desertrescue.rs2:577-672; a failed roll wastes a bar or 10 feathers), 2 full waterskins (1823), 6
+// sharks. %desertrescue is varp 197, %desertrescue_map_mechanisms 198.
+const TT_WORN = wear([[1333, 3], [1833, 4], [1835, 7], [1837, 10]]);
+const SLAVE_WORN = wear([[1844, 4], [1845, 7], [1846, 10]]);
+const TT_ITEMS: Array<number | [number, number]> = [2347, 2349, 2349, 2349, [314, 40], 1823, 1823];
+function tt(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, extra: Array<number | [number, number]> = [], equipment = TT_WORN): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment, varps: { ...DONE, ...varps },
+        inventory: items([...TT_ITEMS, ...extra, ...Array.from({ length: 6 }, () => 385)]),
+    };
+}
+
 export const LONG_PRESETS: Record<string, SaveConfig> = {
+    // Beside Irena, south of the Shantay Pass (spawn 3303,3113, maps/m51_48.jm2).
+    quest_desertrescue: tt({ x: 3303, z: 3112 }),
+    // Debug (TT_FROM=shabim): beside Al Shabim's tent, %desertrescue 10 (the mine guard asked for a pineapple), the
+    // metal key (1839), the scimitar and the slave clothes in the pack.
+    quest_desertrescue_shabim: tt({ x: 3170, z: 3034 }, { 197: 10 }, [1839, 1333, 1844, 1845, 1846], []),
+    // Debug (TT_FROM=ana): east of the mine cave, %desertrescue 17 (pineapple given), slave clothes worn, metal key.
+    quest_desertrescue_ana: tt({ x: 3286, z: 9415 }, { 197: 17 }, [1839, 1333], SLAVE_WORN),
+    // Beside Parroty Pete at the Ardougne zoo aviary (spawn 2611,3285, maps/m40_51.jm2).
+    quest_eadgar: eadgar({ x: 2612, z: 3285 }),
+    // Debug (EA_FROM=leg1): inside the stronghold back door with the parrot, %eadgar_quest 10.
+    quest_eadgar_leg1: eadgar({ x: 2823, z: 10050 }, { 335: 10, 336: 1 | (1 << 11) }, [...EA_ITEMS.filter(e => e !== 2116 && e !== 2015), 3266]),
+    // Debug (EA_FROM=rack1): beside Eadgar with the parrot and the ground thistle, %eadgar_quest 50.
+    quest_eadgar_rack1: eadgar({ x: 2891, z: 10084, level: 2 }, { 335: 50, 336: 1 | (1 << 11) }, [1511, ...Array(10).fill(1947), ...Array(5).fill(2138), 3266, 3264, ...EA_LATE]),
+    // Debug (EA_FROM=robe): beside Tegid, the items given (%eadgar_quest 70).
+    quest_eadgar_robe: eadgar({ x: 2913, z: 3419 }, { 335: 70, 336: EA_BITS, 337: 10, 338: 5 }, [3264, ...EA_LATE]),
+    // Debug (EA_FROM=potion): beside Eadgar with the robe and the ground thistle, %eadgar_quest 70.
+    quest_eadgar_potion: eadgar({ x: 2891, z: 10084, level: 2 }, { 335: 70, 336: EA_BITS, 337: 10, 338: 5 }, [3267, 3264, ...EA_LATE]),
+    // Debug (EA_FROM=rack2): beside Eadgar, the potion given (%eadgar_quest 85).
+    quest_eadgar_rack2: eadgar({ x: 2891, z: 10084, level: 2 }, { 335: 85, 336: EA_BITS | 4, 337: 10, 338: 5 }, EA_LATE),
+    // Debug (EA_FROM=fakeman): beside Eadgar with the fake man (%eadgar_quest 87).
+    quest_eadgar_fakeman: eadgar({ x: 2891, z: 10084, level: 2 }, { 335: 87, 336: EA_BITS | 4, 337: 10, 338: 5 }, [3268, ...EA_LATE]),
+    // Debug (EA_FROM=store): by the kitchen drawers (level 1) with the storeroom key (%eadgar_quest 90).
+    quest_eadgar_store: eadgar({ x: 2852, z: 10050, level: 1 }, { 335: 90, 336: EA_BITS | 4, 337: 10, 338: 5 }, [3269, 2146, ...EA_LATE]),
+
     // Beside Denulth in the Imperial Guard camp, Burthorpe (spawn 2896,3528, maps/m45_55.jm2).
     quest_troll: troll({ x: 2896, z: 3529 }),
     // Debug (TS_FROM=arena): west of the arena door, %troll_quest 10.
