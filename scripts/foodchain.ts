@@ -25,6 +25,9 @@ const CONF = join(resolve(import.meta.dir, '..'), '.practice', 'foodchain.json')
 const readConf = () => { try { const f = JSON.parse(readFileSync(CONF, 'utf8')).farmers; if (Array.isArray(f) && f.every(x => typeof x === 'string' && /^[A-Za-z0-9 _-]{1,12}$/.test(x) && !/^haggis$/i.test(x))) { if (f.join() !== FARMERS.join()) say(`farmers ${f.join(',')}`); FARMERS = f; } } catch { /* keep */ } };
 const MIN_FISH = Number(process.env.MIN_FISH ?? 100);
 const LOW = Number(process.env.LOW ?? 40);
+// Fewer fish than this are not handed out: the courier fetches more first (2026-10-24: 1-fish hand-outs made farmers
+// log in, eat once and log out again).
+const MIN_GIVE = Number(process.env.MIN_GIVE ?? 8);
 if (process.env.DEMO_OK !== '1') { console.log('foodchain: set DEMO_OK=1 (live server)'); process.exit(2); }
 if ([COOK, COURIER, ...FARMERS].some(a => /^haggis$/i.test(a))) { console.log('foodchain: the main account is never part of the chain'); process.exit(2); }
 
@@ -135,16 +138,16 @@ async function tick() {
     if (courierBusy) return;
     // A farmer waits at the bank with no food: hand over the courier's fish.
     const w = waitingFarmer();
-    if (w && courierFish() > 0 && !running.has(COURIER)) { void giveFish(w); return; }
+    if (w && courierFish() >= MIN_GIVE && !running.has(COURIER)) { void giveFish(w); return; }
     // Farmers: restart while they have food, or while the courier holds fish for them.
     for (const f of FARMERS) {
         if (running.has(f) || external(f) || dead.has(f)) continue;
         // At least 5: the status list does not mark bank notes, and a single noted fish is no food (2026-10-23:
         // mmtha0205 was restarted every 3.5 min with 1 noted salmon and logged out with "no food" each time).
-        if (farmerFood(f) >= 5 || courierFish() > 0) start(f, 'scripts/goldfarm.ts', { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' });
+        if (farmerFood(f) >= 5 || courierFish() >= MIN_GIVE) start(f, 'scripts/goldfarm.ts', { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' });
     }
     // Courier trip: fish ready at the cook and a farmer low (or waiting) and the courier holds none.
-    if (running.has(COURIER) || external(COURIER) || dead.has(COURIER) || courierFish() > 0) return;
+    if (running.has(COURIER) || external(COURIER) || dead.has(COURIER) || courierFish() >= MIN_GIVE) return;
     const ready = count(status(COOK)?.bank, /^(trout|salmon)$/i);
     const low = FARMERS.filter(f => !dead.has(f)).some(f => farmerFood(f) < LOW);
     if (ready < MIN_FISH || !low) return;
