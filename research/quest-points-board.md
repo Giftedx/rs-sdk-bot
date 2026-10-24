@@ -86,7 +86,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Prince Ali Rescue (`prince`) | 3 (115) | `qp-filler` | none found | none found | - |
 | Romeo & Juliet (`romeojuliet`) | 5 (116) | `rj` | none | none | - |
 | Rune Mysteries (`runemysteries`) | 1 (117) | rest | none found | none | S |
-| Scorpion Catcher (`scorpcatcher`) | 1 (118) | `scorpion` | Prayer 31 (`quest_scorpcatcher/scripts/scorpcatcher_journal.rs2:9`); Alfred Grimhand's Barcrawl for the Barbarian Outpost gate (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-5`; row `barcrawl` MEASURED 1,466-1,486); the dusty key (untradeable) for scorpion A in Taverley dungeon (`research/quest-plan.md` 1o) | none found | - |
+| Scorpion Catcher (`scorpcatcher`) | 1 (118) | `scorpion`, MEASURED 910-942 (`research/quest-plan.md` 1o) | Prayer 31 (`quest_scorpcatcher/scripts/scorpcatcher_journal.rs2:9`); Alfred Grimhand's Barcrawl for the Barbarian Outpost gate (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-5`; row `barcrawl` MEASURED 1,466-1,486); the dusty key (untradeable) for scorpion A in Taverley dungeon (`research/quest-plan.md` 1o) | none found | - |
 | Sea Slug (`seaslug`) | 1 (119) | `rival-seaslug` (qp 0), MEASURED 449-455 (`research/quest-plan.md` 1n) | Firemaking 30 (`quest_seaslug/scripts/quest_seaslug.rs2:43`); the lite client needs the bridged-tile fix `packages/core/src/bridgefix.ts` for the broken glass room door | none found | - |
 | Sheep Shearer (`sheep`) | 1 (120) | rest | none | none | S |
 | Sheep Herder (`sheepherder`) | 4 (121) | `qp-filler` | none found | none found | - |
@@ -1101,3 +1101,14 @@ regenerated (963 lines added, none changed). Scenario a, `--levers`: Overall fin
 worst Agility -37498" -> "50 inputs not MEASURED; worst Agility -37630". `bun test packages/planner`: 42 pass,
 0 fail. Scorpion Catcher itself is not proven: scorpion B is caught with the Barcrawl done; scorpion A needs the dusty
 key.
+
+### Scorpion Catcher (the `scorpion` row)
+
+`RESULT ok qp=1 questMsg=true xp=attack=4700,strength=165625,... ticks=910 hpMin=99 eats=0` (runs: 937, 910, 942
+ticks), preset `quest_scorpion`, script `scripts/generated/quest-scorpion.ts`; route and findings in
+`research/quest-plan.md` 1o. The locked gate of test run t5 is the dusty key gate (loc 2623 at 2924,9803,
+`areas/area_taverly/dungeon/scripts/jail_doors.rs2:31`). The run fetches the dusty key itself (Jailer, jail key on
+Velrak's cell door, Velrak) in 271-295 ticks, inside the row. Planner: row `scorpion` 300 / 900 ESTIMATE -> 910 / 942
+MEASURED. Scenario a, `--levers`: Overall finish 41,506 / 44,402 before and after; Quest Points WIN at 105,723 /
+130,958 -> 106,356 / 131,068; QP at end 145. Gate: "50 inputs not MEASURED; worst Agility -37630" -> "47 inputs not
+MEASURED; worst Agility -37630". `bun test packages/planner`: 42 pass, 0 fail.

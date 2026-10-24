@@ -1,4 +1,4 @@
-// NOT PROVEN (2026-10-24): B is caught with the Barcrawl done (77 = 2); A needs the dusty key, research/quest-plan.md 1o.
+// PROOF 3/3 on practice (2026-10-24): 937, 910, 942 ticks; the dusty key chain is in the run, research/quest-plan.md 1o.
 // Scorpion Catcher from preset quest_scorpion (beside Thormac, top of the Sorcerer's Tower), at the planner's state
 // for the scorpion row (tick 53,715, every skill 99). Reward: 66,250 Strength (x25: 165,625), 1 QP
 // (quest_scorpcatcher.rs2:55-60). Paths below are under vendor/rs-sdk/server/content/scripts/.
@@ -23,11 +23,16 @@ const SCORP_C = { x: 3058, z: 3488 };
 const TOWER = [{ x: 2701, z: 3408 }, { x: 2704, z: 3403 }, { x: 2699, z: 3405 }];
 const CAGE = { empty: 456, a: 457, ab: 458, ac: 459, b: 460, bc: 461, c: 462, full: 463 };
 const CAGES = Object.values(CAGE);
-const NPC = { a: 385, b: 386, c: 387 };
+const NPC = { a: 385, b: 386, c: 387, jailer: 201 };
+const ITEM = { jailKey: 1591, dusty: 1590 };
+const JAILER = { x: 2933, z: 9693 };                         // spawn, maps/m45_151.jm2
+const JAIL_DOOR = { id: 2631, x: 2931, z: 9690 };            // Velrak's cell door, south wall of the tile
+const VELRAK = { x: 2931, z: 9685 };
+const GATE = { id: 2623, x: 2924, z: 9803 };                 // deepdungeondoor, west wall of the tile, maps/m45_153.jm2
 
 const q = await openQuest({ cap: 2500, eatAt: 50, food: [379], lumbridgeOk: false });
 try {
-    const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage)
+    const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage); 3: quest_scorpion_s3 (Taverley dungeon ladder, cage with B)
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+scorpion catcher/i) > 0) questDone = true; });
     const cage = (): number | undefined => CAGES.find(id => q.has(id));
@@ -84,18 +89,54 @@ try {
     // that a Barbarian guard within 5 tiles talks instead (areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1-5).
     // The gate moves the bot through (outpost_gate.rs2:7-11).
     const inOutpost = () => (q.pos()?.worldX ?? 0) >= 2546;
-    if (!inOutpost()) {
-        await q.walk('to outpost gate', [{ x: 2544, z: 3569, tol: 1 }]);
-        await q.step('outpost gate', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, inOutpost, 8, 4);
+    if (FROM < 3) {
+        if (!inOutpost()) {
+            await q.walk('to outpost gate', [{ x: 2544, z: 3569, tol: 1 }]);
+            await q.step('outpost gate', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, inOutpost, 8, 4);
+        }
+        await q.walk('to scorpion b', [{ x: SCORP_B.x + 1, z: SCORP_B.z, tol: 2 }]);
+        await catchScorp('b', SCORP_B);
     }
-    await q.walk('to scorpion b', [{ x: SCORP_B.x + 1, z: SCORP_B.z, tol: 2 }]);
-    await catchScorp('b', SCORP_B);
 
-    // A: Falador Teleport, the Taverley dungeon ladder, the secret wall.
-    await q.teleport('falador teleport 1', 'magic:falador_teleport', 2965, 3378);
-    await q.walk('to taverley ladder', [{ x: TAV_LADDER.x, z: TAV_LADDER.z + 1, tol: 1 }]);
-    await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
-    await q.walk('to wall', [{ x: WALL.x, z: WALL.z + 1, tol: 1 }]);
+    // A: Falador Teleport, the Taverley dungeon ladder, the dusty key, the secret wall.
+    if (FROM < 3) {
+        await q.teleport('falador teleport 1', 'magic:falador_teleport', 2965, 3378);
+        await q.walk('to taverley ladder', [{ x: TAV_LADDER.x, z: TAV_LADDER.z + 1, tol: 1 }]);
+        await q.climb('taverley ladder', ladderAt(TAV_LADDER, /climb-down/i), /climb-down/i, () => (q.pos()?.worldZ ?? 0) > 9000);
+    }
+    // The corridor north of the secret wall is walled off from the ladder (wall on x 2880/2881); the only way in is
+    // the dusty key gate (deepdungeondoor 2623, west wall of 2924,9803). From its east side it gives "This gate is
+    // locked." (areas/area_taverly/dungeon/scripts/jail_doors.rs2:31, test run t5) unless the dusty key is used on
+    // it. Velrak gives the dusty key (untradeable) once his cell door (dungeonjail 2631, south wall of 2931,9690) is
+    // opened with the jail key, which the Jailer always drops (drop tables/scripts/jailer.rs2:10, 100 ticks on the
+    // ground). The corridor side of a door is "entering" (doors/scripts/door_procs.rs2:77-88): only that side needs
+    // the key; the door moves the player through (open_and_close_doors.rs2:43-62).
+    q.blockDoor(0, GATE.x, GATE.z);
+    const ground = (id: number): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
+    const pickup = (g: any) => q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
+    if (!q.has(ITEM.dusty)) {
+        await q.walk('to jailer', [{ x: JAILER.x - 3, z: JAILER.z - 1, tol: 3 }]);
+        for (let t = 0; t < 150 && !q.has(ITEM.jailKey); t++) {
+            await q.guard('jailer');
+            const g = ground(ITEM.jailKey);
+            const n = npcId(NPC.jailer);
+            if (g) { if (t % 3 === 0) await pickup(g); }
+            else if (n && t % 4 === 0 && q.pos()?.targetIndex !== n.index) await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
+            await q.waitTicks(1);
+        }
+        if (!q.has(ITEM.jailKey)) await q.fail('jail key');
+        q.milestone('jail key');
+        const inCell = () => (q.pos()?.worldZ ?? 9999) < JAIL_DOOR.z;
+        await q.step('cell door', () => q.useOnLoc(ITEM.jailKey, JAIL_DOOR), inCell, 15, 4);
+        await q.talk('velrak', /^velrak/i, [/know anywhere good to explore/i, /yes please/i], () => q.has(ITEM.dusty), VELRAK, 40);
+        q.milestone('dusty key');
+        await q.step('leave cell', () => q.opLoc(JAIL_DOOR, 1), () => !inCell(), 15, 4);
+    }
+    const pastGate = () => (q.pos()?.worldX ?? 0) < GATE.x && Math.abs((q.pos()?.worldZ ?? 0) - GATE.z) < 30;
+    await q.walk('to dusty gate', [{ x: GATE.x + 1, z: GATE.z, tol: 1 }]);
+    await q.step('dusty gate', () => q.useOnLoc(ITEM.dusty, GATE), pastGate, 15, 4);
+    q.milestone('gate');
+    await q.walk('to wall', [{ x: WALL.x, z: WALL.z, tol: 1 }]);
     await q.step('secret wall', () => q.opLoc(WALL, 1), () => (q.pos()?.worldZ ?? 9999) < WALL.z, 10, 4);
     await catchScorp('a', SCORP_A);
 
@@ -110,6 +151,9 @@ try {
         await q.converse([/well can i join your order/i], () => q.lvl() === 1 || (!q.dialogOpen() && q.sawText(/you may join/i)), 30);
     }
     if (q.lvl() !== 1) await q.fail('monastery upstairs');
+    // Scorpion C is in the bedroom behind a door (loc_1530, north wall of 3058,3485, maps/m47_54.jm2); the client
+    // finds no route to it while the door is shut (test run a1).
+    await q.openDoor('bedroom door', 3058, 3485);
     await catchScorp('c', SCORP_C);
     if (!q.has(CAGE.full)) await q.fail('cage not full');
 

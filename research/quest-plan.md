@@ -1155,11 +1155,12 @@ RESULT ok qp=1 questMsg=true xp=fishing=179375 at=2717,3301,0 ticks=455 hpMin=97
 Milestones (run t17): 1 28, 2 51, 3 71, sticks 124, 4 172, 5 221, 6 265, 7 277, 8 338, 9 345, 10 367, 11 381,
 complete 451. The rival's 304 was a browser run; our 449-455 has 142 walk ticks and 155 dialog ticks.
 
-## 1o. Scorpion Catcher (the `scorpion` row): NOT PROVEN; Barcrawl MEASURED, scorpion A needs the dusty key
+## 1o. Scorpion Catcher (the `scorpion` row): MEASURED 910 / 942 with the dusty key; Barcrawl MEASURED
 
-Script `scripts/generated/quest-scorpion.ts` (not proven), presets `quest_scorpion` (beside Thormac, 2702,3404,3;
-every skill 99, rune set, Falador and Camelot Teleport runes; from 2026-10-24 also `%barcrawl` 77 = 2) and
-`quest_scorpion_s2` (debug, stage 2, outside the Barbarian Outpost, `SC_FROM=2`). The row stays ESTIMATE (277 / 832).
+Script `scripts/generated/quest-scorpion.ts` (PROOF 3/3), presets `quest_scorpion` (beside Thormac, 2702,3404,3;
+every skill 99, rune set, Falador and Camelot Teleport runes; from 2026-10-24 also `%barcrawl` 77 = 2),
+`quest_scorpion_s2` (debug, stage 2, outside the Barbarian Outpost, `SC_FROM=2`) and `quest_scorpion_s3` (debug,
+stage 2, cage with B, at the foot of the Taverley dungeon ladder, `SC_FROM=3`). The row is MEASURED (910 / 942).
 
 Stages (CODE-READ, varp `%scorpcatcher` 76): Thormac gives the cage (1, `area_seers/scripts/thormac.rs2:47-56`); a
 Seer's looking glass (2, `area_seers/scripts/seer.rs2:56-68`) opens the Taverley dungeon secret wall
@@ -1206,22 +1207,52 @@ the row.
 
 With the varp set, the scorpion script opens the gate and catches B (test run t5: milestone "scorpion b" at 327).
 
-### Scorpion A: the Taverley dungeon route needs the dusty key (test run t5, CODE-READ)
+### Scorpion A: the Taverley dungeon route needs the dusty key (MEASURED)
 
 The secret wall (scorpionwall 2117, south wall of 2875,9799, `maps/m44_153.jm2`) is opened from the corridor north
 of it; scorpion A is in the room south of it (2875-2879,9795-9798). That room and the corridor are walled off from
 the entrance ladder (2884,9797): the engine flags show a wall on x 2880/2881 at z 9794-9800 and blocked tiles at
-2881,9801 and 2882,9802. The SDK route goes round through the deeper dungeon, and the bot stopped at 2881,9800 after
-"This gate is locked." (t5, 1,661 ticks). Rev 289 has no obstacle pipe or floor spikes there (no such loc in
-`m44_153`; the OSRS route of `vendor/quest-helper` `ScorpionCatcher.java:209-212` uses them). The other OSRS route is
-the dusty key gate (2924,9803, `ScorpionCatcher.java:220`): kill the Jailer in the Black Knights' base for the jail
-key, open Velrak's cell, and Velrak gives the dusty key (`area_taverly/dungeon/scripts/jailer.rs2`,
-`jail_doors.rs2:10-25`, `velrak_the_explorer.rs2:2-16`). The dusty key is `tradeable=no`
-(`_unpack/225/all.obj:916-929`), so a helper cannot supply it.
+2881,9801 and 2882,9802. Rev 289 has no obstacle pipe or floor spikes there (no such loc in `m44_153`; the OSRS
+route of `vendor/quest-helper` `ScorpionCatcher.java:209-212` uses them).
 
-Next step: script the dusty key (Jailer kill, jail door, Velrak) and the gate at 2924,9803 in
-`quest-scorpion.ts`, then the walk to the corridor north of the secret wall; the Monastery (C) and the return to
-Thormac are written and not run. Check which gate gave "This gate is locked." in t5 before writing the route.
+The locked gate of test run t5 is the dusty key gate: deepdungeondoor (loc 2623, "Gate", west wall of 2924,9803,
+`maps/m45_153.jm2`). The walker logged "Temporarily avoiding locked door at (2924, 9803)"; the message is
+`mes("This <$name> is locked.")` in `[label,unlock_taverley_jaildoor]`
+(`areas/area_taverly/dungeon/scripts/jail_doors.rs2:31`). Only the "entering" side (the player on the loc tile, here
+the east side, `doors/scripts/door_procs.rs2:77-88`) needs the key; the door moves the player through
+(`doors/scripts/open_and_close_doors.rs2:43-62`). Pathfinder probe with the gate blocked: ladder to 2875,9800 ends at
+2881,9800; 2923,9803 to 2875,9800 is 95 tiles.
+
+Route (`quest-scorpion.ts`, the gate marked blocked with `q.blockDoor` until the key opens it): the ladder; the Jailer
+(npc 201, spawn 2933,9693, combat 47; reached from the west along z 9691-9693) always drops the jail key (1591,
+`drop tables/scripts/jailer.rs2:10`, 100 ticks on the ground); the jail key on Velrak's cell door (dungeonjail 2631,
+south wall of 2931,9690, `jail_doors.rs2:2-6`); Velrak (798, 2931,9685): "So... do you know anywhere good to
+explore?", "Yes please!" gives the dusty key (1590, untradeable, `velrak_the_explorer.rs2:2-16`); Open on the cell
+door from inside (no key needed); the dusty key on the gate from 2925,9803; the walk to 2875,9799 and the secret wall.
+The Monastery bedroom door (loc_1530, north wall of 3058,3485) must be opened before scorpion C: with it shut, the
+client finds no route to the scorpion (test run a1: `cant_reach: Using item on NPC #532 - no route`).
+
+`prove-log.ts scripts/generated/quest-scorpion.ts quest_scorpion 3`: PROOF 3/3 (MEASURED practice, 2026-10-24).
+
+```
+RESULT ok qp=1 questMsg=true xp=attack=4700,strength=165625,hitpoints=1557,magic=3787 at=2705,3407,3 ticks=937 hpMin=99 eats=0 walkTicks=728 retries=0 died=false ...
+RESULT ok qp=1 questMsg=true xp=attack=4700,strength=165625,hitpoints=1560,magic=3787 at=2700,3403,3 ticks=910 hpMin=99 eats=0 walkTicks=727 retries=0 died=false ...
+RESULT ok qp=1 questMsg=true xp=attack=4700,strength=165625,hitpoints=1557,magic=3787 at=2701,3404,3 ticks=942 hpMin=99 eats=0 walkTicks=732 retries=0 died=false ...
+```
+
+Milestones (runs 1-3): cage 24, Seer 135-136, scorpion B 318-326, dungeon ladder 397-405, jail key 560-589, dusty key
+585-615, gate 668-700, scorpion A 721-753, scorpion C 818-849, complete 910-942. The dusty key chain (ladder to gate)
+is 271-295 ticks and is in the row; it is not a row of its own, because only this quest uses the key. Walking is
+about 730 of the 930 ticks.
+
+Planner: row `scorpion` 910 / 942 MEASURED (was ESTIMATE 300 / 900, burst patch 277 / 832; the burst patch now
+carries the measured ticks). Scenario a, `--levers`: Overall finish 41,506 / 44,402 before and after (the row is
+after the last 99); Quest Points WIN at 105,723 / 130,958 -> 106,356 / 131,068; QP at end 145. Gate: "50 inputs not
+MEASURED; worst Agility -37630" -> "47 inputs not MEASURED; worst Agility -37630". `bun test packages/planner`: 42
+pass, 0 fail.
+
+Next: the walk is the lever. The Jailer leg (ladder to jail, 264 tiles) and the jail to the gate (150 tiles) are the
+long legs; a games necklace or other teleport nearer the jail is not checked.
 
 ## 1p. The Dig Site (the `dig` row): not started
 

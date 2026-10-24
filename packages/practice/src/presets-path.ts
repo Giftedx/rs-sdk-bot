@@ -79,6 +79,8 @@ export const PATH_PRESETS: Record<string, SaveConfig> = {
     quest_scorpion: scorpion({ x: 2702, z: 3404, level: 3 }),
     // Debug: stage 2 (76 = 2) with the empty cage (456), west of the Barbarian Outpost (SC_FROM=2).
     quest_scorpion_s2: scorpion({ x: 2538, z: 3570 }, { 76: 2 }, [456]),
+    // Debug: stage 2 with the cage holding B (460), at the foot of the Taverley dungeon ladder (SC_FROM=3).
+    quest_scorpion_s3: scorpion({ x: 2885, z: 9797 }, { 76: 2 }, [460]),
     // Alfred Grimhand's Barcrawl (scripts/generated/quest-barcrawl.ts): the scorpion row's state (every skill 99, rune
     // set, QP_BEFORE_DRAGON and Dragon Slayer), outside the Barbarian Outpost gate (guards 2544,3567 / 2544,3571).
     // 500 coins (208 for the bars, 60 for two ships); runes for Falador, Varrock and Camelot Teleport (3 law 563,
