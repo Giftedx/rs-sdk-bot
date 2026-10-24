@@ -52,7 +52,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Family Crest (`crest`) | 1 (81) | `crest` (qp 0) | Mining 40, Crafting 40, Smithing 40, Magic 59 (`quest_crest/scripts/crest_journal.rs2:10-13`) | level 170 demon (`:14`) | - |
 | Death Plateau (`death`) | 1 (82) | rest | none found; MEASURED 1,192-1,201 ticks in row `quests-medium` | none found | M |
 | Demon Slayer (`demon`) | 3 (83) | rest | none found; keys and Silverlight untradeable (`quest_demon/configs/demon.obj`); MEASURED 877-899 ticks in row `quests-medium` | Delrith, needs Silverlight (`quest_demon/scripts/demon_journal.rs2:6-9`) | M |
-| The Tourist Trap (`desertrescue`) | 2 (84) | rest | Fletching 10, Smithing 20 (`quest_desertrescue/scripts/quest_desertrescue.rs2:603,655`) | none found; CLAIMED by long-quest helper 3 | L |
+| The Tourist Trap (`desertrescue`) | 2 (84) | rest | Fletching 10, Smithing 20 (`quest_desertrescue/scripts/quest_desertrescue.rs2:603,655`) | none found; MEASURED 1,604-1,624 ticks in row `quests-long` | L |
 | Doric's Quest (`doric`) | 1 (85) | rest | none found | none | S |
 | Dragon Slayer (`dragon`) | 2 (86) | `dragon` | 32 QP (`quest_dragon/scripts/dragon_journal.rs2:7`) | level 83 dragon (`:6`) | - |
 | Druidic Ritual (`druid`) | 4 (87) | `druid` | none | none | - |
@@ -1444,6 +1444,7 @@ deleted after the run.
 | Underground Pass | `scripts/generated/quest-upass.ts` | 2764, 2859, 2898 | MEASURED 3/3 |
 | Troll Stronghold | `scripts/generated/quest-troll.ts` | 847, 788, 824 | MEASURED 3/3 |
 | Shilo Village | `scripts/generated/quest-zombiequeen.ts` | 2133, 2478, 2357 | MEASURED 3/3 |
+| The Tourist Trap | `scripts/generated/quest-desertrescue.ts` | 1617, 1604, 1624 | MEASURED 3/3 |
 
 ### Underground Pass
 
@@ -1601,6 +1602,72 @@ same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 13 -> 12
 -> 26,500 / 41,000 (burst 26,172 / 40,321 -> 24,507 / 37,917); scratchpad `up/long-rows.ts`. `haggis-cli.ts
 research/hiscores-live.json --levers`: Quest Points WIN at 103,397 / 121,918 -> 103,865 / 121,992; QP at end 145.
 `bun test packages/planner`: 42 pass, 0 fail.
+
+### The Tourist Trap
+
+`RESULT ok qp=2 xp=attack=8000,hitpoints=2650,fletching=250,agility=232500 ... ticks=1617 hpMin=84 eats=0 ...
+died=false` (runs: 1617, 1604, 1624 ticks), each with `Congratulations! Quest complete!`. Preset `quest_desertrescue`:
+beside Irena (spawn 3303,3113, south of the Shantay Pass, so the pass is not crossed); no quest needed. Worn: a rune
+scimitar and the desert shirt, robe and boots (tradeable). Helper items (tradeable): a hammer, 3 bronze bars, 40
+feathers, 2 full waterskins, 6 sharks. Debug presets `quest_desertrescue_shabim`, `_ana` with `TT_FROM`. Varps:
+`%desertrescue` 197, `%desertrescue_map_mechanisms` 198. Server truth: `quests/quest_desertrescue/scripts/*.rs2`
+(`quest_desertrescue.rs2` unless named).
+
+Steps (proof run 1 MILESTONE ticks):
+- Irena: "What's the matter?", "Is there a reward if I get her back?", "Okay Irena, calm down." sets 1
+  (`irena.rs2:1-66`) 0-26.
+- The Mercenary Captain (3270,3029): "Wow! A real captain!", "I'd love to work for a tough guy like you!", "Can't I do
+  something...", "Sorry Sir...", "It's a funny captain who can't fight his own battles!" starts a duel
+  (`mercenary_captain.rs2:29-67`). The bot attacks only after his first swing: an attack before it asks "Are you
+  sure" and the guards dump the player in the desert (`:218-241`, `skill_combat/scripts/npc/npc_combat.rs2:165-167`).
+  His death sets 4 and adds the metal key (`:193-216`) 26-176.
+- The scimitar off (a guard jails a player with a weapon or armour, `:145-186`); the gate with the key sets 5
+  (`:68-131`) 188.
+- A male slave on the surface: "I've just arrived.", "Oh yes, that sounds interesting.", "What's that then?", "I can
+  try to undo them for you.", "It's funny you should say that...", "Yeah, okay, let's give it a go." (Thieving), "Yes,
+  I'll trade."; the worn desert clothes become worn slave clothes (8, `mining_slave.rs2:79-200`) 285.
+- The mine doors with the slave clothes worn (9, `:417-445`) 300; the mine guard by the caves (the player must stand in
+  3274-3284, 9413-9423): "I'd like to mine in a different area.", "Yes sir, you're quite right sir." (10,
+  `camp_guard.rs2:3-17,105-121`) 376; the exit door; the slave clothes off; the gate out.
+- Al Shabim (3171,3025): "I am looking for a pineapple.", "Yes, I'm interested." gives the Bedabin key (11,
+  `al_shabim.rs2:117-141`) 544.
+- Back in; the ladder (3290,3036) to Captain Siad's office; Search on the bookcase (3284,3032) sets the sailing bit;
+  Siad: "I wanted to have a chat?", "You seem to have a lot of books!", "So, you're interested in sailing?", "I could
+  tell by the cut of your jib." distracts him with no random roll (`captain_siad.rs2:43-81`); Open on the chest with
+  the key gives the plans (12, `:308-345`) 785. Out of the camp.
+- Al Shabim with the plans, the bar and 10 feathers: "Yes, I'm very interested.", "Yes, I'm kind of curious." (13,
+  `al_shabim.rs2:81-90,168-186`) 889; the Bedabin guard lets the bot into the anvil tent
+  (`bedabin_nomad_guard.rs2:187-226`); a bar on the experimental anvil, "Yes, I'd like to try." (14, `:577-641`) 969;
+  the feathers on the tip (15, `:643-672`) 982; Al Shabim takes the dart and plans and gives the Tenti pineapple (16,
+  `al_shabim.rs2:42-74`) 1028.
+- Back in, slave clothes on, the mine; the mine guard eats the pineapple (17, `camp_guard.rs2:149-156`) 1179; the cave
+  east (`:471-489`); an empty barrel ("Yeah, cool!") and the lower mine cart ("Yes, of course.", Agility) to Ana's side
+  (18, `:741-778,808-835`) 1213.
+- The barrel on Ana (19, `ana.rs2:56-89`) 1258; Ana in the far cart (20, `:837-850`); the cart back; Search on the
+  barrels by the lower cart (21, `:744-769`) 1315; Ana on the lift, "Yes please.", "I said you were very gregarious!"
+  (22, `camp_guard.rs2:177-206`) 1362.
+- The cave west, the exit; the winch (3279,3017; 23, `:883-894`) and the barrel beside it (3278,3017; 24, `:715-730`)
+  1455; Ana on the cart (3287,3023; 25, `:392-400`) 1464; the driver: "Nice cart.", "One wagon wheel...", "'One good
+  turn deserves another'", "Fired... no, shot perhaps!", "In for a penny in for a pound.", "Well, you see, it's like
+  this...", "Prison riot in ten minutes...", "You can't leave me here, I'll get killed!" (`mine_cart_driver.rs2:258-332`);
+  Search on the cart, "Yes, I'll get on." rides out to 3258,3029 with Ana (26, `:358-371`) 1547.
+- Irena (27); Ana gives the wrought iron key; two XP picks (Agility twice) queue the completion (`irena.rs2:17-24,77-102`,
+  `ana.rs2:1-17`) 1617.
+
+Findings:
+- The camp gate is a wall on the east edge of 3273,3028-3029. From inside, Open moves the player onto the gate tile
+  (x 3273), not past it (`doors/scripts/open_and_close_double_doors.rs2:143-158`); trial 2 waited for x 3272 and
+  failed.
+- A walkPath to the tile south of the mine exit door (3278,9426) opened that door, landed the bot on the surface and
+  then walked off toward the underground goal for 5,000 ticks (trial 1). The bot sends Open on the exit door from
+  where it stands; the server routes to it.
+- A guard within 4 tiles of the gate jails a player who leaves in any slave clothes (`:110-118`), so the bot takes them
+  off before each exit and puts them on again before the mine doors.
+- At level 99 the skill rolls can still fail: the chain lock (`stat_random(thieving, 20, 250)`), the anvil (Smithing
+  61/245, wastes a bar), the feathers (Fletching 61/254, waste 10), the cart (Agility 100/250). The bot carries spares
+  and repeats each one. No proof run failed one.
+- The desert heat does not act in the camp or the Bedabin camp (`area_desert/configs/desert_heat_zones.dbrow`); the
+  desert clothes and the waterskins kept the HP at 84 or more.
 
 ### Regicide: research notes (not scripted)
 
