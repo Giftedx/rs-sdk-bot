@@ -130,15 +130,31 @@ try {
     // Picks the thistle by Eadgar's cave, dries it on a new fire, grinds it (eadgar_troll_thistle.rs2:1-35,
     // skill_cooking/configs/cooking_source/cooking_generic.dbrow:679-688).
     const thistle = async () => {
-        for (let i = 0; i < 6 && !q.has(ITEM.thistle); i++) {
+        // The thistle moves to one of 5 spots after each pick (eadgar_troll_thistle.rs2:9-23); the bot walks the spots
+        // until it sees it.
+        const SPOTS = [[2891, 3676], [2887, 3675], [2883, 3670], [2902, 3674], [2892, 3686]] as const;
+        for (let i = 0; i < 12 && !q.has(ITEM.thistle); i++) {
             const n = q.npc(/^thistle$/i);
-            if (!n) { await q.walk('to thistle', [{ x: 2891, z: 3675, tol: 3 }]); await q.waitTicks(1); continue; }
-            await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: (n.optionsWithIndex ?? [])[0]?.opIndex ?? 1, reason: 'SDK' });
-            await q.waitUntil(() => q.has(ITEM.thistle), 12);
+            if (!n) { const [sx, sz] = SPOTS[i % SPOTS.length]!; await q.walk('to thistle', [{ x: sx, z: sz, tol: 2 }]); continue; }
+            const opi = (n.optionsWithIndex ?? []).find((o: any) => /pick/i.test(o.text))?.opIndex ?? (n.optionsWithIndex ?? [])[0]?.opIndex ?? 1;
+            await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: opi, reason: 'SDK' });
+            await q.waitUntil(() => q.has(ITEM.thistle), 15);
+            if (!q.has(ITEM.thistle)) console.log(`WARN thistle try ${i} npc ${n.x},${n.z} opts ${JSON.stringify(n.optionsWithIndex ?? [])} me ${x()},${z()} op=${JSON.stringify(q.st()?.opFeedback ?? {})}`);
         }
         if (!q.has(ITEM.thistle)) await q.fail('thistle');
-        const t0 = q.s.tick();
-        await useItem('fire', ITEM.tinderbox, ITEM.logs, () => msgSince(/fire catches|logs begin to burn/i, t0));
+        // A fire needs a tile with no loc (firemaking.rs2:133-143); most tiles by the cave hold scenery, so the bot
+        // tries 2 bare tiles that a walk reaches from the cave mouth (maps/m45_57.jm2; 2895,3672 lit in trial 2, a walk
+        // to the bare but closed-off 2894,3673 idled 196 ticks), the nearer first.
+        let lit = false;
+        const tiles = ([[2895, 3672], [2894, 3676]] as const).slice().sort((a, b) => q.cheb(a[0], a[1]) - q.cheb(b[0], b[1]));
+        for (const [fx, fz] of tiles) {
+            await q.walk('to fire tile', [{ x: fx, z: fz, tol: 0 }]);
+            const t0 = q.s.tick();
+            await q.useOnItem(ITEM.tinderbox, ITEM.logs);
+            await q.waitUntil(() => msgSince(/fire catches|can't light a fire/i, t0), 12);
+            if (msgSince(/fire catches/i, t0)) { lit = true; break; }
+        }
+        if (!lit) await q.fail('fire');
         await q.waitTicks(2);
         const fire = () => q.findLoc((l: any) => /^fire$/i.test(l.name) && l.distance <= 3);
         await q.step('dry thistle', async () => { const f = fire(); if (f) await q.useOnLoc(ITEM.thistle, f); }, () => q.has(ITEM.dried), 10, 4);

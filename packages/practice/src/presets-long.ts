@@ -62,8 +62,9 @@ function troll(position: { x: number; z: number; level?: number }, varps: Record
 // troll set (climbing boots for the rocks). Helper items (tradeable): pineapple chunks (2116) and vodka (2015) for the
 // parrot (eadgar_zoo_keeper_aviary.rs2:21-50), 2 logs (one for Eadgar, one for the fire), 10 grain, 5 raw chickens
 // (quest_eadgar.rs2:224-357), a tinderbox, a pestle and mortar, a ranarr potion (unf) (99) for the troll potion,
-// runes for 3 Falador teleports, a shark. %eadgar_quest 335, %eadgar_bits 336, %eadgar_grain 337, %eadgar_chickens 338.
-const EA_ITEMS: Array<number | [number, number]> = [2116, 2015, 1511, 1511, ...Array(10).fill(1947), ...Array(5).fill(2138), 590, 233, 99, [563, 3], [556, 9], [555, 3], 385];
+// runes for 3 Falador teleports, 3 sharks (the Death Plateau trolls took the bot from 99 to 30 hp in a trial).
+// %eadgar_quest 335, %eadgar_bits 336, %eadgar_grain 337, %eadgar_chickens 338.
+const EA_ITEMS: Array<number | [number, number]> = [2116, 2015, 1511, 1511, ...Array(10).fill(1947), ...Array(5).fill(2138), 590, 233, 99, [563, 3], [556, 9], [555, 3], 385, 385, 385];
 const EA_BITS = 1 | (1 << 11) | (1 << 1);   // Pete's 2 talks, the logs given
 function eadgar(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, inv: Array<number | [number, number]> = EA_ITEMS): SaveConfig {
     return {
@@ -71,7 +72,7 @@ function eadgar(position: { x: number; z: number; level?: number }, varps: Recor
         inventory: items(inv),
     };
 }
-const EA_LATE: Array<number | [number, number]> = [590, 233, 99, [563, 3], [556, 9], [555, 3], 385];
+const EA_LATE: Array<number | [number, number]> = [590, 233, 99, [563, 3], [556, 9], [555, 3], 385, 385, 385];
 
 // The Tourist Trap (scripts/generated/quest-desertrescue.ts): no quest needed. Worn: a rune scimitar for the Mercenary
 // Captain (the bot takes it off before the camp: the guards jail a player with a weapon or armour,
