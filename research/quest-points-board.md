@@ -75,7 +75,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Imp Catcher (`imp`) | 1 (104) | rest | none found | imps (`quest_imp/scripts/imp_journal.rs2:13`) | S |
 | The Dig Site (`itexam`) | 2 (105) | `dig`, MEASURED 1,535-1,851 (`research/quest-plan.md` 1p) | Agility 10 at the winch, Herblore 10 in the chemistry, Thieving 25 at the pocket (`quest_itexam/scripts/area_digsite.rs2:617`, `itexam_chemistry.rs2:21`, `digsite_workman.rs2:62`); the rock samples, brush, trowel, talisman, chemicals and tablet are untradeable, so the account fetches them | none found | - |
 | Observatory Quest (`itgronigen`) | 2 (106) | rest | none found; MEASURED 550-555 ticks in row `quests-medium` | none found | M |
-| Watchtower (`itwatchtower`) | 4 (107) | rest | Magic 14, Mining 40, Herblore 14, Thieving 15, Agility 25 (`quest_itwatchtower/scripts/itwatchtower_journal.rs2:8-28`) | ogres | XL |
+| Watchtower (`itwatchtower`) | 4 (107) | rest | Magic 14, Mining 40, Herblore 14, Thieving 15, Agility 25 (`quest_itwatchtower/scripts/itwatchtower_journal.rs2:8-28`) | ogres; CLAIMED by long-quest helper 3 | XL |
 | Jungle Potion (`junglepotion`) | 1 (108) | rest | Druidic Ritual (`areas/area_karamja/scripts/trufitus.rs2:280` reads `%druidquest`); MEASURED 649-651 ticks in row `quests-medium` | none found | M |
 | Legends' Quest (`legends`) | 4 (109) | rest | 107 QP; Family Crest, Heroes', Underground Pass, Shilo Village, Waterfall (`quest_legends/scripts/legends_guard.rs2:50-53`); Magic 56, Mining 52, Agility, Crafting, Smithing, Strength, Thieving, Woodcutting 50, Herblore 45, Prayer 42 (`legends_journal.rs2:65-128`) | several | XL |
 | Dwarf Cannon (`mcannon`) | 1 (110) | `cannon` | none | goblins | - |
