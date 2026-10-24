@@ -902,6 +902,7 @@ The walks between the 4 quests are not in the counts.
 | Black Knights' Fortress | `scripts/generated/quest-blackknight.ts` | 327, 327, 323 | MEASURED 3/3 |
 | Ernest the Chicken | `scripts/generated/quest-haunted.ts` | 410, 414, 412 | MEASURED 3/3 |
 | Prince Ali Rescue | `scripts/generated/quest-prince.ts` | 638, 621, 607 | MEASURED 3/3 |
+| Sheep Herder | `scripts/generated/quest-sheepherder.ts` | 1668, 1580, 1697 | MEASURED 3/3 |
 
 ### Black Knights' Fortress
 
@@ -987,3 +988,43 @@ research/hiscores-live.json --levers`: Overall finish 41,229 / 44,310 -> 41,374 
 was faster than ours); QP at end 145; Quest Points WIN at 102,075 / 130,441 -> 102,220 / 130,401. Gate
 (`scripts/haggis-gate.ts`): "54 inputs not MEASURED; worst Agility -37538" -> "53 inputs not MEASURED; worst Agility
 -37498". `bun test packages/planner`: 42 pass, 0 fail.
+
+### Sheep Herder
+
+`RESULT ok qp=4 ... ticks=1668 hpMin=99 eats=0 walkTicks=183 retries=0 died=false` (runs: 1668, 1580, 1697 ticks),
+each with `Congratulations! Quest complete!`. Route: Halgrive "What's wrong?", "I can do that for you." gives the feed
+(`quests/quest_sheepherder/scripts/npcs/councillor_halgrive.rs2:18-58`) 0-42; Orbon's suit for 100 coins
+(`doctor_orbon.rs2:135-162`), both pieces worn 42-68; the walk to the pen, the cattle prod from the pen floor (2604,3357)
+and out, the prod wielded 68-149; the 4 sheep 149-1580/1697; Halgrive queues the completion (`:68-75`).
+Each sheep: prods to the gate zone (2592-2594,3360-3363), one more prod there and it jumps the gate
+(`diseased_sheep.rs2:81-101`); in through the gate, the feed on it (it dies and drops its bones, `:139-164`), the bones
+into the furnace (165 at 2605,3360, `sheepherder_furnace.rs2`), out. Prods per sheep in the 3 runs: 74-95 (sheep 1),
+50-78 (2), 59-145 (4), 87-173 (3), against a shortest push path of 46, 31, 44, 58.
+Findings:
+- A prod moves the sheep one tile away from the bot (`:81-89`); the script plans the push path to the gate zone by BFS
+  over the SDK collision (`canTravel`), with the bot's tile behind each step open and free of NPCs. A 2x2 tree
+  (2607,3343) covers 2608,3344, which `canTravel` alone passed as a bot tile.
+- The sheep wander back toward their spawn (wanderrange 3; the ai_timer resets the mode every 10-30 ticks, `:103-113`).
+  This is most of the spread and why the prods are 1.5-3 times the push path. Before each prod the script checks the
+  sheep is still on the tile it planned from.
+- The jumped sheep is a new NPC that lasts 150 ticks (`npc_add(..., 150)`, `:95`). The first trial herded all 4 and
+  then found none to feed; the script feeds and burns each sheep as soon as it is in.
+- `walkPath` treats the pen gate as a door and "opens" it: the gate teleports a suited bot into the pen, and one trial
+  stood 224 ticks inside it. The walks to the sheep are client-routed dashes.
+- A sheep can wander into a pocket with no push (2594,3357 by the fence; 2571,3385). The script waits, and after 10
+  tries takes another copy of the same sheep (each has 3 spawns).
+- No helper items: feed, suit, prod and bones are untradeable (`quest_sheepherder.obj`). Coins: 100.
+
+### Planner change for `qp-filler`
+
+The row keeps its QP (18, or 14 with lever `combat-hp-bound`). Ticks: floor = the sum of the 4 best runs (323 + 410 +
+607 + 1,580 = 2,920), realistic = the sum of the 4 worst (327 + 414 + 638 + 1,697 = 3,076), MEASURED, under
+`combat-hp-bound` and `rival-dialogue-burst` (was 1,200 / 3,600 and 1,388 / 4,163 ESTIMATE). Without the lever the
+row also holds Witch's House: 3,364 / 3,561 (+444 / 485, row `witch`; was 1,500 / 4,500). The walks between the 4
+quests (Draynor, Al Kharid, Ardougne, Falador) are not in the counts.
+`haggis-cli research/hiscores-live.json`, scenario a: Overall finish 41,374 floor / 44,270 realistic before and after
+(the row is after the last 99). Quest Points finish 102,220 / 130,401 -> 103,752 / 129,314 (WIN either way). QP at end
+145. `bun test packages/planner`: 42 pass, 0 fail.
+Next: Sheep Herder is 54% of the row. The herd is the lever: prod from the tile 2 behind on straight runs more often,
+and herd the far sheep (3, 4) with fewer re-plans. An amulet of glory would cut Prince Ali's 4 teleport walks, if a
+helper can supply one charged.

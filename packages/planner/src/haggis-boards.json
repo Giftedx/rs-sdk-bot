@@ -2069,10 +2069,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 1500,
-    "realistic": 4500,
-    "evidence": "ESTIMATE",
-    "source": "8 short quests at 300-900 ticks each; no quest time measured. QP values quest.constant:72-139 (CODE-READ); Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed; Romeo & Juliet split out to row rj (MEASURED), one equal share of the ESTIMATE removed"
+    "floor": 3364,
+    "realistic": 3561,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); plus Witch's House 444/485 (row witch, MEASURED), which this row holds when lever combat-hp-bound is off; was 1500/4500 ESTIMATE"
    },
    "lump": true,
    "xp": {
@@ -2094,10 +2094,10 @@
       "xp": {},
       "qp": 14,
       "ticks": {
-       "floor": 1200,
-       "realistic": 3600,
-       "evidence": "ESTIMATE",
-       "source": "7 short quests (Witch's House split out) at 300-900 ticks each; research/gap-closers.md; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed; Romeo & Juliet split out to row rj (MEASURED), one equal share of the ESTIMATE removed"
+       "floor": 2920,
+       "realistic": 3076,
+       "evidence": "MEASURED",
+       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); was 1200/3600 ESTIMATE"
       }
      }
     },
@@ -2105,10 +2105,10 @@
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 1388,
-       "realistic": 4163,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 2400/7200; Druidic Ritual split out to row druid (MEASURED), one equal share of the ESTIMATE removed; Goblin Diplomacy split out to row gobdip (MEASURED), one equal share of the ESTIMATE removed; Romeo & Juliet split out to row rj (MEASURED), one equal share of the ESTIMATE removed"
+       "floor": 2920,
+       "realistic": 3076,
+       "evidence": "MEASURED",
+       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); the rival burst run is not measured by us; was 1388/4163 ESTIMATE"
       }
      }
     }
