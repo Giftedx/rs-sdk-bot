@@ -93,7 +93,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | The Knight's Sword (`squire`) | 1 (122) | rest | Mining 10 (`quest_squire/scripts/squire_journal.rs2:7`); the portrait, blurite ore and sword are untradeable (`quest_squire/configs/quest_squire.obj`); MEASURED 887-922 ticks in row `quests-medium` | none found | M |
 | Tribal Totem (`totem`) | 1 (123) | rest | Thieving 21 (`quest_totem/scripts/quest_totem.rs2:125`); Plague City for Ardougne Teleport (`skill_magic/scripts/spells/teleport.rs2:22-35`); MEASURED 340-352 ticks in row `quests-medium` | none found | M |
 | Tree Gnome Village (`tree`) | 2 (124) | `tree` | none found | level 112 warlord (`quest_tree/scripts/tree_journal.rs2:6`) | - |
-| Underground Pass (`upass`) | 5 (125) | rest | Biohazard (`quest_upass/scripts/quest_upass.rs2:81`), Thieving 50 (`:248`); CLAIMED by long-quest helper | Iban's undead, others | XL |
+| Underground Pass (`upass`) | 5 (125) | rest | Biohazard (`quest_upass/scripts/quest_upass.rs2:81`), Thieving 50 (`:248`); MEASURED 2,764-2,898 ticks in row `quests-long` | Iban's undead, others | XL |
 | Vampire Slayer (`vampire`) | 3 (126) | rest | none found | level 34 vampire (`quest_vampire/scripts/vampire_journal.rs2:9`) | S |
 | Waterfall Quest (`waterfall`) | 1 (127) | `waterfall` | none found | level 84 giants (`quest_waterfall/scripts/waterfall_journal.rs2:9`) | - |
 | Lost City (`zanaris`) | 3 (128) | rest | Woodcutting 36, Crafting 31 (`quest_zanaris/scripts/quest_zanaris.rs2:37,78`) | level 101 spirit without weapons (`zanaris_journal.rs2:20`) | M |
@@ -1297,3 +1297,67 @@ Velrak's cell door, Velrak) in 271-295 ticks, inside the row. Planner: row `scor
 MEASURED. Scenario a, `--levers`: Overall finish 41,506 / 44,402 before and after; Quest Points WIN at 105,540 /
 130,407 -> 106,173 / 130,517 (edc35a8 -> 21e430b); QP at end 145. Gate: "50 inputs not MEASURED; worst Agility -37630" -> "47 inputs not
 MEASURED; worst Agility -37630". `bun test packages/planner`: 42 pass, 0 fail.
+
+## Long `rest` quests: scripts and proofs (MEASURED practice, 3/3 each)
+
+Presets `quest_<name>` in `packages/practice/src/presets-long.ts`: every skill 99, the quests before the dragon row plus
+Dragon Slayer, Merlin's Crystal and Fight Arena done, the quest's own prerequisites, the helper items, and the start
+beside the first NPC. Runner: `proveInProcess` with `okPass`, one bot at a time, each run on a fresh account that is
+deleted after the run.
+
+| Quest | Script | RESULT ticks (3 runs) | Status |
+|---|---|---|---|
+| Underground Pass | `scripts/generated/quest-upass.ts` | 2764, 2859, 2898 | MEASURED 3/3 |
+
+### Underground Pass
+
+`RESULT ok qp=5 xp=attack=128400,hitpoints=17687,agility=75075,thieving=225 ... ticks=2764 hpMin=36 eats=5 ...
+died=false` (runs: 2764, 2859, 2898 ticks), each with `Congratulations! Quest complete!`. Preset `quest_upass`: in
+King Lathas's room (Ardougne castle, level 1); Plague City (165 = 30) and Biohazard (68 = 16) done
+(`quest_upass.rs2:81`); worn rune full helm, scimitar, chainbody and platelegs. Helper items (tradeable): shortbow, 5
+iron arrows, tinderbox, rope, bucket, spade, 14 sharks.
+
+Steps (run 1 MILESTONE ticks):
+- Lathas sets the started bit and a random grid path (`king_lathas.rs2:90-110`; Ranged 25 needed, `:94`) 0-24; the
+  West Ardougne doors open after Biohazard (`area_ardougne_west/scripts/doors.rs2:24-40`); Koftik, "I'll take my
+  chances." (`koftik.rs2:34-57`) 157; the cave (`upass_caveentrance2` 2433,3313) and 3 rockslides west.
+- Koftik at the bridge gives the damp cloth; cloth on an arrow, the tinderbox on that; bow and lit arrow worn; "Fire-at"
+  the guide rope from 2447,9722 (the shot needs x > 2443 and z >= 9720, `upass_bridge.rs2:33-79`) 275.
+- The rope on the hanging rock (2460,9699) swings the bot east; 2 rockslides to the spike grid 360.
+- The spike grid (2467-2476, 9673-9682): 3 column pairs, each safe on one 2-row band of 5; the path is per player in
+  `%ibanmulti` bits 22-31 and is not sent to the client (`upass_grid.rs2:47-106`). The bot tries the bands one by one,
+  walking (not running) tile by tile; a wrong band drops it into the spike pit (15 damage) and the hand holds put it
+  back at 2477,9677. The proofs took 2, 5 and 4 falls (at most 8). It leaves the grid on its last row to x 2466 and
+  walks that column to the lever: a server-routed walk from the grid crossed wrong tiles in a trial.
+- The lever (2466,9672) opens the portcullis; orbs 4, 2, 3 off the floor, orb 1 under the log trap's flat rock
+  ("Yes, I'll give it a go."); the 4 into the furnace (2454,9682); the well (2416,9674) to the second cave.
+- The cell lock (2393,9655), the spade on the mud in the cell, the ledge (level-1 bridge locs at 2374,9639-9644), the
+  two Thieving 50 cage doors (2380,9619 and 2404,9620), the pipe (2417,9605) to the unicorn; the loose railing from the
+  cage on the boulder kills it and jumps the bot 25 tiles west; the smashed cage gives the horn; the tunnel south to
+  the paladins.
+- Sir Jerro, Sir Carl and Sir Harry (level 62) each drop a coat of arms; the 3 coats and the horn into the well
+  (2373,9718) unlock the skull door (2368,9717) to the main cavern (2173,4725, level 1).
+- The tunnel down (2150,4545) to the dwarves; Nilhoof sets 6. Up again; 2 broken bridges ("Cross") to the witch's cat;
+  the cat on the witch's door draws her off (`kardia.rs2:69-78`); her chest gives the doll (7).
+- Othainian (west over 2 bridges), Doomion and Holthion (level 91) drop their amulets at stage 7; the amulets open the
+  chest (2136,4578) for the shadow. Down to the dwarves: Klank's gauntlets, the bucket on the brew barrel, the brew
+  and the tinderbox on Iban's tomb for the ashes, Kalrag (level 89) killed with the doll in the pack for the blood. Up
+  the north-west tunnel (2304,9915); the dove from the cage (2134,4702), gauntlets worn.
+- An Iban disciple drops the Zamorak robes; all else off, the robes on, the temple door (2143,4647); the doll on the
+  altar kills Iban (9) and throws the bot out; Koftik leads it to the entrance; King Lathas queues the completion.
+
+Findings:
+- At level 99 no Agility, Thieving or Ranged roll in the quest fails: each is `stat_random(skill, low >= 100, high >= 260)` on
+  256 (`quest_upass.rs2:229,254`, `upass_bridge.rs2:68`, `upass_obstacles.rs2:22,113,162,233,273,307,374`).
+- The temple door opens only with the robe top and bottom worn and nothing else (`quest_upass.rs2:586`), so the pack
+  needs room for the 5 worn items there. The bot drops the bow and arrows after the bridge, the spade after the mud,
+  and the journal and 2 potions from the witch's chest.
+- The game-message buffer is capped, so a count of a message can stay flat; the obstacle checks use the message tick
+  (`gameMessages[].tick`).
+- The brew barrel has `forceapproach=south` at angle 1 (`upass.loc`): the bot uses it from the west tile 2326,9799.
+- Auto retaliate is off and a meal stops an attack, so the kill loop sends the attack again every 6 ticks (one click
+  left Holthion alive for 260 ticks in a trial). Protect from Melee for the demons and Kalrag; the bot eats to 80-85
+  HP before the demons, Kalrag and the temple. A trial with 14 lobsters reached hp 16 (traps, Kalrag, Iban's bolts).
+- Iban's bolts push the bot 1 tile and cancel the walk to the altar ("I can't reach that!"); the use is sent again.
+- The run walks from Lathas to Koftik (about 140 tiles) and back from the cave exit to Lathas inside its ticks.
+
