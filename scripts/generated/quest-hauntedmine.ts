@@ -199,11 +199,11 @@ try {
     const bits = readBits();
     console.log(`BITS ${JSON.stringify(bits)} modal=${q.st()?.modalInterface}`);
     if (Object.values(bits).some(v => v !== 0 && v !== 1)) await q.fail(`bits unread ${JSON.stringify(bits)}`);
-    await q.s.sdk.sendCloseModal();
-    await q.waitTicks(1);
     const pulls = Object.keys(WANT).map(Number).filter(n => bits[n] !== WANT[n]);
     // Lever 7 is in the west row, levers 1-4 in the east cluster; the controls are between them.
     pulls.sort((a, b) => (a === 7 ? -1 : 0) - (b === 7 ? -1 : 0));
+    // Points already right (1 in 32 of the random states): the open controls send the cart at once.
+    if (pulls.length) { await q.s.sdk.sendCloseModal(); await q.waitTicks(2); }
     for (const n of pulls) {
         const p = LEVER[n]!;
         const k0 = q.msgCount(/you pull the lever/i);
@@ -211,7 +211,7 @@ try {
         bits[n] ^= 1;
     }
     console.log(`PULLS ${pulls.join(',')} at ${q.T()}`);
-    await openControls();
+    if (pulls.length) await openControls();
     const now = readBits();
     if (Object.keys(WANT).some(n => now[Number(n)] !== WANT[Number(n)])) await q.fail(`points wrong ${JSON.stringify(now)}`);
     await q.step('send cart', () => q.s.direct({ type: 'clickComponent', componentId: componentId('hauntedmine_controls:com_222'), reason: 'SDK' }),
@@ -268,60 +268,82 @@ try {
     // the carts, cranes or pickaxes every 5 ticks (:112-147, 0-15). Fire Wave from range (magic defence -5,
     // hauntedmine.npc:205): no walk to a ghost that stands where melee cannot reach.
     const WAVE = componentId('magic:fire_wave');
-    // The server walks a caster close to the ghost before Fire Wave lands (the trial runs hit from 1-3 tiles), so per
-    // boss spot (hauntedmine_boss_ghost.rs2:308-342, plus the spawn 2788,4458) the bot first runs to a tile next to
-    // it that is off the cart tracks (a cart pushes a player along its track, :136-142, and the east end of the z 4456
-    // track, 2795,4456, is a dead end while a cart stands beside it), then casts and lets the server close in.
-    const SPOTS: Array<[number, number, number, number]> = [
-        [2794, 4452, 2794, 4454], [2796, 4460, 2796, 4458], [2788, 4463, 2788, 4464], [2780, 4460, 2779, 4458],
-        [2780, 4454, 2782, 4454], [2787, 4444, 2788, 4446], [2788, 4458, 2788, 4456],
-    ];
-    let lastCast = -99, casts = 0, lastWalk = -99, mxp = q.xp('Magic'), noXp = 0, restage = 0, checked = -1, staged = -1, stageFor = -1, stageT = 0, movedT = 0, unstick = 0, lastHere = '', lastGx = 2788, lastGz = 4458;
-    for (let i = 0; i < 900 && !killed(); i++) {
-        await q.guard('boss');
-        const here = `${q.pos()?.worldX},${q.pos()?.worldZ}`;
-        if (here !== lastHere) { lastHere = here; movedT = q.T(); }
-        const b = boss();
-        const g: any = b ?? (q.st()?.nearbyNpcs ?? []).find((n: any) => /^ghost$/i.test(n.name));
-        if (g) { lastGx = g.tileX ?? g.x; lastGz = g.tileZ ?? g.z; }
-        const gx = lastGx, gz = lastGz;
-        let si = 0;
-        for (let k = 1; k < SPOTS.length; k++) if (Math.max(Math.abs(SPOTS[k]![0] - gx), Math.abs(SPOTS[k]![1] - gz)) < Math.max(Math.abs(SPOTS[si]![0] - gx), Math.abs(SPOTS[si]![1] - gz))) si = k;
-        const [, , hx, hz] = SPOTS[si]!;
-        if (lastCast > 0 && checked !== lastCast && q.T() - lastCast >= 5) {
-            checked = lastCast;
-            noXp = q.xp('Magic') === mxp ? noXp + 1 : 0;
-            if (noXp >= 2) { staged = -1; stageFor = -1; noXp = 0; restage++; }
+    // The server walks a caster close to the ghost before Fire Wave lands (trial runs hit from 1-3 tiles), so the bot
+    // casts from where it stands and lets the server close in; it walks back to a home tile in the room's middle
+    // (2788,4454, or 2786,4452 for the south spot 2787,4443-4445, hauntedmine_boss_ghost.rs2:335-341) only while the
+    // ghost is faded. The east spot (2794,4451-4453, :308-312) is reached by row 4454, not by the z 4456 cart track:
+    // a cart pushes a player along its track (:136-142), and the track's east end 2795,4456 is a dead end while a
+    // cart stands beside it (2 of 6 proof runs died there).
+    let lastCast = -99, casts = 0, lastWalk = -99, mxp = q.xp('Magic'), noXp = 0, stuck = 0, checked = -1, east = 0, north = 0, movedT = 0, lastHere = '', seenT = q.T();
+    const via = async (pts: Array<[number, number]>) => {
+        for (const [wx, wz] of pts) {
+            await q.s.direct({ type: 'walkTo', x: wx, z: wz, running: true, reason: 'SDK' });
+            await q.waitUntil(() => q.near(wx, wz, 0), 7);
         }
-        // A new spot (or two dry casts): run to its stand tile first; no walk within 8 ticks of a cast (the
-        // server's own approach).
-        if (staged !== si && q.T() - lastCast >= 8) {
-            if (stageFor !== si) { stageFor = si; stageT = q.T(); }
-            if (q.near(hx, hz, 0) || q.T() - stageT > 12) staged = si;
-            else if (q.T() - lastWalk >= 3) {
-                lastWalk = q.T();
-                // No step for 9 ticks: a cart or a crane holds the route; a short walk 2 tiles off in turn first.
-                const [ux, uz] = q.T() - movedT >= 9 ? [[2, 0], [0, 2], [-2, 0], [0, -2]][unstick++ % 4]! : [0, 0];
-                await q.s.direct({ type: 'walkTo', x: (ux ? q.pos()!.worldX : hx) + ux, z: (uz ? q.pos()!.worldZ : hz) + uz, running: true, reason: 'SDK' });
-                if (ux || uz) movedT = q.T();
+    };
+    // Up to 3 rounds: the kill page (queue hauntedmine_boss_death, :247-254) sets 9; a key taken at 8 with the ghost
+    // gone wakes it again (:18-26,52), so a round ends with the key and the next round fights on.
+    for (let round = 0; round < 3 && !q.has(ITEM.rewardKey); round++) {
+        seenT = q.T();
+        for (let i = 0; i < 900 && !killed(); i++) {
+            await q.guard('boss');
+            const here = `${q.pos()?.worldX},${q.pos()?.worldZ}`;
+            if (here !== lastHere) { lastHere = here; movedT = q.T(); }
+            // The kill page can close before it is read: no ghost in view for 20 ticks from home after a hit ends the
+            // fight too (the reward key step then proves it).
+            if ((q.st()?.nearbyNpcs ?? []).some((n: any) => /treus dayth|^ghost$/i.test(n.name))) seenT = q.T();
+            else if (q.T() - seenT >= 20 && casts > 0 && q.near(2788, 4454, 1)) break;
+            const b = boss();
+            const g: any = b ?? (q.st()?.nearbyNpcs ?? []).find((n: any) => /^ghost$/i.test(n.name));
+            const south = !!g && (g.tileZ ?? g.z) <= 4446;
+            const [hx, hz] = south ? [2786, 4452] : [2788, 4454];
+            const bx = b ? (b.tileX ?? b.x) : 0, bz = b ? (b.tileZ ?? b.z) : 0;
+            if (b && q.cheb(2794, 4452) > 2 && Math.max(Math.abs(bx - 2794), Math.abs(bz - 4452)) <= 1 && q.T() - lastCast >= 5) {
+                east++;
+                await via([[2791, 4454], [2794, 4454]]);
             }
-        } else if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
-            casts++; lastCast = q.T(); mxp = q.xp('Magic');
-            await q.s.direct({ type: 'spellOnNpc', npcIndex: b.index, spellComponent: WAVE, reason: 'SDK' });
+            // The north spot (2788-2789,4463) is reached only along the z 4462 track: from its west end to 2787,4461
+            // (off the track), so a cart push ends at the west end, not in the east-end pocket.
+            if (b && bz >= 4463 && Math.abs(bx - 2788) <= 2 && q.cheb(2787, 4461) > 1 && q.T() - lastCast >= 5) {
+                north++;
+                await via([[2781, 4461], [2787, 4461]]);
+            }
+            // Out of the east-end pocket of the z 4462 track by its east side.
+            if (q.pos()!.worldX >= 2794 && q.pos()!.worldZ >= 4462 && q.T() - movedT >= 6) {
+                stuck++;
+                await via([[2796, 4461], [2796, 4457], [2791, 4455], [2788, 4454]]);
+            }
+            // Two dry casts in a row (no Magic XP): the approach is stuck; back home by 2791,4454.
+            if (b && lastCast > 0 && checked !== lastCast && q.T() - lastCast >= 5) {
+                checked = lastCast;
+                noXp = q.xp('Magic') === mxp ? noXp + 1 : 0;
+                if (noXp >= 2 && !q.near(hx, hz, 0)) { stuck++; await via(south ? [[2788, 4454], [hx, hz]] : [[2791, 4454], [hx, hz]]); noXp = 0; }
+            }
+            if (b && !q.dialogOpen() && q.T() - lastCast >= 5 && (q.near(hx, hz, 0) || q.T() - lastCast >= 8 || lastCast < 0)) {
+                casts++; lastCast = q.T(); mxp = q.xp('Magic');
+                await q.s.direct({ type: 'spellOnNpc', npcIndex: b.index, spellComponent: WAVE, reason: 'SDK' });
+            } else if (!q.near(hx, hz, 0) && !b && q.T() - lastWalk >= 4) {
+                lastWalk = q.T();
+                await q.s.direct({ type: 'walkTo', x: hx, z: hz, running: true, reason: 'SDK' });
+            }
+            if (i % 20 === 0) {
+                const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /treus dayth|^ghost$/i.test(n.name));
+                console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} stuck=${stuck} east=${east} north=${north} myhp=${q.hp()}`);
+            }
+            await q.waitTicks(1);
         }
-        if (i % 20 === 0) {
-            const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /treus dayth|^ghost$/i.test(n.name));
-            console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} restage=${restage} spot=${si} myhp=${q.hp()}`);
-        }
-        await q.waitTicks(1);
+        await q.waitUntil(() => killed(), 40);
+        if (!killed()) console.log(`WARN round ${round}: no kill page at ${q.T()}`);
+        await shut();
+        await q.walk('to key', [{ x: 2788, z: 4454, tol: 0 }]);
+        const k = keyNpc();
+        if (k) await q.s.direct({ type: 'interactNpc', npcIndex: k.index, optionIndex: q.opIndex(k, /take/i), reason: 'SDK' });
+        await q.waitUntil(() => q.has(ITEM.rewardKey) || !!boss(), 15);
+        await shut();
+        await q.waitUntil(() => q.has(ITEM.rewardKey) || !!boss(), 10);
     }
-    if (!killed()) await q.fail('boss');
-    await shut();
+    if (!q.has(ITEM.rewardKey)) await q.fail('reward key');
     q.milestone(9);
-    await q.step('reward key', () => { const k = keyNpc(); return k ? q.s.direct({ type: 'interactNpc', npcIndex: k.index, optionIndex: q.opIndex(k, /take/i), reason: 'SDK' }) : q.waitTicks(1); },
-        () => q.has(ITEM.rewardKey), 20, 4);
-    await shut();
-    q.milestone('reward key');
 
     // 10. Out of the boss room, down the light stairs, up the west stairs (light now, :36) to the reward door (10,
     // hauntedmine_crystals.rs2:1-29) and a crystal cut with the chisel (complete, :39-56).
