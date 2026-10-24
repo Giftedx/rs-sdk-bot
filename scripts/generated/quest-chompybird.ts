@@ -1,17 +1,18 @@
 // Big Chompy Bird Hunting from preset quest_chompybird (beside Rantz in the Feldip Hills; every skill 99; a knife, a
 // chisel, an achey log, wolf bones, feathers, 6 ogre arrows, the 6 possible seasonings and 50 worn ogre arrows from a
 // helper). Reward: 2 QP, the ogre bow, Fletching 262, Cooking 1,470, Ranged 735 XP before 25x
-// (quest_chompybird.rs2:39-49).
+// (quest_chompybird.rs2:42-51).
 // %chompybird stages (quest_chompybird.constant:1-13): Rantz starts it (5, rantz.rs2:29-49); 6 ogre arrows that the
 // bot made itself (the made_arrows bit, ogre_arrows.rs2:139-142) go to Rantz (10, rantz.rs2:263-283) and his first
 // question sets 15 (:288-294); the rock off the chest in his cave (20) and the bellows (ogre_chest.rs2); the bellows
-// fill at the swamp bubbles and inflate 3 swamp toads (swamp_toad.rs2:28-56); Rantz sees a bloated toad (25,
-// rantz.rs2:62-74); a toad placed in the clearing (30, bloated_toad.rs2:42-77) calls a chompy at random
-// (:79-108, 1 in 5 per 25 ticks for 4 rolls); Rantz shoots it and misses (40, chompy_bird.rs2:221-253) and lends the
-// bow (45, rantz.rs2:85-109); the bot's kill (50, chompy_bird.rs2:226-231), the pluck, Rantz sees the raw chompy (55)
-// and names his seasoning; Bugs and Fycie name theirs (bugs.rs2, fycie.rs2: the seasonings are random, so the bot
-// reads them from the dialog); the spit roast with all three seasonings (60) hands the chompy to Rantz when he is
-// within 10 tiles (raw_chompy.rs2:36-49) and the queue completes the quest.
+// fill at the swamp bubbles and inflate 3 swamp toads (swamp_toad.rs2:24-74); Rantz sees a bloated toad (25,
+// rantz.rs2:62-74); a toad placed in the clearing (30, bloated_toad.rs2:34-88) calls a chompy at random
+// (:89-118, 1 in 5 per 25 ticks for 4 rolls); Rantz shoots it and misses (40, chompy_bird.rs2:221-253) and lends the
+// bow (45, rantz.rs2:85-109); the bot's kill (50, chompy_bird.rs2:191-219), the pluck, Rantz sees the raw chompy (55)
+// and names his seasoning; Bugs and Fycie name theirs (bugs.rs2, fycie.rs2: the content rolls them, though random(1)
+// is always 0 on this engine, NumberOps.ts:32-35; the bot reads them from the dialog); the spit roast with all three
+// seasonings (60) hands the chompy to Rantz when he is within 10 tiles (raw_chompy.rs2:36-58) and the queue completes
+// the quest.
 import { openQuest } from './quest-lib';
 
 const ITEM = {

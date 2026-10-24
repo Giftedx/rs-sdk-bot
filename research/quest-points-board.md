@@ -46,7 +46,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Biohazard (`biohazard`) | 3 (75) | rest | Plague City (OSRS; `quest_elena/scripts/mud_patch.rs2:15` reads `%biohazard`); a teleport destroys the plague sample (`skill_magic/scripts/spells/teleport.rs2:94-97`); MEASURED 1,655-1,672 ticks in row `quests-medium` | none found | L |
 | Shield of Arrav (`blackarmgang`) | 1 (76) | rest | one gang only (`general/scripts/quests.rs2:170`); a second account in the other gang (rev 289 code, see "Shield of Arrav as a pair"); MEASURED 234-237 ticks in row `quest-arrav` | Jonny the Beard, weaponsmaster (helper) | M |
 | Black Knights' Fortress (`blackknight`) | 3 (77) | `qp-filler` | 12 QP (`quest_blackknight/scripts/blackknight_journal.rs2:9-10`) | level 33 knights (same) | - |
-| Big Chompy Bird Hunting (`chompybird`) | 2 (78) | rest | Fletching 5, Cooking 30, Ranged 30 (`quest_chompybird/scripts/chompybird_journal.rs2:10-28`) | none found; CLAIMED by short/medium helper | M |
+| Big Chompy Bird Hunting (`chompybird`) | 2 (78) | rest | Fletching 5, Cooking 30, Ranged 30 (`quest_chompybird/scripts/chompybird_journal.rs2:10-28`) | none found; MEASURED 483-583 ticks in row `quests-medium` | M |
 | Clock Tower (`cog`) | 1 (79) | rest | none found; MEASURED 468-486 ticks in row `quests-medium` | none found | M |
 | Cook's Assistant (`cook`) | 1 (80) | `cooks-assistant` | none | none | - |
 | Family Crest (`crest`) | 1 (81) | `crest` (qp 0) | Mining 40, Crafting 40, Smithing 40, Magic 59 (`quest_crest/scripts/crest_journal.rs2:10-13`) | level 170 demon (`:14`) | - |
@@ -1062,13 +1062,54 @@ medium (see the Death Plateau findings), 9 long and 7 very long; `quests-medium`
 realistic 12,903. `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP
 at end 145; Quest Points WIN at 105,251 floor / 125,347 realistic.
 
-Next for the `presets-rest.ts` helper: Big Chompy Bird Hunting (`quests/quest_chompybird`, 2 QP, class M; Fletching 5,
-Cooking 30, Ranged 30). Not started, not claimed; content read only. `%chompybird` stages 0-60 and the flavour bits are in
-`configs/quest_chompybird.constant:1-30`: Rantz starts it ("Ok, I'll make you some 'stabbers'.", `rantz.rs2:29-48`), 6
-ogre arrows (`:240-279`), the kids and the toad (`:288-293`, `bloated_toad.rs2`, `swamp_toad.rs2`), the shown toad
-(`rantz.rs2:66-71`), Rantz's bow (`:89-103`), the chompy kill and the cooking; the ingredients Rantz and his children ask
-for are random (`rantz.rs2:138`, flavour bits 1-5), so the script must read them from the dialog, as Murder Mystery
-reads its murderer.
+After Big Chompy Bird Hunting `quests-rest` is 14 quests, 36 QP, 30,100 / 46,200 (burst 27,836 / 42,726), 0 medium, 7
+long and 7 very long; `quests-medium` is 19 quests, 33 QP, floor 14,722 / realistic 15,841 (a text splice of the two
+rows). Class count fix first: the row counted 0 medium and 8 long, but its 15 quests were 7 long (Eadgar's Ruse, Horror
+from the Deep, Shilo Village, Temple of Ikov, The Tourist Trap, Troll Romance, Troll Stronghold), 7 very long and Big
+Chompy Bird Hunting (medium in the table), so Chompy was counted as long. Fixed to 1 medium and 7 long (-900 / -1,300),
+then the medium delta (-900 / -1,300): together one long class off (-1,800 / -2,600). QP 38 - 2 = 36 (11 long + 18 very
+long + the 7 QP of the 4 qp-0 rows). `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts
+research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 103,996 floor / 123,172 realistic.
+
+### Big Chompy Bird Hunting
+
+Preset `quest_chompybird` in `packages/practice/src/presets-rest.ts`: beside Rantz in the Feldip Hills (spawn
+2630,2981); a knife, a chisel, an achey log, wolf bones, 8 feathers, 6 ogre arrows, the 6 possible seasonings and 2
+lobsters from a helper; 50 ogre arrows worn. Script `scripts/generated/quest-chompybird.ts`. `RESULT ok qp=2
+xp=hitpoints=332,ranged=19375,cooking=37105,fletching=6980,crafting=125 ... ticks=491 ... walkTicks=108 retries=0
+died=false` (runs: 491, 583, 483 ticks; trials before the proof: 128 (fail), 444), each with `Congratulations! Quest
+complete!`. Varp `%chompybird` 0-60, then complete (`quests/quest_chompybird/configs/quest_chompybird.constant`). Steps (proof run 1
+MILESTONE ticks): Rantz, "Ok, I'll make you some 'stabbers'." (5) 0-10 (`rantz.rs2:29-49`); knife on the achey log,
+chisel on the wolf bones, feathers on the shafts, tips on the flighted arrows (2-6 each, `ogre_arrows.rs2:19-142`; the
+made_arrows bit) 10-18; Rantz takes 6 arrows (10) and "How do we make the chompys come?" (15) 18-42
+(`rantz.rs2:238-296`); the cave 2629,2998, the rock off the chest 2637,9398 (20, a Strength roll) and the bellows
+42-69 (`ogre_chest.rs2`); out, the swamp bubbles at about 2599,2965 and 3 swamp toads inflated 69-128
+(`quest_chompybird.rs2:12-41`, `swamp_toad.rs2:24-74`); Rantz sees a toad (25) 128-161 (`rantz.rs2:62-74`); a toad
+placed in the clearing 2635,2967 (30) 161-171 (`bloated_toad.rs2:34-88`); the chompy comes (35) and Rantz misses it
+(40) 171-295 (`chompy_bird.rs2:1-18,221-253`, `rantz.rs2:760-761`); Rantz, "Come on, let me have a go...", "I'm
+actually quite strong... please let me try." gives the bow (45) 295-320 (`rantz.rs2:85-109`); the bow wielded, a toad
+placed, the bot shoots the chompy (op5), plucks it (op4) and picks up the raw chompy (50) 320-351
+(`chompy_bird.rs2:77-219`); Rantz sees it (55) and names his seasoning 351-386 (`rantz.rs2:129-158`); the cave, Bugs and
+Fycie name theirs 386-417 (`bugs.rs2:57-66`, `fycie.rs2:50-62`); out, the raw chompy on the spit roast 2630,2990 (60),
+Rantz within 10 tiles takes it and the queue completes the quest 417-491 (`raw_chompy.rs2:14-58,94-220`,
+`rantz.rs2:331-344`, `quest_chompybird.rs2:42-51`).
+Findings:
+- The seasonings are not random on this engine. The content rolls `random(1)` (`rantz.rs2:138`, `bugs.rs2:56`,
+  `fycie.rs2:54`), and `random(n)` pushes `JavaRandom.nextDouble() * n` as an int (engine
+  `script/handlers/NumberOps.ts:32-35`), so it is always 0: Rantz onion, Bugs equa leaves, Fycie tomato in all 3 proof
+  runs. The script still reads each pick from the dialog and logs `cooked with onion, equa leaves, tomato (asked onion,
+  equa leaves, tomato)` from the inventory counts. Only those 3 seasonings are needed; the preset carries all 6.
+- The tick spread is the chompy spawn: each placed toad rolls 1 in 5 every 25 ticks for 4 rolls
+  (`bloated_toad.rs2:89-118`). Run 2 placed a second toad for the bot's own chompy (583 ticks).
+- Trial 1 failed at the swamp bubbles: the nearest bubbles were out of reach in the swamp (`I can't reach that!`). The
+  script tries the reachable bubbles and toads first.
+- Rantz checks only the made_arrows bit and a count of 6 (`rantz.rs2:263-275`), so 2 arrows made from one log and one
+  bone set the bit and the helper's 6 arrows make the count. The bow is two-handed; the shield goes to the pack.
+- Helper items: all tradeable (knowledge/items.json). The bellows, the bloated toads, the ogre bow and the seasoned
+  chompy are untradeable (2871-2875, 2882-2883).
+
+Next for the `presets-rest.ts` helper: the medium class of `quests-rest` is now empty; the 14 quests left are long
+(7) and very long (7), and the long ones are claimed by other helpers (Shilo Village, Troll Stronghold).
 
 ### Shades of Mort'ton
 

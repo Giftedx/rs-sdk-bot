@@ -68,8 +68,9 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // (tradeable): a knife (946), a chisel (1755), an achey log (2862), wolf bones (2859) and 8 feathers (314) for the
     // bot's own ogre arrows (the made_arrows bit, ogre_arrows.rs2:139-142); 6 ogre arrows (2866) for Rantz with them; the
     // 6 possible seasonings (potato 1942, onion 1957, equa leaves 2128, cabbage 1965, tomato 1982, doogle leaves 1573),
-    // as each ogre's pick is random; 2 lobsters; 50 ogre arrows worn for the lent ogre bow. The bellows, the toads, the
-    // bow and the chompy are untradeable or quest items (knowledge/items.json 2871-2883).
+    // as the content rolls each ogre's pick (random(1) is always 0 on this engine: onion, equa leaves, tomato);
+    // 2 lobsters; 50 ogre arrows worn for the lent ogre bow. The bellows, the toads, the bow and the chompy are
+    // untradeable or quest items (knowledge/items.json 2871-2883).
     quest_chompybird: {
         ...rest({ x: 2632, z: 2982 }, [946, 1755, 2862, 2859, [314, 8], [2866, 6], 1942, 1957, 2128, 1965, 1982, 1573], 2),
         equipment: [...COMBAT_SET, { id: 2866, count: 50, slot: 13 }],
