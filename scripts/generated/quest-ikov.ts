@@ -85,11 +85,21 @@ try {
             await q.waitTicks(1);
         }
     };
-    const fearNorth =() => door('fear door north', FEAR, () => z() >= 9815);
+    // These doors are walls on one edge of the loc tile: an op from the loc tile crosses the wall, an op from the far
+    // side moves the bot onto the loc tile (doors/scripts/open_and_close_double_doors.rs2:143-158). Trial 2 waited one
+    // tile too far.
+    const fearNorth = () => door('fear door north', FEAR, () => z() >= 9815);
     const fearSouth = () => door('fear door south', FEAR, () => z() <= 9814);
 
     if (from('start')) {
         // 1. Lucien: "I'm a mighty hero!", "That sounds like a laugh!" sets 10 and gives his pendant (lucien.rs2:14-72).
+        // Lucien wanders through the inn's rooms; their doors (loc_1533) start shut and the walker plans through them,
+        // so the bot opens them by tile first (proof attempt 1: "I can't reach that!" 3/3).
+        for (const [dx, dz] of [[2576, 3320], [2571, 3322], [2569, 3322]] as const) {
+            if (!q.shutAt(dx, dz)) continue;
+            await q.walk(`to inn door ${dx},${dz}`, [{ x: dx === 2576 ? 2575 : dx === 2571 ? 2572 : 2570, z: dz, tol: 0 }]);
+            await q.openDoor(`inn door ${dx},${dz}`, dx, dz);
+        }
         await q.talk('lucien', /^lucien$/i, [/i'm a mighty hero/i, /that sounds like a laugh/i], () => q.has(ITEM.pendantL), LUCIEN1, 60);
         q.milestone(10);
         await wear(ITEM.pendantL);
@@ -201,7 +211,9 @@ try {
         await door('warrior door', FW_DOOR, () => z() >= 9871);
         // 9. Winelda: "Yes I do!" (50); the 20 roots (60) and her teleport over the lava (winelda.rs2:1-71).
         await q.talk('winelda', /^winelda$/i, [/^yes i do/i], () => q.sawText(/get winelda 20 limpwurt roots/i), WINELDA, 60);
-        await q.talk('winelda roots', /^winelda$/i, [], () => q.near(2664, 9876, 1), WINELDA, 60);
+        // Her teleport lands at 2664,9876 east of the lava (x >= 2660 is reached no other way); proof attempt 2 waited
+        // for that exact tile, missed it by a step and walked back toward her.
+        await q.talk('winelda roots', /^winelda$/i, [], () => x() >= 2660, WINELDA, 60);
         q.milestone(60);
         // 10. A guardian (no Lucien pendant worn): the Mahjarrat, Lucien, "it's time for my yearly bath", "Ok! I'll
         // help!" gives the pendant of Armadyl (70, guardian_of_armadyl.rs2:72-198). The secret door leads to them.

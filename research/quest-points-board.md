@@ -71,7 +71,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Heroes' Quest (`hero`) | 1 (100) | rest | 55 QP, Lost City, Merlin's Crystal, Dragon Slayer (`quest_hero/scripts/quest_hero.rs2:2-3`); a gang HQ from Shield of Arrav (`locs/brimhaven_blackarm_hq.rs2:2`, `locs/brimhaven_restaurant.rs2:2`); a second player for Grip (`hero_journal.rs2:190`) | firebird, Grip | XL |
 | Witch's Potion (`hetty`) | 1 (101) | rest | none found | none found | S |
 | Pirate's Treasure (`hunt`) | 2 (102) | rest | none found; the rum, key and message are untradeable (`quest_hunt/configs/quest_hunt.obj`); MEASURED 460-474 ticks in row `quests-medium` | none found | M |
-| Temple of Ikov (`ikov`) | 1 (103) | rest | Thieving 42, Ranged 40 (`quest_ikov/scripts/ikov_journal.rs2:14-15`) | fire warrior (`ikov_dungeon.rs2:158`); CLAIMED by long-quest helper 3 | L |
+| Temple of Ikov (`ikov`) | 1 (103) | rest | Thieving 42, Ranged 40 (`quest_ikov/scripts/ikov_journal.rs2:14-15`) | fire warrior (`ikov_dungeon.rs2:158`); MEASURED 947-1,077 ticks in row `quests-long` | L |
 | Imp Catcher (`imp`) | 1 (104) | rest | none found | imps (`quest_imp/scripts/imp_journal.rs2:13`) | S |
 | The Dig Site (`itexam`) | 2 (105) | `dig`, MEASURED 1,535-1,851 (`research/quest-plan.md` 1p) | Agility 10 at the winch, Herblore 10 in the chemistry, Thieving 25 at the pocket (`quest_itexam/scripts/area_digsite.rs2:617`, `itexam_chemistry.rs2:21`, `digsite_workman.rs2:62`); the rock samples, brush, trowel, talisman, chemicals and tablet are untradeable, so the account fetches them | none found | - |
 | Observatory Quest (`itgronigen`) | 2 (106) | rest | none found; MEASURED 550-555 ticks in row `quests-medium` | none found | M |
@@ -1446,6 +1446,7 @@ deleted after the run.
 | Shilo Village | `scripts/generated/quest-zombiequeen.ts` | 2133, 2478, 2357 | MEASURED 3/3 |
 | The Tourist Trap | `scripts/generated/quest-desertrescue.ts` | 1617, 1604, 1624 | MEASURED 3/3 |
 | Eadgar's Ruse | `scripts/generated/quest-eadgar.ts` | 2175, 2161, 2091 | MEASURED 3/3 |
+| Temple of Ikov | `scripts/generated/quest-ikov.ts` | 947, 1077, 972 | MEASURED 3/3 |
 
 ### Underground Pass
 
@@ -1675,6 +1676,55 @@ Planner: `quests-long` gets The Tourist Trap (2 QP, floor 1,604 / realistic 1,62
 41,000 -> 24,700 / 38,400 (burst 22,843 / 35,512); scratchpad `up/long-rows.ts`. `haggis-cli.ts
 research/hiscores-live.json --levers`: Quest Points WIN at 103,865 / 121,992 -> 103,805 / 121,211; Overall finish
 42,486 / 44,866 unchanged; QP at end 145. `bun test packages/planner`: 42 pass, 0 fail.
+
+### Temple of Ikov
+
+`RESULT ok qp=1 xp=attack=1700,hitpoints=2520,ranged=268400,magic=875,fletching=200000 ... ticks=947 hpMin=99 eats=0
+... died=false` (runs: 947, 1077, 972 ticks), each with `Congratulations! Quest complete!`. Preset `quest_ikov`: beside
+Lucien in the Flying Horse Inn, Ardougne (spawn 2573,3321); no quest needed. Worn: a magic shortbow, no armour. Helper
+items (tradeable): a lit candle, a knife, 20 limpwurt roots, Varrock Teleport runes, 2 sharks. Debug presets
+`quest_ikov_low`, `_arrows`, `_warrior` with `IK_FROM`. Varps: `%ikov` 26, `%ikov_dungeon` 27,
+`%ikov_icearrowchest_coord` 28. The bot takes the Armadyl side: no fight with the 5 guardians. Server truth:
+`quests/quest_ikov/scripts/*.rs2`.
+
+Steps (proof run 1 MILESTONE ticks):
+- The inn doors (loc_1533 at 2576,3320, 2571,3322, 2569,3322) opened by tile; Lucien: "I'm a mighty hero!", "That
+  sounds like a laugh!" sets 10 and gives his pendant, which the bot wears (`lucien.rs2:14-72`) 0-47.
+- The Hemenster cellar ladder (2677,3405) into the temple; the dark stairs (2651,9808) with the lit candle to the lower
+  room (`ikov_dungeon.rs2:3-10`); the knife on the web at 2654,9766 (1 in 2, `general_use/scripts/web.rs2:10-30`); the
+  boots of lightness (2654,9767), worn; the stairs up.
+- The door of fear north (the pendant worn, `ikov_dungeon.rs2:12-23`); the lava bridge (2648-2650,9828) moves a player
+  with weight below 0 across and drops anyone else into the lava (`:36-82`); the lever piece (2637,9819); the bridge
+  and the door back; the piece in the bracket (2671,9804) and Pull set the lever bit (`:87-110`) 285.
+- The south gate (2661-2662,9803, `:25-34`); the 6 ice-arrow chests (2710-2747, 9821-9850): one holds 1-5 arrows, and
+  it moves after each find (`quest_ikov.rs2:9-17`, `ikov_dungeon.rs2:112-131`). The bot opens and searches round them
+  until it has 10 (3 finds in run 1) 490.
+- Back north; Search for traps on the trap lever (2665,9855, Thieving 42) sets 20, Pull sets 30 (`:133-165`) 593.
+- The trap-lever door; the Fire Warrior's door (2646,9870) summons him (level 84, `:177-219`); the bot shoots him with
+  the ice arrows worn under Protect from Magic (only ice arrows and Ranged hurt him,
+  `skill_combat/scripts/npc/npc_combat.rs2:169`) and picks up fallen arrows when the quiver runs low (40,
+  `fire_warrior_of_leskarus.rs2:20-30`) 674.
+- Winelda (2656,9875): "Yes I do!" (50); the 20 roots (60) and her teleport over the lava to 2664,9876
+  (`winelda.rs2`) 756.
+- The Lucien pendant off; the secret door (2643,9892); a guardian: "What are your kind and what are you doing here?",
+  "Who are the Mahjarrat?", "Did you say Lucien?", "You're right, it's time for my yearly bath.", "Ok! I'll help!"
+  gives the pendant of Armadyl (70, `guardian_of_armadyl.rs2:132-190`) 832.
+- Varrock Teleport; the pendant of Armadyl worn and the bow off; Lucien (level 14, 3176,3476) killed with fists
+  (`quest_ikov.rs2:141-157`, `lucien.rs2:108-122`) 947.
+
+Findings:
+- A coord varp starts at -1 (null) in the engine (`engine/entity/Player.ts:490-497`), but the practice save generator
+  writes 0 for every varp below 309. With 0, `%ikov_icearrowchest_coord` matches no chest and is never randomised
+  (`quest_ikov.rs2:115-131`): trial 4 searched 60 times and found nothing. The preset sets varp 28 to -1, which is what
+  a real account holds. Other quests with a coord or obj varp can meet the same trap in a preset.
+- The boots of lightness lie behind a slashable web (`bigweb_slashable`), so a plain pickup is "I can't reach that!"
+  (trial 1). The lever piece also needs a walk next to it first (trial 3).
+- These doors are walls on one edge of the loc tile: an op from the loc tile crosses the wall, an op from the far side
+  moves the player onto the loc tile only (`doors/scripts/open_and_close_double_doors.rs2:143-158`).
+- A hidden trapdoor (105) shares the trap lever's tile; the bot finds each loc by id and tile.
+- Lucien walks through the inn's rooms, whose doors start shut; proof attempt 1 failed 0/3 with "I can't reach that!".
+  Proof attempt 2 failed 2 runs when the bot waited for Winelda's exact landing tile; it now checks x >= 2660.
+- The ice arrows are spent on the Fire Warrior, so Lucien dies to fists (trial 6: "There is no ammo left").
 
 ### Regicide: research notes (not scripted)
 
