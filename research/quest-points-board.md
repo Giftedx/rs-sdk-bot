@@ -80,7 +80,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Legends' Quest (`legends`) | 4 (109) | rest | 107 QP; Family Crest, Heroes', Underground Pass, Shilo Village, Waterfall (`quest_legends/scripts/legends_guard.rs2:50-53`); Magic 56, Mining 52, Agility, Crafting, Smithing, Strength, Thieving, Woodcutting 50, Herblore 45, Prayer 42 (`legends_journal.rs2:65-128`) | several | XL |
 | Dwarf Cannon (`mcannon`) | 1 (110) | `cannon` | none | goblins | - |
 | Throne of Miscellania (`misc`) | 1 (111) | rest | Heroes' Quest, Fremennik Trials (`quest_misc/scripts/misc_journal.rs2:8-17`, `misc_door_guard.rs2:10`) | none found | XL |
-| Murder Mystery (`murder`) | 3 (112) | rest | none found; MEASURED 302-345 ticks in row `quests-medium` (random murderer) | none found | M |
+| Murder Mystery (`murder`) | 3 (112) | rest | none found; MEASURED 270-395 ticks in row `quests-medium` (random murderer; all 6 suspects proved) | none found | M |
 | The Restless Ghost (`priest`) | 1 (113) | rest | none found | level 13 skeleton (`quest_priest/scripts/priest_journal.rs2:8`) | S |
 | Priest in Peril (`priestperil`) | 1 (114) | rest | none found; 50 rune essence to Drezel (`areas/area_mausoleum/scripts/drezel.rs2:96-113`); MEASURED 993-1011 ticks in row `quests-medium` | level 30 (`quest_priestperil/scripts/priestperil_journal.rs2:7`) | M |
 | Prince Ali Rescue (`prince`) | 3 (115) | `qp-filler` | none found | none found | - |
@@ -915,9 +915,19 @@ script); a search of the murderer's own loc (compost, beehive, drain, spiders' n
 (`quest_murder.rs2:1-103`); the guard, "I know who did it!" with all three proofs 251-302
 (`murder_guard.rs2:36-53,132-152`).
 Findings:
-- The 3 proof runs drew Bob once and David twice. David is the second suspect of his pair and his barrel is on level 1,
-  so 345 is near the worst case; Elizabeth and Frank (both barrels on level 1) were not drawn, so their run times are not
-  measured.
+- The 3 proof runs drew Bob once and David twice. Debug presets `quest_murder_anna` .. `quest_murder_frank` start
+  the quest (varp 192 `%murderquest` = 1) with the murderer forced (varp 195 `%murdersus` = 1-6; the guard rolls it at
+  random, `murder_guard.rs2:12`). One run each, `RESULT ok qp=3`, each with `The finger prints are an exact match to
+  <suspect>'s.` and `Congratulations! Quest complete!`: Anna 289, Carol 353, Elizabeth 395, Frank 288 ticks. A fresh
+  `quest_murder` run after the script change drew Anna: 270 ticks. Elizabeth is the worst case: the second suspect of
+  her pair (frank/elizabeth) and both barrels on level 1, then her poison loc, the fountain at 2747,3563, outside.
+  The forced presets skip the start roll, but the guard step took 8-29 ticks in them against 18-28 fresh, so the
+  forced runs are counted as they are. Row `quests-medium` now takes Murder Mystery as 302/345/338/270/289/353/395/288:
+  floor 270, realistic 395; the row is 18 quests, 31 QP, floor 14,239 / realistic 15,258. `bun test
+  packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points
+  WIN at 105,178 floor / 124,993 realistic.
+- Forced Anna trial 1 failed at the guard: the nearest guard stood in the hall south of the shut door 2741,3576 (loc
+  1533) and the client found no route (`I can't reach that!`). The script now opens that door before the guard talk.
 - Trial 1 stood west of Bob's barrel (2733,3578) behind the wall: "I can't reach that!". The script now stands on a
   named tile beside each barrel and the spiders' nest.
 - Trial 2: the print mismatch opens a mesbox before the `inv_del` (`quest_murder.rs2:336-337`), so the item-on-item
