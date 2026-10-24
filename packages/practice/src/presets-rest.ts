@@ -64,4 +64,14 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // (2064) for Harold, an iron bar (2351) for the spikes, coins for the 101-coin bet. No food: the 5 stone balls
     // need the last free slots. 500 coins cover a lost roll or two.
     quest_death: rest({ x: 2896, z: 3529 }, [...Array(10).fill(2309), ...Array(10).fill(333), 1905, 2064, 2351], 0, 500),
+    // Big Chompy Bird Hunting: beside Rantz in the Feldip Hills (spawn 2630,2981, maps/m41_46.jm2). Helper items
+    // (tradeable): a knife (946), a chisel (1755), an achey log (2862), wolf bones (2859) and 8 feathers (314) for the
+    // bot's own ogre arrows (the made_arrows bit, ogre_arrows.rs2:139-142); 6 ogre arrows (2866) for Rantz with them; the
+    // 6 possible seasonings (potato 1942, onion 1957, equa leaves 2128, cabbage 1965, tomato 1982, doogle leaves 1573),
+    // as each ogre's pick is random; 2 lobsters; 50 ogre arrows worn for the lent ogre bow. The bellows, the toads, the
+    // bow and the chompy are untradeable or quest items (knowledge/items.json 2871-2883).
+    quest_chompybird: {
+        ...rest({ x: 2632, z: 2982 }, [946, 1755, 2862, 2859, [314, 8], [2866, 6], 1942, 1957, 2128, 1965, 1982, 1573], 2),
+        equipment: [...COMBAT_SET, { id: 2866, count: 50, slot: 13 }],
+    },
 };
