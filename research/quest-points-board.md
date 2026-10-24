@@ -1766,3 +1766,18 @@ Planner: `quests-long` gets Eadgar's Ruse (1 QP, floor 2,091 / realistic 2,175):
 same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 11 -> 10 quests, 31 -> 30 QP, 24,700 / 38,400
 -> 22,900 / 35,800 (burst 21,178 / 33,108); scratchpad `up/long-rows.ts` on the committed rows. `haggis-cli.ts
 research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN. `bun test packages/planner`: 42 pass, 0 fail.
+
+Next for long-quest helper 2: Troll Romance (`quests/quest_troll_love`, 2 QP, class L; not started, not claimed;
+content read only). `%troll_love` (varp 385) stages in `configs/quest_troll_love.constant:1-11`. Ug (2827,10064,
+level 1 of the stronghold) starts it, "Don't worry now, I'll see what I can do." (5, `ug.rs2:33-60`); Aga
+(2828,10104,1), "So... how's your... um... love life?" (10, `aga.rs2:28-47`); Tenzing, "Do you know where I can find
+Trollweiss?", "What would I need to make such a sled?" (15, `quest_death/scripts/death_sherpa.rs2:43-66`); Dunstan, "I
+need a sled!!" (20), then a yew or maple log, an iron bar and a rope make the sled (22,
+`quest_death/scripts/death_smithy.rs2:215-252`); a bucket of wax with swamp tar and a cake tin make the sled wax, the
+wax on the sled (25, `quest_troll_love.rs2:57-91`). The ice-troll cave entrance (2820,3743) and the crevasse to the top
+(2778,3869); the waxed sled worn at the slope barrier (2772,3835) rides to 2790,3794; the Trollweiss flowers at
+2775-2781,3780-3785 (30, `:43-53`); the second ride (2785,3771) ends at 2794,3719 and the tunnels lead out to the
+Rellekka side (2730,3713). Ug takes the flower (35); Arrg (2828,10095,1), "I am here to kill you!" moves the fight
+outside (`arrg.rs2:24-81`); Arrg (level 113) dead (40); Ug completes it (`ug.rs2:96-111`). With Eadgar's Ruse first,
+the Trollheim teleport (2890,3679) brings the bot back from the Rellekka side; the preset should include Eadgar's Ruse
+(335 = 110) and its runes.
