@@ -19,10 +19,10 @@ function medium(position: { x: number; z: number; level?: number }, items: Array
 }
 
 // Haunted Mine: a staff of fire (1387) in the weapon slot and Fire Wave runes (1 blood 565 + 5 air 556 a cast) for the
-// boss, 21 lobsters (a fight of 3 rounds ate 18 and died in 1 of 6 proof runs; 21 + runes + chisel + the 4 quest
-// items fill the 28 slots).
+// boss, 21 sharks (385, heal 20; a fight of 3-4 rounds ate 18-21 lobsters and died in 2 of 12 proof runs; 21 + runes +
+// chisel + the 4 quest items fill the 28 slots).
 function hauntedmine(position: { x: number; z: number }, items: Array<number | [number, number]>, varps: Record<number, number> = {}): SaveConfig {
-    const c = medium(position, [...items, [565, 40], [556, 200]], 21, 0, { 107: 5, 302: 61, 307: 110, ...varps });
+    const c = medium(position, [...items, [565, 40], [556, 200], ...Array(21).fill(385)], 0, 0, { 107: 5, 302: 61, 307: 110, ...varps });
     return { ...c, equipment: [...RUNE_SET.filter(e => e.slot !== 3), { id: 1387, count: 1, slot: 3 }] };
 }
 

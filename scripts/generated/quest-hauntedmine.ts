@@ -1,5 +1,5 @@
 // Haunted Mine from preset quest_hauntedmine (beside the Zealot outside the Mort Ridge mines; every skill 99; Priest in
-// Peril done; a chisel and lobsters). Reward: 2 QP, 22,000 Strength XP (quests/quest_hauntedmine/scripts/
+// Peril done; a chisel and sharks). Reward: 2 QP, 22,000 Strength XP (quests/quest_hauntedmine/scripts/
 // hauntedmine_crystals.rs2:52-56).
 // Varp %hauntedmine (hauntedmine.constant:1-11): 1 the Zealot's history, 3 an entrance crawled, 4 the valve found, 5 the
 // lift, 7 the dark stairs with a fungus, 8 the boss key, 9 the boss killed, 10 the reward door, then the crystal.
@@ -63,7 +63,7 @@ const COM: Record<number, [string, boolean]> = {
 };
 const ITEM = { liftKey: 4078, rewardKey: 4077, fungus: 4075, chisel: 1755, shard: 4082 };
 
-const q = await openQuest({ cap: 4500, eatAt: 55 });
+const q = await openQuest({ cap: 4500, eatAt: 55, food: [385, 379] });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/completed a quest|quest complete/i) > 0) questDone = true; });

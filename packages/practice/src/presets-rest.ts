@@ -55,4 +55,9 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // (tradeable): 3 planks (960), a bronze bar (2349), a molten glass (1775); 4 lobsters. The keep key, the lens mould and
     // the lens are untradeable (knowledge/items.json 601-603), so the run collects them.
     quest_itgronigen: rest({ x: 2439, z: 3187 }, [960, 960, 960, 2349, 1775], 4),
+    // Death Plateau: beside Denulth in the Imperial Guard camp, Burthorpe (spawn 2896,3528, maps/m45_55.jm2). Helper
+    // items (tradeable): 10 bread (2309) and 10 trout (333) for Tenzing, an Asgarnian Ale (1905) and a Blurberry Special
+    // (2064) for Harold, an iron bar (2351) for the spikes, coins for the 101-coin bet. No food: the 5 stone balls
+    // need the last free slots. 500 coins cover a lost roll or two.
+    quest_death: rest({ x: 2896, z: 3529 }, [...Array(10).fill(2309), ...Array(10).fill(333), 1905, 2064, 2351], 0, 500),
 };

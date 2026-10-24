@@ -26,7 +26,7 @@ const FROM = process.env.UP_FROM ?? 'start';
 const STAGES = ['start', 'bridge', 'grid', 'orbs', 'area2', 'paladins', 'main', 'witch', 'demons', 'lower', 'dove', 'temple'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 9000, eatAt: 35 });
+const q = await openQuest({ cap: 9000, eatAt: 40, food: [385, 379, 2327, 2293] });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -70,6 +70,22 @@ try {
         }
         if (!q.has(id)) await q.fail(`pickup ${label}`);
     };
+    // Protect from Melee (prayer index 14, as in quest-arena.ts) for the level 89-91 fights.
+    const PFM = 14;
+    const pfm = async (on: boolean) => {
+        const p: any = q.st()?.prayers;
+        if (!!p?.activePrayers?.[PFM] === on || (on && (p?.prayerPoints ?? 0) <= 0)) return;
+        await q.step(`pfm ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => !!(q.st() as any)?.prayers?.activePrayers?.[PFM] === on, 3, 3);
+    };
+    // Eats until hp >= hpTo (before the temple's bolts and the big fights).
+    const topUp = async (hpTo: number) => {
+        for (let i = 0; i < 8 && q.hp() < hpTo; i++) {
+            const f = q.inv().find((e: any) => [385, 379, 2327, 2293].includes(e.id));
+            if (!f) break;
+            await q.s.direct({ type: 'useInventoryItem', slot: f.slot, optionIndex: 1, reason: 'SDK' });
+            await q.waitTicks(3);
+        }
+    };
     // Attacks the nearest NPC matching re until it dies; then picks up `drop` (if given) from the floor.
     const kill = async (label: string, re: RegExp, drop?: number, home?: { x: number; z: number }) => {
         for (let i = 0; i < 6; i++) {
@@ -77,8 +93,14 @@ try {
             let n = q.npc(re);
             if (!n && home) { await q.walk(`${label} approach`, [{ x: home.x, z: home.z, tol: 4 }]); n = q.npc(re); }
             if (!n) { await q.waitTicks(2); continue; }
-            await q.s.bot.attack(n as any);
-            await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index), 80);
+            // Auto retaliate is off (quest-lib) and a meal stops the attack, so the attack is sent again every 6 ticks
+            // (trial f4: Holthion took 260 ticks with one click).
+            const alive = () => (q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index);
+            for (let k = 0; k < 20 && alive(); k++) {
+                await q.guard(label);
+                await q.s.bot.attack(n as any);
+                await q.waitUntil(() => !alive(), 6);
+            }
             if (!(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index)) break;
         }
         await q.waitTicks(2);
@@ -223,6 +245,7 @@ try {
             }
             if (!q.has(id)) await q.fail(`pickup ${label}`);
         };
+        // The traps on the way (springs, spears) hit 8-11 each; a trial reached hp 28 here.
         await pickup('orb 4', ITEM.orb4, 2416, 9698);
         await pickup('orb 2', ITEM.orb2, 2386, 9677);
         await pickup('orb 3', ITEM.orb3, 2385, 9685);
@@ -324,18 +347,27 @@ try {
         // level 91) drop their amulets while %upass is 7 (doomion.rs2, holthion.rs2, othainian.rs2); the 3 amulets open
         // the chest (upassshutchest1 2136,4578) for Iban's shadow (quest_upass.rs2:524-545), poured on the doll
         // (:547-562).
+        // Out of the room: the door, then the corridor (2159,4568); in trial f4 the walk on from the door tile went
+        // back and forth through the door for 90 ticks.
         if (x() <= 2157 && z() <= 4566) await cross('witch door out', 2158, 4566, 3270, /open/i, () => x() >= 2158, 12);
+        await q.dash('witch corridor', 2159, 4569, 0, 12);
         await bridge('bridge cat 2', 2147, 4583, 2150, 4583);
         // Othainian first: west over 2 bridges (2127,4592 from 2130,4592 lands at 2127,4591; 2123,4582 from 2123,4585
         // lands at 2123,4581, trial w3), and back the same way.
         await bridge('bridge west 1', 2127, 4592, 2130, 4592);
         await bridge('bridge west 2', 2123, 4582, 2123, 4585);
+        await topUp(80);
+        await pfm(true);
         await kill('othainian', /^othainian$/i, ITEM.amuletO, { x: 2123, z: 4562 });
+        await pfm(false);
         await bridge('bridge west 2 back', 2123, 4582, 2123, 4581);
         await bridge('bridge west 1 back', 2127, 4592, 2127, 4591);
         await bridge('bridge demons', 2142, 4562, 2142, 4565);
+        await topUp(80);
+        await pfm(true);
         await kill('doomion', /^doomion$/i, ITEM.amuletD, { x: 2134, z: 4563 });
         await kill('holthion', /^holthion$/i, ITEM.amuletH, { x: 2133, z: 4556 });
+        await pfm(false);
         q.milestone('amulets');
         await q.walk('to shadow chest', [{ x: 2136, z: 4577, tol: 1 }]);
         await q.step('shadow chest', () => q.opLoc(q.findLoc((l: any) => l.id === 3274) ?? { id: 3274, x: 2136, z: 4578 }, 1), () => q.has(ITEM.shadow), 12, 3);
@@ -371,7 +403,10 @@ try {
         await q.step('ashes on doll', () => q.useOnItem(ITEM.ashes, ITEM.doll), () => !q.has(ITEM.ashes), 15, 2);
         q.milestone('ashes');
         const b0 = 0;
+        await topUp(80);
+        await pfm(true);
         await kill('kalrag', /^kalrag$/i, undefined, { x: 2356, z: 9908 });
+        await pfm(false);
         await q.waitUntil(() => q.msgCount(/smear the doll of iban/i) > b0, 8);
         if (q.msgCount(/smear the doll of iban/i) <= b0) await q.fail('no blood on doll');
         q.milestone('blood');
@@ -404,6 +439,7 @@ try {
         if ((q.st()?.equipment ?? []).length > 0) await q.fail('unequip');
         await wield('robe top', ITEM.robeTop);
         await wield('robe bottom', ITEM.robeBottom);
+        await topUp(85);
         await q.walk('to temple door', [{ x: 2145, z: 4647, tol: 1 }]);
         await cross('temple door', 2143, 4647, 3334, /open/i, () => x() <= 2142, 12);
         q.milestone(8);

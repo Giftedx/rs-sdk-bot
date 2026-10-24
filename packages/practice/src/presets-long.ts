@@ -18,7 +18,7 @@ const wear = (list: Array<[number, number]>) => list.map(([id, slot]) => ({ id, 
 // these 4 off there). Helper items (tradeable): shortbow (841) and 5 iron arrows (884) for the fire arrow
 // (upass_bridge.rs2:1-22,33-79), a tinderbox (590) to light it, a rope (954) for the rock swing
 // (upass_obstacles.rs2:94-131), a bucket (1925) for the dwarf brew (quest_upass.rs2:421-427), a spade (952) for the mud in
-// the cell (:210-224), 14 lobsters.
+// the cell (:210-224), 14 sharks (385). A trial with 14 lobsters ended at hp 16 (traps, Kalrag, Iban's bolts).
 const UP_WORN = wear([[1163, 0], [1333, 3], [1113, 4], [1079, 7]]);
 const UP_ITEMS: Array<number | [number, number]> = [841, [884, 5], 590, 954, 1925, 952];
 // Debug presets: %upass (161), %ibanmulti (162; bit 11 started, bits 22-31 the grid path set by King Lathas,
@@ -27,7 +27,7 @@ const GRID = 2048 + (333 << 22);
 function upass(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, extra: Array<number | [number, number]> = [], food = 14): SaveConfig {
     return {
         position: { level: 0, ...position }, skills: ALL_99, equipment: UP_WORN, varps: { ...DONE, 165: 30, 68: 16, ...varps },
-        inventory: items([...UP_ITEMS, ...extra, ...Array.from({ length: food }, () => 379)]),
+        inventory: items([...UP_ITEMS, ...extra, ...Array.from({ length: food }, () => 385)]),
     };
 }
 
