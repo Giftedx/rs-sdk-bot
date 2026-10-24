@@ -1247,7 +1247,7 @@ about 730 of the 930 ticks.
 
 Planner: row `scorpion` 910 / 942 MEASURED (was ESTIMATE 300 / 900, burst patch 277 / 832; the burst patch now
 carries the measured ticks). Scenario a, `--levers`: Overall finish 41,506 / 44,402 before and after (the row is
-after the last 99); Quest Points WIN at 105,723 / 130,958 -> 106,356 / 131,068; QP at end 145. Gate: "50 inputs not
+after the last 99); Quest Points WIN at 105,540 / 130,407 -> 106,173 / 130,517 (edc35a8 -> 21e430b); QP at end 145. Gate: "50 inputs not
 MEASURED; worst Agility -37630" -> "47 inputs not MEASURED; worst Agility -37630". `bun test packages/planner`: 42
 pass, 0 fail.
 

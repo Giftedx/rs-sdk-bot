@@ -1109,6 +1109,6 @@ ticks), preset `quest_scorpion`, script `scripts/generated/quest-scorpion.ts`; r
 `research/quest-plan.md` 1o. The locked gate of test run t5 is the dusty key gate (loc 2623 at 2924,9803,
 `areas/area_taverly/dungeon/scripts/jail_doors.rs2:31`). The run fetches the dusty key itself (Jailer, jail key on
 Velrak's cell door, Velrak) in 271-295 ticks, inside the row. Planner: row `scorpion` 300 / 900 ESTIMATE -> 910 / 942
-MEASURED. Scenario a, `--levers`: Overall finish 41,506 / 44,402 before and after; Quest Points WIN at 105,723 /
-130,958 -> 106,356 / 131,068; QP at end 145. Gate: "50 inputs not MEASURED; worst Agility -37630" -> "47 inputs not
+MEASURED. Scenario a, `--levers`: Overall finish 41,506 / 44,402 before and after; Quest Points WIN at 105,540 /
+130,407 -> 106,173 / 130,517 (edc35a8 -> 21e430b); QP at end 145. Gate: "50 inputs not MEASURED; worst Agility -37630" -> "47 inputs not
 MEASURED; worst Agility -37630". `bun test packages/planner`: 42 pass, 0 fail.
