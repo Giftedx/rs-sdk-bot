@@ -1,4 +1,4 @@
-// NOT PROVEN (2026-10-24): needs Alfred Grimhand's Barcrawl first (preset varp 77 = 2), see research/quest-plan.md 1o.
+// NOT PROVEN (2026-10-24): B is caught with the Barcrawl done (77 = 2); A needs the dusty key, research/quest-plan.md 1o.
 // Scorpion Catcher from preset quest_scorpion (beside Thormac, top of the Sorcerer's Tower), at the planner's state
 // for the scorpion row (tick 53,715, every skill 99). Reward: 66,250 Strength (x25: 165,625), 1 QP
 // (quest_scorpcatcher.rs2:55-60). Paths below are under vendor/rs-sdk/server/content/scripts/.

@@ -1155,11 +1155,11 @@ RESULT ok qp=1 questMsg=true xp=fishing=179375 at=2717,3301,0 ticks=455 hpMin=97
 Milestones (run t17): 1 28, 2 51, 3 71, sticks 124, 4 172, 5 221, 6 265, 7 277, 8 338, 9 345, 10 367, 11 381,
 complete 451. The rival's 304 was a browser run; our 449-455 has 142 walk ticks and 155 dialog ticks.
 
-## 1o. Scorpion Catcher (the `scorpion` row): NOT PROVEN, needs the Barcrawl
+## 1o. Scorpion Catcher (the `scorpion` row): NOT PROVEN; Barcrawl MEASURED, scorpion A needs the dusty key
 
 Script `scripts/generated/quest-scorpion.ts` (not proven), presets `quest_scorpion` (beside Thormac, 2702,3404,3;
-every skill 99, rune set, Falador and Camelot Teleport runes) and `quest_scorpion_s2` (debug, stage 2, outside the
-Barbarian Outpost, `SC_FROM=2`). The row stays ESTIMATE (277 / 832).
+every skill 99, rune set, Falador and Camelot Teleport runes; from 2026-10-24 also `%barcrawl` 77 = 2) and
+`quest_scorpion_s2` (debug, stage 2, outside the Barbarian Outpost, `SC_FROM=2`). The row stays ESTIMATE (277 / 832).
 
 Stages (CODE-READ, varp `%scorpcatcher` 76): Thormac gives the cage (1, `area_seers/scripts/thormac.rs2:47-56`); a
 Seer's looking glass (2, `area_seers/scripts/seer.rs2:56-68`) opens the Taverley dungeon secret wall
@@ -1168,17 +1168,60 @@ A at 2877,9796 (Taverley dungeon), B at 2552,3570 (Barbarian Outpost), C at 3058
 ladder needs the order, Prayer 31, `areas/monastery/scripts/prayer_guild.rs2:5-40`); Thormac with the full cage
 (463) completes (66,250 Strength x25 = 165,625, `quest_scorpcatcher.rs2:55-60`).
 
-Test runs t1-t4 and d1 (practice, 2026-10-24): Thormac 0-25, the tower and a Seer to 139-226 ticks. Scorpion B is in
-the outpost's building behind the outer gate (`barbariangater`/`barbariangatel`, east wall of 2545,3569-3570). The gate
-opens only when no Barbarian guard (spawns 2544,3567 and 2544,3571) is within 5 tiles of the player; otherwise the
-guard talks and the Barcrawl starts (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-11`,
-`barbarian_outpost_guard.rs2`). The guards stand 1-2 tiles from the gate, so the bot was talked to on every click for
-700 ticks. The north side of the outpost does not lead into the courtyard (run d1). The planner's `agility-52` row
-already notes that the outpost needs Alfred Grimhand's Barcrawl.
+### Scorpion B: the outpost gate needs Alfred Grimhand's Barcrawl (CODE-READ, then MEASURED)
 
-Next step: add a Barcrawl row (9 bars, `%barcrawl`, not measured) as a requirement of `scorpion`, or prove that the
-guards can be drawn away from the gate; the rest of the script (Taverley dungeon, Monastery, the return) is written
-and not run.
+The gate opens only with `%barcrawl` (77) = 2; before that a Barbarian guard (spawns 2544,3567 and 2544,3571) within
+5 tiles talks instead (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-5`). The guards stand 1-2 tiles from the
+gate, so this is a hard requirement (test runs t1-t4, d1). The Barcrawl is a miniquest: `%barcrawl` is not in
+`general/configs/quest.constant`, so it gives no QP. The guard starts it ("Looks can be deceiving, I am in fact a
+barbarian.", card 455, `barbarian_outpost_guard.rs2:11-31`) and ends it when bits 3-12 are set (`:48-60`,
+`quest_barcrawl.rs2:12-16`). Each bartender signs while its bit is clear and the card is in the pack.
+
+Script `scripts/generated/quest-barcrawl.ts`, preset `barcrawl` (outside the gate, 2541,3569; every skill 99, 500
+coins, runes for Falador, Varrock and Camelot Teleport). Route: the guard; the Gnome Stronghold gate (Femi's boxes:
+"Sorry, I'm a bit busy.", `gnome_gate.rs2:20-22`), the Grand Tree doors and ladder, Blurberry (2480,3490,1);
+Falador Teleport, the Rising Sun (70 coins), the Rusty Anchor (8); the ship to Musa Point (30), Zambo (7); the walk to
+Brimhaven, the Dead Man's Chest (15); the customs officer's ship to Ardougne (30); the Flying Horse (8, its east door
+loc_1533 at 2576,3320 must be opened, test run t2), the Dragon Inn in Yanille (12); Varrock Teleport, the Blue Moon
+(50), the Jolly Boar (10); Camelot Teleport, the Foresters Arms (18); the walk back to the guard. The Flying Horse
+drink hits 25% of HP (`area_ardougne_east/scripts/bartender.rs2:51`); hpMin 73 at 99 HP, no food eaten. A bar pays
+before its p_delays and the signature, so the script accepts the buy message and then waits for the signature
+(t2 lost ticks re-opening the Dead Man's Chest menu).
+
+`prove-log.ts scripts/generated/quest-barcrawl.ts barcrawl 3`: PROOF 3/3 (MEASURED practice, 2026-10-24).
+
+```
+RESULT ok bars=10 card=false xp=magic=3462 at=2543,3567,0 ticks=1466 hpMin=73 eats=0 walkTicks=1082 ...
+RESULT ok bars=10 card=false xp=magic=3462 at=2542,3565,0 ticks=1486 hpMin=73 eats=0 walkTicks=1083 ...
+RESULT ok bars=10 card=false xp=magic=3462 at=2543,3568,0 ticks=1472 hpMin=73 eats=0 walkTicks=1079 ...
+```
+
+Milestones (t3): card 24, Blurberry 274, Rising Sun 387, Rusty Anchor 497, Zambo 582, Dead Man's Chest 684, Flying
+Horse 851, Dragon Inn 1027, Blue Moon 1080, Jolly Boar 1201, Foresters Arms 1272, complete 1463. Walking is 1,080
+of the 1,470 ticks.
+
+Planner: row `barcrawl` (1,466 / 1,486 MEASURED, qp 0, at place `outpost-guard` 2541,3569, travel legs regenerated
+with `travel-gen.ts`) is now a requirement of `scorpion`. `agility-52` stays on the gnome course, so it does not need
+the row.
+
+With the varp set, the scorpion script opens the gate and catches B (test run t5: milestone "scorpion b" at 327).
+
+### Scorpion A: the Taverley dungeon route needs the dusty key (test run t5, CODE-READ)
+
+The secret wall (scorpionwall 2117, south wall of 2875,9799, `maps/m44_153.jm2`) is opened from the corridor north
+of it; scorpion A is in the room south of it (2875-2879,9795-9798). That room and the corridor are walled off from
+the entrance ladder (2884,9797): the engine flags show a wall on x 2880/2881 at z 9794-9800 and blocked tiles at
+2881,9801 and 2882,9802. The SDK route goes round through the deeper dungeon, and the bot stopped at 2881,9800 after
+"This gate is locked." (t5, 1,661 ticks). Rev 289 has no obstacle pipe or floor spikes there (no such loc in
+`m44_153`; the OSRS route of `vendor/quest-helper` `ScorpionCatcher.java:209-212` uses them). The other OSRS route is
+the dusty key gate (2924,9803, `ScorpionCatcher.java:220`): kill the Jailer in the Black Knights' base for the jail
+key, open Velrak's cell, and Velrak gives the dusty key (`area_taverly/dungeon/scripts/jailer.rs2`,
+`jail_doors.rs2:10-25`, `velrak_the_explorer.rs2:2-16`). The dusty key is `tradeable=no`
+(`_unpack/225/all.obj:916-929`), so a helper cannot supply it.
+
+Next step: script the dusty key (Jailer kill, jail door, Velrak) and the gate at 2924,9803 in
+`quest-scorpion.ts`, then the walk to the corridor north of the secret wall; the Monastery (C) and the return to
+Thormac are written and not run. Check which gate gave "This gate is locked." in t5 before writing the route.
 
 ## 1p. The Dig Site (the `dig` row): not started
 

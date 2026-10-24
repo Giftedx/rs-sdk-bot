@@ -86,7 +86,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Prince Ali Rescue (`prince`) | 3 (115) | `qp-filler` | none found | none found | - |
 | Romeo & Juliet (`romeojuliet`) | 5 (116) | `rj` | none | none | - |
 | Rune Mysteries (`runemysteries`) | 1 (117) | rest | none found | none | S |
-| Scorpion Catcher (`scorpcatcher`) | 1 (118) | `scorpion` | Prayer 31 (`quest_scorpcatcher/scripts/scorpcatcher_journal.rs2:9`); in practice also Alfred Grimhand's Barcrawl for the Barbarian Outpost gate (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-11`, `research/quest-plan.md` 1o) | none found | - |
+| Scorpion Catcher (`scorpcatcher`) | 1 (118) | `scorpion` | Prayer 31 (`quest_scorpcatcher/scripts/scorpcatcher_journal.rs2:9`); Alfred Grimhand's Barcrawl for the Barbarian Outpost gate (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-5`; row `barcrawl` MEASURED 1,466-1,486); the dusty key (untradeable) for scorpion A in Taverley dungeon (`research/quest-plan.md` 1o) | none found | - |
 | Sea Slug (`seaslug`) | 1 (119) | `rival-seaslug` (qp 0), MEASURED 449-455 (`research/quest-plan.md` 1n) | Firemaking 30 (`quest_seaslug/scripts/quest_seaslug.rs2:43`); the lite client needs the bridged-tile fix `packages/core/src/bridgefix.ts` for the broken glass room door | none found | - |
 | Sheep Shearer (`sheep`) | 1 (120) | rest | none | none | S |
 | Sheep Herder (`sheepherder`) | 4 (121) | `qp-filler` | none found | none found | - |
@@ -1028,3 +1028,15 @@ quests (Draynor, Al Kharid, Ardougne, Falador) are not in the counts.
 Next: Sheep Herder is 54% of the row. The herd is the lever: prod from the tile 2 behind on straight runs more often,
 and herd the far sheep (3, 4) with fewer re-plans. An amulet of glory would cut Prince Ali's 4 teleport walks, if a
 helper can supply one charged.
+
+### Alfred Grimhand's Barcrawl (the `barcrawl` row, a requirement of `scorpion`)
+
+A miniquest with no QP (`%barcrawl` 77 is not in `general/configs/quest.constant`). `RESULT ok bars=10 card=false
+... ticks=1466 hpMin=73 eats=0` (runs: 1,466, 1,486, 1,472 ticks), preset `barcrawl`, script
+`scripts/generated/quest-barcrawl.ts`; route and findings in `research/quest-plan.md` 1o. Planner: new place
+`outpost-guard`, new row `barcrawl` 1,466 / 1,486 MEASURED, `scorpion` requires it; `haggis-travel.json`
+regenerated (963 lines added, none changed). Scenario a, `--levers`: Overall finish 41,374 / 44,270 -> 41,506 /
+44,402; QP at end 145; Quest Points WIN at 102,220 / 130,401 -> 105,679 / 131,261. Gate: "53 inputs not MEASURED;
+worst Agility -37498" -> "50 inputs not MEASURED; worst Agility -37630". `bun test packages/planner`: 42 pass,
+0 fail. Scorpion Catcher itself is not proven: scorpion B is caught with the Barcrawl done; scorpion A needs the dusty
+key.
