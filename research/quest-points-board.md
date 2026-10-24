@@ -1361,3 +1361,10 @@ Findings:
 - Iban's bolts push the bot 1 tile and cancel the walk to the altar ("I can't reach that!"); the use is sent again.
 - The run walks from Lathas to Koftik (about 140 tiles) and back from the cave exit to Lathas inside its ticks.
 
+
+Planner: new row `quests-long` in `packages/planner/src/haggis-boards.json` (MEASURED, after `quests-medium`, which
+it requires for Biohazard): Underground Pass, 5 QP, floor 2,764 / realistic 2,898 (best / worst run, the same under
+`rival-dialogue-burst`). `quests-rest` loses one very long quest: 18 -> 17 quests, 47 -> 42 QP, 37,100 / 56,700 ->
+34,600 / 52,700 (burst 34,310 / 52,436 -> 31,998 / 48,737); a text splice of the two rows. Scenario a, `--levers`:
+Quest Points WIN at 104,439 / 126,149 -> 104,891 / 125,348; Overall finish 42,486 / 44,866 unchanged; QP at end 145.
+`bun test packages/planner`: 42 pass, 0 fail.
