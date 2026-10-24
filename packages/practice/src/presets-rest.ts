@@ -44,4 +44,7 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // water (1929) for the red-hot black cog (cogs.rs2:30-40); ice gloves also work but are untradeable. The cogs and
     // the rat poison are quest items from the run.
     quest_cog: rest({ x: 2568, z: 3249 }, [1929], 4),
+    // Hazeel Cult (good side): beside Sir Ceril Carnillean in his house (spawn 2565,3271, maps/m40_51.jm2). No helper
+    // items; the armour is a quest item from Alomone (alomone.rs2:115-123). 4 lobsters.
+    quest_hazeelcult: rest({ x: 2566, z: 3271 }, [], 4),
 };

@@ -67,7 +67,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | The Grand Tree (`grandtree`) | 5 (96) | `grandtree` | Agility 25 (`quest_grandtree/scripts/quest_grandtree.rs2:25`); Tree Gnome Village read at `king_narnode.rs2:8` | level 172 demon (`grandtree_journal.rs2:14`) | - |
 | Ernest the Chicken (`haunted`) | 4 (97) | `qp-filler` | none found | none found | - |
 | Haunted Mine (`hauntedmine`) | 2 (98) | rest | Agility 15, Crafting 35, Morytania access (Priest in Peril) (`quest_hauntedmine/scripts/hauntedmine_journal.rs2:10-16`) | level 95 (`:19`) | L |
-| Hazeel Cult (`hazeelcult`) | 1 (99) | rest | none found; CLAIMED by short/medium helper | none found | M |
+| Hazeel Cult (`hazeelcult`) | 1 (99) | rest | none found; MEASURED 426-435 ticks in row `quests-medium` (good side) | none found | M |
 | Heroes' Quest (`hero`) | 1 (100) | rest | 55 QP, Lost City, Merlin's Crystal, Dragon Slayer (`quest_hero/scripts/quest_hero.rs2:2-3`); a gang HQ from Shield of Arrav (`locs/brimhaven_blackarm_hq.rs2:2`, `locs/brimhaven_restaurant.rs2:2`); a second player for Grip (`hero_journal.rs2:190`) | firebird, Grip | XL |
 | Witch's Potion (`hetty`) | 1 (101) | rest | none found | none found | S |
 | Pirate's Treasure (`hunt`) | 2 (102) | rest | none found; the rum, key and message are untradeable (`quest_hunt/configs/quest_hunt.obj`); MEASURED 460-474 ticks in row `quests-medium` | none found | M |
@@ -857,6 +857,29 @@ Findings:
   the script marks it as a wall for the SDK plan.
 - Helper item: a bucket of water (tradeable). The cogs and the rat poison are untradeable quest items.
 
+### Hazeel Cult
+
+Preset `quest_hazeelcult` in `packages/practice/src/presets-rest.ts`: beside Sir Ceril Carnillean in his house (spawn
+2565,3271); no helper items, 4 lobsters. `RESULT ok qp=1 xp=attack=2500,hitpoints=827 ... ticks=435 ... walkTicks=177
+retries=0 died=false` (runs: 435, 426, 435 ticks; a trial before the proof: 434), each with `Congratulations! Quest
+complete!`. The bot takes the good side: one raft trip, against two hideout visits and the house chest on the evil side
+(`quests/quest_hazeelcult/scripts/clivet.rs2:239-258`, `alomone.rs2:15-73`). Varp `%hazeelcultquest` (223). Steps (proof
+run 1 MILESTONE ticks): Ceril, "What's wrong?", "Yes, of course, I'd be happy to help." sets 2 0-40
+(`ceril_carnillean.rs2:8-31`); the 5 sewer valves 2572,3263, 2562,3247, 2585,3245 (turn left), 2597,3263, 2609,3243 (the
+others turn right) set the 5 bits of `%hazeelcult_valves` (224) 40-151 (`quest_hazeelcult.rs2:42-70`); the cave
+2585,3233, Clivet, "What do you mean?", "You're crazy, I'd never help you." sets 4 and side 0 151-222
+(`clivet.rs2:147-158,228-272`); the raft 2567,9679 goes to the hideout end 2606,9692 with all 5 bits
+(`quest_hazeelcult.rs2:11-40`), Alomone's talk turns him hostile, his death sets 6 and drops the armour 222-273
+(`alomone.rs2:1-10,100-123`); a raft back to the cave mouth, the stairs 2570,9683 out to 2587,3237, the walk to the
+house, upstairs, Ceril takes the armour (7, the "kind of completed" scroll) 273-373 (`ceril_carnillean.rs2:108-139`,
+`quest_hazeelcult.rs2:159-167`); the cupboard 2573,3267 opened and searched with Ceril and Jones near completes the quest
+373-435 (`quest_hazeelcult.rs2:81-122,169-175`).
+Findings:
+- Auto retaliate is off in the quest scripts, so the bot attacks Alomone itself after his "DIE!!!" line.
+- The proof logs show no Thieving gain in `xp=` although the reward queue calls `stat_advance(thieving, 15000)`
+  (`quest_hazeelcult.rs2:172`); the run ends on the quest-complete message, so the XP may land after the snapshot. Not
+  checked further; the QP comes from the quest varp.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -905,7 +928,12 @@ medium and 9 long; `quests-medium` is 13 quests, 21 QP, floor 9,900 / realistic 
 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 105,658 floor /
 128,421 realistic.
 
-Next for the `presets-rest.ts` helper: Hazeel Cult, Murder Mystery, Observatory Quest, Death Plateau and Big Chompy Bird
+After Hazeel Cult (medium, 900 / 1,300) `quests-rest` is 20 quests, 52 QP, 38,900 / 59,300 (burst 35,975 / 54,841), 3
+medium and 9 long; `quests-medium` is 14 quests, 22 QP, floor 10,326 / realistic 10,802. `bun test packages/planner`: 42
+pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 105,252 floor /
+127,654 realistic.
+
+Next for the `presets-rest.ts` helper: Murder Mystery, Observatory Quest, Death Plateau and Big Chompy Bird
 Hunting (class M).
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
