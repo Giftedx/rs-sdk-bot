@@ -110,12 +110,24 @@
    "runTicks": 180,
    "toll": 10
   },
+  "air-ruins>fm-line-lumbridge-north": {
+   "tiles": 231,
+   "runTicks": 115.5
+  },
+  "air-ruins>goblin-village": {
+   "tiles": 234,
+   "runTicks": 117
+  },
   "air-ruins>guildmaster": {
    "tiles": 309,
    "runTicks": 154.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "air-ruins>kaqemeex": {
+   "tiles": 219,
+   "runTicks": 109.5
   },
   "air-ruins>lady-servil": {
    "tiles": 710,
@@ -145,6 +157,10 @@
    "tiles": 240,
    "runTicks": 120
   },
+  "air-ruins>outpost-guard": {
+   "tiles": 808,
+   "runTicks": 404
+  },
   "air-ruins>port-sarim-dock": {
    "tiles": 81,
    "runTicks": 40.5
@@ -156,6 +172,10 @@
   "air-ruins>romeo": {
    "tiles": 317,
    "runTicks": 158.5
+  },
+  "air-ruins>rusty-anchor": {
+   "tiles": 89,
+   "runTicks": 44.5
   },
   "air-ruins>thormac": {
    "tiles": 510,
@@ -289,12 +309,24 @@
    "runTicks": 545,
    "toll": 10
   },
+  "almera>fm-line-lumbridge-north": {
+   "tiles": 961,
+   "runTicks": 480.5
+  },
+  "almera>goblin-village": {
+   "tiles": 694,
+   "runTicks": 347
+  },
   "almera>guildmaster": {
    "tiles": 906,
    "runTicks": 453,
    "locked": [
     "championdoor"
    ]
+  },
+  "almera>kaqemeex": {
+   "tiles": 650,
+   "runTicks": 325
   },
   "almera>lady-servil": {
    "tiles": 325,
@@ -324,6 +356,10 @@
    "tiles": 740,
    "runTicks": 370
   },
+  "almera>outpost-guard": {
+   "tiles": 87,
+   "runTicks": 43.5
+  },
   "almera>port-sarim-dock": {
    "tiles": 805,
    "runTicks": 402.5
@@ -335,6 +371,10 @@
   "almera>romeo": {
    "tiles": 914,
    "runTicks": 457
+  },
+  "almera>rusty-anchor": {
+   "tiles": 816,
+   "runTicks": 408
   },
   "almera>thormac": {
    "tiles": 252,
@@ -464,12 +504,24 @@
    "runTicks": 471.5,
    "toll": 10
   },
+  "ardougne-market>fm-line-lumbridge-north": {
+   "tiles": 814,
+   "runTicks": 407
+  },
+  "ardougne-market>goblin-village": {
+   "tiles": 547,
+   "runTicks": 273.5
+  },
   "ardougne-market>guildmaster": {
    "tiles": 759,
    "runTicks": 379.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "ardougne-market>kaqemeex": {
+   "tiles": 503,
+   "runTicks": 251.5
   },
   "ardougne-market>lady-servil": {
    "tiles": 140,
@@ -499,6 +551,10 @@
    "tiles": 593,
    "runTicks": 296.5
   },
+  "ardougne-market>outpost-guard": {
+   "tiles": 312,
+   "runTicks": 156
+  },
   "ardougne-market>port-sarim-dock": {
    "tiles": 658,
    "runTicks": 329
@@ -510,6 +566,10 @@
   "ardougne-market>romeo": {
    "tiles": 767,
    "runTicks": 383.5
+  },
+  "ardougne-market>rusty-anchor": {
+   "tiles": 669,
+   "runTicks": 334.5
   },
   "ardougne-market>thormac": {
    "tiles": 127,
@@ -652,6 +712,16 @@
    "tiles": 90,
    "runTicks": 45
   },
+  "bank:al-kharid-bank:0>fm-line-lumbridge-north": {
+   "tiles": 200,
+   "runTicks": 110,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>goblin-village": {
+   "tiles": 528,
+   "runTicks": 274,
+   "toll": 10
+  },
   "bank:al-kharid-bank:0>guildmaster": {
    "tiles": 209,
    "runTicks": 114.5,
@@ -659,6 +729,11 @@
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:al-kharid-bank:0>kaqemeex": {
+   "tiles": 514,
+   "runTicks": 267,
+   "toll": 10
   },
   "bank:al-kharid-bank:0>lady-servil": {
    "tiles": 1064,
@@ -696,6 +771,11 @@
     "bkfortressdoor1"
    ]
   },
+  "bank:al-kharid-bank:0>outpost-guard": {
+   "tiles": 1162,
+   "runTicks": 591,
+   "toll": 10
+  },
   "bank:al-kharid-bank:0>port-sarim-dock": {
    "tiles": 346,
    "runTicks": 183,
@@ -709,6 +789,11 @@
   "bank:al-kharid-bank:0>romeo": {
    "tiles": 265,
    "runTicks": 142.5,
+   "toll": 10
+  },
+  "bank:al-kharid-bank:0>rusty-anchor": {
+   "tiles": 305,
+   "runTicks": 162.5,
    "toll": 10
   },
   "bank:al-kharid-bank:0>thormac": {
@@ -834,12 +919,24 @@
    "runTicks": 491,
    "toll": 10
   },
+  "bank:ardougne-north-bank:0>fm-line-lumbridge-north": {
+   "tiles": 853,
+   "runTicks": 426.5
+  },
+  "bank:ardougne-north-bank:0>goblin-village": {
+   "tiles": 586,
+   "runTicks": 293
+  },
   "bank:ardougne-north-bank:0>guildmaster": {
    "tiles": 798,
    "runTicks": 399,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:ardougne-north-bank:0>kaqemeex": {
+   "tiles": 542,
+   "runTicks": 271
   },
   "bank:ardougne-north-bank:0>lady-servil": {
    "tiles": 156,
@@ -869,6 +966,10 @@
    "tiles": 632,
    "runTicks": 316
   },
+  "bank:ardougne-north-bank:0>outpost-guard": {
+   "tiles": 263,
+   "runTicks": 131.5
+  },
   "bank:ardougne-north-bank:0>port-sarim-dock": {
    "tiles": 697,
    "runTicks": 348.5
@@ -880,6 +981,10 @@
   "bank:ardougne-north-bank:0>romeo": {
    "tiles": 806,
    "runTicks": 403
+  },
+  "bank:ardougne-north-bank:0>rusty-anchor": {
+   "tiles": 708,
+   "runTicks": 354
   },
   "bank:ardougne-north-bank:0>thormac": {
    "tiles": 141,
@@ -996,12 +1101,24 @@
    "runTicks": 490.5,
    "toll": 10
   },
+  "bank:ardougne-south-bank:0>fm-line-lumbridge-north": {
+   "tiles": 852,
+   "runTicks": 426
+  },
+  "bank:ardougne-south-bank:0>goblin-village": {
+   "tiles": 585,
+   "runTicks": 292.5
+  },
   "bank:ardougne-south-bank:0>guildmaster": {
    "tiles": 797,
    "runTicks": 398.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:ardougne-south-bank:0>kaqemeex": {
+   "tiles": 541,
+   "runTicks": 270.5
   },
   "bank:ardougne-south-bank:0>lady-servil": {
    "tiles": 120,
@@ -1031,6 +1148,10 @@
    "tiles": 631,
    "runTicks": 315.5
   },
+  "bank:ardougne-south-bank:0>outpost-guard": {
+   "tiles": 334,
+   "runTicks": 167
+  },
   "bank:ardougne-south-bank:0>port-sarim-dock": {
    "tiles": 696,
    "runTicks": 348
@@ -1042,6 +1163,10 @@
   "bank:ardougne-south-bank:0>romeo": {
    "tiles": 805,
    "runTicks": 402.5
+  },
+  "bank:ardougne-south-bank:0>rusty-anchor": {
+   "tiles": 707,
+   "runTicks": 353.5
   },
   "bank:ardougne-south-bank:0>thormac": {
    "tiles": 165,
@@ -1154,12 +1279,24 @@
    "runTicks": 372,
    "toll": 10
   },
+  "bank:catherby-bank:0>fm-line-lumbridge-north": {
+   "tiles": 615,
+   "runTicks": 307.5
+  },
+  "bank:catherby-bank:0>goblin-village": {
+   "tiles": 348,
+   "runTicks": 174
+  },
   "bank:catherby-bank:0>guildmaster": {
    "tiles": 560,
    "runTicks": 280,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:catherby-bank:0>kaqemeex": {
+   "tiles": 304,
+   "runTicks": 152
   },
   "bank:catherby-bank:0>lady-servil": {
    "tiles": 328,
@@ -1189,6 +1326,10 @@
    "tiles": 394,
    "runTicks": 197
   },
+  "bank:catherby-bank:0>outpost-guard": {
+   "tiles": 426,
+   "runTicks": 213
+  },
   "bank:catherby-bank:0>port-sarim-dock": {
    "tiles": 459,
    "runTicks": 229.5
@@ -1200,6 +1341,10 @@
   "bank:catherby-bank:0>romeo": {
    "tiles": 568,
    "runTicks": 284
+  },
+  "bank:catherby-bank:0>rusty-anchor": {
+   "tiles": 470,
+   "runTicks": 235
   },
   "bank:catherby-bank:0>thormac": {
    "tiles": 128,
@@ -1308,12 +1453,24 @@
    "runTicks": 123.5,
    "toll": 10
   },
+  "bank:draynor-bank:0>fm-line-lumbridge-north": {
+   "tiles": 139,
+   "runTicks": 69.5
+  },
+  "bank:draynor-bank:0>goblin-village": {
+   "tiles": 323,
+   "runTicks": 161.5
+  },
   "bank:draynor-bank:0>guildmaster": {
    "tiles": 263,
    "runTicks": 131.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:draynor-bank:0>kaqemeex": {
+   "tiles": 308,
+   "runTicks": 154
   },
   "bank:draynor-bank:0>lady-servil": {
    "tiles": 831,
@@ -1343,6 +1500,10 @@
    "tiles": 329,
    "runTicks": 164.5
   },
+  "bank:draynor-bank:0>outpost-guard": {
+   "tiles": 929,
+   "runTicks": 464.5
+  },
   "bank:draynor-bank:0>port-sarim-dock": {
    "tiles": 113,
    "runTicks": 56.5
@@ -1354,6 +1515,10 @@
   "bank:draynor-bank:0>romeo": {
    "tiles": 295,
    "runTicks": 147.5
+  },
+  "bank:draynor-bank:0>rusty-anchor": {
+   "tiles": 72,
+   "runTicks": 36
   },
   "bank:draynor-bank:0>thormac": {
    "tiles": 631,
@@ -1457,12 +1622,24 @@
    "tiles": 362,
    "runTicks": 181
   },
+  "bank:edgeville-bank:0>fm-line-lumbridge-north": {
+   "tiles": 260,
+   "runTicks": 130
+  },
+  "bank:edgeville-bank:0>goblin-village": {
+   "tiles": 245,
+   "runTicks": 122.5
+  },
   "bank:edgeville-bank:0>guildmaster": {
    "tiles": 184,
    "runTicks": 92,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:edgeville-bank:0>kaqemeex": {
+   "tiles": 268,
+   "runTicks": 134
   },
   "bank:edgeville-bank:0>lady-servil": {
    "tiles": 832,
@@ -1492,6 +1669,10 @@
    "tiles": 136,
    "runTicks": 68
   },
+  "bank:edgeville-bank:0>outpost-guard": {
+   "tiles": 930,
+   "runTicks": 465
+  },
   "bank:edgeville-bank:0>port-sarim-dock": {
    "tiles": 292,
    "runTicks": 146
@@ -1503,6 +1684,10 @@
   "bank:edgeville-bank:0>romeo": {
    "tiles": 192,
    "runTicks": 96
+  },
+  "bank:edgeville-bank:0>rusty-anchor": {
+   "tiles": 257,
+   "runTicks": 128.5
   },
   "bank:edgeville-bank:0>thormac": {
    "tiles": 632,
@@ -1603,12 +1788,24 @@
    "runTicks": 200,
    "toll": 10
   },
+  "bank:falador-east-bank:0>fm-line-lumbridge-north": {
+   "tiles": 271,
+   "runTicks": 135.5
+  },
+  "bank:falador-east-bank:0>goblin-village": {
+   "tiles": 174,
+   "runTicks": 87
+  },
   "bank:falador-east-bank:0>guildmaster": {
    "tiles": 299,
    "runTicks": 149.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:falador-east-bank:0>kaqemeex": {
+   "tiles": 159,
+   "runTicks": 79.5
   },
   "bank:falador-east-bank:0>lady-servil": {
    "tiles": 723,
@@ -1638,6 +1835,10 @@
    "tiles": 180,
    "runTicks": 90
   },
+  "bank:falador-east-bank:0>outpost-guard": {
+   "tiles": 821,
+   "runTicks": 410.5
+  },
   "bank:falador-east-bank:0>port-sarim-dock": {
    "tiles": 150,
    "runTicks": 75
@@ -1649,6 +1850,10 @@
   "bank:falador-east-bank:0>romeo": {
    "tiles": 307,
    "runTicks": 153.5
+  },
+  "bank:falador-east-bank:0>rusty-anchor": {
+   "tiles": 141,
+   "runTicks": 70.5
   },
   "bank:falador-east-bank:0>thormac": {
    "tiles": 523,
@@ -1745,12 +1950,24 @@
    "runTicks": 229.5,
    "toll": 10
   },
+  "bank:falador-west-bank:0>fm-line-lumbridge-north": {
+   "tiles": 330,
+   "runTicks": 165
+  },
+  "bank:falador-west-bank:0>goblin-village": {
+   "tiles": 149,
+   "runTicks": 74.5
+  },
   "bank:falador-west-bank:0>guildmaster": {
    "tiles": 274,
    "runTicks": 137,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:falador-west-bank:0>kaqemeex": {
+   "tiles": 134,
+   "runTicks": 67
   },
   "bank:falador-west-bank:0>lady-servil": {
    "tiles": 698,
@@ -1780,6 +1997,10 @@
    "tiles": 155,
    "runTicks": 77.5
   },
+  "bank:falador-west-bank:0>outpost-guard": {
+   "tiles": 796,
+   "runTicks": 398
+  },
   "bank:falador-west-bank:0>port-sarim-dock": {
    "tiles": 209,
    "runTicks": 104.5
@@ -1791,6 +2012,10 @@
   "bank:falador-west-bank:0>romeo": {
    "tiles": 282,
    "runTicks": 141
+  },
+  "bank:falador-west-bank:0>rusty-anchor": {
+   "tiles": 200,
+   "runTicks": 100
   },
   "bank:falador-west-bank:0>thormac": {
    "tiles": 498,
@@ -1883,12 +2108,24 @@
    "runTicks": 420,
    "toll": 10
   },
+  "bank:seers-village-bank:0>fm-line-lumbridge-north": {
+   "tiles": 711,
+   "runTicks": 355.5
+  },
+  "bank:seers-village-bank:0>goblin-village": {
+   "tiles": 444,
+   "runTicks": 222
+  },
   "bank:seers-village-bank:0>guildmaster": {
    "tiles": 656,
    "runTicks": 328,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:seers-village-bank:0>kaqemeex": {
+   "tiles": 400,
+   "runTicks": 200
   },
   "bank:seers-village-bank:0>lady-servil": {
    "tiles": 335,
@@ -1918,6 +2155,10 @@
    "tiles": 490,
    "runTicks": 245
   },
+  "bank:seers-village-bank:0>outpost-guard": {
+   "tiles": 371,
+   "runTicks": 185.5
+  },
   "bank:seers-village-bank:0>port-sarim-dock": {
    "tiles": 555,
    "runTicks": 277.5
@@ -1929,6 +2170,10 @@
   "bank:seers-village-bank:0>romeo": {
    "tiles": 664,
    "runTicks": 332
+  },
+  "bank:seers-village-bank:0>rusty-anchor": {
+   "tiles": 566,
+   "runTicks": 283
   },
   "bank:seers-village-bank:0>thormac": {
    "tiles": 124,
@@ -2016,12 +2261,24 @@
    "tiles": 213,
    "runTicks": 106.5
   },
+  "bank:varrock-east-bank:0>fm-line-lumbridge-north": {
+   "tiles": 295,
+   "runTicks": 147.5
+  },
+  "bank:varrock-east-bank:0>goblin-village": {
+   "tiles": 388,
+   "runTicks": 194
+  },
   "bank:varrock-east-bank:0>guildmaster": {
    "tiles": 106,
    "runTicks": 53,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:varrock-east-bank:0>kaqemeex": {
+   "tiles": 374,
+   "runTicks": 187
   },
   "bank:varrock-east-bank:0>lady-servil": {
    "tiles": 938,
@@ -2054,6 +2311,10 @@
     "bkfortressdoor1"
    ]
   },
+  "bank:varrock-east-bank:0>outpost-guard": {
+   "tiles": 1036,
+   "runTicks": 518
+  },
   "bank:varrock-east-bank:0>port-sarim-dock": {
    "tiles": 383,
    "runTicks": 191.5
@@ -2065,6 +2326,10 @@
   "bank:varrock-east-bank:0>romeo": {
    "tiles": 50,
    "runTicks": 25
+  },
+  "bank:varrock-east-bank:0>rusty-anchor": {
+   "tiles": 342,
+   "runTicks": 171
   },
   "bank:varrock-east-bank:0>thormac": {
    "tiles": 738,
@@ -2148,12 +2413,24 @@
    "tiles": 235,
    "runTicks": 117.5
   },
+  "bank:varrock-west-bank:0>fm-line-lumbridge-north": {
+   "tiles": 272,
+   "runTicks": 136
+  },
+  "bank:varrock-west-bank:0>goblin-village": {
+   "tiles": 318,
+   "runTicks": 159
+  },
   "bank:varrock-west-bank:0>guildmaster": {
    "tiles": 84,
    "runTicks": 42,
    "locked": [
     "championdoor"
    ]
+  },
+  "bank:varrock-west-bank:0>kaqemeex": {
+   "tiles": 304,
+   "runTicks": 152
   },
   "bank:varrock-west-bank:0>lady-servil": {
    "tiles": 868,
@@ -2186,6 +2463,10 @@
     "bkfortressdoor1"
    ]
   },
+  "bank:varrock-west-bank:0>outpost-guard": {
+   "tiles": 966,
+   "runTicks": 483
+  },
   "bank:varrock-west-bank:0>port-sarim-dock": {
    "tiles": 313,
    "runTicks": 156.5
@@ -2197,6 +2478,10 @@
   "bank:varrock-west-bank:0>romeo": {
    "tiles": 38,
    "runTicks": 19
+  },
+  "bank:varrock-west-bank:0>rusty-anchor": {
+   "tiles": 272,
+   "runTicks": 136
   },
   "bank:varrock-west-bank:0>thormac": {
    "tiles": 668,
@@ -2269,12 +2554,24 @@
    "tiles": 290,
    "runTicks": 145
   },
+  "barbarian-fly-spot>fm-line-lumbridge-north": {
+   "tiles": 188,
+   "runTicks": 94
+  },
+  "barbarian-fly-spot>goblin-village": {
+   "tiles": 232,
+   "runTicks": 116
+  },
   "barbarian-fly-spot>guildmaster": {
    "tiles": 112,
    "runTicks": 56,
    "locked": [
     "championdoor"
    ]
+  },
+  "barbarian-fly-spot>kaqemeex": {
+   "tiles": 218,
+   "runTicks": 109
   },
   "barbarian-fly-spot>lady-servil": {
    "tiles": 782,
@@ -2307,6 +2604,10 @@
     "bkfortressdoor1"
    ]
   },
+  "barbarian-fly-spot>outpost-guard": {
+   "tiles": 880,
+   "runTicks": 440
+  },
   "barbarian-fly-spot>port-sarim-dock": {
    "tiles": 229,
    "runTicks": 114.5
@@ -2318,6 +2619,10 @@
   "barbarian-fly-spot>romeo": {
    "tiles": 120,
    "runTicks": 60
+  },
+  "barbarian-fly-spot>rusty-anchor": {
+   "tiles": 188,
+   "runTicks": 94
   },
   "barbarian-fly-spot>thormac": {
    "tiles": 582,
@@ -2386,12 +2691,24 @@
    "tiles": 344,
    "runTicks": 172
   },
+  "body-ruins>fm-line-lumbridge-north": {
+   "tiles": 224,
+   "runTicks": 112
+  },
+  "body-ruins>goblin-village": {
+   "tiles": 182,
+   "runTicks": 91
+  },
   "body-ruins>guildmaster": {
    "tiles": 166,
    "runTicks": 83,
    "locked": [
     "championdoor"
    ]
+  },
+  "body-ruins>kaqemeex": {
+   "tiles": 168,
+   "runTicks": 84
   },
   "body-ruins>lady-servil": {
    "tiles": 732,
@@ -2424,6 +2741,10 @@
     "bkfortressdoor1"
    ]
   },
+  "body-ruins>outpost-guard": {
+   "tiles": 830,
+   "runTicks": 415
+  },
   "body-ruins>port-sarim-dock": {
    "tiles": 237,
    "runTicks": 118.5
@@ -2435,6 +2756,10 @@
   "body-ruins>romeo": {
    "tiles": 174,
    "runTicks": 87
+  },
+  "body-ruins>rusty-anchor": {
+   "tiles": 203,
+   "runTicks": 101.5
   },
   "body-ruins>thormac": {
    "tiles": 532,
@@ -2500,12 +2825,24 @@
    "runTicks": 418,
    "toll": 10
   },
+  "camelot>fm-line-lumbridge-north": {
+   "tiles": 707,
+   "runTicks": 353.5
+  },
+  "camelot>goblin-village": {
+   "tiles": 440,
+   "runTicks": 220
+  },
   "camelot>guildmaster": {
    "tiles": 652,
    "runTicks": 326,
    "locked": [
     "championdoor"
    ]
+  },
+  "camelot>kaqemeex": {
+   "tiles": 396,
+   "runTicks": 198
   },
   "camelot>lady-servil": {
    "tiles": 368,
@@ -2535,6 +2872,10 @@
    "tiles": 486,
    "runTicks": 243
   },
+  "camelot>outpost-guard": {
+   "tiles": 428,
+   "runTicks": 214
+  },
   "camelot>port-sarim-dock": {
    "tiles": 551,
    "runTicks": 275.5
@@ -2546,6 +2887,10 @@
   "camelot>romeo": {
    "tiles": 660,
    "runTicks": 330
+  },
+  "camelot>rusty-anchor": {
+   "tiles": 562,
+   "runTicks": 281
   },
   "camelot>thormac": {
    "tiles": 155,
@@ -2607,12 +2952,24 @@
    "runTicks": 456,
    "toll": 10
   },
+  "caroline>fm-line-lumbridge-north": {
+   "tiles": 783,
+   "runTicks": 391.5
+  },
+  "caroline>goblin-village": {
+   "tiles": 516,
+   "runTicks": 258
+  },
   "caroline>guildmaster": {
    "tiles": 728,
    "runTicks": 364,
    "locked": [
     "championdoor"
    ]
+  },
+  "caroline>kaqemeex": {
+   "tiles": 472,
+   "runTicks": 236
   },
   "caroline>lady-servil": {
    "tiles": 176,
@@ -2642,6 +2999,13 @@
    "tiles": 562,
    "runTicks": 281
   },
+  "caroline>outpost-guard": {
+   "tiles": 364,
+   "runTicks": 182,
+   "locked": [
+    "loc_2551"
+   ]
+  },
   "caroline>port-sarim-dock": {
    "tiles": 627,
    "runTicks": 313.5
@@ -2653,6 +3017,10 @@
   "caroline>romeo": {
    "tiles": 736,
    "runTicks": 368
+  },
+  "caroline>rusty-anchor": {
+   "tiles": 638,
+   "runTicks": 319
   },
   "caroline>thormac": {
    "tiles": 104,
@@ -2710,12 +3078,24 @@
    "runTicks": 353.5,
    "toll": 10
   },
+  "catherby-shore>fm-line-lumbridge-north": {
+   "tiles": 578,
+   "runTicks": 289
+  },
+  "catherby-shore>goblin-village": {
+   "tiles": 311,
+   "runTicks": 155.5
+  },
   "catherby-shore>guildmaster": {
    "tiles": 523,
    "runTicks": 261.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "catherby-shore>kaqemeex": {
+   "tiles": 267,
+   "runTicks": 133.5
   },
   "catherby-shore>lady-servil": {
    "tiles": 358,
@@ -2745,6 +3125,10 @@
    "tiles": 357,
    "runTicks": 178.5
   },
+  "catherby-shore>outpost-guard": {
+   "tiles": 456,
+   "runTicks": 228
+  },
   "catherby-shore>port-sarim-dock": {
    "tiles": 422,
    "runTicks": 211
@@ -2756,6 +3140,10 @@
   "catherby-shore>romeo": {
    "tiles": 531,
    "runTicks": 265.5
+  },
+  "catherby-shore>rusty-anchor": {
+   "tiles": 433,
+   "runTicks": 216.5
   },
   "catherby-shore>thormac": {
    "tiles": 158,
@@ -2808,12 +3196,24 @@
    "tiles": 223,
    "runTicks": 111.5
   },
+  "dimintheis>fm-line-lumbridge-north": {
+   "tiles": 292,
+   "runTicks": 146
+  },
+  "dimintheis>goblin-village": {
+   "tiles": 408,
+   "runTicks": 204
+  },
   "dimintheis>guildmaster": {
    "tiles": 103,
    "runTicks": 51.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "dimintheis>kaqemeex": {
+   "tiles": 394,
+   "runTicks": 197
   },
   "dimintheis>lady-servil": {
    "tiles": 958,
@@ -2846,6 +3246,10 @@
     "bkfortressdoor1"
    ]
   },
+  "dimintheis>outpost-guard": {
+   "tiles": 1056,
+   "runTicks": 528
+  },
   "dimintheis>port-sarim-dock": {
    "tiles": 403,
    "runTicks": 201.5
@@ -2857,6 +3261,10 @@
   "dimintheis>romeo": {
    "tiles": 70,
    "runTicks": 35
+  },
+  "dimintheis>rusty-anchor": {
+   "tiles": 362,
+   "runTicks": 181
   },
   "dimintheis>thormac": {
    "tiles": 758,
@@ -2906,12 +3314,24 @@
    "runTicks": 124,
    "toll": 10
   },
+  "draynor-willows>fm-line-lumbridge-north": {
+   "tiles": 149,
+   "runTicks": 74.5
+  },
+  "draynor-willows>goblin-village": {
+   "tiles": 331,
+   "runTicks": 165.5
+  },
   "draynor-willows>guildmaster": {
    "tiles": 265,
    "runTicks": 132.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "draynor-willows>kaqemeex": {
+   "tiles": 316,
+   "runTicks": 158
   },
   "draynor-willows>lady-servil": {
    "tiles": 839,
@@ -2941,6 +3361,10 @@
    "tiles": 337,
    "runTicks": 168.5
   },
+  "draynor-willows>outpost-guard": {
+   "tiles": 937,
+   "runTicks": 468.5
+  },
   "draynor-willows>port-sarim-dock": {
    "tiles": 121,
    "runTicks": 60.5
@@ -2952,6 +3376,10 @@
   "draynor-willows>romeo": {
    "tiles": 303,
    "runTicks": 151.5
+  },
+  "draynor-willows>rusty-anchor": {
+   "tiles": 80,
+   "runTicks": 40
   },
   "draynor-willows>thormac": {
    "tiles": 639,
@@ -2996,12 +3424,24 @@
    "tiles": 230,
    "runTicks": 115
   },
+  "earth-ruins>fm-line-lumbridge-north": {
+   "tiles": 313,
+   "runTicks": 156.5
+  },
+  "earth-ruins>goblin-village": {
+   "tiles": 450,
+   "runTicks": 225
+  },
   "earth-ruins>guildmaster": {
    "tiles": 159,
    "runTicks": 79.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "earth-ruins>kaqemeex": {
+   "tiles": 436,
+   "runTicks": 218
   },
   "earth-ruins>lady-servil": {
    "tiles": 1000,
@@ -3031,6 +3471,10 @@
    "tiles": 345,
    "runTicks": 172.5
   },
+  "earth-ruins>outpost-guard": {
+   "tiles": 1098,
+   "runTicks": 549
+  },
   "earth-ruins>port-sarim-dock": {
    "tiles": 445,
    "runTicks": 222.5
@@ -3042,6 +3486,10 @@
   "earth-ruins>romeo": {
    "tiles": 112,
    "runTicks": 56
+  },
+  "earth-ruins>rusty-anchor": {
+   "tiles": 404,
+   "runTicks": 202
   },
   "earth-ruins>thormac": {
    "tiles": 800,
@@ -3086,12 +3534,24 @@
    "tiles": 164,
    "runTicks": 82
   },
+  "exam-centre>fm-line-lumbridge-north": {
+   "tiles": 258,
+   "runTicks": 129
+  },
+  "exam-centre>goblin-village": {
+   "tiles": 498,
+   "runTicks": 249
+  },
   "exam-centre>guildmaster": {
    "tiles": 178,
    "runTicks": 89,
    "locked": [
     "championdoor"
    ]
+  },
+  "exam-centre>kaqemeex": {
+   "tiles": 484,
+   "runTicks": 242
   },
   "exam-centre>lady-servil": {
    "tiles": 1048,
@@ -3124,6 +3584,10 @@
     "bkfortressdoor1"
    ]
   },
+  "exam-centre>outpost-guard": {
+   "tiles": 1146,
+   "runTicks": 573
+  },
   "exam-centre>port-sarim-dock": {
    "tiles": 412,
    "runTicks": 206
@@ -3135,6 +3599,10 @@
   "exam-centre>romeo": {
    "tiles": 202,
    "runTicks": 101
+  },
+  "exam-centre>rusty-anchor": {
+   "tiles": 371,
+   "runTicks": 185.5
   },
   "exam-centre>thormac": {
    "tiles": 848,
@@ -3172,12 +3640,24 @@
    "runTicks": 232.5,
    "toll": 10
   },
+  "falador-castle>fm-line-lumbridge-north": {
+   "tiles": 336,
+   "runTicks": 168
+  },
+  "falador-castle>goblin-village": {
+   "tiles": 168,
+   "runTicks": 84
+  },
   "falador-castle>guildmaster": {
    "tiles": 293,
    "runTicks": 146.5,
    "locked": [
     "championdoor"
    ]
+  },
+  "falador-castle>kaqemeex": {
+   "tiles": 153,
+   "runTicks": 76.5
   },
   "falador-castle>lady-servil": {
    "tiles": 717,
@@ -3207,6 +3687,10 @@
    "tiles": 174,
    "runTicks": 87
   },
+  "falador-castle>outpost-guard": {
+   "tiles": 815,
+   "runTicks": 407.5
+  },
   "falador-castle>port-sarim-dock": {
    "tiles": 215,
    "runTicks": 107.5
@@ -3218,6 +3702,10 @@
   "falador-castle>romeo": {
    "tiles": 301,
    "runTicks": 150.5
+  },
+  "falador-castle>rusty-anchor": {
+   "tiles": 206,
+   "runTicks": 103
   },
   "falador-castle>thormac": {
    "tiles": 517,
@@ -3251,12 +3739,24 @@
    "runTicks": 234,
    "toll": 10
   },
+  "falador-white-knights>fm-line-lumbridge-north": {
+   "tiles": 339,
+   "runTicks": 169.5
+  },
+  "falador-white-knights>goblin-village": {
+   "tiles": 171,
+   "runTicks": 85.5
+  },
   "falador-white-knights>guildmaster": {
    "tiles": 296,
    "runTicks": 148,
    "locked": [
     "championdoor"
    ]
+  },
+  "falador-white-knights>kaqemeex": {
+   "tiles": 156,
+   "runTicks": 78
   },
   "falador-white-knights>lady-servil": {
    "tiles": 720,
@@ -3286,6 +3786,10 @@
    "tiles": 177,
    "runTicks": 88.5
   },
+  "falador-white-knights>outpost-guard": {
+   "tiles": 818,
+   "runTicks": 409
+  },
   "falador-white-knights>port-sarim-dock": {
    "tiles": 218,
    "runTicks": 109
@@ -3297,6 +3801,10 @@
   "falador-white-knights>romeo": {
    "tiles": 304,
    "runTicks": 152
+  },
+  "falador-white-knights>rusty-anchor": {
+   "tiles": 209,
+   "runTicks": 104.5
   },
   "falador-white-knights>thormac": {
    "tiles": 520,
@@ -3325,12 +3833,27 @@
    "tiles": 124,
    "runTicks": 62
   },
+  "fire-ruins>fm-line-lumbridge-north": {
+   "tiles": 180,
+   "runTicks": 100,
+   "toll": 10
+  },
+  "fire-ruins>goblin-village": {
+   "tiles": 508,
+   "runTicks": 264,
+   "toll": 10
+  },
   "fire-ruins>guildmaster": {
    "tiles": 182,
    "runTicks": 91,
    "locked": [
     "championdoor"
    ]
+  },
+  "fire-ruins>kaqemeex": {
+   "tiles": 494,
+   "runTicks": 257,
+   "toll": 10
   },
   "fire-ruins>lady-servil": {
    "tiles": 1044,
@@ -3368,6 +3891,11 @@
     "bkfortressdoor1"
    ]
   },
+  "fire-ruins>outpost-guard": {
+   "tiles": 1142,
+   "runTicks": 581,
+   "toll": 10
+  },
   "fire-ruins>port-sarim-dock": {
    "tiles": 326,
    "runTicks": 173,
@@ -3381,6 +3909,11 @@
   "fire-ruins>romeo": {
    "tiles": 213,
    "runTicks": 106.5
+  },
+  "fire-ruins>rusty-anchor": {
+   "tiles": 285,
+   "runTicks": 152.5,
+   "toll": 10
   },
   "fire-ruins>thormac": {
    "tiles": 844,
@@ -3411,6 +3944,192 @@
    "tiles": 462,
    "runTicks": 241,
    "toll": 10
+  },
+  "fm-line-lumbridge-north>goblin-village": {
+   "tiles": 388,
+   "runTicks": 194
+  },
+  "fm-line-lumbridge-north>guildmaster": {
+   "tiles": 203,
+   "runTicks": 101.5,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "fm-line-lumbridge-north>kaqemeex": {
+   "tiles": 374,
+   "runTicks": 187
+  },
+  "fm-line-lumbridge-north>lady-servil": {
+   "tiles": 935,
+   "runTicks": 467.5
+  },
+  "fm-line-lumbridge-north>lava-maze-runite": {
+   "tiles": 671,
+   "runTicks": 335.5
+  },
+  "fm-line-lumbridge-north>lawgof": {
+   "tiles": 903,
+   "runTicks": 451.5
+  },
+  "fm-line-lumbridge-north>lumbridge-kitchen": {
+   "tiles": 154,
+   "runTicks": 77
+  },
+  "fm-line-lumbridge-north>lumbridge-spawn": {
+   "tiles": 132,
+   "runTicks": 66
+  },
+  "fm-line-lumbridge-north>mage-arena-lever": {
+   "tiles": 811,
+   "runTicks": 405.5
+  },
+  "fm-line-lumbridge-north>mind-ruins": {
+   "tiles": 355,
+   "runTicks": 177.5,
+   "locked": [
+    "bkfortressdoor1"
+   ]
+  },
+  "fm-line-lumbridge-north>outpost-guard": {
+   "tiles": 1033,
+   "runTicks": 516.5
+  },
+  "fm-line-lumbridge-north>port-sarim-dock": {
+   "tiles": 217,
+   "runTicks": 108.5
+  },
+  "fm-line-lumbridge-north>port-sarim-monks": {
+   "tiles": 197,
+   "runTicks": 98.5
+  },
+  "fm-line-lumbridge-north>romeo": {
+   "tiles": 259,
+   "runTicks": 129.5
+  },
+  "fm-line-lumbridge-north>rusty-anchor": {
+   "tiles": 176,
+   "runTicks": 88
+  },
+  "fm-line-lumbridge-north>thormac": {
+   "tiles": 735,
+   "runTicks": 367.5
+  },
+  "fm-line-lumbridge-north>varrock-east-iron": {
+   "tiles": 211,
+   "runTicks": 105.5
+  },
+  "fm-line-lumbridge-north>varrock-west-anvil": {
+   "tiles": 268,
+   "runTicks": 134
+  },
+  "fm-line-lumbridge-north>water-ruins": {
+   "tiles": 178,
+   "runTicks": 89
+  },
+  "fm-line-lumbridge-north>wilderness-course": {
+   "tiles": 766,
+   "runTicks": 383,
+   "locked": [
+    "loc_2309"
+   ]
+  },
+  "fm-line-lumbridge-north>witch-house": {
+   "tiles": 342,
+   "runTicks": 171
+  },
+  "goblin-village>guildmaster": {
+   "tiles": 330,
+   "runTicks": 165,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "goblin-village>kaqemeex": {
+   "tiles": 104,
+   "runTicks": 52
+  },
+  "goblin-village>lady-servil": {
+   "tiles": 668,
+   "runTicks": 334
+  },
+  "goblin-village>lava-maze-runite": {
+   "tiles": 475,
+   "runTicks": 237.5
+  },
+  "goblin-village>lawgof": {
+   "tiles": 636,
+   "runTicks": 318
+  },
+  "goblin-village>lumbridge-kitchen": {
+   "tiles": 486,
+   "runTicks": 243
+  },
+  "goblin-village>lumbridge-spawn": {
+   "tiles": 464,
+   "runTicks": 232
+  },
+  "goblin-village>mage-arena-lever": {
+   "tiles": 638,
+   "runTicks": 319
+  },
+  "goblin-village>mind-ruins": {
+   "tiles": 118,
+   "runTicks": 59
+  },
+  "goblin-village>outpost-guard": {
+   "tiles": 766,
+   "runTicks": 383
+  },
+  "goblin-village>port-sarim-dock": {
+   "tiles": 306,
+   "runTicks": 153
+  },
+  "goblin-village>port-sarim-monks": {
+   "tiles": 297,
+   "runTicks": 148.5
+  },
+  "goblin-village>romeo": {
+   "tiles": 338,
+   "runTicks": 169
+  },
+  "goblin-village>rusty-anchor": {
+   "tiles": 297,
+   "runTicks": 148.5
+  },
+  "goblin-village>thormac": {
+   "tiles": 468,
+   "runTicks": 234
+  },
+  "goblin-village>varrock-east-iron": {
+   "tiles": 418,
+   "runTicks": 209
+  },
+  "goblin-village>varrock-west-anvil": {
+   "tiles": 314,
+   "runTicks": 157
+  },
+  "goblin-village>water-ruins": {
+   "tiles": 428,
+   "runTicks": 214
+  },
+  "goblin-village>wilderness-course": {
+   "tiles": 570,
+   "runTicks": 285,
+   "locked": [
+    "loc_2309"
+   ]
+  },
+  "goblin-village>witch-house": {
+   "tiles": 72,
+   "runTicks": 36
+  },
+  "guildmaster>kaqemeex": {
+   "tiles": 316,
+   "runTicks": 158,
+   "locked": [
+    "championdoor"
+   ]
   },
   "guildmaster>lady-servil": {
    "tiles": 880,
@@ -3462,6 +4181,13 @@
     "championdoor"
    ]
   },
+  "guildmaster>outpost-guard": {
+   "tiles": 978,
+   "runTicks": 489,
+   "locked": [
+    "championdoor"
+   ]
+  },
   "guildmaster>port-sarim-dock": {
    "tiles": 325,
    "runTicks": 162.5,
@@ -3479,6 +4205,13 @@
   "guildmaster>romeo": {
    "tiles": 70,
    "runTicks": 35,
+   "locked": [
+    "championdoor"
+   ]
+  },
+  "guildmaster>rusty-anchor": {
+   "tiles": 284,
+   "runTicks": 142,
    "locked": [
     "championdoor"
    ]
@@ -3526,6 +4259,81 @@
     "championdoor"
    ]
   },
+  "kaqemeex>lady-servil": {
+   "tiles": 624,
+   "runTicks": 312
+  },
+  "kaqemeex>lava-maze-runite": {
+   "tiles": 507,
+   "runTicks": 253.5
+  },
+  "kaqemeex>lawgof": {
+   "tiles": 592,
+   "runTicks": 296
+  },
+  "kaqemeex>lumbridge-kitchen": {
+   "tiles": 472,
+   "runTicks": 236
+  },
+  "kaqemeex>lumbridge-spawn": {
+   "tiles": 450,
+   "runTicks": 225
+  },
+  "kaqemeex>mage-arena-lever": {
+   "tiles": 670,
+   "runTicks": 335
+  },
+  "kaqemeex>mind-ruins": {
+   "tiles": 150,
+   "runTicks": 75
+  },
+  "kaqemeex>outpost-guard": {
+   "tiles": 722,
+   "runTicks": 361
+  },
+  "kaqemeex>port-sarim-dock": {
+   "tiles": 291,
+   "runTicks": 145.5
+  },
+  "kaqemeex>port-sarim-monks": {
+   "tiles": 282,
+   "runTicks": 141
+  },
+  "kaqemeex>romeo": {
+   "tiles": 324,
+   "runTicks": 162
+  },
+  "kaqemeex>rusty-anchor": {
+   "tiles": 282,
+   "runTicks": 141
+  },
+  "kaqemeex>thormac": {
+   "tiles": 424,
+   "runTicks": 212
+  },
+  "kaqemeex>varrock-east-iron": {
+   "tiles": 404,
+   "runTicks": 202
+  },
+  "kaqemeex>varrock-west-anvil": {
+   "tiles": 300,
+   "runTicks": 150
+  },
+  "kaqemeex>water-ruins": {
+   "tiles": 413,
+   "runTicks": 206.5
+  },
+  "kaqemeex>wilderness-course": {
+   "tiles": 602,
+   "runTicks": 301,
+   "locked": [
+    "loc_2309"
+   ]
+  },
+  "kaqemeex>witch-house": {
+   "tiles": 41,
+   "runTicks": 20.5
+  },
   "lady-servil>lava-maze-runite": {
    "tiles": 1071,
    "runTicks": 535.5
@@ -3550,6 +4358,10 @@
    "tiles": 714,
    "runTicks": 357
   },
+  "lady-servil>outpost-guard": {
+   "tiles": 397,
+   "runTicks": 198.5
+  },
   "lady-servil>port-sarim-dock": {
    "tiles": 779,
    "runTicks": 389.5
@@ -3561,6 +4373,10 @@
   "lady-servil>romeo": {
    "tiles": 888,
    "runTicks": 444
+  },
+  "lady-servil>rusty-anchor": {
+   "tiles": 790,
+   "runTicks": 395
   },
   "lady-servil>thormac": {
    "tiles": 248,
@@ -3609,6 +4425,10 @@
    "tiles": 394,
    "runTicks": 197
   },
+  "lava-maze-runite>outpost-guard": {
+   "tiles": 1169,
+   "runTicks": 584.5
+  },
   "lava-maze-runite>port-sarim-dock": {
    "tiles": 697,
    "runTicks": 348.5
@@ -3620,6 +4440,10 @@
   "lava-maze-runite>romeo": {
    "tiles": 491,
    "runTicks": 245.5
+  },
+  "lava-maze-runite>rusty-anchor": {
+   "tiles": 663,
+   "runTicks": 331.5
   },
   "lava-maze-runite>thormac": {
    "tiles": 871,
@@ -3664,6 +4488,10 @@
    "tiles": 682,
    "runTicks": 341
   },
+  "lawgof>outpost-guard": {
+   "tiles": 138,
+   "runTicks": 69
+  },
   "lawgof>port-sarim-dock": {
    "tiles": 747,
    "runTicks": 373.5
@@ -3675,6 +4503,10 @@
   "lawgof>romeo": {
    "tiles": 856,
    "runTicks": 428
+  },
+  "lawgof>rusty-anchor": {
+   "tiles": 758,
+   "runTicks": 379
   },
   "lawgof>thormac": {
    "tiles": 194,
@@ -3718,6 +4550,10 @@
     "bkfortressdoor1"
    ]
   },
+  "lumbridge-kitchen>outpost-guard": {
+   "tiles": 1104,
+   "runTicks": 552
+  },
   "lumbridge-kitchen>port-sarim-dock": {
    "tiles": 288,
    "runTicks": 144
@@ -3729,6 +4565,10 @@
   "lumbridge-kitchen>romeo": {
    "tiles": 249,
    "runTicks": 124.5
+  },
+  "lumbridge-kitchen>rusty-anchor": {
+   "tiles": 247,
+   "runTicks": 123.5
   },
   "lumbridge-kitchen>thormac": {
    "tiles": 806,
@@ -3768,6 +4608,10 @@
     "bkfortressdoor1"
    ]
   },
+  "lumbridge-spawn>outpost-guard": {
+   "tiles": 1082,
+   "runTicks": 541
+  },
   "lumbridge-spawn>port-sarim-dock": {
    "tiles": 266,
    "runTicks": 133
@@ -3779,6 +4623,10 @@
   "lumbridge-spawn>romeo": {
    "tiles": 227,
    "runTicks": 113.5
+  },
+  "lumbridge-spawn>rusty-anchor": {
+   "tiles": 225,
+   "runTicks": 112.5
   },
   "lumbridge-spawn>thormac": {
    "tiles": 784,
@@ -3807,6 +4655,10 @@
    "tiles": 418,
    "runTicks": 209
   },
+  "mind-ruins>outpost-guard": {
+   "tiles": 812,
+   "runTicks": 406
+  },
   "mind-ruins>port-sarim-dock": {
    "tiles": 312,
    "runTicks": 156
@@ -3821,6 +4673,10 @@
    "locked": [
     "bkfortressdoor1"
    ]
+  },
+  "mind-ruins>rusty-anchor": {
+   "tiles": 303,
+   "runTicks": 151.5
   },
   "mind-ruins>thormac": {
    "tiles": 514,
@@ -3859,6 +4715,49 @@
    "tiles": 353,
    "runTicks": 176.5
   },
+  "outpost-guard>port-sarim-dock": {
+   "tiles": 877,
+   "runTicks": 438.5
+  },
+  "outpost-guard>port-sarim-monks": {
+   "tiles": 875,
+   "runTicks": 437.5
+  },
+  "outpost-guard>romeo": {
+   "tiles": 986,
+   "runTicks": 493
+  },
+  "outpost-guard>rusty-anchor": {
+   "tiles": 888,
+   "runTicks": 444
+  },
+  "outpost-guard>thormac": {
+   "tiles": 324,
+   "runTicks": 162
+  },
+  "outpost-guard>varrock-east-iron": {
+   "tiles": 1066,
+   "runTicks": 533
+  },
+  "outpost-guard>varrock-west-anvil": {
+   "tiles": 962,
+   "runTicks": 481
+  },
+  "outpost-guard>water-ruins": {
+   "tiles": 1034,
+   "runTicks": 517
+  },
+  "outpost-guard>wilderness-course": {
+   "tiles": 1264,
+   "runTicks": 632,
+   "locked": [
+    "loc_2309"
+   ]
+  },
+  "outpost-guard>witch-house": {
+   "tiles": 694,
+   "runTicks": 347
+  },
   "port-sarim-dock>port-sarim-monks": {
    "tiles": 39,
    "runTicks": 19.5
@@ -3866,6 +4765,10 @@
   "port-sarim-dock>romeo": {
    "tiles": 333,
    "runTicks": 166.5
+  },
+  "port-sarim-dock>rusty-anchor": {
+   "tiles": 62,
+   "runTicks": 31
   },
   "port-sarim-dock>thormac": {
    "tiles": 579,
@@ -3898,6 +4801,10 @@
    "tiles": 314,
    "runTicks": 157
   },
+  "port-sarim-monks>rusty-anchor": {
+   "tiles": 40,
+   "runTicks": 20
+  },
   "port-sarim-monks>thormac": {
    "tiles": 577,
    "runTicks": 288.5
@@ -3925,6 +4832,10 @@
    "tiles": 250,
    "runTicks": 125
   },
+  "romeo>rusty-anchor": {
+   "tiles": 292,
+   "runTicks": 146
+  },
   "romeo>thormac": {
    "tiles": 688,
    "runTicks": 344
@@ -3951,6 +4862,33 @@
   "romeo>witch-house": {
    "tiles": 292,
    "runTicks": 146
+  },
+  "rusty-anchor>thormac": {
+   "tiles": 590,
+   "runTicks": 295
+  },
+  "rusty-anchor>varrock-east-iron": {
+   "tiles": 324,
+   "runTicks": 162
+  },
+  "rusty-anchor>varrock-west-anvil": {
+   "tiles": 268,
+   "runTicks": 134
+  },
+  "rusty-anchor>water-ruins": {
+   "tiles": 177,
+   "runTicks": 88.5
+  },
+  "rusty-anchor>wilderness-course": {
+   "tiles": 758,
+   "runTicks": 379,
+   "locked": [
+    "loc_2309"
+   ]
+  },
+  "rusty-anchor>witch-house": {
+   "tiles": 250,
+   "runTicks": 125
   },
   "thormac>varrock-east-iron": {
    "tiles": 768,
@@ -4032,6 +4970,11 @@
   "lumbridge-spawn": {
    "bank": "bank:al-kharid-bank:0",
    "runTicks": 65.5,
+   "method": "path"
+  },
+  "fm-line-lumbridge-north": {
+   "bank": "bank:draynor-bank:0",
+   "runTicks": 69.5,
    "method": "path"
   },
   "lumbridge-kitchen": {
@@ -4134,6 +5077,11 @@
    "runTicks": 51,
    "method": "path"
   },
+  "outpost-guard": {
+   "bank": "bank:ardougne-north-bank:0",
+   "runTicks": 131.5,
+   "method": "path"
+  },
   "thormac": {
    "bank": "bank:seers-village-bank:0",
    "runTicks": 62,
@@ -4172,6 +5120,21 @@
   "caroline": {
    "bank": "bank:ardougne-south-bank:0",
    "runTicks": 46.5,
+   "method": "path"
+  },
+  "kaqemeex": {
+   "bank": "bank:falador-west-bank:0",
+   "runTicks": 67,
+   "method": "path"
+  },
+  "rusty-anchor": {
+   "bank": "bank:draynor-bank:0",
+   "runTicks": 36,
+   "method": "path"
+  },
+  "goblin-village": {
+   "bank": "bank:falador-west-bank:0",
+   "runTicks": 74.5,
    "method": "path"
   }
  },

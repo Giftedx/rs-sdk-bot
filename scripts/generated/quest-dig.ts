@@ -51,7 +51,7 @@ const KEEP = new Set<number>([ITEM.tea, ITEM.opal, ITEM.rope, ITEM.vial, ITEM.ch
     ITEM.invite, ITEM.tablet, ITEM.powder, ITEM.nitrate, ITEM.liquid, ITEM.nitro, ITEM.ground, ITEM.mix1, ITEM.mix2,
     ITEM.compound, ITEM.root, ITEM.key, ITEM.law, ITEM.air, ITEM.fire, ITEM.lobster, 995]);
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 6000 });
 try {
     let questDone = false;
     // Every game message once, with the script tick it was seen (gameMessages is a short rolling list).
@@ -66,8 +66,13 @@ try {
             mlog.push({ t: q.T(), text: m.text });
             if (/quest complete/i.test(m.text)) questDone = true;
         }
+        // A level-up page blocks the next pan, pickpocket or dig until it is clicked (trial t3 lost 8 ticks a page;
+        // Mining goes from 1 to about 30 here). It is clicked the tick it shows.
+        const d: any = q.s.sdk.getDialog();
+        if (d?.isOpen && !d.isWaiting && /just advanced/i.test([d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].join(' '))) void q.s.sdk.sendClickDialog(0);
     });
-    const msgSince = (re: RegExp, t0: number): boolean => mlog.some(e => e.t >= t0 && re.test(e.text));
+    // Seen after tick t0 (a message seen in the tick an action was sent belongs to the action before it).
+    const msgSince = (re: RegExp, t0: number): boolean => mlog.some(e => e.t > t0 && re.test(e.text));
     const tally = (re: RegExp): string => { const c: Record<string, number> = {}; for (const e of mlog) if (re.test(e.text)) c[e.text] = (c[e.text] ?? 0) + 1; return Object.entries(c).map(([k, v]) => `${k.replace(/^You (find|steal) /, '')}=${v}`).join('; '); };
     const x = (): number => q.pos()?.worldX ?? 0;
     const z = (): number => q.pos()?.worldZ ?? 0;
@@ -83,15 +88,19 @@ try {
     const nearestSpawn = (id: number) => [...(SPAWNS[id] ?? [])].sort((a, b) => q.cheb(a.x, a.z) - q.cheb(b.x, b.z))[0]!;
     // Finds an NPC by type id: the nearest in view, else walks to its spawns in turn.
     const findNpc = async (label: string, id: number, home?: { x: number; z: number }): Promise<any> => {
+        if (!npcs(id)[0]) await q.waitUntil(() => !!npcs(id)[0], 3);
         if (npcs(id)[0]) return npcs(id)[0];
         const spots = home ? [home] : [...(SPAWNS[id] ?? [])].sort((a, b) => q.cheb(a.x, a.z) - q.cheb(b.x, b.z));
         for (const sp of spots) {
             await q.walk(`${label} approach`, [{ x: sp.x, z: sp.z, tol: 4 }]);
             if (npcs(id)[0]) return npcs(id)[0];
         }
+        if (!npcs(id)[0]) console.log(`WARN ${label}: npcs in view ${(q.st()?.nearbyNpcs ?? []).map((n: any) => `${n.id}:${n.name}@${n.x},${n.z}`).join(' ')}`);
         return npcs(id)[0] ?? q.fail(`${label}: no npc ${id}`);
     };
-    // Talk to an NPC by type id (the three students are all "Student"); waits for the dialog, then pages.
+    // Talk to an NPC by type id (the three students are all "Student"); waits for the dialog, then pages. It returns
+    // as soon as ok() holds, with the dialog maybe still open: the next walk or click closes it, and every state change
+    // that ok() tests comes before the last pages. A check that needs the last page clicked tests !dialogOpen() itself.
     const talkId = async (label: string, id: number, pats: RegExp[], ok: () => boolean, home?: { x: number; z: number }, maxTicks = 60): Promise<void> => {
         for (let i = 0; i < 4 && !ok(); i++) {
             await q.guard(label);
@@ -101,7 +110,7 @@ try {
             await q.waitUntil(() => q.dialogOpen(), 20);
             if (!q.dialogOpen()) { console.log(`WARN ${label} no dialog: npc ${n.x},${n.z} me ${x()},${z()} t=${q.T()}`); continue; }
             let shut = 0;
-            await q.converse(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return (ok() && !q.dialogOpen()) || shut >= 2; }, maxTicks);
+            await q.converse(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 2; }, maxTicks);
         }
         if (!ok()) await q.fail(`talk ${label}`);
     };
@@ -115,7 +124,7 @@ try {
             await q.useOnNpc(item, n);
             await q.waitUntil(() => q.dialogOpen() || ok(), 20);
             let shut = 0;
-            await q.converse([], () => { shut = q.dialogOpen() ? 0 : shut + 1; return (ok() && !q.dialogOpen()) || shut >= 2; }, maxTicks);
+            await q.converse([], () => { shut = q.dialogOpen() ? 0 : shut + 1; return ok() || shut >= 2; }, maxTicks);
         }
         if (!ok()) await q.fail(`use ${label}`);
     };
@@ -151,9 +160,14 @@ try {
         await q.walk('to curator', [{ x: CURATOR.x, z: CURATOR.z - 2, tol: 2 }]);
         await talkId('curator', NPC.curator, [], () => q.has(ITEM.stamped), CURATOR, 40);
         q.milestone('stamped');
-        await toExaminer();
+        // Out by the museum's west door and the Varrock street to the east gate: lockeddoor1 (1591 at 3268,3435,
+        // maps/m51_53.jm2) is on the SDK's shortest path and stays shut ("The door is locked tight"; trial t1 lost 241
+        // ticks there).
+        await q.walk('museum to exam centre', [{ x: 3244, z: 3439, tol: 2 }, { x: 3241, z: 3431, tol: 2 }, { x: 3272, z: 3430, tol: 2 },
+            { x: 3289, z: 3400, tol: 3 }, { x: 3308, z: 3346, tol: 3 }, { x: EXAMINER.x, z: EXAMINER.z, tol: 3 }]);
         // The stamped letter starts exam 1 at once; with no errands done it cannot pass (examiner.rs2:68-77, 256-270).
-        await talkId('examiner 2', NPC.examiner, [/vegetarianism/i, /small pink fish/i, /rubber chickens/i], () => !q.has(ITEM.stamped) && q.sawText(/let's see how you did/i), EXAMINER, 80);
+        // The stage is set before the questions, so the bot walks away from them.
+        await talkId('examiner 2', NPC.examiner, [/vegetarianism/i, /small pink fish/i, /rubber chickens/i], () => !q.has(ITEM.stamped), EXAMINER, 80);
         q.milestone(2);
     }
 
@@ -161,8 +175,8 @@ try {
     if (at('errands')) {
         if (!q.has(ITEM.s3)) {
             await q.walk('to bush', [{ x: L.bush.x, z: L.bush.z + 1, tol: 1 }]);
-            await q.step('bush', () => q.opLoc(L.bush, 1), () => q.has(ITEM.s3), 12, 4);
-            await closeDialog();
+            await q.step('bush', () => q.opLoc(L.bush, 1), () => q.has(ITEM.s3) || q.dialogOpen(), 12, 4);
+            await q.converse([], () => q.has(ITEM.s3), 8);
         }
         q.milestone('s3');
         // The panning guide takes the tea (panning_guide.rs2:166-181); the tray lies at 3369,3378 (maps/m52_52.jm2 OBJ).
@@ -171,26 +185,28 @@ try {
         if (!q.has(ITEM.tray) && !q.has(ITEM.trayMud)) await pickup('tray', ITEM.tray);
         q.milestone('tea');
         // Pan and search until rock sample 2: 3 in 40 a search (area_digsite.rs2:40-69).
-        let pans = 0;
-        for (let i = 0; i < 120 && !q.has(ITEM.s2); i++) {
+        // The next action is sent as soon as the tray changes; the objbox is clicked only when that action is dropped.
+        let pans = 0, dropped = 0;
+        // The panning point's only op is op1 "Look" (all.loc), which runs [oploc1,panning_point].
+        const pan = () => q.findLoc(l => PAN.some(t => t.x === l.x && t.z === l.z) && /panning point/i.test(l.name)) ?? q.findLoc(l => /panning point/i.test(l.name));
+        for (let i = 0; i < 400 && !q.has(ITEM.s2); i++) {
             await q.guard('panning');
             await dropJunk(3);
             if (q.has(ITEM.trayMud)) {
                 await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.trayMud)!, optionIndex: 2, reason: 'SDK' });
-                await q.waitUntil(() => q.has(ITEM.tray) || q.dialogOpen(), 6);
-                await closeDialog();
+                await q.waitUntil(() => q.has(ITEM.tray), 4);
+                if (!q.has(ITEM.tray)) { dropped++; await closeDialog(); }
                 continue;
             }
-            const p = PAN.map(t => ({ t, l: q.findLoc(l => l.x === t.x && l.z === t.z && /pan/i.test(l.name) || (l.x === t.x && l.z === t.z && (l.optionsWithIndex ?? []).some((o: any) => /pan/i.test(o.text)))) })).find(o => o.l)?.l
-                ?? q.findLoc(l => (l.optionsWithIndex ?? []).some((o: any) => /^pan$/i.test(o.text)));
+            const p = pan();
             if (!p) { console.log(`WARN no panning point near ${x()},${z()}`); await q.walk('to pan', [{ x: 3377, z: 3374, tol: 1 }]); continue; }
             pans++;
-            await q.opLoc(p, q.opIndex(p, /pan/i));
-            await q.waitUntil(() => q.has(ITEM.trayMud) || q.dialogOpen(), 12);
-            await closeDialog();
+            await q.opLoc(p, 1);
+            await q.waitUntil(() => q.has(ITEM.trayMud), 10);
+            if (!q.has(ITEM.trayMud)) { dropped++; await closeDialog(); }
         }
         if (!q.has(ITEM.s2)) await q.fail('rock sample 2');
-        console.log(`PANS ${pans} FINDS ${tally(/within the mud|rock sample|plain mud/i)}`);
+        console.log(`PANS ${pans} dropped=${dropped} FINDS ${tally(/within the mud|rock sample|plain mud/i)}`);
         q.milestone('s2');
         // Pickpocket a workman until rock sample 1 and a specimen brush (digsite_workman.rs2:48-116).
         let picks = 0;
@@ -199,14 +215,13 @@ try {
             await dropJunk(3);
             const n = await findNpc('workman', NPC.workman);
             picks++;
-            const m0 = q.msgCount(/pick the workman's pocket/i);
+            const t0 = q.T(), had = q.has(ITEM.s1);
             await q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /pickpocket/i.test(o.text))?.opIndex ?? 3, reason: 'SDK' });
-            await q.waitUntil(() => q.msgCount(/pick the workman's pocket/i) > m0, 10);
-            await q.waitUntil(() => q.dialogOpen(), 3);
-            await closeDialog();
+            // The rock sample comes with an objbox and no game message; the other results are messages.
+            await q.waitUntil(() => msgSince(/^you (steal|find a specimen|fail)/i, t0) || (!had && q.has(ITEM.s1)), 10);
+            if (q.dialogOpen()) await closeDialog();
             // A failed pick stuns for 8 ticks (:67-81).
-            const last = (q.st()?.gameMessages ?? []).slice(-3).map((m: any) => m.text).join(' ');
-            if (/stunned|fail to pick/i.test(last)) await q.waitTicks(7);
+            if (msgSince(/fail to pick/i, t0)) await q.waitTicks(7);
         }
         if (!(q.has(ITEM.s1) && q.has(ITEM.brush))) await q.fail('pickpocket');
         console.log(`PICKS ${picks} FINDS ${tally(/^you (steal|find a specimen|fail)/i)}`);
@@ -244,7 +259,7 @@ try {
 
     // 4. Exam 3: student 2 wants an opal (student2.rs2:253-283).
     if (at('e3')) {
-        await talkId('student 2 opal ask', NPC.s2, [], () => q.sawText(/precious stone/i) || q.sawText(/did you bring me the opal/i));
+        await talkId('student 2 opal ask', NPC.s2, [], () => (q.sawText(/turn up for you/i) || q.sawText(/did you bring me the opal/i)) && !q.dialogOpen());
         await talkId('student 2 opal', NPC.s2, [], () => !q.has(ITEM.opal) && q.sawText(/samples cleaned and carried only in specimen jars/i));
         await talkId('student 1 tip 3', NPC.s1, [], () => q.sawText(/specimen brush use:/i));
         await talkId('student 3 tip 3', NPC.s3, [], () => q.sawText(/technique for handling bones is/i));
@@ -258,7 +273,7 @@ try {
     if (at('talisman')) {
         await q.walk('to level 3 site', [{ x: 3354, z: 3403, tol: 1 }]);
         let digs = 0;
-        for (let i = 0; i < 200 && !q.has(ITEM.talisman); i++) {
+        for (let i = 0; i < 300 && !q.has(ITEM.talisman); i++) {
             await q.guard('dig');
             await dropJunk(3);
             const soil = q.findLoc(l => /soil/i.test(l.name) && l.x >= L3.x0 && l.x <= L3.x1 && l.z >= L3.z0 && l.z <= L3.z1);
@@ -323,9 +338,12 @@ try {
         await q.step('tinderbox', () => q.useOnLoc(ITEM.tinderbox, L.bricks), () => z() < 9792 && z() > 9000, 30, 3);
         await closeDialog();
         q.milestone(8);
+        // The stone tablet lies at 3374,9747 (maps/m52_152.jm2 OBJ), past the blown bricks (3379,9761).
+        await q.walk('to tablet', [{ x: 3379, z: 9758, tol: 1 }, { x: 3374, z: 9748, tol: 1 }]);
         await pickup('tablet', ITEM.tablet);
         q.milestone('tablet');
-        await q.climb('altar ladder up', () => q.locAt(L.ladderAltarB.x, L.ladderAltarB.z) ?? q.findLoc(l => /ladder/i.test(l.name)), /climb/i, () => z() < 9000);
+        await q.walk('to ladder', [{ x: 3379, z: 9758, tol: 1 }, { x: L.ladderAltarB.x, z: L.ladderAltarB.z + 1, tol: 1 }]);
+        await q.climb('altar ladder up', () => q.locAt(L.ladderAltarB.x, L.ladderAltarB.z) ?? L.ladderAltarB, /climb/i, () => z() < 9000);
         await useOnId('expert tablet', ITEM.tablet, NPC.expert, () => questDone || !q.has(ITEM.tablet), EXPERT, 60);
         await q.waitUntil(() => questDone, 10);
         await closeDialog();

@@ -36,12 +36,13 @@ function late(position: { x: number; z: number; level?: number }, skills: Record
 
 // Scorpion Catcher (the scorpion row, tick 53,715, after Dragon Slayer): every skill 99; rune helm, body, legs and
 // scimitar worn; the quests before the dragon row plus Dragon Slayer (176 = 10) done. Runes for 2 Falador and 1
-// Camelot Teleport (law 563, air 556, water 555); an antipoison (2446); 4 lobsters. Thormac gives the cage.
+// Camelot Teleport (law 563, air 556, water 555); an antipoison (2446); 4 lobsters. Thormac gives the cage. Alfred
+// Grimhand's Barcrawl done (77 = 2, the barcrawl row) for the Barbarian Outpost gate.
 const ALL_99: Record<string, number> = Object.fromEntries(['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'].map(k => [k, 99]));
 const RUNE_SET = [[1163, 0], [1333, 3], [1127, 4], [1079, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! }));
 function scorpion(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, quest: number[] = []): SaveConfig {
     return {
-        position: { level: 0, ...position }, skills: ALL_99, equipment: RUNE_SET, varps: { ...QP_BEFORE_DRAGON, 176: 10, ...varps },
+        position: { level: 0, ...position }, skills: ALL_99, equipment: RUNE_SET, varps: { ...QP_BEFORE_DRAGON, 176: 10, 77: 2, ...varps },
         inventory: [[563, 5], [556, 20], [555, 4]].map(([id, count]) => ({ id: id!, count: count! }))
             .concat([2446, 379, 379, 379, 379, ...quest].map(id => ({ id, count: 1 }))),
     };
@@ -78,5 +79,14 @@ export const PATH_PRESETS: Record<string, SaveConfig> = {
     quest_scorpion: scorpion({ x: 2702, z: 3404, level: 3 }),
     // Debug: stage 2 (76 = 2) with the empty cage (456), west of the Barbarian Outpost (SC_FROM=2).
     quest_scorpion_s2: scorpion({ x: 2538, z: 3570 }, { 76: 2 }, [456]),
+    // Alfred Grimhand's Barcrawl (scripts/generated/quest-barcrawl.ts): the scorpion row's state (every skill 99, rune
+    // set, QP_BEFORE_DRAGON and Dragon Slayer), outside the Barbarian Outpost gate (guards 2544,3567 / 2544,3571).
+    // 500 coins (208 for the bars, 60 for two ships); runes for Falador, Varrock and Camelot Teleport (3 law 563,
+    // 11 air 556, 1 water 555, 1 fire 554); 4 lobsters.
+    barcrawl: {
+        position: { x: 2541, z: 3569, level: 0 }, skills: ALL_99, equipment: RUNE_SET, varps: { ...QP_BEFORE_DRAGON, 176: 10 }, coins: 500,
+        inventory: [[563, 3], [556, 11], [555, 1], [554, 1]].map(([id, count]) => ({ id: id!, count: count! }))
+            .concat([379, 379, 379, 379].map(id => ({ id, count: 1 }))),
+    },
     quest_seaslug: late({ x: 2717, z: 3302 }, LATE_SKILLS, [1941, 596, 563, 563, 563, 556, 556, 556]),
 };

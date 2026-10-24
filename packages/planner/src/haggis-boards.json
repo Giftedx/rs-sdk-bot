@@ -248,6 +248,11 @@
    "z": 3362,
    "note": "Dragon Slayer start and end, npc guildmaster (knowledge/ubermouse/world.json)"
   },
+  "outpost-guard": {
+   "x": 2541,
+   "z": 3569,
+   "note": "Alfred Grimhand's Barcrawl start and end, npc barbguard1 at 2544,3567 / 2544,3571, outside the Barbarian Outpost gate (maps/m39_55.jm2)"
+  },
   "thormac": {
    "x": 2702,
    "z": 3405,
@@ -2229,6 +2234,28 @@
    "minLevelSource": "combat gate (CODE-READ): Elvarg attack 70, strength 70, 120 HP, slash, attack range 8 (quest_dragon/configs/quest_dragon.npc:15-29): the melee part is Protect from Melee (Prayer 43, skill_prayer/configs/prayers.dbrow:121-127) sets NPC melee damage to 0 (skill_combat/scripts/npc/npc_combat_melee.rs2:44-45) and drains 1 point per 5 ticks (skill_prayer/scripts/prayer.rs2:164-174, effect 12); the dragonfire needs the anti-dragon shield (already a supply of this row)"
   },
   {
+   "id": "barcrawl",
+   "label": "Alfred Grimhand's Barcrawl (miniquest, no QP)",
+   "serves": [
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 1466,
+    "realistic": 1486,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1o: scripts/generated/quest-barcrawl.ts, preset barcrawl (outside the Barbarian Outpost gate; every skill 99, 500 coins, Falador, Varrock and Camelot Teleport runes), practice, 3/3 PASS at 1466, 1486, 1472 ticks (floor = best, realistic = worst), the guard to the guard: 10 bars, 2 ships, 3 teleports"
+   },
+   "lump": true,
+   "xp": {},
+   "qp": 0,
+   "requires": [
+    "tutorial"
+   ],
+   "evidence": "MEASURED",
+   "source": "research/quest-plan.md section 1o: scripts/generated/quest-barcrawl.ts, preset barcrawl (outside the Barbarian Outpost gate; every skill 99, 500 coins, Falador, Varrock and Camelot Teleport runes), practice, 3/3 PASS at 1466, 1486, 1472 ticks (floor = best, realistic = worst), the guard to the guard: 10 bars, 2 ships, 3 teleports; the Barbarian Outpost gate opens only with %barcrawl = 2 (areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1-5); not in general/configs/quest.constant, so no QP",
+   "at": "outpost-guard"
+  },
+  {
    "id": "scorpion",
    "label": "Scorpion Catcher",
    "serves": [
@@ -2247,7 +2274,8 @@
    },
    "qp": 1,
    "requires": [
-    "prayer-31"
+    "prayer-31",
+    "barcrawl"
    ],
    "minLevel": {
     "prayer": 31

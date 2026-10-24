@@ -268,25 +268,19 @@ try {
     // way. Each 5 ticks it attacks by where the PLAYER stands (:112-147): a cart on a track zone pushes the player
     // along the track (:136-142,157-195; the old deaths were in the track-end pockets), a crane near a crane zone, else
     // a pickaxe (max 15, 10 under Protect from Missiles, :228-241). Fire Wave is an ap trigger (player_magic.rs2:40):
-    // the server walks a caster until it has line of sight within 10 tiles. So the bot casts only from a tile that has
-    // that sight (the SDK collision, the same rsmod hasLineOfSight as the engine, GameMap.ts:482) and is off every cart
-    // track; home 2785,4453 sees 5 of the 6 spots, and the bot steps to the nearest such tile for the rest.
-    await (await import('../../packages/core/src/pathcache')).loadPathfinding();
-    const rs: any = await import('../../vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod-pathfinder.js');
-    const pf: any = await import('../../vendor/rs-sdk/sdk/pathfinding');
+    // the server walks a caster until it has line of sight (GameMap.ts:485-487), and the room's machinery blocks
+    // projectiles (the SDK collision has no projectile flags here, so it cannot predict that). So the bot walks to a
+    // cast tile per ghost spot, off every cart track, before it casts, and walks out of a pocket at once.
     const WAVE = componentId('magic:fire_wave');
     const PFMISS = 13;
     const inz = (x0: number, z0: number, x1: number, z1: number, px: number, pz: number) => px >= x0 && px <= x1 && pz >= z0 && pz <= z1;
     const TRACKS: Array<[number, number, number, number]> = [[2782, 4456, 2784, 4456], [2783, 4446, 2783, 4453], [2785, 4447, 2785, 4452],
         [2791, 4447, 2791, 4452], [2793, 4446, 2793, 4453], [2791, 4456, 2794, 4456], [2781, 4462, 2795, 4462]];
-    const CRANES: Array<[number, number]> = [[2793, 4458], [2787, 4451], [2787, 4446], [2782, 4458]];
-    const onTrack = (px: number, pz: number) => TRACKS.some(([x0, z0, x1, z1]) => inz(x0, z0, x1, z1, px, pz));
-    const nearCrane = (px: number, pz: number) => CRANES.some(([cx, cz]) => inz(cx, cz - 1, cx + 2, cz + 3, px, pz) || inz(cx - 1, cz, cx + 3, cz + 2, px, pz));
-    const sees = (px: number, pz: number, tx: number, tz: number) => Math.max(Math.abs(px - tx), Math.abs(pz - tz)) <= 8 && !!rs.hasLineOfSight(0, px, pz, tx, tz, 1, 1, 1, 1, 0);
+        const onTrack = (px: number, pz: number) => TRACKS.some(([x0, z0, x1, z1]) => inz(x0, z0, x1, z1, px, pz));
     const HOME = { x: 2785, z: 4453 };
     // The north-east pocket between the z 4456 and z 4462 tracks beside the crane at 2793,4458: a cart push along the
     // z 4462 track ends there and a crane hits on (the old deaths, and 1 death in this script's first full proof).
-    const ne = (px: number, pz: number) => px >= 2790 && pz >= 4457 && pz <= 4463;
+    const ne = (px: number, pz: number) => px >= 2790 && pz >= 4458 && pz <= 4463;
     const via = async (pts: Array<[number, number]>) => {
         for (const [wx, wz] of pts) {
             await q.s.direct({ type: 'walkTo', x: wx, z: wz, running: true, reason: 'SDK' });
@@ -296,37 +290,28 @@ try {
     // The north spot (2788-2789,4463): cast from 2787,4461 (off the track), reached along the z 4461 row from the
     // west end of the track (the proven route of the earlier fight logic).
     const NORTH = { x: 2787, z: 4461 };
-    // Cast tiles: walkable, off the tracks and the track-end pockets (x >= 2794 at z 4455-4463), the room interior.
-    const TILES: Array<{ x: number; z: number; crane: boolean }> = [];
-    for (let tx = 2777; tx <= 2797; tx++) for (let tz = 4441; tz <= 4463; tz++) {
-        if (!pf.isTileWalkable(0, tx, tz) || onTrack(tx, tz) || ne(tx, tz) || tz >= 4461) continue;
-        // Machinery splits the room: only tiles with a path from home (the end of the path on the tile).
-        const path: any[] = (tx === HOME.x && tz === HOME.z) ? [HOME] : pf.findLongPath(0, HOME.x, HOME.z, tx, tz, 200, []);
-        const end = path[path.length - 1];
-        if (!end || end.x !== tx || end.z !== tz) continue;
-        TILES.push({ x: tx, z: tz, crane: nearCrane(tx, tz) });
-    }
-    console.log(`BOSS tiles=${TILES.length} home sees=${TILES.some(t => t.x === HOME.x && t.z === HOME.z)}`);
-    const bad = new Set<string>();   // tile>ghost pairs where a cast still made the server walk the bot
-    const pick = (gx: number, gz: number) => {
-        const me = q.pos()!;
-        let best: { x: number; z: number } | undefined, bs = 1e9;
-        for (const t of TILES) {
-            if (!sees(t.x, t.z, gx, gz) || bad.has(`${t.x},${t.z}>${gx},${gz}`)) continue;
-            const dg = Math.max(Math.abs(t.x - gx), Math.abs(t.z - gz));
-            if (dg > 8) continue;
-            const sc = Math.max(Math.abs(t.x - me.worldX), Math.abs(t.z - me.worldZ)) + (t.crane ? 3 : 0) + Math.max(Math.abs(t.x - HOME.x), Math.abs(t.z - HOME.z)) / 4 + dg / 2;
-            if (sc < bs) { bs = sc; best = t; }
-        }
-        return best;
-    };
+    // Spots (local 43_69 coords +2752,+4416) and the cast tiles that hit from them in the proof runs. Routes: the x 2786
+    // column between the x 2785 track and the crane at 2787,4451 to the south, row 4454 then 4455 to the east, the
+    // z 4461 row from its west end to the north.
+    type Spot = { name: string; x: number; z: number; cast: Array<[number, number]>; route: (mx: number, mz: number) => Array<[number, number]> | undefined };
+    const SPOTS: Spot[] = [
+        { name: 'E', x: 2794, z: 4452, cast: [[2794, 4454], [2794, 4453]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
+        // NE: a cast from 2794,4455 or 2791,4455 hits after the server walks the bot to 2794,4457 (lift trials).
+        { name: 'NE', x: 2796, z: 4460, cast: [[2794, 4457], [2794, 4455]], route: () => [[2790, 4454], [2791, 4455], [2793, 4455]] },
+        { name: 'N', x: 2788, z: 4463, cast: [[NORTH.x, NORTH.z]], route: (mx, mz) => mz >= 4459 ? [] : [[2781, 4457], [2781, 4461]] },
+        { name: 'NW', x: 2780, z: 4460, cast: [[2780, 4459], [2779, 4458], [2780, 4460]], route: () => [] },
+        { name: 'W', x: 2780, z: 4454, cast: [[2786, 4454], [2782, 4454]], route: () => [] },
+        { name: 'S', x: 2787, z: 4444, cast: [[2786, 4446], [2786, 4448]], route: (mx) => mx === 2786 ? [] : [[2786, 4454], [2786, 4450]] },
+    ];
+    const hitFrom = new Set<string>();   // tile>spot pairs that hit in this fight
+    const bad = new Set<string>();   // tile>spot pairs that did not hit (a dry cast or a failed walk)
     let prayT = -99;
     const offPray = q.s.onTick(() => {
         if (q.T() - prayT < 4 || (q.st()?.prayers?.prayerPoints ?? 0) <= 0 || q.st()?.prayers?.activePrayers?.[PFMISS] || sq() !== '43_69' || x() >= 2799) return;
         prayT = q.T();
         void q.s.direct({ type: 'togglePrayer', prayerIndex: PFMISS, reason: 'SDK' });
     });
-    let failHere = '', lastCast = -99, mxp = 0, casts = 0, moves = 0, pushes = 0, walked = 0, castAt = '', seenT = q.T();
+    let spotNow = '', castSpot = '', failHere = '', lastCast = -99, mxp = 0, casts = 0, moves = 0, pushes = 0, walked = 0, castAt = '', seenT = q.T();
     await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
     // Up to 3 rounds: the kill page (queue hauntedmine_boss_death, :247-254) sets 9; a key taken at 8 with the ghost
     // gone wakes it again (:18-26,52), so a round ends with the key and the next round fights on.
@@ -338,10 +323,16 @@ try {
             const mx = me.worldX, mz = me.worldZ;
             // The kill page can close before it is read: no ghost in view for 20 ticks after a hit ends the fight
             // too (the reward key step then proves it).
+            // The ghost drops out of the NPC list from some tiles (2781,4459, 2786,4461, 2787,4445 in the proofs) while
+            // it lives, so only an empty list from home counts; from elsewhere the bot walks home first.
             if ((q.st()?.nearbyNpcs ?? []).some((n: any) => /treus dayth|^ghost$/i.test(n.name))) seenT = q.T();
-            else if (q.T() - seenT >= 20 && casts > 0) break;
+            else if (q.T() - seenT >= 20 && casts > 0 && q.near(HOME.x, HOME.z, 0)) break;
+            else if (q.T() - seenT >= 6 && !q.near(HOME.x, HOME.z, 0) && !onTrack(mx, mz) && !ne(mx, mz)) {
+                await via(mz >= 4459 ? [[2781, 4461], [2781, 4457], [HOME.x, HOME.z]] : [[HOME.x, HOME.z]]);
+                continue;
+            }
             // A cast that made the server walk the bot: that tile does not see the ghost for the engine.
-            if (castAt && q.T() - lastCast <= 2 && `${mx},${mz}` !== castAt.split('>')[0]) { bad.add(castAt); console.log(`BOSS ${q.T()} cast walked: ${castAt} now ${mx},${mz}`); castAt = ''; }
+            if (castAt && q.T() - lastCast === 2 && `${mx},${mz}` !== castAt.split('>')[0]) console.log(`BOSS ${q.T()} cast walked: ${castAt} now ${mx},${mz}`);
             // Pushed onto a track (or into a pocket): back to home at once.
             if (onTrack(mx, mz) || ne(mx, mz)) {
                 pushes++;
@@ -355,43 +346,35 @@ try {
             // A cast with no Magic XP after 4 ticks (a splash still gives XP) never fired: that tile does not work
             // for that ghost tile either.
             if (castAt && q.T() - lastCast >= 4) {
-                if (q.xp('Magic') === mxp && boss()) { bad.add(castAt); console.log(`BOSS ${q.T()} dry cast ${castAt}`); }
-                else if (q.xp('Magic') > mxp) console.log(`BOSS ${q.T()} hit ${castAt}`);
+                if (q.xp('Magic') === mxp && boss()) { bad.add(`${castAt.split('>')[0]}>${castSpot}`); console.log(`BOSS ${q.T()} dry cast ${castAt} (${castSpot})`); }
+                else if (q.xp('Magic') > mxp) { hitFrom.add(`${castAt.split('>')[0]}>${castSpot}`); console.log(`BOSS ${q.T()} hit ${castAt} (${castSpot})`); }
                 castAt = '';
             }
             const b = boss();
             if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
                 const gx = b.tileX ?? b.x, gz = b.tileZ ?? b.z;
-                if (gz >= 4463 && Math.abs(gx - 2788) <= 2) {
-                    if (mx !== NORTH.x || mz !== NORTH.z) {
-                        moves++;
-                        await via(mz >= 4459 ? [[NORTH.x, NORTH.z]] : [[2781, 4461], [NORTH.x, NORTH.z]]);
-                        await q.waitTicks(1);
-                        continue;
-                    }
-                } else if (!sees(mx, mz, gx, gz) || bad.has(`${mx},${mz}>${gx},${gz}`)) {
-                    const t = pick(gx, gz);
-                    if (t && (t.x !== mx || t.z !== mz)) {
-                        moves++;
-                        await q.s.direct({ type: 'walkTo', x: t.x, z: t.z, running: true, reason: 'SDK' });
-                        const t0 = q.T();
-                        await q.waitUntil(() => q.near(t.x, t.z, 0) || !boss(), 8);
-                        walked += q.T() - t0;
-                        if (!q.near(t.x, t.z, 0) && boss()) {
-                            bad.add(`${t.x},${t.z}>${gx},${gz}`);
-                            console.log(`BOSS ${q.T()} move to ${t.x},${t.z} failed at ${q.pos()?.worldX},${q.pos()?.worldZ}`);
-                            // Held in place (a crane or a cart stands in the way; the engine blocks players on NPC
-                            // tiles): two failed moves from one tile, then the walk home by the row 4455-4453 tiles.
-                            const here = `${q.pos()?.worldX},${q.pos()?.worldZ}`;
-                            failHere = failHere.startsWith(`${here}#`) ? `${here}#${Number(failHere.split('#')[1]) + 1}` : `${here}#1`;
-                            if (Number(failHere.split('#')[1]) >= 2) { console.log(`BOSS ${q.T()} held at ${here}: home`); await via([[2785, 4455], [HOME.x, HOME.z]]); failHere = ''; }
-                        } else console.log(`BOSS ${q.T()} moved ${mx},${mz} -> ${t.x},${t.z} for ghost ${gx},${gz}`);
-                        await q.waitTicks(1);
-                        continue;
-                    }
+                // The ghost's spot (nearest of the 6, :308-342) gives the cast tiles: the tiles that hit in the
+                // proof runs (BOSS hit lines). The SDK collision has no projectile blockers in this room, so its
+                // line of sight cannot pick them.
+                const sp = SPOTS.reduce((m, o) => Math.max(Math.abs(o.x - gx), Math.abs(o.z - gz)) < Math.max(Math.abs(m.x - gx), Math.abs(m.z - gz)) ? o : m);
+                const here = `${mx},${mz}`;
+                if (!sp.cast.some(([cx, cz]) => cx === mx && cz === mz) && !hitFrom.has(`${here}>${sp.name}`)) {
+                    const [cx, cz] = sp.cast.find(([cx, cz]) => !bad.has(`${cx},${cz}>${sp.name}`)) ?? sp.cast[0]!;
+                    moves++;
+                    const t0 = q.T();
+                    await via([...(sp.route(mx, mz) ?? []), [cx, cz]]);
+                    walked += q.T() - t0;
+                    if (!q.near(cx, cz, 0) && boss()) {
+                        bad.add(`${cx},${cz}>${sp.name}`);
+                        console.log(`BOSS ${q.T()} move to ${cx},${cz} (${sp.name}) failed at ${q.pos()?.worldX},${q.pos()?.worldZ}`);
+                        if (sp.cast.every(([x0, z0]) => bad.has(`${x0},${z0}>${sp.name}`))) for (const [x0, z0] of sp.cast) bad.delete(`${x0},${z0}>${sp.name}`);
+                    } else console.log(`BOSS ${q.T()} moved ${here} -> ${cx},${cz} for ${sp.name} ghost ${gx},${gz}`);
+                    await q.waitTicks(1);
+                    continue;
                 }
+                spotNow = sp.name;
                 casts++; lastCast = q.T(); mxp = q.xp('Magic');
-                castAt = `${q.pos()!.worldX},${q.pos()!.worldZ}>${gx},${gz}`;
+                castAt = `${q.pos()!.worldX},${q.pos()!.worldZ}>${gx},${gz}`; castSpot = spotNow;
                 await q.s.direct({ type: 'spellOnNpc', npcIndex: b.index, spellComponent: WAVE, reason: 'SDK' });
             }
             if (i % 20 === 0) {

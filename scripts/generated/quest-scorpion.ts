@@ -1,4 +1,4 @@
-// NOT PROVEN (2026-10-24): the Barbarian Outpost gate needs the Barcrawl, see research/quest-plan.md section 1o.
+// NOT PROVEN (2026-10-24): needs Alfred Grimhand's Barcrawl first (preset varp 77 = 2), see research/quest-plan.md 1o.
 // Scorpion Catcher from preset quest_scorpion (beside Thormac, top of the Sorcerer's Tower), at the planner's state
 // for the scorpion row (tick 53,715, every skill 99). Reward: 66,250 Strength (x25: 165,625), 1 QP
 // (quest_scorpcatcher.rs2:55-60). Paths below are under vendor/rs-sdk/server/content/scripts/.
@@ -79,13 +79,15 @@ try {
         q.milestone(2);
     }
 
-    // B: the Barbarian Outpost.
-    // The outpost gate (barbariangater/l, east wall of 2545,3569-3570, maps/m39_55.jm2) opens only when no
-    // Barbarian guard (spawns 2544,3567 and 2544,3571) is within 5 tiles; otherwise the guard starts the Barcrawl
-    // talk (areas/area_barbarian_outpost/scripts/outpost_gate.rs2, barbarian_outpost_guard.rs2). walkPath clicked it
-    // for 700 ticks in a test run. The SDK path with the gate blocked goes round the north side; this tries it.
-    await q.walk('outpost north', [{ x: 2544, z: 3575, tol: 1 }, { x: 2550, z: 3577, tol: 1 }, { x: 2556, z: 3574, tol: 1 }]);
-    console.log(`NOTE outpost north at ${q.pos()?.worldX},${q.pos()?.worldZ} T=${q.T()}`);
+    // B: the Barbarian Outpost. The gate (barbariangater/l, east wall of 2545,3569-3570, maps/m39_55.jm2) opens once
+    // %barcrawl (77) is 2, Alfred Grimhand's Barcrawl (scripts/generated/quest-barcrawl.ts, the barcrawl row); before
+    // that a Barbarian guard within 5 tiles talks instead (areas/area_barbarian_outpost/scripts/outpost_gate.rs2:1-5).
+    // The gate moves the bot through (outpost_gate.rs2:7-11).
+    const inOutpost = () => (q.pos()?.worldX ?? 0) >= 2546;
+    if (!inOutpost()) {
+        await q.walk('to outpost gate', [{ x: 2544, z: 3569, tol: 1 }]);
+        await q.step('outpost gate', () => { const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2545 && (l.z === 3569 || l.z === 3570) && (l.optionsWithIndex ?? []).length > 0); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, inOutpost, 8, 4);
+    }
     await q.walk('to scorpion b', [{ x: SCORP_B.x + 1, z: SCORP_B.z, tol: 2 }]);
     await catchScorp('b', SCORP_B);
 
