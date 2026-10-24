@@ -101,7 +101,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Troll Stronghold (`troll`) | 1 (130) | rest | Death Plateau (`quest_death/scripts/death_ig_commander.rs2:5-9` offers the troll talk only at `%death_equiproom` 80), Agility 15 (`quest_troll/scripts/quest_troll.rs2:7`), worn climbing boots (`:8-11`, `quest_death/scripts/quest_death.rs2:159-176`), Thieving 30 (`troll_stronghold_camp_guard.rs2:46`); MEASURED 788-847 ticks in row `quests-long` | level 101 Dad, level 113 general (`pack` combat; `troll_journal.rs2:5`) | L |
 | Troll Romance (`troll_love`) | 2 (131) | rest | Death Plateau, Troll Stronghold, Agility 28 (`quest_troll_love/scripts/troll_love_journal.rs2:12-22`); MEASURED 1,084-1,138 ticks in row `quests-long` | level 113 troll (`:26`) | L |
 | Tai Bwo Wannai Trio (`tbwt`) | 2 (132) | rest | Jungle Potion (`areas/area_karamja/scripts/tbwt_timfraku.rs2:51`), Cooking 30, Agility 15, Fishing 5 (`quest_tbwt/scripts/tbwt_journal.rs2:11-13`) | level 48 jogres (`:15`) | XL |
-| Regicide (`regicide`) | 3 (133) | rest | Underground Pass (`quest_regicide/scripts/regicide_kings_messenger.rs2:2`), Agility 56, Crafting 10 (`quest_regicide.rs2:404,674`) | none found; research notes in "Regicide: research notes"; CLAIMED by long-quest helper 1 | XL |
+| Regicide (`regicide`) | 3 (133) | rest | Underground Pass (`quest_regicide/scripts/regicide_kings_messenger.rs2:2`), Agility 56, Crafting 10 (`quest_regicide.rs2:404,674`) | none found; MEASURED 3,525-3,592 ticks in row `quests-long` | XL |
 | Eadgar's Ruse (`eadgar`) | 1 (134) | rest | Druidic Ritual, Death Plateau, Troll Stronghold, Herblore 31 (`areas/area_taverly/scripts/sanfew.rs2:102-103`); Eadgar freed in Troll Stronghold for his cave top (`quest_troll/scripts/quest_troll.rs2:129-131`); the parrot, robe, thistle, potion, fake man, key and goutweed are untradeable (`quest_eadgar/configs/quest_eadgar.obj`); MEASURED 2,091-2,175 ticks in row `quests-long` | none found | L |
 | Shades of Mort'ton (`mortton`) | 3 (135) | rest (row `mortton-oil` is OUT) | Crafting 12 (`quest_mortton/scripts/quest_mortton.rs2:76`), Morytania (Priest in Peril, OSRS); MEASURED 1,908-1,956 ticks in row `quests-medium` | 5 shades (`mortton_journal.rs2:79-85`) | L |
 | The Fremennik Trials (`viking`) | 3 (136) | rest | Woodcutting 40, Crafting 40, Fletching 25 (`quest_viking/scripts/viking_journal.rs2:7`) | level 69, unarmed (`:8`); CLAIMED by long-quest helper 2 | XL |
@@ -1757,37 +1757,82 @@ Long-quest helper 3 read the content and stopped before a script (context); the 
 - Not read yet: which item each bridge spot and the cog take, the diary (`horror_diary.rs2`), the lighthouse ladders
   and doors, and the mother's damage rule per form.
 
-### Regicide: research notes (not scripted)
+### Regicide
 
-The long-quest helper read the content and stopped before a script (context). Server truth:
-`quests/quest_regicide/scripts/*.rs2`. Varps: `%regicide_quest`, `%regicide_bits` (`quest_regicide.varp`), stages
-0-14 (`quest_regicide.constant`).
-- Start: the King's messenger spawns on a player timer of 400-1,200 ticks set at login once Underground Pass is
-  complete (`login_logout/login.rs2:74`, `regicide_kings_messenger.rs2:1-13`). In a real run the timer fires during
-  the quests before this one; a preset can start at `%regicide_quest` 1 with the summons.
-- King Lathas sets 2 (`areas/area_ardougne_east/scripts/king_lathas.rs2:30-36`). The way west is the well of voyage
-  at 2008,4711 level 1, beside Koftik (caveguide6, 2012,4713), at the far end of the Underground Pass main cavern
-  (`quest_regicide.rs2:10-17`: to 2343,9622; the temple exit 2312,9623 to 2312,3216). The walk from the pass
-  entrance to the well is not measured.
-- Idris and two elves meet the bot in Tirannwn on a timer (3, `idris.rs2:6-72`); Lord Iorwerth (2205,3252) 4; the
-  tracker (2257,3149) 5, the pendant from Iorwerth, the tracker 6, the footprints (2240,3150) 7, the tracker 8
-  (`regicide_camp_tracker.rs2`, `lord_iorwerth.rs2`).
-- The dense forest crossings need Agility 56 (`quest_regicide.rs2:388-471`); a Tyras guard (level 110) at the camp
-  crossing (2187,3169) must die (9, `tyras_guard.rs2`); the crossing again sets 10; Iorwerth gives the Big Book o'
-  Bangs (11).
-- The bomb: coal tar from the tar pit into a barrel (`quest_regicide.rs2:636-647`), the fractionalizing still for the
-  naphtha (an interface with pressure and tar valves and coal; `regicide_fractionalizing_still.rs2:1-201`; the
-  naphtha comes on close when `%regicide_still_total` >= 26), limestone in the furnace (2193,3146) for quicklime
-  (gloves stop 8 damage), the pestle and mortar with an empty pot for the dust, sulphur from the pits (2256-2272,
-  3115-3130) ground, 4 balls of wool on the loom (2198,3249) for the cloth; the mixes and the cloth make the fused lid
-  (`quest_regicide.rs2:649-788`). The barrel (3216) is untradeable; it lies on the ground in maps m34_49 and m34_50.
-- A cooked rabbit (tradeable) to the lazy guard (2181,3184) frees the catapult (2185,3183); the fused lid on it kills
-  Tyras (12, `quest_regicide.rs2:495-599`); Iorwerth's message (13); Arianwyn in zone 0_40_51_24_32 on the way home
-  (14, `:792-830`); King Lathas queues the completion (`king_lathas.rs2:6-16`, `quest_regicide.rs2:850-855`).
-- Traps (woodsprings, tripwires, leaf pits) roll `stat_random(agility, 30, 155)` or `(160, 300)`; at 99 they do not
-  fail (`quest_regicide.rs2:31-316`, `regicide_zones.rs2`).
-- Helper items (tradeable): coal, limestone, a pestle and mortar, an empty pot (the Quartermaster at 2194,3140 also
-  sells pots, `regicide.inv`), 4 balls of wool, a cooked rabbit, gloves, food. Not a blocker for a bot found.
+`RESULT ok qp=3 xp=attack=11100,hitpoints=3680,magic=4250,agility=343900,thieving=450 ... ticks=3536 hpMin=36 eats=10
+... died=false` (runs: 3536, 3525, 3592 ticks), each with `Congratulations! Quest complete!`. Script
+`scripts/generated/quest-regicide.ts`. Preset `quest_regicide`: King Lathas's room (2577,3292, level 1); Underground
+Pass done (161 = 10, `%ibanmulti` 162 as a finished run leaves it), `%regicide_quest` (328) 1 with the King's summons.
+In a real run the messenger brings the summons during the quests before (a 400-1,200 tick timer from login once
+Underground Pass is done, `login_logout/login.rs2:74`, `regicide_kings_messenger.rs2:1-13`); that talk is not counted.
+Worn: the rune set. Helper items (tradeable): a shortbow, 2 iron fire arrows and a tinderbox (one lit arrow per
+crossing of the pass), a rope, a spade, a pestle and mortar, an empty pot, a limestone, 4 balls of wool, runes for a
+Falador and two Ardougne teleports, 10 sharks; in the Falador west bank: 8 coal, the second rope, a cooked rabbit, 20
+sharks. Debug presets `quest_regicide_tir1`, `_t8`, `_falador`, `_up2`, `_tir2`, `_home` with `RG_FROM`. Server truth:
+`quests/quest_regicide/scripts/*.rs2` (`quest_regicide.rs2` unless named).
+
+Route. The still for the naphtha is in the Rimmington chemist's house (2927,3212), the tar only in Tirannwn, and the
+Arandar gate opens from the north only when the stage is above 12 (`regicide_arandar_gate_guard.rs2:4-6`). So the
+bot crosses the Underground Pass twice. With the stage at 2 or more, Iban's temple door puts the bot in the temple of
+the well of voyage (`quest_upass/scripts/quest_upass.rs2:574-588`); the well and the temple exit lead to 2312,3216
+(`:10-29`). The quicklime needs stage 11 but any furnace (`skill_smithing/scripts/smelting/smelting.rs2:23`), so the
+bomb is made between the two crossings.
+
+Steps (proof run 1 MILESTONE ticks):
+- King Lathas sets 2 (`areas/area_ardougne_east/scripts/king_lathas.rs2:30-37`) 0-14.
+- The Underground Pass as `quest-upass.ts` runs it (the lit arrow on the bridge rope, the rope swing, the spike grid by
+  trial, the orbs' well, the cell lock, the mud, the ledge, the cage doors, the pipe), then the unicorn's door
+  (2375,9611) straight to the paladins' side (`quest_upass.rs2:318-327`), the skull door (the badges are in the well,
+  `:340-405`), the bridge at 2121,4686, the two temple bridges, Iban's temple door, the well of voyage, the temple exit
+  14-829.
+- Idris (3, `idris.rs2:6-72`) 984; Lord Iorwerth 4; the 2 barrels (2205,3257, 2208,3259) and the wool on the loom;
+  the tracker 5; Iorwerth's pendant; the tracker 6; the footprints 7; the tracker 8 (`lord_iorwerth.rs2`,
+  `regicide_camp_tracker.rs2`, `:483-493`) 984-1347.
+- The tar pit fills both barrels (`:636-647`); a sulphur piece, ground; the 3 crossings west from the old camp: the
+  last spawns a Tyras guard at stage 8 (`:464-466,602-610`), killed (9, `tyras_guard.rs2:36-42`) 1347-1551.
+- The tripwire and 3 crossings north; the Tyras camp crossing sets 10 (`:467-471`); back to Iorwerth, the Big Book o'
+  Bangs (11) 1551-1868.
+- The Falador teleport; the furnace (2975,3368) for the quicklime, ground into the pot (`:649-712`); the bank; the still
+  (below) gives the naphtha; the quicklime dust, the sulphur dust and the cloth make the fused barrel (`:717-788`); the
+  Ardougne teleport 1868-2116.
+- The pass again 2116-2953.
+- To the catapult clearing; the cooked rabbit to the lazy guard (`regicide_tyras_lazy_guard.rs2:30-41`); the fused
+  barrel on the catapult kills Tyras (12, `:495-599`) 2953-3203.
+- Iorwerth's message (13); the Ardougne teleport; Arianwyn in zone 2584-2591,3296-3303 (14, `:792-830`); King Lathas
+  queues the completion (`king_lathas.rs2:6-16`, `:850-855`) 3203-3536.
+
+The still (`regicide_fractionalizing_still.rs2`): every 2 ticks the pressure needle moves by the valve (-2 at the middle
+setting, `com_130` once) plus the tar regulator (+2 fully open, `com_132` twice), so the pressure holds at 0. The heat
+needle rises 1 a step while `%temp` is above 50 (3 above 80) and falls 1 at 0; a coal click (`com_120`) adds 60, and
+`%temp` falls by 5 + 6 x the heat each step. The total gains 2 a step while the regulator is open and the heat is in
+bits 19-24; at 26 the naphtha comes when the interface closes. A heat needle past its top resets everything. The coal
+plan `1110001010101000` (one entry per step) reaches 26 in 16 steps with 7 coal, and a search over every case where
+any click lands one step late found it safe (scratchpad `up/still3.ts`). All 3 proof runs made the naphtha on the
+first attempt (`STILL attempt 0 naphtha=true coal=1`).
+
+Findings:
+- Tirannwn traps trigger on their tiles: the leaf pits (3x3), the tripwire, the woodspring (2 tiles,
+  `regicide_zones.rs2`). The SDK walker plans over them (`blockwalk=no`). The script walks Tirannwn by legs from a
+  planner (scratchpad `up/tir.ts`): Dijkstra with the trap tiles blocked and the crossings, log balances, pit jumps,
+  woodspring passes and the tripwire as edges; a waypoint is kept only if no shortest path to it from the waypoint
+  before touches a trap tile.
+- A crossing works only from within 1 tile of its start square (`:456-458`), so the bot walks to that square first.
+- Walking onto the tripwire pushes the player 2 tiles on (10 damage and poison, `:171-188`). That is the crossing the
+  script uses (Step-over not tried).
+- The woodspring's Pass op walks the bot onto a trigger tile first; about half the passes trip it once (8 damage,
+  thrown back 1 tile), then the next op passes.
+- Idris spawns beside the bot (`map_findsquare` radius 1-3 with line of walk). His timer fires 20-30 ticks after the
+  bot enters map 35_49, 35_50 or 36_50 (`music/scripts/move.rs2:21-41`). In a 1-tile forest path that finds no square,
+  and he never comes (proof attempt 1, run 1: `no idris`). The bot now waits in open ground at 2266,3198, just inside
+  map 35_49.
+- Of the 3 tar tiles only 2263,3127 is in reach (from 2263,3128); trial t1 used the nearest by distance and got
+  "I can't reach that!".
+- Three npc types are named "Tyras guard"; the lazy one is type 1205.
+- After the pipe the bot is at 2390,9605 by the unicorn's cage, not at the door at 2400,9611.
+- Arianwyn's zone fires on entry only. Proof attempt 2, run 3 stood in it with no Arianwyn (2/3); the bot now steps
+  out and in again if she does not come. No run of the final proof needed that.
+
+Planner: see below.
 
 ### Eadgar's Ruse
 
