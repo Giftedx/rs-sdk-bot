@@ -159,6 +159,27 @@ function rg(position: { x: number; z: number; level?: number }, stage: number, i
 }
 const RG_TRAV: Array<number | [number, number]> = [841, 590, 952, 233, 1931, 3211];
 
+// The Fremennik Trials (scripts/generated/quest-viking.ts): no quest needed. Nothing worn (Peer banks it all,
+// viking_peer.rs2:160-215, and Thorvald's fight allows no weapons or armour, viking_thorvald.rs2:435-481). Helper items
+// (tradeable): 5,300 coins, a beer, a tinderbox, a rune axe, a knife, a cabbage, a potato, an onion, a raw shark, 4
+// sharks. %viking is varp 347 (1 + votes), %viking_bits 348 (quest_viking.constant).
+const VK_ITEMS: Array<number | [number, number]> = [[995, 5300], 1917, 590, 1359, 946, 1965, 1942, 1957, 383];
+function viking(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, inv: Array<number | [number, number]> = VK_ITEMS, food = 4): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment: [], varps: { ...DONE, ...varps },
+        inventory: items([...inv, ...Array.from({ length: food }, () => 385)]),
+    };
+}
+// Debug stages (VK_FROM): the %viking_bits ranges after each stage.
+const VB_START = (2 << 10) | (1 << 12) | (1 << 14);                 // Swensen done; Manni, Sigli started
+const VB_OLAF1 = VB_START | (1 << 16) | (3 << 20);                  // Thorvald started; Olaf: Askeladden's rock
+const VB_CHAIN = VB_OLAF1 | (15 << 23);                             // Sigmund done
+const VB_EAST2 = (VB_CHAIN & ~(7 << 20)) | (1 << 1) | (5 << 20) | (15 << 27);    // the salesman; Olaf 5 (the stew)
+const VB_DRAUGEN = VB_EAST2 | (2 << 14);                            // Sigli done (3)
+const VB_MANNI = (VB_DRAUGEN & ~0b111 & ~(3 << 12)) | (2 << 12);   // Manni done (2)
+const VB_OLAF = (VB_MANNI & ~(7 << 20) & ~(15 << 27)) | (7 << 20);  // Olaf done
+const VB_PEER = VB_OLAF | (3 << 18);                                // Peer done
+
 export const LONG_PRESETS: Record<string, SaveConfig> = {
     // In King Lathas's room, level 1 of Ardougne castle.
     quest_regicide: rg({ x: 2577, z: 3292, level: 1 }, 1, [3206, [2532, 2], 954, ...RG_TRAV, 1759, 1759, 1759, 1759, ...RG_RUNES]),
@@ -224,6 +245,17 @@ export const LONG_PRESETS: Record<string, SaveConfig> = {
     quest_trolllove_arrg: trollLove({ x: 2827, z: 10066, level: 1 }, { 385: 35 }, [1887, [563, 2], [554, 2]]),
 
     // Beside Denulth in the Imperial Guard camp, Burthorpe (spawn 2896,3528, maps/m45_55.jm2).
+    quest_viking: viking({ x: 2659, z: 3666 }),
+    quest_viking_olaf1: viking({ x: 2649, z: 3661 }, { 347: 2, 348: VB_START }, [...VK_ITEMS, 3697]),
+    quest_viking_chain: viking({ x: 2658, z: 3661 }, { 347: 2, 348: VB_OLAF1 }, [...VK_ITEMS, 3697, 3688, 3695]),
+    quest_viking_east2: viking({ x: 2641, z: 3682 }, { 347: 3, 348: VB_CHAIN }, [[995, 300], 1917, 590, 1359, 946, 1965, 1942, 1957, 383, 3697, 3688, 3695]),
+    quest_viking_draugen: viking({ x: 2655, z: 3594 }, { 347: 3, 348: VB_EAST2 }, [[995, 50], 590, 1359, 946, 3697, 3690, 3712, 3713]),
+    quest_viking_manni: viking({ x: 2660, z: 3655 }, { 347: 4, 348: VB_DRAUGEN }, [[995, 50], 590, 1359, 946, 3690, 3712, 3713]),
+    quest_viking_olaf: viking({ x: 2664, z: 3674 }, { 347: 5, 348: VB_MANNI }, [[995, 50], 590, 1359, 946, 3690]),
+    quest_viking_peer: viking({ x: 2660, z: 3683 }, { 347: 6, 348: VB_OLAF }, [[995, 50], 590, 1359, 946, 3689]),
+    quest_viking_thorvald: viking({ x: 2636, z: 3668 }, { 347: 7, 348: VB_PEER }, [], 0),
+    quest_viking_end: viking({ x: 2667, z: 3695 }, { 347: 8, 348: (VB_PEER & ~(3 << 16)) | (2 << 16) }, [], 0),
+
     quest_troll: troll({ x: 2896, z: 3529 }),
     // Debug (TS_FROM=arena): west of the arena door, %troll_quest 10.
     quest_troll_arena: troll({ x: 2894, z: 3618 }, { 317: 10 }),

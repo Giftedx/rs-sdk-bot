@@ -1,6 +1,6 @@
 {
  "base": "https://rs-sdk-demo.fly.dev",
- "takenAt": "2026-10-24T08:56:11.163Z",
+ "takenAt": "2026-10-24T09:56:10.790Z",
  "boards": [
   {
    "board": "Overall",
@@ -2697,8 +2697,8 @@
     {
      "rank": 9,
      "name": "qu3st",
-     "level": 127,
-     "ticks": 916541
+     "level": 128,
+     "ticks": 922541
     },
     {
      "rank": 10,
