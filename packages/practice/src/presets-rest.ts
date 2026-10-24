@@ -51,4 +51,8 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // (tradeable): 3 pots of flour (1933) for the dagger and two suspects' items, a law (563) and 5 air runes (556) for
     // one Camelot Teleport to the poison salesman. The flypaper (untradeable) comes from the mansion's sacks.
     quest_murder: rest({ x: 2740, z: 3577 }, [1933, 1933, 1933, [563, 1], [556, 5]], 2),
+    // Observatory Quest: beside the professor in the reception (spawn 2438,3186, maps/m38_49.jm2). Helper items
+    // (tradeable): 3 planks (960), a bronze bar (2349), a molten glass (1775); 4 lobsters. The keep key, the lens mould and
+    // the lens are untradeable (knowledge/items.json 601-603), so the run collects them.
+    quest_itgronigen: rest({ x: 2439, z: 3187 }, [960, 960, 960, 2349, 1775], 4),
 };

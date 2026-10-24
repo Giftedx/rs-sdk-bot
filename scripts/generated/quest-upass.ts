@@ -23,10 +23,10 @@ const LEVER = { id: 3337, x: 2466, z: 9672 };             // portcullis_lever_up
 const HOLDS = { id: 3365, x: 2395, z: 9559 };             // upass_grilltrap_hand_holds in the spike pit -> 2477,9677
 
 const FROM = process.env.UP_FROM ?? 'start';
-const STAGES = ['start', 'bridge', 'grid', 'orbs', 'area2', 'paladins', 'main', 'witch', 'demons'];
+const STAGES = ['start', 'bridge', 'grid', 'orbs', 'area2', 'paladins', 'main', 'witch', 'demons', 'lower', 'dove', 'temple'];
 const from = (s: string) => STAGES.indexOf(FROM) <= STAGES.indexOf(s);
 
-const q = await openQuest({ cap: 9000, eatAt: 50 });
+const q = await openQuest({ cap: 9000, eatAt: 35 });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -38,15 +38,27 @@ try {
         await q.step(label, () => use(id, op), () => !q.has(id), 4, 3);
     };
     // Rockslide (rockslide2_obstacle_upass 3309): "Climb-over" steps to the far side (upass_obstacles.rs2:1-30).
+    // A game message of type 0 at or after tick t (gameMessages carries the tick; the buffer is capped, so a count of
+    // matches can stay flat).
+    const msgSince = (re: RegExp, t: number) => (q.st()?.gameMessages ?? []).some((m: any) => m.type === 0 && m.tick >= t && re.test(m.text));
     const slide = async (label: string, lx: number, lz: number) => {
-        const n0 = q.msgCount(/step down the other side/i);
-        await q.step(label, () => q.opLoc(q.locAt(lx, lz) ?? { id: 3309, x: lx, z: lz }, 1), () => q.msgCount(/step down the other side/i) > n0, 20, 4);
+        const t0 = q.s.tick();
+        await q.step(label, () => q.opLoc(q.locAt(lx, lz) ?? { id: 3309, x: lx, z: lz }, 1), () => msgSince(/step down the other side/i, t0), 20, 4);
         await q.waitTicks(3);
     };
 
     const cross = async (label: string, lx: number, lz: number, id: number, op: RegExp, done: () => boolean, ticks = 15) => {
         await q.step(label, () => { const l = q.locAt(lx, lz) ?? q.findLoc((k: any) => k.id === id && Math.abs(k.x - lx) <= 1 && Math.abs(k.z - lz) <= 1) ?? { id, x: lx, z: lz }; return q.opLoc(l, q.opIndex(l, op)); }, done, ticks, 4);
         await q.waitTicks(1);
+    };
+    // Items the quest no longer needs are dropped so the pack has room at the temple (5 worn items come off there).
+    const drop = async (label: string, ids: number[]) => {
+        for (let i = 0; i < 6 && ids.some(id => q.has(id)); i++) {
+            const it = q.inv().find((e: any) => ids.includes(e.id));
+            if (it) await q.s.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' });
+            await q.waitTicks(1);
+        }
+        if (ids.some(id => q.has(id))) console.log(`WARN drop ${label}`);
     };
     const pickup = async (label: string, id: number, gx?: number, gz?: number) => {
         if (gx !== undefined && gz !== undefined) await q.walk(`to ${label}`, [{ x: gx, z: gz, tol: 1 }]);
@@ -76,8 +88,8 @@ try {
     // this side, "Cross" jumps to the far side (upass_obstacles.rs2:353-406).
     const bridge = async (label: string, lx: number, lz: number, ax: number, az: number) => {
         await q.walk(`${label} approach`, [{ x: ax, z: az, tol: 0 }]);
-        const n0 = q.msgCount(/manage to cross safely/i);
-        await cross(label, lx, lz, 3255, /cross/i, () => q.msgCount(/manage to cross safely/i) > n0, 25);
+        const t0 = q.s.tick();
+        await cross(label, lx, lz, 3255, /cross/i, () => msgSince(/manage to cross safely/i, t0), 25);
         await q.waitTicks(2);
     };
 
@@ -115,6 +127,7 @@ try {
         await q.walk('to shot', [{ x: 2447, z: 9722, tol: 0 }]);
         await q.step('shoot rope', () => q.opLoc(q.locAt(ROPE.x, ROPE.z) ?? ROPE, 1), () => x() <= 2442, 20, 3);
         await wield('scimitar', ITEM.scimitar);
+        await drop('bow', [ITEM.bow, ITEM.arrow]);
         q.milestone(2);
         // 5. The rope on the hanging rock swings the bot east (upass_obstacles.rs2:94-131), then rockslides north-east
         // round to the spike grid.
@@ -235,6 +248,7 @@ try {
         await q.walk('to cell', [{ x: 2393, z: 9656, tol: 0 }]);
         await cross('cell lock', 2393, 9655, 3266, /pick|open/i, () => z() <= 9654);
         await q.step('mud', () => q.useOnLoc(ITEM.spade, q.findLoc((l: any) => l.id === 3216) ?? { id: 3216, x: 2393, z: 9650 }), () => z() <= 9647, 12, 3);
+        await drop('spade', [ITEM.spade]);
         await q.walk('to ledge', [{ x: 2375, z: 9644, tol: 0 }]);
         await cross('ledge', 2374, 9644, 3238, /.*/, () => z() <= 9639, 20);
         await q.walk('to cage door 1', [{ x: 2379, z: 9619, tol: 0 }]);
@@ -302,6 +316,7 @@ try {
         await cross('witch door', 2158, 4566, 3270, /open/i, () => x() <= 2157 && z() <= 4566, 12);
         await q.step('witch chest', () => q.dialogOpen() ? q.converse([], () => q.has(ITEM.doll), 3) : q.opLoc(q.findLoc((l: any) => l.id === 3272 || l.id === 3273) ?? { id: 3272, x: 2157, z: 4564 }, 1), () => q.has(ITEM.doll), 12, 4);
         await q.converse([], () => !q.dialogOpen(), 6);
+        await drop('journal', [1494, 127, 145]);
         q.milestone(7);
     }
     if (from('demons')) {
@@ -311,17 +326,107 @@ try {
         // (:547-562).
         if (x() <= 2157 && z() <= 4566) await cross('witch door out', 2158, 4566, 3270, /open/i, () => x() >= 2158, 12);
         await bridge('bridge cat 2', 2147, 4583, 2150, 4583);
+        // Othainian first: west over 2 bridges (2127,4592 from 2130,4592 lands at 2127,4591; 2123,4582 from 2123,4585
+        // lands at 2123,4581, trial w3), and back the same way.
+        await bridge('bridge west 1', 2127, 4592, 2130, 4592);
+        await bridge('bridge west 2', 2123, 4582, 2123, 4585);
+        await kill('othainian', /^othainian$/i, ITEM.amuletO, { x: 2123, z: 4562 });
+        await bridge('bridge west 2 back', 2123, 4582, 2123, 4581);
+        await bridge('bridge west 1 back', 2127, 4592, 2127, 4591);
         await bridge('bridge demons', 2142, 4562, 2142, 4565);
         await kill('doomion', /^doomion$/i, ITEM.amuletD, { x: 2134, z: 4563 });
         await kill('holthion', /^holthion$/i, ITEM.amuletH, { x: 2133, z: 4556 });
-        q.milestone('demons 2');
-        await bridge('bridge demons back', 2142, 4562, 2142, 4561);
-        await bridge('bridge west 1', 2127, 4592, 2130, 4592);
-        console.log(`AT after west 1 ${x()},${z()}`);
-        await bridge('bridge west 2', 2123, 4582, 2123, 4585);
-        console.log(`AT after west 2 ${x()},${z()}`);
-        await kill('othainian', /^othainian$/i, ITEM.amuletO, { x: 2123, z: 4562 });
-        q.milestone('demons 3');
+        q.milestone('amulets');
+        await q.walk('to shadow chest', [{ x: 2136, z: 4577, tol: 1 }]);
+        await q.step('shadow chest', () => q.opLoc(q.findLoc((l: any) => l.id === 3274) ?? { id: 3274, x: 2136, z: 4578 }, 1), () => q.has(ITEM.shadow), 12, 3);
+        await q.step('shadow on doll', () => q.useOnItem(ITEM.shadow, ITEM.doll), () => !q.has(ITEM.shadow), 6, 3);
+        q.milestone('shadow');
+    }
+    if (from('lower')) {
+        // 13. Back east and down to the dwarves: Klank gives the gauntlets (klank.rs2, %upass 7); the bucket on the
+        // brew barrel (2327,9799); the brew on Iban's tomb, the tinderbox on it, the ashes from it (quest_upass.rs2:
+        // 421-489) rubbed into the doll (:563-568); Kalrag (2356,9911, level 89) killed with the doll in the pack
+        // (kalrag.rs2:8-33); up the north-west tunnel (2304,9915 -> 2113,4729,1, quest_upass.rs2:417-419).
+        // From the chest the walk to the bridge and on north ended at 2138,4579 twice (trials w4, f1); from the
+        // demons' floor (2135,4556) it did not (trial l2), so the bot goes there first.
+        if (z() < 4580 && x() < 2143) {
+            await q.walk('to demons floor', [{ x: 2135, z: 4556, tol: 1 }]);
+            await bridge('bridge demons out', 2142, 4562, 2142, 4561);
+        }
+        // After the chest a walk to 2146,4583 ended at 2138,4579 (trial w4); the bot walks the column x 2142 first.
+        await q.walk('to bridge cat 3', [{ x: 2142, z: 4566, tol: 1 }, { x: 2142, z: 4582, tol: 1 }]);
+        await bridge('bridge cat 3', 2147, 4583, 2146, 4583);
+        await bridge('bridge witch back', 2156, 4582, 2155, 4582);
+        await q.walk('to tunnel down 2', [{ x: 2150, z: 4547, tol: 2 }]);
+        await cross('tunnel down 2', 2150, 4545, 3222, /descend/i, () => q.lvl() === 0, 15);
+        await q.converse([], () => !q.dialogOpen(), 10);
+        await q.talk('klank', /^klank$/i, [/what happened to them/i], () => q.has(ITEM.gauntlets), { x: 2323, z: 9803 }, 60);
+        // The barrel has forceapproach=south at angle 1, so the bot uses it from the west tile (upass.loc).
+        await q.walk('to barrel', [{ x: 2326, z: 9799, tol: 0 }]);
+        await q.step('brew', () => q.useOnLoc(ITEM.bucket, q.findLoc((l: any) => l.id === 3344) ?? { id: 3344, x: 2327, z: 9799 }), () => q.has(ITEM.brew), 10, 3);
+        await q.walk('to tomb', [{ x: 2357, z: 9799, tol: 2 }]);
+        const tomb = () => q.findLoc((l: any) => l.id === 3353 || l.id === 3354) ?? { id: 3353, x: 2356, z: 9800 };
+        await q.step('pour brew', () => q.useOnLoc(ITEM.brew, tomb()), () => !q.has(ITEM.brew), 10, 3);
+        await q.step('light tomb', () => q.useOnLoc(ITEM.tinderbox, tomb()), () => q.has(ITEM.ashes), 12, 3);
+        await q.step('ashes on doll', () => q.useOnItem(ITEM.ashes, ITEM.doll), () => !q.has(ITEM.ashes), 15, 2);
+        q.milestone('ashes');
+        const b0 = 0;
+        await kill('kalrag', /^kalrag$/i, undefined, { x: 2356, z: 9908 });
+        await q.waitUntil(() => q.msgCount(/smear the doll of iban/i) > b0, 8);
+        if (q.msgCount(/smear the doll of iban/i) <= b0) await q.fail('no blood on doll');
+        q.milestone('blood');
+        await q.walk('to tunnel up 2', [{ x: 2305, z: 9915, tol: 1 }]);
+        await cross('tunnel up 2', 2304, 9915, 3223, /ascend/i, () => q.lvl() === 1, 15);
+    }
+    if (from('dove')) {
+        // 14. The gauntlets worn; the bridge east (2121,4686 from 2120,4686); the cage (upass_cage_dummy 2134,4702)
+        // gives Iban's dove (quest_upass.rs2:492-522), crushed on the doll (:549-555).
+        await wield('gauntlets', ITEM.gauntlets);
+        await bridge('bridge north', 2121, 4686, 2120, 4686);
+        await q.walk('to dove cage', [{ x: 2133, z: 4701, tol: 1 }]);
+        await q.step('dove', () => q.opLoc(q.findLoc((l: any) => l.id === 3351) ?? { id: 3351, x: 2134, z: 4702 }, 1), () => q.has(ITEM.dove), 12, 4);
+        await q.step('dove on doll', () => q.useOnItem(ITEM.dove, ITEM.doll), () => !q.has(ITEM.dove), 6, 3);
+        q.milestone('dove');
+    }
+    if (from('temple')) {
+        // 15. South over 2 bridges to the temple (2162,4663 from 2162,4666; 2161,4654 from 2161,4657); an Iban
+        // disciple (level 13) drops the Zamorak robe top and bottom (iban_disciple.rs2:23-35); everything else off, the
+        // robes on, the temple door (2143,4647) opens (quest_upass.rs2:574-619); the complete doll on the altar
+        // (2136,4647) kills Iban, sets 9 and throws the bot out to 2482,9607 (:649-693).
+        await bridge('bridge temple 1', 2162, 4663, 2162, 4666);
+        await bridge('bridge temple 2', 2161, 4654, 2161, 4657);
+        await kill('disciple', /^iban disciple$/i, ITEM.robeTop, { x: 2155, z: 4648 });
+        await pickup('robe bottom', ITEM.robeBottom);
+        for (let i = 0; i < 4 && (q.st()?.equipment ?? []).length > 0; i++) {
+            for (const w of (q.st()?.equipment ?? [])) await q.s.bot.unequipItem(w.name ?? w.id);
+            await q.waitTicks(2);
+        }
+        if ((q.st()?.equipment ?? []).length > 0) await q.fail('unequip');
+        await wield('robe top', ITEM.robeTop);
+        await wield('robe bottom', ITEM.robeBottom);
+        await q.walk('to temple door', [{ x: 2145, z: 4647, tol: 1 }]);
+        await cross('temple door', 2143, 4647, 3334, /open/i, () => x() <= 2142, 12);
+        q.milestone(8);
+        // Iban's bolts hit 5-10 and push the bot 1 tile east (lord_iban.rs2:1-40); a hit or a meal cancels the walk to
+        // the altar ("I can't reach that!" 4 times in trial c1), so the bot sends the use again until it lands.
+        await q.step('doll on altar', () => q.useOnLoc(ITEM.doll, q.findLoc((l: any) => l.id === 3359) ?? { id: 3359, x: 2136, z: 4647 }), () => q.lvl() === 0, 6, 15);
+        q.milestone(9);
+        // 16. Koftik (caveguide5, 2443,9607) leads the bot back to the entrance (koftik.rs2:131-145); the exit
+        // (2496,9713) to West Ardougne; King Lathas queues the completion (king_lathas.rs2:81-87).
+        await q.talk('koftik out', /^koftik$/i, [], () => z() > 9700, { x: 2443, z: 9607 }, 60);
+        await q.walk('to exit', [{ x: 2495, z: 9714, tol: 1 }]);
+        await cross('exit', 2496, 9713, 3214, /.*/, () => z() < 4000, 12);
+        await q.walk('to city doors 2', [{ x: 2556, z: 3300, tol: 1 }]);
+        await q.step('city doors 2', () => { const d = q.findLoc((l: any) => /door/i.test(l.name) && l.x >= 2557 && l.x <= 2558 && l.z >= 3299 && l.z <= 3300); return d ? q.opLoc(d, q.opIndex(d, /open/i)) : q.waitTicks(1); }, () => x() >= 2559, 12, 4);
+        await q.walk('to castle stairs', [{ x: 2572, z: 3295, tol: 1 }]);
+        await q.climb('castle stairs up', () => q.findLoc((l: any) => l.id === 1722 && l.distance <= 12) ?? { id: 1722, x: 2571, z: 3295 }, /climb-up|^climb$|walk-up/i, () => q.lvl() === 1);
+        await q.walk('to lathas door 2', [{ x: 2574, z: 3293, tol: 0 }]);
+        await q.openDoor('lathas door 2', 2575, 3293);
+        await q.talk('lathas 2', /^king lathas$/i, [], () => questDone, LATHAS, 120, true);
+        await q.converse([], () => !q.dialogOpen(), 10);
+        q.milestone(100);
+        off();
+        await q.end(questDone, 'qp=5');
     }
     off();
     await q.end(false, 'stage end');

@@ -48,4 +48,8 @@ export const LONG_PRESETS: Record<string, SaveConfig> = {
     quest_upass_main: upass({ x: 2173, z: 4725, level: 1 }, { 161: 5, 162: GRID }),
     // Debug (UP_FROM=witch): by the tunnel up from the dwarves, %upass 6.
     quest_upass_witch: upass({ x: 2336, z: 9795 }, { 161: 6, 162: GRID }),
+    // Debug (UP_FROM=lower): beside the demons with the doll and shadow done, %upass 7 (bits 4 shadow, 9 cat).
+    // Debug: at the shadow chest, same state.
+    quest_upass_chest: upass({ x: 2136, z: 4577, level: 1 }, { 161: 7, 162: GRID + 16 + 512 }, [1492]),
+    quest_upass_lower: upass({ x: 2135, z: 4556, level: 1 }, { 161: 7, 162: GRID + 16 + 512 }, [1492]),
 };

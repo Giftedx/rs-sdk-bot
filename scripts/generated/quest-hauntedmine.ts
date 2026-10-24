@@ -316,8 +316,15 @@ try {
     await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
     // Up to 3 rounds: the kill page (queue hauntedmine_boss_death, :247-254) sets 9; a key taken at 8 with the ghost
     // gone wakes it again (:18-26,52), so a round ends with the key and the next round fights on.
-    for (let round = 0; round < 3 && !q.has(ITEM.rewardKey); round++) {
-        seenT = q.T();
+    // A ghost killed while it is faded (the kill lands after the hit's move turned it into
+    // hauntedmine_boss_ghost_faded, which has no ai_queue3, :244-249) stays at 0 hitpoints and takes no more damage, and
+    // the key stays blocked while it lives (:23-26). Its timer deletes it when the player leaves the fight zone
+    // (:117-123; the door zone x 2799-2807 does not count), so the bot steps out past the door zone and back, and the
+    // key wakes a new ghost.
+    let zeroT = -1;
+    for (let round = 0; round < 4 && !q.has(ITEM.rewardKey); round++) {
+        seenT = q.T(); zeroT = -1;
+        let stuckGhost = false;
         for (let i = 0; i < 900 && !killed(); i++) {
             await q.guard('boss');
             const me = q.pos()!;
@@ -326,7 +333,9 @@ try {
             // too (the reward key step then proves it).
             // The ghost drops out of the NPC list from some tiles (2781,4459, 2786,4461, 2787,4445 in the proofs) while
             // it lives, so only an empty list from home counts; from elsewhere the bot walks home first.
-            if ((q.st()?.nearbyNpcs ?? []).some((n: any) => /treus dayth|^ghost$/i.test(n.name))) seenT = q.T();
+            const gh: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /treus dayth|^ghost$/i.test(n.name));
+            if (gh?.hp === 0) { if (zeroT < 0) zeroT = q.T(); else if (q.T() - zeroT >= 8) { stuckGhost = true; break; } } else if (gh?.hp > 0) zeroT = -1;
+            if (gh) seenT = q.T();
             else if (q.T() - seenT >= 20 && casts > 0 && q.near(HOME.x, HOME.z, 0)) break;
             else if (q.T() - seenT >= 6 && !q.near(HOME.x, HOME.z, 0) && !onTrack(mx, mz) && !ne(mx, mz)) {
                 await via(mz >= 4459 ? [[2781, 4461], [2781, 4457], [HOME.x, HOME.z]] : [[HOME.x, HOME.z]]);
@@ -347,7 +356,7 @@ try {
             // A cast with no Magic XP after 4 ticks (a splash still gives XP) never fired: that tile does not work
             // for that ghost tile either.
             if (castAt && q.T() - lastCast >= 4) {
-                if (q.xp('Magic') === mxp && boss()) { bad.add(`${castAt.split('>')[0]}>${castSpot}`); console.log(`BOSS ${q.T()} dry cast ${castAt} (${castSpot})`); }
+                if (q.xp('Magic') === mxp && boss()) { hitFrom.delete(`${castAt.split('>')[0]}>${castSpot}`); hitFrom.delete(`${mx},${mz}>${castSpot}`); bad.add(`${castAt.split('>')[0]}>${castSpot}`); console.log(`BOSS ${q.T()} dry cast ${castAt} (${castSpot})`); }
                 else if (q.xp('Magic') > mxp) { hitFrom.add(`${castAt.split('>')[0]}>${castSpot}`); hitFrom.add(`${mx},${mz}>${castSpot}`); console.log(`BOSS ${q.T()} hit ${castAt} (${castSpot})`); }
                 castAt = '';
             }
@@ -384,7 +393,16 @@ try {
             }
             await q.waitTicks(1);
         }
-        await q.waitUntil(() => killed(), 40);
+        if (stuckGhost && !killed()) {
+            console.log(`BOSS ${q.T()} ghost at 0 hp: out past the door zone and back`);
+            for (let k = 0; k < 8 && x() >= 2790 && z() >= 4457; k++) { await via([[2791, 4455]]); if (z() >= 4457) await q.waitTicks(3); }
+            if (x() < 2790 && z() >= 4459) await via([[2781, 4461], [2781, 4457]]);
+            await go('boss door out', LOC.bossDoor!, () => x() >= 2799, { x: 2798, z: 4453 });
+            await q.walk('past the door zone', [{ x: 2809, z: 4453, tol: 1 }]);
+            await q.waitTicks(3);
+            await go('boss door in', LOC.bossDoor!, () => x() < 2799, { x: 2800, z: 4453 });
+        }
+        await q.waitUntil(() => killed(), stuckGhost ? 1 : 40);
         if (!killed()) console.log(`WARN round ${round}: no kill page at ${q.T()}`);
         await shut();
         // The north-east corner (x 2791-2797, z 4457-4461) joins the room only across the z 4456 track (SDK
