@@ -46,7 +46,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Biohazard (`biohazard`) | 3 (75) | rest | Plague City (OSRS; `quest_elena/scripts/mud_patch.rs2:15` reads `%biohazard`); a teleport destroys the plague sample (`skill_magic/scripts/spells/teleport.rs2:94-97`); MEASURED 1,655-1,672 ticks in row `quests-medium` | none found | L |
 | Shield of Arrav (`blackarmgang`) | 1 (76) | rest | one gang only (`general/scripts/quests.rs2:170`); a second account in the other gang (rev 289 code, see "Shield of Arrav as a pair"); MEASURED 234-237 ticks in row `quest-arrav` | Jonny the Beard, weaponsmaster (helper) | M |
 | Black Knights' Fortress (`blackknight`) | 3 (77) | `qp-filler` | 12 QP (`quest_blackknight/scripts/blackknight_journal.rs2:9-10`) | level 33 knights (same) | - |
-| Big Chompy Bird Hunting (`chompybird`) | 2 (78) | rest | Fletching 5, Cooking 30, Ranged 30 (`quest_chompybird/scripts/chompybird_journal.rs2:10-28`) | none found | M |
+| Big Chompy Bird Hunting (`chompybird`) | 2 (78) | rest | Fletching 5, Cooking 30, Ranged 30 (`quest_chompybird/scripts/chompybird_journal.rs2:10-28`) | none found; CLAIMED by short/medium helper | M |
 | Clock Tower (`cog`) | 1 (79) | rest | none found; MEASURED 468-486 ticks in row `quests-medium` | none found | M |
 | Cook's Assistant (`cook`) | 1 (80) | `cooks-assistant` | none | none | - |
 | Family Crest (`crest`) | 1 (81) | `crest` (qp 0) | Mining 40, Crafting 40, Smithing 40, Magic 59 (`quest_crest/scripts/crest_journal.rs2:10-13`) | level 170 demon (`:14`) | - |
