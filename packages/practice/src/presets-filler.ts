@@ -29,4 +29,8 @@ export const FILLER_PRESETS: Record<string, SaveConfig> = {
     quest_blackknight: filler({ x: 2961, z: 3337, level: 2 }, [1101, 1139, 1965, [563, 2], [556, 6], [555, 2]]),
     // Debug: outside the fortress door with %spy 1 and the uniform worn.
     quest_blackknight_fort: { ...filler({ x: 3016, z: 3512 }, [1333, 1965, [563, 1], [556, 3], [555, 1]], 4, 0, { 130: 1 }), equipment: [[1139, 0], [1725, 2], [1101, 4], [1201, 5], [1079, 7], [1059, 9], [1061, 10]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! })) },
+    // Ernest the Chicken: outside the Draynor Manor gate beside Veronica (spawn 3110,3330, maps/m48_52.jm2); fish food
+    // (272) and poison (273) for the fountain, a spade (952) for the compost heap. The gauge, key, tube and oil can
+    // are untradeable (quest_haunted.obj), so the run fetches them.
+    quest_haunted: filler({ x: 3111, z: 3331 }, [272, 273, 952]),
 };

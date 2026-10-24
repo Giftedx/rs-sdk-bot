@@ -900,6 +900,7 @@ The walks between the 4 quests are not in the counts.
 | Quest | Script | RESULT ticks (3 runs) | Status |
 |---|---|---|---|
 | Black Knights' Fortress | `scripts/generated/quest-blackknight.ts` | 327, 327, 323 | MEASURED 3/3 |
+| Ernest the Chicken | `scripts/generated/quest-haunted.ts` | 410, 414, 412 | MEASURED 3/3 |
 
 ### Black Knights' Fortress
 
@@ -923,3 +924,27 @@ Findings (`maps/m47_54.jm2`, and the `nearbyLocs` of the trials):
 - The Black Knights (level 33) hit the bot to 95 HP at most. No food was eaten.
 - Helper items (tradeable): iron chainbody (1101), bronze med helm (1139), cabbage (1965; the Draynor Manor
   `magic_cabbage` is the wrong one, `:119-129`), runes for two Falador teleports.
+
+### Ernest the Chicken
+
+`RESULT ok qp=4 ... ticks=410 hpMin=99 eats=0 walkTicks=88 retries=3 died=false` (runs: 410, 414, 412 ticks), each
+with `Congratulations! Quest complete!`. Route: Veronica "Aha, sounds like a quest. I'll help." (`areas/area_draynor/
+scripts/veronica.rs2:8-19`) 0-18; poison on the fish food, the food into the fountain (153 at 3087,3334), the
+fountain searched for the gauge (`quest_haunted.rs2:48-93`) 18-47; the spade on the compost heap (152 at 3084,3360)
+gives the key (`:16-29`) 47-65; the front door (opens from the south only, `:1-11`), the closet (131 at 3107,3367)
+with the key both ways, the tube from its floor 65-117; the bookcase (155 at 3097,3358, searched from the east,
+`:95-100`) and the ladder down 117-141; the lever route and the oil can 141-277; the ladder up (it resets the levers,
+`:136-145`), the lever out of the secret room (160 at 3096,3357), the stairs, the lab door, Oddenstein twice
+(`professor_oddenstein.rs2:63-124`) 277-412.
+Findings:
+- The basement doors are named for 9 rooms, but rooms 1 and 4 (x >= 3105) are one room and so are 7 and 8 (z < 9758,
+  x >= 3100; the ladder, levers A and B) (`maps/m48_152.jm2` wall lines x 3100 / 3105, z 9758 / 9763). With that
+  room map, a Dijkstra over room x lever bits (`:168-176` door conditions) gives 23 actions: B, A, door 4to7, D,
+  4to5, 5to8, A, B, 5to8, 5to6, 3to6, F, E, 2to3, 1to2, C, 1to2, 2to3, E, 2to3, 2to5, 5to8, 8to9. They take 136
+  ticks. The door 8to9 still opens on the way back (E up, F down).
+- The fountain adds the gauge after its two chatplayer pages (`:56-60`); the script clicks them through.
+- Two shut doors that the SDK plan does not handle: the hall door (loc_1530 at 3109,3358) and the lab door (loc_1530
+  at 3108,3364, level 2). A walk to the closet door's tile planned through the locked closet door ("Temporarily
+  avoiding locked door") and lost 77 ticks; a shut lab door made 3 of 3 talks to Oddenstein fail.
+- Helper items (tradeable): fish food (272), poison (273), spade (952). Untradeable: gauge, key, tube, oil can
+  (`quest_haunted.obj`).
