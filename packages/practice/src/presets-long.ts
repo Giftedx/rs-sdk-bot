@@ -91,7 +91,64 @@ function tt(position: { x: number; z: number; level?: number }, varps: Record<nu
     };
 }
 
+// Temple of Ikov (scripts/generated/quest-ikov.ts): no quest needed (Thieving 42, Ranged 40). Worn: a magic shortbow
+// (861; ice arrows need a yew or magic bow, quest_ikov.obj ice_arrow levelrequire 40, player_ranged.rs2:97), no
+// armour: the lava bridge drops a player whose weight is 0 or more (ikov_dungeon.rs2:52-82), and the boots of
+// lightness give -10 lb. Helper items (tradeable): a lit candle (33) for the dark stairs (:3-10), a knife (946) for the
+// web in front of the boots (general_use/scripts/web.rs2:10-30, 1 in 2 per slash), 20 limpwurt roots
+// (225) for Winelda (winelda.rs2:1-12), Varrock Teleport runes (law, 3 air, fire), 2 sharks. %ikov is varp 26,
+// %ikov_icearrowchest_coord 28 is set to -1: a coord varp starts at -1 (null) in the engine (engine/entity/Player.ts:490-497)
+// but the generated save writes 0, which matches no chest (quest_ikov.rs2:115-131; trial 4 searched 60 times for none).
+// %ikov_dungeon 27 (bit 0 the lever, bit 1 the bridge).
+const IK_WORN = wear([[861, 3]]);
+const IK_ITEMS: Array<number | [number, number]> = [33, 946, ...Array(20).fill(225), [563, 1], [556, 3], [554, 1], 385, 385];
+function ikov(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, extra: Array<number | [number, number]> = [], equipment = IK_WORN): SaveConfig {
+    return { position: { level: 0, ...position }, skills: ALL_99, equipment, varps: { ...DONE, 28: -1, ...varps }, inventory: items([...IK_ITEMS, ...extra]) };
+}
+
+// Regicide (scripts/generated/quest-regicide.ts): Underground Pass done (161 = 10; %ibanmulti 162 as a finished run
+// leaves it: the doll bits 1-4, the 4 orbs 5-8, the cat 9, started 11, the 3 badges and the horn thrown 14-16 and 18,
+// Koftik 17, the grid path 22-31), %regicide_quest (328) 1 with the King's summons (3206). Worn: the rune set. Helper
+// items (tradeable): a shortbow and 2 iron fire arrows (2532) with a tinderbox for the bridge rope (one per crossing of
+// the pass), a rope (the second one in the bank), a spade for the cell mud, a pestle and mortar, an empty pot, a
+// limestone, 4 balls of wool, runes for a Falador and two Ardougne teleports, 10 sharks; in the Falador bank: 8 coal for
+// the still, the second rope, a cooked rabbit for the catapult guard, 20 sharks.
+const IBAN_DONE = 1022 + 2048 + 114688 + 131072 + 262144 + (333 << 22);
+const RG_WORN = UP_WORN;
+const RG_RUNES: Array<number | [number, number]> = [[563, 5], [556, 3], [555, 5]];
+const RG_BANK = items([[453, 8], 954, 3228, [385, 20]]);
+function rg(position: { x: number; z: number; level?: number }, stage: number, inv: Array<number | [number, number]>, food = 10): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment: RG_WORN, varps: { ...DONE, 165: 30, 68: 16, 161: 10, 162: IBAN_DONE, 328: stage },
+        inventory: items([...inv, ...Array.from({ length: food }, () => 385)]), bank: RG_BANK,
+    };
+}
+const RG_TRAV: Array<number | [number, number]> = [841, 590, 952, 233, 1931, 3211];
+
 export const LONG_PRESETS: Record<string, SaveConfig> = {
+    // In King Lathas's room, level 1 of Ardougne castle.
+    quest_regicide: rg({ x: 2577, z: 3292, level: 1 }, 1, [3206, [2532, 2], 954, ...RG_TRAV, 1759, 1759, 1759, 1759, ...RG_RUNES]),
+    // Debug (RG_FROM=tir1): at the temple exit in Tirannwn, %regicide_quest 2.
+    quest_regicide_tir1: rg({ x: 2312, z: 3216 }, 2, [2532, ...RG_TRAV, 1759, 1759, 1759, 1759, ...RG_RUNES]),
+    // Debug (RG_FROM=t8): beside the tracker, %regicide_quest 8, the 2 barrels and the cloth.
+    quest_regicide_t8: rg({ x: 2256, z: 3150 }, 8, [2532, ...RG_TRAV, 3216, 3216, 3224, ...RG_RUNES]),
+    // Debug (RG_FROM=falador): at the Falador teleport spot, %regicide_quest 11, 2 tar barrels, sulphur dust, the cloth.
+    quest_regicide_falador: rg({ x: 2965, z: 3378 }, 11, [2532, ...RG_TRAV, 3220, 3220, 3215, 3224, [563, 4], [555, 4]], 8),
+    // Debug (RG_FROM=up2): at the Ardougne teleport spot, %regicide_quest 11, the fused barrel, rabbit and rope.
+    quest_regicide_up2: rg({ x: 2661, z: 3301 }, 11, [841, 2532, 590, 952, 954, 3219, 3228, [563, 2], [555, 2]], 12),
+    // Debug (RG_FROM=tir2): at the temple exit, %regicide_quest 11, the fused barrel and the rabbit.
+    quest_regicide_tir2: rg({ x: 2312, z: 3216 }, 11, [841, 590, 952, 3219, 3228, [563, 2], [555, 2]], 12),
+    // Debug (RG_FROM=home): beside the catapult after the shot, %regicide_quest 12.
+    quest_regicide_home: rg({ x: 2183, z: 3185 }, 12, [[563, 2], [555, 2]], 8),
+
+    // Beside Lucien in the Flying Horse Inn, Ardougne (spawn 2573,3321, maps/m40_51.jm2).
+    quest_ikov: ikov({ x: 2574, z: 3321 }),
+    // Debug (IK_FROM=low): in the temple by the dark stairs, %ikov 10, the pendant of Lucien (86) worn.
+    quest_ikov_low: ikov({ x: 2654, z: 9809 }, { 26: 10 }, [], wear([[861, 3], [86, 2]])),
+    // Debug (IK_FROM=arrows): south of the mended-lever gate, %ikov 10, the lever bit set, boots of lightness worn.
+    quest_ikov_arrows: ikov({ x: 2661, z: 9801 }, { 26: 10, 27: 1 }, [], wear([[861, 3], [86, 2], [89, 10]])),
+    // Debug (IK_FROM=warrior): south of the trap-lever door, %ikov 30, 10 ice arrows worn.
+    quest_ikov_warrior: ikov({ x: 2648, z: 9855 }, { 26: 30, 27: 1 }, [], [...wear([[861, 3], [86, 2], [89, 10]]), { id: 78, count: 10, slot: 13 }]),
     // Beside Irena, south of the Shantay Pass (spawn 3303,3113, maps/m51_48.jm2).
     quest_desertrescue: tt({ x: 3303, z: 3112 }),
     // Debug (TT_FROM=shabim): beside Al Shabim's tent, %desertrescue 10 (the mine guard asked for a pineapple), the

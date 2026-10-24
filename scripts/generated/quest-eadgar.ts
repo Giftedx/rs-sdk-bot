@@ -271,9 +271,26 @@ try {
         const t0 = q.s.tick();
         await op('store door', STORE_DOOR, () => msgSince(/you unlock the door/i, t0) || z() >= STORE_DOOR.z);
         q.milestone(100);
-        for (let i = 0; i < 4 && !q.has(ITEM.goutweed); i++) {
-            await q.walk('to crate', [{ x: CRATE.x, z: CRATE.z + 1, tol: 0 }]);
-            await op('crate', CRATE, () => q.has(ITEM.goutweed), 8, 2);
+        // The patrolling guards throw a club at a player on or ahead of their path; the knock-out puts the bot at
+        // 2849,10080 (quest_eadgar.rs2:510-590), so the walk and the crate are tried again from there.
+        for (let i = 0; i < 12 && !q.has(ITEM.goutweed); i++) {
+            await q.guard('crate');
+            if (q.dialogOpen()) await closeDlg();
+            if (!(x() === CRATE.x && z() === CRATE.z + 1)) {
+                // From the door tile a client-routed click does not move the bot (trial u1: 300 ticks; trial st2: 25),
+                // so even tries use the SDK walker and odd tries the click.
+                if (i % 2 === 1) {
+                    await q.s.direct({ type: 'walkTo', x: CRATE.x, z: CRATE.z + 1, running: true, reason: 'SDK' });
+                    await q.waitUntil(() => x() === CRATE.x && z() === CRATE.z + 1, 25);
+                } else {
+                    await q.s.bot.walkTo(CRATE.x, CRATE.z + 1, 0, { timeout: 30_000 } as any).catch(() => undefined);
+                }
+            }
+            if (x() === CRATE.x && z() === CRATE.z + 1) {
+                await q.opLoc(loc(CRATE), 1);
+                await q.waitUntil(() => q.has(ITEM.goutweed), 8);
+            }
+            if (!q.has(ITEM.goutweed)) console.log(`WARN crate try ${i} me ${x()},${z()} t=${q.T()}`);
         }
         if (!q.has(ITEM.goutweed)) await q.fail('goutweed');
         q.milestone('goutweed');
