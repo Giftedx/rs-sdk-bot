@@ -1,4 +1,4 @@
-// NOT PROVEN (2026-10-24): stops at the broken glass, see research/quest-plan.md section 1n.
+// MEASURED (2026-10-24): 3/3 on practice in 449-455 ticks, see research/quest-plan.md section 1n.
 // Sea Slug from preset quest_seaslug (beside Caroline), at the planner's state for the rival-seaslug row (tick
 // 24,985; Firemaking 99, Fishing 1). Reward: 71,750 Fishing (x25: 179,375), 1 QP (caroline.rs2:33-48).
 // Varp %seaslugquest (159, quest_seaslug.constant): 1 Caroline; 2 Holgart wants swamp paste; 3 the paste (helper item
@@ -10,7 +10,7 @@
 // the island) puts a lit torch out (holgart_ardougne.rs2:152-167), so the torch is lit after the island.
 // Paths below are under vendor/rs-sdk/server/content/scripts/.
 import { openQuest } from './quest-lib';
-import { componentId } from '../../packages/core/src/logout';
+import { fixBridgedLocChanges } from '../../packages/core/src/bridgefix';
 
 const CAROLINE = { x: 2716, z: 3302 };
 const HOLGART_LAND = { x: 2720, z: 3306 };
@@ -22,10 +22,11 @@ const WALL = { x: 2764, z: 3287 };                         // kennithwall (2519)
 const PANEL = { x: 2765, z: 3288 };                        // loosepanel (2518)
 const CRANE = { x: 2768, z: 3286 };                        // fishingcrane (2520), 4x4; used from z >= 3289
 const STICKS = { x: 2784, z: 3289 };                       // damp sticks (1467) spawn
-const GLASS = [{ x: 2765, z: 3278 }, { x: 2765, z: 3289 }]; // broken glass (1469) spawns
+const GLASS_DOOR = { x: 2765, z: 3287 };                  // loc_1533 east wall; broken glass (1469) at 2765,3289
 const ITEM = { paste: 1941, torch: 596, lit: 594, damp: 1467, glass: 1469, dry: 1468, food: 379 };
 
 const q = await openQuest({ cap: 2000, eatAt: 40, food: [ITEM.food] });
+if (!fixBridgedLocChanges((q.s as any).client)) console.log('WARN bridge fix not applied');
 try {
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+sea slug/i) > 0) questDone = true; });
@@ -35,7 +36,7 @@ try {
         await q.step(label, () => { const g = ground(id); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(id), 15, 5);
     };
     const listLocs = (r = 6) => q.locs().filter((l: any) => l.distance <= r).map((l: any) => `${l.name}#${l.id}@${l.x},${l.z}:${(l.optionsWithIndex ?? []).map((o: any) => o.text).join('/')}`).join(' ');
-    const ladder = (re: RegExp) => () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 12 && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
+    const ladder = (re: RegExp) => () => q.findLoc(l => /ladder/i.test(l.name) && l.distance <= 25 && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
     const locOp = async (label: string, id: number, at: { x: number; z: number }, ok: () => boolean, ticks = 12): Promise<void> => {
         await q.step(label, () => {
             const l = q.findLoc(l => l.id === id || (l.x === at.x && l.z === at.z && (l.optionsWithIndex ?? []).length > 0));
@@ -44,7 +45,9 @@ try {
         }, ok, ticks, 4);
     };
     const shout = async (label: string, ok: () => boolean): Promise<void> => {
-        await q.walk(`to wall ${label}`, [{ x: WALL.x, z: WALL.z + 2, tol: 1 }]);
+        // South of the wall (Kennith is 2 tiles north, quest_seaslug.rs2:119-122), in the room behind door loc_1530
+        // (2764,3285, a bridged tile: fixBridgedLocChanges).
+        await q.walk(`to wall ${label}`, [{ x: WALL.x, z: WALL.z - 1, tol: 0 }]);
         await locOp(`shout ${label}`, 2519, WALL, () => q.dialogOpen() || ok(), 10);
         await q.converse([], () => ok() && !q.dialogOpen(), 30);
         if (!ok()) await q.fail(`shout ${label}`);
@@ -62,20 +65,12 @@ try {
     // The damp sticks and the broken glass on the platform; dried at once (no stage check, quest_seaslug.rs2:29-40).
     await q.walk('to sticks', [{ x: STICKS.x, z: STICKS.z, tol: 1 }]);
     await pickUp('damp sticks', ITEM.damp);
-    // Broken glass: both spawns (2765,3278 in the kitchen, 2765,3289 under Kennith's room) are "I can't reach that!"
-    // for a walk-up pickup, also with the room doors (loc_1533 2765,3277 and 2765,3287) open (test runs t1-t10:
-    // the server leaves the bot on 2766,3287), and the groundItems entries say reachable=false. Telekinetic Grab
-    // (Magic 33, 1 air + 1 law, skill_magic/scripts/spells/telegrab.rs2) takes it from the pier outside.
-    await q.walk('to glass window', [{ x: 2766, z: 3289, tol: 0 }]);
-    const TELEGRAB = componentId('magic:telekinetic_grab');
-    for (let i = 0; i < 4 && !q.has(ITEM.glass); i++) {
-        await q.guard('telegrab');
-        const g = (q.st()?.groundItems ?? []).filter((g: any) => g.id === ITEM.glass).sort((a: any, b: any) => a.distance - b.distance)[0];
-        if (!g) { await q.waitTicks(1); continue; }
-        const r: any = await q.s.direct({ type: 'spellOnGroundItem', x: g.x, z: g.z, itemId: g.id, spellComponent: TELEGRAB, reason: 'SDK' });
-        await q.waitUntil(() => q.has(ITEM.glass), 8);
-        if (!q.has(ITEM.glass)) console.log(`WARN telegrab ${i}: ${JSON.stringify(r)?.slice(0, 160)} msgs=${(q.st()?.gameMessages ?? []).slice(-2).map((m: any) => m.text).join(' / ')}`);
-    }
+    // Broken glass at 2765,3289, in the room under Kennith's room. The room door (loc_1533, 2765,3287) is on a
+    // bridged tile; fixBridgedLocChanges (packages/core/src/bridgefix.ts) makes the lite client route through it once
+    // it is open. Without it the lite collision keeps the closed door and the pickup is "I can't reach that!".
+    await q.walk('to glass door', [{ x: GLASS_DOOR.x + 1, z: GLASS_DOOR.z, tol: 0 }]);
+    const closedDoor = () => q.findLoc(l => l.id === 1533 && l.x === GLASS_DOOR.x && l.z === GLASS_DOOR.z);
+    if (closedDoor()) await q.step('open glass door', () => q.opLoc(closedDoor(), 1), () => !closedDoor(), 6, 3);
     await pickUp('broken glass', ITEM.glass);
     await q.step('dry sticks', () => q.useOnItem(ITEM.glass, ITEM.damp), () => q.has(ITEM.dry), 6, 3);
     q.milestone('sticks');
@@ -85,13 +80,17 @@ try {
     await q.climb('ladder up 1', ladder(/climb-up/i), /climb-up/i, () => q.lvl() === 1);
     await shout('1', () => q.sawText(/try and find your father/i));
     q.milestone(4);
+    await q.walk('to ladder top 1', [{ x: LADDER.x - 3, z: LADDER.z, tol: 3 }]); // the top is 2784,3286,1 (loc 1746)
     await q.climb('ladder down 1', ladder(/climb-down/i), /climb-down/i, () => q.lvl() === 0);
 
     // 5-6. Holgart to the island; Kent; Holgart back.
     await q.talk('holgart platform', /^holgart$/i, [], () => q.near(ISLAND.x, ISLAND.z, 8), PLATFORM, 40);
     await q.converse([], () => !q.dialogOpen(), 10);
     q.milestone(5);
-    await q.talk('kent', /^kent$/i, [], () => q.sawText(/thanks kent/i), { x: 2793, z: 3321 }, 60);
+    // Kent sets stage 6 after "get my boy", then closes the talk (if_close, p_delay) before the slug part (kent.rs2:14-17).
+    const kentDone = () => q.sawText(/thanks kent/i) || q.sawText(/please go back and get my boy/i);
+    await q.talk('kent', /^kent$/i, [], kentDone, { x: 2793, z: 3321 }, 60);
+    await q.converse([], () => q.sawText(/thanks kent/i) && !q.dialogOpen(), 20);
     q.milestone(6);
     await q.talk('holgart island', /^holgart$/i, [], () => q.near(PLATFORM.x, PLATFORM.z, 6), ISLAND, 40);
     await q.converse([], () => !q.dialogOpen(), 10);
@@ -119,6 +118,7 @@ try {
     await q.walk('to crane', [{ x: CRANE.x + 1, z: CRANE.z + 3, tol: 1 }]);
     await locOp('crane', 2520, CRANE, () => q.msgCount(/lower kennith to the row boat/i) > 0, 15);
     q.milestone(11);
+    await q.walk('to ladder top 2', [{ x: LADDER.x - 3, z: LADDER.z, tol: 3 }]); // the top is 2784,3286,1 (loc 1746)
     await q.climb('ladder down 2', ladder(/climb-down/i), /climb-down/i, () => q.lvl() === 0);
 
     // Holgart to the shore; Caroline.

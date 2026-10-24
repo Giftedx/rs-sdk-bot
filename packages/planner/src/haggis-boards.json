@@ -3286,10 +3286,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 304,
-    "realistic": 495,
-    "evidence": "ESTIMATE",
-    "source": "floor = rival fastest browser run 304 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S19); realistic = their stock-client figure 495 (docs/speedrun/quests/README.md section 3)"
+    "floor": 449,
+    "realistic": 455,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1n: scripts/generated/quest-seaslug.ts, preset quest_seaslug (beside Caroline; the planner state at tick 24,985, Firemaking 99, Fishing 1; swamp paste and an unlit torch from a helper), practice, 3/3 PASS at 452, 449, 455 ticks (floor = best, realistic = worst), Caroline to Caroline; the bridged-tile door fix packages/core/src/bridgefix.ts. Was ESTIMATE 304 / 495 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S19)"
    },
    "lump": true,
    "xp": {
@@ -3307,7 +3307,7 @@
     "role": "add"
    },
    "evidence": "ESTIMATE",
-   "source": "XP: caroline.rs2:45 stat_advance(fishing, 71750) (CODE-READ); Firemaking 30 gate quest_seaslug.rs2:43 (CODE-READ); ticks rival; its 1 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
+   "source": "XP: caroline.rs2:45 stat_advance(fishing, 71750) (CODE-READ); Firemaking 30 gate quest_seaslug.rs2:43 (CODE-READ); ticks MEASURED (research/quest-plan.md section 1n); its 1 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
    "at": "caroline"
   }
  ],

@@ -1096,11 +1096,11 @@ Planner: row `rival-fight-arena` 628 / 637 MEASURED. Scenario a, `research/hisco
 Still open: the walk from Narnode to Lady Servil is not counted; the chest-to-guard legs (about 100 ticks) could use
 one trip if the guard took the brew at stage 2 (it does not, `khazard_barman.rs2` needs stage 3).
 
-## 1n. Sea Slug (the `rival-seaslug` row): NOT PROVEN, stops at the broken glass
+## 1n. Measured: Sea Slug (the `rival-seaslug` row)
 
-Script `scripts/generated/quest-seaslug.ts` (not proven), preset `quest_seaslug` (beside Caroline, 2717,3302; the
-planner state at tick 24,985: Attack 99, Strength 97, Defence 89, Hitpoints 97, Firemaking 99, Fishing 1; swamp
-paste 1941 and an unlit torch 596 from a helper, 3 law and 3 air runes). The row stays ESTIMATE (rival 304 / 495).
+Script `scripts/generated/quest-seaslug.ts`, preset `quest_seaslug` (beside Caroline, 2717,3302; the planner state at
+tick 24,985: Attack 99, Strength 97, Defence 89, Hitpoints 97, Firemaking 99, Fishing 1; swamp paste 1941 and an
+unlit torch 596 from a helper). The row is MEASURED: 449 floor / 455 realistic (was the rival's 304 / 495).
 
 Stages (CODE-READ, varp `%seaslugquest` 159, `quest_seaslug.constant`): Caroline (1, `area_ardougne_east/scripts/caroline.rs2`);
 Holgart wants swamp paste (2) and takes it (3); the row boat to the platform (`holgart_ardougne.rs2:93-117, 152-167`);
@@ -1108,20 +1108,52 @@ Kennith shouted to across the wall upstairs (4, `area_fishing_platform/scripts/k
 (5, `holgart_platform.rs2:83-89`); Kent (6, `kent.rs2`); back to the platform; the dry sticks rubbed with the torch
 in the pack (7, Firemaking 30, `quest_seaslug.rs2:42-63`); Kennith (8); kick the panel (9); Kennith (10); the crane
 (11); Holgart to the shore; Caroline (`caroline.rs2:33-48`, 71,750 Fishing x25 = 179,375). The dry sticks come from
-damp sticks (1467) and broken glass (1469), both `tradeable=no`, map spawns at 2784,3289 and at 2765,3278 / 2765,3289
-(`maps/m43_51.jm2` OBJ section). The boat from Ardougne and from the island puts a lit torch out.
+damp sticks (1467, spawn 2784,3289) and broken glass (1469, spawns 2765,3278 and 2765,3289, `maps/m43_51.jm2` OBJ).
 
-Test runs t1-t12 (practice, 2026-10-24): stages 1-3 pass in 71-74 ticks; the damp sticks are picked up. Both broken
-glass spawns stay "I can't reach that!": a walk-up pickup, a Telekinetic Grab from the pier outside, and a walk into
-either room (2765,3277 kitchen, 2765,3287 under Kennith's room) after its door (`loc_1533`, `doors/configs/doors.loc`)
-is open; `bot.walkTo` reports "Stuck at (2766, 3287)" and the groundItems entries have `reachable: false`. Both rooms
-are on bridged tiles (level-1 land flag 2, `engine/src/engine/GameMap.ts:230-236`), floor overlay 5 where the pier is
-42 (`maps/m43_51.jm2`). The cause is not found. The rival's notes mark the quest "blocked for the bot until
-cairn://p/rs/54" (scratchpad `rival/quest_points.md:57`), their 304-tick run was in a browser.
+### Cause of "I can't reach that!" at the broken glass (test runs t1-t13)
 
-Next step: find what blocks the step from 2766,3287 to 2765,3287 on the server (dump the engine collision flags of
-those tiles on the practice server, or walk a browser client in), then finish the script from stage 4 (it is written
-to the end but not run past the glass).
+The engine collision is correct. The platform tiles are bridged: the level-1 map flag of each tile has LinkBelow
+(0x2), so the engine moves the raw level-1 locs down to level 0 and drops the raw level-0 ones
+(`engine/src/engine/GameMap.ts:230-236, 263-266`). A dump of the engine flags at level 0 (the loaders of `GameMap.ts`
+run on `m43_51`) shows the glass room 2762-2765,3286-3290 closed on the east by walls, with one door, `loc_1533`
+at 2765,3287 (raw "1 13 23: 1533 0 2", WALL_EAST). Opened, it is deleted and `loc_1534` is added at 2766,3287 with
+angle 3 (`doors/scripts/doors.rs2:6-20`, `door_procs.rs2:1-9`), which leaves 2766,3287 to 2765,3287 to 2765,3289
+open. The server does not path for the bot: the client routes (`server/PATCHES.md`, "Walk-before-op",
+`clientRoutefinder=true`), and the server answers "I can't reach that!" when the client path ends short.
+
+The client is the lite client (`server/webclient/src/lite/`), and it has two bridge faults:
+
+- `protocol/zone.ts:22-36` keys LOC_ADD_CHANGE and LOC_DEL by the player's level (0). `world/CollisionBuilder.ts:63-72`
+  reads the raw level (1) for a bridged tile and moves it down; the level-0 entry is dropped (0 - 1 < 0). The opened
+  door stays closed in the lite collision map, so the route ends at 2766,3287 ("Stuck at (2766, 3287)",
+  `reachable: false`). The browser client puts the change on the right map (`client/Client.ts` `locChangeUnchecked`,
+  `tileLevel = level + 1` for LinkBelow).
+- `world/SceneLite.ts` answers `wallType` / `sceneType` (level L) from raw level L (`world/LocIndex.ts:12-15`), so on a
+  bridge `nearbyLocs` lists the locs under the bridge and not the door on it. The browser `World` moves the levels
+  down (`setBridge`).
+
+Telekinetic Grab from the pier did not work because the room wall blocks the line of sight (WALL_EAST_PROJ on
+2765,3289).
+
+Fix (package code, `patches/rs-sdk.md` item 4): `packages/core/src/bridgefix.ts` `fixBridgedLocChanges(client)` keys
+the loc changes of a bridged tile by raw level (L + 1) and makes SceneLite read raw level L + 1 there. The script calls
+it after login, opens the door, and picks up the glass at 2765,3289 (t14). The same fix opens `loc_1530` (2764,3285,1)
+upstairs; the shout spot is 2764,3286,1, south of the wall (Kennith is 2 tiles north, `quest_seaslug.rs2:119-122`),
+not the north side (t14: "no route" to loc 2519). Kent sets stage 6 and closes the talk before the slug part
+(`kent.rs2:14-17`), so the script accepts "get my boy" (t16).
+
+### Proof (MEASURED practice, 2026-10-24)
+
+`prove-log.ts scripts/generated/quest-seaslug.ts quest_seaslug 3`: PROOF 3/3.
+
+```
+RESULT ok qp=1 questMsg=true xp=fishing=179375 at=2715,3301,0 ticks=452 hpMin=97 eats=0 ...
+RESULT ok qp=1 questMsg=true xp=fishing=179375 at=2719,3302,0 ticks=449 hpMin=97 eats=0 ...
+RESULT ok qp=1 questMsg=true xp=fishing=179375 at=2717,3301,0 ticks=455 hpMin=97 eats=0 ...
+```
+
+Milestones (run t17): 1 28, 2 51, 3 71, sticks 124, 4 172, 5 221, 6 265, 7 277, 8 338, 9 345, 10 367, 11 381,
+complete 451. The rival's 304 was a browser run; our 449-455 has 142 walk ticks and 155 dialog ticks.
 
 ## 1o. Scorpion Catcher (the `scorpion` row): NOT PROVEN, needs the Barcrawl
 

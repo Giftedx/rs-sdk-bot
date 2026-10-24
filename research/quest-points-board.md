@@ -87,7 +87,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Romeo & Juliet (`romeojuliet`) | 5 (116) | `rj` | none | none | - |
 | Rune Mysteries (`runemysteries`) | 1 (117) | rest | none found | none | S |
 | Scorpion Catcher (`scorpcatcher`) | 1 (118) | `scorpion` | Prayer 31 (`quest_scorpcatcher/scripts/scorpcatcher_journal.rs2:9`); in practice also Alfred Grimhand's Barcrawl for the Barbarian Outpost gate (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-11`, `research/quest-plan.md` 1o) | none found | - |
-| Sea Slug (`seaslug`) | 1 (119) | `rival-seaslug` (qp 0) | Firemaking 30 (`quest_seaslug/scripts/quest_seaslug.rs2:43`); the broken glass was not reachable in practice runs (`research/quest-plan.md` 1n) | none found | - |
+| Sea Slug (`seaslug`) | 1 (119) | `rival-seaslug` (qp 0), MEASURED 449-455 (`research/quest-plan.md` 1n) | Firemaking 30 (`quest_seaslug/scripts/quest_seaslug.rs2:43`); the lite client needs the bridged-tile fix `packages/core/src/bridgefix.ts` for the broken glass room door | none found | - |
 | Sheep Shearer (`sheep`) | 1 (120) | rest | none | none | S |
 | Sheep Herder (`sheepherder`) | 4 (121) | `qp-filler` | none found | none found | - |
 | The Knight's Sword (`squire`) | 1 (122) | rest | Mining 10 (`quest_squire/scripts/squire_journal.rs2:7`); the portrait, blurite ore and sword are untradeable (`quest_squire/configs/quest_squire.obj`); MEASURED 887-922 ticks in row `quests-medium` | none found | M |
@@ -976,3 +976,14 @@ Findings:
 - Helper items (tradeable): 3 balls of wool, yellow dye, pink skirt, rope, soft clay, bronze bar, 3 beers, redberries,
   pot of flour, bucket of water, ashes, runes for 4 Lumbridge teleports, 50 coins. Untradeable: wig, paste, key print,
   key (`quest_prince.obj`).
+
+### Sea Slug (the `rival-seaslug` row)
+
+`RESULT ok qp=1 questMsg=true xp=fishing=179375 ... ticks=452 hpMin=97 eats=0` (runs: 452, 449, 455 ticks), preset
+`quest_seaslug`, script `scripts/generated/quest-seaslug.ts`. The broken glass block was a lite client fault on
+bridged tiles, not the server (`research/quest-plan.md` 1n, `patches/rs-sdk.md` item 4). Planner: row
+`rival-seaslug` 449 / 455 MEASURED (was the rival's 304 / 495 ESTIMATE). Scenario a, `haggis-cli.ts
+research/hiscores-live.json --levers`: Overall finish 41,229 / 44,310 -> 41,374 / 44,270 (the rival's 304-tick floor
+was faster than ours); QP at end 145; Quest Points WIN at 102,075 / 130,441 -> 102,220 / 130,401. Gate
+(`scripts/haggis-gate.ts`): "54 inputs not MEASURED; worst Agility -37538" -> "53 inputs not MEASURED; worst Agility
+-37498". `bun test packages/planner`: 42 pass, 0 fail.
