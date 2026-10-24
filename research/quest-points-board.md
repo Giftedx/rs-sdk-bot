@@ -51,7 +51,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Cook's Assistant (`cook`) | 1 (80) | `cooks-assistant` | none | none | - |
 | Family Crest (`crest`) | 1 (81) | `crest` (qp 0) | Mining 40, Crafting 40, Smithing 40, Magic 59 (`quest_crest/scripts/crest_journal.rs2:10-13`) | level 170 demon (`:14`) | - |
 | Death Plateau (`death`) | 1 (82) | rest | none found | none found | M |
-| Demon Slayer (`demon`) | 3 (83) | rest | none found | Delrith, needs Silverlight (`quest_demon/scripts/demon_journal.rs2:6-9`) | M |
+| Demon Slayer (`demon`) | 3 (83) | rest | none found; keys and Silverlight untradeable (`quest_demon/configs/demon.obj`); MEASURED 877-899 ticks in row `quests-medium` | Delrith, needs Silverlight (`quest_demon/scripts/demon_journal.rs2:6-9`) | M |
 | The Tourist Trap (`desertrescue`) | 2 (84) | rest | Fletching 10, Smithing 20 (`quest_desertrescue/scripts/quest_desertrescue.rs2:603,655`) | none found | L |
 | Doric's Quest (`doric`) | 1 (85) | rest | none found | none | S |
 | Dragon Slayer (`dragon`) | 2 (86) | `dragon` | 32 QP (`quest_dragon/scripts/dragon_journal.rs2:7`) | level 83 dragon (`:6`) | - |
@@ -436,6 +436,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Nature Spirit | `scripts/generated/quest-druidspirit.ts` | 823, 830, 791 | MEASURED 3/3 |
 | In Search of the Myreque | `scripts/generated/quest-routequest.ts` | 819, 852, 846 | MEASURED 3/3 |
 | Haunted Mine | `scripts/generated/quest-hauntedmine.ts` | 1092, 1225, 1018 | MEASURED 3/3 |
+| Demon Slayer | `scripts/generated/quest-demon.ts` | 899, 877, 882 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -730,6 +731,37 @@ Findings:
 - Helper items (tradeable): staff of fire, blood and air runes, chisel, lobsters. The keys, fungus and shard are quest
   items (`hauntedmine.obj`).
 
+### Demon Slayer
+
+Preset `quest_demon` in `packages/practice/src/presets-rest.ts` (the base of the qp-filler presets: every skill 99, the
+combat rune set, the quests before the dragon row plus Dragon Slayer, Merlin's Crystal and Fight Arena done).
+`RESULT ok qp=3 xp=attack=700,hitpoints=230,magic=875 ... ticks=899 ... walkTicks=474 retries=6 died=false` (runs: 899,
+877, 882 ticks), each with `Prysin hands you an impressive looking sword.` and `Congratulations! Quest complete!`.
+Steps (run 1 MILESTONE ticks): Gypsy Aris, 1 coin, "Who's Delrith?", "Okay, where is he?" sets 1 0-70
+(`areas/area_varrock/scripts/gypsy.rs2:159-232`); Sir Prysin in the palace's south-west room (door `loc_1536` 3206,3472)
+"Gypsy Aris said...", "I need to find Silverlight.", "So give me the keys!" sets 2 70-160 (`sir_prysin.rs2:78-123`);
+the walk to the Wizards' Tower, Traiborn on level 1 "I need to get a key...", "Well, have you got any keys knocking
+around?", "I'll get the bones for you." sets 3, then 25 bones, one per `p_delay(1)`, give key 1 160-476
+(`areas/area_draynor/scripts/traiborn.rs2:1-32,130-215`); Varrock Teleport, Captain Rovin on palace level 2 "Yes, I
+know, but this is important.", "There's a demon..." gives key 2 476-596 (`captain_rovin.rs2:27-45`); the bucket spawn on
+level 1 above the kitchen (3221,3497,1, behind the door `loc_1530` 3221,3496), filled at the kitchen sink (3224,3494) and
+poured down the drain (3225,3495) drops key 3 at 3225,9897 for 300 ticks 596-656 (`quest_demon/scripts/demon_slayer.rs2:
+31-47`); the manhole east of the palace (3237,3458, `general_use/scripts/manholes.rs2:1-10`), key 3, the ladder out
+656-739; Prysin takes the 3 keys and gives Silverlight (29) 739-813; Silverlight wielded, Delrith in the stone circle
+south of Varrock, at 0 HP the incantation "Carlem Aber Camerinthum Purchai Gabindo" (option 4,
+`quest_demon/scripts/delrith.rs2:15-55`) 813-899.
+Findings:
+- The 28 slots hold 25 bones, 1 coin, 1 law and 1 fire rune (Varrock Teleport with a staff of air wielded). So the
+  preset carries no food and no bucket. Traiborn must come before the Varrock Teleport: the bones need 25 slots, and the
+  teleport runes do not fit with a bucket of water as well.
+- The keys and Silverlight are `tradeable=no` (`demon.obj`). Delrith can be attacked only with Silverlight wielded
+  (`skill_combat/scripts/npc/npc_combat.rs2:174-186`). The incantation is fixed in rev 289 (`gypsy.rs2:240-246`).
+- Explicit tiles fixed 5 failed trials: the SDK walker took the bot round the outside of the tower's west wall (the doors
+  3109,3166 and 3107,3162 are now named); the kitchen stairs need the kitchen door 3223,3491; the bucket room door
+  3221,3496,1; the ladder 3230,3504 north-east of the palace stands inside a walled ruin with no way in, so the bot uses the
+  manhole; Traiborn's bones close the dialog for each `p_delay(1)`, so the bot clicks the pages and does not talk again.
+- Helper items: 25 bones, 1 coin, 1 law rune, 1 fire rune, staff of air. All are tradeable (`knowledge/items.json`).
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -752,6 +784,11 @@ After Haunted Mine (long, 1,800 / 2,600) `quests-rest` is 26 quests, 60 QP, 44,3
 9 medium and 9 long; `quests-medium` is 8 quests, 14 QP, floor 7,372 / realistic 7,770 (a text splice of the two rows;
 the file is no longer `JSON.stringify` format). `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts
 research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 101,946 floor / 130,524 realistic.
+
+After Demon Slayer (medium, 900 / 1,300) `quests-rest` is 25 quests, 57 QP, 43,400 / 65,800 (burst 40,136 / 60,852), 8
+medium and 9 long; `quests-medium` is 9 quests, 17 QP, floor 8,249 / realistic 8,669 (a text splice of the two rows).
+`bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest
+Points WIN at 105,723 floor / 130,958 realistic.
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached

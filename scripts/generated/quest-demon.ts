@@ -87,14 +87,19 @@ try {
     await q.step('pour drain', () => q.useOnLoc(ITEM.water, q.locAt(DRAIN.x, DRAIN.z) ?? DRAIN), () => !q.has(ITEM.water), 10, 4);
     q.milestone('drain');
 
-    // 6. The sewer ladder north-east of the palace (3230,3504) to 3230,9904; key 3 at 3225,9897.
-    await q.walk('to sewer ladder', [{ x: 3230, z: 3503, tol: 1 }]);
-    await q.climb('sewer down', stairs(3230, 3504, /climb-down/i), /climb-down/i, () => z() > 9000);
+    // 6. The manhole east of the palace (3237,3458; manholes.rs2:1-10 opens it, then a jump of +6400 z); key 3 at
+    // 3225,9897; out by the ladder 3237,9858. The ladder 3230,3504 north-east of the palace stands inside a walled ruin
+    // that the bot could not reach (trial 5).
+    const MANHOLE = { x: 3237, z: 3458 };
+    await q.walk('to manhole', [{ x: MANHOLE.x, z: MANHOLE.z + 1, tol: 1 }]);
+    const manholeOpen = () => !!q.findLoc(l => l.x === MANHOLE.x && l.z === MANHOLE.z && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text)));
+    await q.step('open manhole', () => q.opLoc(q.locAt(MANHOLE.x, MANHOLE.z) ?? { id: 881, ...MANHOLE }, 1), () => manholeOpen() || z() > 9000, 8, 4);
+    await q.climb('sewer down', stairs(MANHOLE.x, MANHOLE.z, /climb-down/i), /climb-down/i, () => z() > 9000);
     await q.walk('to key 3', [{ x: KEY3_AT.x, z: KEY3_AT.z, tol: 1 }]);
     await pickup('key 3', ITEM.key3, 15, 5);
     q.milestone('key3');
-    await q.walk('to sewer ladder up', [{ x: 3230, z: 9903, tol: 1 }]);
-    await q.climb('sewer up', stairs(3230, 9904, /climb-up/i), /climb-up/i, () => z() < 9000);
+    await q.walk('to sewer ladder up', [{ x: 3237, z: 9859, tol: 1 }]);
+    await q.climb('sewer up', stairs(3237, 9858, /climb-up/i), /climb-up/i, () => z() < 9000);
 
     // 7. Sir Prysin takes the 3 keys and gives Silverlight (29); wield it.
     await q.walk('to prysin 2', [{ x: 3211, z: 3460, tol: 2 }, { x: 3207, z: 3472, tol: 1 }]);
