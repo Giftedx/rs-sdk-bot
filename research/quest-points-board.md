@@ -873,6 +873,16 @@ After Elemental Workshop (medium, 900 / 1,300) `quests-rest` is 22 quests, 54 QP
 packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
 at 106,022 floor / 129,137 realistic.
 
+Next for the `presets-rest.ts` helper (not started; content read only): Clock Tower (`quests/quest_cog`, 1 QP, class M).
+No NPC beyond Brother Kojo (spawn 2569,3249). The 4 cogs lie in the cellar (`maps/m40_150.jm2`): white 2577,9655, black
+2613,9639 (red hot: a bucket of water on it, `objs/cogs.rs2:29-40`), blue 2574,9633, red 2583,9613; rat poison 2564,9662
+on the food trough 2586,9654 opens the rat gate 2579,9656 (`locs/quest_cog_food_trough.rs2:1-18`,
+`quest_cog_gates_and_levers.rs2:1-9`); the poles are black in the cellar (2570,9642), red on level 0 (2568,3243), blue on
+level 1 (2569,3240) and white on level 2 (2567,3241), one cog carried at a time (`objs/cogs.rs2:50-53`). The cellar has
+several one-way exit ladders (`knowledge/transports.json`: `ladder_from_cellar` at 2555,9658, 2575,9655, 2621,9661,
+2570,9667 with no `ladder_cellar` above them), so the route between the cog rooms must be found by trials. Then Hazeel
+Cult, Murder Mystery, Observatory Quest, Death Plateau and Big Chompy Bird Hunting (class M).
+
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached
 MILESTONE 50 at tick 566 (diary 22, serum 26, Razmire 68, 5 remains 416, Razmire's store 444, Ulsquire 495, the temple
