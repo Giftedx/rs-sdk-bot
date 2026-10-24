@@ -1120,10 +1120,10 @@
     "magic"
    ],
    "ticks": {
-    "floor": 3000,
-    "realistic": 3750,
-    "evidence": "ESTIMATE",
-    "source": "magic-teleport ladder (haggis.ts MAGIC_TELEPORT_TIERS): 722 teleports + 36 wind strikes for 1-25. teleport.rs2:59-66 p_delay(1) + p_delay(0): 4 ticks per cast floor, 5 realistic (research/xp-per-tick.md:84 \"about 4\"); strikes 3 floor, 4 realistic; cast rate not measured"
+    "floor": 3033,
+    "realistic": 3046,
+    "evidence": "MEASURED",
+    "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-teleport.ts, research/skill-rows-measured.md): Magic 25 -> 99 by Varrock/Lumbridge/Falador/Camelot teleports (preset floor_tele25) 2,879 / 2,881 / 2,880 ticks, 720 casts at 4.00 ticks each (one click per tick; teleport.rs2 p_finduid drops clicks while delayed); wind strike on chickens 1 -> 25 (preset floor_tele1) 154 / 182 / 162 ticks (28-29 casts, 5.5-6.3 ticks each). Floor 154 + 2,879, realistic 166 + 2,880 (means)"
    },
    "xp": {
     "magic": "to99"
@@ -1135,8 +1135,8 @@
     "group": "magic-smithing",
     "option": "separate"
    },
-   "evidence": "ESTIMATE",
-   "source": "teleport route of research/supply-costs.md (Magic) and research/supply-logistics.md (Proposed substitutions): 722 law runes; magic_spells.dbrow levels and XP (CODE-READ). Wind strike 1-25 needs a target (not in the tick count of the old enchant row either). Not run inside the pickpocket stuns: a teleport leaves the thieving spot. Travel not priced: the row is anywhere, and the last cast can be a Varrock or Falador teleport to end near the next row",
+   "evidence": "MEASURED",
+   "source": "ticks MEASURED practice (scripts/measure/floor-teleport.ts, 3 runs per band). Teleport route of research/supply-costs.md (Magic) and research/supply-logistics.md (Proposed substitutions): 722 law runes; magic_spells.dbrow levels and XP (CODE-READ). Wind strike 1-25 needs a target (not in the tick count of the old enchant row either). Not run inside the pickpocket stuns: a teleport leaves the thieving spot. Travel not priced: the row is anywhere, and the last cast can be a Varrock or Falador teleport to end near the next row",
    "supplies": [
     {
      "item": "staff of air",
@@ -1289,10 +1289,10 @@
     "skill": "magic",
     "toLevel": 43,
     "xpPerTick": {
-     "floor": 117.2,
-     "realistic": 89.9,
-     "evidence": "ESTIMATE",
-     "source": "magic-teleport ladder to 43 (haggis.ts MAGIC_TELEPORT_TIERS, suppliesLadder toLevel 43): 36 wind strikes 1-25 + 4 Varrock + 5 Lumbridge + 6 Falador teleports = 19,684 XP; 3 ticks per strike and 4 per teleport floor = 168 ticks (117 XP/tick), 4 and 5 realistic = 219 ticks (90 XP/tick) (teleport.rs2:59-66, research/xp-per-tick.md:84); cast rate not measured. The enchant ladder to 43 needs 28 cosmic runes (MAGIC_TIERS), more than the 20 that can be staged (unsourceable)"
+     "floor": 92.8,
+     "realistic": 87.9,
+     "evidence": "MEASURED",
+     "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-teleport.ts, research/skill-rows-measured.md): wind strike 1 -> 25 in 154 / 182 / 162 ticks, then teleports 25 -> 43 in 58 ticks (identical in 3 runs, 4 ticks per cast): 19,684 XP in 212 ticks (floor, best run) or 224 (realistic, mean). Was ESTIMATE: magic-teleport ladder to 43 (haggis.ts MAGIC_TELEPORT_TIERS, suppliesLadder toLevel 43): 36 wind strikes 1-25 + 4 Varrock + 5 Lumbridge + 6 Falador teleports = 19,684 XP; 3 ticks per strike and 4 per teleport floor = 168 ticks (117 XP/tick), 4 and 5 realistic = 219 ticks (90 XP/tick) (teleport.rs2:59-66, research/xp-per-tick.md:84); cast rate not measured. The enchant ladder to 43 needs 28 cosmic runes (MAGIC_TIERS), more than the 20 that can be staged (unsourceable)"
     }
    },
    "requires": [
@@ -1595,15 +1595,15 @@
   },
   {
    "id": "woodcut",
-   "label": "3-tick woodcutting (knife + log), rune axe from 41",
+   "label": "3-tick woodcutting (knife + log), rune axe from 1, oaks to 72 then willows",
    "serves": [
     "woodcutting"
    ],
    "ticks": {
-    "floor": 2900,
-    "realistic": 3400,
-    "evidence": "ESTIMATE",
-    "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md). Knife 3-tick re-measured 62.1/64.1/62.1 XP/tick on oaks from 15; flinch 2-tick FAILS (no two aggressive 4-tick attackers at any tree; one-attacker flinch 53.1/0/59.4): research/gathering-tricks.md"
+    "floor": 3356,
+    "realistic": 3467,
+    "evidence": "MEASURED",
+    "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-woodcut.ts, research/skill-rows-measured.md): delayed-click 3-tick (knife + Make 1 at T, drop a log at T+1, Chop at T+2), rune axe from level 1 (woodcut.rs2:193-235 has no axe level check), normal trees 1-15, Draynor oaks 15-72, Draynor willows 72-99. Level 1 -> 85 (preset floor_wc1) 1,504 / 1,444 / 1,530 ticks; 85 -> 99 (preset floor_wc85) 1,969 / 1,912 / 2,040 ticks. Floor 1,444 + 1,912, realistic 1,493 + 1,974 (means). Tree moves are 15-20% of the ticks (oaks and willows fall on 1 log in 8)"
    },
    "xp": {
     "woodcutting": "to99"
@@ -1611,8 +1611,8 @@
    "requires": [
     "tutorial"
    ],
-   "evidence": "ESTIMATE",
-   "source": "model 3,852 (xp-per-tick.md) x 0.75 from the measured +29% (tricks-plan.md). Knife 3-tick re-measured 62.1/64.1/62.1 XP/tick on oaks from 15; flinch 2-tick FAILS (no two aggressive 4-tick attackers at any tree; one-attacker flinch 53.1/0/59.4): research/gathering-tricks.md",
+   "evidence": "MEASURED",
+   "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-woodcut.ts, research/skill-rows-measured.md): delayed-click 3-tick (knife + Make 1 at T, drop a log at T+1, Chop at T+2), rune axe from level 1 (woodcut.rs2:193-235 has no axe level check), normal trees 1-15, Draynor oaks 15-72, Draynor willows 72-99. Level 1 -> 85 (preset floor_wc1) 1,504 / 1,444 / 1,530 ticks; 85 -> 99 (preset floor_wc85) 1,969 / 1,912 / 2,040 ticks. Floor 1,444 + 1,912, realistic 1,493 + 1,974 (means). Tree moves are 15-20% of the ticks (oaks and willows fall on 1 log in 8)",
    "supplies": [
     {
      "item": "rune axe",
@@ -1693,11 +1693,13 @@
      "lever": "rival-sea-slug",
      "set": {
       "ticks": {
-       "floor": 1788,
-       "realistic": 2568,
-       "evidence": "ESTIMATE",
-       "source": "flinch-gather ticks 2179/3130 x 0.8203: Sea Slug's 179,375 Fishing lands first, so only 819,083 XP is left (this row has fixed ticks, so prior XP does not shorten it by itself)"
-      }
+       "floor": 2305,
+       "realistic": 2346,
+       "evidence": "MEASURED",
+       "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-fish.ts fly, preset floor_fish_fly74, research/skill-rows-measured.md): Fishing 74 (Sea Slug lands 179,375 XP) -> 99 by fly 3-tick with one fish dropped in the knife tick, 2,356 / 2,305 / 2,377 ticks (346-357 XP/tick, about 560 feathers). Floor = best run, realistic = mean. Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). Was ESTIMATE 1,788 / 2,568 from the flinch model, and flinch FAILS (research/gathering-tricks.md)"
+      },
+      "label": "3-tick fly fishing 74 -> 99 after Sea Slug (drop one fish in the knife tick)",
+      "via": []
      },
      "addRequires": [
       "rival-seaslug"
