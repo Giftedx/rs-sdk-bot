@@ -1032,6 +1032,70 @@ Cost: Haggis's Heroes' row stays ESTIMATE inside `quests-rest` (class XL). The r
 quests, which is not on Haggis's clock but is a full second questing account. Without it, Heroes' Quest (1 QP), Throne of
 Miscellania (1) and Legends' Quest (4) are lost (both need Heroes'), and the total stops at 139 QP (`quest_misc/scripts/misc_journal.rs2:8-17`, `quest_legends/scripts/legends_guard.rs2:50-53`).
 
+## 1m. Measured: Fight Arena (the `rival-fight-arena` row)
+
+Script `scripts/generated/quest-arena.ts`, preset `quest_arena` (`packages/practice/src/presets-path.ts`, beside Lady
+Servil, 2566,3197). The preset is the planner state at the row (tick 12,267, after The Grand Tree): Attack 94, Magic
+99, Prayer 43, Agility 76, Strength, Defence, Thieving 1, 10 Hitpoints. Staff of fire worn; 60 blood and 300 air runes
+(Fire Wave), 3 prayer potions, 4 lobsters, 20 coins. Practice server, one bot at a time.
+
+3/3 PASS on the final script (MEASURED practice, 2026-10-24):
+
+| Run | RESULT line (cut) | Ticks | LEDGER idle | Casts | Potions |
+|---|---|---|---|---|---|
+| u1 | `RESULT ok qp=2 questMsg=true casts=30 potions=1 prayerLeft=18 xp=attack=304375,hitpoints=7187,magic=36350,thieving=54375 at=2566,3197,0 ticks=628 hpMin=10 eats=0 walkTicks=189 retries=4 died=false` | 628 | 176 (27.9%) | 30 | 1 |
+| u2 | `RESULT ok qp=2 questMsg=true casts=31 potions=1 prayerLeft=16 xp=attack=304375,hitpoints=7192,magic=37412,thieving=54375 at=2565,3197,0 ticks=634 hpMin=10 eats=0 walkTicks=190 retries=4 died=false` | 634 | 183 (28.7%) | 31 | 1 |
+| u3 | `RESULT ok qp=2 questMsg=true casts=31 potions=1 prayerLeft=17 xp=attack=304375,hitpoints=7190,magic=37412,thieving=54375 at=2566,3198,0 ticks=637 hpMin=10 eats=0 walkTicks=190 retries=4 died=false` | 637 | 176 (27.5%) | 31 | 1 |
+
+Every run ends with `Congratulations! Quest complete!` and the quest XP (304,375 Attack and 54,375 Thieving,
+`quest_arena.rs2` arena_quest_complete: `stat_advance(attack, 121750)`, `(thieving, 21750)`). No damage (HP min 10).
+Planned: 499 / 720 (the rival's ESTIMATE); measured 628-637.
+
+Stages (CODE-READ, varp `%arenaquest` 17, `quest_arena.constant`; paths under `quests/quest_arena/scripts/`): Lady
+Servil "Can I help you?" (1, `lady_servil.rs2`); the chest at 2613,3189 gives the Khazard helmet and armour (2,
+`quest_arena.rs2:1-29`); the guard at 2615,3141 (`arena_guard2`) wants a drink (3, `khazard_guard.rs2:98-106`); the
+barman (2566,3140) sells a Khali brew for 5 coins only at stage 3+ (`khazard_barman.rs2`); the guard drinks it and
+gives the cell keys (5, `khazard_guard.rs2:110-125`); the keys on Jeremy's cell door (2617,3167) put the player in the
+arena and let the ogre out (6, `jeremy_servil.rs2:57-145`); the ogre's death (8) runs Khazard's pages and the cells
+(9, `general_khazard.rs2:226-270`); Hengrad (2598,3142) calls the guard, who walks the player to the scorpion
+(`hengrad.rs2`); its death (10) brings Bouncer; Bouncer's death (11) and Khazard's pages set 12 (freed) and Khazard
+attacks (`general_khazard.rs2:277-294`). Lady Servil at 12 queues the completion. General Khazard (stage 13) is not
+needed.
+
+Route (run u1, MILESTONE ticks): Lady Servil 0-24; chest 24-71; north door, the guard 71-127; west door, barman
+127-179; back, the guard and the keys 179-247; cell door, into the arena 247-284; ogre 284-335; cells 335-346; Hengrad,
+scorpion, Bouncer, Khazard's pages 346-518; arena door, north door, Lady Servil 518-628.
+
+Findings:
+
+- Fire Wave (Magic 75, max 20, `magic_combat_spells.dbrow:286-295`) under Protect from Melee: 9-12 casts for the
+  ogre, 5-8 for the scorpion, 10-16 for Bouncer; about 110-125 ticks of fighting; 1 prayer potion, 12-18 points left.
+- The door `fightarena_door1` (2617,3171 and 2585,3141) opens from its own (inside) tile with no talk
+  (`door_procs.rs2:77-88` check_axis); from outside the guard lets a player in Khazard armour through. After stage 12
+  a click from outside makes the guard attack (`khazard_guard_generals_pet`), so the script leaves by the north door
+  and never steps back.
+- walkPath takes the cell doors beside the east corridor (2617,3159, 3163, 3167, west walls) for doors on its way and
+  clicks them ("The cell gate is securely locked", 79-89 idle ticks each time); `blockDoorTemporarily` did not stop
+  it. The corridor is walked with client-routed clicks; south of z 3151 walkPath opens the real doors (2616,3147,
+  2609,3143).
+- Each cage holds a static spawn (ogre 2608,3165, scorpion 2608,3159, Bouncer 2608,3162). A cast while the NPC is
+  still in its cage sent the bot into the gate for line of sight; the gate shut after 6 ticks and every later cast was
+  `cant_reach` (run p1). The script casts only when the NPC's tile is west of x 2606, and an NPC already on the player
+  (one left out by an earlier failed run) comes first.
+- In one run of an earlier script version (r3) the scorpion stayed in its cage for 300 ticks. Jeremy's talk at stages
+  9 and 10 runs the cage release again (`jeremy_servil.rs2:39-44`); the final script talks to him after 20 ticks with
+  no fighter out. The 3 proof runs did not need it (not exercised).
+
+Planner: row `rival-fight-arena` 628 / 637 MEASURED. Scenario a, `research/hiscores-live.json`:
+
+| Model | Overall floor | Overall realistic |
+|---|---|---|
+| Before (499 / 720 ESTIMATE, rival) | 41,100 | 44,393 |
+| Fight Arena MEASURED (628 / 637) | 41,229 | 44,310 |
+
+Still open: the walk from Narnode to Lady Servil is not counted; the chest-to-guard legs (about 100 ticks) could use
+one trip if the guard took the brew at stage 2 (it does not, `khazard_barman.rs2` needs stage 3).
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,

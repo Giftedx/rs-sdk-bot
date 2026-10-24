@@ -3210,10 +3210,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 499,
-    "realistic": 720,
-    "evidence": "ESTIMATE",
-    "source": "floor = rival fastest browser chain 499, expected 526 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S12); realistic = their stock-client figure 720 (docs/speedrun/quests/README.md section 3)"
+    "floor": 628,
+    "realistic": 637,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1m: scripts/generated/quest-arena.ts, preset quest_arena (beside Lady Servil; Attack 94, Magic 99, Prayer 43, Strength, Defence 1, 10 HP; Fire Wave runes, 3 prayer potions, 20 coins), practice, 3/3 PASS on the final script at 628, 634, 637 ticks (floor = best, realistic = worst), Lady Servil to Lady Servil, the walk from Narnode not counted. Was ESTIMATE 499 / 720 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S12)"
    },
    "lump": true,
    "xp": {

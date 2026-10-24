@@ -97,23 +97,50 @@ try {
     // nearest one out ("I'm already under attack!" for 300 ticks in a test run that cast on the wrong ogre).
     const target = (re: RegExp): any => {
         const all: any[] = (q.st()?.nearbyNpcs ?? []).filter((n: any) => re.test(n.name) && n.distance <= 20).sort((a: any, b: any) => a.distance - b.distance);
-        return all.find(n => n.targetIndex >= 32768) ?? all.find(n => (n.tileX ?? n.x) <= 2605);
+        // Any NPC already on the player first (a scorpion left out by an earlier run attacked during the ogre fight).
+        const foe = (q.st()?.nearbyNpcs ?? []).filter((n: any) => n.targetIndex >= 32768 && n.distance <= 10 && !/servil/i.test(n.name)).sort((a: any, b: any) => a.distance - b.distance)[0];
+        return foe ?? all.find(n => (n.tileX ?? n.x) <= 2605);
     };
-    const fight = async (label: string, re: RegExp, done: () => boolean, maxTicks = 300): Promise<void> => {
+    const fight = async (label: string, re: RegExp, done: () => boolean, maxTicks = 300, retrigger = false): Promise<void> => {
         const t0 = q.T();
         const runes0 = lastMsg(/do not have enough/i);
         const mxp0 = q.xp('Magic');
         let lastCast = -99, gone = 0, seen = false, firstCast = -1;
+        let blocked = lastMsg(/already under attack/i);
+        let forced = -1, lastTarget = -1;
+        let waiting = 0;
         for (let t = 0; t < maxTicks && !done(); t++) {
             await q.guard(label);
             if (q.dialogOpen()) { const d: any = q.s.sdk.getDialog(); if (!d.isWaiting) void q.s.sdk.sendClickDialog(0); }
             await keepPrayer();
             if (!pfmOn() && points() > 0) await setPfm(true);
-            const n = target(re);
-            if (!n) { if (seen && ++gone >= 4) break; await q.waitTicks(1); continue; }
+            const ua = lastMsg(/already under attack/i);
+            if (ua > blocked) {
+                blocked = ua;
+                const near: any[] = (q.st()?.nearbyNpcs ?? []).filter((x: any) => x.distance <= 10);
+                console.log(`WARN under attack at ${q.T()}: ${near.map((x: any) => `${x.name}@${x.tileX ?? x.x},${x.tileZ ?? x.z} t=${x.targetIndex} c=${x.inCombat}`).join('; ')}`);
+                // The attacker is a melee NPC beside the bot that is not the last target: cast on it instead.
+                const foe = near.filter((x: any) => x.distance <= 2 && x.index !== lastTarget && !/servil|hengrad/i.test(x.name)).sort((x: any, y: any) => (re.test(y.name) ? 1 : 0) - (re.test(x.name) ? 1 : 0) || x.distance - y.distance)[0];
+                if (foe) forced = foe.index;
+            }
+            const f = forced >= 0 ? (q.st()?.nearbyNpcs ?? []).find((x: any) => x.index === forced) : undefined;
+            if (forced >= 0 && !f) forced = -1;
+            const n = f ?? target(re);
+            if (!n) {
+                if (seen && ++gone >= 4) break;
+                // No fighter out after 20 ticks: Jeremy's talk at stages 9 and 10 runs the cage release again
+                // (jeremy_servil.rs2:39-44; the scorpion stayed in its cage for 300 ticks in proof run r3).
+                if (!seen && retrigger && ++waiting % 20 === 0 && waiting <= 60) {
+                    const j = q.npc(/^jeremy servil$/i);
+                    console.log(`WARN ${label}: none out at ${q.T()}, talking to Jeremy (${j ? `${j.x},${j.z}` : 'not seen'})`);
+                    if (j) { await q.talkTo(j); await q.waitUntil(() => q.dialogOpen(), 15); await q.converse([], () => !q.dialogOpen(), 20); }
+                }
+                await q.waitTicks(1); continue;
+            }
             gone = 0;
             if (!q.dialogOpen() && q.T() - lastCast >= 5) {
                 seen = true; casts++; lastCast = q.T(); if (firstCast < 0) firstCast = q.T();
+                lastTarget = n.index;
                 await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: WAVE, reason: 'SDK' });
             }
             if (firstCast >= 0 && q.T() - firstCast > 60 && q.xp('Magic') === mxp0) await q.fail(`${label}: no cast landed`);
@@ -121,7 +148,7 @@ try {
             await q.waitTicks(1);
         }
         console.log(`NOTE ${label} ${q.T() - t0} ticks casts=${casts} prayer=${points()} potions=${potions} hp=${q.hp()}`);
-        if (!done() && target(re)) await q.fail(`${label}: not dead`);
+        if (!done() && (target(re) || !seen)) await q.fail(`${label}: not dead`);
     };
     const inArena = (): boolean => { const p = q.pos(); return !!p && p.worldX >= 2581 && p.worldX <= 2606 && p.worldZ >= 3151 && p.worldZ <= 3171; };
 
@@ -216,10 +243,10 @@ try {
         await setPfm(true);
         const t0 = q.T();
         await q.waitUntil(() => !!q.npc(/^khazard scorpion$/i), 20);
-        await fight('scorpion', /^khazard scorpion$/i, () => false);
+        await fight('scorpion', /^khazard scorpion$/i, () => false, 300, true);
         q.milestone(10);
         await q.converse([], () => !!q.npc(/^bouncer$/i) && !q.dialogOpen(), 30);
-        await fight('bouncer', /^bouncer$/i, () => false);
+        await fight('bouncer', /^bouncer$/i, () => false, 300, true);
         q.milestone(11);
         // Khazard's pages; the last one frees the Servils (12) and he attacks.
         await q.converse([], () => q.sawText(/at least have the pleasure of killing you/i) && !q.dialogOpen(), 40);
