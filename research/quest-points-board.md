@@ -86,8 +86,8 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Prince Ali Rescue (`prince`) | 3 (115) | `qp-filler` | none found | none found | - |
 | Romeo & Juliet (`romeojuliet`) | 5 (116) | `rj` | none | none | - |
 | Rune Mysteries (`runemysteries`) | 1 (117) | rest | none found | none | S |
-| Scorpion Catcher (`scorpcatcher`) | 1 (118) | `scorpion` | Prayer 31 (`quest_scorpcatcher/scripts/scorpcatcher_journal.rs2:9`) | none found | - |
-| Sea Slug (`seaslug`) | 1 (119) | `rival-seaslug` (qp 0) | Firemaking 30 (`quest_seaslug/scripts/quest_seaslug.rs2:43`) | none found | - |
+| Scorpion Catcher (`scorpcatcher`) | 1 (118) | `scorpion` | Prayer 31 (`quest_scorpcatcher/scripts/scorpcatcher_journal.rs2:9`); in practice also Alfred Grimhand's Barcrawl for the Barbarian Outpost gate (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-11`, `research/quest-plan.md` 1o) | none found | - |
+| Sea Slug (`seaslug`) | 1 (119) | `rival-seaslug` (qp 0) | Firemaking 30 (`quest_seaslug/scripts/quest_seaslug.rs2:43`); the broken glass was not reachable in practice runs (`research/quest-plan.md` 1n) | none found | - |
 | Sheep Shearer (`sheep`) | 1 (120) | rest | none | none | S |
 | Sheep Herder (`sheepherder`) | 4 (121) | `qp-filler` | none found | none found | - |
 | The Knight's Sword (`squire`) | 1 (122) | rest | Mining 10 (`quest_squire/scripts/squire_journal.rs2:7`); the portrait, blurite ore and sword are untradeable (`quest_squire/configs/quest_squire.obj`); MEASURED 887-922 ticks in row `quests-medium` | none found | M |

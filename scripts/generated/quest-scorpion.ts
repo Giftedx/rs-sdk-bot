@@ -1,3 +1,4 @@
+// NOT PROVEN (2026-10-24): the Barbarian Outpost gate needs the Barcrawl, see research/quest-plan.md section 1o.
 // Scorpion Catcher from preset quest_scorpion (beside Thormac, top of the Sorcerer's Tower), at the planner's state
 // for the scorpion row (tick 53,715, every skill 99). Reward: 66,250 Strength (x25: 165,625), 1 QP
 // (quest_scorpcatcher.rs2:55-60). Paths below are under vendor/rs-sdk/server/content/scripts/.
@@ -26,6 +27,7 @@ const NPC = { a: 385, b: 386, c: 387 };
 
 const q = await openQuest({ cap: 2500, eatAt: 50, food: [379], lumbridgeOk: false });
 try {
+    const FROM = Number(process.env.SC_FROM ?? 0);   // 2: debug preset quest_scorpion_s2 (outside the outpost, stage 2, empty cage)
     let questDone = false;
     const offDone = q.s.onTick(() => { if (q.msgCount(/quest complete|completed the\s+scorpion catcher/i) > 0) questDone = true; });
     const cage = (): number | undefined => CAGES.find(id => q.has(id));
@@ -45,54 +47,46 @@ try {
     };
     const ladderAt = (at: { x: number; z: number }, re: RegExp) => () => q.findLoc(l => /ladder/i.test(l.name) && Math.max(Math.abs(l.x - at.x), Math.abs(l.z - at.z)) <= 1 && (l.optionsWithIndex ?? []).some((o: any) => re.test(o.text)));
 
-    // 1. Thormac: "What do you need assistance with?", "What's in it for me?", "Ok, I will do it then." (the cage
-    // comes with the start; the "how would I catch them" branch adds a 4-tick delay, thormac.rs2:29-38).
-    await q.talk('thormac 1', /^thormac$/i, [/what do you need assistance/i, /what's in it for me/i, /ok, i will do it/i], () => q.has(CAGE.empty), THORMAC, 40);
-    q.milestone(1);
+    if (FROM < 2) {
+        // 1. Thormac: "What do you need assistance with?", "What's in it for me?", "Ok, I will do it then." (the cage
+        // comes with the start; the "how would I catch them" branch adds a 4-tick delay, thormac.rs2:29-38).
+        await q.talk('thormac 1', /^thormac$/i, [/what do you need assistance/i, /what's in it for me/i, /ok, i will do it/i], () => q.has(CAGE.empty), THORMAC, 40);
+        q.milestone(1);
 
-    // Down the tower.
-    for (let lv = 3; lv >= 1; lv--) {
-        const at = TOWER[lv - 1]!;
-        await q.climb(`tower down ${lv}`, ladderAt(at, /climb-down/i), /climb-down/i, () => q.lvl() === lv - 1);
-    }
+        // Down the tower.
+        for (let lv = 3; lv >= 1; lv--) {
+            const at = TOWER[lv - 1]!;
+            await q.climb(`tower down ${lv}`, ladderAt(at, /climb-down/i), /climb-down/i, () => q.lvl() === lv - 1);
+        }
 
-    // 2. A Seer: "I need to locate some scorpions."; the looking glass sets stage 2.
-    // Four Seers spawn (2702,3475; 2714,3471; 2716,3485; 2705,3473 upstairs). The nearest can be the upstairs one, which
-    // a Talk-to cannot reach (first test run), so the bot talks to the nearest with reachable set.
-    await q.walk('to seer', [{ x: SEER.x, z: SEER.z - 2, tol: 4 }]);
-    const seers = (): any[] => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^seer$/i.test(n.name)).sort((a: any, b: any) => a.distance - b.distance);
-    console.log(`NOTE seers: ${seers().map((n: any) => `${n.x},${n.z} d=${n.distance} r=${n.reachable}`).join('; ')}`);
-    for (let i = 0; i < 3 && !q.sawText(/try and get you some information on the others/i); i++) {
-        await q.guard('seer');
-        let n = seers().find((x: any) => x.reachable !== false);
-        // All in shut houses: walkPath to the nearest one opens its door.
-        if (!n && seers()[0]) { const t = seers()[0]; await q.walk('to seer house', [{ x: t.x, z: t.z, tol: 1 }]); n = seers()[0]; }
-        if (!n) await q.fail('no seer');
-        await q.talkTo(n);
-        await q.waitUntil(() => q.dialogOpen(), 25);
-        await q.converse([/i need to locate some scorpions/i], () => q.sawText(/try and get you some information on the others/i) && !q.dialogOpen(), 60);
+        // 2. A Seer: "I need to locate some scorpions."; the looking glass sets stage 2.
+        // Four Seers spawn (2702,3475; 2714,3471; 2716,3485; 2705,3473 upstairs). The nearest can be the upstairs one, which
+        // a Talk-to cannot reach (first test run), so the bot talks to the nearest with reachable set.
+        await q.walk('to seer', [{ x: SEER.x, z: SEER.z - 2, tol: 4 }]);
+        const seers = (): any[] => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^seer$/i.test(n.name)).sort((a: any, b: any) => a.distance - b.distance);
+        console.log(`NOTE seers: ${seers().map((n: any) => `${n.x},${n.z} d=${n.distance} r=${n.reachable}`).join('; ')}`);
+        for (let i = 0; i < 3 && !q.sawText(/try and get you some information on the others/i); i++) {
+            await q.guard('seer');
+            let n = seers().find((x: any) => x.reachable !== false);
+            // All in shut houses: walkPath to the nearest one opens its door.
+            if (!n && seers()[0]) { const t = seers()[0]; await q.walk('to seer house', [{ x: t.x, z: t.z, tol: 1 }]); n = seers()[0]; }
+            if (!n) await q.fail('no seer');
+            await q.talkTo(n);
+            await q.waitUntil(() => q.dialogOpen(), 25);
+            await q.converse([/i need to locate some scorpions/i], () => q.sawText(/try and get you some information on the others/i) && !q.dialogOpen(), 60);
+        }
+        if (!q.sawText(/try and get you some information on the others/i)) await q.fail('seer');
+        q.milestone(2);
     }
-    if (!q.sawText(/try and get you some information on the others/i)) await q.fail('seer');
-    q.milestone(2);
 
     // B: the Barbarian Outpost.
-    // The outpost gate (2551,3569-3570, areas/area_barbarian_outpost/scripts/outpost_gate.rs2) opens for anyone when no
-    // Barbarian guard (spawns 2544,3567 and 2544,3571) is within 5 tiles of the player; with one in range the guard
-    // talks instead (the Barcrawl start). walkPath stood beside the guards and clicked for 700 ticks in a test run,
-    // so the bot clicks from 2550,3569/3570 (6 tiles from the spawns) and steps back to retry when a guard talks.
-    await q.walk('to outpost gate', [{ x: 2550, z: 3569, tol: 1 }]);
-    const inside = (): boolean => (q.pos()?.worldX ?? 0) >= 2552;
-    for (let i = 0; i < 8 && !inside(); i++) {
-        await q.guard('outpost gate');
-        const near5 = (q.st()?.nearbyNpcs ?? []).some((n: any) => /barbarian guard/i.test(n.name) && n.distance <= 5);
-        if (near5) { await q.dash('gate wait', 2550, i % 2 ? 3569 : 3570, 0, 6); await q.waitTicks(2); continue; }
-        const g = q.findLoc(l => /gate/i.test(l.name) && l.x === 2551 && (l.z === 3569 || l.z === 3570));
-        if (!g) { console.log('WARN no outpost gate'); await q.waitTicks(1); continue; }
-        await q.opLoc(g, 1);
-        await q.waitUntil(() => inside() || q.dialogOpen(), 8);
-        if (q.dialogOpen()) { console.log(`NOTE outpost guard talked at ${q.T()}`); await q.s.direct({ type: 'walkTo', x: 2550, z: 3569, running: true, reason: 'SDK' }); await q.waitTicks(3); }
-    }
-    if (!inside()) await q.fail('outpost gate');
+    // The outpost gate (barbariangater/l, east wall of 2545,3569-3570, maps/m39_55.jm2) opens only when no
+    // Barbarian guard (spawns 2544,3567 and 2544,3571) is within 5 tiles; otherwise the guard starts the Barcrawl
+    // talk (areas/area_barbarian_outpost/scripts/outpost_gate.rs2, barbarian_outpost_guard.rs2). walkPath clicked it
+    // for 700 ticks in a test run. The SDK path with the gate blocked goes round the north side; this tries it.
+    await q.walk('outpost north', [{ x: 2544, z: 3575, tol: 1 }, { x: 2550, z: 3577, tol: 1 }, { x: 2556, z: 3574, tol: 1 }]);
+    console.log(`NOTE outpost north at ${q.pos()?.worldX},${q.pos()?.worldZ} T=${q.T()}`);
+    await q.walk('to scorpion b', [{ x: SCORP_B.x + 1, z: SCORP_B.z, tol: 2 }]);
     await catchScorp('b', SCORP_B);
 
     // A: Falador Teleport, the Taverley dungeon ladder, the secret wall.

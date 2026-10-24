@@ -1096,6 +1096,67 @@ Planner: row `rival-fight-arena` 628 / 637 MEASURED. Scenario a, `research/hisco
 Still open: the walk from Narnode to Lady Servil is not counted; the chest-to-guard legs (about 100 ticks) could use
 one trip if the guard took the brew at stage 2 (it does not, `khazard_barman.rs2` needs stage 3).
 
+## 1n. Sea Slug (the `rival-seaslug` row): NOT PROVEN, stops at the broken glass
+
+Script `scripts/generated/quest-seaslug.ts` (not proven), preset `quest_seaslug` (beside Caroline, 2717,3302; the
+planner state at tick 24,985: Attack 99, Strength 97, Defence 89, Hitpoints 97, Firemaking 99, Fishing 1; swamp
+paste 1941 and an unlit torch 596 from a helper, 3 law and 3 air runes). The row stays ESTIMATE (rival 304 / 495).
+
+Stages (CODE-READ, varp `%seaslugquest` 159, `quest_seaslug.constant`): Caroline (1, `area_ardougne_east/scripts/caroline.rs2`);
+Holgart wants swamp paste (2) and takes it (3); the row boat to the platform (`holgart_ardougne.rs2:93-117, 152-167`);
+Kennith shouted to across the wall upstairs (4, `area_fishing_platform/scripts/kennith.rs2`); Holgart to the island
+(5, `holgart_platform.rs2:83-89`); Kent (6, `kent.rs2`); back to the platform; the dry sticks rubbed with the torch
+in the pack (7, Firemaking 30, `quest_seaslug.rs2:42-63`); Kennith (8); kick the panel (9); Kennith (10); the crane
+(11); Holgart to the shore; Caroline (`caroline.rs2:33-48`, 71,750 Fishing x25 = 179,375). The dry sticks come from
+damp sticks (1467) and broken glass (1469), both `tradeable=no`, map spawns at 2784,3289 and at 2765,3278 / 2765,3289
+(`maps/m43_51.jm2` OBJ section). The boat from Ardougne and from the island puts a lit torch out.
+
+Test runs t1-t12 (practice, 2026-10-24): stages 1-3 pass in 71-74 ticks; the damp sticks are picked up. Both broken
+glass spawns stay "I can't reach that!": a walk-up pickup, a Telekinetic Grab from the pier outside, and a walk into
+either room (2765,3277 kitchen, 2765,3287 under Kennith's room) after its door (`loc_1533`, `doors/configs/doors.loc`)
+is open; `bot.walkTo` reports "Stuck at (2766, 3287)" and the groundItems entries have `reachable: false`. Both rooms
+are on bridged tiles (level-1 land flag 2, `engine/src/engine/GameMap.ts:230-236`), floor overlay 5 where the pier is
+42 (`maps/m43_51.jm2`). The cause is not found. The rival's notes mark the quest "blocked for the bot until
+cairn://p/rs/54" (scratchpad `rival/quest_points.md:57`), their 304-tick run was in a browser.
+
+Next step: find what blocks the step from 2766,3287 to 2765,3287 on the server (dump the engine collision flags of
+those tiles on the practice server, or walk a browser client in), then finish the script from stage 4 (it is written
+to the end but not run past the glass).
+
+## 1o. Scorpion Catcher (the `scorpion` row): NOT PROVEN, needs the Barcrawl
+
+Script `scripts/generated/quest-scorpion.ts` (not proven), presets `quest_scorpion` (beside Thormac, 2702,3404,3;
+every skill 99, rune set, Falador and Camelot Teleport runes) and `quest_scorpion_s2` (debug, stage 2, outside the
+Barbarian Outpost, `SC_FROM=2`). The row stays ESTIMATE (277 / 832).
+
+Stages (CODE-READ, varp `%scorpcatcher` 76): Thormac gives the cage (1, `area_seers/scripts/thormac.rs2:47-56`); a
+Seer's looking glass (2, `area_seers/scripts/seer.rs2:56-68`) opens the Taverley dungeon secret wall
+(`quest_scorpcatcher.rs2:45-53`, 2875,9799); the three catches have no stage check (`quest_scorpcatcher.rs2:14-39`):
+A at 2877,9796 (Taverley dungeon), B at 2552,3570 (Barbarian Outpost), C at 3058,3488,1 (Monastery upstairs, the
+ladder needs the order, Prayer 31, `areas/monastery/scripts/prayer_guild.rs2:5-40`); Thormac with the full cage
+(463) completes (66,250 Strength x25 = 165,625, `quest_scorpcatcher.rs2:55-60`).
+
+Test runs t1-t4 and d1 (practice, 2026-10-24): Thormac 0-25, the tower and a Seer to 139-226 ticks. Scorpion B is in
+the outpost's building behind the outer gate (`barbariangater`/`barbariangatel`, east wall of 2545,3569-3570). The gate
+opens only when no Barbarian guard (spawns 2544,3567 and 2544,3571) is within 5 tiles of the player; otherwise the
+guard talks and the Barcrawl starts (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-11`,
+`barbarian_outpost_guard.rs2`). The guards stand 1-2 tiles from the gate, so the bot was talked to on every click for
+700 ticks. The north side of the outpost does not lead into the courtyard (run d1). The planner's `agility-52` row
+already notes that the outpost needs Alfred Grimhand's Barcrawl.
+
+Next step: add a Barcrawl row (9 bars, `%barcrawl`, not measured) as a requirement of `scorpion`, or prove that the
+guards can be drawn away from the gate; the rest of the script (Taverley dungeon, Monastery, the return) is written
+and not run.
+
+## 1p. The Dig Site (the `dig` row): not started
+
+The row stays ESTIMATE (555 / 1,387). Content (CODE-READ, `quests/quest_itexam/scripts/`, about 2,000 lines): the
+examiner's three exams (`examiner.rs2`) each need three student errands (`student1.rs2`, `student2.rs2`,
+`student3.rs2`; exam 1 needs three untradeable rock samples: the workman's pickpocket, `digsite_workman.rs2:90-92`,
+and two digsite searches, `area_digsite.rs2:46-90`; exam 3 needs an opal), then the expert, the permit, the winch
+and the chemistry (`itexam_chemistry.rs2`) in `area_digsite.rs2`. The planner gate is Agility 10, Herblore 10,
+Thieving 25 (`itexam_journal.rs2:10-22`).
+
 ## 2. Combat boards: what quests give and what the leaders need
 
 Leaders (`research/hiscores-2026-10-22.json`): Attack 4,728 ticks, Strength 4,966, Defence 7,974, Ranged 5,595,

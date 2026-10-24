@@ -53,5 +53,7 @@ export const PATH_PRESETS: Record<string, SaveConfig> = {
     // Sea Slug: beside Caroline (spawn 2716,3302, maps/m42_51.jm2).
     // Scorpion Catcher: beside Thormac, top floor of the Sorcerer's Tower (spawn 2702,3405,3, maps/m42_53.jm2).
     quest_scorpion: scorpion({ x: 2702, z: 3404, level: 3 }),
+    // Debug: stage 2 (76 = 2) with the empty cage (456), west of the Barbarian Outpost (SC_FROM=2).
+    quest_scorpion_s2: scorpion({ x: 2538, z: 3570 }, { 76: 2 }, [456]),
     quest_seaslug: late({ x: 2717, z: 3302 }, LATE_SKILLS, [1941, 596, 563, 563, 563, 556, 556, 556]),
 };
