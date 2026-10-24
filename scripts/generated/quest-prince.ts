@@ -127,7 +127,9 @@ try {
         if (i > 0) q.stats.retries++;
         const r0 = q.st()?.opFeedback?.opRejectedCount ?? 0;
         await q.useOnNpc(ITEM.rope, k);
-        await q.waitUntil(() => !q.has(ITEM.rope), 12);
+        // The mesbox comes before the rope leaves the pack (quest_prince.rs2:27-32), so its page is clicked.
+        await q.waitUntil(() => q.dialogOpen() || !q.has(ITEM.rope), 12);
+        await q.converse([], () => !q.has(ITEM.rope), 6);
         if (q.has(ITEM.rope)) console.log(`WARN rope ${i}: keli ${k.x},${k.z} d=${k.distance} me ${x()},${z()} rejected+${(q.st()?.opFeedback?.opRejectedCount ?? 0) - r0} msgs=${(q.st()?.gameMessages ?? []).slice(-2).map((m: any) => m.text).join(' / ')}`);
     }
     if (q.has(ITEM.rope)) await q.fail('rope keli');

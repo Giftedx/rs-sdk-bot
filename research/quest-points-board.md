@@ -901,6 +901,7 @@ The walks between the 4 quests are not in the counts.
 |---|---|---|---|
 | Black Knights' Fortress | `scripts/generated/quest-blackknight.ts` | 327, 327, 323 | MEASURED 3/3 |
 | Ernest the Chicken | `scripts/generated/quest-haunted.ts` | 410, 414, 412 | MEASURED 3/3 |
+| Prince Ali Rescue | `scripts/generated/quest-prince.ts` | 638, 621, 607 | MEASURED 3/3 |
 
 ### Black Knights' Fortress
 
@@ -948,3 +949,30 @@ Findings:
   avoiding locked door") and lost 77 ticks; a shut lab door made 3 of 3 talks to Oddenstein fail.
 - Helper items (tradeable): fish food (272), poison (273), spade (952). Untradeable: gauge, key, tube, oil can
   (`quest_haunted.obj`).
+
+### Prince Ali Rescue
+
+`RESULT ok qp=3 xp=attack=6400,hitpoints=2117,magic=4100 ... ticks=638 hpMin=99 eats=0 retries=0 died=false` (runs:
+638, 621, 607 ticks), each with `Congratulations! Quest complete!`. Route: Hassan (`areas/area_alkharid/scripts/
+hassan.rs2:1-10`) 0-10; Osman, the first thing, "Okay, I better go find some things." (`osman.rs2:56-105`) 10-58;
+Lumbridge teleport, the walk to the Draynor jail, Keli's key print with the soft clay (`areas/area_draynor/scripts/
+lady_keli.rs2:219-311`) 58-194; Ned's wig from 3 balls of wool (`ned.rs2:104-121`) and the yellow dye on it
+(`quest_prince.rs2:1-12`) 194-248; Aggie's paste (`aggie.rs2:25-33, 140-154`) 248-285; Lumbridge teleport, the toll
+gate (10 coins), Osman takes the print and the bar (`osman.rs2:107-126`) 285-362; Lumbridge teleport, Leela gives the
+key and sets 30 (`leela.rs2:10-37`) 362-444; Joe takes the 3 beers (`joe_guard.rs2:128-155`) 444-498; the rope on
+Keli (`quest_prince.rs2:14-32`), the key on the cell door from the north (`:34-44`), the prince takes the disguise
+(`prince_ali.rs2:312-335`) 498-526; Lumbridge teleport, the free toll gate, Hassan queues the completion 526-607.
+Findings:
+- Two round trips are fixed by the varps: Osman makes the key only from a print taken after his first talk
+  (`lady_keli.rs2:298`, `osman.rs2:119`), and Hassan pays only after the prince is out (`hassan.rs2:24-26`).
+- The jail guards (vislevel 26) are `huntmode=aggressive_melee`. A guard's hit closes the talk: one trial lost 4 Keli
+  talks so. The script kills a guard in combat within 3 tiles before each jail talk (the Attack and Hitpoints XP in
+  RESULT). Each kill costs a few ticks; the spread of the runs is mostly these fights.
+- Keli's rope message is a mesbox before the rope leaves the pack (`quest_prince.rs2:27-32`), so its page must be
+  clicked. The cell is x <= 3125, z <= 3243; the corridor tile 3126,3243 is outside it.
+- An amulet of glory (Draynor Village and Al Kharid, `amulet_of_glory.rs2:13-34`) would cut the 4 Lumbridge
+  teleports' walks (about 60 ticks each to the jail, 50 to Osman). It is not used: no helper's supply of a charged
+  glory is proven.
+- Helper items (tradeable): 3 balls of wool, yellow dye, pink skirt, rope, soft clay, bronze bar, 3 beers, redberries,
+  pot of flour, bucket of water, ashes, runes for 4 Lumbridge teleports, 50 coins. Untradeable: wig, paste, key print,
+  key (`quest_prince.obj`).
