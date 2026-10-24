@@ -1,10 +1,10 @@
 // Horror from the Deep from preset quest_horror (beside Larrissa outside the lighthouse; every skill 99; the rune set
 // worn; planks, nails, hammer, swamp tar, molten glass, tinderbox, a bronze dagger, a bronze arrow, wave runes and 12
 // sharks from a helper). Reward: 2 QP, 4,662 XP each in Magic, Strength and Ranged before 25x
-// (quests/quest_horror/scripts/quest_horror.rs2:479-497).
+// (quests/quest_horror/scripts/quest_horror.rs2:485-497).
 // %horrorquest (varp 351 bits 0-10, quest_horror.constant): Larrissa 1 (horror_girlfriend.rs2:81-85); the door with
 // the key and both bridge halves 2 (quest_horror.rs2:21-36); the light repaired 4 (:265-289); the junior Dagannoth
-// dead 5 (horror_dagannoth.rs2:19-36); the mother dead completes it (:216-227). Stage 3 is never set.
+// dead 5 (horror_dagannoth.rs2:15-36); the mother dead completes it (:216-227). Stage 3 is never set.
 // Every jump and bridge crossing is stat_random(agility, 5, 255) (basalt_rocks.rs2, quest_horror.rs2:101): at
 // Agility 99 the value is 256, above every roll (engine PlayerOps.ts STAT_RANDOM), so no jump fails.
 // HD_FROM=<stage> starts at a debug preset (packages/practice/src/presets-long.ts).
@@ -18,12 +18,17 @@ const PIPE = { id: 2287, x: 2552, z: 3559 };              // barbarian_obstacle_
 const DOOR = { id: 4577, x: 2509, z: 3636 };              // horror_lighthouse_doorway (39_56 copy)
 const BRIDGE_L = { id: 4615, x: 2596, z: 3608 };
 const BRIDGE_R = { id: 4616, x: 2598, z: 3608 };
-// Basalt rocks north from the Barbarian Outpost shore (basalt_rocks.rs2:1-10): [loc id, x, z, landing check].
+// Basalt rocks (basalt_rocks.rs2:1-10): [loc id, x, z, landing check]. South from the lighthouse: 10, 8, 6, 4, 2;
+// north from the Barbarian Outpost shore: 1, 3, 5, 7, 9.
+const SOUTH: Array<[number, number, number, (x: number, z: number) => boolean]> = [
+    [4559, 2514, 3619, (_x, z) => z <= 3616], [4557, 2514, 3615, (x, z) => z <= 3612 && x >= 2514],
+    [4555, 2516, 3611, (x) => x >= 2518], [4553, 2522, 3602, (_x, z) => z <= 3599], [4551, 2522, 3597, (_x, z) => z <= 3594],
+];
 const NORTH: Array<[number, number, number, (x: number, z: number) => boolean]> = [
     [4550, 2522, 3595, (_x, z) => z >= 3598], [4552, 2522, 3600, (_x, z) => z >= 3603], [4554, 2518, 3611, (x) => x <= 2515],
     [4556, 2514, 3613, (_x, z) => z >= 3616], [4558, 2514, 3617, (_x, z) => z >= 3620],
 ];
-// Lighthouse, 38_71 copy before the repair (quest_horror.rs2:191-216).
+// Lighthouse, 38_71 copy before the repair (quest_horror.rs2:186-212).
 const STAIRS_BASE = { id: 4568, x: 2442, z: 4600 };
 const STAIRS_MID = { id: 4569, x: 2442, z: 4600 };
 const STAIRS_TOP = { id: 4570, x: 2506, z: 3641 };       // 39_56 copy, where the repair teleports the bot
@@ -53,9 +58,11 @@ try {
     const loc = (l: { id: number; x: number; z: number }) => q.findLoc((k: any) => k.id === l.id && k.x === l.x && k.z === l.z) ?? l;
     // The capped message buffer: compare ticks, not counts.
     const msgSince = (re: RegExp, t0: number) => (q.st()?.gameMessages ?? []).some((m: any) => m.tick >= t0 && re.test(m.text));
-    const jump = async (label: string, list: typeof NORTH) => {
+    // A click sent while the last jump's forcemove still runs is lost (trial 6: 13 idle ticks at 2518,3610 with a 14-tick
+    // retry), so the jump and stair steps retry every 6 ticks.
+    const jump = async (label: string, list: typeof SOUTH) => {
         for (const [id, lx, lz, landed] of list) {
-            await q.step(`${label} ${lx},${lz}`, () => q.opLoc(loc({ id, x: lx, z: lz }), 1), () => landed(x(), z()), 14, 4);
+            await q.step(`${label} ${lx},${lz}`, () => q.opLoc(loc({ id, x: lx, z: lz }), 1), () => landed(x(), z()), 6, 8);
         }
     };
     const useOn = async (label: string, item: number, l: { id: number; x: number; z: number }, ok: () => boolean) => {
@@ -74,27 +81,30 @@ try {
         // 1. Larrissa: "With what?", "But how can I help?", "Okay, I'll help!" sets 1 (horror_girlfriend.rs2:81-123).
         await q.talk('larrissa', /^larrissa$/i, [/^with what/i, /but how can i help/i, /okay, i'll help/i, /i'll see what i can do/i], () => q.sawText(/thank you so much! i know my darling/i), LARRISSA, 60);
         q.milestone(1);
-        // 2. East along the causeway to the bridge (the lighthouse side reaches its west half only): a plank, 4 nails
-        // and the hammer on each half; the jump over the gap lands east of it, on the Rellekka shore
-        // (quest_horror.rs2:62-167). Trial 1 crossed the rocks first, but the shore reaches the east half only.
-        await q.walk('to bridge', [{ x: BRIDGE_L.x - 1, z: BRIDGE_L.z, tol: 0 }]);
-        await useOn('plank west', ITEM.plank, BRIDGE_L, () => q.cnt(ITEM.plank) === 1 || q.sawText(/half a makeshift walkway/i));
-        await q.step('cross gap', () => q.opLoc(loc(BRIDGE_L), 1), () => x() >= 2599, 14, 3);
-        await q.waitTicks(1);
-        await useOn('plank east', ITEM.plank, BRIDGE_R, () => !q.has(ITEM.plank) || q.sawText(/now made a makeshift walkway/i));
-        q.milestone('bridge');
-        // 3. Gunnjorn, inside the Barbarian agility course, gives the key (areas/area_barbarian_outpost/scripts/
-        // gunnjorn.rs2:1-28). The obstacle pipe (2552,3559) is the only way in (trial 2: no path to him); a squeeze
-        // moves 3 tiles each way (skill_agility/scripts/barbarian_course.rs2:125-147).
+        // 2. South over the rocks to Gunnjorn, inside the Barbarian agility course: he gives the key
+        // (areas/area_barbarian_outpost/scripts/gunnjorn.rs2:1-28). The obstacle pipe (2552,3559) is the only way in
+        // (trial 2: no path to him); a squeeze moves 3 tiles each way (skill_agility/scripts/barbarian_course.rs2:125-147).
+        // Proof attempt 2 went to the bridge first, then round by the Rellekka shore: about 350 ticks from the bridge to the key.
+        await jump('rocks south', SOUTH);
         await q.walk('to pipe', [{ x: PIPE.x, z: PIPE.z + 2, tol: 1 }]);
         await q.step('pipe in', () => q.opLoc(loc(PIPE), 1), () => z() <= PIPE.z - 1, 14, 4);
         await q.talk('gunnjorn', /^gunnjorn$/i, [], () => q.has(ITEM.key), GUNNJORN, 40);
         await q.walk('to pipe back', [{ x: PIPE.x, z: PIPE.z - 1, tol: 1 }]);
         await q.step('pipe out', () => q.opLoc(loc(PIPE), 1), () => z() >= PIPE.z + 2, 14, 4);
         q.milestone('key');
-        // 4. North over the rocks; the key unlocks the door, the next click enters the 38_71 copy (2).
         await q.walk('to rocks', [{ x: 2522, z: 3594, tol: 1 }]);
         await jump('rocks north', NORTH);
+        // 3. East along the causeway to the bridge (the lighthouse side reaches its west half only, the shore its east
+        // half only; trial 1): a plank, 4 nails and the hammer on each half. Cross jumps the gap to 2599; with both
+        // halves fixed Cross walks back over it (quest_horror.rs2:62-167).
+        await q.walk('to bridge', [{ x: BRIDGE_L.x - 1, z: BRIDGE_L.z, tol: 0 }]);
+        await useOn('plank west', ITEM.plank, BRIDGE_L, () => q.cnt(ITEM.plank) === 1 || q.sawText(/half a makeshift walkway/i));
+        await q.step('cross gap', () => q.opLoc(loc(BRIDGE_L), 1), () => x() >= 2599, 14, 3);
+        await q.waitTicks(1);
+        await useOn('plank east', ITEM.plank, BRIDGE_R, () => !q.has(ITEM.plank) || q.sawText(/now made a makeshift walkway/i));
+        await q.step('bridge back', () => q.opLoc(loc(BRIDGE_R), 1), () => x() <= 2595, 14, 3);
+        q.milestone('bridge');
+        // 4. The key unlocks the door; the next click enters the 38_71 copy (2, quest_horror.rs2:1-58).
         await q.walk('to door', [{ x: DOOR.x, z: DOOR.z - 1, tol: 0 }]);
         await q.step('unlock door', () => q.opLoc(loc(DOOR), 1), () => !q.has(ITEM.key), 10, 3);
         await q.step('enter lighthouse', () => q.opLoc(loc(DOOR), 1), () => z() > 4500, 10, 4);
@@ -102,17 +112,17 @@ try {
     }
     if (from('in')) {
         // 5. Up the spiral stairs to the light: swamp tar, tinderbox, molten glass on the mechanism sets 4 and moves
-        // the bot to the 39_56 copy (quest_horror.rs2:191-216, 245-289).
-        await q.step('stairs up 1', () => q.opLoc(loc(STAIRS_BASE), 1), () => lvl() === 1, 10, 4);
-        await q.step('stairs up 2', () => q.opLoc(loc(STAIRS_MID), 2), () => lvl() === 2, 10, 4);
+        // the bot to the 39_56 copy (quest_horror.rs2:186-212, 245-289).
+        await q.step('stairs up 1', () => q.opLoc(loc(STAIRS_BASE), 1), () => lvl() === 1, 6, 6);
+        await q.step('stairs up 2', () => q.opLoc(loc(STAIRS_MID), 2), () => lvl() === 2, 6, 6);
         const t2 = q.s.tick();
         await useOn('tar', ITEM.tar, COG, () => !q.has(ITEM.tar));
         await useOn('light', ITEM.tinder, COG, () => msgSince(/light the torch|already lit/i, t2));
         await useOn('glass', ITEM.glass, COG, () => !q.has(ITEM.glass) && z() < 4000);
         q.milestone(4);
         // 6. Down: the top stairs go back to the 38_71 copy (level 1), then down and the iron ladder to the basement.
-        await q.step('stairs down 1', () => q.opLoc(loc(STAIRS_TOP), 1), () => lvl() === 1 && z() > 4500, 10, 4);
-        await q.step('stairs down 2', () => q.opLoc(loc(STAIRS_MID), 3), () => lvl() === 0, 10, 4);
+        await q.step('stairs down 1', () => q.opLoc(loc(STAIRS_TOP), 1), () => lvl() === 1 && z() > 4500, 6, 6);
+        await q.step('stairs down 2', () => q.opLoc(loc(STAIRS_MID), 3), () => lvl() === 0, 6, 6);
         await q.step('basement ladder', () => q.opLoc(loc(LADDER), 1), () => lvl() === 1 && x() > 2500, 12, 4);
     }
     if (from('cave')) {
@@ -125,10 +135,10 @@ try {
             for (let i = 0; i < 3 && !placed(); i++) {
                 await q.guard(`wall ${name}`);
                 await q.useOnLoc(id, loc(WALL_MID));
-                await q.converse([/^\W*yes\W*$/i], placed, 12);
+                await q.converse([/yes/i], placed, 12);
             }
             if (!placed()) await q.fail(`wall ${name}`);
-            await closeDlg();
+            await q.waitUntil(() => !q.dialogOpen(), 3);
         }
         q.milestone('wall');
         await q.walk('to open wall', [{ x: WALL_OPEN.x, z: WALL_OPEN.z - 1, tol: 0 }]);
@@ -136,8 +146,8 @@ try {
         await q.step('cavern ladder', () => q.opLoc(loc(LADDER2), 1), () => lvl() === 0, 12, 4);
     }
     if (from('fight')) {
-        // 8. Jossik's talk at 4 ends by calling a junior Dagannoth (horror_lighthousekeeper.rs2:1-6, 258-301); its death
-        // sets 5 and calls the mother (horror_dagannoth.rs2:19-36, 230-256).
+        // 8. Jossik's talk at 4 ends by calling a junior Dagannoth (horror_lighthousekeeper.rs2:1-18, 258-301); its death
+        // sets 5 and calls the mother (horror_dagannoth.rs2:15-36, 230-256).
         const npcId = (ids: number[]) => (q.st()?.nearbyNpcs ?? []).find((n: any) => ids.includes(n.id));
         await q.talk('jossik', /^jossik$/i, [], () => q.sawText(/back any minute now/i), JOSSIK, 80);
         await q.waitUntil(() => !!npcId([NPC.junior, 1344, 1345, 1346]), 12);
@@ -155,13 +165,28 @@ try {
         // own style (npc_combat.rs2:402-437). The bot casts the matching wave on the 4 element forms and uses the
         // scimitar on the melee form. Protect from Missiles stops her spines; she then closes to melee.
         const MOTHER = [NPC.air, NPC.water, NPC.fire, NPC.earth, NPC.ranged, NPC.melee, 1348, 1349, 1350];
-        await q.converse([], () => !!npcId(MOTHER) && !q.dialogOpen(), 40);
-        let lastCast = -10, meleeOn = -1, casts = 0;
+        // She arrives a few ticks after the junior's death dialog (spawn_dagmother: p_delay 0, 1, 1, 1). Proof attempt 1
+        // run 1 left the loop when she was not yet listed and cast nothing. Jossik's talk at 5 calls her again
+        // (horror_lighthousekeeper.rs2:3-8); a form change deletes her when the bot is more than 17 tiles away.
+        await q.converse([], () => !!npcId(MOTHER) && !q.dialogOpen(), 60);
+        let lastCast = -10, meleeOn = -1, casts = 0, absent = 0, recalls = 0;
         for (let k = 0; k < 900 && !questDone; k++) {
             await q.guard('mother');
             if (q.dialogOpen()) { await closeDlg(); continue; }
             const n: any = npcId(MOTHER);
-            if (!n) { await q.waitTicks(1); if (!npcId(MOTHER) && k > 5) break; continue; }
+            if (!n) {
+                await q.waitTicks(1);
+                if (++absent < 15 || questDone) continue;
+                if (++recalls > 3) break;
+                console.log(`WARN mother absent; Jossik again at ${q.T()}`);
+                const j = q.npc(/^jossik$/i);
+                if (j) await q.talkTo(j);
+                await q.waitUntil(() => q.dialogOpen(), 10);
+                await q.converse([], () => !q.dialogOpen(), 40);
+                absent = 0;
+                continue;
+            }
+            absent = 0;
             const spell = WAVE[n.id];
             if (spell && q.T() - lastCast >= 5) {
                 lastCast = q.T(); casts++; meleeOn = -1;

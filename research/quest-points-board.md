@@ -105,7 +105,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Eadgar's Ruse (`eadgar`) | 1 (134) | rest | Druidic Ritual, Death Plateau, Troll Stronghold, Herblore 31 (`areas/area_taverly/scripts/sanfew.rs2:102-103`); Eadgar freed in Troll Stronghold for his cave top (`quest_troll/scripts/quest_troll.rs2:129-131`); the parrot, robe, thistle, potion, fake man, key and goutweed are untradeable (`quest_eadgar/configs/quest_eadgar.obj`); MEASURED 2,091-2,175 ticks in row `quests-long` | none found | L |
 | Shades of Mort'ton (`mortton`) | 3 (135) | rest (row `mortton-oil` is OUT) | Crafting 12 (`quest_mortton/scripts/quest_mortton.rs2:76`), Morytania (Priest in Peril, OSRS); MEASURED 1,908-1,956 ticks in row `quests-medium` | 5 shades (`mortton_journal.rs2:79-85`) | L |
 | The Fremennik Trials (`viking`) | 3 (136) | rest | Woodcutting 40, Crafting 40, Fletching 25 (`quest_viking/scripts/viking_journal.rs2:7`) | level 69, unarmed (`:8`); CLAIMED by long-quest helper 2 | XL |
-| Horror from the Deep (`horror`) | 2 (137) | rest | Agility 35 (`quest_horror/scripts/horror_journal.rs2:6`); Prayer 50 for the god book (`horror_godbook.rs2:253`) | level 100 enemies (`horror_journal.rs2:6`); research notes in "Horror from the Deep: research notes"; CLAIMED by long-quest helper 3 | L |
+| Horror from the Deep (`horror`) | 2 (137) | rest | Agility 35 (`quest_horror/scripts/horror_journal.rs2:6`); Prayer 50 for the god book (`horror_godbook.rs2:253`) ; Alfred Grimhand's Barcrawl for the Barbarian Outpost gate to Gunnjorn (`area_barbarian_outpost/scripts/outpost_gate.rs2:1-5`); MEASURED 678-701 ticks in row `quests-long` | level 100 enemies (`horror_journal.rs2:6`) | L |
 | Monkey Madness (`mm`) | 3 (138) | `rival-mm` (qp 0) | The Grand Tree (`quest_mm/scripts/mm_journal.rs2:4`) | level 195 jungle demon (`:5`) | - |
 | In Search of the Myreque (`routequest`) | 2 (139) | rest | Nature Spirit (`quest_routequest/scripts/routequest_journal.rs2:18-23`), Agility 25 (`routequest_myreque.rs2:125`); MEASURED 819-852 ticks in row `quests-medium` | level 97 (`routequest_journal.rs2:24`) | L |
 | **Total** | **145** | | | | |
@@ -1447,6 +1447,7 @@ deleted after the run.
 | The Tourist Trap | `scripts/generated/quest-desertrescue.ts` | 1617, 1604, 1624 | MEASURED 3/3 |
 | Eadgar's Ruse | `scripts/generated/quest-eadgar.ts` | 2175, 2161, 2091 | MEASURED 3/3 |
 | Temple of Ikov | `scripts/generated/quest-ikov.ts` | 947, 1077, 972 | MEASURED 3/3 |
+| Horror from the Deep | `scripts/generated/quest-horror.ts` | 687, 701, 678 | MEASURED 3/3 |
 
 ### Underground Pass
 
@@ -1732,30 +1733,68 @@ same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 10 -> 9 
 --levers`: Quest Points WIN at 104,231 / 120,982 -> 103,513 / 119,654; Overall finish 42,486 / 44,866 unchanged; QP at
 end 145. `bun test packages/planner`: 42 pass, 0 fail.
 
-### Horror from the Deep: research notes (not scripted)
+### Horror from the Deep
 
-Long-quest helper 3 read the content and stopped before a script (context); the claim is released. Server truth:
-`quests/quest_horror/scripts/*.rs2` (`quest_horror.rs2` unless named).
-- Varps: `%deephorror` is varp 351 and `%godbook_multi` 350 (`pack/varp.pack`). Both are above 308, so a preset that
-  sets them goes through `extendVarps` (`packages/practice/src/presets.ts:524`). Varbits on 351
-  (`quest_horror.varbit`): `horrorquest` bits 0-10 (stages 0-5 and complete, `quest_horror.constant`), the door, the 2
-  bridge halves (12, 13), the agility key, the lighthouse entrance, and one bit each for the fire, water, earth and air
-  runes, the sword and the arrow in the strange door (16-21).
-- Start: Larrissa (`horror_girlfriend.rs2:81-93`): "With what?", "But how can I help?", "Okay, I'll help!" sets 1. With
-  both bridge halves fixed and the key in the pack she sets 2 (`:26-33`).
-- The broken bridge spots take an item each (`oplocu` at `:110-167`); crossing is `stat_random(agility, 5, 255)`
-  (`:101`), and the basalt rocks are the same roll (`basalt_rocks.rs2:21,38`): at 99 about 1 fail in 2-3, so every jump
-  needs a retry loop.
-- The broken cog (`:245-289`) repairs the lighthouse (4, `:283-286`).
-- The strange door below (`:297-470`): a fire, water, earth and air rune, a sword and an arrow placed in the wall, each
-  confirmed with "Yes" (`:332-427`).
-- Dagannoth: the junior (`horror_dagannoth.rs2:1-36`) sets 5; the mother (`:38-256`) changes form on an ai_timer
-  (air, water, melee, earth, fire, ranged, `:113-215`) and her death queues the completion (`:216-227`,
-  `quest_horror.rs2:485-497`). Only the player she targets can attack her (`skill_combat/scripts/npc/npc_combat.rs2:212-221`).
-  The script must read her current form (the npc type, or the "The Dagannoth changes to ..." message) and hit with
-  the matching style: the spell of that element, a melee weapon, or a bow.
-- Not read yet: which item each bridge spot and the cog take, the diary (`horror_diary.rs2`), the lighthouse ladders
-  and doors, and the mother's damage rule per form.
+`RESULT ok qp=2 xp=attack=12800,strength=116550,hitpoints=7985,ranged=116550,magic=139387,agility=725 ... ticks=687
+hpMin=87 eats=0 ... died=false` (runs: 687, 701, 678 ticks), each with `Congratulations! Quest complete!`. Script
+`scripts/generated/quest-horror.ts`. Preset `quest_horror`: beside Larrissa outside the lighthouse (2508,3634); no
+quest needed, Alfred Grimhand's Barcrawl done (77 = 2) for the Barbarian Outpost gate. Worn: the rune set. Helper items
+(tradeable): 2 planks, 8 nails, a hammer, swamp tar, molten glass, a tinderbox, a bronze dagger, a bronze arrow, 200
+air, 100 each of water, earth and fire, 40 blood runes, 12 sharks. `%deephorror` is varp 351, so `extendVarps` writes
+it. Debug presets `quest_horror_in`, `_cave`, `_fight` with `HD_FROM`. Server truth: `quests/quest_horror/scripts/*.rs2`
+(`quest_horror.rs2` unless named).
+
+Steps (proof attempt 3, run 1 MILESTONE ticks):
+- Larrissa: "With what?", "But how can I help?", "Okay, I'll help!", "I'll see what I can do" sets 1
+  (`horror_girlfriend.rs2:81-123`) 0-44.
+- The 5 basalt rocks south (`basalt_rocks.rs2:1-10`); the obstacle pipe (2552,3559) into the Barbarian agility course;
+  Gunnjorn gives the key (`areas/area_barbarian_outpost/scripts/gunnjorn.rs2:1-28`); the pipe out 44-171.
+- The 5 rocks north; east along the causeway to the broken bridge (2596-2598,3608); a plank on the west half (4 nails,
+  the hammer); Cross jumps the gap to 2599; a plank on the east half; Cross walks back (`:62-167`) 171-323.
+- Walk-through with the key unlocks the lighthouse door; the next click enters the 38_71 copy and sets 2 (`:1-58`)
+  323-373.
+- The spiral stairs up twice; swamp tar, tinderbox and molten glass on the lighting mechanism (2443,4599, level 2) set
+  4 and move the bot to the 39_56 copy (`:186-212,245-289`) 373-390.
+- The top stairs (back to the 38_71 copy, level 1), Climb-down, the iron ladder (2445,4604) to the basement
+  (2518,4618, level 1); a fire, water, earth and air rune, the dagger and the arrow in the strange wall (2514,4627),
+  each with "Yes" (`:332-427`); the east part opens from the south; the ladder down to the cavern 390-440.
+- Jossik's talk calls a junior Dagannoth (`horror_lighthousekeeper.rs2:1-18,258-301`); Protect from Missiles; the
+  scimitar kills it (5, `horror_dagannoth.rs2:15-36`) 440-551.
+- The Dagannoth mother changes form every 30 ticks (air, water, melee, earth, fire, ranged, `:113-215`), and each form
+  takes only its own style (`skill_combat/scripts/npc/npc_combat.rs2:402-437`). The bot casts the matching wave on the
+  4 element forms (14-19 casts per run) and uses the scimitar on the melee form. She dies in her first cycle; the
+  completion moves the bot to 2515,10001,1 (`quest_horror.rs2:485-497`) 551-687.
+
+Findings:
+- No jump or crossing fails at Agility 99. The research notes said "about 1 fail in 2-3"; that was wrong.
+  `stat_random(agility, 5, 255)` (`:101`, `basalt_rocks.rs2:21,38`) gives the value 0 + 255 + 1 = 256 at level 99, and
+  the roll is 0-255 (`lostcity-engine/src/engine/script/handlers/PlayerOps.ts` STAT_RANDOM). The jump steps retry
+  only for lost clicks.
+- The lighthouse side reaches only the west half of the bridge, and the shore reaches only the east half (rsmod flood
+  fill; trial 1 walked south over the rocks and found no path to 2595,3608). Proof attempt 2 (3/3 in 853-892 ticks)
+  did the bridge first and then walked round by the Rellekka shore to Gunnjorn: about 350 ticks from the bridge to the
+  key. The key first, by the rocks, and then the bridge from the causeway saves about 180 ticks.
+- Gunnjorn stands inside the agility course, which only the obstacle pipe enters (trial 2: no path to him). From the
+  shore the walk to the pipe goes through the Barbarian Outpost gate, which needs Alfred Grimhand's Barcrawl (trial 3:
+  the walker stopped at the gate, 2545,3569). The barcrawl row is before Scorpion Catcher in the plan, so the preset
+  sets 77 = 2. Not checked: whether the walk from the rocks also crosses the gate.
+- Stage 3 (`^horror_fixing_lighthouse`) is never set; the repair goes from 2 to 4. The repair teleports the bot to
+  the 39_56 copy of the lighthouse, and the top stairs there lead back to the 38_71 copy.
+- Jossik at stage 4 talks first and calls the junior at the end of the talk (debug trial f1: a bare op only opened the
+  talk).
+- Prayer toggles sent while the junior arrives (its spawn queue holds `p_delay`) changed nothing in 9 ticks (debug
+  trial f2); the script now waits 6 ticks between up to 4 toggles.
+- A jump or stair click sent while the last forcemove still runs is lost: trial 6 waited 13 ticks at 2518,3610 for a
+  14-tick retry. The jump and stair steps now retry every 6 ticks.
+- The mother arrives a few ticks after the junior's death talk. Proof attempt 1 run 1 left the fight loop before she
+  was listed and cast nothing (2/3). The script now waits for her, and if she is gone for 15 ticks it talks to Jossik
+  again, which calls her (`horror_lighthousekeeper.rs2:3-8`). No proof run needed that.
+
+Planner: `quests-long` gets Horror from the Deep (2 QP, floor 678 / realistic 701): 8 quests, 16 QP, 12,089 / 12,938
+(the same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 8 -> 7 quests, 27 -> 25 QP, 19,300 / 30,600
+-> 17,500 / 28,000 (burst 16,184 / 25,894); scratchpad `up/long-rows.ts` on the committed rows (Troll Romance
+included). `haggis-cli.ts research/hiscores-live.json --levers`: Quest Points WIN at 102,933 / 118,388 -> 101,946 /
+116,684; QP at end 145. `bun test packages/planner`: 42 pass, 0 fail.
 
 ### Regicide
 
