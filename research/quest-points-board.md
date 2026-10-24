@@ -67,7 +67,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | The Grand Tree (`grandtree`) | 5 (96) | `grandtree` | Agility 25 (`quest_grandtree/scripts/quest_grandtree.rs2:25`); Tree Gnome Village read at `king_narnode.rs2:8` | level 172 demon (`grandtree_journal.rs2:14`) | - |
 | Ernest the Chicken (`haunted`) | 4 (97) | `qp-filler` | none found | none found | - |
 | Haunted Mine (`hauntedmine`) | 2 (98) | rest | Agility 15, Crafting 35, Morytania access (Priest in Peril) (`quest_hauntedmine/scripts/hauntedmine_journal.rs2:10-16`) | level 95 (`:19`) | L |
-| Hazeel Cult (`hazeelcult`) | 1 (99) | rest | none found | none found | M |
+| Hazeel Cult (`hazeelcult`) | 1 (99) | rest | none found; CLAIMED by short/medium helper | none found | M |
 | Heroes' Quest (`hero`) | 1 (100) | rest | 55 QP, Lost City, Merlin's Crystal, Dragon Slayer (`quest_hero/scripts/quest_hero.rs2:2-3`); a gang HQ from Shield of Arrav (`locs/brimhaven_blackarm_hq.rs2:2`, `locs/brimhaven_restaurant.rs2:2`); a second player for Grip (`hero_journal.rs2:190`) | firebird, Grip | XL |
 | Witch's Potion (`hetty`) | 1 (101) | rest | none found | none found | S |
 | Pirate's Treasure (`hunt`) | 2 (102) | rest | none found; the rum, key and message are untradeable (`quest_hunt/configs/quest_hunt.obj`); MEASURED 460-474 ticks in row `quests-medium` | none found | M |
