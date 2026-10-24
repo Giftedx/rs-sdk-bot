@@ -79,7 +79,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Jungle Potion (`junglepotion`) | 1 (108) | rest | Druidic Ritual (`areas/area_karamja/scripts/trufitus.rs2:280` reads `%druidquest`); MEASURED 649-651 ticks in row `quests-medium` | none found | M |
 | Legends' Quest (`legends`) | 4 (109) | rest | 107 QP; Family Crest, Heroes', Underground Pass, Shilo Village, Waterfall (`quest_legends/scripts/legends_guard.rs2:50-53`); Magic 56, Mining 52, Agility, Crafting, Smithing, Strength, Thieving, Woodcutting 50, Herblore 45, Prayer 42 (`legends_journal.rs2:65-128`) | several | XL |
 | Dwarf Cannon (`mcannon`) | 1 (110) | `cannon` | none | goblins | - |
-| Throne of Miscellania (`misc`) | 1 (111) | rest | Heroes' Quest, Fremennik Trials (`quest_misc/scripts/misc_journal.rs2:8-17`, `misc_door_guard.rs2:10`) | none found | XL |
+| Throne of Miscellania (`misc`) | 1 (111) | rest | Heroes' Quest, Fremennik Trials (`quest_misc/scripts/misc_journal.rs2:8-17`, `misc_door_guard.rs2:10`) | none found; CLAIMED by long-quest helper 1 | XL |
 | Murder Mystery (`murder`) | 3 (112) | rest | none found; MEASURED 270-395 ticks in row `quests-medium` (random murderer; all 6 suspects proved) | none found | M |
 | The Restless Ghost (`priest`) | 1 (113) | rest | none found | level 13 skeleton (`quest_priest/scripts/priest_journal.rs2:8`) | S |
 | Priest in Peril (`priestperil`) | 1 (114) | rest | none found; 50 rune essence to Drezel (`areas/area_mausoleum/scripts/drezel.rs2:96-113`); MEASURED 993-1011 ticks in row `quests-medium` | level 30 (`quest_priestperil/scripts/priestperil_journal.rs2:7`) | M |
