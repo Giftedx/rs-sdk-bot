@@ -98,7 +98,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Waterfall Quest (`waterfall`) | 1 (127) | `waterfall` | none found | level 84 giants (`quest_waterfall/scripts/waterfall_journal.rs2:9`) | - |
 | Lost City (`zanaris`) | 3 (128) | rest | Woodcutting 36, Crafting 31 (`quest_zanaris/scripts/quest_zanaris.rs2:37,78`) | level 101 spirit without weapons (`zanaris_journal.rs2:20`) | M |
 | Shilo Village (`zombiequeen`) | 2 (129) | rest | Jungle Potion (`quest_zombiequeen/scripts/mosol_rei.rs2:2`), Crafting 20, Agility 32 (`zombiequeen_journal.rs2:23-26`) | level 86 (`:27`); CLAIMED by long-quest helper | L |
-| Troll Stronghold (`troll`) | 1 (130) | rest | Death Plateau (OSRS), Agility 15 (`quest_troll/scripts/quest_troll.rs2:7`) | level 113 troll (`troll_journal.rs2:5`); CLAIMED by long-quest helper 2 | L |
+| Troll Stronghold (`troll`) | 1 (130) | rest | Death Plateau (`quest_death/scripts/death_ig_commander.rs2:5-9` offers the troll talk only at `%death_equiproom` 80), Agility 15 (`quest_troll/scripts/quest_troll.rs2:7`), worn climbing boots (`:8-11`, `quest_death/scripts/quest_death.rs2:159-176`), Thieving 30 (`troll_stronghold_camp_guard.rs2:46`); MEASURED 788-847 ticks in row `quests-long` | level 101 Dad, level 113 general (`pack` combat; `troll_journal.rs2:5`) | L |
 | Troll Romance (`troll_love`) | 2 (131) | rest | Death Plateau, Troll Stronghold, Agility 28 (`quest_troll_love/scripts/troll_love_journal.rs2:12-22`) | level 113 troll (`:26`) | L |
 | Tai Bwo Wannai Trio (`tbwt`) | 2 (132) | rest | Jungle Potion (`areas/area_karamja/scripts/tbwt_timfraku.rs2:51`), Cooking 30, Agility 15, Fishing 5 (`quest_tbwt/scripts/tbwt_journal.rs2:11-13`) | level 48 jogres (`:15`) | XL |
 | Regicide (`regicide`) | 3 (133) | rest | Underground Pass (`quest_regicide/scripts/regicide_kings_messenger.rs2:2`), Agility 56, Crafting 10 (`quest_regicide.rs2:404,674`) | none found | XL |
@@ -1442,6 +1442,7 @@ deleted after the run.
 | Quest | Script | RESULT ticks (3 runs) | Status |
 |---|---|---|---|
 | Underground Pass | `scripts/generated/quest-upass.ts` | 2764, 2859, 2898 | MEASURED 3/3 |
+| Troll Stronghold | `scripts/generated/quest-troll.ts` | 847, 788, 824 | MEASURED 3/3 |
 
 ### Underground Pass
 
@@ -1502,3 +1503,48 @@ it requires for Biohazard): Underground Pass, 5 QP, floor 2,764 / realistic 2,89
 34,600 / 52,700 (burst 34,310 / 52,436 -> 31,998 / 48,737); a text splice of the two rows. Scenario a, `--levers`:
 Quest Points WIN at 104,439 / 126,149 -> 104,891 / 125,348; Overall finish 42,486 / 44,866 unchanged; QP at end 145.
 `bun test packages/planner`: 42 pass, 0 fail.
+
+### Troll Stronghold
+
+`RESULT ok qp=1 xp=attack=25400,hitpoints=8415,agility=50 ... ticks=847 hpMin=43 eats=3 ... died=false` (runs: 847,
+788, 824 ticks), each with `Congratulations! Quest complete!`; the 3 proof saves hold `%troll_quest` (varp 317) = 50
+and `%troll_varbit` (318) = 63 (scratchpad `savvars.ts`). Preset `quest_troll`: beside Denulth (2896,3529), Death
+Plateau done (314 = 80, 315 = 8), worn rune full helm, scimitar, chainbody, kiteshield, platelegs and climbing boots
+(3105, tradeable: Tenzing sells them for 12 coins after Death Plateau, `quest_death/scripts/death_sherpa.rs2:12-25`),
+20 sharks. Debug presets `quest_troll_arena`, `quest_troll_inside`, `quest_troll_back` with `TS_FROM`.
+
+Steps (proof run 1 MILESTONE ticks; `quests/quest_troll/scripts/` unless named):
+- Denulth: "How goes your fight with the trolls?", "Is there anything I can do to help?", "I'll get Godric back!" (10,
+  `quest_death/scripts/death_ig_commander.rs2:62-86`) 0-28.
+- North with the boots: the Death Plateau rocks (2880,3594, `quest_death.rs2:169-176`), west to the troll rocks
+  (2856,3612, the rockslide; boots checked at z 3611, `quest_troll.rs2:1-13`), the climb east at 2859,3626 and the climb
+  down at 2878,3622 (`:15-70`) to the arena's west door 28-150.
+- The arena door (2897,3618; a west-wall door, so the bot is inside on x 2897); Dad (level 101) under Protect from
+  Melee; below 20 hp he gives up, "I'll be going now." (20, `troll_champion.rs2:114-140`) 150-273.
+- The north door (2916,3629), the troll pass (2903,3644 -> 2907,10019; 2906,10036 -> 2908,3654,
+  `quest_troll.rs2:121-127`), 157 tiles to the stronghold door (2839,3689 -> 2837,10090 level 2) 273-400.
+- A Troll General (level 113) drops the prison key while `%troll_quest` < 30 (`drop tables/scripts/troll_commander.rs2:
+  1-7`); the stairs (2843,10108) to level 1; the prison door (2848,10107) takes the key (30, `quest_troll.rs2:222-233`)
+  400-635.
+- Down the stairs (2852,10107); Twig and Berry pickpocketed for the cell keys (`troll_stronghold_camp_guard.rs2:
+  41-75`); Godric's cell (40, `quest_troll.rs2:303-308`) and Eadgar's cell (bit 0) 635-679.
+- The back exit (2823,10048 -> 2827,3646, sets the back-exit bit, `:116-119`); the troll rocks at 2833,3628 and
+  2856,3612 and the Death Plateau rocks down to Burthorpe 679-760; Dunstan queues the completion
+  (`quest_death/scripts/death_smithy.rs2:1-8`) 760-847.
+
+Findings:
+- At level 99 a troll climb fails at most 1 time in 256 (`stat_random(agility, 170, 253)`) and the rockslide and the
+  pickpocket never fail (`stat_random(agility, 160, 300)`, `stat_random(thieving, 60, 300)`); no climb failed in the 3 proof runs.
+- The bot frees Eadgar too (about 8 ticks): his cave entrance puts the player on level 2, where Eadgar stands (spawn
+  2890,10086,2), only with that bit set (`quest_troll.rs2:129-131`). Eadgar's Ruse starts with him.
+- The stronghold door tile (2839,3688) is blocked; a walk to it idled 268 ticks in a trial. The walk now ends at
+  2841,3689.
+- The entrance on level 2 is a narrow passage south to 10057; the generals are reached round that loop (about 50 ticks
+  each way). The Death Plateau trolls throw rocks at the bot on the way down (hp 41-48).
+- Helper items (tradeable): climbing boots, sharks. The keys are quest items.
+- The law talisman is the only reward; the quest gives no XP (`quest_troll.rs2:364-369`).
+
+Planner: `quests-long` gets Troll Stronghold (1 QP, floor 788 / realistic 847): 2 quests, 6 QP, 3,552 / 3,745 (the same
+under `rival-dialogue-burst`). `quests-rest` loses one long quest: 14 -> 13 quests, 36 -> 35 QP, 30,100 / 46,200 ->
+28,300 / 43,600 (burst 27,836 / 42,726 -> 26,172 / 40,321); scratchpad `up/long-rows.ts`. `haggis-cli.ts
+research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN. `bun test packages/planner`: 42 pass, 0 fail.

@@ -44,7 +44,29 @@ function zq(position: { x: number; z: number; level?: number }, varps: Record<nu
     };
 }
 
+// Troll Stronghold (scripts/generated/quest-troll.ts): Death Plateau done (%death_equiproom 314 = 80, %death_map 315 =
+// 8; death_ig_commander.rs2:5-9 offers the troll talk only then). Worn: the rune set, a rune kiteshield and climbing
+// boots (3105, tradeable; Tenzing sells them for 12 coins after Death Plateau, death_sherpa.rs2:12-25), which the death
+// and troll climbing rocks need (quest_death.rs2:159-176, quest_troll.rs2:1-13). 20 sharks. %troll_quest is varp 317,
+// %troll_varbit 318.
+const TROLL_WORN = wear([[1163, 0], [1333, 3], [1113, 4], [1201, 5], [1079, 7], [3105, 10]]);
+function troll(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, extra: Array<number | [number, number]> = [], food = 20): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment: TROLL_WORN, varps: { ...DONE, 314: 80, 315: 8, ...varps },
+        inventory: items([...extra, ...Array.from({ length: food }, () => 385)]),
+    };
+}
+
 export const LONG_PRESETS: Record<string, SaveConfig> = {
+    // Beside Denulth in the Imperial Guard camp, Burthorpe (spawn 2896,3528, maps/m45_55.jm2).
+    quest_troll: troll({ x: 2896, z: 3529 }),
+    // Debug (TS_FROM=arena): west of the arena door, %troll_quest 10.
+    quest_troll_arena: troll({ x: 2894, z: 3618 }, { 317: 10 }),
+    // Debug (TS_FROM=inside): inside the stronghold door (level 2), Dad beaten (%troll_quest 20).
+    quest_troll_inside: troll({ x: 2837, z: 10090, level: 2 }, { 317: 20 }),
+    // Debug (TS_FROM=back): outside the back exit, Godric and Eadgar freed (%troll_quest 40, %troll_varbit bits 0-3).
+    quest_troll_back: troll({ x: 2827, z: 3646 }, { 317: 40, 318: 15 }),
+
     // Beside Mosol Rei, east of the Shilo Village gates (spawn 2883,2951, maps/m45_46.jm2).
     quest_zombiequeen: zq({ x: 2884, z: 2951 }),
     // Debug (ZQ_FROM=mound): beside the mound with the quest started (%zombiequeen 1).
