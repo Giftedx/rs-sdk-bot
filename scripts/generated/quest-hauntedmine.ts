@@ -386,6 +386,10 @@ try {
         await q.waitUntil(() => killed(), 40);
         if (!killed()) console.log(`WARN round ${round}: no kill page at ${q.T()}`);
         await shut();
+        // The north-east corner (x 2791-2797, z 4457-4461) joins the room only across the z 4456 track (SDK
+        // collision), and a cart on the track blocks the step: try again until the cart moves on.
+        for (let k = 0; k < 8 && x() >= 2790 && z() >= 4457; k++) { await via([[2791, 4455]]); if (z() >= 4457) await q.waitTicks(3); }
+        if (x() < 2790 && z() >= 4459) await via([[2781, 4461], [2781, 4457]]);
         await q.walk('to key', [{ x: 2788, z: 4454, tol: 0 }]);
         const k = keyNpc();
         if (k) await q.s.direct({ type: 'interactNpc', npcIndex: k.index, optionIndex: q.opIndex(k, /take/i), reason: 'SDK' });

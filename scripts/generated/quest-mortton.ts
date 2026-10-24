@@ -91,7 +91,9 @@ try {
     const buy = async (label: string) => {
         // One trip: as many sets as the free slots hold (1 plank, 1 limestone brick, 5 swamp paste), the add_temple_resources set
         // (flamtaer_temple.rs2:274-278).
-        if (!q.st()?.shop?.isOpen) await open(label, 'razmire', visible('razmire') ? 4 : 1);
+        // A temple page ("~ Repairing the temple ~", flamtaer_temple.rs2:254-272) can still be open: close it first,
+        // or open() takes it for Razmire's talk.
+        if (!q.st()?.shop?.isOpen) { await shut(); await open(label, 'razmire', visible('razmire') ? 4 : 1); }
         // From stage 55 Razmire's talk menu has "Can you open a store for me?" before the store menu (razmire_keelgan.rs2:205-208).
         if (!q.st()?.shop?.isOpen) await chat([/open a store for me/i, /building store/i], () => !!q.st()?.shop?.isOpen, 40);
         if (!q.st()?.shop?.isOpen) await q.fail(`${label}: store not open`);

@@ -1,6 +1,6 @@
 {
  "base": "https://rs-sdk-demo.fly.dev",
- "takenAt": "2026-10-24T04:26:07.006Z",
+ "takenAt": "2026-10-24T04:56:09.065Z",
  "boards": [
   {
    "board": "Overall",
@@ -2714,63 +2714,63 @@
     },
     {
      "rank": 12,
+     "name": "qu3st",
+     "level": 113,
+     "ticks": 883541
+    },
+    {
+     "rank": 13,
      "name": "zzlat01",
      "level": 111,
      "ticks": 858035
     },
     {
-     "rank": 13,
+     "rank": 14,
      "name": "soko27",
      "level": 111,
      "ticks": 1706074
     },
     {
-     "rank": 14,
+     "rank": 15,
      "name": "soko28",
      "level": 111,
      "ticks": 1745178
     },
     {
-     "rank": 15,
+     "rank": 16,
      "name": "soko3",
      "level": 111,
      "ticks": 1874261
     },
     {
-     "rank": 16,
+     "rank": 17,
      "name": "soko10",
      "level": 111,
      "ticks": 1912762
     },
     {
-     "rank": 17,
+     "rank": 18,
      "name": "dotsbot44",
      "level": 111,
      "ticks": 3175994
     },
     {
-     "rank": 18,
+     "rank": 19,
      "name": "dotsbot89",
      "level": 111,
      "ticks": 3184846
     },
     {
-     "rank": 19,
+     "rank": 20,
      "name": "dotsbot30",
      "level": 111,
      "ticks": 3263053
     },
     {
-     "rank": 20,
+     "rank": 21,
      "name": "dotsbot15",
      "level": 111,
      "ticks": 3271265
-    },
-    {
-     "rank": 21,
-     "name": "sokoalt1",
-     "level": 111,
-     "ticks": 3509458
     }
    ]
   }
