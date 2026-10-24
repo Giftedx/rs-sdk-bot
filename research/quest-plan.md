@@ -623,7 +623,7 @@ Two tool fixes were needed:
 | 80 | Walk west to the ravine (2721,2757) until a ravine archer knocks you out (1 in 20 arrows, `mm_archer.rs2:51-53`; the prayer does not stop it); jail 2770-2776,2793-2794 (`:66-82`); pick the lock 2771,2795 (`mm_jail.rs2:1-11`, `stat_random(thieving, 95, 295)`, 0-3 fails at Thieving 43) when no patrol guard is within 3 tiles. The patrol (`mm_jail.rs2:181-259`, route enum `mm_jail_patrol_route`) walks the only exit lane (2772-2773,2796-2801) and knocks a human back in from 1 tile of its south-west tile, with a flyback that costs a fifth of the HP: 0-5 re-jails a run | `quest-mm.ts` `knockout`, `walkAtoll` | MEASURED |
 | 90 | Garkor (2805,2762) from the north tile (the elder guards south of him knock out a human, `mm_elder_guard.rs2:52-75`); his talk resumes after a hit closes it (`mm_garkor.rs2:95-126`). Dentures crate (2767,2769) from 2768,2769 (outside the sleeping guard's zone 2762-2767,2767-2772, `mm_sleeping_monkey_guard.rs2:1-14`), in by the warehouse door 2764,2764; the crate over the hole (2769,2765) from its south tile 2769,2764: the warehouse spider (2 HP, `respawnrate=4`, spawn 2770,2766) hits from the other tiles, and any hit closes the choice (`npc_combat_melee.rs2:36`). Cellar, mould crate (2782,9172), the **eastern** rope (2798,9169): the western one lands in a warehouse whose only ground door (2744,2767) is locked (`quest_mm.rs2:1019-1020`); the eastern one lands in the sleeping guard's zone, and the bot runs south out of it | `quest-mm.ts` stage 90 | MEASURED |
 | 100 | Bridge ladder 2803,2734 up, jump at 2803,2727,l2 to the landing (`quest_mm.rs2:1022-1043`; not as a monkey); dungeon ladder 2763,2703; Zooknock 2804,9145 by a fixed corner route (about 535 tiles; a single far goal sent the walker into a dead end); Protect from Melee for the whole human pass; his story resumes after hits; dentures, gold bar, mould and the monkey bones on him: enchanted bar and mould back (`mm_zooknock.rs2:48-122, 163-201`) | `quest-mm.ts` stage 100 | MEASURED |
-| 110 | Back up; the second knockout and lock; the temple: south ladder (2794,2773) up, level 1 to 2806,2785, the east ladder top drops on the trapdoor's access tile (`quest_mm.rs2:766-771`); trapdoor (2807,2785, `mm_temple.rs2:1-17`); wall of flame (4765 at 2809,9191, not in `nearbyLocs`) with the bar and the mould, wool on the amulet; the rope (4881 at 2808,9201, by id) lands on a random tile within 2 of the trapdoor (`mm_temple.rs2:28`): 2806,2785 takes the ladder, 2807,2783-2787 walk out on the temple floor, a tile boxed by the engaged trapdoor guards falls back to Varrock Teleport and the way round (2 of the last 5 full runs; pass 4 used it). The child (2743,2795): 5 bananas from the garden trees, uncle, how many, the bananas, the toy after 100 ticks; the aunt patrols her garden (`quest_mm.npc` `[mm_monkeys_aunt]`: 2742,2794 15 ticks, 2743,2792 30 ticks, then her house), so the bot waits at 2746,2800 while she is there. The dungeon (Protect from Melee), the talisman on Zooknock: the Karamjan greegree; the chapter 3 cutscene (an eat or a potion inside it closes the page; a step restarts it, `quest_mm.rs2:360-375`) | `quest-mm.ts` stages 105-110 | MEASURED |
+| 110 | Back up; the second knockout and lock; the temple: south ladder (2794,2773) up, level 1 to 2806,2785, the east ladder top drops on the trapdoor's access tile (`quest_mm.rs2:766-771`); trapdoor (2807,2785, `mm_temple.rs2:1-17`); wall of flame (4765 at 2809,9191, not in `nearbyLocs`) with the bar and the mould, wool on the amulet; the rope (4881 at 2808,9201, by id) lands on a random tile within 2 of the trapdoor (`mm_temple.rs2:28`): 2806,2785 takes the ladder, 2807,2783-2787 walk out on the temple floor, a tile boxed by the engaged trapdoor guards goes back down the open trapdoor (it stays open 500 ticks, `mm_temple.rs2:6`) and up the rope for a new tile when it is within 1 tile of the trapdoor, else falls back to Varrock Teleport and the way round (2 of the last 5 full runs; pass 4 used it; one boxed landing at 2805,2784, 2 tiles out, could not reach the trapdoor). The child (2743,2795): 5 bananas from the garden trees, uncle, how many, the bananas, the toy after 100 ticks; the aunt patrols her garden (`quest_mm.npc` `[mm_monkeys_aunt]`: 2742,2794 15 ticks, 2743,2792 30 ticks, then her house), so the bot waits at 2746,2800 while she is there. She calls only when both stand in the garden or both outside it (`mm_monkeys_aunt.rs2:13-17`), so the bot stays in the garden until she walks in: it leaves 13 ticks after she stops at 2737,2794 (she steps in at 2740 18 ticks after she arrives there, practice trace). The child's talks end after 2 shut ticks (was 6), and the bananas go on the child (`opnpcu`, no greeting pages). During the toy's 100-tick timer the bot picks 6-8 more bananas from the other trees (5 a tree), eaten on the walks at 31 HP or less. The dungeon (Protect from Melee), the talisman on Zooknock: the Karamjan greegree; the chapter 3 cutscene (an eat or a potion inside it closes the page; a step restarts it, `quest_mm.rs2:360-375`) | `quest-mm.ts` stages 105-110 | MEASURED |
 | 115 | Greegree worn (`mm_greegree.rs2:1-10`, not within 10 ticks of combat); the dungeon back (the zombies hit a monkey too: Protect from Melee); the west gate (2719,2766) opens for a monkey; Garkor (Karamjan monkey: seek an alliance); the talking elder guard (2801,2757); Kruk in the yard east of the gate, reached over the watchtower bridge (west tower ladder 2713,2766 to level 2, east tower 2729,2766 down); he escorts the envoy in; Awowogei's mission | `quest-mm.ts` stage 115 | MEASURED |
 | 120 | Out by the elder guard from the hall door 2802,2759; greegree off before the bridge jump; Lumdo to Crash Island; Waydar to the Gnomeball pitch; stronghold spirit tree to the Battlefield; round a locked Khazard door to the zoo; greegree on, the minder cages the "monkey", a zoo monkey in the backpack, greegree off, the minder lets the human out; walk to the stronghold's south gate (`gnome_areagate` 190, op; Femi's boxes: "Sorry, I'm a bit busy") and the Grand Tree; Daero, Waydar, Lumdo; greegree, gate, the elder guard lets Kruk's envoy in; Awowogei; Garkor: chapter 4 cutscene, then the sigil; staff and amulet of magic back on | `quest-mm.ts` stage 120 | MEASURED |
 | 140 | Sigil op2 (`mm_demon.rs2:1-5, 16-143`): the battle zone 1_42_143; Protect from Magic on arrival; Fire Wave every 5 ticks from 4+ tiles; kill (`:377-401`) | | MEASURED |
@@ -708,7 +708,19 @@ RESULT lines (cut):
 - 3: `RESULT ok qp=3 questMsg=true fightTicks=264 casts=52 potions=3 prayerLeft=18 xp=attack=500000,strength=875000,defence=500000,hitpoints=879637,magic=62062,crafting=5100,thieving=262 at=2482,3481,1 ticks=5071 hpMin=20 eats=17 walkTicks=2392 retries=25 died=false`
 - 4: `RESULT ok qp=3 questMsg=true fightTicks=264 casts=52 potions=3 prayerLeft=9 xp=attack=500000,strength=875000,defence=500000,hitpoints=879227,magic=62337,crafting=5100,thieving=525 at=2482,3481,1 ticks=5786 hpMin=5 eats=16` (boxed at 2807,2786: the Varrock Teleport fallback, about 700 ticks)
 
-Passes 3 and 4 ran back to back on the final script (2d3ec65, `proved 2/2`). Between passes 2 and 3 one run stopped boxed by the trapdoor guards at 2805,2786
+Passes 5-7 ran back to back on the final script of 2026-10-24 (`proved 3/3`, one bot):
+
+| Pass | Ticks | 70 atoll | 80 jail out | 90 cellar, rope | 100 Zooknock | 107 temple out | talisman | 110 greegree | 115 Awowogei | 120 sigil | 160 Narnode | Fight | Re-jails | HP min | Extra bananas |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 5 | **5,320** | 716 | 796 | 1,120 | 1,745 | 2,309 | 2,685 | 3,268 | 3,859 | 4,771 | 5,254 | 263 (52 casts, 3 potions) | 10 | 12 | 8 |
+| 6 | **5,029** | 695 | 803 | 1,060 | 1,594 | 2,099 | 2,396 | 2,846 | 3,458 | 4,326 | 4,952 | 405 (81 casts, 5 potions) | 2 | 19 | 6 |
+| 7 | **5,149** | 697 | 783 | 1,048 | 1,646 | 2,102 | 2,386 | 2,810 | 3,420 | 4,297 | 5,073 | 553 (110 casts, 6 potions) | 1 | 9 | 6 |
+
+- 5: `RESULT ok qp=3 questMsg=true fightTicks=263 casts=52 potions=3 prayerLeft=17 xp=attack=500000,strength=875000,defence=500000,hitpoints=879867,magic=59225,crafting=5100,thieving=450 at=2482,3481,1 ticks=5320 hpMin=12 eats=15 walkTicks=2508 retries=26 died=false`
+- 6: `RESULT ok qp=3 questMsg=true fightTicks=405 casts=81 potions=5 prayerLeft=12 xp=attack=500000,strength=875000,defence=500000,hitpoints=879805,magic=88875,crafting=5100,thieving=150 at=2482,3481,1 ticks=5029 hpMin=19 eats=13 walkTicks=2352 retries=26 died=false`
+- 7: `RESULT ok qp=3 questMsg=true fightTicks=553 casts=110 potions=6 prayerLeft=9 xp=attack=500000,strength=875000,defence=500000,hitpoints=881550,magic=127650,crafting=5100,thieving=112 at=2482,3481,1 ticks=5149 hpMin=9 eats=16 walkTicks=2369 retries=25 died=false`
+
+Passes 3 and 4 ran back to back on the script of 2d3ec65 (`proved 2/2`). Between passes 2 and 3 one run stopped boxed by the trapdoor guards at 2805,2786
 (`RESULT fail temple out ... ticks=2380`); the Varrock Teleport fallback came after it, and pass 3 did not need it
 (landing 2806,2784). Six earlier full tries failed while the atoll was being fixed: two deaths in the dungeon with the
 food gone (HP 35, 10 sharks, 4 potions), a death at the warehouse door (a 15 hit by a scorpion while the prayer was on
@@ -728,13 +740,48 @@ Findings:
   200,000-coin shortcut (`mm_glough.rs2:28-29`) leaves one slide and the solver needs 14-18 ticks, so it cannot
   save more than that minus the walk to Glough: not tried.
 
-Planner: row `rival-mm` is now MEASURED 5,071 / 5,786 (best / worst pass; was ESTIMATE 4,566 / 5,052). Scenario a,
+Where the atoll ticks go (pass 3 of 2026-10-23, 3,829 ticks for stages 80-120; MEASURED from its milestones and the
+`jumps` list): four dungeon passes 269, 281, 303, 293 (1,146; the collision path is 535 tiles each way, `findLongPath`,
+and the dungeon has one ladder, `m43_42`/`m43_142` loc 4780/4781); Zooknock's first talk and four gives 219 (dialog pages
+are 2 ticks each, click and wait); the zoo trip 863 (zoo to the Grand Tree about 280 tiles walked; a spirit tree or a
+teleport deletes the backpack monkey, `post_tele_checks`, `teleport.rs2:109-112`, `spirit_tree.rs2:76`; no glider lands
+near the zoo); the child's garden 359 (100 of it the toy timer); the jailings with re-jails about 225. Glough's and the
+cutscene relogin were not tried.
+
+Changes of 2026-10-24 and their measured effect:
+
+- Garden (aunt rule, shorter talk ends, bananas on the child): 284-297 ticks from the temple to the talisman in passes 6-7
+  and 333 in a segment run, against 359-373 before (passes 1-4 and a segment run). Pass 5: 376 (the aunt's phase).
+- Food: 6-8 extra bananas a pass (12-16 HP). HP min 9-19 in passes 5-7. One full pass before this change died in the
+  fourth dungeon pass with the 12 sharks gone (HP 35, a Varrock fallback on the way).
+- Waydar orders Lumdo only when Lumdo is within 10 tiles of the player (`mm_waydar.rs2:83`): one full run failed there
+  (`RESULT fail talk waydar lumdo ... ticks=656`); the bot now stands near Lumdo first.
+- Temple: the trapdoor retry for a boxed landing within 1 tile (not yet seen in a run; the one boxed landing since was
+  2 tiles out and took the Varrock fallback).
+- Not kept: a lock pick only in the patrol's handover window (the lane x 2772-2773, z 2796-2802 is the only way out and
+  the patrol holds it for points 2-10, about 90 ticks a guard; the next guard crosses the west room 13-24 ticks after
+  the last leaves). Practice: waits of 60-275 ticks a jailing and re-jails from the handover crowd, against about 70 a
+  jailing for the old rule (pass 3: 20, 95, 110), so the old rule stays. The re-jails are still the largest variable
+  cost (1-10 a pass, about 40 ticks and a fifth of the HP each).
+
+Hitpoints: plan on 35 only with this pack: HP min 5-20 over 7 passes and one death. With a few more Hitpoints levels
+(not modelled) or two more sharks (no free slot in chapter 1) the margin is safe. Prayer is near its limit too: pass 7
+used 6 potions in the fight and left 9 points.
+
+Planner: row `rival-mm` is now MEASURED 5,029 / 5,320 (best / worst of passes 5-7; was MEASURED 5,071 / 5,786 from
+passes 1-4). Scenario a, `bun packages/planner/src/haggis-cli.ts --levers`, Overall finish: 40,545 floor / 45,430
+realistic before, 40,503 / 44,964 after (same tree, 2026-10-24). The realistic drop is mostly the Varrock fallback that
+none of passes 5-7 needed; it can still happen. `bun test packages/planner`: 42 pass.
+
+Earlier planner change: row `rival-mm` became MEASURED 5,071 / 5,786 (best / worst pass; was ESTIMATE 4,566 / 5,052). Scenario a,
 `research/hiscores-live.json`, `bun packages/planner/src/haggis-cli.ts --levers`, Overall finish: 40,040 floor /
 44,805 realistic before the change, 40,545 / 45,539 after (both on the same tree, 2026-10-23/24). The
 row is slower than the rival's estimate, so the finish moves out by 505 / 734 ticks. `bun test packages/planner`:
 42 pass (the rival-lever test now accepts a MEASURED rival row that cites this section).
 
-Next stage: cut the atoll. Leads, by size: the stage 120 walk back from the zoo (Ardougne to the Grand Tree, about
+Next lead (2026-10-24): the re-jails (count the patrol's lane visits: point 10 is the third lane-top stop, so a
+pick during that 6-tick stop and a wait in the lane at z 2797-2798 would follow the guard out), a boxed landing 2 tiles
+from the trapdoor, and the cutscene relogin. Earlier leads, by size: the stage 120 walk back from the zoo (Ardougne to the Grand Tree, about
 250 tiles; no teleport keeps the backpack monkey, `teleport.rs2:109-112`); the re-jails (pick the lock only in the
 patrol's handover window); the child's garden wait (arrive while the aunt is in her house); the cutscene relogin
 test. Hitpoints at the row is still not modelled (the preset's 35 is an estimate).
