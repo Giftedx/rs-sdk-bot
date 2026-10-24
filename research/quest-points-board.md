@@ -47,7 +47,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Shield of Arrav (`blackarmgang`) | 1 (76) | rest | one gang only (`general/scripts/quests.rs2:170`); a second account in the other gang (rev 289 code, see "Shield of Arrav as a pair"); MEASURED 234-237 ticks in row `quest-arrav` | Jonny the Beard, weaponsmaster (helper) | M |
 | Black Knights' Fortress (`blackknight`) | 3 (77) | `qp-filler` | 12 QP (`quest_blackknight/scripts/blackknight_journal.rs2:9-10`) | level 33 knights (same) | - |
 | Big Chompy Bird Hunting (`chompybird`) | 2 (78) | rest | Fletching 5, Cooking 30, Ranged 30 (`quest_chompybird/scripts/chompybird_journal.rs2:10-28`) | none found | M |
-| Clock Tower (`cog`) | 1 (79) | rest | none found; CLAIMED by short/medium helper | none found | M |
+| Clock Tower (`cog`) | 1 (79) | rest | none found; MEASURED 468-486 ticks in row `quests-medium` | none found | M |
 | Cook's Assistant (`cook`) | 1 (80) | `cooks-assistant` | none | none | - |
 | Family Crest (`crest`) | 1 (81) | `crest` (qp 0) | Mining 40, Crafting 40, Smithing 40, Magic 59 (`quest_crest/scripts/crest_journal.rs2:10-13`) | level 170 demon (`:14`) | - |
 | Death Plateau (`death`) | 1 (82) | rest | none found | none found | M |
@@ -830,6 +830,33 @@ Findings:
   bot is north of the wall.
 - Helper items: knife, needle, leather, thread, hammer, rune pickaxe, coal. All are tradeable (`knowledge/items.json`).
 
+### Clock Tower
+
+Preset `quest_cog` in `packages/practice/src/presets-rest.ts`: beside Brother Kojo, north of the tower (spawn 2569,3249);
+a bucket of water and 4 lobsters from a helper. `RESULT ok qp=1 xp= ... ticks=486 ... walkTicks=364 retries=1
+died=false` (runs: 486, 472, 468 ticks; a trial before the proof: 487), each with `Congratulations! Quest complete!`.
+Varp `%cogquest` (10) bits 0-3 count the stage (1 after Kojo, +1 a cog, 5 all four, 8 complete) and bit 4 is the rat
+gate; `%cog_bits` (35) has one bit a cog (`quests/quest_cog/scripts/locs/quest_cog_spindles.rs2:1-75`,
+`configs/quest_cog.constant:1-14`). One cog at a time (`objs/cogs.rs2:42-57`). The cellar parts join only through
+one-way ladders (`knowledge/transports.json`), so each cog has its own way in and out. Steps (proof run 1 MILESTONE
+ticks): Kojo, "OK old monk, what can I do?" 0-30 (`npcs/brother_kojo.rs2:9-18`); the tower ladder 2566,3242 down, water
+on the black cog 2613,9639, take it, the black spindle 2570,9642 30-120 (`objs/cogs.rs2:16-40`); the red cog 2583,9613,
+back up the ladder, the red spindle 2568,3243 on level 0 120-206; down again, the rat poison 2564,9662, the lever
+2591,9661 opens gate 2595,9657, the poison on the trough 2586,9654 sets the gate bit 206-274
+(`locs/quest_cog_gates_and_levers.rs2:28-42`, `locs/quest_cog_food_trough.rs2:1-18`); the gate 2579,9656, the white cog
+2577,9655, the ladder 2575,9655 up to 2575,3255, the stairs to level 2, the white spindle 2567,3241 274-319; the ladder
+2621,3261 east of the tower, the tunnel south and west, push the wall 2575,9631 from the east, the blue cog 2574,9633,
+the ladder 2572,9631 up to 2572,3231, the blue spindle 2569,3240 on level 1 319-469; Kojo 469-486
+(`brother_kojo.rs2:44-48`).
+Findings:
+- The black cog needs a bucket of water used on the ground item (OPOBJU, `objs/cogs.rs2:30-40`). The SDK has no
+  item-on-ground-item action, so the script writes the OPOBJU packet on the lite client (field order from
+  `engine/src/network/game/client/codec/OpObjUDecoder.ts`). Ice gloves also cool it but are untradeable (id 1580).
+- Trial 1 stopped at the tower ladder with "I can't reach that!": doors (loc 1530) at 2574,3250 and 2567,3245 close
+  Kojo's room and the middle room, so the script opens them by tile. The boarded-up closet door 2566,3237 never opens;
+  the script marks it as a wall for the SDK plan.
+- Helper item: a bucket of water (tradeable). The cogs and the rat poison are untradeable quest items.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -873,15 +900,13 @@ After Elemental Workshop (medium, 900 / 1,300) `quests-rest` is 22 quests, 54 QP
 packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
 at 106,022 floor / 129,137 realistic.
 
-Next for the `presets-rest.ts` helper (not started; content read only): Clock Tower (`quests/quest_cog`, 1 QP, class M).
-No NPC beyond Brother Kojo (spawn 2569,3249). The 4 cogs lie in the cellar (`maps/m40_150.jm2`): white 2577,9655, black
-2613,9639 (red hot: a bucket of water on it, `objs/cogs.rs2:29-40`), blue 2574,9633, red 2583,9613; rat poison 2564,9662
-on the food trough 2586,9654 opens the rat gate 2579,9656 (`locs/quest_cog_food_trough.rs2:1-18`,
-`quest_cog_gates_and_levers.rs2:1-9`); the poles are black in the cellar (2570,9642), red on level 0 (2568,3243), blue on
-level 1 (2569,3240) and white on level 2 (2567,3241), one cog carried at a time (`objs/cogs.rs2:50-53`). The cellar has
-several one-way exit ladders (`knowledge/transports.json`: `ladder_from_cellar` at 2555,9658, 2575,9655, 2621,9661,
-2570,9667 with no `ladder_cellar` above them), so the route between the cog rooms must be found by trials. Then Hazeel
-Cult, Murder Mystery, Observatory Quest, Death Plateau and Big Chompy Bird Hunting (class M).
+After Clock Tower (medium, 900 / 1,300) `quests-rest` is 21 quests, 53 QP, 39,800 / 60,600 (burst 36,807 / 56,043), 4
+medium and 9 long; `quests-medium` is 13 quests, 21 QP, floor 9,900 / realistic 10,367. `bun test packages/planner`: 42
+pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 105,658 floor /
+128,421 realistic.
+
+Next for the `presets-rest.ts` helper: Hazeel Cult, Murder Mystery, Observatory Quest, Death Plateau and Big Chompy Bird
+Hunting (class M).
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached
