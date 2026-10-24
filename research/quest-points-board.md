@@ -50,7 +50,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Clock Tower (`cog`) | 1 (79) | rest | none found; MEASURED 468-486 ticks in row `quests-medium` | none found | M |
 | Cook's Assistant (`cook`) | 1 (80) | `cooks-assistant` | none | none | - |
 | Family Crest (`crest`) | 1 (81) | `crest` (qp 0) | Mining 40, Crafting 40, Smithing 40, Magic 59 (`quest_crest/scripts/crest_journal.rs2:10-13`) | level 170 demon (`:14`) | - |
-| Death Plateau (`death`) | 1 (82) | rest | none found; CLAIMED by short/medium helper | none found | M |
+| Death Plateau (`death`) | 1 (82) | rest | none found; MEASURED 1,192-1,201 ticks in row `quests-medium` | none found | M |
 | Demon Slayer (`demon`) | 3 (83) | rest | none found; keys and Silverlight untradeable (`quest_demon/configs/demon.obj`); MEASURED 877-899 ticks in row `quests-medium` | Delrith, needs Silverlight (`quest_demon/scripts/demon_journal.rs2:6-9`) | M |
 | The Tourist Trap (`desertrescue`) | 2 (84) | rest | Fletching 10, Smithing 20 (`quest_desertrescue/scripts/quest_desertrescue.rs2:603,655`) | none found | L |
 | Doric's Quest (`doric`) | 1 (85) | rest | none found | none | S |
@@ -933,6 +933,41 @@ Findings:
 - Helper items: planks, bronze bar, molten glass (tradeable). The keep key, the lens mould and the lens are untradeable
   (`knowledge/items.json` 601-603).
 
+### Death Plateau
+
+Preset `quest_death` in `packages/practice/src/presets-rest.ts`: beside Denulth in the Imperial Guard camp (spawn
+2896,3528); 10 bread, 10 trout, an Asgarnian Ale, a Blurberry Special, an iron bar and 500 coins from a helper, no food.
+`RESULT ok qp=1 xp=attack=75000 ... ticks=1192 ... walkTicks=665 retries=3 died=false` (runs: 1,192, 1,193, 1,201 ticks;
+trials before the proof: 1,304, 1,282, 1,197), each with `Congratulations! Quest complete!`. Two tracks; varps
+`%death_equiproom` and `%death_map` (`quests/quest_death/configs/quest_death.constant`). Steps (proof run 1 MILESTONE
+ticks): Denulth, "Do you have any quests for me?", "No but perhaps I could try and find one?" (10, Harold's gold set to
+100) 0-49 (`death_ig_commander.rs2:91-120`); Eohric on castle level 1 (20), Harold at the Toad and Chicken (30), Eohric
+again (40) 49-273 (`death_headservant.rs2:1-55`, `death_guard_equiproom.rs2:264-273`); the ale (50) and the Blurberry
+Special (Harold very drunk) 273-412 (`:275-338`); "Would you like to gamble?", a 101-coin bet, the roll; very drunk,
+Harold always loses, and a win above his 100 gold gives the IOU (55) 412-463 (`:126-185,207-249`); reading it gives the
+combination (60) 463-474 (`quest_death.rs2:27-35`); the 5 stone balls from x 2893 onto the mechanism by the castle door
+(Blue 2894,3562, Yellow 2895,3562, Red 2894,3563, Purple 2895,3563, Green 2895,3564) unlock the door (70) 474-545
+(`quest_death.rs2:37-44,83-101`); Saba in the hermit cave (map 1), Tenzing (2, his climbing boots), Dunstan (3), Denulth's
+certificate (4), Dunstan takes it (5) and spikes the boots for the iron bar 545-917 (`death_saba.rs2:32-56`,
+`death_sherpa.rs2:150-178`, `death_smithy.rs2:16-48,187-210`, `death_ig_commander.rs2:157-184`); Tenzing takes the food
+and the boots (6) and draws the map (7); the back door, the stile 2817,3562 and the secret way to the zone at 2864,3609
+(8) 917-1061 (`death_sherpa.rs2:119-147,181-190`, `quest_death.rs2:46-71,103-118,130-136`); back over the stile and
+through the hut, Denulth takes the map and the combination 1061-1192 (`death_ig_commander.rs2:186-221`).
+Findings:
+- The dice: the roll button (`death_dice:com_28`) needs protected access, so a click inside `harold_roll`'s 3
+  `p_delay(2)` gets no effect (Player.ts `runScript`); trial 2 clicked at 7 ticks and lost the bet. The script waits 12
+  ticks. The queued `haroldgamble_end` writes the IOU only when the dice modal is closed (Player.ts `processQueue`,
+  `canAccess`), so the script closes it after the roll (trial 7).
+- The stairs top of the inn (2914,3540) is outside Harold's room; Harold's door (2906,3543) is knocked from the row
+  z 3543. Dunstan's smithy door (2921,3571) and Tenzing's two doors are opened by tile.
+- The secret way has no way down to Burthorpe (the SDK plan ends at 2881,3596, trial 5), so the bot goes back over the
+  stile and through the hut.
+- Inventory: 10 bread, 10 trout, coins, the iron bar and the combination leave exactly 5 slots for the stone balls.
+- Helper items: bread, trout, ale, Blurberry Special, iron bar, coins (tradeable). The IOU, the combination, the
+  certificate, the map and the stone balls are untradeable (`knowledge/items.json` 3102-3104, 3109-3114).
+- Row `quests-rest` counted 1 medium quest before this step while the table lists 2 unproven medium rest quests (Big
+  Chompy Bird Hunting and Death Plateau); after this delta the row counts 0 medium.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -996,8 +1031,13 @@ After Observatory Quest (medium, 900 / 1,300) `quests-rest` is 18 quests, 47 QP,
 packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN
 at 104,439 floor / 126,149 realistic.
 
-Next for the `presets-rest.ts` helper: Death Plateau and Big Chompy Bird
-Hunting (class M).
+After Death Plateau (medium, 900 / 1,300) `quests-rest` is 16 quests, 41 QP, 33,700 / 51,400 (burst 31,166 / 47,535), 0
+medium (see the Death Plateau findings), 9 long and 7 very long; `quests-medium` is 17 quests, 28 QP, floor 12,370 /
+realistic 12,903. `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP
+at end 145; Quest Points WIN at 105,251 floor / 125,347 realistic.
+
+Next for the `presets-rest.ts` helper: Big Chompy Bird Hunting (`quests/quest_chompybird`, 2 QP, class M; Fletching 5,
+Cooking 30, Ranged 30).
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached

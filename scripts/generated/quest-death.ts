@@ -134,6 +134,10 @@ try {
         await q.s.direct({ type: 'clickComponent', componentId: DICE_ROLL, reason: 'SDK' });
         await q.waitTicks(6);
         if (c?.writeOpcode) { c.writeOpcode(RESUME_PAUSEBUTTON); c.out.p2(DICE_PAUSE); }
+        // The resume alone left the dice open in trial 7, and the normal queue waits for a closed modal (Player.ts
+        // processQueue, canAccess), so the IOU only came when the next talk closed it. Close it here.
+        await q.waitTicks(1);
+        await q.s.direct({ type: 'closeModal', reason: 'SDK' });
         await q.waitUntil(() => q.has(ITEM.iou) || q.dialogOpen(), 8);
         await q.converse([], () => q.has(ITEM.iou) && !q.dialogOpen(), 20);
     }
@@ -143,10 +147,8 @@ try {
         await closeDlg();
         await q.s.direct({ type: 'closeModal', reason: 'SDK' });
         await q.waitTicks(1);
-        const r: any = await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.iou)!, optionIndex: 1, reason: 'SDK' });
+        await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.iou)!, optionIndex: 1, reason: 'SDK' });
         await q.waitUntil(() => q.has(ITEM.combo) || q.dialogOpen(), 4);
-        const d: any = q.s.sdk.getDialog();
-        console.log(`DEBUG read iou ${i} r=${JSON.stringify(r)} dlg=${d?.isOpen}/${d?.isWaiting} txt=${(d?.text ?? '').slice(0, 60)} op=${JSON.stringify(q.st()?.opFeedback ?? {})}`);
         await q.converse([], () => q.has(ITEM.combo) && !q.dialogOpen(), 12);
     }
     if (!q.has(ITEM.combo)) await q.fail('step read iou');
