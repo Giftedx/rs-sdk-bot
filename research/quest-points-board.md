@@ -66,7 +66,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Holy Grail (`grail`) | 2 (95) | `grail` (MEASURED 1,451-1,479 ticks, `quest-plan.md` 1k) | Merlin's Crystal (`king_arthur.rs2` grail start needs `%arthur` complete); no weapon or armour on Entrana | Black Knight Titan (`quest_grail/scripts/grail_journal.rs2:11`), needs Excalibur worn at its death | - |
 | The Grand Tree (`grandtree`) | 5 (96) | `grandtree` | Agility 25 (`quest_grandtree/scripts/quest_grandtree.rs2:25`); Tree Gnome Village read at `king_narnode.rs2:8` | level 172 demon (`grandtree_journal.rs2:14`) | - |
 | Ernest the Chicken (`haunted`) | 4 (97) | `qp-filler` | none found | none found | - |
-| Haunted Mine (`hauntedmine`) | 2 (98) | rest | Agility 15, Crafting 35, Morytania access (Priest in Peril) (`quest_hauntedmine/scripts/hauntedmine_journal.rs2:10-16`) | level 95 (`:19`) | L |
+| Haunted Mine (`hauntedmine`) | 2 (98) | rest | Agility 15, Crafting 35, Morytania access (Priest in Peril) (`quest_hauntedmine/scripts/hauntedmine_journal.rs2:10-16`); MEASURED 1,011-1,574 ticks in row `quests-medium` | level 95 (`:19`) | L |
 | Hazeel Cult (`hazeelcult`) | 1 (99) | rest | none found; MEASURED 426-435 ticks in row `quests-medium` (good side) | none found | M |
 | Heroes' Quest (`hero`) | 1 (100) | rest | 55 QP, Lost City, Merlin's Crystal, Dragon Slayer (`quest_hero/scripts/quest_hero.rs2:2-3`); a gang HQ from Shield of Arrav (`locs/brimhaven_blackarm_hq.rs2:2`, `locs/brimhaven_restaurant.rs2:2`); a second player for Grip (`hero_journal.rs2:190`) | firebird, Grip | XL |
 | Witch's Potion (`hetty`) | 1 (101) | rest | none found | none found | S |
@@ -103,7 +103,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Tai Bwo Wannai Trio (`tbwt`) | 2 (132) | rest | Jungle Potion (`areas/area_karamja/scripts/tbwt_timfraku.rs2:51`), Cooking 30, Agility 15, Fishing 5 (`quest_tbwt/scripts/tbwt_journal.rs2:11-13`) | level 48 jogres (`:15`) | XL |
 | Regicide (`regicide`) | 3 (133) | rest | Underground Pass (`quest_regicide/scripts/regicide_kings_messenger.rs2:2`), Agility 56, Crafting 10 (`quest_regicide.rs2:404,674`) | none found | XL |
 | Eadgar's Ruse (`eadgar`) | 1 (134) | rest | Druidic Ritual, Troll Stronghold, Herblore 31 (`quest_eadgar/scripts/eadgar_journal.rs2:8`; `quest_troll/scripts/troll_eadgar.rs2:22`) | none found | L |
-| Shades of Mort'ton (`mortton`) | 3 (135) | rest (row `mortton-oil` is OUT) | Crafting 12 (`quest_mortton/scripts/quest_mortton.rs2:76`), Morytania (Priest in Peril, OSRS) | 5 shades (`mortton_journal.rs2:79-85`) | L |
+| Shades of Mort'ton (`mortton`) | 3 (135) | rest (row `mortton-oil` is OUT) | Crafting 12 (`quest_mortton/scripts/quest_mortton.rs2:76`), Morytania (Priest in Peril, OSRS); MEASURED 1,908-1,956 ticks in row `quests-medium` | 5 shades (`mortton_journal.rs2:79-85`) | L |
 | The Fremennik Trials (`viking`) | 3 (136) | rest | Woodcutting 40, Crafting 40, Fletching 25 (`quest_viking/scripts/viking_journal.rs2:7`) | level 69, unarmed (`:8`) | XL |
 | Horror from the Deep (`horror`) | 2 (137) | rest | Agility 35 (`quest_horror/scripts/horror_journal.rs2:6`); Prayer 50 for the god book (`horror_godbook.rs2:253`) | level 100 enemies (`horror_journal.rs2:6`) | L |
 | Monkey Madness (`mm`) | 3 (138) | `rival-mm` (qp 0) | The Grand Tree (`quest_mm/scripts/mm_journal.rs2:4`) | level 195 jungle demon (`:5`) | - |
@@ -435,11 +435,12 @@ at a time, each run on a fresh account that is deleted after the run.
 | Biohazard | `scripts/generated/quest-biohazard.ts` | 1662, 1655, 1672 | MEASURED 3/3 |
 | Nature Spirit | `scripts/generated/quest-druidspirit.ts` | 823, 830, 791 | MEASURED 3/3 |
 | In Search of the Myreque | `scripts/generated/quest-routequest.ts` | 819, 852, 846 | MEASURED 3/3 |
-| Haunted Mine | `scripts/generated/quest-hauntedmine.ts` | 1092, 1225, 1018 | MEASURED 3/3 |
+| Haunted Mine | `scripts/generated/quest-hauntedmine.ts` | 1423, 1304, 1574, 1017, 1163, 1011 | MEASURED 6/6 |
 | Demon Slayer | `scripts/generated/quest-demon.ts` | 899, 877, 882 | MEASURED 3/3 |
 | Jungle Potion | `scripts/generated/quest-junglepotion.ts` | 651, 650, 649 | MEASURED 3/3 |
 | Tribal Totem | `scripts/generated/quest-totem.ts` | 340, 352, 343 | MEASURED 3/3 |
 | Elemental Workshop | `scripts/generated/quest-elemental.ts` | 206, 209, 194 | MEASURED 3/3 |
+| Shades of Mort'ton | `scripts/generated/quest-mortton.ts` | 1908, 1944, 1956 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -689,11 +690,13 @@ Findings:
 
 ### Haunted Mine
 
-`RESULT ok qp=2 ... ticks=1092 ... walkTicks=375 retries=5 died=false` (runs: 1,092, 1,225, 1,018 ticks), each with
-`You cut a shard from the crystal. / Congratulations! Quest complete!`. Class L in `quests-rest`; the row
+`RESULT ok qp=2 shard=false xp=hitpoints=3350,magic=18862 ... ticks=1017 hpMin=47 eats=1 walkTicks=377 retries=5
+died=false` (6 runs in a row with the final script, two 3-run proofs: 1,423, 1,304, 1,574, 1,017, 1,163, 1,011 ticks;
+the earlier fight logic measured 1,092, 1,225, 1,018 in its one 3/3 proof),
+each with `You cut a shard from the crystal. / Congratulations! Quest complete!`. Class L in `quests-rest`; the row
 `quests-medium` holds it. Preset `quest_hauntedmine`: south of the Zealot (spawn 3444,3258, `maps/m53_50.jm2`) at
 3444,3256, the state after In Search of the Myreque (107 = 5, 302 = 61, 307 = 110), a staff of fire (1387) in the weapon
-slot, 40 blood and 200 air runes (Fire Wave), a chisel, 18 lobsters. Debug preset `quest_hauntedmine_lift` with
+slot, 40 blood and 200 air runes (Fire Wave), a chisel, 21 sharks (385). Debug preset `quest_hauntedmine_lift` with
 `HM_FROM=lift` starts at the cart-end ladder with the lift key and a fungus. Steps (proof run 1 MILESTONE ticks;
 `quests/quest_hauntedmine/scripts/` unless named): the Zealot, Saradomin, "I come seeking challenges and quests.", "What
 quest is that then?" (1), "Is there any other way into the mines?" (the key bit, `zealot.rs2:1-201`), Pickpocket for
@@ -719,15 +722,28 @@ Findings:
   script waits beside the lane (side steps 2728,4503 and 2726,4496 from the SDK collision), lets the cart pass and
   runs. Cart 4 (x 2739, z 4528-4531) blocks the way to the lift area; the script goes when the cart is one tile from
   its south stop, because NPCs move before players in a tick.
-- The boss fight is the fragile part: 6 earlier 3-run proofs of earlier fight logic passed 2, 2, 1, 0, 2 and 1 runs. The
-  ghost moves after hits and fades on the way (no Attack op); the server walks a Fire Wave caster close before the
-  spell lands; boss carts push a player along the z 4456 and z 4462 tracks into dead-end pockets at their east ends
-  (2795,4456; 2794-2795,4462-4463), where a cart beside the pocket holds the player and the boss hits on (2 deaths).
-  The kept logic: cast from where the bot stands, walk home (2788,4454; 2786,4452 for the south spot) only while the
-  ghost is faded, reach the east spot by row 4454 and the north spot from the west end of the z 4462 track, leave the
-  east pocket by its east side, and take the key in up to 3 rounds (a key taken at 8 with the ghost gone wakes it
-  again, `hauntedmine_boss_ghost.rs2:18-26,52`; the kill page was not seen in 1 of the 3 proof runs, which then fought
-  a second round). Eats 5-6 lobsters, hpMin 29-34.
+- The boss fight was the fragile part: 6 earlier 3-run proofs of earlier fight logic passed 2, 2, 1, 0, 2 and 1 runs.
+  Causes found (logs `hm-*` of this work, BOSS lines):
+  - Each 5 ticks the ghost attacks by where the PLAYER stands (`hauntedmine_boss_ghost.rs2:112-147`): on a track zone a
+    cart pushes the player along the track (`:157-195`), near a crane the crane hits, else a pickaxe (max 15, 10 under
+    Protect from Missiles, `:228-241`). The pushes along the z 4462 track end in the north-east corner (x 2791-2797,
+    z 4457-4461), which joins the room only across the z 4456 track; a cart on that track holds the player there.
+  - Fire Wave is an ap trigger (`skill_combat/scripts/player/player_magic.rs2:40`); the server walks the caster until
+    it has line of sight (`engine/src/engine/GameMap.ts:485-487`). The SDK collision has no projectile flags in this
+    room (0 tiles with `LOC_PROJ_BLOCKER`), so it cannot predict the line of sight; a first version that cast only
+    from SDK line-of-sight tiles stood still and cast dry (no Magic XP) from 2783,4454.
+  - A ghost killed while it is faded stays at 0 hitpoints: the retaliation queue (the move with the fade, 1 in 2) runs
+    before the damage queue of the same hit (`player_magic.rs2:227-231`, `npc_combat.rs2:367-368`), and only
+    `hauntedmine_boss_ghost` has the death queue (`hauntedmine_boss_ghost.rs2:247-249`). The NPC list then shows
+    `Treus Dayth hp=0/100`, more casts do nothing, and the key is blocked while it lives (`:23-26`). This happened once in
+    3 of the 6 final runs and up to 3 times a fight in the trials; a fight that waits it out runs out of food.
+  The kept logic: Protect from Missiles on in the room; per ghost spot (`:308-342`) a cast tile that hit in the trials
+  (E 2794,4454 / 2794,4453; NE 2796,4457; N 2787,4461 by the z 4461 row from its west end; NW 2780,4459 / 2779,4458;
+  W 2786,4454; S 2786,4446 by the x 2786 column), a tile with a dry cast or a failed walk is skipped; off a track or
+  out of the corner at once; a ghost at 0 hitpoints for 8 ticks: out of the door, past the door zone (x 2799-2807,
+  `:101-105,117-123`) to 2809,4453 and back, so the timer deletes the ghost and the key wakes a new one (up to 4
+  rounds); from the corner the walk to the key waits for the cart to leave the z 4456 track; 21 sharks (heal 20),
+  eat at 55. The 6 final runs: hpMin 41-54, eats 1-11, 0-1 stuck-ghost rounds each.
 - Agility 15 and Crafting 35 are journal text only; no script checks them (`hauntedmine_journal.rs2:77-81`; no
   `stat` check in the quest scripts). The quest XP is 22,000 Strength (`hauntedmine_crystals.rs2:54`); the RESULT
   `xp=` field did not show a Strength gain (not explained).
@@ -1044,29 +1060,51 @@ ogre arrows (`:240-279`), the kids and the toad (`:288-293`, `bloated_toad.rs2`,
 for are random (`rantz.rs2:138`, flavour bits 1-5), so the script must read them from the dialog, as Murder Mystery
 reads its murderer.
 
-Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
-`quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached
-MILESTONE 50 at tick 566 (diary 22, serum 26, Razmire 68, 5 remains 416, Razmire's store 444, Ulsquire 495, the temple
-talk 566). It then stopped at the temple. Every Repair gave "You're not sure how you would go about fixing this."
-(`flamtaer_temple.rs2:3-6`), so `%morttonquest` was still under 50, although the script saw Ulsquire's line after
-the stage-50 set (`ulsquire_shauncy.rs2:175-179`). Next step: find why the stage stays under 50. Start by logging
-every dialog page and option of the "ulsquire 2" talk. Fixed in the trials: the book's forward button is `book:com_86`
-(`book.rs2:31-48`); Razmire's plank is named "Plank"; a dead shade (hp 0) is not a target; the bot walks next to an
-NPC before the serum or Talk-to (the two NPCs stand in different houses). Content read: the diary on Herbi Flax's shelf
-(`quest_mortton.rs2:1-11`, read to the last page for 5, `serum_book.rs2:25-28`); serum 207 from tarromin, water and
-ashes (10, `herblore.rs2:16-17`); the serum on Razmire, "What are all these shadow creatures?", "Yes, I'll dispatch"
-(15, `razmire_keelgan.rs2:85-184`); 5 Loar shades and their remains (40, `mortton_shades.rs2:7-46`); Razmire takes 2
-(45) and opens his stores; Ulsquire sees 1 (47) and "What can you tell me about that temple?" (50,
-`ulsquire_shauncy.rs2:73-180`); all 15 temple walls (`maps/m54_51.jm2` 3504-3508,3314-3318) to templewall_10, then
-`%temple_repaired_p` = 100 gives 60 (`flamtaer_temple.rs2:44-92,236-252`); the altar lit, olive oil sanctified (65,
-`:167-304`); the sacred oil on logs (70), the logs, a remains and a tinderbox on a pyre (75, 80, `mortton_pyre.rs2`);
-Ulsquire queues the completion (`ulsquire_shauncy.rs2:106-110`). Risks:
-- About 150 Repair builds (15 walls x 10 stages, one build per 3 ticks) use about 5,000 resources (7-70 a build at
-  Crafting 99, `flamtaer_temple.rs2:94-124`); each set of 1 plank, 1 limestone brick and 5 swamp paste gives 800
-  (`:274-278`), and swamp paste does not stack, so about 7 sets need 3-4 trips to Razmire's builders' store.
-- The temple state is world-wide (`flamtaer_temple.vars`; the wall stages hold 9,000 ticks, `:138-153`), so a second
-  run within 9,000 ticks of a first finds the walls built. Clean 3/3 proofs need runs 9,000+ ticks apart, or the
-  measurement must say which runs found built walls (the script logs a TEMPLE start line).
+### Shades of Mort'ton
+
+`RESULT ok qp=3 ops=154 trips=3 xp=...,crafting=107200,herblore=51250 ... ticks=1908 ... died=false` (runs: 1,908,
+1,944, 1,956 ticks), each with `Congratulations! Quest complete!`. Each proof run started 9,000+ ticks after the last
+wall change of the run before (`flamtaer_temple.rs2:138-153`), and each logged `TEMPLE start
+levels=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0`, so every run built the whole temple. Class L in `quests-rest`; the row
+`quests-medium` holds it. Preset `quest_mortton` (presets-medium.ts): in Herbi Flax's house beside the shelf, the
+state after Haunted Mine, a hammer, a tinderbox, logs, a tarromin, a vial of water, ashes, two serum 207 (3410),
+30,000 coins, 2 lobsters. Debug preset `quest_mortton_ulsquire` with `MT_FROM=ulsquire` starts at Razmire's store with
+339 = 47. Steps (proof run 1 MILESTONE ticks; `quests/quest_mortton/scripts/` unless named): the diary from the shelf,
+read to the last page (5) 0-22; serum 207 (10) 22-26; Razmire with the serum, "What are all these shadow creatures?",
+"Yes, I'll dispatch" (15) 26-67; 5 Loar shades and their remains (40) 67-290; Razmire takes 2 (45), the builders' store
+and the general store for olive oil 290-353; Ulsquire sees 1 (47) 353-398; "What can you tell me about that temple?"
+(50) 398-416; 15 temple walls to level 10 and the stage 60 build (`minigames/game_mortton/scripts/flamtaer_temple.rs2:
+44-92`) 416-1809 (154 Repairs, 3 store trips of 2 material sets); the altar lit, the sacred oil, the pyre logs, the
+pyre (65-80, `:167-304`, `mortton_pyre.rs2`) 1809-1870; Ulsquire (complete, `ulsquire_shauncy.rs2:106-110`) 1870-1908.
+Findings:
+- The stage stayed under 50 in the 7 earlier trials because the "ulsquire 2" talk never chose the temple option: the
+  save of trial `mt-t7` (account qmtxbph01) held `morttonquest` (varp 339, `pack/varp.pack:340`) = 47, read from the
+  engine save file (perm varps after the 133-byte header, `engine/src/engine/entity/Player.ts:209-246`). The old
+  script printed MILESTONE 50 whatever its chat returned. With every dialog page logged (DLG lines) the talk reads:
+  Ulsquire's thanks, the post-shades menu, "What can you tell me about that temple?", "How can you rebuild a totally
+  destroyed temple?", and line 176 sets 50. The first open after the store often fails (the NPC is afflicted again or a
+  page is still open), so the script now opens the talk up to 3 times and waits for the "How can you rebuild" page.
+- From stage 55 Razmire's talk has "Can you open a store for me?" before the store menu
+  (`razmire_keelgan.rs2:132`); the old store trip clicked the first option and never opened the store.
+- A temple that another player built (all walls at 10) still needs one build with a material set: the stage moves
+  50 -> 55 -> 60 only inside `try_build_temple` (`:76-84`), and the altar needs 10% sanctity (`:176`). A trial on a
+  built temple (`mt-f3`) finished in 920 ticks.
+- A "~ Repairing the temple ~" page can stay open when the pool empties (`:254-272`); the store trip closes it first.
+- The Loar shadows wander 30 tiles (`mortton_shades.npc`) and are often not in view at the house; the script walks a
+  loop of 8 spawn points. Shades never attack a player above combat 80 (`vislevel` 40 x 2, `Npc.ts:1011`).
+- Swamp paste does not stack, so a trip carries 2 sets (1 plank, 1 limestone brick, 5 paste each, `:274-278`); the
+  proof runs used 3-4 trips (6-8 sets) for 152-156 Repairs at Crafting 99 (7-70 resources a build, `:94-118`).
+- Helper items (tradeable): hammer, tinderbox, logs, tarromin, vial of water, ashes, serum 207, coins. The diary and the
+  shade remains are quest items.
+
+After Shades of Mort'ton (long, 1,800 / 2,600) `quests-rest` is 15 quests, 38 QP, 31,900 / 48,800 (burst 29,501 /
+45,130), 0 medium, 8 long and 7 very long; `quests-medium` is 18 quests, 31 QP, floor 14,271 / realistic 15,208 (with
+the 6 new Haunted Mine runs, 1,011 / 1,574). A text splice of the two rows (scratchpad `mortton-splice.ts`). `bun test
+packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points
+WIN at 105,487 floor / 125,247 realistic.
+
+Next for the medium-quest helper: the row `mortton-oil` (OUT) can use this script up to stage 65 (the sacred oil);
+not checked. Haunted Mine: a ghost killed while faded costs a round (about 300 ticks); no way to stop it was found.
 
 ## Cook's Assistant, Witch's House, Lost City (MEASURED practice, 3/3 each)
 
