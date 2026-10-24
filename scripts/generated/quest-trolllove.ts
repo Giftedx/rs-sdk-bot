@@ -180,7 +180,27 @@ try {
         // (arrg.rs2:69-81); Arrg (level 113, 140 hp, melee and thrown rocks) dead (40).
         await wield(ITEM.scimitar);
         await wield(ITEM.shield);
-        await q.talk('arrg', /^arrg$/i, [/i am here to kill you/i], () => z() < 4000, ARRG, 80, true);
+        // The server can hold the page after the option for 4 ticks (proof trial 3: 848-851), and q.talk() takes 3
+        // shut ticks as the end and clicks Arrg again, which cancels the teleport. So this loop waits 10 shut ticks.
+        // The stronghold trolls around Arrg (maps/m44_157.jm2: 7 within 10 tiles) attack, and a hit closes the dialog
+        // (proof trials: the page after "Whaaaaaaaat?" or the option shut at once), so the bot kills an attacker first.
+        const attacker = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.inCombat && n.distance <= 3 && !/^(arrg|ug|aga)$/i.test(n.name) && (n.optionsWithIndex ?? []).some((o: any) => /attack/i.test(o.text)));
+        for (let i = 0; i < 8 && z() > 4000; i++) {
+            await q.guard('arrg talk');
+            for (let k = 0; k < 10 && attacker(); k++) {
+                const a = attacker();
+                console.log(`WARN arrg talk: attacker ${a.name} at ${a.x},${a.z}`);
+                await q.s.bot.attack(a as any);
+                await q.waitUntil(() => !attacker(), 6);
+            }
+            const n = q.npc(/^arrg$/i);
+            if (!n) { await q.walk('to arrg', [{ x: ARRG.x, z: ARRG.z - 1, tol: 2 }]); continue; }
+            await q.talkTo(n);
+            await q.waitUntil(() => q.dialogOpen(), 20);
+            let shut = 0;
+            await q.converse([/i am here to kill you/i], () => { shut = q.dialogOpen() ? 0 : shut + 1; return z() < 4000 || shut >= 10; }, 80);
+        }
+        if (z() > 4000) await q.fail('arrg talk');
         await closeDlg();
         await pfm(true);
         let seen = false, gone = 0;

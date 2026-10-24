@@ -99,7 +99,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Lost City (`zanaris`) | 3 (128) | rest | Woodcutting 36, Crafting 31 (`quest_zanaris/scripts/quest_zanaris.rs2:37,78`) | level 101 spirit without weapons (`zanaris_journal.rs2:20`) | M |
 | Shilo Village (`zombiequeen`) | 2 (129) | rest | Jungle Potion (`quest_zombiequeen/scripts/mosol_rei.rs2:2`), Crafting 20, Agility 32 (`zombiequeen_journal.rs2:23-26`); MEASURED 2,133-2,478 ticks in row `quests-long` | level 86 (`:27`) | L |
 | Troll Stronghold (`troll`) | 1 (130) | rest | Death Plateau (`quest_death/scripts/death_ig_commander.rs2:5-9` offers the troll talk only at `%death_equiproom` 80), Agility 15 (`quest_troll/scripts/quest_troll.rs2:7`), worn climbing boots (`:8-11`, `quest_death/scripts/quest_death.rs2:159-176`), Thieving 30 (`troll_stronghold_camp_guard.rs2:46`); MEASURED 788-847 ticks in row `quests-long` | level 101 Dad, level 113 general (`pack` combat; `troll_journal.rs2:5`) | L |
-| Troll Romance (`troll_love`) | 2 (131) | rest | Death Plateau, Troll Stronghold, Agility 28 (`quest_troll_love/scripts/troll_love_journal.rs2:12-22`) | level 113 troll (`:26`); CLAIMED by long-quest helper 2 | L |
+| Troll Romance (`troll_love`) | 2 (131) | rest | Death Plateau, Troll Stronghold, Agility 28 (`quest_troll_love/scripts/troll_love_journal.rs2:12-22`); MEASURED 1,084-1,138 ticks in row `quests-long` | level 113 troll (`:26`) | L |
 | Tai Bwo Wannai Trio (`tbwt`) | 2 (132) | rest | Jungle Potion (`areas/area_karamja/scripts/tbwt_timfraku.rs2:51`), Cooking 30, Agility 15, Fishing 5 (`quest_tbwt/scripts/tbwt_journal.rs2:11-13`) | level 48 jogres (`:15`) | XL |
 | Regicide (`regicide`) | 3 (133) | rest | Underground Pass (`quest_regicide/scripts/regicide_kings_messenger.rs2:2`), Agility 56, Crafting 10 (`quest_regicide.rs2:404,674`) | none found; research notes in "Regicide: research notes"; CLAIMED by long-quest helper 1 | XL |
 | Eadgar's Ruse (`eadgar`) | 1 (134) | rest | Druidic Ritual, Death Plateau, Troll Stronghold, Herblore 31 (`areas/area_taverly/scripts/sanfew.rs2:102-103`); Eadgar freed in Troll Stronghold for his cave top (`quest_troll/scripts/quest_troll.rs2:129-131`); the parrot, robe, thistle, potion, fake man, key and goutweed are untradeable (`quest_eadgar/configs/quest_eadgar.obj`); MEASURED 2,091-2,175 ticks in row `quests-long` | none found | L |
@@ -1848,17 +1848,59 @@ same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 11 -> 10
 -> 22,900 / 35,800 (burst 21,178 / 33,108); scratchpad `up/long-rows.ts` on the committed rows. `haggis-cli.ts
 research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN. `bun test packages/planner`: 42 pass, 0 fail.
 
-Next for long-quest helper 2: Troll Romance (`quests/quest_troll_love`, 2 QP, class L; not started, not claimed;
-content read only). `%troll_love` (varp 385) stages in `configs/quest_troll_love.constant:1-11`. Ug (2827,10064,
-level 1 of the stronghold) starts it, "Don't worry now, I'll see what I can do." (5, `ug.rs2:29-72`); Aga
-(2828,10104,1), "So... how's your... um... love life?" (10, `aga.rs2:20-50`); Tenzing, "Do you know where I can find
-Trollweiss?", "What would I need to make such a sled?" (15, `quest_death/scripts/death_sherpa.rs2:43-66`); Dunstan, "I
-need a sled!!" (20), then a yew or maple log, an iron bar and a rope make the sled (22,
-`quest_death/scripts/death_smithy.rs2:213-252`); a bucket of wax with swamp tar and a cake tin make the sled wax, the
-wax on the sled (25, `quest_troll_love.rs2:67-98`). The ice-troll cave entrance (2820,3743) and the crevasse to the top
-(2778,3869); the waxed sled worn at the slope barrier (2772,3835) rides to 2790,3794; the Trollweiss flowers at
-2775-2781,3780-3785 (30, `:47-57`); the second ride (2785,3771) ends at 2794,3719 and the tunnels lead out to the
-Rellekka side (2730,3713). Ug takes the flower (35); Arrg (2828,10095,1), "I am here to kill you!" moves the fight
-outside (`arrg.rs2:22-81`); Arrg (level 113) dead (40); Ug completes it (`ug.rs2:108-116`, `quest_troll_love.rs2:296-307`). With Eadgar's Ruse first,
-the Trollheim teleport (2890,3679) brings the bot back from the Rellekka side; the preset should include Eadgar's Ruse
-(335 = 110) and its runes.
+### Troll Romance
+
+`RESULT ok qp=2 xp=attack=14000,strength=100000,hitpoints=4637,magic=5100,agility=201250 ... ticks=1092 hpMin=97
+eats=0 ... died=false` (runs: 1,092, 1,138, 1,084 ticks), each with `Congratulations! You've helped a lonely troll find
+love. Quest complete!`; the 3 proof saves hold `%troll_love` (varp 385) = 45. Script
+`scripts/generated/quest-trolllove.ts`. Preset `quest_trolllove`: beside Ug on level 1 of the Troll Stronghold
+(2827,10066); Death Plateau, Troll Stronghold and Eadgar's Ruse done (314 = 80, 315 = 8, 317 = 50, 318 = 63, 335 =
+110); the troll worn set. Helper items (tradeable, knowledge/items.json): maple logs, an iron bar, a rope, a bucket of
+wax, swamp tar, a cake tin, runes for 3 Trollheim teleports (6 law, 6 fire; `skill_magic/configs/magic_spells.dbrow`),
+14 sharks. Debug presets `quest_trolllove_cave` and `quest_trolllove_arrg` with `TR_FROM` (cave, arrg).
+
+Steps (proof run 1 MILESTONE ticks; `quests/quest_troll_love/scripts/` unless named):
+- Ug: "Awww, you poor troll...", "Don't worry now, I'll see what I can do." (5, `ug.rs2:29-72`) 0-24; Aga: "So...
+  how's your... um... love life?", "Errr... I've got to go." (10, `aga.rs2:20-50`) 24-76.
+- The prison door and stairs to level 0, the back exit (2823,10048), the troll rocks (2833,3628 and 2856,3612), the
+  secret way to the stile (2817,3562; walk to 2817,3564, the tile 2817,3563 is not reachable) and Tenzing's back door;
+  Tenzing: "Do you know where I can find Trollweiss?", "What would I need to make such a sled?" (15,
+  `quest_death/scripts/death_sherpa.rs2:43-66`) 76-291.
+- Tenzing's front door to Dunstan's smithy; Dunstan: "I need a sled!!", "Yes." (20); again with the materials, then
+  "Where can I get wax from?", "See you!" (22, `quest_death/scripts/death_smithy.rs2:91-255`) 291-429.
+- Swamp tar on the bucket of wax (the cake tin in the pack) makes the sled wax; the sled on the wax (25,
+  `quest_troll_love.rs2:60-98`) 429-433.
+- Trollheim teleport; the ice-troll cave (2820,3743 -> 2803,10187); the crevasse (2772,10233 -> 2778,3869) 433-577.
+- The waxed sled worn (op 2, only in zone 0_43_58_0_0..0_43_60_63_63, `:117-136`), the barrier at 2772,3835 rides to
+  2790,3794 (`:138-232`) 577-617; a Trollweiss flower (loc 5006, op 2; 30, `:47-57`) 617-626; the barrier at
+  2785,3771 rides to 2794,3719 (`:234-293`) 626-664.
+- Scimitar and shield worn again; Trollheim teleport; the stronghold door (2839,3689) and the north stairs to level 1;
+  Ug takes the flower (35, `ug.rs2:76-89`) 664-824.
+- Arrg (2828,10095,1): "I am here to kill you!" puts the bot at 2914,3611 with an attackable Arrg (level 113, 140 hp)
+  4 tiles west (`arrg.rs2:69-81`); Protect from Melee; Arrg dead (40, `:119-129`) 824-941.
+- Trollheim teleport, the stronghold door, level 1; Ug queues the completion (`ug.rs2:96-116`,
+  `quest_troll_love.rs2:296-307`) 941-1092.
+
+Findings:
+- The Mountain Trolls around Arrg on level 1 (7 spawns within 10 tiles in `maps/m44_157.jm2`) attack the bot, and a
+  hit closes the Arrg dialog: in 3 of 6 earlier trial runs the page after "Whaaaaaaaat?" or the option page shut at once,
+  and `q.talk()` then clicked Arrg again. The script kills an attacker that is in combat within 3 tiles first (proof
+  run 2 fought one, hpMin 47, 1,138 ticks).
+- The first ride crashes 1 time in 250 (`random(250)`, `quest_troll_love.rs2:162-196`): the bot lands at 2799,3794
+  and the sled lies on 2799,3795; the script picks it up. No proof run crashed.
+- From the Trollheim teleport tile (2890,3679) the walks to the ice cave and to the stronghold door are each about 170
+  tiles (rsmod flood fill), so the 3 teleports are the slowest legs after the walk to Tenzing.
+
+Planner: `quests-long` gets Troll Romance (2 QP, floor 1,084 / realistic 1,138): 7 quests, 14 QP, 11,411 / 12,237 (the
+same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 9 -> 8 quests, 29 -> 27 QP, 21,100 / 33,200 ->
+19,300 / 30,600 (burst 17,849 / 28,299); scratchpad `up/long-rows.ts` on the committed rows (Temple of Ikov included).
+`haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 102,933 floor / 118,388
+realistic. `bun test packages/planner`: 42 pass, 0 fail.
+
+Next for long-quest helper 2: The Fremennik Trials (`quests/quest_viking`, 3 QP, class XL; not claimed; content
+skimmed only, 4,627 script lines). Chieftain Brundt in the Rellekka longhall starts it; 7 of the 12 council votes
+(`viking_journal.rs2:1-40`). The trials are in `viking_*.rs2`: Manni (the low-alcohol keg, `^viking_keg_lowalc`),
+Swensen's maze, the Reveller, Sigli (the draugen), Thorvald (combat with no weapons or armour, level 69,
+`viking_journal.rs2:7-8`), Peer the Seer (his house is entered with no items or worn items, `viking_peer.rs2:36,293`;
+he banks them, `:195-213`) and Olaf and Sigmund (trade chains). `%viking` stages and the `%viking_bits` bits are in
+`configs/quest_viking.constant`. Horror from the Deep is CLAIMED by long-quest helper 3.
