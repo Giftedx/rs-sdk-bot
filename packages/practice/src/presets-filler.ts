@@ -33,4 +33,10 @@ export const FILLER_PRESETS: Record<string, SaveConfig> = {
     // (272) and poison (273) for the fountain, a spade (952) for the compost heap. The gauge, key, tube and oil can
     // are untradeable (quest_haunted.obj), so the run fetches them.
     quest_haunted: filler({ x: 3111, z: 3331 }, [272, 273, 952]),
+    // Prince Ali Rescue: in the Al Kharid palace beside Hassan (spawn 3302,3163, maps/m51_49.jm2). Helper items
+    // (tradeable): 3 balls of wool (1759) for Ned's wig, yellow dye (1765), pink skirt (1013), rope (954), soft clay
+    // (1761), bronze bar (2349), 3 beers (1917), and Aggie's paste set: redberries (1951), pot of flour (1933), bucket
+    // of water (1929), ashes (592); runes for 4 Lumbridge teleports (4 law 563, 12 air 556, 4 earth 557); 50 coins
+    // (the toll gate, 10). The wig, paste, key print and key are untradeable (quest_prince.obj), so the run makes them.
+    quest_prince: filler({ x: 3301, z: 3163 }, [1759, 1759, 1759, 1765, 1013, 954, 1761, 2349, 1917, 1917, 1917, 1951, 1933, 1929, 592, [563, 4], [556, 12], [557, 4]], 4, 50),
 };

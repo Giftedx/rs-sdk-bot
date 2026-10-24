@@ -63,7 +63,7 @@ const COM: Record<number, [string, boolean]> = {
 };
 const ITEM = { liftKey: 4078, rewardKey: 4077, fungus: 4075, chisel: 1755, shard: 4082 };
 
-const q = await openQuest({ cap: 4500 });
+const q = await openQuest({ cap: 4500, eatAt: 55 });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/completed a quest|quest complete/i) > 0) questDone = true; });
@@ -264,71 +264,93 @@ try {
         () => q.dialogOpen() || !!boss(), 20, 4);
     await q.converse([], () => !!boss() && !q.dialogOpen(), 40);
     q.milestone(8);
-    // 9. The fight: the ghost moves after hits (ai_queue1, :244-245) and fades (no Attack op) on the way; it hits with
-    // the carts, cranes or pickaxes every 5 ticks (:112-147, 0-15). Fire Wave from range (magic defence -5,
-    // hauntedmine.npc:205): no walk to a ghost that stands where melee cannot reach.
+    // 9. The fight: the ghost moves after hits (ai_queue1, :244-245) to one of 6 spots and fades (no Attack op) on the
+    // way. Each 5 ticks it attacks by where the PLAYER stands (:112-147): a cart on a track zone pushes the player
+    // along the track (:136-142,157-195; the old deaths were in the track-end pockets), a crane near a crane zone, else
+    // a pickaxe (max 15, 10 under Protect from Missiles, :228-241). Fire Wave is an ap trigger (player_magic.rs2:40):
+    // the server walks a caster until it has line of sight within 10 tiles. So the bot casts only from a tile that has
+    // that sight (the SDK collision, the same rsmod hasLineOfSight as the engine, GameMap.ts:482) and is off every cart
+    // track; home 2785,4453 sees 5 of the 6 spots, and the bot steps to the nearest such tile for the rest.
+    await (await import('../../packages/core/src/pathcache')).loadPathfinding();
+    const rs: any = await import('../../vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod-pathfinder.js');
+    const pf: any = await import('../../vendor/rs-sdk/sdk/pathfinding');
     const WAVE = componentId('magic:fire_wave');
-    // The server walks a caster close to the ghost before Fire Wave lands (trial runs hit from 1-3 tiles), so the bot
-    // casts from where it stands and lets the server close in; it walks back to a home tile in the room's middle
-    // (2788,4454, or 2786,4452 for the south spot 2787,4443-4445, hauntedmine_boss_ghost.rs2:335-341) only while the
-    // ghost is faded. The east spot (2794,4451-4453, :308-312) is reached by row 4454, not by the z 4456 cart track:
-    // a cart pushes a player along its track (:136-142), and the track's east end 2795,4456 is a dead end while a
-    // cart stands beside it (2 of 6 proof runs died there).
-    let lastCast = -99, casts = 0, lastWalk = -99, mxp = q.xp('Magic'), noXp = 0, stuck = 0, checked = -1, east = 0, north = 0, movedT = 0, lastHere = '', seenT = q.T();
-    const via = async (pts: Array<[number, number]>) => {
-        for (const [wx, wz] of pts) {
-            await q.s.direct({ type: 'walkTo', x: wx, z: wz, running: true, reason: 'SDK' });
-            await q.waitUntil(() => q.near(wx, wz, 0), 7);
+    const PFMISS = 13;
+    const inz = (x0: number, z0: number, x1: number, z1: number, px: number, pz: number) => px >= x0 && px <= x1 && pz >= z0 && pz <= z1;
+    const TRACKS: Array<[number, number, number, number]> = [[2782, 4456, 2784, 4456], [2783, 4446, 2783, 4453], [2785, 4447, 2785, 4452],
+        [2791, 4447, 2791, 4452], [2793, 4446, 2793, 4453], [2791, 4456, 2794, 4456], [2781, 4462, 2795, 4462]];
+    const CRANES: Array<[number, number]> = [[2793, 4458], [2787, 4451], [2787, 4446], [2782, 4458]];
+    const onTrack = (px: number, pz: number) => TRACKS.some(([x0, z0, x1, z1]) => inz(x0, z0, x1, z1, px, pz));
+    const nearCrane = (px: number, pz: number) => CRANES.some(([cx, cz]) => inz(cx, cz - 1, cx + 2, cz + 3, px, pz) || inz(cx - 1, cz, cx + 3, cz + 2, px, pz));
+    const sees = (px: number, pz: number, tx: number, tz: number) => Math.max(Math.abs(px - tx), Math.abs(pz - tz)) <= 10 && !!rs.hasLineOfSight(0, px, pz, tx, tz, 1, 1, 1, 1, 0);
+    const HOME = { x: 2785, z: 4453 };
+    // Cast tiles: walkable, off the tracks and the track-end pockets (x >= 2794 at z 4455-4463), the room interior.
+    const TILES: Array<{ x: number; z: number; crane: boolean }> = [];
+    for (let tx = 2777; tx <= 2797; tx++) for (let tz = 4441; tz <= 4463; tz++) {
+        if (!pf.isTileWalkable(0, tx, tz) || onTrack(tx, tz) || (tx >= 2794 && tz >= 4455)) continue;
+        TILES.push({ x: tx, z: tz, crane: nearCrane(tx, tz) });
+    }
+    const bad = new Set<string>();   // tile>ghost pairs where a cast still made the server walk the bot
+    const pick = (gx: number, gz: number) => {
+        const me = q.pos()!;
+        let best: { x: number; z: number } | undefined, bs = 1e9;
+        for (const t of TILES) {
+            if (!sees(t.x, t.z, gx, gz) || bad.has(`${t.x},${t.z}>${gx},${gz}`)) continue;
+            const sc = Math.max(Math.abs(t.x - me.worldX), Math.abs(t.z - me.worldZ)) + (t.crane ? 3 : 0) + Math.max(Math.abs(t.x - HOME.x), Math.abs(t.z - HOME.z)) / 4;
+            if (sc < bs) { bs = sc; best = t; }
         }
+        return best;
     };
+    let prayT = -99;
+    const offPray = q.s.onTick(() => {
+        if (q.T() - prayT < 4 || (q.st()?.prayers?.prayerPoints ?? 0) <= 0 || q.st()?.prayers?.activePrayers?.[PFMISS] || sq() !== '43_69' || x() >= 2799) return;
+        prayT = q.T();
+        void q.s.direct({ type: 'togglePrayer', prayerIndex: PFMISS, reason: 'SDK' });
+    });
+    let lastCast = -99, casts = 0, moves = 0, pushes = 0, walked = 0, castAt = '', seenT = q.T();
+    await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
     // Up to 3 rounds: the kill page (queue hauntedmine_boss_death, :247-254) sets 9; a key taken at 8 with the ghost
     // gone wakes it again (:18-26,52), so a round ends with the key and the next round fights on.
     for (let round = 0; round < 3 && !q.has(ITEM.rewardKey); round++) {
         seenT = q.T();
         for (let i = 0; i < 900 && !killed(); i++) {
             await q.guard('boss');
-            const here = `${q.pos()?.worldX},${q.pos()?.worldZ}`;
-            if (here !== lastHere) { lastHere = here; movedT = q.T(); }
-            // The kill page can close before it is read: no ghost in view for 20 ticks from home after a hit ends the
-            // fight too (the reward key step then proves it).
+            const me = q.pos()!;
+            const mx = me.worldX, mz = me.worldZ;
+            // The kill page can close before it is read: no ghost in view for 20 ticks after a hit ends the fight
+            // too (the reward key step then proves it).
             if ((q.st()?.nearbyNpcs ?? []).some((n: any) => /treus dayth|^ghost$/i.test(n.name))) seenT = q.T();
-            else if (q.T() - seenT >= 20 && casts > 0 && q.near(2788, 4454, 1)) break;
+            else if (q.T() - seenT >= 20 && casts > 0) break;
+            // A cast that made the server walk the bot: that tile does not see the ghost for the engine.
+            if (castAt && q.T() - lastCast <= 2 && `${mx},${mz}` !== castAt.split('>')[0]) { bad.add(castAt); castAt = ''; }
+            // Pushed onto a track (or into a pocket): back to home at once.
+            if (onTrack(mx, mz) || (mx >= 2794 && mz >= 4455)) {
+                pushes++;
+                await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
+                await q.waitUntil(() => { const p = q.pos()!; return !onTrack(p.worldX, p.worldZ) && !(p.worldX >= 2794 && p.worldZ >= 4455); }, 6);
+                continue;
+            }
             const b = boss();
-            const g: any = b ?? (q.st()?.nearbyNpcs ?? []).find((n: any) => /^ghost$/i.test(n.name));
-            const south = !!g && (g.tileZ ?? g.z) <= 4446;
-            const [hx, hz] = south ? [2786, 4452] : [2788, 4454];
-            const bx = b ? (b.tileX ?? b.x) : 0, bz = b ? (b.tileZ ?? b.z) : 0;
-            if (b && q.cheb(2794, 4452) > 2 && Math.max(Math.abs(bx - 2794), Math.abs(bz - 4452)) <= 1 && q.T() - lastCast >= 5) {
-                east++;
-                await via([[2791, 4454], [2794, 4454]]);
-            }
-            // The north spot (2788-2789,4463) is reached only along the z 4462 track: from its west end to 2787,4461
-            // (off the track), so a cart push ends at the west end, not in the east-end pocket.
-            if (b && bz >= 4463 && Math.abs(bx - 2788) <= 2 && q.cheb(2787, 4461) > 1 && q.T() - lastCast >= 5) {
-                north++;
-                await via([[2781, 4461], [2787, 4461]]);
-            }
-            // Out of the east-end pocket of the z 4462 track by its east side.
-            if (q.pos()!.worldX >= 2794 && q.pos()!.worldZ >= 4462 && q.T() - movedT >= 6) {
-                stuck++;
-                await via([[2796, 4461], [2796, 4457], [2791, 4455], [2788, 4454]]);
-            }
-            // Two dry casts in a row (no Magic XP): the approach is stuck; back home by 2791,4454.
-            if (b && lastCast > 0 && checked !== lastCast && q.T() - lastCast >= 5) {
-                checked = lastCast;
-                noXp = q.xp('Magic') === mxp ? noXp + 1 : 0;
-                if (noXp >= 2 && !q.near(hx, hz, 0)) { stuck++; await via(south ? [[2788, 4454], [hx, hz]] : [[2791, 4454], [hx, hz]]); noXp = 0; }
-            }
-            if (b && !q.dialogOpen() && q.T() - lastCast >= 5 && (q.near(hx, hz, 0) || q.T() - lastCast >= 8 || lastCast < 0)) {
-                casts++; lastCast = q.T(); mxp = q.xp('Magic');
+            if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
+                const gx = b.tileX ?? b.x, gz = b.tileZ ?? b.z;
+                if (!sees(mx, mz, gx, gz) || bad.has(`${mx},${mz}>${gx},${gz}`)) {
+                    const t = pick(gx, gz);
+                    if (t && (t.x !== mx || t.z !== mz)) {
+                        moves++;
+                        await q.s.direct({ type: 'walkTo', x: t.x, z: t.z, running: true, reason: 'SDK' });
+                        const t0 = q.T();
+                        await q.waitUntil(() => q.near(t.x, t.z, 0) || !boss(), 8);
+                        walked += q.T() - t0;
+                        continue;
+                    }
+                }
+                casts++; lastCast = q.T();
+                castAt = `${q.pos()!.worldX},${q.pos()!.worldZ}>${gx},${gz}`;
                 await q.s.direct({ type: 'spellOnNpc', npcIndex: b.index, spellComponent: WAVE, reason: 'SDK' });
-            } else if (!q.near(hx, hz, 0) && !b && q.T() - lastWalk >= 4) {
-                lastWalk = q.T();
-                await q.s.direct({ type: 'walkTo', x: hx, z: hz, running: true, reason: 'SDK' });
             }
             if (i % 20 === 0) {
                 const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /treus dayth|^ghost$/i.test(n.name));
-                console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} stuck=${stuck} east=${east} north=${north} myhp=${q.hp()}`);
+                console.log(`BOSS ${q.T()} me ${mx},${mz} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} moves=${moves} pushes=${pushes} bad=${bad.size} myhp=${q.hp()} pray=${q.st()?.prayers?.prayerPoints}`);
             }
             await q.waitTicks(1);
         }
@@ -359,6 +381,6 @@ try {
     await q.waitUntil(() => questDone, 5);
     await shut();
     q.milestone(11);
-    off(); offCart();
+    off(); offCart(); offPray();
     await q.end(questDone, `qp=2 shard=${q.has(ITEM.shard)}`);
 } catch (e) { await q.fail(String(e)); }

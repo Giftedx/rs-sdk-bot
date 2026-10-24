@@ -20,7 +20,21 @@ function arena(position: { x: number; z: number; level?: number }, stage = 0, qu
     };
 }
 
+// Sea Slug (the rival-seaslug row, tick 24,985, after the woodcut and prayer rows): Attack 99, Strength 97, Defence 89,
+// Hitpoints 97, Prayer 99, Magic 99, Woodcutting 99, Thieving 99, Agility 76, the 99s of the early route; Fishing,
+// Mining, Ranged 1. Fight Arena (17 = 14), Tree Gnome Village, The Grand Tree done. Helper items: swamp paste (1941,
+// tradeable; swamp tar and flour cooked) and an unlit torch (596, tradeable, so Bailey's talk is not needed).
+const LATE_SKILLS = { Attack: 99, Strength: 97, Defence: 89, Hitpoints: 97, Prayer: 99, Magic: 99, Woodcutting: 99, Thieving: 99, Agility: 76, Cooking: 99, Fletching: 99, Firemaking: 99, Crafting: 99, Smithing: 99, Herblore: 99, Runecraft: 99 };
+function late(position: { x: number; z: number; level?: number }, skills: Record<string, number>, items: number[], varps: Record<number, number> = {}): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills, varps: { 17: 14, 111: 9, 150: 160, ...varps },
+        inventory: [...items, 379, 379, 379, 379].map(id => ({ id, count: 1 })),
+    };
+}
+
 export const PATH_PRESETS: Record<string, SaveConfig> = {
     // Fight Arena: beside Lady Servil (spawn 2566,3199, maps/m40_49.jm2).
     quest_arena: arena({ x: 2566, z: 3197 }),
+    // Sea Slug: beside Caroline (spawn 2716,3302, maps/m42_51.jm2).
+    quest_seaslug: late({ x: 2717, z: 3302 }, LATE_SKILLS, [1941, 596]),
 };

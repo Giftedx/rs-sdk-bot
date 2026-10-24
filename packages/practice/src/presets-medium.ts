@@ -27,10 +27,11 @@ function hauntedmine(position: { x: number; z: number }, items: Array<number | [
 
 // Shades of Mort'ton: in Herbi Flax's house, Mort'ton, beside the shelf with the diary (shades_experimentshelf
 // 3481,3279, maps/m54_51.jm2); the state after Haunted Mine. Helper items (tradeable): hammer (2347), tinderbox (590),
-// logs (1511) for the pyre logs, a clean tarromin (253), a vial of water (227) and ashes (592) for serum 207, a second
+// logs (1511) for the pyre logs, a clean tarromin (253), a vial of water (227) and ashes (592) for serum 207, two more
 // serum 207 (3410; each talk with an afflicted NPC spends a dose, razmire_keelgan.rs2:33-48), 30,000 coins for
-// Razmire's builders' store (planks, limestone bricks, swamp paste, _unpack/274/all.inv:28-36), 4 lobsters.
-const MORTTON = medium({ x: 3482, z: 3279 }, [2347, 590, 1511, 253, 227, 592, 3410], 4, 30000, { 107: 5, 302: 61, 307: 110 });
+// Razmire's builders' store (planks, limestone bricks, swamp paste, _unpack/274/all.inv:28-36), 2 lobsters (swamp
+// paste does not stack, so free slots set the material sets a store trip carries).
+const MORTTON = medium({ x: 3482, z: 3279 }, [2347, 590, 1511, 253, 227, 592, 3410, 3410], 2, 30000, { 107: 5, 302: 61, 307: 110 });
 
 export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // Pirate's Treasure: on the Port Sarim jetty beside Redbeard Frank (spawn 3053,3250, maps/m47_50.jm2); 10 bananas
@@ -84,5 +85,8 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // Debug start for HM_FROM=lift: 42_70 north beside the cart-end ladder, the lift key (4078) and a fungus (4075),
     // %hauntedmine = 3 (an entrance crawled).
     quest_mortton: MORTTON,
+    // Debug start for MT_FROM=ulsquire: beside Razmire's store with the state after Ulsquire sees a remains (339 = 47,
+    // ulsquire_shauncy.rs2:84), 2 shade remains (3396) and three serum 207 (3410).
+    quest_mortton_ulsquire: medium({ x: 3489, z: 3294 }, [2347, 590, 1511, 3410, 3410, 3410, 3396, 3396], 2, 30000, { 107: 5, 302: 61, 307: 110, 339: 47 }),
     quest_hauntedmine_lift: hauntedmine({ x: 2710, z: 4539 }, [1755, 4078, 4075], { 382: 3 }),
 };

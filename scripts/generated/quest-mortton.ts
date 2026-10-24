@@ -39,12 +39,16 @@ try {
     const shut = () => q.converse([], () => !q.dialogOpen(), 12);
     // One dialog page per tick; on an option page the LAST pattern that matches an option wins (a later step beats
     // an earlier one), or pick() decides.
+    let lastPage = '';
+    const DLG = process.env.MT_DLG !== '0';
     const chat = async (pats: RegExp[], ok: () => boolean, maxTicks: number, pick?: (opts: string[]) => RegExp | undefined): Promise<boolean> => {
         for (let i = 0; i < maxTicks && !q.stats.died; i++) {
             if (ok()) return true;
             const d: any = q.s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) {
                 const opts: any[] = d.options ?? [];
+                const page = [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].filter(Boolean).join(' | ');
+                if (page !== lastPage) { lastPage = page; if (DLG) console.log(`DLG ${q.T()} ${page.slice(0, 260)}${opts.length ? ` OPTS ${opts.map(o => `${o.index}:${o.text}`).join(' / ')}` : ''}`); }
                 let idx: number | undefined;
                 const want = pick?.(opts.map(o => o.text));
                 if (want) idx = opts.find(o => want.test(o.text))?.index;
@@ -83,65 +87,14 @@ try {
         if (!q.dialogOpen() && !q.st()?.shop?.isOpen) await q.fail(`open ${label}`);
     };
 
-    // 1. The diary from Herbi Flax's shelf (quest_mortton.rs2:1-11); read to the last page with the forward button book:com_86 (5, serum_book.rs2:3-29, book.rs2:31-48).
-    await q.step('shelf', () => q.opLoc(SHELF), () => q.has(ITEM.book), 15, 4);
-    await shut();
-    await q.step('read', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.book)!, optionIndex: 1, reason: 'SDK' }), () => q.dialogOpen() || q.st()?.modalInterface > 0, 10, 3);
-    await chat([], () => q.st()?.modalInterface > 0 && !q.dialogOpen(), 10);
-    for (let i = 0; i < 12; i++) { await q.s.direct({ type: 'clickComponent', componentId: componentId('book:com_86'), reason: 'SDK' }); await q.waitTicks(1); }
-    await q.s.sdk.sendCloseModal();
-    await q.waitTicks(1);
-    q.milestone(5);
-    // 2. Serum 207: tarromin into the water, then the ashes (10, brew_potion.struct:286-300, herblore.rs2:16-17).
-    await q.step('unf', () => q.useOnItem(ITEM.tarromin, ITEM.vial), () => q.has(ITEM.unf), 8, 3);
-    await shut();
-    const s0 = q.cnt(3410);
-    await q.step('serum', () => q.useOnItem(ITEM.ashes, ITEM.unf), () => q.cnt(3410) > s0, 8, 3);
-    await shut();
-    q.milestone(10);
-    await q.step('drop book', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.book)!, optionIndex: 5, reason: 'SDK' }), () => !q.has(ITEM.book), 6, 3);
-    await shut();
-
-    // 3. Razmire: "What are all these shadow creatures?", "Yes, I'll dispatch those dark and evil creatures." (15,
-    // razmire_keelgan.rs2:85-93,149-184).
-    await open('razmire 1', 'razmire');
-    await chat([/what are all these shadow/i, /yes, i'll dispatch/i], () => q.sawText(/that's what i wanted to hear/i) && !q.dialogOpen(), 80);
-    q.milestone(15);
-
-    // 4. Five Loar shades (a Loar Shadow turns when attacked, mortton_shades.rs2:81-111) and their remains (20-40,
-    // :7-46). Auto retaliate is off, so the bot attacks each one that is on it.
-    const shadeOn = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shade$/i.test(n.name) && n.targetIndex >= 0 && (n.hp ?? 1) > 0).sort((a: any, b: any) => a.distance - b.distance)[0];
-    const shadow = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shad(ow|e)$/i.test(n.name) && n.reachable !== false && (n.hp ?? 1) > 0).sort((a: any, b: any) => a.distance - b.distance)[0];
-    let kills = 0;
-    for (let i = 0; i < 80 && q.cnt(ITEM.remains) < 5; i++) {
-        await q.guard('shades');
-        const ground = (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.remains && g.distance <= 8);
-        if (ground) {
-            const r0 = q.cnt(ITEM.remains);
-            await q.s.bot.pickupItem(ground);
-            await q.waitUntil(() => q.cnt(ITEM.remains) > r0, 6);
-            continue;
-        }
-        const t = shadeOn() ?? shadow();
-        if (!t) { await q.walk('shades', [{ x: 3488, z: 3285, tol: 3 }]); await q.waitTicks(2); continue; }
-        await q.s.direct({ type: 'interactNpc', npcIndex: t.index, optionIndex: q.opIndex(t, /attack/i), reason: 'SDK' });
-        const idx = t.index;
-        await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === idx && /loar/i.test(n.name) && (n.hp ?? 1) > 0) || (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.remains && g.distance <= 3), 40);
-        kills++;
-        // The remains drop after the death animation (obj_add after npc_death, mortton_shades.rs2:7-13).
-        await q.waitUntil(() => (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.remains && g.distance <= 4), 6);
-        if (kills <= 12) console.log(`SHADE ${q.T()} t=${t.name}@${t.x},${t.z} reach=${t.reachable} after=${JSON.stringify((q.st()?.nearbyNpcs ?? []).filter((n: any) => n.index === idx).map((n: any) => [n.name, n.hp, n.maxHp]))} ground=${JSON.stringify((q.st()?.groundItems ?? []).filter((g: any) => g.distance <= 6).map((g: any) => [g.id, g.name]))} msg=${(q.st()?.gameMessages ?? []).slice(-1)[0]?.text}`);
-    }
-    if (q.cnt(ITEM.remains) < 5) await q.fail(`remains ${q.cnt(ITEM.remains)}`);
-    console.log(`SHADES remains=${q.cnt(ITEM.remains)} tries=${kills} at ${q.T()}`);
-    q.milestone(40);
-
-    // 5. Razmire takes 2 remains (45) and opens his stores (razmire_keelgan.rs2:99-111,201-243).
+    // Razmire's builders' store (razmire_keelgan.rs2:99-111,201-243).
     const buy = async (label: string) => {
         // One trip: as many sets as the free slots hold (1 plank, 1 limestone brick, 5 swamp paste), the add_temple_resources set
         // (flamtaer_temple.rs2:274-278).
         if (!q.st()?.shop?.isOpen) await open(label, 'razmire', visible('razmire') ? 4 : 1);
-        if (!q.st()?.shop?.isOpen) await chat([/building store/i], () => !!q.st()?.shop?.isOpen, 40);
+        // From stage 55 Razmire's talk menu has "Can you open a store for me?" before the store menu (razmire_keelgan.rs2:205-208).
+        if (!q.st()?.shop?.isOpen) await chat([/open a store for me/i, /building store/i], () => !!q.st()?.shop?.isOpen, 40);
+        if (!q.st()?.shop?.isOpen) await q.fail(`${label}: store not open`);
         const free = 28 - q.inv().length;
         const sets = Math.max(1, Math.floor((free - 1) / 7));
         for (const [re, id, n] of [[/^plank$/i, ITEM.plank, sets], [/limestone brick/i, ITEM.brick, sets], [/swamp paste/i, ITEM.paste, 5 * sets]] as Array<[RegExp, number, number]>) {
@@ -150,25 +103,106 @@ try {
                 if (!r.success) console.log(`WARN buy ${re}: ${r.message}`);
             }
         }
-        await q.s.sdk.sendCloseShop?.();
+        await q.s.bot.closeShop();
+        await q.waitTicks(1);
+        if (label === 'store 1' && !first(ITEM.olive)) {
+            // Olive oil for the sacred oil from the general store on the same visit (razmire_keelgan.rs2:192-193).
+            await open(`${label} general`, 'razmire', 1);
+            await chat([/open a store for me/i, /general store/i], () => !!q.st()?.shop?.isOpen, 40);
+            await q.s.bot.buyFromShop(/olive oil/i, 1);
+            await q.s.bot.closeShop();
+            await q.waitTicks(1);
+        }
+        console.log(`BUY ${label} olive=${first(ITEM.olive) ?? 0} planks=${q.cnt(ITEM.plank)} bricks=${q.cnt(ITEM.brick)} paste=${q.cnt(ITEM.paste)} coins=${q.cnt(ITEM.coins)} at ${q.T()}`);
+    };
+    // MT_FROM=ulsquire (debug preset quest_mortton_ulsquire): the state after Ulsquire sees a remains (47).
+    const FROM = process.env.MT_FROM ?? '';
+    if (FROM !== 'ulsquire') {
+        // 1. The diary from Herbi Flax's shelf (quest_mortton.rs2:1-11); read to the last page with the forward button book:com_86 (5, serum_book.rs2:3-29, book.rs2:31-48).
+        await q.step('shelf', () => q.opLoc(SHELF), () => q.has(ITEM.book), 15, 4);
+        await shut();
+        await q.step('read', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.book)!, optionIndex: 1, reason: 'SDK' }), () => q.dialogOpen() || q.st()?.modalInterface > 0, 10, 3);
+        await chat([], () => q.st()?.modalInterface > 0 && !q.dialogOpen(), 10);
+        for (let i = 0; i < 12; i++) { await q.s.direct({ type: 'clickComponent', componentId: componentId('book:com_86'), reason: 'SDK' }); await q.waitTicks(1); }
         await q.s.sdk.sendCloseModal();
         await q.waitTicks(1);
-        console.log(`BUY ${label} planks=${q.cnt(ITEM.plank)} bricks=${q.cnt(ITEM.brick)} paste=${q.cnt(ITEM.paste)} coins=${q.cnt(ITEM.coins)} at ${q.T()}`);
-    };
-    await open('razmire 2', 'razmire');
-    await chat([/building store/i], () => !!q.st()?.shop?.isOpen, 60);
-    if (q.cnt(ITEM.remains) > 3) await q.fail('razmire kept the remains');
-    q.milestone(45);
-    await buy('store 1');
+        q.milestone(5);
+        // 2. Serum 207: tarromin into the water, then the ashes (10, brew_potion.struct:286-300, herblore.rs2:16-17).
+        await q.step('unf', () => q.useOnItem(ITEM.tarromin, ITEM.vial), () => q.has(ITEM.unf), 8, 3);
+        await shut();
+        const s0 = q.cnt(3410);
+        await q.step('serum', () => q.useOnItem(ITEM.ashes, ITEM.unf), () => q.cnt(3410) > s0, 8, 3);
+        await shut();
+        q.milestone(10);
+        await q.step('drop book', () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.book)!, optionIndex: 5, reason: 'SDK' }), () => !q.has(ITEM.book), 6, 3);
+        await shut();
 
-    // 6. Ulsquire sees a remains (47, ulsquire_shauncy.rs2:73-87); "What can you tell me about that temple?" (50,
-    // :171-180).
-    await open('ulsquire 1', 'ulsquire');
-    await chat([], () => q.cnt(ITEM.remains) <= 2 && !q.dialogOpen(), 40);
-    q.milestone(47);
-    await open('ulsquire 2', 'ulsquire');
-    await chat([], () => q.sawText(/good supply of limestone bricks/i) && !q.dialogOpen(), 60,
-        () => q.sawText(/good supply of limestone bricks/i) ? /^ok thanks/i : /about that temple/i);
+        // 3. Razmire: "What are all these shadow creatures?", "Yes, I'll dispatch those dark and evil creatures." (15,
+        // razmire_keelgan.rs2:85-93,149-184).
+        await open('razmire 1', 'razmire');
+        await chat([/what are all these shadow/i, /yes, i'll dispatch/i], () => q.sawText(/that's what i wanted to hear/i) && !q.dialogOpen(), 80);
+        q.milestone(15);
+
+        // 4. Five Loar shades (a Loar Shadow turns when attacked, mortton_shades.rs2:81-111) and their remains (20-40,
+        // :7-46). Auto retaliate is off, so the bot attacks each one that is on it.
+        const shadeOn = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shade$/i.test(n.name) && n.targetIndex >= 0 && (n.hp ?? 1) > 0).sort((a: any, b: any) => a.distance - b.distance)[0];
+        const shadow = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^loar shad(ow|e)$/i.test(n.name) && n.reachable !== false && (n.hp ?? 1) > 0).sort((a: any, b: any) => a.distance - b.distance)[0];
+        let kills = 0, patrol = 0;
+        // The shadows wander 30 tiles from their spawns (mortton_shades.npc) and drift to the temple (proof logs).
+        const PATROL = [{ x: 3488, z: 3285 }, { x: 3487, z: 3274 }, { x: 3480, z: 3280 }, { x: 3484, z: 3297 }, { x: 3497, z: 3292 }, { x: 3499, z: 3306 }, { x: 3500, z: 3316 }, { x: 3496, z: 3279 }];
+        for (let i = 0; i < 80 && q.cnt(ITEM.remains) < 5; i++) {
+            await q.guard('shades');
+            const ground = (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.remains && g.distance <= 8);
+            if (ground) {
+                const r0 = q.cnt(ITEM.remains);
+                await q.s.bot.pickupItem(ground);
+                await q.waitUntil(() => q.cnt(ITEM.remains) > r0, 6);
+                continue;
+            }
+            const t = shadeOn() ?? shadow();
+            if (!t) {
+                // No shade in view: walk the next point of a loop through the town's spawns (maps/m54_51.jm2).
+                const pt = PATROL[patrol++ % PATROL.length]!;
+                if (patrol % 4 === 1) console.log(`NOSHADE ${q.T()} to ${pt.x},${pt.z} loar=${JSON.stringify((q.st()?.nearbyNpcs ?? []).filter((n: any) => /loar/i.test(n.name)).map((n: any) => [n.name, n.x, n.z, n.reachable, n.hp]))}`);
+                await q.walk('shades', [{ ...pt, tol: 2 }]);
+                await q.waitTicks(2);
+                continue;
+            }
+            await q.s.direct({ type: 'interactNpc', npcIndex: t.index, optionIndex: q.opIndex(t, /attack/i), reason: 'SDK' });
+            const idx = t.index;
+            await q.waitUntil(() => !(q.st()?.nearbyNpcs ?? []).some((n: any) => n.index === idx && /loar/i.test(n.name) && (n.hp ?? 1) > 0) || (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.remains && g.distance <= 3), 40);
+            kills++;
+            // The remains drop after the death animation (obj_add after npc_death, mortton_shades.rs2:7-13).
+            await q.waitUntil(() => (q.st()?.groundItems ?? []).some((g: any) => g.id === ITEM.remains && g.distance <= 4), 6);
+            if (kills <= 12) console.log(`SHADE ${q.T()} t=${t.name}@${t.x},${t.z} reach=${t.reachable} after=${JSON.stringify((q.st()?.nearbyNpcs ?? []).filter((n: any) => n.index === idx).map((n: any) => [n.name, n.hp, n.maxHp]))} ground=${JSON.stringify((q.st()?.groundItems ?? []).filter((g: any) => g.distance <= 6).map((g: any) => [g.id, g.name]))} msg=${(q.st()?.gameMessages ?? []).slice(-1)[0]?.text}`);
+        }
+        if (q.cnt(ITEM.remains) < 5) await q.fail(`remains ${q.cnt(ITEM.remains)}`);
+        console.log(`SHADES remains=${q.cnt(ITEM.remains)} tries=${kills} at ${q.T()}`);
+        q.milestone(40);
+
+        await open('razmire 2', 'razmire');
+        await chat([/building store/i], () => !!q.st()?.shop?.isOpen, 60);
+        if (q.cnt(ITEM.remains) > 3) await q.fail('razmire kept the remains');
+        q.milestone(45);
+        await buy('store 1');
+
+        // 6. Ulsquire sees a remains (47, ulsquire_shauncy.rs2:73-87).
+        await open('ulsquire 1', 'ulsquire');
+        await chat([], () => q.cnt(ITEM.remains) <= 2 && !q.dialogOpen(), 40);
+        q.milestone(47);
+    } else {
+        await buy('store 1');
+    }
+    // "What can you tell me about that temple?" sets 50 after the player's "How can you rebuild" line (:171-180).
+    let told = false;
+    for (let t = 0; t < 3 && !told; t++) {
+        await shut();
+        await open(`ulsquire 2.${t}`, 'ulsquire');
+        told = await chat([], () => q.sawText(/how can you rebuild a totally destroyed temple/i) && !q.dialogOpen(), 60,
+            () => q.sawText(/how can you rebuild a totally destroyed temple/i) ? /^ok thanks/i : /about that temple/i);
+        if (!told) console.log(`WARN ulsquire 2.${t} no temple talk at ${q.T()}`);
+    }
+    if (!told) await q.fail('ulsquire temple talk');
     q.milestone(50);
 
     // 7. The temple: Repair on each wall until all 15 are templewall_10 (temple_repaired_p 100, flamtaer_temple.rs2:
@@ -180,7 +214,11 @@ try {
     console.log(`TEMPLE start levels=${levels().join(',')} repaired=${repairedP()} resources=${resourcesP()} sanctity=${sanctityP()} at ${q.T()}`);
     let trips = 1, ops = 0;
     const hasSet = () => q.has(ITEM.plank) && q.has(ITEM.brick) && q.cnt(ITEM.paste) >= 5;
-    for (let i = 0; i < 400 && repairedP() < 100; i++) {
+    // Done when the overlay counts all 15 walls (temple_repaired_p 100, :236-252), a build saw it and moved the stage
+    // to 60 (the message, :80-84), and the sanctity holds the 10% that the altar and the oil need (:176,290) after the
+    // drain of 30 a 100 ticks (:160-164). A temple that another player built still needs that build.
+    const allowed = () => q.msgCount(/allowed to light the holy fire/i) > 0;
+    for (let i = 0; i < 400 && !(repairedP() >= 100 && allowed() && sanctityP() >= 40); i++) {
         await q.guard('temple');
         if (!hasSet() && resourcesP() < 1) {
             // Out of resources: the next trip to the builders' store.
@@ -194,7 +232,7 @@ try {
         let k = -1;
         for (let j = 0; j < WALLS.length; j++) if (lv[j]! >= 0 && lv[j]! < 10 && (k < 0 || lv[j]! < lv[k]!)) k = j;
         if (k < 0) {
-            // All 15 at level 10: one more Repair lets the overlay count them (the queue from Razmire's timer).
+            // All 15 at level 10: Repair still builds (stage and sanctity) without a wall change.
             k = 0;
         }
         const [wx, wz] = WALLS[k]!;
@@ -208,11 +246,10 @@ try {
         }
         await q.opLoc(w, q.opIndex(w, /repair/i));
         ops++;
-        await q.waitUntil(() => wallLevel(wallAt(wx, wz)?.id ?? -1) !== l0 || q.dialogOpen() || repairedP() >= 100, l0 === 10 ? 6 : 14);
+        await q.waitUntil(() => wallLevel(wallAt(wx, wz)?.id ?? -1) !== l0 || q.dialogOpen() || (repairedP() >= 100 && allowed() && sanctityP() >= 40), l0 === 10 ? 6 : 14);
         if (i % 10 === 0) console.log(`TEMPLE ${q.T()} levels=${levels().join(',')} repaired=${repairedP()} resources=${resourcesP()} sanctity=${sanctityP()} sets=${q.cnt(ITEM.plank)}`);
     }
-    if (repairedP() < 100) await q.fail(`temple ${repairedP()}`);
-    await q.waitUntil(() => q.msgCount(/allowed to light the holy fire/i) > 0, 10);
+    if (repairedP() < 100 || !allowed()) await q.fail(`temple ${repairedP()} allowed=${allowed()}`);
     console.log(`TEMPLE done ops=${ops} trips=${trips} sanctity=${sanctityP()} at ${q.T()}`);
     q.milestone(60);
 
@@ -224,9 +261,9 @@ try {
     q.milestone('altar');
     if (!first(ITEM.olive)) {
         await open('general store', 'razmire', visible('razmire') ? 3 : 1);
-        if (!q.st()?.shop?.isOpen) await chat([/general store/i], () => !!q.st()?.shop?.isOpen, 40);
+        if (!q.st()?.shop?.isOpen) await chat([/open a store for me/i, /general store/i], () => !!q.st()?.shop?.isOpen, 40);
         await q.s.bot.buyFromShop(/olive oil/i, 1);
-        await q.s.sdk.sendCloseModal();
+        await q.s.bot.closeShop();
         await q.waitTicks(1);
         await q.walk('to temple', [{ x: 3506, z: 3313, tol: 1 }]);
     }
