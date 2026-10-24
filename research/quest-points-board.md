@@ -941,18 +941,18 @@ Preset `quest_death` in `packages/practice/src/presets-rest.ts`: beside Denulth 
 trials before the proof: 1,304, 1,282, 1,197), each with `Congratulations! Quest complete!`. Two tracks; varps
 `%death_equiproom` and `%death_map` (`quests/quest_death/configs/quest_death.constant`). Steps (proof run 1 MILESTONE
 ticks): Denulth, "Do you have any quests for me?", "No but perhaps I could try and find one?" (10, Harold's gold set to
-100) 0-49 (`death_ig_commander.rs2:91-120`); Eohric on castle level 1 (20), Harold at the Toad and Chicken (30), Eohric
-again (40) 49-273 (`death_headservant.rs2:1-55`, `death_guard_equiproom.rs2:264-273`); the ale (50) and the Blurberry
-Special (Harold very drunk) 273-412 (`:275-338`); "Would you like to gamble?", a 101-coin bet, the roll; very drunk,
-Harold always loses, and a win above his 100 gold gives the IOU (55) 412-463 (`:126-185,207-249`); reading it gives the
-combination (60) 463-474 (`quest_death.rs2:27-35`); the 5 stone balls from x 2893 onto the mechanism by the castle door
-(Blue 2894,3562, Yellow 2895,3562, Red 2894,3563, Purple 2895,3563, Green 2895,3564) unlock the door (70) 474-545
+100) 0-48 (`death_ig_commander.rs2:91-120`); Eohric on castle level 1 (20), Harold at the Toad and Chicken (30), Eohric
+again (40) 48-265 (`death_headservant.rs2:1-55`, `death_guard_equiproom.rs2:264-273`); the ale (50) and the Blurberry
+Special (Harold very drunk) 265-404 (`:275-338`); "Would you like to gamble?", a 101-coin bet, the roll; very drunk,
+Harold always loses, and a win above his 100 gold gives the IOU (55) 404-455 (`:126-185,207-249`); reading it gives the
+combination (60) 455-466 (`quest_death.rs2:27-35`); the 5 stone balls from x 2893 onto the mechanism by the castle door
+(Blue 2894,3562, Yellow 2895,3562, Red 2894,3563, Purple 2895,3563, Green 2895,3564) unlock the door (70) 466-537
 (`quest_death.rs2:37-44,83-101`); Saba in the hermit cave (map 1), Tenzing (2, his climbing boots), Dunstan (3), Denulth's
-certificate (4), Dunstan takes it (5) and spikes the boots for the iron bar 545-917 (`death_saba.rs2:32-56`,
+certificate (4), Dunstan takes it (5) and spikes the boots for the iron bar 537-912 (`death_saba.rs2:32-56`,
 `death_sherpa.rs2:150-178`, `death_smithy.rs2:16-48,187-210`, `death_ig_commander.rs2:157-184`); Tenzing takes the food
 and the boots (6) and draws the map (7); the back door, the stile 2817,3562 and the secret way to the zone at 2864,3609
-(8) 917-1061 (`death_sherpa.rs2:119-147,181-190`, `quest_death.rs2:46-71,103-118,130-136`); back over the stile and
-through the hut, Denulth takes the map and the combination 1061-1192 (`death_ig_commander.rs2:186-221`).
+(8) 912-1057 (`death_sherpa.rs2:119-147,181-190`, `quest_death.rs2:46-71,103-118,130-136`); back over the stile and
+through the hut, Denulth takes the map and the combination 1057-1192 (`death_ig_commander.rs2:186-221`).
 Findings:
 - The dice: the roll button (`death_dice:com_28`) needs protected access, so a click inside `harold_roll`'s 3
   `p_delay(2)` gets no effect (Player.ts `runScript`); trial 2 clicked at 7 ticks and lost the bet. The script waits 12
