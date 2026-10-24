@@ -268,35 +268,28 @@ try {
     // the carts, cranes or pickaxes every 5 ticks (:112-147, 0-15). Fire Wave from range (magic defence -5,
     // hauntedmine.npc:205): no walk to a ghost that stands where melee cannot reach.
     const WAVE = componentId('magic:fire_wave');
-    // A cast with no Magic XP 6 ticks later had no line of sight (a crane between): the bot runs at the ghost first.
-    let lastCast = -99, casts = 0, mxp = q.xp('Magic'), closer = 0, seen = q.T();
+    // Where to stand (rsmod hasLineOfSight, range 9, from the boss spots of hauntedmine_boss_ghost.rs2:308-342):
+    // 2788,4454 sees move spots 0-4; 2786,4452 sees spot 5 (2787,4443-4445). Both are off the cart tracks; a walk
+    // across a track can stop at a boss cart (blockwalk), so the bot does not chase the ghost.
+    let lastCast = -99, casts = 0, lastWalk = -99;
     for (let i = 0; i < 900 && !killed(); i++) {
         await q.guard('boss');
         const b = boss();
-        // Out of the NPC view (15 tiles) from a far corner: back to the room's middle, where every spot is in view.
-        const anyGhost = (q.st()?.nearbyNpcs ?? []).some((n: any) => /treus dayth|^ghost$/i.test(n.name));
-        if (anyGhost) seen = q.T();
-        else if (q.T() - seen >= 3 && !q.near(2788, 4451, 1)) { await q.s.direct({ type: 'walkTo', x: 2788, z: 4451, running: true, reason: 'SDK' }); seen = q.T(); }
-        if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
-            const bx = b.tileX ?? b.x, bz = b.tileZ ?? b.z;
-            if ((lastCast > 0 && q.xp('Magic') === mxp) || q.cheb(bx, bz) > 8) {
-                closer++;
-                // The south spot (move index 5, 2787,4443-4445, hauntedmine_boss_ghost.rs2:335-341) has no line of sight
-                // from the room's middle; 2788,4448 has (a clear column).
-                const [tx, tz] = bz <= 4446 ? [2788, 4448] : [bx, bz];
-                const wr: any = await q.s.direct({ type: 'walkTo', x: tx, z: tz, running: true, reason: 'SDK' });
-                await q.waitUntil(() => { const g = boss(); return !g || q.near(tx, tz, bz <= 4446 ? 0 : 3); }, 8);
-                if (closer % 4 === 1) console.log(`CLOSER ${q.T()} to ${tx},${tz} now ${q.pos()?.worldX},${q.pos()?.worldZ} r=${JSON.stringify(wr).slice(0, 160)}`);
-            }
-            const b2 = boss();
-            if (b2) {
-                casts++; lastCast = q.T(); mxp = q.xp('Magic');
-                await q.s.direct({ type: 'spellOnNpc', npcIndex: b2.index, spellComponent: WAVE, reason: 'SDK' });
-            }
+        const g: any = b ?? (q.st()?.nearbyNpcs ?? []).find((n: any) => /^ghost$/i.test(n.name));
+        const south = !!g && (g.tileZ ?? g.z) <= 4446;
+        const [hx, hz] = south ? [2786, 4452] : [2788, 4454];
+        // A cast the server finds out of reach walks the bot on (its approach); the bot walks home only while the
+        // ghost is faded (no Attack op) or a cast has had 8 ticks.
+        if (b && !q.dialogOpen() && q.T() - lastCast >= 5 && (q.near(hx, hz, 0) || q.T() - lastCast >= 8 || lastCast < 0)) {
+            casts++; lastCast = q.T();
+            await q.s.direct({ type: 'spellOnNpc', npcIndex: b.index, spellComponent: WAVE, reason: 'SDK' });
+        } else if (!q.near(hx, hz, 0) && (!b || q.T() - lastCast >= 8) && q.T() - lastWalk >= 4) {
+            lastWalk = q.T();
+            await q.s.direct({ type: 'walkTo', x: hx, z: hz, running: true, reason: 'SDK' });
         }
         if (i % 20 === 0) {
             const g: any = (q.st()?.nearbyNpcs ?? []).find((n: any) => /treus dayth|^ghost$/i.test(n.name));
-            console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} closer=${closer} myhp=${q.hp()}`);
+            console.log(`BOSS ${q.T()} me ${q.pos()?.worldX},${q.pos()?.worldZ} npc ${g?.name}@${g?.tileX ?? g?.x},${g?.tileZ ?? g?.z} hp=${g?.hp}/${g?.maxHp} casts=${casts} myhp=${q.hp()}`);
         }
         await q.waitTicks(1);
     }
@@ -310,7 +303,7 @@ try {
 
     // 10. Out of the boss room, down the light stairs, up the west stairs (light now, :36) to the reward door (10,
     // hauntedmine_crystals.rs2:1-29) and a crystal cut with the chisel (complete, :39-56).
-    await go('boss door out', LOC.bossDoor!, () => x() > 2799, { x: 2798, z: 4453 });
+    await go('boss door out', LOC.bossDoor!, () => x() >= 2799, { x: 2798, z: 4453 });
     await go('light stairs', LOC.lightE!, () => sq() === '42_69', { x: 2811, z: 4453 });
     await go('dark stairs west', LOC.darkW!, () => sq() === '43_69', { x: 2693, z: 4438 });
     await q.walk('to reward door', [{ x: 2772, z: 4451, tol: 0 }]);

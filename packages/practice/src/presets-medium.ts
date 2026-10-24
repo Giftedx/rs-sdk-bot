@@ -25,6 +25,13 @@ function hauntedmine(position: { x: number; z: number }, items: Array<number | [
     return { ...c, equipment: [...RUNE_SET.filter(e => e.slot !== 3), { id: 1387, count: 1, slot: 3 }] };
 }
 
+// Shades of Mort'ton: in Herbi Flax's house, Mort'ton, beside the shelf with the diary (shades_experimentshelf
+// 3481,3279, maps/m54_51.jm2); the state after Haunted Mine. Helper items (tradeable): hammer (2347), tinderbox (590),
+// logs (1511) for the pyre logs, a clean tarromin (253), a vial of water (227) and ashes (592) for serum 207, a second
+// serum 207 (3410; each talk with an afflicted NPC spends a dose, razmire_keelgan.rs2:33-48), 30,000 coins for
+// Razmire's builders' store (planks, limestone bricks, swamp paste, _unpack/274/all.inv:28-36), 4 lobsters.
+const MORTTON = medium({ x: 3482, z: 3279 }, [2347, 590, 1511, 253, 227, 592, 3410], 4, 30000, { 107: 5, 302: 61, 307: 110 });
+
 export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // Pirate's Treasure: on the Port Sarim jetty beside Redbeard Frank (spawn 3053,3250, maps/m47_50.jm2); 10 bananas
     // (1963) for Luthas's crate, white apron (1005) for Wydin, spade (952), 200 coins (two boat fares, the rum), runes
@@ -76,5 +83,6 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     quest_hauntedmine: hauntedmine({ x: 3444, z: 3256 }, [1755]),
     // Debug start for HM_FROM=lift: 42_70 north beside the cart-end ladder, the lift key (4078) and a fungus (4075),
     // %hauntedmine = 3 (an entrance crawled).
+    quest_mortton: MORTTON,
     quest_hauntedmine_lift: hauntedmine({ x: 2710, z: 4539 }, [1755, 4078, 4075], { 382: 3 }),
 };
