@@ -50,7 +50,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Clock Tower (`cog`) | 1 (79) | rest | none found; MEASURED 468-486 ticks in row `quests-medium` | none found | M |
 | Cook's Assistant (`cook`) | 1 (80) | `cooks-assistant` | none | none | - |
 | Family Crest (`crest`) | 1 (81) | `crest` (qp 0) | Mining 40, Crafting 40, Smithing 40, Magic 59 (`quest_crest/scripts/crest_journal.rs2:10-13`) | level 170 demon (`:14`) | - |
-| Death Plateau (`death`) | 1 (82) | rest | none found | none found | M |
+| Death Plateau (`death`) | 1 (82) | rest | none found; CLAIMED by short/medium helper | none found | M |
 | Demon Slayer (`demon`) | 3 (83) | rest | none found; keys and Silverlight untradeable (`quest_demon/configs/demon.obj`); MEASURED 877-899 ticks in row `quests-medium` | Delrith, needs Silverlight (`quest_demon/scripts/demon_journal.rs2:6-9`) | M |
 | The Tourist Trap (`desertrescue`) | 2 (84) | rest | Fletching 10, Smithing 20 (`quest_desertrescue/scripts/quest_desertrescue.rs2:603,655`) | none found | L |
 | Doric's Quest (`doric`) | 1 (85) | rest | none found | none | S |
