@@ -73,8 +73,11 @@ try {
         await closeDlg();
     };
 
-    // 1. The guard: "Sure, I'll help." starts the quest and picks the murderer.
-    await q.talk('guard', /^guard$/i, [/sure, i'll help/i], () => q.sawText(/thanks a lot/i), GUARD_IN, 40);
+    // 1. The guard: "Sure, I'll help." starts the quest and picks the murderer. A debug preset with the quest started
+    // (quest_murder_<suspect>) gets the started menu instead (murder_guard.rs2:22).
+    // The hall door 2741,3576 (loc 1533): the nearest guard can be in the hall south of it ("I can't reach that!").
+    await q.openDoor('hall door', 2741, 3576);
+    await q.talk('guard', /^guard$/i, [/sure, i'll help/i, /what should i be doing to help again/i], () => q.sawText(/thanks a lot|look around and investigate/i), GUARD_IN, 40);
     q.milestone(1);
 
     // 2. The study: the dagger (a mesbox) and the thread on the window.

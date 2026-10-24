@@ -51,6 +51,10 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // (tradeable): 3 pots of flour (1933) for the dagger and two suspects' items, a law (563) and 5 air runes (556) for
     // one Camelot Teleport to the poison salesman. The flypaper (untradeable) comes from the mansion's sacks.
     quest_murder: rest({ x: 2740, z: 3577 }, [1933, 1933, 1933, [563, 1], [556, 5]], 2),
+    // Debug presets quest_murder_<suspect>: the quest started (varp 192 %murderquest = 1) with the murderer forced (varp 195
+    // %murdersus, 1 Anna .. 6 Frank, quest_murder.constant); the guard's start rolls it at random (murder_guard.rs2:12).
+    ...Object.fromEntries(['anna', 'bob', 'carol', 'david', 'elizabeth', 'frank'].map((k, i) =>
+        [`quest_murder_${k}`, rest({ x: 2740, z: 3577 }, [1933, 1933, 1933, [563, 1], [556, 5]], 2, 0, { 192: 1, 195: i + 1 })])),
     // Observatory Quest: beside the professor in the reception (spawn 2438,3186, maps/m38_49.jm2). Helper items
     // (tradeable): 3 planks (960), a bronze bar (2349), a molten glass (1775); 4 lobsters. The keep key, the lens mould and
     // the lens are untradeable (knowledge/items.json 601-603), so the run collects them.

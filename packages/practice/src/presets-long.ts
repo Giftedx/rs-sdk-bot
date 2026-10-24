@@ -31,7 +31,30 @@ function upass(position: { x: number; z: number; level?: number }, varps: Record
     };
 }
 
+// Shilo Village (scripts/generated/quest-zombiequeen.ts): Jungle Potion (175 = 12) done (mosol_rei.rs2:2). Worn: the
+// same rune set (the Beads of the Dead go on the neck slot). Helper items (tradeable): spade (952) for the mound
+// (quest_zombiequeen.rs2:415-443), a lit candle (33) and a rope (954) for the fissure (:445-483), a chisel (1755) for
+// the pommel and the bone shard (:1246-1299), bronze wire (1794) for the beads (:1263-1280), 3 bones (526) for the
+// tomb door (:1399-1447), 14 sharks. %zombiequeen is varp 116, %zq_map_mechanisms 117.
+const ZQ_ITEMS: Array<number | [number, number]> = [952, 33, 954, 1755, 1794, 526, 526, 526];
+function zq(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, extra: Array<number | [number, number]> = [], food = 14, base = ZQ_ITEMS): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment: UP_WORN, varps: { ...DONE, 175: 12, ...varps },
+        inventory: items([...base, ...extra, ...Array.from({ length: food }, () => 385)]),
+    };
+}
+
 export const LONG_PRESETS: Record<string, SaveConfig> = {
+    // Beside Mosol Rei, east of the Shilo Village gates (spawn 2883,2951, maps/m45_46.jm2).
+    quest_zombiequeen: zq({ x: 2884, z: 2951 }),
+    // Debug (ZQ_FROM=mound): beside the mound with the quest started (%zombiequeen 1).
+    quest_zombiequeen_mound: zq({ x: 2921, z: 2997 }, { 116: 1 }),
+    // Debug (ZQ_FROM=azr): in Ah Za Rhoon below the fissure (%zombiequeen 7), the candle and rope used.
+    quest_zombiequeen_azr: zq({ x: 2898, z: 9401 }, { 116: 7 }, [], 14, [1755, 1794, 526, 526, 526]),
+    // Debug (ZQ_FROM=cairn): east of the Cairn Isle rocks, Ah Za Rhoon done (%zombiequeen 8, both scrolls read: bits
+    // 5 and 6), Zadimus' remains and the 2 scrolls in the pack.
+    quest_zombiequeen_cairn: zq({ x: 2796, z: 2979 }, { 116: 8, 117: 96 }, [610, 607, 608], 14, [1755, 1794, 526, 526, 526]),
+
     // In King Lathas's room, level 1 of Ardougne castle (spawn 2578,3293,1, maps/m40_51.jm2).
     quest_upass: upass({ x: 2577, z: 3292, level: 1 }),
     // Debug (UP_FROM=bridge): beside Koftik at the bridge, %upass 1.
