@@ -97,7 +97,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Vampire Slayer (`vampire`) | 3 (126) | rest | none found | level 34 vampire (`quest_vampire/scripts/vampire_journal.rs2:9`) | S |
 | Waterfall Quest (`waterfall`) | 1 (127) | `waterfall` | none found | level 84 giants (`quest_waterfall/scripts/waterfall_journal.rs2:9`) | - |
 | Lost City (`zanaris`) | 3 (128) | rest | Woodcutting 36, Crafting 31 (`quest_zanaris/scripts/quest_zanaris.rs2:37,78`) | level 101 spirit without weapons (`zanaris_journal.rs2:20`) | M |
-| Shilo Village (`zombiequeen`) | 2 (129) | rest | Jungle Potion (`quest_zombiequeen/scripts/mosol_rei.rs2:2`), Crafting 20, Agility 32 (`zombiequeen_journal.rs2:23-26`) | level 86 (`:27`); CLAIMED by long-quest helper | L |
+| Shilo Village (`zombiequeen`) | 2 (129) | rest | Jungle Potion (`quest_zombiequeen/scripts/mosol_rei.rs2:2`), Crafting 20, Agility 32 (`zombiequeen_journal.rs2:23-26`); MEASURED 2,133-2,478 ticks in row `quests-long` | level 86 (`:27`) | L |
 | Troll Stronghold (`troll`) | 1 (130) | rest | Death Plateau (`quest_death/scripts/death_ig_commander.rs2:5-9` offers the troll talk only at `%death_equiproom` 80), Agility 15 (`quest_troll/scripts/quest_troll.rs2:7`), worn climbing boots (`:8-11`, `quest_death/scripts/quest_death.rs2:159-176`), Thieving 30 (`troll_stronghold_camp_guard.rs2:46`); MEASURED 788-847 ticks in row `quests-long` | level 101 Dad, level 113 general (`pack` combat; `troll_journal.rs2:5`) | L |
 | Troll Romance (`troll_love`) | 2 (131) | rest | Death Plateau, Troll Stronghold, Agility 28 (`quest_troll_love/scripts/troll_love_journal.rs2:12-22`) | level 113 troll (`:26`) | L |
 | Tai Bwo Wannai Trio (`tbwt`) | 2 (132) | rest | Jungle Potion (`areas/area_karamja/scripts/tbwt_timfraku.rs2:51`), Cooking 30, Agility 15, Fishing 5 (`quest_tbwt/scripts/tbwt_journal.rs2:11-13`) | level 48 jogres (`:15`) | XL |
@@ -1443,6 +1443,7 @@ deleted after the run.
 |---|---|---|---|
 | Underground Pass | `scripts/generated/quest-upass.ts` | 2764, 2859, 2898 | MEASURED 3/3 |
 | Troll Stronghold | `scripts/generated/quest-troll.ts` | 847, 788, 824 | MEASURED 3/3 |
+| Shilo Village | `scripts/generated/quest-zombiequeen.ts` | 2133, 2478, 2357 | MEASURED 3/3 |
 
 ### Underground Pass
 
@@ -1548,3 +1549,55 @@ Planner: `quests-long` gets Troll Stronghold (1 QP, floor 788 / realistic 847): 
 under `rival-dialogue-burst`). `quests-rest` loses one long quest: 14 -> 13 quests, 36 -> 35 QP, 30,100 / 46,200 ->
 28,300 / 43,600 (burst 27,836 / 42,726 -> 26,172 / 40,321); scratchpad `up/long-rows.ts`. `haggis-cli.ts
 research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN. `bun test packages/planner`: 42 pass, 0 fail.
+
+### Shilo Village
+
+`RESULT ok qp=2 xp=attack=52700,hitpoints=17440,crafting=97125,agility=1425 ... ticks=2133 hpMin=41 eats=1 ...
+died=false` (runs: 2133, 2478, 2357 ticks), each with `Congratulations! Quest complete!`. Preset `quest_zombiequeen`:
+beside Mosol Rei (spawn 2883,2951, east of the Shilo gates), Jungle Potion done (175 = 12, `mosol_rei.rs2:2`), worn
+rune full helm, scimitar, chainbody, platelegs. Helper items (tradeable): spade, lit candle, rope, chisel, bronze wire,
+3 bones, 14 sharks. Debug presets `quest_zombiequeen_mound`, `_azr`, `_cairn` with `ZQ_FROM`. Varps: `%zombiequeen`
+116, `%zq_map_mechanisms` 117.
+
+Steps (proof run 1 MILESTONE ticks; `quests/quest_zombiequeen/scripts/quest_zombiequeen.rs2` unless named):
+- Mosol Rei: "Why do I need to run?", "Rashiliyia? Who is she?", "What can we do?", "I'll go to see the Shaman.",
+  "Yes, I'm sure..." gives the Wampum belt (`mosol_rei.rs2:21-107`) 0-46. His menus offer "What can we do?" again
+  beside the next step, so the bot answers by pattern priority, not by option order.
+- Trufitus (2809,3086): the belt on him, "Mosol Rei said something about a legend?", "Why was it called Ah Za Rhoon?",
+  "I am going to search for Ah Za Rhoon!", "Yes, I will seriously look..." sets 1 (`areas/area_karamja/scripts/
+  trufitus.rs2:85-89,500-543`) 46-208.
+- The mound (2921,2999) is in a jungle cut off by vines and trees; the stepping stones (2925,2948-2950, 1 tile per
+  Cross, `skill_agility/scripts/shortcuts.rs2:228-271`) cross the river. Search (3), the spade (4), the lit candle (5),
+  the rope (6), Search and "Yes, I'll give it a go!" lower the bot to 2898,9401 (7, `:329-483`) 208-466.
+- Ah Za Rhoon: the rubble (2887,9373) to the lower cave; the hidden bookcase (2885,9317) gives the tattered scroll, the
+  gallows (2934,9325) Zadimus' remains, the sacks (2939,9285) the crumpled scroll; both scrolls read (bits 5, 6); the
+  rubble back; the south waterfall path (2940,9349) out to 2929,2946 (8 on leaving, `:977-1064`) 466-938.
+- Cairn Isle: the climbing rocks (2794 and 2792, 2979) west, the log bridge, the stacked rocks (2762,2990, "Yes Please")
+  into Bervirius' tomb (9, needs the tattered scroll read, `:613-649`); the dolmen (2766,9364) gives the pommel,
+  the crystal and the notes; the chisel on the pommel, the wire on the beads: the Beads of the Dead (crumpled scroll
+  read, `:1246-1280`); the hand holds out; the bridge and rocks back east 938-1100.
+- Zadimus' remains buried in Tai Bwo Wannai (2794-2798, 3087-3090) give the bone shard (`:948-972`) 1100-1214.
+- The stones north; the palm trees (2915,3092) show the doors; Search on them (bit 4); the chisel on the shard makes
+  the bone key; the key on the doors (10); the beads worn; Open into the tomb (2929,9525) 1214-1490.
+- The gate (11; the beads keep Rashiliyia away, `:255-312`); the rocks down; 3 bones in the tomb door (2892,9480; 12,
+  `:1399-1447`); the dolmen (2892,9487) raises Nazastarool (level 91, 68, 93) under Protect from Melee; the remains
+  (14) 1490-1817.
+- Out: the rocks, the gate, the bone key on the exit doors to 2916,3093; the stones south; Cairn Isle again; the
+  remains on Bervirius' dolmen queue the completion (`:1120-1143,1630-1635`) 1817-2133.
+
+Findings:
+- The Undead Ones (level 61) attack on sight below ground, and a hit during a mesbox dropped the click that resumes it
+  (trial t6: 4 rubble searches, the choice never opened). The bot kills any Undead One within 5 tiles that has a
+  target before each underground action.
+- A slip on the stepping stones (`stat_random(agility, 50, 253)`) swims the bot about 6 ticks and leaves it on the far
+  bank at x 2931; proof attempt 1 failed there (2/3), and the bot now waits for the swim to end.
+- After the third bone a dialog page can leave the bot on the tomb door tile; Open walks it in (trial t10).
+- Dropping a scroll or the crystal opens a confirm dialog (the crystal explodes); the bot keeps them.
+- At level 99 each Agility roll here still fails about 1 time in 85-100 (`stat_random(agility, 70-170, 250-253)`); every
+  obstacle is retried.
+
+Planner: `quests-long` gets Shilo Village (2 QP, floor 2,133 / realistic 2,478): 3 quests, 8 QP, 5,685 / 6,223 (the
+same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 13 -> 12 quests, 35 -> 33 QP, 28,300 / 43,600
+-> 26,500 / 41,000 (burst 26,172 / 40,321 -> 24,507 / 37,917); scratchpad `up/long-rows.ts`. `haggis-cli.ts
+research/hiscores-live.json --levers`: Quest Points WIN at 103,397 / 121,918 -> 103,865 / 121,992; QP at end 145.
+`bun test packages/planner`: 42 pass, 0 fail.
