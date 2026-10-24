@@ -42,14 +42,14 @@ const LOOM = { id: 787, x: 2198, z: 3249 };
 const FURNACE = { id: 2781, x: 2975, z: 3368 };             // Falador
 const STILL = { id: 4026, x: 2927, z: 3212 };
 const CATAPULT = { id: 3976, x: 2185, z: 3183 };
-const LAZY = { x: 2181, z: 3184 };
 
 // Tirannwn legs (scratchpad up/tir.ts): "x,z" walk (every shortest path off trap tiles), "K:loc:from>to" a loc op:
 // C cross_over (Agility 56, %regicide_quest >= 8, quest_regicide.rs2:388-477), L log balance (:341-386), J pit jump
 // (:237-281), P woodspring pass (:31-77), W the tripwire walked onto (it pushes the bot 2 tiles on, 10 damage and
 // poison: :171-188, regicide_zones.rs2:59-62).
 const LEG = {
-    E_I: '2298,3209 2284,3212 2270,3209 2267,3205 J:2267,3204:2267,3205>2267,3201 2260,3187 2246,3183 2238,3181 P:2235,3181:2238,3181>2234,3181 2221,3184 2211,3198 2209,3201 J:2209,3202:2209,3201>2209,3205 2206,3219 2205,3233 2202,3237 L:2201,3237:2202,3237>2196,3237 2197,3251 2205,3251',
+    E_IDRIS: '2298,3209 2284,3212 2270,3209 2267,3205 J:2267,3204:2267,3205>2267,3201 2266,3198',
+    IDRIS_I: '2257,3186 2243,3182 2238,3181 P:2235,3181:2238,3181>2234,3181 2221,3184 2211,3198 2209,3201 J:2209,3202:2209,3201>2209,3205 2206,3219 2205,3233 2202,3237 L:2201,3237:2202,3237>2196,3237 2197,3251 2205,3251',
     I_T: '2196,3246 2196,3237 L:2197,3237:2196,3237>2202,3237 2203,3223 2208,3209 2209,3205 J:2209,3204:2209,3205>2209,3201 2219,3187 2231,3178 2239,3164 2253,3152 2257,3150',
     T_I: '2243,3160 2233,3174 2221,3183 2212,3197 2209,3201 J:2209,3202:2209,3201>2209,3205 2206,3219 2205,3233 2202,3237 L:2201,3237:2202,3237>2196,3237 2197,3251 2205,3251',
     T_FP: '2243,3150 2241,3151',
@@ -277,9 +277,10 @@ try {
         await cross(`cage door 2.${n}`, 2404, 9620, 3268, /pick|open/i, () => x() >= 2404);
         await q.walk(`to pipe ${n}`, [{ x: 2419, z: 9605, tol: 0 }]);
         await cross(`pipe ${n}`, 2417, 9605, 3237, /.*/, () => x() <= 2413, 25);
-        // The unicorn's door (upass_unicorn_doorl 2400,9611, angle south) puts the bot at 2371,9666.
-        await q.walk(`to unicorn door ${n}`, [{ x: 2400, z: 9610, tol: 1 }]);
-        await cross(`unicorn door ${n}`, 2400, 9611, 3219, /.*/, () => z() > 9660, 12);
+        // The pipe ends at 2390,9605 by the unicorn's cage; its door (upass_unicorn_doorl 2375,9611, angle south) puts
+        // the bot at 2371,9666 once the unicorn is dead (quest_upass.rs2:318-327).
+        await q.walk(`to unicorn door ${n}`, [{ x: 2375, z: 9610, tol: 1 }]);
+        await cross(`unicorn door ${n}`, 2375, 9611, 3219, /.*/, () => z() > 9660, 12);
         q.milestone(`area2.${n}`);
         await q.walk(`to skull door ${n}`, [{ x: 2370, z: 9718, tol: 1 }]);
         await cross(`skull door ${n}`, 2368, 9717, 3220, /open/i, () => q.lvl() === 1, 15);
@@ -307,8 +308,14 @@ try {
         await pass(1);
     }
     if (from('tir1')) {
-        // 2. Idris comes 20-30 ticks after the bot enters the forest (idris.rs2:6-50); the walk stops for him.
-        await tw('to iorwerth', LEG.E_I);
+        // 2. Idris comes 20-30 ticks after the bot enters map 35_49, 35_50 or 36_50 (music/scripts/move.rs2:21-41,
+        // idris.rs2:6-30), beside the bot (map_findsquare radius 1-3 with line of walk); in a 1-tile forest path that
+        // finds no square and he never comes (proof run 1). So the bot waits in the open ground at 2266,3198, just
+        // inside map 35_49 (the timer starts again on that entry).
+        await tw('to idris', LEG.E_IDRIS);
+        for (let i = 0; i < 40 && !q.sawText(/north west of the forest/i); i++) { await dialogs(); await q.waitTicks(1); }
+        await dialogs();
+        await tw('to iorwerth', LEG.IDRIS_I);
         if (!q.sawText(/north west of the forest/i)) await q.fail('no idris');
         q.milestone(3);
         await q.talk('iorwerth 1', /^lord iorwerth$/i, [], () => q.sawText(/find one of our trackers/i), IORWERTH, 60);
@@ -378,7 +385,9 @@ try {
         await q.walk('to bank', [{ x: 2946, z: 3368, tol: 1 }]);
         const o = await q.s.bot.openBank();
         if (!o.success) await q.fail(`openBank ${o.message}`);
-        for (const [re, n] of [[/^coal$/i, 8], [/^rope$/i, 1], [/^cooked rabbit$/i, 1]] as Array<[RegExp, number]>) {
+        // The sharks go in first: the pack is near full (8 coal, the rope and the rabbit come out).
+        if (q.has(ITEM.shark)) { await q.s.bot.depositItem(/^shark$/i, -1); await q.waitTicks(1); }
+        for (const [re, n] of [[/^rope$/i, 1], [/^cooked rabbit$/i, 1], [/^coal$/i, 8]] as Array<[RegExp, number]>) {
             const w = await q.s.bot.withdrawItem(re, n);
             if (!w.success) console.log(`WARN withdraw ${re}: ${w.message}`);
             await q.waitTicks(1);
@@ -432,8 +441,14 @@ try {
         // barrel on the catapult (12, :495-599).
         await tw('to catapult', LEG.E_CAMP);
         await q.walk('to lazy guard', [{ x: 2183, z: 3184, tol: 1 }]);
-        const lazy = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => /^tyras guard$/i.test(n.name)).sort((a: any, b: any) => (Math.abs(a.x - LAZY.x) + Math.abs(a.z - LAZY.z)) - (Math.abs(b.x - LAZY.x) + Math.abs(b.z - LAZY.z)))[0];
-        await q.step('rabbit', () => { const g = lazy(); return g ? q.useOnNpc(ITEM.rabbit, g) : q.waitTicks(1); }, () => !q.has(ITEM.rabbit), 15, 3);
+        // Three npc types share the name "Tyras guard"; the lazy one is type 1205 (npc.pack).
+        const lazy = () => (q.st()?.nearbyNpcs ?? []).filter((n: any) => n.id === 1205).sort((a: any, b: any) => a.distance - b.distance)[0];
+        // The rabbit leaves the pack on the guard's page after the bot's (regicide_tyras_lazy_guard.rs2:30-36).
+        await q.step('rabbit', async () => {
+            const g = lazy();
+            if (!q.dialogOpen() && g) { await q.useOnNpc(ITEM.rabbit, g); await q.waitUntil(() => q.dialogOpen(), 12); }
+            await q.converse([], () => !q.has(ITEM.rabbit), 8);
+        }, () => !q.has(ITEM.rabbit), 4, 4);
         await q.converse([], () => !q.dialogOpen(), 20);
         await q.step('catapult', () => q.useOnLoc(ITEM.fused, q.findLoc((l: any) => l.id === CATAPULT.id) ?? CATAPULT), () => !q.has(ITEM.fused), 15, 3);
         await q.waitUntil(() => at(2183, 3185), 30);

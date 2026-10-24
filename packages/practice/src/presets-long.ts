@@ -74,6 +74,21 @@ function eadgar(position: { x: number; z: number; level?: number }, varps: Recor
 }
 const EA_LATE: Array<number | [number, number]> = [590, 233, 99, [563, 3], [556, 9], [555, 3], 385, 385, 385];
 
+// Troll Romance (scripts/generated/quest-trolllove.ts): Death Plateau, Troll Stronghold and Eadgar's Ruse done (335 =
+// 110, for the Trollheim teleport, skill_magic/scripts/spells/teleport.rs2:30-33). Worn: the troll set. Helper items
+// (tradeable): maple logs, an iron bar and a rope for Dunstan's sled (death_smithy.rs2:233-255), a bucket of wax, swamp
+// tar and a cake tin for the sled wax (quest_troll_love.rs2:67-82), runes for 3 Trollheim teleports (2 law, 2 fire
+// each, magic_spells.dbrow), 14 sharks. %troll_love is varp 385. The sled, wax and Trollweiss are untradeable
+// (quest_troll_love.obj).
+const TR_ITEMS: Array<number | [number, number]> = [1517, 2351, 954, 30, 1939, 1887, [563, 6], [554, 6]];
+function trollLove(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, inv: Array<number | [number, number]> = TR_ITEMS, food = 14): SaveConfig {
+    return {
+        position: { level: 0, ...position }, skills: ALL_99, equipment: TROLL_WORN,
+        varps: { ...DONE, 314: 80, 315: 8, 317: 50, 318: 63, 335: 110, ...varps },
+        inventory: items([...inv, ...Array.from({ length: food }, () => 385)]),
+    };
+}
+
 // The Tourist Trap (scripts/generated/quest-desertrescue.ts): no quest needed. Worn: a rune scimitar for the Mercenary
 // Captain (the bot takes it off before the camp: the guards jail a player with a weapon or armour,
 // quest_desertrescue.rs2:145-186) and the desert shirt, robe and boots (1833/1835/1837, tradeable), which the slave
@@ -172,6 +187,13 @@ export const LONG_PRESETS: Record<string, SaveConfig> = {
     quest_eadgar_fakeman: eadgar({ x: 2891, z: 10084, level: 2 }, { 335: 87, 336: EA_BITS | 4, 337: 10, 338: 5 }, [3268, ...EA_LATE]),
     // Debug (EA_FROM=store): by the kitchen drawers (level 1) with the storeroom key (%eadgar_quest 90).
     quest_eadgar_store: eadgar({ x: 2852, z: 10050, level: 1 }, { 335: 90, 336: EA_BITS | 4, 337: 10, 338: 5 }, [3269, 2146, ...EA_LATE]),
+
+    // Beside Ug, level 1 of the Troll Stronghold (spawn 2827,10064,1, maps/m44_157.jm2).
+    quest_trolllove: trollLove({ x: 2827, z: 10066, level: 1 }),
+    // Debug (TR_FROM=cave): in Burthorpe with the waxed sled (%troll_love 25).
+    quest_trolllove_cave: trollLove({ x: 2919, z: 3574 }, { 385: 25 }, [4084, 1887, [563, 6], [554, 6]]),
+    // Debug (TR_FROM=arrg): beside Ug with the Trollweiss given (%troll_love 35).
+    quest_trolllove_arrg: trollLove({ x: 2827, z: 10066, level: 1 }, { 385: 35 }, [1887, [563, 2], [554, 2]]),
 
     // Beside Denulth in the Imperial Guard camp, Burthorpe (spawn 2896,3528, maps/m45_55.jm2).
     quest_troll: troll({ x: 2896, z: 3529 }),
