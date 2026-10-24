@@ -73,7 +73,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Pirate's Treasure (`hunt`) | 2 (102) | rest | none found; the rum, key and message are untradeable (`quest_hunt/configs/quest_hunt.obj`); MEASURED 460-474 ticks in row `quests-medium` | none found | M |
 | Temple of Ikov (`ikov`) | 1 (103) | rest | Thieving 42, Ranged 40 (`quest_ikov/scripts/ikov_journal.rs2:14-15`) | fire warrior (`ikov_dungeon.rs2:158`) | L |
 | Imp Catcher (`imp`) | 1 (104) | rest | none found | imps (`quest_imp/scripts/imp_journal.rs2:13`) | S |
-| The Dig Site (`itexam`) | 2 (105) | `dig` | Agility 10, Herblore 10, Thieving 25 (`quest_itexam/scripts/itexam_journal.rs2:10-22`) | none found | - |
+| The Dig Site (`itexam`) | 2 (105) | `dig`, MEASURED 1,535-1,851 (`research/quest-plan.md` 1p) | Agility 10 at the winch, Herblore 10 in the chemistry, Thieving 25 at the pocket (`quest_itexam/scripts/area_digsite.rs2:617`, `itexam_chemistry.rs2:21`, `digsite_workman.rs2:62`); the rock samples, brush, trowel, talisman, chemicals and tablet are untradeable, so the account fetches them | none found | - |
 | Observatory Quest (`itgronigen`) | 2 (106) | rest | none found | none found | M |
 | Watchtower (`itwatchtower`) | 4 (107) | rest | Magic 14, Mining 40, Herblore 14, Thieving 15, Agility 25 (`quest_itwatchtower/scripts/itwatchtower_journal.rs2:8-28`) | ogres | XL |
 | Jungle Potion (`junglepotion`) | 1 (108) | rest | Druidic Ritual (`areas/area_karamja/scripts/trufitus.rs2:280` reads `%druidquest`); MEASURED 649-651 ticks in row `quests-medium` | none found | M |

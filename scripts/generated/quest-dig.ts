@@ -1,7 +1,7 @@
-// The Dig Site from preset quest_dig (in the Exam Centre beside the examiner; Haggis at the dig row, tick 28,202:
+// The Dig Site from preset quest_dig (in the Exam Centre beside the examiner; Haggis at the dig row, tick 28,294:
 // Attack 99, Strength 97, Defence 89, Hitpoints 97, Thieving 99, Agility 76, Herblore 99, Fishing 99, Mining 1).
 // Helper items (tradeable): cup of tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport
-// runes. Reward: 2 QP, 153,000 Mining and 20,000 Herblore (x25 on the demo server), 2 gold bars (quest_itexam.rs2:41-46).
+// runes. Reward: 2 QP, 15,300 Mining and 2,000 Herblore XP (382,500 and 50,000 at x25), 2 gold bars (quest_itexam.rs2:39-46).
 // Varp %itexamlevel (131, bits 0-3, not transmitted): 1 letter, 2-4 exams 1-3, 5 expert, 6 permit, 7 compound on the
 // bricks, 8 blast, 9 complete. Errands in %itexam_errands (132), 2 bits a student; flags in %itexam_bits (133).
 // Server truth: quests/quest_itexam/scripts/ (examiner.rs2, student1-3.rs2, area_digsite.rs2, digsite_workman.rs2,
@@ -280,11 +280,20 @@ try {
             if (!soil) { console.log(`WARN no soil near ${x()},${z()}`); await q.walk('to soil', [{ x: 3353, z: 3406, tol: 1 }]); continue; }
             digs++;
             if (digs % 20 === 0) console.log(`DIGS ${digs} t=${q.T()} inv=${q.inv().map(i => i.id).join(',')} FINDS ${tally(/^you find|strange talisman/i)}`);
+            // The next dig is sent the tick the find shows; a level-up page there is clicked by the tick hook. A dig that
+            // gets no "You dig through the earth..." in 3 ticks was dropped (trial d2: 4 ticks lost a level-up) and is sent again.
             const t0 = q.T();
             await q.useOnLoc(ITEM.trowel, soil);
-            await q.waitUntil(() => msgSince(/you dig through the earth/i, t0), 12);
-            await q.waitUntil(() => msgSince(/^you find|clean your find/i, t0) || q.has(ITEM.talisman) || q.dialogOpen(), 10);
-            await closeDialog();
+            await q.waitUntil(() => msgSince(/you dig through the earth/i, t0), 3);
+            if (!msgSince(/you dig through the earth/i, t0)) {
+                q.stats.retries++;
+                const d: any = q.s.sdk.getDialog();
+                if (d?.isOpen && !d.isWaiting) await q.s.sdk.sendClickDialog(0);
+                await q.useOnLoc(ITEM.trowel, soil);
+                await q.waitUntil(() => msgSince(/you dig through the earth/i, t0), 8);
+            }
+            await q.waitUntil(() => msgSince(/^you find|clean your find/i, t0) || q.has(ITEM.talisman), 10);
+            if (q.has(ITEM.talisman)) await closeDialog();
         }
         if (!q.has(ITEM.talisman)) await q.fail('talisman');
         console.log(`DIGS ${digs} FINDS ${tally(/^you find|strange talisman/i)}`);

@@ -48,7 +48,7 @@ function scorpion(position: { x: number; z: number; level?: number }, varps: Rec
     };
 }
 
-// The Dig Site (the dig row, tick 28,202, after the fly-fishing row): the Sea Slug state plus Fishing 99; Sea Slug
+// The Dig Site (the dig row, tick 28,294, after the fly-fishing row): the Sea Slug state plus Fishing 99; Sea Slug
 // (159 = 12), Cook's Assistant (29 = 2), Druidic Ritual (80 = 4), Family Crest (148 = 11) done. Helper items (all
 // tradeable): cup of tea (1978), opal (1609), 2 ropes (954), vial (229), charcoal (973), pestle and mortar (233),
 // tinderbox (590), runes for 1 Varrock Teleport, 2 lobsters. Debug presets start a stage with its quest items

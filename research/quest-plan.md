@@ -1254,14 +1254,83 @@ pass, 0 fail.
 Next: the walk is the lever. The Jailer leg (ladder to jail, 264 tiles) and the jail to the gate (150 tiles) are the
 long legs; a games necklace or other teleport nearer the jail is not checked.
 
-## 1p. The Dig Site (the `dig` row): not started
+## 1p. Measured: The Dig Site (the `dig` row)
 
-The row stays ESTIMATE (555 / 1,387). Content (CODE-READ, `quests/quest_itexam/scripts/`, about 2,000 lines): the
-examiner's three exams (`examiner.rs2`) each need three student errands (`student1.rs2`, `student2.rs2`,
-`student3.rs2`; exam 1 needs three untradeable rock samples: the workman's pickpocket, `digsite_workman.rs2:90-92`,
-and two digsite searches, `area_digsite.rs2:46-90`; exam 3 needs an opal), then the expert, the permit, the winch
-and the chemistry (`itexam_chemistry.rs2`) in `area_digsite.rs2`. The planner gate is Agility 10, Herblore 10,
-Thieving 25 (`itexam_journal.rs2:10-22`).
+Script `scripts/generated/quest-dig.ts`, preset `quest_dig` (`packages/practice/src/presets-path.ts`; in the Exam
+Centre beside the examiner, 3361,3341). The preset is the planner state at the row's start, tick 28,294 (scenario a,
+realistic): Attack 99, Strength 97, Defence 89, Hitpoints 97, Prayer 99, Magic 99, Thieving 99, Agility 76, Herblore
+99, Fishing 99, the 99s of the early route; Mining and Ranged 1. Helper items (all tradeable): a cup of tea (1978), an
+opal (1609), 2 ropes, a vial, charcoal, a pestle and mortar, a tinderbox, runes for 1 Varrock Teleport, 2 lobsters.
+Debug presets `quest_dig_talisman` (stage 5, `DIG_FROM=talisman`) and `quest_dig_cave` (stage 6, `DIG_FROM=cave`).
+
+### Stages (CODE-READ; `quests/quest_itexam/scripts/` unless named)
+
+Varp `%itexamlevel` (131, bits 0-3, `quest_itexam.rs2:15-22`) is not transmitted, so the script reads items and
+dialog text. Errands are 2 bits a student in `%itexam_errands` (132, `:24-31`); flags in `%itexam_bits` (133, `:33-37`).
+The file names do not match the NPCs: `student2.rs2` holds student3's script and `student3.rs2` holds student2's.
+
+| Stage | Action | Evidence |
+|---|---|---|
+| 0 -> 1 | The examiner: "Can I take an exam?" gives the unstamped letter | `examiner.rs2:40-58` |
+| 1 | The curator (Varrock Museum, 3255,3445) stamps it | `areas/area_varrock/scripts/curator.rs2:3,52-70` |
+| 1 -> 2 | The examiner takes the stamped letter, sets 2 and starts exam 1 at once. With no errands done it cannot pass; the stage is set before the questions, so the bot walks away | `examiner.rs2:68-77` |
+| 2 | Rock sample 3: the bush at 3357,3372 (no stage check while the stage is 2 or less). Rock sample 2: the panning guide takes the tea (bit 1), the tray lies at 3369,3378, each search of a full tray gives it 3 in 40. Rock sample 1: a workman's pocket, 3 in 11 of the successful picks; the specimen brush is 3 in 11 too | `area_digsite.rs2:79-91, 5-69`, `panning_guide.rs2:15-31`, `digsite_workman.rs2:48-116`, `maps/m52_52.jm2` OBJ |
+| 2 | Each sample used on its student sets that errand with no stage check: sample 1 on student1 (615), sample 2 on student3 (616), sample 3 on student2 (617) | `student1.rs2:11-21,63-69`, `student2.rs2:11-21,63-69` (student3), `student3.rs2:11-20,60-66` (student2) |
+| 2 -> 3 | Exam 1: "The study of the earth, its contents, and history.", "All that have passed the appropriate Earth Sciences exam.", "Gloves and boots to be worn at all times; proper tools must be used." Gives the trowel and certificate 1 | `examiner.rs2:174-277` |
+| 3 | One talk with each student (each tip sets the errand) | `student1.rs2:71-78`, `student2.rs2:71-79`, `student3.rs2:68-75` |
+| 3 -> 4 | Exam 2: "Samples taken in rough form; kept only in sealed containers.", "Finds must be carefully handled, and gloves worn.", "Always handle with care; strike cleanly on its cleaving point." | `examiner.rs2:296-398` |
+| 4 | student1 and student3 tips; student2 wants an opal: one talk sets the errand to 1, a second talk takes the opal | `student1.rs2:80-87`, `student2.rs2:81-89`, `student3.rs2:77-114` |
+| 4 -> 5 | Exam 3: "Samples cleaned, and carried only in specimen jars.", "Brush carefully and slowly using short strokes.", "Handle bones very carefully and keep them away from other samples." | `examiner.rs2:417-522` |
+| 5 | The trowel on level 3 soil (x 3350-3357, z 3404-3412) with a specimen jar and the brush: the talisman is 1 in 20 a dig (6-tick delay a dig). The jar comes from the Exam Centre cupboard at 3354,3332 | `area_digsite.rs2:171-177, 400-454`, `general_use/scripts/cupboards.rs2:36`, `area_exam_centre.rs2:22-28` |
+| 5 -> 6 | The talisman on the expert (3355,3333) gives the invitation letter (bit 7); the letter on any surface workman sets 6 | `arcaeological_expert.rs2:141-160`, `digsite_workman.rs2:118-126` |
+| 6 | A rope on winch 2 (3370,3428), then the winch: the private dig (3353,9818). Workman 2: "I have been invited to research here.", "Do you know where to find a chest key?", "I don't suppose I could use it?", "Please?", "Aww... go on.", "Pretty please!", "Pretty please with sugar on top!" gives the chest key. An arcenia root lies at 3351,9824 and 3348,9819. Ladder up to 3370,3427 | `area_digsite.rs2:637-684, 693-696`, `private_dig_worker.rs2:7-54`, `maps/m52_153.jm2` OBJ |
+| 6 | The key on the chest (3374,3378, surface), then Search: the powder. The trowel on a barrel (3364,3378) opens it (bit 4); a vial on it: the liquid. The expert names both (nitroglycerin, ammonium nitrate). Chemistry: nitroglycerin on the nitrate, the pestle on charcoal, the ground charcoal on the mixture, the root on that: the compound (Herblore 10) | `area_digsite.rs2:776-828`, `arcaeological_expert.rs2:176-187`, `itexam_chemistry.rs2:1-73` |
+| 6 -> 7 | A rope on winch 1 (3352,3417), then the winch: the altar cave (3370,9828). The compound on the bricks (3379,9825) sets 7 | `area_digsite.rs2:583-631, 714-722` |
+| 7 -> 8 | The tinderbox on the bricks works only from 3379,9826; a run sequence moves the bot to the cave copy after the blast (3368,9767) and sets 8 | `area_digsite.rs2:723-767` |
+| 8 -> 9 | The stone tablet lies at 3374,9747 (`maps/m52_152.jm2` OBJ), past the blown bricks; the ladder at 3370,9763 goes up to 3354,3417. The tablet on the expert queues the completion: 2 QP, 15,300 Mining and 2,000 Herblore XP (x25: 382,500 and 50,000), 2 gold bars | `arcaeological_expert.rs2:161-175`, `quest_itexam.rs2:39-46` |
+
+The tablet in the cave before the blast (3374,9811) is behind the bricks: the SDK path from the altar cave landing
+ends at 3378,9826. The private dig and the altar cave are not joined (the root at 3365,9829 is `reachable: false`
+from the private dig). Agility 10 is checked at the winch (`area_digsite.rs2:617-621`), Herblore 10 in the chemistry
+(`itexam_chemistry.rs2:21-24`), Thieving 25 at the pocket (`digsite_workman.rs2:62-65`).
+
+### Traps found in the trials
+
+- The museum's east courtyard door (lockeddoor1, 1591 at 3268,3435, `maps/m51_53.jm2`) is on the SDK's shortest path
+  from the curator and stays locked ("The door is locked tight"); trial t1 lost 241 ticks there. The script leaves by
+  the west door and the Varrock street to the east gate.
+- The panning point's only op in the cache is op1 "Look" (`_unpack/225/all.loc:12054-12058`); it runs
+  `[oploc1,panning_point]`. The loc is found by name.
+- Level-up pages block the next pan, pick or dig until clicked: Mining goes from 1 to about 30 during the quest. The
+  script clicks them the tick they show. Trial d2 lost 4 ticks on each level-up dig.
+- Workman 2 (614) takes a few ticks to enter the NPC list after the winch.
+- The three students are all named "Student"; the script picks them by NPC id.
+- The rare finds came slower than the code rates in these trials: 8 rock samples in 189 pans (4.2%; the code rate is
+  7.5%) and 9 talismans in about 400 digs (2.3%; the code rate is 5%; trial t1 reached the tick cap after about 99
+  digs with none). An offline draw of 2,000,000 values from the server's `JavaRandom`
+  (`engine/src/util/JavaRandom.ts`) gives 7.4% and 5.0%, so the cause is not found. These two counts are most of the
+  spread between runs.
+
+### Proof (MEASURED practice, 2026-10-24)
+
+`RESULT ok qp=2 xp=magic=875,fishing=500,mining=385600,herblore=50187,agility=100,thieving=1820 ... ticks=1717
+hpMin=96 eats=0 walkTicks=822 retries=11 died=false` (final script, runs f1-f3: 1,717, 1,851, 1,535 ticks), each with
+`Congratulations! Quest complete!`. Pans 11, 9, 2; picks 10, 2, 7; digs 13, 39, 5. Milestones of f1 (ticks): jar 18,
+letter 40, stamped 86, stage 2 205, sample 3 245, tea 285, sample 2 411, sample 1 474, errands 503, exam 1 592, liquid
+651, exam 2 797, exam 3 1,025, talisman 1,186, permit 1,304, private dig 1,335, key 1,393, powder 1,440, compound
+1,503, altar cave 1,559, bricks 1,569, blast 1,614, tablet 1,631, complete 1,717. The cave part (permit to complete) is
+413-433 ticks; the debug preset `quest_dig_cave` passed in 391. The LEDGER lines give 936-945 ticks of movement
+(`walkTicks` 822-823: six crossings between the Exam Centre and the digsite, and the Varrock trip) and 395-441 ticks
+of dialog (2 ticks a page).
+
+Planner: row `dig` MEASURED floor 1,535 / realistic 1,851 (was ESTIMATE 600 / 1,500; 555 / 1,387 under
+`rival-dialogue-burst`, which now carries the measured values). `bun test packages/planner`: 42 pass, 0 fail.
+`haggis-cli.ts research/hiscores-live.json --order`, scenario a: Overall finish 41,506 / 44,402 before, 42,486 / 44,866
+after; `QP at end 145; idle 0; travel 7,361 floor / 7,361 realistic; blocked none` before and after; Quest Points WIN
+(107,153 / 130,981).
+
+Next: the walks and the pages are the cost. Ideas not tried: the specimen jar from the sacks at 3358,3418 instead of
+the cupboard; a burst of dialog clicks (the rival's lever, not measured by us).
 
 ## 2. Combat boards: what quests give and what the leaders need
 

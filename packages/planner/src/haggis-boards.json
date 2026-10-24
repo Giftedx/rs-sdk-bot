@@ -2722,10 +2722,10 @@
     "questpoints"
    ],
    "ticks": {
-    "floor": 600,
-    "realistic": 1500,
-    "evidence": "ESTIMATE",
-    "source": "XP: quest_itexam.rs2:41-42 (CODE-READ); time not measured"
+    "floor": 1535,
+    "realistic": 1851,
+    "evidence": "MEASURED",
+    "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39); an earlier script version took 2,629 ticks with 58 pans and 61 digs. XP: quest_itexam.rs2:39-46. Was ESTIMATE 600 / 1,500"
    },
    "lump": true,
    "xp": {
@@ -2743,17 +2743,17 @@
     "herblore": 10,
     "thieving": 25
    },
-   "evidence": "ESTIMATE",
-   "source": "XP: quest_itexam.rs2:41-42 (CODE-READ); time not measured",
+   "evidence": "MEASURED",
+   "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39); an earlier script version took 2,629 ticks with 58 pans and 61 digs. XP: quest_itexam.rs2:39-46. Was ESTIMATE 600 / 1,500",
    "patches": [
     {
      "lever": "rival-dialogue-burst",
      "set": {
       "ticks": {
-       "floor": 555,
-       "realistic": 1387,
-       "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 600/1500"
+       "floor": 1535,
+       "realistic": 1851,
+       "evidence": "MEASURED",
+       "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39); an earlier script version took 2,629 ticks with 58 pans and 61 digs. XP: quest_itexam.rs2:39-46. Was ESTIMATE 600 / 1,500; the rival burst run is not measured by us (was this row x 0.9248, 555 / 1,387)"
       }
      }
     }
