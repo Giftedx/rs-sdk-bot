@@ -1669,6 +1669,12 @@ Findings:
 - The desert heat does not act in the camp or the Bedabin camp (`area_desert/configs/desert_heat_zones.dbrow`); the
   desert clothes and the waterskins kept the HP at 84 or more.
 
+Planner: `quests-long` gets The Tourist Trap (2 QP, floor 1,604 / realistic 1,624): 4 quests, 10 QP, 7,289 / 7,847
+(the same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 12 -> 11 quests, 33 -> 31 QP, 26,500 /
+41,000 -> 24,700 / 38,400 (burst 22,843 / 35,512); scratchpad `up/long-rows.ts`. `haggis-cli.ts
+research/hiscores-live.json --levers`: Quest Points WIN at 103,865 / 121,992 -> 103,805 / 121,211; Overall finish
+42,486 / 44,866 unchanged; QP at end 145. `bun test packages/planner`: 42 pass, 0 fail.
+
 ### Regicide: research notes (not scripted)
 
 The long-quest helper read the content and stopped before a script (context). Server truth:
