@@ -76,7 +76,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | The Dig Site (`itexam`) | 2 (105) | `dig` | Agility 10, Herblore 10, Thieving 25 (`quest_itexam/scripts/itexam_journal.rs2:10-22`) | none found | - |
 | Observatory Quest (`itgronigen`) | 2 (106) | rest | none found | none found | M |
 | Watchtower (`itwatchtower`) | 4 (107) | rest | Magic 14, Mining 40, Herblore 14, Thieving 15, Agility 25 (`quest_itwatchtower/scripts/itwatchtower_journal.rs2:8-28`) | ogres | XL |
-| Jungle Potion (`junglepotion`) | 1 (108) | rest | Druidic Ritual (OSRS; `areas/area_karamja/scripts/trufitus.rs2:280` reads `%druidquest`) | none found | M |
+| Jungle Potion (`junglepotion`) | 1 (108) | rest | Druidic Ritual (`areas/area_karamja/scripts/trufitus.rs2:280` reads `%druidquest`); MEASURED 649-651 ticks in row `quests-medium` | none found | M |
 | Legends' Quest (`legends`) | 4 (109) | rest | 107 QP; Family Crest, Heroes', Underground Pass, Shilo Village, Waterfall (`quest_legends/scripts/legends_guard.rs2:50-53`); Magic 56, Mining 52, Agility, Crafting, Smithing, Strength, Thieving, Woodcutting 50, Herblore 45, Prayer 42 (`legends_journal.rs2:65-128`) | several | XL |
 | Dwarf Cannon (`mcannon`) | 1 (110) | `cannon` | none | goblins | - |
 | Throne of Miscellania (`misc`) | 1 (111) | rest | Heroes' Quest, Fremennik Trials (`quest_misc/scripts/misc_journal.rs2:8-17`, `misc_door_guard.rs2:10`) | none found | XL |
@@ -437,6 +437,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | In Search of the Myreque | `scripts/generated/quest-routequest.ts` | 819, 852, 846 | MEASURED 3/3 |
 | Haunted Mine | `scripts/generated/quest-hauntedmine.ts` | 1092, 1225, 1018 | MEASURED 3/3 |
 | Demon Slayer | `scripts/generated/quest-demon.ts` | 899, 877, 882 | MEASURED 3/3 |
+| Jungle Potion | `scripts/generated/quest-junglepotion.ts` | 651, 650, 649 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -762,6 +763,24 @@ Findings:
   manhole; Traiborn's bones close the dialog for each `p_delay(1)`, so the bot clicks the pages and does not talk again.
 - Helper items: 25 bones, 1 coin, 1 law rune, 1 fire rune, staff of air. All are tradeable (`knowledge/items.json`).
 
+### Jungle Potion
+
+Preset `quest_junglepotion` in `packages/practice/src/presets-rest.ts`: beside Trufitus in Tai Bwo Wannai, Druidic Ritual
+done, 6 lobsters, no helper items. `RESULT ok qp=1 xp=herblore=19687 ... ticks=651 ... walkTicks=458 retries=1
+died=false` (runs: 651, 650, 649 ticks; a trial before the proof: 653), each with `Congratulations! Quest complete!`.
+Steps (trial MILESTONE ticks): Trufitus "It's a nice village, where is everyone?", "Me? How can I help?", "It sounds like
+just the challenge for me." sets 1 0-37 (`areas/area_karamja/scripts/trufitus.rs2:233-309`); then for each herb a Search
+(op2) of its loc, Identify, and "Of course!" to Trufitus (`quests/quest_junglepotion/scripts/quest_junglepotion.rs2:3-75`,
+`trufitus.rs2:311-397`): snake weed at the marshy jungle vine 2760,3014 37-165; ardrigal at the palm 2870,3115 165-262;
+sito foil at the scorched earth 2789,3047 262-355; volencia moss at the rock 2851,3035 355-442; rogues purse in the
+caverns (Search the rocks 2824,3118, "Yes, I'll enter the cave.", the cavern wall 2869,9517, the hand holds 2830,9522
+out) 442-643; the last give runs on into the completion 643-653 (`trufitus.rs2:389-423`).
+Findings:
+- A herb gives its "found" stage only when it is picked at its own "get" stage (`quest_junglepotion.rs2:51-75`), so the
+  5 herbs are 5 trips from Trufitus. A helper cannot pre-pick them.
+- The picked loc turns empty for 100 ticks (`:67-72`); each herb has 2-4 locs, so the bot searches the nearest full one.
+- Trufitus takes only the identified herb (`trufitus.rs2:322-325`); Herblore 99 identifies all 5.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -789,6 +808,11 @@ After Demon Slayer (medium, 900 / 1,300) `quests-rest` is 25 quests, 57 QP, 43,4
 medium and 9 long; `quests-medium` is 9 quests, 17 QP, floor 8,249 / realistic 8,669 (a text splice of the two rows).
 `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest
 Points WIN at 105,723 floor / 130,958 realistic.
+
+After Jungle Potion (medium, 900 / 1,300) `quests-rest` is 24 quests, 56 QP, 42,500 / 64,500 (burst 39,304 / 59,650), 7
+medium and 9 long; `quests-medium` is 10 quests, 18 QP, floor 8,898 / realistic 9,320. `bun test packages/planner`: 42
+pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 106,173 floor /
+130,517 realistic.
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached

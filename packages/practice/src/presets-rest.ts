@@ -27,4 +27,8 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // spawn on level 1 of the palace (3221,3497,1, maps/m50_54.jm2), filled at the kitchen sink. The keys and
     // Silverlight are untradeable (demon.obj), so the run collects them.
     quest_demon: rest({ x: 3204, z: 3424 }, [...Array(25).fill(526), [563, 1], [554, 1]], 0, 1, {}, 1381),
+    // Jungle Potion: in Trufitus's hut, Tai Bwo Wannai (spawn 2809,3086, maps/m43_48.jm2); Druidic Ritual is done (80 = 4
+    // in QP_BEFORE_DRAGON; trufitus.rs2:280 reads it). No helper items: the 5 herbs count only when picked at their own
+    // stage (quest_junglepotion.rs2:51-75). 6 lobsters for the jungle.
+    quest_junglepotion: rest({ x: 2810, z: 3086 }, [], 6),
 };
