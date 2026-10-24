@@ -128,7 +128,13 @@ try {
         started = true;
         for (let i = 0; i < 16 && !done(); i++) {
             await q.guard('stones');
-            if (x() !== 2925 || (north ? z() < 2947 : z() > 2951)) { await q.walk('stones bank', [{ x: 2925, z: north ? 2947 : 2951, tol: 0 }]); continue; }
+            if (x() !== 2925 || (north ? z() < 2947 : z() > 2951)) {
+                // A slip swims the bot about 6 ticks and leaves it on the far bank at x 2931 (shortcuts.rs2:245-268).
+                await q.waitTicks(8);
+                if (done()) break;
+                await q.walk('stones bank', [{ x: 2925, z: north ? 2947 : 2951, tol: 0 }]);
+                continue;
+            }
             const nz = z() + (north ? 1 : -1);
             const st = q.findLoc((l: any) => l.id >= 2333 && l.id <= 2335 && l.x === 2925 && l.z === nz);
             const z0 = z();
