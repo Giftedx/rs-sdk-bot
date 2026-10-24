@@ -98,7 +98,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Waterfall Quest (`waterfall`) | 1 (127) | `waterfall` | none found | level 84 giants (`quest_waterfall/scripts/waterfall_journal.rs2:9`) | - |
 | Lost City (`zanaris`) | 3 (128) | rest | Woodcutting 36, Crafting 31 (`quest_zanaris/scripts/quest_zanaris.rs2:37,78`) | level 101 spirit without weapons (`zanaris_journal.rs2:20`) | M |
 | Shilo Village (`zombiequeen`) | 2 (129) | rest | Jungle Potion (`quest_zombiequeen/scripts/mosol_rei.rs2:2`), Crafting 20, Agility 32 (`zombiequeen_journal.rs2:23-26`) | level 86 (`:27`); CLAIMED by long-quest helper | L |
-| Troll Stronghold (`troll`) | 1 (130) | rest | Death Plateau (OSRS), Agility 15 (`quest_troll/scripts/quest_troll.rs2:7`) | level 113 troll (`troll_journal.rs2:5`) | L |
+| Troll Stronghold (`troll`) | 1 (130) | rest | Death Plateau (OSRS), Agility 15 (`quest_troll/scripts/quest_troll.rs2:7`) | level 113 troll (`troll_journal.rs2:5`); CLAIMED by long-quest helper 2 | L |
 | Troll Romance (`troll_love`) | 2 (131) | rest | Death Plateau, Troll Stronghold, Agility 28 (`quest_troll_love/scripts/troll_love_journal.rs2:12-22`) | level 113 troll (`:26`) | L |
 | Tai Bwo Wannai Trio (`tbwt`) | 2 (132) | rest | Jungle Potion (`areas/area_karamja/scripts/tbwt_timfraku.rs2:51`), Cooking 30, Agility 15, Fishing 5 (`quest_tbwt/scripts/tbwt_journal.rs2:11-13`) | level 48 jogres (`:15`) | XL |
 | Regicide (`regicide`) | 3 (133) | rest | Underground Pass (`quest_regicide/scripts/regicide_kings_messenger.rs2:2`), Agility 56, Crafting 10 (`quest_regicide.rs2:404,674`) | none found | XL |
