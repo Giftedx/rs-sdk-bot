@@ -36,4 +36,9 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // Ardougne Teleport (2 law 563, 2 water 555), 30 coins for Captain Barnaby back to Brimhaven, 4 lobsters. The label
     // and the totem are quest items from the run.
     quest_totem: rest({ x: 2791, z: 3183 }, [[563, 2], [555, 2]], 4, 30, { 165: 30 }),
+    // Tribal Totem: beside Kangai Mau in Brimhaven (spawn 2791,3182, maps/m43_49.jm2). Plague City done (165 = 30; the
+    // quest moves to the end of the quests-medium row, after Plague City) for Ardougne Teleport (teleport.rs2:22-35). Helper items: runes for one
+    // Ardougne Teleport (2 law 563, 2 water 555), 30 coins for Captain Barnaby back to Brimhaven, 4 lobsters. The label
+    // and the totem are quest items from the run.
+    quest_totem: rest({ x: 2791, z: 3183 }, [[563, 2], [555, 2]], 4, 30, { 165: 30 }),
 };

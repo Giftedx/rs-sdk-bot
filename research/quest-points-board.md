@@ -91,7 +91,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Sheep Shearer (`sheep`) | 1 (120) | rest | none | none | S |
 | Sheep Herder (`sheepherder`) | 4 (121) | `qp-filler` | none found | none found | - |
 | The Knight's Sword (`squire`) | 1 (122) | rest | Mining 10 (`quest_squire/scripts/squire_journal.rs2:7`); the portrait, blurite ore and sword are untradeable (`quest_squire/configs/quest_squire.obj`); MEASURED 887-922 ticks in row `quests-medium` | none found | M |
-| Tribal Totem (`totem`) | 1 (123) | rest | Thieving 21 (`quest_totem/scripts/quest_totem.rs2:125`) | none found | M |
+| Tribal Totem (`totem`) | 1 (123) | rest | Thieving 21 (`quest_totem/scripts/quest_totem.rs2:125`); Plague City for Ardougne Teleport (`skill_magic/scripts/spells/teleport.rs2:22-35`); MEASURED 340-352 ticks in row `quests-medium` | none found | M |
 | Tree Gnome Village (`tree`) | 2 (124) | `tree` | none found | level 112 warlord (`quest_tree/scripts/tree_journal.rs2:6`) | - |
 | Underground Pass (`upass`) | 5 (125) | rest | Biohazard (`quest_upass/scripts/quest_upass.rs2:81`), Thieving 50 (`:248`); CLAIMED by long-quest helper | Iban's undead, others | XL |
 | Vampire Slayer (`vampire`) | 3 (126) | rest | none found | level 34 vampire (`quest_vampire/scripts/vampire_journal.rs2:9`) | S |
@@ -438,6 +438,7 @@ at a time, each run on a fresh account that is deleted after the run.
 | Haunted Mine | `scripts/generated/quest-hauntedmine.ts` | 1092, 1225, 1018 | MEASURED 3/3 |
 | Demon Slayer | `scripts/generated/quest-demon.ts` | 899, 877, 882 | MEASURED 3/3 |
 | Jungle Potion | `scripts/generated/quest-junglepotion.ts` | 651, 650, 649 | MEASURED 3/3 |
+| Tribal Totem | `scripts/generated/quest-totem.ts` | 340, 352, 343 | MEASURED 3/3 |
 
 ### Pirate's Treasure
 
@@ -781,6 +782,30 @@ Findings:
 - The picked loc turns empty for 100 ticks (`:67-72`); each herb has 2-4 locs, so the bot searches the nearest full one.
 - Trufitus takes only the identified herb (`trufitus.rs2:322-325`); Herblore 99 identifies all 5.
 
+### Tribal Totem
+
+Preset `quest_totem` in `packages/practice/src/presets-rest.ts`: beside Kangai Mau in Brimhaven, Plague City done (165 =
+30) for Ardougne Teleport; 2 law and 2 water runes, 30 coins, 4 lobsters. `RESULT ok qp=1 xp=magic=1525,thieving=44375
+... ticks=340 ... walkTicks=147 retries=4 died=false` (runs: 340, 352, 343 ticks; a trial before the proof: 350), each
+with `Congratulations! Quest complete!`. Steps (trial MILESTONE ticks): Kangai Mau "I'm in search of adventure!", "Ok, I
+will get it back." sets 1 0-20 (`areas/area_brimhaven/scripts/kangai_mau.rs2:16-54`); Ardougne Teleport, the label from
+the horn crate (2650,3273) onto the teleport crate (2650,3271) in the RPDT depot sets 2 20-72
+(`quests/quest_totem/scripts/quest_totem.rs2:8-31`); the RPDT employee "So, when are you going to deliver this crate?"
+sets 3 72-82 (`areas/area_ardougne_east/scripts/rdpt_employee.rs2:1-8`); Wizard Cromperty "So what have you
+invented?", "Can I be teleported please?", "Yes, that sounds good. Teleport me!" lands the bot beside the crate in
+Handelmort's mansion (2638,3321) and sets 4 82-148 (`wizard_cromperty.rs2:23-81`); the crate room door 2636,3323, the
+combination lock KURT (lock 1 +10, locks 2-4 -6 / -9 / -7, one button a tick, `quest_totem.rs2:33-120`) 148-189; Search
+the stairs (Thieving 21, `:142-154`), climb, the chest on level 1 (2638,3324) 189-230; down, out by the totem door
+(opens from inside, `:1-6`), Captain Barnaby to Brimhaven (30 coins, `captain_barnaby.rs2:1-2`), Kangai Mau takes the
+totem 230-350 (`kangai_mau.rs2:66-74`).
+Findings:
+- The label and the totem are quest items; the totem cannot come from a helper before stage 4 (`kangai_mau.rs2:68`).
+- An unsearched stairs drops the bot through a trap for 20% HP (`quest_totem.rs2:122-140`); Search first.
+- The Cromperty teleport closes the dialog for a `p_delay(4)`; trial 1 tried to talk again inside it, so the bot now
+  waits for the arrival tile. The 32 lock clicks are the longest idle (32-35 ticks); several clicks a tick are not tried.
+- The planner puts `quests-rest` before `quests-medium` (`haggis-cli.ts --order`: rows 54 and 56), so this quest's
+  Ardougne Teleport needs Plague City first. In `quests-medium` it comes after Plague City.
+
 ### Planner change for the medium quests
 
 New row `quests-medium` in `packages/planner/src/haggis-boards.json` (MEASURED), after `quests-short`: Pirate's
@@ -813,6 +838,11 @@ After Jungle Potion (medium, 900 / 1,300) `quests-rest` is 24 quests, 56 QP, 42,
 medium and 9 long; `quests-medium` is 10 quests, 18 QP, floor 8,898 / realistic 9,320. `bun test packages/planner`: 42
 pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 106,173 floor /
 130,517 realistic.
+
+After Tribal Totem (medium, 900 / 1,300) `quests-rest` is 23 quests, 55 QP, 41,600 / 63,200 (burst 38,472 / 58,447), 6
+medium and 9 long; `quests-medium` is 11 quests, 19 QP, floor 9,238 / realistic 9,672. `bun test packages/planner`: 42
+pass, 0 fail. `haggis-cli.ts research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 106,661 floor /
+130,130 realistic.
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached
