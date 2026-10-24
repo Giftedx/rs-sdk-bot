@@ -1037,7 +1037,12 @@ realistic 12,903. `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts r
 at end 145; Quest Points WIN at 105,251 floor / 125,347 realistic.
 
 Next for the `presets-rest.ts` helper: Big Chompy Bird Hunting (`quests/quest_chompybird`, 2 QP, class M; Fletching 5,
-Cooking 30, Ranged 30).
+Cooking 30, Ranged 30). Not started, not claimed; content read only. `%chompybird` stages 0-60 and the flavour bits are in
+`configs/quest_chompybird.constant:1-30`: Rantz starts it ("Ok, I'll make you some 'stabbers'.", `rantz.rs2:29-48`), 6
+ogre arrows (`:240-279`), the kids and the toad (`:288-293`, `bloated_toad.rs2`, `swamp_toad.rs2`), the shown toad
+(`rantz.rs2:66-71`), Rantz's bow (`:89-103`), the chompy kill and the cooking; the ingredients Rantz and his children ask
+for are random (`rantz.rs2:138`, flavour bits 1-5), so the script must read them from the dialog, as Murder Mystery
+reads its murderer.
 
 Next: Shades of Mort'ton (`quests/quest_mortton`, 3 QP, class L). Script `scripts/generated/quest-mortton.ts` and preset
 `quest_mortton` (presets-medium.ts) are in progress, not proven. 7 practice trials; the best one (`mt-t6`) reached
