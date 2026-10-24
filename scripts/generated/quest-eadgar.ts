@@ -1,14 +1,15 @@
 // Eadgar's Ruse from preset quest_eadgar (beside Parroty Pete at the Ardougne zoo; every skill 99; Druidic Ritual,
 // Death Plateau and Troll Stronghold done, Eadgar freed; the troll preset's worn set with climbing boots; helper items
-// below). Reward: 1 QP, 110,000 Herblore XP before 25x, the Trollheim teleport (quest_eadgar.rs2:590-598).
-// %eadgar_quest (varp 335, quest_eadgar.constant): Sanfew 10 (area_taverly/scripts/sanfew.rs2:127-136), Burntmeat
-// first 20 (eadgar_troll_chief_cook.rs2:59-71), Eadgar 30 and with the parrot 50 (quest_eadgar.rs2:35-66,68-96), the
-// parrot under the rack 60 (:214-222), Eadgar 70 with the logs, grain, chickens (:224-357), the dirty robe 80 (:365-383),
-// the troll potion 85 (:386-406), the parrot back 86 (:197-211), the fake man 87 (:408-440), Burntmeat 90
-// (eadgar_troll_chief_cook.rs2:24-40), the storeroom door with the drawer key 100 (quest_eadgar.rs2:473-509), the
+// below). Reward: 1 QP, 11,000 Herblore XP before 25x (stat_advance 110000 in tenths; the proofs gained 275,000), the
+// Trollheim teleport (quest_eadgar.rs2:592-598).
+// %eadgar_quest (varp 335, quest_eadgar.constant): Sanfew 10 (area_taverly/scripts/sanfew.rs2:130-136), Burntmeat
+// first 20 (eadgar_troll_chief_cook.rs2:12-62), Eadgar 30 and with the parrot 50 (quest_eadgar.rs2:31-66,69-96), the
+// parrot under the rack 60 (:166-179), Eadgar 70 with the logs, grain, chickens (:181-357), the dirty robe 80 (:369-386),
+// the troll potion 85 (:388-405), the parrot back 86 (:147-165), the fake man 87 (:413-436), Burntmeat 90
+// (eadgar_troll_chief_cook.rs2:24-40), the storeroom door with the drawer key 100 (quest_eadgar.rs2:459-508), the
 // goutweed to Sanfew (sanfew.rs2:6-7,158-160).
 // The parrot: Pete's two talks set %eadgar_bits 0 and 11, pineapple chunks on vodka make alco-chunks, the chunks on the
-// aviary hatch catch it; this works before the quest starts (eadgar_zoo_keeper_aviary.rs2:21-90), so the run starts here.
+// aviary hatch catch it; this works before the quest starts (eadgar_zoo_keeper_aviary.rs2:18-101), so the run starts here.
 // Tegid gives the dirty robe only at stage 70 (eadgar_druid_washing.rs2:7-16), so Taverley is visited twice more.
 // EA_FROM=<stage> starts at a debug preset (packages/practice/src/presets-long.ts).
 import { openQuest } from './quest-lib';
@@ -264,7 +265,7 @@ try {
     }
     if (from('store')) {
         // 10. Down the kitchen stairs, the storeroom door (100), the goutweed crate (the sleeping guard's club only
-        // knocks the bot out after the goutweed is in the pack, quest_eadgar.rs2:557-575).
+        // knocks the bot out after the goutweed is in the pack, quest_eadgar.rs2:547-568).
         await q.walk('to kitchen stairs', [{ x: L1_KITCHEN_DOWN.x, z: L1_KITCHEN_DOWN.z - 1, tol: 1 }]);
         await op('kitchen stairs', L1_KITCHEN_DOWN, () => lv() === 0);
         await q.walk('to store door', [{ x: STORE_DOOR.x, z: STORE_DOOR.z - 1, tol: 0 }]);

@@ -102,7 +102,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Troll Romance (`troll_love`) | 2 (131) | rest | Death Plateau, Troll Stronghold, Agility 28 (`quest_troll_love/scripts/troll_love_journal.rs2:12-22`) | level 113 troll (`:26`) | L |
 | Tai Bwo Wannai Trio (`tbwt`) | 2 (132) | rest | Jungle Potion (`areas/area_karamja/scripts/tbwt_timfraku.rs2:51`), Cooking 30, Agility 15, Fishing 5 (`quest_tbwt/scripts/tbwt_journal.rs2:11-13`) | level 48 jogres (`:15`) | XL |
 | Regicide (`regicide`) | 3 (133) | rest | Underground Pass (`quest_regicide/scripts/regicide_kings_messenger.rs2:2`), Agility 56, Crafting 10 (`quest_regicide.rs2:404,674`) | none found; research notes in "Regicide: research notes"; CLAIMED by long-quest helper 1 | XL |
-| Eadgar's Ruse (`eadgar`) | 1 (134) | rest | Druidic Ritual, Troll Stronghold, Herblore 31 (`quest_eadgar/scripts/eadgar_journal.rs2:8`; `quest_troll/scripts/troll_eadgar.rs2:22`) | none found; CLAIMED by long-quest helper 2 | L |
+| Eadgar's Ruse (`eadgar`) | 1 (134) | rest | Druidic Ritual, Death Plateau, Troll Stronghold, Herblore 31 (`areas/area_taverly/scripts/sanfew.rs2:102-103`); Eadgar freed in Troll Stronghold for his cave top (`quest_troll/scripts/quest_troll.rs2:129-131`); the parrot, robe, thistle, potion, fake man, key and goutweed are untradeable (`quest_eadgar/configs/quest_eadgar.obj`); MEASURED 2,091-2,175 ticks in row `quests-long` | none found | L |
 | Shades of Mort'ton (`mortton`) | 3 (135) | rest (row `mortton-oil` is OUT) | Crafting 12 (`quest_mortton/scripts/quest_mortton.rs2:76`), Morytania (Priest in Peril, OSRS); MEASURED 1,908-1,956 ticks in row `quests-medium` | 5 shades (`mortton_journal.rs2:79-85`) | L |
 | The Fremennik Trials (`viking`) | 3 (136) | rest | Woodcutting 40, Crafting 40, Fletching 25 (`quest_viking/scripts/viking_journal.rs2:7`) | level 69, unarmed (`:8`) | XL |
 | Horror from the Deep (`horror`) | 2 (137) | rest | Agility 35 (`quest_horror/scripts/horror_journal.rs2:6`); Prayer 50 for the god book (`horror_godbook.rs2:253`) | level 100 enemies (`horror_journal.rs2:6`) | L |
@@ -1445,6 +1445,7 @@ deleted after the run.
 | Troll Stronghold | `scripts/generated/quest-troll.ts` | 847, 788, 824 | MEASURED 3/3 |
 | Shilo Village | `scripts/generated/quest-zombiequeen.ts` | 2133, 2478, 2357 | MEASURED 3/3 |
 | The Tourist Trap | `scripts/generated/quest-desertrescue.ts` | 1617, 1604, 1624 | MEASURED 3/3 |
+| Eadgar's Ruse | `scripts/generated/quest-eadgar.ts` | 2175, 2161, 2091 | MEASURED 3/3 |
 
 ### Underground Pass
 
@@ -1706,3 +1707,62 @@ The long-quest helper read the content and stopped before a script (context). Se
   fail (`quest_regicide.rs2:31-316`, `regicide_zones.rs2`).
 - Helper items (tradeable): coal, limestone, a pestle and mortar, an empty pot (the Quartermaster at 2194,3140 also
   sells pots, `regicide.inv`), 4 balls of wool, a cooked rabbit, gloves, food. Not a blocker for a bot found.
+
+### Eadgar's Ruse
+
+`RESULT ok qp=1 xp=magic=3600,firemaking=1000,herblore=276937 ... ticks=2175 hpMin=38 eats=1 ... died=false` (runs:
+2175, 2161, 2091 ticks), each with `Congratulations! Quest complete!`; the 3 proof saves hold `%eadgar_quest` (varp
+335) = 110. Preset `quest_eadgar`: beside Parroty Pete at the Ardougne zoo (2612,3285); Druidic Ritual, Death Plateau
+and Troll Stronghold done with Eadgar freed and the back door opened (317 = 50, 318 = 63, as the Troll Stronghold proof
+saves); the troll worn set with climbing boots. Helper items (tradeable): pineapple chunks, vodka, 2 logs, 10 grain, 5
+raw chickens, a tinderbox, a pestle and mortar, a ranarr potion (unf), runes for 3 Falador teleports, 3 sharks. Debug
+presets `quest_eadgar_<stage>` with `EA_FROM` (leg1, rack1, robe, potion, rack2, fakeman, store).
+
+Steps (proof run 1 MILESTONE ticks; `quests/quest_eadgar/scripts/` unless named):
+- Parroty Pete: "When did you add it?" and "What do you feed them?" set `%eadgar_bits` 0 and 11; the chunks on the
+  vodka make alco-chunks; the alco-chunks on the aviary hatch (2611,3287) catch the drunk parrot
+  (`eadgar_zoo_keeper_aviary.rs2:18-101`). This works before the quest starts and is blocked only from stage 50
+  (`:77-90`), so the run starts at the zoo 0-56.
+- Falador teleport; Sanfew (level 1 of his house): "Have you any more work for me...", "I'll do it." (10,
+  `area_taverly/scripts/sanfew.rs2:95-136`) 56-146.
+- North through Burthorpe: the Death Plateau rocks, the troll rocks at 2856,3612 and 2833,3628, the stronghold's secret
+  door (2827,3647, open after Troll Stronghold) to level 0; the stairs and the prison door to level 1; Burntmeat first
+  (20, `eadgar_troll_chief_cook.rs2:12-62`) 146-423.
+- Level 2, the top exit (2838,10090); the thistle by Eadgar's cave, dried on a fire and ground
+  (`eadgar_troll_thistle.rs2:2-38`); the cave (2892,3672 -> level 2 beside Eadgar); Eadgar twice: 30 (the parrot asked
+  for, `quest_eadgar.rs2:31-66`) and 50 (the plan, `:69-96`) 423-680.
+- Back through the stronghold door to the prison on level 0; the parrot under the rack (2828,10096; 60, `:166-179`)
+  680-807.
+- Out by the top exit; Eadgar takes the log, 10 grain and 5 chickens (70, `:181-357`) 807-985.
+- Falador teleport; Tegid: "Sanfew won't be happy..." gives the dirty robe, only at stage 70
+  (`eadgar_druid_washing.rs2:1-41`) 985-1070.
+- North again to Eadgar: the robe (80, `quest_eadgar.rs2:369-386`); the ground thistle into the ranarr potion (stage
+  80 only, `eadgar_troll_thistle.rs2:42-55`); the troll potion (85, `quest_eadgar.rs2:388-405`) 1070-1481.
+- The rack gives the parrot back (86, `:147-165`) 1481-1626; Eadgar's fake man (87, queued, `:413-436`) 1626-1798.
+- Burntmeat takes the fake man for the burnt meat (90, `eadgar_troll_chief_cook.rs2:24-40`); the kitchen drawers
+  (2852,10049; open, then search) give the storeroom key (`quest_eadgar.rs2:459-486`) 1798-1973.
+- The kitchen stairs (2852,10061) to the storeroom side of level 0; the key on the storeroom door (2869,10085; 100,
+  `:488-508`); the goutweed crate (2856,10074) 1973-2091.
+- Falador teleport; Sanfew takes the goutweed (`area_taverly/scripts/sanfew.rs2:158-161`) 2091-2175.
+
+Findings:
+- The patrolling guards throw a club at a player on or ahead of their path; the knock-out puts the player at 2865,10088
+  (`quest_eadgar.rs2:510-590`). The bot walks to the crate again from there (1-4 knock-outs a run). The sleeping guard
+  beside the crate throws only after the goutweed is in the pack (`:547-568`).
+- From the storeroom door tile a client-routed walk click does not move the bot (trial u1 stood there 300 ticks); the
+  crate loop uses the SDK walker first.
+- A fire needs a tile with no loc (`skill_firemaking/scripts/firemaking.rs2:133-143`). Most tiles by Eadgar's cave hold
+  scenery, and some bare tiles are closed off (a walk to 2894,3673 idled 196 ticks). The bot lights the fire on 2895,3672
+  or 2894,3676.
+- The thistle moves to one of 5 spots after each pick (`eadgar_troll_thistle.rs2:9-23`); 2902,3674 is reached only by a
+  long path, so the bot clicks it again after 15 ticks.
+- The Death Plateau trolls throw rocks on the path north of the Death Plateau rocks; a trial with 1 shark fell to hp 30.
+  The preset has 3 sharks (hp 38-40 at the lowest in the proofs).
+- The quest gives the Trollheim teleport (`skill_magic/scripts/spells/teleport.rs2:30-33`, tele_coord 2890,3679 in
+  `skill_magic/configs/magic_spells.dbrow`). Troll Romance after Eadgar's Ruse can use it to come back from the
+  Rellekka side of the ice-troll cave.
+
+Planner: `quests-long` gets Eadgar's Ruse (1 QP, floor 2,091 / realistic 2,175): 5 quests, 11 QP, 9,380 / 10,022 (the
+same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 11 -> 10 quests, 31 -> 30 QP, 24,700 / 38,400
+-> 22,900 / 35,800 (burst 21,178 / 33,108); scratchpad `up/long-rows.ts` on the committed rows. `haggis-cli.ts
+research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN. `bun test packages/planner`: 42 pass, 0 fail.
