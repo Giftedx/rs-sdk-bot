@@ -9,6 +9,7 @@
 // the island) puts a lit torch out (holgart_ardougne.rs2:152-167), so the torch is lit after the island.
 // Paths below are under vendor/rs-sdk/server/content/scripts/.
 import { openQuest } from './quest-lib';
+import { componentId } from '../../packages/core/src/logout';
 
 const CAROLINE = { x: 2716, z: 3302 };
 const HOLGART_LAND = { x: 2720, z: 3306 };
@@ -60,16 +61,20 @@ try {
     // The damp sticks and the broken glass on the platform; dried at once (no stage check, quest_seaslug.rs2:29-40).
     await q.walk('to sticks', [{ x: STICKS.x, z: STICKS.z, tol: 1 }]);
     await pickUp('damp sticks', ITEM.damp);
-    // The glass at 2765,3278 lies in the kitchen (x 2763-2765, z 3276-3278) behind a shut door on its east wall
-    // (loc_1533 at 2765,3277, maps/m43_51.jm2): "I can't reach that!" until it is open (first test runs).
-    await q.walk('to kitchen door', [{ x: 2766, z: 3277, tol: 0 }]);
-    // The door is not in nearbyLocs (the platform is a bridge level), so it is clicked by id and tile.
-    const r: any = await q.opLoc({ id: 1533, x: 2765, z: 3277 }, 1);
-    console.log(`NOTE kitchen door click: ${JSON.stringify(r)?.slice(0, 200)}`);
-    await q.waitTicks(3);
-    await q.s.direct({ type: 'walkTo', x: 2764, z: 3277, running: true, reason: 'SDK' });
-    await q.waitTicks(3);
-    console.log(`NOTE at ${q.pos()?.worldX},${q.pos()?.worldZ} kitchen locs: ${listLocs(3)} glass: ${(q.st()?.groundItems ?? []).filter((g: any) => g.id === ITEM.glass).map((g: any) => `${g.x},${g.z},${g.level ?? ''} d=${g.distance}`).join(' ')}`);
+    // Broken glass: both spawns (2765,3278 in the kitchen, 2765,3289 under Kennith's room) are "I can't reach that!"
+    // for a walk-up pickup, also with the room doors (loc_1533 2765,3277 and 2765,3287) open (test runs t1-t10:
+    // the server leaves the bot on 2766,3287), and the groundItems entries say reachable=false. Telekinetic Grab
+    // (Magic 33, 1 air + 1 law, skill_magic/scripts/spells/telegrab.rs2) takes it from the pier outside.
+    await q.walk('to glass window', [{ x: 2766, z: 3289, tol: 0 }]);
+    const TELEGRAB = componentId('magic:telekinetic_grab');
+    for (let i = 0; i < 4 && !q.has(ITEM.glass); i++) {
+        await q.guard('telegrab');
+        const g = (q.st()?.groundItems ?? []).filter((g: any) => g.id === ITEM.glass).sort((a: any, b: any) => a.distance - b.distance)[0];
+        if (!g) { await q.waitTicks(1); continue; }
+        const r: any = await q.s.direct({ type: 'spellOnGroundItem', x: g.x, z: g.z, itemId: g.id, spellComponent: TELEGRAB, reason: 'SDK' });
+        await q.waitUntil(() => q.has(ITEM.glass), 8);
+        if (!q.has(ITEM.glass)) console.log(`WARN telegrab ${i}: ${JSON.stringify(r)?.slice(0, 160)} msgs=${(q.st()?.gameMessages ?? []).slice(-2).map((m: any) => m.text).join(' / ')}`);
+    }
     await pickUp('broken glass', ITEM.glass);
     await q.step('dry sticks', () => q.useOnItem(ITEM.glass, ITEM.damp), () => q.has(ITEM.dry), 6, 3);
     q.milestone('sticks');

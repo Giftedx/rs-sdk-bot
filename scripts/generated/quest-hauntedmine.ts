@@ -282,21 +282,28 @@ try {
     const CRANES: Array<[number, number]> = [[2793, 4458], [2787, 4451], [2787, 4446], [2782, 4458]];
     const onTrack = (px: number, pz: number) => TRACKS.some(([x0, z0, x1, z1]) => inz(x0, z0, x1, z1, px, pz));
     const nearCrane = (px: number, pz: number) => CRANES.some(([cx, cz]) => inz(cx, cz - 1, cx + 2, cz + 3, px, pz) || inz(cx - 1, cz, cx + 3, cz + 2, px, pz));
-    const sees = (px: number, pz: number, tx: number, tz: number) => Math.max(Math.abs(px - tx), Math.abs(pz - tz)) <= 10 && !!rs.hasLineOfSight(0, px, pz, tx, tz, 1, 1, 1, 1, 0);
+    const sees = (px: number, pz: number, tx: number, tz: number) => Math.max(Math.abs(px - tx), Math.abs(pz - tz)) <= 8 && !!rs.hasLineOfSight(0, px, pz, tx, tz, 1, 1, 1, 1, 0);
     const HOME = { x: 2785, z: 4453 };
     // Cast tiles: walkable, off the tracks and the track-end pockets (x >= 2794 at z 4455-4463), the room interior.
     const TILES: Array<{ x: number; z: number; crane: boolean }> = [];
     for (let tx = 2777; tx <= 2797; tx++) for (let tz = 4441; tz <= 4463; tz++) {
         if (!pf.isTileWalkable(0, tx, tz) || onTrack(tx, tz) || (tx >= 2794 && tz >= 4455)) continue;
+        // Machinery splits the room: only tiles with a path from home (the end of the path on the tile).
+        const path: any[] = (tx === HOME.x && tz === HOME.z) ? [HOME] : pf.findLongPath(0, HOME.x, HOME.z, tx, tz, 200, []);
+        const end = path[path.length - 1];
+        if (!end || end.x !== tx || end.z !== tz) continue;
         TILES.push({ x: tx, z: tz, crane: nearCrane(tx, tz) });
     }
+    console.log(`BOSS tiles=${TILES.length} home sees=${TILES.some(t => t.x === HOME.x && t.z === HOME.z)}`);
     const bad = new Set<string>();   // tile>ghost pairs where a cast still made the server walk the bot
     const pick = (gx: number, gz: number) => {
         const me = q.pos()!;
         let best: { x: number; z: number } | undefined, bs = 1e9;
         for (const t of TILES) {
             if (!sees(t.x, t.z, gx, gz) || bad.has(`${t.x},${t.z}>${gx},${gz}`)) continue;
-            const sc = Math.max(Math.abs(t.x - me.worldX), Math.abs(t.z - me.worldZ)) + (t.crane ? 3 : 0) + Math.max(Math.abs(t.x - HOME.x), Math.abs(t.z - HOME.z)) / 4;
+            const dg = Math.max(Math.abs(t.x - gx), Math.abs(t.z - gz));
+            if (dg > 8) continue;
+            const sc = Math.max(Math.abs(t.x - me.worldX), Math.abs(t.z - me.worldZ)) + (t.crane ? 3 : 0) + Math.max(Math.abs(t.x - HOME.x), Math.abs(t.z - HOME.z)) / 4 + dg / 2;
             if (sc < bs) { bs = sc; best = t; }
         }
         return best;
@@ -307,7 +314,7 @@ try {
         prayT = q.T();
         void q.s.direct({ type: 'togglePrayer', prayerIndex: PFMISS, reason: 'SDK' });
     });
-    let lastCast = -99, casts = 0, moves = 0, pushes = 0, walked = 0, castAt = '', seenT = q.T();
+    let lastCast = -99, mxp = 0, casts = 0, moves = 0, pushes = 0, walked = 0, castAt = '', seenT = q.T();
     await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
     // Up to 3 rounds: the kill page (queue hauntedmine_boss_death, :247-254) sets 9; a key taken at 8 with the ghost
     // gone wakes it again (:18-26,52), so a round ends with the key and the next round fights on.
@@ -322,13 +329,20 @@ try {
             if ((q.st()?.nearbyNpcs ?? []).some((n: any) => /treus dayth|^ghost$/i.test(n.name))) seenT = q.T();
             else if (q.T() - seenT >= 20 && casts > 0) break;
             // A cast that made the server walk the bot: that tile does not see the ghost for the engine.
-            if (castAt && q.T() - lastCast <= 2 && `${mx},${mz}` !== castAt.split('>')[0]) { bad.add(castAt); castAt = ''; }
+            if (castAt && q.T() - lastCast <= 2 && `${mx},${mz}` !== castAt.split('>')[0]) { bad.add(castAt); console.log(`BOSS ${q.T()} cast walked: ${castAt} now ${mx},${mz}`); castAt = ''; }
             // Pushed onto a track (or into a pocket): back to home at once.
             if (onTrack(mx, mz) || (mx >= 2794 && mz >= 4455)) {
                 pushes++;
+                console.log(`BOSS ${q.T()} pushed to ${mx},${mz}`);
                 await q.s.direct({ type: 'walkTo', x: HOME.x, z: HOME.z, running: true, reason: 'SDK' });
                 await q.waitUntil(() => { const p = q.pos()!; return !onTrack(p.worldX, p.worldZ) && !(p.worldX >= 2794 && p.worldZ >= 4455); }, 6);
                 continue;
+            }
+            // A cast with no Magic XP after 4 ticks (a splash still gives XP) never fired: that tile does not work
+            // for that ghost tile either.
+            if (castAt && q.T() - lastCast >= 4) {
+                if (q.xp('Magic') === mxp && boss()) { bad.add(castAt); console.log(`BOSS ${q.T()} dry cast ${castAt}`); }
+                castAt = '';
             }
             const b = boss();
             if (b && !q.dialogOpen() && q.T() - lastCast >= 5) {
@@ -341,10 +355,13 @@ try {
                         const t0 = q.T();
                         await q.waitUntil(() => q.near(t.x, t.z, 0) || !boss(), 8);
                         walked += q.T() - t0;
+                        if (!q.near(t.x, t.z, 0) && boss()) { bad.add(`${t.x},${t.z}>${gx},${gz}`); console.log(`BOSS ${q.T()} move to ${t.x},${t.z} failed at ${q.pos()?.worldX},${q.pos()?.worldZ}`); }
+                        else console.log(`BOSS ${q.T()} moved ${mx},${mz} -> ${t.x},${t.z} for ghost ${gx},${gz}`);
+                        await q.waitTicks(1);
                         continue;
                     }
                 }
-                casts++; lastCast = q.T();
+                casts++; lastCast = q.T(); mxp = q.xp('Magic');
                 castAt = `${q.pos()!.worldX},${q.pos()!.worldZ}>${gx},${gz}`;
                 await q.s.direct({ type: 'spellOnNpc', npcIndex: b.index, spellComponent: WAVE, reason: 'SDK' });
             }

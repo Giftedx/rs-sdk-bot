@@ -39,4 +39,10 @@ export const FILLER_PRESETS: Record<string, SaveConfig> = {
     // of water (1929), ashes (592); runes for 4 Lumbridge teleports (4 law 563, 12 air 556, 4 earth 557); 50 coins
     // (the toll gate, 10). The wig, paste, key print and key are untradeable (quest_prince.obj), so the run makes them.
     quest_prince: filler({ x: 3301, z: 3163 }, [1759, 1759, 1759, 1765, 1013, 954, 1761, 2349, 1917, 1917, 1917, 1951, 1933, 1929, 592, [563, 4], [556, 12], [557, 4]], 4, 50),
+    // Sheep Herder: in East Ardougne beside Councillor Halgrive (spawn 2617,3299, maps/m40_51.jm2); 200 coins for
+    // Doctor Orbon's suit (100, doctor_orbon.rs2:149-162). No helper items: the feed, suit, cattle prod (a floor spawn in
+    // the pen at 2604,3357, maps/m40_52.jm2) and bones are untradeable (quest_sheepherder.obj).
+    quest_sheepherder: filler({ x: 2618, z: 3299 }, [], 4, 200),
+    // Debug: at the pen gate with %sheepherderquest 2, the suit worn, the cattle prod wielded, the feed (SH_FROM=herd).
+    quest_sheepherder_herd: { ...filler({ x: 2593, z: 3361 }, [279], 4, 100, { 60: 2 }), equipment: [[1163, 0], [1725, 2], [278, 3], [284, 4], [1201, 5], [285, 7]].map(([id, slot]) => ({ id: id!, count: 1, slot: slot! })) },
 };

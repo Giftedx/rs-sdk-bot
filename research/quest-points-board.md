@@ -40,7 +40,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 
 | Quest (constant) | QP (line) | Planner row | Requirements (skills, quests, QP) | Combat | Class |
 |---|---|---|---|---|---|
-| Fight Arena (`arena`) | 2 (72) | `rival-fight-arena` (qp 0) | none found | level 137 enemy (`quest_arena/scripts/arena_journal.rs2:8`) | - |
+| Fight Arena (`arena`) | 2 (72) | `rival-fight-arena` (qp 0), MEASURED 628-637 (`research/quest-plan.md` 1m) | none found | level 137 enemy (`quest_arena/scripts/arena_journal.rs2:8`); Fire Wave under Protect from Melee, 0 damage | - |
 | Merlin's Crystal (`arthur`) | 6 (73) | `merlin` | none found | level 39 (`quest_arthur/scripts/arthur_journal.rs2:10`) | - |
 | Witch's House (`ball`) | 4 (74) | `witch` | none found | level 53 (`quest_ball/scripts/ball_journal.rs2:7`) | - |
 | Biohazard (`biohazard`) | 3 (75) | rest | Plague City (OSRS; `quest_elena/scripts/mud_patch.rs2:15` reads `%biohazard`); a teleport destroys the plague sample (`skill_magic/scripts/spells/teleport.rs2:94-97`); MEASURED 1,655-1,672 ticks in row `quests-medium` | none found | L |
