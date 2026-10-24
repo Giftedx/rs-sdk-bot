@@ -105,7 +105,7 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Eadgar's Ruse (`eadgar`) | 1 (134) | rest | Druidic Ritual, Death Plateau, Troll Stronghold, Herblore 31 (`areas/area_taverly/scripts/sanfew.rs2:102-103`); Eadgar freed in Troll Stronghold for his cave top (`quest_troll/scripts/quest_troll.rs2:129-131`); the parrot, robe, thistle, potion, fake man, key and goutweed are untradeable (`quest_eadgar/configs/quest_eadgar.obj`); MEASURED 2,091-2,175 ticks in row `quests-long` | none found | L |
 | Shades of Mort'ton (`mortton`) | 3 (135) | rest (row `mortton-oil` is OUT) | Crafting 12 (`quest_mortton/scripts/quest_mortton.rs2:76`), Morytania (Priest in Peril, OSRS); MEASURED 1,908-1,956 ticks in row `quests-medium` | 5 shades (`mortton_journal.rs2:79-85`) | L |
 | The Fremennik Trials (`viking`) | 3 (136) | rest | Woodcutting 40, Crafting 40, Fletching 25 (`quest_viking/scripts/viking_journal.rs2:7`) | level 69, unarmed (`:8`) | XL |
-| Horror from the Deep (`horror`) | 2 (137) | rest | Agility 35 (`quest_horror/scripts/horror_journal.rs2:6`); Prayer 50 for the god book (`horror_godbook.rs2:253`) | level 100 enemies (`horror_journal.rs2:6`); CLAIMED by long-quest helper 3 | L |
+| Horror from the Deep (`horror`) | 2 (137) | rest | Agility 35 (`quest_horror/scripts/horror_journal.rs2:6`); Prayer 50 for the god book (`horror_godbook.rs2:253`) | level 100 enemies (`horror_journal.rs2:6`); research notes in "Horror from the Deep: research notes" | L |
 | Monkey Madness (`mm`) | 3 (138) | `rival-mm` (qp 0) | The Grand Tree (`quest_mm/scripts/mm_journal.rs2:4`) | level 195 jungle demon (`:5`) | - |
 | In Search of the Myreque (`routequest`) | 2 (139) | rest | Nature Spirit (`quest_routequest/scripts/routequest_journal.rs2:18-23`), Agility 25 (`routequest_myreque.rs2:125`); MEASURED 819-852 ticks in row `quests-medium` | level 97 (`routequest_journal.rs2:24`) | L |
 | **Total** | **145** | | | | |
@@ -1731,6 +1731,31 @@ same under `rival-dialogue-burst`). `quests-rest` loses one long quest: 10 -> 9 
 21,100 / 33,200 (burst 19,513 / 30,703); scratchpad `up/long-rows.ts`. `haggis-cli.ts research/hiscores-live.json
 --levers`: Quest Points WIN at 104,231 / 120,982 -> 103,513 / 119,654; Overall finish 42,486 / 44,866 unchanged; QP at
 end 145. `bun test packages/planner`: 42 pass, 0 fail.
+
+### Horror from the Deep: research notes (not scripted)
+
+Long-quest helper 3 read the content and stopped before a script (context); the claim is released. Server truth:
+`quests/quest_horror/scripts/*.rs2` (`quest_horror.rs2` unless named).
+- Varps: `%deephorror` is varp 351 and `%godbook_multi` 350 (`pack/varp.pack`). Both are above 308, so a preset that
+  sets them goes through `extendVarps` (`packages/practice/src/presets.ts:524`). Varbits on 351
+  (`quest_horror.varbit`): `horrorquest` bits 0-10 (stages 0-5 and complete, `quest_horror.constant`), the door, the 2
+  bridge halves (12, 13), the agility key, the lighthouse entrance, and one bit each for the fire, water, earth and air
+  runes, the sword and the arrow in the strange door (16-21).
+- Start: Larrissa (`horror_girlfriend.rs2:81-93`): "With what?", "But how can I help?", "Okay, I'll help!" sets 1. With
+  both bridge halves fixed and the key in the pack she sets 2 (`:26-33`).
+- The broken bridge spots take an item each (`oplocu` at `:110-167`); crossing is `stat_random(agility, 5, 255)`
+  (`:101`), and the basalt rocks are the same roll (`basalt_rocks.rs2:21,38`): at 99 about 1 fail in 2-3, so every jump
+  needs a retry loop.
+- The broken cog (`:245-289`) repairs the lighthouse (4, `:283-286`).
+- The strange door below (`:297-470`): a fire, water, earth and air rune, a sword and an arrow placed in the wall, each
+  confirmed with "Yes" (`:332-427`).
+- Dagannoth: the junior (`horror_dagannoth.rs2:1-36`) sets 5; the mother (`:38-256`) changes form on an ai_timer
+  (air, water, melee, earth, fire, ranged, `:113-215`) and her death queues the completion (`:216-227`,
+  `quest_horror.rs2:485-497`). Only the player she targets can attack her (`skill_combat/scripts/npc/npc_combat.rs2:212-221`).
+  The script must read her current form (the npc type, or the "The Dagannoth changes to ..." message) and hit with
+  the matching style: the spell of that element, a melee weapon, or a bow.
+- Not read yet: which item each bridge spot and the cog take, the diary (`horror_diary.rs2`), the lighthouse ladders
+  and doors, and the mother's damage rule per form.
 
 ### Regicide: research notes (not scripted)
 
