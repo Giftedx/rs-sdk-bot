@@ -4,14 +4,15 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { openBot, finish, countItems } from '../packages/core/src/bot';
-import { waitTicks } from '../packages/core/src/ticks';
+import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 
-const BANK_SPOT = { x: 2654, z: 3283 };
+const BANK_SPOT = { x: Number(process.env.BANK_X ?? 2654), z: Number(process.env.BANK_Z ?? 3283) };
+if(!Number.isInteger(BANK_SPOT.x)||!Number.isInteger(BANK_SPOT.z)) throw new Error('invalid bank coordinates');
 const args = process.argv.slice(2);
 const name = args[0]!;
 const banker = args.find(a => a.startsWith('--banker='))?.slice(9) ?? 'Moneyshot';
 const items = args.slice(1).filter(a => !a.startsWith('--')).map(a => { const [c, ...n] = a.split(':'); return { name: n.join(':'), count: Number(c) }; });
-if (!items.length || items.some(i => !i.name || !(i.count > 0))) throw new Error('usage: <bot> <count>:<item> ...');
+if (!items.length || items.some(i => !i.name || !Number.isSafeInteger(i.count) || i.count <= 0)) throw new Error('usage: <bot> <count>:<item> ...');
 const dir = join(resolve(import.meta.dir, '..'), '.practice', 'withdraw');
 const file = join(dir, `${name}.json`);
 const exact = (n: string) => new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
@@ -22,6 +23,8 @@ try {
     writeFileSync(file, JSON.stringify({ items }));
     await waitTicks(s, 2);
     await s.bot.walkTo(BANK_SPOT.x, BANK_SPOT.z, 2);
+    if(!(await waitUntil(s,st=>st.nearbyPlayers.some((p:{name:string})=>p.name.toLowerCase()===banker.toLowerCase()),{timeoutTicks:150})))
+        throw new Error('owned banker did not arrive within150ticks');
     const before = items.map(i => countItems(s, exact(i.name)));
     let ok = false;
     for (let i = 0; i < 8 && !ok; i++) {

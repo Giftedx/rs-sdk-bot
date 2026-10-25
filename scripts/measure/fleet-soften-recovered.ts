@@ -1,0 +1,25 @@
+// Continue the SAME real recovery actor with unchanged bounded standalone softening.
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
+import {parseJm2} from '../../packages/knowledge/src/jm2';
+const actor=process.argv[2]!;if(!/^fl[a-z0-9]+$/.test(actor)||process.env.REUSE_STACK!=='1')throw new Error('explicit generated local actor/existing stack required');
+const sourceSha256=createHash('sha256').update(readFileSync('scripts/soften-clay.ts')).digest('hex').toUpperCase();if(sourceSha256!=='8FF162B4977769E85274A631838B8321CD5CE5966E5F5CAB3D43D7F24071028B')throw new Error('softening source freeze changed');
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<9)throw new Error(`single start requires9GiB actual${free}`);
+const path=resolve('vendor/rs-sdk/server/engine/data/players/main',`${actor}.sav`),dir=resolve('.practice/fleet-proof'),prefix=`soften-recovered-${actor}`,initial=readPracticeSave(path);
+const count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+if(initial.skills[3]!.level!==10||count(initial.inventories[95]??[],434)!==20||count(initial.inventories[93]??[],2309)!==0)throw new Error('requires exact real post-recovery HP10/20bankclay/Breadconsumed');
+writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));console.log(`PROOF_START actor=${actor} source=${sourceSha256} sameRecoveredActor=true food0=true freeGiB=${free}`);
+const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/soften-clay.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'500',MAX_MAKE:'20',RAW_RESERVE:'0'},stdout:'pipe',stderr:'pipe'});let output='';const timer=setTimeout(()=>p.kill(),220000);
+const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const text=new TextDecoder().decode(b);output+=text;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(text);}};
+await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);
+const result=JSON.parse(output.match(/^SOFT_CLAY_BANK (.+)$/m)?.[1]??'null');
+const final=await waitPracticeSave(path,s=>count(s.inventories[95]??[],1761)===20&&count(s.inventories[95]??[],434)===0);
+const totals=(s:typeof initial)=>{const m=new Map<number,number>();for(const items of Object.values(s.inventories))for(const i of items)m.set(i.id,(m.get(i.id)??0)+i.count);return m;};const before=totals(initial),after=totals(final.save);
+const assets=[...new Set([...before.keys(),...after.keys()])].every(id=>(after.get(id)??0)===(before.get(id)??0)+(id===434?-20:id===1761?20:0));
+const booths=parseJm2('m49_53.jm2',readFileSync('vendor/rs-sdk/server/content/maps/m49_53.jm2','utf8')).locs.filter(l=>l.id===2213&&l.level===0&&l.x>=3185&&l.x<=3188&&l.z>=3435&&l.z<=3447);
+const atBank=final.save.position.level===0&&booths.some(b=>Math.max(Math.abs(final.save.position.x-b.x),Math.abs(final.save.position.z-b.z))<=1);
+const xpUnchanged=final.save.skills.every((s,i)=>s.xp===initial.skills[i]!.xp),life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(output);
+const ok=code===0&&final.matched&&result?.ok&&result.targetMet&&result.made===20&&result.banked===20&&assets&&atBank&&xpUnchanged&&life&&output.includes('LOGOUT logged-out');
+writeFileSync(resolve(dir,`${prefix}-snapshot.json`),JSON.stringify({ok,actor,sourceSha256,result,assets,atBank,xpUnchanged,life,sameRealRecoveryActor:true,initial,final:final.save},null,2));console.log(`PROOF_GATE soften-recovered ok=${ok} soft20=${result?.banked} assets=${assets} xpUnchanged=${xpUnchanged} life=${life}`);process.exitCode=ok?0:1;

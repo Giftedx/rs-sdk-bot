@@ -7,12 +7,14 @@
 // FARMERS=<a,b,...> and PER=<n> (default: an even share) for the hand-out at Ardougne; CAP (default 3000) ticks.
 // FEATHERS=<n>: buy n feathers at Gerrant (Port Sarim) on the way out and give them to the cook in the Draynor trade.
 // START=draynor skips the outbound legs (the courier already stands at Draynor bank).
+// OUTBOUND_ONLY=1 ends at Draynor with the owned supplies still held; no collection or return trip.
 import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 
 type Pt = [number, number, number];
 const ARDY_BANK = { x: 2654, z: 3283 };
+const NORTH_BANK = { x: 2619, z: 3332 };
 const DRAYNOR = { x: 3092, z: 3243 };
 const LUMBRIDGE = { x: 3222, z: 3218 };
 const BRIM_DECK = { x: 2775, z: 3234 };
@@ -27,14 +29,19 @@ const PER = process.env.PER ? Number(process.env.PER) : 0;
 // HOME_ONLY=1: an account near Lumbridge or Draynor (a respawn) walks to Draynor bank, takes fares from its bank,
 // and goes home to Ardougne on the same boats; no trade.
 const HOME_ONLY = process.env.HOME_ONLY === '1';
+const OUTBOUND_ONLY = process.env.OUTBOUND_ONLY === '1';
 const START_DRAYNOR = process.env.START === 'draynor' || HOME_ONLY;
 const FEATHERS = Number(process.env.FEATHERS ?? 0);
 const FISH = /^(trout|salmon)$/i;
 // Port Sarim <-> Draynor bank: north round the water, then the x 3089-3092 lane (fishing30.ts BANK_TO_SARIM).
 const SARIM_TO_DRAYNOR: Pt[] = [[3047, 3237, 3], [3060, 3265, 3], [3089, 3266, 2], [3092, 3250, 1], [DRAYNOR.x, DRAYNOR.z, 2]];
 const DRAYNOR_TO_SARIM: Pt[] = [[3092, 3250, 1], [3089, 3266, 2], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3]];
+// Land fallback targets are walked directly through the pathfinder, so the courier works from any start
+// (for example a saved Varrock bank position) instead of assuming it stands near Ardougne.
+const SARIM = { x: 3029, z: 3217 };
 
-if (!FROM && !HOME_ONLY) { console.log('RESULT fail FROM=<fish cook account> is required'); process.exit(1); }
+if (OUTBOUND_ONLY && START_DRAYNOR) { console.log('RESULT fail OUTBOUND_ONLY requires an Ardougne start'); process.exit(1); }
+if (!FROM && !HOME_ONLY && !OUTBOUND_ONLY) { console.log('RESULT fail FROM=<fish cook account> is required'); process.exit(1); }
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
@@ -148,16 +155,30 @@ try {
     });
 
     const p0 = pos();
+    if(OUTBOUND_ONLY && (!p0 || p0.level!==0 || cheb(ARDY_BANK,p0)>10))
+        await fail('outbound supply trip requires Ardougne bank start');
     console.log(`FOODCOURIER from=${FROM} farmers=${FARMERS.join(',') || '-'} coins=${coins()} fishNotes=${fishNotes()} at=${p0?.worldX},${p0?.worldZ}`);
-    if (!START_DRAYNOR) {
+    if (!START_DRAYNOR && (!p0 || cheb(ARDY_BANK, p0) > 10)) {
+        const requiredFare = OUTBOUND_ONLY ? 60 : 120;
         // Fares come from the bank when the pack is short (2026-10-23: a live trip spent the pack on feathers, and
         // scripts/banker.ts banks the coins a donor gives).
-        if (coins() < 120 && p0 && cheb(ARDY_BANK, p0) <= 10) {
+        if (coins() < requiredFare) {
             const o = await s.bot.openBank();
-            if (o.success) { await s.bot.withdrawItem(/^coins$/i, 500); await s.bot.closeBank(); }
+            if (o.success) {
+                for (const item of [...new Set(inv().filter(i => !/^coins$/i.test(i.name) && !notes().some(n => n.slot === i.slot)).map(i => i.name as string))]) {
+                    await s.bot.depositItem(new RegExp(`^${item}$`, 'i'), -1);
+                }
+                await s.bot.withdrawItem(/^coins$/i, 500);
+                await s.bot.closeBank();
+            }
             console.log(`MILESTONE fares from bank coins=${coins()} t=${used()}`);
         }
-        if (coins() < 120) await fail('needs 120 coins for four boat fares');
+        if (coins() < requiredFare || (p0 && cheb(ARDY_BANK, p0) > 30)) {
+            // No fare money, or a long way from Ardougne: walk the land route to Port Sarim instead of sailing.
+            console.log(`MILESTONE no fare coins; land route to Port Sarim`);
+            if (!(await walk([[SARIM.x, SARIM.z, 3]]))) await fail('land route to Port Sarim');
+            leg('land-sarim');
+        } else {
         if (!(await walk([[2679, 3275, 3]]))) await fail('walk to Barnaby');
         if (!(await sail(/^captain barnaby$/i, SAILOR, BRIM_DECK))) await fail('sail to Brimhaven');
         if (!(await disembark())) await fail('Brimhaven gangplank');
@@ -165,19 +186,33 @@ try {
         if (!(await sail(/^customs officer$/i, CUSTOMS, SARIM_DECK))) await fail('sail to Port Sarim');
         if (!(await disembark())) await fail('Port Sarim gangplank');
         leg('sarim');
+        }
         if (FEATHERS > 0) await buyFeathers();
         if (!(await walk(SARIM_TO_DRAYNOR))) await fail('walk to Draynor bank');
         leg('draynor');
     }
 
-    if (HOME_ONLY) {
+    if(OUTBOUND_ONLY) {
+        off();
+        const p=pos();
+        await finish([s],!died&&!!p&&p.level===0&&cheb(DRAYNOR,p)<=4,
+            `outboundOnly=true ${detail()} coins=${coins()} at=${p?.worldX},${p?.worldZ},${p?.level}`);
+    }
+
+    if (START_DRAYNOR) {
         if (!(await walk([[DRAYNOR.x, DRAYNOR.z, 2]]))) await fail('walk to Draynor bank');
         if (coins() < 60) {
             const o = await s.bot.openBank();
-            if (o.success) { await s.bot.withdrawItem(/^coins$/i, 200); await s.bot.closeBank(); }
+            if (o.success) {
+                for (const item of [...new Set(inv().filter(i => !/^coins$/i.test(i.name) && !notes().some(n => n.slot === i.slot)).map(i => i.name as string))]) {
+                    await s.bot.depositItem(new RegExp(`^${item}$`, 'i'), -1);
+                }
+                await s.bot.withdrawItem(/^coins$/i, 200);
+                await s.bot.closeBank();
+            }
         }
         leg(`draynor coins=${coins()}`);
-        if (coins() < 60) await fail('needs 60 coins for the two fares home');
+        if (coins() < 60) console.log('MILESTONE no fare coins; land route home');
     }
     // Take the notes: the cook starts the trade when it sees this bot (fishcook.ts handOff).
     const before = fishNotes();
@@ -193,8 +228,15 @@ try {
     received = fishNotes() - before;
     leg(`received${received}`);
     if (received <= 0 && !HOME_ONLY) await fail('no fish notes from the cook');
-    if (coins() < 60 && !START_DRAYNOR) await fail('needs 60 coins for the two fares home');
+    if (coins() < 60 && !START_DRAYNOR) console.log('MILESTONE no fare coins; land route home');
 
+    if (coins() < 60) {
+        // No fare money: walk the land route home instead of sailing.
+        console.log('MILESTONE no fare coins; land route to Ardougne');
+        if (!(await walk(DRAYNOR_TO_SARIM))) await fail('land route to Port Sarim');
+        if (!(await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]))) await fail('land route to Ardougne');
+        leg('land-ardougne');
+    } else {
     if (!(await walk(DRAYNOR_TO_SARIM))) await fail('walk to Port Sarim');
     if (!(await sail(/^(seaman|captain tobias)/i, SAILOR, MUSA_DECK))) await fail('sail to Karamja');
     if (!(await disembark())) await fail('Musa Point gangplank');
@@ -203,6 +245,7 @@ try {
     if (!(await disembark())) await fail('Ardougne gangplank');
     if (!(await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]))) await fail('walk to Ardougne bank');
     leg('ardougne');
+    }
 
     // Hand-out: an even share of each fish type to each farmer, unless PER is set.
     await timed(n => giveTicks += n, async () => {
@@ -210,6 +253,12 @@ try {
             const give = notes().map(i => ({ item: new RegExp(`^${i.name}$`, 'i'), amount: PER > 0 ? Math.min(PER, i.count) : Math.floor(i.count / (FARMERS.length - k)) })).filter(g => g.amount > 0);
             if (give.length === 0) break;
             const n0 = fishNotes();
+            const isNorth = /^mightyrod$/i.test(f);
+            if (isNorth) {
+                await walk([[2644, 3293, 2], [NORTH_BANK.x, NORTH_BANK.z, 2]]);
+            } else {
+                await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]);
+            }
             for (let tryN = 0; tryN < 3 && fishNotes() === n0 && !died; tryN++) {
                 const r = await s.bot.trade(new RegExp(`^${f}$`, 'i'), { give, timeout: 60_000, requestTimeout: 30_000, retryOnBusy: true });
                 if (!r.success) { console.log(`WARN trade ${f} ${r.reason} ${r.message}`); await waitTicks(s, 5); }
@@ -220,6 +269,6 @@ try {
     });
     off();
     const p = pos();
-    const ok = !died && (received > 0 || HOME_ONLY) && !!p && cheb(ARDY_BANK, p) <= 6 && (FARMERS.length === 0 || handed > 0);
+    const ok = !died && (received > 0 || HOME_ONLY) && !!p && (cheb(ARDY_BANK, p) <= 6 || cheb(NORTH_BANK, p) <= 6) && (FARMERS.length === 0 || handed > 0);
     await finish([s], ok, `${detail()} at=${p?.worldX},${p?.worldZ},${p?.level}`);
 } catch (e) { await finish([s], false, String(e)); }

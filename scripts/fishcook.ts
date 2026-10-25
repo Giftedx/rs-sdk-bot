@@ -34,15 +34,27 @@ const FLY_SPOT: Tile = { x: 3239, z: 3251 };
 const FIREPLACE: Tile = { x: 3214, z: 3249 };
 const BANK: Tile = { x: 3092, z: 3243 };
 const CHICKENS: Tile = { x: 3230, z: 3298 };
+const NET_STAND: Tile = { x: 3088, z: 3227 };
+const GERRANT: Tile = { x: 3014, z: 3224 };
+const LOGS_AT: Tile = { x: 3089, z: 3266 };
+
 // Fly -> fireplace stays north of z 3248 (giant spiders at 3243,3236 and 3245,3232; scripts/generated/fishing30.ts).
 const TO_FIRE: Pt[] = [[3226, 3250, 2], [FIREPLACE.x + 1, FIREPLACE.z, 1]];
 // Fireplace -> Draynor bank: the fishing30 route north of the jail guards (3109,3237 and 3120,3238), then the
 // x 3089-3092 lane south into the bank (6+ tiles from the dark wizards at 3084,3236 and 3085,3238).
 const FIRE_TO_BANK: Pt[] = [[3180, 3258, 3], [3100, 3285, 3], [3089, 3266, 2], [3092, 3250, 1], [BANK.x, BANK.z, 2]];
+const FLY_TO_BANK: Pt[] = [[3226, 3250, 2], ...FIRE_TO_BANK];
 const BANK_TO_FLY: Pt[] = [[3092, 3250, 1], [3089, 3266, 2], [3100, 3285, 3], [3180, 3258, 3], [3226, 3250, 2], [FLY_SPOT.x, FLY_SPOT.z, 1]];
 const FIRE_TO_FLY: Pt[] = [[3226, 3250, 2], [FLY_SPOT.x, FLY_SPOT.z, 1]];
 const FLY_TO_CHICKENS: Pt[] = [[3226, 3262, 2], [3232, 3285, 2], [CHICKENS.x, CHICKENS.z, 3]];
 const CHICKENS_TO_FIRE: Pt[] = [[3232, 3285, 2], [3226, 3262, 2], [FIREPLACE.x + 1, FIREPLACE.z, 1]];
+
+// Safe East lane round young dark wizards in Draynor
+const EAST_LANE: Pt[] = [[3094, 3247, 1], [3095, 3236, 1], [3093, 3228, 1]];
+const BANK_TO_NET: Pt[] = [[3092, 3247, 1], ...EAST_LANE, [NET_STAND.x, NET_STAND.z, 1]];
+const NET_TO_BANK: Pt[] = [[3093, 3228, 1], [3095, 3236, 1], [3094, 3247, 1], [3092, 3247, 1], [BANK.x, BANK.z, 2]];
+const BANK_TO_SARIM: Pt[] = [[3092, 3250, 1], [LOGS_AT.x, LOGS_AT.z, 1], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3], [GERRANT.x, GERRANT.z, 2]];
+const SARIM_TO_BANK: Pt[] = [[3029, 3217, 3], [3047, 3237, 3], [3060, 3265, 3], [LOGS_AT.x, LOGS_AT.z, 1], [3092, 3250, 1], [BANK.x, BANK.z, 2]];
 
 const ROD = /^fly fishing rod$/i;
 const FEATHER = /^feather$/i;
@@ -65,6 +77,7 @@ try {
     const invLen = () => inv().length;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const cook = () => s.sdk.getSkill('Cooking')?.baseLevel ?? 1;
+    const fish = () => s.sdk.getSkill('Fishing')?.baseLevel ?? 1;
     const cookXp = () => s.sdk.getSkillXp('Cooking') ?? 0;
     const fishXp = () => s.sdk.getSkillXp('Fishing') ?? 0;
     const cheb = (a: Tile, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
@@ -234,9 +247,10 @@ try {
             // Raw fish the level cannot cook yet (salmon below 25) goes in too, or it would fill the pack for good.
             // One deposit-all per item name (a second call on a name already gone waits for its timeout: 614 bank
             // ticks in the first practice run).
-            const DEPOSIT = TICK3 ? /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon)$/i
-                : /^(trout|salmon|burnt fish|burnt chicken|raw chicken|cooked chicken|bones|raw trout|raw salmon|knife|logs|arrow shaft)$/i;
-            for (const name of [...new Set(inv().filter(i => DEPOSIT.test(i.name)).map(i => i.name as string))]) {
+            // Deposit every item that is not needed for fly fishing (raw/cooked fish, burnt fish, starter shrimps/bread, etc.)
+            const KEEP = TICK3 ? /^(fly fishing rod|feather|coins|knife|logs)$/i : /^(fly fishing rod|feather|coins)$/i;
+            const toDeposit = [...new Set(inv().filter(i => !KEEP.test(i.name)).map(i => i.name as string))];
+            for (const name of toDeposit) {
                 const re = new RegExp(`^${name}$`, 'i');
                 const before = countItems(s, re);
                 if (before === 0) continue;
@@ -247,9 +261,178 @@ try {
             bankFish = ['Trout', 'Salmon'].reduce((n, name) => n + (s.sdk.findBankItem(new RegExp(`^${name}$`, 'i'))?.count ?? 0), 0);
             packs++;
             console.log(`BANK pack=${packs} banked=${banked} bankFish=${bankFish} t=${now()}`);
+
+            // Top up feathers from bank if available
+            const fInBank = s.sdk.findBankItem(FEATHER);
+            if (fInBank && fInBank.count > 0 && countItems(s, FEATHER) < 100) {
+                await s.bot.withdrawItem(fInBank, fInBank.count);
+            }
             await s.bot.closeBank();
         } finally { bankTicks += s.tick() - b0; }
         if (GIVE_TO) await handOff(0);
+
+        // If feathers are critically low after bank visit, top up from Gerrant shop!
+        if (countItems(s, FEATHER) < 50) {
+            await restockFeathersFromShop();
+        }
+    };
+
+    // Restocks feathers in bulk (1,000 feathers for 2,000 gp) from Gerrant's shop at Port Sarim
+    const restockFeathersFromShop = async () => {
+        console.log(`MILESTONE restocking feathers from Gerrant's shop (Port Sarim)...`);
+        const p = pos();
+        if (!p || cheb(BANK, p) > 4) {
+            await go(FIRE_TO_BANK, 'to Draynor bank');
+        }
+        if (countItems(s, /^coins$/i) < 200) {
+            const o = await s.bot.openBank();
+            if (o.success) {
+                const coinsBank = s.sdk.findBankItem(/^coins$/i);
+                if (coinsBank && coinsBank.count > 0) {
+                    await s.bot.withdrawItem(coinsBank, Math.min(2000, coinsBank.count));
+                }
+                await s.bot.closeBank();
+            }
+        }
+        if (countItems(s, /^coins$/i) < 10) {
+            console.log(`WARN no coins to buy feathers; falling back to chickens`);
+            await chickenTrip(FEATHER_FILL, 0);
+            return;
+        }
+        await go(BANK_TO_SARIM, 'to Gerrant at Port Sarim');
+        const sh = await s.bot.openShop(/^gerrant$/i);
+        if (sh.success) {
+            const f0 = countItems(s, FEATHER);
+            await s.bot.buyFromShop(FEATHER, 1000);
+            await s.bot.closeShop();
+            const bought = countItems(s, FEATHER) - f0;
+            feathersGot += bought;
+            console.log(`MILESTONE bought ${bought} feathers from Gerrant! Total held: ${countItems(s, FEATHER)}`);
+        } else {
+            lastFail = `openShop: ${sh.message}`;
+        }
+        await go(SARIM_TO_BANK, 'back to Draynor bank');
+    };
+
+    // Trains Fishing from 1 to 20 with small fishing net at Draynor coast
+    const trainNetFishing = async () => {
+        console.log(`MILESTONE Training Fishing from ${fish()} to 20 with Small fishing net at Draynor coast...`);
+        const p = pos();
+        if (!p || cheb(BANK, p) > 4) {
+            await go(FLY_TO_BANK, 'to Draynor bank');
+        }
+        let o = await s.bot.openBank();
+        if (o.success) {
+            for (const it of inv().filter(i => /^(fly fishing rod|raw chicken|cooked chicken|burnt chicken|trout|salmon|burnt fish)$/i.test(i.name))) {
+                await s.bot.depositItem(new RegExp(`^${it.name}$`, 'i'), -1);
+            }
+            if (countItems(s, /^small fishing net$/i) === 0) {
+                const netInBank = s.sdk.findBankItem(/^small fishing net$/i);
+                if (netInBank) {
+                    await s.bot.withdrawItem(netInBank, 1);
+                }
+            }
+            await s.bot.closeBank();
+        }
+        if (countItems(s, /^small fishing net$/i) === 0) {
+            console.log(`Buying small fishing net at Port Sarim...`);
+            await go(BANK_TO_SARIM, 'to Gerrant');
+            const sh = await s.bot.openShop(/^gerrant$/i);
+            if (sh.success) {
+                await s.bot.buyFromShop(/^small fishing net$/i, 1);
+                await s.bot.closeShop();
+            }
+            await go(SARIM_TO_BANK, 'back to Draynor');
+        }
+        if (countItems(s, /^small fishing net$/i) === 0) {
+            await end(false, 'no small fishing net');
+        }
+
+        let stall = 0;
+        while (!over() && fish() < 20) {
+            if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
+            if (await eatIfLow()) continue;
+            if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) {
+                await s.direct({ type: 'closeModal', reason: 'SDK' });
+            }
+
+            if (invLen() >= 28) {
+                await go(NET_TO_BANK, 'to Draynor bank');
+                const ob = await s.bot.openBank();
+                if (ob.success) {
+                    for (const name of ['Raw shrimps', 'Raw anchovies']) {
+                        const cnt = countItems(s, new RegExp(`^${name}$`, 'i'));
+                        if (cnt > 0) await s.bot.depositItem(new RegExp(`^${name}$`, 'i'), -1);
+                    }
+                    await s.bot.closeBank();
+                }
+                if (fish() >= 20) break;
+                await go(BANK_TO_NET, 'to Draynor net spot');
+                continue;
+            }
+
+            const curPos = pos();
+            if (!curPos || cheb(NET_STAND, curPos) > 4) {
+                await go(BANK_TO_NET, 'to Draynor net spot');
+            }
+
+            const wiz = (st()?.nearbyNpcs ?? []).some((n: any) => /dark wizard/i.test(n.name) && n.distance <= 4);
+            if (wiz) {
+                lastFail = 'dark wizard near net spot';
+                await walk([[3093, 3228, 1]]);
+                await waitTicks(s, 3);
+                continue;
+            }
+
+            const sp = (st()?.nearbyNpcs ?? []).filter((n: any) =>
+                /fishing spot/i.test(n.name) &&
+                !WHIRLPOOL.has(n.id) &&
+                n.z <= 3228 &&
+                n.optionsWithIndex?.some((o: any) => /^net$/i.test(o.text))
+            ).sort((a: any, b: any) => a.distance - b.distance)[0] as any;
+
+            if (!sp) {
+                stall++;
+                if (stall % 5 === 0) await walk([[NET_STAND.x, NET_STAND.z, 1]]);
+                await waitTicks(s, 1);
+                continue;
+            }
+            stall = 0;
+
+            const netOp = sp.optionsWithIndex.find((o: any) => /^net$/i.test(o.text))?.opIndex ?? 1;
+            const invBefore = invLen();
+            await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: netOp, reason: 'SDK' });
+
+            for (let t = 0; t < 12 && !over() && fish() < 20; t++) {
+                await waitTicks(s, 1);
+                if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) {
+                    await s.direct({ type: 'closeModal', reason: 'SDK' });
+                    break;
+                }
+                if (invLen() > invBefore || invLen() >= 28) break;
+                if (!(st()?.nearbyNpcs ?? []).some((n: any) => n.index === sp.index)) break;
+            }
+        }
+
+        console.log(`MILESTONE Fishing reached ${fish()}! Transitioning to fly fishing...`);
+        await go(NET_TO_BANK, 'to Draynor bank');
+        o = await s.bot.openBank();
+        if (o.success) {
+            await s.bot.depositItem(/^small fishing net$/i, 1);
+            for (const name of ['Raw shrimps', 'Raw anchovies']) {
+                if (countItems(s, new RegExp(`^${name}$`, 'i')) > 0) {
+                    await s.bot.depositItem(new RegExp(`^${name}$`, 'i'), -1);
+                }
+            }
+            const rodItem = s.sdk.findBankItem(ROD);
+            if (rodItem) await s.bot.withdrawItem(rodItem, 1);
+            const fItem = s.sdk.findBankItem(FEATHER);
+            if (fItem) await s.bot.withdrawItem(fItem, fItem.count);
+            await s.bot.closeBank();
+        }
+        if (countItems(s, FEATHER) < 200) {
+            await restockFeathersFromShop();
+        }
     };
 
     // Withdraws every cooked fish as notes and trades them to GIVE_TO. waitTicks > 0 waits for the player to arrive.
@@ -293,7 +476,44 @@ try {
         await handOff(WAIT);
         await end(given > 0, 'no hand-off');
     }
+
+    if (fish() < 20) {
+        await trainNetFishing();
+    }
+
+    if (slotOf(ROD) === undefined) {
+        const o = await s.bot.openBank();
+        if (o.success) {
+            await s.bot.withdrawItem(ROD, 1);
+            await s.bot.closeBank();
+        }
+        if (slotOf(ROD) === undefined && countItems(s, /^coins$/i) >= 5) {
+            console.log('MILESTONE buying fly fishing rod at Port Sarim');
+            await go(BANK_TO_SARIM, 'to Gerrant');
+            const sh = await s.bot.openShop(/^gerrant$/i);
+            if (sh.success) {
+                await s.bot.buyFromShop(ROD, 1);
+                await s.bot.closeShop();
+            }
+            await go(SARIM_TO_BANK, 'back to Draynor');
+        }
+    }
     if (slotOf(ROD) === undefined) await end(false, 'no fly fishing rod');
+
+    const KEEP_FLY = TICK3 ? /^(fly fishing rod|feather|coins|knife|logs)$/i : /^(fly fishing rod|feather|coins)$/i;
+    if (inv().some(i => !KEEP_FLY.test(i.name) && !RAW_FISH.test(i.name))) {
+        console.log('MILESTONE cleaning up unneeded starter/junk items at Draynor bank');
+        const p = pos();
+        if (p && cheb(BANK, p) > 4) await go(FIRE_TO_BANK, 'to Draynor bank for cleanup');
+        const o = await s.bot.openBank();
+        if (o.success) {
+            for (const item of [...new Set(inv().filter(i => !KEEP_FLY.test(i.name)).map(i => i.name as string))]) {
+                await s.bot.depositItem(new RegExp(`^${item}$`, 'i'), -1);
+            }
+            await s.bot.closeBank();
+        }
+        await go(BANK_TO_FLY, 'back to Lumbridge river');
+    }
 
     let chain: { index: number } | null = null;
     let stillAnim = 0;
@@ -328,8 +548,8 @@ try {
         }
         if (feathers < FEATHER_MIN) {
             if (countItems(s, RAW_FISH) > 0 || cookedInPack() > 0) { await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); continue; }
-            await chickenTrip(FEATHER_FILL, 0);
-            await go(FIRE_TO_FLY, 'back to the river');
+            await restockFeathersFromShop();
+            await go(BANK_TO_FLY, 'back to the river');
             continue;
         }
         if (invLen() >= 28) {
@@ -348,16 +568,17 @@ try {
             const p = pos();
             if (!p || cheb(FLY_SPOT, p) > 3) await walk([[FLY_SPOT.x, FLY_SPOT.z, 1]]);
             else if (++noSpot > 5 && countItems(s, RAW_FISH) > 0) {
-                // The spots sit south on the spider bank (2026-10-23 live: 828, 231 and 228 idle ticks here). Use the
-                // wait: cook and bank what the pack holds, or fetch feathers, then look again.
                 noSpot = 0; spotWaits++;
                 await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); chain = null;
                 continue;
             } else if (noSpot > 5 && invLen() <= 18) {
-                // No raw fish to cook: chickens give feathers. Raw chicken only below Cooking 15 (it trains Cooking to
-                // trout; above that, waiting for 8 raw chickens cost 359-407 ticks per 2,500 in practice).
                 noSpot = 0; spotWaits++;
-                await chickenTrip(feathers + 10, cook() < 15 ? 8 : 0); await go(FIRE_TO_FLY, 'back to the river'); chain = null;
+                if (feathers < 50) {
+                    await restockFeathersFromShop();
+                } else {
+                    idleTicks++; await waitTicks(s, 2);
+                }
+                chain = null;
                 continue;
             } else { idleTicks++; await waitTicks(s, 1); }
             fishTicks += s.tick() - f0;

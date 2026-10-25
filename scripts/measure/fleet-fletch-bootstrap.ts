@@ -1,0 +1,43 @@
+// One local actor: fresh Fletching1 ->195 headless ->25 oak bows from noted cargo.
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {createBot} from '../../packages/practice/src/bots';
+import {applyPreset} from '../../packages/practice/src/presets';
+import {runBotName} from '../../packages/practice/src/prove';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
+const sourceSha256=createHash('sha256').update(readFileSync('scripts/fletch-arrows.ts')).digest('hex').toUpperCase();
+if(sourceSha256!=='24D5FE575F31E64881C312F425D326FD690F29DA115E2879240010C6F44FEBE3'||process.env.REUSE_STACK!=='1')throw new Error('requires frozen source and existing stack');
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+if(free<11)throw new Error('practice start needs11GiB');
+const actor=runBotName('flfletch',1),dir=resolve('.practice/fleet-proof'),prefix=`fletch-bootstrap-${actor}`;
+await createBot(actor);
+const path=await applyPreset(actor,{position:{x:3092,z:3243,level:0},coins:200,inventory:[{id:946,count:1},{id:315,count:1},{id:2309,count:1},{id:1522,count:30},{id:1778,count:30}],bank:[{id:52,count:295},{id:314,count:295}]});
+const initial=readPracticeSave(path);
+if(!initial.skills.every((s,i)=>s.xp===(i===3?980:0)&&s.level===(i===3?10:1)))throw new Error('fresh skill fixture mismatch');
+writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
+console.log(`PROOF_START actor=${actor} freeGiB=${free} source=${sourceSha256}`);
+async function run(mode:string,env:Record<string,string>){
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/fletch-arrows.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MODE:mode,CAP:'1000',...env},stdout:'pipe',stderr:'pipe'});
+ const timer=setTimeout(()=>p.kill(),450000);let output='';
+ const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}-${mode}.log`),output);process.stdout.write(part);}};
+ await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);
+ if(code!==0||!/^RESULT ok/m.test(output)||!/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(output)||!output.includes('LOGOUT logged-out'))throw new Error(`${mode} actual production gate failed`);
+ return output;
+}
+const count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+const headless=await run('headless',{MAX_MAKE:'195',SHAFT_RESERVE:'100',FEATHER_RESERVE:'100'});
+const middle=await waitPracticeSave(path,s=>s.skills[9]!.xp===4875&&count(s.inventories[95]??[],53)===195);
+const h=JSON.parse(headless.match(/^HEADLESS_BANK (.+)$/m)?.[1]??'null');
+if(!middle.matched||h.made!==195||h.banked!==195||h.xpGain!==4875||count(middle.save.inventories[95]??[],52)!==100||count(middle.save.inventories[95]??[],314)!==100||middle.save.skills[9]!.level!==25)throw new Error('bootstrap exact F25/reserve gate failed');
+writeFileSync(resolve(dir,`${prefix}-middle.json`),JSON.stringify(middle.save,null,2));
+console.log(`PROOF_BOOTSTRAP_F25 actor=${actor} headless195=true XP=4875`);
+const bows=await run('oak-bows',{MAX_MAKE:'25',LOG_RESERVE:'5',STRING_RESERVE:'5'});
+const end=await waitPracticeSave(path,s=>s.skills[9]!.xp===36125&&count(s.inventories[95]??[],845)===25);
+const b=JSON.parse(bows.match(/^OAK_BOW_BANK (.+)$/m)?.[1]??'null'),bank=end.save.inventories[95]??[],held=end.save.inventories[93]??[];
+const total=(id:number)=>Object.values(end.save.inventories).reduce((n,items)=>n+count(items,id),0);
+const assets=count(bank,52)===100&&count(bank,314)===100&&count(bank,53)===195&&count(bank,1521)===5&&count(bank,1777)===5&&total(1522)===0&&total(1778)===0&&[946,315,2309].every(id=>total(id)===1)&&total(995)===200;
+const ok=end.matched&&b.made===25&&b.banked===25&&b.xpGain===31250&&b.shapeXp===15625&&b.stringXp===15625&&assets&&count(held,845)===0&&total(56)===0&&end.save.skills.every((s,i)=>i===9||s.xp===initial.skills[i]!.xp);
+writeFileSync(resolve(dir,`${prefix}-snapshot.json`),JSON.stringify({ok,actor,sourceSha256,stagedInputs:{shafts:295,feathers:295,oakNotes:30,stringNotes:30},h,b,assets,initial,middle:middle.save,final:end.save},null,2));
+console.log(`PROOF_GATE sameActor=true headless195=true oak25=${b.made} XP=${end.save.skills[9]!.xp} assets=${assets} ok=${ok}`);
+process.exitCode=ok?0:1;

@@ -12,7 +12,7 @@ const SCRATCH = process.env.LEARN_SCRATCH
     ?? 'E:/moved/temp/claude/F--dev-on-f-osrs-rs-research-rs-sdk-bot/72e3d252-d3cd-4626-9f3d-241dd42da82c/scratchpad';
 const LIVE_SERVER = 'rs-sdk-demo.fly.dev';
 const LIVE_HOUR = 9000;                    // 3600 s / 0.4 s
-const KINDS = ['xp', 'move', 'anim', 'dialog', 'stun', 'idle'] as const;
+const KINDS = ['xp', 'inventory', 'move', 'anim', 'dialog', 'stun', 'idle'] as const;
 type Kind = typeof KINDS[number];
 type Ledger = Partial<Record<Kind, number>>;
 type Env = 'live' | 'practice';
@@ -227,7 +227,7 @@ for (const s of statuses) {
     };
     const snap = (snapshots[key] ??= []);
     const tl = String(s.timeline ?? '');
-    const tlCount = Object.fromEntries(['x', 'm', 'a', 'd', 's', 'i'].map(c => [c, tl.split(c).length - 1]));
+    const tlCount = Object.fromEntries(['x', 'v', 'm', 'a', 'd', 's', 'i'].map(c => [c, tl.split(c).length - 1]));
     if (!snap.length || snap[snap.length - 1].tick !== s.tick) snap.push({ at: s.at, tick: s.tick, phase: s.phase, xpTotal, skills: archive[key].skills, ledger: s.ledger, pos: s.pos, tl: { len: tl.length, ...tlCount } });
     if (snap.length > 400) snap.splice(0, snap.length - 400);
 }
@@ -492,8 +492,8 @@ for (const c of checks) row(c.fact, c.data.replace(/\|/g, '/'), c.pass ? 'yes' :
 out.push('', '## Failed live runs (ticks in the failed runs; not all of them are lost, the XP stays)', '');
 row('Script', 'Reason', 'Runs', 'Ticks', 'Of live ticks', 'Example', 'Script line (lead)'); row(...Array(7).fill('---'));
 for (const f of failures) row(f.script, f.reason, f.runs, f.ticks, f.total, `\`${f.example.replace(/\|/g, '/')}\``, (f.line ?? 'not found').replace(/\|/g, '/'));
-out.push('', '## Per script', '');
-row('Script', 'Env', 'Runs', 'Pass', 'Unit', 'Median', 'Best', 'Trend', 'xp%', 'move%', 'anim%', 'dialog%', 'stun%', 'idle%', 'Ledger ticks'); row(...Array(15).fill('---'));
+out.push('', '## Per script', '', 'items% = observed inventory ID/count changes, including buys, banks, trades and item use. This is not net new output. Old ledgers did not record this category and remain unchanged.', '');
+row('Script', 'Env', 'Runs', 'Pass', 'Unit', 'Median', 'Best', 'Trend', 'xp%', 'items%', 'move%', 'anim%', 'dialog%', 'stun%', 'idle%', 'Ledger ticks'); row(...Array(16).fill('---'));
 for (const s of stats) row(s.script, s.env, s.runs, s.done ? `${s.pass}/${s.done}` : '-', s.unit ?? '-', f1(s.median ?? NaN), f1(s.best ?? NaN), s.trend, ...KINDS.map(k => s.ledgerTicks ? f1(pct(s.shares[k] ?? 0, s.ledgerTicks)) : '-'), s.ledgerTicks || '-');
 out.push('', '### Live vs practice (same script, same unit)', '', 'Ticks per 1,000 XP falls as the level rises (more XP per action). Live and practice runs cover different level ranges, so a ratio far from 1 can be range, not speed.', '');
 row('Script', 'Unit', 'Live median', 'Practice median', 'Live / practice', 'Live n', 'Practice n'); row(...Array(7).fill('---'));

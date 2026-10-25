@@ -1,0 +1,41 @@
+// Same local actor: actual owned-bucket city entry, then mine20->soften20->final bank.
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {createBot} from '../../packages/practice/src/bots';
+import {applyPreset} from '../../packages/practice/src/presets';
+import {runBotName} from '../../packages/practice/src/prove';
+import {readPracticeSave,setPracticeSkills,waitPracticeSave} from './fleet-player-save';
+const expected:Record<string,string>={'scripts/measure/fleet-clay-entry.ts':'9AD9C530EE9C65B931C5793ADB57278002017C5560D6D9A2AF7E28E9AEBED4F6','scripts/gather-ore.ts':'4252180480A7B7EB96C5362720A989BAF212374685445CF9BBDF6173A5E11D7A','scripts/soften-clay.ts':'8FF162B4977769E85274A631838B8321CD5CE5966E5F5CAB3D43D7F24071028B'};
+const hashes=Object.fromEntries(Object.keys(expected).map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex').toUpperCase()]));
+if(Object.entries(expected).some(([p,h])=>hashes[p]!==h)||process.env.REUSE_STACK!=='1')throw new Error('source freeze/existing stack required');
+const source=JSON.parse(readFileSync('.practice/status/Shaftsinker.json','utf8'));
+if(!Array.isArray(source.equipment))throw new Error('Shaftsinker worn equipment UNKNOWN; fresh actual observation required');
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<9)throw new Error(`single start needs9GiB actual${free}`);
+const actor=runBotName('flclay',1),dir=resolve('.practice/fleet-proof'),prefix=`clay-chain-${actor}`;await createBot(actor);
+const path=await applyPreset(actor,{position:source.pos,skills:Object.fromEntries(source.skills.map((s:{name:string;level:number})=>[s.name,s.level])),inventory:source.inventory.map((i:{id:number;count:number})=>({id:i.id,count:i.count})),equipment:source.equipment.map((i:{id:number;count:number;slot:number})=>({id:i.id,count:i.count,slot:i.slot})),bank:source.bank.map((i:{id:number;count:number})=>({id:i.id,count:i.count}))});
+setPracticeSkills(path,source.skills.map((s:{name:string;level:number;xp:number})=>({level:s.name==='Hitpoints'?source.hp.now:s.level,xp:s.xp})));
+const initial=readPracticeSave(path);writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
+console.log(`PROOF_START actor=${actor} freeGiB=${free} Mining=${initial.skills[14]!.xp} fullSameActorChain=true`);
+async function child(script:string,label:string,env:Record<string,string>={}){
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve(script),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:'pipe',stderr:'pipe'});let output='',stopSent=false;
+ const timer=setTimeout(()=>p.kill(),380000);
+ const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}-${label}.log`),output);process.stdout.write(part);if(!stopSent&&output.includes('PROOF_DAMAGE ')){stopSent=true;writeFileSync(resolve('.practice',`stop-${actor}`),'local clay fresh-route HP damage; bounded proof stop');}}};
+ await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);return{output,code,stopSent};
+}
+const count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+const totals=(s:typeof initial)=>{const m=new Map<number,number>();for(const items of Object.values(s.inventories))for(const i of items)m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
+const before=totals(initial);
+const entry=await child('scripts/measure/fleet-clay-entry.ts','entry');
+const e=JSON.parse(entry.output.match(/^CLAY_ENTRY (.+)$/m)?.[1]??'null');
+const middle=await waitPracticeSave(path,s=>s.position.level===0&&Math.max(Math.abs(s.position.x-3185),Math.abs(s.position.z-3436))<=4&&count(s.inventories[93]??[],1925)===1);
+if(entry.code!==0||!e?.ok||entry.stopSent||!middle.matched||[...before].some(([id,n])=>totals(middle.save).get(id)!==n))throw new Error('clay entry exact-asset/noHP gate failed; mining not started');
+writeFileSync(resolve(dir,`${prefix}-middle.json`),JSON.stringify(middle.save,null,2));console.log(`PROOF_ENTRY_DONE actor=${actor} ownedBucketHeld=true`);
+const work=await child('scripts/gather-ore.ts','mining-soften',{ORE_PROFILE:'clay',SOFTEN_CLAY:'1',CAP:'800',BANK_AT:'20',MAX_TRIPS:'1',NO_ORE_TICKS:'120',MAX_MAKE:'20',RAW_RESERVE:'0'});
+const soft=JSON.parse(work.output.match(/^SOFT_CLAY_BANK (.+)$/m)?.[1]??'null');
+const final=await waitPracticeSave(path,s=>count(s.inventories[95]??[],1761)===(before.get(1761)??0)+20,{timeoutMs:work.code===0?6000:1000});
+const after=totals(final.save),assets=[...new Set([...before.keys(),...after.keys()])].every(id=>(after.get(id)??0)===(before.get(id)??0)+(id===1761?20:0));
+const life=[entry.output,work.output].every(s=>/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(s)&&s.includes('LOGOUT logged-out'));
+const atBank=final.save.position.level===0&&Math.max(Math.abs(final.save.position.x-3185),Math.abs(final.save.position.z-3436))<=4;
+const ok=work.code===0&&final.matched&&!work.stopSent&&soft?.ok&&soft.made===20&&soft.banked===20&&soft.targetMet&&assets&&life&&atBank&&final.save.skills[14]!.xp-initial.skills[14]!.xp===2500&&/mined=20 banked=20/.test(work.output);
+writeFileSync(resolve(dir,`${prefix}-snapshot.json`),JSON.stringify({ok,actor,hashes,sourceStatusAt:source.at,sourceEquipment:source.equipment,e,soft,assets,life,atBank,stoppedOnDamage:work.stopSent,initial,middle:middle.save,final:final.save},null,2));console.log(`PROOF_GATE clay-chain ok=${ok} mined20=${/mined=20 banked=20/.test(work.output)} soft20=${soft?.made} assets=${assets} life=${life}`);process.exitCode=ok?0:1;

@@ -265,7 +265,7 @@ try {
             }
             return b.every(x => Number.isInteger(x) && x >= 0 && x <= 24) ? b : null;
         };
-        const { ClientProt } = await import('../../vendor/rs-sdk/server/webclient/src/io/ClientProt.ts');
+        const { ClientProt } = await import('../../vendor/rs-sdk/server/webclient/src/io/ClientProt');
         const click = (b: number[], slot: number): void => {
             const objId = 3904 + 2 * (b[slot]! - 1);
             client.writeOpcode(ClientProt.OPHELD5);

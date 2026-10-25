@@ -68,7 +68,7 @@ try {
     q.milestone(4);
 
     // 4. Down, search the crates (op1 on the kittens_mew npc, p_delay(4) each) until the kitten.
-    await q.climb('ladder down', () => q.findLoc(l => l.x === LADDER.x && l.z === LADDER.z && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))) ?? { id: 1746, ...LADDER }, /climb-down/i, levelIs(0));
+    await q.climb('ladder down', () => q.findLoc(l => l.x === LADDER.x && l.z === LADDER.z && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))) ?? { ...LADDER, id: 1746 }, /climb-down/i, levelIs(0));
     // The npc list lags the level change by a tick or two (a trial saw only the level-1 cat right after the ladder).
     await q.waitUntil(() => (q.st()?.nearbyNpcs ?? []).some((m: any) => /crate/i.test(m.name)), 8);
     const order = [...CRATES].sort((a, b) => q.cheb(a.x, a.z) - q.cheb(b.x, b.z));

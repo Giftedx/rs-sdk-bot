@@ -1,0 +1,43 @@
+// Same local actor: Seers reverse staging, then actual outbound courier to Draynor.
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {createBot} from '../../packages/practice/src/bots';
+import {applyPreset} from '../../packages/practice/src/presets';
+import {runBotName} from '../../packages/practice/src/prove';
+import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
+if(process.env.REUSE_STACK!=='1')throw new Error('existing local stack required');
+const sourcePaths=['scripts/measure/fleet-seers-entry.ts','scripts/foodcourier.ts','packages/core/src/walk.ts'];
+const hashes=Object.fromEntries(sourcePaths.map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex').toUpperCase()]));
+for(const [env,path] of [['EXPECT_REVERSE_SHA','scripts/measure/fleet-seers-entry.ts'],['EXPECT_COURIER_SHA','scripts/foodcourier.ts']] as const)if(!process.env[env]||hashes[path]!==process.env[env])throw new Error(`${env} frozen source required`);
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+if(free<11)throw new Error(`new second admission needs11GiB free; actual${free}`);
+const actor=runBotName('flreturn',1),dir=resolve('.practice/fleet-proof'),prefix=`return-strings-${actor}`;
+await createBot(actor);
+const savePath=await applyPreset(actor,{position:{x:2727,z:3492,level:0},inventory:[{id:1778,count:500},{id:333,count:1},{id:333,count:1}],bank:[{id:995,count:60},{id:946,count:1},{id:1511,count:13},{id:1737,count:40}]});
+const initial=readPracticeSave(savePath);
+writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
+console.log(`PROOF_START actor=${actor} freeGiB=${free} cargo=500notedBowstrings fare=60`);
+async function child(path:string,label:string,env:Record<string,string>){
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve(path),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:'pipe',stderr:'pipe'});let output='';
+ const timer=setTimeout(()=>p.kill(),450000);
+ const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}-${label}.log`),output);process.stdout.write(part);}};
+ await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);
+ if(code!==0||!/^RESULT ok/m.test(output)||!output.includes('LOGOUT logged-out')||!/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(output))throw new Error(`${label} production/life gate failed`);
+ return output;
+}
+const count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+const totals=(save:ReturnType<typeof readPracticeSave>)=>{const m=new Map<number,number>();for(const items of Object.values(save.inventories))for(const i of items)m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
+const before=totals(initial);
+const reverse=await child('scripts/measure/fleet-seers-entry.ts','reverse',{RETURN_ARDY:'1',CARRY_COINS:'60'});
+const middle=await waitPracticeSave(savePath,s=>Math.max(Math.abs(s.position.x-2654),Math.abs(s.position.z-3283))<=4&&s.position.level===0&&count(s.inventories[93]??[],995)===60);
+if(!middle.matched||[...before].some(([id,n])=>totals(middle.save).get(id)!==n))throw new Error('reverse saved-state conservation/arrival gate failed');
+writeFileSync(resolve(dir,`${prefix}-middle.json`),JSON.stringify(middle.save,null,2));
+console.log(`PROOF_REVERSE_DONE actor=${actor} cargo500=true heldFare60=true`);
+const outbound=await child('scripts/foodcourier.ts','outbound',{OUTBOUND_ONLY:'1',HOME_ONLY:'',START:'',FROM:'',FARMERS:'',FEATHERS:'0',CAP:'1200'});
+const final=await waitPracticeSave(savePath,s=>Math.max(Math.abs(s.position.x-3092),Math.abs(s.position.z-3243))<=4&&s.position.level===0&&(totals(s).get(995)??0)===0);
+const after=totals(final.save),assets=[...before].every(([id,n])=>(after.get(id)??0)===n-(id===995?60:0))&&[...after].every(([id,n])=>n===(before.get(id)??0)-(id===995?60:0));
+const held=final.save.inventories[93]??[];
+const ok=final.matched&&assets&&count(held,1778)===500&&count(held,333)===2&&final.save.skills.every((s,i)=>s.xp===initial.skills[i]!.xp)&&/received=0 handed=0/.test(outbound);
+writeFileSync(resolve(dir,`${prefix}-snapshot.json`),JSON.stringify({ok,actor,hashes,assets,initial,middle:middle.save,final:final.save,staged:{notedBowstrings:500,trout:2,coins:60},reverseTicks:reverse.match(/RESULT ok.*ticks=(\d+)/)?.[1],outboundTicks:outbound.match(/RESULT ok.*ticks=(\d+)/)?.[1]},null,2));
+console.log(`PROOF_GATE sameActor=true notes500=${count(held,1778)} foods2=${count(held,333)} fare60=${assets} ok=${ok}`);process.exitCode=ok?0:1;

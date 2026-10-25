@@ -6,6 +6,7 @@
 // FOOD_FROM=<account>: with no bank food (trout, salmon, lobster) in the pack or the bank, serve one trade from that
 // account (180 s) first. FOOD_ONLY_TRADE=1: never use the stall or the shop; when the pack and the bank run out of
 // food, serve one more trade from FOOD_FROM at the bank, and end the run (log out) when none comes.
+// CURIER_FOOD_WAKE=1: also meet that owned supplier's fresh food notes at the south bank,20s/120tick cooldown.
 // Bank food: cooked trout (heals 7) and salmon (9) from scripts/fishcook.ts come before lobsters (12) on withdraw.
 // Food fallback: with no lobsters in the pack or the bank, steal from the Ardougne baker's stall until the pack holds
 // STALL_FILL (default 10) food items. Rules (skill_thieving stealing.rs2:98-121, thieving.rs2:53-73): an ardougne_guard
@@ -16,8 +17,31 @@
 // Preset goldfarm_knights (goldfarm_nofood for the stall). Copies the 2-tick direct click and eating inside the stun from scripts/generated/thieving60.ts.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { openBot, finish, randomEventsOf } from '../packages/core/src/bot';
+import { openBot, finish, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
 import { waitTicks } from '../packages/core/src/ticks';
+import type {Session} from '../packages/core/src/inprocess';
+import {ownedAccounts} from '../packages/core/src/tradeguard';
+
+const COOKED_IDS=new Set([329,333,379,330,334,380]),NOTED_COOKED_IDS=new Set([330,334,380]);
+export function incomingCookedFood(before:readonly {id:number;count:number}[],after:readonly {id:number;count:number}[]){
+    const count=(rows:typeof before,id:number)=>rows.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+    return [...COOKED_IDS].reduce((n,id)=>n+Math.max(0,count(after,id)-count(before,id)),0);
+}
+export function courierFoodReady(status:any,from:string,server:string,owned:ReadonlySet<string>,now=Date.now(),tick=0,lastAttempt=-120){
+    return /^[A-Za-z0-9_ -]{1,12}$/.test(from)&&owned.has(from.toLowerCase())&&typeof status?.name==='string'&&status.name.toLowerCase()===from.toLowerCase()
+        &&status.server===server&&!status.result&&Number.isFinite(status.at)&&now-status.at>=0&&now-status.at<30000
+        &&tick-lastAttempt>=120&&status.pos?.level===0&&Math.max(Math.abs(status.pos.x-2654),Math.abs(status.pos.z-3283))<=8
+        &&Array.isArray(status.inventory)&&status.inventory.some((i:any)=>NOTED_COOKED_IDS.has(i.id)&&Number.isSafeInteger(i.count)&&i.count>0);
+}
+// Reused by normal empty-food service and the opt-in short proactive rendezvous.
+export async function receiveFoodAtBank(s:Session,from:string,timeout:number,refill:()=>Promise<void>,available:()=>boolean){
+    if(!/^[A-Za-z0-9_ -]{1,12}$/.test(from))throw Error('invalid configured food supplier');
+    const before=s.sdk.getInventory().map(i=>({...i})),start=s.tick();
+    const result=await s.bot.serveTrades({from:new RegExp(`^${from}$`,'i'),maxTrades:1,timeout});
+    const ticks=s.tick()-start,incoming=incomingCookedFood(before,s.sdk.getInventory());
+    if(s.tick()===start)await waitTicks(s,1);
+    await refill();return{incoming,available:available(),ticks,reason:result.reason,message:result.message};
+}
 
 type Tile = { x: number; z: number };
 const KNIGHT_SPOT: Tile = { x: 2653, z: 3302 };
@@ -48,8 +72,11 @@ const DMG = 3;
 // pickpocket.rs2:134-137), so a 1-tick cadence costs nothing and re-paths to a knight that stepped away a tick sooner.
 const PICK_TICKS = Number(process.env.PICK_TICKS ?? 2);
 
+if(import.meta.main){
 console.log(`ERR-TRACE opening ${process.argv[2]}`);
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
+const foodWake=process.env.CURIER_FOOD_WAKE==='1';
+const farmServer=foodWake?serverFromEnv(readFileSync(join(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8')):'';
 try {
     await waitTicks(s, 5);
     // Farm only where the knights are. After a death the game respawns the bot in Lumbridge; walking from there to
@@ -181,20 +208,15 @@ try {
 
     // FOOD_FROM: no bank food anywhere, so take notes by trade at the bank spot, then bank them. True when the pack
     // or the bank holds food afterwards.
-    let lastTradeOk = true, tradeTicks = 0, tradesIn = 0;
-    const foodByTrade = async (): Promise<boolean> => {
+    let lastTradeOk = true, tradeTicks = 0, tradesIn = 0,lastCourierAttempt=-120;
+    const foodByTrade = async (timeout=180_000): Promise<boolean> => {
         console.log(`MILESTONE waiting for food trade from ${FOOD_FROM} t=${now()}`);
         await walk(BANK_SPOT, 2);
-        const q0 = s.tick();
-        const re = new RegExp(`^${FOOD_FROM.replace(/[^a-zA-Z0-9 _-]/g, '')}$`, 'i');
-        const r = await s.bot.serveTrades({ from: re, maxTrades: 1, timeout: 180_000 });
-        tradeTicks += s.tick() - q0;
-        if (s.tick() === q0) await waitTicks(s, 1);
-        const got = notes().reduce((n, i) => n + i.count, 0) + bigFood();
-        console.log(`TRADE ${r.reason} ${r.message} notes=${notes().reduce((n, i) => n + i.count, 0)} bigFood=${bigFood()} t=${now()}`);
-        if (got > 0) tradesIn++;
-        await refill();
-        lastTradeOk = food() >= 2 || !bankEmpty;
+        const r=await receiveFoodAtBank(s,FOOD_FROM,timeout,refill,()=>food()>=2||!bankEmpty);
+        tradeTicks+=r.ticks;
+        console.log(`TRADE ${r.reason} ${r.message} incomingFood=${r.incoming} notes=${notes().reduce((n, i) => n + i.count, 0)} bigFood=${bigFood()} t=${now()}`);
+        if(r.incoming>0)tradesIn++;
+        lastTradeOk=r.available;
         return lastTradeOk;
     };
 
@@ -368,6 +390,12 @@ try {
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
         const l = food();
         if (hp() <= eatAt() && l > 0) { if (!(await eat())) await waitTicks(s, 1); continue; }
+        if(foodWake&&/^[A-Za-z0-9_ -]{1,12}$/.test(FOOD_FROM)&&(l>=2||!bankEmpty)){
+            let courier:any;try{courier=JSON.parse(readFileSync(join(import.meta.dir,'../.practice/status',`${FOOD_FROM}.json`),'utf8'));}catch{/* no current courier observation */}
+            if(courierFoodReady(courier,FOOD_FROM,farmServer,ownedAccounts(farmServer),Date.now(),s.tick(),lastCourierAttempt)){
+                lastCourierAttempt=s.tick();await foodByTrade(20_000);await walk(KNIGHT_SPOT,3);continue;
+            }
+        }
         if ((bigFood() < 2 && l < 2 && !bankEmpty) || coins() >= BANK_AT || notes().length > 0) {
             await refill();
             await walk(KNIGHT_SPOT, 3);
@@ -395,3 +423,4 @@ try {
     }
     await end(!died, died ? 'died' : 'ticks');
 } catch (e) { await finish([s], false, String(e)); }
+}

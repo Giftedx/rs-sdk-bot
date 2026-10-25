@@ -1,0 +1,27 @@
+// Staged FUTURE Seers processing state. Does not prove live transport, funding or unknown worn gear.
+import {readFileSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {createBot} from '../../packages/practice/src/bots';
+import {applyPreset} from '../../packages/practice/src/presets';
+import {runBotName} from '../../packages/practice/src/prove';
+import {readPracticeSave,setPracticeSkills,waitPracticeSave} from './fleet-player-save';
+import {parseJm2} from '../../packages/knowledge/src/jm2';
+const sourceSha256=createHash('sha256').update(readFileSync('scripts/fletch-arrows.ts')).digest('hex').toUpperCase();if(sourceSha256!=='CD5A16A233A2444D6E66B9EC7BEE5DFD37DBD2B37C763C402C877C7EF9FDA614'||process.env.REUSE_STACK!=='1')throw new Error('source freeze/existing stack required');
+const maker=JSON.parse(readFileSync('.practice/status/Shaftmaker.json','utf8'));
+if(maker.skills[9].xp!==598625||maker.skills[9].level!==91)throw new Error('expected named staged F91 XP598625 source skills');
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<9)throw new Error(`single start needs9GiB actual${free}`);
+const actor=runBotName('flseers',1),dir=resolve('.practice/fleet-proof'),prefix=`seers-bows-${actor}`;
+const bank=[...maker.bank.filter((i:{id:number})=>![995,1521,1777,845].includes(i.id)).map((i:{id:number;count:number})=>({id:i.id,count:i.count})),{id:995,count:65},{id:1521,count:5},{id:1777,count:25},{id:845,count:475}];
+await createBot(actor);const path=await applyPreset(actor,{position:{x:2727,z:3492,level:0},skills:Object.fromEntries(maker.skills.map((s:{name:string;level:number})=>[s.name,s.level])),equipment:[],inventory:[{id:946,count:1},{id:315,count:1},{id:2309,count:1},{id:1522,count:500}],bank});setPracticeSkills(path,maker.skills);
+const initial=readPracticeSave(path);writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));console.log(`PROOF_START actor=${actor} source=${sourceSha256} freeGiB=${free} stagedSeers=true futureFare65GP=true MAX20=true`);
+const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/fletch-arrows.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_EXPECT_SKILLS:JSON.stringify(maker.skills),MODE:'oak-bows',MAX_MAKE:'20',LOG_RESERVE:'5',STRING_RESERVE:'5',CAP:'1000'},stdout:'pipe',stderr:'pipe'});let output='';const timer=setTimeout(()=>p.kill(),420000);
+const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const text=new TextDecoder().decode(b);output+=text;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(text);}};await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);
+const result=JSON.parse(output.match(/^OAK_BOW_BANK (.+)$/m)?.[1]??'null'),count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+const final=await waitPracticeSave(path,s=>count(s.inventories[95]??[],845)===495&&s.skills[9]!.xp===623625);
+const totals=(s:typeof initial)=>{const m=new Map<number,number>();for(const items of Object.values(s.inventories))for(const i of items)m.set(i.id,(m.get(i.id)??0)+i.count);return m;};const before=totals(initial),after=totals(final.save),delta=new Map([[1522,-500],[1521,480],[1777,-20],[845,20]]);
+const assets=[...new Set([...before.keys(),...after.keys(),...delta.keys()])].every(id=>(after.get(id)??0)===(before.get(id)??0)+(delta.get(id)??0));
+const booths=parseJm2('m42_54.jm2',readFileSync('vendor/rs-sdk/server/content/maps/m42_54.jm2','utf8')).locs.filter(l=>l.id===2213&&l.level===0&&l.x>=2720&&l.x<=2730&&l.z>=3493&&l.z<=3497);
+const atBank=final.save.position.level===0&&booths.some(b=>Math.max(Math.abs(final.save.position.x-b.x),Math.abs(final.save.position.z-b.z))<=1),life=/PROOF_SURVIVAL started=true died=false hpMin=10 finalHp=10/.test(output);
+const ok=code===0&&final.matched&&result?.ok&&result.targetMet&&result.made===20&&result.banked===20&&result.notesConverted===500&&result.xpGain===25000&&assets&&atBank&&life&&count(final.save.inventories[93]??[],845)===0&&output.includes('LOGOUT logged-out');
+writeFileSync(resolve(dir,`${prefix}-snapshot.json`),JSON.stringify({ok,actor,sourceSha256,result,assets,atBank,life,qualification:'STAGED owned-incoming500Oaknotes+futureSeerslocation+65GP after125-60fare. Explicit empty worn fixture; current source status worn field is not cloned or assumed. No actual funding/entry/handoff claim.',sourceMakerStatusAt:maker.at,sourceMakerEquipmentKnown:Array.isArray(maker.equipment),initial,final:final.save},null,2));console.log(`PROOF_GATE seers-bows ok=${ok} made=${result?.made} assets=${assets} life=${life} atBank=${atBank}`);process.exitCode=ok?0:1;

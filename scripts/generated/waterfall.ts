@@ -6,6 +6,7 @@
 // Route notes (bun research/route-danger.ts, 2026-10-23): the gnome cellar (hobgoblins), Glarial's tomb (skeletons,
 // zombies, moss giants) and the falls (shadow spiders, skeletons, fire giants max hit about 7) have aggressive NPCs
 // with hunt range 1-2. The bot never fights; it eats a lobster at 7 HP or less.
+import type { Session } from '../../packages/core/src/inprocess';
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
@@ -46,6 +47,105 @@ const CAP = 4000;
 const EAT_AT = 6;
 const TRACE = process.env.WF_TRACE === "1";
 
+export function waterfallFood(kind = 'lobster', eatAt?: number, count = 16) {
+    const foods: Record<string, { id: number; heal: number }> = { lobster: { id: 379, heal: 12 }, salmon: { id: 329, heal: 9 }, trout: { id: 333, heal: 7 } };
+    const food = foods[kind.toLowerCase()];
+    if (!food || !Number.isSafeInteger(count) || count < 1 || count > 16) throw new Error('invalid Waterfall food/count');
+    const threshold = eatAt ?? (food.id === 379 ? 6 : 30);
+    if (!Number.isSafeInteger(threshold) || threshold < 1 || (food.id !== 379 && threshold < 23)) throw new Error('Waterfall fish threshold must retain a two-fire-giant-hit margin (>=23)');
+    return { ...food, count, eatAt: threshold, crossAt: food.id === 379 && eatAt === undefined ? 9 : threshold };
+}
+const WF_BANK = { x: 2654, z: 3283 };
+export function waterfallAssets(s: Session): Map<number, number> {
+    const counts = new Map<number, number>();
+    for (const i of [...s.sdk.getInventory(), ...s.sdk.getEquipment(), ...(s.sdk.getState()?.bank?.items ?? [])]) counts.set(i.id, (counts.get(i.id) ?? 0) + i.count);
+    return counts;
+}
+export async function bankWaterfallPack(s: Session) {
+    if (!(await s.bot.openBank()).success) throw new Error('Waterfall bank open failed');
+    for (const id of new Set(s.sdk.getInventory().map(i => i.id))) {
+        const item = s.sdk.getInventory().find(i => i.id === id)!;
+        await s.bot.depositItem(item, -1);
+        if (s.sdk.getInventory().some(i => i.id === id)) throw new Error(`Waterfall bank deposit incomplete id=${id}`);
+    }
+    await waitTicks(s, 1);
+}
+export async function prepareWaterfallPack(s: Session, food: ReturnType<typeof waterfallFood>) {
+    const p = s.sdk.getState()?.player;
+    if (!p || p.level !== 0 || Math.max(Math.abs(p.worldX - WF_BANK.x), Math.abs(p.worldZ - WF_BANK.z)) > 8) throw new Error('Waterfall Mighty preparation requires Ardougne south bank start');
+    if (!(await s.bot.openBank()).success) throw new Error('Waterfall initial bank failed');
+    await waitTicks(s, 1);
+    const initial = waterfallAssets(s);
+    await bankWaterfallPack(s); await s.bot.closeBank();
+    for (const item of [...s.sdk.getEquipment()]) if (!(await s.bot.unequipItem(item)).success) throw new Error(`Waterfall cannot store worn ${item.name}`);
+    await bankWaterfallPack(s);
+    try {
+        for (const [id, count] of [[954, 2], [556, 6], [557, 6], [555, 6], [food.id, food.count]]) {
+            const item = s.sdk.getState()?.bank?.items.find(i => i.id === id);
+            if (!item || item.count < count) throw new Error(`Waterfall owned input shortfall id=${id} need=${count}`);
+            await s.bot.withdrawItem(item, count, { asNote: false });
+            const actual = s.sdk.getInventory().filter(i => i.id === id).reduce((n,i) => n+i.count, 0);
+            if (actual !== count) throw new Error(`Waterfall withdrawal shortfall id=${id} actual=${actual}`);
+        }
+        if (s.sdk.getInventory().length > 23) throw new Error('Waterfall staged pack exceeds23slots');
+    } catch (e) { await bankWaterfallPack(s); throw e; }
+    finally { await s.bot.closeBank(); }
+    return initial;
+}
+export function waterfallConserved(initial: ReadonlyMap<number, number>, final: ReadonlyMap<number, number>, foodId: number, eaten: number) {
+    return [...initial].every(([id,n]) => (final.get(id) ?? 0) >= n - ([556,557,555].includes(id) ? 6 : id === foodId ? eaten : 0));
+}
+
+export function waterfallResumeAtBookcase(p: { worldX: number; worldZ: number; level: number } | undefined) {
+    return !!p && p.level === 1 && Math.abs(p.worldX - 2519) <= 3 && Math.abs(p.worldZ - 3427) <= 3;
+}
+
+// A shut chat window does not prove that the server reached a quest assignment. These
+// mandatory conversations require a line AFTER that assignment and a closed final page.
+export async function waterfallDialogue(s: Session, opts: { proof: RegExp; choices?: RegExp[]; maxTicks: number; stop?: () => boolean }) {
+    let proofSeen = false;
+    const trace: unknown[] = [];
+    let last = '';
+    // Capture on publication too: an awaited click can span several observations.
+    const observe = () => {
+        const d: any = s.sdk.getDialog();
+        const text = d?.isOpen ? [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].join(' ') : '';
+        if (opts.proof.test(text)) proofSeen = true;
+        const page = { tick: s.tick(), pageId: d?.pageId, open: !!d?.isOpen, waiting: !!d?.isWaiting, text,
+            options: d?.options ?? [] };
+        const key = JSON.stringify({ ...page, tick: 0 });
+        if (key !== last) { trace.push(page); last = key; }
+    };
+    const off = s.onTick(observe);
+    try {
+    for (let tick = 0; tick < opts.maxTicks; tick++) {
+        const d: any = s.sdk.getDialog();
+        observe();
+        if (opts.stop?.()) return { ok: false, proofSeen, reason: 'stopped', trace };
+        if (proofSeen && !d?.isOpen && !d?.isWaiting) return { ok: true, proofSeen, reason: 'proved', trace };
+        if (d?.isOpen && !d.isWaiting) {
+            const options: any[] = d.options ?? [];
+            // BUTTON_OK=1 is a choice; BUTTON_CONTINUE=6 is a pause page
+            // (lite/actions.ts). Never send bare RESUME to an unanswered choice.
+            const choices = options.filter(o => o.buttonType === 1 || !/^\s*(click here to )?continue\s*$/i.test(o.text ?? '') && o.buttonType !== 6);
+            const selected = choices.find(o => opts.choices?.some(re => re.test(o.text ?? '')));
+            if (choices.length && !selected) return { ok: false, proofSeen, reason: 'unexpected choice', trace };
+            const index = selected?.index ?? options.find(o => o.buttonType === 6)?.index ?? 0;
+            const reply = await s.sdk.sendClickDialog(index);
+            trace.push({ tick: s.tick(), index, reply });
+        }
+        await waitTicks(s, 1);
+    }
+    return { ok: false, proofSeen, reason: 'mandatory progress not observed', trace };
+    } finally { off(); }
+}
+
+async function main() {
+const MIGHTY = process.env.WF_MIGHTY === '1';
+const RESUME_HUDON = process.env.WF_RESUME_HUDON === '1';
+if (RESUME_HUDON && !MIGHTY) throw new Error('WF_RESUME_HUDON requires WF_MIGHTY=1');
+const FOOD = waterfallFood(process.env.WF_FOOD ?? 'lobster', process.env.WF_EAT_AT ? Number(process.env.WF_EAT_AT) : undefined, Number(process.env.WF_FOOD_COUNT ?? 16));
+if (!process.argv[2] || /^(haggis|main)$/i.test(process.argv[2])) throw new Error('explicit non-reserved Waterfall account required');
 const s = await openBot(process.argv[2]!);
 try {
     await waitTicks(s, 5);
@@ -65,7 +165,16 @@ try {
     };
     const inBoxXZ = (x: number, z: number, x0: number, z0: number, x1: number, z1: number): boolean => x >= x0 && x <= x1 && z >= z0 && z <= z1;
     const dialogOpen = (): boolean => !!s.sdk.getDialog()?.isOpen;
+    const pages: string[] = [];
+    const capturePage = (): void => {
+        const d: any = s.sdk.getDialog();
+        if (!d?.isOpen) return;
+        const text = [d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].join(' ');
+        if (text && pages[pages.length - 1] !== text) { pages.push(text); if (pages.length > 400) pages.shift(); }
+    };
     const sawText = (re: RegExp): boolean => {
+        capturePage();
+        if (pages.some(p => re.test(p))) return true;
         const d: any = s.sdk.getDialog();
         if (d?.text && re.test(d.text)) return true;
         return (st()?.recentDialogs ?? []).some((e: any) => re.test((e.text ?? []).join(' ')));
@@ -74,7 +183,11 @@ try {
     const msgCount = (re: RegExp): number => (st()?.gameMessages ?? []).filter((m: any) => m.type === 0 && re.test(m.text)).length;
 
     // Auto retaliate off (controls:com_3 = component 151): a hit never turns a walk or a loc click into a fight.
-    await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
+    if (MIGHTY) {
+        if (st()?.autoRetaliateEnabled === undefined) throw new Error('Waterfall needs observed auto-retaliate state');
+        if (st()?.autoRetaliateEnabled) await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
+        if (!await waitUntil(s, () => st()?.autoRetaliateEnabled === false, { timeoutTicks: 5 })) throw new Error('Waterfall auto-retaliate off not observed');
+    } else await s.direct({ type: 'clickComponent', componentId: 151, reason: 'SDK' });
     const atk0 = atkXp();
     const str0 = strXp();
     const p0 = pos();
@@ -104,27 +217,28 @@ try {
     let eatCount0 = 0;
     const eatPending = (): boolean => eatSentAt >= 0;
     const eatNow = (): boolean => {
-        const food = inv().find(i => i.id === ITEM.lobster);
+        const food = inv().find(i => i.id === FOOD.id);
         if (!food || eatPending()) return false;
         const op = food.optionsWithIndex?.find((o: any) => /^eat$/i.test(o.text))?.opIndex ?? 1;
         eatSentAt = s.tick();
-        eatCount0 = cnt(ITEM.lobster);
+        eatCount0 = cnt(FOOD.id);
         void s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: op, reason: 'SDK' });
         return true;
     };
     const eatCheck = (): void => {
         if (!eatPending()) return;
-        if (cnt(ITEM.lobster) < eatCount0) { eats++; lastEat = s.tick(); eatSentAt = -99; }
+        if (cnt(FOOD.id) < eatCount0) { eats++; lastEat = s.tick(); eatSentAt = -99; }
         else if (s.tick() - eatSentAt >= 2) eatSentAt = -99;
     };
 
     // Every tick: death watch, jump log, and the eat reflex (a direct op, so it never waits behind a bot.* action).
     const off = s.onTick(() => {
+        capturePage();
         const p = pos();
         const h = hp();
         if (h > 0 && h < hpMin && h <= 4) {
             const ns = (st()?.nearbyNpcs ?? []).filter((n: any) => n.distance <= 3).map((n: any) => `${n.name}@${n.tileX ?? n.x},${n.tileZ ?? n.z}${n.inCombat ? "*" : ""}`).join(" ");
-            console.log(`WARN hp ${h} at ${T()} ${p?.worldX},${p?.worldZ},${p?.level} lobsters=${cnt(ITEM.lobster)} near: ${ns}`);
+            console.log(`WARN hp ${h} at ${T()} ${p?.worldX},${p?.worldZ},${p?.level} foodId=${FOOD.id} foodLeft=${cnt(FOOD.id)} lobsters=${cnt(379)} near: ${ns}`);
         }
         if (h > 0) hpMin = Math.min(hpMin, h);
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) died = true;
@@ -139,13 +253,13 @@ try {
             console.log(`TRACE ${T()} ${p.worldX},${p.worldZ} hp=${h} hits=${hits} ${ns}`);
         }
         eatCheck();
-        if (h > 0 && h <= (crossing ? 9 : EAT_AT)) eatNow();
+        if (h > 0 && h <= (crossing ? FOOD.crossAt : FOOD.eatAt)) eatNow();
     });
 
     const detail = (): string => {
         const p = pos();
         const msgs = (st()?.gameMessages ?? []).filter((m: any) => m.type === 0).slice(-4).map((m: any) => m.text).join(' / ');
-        return `at=${p?.worldX},${p?.worldZ},${p?.level} ticks=${T()} hpMin=${hpMin} eats=${eats} lobsters=${cnt(ITEM.lobster)} died=${died} milestones=${[...done].join(',')} jumps=${jumps.join(';')} msgs=${msgs}`;
+        return `at=${p?.worldX},${p?.worldZ},${p?.level} ticks=${T()} hpMin=${hpMin} eats=${eats} foodId=${FOOD.id} foodLeft=${cnt(FOOD.id)} lobsters=${cnt(379)} died=${died} milestones=${[...done].join(',')} jumps=${jumps.join(';')} msgs=${msgs}`;
     };
     const fail = async (why: string): Promise<never> => {
         off();
@@ -169,8 +283,8 @@ try {
     const opIndex = (l: any, re: RegExp): number => l?.optionsWithIndex?.find((o: any) => re.test(o.text))?.opIndex ?? 1;
 
     // Scripted actions (p_delay) drop eats, so top up first when one hit could leave too little.
-    const topUp = async (label: string, at = EAT_AT + 1): Promise<void> => {
-        for (let i = 0; i < 6 && hp() > 0 && hp() <= at && has(ITEM.lobster); i++) {
+    const topUp = async (label: string, at = FOOD.eatAt + 1): Promise<void> => {
+        for (let i = 0; i < 6 && hp() > 0 && hp() <= at && has(FOOD.id); i++) {
             await guard(label);
             eatNow();
             await waitTicks(s, 1);
@@ -290,46 +404,51 @@ try {
     // step 6, so the fire giant crossing can be tested on its own.
     const inFalls = () => inBox(2550, 9855, 2610, 9925);
     const RUNES = [ITEM.air, ITEM.earth, ITEM.water];
+    let initialAssets: Map<number, number> | undefined;
+    if (MIGHTY) {
+        if (RESUME_HUDON) {
+            if (!waterfallResumeAtBookcase(pos())) await fail('Hudon resume requires observed Hadley upstairs bookcase start');
+            console.log(`WATERFALL_RESUME_HUDON ${detail()} questStage=unknown; repair via Almera and Hudon proof`);
+            await climb('resume Hadley down', 2518, 3429, /climb-down/i, () => pos()?.level === 0);
+            await walk('resume Ardougne bank', [[WF_BANK.x, WF_BANK.z, 1]]);
+        }
+        initialAssets = await prepareWaterfallPack(s, FOOD);
+        console.log(`WATERFALL_PREP ${JSON.stringify({ food: FOOD, slots: inv().length, storedKnife: initialAssets.get(946) ?? 0, storedShafts: initialAssets.get(52) ?? 0 })}`);
+        await walk('Ardougne to Almera', [[2522,3494,2]]);
+    }
     const resume = inFalls();
     if (resume) console.log(`MILESTONE resume-falls ${T()}`);
     if (!resume) {
         // 1. Almera: "How can I help?" sets %waterfall_quest = 1 (almera.rs2:14).
         const talk = await s.bot.talkTo(/^almera$/i);
         if (!talk.success) await fail(`talk Almera: ${talk.message}`);
-        // Done when her last line is seen, or after the dialog stays shut for 3 ticks. The raft refuses at 0, so it proves 1.
-        let shutFor = 0;
-        await converse([/how can i help/i], () => {
-            shutFor = dialogOpen() ? 0 : shutFor + 1;
-            return (sawText(/you are kind|small raft out back/i) && !dialogOpen()) || shutFor >= 3;
-        }, 60);
-        if (sawText(/you are kind|small raft out back/i)) milestone(1);
-        else console.log(`WARN Almera last line not seen at ${T()}`);
+        const almera = await waterfallDialogue(s, { proof: /you are kind|small raft out back|you can't be too careful these days|tourist centre south/i,
+            choices: [/how can i help/i], maxTicks: 60, stop: () => died || T() > CAP });
+        console.log(`WATERFALL_DIALOG Almera ${JSON.stringify(almera)}`);
+        if (!almera.ok) await fail('no Waterfall progress: mandatory Almera dialogue');
+        milestone(1);
 
         // 2. The raft lands on Hudon's island (2512,3481); Hudon's forced dialogue sets 2 (quest_waterfall.rs2:178).
-        const onIsland = () => inBox(2510, 3476, 2514, 3482);
+        const onIsland = () => inBox(2510, 3476, 2514, 3481);
         await walk('raft', [[2511, 3494, 1]]);
         await step('raft 1', () => opLoc(LOC.raft), onIsland, 20);
         milestone(1);
-        const hudonDone = () => (sawText(/fine alone/i) || msgCount(/hudon is refusing/i) > 0) && !dialogOpen();
-        let seenOpen = false;
-        let shutAfter = 0;
-        await converse([], () => {
-            if (dialogOpen()) { seenOpen = true; shutAfter = 0; } else if (seenOpen) shutAfter++;
-            return hudonDone() || shutAfter >= 3;
-        }, 20);
-        if (seenOpen && !hudonDone()) console.log(`WARN forced dialogue ended without the Hudon line at ${T()}`);
+        const hudonProof = /fine alone|so you're still here|find that treasure soon/i;
+        let hudon = await waterfallDialogue(s, { proof: hudonProof, maxTicks: 36, stop: () => died || T() > CAP });
+        console.log(`WATERFALL_DIALOG Hudon-forced ${JSON.stringify(hudon)}`);
         // No forced dialogue (Hudon wandered more than 5 tiles off): talk to him from the island (hudon.rs2:22).
-        for (let i = 0; i < 2 && !hudonDone() && !seenOpen; i++) {
+        for (let i = 0; i < 2 && !hudon.ok && !dialogOpen(); i++) {
             await guard('talk Hudon');
+            // hudon.rs2 accepts speech only in x2510..2514,z3476..3481.
+            if (!await walkPt(2512, 3481, 0) || !onIsland()) await fail('Hudon acoustic island position');
             const h = s.sdk.findNearbyNpc(/^hudon$/i);
             if (h) await s.direct({ type: 'interactNpc', npcIndex: h.index, optionIndex: h.optionsWithIndex?.find((o: any) => /talk/i.test(o.text))?.opIndex ?? 1, reason: 'SDK' });
             await waitUntil(s, () => dialogOpen() || died, { timeoutTicks: 8 });
-            let shut = 0;
-            await converse([], () => { shut = dialogOpen() ? 0 : shut + 1; return hudonDone() || shut >= 3; }, 30);
+            hudon = await waterfallDialogue(s, { proof: hudonProof, maxTicks: 36, stop: () => died || T() > CAP });
+            console.log(`WATERFALL_DIALOG Hudon-manual-${i + 1} ${JSON.stringify(hudon)}`);
         }
-        // The bookcase only gives the book at 2 or more, so the book proves 2 if the dialogue text was missed.
-        if (hudonDone()) milestone(2);
-        else console.log(`WARN Hudon dialogue not seen at ${T()}`);
+        if (!hudon.ok) await fail('no Waterfall progress: mandatory Hudon dialogue');
+        milestone(2);
 
         // Off the island: rope on the rock, rope on the dead tree to the ledge, then the barrel washes the bot to 2527,3413.
         const onTreeIsland = () => inBox(2512, 3465, 2513, 3475);
@@ -404,6 +523,7 @@ try {
         // (300-tick drop timer). The pebble opens the tomb and sets 4.
         await walkMaze('maze out', 2557, 3444, [...MAZE].reverse());
         // All three stacks in one tick (the server takes 5 inputs per tick); bot.dropItem cost about 15 idle ticks here.
+        const runeDrop = { x: pos()?.worldX, z: pos()?.worldZ };
         for (let i = 0; i < 4 && RUNES.some(has); i++) {
             for (const r of inv().filter(x => RUNES.includes(x.id))) void s.direct({ type: 'dropItem', slot: r.slot, reason: 'SDK' });
             await waitUntil(s, () => !RUNES.some(has) || died, { timeoutTicks: 2 });
@@ -431,7 +551,7 @@ try {
         for (let i = 0; i < 20 && RUNES.some(id => cnt(id) < 6); i++) {
             await guard('pick runes');
             const id = RUNES.find(r => cnt(r) < 6)!;
-            const g = (st()?.groundItems ?? []).filter((x: any) => x.id === id).sort((a: any, b: any) => a.distance - b.distance)[0];
+            const g = (st()?.groundItems ?? []).filter((x: any) => x.id === id && (!MIGHTY || x.x === runeDrop.x && x.z === runeDrop.z)).sort((a: any, b: any) => a.distance - b.distance)[0];
             if (g) await s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' });
             await waitUntil(s, () => cnt(id) >= 6 || died, { timeoutTicks: 3 });
         }
@@ -477,7 +597,7 @@ try {
         const d = findLoc(l => (l.id === 1516 || l.id === 1519) && l.z === DOUBLE_DOOR.z && Math.abs(l.x - 2564.5) <= 1);
         if (d) await opLoc({ id: d.id, x: d.x, z: d.z }, opIndex(d, /^open$/i));
     }, () => !doorShut(), 6, 4);
-    await topUp('top up', 9);
+    await topUp('top up', FOOD.crossAt);
     crossing = true;
     // Shield: in single-way combat no NPC attacks a player that another NPC attacked in the last 8 ticks
     // (npc_check_notcombat, npc_combat.rs2:382-391). The run from here to the 1-wide corridor (2568,9891) takes about
@@ -488,7 +608,7 @@ try {
         && !giantIdx().has(e.sourceIndex) && e.tick >= s.tick() - 1);
     let shieldWait = 0;
     for (; shieldWait < 12 && !shieldHit() && !died; shieldWait++) { await guard('shield'); await waitTicks(s, 1); }
-    await topUp('top up', 9);
+    await topUp('top up', FOOD.crossAt);
     console.log(`MILESTONE crossing ${T()} hp=${hp()} shield=${shieldHit()} waited=${shieldWait} gap=${giantGap(2564, 9885)}`);
     let lastSend = -99;
     let still = 0;
@@ -544,8 +664,8 @@ try {
 
     // 10. Urn on the chalice (never op1: that floods the cavern). The reward queue sets 10 and grants the XP.
     // The reward needs 5 free slots. The danger is over here, so spare lobsters go first.
-    for (let i = 0; i < 6 && inv().length > 23 && has(ITEM.lobster); i++) {
-        const l = inv().find(x => x.id === ITEM.lobster);
+    for (let i = 0; !MIGHTY && i < 6 && inv().length > 23 && has(FOOD.id); i++) {
+        const l = inv().find(x => x.id === FOOD.id);
         if (l) await s.direct({ type: 'dropItem', slot: l.slot, reason: 'SDK' });
         await waitTicks(s, 1);
     }
@@ -553,11 +673,35 @@ try {
     await step('chalice', () => useOnLoc(ITEM.urn, LOC.chalice), () => atkXp() > atk0, 15, 3);
     milestone(10);
 
-    off();
+    if (!MIGHTY) off();
     const gained = atkXp() - atk0;
     const strGained = strXp() - str0;
     console.log(`RATE attack ${gained} ${T()}`);
     console.log(`INFO walkPath ticks=${walkTicks}`);
-    const ok = gained >= 300_000 && !died;
-    await finish([s], ok, `attackXp=${gained} strengthXp=${strGained} ${detail()}`);
+    let preserved = true, rewardsBanked = false;
+    if (MIGHTY && !died) {
+        // quest_waterfall.rs2:392 returns the raised chamber to the original room;
+        // door2000:287 exits to the ledge, barrel:291 washes safely to2527,3413.
+        await walk('raised room exit', [[2604,9901,1]]);
+        await step('raised room key exit', () => useOnLoc(ITEM.baxKey, { id: 2002, x: 2604, z: 9900 }), () => inBox(2562,9894,2572,9901), 15, 4);
+        await step('south key door return', () => useOnLoc(ITEM.baxKey, LOC.giantDoor), () => !findLoc(l => l.id === 2002 && l.x === LOC.giantDoor.x && l.z === LOC.giantDoor.z), 12, 4);
+        await dash('return through giant room', [[2568,9891],[2565,9883]]);
+        await step('return double door', async () => { const d = findLoc(l => [1516,1519].includes(l.id) && l.z === 9881); if (d) await opLoc(d, opIndex(d,/^open$/i)); }, () => !doorShut(), 8, 4);
+        await dash('return to ledge exit', [[2564,9880],[2584,9876],[2575,9863]]);
+        await step('falls exit', () => opLoc({ id: 2000, x: 2575, z: 9861 }), () => near(2511,3463,3), 15, 4);
+        await step('return barrel', () => opLoc(LOC.barrel), () => near(2527,3413,4), 15, 4);
+        await walk('Waterfall reward return to bank', [[WF_BANK.x,WF_BANK.z,2]]);
+        await bankWaterfallPack(s);
+        const final = waterfallAssets(s);
+        preserved = !!initialAssets && waterfallConserved(initialAssets, final, FOOD.id, eats);
+        rewardsBanked = [ [1601,2], [2357,2], [299,40] ].every(([id,n]) => (final.get(id) ?? 0) - (initialAssets?.get(id) ?? 0) === n);
+        console.log(`WATERFALL_BANK ${JSON.stringify({ attackXp: gained, strengthXp: strGained, preserved, rewardsBanked, foodId: FOOD.id, eaten: eats, foodLeft: final.get(FOOD.id) ?? 0, diamonds: final.get(1601) ?? 0, goldBars: final.get(2357) ?? 0, seeds: final.get(299) ?? 0, hpMin, died })}`);
+        await s.bot.closeBank();
+        off();
+    }
+    const ok = (MIGHTY ? gained === 343750 && strGained === 343750 && preserved && rewardsBanked : gained >= 300_000) && !died;
+    await finish([s], ok, `attackXp=${gained} strengthXp=${strGained} preserved=${preserved} rewardsBanked=${rewardsBanked} ${detail()}`);
 } catch (e) { await finish([s], false, String(e)); }
+
+}
+if (import.meta.main) await main();

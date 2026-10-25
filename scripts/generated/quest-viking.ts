@@ -33,7 +33,7 @@ const NPC = {
     sigli: { re: /^sigli the huntsman$/i, at: { x: 2660, z: 3653 } },
     swensen: { re: /^swensen the navigator$/i, at: { x: 2646, z: 3660 }, door: { out: { x: 2645, z: 3664 }, x: 2645, z: 3663, in: { x: 2645, z: 3661 } } },
     peer: { re: /^peer the seer$/i, at: { x: 2634, z: 3668 } },
-    yrsa: { re: /^yrsa$/i, at: { x: 2625, z: 3675 }, door: { out: { x: 2628, z: 3675 }, x: 2627, z: 3675, in: { x: 2625, z: 3675 } } },
+    yrsa: { re: /^yrsa$/i, at: { x: 2625, z: 3675 }, door: { via: { x: 2636, z: 3672 }, out: { x: 2628, z: 3675 }, x: 2627, z: 3675, in: { x: 2625, z: 3675 } } },
     sigmund: { re: /^sigmund the merchant$/i, at: { x: 2641, z: 3680 } },
     sailor: { re: /^sailor$/i, at: { x: 2629, z: 3693 } },
     fisherman: { re: /^fisherman$/i, at: { x: 2641, z: 3699 } },
@@ -45,7 +45,7 @@ const NPC = {
     salesman: { re: /^poison salesman$/i, at: { x: 2737, z: 3491 } },
 };
 type Who = keyof typeof NPC;
-type Door = { out: { x: number; z: number }; x: number; z: number; in: { x: number; z: number } };
+type Door = { via?: { x: number; z: number }; out: { x: number; z: number }; x: number; z: number; in: { x: number; z: number } };
 const LOC = {
     mazeTop: { id: 4158, x: 2644, z: 3657 },
     mazeExit: { id: 4160, x: 2665, z: 10037 },
@@ -95,7 +95,7 @@ const RIDDLES: Array<[RegExp, number[]]> = [
     [/first is in water/i, [19, 8, 12, 4]],    // TIME
     [/first is in wizard/i, [22, 8, 13, 3]],   // WIND
 ];
-const DRAUGEN = 1279, BUTTERFLY = 1280;
+const DRAUGEN = 1279;
 const KOSCHEI = [1290, 1291, 1292, 1293];
 const DIRS: Record<string, [number, number]> = {
     'north-west': [-1, 1], 'north-east': [1, 1], 'south-west': [-1, -1], 'south-east': [1, -1],
@@ -140,7 +140,7 @@ try {
     // A house door the walker does not open (Swensen's, 2645,3663): the outside tile, the door by tile, the inside tile.
     const enter = async (label: string, d: Door) => {
         if (q.near(d.in.x, d.in.z, 2)) return;
-        await q.walk(`${label} door`, [{ x: d.out.x, z: d.out.z, tol: 0 }]);
+        await q.walk(`${label} door`, [...(d.via ? [{ x: d.via.x, z: d.via.z, tol: 2 }] : []), { x: d.out.x, z: d.out.z, tol: 0 }]);
         await q.openDoor(`${label} door`, d.x, d.z);
         await q.walk(`${label} in`, [{ x: d.in.x, z: d.in.z, tol: 1 }]);
     };
@@ -257,26 +257,28 @@ try {
         await op('wheel ladder', { id: 1747, x: 2715, z: 3470 }, /climb-up/i, () => lv() === 1, 10);
         await useLoc('spin', ITEM.fleece, LOC.wheel, got(ITEM.wool), 12);
         await useItem('string lyre', ITEM.wool, ITEM.lyreUnstrung, got(ITEM.lyreStrung));
-        // 14. The lyre teleport to Rellekka (viking_olaf.rs2:212-226); the raw shark on Fossegrimen's altar.
-        await q.step('lyre teleport', () => invOp(ITEM.lyreStrung, /play/i), () => q.near(2662, 3644, 4), 12, 3);
-        await q.walk('to altar', [{ x: LOC.altar.x, z: LOC.altar.z + 1, tol: 1 }]);
-        await useLoc('altar', ITEM.rawShark, LOC.altar, got(ITEM.lyreEnchanted));
-        // 15. The council workman: the beer for the firecracker.
+        // 14. Down and north: the council workman takes the beer for the firecracker; the raw shark on Fossegrimen's
+        // altar enchants the lyre (the strung lyre's Play only says a line, viking_olaf.rs2:212-214).
+        await op('wheel ladder down', { id: 1746, x: 2715, z: 3470 }, /climb-down/i, () => lv() === 0, 10);
+        await q.openDoor('wheel house door', 2716, 3472);
         await q.step('workman', async () => {
             const n = q.npc(NPC.workman.re);
             if (!n) return q.walk('to workman', [{ x: NPC.workman.at.x, z: NPC.workman.at.z + 1, tol: 3 }]);
             return q.useOnNpc(ITEM.beer, n);
         }, got(ITEM.cracker), 20, 4);
         await closeDlg();
+        await q.walk('to altar', [{ x: LOC.altar.x, z: LOC.altar.z + 1, tol: 1 }]);
+        await useLoc('altar', ITEM.rawShark, LOC.altar, got(ITEM.lyreEnchanted));
         q.milestone('east2');
     }
     if (from('draugen')) {
         // 16. The talisman points toward the Draugen's butterfly (viking_sigil.rs2:192-237); within 3 tiles the Draugen
         // (level 69) appears; dead, it charges the talisman. Sigli takes it.
+        // The Butterfly NPC near the bot is not the one the talisman tracks (proof trial 1: it sat on the bot's tile),
+        // so only the talisman's direction is used: hops of 14 tiles, halved each time the direction turns back.
         const dr = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.id === DRAUGEN);
-        const fly = () => (q.st()?.nearbyNpcs ?? []).find((n: any) => n.id === BUTTERFLY);
-        let seen = false;
-        for (let i = 0; i < 40 && !q.has(ITEM.talisman); i++) {
+        let seen = false, hop = 14, prev: [number, number] | undefined;
+        for (let i = 0; i < 120 && !q.has(ITEM.talisman); i++) {
             await q.guard('draugen');
             const d = dr();
             if (d) {
@@ -285,23 +287,25 @@ try {
                 await q.waitUntil(() => !dr() || q.has(ITEM.talisman), 8);
                 continue;
             }
-            const f = fly();
-            if (f && f.distance > 2) await q.walk('to butterfly', [{ x: f.x, z: f.z, tol: 1 }]);
+            if (seen) { await q.waitUntil(() => q.has(ITEM.talisman) || !!dr(), 4); if (q.has(ITEM.talisman)) break; }
             const m0 = msgs(/talisman guides you|draugen is here|moved elsewhere/i);
             await invOp(ITEM.talismanUn, /locate/i);
             await q.waitUntil(() => msgs(/talisman guides you|draugen is here|moved elsewhere/i) > m0 || !!dr(), 4);
             await q.waitTicks(1);
             const m = (q.st()?.gameMessages ?? []).filter((g: any) => g.type === 0).map((g: any) => g.text).reverse().find((t: string) => /talisman guides you|draugen is here/i.test(t)) ?? '';
-            console.log(`DRAUGEN ${q.T()} ${x()},${z()} ${m} fly=${f ? `${f.x},${f.z}` : '-'}`);
-            if (dr() || /draugen is here/i.test(m)) continue;
+            console.log(`DRAUGEN ${q.T()} ${x()},${z()} hop=${hop} ${m}`);
+            if (/draugen is here/i.test(m) || dr()) { await q.waitUntil(() => !!dr(), 5); continue; }
+            if (/moved elsewhere/i.test(lastMsg())) { hop = 14; prev = undefined; }
             const g = m.match(/guides you ([a-z-]+)/i)?.[1]?.toLowerCase();
             const v = g ? DIRS[g] : undefined;
             if (!v) { await q.waitTicks(2); continue; }
-            // A hop of 14 tiles; the client routes round water and trees (no fail on a blocked goal).
-            const hx = x() + v[0] * 14, hz = z() + v[1] * 14;
+            if (prev && prev[0] * v[0] + prev[1] * v[1] < 0) hop = Math.max(2, Math.floor(hop / 2));
+            prev = v;
+            // The client routes round water and trees (no fail on a blocked goal).
+            const hx = x() + v[0] * hop, hz = z() + v[1] * hop;
             await q.s.direct({ type: 'walkTo', x: hx, z: hz, running: true, reason: 'SDK' });
             let still = 0, at0 = '';
-            await q.waitUntil(() => { const at = `${x()},${z()}`; still = at === at0 ? still + 1 : 0; at0 = at; return q.near(hx, hz, 2) || still >= 3 || !!fly() || !!dr(); }, 30);
+            await q.waitUntil(() => { const at = `${x()},${z()}`; still = at === at0 ? still + 1 : 0; at0 = at; return q.near(hx, hz, 1) || still >= 3 || !!dr(); }, 30);
         }
         if (!q.has(ITEM.talisman)) await q.fail(`draugen seen=${seen}`);
         q.milestone('draugen');
