@@ -7,14 +7,70 @@
       "script": "scripts/gather-fire-combat.ts",
       "role": "combat",
       "goal": "Kill Fire Giants in Waterfall Dungeon, bank loot, and return forever",
-      "enabled": true,
-      "repeat": true,
+      "enabled": false,
+      "repeat": false,
       "env": {
         "CAP": "9000",
         "RANDOM_EVENTS": "0",
         "FOOD_FROM": "Bigpackage"
       },
-      "note": "Perpetual Fire Giant combat loop: Waterfall dungeon kills, looting runes, gems and equipment, banking at Ardougne North bank, returning forever."
+      "note": "Paused: one Fire Giant pilot per run; 0 kills with a bronze sword. Needs a better owned weapon first."
+    },
+    {
+      "account": "Pocketrocket",
+      "script": "scripts/goldfarm-stable.ts",
+      "role": "thieving",
+      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
+      "enabled": true,
+      "repeat": true,
+      "env": {
+        "TICKS": "9000",
+        "BANK_AT": "25000",
+        "FOOD_FROM": "Bigpackage"
+      },
+      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
+    },
+    {
+      "account": "mmtha0205",
+      "script": "scripts/goldfarm-stable.ts",
+      "role": "thieving",
+      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
+      "enabled": true,
+      "repeat": true,
+      "env": {
+        "TICKS": "9000",
+        "BANK_AT": "25000",
+        "FOOD_FROM": "Bigpackage"
+      },
+      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
+    },
+    {
+      "account": "mmthv2350",
+      "script": "scripts/goldfarm-stable.ts",
+      "role": "thieving",
+      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
+      "enabled": true,
+      "repeat": true,
+      "env": {
+        "TICKS": "9000",
+        "BANK_AT": "25000",
+        "FOOD_FROM": "Bigpackage"
+      },
+      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
+    },
+    {
+      "account": "Pocketpython",
+      "script": "scripts/goldfarm-stable.ts",
+      "role": "thieving",
+      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
+      "enabled": true,
+      "repeat": true,
+      "env": {
+        "TICKS": "9000",
+        "BANK_AT": "25000",
+        "FOOD_FROM": "Bigpackage"
+      },
+      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
     },
     {
       "account": "Masterbaiter",
@@ -52,7 +108,7 @@
       "env": {
         "FROM": "Masterbaiter",
         "FEATHERS": "500",
-        "FARMERS": "Pocketrocket,mmtha0205,mmthv2350,Pocketpython,mmsmk1232,Mightyrod",
+        "FARMERS": "Pocketrocket,mmtha0205,mmthv2350,Pocketpython",
         "CAP": "9000"
       },
       "note": "On-demand food courier & walking bank: carries food notes from Draynor to Ardougne when any farmer or combat account drops below safe food buffer.",
@@ -60,9 +116,7 @@
         "Pocketrocket",
         "mmtha0205",
         "mmthv2350",
-        "Pocketpython",
-        "mmsmk1232",
-        "Mightyrod"
+        "Pocketpython"
       ],
       "foodLowBelow": 80,
       "foodSourceAccount": "Masterbaiter",
@@ -132,6 +186,14 @@
       "repeat": false
     },
     {
+      "account": "mmsmk1232",
+      "script": "scripts/goldfarm-stable.ts",
+      "role": "thieving",
+      "goal": "Thieving 1: train to 55 before joining the knight pool",
+      "enabled": false,
+      "repeat": false
+    },
+    {
       "account": "AFKnight",
       "script": "scripts/gather-combat.ts",
       "role": "combat",
@@ -172,27 +234,6 @@
       "role": "woodcutting",
       "goal": "Woodcutting supply: bank oak/yew logs for fletching",
       "enabled": false
-    },
-    {
-      "accounts": [
-        "Pocketrocket",
-        "mmtha0205",
-        "mmthv2350",
-        "Pocketpython",
-        "mmsmk1232"
-      ],
-      "host": true,
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food (hosted 5-bot pool)",
-      "enabled": true,
-      "repeat": true,
-      "env": {
-        "TICKS": "9000",
-        "BANK_AT": "25000",
-        "FOOD_FROM": "Bigpackage"
-      },
-      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
     }
   ]
 }

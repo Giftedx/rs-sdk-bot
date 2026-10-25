@@ -33,21 +33,29 @@ export interface FleetAccount {
 
 export interface FleetPlan { maxBots: number; minFreeGB: number; jobs: Job[]; }
 
-const THIEVES = ['Pocketrocket', 'mmtha0205', 'mmthv2350', 'Pocketpython', 'mmsmk1232'];
+// Thieving 99 accounts only. mmsmk1232 (Thieving 1, status 2026-10-25) idled 2400 ticks at the knights; the knights
+// need 55 and goldfarm-stable.ts farmStartProblem refuses it, so it stays out of the pool until it is trained.
+const THIEVES = ['Pocketrocket', 'mmtha0205', 'mmthv2350', 'Pocketpython'];
 
 // Active live accounts first. New accounts are disabled until an operator creates their bot.env and flips enabled.
 export const FLEET: FleetAccount[] = [
     {
         name: 'Mightyrod', server: 'rs-sdk-demo.fly.dev', role: 'combat',
         goal: 'Kill Fire Giants in Waterfall Dungeon, bank loot, and return forever',
-        script: 'scripts/gather-fire-combat.ts', enabled: true, repeat: true,
+        // Paused 2026-10-25: 0 credited kills in every live pilot. Best run: bronze sword (1277, the best weapon it
+        // owns), 227 fight ticks, hpMin 29, HP guard retreat (.practice/swarm-logs/Mightyrod.log). The script is ONE
+        // finite pilot, not a loop. Re-enable after it owns a real weapon (e.g. a rune scimitar) and a pilot kills.
+        script: 'scripts/gather-fire-combat.ts', enabled: false, repeat: false,
         env: { CAP: '9000', RANDOM_EVENTS: '0', FOOD_FROM: 'Bigpackage' },
-        note: 'Perpetual Fire Giant combat loop: Waterfall dungeon kills, looting runes, gems and equipment, banking at Ardougne North bank, returning forever.',
+        note: 'Paused: one Fire Giant pilot per run; 0 kills with a bronze sword. Needs a better owned weapon first.',
     },
+    // One job per thief, not a shared host: a host starts only the accounts that are free at that moment, and the others
+    // then wait for that whole host to end (2026-10-25: two thieves sat offline "waiting: current mission still
+    // running" for a full run). Four single processes cost about 2.2 GB, well inside the 8 GB floor.
     ...THIEVES.map(name => ({
         name, server: 'rs-sdk-demo.fly.dev', role: 'thieving' as const,
-        goal: 'Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food (hosted 5-bot pool)',
-        script: 'scripts/goldfarm-stable.ts', enabled: true, repeat: true, hostGroup: 'thieving',
+        goal: 'Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food',
+        script: 'scripts/goldfarm-stable.ts', enabled: true, repeat: true,
         env: { TICKS: '9000', BANK_AT: '25000', FOOD_FROM: 'Bigpackage' },
         note: '5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier.',
     })),
@@ -69,8 +77,8 @@ export const FLEET: FleetAccount[] = [
         name: 'Bigpackage', server: 'rs-sdk-demo.fly.dev', role: 'courier',
         goal: 'Walking bank: collect cooked food from Masterbaiter and trade on demand to whoever needs it',
         script: 'scripts/foodcourier.ts', enabled: true, repeat: true,
-        env: { FROM: 'Masterbaiter', FEATHERS: '500', FARMERS: [...THIEVES, 'Mightyrod'].join(','), CAP: '9000' },
-        whenFoodLowFrom: [...THIEVES, 'Mightyrod'], foodLowBelow: 80, foodSourceAccount: 'Masterbaiter',
+        env: { FROM: 'Masterbaiter', FEATHERS: '500', FARMERS: THIEVES.join(','), CAP: '9000' },
+        whenFoodLowFrom: [...THIEVES], foodLowBelow: 80, foodSourceAccount: 'Masterbaiter',
         sourceFoodMinimum: 1,
         note: 'On-demand food courier & walking bank: carries food notes from Draynor to Ardougne when any farmer or combat account drops below safe food buffer.',
     },
@@ -114,6 +122,11 @@ export const FLEET: FleetAccount[] = [
         script: 'scripts/gather-combat.ts', enabled: false, repeat: false,
     },
     // Proposed clean-pun accounts. Disabled until created and reviewed; no sexual names are generated.
+    {
+        name: 'mmsmk1232', server: 'rs-sdk-demo.fly.dev', role: 'thieving',
+        goal: 'Thieving 1: train to 55 before joining the knight pool',
+        script: 'scripts/goldfarm-stable.ts', enabled: false, repeat: false,
+    },
     { name: 'AFKnight', server: 'rs-sdk-demo.fly.dev', role: 'combat', goal: 'Combat support: cowhides, bones and beef near Lumbridge', script: 'scripts/gather-combat.ts', enabled: false },
     { name: 'OreElse', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Mining supply: bank iron and coal for smithing', script: 'scripts/gather-ore.ts', enabled: false },
     { name: 'FishAndChips', server: 'rs-sdk-demo.fly.dev', role: 'fishing', goal: 'Fishing supply: fly fish and cook trout/salmon for the courier', script: 'scripts/fishcook.ts', enabled: false },
