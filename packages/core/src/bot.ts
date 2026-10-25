@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { connectInProcess, type Session } from './inprocess';
+import { isLocalServer } from './localserver';
 import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { startLedger, formatLedger } from './ledger';
@@ -21,7 +22,7 @@ export function serverFromEnv(env: string): string {
 // rs-sdk's bot.env template defaults to the public demo server, so a practice bot whose --local rewrite failed
 // would silently log in there. Anything but our local server needs DEMO_OK=1, set on purpose by the caller.
 export function assertServerAllowed(server: string, env: Record<string, string | undefined> = process.env): void {
-    if (/^(localhost|127\.)/.test(server)) return;
+    if (isLocalServer(server)) return;
     if (env.DEMO_OK === '1') return;
     throw new Error(`refusing to connect to ${server}: not the local practice server; set DEMO_OK=1 to allow it on purpose`);
 }

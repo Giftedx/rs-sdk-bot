@@ -4,6 +4,7 @@ import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import { loadPathfinding } from './pathcache';
 import { assertLoginAllowed } from './haggisgate';
+import { isLocalServer } from './localserver';
 import { ownedAccounts, recordOwnedAccount, tradeRefusal } from './tradeguard';
 import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
 
@@ -195,7 +196,7 @@ export interface Session {
 // The lite session spreads logins with a random jitter on remote servers (session.ts:122, 5 s default) to spare the
 // login server. Skip it only for our own local practice server.
 export function loginJitterFor(host: string): number | undefined {
-    return /^(localhost|127\.)/.test(host) ? 0 : undefined;
+    return isLocalServer(host) ? 0 : undefined;
 }
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');

@@ -11,7 +11,10 @@ export function assertLoginAllowed(name: string, now = Date.now(), env = process
     if (name.toLowerCase() !== MAIN) return;
     if (env.HAGGIS_RUN !== '1') throw new Error('Haggis login refused: HAGGIS_RUN=1 is not set (the main account runs only the final route)');
     if (!existsSync(GATE_FILE)) throw new Error('Haggis login refused: no gate file; run bun scripts/haggis-gate.ts');
-    const g = JSON.parse(readFileSync(GATE_FILE, 'utf8')) as { go?: boolean; at?: number; gates?: { name: string; pass: boolean }[] };
+    let g: { go?: boolean; at?: number; gates?: { name: string; pass: boolean }[] };
+    try { g = JSON.parse(readFileSync(GATE_FILE, 'utf8')); }
+    catch (e) { throw new Error(`Haggis login refused: gate file unreadable (${String(e).slice(0, 120)}); run bun scripts/haggis-gate.ts`); }
+    if (!g || typeof g !== 'object') throw new Error('Haggis login refused: gate file is not an object; run bun scripts/haggis-gate.ts');
     const failed = (g.gates ?? []).filter(x => !x.pass).map(x => x.name);
     if (g.go !== true || failed.length) throw new Error(`Haggis login refused: gates not passed (${failed.join(', ') || 'go=false'})`);
     if (!g.at || now - g.at > 10 * 60_000) throw new Error('Haggis login refused: gate check is older than 10 minutes; run it again');

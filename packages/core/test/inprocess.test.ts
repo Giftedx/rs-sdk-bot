@@ -121,6 +121,8 @@ test('login jitter is 0 only for a local server; any other host keeps the upstre
     expect(loginJitterFor('localhost:8888')).toBe(0);
     expect(loginJitterFor('127.0.0.1:8888')).toBe(0);
     expect(loginJitterFor('rs-sdk-demo.fly.dev')).toBeUndefined(); // undefined = session.ts default (5 s for remote)
+    expect(loginJitterFor('localhost.example.com')).toBeUndefined();
+    expect(loginJitterFor('127.evil.io')).toBeUndefined();
 });
 
 test('bank readiness follows full inventory packets, keeps real empty updates, and rejects other mutations', async () => {

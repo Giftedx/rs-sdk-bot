@@ -48,5 +48,8 @@ test('a non-local server is refused unless DEMO_OK=1 is set on purpose', async (
     const { assertServerAllowed } = await import('../src/bot');
     expect(() => assertServerAllowed('localhost:8888', {})).not.toThrow();
     expect(() => assertServerAllowed('rs-sdk-demo.fly.dev', {})).toThrow(/DEMO_OK/);
+    // A prefix match once let these through: they look local but resolve anywhere.
+    expect(() => assertServerAllowed('localhost.example.com:443', {})).toThrow(/DEMO_OK/);
+    expect(() => assertServerAllowed('127.evil.io', {})).toThrow(/DEMO_OK/);
     expect(() => assertServerAllowed('rs-sdk-demo.fly.dev', { DEMO_OK: '1' })).not.toThrow();
 });
