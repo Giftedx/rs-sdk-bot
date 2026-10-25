@@ -1,5 +1,7 @@
-# Third-party clones. Re-create with scripts/clone-vendor.sh
-/vendor/
+# Third-party clones. Re-create with scripts/clone-vendor.sh.
+# rs-sdk is a tracked submodule (pinned by gitlink and rs-sdk.pin), so it is un-ignored.
+/vendor/*
+!/vendor/rs-sdk
 # YouTube auto-captions: private study copy, do not publish
 node_modules/
 .env
