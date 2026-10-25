@@ -28,6 +28,7 @@ Already cloned without `--recurse-submodules`? Run `git submodule update --init`
 ## Safety
 
 - The default server is the local practice server (`localhost:8888`). Connecting anywhere else needs `DEMO_OK=1` set on purpose (`packages/core/src/bot.ts`).
+- The dashboard listens on `127.0.0.1` only. `DASH_HOST=0.0.0.0` opens it to the network on purpose; its state shows bot positions, inventories, banks and account names.
 - `bot.env` holds bot credentials. It is gitignored. Never commit it or print its `PASSWORD=` line.
 - Bots log out before they exit, so playtime stops. Stop a running bot with a stop file in `.practice/` (see `packages/core/src/bot.ts`).
 

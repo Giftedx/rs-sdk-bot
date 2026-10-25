@@ -32,6 +32,9 @@ const FILES = {
     haggisPlan: join(import.meta.dir, 'haggis-plan.json'),
 };
 const PORT = Number(process.env.DASH_PORT ?? 3100);
+// The state holds bot positions, inventories, banks and account names, so only this PC listens by default.
+// DASH_HOST=0.0.0.0 opens it to the network on purpose (the reveal routes still answer loopback only).
+const HOST = process.env.DASH_HOST ?? '127.0.0.1';
 const DEMO = 'https://rs-sdk-demo.fly.dev';
 const BANKER = 'Moneyshot';
 const MAIN = 'Haggis';
@@ -1057,6 +1060,7 @@ function viewerAsset(pathname:string):Response|null {
     }catch{return new Response('not found',{status:404});}
 }
 Bun.serve({
+    hostname: HOST,
     port: PORT,
     idleTimeout: 0,
     fetch(req, server) {
@@ -1087,7 +1091,7 @@ Bun.serve({
         if (url.pathname === '/api/our-names') return Response.json(liveAccounts().filter(n => n !== MAIN), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (['/api/reveal', '/api/hidden-names'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
         if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
-        // The server listens on every address; only this PC may read the main account's name.
+        // The server may listen on every address (DASH_HOST); only this PC may read the main account's name.
 
         if (url.pathname === '/api/reveal') return new Response(MAIN, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
@@ -1104,4 +1108,4 @@ Bun.serve({
         return new Response('not found', { status: 404 });
     },
 });
-console.log(`dashboard: http://localhost:${PORT}`);
+console.log(`dashboard: http://localhost:${PORT} (listening on ${HOST})`);
