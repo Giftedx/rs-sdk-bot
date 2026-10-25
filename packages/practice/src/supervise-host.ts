@@ -1,11 +1,13 @@
 // Keeps a bot host run going (packages/core/src/host.ts: N accounts in one process). Same rules as supervise.ts,
 // applied per account: an account is done after RESULT ok, stopped after a stop file or "no food", and never run
-// again after a death. The host is restarted with only the accounts that failed otherwise, until each account has
+// again after a death or no-progress block. The host is restarted with only the accounts that failed otherwise, until each account has
 // an end or the restarts run out.
 // CLI: bun packages/practice/src/supervise-host.ts <script> <maxRestarts> <account...>  (env passes through)
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-export type AccountEnd = 'done' | 'stopped' | 'died' | 'gave-up';
+import { isNoProgressFailure } from './supervise';
+
+export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up';
 
 // The end an account's last RESULT line means, or null when the account must run again. Same order as supervise.ts.
 export function classify(result: string | undefined, stopFile: boolean): AccountEnd | null {
@@ -16,6 +18,7 @@ export function classify(result: string | undefined, stopFile: boolean): Account
     if (/died=true|RESULT fail died/.test(r)) return 'died';
     // Out of food: a restart only logs in again and finds the same empty bank.
     if (/RESULT fail no food/.test(r)) return 'stopped';
+    if (isNoProgressFailure(r)) return 'blocked';
     return null;
 }
 

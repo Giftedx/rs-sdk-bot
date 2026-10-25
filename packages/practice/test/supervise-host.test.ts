@@ -42,3 +42,19 @@ test('a host that exits with no RESULT is restarted; restarts run out to gave-up
     expect(calls).toEqual([['a', 'b'], ['a', 'b'], ['b']]);
     expect(r.ends).toEqual({ a: 'stopped', b: 'gave-up' });
 });
+
+
+test('host blocks a no-progress account on its first run while retrying a transient login for its peer', async () => {
+    const calls: string[][] = [];
+    const result = await superviseHost(['stuck', 'transient', 'dead'], {
+        run: async accounts => {
+            calls.push(accounts);
+            return calls.length === 1
+                ? { stdout: '[stuck] RESULT fail Error: spinning made no progress\n[transient] RESULT fail login timeout\n[dead] RESULT fail died=true', exitCode: 1 }
+                : { stdout: '[transient] RESULT ok collected=20', exitCode: 0 };
+        },
+        stopped: () => false, pause: async () => {}, maxRestarts: 20,
+    });
+    expect(calls).toEqual([['stuck', 'transient', 'dead'], ['transient']]);
+    expect(result.ends).toEqual({ stuck: 'blocked', transient: 'done', dead: 'died' });
+});

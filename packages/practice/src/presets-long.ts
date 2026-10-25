@@ -180,7 +180,33 @@ const VB_MANNI = (VB_DRAUGEN & ~0b111 & ~(3 << 12)) | (2 << 12);   // Manni done
 const VB_OLAF = (VB_MANNI & ~(7 << 20) & ~(15 << 27)) | (7 << 20);  // Olaf done
 const VB_PEER = VB_OLAF | (3 << 18);                                // Peer done
 
+// Throne of Miscellania (scripts/generated/quest-misc.ts): Heroes' Quest (188 = 15) and The Fremennik Trials (347 =
+// 10) done (misc_door_guard.rs2:10, misc_journal.rs2:8-17). Heroes' Quest needs a partner account that is not scripted
+// yet, so this preset sets it. Worn: an iron sickle (3899, tradeable; Gardener Gunnhild sells it), which the herb
+// weeding needs (area_miscellania/scripts/weed_herbs.rs2:19-21). Helper items (tradeable): flowers (2472), a shortbow,
+// a gold ring for Princess Astrid (princess_astrid.rs2:622-694); an iron bar for Derrik's nib and logs for the pen
+// (derrik.rs2:32-45, quest_misc.rs2:9-19). %misc_quest is varp 359; %misc_varbit_1 (361) holds the approval (bits
+// 18-24) and the affection (25-31); %misc_varbit_2 (362) bit 30 audience, bit 31 visited (quest_misc.varbit).
+const MISC_ITEMS: Array<number | [number, number]> = [2472, 841, 1635, 2351, 1511];
+const MISC_WORN = wear([[3899, 3]]);
+const MISC_V2 = (1 << 30) | (1 << 31);                   // audience granted, island visited (negative as int32)
+function misc(position: { x: number; z: number; level?: number }, varps: Record<number, number> = {}, inv: Array<number | [number, number]> = MISC_ITEMS): SaveConfig {
+    return { position: { level: 0, ...position }, skills: ALL_99, equipment: MISC_WORN, varps: { ...DONE, 188: 15, 347: 10, ...varps }, inventory: items(inv) };
+}
+const MISC_WED = (40 << 25);                              // %misc_affection 40: Astrid agreed to marry
+const MISC_FULL = MISC_WED | (96 << 18);                  // and the approval at 75 % (96 of 127)
+
 export const LONG_PRESETS: Record<string, SaveConfig> = {
+    // North of the throne room door, level 1 of the Miscellania castle (King Vargas spawn 2501,3859,1,
+    // maps/m39_60.jm2), where the stairs from the ground floor arrive.
+    quest_misc: misc({ x: 2506, z: 3865, level: 1 }),
+    // Debug (MI_FROM=weed): by the herb garden, %misc_quest 10, Astrid agreed (approval 32).
+    quest_misc_weed: misc({ x: 2523, z: 3851 }, { 359: 10, 361: MISC_WED | (32 << 18), 362: MISC_V2 }, [2351, 1511]),
+    // Debug (MI_FROM=peace): by the herb garden, %misc_quest 10, Astrid agreed, approval 96.
+    quest_misc_peace: misc({ x: 2523, z: 3851 }, { 359: 10, 361: MISC_FULL, 362: MISC_V2 }, [2351, 1511]),
+    // Debug (MI_FROM=pen): north of the throne room door, %misc_quest 70 with the treaty (3896).
+    quest_misc_pen: misc({ x: 2506, z: 3865, level: 1 }, { 359: 70, 361: MISC_FULL, 362: MISC_V2 }, [2351, 1511, 3896]),
+
     // In King Lathas's room, level 1 of Ardougne castle.
     quest_regicide: rg({ x: 2577, z: 3292, level: 1 }, 1, [3206, [2532, 2], 954, ...RG_TRAV, 1759, 1759, 1759, 1759, ...RG_RUNES]),
     // Debug (RG_FROM=tir1): at the temple exit in Tirannwn, %regicide_quest 2.
@@ -249,7 +275,7 @@ export const LONG_PRESETS: Record<string, SaveConfig> = {
     quest_viking_olaf1: viking({ x: 2649, z: 3661 }, { 347: 2, 348: VB_START }, [...VK_ITEMS, 3697]),
     quest_viking_chain: viking({ x: 2658, z: 3661 }, { 347: 2, 348: VB_OLAF1 }, [...VK_ITEMS, 3697, 3688, 3695]),
     quest_viking_east2: viking({ x: 2641, z: 3682 }, { 347: 3, 348: VB_CHAIN }, [[995, 300], 1917, 590, 1359, 946, 1965, 1942, 1957, 383, 3697, 3688, 3695]),
-    quest_viking_draugen: viking({ x: 2655, z: 3594 }, { 347: 3, 348: VB_EAST2 }, [[995, 50], 590, 1359, 946, 3697, 3690, 3712, 3713]),
+    quest_viking_draugen: viking({ x: 2626, z: 3600 }, { 347: 3, 348: VB_EAST2 }, [[995, 50], 590, 1359, 946, 3697, 3690, 3712, 3713]),
     quest_viking_manni: viking({ x: 2660, z: 3655 }, { 347: 4, 348: VB_DRAUGEN }, [[995, 50], 590, 1359, 946, 3690, 3712, 3713]),
     quest_viking_olaf: viking({ x: 2664, z: 3674 }, { 347: 5, 348: VB_MANNI }, [[995, 50], 590, 1359, 946, 3690]),
     quest_viking_peer: viking({ x: 2660, z: 3683 }, { 347: 6, 348: VB_OLAF }, [[995, 50], 590, 1359, 946, 3689]),

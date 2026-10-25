@@ -38,6 +38,18 @@ function gtPreset(stage: number, position: { x: number; z: number; level: number
 
 export const PRESETS: Record<string, SaveConfig> = {
     fresh_lumbridge: { position: LUMBRIDGE },
+    gather_flax: { position: { x: 2744, z: 3445, level: 0 } },
+    gather_yews: { position: { x: 2712, z: 3462, level: 0 }, skills: { Woodcutting: 99, Attack: 60 }, inventory: [{ id: 1359, count: 1 }] },
+    shop_catherby: { position: { x: 2822, z: 3442, level: 0 }, coins: 50000 },
+    gather_fish_catherby: { position: { x: 2840, z: 3432, level: 0 }, skills: { Fishing: 70 }, inventory: [{ id: 301, count: 1 }] },
+    spin_bowstrings_seers: { position: { x: 2727, z: 3492, level: 0 }, skills: { Crafting: 40 }, inventory: [{ id: 1779, count: 28 }], bank: [{ id: 1779, count: 100 }] },
+    gather_ore_varrock: { position: { x: 3286, z: 3368, level: 0 }, skills: { Mining: 50 }, inventory: [{ id: 1275, count: 1 }] },
+    smelt_bars_alkharid: { position: { x: 3274, z: 3186, level: 0 }, skills: { Smithing: 50 }, inventory: [{ id: 440, count: 28 }], bank: [{ id: 440, count: 200 }] },
+    fletch_arrows_bank: { position: { x: 2809, z: 3441, level: 0 }, skills: { Fletching: 80 }, inventory: [{ id: 53, count: 1000 }, { id: 44, count: 1000 }], bank: [{ id: 53, count: 5000 }, { id: 44, count: 5000 }] },
+    cook_food_catherby: { position: { x: 2816, z: 3443, level: 0 }, skills: { Cooking: 70 }, inventory: [{ id: 377, count: 28 }], bank: [{ id: 377, count: 200 }] },
+    brew_potions_bank: { position: { x: 3253, z: 3420, level: 0 }, skills: { Herblore: 50 }, inventory: [{ id: 99, count: 14 }, { id: 231, count: 14 }], bank: [{ id: 99, count: 100 }, { id: 231, count: 100 }] },
+    craft_jewelry_bank: { position: { x: 3269, z: 3167, level: 0 }, skills: { Crafting: 50 }, inventory: [{ id: 1755, count: 1 }, { id: 1623, count: 27 }], bank: [{ id: 1623, count: 100 }] },
+    gather_combat_druid: { position: { x: 3115, z: 9928, level: 0 }, skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60 }, equipment: [{ id: 1333, count: 1, slot: 3 }, { id: 1113, count: 1, slot: 4 }, { id: 1079, count: 1, slot: 7 }], inventory: [{ id: 379, count: 5 }] },
     // Trees within reach, measured by the 2026-10-22 spike run.
     wc_lumbridge: { position: { x: 3224, z: 3245, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // Lumbridge castle courtyard, ground floor (vendor/rs-sdk/learnings/walking.md: castle 3222,3218).

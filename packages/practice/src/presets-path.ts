@@ -13,9 +13,11 @@ import { QP_BEFORE_DRAGON } from './presets-dragon';
 // the fire) for 60 casts; 3 prayer potions (2434); 4 lobsters (379); 20 coins (a Khali brew is 5).
 const ARENA_SKILLS = { Attack: 94, Magic: 99, Prayer: 43, Agility: 76, Cooking: 99, Fletching: 99, Firemaking: 99, Crafting: 99, Smithing: 99, Herblore: 99, Runecraft: 99 };
 function arena(position: { x: number; z: number; level?: number }, stage = 0, quest: number[] = []): SaveConfig {
+    const varps: Record<number, number> = { 111: 9, 150: 160 };
+    if (stage) varps[17] = stage;
     return {
         position: { level: 0, ...position }, skills: ARENA_SKILLS, equipment: [{ id: 1387, count: 1, slot: 3 }],
-        varps: { 111: 9, 150: 160, ...(stage ? { 17: stage } : {}) }, coins: 20,
+        varps, coins: 20,
         inventory: [[565, 60], [556, 300]].map(([id, count]) => ({ id: id!, count: count! }))
             .concat([2434, 2434, 2434, 379, 379, 379, 379, ...quest].map(id => ({ id, count: 1 }))),
     };
