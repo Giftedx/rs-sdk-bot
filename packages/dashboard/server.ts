@@ -8,9 +8,12 @@
 // One state is built every 2 s while someone watches and sent to every client over server-sent events.
 // Files it keeps: .practice/events.jsonl (phase changes), .practice/results.jsonl (RESULT lines),
 // .practice/rank-history.jsonl (rank changes). It reads .practice/vault-log.jsonl (the banker's transfers).
-import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { appendFileSync, existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
 import { cpus, freemem, totalmem } from 'node:os';
+import { createHash } from 'node:crypto';
+import { collectionState, operationState, isLoopback, effectiveJob, productionGoal, boundedOperation, capacityState, hostStopNativeProof, productionReview, type NativeProof } from './collection';
+import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import { xpForLevel } from '../planner/src/curve';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule } from '../planner/src/haggis';
 
@@ -52,6 +55,7 @@ function tailJsonl<T>(file: string, n: number): T[] {
     } catch { return []; }
 }
 function append(file: string, doc: unknown) {
+    if (process.env.DASH_READ_ONLY === '1') return;
     try { appendFileSync(file, JSON.stringify(doc) + NL); } catch { /* locked or full: memory still has it */ }
 }
 // Re-reads a file only when its mtime changes.
@@ -226,7 +230,36 @@ function trackResult(s: Status) {
     results.length = Math.min(results.length, 300);
     append(FILES.results, r);
 }
-function scripts() {
+type ProofEntry = {proof: NativeProof; resultPrefix: string};
+let proofScanAt=0;
+let proofCache=new Map<string,ProofEntry>();
+function nativeProofs(now: number): Map<string,ProofEntry> {
+    if(now-proofScanAt<10_000)return proofCache;
+    proofScanAt=now;
+    const next=new Map<string,ProofEntry>(),dir=join(practice,'fleet-proof');
+    const boundedText=(path:string,max:number)=>{if(statSync(path).size>max)throw new Error('proof input too large');return readFileSync(path,'utf8');};
+    const digest=(path:string)=>createHash('sha256').update(boundedText(path,512_000)).digest('hex').toUpperCase();
+    try {
+        // Exact known harness family only. No path or evidence file comes from an HTTP argument.
+        const hashes={host:digest(join(root,'packages/core/src/host.ts')),worker:digest(join(root,'scripts/train-prayer.ts')),harness:digest(join(root,'scripts/measure/fleet-host-stop.ts'))};
+        for(const filename of readdirSync(dir).filter(f=>/^host-stop-fl[a-z0-9]+-snapshot\.json$/i.test(f)).slice(-64))try{
+            const path=join(dir,filename),s=JSON.parse(boundedText(path,256_000));
+            if(typeof s.actor!=='string'||filename!==`host-stop-${s.actor}-snapshot.json`
+                ||typeof s.sourcePath!=='string'||!/^\.practice\/fleet-proof\/prayer-fl[a-z0-9]+-source\.json$/i.test(s.sourcePath))continue;
+            const status=JSON.parse(boundedText(join(statusDir,`${s.actor}.json`),256_000));
+            const raw=boundedText(join(dir,`host-stop-${s.actor}.log`),2_000_000);
+            const proof=hostStopNativeProof(status,{filename,snapshot:s,raw,at:statSync(path).mtimeMs,
+                hashes:{...hashes,fixture:digest(join(dir,s.sourcePath.split('/').pop()!))}});
+            if(proof)next.set(s.actor.toLowerCase(),{proof,resultPrefix:String(status.result).slice(0,220)});
+        }catch{/* Missing, failed, changed-source or malformed evidence stays an ordinary raw result. */}
+    }catch{/* No supported proof family is available. */}
+    proofCache=next;return next;
+}
+function resultProof(r: Pick<Res,'name'|'text'>, proofs: Map<string,ProofEntry>) {
+    const entry=proofs.get(r.name.toLowerCase());
+    return entry&&r.text.startsWith(entry.resultPrefix)?entry.proof:null;
+}
+function scripts(proofs: Map<string,ProofEntry>) {
     const by = new Map<string, Res[]>();
     // A swarm run reports its job's goal text, a hand run its script name: count both under the script.
     const key = (g: string) => /^gold farm/i.test(g) ? 'goldfarm' : /^food chain: fish/i.test(g) ? 'fishcook' : /^food chain: courier/i.test(g) ? 'foodcourier' : g;
@@ -234,14 +267,16 @@ function scripts() {
     return [...by].map(([goal, l]) => {
         let streak = 0;
         for (const r of l) { if (r.ok === l[0]!.ok) streak++; else break; }
-        return { goal, runs: l.length, ok: l.filter(r => r.ok).length, streak, streakOk: l[0]!.ok, last: l[0]!.at, recent: l.slice(0, 12).map(r => r.ok) };
+        const proved=new Set(l.filter(r=>resultProof(r,proofs)).map(r=>r.name.toLowerCase())).size;
+        return { goal, runs: l.length, ok: l.filter(r => r.ok).length, streak, streakOk: l[0]!.ok, last: l[0]!.at, recent: l.slice(0, 12).map(r => r.ok),
+            proofs:{proved,stopCleanup:proved,failedWork:l.filter(r=>!r.ok).length} };
     }).sort((a, b) => b.last - a.last);
 }
 
 // ---------- machine: memory, CPU load, bun processes ----------
 let cpuPrev = cpus().map(c => c.times);
 let cpuPct = 0;
-const procs: { pid: number; script: string; started: number; mb: number }[] = [];
+const procs: { pid: number; script: string; started: number; mb: number; accounts: string[] }[] = [];
 setInterval(() => {
     const now = cpus().map(c => c.times);
     let busy = 0, all = 0;
@@ -267,7 +302,9 @@ async function scanProcs(force = false) {
             if (!pid || !created) continue;
             // Only the script file name: command lines never reach the page.
             const script = (cmd.join('|').match(/([\w.-]+\.(?:ts|js))\b/g) ?? []).pop() ?? 'bun';
-            procs.push({ pid: Number(pid), script, started: Date.parse(created), mb: Math.round(Number(ws) / 2 ** 20) });
+            const tokens = (cmd.join('|').match(/"[^"]*"|'[^']*'|[^\s]+/g) ?? []).map(t => t.replace(/^["']|["']$/g, '').toLowerCase());
+            const accounts = liveAccounts().filter(name => tokens.includes(name.toLowerCase()));
+            procs.push({ pid: Number(pid), script, started: Date.parse(created), mb: Math.round(Number(ws) / 2 ** 20), accounts });
         }
         procs.sort((a, b) => a.started - b.started);
     } catch { /* not Windows */ }
@@ -283,16 +320,22 @@ function connectFeed() {
         const ws = new WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
         ws.onopen = () => { world.connected = true; ws.send(JSON.stringify({ t: 'roster', on: true })); };
         ws.onmessage = e => {
-            const m = JSON.parse(String(e.data));
-            const now = Date.now();
-            if (m.t === 'hello') { world.players = m.players ?? world.players; world.tick = m.tick ?? world.tick; world.tickAt = now; world.tickMs = m.tickMs ?? 400; world.rev = m.rev ?? 0; }
-            if (m.t !== 'roster') return;
-            world.players = m.p.length;
-            if (m.k) { world.tick = m.k; world.tickAt = now; }
-            for (const p of m.p) {
-                const n = String(p[1]).toLowerCase();
-                if (!firstSeen.has(n)) firstSeen.set(n, now);
-                roster.set(n, { x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
+            try {
+                const m = JSON.parse(String(e.data));
+                const now = Date.now();
+                if (m.t === 'hello') { world.players = m.players ?? world.players; world.tick = m.tick ?? world.tick; world.tickAt = now; world.tickMs = m.tickMs ?? 400; world.rev = m.rev ?? 0; }
+                if (m.t !== 'roster') return;
+                if (!Array.isArray(m.p)) return;
+                world.players = m.p.length;
+                if (m.k) { world.tick = m.k; world.tickAt = now; }
+                for (const p of m.p) {
+                    if (!Array.isArray(p) || p.length < 6) continue;
+                    const n = String(p[1]).toLowerCase();
+                    if (!firstSeen.has(n)) firstSeen.set(n, now);
+                    roster.set(n, { x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
+                }
+            } catch (err) {
+                console.error(`world feed message failed: ${String(err)}`);
             }
         };
         ws.onclose = () => { world.connected = false; setTimeout(connectFeed, 5000); };
@@ -518,7 +561,7 @@ function vault(bots: any[], now: number) {
 
 // ---------- swarm controller (scripts/swarm.ts) ----------
 type SwarmJob = { account: string; script: string; role: string; goal: string; enabled: boolean; repeat: boolean; note: string; state: string; since: number | null };
-type Swarm = { at: number; freeGB: number; running: number; maxBots: number; jobs: SwarmJob[] };
+type Swarm = { at: number; freeGB: number; running: number; externalRunning?: number; pendingStartup?: number; pendingReserveGB?: number; minFreeGB?: number; maxBots: number; jobs: SwarmJob[] };
 const swarm = () => cached<Swarm | null>(FILES.swarm, t => JSON.parse(t) as Swarm, null);
 
 // ---------- owner request queue (research/owner-requests.md) ----------
@@ -636,7 +679,8 @@ function haggisPlan() {
 }
 
 // ---------- alerts ----------
-type Alert = { at: number; name: string; kind: 'death' | 'stuck' | 'idle' | 'logout'; text: string; practice?: boolean };
+type Alert = { at: number; name: string; kind: 'death' | 'failure' | 'blocked' | 'stuck' | 'idle' | 'logout' | 'efficiency'; text: string; practice?: boolean };
+const productionReviews=new Map<string,{at:number;texts:string[]}>();
 // Practice bots: every status file that ever named a localhost server, including ones too old for the roster.
 const practiceNames = () => new Set([...statusCache.values()].filter(c => /^localhost/.test(c.doc.server)).map(c => c.doc.name));
 function alerts(bots: any[], now: number): Alert[] {
@@ -647,12 +691,16 @@ function alerts(bots: any[], now: number): Alert[] {
     for (const b of bots) {
         if (!b.at) continue;
         const age = now - b.at;
+        if(b.result&&!b.practice&&/^ok\b/.test(String(b.result))) productionReviews.set(b.name,{at:b.at,texts:productionReview(b)});
+        const review=productionReviews.get(b.name);
+        if(review&&now-review.at<3_600_000)for(const text of review.texts)out.push({at:review.at,name:b.name,kind:'efficiency',text});
+        if (['failed','died','blocked'].includes(b.operation)) out.push({ at:b.at, name:b.name, kind:b.operation==='died'?'death':b.operation==='blocked'?'blocked':'failure', text:String(b.result||b.phase||'HP 0 observed').slice(0,110) });
         // Running = this process has printed no RESULT yet. No update for 60 s while running: stuck or crashed.
         // A job the swarm disabled or saw end is not stuck; without a swarm job, only the last 15 min count.
         const js = String(b.job?.state ?? '');
         const meant = b.job ? /^(running|starting|external)/.test(js) : age < 15 * 60_000;
         if (!b.result && meant && age > 60_000) out.push({ at: b.at, name: b.name, kind: 'stuck', text: `no status for ${Math.round(age / 1000)} s while running` });
-        if (b.fresh) {
+        if (b.fresh && !b.result) {
             const tl = String(b.timeline ?? ''), m = tl.match(/i+$/);
             if (m && m[0].length > 20) out.push({ at: b.at, name: b.name, kind: 'idle', text: `idle ${m[0].length} ticks now` });
             if (/logout fail/i.test(b.phase ?? '')) out.push({ at: b.at, name: b.name, kind: 'logout', text: b.phase });
@@ -677,7 +725,7 @@ function placeOf(p: { x: number; z: number } | undefined | null): string | null 
 
 // ---------- role-aware row data, picked from the swarm job's goal ----------
 function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: number | null) {
-    const goal = String(job?.goal ?? s.goal ?? '');
+    const goal = String(s.goal ?? job?.goal ?? '');
     const pack = s.inventory ?? [];
     if (/^gold farm/i.test(goal)) {
         const coins = coinsOf(s), start = runStartCoins.get(s.name + '|' + s.started);
@@ -759,6 +807,7 @@ function race() {
 }
 // The 5 go/no-go gates: scripts/haggis-gate.ts every 10 minutes; it writes .practice/haggis-go.json.
 async function runGate() {
+    if (process.env.DASH_READ_ONLY === '1') return;
     try { await Bun.spawn(['bun', join(root, 'scripts', 'haggis-gate.ts')], { stdout: 'ignore', stderr: 'ignore', cwd: root }).exited; } catch { /* next round */ }
 }
 setInterval(() => void runGate(), 600_000);
@@ -814,10 +863,13 @@ function shortPhase(ph: string) {
     return ph;
 }
 function buildState() {
-    const now = Date.now();
+    const proofs=nativeProofs(Date.now());
     const st = readStatuses();
     const sw = swarm();
-    const names = new Set([...liveAccounts(), ...st.keys()]);
+    // File/proof reads can span a newer controller publication. Compare those
+    // observations with the time after the reads, not the build's old start time.
+    const now = Date.now();
+    const names = new Set([...liveAccounts(), ...st.keys(), ...(sw?.jobs ?? []).map(j => j.account)]);
     const bots = [...names].map(name => {
         const s0 = st.get(name) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
         const live = roster.get(name.toLowerCase());
@@ -849,28 +901,35 @@ function buildState() {
         // An account can have two entries (an old disabled single job and a host job): the enabled one wins.
         // An entry without a script is a reservation (the main account), not a job.
         const jobRaw = mine.find(j => j.enabled && j.script) ?? mine.filter(j => j.script).pop() ?? null;
-        const job = byHand ? { ...(jobRaw ?? { account: name, repeat: false, since: null }), script: String(s0.goal), role: byHand.role, goal: byHand.goal, enabled: true, state: 'manual', note: `started by hand: ${s0.goal}` } as SwarmJob : jobRaw;
+        const jobBeforeStatus = byHand ? { ...(jobRaw ?? { account: name, repeat: false, since: null }), script: String(s0.goal), role: byHand.role, goal: byHand.goal, enabled: true, state: 'manual', note: `started by hand: ${s0.goal}` } as SwarmJob : jobRaw;
+        const job = effectiveJob(s, jobBeforeStatus, fresh);
+        const processActive = procs.some(p => p.accounts.some(a => a.toLowerCase() === name.toLowerCase()) && p.started <= (s.at ?? 0));
+        const currentGoal = String(s.goal || job?.goal || '');
+        // The status may carry a custom goal. Keep the configured script as
+        // classification evidence even when effectiveJob labels it manual.
+        const production = productionGoal(currentGoal, jobBeforeStatus?.script);
         const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
         return {
-            ...s, name, fresh, inWorld, live: inWorld ? live : null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
+            ...s, name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, reserved: name === MAIN }, now), live: inWorld ? live : null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
             practice: /^localhost/.test(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
             xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: spark.get(name) ?? [], rateSkill: skill ?? "all skills", xpLeft,
             eta: ticksLeft != null ? fmtTicks(ticksLeft) : null, finish: finish != null ? fmtTicks(finish) : null,
             pace: finish != null && top ? { top: top.name, topTime: fmtTicks(top.ticks), ahead: finish < top.ticks, gap: fmtTicks(Math.abs(top.ticks - finish)) } : null,
-            action: fresh ? ({ x: 'xp', m: 'move', a: 'anim', d: 'dialog', s: 'stun', i: 'idle' } as Record<string, string>)[last] ?? null : null,
+            action: fresh ? ({ x: 'xp', v: 'inventory', m: 'move', a: 'anim', d: 'dialog', s: 'stun', i: 'idle' } as Record<string, string>)[last] ?? null : null,
             phaseShort: shortPhase(ph), phaseSince: since?.at ?? null, phaseExact: since?.exact ?? false,
             uptime: s.started && s.at ? s.at - s.started : null,
             outcome: !res ? null : died(res) ? 'died' : /^ok\b/.test(res) ? 'ok' : 'fail',
-            job, reserved: name === MAIN || (reservedEntry && !job),
+            nativeProof: resultProof({name,text:res},proofs),
+            job, planJob: jobRaw, bounded: boundedOperation(s), reserved: name === MAIN || (reservedEntry && !job),
             // Training: a fresh bot whose goal skill is still below its target, not a gold farmer or a banker.
-            training: fresh && sk != null && sk.level < target && !/^gold farm|bank/i.test(String(job?.goal ?? s.goal ?? '')),
+            training: fresh && !production && sk != null && sk.level < target && !/^gold farm|bank/i.test(String(job?.goal ?? s.goal ?? '')),
             role4: roleView(s, job, fresh, r),
             // Newest RESULT this server saw for the account, and its newest death in the last 24 h.
-            lastRes: (() => { const x = newestRes.get(name); return x ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),
-            death: (() => { const x0 = newestDeath.get(name), x = x0 && now - x0.at < 86_400_000 ? x0 : null; return x ? { at: x.at, text: x.text } : null; })(),
+            lastRes: (() => { const x = newestRes.get(name); return x && (!s.started || x.at >= s.started) ? { at: x.at, ok: x.ok, died: died(x.text), text: x.text } : null; })(),
+            death: (() => { const x0 = newestDeath.get(name), x = x0 && now - x0.at < 86_400_000 && (!s.started || x0.at >= s.started) ? x0 : null; return x ? { at: x.at, text: x.text } : null; })(),
         };
     });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
@@ -892,6 +951,11 @@ function buildState() {
         return { board: e.board, top: t ? { name: t.name, level: null, time: t.value, ticks: null } : null, best: null, gap: null, kind: 'value' };
     })];
     const v = vault(bots, now);
+    const cargoDir = join(practice, 'cargo');
+    const cargo = existsSync(cargoDir) ? readdirSync(cargoDir).filter(f => f.endsWith('.json') && !f.startsWith('request-')).flatMap(f => {
+        try { return [JSON.parse(readFileSync(join(cargoDir, f), 'utf8'))]; } catch { return []; }
+    }) : [];
+    const collection = collectionState(bots, liveAccounts(), cargo, tailJsonl<any>(FILES.vault, 100_000), now);
     if (!vaultTrend.length || now - vaultTrend[vaultTrend.length - 1]!.at > 60_000) { vaultTrend.push({ at: now, value: Math.round(v.value), coins: v.coins }); if (vaultTrend.length > 240) vaultTrend.shift(); }
     const farmers = (bots as any[]).filter(b => b.role4?.kind === 'gold' && !b.practice);
     const economy = {
@@ -913,13 +977,14 @@ function buildState() {
     return {
         now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards,
         events: events.slice(0, 160).map(e => ({ ...e, text: shortPhase(e.text), full: e.text, practice: prac.has(e.name) })),
-        results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name) })), scripts: scripts(), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
-        swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
+        results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name),nativeProof:resultProof(r,proofs) })), scripts: scripts(proofs), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
+        capacity: capacityState(sw,sys.freeGB,now),
+        swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, externalRunning: sw.externalRunning ?? null, pendingStartup: sw.pendingStartup ?? null, pendingReserveGB: sw.pendingReserveGB ?? null, minFreeGB: sw.minFreeGB ?? null, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
         viewerTimings: viewerTimings.slice(0, 20),
         race: race(), gates: gates(), chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
         pageVersion: (() => { try { return statSync(join(import.meta.dir, 'index.html')).mtimeMs; } catch { return 0; } })(),
-        icons, vault: v, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
+        icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
 }
 
@@ -931,7 +996,33 @@ let latest = { at: 0, json: '' };
 function current() {
     // The main account's name never leaves the server unasked: every string value has it swapped for a marker, which
     // the page draws as a blurred block (owner rule: screenshots must not show it). /api/reveal returns it on a click.
-    if (Date.now() - latest.at > 1500) latest = { at: Date.now(), json: JSON.stringify(buildState(), (_k, v) => (typeof v === 'string' ? v.replace(SECRET_RE, SECRET_MARK) : v)) };
+    if (Date.now() - latest.at > 1500) {
+        try {
+            latest = { at: Date.now(), json: JSON.stringify(buildState(), (_k, v) => (typeof v === 'string' ? v.replace(SECRET_RE, SECRET_MARK) : v)) };
+        } catch (e) {
+            // A malformed status file or a transient read failure must not stop the dashboard for every client.
+            // Keep the last good state, and expose the failure so the page can show it.
+            console.error(`state build failed: ${String(e)}`);
+            if (latest.json) {
+                try {
+                    const stale = JSON.parse(latest.json);
+                    stale.stateError = String(e);
+                    latest = { at: Date.now(), json: JSON.stringify(stale) };
+                } catch {
+                    // If the previous state cannot be parsed, fall through to a minimal error state.
+                }
+            }
+            if (!latest.json) {
+                latest = { at: Date.now(), json: JSON.stringify({
+                    now: Date.now(), stateError: String(e), bots: [], boards: [], events: [], results: [],
+                    scripts: [], alerts: [], requests: [], mainPlan: null, capacity: null, swarm: null,
+                    viewerTimings: [], race: null, gates: [], chain: null, gapHistory: [], economy: null,
+                    pageVersion: 0, icons: {}, vault: null, collection: null, map: { ...MAP, ready: false },
+                    sys: null, snapshotAt: null, liveTopsAt: 0, liveTops: 0, world: {}, worldPlayers: 0,
+                }) };
+            }
+        }
+    }
     return latest.json;
 }
 setInterval(() => {
@@ -942,11 +1033,45 @@ setInterval(() => {
 
 // The page embeds the rs-world viewer (COEP require-corp); credentialless keeps Google Fonts loadable.
 const ISO = { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'credentialless' };
+const viewerRoot=join(root,'vendor','rs-world'),viewerBuild=join(viewerRoot,'build'),viewerCaches=join(viewerRoot,'caches');
+const VIEWER_ISO={...ISO,'Cross-Origin-Embedder-Policy':'require-corp','Cross-Origin-Resource-Policy':'same-origin'};
+function viewerAvailable() {
+    try {
+        const text=readFileSync(join(viewerBuild,'asset-manifest.json'),'utf8');
+        if(createHash('sha256').update(text).digest('hex').toUpperCase()!==VIEWER_MANIFEST_SHA256)return false;
+        const manifest=JSON.parse(text);
+        const files=[manifest.files?.['main.js'],manifest.files?.['main.css']];
+        return existsSync(join(viewerBuild,'index.html'))&&existsSync(join(viewerCaches,'caches.json'))
+            &&files.every(p=>typeof p==='string'&&/^\/static\/(?:js|css)\/[\w.-]+$/.test(p)&&existsSync(join(viewerBuild,p.slice(1))));
+    }catch{return false;}
+}
+function viewerAsset(pathname:string):Response|null {
+    const route=viewerAssetRoute(pathname);
+    if(route===null)return null;
+    if(route==='bad')return new Response('bad viewer path',{status:400});
+    const base=route.root==='static'?join(viewerBuild,'static'):viewerCaches;
+    try {
+        const realBase=realpathSync(base),file=realpathSync(resolve(base,route.relative));
+        if(!file.startsWith(realBase+sep)||!statSync(file).isFile())return new Response('not found',{status:404});
+        return new Response(Bun.file(file),{headers:{...VIEWER_ISO,'cache-control':route.root==='static'?'public,max-age=3600':'no-cache'}});
+    }catch{return new Response('not found',{status:404});}
+}
 Bun.serve({
     port: PORT,
     idleTimeout: 0,
     fetch(req, server) {
         const url = new URL(req.url);
+        if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
+        if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
+        if(url.pathname==='/viewer'||url.pathname==='/viewer/') {
+            if(!viewerAvailable())return new Response('3D viewer assets unavailable',{status:503});
+            // Native isolation headers replace this root-scoped service worker;
+            // the viewer must not install a worker over the dashboard itself.
+            const html=readFileSync(join(viewerBuild,'index.html'),'utf8').replace(/<script\s+src="\/coi-serviceworker\.js"><\/script>/,'')
+                .replace('<head>','<head><script src="/api/viewer-bridge.js"></script>');
+            return new Response(html,{headers:{...VIEWER_ISO,'content-type':'text/html;charset=utf-8','cache-control':'no-store'}});
+        }
+        const asset=viewerAsset(url.pathname);if(asset)return asset;
         // The page relays the 3D viewer's follow-change timings (time until the destination is loaded).
         if (url.pathname === '/api/viewer-timing' && req.method === 'POST') {
             return req.json().then((t: any) => {
@@ -960,9 +1085,10 @@ Bun.serve({
         // never holds the name: the iframe URL carries only this endpoint.
         // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
         if (url.pathname === '/api/our-names') return Response.json(liveAccounts().filter(n => n !== MAIN), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
+        if (['/api/reveal', '/api/hidden-names'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
         if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         // The server listens on every address; only this PC may read the main account's name.
-        if (url.pathname === '/api/reveal' && !/^(127\.|::1$|::ffff:127\.)/.test(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
+
         if (url.pathname === '/api/reveal') return new Response(MAIN, { headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' } });
         if (url.pathname === '/api/map') return mapBytes ? new Response(mapBytes, { headers: { 'content-type': 'application/octet-stream' } }) : new Response('building', { status: 503 });
         if (url.pathname === '/events') {

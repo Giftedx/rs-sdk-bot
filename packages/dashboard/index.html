@@ -14,7 +14,7 @@
 --tx:#ece2c6;--dm:#a3957a;--fa:#74684f;
 --gold:#e9b949;--gold2:#a07b2a;--gold3:#5c4614;--parch:#d9c48f;
 --win:#7ed36a;--warn:#f0943c;--late:#e0583f;
---c-xp:#e9b949;--c-move:#6ea9ea;--c-anim:#4fc9b2;--c-dialog:#b590f2;--c-stun:#c9a27a;--c-idle:#f0943c;
+--c-xp:#e9b949;--c-inventory:#aeb6c4;--c-move:#6ea9ea;--c-anim:#4fc9b2;--c-dialog:#b590f2;--c-stun:#c9a27a;--c-idle:#f0943c;
 --ui:"Barlow Semi Condensed",system-ui,sans-serif;--rs:Cinzel,Georgia,serif;--u:4px}
 *{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13px/1.3 var(--ui);overflow:hidden}
 body{background:radial-gradient(ellipse at 50% -20%,#2a210f55,transparent 60%),var(--bg)}
@@ -37,7 +37,7 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
 .pulse{width:8px;height:8px;border-radius:50%;background:var(--win);animation:pl 2s infinite}.pulse.off{background:var(--late);animation:none}
 @keyframes pl{0%{box-shadow:0 0 0 0 #7ed36aaa}70%{box-shadow:0 0 0 7px #7ed36a00}100%{box-shadow:0 0 0 0 #7ed36a00}}
 /* alerts */
-.alerts{display:flex;gap:6px;align-items:center;overflow:hidden;white-space:nowrap}
+.alerts{display:flex;gap:6px;align-items:center;overflow-x:auto;overflow-y:hidden;white-space:nowrap}
 .alerts .lbl{font:700 11px var(--rs);letter-spacing:.14em;color:var(--parch);margin-right:4px}
 .al{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--ln2);background:var(--p1);border-radius:4px;padding:2px 8px;font-size:12px;cursor:pointer;flex:none}
 .al:hover{border-color:var(--gold2)}.al .t{font:700 11px var(--ui);letter-spacing:.08em}
@@ -182,9 +182,9 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
 .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.stat{background:var(--p2);border:1px solid var(--ln);border-radius:4px;padding:1px 8px;min-width:0;display:flex;justify-content:space-between;align-items:baseline;gap:6px;line-height:19px}
 .stat span{font:600 11px var(--ui);letter-spacing:.1em;text-transform:uppercase;color:var(--dm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat b{font:600 13px var(--ui);white-space:nowrap;font-variant-numeric:tabular-nums}
 .strip{display:flex;height:12px;border-radius:2px;overflow:hidden;background:#0c0a07}.strip i{flex:1;min-width:1px}
-.k-x{background:var(--c-xp)}.k-m{background:var(--c-move)}.k-a{background:var(--c-anim)}.k-d{background:var(--c-dialog)}.k-s{background:var(--c-stun)}.k-i{background:var(--c-idle)}
+.k-v{background:var(--c-inventory)}.k-x{background:var(--c-xp)}.k-m{background:var(--c-move)}.k-a{background:var(--c-anim)}.k-d{background:var(--c-dialog)}.k-s{background:var(--c-stun)}.k-i{background:var(--c-idle)}
 .hx0{background:#15120d}.hx1{background:#4a3a14}.hx2{background:#7d5f18}.hx3{background:#b88a22}.hx4{background:#e9b949}.hx5{background:#fff1b8}
-.shares{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:4px}.shares div{font-size:11.5px;display:flex;gap:4px;align-items:center;justify-content:space-between;background:var(--p2);border-radius:3px;padding:0 6px;font-variant-numeric:tabular-nums}
+.shares{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:4px;margin-top:4px}.shares div{font-size:11.5px;display:flex;gap:4px;align-items:center;justify-content:space-between;background:var(--p2);border-radius:3px;padding:0 6px;font-variant-numeric:tabular-nums}
 .skills{display:grid;grid-template-columns:repeat(4,1fr);gap:2px 4px}
 .sk{background:var(--p2);border:1px solid var(--ln);border-radius:3px;padding:0 6px;font-size:11.5px;position:relative;overflow:hidden;display:flex;justify-content:space-between;line-height:17px}
 .sk b{font:600 11.5px var(--ui);font-variant-numeric:tabular-nums}.sk.mx{border-color:var(--gold2);color:var(--gold)}.sk.goal{box-shadow:inset 0 0 0 1px var(--parch)}.sk i{position:absolute;left:0;bottom:0;height:2px;background:var(--gold2)}
@@ -205,36 +205,69 @@ header{display:flex;align-items:stretch;gap:0;border-bottom:1px solid var(--ln)}
 .secret{display:inline-block;user-select:none;font:700 10px/14px var(--ui);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding:0 6px;border:1px solid var(--gold3);border-radius:3px;background:repeating-linear-gradient(135deg,#2a210f 0 4px,#1a150b 4px 8px);vertical-align:1px}.secret.shown{text-transform:none;letter-spacing:normal;font:inherit;background:none;border-color:transparent;padding:0;user-select:text}
 /* 2560 x 1440: wider side columns, same structure */
 
+
+.app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 28px minmax(0,1fr)}header{flex-wrap:wrap;min-width:0}.brand{min-height:52px}.links{min-height:30px}
+.grid{grid-template-columns:minmax(250px,.8fr) minmax(380px,1.5fr) minmax(320px,1fr)}
+.col{min-width:0}.legacy{display:block;flex:none}.legacy summary{padding:8px 12px;cursor:pointer;color:var(--dm);font-weight:600}.legacy:not([open])>*:not(summary){display:none}
+.stockgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:8px 12px;overflow:auto;min-height:0;height:100%;grid-template-rows:repeat(2,minmax(0,1fr))}.stockgrid>div{min-width:0;overflow:auto}.stockrow{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed var(--ln);line-height:21px}.stockrow b{white-space:nowrap;font-weight:500}.cargo{padding:4px 0;border-bottom:1px dashed var(--ln);overflow-wrap:anywhere}.stockgrid p{font-size:11px;margin:5px 0}.ticknote{color:var(--dm);font-size:11px}.recentstrip{display:flex;gap:1px;height:16px}.recentstrip i{flex:1;min-width:0}
+@media(max-width:1450px){.app{grid-template-rows:auto 28px minmax(0,1fr)}header{flex-wrap:wrap;min-height:100px}.brand{min-width:230px}.kpi{padding:6px 12px}.links{margin-left:auto}}
+@media(max-width:1050px){html,body{overflow:auto;height:auto}.app{height:auto!important;min-height:100vh;display:block}.alerts{margin:6px 0}.grid{display:flex;flex-direction:column}.col{display:contents}.card{min-height:120px;height:auto!important;max-height:none!important;flex:none!important}.card:has(#mw){height:300px!important}.card:has(#roster){max-height:360px!important}.card:has(#detail){max-height:700px!important}.card:has(#vault){min-height:350px}.legacy{min-height:0}.scroll{max-height:500px}.stockgrid{overflow:visible;height:auto;grid-template-rows:auto}.stockgrid>div{overflow:visible}.mini{padding:6px}.rhead,.rspecial,.race{display:block}.brand b{font-size:16px}header{gap:5px}.kpi{border:1px solid var(--ln);flex:1 1 110px}.kpi b{font-size:20px}.brand{flex:1 1 100%;padding-top:10px}.links{flex-wrap:wrap}.cap{white-space:normal}.stats,.skills{grid-template-columns:repeat(3,minmax(0,1fr))}.feed>div{grid-template-columns:35px 12px 82px minmax(0,1fr)}.legacy[open]{overflow:auto}.legacy .race{min-width:580px}}
+@media(max-width:500px){.stockgrid{grid-template-columns:1fr}.d{padding:8px}.inv2{grid-template-columns:1fr}.shares{grid-template-columns:repeat(3,1fr)}.mini{grid-template-columns:repeat(2,auto)}.links{font-size:11px}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.rhead{max-width:100%}}
+
+.plan-line{grid-column:2/-1;white-space:normal;overflow-wrap:anywhere;font-size:11px;color:var(--dm);line-height:1.25;padding-bottom:4px}.plan-note{padding:6px 8px;background:var(--p2);border-left:2px solid var(--gold3);font-size:12px;overflow-wrap:anywhere}.operation-proof{padding:6px 8px;border:1px solid var(--ln2);border-radius:4px}.operation-proof>.stats{margin:5px 0}.operation-proof>.dm{font-size:11px;line-height:1.3}.card:has(#mach){min-height:185px}
+
+/* Operational scan: stable metric groups; raw notes remain in details and titles. */
+.app{grid-template-rows:auto auto 28px minmax(0,1fr)}header{min-height:58px;min-width:0}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));flex:1;min-width:0}.metrics .kpi{min-width:0;padding:8px 10px;white-space:normal}.metrics .cap{font-size:11px;letter-spacing:.04em;white-space:normal;line-height:1.2}
+.capacity{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:8px 12px;background:var(--p2);border:1px solid var(--ln2);border-radius:4px;min-width:0}.capacity>div{min-width:0}.capacity b{display:block;font-size:20px;line-height:1.15;font-variant-numeric:tabular-nums}.capacity span{font-size:12px;color:var(--dm)}.capacity small{font-size:12px;font-weight:500;color:var(--dm)}
+.off1{grid-template-columns:14px minmax(0,1fr) auto 38px;padding:7px 10px;gap:3px 6px;font-size:13px}.off1 .nm{font-size:14px}.off1 .note{grid-column:2/-1;white-space:nowrap;line-height:1.35}.off1 .plan-line{grid-column:2/-1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal;font-size:13px;line-height:1.3;padding:0;color:var(--dm)}
+.bot{padding-top:7px;padding-bottom:7px}.bot .l,.bot .r{min-width:0}.bot .pill{max-width:110px;overflow:hidden;text-overflow:ellipsis}.plan-note{font-size:13px;line-height:1.4}.result{font-size:12px}.ticknote{font-size:12px}
+@media(max-width:1450px){.app{grid-template-rows:auto auto 28px minmax(0,1fr)}header{min-height:0}.metrics{flex-basis:calc(100% - 250px)}.mini{border-left:0}}
+@media(max-width:1050px){header{gap:8px;padding-bottom:8px}.brand{padding-top:12px}.metrics{flex:1 1 100%;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.metrics .kpi{padding:9px 10px}.mini{flex:1;padding:0;white-space:normal}.links{padding:0;gap:10px}.capacity{margin:8px 0}.card:has(#roster){max-height:520px!important}.card>h2{font-size:12px;letter-spacing:.08em}.grid,.card,.scroll{max-width:100%}}
+@media(max-width:500px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.capacity{grid-template-columns:repeat(3,minmax(0,1fr));padding:8px}.capacity b{font-size:21px}.mini{grid-template-columns:repeat(2,minmax(0,1fr));font-size:12px;gap:4px}.links{flex-wrap:wrap;justify-content:flex-start;width:100%;font-size:12px}.bot{grid-template-columns:minmax(0,1fr)}.bot .l{flex-wrap:wrap;white-space:normal}.bot .r{justify-content:flex-start}.bot .recentstrip{max-width:100%}.off1 .pill{max-width:105px;overflow:hidden;text-overflow:ellipsis}}
+
+/* Scroll surfaces share the dark palette, including stock and alert overflow. */
+*{scrollbar-width:thin;scrollbar-color:var(--gold3) var(--p1)}
+*::-webkit-scrollbar{width:6px;height:6px}*::-webkit-scrollbar-track{background:var(--p1)}*::-webkit-scrollbar-thumb{background:var(--gold3);border:1px solid var(--p1);border-radius:4px}*::-webkit-scrollbar-thumb:hover{background:var(--gold2)}
+.evidence{border:1px solid var(--ln2);border-radius:4px;padding:7px 9px;font-size:13px}.evidence summary{cursor:pointer;color:var(--parch)}.evidence pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 var(--ui);color:var(--dm)}
+.cleanup-badge{color:var(--parch);border:1px solid var(--gold3);border-radius:3px;padding:0 4px;font-size:11px;flex-basis:100%;width:max-content;line-height:15px}
+.pc:has(.cleanup-badge){height:auto;min-height:20px;flex-wrap:wrap}.pc>span.ell{flex:1!important;min-width:0;max-width:none!important}.card:has(#prac){height:auto!important;min-height:110px;flex:none!important}
+
+.viewer-status{position:absolute;left:10px;right:10px;top:32px;z-index:3;padding:9px 12px;border:1px solid var(--gold3);border-radius:4px;background:#12100cf2;color:var(--parch);font-size:13px;line-height:1.4;pointer-events:none;overflow-wrap:anywhere}.viewer-status[hidden]{display:none}
+.mapwrap.loading3d #rsw{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
-  <div class="brand"><b>SWARM CONTROL</b><small>rs-sdk demo · 24-board race</small></div>
-  <div class="kpi hero" id="kh-win"><b id="k-win">–</b><span class="cap">boards won · realistic</span></div>
-  <div class="kpi hero" id="kh-gap"><b id="k-gap">–</b><span class="cap">overall gap · realistic</span></div>
-  <div class="kpi" id="kh-gates"><b id="k-gates">–</b><span class="cap">go gates</span></div>
-  <div class="kpi" id="kh-gold"><b id="k-gold">–</b><span class="cap">coins / tick · farmers</span></div>
-  <div class="kpi" id="kh-gp"><b id="k-gp">–</b><span class="cap" title="coins plus the GE value of every item our accounts hold (bank and pack); the banker holds only part of it">team wealth</span></div>
-  <div class="kpi" id="kh-xp"><b id="k-xp">–</b><span class="cap" id="k-xp-l">xp / tick · training</span></div>
+  <div class="brand"><b>SWARM CONTROL</b><small>OWNED ACCOUNTS · COLLECTION OPS</small></div>
+  <div class="metrics">
+  <div class="kpi hero" id="kh-win"><b id="k-win">–</b><span class="cap">working / live cap</span></div>
+  <div class="kpi hero" id="kh-gap"><b id="k-gap">–</b><span class="cap">recent bank snapshots</span></div>
+  <div class="kpi" id="kh-gates"><b id="k-gates">–</b><span class="cap">pending cargo holders</span></div>
+  <div class="kpi" id="kh-gold"><b id="k-gold">–</b><span class="cap">owned transfers</span></div>
+  <div class="kpi" id="kh-gp"><b id="k-gp">–</b><span class="cap" title="Accounts with a current failure, blocker or stale active status">need attention</span></div>
+  <div class="kpi" id="kh-xp"><b id="k-xp">–</b><span class="cap" id="k-xp-l">xp / tick · observed</span></div>
+  </div>
   <div class="mini" id="mini"></div>
   <div class="links"><span class="pulse" id="pulse" title="live, every 2 s"></span><span class="num dm" id="clock"></span>
-    <button id="showb" class="showb" title="Show mode: for screen sharing. Hides owner-request quotes, file paths and the name reveal.">show</button><a href="https://rs-sdk-demo.fly.dev/hiscores" target="_blank">Hiscores</a><a href="https://rs-sdk-demo.fly.dev/market" target="_blank">Market</a></div>
+    <button id="showb" class="showb" title="Show mode: for screen sharing. Hides owner-request quotes, file paths and the name reveal.">show</button><a href="https://rs-sdk-demo.fly.dev/hiscores" target="_blank">Hiscores</a><span class="g">NO GE</span></div>
 </header>
+<div class="capacity" id="capacity" aria-label="Fleet capacity and RAM"><div>Capacity unknown</div></div>
 <div class="alerts" id="alerts"><span class="lbl">ALERTS</span><span class="loading">loading</span></div>
 <div class="grid">
   <div class="col">
     <section class="card" style="flex:0 1 auto;max-height:440px"><h2>Live accounts <em id="cnt"></em></h2><div class="scroll" id="roster"><div class="loading">loading</div></div></section>
     <section class="card" style="height:100px;flex:none"><h2>Practice <em id="pcnt"></em></h2><div class="prac" id="prac"></div></section>
-    <section class="card" style="flex:1 1 200px"><h2><span id="rqt">Owner requests</span> <em id="rqh"></em></h2><div class="rq" id="rq"><div class="loading">loading</div></div></section>
+    <section class="card" style="flex:1 1 200px;display:none"><h2><span id="rqt">Owner requests</span> <em id="rqh"></em></h2><div class="rq" id="rq"><div class="loading">loading</div></div></section>
     <section class="card" style="height:166px;flex:none"><h2>Machine <em id="mach-h"></em></h2><div class="mach" id="mach"><div class="loading">loading</div></div></section>
   </div>
   <div class="col">
-    <section class="card" style="flex:1"><h2>World <em id="map-h"></em><span class="tog"><button id="bt" title="fly to the next most interesting bot every 60 s">TOUR</button></span><span class="tog"><button id="b3" class="on">3D</button><button id="b2">2D</button></span></h2>
-      <div class="mapwrap" id="mw"><iframe id="rsw" allow="cross-origin-isolated; fullscreen" title="rs-world 3D viewer"></iframe><canvas id="map"></canvas><div class="follow" id="follow"></div><div class="hud" id="chain"></div>
+    <section class="card" style="flex:1"><h2>World <em id="map-h"></em><span class="tog"><button id="bt" title="fly to the next most interesting bot every 60 s">TOUR</button></span><span class="tog"><button id="b3">3D</button><button id="b2" class="on">2D</button></span></h2>
+      <div class="mapwrap d2" id="mw"><iframe id="rsw" allow="cross-origin-isolated; fullscreen" title="rs-world 3D viewer"></iframe><canvas id="map"></canvas><div class="viewer-status" id="viewer-status" role="status" aria-live="polite" hidden></div><div class="follow" id="follow"></div><div class="hud" id="chain"></div>
       <div class="legend" id="legend" style="display:none"><span><b class="on"></b>playing</span><span><b class="wd"></b>in world / local</span><span><b class="off"></b>offline</span></div></div></section>
-    <section class="card" style="flex:none"><h2>Main account race <em id="race-h"></em></h2><div class="rhead" id="rhead"></div><div class="race" id="race"><div class="loading">loading the plan</div></div><div class="rspecial" id="rspecial"></div></section>
-    <section class="card" style="height:252px;flex:none"><h2>Economy <em id="vsum"></em></h2><div id="vault" style="display:flex;flex-direction:column;flex:1;min-height:0"><div class="loading">loading</div></div></section>
+    <details class="card legacy"><summary>Legacy board race · open plan</summary><h2>Main account race <em id="race-h"></em></h2><div class="rhead" id="rhead"></div><div class="race" id="race"><div class="loading">loading the plan</div></div><div class="rspecial" id="rspecial"></div></details>
+    <section class="card" style="height:350px;flex:none"><h2>Collection stock <em id="vsum"></em></h2><div id="vault" style="display:flex;flex-direction:column;flex:1;min-height:0"><div class="loading">loading</div></div></section>
   </div>
   <div class="col">
     <section class="card" style="flex:1"><h2>Account <em id="dupd"></em></h2><div class="scroll d" id="detail"><div class="loading">loading</div></div></section>
@@ -253,12 +286,13 @@ const nf=n=>Number(n||0).toLocaleString('en-US'),gp=n=>n==null?'–':n>=1e9?(n/1
 const sgn=n=>n==null?'–':(n>0?'+':n<0?'−':'')+nf(Math.abs(n));
 // Durations are shown in ticks; the game time (0.4 s a tick) goes in the tooltip.
 const TICK_MS=400,tickTime=t=>t==null?'–':dur(Math.abs(t)*TICK_MS),ticksTxt=t=>t==null?'–':nf(Math.round(t));
-const K={x:'xp',m:'move',a:'anim',d:'dialog',s:'stun',i:'idle'},KC={xp:'var(--c-xp)',move:'var(--c-move)',anim:'var(--c-anim)',dialog:'var(--c-dialog)',stun:'var(--c-stun)',idle:'var(--c-idle)'};
-let S=null,sel=null,picked=false,mode='3d',MAPI=null,tipFor=null,tipXY=[0,0],rswFor=null,PRAC_OPEN=false;
+const K={x:'xp',v:'inventory',m:'move',a:'anim',d:'dialog',s:'stun',i:'idle'},KC={xp:'var(--c-xp)',inventory:'var(--c-inventory)',move:'var(--c-move)',anim:'var(--c-anim)',dialog:'var(--c-dialog)',stun:'var(--c-stun)',idle:'var(--c-idle)'};
+let S=null,sel=null,picked=false,mode='2d',MAPI=null,tipFor=null,tipXY=[0,0],rswFor=null,PRAC_OPEN=false;
+let VIEWER={state:'idle',detail:'',origin:location.origin,url:null,feed:null},VIEWER_REQUEST=0,VIEWER_TIMER=null;
 const STATIC=new URLSearchParams(location.search).has('static');
 const PLACES=[['Lumbridge',3222,3218],['Varrock',3212,3428],['Draynor',3093,3244],['Port Sarim',3029,3217],['Falador',2965,3380],['Ardougne',2662,3305],['Brimhaven',2760,3180],['Musa Point',2920,3160],['Catherby',2810,3435],['Seers',2725,3485],['Baxtorian Falls',2521,3495],['GE',3181,3443],['Al Kharid',3293,3175],['Yanille',2590,3090],['Taverley',2895,3440],['Edgeville',3090,3490]];
-const st=b=>b.reserved&&!b.inWorld?['off','reserved']:b.inWorld&&b.fresh?['on','playing']:b.inWorld?['wd','in world']:b.fresh?['wd',b.practice?'practice':'status only']:['off','offline'];
-const running=b=>b.fresh||b.inWorld;
+const st=b=>b.operation==='active-stale'?['wd','process active · status stale']:b.operation==='died'?['off','died']:b.operation==='paused'?['off','paused']:b.operation==='failed'?['off','failed']:b.operation==='blocked'?['off','blocked']:b.operation==='unobserved'?['wd','status stale']:b.operation==='ended'?['off','ended']:b.reserved&&!b.inWorld?['off','reserved']:b.inWorld&&b.fresh?['on','playing']:b.inWorld?['wd','in world']:b.fresh?['wd',b.practice?'practice':'status only']:['off','offline'];
+const running=b=>['observed','active-stale'].includes(b.operation);
 const skills=b=>(b.skills||[]).filter(k=>!/^Stat\d+$/.test(k.name));
 const ledger=b=>{const l=b.ledger;if(!l)return null;const t=Object.values(l).reduce((a,c)=>a+c,0);if(!t)return null;return{t,p:Object.fromEntries(Object.values(K).map(n=>[n,100*(l[n]||0)/t]))}};
 const lbar=(L,w)=>`<span class="lb" style="width:${w}">${Object.values(K).map(n=>L.p[n]>0?`<i style="width:${L.p[n].toFixed(1)}%;background:${KC[n]}"></i>`:'').join('')}</span>`;
@@ -302,41 +336,74 @@ function keyed(el,rows){const have=new Map([...el.children].filter(c=>c.dataset.
 const isGold=b=>b.role4?.kind==='gold',isBank=b=>b.role4?.kind==='bank';
 function rowLive(b){const[c,t]=st(b),sk=goalOf(b),L=running(b)?ledger(b):null,idle=L?L.p.idle:null,bad=idle!=null&&idle>10;
   const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':'';
-  const tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,rl=roleLine(b);
+  const tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,rl=b.production?`<span class="dm ell" title="${E(b.currentGoal||b.goal||'')}">${E(b.currentGoal||b.goal||'Current goal unknown')}</span>`:roleLine(b);
   return`<i hidden data-c="bot ${sel===b.name?'sel':''}"></i>
   <div class="l"><span class="dot ${c}" title="${t}"></span><span class="nm">${E(b.name)}</span><span class="pill ${pc}" ${b.roleInferred?'title="inferred from the highest non-Hitpoints skill"':''}>${E(role)}</span>${jobPill(b.job)}${IR[b.name]?.why?`<span class="why" title="interest score ${IR[b.name].score.toFixed(0)}: ${E(IR[b.name].all)}">${E(IR[b.name].why)}</span>`:''}</div>
   <div class="r">${actChip(b.action)}<span class="num dm" title="status file age">${b.at?ago(S.now-b.at):''}</span></div>
   <div class="l">${rl??(sk?`<span class="gbar"><i style="width:${pct.toFixed(1)}%"></i><span>${E(b.goalSkill)} ${sk.level} / ${tgt}</span></span>${paceTxt(b)}${b.role4?.kind==='fish'?`<span class="dm num" title="feathers in the pack">${nf(b.role4.feathers)} feathers</span>`:''}`:`<span class="dm ell">${E(b.job?.goal||b.goal||'')}</span>`)}</div>
   <div class="r">${isGold(b)?(b.role4.coinsPerTick!=null?`<span class="gold" title="${gp(b.role4.coinsPerTick*9000)} coins an hour">${b.role4.coinsPerTick.toFixed(1)} c/tick</span>`:''):b.training&&b.xpPerTick!=null?`<span class="num" title="${gp(b.xpPerHour)} xp an hour">${b.xpPerTick.toFixed(0)} xp/tick</span>`:''}${b.spark?.length>1&&!isGold(b)&&b.training?svgSpark(b.spark,48,14):''}</div>
-  <div class="l"><span class="ell dm" title="${E(b.phase||'')}">${/^\s*\w+=\S+(\s+\w+=\S+){2,}/.test(b.phaseShort||'')?'':E(b.phaseShort||'')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}</div>
-  <div class="r">${L?`${lbar(L,'64px')}<span class="idl ${bad?'bad':'ok'}" title="share of ledger ticks spent idle">${bad?'⚠ ':''}idle ${idle.toFixed(0)}%</span>`:''}</div>`}
+  <div class="l"><span class="ell dm" title="${E(b.phase||'')}">${E(operationPhase(b))}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}</div>
+  <div class="r">${L?`${lbar(L,'64px')}<span class="idl ${bad?'bad':'ok'}" title="Share of ticks with no observed XP, inventory, move, animation, dialog or stun change. This alone does not prove wasted time.">${bad?'⚠ ':''}unchanged ${idle.toFixed(0)}%</span>`:''}</div><div class="recentstrip" style="grid-column:1/-1;height:5px" title="Recent ticks: XP, inventory change, move, animation, dialog, stun, idle. Inventory change does not prove net output.">${String(b.timeline||'').slice(-100).split('').map(k=>`<i style="background:${KC[K[k]]||'var(--fa)'}"></i>`).join('')}</div>`}
 // Offline: the newest RESULT and any death come first; the swarm note is second (it can be older than the result).
+function hasStopProof(p){return p?.kind==='host-stop-cleanup'&&p.outcome==='proved'&&p.level==='local-native'&&p.workerOutcome==='fail'&&p.goalMet===false;}
+function resultKind(r){if(r.kind==='ev')return 'ev';if(r.kind==='died'||r.outcome==='died'||/\bdied=true\b/.test(r.text||''))return 'died';if(hasStopProof(r.nativeProof))return 'stop-proof';return r.ok===true||r.outcome==='ok'||r.kind==='ok'?'ok':r.ok===false||r.outcome==='fail'||r.kind==='fail'?'fail':'unknown';}
+function nativeProofPanel(b){
+  const p=b.nativeProof;
+  if(!hasStopProof(p))return '';
+  return `<details class="operation-proof"><summary>Stop cleanup proved · work stopped${p.source?.matchesCurrent===false?' · Historical source':''}</summary><div class="dm">Local native proof. Raw worker result remains fail; work goal was not met.${p.source?.matchesCurrent===false?' Historical source: this does not prove current source readiness.':''}</div><div>${E(p.scope||'')}</div><pre style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px">${E(JSON.stringify(p,null,2))}</pre></details>`;
+}
+function cleanupBadge(b){return hasStopProof(b.nativeProof)?'<span class="cleanup-badge" title="Local native stop cleanup proved; raw worker result is fail and work goal was not met">cleanup ✓</span>':'';}
+function controllerEvidence(b){
+  const plan=b.planJob||b.job,raw=b.lastRes?.text||b.result||'';
+  if(!plan&&!raw&&!b.phase)return '';
+  return `${plan?`<div class="dm">Controller state: ${E(b.reserved?'reserved':plan.state||'unknown')}</div>`:''}<details class="evidence"><summary>Controller notes and raw evidence</summary>${plan?.note?`<pre>${E(plan.note)}</pre>`:''}${raw?`<div class="cap">Raw worker result · ${E(b.outcome||'unknown')}</div><pre>${E(raw)}</pre>`:''}${b.phase?`<div class="cap">Last recorded phase</div><pre>${E(b.phase)}</pre>`:''}</details>`;
+}
+function boundedLabel(b){
+  const q=b.bounded;
+  return q?.targetMet===true&&q.label==='Stock target met'&&typeof q.counters?.boughtTotal!=='number'?'Goal reached':q?.label||'Goal state unknown';
+}
+function operationPhase(b){
+  const text=String(b.phaseShort||'').trim();
+  if(!text)return 'No recent phase observed';
+  const task={'fleet-bank-inspect.ts':'Bank inspection','bank-owned-shaftsinker-food.ts':'Owned food preparation'}[text.replace(/^.*[\\/]/,'')];
+  if(task)return task;
+  if(/^(fail|error|blocked|died)\b/i.test(text)||/\bfailure=(?!-|false\b)\S+/i.test(text))return text;
+  if(/(?:^|\s)\w+=\S+/.test(text))return 'Last recorded milestone · open detail for counters';
+  return (b.phaseSince&&S.now-b.phaseSince>300000?'Last phase: ':'')+text;
+}
+function offlineGoal(b){return b.reserved?'private main · reserved':String(b.currentGoal||(b.planJob||b.job)?.goal||b.goal||'Goal unknown');}
 function offWhy(b){
-  if(b.reserved)return{html:'<b>reserved</b> <i>· the main run starts only on a GO from the gate</i>',tip:'reserved for the main run'};
-  const parts=[],tips=[];
-  if(b.death){parts.push(`<b class="i-late">died</b> <i>${ago(S.now-b.death.at)} ago</i>`);tips.push('death: '+b.death.text)}
-  const r=b.lastRes;if(r&&(!b.death||r.at>b.death.at)){const head=r.text.replace(/^(ok|fail)\s+/,'').split(/\s+/).slice(0,2).join(' ');parts.push(`<b>${r.died?'died':r.ok?'ok':'fail'}</b> ${E(head)} <i>${ago(S.now-r.at)}</i>`);tips.push('last RESULT: '+r.text)}
-  else if(!r&&!b.death&&b.result){parts.push(`<b>${b.outcome||'result'}</b> ${E(String(b.result).replace(/^(ok|fail)\s+/,'').split(/\s+/).slice(0,2).join(' '))}`);tips.push('last RESULT: '+b.result)}
-  if(b.job?.note){parts.push(`<i>${E(b.job.note)}</i>`);tips.push('swarm note: '+b.job.note)}
-  if(!parts.length)parts.push(b.at?'<i>no result yet</i>':'<i>no status file yet</i>');
-  return{html:parts.join(' <i>·</i> '),tip:tips.join(' | ')}}
-function rowOff(b){const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':'',w=offWhy(b);
-  const oc=b.reserved?'<span class="oc fa">◇</span>':ocIcon(b.death&&!(b.lastRes&&b.lastRes.at>b.death.at&&!b.lastRes.died)?'died':b.lastRes?(b.lastRes.died?'died':b.lastRes.ok?'ok':'fail'):b.outcome);
-  return`<i hidden data-c="off1 ${sel===b.name?'sel':''}"></i>${oc}<span class="nm">${E(b.name)}</span><span class="pill ${pc}">${E(role)}</span><span class="note" title="${E(w.tip)}">${w.html}</span><span class="num fa" style="text-align:right" title="last seen">${b.lastSeen?ago(S.now-b.lastSeen):'never'}</span>`}
+  if(b.reserved)return{html:'<b>reserved</b> <i>· private main account</i>',tip:'private main account'};
+  const operation=b.operation||'unknown';
+  const parts=[`<b class="${['failed','died','blocked','unobserved','active-stale'].includes(operation)?'i-warn':'dm'}">${E(operation)}</b>`],tips=[];
+  const r=b.lastRes,raw=r?.text||b.result||'';
+  if(b.death&&(!r||b.death.at>=r.at)){parts.push(`<b class="i-late">died</b> <i>${ago(S.now-b.death.at)} ago</i>`);tips.push('death: '+b.death.text);}
+  else if(raw){const ok=r?r.ok:b.outcome==='ok',label=operation==='paused'?'worker stopped':b.bounded?.visible?boundedLabel(b):ok?'worker reported complete':'worker failed';
+    parts.push(`<b class="${ok?'dm':'i-warn'}">${E(label)}</b>${r?.at?` <i>${ago(S.now-r.at)} ago</i>`:''}`);}
+  else if(operation==='paused')parts.push('<i>deliberate stop file</i>');
+  if(hasStopProof(b.nativeProof))parts.push('<b class="dm">stop cleanup proved · work stopped</b>');
+  if(raw)tips.push('Raw worker RESULT: '+raw);
+  const plan=b.planJob||b.job;if(plan?.state)tips.push('Controller: '+plan.state);if(plan?.note)tips.push('Controller note: '+plan.note);
+  return{html:parts.join(' <i>·</i> '),tip:tips.join(' | ')};
+}
+function rowOff(b){const role=b.reserved?'main · reserved':b.role||'?',pc=b.reserved?'res':b.roleInferred?'inf':'',w=offWhy(b),plan=b.planJob||b.job;
+  const oc=b.operation==='paused'?'<span class="oc dm">Ⅱ</span>':b.reserved?'<span class="oc fa">◇</span>':ocIcon(b.death&&!(b.lastRes&&b.lastRes.at>b.death.at&&!b.lastRes.died)?'died':b.lastRes?(b.lastRes.died?'died':b.lastRes.ok?'ok':'fail'):b.outcome);
+  return`<i hidden data-c="off1 ${sel===b.name?'sel':''}"></i>${oc}<span class="nm">${E(b.name)}</span><span class="pill ${pc}">${E(role)}</span><span class="num fa" style="text-align:right" title="last seen">${b.lastSeen?ago(S.now-b.lastSeen):'never'}</span><span class="note" title="${E(w.tip)}">${w.html}</span><div class="plan-line" title="${E((plan?.state||'no controller job')+' · '+(plan?.note||''))}">${E(b.reserved?'reserved':plan?.state||'unmanaged')} · ${E(offlineGoal(b))}</div>`;
+}
 function roster(){const live=S.bots.filter(b=>!b.practice),on=ranked(),off=live.filter(b=>!(running(b)&&!b.reserved)).sort((a,b)=>Number(!!b.reserved)-Number(!!a.reserved));
   const rows=on.map(b=>['L'+b.name,rowLive(b)]);
   if(!on.length)rows.push(['G-none','<i hidden data-c="empty-st"></i>No live account is running.']);
-  if(off.length)rows.push(['G-off',`<i hidden data-c="grp"></i>offline · ${off.length} · latest result first, swarm note after`]);
+  if(off.length)rows.push(['G-off',`<i hidden data-c="grp"></i>not running · ${off.length} · state and latest result`]);
   rows.push(...off.map(b=>['O'+b.name,rowOff(b)]));
   keyed($('#roster'),rows);
   const pr=S.bots.filter(b=>b.practice),pRun=pr.filter(running),pDone=pr.filter(b=>!running(b)).sort((a,b)=>(b.at||0)-(a.at||0)),oc=k=>pDone.filter(b=>b.outcome===k).length;
   // 3 rows of 4: running bots first, then the newest finished; older ones are only counted.
   const shown=[...pRun,...pDone].slice(0,12),rest=pr.length-shown.length;
-  $('#pcnt').textContent=`${pRun.length} running · ${pDone.length} done (✔${oc('ok')} ✘${oc('fail')} ✝${oc('died')}) · last 30 min${rest>0?' · +'+rest+' not shown':''}`;
+  $('#pcnt').textContent=`${pRun.length} running · goals ${oc('ok')} · cleanup proved ${pDone.filter(b=>hasStopProof(b.nativeProof)).length} · work failed ${pDone.filter(b=>resultKind(b)==='fail').length} · died ${oc('died')} · last 30 min${rest>0?' · +'+rest+' not shown':''}`;
   if(!shown.length){put('#prac','<span class="empty-st" style="grid-column:1/-1;padding:4px 0">No practice bot in the last 30 min.</span>');}else{if($('#prac')._h)$('#prac')._h=null,$('#prac').innerHTML='';
   keyed($('#prac'),shown.map(b=>{const sk=goalOf(b),tgt=b.goalLevel||99,pct=sk?Math.min(100,(sk.level-1)/Math.max(1,tgt-1)*100):0,[c]=st(b);
-    return['P'+b.name,`<i hidden data-c="pc ${sel===b.name?'sel':''}"></i><span class="dot ${c}"></span>${running(b)?'':ocIcon(b.outcome)}<span class="ell" style="flex:none;max-width:62px" title="${E(b.name)} · ${E(b.phase||'')}${b.result?' · '+E(b.result):''}">${E(b.name)}</span><span class="gb" title="${sk?E(b.goalSkill)+' '+sk.level+'/'+tgt:''}"><i style="width:${pct.toFixed(0)}%"></i></span>`]}))}
-  $('#cnt').textContent=`${on.length} running · ${off.length} offline`}
+    return['P'+b.name,`<i hidden data-c="pc ${sel===b.name?'sel':''}"></i><span class="dot ${c}"></span>${running(b)?'':ocIcon(b.outcome)}<span class="ell" style="flex:none;max-width:62px" title="${E(b.name)} · ${E(b.phase||'')}${b.result?' · '+E(b.result):''}">${E(b.name)}</span><span class="gb" title="${sk?E(b.goalSkill)+' '+sk.level+'/'+tgt:''}"><i style="width:${pct.toFixed(0)}%"></i></span>${cleanupBadge(b)}`]}))}
+  $('#cnt').textContent=`${on.length} observed · ${off.length} not running`}
 // Interest score: what is worth watching now. Recent death or alert, a new phase (level-up or milestone),
 // close to or ahead of a board #1, a high rate; idle sinks. The order is kept for 30 s (or until a new alert)
 // so rows do not jump every 2 s; the reason shows as a tag on the row.
@@ -359,7 +426,7 @@ function setShow(v){SHOW=v;try{localStorage.setItem('show',v?'1':'0')}catch{}doc
 $('#showb').addEventListener('click',()=>setShow(!SHOW));setShow(SHOW);if(Q.get('bot')){sel=Q.get('bot');picked=true}let TOUR=Q.has('tour'),TOUR_AT=0;const TOUR_MS=(Number(Q.get('tourEvery'))||60)*1e3;
 function tourStep(){if(!TOUR||S.now-TOUR_AT<TOUR_MS)return;TOUR_AT=S.now;const l=ranked();if(!l.length)return;const i=l.findIndex(b=>b.name===sel);sel=l[(i+1)%l.length].name}
 // The viewer reports follow-change timings; keep them on the server for the Machine panel and measurements.
-window.addEventListener('message',e=>{if(e.origin!=='http://localhost:3000'||!e.data?.viewerTiming)return;fetch('/api/viewer-timing',{method:'POST',body:JSON.stringify(e.data.viewerTiming)}).catch(()=>{})});
+
 function pick(n){if(!n)return;sel=n;picked=true;render()}
 for(const id of['#roster','#prac']){const el=$(id);el.onclick=e=>{const r=e.target.closest('[data-k]');if(r&&!r.dataset.k.startsWith('G'))pick(r.dataset.k.slice(1))};
   el.onmousemove=e=>{const r=e.target.closest('[data-k]');tipFor=r&&!r.dataset.k.startsWith('G')?r.dataset.k.slice(1):null;tipXY=[e.clientX,e.clientY];tip()};el.onmouseleave=()=>{tipFor=null;tip()}}
@@ -368,7 +435,7 @@ let TT=null;
 function placeTip(el){el.style.display='block';const[px,py]=tipXY;el.style.left=Math.max(8,Math.min(innerWidth-el.offsetWidth-8,px+14))+'px';el.style.top=Math.max(8,Math.min(innerHeight-el.offsetHeight-8,py+12))+'px'}
 document.addEventListener('mousemove',e=>{const t=e.target.closest&&e.target.closest('[data-tt]');if(t){TT=t.getAttribute('data-tt');tipXY=[e.clientX,e.clientY];const el=$('#tip');el.innerHTML=TT;placeTip(el)}else if(TT){TT=null;if(!tipFor)$('#tip').style.display='none'}});
 function tip(){const el=$('#tip'),b=tipFor&&S.bots.find(q=>q.name===tipFor);if(!b){if(!TT)el.style.display='none';return}const L=running(b)?ledger(b):null;
-  el.innerHTML=`<div class="sub"><span>${E(b.name)}</span><span>${b.job?E(b.job.state):b.reserved?'reserved':''}</span></div>${b.job?.note?`<div class="dm" style="margin-bottom:4px">swarm note: ${E(b.job.note)}</div>`:''}`+(L?`<table>${Object.values(K).map(n=>`<tr><td><span class="dot" style="background:${KC[n]}"></span> ${n}</td><td style="text-align:right">${nf(b.ledger[n])}</td><td style="text-align:right">${L.p[n].toFixed(1)}%</td></tr>`).join('')}</table>${L.p.idle>10?'<div class="w">⚠ idle over 10%: standing still is a warcrime</div>':''}`:(b.lastRes||b.result)?`<div class="dm" style="white-space:normal;font-size:11px">${E(b.lastRes?.text||b.result)}</div>`:'');
+  el.innerHTML=`<div class="sub"><span>${E(b.name)}</span><span>${b.job?E(b.job.state):b.reserved?'reserved':''}</span></div>${b.job?.note?`<div class="dm" style="margin-bottom:4px">swarm note: ${E(b.job.note)}</div>`:''}`+(L?`<table>${Object.values(K).map(n=>`<tr><td><span class="dot" style="background:${KC[n]}"></span> ${n==='inventory'?'items':n}</td><td style="text-align:right">${nf(b.ledger[n]||0)}</td><td style="text-align:right">${L.p[n].toFixed(1)}%</td></tr>`).join('')}</table>${L.p.idle>10?'<div class="w">⚠ no observed change over 10% of ticks; the ledger alone does not prove waste</div>':''}`:(b.lastRes||b.result)?`<div class="dm" style="white-space:normal;font-size:11px">${E(b.lastRes?.text||b.result)}</div>`:'');
   placeTip(el)}
 
 $('#alerts').onclick=e=>{const a=e.target.closest('.al[data-n]');if(a)pick(a.dataset.n)};
@@ -377,22 +444,13 @@ $('#alerts').onclick=e=>{const a=e.target.closest('.al[data-n]');if(a)pick(a.dat
 const stat=(k,v,cls='',tt='')=>`<div class="stat"${tt?` title="${E(tt)}"`:''}><span>${k}</span><b class="${cls}">${v}</b></div>`;
 const hero=(k,v,tt='')=>`<div${tt?` title="${E(tt)}"`:''}><span class="cap">${k}</span><b>${v}</b></div>`;
 function roleOf(b){if(b.reserved)return'main';if(b.role4?.kind==='cook'||b.role4?.kind==='courier')return b.role4.kind;if(isGold(b))return'gold';if(isBank(b)||b.name===S.vault?.banker)return'bank';if(b.goalSkill&&b.xpLeft===0)return'done';if(b.goalSkill)return'train';return'other'}
-function detailHero(b){const k=roleOf(b),r=b.role4||{},sk=goalOf(b),et=etaTicks(b);
-  if(k==='main'){const G=S.gates?.gates||[],R=S.race;return`<div class="dhero">${hero('go gates',`${G.filter(g=>g.pass).length}<small>/ ${G.length}</small>`,G.map(g=>(g.pass?'✔ ':'✘ ')+g.name+': '+g.detail).join('\n'))}${hero('overall gap · realistic',R?.gap!=null?`<span class="${R.gap>=0?'i-win':''}">${sgn(R.gap)}</span><small>ticks</small>`:'–',R?.gap!=null?tickTime(R.gap)+' of game time':'')}${hero('boards won · realistic',R?`${R.wins}<small>/ 24</small>`:'–')}</div>
-    <div class="dnote"><span>Reserved for the main run. It logs in only when the go/no-go gate script prints GO (5 of 5 gates).</span></div>`}
-  if(k==='gold'){const per=r.coinsPerTick,emptyT=r.emptyMs!=null?r.emptyMs/TICK_MS:null;return`<div class="dhero">${hero('coins / tick',per!=null?per.toFixed(1):'–',per!=null?gp(per*9000)+' coins an hour':'needs 2 fresh status samples')}${hero('made this run',r.made!=null?gp(r.made):'–','coins gained since the first status of this run')}${hero('food left',`${r.food+(r.bankFood||0)}<small>${emptyT!=null?ticksTxt(emptyT)+' t':'pack+bank'}</small>`,emptyT!=null?`empty in ${ticksTxt(emptyT)} ticks (${tickTime(emptyT)}) at the measured eat rate`:'no eat rate measured yet')}</div>
-    <div class="stats">${stat('coins held',gp(r.coins),'g',nf(r.coins)+' coins')}${stat('food in bank',r.bankFood??'–')}${stat('eats / 1k t',r.eatPerTick!=null?(r.eatPerTick*1000).toFixed(1):'–')}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp&&b.hp.now<=b.hp.max/3?'i-late':'')}${stat('run up',b.uptime!=null?ticksTxt(b.uptime/TICK_MS)+' t':'–','',b.uptime!=null?dur(b.uptime):'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}</div>`}
-  if(k==='cook'){return`<div class="dhero">${hero('cooked fish in bank',nf(r.cooked),'trout and salmon in the Draynor bank, ready for the courier')}${hero('xp / tick · Cooking',b.xpPerTick!=null?b.xpPerTick.toFixed(1):'–',b.xpPerHour!=null?gp(b.xpPerHour)+' xp an hour':'needs 2 fresh status samples')}${hero('to level '+(b.goalLevel||99),et!=null?`${ticksTxt(et)}<small>ticks</small>`:sk?.level>=(b.goalLevel||99)?'<span class="i-win">✔</span>':'–',et!=null?tickTime(et)+' of game time at this rate':'')}</div>
-    <div class="stats">${stat('Cooking',sk?`${sk.level} / ${b.goalLevel||99}`:'–')}${stat('raw in pack',r.raw)}${stat('cooked in pack',r.cookedPack)}${stat('burnt in bank',r.burnt)}${stat('feathers',nf(r.feathers),r.feathers<100?'i-warn':'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}</div>`}
-  if(k==='courier'){return`<div class="dhero">${hero('fish carried',nf(r.fish),'trout and salmon notes in the pack')}${hero('at',E(r.at||'on the road'),b.pos?`${b.pos.x},${b.pos.z}`:'')}${hero('coins',gp(r.coins),'four boat fares a trip: 120 coins')}</div>
-    <div class="stats">${stat('last step',E(b.phaseShort||'–'))}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp&&b.hp.now<=b.hp.max/3?'i-late':'')}${stat('run up',b.uptime!=null?ticksTxt(b.uptime/TICK_MS)+' t':'–','',b.uptime!=null?dur(b.uptime):'')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'–')}${stat('last run',b.outcome||'–')}</div>`}
-  if(k==='bank'){const v=S.vault||{},age=v.lastTransferAt?S.now-v.lastTransferAt:null;return`<div class="dhero">${hero('vault value',gp(v.value))}${hero('coins',gp(v.coins),nf(v.coins)+' coins')}${hero('last transfer',age!=null?ago(age):'–',v.lastTransferAt?when(v.lastTransferAt):'no transfer logged')}</div>
-    <div class="stats">${stat('holders',(v.holders||[]).length)}${stat('item kinds',(v.items||[]).length)}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–')}${stat('run up',dur(b.uptime))}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('last run',b.outcome||'–')}</div>`}
-  if(k==='done'){return`<div class="dhero">${hero('goal reached',`${E(b.goalSkill)} ${sk?.level??''}`)}${hero('vs #1',b.pace?`<span class="${b.pace.ahead?'i-win':''}">${b.pace.ahead?'ahead':'behind'}</span><small>${E(b.pace.gap)}</small>`:'–',b.pace?`#1 ${b.pace.top} ${b.pace.topTime}`:'no #1 time for this target')}${hero('last run',b.lastRes?(b.lastRes.died?'<span class="i-late">✝ died</span>':b.lastRes.ok?'<span class="i-win">✔</span> ok':'<span class="i-warn">✘</span> fail'):E(b.outcome||'–'))}</div>
-    <div class="stats">${stat('combat',b.combat??'–')}${stat('total lvl',skills(b).reduce((n,k)=>n+k.level,0))}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–')}${stat('tick',b.tick!=null?nf(b.tick):'–')}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'–')}</div>`}
-  if(k==='train'){return`<div class="dhero">${hero('xp / tick · '+E(b.goalSkill),b.xpPerTick!=null?b.xpPerTick.toFixed(1):'–',b.xpPerHour!=null?gp(b.xpPerHour)+' xp an hour':'needs 2 fresh status samples')}${hero('to level '+(b.goalLevel||99),et!=null?`${ticksTxt(et)}<small>ticks</small>`:'–',et!=null?tickTime(et)+' of game time at this rate':'')}${hero('vs #1',b.pace?`<span class="${b.pace.ahead?'i-win':'i-late'}">${b.pace.ahead?'▲':'▼'}</span> ${E(b.pace.gap)}`:'–',b.pace?`projected ${b.finish} vs #1 ${b.pace.top} ${b.pace.topTime}`:'no #1 time for this target')}</div>
-    <div class="stats">${stat('level',sk?`${sk.level} / ${b.goalLevel||99}`:'–')}${stat('xp left',b.xpLeft!=null?gp(b.xpLeft):'–')}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp&&b.hp.now<=b.hp.max/3?'i-late':'')}${stat('run up',dur(b.uptime))}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('pos',b.pos?`${b.pos.x},${b.pos.z}`:'–')}</div>`}
-  return`<div class="stats">${stat('combat',b.combat??'–')}${stat('total lvl',skills(b).reduce((n,k)=>n+k.level,0))}${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–')}${stat('run up',dur(b.uptime))}${stat('last seen',b.lastSeen?ago(S.now-b.lastSeen):'–')}${stat('last run',b.outcome||'–')}</div>`}
+function detailHero(b){const cargo=(S.collection?.pending||[]).find(p=>p.name===b.name),bank=(S.collection?.banks||[]).find(p=>p.name===b.name);
+  const job=b.reserved?'Private main account':b.currentGoal||String(b.goal||b.job?.goal||'No active job');
+  const outputs=(S.collection?.transfers||[]).filter(t=>t.from===b.name||t.to===b.name);
+  return `<div class="dnote"><b>${E(job)}</b></div><div class="dhero">${hero('operation',E(b.operation||'unknown'))}${hero('bank observed',bank?.at?ago(S.now-bank.at)+' ago':'unknown',bank?.at?when(bank.at):'No dated bank snapshot')}${hero('cargo manifest',cargo?cargo.items.reduce((n,i)=>n+i.count,0)+'<small>units · '+(cargo.stale?'stale':ago(S.now-cargo.at))+'</small>':'none observed','Manifest is bank stock awaiting an owned courier. It is not new output.')}</div>
+  <div class="stats">${stat('HP',b.hp?b.hp.now+'/'+b.hp.max:'–',b.hp?.now===0?'i-late':'')}${stat('status age',b.at?ago(S.now-b.at):'unknown')}${stat('bank types',bank?.kinds??'unknown')}${stat('XP / tick',running(b)&&b.xpPerTick!=null?b.xpPerTick.toFixed(1):'unknown')}${stat('tick',b.tick!=null?nf(b.tick):'–')}${stat('last owned transfer',outputs[0]?ago(S.now-outputs[0].at):'not logged')}</div>
+  ${cargo?`<div class="dm">Cargo: ${cargo.items.map(i=>E(i.name)+' × '+nf(i.count)).join(', ')}</div>`:''}
+  <details class="legacy"><summary>Skill target and board pace · secondary</summary><div class="dm">${b.goalSkill?E(b.goalSkill)+' '+(b.goalNow??'?')+' / '+(b.goalLevel||99):'No skill target'}${b.pace?' · '+(b.pace.ahead?'ahead':'behind')+' board #1 by '+E(b.pace.gap):''}</div></details>`}
 function detail(){
   const b=S.bots.find(x=>x.name===sel);if(!b){put('#detail','<div class="empty-st">Pick an account in Live accounts.</div>');return}
   const sks=skills(b),total=sks.reduce((n,k)=>n+k.level,0),run=running(b),L=run?ledger(b):null,[c,t]=st(b);
@@ -405,20 +463,23 @@ function detail(){
   const combos=cmb.length?cmb.map(x=>`<div class="cmb" title="${nf(x.n)} ticks · ${nf(x.xp)} xp"><span class="ell">${x.k==='none'?'<span class="dm">(no input)</span>':E(x.k)}</span><span class="dm" style="text-align:right">${(100*x.n/cn).toFixed(0)}%</span>${x.k==='none'?'<span class="fa" style="text-align:right" title="XP lands a tick or more after the input that earned it, so ticks with no input collect it. It is not XP for doing nothing.">–</span>':`<span class="${x.xp?'g':'fa'}" style="text-align:right">${(x.xp/x.n).toFixed(1)}</span>`}</div>`).join(''):'<span class="dm" style="font-size:12px">No input log yet.</span>';
   const w=offWhy(b);
   put('#detail',`<div class="dh"><span class="dot ${c}"></span><h3>${E(b.name)}</h3><span class="pill ${b.reserved?'res':b.roleInferred?'inf':''}">${E(b.reserved?'main · reserved':b.role)}</span>${jobPill(b.job)}${actChip(b.action)}<span class="dm ell" style="margin-left:auto">${t} · ${E(b.server)}</span></div>
-  <div class="dline"><span class="cap">goal</span><b class="ell">${E(b.reserved?'rank 1 on all 24 boards in one run':b.job?.goal||String(b.goal||'–').replace(/\.ts$/,''))}</b>${run?`<span class="cap" style="margin-left:auto">phase</span><span class="ell" title="${E(b.phase||'')}">${E(b.phaseShort||'–')}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}`:''}</div>
+  <div class="ticknote">Recent ticks: gold = XP · silver = inventory change · blue = move · teal = animation only · purple = dialog · orange = idle. Inventory changes and inputs do not prove net output.</div><div class="recentstrip">${String(b.timeline||'').slice(-120).split('').map(k=>`<i title="${E(K[k]||'unknown')}" style="background:${KC[K[k]]||'var(--fa)'}"></i>`).join('')||'No tick samples observed'}</div><div class="dline"><span class="cap">goal</span><b class="ell">${E(b.reserved?'Collect useful XP, money, rare items and strong gear across owned accounts':b.currentGoal||String(b.goal||b.job?.goal||'–').replace(/\.ts$/,''))}</b>${run?`<span class="cap" style="margin-left:auto">phase</span><span class="ell" title="${E(b.phase||'')}">${E(operationPhase(b))}</span>${b.phaseSince?`<span class="since">${b.phaseExact?'':'≥'}${dur(S.now-b.phaseSince)}</span>`:''}`:''}</div>
   ${!run&&!b.reserved?`<div class="dnote" title="${E(w.tip)}"><span>${w.html}</span></div>`:''}
+  ${controllerEvidence(b)}
+  ${b.bounded?.visible?`<div class="operation-proof"><b class="${b.bounded.targetMet===true?'i-win':b.bounded.targetMet===false?'i-warn':'dm'}">${E(boundedLabel(b))}</b><div class="stats">${Object.entries(b.bounded.counters).map(([k,v])=>stat(({boughtTotal:'bought units',bankedTotal:'banked units',made:'made units',banked:'banked units',planned:'planned units',xpGain:'XP gained',spentTotal:'coins spent',coinsLeft:'wallet at result',coinReserve:'coin reserve',maxSpend:'spend cap',maxItems:'item cap',noBuyTicks:'no-buy ticks',noBuyLimit:'no-buy limit'})[k],nf(v))).join('')}</div><div class="dm">${b.result?'Last result':'Latest phase'} · ${b.at?ago(S.now-b.at)+' old':'age unknown'}${b.bounded.stop?' · stop '+E(b.bounded.stop):''}. Banked units are this run’s observed deposit count. Buffer readiness is separate from new output.</div></div>`:''}
+  ${nativeProofPanel(b)}
   ${detailHero(b)}
   ${run?`<div><div class="sub"><span>Last 300 ticks · what each tick did</span><span>${(b.timeline||'').length} ticks · inputs 0-5 below</span></div>
   <div class="strip">${tl||'<span class="dm" style="font-size:11px;padding:0 6px">no timeline</span>'}</div><div class="strip" style="height:6px;margin-top:2px" title="inputs per tick: dark 0, white 5">${heat||''}</div>
   ${L?(()=>{// Shares of the same ticks the strip shows (the hover keeps the whole-run ledger).
     const t=(b.timeline||'').slice(-300),TP={};for(const n of Object.values(K))TP[n]=0;for(const c of t)if(K[c])TP[K[c]]++;for(const n in TP)TP[n]=t.length?100*TP[n]/t.length:0;
-    return`<div class="shares" title="share of the ${t.length} ticks above · whole run: ${Object.values(K).map(n=>n+' '+L.p[n].toFixed(0)+'%').join(', ')}">${Object.values(K).map(n=>`<div><span>${n==='idle'&&TP.idle>10?'<span class="i-warn">⚠</span>':`<span class="dot" style="background:${KC[n]}"></span>`} ${n}</span><b class="${n==='idle'&&TP.idle>10?'i-warn':''}">${TP[n].toFixed(0)}%</b></div>`).join('')}</div>`})():''}</div>`:''}
+    return`<div class="shares" title="share of the ${t.length} ticks above · whole run: ${Object.values(K).map(n=>n+' '+L.p[n].toFixed(0)+'%').join(', ')}">${Object.values(K).map(n=>`<div><span>${n==='idle'&&TP.idle>10?'<span class="i-warn">⚠</span>':`<span class="dot" style="background:${KC[n]}"></span>`} ${n==='inventory'?'items':n}</span><b class="${n==='idle'&&TP.idle>10?'i-warn':''}">${TP[n].toFixed(0)}%</b></div>`).join('')}</div>`})():''}</div>`:''}
   <div><div class="sub"><span>Skills</span><span>total ${total}</span></div><div class="skills">${sks.map(k=>`<div class="sk ${k.level>=99?'mx':''} ${k.name===b.goalSkill?'goal':''}" title="${nf(k.xp)} xp${k.name===b.goalSkill?' · goal skill':''}"><span>${E(k.name)}</span><b>${k.level}</b><i style="width:${((k.level-1)/98*100).toFixed(0)}%"></i></div>`).join('')||'<span class="dm">No skills in the status file.</span>'}</div></div>
   <div class="inv2"><div><div class="sub"><span>Pack</span><span>${inv.length}/28</span></div><div class="pack">${pack}</div></div>
   <div style="min-width:0;display:flex;flex-direction:column;gap:6px"><div><div class="sub"><span>Bank</span><span>${b.bank?b.bank.length+' kinds'+(b.bankAt?' · '+ago(S.now-b.bankAt)+' old':''):'not seen'}</span></div>${b.bank?`<div class="bankg">${bank}</div>`:'<div class="dm" style="font-size:12px">Not opened since the bot started.</div>'}</div>
   ${run?`<div><div class="sub"><span>Action sets per tick</span><span>share · xp/tick</span></div>${combos}</div>`:''}
   <div><div class="sub"><span>Live ranks</span><span>${(()=>{const t=Math.min(...(b.ranks||[]).map(x=>x.since).filter(Boolean));return isFinite(t)?`Δ ${S.now-t>=86400e3?'24 h':dur(S.now-t)}`:'Δ'})()} · lvl</span></div><div class="list">${rk}</div></div></div></div>
-  ${b.result?`<div class="result" title="${E(b.result)}">${ocIcon(b.outcome)} ${E(b.result)}</div>`:''}`);
+`);
   $('#dupd').textContent=b.at?`status ${ago(S.now-b.at)} ago`:'no status file';
 }
 
@@ -444,14 +505,14 @@ function flowSvg(v,W,H){const fl=v.flow||[];if(!fl.length)return`<div class="emp
 
 // ---- activity: live accounts first; practice folds into one line with counts (click to open) ----
 function activity(){
-  put('#scripts',(S.scripts.length?'<div class="scr hd"><span>script</span><span>runs</span><span>ok</span><span>recent</span></div><div class="scr hd"><span>script</span><span>runs</span><span>ok</span><span>recent</span></div>':'')+S.scripts.slice(0,8).map(s=>`<div class="scr" title="${s.runs} runs · ${s.ok} ok · last ${when(s.last)} · ${s.streak}× ${s.streakOk?'pass':'fail'} streak"><span class="ell">${E(s.goal)}</span><span class="dm" style="text-align:right">${s.runs}</span><span style="text-align:right">${Math.round(100*s.ok/s.runs)}%</span><span class="pips">${s.recent.map(o=>`<i style="background:${o?'var(--win)':'var(--warn)'}"></i>`).join('')}</span></div>`).join('')||'<span class="dm">No RESULT lines yet.</span>');
-  const ev=S.events.map(e=>({at:e.at,name:e.name,practice:e.practice,ic:'<span class="g">▸</span>',text:e.text,full:e.full,kind:'ev'})),rs=S.results.map(r=>{const d=/\bdied=true\b/.test(r.text)||/\bdied (?!=)/.test(r.text);return{at:r.at,name:r.name,practice:r.practice,ic:ocIcon(d?'died':r.ok?'ok':'fail'),text:r.text,kind:d?'died':r.ok?'ok':'fail'}});
+  put('#scripts',(S.scripts.length?'<div class="scr hd"><span>script</span><span>runs</span><span>ok</span><span>recent</span></div><div class="scr hd"><span>script</span><span>runs</span><span>ok</span><span>recent</span></div>':'')+S.scripts.slice(0,8).map(s=>`<div class="scr" title="${s.runs} raw worker runs · ${s.ok} ok · stop cleanup proved ${s.proofs?.stopCleanup??0} (separate from work goal) · last ${when(s.last)} · ${s.streak}× ${s.streakOk?'pass':'fail'} streak"><span class="ell">${E(s.goal)}</span><span class="dm" style="text-align:right">${s.runs}</span><span style="text-align:right">${Math.round(100*s.ok/s.runs)}%</span><span class="pips">${s.recent.map(o=>`<i style="background:${o?'var(--win)':'var(--warn)'}"></i>`).join('')}</span></div>`).join('')||'<span class="dm">No RESULT lines yet.</span>');
+  const ev=S.events.map(e=>({at:e.at,name:e.name,practice:e.practice,ic:'<span class="g">▸</span>',text:e.text,full:e.full,kind:'ev'})),rs=S.results.map(r=>{const d=/\bdied=true\b/.test(r.text)||/\bdied (?!=)/.test(r.text);return{at:r.at,name:r.name,practice:r.practice,ic:ocIcon(d?'died':r.ok?'ok':'fail'),text:hasStopProof(r.nativeProof)?'Stop cleanup proved / work stopped · raw worker '+r.text:r.text,kind:d?'died':resultKind(r)}});
   const all=[...ev,...rs].sort((a,b)=>b.at-a.at),live=all.filter(f=>!f.practice).slice(0,80),prac=all.filter(f=>f.practice),hour=prac.filter(f=>S.now-f.at<3600e3);
   const n=k=>hour.filter(f=>f.kind===k).length;
   $('#acth').textContent=`${live.length} live · ${prac.length} practice`;
   const row=f=>`<div title="${E(when(f.at))} · ${E(f.full||f.text)}"><span class="dm num">${E(hm(f.at))}</span>${f.ic}<b class="ell">${E(f.name)}</b><span class="dm">${E(f.text)}</span></div>`;
   put('#feed',(live.length?live.map(row).join(''):'<div class="empty-st" style="display:block">No live events yet.</div>'));
-  put('#pfeed',`<div class="pline" id="pline">${PRAC_OPEN?'▾':'▸'} practice · last hour: <b class="num">${n('ok')}</b> <span class="i-win">✔</span> <b class="num">${n('fail')}</b> <span class="i-warn">✘</span> <b class="num">${n('died')}</b> <span class="i-late">✝</span> · <b class="num">${n('ev')}</b> phase changes <span style="margin-left:auto">${PRAC_OPEN?'hide':'show'} ${prac.length}</span></div>`+
+  put('#pfeed',`<div class="pline" id="pline">${PRAC_OPEN?'▾':'▸'} practice · last hour: goals <b class="num">${n('ok')}</b> · stop cleanup proved <b class="num">${n('stop-proof')}</b> · work failed <b class="num i-warn">${n('fail')}</b> · died <b class="num i-late">${n('died')}</b> · <b class="num">${n('ev')}</b> phase changes <span style="margin-left:auto">${PRAC_OPEN?'hide':'show'} ${prac.length}</span></div>`+
     (PRAC_OPEN?`<div style="max-height:120px;overflow:auto">${prac.slice(0,80).map(row).join('')}</div>`:''))}
 $('#pfeed').addEventListener('click',e=>{if(e.target.closest('#pline')){PRAC_OPEN=!PRAC_OPEN;activity()}});
 
@@ -470,11 +531,21 @@ function requests(){if(SHOW)return teamBoards();$('#rqt').textContent='Owner req
   <div class="sub" style="margin:4px 0 0"><span>Open · priority order</span><span>${r.open.length}</span></div>
   <div class="scroll">${r.open.map(x=>`<div class="rqi" title="${E(x.request)}${x.next?' · NEXT: '+E(x.next):''}${x.evidence?' · '+E(x.evidence):''}"><span class="dm num">#${E(x.id)}</span><span class="st ${RC[x.kind]||'k-RULE'}">${E(x.kind)}</span><span class="ell">${E(x.request)}</span></div>`).join('')||'<div class="empty-st">No open request.</div>'}</div>`)}
 
+function capacityView(){
+  const c=S.capacity||{},sys=S.sys||{};
+  const number=v=>typeof v==='number'&&Number.isFinite(v)?v:null;
+  const active=c.fresh===true?number(c.active):null,cap=number(c.cap),queued=c.fresh===true?number(c.queued):null;
+  const free=number(c.freeGB)??number(sys.freeGB),headroom=c.fresh===true?number(c.headroomGB):null;
+  const value=v=>v===null?'?':v;
+  $('#k-win').innerHTML=`${value(active)}<small>/ ${value(cap)}</small>`;
+  put('#capacity',`<div title="Controller observation: ${c.fresh===true?'recent':'stale or unavailable'}"><b>${value(queued)}</b><span>queued for admission</span></div><div><b>${free===null?'?':free.toFixed(1)} <small>GiB</small></b><span>free RAM</span></div><div title="Free RAM minus controller floor and pending startup reserve. Each new start also needs its own admission budget."><b class="${headroom!==null&&headroom<1?'i-warn':''}">${headroom===null?'?':headroom.toFixed(1)} <small>GiB</small></b><span>above floor + reserves</span></div>`);
+}
 function machine(){const s=S.sys||{},w=S.world||{},mem=s.totalGB?100*(1-s.freeGB/s.totalGB):0,sw=S.swarm;
   const bar=(k,p,txt,warn)=>`<div class="mbar"><span class="cap">${k}</span><span class="tr"><i style="width:${Math.min(100,p).toFixed(0)}%;background:${warn?'var(--warn)':'var(--gold2)'}"></i></span><span class="num" style="text-align:right">${warn?'<span class="i-warn">⚠</span> ':''}${txt}</span></div>`;
-  $('#mach-h').textContent=`${s.cores||'?'} cores · feed ${w.connected?'up':'down'}${sw?' · swarm '+ago(S.now-sw.at)+' ago':''}`;
+  $('#mach-h').textContent=`${s.cores||'?'} logical CPUs · feed ${w.connected?'up':'down'}${sw?' · swarm '+ago(S.now-sw.at)+' ago':''}`;
+  $('#mach-h').title=sw?`Managed ${sw.running} · external ${sw.externalRunning??'unknown'} · pending ${sw.pendingStartup??'unknown'} · startup reserve ${sw.pendingReserveGB??'unknown'} GiB · free RAM floor ${sw.minFreeGB??'unknown'} GiB`:'';
   const pr=[...(s.procs||[])].sort((a,b)=>b.mb-a.mb);
-  put('#mach',bar('CPU',s.cpu||0,(s.cpu||0).toFixed(0)+'%',s.cpu>85)+bar('RAM',mem,`${(s.totalGB-s.freeGB).toFixed(1)} / ${(s.totalGB||0).toFixed(0)} GB`,s.freeGB<5)+
+  put('#mach', (sw?`<div class="dm" style="font-size:11px;margin-bottom:4px">Managed ${sw.running} · external ${sw.externalRunning??'?'} · starting ${sw.pendingStartup??'?'} / cap ${sw.maxBots}</div>`:'')+bar('CPU',s.cpu||0,(s.cpu||0).toFixed(0)+'%',s.cpu>85)+bar('RAM',mem,`${(s.totalGB-s.freeGB).toFixed(1)} / ${(s.totalGB||0).toFixed(0)} GB`,s.freeGB<5)+
   `<div class="sub" style="margin-top:2px"><span>bun · ${pr.length} · ${nf(pr.reduce((n,p)=>n+p.mb,0))} MB</span><span>pid · up · RAM</span></div><div>${pr.slice(0,3).map(p=>`<div class="proc"><span class="ell">${E(p.script)}</span><span class="dm">${p.pid}</span><span>${dur(p.up)}</span><span class="dm" style="text-align:right">${p.mb} MB</span></div>`).join('')||'<span class="dm">No process scan yet.</span>'}${pr.length>3?`<div class="dm" style="font-size:11px">+${pr.length-3} more · ${nf(pr.slice(3).reduce((n,p)=>n+p.mb,0))} MB</div>`:''}</div>`)}
 
 async function loadMap(){if(MAPI||!S.map?.ready)return;try{const buf=new Uint8Array(await(await fetch('/api/map')).arrayBuffer());const m=S.map,c=document.createElement('canvas');c.width=m.w;c.height=m.h;const g=c.getContext('2d'),img=g.createImageData(m.w,m.h);
@@ -487,39 +558,101 @@ function drawMap(){if(mode!=='2d'||!S)return;const c=$('#map'),w=c.clientWidth,h
     if(cl==='on'){g.beginPath();g.arc(x,z,11,0,7);g.fillStyle='#7ed36a26';g.fill()}g.beginPath();g.arc(x,z,sel===b.name?6:4.5,0,7);g.fillStyle=col;g.fill();if(sel===b.name){g.lineWidth=2;g.strokeStyle='#e9b949';g.stroke()}
     if(cl!=='off'||sel===b.name){g.fillStyle='#ece2c6';g.font='700 12px "Barlow Semi Condensed",sans-serif';g.fillText(b.name===MARK?'main':b.name,x+8,z-6)}}}
 $('#map').onclick=e=>{const c=$('#map'),r=c.getBoundingClientRect();let best=null,bd=300;for(const[x,z,n]of c._p||[]){const d=(x-(e.clientX-r.left))**2+(z-(e.clientY-r.top))**2;if(d<bd){bd=d;best=n}}if(best)pick(best)};
-function setMode(m){mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},'http://localhost:3000');$('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';if(S){syncWorld();drawMap()}}
-$('#bt').onclick=()=>{TOUR=!TOUR;TOUR_AT=0;$('#bt').classList.toggle('on',TOUR);if(S)render()};$('#bt').classList.toggle('on',TOUR);$('#b3').onclick=()=>setMode('3d');$('#b2').onclick=()=>setMode('2d');
-function syncWorld(){const b=S.bots.find(x=>x.name===sel);$('#follow').textContent=mode==='3d'?(b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${S.bots.filter(b=>b.live||b.pos).length} bots on the map`;
-  $('#map-h').textContent=mode==='3d'?'live rs-world viewer · world feed':'collision map · click a dot';
-  // Load the viewer once; later follow changes go by postMessage (a new src reloads the whole 3D scene).
-  // fps=20 and scale=0.75 keep its CPU and GPU cost down on a busy box.
-  if(mode!=='3d')return;
+// HTTP and iframe load prove delivery only. A rendered/private-ready message proves the scene.
+function viewerFrameUrl(value,base){
+  const u=new URL(value||'/viewer/',base),b=new URL(base);
+  if(u.origin!==b.origin||u.pathname!=='/viewer/')throw Error('Unsupported viewer address');
+  return u;
+}
+function viewerMessage(e,frame,origin){
+  if(e.source!==frame||e.origin!==origin)return null;
+  const v=e.data?.viewerState;
+  return v&&['loading','ready','error'].includes(v.state)?v:null;
+}
+function viewerCanReveal(v){return v?.state==='ready'&&v.renderReady===true&&v.privacyReady===true;}
+function viewerStatusText(v,m){
+  if(v.state==='checking')return 'Checking 3D viewer availability…';
+  if(v.state==='loading')return v.detail||'Loading 3D scene… 2D remains available.';
+  if(v.state==='unavailable')return '3D unavailable · '+v.detail+' · showing 2D';
+  if(m==='3d'&&v.state==='ready')return v.feed===true?'3D scene ready · live feed connected':v.feed===false?'3D scene ready · live feed disconnected':'3D scene ready · feed status unknown';
+  return '2D collision map · click a dot';
+}
+function showViewerStatus(){
+  const text=viewerStatusText(VIEWER,mode),notice=$('#viewer-status');
+  $('#map-h').textContent=text;$('#map-h').title=text;
+  notice.hidden=!['checking','loading','unavailable'].includes(VIEWER.state);notice.textContent=text;
+  $('#mw').classList.toggle('loading3d',mode==='3d'&&VIEWER.state!=='ready');
+  $('#b3').textContent=['checking','loading'].includes(VIEWER.state)?'3D…':'3D';
+}
+function setMode(m,preserve=false){
+  if(m==='2d'&&!preserve){VIEWER_REQUEST++;clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'idle',detail:''};}
+  if(m==='2d'){$('#rsw').removeAttribute('src');rswFor=null;}
+  mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},VIEWER.origin);
+  $('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';
+  showViewerStatus();if(S){syncWorld();drawMap();}
+}
+function viewerUnavailable(reason){
+  clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'unavailable',detail:String(reason||'viewer did not become ready').slice(0,180),feed:null};
+  $('#rsw').removeAttribute('src');rswFor=null;setMode('2d',true);
+}
+async function request3D(){
+  const request=++VIEWER_REQUEST;clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'checking',detail:'',feed:null};showViewerStatus();
+  try{
+    const response=await fetch('/api/viewer-health',{signal:AbortSignal.timeout(3000)});
+    if(!response.ok)throw Error('Viewer health request failed');const health=await response.json();
+    if(request!==VIEWER_REQUEST)return;
+    if(!health.available)throw Error(health.reason||'viewer service is not available');
+    const url=viewerFrameUrl(health.url,location.origin);
+    VIEWER={state:'loading',detail:'Loading 3D scene… waiting for rendering and private-name protection.',origin:url.origin,url:url.href,feed:null};
+    $('#rsw').removeAttribute('src');rswFor=null;
+    VIEWER_TIMER=setTimeout(()=>{if(request===VIEWER_REQUEST&&VIEWER.state==='loading')viewerUnavailable('scene readiness timed out');},45000);
+    setMode('3d',true);
+  }catch(e){if(request===VIEWER_REQUEST)viewerUnavailable(e.message||'viewer health check failed');}
+}
+$('#bt').onclick=()=>{TOUR=!TOUR;TOUR_AT=0;$('#bt').classList.toggle('on',TOUR);if(S)render()};$('#bt').classList.toggle('on',TOUR);
+$('#b3').onclick=request3D;$('#b2').onclick=()=>setMode('2d');
+$('#rsw').onerror=()=>{if(mode==='3d')viewerUnavailable('viewer page failed to load');};
+$('#rsw').onload=()=>{if(mode==='3d'&&VIEWER.state==='loading'){VIEWER.detail='3D page loaded · waiting for scene rendering and private-name protection.';showViewerStatus();}};
+window.addEventListener('message',e=>{
+  const frame=$('#rsw').contentWindow;
+  if(e.source!==frame||e.origin!==VIEWER.origin)return;
+  const v=viewerMessage(e,frame,VIEWER.origin);
+  if(v&&mode==='3d'){
+    if(v.state==='error'){viewerUnavailable(v.detail||'viewer reported an error');return;}
+    if(viewerCanReveal(v)){clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'ready',detail:'',feed:typeof v.feedConnected==='boolean'?v.feedConnected:null};}
+    else if(VIEWER.state==='loading'&&typeof v.detail==='string')VIEWER.detail=v.detail.slice(0,180);
+    showViewerStatus();
+  }
+  if(e.data?.viewerTiming)fetch('/api/viewer-timing',{method:'POST',body:JSON.stringify(e.data.viewerTiming)}).catch(()=>{});
+});
+function syncWorld(){
+  const b=S.bots.find(x=>x.name===sel);$('#follow').textContent=mode==='3d'?(b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${S.bots.filter(b=>b.live||b.pos).length} bots on the map`;
+  showViewerStatus();if(mode!=='3d'||!VIEWER.url)return;
   const f=$('#rsw');
-  if(!f.src){rswFor=sel;f.src=`http://localhost:3000/?live=wss://rs-sdk-demo.fly.dev/worldfeed${Q.get('flight')==='0'?'&flight=0':''}${Q.get('cache')==='0'?'&cache=0':''}&embed=1&fps=20&scale=0.75&hideNamesFrom=${encodeURIComponent(location.origin+'/api/hidden-names')}&highlightFrom=${encodeURIComponent(location.origin+'/api/our-names')}${sel?'&follow='+encodeURIComponent(sel):''}`}
-  else if(rswFor!==sel&&sel){rswFor=sel;f.contentWindow?.postMessage({follow:sel},'http://localhost:3000')}}
+  if(!f.getAttribute('src')){
+    const url=viewerFrameUrl(VIEWER.url,location.origin);
+    url.searchParams.set('live','wss://rs-sdk-demo.fly.dev/worldfeed');url.searchParams.set('embed','1');url.searchParams.set('fps','20');url.searchParams.set('scale','0.75');
+    url.searchParams.set('hideNamesFrom',location.origin+'/api/hidden-names');url.searchParams.set('highlightFrom',location.origin+'/api/our-names');
+    if(Q.get('flight')==='0')url.searchParams.set('flight','0');if(Q.get('cache')==='0')url.searchParams.set('cache','0');
+    if(sel)url.searchParams.set('follow',sel);rswFor=sel;f.src=url.href;
+  }else if(rswFor!==sel&&sel){rswFor=sel;f.contentWindow?.postMessage({follow:sel},VIEWER.origin);}
+}
 
 // ---- header ----
-function header(){const R=S.race,G=S.gates?.gates||[],X=S.economy,w=S.world||{},sw=S.swarm,bots=S.bots,live=bots.filter(b=>!b.practice),ok=R&&!R.error;
-  $('#k-win').innerHTML=ok?`${R.wins}<small>/ 24 · floor ${R.floorWins}</small>`:'–';
-  $('#kh-win').title=ok?`Boards where the plan finishes before the live #1. Realistic plan: ${R.wins}; floor plan: ${R.floorWins}. Source: ${R.options}.`:'';
-  $('#k-gap').innerHTML=ok&&R.gap!=null?`<span class="${R.gap>=0?'i-win':''}">${sgn(R.gap)}</span><small>floor ${sgn(R.floorGap)}</small>`:'–';
-  $('#kh-gap').title=ok?`Overall board, ticks against the live #1. Headline = realistic plan ${sgn(R.gap)} ticks (${tickTime(R.gap)}); floor plan ${sgn(R.floorGap)} ticks (${tickTime(R.floorGap)}). ${R.options}.`:'';
-  $('#k-gates').innerHTML=G.length?`${G.filter(g=>g.pass).length}<small>/ ${G.length}</small>`:'–';
-  $('#kh-gates').title=G.map(g=>(g.pass?'✔ ':'✘ ')+g.name+': '+g.detail).join('\n');
-  $('#k-gold').innerHTML=X?`${X.goldPerTick.toFixed(1)}<small>${gp(X.goldPerTick*3600e3/TICK_MS)}/h</small>`:'–';
-  $('#kh-gold').title='Coins per tick of the live gold farmers, each measured over its last 2 minutes of status files.';
-  // Training XP: only bots whose goal skill is still below its target. Level-99 gold farmers still gain XP; that XP
-  // does not move any board, so it is not counted.
-  const tr=live.filter(b=>b.training&&b.xpPerTick>0);
-  $('#k-xp').innerHTML=tr.length?`${nf(Math.round(tr.reduce((n,b)=>n+b.xpPerTick,0)))}<small>${tr.length} bot${tr.length>1?'s':''}</small>`:'<span class="dm">0</span><small>no bot below its target</small>';
-  $('#kh-xp').title=tr.length?tr.map(b=>`${b.name}: ${b.goalSkill} ${b.goalNow}/${b.goalLevel}, ${b.xpPerTick.toFixed(1)} xp/tick`).join('\n'):'No running bot is training a skill below its target level.';
-  put('#mini',`<span><b>${bots.filter(b=>b.inWorld).length}</b> in world</span><span><b>${sw?sw.running+' / '+sw.maxBots:'–'}</b> swarm</span><span><b>${live.length}</b> accounts</span><span><b>${nf(S.worldPlayers)}</b> players</span><span>tick <b>${w.tick!=null?nf(w.tick):'–'}</b></span>${(()=>{const d=S.bots.filter(b=>!b.practice&&b.death).sort((a,b)=>b.death.at-a.death.at);return`<span title="${E(d.length?'live accounts with a death in the last 24 h (newest each):\n'+d.map(b=>hm(b.death.at)+' '+b.name).join('\n'):'no live death in 24 h')}"><b class="${d.length?'i-late':''}">${d.length}</b> ✝ 24 h</span>`})()}`)}
+function header(){capacityView();const c=S.collection||{banks:[],pending:[]},bots=S.bots.filter(b=>!b.practice),banks=c.banks||[];
+  $('#kh-win').title='Active managed and external live accounts, from a recent controller observation. Unknown when controller is stale.';
+  $('#k-gap').innerHTML=`${banks.filter(b=>b.state==='recent').length}<small>/ ${banks.length}</small>`;$('#kh-gap').title='Recent = bank observed within 5 minutes. Fresh status does not refresh a bank.';
+  $('#k-gates').textContent=c.pending.length;$('#kh-gates').title='Non-empty cargo manifests. Not added to bank totals.';
+  $('#k-gold').textContent=c.transferCount??0;$('#kh-gold').title='Vault log entries with both endpoints in our owned live account set.';
+  $('#k-gp').textContent=bots.filter(b=>['failed','died','blocked','unobserved','active-stale'].includes(b.operation)).length;$('#kh-gp').title='Failed, blocked or in-world with stale status.';
+  const tr=bots.filter(b=>running(b)&&b.xpPerTick>0);$('#k-xp').textContent=tr.length?nf(Math.round(tr.reduce((n,b)=>n+b.xpPerTick,0))):'–';$('#kh-xp').title='Sum of per-account XP/tick over up to 2 minutes. Two samples needed. Item output is separate.';
+  put('#mini',`<span title="${c.missingIds?'Name estimate: legacy snapshots lack item IDs':'Distinct observed bank IDs; packs and cargo excluded'}"><b>${c.distinct??'?'}</b> banked types</span><span><b>${bots.filter(running).length}</b> observed</span><span><b>${bots.filter(b=>b.operation==='offline').length}</b> offline</span><span><b>${banks.filter(b=>b.state==='unknown').length}</b> banks unknown</span><span><b>${banks.filter(b=>b.state==='stale').length}</b> banks stale</span>`)}
 
 // Alerts: the last 60 minutes plus the unresolved ones (stuck, idle now); older ones fold into "N earlier".
 // Practice alerts only as a muted count.
 function alertsBar(){const now=S.now,all=S.alerts||[],live=all.filter(a=>!a.practice),prac=all.filter(a=>a.practice);
   const recent=live.filter(a=>now-a.at<60*60e3||a.kind==='stuck'||a.kind==='idle'),older=live.filter(a=>!recent.includes(a));
-  const ic={death:'✝',stuck:'⚠',idle:'⚠',logout:'⚠'};
+  const ic={death:'✝',failure:'✘',blocked:'⚠',stuck:'⚠',idle:'⚠',logout:'⚠'};
   const chip=x=>`<span class="al ${x.kind}" data-n="${E(x.name)}" title="${E(when(x.at))} · ${E(x.text)}"><span class="t">${ic[x.kind]||'⚠'} ${x.kind.toUpperCase()}</span><b>${E(x.name)}</b><span class="dm ell" style="max-width:240px">${E(x.text)}</span><span class="fa num">${hm(x.at)}</span></span>`;
   const list=l=>E(l.map(x=>hm(x.at)+' '+x.kind+' '+x.name+': '+x.text).join('\n'));
   put('#alerts',`<span class="lbl">ALERTS</span>`+(recent.length?recent.map(chip).join(''):'<span class="allclear"><span class="i-win">✔</span> no live alert in the last hour</span>')+
@@ -566,25 +699,14 @@ function raceView(){const R=S.race,G=S.gates?.gates||[];
   put('#rspecial',`<div><div class="sub"><span>Quest Points · its own clock</span></div>${qpTxt}<div style="margin-top:6px">${legend}</div></div><div><div class="sub"><span>No clock · rank by value</span><span>ties by time</span></div><div class="nc">${ncTxt}</div></div>`)}
 
 // ---- economy ----
-function economy(){const v=S.vault,X=S.economy;if(!v||!X)return;const live=v.holders.length,seen=v.holders.filter(h=>h.bankSeen).length;
-  // The newest transfer can be a small one; the age of the biggest band says how old most of the picture is.
-  const big=(v.flow||[]).reduce((m,l)=>!m||l.value>m.value?l:m,null),bigAge=big?S.now-big.last:null;
-  const age=v.lastTransferAt?S.now-v.lastTransferAt:null,stale=age==null||age>3600e3;
-  $('#vsum').textContent=`${live} holders · banks known ${seen}/${live} · GE quotes ${X.pricesAt?ago(S.now-X.pricesAt)+' old':'loading'}`;$('#k-gp').textContent=gp(v.value);
-  if(!$('#eg')){$('#vault').innerHTML=`<div class="vtop" id="vt"></div><div class="egrid" id="eg"><div><div class="sub"><span title="givers → banker → receivers">Flow</span><span id="flowage"></span></div><div id="flow"></div></div><div><div class="sub"><span>Gold farmers</span><span>c/tick · made · food</span></div><div id="farm"></div><div class="sub" style="margin-top:6px"><span>GE stock · key supplies</span><span id="suph"></span></div><div class="scroll" id="sup"></div></div><div><div class="sub"><span>Items</span><span>count · value</span></div><div class="scroll" id="vit"></div></div><div><div class="sub"><span>Who holds what</span><span>value · source · age</span></div><div class="scroll" id="vho"></div></div></div>`}
-  put('#flowage',age!=null?`<span class="age ${stale?'old':'ok'}" title="last vault-log transfer ${when(v.lastTransferAt)}${stale?' · older than 1 h: the flow is greyed out':''}">${stale?'⚠ ':''}newest ${ago(age)}${bigAge!=null&&bigAge>3600e3?` · biggest ${ago(bigAge)}`:''}</span>`:'<span class="age old">no transfer</span>');
-  const tr=X.trend||[];
-  put('#vt',`<span><span class="vbig">${gp(v.value)}</span><small>team wealth · est.</small></span>${(()=>{const bk=(v.holders||[]).find(h=>h.banker);return bk?`<span title="what the banker (${E(bk.name)}) holds">in vault <b class="gold">${gp(bk.value)}</b></span>`:''})()}${tr.length>1?`<span title="vault value, one point a minute since the dashboard started">${svgSpark(tr,80,18)}</span>`:''}<span>${icon('Coins',16)} <b class="gold">${nf(v.coins)}</b><small>coins</small></span><span><b class="gold">${X.goldPerTick.toFixed(1)}</b><small>c/tick farmed now · ${gp(X.goldPerTick*3600e3/TICK_MS)}/h</small></span><span><b class="num">${v.items.length}</b><small>kinds</small></span>${seen<live?`<span class="dm" style="margin-left:auto;font-size:11px"><span class="i-warn">⚠</span> ${live-seen} bank${live-seen>1?'s':''} never opened</span>`:''}`);
-  put('#farm',X.farmers.length?X.farmers.map(f=>{const emptyT=f.emptyMs!=null?f.emptyMs/TICK_MS:null,low=emptyT!=null&&emptyT<4500;
-    return`<div class="fr" title="${E(f.name)}: ${nf(f.coins)} coins held · food ${f.food} in pack, ${f.bankFood} in bank${f.eatPerTick?' · eats '+(f.eatPerTick*1000).toFixed(1)+' per 1,000 ticks':''}${emptyT!=null?' · empty in '+tickTime(emptyT):''}"><span>${f.fresh?'':'<span class="fa">○ </span>'}<b style="font-weight:600">${E(f.name)}</b></span><span class="n">${f.coinsPerTick!=null?f.coinsPerTick.toFixed(1):'–'}</span><span class="n">${f.made!=null?gp(f.made):'–'}</span><span class="n">${low?'<span class="i-warn">⚠</span> ':''}${f.food}${emptyT!=null?' · '+ticksTxt(emptyT)+'t':''}</span></div>`}).join(''):'<div class="empty-st">No gold farmer running.</div>');
-  const sup=(X.supplies||[]),inStock=sup.filter(s=>s.stock>0).sort((a,b)=>b.stock-a.stock);
-  $('#suph').textContent=`${inStock.length} of ${sup.length} for sale · stock · ask`;
-  put('#sup',inStock.map(s=>`<div class="sup" title="${E(s.name)} · ${nf(s.stock)} for sale${s.ask!=null?' · ask '+nf(s.ask):''}${s.vwap!=null?' · 7-day avg '+nf(Math.round(s.vwap)):''}">${icon(s.name,16)}<span class="ell">${E(s.name)}</span><span style="text-align:right">${gp(s.stock)}</span><span class="dm" style="text-align:right">${s.ask!=null?gp(s.ask):'–'}</span></div>`).join('')||'<div class="empty-st">None of the key supplies is for sale.</div>');
-  const items=v.items.map(i=>`<div class="it" title="${E(i.holders.map(h=>h.name+' '+nf(h.count)).join(', '))}${i.price!=null?' · '+nf(Math.round(i.price))+' gp each':' · no price'}">${icon(i.name,20)}<span class="ell">${E(i.name)}</span><span style="text-align:right">${gp(i.count)}</span><span class="${i.value?'g':'fa'}" style="text-align:right">${i.value!=null?gp(i.value):'?'}</span></div>`).join('')||'<div class="empty-st">Nothing held.</div>';
-  const hold=v.holders.map(h=>`<div class="hold" title="${E(h.items.map(i=>i.name+' '+nf(i.count)).join(', '))}"><div class="h1"><b class="ell" style="font-weight:${h.banker?700:600};${h.banker?'color:var(--gold)':''}">${E(h.name)}</b><span class="g" style="text-align:right">${gp(h.value)}</span><span class="src">${h.source==='log'?'from log':h.source==='snapshot+log'?'snap + log':h.bankSeen?'snapshot':'pack only'}</span><span class="fa" style="text-align:right">${h.age!=null?ago(h.age):''}</span></div></div>`).join('');
-  const fe=$('#flow');fe.classList.toggle('stale',stale);put(fe,flowSvg(v,fe.clientWidth||280,fe.clientHeight||150));put('#vit',items);put('#vho',hold)}
+function economy(){const c=S.collection;if(!c)return;
+  $('#vsum').textContent=`${c.missingIds?'name estimate · '+c.missingIds+' rows lack IDs':'item IDs observed'} · bank only`;
+  const row=(a,b)=>`<div class="stockrow"><span class="ell">${a}</span><b>${b}</b></div>`;
+  put('#vault',`<div class="stockgrid"><div><div class="sub">Bank stock · snapshot quantities</div>${c.items.map(i=>row(E(i.name),nf(i.count))).join('')||'<div class="dm">No bank stock observed.</div>'}</div>
+  <div><div class="sub">Bank freshness · 5 min limit</div>${c.banks.map(b=>row(E(b.name),`<span class="${b.state==='recent'?'i-win':'i-warn'}">${b.state} ${b.at?ago(S.now-b.at):''}</span>`)).join('')}</div>
+  <div><div class="sub">Useful cargo · awaiting own courier</div>${c.pending.map(p=>`<div class="cargo"><b>${E(p.name)}</b> <span class="${p.stale?'i-warn':'dm'}">${p.stale?'STALE · ':''}${ago(S.now-p.at)}</span><div class="dm">${p.items.map(i=>E(i.name)+' × '+nf(i.count)).join(', ')}</div></div>`).join('')||'<div class="dm">No pending manifest observed.</div>'}<p class="dm">Cargo is a subset of bank stock. Snapshots may age during a transfer.</p></div>
+  <div><div class="sub">Confirmed owned transfers · vault log</div>${c.transfers.map(t=>`<div class="cargo"><b>${E(t.from)} → ${E(t.to)}</b><div class="dm">${ago(S.now-t.at)} · ${(t.items||[]).map(i=>E(i.name)+' × '+nf(i.count)).join(', ')}</div></div>`).join('')||'<div class="dm">No owned transfer logged.</div>'}<p class="dm">${c.excludedTransfers} entries excluded: ownership not confirmed. No GE commerce.</p></div></div>`)}
 
-// Role-aware second line of a running row, picked from the swarm job's goal.
 function roleLine(b){const r=b.role4;if(!r)return null;
   if(r.kind==='gold'){const emptyT=r.emptyMs!=null?r.emptyMs/TICK_MS:null,low=emptyT!=null&&emptyT<4500;
     return`<span class="gold">${icon('Coins',14)} made ${r.made!=null?gp(r.made):'–'}</span><span class="dm num" title="${E(`food: ${r.food} in the pack, ${r.bankFood??0} in the bank`)}${emptyT!=null?' · lasts '+tickTime(emptyT)+' at the measured eat rate':''}">${low?'<span class="i-warn">⚠</span> ':''}food ${r.food}${r.bankFood?'+'+r.bankFood:''}${emptyT!=null?' · '+ticksTxt(emptyT)+' t':''}</span>`}
@@ -597,8 +719,8 @@ function roleLine(b){const r=b.role4;if(!r)return null;
 function chainHud(){const el=$('#chain'),c=S.chain;if(!c){el.style.display='none';return}el.style.display='';
   const node=(n,fresh,cap,main,sub,tt)=>n?`<div class="cn${fresh?'':' cnoff'}" data-pick="${E(n)}" title="${E(tt)}"><span class="cap">${cap}</span><b>${main}</b><span class="dm ell">${E(n)}${sub?' · '+sub:''}</span></div>`:'';
   const k=c.cook,r=c.courier,fs=c.farmers||[];
-  put(el,`<span class="t">food chain</span>`+node(k?.name,k?.fresh,'fish + cook',`${icon('Salmon',18)}${nf(k?.cooked??0)}`,`Cooking ${k?.level??'?'}${k?.fresh?'':' · '+ago(S.now-k.at)}`,'cooked trout and salmon in the Draynor bank')
-   +'<span class="ar">▸</span>'+node(r?.name,r?.fresh,'courier',`${icon('Salmon',18)}${nf(r?.fish??0)}`,E(r?.fresh?(r.place||'on the road'):'parked · '+ago(S.now-r.at)),'fish notes carried; boats Ardougne ⇄ Port Sarim, walk to Draynor')
+  put(el,`<span class="t">food chain</span>`+(k?node(k.name,k.fresh,'fish + cook',`${icon('Salmon',18)}${nf(k.cooked??0)}`,`Cooking ${k.level??'?'}${k.fresh?'':' · '+ago(S.now-k.at)}`,'cooked trout and salmon in the Draynor bank'):'')
+   +'<span class="ar">▸</span>'+(r?node(r.name,r.fresh,'courier',`${icon('Salmon',18)}${nf(r.fish??0)}`,E(r.fresh?(r.place||'on the road'):'parked · '+ago(S.now-r.at)),'fish notes carried; boats Ardougne ⇄ Port Sarim, walk to Draynor'):'')
    +'<span class="ar">▸</span>'+(fs.length?fs.map(f=>node(f.name,f.fresh,'gold farm',`${icon('Salmon',18)}${nf(f.food+f.bankFood)}`,'food','food in pack and bank; no stall, no shop')).join(''):'<div class="cn cnoff"><span class="cap">gold farm</span><b>–</b><span class="dm">no farmer running</span></div>'))}
 $('#chain').addEventListener('click',e=>{const n=e.target.closest('[data-pick]');if(n)pick(n.dataset.pick)});
 // The layout is drawn for 1920 x 1080. A larger screen scales the whole page up (2560 x 1440: 1.33), so every
