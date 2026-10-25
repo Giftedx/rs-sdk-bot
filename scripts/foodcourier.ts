@@ -11,7 +11,7 @@
 import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
-import { ARDY_BANK, BOAT_FARES_OUT, BOAT_FARES_ROUND, NORTH_BANK, NORTH_TO_SOUTH, SARIM, outboundStart } from './courier-route';
+import { ARDY_BANK, BOAT_FARES_OUT, BOAT_FARES_ROUND, NORTH_BANK, NORTH_TO_SOUTH, SARIM, draynorApproach, onKaramja, outboundStart } from './courier-route';
 
 type Pt = [number, number, number];
 const DRAYNOR = { x: 3092, z: 3243 };
@@ -20,6 +20,7 @@ const BRIM_DECK = { x: 2775, z: 3234 };
 const SARIM_DECK = { x: 3032, z: 3217 };
 const MUSA_DECK = { x: 2956, z: 3143 };
 const ARDY_DECK = { x: 2683, z: 3268 };
+const KNIGHTS = { x: 2653, z: 3302 }; // scripts/goldfarm-stable.ts KNIGHT_SPOT
 const FROM = process.env.FROM?.trim() || '';
 const WAIT = Number(process.env.WAIT ?? 1500);
 const CAP = Number(process.env.CAP ?? 3000);
@@ -207,8 +208,11 @@ try {
             `outboundOnly=true ${detail()} coins=${coins()} at=${p?.worldX},${p?.worldZ},${p?.level}`);
     }
 
-    if (START_DRAYNOR) {
-        if (!(await walk([[DRAYNOR.x, DRAYNOR.z, 2]]))) await fail('walk to Draynor bank');
+    // HOME_ONLY from Karamja: a session that ended between the boats goes on from the island (scripts/courier-route.ts).
+    const fromKaramja = HOME_ONLY && onKaramja(pos());
+    if (START_DRAYNOR && !fromKaramja) {
+        // From a Lumbridge respawn, the lane north of the jail guards (scripts/courier-route.ts draynorApproach).
+        if (!(await walk(draynorApproach(pos())))) await fail('walk to Draynor bank');
         if (coins() < 60) {
             const o = await s.bot.openBank();
             if (o.success) {
@@ -238,18 +242,24 @@ try {
 
     // Home fares come from the Draynor bank. The land route home crosses White Wolf Mountain (scripts/courier-route.ts),
     // so without two fares the courier logs out here at the bank, notes kept, instead of walking it.
-    if (coins() < BOAT_FARES_OUT) {
+    const fareNeed = fromKaramja ? BOAT_FARES_OUT / 2 : BOAT_FARES_OUT;
+    if (coins() < fareNeed && !fromKaramja) {
         const o = await s.bot.openBank();
         if (o.success) { await s.bot.withdrawItem(/^coins$/i, 200); await s.bot.closeBank(); }
         console.log(`MILESTONE home fares from Draynor bank coins=${coins()} t=${used()}`);
     }
-    if (coins() < BOAT_FARES_OUT) {
-        await fail(`no courier progress: needs ${BOAT_FARES_OUT} coins for the boats home; refusing the White Wolf Mountain land route`);
+    if (coins() < fareNeed) {
+        await fail(`no courier progress: needs ${fareNeed} coins for the boats home; refusing the White Wolf Mountain land route`);
     } else {
-    if (!(await walk(DRAYNOR_TO_SARIM))) await fail('walk to Port Sarim');
-    if (!(await sail(/^(seaman|captain tobias)/i, SAILOR, MUSA_DECK))) await fail('sail to Karamja');
-    if (!(await disembark())) await fail('Musa Point gangplank');
-    if (!(await walk([[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]]))) await fail('walk to Brimhaven');
+    if (!fromKaramja) {
+        if (!(await walk(DRAYNOR_TO_SARIM))) await fail('walk to Port Sarim');
+        if (!(await sail(/^(seaman|captain tobias)/i, SAILOR, MUSA_DECK))) await fail('sail to Karamja');
+        if (!(await disembark())) await fail('Musa Point gangplank');
+    } else console.log(`MILESTONE resume on Karamja t=${used()}`);
+    // Only the waypoints still ahead: from the middle of the island the first ones would walk back east.
+    const toBrim: Pt[] = [[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]];
+    const px = pos()?.worldX ?? 9999;
+    if (!(await walk(toBrim.filter(([x], i) => i === toBrim.length - 1 || x < px)))) await fail('walk to Brimhaven');
     if (!(await sail(/^customs officer$/i, CUSTOMS, ARDY_DECK))) await fail('sail to Ardougne');
     if (!(await disembark())) await fail('Ardougne gangplank');
     if (!(await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]))) await fail('walk to Ardougne bank');
@@ -266,16 +276,27 @@ try {
             if (isNorth) {
                 await walk([[2644, 3293, 2], [NORTH_BANK.x, NORTH_BANK.z, 2]]);
             } else {
-                await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]);
+                // Between the bank and the knights (19 tiles) both are in view range: stay put instead of walking back.
+                const q = pos();
+                if (!q || cheb(ARDY_BANK, q) > 6 && cheb(KNIGHTS, q) > 6) await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]);
             }
+            let toKnights = false;
             for (let tryN = 0; tryN < 3 && fishNotes() === n0 && !died; tryN++) {
                 const r = await s.bot.trade(new RegExp(`^${f}$`, 'i'), { give, timeout: 60_000, requestTimeout: 30_000, retryOnBusy: true });
-                if (!r.success) { console.log(`WARN trade ${f} ${r.reason} ${r.message}`); await waitTicks(s, 5); }
+                if (!r.success) {
+                    console.log(`WARN trade ${f} ${r.reason} ${r.message}`);
+                    // A thief at work stands at the knights, out of sight of the bank (2026-10-25: all six hand-outs
+                    // ended player_not_found). Look for it there once; that walk has 0 hunting spawns in reach.
+                    if (r.reason === 'player_not_found' && !isNorth && !toKnights) { toKnights = true; await walk([[KNIGHTS.x, KNIGHTS.z, 3]]); continue; }
+                    await waitTicks(s, 5);
+                }
             }
             handed += n0 - fishNotes();
             console.log(`MILESTONE gave ${f} ${n0 - fishNotes()} t=${used()}`);
         }
     });
+    // A hand-out at the knights ends 19 tiles from the bank: come back so the next run starts at a known bank.
+    { const q = pos(); if (q && cheb(ARDY_BANK, q) > 6 && cheb(NORTH_BANK, q) > 6) await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]); }
     off();
     const p = pos();
     const ok = !died && (received > 0 || HOME_ONLY) && !!p && (cheb(ARDY_BANK, p) <= 6 || cheb(NORTH_BANK, p) <= 6) && (FARMERS.length === 0 || handed > 0);

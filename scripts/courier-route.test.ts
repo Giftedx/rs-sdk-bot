@@ -1,5 +1,15 @@
 import { expect, test } from 'bun:test';
-import { outboundStart } from './courier-route';
+import { LUMBRIDGE_TO_DRAYNOR, draynorApproach, onKaramja, outboundStart } from './courier-route';
+
+test('a home trip that ended between the boats resumes on Karamja only', () => {
+    expect(onKaramja({ worldX: 2829, worldZ: 3190, level: 0 })).toBe(true); // Pocketpython, disconnected 2026-10-25
+    expect(onKaramja({ worldX: 2956, worldZ: 3146, level: 0 })).toBe(true); // Musa Point
+    expect(onKaramja({ worldX: 2774, worldZ: 3228, level: 0 })).toBe(true); // Brimhaven dock
+    expect(onKaramja({ worldX: 2956, worldZ: 3143, level: 1 })).toBe(false); // on the deck
+    expect(onKaramja({ worldX: 3222, worldZ: 3218, level: 0 })).toBe(false);
+    expect(onKaramja({ worldX: 2654, worldZ: 3283, level: 0 })).toBe(false);
+    expect(onKaramja(undefined)).toBe(false);
+});
 import { isNoProgressFailure } from '../packages/practice/src/supervise';
 
 test('every courier refusal blocks in the supervisor instead of logging in again', () => {
@@ -22,6 +32,13 @@ test('the land route to Port Sarim is only for starts east of White Wolf Mountai
     expect(outboundStart(at(3185, 3436))).toBe('land'); // Varrock West bank, survived live
     expect(outboundStart(at(3222, 3218))).toBe('land'); // Lumbridge respawn
     expect(outboundStart(at(3092, 3243))).toBe('land'); // Draynor bank
+});
+
+test('a Lumbridge respawn reaches Draynor north of the jail guards; Draynor itself walks straight in', () => {
+    expect(draynorApproach(at(3222, 3218))).toBe(LUMBRIDGE_TO_DRAYNOR);
+    expect(LUMBRIDGE_TO_DRAYNOR.every(([x, z]) => !(Math.abs(x - 3124) <= 10 && Math.abs(z - 3248) <= 10))).toBe(true);
+    expect(draynorApproach(at(3093, 3244))).toEqual([[3092, 3243, 2]]);
+    expect(draynorApproach(undefined)).toEqual([[3092, 3243, 2]]);
 });
 
 test('anywhere else is refused instead of walked', () => {

@@ -15,6 +15,21 @@ export const BOAT_FARES_OUT = 60;
 export const BOAT_FARES_ROUND = 120;
 
 export type OutboundStart = 'boat-south' | 'boat-north' | 'land' | 'refuse';
+export type RoutePoint = [number, number, number];
+export const DRAYNOR_BANK: Tile = { x: 3092, z: 3243 };
+// Lumbridge side -> Draynor bank north of the jail guards (scripts/fishcook.ts FIRE_TO_BANK, walked every pack).
+// research/route-danger.ts 3222,3218 ... 3092,3243 on this lane: 0 spawns in reach. The direct path passes two
+// level-26 jail guards (3121,3249 and 3127,3248, reach 8), too much for a 10 HP account after a respawn.
+export const LUMBRIDGE_TO_DRAYNOR: RoutePoint[] = [[3226, 3250, 2], [3180, 3258, 3], [3100, 3285, 3], [3089, 3266, 2], [3092, 3250, 1], [DRAYNOR_BANK.x, DRAYNOR_BANK.z, 2]];
+// Musa Point <-> Brimhaven on Karamja (ground level). A session that ends there (2026-10-25: Pocketpython was
+// disconnected at 2829,3190) resumes the home leg from here: walk to Brimhaven, sail to Ardougne.
+export function onKaramja(p: { worldX: number; worldZ: number; level: number } | null | undefined): boolean {
+    return !!p && p.level === 0 && p.worldX >= 2760 && p.worldX <= 2965 && p.worldZ >= 3130 && p.worldZ <= 3235;
+}
+export function draynorApproach(p: { worldX: number; worldZ: number; level: number } | null | undefined): RoutePoint[] {
+    if (p && p.level === 0 && p.worldX >= 3110) return LUMBRIDGE_TO_DRAYNOR;
+    return [[DRAYNOR_BANK.x, DRAYNOR_BANK.z, 2]];
+}
 
 const cheb = (a: Tile, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
 
