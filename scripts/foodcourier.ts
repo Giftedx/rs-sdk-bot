@@ -11,10 +11,9 @@
 import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
+import { ARDY_BANK, BOAT_FARES_OUT, BOAT_FARES_ROUND, NORTH_BANK, NORTH_TO_SOUTH, SARIM, outboundStart } from './courier-route';
 
 type Pt = [number, number, number];
-const ARDY_BANK = { x: 2654, z: 3283 };
-const NORTH_BANK = { x: 2619, z: 3332 };
 const DRAYNOR = { x: 3092, z: 3243 };
 const LUMBRIDGE = { x: 3222, z: 3218 };
 const BRIM_DECK = { x: 2775, z: 3234 };
@@ -36,9 +35,6 @@ const FISH = /^(trout|salmon)$/i;
 // Port Sarim <-> Draynor bank: north round the water, then the x 3089-3092 lane (fishing30.ts BANK_TO_SARIM).
 const SARIM_TO_DRAYNOR: Pt[] = [[3047, 3237, 3], [3060, 3265, 3], [3089, 3266, 2], [3092, 3250, 1], [DRAYNOR.x, DRAYNOR.z, 2]];
 const DRAYNOR_TO_SARIM: Pt[] = [[3092, 3250, 1], [3089, 3266, 2], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3]];
-// Land fallback targets are walked directly through the pathfinder, so the courier works from any start
-// (for example a saved Varrock bank position) instead of assuming it stands near Ardougne.
-const SARIM = { x: 3029, z: 3217 };
 
 if (OUTBOUND_ONLY && START_DRAYNOR) { console.log('RESULT fail OUTBOUND_ONLY requires an Ardougne start'); process.exit(1); }
 if (!FROM && !HOME_ONLY && !OUTBOUND_ONLY) { console.log('RESULT fail FROM=<fish cook account> is required'); process.exit(1); }
@@ -158,8 +154,17 @@ try {
     if(OUTBOUND_ONLY && (!p0 || p0.level!==0 || cheb(ARDY_BANK,p0)>10))
         await fail('outbound supply trip requires Ardougne bank start');
     console.log(`FOODCOURIER from=${FROM} farmers=${FARMERS.join(',') || '-'} coins=${coins()} fishNotes=${fishNotes()} at=${p0?.worldX},${p0?.worldZ}`);
-    if (!START_DRAYNOR && (!p0 || cheb(ARDY_BANK, p0) > 10)) {
-        const requiredFare = OUTBOUND_ONLY ? 60 : 120;
+    // Outbound start (scripts/courier-route.ts): sail from either Ardougne bank, walk only from east of White Wolf
+    // Mountain. Before 2026-10-25 this branch ran only for a start away from the south bank, so a south-bank start
+    // skipped Draynor entirely, and a North-bank start walked over the mountain and died.
+    const start = START_DRAYNOR ? null : outboundStart(p0);
+    // "no courier progress" makes the supervisors block the account instead of logging it in again (supervise.ts).
+    if (start === 'refuse') await fail('no courier progress: start is not an Ardougne bank or east of White Wolf Mountain');
+    if (start === 'boat-north') {
+        if (!(await walk([[NORTH_TO_SOUTH.x, NORTH_TO_SOUTH.z, 2], [ARDY_BANK.x, ARDY_BANK.z, 2]]))) await fail('walk to Ardougne south bank');
+    }
+    if (start !== null) {
+        const requiredFare = OUTBOUND_ONLY ? BOAT_FARES_OUT : BOAT_FARES_ROUND;
         // Fares come from the bank when the pack is short (2026-10-23: a live trip spent the pack on feathers, and
         // scripts/banker.ts banks the coins a donor gives).
         if (coins() < requiredFare) {
@@ -173,11 +178,14 @@ try {
             }
             console.log(`MILESTONE fares from bank coins=${coins()} t=${used()}`);
         }
-        if (coins() < requiredFare || (p0 && cheb(ARDY_BANK, p0) > 30)) {
-            // No fare money, or a long way from Ardougne: walk the land route to Port Sarim instead of sailing.
-            console.log(`MILESTONE no fare coins; land route to Port Sarim`);
+        if (start === 'land') {
+            // East of the mountain: walk to Port Sarim (one level-2 spider in reach from Varrock West).
+            console.log(`MILESTONE east start; land route to Port Sarim`);
             if (!(await walk([[SARIM.x, SARIM.z, 3]]))) await fail('land route to Port Sarim');
             leg('land-sarim');
+        } else if (coins() < requiredFare) {
+            // At Ardougne without fares: never walk over White Wolf Mountain (the 2026-10-25 death). Stop and log out.
+            await fail(`no courier progress: needs ${requiredFare} coins for the boat fares; refusing the White Wolf Mountain land route`);
         } else {
         if (!(await walk([[2679, 3275, 3]]))) await fail('walk to Barnaby');
         if (!(await sail(/^captain barnaby$/i, SAILOR, BRIM_DECK))) await fail('sail to Brimhaven');
@@ -212,7 +220,6 @@ try {
             }
         }
         leg(`draynor coins=${coins()}`);
-        if (coins() < 60) console.log('MILESTONE no fare coins; land route home');
     }
     // Take the notes: the cook starts the trade when it sees this bot (fishcook.ts handOff).
     const before = fishNotes();
@@ -228,14 +235,16 @@ try {
     received = fishNotes() - before;
     leg(`received${received}`);
     if (received <= 0 && !HOME_ONLY) await fail('no fish notes from the cook');
-    if (coins() < 60 && !START_DRAYNOR) console.log('MILESTONE no fare coins; land route home');
 
-    if (coins() < 60) {
-        // No fare money: walk the land route home instead of sailing.
-        console.log('MILESTONE no fare coins; land route to Ardougne');
-        if (!(await walk(DRAYNOR_TO_SARIM))) await fail('land route to Port Sarim');
-        if (!(await walk([[ARDY_BANK.x, ARDY_BANK.z, 2]]))) await fail('land route to Ardougne');
-        leg('land-ardougne');
+    // Home fares come from the Draynor bank. The land route home crosses White Wolf Mountain (scripts/courier-route.ts),
+    // so without two fares the courier logs out here at the bank, notes kept, instead of walking it.
+    if (coins() < BOAT_FARES_OUT) {
+        const o = await s.bot.openBank();
+        if (o.success) { await s.bot.withdrawItem(/^coins$/i, 200); await s.bot.closeBank(); }
+        console.log(`MILESTONE home fares from Draynor bank coins=${coins()} t=${used()}`);
+    }
+    if (coins() < BOAT_FARES_OUT) {
+        await fail(`no courier progress: needs ${BOAT_FARES_OUT} coins for the boats home; refusing the White Wolf Mountain land route`);
     } else {
     if (!(await walk(DRAYNOR_TO_SARIM))) await fail('walk to Port Sarim');
     if (!(await sail(/^(seaman|captain tobias)/i, SAILOR, MUSA_DECK))) await fail('sail to Karamja');
