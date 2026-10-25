@@ -1,6 +1,8 @@
 # Changes and workarounds for vendored rs-sdk
 
-rs-sdk is pinned in `rs-sdk.pin`. `bun scripts/check-pin.ts` checks it. We do not edit files under `vendor/` from package code. Each item below says how we deal with an rs-sdk behavior.
+rs-sdk is a git submodule at `vendor/rs-sdk`, pinned by its gitlink in the parent repo and by `rs-sdk.pin`. `bun run check-pin` checks the checkout against the pin. We do not edit files under `vendor/` from package code. Each item below says how we deal with an rs-sdk behavior.
+
+Setup for a fresh clone: `git clone --recurse-submodules <repo>`, then in `vendor/rs-sdk` run `git config core.autocrlf false` before any checkout. Item 1 depends on this.
 
 1. **LF line endings are required.** `bots/create-bot.ts --local` replaces `SERVER=localhost\n`. With CRLF checkouts (`core.autocrlf=true`, the Windows default) the match fails, and the bot env keeps `SERVER=localhost` with no `GATEWAY_URL`. Fix: `scripts/clone-vendor.sh` clones with `-c core.autocrlf=false`. Seen 2026-10-22.
 2. **Telemetry is on by default.** `bot.env` from the template has `TELEMETRY=true`, and `sdk/bug-report.ts` posts to `https://rs-sdk-demo.fly.dev/bug-report`. Our `createBot` rewrites it to `TELEMETRY=false`.

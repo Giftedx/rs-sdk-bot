@@ -41,12 +41,7 @@ permission. Where the task brief and this file disagree, the task brief wins onl
   Contradictions section with file:line on both sides and what would settle it. These two edits are allowed
   when your task brief gives you `research/INDEX.md`; if it does not, put the row in your report.
 - Commits touch only owned files. Stage files by name (`git add <file>`), never `git add -A` or `git add .`.
-  End every commit message with these two lines:
-
-  ```
-  Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-  Claude-Session: https://claude.ai/code/session_01QZfPE9fwmc1anerZ7XiCDD
-  ```
+  Commit messages are normal, one concern per commit. No agent trailers.
 - Commit only when your task brief asks for a commit. Never push, rebase, amend or reset.
 </ownership>
 
