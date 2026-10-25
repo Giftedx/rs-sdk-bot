@@ -220,3 +220,25 @@ events, a live run of any part.
 - Courier: `RESULT ok ticks=1206 received=192 ... coins=380 walkTicks=445 boatTicks=119 waitTicks=635`. The courier waited 635 ticks at Draynor until Mightyrod's next bank visit.
 - Pocketrocket's `goldfarm.ts` walked to the bank from the same spot (`BANK trip=1 ... t=388`) and took the fish: `TRADE max_trades Completed 1 trade(s) (1 session(s)) notes=192 bigFood=1 t=459`.
 - Next fix: the courier's wait. Mightyrod hands over only when it banks; it could bank as soon as the courier reaches Draynor.
+
+## Live repair (2026-10-25, 06:30-08:00 UTC)
+
+MEASURED live. Before: swarm stopped since 05:01; Pocketrocket, mmtha0205, Pocketpython and Bigpackage dead
+(Lumbridge respawns); every courier hand-out ended `player_not_found` (`MILESTONE gave <farmer> 0`).
+
+- Recovery: `HOME_ONLY=1 bun scripts/foodcourier.ts <bot>` from Lumbridge, on the new lane north of the jail guards
+  (`courier-route.ts LUMBRIDGE_TO_DRAYNOR`, route-danger 0 spawns). Four runs, none hit:
+  `RESULT ok ticks=403 ... hpMin=10 died=false` (Pocketrocket), `ticks=406 hpMin=11` (mmtha0205), `ticks=400
+  hpMin=10` (Bigpackage), `ticks=398` (Pocketrocket again). Pocketpython was disconnected on Karamja (2829,3190,
+  11/11 HP); the new Karamja resume finished it: `RESULT ok ticks=107 ... legs=received0@0,ardougne@107`.
+- Hand-out fixed: the courier looks for a thief at the knights, and the thief serves for up to 45 s while the
+  courier stays in view. `MILESTONE gave mmtha0205 72`, `gave mmthv2350 72`, `gave Pocketpython 73`,
+  `RESULT ok ... handed=217` (the first non-zero farmer hand-out in the logs).
+- Pocketrocket died twice more with no food at 10/10 HP: once in the stall, once walking to the shop
+  (`WARN shop trip=1 Timed out ...`, then `RESULT fail died`). Fix: with 0 food the thief goes to neither the stall nor
+  the shop; it waits at the bank. After that change, 0 deaths in this session.
+- mmsmk1232 (Thieving 1) is out of the knight pool. Mightyrod's Fire giant pilot is paused (0 kills with a bronze
+  sword). Thieves run as single jobs: a shared host left two accounts waiting a whole run.
+- Open: no fresh-account or 3-run proof of the hand-out at the knights; the courier's 1-run result above is one
+  sample.
+
