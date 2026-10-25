@@ -11,5 +11,3 @@ bot.env
 *.log
 swarm.generated.json
 swarm.validate.json
-
-node_modules/
