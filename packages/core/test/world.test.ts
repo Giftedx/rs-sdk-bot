@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { createWorld, type Tile, type Account } from '../src/world';
+import { createWorld, blockedDoorsNear, type Door, type Tile, type Account } from '../src/world';
 
 const acct = (skills: Record<string, number> = {}): Account => ({ skills, varps: {}, items: [] });
 // Flat world: walking costs Chebyshev distance on the same level, never across levels.
@@ -97,4 +97,23 @@ test('dungeon tiles (z + 6400) do not mislead the search into a far exit', () =>
         expect(r.legs.find(l => l.kind === 'transport')).toMatchObject({ loc: 'ladderA' });
         expect(r.cost).toBeLessThan(100);
     }
+});
+
+
+test('near-leg blocked doors share account policy and exclude other floors/far tiles', () => {
+    const make = (x: number, kind: string, need?: Door['need'], level = 0): Door => ({ id: x, loc: 'door', x, z: 10, level, kind, need, trigger: '', src: '' });
+    const doors = [make(5, 'open'), make(6, 'locked'), make(7, 'one_way'), make(8, 'conditional'), make(9, 'unknown'),
+        make(10, 'skill', { skill: 'crafting', level: 10 }), make(11, 'key', { item: 'brass_key' }), make(12, 'quest', { varp: 'quest' }),
+        make(5000, 'locked'), make(13, 'locked', undefined, 1)];
+    const account = { skills: { crafting: 10 }, varps: {}, items: ['brass_key'] };
+    const from = { x: 0, z: 0, level: 0 }, to = { x: 20, z: 20, level: 0 };
+    expect(blockedDoorsNear(from, to, account, doors).map(d => d.x)).toEqual([6, 7, 8, 9, 12]);
+    expect(blockedDoorsNear(from, to, { ...account, varps: { quest: 1 } }, doors).map(d => d.x)).toEqual([6, 7, 8, 9]);
+    expect(blockedDoorsNear(from, { ...to, level: 1 }, account, doors)).toEqual([]);
+});
+
+test('generated Ardougne side-locked pair blocks the Catherby leg before the building is entered', () => {
+    const blocked = blockedDoorsNear({ x: 2654, z: 3283, level: 0 }, { x: 2809, z: 3441, level: 0 }, acct());
+    expect(blocked).toContainEqual({ x: 2674, z: 3304, level: 0 });
+    expect(blocked).toContainEqual({ x: 2674, z: 3305, level: 0 });
 });

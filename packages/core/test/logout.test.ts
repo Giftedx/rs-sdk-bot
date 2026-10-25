@@ -36,10 +36,10 @@ test('logout clicks again within one tick by default (a skilling delay drops cli
 
 // Seen 2026-10-22 (bankx8v0r3): the engine logged the player out (P_LOGOUT, removePlayer, LOGOUT packet), but
 // the socket closed before the lite session read that packet, so the session ended as 'disconnected'.
-test('a session that ends as disconnected after a logout click counts as logged out', async () => {
+test('a disconnect after a logout click remains unconfirmed', async () => {
     let end!: (v: { reason: string }) => void;
     const s = { sdk: { sendClickComponent: async () => { setTimeout(() => end({ reason: 'disconnected' }), 5); return { success: true }; } }, ended: new Promise<{ reason: string }>(r => { end = r; }) };
-    expect(await logout(s as any, 2000)).toBe('logged-out');
+    expect(await logout(s as any, 2000)).toBe('disconnected');
 });
 
 test('a disconnect before any logout click is still reported as disconnected', async () => {

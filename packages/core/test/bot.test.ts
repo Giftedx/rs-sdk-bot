@@ -1,5 +1,31 @@
 import { test, expect } from 'bun:test';
-import { closeWithin } from '../src/bot';
+import { closeWithin, settle, sessionDied } from '../src/bot';
+
+test('death detection uses actual death/life state, not legal travel or missing HP',()=>{
+    const initial={lifeId:4,respawnCount:0};
+    expect(sessionDied(initial,{lifeId:4,respawnCount:0,worldX:9999})).toBe(false);
+    expect(sessionDied(initial,{lifeId:4,respawnCount:0,isDead:true})).toBe(true);
+    expect(sessionDied(initial,{lifeId:5,respawnCount:1})).toBe(true);
+    expect(sessionDied(initial,undefined)).toBe(false);
+});
+
+test('concurrent stop and script cleanup share one logout and final result', async () => {
+    let clicks = 0, closes = 0;
+    let end!: (v: { reason: string }) => void;
+    const lines: string[] = [];
+    const session: any = {
+        name: 'test', ended: new Promise(r => { end = r; }),
+        direct: async () => { clicks++; end({ reason: 'logged-out' }); return { success: true }; },
+        close: async () => { closes++; },
+    };
+    const a = settle([session], false, 'stop file', { log: l => lines.push(l) });
+    const b = settle([session], true, 'script returned', { log: l => lines.push(l) });
+    expect(await a).toBe(false);
+    expect(await b).toBe(false);
+    expect(clicks).toBe(1);
+    expect(closes).toBe(1);
+    expect(lines.filter(l => l.startsWith('RESULT'))).toEqual(['RESULT fail stop file']);
+});
 
 test('closeWithin returns after its limit even if a session close never finishes', async () => {
     const stuck = { close: () => new Promise<void>(() => {}) };

@@ -1,6 +1,21 @@
 import { test, expect } from 'bun:test';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { createShim, type ClientLike } from '../src/inprocess';
+import { tradeRefusal } from '../src/tradeguard';
+
+test('the action boundary blocks unowned trades through both queue and direct calls', async () => {
+    const c = fakeClient();
+    const sdk = newSdk();
+    const state = { nearbyPlayers: [{ index: 7, name: 'Our mule' }, { index: 8, name: 'Stranger' }], trade: { partner: 'Stranger' } };
+    const shim = createShim(c, sdk, a => tradeRefusal(a, state, new Set(['our mule'])));
+    shim.start();
+    expect((await sdk.sendTradeRequest(8)).success).toBe(false);
+    expect((await shim.direct({ type: 'clickComponent', componentId: 3546 }) as any).success).toBe(false);
+    expect(c.executed).toHaveLength(0);
+    expect((await sdk.sendTradeRequest(7)).success).toBe(true);
+    expect(c.executed).toHaveLength(1);
+    shim.stop('stopped');
+});
 
 function fakeClient() {
     let cb: (() => void) | null = null;
@@ -106,4 +121,41 @@ test('login jitter is 0 only for a local server; any other host keeps the upstre
     expect(loginJitterFor('localhost:8888')).toBe(0);
     expect(loginJitterFor('127.0.0.1:8888')).toBe(0);
     expect(loginJitterFor('rs-sdk-demo.fly.dev')).toBeUndefined(); // undefined = session.ts default (5 s for remote)
+});
+
+test('bank readiness follows full inventory packets, keeps real empty updates, and rejects other mutations', async () => {
+    const base=fakeClient();
+    const bank={linkObjType:[0],linkObjNumber:[0]};
+    const c:any=Object.assign(base,{ptype0:-1,packetsReceived:0,mainModalId:5292,
+        ifMutable:()=>bank,
+        collectBotState:()=>({bank:{isOpen:c.mainModalId===5292,items:bank.linkObjType[0]?[{id:1779,name:'Flax',count:bank.linkObjNumber[0]}]:[]}})});
+    const shim=createShim(c,newSdk());shim.start();
+    const packet=async(opcode:number,id=5382,raw=1780,count=81)=>{
+        c.ptype0=opcode;c.packetsReceived++;
+        const inv=c.ifMutable(id);inv.linkObjType[0]=raw;inv.linkObjNumber[0]=count;
+        await Promise.resolve();
+    };
+    expect(shim.bankObservation()).toBeNull(); // open modal, no payload
+    await packet(79); // IF_SETTEXT-like mutation cannot establish inventory readiness
+    expect(shim.bankObservation()).toBeNull();
+    await packet(107,3214);
+    expect(shim.bankObservation()).toBeNull();
+    await packet(76); // partial alone is not a complete baseline
+    expect(shim.bankObservation()).toBeNull();
+    await packet(107);
+    expect(shim.bankObservation()?.items[0]?.count).toBe(81);
+    const generation=shim.bankObservation()!.generation;
+    c.ifMutable(5382);await Promise.resolve(); // read with same last packet is not a new update
+    expect(shim.bankObservation()!.generation).toBe(generation);
+    await packet(76,5382,0,0); // withdrawing the last item is a real empty snapshot
+    expect(shim.bankObservation()?.items).toEqual([]);
+    expect(shim.bankObservation()!.generation).toBeGreaterThan(generation);
+    await packet(28,5382,0,0); // close STOP clears components while modal may still look open
+    expect(shim.bankObservation()).toBeNull();
+    c.mainModalId=-1;
+    await packet(107); // full inventory can precede the bank's modal-open packet
+    expect(shim.bankObservation()).toBeNull();
+    c.mainModalId=5292;
+    expect(shim.bankObservation()?.items[0]?.count).toBe(81);
+    shim.stop('stopped');
 });

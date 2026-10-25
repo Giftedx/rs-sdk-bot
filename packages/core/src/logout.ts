@@ -50,6 +50,5 @@ export async function logout(
     }
     // The engine sends LOGOUT and closes the socket; under load the lite session can see the closed socket before
     // it reads the packet and end as 'disconnected' (seen: bankx8v0r3, engine log showed a full P_LOGOUT).
-    if (ended === 'disconnected' && clicked) return 'logged-out';
     return ended ?? 'timeout';
 }

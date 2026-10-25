@@ -26,8 +26,13 @@ export function assertServerAllowed(server: string, env: Record<string, string |
     throw new Error(`refusing to connect to ${server}: not the local practice server; set DEMO_OK=1 to allow it on purpose`);
 }
 
+export function sessionDied(initial: any, now: any): boolean {
+    return !!now && (now.isDead === true || (now.respawnCount ?? 0) > (initial?.respawnCount ?? 0)
+        || (initial?.lifeId !== undefined && now.lifeId !== undefined && now.lifeId !== initial.lifeId));
+}
+
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
-export async function openBot(name: string, opts: { log?: (line: string) => void } = {}): Promise<Session> {
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown> } = {}): Promise<Session> {
     const log = opts.log ?? ((l: string) => console.log(l));
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
@@ -35,7 +40,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     const server = serverFromEnv(env);
     assertServerAllowed(server);
     const s = await connectInProcess({ name, password, server });
-    const ready = await waitUntil(s, st => st?.inGame && (st.skills?.length ?? 0) > 0 && !!st.player, { timeoutTicks: 100 });
+    const ready = await waitUntil(s, st => st?.inGame && !!st.player
+        && (st.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel ?? 0)>0, { timeoutTicks: 100 });
     if (!ready) {
         // Logged in but not usable: log out before failing, or the account lingers and adds playtime.
         log(`LOGOUT ${await logoutSession(s)}`);
@@ -52,9 +58,16 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
     // it (seen: fishing30 under the supervisor, 2026-10-23) still logs out in game.
     let stopTicks = 0;
-    s.onTick(() => { if (++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`))) void finish([s], false, 'stop file'); });
+    let stopping = false;
+    s.onTick(() => {
+        const reason = sessionDied(p,s.sdk.getState()?.player) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file' : null;
+        if (!stopping && !settling.has(s) && reason) {
+            stopping = true;
+            void (opts.onStop ? opts.onStop(s,reason) : finish([s], false, reason));
+        }
+    });
     // Live status for the dashboard (packages/dashboard).
-    statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }, () => led.rows.slice(-300).map(r => r.kind[0]).join('')));
+    statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
     return s;
 }
 
@@ -94,6 +107,8 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
 const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const randomEvents = new Map<Session, RandomEventWatch>();
+const settling = new WeakSet<Session>();
+const settlements = new WeakMap<Session, Promise<boolean>>();
 // The session's random event watcher, so a script can pause its loop while busy() is true.
 export const randomEventsOf = (s: Session): RandomEventWatch | undefined => randomEvents.get(s);
 
@@ -108,11 +123,19 @@ export async function finish(sessions: Session[], ok: boolean, detail: string): 
 
 // finish() without the exit: prints RESULT, the ledgers and events, logs every account out, closes every session,
 // and returns the final ok. The bot host (host.ts) calls it once per hosted script.
-export async function settle(sessions: Session[], ok: boolean, detail: string, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void } = {}): Promise<boolean> {
+export function settle(sessions: Session[], ok: boolean, detail: string, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void } = {}): Promise<boolean> {
+    const existing = sessions.map(s => settlements.get(s)).find(Boolean);
+    if (existing) return existing;
+    const result = settleOnce(sessions, ok, detail, opts);
+    for (const s of sessions) settlements.set(s, result);
+    return result;
+}
+
+async function settleOnce(sessions: Session[], ok: boolean, detail: string, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void }): Promise<boolean> {
+    for (const s of sessions) settling.add(s);
     const log = opts.log ?? ((l: string) => console.log(l));
-    log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
     for (const s of sessions) {
-        const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`); statuses.get(s)?.stop();
+        const l = ledgers.get(s); if (l) log(`${formatLedger(l.stop())} bot=${s.name}`);
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
     opts.onReported?.(() => ok);
@@ -122,6 +145,9 @@ export async function settle(sessions: Session[], ok: boolean, detail: string, o
     if (outs.some(o => o !== 'logged-out')) { log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }
     const c = await closeWithin(sessions, 5000);
     if (c.timedOut > 0) log(`WARN ${c.timedOut} session close(s) timed out`);
+    if (c.timedOut > 0) ok = false;
+    log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
+    for (const s of sessions) { statuses.get(s)?.stop(); ledgers.delete(s); statuses.delete(s); randomEvents.delete(s); }
     return ok;
 }
 

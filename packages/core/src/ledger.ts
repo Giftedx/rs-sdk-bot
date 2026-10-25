@@ -1,6 +1,7 @@
 // Tick ledger: what the account did on every logged-in tick, so a run can be reviewed tick by tick and the idle
 // ticks found and cut (owner rule: every tick must be used). One kind per tick, by priority:
 //   xp      some skill's XP rose this tick
+//   inventory item ID/count totals changed (buy, bank, trade, consume or produce; not proof of net output)
 //   move    the player's tile changed
 //   anim    an animation is playing (skilling, stun, eating)
 //   dialog  a dialog is open (level-up, NPC chat): usually waste to close fast
@@ -8,13 +9,22 @@
 //   idle    none of the above
 // Attach with startLedger(session); call stop() to get the summary and print it with formatLedger.
 
-export type TickKind = 'xp' | 'move' | 'anim' | 'dialog' | 'stun' | 'idle';
+export type TickKind = 'xp' | 'inventory' | 'move' | 'anim' | 'dialog' | 'stun' | 'idle';
 export interface TickRow { tick: number; kind: TickKind; at: string }
 
 const xpSum = (st: any) => (st?.skills ?? []).reduce((n: number, k: any) => n + (k.experience ?? 0), 0);
+const inventoryKey = (items: any[]) => {
+    const totals = new Map<number, number>();
+    for (const item of items) if (Number.isInteger(item?.id) && item.id >= 0 && Number.isFinite(item.count) && item.count > 0)
+        totals.set(item.id, (totals.get(item.id) ?? 0) + item.count);
+    return JSON.stringify([...totals].sort((a, b) => a[0] - b[0]));
+};
 
 export function classifyTick(before: any, now: any, stunned = false): TickKind {
     if (xpSum(now) > xpSum(before)) return 'xp';
+    // Missing state is unknown, not an empty inventory. Establish a baseline first.
+    if (Array.isArray(before?.inventory) && Array.isArray(now?.inventory)
+        && inventoryKey(before.inventory) !== inventoryKey(now.inventory)) return 'inventory';
     const a = before?.player, b = now?.player;
     if (a && b && (a.worldX !== b.worldX || a.worldZ !== b.worldZ || a.level !== b.level)) return 'move';
     if ((b?.animId ?? -1) !== -1) return 'anim';
@@ -23,7 +33,7 @@ export function classifyTick(before: any, now: any, stunned = false): TickKind {
 }
 
 export function summarize(rows: TickRow[]) {
-    const counts: Record<TickKind, number> = { xp: 0, move: 0, anim: 0, dialog: 0, stun: 0, idle: 0 };
+    const counts: Record<TickKind, number> = { xp: 0, inventory: 0, move: 0, anim: 0, dialog: 0, stun: 0, idle: 0 };
     for (const r of rows) counts[r.kind]++;
     const streaks: { start: number; length: number; at: string }[] = [];
     for (let i = 0; i < rows.length; i++) {
@@ -42,7 +52,9 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
     // Copy the fields the classifier reads: the state object may be reused between ticks.
     const snap = () => {
         const st = s.sdk.getState();
-        return { player: st?.player && { ...st.player }, skills: (st?.skills ?? []).map((k: any) => ({ experience: k.experience })), dialog: { isOpen: !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen) } };
+        return { player: st?.player && { ...st.player }, skills: (st?.skills ?? []).map((k: any) => ({ experience: k.experience })),
+            inventory: Array.isArray(st?.inventory) ? st.inventory.map((i: any) => i && ({ id: i.id, count: i.count })) : undefined,
+            dialog: { isOpen: !!(s.sdk.getDialog?.()?.isOpen ?? st?.dialog?.isOpen) } };
     };
     let last = snap();
     // The message list keeps only the newest messages, so its length stops growing: track the newest tick seen.
@@ -61,6 +73,6 @@ export function startLedger(s: { sdk: { getState(): any; getDialog?(): any }; on
 
 export function formatLedger(sum: ReturnType<typeof summarize>): string {
     const c = sum.counts;
-    return `LEDGER ticks=${sum.ticks} xp=${c.xp} move=${c.move} anim=${c.anim} dialog=${c.dialog} stun=${c.stun} idle=${c.idle} idlePct=${sum.idlePct.toFixed(1)} `
+    return `LEDGER ticks=${sum.ticks} xp=${c.xp} inventory=${c.inventory} move=${c.move} anim=${c.anim} dialog=${c.dialog} stun=${c.stun} idle=${c.idle} idlePct=${sum.idlePct.toFixed(1)} `
         + `longestIdle=${sum.longestIdle.map(x => `${x.length}@t${x.start}(${x.at})`).join(',')}`;
 }

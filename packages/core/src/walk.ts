@@ -2,7 +2,7 @@ import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { atTile, checked, levelIs, type Outcome } from './act';
 import { waitTicks } from './ticks';
 import type { TickSource } from './ticks';
-import type { Account, Leg, Tile, World } from './world';
+import { blockedDoorsNear, type Account, type Door, type Leg, type Tile, type World } from './world';
 
 export interface Walker extends TickSource {
     sdk: TickSource['sdk'] & { blockDoorTemporarily?(level: number, x: number, z: number, ttlMs?: number): boolean };
@@ -99,7 +99,18 @@ function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts
     return checked(s, {
         name: `${leg.loc} ${leg.option} at ${leg.at.x},${leg.at.z},${leg.at.level}`,
         pre: st => (findLoc(st) ? null : `no loc at ${leg.at.x},${leg.at.z},${leg.at.level}`),
-        send: wrap(() => s.bot.interactLoc(findLoc(s.sdk.getState()), Number(leg.option.replace(/^op/, '')))),
+        send: wrap(async () => {
+            const reply=await s.bot.interactLoc(findLoc(s.sdk.getState()), Number(leg.option.replace(/^op/, '')));
+            const r=reply as {success?:boolean;reason?:string;message?:string}|null;
+            // The SDK's idle grace can end before a stair transition is published.
+            // Its generic map-flag rejection has the same ambiguity. Neither proves refusal.
+            const pending=r?.success===false && (
+                (r.reason==='timeout' && /^(Nothing happened|Timed out) interacting with /i.test(r.message??'')) ||
+                (r.reason==='rejected' && /^Server discarded the interaction with /i.test(r.message??'')));
+            return pending ? undefined : reply;
+        }),
+        // Arrival also clears the map flag. Only the requested floor AND landing prove this leg.
+        rejectOnFeedback: false,
         effect: (b, n) => onLevel(b, n) && arrive(b, n),
         // interactLoc first walks round to a usable side of the loc (24 ticks measured for a 2x2 staircase).
         timeoutTicks: opts.legTimeoutTicks ?? 60,
@@ -144,6 +155,9 @@ export interface PathDeps {
     // Clicks the run button on (controls:com_5). Sent once, before the first walk click.
     runOn?(): unknown;
     locs(): PathLoc[];
+    messages?(): readonly { text: string; tick: number; observationId?: number }[];
+    blockDoor?(level: number, loc: PathTile): boolean;
+    doorBlocked?(level: number, loc: PathTile): boolean;
     // Path corners from `from` to `to`, without `from` (the rs-sdk findLongPath format).
     plan(level: number, from: PathTile, to: PathTile): PathTile[];
 }
@@ -185,6 +199,10 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     if (!goal) return Promise.resolve({ ...res, ok: true });
     const level = start.level;
     const goalTol = goal.tol ?? 2;
+    const failedDoors = new Set<string>();
+    const doorKey = (loc: PathTile) => `${level},${loc.x},${loc.z}`;
+    const blockedDoor = (loc: PathTile) => failedDoors.has(doorKey(loc)) || deps.doorBlocked?.(level, loc) === true;
+    const messageKey = (m: { text: string; tick: number; observationId?: number }) => `${m.observationId ?? m.tick}:${m.text}`;
 
     // Path tiles through every point in order. seg[i] is the index of the point that tile i leads to.
     let tiles: PathTile[] = [];
@@ -197,6 +215,10 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             // customs officer gives 0 waypoints). Then take the straight line: the client routes each click itself.
             const corners = deps.plan(level, cur, points[k]!);
             const t = expandPath(cur, corners.length ? corners : [points[k]!]);
+            // A door coordinate anchors a wall edge, not a blocked floor tile.
+            // Trust a nonempty edge-aware plan; only an unverified straight
+            // fallback must reject a known blocked anchor.
+            if (!corners.length && t.some(blockedDoor)) { tiles = []; seg = []; return; }
             for (const x of t) { tiles.push(x); seg.push(k); }
             if (t.length) cur = t[t.length - 1]!;
         }
@@ -207,12 +229,16 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
 
     let idx = -1;          // path tile nearest the bot
     let target = -1;       // path index of the last walk click
-    let door: { loc: PathLoc; sentAt: number } | null = null;
+    let door: { loc: PathLoc; sentAt: number; messages: Set<string> } | null = null;
+    const doorAttempts = new Map<string, number>();
     let last = { x: start.x, z: start.z };
     let still = 0;
     let ticks = 0;
     let ranOn = false;
     let sentThisTick = false;
+    let movementEpoch = 0, rejectedWalks = 0, movementRepaths = 0;
+    let rejectionReplan = false, rejectionReplanned = false;
+    let walkReply: (reply: unknown, from: { x: number; z: number; level: number }, to: PathTile, epoch: number) => void = () => {};
 
     const nearest = (p: PathTile): { i: number; d: number } => {
         let best = { i: Math.max(0, idx), d: Infinity };
@@ -229,24 +255,30 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
         let best: { l: PathLoc; i: number } | null = null;
         for (const l of deps.locs()) {
             const i = ahead.get(`${l.x},${l.z}`);
-            if (i !== undefined && openOp(l) && (!best || i < best.i)) best = { l, i };
+            if (i !== undefined && openOp(l) && !blockedDoor(l) && (!best || i < best.i)) best = { l, i };
         }
         return best?.l ?? null;
     };
-    const send = (what: string, f: () => unknown): boolean => {
+    const send = (what: string, f: () => unknown, reply?: (value: unknown) => void): boolean => {
         if (sentThisTick) return false;
         sentThisTick = true;
         try {
-            const r = f() as { catch?: (h: () => void) => unknown } | undefined;
-            if (r && typeof r.catch === 'function') r.catch(() => {});
-        } catch { /* the next tick decides again */ }
+            const r = f() as { then?: unknown } | undefined;
+            if (r && typeof r.then === 'function') Promise.resolve(r).then(value => reply?.(value), error => reply?.({ success: false, phase: 'dispatch', reason: 'exception', message: String(error) }));
+            else reply?.(r);
+        } catch (error) { reply?.({ success: false, phase: 'dispatch', reason: 'exception', message: String(error) }); }
         log(what);
         return true;
     };
     const clickAhead = (span: number) => {
         const i = Math.min(tiles.length - 1, Math.max(0, idx) + span);
         const t = tiles[i]!;
-        if (send(`walk ${t.x},${t.z}`, () => deps.walk(t.x, t.z))) { target = i; res.clicks++; }
+        if (sentThisTick) return;
+        const from = deps.pos();
+        if (!from) return;
+        const epoch = movementEpoch;
+        res.clicks++; // Dispatch attempts, including an explicit client refusal.
+        if (send(`walk ${t.x},${t.z}`, () => deps.walk(t.x, t.z), reply => walkReply(reply, from, t, epoch))) target = i;
     };
     const replan = (p: PathTile, why: string): boolean => {
         build(p, seg[Math.max(0, idx)] ?? 0);
@@ -265,6 +297,29 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             off();
             resolve({ ...res, ok, ticks, next: ok ? points.length : (seg[Math.max(0, idx)] ?? 0), detail });
         };
+        const failedDoor = (loc: PathLoc, why: string, p: PathTile) => {
+            const attempts = doorAttempts.get(doorKey(loc)) ?? 0;
+            const detail = `no progress: door ${loc.id}@${loc.x},${loc.z},${level} stayed closed after ${attempts} Open attempts at=${p.x},${p.z} goal=${goal.x},${goal.z}: ${why}`;
+            failedDoors.add(doorKey(loc));
+            const registered = deps.blockDoor?.(level, loc) === true;
+            door = null;
+            log(detail);
+            if (!registered || !replan(p, detail)) return finish(false, detail);
+            clickAhead(look);
+        };
+        walkReply = (value, from, to, epoch) => {
+            const p = deps.pos();
+            if (done || epoch !== movementEpoch || !p || p.level !== from.level || d8(p, from) !== 0) return;
+            const reply = value as { success?: boolean; phase?: unknown; reason?: unknown; message?: unknown } | null | undefined;
+            if (reply?.success !== false) return; // Undefined fakes and accepted dispatches remain movement-checked.
+            // A slow reply may arrive after the normal still-path replan. That already spent this attempt.
+            if (res.repaths > movementRepaths) { rejectionReplanned = true; rejectionReplan = false; }
+            rejectedWalks++;
+            const detail = `no progress: walk rejected ${rejectedWalks} times start=${start.x},${start.z},${level} at=${p.x},${p.z},${p.level} target=${to.x},${to.z} reply=${JSON.stringify({ phase: reply.phase, reason: reply.reason, message: reply.message })}`;
+            log(detail);
+            if (rejectedWalks >= 3) { finish(false, detail); return; }
+            if (!rejectionReplanned) rejectionReplan = true;
+        };
         const decide = () => {
             sentThisTick = false;
             const p = deps.pos();
@@ -274,6 +329,7 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             if (opts.stop?.()) return finish(false, 'stopped');
             if (ticks > maxTicks) return finish(false, `budget ${maxTicks} ticks at ${p.x},${p.z}`);
             const moved = p.x !== last.x || p.z !== last.z;
+            if (moved) { movementEpoch++; rejectedWalks = 0; movementRepaths = res.repaths; rejectionReplan = false; rejectionReplanned = false; }
             last = { x: p.x, z: p.z };
             still = moved ? 0 : still + 1;
             if (ticks > 0 && !moved) res.still++;
@@ -281,6 +337,10 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             // The run button does not count as the tick's input: the server takes 5 per tick, and it goes first.
             if (!ranOn && deps.runOn) { ranOn = true; send('run on', () => deps.runOn!()); sentThisTick = false; }
 
+            if (rejectionReplan) {
+                rejectionReplan = false; rejectionReplanned = true;
+                if (!replan(p, 'client walk rejection')) return finish(false, `no path from ${p.x},${p.z}`);
+            }
             const n = nearest(p);
             if (n.d > 3) {
                 // Off the planned path (the client routed round something): plan again from here.
@@ -291,25 +351,32 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             if (door) {
                 const d = door;
                 const shutNow = deps.locs().some(l => l.x === d.loc.x && l.z === d.loc.z && l.id === d.loc.id && openOp(l));
-                if (!shutNow) { door = null; log('door open'); clickAhead(look); return; }
-                // No step for 3 ticks and the door is still shut: click it again.
-                if (still >= 3 && ticks - d.sentAt >= 3) door = null; else return;
+                if (!shutNow) { door = null; doorAttempts.delete(doorKey(d.loc)); log('door open'); clickAhead(look); return; }
+                const refusal = deps.messages?.().find(m => !d.messages.has(messageKey(m)) && /\b(?:door|gate).{0,32}\blocked\b|\b(?:cannot|can't) open\b/i.test(m.text));
+                if (refusal) return failedDoor(d.loc, refusal.text, p);
+                // Open may first walk to the door, then wait for a delayed server
+                // action. Count unchanged ticks, not distance or accepted dispatches.
+                if (still >= 6 && ticks - d.sentAt >= 6) {
+                    if ((doorAttempts.get(doorKey(d.loc)) ?? 0) >= 3) return failedDoor(d.loc, 'no open effect observed', p);
+                    door = null;
+                } else return;
             }
             const shut = shutDoorAhead(idx, idx + look);
             if (shut) {
                 const op = openOp(shut)!.opIndex;
-                if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op))) { door = { loc: shut, sentAt: ticks }; res.doors++; target = -1; }
+                const baseline = new Set((deps.messages?.() ?? []).map(messageKey));
+                if (send(`open ${shut.x},${shut.z} id${shut.id}`, () => deps.interactLoc(shut, op))) {
+                    door = { loc: shut, sentAt: ticks, messages: baseline };
+                    doorAttempts.set(doorKey(shut), (doorAttempts.get(doorKey(shut)) ?? 0) + 1);
+                    res.doors++; target = -1;
+                }
                 return;
             }
             // No tile gained for 2 ticks: plan again from where the bot stands.
             if (still >= 2) {
-                if (!replan(p, `still ${still}`)) return finish(false, `no path from ${p.x},${p.z}`);
-                // The client may have routed the bot to a shut door that is not on the path.
-                const near = deps.locs().find(l => openOp(l) && d8(l, p) <= 1);
-                if (still >= 4 && near) {
-                    if (send(`open near ${near.x},${near.z}`, () => deps.interactLoc(near, openOp(near)!.opIndex))) { door = { loc: near, sentAt: ticks }; res.doors++; }
-                    return;
-                }
+                if (rejectedWalks === 0 && !replan(p, `still ${still}`)) return finish(false, `no path from ${p.x},${p.z}`);
+                // Only doors on the planned leg are attempted. A nearby unrelated
+                // Open option is not evidence that it blocks this route.
                 clickAhead(still >= 3 ? Math.ceil(look / 2) : look);
                 return;
             }
@@ -325,10 +392,22 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     });
 }
 
+export function applyKnownDoorBlocks(sdk: any, level: number, from: PathTile, to: PathTile, doors?: readonly Door[]): Tile[] {
+    const state = sdk.getState();
+    const skills: Record<string, number> = {};
+    for (const skill of state?.skills ?? []) if (typeof skill.name === 'string' && Number.isFinite(skill.baseLevel)) skills[skill.name.toLowerCase()] = skill.baseLevel;
+    const items = (state?.inventory ?? []).filter((i: any) => typeof i?.name === 'string' && i.count > 0).map((i: any) => i.name.toLowerCase().replace(/ /g, '_'));
+    const account: Account = { skills, items, varps: {} }; // Unobserved quest state stays unknown.
+    const blocked = blockedDoorsNear({ ...from, level }, { ...to, level }, account, doors);
+    for (const d of blocked) sdk.blockDoorTemporarily?.(d.level, d.x, d.z, 600_000);
+    return blocked;
+}
+
 // PathDeps for an in-process session (packages/core/src/inprocess.ts). Inputs go straight to the client, not
 // through the SDK action queue, so a click leaves on the tick it is decided.
 export async function sessionWalker(s: { sdk: any; onTick(cb: () => void): () => void; direct(a: { type: string; [k: string]: unknown }): Promise<unknown>; ended?: Promise<unknown> }): Promise<PathDeps> {
     const pf: any = await import('../../../vendor/rs-sdk/sdk/pathfinding');
+    const knownBlocks = new Set<string>();
     return {
         pos: () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; },
         onTick: cb => s.onTick(cb),
@@ -337,7 +416,13 @@ export async function sessionWalker(s: { sdk: any; onTick(cb: () => void): () =>
         interactLoc: (l, op) => s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' }),
         runOn: () => s.direct({ type: 'clickComponent', componentId: 153, reason: 'SDK' }),
         locs: () => s.sdk.getState()?.nearbyLocs ?? [],
+        messages: () => s.sdk.getState()?.gameMessages ?? [],
+        blockDoor: (level, loc) => s.sdk.blockDoorTemporarily?.(level, loc.x, loc.z) === true,
+        doorBlocked: (level, loc) => knownBlocks.has(`${level},${loc.x},${loc.z}`) || s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
-        plan: (level, from, to) => pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []),
+        plan: (level, from, to) => {
+            for (const d of applyKnownDoorBlocks(s.sdk, level, from, to)) knownBlocks.add(`${level},${d.x},${d.z}`);
+            return pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []);
+        },
     };
 }

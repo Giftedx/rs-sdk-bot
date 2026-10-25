@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { expandPath, walkPath, type PathDeps, type PathLoc } from '../src/walk';
+import { expandPath, walkPath, applyKnownDoorBlocks, type PathDeps, type PathLoc } from '../src/walk';
 
 // A straight east-west road at z=3200. The fake bot runs 2 tiles per tick toward its last click. A shut door at
 // doorX blocks the road until a loc click opens it; the open takes effect `openDelay` ticks after the bot
@@ -102,4 +102,172 @@ test('walkPath walks a straight line when the planner finds no path from a tile 
     const r = await run(w, 3040);
     expect(r.ok).toBe(true);
     expect(r.ticks).toBeLessThanOrEqual(21);
+});
+
+// Explicit client refusals are different from a dispatched move that has not arrived yet.
+function rejectedRoad(walk: (call: number, move: (x: number) => void) => unknown) {
+    let x = 3000, calls = 0;
+    const listeners = new Set<() => void>();
+    const deps: PathDeps = {
+        pos: () => ({ x, z: 3200, level: 0 }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        walk: () => walk(++calls, next => { x = next; }),
+        interactLoc: () => {}, locs: () => [], plan: (_level, _from, to) => [to],
+    };
+    return { deps, calls: () => calls, step: () => { for (const cb of [...listeners]) cb(); } };
+}
+async function driveRejections(w: ReturnType<typeof rejectedRoad>, afterStep?: (tick: number) => void) {
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const pending = walkPath(w.deps, [{ x: 3050, z: 3200, tol: 0 }], { maxTicks: 30 }).then(r => { result = r; return r; });
+    for (let tick = 0; tick < 35 && !result; tick++) {
+        await Promise.resolve(); await Promise.resolve();
+        w.step(); afterStep?.(tick);
+        await Promise.resolve(); await Promise.resolve();
+    }
+    return pending;
+}
+const rejected = { success: false, phase: 'validation', reason: 'client_rejected', message: 'Failed to walk' };
+
+for (const asyncReply of [false, true]) test(`three ${asyncReply ? 'async' : 'sync'} client walk refusals stop before the tick budget`, async () => {
+    const w = rejectedRoad(() => asyncReply ? Promise.resolve(rejected) : rejected);
+    const r = await driveRejections(w);
+    expect(r.ok).toBe(false);
+    expect(w.calls()).toBe(3);
+    expect(r.repaths).toBe(1);
+    expect(r.ticks).toBeLessThanOrEqual(3);
+    expect(r.detail).toContain('walk rejected 3 times');
+    expect(r.detail).toContain('start=3000,3200,0 at=3000,3200,0 target=');
+    expect(r.detail).toContain('client_rejected');
+});
+
+for (const asyncReply of [false, true]) test(`three ${asyncReply ? 'promise errors' : 'thrown dispatch errors'} produce a bounded diagnostic`, async () => {
+    const w = rejectedRoad(() => {
+        if (asyncReply) return Promise.reject(new Error('dispatch failed'));
+        throw new Error('dispatch failed');
+    });
+    const r = await driveRejections(w);
+    expect(w.calls()).toBe(3);
+    expect(r.detail).toContain('exception');
+    expect(r.detail).toContain('dispatch failed');
+});
+
+test('actual movement resets the count; two refusals per position do not accumulate across positions', async () => {
+    const w = rejectedRoad((call, move) => {
+        if (call === 3) { move(3001); return { success: true }; }
+        if (call === 6) { move(3050); return { success: true }; }
+        return rejected;
+    });
+    const r = await driveRejections(w);
+    expect(r.ok).toBe(true);
+    expect(w.calls()).toBe(6);
+});
+
+test('a delayed rejection from before movement cannot poison the new position', async () => {
+    let release: ((value: typeof rejected) => void) | undefined;
+    const w = rejectedRoad((call, move) => {
+        if (call === 1) return new Promise(resolve => { release = resolve; });
+        if (call === 2) { move(3001); return { success: true }; }
+        if (call === 5) { move(3050); return { success: true }; }
+        return rejected;
+    });
+    const r = await driveRejections(w, tick => { if (tick === 1) release?.(rejected); });
+    expect(r.ok).toBe(true);
+    expect(w.calls()).toBe(5);
+});
+
+test('two transient client refusals still allow a later move and delayed door opening', async () => {
+    const w = road({ doorX: 3030, openDelay: 3 });
+    const original = w.deps.walk;
+    let refused = 0;
+    w.deps.walk = (x, z) => ++refused <= 2 ? rejected : original(x, z);
+    const r = await run(w, 3060);
+    expect(r.ok).toBe(true);
+    expect(r.doors).toBe(1);
+    expect(w.doorShut()).toBe(false);
+});
+
+
+test('an async refusal arriving after the normal still replan does not add a second replan', async () => {
+    const w = rejectedRoad(() => Promise.resolve(rejected));
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const pending = walkPath(w.deps, [{ x: 3020, z: 3200, tol: 1 }, { x: 3050, z: 3200, tol: 0 }], { maxTicks: 50 }).then(r => { result = r; return r; });
+    for (let tick = 0; tick < 60 && !result; tick++) { w.step(); await Promise.resolve(); }
+    const r = await pending;
+    expect(w.calls()).toBe(3);
+    expect(r.repaths).toBe(1);
+    expect(r.detail).toContain('walk rejected 3 times');
+});
+
+test('session door policy is near-leg, same-floor and uses observed base skills/items with unknown quests', () => {
+    const blocked:string[]=[];
+    const sdk={getState:()=>({skills:[{name:'Thieving',baseLevel:50,level:99}],inventory:[{name:'Brass key',count:1}],varps:{quest:99}}),
+        blockDoorTemporarily:(level:number,x:number,z:number)=>{blocked.push(`${x},${z},${level}`);return true;}};
+    const door=(x:number,kind:string,need:any={},level=0)=>({id:x,loc:'Door',x,z:3304,level,kind,need,trigger:'Open',src:'fixture'});
+    const doors=[door(2674,'one_way'),{...door(2674,'one_way'),z:3305},door(2675,'open'),
+        door(2676,'skill',{skill:'thieving',level:40}),door(2677,'skill',{skill:'thieving',level:60}),
+        door(2678,'key',{item:'brass_key'}),door(2679,'key',{item:'other_key'}),door(2680,'quest',{varp:'quest'}),
+        door(2800,'locked'),door(2681,'locked',{},1)];
+    applyKnownDoorBlocks(sdk,0,{x:2670,z:3304},{x:2690,z:3304},doors);
+    expect(blocked).toEqual(['2674,3304,0','2674,3305,0','2677,3304,0','2679,3304,0','2680,3304,0']);
+});
+
+test('two-sided locked gate is observed and blocked one coordinate at a time without endless Open', async () => {
+    let pos={x:2670,z:3304,level:0},target={x:2670,z:3304},tick=0;
+    const pending:{loc:PathLoc|null}={loc:null};const listeners=new Set<()=>void>(),messages:any[]=[],blocks=new Set<string>(),opened:number[]=[];
+    const a:PathLoc={x:2674,z:3304,id:2550,optionsWithIndex:[{text:'Open',opIndex:1}]};
+    const b:PathLoc={...a,z:3305,id:2551};const key=(l:{x:number;z:number})=>`${l.x},${l.z}`;
+    const deps:PathDeps={pos:()=>pos,onTick:cb=>{listeners.add(cb);return()=>listeners.delete(cb);},
+        walk:(x,z)=>{target={x,z};return {success:true};},
+        interactLoc:l=>{opened.push(l.id);pending.loc=l;target={x:l.x-1,z:l.z};return {success:true};},
+        locs:()=>[a,b],messages:()=>messages,
+        blockDoor:(_level,l)=>{blocks.add(key(l));return true;},doorBlocked:(_level,l)=>blocks.has(key(l)),
+        plan:(_level,_from,to)=>blocks.has(key(a))?(blocks.has(key(b))?[]:[{x:2673,z:3305},{x:2680,z:3305},to]):[to]};
+    let result:any;const done=walkPath(deps,[{x:2680,z:3304,tol:0}],{maxTicks:100}).then(r=>result=r);
+    for(let step=0;step<110&&!result;step++) {
+        tick++;for(let k=0;k<2;k++){const nx=pos.x+Math.sign(target.x-pos.x),nz=pos.z+Math.sign(target.z-pos.z);if(nx===2674&&(nz===3304||nz===3305))break;pos.x=nx;pos.z=nz;}
+        if(pending.loc&&Math.max(Math.abs(pos.x-pending.loc.x),Math.abs(pos.z-pending.loc.z))<=1){messages.push({text:'This door is locked.',tick,observationId:tick});pending.loc=null;}
+        for(const cb of [...listeners])cb();await Promise.resolve();
+    }
+    await done;expect(result.ok).toBe(false);expect(opened).toEqual([2550,2551]);
+    expect(blocks.size).toBe(2);expect(result.repaths).toBe(2);expect(result.ticks).toBeLessThan(20);
+    expect(result.detail).toContain('no progress: door');expect(result.detail).toContain('2551');
+});
+
+test('a dispatched door that stays closed is bounded even without a refusal message', async () => {
+    const w=road({doorX:3030,openDelay:Infinity});const r=await run(w,3060);
+    expect(r.ok).toBe(false);expect(r.doors).toBe(3);expect(r.ticks).toBeLessThan(45);
+    expect(r.detail).toContain('no progress: door');
+});
+
+test('door approach and delayed open remain valid; stop during an open never marks it blocked', async () => {
+    const w=road({doorX:3030,openDelay:5});const r=await run(w,3060);
+    expect(r.ok).toBe(true);expect(r.doors).toBe(1);
+    const waiting=road({doorX:3010,openDelay:100});let blocks=0;
+    waiting.deps.blockDoor=()=>{blocks++;return true;};
+    let result:any;const done=walkPath(waiting.deps,[{x:3040,z:3200,tol:0}],{stop:()=>waiting.tick()>=7}).then(r=>result=r);
+    for(let i=0;i<15&&!result;i++){waiting.step();await Promise.resolve();}
+    await done;expect(result.detail).toBe('stopped');expect(blocks).toBe(0);
+});
+
+test('an old locked message cannot poison a normal door and adjacent unrelated Open is not probed', async () => {
+    const normal=road({doorX:3030,openDelay:3});normal.deps.messages=()=>[{text:'This door is locked.',tick:-1,observationId:1}];
+    const opened=await run(normal,3060);expect(opened.ok).toBe(true);expect(opened.doors).toBe(1);
+    const offPath=road({stallAt:3000});let probes=0;
+    offPath.deps.locs=()=>[{x:3000,z:3201,id:2550,optionsWithIndex:[{text:'Open',opIndex:1}]}];
+    offPath.deps.interactLoc=()=>{probes++;};
+    expect((await run(offPath,3040)).ok).toBe(true);expect(probes).toBe(0);
+});
+
+test('edge-aware planned path may run along a blocked wall anchor without opening it', async () => {
+    const w=road();let opens=0;
+    w.deps.locs=()=>[{x:3030,z:3200,id:2550,optionsWithIndex:[{text:'Open',opIndex:1}]}];
+    w.deps.doorBlocked=(_level,l)=>l.x===3030&&l.z===3200;
+    w.deps.interactLoc=()=>{opens++;};
+    expect((await run(w,3060)).ok).toBe(true);expect(opens).toBe(0);
+});
+test('empty-planner straight fallback cannot assume a blocked wall anchor is safe', async () => {
+    const w=road();w.deps.plan=()=>[];
+    w.deps.doorBlocked=(_level,l)=>l.x===3030&&l.z===3200;
+    const r=await run(w,3060);
+    expect(r.ok).toBe(false);expect(r.ticks).toBe(0);expect(w.inputs).toHaveLength(0);
 });

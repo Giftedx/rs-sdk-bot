@@ -9,6 +9,7 @@
 // every script finished ok.
 //
 // Scripts run unchanged. When the host loads a script it rewrites the source of that one file:
+//   import.meta.main                         -> true (parser define on this entry only, never its helpers)
 //   process.argv / process.env / process.exit  -> per-bot values (argv[2] is the bot name; env is a copy)
 //   console.log / error / warn / info          -> per-bot log
 //   the import of packages/core/src/bot        -> a per-bot copy of the module that re-exports bot.ts unchanged,
@@ -62,6 +63,20 @@ export function rewriteScript(src: string, id: string, scriptDir: string, botMod
     return `const __host = globalThis.__rsBotHost.get(${JSON.stringify(id)});\n${out}`;
 }
 
+// Only the ?hostscript entry is passed here. A parser define avoids changing the
+// same text inside a string/comment or making an imported helper a main module.
+export function hostedEntrySource(src: string, id: string, scriptDir: string): string {
+    const entry = new Bun.Transpiler({ loader: 'ts', target: 'bun', define: { 'import.meta.main': 'true' } }).transformSync(src);
+    return rewriteScript(entry, id, scriptDir);
+}
+
+type OpenOptions = NonNullable<Parameters<typeof openBot>[1]>;
+export function hostedOpenOptions(log: (line: string) => void, defaultStop: NonNullable<OpenOptions['onStop']>, opts: OpenOptions = {}): OpenOptions {
+    // A custom callback cancels work/banks products before the worker calls its
+    // own finish. Only scripts without that policy use the host's final stop.
+    return { log, ...opts, onStop: opts.onStop ?? defaultStop };
+}
+
 // The per-bot copy of bot.ts: everything from the shared module, with openBot and finish bound to one bot.
 export function botWrapper(id: string, botModule: string = BOT_MODULE): string {
     return `export * from '${botModule}';
@@ -81,7 +96,7 @@ interface Instance {
     console: Record<'log' | 'error' | 'warn' | 'info', (...a: unknown[]) => void>;
     log(line: string): void;
     exit(code?: number): never;
-    openBot(name: string, opts?: { log?: (line: string) => void }): Promise<Session>;
+    openBot(name: string, opts?: OpenOptions): Promise<Session>;
     finish(sessions: Session[], ok: boolean, detail: string): Promise<never>;
     sessions: Session[];
     result: string;
@@ -101,7 +116,7 @@ function install(out: (line: string) => void, guard: boolean): void {
             build.onLoad({ filter: new RegExp(`[?&]${SCRIPT_Q}=`) }, args => {
                 const [file, query] = args.path.split('?') as [string, string];
                 const id = new URLSearchParams(query).get(SCRIPT_Q)!;
-                return { contents: rewriteScript(readFileSync(file, 'utf8'), id, dirname(file)), loader: 'ts' };
+                return { contents: hostedEntrySource(readFileSync(file, 'utf8'), id, dirname(file)), loader: 'js' };
             });
             build.onLoad({ filter: new RegExp(`[?&]${BOT_Q}=`) }, args => {
                 const id = new URLSearchParams(args.path.split('?')[1]).get(BOT_Q)!;
@@ -186,7 +201,7 @@ export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out
                 throw new HostExit(code);
             },
             async openBot(name, o) {
-                const s = await openBot(name, { log: l => inst.log(l), ...o });
+                const s = await openBot(name, hostedOpenOptions(l => inst.log(l), (s,detail) => inst.finish([s], false, detail), o));
                 inst.sessions.push(s);
                 return s;
             },

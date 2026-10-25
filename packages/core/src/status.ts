@@ -1,12 +1,32 @@
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { NAMES } from './names';
+import type { BankObservation } from './inprocess';
 
 // Live status for the dashboard (packages/dashboard): every bot writes .practice/status/<name>.json every few ticks.
 // Role: env BOT_ROLE, else the names list the account comes from. Goal: env BOT_GOAL, else the script file.
 // Phase: the last "MILESTONE <name>" line the script printed. The bank is kept from the last time it was open.
 
 const dir = join(resolve(import.meta.dir, '..', '..', '..'), '.practice', 'status');
+let baseIds: Map<number, number> | undefined;
+function baseId(id: number): number {
+    if (!baseIds) {
+        baseIds = new Map();
+        const rows = readFileSync(join(resolve(import.meta.dir, '../../..'), 'vendor/rs-sdk/server/content/pack/obj.pack'), 'utf8').split(/\r?\n/).flatMap(l=>{ const m=l.match(/^(\d+)=(.+)$/); return m ? [[Number(m[1]), m[2]!] as const] : []; });
+        const names = new Map(rows.map(([id,name])=>[name,id]));
+        for (const [id,name] of rows) baseIds.set(id,name.startsWith('cert_') ? names.get(name.slice(5)) ?? id : id);
+    }
+    return baseIds.get(id) ?? id;
+}
+
+// This is the current SDK observation, never a reconstruction from bank stock
+// or a prior session. Missing/invalid data is unknown; an explicit [] stays [].
+function equipmentStatus(raw: unknown) {
+    if (!Array.isArray(raw) || !raw.every(i => i && Number.isSafeInteger(i.slot) && i.slot >= 0
+        && Number.isSafeInteger(i.id) && i.id >= 0 && typeof i.name === 'string' && i.name.trim().length > 0
+        && Number.isSafeInteger(i.count) && i.count > 0)) return null;
+    return raw.map(i => ({ slot:i.slot, id:i.id, baseId:baseId(i.id), name:i.name, count:i.count }));
+}
 
 export function roleOf(name: string): string {
     if (process.env.BOT_ROLE) return process.env.BOT_ROLE;
@@ -16,14 +36,34 @@ export function roleOf(name: string): string {
 
 let lastLine = '';
 let lastResult = '';
+let lastCounters: Record<string, number> = {};
 let patched = false;
 // Per-bot MILESTONE and RESULT lines, for processes that run several bots (packages/core/src/host.ts). A bot with no
 // entry here uses the process-wide lines above, as before.
-const perBot = new Map<string, { line: string; result: string }>();
+const perBot = new Map<string, { line: string; result: string; counters: Record<string, number> }>();
+
+// Read only complete top-level scalar tokens. Diagnostic JSON and quoted text
+// may contain key=value strings; those are not worker counters. Keep parsing
+// bounded separately from the short public result and retain the first flat key.
+export function resultCounters(text: string): Record<string, number> {
+    const prefix=text.slice(0,16*1024),bytes=Buffer.from(prefix),complete=prefix.length===text.length&&bytes.length<=16*1024;
+    const bounded=bytes.subarray(0,16*1024).toString('utf8'),out:Record<string,number>={};
+    let token='',depth=0,quote='',escape=false;
+    const consume=()=>{const m=token.match(/^([A-Za-z]+)=(-?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)$/);if(m){const value=Number(m[2]);if(Number.isFinite(value)&&!Object.hasOwn(out,m[1]!))out[m[1]!]=value;}token='';};
+    for(const char of bounded){
+        if(quote){token+=char;if(escape)escape=false;else if(char==='\\')escape=true;else if(char===quote)quote='';continue;}
+        if(char==='"'||char==="'"||char==='`'){quote=char;token+=char;continue;}
+        if(char==='{'||char==='[')depth++;
+        else if(char==='}'||char===']')depth=Math.max(0,depth-1);
+        if(/\s/.test(char)&&depth===0)consume();else token+=char;
+    }
+    if(complete&&depth===0&&!quote)consume();
+    return out;
+}
 export function noteStatusLine(name: string, line: string): void {
-    const e = perBot.get(name) ?? { line: '', result: '' };
+    const e = perBot.get(name) ?? { line: '', result: '', counters: {} };
     if (line.startsWith('MILESTONE ')) e.line = line.slice(10);
-    if (line.startsWith('RESULT ')) e.result = line.slice(7, 300);
+    if (line.startsWith('RESULT ')) { e.result = line.slice(7, 300); e.counters=resultCounters(line.slice(7)); }
     perBot.set(name, e);
 }
 function captureMilestones() {
@@ -33,7 +73,7 @@ function captureMilestones() {
     console.log = (...args: unknown[]) => {
         const line = args.map(String).join(' ');
         if (line.startsWith('MILESTONE ')) lastLine = line.slice(10);
-        if (line.startsWith('RESULT ')) lastResult = line.slice(7, 300);
+        if (line.startsWith('RESULT ')) { lastResult = line.slice(7, 300); lastCounters=resultCounters(line.slice(7)); }
         orig(...args);
     };
 }
@@ -75,17 +115,49 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
     });
 }
 
-export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
+export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
     captureMilestones();
     mkdirSync(dir, { recursive: true });
     const file = join(dir, `${s.name}.json`);
-    let bank: { name: string; count: number }[] | null = null;
+    let bank: { id: number; baseId: number; name: string; count: number }[] | null = null;
     let bankAt: number | null = null;
     const started = Date.now();
+    // Keep the last observation across logins, with its original age. Load only
+    // bank data from this account and server, never a previous run's activity.
+    try {
+        const prior = JSON.parse(readFileSync(file, 'utf8'));
+        const validId = (id: unknown) => Number.isSafeInteger(id) && (id as number) >= 0;
+        if (typeof prior.name === 'string' && prior.name.toLowerCase() === s.name.toLowerCase() && prior.server === server
+            && Number.isFinite(prior.bankAt) && prior.bankAt > 0 && prior.bankAt <= started
+            && Number.isFinite(prior.at) && prior.at >= prior.bankAt && prior.at <= started
+            && Array.isArray(prior.bank) && prior.bank.every((i: any) => i && validId(i.id)
+                && (i.baseId === undefined || validId(i.baseId)) && typeof i.name === 'string' && i.name.trim().length > 0
+                && Number.isSafeInteger(i.count) && i.count > 0)) {
+            bank = prior.bank.map((i: any) => ({ id:i.id, baseId:i.baseId ?? baseId(i.id), name:i.name, count:i.count }));
+            bankAt = prior.bankAt;
+        }
+    } catch { /* missing or invalid prior observation remains unknown */ }
     const inputs = recordInputs(s);
+    let lastBankGeneration = 0;
+    const observeBank = () => {
+        const observed = s.bankObservation?.();
+        // An open modal with [] is not proof of an empty bank. Only a completed
+        // bank inventory update advances this snapshot, including a real empty one.
+        if (observed && observed.generation > lastBankGeneration) {
+            bank = observed.items.map(i => ({ id:i.id, baseId:baseId(i.id), name:i.name, count:i.count }));
+            bankAt = observed.at;
+            lastBankGeneration = observed.generation;
+        }
+    };
+    // A bank visit can finish between the five-tick writes. Capture it before close as well as each tick.
+    const bot=(s as any).bot;
+    for (const method of ['closeBank','closeInterface']) if (typeof bot?.[method]==='function') {
+        const original=bot[method].bind(bot);
+        bot[method]=(...args:unknown[])=>{ observeBank(); return original(...args); };
+    }
     const write = () => {
         const st = s.sdk.getState();
-        if (st?.bank?.isOpen && Array.isArray(st.bank.items)) { bank = st.bank.items.map((i: any) => ({ name: i.name, count: i.count })); bankAt = Date.now(); }
+        observeBank();
         const p = st?.player;
         const hp = (st?.skills ?? []).find((k: any) => k.name === 'Hitpoints');
         const own = perBot.get(s.name);
@@ -98,20 +170,21 @@ export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(
             hp: hp ? { now: hp.level, max: hp.baseLevel } : null,
             combat: p?.combatLevel ?? null,
             skills: (st?.skills ?? []).map((k: any) => ({ name: k.name, level: k.baseLevel, xp: k.experience })),
-            inventory: (st?.inventory ?? []).map((i: any) => ({ name: i.name, count: i.count })),
+            inventory: (st?.inventory ?? []).map((i: any) => ({ id:i.id,baseId:baseId(i.id),name: i.name, count: i.count })),
+            equipment: equipmentStatus(st?.equipment),
             bank, bankAt, ledger: ledgerCounts?.() ?? null,
-            // Last 300 ticks, one letter per tick: x xp, m move, a anim, d dialog, s stun, i idle.
+            // Last 300 ticks: x XP, v observed inventory change (not net output), m move, a anim, d dialog, s stun, i idle.
             timeline: timeline?.() ?? '',
             // Inputs sent per tick (last 300 ticks, one digit each) and the top action sets with the XP they gained.
             inputs: inputs(),
             // Every key=value counter from the last RESULT line (shopTicks, walkTicks, stuns, eaten, ...).
-            counters: Object.fromEntries([...resultNow.matchAll(/([A-Za-z]+)=(-?[0-9.]+)/g)].map(m => [m[1], Number(m[2])])),
+            counters: own ? own.counters : lastCounters,
             env: { target: process.env.TARGET ?? null, cap: process.env.CAP ?? null },
         };
         try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameSync(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }
     };
     write();
     let n = 0;
-    const off = s.onTick(() => { if (++n % 5 === 0) write(); });
+    const off = s.onTick(() => { observeBank(); if (++n % 5 === 0) write(); });
     return { stop: () => { write(); off(); } };
 }

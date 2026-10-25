@@ -4,6 +4,8 @@ import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import { loadPathfinding } from './pathcache';
 import { assertLoginAllowed } from './haggisgate';
+import { ownedAccounts, recordOwnedAccount, tradeRefusal } from './tradeguard';
+import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
 
 // Runs BotSDK + BotActions in the same process as a LiteClient, with no gateway.
 // BotSDK only speaks WebSocket (sdk/index.ts:272), so the shim fakes a connected socket and feeds it the
@@ -14,6 +16,16 @@ export interface ClientLike {
     executeBotAction(action: unknown): unknown | Promise<unknown>;
     setOnGameTickCallback(cb: (() => void) | null): void;
     getMaxMessageLength?(): number;
+    ifMutable?(id: number): unknown;
+    ptype0?: number;
+    packetsReceived?: number;
+    mainModalId?: number;
+}
+
+export interface BankObservation {
+    generation: number;
+    at: number;
+    items: { id: number; name: string; count: number }[];
 }
 
 export interface Shim {
@@ -21,6 +33,7 @@ export interface Shim {
     stop(reason: string): void;
     tick(): number;
     onTick(cb: () => void): () => void;
+    bankObservation(): BankObservation | null;
     // Sends one action straight to the client, skipping the queue (used for logout, which must not wait
     // behind a slow or stuck action).
     direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
@@ -28,7 +41,7 @@ export interface Shim {
 
 type Queued = { actionId: string; action: { type: string; ticks?: number } };
 
-export function createShim(client: ClientLike, sdk: BotSDK): Shim {
+export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unknown) => string | null): Shim {
     const s = sdk as any;
     let tick = 0;
     let stopped = false;
@@ -37,9 +50,37 @@ export function createShim(client: ClientLike, sdk: BotSDK): Shim {
     let waitDone: (() => void) | null = null;
     const queue: Queued[] = [];
     const listeners = new Set<() => void>();
+    // ifMutable is used by text/model packets too. Only inventory packets for the
+    // bank component establish data readiness. ptype0 + packetsReceived identify
+    // the current dispatch (incoming.ts records both before calling ifMutable).
+    const originalMutable = client.ifMutable;
+    let seenPacket = -1, bankGeneration = 0, bankAt = 0, bankReady = false, pendingBank = 0, bankWasOpen = false;
+    const trackedMutable = originalMutable ? function (id: number) {
+        const component = originalMutable.call(client, id);
+        const packet = client.packetsReceived, opcode = client.ptype0;
+        if (packet == null || packet === seenPacket) return component;
+        seenPacket = packet;
+        if (id !== 5382 || !component || ![ServerProt.UPDATE_INV_FULL, ServerProt.UPDATE_INV_PARTIAL, ServerProt.UPDATE_INV_STOP_TRANSMIT].includes(opcode!)) return component;
+        pendingBank++;
+        // The packet handler fills the component after ifMutable returns. Publish
+        // readiness after that synchronous handler, never while it is half filled.
+        queueMicrotask(() => {
+            pendingBank--;
+            if (stopped) return;
+            if (opcode === ServerProt.UPDATE_INV_STOP_TRANSMIT) { bankReady = false; bankWasOpen = false; return; }
+            if (opcode === ServerProt.UPDATE_INV_FULL) bankReady = true;
+            if (bankReady) { bankGeneration++; bankAt = Date.now(); }
+        });
+        return component;
+    } : undefined;
+    if (trackedMutable) client.ifMutable = trackedMutable;
 
     const deliver = (msg: object) => s.handleMessage(JSON.stringify(msg));
     const pushState = () => deliver({ type: 'sdk_state', state: client.collectBotState(tick), stateReceivedAt: Date.now() });
+    const execute = (action: unknown) => {
+        const refusal = guard?.(action);
+        return refusal ? { success: false, reason: 'unowned_partner', message: refusal } : client.executeBotAction(action);
+    };
 
     const onGameTick = () => {
         if (stopped) return;
@@ -67,7 +108,7 @@ export function createShim(client: ClientLike, sdk: BotSDK): Shim {
                 waitDone = null;
                 result = { success: true, message: 'waited' };
             } else {
-                result = await client.executeBotAction(next.action);
+                result = await execute(next.action);
             }
         } catch (e) {
             result = { success: false, reason: 'error', message: String(e) };
@@ -97,6 +138,7 @@ export function createShim(client: ClientLike, sdk: BotSDK): Shim {
         stop(reason: string) {
             if (stopped) return;
             stopped = true;
+            if (trackedMutable && client.ifMutable === trackedMutable) client.ifMutable = originalMutable;
             client.setOnGameTickCallback(null);
             queue.length = 0;
             waitDone?.();
@@ -110,13 +152,26 @@ export function createShim(client: ClientLike, sdk: BotSDK): Shim {
             s.pendingActions.clear();
         },
         tick: () => tick,
+        bankObservation() {
+            if (stopped) return null;
+            if (client.mainModalId !== 5292) {
+                if (bankWasOpen) { bankReady = false; bankWasOpen = false; }
+                return null;
+            }
+            if (!bankReady || pendingBank) return null;
+            bankWasOpen = true;
+            // Read the client now, not the SDK's previous PLAYER_INFO snapshot.
+            const state = client.collectBotState(tick) as { bank?: { isOpen?: boolean; items?: BankObservation['items'] } };
+            if (!state?.bank?.isOpen || !Array.isArray(state.bank.items)) return null;
+            return { generation: bankGeneration, at: bankAt, items: state.bank.items.map(i => ({ id: i.id, name: i.name, count: i.count })) };
+        },
         onTick(cb) {
             listeners.add(cb);
             return () => listeners.delete(cb);
         },
         async direct(action) {
             if (stopped) return { success: false, message: 'session stopped' };
-            return client.executeBotAction(action);
+            return execute(action);
         },
     };
 }
@@ -133,6 +188,8 @@ export interface Session {
     // The LiteClient itself, for packets the action layer has no action for (quest-mm.ts: OPHELD5 on a puzzle
     // component). Absent on sessions that are not in-process.
     client?: unknown;
+    // Local readiness contract; does not change the vendored SDK's state schema.
+    bankObservation?(): BankObservation | null;
 }
 
 // The lite session spreads logins with a random jitter on remote servers (session.ts:122, 5 s default) to spare the
@@ -178,7 +235,12 @@ export async function connectInProcess(opts: { name: string; password: string; s
         },
     });
     const sdk: BotSDK = new BotSDK({ botUsername: opts.name, password: opts.password, autoLaunchBrowser: false, autoReconnect: false } as any);
-    shim = createShim(session.client as unknown as ClientLike, sdk);
+    recordOwnedAccount(opts.name,host);
+    shim = createShim(session.client as unknown as ClientLike, sdk, action => {
+        const a=action as any;
+        const trading=a.type==='interactPlayer'&&a.optionIndex===4 || ['clickComponent','clickComponentWithOption'].includes(a.type)&&[3420,3546].includes(a.componentId);
+        return trading ? tradeRefusal(a,sdk.getState(),ownedAccounts(host)) : null;
+    });
     shim.start();
     const bot: BotActions = new BotActions(sdk);
     const sh = shim;
@@ -188,6 +250,7 @@ export async function connectInProcess(opts: { name: string; password: string; s
         bot,
         tick: () => sh.tick(),
         onTick: cb => sh.onTick(cb),
+        bankObservation: () => sh.bankObservation(),
         direct: a => sh.direct(a),
         ended,
         client: session.client,

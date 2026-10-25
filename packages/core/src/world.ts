@@ -30,7 +30,7 @@ const key = (t: Tile) => `${t.x},${t.z},${t.level}`;
 const cheb = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
 
 // Conservative: a door passes only when the account clearly meets its rule. Quest doors need the varp set
-// above 0 (the exact complete value is not mined yet). One-way, locked and unknown doors never pass.
+// above 0 (the exact complete value is not mined yet). One-way, conditional, locked and unknown doors never pass.
 export function doorBlocks(d: Door, a: Account): boolean {
     switch (d.kind) {
         case 'open': return false;
@@ -39,6 +39,18 @@ export function doorBlocks(d: Door, a: Account): boolean {
         case 'quest': return !(d.need?.varp && (a.varps[d.need.varp] ?? 0) > 0);
         default: return true;
     }
+}
+
+let knownDoorFacts: Door[] | null = null;
+// Same account policy as the route planner, bounded to the current same-floor leg plus32tiles.
+// This loader does not initialize the pathfinder or construct the transport graph.
+export function blockedDoorsNear(from: Tile, to: Tile, acct: Account, doors?: readonly Door[]): Tile[] {
+    if (from.level !== to.level) return [];
+    const minX = Math.min(from.x, to.x) - 32, maxX = Math.max(from.x, to.x) + 32;
+    const minZ = Math.min(from.z, to.z) - 32, maxZ = Math.max(from.z, to.z) + 32;
+    const facts = doors ?? (knownDoorFacts ??= loadJson<Door[]>('doors.json'));
+    return facts.filter(d => d.level === from.level && d.x >= minX && d.x <= maxX && d.z >= minZ && d.z <= maxZ && doorBlocks(d, acct))
+        .map(d => ({ x: d.x, z: d.z, level: d.level }));
 }
 
 let rsPath: { findLongPath: Function; getDoorAt: Function } | null = null;

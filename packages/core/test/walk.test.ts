@@ -132,3 +132,46 @@ test('a walk leg lets walkTo deal with a refused step (a shut door) instead of s
     g.stop();
     expect(r.ok).toBe(true);
 });
+
+test('a map-flag clear during stair approach does not cancel the later floor arrival', async () => {
+    const g=fakeGame({x:3209,z:3220,level:2,nearbyLocs:[{id:1740,name:'Staircase',x:3205,z:3229,level:2,optionsWithIndex:[]}]});
+    g.quirks.climbTo={x:3205,z:3228,level:1}; g.quirks.climbDelayTicks=8;
+    const original=g.bot.interactLoc;
+    g.bot.interactLoc=async(loc:any,op:number)=>{const reply=await original(loc,op); g.state.opFeedback.opRejectedCount++; return reply;};
+    const result=await walkRoute(g as any,[{kind:'transport',loc:'spiralstairstop',option:'op1',at:{x:3205,z:3229,level:2},to:{x:3205,z:3228,level:1},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:20});
+    g.stop(); expect(result.ok).toBe(true); expect(g.calls.filter(c=>c.startsWith('interact')).length).toBe(1);
+});
+
+test('an ambiguous SDK timeout reply does not cancel an already pending stair transition', async () => {
+    const g=fakeGame({x:3209,z:3220,level:2,nearbyLocs:[{id:1740,name:'Staircase',x:3205,z:3229,level:2,optionsWithIndex:[]}]});
+    g.quirks.climbTo={x:3205,z:3228,level:1}; g.quirks.climbDelayTicks=8;
+    const original=g.bot.interactLoc;
+    g.bot.interactLoc=async(loc:any,op:number)=>{await original(loc,op); return {success:false,reason:'timeout',message:'Nothing happened interacting with Staircase'};};
+    const result=await walkRoute(g as any,[{kind:'transport',loc:'spiralstairstop',option:'op1',at:{x:3205,z:3229,level:2},to:{x:3205,z:3228,level:1},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:20});
+    g.stop(); expect(result.ok).toBe(true); expect(g.calls.filter(c=>c.startsWith('interact')).length).toBe(1);
+});
+
+test('a generic discarded stair reply waits for the required arrival', async () => {
+    const g=fakeGame({x:3209,z:3220,level:2,nearbyLocs:[{id:1740,name:'Staircase',x:3205,z:3229,level:2,optionsWithIndex:[]}]});
+    g.quirks.climbTo={x:3205,z:3228,level:1}; g.quirks.climbDelayTicks=8;
+    const original=g.bot.interactLoc;
+    g.bot.interactLoc=async(loc:any,op:number)=>{await original(loc,op); return {success:false,reason:'rejected',message:'Server discarded the interaction with Staircase - mid-action, stunned, or a modal is open'};};
+    const result=await walkRoute(g as any,[{kind:'transport',loc:'spiralstairstop',option:'op1',at:{x:3205,z:3229,level:2},to:{x:3205,z:3228,level:1},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:20});
+    g.stop(); expect(result.ok).toBe(true);
+});
+
+test('an explicit stair refusal stays a rejection', async () => {
+    const g=fakeGame({x:3209,z:3220,level:2,nearbyLocs:[{id:1740,name:'Staircase',x:3205,z:3229,level:2,optionsWithIndex:[]}]});
+    g.bot.interactLoc=async()=>({success:false,reason:'rejected',message:'You need a key to use these stairs'});
+    const result=await walkRoute(g as any,[{kind:'transport',loc:'spiralstairstop',option:'op1',at:{x:3205,z:3229,level:2},to:{x:3205,z:3228,level:1},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:20});
+    g.stop(); expect(result).toMatchObject({ok:false,reason:'rejected'});
+});
+
+test('ambiguous stair replies cannot pass on the right floor at the wrong landing', async () => {
+    const g=fakeGame({x:3209,z:3220,level:2,nearbyLocs:[{id:1740,name:'Staircase',x:3205,z:3229,level:2,optionsWithIndex:[]}]});
+    g.quirks.climbTo={x:3215,z:3228,level:1}; g.quirks.climbDelayTicks=2;
+    const original=g.bot.interactLoc;
+    g.bot.interactLoc=async(loc:any,op:number)=>{await original(loc,op); return {success:false,reason:'timeout',message:'Nothing happened interacting with Staircase'};};
+    const result=await walkRoute(g as any,[{kind:'transport',loc:'spiralstairstop',option:'op1',at:{x:3205,z:3229,level:2},to:{x:3205,z:3228,level:1},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:10});
+    g.stop(); expect(result).toMatchObject({ok:false,reason:'timeout'});
+});
