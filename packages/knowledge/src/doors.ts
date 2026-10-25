@@ -1,6 +1,6 @@
 import { cleanLines } from './text';
 
-export type DoorKind = 'open' | 'one_way' | 'key' | 'quest' | 'skill' | 'locked' | 'unknown';
+export type DoorKind = 'open' | 'one_way' | 'key' | 'quest' | 'skill' | 'locked' | 'conditional' | 'unknown';
 export interface DoorNeed { skill?: string; level?: number; varp?: string; item?: string; side?: string }
 export interface Trigger { body: string; src: string }
 export type Triggers = Map<string, Trigger>; // key: `<type>,<name>`, e.g. `oploc1,brasskeydoor`, `label,open_x`
@@ -62,6 +62,17 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     if (varp && REFUSAL.test(body)) return { kind: 'quest', need: { varp: varp[1] }, trigger: src };
     const side = body.match(/coord([xz])\(coord\)\s*([<>]=?)\s*coord[xz]\(loc_coord\)/);
     if (side && REFUSAL.test(body)) return { kind: 'one_way', need: { side: `refuses when player ${side[1]} ${side[2]} door ${side[1]}` }, trigger: src };
+    // Open and refusal branches are not an unconditional Open operation. The thieving-door
+    // handler takes an axis-derived entering flag, aliases it to locked, and may invert it via DB.
+    // Do not guess a cardinal permitted side without the DB row and loc angle.
+    if (OPEN_PROC.test(body) && REFUSAL.test(body)) {
+        const axis = /~check_axis(?:_locactive)?\s*\(/.test(body);
+        const enteringLock = /boolean\s+\$entering\b/.test(body)
+            && /def_boolean\s+\$locked\s*=\s*\$entering\b/.test(body)
+            && /if\s*\(\s*\$locked\s*=\s*true\s*\)/.test(body);
+        if (axis && enteringLock) return { kind: 'one_way', need: { side: 'Open depends on entering side; locked_door.lock_inversed determines orientation' }, trigger: src };
+        return { kind: 'conditional', trigger: src };
+    }
     if (OPEN_PROC.test(body)) return { kind: 'open', trigger: src };
     if (REFUSAL.test(body)) return { kind: 'locked', trigger: src };
     return { kind: 'unknown', trigger: src };

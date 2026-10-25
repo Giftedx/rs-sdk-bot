@@ -2823,7 +2823,10 @@
   "x": 2610,
   "z": 3316,
   "level": 0,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:19",
   "src": "maps/m40_51.jm2:7595"
  },
@@ -2913,7 +2916,10 @@
   "x": 2572,
   "z": 3288,
   "level": 1,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:16",
   "src": "maps/m40_51.jm2:8754"
  },
@@ -2923,7 +2929,10 @@
   "x": 2572,
   "z": 3305,
   "level": 1,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:16",
   "src": "maps/m40_51.jm2:8766"
  },
@@ -3073,7 +3082,10 @@
   "x": 2565,
   "z": 3356,
   "level": 0,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:13",
   "src": "maps/m40_52.jm2:4741"
  },
@@ -3495,7 +3507,10 @@
   "x": 2655,
   "z": 9714,
   "level": 0,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:10",
   "src": "maps/m41_151.jm2:6569"
  },
@@ -3505,7 +3520,10 @@
   "x": 2655,
   "z": 9715,
   "level": 0,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:7",
   "src": "maps/m41_151.jm2:6571"
  },
@@ -3847,7 +3865,10 @@
   "x": 2674,
   "z": 3304,
   "level": 0,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:4",
   "src": "maps/m41_51.jm2:8189"
  },
@@ -3857,7 +3878,10 @@
   "x": 2674,
   "z": 3305,
   "level": 0,
-  "kind": "open",
+  "kind": "one_way",
+  "need": {
+   "side": "Open depends on entering side; locked_door.lock_inversed determines orientation"
+  },
   "trigger": "scripts/skill_thieving/scripts/doors/locked_door.rs2:1",
   "src": "maps/m41_51.jm2:8190"
  },
@@ -5936,7 +5960,7 @@
   "x": 2924,
   "z": 9654,
   "level": 0,
-  "kind": "open",
+  "kind": "conditional",
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_150.jm2:1916"
  },
@@ -5946,7 +5970,7 @@
   "x": 2927,
   "z": 9649,
   "level": 0,
-  "kind": "open",
+  "kind": "conditional",
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_150.jm2:1975"
  },
@@ -5966,7 +5990,7 @@
   "x": 2931,
   "z": 9640,
   "level": 0,
-  "kind": "open",
+  "kind": "conditional",
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_150.jm2:2064"
  },
@@ -6246,7 +6270,7 @@
   "x": 2938,
   "z": 3252,
   "level": 0,
-  "kind": "open",
+  "kind": "conditional",
   "trigger": "scripts/quests/quest_dragon/scripts/melzars_maze.rs2:20",
   "src": "maps/m45_50.jm2:6253"
  },
@@ -23215,7 +23239,7 @@
   "x": 3016,
   "z": 3514,
   "level": 0,
-  "kind": "open",
+  "kind": "conditional",
   "trigger": "scripts/quests/quest_blackknight/scripts/quest_blackknight.rs2:14",
   "src": "maps/m47_54.jm2:5081"
  },
@@ -26360,7 +26384,7 @@
   "x": 3292,
   "z": 9434,
   "level": 0,
-  "kind": "open",
+  "kind": "conditional",
   "trigger": "scripts/quests/quest_desertrescue/scripts/quest_desertrescue.rs2:675",
   "src": "maps/m51_147.jm2:5695"
  },
@@ -26370,7 +26394,7 @@
   "x": 3292,
   "z": 9435,
   "level": 0,
-  "kind": "open",
+  "kind": "conditional",
   "trigger": "scripts/quests/quest_desertrescue/scripts/quest_desertrescue.rs2:674",
   "src": "maps/m51_147.jm2:5697"
  },

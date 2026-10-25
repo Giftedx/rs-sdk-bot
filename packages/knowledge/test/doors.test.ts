@@ -1,4 +1,6 @@
 import { test, expect } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { classifyDoor, parseTriggers } from '../src/doors';
 
 const SCRIPTS = `[oploc1,miningguilddoor]
@@ -78,4 +80,21 @@ test('plain gates open through ~open_gate and ~open_outer_gate', () => {
     const g = parseTriggers([{ text: '[oploc1,_gate_main_closed] ~open_gate;\n[oploc1,_gate_outer_closed] ~open_outer_gate;\n', file: 'scripts/gates.rs2' }]);
     expect(classifyDoor('loc_1551', 'gate_main_closed', g).kind).toBe('open');
     expect(classifyDoor('loc_1553', 'gate_outer_closed', g).kind).toBe('open');
+});
+
+
+test('real thieving Open handlers2550/2551 are side-locked despite an open procedure in the expanded body', () => {
+    const file = 'scripts/skill_thieving/scripts/doors/locked_door.rs2';
+    const axis = 'scripts/doors/scripts/door_procs.rs2';
+    const real = parseTriggers([file, axis].map(file => ({ file, text: readFileSync(resolve(import.meta.dir, '../../../vendor/rs-sdk/server/content', file), 'utf8') })));
+    for (const loc of ['loc_2550', 'loc_2551']) {
+        expect(classifyDoor(loc, undefined, real)).toMatchObject({ kind: 'one_way', need: { side: expect.stringContaining('lock_inversed') }, trigger: expect.stringContaining(file) });
+    }
+    // Existing item-use lockpick paths remain key-gated rather than unconditional Open.
+    expect(classifyDoor('loc_2557', undefined, real).kind).toBe('key');
+});
+
+test('an unresolved conditional refusal plus Open is explicit conditional, not open or a guessed skill/quest', () => {
+    const t = parseTriggers([{ file: 'conditional.rs2', text: '[oploc1,conditional]\nif (~condition) { mes("This door is locked."); return; }\n~open_door(500);' }]);
+    expect(classifyDoor('conditional', undefined, t).kind).toBe('conditional');
 });
