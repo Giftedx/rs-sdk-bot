@@ -3,6 +3,7 @@ import {readFileSync,writeFileSync,statSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {openBot,finish,serverFromEnv} from '../../packages/core/src/bot';
+import {isLocalServer} from '../../packages/core/src/localserver';
 import {waitTicks,waitUntil} from '../../packages/core/src/ticks';
 import {sessionWalker,walkPath,expandPath} from '../../packages/core/src/walk';
 import {SWORD_ROUTE,swordTileSafe} from '../buy-owned-sword';
@@ -12,7 +13,7 @@ const actor=process.argv[2];
 if(!actor||!/^fl[a-z0-9]+$/i.test(actor)||process.env.REUSE_STACK!=='1')throw new Error('requires existing local failed fleet actor and REUSE_STACK=1');
 if(createHash('sha256').update(readFileSync('scripts/buy-owned-sword.ts')).digest('hex').toUpperCase()!==expected)throw new Error('inspection requires unchanged D14 worker');
 const envText=readFileSync(resolve('vendor/rs-sdk/bots',actor,'bot.env'),'utf8');
-if(!/^(localhost|127\.)/.test(serverFromEnv(envText)))throw new Error('inspection refuses non-local actor');
+if(!isLocalServer(serverFromEnv(envText)))throw new Error('inspection refuses non-local actor');
 
 // Primary NPC551/552 default wander5 + indoors: union of spawn±5 rectangles.
 // Nearest threat bounds: Thief3184..85/3385..90 (wander8/no automatic hunt),

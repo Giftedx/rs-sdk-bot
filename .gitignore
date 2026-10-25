@@ -2,7 +2,10 @@
 # rs-sdk is a tracked submodule (pinned by gitlink and rs-sdk.pin), so it is un-ignored.
 /vendor/*
 !/vendor/rs-sdk
-# YouTube auto-captions: private study copy, do not publish
+# YouTube auto-captions: private study copy, do not publish (research/video/talk-notes.md keeps only our notes)
+/research/video/transcript.md
+/research/video/*.vtt
+/research/video/*.srt
 node_modules/
 .env
 bot.env
