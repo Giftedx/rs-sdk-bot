@@ -73,6 +73,26 @@ export function selectFoodToEat(items: readonly any[], loss: number): any | unde
 export const calcEatAt = (maxHp: number): number =>
     maxHp <= 10 ? 4 : Math.max(4, Math.min(maxHp - 6, Math.floor(maxHp * 0.4)));
 
+// The farm runs only where it stands: Ardougne market, ground level. A thief that starts elsewhere (a respawn in
+// Lumbridge, a Draynor bank) must not walk here on its own: on 2026-10-25 a 10 HP thief with no food walked from
+// Draynor through Taverley toward the bank and died on the way. The radius covers bank, knights, stall and shop.
+export const ARDOUGNE_RADIUS = 40;
+export function farmStartProblem(p: { worldX: number; worldZ: number; level: number } | null | undefined, thieving: number): string | null {
+    if (!p) return 'no goldfarm progress: position unknown';
+    if (p.level !== 0 || Math.max(Math.abs(p.worldX - BANK_SPOT.x), Math.abs(p.worldZ - BANK_SPOT.z)) > ARDOUGNE_RADIUS)
+        return `no goldfarm progress: start in Ardougne market, not ${p.worldX},${p.worldZ},${p.level}`;
+    // The knights need Thieving 55. Below it the farm looks for men and women, and none stand at the market: a
+    // Thieving 1 account idled all 2400 ticks on 2026-10-25 and still reported ok.
+    if (thieving < 55) return `no goldfarm progress: Thieving ${thieving} is below 55 for the knights`;
+    return null;
+}
+
+// The Baker's stall with no food is safe only at full HP (or one below): see replenishFood.
+export const stallAllowed = (hp: number, maxHp: number, food: number): boolean => food > 0 || hp >= maxHp - 1;
+
+// Ends a run that has stood still: this many ticks with no pickpocket at all is a stuck farm, not a slow one.
+export const IDLE_LIMIT = 300;
+
 if (import.meta.main) {
     console.log(`ERR-TRACE opening ${process.argv[2]}`);
     const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
@@ -116,7 +136,7 @@ if (import.meta.main) {
         let picks = 0, noops = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
         let bankFails = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0;
         let shopTrips = 0, shopTicks = 0, bought = 0;
-        let hpMin = hp(), died = false, bankEmpty = false, lastFail = '';
+        let hpMin = hp(), died = false, bankEmpty = false, lastFail = '', lastPickTick = s.tick();
         let last = pos();
 
         const off = s.onTick(() => {
@@ -286,6 +306,7 @@ if (import.meta.main) {
             stallTrips++;
             await walk(STALL_SPOT, 2);
             const s0 = s.tick();
+            const hpAtStall = hp();
             const badUntil = new Map<string, number>();
             const key = (t: Tile) => `${t.x},${t.z}`;
             const d = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
@@ -295,7 +316,8 @@ if (import.meta.main) {
                     if (existsSync(stopFile)) return;
                     if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
                     if (hp() <= eatAt() && foodCount() > 0) { await eat(); continue; }
-                    if (hp() <= DMG && foodCount() === 0) break; // retreat to bank if dangerously low
+                    // No food and any hit taken: leave at once, before the guard's next hits.
+                    if (foodCount() === 0 && hp() < hpAtStall) { lastFail = 'stall: hit with no food, retreat'; break; }
 
                     const npcs = (st()?.nearbyNpcs ?? []) as any[];
                     const guards = npcs.filter(n => GUARD.test(n.name)).map(n => ({ x: n.x, z: n.z }));
@@ -384,8 +406,10 @@ if (import.meta.main) {
                 if (foodCount() >= 2) return;
             }
 
-            // At critical HP with no food, do not walk to the open stall where guards can finish the account.
-            if (hp() <= 6 && foodCount() === 0) return;
+            // With no food, the stall is only safe at full HP: a guard that catches the thief keeps hitting, and two
+            // live thieves died at the stall on 2026-10-25 with no food (hp 4-7). Below that, wait at the bank: HP
+            // comes back on its own and the courier may arrive.
+            if (!stallAllowed(hp(), maxHp(), foodCount())) return;
             await stallTrip();
         };
 
@@ -437,15 +461,22 @@ if (import.meta.main) {
             if (hp() < hp0) {
                 picks++;
                 fails++;
+                lastPickTick = s.tick();
                 await onStun();
             } else if (coins() > c0) {
                 picks++;
+                lastPickTick = s.tick();
             } else {
                 noops++;
             }
         };
 
         console.log(`GOLDFARM ticks=${TICKS} eatAt=${eatAt()} maxHp=${maxHp()} food=${foodCount()} notes=${notes().length} coins=${coins0}`);
+
+        // Refuse before any walk: a start outside Ardougne, or an account too weak for the knights.
+        const startProblem = farmStartProblem(pos(), s.sdk.getSkill('Thieving')?.baseLevel ?? 0);
+        if (startProblem) await end(false, startProblem);
+        lastPickTick = s.tick();
 
         const hasJunk = () => inv().some(i => !COINS.test(i.name) && !isFoodItem(i) && !notes().some(n => n.slot === i.slot));
 
@@ -465,6 +496,11 @@ if (import.meta.main) {
                 nextMark += 1000;
             }
             if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
+            // A farm that stands still logs out instead of burning playtime (a waiting-for-food bank stay counts too).
+            // No food at all reads as "no food" (supervisors: stopped, resumable); anything else is a stuck farm (blocked).
+            if (s.tick() - lastPickTick >= IDLE_LIMIT) await end(false, foodCount() === 0
+                ? `no food: waited ${IDLE_LIMIT} ticks with no pickpocket and no food`
+                : `no goldfarm progress: idle ${IDLE_LIMIT} ticks with no pickpocket`);
 
             const f = foodCount();
 
