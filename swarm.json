@@ -1,112 +1,103 @@
 {
-  "maxBots": 6,
-  "minFreeGB": 4,
+  "maxBots": 10,
+  "minFreeGB": 8,
   "jobs": [
     {
       "account": "Mightyrod",
-      "script": "scripts/generated/fishing30.ts",
-      "role": "fishing",
-      "goal": "Fishing 99",
+      "script": "scripts/gather-fire-combat.ts",
+      "role": "combat",
+      "goal": "Kill Fire Giants in Waterfall Dungeon, bank loot, and return forever",
+      "enabled": true,
+      "repeat": true,
       "env": {
-        "TARGET": "99",
-        "CAP": "15000"
+        "CAP": "9000",
+        "RANDOM_EVENTS": "0",
+        "FOOD_FROM": "Bigpackage"
       },
-      "enabled": false,
-      "note": "Fishing 99 reached 2026-10-23; free for a new job",
-      "repeat": false
+      "note": "Perpetual Fire Giant combat loop: Waterfall dungeon kills, looting runes, gems and equipment, banking at Ardougne North bank, returning forever."
     },
     {
-      "account": "Moneyshot",
-      "script": "scripts/banker.ts",
-      "role": "bank",
-      "goal": "banker: hold the vault",
-      "enabled": false,
+      "account": "Masterbaiter",
+      "script": "scripts/fishcook.ts",
+      "role": "fishing",
+      "goal": "Fly fish and cook best food (trout & salmon) forever, bank and supply courier",
+      "enabled": true,
       "repeat": true,
-      "note": "start on demand (payouts, deposits); idle it costs 300-600 MB"
+      "env": {
+        "TICKS": "9000",
+        "GIVE_TO": "Bigpackage"
+      },
+      "note": "Continuous 3-tick fly fishing trout/salmon (~51 cooked food/1000 ticks, ~465/hr) at Lumbridge river, cooked at general store fireplace, banked at Draynor, and traded to courier."
+    },
+    {
+      "account": "Shaftsinker",
+      "script": "scripts/gather-essence.ts",
+      "role": "mining",
+      "goal": "Mine rune essence and pure essence via Aubury, bank at Varrock East forever",
+      "enabled": true,
+      "repeat": true,
+      "env": {
+        "CAP": "15000",
+        "BANK_AT": "28"
+      },
+      "note": "Mine rune essence (and pure essence 30+) in the Rune Essence Mine via Aubury teleport, bank at Varrock East bank, and loop forever."
     },
     {
       "account": "Bigpackage",
-      "script": "scripts/generated/gecourier.ts",
-      "role": "helper",
-      "goal": "courier: GE lobsters to Ardougne",
+      "script": "scripts/foodcourier.ts",
+      "role": "courier",
+      "goal": "Walking bank: collect cooked food from Masterbaiter and trade on demand to whoever needs it",
+      "enabled": true,
+      "repeat": true,
       "env": {
-        "LOBSTERS": "115",
-        "PRICE": "165"
-      },
-      "enabled": false,
-      "note": "holds 115 lobster notes; next trip needs coins from the banker"
-    },
-    {
-      "account": "Woodpecker",
-      "script": "scripts/generated/woodcutting.ts",
-      "role": "woodcutting",
-      "goal": "Woodcutting 99",
-      "env": {
-        "TARGET": "99",
+        "FROM": "Masterbaiter",
+        "FEATHERS": "500",
+        "FARMERS": "Pocketrocket,mmtha0205,mmthv2350,Pocketpython,mmsmk1232,Mightyrod",
         "CAP": "9000"
       },
+      "note": "On-demand food courier & walking bank: carries food notes from Draynor to Ardougne when any farmer or combat account drops below safe food buffer.",
+      "whenFoodLowFrom": [
+        "Pocketrocket",
+        "mmtha0205",
+        "mmthv2350",
+        "Pocketpython",
+        "mmsmk1232",
+        "Mightyrod"
+      ],
+      "foodLowBelow": 80,
+      "foodSourceAccount": "Masterbaiter",
+      "sourceFoodMinimum": 1
+    },
+    {
+      "account": "Shaftmaker",
+      "script": "scripts/fletch-arrows.ts",
+      "role": "fletching",
+      "goal": "Fletching99 complete; await useful advanced ammunition inputs",
       "enabled": false,
-      "note": "died at WC 49, cause not known; wait for the random-event check"
+      "repeat": false
     },
     {
       "account": "Bigchopper",
-      "script": "scripts/generated/woodcutting.ts",
+      "script": "scripts/gather-yews.ts",
       "role": "woodcutting",
-      "goal": "Woodcutting 99",
-      "env": {
-        "TARGET": "99",
-        "CAP": "9000"
-      },
+      "goal": "Collect and bank oak logs for the fletching supply chain",
       "enabled": false,
-      "note": "Woodcutting 99 reached 2026-10-23; free for a new job"
+      "repeat": false
     },
     {
-      "account": "Pocketpython",
-      "script": "scripts/goldfarm.ts",
-      "role": "thieving",
-      "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "moved into the goldfarm host job 2026-10-23",
-      "env": {
-        "TICKS": "9000"
-      },
-      "repeat": true
+      "account": "Woodpecker",
+      "script": "scripts/gather-ore.ts",
+      "role": "mining",
+      "goal": "Mining recovery paused",
+      "enabled": false
     },
     {
-      "account": "Pocketrocket",
-      "script": "scripts/goldfarm.ts",
-      "role": "thieving",
-      "goal": "gold farm: knights (~15 coins/tick on practice)",
+      "account": "Ballspinner",
+      "script": "scripts/spin-bowstrings.ts",
+      "role": "crafting",
+      "goal": "Crafting99 complete; hold strings for owned production demand",
       "enabled": false,
-      "note": "moved into the goldfarm host job 2026-10-23",
-      "env": {
-        "TICKS": "9000"
-      },
-      "repeat": true
-    },
-    {
-      "account": "mmtha0205",
-      "script": "scripts/goldfarm.ts",
-      "role": "thieving",
-      "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "moved into the goldfarm host job 2026-10-23",
-      "env": {
-        "TICKS": "9000"
-      },
-      "repeat": true
-    },
-    {
-      "account": "mmthv2350",
-      "script": "scripts/goldfarm.ts",
-      "role": "thieving",
-      "goal": "gold farm: knights (~15 coins/tick on practice)",
-      "enabled": false,
-      "note": "moved into the goldfarm host job 2026-10-23",
-      "env": {
-        "TICKS": "9000"
-      },
-      "repeat": true
+      "repeat": false
     },
     {
       "account": "Haggis",
@@ -117,22 +108,91 @@
       "note": "reserved: runs only the final rehearsed route"
     },
     {
+      "account": "Abracadickra",
+      "script": "scripts/shop-buyer.ts",
+      "role": "magic",
+      "goal": "Bounded magic and potion supplies:40each owned target",
+      "enabled": false,
+      "repeat": false
+    },
+    {
+      "account": "Moneyshot",
+      "script": "scripts/banker.ts",
+      "role": "bank",
+      "goal": "Receive owned cargo, bank it, then wait offline",
+      "enabled": false,
+      "repeat": false
+    },
+    {
+      "account": "Swordinhand",
+      "script": "scripts/gather-combat.ts",
+      "role": "combat",
+      "goal": "Practice-gated cowhides, bones and beef; then Strength/Defence progression",
+      "enabled": false,
+      "repeat": false
+    },
+    {
+      "account": "AFKnight",
+      "script": "scripts/gather-combat.ts",
+      "role": "combat",
+      "goal": "Combat support: cowhides, bones and beef near Lumbridge",
+      "enabled": false
+    },
+    {
+      "account": "OreElse",
+      "script": "scripts/gather-ore.ts",
+      "role": "mining",
+      "goal": "Mining supply: bank iron and coal for smithing",
+      "enabled": false
+    },
+    {
+      "account": "FishAndChips",
+      "script": "scripts/fishcook.ts",
+      "role": "fishing",
+      "goal": "Fishing supply: fly fish and cook trout/salmon for the courier",
+      "enabled": false
+    },
+    {
+      "account": "BowBeforeMe",
+      "script": "scripts/fletch-arrows.ts",
+      "role": "fletching",
+      "goal": "Fletching supply: cut shafts and fletch arrows for ranged",
+      "enabled": false
+    },
+    {
+      "account": "MineYourBiz",
+      "script": "scripts/gather-essence.ts",
+      "role": "mining",
+      "goal": "Essence supply: mine rune/pure essence via Aubury",
+      "enabled": false
+    },
+    {
+      "account": "YewFirst",
+      "script": "scripts/gather-yews.ts",
+      "role": "woodcutting",
+      "goal": "Woodcutting supply: bank oak/yew logs for fletching",
+      "enabled": false
+    },
+    {
       "accounts": [
-        "Pocketpython",
         "Pocketrocket",
         "mmtha0205",
-        "mmthv2350"
+        "mmthv2350",
+        "Pocketpython",
+        "mmsmk1232"
       ],
       "host": true,
-      "script": "scripts/goldfarm.ts",
+      "script": "scripts/goldfarm-stable.ts",
       "role": "thieving",
-      "goal": "gold farm: knights (4 bots, one host)",
-      "env": {
-        "TICKS": "9000"
-      },
-      "enabled": false,
+      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food (hosted 5-bot pool)",
+      "enabled": true,
       "repeat": true,
-      "note": "PAUSED 2026-10-23 ~14:00: stall food trips are lethal live (5 farmer deaths today; guards attack thieves with no food left). Restart only with a safe food supply (lobsters by trade, or another source)"
+      "env": {
+        "TICKS": "9000",
+        "BANK_AT": "25000",
+        "FOOD_FROM": "Bigpackage"
+      },
+      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
     }
   ]
 }
