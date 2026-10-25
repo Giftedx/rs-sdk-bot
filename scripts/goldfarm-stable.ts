@@ -87,11 +87,23 @@ export function farmStartProblem(p: { worldX: number; worldZ: number; level: num
     return null;
 }
 
-// The Baker's stall with no food is safe only at full HP (or one below): see replenishFood.
-export const stallAllowed = (hp: number, maxHp: number, food: number): boolean => food > 0 || hp >= maxHp - 1;
+// The Baker's stall only with food in the pack. Full HP is not enough: on 2026-10-25 at 06:5x Pocketrocket entered
+// it at 10/10 HP with no food and died before its first steal (host-Pocketrocket.log, stolen=0 refused=0). Without
+// food the thief waits at the bank for the courier instead (IDLE_LIMIT ends that wait as "no food", resumable).
+export const stallAllowed = (_hp: number, _maxHp: number, food: number): boolean => food > 0;
 
 // Ends a run that has stood still: this many ticks with no pickpocket at all is a stuck farm, not a slow one.
 export const IDLE_LIMIT = 300;
+
+// The courier is in view and the last answer is old enough. Exact name match: a stranger never opens a trade.
+export const COURIER_COOLDOWN = 60;
+// Only a thief that is short of food waits for the courier at the knights: a courier that idles in view (between runs,
+// 2026-10-25) otherwise cost every fed thief a 45 s wait each minute.
+export const COURIER_WANT_BELOW = 8;
+export function courierCheckDue(tick: number, lastCheck: number, courier: string, players: readonly { name?: string }[]): boolean {
+    if (!courier || tick - lastCheck < COURIER_COOLDOWN) return false;
+    return players.some(p => typeof p?.name === 'string' && p.name.toLowerCase() === courier.toLowerCase());
+}
 
 if (import.meta.main) {
     console.log(`ERR-TRACE opening ${process.argv[2]}`);
@@ -136,7 +148,7 @@ if (import.meta.main) {
         let picks = 0, noops = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
         let bankFails = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0;
         let shopTrips = 0, shopTicks = 0, bought = 0;
-        let hpMin = hp(), died = false, bankEmpty = false, lastFail = '', lastPickTick = s.tick();
+        let hpMin = hp(), died = false, bankEmpty = false, lastFail = '', lastPickTick = s.tick(), lastCourierCheck = -100_000;
         let last = pos();
 
         const off = s.onTick(() => {
@@ -257,8 +269,14 @@ if (import.meta.main) {
             if (!courierNpc) return;
             console.log(`COURIER trade check from ${FOOD_FROM} t=${now()}`);
             const re = new RegExp(`^${FOOD_FROM}$`, 'i');
-            await s.bot.serveTrades({ from: re, maxTrades: 1, timeout: 5000 });
-            await refill();
+            // Serve while the courier stays in view (up to 45 s): it hands out to each farmer in turn, so a 5 s window
+            // ended before its request came (2026-10-25: every hand-out failed). Leave as soon as it walks off.
+            const inView = () => (st()?.nearbyPlayers ?? []).some((p: any) => re.test(p.name));
+            const r = await s.bot.serveTrades({ from: re, maxTrades: 1, timeout: 45_000, until: () => !inView() || existsSync(stopFile) });
+            const got = r.trades.some(t => t.success);
+            console.log(`COURIER ${got ? 'received' : 'no trade'} food=${foodCount()} notes=${notes().length} t=${now()}`);
+            // Bank only what arrived (notes -> food); a no-trade wait has nothing to bank.
+            if (got) await refill();
         };
 
         // Buy bread and cakes from Baker's shop in Ardougne market
@@ -271,10 +289,12 @@ if (import.meta.main) {
                 const o = await s.bot.openShop(BAKER);
                 if (!o.success) {
                     lastFail = `shop:${o.message}`;
+                    console.log(`WARN shop trip=${shopTrips} ${o.message} t=${now()}`);
                     return;
                 }
                 let free = 28 - inv().length - KEEP_FREE;
                 let money = coins();
+                let sent = 0;
                 const shopItems = (st()?.shop?.shopItems ?? []) as any[];
                 for (const item of shopItems) {
                     if (!/^(bread|cake|chocolate slice)$/i.test(item.name) || item.count <= 0) continue;
@@ -287,6 +307,8 @@ if (import.meta.main) {
                         while (n >= chunk) {
                             await s.direct({ type: 'shopBuy', slot: item.slot, amount: chunk, reason: 'SDK' } as any);
                             n -= chunk;
+                            // At most 5 buy packets per tick, as scripts/goldfarm.ts and generated/thieving60.ts send.
+                            if (++sent % 5 === 0) await waitTicks(s, 1);
                         }
                     }
                     if (free <= 0) break;
@@ -401,7 +423,9 @@ if (import.meta.main) {
             if (foodCount() >= 2) return;
 
             const shopSafe = (s.tick() - lastStealTick > 1520) && (Date.now() - lastStealEpoch > 1520 * 400);
-            if (shopSafe && (coins() >= 12 || !bankEmpty)) {
+            // The Baker's shop stands at the stall. With no food in the pack, stay away from both: Pocketrocket died at
+            // 10/10 HP on the way to the shop at 2655,3316 with food=0 (2026-10-25, third death there with no food).
+            if (shopSafe && foodCount() > 0 && (coins() >= 12 || !bankEmpty)) {
                 await shopTrip();
                 if (foodCount() >= 2) return;
             }
@@ -496,6 +520,14 @@ if (import.meta.main) {
                 nextMark += 1000;
             }
             if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
+            // The courier walks to the knights when the thief is not at the bank (scripts/foodcourier.ts): answer it
+            // while it stands in view, at most once per COURIER_COOLDOWN ticks, so a departing courier costs little.
+            if (foodCount() < COURIER_WANT_BELOW && courierCheckDue(s.tick(), lastCourierCheck, FOOD_FROM, st()?.nearbyPlayers ?? [])) {
+                lastCourierCheck = s.tick();
+                await quickCourierCheck();
+                lastPickTick = Math.max(lastPickTick, s.tick() - IDLE_LIMIT / 2);
+                continue;
+            }
             // A farm that stands still logs out instead of burning playtime (a waiting-for-food bank stay counts too).
             // No food at all reads as "no food" (supervisors: stopped, resumable); anything else is a stuck farm (blocked).
             if (s.tick() - lastPickTick >= IDLE_LIMIT) await end(false, foodCount() === 0
