@@ -1,0 +1,1626 @@
+{
+  "version": 1,
+  "kind": "collection-expansion-candidates",
+  "createdAt": "2026-10-24",
+  "sourceRevision": "vendored rs-sdk rev289 content; live content drift unverified",
+  "autoLaunch": false,
+  "policy": {
+    "commerce": "NPC supply purchases with owned coins only. No selling, GE, stranger trades or player commerce.",
+    "accountNames": "Suggestions only, from packages/core/src/names.ts; never create/assign without root ownership check.",
+    "ratesAndValue": "No live prices, GP estimates, drop-rate estimates or time promises.",
+    "scope": "Candidate coverage only, not an all-items catalogue or completion score.",
+    "resources": "Root owns game input, deployment and any practice/live launch. No bot run by this task.",
+    "targets": "Targets and tick caps are proposed SMART admission gates, not measured rates or time promises."
+  },
+  "sourceUncertainty": [
+    "knowledge/shops.json is an index of candidate inventory definitions: skill-guide entries and _unpack records are not shop-access proof. Only NPC-bound shops with reachable handlers are accepted here.",
+    "Item IDs are checked against rev289 content/pack/obj.pack. Local source does not prove current live content.",
+    "Recipe/drop existence does not prove an accessible route, productive output, current stock or final bank delivery.",
+    "Prior results are raw historical evidence without script SHA/preset binding; do not auto-promote candidate readiness.",
+    "Queued jobs may share finite input stock; account suggestions are not simultaneous assignments."
+  ],
+  "regions": [
+    {
+      "id": "varrock",
+      "jobs": [
+        "varrock-ores"
+      ]
+    },
+    {
+      "id": "alkharid",
+      "jobs": [
+        "alkharid-bars"
+      ]
+    },
+    {
+      "id": "seers",
+      "jobs": [
+        "seers-bowstrings"
+      ]
+    },
+    {
+      "id": "owned-bank",
+      "jobs": [
+        "bank-arrows"
+      ]
+    },
+    {
+      "id": "catherby",
+      "jobs": [
+        "catherby-tips"
+      ]
+    },
+    {
+      "id": "port-sarim-draynor",
+      "jobs": [
+        "sarim-magic-supplies",
+        "sarim-supplies"
+      ]
+    },
+    {
+      "id": "lumbridge-alkharid",
+      "jobs": [
+        "lumbridge-hides"
+      ]
+    },
+    {
+      "id": "edgeville-dungeon",
+      "jobs": [
+        "edgeville-herbs",
+        "edgeville-bones"
+      ]
+    },
+    {
+      "id": "location-not-selected",
+      "jobs": [
+        "rare-firegiant-gear"
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "sarim-magic-supplies",
+      "priority": 1,
+      "region": "port-sarim-draynor",
+      "title": "Betty runes and eyes",
+      "candidateAccount": {
+        "role": "magic",
+        "name": "Abracadickra",
+        "assignment": "suggestion only; root creates/funds only after proof"
+      },
+      "inputs": [
+        {
+          "id": 995,
+          "debugName": "coins",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:996"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 554,
+          "debugName": "firerune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:555"
+        },
+        {
+          "id": 555,
+          "debugName": "waterrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:556"
+        },
+        {
+          "id": 556,
+          "debugName": "airrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:557"
+        },
+        {
+          "id": 557,
+          "debugName": "earthrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:558"
+        },
+        {
+          "id": 558,
+          "debugName": "mindrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:559"
+        },
+        {
+          "id": 562,
+          "debugName": "chaosrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:563"
+        },
+        {
+          "id": 560,
+          "debugName": "deathrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:561"
+        },
+        {
+          "id": 221,
+          "debugName": "eye_of_newt",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:222"
+        },
+        {
+          "id": 559,
+          "debugName": "bodyrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:560"
+        }
+      ],
+      "existingScript": "scripts/shop-buyer.ts",
+      "profileOrMode": "betty only",
+      "prerequisites": [
+        "Root-owned account, owned20kfloat with5kprotected reserve",
+        "Fresh safe entry and owned coin delivery/boat route must be proved separately"
+      ],
+      "routeLeadIn": "Fresh spawn -> Draynor3092,3243 -> Betty3012,3259 -> same bank; owned funding is a separate gate.",
+      "missingCapability": "Budget controls are unit/source checked, not game proved. Live shared stock, travel safety, current price formula and owned east-side funding remain open.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_port_sarim/configs/port_sarim.npc:219",
+          "anchor": "param=owned_shop,magicshop"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_port_sarim/scripts/betty.rs2:7",
+          "anchor": "~openshop_activenpc;"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_port_sarim/configs/port_sarim.inv:35",
+          "anchor": "[magicshop]"
+        }
+      ],
+      "practice": {
+        "status": "not-run-for-this-profile",
+        "records": [],
+        "limit": "Mixed historical shop records are not Betty proof. A funded preset does not prove live funding or fresh route."
+      },
+      "nextGate": "Within1200ticks bank>=20each Fire rune, Chaos rune, Death rune, Eye of newt; no death, protected assets intact, actual spend<=15000 and coins>=5000. Require final bank snapshot.",
+      "autoLaunch": false,
+      "stage": "candidate-needs-budget-route-practice",
+      "usefulCategories": [
+        "magic-input",
+        "herblore-input"
+      ],
+      "dependsOn": [
+        "owned-east-side-funding"
+      ],
+      "admission": {
+        "why": "Four item types absent from sampled Moneyshot bank; no skill or raw-input prerequisite. Runes enable later Magic; eyes need future guam/irit before potion use.",
+        "incrementalCoverage": [
+          "fire-rune",
+          "chaos-rune",
+          "death-rune",
+          "eye-of-newt"
+        ],
+        "practicePreset": {
+          "position": {
+            "x": 3092,
+            "z": 3243,
+            "level": 0
+          },
+          "skills": "fresh",
+          "coins": 20000,
+          "protectedKit": "knife and2edible foods; no target products"
+        },
+        "env": {
+          "PROFILE": "betty",
+          "CAP": "1200",
+          "STOCK_TARGET": "20",
+          "BANK_AT": "0",
+          "FLOAT": "20000",
+          "COIN_RESERVE": "5000",
+          "MAX_SPEND": "15000",
+          "MAX_ITEMS": "180",
+          "STOP_AT_TARGET": "1"
+        },
+        "cost": "Measure buy actions, walk/bank/total ticks and actual coin debit. No measured rate for Betty. Unstackable eyes may need2loads with protected food.",
+        "contention": "Shared magicshop; source1000/rune and300eyes are stock definitions, not live availability. No GE fallback.",
+        "known": "NPC handler, owned_shop binding,9commodities and source price maximum checked.",
+        "unknown": [
+          "Live stock, competing buyers, cost drift",
+          "Fresh route and funding/boat/recipient proof",
+          "Final bank targets, HP and budget in game"
+        ],
+        "liveAdmission": "One bounded repeat=false pilot only after all gates; root launches."
+      }
+    },
+    {
+      "id": "seers-bowstrings",
+      "priority": 2,
+      "region": "seers",
+      "title": "Spin staged flax into bow strings",
+      "candidateAccount": {
+        "role": "crafting",
+        "name": "Familyjewel",
+        "assignment": "suggestion only; reuse qualified Ballspinner before adding a spinner"
+      },
+      "inputs": [
+        {
+          "id": 1779,
+          "debugName": "flax",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1780"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 1777,
+          "debugName": "bow_string",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1778"
+        }
+      ],
+      "existingScript": "scripts/spin-bowstrings.ts",
+      "profileOrMode": "bounded trips",
+      "prerequisites": [
+        "Crafting10",
+        "Owned flax staged at Seers bank; train wool below10 separately"
+      ],
+      "routeLeadIn": "From Seers bank walk to spinning house, climb to level1 wheel, spin, descend, bank.",
+      "missingCapability": "All observed owned candidates Crafting1. Resolve Ballspinner live stairs failure and qualifyCraft10;1032flax is in Moneyshot, not processor bank. Reserve/final-withdraw behavior and reverse owned delivery need proof.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_crafting/configs/spinning/spinning.struct:1",
+          "anchor": "[flax]"
+        },
+        {
+          "source": "scripts/spin-bowstrings.ts:12",
+          "anchor": "const WHEEL_SPOT = { x: 2711, z: 3471, level: 1 };"
+        }
+      ],
+      "practice": {
+        "status": "prior-record-only",
+        "records": [
+          {
+            "source": ".practice/results.jsonl:4801",
+            "at": 1792853535918,
+            "result": "ok ticks=70 spunTotal=2 bankTrips=1 spunPer1kTicks=28.57"
+          }
+        ],
+        "limit": "No bot run in this task. Records do not bind script SHA, preset or exact route. A prior ok alone does not prove banked output.",
+        "environment": "unclassified historical record; practice/live and presets not proven here"
+      },
+      "nextGate": "Conversion-only: Seersbank2727,3492, Crafting10,106flax -> exactly56new banked bow strings within800ticks; retain50rawflax and protected assets, no death, end ground-floor. Separately prove Craft1bootstrap, owned transfer and safe fresh Seers arrival.",
+      "autoLaunch": false,
+      "stage": "candidate-needs-skill-transfer-route-practice",
+      "usefulCategories": [
+        "crafting-xp",
+        "fletching-input"
+      ],
+      "dependsOn": [
+        "owned-flax-stock"
+      ],
+      "admission": {
+        "why": "Largest transformable owned buffer,1032Moneyshot flax; adds bow strings/CraftingXP without gathering contention. Ranked after runes because skill bootstrap and transfer remain open.",
+        "incrementalCoverage": [
+          "bow-string"
+        ],
+        "practicePreset": {
+          "position": {
+            "x": 2727,
+            "z": 3492,
+            "level": 0
+          },
+          "skills": {
+            "Crafting": 10
+          },
+          "bank": [
+            {
+              "id": 1779,
+              "count": 106
+            }
+          ]
+        },
+        "env": {
+          "CAP": "800",
+          "MAX_TRIPS": "3",
+          "RAW_RESERVE": "50",
+          "MAX_SPUN": "56"
+        },
+        "envLimit": "Reserve/max-spun flags are requirements until spinner owner implements/proves them; current support must be checked.",
+        "reserves": "Keep50rawflax per processor and25rawwool before consuming bootstrap wool. Already-spun balls cannot train the bootstrap again.",
+        "cost": "Ladder up/down and bank walks each batch; report conversion apart from wool qualification, delivery and fresh Seers travel.",
+        "contention": "Owned flax avoids live resource nodes; stairs/doors/courier scheduling remain shared resources.",
+        "known": "Flax->bow_string atCraft10 and wool->ball_of_wool source recipes verified.",
+        "unknown": [
+          "Actual future account Craft10",
+          "Reverse delivery: note courier currently delivers toMoneyshot only",
+          "Fresh safe Seers route and final-bank reserve behavior"
+        ],
+        "liveAdmission": "PresetCraft10 does not qualify a fresh live account; prefer reuse after skill+transfer+route gates."
+      }
+    },
+    {
+      "id": "sarim-supplies",
+      "priority": 3,
+      "region": "port-sarim-draynor",
+      "title": "Gerrant feathers, bait and fishing tools",
+      "candidateAccount": {
+        "role": "fishing",
+        "name": "Masterbaiter",
+        "assignment": "suggestion only; root checks ownership and funds after proof"
+      },
+      "inputs": [
+        {
+          "id": 995,
+          "debugName": "coins",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:996"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 314,
+          "debugName": "feather",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:315"
+        },
+        {
+          "id": 313,
+          "debugName": "fishing_bait",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:314"
+        },
+        {
+          "id": 311,
+          "debugName": "harpoon",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:312"
+        },
+        {
+          "id": 301,
+          "debugName": "lobster_pot",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:302"
+        }
+      ],
+      "existingScript": "scripts/shop-buyer.ts",
+      "profileOrMode": "sarim only",
+      "prerequisites": [
+        "Owned10kfloat with5kreserve",
+        "Safe fresh entry and Draynor/Gerrant return",
+        "No access assumed to death-blocked Bigchopper shafts"
+      ],
+      "routeLeadIn": "Draynor3092,3243 -> Gerrant3013,3225 -> same bank. Check highwayman/wizard exposure and owned funding separately.",
+      "missingCapability": "Fresh funding and safe route unproved. Source shared stock does not establish live available stock or wait time.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_port_sarim/configs/port_sarim.npc:285",
+          "anchor": "param=owned_shop,fishingshop"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_port_sarim/scripts/gerrant.rs2:17",
+          "anchor": "~openshop_activenpc;"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_port_sarim/configs/port_sarim.inv:78",
+          "anchor": "[fishingshop]"
+        }
+      ],
+      "practice": {
+        "status": "not-run-for-this-profile",
+        "records": [],
+        "limit": "Source shop bound; safe fresh route and actual banked output unproved."
+      },
+      "nextGate": "Within1500ticks bank>=500feathers,>=100bait,>=1each harpoon/lobsterpot; retain5000coins and protected kit; spend<=5000; no death. Observe all final bank counts.",
+      "autoLaunch": false,
+      "stage": "candidate-needs-budget-route-practice",
+      "usefulCategories": [
+        "fishing-tools",
+        "fishing-input",
+        "fletching-input"
+      ],
+      "dependsOn": [
+        "owned-east-side-funding"
+      ],
+      "admission": {
+        "why": "Adds four useful buffers without skill/combat prerequisites; feeds fly fishing now and future headless arrows after shafts are recovered/transferred.",
+        "incrementalCoverage": [
+          "bulk-feathers",
+          "fishing-bait",
+          "harpoon",
+          "lobster-pot"
+        ],
+        "practicePreset": {
+          "position": {
+            "x": 3092,
+            "z": 3243,
+            "level": 0
+          },
+          "skills": "fresh",
+          "coins": 10000,
+          "protectedKit": "knife and2edible foods; zero profile products"
+        },
+        "env": {
+          "PROFILE": "sarim",
+          "CAP": "1500",
+          "STOCK_TARGET": "500",
+          "BANK_AT": "0",
+          "FLOAT": "10000",
+          "COIN_RESERVE": "5000",
+          "MAX_SPEND": "5000",
+          "MAX_ITEMS": "1004",
+          "STOP_AT_TARGET": "1"
+        },
+        "reserves": "Keep5000coins and allocate50feathers to working fisher before further processing. Tool ownership does not waive Fishing levels.",
+        "cost": "Stackable supplies reduce banking; only tool types use extra slots. Measure actions/walk/total ticks; no rate claim.",
+        "contention": "Shared source stock1000feathers/1500bait/2harpoons/2pots; restock parameters are not live waiting measurements.",
+        "known": "Gerrant handler+owned_shop fishingshop binding, stock definitions and script profile checked.",
+        "unknown": [
+          "Actual shelves/prices",
+          "Fresh safe entry and owned funding",
+          "Final bank delta and who consumes tools"
+        ],
+        "liveAdmission": "One bounded repeat=false pilot only after gates; root launches."
+      }
+    },
+    {
+      "id": "bank-arrows",
+      "priority": 4,
+      "region": "owned-bank",
+      "title": "Assemble shafts/headless arrows, then steel arrows",
+      "candidateAccount": {
+        "role": "fletching",
+        "name": "Shaftmaker",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 1511,
+          "debugName": "logs",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1512"
+        },
+        {
+          "id": 946,
+          "debugName": "knife",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:947"
+        },
+        {
+          "id": 52,
+          "debugName": "arrow_shaft",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:53"
+        },
+        {
+          "id": 314,
+          "debugName": "feather",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:315"
+        },
+        {
+          "id": 41,
+          "debugName": "steel_arrowheads",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:42"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 53,
+          "debugName": "headless_arrow",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:54"
+        },
+        {
+          "id": 886,
+          "debugName": "steel_arrow",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:887"
+        }
+      ],
+      "existingScript": "scripts/fletch-arrows.ts",
+      "profileOrMode": "shafts -> headless -> arrows steel; separate invocations",
+      "prerequisites": [
+        "Members map",
+        "Headless requires shafts+feathers; finished steel requires Fletching30",
+        "Stage input via owned courier; tip supply from catherby-tips"
+      ],
+      "routeLeadIn": "Remain at a verified owned bank with staged buffers; no remote traversal needed.",
+      "missingCapability": "Bigchopper720shafts are in a death-blocked account, not staged supply. Require safe recovery and owned transfer, bulk feathers and final-bank/reserve fixes. Do not use this as ready input.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_fletching/scripts/arrows.rs2:25",
+          "anchor": "[label,make_headless_arrows]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_fletching/configs/arrows/arrows.dbrow:17",
+          "anchor": "[fletching_steel_arrow]"
+        },
+        {
+          "source": "scripts/fletch-arrows.ts:45",
+          "anchor": "} else if (MODE === 'headless') {"
+        }
+      ],
+      "practice": {
+        "status": "prior-record-only",
+        "records": [
+          {
+            "source": ".practice/results.jsonl:4805",
+            "at": 1792854848991,
+            "result": "fail ticks=30 fletched=0 mode=arrows bankTrips=1 fletchPer1kTicks=0.00"
+          },
+          {
+            "source": ".practice/results.jsonl:4806",
+            "at": 1792854872887,
+            "result": "ok ticks=30 fletched=120 mode=arrows bankTrips=1 fletchPer1kTicks=4000.00"
+          }
+        ],
+        "limit": "No bot run in this task. Records do not bind script SHA, preset or exact route. A prior ok alone does not prove banked output.",
+        "environment": "unclassified historical record; practice/live and presets not proven here"
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "candidate-blocked-death-locked-inputs",
+      "usefulCategories": [
+        "fletching-xp",
+        "ranged-ammo"
+      ],
+      "dependsOn": [
+        "owned-logs-stock",
+        "sarim-supplies",
+        "catherby-tips"
+      ]
+    },
+    {
+      "id": "alkharid-bars",
+      "priority": 5,
+      "region": "alkharid",
+      "title": "Smelt staged bronze, then iron/steel",
+      "candidateAccount": {
+        "role": "smithing",
+        "name": "Ironrod",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 436,
+          "debugName": "copper_ore",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:437"
+        },
+        {
+          "id": 438,
+          "debugName": "tin_ore",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:439"
+        },
+        {
+          "id": 440,
+          "debugName": "iron_ore",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:441"
+        },
+        {
+          "id": 453,
+          "debugName": "coal",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:454"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 2349,
+          "debugName": "bronze_bar",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:2350"
+        },
+        {
+          "id": 2351,
+          "debugName": "iron_bar",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:2352"
+        },
+        {
+          "id": 2353,
+          "debugName": "steel_bar",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:2354"
+        }
+      ],
+      "existingScript": "scripts/smelt-bars.ts",
+      "profileOrMode": "bronze first; iron/steel separate gated modes",
+      "prerequisites": [
+        "Smithing1 bronze =1 copper+1 tin",
+        "Smithing15 iron; Smithing30 steel =1 iron+2coal",
+        "Supply from varrock-ores; coal route not yet included"
+      ],
+      "routeLeadIn": "Stage at Al Kharid bank. Walk to local furnace, smelt one bounded batch, return to same bank. Toll/gate lead-in from spawn remains unproved.",
+      "missingCapability": "Ownedore transport and actualaccount entry still separate; eightbarstaged processing nativepassed125ticks onF7061805,10copper9tin to2copper1tin,1240XP,allkit/HP10preserved.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_smithing/configs/smelting/smelting.struct:1",
+          "anchor": "[smelting_bronze_bar]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_smithing/configs/smelting/smelting.struct:17",
+          "anchor": "[smelting_iron_bar]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_smithing/configs/smelting/smelting.struct:30",
+          "anchor": "[smelting_steel_bar]"
+        },
+        {
+          "source": "scripts/smelt-bars.ts:9",
+          "anchor": "const FURNACE_SPOT = { x: 3274, z: 3186 }; // Al Kharid Furnace"
+        }
+      ],
+      "practice": {
+        "status": "prior-record-only",
+        "records": [
+          {
+            "source": ".practice/results.jsonl:4818",
+            "at": 1792855201189,
+            "result": "fail ticks=36 smelted=0 heldBars=0 heldOres=55 bankTrips=1 walkTicks=25 barsPer1kTicks=0.00"
+          },
+          {
+            "source": ".practice/results.jsonl:4819",
+            "at": 1792855222014,
+            "result": "ok ticks=40 smelted=4 heldBars=4 heldOres=22 bankTrips=0 walkTicks=0 barsPer1kTicks=100.00"
+          }
+        ],
+        "limit": "No bot run in this task. Records do not bind script SHA, preset or exact route. A prior ok alone does not prove banked output.",
+        "environment": "unclassified historical record; practice/live and presets not proven here",
+        "latest": {
+          "status": "passed-staged-processing",
+          "sourceSha256": "F7061805595866FB775D9537B75AC975CF057F80708124A8C0F1B15DE69943C5",
+          "newBanked": 8,
+          "ticks": 125,
+          "raw": ".practice/fleet-proof/smelt-bronze-flsmelxv2c01.log"
+        }
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "staged-processing-practice-passed",
+      "usefulCategories": [
+        "smithing-xp",
+        "equipment-input"
+      ],
+      "dependsOn": [
+        "varrock-ores"
+      ]
+    },
+    {
+      "id": "varrock-ores",
+      "priority": 6,
+      "region": "varrock",
+      "title": "Balanced copper/tin, then iron",
+      "candidateAccount": {
+        "role": "mining",
+        "name": "Shaftsinker",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 1265,
+          "debugName": "bronze_pickaxe",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1266"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 436,
+          "debugName": "copper_ore",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:437"
+        },
+        {
+          "id": 438,
+          "debugName": "tin_ore",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:439"
+        },
+        {
+          "id": 440,
+          "debugName": "iron_ore",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:441"
+        }
+      ],
+      "existingScript": "scripts/gather-ore.ts",
+      "profileOrMode": "current mixed copper/tin; iron after Mining15",
+      "prerequisites": [
+        "Mining1 copper/tin; Mining15 iron",
+        "Owned pickaxe; confirm bootstrap coin and current food/HP",
+        "Reserve paired copper/tin for bronze before bulk iron"
+      ],
+      "routeLeadIn": "From safe bank, inspect north/east route to SE Varrock mine, then return to Varrock East bank. Avoid south-Varrock dark wizards.",
+      "missingCapability": "Confirm actual mine and bank access from intended spawn; prior preset throughput is not fresh-account route proof.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_mining/configs/mine.dbrow:26",
+          "anchor": "[copper_rock_table]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_mining/configs/mine.dbrow:42",
+          "anchor": "[tin_rock_table]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_mining/configs/mine.dbrow:58",
+          "anchor": "[iron_rock_table]"
+        },
+        {
+          "source": "scripts/gather-ore.ts:173",
+          "anchor": "const kind = level >= 15 && attempt % 3 === 2 ? 'iron' : attempt % 2 === 0 ? 'copper' : 'tin';"
+        }
+      ],
+      "practice": {
+        "status": "prior-record-only",
+        "records": [
+          {
+            "source": ".practice/results.jsonl:4839",
+            "at": 1792857770383,
+            "result": "ok ticks=463 died=false mined=27 banked=27 held=0 bankTrips=1 walkTicks=46 hpMin=10 orePer1kTicks=58.32"
+          },
+          {
+            "source": ".practice/results.jsonl:4841",
+            "at": 1792857889796,
+            "result": "ok ticks=710 died=false mined=25 banked=25 held=0 bankTrips=1 walkTicks=282 hpMin=9 orePer1kTicks=35.21"
+          }
+        ],
+        "limit": "No bot run in this task. Records do not bind script SHA, preset or exact route. A prior ok alone does not prove banked output.",
+        "environment": "unclassified historical record; practice/live and presets not proven here"
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "candidate-needs-route-practice",
+      "usefulCategories": [
+        "mining-xp",
+        "smithing-input"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "catherby-tips",
+      "priority": 7,
+      "region": "catherby",
+      "title": "Hickton arrowtip supply for fletching",
+      "candidateAccount": {
+        "role": "helper",
+        "name": "Fullsack",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 995,
+          "debugName": "coins",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:996"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 41,
+          "debugName": "steel_arrowheads",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:42"
+        },
+        {
+          "id": 42,
+          "debugName": "mithril_arrowheads",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:43"
+        },
+        {
+          "id": 43,
+          "debugName": "adamant_arrowheads",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:44"
+        },
+        {
+          "id": 44,
+          "debugName": "rune_arrowheads",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:45"
+        }
+      ],
+      "existingScript": "scripts/shop-buyer.ts",
+      "profileOrMode": "catherby",
+      "prerequisites": [
+        "Only owned coin float with explicit reserve and maximum spend",
+        "NPC purchase only; no sales or player orders",
+        "Higher-tip output gated by downstream Fletching level"
+      ],
+      "routeLeadIn": "Stage at Catherby bank, approach Hickton, open trade, buy bounded useful stock, bank locally. Spawn-to-Catherby route unproved.",
+      "missingCapability": "Practice profile-specific shop/bank round trip. Static stock does not promise live availability or price. Do not consume all coins or overfill tool caps.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_catherby/configs/catherby.npc:108",
+          "anchor": "param=owned_shop,archeryshop2"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_catherby/scripts/hickton.rs2:6",
+          "anchor": "~openshop_activenpc;"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_catherby/configs/catherby.inv:45",
+          "anchor": "stock10=steel_arrowheads,600,40"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/shop/scripts/shop.rs2:1",
+          "anchor": "[opnpc3,_shop_keeper] ~openshop_activenpc;"
+        }
+      ],
+      "practice": {
+        "status": "prior-record-only",
+        "records": [
+          {
+            "source": ".practice/results.jsonl:4789",
+            "at": 1792852690937,
+            "result": "fail ticks=100 boughtTotal=0 bankTrips=0 shopTrips=5 coinsLeft=50000"
+          },
+          {
+            "source": ".practice/results.jsonl:4791",
+            "at": 1792852798622,
+            "result": "ok ticks=123 boughtTotal=120 bankTrips=2 shopTrips=3 coinsLeft=41123"
+          }
+        ],
+        "limit": "No bot run in this task. Records do not bind script SHA, preset or exact route. A prior ok alone does not prove banked output.",
+        "environment": "unclassified historical record; practice/live and presets not proven here"
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "candidate-needs-route-practice",
+      "usefulCategories": [
+        "fletching-input"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "lumbridge-hides",
+      "priority": 8,
+      "region": "lumbridge-alkharid",
+      "title": "Own cowhide collection then soft leather tanning",
+      "candidateAccount": {
+        "role": "crafting",
+        "name": "Leathertool",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 995,
+          "debugName": "coins",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:996"
+        },
+        {
+          "id": 379,
+          "debugName": "lobster",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:380"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 1739,
+          "debugName": "cow_hide",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1740"
+        },
+        {
+          "id": 2132,
+          "debugName": "raw_beef",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:2133"
+        },
+        {
+          "id": 1741,
+          "debugName": "leather",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1742"
+        }
+      ],
+      "existingScript": null,
+      "profileOrMode": "new cow collector + tanner adapter",
+      "prerequisites": [
+        "Combat/food/HP sufficient for cows; collect only earned/owned drops",
+        "Owned coins for tanning; retain food/route reserve",
+        "Toll/gate access to Al Kharid must be verified"
+      ],
+      "routeLeadIn": "Start at a mapped Lumbridge cow pen. Bank own hides. Courier to Al Kharid and tan with Ellis interface, then bank leather.",
+      "missingCapability": "No existing cow target or tanner loop. Do not treat cow death as hide pickup or tanner dialog as leather output. Crafting leather products is a later candidate.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/cow.rs2:12",
+          "anchor": "obj_add(npc_coord, cow_hide, 1, ^lootdrop_duration);"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_alkharid/scripts/tanner.rs2:41",
+          "anchor": "[opnpc3,tanner]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/areas/area_alkharid/scripts/tanner.rs2:133",
+          "anchor": "[label,tan_soft_leather](int $hides)"
+        }
+      ],
+      "practice": {
+        "status": "not-run",
+        "records": [],
+        "limit": "No implementation for this candidate and no bot run in this task."
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "candidate-blocked",
+      "usefulCategories": [
+        "combat-xp",
+        "crafting-input",
+        "food-input"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "edgeville-herbs",
+      "priority": 9,
+      "region": "edgeville-dungeon",
+      "title": "Chaos druid herbs and useful runes",
+      "candidateAccount": {
+        "role": "combat",
+        "name": "Shaftswinger",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 379,
+          "debugName": "lobster",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:380"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 199,
+          "debugName": "unidentified_guam",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:200"
+        },
+        {
+          "id": 201,
+          "debugName": "unidentified_marentill",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:202"
+        },
+        {
+          "id": 203,
+          "debugName": "unidentified_tarromin",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:204"
+        },
+        {
+          "id": 205,
+          "debugName": "unidentified_harralander",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:206"
+        },
+        {
+          "id": 207,
+          "debugName": "unidentified_ranarr",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:208"
+        },
+        {
+          "id": 209,
+          "debugName": "unidentified_irit",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:210"
+        },
+        {
+          "id": 211,
+          "debugName": "unidentified_avantoe",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:212"
+        },
+        {
+          "id": 213,
+          "debugName": "unidentified_kwuarm",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:214"
+        },
+        {
+          "id": 215,
+          "debugName": "unidentified_cadantine",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:216"
+        },
+        {
+          "id": 2485,
+          "debugName": "unidentified_lantadyme",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:2486"
+        },
+        {
+          "id": 217,
+          "debugName": "unidentified_dwarf_weed",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:218"
+        },
+        {
+          "id": 563,
+          "debugName": "lawrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:564"
+        },
+        {
+          "id": 561,
+          "debugName": "naturerune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:562"
+        },
+        {
+          "id": 227,
+          "debugName": "vial_water",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:228"
+        },
+        {
+          "id": 995,
+          "debugName": "coins",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:996"
+        }
+      ],
+      "existingScript": "scripts/gather-combat.ts",
+      "profileOrMode": "druid",
+      "prerequisites": [
+        "Equipped combat kit and owned food reserve",
+        "Dungeon entry/exit with level transition verified",
+        "Only hero-earned/owned drops; ground ownership must be checked"
+      ],
+      "routeLeadIn": "Stage Edgeville bank. Prove entrance and underground traversal before combat; reverse the route with loot. Existing script has underground coordinates but no entrance action.",
+      "missingCapability": "Blocking: dungeon traversal; no-food/death stop during long kill wait; ID-based loot/pickup and all useful-drop retention. Current regex omits coins and many runes; prior kills2 looted0 bankTrips0 is not collection.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/chaos_druid.rs2:1",
+          "anchor": "[ai_queue3,chaos_druid]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/shared_droptables.rs2:2",
+          "anchor": "[proc,randomherb]()(namedobj, int)"
+        },
+        {
+          "source": "scripts/gather-combat.ts:18",
+          "anchor": "npc: /^chaos druid$/i,"
+        }
+      ],
+      "practice": {
+        "status": "prior-record-only",
+        "records": [
+          {
+            "source": ".practice/results.jsonl:4820",
+            "at": 1792855237637,
+            "result": "ok ticks=53 kills=2 looted=0 bankTrips=0 walkTicks=0 hp=60 actionsPer1kTicks=37.74"
+          }
+        ],
+        "limit": "No bot run in this task. Records do not bind script SHA, preset or exact route. A prior ok alone does not prove banked output.",
+        "environment": "unclassified historical record; practice/live and presets not proven here"
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "candidate-blocked",
+      "usefulCategories": [
+        "combat-xp",
+        "herblore-input",
+        "magic-input",
+        "coin-drop"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "edgeville-bones",
+      "priority": 10,
+      "region": "edgeville-dungeon",
+      "title": "Hill giant big bones, limpwurt and useful drops",
+      "candidateAccount": {
+        "role": "combat",
+        "name": "Swordinhand",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 379,
+          "debugName": "lobster",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:380"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 532,
+          "debugName": "big_bones",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:533"
+        },
+        {
+          "id": 225,
+          "debugName": "limpwurt_root",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:226"
+        },
+        {
+          "id": 1153,
+          "debugName": "iron_full_helm",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1154"
+        },
+        {
+          "id": 1191,
+          "debugName": "iron_kiteshield",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1192"
+        },
+        {
+          "id": 1295,
+          "debugName": "steel_longsword",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1296"
+        },
+        {
+          "id": 561,
+          "debugName": "naturerune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:562"
+        },
+        {
+          "id": 995,
+          "debugName": "coins",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:996"
+        }
+      ],
+      "existingScript": "scripts/gather-combat.ts",
+      "profileOrMode": "giant",
+      "prerequisites": [
+        "Food/combat kit and safe exit",
+        "Verify exact dungeon entrance and any brass-key door requirement",
+        "Retain bones for owned prayer use; no sale assumptions"
+      ],
+      "routeLeadIn": "Stage Edgeville bank. Practice dungeon entrance, giant room, owned loot collection and exit. Brass-key route is a lead requiring proof, not a confirmed gate.",
+      "missingCapability": "Blocking: same dungeon and combat-stop gaps as herbs; current drop regex omits gear/coins; default big-bones NPC parameter must be linked to intended variant before launch.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/giant.rs2:1",
+          "anchor": "[ai_queue3,giant]"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/giant.rs2:52",
+          "anchor": "obj_add(npc_coord, limpwurt_root, 1, ^lootdrop_duration);"
+        },
+        {
+          "source": "scripts/gather-combat.ts:24",
+          "anchor": "npc: /^hill giant$/i,"
+        }
+      ],
+      "practice": {
+        "status": "prior-record-only",
+        "records": [
+          {
+            "source": ".practice/results.jsonl:4820",
+            "at": 1792855237637,
+            "result": "ok ticks=53 kills=2 looted=0 bankTrips=0 walkTicks=0 hp=60 actionsPer1kTicks=37.74"
+          }
+        ],
+        "limit": "No bot run in this task. Records do not bind script SHA, preset or exact route. A prior ok alone does not prove banked output.",
+        "environment": "unclassified historical record; practice/live and presets not proven here"
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "candidate-blocked",
+      "usefulCategories": [
+        "combat-xp",
+        "prayer-input",
+        "herblore-input",
+        "gear",
+        "coin-drop"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "rare-firegiant-gear",
+      "priority": 11,
+      "region": "location-not-selected",
+      "title": "Fire giant rune scimitar and fire battlestaff",
+      "candidateAccount": {
+        "role": "ranged",
+        "name": "Earlyshooter",
+        "assignment": "suggestion only; check ownership and availability"
+      },
+      "inputs": [
+        {
+          "id": 886,
+          "debugName": "steel_arrow",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:887"
+        },
+        {
+          "id": 379,
+          "debugName": "lobster",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:380"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 1333,
+          "debugName": "rune_scimitar",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1334"
+        },
+        {
+          "id": 1393,
+          "debugName": "fire_battlestaff",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1394"
+        },
+        {
+          "id": 1181,
+          "debugName": "mithril_sq_shield",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:1182"
+        },
+        {
+          "id": 892,
+          "debugName": "rune_arrow",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:893"
+        },
+        {
+          "id": 565,
+          "debugName": "bloodrune",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:566"
+        },
+        {
+          "id": 995,
+          "debugName": "coins",
+          "source": "vendor/rs-sdk/server/content/pack/obj.pack:996"
+        }
+      ],
+      "existingScript": null,
+      "profileOrMode": "new ranged combat/loot profile",
+      "prerequisites": [
+        "Select mapped accessible rev289 firegiant spawn; no Waterfall door route assumed",
+        "Ranged kit/level, ammo, food, escape and combat risk measured in practice",
+        "Only owned drops; anti-loss reserve and exit bound mandatory"
+      ],
+      "routeLeadIn": "Choose a source-backed spawn with a bankable route. Walk the lead-in in practice before any combat. Existing Waterfall route has a recorded low-HP death hazard; do not reuse blindly.",
+      "missingCapability": "No selected spawn, route, equipment plan, safespot proof or handler. High-risk candidate stays blocked. Rare-drop existence is source evidence, not a promised drop or value.",
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/fire_giant.rs2:18",
+          "anchor": "obj_add(npc_coord, rune_scimitar, 1, ^lootdrop_duration);"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/fire_giant.rs2:16",
+          "anchor": "obj_add(npc_coord, fire_battlestaff, 1, ^lootdrop_duration);"
+        },
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/fire_giant.rs2:52",
+          "anchor": "obj_add(npc_coord, ~ultrarare_getitem, ^lootdrop_duration);"
+        }
+      ],
+      "practice": {
+        "status": "not-run",
+        "records": [],
+        "limit": "No implementation for this candidate and no bot run in this task."
+      },
+      "nextGate": "Practice a bounded full gather/process -> bank -> observed stock change. Record productive, walking, dialog, idle and total game ticks. A result with no bank/output is incomplete.",
+      "autoLaunch": false,
+      "stage": "candidate-blocked",
+      "usefulCategories": [
+        "rare-drop",
+        "strong-gear",
+        "magic-input",
+        "coin-drop"
+      ],
+      "dependsOn": [
+        "bank-arrows"
+      ]
+    },
+    {
+      "id": "ardougne-cow-products",
+      "priority": 2,
+      "region": "ardougne",
+      "title": "Cowhides, bones and beef from credited kills",
+      "candidateAccount": {
+        "role": "combat",
+        "name": "Swordinhand",
+        "assignment": "suggestion only; no new live account admitted"
+      },
+      "existingScript": "scripts/gather-combat.ts",
+      "profileOrMode": "bounded cow mode",
+      "inputs": [],
+      "outputs": [
+        {
+          "id": 1739,
+          "debugName": "cow_hide"
+        },
+        {
+          "id": 526,
+          "debugName": "bones"
+        },
+        {
+          "id": 2132,
+          "debugName": "raw_beef"
+        }
+      ],
+      "usefulCategories": [
+        "combat-xp",
+        "prayer-input",
+        "crafting-input",
+        "food-input"
+      ],
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/drop tables/scripts/cow.rs2",
+          "anchor": "npc_findhero gate; default bones, raw_beef and cow_hide"
+        }
+      ],
+      "nextGate": "Five credited kills; actual five each hide/bones/beef banked; weapon/shield/two-food kit protected, HP/life guards; measure all travel and looting.",
+      "stage": "staged-full-cycle-practice-passed",
+      "autoLaunch": false,
+      "practice": {
+        "status": "passed",
+        "ticks": 648,
+        "creditedKills": 5,
+        "newBanked": {
+          "cowhide": 5,
+          "bones": 5,
+          "rawBeef": 5
+        },
+        "sourceSha256": "1186AAB67B38769F817B6B570DEC740A625CA8322BF225E334DACF7A6EB7E1CB",
+        "raw": ".practice/fleet-proof/cow-flcowxzhy01.log",
+        "limit": "StagedArdybank freshAttack1/HP10 swordshieldand2heldTrout+5bank. Onefoodconsumed; actualAttack23/finalHP11/base17,minimum6; nodeath. Earlier379food-publicationfailurepreserved."
+      }
+    },
+    {
+      "id": "varrock-soft-clay",
+      "priority": 3,
+      "region": "varrock",
+      "title": "Mine clay and soften with reusable water container",
+      "candidateAccount": {
+        "role": "mining",
+        "name": "Rockhardpick",
+        "assignment": "suggestion only; no new live account admitted"
+      },
+      "existingScript": "scripts/gather-ore.ts",
+      "profileOrMode": "clay plus bounded softening",
+      "inputs": [
+        {
+          "id": 1265,
+          "debugName": "bronze_pickaxe"
+        },
+        {
+          "id": 1925,
+          "debugName": "bucket"
+        }
+      ],
+      "outputs": [
+        {
+          "id": 434,
+          "debugName": "clay"
+        },
+        {
+          "id": 1761,
+          "debugName": "softclay"
+        }
+      ],
+      "sources": [
+        {
+          "source": "vendor/rs-sdk/server/content/scripts/skill_crafting/scripts/pottery/pottery.rs2:44",
+          "anchor": "one clay and water consumed; empty container and softclay returned"
+        }
+      ],
+      "usefulCategories": [
+        "mining-xp",
+        "crafting-input",
+        "pottery-input"
+      ],
+      "nextGate": "Twenty mined clay converted one-to-one to twenty banked softclay; actual public water refill, kit/cash/HP preserved; record complete route and no-progress bound.",
+      "stage": "staged-full-chain-practice-passed",
+      "autoLaunch": false,
+      "practice": {
+        "status": "passed",
+        "ticks": 664,
+        "newBanked": 20,
+        "sourceSha256": "4252180480A7B7EB96C5362720A989BAF212374685445CF9BBDF6173A5E11D7A",
+        "helperSha256": "8FF162B4977769E85274A631838B8321CD5CE5966E5F5CAB3D43D7F24071028B",
+        "raw": ".practice/fleet-proof/clay-flclayxhgr01.log",
+        "limit": "Freshskills from stagedWestBank; Mining+softening20 banked/HP10/kit200GPpreserved. Freshentry and livecrowdunproved."
+      }
+    }
+  ],
+  "coverageStillOpen": [
+    "Coal and higher ore routes; bars-to-useful equipment; tool upgrades",
+    "Jewellery/gem processing and enchantments; bow cutting/stringing",
+    "Herb identification, potion recipes and secondaries beyond eye of newt",
+    "Runecraft and essence access; broad prayer/quest unlocks",
+    "Higher combat loot families, rare-table item enumeration and safe storage",
+    "Quest/untradeable ownership gates and all other useful-item families"
+  ],
+  "nextThreeAccountRoles": [
+    "sarim-magic-supplies",
+    "seers-bowstrings",
+    "sarim-supplies"
+  ],
+  "rankingBasis": "Engineering judgment: useful new coverage/unlocks, owned-input readiness/reserves, qualification/transfer cost, safe bank delivery, action/travel cost, shared-stock contention and existing-worker reuse. No invented market price or numeric value score.",
+  "capacityAdmission": {
+    "configuredMaxBots": 6,
+    "configuredMinFreeGB": 8,
+    "observedSupervisedRunning": 3,
+    "rule": "Root counts manual/external sessions and peak on-demand banker too. Three candidates are not three allocated simultaneous slots. Practice serially, admit one new bounded role at a time and log out when its buffer is done.",
+    "observationSource": ".practice/swarm-state.json; refresh before launch"
+  },
+  "fundingGate": "Most owned funds are west in mmtha0205/Pocketrocket; Moneyshot roughly66kbank observed.20k/10k east-side presets are synthetic input. Before live: prove owned coin transfer, retained origin reserve, safe courier/boat and recipient entry. No free-money assumption.",
+  "observedOwnedBanks": [
+    {
+      "account": "Moneyshot",
+      "source": ".practice/status/Moneyshot.json",
+      "at": 1792860258544,
+      "bankAt": 1792860202102,
+      "evidence": "saved live bank observation; no live connection by this task",
+      "items": [
+        {
+          "id": 995,
+          "name": "Coins",
+          "count": 66106
+        },
+        {
+          "id": 882,
+          "name": "Bronze arrow",
+          "count": 1377
+        },
+        {
+          "id": 1779,
+          "name": "Flax",
+          "count": 1234
+        },
+        {
+          "id": 1759,
+          "name": "Ball of wool",
+          "count": 129
+        }
+      ]
+    },
+    {
+      "account": "mmtha0205",
+      "source": ".practice/status/mmtha0205.json",
+      "at": 1792860258189,
+      "bankAt": 1792860245760,
+      "evidence": "saved live bank observation; no live connection by this task",
+      "items": [
+        {
+          "id": 995,
+          "name": "Coins",
+          "count": 2384389
+        }
+      ]
+    },
+    {
+      "account": "Pocketrocket",
+      "source": ".practice/status/Pocketrocket.json",
+      "at": 1792860256948,
+      "bankAt": 1792860211118,
+      "evidence": "saved live bank observation; no live connection by this task",
+      "items": [
+        {
+          "id": 995,
+          "name": "Coins",
+          "count": 2653155
+        },
+        {
+          "id": 1779,
+          "name": "Flax",
+          "count": 27
+        }
+      ]
+    },
+    {
+      "account": "Bigchopper",
+      "source": ".practice/status/Bigchopper.json",
+      "at": 1792856677332,
+      "bankAt": 1792856609888,
+      "evidence": "saved live bank observation; no live connection by this task",
+      "items": [
+        {
+          "id": null,
+          "name": "Coins",
+          "count": 84
+        },
+        {
+          "id": null,
+          "name": "Logs",
+          "count": 3
+        },
+        {
+          "id": null,
+          "name": "Bronze arrow",
+          "count": 25
+        },
+        {
+          "id": null,
+          "name": "Arrow shaft",
+          "count": 720
+        }
+      ]
+    },
+    {
+      "account": "Shaftsinker",
+      "source": ".practice/status/Shaftsinker.json",
+      "at": 1792859433332,
+      "bankAt": 1792859385746,
+      "evidence": "saved live bank observation; no live connection by this task",
+      "items": [
+        {
+          "id": 995,
+          "name": "Coins",
+          "count": 25
+        },
+        {
+          "id": 882,
+          "name": "Bronze arrow",
+          "count": 25
+        },
+        {
+          "id": 436,
+          "name": "Copper ore",
+          "count": 10
+        },
+        {
+          "id": 438,
+          "name": "Tin ore",
+          "count": 9
+        }
+      ]
+    }
+  ],
+  "snapshotNotes": [
+    "Bigchopper death-blocked:720shafts are not ready input.",
+    "Ballspinner observed Crafting1; practiceCraft14 does not qualify live account.",
+    "Abracadickra, Familyjewel, Masterbaiter names come from names.ts; directories absent at read, no accounts created."
+  ],
+  "practiceQueue": [
+    "host-current-worker-clean-stop",
+    "mighty-owned-weapon-and-prayer-recharge",
+    "mighty-single-giant-credit-food-bank",
+    "sword-imp-beads",
+    "mighty-witch-house-supply-entry",
+    "varrock-clay-safe-collector"
+  ],
+  "progressionTracks": [
+    {
+      "id": "combat-supplier",
+      "candidateAccount": "Swordinhand",
+      "goal": "Reliable owned cowhides/bones/beef first, then safer access to higher tier drops",
+      "firstGate": "Five credited kills and fifteen useful drops banked; weapon/shield/food, health and escape validated",
+      "laterGates": [
+        "Choose verified safe Strength and Defence training with gear/food support",
+        "Practice entry, combat, loot and bank cycle for herb/rune targets",
+        "Admit rare-gear targets only after measured survival and supply cost"
+      ],
+      "status": "FD2D LIVE2genuinecowbundlesbanked360ticksStrength14/HPmin6ate1Trout/noDeath; gearduplicatefixnativepass. PausedwhileMightyownscowpen; donotconcurrentlyrunany-player12guard."
+    },
+    {
+      "id": "experienced-fighter",
+      "candidateAccount": "Mightyrod",
+      "observedSkills": {
+        "Attack": 91,
+        "Strength": 83,
+        "Defence": 63,
+        "Hitpoints": 66
+      },
+      "goal": "Turn high Attack/HP into a useful fighter through gear and Strength/Defence unlocks",
+      "firstGate": "Verify owned equipment and source suitable weapon/armour; prove bounded training plus food/return",
+      "status": "Live5-cowDefenceproductionhealthy; Swordpausedexclusivepen. Defence40cleared; WitchHouse158125HPXPgatedbyexactworn1059/1985cheese/Salmonprofile+entry/fullsameprofilenative/return. 198ECLIunknownTARGETnowfailsbeforelogin;validcowbodyFD2Dunchanged.",
+      "nextAssignment": {
+        "priority": "Upgrade actual melee output before more cow-only training",
+        "candidate": "Owned Adamant sword1287 at VarrockSwordshop551/552, Attack30/stab23/Strength24/4tick; MightyAttack91 qualifies",
+        "funding": "Nominal2080GP, publicstock/prices unknown; owned18kAbra can buy after isolatedprofile/nativegate. No selling/playercommerce.",
+        "integration": "CurrentequipCowKit/runCows hardcodes1277. Need optional explicit1287profile, observed correctwornweapon/style0|1|3, allbronzekit retained; default1277 forSword/Impunchanged. Native+finitepublicproofbeforecontinuous.",
+        "recharge": "RealAltar409@2617,3309; exactsafeexpandedroute/dogs/wolves/doors andactualdrainedpoints→43/OFF/bankreturn gate required before protection-maintained combat."
+      },
+      "prayerUnlock": {
+        "goal": "Prayer43 ProtectfromMelee before hardercombat",
+        "observed": "Prayer1XP0,bank217Bones526+1held at1792881719368; datednotfreshinputgate",
+        "threshold": "LOCAL43=19684XP; configured25xnormalBones112.5XP;175→19687.5raw/SDK19687, retain>=6bones",
+        "admission": "7737native694ticks175bones222→47/raw196875/Prayer43/PFM14ON→OFFpoints43/HP70/allassets+XP/logoutCRC PASS. SAMEfinitepublicmissionactive/repeatfalse; no giantadmission.",
+        "status": "COMPLETE LIVE7737/747ticks175bones222→47/XP19687/Prayer43/PFM14ON→OFF43points/HP70/allassets+equipment/confirmedlogout. Finitegoaldisabled; no emptyrelogin."
+      }
+    },
+    {
+      "id": "smithing-supply",
+      "candidateAccount": "Ironrod",
+      "goal": "Owned ore to bars, then arrowheads/tools/equipment for other accounts",
+      "firstGate": "Eight bronze bars banked from ten copper/nine tin, keep one ore reserve",
+      "status": "staged bronze practice passed; actual account/funding/input handoff not yet admitted"
+    },
+    {
+      "id": "crafting-supply",
+      "candidateAccount": "Ballspinner",
+      "goal": "Convert renewable flax into bowstrings; later leather and jewellery after actual prerequisites",
+      "firstGate": "Fifty-six new bowstrings banked with fifty flax and working kit preserved",
+      "status": "COMPLETE LIVE95FA442newstrings2339ticks/165750XP/Crafting99XP998687/HP10/allassets/logout. Actual bank1659strings600rawFlax. Offline until useful owned demand; no XP grinding past99.",
+      "nextAssignment": {
+        "goal": "Useful owned leather gloves1059 for WitchHouse; starter boots/body only against actual demand",
+        "inputs": "Dated Mighty bank197cowhides; needle/thread/6GP+tanner entry not observed/proved",
+        "gate": "Bounded own hides→leather→exact1059/gloves actual-output-bank and cost/kit/food conservation, then owned delivery. Craft99 done; do not spin for XP."
+      }
+    },
+    {
+      "id": "fletching-supply",
+      "candidateAccount": "Shaftmaker",
+      "goal": "ProcessownedOaklogsandbowstrings; leveltowardadvancedammunition",
+      "firstGate": "195headsLIVE56ticksF25;25OakbowsLIVE287ticksF51;twofurther25batchesbanked. CD5Anative26boundarypassed.",
+      "status": "COMPLETE LIVECD5A320newOakbows3051ticks/400000XP/Fletching99XP998625/HP10/allassets/logout. Actual Seers bank795bows185Oak205strings. Offline; next advanced ammunition requires real inputs and recipe proof.",
+      "nextAssignment": {
+        "goal": "Finite15steel arrows when owned ranged user needs them",
+        "inputs": "Dated Shaft195headless,mmtha26steelTips atCatherby; requiresowned15tipdeliverytoSeers",
+        "gate": "Existing bounded MODEsteel MAX15 HEADLESS_RESERVE180 TIP_RESERVE0; same-profile full native+live exactbank proof. Higher tiers only legacy unbounded worker, not admitted."
+      }
+    },
+    {
+      "id": "safe-clay-supply",
+      "candidateAccount": "Shaftsinker",
+      "goal": "Ownedrawclayforunlockquests andsoftclayforcrafting",
+      "firstGate": "Native9AD9entry59+20soft597passed; publicminingFAILEDsafety HP10to8. CauseUNKNOWN, possibleMuggernotattributed.",
+      "status": "Public mining STILLBLOCKED actualattackerUNKNOWN. 27Crecovery20raw/HP8→10/0Mine;14softprocessed+6rawDoricreserved. Ownedfooddelivery20SalmonPASS; actual2RAWheld18bank/HP10/allassets/logout. Prepcheckerfalseonlyrequiredunchangedtilebutbankapproached3184→3185; failedrawpreserved+separateaudit, correctedsourceNOTRERUN. Needs2Iron+4ownedCopper+6reservedClay. NoMiningresume."
+    },
+    {
+      "id": "magic-bead-supply",
+      "candidateAccount": "Swordinhand",
+      "goal": "CollectfourImpbeads; ImpCatcher21875MagicXP→44from1/amulet1478",
+      "firstGate": "Prototype exists but NOT admitted. Require observed active-target cancellation plus credited kill/ash/bank gate; separate WizardsTowerfloor2 hand-in entry.",
+      "status": "ACD265B5 cancellation-only NATIVE STRICTPASS flcancxljz01/106ticks/realNPC3532+100AttackXP/exactadjacent2641,3240→2640,3239/NONE-1/OFF/opcode234once/165GPallassetsbankreturn/HP13/logoutCRC. Priorflcancx9oi01 actualeffectPASSbutstrictFALSEbecausewrongwriteOpcode meter retained; correctedout.p1Enc offline+nativeverified. Fullkill/death/ownXP/privateASH/bank route stillNOTADMITTED; no publichunter. Currentworld38044partialNPC3526,3532 fromcancel-only, notfreshhero-credit. PracticePrayer7737next."
+    }
+  ],
+  "geminiReview": {
+    "source": "C:/Users/aggis/Downloads/fleet-scaling-and-yield-maximization-plan.md",
+    "sha256": "CADAB4E4B6544E25874D2F34DF7A4FFF593580B4BEAA8785659995816D66D156",
+    "judgment": "Adopt useful progression and measured shared-host reuse. Reject unproved capacity/rates and unsupported content.",
+    "adopt": [
+      "Owned175bones unlockMightyPrayer43; native694ticksPASS/publicfiniteactive. Thengear-aware1287/food/recharge/singleGiantgate.",
+      "Hostentry/cleanup compatibility before conversion; cap6/floor8+1perstartup retained.",
+      "Actual inputs/output/debit/health/bank proof and staged role deployment."
+    ],
+    "rejectOrGate": [
+      "12–16accounts/5.5GiBfloor/0.3startup: unsupported. Claimed4.5GiBemergency pause nonexistent.",
+      "WaterfallFiregiants/EdgeGiants singlecombat; tank+DPS cannotsharetarget, XP/drop notshared. No zerorisk promise.",
+      "MasterFarmers/seedFarming absentrev289. Runeaxeunowned/notNPCshopstock.",
+      "Fishing1 cannotFlyfish20; Magic1 cannotHighAlch55/nature supply. Claimedprogressionworkers missing.",
+      "1.8xyield/3ticktrades/0tickcoord/10bot1.4GiB unmeasured. No selling/GE or Main operation."
+    ],
+    "resourceEvidence": "NativePrayerenginegrew~2GiB; brief7.859GiBfree beforeRootPocketpause restored9.776. PracticeOFF/CRC gave11.585. No floor reduction.",
+    "hostEvidence": "Host2F5C/Spinner27A0 entry:12tests47assertsPASS. Prayer458 interruptionfix:9tests622assertsPASS. GlobalTS9820EXIT0. Nativehistorical SINGLEhostSTOP flhstoxz9q01:33ticks/4actualburies=counter4/XP4500/218unusedALLbanked/held0/HP70/allassets+CRC/logout PASS. UnmetproductiongoalremainsFAIL. First7737stopfailureretained. No livehostconversion/multi-actor memory/yield claim.",
+    "next": "Prove finite actualcollector/cleanstop inhost undercap6/floor8; then stagedlivepilot withno duplicate logins. Mightyownedweapon1287+altar-recharge+singleGiantentry/kill/loot/bank gates. No masterfarmer/tank-squad/runeaxe assumptions.",
+    "currentCapacity": "Latest observed free RAM ~8.5GiB, Pocketrocket active, Bigchopper queued by existing 8GiB+1startup governor. Earlier ~10.8GiB changed with other desktop load. No claim of six active or12-account readiness; guards unchanged."
+  }
+}
