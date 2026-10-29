@@ -1,28 +1,30 @@
-// Live account names. Owner rules (2026-10-23): no codes or timestamps, the name fits the job, and every name is a
-// sly double meaning. Server rule (vendor/rs-sdk/bots/create-bot.ts): 1-12 letters or digits. Names are taken in
-// list order; a name someone else already owns fails at login, so the caller moves on to the next one.
-// Do not reorder or remove a name once an account uses it: status.ts finds a bot's role from these lists.
+// Live account names (owner rule, AGENTS.md "Accounts"). Every name is a real joke: the RuneScape meaning and the
+// innuendo both work for the role, ideally a known phrase or a true double meaning (Moneyshot, Earlyshooter, Porksword,
+// YewGotWood). A rude word bolted onto a skill word is not a joke (CoinCock, PickpockDick, NabTheKnob). Scottish where
+// it fits. Server rule (vendor/rs-sdk/bots/create-bot.ts): 1-12 letters or digits. Names are taken in list order; a
+// name someone else owns fails at login, so the caller moves on. Never remove or reorder a name an account uses:
+// status.ts finds a bot's role from these lists. Each list starts with the names in use.
 
 export const NAMES = {
-    thieving: ['Pocketrocket', 'Pocketpython', 'Sneakyshaft', 'Longfingers', 'Quickhandjob', 'Pickmypocket', 'Stiffpicker', 'Pocketbulge', 'Nutsnatcher', 'Knobpicker', 'Stunnedstiff', 'Purseprober', 'Fingerblastr', 'Stallholder'],
-    runecraft: ['Wandwaver', 'Woodenstaff', 'Magicwanda', 'Staffstiffy', 'Rubmyrunes', 'Pouchstuffer', 'Bigwandvibes', 'Wandtugger', 'Essencepump'],
-    mining: ['Shaftsinker', 'Rockhardpick', 'Deepdigger', 'Hardpickaxe', 'Rockmyshaft', 'Mineshafted', 'Hardrockhank', 'Nuggethunter', 'Pickholder', 'Stonedboner'],
-    woodcutting: ['Morningwood', 'Hardwoodhank', 'Bigwoodbill', 'Woodpecker', 'Bigchopper', 'Wiltedwillow', 'Hardoak', 'Woodenuwant', 'Lumberjohnny', 'Yewlongwood'],
-    fishing: ['Mightyrod', 'Longrodlarry', 'Rodholder', 'Masterbaiter', 'Bigtackle', 'Rodstroker', 'Fishfingerer', 'Reelmyrod', 'Wormwrangler', 'Harpoonhank'],
-    cooking: ['Sausageking', 'Meatpacker', 'Hotdogchef', 'Porksword', 'Saltysausage', 'Beefbaton', 'Sausagefest', 'Bigweiner', 'Meatspinner', 'Spitroaster'],
-    crafting: ['Familyjewel', 'Crownjewels', 'Glassblower', 'Jewelbag', 'Ballspinner', 'Leathertool', 'Gemstoner'],
-    combat: ['Swordinhand', 'Shaftswinger', 'Bigswordguy', 'Pokesword', 'Swordswallow', 'Unsheathed', 'Bigshield', 'Thickskull', 'Rockhardtank'],
-    ranged: ['Earlyshooter', 'Bigquiver', 'Quiverfull', 'Longbowlad', 'Shaftshooter', 'Pullmybow'],
-    magic: ['Abracadickra', 'Hocuspokeus', 'Wizardwand', 'Pointyhat', 'Wandwanker', 'Magicmissile', 'Staffoflife', 'Spellbinder'],
-    prayer: ['Bigboner', 'Bonezone', 'Boneburier', 'Hardboner', 'Altarboy', 'Kneeler'],
-    agility: ['Polevaulter', 'Tightsqueeze', 'Ropeburner', 'Pipecrawler', 'Bigpoledave', 'Logbalancer'],
-    firemaking: ['Firecrotch', 'Tinderballs', 'Woodburner', 'Hotlogger', 'Lightmylog'],
-    fletching: ['Shaftmaker', 'Nockitoff', 'Bowstringer', 'Whittlewood', 'Featherdtip'],
-    smithing: ['Ironrod', 'Steelrod', 'Hammeredhard', 'Anvilpounder', 'Hotforger'],
-    herblore: ['Pestlepound', 'Stirmypot', 'Hardherbs', 'Potionboner', 'Mortarboner', 'Grindmyherb', 'Vialvirile'],
-    bank: ['Moneyshot', 'Fatstack', 'Bigdeposit', 'Fullvault', 'Loadedwallet', 'Stackedsack', 'Deeppockets'],
-    runite: ['Runitehard', 'Lavarockhard', 'Hotrocks', 'Rockhardrune', 'Lavalover', 'Moltenrod', 'Runeboner'],
-    helper: ['Bigpackage', 'Fullsack', 'Deliveryboy', 'Lunchboxlad', 'Bulgingsack', 'Heavyload', 'Sackhauler', 'Bigloads', 'Packhorse', 'Ballbag'],
+    thieving: ['Pocketrocket', 'Pocketpython', 'Quickhandjob', 'TrouserSnake', 'TheFullMonty', 'UnderMyKilt', 'Fingerblastr'],
+    runecraft: ['Wandwaver', 'Woodenstaff', 'Magicwanda', 'Rubmyrunes', 'ChaosInPants', 'Staffstiffy'],
+    mining: ['Shaftsinker', 'HardRockCafe', 'Stonedboner', 'Mineshafted'],
+    woodcutting: ['Woodpecker', 'Bigchopper', 'Morningwood', 'YewGotWood', 'WoodInMyKilt'],
+    fishing: ['Mightyrod', 'Masterbaiter', 'LochNessRod', 'Fishfingerer'],
+    cooking: ['Porksword', 'MeatNTwoVeg', 'Spitroaster', 'Sausagefest', 'Saltysausage'],
+    crafting: ['Ballspinner', 'Crownjewels', 'Familyjewel', 'Glassblower'],
+    combat: ['Swordinhand', 'BraveHardon', 'TossTheCaber', 'Swordswallow', 'Unsheathed'],
+    ranged: ['Shaftshooter', 'Earlyshooter', 'Pullmybow', 'Quiverfull'],
+    magic: ['Abracadickra', 'Hocuspokeus', 'Wandwanker'],
+    prayer: ['Bigboner', 'BoneToPick', 'Bonezone'],
+    agility: ['Polevaulter', 'PoleDancer', 'Tightsqueeze'],
+    firemaking: ['Firecrotch', 'Lightmylog', 'Tinderballs'],
+    fletching: ['Shaftmaker', 'Nockitoff'],
+    smithing: ['Hammeredhard', 'Ironrod', 'Steelrod'],
+    herblore: ['Stirmypot', 'Grindmyherb', 'Vialvirile'],
+    bank: ['Moneyshot', 'SporranBulge', 'Fatstack', 'Deeppockets'],
+    runite: ['Runeboner', 'Hotrocks', 'Moltenrod'],
+    helper: ['Bigpackage', 'Ballbag', 'Packhorse', 'Heavyload'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type Role = keyof typeof NAMES;

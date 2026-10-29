@@ -2,7 +2,7 @@ import {test, expect} from 'bun:test';
 import {NAMES} from '../../core/src/names';
 import {provisionAccount, createAccountProvisionDeps,registrationEnvironment, type AccountProvisionDeps, type RegistrationResult} from '../src/account-provision';
 
-const request = {role:'ranged' as const,purpose:'missing role: ranged supply',server:'rs-sdk-demo.fly.dev',reservedNames:['BIGQUIVER']};
+const request = {role:'ranged' as const,purpose:'missing role: ranged supply',server:'rs-sdk-demo.fly.dev',reservedNames:['PULLMYBOW']};
 test('live registration forwards its verified release and refuses a missing pin before login',()=>{
  const pin='a'.repeat(64);expect(registrationEnvironment('rs-sdk-demo.fly.dev',pin).WORKER_RELEASE).toBe(pin);expect(registrationEnvironment('rs-sdk-demo.fly.dev',pin).DEMO_OK).toBe('1');
  expect(()=>registrationEnvironment('rs-sdk-demo.fly.dev',undefined)).toThrow('qualified runtime');expect(()=>registrationEnvironment('rs-sdk-demo.fly.dev','bad')).toThrow('qualified runtime');expect(registrationEnvironment('localhost:8888',undefined).DEMO_OK).toBe('');
@@ -10,7 +10,7 @@ test('live registration forwards its verified release and refuses a missing pin 
 function harness(result:RegistrationResult={exitCode:0,stdout:'CLAIM ticks=1 in_game=false logout=logged-out\n'}) {
     const created:string[]=[],registered:string[]=[];
     const deps:AccountProvisionDeps={
-        listLocalAccountNames:()=>['earlyshooter'],
+        listLocalAccountNames:()=>['shaftshooter','earlyshooter'],
         createLocalAccount:(name)=>{created.push(name);},
         registerAccount:async(name)=>{registered.push(name);return result;},
     };

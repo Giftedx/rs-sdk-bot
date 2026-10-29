@@ -27,7 +27,7 @@ For a new approach, check local code and [project use map](research/project-use-
 - The PC is available for maximum useful account progress. Fill qualified live slots across skills, quests, combat, resources and route supply. Prefer sharks over new trout or salmon; use existing stock.
 - Expand in batches of up to 4 accounts after two fresh useful live results, prepared demand and measured RAM, CPU and tick headroom. Keep 4 GiB free (`packages/core/src/memory.ts`) and one practice slot. The cap of 17 is not fixed. No further permission is needed inside these bounds.
 - Create an account only with a proved useful first job. A claimed or blocked account is not progress.
-- New live names: a penis joke plus a RuneScape, task or goal pun, optionally Scottish; 1-12 letters or digits. Keep existing names. Check local duplicates. First login registers the account and starts its clock.
+- New live names must be actually funny: a real penis joke where the RuneScape meaning and the innuendo both work for the role, ideally a known phrase or a true double meaning (Moneyshot, Earlyshooter, Porksword, YewGotWood, MeatNTwoVeg, TossTheCaber). A rude word bolted onto a skill word is not a joke (CoinCock, PickpockDick, NabTheKnob). Scottish where it fits. 1-12 letters or digits. Take names from `packages/core/src/names.ts` only; add new ones there to the same standard. Keep existing accounts. First login registers the account and starts its clock.
 - Each assignment has one owner, budget, acceptance and next action. A vacant slot names its constraint.
 - `swarm.json` owns live assignments. `scripts/fleet.ts` holds templates; `apply` only creates a missing plan.
 
