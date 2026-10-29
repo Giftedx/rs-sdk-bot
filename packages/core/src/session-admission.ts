@@ -14,10 +14,17 @@ export function missionSignature(job:{script:string;host?:boolean;orchestrate?:b
 }
 export function successfulEnd(reason:string):boolean{return /^done(?: after \d+ runs)?$/.test(reason);}
 
-export type LiveLogoutRef=ProducerProofRef|LegacyLogoutClaim;
+export type BootstrapLogoutRef={kind:'bootstrap';account:string;statusAt:number};
+export type LiveLogoutRef=ProducerProofRef|LegacyLogoutClaim|BootstrapLogoutRef;
+// First start for an account with no producer attempts. verifyLegacyLogout refuses every legacy claim, so without
+// this path an account that predates the session producer can never start. A live session rewrites its status every
+// few seconds and the server drops a disconnected session after 500 ticks (200 s), so a status unchanged for 15 min
+// means no session is open; a second login would also be refused by the server. The first producer session then
+// writes the logout receipt that every later start uses. Repairs (required) still need producer proof.
+export const BOOTSTRAP_STATUS_AGE_MS=15*60*1000;
 // No log reconstruction: the producer owns every new connection attempt. Historical sessions need an
 // explicitly sealed legacy claim; a missing status or a RESULT string never proves their logout.
-export function liveLogoutRef(account:string,base:string,required=false):LiveLogoutRef|null{
+export function liveLogoutRef(account:string,base:string,required=false,now=Date.now()):LiveLogoutRef|null{
  assertNoRecoveryLease(account,base);
  const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(account,LIVE_SERVER,{root});
  const statusPath=join(base,'.practice/status',account+'.json');
@@ -40,6 +47,7 @@ export function liveLogoutRef(account:string,base:string,required=false):LiveLog
   if(checked.state!=='legacy-confirmed')throw Error('legacy logout claim refused: '+account+' '+checked.reason);
   return claim;
  }
+ if(!required&&status?.server===LIVE_SERVER&&Number.isFinite(status.at)&&status.at>0&&now-status.at>=BOOTSTRAP_STATUS_AGE_MS)return{kind:'bootstrap',account,statusAt:status.at};
  if(required||status?.server===LIVE_SERVER)throw Error('account needs an explicit legacy logout claim: '+account);
  return null;
 }

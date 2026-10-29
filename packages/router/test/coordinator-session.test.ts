@@ -61,3 +61,11 @@ test('installation checks every participant and the durable failed-script histor
  expect(()=>installJob(task,'Rod','new.ts','test','source',{}, {base:f.base,preflight:true})).not.toThrow();
  expect(readFileSync(path,'utf8')).toBe(JSON.stringify(plan));
 });
+
+test('an account with no producer attempts may start once its live status is 15 minutes old; repairs still need producer proof',()=>{
+ const f=fixture(),now=Date.now();
+ f.status('Rod',{result:'ok old work',at:now-14*60_000});expect(()=>liveLogoutRef('Rod',f.base,false,now)).toThrow('legacy');
+ f.status('Rod',{result:'ok old work',at:now-15*60_000});expect(liveLogoutRef('Rod',f.base,false,now)).toEqual({kind:'bootstrap',account:'Rod',statusAt:now-15*60_000});
+ expect(()=>liveLogoutRef('Rod',f.base,true,now)).toThrow('legacy');
+ f.attempt('Rod');expect(()=>liveLogoutRef('Rod',f.base,false,now)).toThrow('not confirmed');
+});
