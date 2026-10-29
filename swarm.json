@@ -314,7 +314,7 @@
       "script": "scripts/shark-supply.ts",
       "role": "fishing",
       "goal": "100 cooked sharks for endgame combat and the main run",
-      "enabled": true,
+      "enabled": false,
       "repeat": false,
       "env": {
         "SHARK_CONSUMER": "endgame combat staging"
