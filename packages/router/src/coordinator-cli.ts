@@ -193,7 +193,12 @@ async function main(){
  if(mode!=='--run'&&mode!=='--once')throw Error('Use --run, --once, --status or --stop');
  const config=json(join(projectRoot,'swarm.json')).coordination;if(!config?.enabled)throw Error('swarm.json coordination.enabled required');
  const lease=join(coordinationDir,'owner.json');
- if(existsSync(lease)){const owner=json(lease);if(owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid)))throw Error('coordinator already owned by PID '+owner.pid);}
+ if(existsSync(lease)){
+  const owner=json(lease),held=()=>owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid));
+  // A reload successor starts while its predecessor finishes the current loop.
+  for(let waited=0;held()&&arg?.startsWith('reload-')&&waited<60000;waited+=1000)await Bun.sleep(1000);
+  if(held())throw Error('coordinator already owned by PID '+owner.pid);
+ }
  const nonce=arg??randomUUID();atomicJson(lease,{pid:process.pid,nonce,at:Date.now()});
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))throw Error('coordinator or swarm is paused; resume only under owner authority');
  if(!state.tasks.length){addTasks(state,config.bootstrap??[]);saveState(state);}
@@ -202,7 +207,13 @@ async function main(){
   try{await tick(state,config);}catch(error){event('loop-error',String(error));await Bun.sleep(7000);}
   if(mode==='--once')break;await waitForWork();
  }while(!existsSync(stop)&&!existsSync(restart)&&!existsSync(join(projectRoot,'.practice/stop-swarm')));
- if(existsSync(restart)){unlinkSync(restart);event('coordinator-reload',{children:'preserved for adoption'});return;}
+ if(existsSync(restart)){
+  unlinkSync(restart);
+  // The successor loads the current code at once instead of waiting up to five minutes for the watchdog.
+  const token='reload-'+randomUUID(),stamp=Date.now();
+  const pid=spawnDetached([process.execPath,'packages/router/src/coordinator-cli.ts','--run',token],projectRoot,join(coordinationDir,`daemon-${stamp}.out.log`),join(coordinationDir,`daemon-${stamp}.err.log`));
+  event('coordinator-reload',{children:'preserved for adoption',successor:pid});return;
+ }
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm'))){
   const plan=json(join(projectRoot,'swarm.json'));
   for(const job of plan.jobs.filter((j:any)=>j.coordinatorOwner==='coordinator'&&j.enabled!==false)){
