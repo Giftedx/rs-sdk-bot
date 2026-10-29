@@ -1,6 +1,6 @@
 // Practice check for scripts/quest-sweep.ts (quest-sweep capability): Doric's Quest from Falador square with the items in the bank, then a
 // refusal with an empty bank. Writes results.json here.
-import {openSync,writeFileSync,rmSync,closeSync,mkdirSync} from 'node:fs';
+import {openSync,writeFileSync,rmSync,closeSync,mkdirSync,readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {freemem} from 'node:os';
 import {startStack,stopStack} from './stack';
@@ -9,6 +9,13 @@ import {createBot} from './bots';
 import {runBotName} from './prove';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 const root=resolve(import.meta.dir,'../../..'),dir=join(resolve(import.meta.dir,'../../..'),'.practice','quest-sweep');
+// --verify: the consumer check reads the last practice results and passes only when every case met its expectation.
+if(process.argv.includes('--verify')){
+ const r=JSON.parse(readFileSync(join(dir,'results.json'),'utf8')) as {id:string;ok:boolean}[];
+ const ok=['bank-stage','missing'].every(id=>r.some(x=>x.id===id&&x.ok));
+ console.log(ok?'quest-sweep practice results verified':'quest-sweep practice results failed '+JSON.stringify(r));
+ process.exit(ok?0:1);
+}
 if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
 const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
 writeFileSync(fd,JSON.stringify({pid:process.pid,directory:dir,task:'quest-sweep'}));closeSync(fd);

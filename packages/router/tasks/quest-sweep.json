@@ -12,14 +12,33 @@
     {
       "id": "quest-sweep-regressions",
       "phase": "regression",
-      "command": ["bun", "test", "scripts/quest-sweep.test.ts", "--timeout", "10000"],
+      "command": [
+        "bun",
+        "test",
+        "scripts/quest-sweep.test.ts",
+        "--timeout",
+        "10000"
+      ],
       "timeoutMs": 60000
     },
     {
       "id": "quest-sweep-practice",
       "phase": "practice",
-      "command": ["bun", "packages/practice/src/quest-sweep-proof.ts"],
+      "command": [
+        "bun",
+        "packages/practice/src/quest-sweep-proof.ts"
+      ],
       "timeoutMs": 900000
+    },
+    {
+      "id": "quest-sweep-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-sweep-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
     }
   ]
 }
