@@ -183,11 +183,15 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   const dep=records.get(id);return !!dep&&dep.spec.capability===r.spec.capability&&dep.receipt?.output?.delivery?.ok&&(dep.receipt.at??0)>lastLiveStart;
  })).map(r=>r.spec.id));
  const activeNames=new Set(running.filter(r=>r.spec.kind==='run').flatMap(r=>boundAccounts(r.spec,state)??[]).map(n=>n.toLowerCase()));
+ // An isolated build changes the main checkout only when it publishes, so a qualification for a waiting live run
+ // goes ahead of builds and of another focus; the run normally ends before that publish.
+ const liveQualifies=new Set(resources.isolatedBuilds?pending.filter(r=>r.spec.kind==='qualify'&&state.tasks.some(p=>p.status==='pending'&&p.spec.kind==='run'&&p.spec.dependsOn.includes(r.spec.id))).map(r=>r.spec.id):[]);
  const ready=pending.filter(r=>{
   // Unrelated native proofs would expire at the next focused source repair.
   // Leave them queued until the focused capability reaches its live consumer.
-  if(resources.focusCapability&&['build','qualify'].includes(r.spec.kind)&&!focusCaps.has(r.spec.capability!))return false;
-  if(r.spec.kind==='qualify'&&buildWaiting)return false;
+  const liveQualify=liveQualifies.has(r.spec.id);
+  if(!liveQualify&&resources.focusCapability&&['build','qualify'].includes(r.spec.kind)&&!focusCaps.has(r.spec.capability!))return false;
+  if(r.spec.kind==='qualify'&&buildWaiting&&!liveQualify)return false;
   if(r.spec.kind==='run'&&running.filter(a=>a.spec.kind==='run').length>=(resources.liveLimit??Infinity))return false;
   if(r.spec.kind!=='run'&&running.filter(a=>a.spec.kind!=='run').length>=(resources.developmentLimit??Infinity))return false;
   if(r.spec.kind==='build'&&!canBuild(r)||r.spec.kind==='qualify'&&resources.nativeReady===false)return false;
@@ -211,7 +215,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
    +Math.min(20,Math.max(0,now-Math.max(goal.lastStartedAt,r.createdAt))/300000);
  };
  const consumers=ready.filter(r=>resources.preferLive?r.spec.kind==='run':productionWindow.has(r.spec.id));
- const focused=ready.filter(r=>r.spec.capability===resources.focusCapability);
+ const focused=ready.filter(r=>r.spec.capability===resources.focusCapability||liveQualifies.has(r.spec.id));
  const candidates=focused.length?focused:(buildWaiting||resources.preferLive)&&consumers.length?consumers:ready;
  const overdue=candidates.filter(r=>now-state.goals.find(g=>g.id===r.spec.goal)!.lastStartedAt>=30*60000);
  const pool=overdue.length?overdue:candidates;

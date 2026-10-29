@@ -96,6 +96,14 @@ test('isolated builds overlap live runs; a pending publish holds only new live s
  expect(chooseTask(s,4)).toBeNull(); // without isolation a running build still keeps live work offline
 });
 
+test('with isolated builds a qualification for a waiting live run passes a waiting build and another focus',()=>{
+ const s=initialState();addTasks(s,[task('build',{kind:'build',capability:'other-order'}),task('q',{kind:'qualify',capability:'quest-sweep',priority:50}),
+  task('run',{kind:'run',capability:'quest-sweep',account:'Helper1',dependsOn:['q'],accept:{quests:['Hazeel Cult']}}),task('q-alone',{kind:'qualify',capability:'other-order'})],0);
+ expect(chooseTask(s,2,{isolatedBuilds:true,focusCapability:'other-order'})?.id).toBe('q');
+ expect(chooseTask(s,2,{focusCapability:'other-order'})?.id).toBe('build'); // without isolation the qualification waits for the build
+ startTask(s,'build',3,'b');expect(chooseTask(s,4,{isolatedBuilds:true})).toBeNull(); // the practice server is shared
+});
+
 test('a focus that failed three builds in a row is not re-adopted',()=>{
  const s=initialState();addTasks(s,['b1','b2','b3','b4'].map(id=>task(id,{kind:'build',capability:'agility-order'})),0);
  for(const [i,id] of ['b1','b2','b3'].entries()){const r=startTask(s,id,10+i,'r'+id);finishTask(s,{taskId:id,runId:r.runId!,ok:false,at:20+i,error:'check failed',output:{}});}
