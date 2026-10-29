@@ -1,4 +1,4 @@
-# Supply-board tick floors, measured on practice (2026-10-23)
+# Supply-board tick floors, measured on practice
 
 The account starts at level 1 (or the level named) with every supply in its pack or bank. It converts the supplies
 as fast as the tick rules allow. Each script sends its inputs with `s.direct`, up to 5 per tick. The result is the
@@ -382,7 +382,7 @@ Supplies: logs 2, oak 4, willow 7, maple 13, yew 24, magic 107, tinderbox.
 - **C6**: a modal (bank, level-up page) holds the NORMAL wine timer (probe: 30 ticks, xp +0, bank open);
   with no modal, Cooking 99 lands 20 ticks after the last wine (3 runs). Claim A holds; claim B is wrong.
 
-## Flip attempts for the three losing boards (2026-10-23, second pass)
+## Flip attempts for the three losing boards
 
 ### Smithing: helper trades bars at the anvil (FLIPPED on practice)
 
@@ -403,7 +403,7 @@ helper banks for the next load while the smither works; its ticks are not on the
   Make-X (`FLOOR_OVERLAP=1`), 0 of 31 trades opened while smithing (`overlapOpened=0`) and the total stayed
   1,312. `trade.rs2` refuses a busy partner (`.busy`: delayed or a modal). The pickpocket-stun case differs: a
   stun is not a `p_delay`.
-- Two harness rules came out of it: a second request after the screen opened resets the trade (the
+- Harness rules: a second request after the screen opened resets the trade (the
   offer-to-confirm switch reads closed for one tick), and Make 5 / Make 10 run on until the bars run out, so ask
   only for 1, 5 or 10.
 - The margin is 25 ticks for a board trained first. Supply delivery to the helper and the first trade are in
@@ -426,7 +426,7 @@ helper banks for the next load while the smither works; its ticks are not on the
 - Open: a 157-tile snake of lightable tiles with walls at both row ends, or two shorter snakes joined by a short
   walk. Without it, the best measured route stays at about 780 ticks.
 
-### Firemaking on a line: line search and helper drops (2026-10-23, third pass)
+### Firemaking on a line: line search and helper drops
 
 Scripts: `scripts/measure/fm-line-search.ts` (map scan), `scripts/measure/floor-fm-line.ts` (the burn),
 `scripts/measure/fm-line-run.ts` (builds the saves, one firemaker plus 5 helpers in one process, waits for

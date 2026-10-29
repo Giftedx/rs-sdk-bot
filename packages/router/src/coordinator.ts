@@ -148,7 +148,7 @@ export function boundAccounts(task:CoordTask,state:CoordinatorState):string[]|nu
  return new Set(names.map(n=>n.toLowerCase())).size===names.length?names:null;
 }
 // Consecutive failed builds of one capability, newest first. A focus that keeps failing starves every other lane:
-// 2026-10-28/29 shark-supply-order held it 11.2 h through 19 failed builds (research/bot-host.md "Build/live overlap").
+// a shark-supply-order focus held all development 11.2 h through 19 failed builds (research/bot-host.md "Isolated build workspaces").
 export const FOCUS_FAILURE_LIMIT=3;
 export function failedBuildStreak(state:CoordinatorState,capability:string):number{
  const builds=state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt&&(r.status==='failed'||r.status==='succeeded')).sort((a,b)=>(b.receipt!.at??0)-(a.receipt!.at??0));

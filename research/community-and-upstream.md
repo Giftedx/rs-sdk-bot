@@ -1,25 +1,25 @@
 # Community and upstream repos: what to reuse
 
-Survey date: 2026-10-22. All paths are relative to `F:\dev-on-f\osrs-rs-research\rs-sdk-bot\vendor\` unless stated. Every clone except `rsmod-pathfinder` is shallow, so `git log` history is truncated.
+All paths are relative to `F:\dev-on-f\osrs-rs-research\rs-sdk-bot\vendor\` unless stated. Every clone except `rsmod-pathfinder` is shallow, so `git log` history is truncated.
 
 ## 0. Repo facts
 
-Size is `du -sh` of the clone (includes `.git` and, for rs-sdk / lumbridge-ai, the vendored server content). Last commit is `git log -1 --format=%ci`.
+Size is `du -sh` of the clone (includes `.git` and, for rs-sdk / lumbridge-ai, the vendored server content). Last commit message is `git log -1 --format=%s`.
 
-| Repo | Origin | License | Size | Tracked files | Branch | Last commit |
+| Repo | Origin | License | Size | Tracked files | Branch | Last commit message |
 |---|---|---|---|---|---|---|
-| rs-sdk | MaxBittker/rs-sdk | MIT (`LICENSE`, "Copyright (c) 2025 Lost City") | 241M | 13,897 | main | 2026-10-19 "Raise world feed capacity and expire idle clients" |
-| jevscape | Skyvern-AI/jevscape | **none** (no LICENSE file, no `license` in package.json) | 119M | 463 | main | 2026-09-18 "Cover: JevScape image ..." |
-| lumbridge-ai | samheutmaker/lumbridge-ai | MIT (`LICENSE`, inherited from rs-sdk) | 227M | 13,179 | main | 2026-08-17 "bot changes + website" |
-| rs-world | MaxBittker/rs-world | BSD-2-Clause (dennisdev) | 17M | 333 | main | 2026-10-19 "Add world feed heartbeat and reconnect control" |
-| rs-map-viewer | dennisdev/rs-map-viewer | BSD-2-Clause | 11M | 316 | master | 2026-08-02 "Updated undescriptive locations and added some new" |
-| rsmod-pathfinder | MaxBittker/rsmod-pathfinder (npm `@2004scape/rsmod-pathfinder` 5.0.4) | ISC (`LICENSE.md`, "Copyright (c) 2020 RS Mod"; package.json says ISC) | 1.8M | 57 | main | 2026-02-11 "2048 grid, generation counter, u16 maxWaypoints" |
-| lostcity-engine | LostCityRS/Engine-TS | MIT | 12M | 574 | **274** | 2026-08-20 "Updated client bundle with socket fix" |
-| lostcity-content | LostCityRS/Content | MIT for code; assets are Jagex IP (README) | 111M | 9,393 | **274** | 2026-09-24 "fix: only one player occasionally getting sent to arena when full (#764)" |
-| lostcity-client | LostCityRS/Client-TS | MIT | 2.1M | 110 | **274** | 2026-08-20 "fix: Better ClientStream logic" |
-| lostcity-server | LostCityRS/Server | MIT | 173K | 13 | main | 2026-07-08 "Updated revision list" |
-| lostcity-runescript | LostCityRS/RuneScriptTS | MIT + `LICENSE.neptune` (MIT, Joshua Filby) | 1.2M | 143 | main | 2026-07-29 "infer constant type from concrete sibling ..." |
-| lostcity-markets | LostCityRS/Markets | MIT per `composer.json` only; no LICENSE file | 41M | 4,375 | main | 2026-06-18 "remove stats tab and related code" |
+| rs-sdk | MaxBittker/rs-sdk | MIT (`LICENSE`, "Copyright (c) 2025 Lost City") | 241M | 13,897 | main | "Raise world feed capacity and expire idle clients" |
+| jevscape | Skyvern-AI/jevscape | **none** (no LICENSE file, no `license` in package.json) | 119M | 463 | main | "Cover: JevScape image ..." |
+| lumbridge-ai | samheutmaker/lumbridge-ai | MIT (`LICENSE`, inherited from rs-sdk) | 227M | 13,179 | main | "bot changes + website" |
+| rs-world | MaxBittker/rs-world | BSD-2-Clause (dennisdev) | 17M | 333 | main | "Add world feed heartbeat and reconnect control" |
+| rs-map-viewer | dennisdev/rs-map-viewer | BSD-2-Clause | 11M | 316 | master | "Updated undescriptive locations and added some new" |
+| rsmod-pathfinder | MaxBittker/rsmod-pathfinder (npm `@2004scape/rsmod-pathfinder` 5.0.4) | ISC (`LICENSE.md`, "Copyright (c) 2020 RS Mod"; package.json says ISC) | 1.8M | 57 | main | "2048 grid, generation counter, u16 maxWaypoints" |
+| lostcity-engine | LostCityRS/Engine-TS | MIT | 12M | 574 | **274** | "Updated client bundle with socket fix" |
+| lostcity-content | LostCityRS/Content | MIT for code; assets are Jagex IP (README) | 111M | 9,393 | **274** | "fix: only one player occasionally getting sent to arena when full (#764)" |
+| lostcity-client | LostCityRS/Client-TS | MIT | 2.1M | 110 | **274** | "fix: Better ClientStream logic" |
+| lostcity-server | LostCityRS/Server | MIT | 173K | 13 | main | "Updated revision list" |
+| lostcity-runescript | LostCityRS/RuneScriptTS | MIT + `LICENSE.neptune` (MIT, Joshua Filby) | 1.2M | 143 | main | "infer constant type from concrete sibling ..." |
+| lostcity-markets | LostCityRS/Markets | MIT per `composer.json` only; no LICENSE file | 41M | 4,375 | main | "remove stats tab and related code" |
 
 **Revision trap.** The LostCity clones are on branch `274`. rs-sdk vendors rev **289** (`rs-sdk/server/PATCHES.md`: "upgraded from 274 on 2026-10-09"; `rs-sdk/server/content/.github/workflows/content.yml` pins `ref: '289'`). For data mining, read `rs-sdk/server/content/`, not `lostcity-content/`. rs-sdk content has quests, areas and drop tables that the 274 clone lacks (for example `quest_hauntedmine`, `quest_troll_love`, `area_miscellania`, `drop tables/scripts/iron_dragon.rs2`).
 
@@ -62,7 +62,7 @@ Files (line counts): `catalog.ts` 1,736, `controller.ts` 1,023, `live.html` 526,
   - `this_tick`: `do_nothing | close_dialog | eat_food | restart_current`. These act beside the goal and do not change it. The split exists because Jev once picked `close_dialog` as a *goal* after a level-up. That aborted fishing and the bot stood idle for 25 s.
   - `poll_again_in_ticks`: N, 2N, 5 or 10. The model sets its own polling cadence.
 - The answer timeout equals the poll interval. A late answer keeps the current action. Tick mode never blocks on the model.
-- Player status is sampled every tick (lines 327-334): `dead | under_attack (HP fell in last 6 s) | skilling (target matches fishing spot/tree/rock) | in_combat | in_dialog | animating | moving | idle`. It comes with `idle_for_seconds`, `seconds_since_last_xp`, the last server message and its age, and `recent_events` (the last 8 events). `under_attack` was added after a dark wizard killed the bot while the state still looked like "fishing".
+- Player status is sampled every tick (lines 327-334): `dead | under_attack (HP fell in last 6 s) | skilling (target matches fishing spot/tree/rock) | in_combat | in_dialog | animating | moving | idle`. It comes with `idle_for_seconds`, `seconds_since_last_xp`, the last server message and its age, and `recent_events` (the last 8 events). `under_attack` exists so that a dark wizard attack does not read as "fishing".
 - In tick mode, fishing scripts click once and hold (`ctx.hold`). Every re-click is a model `restart_current`.
 - rs-sdk patches: `walkTo(x, z, tol, signal?)` cancellation (adds two `signal?.aborted` checks in `sdk/actions.ts`), and the real level curve 2^(level/7) in place of rs-sdk's 2^(level/10). `--xprate 1` restores real XP; rs-sdk's default multiplier is 25.
 
@@ -70,7 +70,7 @@ Files (line counts): `catalog.ts` 1,736, `controller.ts` 1,023, `live.html` 526,
 
 The controller appends `events.jsonl` (`start`, `deciding` with the full snapshot and candidates, `decision` with the probability map, `outcome`, `log`, `summary`). `live.ts` streams the file over Server-Sent Events. The page embeds the bot's own browser game client beside a sidebar. Simple view: task, level, XP to next level, ranked choices with percentages. Developer view: snapshot, probability bars, latency, tokens, controller log. Only one tab may load the game client, and Chrome must keep it visible during login. `?nogame=1` shows the panel only.
 
-### Claimed results (README, 2026-09-18, 15-min tasks, 16 skills, local runner, 20 ticks/s, one run per skill)
+### Claimed results (README, 15-min tasks, 16 skills, local runner, 20 ticks/s, one run per skill)
 
 | Policy | Mean peak XP/min | Mean total XP |
 |---|---:|---:|
@@ -100,7 +100,7 @@ Plain rs-sdk (and RuneBench's OpenCode adapter) has the LLM write TypeScript aga
 
 ## 2. lumbridge-ai vs rs-sdk
 
-The clone holds 20 commits (2026-08-16 to 2026-08-17), 19 by Sam Heutmaker and 1 by Sam Hogan. The fork point is older than current rs-sdk. Most of the 3,896 differing paths (`diff -rq --strip-trailing-cr`) are rs-sdk's later work: content rev 274 vs 289, the world feed, the GE/market. Those are not lumbridge additions.
+The clone holds 20 commits, 19 by Sam Heutmaker and 1 by Sam Hogan. The fork point is older than current rs-sdk. Most of the 3,896 differing paths (`diff -rq --strip-trailing-cr`) are rs-sdk's later work: content rev 274 vs 289, the world feed, the GE/market. Those are not lumbridge additions.
 
 **Present in rs-sdk, absent in lumbridge-ai (newer upstream):** `sdk/ge-actions.ts`, `sdk/market.ts`, `sdk/MARKET.md`, `mcp/market-tools.ts`, `mcp/execute-code.ts`, `server/engine/src/web/worldfeed.ts`, `server/engine/src/engine/market/`, the hiscores pages, `learnings/`, and the 289 content.
 
@@ -331,17 +331,17 @@ The whole pipeline is code, re-runnable on each revision bump. Validate it again
 4. Use `findLongPath` path length as the distance metric. Add a stairs and ladders transition graph mined from content.
 5. Build `knowledge/*.json` from `rs-sdk/server/content` (rev 289), not from the 274 `lostcity-content` clone. Extend rather than replace `rs-sdk/wiki/generate-*.ts`.
 
-## 7. Cairn record run and live network delay (2026-10-29)
+## 7. Cairn record run and live network delay
 
-**Claim: the overall record is 35,787 ticks.** `cairnmax20x` (Cairn swarm) beat stunbaron's 35,916 by 129 ticks on 2026-10-26. Evidence: https://rune.fast/ (read 2026-10-29). Gap: compare with the target in `research/hiscores-live.json` before the next plan update.
+**Claim: the overall record is 35,787 ticks.** `cairnmax20x` (Cairn swarm) beat stunbaron's 35,916 by 129 ticks. Evidence: https://rune.fast/. Gap: compare with the target in `research/hiscores-live.json` before the next plan update.
 
 **Claim: host location was their largest gain.** The write-up says each reaction landed 2-3 ticks late from California, and on the next tick from an AWS us-east-1 VPS. Conditions: their script, their client. Evidence: write-up only, no raw data.
 
-**Claim: from this PC, a request to the game app takes 100-370 ms.** Conditions: 2026-10-29, this PC, HTTPS `GET /` to `rs-sdk-demo.fly.dev`. The Fly edge is London (`fly-request-id` ends `-lhr`, two `via: fly.io` hops), so the game app is elsewhere. TCP connect to the edge took 25-58 ms (8 runs). On one reused connection, 11 requests took 100-301 ms to first byte (median 175 ms). Gap: the game socket can differ from `GET /`. Reaction delay in ticks is not measured live. `research/agility.md` lost 1 tick per click, but that was practice (local, 150 ms tick).
+**Claim: from this PC, a request to the game app takes 100-370 ms.** Conditions: this PC, HTTPS `GET /` to `rs-sdk-demo.fly.dev`. The Fly edge is London (`fly-request-id` ends `-lhr`, two `via: fly.io` hops), so the game app is elsewhere. TCP connect to the edge took 25-58 ms (8 runs). On one reused connection, 11 requests took 100-301 ms to first byte (median 175 ms). Gap: the game socket can differ from `GET /`. Reaction delay in ticks is not measured live. `research/agility.md` lost 1 tick per click, but that was practice (local, 150 ms tick).
 
 **Their failures to guard against:** logout refused while under attack; rings delivered as notes; prayer at 0 among poison spiders; two orders to the same account at once (operator "log out" against coordinator "takeover"), which left the body undriven and dead.
 
-**Claim: Cairn's route is public, with ticks per step.** Evidence: https://rune.fast/route (read 2026-10-29). Their plan sums to 34,143 ticks. Their real run took 35,787. The overruns were the spiders (+947, 541 of them while the body died), iron mining (+313, rock competition), the body altar (+233), fly fishing (+203) and the knights (+189). Our model (`.practice/workflow-repair-20261028/unrestricted-result.json`) is 45,570 ticks, 11,427 more than their plan. Next decision: price each of their steps in our planner and list the steps we cannot yet run.
+**Claim: Cairn's route is public, with ticks per step.** Evidence: https://rune.fast/route. Their plan sums to 34,143 ticks. Their real run took 35,787. The overruns were the spiders (+947, 541 of them while the body died), iron mining (+313, rock competition), the body altar (+233), fly fishing (+203) and the knights (+189). Our model (`.practice/workflow-repair-20261028/unrestricted-result.json`) is 45,570 ticks, 11,427 more than their plan. Next decision: price each of their steps in our planner and list the steps we cannot yet run.
 
 | Step | Skills | Plan | Took |
 |---|---|---|---|
@@ -371,10 +371,10 @@ The whole pipeline is code, re-runnable on each revision bump. Validate it again
 | Cannon and magic shortbow at the spiders | Def, Ranged 55-99, HP 99 | 2,152 | 3,099 |
 | Wilderness Agility Course | Agility 76-99 | 4,300 | 4,067 |
 
-**Claim: our largest extra costs against Cairn's plan are combat and Smithing, plus walking.** Conditions: 2026-10-29, `bun packages/planner/src/cairn-cli.ts`, scenario a realistic, travel on, `research/hiscores-live.json`; prices include the walk into each row. Evidence: spiders and melee top-ups 6,535 against 2,152 (+4,383); Family Crest plus superheat 4,078 against an anvil 903 (+3,175); The Dig Site 1,993, which Cairn skips (Doric's Quest and Plague City instead); Monkey Madness +938; the four early quests +859; The Grand Tree +851. Walking totals 8,254. Our iron (-639) and knights (-136) rows are cheaper than Cairn's plan, so they may be optimistic. Gap: 9 of 25 steps lack a planner row, a worker script, or the script file their capability names (Wind Strike start, castle-row fires, rings, Doric's Quest, air altar, Plague City, first spiders, Mage Arena, anvil). Next decision: price the anvil Smithing route and Cairn's combat order in the planner.
+**Claim: our largest extra costs against Cairn's plan are combat and Smithing, plus walking.** Conditions: `bun packages/planner/src/cairn-cli.ts`, scenario a realistic, travel on, `research/hiscores-live.json`; prices include the walk into each row. Evidence: spiders and melee top-ups 6,535 against 2,152 (+4,383); Family Crest plus superheat 4,078 against an anvil 903 (+3,175); The Dig Site 1,993, which Cairn skips (Doric's Quest and Plague City instead); Monkey Madness +938; the four early quests +859; The Grand Tree +851. Walking totals 8,254. Our iron (-639) and knights (-136) rows are cheaper than Cairn's plan, so they may be optimistic. Gap: 9 of 25 steps lack a planner row, a worker script, or the script file their capability names (Wind Strike start, castle-row fires, rings, Doric's Quest, air altar, Plague City, first spiders, Mage Arena, anvil). Next decision: price the anvil Smithing route and Cairn's combat order in the planner.
 
-**Claim: the anvil route saves 1,844 ticks, and the planner now chooses it.** Conditions: 2026-10-29, scenario a realistic, travel on, `research/hiscores-live.json`. New option `magic-smithing=anvil` (`packages/planner/src/haggis-boards.json` rows `smith-anvil`, `magic-anvil`): platebodies 1-99 with a helper trading bars at the Varrock west anvil (MEASURED 1,316 ticks practice), enchant 7-80 without dragonstone in the foreground (183 casts, ESTIMATE from the MEASURED cast rate), then Mage Arena and Charge 80-99. Evidence: Overall 45,570 -> 43,726 (floor 43,135 -> 41,158); Magic and Smithing rows 3,131 ticks with walks against 4,453 for Family Crest plus superheat. The old `separate` option never finishes: its Magic row is a stun guest of thieving, and thieving needs Monkey Madness, which needs Magic 75. Gap: Cairn's anvil is 903 ticks against our 1,316 from 1 (they arrive at Smithing 41 from Superheat in the stuns and trade in bursts); no worker script exists for the anvil or Mage Arena. Next decision: Smithing 1-41 by Superheat inside the knights' stuns, and the combat order (spiders and melee top-ups, +4,383).
+**Claim: the anvil route saves 1,844 ticks, and the planner chooses it.** Conditions: scenario a realistic, travel on, `research/hiscores-live.json`. Option `magic-smithing=anvil` (`packages/planner/src/haggis-boards.json` rows `smith-anvil`, `magic-anvil`): platebodies 1-99 with a helper trading bars at the Varrock west anvil (MEASURED 1,316 ticks practice), enchant 7-80 without dragonstone in the foreground (183 casts, ESTIMATE from the MEASURED cast rate), then Mage Arena and Charge 80-99. Evidence: Overall 45,570 -> 43,726 (floor 43,135 -> 41,158); Magic and Smithing rows 3,131 ticks with walks against 4,453 for Family Crest plus superheat. The old `separate` option never finishes: its Magic row is a stun guest of thieving, and thieving needs Monkey Madness, which needs Magic 75. Gap: Cairn's anvil is 903 ticks against our 1,316 from 1 (they arrive at Smithing 41 from Superheat in the stuns and trade in bursts); no worker script exists for the anvil or Mage Arena. Next decision: Smithing 1-41 by Superheat inside the knights' stuns, and the combat order (spiders and melee top-ups, +4,383).
 
-**Claim: Cairn's combat order does not help in our model; their combat gain is quest speed.** Conditions: 2026-10-29, scenario a realistic, travel on, `research/hiscores-live.json`; retired lever `rival-dragon-combat` (Dragon Slayer before the top-ups, a measured 30-tick Doric's Quest for the 32nd QP). Evidence: Overall 43,726 default, 44,354 with the lever (floor 41,158 -> 41,805). Dragon Slayer (2,003 with walk) replaces the Strength and Defence top-ups (2,961), but Goblin Diplomacy, Romeo and Juliet and Doric move before it, and Hitpoints then needs Witch's House at the end (772). The planner QP counter keeps the Fight Arena, Monkey Madness and Sea Slug points in quests-rest, so the lever sets Dragon Slayer's `minQp` to 0 and requires the 12 rows that give the real 32 QP. Our quest rows cost more than Cairn's: Monkey Madness 5,501 against 4,563 (their one-tick dialogue client saved 450), The Grand Tree with Agility 1-25 2,433 against 1,582, Tree Gnome Village 1,321 against 734. Ranged rates are close: their Ranged 1-99 took about 325 XP per tick without the death (998,458 XP over 3,069 ticks, which also trained Defence and Hitpoints); our row is 309. Next decision: measure our dialogue speed (ticks per page) and the walk into each quest.
+**Claim: Cairn's combat order does not help in our model; their combat gain is quest speed.** Conditions: scenario a realistic, travel on, `research/hiscores-live.json`; lever `rival-dragon-combat` (Dragon Slayer before the top-ups, a measured 30-tick Doric's Quest for the 32nd QP). Evidence: Overall 43,726 default, 44,354 with the lever (floor 41,158 -> 41,805). Dragon Slayer (2,003 with walk) replaces the Strength and Defence top-ups (2,961), but Goblin Diplomacy, Romeo and Juliet and Doric move before it, and Hitpoints then needs Witch's House at the end (772). The planner QP counter keeps the Fight Arena, Monkey Madness and Sea Slug points in quests-rest, so the lever sets Dragon Slayer's `minQp` to 0 and requires the 12 rows that give the real 32 QP. Our quest rows cost more than Cairn's: Monkey Madness 5,501 against 4,563 (their one-tick dialogue client saved 450), The Grand Tree with Agility 1-25 2,433 against 1,582, Tree Gnome Village 1,321 against 734. Ranged rates are close: their Ranged 1-99 took about 325 XP per tick without the death (998,458 XP over 3,069 ticks, which also trained Defence and Hitpoints); our row is 309. Next decision: measure our dialogue speed (ticks per page) and the walk into each quest.
 
-**Dialogue pace** (2026-10-29): MEASURED practice, 16 pages in 32 ticks with our client and 15 with a raw burst; see `research/quest-plan.md` ("Dialogue burst").
+**Dialogue pace:** MEASURED practice, 16 pages in 32 ticks with our client and 15 with a raw burst; see `research/quest-plan.md` ("Dialogue burst").

@@ -1,4 +1,4 @@
-# Supply costs per board (live GE, 2026-10-23)
+# Supply costs per board (live GE snapshot)
 
 Snapshot: `research/market-2026-10-23.json`, taken 2026-10-23T06:53:52Z by `bun scripts/market-snapshot.ts`
 (read-only GETs, 2 requests per second at most, 182 items). Tables: `bun scripts/market-snapshot.ts --costs
@@ -22,7 +22,7 @@ ground spawns are **CODE-READ** (rev 289 content). Coin totals are **ESTIMATE** 
   ask is a lower bound. Each table also shows the book average.
 - **Availability counts, not only price.** "Short" is what neither the GE nor the shops hold now. Most
   inputs have 0 sellers. The live GE had 0 raw lobster, raw tuna, raw salmon and raw trout for sale in this
-  snapshot (raw shark 0, raw swordfish 0); the coordinator reports 0 cooked lobster too, earlier today.
+  snapshot (raw shark 0, raw swordfish 0); the coordinator also reported 0 cooked lobster.
 - A market of 112 active items out of 1,443 tradeable (`/api/market/items` summary) is thin, and some
   prices are set high on purpose (uncut sapphire ask 20,000, base 25; uncut dragonstone bid 1,000,000).
 
@@ -118,7 +118,7 @@ Coins at the ask for each board's cheapest buy route, full need (including units
 - With GE law runes instead of gated shops: +1,872,736.
 - Gold farm model (4 accounts at Thieving 99 on knights, 18.8 coins per tick per account, about 169,200 per
   account-hour, **ESTIMATE, not measured**): 676,800 per hour for the team. 14,375,347 coins = **21.2 hours**
-  (85 account-hours). Without Prayer: **5.7 hours**. The banker holds 66,078 coins today.
+  (85 account-hours). Without Prayer: **5.7 hours**. The banker holds 66,078 coins at the snapshot.
 - Coins do not buy what is not for sale. Even with the gold, these inputs need helper work: dragon bones (539),
   Herblore herbs and secondaries (all tiers), raw fish (Cooking), grapes (wine), dragonstones and air orbs
   (fast Crafting), maple logs, rune dart tips and most rune arrowtips (fast Fletching), gold ore.

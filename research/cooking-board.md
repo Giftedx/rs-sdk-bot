@@ -1,10 +1,10 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
 > Correction: the Almera “10 grapes” entry below is a map-location misread, not an item spawn. See [grape-gold.md](grape-gold.md). Preset/session timings exclude full fresh-account preparation and do not prove a whole-clock hiscore attempt. Login wine is authorized.
 
-# Cooking board: what it takes (2026-10-22)
+# Cooking board: what it takes
 
-## Reusable wine order, 2026-10-28
+## Reusable wine order
 
 `bun scripts/cook-wine.ts <account> [target=99] [fermentation-deadline=80]` replaces the two scratch commands. It reuses `depositObserved` and `settle`. It waits for observed effects, confirms logout before reconnecting in the same process, and stops at the exact target. Unused bulk stays owned when the starter reaches the target. An all-bad starter can consume stock without XP, so the worker checks its item outcome before rejecting it.
 
@@ -29,7 +29,7 @@ Source decision: [rune.fast techniques](https://rune.fast/tricks) and [harness](
   Other operators already use this method and are buying every grape.
 - Verdict: a supply war. Not a first target.
 
-## Update: the login timer (proven 2026-10-22)
+## The login timer (proven on the practice server)
 - Every login runs `~ferment_wines_login` (`login_logout/login.rs2:70`), which sets the 20-tick
   `fermenting_wine` timer (`wine.rs2:72`) with **no level check**.
 - Practice server, account with no Cooking levels and 600 unfermented wines banked, doing nothing after login:

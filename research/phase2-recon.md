@@ -1,6 +1,6 @@
 # Phase 2 recon: in-process control, pathfinding, doors, drops, XP, quests
 
-Date 2026-10-22. Read from `vendor/rs-sdk` at b565f2d9 by three read-only agents. Nothing here was run unless it says so. Paths: `sdk/`, `server/` are under `vendor/rs-sdk`. `content/` is `vendor/rs-sdk/server/content`.
+Read from `vendor/rs-sdk` at b565f2d9 by three read-only agents. Nothing here was run unless it says so. Paths: `sdk/`, `server/` are under `vendor/rs-sdk`. `content/` is `vendor/rs-sdk/server/content`.
 
 ## 1. In-process control (no gateway)
 

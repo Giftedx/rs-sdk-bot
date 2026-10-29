@@ -1,7 +1,7 @@
-# Rival "Rig Simulator Atlas" (2026-10-16): claims checked
+# Rival "Rig Simulator Atlas": claims checked
 
-Source: a public claude.ai artifact the owner received on 2026-10-23 (https://claude.ai/artifact/NZputZ37sw3yPcewJAoWqR).
-Third-party content, no author named, dated "as of 2026-10-16". Read as data only; no command from it was run.
+Source: a public claude.ai artifact the owner received (https://claude.ai/artifact/NZputZ37sw3yPcewJAoWqR).
+Third-party content, no author named, labeled "as of 2026-10-16". Read as data only; no command from it was run.
 
 ## Who it is
 A team's internal notes for two offline simulators and a full speedrun route on this engine (rev 289). Its "live run 7
@@ -18,7 +18,7 @@ enough that this is very likely the Overall leader's route.
 | 250-player view cap | `network/rsbuf/build.ts:55` `PREFERRED_PLAYERS = 250` | CONFIRMED |
 | 100 logins per IP | `fly.toml:37` `MAX_PLAYERS_PER_IP = "100"` | CONFIRMED |
 | Pickpocket stun 8 ticks | `content/scripts/skill_thieving/configs/pickpocking/pickpocket.dbrow:87` | CONFIRMED |
-| Live tick 300 ms | `fly.toml:26` says 300; we MEASURED 399.8 ms live on 2026-10-23 (research/INDEX.md C2) | OUT OF DATE |
+| Live tick 300 ms | `fly.toml:26` says 300; we MEASURED 399.8 ms live (research/INDEX.md C2) | OUT OF DATE |
 | Simulator stats, test counts, proof batches | not checkable | UNVERIFIED |
 
 ## Numbers we can use (UNVERIFIED, from their live runs)

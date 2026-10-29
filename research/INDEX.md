@@ -15,7 +15,7 @@ Use the [current plan](../docs/plans/joined-plan.md) for priorities and the [res
 | Quest prerequisites and routes | [quest-plan](quest-plan.md), [quest-route](quest-route.md), [quest-xp](quest-xp.md), [heroes-partner](heroes-partner.md) |
 | Runtime and host capacity | [bot-host](bot-host.md), [random-events](random-events.md), [rs-sdk-deep-dive](rs-sdk-deep-dive.md) |
 | Which external work should we use? | [Project use map](project-use-map.md#find-and-port-a-solution) — exact source entry points, local consumers, saved commits and porting recipe; grouped inventory below; [ecosystem evidence](botting-ecosystem-2026-10-23.md), [local upstream review](community-and-upstream.md) |
-| Measured waste and earlier requests | [learning-report](learning-report.md) (generated), [run-learnings](run-learnings-2026-10-23.md), [owner-requests](owner-requests.md) (dated ledger) |
+| Measured waste and open owner requests | [learning-report](learning-report.md) (generated), [owner-requests](owner-requests.md) |
 
 Find narrower topics with `rg --files research`. Preserve paths cited by code and dashboards.
 
@@ -44,13 +44,13 @@ Task context: acceptance check, consumer path, relevant evidence, unresolved dep
 | Holding stock is not staging it | Track item, quantity, holder, observation time, reservation and destination | [preparation-report](../scripts/preparation-report.ts) |
 | Starting items can resemble quest rewards | Require the observed completion flag. Resume from the current item/stage evidence | [Rune Mysteries](../scripts/generated/quest-runemysteries.ts), [quest plan](quest-plan.md) |
 | Logout can erase useful telemetry | Retain account/server journal observations with their own date; fresh status cannot refresh old unlock evidence | [Native and live retention](../.practice/quest-expansion/journal-live-proof.json); `status.ts`, `goal-readiness.ts` |
-| A proved historical route can fail today | Bind account, direction, server, age, combat and remaining costs | [Courier receipt replay](../.practice/shared-supply/courier-replay.json) |
+| A route proved once can fail now | Bind account, direction, server, age, combat and remaining costs | [Courier receipt replay](../.practice/shared-supply/courier-replay.json) |
 
 ## Freshness and writing
 
-Old topic files are research evidence, not current fleet instructions. Counts, targets, role assignments and model totals expire. Read current source and dated raw state before acting. A code read, model, practice run and live run prove different things.
+Topic files are research evidence, not fleet instructions. Counts, targets, role assignments and model totals expire. Read current source and raw state before acting. A code read, model, practice run and live run prove different things.
 
-Update the existing topic with **claim; conditions/date; evidence; remaining gap**. Replace a superseded conclusion in place and retain its evidence link. Keep failed results. A new file needs a distinct reusable purpose. Do not hand-edit `learning-report.md` or generated data.
+Update the existing topic with **claim; conditions; evidence; remaining gap**. Replace a stale conclusion in place; git keeps the old one (AGENTS.md, No diary). Keep failed results that still apply. A new file needs a distinct reusable purpose. Do not hand-edit `learning-report.md` or generated data.
 
 ## Open conflicts that affect use
 
@@ -58,4 +58,4 @@ Update the existing topic with **claim; conditions/date; evidence; remaining gap
 - Run energy depends on `NODE_INFINITE_RUN`. The playbook now states this condition. Live configuration remains unverified.
 - The dashboard labels `owner-requests` as historical and separates file edits from verification. Its rows remain history; use the joined plan for current work.
 
-[Review and session coverage](../docs/reviews/workflow-2026-10-26.md) · [Original index and conflicts](../docs/archive/workflow-before-2026-10-26.zip). Unsettled entries remain leads.
+Unsettled entries remain leads.

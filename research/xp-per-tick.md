@@ -1,6 +1,6 @@
 # XP per tick of the specialist's own playtime
 
-Date: 2026-10-22. Source: rev 289 RuneScript in `vendor/rs-sdk/server/content/scripts` (paths below are relative to that folder, unless they start with `engine/`, which means `vendor/rs-sdk/server/engine/src`).
+Source: rev 289 RuneScript in `vendor/rs-sdk/server/content/scripts` (paths below are relative to that folder, unless they start with `engine/`, which means `vendor/rs-sdk/server/engine/src`).
 
 Assumptions: members world, 25x XP rate, 99 = 998,458 XP, helpers supply all tradeable items (noted where useful), the specialist pays only for its own ticks. "Est. ticks" comes from a greedy simulation (best XP/tick method at each level) on the server curve. The simulation script was a scratch file and is not committed. Estimates include a bank or trade overhead model, which is inferred, not measured.
 
@@ -65,8 +65,8 @@ Assumptions: members world, 25x XP rate, 99 = 998,458 XP, helpers supply all tra
 - Model: 14 unfinished potions + 14 secondaries per inventory, 4 ticks per inventory. Sim: 71 ticks. Live 447 is far slower. Either the live player banks slowly, or the bank model is wrong. Test the bank cycle in game before you rely on it.
 - Items: unfinished potions of every tier and their secondaries.
 
-### Firemaking (seen in code)
-- `skill_firemaking/scripts/firemaking.rs2:79-131`: `%action_delay` +3 for the first attempt, then a roll every 4 ticks, `stat_random(firemaking,64,512)` (always succeeds from about level 44). XP is in `configs/firemaking.obj`: logs 40, oak 60, willow 90, maple 135, yew 202.5, magic 303.8.
+### Firemaking (code-read)
+- `skill_firemaking/scripts/firemaking.rs2:79-131`: `%action_delay` +3 for the initial attempt, then a roll every 4 ticks, `stat_random(firemaking,64,512)` (always succeeds from about level 44). XP is in `configs/firemaking.obj`: logs 40, oak 60, willow 90, maple 135, yew 202.5, magic 303.8.
 - Sim: 693 ticks. Live 673 matches.
 - Other options: Mort'ton pyre, `pyre_fm_experience` up to 404.5 (`minigames/game_mortton/configs/flamtaer_pyre.struct:64`). This needs the Shades of Mort'ton quest. The cycle time is not checked.
 

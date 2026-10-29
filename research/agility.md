@@ -1,16 +1,12 @@
 # Agility courses: measured lap rates (rev 289, practice)
 
-Date: 2026-10-23. Evidence: MEASURED practice (local server, presets, 150 ms tick) + CODE-READ.
+Evidence: MEASURED practice (local server, presets, 150 ms tick) + CODE-READ.
 Boards: Agility, Overall.
 
 ## Result
 
-- **Update 2 (2026-10-24, section "Agility 88-99"):** 10 more V2 runs from Agility 90 (90 to 96) measure 202.0 XP/tick
-  for the 88-99 band. With 76-87 at 192.3, the weighted 52-99 rate is 196.0 XP/tick (was 190.9). The planner row
-  now uses 196.0 realistic; the floor stays 212.9.
-- **Update (V2 script, 60 runs of 20 laps, section "Wilderness V2"):** the Wilderness rate from Agility 52 to 99 is
-  190.9 XP/tick (band-weighted, V2), against 178.9 for the first script with the same method. The planner row now
-  uses 190.9 realistic and 212.9 floor.
+- The Wilderness rate from Agility 52 to 99 is 196.0 XP/tick (band-weighted, V2; section "Agility 88-99"). The planner row
+  uses 196.0 realistic and 212.9 floor.
 - Agility stays the last skill on the Haggis clock. The Wilderness course is the fastest route.
   Measured on practice: 202.6 XP/tick in the best runs, 178 XP/tick as the mean of 9 runs at Agility 70 and 90.
 - The plan reaches the Wilderness step at Agility 76 (202,363 XP: gnome laps to 25 = 4,863 XP, then
@@ -39,7 +35,7 @@ them the working tree gives 38,427 / 47,313 for the measured table.
 The Overall #1 is stunbaron at 35,916. The no-Wilderness row does not model the trip to Brimhaven or the
 200-coin entry fee (`agilityarena_clerk.rs2:19`).
 
-## Wilderness V2 (MEASURED practice, 2026-10-23)
+## Wilderness V2 (MEASURED practice)
 
 Script: `scripts/measure/agility-laps.ts`. `AGI_V1=1` runs the first version ("before"); the default is V2 ("after").
 Runner: `RANDOM_EVENTS=0 bun scripts/measure/floor-run.ts scripts/measure/agility-laps.ts agility_wilderness_<L> 10 wilderness 20 2600`.
@@ -123,10 +119,10 @@ course with no potion (preset `agility_wilderness_49`).
   The band is the first lap only, so it is a small sample.
 - Planner effect (lever 3, gnome to 49, then the Wilderness row): see `research/agility-gap.md`.
 
-### Agility 88-99 (MEASURED practice, 2026-10-24)
+### Agility 88-99 (MEASURED practice)
 
 Preset `agility_wilderness_90` (the same kit as the 76 preset: south of the pipe, HP 70, Defence 70, 15 lobsters).
-The script's level bands are now 76-87 and 88-99 (was one 76-99 band). 10 runs of 20 laps, V2, one run per
+The script's level bands are 76-87 and 88-99. 10 runs of 20 laps, V2, one run per
 `floor-run.ts` call, `RANDOM_EVENTS=0`. Every run went from Agility 90 to 96, so the band has no data at 88-89 or 97-99.
 
 - Per run (XP/tick): 208.7 205.5 208.8 203.1 190.2 198.7 208.8 208.7 194.0 196.9. Mean 202.3, SD 6.6, median 204.3,
@@ -134,15 +130,15 @@ The script's level bands are now 76-87 and 88-99 (was one 76-99 band). 10 runs o
 - Band 88-99: 202.1 (2,862,687 XP / 14,164 ticks). Clean lap median 66 (172 of 200 laps clean, best 62).
 - Falls: 31 fail messages in 200 laps (2-6 per run), against 39 for the 76 runs: stones 15 (recover 16.7 ticks), log 9
   (42.0), rope swing 7 (33.0). Lap bonuses lost: 7 (16-18 at lower levels). Eats 0-4 per run.
-- Pooled with the 30 V2 runs of 2026-10-23 (`agi2/after.log`): the 10 laps there that start at Agility 88 (lap 20 of each
+- Pooled with the 30 V2 runs (`agi2/after.log`): the 10 laps there that start at Agility 88 (lap 20 of each
   76 run, 142,850 XP / 712 ticks, split by lap start level, not by obstacle) move from 76-99 to 88-99.
 
 | Band | XP / ticks | XP/tick |
 |---|---|---|
-| 52-59 (2026-10-23) | 288,820 / 1,671 | 172.8 |
-| 60-75 (2026-10-23) | 2,870,937 / 15,425 | 186.1 |
-| 76-87 (2026-10-23, less the 10 laps from 88) | 5,309,824 / 27,610 | 192.3 |
-| 88-99 (2026-10-24, plus the 10 laps from 88) | 3,005,537 / 14,876 | 202.0 |
+| 52-59 | 288,820 / 1,671 | 172.8 |
+| 60-75 | 2,870,937 / 15,425 | 186.1 |
+| 76-87 (less the 10 laps from 88) | 5,309,824 / 27,610 | 192.3 |
+| 88-99 (plus the 10 laps from 88) | 3,005,537 / 14,876 | 202.0 |
 | **52-99, weighted by the XP of each band** | | **196.0** |
 
 Weighted rate = 960,842 / (28,577 / 172.8 + 136,124 / 186.1 + 263,269 / 192.3 + 532,872 / 202.0) = 195.96. XP per band

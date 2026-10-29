@@ -16,8 +16,8 @@ Projects: https://github.com/MaxBittker/rs-sdk, https://github.com/MaxBittker/ru
 3. Do not guess what the model will struggle with. Run it, observe, fix one real problem at a time.
 
 ### 3. "Farming" rollouts
-- Start many runs overnight (for example: 4 agents, each trains one skill).
-- In the morning, ask each: what burned time, what was missing from the SDK.
+- Start many runs at once (for example: 4 agents, each trains one skill).
+- After the runs, ask each: what burned time, what was missing from the SDK.
 - Filter the feedback by hand. Bad feedback types:
   - "Give me a function that does the whole task" (wrong: the agent must still play).
   - "The game is bugged" (wrong: a false belief about the system).
@@ -40,8 +40,8 @@ Projects: https://github.com/MaxBittker/rs-sdk, https://github.com/MaxBittker/ru
 - Built on Harbor: each task = one Docker image. Harbor injects a coding agent, gives an instruction, runs it, collects the result. Standard format.
 - Good-benchmark layers: hard, verifiable, cheap (a 30 min task should become 5 min if possible), encodes desirable behavior (watch for Goodhart's law), interesting to others.
 - Scoring problem: "total XP in 30 min" punishes exploring.
-- Fix: score the **peak 15-second XP rate** in the run. Exploring is no longer punished.
-- Smart models then gamed the peak window. Quests give big XP drops, so top models did quests to spike the rate.
+- Fix: score the **peak 15-second XP rate** in the run. Exploring is not punished.
+- Smart models game the peak window. Quests give big XP drops, so top models did quests to spike the rate.
 - Final score: log of each skill score, averaged over 16 skills. Cost per run is shown too. A +0.3 log jump is a large multiplier.
 - Progress over about 10 months: Opus 5.5 = 13x Opus 4.5. "Astra" = 17x. Budget models = 5x at 40x cheaper.
 - Max thinks the benchmark is close to saturated. Next wins are "same score, cheaper". A harder bench needs 10x to 100x harder tasks, not "run longer".

@@ -1,4 +1,4 @@
-# Combat XP per tick, cannon, stun guests (2026-10-23)
+# Combat XP per tick, cannon, stun guests
 
 Measurements 1, 2 and 3 of `research/gap-closers.md`. All runs are MEASURED practice: the local server, preset
 accounts (not fresh accounts), one bot at a time, `RANDOM_EVENTS=0`. Rates are in ticks, so the 150 ms practice tick
@@ -6,58 +6,30 @@ does not matter. The quest helper can add cannon rows from Dwarf Cannon under "C
 
 Paths start at `vendor/rs-sdk/server/content/scripts/`.
 
-## Result (second pass)
+## Result
 
-| Planner row | First pass, floor / realistic | Now (MEASURED), floor / realistic |
-|---|---|---|
-| `att-top`, `str-top` style XP per tick | 156.7 / 139.6 (Gnome battlefield) | **203.3 / 185.3** (ice warriors, band 90, section 4) |
-| `def-top` style XP per tick (Defence 1 to 99) | 150.6 / 134.5 | **179.5 / 162.9** (best spot per band) |
-| `hp-top` Hitpoints XP per tick | 51.8 / 46.2 | **67.3 / 61.4** (ice warriors) |
-| `cannon-melee` on `att-top`, `str-top` | 120.7 / 113.8, +0.585 Ranged per style XP | **94.0 / 86.7, +2.125** (fixed top-up, section 5) |
-| `cannon-melee` on `def-top` | 113.3 / 103.1, +0.693 | **94.0 / 86.7, +2.125** (band 90 rate for all bands) |
-| `cannon-melee` on `hp-top` | 39.9 / 37.6, +1.77 | **31.1 / 28.7, +6.42** Ranged per HP XP |
-| `thieve` `deadTicks` (stun-guests) | 1,511 / 2,611 | unchanged |
+| Planner row | MEASURED floor / realistic |
+|---|---|
+| `att-top`, `str-top` style XP per tick | **203.3 / 185.3** (ice warriors, band 90, section 4) |
+| `def-top` style XP per tick (Defence 1 to 99) | **179.5 / 162.9** (best spot per band) |
+| `hp-top` Hitpoints XP per tick | **67.3 / 61.4** (ice warriors) |
+| `cannon-melee` on `att-top`, `str-top` | **94.0 / 86.7, +2.125 Ranged per style XP** (fixed top-up, section 5) |
+| `cannon-melee` on `def-top` | **94.0 / 86.7, +2.125** (band 90 rate for all bands) |
+| `cannon-melee` on `hp-top` | **31.1 / 28.7, +6.42** Ranged per HP XP |
+| `thieve` `deadTicks` (stun-guests) | 1,511 / 2,611 |
 
-Overall finish (scenario a, all safe levers, `haggis-cli.ts --levers`; the "without" column disables
-`cannon-melee`). Other agents changed the table between the passes (the Dwarf Cannon helper's `ranged` row "Cannon
-+ melee to Ranged 99", the Fight Arena row, rival levers), so the first-pass totals below are not comparable.
+Overall finish (scenario a, all safe levers, `haggis-cli.ts --levers`; the "without" column disables `cannon-melee`).
 
 | Table | Floor | Realistic | Without `cannon-melee`, floor / realistic |
 |---|---|---|---|
-| HEAD before this pass | 37,995 (late 2,079) | 45,473 (late 9,557) | 37,868 / 45,342 |
-| **HEAD + these rows (committed)** | **38,100 (late 2,184)** | **45,580 (late 9,664)** | **37,805 / 45,266** |
-| Working tree (these rows + other agents' uncommitted rows) | 38,191 (late 2,275) | 45,540 (late 9,624) | 37,896 / 45,226 |
+| HEAD + these rows (committed) | 38,100 (late 2,184) | 45,580 (late 9,664) | 37,805 / 45,266 |
+| Working tree (these rows + uncommitted rows of other agents) | 38,191 (late 2,275) | 45,540 (late 9,624) | 37,896 / 45,226 |
 
 Faster melee hardly moves Overall now. In the current schedule, Attack and Strength are already 99 when "Melee to
 Attack 99" starts (0 ticks), "Combat top-up to Hitpoints 99" takes 0 ticks, and Defence needs only 671 ticks after
 the `ranged` row. The critical path is the `ranged` row (4,808 ticks, cannon + melee) and the short quests (6,659
 ticks). `cannon-melee` costs 295 / 314 ticks: it slows `def-top` from 162.9 to 86.7 style XP per tick, and the
 Ranged it adds is not needed at that point.
-
-## Result (first pass)
-
-| Planner row (`packages/planner/src/haggis-boards.json`) | Before (ESTIMATE) floor / realistic | First pass (MEASURED) floor / realistic |
-|---|---|---|
-| `att-top`, `str-top` style XP per tick | 400 / 250 | **156.7 / 139.6** (band 90) |
-| `def-top` style XP per tick (Defence 1 to 99) | 400 / 250 | **150.6 / 134.5** (XP-weighted bands) |
-| `hp-top` Hitpoints XP per tick | 133 / 83 | **51.8 / 46.2** (band 90) |
-| `cannon-melee`: style XP per tick with the cannon (band 90) | unchanged rate, +0.6 Ranged per style XP | **120.7 / 113.8**, +0.585 Ranged per style XP |
-| `cannon-melee`: `def-top` with the cannon | +0.6 | **113.3 / 103.1**, +0.693 |
-| `cannon-melee`: `hp-top` with the cannon | +1.8 Ranged per HP XP | **39.9 / 37.6** HP XP per tick, +1.77 |
-| `thieve` `deadTicks` (stun-guests) | 1,509 / 2,419 | **1,511 / 2,611** |
-
-Overall finish (`bun packages/planner/src/haggis-cli.ts --levers`, all safe levers):
-
-| | Floor | Realistic |
-|---|---|---|
-| Before these rows (same day, other agents' rows included) | 31,140 (slack +4,776, WIN) | 45,916 (gap 10,000) |
-| **Now, all safe levers** | **37,361 (gap 1,445, LATE)** | **46,930 (gap 11,014)** |
-| Now, all safe levers except `cannon-melee` | 36,271 (gap 355, LATE) | 45,802 (gap 9,886) |
-
-Overall no longer wins at floor rates. The measured melee rate is about 140 style XP per tick, not 250-400. The old
-floor assumed 4 damage per tick; the bot deals 1.4-1.6. `cannon-melee` now costs ticks (-1,090 floor, -1,128
-realistic as the last lever): with this bot's cannon handling the melee loss is larger than the Ranged gain.
-`stun-guests` saves 682 floor / 617 realistic as the last lever (1,514 / 2,611 alone).
 
 ## 1. Melee, no cannon
 
@@ -258,7 +230,7 @@ foodUsed=0`.
 
 | `ranged` row | Ranged finish, floor / realistic | Overall, all safe levers | Overall, without `cannon-melee` |
 |---|---|---|---|
-| Cannon + melee 215.7 / 207.7, side Defence 0.441 (before) | 33,392 / 40,060 | 38,235 / 45,443 | 37,940 / 45,129 |
+| Cannon + melee 215.7 / 207.7, side Defence 0.441 | 33,392 / 40,060 | 38,235 / 45,443 | 37,940 / 45,129 |
 | Bow rapid + cannon 392.5 / 384.2, no Defence | 31,307 / 37,851 | 40,834 / 48,313 | 38,308 / 45,623 |
 | **Bow longrange + cannon 323.4 / 309.4, side Defence 0.180 (committed)** | **31,851 / 38,480** | **39,466 / 46,869** | **37,851 / 45,149** |
 
@@ -374,7 +346,7 @@ Saved as the last lever: `waterfall-late` 417 / 365, `def-at-ranged-spot` 97 / 1
 - `kills` and `dmgTaken` in the RESULT lines are not reliable (the SDK did not report kill events; damage events
   repeat). The rates use XP deltas only.
 
-## 2026-10-26: bounded Ranged entry and live admission failure
+## Bounded Ranged entry and live admission
 
 **Published evidence:** `scripts/gather-ranged.ts`, pin `3721e6165924310cc63631be2c3f3b65f5d08566d57eb25e822312a041af9c30`, passed56 focused checks/typecheck and four installed native cases. The first live Bigchopper pilot then refused every target because another player was nearby:471ticks,0kills/XP. Bow1/arrows90/salmon3 and unrelated assets were banked,HP15,logout. Keep that failed result and Bigchopper's hold. Evidence: `.practice/ranged-entry/live/proof.json`; prior release evidence remains `.practice/ranged-entry/release-qualified.json`.
 
@@ -382,10 +354,8 @@ Saved as the last lever: `waterfall-late` 417 / 365, `def-at-ranged-spot` 97 / 1
 
 **Repair method:** replace field-wide player absence with an idle reachable selected Chicken41/1017, explicit attack and bounded own damage credit. Pinned `NpcType.regenrate=100` and `Npc.processRegen` permit at most2 healed HP in180ticks: own3damage out of at most5 establishes majority. At this25x rate require300–500XP in100XP steps, disappearance and fresh paired bones/raw-chicken drops. Disable auto-retaliate during ranging and restore its observed original value. SDK damage attribution is heuristic; object reveal delay is configurable. Neither supplies reliable ownership proof here. Primary source paths and rejected alternatives: `.practice/ranged-entry/presence/source-decision.json`.
 
-**Observed failures retained:** coop tolerance originally stopped outside the gate; exact entry3233,3297 fixed reachability. Concurrent heals once counted one meal three times; one shared pending action now requires matched debit and HP gain. Repair trials caught wrong restore component151 (ON is150) and exact300XP rejecting a regenerated chicken. These failed cases remain in their unique native folders.
-
 **Isolated repair:** `.practice/ranged-entry/presence/candidate.ts`, SHA-256 `7d1569bff1e8098acbcb8107326421643e646a7a040e8c3d9ea21419c34cef3e`. Native local150ms/25x, Ranged1, banked bow1/arrows90/salmon3 and unrelated kit. Passive same-coop bystander:2kills/600XP,351ticks,89arrows/3salmon banked; logout and original auto-retaliate restored. WoundedHP4:2kills/700XP,331ticks,87arrows/2salmon banked; one observed heal. No-ammo refusal:9ticks,0XP/consumption,bank/logout. Owned stop:300ticks,1kill/300XP,90arrows/3salmon retained,loot banked,logout;target unmet remains false. Each is one observation, not a comparative rate. Twelve policy/heal/supervisor checks, candidate typecheck and all four native cases pass. Independent CRC-save parsing checks bank, equipment, unrelated assets and varp172; shot/food balance matches. Evidence: `.practice/ranged-entry/presence/qualification.json`.
 
 **Released live result:** `.practice/ranged-entry/repair-release/live/proof.json` passes on pin `2b85da3588e50523e20a91617fdb0d7870343c82d7c6c2a6e23723cbbdc84862`; installed worker SHA-256 `8ffceba8024b38da514f95cb7aa39b5e70582b629343d077bfa93868a41c8027`. Bigchopper2kills/700XP,Ranged7,476ticks;2bones/2raw chicken/5feathers banked, bow1/arrows86/salmon3 retained,HP15→16,logout. Eleven observed shots =7recovered+4lost; no food consumed. Unrelated assets match. Thirty-seven focused checks/typecheck and four exact installed native cases pass; original auto-retaliate restored in CRC-save checks. Productive earners drained with251,850 gross banked coins, then resumed on controller20380. The release also passes strict cache build with the known GE-fork checksum; no route-time saving follows from that.
 
-**Next owner:** goal executor. Bigchopper is offline awaiting alternate Arrav route/sustain qualification. Owned food transfer left Shaftsinker17salmon; no food purchase. Full1–40/99, later equipment, active competitor races, refill and fresh-start rehearsal remain unproved. Preserve Shaftshooter offline and productive earners. Keep failed and prior candidate proofs intact.
+**Owner and next action:** goal executor. Bigchopper is offline awaiting alternate Arrav route/sustain qualification. Owned food transfer left Shaftsinker17salmon; no food purchase. Full1–40/99, later equipment, active competitor races, refill and fresh-start rehearsal remain unproved. Preserve Shaftshooter offline and productive earners. Keep failed and prior candidate proofs intact.

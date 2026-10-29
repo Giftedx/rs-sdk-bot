@@ -1,4 +1,4 @@
-# Quest XP at 25x (2026-10-23)
+# Quest XP at 25x
 
 From knowledge/quests.json (each quest's stat_advance calls; the file stores whole XP, the server multiplies by 25).
 Not yet checked: rewards that are a choice of skill, lamps, and each quest's requirements and playtime.

@@ -1,6 +1,6 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
-# Game tricks on this server, and how we use them (2026-10-23)
+# Game tricks on this server, and how we use them
 
 Sources: a web catalog of known RuneScape tricks (OSRS wiki and others; every rate there is an Old School figure),
 and a code check of this server (`vendor/rs-sdk/server`). Status: **proven** = measured here; **code** = read in

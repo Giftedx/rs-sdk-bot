@@ -1,6 +1,6 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Current authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
-# Tick tricks and speed methods: web catalog checked against rev 289 (2026-10-23)
+# Tick tricks and speed methods: web catalog checked against rev 289
 
 Scope: known tick-manipulation and speedrun methods per skill (mostly Old School RuneScape sources), each checked
 against this server's content (`vendor/rs-sdk/server/content/scripts`, abbreviated `c/`) and engine
@@ -13,7 +13,7 @@ Status words:
 - **no**: the code shows that the trick does not work here.
 - **UNVERIFIED**: I could not check it in code or in a fetched source.
 
-All XP figures are base XP (before the 25x server rate) unless the row says x25.
+All XP figures are base XP (without the 25x server rate) unless the row says x25.
 `stat_advance` takes tenths of XP (`stat_advance(agility, 4989)` = 498.9 XP).
 
 ## 0. Engine rules that decide every trick
@@ -171,7 +171,7 @@ Fastest Crafting here: battlestaves or gems at 5 per tick. Supply is the limit. 
 
 | Item | Evidence | Status |
 |---|---|---|
-| First log: roll 3 ticks after the first attempt. After a success or a failure, the next roll is 4 ticks later | `c/skill_firemaking/scripts/firemaking.rs2:54-75, 98-116` | code: **4 ticks per log** at best |
+| First log: the roll comes 3 ticks after the click. Every later roll comes 4 ticks after the previous roll, success or failure | `c/skill_firemaking/scripts/firemaking.rs2:54-75, 98-116` | code: **4 ticks per log** at best |
 | Success roll `stat_random(64, 512)`: about 25% at level 1, 100% at about 43 | `firemaking.rs2:61,105`; the OSRS wiki gives 65/256 at 1 and 256/256 at 43 (https://oldschool.runescape.wiki/w/Firemaking) | code + web agree |
 | Line-up: the player is pushed west, then east, south, north | `firemaking.rs2:145-174`; the same order is on the OSRS wiki page | code |
 | Knife-on-log before the first light | sets `%action_delay = T+2`, so the first roll comes 1 tick sooner. Saves 1 tick per line, not per log | code (small) |

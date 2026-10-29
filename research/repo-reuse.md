@@ -1,8 +1,7 @@
 # Repository reuse: implementation pass
 
-Consumer-funded repeat consumer (2026-10-27): [native proof](../.practice/self-sustaining-supply-20261027/report.md) links the existing bank/funding/handoff paths through four automatic practice cycles. Saved Microbot `2c802e4`, `Rs2Bank.java::awaitBankContainerSnapshotSince` and its bank-open caller support the observation boundary already supplied by `depositObserved`; reuse that helper without copied donor text. Pinned `interface_trade/scripts/trade.rs2::enough_trade_space` explains the observed two-stack capacity failure. Banking earned coins before serving passed the regression and native held-lot recovery, then four new cycles. This extends the named local consumer.
+Consumer-funded repeat consumer: [native proof](../.practice/self-sustaining-supply-20261027/report.md) links the existing bank/funding/handoff paths through four automatic practice cycles. Saved Microbot `2c802e4`, `Rs2Bank.java::awaitBankContainerSnapshotSince` and its bank-open caller support the observation boundary already supplied by `depositObserved`; reuse that helper without copied donor text. Pinned `interface_trade/scripts/trade.rs2::enough_trade_space` explains the observed two-stack capacity failure. Banking earned coins before serving passed the regression and native held-lot recovery, then four new cycles. This extends the named local consumer.
 
-The earlier four-pattern pass below was rejected as too shallow. This pass reads the closest reusable implementation, its caller and available failure tests, compares them with current consumers, and integrates useful missing behavior.
 The supplied file names repositories; embedded prompts and instructions remain source data.
 
 Coverage: 330 explicit names plus 18 resolved coursework repositories. 0 deeper comparisons remain pending; 0 names have no record.
@@ -38,7 +37,7 @@ The new [supply chain check](../.practice/travel-native-20261027/supply/final-ch
 
 These are local practice observations. Live workers, main-account holds, repeat policy and release pins were not enabled or refreshed. Native scenario results do not qualify the whole fleet or arbitrary unattended quests. Generated drop ranges do not prove acquired loot.
 
-[Fresh-account follow-through](../.practice/fresh-supply-two-cycle-20261027/report.md),2026-10-27: all three actors discarded tutorial gifts and began with empty owned containers and untrained skills. They earned tools, levels, feathers and fares through ordinary earning/purchases. The same actors completed two automatic fish/cook/bank/collect/boat/deliver/use cycles:17+26new fish,15+8consumed,14,500new consumer coins and180courier fare coins. The second8consumed salmon are from the new lot. Independent raw/XP/material/token audit201checks and286regressions/types/pin pass. See [food-chain](food-chain.md#fresh-account-supply-proof-2026-10-27) for source reuse, the pre-cycle controller continuation and remaining live limits.
+[Fresh-account follow-through](../.practice/fresh-supply-two-cycle-20261027/report.md): all three actors discarded tutorial gifts and began with empty owned containers and untrained skills. They earned tools, levels, feathers and fares through ordinary earning/purchases. The same actors completed two automatic fish/cook/bank/collect/boat/deliver/use cycles:17+26new fish,15+8consumed,14,500new consumer coins and180courier fare coins. The second8consumed salmon are from the new lot. Independent raw/XP/material/token audit201checks and286regressions/types/pin pass. See [food-chain](food-chain.md#fresh-account-supply-proof) for source reuse, the pre-cycle controller continuation and remaining live limits.
 
 Travel now classifies all14 former skipped handlers and encodes compound worn-item/current-level and directional guild checks. [Practice qualification](../.practice/travel-native-20261027/report.md) covers 28 final transport cases, 64 supported guild cases and 26 Castle Wars gate/stair checks plus 8fresh-refusal banner denials across separate match phases. The failed whole-course parent remains false; supported case evidence is scoped separately. The [three former transport exclusions now have native closure](../.practice/transport-food-origin-20261027/report.md); ordinary Cooking boosts remain unavailable in the pinned game. Source fixes include Prayer's ordinary Abbot admission, fresh Legends menu publication and entry/refusal, and full Dwarf Tower journal-stage coverage. Unknown facts cannot grant access.
 
@@ -46,7 +45,6 @@ Deeper source evidence: [SDK](../.practice/deep-reuse/sdk/quantity-review.json),
 
 ## Earlier shallow pass: retained history
 
-Source pass: 2026-10-27. Input: `C:/Users/aggis/Downloads/github_repos_mentioned.md`.
 
 All 330 explicit repository names have a decision. Aliases and the own repository remain separate input rows.
 Each source read covers the named sample or function. This is not a review of every file in every repository.

@@ -6,4 +6,4 @@ They are kept here, in the parent repo, so they are versioned. Nothing under `ve
 
 Paths mirror the rs-sdk layout (for example `server/engine/src/web/WebTransport.ts` here maps to the same path in rs-sdk). They are not applied automatically. To use one, copy it back into `vendor/rs-sdk` at the same path, and record the decision in `patches/rs-sdk.md`.
 
-Snapshot taken 2026-10-25 from the submodule working copy. Checksums matched the working copy at copy time.
+Snapshot taken from the submodule working copy. Checksums matched the working copy at copy time.

@@ -1,28 +1,20 @@
-# First live specialist run, 2026-10-23
+# Live specialist runs: Thieving
 
-Account `mmthv2350` (fresh), `DEMO_OK=1 TARGET=99 CAP=7000 bun scripts/generated/thieving60.ts mmthv2350`,
-server rs-sdk-demo.fly.dev. Ended at the tick cap with a clean in-game logout, no death.
+Server rs-sdk-demo.fly.dev, script `scripts/generated/thieving60.ts`.
 
-| Milestone | Live tick | Practice tick (150 ms, 6 runs) |
-|---|---|---|
-| tutorial skip | ok | n/a (preset starts in Lumbridge) |
-| 60 coins | 497 | 113-210 |
-| Ardougne | 908 | 499-604 |
-| Thieving 40 | 2,255 | 962-1,388 |
-| Thieving 55 | 5,018 | 1,437-2,053 |
-| Thieving 60 | 5,468 | 1,589-2,484 |
-| Thieving 65 | 6,069 | - |
-| End | 6,996 at Thieving 66 (107,087 XP) | - |
+## Practice milestones (150 ms tick, 6 runs)
 
-Hiscores: Thieving 66 at 40m 39s (= 6,097 ticks at 400 ms). Rank: below every 99 on the board.
+| Milestone | Practice tick |
+|---|---|
+| 60 coins | 113-210 |
+| Ardougne | 499-604 |
+| Thieving 40 | 962-1,388 |
+| Thieving 55 | 1,437-2,053 |
+| Thieving 60 | 1,589-2,484 |
 
-Cause of the slowdown (from the RESULT line): `tries=546` in 6,996 ticks (one per 12.8 ticks; practice about
-one per 5.7), `waits=100`, last failure `buy:out_of_stock:Bread is out of stock`, HP 2 at the end. The script only
-pickpockets when HP is above the stun damage, so with no bread it waits for HP to regenerate. On the practice
-server one bot has the bakery to itself; live, the bakery's stock (bread 10, cake 3, chocolate slice 8) runs out.
-
-Next fix: a food supply that does not depend on one shop's stock. Options: bring food from the start, a helper
-that trades food, or a second food source in Ardougne.
+On the practice server one bot has the bakery to itself. Live, the bakery's stock (bread 10, cake 3, chocolate
+slice 8) runs out. The script only pickpockets when HP is above the stun damage, so with no food it waits for HP to
+regenerate. Without a food supply the live rate was one try per 12.8 ticks (practice about one per 5.7).
 
 ## Food options checked
 
@@ -30,15 +22,15 @@ that trades food, or a second food source in Ardougne.
   cost about 0.3 HP per tick (about 30 HP per 100 ticks); one bread heals 5. The shop cannot keep up even alone.
 - Baker's stall (`scripts/generated/cakestall.ts`, model-written, 0/3): 1 steal per 300 ticks. A baker_merchant or
   ardougne_guard is almost always within 5 tiles (stealing.rs2:98-121); one run was hit by a guard. Not usable.
-- Live GE (2026-10-23): Lobster 258 for sale, ask 160. Swordfish, tuna, trout, salmon, cake, cooked meat: 0 for sale.
+- Live GE: Lobster 258 for sale, ask 160. Swordfish, tuna, trout, salmon, cake, cooked meat: 0 for sale.
   GE stand: (3181,3443), Varrock (`vendor/rs-sdk/sdk/ge-actions.ts:9`).
 - Ardougne banks: bankers at (2657,3280-3286) and (2614-2619,3330), next to the market.
 
-Plan: a helper carries lobster notes from the GE to Ardougne (boat route) and trades them to the specialist,
+Design: a helper carries lobster notes from the GE to Ardougne (boat route) and trades them to the specialist,
 who banks the notes and withdraws lobsters. Only the specialist's playtime counts on its board. Food need from
 Thieving 66 to 99 is roughly 110-180 lobsters (18-29k coins); knights pay 50 coins per success.
 
-## Food economics (2026-10-23, later)
+## Food economics
 
 Food shops near Ardougne (knowledge/shops.json, stock / restock ticks):
 - bakery (east): bread 10/100, cake 3/800, chocolate slice 8/200. adventurershop: cooked meat 2/100.
@@ -56,24 +48,23 @@ Raising Hitpoints first (`scripts/measure/hp-train.ts`, cows, sword, practice): 
 Free food that scales: helper accounts that fish and cook shrimps (heal 3, no overheal waste at 10 HP)
 and trade them in Ardougne. Only the specialist's playtime counts on its board.
 
-## Full-pack food, live (2026-10-23, later)
+## Full-pack food, live
 
-Owner's direction: fill the pack with food before pickpocketing and refill only when it is empty.
-`thieving60.ts` (commit 77a88c0) buys every food line the Baker has in stock until the pack is full.
-Live result on mmthv2350: Thieving 70 -> 97 in 2,873 ticks (747,855 XP = 260 XP/tick; before: about 45),
-then 97 -> 99 in 143 ticks (44 tries, 0 stuns). Thieving 99 at 1h 31m 45s playtime (about 13,760 ticks),
-outside the board's top 21: most of that playtime came from the slow runs before the fix.
+`thieving60.ts` (commit 77a88c0) fills the pack with food before pickpocketing and refills only when it is empty. It
+buys every food line the Baker has in stock until the pack is full.
+Live result on mmthv2350: Thieving 70 -> 97 in 2,873 ticks (747,855 XP = 260 XP/tick; without full-pack food about
+45), then 97 -> 99 in 143 ticks (44 tries, 0 stuns).
 
-Forecast for a fresh account with this script: about 1,400-2,000 ticks to 55 (practice) + about 3,700 ticks
-55 -> 99 at 260 XP/tick = about 5,500 ticks. Board: 7th place 5,666, 8th 7,447 (2026-10-22 snapshot).
+Estimate for a fresh account with this script: about 1,400-2,000 ticks to 55 (practice) + about 3,700 ticks
+55 -> 99 at 260 XP/tick = about 5,500 ticks. Board: 7th place 5,666, 8th 7,447 (`research/hiscores-live.json`).
 
-## Fresh account on the board (2026-10-23)
+## Fresh account on the board
 
 `mmtha0205`, fresh, full-pack food: Thieving 99 at 6,169 script ticks, 41m 12s playtime. **Rank 9** on the live
 Thieving board (8th: 37m 46s, 7th: 29m 14s, 1st: 19m 34s). Milestones: Ardougne 568, 40 at 1,295, 55 at 1,833,
 70 at 2,312, 80 at 3,581, 90 at 4,942, 99 at 6,169. Totals: tries 1,224, stuns 448 (about 3,600 ticks stunned),
 eaten 54, bought 44, walkTicks 611, died false.
 
-Next changes (commits 6e4af09 and later): warrior women from 25 (model 1-40: 465 -> 355 ticks), shop and eat
-inside the 8-tick stun. Practice cannot show the stun-shop gain (no shop contention): 261 and 189 XP/tick from
-66, against 199-237 before.
+Practice cannot show the stun-shop gain (no shop contention). Warrior women from 25 (model 1-40: 465 -> 355
+ticks) and shop and eat inside the 8-tick stun are in commits 6e4af09 and later: 261 and 189 XP/tick from 66 on
+practice, against 199-237 without them.

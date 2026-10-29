@@ -1,12 +1,12 @@
-# Quest plan for the combat boards and Quest Points (2026-10-23)
+# Quest plan for the combat boards and Quest Points
 
 Sources: `research/quest-xp.md` (XP per quest at 25x), `research/quest-route.md` (routes and OSRS requirements),
 `knowledge/quests.json`, the rev 289 quest scripts under `vendor/rs-sdk/server/content/scripts/quests/`, and the
 leader snapshot `research/hiscores-2026-10-22.json`. Evidence levels follow `research/INDEX.md`.
 
-## Current observation path (2026-10-26)
+## Current observation path
 
-Offline integration: [preparation](../.practice/shared-supply/preparation.json) now evaluates shared quest prerequisites and alternative tools from dated account flags; unknowns stay unknown. Rune Mysteries completion requires the journal flag, never the starting/reward talisman. Restart after package handoff tries Aubury for notes with bounded dialogue retries; other missing-item stages may still require recovery. [95 tests](../.practice/shared-supply/combined-tests.txt) cover the focused batch; [Native recovery](../.practice/shared-supply/rune-fixed-proof.json), 2026-10-26: seeded stage 4, Magic 40 and runes, no package/notes → flag 6 → bank; completed restart changes no inventory or position. Original runner completed the quest but falsely failed by checking Varrock teleport against the bank. [Candidate](../.practice/shared-supply/rune-finish.patch) checks the landing then walks to bank; 374 ticks, zero retries, clean logout. Installed in the [coordinated release](../.practice/release-next/activation.json); other missing-item stages and no-rune fallback remain unproved. Failed baseline retained in `rune-native-proof.json`.
+Offline integration: [preparation](../.practice/shared-supply/preparation.json) now evaluates shared quest prerequisites and alternative tools from dated account flags; unknowns stay unknown. Rune Mysteries completion requires the journal flag, never the starting/reward talisman. Restart after package handoff tries Aubury for notes with bounded dialogue retries; other missing-item stages may still require recovery. [95 tests](../.practice/shared-supply/combined-tests.txt) cover the focused batch; [Native recovery](../.practice/shared-supply/rune-fixed-proof.json),: seeded stage 4, Magic 40 and runes, no package/notes → flag 6 → bank; completed restart changes no inventory or position. Original runner completed the quest but falsely failed by checking Varrock teleport against the bank. [Candidate](../.practice/shared-supply/rune-finish.patch) checks the landing then walks to bank; 374 ticks, zero retries, clean logout. Installed in the [coordinated release](../.practice/release-next/activation.json); other missing-item stages and no-rune fallback remain unproved. Failed baseline retained in `rune-native-proof.json`.
 
 `packages/core/src/quest-status.ts` maps all 68 journal components. It reads each client's server-set colours passively; untouched red and untransmitted varp defaults stay unknown. Status snapshots carry per-quest flags. Existing workers are not restarted for capture. Reward extraction remains separate: `knowledge/quests.json` has 64 quests / 138 QP. [Dashboard evidence](../.practice/goal-gaps/verification.json) records observed coverage, not completion of unobserved accounts.
 
@@ -15,8 +15,7 @@ Offline integration: [preparation](../.practice/shared-supply/preparation.json) 
 Script `scripts/generated/waterfall.ts`, preset `quest_waterfall` (beside Almera, 10 HP, 2 ropes, 6 air, earth and
 water runes, 18 lobsters, 500 coins). Practice server, 150 ms tick, one bot at a time.
 
-3/3 PASS with the final script (MEASURED practice, 2026-10-23). The three proof runs are `g1`, `h1`, `h2`;
-the script did not change between them. Run `g1` ran before a power cut, `h1` and `h2` after it.
+Baseline script, 3/3 PASS (MEASURED practice). The three proof runs are `g1`, `h1`, `h2`; the script did not change between them.
 
 | Run | RESULT line (cut) | Ticks | Attack XP | Strength XP | Eats | HP min |
 |---|---|---|---|---|---|---|
@@ -29,11 +28,6 @@ Every run ends with `Congratulations! Quest complete!`; the quest gives 1 QP (`q
 XP per tick of quest time: 687,500 / 1,161 = **592 combat XP per tick** (296 Attack + 296 Strength). The Attack #1
 averaged 998,458 / 4,728 = 211 Attack XP per tick; the Strength #1, 998,458 / 4,966 = 201. Waterfall alone gives
 34% of each 99 in 1,161 ticks, 25% of the Attack leader's time.
-
-Earlier, 0/3 in 3 author attempts and 8 deaths (`research/run-learnings-2026-10-23.md:97-103`). Before the final
-proof: 1 FAIL with the door fix but 10 lobsters and `bot.walkTo` in the falls
-(`RESULT fail died during walk 2564,9880 ... eats=10 lobsters=0`); 2 PASS from the `quest_waterfall_falls` preset
-(135 and 140 ticks from the crate).
 
 Run h2 had HP 2. The low point is not traced (no `WF_TRACE` in proof runs). 6 lobsters were left, so food was not
 the limit; one more spider hit at that tick could kill. This is the main risk left.
@@ -51,8 +45,8 @@ low-HP points print as `WARN hp`.
 | m2 | `RESULT ok attackXp=343750 strengthXp=343750 at=2603,9912,0 ticks=1037 hpMin=4 eats=9 lobsters=9 died=false` | 1,037 | 223 (21.4%) | 604 |
 | m3 | `RESULT ok attackXp=343750 strengthXp=343750 at=2603,9912,0 ticks=1031 hpMin=4 eats=8 lobsters=10 died=false` | 1,031 | 216 (20.8%) | 609 |
 
-Before: 1,160, 1,164, 1,160. After: 1,030, 1,037, 1,031, so 129 ticks (11%) faster. 343,750 Attack + 343,750
-Strength in 1,033 ticks = **666 combat XP per tick**. The rival's 979 (UNVERIFIED) is now 54 ticks ahead.
+The baseline took 1,160, 1,164, 1,160 ticks; this script takes 1,030, 1,037, 1,031, so 129 ticks (11%) faster. 343,750 Attack + 343,750
+Strength in 1,033 ticks = **666 combat XP per tick**. The rival's 979 (UNVERIFIED) is 54 ticks ahead.
 
 The cut by segment (m1 against h1): Hadley to the gnome cellar fell from 270 to 236 ticks (h1 126-396, m1 113-349), the maze out and the walk to the tombstone from 302 to 241
 (h1 522-824, m1 454-695), the tombstone idle from 15 + 14 to 11 + 9 ticks.
@@ -90,7 +84,7 @@ on the tick after the rune lands; (4) the Hudon dialogue wait.
 
 ### Cause of the 8 deaths at the giant door
 
-The earlier runs did not die to one big hit. They died because the bot could not reach the giant door at all.
+The deaths were not one big hit. The bot died because the bot could not reach the giant door at all.
 
 1. A closed double door (loc 1516 and 1519, "Large door", at 2564,9881 and 2565,9881; `maps/m40_154.jm2`, LOC
    lines `0 4 25` and `0 5 25`) shuts the fire giant room from the south room. CODE-READ.
@@ -120,7 +114,7 @@ Script `scripts/generated/dwarfcannon.ts`, preset `quest_dwarfcannon`. The prese
 Strength 99, Defence 89, Hitpoints 97, Ranged 1, and Crafting, Smithing and Magic 99. The pack holds 8 lobsters,
 500 coins, 2 law, 8 air and 1 water rune. Practice server, 150 ms tick, one bot at a time.
 
-3/3 PASS (MEASURED practice, 2026-10-23):
+3/3 PASS (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | Railing tries / fails | HP min |
 |---|---|---|---|---|---|
@@ -153,7 +147,7 @@ Random parts and how the script handles them:
    (`mcannon_broken_cannon.rs2:90-96`). At Smithing or Crafting 99 the roll cannot fail. The script still retries
    both, so it also works at low levels (not run below 99).
 3. A click sent on the tick after "manage to fix it" or a railing success lands inside `p_delay(2)`. The server
-   drops it. The script sends it again every 2 ticks. Before this fix, each part cost 16 more idle ticks.
+   drops it. The script sends it again every 2 ticks. Without the resend, each part costs 16 more idle ticks.
 
 Findings from the failed attempts:
 
@@ -170,7 +164,7 @@ Dialogue: the lite client sends one continue per page (`webclient/src/lite/actio
 `resumedPauseButton`), so 190 of the 888 ticks are dialogue. The walk from the Waterfall end to the commander is not
 counted.
 
-**Dialogue burst, MEASURED practice 2026-10-29.** Claim: raw `RESUME_PAUSEBUTTON` bursts halve dialogue time.
+**Dialogue burst, MEASURED practice.** Claim: raw `RESUME_PAUSEBUTTON` bursts halve dialogue time.
 Conditions: local practice server at 400 ms, fresh accounts (`fresh_lumbridge`), Father Aereck's welcome talk
 (`father_aereck.rs2`: 13 continue pages in blocks of 1, 5, 4, 3 between 3 choices = 16 pages), 3 runs x 3 talks per
 method, `scripts/measure/dialogue-pace.ts`. Evidence (`.practice/dialogue-pace-20261029/runs.log`): quest-lib
@@ -180,26 +174,17 @@ method, `scripts/measure/dialogue-pace.ts`. Evidence (`.practice/dialogue-pace-2
 are valid. Cairn reports 16 ticks for one page a tick and 7 for their burst; ours still waits for each choice page.
 Gap: page counts per quest are not measured, so the quest rows keep their measured ticks. Estimate only: Dwarf Cannon
 spends 190 ticks on dialogue, so a burst would save about 100 (11%); on the quest rows before Overall (about 12,400
-ticks) 7.5-11% is 930-1,400 ticks. Tried 2026-10-29 in a practice copy (`.practice/dialogue-pace-20261029/quests/`, `Q_BURST=1`: 5 blind continues on
-a page with no choice), 150 ms, 3 runs per case (`quest-runs.log`). Without the burst: Druidic Ritual 247, 244, 248
-ticks; Tree Gnome Village 800, 784, 812 (all PASS). With it: 0 of 6 PASS, each `fail talk <npc> 1`. The game advanced
-(Tree Gnome Village: the maze teleport at tick 12), but each talk step ends on `sawText` of a page the burst skipped.
-Next decision: record the text of every page the client receives, or end talk steps on quest varps.
-Recording every page text from the 31 chat interfaces (`interface.pack` ids of every interface `chat.rs2` sets text on;
-the server sets text before `IF_OPENCHAT`, so `chatModalId` cannot filter them): Druidic Ritual 216, 217, 217 with the
-burst against 248, 247, 247 without (3/3 PASS each, -31 ticks, 12.6%). Tree Gnome Village 0/3 with the burst: the
-ballista hit text (`quest_tree.rs2:23`) arrives before its page is answered, the script walks away, the walk closes the
-mesbox and `%treequest = ^tree_ballista_fired` never runs ("The wall is damaged, but not enough to climb.";
-`tree-burst-trace.log`). Quest varps cannot replace text checks live: 4 of 66 quest `.varp` files have `transmit=yes`
-(`treequest` and `druidquest` do not), so the client sees only the journal colour.
-Fix, MEASURED practice 2026-10-29 (150 ms, 3 runs per case, `quest-runs.log` "page-pending rule"): a page whose text
+ticks) 7.5-11% is 930-1,400 ticks. Blind continues alone fail: each talk step ends on `sawText` of a page the burst skipped. The client therefore records the text of
+every page it receives (the 31 chat interfaces: `interface.pack` ids of every interface `chat.rs2` sets text on; the server sets
+text before `IF_OPENCHAT`, so `chatModalId` cannot filter them). Quest varps cannot replace text checks live: 4 of 66 quest
+`.varp` files have `transmit=yes` (`treequest` and `druidquest` do not), so the client sees only the journal colour.
+Page-pending rule (MEASURED practice, 150 ms, 3 runs per case, `quest-runs.log`): a page whose text
 arrived after the last successful answer counts as open (`dialogOpen()`) for up to 5 ticks, so no step ends while a
 page waits; any successful `sendClickDialog` or burst answers it. All 12 PASS with full rewards (Druidic Ritual 6,250
 Herblore; Tree Gnome Village 2 QP, amulet, 286,250 Attack). Druidic Ritual 217, 216, 217 against 248, 248, 247 (-31,
 12.5%); Tree Gnome Village 699, 661, 667 against 756, 796, 819 (-114, 14.4%; the ballista milestone at 71-76 instead of
 139-141). Estimate only: the quest-lib quests before Overall (about 12,000 ticks) would save 1,500-1,750 ticks. Gap:
 the change lives in a practice copy; `scripts/generated/quest-lib.ts` belongs to `fresh-rune-supply-order`.
-Was: a burst option in `quest-lib.ts` `converse`, then 3 matched quest runs.
 
 ### Cannon session after the quest (MEASURED practice)
 
@@ -239,23 +224,21 @@ attack roll, so the Ranged level does not change the rate (CODE-READ there, not 
 The fix belongs in `scripts/measure/combat-melee.ts` (not changed here). With it, the `cannon-melee` lever patches
 in the melee rows would read about +2.3 Ranged per style XP, not 0.585.
 
-Planner (`packages/planner/src/haggis-boards.json`): row `cannon` is now 888 / 925 ticks MEASURED, needs Magic 45,
-and has no burst patch. Row `ranged` is now "Cannon + melee to Ranged 99" at 215.7 / 207.7 MEASURED, side XP 0.441
-Defence (defensive style, CODE-READ) and 0.146 Hitpoints per Ranged XP. Scenario a, `research/hiscores-live.json`,
-2026-10-23:
+Planner (`packages/planner/src/haggis-boards.json`): row `cannon` is 888 / 925 ticks MEASURED, needs Magic 45,
+and has no burst patch. Row `ranged` is "Cannon + melee to Ranged 99" at 215.7 / 207.7 MEASURED, side XP 0.441
+Defence (defensive style, CODE-READ) and 0.146 Hitpoints per Ranged XP. Scenario a, `research/hiscores-live.json`:
 
-| Board | Before (floor / realistic) | After (floor / realistic) |
-|---|---|---|
-| Ranged (#1 5,595) | 29,682 / 37,793 | 33,257 / 40,197 |
-| Hitpoints (#1 17,058) | 29,039 / 36,828 | 32,518 / 39,429 |
-| Overall (#1 35,916) | 38,306 / 47,340 | 37,995 / 45,473 |
+| Board | Floor / realistic |
+|---|---|
+| Ranged (#1 5,595) | 33,257 / 40,197 |
+| Hitpoints (#1 17,058) | 32,518 / 39,429 |
+| Overall (#1 35,916) | 37,995 / 45,473 |
 
-Ranged is later because the old row assumed 600 / 400 XP per tick with a bow (ESTIMATE). Overall is earlier because
-the cannon session now feeds Defence. A bow plus the cannon is not measured and could be faster.
+The cannon session feeds Defence. A bow plus the cannon is not measured and could be faster.
 
 ## 1c. Short quests (the `qp-filler` row)
 
-The schedule (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`, 2026-10-23,
+The schedule (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`,
 scenario a) has one ESTIMATE row for the short quests: activity 39, "Short quests to 32 QP", 6,659 ticks
 realistic for 7 quests (Romeo & Juliet, Goblin Diplomacy, Druidic Ritual, Ernest, Sheep Herder, Black Knights'
 Fortress, Prince Ali), about 951 each, and a separate Witch's House row of 832. Order of work: planned ticks, then
@@ -332,8 +315,8 @@ dialogue ticks in the LEDGER). The dialogue is the largest part left; a burst se
 The generals' hut has a shut double door in its south wall (loc 1516 at 2957,3509 and 1519 at 2958,3509,
 `maps/m46_54.jm2`). The SDK plan treats it as open. Shut, the client cannot route a talk to Wartface, and the click
 does nothing: `WARN talk wartface 1 no dialog: npc 2956,3511 d=2 me 2957,3509` in 3 of 3 tries, 4 failed runs in
-all. The first proof (172, 167, 172 ticks, committed in 883641e) passed only because an earlier run had left the
-door open. The script now opens both leaves by tile (`openDoor`).
+all. A proof that did not open the door (172, 167, 172 ticks) passed only because a prior run had left the
+door open. The script opens both leaves by tile (`openDoor`).
 
 Planner: row `gobdip` (169 / 177 MEASURED, 5 QP, places `rusty-anchor` to `goblin-village`, serves Quest Points
 only).
@@ -378,7 +361,7 @@ they do not move Overall; they move Quest Points and the start of Dragon Slayer 
 Script `scripts/generated/quest-crest.ts`, preset `quest_crest` (beside Dimintheis, 3280,3403). The quest ends at
 Avan with the goldsmith gauntlets that the superheat route needs. Practice server, one bot at a time.
 
-3/3 PASS (MEASURED practice, 2026-10-23):
+3/3 PASS (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | HP min | Eats |
 |---|---|---|---|---|---|
@@ -405,7 +388,7 @@ jewellery and the gauntlets are untradeable (`quest_crest.obj`), so Haggis does 
 
 Findings:
 
-- **The row cannot run where the floor order put it.** Before this work the floor order ran `crest` at tick 1,872,
+- **The row cannot run where the floor order puts it.** The floor order runs `crest` at tick 1,872,
   after `prayer-31`, with Magic 1 and 10 Hitpoints. Chronozon dies only after one successful hit of each of Wind,
   Water, Earth and Fire Blast (`crest_chronozon.rs2`, `player_magic.rs2:223`, in `pvm_spell_success`), and Fire
   Blast needs Magic 59. His room is in the Wilderness part of the Edgeville dungeon with poison spiders (64) beside
@@ -414,10 +397,10 @@ Findings:
   where Haggis still has about 10 Hitpoints. The preset is Haggis after Monkey Madness (Hitpoints 97, Defence 89)
   with Magic 59, so the proof is for that state, not for a 10-HP account (not run).
 - A blast that splashes sets no bit. In the rune set (magic bonus about -50) the blasts splashed until the runes ran
-  out in 2 of 6 earlier runs. Chronozon has no magic level, so the script takes off the helm, body, shield and legs
+  out in 2 of 6 runs. Chronozon has no magic level, so the script takes off the helm, body, shield and legs
   (4 ticks) before the first blast, and casts each blast until "Chronozon weakens". It then kills him with fire blasts.
 - Single-way combat: a poison spider that attacks first blocks every cast ("I'm already under attack!"). The script
-  kills it with the scimitar (NPC `targetIndex` 32768 + player index), then goes on. One earlier run died to the
+  kills it with the scimitar (NPC `targetIndex` 32768 + player index), then goes on. One run died to the
   spider's poison after the teleport out, so the script drinks the second antipoison before the fight.
 - Johnathon's `inv_del(inv, last_useitem, 1)` removes the whole 4-dose antipoison.
 - The gameMessages list is capped, so the script tells a new message by its `observationId`, not by a count.
@@ -431,9 +414,8 @@ with qp 1 the realistic end count was 143 and two tests failed). Scenario a, `re
 
 | Model | Overall floor | Overall realistic | Route (realistic) |
 |---|---|---|---|
-| Before (crest 1,200 / 3,000 ESTIMATE, no gate) | 38,583 | 47,248 | separate |
 | Measured ticks only, no gate | 38,562 | 46,011 | superheat |
-| Measured ticks and the Magic 59 gate (now) | 39,229 | 46,673 | superheat |
+| Measured ticks and the Magic 59 gate | 39,229 | 46,673 | superheat |
 
 Still open: the crest in the order needs a combat state that the planner does not model (Hitpoints); the walk from
 the previous activity to Dimintheis is not counted; the Al Kharid toll gate dialogue runs twice (not timed separately)
@@ -468,12 +450,8 @@ Overall finish, scenario a, `research/hiscores-live.json`:
 
 | Model | Overall floor | Overall realistic |
 |---|---|---|
-| Before (crest gate only) | 39,229 | 46,673 |
 | Combat gates and `prayer-43` (commit 53a17eb) | 39,243 | 46,690 |
 | Gates and Tree Gnome Village MEASURED (782 / 829) | 39,360 | 46,019 |
-
-The floor rises because the old `tree` floor was the rival's 938 (and 665 with the `rival-grandtree-agility`
-lever), both UNVERIFIED; the realistic finish drops 671 ticks against the old 1,500 ESTIMATE.
 
 ## 1f. Measured: Tree Gnome Village (the `tree` row)
 
@@ -481,7 +459,7 @@ Script `scripts/generated/quest-tree.ts`, preset `quest_tree` (beside King Bolre
 planner state at the row: Attack, Strength, Defence 1, 10 Hitpoints, Magic 43, Prayer 43; staff of fire, 80 chaos and
 240 air runes (Fire Bolt), 6 logs, 2 prayer potions, 4 lobsters. Practice server, one bot at a time.
 
-3/3 PASS (MEASURED practice, 2026-10-23):
+3/3 PASS (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | HP min | Potions |
 |---|---|---|---|---|---|
@@ -558,7 +536,7 @@ Paths below are under `vendor/rs-sdk/server/content/scripts/`; `qgt/` is `quests
 
 ### Proof
 
-3/3 PASS (MEASURED practice, 2026-10-23):
+3/3 PASS (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | Demon casts | Roots searched |
 |---|---|---|---|---|---|
@@ -610,11 +588,7 @@ Planner: row `grandtree` 2,001 / 2,083 MEASURED (also in the `rival-grandtree-ag
 
 | Model | Overall floor | Overall realistic |
 |---|---|---|
-| Before (grandtree 1,811 / 3,000 ESTIMATE) | 39,239 | 45,758 |
 | Grand Tree MEASURED (2,001 / 2,083) | 39,981 | 44,841 |
-
-The floor rises 742 ticks because the old floor was the rival's UNVERIFIED 1,811; the realistic finish drops 917
-ticks.
 
 Still open: the root search is random (1-13 roots, 12-139 ticks); a better tour from the trapdoor (search before
 Narnode is not possible, the root is set at 150) is not tried. The walk to Narnode is not counted. The preset has
@@ -622,27 +596,19 @@ Narnode is not possible, the root is set at 150) is not tried. The walk to Narno
 
 ## 1h. Monkey Madness (the `rival-mm` row): MEASURED end to end on practice
 
-### Current candidate gate, 2026-10-27
+### Current candidate gate
 
-Earlier whole-quest runs below do not verify the current guard candidate with today's walker. The [first full attempt](../.practice/mm-exit/guard-candidate/full-1793058431497/run1/proof.json) stopped at207ticks returning from Caranock. It logged out alive at2958,3015. The [offline model](../.practice/mm-exit/shipyard/blocked-model.json) reproduces that exact partial endpoint. `sessionWalker::applyKnownDoorBlocks` has no quest varps and blocks both shipyard gates. Outside the gate,the same pilot waypoint remains reachable.
+State: the guard candidate is unqualified. It needs three fresh full quests, installation and release. The full runs in the sections below do not verify it. Production source `b77b9247` and the timing model do not change.
 
-[Source decision](../.practice/mm-exit/shipyard/source-decision.json):rs-sdk `b565f2d9` `quest_grandtree.rs2::oploc1,_shipyard_gate/open_shipyard_gate` → MM stage30 → adapt existing `q.step/opLoc` to observe the authorized inside exit. Retain the generic unknown-quest guard. The sibling Grand Tree route teleports elsewhere,so it does not fit this pilot return. No external code copied. The [staged delta](../.practice/mm-exit/shipyard/lineage.json) inserts only this exit into the prior temple candidate.
-
-[Exact failed-save rehearsal](../.practice/mm-exit/shipyard/native-1793059097027/proof.json) obtains Narnode's orders4005 and logs out at the Grand Tree. It preserves five original worn items,12sharks andHP35,using one super-antipoison dose.122ticks cover this reduced checkpoint only. [Full repaired batch](../.practice/mm-exit/guard-candidate/full-1793059262250/proof.json):run1 passed5,213ticks,HPmin13,saved quest365=10,training XP,10000coins/3diamonds,gear and logout. Run2 failed at1,235ticks after three warehouse captures;HPmin10/final30,six sharks used,gear retained/logout. Run3 did not start. One pass does not qualify this candidate.
-
-[Warehouse trace](../.practice/mm-exit/warehouse/trace-1793060810065/proof.json):three unchanged reduced controls reached dentures/cellar/extraction,but each crossed the sleeping-guard rectangle before dentures;one also crossed it afterward. Pinned `mm_sleeping_monkey_guard.rs2` summons guards for humans at2762..2767,2767..2772. Long clicks let the client cut through it. Two path-only repairs failed:[first](../.practice/mm-exit/warehouse/native-1793061398574/proof.json) stopped after repeated captures with clean logout;[second](../.practice/mm-exit/warehouse/native-1793061596846/proof.json) looped west,reached HP6 and stopped,logout timed out. Both retained kit. Static rsmod simulation missed the loop. The [real LiteClient BFS fixture](../.practice/mm-exit/warehouse/client-model-before-doorway.json) reproduces it with pinned raw collision.
-
-[Reuse decision](../.practice/mm-exit/warehouse/source-decision.json):the entrance4710 at2764,2764 is named Doorway,with Open. Pinned `quest_mm.rs2:831` permits passage. Our `openOp` filter accepts Door/Gate but misses Doorway. Stage that one-word fix,retain chest exclusion and bounded door recovery,and combine it with the existing temple overlay pattern plus constrained warehouse clicks. Door fix alone still crosses the trigger in the [client model](../.practice/mm-exit/warehouse/client-model.json);the combined candidate reaches it without doing so. Doorway regression fails before repair;23walker tests/79assertions,three path tests/26assertions and candidate/driver typecheck pass. No server changes or added retries.
-
-[Three reduced native cases and independent save/log audit](../.practice/mm-exit/warehouse/native-1793062132167/independent-audit.json) pass:actual dentures,cellar,bank/logout,all five kit items and12sharks retained.248/232/300ticks;HPmin35/35/25,no food used,no observed trigger tile. Total34air,5blood,3law and3antipoison doses consumed;three seals intentionally dropped by the existing quest. These are seeded practice costs,not live/main costs or matched speed comparisons. Candidate/helper/walker SHA-256 and CRC save bytes are archived. [Full batch](../.practice/mm-exit/guard-candidate/full-1793062289389/proof.json) ended with2passes/1failure:runs1/2 passed5,128/5,145ticks,HPmin20/13,six/eight sharks depleted. Run2 reports `eats=12`:existing `quest-lib.ts::guard` increments before dispatch,so this counter is item-use attempts,not observed consumption. Do not price12sharks or infer four lost items. Actual item accounting uses CRC saves;an observed-consumption counter remains a separate quest-helper repair. Both completed runs pass actual quest/training/reward/kit/logout checks. Their saved costs are433/468air,86/93blood,one law each,24prayer doses each and4/3super-antipoison doses. No main/live cost or speed claim.
-
-Run3 stopped at3,723ticks on `walk gate1 to gate`,alive with kit retained and clean logout. Its stage110 milestone at3,426 preceded cutscene entry at3,430;`monkey` followed at3,434 while the player was in the private region. It returned underground at3,446,after the code had skipped the dungeon-exit branch. Pinned `mm_zooknock.rs2:224` queues chapter3 before the item box and chat pages. `quest_mm.rs2:169` closes the interface,delays,fades and teleports. The ignored30tick start wait and inactive `cutscene` call can mark completion before entry.
-
-[Checked phase candidate](../.practice/mm-exit/chapter3/lineage.json) reuses `converse1`,then requires observed start and cave return near Zooknock before110. The first checked version safely [refused at925ticks](../.practice/mm-exit/chapter3/native-1793065851630/proof.json);cutscene entry followed during cleanup at932. Its raw log identified the remaining material-question choice. Pinned `mm_zooknock.rs2:285-300` exits that loop via "I'll be back later." at option3. Continue0 cannot choose it. The final candidate matches that explicit exit while waiting;it does not treat a longer timeout as completion. Seven extracted-caller/helper fixtures/18assertions and typecheck pass,including the native-observed choice,late entry,never-started,never-returned and wrong-return cases.
-
-[Reduced giver native](../.practice/mm-exit/chapter3/native-1793066376954/proof.json) passes400ticks:entry26,cave return70,checkpoint110at70,cave exit354,surface gate400,clean logout. CRC saves independently agree:main3653→4,greegree0→1,equipped monkey,all five original kit items retained,sharks8→7,HP35→28,minimum21. This fixture reuses s107 flags/kit,places the actor at Zooknock with obtained talisman4023/child7,and skips unrelated child/travel setup. It proves the real handoff/queued phase and subsequent cave-exit/gate consumer;not the full quest,whole-route supply robustness,main staging or speed. Three fresh full candidate quests,installation and release remain unqualified. Main clocks,production sourceb77b9247 and the timing model are unchanged.
-
-[Old canonical release bytes](../.practice/mm-exit/warehouse/release/prepared.json) remain prepared,unqualified and predate the phase fix;they are not an install candidate. The walker delta was one filter word;other runtime changes were import relocation of staged code. The temple regression embeds its saved footprint instead of requiring an ignored practice log. [Virtual root typecheck](../.practice/mm-exit/warehouse/release/virtual-typecheck.json) passed those seven files without installing them. It does not prove the new phase or installed behaviour. Require the new full batch,updated canonical bytes,clear ownership,exact baseline hashes,canonical checks and installed consumer proof before publishing a new pin.
+Facts from the candidate work (MEASURED practice, seeded, not live or main costs, no speed claim):
+- Shipyard exit: `sessionWalker::applyKnownDoorBlocks` has no quest varps and blocks both shipyard gates, so a return from Caranock stops at 207 ticks outside the gate ([model](../.practice/mm-exit/shipyard/blocked-model.json)). The reuse decision is rs-sdk `b565f2d9` `quest_grandtree.rs2::oploc1,_shipyard_gate/open_shipyard_gate` -> MM stage 30, adapted to the existing `q.step/opLoc` ([decision](../.practice/mm-exit/shipyard/source-decision.json)). The generic unknown-quest guard stays.
+- Warehouse: `mm_sleeping_monkey_guard.rs2` summons guards for humans at 2762..2767,2767..2772. Long clicks let the client cut through that rectangle. The entrance 4710 at 2764,2764 is named Doorway with Open, and `quest_mm.rs2:831` permits passage; the `openOp` filter accepted Door/Gate but missed Doorway. The fix is that filter word plus the temple overlay pattern and constrained warehouse clicks. The real LiteClient BFS fixture reproduces the west loop that static rsmod simulation missed ([fixture](../.practice/mm-exit/warehouse/client-model-before-doorway.json), [decision](../.practice/mm-exit/warehouse/source-decision.json)).
+- Three reduced native cases pass with an independent save/log audit ([audit](../.practice/mm-exit/warehouse/native-1793062132167/independent-audit.json)): dentures, cellar, bank/logout, all five kit items and 12 sharks kept; 248 / 232 / 300 ticks; HP min 35 / 35 / 25; no trigger tile crossed.
+- Full batch ([proof](../.practice/mm-exit/guard-candidate/full-1793062289389/proof.json)): 2 passes and 1 failure. Runs 1 and 2 passed at 5,128 and 5,145 ticks, HP min 20 and 13, with six and eight sharks depleted. Their saved costs are 433 / 468 air, 86 / 93 blood, one law each, 24 prayer doses each and 4 / 3 super-antipoison doses. The `eats` counter in `quest-lib.ts::guard` counts item-use attempts, not consumption (run 2 reports `eats=12`), so item accounting uses CRC saves.
+- Run 3 stopped at 3,723 ticks on `walk gate1 to gate`, alive, kit retained, clean logout. Its stage 110 milestone (3,426) came before cutscene entry (3,430). Pinned `mm_zooknock.rs2:224` queues chapter 3 before the item box and chat pages, and `quest_mm.rs2:169` closes the interface, delays, fades and teleports, so the ignored 30-tick start wait and inactive `cutscene` call can mark completion before entry.
+- Chapter-3 phase candidate ([lineage](../.practice/mm-exit/chapter3/lineage.json)): reuses `converse1`, then requires observed start and cave return near Zooknock before 110. It leaves the material-question loop through option 3, "I'll be back later." (`mm_zooknock.rs2:285-300`); Continue 0 cannot choose it. A longer timeout is not completion. Seven extracted-caller/helper fixtures (18 assertions) and the typecheck pass.
+- Reduced giver native ([proof](../.practice/mm-exit/chapter3/native-1793066376954/proof.json)) passes at 400 ticks: entry 26, cave return 70, checkpoint 110 at 70, cave exit 354, surface gate 400, clean logout. CRC saves agree: main 3653 -> 4, greegree 0 -> 1, monkey equipped, five kit items kept, sharks 8 -> 7, HP 35 -> 28 (min 21). The fixture reuses s107 flags and kit and places the actor at Zooknock with talisman 4023 and child 7. It proves the handoff, queued phase and cave-exit/gate consumer, not the full quest, route supply, main staging or speed.
+- The prepared canonical release bytes ([prepared](../.practice/mm-exit/warehouse/release/prepared.json)) predate the phase fix and are not an install candidate. A new pin needs the full batch, updated canonical bytes, clear ownership, exact baseline hashes, canonical checks and installed consumer proof. The [virtual typecheck](../.practice/mm-exit/warehouse/release/virtual-typecheck.json) covers seven files and does not prove the phase or installed behaviour.
 
 Script `scripts/generated/quest-mm.ts` (puzzle solver `scripts/generated/mm-puzzle.ts`), presets in
 `packages/practice/src/presets-mm.ts`. The preset `quest_mm` is the planner state at the row (scenario a, order row
@@ -682,7 +648,7 @@ Two tool fixes were needed:
 | 80 | Walk west to the ravine (2721,2757) until a ravine archer knocks you out (1 in 20 arrows, `mm_archer.rs2:51-53`; the prayer does not stop it); jail 2770-2776,2793-2794 (`:66-82`); pick the lock 2771,2795 (`mm_jail.rs2:1-11`, `stat_random(thieving, 95, 295)`, 0-3 fails at Thieving 43) when no patrol guard is within 3 tiles. The patrol (`mm_jail.rs2:181-259`, route enum `mm_jail_patrol_route`) walks the only exit lane (2772-2773,2796-2801) and knocks a human back in from 1 tile of its south-west tile, with a flyback that costs a fifth of the HP: 0-5 re-jails a run | `quest-mm.ts` `knockout`, `walkAtoll` | MEASURED |
 | 90 | Garkor (2805,2762) from the north tile (the elder guards south of him knock out a human, `mm_elder_guard.rs2:52-75`); his talk resumes after a hit closes it (`mm_garkor.rs2:95-126`). Dentures crate (2767,2769) from 2768,2769 (outside the sleeping guard's zone 2762-2767,2767-2772, `mm_sleeping_monkey_guard.rs2:1-14`), in by the warehouse door 2764,2764; the crate over the hole (2769,2765) from its south tile 2769,2764: the warehouse spider (2 HP, `respawnrate=4`, spawn 2770,2766) hits from the other tiles, and any hit closes the choice (`npc_combat_melee.rs2:36`). Cellar, mould crate (2782,9172), the **eastern** rope (2798,9169): the western one lands in a warehouse whose only ground door (2744,2767) is locked (`quest_mm.rs2:1019-1020`); the eastern one lands in the sleeping guard's zone, and the bot runs south out of it | `quest-mm.ts` stage 90 | MEASURED |
 | 100 | Bridge ladder 2803,2734 up, jump at 2803,2727,l2 to the landing (`quest_mm.rs2:1022-1043`; not as a monkey); dungeon ladder 2763,2703; Zooknock 2804,9145 by a fixed corner route (about 535 tiles; a single far goal sent the walker into a dead end); Protect from Melee for the whole human pass; his story resumes after hits; dentures, gold bar, mould and the monkey bones on him: enchanted bar and mould back (`mm_zooknock.rs2:48-122, 163-201`) | `quest-mm.ts` stage 100 | MEASURED |
-| 110 | Back up; the second knockout and lock; the temple: south ladder (2794,2773) up, level 1 to 2806,2785, the east ladder top drops on the trapdoor's access tile (`quest_mm.rs2:766-771`); trapdoor (2807,2785, `mm_temple.rs2:1-17`); wall of flame (4765 at 2809,9191, not in `nearbyLocs`) with the bar and the mould, wool on the amulet; the rope (4881 at 2808,9201, by id) lands on a random tile within 2 of the trapdoor (`mm_temple.rs2:28`): 2806,2785 takes the ladder, 2807,2783-2787 walk out on the temple floor, a tile boxed by the engaged trapdoor guards goes back down the open trapdoor (it stays open 500 ticks, `mm_temple.rs2:6`) and up the rope for a new tile when it is within 1 tile of the trapdoor, else falls back to Varrock Teleport and the way round (2 of the last 5 full runs; pass 4 used it; one boxed landing at 2805,2784, 2 tiles out, could not reach the trapdoor). The child (2743,2795): 5 bananas from the garden trees, uncle, how many, the bananas, the toy after 100 ticks; the aunt patrols her garden (`quest_mm.npc` `[mm_monkeys_aunt]`: 2742,2794 15 ticks, 2743,2792 30 ticks, then her house), so the bot waits at 2746,2800 while she is there. She calls only when both stand in the garden or both outside it (`mm_monkeys_aunt.rs2:13-17`), so the bot stays in the garden until she walks in: it leaves 13 ticks after she stops at 2737,2794 (she steps in at 2740 18 ticks after she arrives there, practice trace). The child's talks end after 2 shut ticks (was 6), and the bananas go on the child (`opnpcu`, no greeting pages). During the toy's 100-tick timer the bot picks 6-8 more bananas from the other trees (5 a tree), eaten on the walks at 31 HP or less. The dungeon (Protect from Melee), the talisman on Zooknock: the Karamjan greegree; the chapter 3 cutscene (an eat or a potion inside it closes the page; a step restarts it, `quest_mm.rs2:360-375`) | `quest-mm.ts` stages 105-110 | MEASURED |
+| 110 | Back up; the second knockout and lock; the temple: south ladder (2794,2773) up, level 1 to 2806,2785, the east ladder top drops on the trapdoor's access tile (`quest_mm.rs2:766-771`); trapdoor (2807,2785, `mm_temple.rs2:1-17`); wall of flame (4765 at 2809,9191, not in `nearbyLocs`) with the bar and the mould, wool on the amulet; the rope (4881 at 2808,9201, by id) lands on a random tile within 2 of the trapdoor (`mm_temple.rs2:28`): 2806,2785 takes the ladder, 2807,2783-2787 walk out on the temple floor, a tile boxed by the engaged trapdoor guards goes back down the open trapdoor (it stays open 500 ticks, `mm_temple.rs2:6`) and up the rope for a new tile when it is within 1 tile of the trapdoor, else falls back to Varrock Teleport and the way round (2 of the last 5 full runs; pass 4 used it; one boxed landing at 2805,2784, 2 tiles out, could not reach the trapdoor). The child (2743,2795): 5 bananas from the garden trees, uncle, how many, the bananas, the toy after 100 ticks; the aunt patrols her garden (`quest_mm.npc` `[mm_monkeys_aunt]`: 2742,2794 15 ticks, 2743,2792 30 ticks, then her house), so the bot waits at 2746,2800 while she is there. She calls only when both stand in the garden or both outside it (`mm_monkeys_aunt.rs2:13-17`), so the bot stays in the garden until she walks in: it leaves 13 ticks after she stops at 2737,2794 (she steps in at 2740 18 ticks after she arrives there, practice trace). The child's talks end after 2 shut ticks, and the bananas go on the child (`opnpcu`, no greeting pages). During the toy's 100-tick timer the bot picks 6-8 more bananas from the other trees (5 a tree), eaten on the walks at 31 HP or less. The dungeon (Protect from Melee), the talisman on Zooknock: the Karamjan greegree; the chapter 3 cutscene (an eat or a potion inside it closes the page; a step restarts it, `quest_mm.rs2:360-375`) | `quest-mm.ts` stages 105-110 | MEASURED |
 | 115 | Greegree worn (`mm_greegree.rs2:1-10`, not within 10 ticks of combat); the dungeon back (the zombies hit a monkey too: Protect from Melee); the west gate (2719,2766) opens for a monkey; Garkor (Karamjan monkey: seek an alliance); the talking elder guard (2801,2757); Kruk in the yard east of the gate, reached over the watchtower bridge (west tower ladder 2713,2766 to level 2, east tower 2729,2766 down); he escorts the envoy in; Awowogei's mission | `quest-mm.ts` stage 115 | MEASURED |
 | 120 | Out by the elder guard from the hall door 2802,2759; greegree off before the bridge jump; Lumdo to Crash Island; Waydar to the Gnomeball pitch; stronghold spirit tree to the Battlefield; round a locked Khazard door to the zoo; greegree on, the minder cages the "monkey", a zoo monkey in the backpack, greegree off, the minder lets the human out; walk to the stronghold's south gate (`gnome_areagate` 190, op; Femi's boxes: "Sorry, I'm a bit busy") and the Grand Tree; Daero, Waydar, Lumdo; greegree, gate, the elder guard lets Kruk's envoy in; Awowogei; Garkor: chapter 4 cutscene, then the sigil; staff and amulet of magic back on | `quest-mm.ts` stage 120 | MEASURED |
 | 140 | Sigil op2 (`mm_demon.rs2:1-5, 16-143`): the battle zone 1_42_143; Protect from Magic on arrival; Fire Wave every 5 ticks from 4+ tiles; kill (`:377-401`) | | MEASURED |
@@ -714,7 +680,7 @@ Two tool fixes were needed:
   1-4 left at the end. Any hit, even at 0 damage, closes the open dialog, so every long talk and crate is written to
   resume.
 
-### Proof (MEASURED practice, 2026-10-23)
+### Proof (MEASURED practice)
 
 Chapter 1 (preset `quest_mm`, stages 10-70, Narnode to the Ape Atoll landing), 3/3 PASS:
 
@@ -744,10 +710,9 @@ Every end run takes 0 damage in the fight (HP min 35), ends with the quest-compl
 - The arrival in the battle zone holds the player in a `p_delay` (`mm_demon.rs2:80-100`): a prayer toggle there is
   dropped, so the script toggles on every tick until it holds.
 
-Planner (first pass of this work, 2026-10-23): row `rival-mm` kept 4,566 / 5,052 ESTIMATE; `minLevel` gained
-`magic: 75`.
+Planner: row `rival-mm` has `minLevel` `magic: 75`.
 
-### Full runs (MEASURED practice, 2026-10-23)
+### Full runs (MEASURED practice)
 
 The whole quest from preset `quest_mm` (Narnode to Daero's training reward), one bot at a time, 150 ms ticks,
 `scratchpad run.ts` = `prove()` with a 50-minute timeout (`cli.ts prove` stops a script at 300 s). Milestone ticks
@@ -767,7 +732,7 @@ RESULT lines (cut):
 - 3: `RESULT ok qp=3 questMsg=true fightTicks=264 casts=52 potions=3 prayerLeft=18 xp=attack=500000,strength=875000,defence=500000,hitpoints=879637,magic=62062,crafting=5100,thieving=262 at=2482,3481,1 ticks=5071 hpMin=20 eats=17 walkTicks=2392 retries=25 died=false`
 - 4: `RESULT ok qp=3 questMsg=true fightTicks=264 casts=52 potions=3 prayerLeft=9 xp=attack=500000,strength=875000,defence=500000,hitpoints=879227,magic=62337,crafting=5100,thieving=525 at=2482,3481,1 ticks=5786 hpMin=5 eats=16` (boxed at 2807,2786: the Varrock Teleport fallback, about 700 ticks)
 
-Passes 5-7 ran back to back on the final script of 2026-10-24 (`proved 3/3`, one bot):
+Passes 5-7 ran back to back on the final script (`proved 3/3`, one bot):
 
 | Pass | Ticks | 70 atoll | 80 jail out | 90 cellar, rope | 100 Zooknock | 107 temple out | talisman | 110 greegree | 115 Awowogei | 120 sigil | 160 Narnode | Fight | Re-jails | HP min | Extra bananas |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -799,7 +764,7 @@ Findings:
   200,000-coin shortcut (`mm_glough.rs2:28-29`) leaves one slide and the solver needs 14-18 ticks, so it cannot
   save more than that minus the walk to Glough: not tried.
 
-Where the atoll ticks go (pass 3 of 2026-10-23, 3,829 ticks for stages 80-120; MEASURED from its milestones and the
+Where the atoll ticks go (pass 3 of, 3,829 ticks for stages 80-120; MEASURED from its milestones and the
 `jumps` list): four dungeon passes 269, 281, 303, 293 (1,146; the collision path is 535 tiles each way, `findLongPath`,
 and the dungeon has one ladder, `m43_42`/`m43_142` loc 4780/4781); Zooknock's first talk and four gives 219 (dialog pages
 are 2 ticks each, click and wait); the zoo trip 863 (zoo to the Grand Tree about 280 tiles walked; a spirit tree or a
@@ -807,7 +772,7 @@ teleport deletes the backpack monkey, `post_tele_checks`, `teleport.rs2:109-112`
 near the zoo); the child's garden 359 (100 of it the toy timer); the jailings with re-jails about 225. Glough's and the
 cutscene relogin were not tried.
 
-Changes of 2026-10-24 and their measured effect:
+Script changes and their measured effect:
 
 - Garden (aunt rule, shorter talk ends, bananas on the child): 284-297 ticks from the temple to the talisman in passes 6-7
   and 333 in a segment run, against 359-373 before (passes 1-4 and a segment run). Pass 5: 376 (the aunt's phase).
@@ -827,23 +792,15 @@ Hitpoints: plan on 35 only with this pack: HP min 5-20 over 7 passes and one dea
 (not modelled) or two more sharks (no free slot in chapter 1) the margin is safe. Prayer is near its limit too: pass 7
 used 6 potions in the fight and left 9 points.
 
-Planner: row `rival-mm` is now MEASURED 5,029 / 5,320 (best / worst of passes 5-7; was MEASURED 5,071 / 5,786 from
-passes 1-4). Scenario a, `bun packages/planner/src/haggis-cli.ts --levers`, Overall finish: 40,545 floor / 45,430
-realistic before, 40,503 / 44,964 after (same tree, 2026-10-24). The realistic drop is mostly the Varrock fallback that
-none of passes 5-7 needed; it can still happen. `bun test packages/planner`: 42 pass.
+Planner: row `rival-mm` is MEASURED 5,029 / 5,320 (best / worst of passes 5-7). Scenario a,
+`bun packages/planner/src/haggis-cli.ts --levers`, Overall finish: 40,503 floor / 44,964 realistic. The realistic value
+is low because none of passes 5-7 needed the Varrock fallback; it can still happen. `bun test packages/planner`: 42 pass
+(the rival-lever test accepts a MEASURED rival row that cites this section).
 
-Earlier planner change: row `rival-mm` became MEASURED 5,071 / 5,786 (best / worst pass; was ESTIMATE 4,566 / 5,052). Scenario a,
-`research/hiscores-live.json`, `bun packages/planner/src/haggis-cli.ts --levers`, Overall finish: 40,040 floor /
-44,805 realistic before the change, 40,545 / 45,539 after (both on the same tree, 2026-10-23/24). The
-row is slower than the rival's estimate, so the finish moves out by 505 / 734 ticks. `bun test packages/planner`:
-42 pass (the rival-lever test now accepts a MEASURED rival row that cites this section).
-
-Next lead (2026-10-24): the re-jails (count the patrol's lane visits: point 10 is the third lane-top stop, so a
+Open leads: the re-jails (count the patrol's lane visits: point 10 is the third lane-top stop, so a
 pick during that 6-tick stop and a wait in the lane at z 2797-2798 would follow the guard out), a boxed landing 2 tiles
-from the trapdoor, and the cutscene relogin. Earlier leads, by size: the stage 120 walk back from the zoo (Ardougne to the Grand Tree, about
-250 tiles; no teleport keeps the backpack monkey, `teleport.rs2:109-112`); the re-jails (pick the lock only in the
-patrol's handover window); the child's garden wait (arrive while the aunt is in her house); the cutscene relogin
-test. Hitpoints at the row is still not modelled (the preset's 35 is an estimate).
+from the trapdoor, the stage 120 walk back from the zoo (Ardougne to the Grand Tree, about 250 tiles; no teleport keeps the
+backpack monkey, `teleport.rs2:109-112`), and the cutscene relogin test. Hitpoints at the row is still not modelled (the preset's 35 is an estimate).
 
 ## 1i. Measured: Dragon Slayer (the `dragon` row)
 
@@ -854,7 +811,7 @@ row 48, tick 52,855), so the preset has every skill at 99. The guild door needs 
 `general/scripts/quests.rs2`), so the preset sets the complete values of 16 quests the planner does earlier (46 QP),
 not varp 101. Worn: rune full helm, platebody, platelegs, scimitar. Practice server, one bot at a time.
 
-3/3 PASS (MEASURED practice, 2026-10-23):
+3/3 PASS (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | HP min | Eats |
 |---|---|---|---|---|---|
@@ -920,7 +877,7 @@ skill 99, Dragon Slayer done; helper items bucket of wax, bat bones, bread, tind
 Falador, one Varrock and one Camelot teleport, 6 lobsters). Debug presets `quest_merlin_s3` ... `_s8`
 (`MC_FROM=<milestone>`). Practice server, one bot at a time.
 
-3/3 PASS (MEASURED practice, 2026-10-23):
+3/3 PASS (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | HP min |
 |---|---|---|---|---|
@@ -970,7 +927,7 @@ items 100 coins, runes for three Falador and four Camelot teleports (8 law, 32 a
 presets `quest_grail_s2` ... `_s9` (`HG_FROM=<milestone>`, `HG_STOP=<milestone>`). Practice server, one bot at a
 time, each run on a fresh account deleted after the run.
 
-3/3 PASS (MEASURED practice, 2026-10-23):
+3/3 PASS (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | HP min |
 |---|---|---|---|---|
@@ -1098,7 +1055,7 @@ Servil, 2566,3197). The preset is the planner state at the row (tick 12,267, aft
 99, Prayer 43, Agility 76, Strength, Defence, Thieving 1, 10 Hitpoints. Staff of fire worn; 60 blood and 300 air runes
 (Fire Wave), 3 prayer potions, 4 lobsters, 20 coins. Practice server, one bot at a time.
 
-3/3 PASS on the final script (MEASURED practice, 2026-10-24):
+3/3 PASS on the final script (MEASURED practice):
 
 | Run | RESULT line (cut) | Ticks | LEDGER idle | Casts | Potions |
 |---|---|---|---|---|---|
@@ -1140,8 +1097,8 @@ Findings:
 - Each cage holds a static spawn (ogre 2608,3165, scorpion 2608,3159, Bouncer 2608,3162). A cast while the NPC is
   still in its cage sent the bot into the gate for line of sight; the gate shut after 6 ticks and every later cast was
   `cant_reach` (run p1). The script casts only when the NPC's tile is west of x 2606, and an NPC already on the player
-  (one left out by an earlier failed run) comes first.
-- In one run of an earlier script version (r3) the scorpion stayed in its cage for 300 ticks. Jeremy's talk at stages
+  (one left by a failed run) comes first.
+- In one run of script version r3 the scorpion stayed in its cage for 300 ticks. Jeremy's talk at stages
   9 and 10 runs the cage release again (`jeremy_servil.rs2:39-44`); the final script talks to him after 20 ticks with
   no fighter out. The 3 proof runs did not need it (not exercised).
 
@@ -1149,7 +1106,6 @@ Planner: row `rival-fight-arena` 628 / 637 MEASURED. Scenario a, `research/hisco
 
 | Model | Overall floor | Overall realistic |
 |---|---|---|
-| Before (499 / 720 ESTIMATE, rival) | 41,100 | 44,393 |
 | Fight Arena MEASURED (628 / 637) | 41,229 | 44,310 |
 
 Still open: the walk from Narnode to Lady Servil is not counted; the chest-to-guard legs (about 100 ticks) could use
@@ -1159,7 +1115,7 @@ one trip if the guard took the brew at stage 2 (it does not, `khazard_barman.rs2
 
 Script `scripts/generated/quest-seaslug.ts`, preset `quest_seaslug` (beside Caroline, 2717,3302; the planner state at
 tick 24,985: Attack 99, Strength 97, Defence 89, Hitpoints 97, Firemaking 99, Fishing 1; swamp paste 1941 and an
-unlit torch 596 from a helper). The row is MEASURED: 449 floor / 455 realistic (was the rival's 304 / 495).
+unlit torch 596 from a helper). The row is MEASURED: 449 floor / 455 realistic (the rival's figure is 304 / 495).
 
 Stages (CODE-READ, varp `%seaslugquest` 159, `quest_seaslug.constant`): Caroline (1, `area_ardougne_east/scripts/caroline.rs2`);
 Holgart wants swamp paste (2) and takes it (3); the row boat to the platform (`holgart_ardougne.rs2:93-117, 152-167`);
@@ -1201,7 +1157,7 @@ upstairs; the shout spot is 2764,3286,1, south of the wall (Kennith is 2 tiles n
 not the north side (t14: "no route" to loc 2519). Kent sets stage 6 and closes the talk before the slug part
 (`kent.rs2:14-17`), so the script accepts "get my boy" (t16).
 
-### Proof (MEASURED practice, 2026-10-24)
+### Proof (MEASURED practice)
 
 `prove-log.ts scripts/generated/quest-seaslug.ts quest_seaslug 3`: PROOF 3/3.
 
@@ -1217,7 +1173,7 @@ complete 451. The rival's 304 was a browser run; our 449-455 has 142 walk ticks 
 ## 1o. Scorpion Catcher (the `scorpion` row): MEASURED 910 / 942 with the dusty key; Barcrawl MEASURED
 
 Script `scripts/generated/quest-scorpion.ts` (PROOF 3/3), presets `quest_scorpion` (beside Thormac, 2702,3404,3;
-every skill 99, rune set, Falador and Camelot Teleport runes; from 2026-10-24 also `%barcrawl` 77 = 2),
+every skill 99, rune set, Falador and Camelot Teleport runes, and `%barcrawl` 77 = 2),
 `quest_scorpion_s2` (debug, stage 2, outside the Barbarian Outpost, `SC_FROM=2`) and `quest_scorpion_s3` (debug,
 stage 2, cage with B, at the foot of the Taverley dungeon ladder, `SC_FROM=3`). The row is MEASURED (910 / 942).
 
@@ -1248,7 +1204,7 @@ drink hits 25% of HP (`area_ardougne_east/scripts/bartender.rs2:51`); hpMin 73 a
 before its p_delays and the signature, so the script accepts the buy message and then waits for the signature
 (t2 lost ticks re-opening the Dead Man's Chest menu).
 
-`prove-log.ts scripts/generated/quest-barcrawl.ts barcrawl 3`: PROOF 3/3 (MEASURED practice, 2026-10-24).
+`prove-log.ts scripts/generated/quest-barcrawl.ts barcrawl 3`: PROOF 3/3 (MEASURED practice).
 
 ```
 RESULT ok bars=10 card=false xp=magic=3462 at=2543,3567,0 ticks=1466 hpMin=73 eats=0 walkTicks=1082 ...
@@ -1291,7 +1247,7 @@ door from inside (no key needed); the dusty key on the gate from 2925,9803; the 
 The Monastery bedroom door (loc_1530, north wall of 3058,3485) must be opened before scorpion C: with it shut, the
 client finds no route to the scorpion (test run a1: `cant_reach: Using item on NPC #532 - no route`).
 
-`prove-log.ts scripts/generated/quest-scorpion.ts quest_scorpion 3`: PROOF 3/3 (MEASURED practice, 2026-10-24).
+`prove-log.ts scripts/generated/quest-scorpion.ts quest_scorpion 3`: PROOF 3/3 (MEASURED practice).
 
 ```
 RESULT ok qp=1 questMsg=true xp=attack=4700,strength=165625,hitpoints=1557,magic=3787 at=2705,3407,3 ticks=937 hpMin=99 eats=0 walkTicks=728 retries=0 died=false ...
@@ -1304,10 +1260,8 @@ Milestones (runs 1-3): cage 24, Seer 135-136, scorpion B 318-326, dungeon ladder
 is 271-295 ticks and is in the row; it is not a row of its own, because only this quest uses the key. Walking is
 about 730 of the 930 ticks.
 
-Planner: row `scorpion` 910 / 942 MEASURED (was ESTIMATE 300 / 900, burst patch 277 / 832; the burst patch now
-carries the measured ticks). Scenario a, `--levers`: Overall finish 41,506 / 44,402 before and after (the row is
-after the last 99); Quest Points WIN at 105,540 / 130,407 -> 106,173 / 130,517 (edc35a8 -> 21e430b); QP at end 145. Gate: "50 inputs not
-MEASURED; worst Agility -37630" -> "47 inputs not MEASURED; worst Agility -37630". `bun test packages/planner`: 42
+Planner: row `scorpion` 910 / 942 MEASURED (the row is
+after the last 99). Scenario a, `--levers`: Overall finish 41,506 / 44,402; Quest Points WIN at 106,173 / 130,517; QP at end 145. Gate: "47 inputs not MEASURED; worst Agility -37630". `bun test packages/planner`: 42
 pass, 0 fail.
 
 Next: the walk is the lever. The Jailer leg (ladder to jail, 264 tiles) and the jail to the gate (150 tiles) are the
@@ -1370,7 +1324,7 @@ from the private dig). Agility 10 is checked at the winch (`area_digsite.rs2:617
   (`engine/src/util/JavaRandom.ts`) gives 7.4% and 5.0%, so the cause is not found. These two counts are most of the
   spread between runs.
 
-### Proof (MEASURED practice, 2026-10-24)
+### Proof (MEASURED practice)
 
 `RESULT ok qp=2 xp=magic=875,fishing=500,mining=385600,herblore=50187,agility=100,thieving=1820 ... ticks=1717
 hpMin=96 eats=0 walkTicks=822 retries=11 died=false` (final script, runs f1-f3: 1,717, 1,851, 1,535 ticks), each with
@@ -1382,10 +1336,9 @@ letter 40, stamped 86, stage 2 205, sample 3 245, tea 285, sample 2 411, sample 
 (`walkTicks` 822-823: six crossings between the Exam Centre and the digsite, and the Varrock trip) and 395-441 ticks
 of dialog (2 ticks a page).
 
-Planner: row `dig` MEASURED floor 1,535 / realistic 1,851 (was ESTIMATE 600 / 1,500; 555 / 1,387 under
-`rival-dialogue-burst`, which now carries the measured values). `bun test packages/planner`: 42 pass, 0 fail.
-`haggis-cli.ts research/hiscores-live.json --order`, scenario a: Overall finish 41,506 / 44,402 before, 42,486 / 44,866
-after; `QP at end 145; idle 0; travel 7,361 floor / 7,361 realistic; blocked none` before and after; Quest Points WIN
+Planner: row `dig` MEASURED floor 1,535 / realistic 1,851. `bun test packages/planner`: 42 pass, 0 fail.
+`haggis-cli.ts research/hiscores-live.json --order`, scenario a: Overall finish 42,486 / 44,866;
+`QP at end 145; idle 0; travel 7,361 floor / 7,361 realistic; blocked none`; Quest Points WIN
 (107,153 / 130,981).
 
 Next: the walks and the pages are the cost. Ideas not tried: the specimen jar from the sacks at 3358,3418 instead of
@@ -1426,7 +1379,7 @@ QP, and the QP deadline (921,761) is far away.
 
 | # | Quest | Requirements (rev 289 gate, else OSRS guide) | Helper supplies | Reward at 25x | Ticks | Danger |
 |---|---|---|---|---|---|---|
-| 1 | Waterfall Quest | none | 2 ropes, 6 air + 6 earth + 6 water runes, 18 lobsters | 343,750 Attack, 343,750 Strength, 1 QP | 1,160-1,164 MEASURED practice, 3 runs (preset start at Almera; travel from Lumbridge not counted); rival live 979 UNVERIFIED | south falls room: shadow spiders, skeletons (chip damage); fire giants (max 11) if no spider shield; Glarial's tomb skeletons (one earlier run died at the tomb ladder) |
+| 1 | Waterfall Quest | none | 2 ropes, 6 air + 6 earth + 6 water runes, 18 lobsters | 343,750 Attack, 343,750 Strength, 1 QP | 1,030-1,037 MEASURED practice, 3 runs (preset start at Almera; travel from Lumbridge not counted); rival live 979 UNVERIFIED | south falls room: shadow spiders, skeletons (chip damage); fire giants (max 11) if no spider shield; Glarial's tomb skeletons (one run died at the tomb ladder) |
 | 2 | Tree Gnome Village | Prayer 43 + Magic 35 (combat gate, section 1e) | 6 normal logs (Commander Montai), Fire Bolt runes, staff of fire, 2 prayer potions | 286,250 Attack, 2 QP | 782-829 MEASURED practice, 3 runs (section 1f) | Khazard warlord (level 112) fight for the orb; Khazard troopers in the fortress |
 | 3 | Fight Arena | none (OSRS) | Khazard armour is in the quest; food, a weapon | 304,375 Attack, 54,375 Thieving, 2 QP | 1,300 ESTIMATE | four arena fights: Khazard ogre (63), scorpion (44), Bouncer (137), General Khazard (112); needs HP above 10 or a safespot |
 | 4 | Vampire Slayer | none | garlic, hammer, beer (Dr Harlow), food | 120,625 Attack, 3 QP | 500 ESTIMATE | Count Draynor (34) |
@@ -1446,7 +1399,7 @@ The playtime is stamped only when the QP total changes, at the save after the qu
 (`engine/src/server/login/LoginServer.ts:200-216`), not at the quest-complete tick. Content has 68 quests and 145 QP
 (sum of `scripts/general/configs/quest.constant:72-139`).
 
-Leader: `avery` had 141 QP at 921,761 ticks in `research/hiscores-2026-10-22.json`. Live at 06:37Z on 2026-10-23
+Leader: `avery` had 141 QP at 921,761 ticks in `research/hiscores-2026-10-22.json`. Live at 06:37Z on
 `avery` has **145 QP at 1,022,262 ticks** (`research/boards-special.md:19,25`, MEASURED live). 145 is the maximum.
 
 - The only win is 145 QP saved at a playtime of 1,022,261 ticks or less. More points is not possible.
@@ -1460,8 +1413,7 @@ plus about 15,000 ticks of skill training for the quest gates (Legends' Quest, R
 Ruse, Haunted Mine). It reaches 142 QP at about 85,000 ticks and 145 QP at about 97,000 ticks (ESTIMATE). The 1,200
 mean is 1.0x the one measured quest (Waterfall, about 1,160 ticks from a preset), so the estimate is weak. Even at
 5x that mean (about 485,000 ticks) it stays under 1,022,261. Haggis can also take the board: the schedule model
-reaches 142 QP at 56,263 (floor) and 116,214 (realistic) ticks (`bun packages/planner/src/haggis-cli.ts`,
-2026-10-23), and the last 3 QP need the quests that are not in the model yet. The model still reads the 141-QP
+reaches 142 QP at 56,263 (floor) and 116,214 (realistic) ticks (`bun packages/planner/src/haggis-cli.ts`), and the last 3 QP need the quests that are not in the model yet. The model still reads the 141-QP
 snapshot; with the live 145 leader, the board is WIN only when all 145 land before 1,022,262.
 
 ## 5. Next quests to automate (top 5 by XP per tick)

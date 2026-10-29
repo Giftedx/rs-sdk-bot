@@ -1,10 +1,10 @@
-# Web research: rs-sdk, RuneBench, 2004scape agents (as of 2026-10-22)
+# Web research: rs-sdk, RuneBench, 2004scape agents (stars and counts at fetch)
 
 Scope: what is publicly known about rs-sdk, RuneBench, the demo server, community projects,
 era-accurate game data, and related agent-harness research.
 
 Evidence markers:
-- **[seen]**: I fetched the page or data myself in this session.
+- **[seen]**: I fetched the page or data myself.
 - **[3rd-party]**: from a summary, mirror, or aggregator. I did not see the primary source.
 - **[unverified]**: inference or claim I could not confirm.
 
@@ -12,10 +12,10 @@ Evidence markers:
 
 ## 1. Primary sources and write-ups
 
-### Max Bittker talk, "RuneScape Bench: MMOs for Agents" (Recurse Center, 2026-10-14)
+### Max Bittker talk, "RuneScape Bench: MMOs for Agents" (Recurse Center)
 - Video: https://www.youtube.com/watch?v=cNm4zyUtWj0 (transcript read via Exa) [seen]
 - Event page: https://www.recurse.com/events/runebench [seen]
-- Announcement tweet (2026-10-17): https://xitter.cf/maxbittker/status/2111499673450221803 (nitter mirror) [3rd-party]
+- Announcement tweet: https://xitter.cf/maxbittker/status/2111499673450221803 (nitter mirror) [3rd-party]
 - HN thread: https://news.ycombinator.com/item?id=50136126 [seen]
 
 Points from the transcript [seen]:
@@ -65,18 +65,18 @@ https://xitter.cf/maxbittker/status/2088471897956630576
 - HN launch, "RS-SDK: Drive RuneScape with Claude Code" (124 pts, ~Feb 2026): https://news.ycombinator.com/item?id=46888142 [seen via Exa]
   Author (pokpokpok): "the grounding a game environment allows agents to ratchet their engineering
   progress and run more autonomously".
-- HN 2026-10 thread, author comments [seen]: trade is rare because "resource collection operates at the
-  speed of fanning out teams of agents". A Grand Exchange was added, but liquidity is still low.
+- HN thread, author comments [seen]: trade is rare because "resource collection operates at the
+  speed of fanning out teams of agents". The Grand Exchange has low liquidity.
   Commenters saw a fake "Banker" player beside a Varrock West booth (a trade-scam bait) and many bots in
   identical gear (dragon scimitar, anti-dragon shield) at Brimhaven iron dragons.
 - Max Bittker promo video: https://www.youtube.com/watch?v=XMzT_7dsYTw [seen via Exa]
-- SirPugger, "Can An AI Agent Play RuneScape?" (2026-02-22): https://www.youtube.com/watch?v=pXZLI7Lradw [seen via Exa]
+- SirPugger, "Can An AI Agent Play RuneScape?" https://www.youtube.com/watch?v=pXZLI7Lradw [seen via Exa]
   Claude on rs-sdk. Goal: full rune. The agent pivoted to thieving (Ardougne knights plus cake stall
   for food). It wrote a learnings markdown file after it died. It got 99 mining, 96 smithing, and 99
-  melee overnight. Reported cost: about $40.
+  melee in one run. Reported cost: about $40.
 - Rob Haisfield, Opus 4.6 does Waterfall Quest in about 2 h real time on a 10x local server: https://www.24vids.com/video/claude-code-plays-runescape-the-waterfall-questhere-claude-opus-46-is-p-tw-2026405025153753415 [3rd-party]
 - LostCity forum advert thread: https://lostcity.rs/t/rs-sdk-use-claude-code-to-bot-2004scape-private-server/13736 [seen via Exa]
-- AI Tinkerers NYC talk (2026-02-28), "how I ralph-coded this library": https://sf.aitinkerers.org/talks/rsvp_K5w6vjEFmpA [seen via Exa]
+- AI Tinkerers NYC talk "how I ralph-coded this library": https://sf.aitinkerers.org/talks/rsvp_K5w6vjEFmpA [seen via Exa]
 - Moltbook discussion of the scam findings: https://www.moltbook.com/post/0ab9e8e0-f070-4650-afd4-3d9b5e0fa05f [3rd-party]
 
 ### Speedrunner techniques: what is and is not public
@@ -96,15 +96,14 @@ https://xitter.cf/maxbittker/status/2088471897956630576
   - The talk says quest XP drops are a known burst strategy (for RuneBench).
   - The demo server XP curve is "accelerated and less steep", with infinite run energy and no random
     events (rs-sdk README) [seen].
-- TestingPurposes/rs-sdk-fleet (below) documents a fleet that moved to "MAX-STATS TRAINING" on
-  2026-07-26. It is the most detailed public operator notebook.
+- TestingPurposes/rs-sdk-fleet (below) documents a fleet that moved to "MAX-STATS TRAINING". It is the most detailed public operator notebook.
 
 ---
 
 ## 2. RuneBench results site
 
 - Site: https://maxbittker.github.io/runebench/ (client-rendered; a plain fetch shows only the prose) [seen]
-- Repo: https://github.com/MaxBittker/runebench (157 stars, updated 2026-10-21) [seen]
+- Repo: https://github.com/MaxBittker/runebench (157 stars, updated at fetch) [seen]
 - Data: `results/skills-30m/_data.js` (summary) plus `results/skills-30m/<model>.json` (trajectory steps
   and XP samples). There are also `results/skills-15m`, `results/skills-10m`, and `results/gold/_data.js` (10.8 MB). [seen]
 
@@ -166,7 +165,7 @@ Other observations from the same data [seen]:
 
 ## 3. Demo server hiscores and market
 
-- Hiscores: https://rs-sdk-demo.fly.dev/hiscores (fetched 2026-10-22) [seen]
+- Hiscores: https://rs-sdk-demo.fly.dev/hiscores [seen]
 - Ranking rule (rs-sdk README): "highest total level per lowest account playtime". Max total = **1,881**
   (19 skills x 99). The "Time" column is account playtime.
 - Tables: Overall, the 19 skills, Quest Points, Equipment, Bank, "Lava Maze Runite". Per-player page:
@@ -191,12 +190,12 @@ Other observations from the same data [seen]:
 - Market (Grand Exchange at Varrock West, 5% seller tax): https://rs-sdk-demo.fly.dev/market,
   sortable view `#sort=value&days=90`. The page is client-rendered; I did not extract prices. [seen page shell]
 - Live world viewer: https://maxbittker.github.io/rs-world/ (repo MaxBittker/rs-world) [seen, HTTP 200]
-- Per-IP limit: "a maximum of 400 bots per IP", quoted as the "official rule" (2026-07-26) in
+- Per-IP limit: "a maximum of 400 bots per IP", quoted as the "official rule" in
   TestingPurposes/rs-sdk-fleet. I did not confirm it in rs-sdk docs. [3rd-party]
 
 ---
 
-## 4. GitHub repos building on rs-sdk / RuneBench / LostCity (stars as of 2026-10-22) [seen via gh]
+## 4. GitHub repos building on rs-sdk / RuneBench / LostCity (stars at fetch) [seen via gh]
 
 | Repo | Stars | Description |
 |---|---|---|
@@ -233,8 +232,8 @@ milady-ai/milady, and elizaOS/knowledge. I did not inspect them.
 ## 5. Game-knowledge sources and era accuracy
 
 **Important:** rs-sdk is **not** a May 2004 server. Its local `server/PATCHES.md` says the
-engine, content, and webclient are "vendored copies of upstream LostCity (rev 289, upgraded from 274
-on 2026-10-09)". Rev 289 = 2005-01-17 (Karamja Dungeon). That revision includes the Throne of
+engine, content, and webclient are "vendored copies of upstream LostCity (rev 289, upgraded from 274)".
+Rev 289 is January 2005 (Karamja Dungeon). That revision includes the Throne of
 Miscellania (rev 275), Castle Wars (279), and Monkey Madness (276), but not Slayer (290). Use rev
 289 data, not 225 (May 2004) data. [seen locally and on https://2004.lostcity.rs/roadmap]
 
@@ -249,7 +248,7 @@ Miscellania (rev 275), Castle Wars (279), and Monkey Madness (276), but not Slay
 | jaidenw/2004scape-drop-search | https://github.com/jaidenw/2004scape-drop-search | Fuzzy search over drop tables parsed from server source |
 | LostCity forum guides | https://lostcity.rs/t/a-collection-of-2004scape-guides/8548 | Video guides by Garlic (quest order, drop tables, members skills) |
 | RuneScape Classic wiki | https://classic.runescape.wiki (URL not fetched) | Forum mods say it is "closest to accurate for most things compared to OSRS or RS3" for early RS2 (https://lostcity.rs/t/skills-information/5200) [3rd-party] |
-| OSRS wiki | https://oldschool.runescape.wiki | Good for mechanics. Many items, unlocks, training methods, and XP rates were added after 2005. Demo-server XP curves are modified anyway |
+| OSRS wiki | https://oldschool.runescape.wiki | Good for mechanics. Many items, unlocks, training methods, and XP rates exist only after 2005. Demo-server XP curves are modified anyway |
 
 Rules for use:
 1. For item, NPC, shop, and spawn facts on rs-sdk, trust the generated rs-sdk `wiki/` and the server content first.
@@ -273,7 +272,7 @@ Rules for use:
 | Ralph loop (Geoffrey Huntley) | https://ghuntley.com/ralph/, https://ghuntley.com/loop/, https://github.com/ghuntley/how-to-ralph-wiggum | `while :; do cat PROMPT.md \| claude ; done`. A fresh context each iteration. The plan file on disk is the shared state. The README of rs-sdk names Ralph loops as a target technique |
 | Claude Code ralph-loop plugin | https://github.com/anthropics/claude-plugins-official/tree/main/plugins/ralph-loop | A Stop hook re-feeds the same prompt until a completion promise appears |
 
-Not checked this session: MineDojo arXiv ID, "Claude/Gemini plays Pokemon" harness write-ups.
+Not checked: MineDojo arXiv ID, "Claude/Gemini plays Pokemon" harness write-ups.
 
 ---
 

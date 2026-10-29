@@ -1,4 +1,4 @@
-# Runecraft ladder (model, 2026-10-22)
+# Runecraft ladder (model)
 
 Sources:
 - Altar rows: `vendor/lostcity-content/scripts/skill_runecraft/configs/runecraft.dbrow`.

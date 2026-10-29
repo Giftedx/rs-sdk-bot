@@ -1,4 +1,4 @@
-# Overall board: first estimate (2026-10-22)
+# Overall board: estimate
 
 Live #1: `stunbaron`, total 1,881 (all 99s) in 35,916 ticks (research/hiscores-2026-10-22.json).
 

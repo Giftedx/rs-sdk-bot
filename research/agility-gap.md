@@ -1,33 +1,25 @@
 # Agility gap: least ticks to 99 inside the Haggis run, and what closes the gap
 
-Date: 2026-10-23. Boards: Agility, Overall (and every clock board, through the order trade-off).
+Boards: Agility, Overall (and every clock board, through the order trade-off).
 Evidence: planner runs on the committed rows (MEASURED Agility rates) + CODE-READ of `vendor/lostcity-content`.
 No live logins and no practice bots were used for this file. All planner numbers are from the committed
-rows at HEAD 65230a9 (`git show HEAD:packages/planner/src/haggis-boards.json`). Another agent's uncommitted rows in
-the working tree move the baseline to 40,213 / 44,956; the Agility rows are the same in both.
+rows at HEAD 65230a9 (`git show HEAD:packages/planner/src/haggis-boards.json`).
 
 ## Result
 
-- **Update 2 (2026-10-24, Agility 88-99 measured, `research/agility.md` section "Agility 88-99"):** the 52-99 rate is
-  196.0 XP/tick (88-99 band 202.0). Agility first, pure laps (`gap.ts` = the `final.ts` method, on HEAD 2a9ac6f rows
-  with the new rate): **6,436 floor / 6,828 realistic, gap +336 / -56**. With the potion lever (gnome to 49,
-  Wilderness from 49): **6,250 / 6,645, gap +522 / +127**, a win at realistic (finish < 6,772). The floor does not change
-  (212.9). Overall with Agility first: 42,912 / 47,962 (+2,367 / +2,532 against the baseline on the same rows); with the
-  potion 42,726 / 47,779. The same rows at 190.9 give 6,959 / 6,777 realistic (the old numbers), so only the rate moved.
-  The potion row still uses the 52-99 rate for 49-51 (the 49-51 band, 198.7, is one lap per run). #1 is still
-  stunagile at 6,772 (`research/hiscores-live.json`, 2026-10-23T22:56Z).
-- **Update (measurement 1 done, `research/agility.md` section "Wilderness V2"):** the V2 lap script measures 190.9 XP/tick
-  over 52-99 (band-weighted, 30 runs of 20 laps), against 178.9 for the old script. The planner row is now 190.9
-  realistic / 212.9 floor. Agility first, pure laps (same method as below, `final.ts` on the new rows):
-  **6,436 floor / 6,959 realistic, gap +336 / -187** (was 6,665 / 7,323, +107 / -551). With the potion lever
-  (gnome to 49, Wilderness from 49): 6,250 / 6,777, gap +522 / **-5**. Overall with Agility first: 42,407 / 47,359.
-  The gap is not closed at realistic: 198.3 XP/tick was the target, 190.9 is measured.
+- **Agility first, pure laps, at the measured rate** (`research/agility.md` section "Agility 88-99"; the 52-99 rate is
+  196.0 XP/tick, 88-99 band 202.0; `gap.ts` = the `final.ts` method, on HEAD 2a9ac6f rows):
+  **6,436 floor / 6,828 realistic, gap +336 / -56**. With the potion lever (gnome to 49, Wilderness from 49):
+  **6,250 / 6,645, gap +522 / +127**, a win at realistic (finish < 6,772). The floor does not change (212.9).
+  Overall with Agility first: 42,912 / 47,962 (+2,367 / +2,532 against the baseline on the same rows); with the
+  potion 42,726 / 47,779. The potion row uses the 52-99 rate for 49-51 (the 49-51 band, 198.7, is one lap per run).
+  The tables below use the Wilderness mean of 178 XP/tick and show the ordering trade-offs.
 
-- **#1 is stunagile at 6,772 ticks** (`research/hiscores-live.json`, taken 2026-10-23T16:56Z). The deadline rule is
+- **#1 is stunagile at 6,772 ticks** (`research/hiscores-live.json`). The deadline rule is
   finish tick < deadline (`packages/planner/src/haggis.ts:96`).
 - **Agility last (the current plan): Agility 99 at 40,016 floor / 44,859 realistic**, gap -33,244 / -38,087
   (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`, scenario a).
-- **Least ticks inside the whole run: Agility first, pure laps: 6,665 floor / 7,323 realistic.**
+- **Least ticks inside the whole run at Wilderness mean 178: Agility first, pure laps: 6,665 floor / 7,323 realistic.**
   Gap = +107 floor / **-551 realistic**. Planner, scenario a, scratch copy with the Agility deadline set to 1
   (EDF puts it first), the `def-at-ranged-spot` lever off, and The Grand Tree XP not counted for Agility.
 - **With two more levers (Wilderness mean 202.6, agility potion): 6,176 floor / 6,484 realistic, gap +596 / +288.**
@@ -91,9 +83,9 @@ the baseline.
 |---|---|---|---|---|---|
 | Baseline: Agility last (committed) | 40,016 / 44,859 | -33,244 / -38,087 | 40,016 / 44,859 | - | Agility -38,087 |
 | Baseline, `def-at-ranged-spot` off | 38,002 / 42,759 | -31,230 / -35,987 | 40,113 / 45,051 | Defence +4,362 / +5,000 | Defence |
-| Agility deadline 4,000 (before Ranged) | 32,521 / 37,042 | -25,749 / -30,270 | 39,908 / 44,846 | 4 boards +4,157-4,938 | Ranged -37,294 |
+| Agility deadline 4,000 (ahead of Ranged) | 32,521 / 37,042 | -25,749 / -30,270 | 39,908 / 44,846 | 4 boards +4,157-4,938 | Ranged -37,294 |
 | Agility deadline 3,000 | 23,218 / 25,183 | -16,446 / -18,411 | 39,995 / 44,933 | 8 boards +4,244-5,025 | Ranged -37,381 |
-| Agility deadline 2,400 (before Thieving and later boards) | 15,363 / 16,311 | -8,591 / -9,539 | 39,972 / 44,790 | 10-12 boards +4,221-6,354 | Ranged -37,238 |
+| Agility deadline 2,400 (ahead of Thieving and later boards) | 15,363 / 16,311 | -8,591 / -9,539 | 39,972 / 44,790 | 10-12 boards +4,221-6,354 | Ranged -37,238 |
 | Agility deadline 1,400 | 13,679 / 14,493 | -6,907 / -7,721 | 40,095 / 44,913 | 11-13 boards +3,356-12,645 | Ranged -37,361 |
 | **Grand Tree at Agility 25, early** (gnome to 25, Tree Gnome Village, The Grand Tree to 76, then Wilderness) | 10,610 / 11,399 | -3,838 / -4,627 | **40,645 / 45,463** | 18 boards +1,031-13,195 | Ranged -37,911 |
 | Agility deadline 700, pure laps | 8,292 / 9,016 | -1,520 / -2,244 | 42,242 / 47,198 | 13 boards +6,491-7,441 | Ranged -39,646 |
@@ -159,13 +151,12 @@ for 18 other boards, and Overall +2,616 (with levers 2 and 3: +1,777).
 
 ## Planner rows
 
-No planner row was changed. Lever 3 is CODE-READ, but it is a new order with a supply (potions), not a change to an
-existing row, so it waits for measurement 2. `bun test packages/planner`: 42 pass, 0 fail at commit time (41 earlier; another agent added a test), on the
-working tree).
+Lever 3 is CODE-READ, but it is a new order with a supply (potions), not a change to an
+existing row, so it waits for measurement 2.
+
+The `agility` row realistic rate is 196.0 (MEASURED; the source cites the 52/60/76 runs and the 90 runs).
+`bun test packages/planner`: 42 pass, 0 fail.
 
 Scratch script (not committed): `final.ts` in the session scratchpad, run as `bun final.ts boards-head.json`. They copy
 `haggisActivities()` and change only the Agility deadline, the `grandtree` serves, `agility-52.toLevel` and the
 Wilderness rate.
-
-2026-10-24: the `agility` row realistic rate is now 196.0 (MEASURED, source cites the 2026-10-23 52/60/76 runs and the
-2026-10-24 90 runs). `bun test packages/planner`: 42 pass, 0 fail.

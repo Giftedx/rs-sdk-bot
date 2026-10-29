@@ -1,4 +1,4 @@
-# Gap closers for Haggis's single clock (2026-10-23)
+# Gap closers for Haggis's single clock
 
 Goal: Haggis has rank 1 on all 24 boards from one run. Every skill board stamps Haggis's total playtime when the level
 is reached, so all boards share one clock. Overall #1 (`stunbaron`) has all 19 skills at 99 at **35,916** ticks.
@@ -57,7 +57,7 @@ The numbers come from the `--levers` table.
 - New route before Overall: Waterfall (687,500 Attack + Strength, kept because it is faster than combat), Dwarf Cannon,
   Witch's House on its own (158,125 Hitpoints, `C/quests/quest_ball/scripts/quest_ball.rs2:202`, 4 QP at
   `quest.constant:74`), then melee to 99 in Attack, Strength and Defence (new row `att-top`). The other quests run after
-  Overall for Quest Points. (Corrected 2026-10-23: a 142nd QP does NOT win at any time; the leader has 145 of 145 at 1,022,262 ticks, so the board needs all 145 QP saved by 1,022,261. Moving these quests after Overall still fits that deadline by a wide margin, about 97,000 ticks estimated in research/quest-plan.md.)
+  Overall for Quest Points. (A 142nd QP does NOT win at any time; the leader has 145 of 145 at 1,022,262 ticks, so the board needs all 145 QP saved by 1,022,261. Moving these quests after Overall still fits that deadline by a wide margin, about 97,000 ticks estimated in research/quest-plan.md.)
 - XP per tick (ESTIMATE, existing rows): melee 400 / 250 style XP plus 133 / 83 Hitpoints XP.
 - Cost: the Grand Tree's 197,500 Agility now comes from the course (agility-52 trains from 25 at 80 / 50 XP per tick).
   Holy Grail's 275,000 Prayer comes from bones.

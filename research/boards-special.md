@@ -1,8 +1,8 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
 # Equipment, Bank, Lava Maze Runite and Quest Points
 
-## Current targets — 2026-10-26 09:32 UTC
+## Current targets
 
 [Raw pages, parsed targets and comparison](../.practice/joined-plan/targets-20261026-093155/comparison.json). Read-only public GETs; no account login. The full 24-board goal remains unchanged. These are targets, not owned stock or achieved ranks.
 
@@ -10,16 +10,16 @@
 |---|---|---|
 | Equipment | nickai3:1,366,450 base value, tied with soko | Local query orders value only; tied placement is unspecified. [Current cache audit](../.practice/shared-supply/equipment-ceiling.json):4,089 items,708 wearable; compatible-set upper bound1,366,450. All10 leader item costs match. Live unseen items remain unchecked; matching the set does not prove outright first. |
 | Bank | nickai3:17,239,359,614 base value | Local query breaks equal values by username ascending. Use17,239,359,615 for an unambiguous value lead. Up1,305,151 since02:08 UTC; do not freeze the target or equate bank base value with cash profit. Prove an owned-source value-production route. |
-| Lava Maze Runite | xulvexi:2,463 all-time;1,806 week;86 day | Separate windows. For the main all-time goal, exceed2,463;87 only addresses today's snapshot. Local ties favour earliest last ore. Prove access, return, contention and counted output; gathering other runite does not qualify. |
+| Lava Maze Runite | xulvexi:2,463 all-time;1,806 week;86 day | Separate windows. For the main all-time goal, exceed2,463;87 only addresses the day board snapshot. Local ties favour earliest last ore. Prove access, return, contention and counted output; gathering other runite does not qualify. |
 | Quest Points | qu3st:145 at1,001,957 normalized ticks | Save145 QP below1,001,957 ticks. Local rule is QP descending then saved playtime ascending. Verify full route and final save; old avery deadlines below are historical. |
 
 Source rules: `vendor/rs-sdk/server/engine/src/web/pages/hiscores.ts` and `server/login/LoginServer.ts`; source hash retained with comparison. Local source inspection is not proof of every live implementation detail. All21 timed leaders are unchanged from02:08 UTC; the realistic model still finishes Overall at44,866 against35,916 (8,950 late).
 
 Equipment-score saving: unenchanted dragonstone ring1645 and ring of wealth2572 both score17,625. Skip the enchantment for this goal: avoids Magic68 and one cosmic +15earth +15water runes (`magic_spells.dbrow:50-57`). This is a score-only substitution, not a combat-effect claim. [Dashboard candidate](../.practice/shared-supply/equipment-dashboard.patch) counts either ring once and removes the false enchantment prerequisite;7 offline solver/display checks pass. Staged only while live source is frozen.
 
-## Historical method audit — 2026-10-23
+## Method audit
 
-The detailed sections below retain source, item and method research. Their old target counts, prices, dates and owner-decision proposals are historical, not current instructions. Player commerce and all gameplay techniques are authorized. Lack of a proved route does not change the goal or authorize a claim of completion.
+The sections below hold source, item and method research. Target counts and prices in them are research values. Player commerce and all gameplay techniques are authorized. Lack of a proved route does not change the goal or authorize a claim of completion.
 ## Equipment
 
 ### Rule
@@ -62,7 +62,7 @@ The live #1 and #2 (nickai3, soko) wear exactly this set: 1,366,450 (MEASURED li
 2. Buy in shops: battleaxe 200,000, right shield half 750,000, cape 675. Make the splitbark pieces
    (2,000 coins plus 2 bark and 2 fine cloth). Craft the necklace and the ring (2 dragonstones).
 3. Get the helm, chainbody, platelegs and left shield half from helpers' drops, or buy them on the GE
-   (13.9M + 350M + 240M + 150M = about 754M coins at today's asks; ESTIMATE, the asks move).
+   (13.9M + 350M + 240M + 150M = about 754M coins at current asks; ESTIMATE, the asks move).
 4. Never wear the set into the Wilderness (PvP; see Runite). Put it on as the last act, then log out.
 5. Without the Cape of legends the best is 1,366,250 (Fremennik cloak, 250). That is rank 3.
 
@@ -126,7 +126,7 @@ There is no route that reaches 16.14B with legitimate play in a useful time:
   per bot at Thieving 99 (ESTIMATE). 16.2B / 18.8 = 862M bot-ticks: 100 bots for about 40 days at 400 ms.
 - The cheapest step that still helps: at the end, Haggis banks the whole team's wealth (helpers give
   coins and items by trade), keeps nothing in the inventory, and logs out. That ranks Haggis by team
-  wealth, which today is far below 16B.
+  wealth, which is far below 16B.
 
 ### OWNER DECISION B1
 
@@ -254,7 +254,7 @@ reached the full 145. So Haggis must reach 145 with a lower playtime than 1,022,
    Regicide (Agility); Observatory/Dig Site `itexam` (Mining); Watchtower (Magic); Eadgar's Ruse (Herblore);
    Temple of Ikov (Ranged, Fletching); The Knight's Sword `squire` (Smithing 318,125).
 3. Do every other quest after the skills are 99. Combat and skill checks are then trivial, and quest XP
-   no longer moves any level, so no stamp changes (`LoginServer.ts:171` keeps the stamp when the level
+   moves no level, so no stamp changes (`LoginServer.ts:171` keeps the stamp when the level
    is the same).
 4. Gates in this content: Dragon Slayer needs 32 QP (`quests/quest_dragon/scripts/dragon_journal.rs2:7`),
    Heroes' Quest 55 QP (`quests/quest_hero/configs/quest_hero.constant:20`), Legends' Quest 107 QP

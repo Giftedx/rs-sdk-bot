@@ -1,4 +1,4 @@
-# Quest routes to 99 (2026-10-23, draft)
+# Quest routes to 99
 
 Historical route sketch. Use [quest-plan](quest-plan.md) for source checks and measured segments. Leader times, XP totals and level conversions below require revalidation before planning. Guide requirements are hypotheses, not admission facts.
 

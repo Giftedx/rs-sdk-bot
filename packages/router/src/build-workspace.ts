@@ -1,4 +1,4 @@
-// Isolated source workspaces for coordinator builds (research/bot-host.md "Build/live overlap remains unproved").
+// Isolated source workspaces for coordinator builds (research/bot-host.md "Isolated build workspaces").
 // A build authors and proves its capability in a copy of the source tree. Live workers keep running from the main
 // checkout, so they never load half-edited code. Only publish() writes the main checkout; the caller holds the
 // build lock and a drained fleet for that step alone. Heavy shared trees are junctions: node_modules, vendor and

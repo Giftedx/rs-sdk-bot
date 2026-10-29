@@ -1,15 +1,15 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Current authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Where a restriction or model total below conflicts with this, this applies. See [AGENTS.md](../AGENTS.md).
 
-# Rival gap list: bleugreen/rs-sdk against our Haggis plan (2026-10-23)
+# Rival gap list: bleugreen/rs-sdk against our Haggis plan
 
 Source: `bleugreen/rs-sdk` (MIT, "Copyright (c) 2025 Lost City"), branch `main` at commit `3bd2ab0a`
-(2026-10-23T07:44:55Z). We read `docs/speedrun/` and `speedrun/README.md` as raw text through GitHub. We did not
+(committed 07:44:55Z). We read `docs/speedrun/` and `speedrun/README.md` as raw text through GitHub. We did not
 clone, download, copy or run any file from that repository. Every number from that repository is third-party data.
 For our clock it is **ESTIMATE**, even where the rival labels it "m" (measured on their lab or the demo).
 
 Rival labels: **m** measured, **r** read in code, **i** inferred, **e** estimated. Our labels: MEASURED, CODE-READ,
 ESTIMATE (`research/INDEX.md`). Paths that start with `C/` are in `vendor/rs-sdk/server/content/scripts/`. Paths
-that start with `E/` are in `vendor/rs-sdk/server/engine/src/`. We read every cited line in this session.
+that start with `E/` are in `vendor/rs-sdk/server/engine/src/`. Every cited line was read.
 
 Short names for the rival files:
 
@@ -26,7 +26,7 @@ Short names for the rival files:
 |---|---|---|---|
 | Steps and legs, knife on | 33,882.7 expected, 32,578.9 best | m/i | RO section 2, last row |
 | Legs (27 travel rows) inside that sum | 2,283.3 | m | RO section 2, `T..` rows (our sum) |
-| Row in force (2026-10-23 supply forecast) | **35,671.7 expected, 33,111.0 best** | i | RO section 7 |
+| Row in force (supply forecast) | **35,671.7 expected, 33,111.0 best** | i | RO section 7 |
 | Expected plus Monkey Madness bad case plus S13 railings at p90 | 36,083.0 | i | RO section 7 |
 | Knife loops off all night | 37,844.0 expected | i | RO headline |
 | Record they chase (stunbaron) | 35,916 | MEASURED live | RO line 6 |
@@ -53,7 +53,7 @@ safe levers. "Last" = that lever switched off from all on. Floor / realistic. Al
 | 8 | Wilderness lap 66 ticks lab, 74 demo inferred: Agility 75-99 in 4,114 = 197 XP/tick (RO S17, `skills/agility.md` section 1) | **estimate only** (67-90 ticks from the web) | `rival-agility-lap` | 0 / 876 | 0 / 726 | `C/.../wilderness_course.rs2:17-176` (our row source) | accepted |
 | 9 | Sea Slug: 179,375 Fishing (to 74) in 304 browser / 495 stock (RO S19, QR) | **missing** | `rival-sea-slug` (row `rival-seaslug`) | 87 / 67 | 87 / 67 | `C/areas/area_ardougne_east/scripts/caroline.rs2:45`. Firemaking 30 gate: `C/quests/quest_seaslug/scripts/quest_seaslug.rs2:43` | accepted |
 | 10 | Charge with no cooldown: 163-165 casts, Magic 80-99, inside the stuns. Mage Arena 382 expected, 336 best (RO S16, S18c) | **code-read**: owner lever `charge-spam` | `charge-spam` (Mage Arena ticks patched to 336 / 581) | owner | owner | `C/skill_magic/scripts/spells/charge.rs2:1-27`, see section 5 | **owner decision** |
-| 11 | Login wine: two arming relogs ferment the banked wine, Cooking 30-99 in 81 (RO S25c, `research/wine-window.md`) | **MEASURED practice** (`cooking-board.md`), authorized by the owner on 2026-10-28 | trick `loginWine` (no change) | about 1 tick in the model | | `C/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2:8,22-70,72-73`, `C/login_logout/login.rs2:70`, see section 5 | **eligible gameplay mechanic** |
+| 11 | Login wine: two arming relogs ferment the banked wine, Cooking 30-99 in 81 (RO S25c, `research/wine-window.md`) | **MEASURED practice** (`cooking-board.md`), authorized by the owner | trick `loginWine` (no change) | about 1 tick in the model | | `C/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2:8,22-70,72-73`, `C/login_logout/login.rs2:70`, see section 5 | **eligible gameplay mechanic** |
 | 12 | Five-packet interleaving: at most 4 user events a tick, helpers first and the click last, no helpers while walking, delayed actions only in free ticks (IL checklist 1-8) | **partial**. We know the 5-event cap (INDEX fact 1) and `s.direct`. The 4-not-5 rule and the backlog effect (205 dead ticks, IL rule 2) are new | enables rows 4 and 5 | | | `E/network/game/client/ClientGameProtCategory.ts:5-6` (20 client, 5 user). `E/engine/entity/NetworkPlayer.ts:136-147` | accepted |
 | 13 | Refused USER events spend CLIENT slots (20), not USER slots (5): over-sending is free (ES section 8 #6, m) | **code-read** (INDEX fact 1) | none | | | `E/engine/entity/NetworkPlayer.ts:141-147` | accepted |
 | 14 | Level-ups never stall a delay-free item-on-item burst: each OPHELDU closes the chat (ES #4, m: 27 gems over 31 levels at the level-99 rate) | **MEASURED practice** (`levelup-cost.md`). Settles C5 for item-on-item. Bank opens still pay | none | | | `E/network/game/client/handler/OpHeldHandler.ts:54-55` `clearPendingAction` | accepted |
@@ -163,12 +163,11 @@ rival uses the login wine), Prayer -145 foreground (ours hides it in the stuns, 
 1. **Login wine** (rival S25c uses it). `wine.rs2:8` checks Cooking 35 only when the player makes a wine.
    `wine.rs2:22-70`, the fermentation timer, has no Cooking check. It ferments every unfermented wine in the bank in
    15 batch rolls (`:26-41`) plus the inventory. `login.rs2:70` calls `~ferment_wines_login` (`wine.rs2:72-73`),
-   which starts the 20-tick timer on every login, with or without a wine made in that session. The owner ruled the
-   login arming an exploit (`owner-requests.md` R10, `bug-report-wine-login.md`). It is worth about 1 tick in our
-   model, so nothing changes.
+   which starts the 20-tick timer on every login, with or without a wine made on that login. It is worth about 1 tick in our
+   model.
 2. **Charge with no cooldown and no delay** (rival S18c uses it). `charge.rs2:1-27` has no `p_delay`. Every other XP
    spell has one (`research/leader-forensics.md:144-146`). The recast check at `charge.rs2:8-12` is commented out
-   with the note "this was added sometime in 2005". Rev 289 is dated 2005-01-17 (`research/web-research.md:237`), so
+   with the note "this was added sometime in 2005". Rev 289 is dated January 2005 (`research/web-research.md:237`), so
    a missing recast check fits this revision (`research/gap-closers.md:117`). The missing delay has no such note.
    The commented check also reads `%charge_god_spell`, but the spell sets `%magearena_charge` (`charge.rs2:18`), so
    the check would not stop a recast even if it ran. Verdict: the recast is authentic for the revision. Five casts a

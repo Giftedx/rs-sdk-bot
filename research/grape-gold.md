@@ -1,4 +1,4 @@
-# Grape gold: is the grape bid a gold lever? (2026-10-23)
+# Grape gold: is the grape bid a gold lever?
 
 Verdict: **no.** The "10 grapes every 80 ticks at Almera's house" spawn does not exist. The two real grape
 spawns give 1 grape each, need a quest or a level that our idle accounts do not have, and 4 to 6 other players
@@ -19,10 +19,10 @@ alone at a spawn, and about 2 coins per tick when it shares the spawn with the c
 | Noted grapes | `cert_grapes` (1988) exists, and the GE takes the noted form from the backpack | `pack/obj.pack:1989`; `engine/src/engine/market/GrandExchange.ts:132-138` |
 | Other sources | Goblin drop 1/128 (`goblin.rs2:121`). No shop sells grapes | `knowledge/shops.json` (no grapes row) |
 
-Our idle accounts (status files, 2026-10-23): Mightyrod Cooking 1, Bigchopper Cooking 1. Neither can enter the
+Idle accounts (status files): Mightyrod Cooking 1, Bigchopper Cooking 1. Neither can enter the
 Cooks' Guild. Phoenix Gang membership is not recorded for either; not verified.
 
-## 2. GE bid (MEASURED live, 2026-10-23 about 13:35Z)
+## 2. GE bid (MEASURED live, `/api/market/items/1987`)
 
 `GET /api/market/items/1987`:
 
@@ -31,7 +31,7 @@ bid: 1000  ask: null  buyQuantity: 96282  sellQuantity: 0  volume: 4317  gross: 
 trades: 170  lastPrice: 1000  lastTradeAt: 1792758332687  vwap: 1121.15
 ```
 
-- The bid fell from 96,859 (supply-logistics.md:51) to 96,282: other players sell into it now.
+- Other players sell into the bid, so it shrinks as grapes sell.
 - Daily history (`/history?interval=86400000`): 16, 1,845, 1,038, 1,418 grapes on the last 4 days. Hourly
   history: 24 to 228 grapes per hour; the last two hours 147 and 228.
 - Match rule (CODE-READ, `engine/src/engine/market/MarketStore.ts:137-170`): a sell offer at a price at or
@@ -85,7 +85,6 @@ Live respawn at the roster count of 1,191 to 1,218: `floor(80 x (4000 - 1,218) /
 |---|---|---|---|
 | Alone at one spawn, BANK_AT 26 | 26 / (25 x 57 + 97) = 0.0171 (the 80-tick bank trip is longer than the respawn) | **16.2** | 146k |
 | Shared with the 6 Cooks' Guild campers (1/7) | 0.0024 | **2.3** | 21k |
-| Old claim (10 per 80 ticks at Almera) | 0.125 | 119 | 1.07M |
 
 Gold farmers: 9-15 coins per tick each (`research/learning-report.md`). A grape picker matches one farmer only
 when it is alone at a spawn, needs Cooking 32 and a chef's hat (or Phoenix Gang), and cannot scale: there are
@@ -94,7 +93,7 @@ the 2 spawns (about 160 each per hour at most) already being taken.
 
 ## 7. Live micro-test: not run
 
-The task allows it only if steps 1-4 show the method works. Step 1 shows the Almera spawn does not exist, and
+A live test needs steps 1-4 to show the method works. Step 1 shows the Almera spawn does not exist, and
 neither Mightyrod nor Bigchopper can enter either real spawn (Cooking 1, no chef's hat; Phoenix Gang not
 verified). No account was logged in to the live server. No grapes were sold, so "coins received" is not
 measured; the 950-per-grape figure is CODE-READ.
@@ -103,4 +102,4 @@ measured; the 950-per-grape figure is CODE-READ.
 
 - Whether the Haggis supply plan still needs 601 grapes: the only routes are these 2 contested spawns (about
   160 per hour each, shared) or the GE, where we would compete with a 96k bid at 1,000.
-- `supply-logistics.md:51-54`, `:160` and `cooking-board.md:14,32` still cite the Almera spawn (INDEX C20).
+- `supply-logistics.md:51-54`, `:160` and `cooking-board.md:14,32` cite the Almera spawn, which does not exist (INDEX C20).

@@ -1,6 +1,6 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Current authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Where a restriction or model total below conflicts with this, this applies. See [AGENTS.md](../AGENTS.md).
 
-# Pro playbook for this server (2026-10-23)
+# Pro playbook for this server
 
 Scope: historical rs-sdk observations and source assumptions (rev 289, XP 25x, 400 ms ticks). Live configuration needs verification. Skill boards
 rank by logged-in ticks to reach a level. Sources: web research on OSRS speedrun and efficiency play (wiki, EHP
@@ -9,7 +9,7 @@ tables), checked against this server's code (`vendor/rs-sdk/server`), plus our o
 
 ## How pros plan, and what that means here
 
-### Current allocation review (2026-10-26)
+### Current allocation review
 
 [Saved-state audit](../.practice/fleet-review/audit.json): 22 non-main live credential folders, 21 observed logins, five active earners against a 17-account cap; about 15 GiB free before practice. Counts exclude `_template`. These are observations, not exhaustive live skill/bank refreshes. No account is missing from the config. Eighteen template rows differ from current decisions: `swarm.json` wins; `fleet.ts apply` now refuses to overwrite an existing plan (exclusive creation); templates still need review before reuse.
 
@@ -51,11 +51,11 @@ These are candidates, not a fixed route order. Compare quest time, travel and un
    they stop after about 1,000 ticks in one area (`Player.ts:2189-2217`). Melee NPCs path naively, so safespots work.
    Never walk White Wolf Mountain at low level. Check routes with `research/route-danger.ts`.
 7. **Watch the leaders.** The live world feed (`wss://rs-sdk-demo.fly.dev/worldfeed`) shows every player tick by
-   tick. Seen 2026-10-23: Jackalopett1 (Thieving #8) pickpockets knights about every 2 ticks at 10 HP and eats
+   tick. Observed on the feed: Jackalopett1 (Thieving #8) pickpockets knights about every 2 ticks at 10 HP and eats
    after a stun; Jackalopeth2 (Thieving #3) loops the level-61 Ardougne castle lock doors (loc_2555, upstairs at
    2572,3288 and 2572,3305) and the castle chests (12,500 XP each).
 
-## Board plans (leader ticks from the 2026-10-22 snapshot)
+## Board plans (leader ticks from the hiscores snapshot)
 
 | Board | Leader | Plan | Status |
 |---|---|---|---|

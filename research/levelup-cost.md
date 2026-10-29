@@ -1,4 +1,4 @@
-# Level-up dialogs cost scored playtime (measured 2026-10-22, practice server, 300 ms ticks)
+# Level-up dialogs cost scored playtime (measured on the practice server, 300 ms ticks)
 
 ## Mechanism (content/scripts/levelup/scripts/levelup.rs2)
 Each level-up runs `[label,levelup]`: a message, `if_openchat` of the level-up dialog, then `p_pausebutton`, and for
@@ -18,4 +18,4 @@ levels that unlock something, more pages from `~levelup_unlocks`. The script pau
 - Cost when the next action is blocked: about 2.7 ticks per level gained (40-42 ticks for 15 levels here).
 - A method whose XP lands without any later blocked action (the wine login timer) pays nothing.
 - This explains most of the gap between the XP-per-tick model (Crafting 79 ticks) and the live #1 (197).
-- Open: a cheaper way to clear queued pages. Not found yet.
+- Open: a cheaper way to clear queued pages.

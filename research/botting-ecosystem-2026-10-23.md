@@ -1,6 +1,6 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Current authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
-# Botting ecosystem survey (2026-10-23): code and data we can reuse
+# Botting ecosystem survey: code and data we can reuse
 
 Current cross-survey decisions: [project use map](project-use-map.md). The dated rankings below are evidence history, not an implementation queue.
 
@@ -11,31 +11,31 @@ new findings and re-checks license and activity.
 
 Method: read-only. GitHub metadata and files came from `gh api` (repo, tree, contents, compare, commits) and
 `raw.githubusercontent.com` read as text to stdout. `wiki/world.json` was streamed through `jq` and not saved.
-Nothing was cloned, installed or run. Dates are the repo `pushed_at` date on 2026-10-23.
+Nothing was cloned, installed or run.
 
-Evidence levels: **WEB** (a page or repo file read today) unless a row says **CODE-READ** (we checked the claim
+Evidence levels: **WEB** (a page or repo file read) unless a row says **CODE-READ** (we checked the claim
 in our own `vendor/` or `knowledge/`). **UNVERIFIED** marks a claim we could not check.
 
 ## Main findings
 
-**2026-10-26 review — decision filter (source inspection only).** The two supplied PDF surveys and linked repositories favour these existing paths; no framework migration is justified:
+**Decision filter (source inspection only).** The two supplied PDF surveys and linked repositories favour these existing paths; no framework migration is justified:
 
 - [rs-sdk](https://github.com/MaxBittker/rs-sdk): dispatch is not server effect. Capture before/after item counts, ticks and outcome; start with farmer eating and linked supply costs.
 - [Microbot](https://github.com/chsami/Microbot/blob/main/docs/ARCHITECTURE.md): per-tick entity snapshots, script lifecycle and blocker recovery. Reuse our session/wait/supervisor code; port only a proved missing behaviour.
-- [LostCity Engine/Content](https://github.com/LostCityRS/Engine-TS): extract goal prerequisites and routes from matching pinned revisions. Maps/cache tools aid inspection, not proof of reachability. RuneScriptKt is superseded by [RuneScriptTS](https://github.com/LostCityRS/RuneScriptTS).
+- [LostCity Engine/Content](https://github.com/LostCityRS/Engine-TS): extract goal prerequisites and routes from matching pinned revisions. Maps/cache tools aid inspection, not proof of reachability. RuneScriptKt is rejected in favour of [RuneScriptTS](https://github.com/LostCityRS/RuneScriptTS).
 - Fleet performance figures remain author claims; no license was reported. Practice simulation needs contention/recovery cases and later bounded live proof. Public LostCity, the modified demo and modern OSRS are distinct environments.
 
-Archived OpenOSRS/Alter clients and WaspLib are historical references. RuneLite/plugin-hub offer module boundaries; Simba/SRL offer optional visual checks. Neither requires a second runtime. Earlier compatibility claims below are dated; recheck before import. Wine and level-check techniques are authorized by the current owner decision. Next implementation and proof: [food-chain accounting](food-chain.md#cost-accounting-2026-10-26).
+Archived OpenOSRS/Alter clients and WaspLib are historical references. RuneLite/plugin-hub offer module boundaries; Simba/SRL offer optional visual checks. Neither requires a second runtime. Recheck compatibility claims below before import. Wine and level-check techniques are authorized by the current owner decision. Next implementation and proof: [food-chain accounting](food-chain.md#cost-accounting).
 
-1. **A rival speedrun team publishes its whole plan.** `bleugreen/rs-sdk` (MIT, pushed 2026-10-23, 656 commits
+1. **A rival speedrun team publishes its whole plan.** `bleugreen/rs-sdk` (MIT, 656 commits
    ahead of upstream) has a `speedrun/` package and `docs/speedrun/` with a run order, a step manifest, helper
    playbooks, quest notes, competitor forensics and a measured engine sweep. Its expected run is 38,742 ticks
    (best case 31,324), against stunbaron's 35,916. It names the techniques it uses: wine without a level check,
    Charge without a cooldown, dialogue bursts, knife-on-log tick manipulation, five-packet interleaving.
    It is the highest-value find in this survey. https://github.com/bleugreen/rs-sdk/blob/main/docs/speedrun/research/competitors/public-code.md
 2. **UberMouse's world index is valid for our content.** The fork is MIT. `world.json` was built from content
-   commit `fb264971` (2026-10-11), and upstream has not changed `server/content` since. Our vendor HEAD is
-   `b565f2d9` (2026-10-19), and the compare `b565f2d9...main` shows 0 content files (CODE-READ + WEB). The
+   commit `fb264971`, and upstream has not changed `server/content` since. Our vendor HEAD is
+   `b565f2d9`, and the compare `b565f2d9...main` shows 0 content files (CODE-READ + WEB). The
    reach sets, nearest-bank run ticks and the crossing tables are things our `knowledge/*.json` does not have.
 3. **UberMouse's floor model agrees with our measurements** where both exist (section "Floor model check").
    Our measured guard and knight rates are 87% and 93% of its floor; its iron floor matches our 3-rock cap
@@ -49,18 +49,18 @@ Archived OpenOSRS/Alter clients and WaspLib are historical references. RuneLite/
 
 ## Ranked table (reuse value for Haggis rank 1 on all 24 boards)
 
-| # | Candidate | License | Last push | Lang | What we reuse | Saves us | Risk |
-|---|---|---|---|---|---|---|---|
-| 1 | [bleugreen/rs-sdk](https://github.com/bleugreen/rs-sdk) `speedrun/`, `docs/speedrun/` | MIT (file: "Copyright (c) 2025 Lost City") | 2026-10-23 | TS | Run order and leg ticks, helper playbooks (wine, bones, runes, cannon, mule, staging), quest notes for about 35 quests, engine sweep top ten (measured), hiscore stamp forensics, fast send layer (`lib/wait.ts`, `bank.ts`, `trade.ts`, `converse.ts`, `levelup.ts`, `runner/budget.ts`) | Very high: weeks of measurement on the same server and goal | Rival team; content can change or vanish. Some techniques may be "real exploits" under owner rule (owner decision O3). Low code risk if read only |
-| 2 | [UberMouse/rs-sdk](https://github.com/UberMouse/rs-sdk) `wiki/` | MIT | 2026-10-23 | TS | `world.json` (reach, nearest bank, connectors, gates, crossings, transports, npc spawn clusters), floor model `wiki/world/model/`, 40 scenario saves, save/kick endpoint `server/engine/src/web/pages/saves.ts` | High: a reach graph and per-site banks we do not have; a checked rate model | Low. A generated 7.7 MB file; pin by commit |
-| 3 | [rs2b2t/rs2b0t](https://github.com/rs2b2t/rs2b0t) | MIT | 2026-10-22 | TS | Quest modules (`decide(snapshot) -> step`) and about 22 `docs/decisions/quest-pitfalls-*.md` from live runs, rev 289 | Medium-high: bleugreen estimates 200-500 quest ticks (UNVERIFIED) | Low. Targets a different server (rs2b2t) on the same revision; README table says 289, repo description says 274 |
-| 4 | [TestingPurposes/rs-sdk-fleet](https://github.com/TestingPurposes/rs-sdk-fleet) | NONE | 2026-08-03 | TS | Ideas: browserless protocol client, offline simulator `headless/sim/`, navgrid notes ("send the per-tile path raw"), parallel "pyramid" gold merge | Medium-high as design input (our C2 memory problem, a faster simulator) | No license: copying code is not allowed. Rev 274 baseline |
-| 5 | [Skretzo/shortest-path](https://github.com/Skretzo/shortest-path) | BSD-2-Clause | 2026-10-22 | Java | Transport TSV schema (already recommended) | Medium | Low; OSRS coordinates differ |
-| 6 | [chsami/Microbot](https://github.com/chsami/Microbot) | BSD-2-Clause | 2026-10-23 | Java | State machine and wait helpers (already recommended) | Medium | Low; OSRS client code, port ideas only |
-| 7 | [Zoinkwiz/quest-helper](https://github.com/Zoinkwiz/quest-helper) | BSD-2-Clause | 2026-10-22 | Java | Quest step and requirement schema | Medium | Low; OSRS varbits |
-| 8 | [markeljan/rs-sdk-dashboard](https://github.com/markeljan/rs-sdk-dashboard) | MIT | 2026-10-14 | TS | Fleet dashboard for a 90-account rs-sdk fleet (per bleugreen) | Low-medium (our dashboard exists) | Low |
-| 9 | [jrr97/runescape-ai](https://github.com/jrr97/runescape-ai) | MIT | 2026-10-17 | TS | JSON routine graph schema (already recommended) | Low-medium | Low |
-| 10 | [ineedbots/lc-headless](https://github.com/ineedbots/lc-headless) | NONE | 2026-10-21 | C++ | Ideas: a C++ headless LostCity client | Reassessed below: current README and navigation test source saved | No root license found; runtime/compatibility unproved |
+| # | Candidate | License | Lang | What we reuse | Saves us | Risk |
+|---|---|---|---|---|---|---|
+| 1 | [bleugreen/rs-sdk](https://github.com/bleugreen/rs-sdk) `speedrun/`, `docs/speedrun/` | MIT (file: "Copyright (c) 2025 Lost City") | TS | Run order and leg ticks, helper playbooks (wine, bones, runes, cannon, mule, staging), quest notes for about 35 quests, engine sweep top ten (measured), hiscore stamp forensics, fast send layer (`lib/wait.ts`, `bank.ts`, `trade.ts`, `converse.ts`, `levelup.ts`, `runner/budget.ts`) | Very high: weeks of measurement on the same server and goal | Rival team; content can change or vanish. Some techniques may be "real exploits" under owner rule (owner decision O3). Low code risk if read only |
+| 2 | [UberMouse/rs-sdk](https://github.com/UberMouse/rs-sdk) `wiki/` | MIT | TS | `world.json` (reach, nearest bank, connectors, gates, crossings, transports, npc spawn clusters), floor model `wiki/world/model/`, 40 scenario saves, save/kick endpoint `server/engine/src/web/pages/saves.ts` | High: a reach graph and per-site banks we do not have; a checked rate model | Low. A generated 7.7 MB file; pin by commit |
+| 3 | [rs2b2t/rs2b0t](https://github.com/rs2b2t/rs2b0t) | MIT | TS | Quest modules (`decide(snapshot) -> step`) and about 22 `docs/decisions/quest-pitfalls-*.md` from live runs, rev 289 | Medium-high: bleugreen estimates 200-500 quest ticks (UNVERIFIED) | Low. Targets a different server (rs2b2t) on the same revision; README table says 289, repo description says 274 |
+| 4 | [TestingPurposes/rs-sdk-fleet](https://github.com/TestingPurposes/rs-sdk-fleet) | NONE | TS | Ideas: browserless protocol client, offline simulator `headless/sim/`, navgrid notes ("send the per-tile path raw"), parallel "pyramid" gold merge | Medium-high as design input (our C2 memory problem, a faster simulator) | No license: copying code is not allowed. Rev 274 baseline |
+| 5 | [Skretzo/shortest-path](https://github.com/Skretzo/shortest-path) | BSD-2-Clause | Java | Transport TSV schema (already recommended) | Medium | Low; OSRS coordinates differ |
+| 6 | [chsami/Microbot](https://github.com/chsami/Microbot) | BSD-2-Clause | Java | State machine and wait helpers (already recommended) | Medium | Low; OSRS client code, port ideas only |
+| 7 | [Zoinkwiz/quest-helper](https://github.com/Zoinkwiz/quest-helper) | BSD-2-Clause | Java | Quest step and requirement schema | Medium | Low; OSRS varbits |
+| 8 | [markeljan/rs-sdk-dashboard](https://github.com/markeljan/rs-sdk-dashboard) | MIT | TS | Fleet dashboard for a 90-account rs-sdk fleet (per bleugreen) | Low-medium (our dashboard exists) | Low |
+| 9 | [jrr97/runescape-ai](https://github.com/jrr97/runescape-ai) | MIT | TS | JSON routine graph schema (already recommended) | Low-medium | Low |
+| 10 | [ineedbots/lc-headless](https://github.com/ineedbots/lc-headless) | NONE | C++ | Ideas: a C++ headless LostCity client | Reassessed below: current README and navigation test source saved | No root license found; runtime/compatibility unproved |
 
 Below the top 10 (low value, kept for the record): RuneLite tick plugins, DaxWalker, Parabot, OsrsBot, 2006Scape,
 Apollo, RSMod, RuneJS, OSRS data dumps, AI/RL projects. Notes follow.
@@ -75,8 +75,7 @@ Apollo, RSMod, RuneJS, OSRS data dumps, AI/RL projects. Notes follow.
   batching against the 5 USER events per tick; a `TickWindow` user-event budget per step; resumable runs from
   game state; a host gate for the "knife" in-page tick program; reconnect after outage; a demo restart detector.
   https://github.com/bleugreen/rs-sdk/blob/main/speedrun/README.md
-- `docs/speedrun/RUN-ORDER.md` (890 KB): steps S00-S27 with labels m/r/i/e per tick figure; states the demo has
-  ticked at 400 ms since 2026-10-22 19:56:29Z. That agrees with our C2 settlement (399.8 ms).
+- `docs/speedrun/RUN-ORDER.md` (890 KB): steps S00-S27 with labels m/r/i/e per tick figure; states the demo ticks at 400 ms. That agrees with our C2 settlement (399.8 ms).
   https://github.com/bleugreen/rs-sdk/blob/main/docs/speedrun/RUN-ORDER.md
 - `docs/speedrun/research/engine-sweep.md` section 8, "Top ten, verified" (lab at `NODE_TICKRATE=300`, 3 samples):
   - Agility Arena ticket button: 5 presses landed in one tick, 140,000 base Agility; closed because tickets
@@ -108,7 +107,7 @@ Apollo, RSMod, RuneJS, OSRS data dumps, AI/RL projects. Notes follow.
 ### 2. UberMouse/rs-sdk wiki fork (detailed)
 
 **Licenses.** UberMouse/rs-sdk: MIT (GitHub API; LICENSE file "MIT License, Copyright (c) 2025 Lost City").
-MaxBittker/rs-sdk: MIT, 1,029 stars, pushed 2026-10-23. A copy with the MIT notice kept is allowed.
+MaxBittker/rs-sdk: MIT, 1,029 stars. A copy with the MIT notice kept is allowed.
 https://github.com/UberMouse/rs-sdk/blob/main/LICENSE
 
 **Who and what.** Author Taylor Lodge (commit author). The fork is 665 commits ahead of upstream. It has a
@@ -117,9 +116,8 @@ recordings and replay) and the generated wiki. Bot names in the training pages: 
 conductor2w2. They are not in our hiscore snapshots (`rg conductor research/hiscores-*.json`: no match).
 https://github.com/UberMouse/rs-sdk/blob/main/conductor/README.md
 
-**Content match (CODE-READ + WEB).** `world.json` `generatedFrom` = `fb264971634d…` (upstream commit, 2026-10-11,
-"Harden Miscellania transfers"). The latest upstream commit that touches `server/content` is that same commit
-(`gh api repos/UberMouse/rs-sdk/commits?path=server/content`). Our `vendor/rs-sdk` HEAD `b565f2d9` (2026-10-19)
+**Content match (CODE-READ + WEB).** `world.json` `generatedFrom` = `fb264971634d…` (upstream commit "Harden Miscellania transfers"). The latest upstream commit that touches `server/content` is that same commit
+(`gh api repos/UberMouse/rs-sdk/commits?path=server/content`). Our `vendor/rs-sdk` HEAD `b565f2d9`
 compares to upstream main with 0 content files changed. So the content under `world.json` is our content.
 
 **world.json structure** (format 21, 7,678,917 bytes; top-level keys and counts from `jq`):
@@ -161,7 +159,7 @@ Varrock East bank 46 run ticks; to Lumbridge furnace 73.
 | Ships, carts, teleports, scripted moves | none | 27 transports, 816 crossings | We have no data |
 | Reach from spawn | none | every site and npc cluster | We have no data |
 | Nearest bank per resource | none (our `packages/core` has no nearest-bank logic; `rg nearest packages/core/src/world.ts`: no match) | every resource site | We have no data |
-| Banks | ledger ruling: Draynor (3092,3243), no Lumbridge castle bank (`docs/superpowers/ledgers/2026-10-22-phase2-script-core.md:25`) | 25 bank sites; Draynor stand (3092,3243); none in Lumbridge castle | Agrees |
+| Banks | Draynor (3092,3243), no Lumbridge castle bank (git fa56f14, ledger removed after) | 25 bank sites; Draynor stand (3092,3243); none in Lumbridge castle | Agrees |
 | Drops, shops, items, npcs | `drops.json` 258, `shops.json` 206, `items.json` 2,756, `npcs.json` 1,597 | wiki pages for 1,605 items, 917 npcs, shops | Same source; ours is already machine-readable |
 | Quests | `quests.json` 64 with XP | 68 with varp and stages | Close; theirs has stage numbers |
 
@@ -188,14 +186,14 @@ for gathering skills and travel legs only.
 **Tests.** The owner says 1,288 tests (UNVERIFIED). The tree has 72 `wiki/world/test/*.test.ts` files and 99
 `conductor/**/*.test.ts` files (237 `.test.ts` files repo-wide).
 
-**Other parts worth taking.** `server/engine/src/web/pages/saves.ts` (Taylor Lodge, 2026-10-09): `GET /save/:name`
+**Other parts worth taking.** `server/engine/src/web/pages/saves.ts` (Taylor Lodge): `GET /save/:name`
 and `POST /kick/:name` on the management port, loopback only, behind `SAVE_ENDPOINTS=true`. Our vendor does not
 have it (`rg SAVE_ENDPOINTS vendor/rs-sdk/server/engine/src`: no match). With it, our practice server can snapshot
 and restore scenario states. Also 40 `conductor/saves/*.sav` scenario saves.
 
 ### 3. rs2b2t/rs2b0t
 
-MIT, 12 stars, pushed 2026-10-22. A TypeScript bot client for rs2b2t (a 2004scape anarchy fork), rev 289 per the
+MIT, 12 stars. A TypeScript bot client for rs2b2t (a 2004scape anarchy fork), rev 289 per the
 README table, local engine LostCityRS Engine-TS + Content branch 289. Bots call the client's own `doAction` and
 `tryMove`. It has A* over a baked collision pack with a door and transport graph, quest modules as
 `decide(snapshot) -> step`, 52 bundled scripts, and `docs/decisions/quest-pitfalls-2..22.md`.
@@ -221,17 +219,17 @@ us, and for our content, so shortest-path drops to a schema reference.
 
 ### 8. markeljan/rs-sdk-dashboard
 
-MIT, pushed 2026-10-14. bleugreen says it is "the dashboard a 90-account rs-sdk fleet runs on" and is synced from
+MIT. bleugreen says it is "the dashboard a 90-account rs-sdk fleet runs on" and is synced from
 a private fork; it names sokobot (all 63 quests) and 0hyl8LmRi (all 99s). Reuse: low; we have a dashboard.
 https://github.com/markeljan/rs-sdk-dashboard
 
 ### 9. jrr97/runescape-ai
 
-As in `wider-ecosystem.md`. MIT, pushed 2026-10-17.
+As in `wider-ecosystem.md`. MIT.
 
 ### 10. ineedbots/lc-headless
 
-Earlier README lookup failed; superseded by the 2026-10-26 pinned source inspection below. Current README exists and describes C++/Python scripting and revisions225/274/289. No root license found in captured tree; not built or run. https://github.com/ineedbots/lc-headless
+The README exists and describes C++/Python scripting and revisions225/274/289. No root license found in captured tree; not built or run. https://github.com/ineedbots/lc-headless
 
 ### Other rs-sdk forks (all MIT by inheritance unless stated)
 
@@ -241,7 +239,7 @@ Checked with `gh api repos/MaxBittker/rs-sdk/forks` (newest 100) and `compare/ma
 |---|---|---|
 | Urnz/rs-sdk | 150 / 66 | Housing, land construction, "simulation-clock" mods. Off-goal |
 | saimdlx/nineninemaxxing, jrpii/rs-sdk-temporal-planning, 99-cooking/loot.xyz | ~2,000 / 2,249 | Pre-rewrite history, so the count is not meaningful (bleugreen says upstream rewrote history in March). jrpii has a temporal-planning report (`final-report.md`); loot.xyz is "High-speed rs private server built automation first" with its own `engine/`. Not read further |
-| GoonMachine/rs-sdk | MIT, 2026-08-17 | KotH playbooks, quest-XP bootstrap order, a Discord sample (per bleugreen) |
+| GoonMachine/rs-sdk | MIT | KotH playbooks, quest-XP bootstrap order, a Discord sample (per bleugreen) |
 | CraziedAres, bogocat, ken12321, singulocity, natemacfadden, Kudretg | 1-6 ahead | Small fixes |
 | Kimmo3223, java-james, SeanVella/pvp-sdk, Ghosts, Supalosa, Acquiredl, CakeRepository, Milbaxter, wheredidmyantsgo, uae1319-ux, bestlund/artscape | 0 ahead on `main` | Work may be on other branches (Acquiredl says "bot files are on the acquiredl branch"); not checked |
 
@@ -251,7 +249,7 @@ plugin hosts for the LostCity web client, build 274), maxwelllord/AgentPairRSBen
 nrylov/rs2011-ts (no license, rev 634), index-rs/LC-bankvalue (no license, bank value from a .sav),
 marcdubs/2004Scape-AP-Logic (Archipelago randomizer logic), PureXYZ/2004scape-sp-mobile (MIT, single player, 274).
 
-### RS2 / Lost City focused source check (2026-10-26)
+### RS2 / Lost City focused source check
 
 Match the **server, revision, protocol, cache and game rules**, not the name “RS2”. Our modified rs-sdk demo, rs2b2t and public Lost City are separate targets. The [public Lost City guide](https://2004.lostcity.rs/guide) prohibits bots and modified clients; research here does not establish compatibility or authorization there.
 
@@ -277,8 +275,8 @@ Match the **server, revision, protocol, cache and game rules**, not the name “
 | TriBot, PowBot, Inubot | Sales stopped or shut down; sources disagree (UNVERIFIED, same sources) | none |
 | OSBot, RSPeer | No 2026 status found (UNVERIFIED) | none |
 | RSBot / Powerbot | `powerbot/powerbot` repo not found (404); history UNVERIFIED | none |
-| Parabot | [Parabot/Parabot](https://github.com/Parabot/Parabot) GPL-3.0, last push 2021-11-27; 317 API GPL-2.0, 2022 | none (copyleft, stale) |
-| OsrsBot | [OSRSB/OsrsBot](https://github.com/OSRSB/OsrsBot) GPL-3.0, 2025-02-07 | none (copyleft) |
+| Parabot | [Parabot/Parabot](https://github.com/Parabot/Parabot) GPL-3.0; 317 API GPL-2.0 | none (copyleft, stale) |
+| OsrsBot | [OSRSB/OsrsBot](https://github.com/OSRSB/OsrsBot) GPL-3.0 | none (copyleft) |
 | Microbot | BSD-2-Clause, active | see #6 |
 
 These are not drop-in runtimes. Their public APIs, recovery logic and script task decomposition can still help; wrong-era rates/IDs must be replaced. Copyleft is a reuse condition, not evidence of low technical value. The historical shutdown claims above were not verified and must not guide current choices. See the refreshed classification below.
@@ -286,8 +284,8 @@ These are not drop-in runtimes. Their public APIs, recovery logic and script tas
 ### Walkers
 
 - DaxWalker: [itsdax/Runescape-Web-Walker-Engine](https://github.com/itsdax/Runescape-Web-Walker-Engine),
-  Apache-2.0, pushed 2026-03-11. Ideas only (as in `wider-ecosystem.md` 3.3).
-- rsmod pathfinder: vendored. `rsmod/rsmod` ISC, pushed 2025-10-01.
+  Apache-2.0. Ideas only (as in `wider-ecosystem.md` 3.3).
+- rsmod pathfinder: vendored. `rsmod/rsmod` ISC.
 - UberMouse `wiki/world/reach.ts`, `distance.ts` (MIT) and rs2b0t world-walk (MIT) are new TS options on our
   content. bleugreen `speedrun/lib/paths.ts` and `travel.ts` (MIT) cover gates, spirit trees, gliders, ships.
 
@@ -315,7 +313,7 @@ As in `wider-ecosystem.md` section 6 (Naton1 PvP RL, no license; fight-caves-rl;
 and vhsgreed/jev-plays-runescape (both MIT, small). The useful agent work is bleugreen's and UberMouse's agent
 coordinators (cairn, conductor), which use deterministic task code with an LLM above it, like our plan.
 
-## Expanded discovery and classification (2026-10-26)
+## Expanded discovery and classification
 
 Search aliases: OSRS, 2007scape, 2004scape, 2009scape, 2010scape, RuneScape, RS2, RSPS; bot/scripts, quests, clients/servers, cache/maps/tiles, pathfinder/walker, simulation. These overlap for discovery, not protocol or data compatibility. Deduplicate forks by lineage; a website, client, server and script API are different deliverables.
 
@@ -381,7 +379,7 @@ Search aliases: OSRS, 2007scape, 2004scape, 2009scape, 2010scape, RuneScape, RS2
 - [Kronos184 public archive](https://github.com/The-RSPS-Archive/184---Kronos-Source) identifies a Rune-Server release by Patrity and item-attribute design. Classify as third-party release archive with unverified provenance/license, not a confirmed leak or reusable dependency.
 - “Leaked”, “open source” and “paid” are search labels, not evidence of authorship, completeness or reuse rights. Reuploads, binaries, inaccessible Discord catalogues and decompiled dumps stay separate from inspectable source. No unknown installer or leaked bundle was run/downloaded.
 
-### OpenOSRS automation and paid-source leads (2026-10-26)
+### OpenOSRS automation and paid-source leads
 
 Search result: useful public automation source found; **no verified paid-to-free transition or authenticated leak** in this pass. Free source, paid features, third-party mirrors and RuneLite policy rejection are separate facts. Classify each, rather than calling every automation repo “banned” or “leaked”.
 
@@ -411,7 +409,7 @@ Further non-compliant client/plugin leads, same date:
 
 [Additional pinned trees](../.practice/reuse-source-audit/plugins-more/git-manifest.json) and [11 selected text files](../.practice/reuse-source-audit/plugins-more/sources.json) preserve this pass. Three Chaos implementation files read; other entries are clearly marked tree/README/sales evidence. Searches for alleged leaks did not yield an authenticated premium plugin release. Source visibility, licensing, game compliance and functionality remain separate checks.
 
-Additional source collections and distribution checks (2026-10-26):
+Additional source collections and distribution checks:
 
 | Source / classification | Exact useful entry point | Adaptation / evidence limit |
 |---|---|---|

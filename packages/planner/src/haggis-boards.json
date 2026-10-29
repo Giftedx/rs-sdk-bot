@@ -427,7 +427,7 @@
     "floor": 30,
     "realistic": 30,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-cook.ts, 3/3 PASS on practice from preset quest_cook (every skill 99, egg, milk, flour, start beside the cook; the walk to the kitchen not counted) and 3/3 from quest_cook_partner (Heroes' partner levels): 30/30/30 ticks each, two talks; floor = best run, realistic = worst run; was 12/28 ESTIMATE (rival expected step 12, research/rival-gap-list.md:118)"
+    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-cook.ts, 3/3 PASS on practice from preset quest_cook (every skill 99, egg, milk, flour, start beside the cook; the walk to the kitchen not counted) and 3/3 from quest_cook_partner (Heroes' partner levels): 30/30/30 ticks each, two talks; floor = best run, realistic = worst run"
    },
    "lump": true,
    "xp": {
@@ -602,7 +602,7 @@
     "floor": 49,
     "realistic": 49,
     "evidence": "MEASURED",
-    "source": "MEASURED practice 2026-10-23: 49, 49, 49 ticks Fletching 1 -> 99 (ticksTo99) with arrows only, no dart tips (scripts/measure/floor-fletching.ts LADDER=arrows, args 5 1 1 = open loop 5 inputs per tick, preset floor_fletching_arrows, 240 actions); .practice/results.jsonl, 3 runs; supply delivery not included"
+    "source": "MEASURED practice: 49, 49, 49 ticks Fletching 1 -> 99 (ticksTo99) with arrows only, no dart tips (scripts/measure/floor-fletching.ts LADDER=arrows, args 5 1 1 = open loop 5 inputs per tick, preset floor_fletching_arrows, 240 actions); .practice/results.jsonl, 3 runs; supply delivery not included"
    },
    "xp": {
     "fletching": "to99"
@@ -666,7 +666,7 @@
     "floor": 222,
     "realistic": 231,
     "evidence": "MEASURED",
-    "source": "MEASURED practice 2026-10-23: 222, 228, 231 ticks Crafting 1 -> 99 (scripts/measure/floor-crafting.ts LADDER=diamond, preset floor_crafting_diamond, Draynor booth, 27 gems per trip, 364 diamonds from 43, no dragonstones); .practice/results.jsonl floorx61001, floorxxui12, floorxqni23; floor = best, realistic = worst; supply delivery not included"
+    "source": "MEASURED practice: 222, 228, 231 ticks Crafting 1 -> 99 (scripts/measure/floor-crafting.ts LADDER=diamond, preset floor_crafting_diamond, Draynor booth, 27 gems per trip, 364 diamonds from 43, no dragonstones); .practice/results.jsonl floorx61001, floorxxui12, floorxqni23; floor = best, realistic = worst; supply delivery not included"
    },
    "xp": {
     "crafting": "to99"
@@ -740,7 +740,7 @@
     "floor": 516,
     "realistic": 519,
     "evidence": "MEASURED",
-    "source": "MEASURED practice 2026-10-23: 516, 516, 519 ticks Herblore 3 -> 99 finishing the 644-potion drop mix from unfinished potions (scripts/measure/floor-herblore.ts LADDER=drops, preset floor_herb_drops, Draynor booth, 14 + 14 per trip, 46 bank cycles); .practice/results.jsonl, 3 runs. Not included: identify and unf mixing by the main for herbs a low-level helper cannot identify (was an unmeasured +150 realistic; the row's supplies are unf potions), supply delivery, and Herblore 1-3 (needs Druidic Ritual or other quest XP; the preset starts at 3)"
+    "source": "MEASURED practice: 516, 516, 519 ticks Herblore 3 -> 99 finishing the 644-potion drop mix from unfinished potions (scripts/measure/floor-herblore.ts LADDER=drops, preset floor_herb_drops, Draynor booth, 14 + 14 per trip, 46 bank cycles); .practice/results.jsonl, 3 runs. Not included: identify and unf mixing by the main for herbs a low-level helper cannot identify (the row's supplies are unf potions), supply delivery, and Herblore 1-3 (needs Druidic Ritual or other quest XP; the preset starts at 3)"
    },
    "xp": {
     "herblore": "to99"
@@ -846,7 +846,7 @@
     "floor": 642,
     "realistic": 667,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md (Firemaking on a line, 2026-10-23): line north of Lumbridge (rows z3306 x3211-3182, z3307 x3185-3171, z3311 x3176-3098, z3312 x3103-3071; scripts/measure/fm-line-search.ts), 27 logs in the pack and 5 helpers dropping the other 130 one per tile ahead, no bank, run on: 662, 646, 678 ticks level 1 -> 99 on practice (scripts/measure/fm-line-run.ts); a 5-row Fremennik line gave 682, 658, 666, 706, 650, 642, 678, 682, 642, 678 (10 runs). Turn and supply overhead 0 at level 45+ in 12 of 13 runs; the spread is the failed rolls below level 45 (stat_random(64, 512)). Floor = best run 642, realistic = mean of the 13 runs 667"
+    "source": "research/supply-floors.md (Firemaking on a line): line north of Lumbridge (rows z3306 x3211-3182, z3307 x3185-3171, z3311 x3176-3098, z3312 x3103-3071; scripts/measure/fm-line-search.ts), 27 logs in the pack and 5 helpers dropping the other 130 one per tile ahead, no bank, run on: 662, 646, 678 ticks level 1 -> 99 on practice (scripts/measure/fm-line-run.ts); a 5-row Fremennik line gave 682, 658, 666, 706, 650, 642, 678, 682, 642, 678 (10 runs). Turn and supply overhead 0 at level 45+ in 12 of 13 runs; the spread is the failed rolls below level 45 (stat_random(64, 512)). Floor = best run 642, realistic = mean of the 13 runs 667"
    },
    "xp": {
     "firemaking": "to99"
@@ -859,7 +859,7 @@
     "option": "burn"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md (Firemaking on a line, 2026-10-23): line north of Lumbridge (rows z3306 x3211-3182, z3307 x3185-3171, z3311 x3176-3098, z3312 x3103-3071; scripts/measure/fm-line-search.ts), 27 logs in the pack and 5 helpers dropping the other 130 one per tile ahead, no bank, run on: 662, 646, 678 ticks level 1 -> 99 on practice (scripts/measure/fm-line-run.ts); a 5-row Fremennik line gave 682, 658, 666, 706, 650, 642, 678, 682, 642, 678 (10 runs). Turn and supply overhead 0 at level 45+ in 12 of 13 runs; the spread is the failed rolls below level 45 (stat_random(64, 512)). Floor = best run 642, realistic = mean of the 13 runs 667",
+   "source": "research/supply-floors.md (Firemaking on a line): line north of Lumbridge (rows z3306 x3211-3182, z3307 x3185-3171, z3311 x3176-3098, z3312 x3103-3071; scripts/measure/fm-line-search.ts), 27 logs in the pack and 5 helpers dropping the other 130 one per tile ahead, no bank, run on: 662, 646, 678 ticks level 1 -> 99 on practice (scripts/measure/fm-line-run.ts); a 5-row Fremennik line gave 682, 658, 666, 706, 650, 642, 678, 682, 642, 678 (10 runs). Turn and supply overhead 0 at level 45+ in 12 of 13 runs; the spread is the failed rolls below level 45 (stat_random(64, 512)). Floor = best run 642, realistic = mean of the 13 runs 667",
    "supplies": [
     {
      "item": "tinderbox",
@@ -988,7 +988,7 @@
     "floor": 1312,
     "realistic": 1316,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)"
+    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
    },
    "xp": {
     "smithing": "to99"
@@ -1001,7 +1001,7 @@
     "option": "separate"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)",
+   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)",
    "supplies": [
     {
      "item": "hammer",
@@ -1026,7 +1026,7 @@
     "floor": 1312,
     "realistic": 1316,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)"
+    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
    },
    "xp": {
     "smithing": "to99"
@@ -1039,7 +1039,7 @@
     "option": "anvil"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)",
+   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)",
    "supplies": [
     {
      "item": "hammer",
@@ -1163,7 +1163,7 @@
     "floor": 3033,
     "realistic": 3046,
     "evidence": "MEASURED",
-    "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-teleport.ts, research/skill-rows-measured.md): Magic 25 -> 99 by Varrock/Lumbridge/Falador/Camelot teleports (preset floor_tele25) 2,879 / 2,881 / 2,880 ticks, 720 casts at 4.00 ticks each (one click per tick; teleport.rs2 p_finduid drops clicks while delayed); wind strike on chickens 1 -> 25 (preset floor_tele1) 154 / 182 / 162 ticks (28-29 casts, 5.5-6.3 ticks each). Floor 154 + 2,879, realistic 166 + 2,880 (means)"
+    "source": "MEASURED practice (scripts/measure/floor-teleport.ts, research/skill-rows-measured.md): Magic 25 -> 99 by Varrock/Lumbridge/Falador/Camelot teleports (preset floor_tele25) 2,879 / 2,881 / 2,880 ticks, 720 casts at 4.00 ticks each (one click per tick; teleport.rs2 p_finduid drops clicks while delayed); wind strike on chickens 1 -> 25 (preset floor_tele1) 154 / 182 / 162 ticks (28-29 casts, 5.5-6.3 ticks each). Floor 154 + 2,879, realistic 166 + 2,880 (means)"
    },
    "xp": {
     "magic": "to99"
@@ -1323,7 +1323,7 @@
      "floor": 92.8,
      "realistic": 87.9,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-teleport.ts, research/skill-rows-measured.md): wind strike 1 -> 25 in 154 / 182 / 162 ticks, then teleports 25 -> 43 in 58 ticks (identical in 3 runs, 4 ticks per cast): 19,684 XP in 212 ticks (floor, best run) or 224 (realistic, mean). Was ESTIMATE: magic-teleport ladder to 43 (haggis.ts MAGIC_TELEPORT_TIERS, suppliesLadder toLevel 43): 36 wind strikes 1-25 + 4 Varrock + 5 Lumbridge + 6 Falador teleports = 19,684 XP; 3 ticks per strike and 4 per teleport floor = 168 ticks (117 XP/tick), 4 and 5 realistic = 219 ticks (90 XP/tick) (teleport.rs2:59-66, research/xp-per-tick.md:84); cast rate not measured. The enchant ladder to 43 needs 28 cosmic runes (MAGIC_TIERS), more than the 20 that can be staged (unsourceable)"
+     "source": "MEASURED practice (scripts/measure/floor-teleport.ts, research/skill-rows-measured.md): wind strike 1 -> 25 in 154 / 182 / 162 ticks, then teleports 25 -> 43 in 58 ticks (identical in 3 runs, 4 ticks per cast): 19,684 XP in 212 ticks (floor, best run) or 224 (realistic, mean). The enchant ladder to 43 needs 28 cosmic runes (MAGIC_TIERS), more than the 20 that can be staged (unsourceable)"
     }
    },
    "requires": [
@@ -1422,7 +1422,7 @@
      "floor": 437.7,
      "realistic": 436.7,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-23: Smithing 40 -> 99 (983,500 XP) in 2,247, 2,249, 2,252 ticks = 437.7 / 437.3 / 436.7 XP/tick (floor best, realistic worst); 700 casts, 3.21 ticks per cast with 27 bank trips of 26 ores; side Magic 927,500 XP = 0.943 per Smithing XP (scripts/measure/floor-superheat.ts burst, preset floor_superheat: Draynor booth, goldsmith gauntlets worn; .practice/results.jsonl floorxiyh12, floorxghn23, floorxkr901). Gold needs Smithing 40 (smelting.struct:63, superheat.rs2:37): row smith-40 trains 1 -> 40 first"
+     "source": "MEASURED practice: Smithing 40 -> 99 (983,500 XP) in 2,247, 2,249, 2,252 ticks = 437.7 / 437.3 / 436.7 XP/tick (floor best, realistic worst); 700 casts, 3.21 ticks per cast with 27 bank trips of 26 ores; side Magic 927,500 XP = 0.943 per Smithing XP (scripts/measure/floor-superheat.ts burst, preset floor_superheat: Draynor booth, goldsmith gauntlets worn; .practice/results.jsonl floorxiyh12, floorxghn23, floorxkr901). Gold needs Smithing 40 (smelting.struct:63, superheat.rs2:37): row smith-40 trains 1 -> 40 first"
     },
     "side": {
      "magic": 0.9430604982206405
@@ -1473,7 +1473,7 @@
      "floor": 412.8,
      "realistic": 411.9,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-23: Magic XP per tick while superheating gold, 412.8 / 412.4 / 411.9 over 2,247-2,252 ticks (927,500 Magic XP, Magic 43 -> 98; floor best, realistic worst; same runs as the superheat row: scripts/measure/floor-superheat.ts, preset floor_superheat, .practice/results.jsonl). Need after superheat: about 37,168 XP = 29 casts at most"
+     "source": "MEASURED practice: Magic XP per tick while superheating gold, 412.8 / 412.4 / 411.9 over 2,247-2,252 ticks (927,500 Magic XP, Magic 43 -> 98; floor best, realistic worst; same runs as the superheat row: scripts/measure/floor-superheat.ts, preset floor_superheat, .practice/results.jsonl). Need after superheat: about 37,168 XP = 29 casts at most"
     }
    },
    "requires": [
@@ -1553,7 +1553,7 @@
        "floor": 1196,
        "realistic": 1330,
        "evidence": "ESTIMATE",
-       "source": "rival: air 1-44 in 60 + nature/body 44-99 in 1,136 = 1,196 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06, S21, lab 7-tick cycle, 22 givers); realistic adds their legs T05-06 64 + T20-21 160 = 1,554 (docs/speedrun/skills/runecraft.md section 1: about 1,330 from 1); realistic now 1,554 - 224 legs = 1,330, because the travel model prices the air -> nature leg (was 1,554)"
+       "source": "rival: air 1-44 in 60 + nature/body 44-99 in 1,136 = 1,196 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S06, S21, lab 7-tick cycle, 22 givers); realistic adds their legs T05-06 64 + T20-21 160 = 1,554 (docs/speedrun/skills/runecraft.md section 1: about 1,330 from 1); realistic 1,330 = 1,554 - 224 legs, because the travel model prices the air -> nature leg"
       },
       "via": [
        "nature-ruins"
@@ -1580,7 +1580,7 @@
     "floor": 3850,
     "realistic": 6169,
     "evidence": "MEASURED",
-    "source": "floor: practice fresh run, 1,437-1,816 measured to 55 + about 2,400 model 55->99 = 3,850-4,200 (research/thieving-ladder.md:95); realistic: live mmtha0205 fresh to 99 in 6,169 ticks (research/live-thieving-2026-10-23.md:72)"
+    "source": "floor: practice fresh run, 1,437-1,816 measured to 55 + about 2,400 model 55->99 = 3,850-4,200 (research/thieving-ladder.md:76-77); realistic: live mmtha0205 fresh to 99 in 6,169 ticks (research/live-thieving-2026-10-23.md:63)"
    },
    "xp": {
     "thieving": "to99"
@@ -1593,7 +1593,7 @@
     "factor": 0.8547008547008548
    },
    "evidence": "MEASURED",
-   "source": "floor: practice fresh run, 1,437-1,816 measured to 55 + about 2,400 model 55->99 = 3,850-4,200 (research/thieving-ladder.md:95); realistic: live mmtha0205 fresh to 99 in 6,169 ticks (research/live-thieving-2026-10-23.md:72)",
+   "source": "floor: practice fresh run, 1,437-1,816 measured to 55 + about 2,400 model 55->99 = 3,850-4,200 (research/thieving-ladder.md:76-77); realistic: live mmtha0205 fresh to 99 in 6,169 ticks (research/live-thieving-2026-10-23.md:63)",
    "supplies": [
     {
      "item": "lobster",
@@ -1608,7 +1608,7 @@
        "floor": 1511,
        "realistic": 2611,
        "evidence": "MEASURED",
-       "source": "research/combat-measure.md: usable share of a stun MEASURED practice (Thieving 99 knights, 3 runs each): bury 2.83 bones per 8-tick stun = 0.71 of the 2-tick bury row, enchant 2.5 casts per stun = 0.94 of the 3-tick enchant row; no thieving-rate drop seen. Stunned ticks 3,584 realistic (live-thieving-2026-10-23.md:74), 0.58 x 3,850 floor; x 0.9 for refill trades inside stuns (ESTIMATE). Prayer fills first (1,169 / 1,300 row ticks need 1,646 / 1,831 stun ticks), Magic takes the rest at 0.94"
+       "source": "research/combat-measure.md: usable share of a stun MEASURED practice (Thieving 99 knights, 3 runs each): bury 2.83 bones per 8-tick stun = 0.71 of the 2-tick bury row, enchant 2.5 casts per stun = 0.94 of the 3-tick enchant row; no thieving-rate drop seen. Stunned ticks 3,584 realistic (live-thieving-2026-10-23.md:65), 0.58 x 3,850 floor; x 0.9 for refill trades inside stuns (ESTIMATE). Prayer fills first (1,169 / 1,300 row ticks need 1,646 / 1,831 stun ticks), Magic takes the rest at 0.94"
       }
      }
     },
@@ -1648,7 +1648,7 @@
     "floor": 3356,
     "realistic": 3467,
     "evidence": "MEASURED",
-    "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-woodcut.ts, research/skill-rows-measured.md): delayed-click 3-tick (knife + Make 1 at T, drop a log at T+1, Chop at T+2), rune axe from level 1 (woodcut.rs2:193-235 has no axe level check), normal trees 1-15, Draynor oaks 15-72, Draynor willows 72-99. Level 1 -> 85 (preset floor_wc1) 1,504 / 1,444 / 1,530 ticks; 85 -> 99 (preset floor_wc85) 1,969 / 1,912 / 2,040 ticks. Floor 1,444 + 1,912, realistic 1,493 + 1,974 (means). Tree moves are 15-20% of the ticks (oaks and willows fall on 1 log in 8)"
+    "source": "MEASURED practice (scripts/measure/floor-woodcut.ts, research/skill-rows-measured.md): delayed-click 3-tick (knife + Make 1 at T, drop a log at T+1, Chop at T+2), rune axe from level 1 (woodcut.rs2:193-235 has no axe level check), normal trees 1-15, Draynor oaks 15-72, Draynor willows 72-99. Level 1 -> 85 (preset floor_wc1) 1,504 / 1,444 / 1,530 ticks; 85 -> 99 (preset floor_wc85) 1,969 / 1,912 / 2,040 ticks. Floor 1,444 + 1,912, realistic 1,493 + 1,974 (means). Tree moves are 15-20% of the ticks (oaks and willows fall on 1 log in 8)"
    },
    "xp": {
     "woodcutting": "to99"
@@ -1657,7 +1657,7 @@
     "tutorial"
    ],
    "evidence": "MEASURED",
-   "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-woodcut.ts, research/skill-rows-measured.md): delayed-click 3-tick (knife + Make 1 at T, drop a log at T+1, Chop at T+2), rune axe from level 1 (woodcut.rs2:193-235 has no axe level check), normal trees 1-15, Draynor oaks 15-72, Draynor willows 72-99. Level 1 -> 85 (preset floor_wc1) 1,504 / 1,444 / 1,530 ticks; 85 -> 99 (preset floor_wc85) 1,969 / 1,912 / 2,040 ticks. Floor 1,444 + 1,912, realistic 1,493 + 1,974 (means). Tree moves are 15-20% of the ticks (oaks and willows fall on 1 log in 8)",
+   "source": "MEASURED practice (scripts/measure/floor-woodcut.ts, research/skill-rows-measured.md): delayed-click 3-tick (knife + Make 1 at T, drop a log at T+1, Chop at T+2), rune axe from level 1 (woodcut.rs2:193-235 has no axe level check), normal trees 1-15, Draynor oaks 15-72, Draynor willows 72-99. Level 1 -> 85 (preset floor_wc1) 1,504 / 1,444 / 1,530 ticks; 85 -> 99 (preset floor_wc85) 1,969 / 1,912 / 2,040 ticks. Floor 1,444 + 1,912, realistic 1,493 + 1,974 (means). Tree moves are 15-20% of the ticks (oaks and willows fall on 1 log in 8)",
    "supplies": [
     {
      "item": "rune axe",
@@ -1741,7 +1741,7 @@
        "floor": 2305,
        "realistic": 2346,
        "evidence": "MEASURED",
-       "source": "MEASURED practice 2026-10-24 (scripts/measure/floor-fish.ts fly, preset floor_fish_fly74, research/skill-rows-measured.md): Fishing 74 (Sea Slug lands 179,375 XP) -> 99 by fly 3-tick with one fish dropped in the knife tick, 2,356 / 2,305 / 2,377 ticks (346-357 XP/tick, about 560 feathers). Floor = best run, realistic = mean. Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). Was ESTIMATE 1,788 / 2,568 from the flinch model, and flinch FAILS (research/gathering-tricks.md)"
+       "source": "MEASURED practice (scripts/measure/floor-fish.ts fly, preset floor_fish_fly74, research/skill-rows-measured.md): Fishing 74 (Sea Slug lands 179,375 XP) -> 99 by fly 3-tick with one fish dropped in the knife tick, 2,356 / 2,305 / 2,377 ticks (346-357 XP/tick, about 560 feathers). Floor = best run, realistic = mean. Fly beats delayed lobster and harpoon at every level 74-99 (stat_random code-read: 347-416 vs 211-296 XP/tick at 3 ticks per roll). The flinch model fails (research/gathering-tricks.md)"
       },
       "label": "3-tick fly fishing 74 -> 99 after Sea Slug (drop one fish in the knife tick)",
       "via": []
@@ -1769,7 +1769,7 @@
      "floor": 669.7,
      "realistic": 669.7,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-23: first inventory of scripts/measure/floor-prayer.ts burst (preset floor_prayer, Draynor booth, Prayer 1): bank 7 ticks + 28 bones in 57 ticks, identical in 3 runs (.practice/results.jsonl, FLOOR Prayer level=56 xp=50400 ticks=64). Prayer 1 -> 43 = 11 bones = 7 + 11 x 57/28 = 29.4 ticks for 19,684 XP = 669.7 XP/tick, the same rate for the prayer-31 and prayer-43 rows (they run back to back in one inventory); level split from the per-bone time, not a per-level stamp"
+     "source": "MEASURED practice: first inventory of scripts/measure/floor-prayer.ts burst (preset floor_prayer, Draynor booth, Prayer 1): bank 7 ticks + 28 bones in 57 ticks, identical in 3 runs (.practice/results.jsonl, FLOOR Prayer level=56 xp=50400 ticks=64). Prayer 1 -> 43 = 11 bones = 7 + 11 x 57/28 = 29.4 ticks for 19,684 XP = 669.7 XP/tick, the same rate for the prayer-31 and prayer-43 rows (they run back to back in one inventory); level split from the per-bone time, not a per-level stamp"
     }
    },
    "requires": [
@@ -1792,7 +1792,7 @@
      "floor": 669.7,
      "realistic": 669.7,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-23: first inventory of scripts/measure/floor-prayer.ts burst (preset floor_prayer, Draynor booth, Prayer 1): bank 7 ticks + 28 bones in 57 ticks, identical in 3 runs (.practice/results.jsonl, FLOOR Prayer level=56 xp=50400 ticks=64). Prayer 1 -> 43 = 11 bones = 7 + 11 x 57/28 = 29.4 ticks for 19,684 XP = 669.7 XP/tick, the same rate for the prayer-31 and prayer-43 rows (they run back to back in one inventory); level split from the per-bone time, not a per-level stamp"
+     "source": "MEASURED practice: first inventory of scripts/measure/floor-prayer.ts burst (preset floor_prayer, Draynor booth, Prayer 1): bank 7 ticks + 28 bones in 57 ticks, identical in 3 runs (.practice/results.jsonl, FLOOR Prayer level=56 xp=50400 ticks=64). Prayer 1 -> 43 = 11 bones = 7 + 11 x 57/28 = 29.4 ticks for 19,684 XP = 669.7 XP/tick, the same rate for the prayer-31 and prayer-43 rows (they run back to back in one inventory); level split from the per-bone time, not a per-level stamp"
     }
    },
    "requires": [
@@ -1873,7 +1873,7 @@
     "floor": 1030,
     "realistic": 1037,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md: scripts/generated/waterfall.ts, preset quest_waterfall, practice, 3/3 PASS at 1030, 1037, 1031 ticks with walkPath (was 1160, 1164, 1160); starts beside Almera, so the walk there and the helper trade are not counted. Rival live leg: 979 (research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED))"
+    "source": "research/quest-plan.md: scripts/generated/waterfall.ts, preset quest_waterfall, practice, 3/3 PASS at 1030, 1037, 1031 ticks with walkPath; starts beside Almera, so the walk there and the helper trade are not counted. Rival live leg: 979 (research/rival-atlas-2026-10-16.md:28 (third-party live leg time, UNVERIFIED))"
    },
    "lump": true,
    "xp": {
@@ -1985,7 +1985,7 @@
     "floor": 2001,
     "realistic": 2083,
     "evidence": "MEASURED",
-    "source": "MEASURED practice 2026-10-23 (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), 3/3 PASS at 2,079, 2,001, 2,083 ticks (floor = best run, realistic = worst run); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival live leg 1,811 (research/rival-atlas-2026-10-16.md:28) is UNVERIFIED"
+    "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), 3/3 PASS at 2,079, 2,001, 2,083 ticks (floor = best run, realistic = worst run); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival live leg 1,811 (research/rival-atlas-2026-10-16.md:28) is UNVERIFIED"
    },
    "lump": true,
    "xp": {
@@ -2025,7 +2025,7 @@
        "floor": 2001,
        "realistic": 2083,
        "evidence": "MEASURED",
-       "source": "MEASURED practice 2026-10-23 (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), 3/3 PASS at 2,079, 2,001, 2,083 ticks (floor = best run, realistic = worst run); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b) is not measured by us"
+       "source": "MEASURED practice (research/quest-plan.md section 1g): scripts/generated/quest-grandtree.ts, preset quest_grandtree (beside King Narnode; Attack 60, Strength, Defence 1, 10 HP, Magic 43, Prayer 43, Agility 25, Tree Gnome Village done; staff of fire, Fire Bolt runes, 2 law runes, 3 prayer potions, 1 antipoison, 4 lobsters), 3/3 PASS at 2,079, 2,001, 2,083 ticks (floor = best run, realistic = worst run); Narnode to Narnode, glider to Karamja, Varrock Teleport and two spirit trees back, the black demon under Protect from Melee with Fire Bolt (28-32 casts), HP min 10 in every run; the Daconia root is random (1-13 roots searched); the walk to Narnode not counted; the rival browser chain 1,259 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S11b) is not measured by us"
       }
      }
     }
@@ -2117,7 +2117,7 @@
     "floor": 3364,
     "realistic": 3561,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); plus Witch's House 444/485 (row witch, MEASURED), which this row holds when lever combat-hp-bound is off; was 1500/4500 ESTIMATE"
+    "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); plus Witch's House 444/485 (row witch, MEASURED), which this row holds when lever combat-hp-bound is off"
    },
    "lump": true,
    "xp": {
@@ -2142,7 +2142,7 @@
        "floor": 2920,
        "realistic": 3076,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); was 1200/3600 ESTIMATE"
+       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076)"
       }
      }
     },
@@ -2153,7 +2153,7 @@
        "floor": 2920,
        "realistic": 3076,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); the rival burst run is not measured by us; was 1388/4163 ESTIMATE"
+       "source": "research/quest-points-board.md \"The qp-filler row\": scripts/generated/quest-blackknight.ts, quest-haunted.ts, quest-prince.ts, quest-sheepherder.ts, 3/3 PASS each on practice from presets quest_blackknight / quest_haunted / quest_prince / quest_sheepherder (Haggis at the row: every skill 99, combat rune set; start beside the first NPC; the walks between the 4 quests not counted): Black Knights' Fortress 327/327/323, Ernest the Chicken 410/414/412, Prince Ali Rescue 638/621/607, Sheep Herder 1668/1580/1697; floor = sum of best runs (2,920), realistic = sum of worst runs (3,076); the rival burst run is not measured by us"
       }
      }
     }
@@ -2172,7 +2172,7 @@
     "floor": 444,
     "realistic": 485,
     "evidence": "MEASURED",
-    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, 3/3 PASS on practice from preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted): 485/448/444 ticks; also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); floor = best main run, realistic = worst main run; was 300/900 ESTIMATE"
+    "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, 3/3 PASS on practice from preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted): 485/448/444 ticks; also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); floor = best main run, realistic = worst main run"
    },
    "lump": true,
    "xp": {
@@ -2196,7 +2196,7 @@
        "floor": 444,
        "realistic": 485,
        "evidence": "MEASURED",
-       "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, 3/3 PASS on practice from preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted): 485/448/444 ticks; also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); floor = best main run, realistic = worst main run; the rival burst run is not measured by us; was 277/832 ESTIMATE"
+       "source": "research/quest-points-board.md \"Cook's Assistant, Witch's House, Lost City\": scripts/generated/quest-ball.ts, 3/3 PASS on practice from preset quest_ball (every skill 99, rune set and leather gloves worn, cheese; start beside the boy; the walk to Taverley not counted): 485/448/444 ticks; also 3/3 from quest_ball_partner (Defence 1, 10 HP, Protect from Melee): 522/454/448; the spread is the wait for the witch (61-111 ticks); floor = best main run, realistic = worst main run; the rival burst run is not measured by us"
       }
      }
     }
@@ -2375,7 +2375,7 @@
     "floor": 910,
     "realistic": 942,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), practice, 3/3 PASS at 937, 910, 942 ticks (floor = best, realistic = worst), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in. Was ESTIMATE 300 / 900"
+    "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), practice, 3/3 PASS at 937, 910, 942 ticks (floor = best, realistic = worst), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in"
    },
    "lump": true,
    "xp": {
@@ -2407,7 +2407,7 @@
        "floor": 910,
        "realistic": 942,
        "evidence": "MEASURED",
-       "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), practice, 3/3 PASS at 937, 910, 942 ticks (floor = best, realistic = worst), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in. Was ESTIMATE 300 / 900; the rival burst run is not measured by us; was 277 / 832 (ESTIMATE x 0.9248)"
+       "source": "research/quest-plan.md section 1o: scripts/generated/quest-scorpion.ts, preset quest_scorpion (beside Thormac; every skill 99, rune set, Falador and Camelot Teleport runes, %barcrawl 77 = 2), practice, 3/3 PASS at 937, 910, 942 ticks (floor = best, realistic = worst), Thormac to Thormac; includes the dusty key chain (Jailer, jail key on Velrak's cell door, Velrak, the dusty key on the gate at 2924,9803; 271-295 ticks from the dungeon ladder to the gate) because the corridor north of the secret wall has no other way in. The rival burst run is not measured by us"
       }
      }
     }
@@ -2696,14 +2696,14 @@
      "floor": 212.9,
      "realistic": 196.0,
      "evidence": "MEASURED",
-     "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 2026-10-23 52/60/76 and 2026-10-24 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (was 190.9 with one 76-99 band measured to 88; the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)"
+     "source": "MEASURED practice (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 52/60/76 and 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)"
     }
    },
    "requires": [
     "agility-52"
    ],
    "evidence": "MEASURED",
-   "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 2026-10-23 52/60/76 and 2026-10-24 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (was 190.9 with one 76-99 band measured to 88; the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)",
+   "source": "MEASURED practice (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 52/60/76 and 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71)",
    "supplies": [
     {
      "item": "lobster",
@@ -2721,7 +2721,7 @@
         "floor": 212.9,
         "realistic": 196.0,
         "evidence": "MEASURED",
-        "source": "MEASURED practice 2026-10-23 (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 2026-10-23 52/60/76 and 2026-10-24 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (was 190.9 with one 76-99 band measured to 88; the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71); superseded the rival S17 ESTIMATE of 197 (our clean lap is 66-71 ticks, shorter than the rival's 74)"
+        "source": "MEASURED practice (research/agility.md section V2): scripts/measure/agility-laps.ts V2 (pre-click on the first tick the server accepts, ladder click on the landing tick, walk north to the log after a pit fall), 40 runs of 20 laps from Agility 52, 60, 76, 90 (10 each; data sets 52/60/76 and 90, research/agility.md sections V2 and \"Agility 88-99\"); realistic = 960,842 XP / band ticks with the pooled band rates 52-59 172.8, 60-75 186.1, 76-87 192.3, 88-99 202.0 (measured 88-96) = 196.0 (the same method on the V1 script gives 178.9); floor = best run 212.9 (Agility 76, 20 laps, 1,342 ticks); clean lap 66 ticks (V1 71); the rival S17 ESTIMATE is 197 (our clean lap is 66-71 ticks, shorter than the rival's 74)"
        }
       }
      }
@@ -2840,7 +2840,7 @@
     "floor": 1535,
     "realistic": 1851,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39); an earlier script version took 2,629 ticks with 58 pans and 61 digs. XP: quest_itexam.rs2:39-46. Was ESTIMATE 600 / 1,500"
+    "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46"
    },
    "lump": true,
    "xp": {
@@ -2859,7 +2859,7 @@
     "thieving": 25
    },
    "evidence": "MEASURED",
-   "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39); an earlier script version took 2,629 ticks with 58 pans and 61 digs. XP: quest_itexam.rs2:39-46. Was ESTIMATE 600 / 1,500",
+   "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46",
    "patches": [
     {
      "lever": "rival-dialogue-burst",
@@ -2868,7 +2868,7 @@
        "floor": 1535,
        "realistic": 1851,
        "evidence": "MEASURED",
-       "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39); an earlier script version took 2,629 ticks with 58 pans and 61 digs. XP: quest_itexam.rs2:39-46. Was ESTIMATE 600 / 1,500; the rival burst run is not measured by us (was this row x 0.9248, 555 / 1,387)"
+       "source": "research/quest-plan.md section 1p: scripts/generated/quest-dig.ts, preset quest_dig (Exam Centre beside the examiner; the planner state at tick 28,294: Thieving 99, Agility 76, Herblore 99, Mining 1; tea, opal, 2 ropes, vial, charcoal, pestle and mortar, tinderbox, Varrock Teleport runes from a helper), practice, 3/3 PASS on the final script at 1,717, 1,851, 1,535 ticks (floor = best, realistic = worst), examiner to expert, the walk to the Exam Centre not counted. The spread is the rock-sample pans (2-11) and the talisman digs (5-39). XP: quest_itexam.rs2:39-46. The rival burst run is not measured by us"
       }
      }
     }
@@ -3086,7 +3086,7 @@
     "floor": 15000,
     "realistic": 24000,
     "evidence": "ESTIMATE",
-    "source": "6 quests not on another row and not measured (research/quest-points-board.md), 22 QP: the 46 rest quests (83 QP) plus 7 QP of 4 quests whose rows carry qp 0 (crest 1, rival-fight-arena 2, rival-mm 3, rival-seaslug 1), less the 10 short quests (12 QP) MEASURED in row quests-short and Shield of Arrav (1 QP, medium) MEASURED in row quest-arrav; less 19 medium quests (33 QP) MEASURED in row quests-medium; less Lost City (3 QP, medium) MEASURED in row quest-zanaris; less 9 long quests (19 QP) MEASURED in row quests-long; with that row the run ends at 145 = MAX_QP (quest.constant:72-139, quests.rs2:96-327). Ticks by size class anchored on MEASURED practice runs (research/quest-plan.md): 0 short x 250/400, 0 medium x 900/1,300 (Merlin 868-897, Dwarf Cannon 888-925, Waterfall 1,030-1,037), 0 long x 1,800/2,600 (Dragon Slayer 1,488-1,577, Grand Tree 2,001-2,083), 6 very long x 2,500/4,000 (no measured anchor); was 57,600/86,700 for 46 quests; realistic adds walks and unscripted retries; not measured; was 55100/82700 before quest-arrav; was 54200/81400 before quests-medium; was 50600/76200 before quest-zanaris"
+    "source": "6 quests not on another row and not measured (research/quest-points-board.md), 22 QP: the 46 rest quests (83 QP) plus 7 QP of 4 quests whose rows carry qp 0 (crest 1, rival-fight-arena 2, rival-mm 3, rival-seaslug 1), less the 10 short quests (12 QP) MEASURED in row quests-short and Shield of Arrav (1 QP, medium) MEASURED in row quest-arrav; less 19 medium quests (33 QP) MEASURED in row quests-medium; less Lost City (3 QP, medium) MEASURED in row quest-zanaris; less 9 long quests (19 QP) MEASURED in row quests-long; with that row the run ends at 145 = MAX_QP (quest.constant:72-139, quests.rs2:96-327). Ticks by size class anchored on MEASURED practice runs (research/quest-plan.md): 0 short x 250/400, 0 medium x 900/1,300 (Merlin 868-897, Dwarf Cannon 888-925, Waterfall 1,030-1,037), 0 long x 1,800/2,600 (Dragon Slayer 1,488-1,577, Grand Tree 2,001-2,083), 6 very long x 2,500/4,000 (no measured anchor); realistic adds walks and unscripted retries; not measured"
    },
    "lump": true,
    "qp": 22,
@@ -3110,7 +3110,7 @@
        "floor": 13872,
        "realistic": 22195,
        "evidence": "ESTIMATE",
-       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109); was 50124/75279 before quests-medium; was 46795/70470 before quest-zanaris"
+       "source": "this row x 0.9248: rival burst dialogue (5 continues per tick, ResumePauseButtonHandler.ts:7-21, NetworkPlayer.ts:141-142) saved 879 of 11,689 fixed quest ticks (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md:106-109)"
       }
      }
     }
@@ -3414,7 +3414,7 @@
     "floor": 628,
     "realistic": 637,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1m: scripts/generated/quest-arena.ts, preset quest_arena (beside Lady Servil; Attack 94, Magic 99, Prayer 43, Strength, Defence 1, 10 HP; Fire Wave runes, 3 prayer potions, 20 coins), practice, 3/3 PASS on the final script at 628, 634, 637 ticks (floor = best, realistic = worst), Lady Servil to Lady Servil, the walk from Narnode not counted. Was ESTIMATE 499 / 720 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S12)"
+    "source": "research/quest-plan.md section 1m: scripts/generated/quest-arena.ts, preset quest_arena (beside Lady Servil; Attack 94, Magic 99, Prayer 43, Strength, Defence 1, 10 HP; Fire Wave runes, 3 prayer potions, 20 coins), practice, 3/3 PASS on the final script at 628, 634, 637 ticks (floor = best, realistic = worst), Lady Servil to Lady Servil, the walk from Narnode not counted. Rival ESTIMATE 499 / 720 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S12)"
    },
    "lump": true,
    "xp": {
@@ -3452,7 +3452,7 @@
     "floor": 5029,
     "realistic": 5320,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1h: scripts/generated/quest-mm.ts, preset quest_mm (Narnode, Magic 99, Prayer 43, Thieving 43, Agility 57, Hitpoints 35 ESTIMATE; helper pack: Fire Wave runes, 3 law, gold bar, wool, monkey bones, 7 prayer potions, super antipoison, 12 sharks), practice, 3 consecutive full passes on the final script (2026-10-24) at 5,320, 5,029, 5,149 ticks (floor = best, realistic = worst), Narnode to Daero's training reward; none of the 3 took the Varrock Teleport fallback out of a boxed temple landing (about 400-700 ticks; 1 in 3 of the earlier passes). Was MEASURED 5,071 / 5,786 (4 passes, 2026-10-23), ESTIMATE 4,566 / 5,052 (rival) before that"
+    "source": "research/quest-plan.md section 1h: scripts/generated/quest-mm.ts, preset quest_mm (Narnode, Magic 99, Prayer 43, Thieving 43, Agility 57, Hitpoints 35 ESTIMATE; helper pack: Fire Wave runes, 3 law, gold bar, wool, monkey bones, 7 prayer potions, super antipoison, 12 sharks), practice, 3 consecutive full passes on the final script at 5,320, 5,029, 5,149 ticks (floor = best, realistic = worst), Narnode to Daero's training reward; none of the 3 took the Varrock Teleport fallback out of a boxed temple landing (about 400-700 ticks). Rival ESTIMATE 4,566 / 5,052"
    },
    "lump": true,
    "xp": {
@@ -3490,7 +3490,7 @@
     "floor": 449,
     "realistic": 455,
     "evidence": "MEASURED",
-    "source": "research/quest-plan.md section 1n: scripts/generated/quest-seaslug.ts, preset quest_seaslug (beside Caroline; the planner state at tick 24,985, Firemaking 99, Fishing 1; swamp paste and an unlit torch from a helper), practice, 3/3 PASS at 452, 449, 455 ticks (floor = best, realistic = worst), Caroline to Caroline; the bridged-tile door fix packages/core/src/bridgefix.ts. Was ESTIMATE 304 / 495 (rival, bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S19)"
+    "source": "research/quest-plan.md section 1n: scripts/generated/quest-seaslug.ts, preset quest_seaslug (beside Caroline; the planner state at tick 24,985, Firemaking 99, Fishing 1; swamp paste and an unlit torch from a helper), practice, 3/3 PASS at 452, 449, 455 ticks (floor = best, realistic = worst), Caroline to Caroline; the bridged-tile door fix packages/core/src/bridgefix.ts. Rival ESTIMATE 304 / 495 (bleugreen/rs-sdk@3bd2ab0a docs/speedrun/RUN-ORDER.md S19)"
    },
    "lump": true,
    "xp": {
@@ -3574,7 +3574,7 @@
   {
    "item": "uncut dragonstone",
    "reason": "Historical source observation to recheck: only source is the Taverley crystal chest, 1 per crystal key (2 halves, each 1/128 of randomjewel); GE 0 sellers",
-   "source": "research/supply-logistics.md Summary 1; crystal_chest.rs2:24, shared_droptables.rs2:58-65 (CODE-READ); GE MEASURED live 2026-10-23",
+   "source": "research/supply-logistics.md Summary 1; crystal_chest.rs2:24, shared_droptables.rs2:58-65 (CODE-READ); GE MEASURED live",
    "previousAssumedLimit": 0,
    "recordedAt": "2026-10-23"
   },

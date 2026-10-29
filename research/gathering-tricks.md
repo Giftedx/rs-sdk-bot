@@ -1,4 +1,4 @@
-# Gathering tricks: flinch 2-tick and delayed-click 3-tick (2026-10-23)
+# Gathering tricks: flinch 2-tick and delayed-click 3-tick
 
 This file checks two tricks from `research/tick-tricks-web.md` (sections 1.2 and 1.3) in the rev 289 code, and
 measures them on the local practice server (150 ms tick, presets). Paths start at

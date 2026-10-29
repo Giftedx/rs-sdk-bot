@@ -1,9 +1,9 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Authority (owner decision): all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
-# Leader forensics for the lost and close boards (2026-10-23)
+# Leader forensics for the lost and close boards
 
 This file records how the #1 accounts on 13 boards got their times, and what we must build to match them.
-Live data is from read-only GETs at 2026-10-23 about 07:00Z: 13 board pages, then 59 player pages (the top 5 of
+Live data is from read-only GETs: 13 board pages, then 59 player pages (the top 5 of
 each board), 1.1 s between requests. A world-feed watch ran for about 4 minutes (roster, then a 32x32 `sub`
 rectangle around 7 online accounts, 25 s each). Raw data is not committed (session scratchpad).
 
@@ -88,7 +88,7 @@ the same shape. jackalopeck2 (99 at 142) and jackalopeck1 (99 at 155) are online
 Method: LIKELY the login timer. Every login calls `~ferment_wines_login` (`login_logout/login.rs2:70`), which
 sets the 20-tick `fermenting_wine` timer with no level check (`skill_cooking/scripts/cooking_inv/scripts/wine/
 wine.rs2:72-73`). The timer ferments every banked unfermented wine in 15 batch rolls (`wine.rs2:22-41`) and
-every wine in the pack one by one (`wine.rs2:56-68`). 38 = a short first session to bank the wine, a relog,
+every wine in the pack one by one (`wine.rs2:56-68`). 38 = a short opening session to bank the wine, a relog,
 then about 22 ticks (`cooking-board.md`, MEASURED practice: 99 at session tick 22). Noted wine does not count in
 the pack: `inv_total(inv, jug_unfermented_wine)` reads unnoted jugs only, so the wine must be banked.
 
@@ -241,7 +241,7 @@ Evidence (MEASURED live): jackalopehl2 Herblore 99 at 447, **QP 4 stamped at 450
 
 Code check: 4 QP = Druidic Ritual (`general/configs/quest.constant:87`); it gives 2,500 tenths = 6,250 XP, level
 28 (`quests/quest_druid/scripts/quest_druid.rs2:3`). The herblore scripts have **no** Druidic Ritual check: no
-`%druidquest` read in `skill_herblore` (search on 2026-10-23; the only readers are `area_taverly` and
+`%druidquest` read in `skill_herblore` (searched; the only readers are `area_taverly` and
 `area_karamja` NPC scripts). CONFIRMED that they did a 4-QP quest; LIKELY that it is Druidic Ritual.
 
 Inference: the leaders spend part of 447 ticks on a quest that this engine does not need. 6,250 XP is about 2

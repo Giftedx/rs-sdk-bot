@@ -25,7 +25,7 @@ All paths below are relative to `vendor\`. Nothing here was run in Docker. The n
 | `runebench/shared/check_gold.ts` | The gold verifier. It reads the `.sav` file directly. |
 | `runebench/shared/agents.md` | The guide that becomes `/app/agents.md`, `/app/CLAUDE.md` and `/app/GEMINI.md` in the image. |
 | `runebench/shared/agent*.sav` | Starting saves: `agent.sav` for skills, plus 4 gold starting conditions. |
-| `runebench/shared/pricing.ts` | Per-model token prices, used to backfill `cost_usd`. |
+| `runebench/shared/pricing.ts` | Per-model token prices for `cost_usd`. |
 | `runebench/docker/` | `Dockerfile.base`, `Dockerfile`, `entrypoint.sh`, `ensure-services.sh`, `launch-bot.ts`, `build.sh`. |
 | `runebench/agents/` | Harbor agent adapters: `opencode_adapter.py` (base class), `codex_adapter.py`, and about 40 per-provider subclasses. |
 | `runebench/scripts/` | `run-skills-30m.sh`, `run-skills-15m.sh`, `run-gold.sh`, `run.sh`, `run-common.sh`, and per-model scripts. |
@@ -122,7 +122,7 @@ At runtime, `docker/entrypoint.sh` does the following:
 6. It starts ffmpeg, which records the screen at 1 fps, 400×300, to `/logs/verifier/recording.mp4`.
 7. It starts a watchdog that runs every 5 s and restarts the engine, gateway and bot up to 10 times. Agents run `pkill bun`, so the watchdog is necessary. The watchdog adopts only a tracker that root owns.
 
-Anti-tamper (image v70 and later): the agent cannot write the engine, the saves, the SDK, the tracker or the tracking file. The verifier no longer reads the agent-writable copy at `/logs/verifier/skill_tracking.json`. The history of tamper attempts is in `CLAUDE.md` and the Dockerfile comments. Agents wrote fake tracking JSON, ran the tracker at a 1 s cadence, and overwrote `agent.sav` with the save generator.
+Anti-tamper (image v70 or newer): the agent cannot write the engine, the saves, the SDK, the tracker or the tracking file. The verifier does not read the agent-writable copy at `/logs/verifier/skill_tracking.json`. Blocked tamper methods (also in `CLAUDE.md` and the Dockerfile comments): fake tracking JSON, running the tracker at a 1 s cadence, overwriting `agent.sav` with the save generator.
 
 ---
 

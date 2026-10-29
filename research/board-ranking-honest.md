@@ -1,8 +1,7 @@
-# Board ranking, honest pass (2026-10-22, evening)
+# Board ranking, honest pass
 
-The first ranking (`board-ranking.md`) used model rates only. Two of its inputs were wrong: the guard and knight
-rates counted preset base XP (fixed, see thieving-ladder.md). It also left out travel, food, deaths, rock depletion,
-and money. This file records what measurement now says. "Fresh" means from a new account.
+`board-ranking.md` ranks boards from model rates only. It leaves out travel, food, deaths, rock depletion and
+money. This file ranks from measurement. "Fresh" means from a new account.
 
 | Board | Leader ticks | Our best evidence | Verdict |
 |---|---|---|---|
@@ -10,7 +9,7 @@ and money. This file records what measurement now says. "Fresh" means from a new
 | Mining | 3,964 | Iron, rune pickaxe, 3 rocks, no walking: 97 XP/tick (58,625 XP / 604 ticks). Rocks respawn in 20 ticks (`skill_mining/configs/mine.dbrow:72`), so 3 rocks cap the rate near 120. 99 at that rate: about 8,000-10,000 ticks. The only 5-rock tile is (3100,3767), deep Wilderness (`research/iron-spots.ts`). | Not winnable with iron power-mining |
 | Runecraft | 2,354 | Model 1,531 (+823). Measured: 27 essence crafted in 5-7 ticks, 12-tick trade. Not measured: helper bank trips (est. 150 ticks, so about 8 helpers). Needs about 4,213 essence (live GE: 1,552 sellers, ask 62) = about 261k coins. | Open. Blocked by money and helpers |
 | Crafting | 197 | Measured 27 cuts in 7 ticks. Uncut dragonstone: 0 sellers on the live GE. | Blocked by supply |
-| Cooking | 38 | Only the login-timer wine route is fast enough. Ruled a likely bug (bug-report-wine-login.md). | Not winnable under the no-bug rule |
+| Cooking | 38 | Only the login-timer wine route is fast enough. See bug-report-wine-login.md; the route is authorized. | Not winnable: the record is 20 ticks (`research/hiscores-2026-10-29.json`); the planner models the wine route at 229 |
 | Smithing, Herblore, Prayer, Magic | see board-ranking.md | Top-tier inputs have 0 sellers on the live GE. | Blocked by supply |
 | Woodcutting, Fishing, Agility | see board-ranking.md | Model margins already negative. | Not winnable with these methods |
 

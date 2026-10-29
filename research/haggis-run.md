@@ -1,45 +1,41 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Current authority: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
-> Current target check (2026-10-26 09:32 UTC): [all24 boards refreshed](../.practice/joined-plan/targets-20261026-093155/comparison.json); timed leaders unchanged, current realistic model44,866 versus35,916. Value-board targets and tie limits are in [boards-special](boards-special.md). Historical model snapshot. The claim below that the 24-board goal is impossible is superseded: no feasible route has yet been proved, but the goal remains unchanged. Quest Points has a playtime deadline. Use the [current plan](../docs/plans/joined-plan.md) for the current gap and next experiment.
+> Current target check: [all 24 boards refreshed](../.practice/joined-plan/targets-20261026-093155/comparison.json); timed leaders unchanged, realistic model 44,866 versus 35,916. Value-board targets and tie limits are in [boards-special](boards-special.md). No feasible route has been proved for the 24-board goal; the goal is unchanged. Quest Points has a playtime deadline. Use the [current plan](../docs/plans/joined-plan.md) for the current gap and next experiment.
 
-# Haggis run: 24-board schedule (2026-10-23)
+# Haggis run: 24-board schedule
 
 Model: `packages/planner/src/haggis.ts` with travel (`packages/planner/src/travel.ts`). Inputs:
 `packages/planner/src/haggis-boards.json` (each number has `evidence` and `source`; each row has a place) and the leg
-cache `packages/planner/src/haggis-travel.json`. Deadlines: `research/hiscores-live.json` (taken 2026-10-23T08:26:19.899Z; the 12:26:15Z snapshot has the same row-1
-times), row 1 of each board. The Verdict and table (a) were reprinted 2026-10-23 after the route choice and the
-measured Agility rows; the order, each-board-alone and lever tables below are older. Reprint every table here with
+cache `packages/planner/src/haggis-travel.json`. Deadlines: `research/hiscores-live.json` ), row 1 of each board. Reprint every table here with
 `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --order --supplies --evidence --levers --travel`.
 
 ## Verdict
 
-**This dated schedule does not meet all 24 targets. It does not establish that every possible route fails.** Equipment tie/order semantics require separate validation. Historical numbers:
+**At the numbers below the schedule does not meet all 24 targets. It does not establish that every possible route fails.** Equipment tie/order semantics require separate validation.
 
 - Every skill board stamps the account's total playtime at the level-up (`Player.ts:1904-1905`,
   `LoginServer.ts:155-181`). One account has one clock. Each board that Haggis trains adds its ticks to the stamp
   of every board that comes after it.
 - The Overall #1 (`stunbaron`) has all 19 skills at 99 in 35,916 ticks. With every safe lever, the travel legs,
-  the legal Cooking route and the stageable supply rows (2026-10-23, `research/supply-logistics.md`), Haggis
+  the legal Cooking route and the stageable supply rows (`research/supply-logistics.md`), Haggis
   reaches Overall at **38,583 ticks at floor rates (slack -2,667)** and **47,248 at realistic rates (slack
-  -11,332)**. ESTIMATE (the model; most rows are code-read or rival figures). Before the supply rows the same
-  table gave 36,437 / 43,696; before the measured Agility rows (`research/agility.md`) and the route choice,
-  38,764 / 46,856. The last 99 is Agility at both rates.
-- **Route choice by Overall (2026-10-23).** `schedule` now picks the variant combination with the earliest Overall
+  -11,332)**. ESTIMATE (the model; most rows are code-read or rival figures). The last 99 is Agility at both rates.
+- **Route choice by Overall.** `schedule` picks the variant combination with the earliest Overall
   finish for each mode (`chooseRoute` in `haggis.ts`; all combinations when there are 64 or fewer, else one group at
   a time with a re-check; tie-break: the sum of slack over the clock boards). Only the `magic-smithing` group has
   two live options. Floor picks `superheat` (38,583; the raw-tick choice `separate` gives 39,257). Realistic keeps
   `separate` (47,248; `superheat` gives 47,812 there). The CLI prints the route and the last 99 per mode.
-- **Superheat route supplies (2026-10-23).** `magic-43` now trains on the teleport ladder (36 wind strikes, 15
+- **Superheat route supplies.** `magic-43` trains on the teleport ladder (36 wind strikes, 15
   teleports; 168 / 219 ticks, ESTIMATE): the enchant ladder to 43 needs 28 cosmic runes, more than the 20 that
-  can be staged. `magic-top` now superheats gold past Smithing 99 (441.7 / 415 Magic XP per tick, 30 gold ore,
+  can be staged. `magic-top` superheats gold past Smithing 99 (441.7 / 415 Magic XP per tick, 30 gold ore,
   30 nature runes, 120 fire runes): enchant 5 needs dragonstone amulets. Both rows list their supplies, so the
-  unsourceable test sees them. The `ranged` row's 850 rune arrows now come from `fletch-arrows` (2,595 rune
+  unsourceable test sees them. The `ranged` row's 850 rune arrows come from `fletch-arrows` (2,595 rune
   arrowtips fletched by Haggis; `Supply.from`), so no helper stages them.
-- **Supply rows (2026-10-23).** Four rows needed items with no legal source at this scale and are OUT ("no legal
+- **Supply rows.** Four rows are OUT because they need items with no legal source at this scale ("no legal
   source at this scale"): `fletch` (rune dart tips 1,520), `craft` (uncut dragonstone 305), `herb` (torstol 176,
   snapdragon 6, toadflax 2), `magic` (cosmic runes 546, dragonstone amulets 453). Replacements, all ESTIMATE:
   `fletch-arrows` (arrows only, 49 / 50 ticks), `craft-diamond` (diamonds 43-99, 229 / 230), `herb-drops`
-  (chaos-druid herb drops, 630 / 780), `magic-teleport` (722 law runes, 3,000 / 3,750, no longer inside the
+  (chaos-druid herb drops, 630 / 780), `magic-teleport` (722 law runes, 3,000 / 3,750, outside the
   pickpocket stuns). The table field `unsourceable` lists the items, and `haggis.test.ts` fails if an active row
   needs one. Each replacement row has a `leadTime` note for the helper work.
 - Travel adds 4,769 ticks before the last 99 at floor rates and 6,950 over the whole run (4,718 / 6,899 on the
@@ -47,17 +43,16 @@ measured Agility rows; the order, each-board-alone and lever tables below are ol
   same table without travel (`--no-travel`) gives 33,814 / 42,530. The rival
   plan prices 2,283 of legs and about 1,789 of allowances (`research/rival-gap-list.md`). Our legs are longer
   because the EDF order does not group rows by place and the model has no teleports.
-- At floor and at realistic rates all 20 clock boards are late in the EDF order. Herblore (once +95 at floor)
-  now finishes at 1,036 / 1,217 against 447.
+- At floor and at realistic rates all 20 clock boards are late in the EDF order. Herblore finishes at 1,036 / 1,217 against 447.
 - Scenarios (a) and (b) give the same numbers. Login wine, the cocktail route to Cooking 35, pyre logs and
-  Charge spam were excluded in this historical model. All are now eligible in the current table. Scenario (c) is 277 / 304 ticks
-  faster (38,306 / 46,944, same routes as (a)): with Magic out of the pickpocket stuns, stun relog now saves ticks.
+  Charge spam have no row in this model; all are allowed. Scenario (c) is 277 / 304 ticks
+  faster (38,306 / 46,944, same routes as (a)): with Magic out of the pickpocket stuns, stun relog saves ticks.
 
-**Current experiment priority (2026-10-26, model only).** [Sensitivity](../.practice/shared-supply/sensitivity.json): Overall44,866 versus dated target35,916, a gap of8,950ticks. Hypothetical halving saves at most2,660 for Monkey Madness,2,031 Agility,1,733 Woodcutting or1,614 Ranged; these are non-additive model effects, not proved gains. No single tested change meets Overall; all board deadlines must pass together. Retain combat side XP when comparing Ranged methods.
+**Current experiment priority (model only).** [Sensitivity](../.practice/shared-supply/sensitivity.json): Overall44,866 versus target 35,916, a gap of8,950ticks. Hypothetical halving saves at most2,660 for Monkey Madness,2,031 Agility,1,733 Woodcutting or1,614 Ranged; these are non-additive model effects, not proved gains. No single tested change meets Overall; all board deadlines must pass together. Retain combat side XP when comparing Ranged methods.
 
-[Strict cache build](../.practice/mm-exit/interface-release-build/build-proof.json) now passes with verification enabled and the fixed known GE-fork checksum. Interface bytes match generated source; all6,811zip entries retain their contents. [Fresh actual approaches](../.practice/mm-exit/trace-1793043473883/summary.json) passed3/3 on pin2b85:temple exits39/379/36ticks, including one teleport fallback, then safe bank/logout with amulet retained. This is recovery evidence, not an optimization. Immediate landing NPC snapshots were empty before telemetry repopulated; later footprints expose static route clicks crossing occupied guard rectangles. [Offline geometry](../.practice/mm-exit/trace-1793043473883/footprint-path-run2-552.json) finds a south detour in that observed state. [Guard-aware waypoint candidate](../.practice/mm-exit/guard-candidate/qualification.json) remains isolated:policy/collision restoration and typecheck pass;three native approaches/extractions pass at36/17/46exit ticks. Initial skills,items,varps and positions match the control, but guard layouts differ; this is no statistical speed claim. Each actor retained the amulet at bank with35HP and logout. Two immediate save reads were stale; settled CRC save bytes are archived and the proof harness now waits for required state before teardown. Keep ladder/reroll/teleport recovery and the old417tick tail evidence. Require three matched runs per condition and three full quests before changing model timing. Main stays offline.
+[Strict cache build](../.practice/mm-exit/interface-release-build/build-proof.json) passes with verification enabled and the fixed known GE-fork checksum. Interface bytes match generated source; all6,811zip entries retain their contents. [Fresh actual approaches](../.practice/mm-exit/trace-1793043473883/summary.json) passed3/3 on pin2b85:temple exits39/379/36ticks, including one teleport fallback, then safe bank/logout with amulet retained. This is recovery evidence, not an optimization. Immediate landing NPC snapshots were empty before telemetry repopulated; later footprints expose static route clicks crossing occupied guard rectangles. [Offline geometry](../.practice/mm-exit/trace-1793043473883/footprint-path-run2-552.json) finds a south detour in that observed state. [Guard-aware waypoint candidate](../.practice/mm-exit/guard-candidate/qualification.json) remains isolated:policy/collision restoration and typecheck pass;three native approaches/extractions pass at36/17/46exit ticks. Initial skills,items,varps and positions match the control, but guard layouts differ; this is no statistical speed claim. Each actor retained the amulet at bank with35HP and logout. Two immediate save reads were stale; settled CRC save bytes are archived and the proof harness now waits for required state before teardown. Keep ladder/reroll/teleport recovery and the old417tick tail evidence. Require three matched runs per condition and three full quests before changing model timing. Main stays offline.
 
-The old best-set table counted unknown-value boards as wins and omitted Quest Points' time tiebreak; it is withdrawn. The scheduler's selected subset is a model result, not proof of the best possible route. No live rank or all-board win is established. Monkey Madness has native timing evidence in the nested `ticks.source`; its top-level “ticks rival” text is stale and must not override those measurements.
+The scheduler's selected subset is a model result, not proof of the best possible route. No live rank or all-board win is established. Monkey Madness has native timing evidence in the nested `ticks.source`; its top-level “ticks rival” text is stale and must not override those measurements.
 
 ## Board rules used
 
@@ -65,7 +60,7 @@ The old best-set table counted unknown-value boards as wins and omitted Quest Po
 |---|---|---|
 | 19 skills | Level desc, then playtime at the level-up | `RankedHiscoresWorker.ts:19`, `Player.ts:1905`, `LoginServer.ts:155-181` |
 | Overall | Total level desc, then playtime at the last level-up | `LoginServer.ts:120-150` |
-| Quest Points | Points desc, then playtime ascending, stamped at the save after the total changed (`RankedHiscoresWorker.ts:19`, `LoginServer.ts:200-216`). Corrected 2026-10-23: #1 `avery` now has 145 of 145 at 1,022,262 ticks, so the only win is all 145 QP saved at 1,022,261 ticks or less (research/quest-plan.md, research/boards-special.md) | `hiscores.ts:313`; `quest.constant:72-139` |
+| Quest Points | Points desc, then playtime ascending, stamped at the save after the total changed (`RankedHiscoresWorker.ts:19`, `LoginServer.ts:200-216`). #1 `avery` has 145 of 145 at 1,022,262 ticks, so the only win is all 145 QP saved at 1,022,261 ticks or less (research/quest-plan.md, research/boards-special.md) | `hiscores.ts:313`; `quest.constant:72-139` |
 | Equipment | Worn value desc. No clock | `hiscores.ts:620` |
 | Bank | Bank value desc. No clock | `hiscores.ts:981` |
 | Lava Maze Runite | Ore count desc, ties by first to reach it. All-time, 7-day and 24-hour windows | `hiscores.ts:781-828` |
@@ -110,9 +105,9 @@ Strength -30,529. At floor: Agility -31,811, Ranged -26,709, Defence -26,344, Mi
 
 ### (b) With login wine, (c) all tricks
 
-(b) is the same as (a): login wine is now eligible (earlier model exclusion revoked), so the trick has no row to use. (c) gives Overall 38,306
-floor / 46,944 realistic, 277 / 304 ticks faster than (a): Magic is no longer a stun guest (teleports leave the
-thieving spot), so stun relog now saves ticks. Pyre logs are OUT (content bug).
+(b) is the same as (a): login wine is eligible, but the model has no row that uses it. (c) gives Overall 38,306
+floor / 46,944 realistic, 277 / 304 ticks faster than (a): Magic is not a stun guest (teleports leave the
+thieving spot), so stun relog saves ticks. Pyre logs are OUT (content bug).
 
 ### Each board alone (a fresh account that trains only this board first)
 
@@ -141,7 +136,7 @@ This is the specialist view (scenario c, travel on). It shows which leaders our 
 | Runecraft | 2,354 | 1,588 | **+766** | 1,722 | **+632** |
 
 Only Attack, Hitpoints, Woodcutting, Firemaking and Runecraft win alone at floor rates; only Runecraft wins alone at
-realistic rates. Herblore alone (+123 before the supply rows) now loses: 708 / 858 against 447.
+realistic rates. Herblore alone loses: 708 / 858 against 447.
 Cooking alone is 148 / 179: the legal route is tutorial 10, trade 5-12, walk 13, Cook's Assistant 12-28, 2-3 cooks
 6-9, walk to Al Kharid bank 79, deposit and wine 3-6, timer 20-22.
 
@@ -163,7 +158,7 @@ Tick = Haggis playtime. "Walk" rows are travel legs (`walk A -> B` in `--order`)
 | 8 | Finish potions from dropped herbs | 437 | 1,217 | Herblore 1,217 |
 | 9 | Burn logs | 1,217 | 1,997 | Firemaking 1,997 |
 | 10 | Bury dragon bones to Prayer 31 | 1,997 | 2,009 | |
-| 11 | Teleport ladder to Magic 99 (no longer inside the pickpocket stuns) | 2,009 | 5,759 | Magic 5,759 |
+| 11 | Teleport ladder to Magic 99 (outside the pickpocket stuns) | 2,009 | 5,759 | Magic 5,759 |
 | 12 | Smith platebodies at the Varrock West anvil (walk 151 before) | 5,910 | 7,226 | Smithing 7,226 |
 | 13 | Runecraft, air then nature (walk 149 before) | 7,375 | 8,945 | Runecraft 8,945 |
 | 14 | Tree Gnome Village, Agility 25, The Grand Tree, Fight Arena, Monkey Madness | 9,437 | 20,395 | Attack 15,162 |
@@ -177,7 +172,7 @@ Tick = Haggis playtime. "Walk" rows are travel legs (`walk A -> B` in `--order`)
 | 22 | Witch's House, Waterfall, short quests, Dragon Slayer, Scorpion Catcher, Merlin, Grail, the rest of the quests | 47,143 | 108,400 | Quest Points 142 |
 | 23 | Gear, bank wealth, Lava Maze runite | 108,400 | 110,425 | Equipment, Bank, Runite |
 
-## Travel model (2026-10-23)
+## Travel model
 
 - Each row of `haggis-boards.json` has `at` (a place, `anywhere`, or `bank` = the nearest bank), and may have
   `endAt`, `via` and `bankTrips`. The scheduler adds the walk from the player's place to the next row.
@@ -202,7 +197,7 @@ this server's config files.
 
 | Board | Method | Helper supplies |
 |---|---|---|
-| Cooking | Cook's Assistant (Cooking 30), 1 stew and 1 shrimp on the cook-o-matic range (35), 1 hand-made wine at Al Kharid bank, 20-tick timer ferments the bank. The cocktail route is eligible; its absence from this old result is superseded | 600 noted unfermented wine, egg, bucket of milk, pot of flour, 3 uncooked stew, 2 raw shrimps, 10 coins (toll), 1 grapes, 1 jug of water |
+| Cooking | Cook's Assistant (Cooking 30), 1 stew and 1 shrimp on the cook-o-matic range (35), 1 hand-made wine at Al Kharid bank, 20-tick timer ferments the bank. The cocktail route is eligible | 600 noted unfermented wine, egg, bucket of milk, pot of flour, 3 uncooked stew, 2 raw shrimps, 10 coins (toll), 1 grapes, 1 jug of water |
 | Fletching | Arrows only (15 per action), 5 per tick, all stackable. Darts are OUT: rune dart tips have no seller or shop | 3,615 headless arrows; arrowtips: bronze 60, iron 90, steel 135, mithril 240, adamant 495, rune 2,595 (shop only, about 6.3 h of restock) |
 | Crafting | Gem cutting, 5 per tick, diamonds from 43. Dragonstones are OUT (crystal chest only) | Uncut: opal 5, jade 2, red topaz 2, sapphire 3, emerald 3, ruby 5, diamond 401 (10% margin; 365 without); chisel. GE bids, 4-7 days |
 | Herblore | Unf potion + secondary, 14 per inventory, herbs from chaos-druid drops (1,080 herb rolls). Torstol, snapdragon and toadflax are OUT (no source at scale) | Unf: guam 270, harralander 119, ranarr 93, irit 68, avantoe 51, kwuarm 43; eye of newt 338, red spiders' eggs 119, snape grass 144, limpwurt root 43. About 2,420 kills, about 5.6 helper-hours |
@@ -237,7 +232,7 @@ a helper's pack, next to the Lumbridge tutorial exit, before the first login:
 6. **Gear:** rune axe, rune pickaxe, fly rod, knife, tinderbox, hammer, cannon, armour, 610 lobsters in total.
 
 Wine supply is the hardest part: no shop sells grapes, and the live GE had 0 sellers (`cooking-board.md`).
-Dragonstone, torstol, adamantite bar and cosmic rune also had 0 sellers on 2026-10-22 (`board-ranking.md`).
+Dragonstone, torstol, adamantite bar and cosmic rune also had 0 sellers on the live GE (`board-ranking.md`).
 The staging plan per item, helper and hour is `research/supply-logistics.md`.
 
 ## Infeasible boards and why
@@ -254,7 +249,7 @@ The staging plan per item, helper and hour is `research/supply-logistics.md`.
 
 ## Unknowns and the experiment that closes each
 
-| Number | Value now | Evidence | Experiment |
+| Number | Value | Evidence | Experiment |
 |---|---|---|---|
 | Tutorial skip | 10 | MEASURED | Re-measure on the live server; check Haggis's current playtime (claimed and logged out on the first tick) |
 | Trade of 28 stacks | 5 / 12 | floor ESTIMATE, realistic MEASURED | Pre-opened trade, helper accepts on the same tick, 3 runs |
@@ -285,12 +280,8 @@ The staging plan per item, helper and hour is `research/supply-logistics.md`.
 
 ## Decisions the owner must make
 
-1. **SUPERSEDED 2026-10-23: the goal is not up for change** (owner: "the goal is the goal", "do not lower the bar"). The infeasibility below is a gap to close, not a decision point; research/gap-closers.md already turns Overall into a win at floor rates. Original text kept for the record. Options:
-   (a) Haggis takes the best set (3-6 skill boards + Quest Points + the 3 value boards), or (b) fresh specialist
-   accounts take the boards that win alone (14 at floor rates, 4 at realistic rates), and Haggis takes Quest Points, Equipment,
-   Bank and Runite.
-2. **Compare login wine and stun relog in the current route.** Both are authorized. The old timing verdict is historical; use the current planner and measured runtime before choosing.
-3. **Wilderness risk for Haggis.** The Agility route (Wilderness course), the Lava Maze runite board and the chaos
+1. **Compare login wine and stun relog in the current route.** Both are authorized. Use the current planner and measured runtime before choosing.
+2. **Wilderness risk for Haggis.** The Agility route (Wilderness course), the Lava Maze runite board and the chaos
    altar are in PvP areas. A death can lose the worn best-in-slot set. Decide if Haggis goes there, and if it goes
    before or after the gear for the Equipment board is worn.
 

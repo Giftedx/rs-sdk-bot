@@ -2,9 +2,9 @@
 
 Source: `vendor/rs-sdk/server/content/scripts/macro events/` (scripts and configs), the engine
 (`server/engine/src/engine/World.ts`, `entity/Npc.ts`, `script/handlers/PlayerOps.ts`), and the packs in
-`server/content/pack/`. Read on 2026-10-23. The handler is `packages/core/src/randomevents.ts`.
+`server/content/pack/`. The handler is `packages/core/src/randomevents.ts`.
 
-Live state is NOT VERIFIED (INDEX C1). Checked on 2026-10-23: the Woodpecker run log names no dryad (it only
+Live state is NOT VERIFIED (INDEX C1). Checked: the Woodpecker run log names no dryad (it only
 shows `died ... hp=0` at 3233,3243); no event NPC and no event reward (lamp, strange box, axe handle, kebab and
 beer) is in the inventory or bank of any of the 7 demo bots in `.practice/status/`. The vendored
 `vendor/rs-sdk/fly.toml:25` sets `NODE_RANDOM_EVENTS = "false"`, but that file is not the live config (it sets
@@ -136,7 +136,7 @@ completion (`%macro_event_target_coord`).
   actions; they run when the job ends (or fail after 50 ticks). `RANDOM_EVENTS_GATE=0` turns the gate off.
 - Clicks on an ent, whirlpool, gas rock or gas chest fail at once (`avoid()` lists them for scripts).
 - `RANDOM_EVENTS_LAMP=<skill>` picks the lamp skill; `keep` keeps the lamp; the default is the skill with the
-  most XP gained this session.
+  most XP gained in the run.
 - Every action prints `EVENT <name> <action> t=<tick>`.
 
 Unit test: `packages/core/test/randomevents.test.ts` (fake session).
@@ -160,9 +160,9 @@ Measured on that engine (300 ms ticks), ticks from the first sight of the event:
 | Lost axe | fixed in 9 ticks (pick up head, reattach) |
 | Maze | 17 doors, gate, shrine: returned 183 ticks after the teleport, with the rewards |
 
-Faults the live test found and fixed:
+Flight rules, from live tests:
 - During an attack the client can hold the reported player tile still for 20+ ticks while the server walks the
-  player. A flight no longer ends when the NPC leaves view until the position settles.
+  player. A flight ends when the NPC leaves view only after the position settles.
 - A flight ended 17 tiles away beside aggressive Dark wizards and the bot died there. A flight now walks back to
   its start tile, and flight tiles score away from NPCs that hunt players (`loadDanger()`: huntmode
   aggressive, cowardly or ranged in the server `.npc` files).

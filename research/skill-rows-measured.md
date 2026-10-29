@@ -1,7 +1,7 @@
-# Skill rows measured: magic-teleport, woodcut, fish (2026-10-24)
+# Skill rows measured: magic-teleport, woodcut, fish
 
 This file records practice measurements for three planner rows in `packages/planner/src/haggis-boards.json`.
-Before this work, all three rows were ESTIMATE. Now all three are MEASURED.
+All three rows are MEASURED.
 
 All runs were on the local practice server (150 ms tick). Each run used a fresh preset account, made with
 `RANDOM_EVENTS=0 bun scripts/measure/floor-run.ts <script> <preset> 1 ...`, and each run was deleted after it
@@ -10,25 +10,18 @@ finished. A preset run is not a fresh-account run and not a live run. Paths that
 
 ## Summary
 
-| Row | Old ticks (floor / realistic, ESTIMATE) | New ticks (floor / realistic, MEASURED) | Method change |
-|---|---|---|---|
-| `magic-teleport` (Magic 1-99) | 3,000 / 3,750 | 3,033 / 3,046 | None. A teleport takes 4.00 ticks every cast |
-| `magic-43` (Magic 1-43, on the path) | 168 / 219 (117.2 / 89.9 XP/tick) | 212 / 224 (92.8 / 87.9 XP/tick) | None. Wind strike is slower than assumed (5.5-6.3 ticks per cast, not 3-4) |
-| `woodcut` (Woodcutting 1-99) | 2,900 / 3,400 | 3,356 / 3,467 | Rune axe from level 1, not 41. Oaks to 72, then willows |
-| `fish`, patch `rival-sea-slug` (Fishing 74-99) | 1,788 / 2,568 (+215 via Catherby) | 2,305 / 2,346 (no via leg) | Fly 3-tick only. No lobster or harpoon |
+| Row | Ticks (floor / realistic, MEASURED) | Method |
+|---|---|---|
+| `magic-teleport` (Magic 1-99) | 3,033 / 3,046 | A teleport takes 4.00 ticks every cast |
+| `magic-43` (Magic 1-43, on the path) | 212 / 224 (92.8 / 87.9 XP/tick) | Wind strike takes 5.5-6.3 ticks per cast |
+| `woodcut` (Woodcutting 1-99) | 3,356 / 3,467 | Rune axe from level 1. Oaks to 72, then willows |
+| `fish`, patch `rival-sea-slug` (Fishing 74-99) | 2,305 / 2,346 (no via leg) | Fly 3-tick only. No lobster or harpoon |
 
 Floor is the best run. Realistic is the mean of 3 runs.
 
-Planner, scenario a. Both runs used the same hiscores snapshot (`research/hiscores-live.json` at 2026-10-24, copied
-before the comparison). "Before" is the HEAD boards file and "after" is this change:
-
-| | Overall finish floor | Overall finish realistic | Gate `plan wins` line |
-|---|---|---|---|
-| Before | 40,503 | 44,964 | 1/24 boards win with 2% margin; 61 inputs not MEASURED; worst Agility -38192 |
-| After | 41,100 | 44,393 | 1/24 boards win with 2% margin; 55 inputs not MEASURED; worst Agility -37621 |
-
-The floor became 597 ticks worse because the old fish floor (1,788) came from the flinch model, and flinch FAILS on
-this server (`research/gathering-tricks.md`). The realistic finish became 571 ticks better.
+Planner, scenario a, with `research/hiscores-live.json`: Overall finish 41,100 floor / 44,393 realistic; gate `plan
+wins` line: 1/24 boards win with 2% margin; 55 inputs not MEASURED; worst Agility -37621. The flinch model fails on
+this server (`research/gathering-tricks.md`), so the fish row has no flinch floor.
 
 ## Magic: teleport ladder
 
@@ -89,8 +82,8 @@ Total: floor 1,444 + 1,912 = 3,356. Realistic 1,493 + 1,974 = 3,467.
 Tree moves take 15-20% of the ticks, because oaks and willows fall on 1 log in 8 (`woodcut.rs2:168, 184-189`). A run
 used 1-6 of its 15 spare logs, one log for each mistimed cycle.
 
-Failure seen: a preset with only Woodcutting died at the Draynor oaks. Jail guards (npc 917 at 3109,3237 and
-3120,3238, `maps/m48_50.jm2`) attacked it. The presets now have combat stats at 70. Haggis's combat level at this row is not
+Failure mode: a preset with only Woodcutting died at the Draynor oaks. Jail guards (npc 917 at 3109,3237 and
+3120,3238, `maps/m48_50.jm2`) attacked it. The presets have combat stats at 70. Haggis's combat level at this row is not
 checked here.
 
 ## Fishing: fly 3-tick from the Sea Slug level
@@ -111,18 +104,18 @@ inputs per tick. The Lure op with clock + 2 goes on to the hidden op 4, which ro
 
 Quoted line: `RESULT ok FLOOR Fishing level=99 xp=999287 ticks=2307 ... mode=fly start=74 ... feathers=1439`.
 
-The old rate was 182.5 at 70 (`research/gathering-tricks.md`). That script dropped the whole pack at 26 items. This
+`research/gathering-tricks.md` measures 182.5 at 70 with a script that drops the whole pack at 26 items. This
 script drops one fish in each knife tick, and the rate is almost double. Lobster and harpoon were not run 3 times.
 The code-read rates at 3 ticks per roll are lower than fly at every level from 74 to 99: fly 347-416, harpoon
 (swordfish and tuna) 232-296, lobster 211-281, shark 107-147 XP/tick. One delayed-harpoon run with the new script
 got no XP in 61 ticks, and it was not investigated. The fish patch therefore drops the Catherby via leg (215 ticks).
 
-Failure seen: a Fishing-only preset (10 Hitpoints) died at the Lumbridge river spot at tick 460 and respawned at
-3222,3216. The script now stops when the player is at the respawn point. The fish presets now have combat 70.
+Failure mode: a Fishing-only preset (10 Hitpoints) died at the Lumbridge river spot at tick 460 and respawned at
+3222,3216. The script stops when the player is at the respawn point. The fish presets have combat 70.
 
 ## Open
 
 - Live timing (400 ms tick, network latency) of the 4-input fly tick and the 3-tick woodcut cycle is not measured.
 - Woodcut moves: a closer group of oaks, or a site where the trees stand within reach of each other, could save
   some of the 450-530 move ticks.
-- The base `fish` row (1 -> 99, used when the `rival-sea-slug` lever is off) is still ESTIMATE.
+- The base `fish` row (1 -> 99, used when the `rival-sea-slug` lever is off) is ESTIMATE.

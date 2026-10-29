@@ -1,8 +1,8 @@
-> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+> Authority (owner decision): all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. See [AGENTS.md](../AGENTS.md).
 
 # Bug report draft for Max Bittker (rs-sdk): wine fermentation at login has no level check
 
-Status: SENT 2026-10-23 as https://github.com/MaxBittker/rs-sdk/issues/102 (historical restriction revoked on 2026-10-28). This mechanic is authorized for the demo server.
+Status: SENT as https://github.com/MaxBittker/rs-sdk/issues/102. This mechanic is authorized for the demo server.
 
 ## Summary
 A new account with Cooking level 1 and unfermented wine in its bank reaches 99 Cooking about 22 ticks after logging

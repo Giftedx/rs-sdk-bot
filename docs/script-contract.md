@@ -3,7 +3,7 @@
 Use this contract for new scripts, accounts and shared helpers. It defines acceptance, not proof that existing workers comply.
 Follow [AGENTS.md](../AGENTS.md) for authority, pause, ownership and launch limits.
 
-All gameplay techniques are authorized (owner, 2026-10-28). There is no exploit, community-acceptance or technique-approval gate. Missing supplies become procurement requirements. They never exclude a candidate route. Show quantity, holdings, acquisition method and next consumer separately from runtime evidence.
+All gameplay techniques are authorized (owner). There is no exploit, community-acceptance or technique-approval gate. Missing supplies become procurement requirements. They never exclude a candidate route. Show quantity, holdings, acquisition method and next consumer separately from runtime evidence.
 
 ## Choose and reuse
 

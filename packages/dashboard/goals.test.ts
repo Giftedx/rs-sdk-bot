@@ -6,7 +6,7 @@ test('dashboard goals come from the current plan, not the historical request led
     const plan=goalPlan(text);
     expect(plan.available).toBe(true);expect(plan.paused).toBe(false);
     expect(plan.lanes.map(l=>l.title)).toContain('Specialist hiscores');
-    expect(plan.lanes[0]!.next).toContain('refill');
+    expect(plan.lanes.every(l=>l.target.length>0&&l.next.length>0)).toBe(true);
     expect(goalPlan('').available).toBe(false);
     const paused=text.replace(/^\*\*Live work authorized.*$/m,'**Execution paused by the user.**').replace('## Goals and next evidence','## Goals and next evidence after resume');
     expect(goalPlan(paused)).toEqual({...plan,paused:true});

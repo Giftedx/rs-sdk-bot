@@ -1,4 +1,4 @@
-# Quest Points board: every quest in rev 289 and the planner's QP rows (2026-10-23)
+# Quest Points board: every quest in rev 289 and the planner's QP rows
 
 ## Result
 
@@ -109,29 +109,6 @@ and QP gates fix the order. Class: the size class for the tick estimate of the `
 | Monkey Madness (`mm`) | 3 (138) | `rival-mm` (qp 0) | The Grand Tree (`quest_mm/scripts/mm_journal.rs2:4`) | level 195 jungle demon (`:5`) | - |
 | In Search of the Myreque (`routequest`) | 2 (139) | rest | Nature Spirit (`quest_routequest/scripts/routequest_journal.rs2:18-23`), Agility 25 (`routequest_myreque.rs2:125`); MEASURED 819-852 ticks in row `quests-medium` | level 97 (`routequest_journal.rs2:24`) | L |
 | **Total** | **145** | | | | |
-
-## The planner's QP rows (before this change)
-
-`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`, scenario a, all non-owner levers on.
-
-| Row | QP | Quests |
-|---|---|---|
-| `cooks-assistant`, `waterfall`, `scorpion`, `cannon` | 1 each | one quest each |
-| `tree`, `dragon`, `grail`, `dig` | 2 each | one quest each |
-| `druid` 4, `witch` 4, `gobdip` 5, `rj` 5, `grandtree` 5, `merlin` 6 | 29 | one quest each |
-| `qp-filler` (with lever `combat-hp-bound`: 14) | 14 | Ernest the Chicken 4, Sheep Herder 4, Black Knights' Fortress 3, Prince Ali Rescue 3 |
-| Subtotal, 18 quests | **55** | |
-| `crest`, `rival-fight-arena`, `rival-seaslug`, `rival-mm` | 0 | full quests whose 7 QP (1 + 2 + 1 + 3) are counted inside `quests-rest` (test comment "their points are inside quests-rest") |
-| `quests-rest` | **87** | aggregate ESTIMATE, label "Remaining quests to 142 QP", 15,988 / 47,972 ticks (40 quests x 400-1,200) |
-| Total | **142** | |
-
-The missing quests: none is missing by name, because `quests-rest` names no quests. The 50 quests that are on no
-row with points (46 in `rest`, plus the 4 `qp: 0` rows) give 83 + 7 = 90 QP. The row had 87. Its tick count
-covered 40 quests, but the `rest` set has 46. To reach 145, all 46 must be done. The order is fixed by the gates:
-Death Plateau before Troll Stronghold before Eadgar's Ruse and Troll Romance; Priest in Peril and The Restless
-Ghost before Nature Spirit before In Search of the Myreque; Plague City before Biohazard before Underground Pass
-before Regicide; Jungle Potion before Shilo Village and Tai Bwo Wannai Trio; Lost City and Shield of Arrav before
-Heroes' Quest (55 QP); Heroes' and Fremennik Trials before Throne of Miscellania; then Legends' Quest at 107 QP.
 
 ## Tick estimate for the 46 `rest` quests (ESTIMATE)
 
@@ -1014,7 +991,7 @@ realistic (deadline 1,022,262); Overall 40,545 / 45,211 at this commit (the othe
 
 After Haunted Mine (long, 1,800 / 2,600) `quests-rest` is 26 quests, 60 QP, 44,300 / 67,100 (burst 40,969 / 62,054),
 9 medium and 9 long; `quests-medium` is 8 quests, 14 QP, floor 7,372 / realistic 7,770 (a text splice of the two rows;
-the file is no longer `JSON.stringify` format). `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts
+the file is not `JSON.stringify` format). `bun test packages/planner`: 42 pass, 0 fail. `haggis-cli.ts
 research/hiscores-live.json --levers`: QP at end 145; Quest Points WIN at 101,946 floor / 130,524 realistic.
 
 After Demon Slayer (medium, 900 / 1,300) `quests-rest` is 25 quests, 57 QP, 43,400 / 65,800 (burst 40,136 / 60,852), 8
@@ -1224,9 +1201,9 @@ Findings:
 
 
 Planner: row `witch` 300 / 900 ESTIMATE -> 444 / 485 MEASURED (best / worst main run), the same under
-`rival-dialogue-burst` (was 277 / 832). The row is not in `quests-rest`, so the QP total stays 145. `bun test
+`rival-dialogue-burst`. The row is not in `quests-rest`, so the QP total stays 145. `bun test
 packages/planner`: 42 pass, 0 fail. `haggis-cli --levers`: Quest Points WIN at 102,024 floor / 134,279 realistic
-(was 101,857 / 134,626); Overall and Hitpoints unchanged.
+Overall and Hitpoints unchanged.
 
 ### Lost City
 
@@ -1265,7 +1242,7 @@ Findings:
 Planner: new row `quest-zanaris` (qp 3, 595 / 796 MEASURED, the same under `rival-dialogue-burst`). `quests-rest`:
 72 -> 69 QP, 31 -> 30 quests, one medium class less: 50,600 / 76,200 -> 49,700 / 74,900 (burst 46,795 / 70,470 ->
 45,963 / 69,268). The QP total stays 145 (`QP at end 145`). `bun test packages/planner`: 42 pass, 0 fail.
-`haggis-cli --levers`: Quest Points WIN at 101,787 floor / 133,873 realistic (was 102,024 / 134,279).
+`haggis-cli --levers`: Quest Points WIN at 101,787 floor / 133,873 realistic.
 
 
 ## The `qp-filler` row: Black Knights' Fortress, Ernest the Chicken, Sheep Herder, Prince Ali Rescue
@@ -1363,7 +1340,7 @@ Findings:
 `RESULT ok qp=1 questMsg=true xp=fishing=179375 ... ticks=452 hpMin=97 eats=0` (runs: 452, 449, 455 ticks), preset
 `quest_seaslug`, script `scripts/generated/quest-seaslug.ts`. The broken glass block was a lite client fault on
 bridged tiles, not the server (`research/quest-plan.md` 1n, `patches/rs-sdk.md` item 4). Planner: row
-`rival-seaslug` 449 / 455 MEASURED (was the rival's 304 / 495 ESTIMATE). Scenario a, `haggis-cli.ts
+`rival-seaslug` 449 / 455 MEASURED. Scenario a, `haggis-cli.ts
 research/hiscores-live.json --levers`: Overall finish 41,229 / 44,310 -> 41,374 / 44,270 (the rival's 304-tick floor
 was faster than ours); QP at end 145; Quest Points WIN at 102,075 / 130,441 -> 102,220 / 130,401. Gate
 (`scripts/haggis-gate.ts`): "54 inputs not MEASURED; worst Agility -37538" -> "53 inputs not MEASURED; worst Agility
@@ -1399,8 +1376,8 @@ Findings:
 
 The row keeps its QP (18, or 14 with lever `combat-hp-bound`). Ticks: floor = the sum of the 4 best runs (323 + 410 +
 607 + 1,580 = 2,920), realistic = the sum of the 4 worst (327 + 414 + 638 + 1,697 = 3,076), MEASURED, under
-`combat-hp-bound` and `rival-dialogue-burst` (was 1,200 / 3,600 and 1,388 / 4,163 ESTIMATE). Without the lever the
-row also holds Witch's House: 3,364 / 3,561 (+444 / 485, row `witch`; was 1,500 / 4,500). The walks between the 4
+`combat-hp-bound` and `rival-dialogue-burst`. Without the lever the
+row also holds Witch's House: 3,364 / 3,561 (+444 / 485, row `witch`). The walks between the 4
 quests (Draynor, Al Kharid, Ardougne, Falador) are not in the counts.
 `haggis-cli research/hiscores-live.json`, scenario a: Overall finish 41,374 floor / 44,270 realistic before and after
 (the row is after the last 99). Quest Points finish 102,220 / 130,401 -> 103,752 / 129,314 (WIN either way). QP at end
@@ -1885,8 +1862,8 @@ needle rises 1 a step while `%temp` is above 50 (3 above 80) and falls 1 at 0; a
 `%temp` falls by 5 + 6 x the heat each step. The total gains 2 a step while the regulator is open and the heat is in
 bits 19-24; at 26 the naphtha comes when the interface closes. A heat needle past its top resets everything. The coal
 plan `1110001010101000` (one entry per step) reaches 26 in 16 steps with 7 coal, and a search over every case where
-any click lands one step late found it safe (scratchpad `up/still3.ts`). All 3 proof runs made the naphtha on the
-first attempt (`STILL attempt 0 naphtha=true coal=1`).
+any click lands one step late found it safe (scratchpad `up/still3.ts`). All 3 proof runs made the naphtha with no
+retry (`STILL attempt 0 naphtha=true coal=1`).
 
 Findings:
 - Tirannwn traps trigger on their tiles: the leaf pits (3x3), the tripwire, the woodspring (2 tiles,

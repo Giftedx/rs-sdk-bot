@@ -1,4 +1,4 @@
-# Crafting board: what it takes (measured 2026-10-22, practice server, 300 ms ticks)
+# Crafting board: what it takes (measured on the practice server, 300 ms ticks)
 
 Live #1: `nickgemcut`, 99 in 197 ticks of playtime (research/hiscores-2026-10-22.json).
 

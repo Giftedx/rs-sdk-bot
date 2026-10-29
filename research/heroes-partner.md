@@ -1,4 +1,4 @@
-# Heroes' Quest partner: account, route and timing (2026-10-23)
+# Heroes' Quest partner: account, route and timing
 
 Tracker row C26 (`research/owner-requests.md`). Heroes' Quest needs two accounts. Haggis does the Black Arm side.
 The partner does the Phoenix side. Without the partner, Heroes' Quest, Throne of Miscellania and Legends' Quest are
@@ -12,27 +12,27 @@ login, practice bot or planner change was made for this file.
 - **Partner: Bigchopper.** Woodcutting 99 is done (rank 17 at 11,315 ticks, `research/hiscores-live.json`), so the
   Lost City gate (Woodcutting 36) is met and questing costs it no board time.
 - **Route: 24 quests, 55 QP.** All 24 have a MEASURED practice script. 12 of them are MEASURED 3/3 at the partner's
-  state: Cook's Assistant, Witch's House and Lost City (2026-10-23, `research/quest-points-board.md`, "Cook's
+  state: Cook's Assistant, Witch's House and Lost City (`research/quest-points-board.md`, "Cook's
   Assistant, Witch's House, Lost City"); The Restless Ghost, Pirate's Treasure, Vampire Slayer, Shield of Arrav (Phoenix
-  part), Merlin's Crystal, Holy Grail and Dragon Slayer (2026-10-24, section 6 risk 2); Tree Gnome Village and The Grand Tree. Presets
+  part), Merlin's Crystal, Holy Grail and Dragon Slayer (section 6 risk 2); Tree Gnome Village and The Grand Tree. Presets
   `quest_<name>_partner` are in `packages/practice/src/presets-partner.ts`.
 - **Ticks: about 13,300 / 13,800 for the quests and the skill gates (floor / realistic).** 12,941 / 13,497 of that
-  is MEASURED (was 12,883 / 13,451 before the 7 partner-state re-proofs). Travel between quests is not counted. With
+  is MEASURED. Travel between quests is not counted. With
   travel the total is about 16,300-18,300 ticks (ESTIMATE), or 1.8-2.0 hours at 399.8 ms per tick.
-- **Current timing decision (2026-10-26):** the main need not supply the partner's certificate. `scripts/generated/quest-arrav.ts` accepts any owned Black Arm actor as its first argument; that actor's curator visit produces two certificates. Qualify Swordinhand + Bigchopper as the alternate pair from their actual flags, kit and positions. Source inspection proves the route is parameterized, not that this pair is ready. Keep the main offline; the older main-dependent schedule below is historical.
+- **Current timing decision:** the main need not supply the partner's certificate. `scripts/generated/quest-arrav.ts` accepts any owned Black Arm actor as its first argument; that actor's curator visit produces two certificates. Qualify Swordinhand + Bigchopper as the alternate pair from their actual flags, kit and positions. Source inspection proves the route is parameterized, not that this pair is ready. Keep the main offline; the main-dependent schedule below applies only if the main supplies the certificate.
 
-Entry review2026-10-26, source and dated live status only: both candidate journals say Arrav not started and both have Magic1. Swordinhand's saved position is Ardougne; Bigchopper's is Varrock East. The worker expects the Black Arm actor to meet the helper within30ticks after login and unconditionally uses Varrock teleport after the cupboard. Stage the meeting and qualify a walking fallback or the spell prerequisites before live admission. The shared quest helper also defaults to eating below40HP; check that policy against their15/20 maximum HP before carrying valuable quest food. No pair run was started. Owner: root; next consumer is the existing Arrav worker, with both quest flags, preserved kit/health and certificate transfers as acceptance.
+Entry review (source and saved live status only): both candidate journals say Arrav not started and both have Magic1. Swordinhand's saved position is Ardougne; Bigchopper's is Varrock East. The worker expects the Black Arm actor to meet the helper within30ticks after login and unconditionally uses Varrock teleport after the cupboard. Stage the meeting and qualify a walking fallback or the spell prerequisites before live admission. The shared quest helper also defaults to eating below40HP; check that policy against their15/20 maximum HP before carrying valuable quest food. No pair run was started. Owner: root; next consumer is the existing Arrav worker, with both quest flags, preserved kit/health and certificate transfers as acceptance.
 
 ## 1. Account choice
 
-Status files `.practice/status/<name>.json`, read 2026-10-23. Every account below is on `rs-sdk-demo.fly.dev`.
+Status files `.practice/status/<name>.json`. Every account below is on `rs-sdk-demo.fly.dev`.
 
 | Account | Skills above 1 (not Hitpoints) | Combat, HP | Position | Use now | Verdict |
 |---|---|---|---|---|---|
 | **Bigchopper** | Woodcutting 99, Fletching 32, Thieving 35 | 3, 8/10 | 3206,3239 (Lumbridge) | idle (`fail stop file`); proposed log and arrow supplier in `research/supply-logistics.md:158,170` | **chosen** |
 | Woodpecker | Woodcutting 49, Thieving 22 | 3, 0/10 (died) | 3233,3243 | Woodcutting board run, not finished | no: its board is still open |
 | Moneyshot | Thieving 23 | 3, 10/10 | 2655,3283 | banker that holds the vault (`scripts/banker.ts`) | no: busy |
-| mmsmk1232 | no status file | - | - | smoke-test account (`research/demo-smoke-2026-10-22.md:3`) | possible spare |
+| mmsmk1232 | no status file | - | - | smoke-test account | possible spare |
 | new account | none | 3, 10 | Lumbridge | - | second choice |
 
 Reasons for Bigchopper:
@@ -88,7 +88,7 @@ Quest XP lumps give the partner its combat (levels from `curve.ts`):
 Before Holy Grail the partner has Defence 1, so it cannot wear the rune armour of the Dragon Slayer proof for the
 early quests. Holy Grail (row 22) gives 382,500 Defence XP (`quest_grail.rs2:117`, `stat_advance(defence, 153000)`),
 Defence 85, and 275,000 Prayer XP (`:116`). So at Lost City and Dragon Slayer (rows 23-24) the partner has Defence
-85 (CODE-READ; corrected 2026-10-23, this paragraph said Defence 1 before Dragon Slayer). The partner wears the rune
+85 (CODE-READ). The partner wears the rune
 armour in Melzar's maze and on Crandor (both in Dragon Slayer, MEASURED 3/3, section 6 risk 2).
 
 ## 3. Route to Heroes' Quest readiness
@@ -201,7 +201,7 @@ Two rules from the code fix the order of P7:
 
 ## 5. Timing against Haggis's run
 
-Planner order (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`, 2026-10-23):
+Planner order (`bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`):
 Holy Grail ends at tick 58,062. `quests-rest` runs 58,062-132,138 and holds Heroes' Quest and Lost City. The
 `quest-arrav` pair runs 132,138-132,375.
 
@@ -225,7 +225,7 @@ Holy Grail ends at tick 58,062. `quests-rest` runs 58,062-132,138 and holds Hero
    Bolt is needed: the Entrana zombies drop a bronze axe (50/128), which chops the tree and is the weapon for the
    tree spirit under Protect from Melee (partner `hpMin` 60-69 of 72). Open on live only: the exit portal puts the
    partner in Wilderness level 32, and the walk to level 20 (about 53 ticks) is open to PKers.
-2. **Re-proofs at the partner's levels: 7 of 7 CLOSED (MEASURED practice 3/3, 2026-10-24).** Presets
+2. **Re-proofs at the partner's levels: 7 of 7 CLOSED (MEASURED practice 3/3).** Presets
    `quest_<name>_partner` (`presets-partner.ts`) use the route levels and the quest varps of the rows before:
 
    | Row | Quest | Partner state | Ticks (3 runs) | hpMin | Note |

@@ -156,8 +156,8 @@ async function tick(state:CoordinatorState,config:any){
  const pending=state.tasks.some(r=>r.status==='pending'),failure=state.tasks.some(r=>r.status==='failed'&&(r.receipt?.at??0)>state.lastPlanAt);
  const newOutcome=state.tasks.some(r=>r.receipt&&r.receipt.at>state.lastPlanAt);
  const actionable=existsSync(planRequest)||newOutcome||failure;
- // Without a new receipt, failure or request the planner only rechecks every IDLE_PLAN_MS: 2026-10-28/29, 1,491 of 1,603
- // plans on the 30 s timer proposed no work (research/bot-host.md "Build/live overlap").
+ // Without a new receipt, failure or request the planner only rechecks every IDLE_PLAN_MS: 1,491 of 1,603
+ // plans on a 30 s timer proposed no work (research/bot-host.md "Isolated build workspaces").
  if(!state.planner&&(actionable||state.lastPlanReason.startsWith('planner failed:')||Date.now()-state.lastPlanAt>Math.max(config.plannerIntervalMs??0,IDLE_PLAN_MS))&&Date.now()-state.lastPlanAt>(actionable?1000:30000)){
   if(existsSync(planRequest))unlinkSync(planRequest);
   const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
