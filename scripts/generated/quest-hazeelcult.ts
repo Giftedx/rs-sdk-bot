@@ -85,6 +85,8 @@ try {
             doors:q.locs().filter((l:any)=>l.x>=2563&&l.x<=2567&&l.z>=3269&&l.z<=3274),
             feedback:st?.opFeedback ?? null, dialog:q.s.sdk.getDialog()}));
     };
+    // Resume: holding Carnillean's armour means steps 1-4 are done (quest varps are not sent to the client).
+    if (!q.has(ITEM.armour)) {
     await enterCerilHouse({...q, observeEntry, probeEntry:async()=>{
         const n=q.npc(/^ceril carnillean$/i);
         if(!n){console.log('CERIL_PROBE '+JSON.stringify({outcome:'absent',tick:q.st()?.tick}));return;}
@@ -130,12 +132,15 @@ try {
     }
     await q.step('armour', () => { const g = ground(ITEM.armour); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.armour), 12, 6);
     q.milestone(6);
+    }
 
     // 5. A raft back to the cave mouth, the stairs out, the walk to the house, upstairs to Ceril (7).
+    if (z() > 9000) {
     await q.walk('to end raft', [{ x: RAFT_END.x, z: RAFT_END.z - 1, tol: 1 }]);
     await q.step('raft back', () => q.opLoc(loc(RAFT_END), 1), () => q.near(2567, 9680, 3), 12, 4);
     await closeDlg();
     await q.step('cave stairs', () => q.opLoc(loc(CAVE_STAIRS), 1), () => z() < 9000, 10, 4);
+    }
     await q.walk('to house', [{ x: 2577, z: 3231, tol: 2 }, { x: 2565, z: 3233, tol: 2 }, { x: 2560, z: 3248, tol: 2 }, { x: 2559, z: 3261, tol: 2 }, { x: 2559, z: 3278, tol: 2 }, { x: 2569, z: 3278, tol: 1 }, { x: HOUSE_STAIRS.x, z: HOUSE_STAIRS.z + 1, tol: 1 }]);
     const stairs = () => q.findLoc(l => l.x === HOUSE_STAIRS.x && l.z === HOUSE_STAIRS.z && (l.optionsWithIndex ?? []).some((o: any) => /climb-up/i.test(o.text)));
     await q.climb('house stairs', stairs, /climb-up/i, () => lv() === 1);
