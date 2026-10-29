@@ -7,6 +7,7 @@ import {admissionDecision,activeExternalLive,loadEnded,persistEnded,persistentEn
 import {liveLogoutRef} from './coordinator-session';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {workerSourceRevision} from '../../core/src/worker-release';
+import {importClosure} from './delivery-cli';
 import {processMatches,safeKill} from '../../practice/src/proc';
 import {acceptStatus,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
@@ -37,8 +38,12 @@ type ControllerIdentity={pid:number;nonce:string;source:string;at?:number};
 type SwarmRolloutDeps={base?:string;currentSource?:()=>string;matches?:(pid:number,nonce:string)=>boolean;pidExists?:(pid:number)=>boolean;
  processes?:()=>number[];rows?:()=>any[];stop?:(pid:number,nonce:string)=>Promise<boolean>;spawn?:(source:string,nonce:string)=>number;
  drain?:(owner:ControllerIdentity,after:number)=>Promise<unknown>;now?:()=>number};
-export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={}){
+// The swarm's own code: a standing job runs current worker source (STANDING=1), so only these files need a rollout.
+export const SWARM_FILES=['scripts/swarm.ts','packages/practice/src/supervise.ts','packages/practice/src/supervise-host.ts'];
+export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=true){
  const base=deps.base??projectRoot,dir=join(base,'.practice/coordinator'),ownerFile=join(dir,'swarm-owner.json'),lock=join(dir,'build-lock.json');
+ const closure=createHash('sha256');for(const f of importClosure(SWARM_FILES,base))closure.update(f+'\0').update(readFileSync(join(base,f))).update('\0');
+ const swarmSource=closure.digest('hex');
  const stopped=()=>existsSync(join(base,'.practice/stop-coordinator'))||existsSync(join(base,'.practice/stop-swarm'));
  if(stopped())throw Error('controller rollout owner stopped');
  const currentSource=deps.currentSource??(()=>workerSourceRevision(base)),matches=deps.matches??processMatches,now=deps.now??Date.now;
@@ -55,7 +60,8 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={}){
  // A rollout pauses standing jobs with a marked stop file; once the current controller runs, those marks go.
  const rolloutMark='coordinator rollout pause';
  const standing=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true&&j.enabled&&j.account).map((j:any)=>j.account);}catch{return [];}};
- if(alive&&owner.source===source){
+ // A coordinator run needs the whole-runtime pin; standing jobs need only the swarm's own code current.
+ if(alive&&(forRun?owner.source===source:owner.swarmSource===swarmSource)){
   for(const a of standing()){const f=join(base,'.practice','stop-'+a);try{if(readFileSync(f,'utf8')===rolloutMark)unlinkSync(f);}catch{/* no mark */}}
   return;
  }
@@ -89,7 +95,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={}){
   }
   if(cleared)persistEnded(ends,endRecords);
   const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release})))(source,nonce);
-  const next={pid,nonce,source,at:now()};
+  const next={pid,nonce,source,swarmSource,at:now()};
   try{atomicJson(ownerFile,next);await drain(next,next.at);if(stopped())throw Error('controller rollout owner stopped');}catch(error){
    try{await stop(pid,nonce);}catch{/* retain the fence unless process death can be confirmed */}
    if(pidExists(pid))retainFence=next;

@@ -143,7 +143,7 @@ async function tick(state:CoordinatorState,config:any){
  let controllerPrepared=false,liveBlocked=false;
  // Standing swarm jobs run without a coordinator task, so the controller must run whenever one is enabled.
  if((json(join(projectRoot,'swarm.json')).jobs??[]).some((j:any)=>j.standing===true&&j.enabled)){
-  try{await ensureSwarm(workerSourceRevision());controllerPrepared=true;sourceErrors.delete('controller');}
+  try{await ensureSwarm(workerSourceRevision(),{},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
  for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
