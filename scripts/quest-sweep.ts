@@ -22,10 +22,11 @@ export function presetFor(quest:string):SaveConfig&{position:Tile}{
  return{...p,position:{level:0,...p.position}};
 }
 // Preset food (lobster, shark) only feeds the quest's eat-at threshold; the runner takes what the bank holds.
-export const FOOD=new Set([379,385]);
+export const FOOD=new Set([379,385]),COINS=995;
 export function needs(preset:SaveConfig,food=false):Map<number,number>{
  const m=new Map<number,number>();
  for(const i of preset.inventory??[])if(FOOD.has(i.id)===food)m.set(i.id,(m.get(i.id)??0)+i.count);
+ if(!food&&preset.coins)m.set(COINS,(m.get(COINS)??0)+preset.coins);
  return m;
 }
 const count=(rows:readonly Item[],id:number)=>rows.filter(r=>r.id===id).reduce((n,r)=>n+r.count,0);

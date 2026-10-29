@@ -14,6 +14,7 @@ test('preset food is split from the quest items',()=>{
  const preset={inventory:[{id:434,count:6},{id:379,count:4}]};
  expect([...needs(preset)]).toEqual([[434,6]]);
  expect([...needs(preset,true)]).toEqual([[379,4]]);
+ expect(needs({coins:200}).get(995)).toBe(200);
 });
 
 test('the nearest bank is on the same floor and closest by tiles',()=>{
