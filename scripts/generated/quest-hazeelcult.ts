@@ -1,5 +1,5 @@
-// Hazeel Cult (good side) from preset quest_hazeelcult (beside Sir Ceril Carnillean in his house, west of the Ardougne
-// zoo; every skill 99; no helper items). Reward: 1 QP, 15,000 Thieving XP before 25x, 2,000 coins
+// Hazeel Cult (good side): enter Ceril's house from the exterior south door, west of the Ardougne
+// zoo. Ordinary quest-sweep accounts keep their combat kit. Reward: 1 QP, 1,500 Thieving XP before 25x, 2,005 coins
 // (quest_hazeelcult.rs2:169-175).
 // Varp %hazeelcultquest (223): 2 after Ceril (ceril_carnillean.rs2:8-31), 3 then 4 after Clivet when the bot refuses to
 // join (clivet.rs2:147-158,228-272; side 0 = good), 6 when Alomone dies (alomone.rs2:100-123, he drops the armour), 7
@@ -8,6 +8,37 @@
 // valve bits are set (quest_hazeelcult.rs2:11-70): valve 3 turns left, the other 4 turn right.
 // The good side needs one raft trip; the evil side needs two hideout visits and the house chest, so it is longer.
 import { openQuest } from './quest-lib';
+import { questFlags } from '../../packages/core/src/quest-status';
+
+type Entry = {
+    lvl(): number;
+    near(x: number, z: number, tolerance: number): boolean;
+    npc(re: RegExp): { reachable?: boolean } | undefined;
+    walk(label: string, points: {x:number;z:number;tol:number}[]): Promise<void>;
+    openDoor(label: string, x: number, z: number): Promise<void>;
+    waitUntil(f: () => boolean, ticks: number): Promise<boolean>;
+    observeEntry?(stage: string): void;
+    probeEntry?(): Promise<void>;
+    fail(why: string): Promise<never>;
+};
+// m40_51.jm2: loc_1533 at 0_40_51_5_8, angle 3. Collision has a
+// north/south wall between z=3271 and z=3272; distance alone cannot prove entry.
+export async function enterCerilHouse(q: Entry): Promise<void> {
+    const reachable = () => q.lvl() === 0 && q.npc(/^ceril carnillean$/i)?.reachable === true;
+    q.observeEntry?.('before');
+    if (q.near(2565, 3273, 0) && reachable()) return;
+    await q.walk('Ceril exterior', [{x:2565,z:3271,tol:0}]);
+    q.observeEntry?.('exterior');
+    await q.openDoor('Ceril south door', 2565, 3272);
+    q.observeEntry?.('door');
+    await q.walk('Ceril interior', [{x:2565,z:3273,tol:0}]);
+    q.observeEntry?.('interior');
+    if (!await q.waitUntil(() => { q.observeEntry?.('waiting'); return reachable(); }, 12)) {
+        q.observeEntry?.('deadline');
+        await q.probeEntry?.();
+        await q.fail('Ceril entry unreachable');
+    }
+}
 
 const CERIL = { x: 2565, z: 3271 };
 const CERIL_UP = { x: 2573, z: 3268 };
@@ -26,7 +57,8 @@ const HOUSE_STAIRS = { x: 2568, z: 3268 };
 const CUPBOARD = { x: 2573, z: 3267 };
 const ITEM = { armour: 2405 };
 
-const q = await openQuest({ cap: 3000 });
+async function main() {
+const q = await openQuest({ cap: 3000, food: [385,379] });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
@@ -37,6 +69,34 @@ try {
     const closeDlg = async () => { if (q.dialogOpen()) await q.converse([], () => !q.dialogOpen(), 8); };
     const ground = (id: number): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === id).sort((a: any, b: any) => q.cheb(a.x, a.z) - q.cheb(b.x, b.z))[0];
 
+    // Diagnostic only: snapshot the published route observation and one real OP dispatch.
+    // NPC 885 spawns at 0_40_51_5_7; NPCs in this client list share the active scene plane.
+    const observeEntry = (stage: string) => {
+        const st = q.st(), client: any = q.s.client;
+        const candidates = (st?.nearbyNpcs ?? []).filter((n: any) => n.id === 885 || /ceril|carnillean/i.test(n.name ?? ''));
+        console.log('CERIL_ENTRY ' + JSON.stringify({stage, tick: st?.tick, revision: st?.revision,
+            player: q.pos() && {x:q.pos().worldX,z:q.pos().worldZ,level:q.lvl()}, sceneLevel:client.minusedlevel,
+            selected:q.npc(/^ceril carnillean$/i) ?? null,
+            candidates:candidates.map((n: any) => {
+                const entity = client.npc?.[n.index];
+                return {...n, reachable:n.reachable ?? 'unknown',
+                    route:entity ? {x:client.mapBuildBaseX + entity.routeX?.[0],z:client.mapBuildBaseZ + entity.routeZ?.[0]} : null};
+            }), nearbyNames:(st?.nearbyNpcs ?? []).map((n:any)=>({id:n.id,index:n.index,name:n.name})),
+            doors:q.locs().filter((l:any)=>l.x>=2563&&l.x<=2567&&l.z>=3269&&l.z<=3274),
+            feedback:st?.opFeedback ?? null, dialog:q.s.sdk.getDialog()}));
+    };
+    await enterCerilHouse({...q, observeEntry, probeEntry:async()=>{
+        const n=q.npc(/^ceril carnillean$/i);
+        if(!n){console.log('CERIL_PROBE '+JSON.stringify({outcome:'absent',tick:q.st()?.tick}));return;}
+        const before=q.st()?.revision;
+        const reply=await q.talkTo(n);
+        const dialog=await q.waitUntil(()=>q.dialogOpen(),8);
+        console.log('CERIL_PROBE '+JSON.stringify({index:n.index,id:n.id,beforeRevision:before,reply,dialog}));
+        observeEntry('probe-result');
+    }});
+    q.milestone('house-entry');
+    // Finite practice interruption at the real entry boundary. The next CLI run uses this save unchanged.
+    if (process.env.Q_STOP_AFTER_ENTRY === '1') await q.fail('interrupted house entry');
     // 1. Ceril: "What's wrong?", "Yes, of course, I'd be happy to help." sets 2.
     await q.talk('ceril', /^ceril carnillean$/i, [/what's wrong/i, /yes, of course/i], () => q.sawText(/see what i can do/i), CERIL, 80);
     q.milestone(2);
@@ -90,8 +150,12 @@ try {
     await q.step('open cupboard', () => { const k = cb(); return k ? q.opLoc(k, q.opIndex(k, /^open$/i)) : q.waitTicks(1); }, () => (cb()?.optionsWithIndex ?? []).some((o: any) => /search/i.test(o.text)), 8, 4);
     await q.step('search cupboard', () => { const k = cb(); return k ? q.opLoc(k, q.opIndex(k, /search/i)) : q.waitTicks(1); }, () => q.dialogOpen() || questDone, 8, 4);
     await q.converse([], () => questDone, 120);
-    await q.waitUntil(() => questDone, 10);
+    const complete = () => questFlags(q.s.client)?.some(f => f.name === 'Hazeel Cult' && f.state === 'complete') === true;
+    if (!await q.waitUntil(() => questDone && complete(), 10)) await q.fail('Hazeel completion flag unobserved');
     q.milestone(100);
     off();
     await q.end(questDone, 'qp=1');
 } catch (e) { await q.fail(String(e)); }
+}
+
+if (import.meta.main || (globalThis as {QUEST_SESSION?:unknown}).QUEST_SESSION) await main();

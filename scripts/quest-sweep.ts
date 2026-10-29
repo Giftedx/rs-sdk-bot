@@ -19,7 +19,7 @@ const BANKS:Tile[]=Object.values((travel as unknown as {banks:Record<string,Tile
 export function presetFor(quest:string):SaveConfig&{position:Tile}{
  const p=PRESETS['quest_'+quest];
  if(!p?.position)throw Error(`quest sweep: no preset quest_${quest} with a start tile`);
- return{...p,position:{level:0,...p.position}};
+ return{...p,position:{level:0,...p.position},...(quest==='hazeelcult'?{inventory:[{id:385,count:4}]}:{})};
 }
 // Preset food (lobster, shark) only feeds the quest's eat-at threshold; the runner takes what the bank holds.
 export const FOOD=new Set([379,385]),COINS=995;
@@ -53,8 +53,10 @@ async function main(){
  const preset=presetFor(quest),need=needs(preset),food=needs(preset,true);
  const s:Session=await openBot(account);
  const fail=(why:string)=>finish([s],false,`quest-sweep ${quest} ${why}`);
+ let handed=false;
+ try {
  const st=()=>s.sdk.getState();
- await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20});
+ if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
  const here=():Tile=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:{x:0,z:0,level:-1};};
  const world=await getWorld();
  const pack=():Item[]=>(st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count}));
@@ -80,7 +82,7 @@ async function main(){
    await waitUntil(s,()=>count(pack(),w.id)>=before+w.count,{timeoutTicks:5});
   }
   await s.bot.closeBank();
-  const left=plan(need,pack(),[]).withdraw;
+  const left=plan(need,pack(),[]).missing;
   if(left.length)return fail('withdraw short '+left.map(i=>`${i.id}:${i.count}`).join(','));
  }
  const start=preset.position;
@@ -88,7 +90,12 @@ async function main(){
  if(!there.ok)return fail(`start walk failed at ${JSON.stringify(here())} to ${JSON.stringify(start)}`);
  console.log(`MILESTONE quest-sweep ${quest} staged at ${JSON.stringify(here())}`);
  (globalThis as {QUEST_SESSION?:Session}).QUEST_SESSION=s;
+ handed=true;
  await import(script);
+ } catch(error) {
+  if(handed)throw error;
+  return fail(String(error));
+ }
 }
 
 if(import.meta.main)await main();
