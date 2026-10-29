@@ -1,4 +1,4 @@
-import {readFileSync,existsSync,readdirSync,writeFileSync,renameSync,unlinkSync} from 'node:fs';
+import {readFileSync,existsSync,readdirSync,writeFileSync,renameSync,unlinkSync,mkdirSync} from 'node:fs';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
@@ -45,6 +45,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={}){
  const pidExists=deps.pidExists??((pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return(e as NodeJS.ErrnoException).code!=='ESRCH';}});
  const stop=deps.stop??safeKill,drain=deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerDrain(owner,after,base));
  if(currentSource()!==source)throw Error('runtime changed before controller rollout');
+ // A lock whose owner process is gone fences nothing: archive it into its run folder (a failed build can die holding it).
+ if(existsSync(lock)){let held:any=null;try{held=JSON.parse(readFileSync(lock,'utf8'));}catch{/* unreadable lock stays a fence */}
+  if(held&&Number.isSafeInteger(held.pid)&&!pidExists(held.pid)&&typeof held.runId==='string'&&/^task-[0-9a-f-]+$/.test(held.runId)){const runDir=join(dir,'runs',held.runId);mkdirSync(runDir,{recursive:true});renameSync(lock,join(runDir,'expired-build-lock.json'));}}
  if(existsSync(lock))throw Error('runtime owner or unacknowledged controller remains fenced');
  let owner:any=null;if(existsSync(ownerFile))owner=JSON.parse(readFileSync(ownerFile,'utf8'));
  const alive=owner&&matches(owner.pid,owner.nonce);
