@@ -101,7 +101,9 @@ test('with isolated builds a qualification for a waiting live run passes a waiti
   task('run',{kind:'run',capability:'quest-sweep',account:'Helper1',dependsOn:['q'],accept:{quests:['Hazeel Cult']}}),task('q-alone',{kind:'qualify',capability:'other-order'})],0);
  expect(chooseTask(s,2,{isolatedBuilds:true,focusCapability:'other-order'})?.id).toBe('q');
  expect(chooseTask(s,2,{focusCapability:'other-order'})?.id).toBe('build'); // without isolation the qualification waits for the build
- startTask(s,'build',3,'b');expect(chooseTask(s,4,{isolatedBuilds:true})).toBeNull(); // the practice server is shared
+ startTask(s,'build',3,'b');expect(chooseTask(s,4,{isolatedBuilds:true,developmentLimit:2})?.id).toBe('q');
+ expect(chooseTask(s,4,{isolatedBuilds:true,developmentLimit:1})).toBeNull();
+ expect(chooseTask(s,4,{developmentLimit:2})).toBeNull(); // without isolation builds and checks take turns
 });
 
 test('a focus that failed three builds in a row is not re-adopted',()=>{

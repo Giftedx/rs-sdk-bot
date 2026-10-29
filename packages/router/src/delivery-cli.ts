@@ -5,7 +5,7 @@ import {existsSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {killTree} from '../../practice/src/proc';
-import {recoverProofLock} from '../../practice/src/proof-lock';
+import {recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
 import {deliver,validateDelivery,type DeliveryTask} from './delivery';
 
 const root=resolve(import.meta.dir,'../../..');
@@ -71,13 +71,13 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
             return{exitCode,timedOut,detail:JSON.stringify({stdout:out,stderr:err})};
             };
             if(check.phase==='regression')return start();
-            return withNativeStartup(start,{now:Date.now,freeGB:()=>freemem()/2**30,
+            return withPracticeTurn(join(root,'.practice/delivery-native.lock'),()=>withNativeStartup(start,{now:Date.now,freeGB:()=>freemem()/2**30,
                 stopped:()=>existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm')),
                 sleep:ms=>Bun.sleep(ms),progress:admission=>{
                     writeFileSync(join(directory,'admission.json'),JSON.stringify({...admission,check:check.id},null,2));
                     appendFileSync(join(directory,'admission.jsonl'),JSON.stringify({...admission,check:check.id})+'\n');
                     console.log('DELIVERY_ADMISSION '+JSON.stringify({...admission,check:check.id}));
-                }});
+                }}));
         },
     },diagnosticCheck);
     const report={...result,...nativeDeferralEvidence(result.reason),id:task.id,goal:task.goal,at:Date.now(),runtimeRevision:workerSourceRevision(root),directory,files:task.files.map(path=>{

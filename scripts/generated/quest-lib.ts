@@ -229,6 +229,16 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
 
     // Talk until ok(); then wait until the dialog closes (3 shut ticks). The NPC list covers about 15 tiles, so the
     // bot walks toward `home` first when the NPC is not in it.
+    // The shut door or gate closest to an unreachable target, within 10 tiles of it.
+    const openDoorNear = async (target: { x: number; z: number }, label: string): Promise<void> => {
+        const d = locs().filter((l: any) => /door|gate/i.test(l.name ?? '') && Math.max(Math.abs(l.x - target.x), Math.abs(l.z - target.z)) <= 10
+            && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)))
+            .sort((a: any, b: any) => Math.max(Math.abs(a.x - target.x), Math.abs(a.z - target.z)) - Math.max(Math.abs(b.x - target.x), Math.abs(b.z - target.z)))[0];
+        if (!d) return;
+        console.log(`NOTE ${label}: opening ${d.name} at ${d.x},${d.z}`);
+        await opLoc(d, opIndex(d, /^open$/i));
+        await waitTicks(s, 3);
+    };
     const talk = async (label: string, re: RegExp, pats: RegExp[], ok: () => boolean, home: { x: number; z: number }, maxTicks = 60, stopOpen = false): Promise<void> => {
         for (let i = 0; i < 3; i++) {
             await guard(label);
@@ -239,6 +249,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             if (!n) await fail(`${label}: no npc ${re}`);
             for (let k = 0; k < 8 && !dialogOpen() && !stats.died; k++) {
                 await guard(label);
+                const blocked0 = msgCount(/can't reach that/i);
                 const tr: any = await talkTo(npc(re) ?? n);
                 if (tr && tr.success === false) console.log(`WARN talk ${label}: ${tr.reason ?? ""} ${tr.message ?? ""}`);
                 let at0 = '', still = 0;
@@ -250,6 +261,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                     at0 = at;
                     if (still >= 3) break;
                 }
+                // On the live server a player can shut a door that is open on a fresh practice server.
+                if (!dialogOpen() && msgCount(/can't reach that/i) > blocked0) await openDoorNear(npc(re) ?? n, label);
             }
             if (!dialogOpen()) { const m: any = npc(re); const p = pos(); console.log(`WARN talk ${label} no dialog: npc ${m?.x},${m?.z} d=${m?.distance} me ${p?.worldX},${p?.worldZ} op=${JSON.stringify(st()?.opFeedback ?? {})}`); }
             let shut = 0;

@@ -195,7 +195,9 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   if(r.spec.kind==='run'&&running.filter(a=>a.spec.kind==='run').length>=(resources.liveLimit??Infinity))return false;
   if(r.spec.kind!=='run'&&running.filter(a=>a.spec.kind!=='run').length>=(resources.developmentLimit??Infinity))return false;
   if(r.spec.kind==='build'&&!canBuild(r)||r.spec.kind==='qualify'&&resources.nativeReady===false)return false;
-  if(exclusive(r.spec.kind)&&running.some(a=>exclusive(a.spec.kind)))return false;
+  // Isolated builds author apart and delivery-cli gives native checks one practice turn each, so development tasks
+  // overlap up to developmentLimit; without isolation they share the main checkout one at a time.
+  if(!resources.isolatedBuilds&&exclusive(r.spec.kind)&&running.some(a=>exclusive(a.spec.kind)))return false;
   if(r.spec.kind==='build'&&running.some(a=>(a.spec.kind==='run'&&!resources.isolatedBuilds)||a.spec.kind==='provision'))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='provision'))return false;
   if(r.spec.kind==='provision'&&running.some(a=>a.spec.kind==='build'))return false;

@@ -385,8 +385,11 @@ export function demandCandidates(selection:ReturnType<typeof startable>,waiting:
     const reason=waiting();
     return reason?{start:[],blocked:{...selection.blocked,...Object.fromEntries(selection.start.map(a=>[a,reason]))}}:selection;
 }
+// standing: an owner-assigned job of a script with useful live results; it runs beside coordinator tasks on an
+// account no coordinator task names (the coordinator checks swarm.json before it installs a job).
 export function coordinatedAdmission(job:Job,scoped:boolean):boolean{
-    return !scoped||(job as Job & {coordinatorOwner?:string}).coordinatorOwner==='coordinator';
+    const j=job as Job & {coordinatorOwner?:string;standing?:boolean};
+    return !scoped||j.coordinatorOwner==='coordinator'||j.standing===true;
 }
 
 if (import.meta.main) {

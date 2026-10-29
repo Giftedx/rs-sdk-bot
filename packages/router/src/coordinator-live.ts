@@ -135,6 +135,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,source,base))throw Error('account session ownership is not settled');
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
  if(end&&persistentEnd(end.reason)&&!pendingRepair(account,end))throw Error('account recovery needs a verified repair: '+end.reason);
+ if(existing?.standing===true&&existing.enabled)throw Error('account runs an owner standing job: '+existing.script);
  if(existing&&!reserved&&existing.coordinatorOwner!=='coordinator'){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');

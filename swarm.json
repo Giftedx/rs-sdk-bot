@@ -48,15 +48,16 @@
       "account": "Shaftmaker",
       "script": "scripts/gather-yews.ts",
       "role": "fletching",
-      "goal": "Supply bows and arrows from owned logs for Ranged preparation",
+      "goal": "Yew logs for wealth and fletching supply",
       "enabled": true,
-      "repeat": false,
+      "repeat": true,
       "env": {
-        "TREE": "normal",
-        "MAX_TRIPS": "1",
+        "TREE": "yew",
+        "MAX_TRIPS": "8",
         "BANK_AT": "25",
-        "CAP": "1200"
-      }
+        "CAP": "9000"
+      },
+      "standing": true
     },
     {
       "account": "Bigchopper",
@@ -90,13 +91,14 @@
       "account": "Ballspinner",
       "script": "scripts/gather-flax.ts",
       "role": "crafting",
-      "goal": "Use completed Crafting specialist for equipment and quest supplies",
+      "goal": "Flax for bowstrings and wealth",
       "enabled": true,
-      "repeat": false,
+      "repeat": true,
       "env": {
-        "CAP": "1800",
+        "CAP": "6000",
         "BANK_AT": "28"
-      }
+      },
+      "standing": true
     },
     {
       "account": "Haggis",
@@ -246,27 +248,6 @@
       }
     },
     {
-      "account": "Pocketpython",
-      "args": [],
-      "maxRestarts": 0,
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "run-overnight-earn-pocketpython-20261028 [task-3bdca8f0-b9fc-480f-98da-e6aad9a67e4a]",
-      "enabled": false,
-      "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-overnight-earn-pocketpython-20261028",
-      "env": {
-        "TICKS": "600",
-        "BANK_AT": "50000",
-        "FOOD_FROM": "",
-        "FUND_COURIER": "",
-        "RANDOM_EVENTS": "1",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-3bdca8f0-b9fc-480f-98da-e6aad9a67e4a"
-      }
-    },
-    {
       "account": "Wandwaver",
       "args": [
         "20"
@@ -325,19 +306,20 @@
     },
     {
       "account": "Masterbaiter",
-      "args": [],
+      "args": [
+        "100",
+        "9000"
+      ],
       "maxRestarts": 0,
-      "script": "scripts/quest-cook-job.ts",
-      "role": "cooking",
-      "goal": "run-complete-cook-masterbaiter-2 [task-20ea8a71-d812-40d1-8552-017d523fe52d]",
-      "enabled": false,
+      "script": "scripts/shark-supply.ts",
+      "role": "fishing",
+      "goal": "100 cooked sharks for endgame combat and the main run",
+      "enabled": true,
       "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-complete-cook-masterbaiter-2",
       "env": {
-        "CAP": "2400",
-        "COORDINATOR_RUN_ID": "task-20ea8a71-d812-40d1-8552-017d523fe52d"
-      }
+        "SHARK_CONSUMER": "endgame combat staging"
+      },
+      "standing": true
     },
     {
       "account": "Moneyshot",
@@ -360,29 +342,6 @@
         "AGI_PROGRESS_TICKS": "150",
         "CAP": "1600",
         "COORDINATOR_RUN_ID": "task-619020ea-b180-465c-b9fd-857408b4bd7e"
-      }
-    },
-    {
-      "account": "PickpockDick",
-      "args": [
-        "gnome",
-        "10"
-      ],
-      "maxRestarts": 0,
-      "script": "scripts/agility-order.ts",
-      "role": "thieving",
-      "goal": "run-agility-gnome-pickpockdick-1 [task-966fb866-f273-4e98-940b-1a7ad6df7c3b]",
-      "enabled": false,
-      "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-agility-gnome-pickpockdick-1",
-      "env": {
-        "AGI_MAX_LAPS": "40",
-        "AGI_MAX_TICKS": "6000",
-        "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-966fb866-f273-4e98-940b-1a7ad6df7c3b"
       }
     },
     {
@@ -501,27 +460,73 @@
       }
     },
     {
-      "account": "Mightyrod",
+      "account": "Pocketpython",
       "args": [],
       "maxRestarts": 0,
-      "script": "scripts/shark-supply.ts",
-      "role": "combat",
-      "goal": "run-overnight-shark-batch-mightyrod-20261028 [task-14790ab9-3813-4cc3-aa00-b8c9a4c74d9e]",
+      "script": "scripts/buy-owned-ge-item.ts",
+      "role": "thieving",
+      "goal": "run-ge-grapes-pocketpython-route [task-db89f10a-32b7-43db-bfbe-9d618e393044]",
       "enabled": false,
       "repeat": false,
       "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-overnight-shark-batch-mightyrod-20261028",
+      "coordinatorTask": "run-ge-grapes-pocketpython-route",
       "env": {
-        "MAX_COOKED": "100",
-        "CAP": "12000",
-        "ORDER_KEY": "shark-batch-20261028",
-        "COORDINATOR_RUN_ID": "task-14790ab9-3813-4cc3-aa00-b8c9a4c74d9e"
+        "ORDER_KEY": "wine-grapes-route",
+        "ITEM_ID": "1987",
+        "QUANTITY": "500",
+        "LIMIT_PRICE": "60",
+        "CASH_RESERVE": "100000",
+        "ORDER_MS": "900000",
+        "FILL_WAIT_TICKS": "200",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-db89f10a-32b7-43db-bfbe-9d618e393044"
+      }
+    },
+    {
+      "account": "PickpockDick",
+      "args": [
+        "gnome",
+        "70"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "thieving",
+      "goal": "run-agility-pickpockdick-band70-budget [task-980702fb-3ddb-4298-9e01-924870ef4b0f]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-pickpockdick-band70-budget",
+      "env": {
+        "AGI_MAX_LAPS": "400",
+        "AGI_MAX_TICKS": "10000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-980702fb-3ddb-4298-9e01-924870ef4b0f"
+      }
+    },
+    {
+      "account": "Mightyrod",
+      "args": [
+        "hazeelcult"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/quest-sweep.ts",
+      "role": "combat",
+      "goal": "run-quest-sweep-hazeelcult-mightyrod [task-0bdc21f6-24d5-4ce1-ad81-968bdcc22a56]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-quest-sweep-hazeelcult-mightyrod",
+      "env": {
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-0bdc21f6-24d5-4ce1-ad81-968bdcc22a56"
       }
     }
   ],
   "coordination": {
     "enabled": true,
-    "maxActive": 2,
+    "maxActive": 3,
     "plannerIntervalMs": 30000,
     "modelTimeoutMs": 600000,
     "bootstrap": [
@@ -554,7 +559,7 @@
     "preferLive": true,
     "directive": "Owner2026-10-28 is away overnight and grants full PC resources for maximum USEFUL qualified account progress. Fill available live slots across levelling, quest unlocks, combat, advanced resources and endgame supply; do not stop at two live jobs. Prefer sharks and other endgame-quality supplies over new trout/salmon surplus; use already-owned food rather than waste it. Finish current capability through its live consumer and automatically assign the next useful finite job. Reuse trained helpers; create/register additional task-specific accounts once a qualified useful role or measured capacity need exists. Main/fresh scored-launch clocks remain protected. Max17 is an initial measured cap, not an end goal: after fresh useful outputs, measured host/tick/supply headroom and a reserved practice slot, expand in measured batches under current owner authority. Headless services stay quiet and lean. Keep all full-game/endgame/maxed-quest-gear/hiscore goals in scope; make real game output the priority, not another catalogue or tests-only result.",
     "autoExpand": true,
-    "focusCapability": "cow-progress-order",
-    "focusSince": 1793281747644
+    "focusCapability": "fresh-rune-supply-order",
+    "focusSince": 1793309816437
   }
 }

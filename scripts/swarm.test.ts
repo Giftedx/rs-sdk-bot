@@ -399,6 +399,7 @@ test('scoped coordinator starts only its qualified assignments while ordinary sw
  const old={account:'Existing',script:'scripts/cook-wine.ts',enabled:true} as Job;
  expect(coordinatedAdmission(old,false)).toBe(true);expect(coordinatedAdmission(old,true)).toBe(false);
  expect(coordinatedAdmission({...old,coordinatorOwner:'coordinator'} as Job,true)).toBe(true);
+ expect(coordinatedAdmission({...old,standing:true} as Job,true)).toBe(true);
 });
 
 test('repair re-reads exact producer proof: new intent, late old callback, unknown cleanup and missing proof refuse',()=>{
