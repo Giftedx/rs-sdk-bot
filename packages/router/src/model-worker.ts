@@ -9,7 +9,8 @@ export function rejectedReview(dependencies:Record<string,any>,capability:string
  return latest?.review?.approved===false?String(latest.review.reason):null;
 }
 export function codexArgs(output:string,readOnly:boolean){
- return ['exec','--json','--ephemeral','--color','never','--sandbox',readOnly?'read-only':'danger-full-access','-c','approval_policy="never"','-c','forced_login_method="chatgpt"',
+ // Build workspaces (build-workspace.ts) have no .git; Codex refuses them without --skip-git-repo-check.
+ return ['exec','--skip-git-repo-check','--json','--ephemeral','--color','never','--sandbox',readOnly?'read-only':'danger-full-access','-c','approval_policy="never"','-c','forced_login_method="chatgpt"',
   // A disabled shadow needs a valid transport, even when that server is not
   // in user config. These placeholders are never launched.
   ...['blender','node_repl','cua_repl'].flatMap(name=>['-c',`mcp_servers.${name}={command="cmd.exe",enabled=false}`]),

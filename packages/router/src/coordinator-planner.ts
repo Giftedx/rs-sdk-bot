@@ -7,6 +7,7 @@ import {runModel,type ModelWorker} from './model-worker';
 import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
 import {projectRoot,atomicJson} from './coordinator-store';
+import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -51,7 +52,7 @@ export function readWorld(){
  const scripts:string[]=[];const walk=(path:string)=>{for(const f of readdirSync(join(projectRoot,path),{withFileTypes:true})){const file=path+'/'+f.name;if(f.isDirectory()&&!['measure'].includes(f.name))walk(file);else if(f.isFile()&&f.name.endsWith('.ts')&&!f.name.endsWith('.test.ts'))scripts.push(file);}};walk('scripts');
  const coverage=gameCoverage(JSON.parse(readFileSync(join(projectRoot,'knowledge/skills.json'),'utf8')),JSON.parse(readFileSync(join(projectRoot,'knowledge/quests.json'),'utf8')),statuses,protectedNames,scripts.sort());
  let scoreboard:any=null;try{scoreboard=scoreboardSummary(freshScoreboard(projectRoot));}catch(error){scoreboard={error:String(error)};}
- return{at:Date.now(),scoreboard,executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:12,maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+ return{at:Date.now(),scoreboard,executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
 }
 // The planner sees the whole-game scoreboard in a compact form: every skill, every quest by stage, weak domains.
 export function scoreboardSummary(board:any){
