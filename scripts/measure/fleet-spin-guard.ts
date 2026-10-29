@@ -14,11 +14,11 @@ if(sourceSha256!=='95FA80C3FC05DEFDCF6F8C24A620E809F51DA6B068F4E07A90A52A9A4F730
 const dir=resolve('.practice/fleet-proof'),results:any[]=[];
 const count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 for(const [index,raw] of [50,51].entries()){
- const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<9)throw new Error(`single-bot start needs9GiB actual${free}`);
+ const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());if(free<9)throw new Error(`single-bot start needs9GiB actual${free}`);
  const actor=runBotName('flguard',index+1),prefix=`spin-guard-${raw}-${actor}`;await createBot(actor);
  const path=await applyPreset(actor,{position:{x:2727,z:3492,level:0},skills:{Crafting:80},inventory:[{id:1735,count:1},{id:315,count:1},{id:2309,count:1}],bank:[{id:1779,count:raw},{id:1777,count:7},{id:995,count:170},{id:1737,count:40},{id:1759,count:25}]});
  const initial=readPracticeSave(path);console.log(`PROOF_START actor=${actor} raw=${raw} freeGiB=${free} source=${sourceSha256}`);
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/spin-bowstrings.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MAX_MAKE:'1',RAW_RESERVE:'50',MAX_TRIPS:'4',CAP:'300'},stdout:'pipe',stderr:'pipe'});let output='';const timer=setTimeout(()=>p.kill(),150000);
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/spin-bowstrings.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MAX_MAKE:'1',RAW_RESERVE:'50',MAX_TRIPS:'4',CAP:'300'},stdout:'pipe',stderr:'pipe',windowsHide:true});let output='';const timer=setTimeout(()=>p.kill(),150000);
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(part);}};
  await Promise.all([read(p.stdout),read(p.stderr)]);const exitCode=await p.exited;clearTimeout(timer);
  const result=JSON.parse(output.match(/^SPIN_BANK (.+)$/m)?.[1]??'null'),made=raw-50;

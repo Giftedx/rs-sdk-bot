@@ -16,7 +16,9 @@ export function readPracticeSave(path:string){
 // Only a just-generated practice fixture may receive exact source XP. Never reads live credentials.
 export function setPracticeSkills(path:string,skills:{level:number;xp:number}[]){
  if(dirname(resolve(path))!==resolve(import.meta.dir,'../../vendor/rs-sdk/server/engine/data/players/main')||!/^fl[a-z0-9]+\.sav$/i.test(basename(path))||skills.length!==21)throw new Error('requires generated fleet practice save and21skills');
- const b=bytes(path);for(const [i,s] of skills.entries()){if(!Number.isSafeInteger(s.xp)||s.xp<0||!Number.isSafeInteger(s.level)||s.level<1||s.level>99)throw new Error('invalid exact practice skill');b.writeInt32BE(s.xp*10,28+i*5);b.writeUInt8(s.level,32+i*5);}b.writeUInt32BE(Bun.hash.crc32(b.subarray(0,-4))>>>0,b.length-4);writeFileSync(path,b);
+ // The saved byte is the current level. Prayer can be drained to zero while
+ // its XP still gives a base level of 43. Living fixtures still need positive HP.
+ const b=bytes(path);for(const [i,s] of skills.entries()){if(!Number.isSafeInteger(s.xp)||s.xp<0||!Number.isSafeInteger(s.level)||(i===3?s.level<1:s.level<0)||s.level>99)throw new Error('invalid exact practice skill');b.writeInt32BE(s.xp*10,28+i*5);b.writeUInt8(s.level,32+i*5);}b.writeUInt32BE(Bun.hash.crc32(b.subarray(0,-4))>>>0,b.length-4);writeFileSync(path,b);
 }
 
 // Logout acknowledgement can precede the engine's final .sav publication.

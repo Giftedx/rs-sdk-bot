@@ -1,0 +1,219 @@
+// bun scripts/quest-items-order.ts <account> <quest> --save=<own-save>
+// CAP bounds game ticks (default 2400). Server comes from the account's existing configuration.
+// 2026-10-28: pinned pickables.rs2 op2, cow_milking.rs2 and windmills.rs2
+// -> Cook pack -> adapt observed item transitions -> saved pack and quest-order consumer checks.
+import {existsSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {openBot,settle,getWorld,accountOf} from '../packages/core/src/bot';
+import type {Session,BankObservation} from '../packages/core/src/inprocess';
+import {waitUntil} from '../packages/core/src/ticks';
+import {depositObserved} from '../packages/core/src/deposit';
+import {goTo,sessionWalker,walkPath,type PathPoint} from '../packages/core/src/walk';
+import {questFlags} from '../packages/core/src/quest-status';
+import {questSpec,savedQuest} from './quest-order';
+import {readPracticeSave,waitPracticeSave} from './measure/fleet-player-save';
+
+type Item={id:number;count:number};
+type Save=ReturnType<typeof readPracticeSave>;
+export const QUEST_ITEM_RECIPES={cook:{items:[1944,1927,1933],containers:[1925,1931],grain:1947}} as const;
+const total=(items:readonly Item[]|undefined,id:number)=>(items??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+export function itemRecipe(key:string){
+ if(!Object.hasOwn(QUEST_ITEM_RECIPES,key))throw Error(`quest items: unknown quest ${key}`);
+ return QUEST_ITEM_RECIPES[key as keyof typeof QUEST_ITEM_RECIPES];
+}
+export function itemEntry(key:string,save:Save){
+ const recipe=itemRecipe(key),spec=questSpec(key),pack=save.inventories[93]??[];
+ if(savedQuest(save,spec).done)return 'quest already complete';
+ if(recipe.items.every(id=>total(pack,id)===1))return 'items already in pack';
+ for(const [product,container] of [[1927,1925],[1933,1931]])
+  if(!total(pack,product!)&&!total(save.inventories[95],product!)&&!total(pack,container!)&&!total(save.inventories[95],container!))return `missing container ${container}`;
+ return null;
+}
+export function itemSaveChecks(key:string,before:Save,after:Save){
+ const r=itemRecipe(key),spec=questSpec(key),pack=after.inventories[93]??[];
+ const changed=new Set<number>([...r.items,...r.containers,r.grain]);
+ const ids=new Set([...(before.inventories[93]??[]),...(before.inventories[95]??[]),...pack,...(after.inventories[95]??[])].map(i=>i.id));
+ const assets=(s:Save,id:number)=>total(s.inventories[93],id)+total(s.inventories[95],id);
+ return{
+  pack:r.items.every(id=>total(pack,id)===1)&&pack.every(i=>(r.items as readonly number[]).includes(i.id)),
+  quest:savedQuest(after,spec).progress===savedQuest(before,spec).progress&&savedQuest(after,spec).qp===savedQuest(before,spec).qp,
+  assets:[...ids].filter(id=>!changed.has(id)).every(id=>assets(before,id)===assets(after,id)),
+  containers:[[1927,1925],[1933,1931]].every(([product,container])=>assets(after,product!)>=1&&assets(after,product!)-assets(before,product!)===assets(before,container!)-assets(after,container!)),
+  eggs:assets(after,1944)===Math.max(1,assets(before,1944)),
+  equipment:JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]),
+  alive:(after.skills.find(s=>s.index===3)?.level??0)>0,
+ };
+}
+
+type Observe=(pred:()=>boolean,label:string,ticks?:number)=>Promise<void>;
+// windmills.rs2 debits grain BEFORE p_arrivedelay/p_delay. The SDK can return on
+// that debit. Wait for the script's final message before sending another action.
+// Publication IDs also distinguish messages first seen in the same game tick.
+export async function operateQuestHopper(s:Session,fill:boolean,observe:Observe){
+ const messages=()=>s.sdk.getState()?.gameMessages??[];
+ const cursor=()=>({revision:Math.max(0,...messages().map(m=>m.observationId??0)),tick:Math.max(-1,...messages().map(m=>m.tick))});
+ const fresh=(m:ReturnType<typeof messages>[number],c:ReturnType<typeof cursor>)=>m.observationId!==undefined?m.observationId>c.revision:m.tick>c.tick;
+ const evidence:Record<string,unknown>={entry:s.sdk.getState()?.player};
+ const seen:ReturnType<typeof messages>=[];
+ let baseline=cursor();
+ const capture=()=>{for(const m of messages())if(fresh(m,baseline)&&!seen.some(a=>a.observationId===m.observationId&&a.tick===m.tick&&a.text===m.text))seen.push({...m});};
+ const off=s.onTick(capture);
+ try{
+  if(fill){
+   const grain=s.sdk.getState()?.inventory.find(i=>i.id===1947),hopper=s.sdk.findNearbyLoc(/^hopper$/i);
+   if(!grain||!hopper)throw Error('grain/hopper missing');
+   evidence.hopper={...hopper};
+   evidence.fill=await s.bot.useItemOnLoc(grain,hopper);capture();
+   await observe(()=>{capture();return seen.some(m=>/there is already grain in the hopper/i.test(m.text))||(!s.sdk.getState()?.inventory.some(i=>i.id===1947)&&seen.some(m=>/you put the grain in the hopper/i.test(m.text)));},'hopper fill complete');
+   evidence.fillObserved=seen.map(m=>({...m}));
+  }
+  baseline=cursor();seen.length=0;
+  const controls=s.sdk.findNearbyLoc(/^hopper controls$/i);if(!controls)throw Error('hopper controls missing');
+  evidence.controls={...controls};
+  evidence.operate=await s.bot.interactLoc(controls,1);capture();
+  await observe(()=>{capture();return seen.some(m=>/you operate the hopper\. the grain slides down the chute/i.test(m.text));},'hopper operation');
+  return evidence;
+ }finally{
+  off();
+  console.log('QUEST_ITEMS_HOPPER '+JSON.stringify({...evidence,exit:s.sdk.getState()?.player,messages:messages(),observed:seen}));
+ }
+}
+
+// Helpers never close a session. The entry owns settle and the saved-state check.
+export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:number,options:{onBank?:(bank:BankObservation)=>void;stop?:()=>boolean}={}){
+ const r=itemRecipe(key),spec=questSpec(key),deadline=s.tick()+cap,abort=new AbortController();
+ let ended=false;
+ void s.ended.then(()=>{ended=true;abort.abort();});
+ const stopped=()=>ended||s.tick()>=deadline||abort.signal.aborted||options.stop?.()===true;
+ const off=s.onTick(()=>{if(s.tick()>=deadline||s.sdk.getState()?.player?.isDead)abort.abort();});
+ const check=()=>{if(stopped())throw Error('quest items stopped/deadline');};
+ const inv=()=>s.sdk.getState()?.inventory??[];
+ const cnt=(id:number)=>total(inv(),id);
+ const observe=async(pred:()=>boolean,label:string,ticks=12)=>{
+  check();if(!await waitUntil(s,pred,{timeoutTicks:Math.max(1,Math.min(ticks,deadline-s.tick())),signal:abort.signal}))throw Error(`${label}: effect unobserved`);check();
+ };
+ const walk=async(x:number,z:number,level=0)=>{
+  check();
+  if(s.sdk.getState()?.player?.level!==level){
+   const result=await goTo(s,await getWorld(),{x,z,level},accountOf(s),{legTimeoutTicks:Math.min(100,deadline-s.tick()),signal:abort.signal});
+   if(!result.ok)throw Error(`route: ${result.detail}`);
+  }else{
+   const result=await walkPath(await sessionWalker(s),[{x,z,tol:1}],{maxTicks:deadline-s.tick(),stop:stopped});
+   if(!result.ok)throw Error(`walk: ${result.detail}`);
+  }
+  await observe(()=>{const p=s.sdk.getState()?.player;return !!p&&p.level===level&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=2;},'arrival');
+ };
+ const corridor:PathPoint[]=[{x:3092,z:3250},{x:3089,z:3266},{x:3100,z:3270},{x:3140,z:3270},{x:3180,z:3258},{x:3218,z:3256}];
+ const bank=async()=>{
+  if(s.sdk.getState()?.player?.level!==0)await walk(3166,3304,0);
+  if((s.sdk.getState()?.player?.worldX??0)>3150)for(const p of [...corridor].reverse())await walk(p.x,p.z);
+  await walk(3092,3243);
+  const generation=s.bankObservation?.()?.generation??0;
+  if(!(await s.bot.openBank()).success)throw Error('bank refused');
+  await observe(()=>(s.bankObservation?.()?.generation??0)>generation,'bank observation');
+ };
+ const withdraw=async(id:number)=>{
+  check();const b=s.bankObservation?.(),item=b?.items.find(i=>i.id===id);
+  if(!b||!item)throw Error(`bank item missing ${id}`);
+  const before=cnt(id),stored=total(b.items,id),generation=b.generation;
+  const target=s.sdk.getState()?.bank?.items.find(i=>i.id===id);
+  if(!target)throw Error(`bank slot unobserved ${id}`);
+  await s.bot.withdrawItem(target,1);
+  await observe(()=>{const a=s.bankObservation?.();return !!a&&a.generation>generation&&cnt(id)===before+1&&total(a.items,id)===stored-1;},`withdraw ${id}`);
+ };
+ const closeBank=async()=>{if(!(await s.bot.closeBank()).success)throw Error('bank close refused');};
+ try{
+  await observe(()=>{const f=questFlags(s.client)?.find(q=>q.name===spec.label)?.state;return (f==='not started'||f==='started'||f==='complete')&&Array.isArray(s.sdk.getState()?.inventory)&&!!s.sdk.getState()?.player;},'entry state',20);
+  if(questFlags(s.client)?.find(q=>q.name===spec.label)?.state==='complete')throw Error('quest already complete');
+  if(start&&r.items.every(id=>cnt(id)===1))throw Error('items already in pack');
+  await bank();
+  options.onBank?.(structuredClone(s.bankObservation?.()!));
+  // Normalize surplus by depositing first, then withdrawing one. No item is dropped.
+  for(const id of new Set(inv().map(i=>i.id))){check();const item=inv().find(i=>i.id===id);if(item)await depositObserved(s,item);}
+  for(const id of r.items)if(total(s.bankObservation?.()?.items,id)>0)await withdraw(id);
+  if(!cnt(1927))await withdraw(1925);
+  if(!cnt(1933))await withdraw(1931);
+  // A held grain from an interrupted run is reusable. Saved hopper/flour vars are account state.
+  if(!cnt(1933)&&!(start?.vars[202]??0)&&!(start?.vars[203]??0)&&total(s.bankObservation?.()?.items,r.grain)>0)await withdraw(r.grain);
+  await closeBank();
+  if(!r.items.every(id=>cnt(id)===1))for(const p of corridor)await walk(p.x,p.z);
+  if(!cnt(1944)){
+   await walk(3226,3301);
+   let egg=await s.sdk.scanFindGroundItem(/^egg$/i,12);
+   if(!egg){await observe(()=>s.sdk.getState()?.groundItems.some(i=>i.id===1944)??false,'egg respawn',100);egg=s.sdk.findGroundItem(/^egg$/i);}
+   if(!egg)throw Error('egg unavailable');
+   const before=cnt(1944);await s.bot.pickupItem(egg);await observe(()=>cnt(1944)===before+1,'egg pickup');
+  }
+  if(!cnt(1927)){
+   await walk(3154,3325);
+   await observe(()=>s.sdk.getState()?.nearbyNpcs.some(n=>n.id===81)??false,'cow',20);
+   const cow=s.sdk.getState()?.nearbyNpcs.find(n=>n.id===81),bucket=inv().find(i=>i.id===1925);
+   if(!cow||!bucket)throw Error('cow/bucket missing');
+   await s.bot.useItemOnNpc(bucket,cow);
+   await observe(()=>cnt(1927)===1&&cnt(1925)===0,'milk conversion');
+  }
+  if(!cnt(1933)){
+   // Live restart: probe the actor's bin, never infer private mill vars from zero defaults.
+   if(!start){
+    await walk(3166,3304,0);
+    await probeQuestFlourBin(s,observe);
+   }
+   if(!cnt(1933)&&!(start?.vars[203]??0)){
+    if(!(start?.vars[202]??0)&&!cnt(r.grain)){
+     await walk(3156,3300);const wheat=s.sdk.findNearbyLoc(/^wheat$/i);if(!wheat)throw Error('wheat missing');
+     await s.bot.interactLoc(wheat,2);await observe(()=>cnt(r.grain)===1,'wheat pickup');
+    }
+    await walk(3166,3304,2);
+    await operateQuestHopper(s,!(start?.vars[202]??0),observe);
+   }
+   if(!cnt(1933)){
+   await walk(3166,3304,0);
+   const bin=s.sdk.findNearbyLoc(/^flour bin$/i);if(!bin)throw Error('flour bin missing');
+   await s.bot.interactLoc(bin,1);await observe(()=>cnt(1933)===1&&cnt(1931)===0,'flour conversion');
+   }
+  }
+  await bank();
+  for(const id of new Set(inv().filter(i=>!(r.items as readonly number[]).includes(i.id)).map(i=>i.id))){check();const item=inv().find(i=>i.id===id);if(item)await depositObserved(s,item);}
+  await closeBank();
+  if(!r.items.every(id=>cnt(id)===1)||inv().some(i=>!(r.items as readonly number[]).includes(i.id)))throw Error('quest pack short/surplus');
+  check();return {ok:true,ticks:cap-(deadline-s.tick()),pack:inv().map(i=>({id:i.id,count:i.count}))};
+ }finally{off();}
+}
+
+export async function probeQuestFlourBin(s:Session,observe:Observe){
+ const messages=()=>s.sdk.getState()?.gameMessages??[];
+ const revision=Math.max(0,...messages().map(m=>m.observationId??0)),tick=Math.max(-1,...messages().map(m=>m.tick));
+ let empty=false;
+ const capture=()=>{empty ||= messages().some(m=>(m.observationId!==undefined?m.observationId>revision:m.tick>tick)&&/the flour bin is already empty/i.test(m.text));};
+ const off=s.onTick(capture);
+ try{
+  const bin=s.sdk.findNearbyLoc(/^flour bin$/i);if(!bin)throw Error('flour bin missing');
+  await s.bot.interactLoc(bin,1);capture();
+  await observe(()=>{capture();return empty||s.sdk.getState()?.inventory.some(i=>i.id===1933)===true;},'flour bin probe');
+ }finally{off();}
+}
+
+export async function runQuestItemsOrder(name:string,key:string,options:{save?:string;cap:number}){
+ itemRecipe(key);
+ if(!/^[A-Za-z0-9]{1,12}$/.test(name)||!Number.isSafeInteger(options.cap)||options.cap<1)throw Error('invalid account or CAP');
+ if(!options.save||!existsSync(options.save))return {ok:false,refused:'save required or not found',login:false};
+ const before=readPracticeSave(options.save),refused=itemEntry(key,before);
+ if(refused)return {ok:false,refused,login:false};
+ const s=await openBot(name);let child:Awaited<ReturnType<typeof gatherQuestItems>>|undefined,detail='';
+ try{child=await gatherQuestItems(s,key,before,options.cap);detail=`quest-items ${key} ticks=${child.ticks}`;}
+ catch(e){detail=String(e);}
+ // settle's return includes work success. Its logout receipt is a separate fact.
+ let logout=false;
+ const settled=await settle([s],child?.ok===true,detail,{log:line=>{console.log(line);if(line==='LOGOUT logged-out')logout=true;}});
+ if(child?.ok!==true||!settled||!logout)return {ok:false,child,logout,detail};
+ const saved=await waitPracticeSave(options.save,s=>Object.values(itemSaveChecks(key,before,s)).every(Boolean),{timeoutMs:15000});
+ return {ok:saved.matched,child,logout,checks:itemSaveChecks(key,before,saved.save)};
+}
+if(import.meta.main){
+ try{
+  const args=process.argv.slice(2),[name,key]=args.filter(a=>!a.startsWith('--')),save=args.find(a=>a.startsWith('--save='))?.slice(7);
+  if(!name||!key)throw Error('usage: quest-items-order <account> <quest> --save=<own-save>');
+  const result=await runQuestItemsOrder(name,key,{save:save?resolve(save):undefined,cap:Number(process.env.CAP??2400)});
+  console.log('QUEST_ITEMS_ORDER_RESULT '+JSON.stringify(result));process.exitCode=result.ok?0:1;
+ }catch(e){console.error(String(e));process.exitCode=1;}
+}

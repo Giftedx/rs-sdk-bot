@@ -6,7 +6,7 @@ const [url, out, wArg, hArg, waitArg] = process.argv.slice(2);
 const W = Number(wArg ?? 1600), H = Number(hArg ?? 1200), WAIT = Number(waitArg ?? 4000);
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
 const port = 9300 + Math.floor(Math.random() * 500);
-const proc = Bun.spawn([EDGE, '--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${process.env.TEMP}\\shot-${port}`, `--window-size=${W},${H}`, 'about:blank'], { stdout: 'ignore', stderr: 'ignore' });
+const proc = Bun.spawn([EDGE, '--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${process.env.TEMP}\\shot-${port}`, `--window-size=${W},${H}`, 'about:blank'], { stdout: 'ignore', stderr: 'ignore' ,windowsHide:true});
 // The spawned msedge.exe is only a launcher: it starts the real browser and exits, so killing its pid or tree misses
 // the browser (seen 2026-10-23: 11-16 headless Edge processes left after shots, about 70% CPU). Every exit path kills
 // each Edge process that uses this shot's own profile folder.
@@ -17,7 +17,7 @@ const killTree = () => {
         try {
             const r = Bun.spawnSync(['powershell', '-NoProfile', '-Command',
                 `$p = Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" | Where-Object { $_.CommandLine -match 'shot-${port}' }; $p | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; @($p).Count`],
-                { stdout: 'pipe', stderr: 'ignore' });
+                { stdout: 'pipe', stderr: 'ignore' ,windowsHide:true});
             if (Number(r.stdout.toString().trim()) === 0) return;
         } catch { return; }
         Bun.sleepSync(500);

@@ -5,10 +5,36 @@
 import { openBot, finish, countItems } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
+import type { Session } from '../packages/core/src/inprocess';
+
+export function sharkCookDelta(before: {raw:number;cooked:number;burnt:number}, after: typeof before) {
+    const raw = before.raw-after.raw, cooked = after.cooked-before.cooked, burnt = after.burnt-before.burnt;
+    if (raw < 1 || cooked < 0 || burnt < 0 || raw !== cooked+burnt) throw Error('shark cook deltas do not reconcile');
+    return {raw,cooked,burnt};
+}
+// Cook only held raw383. Caller retains its session and bank/cleanup ownership.
+export async function cookSharks(s: Session, stop: () => boolean) {
+    if ((s.sdk.getSkill('Cooking')?.level ?? 0) < 80) throw Error('sharks require Cooking80');
+    const counts = () => { const n=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);return {raw:n(383),cooked:n(385),burnt:n(387)}; };
+    const before=counts(); let progress=s.tick(), last=before.raw;
+    while(counts().raw>0) {
+        if(stop())throw Error('shark cooking budget/health stop');
+        if(s.tick()-progress>=40)throw Error('shark cooking no progress');
+        const range=s.sdk.getState()?.nearbyLocs.find(l=>/^(range|cooking range)$/i.test(l.name)&&l.x===2817&&l.z===3443)
+            ??s.sdk.getState()?.nearbyLocs.find(l=>/^(range|cooking range)$/i.test(l.name)&&Math.max(Math.abs(l.x-2816),Math.abs(l.z-3443))<=2);
+        if(!range)throw Error('Catherby range unobserved');
+        const raw=s.sdk.getInventory().find(i=>i.id===383)!;
+        await s.sdk.sendUseItemOnLoc(raw.slot,range.x,range.z,range.id);
+        await waitUntil(s,()=>stop()||counts().raw<last,{timeoutTicks:10});
+        if(counts().raw<last){last=counts().raw;progress=s.tick();}
+    }
+    return before.raw ? sharkCookDelta(before,counts()) : {raw:0,cooked:0,burnt:0};
+}
 
 const RANGE_SPOT = { x: 2816, z: 3443 }; // Catherby range
 const BANK_SPOT = { x: 2809, z: 3441 };  // Catherby bank
 
+if (import.meta.main) {
 const botName = process.argv[2];
 const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
 const FOOD_TYPE = (process.argv[4] ?? process.env.FOOD_TYPE ?? 'lobster').toLowerCase();
@@ -112,4 +138,5 @@ try {
     await finish([s], total > 0, `ticks=${used()} ${counters()} cookedPer1kTicks=${perK}`);
 } catch (e) {
     await finish([s], false, String(e));
+}
 }

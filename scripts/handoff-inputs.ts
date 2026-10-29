@@ -1,10 +1,16 @@
-// One owned handoff, with the request observed BEFORE starting the on-demand donor.
-// bun scripts/handoff-inputs.ts <donor> <receiver> 153:Flax --notes --keep='food|tool' --bank-x=2725 --bank-z=3493
+// One exact owned handoff. HANDOFF_ORDER is mandatory; saved bank/pack totals govern recovery.
+// HANDOFF_ORDER=order-key bun scripts/handoff-inputs.ts <donor> <receiver> 153:Flax --notes --keep='food|tool' --bank-x=2725 --bank-z=3493
 // Both jobs must already be paused externally. Existing stop files are never cleared.
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
-import { assertServerAllowed, serverFromEnv } from '../packages/core/src/bot';
+import { assertServerAllowed, serverFromEnv, openBot, settle } from '../packages/core/src/bot';
+import type { Session } from '../packages/core/src/inprocess';
+import {waitUntil} from '../packages/core/src/ticks';
+import {depositObserved} from '../packages/core/src/deposit';
+import {preparePayout} from './banker';
+import {exactOrder,acquireExclusiveLease,ownerAlive} from './payout-order';
+import {reconcileOrder, type OrderSnapshot} from './courier-handoff';
 
 type Item = { name: string; count: number };
 export type Handoff = { donor: string; receiver: string; items: Item[]; notes: boolean; keep?: string;
@@ -128,46 +134,177 @@ export function handoffCommands(c: Handoff, root: string) {
         donor: [process.execPath,join(root,'scripts/banker.ts'),c.donor] };
 }
 
-async function main() {
-    const c = parseHandoff(process.argv.slice(2)), root = resolve(import.meta.dir,'..'), dir = join(root,'.practice');
-    const server = (name: string) => serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',name,'bot.env'),'utf8'));
-    const host = server(c.donor); if (host.toLowerCase() !== server(c.receiver).toLowerCase()) throw new Error('handoff accounts must use the same server');
-    assertServerAllowed(host);
-    const owned = ownedAccounts(host), reqDir = join(dir,'withdraw'), reqFile = join(reqDir,`${c.receiver}.json`);
-    const commands = handoffCommands(c,root);
-    const token = crypto.randomUUID(), goals = new Map<string,string>();
-    let cancelled = false;
-    const cancel = () => { cancelled = true; };
-    process.on('SIGINT',cancel); process.on('SIGTERM',cancel);
-    const readStatus = (name: string) => { const file=join(dir,'status',`${name}.json`);return existsSync(file)?JSON.parse(readFileSync(file,'utf8')):undefined; };
-    const readRequest = (): Request | undefined => {
-        if (!existsSync(reqFile)) return;
-        return { at: statSync(reqFile).mtimeMs, items: JSON.parse(readFileSync(reqFile,'utf8')).items };
+// Shared with GE: read-only coordinator/swarm/pause checks. A matching runId
+// permits only its own assignment. Call acquireAccountLeases before openBot too.
+export function assertAccountOwnership(names:string[],state:any,jobs:any[],stopped:(name:string)=>boolean,runId:string) {
+    for(const name of ['coordinator','swarm',...names])if(stopped(name))throw Error(`existing stop-${name}; preserve owner pause`);
+    if(!state||state.version!==1||!Array.isArray(state.tasks)||!Array.isArray(jobs))throw Error('coordinator account ownership unavailable');
+    const targets=names;
+    for(const record of state.tasks.filter((r:any)=>r.status==='running')) {
+        const spec=record.spec;
+        if(!spec)throw Error('coordinator task ownership unknown');
+        const bindings=spec.participants??(spec.account?[spec.account]:spec.accountFrom?['@'+spec.accountFrom]:[]);
+        const accounts=bindings.map((n:string)=>n.startsWith('@')?state.tasks.find((r:any)=>r.spec?.id===n.slice(1))?.receipt?.output?.account:n);
+        if(accounts.some((n:unknown)=>typeof n!=='string'))throw Error('coordinator participant ownership unresolved');
+        for(const name of targets)if(accounts.some((n:string)=>n.toLowerCase()===name.toLowerCase())&&(!runId||record.runId!==runId))
+            throw Error(`account lease conflict: ${name}; coordinator ${spec.id} ${record.runId}`);
+    }
+    for(const job of jobs)for(const name of targets)
+        if(job.enabled!==false&&(job.accounts??[job.account]).some((n:string)=>n?.toLowerCase()===name.toLowerCase())
+            &&(!runId||!String(job.goal??'').includes('['+runId+']')))
+            throw Error(`account lease conflict: ${name}; swarm ${job.id??job.coordinatorTask??job.script}`);
+}
+
+export function assertHandoffOwnership(c:Handoff,state:any,jobs:any[],stopped:(name:string)=>boolean,runId='') {
+    assertAccountOwnership([c.donor,c.receiver],state,jobs,stopped,runId);
+}
+
+// Shared with GE. Names are case-insensitive. Throws before login on conflict.
+// The caller must retain the returned idempotent release through session cleanup
+// and call it in finally on every exit. base is only for isolated test storage.
+export function acquireAccountLeases(names:string[],runId:string,base=resolve(import.meta.dir,'../.practice/account-leases')):()=>void {
+    if(!names.length||names.some(n=>!ACCOUNT.test(n)||n.trim()!==n))throw Error('invalid account lease names');
+    const releases:(()=>void)[]=[];
+    const release=()=>{for(const done of releases.splice(0).reverse())done();};
+    try {
+        for(const name of [...new Set(names.map(n=>n.toLowerCase()))].sort())releases.push(acquireExclusiveLease(join(base,name+'.lock'),runId));
+        return release;
+    }catch(e){release();throw e;}
+}
+
+const exactName=(name:string)=>new RegExp('^'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'$','i');
+
+export function assertRecoverableStatus(status:any,owner:any,alive:(pid:number)=>boolean) {
+    if(!status||status.result)return;
+    // Age alone is never evidence of logout. Only this order's dead, recorded
+    // process can explain an unfinished status after a crash.
+    if(!owner||!Number.isSafeInteger(owner.pid)||owner.pid<=0||!owner.goal||status.goal!==owner.goal||alive(owner.pid))
+        throw Error('account session ownership unsettled: '+status.name);
+}
+
+// Own both sessions in this entry: the shared banker/taker mains are outside the
+// definition. Reuse their bounded withdrawal helper, but independently check every effect.
+export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,order:ReturnType<typeof exactOrder>,check:()=>void) {
+    if(donor.name.toLowerCase()!==c.donor.toLowerCase()||receiver.name.toLowerCase()!==c.receiver.toLowerCase())throw Error('exact session identity mismatch');
+    const sessions=[donor,receiver],start=Date.now();
+    const bounded=()=>{check();if(Date.now()-start>=c.timeoutMs)throw Error('exact handoff deadline; reconcile saved state before retry');};
+    for(const s of sessions){
+        bounded();
+        if(!(await s.bot.walkTo(c.x,c.z,2,{timeout:Math.min(c.requestMs,c.timeoutMs)})).success)throw Error(`handoff bank entry failed: ${s.name}`);
+        if(!await waitUntil(s,st=>!!st.player&&st.player.level===0&&Math.max(Math.abs(st.player.worldX-c.x),Math.abs(st.player.worldZ-c.z))<=2,{timeoutTicks:20}))throw Error(`handoff bank entry unobserved: ${s.name}`);
+    }
+    const generations=new Map<Session,number>();
+    const bank=async(s:Session)=>{
+        bounded();
+        const wasOpen=s.sdk.getState()?.bank?.isOpen,prior=generations.get(s)??-1;
+        if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>{
+            bounded();const b=s.bankObservation?.();return !!b&&(wasOpen||b.generation>prior);
+        },{timeoutTicks:10}))throw Error(`bank state unknown: ${s.name}`);
+        const b=s.bankObservation!()!;generations.set(s,b.generation);return b;
     };
-    const out = await runHandoff(c, { server: host, owned, now: Date.now, pause: ms=>Bun.sleep(ms),
-        status: readStatus,
-        request: readRequest, otherRequests:()=>existsSync(reqDir)?readdirSync(reqDir).filter(f=>f.endsWith('.json')&&f.toLowerCase()!==`${c.receiver}.json`.toLowerCase()):[],
-        stopped: name=>cancelled || existsSync(join(dir,`stop-${name}`)),
-        stop: name=>{
-            const status=readStatus(name);
-            if(status && !status.result && Date.now()-status.at<30_000 && status.goal!==goals.get(name)) throw new Error('a different active job owns this account; no stop sent');
-            mkdirSync(dir,{recursive:true});const file=join(dir,`stop-${name}`);
-            try { writeFileSync(file,'handoff bounded cleanup\n',{flag:'wx'}); } catch(e:any) { if(e.code!=='EEXIST')throw e; }
-        },
-        spawn: role=>{
-            let output='', code:number|null=null, readFailed=false;const name=role==='receiver'?c.receiver:c.donor,goal=`handoff ${token} ${role}`;goals.set(name,goal);
-            const proc=Bun.spawn(commands[role],{cwd:root,env:{...process.env,...commands.env,BOT_GOAL:goal},stdout:'pipe',stderr:'pipe'});
-            const collect=async(stream:ReadableStream<Uint8Array>,label:string)=>{
-                try { const decoder=new TextDecoder();for await(const chunk of stream){const text=decoder.decode(chunk,{stream:true});if(label==='out')output+=text;process.stdout.write(`[${role}:${label}] ${text}`);} }
-                catch(e) { readFailed=true;output+=`\nWARN child ${label} output error ${String(e)}\n`; }
-            };
-            // A pipe error does not mean the game process exited. Keep it in the
-            // running set so the timeout still sends its graceful stop file.
-            void Promise.all([proc.exited,collect(proc.stdout,'out'),collect(proc.stderr,'err')]).then(([exit])=>{code=readFailed?1:exit;});
-            return {code:()=>code,output:()=>output,goal};
-        }, log:console.log });
-    process.off('SIGINT',cancel); process.off('SIGTERM',cancel);
-    console.log(`HANDOFF_RESULT ${JSON.stringify(out)}`);
-    console.log(`RESULT ${out.ok?'ok':'fail no handoff progress:'} ${out.reason}`); process.exitCode=out.ok?0:1;
+    await bank(donor);await bank(receiver);
+    const saved=order.read(),prior=saved?.state==='prepared'?saved:null;
+    const expected:{id:number;count:number}[]=prior?.expected??c.items.map(w=>{
+        const matches=donor.bankObservation!()!.items.filter(i=>i.name.toLowerCase()===w.name.toLowerCase());
+        if(!matches.length||new Set(matches.map(i=>i.id)).size!==1)throw Error('exact bank item ID unknown: '+w.name);
+        return {id:matches[0]!.id,count:w.count};
+    });
+    if(process.env.HANDOFF_ITEM_ID&&(expected.length!==1||expected[0]!.id!==Number(process.env.HANDOFF_ITEM_ID)))throw Error('HANDOFF_ITEM_ID differs from observed bank item');
+    const snapshot=():OrderSnapshot=>{
+        const holdings=(s:Session)=>{
+            const observed=s.bankObservation?.();if(!observed)throw Error('bank snapshot unavailable: '+s.name);
+            const pack=s.sdk.getInventory();
+            // Names join noted and unnoted forms. Persist raw IDs too for diagnosis.
+            return {bank:expected.map(i=>({id:i.id,count:observed.items.filter(b=>b.id===i.id).reduce((n,b)=>n+b.count,0)})),
+                pack:expected.map((i,k)=>({id:i.id,count:pack.filter(p=>p.name.toLowerCase()===c.items[k]!.name.toLowerCase()).reduce((n,p)=>n+p.count,0)})),
+                rawBank:observed.items.map(i=>({...i})),rawPack:pack.map(i=>({...i})),generation:observed.generation,at:observed.at};
+        };
+        return {donor:holdings(donor),receiver:holdings(receiver)};
+    };
+    const receipt=prior??order.prepare(expected,snapshot());
+    let action=reconcileOrder(receipt,snapshot());
+    let tradeResults:unknown[]=[];
+    if(action==='resume'){
+        bounded();
+        const missing=c.items.map(w=>({...w,count:Math.max(0,w.count-donor.sdk.getInventory().filter(i=>i.name.toLowerCase()===w.name.toLowerCase()).reduce((n,i)=>n+i.count,0))})).filter(w=>w.count>0);
+        if(missing.length)await preparePayout(donor,missing,c.notes,c.keep?new RegExp(c.keep,'i'):null);
+        await donor.bot.closeBank();await receiver.bot.closeBank();
+        bounded();
+        const held=(s:Session,w:Item)=>s.sdk.getInventory().filter(i=>i.name.toLowerCase()===w.name.toLowerCase()).reduce((n,i)=>n+i.count,0);
+        const beforeDonor=c.items.map(w=>held(donor,w)),beforeReceiver=c.items.map(w=>held(receiver,w));
+        if(c.items.some((w,k)=>beforeDonor[k]!<w.count))throw Error('exact prepared pack stock missing');
+        tradeResults=await Promise.allSettled([
+            donor.bot.serveTrades({from:exactName(c.receiver),give:c.items.map(w=>({item:exactName(w.name),amount:w.count})),maxTrades:1,timeout:Math.min(60000,c.timeoutMs-(Date.now()-start))}),
+            receiver.bot.trade(exactName(c.donor),{want:c.items.map(w=>({item:exactName(w.name),amount:w.count})),requestTimeout:Math.min(c.requestMs,60000),timeout:Math.min(60000,c.timeoutMs-(Date.now()-start))})
+        ]);
+        await waitUntil(receiver,()=>{
+            bounded();return c.items.every((w,k)=>(beforeDonor[k]! - held(donor,w))===w.count&&(held(receiver,w) - beforeReceiver[k]!)===w.count);
+        },{timeoutTicks:25});
+        // Lost replies do not decide whether items moved. Reopen banks to observe both sides.
+        await bank(donor);await bank(receiver);
+        action=reconcileOrder(receipt,snapshot());
+        if(action==='resume')throw Error('no item moved; prepared order retained for bounded resume; '+JSON.stringify(tradeResults));
+    }
+    if(action==='bank'){
+        bounded();
+        for(const w of c.items)for(const id of new Set(receiver.sdk.getInventory().filter(i=>i.name.toLowerCase()===w.name.toLowerCase()).map(i=>i.id))){
+            const item=receiver.sdk.getInventory().find(i=>i.id===id);if(item)await depositObserved(receiver,item);
+        }
+    }
+    bounded();
+    const settled=order.settle(snapshot());
+    console.log('HANDOFF_RECEIPT '+JSON.stringify(settled));
+    return {ok:true,phase:'done',reason:'exact donor debit and receiver bank credit',tradeResults,receipt:settled};
+}
+
+// Injectable I/O lets process-level regressions exercise this entry without
+// credentials or a game server. The real CLI always uses the production defaults.
+export async function main(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts}={}) {
+    const c=parseHandoff(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
+    // Key and duplicate checks precede even opening credentials or sessions.
+    const key=process.env.HANDOFF_ORDER??'';
+    if(!/^[a-zA-Z0-9-]{1,64}$/.test(key))throw Error('HANDOFF_ORDER is required before login');
+    const server=(n:string)=>serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',n,'bot.env'),'utf8'));
+    const host=server(c.donor);if(host!==server(c.receiver))throw Error('handoff accounts must use the same server');
+    assertServerAllowed(host);
+    const order=exactOrder(key,c.donor,c.receiver,host,c.items,join(dir,'item-handoffs'));
+    const owned=(io.ownedAccounts??ownedAccounts)(host),sessions:Session[]=[];
+    const runId=process.env.COORDINATOR_RUN_ID??(process.env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1]??'';
+    const saved=order.read(),recoveryOwner=saved?.owner,recoveryOwners=[recoveryOwner,...(saved?.previousOwners??[])].filter(Boolean);
+    const alive=ownerAlive;
+    if(recoveryOwner&&recoveryOwner.pid!==process.pid&&alive(recoveryOwner.pid))throw Error('order owner still alive: '+recoveryOwner.pid);
+    process.env.BOT_GOAL=`${process.env.BOT_GOAL??'handoff'} order:${key} attempt:${crypto.randomUUID()}`;
+    let cancelled=false;const cancel=()=>{cancelled=true;};
+    const read=(p:string,fallback:any)=>existsSync(p)?JSON.parse(readFileSync(p,'utf8')):fallback;
+    const check=()=>{
+        if(cancelled)throw Error('handoff cancelled');
+        assertHandoffOwnership(c,read(join(dir,'coordinator/state.json'),null),read(join(root,'swarm.json'),{}).jobs,n=>existsSync(join(dir,'stop-'+n)),runId);
+        for(const name of [c.donor,c.receiver]){
+            if(!owned.has(name.toLowerCase()))throw Error('not authenticated owned: '+name);
+            if(sessions.some(s=>s.name.toLowerCase()===name.toLowerCase()))continue;
+            const status=read(join(dir,'status',name+'.json'),null);
+            assertRecoverableStatus(status,recoveryOwners.find(o=>o.goal===status?.goal),alive);
+        }
+    };
+    let release:(()=>void)|undefined;
+    let out:any={ok:false,phase:'preflight',reason:''};
+    try{
+        check();release=acquireAccountLeases([c.donor,c.receiver],runId,join(dir,'account-leases'));
+        check();order.claim(); // Durable owner/recoveryOwner precede the first login.
+        process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
+        check();sessions.push(await (io.openBot??openBot)(c.donor,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
+        check();sessions.push(await (io.openBot??openBot)(c.receiver,{onStop:async()=>{cancelled=true;},onSessionEnd:async()=>{cancelled=true;}}));
+        out=await runExactHandoff(c,sessions[0]!,sessions[1]!,order,check);
+    }catch(e){out={ok:false,phase:'transfer',reason:String(e)};}
+    finally{
+        // This entry retains session ownership through the logout checks. Each settle
+        // emits its own acknowledgement, matching the existing consumer's two logouts.
+        try {for(const s of sessions)out.ok=await (io.settle??settle)([s],out.ok,out.reason)&&out.ok;}
+        finally {
+            process.off('SIGINT',cancel);process.off('SIGTERM',cancel);
+            release?.();
+        }
+    }
+    console.log('HANDOFF_RESULT '+JSON.stringify(out));process.exitCode=out.ok?0:1;
 }
 if(import.meta.main) main().catch(e=>{console.error(`HANDOFF_RESULT ${JSON.stringify({ok:false,phase:'preflight',reason:String(e)})}`);console.log(`RESULT fail no handoff progress: ${String(e)}`);process.exitCode=1;});

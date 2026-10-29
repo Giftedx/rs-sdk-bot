@@ -1,157 +1,108 @@
 {
-  "maxBots": 10,
+  "maxBots": 17,
   "minFreeGB": 8,
   "jobs": [
-    {
-      "account": "Mightyrod",
-      "script": "scripts/gather-fire-combat.ts",
-      "role": "combat",
-      "goal": "Kill Fire Giants in Waterfall Dungeon, bank loot, and return forever",
-      "enabled": false,
-      "repeat": false,
-      "env": {
-        "CAP": "9000",
-        "RANDOM_EVENTS": "0",
-        "FOOD_FROM": "Bigpackage"
-      },
-      "note": "Paused: one Fire Giant pilot per run; 0 kills with a bronze sword. Needs a better owned weapon first."
-    },
-    {
-      "account": "Pocketrocket",
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
-      "enabled": true,
-      "repeat": true,
-      "env": {
-        "TICKS": "9000",
-        "BANK_AT": "25000",
-        "FOOD_FROM": "Bigpackage"
-      },
-      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
-    },
-    {
-      "account": "mmtha0205",
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
-      "enabled": true,
-      "repeat": true,
-      "env": {
-        "TICKS": "9000",
-        "BANK_AT": "25000",
-        "FOOD_FROM": "Bigpackage"
-      },
-      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
-    },
-    {
-      "account": "mmthv2350",
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
-      "enabled": true,
-      "repeat": true,
-      "env": {
-        "TICKS": "9000",
-        "BANK_AT": "25000",
-        "FOOD_FROM": "Bigpackage"
-      },
-      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
-    },
-    {
-      "account": "Pocketpython",
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food",
-      "enabled": true,
-      "repeat": true,
-      "env": {
-        "TICKS": "9000",
-        "BANK_AT": "25000",
-        "FOOD_FROM": "Bigpackage"
-      },
-      "note": "5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier."
-    },
-    {
-      "account": "Masterbaiter",
-      "script": "scripts/fishcook.ts",
-      "role": "fishing",
-      "goal": "Fly fish and cook best food (trout & salmon) forever, bank and supply courier",
-      "enabled": true,
-      "repeat": true,
-      "env": {
-        "TICKS": "9000",
-        "GIVE_TO": "Bigpackage"
-      },
-      "note": "Continuous 3-tick fly fishing trout/salmon (~51 cooked food/1000 ticks, ~465/hr) at Lumbridge river, cooked at general store fireplace, banked at Draynor, and traded to courier."
-    },
     {
       "account": "Shaftsinker",
       "script": "scripts/gather-essence.ts",
       "role": "mining",
-      "goal": "Mine rune essence and pure essence via Aubury, bank at Varrock East forever",
-      "enabled": true,
-      "repeat": true,
+      "goal": "Keep essence reserve; prepare Runecraft supply handoff",
+      "enabled": false,
+      "repeat": false,
       "env": {
         "CAP": "15000",
         "BANK_AT": "28"
       },
-      "note": "Mine rune essence (and pure essence 30+) in the Rune Essence Mine via Aubury teleport, bank at Varrock East bank, and loop forever."
+      "note": "Reserve met. Next bind a runecrafter, altar access and authenticated transfer before more mining."
     },
     {
       "account": "Bigpackage",
       "script": "scripts/foodcourier.ts",
       "role": "courier",
-      "goal": "Walking bank: collect cooked food from Masterbaiter and trade on demand to whoever needs it",
-      "enabled": true,
-      "repeat": true,
+      "goal": "2026-10-28:returned52allocated;reserve fresh demand from remaining34newfish",
+      "enabled": false,
+      "repeat": false,
       "env": {
         "FROM": "Masterbaiter",
-        "FEATHERS": "500",
-        "FARMERS": "Pocketrocket,mmtha0205,mmthv2350,Pocketpython",
-        "CAP": "9000"
+        "FEATHERS": "0",
+        "FARMERS": "Pocketrocket,mmtha0205,mmthv2350,Pocketpython,mmsmk1232,NabTheKnob,CoinCock,PickpockDick",
+        "CAP": "2000",
+        "FUND_FROM": "Pocketrocket"
       },
-      "note": "On-demand food courier & walking bank: carries food notes from Draynor to Ardougne when any farmer or combat account drops below safe food buffer.",
+      "note": "Returned52fish delivered to fresh CoinCock demand;prior8protected. Previous75producer fish collected/returned/banked for120fares;41allocated to fresh demand. Current Ardy42food=18salmon+24trout,including protected6salmon+2trout;34newunallocated,3810coins,HP27/logout. Consumer15fish each;next finite-batch demand must be refreshed/reserved before more production. Cleanup timeout remains open;disabled/repeat policy unchanged. Evidence:.practice/supply-repeats-20261028/report.md.",
       "whenFoodLowFrom": [
         "Pocketrocket",
         "mmtha0205",
         "mmthv2350",
-        "Pocketpython"
+        "Pocketpython",
+        "mmsmk1232",
+        "NabTheKnob",
+        "CoinCock",
+        "PickpockDick"
       ],
       "foodLowBelow": 80,
-      "foodSourceAccount": "Masterbaiter",
+      "foodSourceAccounts": [
+        "Masterbaiter"
+      ],
       "sourceFoodMinimum": 1
     },
     {
       "account": "Shaftmaker",
-      "script": "scripts/fletch-arrows.ts",
+      "script": "scripts/gather-yews.ts",
       "role": "fletching",
-      "goal": "Fletching99 complete; await useful advanced ammunition inputs",
-      "enabled": false,
-      "repeat": false
+      "goal": "Supply bows and arrows from owned logs for Ranged preparation",
+      "enabled": true,
+      "repeat": false,
+      "env": {
+        "TREE": "normal",
+        "MAX_TRIPS": "1",
+        "BANK_AT": "25",
+        "CAP": "1200"
+      },
+      "note": "Fletching99 complete. Next choose bow/ammo target for Shaftshooter; convert stock before gathering."
     },
     {
       "account": "Bigchopper",
-      "script": "scripts/gather-yews.ts",
-      "role": "woodcutting",
-      "goal": "Collect and bank oak logs for the fletching supply chain",
+      "script": "scripts/gather-ranged.ts",
+      "role": "quest",
+      "goal": "Alternate Arrav partner: qualify route and sustain after completed bounded Ranged pilot",
       "enabled": false,
-      "repeat": false
+      "repeat": false,
+      "env": {
+        "CAP": "1800",
+        "MAX_KILLS": "2",
+        "AMMO": "90",
+        "FOOD": "3",
+        "FOOD_ID": "329"
+      },
+      "note": "Live Ranged repair2b85:2kills/700XP,Ranged7;bow1/arrows86/salmon3 and loot banked,HP16,logout. No repeat needed for finite entry proof. Next owner goal executor:Arrav walking/sustain or Magic prerequisites;keep Shaftshooter fresh/offline. Earlier0XP admission failure retained."
     },
     {
       "account": "Woodpecker",
       "script": "scripts/gather-ore.ts",
       "role": "mining",
-      "goal": "Mining recovery paused",
-      "enabled": false
+      "goal": "Repair Mining Guild access before advanced ore supply",
+      "enabled": true,
+      "repeat": true,
+      "env": {
+        "CAP": "1800",
+        "BANK_AT": "25",
+        "MAX_TRIPS": "3"
+      },
+      "note": "Actual guild route failure and stop retained. Old Varrock mixed-ore goal did not describe this block. Prove entry/return or explicitly reassign after reviewing assets."
     },
     {
       "account": "Ballspinner",
-      "script": "scripts/spin-bowstrings.ts",
+      "script": "scripts/gather-flax.ts",
       "role": "crafting",
-      "goal": "Crafting99 complete; hold strings for owned production demand",
-      "enabled": false,
-      "repeat": false
+      "goal": "Use completed Crafting specialist for equipment and quest supplies",
+      "enabled": true,
+      "repeat": false,
+      "env": {
+        "CAP": "1800",
+        "BANK_AT": "28"
+      },
+      "note": "Flax and strings already stocked; next qualify needed jewelry/quest item conversion, not more flax."
     },
     {
       "account": "Haggis",
@@ -163,77 +114,464 @@
     },
     {
       "account": "Abracadickra",
-      "script": "scripts/shop-buyer.ts",
-      "role": "magic",
-      "goal": "Bounded magic and potion supplies:40each owned target",
+      "script": "scripts/buy-owned-ge-item.ts",
+      "role": "procurement",
+      "goal": "2026-10-28: procurement/delivery complete;retain reserve while combat repeat is qualified",
       "enabled": false,
-      "repeat": false
-    },
-    {
-      "account": "Moneyshot",
-      "script": "scripts/banker.ts",
-      "role": "bank",
-      "goal": "Receive owned cargo, bank it, then wait offline",
-      "enabled": false,
-      "repeat": false
+      "repeat": false,
+      "env": {
+        "ORDER_KEY": "mightyrod-scimitar-20261027",
+        "ITEM_ID": "1331",
+        "LIMIT_PRICE": "45000",
+        "CASH_RESERVE": "5000",
+        "ORDER_MS": "900000"
+      },
+      "note": "Offer54756filled normal1331for45058coins,collected/banked then matched pickup/return/delivery toMightyrod. Buyer5989coins,zeroescrow,HP10/logout. Disabled;do not repeat settled order. Next consumer dependency is current weapon combat-repeat proof,then inspect any new gear demand before another order."
     },
     {
       "account": "Swordinhand",
       "script": "scripts/gather-combat.ts",
       "role": "combat",
-      "goal": "Practice-gated cowhides, bones and beef; then Strength/Defence progression",
-      "enabled": false,
-      "repeat": false
-    },
-    {
-      "account": "mmsmk1232",
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "Thieving 1: train to 55 before joining the knight pool",
-      "enabled": false,
-      "repeat": false
+      "goal": "Defence20/Strength20 ready; qualify alternate Arrav donor",
+      "enabled": true,
+      "repeat": false,
+      "env": {
+        "TARGET": "cow",
+        "CAP": "1000",
+        "MAX_KILLS": "5",
+        "TRAIN_SKILL": "Strength",
+        "TARGET_LEVEL": "20"
+      },
+      "note": "Live Strength14→20 and Defence20 passed; latest1600StrengthXP, two drop sets banked, no food, assets preserved. Next: refresh gang flags and qualify the Black Arm donor route with Bigchopper."
     },
     {
       "account": "AFKnight",
       "script": "scripts/gather-combat.ts",
       "role": "combat",
-      "goal": "Combat support: cowhides, bones and beef near Lumbridge",
-      "enabled": false
+      "goal": "Combat reserve; qualify Ardougne cow entry before activation",
+      "enabled": false,
+      "note": "Needs qualification: Next: prove dated kit/food, Ardougne bank entry and a saved-state whole trip before enabling. Explicit bounded cow profile replaces the dangerous implicit druid default; Swordinhand is the first qualified worker.",
+      "env": {
+        "TARGET": "cow",
+        "CAP": "1000",
+        "MAX_KILLS": "2",
+        "TRAIN_SKILL": "Defence",
+        "TARGET_LEVEL": "10"
+      }
     },
     {
       "account": "OreElse",
-      "script": "scripts/gather-ore.ts",
-      "role": "mining",
-      "goal": "Mining supply: bank iron and coal for smithing",
-      "enabled": false
+      "script": ".practice/iron-qualification/arrowheads.ts",
+      "role": "smithing",
+      "goal": "Convert owned iron stock for measured Ranged supply demand after smelting qualification",
+      "enabled": false,
+      "repeat": false,
+      "env": {
+        "RANDOM_EVENTS": "0"
+      },
+      "note": "2026-10-26: exact90 tips delivered live;684 iron ore and shortbow1 observed at Eastbank. Next owner: goal executor qualifies existing smelt-bars worker for bounded owned-ore conversion and next arrow demand. Completed scratch arrowhead worker held; no repeat or new login. .practice/ammo-assembly/live/proof.json"
     },
     {
       "account": "FishAndChips",
       "script": "scripts/fishcook.ts",
       "role": "fishing",
-      "goal": "Fishing supply: fly fish and cook trout/salmon for the courier",
-      "enabled": false
+      "goal": "Reserve existing helper stock;qualify retained-raw conversion when allocated demand needs it",
+      "enabled": false,
+      "repeat": false,
+      "env": {
+        "TICKS": "9000",
+        "GIVE_TO": "Bigpackage",
+        "TARGETED_COLLECTION": "1"
+      },
+      "note": "Disabled;original swarm-stop retained. Last saved348feathers/rod/10held rawfish/HP56at river is dated,not fresh proof. Courier current60fish=52returned+8prior;producer now75newfish/62feathers,so no new helper production or automatic100feather transfer. Next refresh actual state and qualify cook/bank of retained10raw only against named demand. Existing stock is not new production."
     },
     {
       "account": "BowBeforeMe",
-      "script": "scripts/fletch-arrows.ts",
+      "script": "scripts/fletch-worker.ts",
       "role": "fletching",
-      "goal": "Fletching supply: cut shafts and fletch arrows for ranged",
-      "enabled": false
+      "goal": "Convert needed logs to shafts for named ammunition demand",
+      "enabled": false,
+      "repeat": false,
+      "env": {
+        "RANDOM_EVENTS": "1",
+        "BANK_KNIFE": "1",
+        "NORMAL_GROVE": "north"
+      },
+      "note": "Existing shaft worker proved; no current consumer deficit established. Do not run surplus batches as fake progress."
     },
     {
       "account": "MineYourBiz",
       "script": "scripts/gather-essence.ts",
       "role": "mining",
       "goal": "Essence supply: mine rune/pure essence via Aubury",
-      "enabled": false
+      "enabled": false,
+      "note": "Needs qualification: No named essence consumer or current deficit. Bind Runecraft demand, dated stock and Aubury entry/return proof before activation; avoid duplicating Shaftsinker reserve."
     },
     {
       "account": "YewFirst",
       "script": "scripts/gather-yews.ts",
       "role": "woodcutting",
-      "goal": "Woodcutting supply: bank oak/yew logs for fletching",
-      "enabled": false
+      "goal": "Maintain normal-log reserve for arrows and Firemaking preparation",
+      "enabled": true,
+      "repeat": false,
+      "env": {
+        "REGION": "draynor",
+        "TREE": "normal",
+        "MAX_TRIPS": "2",
+        "BANK_AT": "25",
+        "CAP": "1800"
+      },
+      "note": "Completed batch is banked. Next bind log quantity to a named consumer; do not gather more without demand."
+    },
+    {
+      "account": "Shaftshooter",
+      "role": "ranged",
+      "goal": "Fresh-clock Ranged specialist; win the board after supply and route proof",
+      "note": "Local credentials only; name unclaimed. Next qualify bow/ammo staging and full fresh-start route.",
+      "script": "",
+      "enabled": false,
+      "repeat": false
+    },
+    {
+      "account": "Polevaulter",
+      "role": "agility",
+      "goal": "Fresh-clock Agility specialist; win the board after route proof",
+      "note": "Local credentials only; name unclaimed. Next qualify fresh-start course access, food and lap recovery.",
+      "script": "",
+      "enabled": false,
+      "repeat": false
+    },
+    {
+      "account": "mmtha0205",
+      "args": [],
+      "maxRestarts": 0,
+      "script": "scripts/goldfarm-stable.ts",
+      "role": "thieving",
+      "goal": "run-overnight-earn-mmtha0205-20261028 [task-b544b1a2-4469-43bd-adde-ee665a62d6da]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-overnight-earn-mmtha0205-20261028",
+      "env": {
+        "TICKS": "600",
+        "BANK_AT": "50000",
+        "FOOD_FROM": "",
+        "FUND_COURIER": "",
+        "RANDOM_EVENTS": "1",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-b544b1a2-4469-43bd-adde-ee665a62d6da"
+      }
+    },
+    {
+      "account": "Pocketpython",
+      "args": [],
+      "maxRestarts": 0,
+      "script": "scripts/goldfarm-stable.ts",
+      "role": "thieving",
+      "goal": "run-overnight-earn-pocketpython-20261028 [task-3bdca8f0-b9fc-480f-98da-e6aad9a67e4a]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-overnight-earn-pocketpython-20261028",
+      "env": {
+        "TICKS": "600",
+        "BANK_AT": "50000",
+        "FOOD_FROM": "",
+        "FUND_COURIER": "",
+        "RANDOM_EVENTS": "1",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-3bdca8f0-b9fc-480f-98da-e6aad9a67e4a"
+      }
+    },
+    {
+      "account": "Wandwaver",
+      "args": [
+        "20"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/rune-supply.ts",
+      "role": "helper",
+      "goal": "run-overnight-rune-start-1-20261028 [task-3f25c93a-b69d-4116-8c6f-829a7a65e17a]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-overnight-rune-start-1-20261028",
+      "env": {
+        "CAP": "8000",
+        "ORDER_KEY": "run-overnight-rune-start-1-20261028",
+        "COORDINATOR_RUN_ID": "task-3f25c93a-b69d-4116-8c6f-829a7a65e17a"
+      }
+    },
+    {
+      "account": "Woodenstaff",
+      "args": [
+        "20"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/rune-supply.ts",
+      "role": "helper",
+      "goal": "run-overnight-rune-start-2-20261028 [task-2af31ccb-10e7-4797-807b-e938c80f9f17]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-overnight-rune-start-2-20261028",
+      "env": {
+        "CAP": "8000",
+        "ORDER_KEY": "run-overnight-rune-start-2-20261028",
+        "COORDINATOR_RUN_ID": "task-2af31ccb-10e7-4797-807b-e938c80f9f17"
+      }
+    },
+    {
+      "account": "Magicwanda",
+      "args": [
+        "30"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/rune-supply.ts",
+      "role": "helper",
+      "goal": "run-rune-magicwanda-tier-30-13 [task-b8a6c592-e0f2-4a95-9efa-21fc01eb341d]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-rune-magicwanda-tier-30-13",
+      "env": {
+        "CAP": "9000",
+        "ORDER_KEY": "rune-magicwanda-tier-30-13",
+        "COORDINATOR_RUN_ID": "task-b8a6c592-e0f2-4a95-9efa-21fc01eb341d"
+      }
+    },
+    {
+      "account": "Masterbaiter",
+      "args": [],
+      "maxRestarts": 0,
+      "script": "scripts/quest-cook-job.ts",
+      "role": "cooking",
+      "goal": "run-complete-cook-masterbaiter-2 [task-20ea8a71-d812-40d1-8552-017d523fe52d]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-complete-cook-masterbaiter-2",
+      "env": {
+        "CAP": "2400",
+        "COORDINATOR_RUN_ID": "task-20ea8a71-d812-40d1-8552-017d523fe52d"
+      }
+    },
+    {
+      "account": "Moneyshot",
+      "args": [
+        "gnome",
+        "10"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "bank",
+      "goal": "run-agility-gnome-moneyshot-13 [task-619020ea-b180-465c-b9fd-857408b4bd7e]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-gnome-moneyshot-13",
+      "env": {
+        "AGI_MAX_LAPS": "40",
+        "AGI_MAX_TICKS": "6000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-619020ea-b180-465c-b9fd-857408b4bd7e"
+      }
+    },
+    {
+      "account": "PickpockDick",
+      "args": [
+        "gnome",
+        "10"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "thieving",
+      "goal": "run-agility-gnome-pickpockdick-1 [task-966fb866-f273-4e98-940b-1a7ad6df7c3b]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-gnome-pickpockdick-1",
+      "env": {
+        "AGI_MAX_LAPS": "40",
+        "AGI_MAX_TICKS": "6000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-966fb866-f273-4e98-940b-1a7ad6df7c3b"
+      }
+    },
+    {
+      "account": "NabTheKnob",
+      "args": [
+        "gnome",
+        "10"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "thieving",
+      "goal": "run-agility-gnome-nabtheknob-1 [task-25fa17da-f353-4230-b518-dc18d635ccdf]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-gnome-nabtheknob-1",
+      "env": {
+        "AGI_MAX_LAPS": "40",
+        "AGI_MAX_TICKS": "6000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-25fa17da-f353-4230-b518-dc18d635ccdf"
+      }
+    },
+    {
+      "account": "mmsmk1232",
+      "args": [
+        "gnome",
+        "10"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "thieving",
+      "goal": "run-agility-gnome-mmsmk1232-1 [task-5fd27705-f9db-492d-bea8-3f2a475e596d]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-gnome-mmsmk1232-1",
+      "env": {
+        "AGI_MAX_LAPS": "40",
+        "AGI_MAX_TICKS": "6000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-5fd27705-f9db-492d-bea8-3f2a475e596d"
+      }
+    },
+    {
+      "account": "CoinCock",
+      "args": [
+        "gnome",
+        "10"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "thieving",
+      "goal": "run-agility-gnome-coincock-1 [task-75a582f3-230f-4f71-ac67-550167370d05]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-gnome-coincock-1",
+      "env": {
+        "AGI_MAX_LAPS": "40",
+        "AGI_MAX_TICKS": "6000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-75a582f3-230f-4f71-ac67-550167370d05"
+      }
+    },
+    {
+      "account": "Pocketrocket",
+      "args": [
+        "gnome",
+        "10"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "thieving",
+      "goal": "run-agility-gnome-pocketrocket-1 [task-aec31345-b42f-498c-9ccc-fbccca0ba478]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-gnome-pocketrocket-1",
+      "env": {
+        "AGI_MAX_LAPS": "40",
+        "AGI_MAX_TICKS": "6000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-aec31345-b42f-498c-9ccc-fbccca0ba478"
+      }
+    },
+    {
+      "account": "mmthv2350",
+      "args": [
+        "gnome",
+        "10"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/agility-order.ts",
+      "role": "thieving",
+      "goal": "run-agility-gnome-mmthv2350-1 [task-7b964be6-c342-4137-81ca-fabf309cf0ac]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-agility-gnome-mmthv2350-1",
+      "env": {
+        "AGI_MAX_LAPS": "40",
+        "AGI_MAX_TICKS": "6000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150",
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-7b964be6-c342-4137-81ca-fabf309cf0ac"
+      }
+    },
+    {
+      "account": "Mightyrod",
+      "args": [],
+      "maxRestarts": 0,
+      "script": "scripts/shark-supply.ts",
+      "role": "combat",
+      "goal": "run-overnight-shark-batch-mightyrod-20261028 [task-14790ab9-3813-4cc3-aa00-b8c9a4c74d9e]",
+      "enabled": false,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-overnight-shark-batch-mightyrod-20261028",
+      "env": {
+        "MAX_COOKED": "100",
+        "CAP": "12000",
+        "ORDER_KEY": "shark-batch-20261028",
+        "COORDINATOR_RUN_ID": "task-14790ab9-3813-4cc3-aa00-b8c9a4c74d9e"
+      }
     }
-  ]
+  ],
+  "coordination": {
+    "enabled": true,
+    "maxActive": 2,
+    "plannerIntervalMs": 30000,
+    "modelTimeoutMs": 600000,
+    "bootstrap": [
+      {
+        "id": "bootstrap-wine-native",
+        "goal": "skills",
+        "kind": "qualify",
+        "capability": "wine-order",
+        "dependsOn": [],
+        "priority": 20,
+        "estimatedMs": 240000,
+        "why": "Refresh reusable wine capability before supply staging and a bounded live Cooking consumer"
+      },
+      {
+        "id": "bootstrap-ammo-native",
+        "goal": "gear",
+        "kind": "qualify",
+        "capability": "ammo-order",
+        "dependsOn": [],
+        "priority": 18,
+        "estimatedMs": 240000,
+        "why": "Refresh composed supply handoff and fletching capability before combat supply consumers"
+      }
+    ],
+    "agents": [
+      "codex",
+      "claude"
+    ],
+    "maxLive": 17,
+    "preferLive": true,
+    "directive": "Owner2026-10-28 is away overnight and grants full PC resources for maximum USEFUL qualified account progress. Fill available live slots across levelling, quest unlocks, combat, advanced resources and endgame supply; do not stop at two live jobs. Prefer sharks and other endgame-quality supplies over new trout/salmon surplus; use already-owned food rather than waste it. Finish current capability through its live consumer and automatically assign the next useful finite job. Reuse trained helpers; create/register additional task-specific accounts once a qualified useful role or measured capacity need exists. Main/fresh scored-launch clocks remain protected. Max17 is an initial measured cap, not an end goal: after fresh useful outputs, measured host/tick/supply headroom and a reserved practice slot, expand in measured batches under current owner authority. Headless services stay quiet and lean. Keep all full-game/endgame/maxed-quest-gear/hiscore goals in scope; make real game output the priority, not another catalogue or tests-only result.",
+    "autoExpand": true,
+    "focusCapability": "cow-progress-order",
+    "focusSince": 1793281747644
+  }
 }

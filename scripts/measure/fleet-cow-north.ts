@@ -39,7 +39,7 @@ if(process.argv[2]==='--entry'){
         ||source.inventory.some((i:any)=>i.id!==333)||source.inventory.reduce((n:number,i:any)=>n+i.count,0)!==2)
         throw new Error('requires fresh completed Mighty South-bank/fullHP/known-worn/two-Trout-only snapshot');
     if(![1277,1171].every(id=>source.equipment.some((i:any)=>i.id===id)))throw new Error('known Mighty worn bronze kit required');
-    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
     if(!Number.isFinite(free)||free<9)throw new Error(`one native actor needs9GiB; actual=${free}`);
     const actor=runBotName('flcow9',1),dir=resolve('.practice/fleet-proof'),prefix=`cow-north-${actor}`;mkdirSync(dir,{recursive:true});
     const sourcePath=resolve(dir,`${prefix}-source.json`);writeFileSync(sourcePath,sourceBytes);await createBot(actor);
@@ -53,7 +53,7 @@ if(process.argv[2]==='--entry'){
     async function child(entry:boolean){
         const label=entry?'entry':'nine-cows',p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),entry?import.meta.path:resolve(script),...(entry?['--entry',actor]:[actor])],{
             env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',COW_NORTH_SOURCE:sourcePath,PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1',
-                TARGET:'cow',TRAIN_SKILL:'Defence',MAX_KILLS:'9',COW_BANK_PROFILE:'north',COW_FOOD_MODE:'banked',CAP:'1500'},stdout:'pipe',stderr:'pipe'});
+                TARGET:'cow',TRAIN_SKILL:'Defence',MAX_KILLS:'9',COW_BANK_PROFILE:'north',COW_FOOD_MODE:'banked',CAP:'1500'},stdout:'pipe',stderr:'pipe',windowsHide:true});
         let output='',stopSent=false;const timer=setTimeout(()=>{stopSent=true;writeFileSync(resolve('.practice',`stop-${actor}`),'native North cow proof timed out');},650000),hard=setTimeout(()=>p.kill(),695000);
         const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const bytes of stream){const text=new TextDecoder().decode(bytes);output+=text;writeFileSync(resolve(dir,`${prefix}-${label}.log`),output);process.stdout.write(text);
             if(!stopSent&&output.includes('PROOF_DAMAGE ')){stopSent=true;writeFileSync(resolve('.practice',`stop-${actor}`),'native North cow proof HP damage');}}};

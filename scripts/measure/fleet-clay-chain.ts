@@ -11,14 +11,14 @@ const hashes=Object.fromEntries(Object.keys(expected).map(p=>[p,createHash('sha2
 if(Object.entries(expected).some(([p,h])=>hashes[p]!==h)||process.env.REUSE_STACK!=='1')throw new Error('source freeze/existing stack required');
 const source=JSON.parse(readFileSync('.practice/status/Shaftsinker.json','utf8'));
 if(!Array.isArray(source.equipment))throw new Error('Shaftsinker worn equipment UNKNOWN; fresh actual observation required');
-const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<9)throw new Error(`single start needs9GiB actual${free}`);
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());if(free<9)throw new Error(`single start needs9GiB actual${free}`);
 const actor=runBotName('flclay',1),dir=resolve('.practice/fleet-proof'),prefix=`clay-chain-${actor}`;await createBot(actor);
 const path=await applyPreset(actor,{position:source.pos,skills:Object.fromEntries(source.skills.map((s:{name:string;level:number})=>[s.name,s.level])),inventory:source.inventory.map((i:{id:number;count:number})=>({id:i.id,count:i.count})),equipment:source.equipment.map((i:{id:number;count:number;slot:number})=>({id:i.id,count:i.count,slot:i.slot})),bank:source.bank.map((i:{id:number;count:number})=>({id:i.id,count:i.count}))});
 setPracticeSkills(path,source.skills.map((s:{name:string;level:number;xp:number})=>({level:s.name==='Hitpoints'?source.hp.now:s.level,xp:s.xp})));
 const initial=readPracticeSave(path);writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
 console.log(`PROOF_START actor=${actor} freeGiB=${free} Mining=${initial.skills[14]!.xp} fullSameActorChain=true`);
 async function child(script:string,label:string,env:Record<string,string>={}){
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve(script),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:'pipe',stderr:'pipe'});let output='',stopSent=false;
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve(script),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:'pipe',stderr:'pipe',windowsHide:true});let output='',stopSent=false;
  const timer=setTimeout(()=>p.kill(),380000);
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}-${label}.log`),output);process.stdout.write(part);if(!stopSent&&output.includes('PROOF_DAMAGE ')){stopSent=true;writeFileSync(resolve('.practice',`stop-${actor}`),'local clay fresh-route HP damage; bounded proof stop');}}};
  await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);return{output,code,stopSent};

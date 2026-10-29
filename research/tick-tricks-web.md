@@ -1,3 +1,5 @@
+> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+
 # Tick tricks and speed methods: web catalog checked against rev 289 (2026-10-23)
 
 Scope: known tick-manipulation and speedrun methods per skill (mostly Old School RuneScape sources), each checked
@@ -274,7 +276,7 @@ than 2004. UNVERIFIED (not searched in content).
 
 | Technique | Evidence | Status |
 |---|---|---|
-| Relog clears the stun | `research/tricks-plan.md` (+17% thieving in practice) | measured. **Not approved by the owner** |
+| Relog clears the stun | `research/tricks-plan.md` (+17% thieving in practice) | measured. Authorized; verify current behaviour |
 | **Wait offline**: boards count only logged-in playtime. The main account logs in only when a helper is ready to trade, and logs out while rocks respawn or helpers gather | 1 playtime tick per relog (`research/tricks-plan.md`). Runite respawn is 1,800-2,400 ticks (section 1.4) | measured cost; plan. This is normal logout use, not a bug. Get the owner's OK |
 | Ferment wine at login | `research/bug-report-wine-login.md` | measured locally; not used |
 

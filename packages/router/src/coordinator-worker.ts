@@ -1,0 +1,124 @@
+import {existsSync,readFileSync,writeFileSync,mkdirSync,copyFileSync,unlinkSync} from 'node:fs';
+import {join,dirname} from 'node:path';
+import {freemem} from 'node:os';
+import {createHash} from 'node:crypto';
+import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
+import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
+import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
+import {createAccountProvisionDeps,provisionAccount} from './account-provision';
+import {readWorld,parseModelObject} from './coordinator-planner';
+import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
+import {projectRoot,coordinationDir,atomicJson} from './coordinator-store';
+import {isWorkspace,publishWorkspace} from './build-workspace';
+
+// A drained fleet for a publish: finite live runs end within their own timeouts (at most 30 minutes in practice).
+const PUBLISH_WAIT_MS=45*60*1000;
+import {buildWorkOrder,preparedNativeDelivery,type CoordTask} from './coordinator';
+import {loadState} from './coordinator-store';
+import {workerSourceRevision} from '../../core/src/worker-release';
+import {runModel,rejectedReview,type ModelWorker} from './model-worker';
+import type {DeliveryResult} from './delivery';
+
+type BuildStageResult=Pick<AuthorResult,'ok'|'delivery'|'diagnostic'|'blocked'|'lastTail'>&{resumedPreparedSource?:string};
+export async function finishBuildDelivery(capability:string,prepared:any,deps:{fingerprint:()=>string;author:()=>Promise<BuildStageResult>;deliver:()=>Promise<DeliveryResult>;review:(result:BuildStageResult,source:string)=>Promise<{approved:boolean;reason:string}>;record:(result:BuildStageResult)=>void},agent:ModelWorker){
+ let resume=false;if(prepared&&!prepared.diagnostic)try{resume=prepared.source===deps.fingerprint();}catch{/* missing or changed source needs the author */}
+ const result:BuildStageResult=resume?await(async()=>{const delivery=await deps.deliver();return{ok:delivery.ok,delivery,lastTail:delivery.reason,resumedPreparedSource:prepared.source};})():await deps.author();
+ deps.record(result);
+ const deferred=result.delivery?.hostDeferred&&!result.delivery.diagnostic?result.delivery:null;
+ if(deferred)return{ok:false,evidence:'host-deferred',hostDeferred:true,sourcePrepared:true,delivery:deferred,error:deferred.reason};
+ if(result.diagnostic?.hostDeferred)return{ok:false,evidence:'host-deferred-diagnostic',hostDeferred:true,sourcePrepared:false,diagnostic:result.diagnostic,error:'Native diagnostic deferred; prior defect remains unrepaired. '+result.diagnostic.reason};
+ if(!result.ok||!result.delivery?.ok||result.delivery.stage!=='delivered')return{ok:false,evidence:result.delivery?'native':'source',delivery:result.delivery,diagnostic:result.diagnostic,blocked:result.blocked,error:result.lastTail};
+ const source=deps.fingerprint();
+ if(result.delivery.source!==source)return{ok:false,evidence:'native',delivery:result.delivery,error:'delivered source changed before review'};
+ const verdict=await deps.review(result,source),unchanged=deps.fingerprint()===source;
+ return{ok:verdict.approved===true&&unchanged,delivery:{...result.delivery,id:capability},review:verdict,evidence:'native',agent,...(!unchanged?{error:'source changed during review'}:{})};
+}
+
+export async function executeTask(task:CoordTask,dependencies:Record<string,any>,directory:string,runId:string,startedAt:number,agent:ModelWorker='claude'){
+ if(task.kind==='provision'){
+  const source=workerSourceRevision();
+  if(!Object.values(dependencies).some((d:any)=>d?.delivery?.ok&&d.delivery.runtimeRevision===source))throw Error('account creation waits for fresh native proof of its prepared first job');
+  const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:source});
+  const admission=admissionDecision({running:activeExternalLive(world.statuses,[],Date.now()).length,external:0,starting:1,startingReserve:1,pending:0,freeGB:freemem()/2**30,minFreeGB:world.capacity.minFreeGB,maxBots:world.capacity.maxBots});
+  if(!admission.allowed)throw Error('account claim waits for measured capacity: '+admission.reason);
+  const create=deps.createLocalAccount;
+  deps.createLocalAccount=async(name,server)=>{atomicJson(join(directory,'identity.json'),{account:name,server,purpose:task.why,at:Date.now()});return create(name,server);};
+  const register=deps.registerAccount;
+  deps.registerAccount=async(name,server)=>{const result=await register(name,server);atomicJson(join(directory,'claim.json'),result);return result;};
+  const result=await provisionAccount({role:task.role as any,purpose:task.why,server:'rs-sdk-demo.fly.dev',reservedNames:world.jobs.flatMap((j:any)=>j.accounts??[j.account]).filter(Boolean)},deps);
+  return{...result,ok:result.registered,evidence:'registered'};
+ }
+ const definition=deliveryTask(task.capability!);
+ const capabilitySource=()=>createHash('sha256').update(JSON.stringify(definition.files.map(file=>[file,readFileSync(join(projectRoot,file),'utf8')]))).digest('hex');
+ if(task.kind==='review'){
+  const fingerprint=capabilitySource;
+  const before=fingerprint();
+  const review=await runModel(agent,'Independently review this delivered capability, its actual code, callers, tests and saved delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Find concrete correctness, ownership, useful-output, recovery and logout defects. Native results are not live proof. Claimed review work order: '+task.why+' Definition: '+JSON.stringify(definition)+' Relevant completed dependency receipts: '+JSON.stringify(dependencies),task.timeoutMs??300000,true);
+  atomicJson(join(directory,'review-model.json'),review);
+  const verdict=review.ok?parseModelObject(review.text):{approved:false,reason:review.text};
+  return{ok:verdict.approved===true&&fingerprint()===before,review:verdict,evidence:'source-review',source:before,agent};
+ }
+ if(task.kind==='run'){
+  const rejection=rejectedReview(dependencies,definition.id,capabilitySource());if(rejection)throw Error('cross-model review requires repair before live delivery: '+rejection);
+  const fingerprint=deliveryFingerprint(definition);
+  if(!Object.values(dependencies).some((r:any)=>r?.delivery?.ok&&r.delivery.id===definition.id&&r.delivery.source===fingerprint))throw Error('fresh same-capability native qualification required');
+  return runLiveTask(task,dependencies,definition,runId,startedAt);
+ }
+ if(task.kind==='qualify'){const delivery=await runDeliveryTask(definition);return{ok:delivery.ok,delivery,evidence:'native'};}
+ const lock=join(coordinationDir,'build-lock.json'),request=join(coordinationDir,'publish-request.json');
+ // The source lock and a drained fleet guard every write to the main checkout that live workers run from.
+ const takeSourceLock=async()=>{
+  if(existsSync(lock)){
+   const owner=JSON.parse(readFileSync(lock,'utf8'));let alive=true;try{process.kill(owner.pid,0);}catch{alive=false;}
+   if(alive&&owner.runId!==runId)throw Error('another builder owns runtime source');if(owner.runId!==runId)unlinkSync(lock);
+  }
+  if(!existsSync(lock))writeFileSync(lock,JSON.stringify({pid:process.pid,runId,at:Date.now()}),{flag:'wx'});
+  if(swarmProcesses().length){
+   await Bun.sleep(6000);
+   const file=join(projectRoot,'.practice/swarm-state.json'),fleet=existsSync(file)?JSON.parse(readFileSync(file,'utf8')):null;
+   if(!fleet||Date.now()-fleet.at>10000||fleet.running||fleet.pendingStartup||fleet.externalRunning)throw Error('runtime build waits for a fresh actual fleet drain');
+  }
+  if(liveRows().some(s=>s.server==='rs-sdk-demo.fly.dev'&&!s.result))throw Error('runtime build waits for existing sessions to settle; stale is not offline');
+ };
+ // An isolated build (build-workspace.ts) edits its own copy: it takes the lock and the drain only to publish.
+ const mainRoot=process.env.COORDINATOR_MAIN_ROOT,isolated=!!mainRoot&&mainRoot!==projectRoot&&isWorkspace(projectRoot);
+ const publish=async(result:any)=>{
+  atomicJson(request,{runId,capability:definition.id,at:Date.now()});
+  const deadline=Date.now()+PUBLISH_WAIT_MS;let last='';
+  try{
+   for(;;){
+    try{await takeSourceLock();break;}catch(error){
+     last=String(error);if(owned())unlinkSync(lock);
+     if(Date.now()>deadline)return{...result,ok:false,sourcePrepared:true,error:'publish waited '+PUBLISH_WAIT_MS/60000+' min for a drained fleet: '+last};
+     await Bun.sleep(15000);
+    }
+   }
+   const out=publishWorkspace(mainRoot!,definition.id,definition.files);atomicJson(join(directory,'publish.json'),{...out,at:Date.now(),from:projectRoot,to:mainRoot});
+   return{...result,published:out};
+  }finally{if(existsSync(request)&&JSON.parse(readFileSync(request,'utf8')).runId===runId)unlinkSync(request);}
+ };
+ const owned=()=>existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).runId===runId;
+ try{
+ if(!isolated)await takeSourceLock();
+ // Preserve every declared pre-existing file before an author edits it.
+ for(const file of definition.files)if(existsSync(join(projectRoot,file))){const out=join(directory,'before',file);mkdirSync(dirname(out),{recursive:true});copyFileSync(join(projectRoot,file),out);}
+ const authorDeadline=Date.now()+(task.timeoutMs??900000);
+ let authorCalls=0;
+ const authorModel=async(prompt:string)=>{
+  const attempt=++authorCalls;writeFileSync(join(directory,`author-prompt-${attempt}.txt`),prompt);
+  const response=await runModel(agent,prompt,Math.max(1,authorDeadline-Date.now()),false);
+  atomicJson(join(directory,`author-response-${attempt}.json`),response);return response;
+ };
+ let prepared:any=null;try{prepared=preparedNativeDelivery(loadState(),definition.id,deliveryFingerprint(definition));}catch{/* incomplete or changed source needs the ordinary author */}
+ const built=await finishBuildDelivery(definition.id,prepared,{fingerprint:()=>deliveryFingerprint(definition),
+ author:()=>authorLoop({id:definition.id,goal:definition.goal+'\n'+buildWorkOrder(task,dependencies,directory),preset:'',delivery:definition},{maxFixes:2,proveRuns:1,repairRegressions:true},{runModel:authorModel,exists:fileExists,prove:async()=>{throw Error('delivery required');},deliver:runDeliveryTask,diagnose:runDiagnosticTask}),
+ deliver:()=>runDeliveryTask(definition),record:result=>atomicJson(join(directory,'author.json'),result),
+ review:async(result)=>{
+ const review=await runModel(agent==='claude'?'codex':'claude','Review this completed capability independently. Read AGENTS.md and the actual declared source, callers, tests and delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Check the claimed work order was actually fulfilled through its real consumer, useful output, failure propagation, recovery, logout, preservation of existing work and reusable parameterized interfaces. Do not approve from tests alone. Work order: '+buildWorkOrder(task,dependencies,directory)+' Definition: '+JSON.stringify(definition)+' Delivery: '+JSON.stringify(result.delivery),300000,true);
+ atomicJson(join(directory,'review-model.json'),review);
+ const verdict=review.ok?parseModelObject(review.text):{approved:false,reason:review.text};atomicJson(join(directory,'review.json'),verdict);
+ return verdict;
+ }},agent);
+ return isolated&&built.ok?await publish(built):built;
+ }finally{if(owned())unlinkSync(lock);}
+}

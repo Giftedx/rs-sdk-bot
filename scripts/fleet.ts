@@ -1,5 +1,5 @@
-// Single-source fleet manifest: every active account, role, goal, script, server and host group in one file.
-// `bun scripts/fleet.ts validate` checks it; `generate [out]` writes a swarm plan; `apply` replaces swarm.json.
+// Fleet templates and credential provisioning. swarm.json owns current operating decisions.
+// `validate` checks templates; `generate [out]` exports a candidate; `apply` only creates a missing swarm.json.
 // New accounts are disabled until their bot.env exists and the operator enables them. Bot passwords are never printed.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -28,42 +28,50 @@ export interface FleetAccount {
     whenFoodLowFrom?: string[];
     foodLowBelow?: number;
     foodSourceAccount?: string;
+    foodSourceAccounts?: string[];
     sourceFoodMinimum?: number;
 }
 
 export interface FleetPlan { maxBots: number; minFreeGB: number; jobs: Job[]; }
 
-// Thieving 99 accounts only. mmsmk1232 (Thieving 1, status 2026-10-25) idled 2400 ticks at the knights; the knights
-// need 55 and goldfarm-stable.ts farmStartProblem refuses it, so it stays out of the pool until it is trained.
-const THIEVES = ['Pocketrocket', 'mmtha0205', 'mmthv2350', 'Pocketpython'];
+// Every member meets the knight requirement. mmsmk1232 reached 55 in its live training run on 2026-10-25
+// (788 ticks, hpMin=5, died=false); the farm still checks the skill before any walk.
+const THIEVES = ['Pocketrocket', 'mmtha0205', 'mmthv2350', 'Pocketpython', 'mmsmk1232'];
 
 // Active live accounts first. New accounts are disabled until an operator creates their bot.env and flips enabled.
 export const FLEET: FleetAccount[] = [
     {
         name: 'Mightyrod', server: 'rs-sdk-demo.fly.dev', role: 'combat',
         goal: 'Kill Fire Giants in Waterfall Dungeon, bank loot, and return forever',
-        // Paused 2026-10-25: 0 credited kills in every live pilot. Best run: bronze sword (1277, the best weapon it
-        // owns), 227 fight ticks, hpMin 29, HP guard retreat (.practice/swarm-logs/Mightyrod.log). The script is ONE
-        // finite pilot, not a loop. Re-enable after it owns a real weapon (e.g. a rune scimitar) and a pilot kills.
-        script: 'scripts/gather-fire-combat.ts', enabled: false, repeat: false,
-        env: { CAP: '9000', RANDOM_EVENTS: '0', FOOD_FROM: 'Bigpackage' },
-        note: 'Paused: one Fire Giant pilot per run; 0 kills with a bronze sword. Needs a better owned weapon first.',
+        // One credited kill and bank return per batch. The controller repeats it;
+        // food, attribution, door, damage and life guards can block a failed batch.
+        script: 'scripts/gather-fire-combat.ts', enabled: true, repeat: true,
+        env: { CAP: '1600', RANDOM_EVENTS: '0' },
+        note: 'One Fire Giant per guarded batch. Native bronze-sword pilot killed1, banked its drops and preserved owned assets on 2026-10-25; the controller repeats from the bank with owned food.',
     },
-    // One job per thief, not a shared host: a host starts only the accounts that are free at that moment, and the others
-    // then wait for that whole host to end (2026-10-25: two thieves sat offline "waiting: current mission still
-    // running" for a full run). Four single processes cost about 2.2 GB, well inside the 8 GB floor.
-    ...THIEVES.map(name => ({
+    // The four uniform farmers share pathfinding. The courier's funding lead
+    // keeps its own environment and process. Live handoff waits for owned work
+    // to end; session, failure and RAM admission rules still apply per account.
+    ...THIEVES.map(name => {
+        // Release each thief's accumulated client state through normal repeat
+        // rather than retaining a roughly hour-long session on the shared PC.
+        const env:Record<string,string>={TICKS:'3000',BANK_AT:'25000',FOOD_FROM:'Bigpackage'};
+        if(name==='Pocketrocket')env.FUND_COURIER='Bigpackage';
+        return {
         name, server: 'rs-sdk-demo.fly.dev', role: 'thieving' as const,
         goal: 'Pickpocket Ardougne Knights for max gp/hr forever; bank coins and refill food',
         script: 'scripts/goldfarm-stable.ts', enabled: true, repeat: true,
-        env: { TICKS: '9000', BANK_AT: '25000', FOOD_FROM: 'Bigpackage' },
-        note: '5 accounts hosted in one process (~700 MB total vs 2.75 GB separate); 50gp/pick (~18.8 gp/tick at 99); food supplied by courier.',
-    })),
+        env,
+        hostGroup: name==='Pocketrocket'?undefined:'knights',
+        note: name==='Pocketrocket'
+            ?'Independent funding lead; banks coins and refills food from its bank or owned courier.'
+            :'Shared knight host; banks coins and refills food from its bank or owned courier.',
+    };}),
     {
         name: 'Masterbaiter', server: 'rs-sdk-demo.fly.dev', role: 'fishing',
         goal: 'Fly fish and cook best food (trout & salmon) forever, bank and supply courier',
         script: 'scripts/fishcook.ts', enabled: true, repeat: true,
-        env: { TICKS: '9000', GIVE_TO: 'Bigpackage' },
+        env: { TICKS: '9000', GIVE_TO: 'Bigpackage', TARGETED_COLLECTION: '1' },
         note: 'Continuous 3-tick fly fishing trout/salmon (~51 cooked food/1000 ticks, ~465/hr) at Lumbridge river, cooked at general store fireplace, banked at Draynor, and traded to courier.',
     },
     {
@@ -75,32 +83,37 @@ export const FLEET: FleetAccount[] = [
     },
     {
         name: 'Bigpackage', server: 'rs-sdk-demo.fly.dev', role: 'courier',
-        goal: 'Walking bank: collect cooked food from Masterbaiter and trade on demand to whoever needs it',
+        goal: 'Collect from either active cook and deliver food on demand to the thieves',
         script: 'scripts/foodcourier.ts', enabled: true, repeat: true,
-        env: { FROM: 'Masterbaiter', FEATHERS: '500', FARMERS: THIEVES.join(','), CAP: '9000' },
-        whenFoodLowFrom: [...THIEVES], foodLowBelow: 80, foodSourceAccount: 'Masterbaiter',
+        env: { FROM: 'Masterbaiter,FishAndChips', FEATHERS: '500', FARMERS: THIEVES.join(','), CAP: '9000', FUND_FROM: 'Pocketrocket' },
+        whenFoodLowFrom: [...THIEVES], foodLowBelow: 80, foodSourceAccounts: ['Masterbaiter','FishAndChips'],
         sourceFoodMinimum: 1,
         note: 'On-demand food courier & walking bank: carries food notes from Draynor to Ardougne when any farmer or combat account drops below safe food buffer.',
     },
     {
         name: 'Shaftmaker', server: 'rs-sdk-demo.fly.dev', role: 'fletching',
-        goal: 'Fletching99 complete; await useful advanced ammunition inputs',
-        script: 'scripts/fletch-arrows.ts', enabled: false, repeat: false,
+        goal: 'Gather and bank normal logs at Seers for arrow-shaft production',
+        script: 'scripts/gather-yews.ts', enabled: true, repeat: true,
+        env: { TREE: 'normal', MAX_TRIPS: '1', BANK_AT: '25', CAP: '1200' },
     },
     {
         name: 'Bigchopper', server: 'rs-sdk-demo.fly.dev', role: 'woodcutting',
         goal: 'Collect and bank oak logs for the fletching supply chain',
-        script: 'scripts/gather-yews.ts', enabled: false, repeat: false,
+        script: 'scripts/gather-yews.ts', enabled: true, repeat: true,
+        env: { REGION: 'draynor', TREE: 'oak', MAX_MAKE: '25', CAP: '1800' },
     },
     {
         name: 'Woodpecker', server: 'rs-sdk-demo.fly.dev', role: 'mining',
-        goal: 'Mining recovery paused',
-        script: 'scripts/gather-ore.ts', enabled: false,
+        goal: 'Gather and bank mixed ores at Varrock East in three-load batches',
+        script: 'scripts/gather-ore.ts', enabled: true, repeat: true,
+        env: { CAP: '1800', BANK_AT: '25', MAX_TRIPS: '3' },
+        note: 'Requires combat13. Exact owned-pickaxe practice qualified without damage and banked75ores in3loads on 2026-10-25; live admission follows the bounded qualification and mining pilot.',
     },
     {
         name: 'Ballspinner', server: 'rs-sdk-demo.fly.dev', role: 'crafting',
-        goal: 'Crafting99 complete; hold strings for owned production demand',
-        script: 'scripts/spin-bowstrings.ts', enabled: false, repeat: false,
+        goal: 'Restock and bank flax at Seers for the next bow-string batch',
+        script: 'scripts/gather-flax.ts', enabled: true, repeat: true,
+        env: { CAP: '1800', BANK_AT: '28' },
     },
     {
         name: 'Haggis', server: 'rs-sdk-demo.fly.dev', role: 'main',
@@ -121,22 +134,17 @@ export const FLEET: FleetAccount[] = [
         goal: 'Practice-gated cowhides, bones and beef; then Strength/Defence progression',
         script: 'scripts/gather-combat.ts', enabled: false, repeat: false,
     },
-    // Proposed clean-pun accounts. Disabled until created and reviewed; no sexual names are generated.
-    {
-        name: 'mmsmk1232', server: 'rs-sdk-demo.fly.dev', role: 'thieving',
-        goal: 'Thieving 1: train to 55 before joining the knight pool',
-        script: 'scripts/goldfarm-stable.ts', enabled: false, repeat: false,
-    },
+    // Legacy proposed accounts. New names follow AGENTS.md: task-based penis joke, optionally Scottish.
     { name: 'AFKnight', server: 'rs-sdk-demo.fly.dev', role: 'combat', goal: 'Combat support: cowhides, bones and beef near Lumbridge', script: 'scripts/gather-combat.ts', enabled: false },
-    { name: 'OreElse', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Mining supply: bank iron and coal for smithing', script: 'scripts/gather-ore.ts', enabled: false },
-    { name: 'FishAndChips', server: 'rs-sdk-demo.fly.dev', role: 'fishing', goal: 'Fishing supply: fly fish and cook trout/salmon for the courier', script: 'scripts/fishcook.ts', enabled: false },
-    { name: 'BowBeforeMe', server: 'rs-sdk-demo.fly.dev', role: 'fletching', goal: 'Fletching supply: cut shafts and fletch arrows for ranged', script: 'scripts/fletch-arrows.ts', enabled: false },
+    { name: 'OreElse', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Gather and bank mixed ores at Varrock East in three-load batches', script: 'scripts/gather-ore.ts', enabled: true, repeat: true, env: { CAP: '1800', BANK_AT: '25', MAX_TRIPS: '3' }, note: 'Qualified at combat13. Live three-load trial banked75ores in1169ticks, hpMin=16, died=false on 2026-10-25. The mixed-mine entry guard requires combat13; emergency owned-load recovery remains available.' },
+    { name: 'FishAndChips', server: 'rs-sdk-demo.fly.dev', role: 'fishing', goal: 'Fish, cook and supply the food courier from Draynor', script: 'scripts/fishcook.ts', enabled: true, repeat: true, env: { TICKS: '9000', GIVE_TO: 'Bigpackage', TARGETED_COLLECTION: '1' } },
+    { name: 'BowBeforeMe', server: 'rs-sdk-demo.fly.dev', role: 'fletching', goal: 'Gather25 normal logs and bank375 arrow shafts in each production batch', script: 'scripts/fletch-worker.ts', enabled: true, repeat: true, env: { RANDOM_EVENTS: '1',BANK_KNIFE:'1',NORMAL_GROVE:'north' }, note: 'Separate northern normal-tree grove passed the two-client practice trial with full health and preserved kit; live recovery qualification follows before the failed epoch is cleared.' },
     { name: 'MineYourBiz', server: 'rs-sdk-demo.fly.dev', role: 'mining', goal: 'Essence supply: mine rune/pure essence via Aubury', script: 'scripts/gather-essence.ts', enabled: false },
-    { name: 'YewFirst', server: 'rs-sdk-demo.fly.dev', role: 'woodcutting', goal: 'Woodcutting supply: bank oak/yew logs for fletching', script: 'scripts/gather-yews.ts', enabled: false },
+    { name: 'YewFirst', server: 'rs-sdk-demo.fly.dev', role: 'woodcutting', goal: 'Gather and bank normal logs at Draynor in two-load batches', script: 'scripts/gather-yews.ts', enabled: true, repeat: true, env: { REGION: 'draynor', TREE: 'normal', MAX_TRIPS: '2', BANK_AT: '25', CAP: '1800' }, note: 'Live pilot banked 50 logs in 1144 ticks, hpMin=10, died=false on 2026-10-25.' },
 ];
 
 // A host group runs all its accounts in one process; singles run one account per job. Conditions come from the group's first row.
-export function toPlan(accounts: readonly FleetAccount[], maxBots = 10, minFreeGB = 8): FleetPlan {
+export function toPlan(accounts: readonly FleetAccount[], maxBots = 17, minFreeGB = 8): FleetPlan {
     const jobs: Job[] = [];
     const groups = new Map<string, FleetAccount[]>();
     for (const a of accounts) {
@@ -155,6 +163,7 @@ export function toPlan(accounts: readonly FleetAccount[], maxBots = 10, minFreeG
         if (a.whenFoodLowFrom) base.whenFoodLowFrom = a.whenFoodLowFrom;
         if (a.foodLowBelow !== undefined) base.foodLowBelow = a.foodLowBelow;
         if (a.foodSourceAccount) base.foodSourceAccount = a.foodSourceAccount;
+        if (a.foodSourceAccounts) base.foodSourceAccounts = a.foodSourceAccounts;
         if (a.sourceFoodMinimum !== undefined) base.sourceFoodMinimum = a.sourceFoodMinimum;
         jobs.push(base);
     }
@@ -170,10 +179,16 @@ export function toPlan(accounts: readonly FleetAccount[], maxBots = 10, minFreeG
         if (first.whenFoodLowFrom) job.whenFoodLowFrom = first.whenFoodLowFrom;
         if (first.foodLowBelow !== undefined) job.foodLowBelow = first.foodLowBelow;
         if (first.foodSourceAccount) job.foodSourceAccount = first.foodSourceAccount;
+        if (first.foodSourceAccounts) job.foodSourceAccounts = first.foodSourceAccounts;
         if (first.sourceFoodMinimum !== undefined) job.sourceFoodMinimum = first.sourceFoodMinimum;
         jobs.push(job);
         void group;
     }
+    // Admission follows this order. Grouping must not move the first member
+    // behind every single-account job and starve its shared startup budget.
+    const priority=new Map(accounts.map((a,i)=>[a.name,i]));
+    const rank=(j:Job)=>Math.min(...(j.host?j.accounts!:[j.account!]).map(name=>priority.get(name)!));
+    jobs.sort((a,b)=>rank(a)-rank(b));
     return { maxBots, minFreeGB, jobs };
 }
 
@@ -220,6 +235,11 @@ export function createAccount(name: string, server = 'rs-sdk-demo.fly.dev'): str
     return dir;
 }
 
+export function writeFleetPlan(out:string,plan:FleetPlan,liveFile=swarmFile):void {
+    // Exclusive create prevents stale templates replacing current decisions, even in a race.
+    writeFileSync(out,JSON.stringify(plan,null,2)+'\n',{flag:resolve(out)===resolve(liveFile)?'wx':'w'});
+}
+
 if (import.meta.main) {
     const [cmd, arg, server] = process.argv.slice(2);
     if (cmd === 'list') {
@@ -231,7 +251,7 @@ if (import.meta.main) {
     } else if (cmd === 'generate' || cmd === 'apply') {
         const plan = toPlan(FLEET);
         const out = cmd === 'apply' ? swarmFile : resolve(repoRoot, arg || 'swarm.generated.json');
-        writeFileSync(out, JSON.stringify(plan, null, 2) + '\n');
+        writeFleetPlan(out,plan);
         console.log(`FLEET wrote ${out} jobs=${plan.jobs.length}`);
     } else if (cmd === 'create' && arg) {
         const dir = createAccount(arg, server);

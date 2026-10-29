@@ -1,6 +1,24 @@
 import {test,expect} from 'bun:test';
-import {treeAfterBank,runDraynorOak,oakGrove,westOakPathAllowed} from './gather-yews';
+import {treeAfterBank,runDraynorOak,oakGrove,westOakPathAllowed,woodTreeOrder,normalGrove} from './gather-yews';
 import type {Session} from '../packages/core/src/inprocess';
+
+const woodTree=(x:number,distance:number)=>({x,z:3285,distance,reachable:true,optionsWithIndex:[{text:'Chop down',opIndex:1}]});
+test('Draynor chooses an available tree over the closer tree another player is already chopping',()=>{
+    const close=woodTree(3086,1),clear=woodTree(3091,5);
+    expect(woodTreeOrder([close,clear],[{x:3086,z:3284}])[0]).toBe(clear);
+    expect(woodTreeOrder([close,clear],[])[0]).toBe(close);
+});
+test('wood selection excludes unreachable or non-choppable resources before ranking',()=>{
+    const clear=woodTree(3091,5);
+    expect(woodTreeOrder([{...woodTree(3086,1),reachable:false},{...woodTree(3087,2),optionsWithIndex:[]},clear],[])).toEqual([clear]);
+});
+test('northern normal grove has separate primary map trees and keeps the old grove unchanged',()=>{
+    const north=normalGrove('north'),south=normalGrove();
+    expect(north.spot).toEqual({x:3088,z:3303});
+    expect(north.contains(3089,3301)).toBe(true);expect(north.contains(3086,3284)).toBe(false);
+    expect(south.contains(3086,3284)).toBe(true);expect(south.contains(3089,3301)).toBe(false);
+    expect(()=>normalGrove('unknown')).toThrow('unsupported NORMAL_GROVE');
+});
 
 test('explicit TREE survives a bank visit with fewer than100normal logs',()=>{
     expect(treeAfterBank('oak',13)).toBe('oak');expect(treeAfterBank('normal',500)).toBe('normal');

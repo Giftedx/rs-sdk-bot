@@ -46,7 +46,7 @@ export async function startLite(name: string, timeoutMs = 120_000): Promise<Lite
         cwd: join(rsSdkRoot(), 'server', 'webclient'),
         stdout: Bun.file(log),
         stderr: Bun.file(log),
-    });
+    windowsHide:true});
     writeLite({ ...readLite(), [name]: { pid: proc.pid, marker: LITE_MARKER } });
     try {
         await waitReady(proc, 'lite', log, timeoutMs);

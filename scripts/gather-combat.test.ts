@@ -1,18 +1,25 @@
 import {test,expect} from 'bun:test';
-import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile} from './gather-combat';
+import {cowCredit,runCows,cowTraining,cowGroundCounts,guardCowWalker,cowRoutePoints,cowProfile,cowStopControl} from './gather-combat';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks} from '../packages/core/src/ticks';
-import {spawnSync} from 'node:child_process';
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 
-test('real CLI rejects unknown combat target before reading account config; valid targets still reach missing phantom config',()=>{
+test('real CLI rejects unknown combat target before reading account config; valid targets still reach missing phantom config',async()=>{
     const name='__combat_validation_no_account__';
     expect(existsSync(resolve(import.meta.dir,'../vendor/rs-sdk/bots',name))).toBe(false);
     for(const target of ['imp','bogus','cow','druid','giant']){
-        const child=spawnSync(process.execPath,[resolve(import.meta.dir,'gather-combat.ts'),name,'1',...(target==='imp'?[]:[target])],{env:{...process.env,DEMO_OK:'0',TARGET:target},encoding:'utf8',timeout:5000});
-        expect(child.error).toBeUndefined();expect(child.status).toBe(1);
-        const output=child.stdout+child.stderr;
+        // The synchronous Windows child bridge reported ETIMEDOUT during broad
+        // runs while the identical isolated CLI passed. Await the real child
+        // and both pipes, retaining the same5s deadline and exit/output checks.
+        const child=Bun.spawn([process.execPath,resolve(import.meta.dir,'gather-combat.ts'),name,'1',...(target==='imp'?[]:[target])],{env:{...process.env,DEMO_OK:'0',TARGET:target},stdout:'pipe',stderr:'pipe'});
+        let timedOut=false;
+        const timer=setTimeout(()=>{timedOut=true;child.kill();},5000);
+        let output:string;
+        try{
+            const [out,err,status]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
+            expect(timedOut).toBe(false);expect(status).toBe(1);output=out+err;
+        }finally{clearTimeout(timer);}
         expect(output).not.toContain('Pathfinding initialized');expect(output).not.toContain('START ');
         if(target==='imp'||target==='bogus'){
             expect(output).toContain(`RESULT fail no combat progress: unsupported target ${target}`);
@@ -176,7 +183,44 @@ test('food debit before delayed HP publication waits for healing and counts actu
     const f=fixture(false,'delayed-food');try{const r=await runCows(f.session,{cap:500,maximum:5,walk:async()=>true});
         expect(r.ok).toBe(true);expect(r.eaten).toBe(1);expect(r.creditedKills).toBe(5);expect(r.preserved).toBe(true);
         expect(f.bank.find(i=>i.id===333).count).toBe(4);
+        expect(r.foodAccounted).toBe(true);expect(r.initialFood).toBe(7);expect(r.finalFood).toBe(6);
     }finally{f.dispose();}
+});
+test('stop request before departure performs no route, kit or combat input and keeps assets',async()=>{
+    const f=fixture();let outbound=0;try{
+        const r=await runCows(f.session,{cap:500,maximum:5,trainSkill:'Attack',targetLevel:20,stop:()=>true,walk:async x=>{if(x===2664)outbound++;return true;}});
+        expect(r.ok).toBe(false);expect(r.stop).toBe('stop-file');expect(outbound).toBe(0);expect(f.kills()).toBe(0);expect(f.equipCalls()).toBe(0);
+        expect(r.banked).toEqual({hide:0,bones:0,beef:0});expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(true);
+    }finally{f.dispose();}
+});
+test('mocked finite partial route banks its credited loot; another call can continue from that state',async()=>{
+    const f=fixture();try{
+        const first=await runCows(f.session,{cap:500,maximum:1,trainSkill:'Defence',targetLevel:10,walk:async()=>true});
+        expect(first.ok).toBe(true);expect(first.partial).toBe(true);expect(first.targetMet).toBe(false);expect(first.stop).toBe('max-kills');expect(first.creditedKills).toBe(1);expect(f.kills()).toBe(1);
+        expect(first.banked).toEqual({hide:1,bones:1,beef:1});expect(first.preserved).toBe(true);expect(first.foodAccounted).toBe(true);
+        expect(f.inv.some(i=>[1739,526,2132].includes(i.id))).toBe(false);
+        const second=await runCows(f.session,{cap:500,maximum:4,walk:async()=>true});
+        expect(second.ok).toBe(true);expect(second.creditedKills).toBe(4);expect(second.banked).toEqual({hide:4,bones:4,beef:4});
+        expect(f.bank.find(i=>i.id===1739).count).toBe(5);expect(second.foodAccounted).toBe(true);
+    }finally{f.dispose();}
+});
+test('mocked stop control retains onStop ownership until the cow loop banks',async()=>{
+    // Unit evidence only. The installed CLI native stopped case checks openBot's callback marker.
+    expect(cowStopControl('druid',()=>false).options).toEqual({});
+    let file=false;const control=cowStopControl('cow',()=>file);
+    const onStop=(control.options as {onStop?:(s:unknown,why:string)=>Promise<unknown>}).onStop;
+    expect(typeof onStop).toBe('function');expect(control.stop()).toBe(false);
+    file=true;expect(control.stop()).toBe(true);file=false;
+    const f=fixture();let fired=false;try{
+        // Fire core onStop on the tick the first credited hide is held.
+        const r=await runCows(f.session,{cap:500,maximum:5,walk:async()=>true,stop:()=>{
+            if(!fired&&f.inv.some(i=>i.id===1739)){fired=true;void onStop!(f.session,'stop file');}return control.stop();}});
+        expect(control.reason()).toBe('stop file');expect(r.ok).toBe(false);expect(r.stop).toBe('stop-file');expect(r.creditedKills).toBe(1);
+        expect(r.banked).toEqual({hide:1,bones:1,beef:1});expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(true);
+        expect(f.inv.some(i=>[1739,526,2132].includes(i.id))).toBe(false);
+    }finally{f.dispose();}
+    const died=cowStopControl('cow',()=>false);await (died.options as any).onStop({}, 'died');await (died.options as any).onStop({}, 'stop file');
+    expect(died.stop()).toBe(true);expect(died.reason()).toBe('died');
 });
 test('vanished NPC without credited drops/XP blocks rather than claiming kills',async()=>{
     const f=fixture(true);try{const r=await runCows(f.session,{cap:120,maximum:5,walk:async()=>true,noProgress:20});expect(r.ok).toBe(false);expect(r.creditedKills).toBe(0);expect(r.failure).toContain('no cow progress');expect(f.kills()).toBe(1);
@@ -186,6 +230,7 @@ test('vanished NPC without credited drops/XP blocks rather than claiming kills',
 test('low HP with no food retreats and banks; a changed life stops without another attack',async()=>{
     for(const injury of ['low-nofood','death'] as const){const f=fixture(false,injury);try{const r=await runCows(f.session,{cap:120,maximum:5,walk:async()=>true,noProgress:20});
         expect(r.ok).toBe(false);expect(r.creditedKills).toBe(0);expect(f.kills()).toBe(1);
-        if(injury==='death'){expect(r.died).toBe(true);expect(r.lifeId).toBe(2);}else{expect(r.stop).toBe('low-hp');expect(r.preserved).toBe(true);}
+        // The fixture removes Trout without an eat; that unobserved debit is a food loss.
+        if(injury==='death'){expect(r.died).toBe(true);expect(r.lifeId).toBe(2);}else{expect(r.stop).toBe('low-hp');expect(r.preserved).toBe(true);expect(r.foodAccounted).toBe(false);}
     }finally{f.dispose();}}
 });

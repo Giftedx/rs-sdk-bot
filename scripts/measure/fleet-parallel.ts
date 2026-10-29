@@ -9,7 +9,7 @@ const children:{exitCode:number|null;exited:Promise<number>;kill():void}[]=[];
 const started=Date.now();
 try{
  for(const mode of cases){
-  const p=Bun.spawn(['bun',resolve('scripts/measure/fleet-practice.ts'),mode,'1'],{env:{...process.env,DEMO_OK:'',REUSE_STACK:'1'},stdout:'inherit',stderr:'inherit'});
+  const p=Bun.spawn(['bun',resolve('scripts/measure/fleet-practice.ts'),mode,'1'],{env:{...process.env,DEMO_OK:'',REUSE_STACK:'1'},stdout:'inherit',stderr:'inherit',windowsHide:true});
   children.push(p);
  }
  const codes=await Promise.all(children.map(p=>p.exited));

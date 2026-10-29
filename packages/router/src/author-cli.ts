@@ -1,5 +1,6 @@
 import { okPass, proveInProcess } from '../../practice/src/prove';
 import { authorLoop, fileExists, runClaude, type AuthorTask } from './author';
+import {deliveryTask,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
 
 // Usage: bun packages/router/src/author-cli.ts <taskId>
 // Needs a running practice stack (bun packages/practice/src/cli.ts up). Claude writes scripts/generated/<id>.ts,
@@ -92,17 +93,21 @@ const MORE: Record<string, AuthorTask> = {
     },
 };
 Object.assign(TASKS, MORE);
-const task = TASKS[process.argv[2] ?? ''];
+const capability=process.argv[2]==='--task'?deliveryTask(process.argv[3]??''):undefined;
+const task:AuthorTask|undefined=capability?{id:capability.id,goal:capability.goal,preset:'delivery-owned',delivery:capability}:TASKS[process.argv[2] ?? ''];
 if (!task) { console.log(`tasks: ${Object.keys(TASKS).join(', ')}`); process.exit(2); }
 const r = await authorLoop(task, { maxFixes: 2, proveRuns: 3 }, {
     runModel: async p => { const m = await runClaude(p); console.log(`MODEL ok=${m.ok} cost=$${m.costUsd.toFixed(3)} ${m.text.slice(0, 200).replace(/\n/g, ' ')}`); return m; },
     prove: async (file, t, runs) => {
-        const p = await proveInProcess({ bot: `g${t.id.slice(0, 4)}`, script: file, runs, preset: t.preset, pass: okPass, timeoutMs: t.timeoutMs, parallel: runs });
+        const p = await proveInProcess({ bot: `g${t.id.slice(0, 4)}`, script: file, runs, preset: t.preset, pass: okPass, outcome: t.id === 'rcair' ? 'rcair' : undefined, timeoutMs: t.timeoutMs, parallel: 1 });
         const tail = p.results.map((x, i) => `run ${i + 1} ${x.ok ? 'PASS' : 'FAIL'}: ${x.tail.replace(/\n/g, ' | ')}`).join('\n');
         console.log(`PROOF ${p.passes}/${p.runs}\n${tail}`);
         return { passes: p.passes, runs: p.runs, tail };
     },
     exists: fileExists,
+    deliver:runDeliveryTask,
+    diagnose:runDiagnosticTask,
 });
 console.log(`AUTHOR ${JSON.stringify(r)}`);
-process.exit(r.ok ? 0 : 1);
+// Exit 3 distinguishes a successful exercise from a delivered capability.
+process.exit(r.complete ? 0 : r.ok ? 3 : 1);

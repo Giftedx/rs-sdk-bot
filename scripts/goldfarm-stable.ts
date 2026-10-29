@@ -1,31 +1,149 @@
 // Gold farm: pickpocket knights of Ardougne at Thieving 99, bank coins and refill food at the south bank.
-// Self-sufficient food supply: withdraws bank food (trout, salmon, lobster, bread, cake), buys from the Baker's shop,
-// or steals cakes from the Baker's stall when out of food.
-// Smart deficit-matched eating: lets HP drop to 4 (max hit 3 from Knights) to preserve food with zero overheal while
-// strictly guaranteeing the bot never dies.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { openBot, finish, randomEventsOf } from '../packages/core/src/bot';
-import { waitTicks } from '../packages/core/src/ticks';
+// Food comes from owned bank stock and the courier. Bakery recovery caused repeated live deaths.
+// Eating at 4 HP leaves room for one knight stun hit of 3 while reducing overheal.
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { openBot, finish, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
+import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import type { Session } from '../packages/core/src/inprocess';
+import { depositObserved } from '../packages/core/src/deposit';
+import { receiveHandoff } from './courier-handoff';
+import { ownedAccounts } from '../packages/core/src/tradeguard';
+import { courierFoodReady, receiveFoodAtBank } from './goldfarm';
+import {pendingCourierFunding,serviceCourierFunding} from './courier-funding';
 
 export type Tile = { x: number; z: number };
 export const KNIGHT_SPOT: Tile = { x: 2653, z: 3302 };
 export const BANK_SPOT: Tile = { x: 2654, z: 3283 };
-export const STALL_SPOT: Tile = { x: 2655, z: 3310 };
 
 export const KNIGHT = /^knight of ardougne$/i;
-export const GUARD = /^guard$/i;
-export const BAKER = /^baker/i;
 export const COINS = /^coins$/i;
 
 export const RANGE = 16;
+type FarmNpc = { index: number; name: string; x: number; z: number; distance: number; reachable?: boolean; optionsWithIndex: readonly { text: string; opIndex: number }[] };
+export function farmPickTarget<T extends FarmNpc>(npcs: readonly T[], p: { worldX: number; worldZ: number } | null | undefined, avoid?: ReadonlySet<number>, pattern = KNIGHT): { npc: T | undefined; recenter: boolean; tol: number } {
+    const candidates = npcs.filter(n => pattern.test(n.name) && !avoid?.has(n.index)
+        && Math.max(Math.abs(n.x-KNIGHT_SPOT.x),Math.abs(n.z-KNIGHT_SPOT.z)) <= RANGE
+        && n.optionsWithIndex.some(o => /^pickpocket$/i.test(o.text))
+        && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= RANGE));
+    const npc = candidates.filter(n => n.reachable !== false).sort((a, b) => a.distance - b.distance)[0];
+    const away = p ? Math.max(Math.abs(KNIGHT_SPOT.x - p.worldX), Math.abs(KNIGHT_SPOT.z - p.worldZ)) : 0;
+    // 2026-10-28 route-error-restart idled 300 ticks at 2651,3304, 2 tiles from the spot but inside a
+    // shut room with every knight unreachable. Then walk onto the spot itself, through the room door.
+    if (!npc && away > 0 && away <= 3 && candidates.length > 0) return { npc, recenter: true, tol: 0 };
+    return { npc, recenter: !npc && away > 3, tol: 3 };
+}
 export const TICKS = Number(process.env.TICKS ?? 9000);
 export const BANK_AT = Number(process.env.BANK_AT ?? 25000);
 export const FOOD_FROM = process.env.FOOD_FROM?.trim() || '';
-export const STALL_FILL = Number(process.env.STALL_FILL ?? 10);
+const FUND_COURIER=process.env.FUND_COURIER?.trim()||'';
 export const KEEP_FREE = 2;
 export const DMG = 3;
+
+// The east bank room exit anchors a wall beside the path, not a path tile.
+// Native and live recovery from 2669,3321 proved this exact observed exit.
+export async function farmWalk(s:Session,t:Tile,tol:number,stop:()=>boolean=()=>false){
+    if (stop()) throw Error('no farm route progress: stopped');
+    const p=s.sdk.getState()?.player;
+    if(p?.level===0&&p.worldX>=2662&&p.worldX<=2672&&p.worldZ>=3315&&p.worldZ<=3325){
+        const exit=s.sdk.getState()?.nearbyLocs.find(l=>l.x===2669&&l.z===3316&&l.name==='Door'&&l.optionsWithIndex.some(o=>o.text==='Open'));
+        if(exit){
+            if(!(await s.bot.interactLoc(exit,'Open')).success)throw Error('no farm route progress: room exit refused');
+            if(!await waitUntil(s,()=>!s.sdk.getState()?.nearbyLocs.some(l=>l.x===exit.x&&l.z===exit.z&&l.id===exit.id&&l.optionsWithIndex.some(o=>o.text==='Open')),{timeoutTicks:8}))
+                throw Error('no farm route progress: room exit unconfirmed');
+        }
+    }
+    const result=await walkPath(await sessionWalker(s),[{...t,tol}],{maxTicks:180,stop});
+    if(!result.ok)throw Error(`no farm route progress: ${result.detail}`);
+    return result;
+}
+
+// SDK eat success can mean HP regeneration alone. Count an observed item use,
+// including a cake changing ID, before crediting consumption.
+export async function farmEatReceipt(d:{itemId:number;count:()=>number;hp:()=>number;tick:()=>number;
+    eat:()=>Promise<{success:boolean}>;wait:()=>Promise<unknown>;log:(line:string)=>void}):Promise<boolean> {
+    const before=d.count(),hpBefore=d.hp(),tickBefore=d.tick();
+    let sdkSuccess=false,error:string|undefined;
+    try { sdkSuccess=(await d.eat()).success; } catch { error='dispatch-or-observation-failed'; }
+    if(d.count()===before)try { await d.wait(); } catch { error??='observation-timeout'; }
+    const after=d.count(),consumed=before-after;
+    const confirmed=before>0&&consumed===1;
+    d.log('EAT_RECEIPT '+JSON.stringify({itemId:d.itemId,before,after,consumed,confirmed,sdkSuccess,
+        hpBefore,hpAfter:d.hp(),tickBefore,tickAfter:d.tick(),...(error?{error}:{})}));
+    return confirmed;
+}
+
+export async function farmFinishCheckpoint(d:{ok:boolean;died:()=>boolean;coins:()=>number;bank:()=>Promise<void>}):Promise<void> {
+    if(!d.ok||d.died())return;
+    // A queued pickpocket can settle during logout. Moving to the bank ends
+    // that interaction; capture final counters only after its coins are stored.
+    await d.bank();
+    if(d.died()||d.coins()!==0)throw Error(`no goldfarm progress: final coin deposit unobserved died=${d.died()}`);
+}
+
+// One owner emits the result and logs out. A thrown failure stays a failure
+// even if this single, separately routed bank recovery stores its income.
+export async function farmErrorCheckpoint(error: unknown, supported: () => boolean, bank: () => Promise<void>) {
+    const reason = String(error);
+    if (!supported()) return { reason, recovery: 'unsupported' };
+    try { await bank(); return { reason, recovery: 'banked' }; }
+    catch (recoveryError) { return { reason, recovery: `failed: ${String(recoveryError)}` }; }
+}
+
+type FarmSettlement = { tick: number; coins: number; xp: number; busy: boolean; inFlight: boolean; available: boolean };
+// Same-tile lite walks emit no packet. Adapt the existing imp worker's observed
+// adjacent-step cancellation, using this worker's farm boundary and shared planner.
+export function farmPickCancellation(s: Pick<Session,'sdk'|'direct'>,
+    planner: () => Promise<{plan:(level:number,from:Tile,to:Tile)=>Tile[]}>) {
+    let target: Tile | undefined;
+    let sent = false, confirmed = false;
+    return async (): Promise<boolean> => {
+        const p=s.sdk.getState()?.player;
+        if(!p||p.level!==0)return false;
+        if(confirmed)return true;
+        if(sent&&target&&p.worldX===target.x&&p.worldZ===target.z){confirmed=true;return true;}
+        if(!target){
+            const from={x:p.worldX,z:p.worldZ},route=await planner();
+            for(const [dx,dz] of [[1,0],[-1,0],[0,1],[0,-1]]){
+                const to={x:from.x+dx!,z:from.z+dz!};
+                if(Math.max(Math.abs(to.x-KNIGHT_SPOT.x),Math.abs(to.z-KNIGHT_SPOT.z))>ARDOUGNE_RADIUS)continue;
+                const path=route.plan(p.level,from,to);
+                if(path.length===1&&path[0]!.x===to.x&&path[0]!.z===to.z){target=to;break;}
+            }
+        }
+        if(!target)return false;
+        const reply=await s.direct({type:'walkTo',x:target.x,z:target.z,running:false,reason:'SDK'}) as {success?:boolean};
+        sent ||= reply?.success===true;
+        // Dispatch acceptance alone never proves that a delayed server cleared its target.
+        return false;
+    };
+}
+// Rev289 MoveClickHandler clears pending interaction unless the player is delayed.
+// Retry that cancellation while draining the delayed pick/stun. Ten quiet ticks
+// exceed the knight's eight-tick stun; fresh ticks and both counters must agree.
+// A stopped stream, rejected cancellation or hard cap yields unknown accounting.
+export async function farmSettlePicks(d: {
+    read: () => FarmSettlement; cancel: () => Promise<boolean>; wait: () => Promise<boolean>;
+}): Promise<FarmSettlement & { exact: boolean }> {
+    let previous = d.read(), quiet = 0;
+    const started = previous.tick;
+    try {
+        for (let elapsed = 0; elapsed < 32; elapsed++) {
+            if (!previous.available) break;
+            const cancelled = await d.cancel();
+            if (!await d.wait()) break;
+            const current = d.read();
+            if (current.tick <= previous.tick || current.tick - started > 32 || !current.available) { previous = current; break; }
+            quiet = current.tick === previous.tick + 1 && cancelled && !previous.busy && !previous.inFlight && !current.busy && !current.inFlight
+                && Number.isSafeInteger(current.coins) && Number.isFinite(current.xp)
+                && current.coins === previous.coins && current.xp === previous.xp ? quiet + 1 : 0;
+            previous = current;
+            if (quiet >= 10) return { ...current, exact: true };
+        }
+    } catch { /* The session owner still logs out, with accounting explicitly unknown. */ }
+    return { ...previous, exact: false };
+}
 
 export interface FoodDef {
     pattern: RegExp;
@@ -40,7 +158,12 @@ export const FOOD_DEFS: FoodDef[] = [
     { pattern: /^trout$/i, heal: 7 },
     { pattern: /^salmon$/i, heal: 9 },
     { pattern: /^lobster$/i, heal: 12 },
+    // consume_normal.dbrow: consumable,shark -> stat_heal,hitpoints,20.
+    { pattern: /^shark$/i, heal: 20 },
 ];
+
+// Owned low-tier fish first; premium sharks only after cheaper stock is gone.
+export const WITHDRAW_FOOD = [/^trout$/i, /^salmon$/i, /^lobster$/i, /^bread$/i, /^cake$/i, /^shark$/i];
 
 export const isFoodItem = (i: any) =>
     FOOD_DEFS.some(d => d.pattern.test(i.name)) &&
@@ -75,11 +198,12 @@ export const calcEatAt = (maxHp: number): number =>
 
 // The farm runs only where it stands: Ardougne market, ground level. A thief that starts elsewhere (a respawn in
 // Lumbridge, a Draynor bank) must not walk here on its own: on 2026-10-25 a 10 HP thief with no food walked from
-// Draynor through Taverley toward the bank and died on the way. The radius covers bank, knights, stall and shop.
+// Draynor through Taverley toward the bank and died on the way. Cover both storage and roaming knights.
 export const ARDOUGNE_RADIUS = 40;
 export function farmStartProblem(p: { worldX: number; worldZ: number; level: number } | null | undefined, thieving: number): string | null {
     if (!p) return 'no goldfarm progress: position unknown';
-    if (p.level !== 0 || Math.max(Math.abs(p.worldX - BANK_SPOT.x), Math.abs(p.worldZ - BANK_SPOT.z)) > ARDOUGNE_RADIUS)
+    if (p.level !== 0 || [BANK_SPOT, KNIGHT_SPOT].every(spot =>
+        Math.max(Math.abs(p.worldX - spot.x), Math.abs(p.worldZ - spot.z)) > ARDOUGNE_RADIUS))
         return `no goldfarm progress: start in Ardougne market, not ${p.worldX},${p.worldZ},${p.level}`;
     // The knights need Thieving 55. Below it the farm looks for men and women, and none stand at the market: a
     // Thieving 1 account idled all 2400 ticks on 2026-10-25 and still reported ok.
@@ -87,13 +211,34 @@ export function farmStartProblem(p: { worldX: number; worldZ: number; level: num
     return null;
 }
 
-// The Baker's stall only with food in the pack. Full HP is not enough: on 2026-10-25 at 06:5x Pocketrocket entered
-// it at 10/10 HP with no food and died before its first steal (host-Pocketrocket.log, stolen=0 refused=0). Without
-// food the thief waits at the bank for the courier instead (IDLE_LIMIT ends that wait as "no food", resumable).
-export const stallAllowed = (_hp: number, _maxHp: number, food: number): boolean => food > 0;
+// Recovery has no shop or stall operation. With one food, mmtha0205 died at the bakery before a steal.
+export async function replenishFarmFood(refill: () => Promise<void>, food: () => number, receive: () => Promise<void>): Promise<void> {
+    await refill();
+    if (food() < 2) await receive();
+}
 
-// Ends a run that has stood still: this many ticks with no pickpocket at all is a stuck farm, not a slow one.
+// Bound waits without useful work. Food recovery is work too; walking and empty bank checks are not.
 export const IDLE_LIMIT = 300;
+
+export function foodWaitLimit(courier: string, status: any, now: number, service?: any): number {
+    // No courier configured: nothing can arrive, so an exhausted supply exits at once instead of idling.
+    if (!courier) return 0;
+    const active = courier && typeof status?.name === 'string' && status.name.toLowerCase() === courier.toLowerCase()
+        && status.server === 'rs-sdk-demo.fly.dev' && status.role === 'courier' && !status.result
+        && Number.isFinite(status.at) && now - status.at >= 0 && now - status.at < 30_000;
+    const scheduled = courier && Number.isFinite(service?.at) && now - service.at >= 0 && now - service.at < 30_000
+        && Array.isArray(service.jobs) && service.jobs.some((j: any) => typeof j?.account === 'string'
+            && j.account.toLowerCase() === courier.toLowerCase() && j.script === 'scripts/foodcourier.ts'
+            && j.enabled === true && typeof j.state === 'string' && /^(running|starting|waiting[: ])/.test(j.state));
+    return active || scheduled ? 1500 : IDLE_LIMIT;
+}
+
+type FarmProgress = { picks: number; fails: number; food: number };
+export function farmProgressTick(last: number, tick: number, before: FarmProgress, after: FarmProgress): number {
+    // picks includes failed attempts. Damage is activity, not useful output.
+    const successes = (p: FarmProgress) => p.picks - p.fails;
+    return successes(after) > successes(before) || after.food > before.food ? tick : last;
+}
 
 // The courier is in view and the last answer is old enough. Exact name match: a stranger never opens a trade.
 export const COURIER_COOLDOWN = 60;
@@ -107,10 +252,15 @@ export function courierCheckDue(tick: number, lastCheck: number, courier: string
 
 if (import.meta.main) {
     console.log(`ERR-TRACE opening ${process.argv[2]}`);
-    const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
-
+    let errorEnd: ((error: unknown) => Promise<never>) | undefined;
+    const s = await openBot(process.argv[2]!, {
+        onStop: (session, detail) => errorEnd ? errorEnd(detail) : finish([session], false, detail),
+        onSessionEnd: (session, detail) => errorEnd ? errorEnd(detail) : finish([session], false, detail),
+    }).catch(e => finish([], false, `login: ${String(e)}`));
     try {
-        await waitTicks(s, 5);
+        const farmServer = serverFromEnv(readFileSync(join(import.meta.dir, '..', 'vendor', 'rs-sdk', 'bots', s.name, 'bot.env'), 'utf8'));
+        if (!await waitUntil(s, () => !!s.sdk.getState()?.player && (s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0,
+            { timeoutTicks: 40 })) throw Error('no goldfarm progress: entry state deadline');
         const st = () => s.sdk.getState();
         const pos = () => st()?.player;
         const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
@@ -129,29 +279,20 @@ if (import.meta.main) {
         const now = () => s.tick() - t0;
         const coins0 = coins();
         const stopFile = `.practice/stop-${process.argv[2]}`;
-        const stealFile = join(import.meta.dir, '..', '.practice', 'goldfarm', `steal-${process.argv[2]}.json`);
 
-        let lastStealTick = -100_000;
-        let lastStealEpoch = 0;
-        try {
-            lastStealEpoch = JSON.parse(readFileSync(stealFile, 'utf8')).at ?? 0;
-        } catch { /* none */ }
-
-        const saveSteal = () => {
-            lastStealEpoch = Date.now();
-            try {
-                mkdirSync(dirname(stealFile), { recursive: true });
-                writeFileSync(stealFile, JSON.stringify({ at: lastStealEpoch }));
-            } catch { /* best effort */ }
-        };
-
-        let picks = 0, noops = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
+        const eatenById: Record<number, number> = {};
+        let picks = 0, unsettledChecks = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
         let bankFails = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0;
+        let knownBankFood: number | undefined, lastProactiveTrade = -120;
         let shopTrips = 0, shopTicks = 0, bought = 0;
         let hpMin = hp(), died = false, bankEmpty = false, lastFail = '', lastPickTick = s.tick(), lastCourierCheck = -100_000;
+        let progress = { picks, fails, food: foodCount() };
         let last = pos();
 
         const off = s.onTick(() => {
+            const next = { picks, fails, food: foodCount() };
+            lastPickTick = farmProgressTick(lastPickTick, s.tick(), progress, next);
+            progress = next;
             const p = pos();
             hpMin = Math.min(hpMin, hp());
             if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
@@ -159,17 +300,78 @@ if (import.meta.main) {
             last = p;
         });
 
-        const end = async (ok: boolean, why: string): Promise<never> => {
+        let ending: Promise<never> | undefined;
+        let stoppingPicks = false, pickInFlight = false;
+        const tail: unknown[] = [];
+        const trace = (event: string) => {
+            const p = pos();
+            const row = {event,tick:s.tick(),coins:coins(),xp:s.sdk.getSkill('Thieving')?.experience,
+                hp:hp(),anim:p?.animId,spotanim:p?.spotanimId,x:p?.worldX,z:p?.worldZ,pickInFlight};
+            tail.push(row);if(tail.length>24)tail.shift();
+            return row;
+        };
+        const finalize = async (ok: boolean, why: string, thrown = false): Promise<never> => {
+            stoppingPicks = true;
+            trace('end');
+            let recovery = 'not-needed';
+            try { await farmFinishCheckpoint({ok,died:()=>died,coins,bank:()=>refill()}); }
+            catch (error) { ok = false; why = String(error); thrown = true; }
+            if (thrown) {
+                ok = false;
+                const outcome = await farmErrorCheckpoint(why,
+                    () => !died && hp() > 0 && !existsSync(stopFile)
+                        && farmStartProblem(pos(), s.sdk.getSkill('Thieving')?.baseLevel ?? 0) === null,
+                    async () => {
+                        // Recenter through the market rather than retrying the failed bank leg.
+                        const p = pos();
+                        if (p && cheb(BANK_SPOT, p) > 4) await walk(KNIGHT_SPOT, 0);
+                        await refill(true);
+                        if (coins() !== 0) throw Error('recovery coin deposit unobserved');
+                    });
+                recovery = outcome.recovery;
+            }
+            // Keep the proved entry/bank recovery before the local cancellation
+            // step, so moving one tile cannot hide the recorded house exit.
+            trace('recovery-complete');
+            console.log('GOLDFARM_TAIL '+JSON.stringify(tail));
+            const cancelPick=farmPickCancellation(s,()=>sessionWalker(s));
+            const settlement = await farmSettlePicks({
+                read: () => {
+                    const p = pos(), xp = s.sdk.getSkill('Thieving')?.experience;
+                    return {tick:s.tick(),coins:coins(),xp:xp ?? NaN,inFlight:pickInFlight,
+                        busy:!p || p.animId !== -1 || p.spotanimId !== -1,
+                        available:st()?.inGame === true && !!p && !died && hp()>0};
+                },
+                cancel: cancelPick,
+                wait: async () => {
+                    const before=s.tick();
+                    const fresh=await waitUntil(s,()=>s.tick()>before,{timeoutTicks:1});
+                    console.log('GOLDFARM_SETTLE '+JSON.stringify(trace('settle')));
+                    return fresh;
+                },
+            });
+            if (!settlement.exact && ok) {ok=false;why='pick settlement unconfirmed';}
+            if (ok && coins() !== 0) {ok=false;why='final coin deposit unobserved after settlement';}
+            // The client cache freezes at logout. Capture only after cancelling
+            // and observing the pick drain, before the session owner logs out.
+            const packCoins = coins(), gained = banked + packCoins - coins0;
+            return finish([s], ok, finalOk => {
             off();
             const ticks = now();
-            const gained = banked + coins() - coins0;
             const p = pos();
-            const detail = `ticks=${ticks} picks=${picks} fails=${fails} noops=${noops} coinsGained=${gained} coinsPerTick=${(gained / Math.max(1, ticks)).toFixed(2)} `
+            const detail = `ticks=${ticks} picks=${picks} fails=${fails} unsettledChecks=${unsettledChecks} coinsGained=${settlement.exact?gained:'unknown'} coinsPerTick=${settlement.exact?(gained / Math.max(1, ticks)).toFixed(2):'unknown'} `
                 + `eaten=${eaten} bankTrips=${bankTrips} bankTicks=${bankTicks} walkTicks=${walkTicks} idleTicks=${idleTicks} eatTicks=${eatTicks} `
                 + `stallTrips=${stallTrips} stallTicks=${stallTicks} stolen=${stolen} refused=${refused} shopTrips=${shopTrips} shopTicks=${shopTicks} bought=${bought} `
-                + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${coins()} food=${foodCount()} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level}`;
-            return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
+                + `hpMin=${hpMin} died=${died} banked=${banked} packCoins=${packCoins} coinsExact=${settlement.exact} food=${foodCount()} hp=${hp()} at=${p?.worldX},${p?.worldZ},${p?.level} recovery=${recovery}`;
+            console.log('GOLDFARM_RESULT ' + JSON.stringify({ ok:finalOk, reason: ok && !finalOk ? 'logout or session close failed' : ok ? '' : why, ticks, picks, fails, coinsGained: settlement.exact ? gained : null, banked,
+                packCoins, coinsExact:settlement.exact, coinsGainedObserved:gained, coins0, newBankedCoins: Math.max(0, banked - coins0), recovery, unbankedCoins: packCoins, eaten, eatenById, food: foodCount(), idleTicks, bankTrips, hpMin, hp: hp(), died,
+                randomEvents: process.env.RANDOM_EVENTS !== '0', at: p ? { x: p.worldX, z: p.worldZ, level: p.level } : null }));
+            return ok ? detail : `${why} ${detail} last=${lastFail}`;
+            });
         };
+        const end = (ok: boolean, why: string, thrown = false): Promise<never> =>
+            ending ??= finalize(ok, why, thrown);
+        errorEnd = error => end(false, String(error), true);
 
         const eat = async (): Promise<boolean> => {
             const e0 = s.tick();
@@ -180,29 +382,31 @@ if (import.meta.main) {
                 await waitTicks(s, 1);
                 return false;
             }
-            const r = await s.bot.eatFood(pick);
+            const count=()=>inv().filter(i=>i.id===pick.id).reduce((sum,i)=>sum+i.count,0);
+            const before=count();
+            const consumed=await farmEatReceipt({itemId:pick.id,count,hp,tick:()=>s.tick(),
+                eat:()=>s.bot.eatFood(pick),
+                wait:()=>s.sdk.waitForCondition(st=>st.inventory.filter(i=>i.id===pick.id).reduce((sum,i)=>sum+i.count,0)<before,2000),
+                log:line=>console.log(line)});
             eatTicks += s.tick() - e0;
-            if (r.success) {
+            if (consumed) {
                 eaten++;
+                eatenById[pick.id] = (eatenById[pick.id] ?? 0) + 1;
             } else {
-                lastFail = `eat:${r.message}`;
+                lastFail = 'eat: consumption unconfirmed';
                 if (s.tick() === e0) await waitTicks(s, 1);
             }
-            return r.success;
+            return consumed;
         };
 
         const walk = async (t: Tile, tol: number) => {
+            trace(`walk:${t.x},${t.z}`);
             const w0 = s.tick();
-            for (let i = 0; i < 3 && !died; i++) {
-                const p = pos();
-                if (p && cheb(t, p) <= tol + 1) break;
-                const r = await s.bot.walkTo(t.x, t.z, tol);
-                if (!r.success) lastFail = `walk:${r.message}`;
-            }
-            walkTicks += s.tick() - w0;
+            try { await farmWalk(s,t,tol,()=>died); }
+            finally { walkTicks += s.tick() - w0; }
         };
 
-        const refill = async () => {
+        const refill = async (bankOnly = false) => {
             bankTrips++;
             await walk(BANK_SPOT, 2);
             const b0 = s.tick();
@@ -210,19 +414,20 @@ if (import.meta.main) {
                 const o = await s.bot.openBank();
                 if (!o.success) {
                     lastFail = `bank:${o.message}`;
+                    if (bankOnly) throw Error(`no recovery bank progress: ${o.message}`);
                     if (++bankFails >= 3) bankEmpty = true;
                     return;
                 }
                 bankFails = 0;
                 const c = coins();
                 if (c > 0) {
-                    const d = await s.bot.depositItem(COINS, -1);
-                    if (d.success) banked += d.amountDeposited ?? c;
-                    else lastFail = `deposit coins:${d.message}`;
+                    const item = inv().find(i => COINS.test(i.name));
+                    if (!item) throw Error('no deposit progress: coins missing');
+                    banked += await depositObserved(s, item);
                 }
+                if (bankOnly) { await s.bot.closeBank(); return; }
                 for (const n of notes()) {
-                    const d = await s.bot.depositItem(n, -1);
-                    if (!d.success) lastFail = `deposit notes:${d.message}`;
+                    await depositObserved(s, n);
                 }
 
                 // Deposit all unneeded items: anything that is NOT edible food and NOT coins (vials, ropes, tools, arrows, logs)
@@ -232,8 +437,6 @@ if (import.meta.main) {
                     if (d.success) console.log(`BANKED unneeded item: ${item}`);
                 }
 
-                // Withdraw food: fish first, then bread, then cake
-                const WITHDRAW_FOOD = [/^trout$/i, /^salmon$/i, /^lobster$/i, /^bread$/i, /^cake$/i];
                 for (const re of WITHDRAW_FOOD) {
                     const inBank = s.sdk.findBankItem(re);
                     const room = 28 - inv().length - KEEP_FREE;
@@ -243,15 +446,8 @@ if (import.meta.main) {
                 }
 
                 const totalBankFood = WITHDRAW_FOOD.reduce((n, re) => n + (s.sdk.findBankItem(re)?.count ?? 0), 0);
+                knownBankFood = totalBankFood;
                 bankEmpty = totalBankFood === 0;
-
-                // If bank has no food, withdraw 100-300 coins to buy bread/cake at the bakery shop
-                const bankCoins = s.sdk.findBankItem(COINS);
-                if (bankEmpty && coins() < 100 && bankCoins && bankCoins.count > 0) {
-                    const n = Math.min(300 - coins(), bankCoins.count);
-                    const w = await s.bot.withdrawItem(bankCoins, n);
-                    if (w.success) banked -= w.amountWithdrawn ?? n;
-                }
 
                 console.log(`BANK trip=${bankTrips} banked=${banked} food=${foodCount()} bankFood=${totalBankFood} coins=${coins()} t=${now()}`);
                 await s.bot.closeBank();
@@ -272,170 +468,20 @@ if (import.meta.main) {
             // Serve while the courier stays in view (up to 45 s): it hands out to each farmer in turn, so a 5 s window
             // ended before its request came (2026-10-25: every hand-out failed). Leave as soon as it walks off.
             const inView = () => (st()?.nearbyPlayers ?? []).some((p: any) => re.test(p.name));
-            const r = await s.bot.serveTrades({ from: re, maxTrades: 1, timeout: 45_000, until: () => !inView() || existsSync(stopFile) });
+            await refill();
+            const r = await receiveHandoff(s, FOOD_FROM, farmServer, () => s.bot.serveTrades({ from: re, maxTrades: 1, timeout: 45_000, until: () => !inView() || existsSync(stopFile) }));
+            // Share the completed attempt across quick and proactive entry paths.
+            lastProactiveTrade = s.tick();
+            lastCourierCheck = s.tick();
             const got = r.trades.some(t => t.success);
             console.log(`COURIER ${got ? 'received' : 'no trade'} food=${foodCount()} notes=${notes().length} t=${now()}`);
             // Bank only what arrived (notes -> food); a no-trade wait has nothing to bank.
             if (got) await refill();
         };
 
-        // Buy bread and cakes from Baker's shop in Ardougne market
-        const shopTrip = async () => {
-            shopTrips++;
-            const before = foodCount();
-            await walk(STALL_SPOT, 2);
-            const q0 = s.tick();
-            try {
-                const o = await s.bot.openShop(BAKER);
-                if (!o.success) {
-                    lastFail = `shop:${o.message}`;
-                    console.log(`WARN shop trip=${shopTrips} ${o.message} t=${now()}`);
-                    return;
-                }
-                let free = 28 - inv().length - KEEP_FREE;
-                let money = coins();
-                let sent = 0;
-                const shopItems = (st()?.shop?.shopItems ?? []) as any[];
-                for (const item of shopItems) {
-                    if (!/^(bread|cake|chocolate slice)$/i.test(item.name) || item.count <= 0) continue;
-                    const price = Math.max(1, item.buyPrice || 12);
-                    let n = Math.min(item.count, free, Math.floor(money / price));
-                    if (n <= 0) continue;
-                    free -= n;
-                    money -= n * price;
-                    for (const chunk of [10, 5, 1]) {
-                        while (n >= chunk) {
-                            await s.direct({ type: 'shopBuy', slot: item.slot, amount: chunk, reason: 'SDK' } as any);
-                            n -= chunk;
-                            // At most 5 buy packets per tick, as scripts/goldfarm.ts and generated/thieving60.ts send.
-                            if (++sent % 5 === 0) await waitTicks(s, 1);
-                        }
-                    }
-                    if (free <= 0) break;
-                }
-                await waitTicks(s, 1);
-                await s.direct({ type: 'closeShop', reason: 'SDK' } as any);
-                const got = foodCount() - before;
-                bought += Math.max(0, got);
-                console.log(`SHOP trip=${shopTrips} food=${foodCount()} bought=${bought} t=${now()}`);
-            } finally {
-                shopTicks += s.tick() - q0;
-            }
-        };
-
-        // Steal bread and cakes from Baker's stall from safe side tiles
-        const stallTrip = async () => {
-            stallTrips++;
-            await walk(STALL_SPOT, 2);
-            const s0 = s.tick();
-            const hpAtStall = hp();
-            const badUntil = new Map<string, number>();
-            const key = (t: Tile) => `${t.x},${t.z}`;
-            const d = (a: Tile, b: Tile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
-
-            try {
-                while (foodCount() < STALL_FILL && 28 - inv().length > KEEP_FREE && s.tick() - s0 < 200 && !died && now() < TICKS) {
-                    if (existsSync(stopFile)) return;
-                    if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
-                    if (hp() <= eatAt() && foodCount() > 0) { await eat(); continue; }
-                    // No food and any hit taken: leave at once, before the guard's next hits.
-                    if (foodCount() === 0 && hp() < hpAtStall) { lastFail = 'stall: hit with no food, retreat'; break; }
-
-                    const npcs = (st()?.nearbyNpcs ?? []) as any[];
-                    const guards = npcs.filter(n => GUARD.test(n.name)).map(n => ({ x: n.x, z: n.z }));
-                    const bakers = npcs.filter(n => BAKER.test(n.name)).map(n => ({ x: n.x, z: n.z }));
-                    const locs = (st()?.nearbyLocs ?? []) as any[];
-
-                    const me = pos();
-                    if (!me) { await waitTicks(s, 1); continue; }
-                    const here = { x: me.worldX, z: me.worldZ };
-
-                    const stallLoc = locs.find(l => /^baker'?s stall$/i.test(l.name) || (l.id === 2561 && cheb(STALL_SPOT, l) <= 6));
-                    if (!stallLoc) {
-                        await waitTicks(s, 2);
-                        continue;
-                    }
-
-                    const sides: Tile[] = [
-                        { x: stallLoc.x - 1, z: stallLoc.z },
-                        { x: stallLoc.x + 1, z: stallLoc.z },
-                        { x: stallLoc.x, z: stallLoc.z - 1 },
-                        { x: stallLoc.x, z: stallLoc.z + 1 },
-                        { x: stallLoc.x, z: stallLoc.z + 2 },
-                        { x: stallLoc.x - 1, z: stallLoc.z + 1 },
-                    ];
-
-                    // Safe tile: no guards within 5 tiles with line of sight (guards hunt at radius 5)
-                    const safeTiles = sides.filter(t => {
-                        if ((badUntil.get(key(t)) ?? 0) > s.tick()) return false;
-                        if (guards.some(g => d(g, t) <= 5)) return false;
-                        const bakerD = Math.min(99, ...bakers.map(b => d(b, t)));
-                        return bakerD > 5 || t.z > stallLoc.z; // North side of stall obstructs Baker view
-                    });
-
-                    if (safeTiles.length === 0) {
-                        await waitTicks(s, 1);
-                        continue;
-                    }
-
-                    safeTiles.sort((a, b) => d(a, here) - d(b, here));
-                    const best = safeTiles[0]!;
-
-                    if (d(best, here) > 0) {
-                        await s.bot.walkTo(best.x, best.z, 0, { timeout: 4000 });
-                        const p = pos();
-                        if (!p || p.worldX !== best.x || p.worldZ !== best.z) {
-                            badUntil.set(key(best), s.tick() + 15);
-                        }
-                        continue;
-                    }
-
-                    const op = stallLoc.optionsWithIndex.find((o: any) => /steal/i.test(o.text))?.opIndex ?? 2;
-                    const before = foodCount();
-                    await s.direct({ type: 'interactLoc', x: stallLoc.x, z: stallLoc.z, locId: stallLoc.id, optionIndex: op, reason: 'SDK' } as any);
-                    let got = false;
-                    for (let i = 0; i < 3 && !got; i++) {
-                        await waitTicks(s, 1);
-                        got = foodCount() > before;
-                    }
-                    if (got) {
-                        stolen++;
-                        lastStealTick = s.tick();
-                        lastStealEpoch = Date.now();
-                        saveSteal();
-                    } else {
-                        refused++;
-                        badUntil.set(key(best), s.tick() + 6);
-                    }
-                }
-            } finally {
-                stallTicks += s.tick() - s0;
-                console.log(`STALL trip=${stallTrips} food=${foodCount()} stolen=${stolen} refused=${refused} t=${now()}`);
-            }
-        };
-
-        // Self-sufficient food replenish pipeline: Bank -> Courier -> Shop -> Stall
-        const replenishFood = async () => {
-            await refill();
-            if (foodCount() >= 2) return;
-
-            await quickCourierCheck();
-            if (foodCount() >= 2) return;
-
-            const shopSafe = (s.tick() - lastStealTick > 1520) && (Date.now() - lastStealEpoch > 1520 * 400);
-            // The Baker's shop stands at the stall. With no food in the pack, stay away from both: Pocketrocket died at
-            // 10/10 HP on the way to the shop at 2655,3316 with food=0 (2026-10-25, third death there with no food).
-            if (shopSafe && foodCount() > 0 && (coins() >= 12 || !bankEmpty)) {
-                await shopTrip();
-                if (foodCount() >= 2) return;
-            }
-
-            // With no food, the stall is only safe at full HP: a guard that catches the thief keeps hitting, and two
-            // live thieves died at the stall on 2026-10-25 with no food (hp 4-7). Below that, wait at the bank: HP
-            // comes back on its own and the courier may arrive.
-            if (!stallAllowed(hp(), maxHp(), foodCount())) return;
-            await stallTrip();
-        };
+        // Banked food and the authenticated owned courier are the food supply.
+        // Do not return a food-poor thief to the bakery: mmtha0205 died there with one food on 2026-10-25.
+        const replenishFood = () => replenishFarmFood(refill, foodCount, quickCourierCheck);
 
         // Inside the 8-tick stun after a fail, eat immediately if HP is at or below safe threshold
         const onStun = async () => {
@@ -448,6 +494,7 @@ if (import.meta.main) {
 
         // One pickpocket attempt
         const steal = async () => {
+            if(stoppingPicks)return;
             // NEVER pickpocket if HP <= 3 (1 hit away from death)
             if (hp() <= DMG) {
                 if (foodCount() > 0) {
@@ -465,12 +512,10 @@ if (import.meta.main) {
             const thiev = s.sdk.getSkill('Thieving')?.level ?? 1;
             const targetPattern = thiev >= 55 ? KNIGHT : /^(man|woman)$/i;
 
-            const npc = (st()?.nearbyNpcs ?? [])
-                .filter((n: any) => targetPattern.test(n.name) && !avoid?.has(n.index) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= RANGE))
-                .sort((a: any, b: any) => a.distance - b.distance)[0] as any;
+            const { npc, recenter, tol } = farmPickTarget(st()?.nearbyNpcs ?? [], p, avoid, targetPattern);
 
             if (!npc) {
-                if (p && cheb(KNIGHT_SPOT, p) > RANGE) await walk(KNIGHT_SPOT, 3);
+                if (recenter) await walk(KNIGHT_SPOT, tol);
                 else { idleTicks++; await waitTicks(s, 1); }
                 return;
             }
@@ -479,20 +524,24 @@ if (import.meta.main) {
             if (op === undefined) { idleTicks++; await waitTicks(s, 1); return; }
 
             const hp0 = hp(), c0 = coins();
+            if(stoppingPicks)return;
+            pickInFlight=true;
+            trace('pick-dispatch');
+            try {
             await s.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: op, reason: 'SDK' } as any);
             await waitTicks(s, 2);
 
             if (hp() < hp0) {
                 picks++;
                 fails++;
-                lastPickTick = s.tick();
                 await onStun();
             } else if (coins() > c0) {
                 picks++;
                 lastPickTick = s.tick();
             } else {
-                noops++;
+                unsettledChecks++;
             }
+            } finally {pickInFlight=false;trace(hp()<hp0?'pick-stun':'pick-observed');}
         };
 
         console.log(`GOLDFARM ticks=${TICKS} eatAt=${eatAt()} maxHp=${maxHp()} food=${foodCount()} notes=${notes().length} coins=${coins0}`);
@@ -513,26 +562,74 @@ if (import.meta.main) {
         }
 
         let nextMark = 1000;
-        while (now() < TICKS && !died) {
+        let foodWaitingSince: number | undefined;
+        while (now() < TICKS && !died && !stoppingPicks) {
             if (existsSync(stopFile)) await end(false, 'stop file');
             if (now() >= nextMark) {
                 console.log(`MILESTONE t=${now()} banked=${banked} packCoins=${coins()} food=${foodCount()} picks=${picks} fails=${fails} eaten=${eaten}`);
                 nextMark += 1000;
             }
             if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
+            if(FUND_COURIER&&pendingCourierFunding(s.name,FUND_COURIER,farmServer)){
+                await walk(BANK_SPOT,2);
+                const funded=await serviceCourierFunding(s,FUND_COURIER,farmServer);
+                if(funded?.state==='unknown')throw Error('no courier progress: funding settlement uncertain');
+                await refill();
+                // The food rendezvous below runs before returning to work, so a hungry funder stays visible.
+            }
+            // Meet real owned cargo before the pack empties. The courier and controller use an 80-fish buffer.
+            if (FOOD_FROM && (knownBankFood === undefined || knownBankFood + foodCount() < 80)) {
+                let courier: any;
+                if (/^[A-Za-z0-9_ -]{1,12}$/.test(FOOD_FROM)) {
+                    try { courier = JSON.parse(readFileSync(join(import.meta.dir, '..', '.practice', 'status', `${FOOD_FROM}.json`), 'utf8')); } catch { /* no cargo observation */ }
+                }
+                if (courierFoodReady(courier, FOOD_FROM, farmServer, ownedAccounts(farmServer), Date.now(), s.tick(), lastProactiveTrade)) {
+                    await walk(BANK_SPOT, 2);
+                    const fundingPending=()=>!!FUND_COURIER&&pendingCourierFunding(s.name,FUND_COURIER,farmServer);
+                    const receipt = await receiveFoodAtBank(s, FOOD_FROM, 45_000, refill, () => foodCount() >= 2, fundingPending, farmServer);
+                    // Funding and food use the same partner. Finish the cash request before accepting food.
+                    if(fundingPending())continue;
+                    lastProactiveTrade = s.tick();
+                    lastCourierCheck = s.tick();
+                    console.log(`COURIER proactive incoming=${receipt.incoming} food=${foodCount()} t=${now()}`);
+                    if (receipt.available) await walk(KNIGHT_SPOT, 3);
+                }
+            }
             // The courier walks to the knights when the thief is not at the bank (scripts/foodcourier.ts): answer it
             // while it stands in view, at most once per COURIER_COOLDOWN ticks, so a departing courier costs little.
             if (foodCount() < COURIER_WANT_BELOW && courierCheckDue(s.tick(), lastCourierCheck, FOOD_FROM, st()?.nearbyPlayers ?? [])) {
-                lastCourierCheck = s.tick();
                 await quickCourierCheck();
-                lastPickTick = Math.max(lastPickTick, s.tick() - IDLE_LIMIT / 2);
+                lastCourierCheck = s.tick();
+            }
+            // Food-poor thieves wait at storage. A live courier gets one bounded delivery window.
+            // Empty bank checks, walking and unsuccessful trade attempts never renew this window.
+            if (foodCount() < 2 && bankEmpty) {
+                if (foodWaitingSince === undefined) {
+                    foodWaitingSince = s.tick();
+                    console.log(`MILESTONE waiting-for-food food=${foodCount()} t=${now()}`);
+                }
+                if (hp() <= eatAt() && foodCount() > 0) await eat();
+                await walk(BANK_SPOT, 2);
+                let courierStatus: any, courierService: any;
+                if (/^[A-Za-z0-9_ -]{1,12}$/.test(FOOD_FROM)) {
+                    try { courierStatus = JSON.parse(readFileSync(join(import.meta.dir, '..', '.practice', 'status', `${FOOD_FROM}.json`), 'utf8')); } catch { /* unavailable courier gets only the short wait */ }
+                    try { courierService = JSON.parse(readFileSync(join(import.meta.dir, '..', '.practice', 'swarm-state.json'), 'utf8')); } catch { /* unavailable controller does not extend the wait */ }
+                }
+                const limit = foodWaitLimit(FOOD_FROM, courierStatus, Date.now(), courierService);
+                if (s.tick() - foodWaitingSince >= limit) {
+                    // Pack coins from the last picks are income: store them before the supply exit.
+                    if (coins() > 0) await refill();
+                    await end(false, `no food supply: waited ${limit} ticks at bank`);
+                }
+                await waitTicks(s, 2);
                 continue;
             }
+            foodWaitingSince = undefined;
             // A farm that stands still logs out instead of burning playtime (a waiting-for-food bank stay counts too).
             // No food at all reads as "no food" (supervisors: stopped, resumable); anything else is a stuck farm (blocked).
             if (s.tick() - lastPickTick >= IDLE_LIMIT) await end(false, foodCount() === 0
-                ? `no food: waited ${IDLE_LIMIT} ticks with no pickpocket and no food`
-                : `no goldfarm progress: idle ${IDLE_LIMIT} ticks with no pickpocket`);
+                ? `no food: waited ${IDLE_LIMIT} ticks with no useful work and no food`
+                : `no goldfarm progress: idle ${IDLE_LIMIT} ticks with no pickpocket or food gained`);
 
             const f = foodCount();
 
@@ -585,6 +682,7 @@ if (import.meta.main) {
 
         await end(!died, died ? 'died' : 'ticks');
     } catch (e) {
+        if (errorEnd) await errorEnd(e);
         await finish([s], false, String(e));
     }
 }

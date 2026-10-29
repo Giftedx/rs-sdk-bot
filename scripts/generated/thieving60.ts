@@ -1,12 +1,14 @@
-// Fresh account (Thieving 1, Hitpoints 10, no items, Lumbridge) to Thieving 60, without dying, under 2500 ticks.
+// Parameterized Thieving trainer: fresh Lumbridge or resumed Draynor/Ardougne.
+// TARGET=55 CAP=2500 CLEAN_FOOD=1 trains a receiver, discards earned bakery leftovers,
+// and ends at Ardougne bank with earned coins deposited. Native proof is required.
 // Preset floors_lumbridge. Plan: pickpocket Lumbridge men to 60 coins, sail to Ardougne (copy of boatardy.ts),
 // then pickpocket the best target for the level: men below 40, guards from 40, knights from 55.
 // Stun damage (skill_thieving pickpocket.dbrow): man 1, guard 2, knight 3. The bot only pickpockets a target
 // when Hitpoints is above that damage, so one failed attempt cannot kill it.
 // Food: bread from the Baker (2654,3311, shop 'bakery', 12 coins), eaten at 5 Hitpoints or less.
 import { existsSync } from 'node:fs';
-import { openBot, finish, countItems, closeWithin } from '../../packages/core/src/bot';
-import { logout } from '../../packages/core/src/logout';
+import { openBot, finish, countItems } from '../../packages/core/src/bot';
+import { depositObserved } from '../../packages/core/src/deposit';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../../packages/core/src/walk';
 
@@ -19,6 +21,10 @@ const ARDY_DECK = { x: 2683, z: 3268 };
 const TARGET = Number(process.env.TARGET ?? 60);
 const CAP = Number(process.env.CAP ?? 2500);
 const EAT_AT = 5;
+const EXIT_BANK = { x: 2654, z: 3283 };
+const BANK_ITEMS = /^(coins|bread|cake|2\/3 cake|slice of cake|chocolate slice)$/i;
+if (!Number.isInteger(TARGET) || TARGET < 1 || TARGET > 99 || !Number.isInteger(CAP) || CAP < 240) await finish([], false, 'TARGET must be1..99 and CAP at least240ticks');
+if (process.env.RELOG === '1') await finish([], false, 'RELOG is unsupported: train through ordinary stuns');
 const BREAD = /^bread$/i;
 const COINS = /^coins$/i;
 
@@ -32,11 +38,8 @@ const KNIGHTS: Target = { name: 'knight', re: /^knight of ardougne$/i, dmg: 3, s
 
 // A login failure must still print one RESULT line, or the proof sees no output at all.
 console.log(`ERR-TRACE opening ${process.argv[2]}`);
-// `s` is replaced on a relog (RELOG=1): every helper reads it at call time.
-let s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
-// Ticks across sessions: each session's s.tick() starts again, so finished sessions add to `base`.
-let base = 0;
-const now = () => base + s.tick();
+const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
+const now = () => s.tick();
 try {
     // A new live account starts on Tutorial Island (seen: START 3094 3106 0 on the demo server). Skip it first.
     await waitTicks(s, 5);
@@ -55,7 +58,7 @@ try {
     const cheb = (a: { x: number; z: number }, p: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - p.worldX), Math.abs(a.z - p.worldZ));
     const xp0 = xp();
     const t0 = now();
-    const left = () => CAP - 30 - (now() - t0);
+    const left = () => CAP - 180 - (now() - t0);
 
     // Death: HP 0, or a jump of more than 20 tiles in one tick that is not a boat landing on a deck (level 1).
     let hpMin = hp();
@@ -74,7 +77,7 @@ try {
         }
         last = p;
     });
-    let off = watch();
+    const off = watch();
 
     const marks = new Set<string>();
     const mark = (name: string) => {
@@ -91,28 +94,44 @@ try {
 
     let tries = 0, stuns = 0, eaten = 0, bought = 0, waits = 0, walkTicks = 0, chases = 0, relogs = 0, relogTicks = 0, logoutTicks = 0, idleTicks = 0, pickTicks = 0, shopTicks = 0, eatTicks = 0, stunWait = 0;
 
-    // RELOG=1: a stun is a temporary varp (%stunned, not saved: _unpack/225/all.varp:112), and the boards count only
-    // logged-in ticks. A logout + login measured 1 playtime tick on the practice server (scripts/measure/relog-bench.ts),
-    // against 8 ticks for the stun. A refused logout (combat window) gives up after 2 s and keeps the session.
-    const RELOG = process.env.RELOG === '1';
-    const relog = async (): Promise<boolean> => {
-        const adapter = { sdk: { sendClickComponent: (id: number) => s.direct({ type: 'clickComponent', componentId: id, reason: 'SDK' } as any) }, ended: s.ended };
-        const r0 = now();
-        const out = await logout(adapter as any, 2000);
-        logoutTicks += s.tick() + base - r0;
-        if (out !== 'logged-out') return false;
-        off();
-        await closeWithin([s], 5000);
-        base += s.tick() + 1;
-        s = await openBot(process.argv[2]!);
-        last = pos();
-        off = watch();
-        relogs++;
-        relogTicks += now() - r0;
-        return true;
-    };
     let lastFail = '';
     const end = async (ok: boolean, why: string): Promise<never> => {
+        if (ok && !died) {
+            // Reuse the paired pack-debit / fresh bank-credit validator. Purchased
+            // bakery food and training coins must not pollute the next supply lot.
+            try {
+                const walked = await walkPath(await sessionWalker(s), [{ ...EXIT_BANK, tol: 2 }], {
+                    maxTicks: Math.max(1, Math.min(120, CAP - (now() - t0))), stop: () => died || now() - t0 >= CAP,
+                });
+                if (!walked.ok) throw Error(`bank exit walk: ${walked.detail}`);
+                if (process.env.CLEAN_FOOD === '1') {
+                    // Qualification may discard earned bakery leftovers so the next
+                    // receiver job can consume only the delivered fish lot.
+                    const leftovers = s.sdk.getInventory().filter(i => BANK_ITEMS.test(i.name) && !COINS.test(i.name));
+                    for (const original of leftovers) {
+                        if (now() - t0 >= CAP) throw Error('food cleanup tick budget exhausted');
+                        const item = s.sdk.getInventory().find(i => i.slot === original.slot && i.id === original.id);
+                        if (!item) throw Error('food cleanup item changed');
+                        const before = s.sdk.getInventory().filter(i=>i.id===item.id).reduce((n,i)=>n+i.count,0);
+                        const dropped = await s.bot.dropItem(item, 1);
+                        if (!await waitUntil(s, () => !s.sdk.getInventory().some(i => i.slot === item.slot && i.id === item.id), {timeoutTicks:8})) throw Error('food cleanup pack debit unobserved');
+                        console.log('TRAINING_FOOD_DISCARDED '+JSON.stringify({itemId:item.id,slot:item.slot,amount:item.count,packBefore:before,packAfter:s.sdk.getInventory().filter(i=>i.id===item.id).reduce((n,i)=>n+i.count,0),sdkSuccess:dropped.success,tick:now()-t0}));
+                    }
+                }
+                if (!(await s.bot.openBank()).success) throw Error('bank exit open failed');
+                for (const id of new Set(s.sdk.getInventory().filter(i => BANK_ITEMS.test(i.name)).map(i => i.id))) {
+                    if (now() - t0 >= CAP) throw Error('bank exit tick budget exhausted');
+                    const item = s.sdk.getInventory().find(i => i.id === id);
+                    if (!item) throw Error('bank exit inventory changed');
+                    await depositObserved(s, item);
+                }
+                if (s.sdk.getInventory().some(i => BANK_ITEMS.test(i.name))) throw Error('training food or coins remain in pack');
+                await s.bot.closeBank();
+                const final = pos();
+                if (!final || final.level !== 0 || cheb(EXIT_BANK, final) > 3 || died || now() - t0 > CAP) throw Error('bank exit position, survival or tick budget failed');
+                console.log(`TRAINING_BANK_EXIT ${JSON.stringify({ position: final, target: TARGET, level: lvl(), inventory: s.sdk.getInventory(), ticks: now()-t0 })}`);
+            } catch (error) { ok = false; why = `bank exit: ${String(error)}`; }
+        }
         off();
         const ticks = now() - t0;
         const gained = xp() - xp0;
@@ -195,13 +214,13 @@ try {
     // full boat trip (Ardougne at tick 669-670 vs 499-604). A failed walk gets 2 more tries from where the bot stands.
     const walk = async (points: [number, number, number][]): Promise<boolean> => {
         const [gx, gz, gtol] = points[points.length - 1]!;
-        let left = points.map(([x, z, tol]) => ({ x, z, tol }));
-        for (let i = 0; i < 3 && !died; i++) {
+        let remainingPath = points.map(([x, z, tol]) => ({ x, z, tol }));
+        for (let i = 0; i < 3 && !died && left() > 0; i++) {
             const p = pos();
             if (p && p.level === 0 && cheb({ x: gx, z: gz }, p) <= gtol + 1) break;
-            const r = await walkPath(await sessionWalker(s), left, { stop: () => died });
+            const r = await walkPath(await sessionWalker(s), remainingPath, { maxTicks:Math.max(1,left()), stop: () => died || left() <= 0 });
             if (!r.ok) console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
-            left = left.slice(Math.min(r.next, left.length - 1));
+            remainingPath = remainingPath.slice(Math.min(r.next, remainingPath.length - 1));
         }
         const p = pos();
         return !died && !!p && cheb({ x: gx, z: gz }, p) <= gtol + 1;
@@ -243,7 +262,13 @@ try {
     // Route from research/route-danger.ts: 357 tiles, clear of the jail guards (26), brown bear (21) and dark wizards;
     // the old route (3105,3250) passed 2 tiles from a jail guard, and two fresh runs died there.
     if (!inArdougne) {
-    if (!(await walk([[3225, 3240, 3], [3180, 3258, 3], [3100, 3285, 3], [3060, 3265, 3], [3047, 3237, 3], [3029, 3217, 3]]))) await end(false, 'walk to Port Sarim');
+    // Same ordinary Draynor corridor already used by foodcourier; a receiver
+    // resumed at its bank must not travel back east to Lumbridge first.
+    const draynorStart = pos();
+    const sarimRoute: [number,number,number][] = draynorStart && cheb({x:3092,z:3242},draynorStart)<=20
+        ? [[3092,3250,1],[3089,3266,2],[3060,3265,3],[3047,3237,3],[3029,3217,3]]
+        : [[3225,3240,3],[3180,3258,3],[3100,3285,3],[3060,3265,3],[3047,3237,3],[3029,3217,3]];
+    if (!(await walk(sarimRoute))) await end(false, 'walk to Port Sarim');
     if (!(await sail(/^(seaman|captain tobias)/i, [/^yes please/i], MUSA_DECK))) await end(false, 'sail to Karamja');
     if (!(await disembark())) await end(false, 'Musa Point gangplank');
     if (!(await walk([[2920, 3160, 5], [2850, 3175, 5], [2800, 3200, 5], [2774, 3228, 3]]))) await end(false, 'walk to Brimhaven');
@@ -302,7 +327,6 @@ try {
     // shopping inside it cannot work.
     const maxHp = () => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
     onStun = async () => {
-        if (RELOG && (await relog())) return;
         if (food() > 0 && hp() <= maxHp() - 4) { const e0 = now(); if ((await s.bot.eatFood(FOOD)).success) eaten++; eatTicks += now() - e0; return; }
         stunWait++;
         await waitTicks(s, 1);

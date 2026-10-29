@@ -21,8 +21,9 @@ import { openBot, finish, randomEventsOf, serverFromEnv } from '../packages/core
 import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
+import { receiveHandoff } from './courier-handoff';
 
-const COOKED_IDS=new Set([329,333,379,330,334,380]),NOTED_COOKED_IDS=new Set([330,334,380]);
+const COOKED_IDS=new Set([329,333,379,330,334,380,385,386]),NOTED_COOKED_IDS=new Set([330,334,380,386]);
 export function incomingCookedFood(before:readonly {id:number;count:number}[],after:readonly {id:number;count:number}[]){
     const count=(rows:typeof before,id:number)=>rows.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
     return [...COOKED_IDS].reduce((n,id)=>n+Math.max(0,count(after,id)-count(before,id)),0);
@@ -34,10 +35,14 @@ export function courierFoodReady(status:any,from:string,server:string,owned:Read
         &&Array.isArray(status.inventory)&&status.inventory.some((i:any)=>NOTED_COOKED_IDS.has(i.id)&&Number.isSafeInteger(i.count)&&i.count>0);
 }
 // Reused by normal empty-food service and the opt-in short proactive rendezvous.
-export async function receiveFoodAtBank(s:Session,from:string,timeout:number,refill:()=>Promise<void>,available:()=>boolean){
+export async function receiveFoodAtBank(s:Session,from:string,timeout:number,refill:()=>Promise<void>,available:()=>boolean,until?:()=>boolean,server?:string){
     if(!/^[A-Za-z0-9_ -]{1,12}$/.test(from))throw Error('invalid configured food supplier');
+    // Earnings add a coin stack after the last refill. Bank it before the
+    // two-species delivery so the reserved two inventory slots are available.
+    await refill();
     const before=s.sdk.getInventory().map(i=>({...i})),start=s.tick();
-    const result=await s.bot.serveTrades({from:new RegExp(`^${from}$`,'i'),maxTrades:1,timeout});
+    const serve=()=>s.bot.serveTrades({from:new RegExp(`^${from}$`,'i'),maxTrades:1,timeout,until});
+    const result=server?await receiveHandoff(s,from,server,serve):await serve();
     const ticks=s.tick()-start,incoming=incomingCookedFood(before,s.sdk.getInventory());
     if(s.tick()===start)await waitTicks(s,1);
     await refill();return{incoming,available:available(),ticks,reason:result.reason,message:result.message};
@@ -50,8 +55,8 @@ const KNIGHT = /^knight of ardougne$/i;
 const RANGE = 16;
 const LOBSTER = /^lobster$/i;
 // Bank food in withdraw order: the food chain's cooked fish first (research/food-chain.md), then lobsters.
-const BANK_FOOD = [/^trout$/i, /^salmon$/i, LOBSTER];
-const BIG = /^(trout|salmon|lobster)$/i;
+const BANK_FOOD = [/^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
+const BIG = /^(trout|salmon|lobster|shark)$/i;
 const FOOD_ONLY_TRADE = process.env.FOOD_ONLY_TRADE === '1';
 const COINS = /^coins$/i;
 const TICKS = Number(process.env.TICKS ?? 9000);
@@ -65,8 +70,8 @@ const GUARD = /^guard$/i;
 const BAKER = /^baker$/i;
 const GUARD_SAFE = 6;
 // Food types and HP per bite (cake pieces 4, chocolate slice 2, bread 5, trout 7, salmon 9, lobster 12).
-const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER];
-const HEAL = [4, 4, 4, 2, 5, 7, 9, 12];
+const FOOD_ORDER = [/^slice of cake$/i, /^2\/3 cake$/i, /^cake$/i, /^chocolate slice$/i, /^bread$/i, /^trout$/i, /^salmon$/i, LOBSTER, /^shark$/i];
+const HEAL = [4, 4, 4, 2, 5, 7, 9, 12, 20];
 const DMG = 3;
 // Click cadence in ticks. A click inside the pick's action delay is queued again by the server (p_opnpc(3),
 // pickpocket.rs2:134-137), so a 1-tick cadence costs nothing and re-paths to a knight that stepped away a tick sooner.
@@ -76,7 +81,7 @@ if(import.meta.main){
 console.log(`ERR-TRACE opening ${process.argv[2]}`);
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 const foodWake=process.env.CURIER_FOOD_WAKE==='1';
-const farmServer=foodWake?serverFromEnv(readFileSync(join(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8')):'';
+const farmServer=FOOD_FROM?serverFromEnv(readFileSync(join(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8')):'';
 try {
     await waitTicks(s, 5);
     // Farm only where the knights are. After a death the game respawns the bot in Lumbridge; walking from there to
@@ -212,7 +217,7 @@ try {
     const foodByTrade = async (timeout=180_000): Promise<boolean> => {
         console.log(`MILESTONE waiting for food trade from ${FOOD_FROM} t=${now()}`);
         await walk(BANK_SPOT, 2);
-        const r=await receiveFoodAtBank(s,FOOD_FROM,timeout,refill,()=>food()>=2||!bankEmpty);
+        const r=await receiveFoodAtBank(s,FOOD_FROM,timeout,refill,()=>food()>=2||!bankEmpty,undefined,farmServer);
         tradeTicks+=r.ticks;
         console.log(`TRADE ${r.reason} ${r.message} incomingFood=${r.incoming} notes=${notes().reduce((n, i) => n + i.count, 0)} bigFood=${bigFood()} t=${now()}`);
         if(r.incoming>0)tradesIn++;

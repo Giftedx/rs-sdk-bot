@@ -83,12 +83,12 @@ if(process.env.SWORD_INSPECT_CHILD==='1'){
     if(initial.position.level!==0||Math.max(Math.abs(initial.position.x-3185),Math.abs(initial.position.z-3436))>2||count(initial.inventories[93]??[],333)!==2
         ||count(initial.inventories[93]??[],995)!==0||count(initial.inventories[95]??[],995)!==2600||count(before,1287)!==0)
         throw new Error('existing failed actor not settled at bank with original cash/2Trout/noSword');
-    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
     if(!Number.isFinite(free)||free<9)throw new Error(`inspection actor needs9GiB; actual=${free}`);
     const source=JSON.parse(readFileSync(resolve('.practice/fleet-proof',`owned-sword-${actor}-source.json`),'utf8'));
     const dir=resolve('.practice/fleet-proof'),prefix=`sword-inspect-${actor}`;
     writeFileSync(resolve(dir,prefix+'-initial.json'),JSON.stringify(initial,null,2));
-    const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,actor],{env:{...process.env,SWORD_INSPECT_CHILD:'1',DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_TRACE_PATH:'1',PROOF_EXPECT_SKILLS:JSON.stringify(source.skills)},stdout:'pipe',stderr:'pipe'});
+    const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,actor],{env:{...process.env,SWORD_INSPECT_CHILD:'1',DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_TRACE_PATH:'1',PROOF_EXPECT_SKILLS:JSON.stringify(source.skills)},stdout:'pipe',stderr:'pipe',windowsHide:true});
     let output='',timedOut=false,forcedKill=false,damaged=false;
     const stop=(reason:string)=>writeFileSync(resolve('.practice',`stop-${actor}`),reason);
     const timer=setTimeout(()=>{timedOut=true;stop('read-only sword inspection timeout');},600000),hard=setTimeout(()=>{forcedKill=true;p.kill();},645000);

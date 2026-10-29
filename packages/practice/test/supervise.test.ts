@@ -1,7 +1,46 @@
 import { test, expect } from 'bun:test';
+import {supervisorParticipants,workerCommand,participantsStopped} from '../src/supervise';
+
+test('supervisor forwards remaining CLI arguments and validates all orchestrator participants',async()=>{
+ expect(workerCommand('Donor','scripts/handoff-inputs.ts',['Receiver','batch'])).toEqual(['bun','scripts/handoff-inputs.ts','Donor','Receiver','batch']);
+ expect(supervisorParticipants('Donor','["Donor","Receiver"]')).toEqual(['Donor','Receiver']);
+ expect(supervisorParticipants('Donor',undefined)).toEqual(['Donor']);
+ for(const raw of ['no json','[]','["Receiver"]','["Donor","donor"]','["Donor","bad/name"]'])expect(()=>supervisorParticipants('Donor',raw)).toThrow();
+ let runs=0;
+ const stopped=()=>participantsStopped(['Donor','Receiver'],name=>name==='Receiver');
+ const result=await supervise({run:async()=>{runs++;return{stdout:'RESULT ok',exitCode:0};},stopped,pause:async()=>{},maxRestarts:0});
+ expect(result).toEqual({reason:'stopped',runs:0});expect(runs).toBe(0);
+});
+
+test('release holds pause without retries or a gameplay failure classification',async()=>{
+ let calls=0;
+ const r=await supervise({run:async()=>{calls++;return {stdout:'RESULT fail Error: no worker progress: release pin missing; live starts paused',exitCode:1};},
+ stopped:()=>false,pause:async()=>{throw Error('must not retry');},maxRestarts:20});
+ expect(r).toEqual({reason:'release-paused',runs:1});expect(calls).toBe(1);
+});
+
+test('Rune Mysteries qualification failures block instead of relogging an untrained starter',()=>{
+ expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
+ expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
+});
 import { supervise, isPrerequisiteFailure } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
+
+test('an ended game session retries after backoff while a real task prerequisite still blocks',async()=>{
+    let calls=0,pauses=0;
+    const r=await supervise({run:async()=>++calls===1?{stdout:'RESULT fail session ended: logged-out',exitCode:1}:{stdout:'RESULT ok recovered',exitCode:0},
+        stopped:()=>false,pause:async()=>{pauses++;},maxRestarts:2});
+    expect(r).toEqual({reason:'done',runs:2});expect(pauses).toBe(1);
+});
+
+test('a failed finite Fire pilot stops after one run even when a public player caused the refusal',async()=>{
+    let calls=0;
+    const result=await supervise({run:async()=>{calls++;return{stdout:'RESULT fail Fire-pilot {"ok":false,"creditedKills":0,"failure":"another player near target"}',exitCode:1};},
+        stopped:()=>false,pause:async()=>{},maxRestarts:20});
+    expect(calls).toBe(1);expect(result).toEqual({reason:'blocked',runs:1});
+    expect(isPrerequisiteFailure('RESULT ok Fire-pilot {"ok":true}')).toBe(false);
+});
 
 test('a success line followed by a failed exit is not done', async () => {
     const r = await supervise({ run: out(['RESULT ok goal met', 'LOGOUT timeout'], 1), stopped: () => false, pause: async () => {}, maxRestarts: 0 });
@@ -38,7 +77,7 @@ test('a death ends supervision: restarting would walk the account into the same 
 });
 
 
-for (const detail of ['no ore progress for 220 ticks', 'no wood progress for 220 ticks', 'shearing made no progress',
+for (const detail of ['no ore progress for 220 ticks', 'no wood progress for 220 ticks', 'no training progress: training requires full HP', 'shearing made no progress',
     'spinning made no progress', 'flax spinning made no progress', 'withdraw made no progress', 'cooking made no progress for12 ticks', 'stalled at bank', 'no-progress guard']) {
     test(`first failure blocks without another login: ${detail}`, async () => {
         let calls = 0;
@@ -74,6 +113,7 @@ test('a stop during retry delay prevents the next login', async () => {
 });
 
 for(const detail of [
+    'essence {"failure":"Error: Rune Mysteries quest required: Aubury refused teleport"}',
     'Error: cow prerequisite: stage2unnoted Trout and syncedHP/skill',
     'Error: cow prerequisite: stage at Ardougne south bank',
     'Error: cow prerequisite: empty carried cow outputs',

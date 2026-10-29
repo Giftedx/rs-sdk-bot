@@ -1,6 +1,9 @@
 import {test,expect} from 'bun:test';
 import {courierFoodReady,incomingCookedFood,receiveFoodAtBank} from './goldfarm';
 import {selectFoodToEat,calcEatAt} from './goldfarm-stable';
+test('incoming sharks and shark notes count as food, raw and burnt do not',()=>{
+    expect(incomingCookedFood([{id:385,count:5}],[{id:385,count:8},{id:386,count:20},{id:383,count:30},{id:387,count:3}])).toBe(23);
+});
 import type {Session} from '../packages/core/src/inprocess';
 const now=100000,owners=new Set(['courier']),live={name:'Courier',server:'rs-sdk-demo.fly.dev',at:now-1000,result:'',pos:{x:2654,z:3283,level:0},inventory:[{id:330,name:'Salmon',count:50}]};
 test('only configured authenticated same-server fresh active bank-near courier with real cooked notes wakes healthy farm',()=>{
@@ -17,13 +20,34 @@ test('trade accounting counts only new actual incoming food, never the existing 
     expect(incomingCookedFood(pack,pack)).toBe(0);expect(incomingCookedFood(pack,[{id:333,count:26},{id:330,count:15}])).toBe(10);
     expect(incomingCookedFood(pack,[{id:333,count:26},{id:330,count:5},{id:331,count:100}])).toBe(0);
 });
+test('receiver banks earned coins before accepting two cooked note stacks into a26food pack',async()=>{
+    let tick=0;const pack:any[]=[...Array.from({length:26},()=>({id:333,count:1})),{id:995,count:100}];
+    const s:any={tick:()=>tick,sdk:{getInventory:()=>pack},bot:{serveTrades:async()=>{
+        expect(28-pack.length).toBeGreaterThanOrEqual(2);
+        pack.push({id:330,count:15},{id:334,count:11});tick++;
+        return{reason:'complete',message:'received'};
+    }}};
+    const r=await receiveFoodAtBank(s,'Courier',20000,async()=>{const i=pack.findIndex(i=>i.id===995);if(i>=0)pack.splice(i,1);},()=>true);
+    expect(r.incoming).toBe(26);
+});
+
 test('short rendezvous timeout preserves existing food and returns normal-work availability; legacy timeout remains selectable',async()=>{
     for(const timeout of [20000,180000]){
         let tick=0,seen=0,refills=0;const pack:any[]=[{id:333,name:'Trout',count:26}];
         const s:any={tick:()=>tick,sdk:{getInventory:()=>pack},bot:{serveTrades:async(o:any)=>{seen=o.timeout;expect(o.from.test('Courier')).toBe(true);tick++;return{reason:'timeout',message:'no trade'};}}};
         const r=await receiveFoodAtBank(s as Session,'Courier',timeout,async()=>{refills++;},()=>pack[0].count>=2);
-        expect(r.incoming).toBe(0);expect(r.available).toBe(true);expect(seen).toBe(timeout);expect(refills).toBe(1);expect(pack[0].count).toBe(26);
+        expect(r.incoming).toBe(0);expect(r.available).toBe(true);expect(seen).toBe(timeout);expect(refills).toBe(2);expect(pack[0].count).toBe(26);
     }
+});
+
+test('food rendezvous yields to a pending cash request from its same partner',async()=>{
+    let tick=0,pending=false,refills=0;
+    const s:any={tick:()=>tick,sdk:{getInventory:()=>[]},bot:{serveTrades:async(o:any)=>{
+        expect(o.until()).toBe(false);pending=true;expect(o.until()).toBe(true);tick++;
+        return{reason:'until',message:'funding pending'};
+    }}};
+    const r=await receiveFoodAtBank(s,'Courier',45000,async()=>{refills++;},()=>false,()=>pending);
+    expect(r.incoming).toBe(0);expect(r.reason).toBe('until');expect(refills).toBe(2);
 });
 
 test('selectFoodToEat matches HP deficit to best food avoiding overheal waste', () => {

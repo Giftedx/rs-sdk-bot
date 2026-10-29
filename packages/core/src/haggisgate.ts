@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import {gateProblem,launchContext,readBound,fresh} from './launch-evidence';
 
 // Haggis is the main account: every second it is logged in counts on the one playtime clock all 24 boards share
-// (Cooking's #1 is at tick 38). It may log in only when scripts/haggis-gate.ts has passed all 5 gates in the last
-// 10 minutes and the run is started on purpose (HAGGIS_RUN=1). Every login path calls this first.
+// It needs explicit, unexpired, source-bound authorization plus HAGGIS_RUN=1. Every login path checks this.
 export const GATE_FILE = join(resolve(import.meta.dir, '..', '..', '..'), '.practice', 'haggis-go.json');
 const MAIN = 'haggis';
 
@@ -11,11 +11,17 @@ export function assertLoginAllowed(name: string, now = Date.now(), env = process
     if (name.toLowerCase() !== MAIN) return;
     if (env.HAGGIS_RUN !== '1') throw new Error('Haggis login refused: HAGGIS_RUN=1 is not set (the main account runs only the final route)');
     if (!existsSync(GATE_FILE)) throw new Error('Haggis login refused: no gate file; run bun scripts/haggis-gate.ts');
-    let g: { go?: boolean; at?: number; gates?: { name: string; pass: boolean }[] };
+    let g: any;
     try { g = JSON.parse(readFileSync(GATE_FILE, 'utf8')); }
     catch (e) { throw new Error(`Haggis login refused: gate file unreadable (${String(e).slice(0, 120)}); run bun scripts/haggis-gate.ts`); }
     if (!g || typeof g !== 'object') throw new Error('Haggis login refused: gate file is not an object; run bun scripts/haggis-gate.ts');
-    const failed = (g.gates ?? []).filter(x => !x.pass).map(x => x.name);
-    if (g.go !== true || failed.length) throw new Error(`Haggis login refused: gates not passed (${failed.join(', ') || 'go=false'})`);
-    if (!g.at || now - g.at > 10 * 60_000) throw new Error('Haggis login refused: gate check is older than 10 minutes; run it again');
+    const problem=gateProblem(g,now);
+    if(problem)throw new Error('Haggis login refused: '+problem);
+    try {
+        const root=resolve(import.meta.dir,'../../..');
+        if(launchContext(root,g.snapshot).context!==g.context)throw Error('Source, route or targets changed');
+        for(const ref of g.bindings)readBound(root,ref,[],false);
+        const m=JSON.parse(readFileSync(join(root,'.practice/monitor.json'),'utf8'));
+        if(!fresh(m.at,now,120000)||!Number.isFinite(m.freeGB)||m.freeGB<8||!Array.isArray(m.alerts)||m.alerts.some((a:any)=>a.level!=='fixed'))throw Error('Machine check no longer clear');
+    }catch(e){throw new Error('Haggis login refused: '+String(e))}
 }

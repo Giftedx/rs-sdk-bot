@@ -4,8 +4,23 @@
 import { openBot, finish } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
+import { startQuestSustain } from '../quest-sustain';
+import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
+import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+// Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
+const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
+const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
+    .split(/\r?\n/).map(l => l.split('=')).filter(([, n]) => n && CHAT_NAMES.test(n.trim())).map(([id]) => Number(id)));
+const RESUME = ClientProt.RESUME_PAUSEBUTTON;
+export let bursts = 0;
+export let recorded = 0;
+// Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default.
+const BURST = process.env.Q_BURST === '1';
+if (BURST) process.on('exit', () => console.log(`NOTE bursts=${bursts} recorded=${recorded} Q_BURST=1`));
 
 export interface Loc { id: number; x: number; z: number }
 export const LUMBRIDGE = { x: 3222, z: 3218 };
@@ -14,12 +29,12 @@ export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', '
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
 // name: the account (default process.argv[2]). others: more sessions of a two-account quest (quest-arrav.ts); fail()
 // and end() log them out too.
-export async function openQuest(opts: { cap?: number; eatAt?: number; food?: number[]; trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
+export async function openQuest(opts: { session?: Session; stop?:()=>boolean; cap?: number; eatAt?: number; food?: number[]; reservedFood?: Readonly<Record<number,number>>|(()=>Readonly<Record<number,number>>); trace?: boolean; lumbridgeOk?: boolean; name?: string; others?: () => Session[] } = {}) {
     const CAP = opts.cap ?? 3000;
     const EAT_AT = opts.eatAt ?? 40;
     const FOOD = opts.food ?? [379];
     const TRACE = opts.trace ?? process.env.Q_TRACE === '1';
-    const s: Session = await openBot(opts.name ?? process.argv[2]!);
+    const s: Session = opts.session ?? await openBot(opts.name ?? process.argv[2]!);
     await waitTicks(s, 3);
     const st = (): any => s.sdk.getState();
     const pos = (): any => st()?.player;
@@ -32,11 +47,37 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
     const cheb = (x: number, z: number): number => { const p = pos(); return p ? Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) : 999; };
     const near = (x: number, z: number, r: number): boolean => cheb(x, z) <= r;
     const lvl = (): number => pos()?.level ?? -1;
-    const dialogOpen = (): boolean => !!s.sdk.getDialog()?.isOpen;
+    // Q_BURST: a page whose text arrived after the last answer still waits for one, even before the SDK state shows
+    // it open (the recorder reads packets, the SDK state lags a tick). A step must not end while a page waits: walking
+    // away closes it and the server never runs the code after the pause (quest_tree.rs2:23-24 sets the varp there).
+    let textSeq = 0, answeredSeq = 0, textAt = -1;
+    const pagePending = (): boolean => BURST && textSeq > answeredSeq && s.tick() - textAt <= 5;
+    const dialogOpen = (): boolean => !!s.sdk.getDialog()?.isOpen || pagePending();
     // Dialog text seen so far: getDialog().text is often empty and recentDialogs keeps few pages, so every tick's page
     // text (text plus allComponents[].text) is kept here (last 400 pages).
     const pages: string[] = [];
     let lastPage = '';
+    // Q_BURST: a burst skips pages, so the tick read above never sees them. Every IF_SETTEXT passes through
+    // ifMutable and then sets .text (lite/protocol/incoming.ts IF_SETTEXT), so a text setter on each component it
+    // returns records every page text the client receives, rendered or not. Only the chat interfaces count (CHAT_ROOTS):
+    // other interfaces' text (side panels) once matched a step check that the dialogue had not reached. The server sets
+    // a page's text before IF_OPENCHAT (chat.rs2 chatnpc_page), so chatModalId cannot tell them apart.
+    const lite: any = (s as any).client;
+    if (BURST && lite && typeof lite.ifMutable === 'function') {
+        const before = lite.ifMutable;
+        // Any dialogue answer, also a script's own sendClickDialog (quest-tree.ts ballista), answers the pages so far.
+        const click = s.sdk.sendClickDialog.bind(s.sdk);
+        (s.sdk as any).sendClickDialog = async (option?: number) => { const seq = textSeq; const r: any = await click(option); if (r?.success) answeredSeq = Math.max(answeredSeq, seq); return r; };
+        lite.ifMutable = function (id: number) {
+            const com: any = before.call(this, id);
+            if (com && !com.__pageText) {
+                let v = com.text;
+                Object.defineProperty(com, 'text', { configurable: true, enumerable: true, get: () => v, set: (x: any) => { v = x; if (typeof x === 'string' && x && CHAT_ROOTS.has(com.layerId)) { pages.push(x); if (pages.length > 400) pages.shift(); recorded++; textSeq++; textAt = s.tick(); } } });
+                com.__pageText = true;
+            }
+            return com;
+        };
+    }
     const pageText = (): string => {
         const d: any = s.sdk.getDialog();
         if (!d?.isOpen) return '';
@@ -69,7 +110,11 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
         done.add(k);
         console.log(`MILESTONE ${k} ${T()}`);
     };
-    let eatCool = 0;
+    const sustain = startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async action=>{
+        const reply=await s.direct(action);
+        if(!reply||typeof reply!=='object'||!('success' in reply)||typeof reply.success!=='boolean')throw Error('quest consume reply unknown');
+        return{success:reply.success,message:'message' in reply?String(reply.message):undefined};
+    }},{food:FOOD,eatAt:EAT_AT,reserved:opts.reservedFood,onConsumed:()=>{stats.eats++;}});
     const off = s.onTick(() => {
         const p = pos();
         const h = hp();
@@ -92,11 +137,6 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
         }
         const pt = pageText();
         if (pt && pt !== lastPage) { pages.push(pt); if (pages.length > 400) pages.shift(); lastPage = pt; }
-        if (eatCool > 0) eatCool--;
-        if (h > 0 && h <= EAT_AT && eatCool === 0) {
-            const food = inv().find(i => FOOD.includes(i.id));
-            if (food) { stats.eats++; eatCool = 3; void s.direct({ type: 'useInventoryItem', slot: food.slot, optionIndex: 1, reason: 'SDK' }); }
-        }
     });
 
     const detail = (): string => {
@@ -106,12 +146,15 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
     };
     const gains = (): string => SKILLS.map(k => [k, xp(k) - xp0[k]!] as const).filter(([, g]) => g > 0).map(([k, g]) => `${k.toLowerCase()}=${g}`).join(',');
     const all = (): Session[] => [s, ...(opts.others?.() ?? []).filter(o => o !== s)];
-    const fail = async (why: string): Promise<never> => { off(); return finish(all(), false, `${why} xp=${gains()} ${detail()}`); };
+    const dispose = async () => { await sustain.settle(); off(); };
+    const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session)throw Error(message); return finish(all(), false, message); };
     const guard = async (label: string): Promise<void> => {
+        if(opts.stop?.())await fail(`stopped during ${label}`);
         if (stats.died) await fail(`died during ${label}`);
+        if (sustain.failure()) await fail(`${sustain.failure()} during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
-    const end = async (ok: boolean, extra = ''): Promise<never> => { off(); return finish(all(), ok && !stats.died, `${extra} xp=${gains()} ${detail()}`); };
+    const end = async (ok: boolean, extra = ''): Promise<never> => { await sustain.settle(); off(); return finish(all(), ok && !stats.died && !sustain.failure(), `${extra} ${sustain.failure()??''} xp=${gains()} ${detail()}`); };
 
     const opLoc = (l: Loc, op = 1) => s.direct({ type: 'interactLoc', x: l.x, z: l.z, locId: l.id, optionIndex: op, reason: 'SDK' });
     const locs = (): any[] => st()?.nearbyLocs ?? [];
@@ -131,7 +174,8 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
             if (ok()) return;
             if (i > 0) stats.retries++;
             await send();
-            await waitUntil(s, () => ok() || stats.died, { timeoutTicks: ticks });
+            await waitUntil(s, () => ok() || stats.died || !!sustain.failure(), { timeoutTicks: ticks });
+            await guard(label);
             if (ok()) return;
             const d: any = s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) await s.sdk.sendClickDialog(0);
@@ -142,13 +186,27 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
 
     // One dialog page per tick: the first option matching a pattern, else "continue". Stops when ok() holds.
     const converse = async (pats: RegExp[], ok: () => boolean, maxTicks: number): Promise<boolean> => {
-        for (let i = 0; i < maxTicks && !stats.died; i++) {
+        const deadline=s.tick()+maxTicks;
+        while (s.tick()<deadline && !stats.died) {
+            await guard('dialogue');
             if (ok()) return true;
             const d: any = s.sdk.getDialog();
             if (d?.isOpen && !d.isWaiting) {
                 const opt = (d.options ?? []).find((o: any) => pats.some(re => re.test(o.text)));
                 if ((d.options ?? []).some((o: any) => !/click here to continue/i.test(o.text)) && !opt) console.log(`WARN no option match: ${(d.options ?? []).map((o: any) => o.text).join(' | ')}`);
-                void s.sdk.sendClickDialog(opt ? opt.index : 0);
+                const beforeClick=s.tick();
+                // Q_BURST=1 sends 5 blind continues on a page with no choice (the USER_EVENT cap).
+                // ResumePauseButtonHandler.ts refuses a continue while a choice is pending, so a choice is never skipped.
+                const choice=(d.options ?? []).some((o: any) => !/click here to continue/i.test(o.text));
+                const c:any=(s as any).client;
+                if(BURST&&!opt&&!choice&&c&&c.chatModalId!==-1){
+                    for(let k=0;k<5;k++){c.writeOpcode(RESUME);c.out.p2(c.chatModalId);}
+                    c.flush?.();bursts++;answeredSeq=textSeq;
+                    await waitTicks(s,1);continue;
+                }
+                const reply=await s.sdk.sendClickDialog(opt ? opt.index : 0);
+                if(!reply.success)await fail(`dialogue click refused: ${reply.message}`);
+                if(s.tick()!==beforeClick)continue;
             }
             await waitTicks(s, 1);
         }
@@ -159,16 +217,13 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
     // A locked door the SDK plans through (collision treats doors as open) becomes a wall for this session.
     const blockDoor = (level: number, x: number, z: number): boolean => !!(s.sdk as any).blockDoorTemporarily?.(level, x, z, 3_600_000);
     const walk = async (label: string, pts: PathPoint[]): Promise<void> => {
-        const goal = pts[pts.length - 1]!;
-        const tol = goal.tol ?? 2;
-        for (let i = 0; i < 3 && !near(goal.x, goal.z, tol); i++) {
-            await guard(label);
-            if (i > 0) stats.retries++;
-            const r = await walkPath(walker, i === 0 ? pts : [goal], { stop: () => stats.died || T() > CAP });
-            stats.walkTicks += r.ticks;
-            if (!r.ok && !near(goal.x, goal.z, tol)) await s.bot.walkTo(goal.x, goal.z, tol, { timeout: 400_000 } as any);
-        }
-        if (!near(goal.x, goal.z, tol + 1)) await fail(`walk ${label}`);
+        await guard(label);
+        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||!!sustain.failure(),
+            near:(point,tolerance)=>near(point.x,point.z,tolerance),walk:(points,options)=>walkPath(walker,points,options),
+            onAttempt:(attempt,result)=>{stats.walkTicks+=result.ticks;if(attempt>0)stats.retries++;},
+        },pts,t0+CAP);
+        await guard(label);
+        if(!result.ok)await fail(`walk ${label}: ${result.detail}`);
     };
 
     // Talk until ok(); then wait until the dialog closes (3 shut ticks). The NPC list covers about 15 tiles, so the
@@ -182,11 +237,13 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
             const n = npc(re);
             if (!n) await fail(`${label}: no npc ${re}`);
             for (let k = 0; k < 8 && !dialogOpen() && !stats.died; k++) {
+                await guard(label);
                 const tr: any = await talkTo(npc(re) ?? n);
                 if (tr && tr.success === false) console.log(`WARN talk ${label}: ${tr.reason ?? ""} ${tr.message ?? ""}`);
                 let at0 = '', still = 0;
                 for (let w = 0; w < 25 && !dialogOpen() && !stats.died; w++) {
                     await waitTicks(s, 1);
+                    await guard(label);
                     const at = `${pos()?.worldX},${pos()?.worldZ}`;
                     still = at === at0 ? still + 1 : 0;
                     at0 = at;
@@ -227,9 +284,10 @@ export async function openQuest(opts: { cap?: number; eatAt?: number; food?: num
     };
 
     return {
-        s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone,
+        s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, openDoor, shutAt, dash, waitTicks: (n: number) => waitTicks(s, n),
-        waitUntil: (f: () => boolean, ticks: number) => waitUntil(s, () => f() || stats.died, { timeoutTicks: ticks }),
+        step, converse, walk, talk, climb, teleport, openDoor, shutAt, dash,
+        waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
+        waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };
 }

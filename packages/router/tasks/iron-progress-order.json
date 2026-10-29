@@ -1,0 +1,50 @@
+{
+  "id": "iron-progress-order",
+  "goal": "Convert owned iron ore into a finite exact banked iron-bar order and Smithing XP, including current ordinary entry staging and logout.",
+  "entry": "scripts/smelt-bars.ts",
+  "files": [
+    "scripts/smelt-bars.ts",
+    "scripts/smelt-bars.test.ts",
+    "scripts/smelt-batch.ts",
+    "scripts/smelt-batch.test.ts",
+    "packages/planner/src/travel.ts",
+    "packages/practice/src/iron-progress-order-proof.ts",
+    "packages/practice/test/iron-progress-order-proof.test.ts"
+  ],
+  "consumer": "Actual installed iron worker from representative Varrock East entry reaches Al Kharid, smelts/banks exact iron bars with new SmithingXP, accounts for failed-smelt ore consumption and toll/travel expenses, retains ore reserve/other assets/life and confirms logout.",
+  "checks": [
+    {
+      "id": "iron-progress-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/smelt-bars.test.ts",
+        "scripts/smelt-batch.test.ts",
+        "packages/practice/test/iron-progress-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "iron-progress-order-native",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/iron-progress-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "iron-progress-order-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/iron-progress-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

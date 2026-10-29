@@ -1,0 +1,69 @@
+{
+  "id": "goldfarm-order",
+  "goal": "Run a finite funded Ardougne earning batch on an owned account with fresh food, bank only newly earned coins, preserve unrelated assets and health, and confirm logout; stop cleanly on exhausted supply.",
+  "entry": "scripts/goldfarm-stable.ts",
+  "files": [
+    "scripts/goldfarm-stable.ts",
+    "scripts/goldfarm-stable.test.ts",
+    "scripts/goldfarm.ts",
+    "scripts/goldfarm.test.ts",
+    "packages/core/src/bot.ts",
+    "packages/core/src/deposit.ts",
+    "packages/practice/src/goldfarm-order-proof.ts",
+    "packages/practice/test/goldfarm-order-proof.test.ts",
+    "packages/core/src/walk.ts",
+    "packages/core/test/walkpath.test.ts",
+    "packages/core/src/reaction-delay.ts",
+    "packages/core/test/reaction-delay.test.ts",
+    "packages/core/test/bot.test.ts"
+  ],
+  "consumer": "Actual installed goldfarm-stable CLI on representative ordinary HP/Thieving and bank entry earns new coins, accounts for food use, banks the income and logs out. Native saved state verifies cash gain, food debit, retained kit/other assets, life, exhausted-supply exit and safe restart. Live consumers fund the endgame equipment, skill inputs and premium-food chain. Every session opened through openBot also reports a passive REACTION line (send-to-first-server-response delay in game ticks) at settle, with zero behaviour change; the goldfarm native delivery retains that line with at least 20 samples.",
+  "checks": [
+    {
+      "id": "goldfarm-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/goldfarm-stable.test.ts",
+        "scripts/goldfarm.test.ts",
+        "packages/practice/test/goldfarm-order-proof.test.ts",
+        "packages/core/test/walkpath.test.ts",
+        "packages/core/test/reaction-delay.test.ts",
+        "packages/core/test/bot.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-goldfarm-door-repro",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/goldfarm-order-proof.ts",
+        "--door-repro"
+      ],
+      "timeoutMs": 240000
+    },
+    {
+      "id": "native-goldfarm-order",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/goldfarm-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-goldfarm-order",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/goldfarm-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

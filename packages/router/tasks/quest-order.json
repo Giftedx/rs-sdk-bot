@@ -1,0 +1,48 @@
+{
+  "id": "quest-order",
+  "goal": "Complete one named generated quest with an owned account from staged items. Refuse to start if a required item is missing. Confirm the quest varp and quest points in saved state, bank what is left, and confirm logout. A rerun of a finished quest stops before it acts.",
+  "entry": "scripts/quest-order.ts",
+  "files": [
+    "scripts/quest-order.ts",
+    "scripts/quest-order.test.ts",
+    "packages/practice/src/quest-order-proof.ts",
+    "packages/practice/test/quest-order-proof.test.ts"
+  ],
+  "consumer": "Quest varp and quest points observed in the saved account after logout; missing-item start refused; rerun of a completed quest refused before login actions",
+  "checks": [
+    {
+      "id": "quest-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/quest-order.test.ts",
+        "packages/practice/test/quest-order-proof.test.ts",
+        "scripts/quest-sustain.test.ts",
+        "scripts/quest-walk.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-quest-order",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-order-proof.ts"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "saved-quest-complete",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

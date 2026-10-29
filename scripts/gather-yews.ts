@@ -8,6 +8,18 @@ import { bankCargo } from '../packages/core/src/cargo';
 import type {Session} from '../packages/core/src/inprocess';
 
 export const treeAfterBank=(explicit:string|undefined,normalLogs:number)=>explicit??(normalLogs<100?'normal':'oak');
+const NORTH_NORMAL_TREES=new Set(['3078,3307','3081,3308','3082,3304','3083,3306','3084,3298','3086,3296','3087,3307','3089,3301','3089,3310','3090,3305','3093,3301','3096,3310']);
+export function normalGrove(name='south'){
+    if(name!=='south'&&name!=='north')throw Error('unsupported NORMAL_GROVE: '+name);
+    return {name,spot:name==='north'?{x:3088,z:3303}:{x:3088,z:3285},
+        contains:(x:number,z:number)=>name==='north'?NORTH_NORMAL_TREES.has(`${x},${z}`):x>=3080&&x<=3092&&z>=3272&&z<=3295};
+}
+type WoodTree={x:number;z:number;distance:number;reachable?:boolean;optionsWithIndex:readonly {text:string}[]};
+export function woodTreeOrder<T extends WoodTree>(trees:readonly T[],players:readonly {x:number;z:number}[]){
+    const adjacent=(t:T)=>players.filter(p=>Math.max(Math.abs(p.x-t.x),Math.abs(p.z-t.z))<=1).length;
+    return trees.filter(t=>t.reachable!==false&&t.optionsWithIndex.some(o=>/^chop down$/i.test(o.text)))
+        .sort((a,b)=>adjacent(a)-adjacent(b)||a.distance-b.distance);
+}
 const OAK_TILES=new Set(['3081,3291','3082,3295']); // rev289 m48_51 oaktree1281, both inside old Draynor safe rectangle.
 export function oakGrove(name='north'){
     if(name!=='north'&&name!=='west')throw new Error('unsupported OAK_GROVE: '+name);
@@ -98,9 +110,11 @@ if(import.meta.main){
 
 const local = process.env.REGION === 'lumbridge';
 const draynor = process.env.REGION === 'draynor';
-let YEW_SPOT = local ? { x: 3226, z: 3237 } : draynor ? { x: 3088, z: 3285 } : { x: 2712, z: 3462 };
+const grove=draynor?normalGrove(process.env.NORMAL_GROVE):undefined;
+let YEW_SPOT = local ? { x: 3226, z: 3237 } : draynor ? grove!.spot : { x: 2712, z: 3462 };
 const SEERS_BANK = local || draynor ? { x: 3092, z: 3243 } : { x: 2727, z: 3492 };
 let TREE = process.env.TREE ?? (draynor ? 'normal' : 'yew');
+if(process.env.NORMAL_GROVE&&(!draynor||TREE!=='normal'))throw Error('NORMAL_GROVE requires Draynor normal trees');
 const logRe = draynor&&!process.env.TREE ? /^(logs|oak logs)$/i : TREE === 'normal' ? /^logs$/i : new RegExp(`^${TREE} logs$`, 'i');
 let treeRe = TREE === 'normal' ? /^tree$/i : new RegExp(`^${TREE}`, 'i');
 const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
@@ -110,6 +124,7 @@ const botName = process.argv[2] ?? 'Bigchopper';
 if(draynor&&TREE==='oak')oakGrove(process.env.OAK_GROVE); // Reject unknown profiles before login.
 
 const s = await openBot(botName).catch(e => finish([], false, `login: ${String(e)}`));
+if(grove?.name==='north'&&(s.sdk.getState()?.player?.combatLevel??0)<13)await finish([s],false,'no wood progress: northern grove requires combat13');
 if(draynor&&TREE==='oak'&&(process.env.PREPARE==='1'||process.env.MAX_MAKE)){
     try{const r=await runDraynorOak(s,{cap:CAP,maximum:Number(process.env.MAX_MAKE??25),prepare:process.env.PREPARE==='1',grove:process.env.OAK_GROVE});await finish([s],r.ok,`mode=draynor-oak ${Object.entries(r).map(([k,v])=>`${k}=${v}`).join(' ')}`);}catch(e){await finish([s],false,String(e));}
 }
@@ -189,7 +204,7 @@ try {
             const logs = s.sdk.getState()?.bank?.items.find(i => /^logs$/i.test(i.name))?.count ?? 0;
             TREE = treeAfterBank(process.env.TREE,logs);
             treeRe = TREE === 'normal' ? /^tree$/i : new RegExp(`^${TREE}`,'i');
-            YEW_SPOT = { x: 3088, z: 3285 };
+            YEW_SPOT = grove!.spot;
         }
         await s.bot.closeInterface();
         await waitTicks(s, 1);
@@ -238,9 +253,9 @@ try {
         const before = yewLogs();
         const trees = s.sdk.getState()?.nearbyLocs.filter(l => treeRe.test(l.name)
             && (!local || (l.x >= 3214 && l.x <= 3239 && l.z >= 3226 && l.z <= 3250))
-            && (!draynor || (l.x>=3080 && l.x<=3092 && l.z>=3272 && l.z<=3295
+            && (!draynor || (grove!.contains(l.x,l.z)
                 && (retryAfter.get(`${l.x},${l.z}`)??0)<=s.tick()))).sort((a,b) => a.distance-b.distance) ?? [];
-        const tree=trees[0];
+        const tree=(draynor?woodTreeOrder(trees,s.sdk.getState()?.nearbyPlayers??[]):trees)[0];
         if(!tree) { await waitTicks(s,2); continue; }
         if(draynor) {
             const xp=s.sdk.getSkillXp('woodcutting')??0;

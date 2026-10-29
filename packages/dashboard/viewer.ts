@@ -14,6 +14,7 @@ export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relati
 // A geometry draw followed by a screen present is not a promise that every tile loaded.
 export function installViewerBridge(host:any) {
     let privacyReady=false,renderReady=false,feedConnected:boolean|null=null,failed=false,announced=false;
+    let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false;
     const undo:(()=>void)[]=[];
     const emit=(detail='A geometry frame was presented; terrain streaming may continue.')=>{
         if(host.parent===host)return;
@@ -41,6 +42,7 @@ export function installViewerBridge(host:any) {
             try{
                 const list=await json();
                 if(!Array.isArray(list)||list.length<1||list.length>64||list.some(n=>typeof n!=='string'||!/^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw new Error('invalid name filter');
+                hiddenNames=new Set(list.map(n=>n.toLowerCase()));
                 // embed.ts applies its hidden Set in the promise continuation.
                 // Two animation turns follow that actual .json() consumption.
                 host.requestAnimationFrame(()=>host.requestAnimationFrame(()=>{if(!failed){privacyReady=true;emit();}}));
@@ -87,11 +89,36 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('open',()=>{feedConnected=true;emit();});
                 this.addEventListener('close',()=>{feedConnected=false;emit();});
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
+                const names=new Map<number,string>(),seenChat=new Set<string>();
+                const mask=(value:string)=>{for(const name of hiddenNames)value=value.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'⟦MAIN⟧');return value;};
+                this.addEventListener('message',(event:any)=>{
+                    if(typeof event.data!=='string'||event.data.length>2_000_000)return;
+                    let message:any;try{message=JSON.parse(event.data);}catch{return;}
+                    if(message.t==='roster'&&Array.isArray(message.p))for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                    if(message.t!=='tick'||!Array.isArray(message.p)||!privacyReady||!renderReady||failed||host.parent===host)return;
+                    for(const p of message.p){
+                        if(typeof p.ch!=='string'||typeof p.i!=='number'||!names.has(p.i))continue;
+                        const key=String(message.k)+':'+p.i+':'+p.ch;
+                        if(seenChat.has(key))continue;seenChat.add(key);if(seenChat.size>500)seenChat.delete(seenChat.values().next().value!);
+                        host.parent.postMessage({atlasChat:{key:mask(key),name:mask(names.get(p.i)!),text:mask(p.ch).slice(0,500)}},host.location.origin);
+                    }
+                });
             }}catch{/* Non-feed sockets do not affect readiness. */}
         }
     };
     host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
+    // The pinned viewer publishes its current follow target in its URL. Relay
+    // that documented state; do not depend on unbuilt debug globals.
+    host.setInterval?.(()=>{
+        if(!privacyReady||!renderReady||failed||host.parent===host)return;
+        const worldMap=!!host.document?.querySelector('.worldmap-modal-overlay');
+        if(worldMap!==publishedWorldMap){publishedWorldMap=worldMap;host.parent.postMessage({atlasWorldMap:worldMap},host.location.origin);}
+        const follow=new host.URL(host.location.href).searchParams.get('follow');
+        if(!follow||follow===publishedFollow||!/^[A-Za-z0-9_ -]{1,12}$/.test(follow))return;
+        publishedFollow=follow;
+        host.parent.postMessage({atlasFollow:hiddenNames.has(follow.toLowerCase())?'⟦MAIN⟧':follow},host.location.origin);
+    },500);
 }
 
 export const viewerBridgeSource=()=>`(${installViewerBridge.toString()})(window);`;

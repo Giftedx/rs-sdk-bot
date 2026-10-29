@@ -1,0 +1,54 @@
+{
+  "id": "quest-items-order",
+  "goal": "Run one complete ordinary-account Cook's Assistant job: observe live entry, reuse owned kit and stock, gather missing ingredients, complete the quest, preserve unrelated assets and confirm logout.",
+  "entry": "scripts/quest-cook-job.ts",
+  "files": [
+    "scripts/quest-items-order.ts",
+    "scripts/quest-items-order.test.ts",
+    "packages/practice/src/quest-items-order-proof.ts",
+    "packages/practice/test/quest-items-order-proof.test.ts",
+    "scripts/quest-cook-job.ts",
+    "scripts/quest-cook-job.test.ts",
+    "scripts/generated/quest-cook.ts",
+    "scripts/quest-cook-entry.test.ts",
+    "scripts/quest-order.ts",
+    "scripts/quest-order.test.ts"
+  ],
+  "consumer": "The actual parameterized live-worker CLI, invoked in native proof from representative normal entry with the same args as live, gathers missing inputs and completes Cooks Assistant. Saved quest flag, quest points, XP/reward, retained assets and logout agree. No privileged/local --save requirement in the live entry. Existing native fixture adapters remain separate.",
+  "checks": [
+    {
+      "id": "quest-items-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/quest-items-order.test.ts",
+        "scripts/quest-cook-job.test.ts",
+        "packages/practice/test/quest-items-order-proof.test.ts",
+        "scripts/quest-order.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-quest-items-consumer",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-items-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-quest-items-consumer",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-items-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

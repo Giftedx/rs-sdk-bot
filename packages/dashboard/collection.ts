@@ -52,12 +52,13 @@ export function collectionState(bots: any[], ownedNames: string[], cargo: any[],
 
 export function operationState(b: any, now: number) {
     if (b.reserved) return 'reserved';
-    const recent = b.at && now - b.at < 3_600_000;
+    const recent = b.at && b.at<=now && now - b.at < 3_600_000;
     const result = String(b.result ?? '');
     if (recent && (b.hp?.now === 0 || /\bdied=true\b|\bdied\s/.test(result))) return 'died';
-    if (recent && /\bstop file\b/i.test(result)) return 'paused';
+    if (/^paused:|\brelease-paused\b/i.test(String(b.planJob?.state??'')) || recent && /\bstop[- ]file\b/i.test(result)) return 'paused';
+    if (/\bblocked\b/i.test(String(b.planJob?.state??''))) return 'blocked';
     if (recent && result && !/^ok\b/.test(result)) return 'failed';
-    if (recent && /blocked|error|fail|stuck/i.test(String(b.phase ?? ''))) return 'blocked';
+    if (recent && /\b(blocked|error|fail|failed|stuck)\b/i.test(String(b.phase ?? ''))) return 'blocked';
     if (!result && b.processActive && (!b.at || now - b.at > 20_000)) return 'active-stale';
     if (!b.at || now - b.at > 20_000) return b.inWorld && !result ? 'unobserved' : 'offline';
     if (b.result) return 'ended';
@@ -105,6 +106,15 @@ export function boundedOperation(status: any) {
             : 'Target fulfillment unreported' };
 }
 
+export function accountJobRows(jobs:any):any[]{
+ if(!Array.isArray(jobs))return [];
+ return jobs.flatMap(job=>{
+  if(!job||typeof job!=='object')return [];
+  const names=[job.account,...(Array.isArray(job.accounts)?job.accounts:[])].filter((n:any)=>typeof n==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(n));
+  const seen=new Set<string>();return names.filter((name:string)=>{const key=name.toLowerCase();if(seen.has(key))return false;seen.add(key);return true;}).map((account:string)=>({...job,account}));
+ });
+}
+
 export function capacityState(sw: any, freeGB: number, now: number) {
     const number = (n: unknown) => typeof n === 'number' && Number.isFinite(n) && n >= 0 ? n : null;
     const at = number(sw?.at), fresh = at !== null && now >= at && now-at < 30_000;
@@ -112,7 +122,7 @@ export function capacityState(sw: any, freeGB: number, now: number) {
     const pendingReserveGB = fresh ? number(sw?.pendingReserveGB) : null;
     const floorGB = sw ? Math.max(8, number(sw.minFreeGB) ?? 8) : null;
     const free = number(freeGB);
-    const queued = fresh && Array.isArray(sw?.jobs) ? new Set(sw.jobs.filter((j: any) => j.enabled && typeof j.account === 'string'
+    const queued = fresh && Array.isArray(sw?.jobs) ? new Set(accountJobRows(sw.jobs).filter((j: any) => j.enabled && typeof j.account === 'string'
         && /^(?:waiting: (?:maxBots$|projected |current mission still running$)|stopping; resume queued$|running; updated mission queued$)/.test(String(j.state)))
         .map((j: any) => j.account.toLowerCase())).size : null;
     return { at, fresh, active: fresh && running !== null && external !== null ? running+external : null, cap,

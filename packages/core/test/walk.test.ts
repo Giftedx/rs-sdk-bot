@@ -2,6 +2,25 @@ import { test, expect } from 'bun:test';
 import { walkRoute } from '../src/walk';
 import { fakeGame } from './fakegame';
 
+test('same-floor exact CW landing cannot pass at its unmoved start two tiles away',async()=>{
+ const g=fakeGame({x:2418,z:3074,level:0,nearbyLocs:[{id:1,x:2417,z:3074,level:0}]});g.state.equipment=[];g.quirks.climbFails=1;
+ try{const result=await walkRoute(g as any,[{kind:'transport',loc:'castlewars_outsidestairs_saradomin_linked',option:'op1',at:{x:2417,z:3074,level:0},entry:{x:2418,z:3074,level:0},to:{x:2416,z:3074,level:0},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:3});expect(result).toMatchObject({ok:false,reason:'timeout'});}finally{g.stop();}
+});
+test('same-floor exact transport waits for its actual delayed landing',async()=>{
+ const g=fakeGame({x:2418,z:3074,level:0,nearbyLocs:[{id:1,x:2417,z:3074,level:0}]});g.state.equipment=[];g.quirks.climbTo={x:2416,z:3074,level:0};g.quirks.climbDelayTicks=4;
+ try{const result=await walkRoute(g as any,[{kind:'transport',loc:'castlewars_outsidestairs_saradomin_linked',option:'op1',at:{x:2417,z:3074,level:0},entry:{x:2418,z:3074,level:0},to:{x:2416,z:3074,level:0},exact:true}],{maxRetriesPerLeg:1,legTimeoutTicks:8});expect(result.ok).toBe(true);expect(result.ticks).toBeGreaterThanOrEqual(4);expect(g.state.player.worldX).toBe(2416);}finally{g.stop();}
+});
+
+test('goTo plans from the observed floor after its ordinary Prayer membership probe already climbed',async()=>{
+ const {goTo}=await import('../src/walk');
+ const p={worldX:3045,worldZ:3483,level:0};const client={ingame:true,mainModalId:-1};
+ const state={player:p,skills:[],inventory:[],equipment:[],nearbyLocs:[{id:2641,x:3046,z:3483,level:0,distance:1}]};
+ const session:any={client,tick:()=>0,onTick:()=>()=>{},sdk:{getState:()=>state,getDialog:()=>null},direct:async(a:any)=>{expect(a.type).toBe('interactLoc');p.level=1;return{success:true};},bot:{}};
+ let planned:any;const world:any={route:(from:any,_to:any,actor:any)=>{planned={from,actor};return{ok:true,legs:[],cost:0};}};
+ const result=await goTo(session,world,{x:3045,z:3483,level:1},{skills:{},varps:{},items:[]});
+ expect(result.ok).toBe(true);expect(planned.from).toEqual({x:3045,z:3483,level:1});expect(planned.actor.unlocks).toContain('prayer-guild');
+});
+
 test('a walk leg that lands 3 tiles off is retried, then succeeds', async () => {
     const g = fakeGame({ x: 0, z: 0, level: 0 });
     g.quirks.walkOffBy = 3;
@@ -90,7 +109,7 @@ test('aborting the walk (reflex) cancels the in-flight bot.walkTo through the SD
     expect(cancelled).toBe(true);
 });
 
-test('goTo blocks, in the SDK pathfinder, the doors this account cannot pass near the route', async () => {
+test('goTo does not turn account policy into persistent SDK refusal walls', async () => {
     const { goTo } = await import('../src/walk');
     const g = fakeGame({ x: 0, z: 0, level: 0 });
     const blocked: string[] = [];
@@ -102,7 +121,7 @@ test('goTo blocks, in the SDK pathfinder, the doors this account cannot pass nea
     const r = await goTo(g as any, world, { x: 10, z: 10, level: 0 }, { skills: {}, varps: {}, items: [] });
     g.stop();
     expect(r.ok).toBe(true);
-    expect(blocked).toEqual(['5,5,0']); // the far door is outside the route's area and is skipped
+    expect(blocked).toEqual([]); // Synchronous per-actor query masks own policy; TTLs own actual refusals only.
 });
 
 test('a walk refused right after a climb (arrival delay) waits before retrying, then succeeds', async () => {

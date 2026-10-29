@@ -15,14 +15,14 @@ const hashes=Object.fromEntries(Object.keys(expected).map(p=>[p,createHash('sha2
 if(Object.entries(expected).some(([p,h])=>hashes[p]!==h))throw new Error('production hash changed');
 if(process.env.REUSE_STACK!=='1')throw new Error('existing local stack required');
 if(existsSync('.practice/withdraw')&&readdirSync('.practice/withdraw').some(f=>f.endsWith('.json')))throw new Error('another payout request pending; owner must resolve');
-const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
 if(free<11)throw new Error(`two-account reservation needs11GiB; free=${free}`);
 console.log(`PROOF_RESOURCE freeGiB=${free} donor=${donor} receiver=${receiver}`);
 const initial:Record<string,ReturnType<typeof readPracticeSave>>={};
 const paths:Record<string,string>={};
 const count=(items:{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 async function child(args:string[],label:string,timeout=60000){
- const p=Bun.spawn(['bun',...args],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0'},stdout:'pipe',stderr:'pipe'});
+ const p=Bun.spawn(['bun',...args],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0'},stdout:'pipe',stderr:'pipe',windowsHide:true});
  const timer=setTimeout(()=>p.kill(),timeout);let out='';
  const read=async(stream:ReadableStream<Uint8Array>,channel:string)=>{for await(const b of stream){const part=new TextDecoder().decode(b);out+=part;writeFileSync(resolve(dir,`${prefix}-${label}.log`),out);process.stdout.write(`[${label}:${channel}] ${part}`);}};
  await Promise.all([read(p.stdout,'out'),read(p.stderr,'err')]);const exitCode=await p.exited;clearTimeout(timer);return{out,exitCode};

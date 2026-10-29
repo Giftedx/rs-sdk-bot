@@ -5,9 +5,10 @@
 // CLI: bun packages/practice/src/supervise-host.ts <script> <maxRestarts> <account...>  (env passes through)
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { isNoProgressFailure } from './supervise';
+import { isNoProgressFailure, isPrerequisiteFailure } from './supervise';
+import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 
-export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up';
+export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused';
 
 // The end an account's last RESULT line means, or null when the account must run again. Same order as supervise.ts.
 export function classify(result: string | undefined, stopFile: boolean): AccountEnd | null {
@@ -18,7 +19,8 @@ export function classify(result: string | undefined, stopFile: boolean): Account
     if (/died=true|RESULT fail died/.test(r)) return 'died';
     // Out of food: a restart only logs in again and finds the same empty bank.
     if (/RESULT fail no food/.test(r)) return 'stopped';
-    if (isNoProgressFailure(r)) return 'blocked';
+    if (isWorkerReleaseHold(r)) return 'release-paused';
+    if (isNoProgressFailure(r) || isPrerequisiteFailure(r)) return 'blocked';
     return null;
 }
 
@@ -75,7 +77,8 @@ if (import.meta.main) {
     if (!script || accounts.length === 0) { console.log('usage: supervise-host.ts <script> <maxRestarts> <account...>'); process.exit(2); }
     const r = await superviseHost(accounts, {
         run: async active => {
-            const p = Bun.spawn(['bun', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000'], { stdout: 'pipe', stderr: 'inherit', env: process.env });
+            if(process.env.DEMO_OK==='1')try{assertWorkerRelease();}catch(e){return {stdout:active.map(a=>`[${a}] RESULT fail ${String(e)}`).join('\n'),exitCode:1};}
+            const p = Bun.spawn(['bun', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000'], { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
             let text = '';
             const reader = p.stdout.getReader();
             for (;;) { const { done, value } = await reader.read(); if (done) break; const c = new TextDecoder().decode(value); text += c; process.stdout.write(c); }

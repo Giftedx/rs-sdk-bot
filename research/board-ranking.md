@@ -8,7 +8,7 @@ Margin = leader ticks - our ticks. Positive means winnable on time alone. Supply
 
 | Board | #1 (ticks) | Our ticks | Margin | Supply (live GE) | Method |
 |---|---|---|---|---|---|
-| Cooking | jackalopeck3 38 | 35 | 3 | Grapes: need ~362; sellers 0, wanted 98700, bid 1000, ask -, last 1000 | hand-made wine at 35 then bank ferment; login-timer route excluded (bug report) |
+| Cooking | jackalopeck3 38 | 35 | 3 | Grapes: need ~362; sellers 0, wanted 98700, bid 1000, ask -, last 1000 | hand-made wine at 35 then bank ferment; login-timer route authorized; qualify current supply and timing |
 | Fletching | jackalopefr1 58 | 323 | -265 | Rune dart tip: need ~2125; sellers 0, wanted 0, bid -, ask -, last - | arrows then darts, 5 actions/tick |
 | Crafting | nickgemcut 197 | 354 | -157 | Uncut dragonstone: need ~291; sellers 0, wanted 100, bid 1000000, ask -, last 200000 | measured: 27 cuts in 7 ticks, trade resupply 12 ticks |
 | Herblore | jackalopehl2 447 | 346 | 101 | Torstol: need ~229; sellers 0, wanted 0, bid -, ask -, last - | finish potions 5/tick; zamorak brew from 78 |

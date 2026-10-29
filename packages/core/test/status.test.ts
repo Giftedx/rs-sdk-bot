@@ -19,6 +19,24 @@ test('a bank visit between writes keeps an identified snapshot after close', asy
     } finally { status.stop(); rmSync(file,{force:true}); rmSync(file+'.tmp',{force:true}); }
 });
 
+test('status links its exact lifecycle attempt and keeps every existing field; no attempt stays null', () => {
+    const name = `StatusLife${process.pid}`;
+    const file = resolve(import.meta.dir, '../../../.practice/status', `${name}.json`);
+    const state: any = { inventory: [], skills: [] };
+    const base: any = { name, sdk: { getState: () => state }, tick: () => 1, onTick: () => () => {} };
+    try {
+        startStatus(base, 'localhost:8888').stop();
+        const plain = JSON.parse(readFileSync(file, 'utf8'));
+        expect(plain.sessionAttemptId).toBeNull();
+        startStatus({ ...base, lifecycle: { attemptId: '1793249737408-1-1' } } as any, 'localhost:8888').stop();
+        const linked = JSON.parse(readFileSync(file, 'utf8'));
+        expect(linked.sessionAttemptId).toBe('1793249737408-1-1');
+        const { sessionAttemptId: _a, at: _b, started: _c, ...rest } = linked, { sessionAttemptId: _d, at: _e, started: _f, ...plainRest } = plain;
+        expect(rest).toEqual(plainRest);
+        expect(Object.keys(linked)).toEqual(Object.keys(plain));
+    } finally { rmSync(file, { force: true }); rmSync(file + '.tmp', { force: true }); }
+});
+
 test('status keeps bank unknown until ready, accepts a real empty update and retains it through close', async () => {
     const name=`StatusReady${process.pid}`;
     const file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
@@ -151,4 +169,12 @@ test('counter parsing is capped at16KiB of UTF8 and drops a truncated numeric to
     const prefix='ok ticks=1 ',tail='tail=';
     const text=prefix+' '.repeat(16*1024-prefix.length-tail.length-2)+tail+'123456 trailing=2';
     expect(resultCounters(text)).toEqual({ticks:1});
+});
+
+test('status writes passive per-account journal colours without sending actions',()=>{
+ const name=`QuestStatus${process.pid}`,file=resolve(import.meta.dir,'../../../.practice/status',`${name}.json`);
+ const s:any={name,sdk:{getState:()=>({skills:[],inventory:[]})},tick:()=>1,onTick:()=>()=>{},client:{ingame:true,ifType:(id:number)=>({colour:id===7333?0x00f800:0xff0000})}};
+ const status=startStatus(s,'localhost:8888');
+ try {const doc=JSON.parse(readFileSync(file,'utf8'));expect(doc.quests).toHaveLength(68);expect(doc.quests.filter((q:any)=>q.state==='complete')).toEqual([{id:7333,name:"Cook's Assistant",state:'complete'}]);expect(doc.quests.filter((q:any)=>q.state==='unknown')).toHaveLength(67);}
+ finally{status.stop();rmSync(file,{force:true});rmSync(file+'.tmp',{force:true});}
 });

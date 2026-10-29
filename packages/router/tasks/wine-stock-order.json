@@ -1,0 +1,47 @@
+{
+  "id": "wine-stock-order",
+  "goal": "Produce an exact owned order of preserved unfermented wine from grapes and jugs of water, reconcile all inputs and outputs, and supply the existing Cooking consumer.",
+  "entry": "scripts/make-wine-order.ts",
+  "files": [
+    "scripts/make-wine-order.ts",
+    "scripts/make-wine-order.test.ts",
+    "packages/practice/src/wine-stock-order-proof.ts",
+    "packages/practice/test/wine-stock-order-proof.test.ts"
+  ],
+  "consumer": "scripts/cook-wine.ts uses the actual produced wine after staging into an ordinary native fixture account; independent saved-state checks verify the requested Cooking level, conserved stock, preserved assets and logout.",
+  "checks": [
+    {
+      "id": "wine-stock-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/make-wine-order.test.ts",
+        "packages/practice/test/wine-stock-order-proof.test.ts",
+        "scripts/cook-wine.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-wine-stock-consumer",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/wine-stock-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-wine-stock-consumer",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/wine-stock-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

@@ -20,9 +20,12 @@
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { inspect } from 'node:util';
+import ts from 'typescript';
 import { openBot, settle } from './bot';
 import type { Session } from './inprocess';
 import { noteStatusLine } from './status';
+import { workerExecution } from './worker-execution';
+import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 const BOT_MODULE = resolve(import.meta.dir, 'bot.ts').replace(/\\/g, '/');
@@ -52,13 +55,32 @@ class HostExit extends Error {
 export function rewriteScript(src: string, id: string, scriptDir: string, botModule: string = BOT_MODULE): string {
     const norm = (p: string) => p.replace(/\\/g, '/').replace(/\.ts$/, '').toLowerCase();
     const target = norm(botModule);
-    const out = src
-        .replace(/(\bfrom\s*|\bimport\s*\(\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, (m, pre: string, _q: string, spec: string) =>
-            norm(resolve(scriptDir, spec)) === target ? `${pre}'${botModule}?${BOT_Q}=${id}'` : m)
-        .replace(/\bprocess\.argv\b/g, '__host.argv')
-        .replace(/\bprocess\.env\b/g, '__host.env')
-        .replace(/\bprocess\.exit\(/g, '__host.exit(')
-        .replace(/\bconsole\.(log|error|warn|info)\b/g, '__host.console.$1');
+    const parsed = ts.createSourceFile('host-entry.ts', src, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const edits: { start: number; end: number; value: string }[] = [];
+    const visit = (node: ts.Node) => {
+        if (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) {
+            const owner = node.expression;
+            const property = ts.isPropertyAccessExpression(node) ? node.name.text
+                : node.argumentExpression && ts.isStringLiteral(node.argumentExpression) ? node.argumentExpression.text : null;
+            if (ts.isIdentifier(owner) && property) {
+                const replacement = owner.text === 'process' && ['argv', 'env', 'exit'].includes(property) ? `__host.${property}`
+                    : owner.text === 'console' && ['log', 'error', 'warn', 'info'].includes(property) ? `__host.console.${property}` : null;
+                if (replacement) edits.push({ start: node.getStart(parsed), end: node.getEnd(), value: replacement });
+            }
+        } else if (ts.isStringLiteral(node)) {
+            const parent = node.parent;
+            const module = ((ts.isImportDeclaration(parent) || ts.isExportDeclaration(parent)) && parent.moduleSpecifier === node)
+                || (ts.isCallExpression(parent) && parent.expression.kind === ts.SyntaxKind.ImportKeyword && parent.arguments[0] === node);
+            if (module && /^\.{1,2}\//.test(node.text) && norm(resolve(scriptDir, node.text)) === target) {
+                const path = `${botModule}?${BOT_Q}=${id}`.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                edits.push({ start: node.getStart(parsed), end: node.getEnd(), value: `'${path}'` });
+            }
+        }
+        ts.forEachChild(node, visit);
+    };
+    visit(parsed);
+    let out = src;
+    for (const edit of edits.sort((a, b) => b.start - a.start)) out = out.slice(0, edit.start) + edit.value + out.slice(edit.end);
     // Import declarations are hoisted, so this line runs before the script body wherever it stands.
     return `const __host = globalThis.__rsBotHost.get(${JSON.stringify(id)});\n${out}`;
 }
@@ -67,14 +89,44 @@ export function rewriteScript(src: string, id: string, scriptDir: string, botMod
 // same text inside a string/comment or making an imported helper a main module.
 export function hostedEntrySource(src: string, id: string, scriptDir: string): string {
     const entry = new Bun.Transpiler({ loader: 'ts', target: 'bun', define: { 'import.meta.main': 'true' } }).transformSync(src);
-    return rewriteScript(entry, id, scriptDir);
+    const rewritten = rewriteScript(entry, id, scriptDir);
+    const split = rewritten.indexOf('\n');
+    const prefix = rewritten.slice(0, split);
+    const body = rewritten.slice(split + 1);
+    // Bun module evaluation does not inherit the import caller's async scope.
+    // Keep static imports at module level and start the worker body in its own
+    // scope. Entry exports are private to this hosted query, never helper imports.
+    const parsed = ts.createSourceFile('host-entry.js', body, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+    const imports: string[] = [], statements: string[] = [];
+    for (const statement of parsed.statements) {
+        if (ts.isImportDeclaration(statement) || (ts.isExportDeclaration(statement) && statement.moduleSpecifier)) {
+            imports.push(statement.getFullText(parsed));
+        } else if (ts.isExportDeclaration(statement)) {
+            continue;
+        } else if (ts.isExportAssignment(statement)) {
+            statements.push(`void (${statement.expression.getText(parsed)});`);
+        } else {
+            let text = statement.getFullText(parsed);
+            const modifiers = ts.canHaveModifiers(statement) ? ts.getModifiers(statement) ?? [] : [];
+            const remove = modifiers.filter(m => m.kind === ts.SyntaxKind.ExportKeyword || m.kind === ts.SyntaxKind.DefaultKeyword);
+            for (const modifier of [...remove].reverse()) {
+                const from = modifier.getStart(parsed) - statement.getFullStart();
+                const to = modifier.getEnd() - statement.getFullStart();
+                text = text.slice(0, from) + text.slice(to);
+            }
+            if (remove.some(m => m.kind === ts.SyntaxKind.DefaultKeyword) &&
+                (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && !statement.name) text = `void (${text});`;
+            statements.push(text);
+        }
+    }
+    return `${imports.join('\n')}\n${prefix}\nawait __host.execution.run(async () => {\n${statements.join('\n')}\n});`;
 }
 
 type OpenOptions = NonNullable<Parameters<typeof openBot>[1]>;
 export function hostedOpenOptions(log: (line: string) => void, defaultStop: NonNullable<OpenOptions['onStop']>, opts: OpenOptions = {}): OpenOptions {
     // A custom callback cancels work/banks products before the worker calls its
     // own finish. Only scripts without that policy use the host's final stop.
-    return { log, ...opts, onStop: opts.onStop ?? defaultStop };
+    return { log, ...opts, onStop: opts.onStop ?? defaultStop, onSessionEnd: opts.onSessionEnd ?? defaultStop };
 }
 
 // The per-bot copy of bot.ts: everything from the shared module, with openBot and finish bound to one bot.
@@ -101,6 +153,8 @@ interface Instance {
     sessions: Session[];
     result: string;
     done: Promise<number>;
+    execution: ReturnType<typeof workerExecution>;
+    openings: Set<Promise<Session>>;
 }
 
 let installed = false;
@@ -155,7 +209,7 @@ export function memLine(tag = ''): string {
     return `MEM${tag ? ' ' + tag : ''} rss=${mb(m.rss)} heapUsed=${mb(m.heapUsed)} external=${mb(m.external)} arrayBuffers=${mb(m.arrayBuffers)}`;
 }
 
-export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out?: (line: string) => void; logDir?: string; guard?: boolean } = {}): Promise<HostedResult[]> {
+export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out?: (line: string) => void; logDir?: string; guard?: boolean; open?: typeof openBot } = {}): Promise<HostedResult[]> {
     const out = opts.out ?? ((l: string) => process.stdout.write(l + '\n'));
     const logDir = opts.logDir ?? join(repoRoot, '.practice', 'logs');
     mkdirSync(logDir, { recursive: true });
@@ -197,19 +251,45 @@ export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out
                 }
             },
             exit(code = 0) {
-                if (!finished) { finished = true; resolveDone(code); }
+                inst.execution.stop(new Error(`worker exited ${code}`));
+                if (!finished) {
+                    finished = true;
+                    const pending = [...inst.openings];
+                    if (inst.sessions.length || pending.length) {
+                        void inst.execution.cleanup(async () => {
+                            await Promise.allSettled(pending);
+                            return settle(inst.sessions, code === 0 && !pending.length, `script exit ${code}`, { log: l => inst.log(l) });
+                        })
+                            .then(ok => resolveDone(code || (ok ? 0 : 1)), e => { inst.log(`WARN exit cleanup failed: ${fmt([e])}`); resolveDone(code || 1); });
+                    } else resolveDone(code);
+                }
                 throw new HostExit(code);
             },
             async openBot(name, o) {
-                const s = await openBot(name, hostedOpenOptions(l => inst.log(l), (s,detail) => inst.finish([s], false, detail), o));
-                inst.sessions.push(s);
-                return s;
+                if (finished || inst.execution.signal.aborted || executionContext.getStore()?.signal.aborted) return never;
+                const opening = (async () => {
+                    const s = await (opts.open ?? openBot)(name, hostedOpenOptions(l => inst.log(l), (s,detail) => inst.finish([s], false, detail), o));
+                    if (finished || inst.execution.signal.aborted) {
+                        await inst.execution.cleanup(() => settle([s], false, 'session opened after worker stopped', { log: l => inst.log(l) }));
+                        throw inst.execution.signal.reason ?? new Error('worker stopped during open');
+                    }
+                    inst.execution.bind(s);
+                    inst.sessions.push(s);
+                    return s;
+                })();
+                inst.openings.add(opening);
+                try { return await opening; } finally { inst.openings.delete(opening); }
             },
             async finish(sessions, ok, detail) {
                 if (finished) return never;
                 finished = true;
+                const pending = [...inst.openings];
+                inst.execution.stop(new Error(`worker finished: ${detail}`));
                 // Same steps as finish() in bot.ts, without the process exit: RESULT, ledgers, logout, close.
-                const final = await settle(sessions, ok, detail, { log: l => inst.log(l) }).catch(e => { inst.log(`WARN settle failed: ${fmt([e])}`); return false; });
+                const final = await inst.execution.cleanup(async () => {
+                    await Promise.allSettled(pending);
+                    return settle([...new Set([...sessions, ...inst.sessions])], ok && !pending.length, detail, { log: l => inst.log(l) });
+                }).catch(e => { inst.log(`WARN settle failed: ${fmt([e])}`); return false; });
                 resolveDone(final ? 0 : 1);
                 // Like process.exit: nothing after finish() in the script runs.
                 return never;
@@ -217,6 +297,8 @@ export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out
             sessions: [],
             result: '',
             done,
+            execution: workerExecution((level, args) => inst.console[level](...args)),
+            openings: new Set(),
         };
         registry.set(id, inst);
         instances.push(inst);
@@ -238,15 +320,35 @@ export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out
     }
 
     const codes = await Promise.all(instances.map(i => i.done));
+    for (const inst of instances) registry.delete(inst.id);
     return instances.map((inst, k) => ({ name: inst.name, ok: codes[k] === 0, code: codes[k]!, result: inst.result }));
 }
 
+// jopt-simple's required argument + typed conversion boundary, rewritten for
+// the two host flags. Reject bad values before opening any worker sessions.
+export function parseHostArgs(argv: string[]) {
+    const positional: string[] = [], values = new Map<string, number>();
+    for (let i = 0; i < argv.length; i++) {
+        const arg = argv[i]!;
+        if (!arg.startsWith('--')) { positional.push(arg); continue; }
+        if (!['--stagger-ms', '--mem-every-s'].includes(arg)) throw new Error(`unknown option ${arg}`);
+        if (values.has(arg)) throw new Error(`duplicate option ${arg}`);
+        const raw = argv[++i];
+        if (!raw?.trim() || raw.startsWith('--')) throw new Error(`${arg} requires a number`);
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value < 0 || (arg === '--stagger-ms' && value > 2_147_483_647)) throw new Error(`${arg} is out of range`);
+        if (arg === '--mem-every-s' && !Number.isSafeInteger(value)) throw new Error(`${arg} requires whole seconds`);
+        values.set(arg, value);
+    }
+    const [script, ...names] = positional;
+    return { script, names, stagger: values.get('--stagger-ms') ?? 0, memEvery: values.get('--mem-every-s') ?? 0 };
+}
+
 if (import.meta.main) {
-    const argv = process.argv.slice(2);
-    const flag = (f: string) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
-    const stagger = Number(flag('--stagger-ms') ?? 0);
-    const memEvery = Number(flag('--mem-every-s') ?? 0);
-    const [script, ...names] = argv;
+    let parsed: ReturnType<typeof parseHostArgs>;
+    try { parsed = parseHostArgs(process.argv.slice(2)); }
+    catch (error) { console.error(`invalid host arguments: ${String(error)}`); process.exit(2); }
+    const { script, names, stagger, memEvery } = parsed;
     if (!script || names.length === 0) {
         console.log('usage: bun packages/core/src/host.ts <script> <bot1> [bot2 ...] [--stagger-ms N] [--mem-every-s N]');
         process.exit(2);

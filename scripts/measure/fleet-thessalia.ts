@@ -44,7 +44,7 @@ const booths:{id:number;tile:{x:number;z:number;level:number}}[] = world.feature
 if (booths.length !== 4) throw new Error('actual Varrock East booth source facts changed');
 const atBooth = (p:{x:number;z:number;level:number}) => p.level===0 && booths.some(b=>Math.max(Math.abs(p.x-b.tile.x),Math.abs(p.z-b.tile.z))<=1);
 if (!atBooth(source.pos)) throw new Error('source not adjacent to actual bank booth');
-const free = Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+const free = Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
 if (!Number.isFinite(free) || free < 9) throw new Error(`single practice actor needs9GiB; actual=${free}`);
 const dir = resolve('.practice/fleet-proof'); mkdirSync(dir,{recursive:true});
 const actor = runBotName('flglove',1), prefix = `thessalia-${actor}`;
@@ -68,7 +68,7 @@ writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,
 console.log(`PROOF_START actor=${actor} source=${sourceSha256} ownedStatusAt=${source.at} equipmentKnown=true freeGiB=${free}`);
 const p = Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve(script),actor,'thessalia','400','100'],{
     env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1',
-        STOCK_TARGET:'1',MAX_ITEMS:'1',MAX_SPEND:'50',COIN_RESERVE:'5000',NO_BUY_TICKS:'25',STOP_AT_TARGET:'1',FLOAT:'5050'},stdout:'pipe',stderr:'pipe'});
+        STOCK_TARGET:'1',MAX_ITEMS:'1',MAX_SPEND:'50',COIN_RESERVE:'5000',NO_BUY_TICKS:'25',STOP_AT_TARGET:'1',FLOAT:'5050'},stdout:'pipe',stderr:'pipe',windowsHide:true});
 let output='', stoppedOnDamage=false, timedOut=false, forcedKill=false;
 const stop = (why:string) => writeFileSync(resolve('.practice',`stop-${actor}`),why);
 const timer = setTimeout(()=>{timedOut=true;stop('local one-glove proof timed out');},240000);

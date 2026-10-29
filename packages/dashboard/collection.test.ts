@@ -1,4 +1,9 @@
 import { expect, test } from 'bun:test';
+
+test('release-paused is a rollout hold, not healthy work or a gameplay block',()=>{
+ for(const state of ['paused: worker release','ended: release-paused after 1 runs','paused: Error: no worker progress: release pin missing; live starts paused'])
+  expect(operationState({at:1000,result:'ok previous run',planJob:{state}},1001)).toBe('paused');
+});
 import { productionReview } from './collection';
 
 test('completed cow trips expose observed travel and spare pack capacity without claiming an optimum',()=>{
@@ -13,6 +18,12 @@ test('completed cow trips expose observed travel and spare pack capacity without
     expect(productionReview({...b,result:'ok mode=fire-access phase=reclaim'})).toEqual([]);
 });
 import { collectionState, operationState, isLoopback, effectiveJob, productionGoal, boundedOperation, capacityState, hostStopNativeProof, HOST_STOP_SOURCE } from './collection';
+test('normal failure counters do not mark productive workers blocked',()=>{
+ expect(operationState({at:1000,phase:'t=2000 banked=25000 fails=40 picks=563',result:''},1001)).toBe('observed');
+ expect(operationState({at:1000,phase:'Error: cannot reach bank',result:''},1001)).toBe('blocked');
+ expect(operationState({at:1000,result:'fail stop-file'},1001)).toBe('paused');
+ expect(operationState({at:1000,planJob:{state:'ended: blocked after 1 runs'},result:'ok endpoint inspected'},1001)).toBe('blocked');
+});
 test('bank evidence excludes packs, cargo, strangers and practice; flags name-only and old banks', () => {
     const c = collectionState([
         { name: 'a', bankAt: 1, bank: [{ name: 'Flax', count: 5 }, { name: 'Flax (noted)', count: 3 }], inventory: [{ name: 'Ore', count: 200 }] },
@@ -149,4 +160,12 @@ test('host STOP proof refuses failed first case, mismatched actors, live results
         f=>{f.evidence.raw=f.evidence.raw.replace('"heldBones":25','"heldBones":0');},f=>{f.evidence.at=200_000;},
     ];
     for(const mutate of mutations){const f=stopProofFixture();mutate(f);expect(hostStopNativeProof(f.status,f.evidence)).toBeNull();}
+});
+
+import {accountJobRows} from './collection';
+test('grouped coordinator assignments reach each account without undefined identities',()=>{
+ const rows=accountJobRows([{accounts:['Worker','worker','Courier'],enabled:true,state:'waiting: maxBots',script:'scripts/order.ts'},null,{accounts:[undefined,4,'../secret']},{account:'Solo',accounts:['Solo','Other']}]);
+ expect(rows.map(r=>r.account)).toEqual(['Worker','Courier','Solo','Other']);expect(rows[0].script).toBe('scripts/order.ts');
+ expect(capacityState({at:1000,jobs:[{accounts:['Worker','Courier'],enabled:true,state:'waiting: maxBots'}]},12,2000).queued).toBe(2);
+ expect(accountJobRows(null)).toEqual([]);
 });

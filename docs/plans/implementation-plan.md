@@ -1,3 +1,5 @@
+> Historical repository-cleanup plan. Not the current execution queue. See [joined-plan.md](joined-plan.md). Do not replay its migrations or deletion steps.
+
 # Implementation Plan
 
 [Overview]

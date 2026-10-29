@@ -1,0 +1,101 @@
+{
+  "id": "fresh-rune-supply-order",
+  "goal": "Turn an ordinary newly claimed starter into a self-supplied Rune Mysteries-complete essence miner and air-rune producer, with real Mining/Runecraft growth, banked runes and logout.",
+  "entry": "scripts/rune-supply.ts",
+  "files": [
+    "scripts/rune-supply.ts",
+    "scripts/rune-supply.test.ts",
+    "scripts/train-chickens.ts",
+    "scripts/train-chickens.test.ts",
+    "scripts/generated/quest-runemysteries.ts",
+    "scripts/generated/quest-lib.ts",
+    "scripts/rune-mysteries-route.ts",
+    "scripts/rune-mysteries-route.test.ts",
+    "scripts/gather-essence.ts",
+    "scripts/gather-essence.test.ts",
+    "scripts/generated/rcair.ts",
+    "scripts/fishcook.ts",
+    "scripts/fishcook.test.ts",
+    "packages/practice/src/fresh-rune-supply-proof.ts",
+    "packages/practice/test/fresh-rune-supply-proof.test.ts"
+  ],
+  "consumer": "Actual installed account-parameterized CLI starts from genuine default registration, prepares owned starter kit and food, completes Rune Mysteries, mines its own essence and crafts and banks genuinely new air runes to Runecraft20, then continues to21. Sequential bounded native stages preserve one identity without reseeding. A separate ordinary altar-recovery fixture proves actual portal exit, exact banking of inherited crafted runes at an already-met target, and no-reseed productive continuation to21. Independent saved-state verification retains default-state, quest/reward, supply, output, interruption/resume, asset, life and logout checks across every stage and distinguishes inherited output from new production.",
+  "checks": [
+    {
+      "id": "fresh-rune-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/rune-supply.test.ts",
+        "scripts/train-chickens.test.ts",
+        "scripts/rune-mysteries-route.test.ts",
+        "scripts/gather-essence.test.ts",
+        "packages/practice/test/fresh-rune-supply-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-fresh-rune-air-recovery",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/fresh-rune-supply-proof.ts",
+        "--air-recovery"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "native-fresh-rune-start",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/fresh-rune-supply-proof.ts",
+        "--stage-start"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "native-fresh-rune-first-bank",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/fresh-rune-supply-proof.ts",
+        "--stage-first-bank"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "native-fresh-rune-target",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/fresh-rune-supply-proof.ts",
+        "--stage-target"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "native-fresh-rune-higher",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/fresh-rune-supply-proof.ts",
+        "--stage-higher"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-fresh-rune-supply",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/fresh-rune-supply-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

@@ -20,6 +20,13 @@ test('chooses active eligible alternative when preferred species is gone; respec
     expect(selectRock([{ ...rock(), reachable: false }, { ...rock(2094), level: 1 }], 30, 0, 0)).toBeUndefined();
     expect(selectRock([rock(2090, 4), { ...rock(2091, 1), x: 3287 }], 1, 0, 0)?.id).toBe(2091);
 });
+test('unoccupied nodes precede crowded preferred species, while equally crowded nodes retain species rotation',()=>{
+    const copper=rock(2090,1),tin={...rock(2094,4),x:3289,z:3364};
+    expect(selectRock([copper,tin],30,0,0,'mixed',[{x:3285,z:3368}])).toBe(tin);
+    expect(selectRock([copper,tin],30,0,0,'mixed',[{x:3285,z:3368},{x:3289,z:3365}])).toBe(copper);
+    expect(selectRock([copper,{...rock(2091,5),x:3290,z:3364}],30,0,0,'mixed',[{x:3285,z:3367}])?.x).toBe(3290);
+});
+
 for (const replacement of [[], [rock(2093)], [{ ...rock(), optionsWithIndex: [] }]]) {
     test('depleted/despawned/replaced selected rock ends wait without60tick timeout', async () => {
         const f = fixture((t, state) => { if (t === 2) state.rocks = replacement; });

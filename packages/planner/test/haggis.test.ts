@@ -1,7 +1,22 @@
 import { test, expect } from 'bun:test';
-import { bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, schedule, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
+import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, schedule, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
 import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
+import { xpForLevel } from '../src/curve';
+
+test('selected air-to-nature route supplies enough full essence packs for 99', () => {
+    const supplies = suppliesFor(haggisActivities(), { mode: 'realistic', tricks: new Set() });
+    // Current altar source: air 5 XP, nature 9 XP, server multiplier 25.
+    // Carry XP across the level-44 transition; round each 27-essence pack.
+    let xp = 0, used = 0;
+    while (xp < xpForLevel(99)) {
+        xp += 27 * (xp < xpForLevel(44) ? 125 : 225);
+        used += 27;
+    }
+    expect(supplies.find(s => s.item === 'rune essence')!.count).toBeGreaterThanOrEqual(used);
+    expect(supplies).toContainEqual({ item: 'air talisman', count: 1 });
+    expect(supplies).toContainEqual({ item: 'nature talisman', count: 1 });
+});
 
 const clock = (id: Board['id'], deadline: number): Board => ({ id, label: id, rule: { kind: 'clock', deadline } });
 const job = (id: string, skill: Activity['serves'][number], ticks: number, extra: Partial<Activity> = {}): Activity => ({
@@ -147,7 +162,7 @@ test('content level gates: gold superheat after Smithing 40, herb rows after Dru
     }
     const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
     for (const mode of ['floor', 'realistic'] as const) {
-        const r = schedule(boards, acts, { mode, tricks: new Set(), force: { 'magic-smithing': 'superheat' } });
+        const r = schedule(boards, acts, { mode, tricks: new Set(), force: { 'magic-smithing': 'superheat', 'herblore-method':'herb-drops' } });
         const at = (id: string) => r.order.find(p => p.id === id)!;
         expect(at('smith-40').end).toBeLessThanOrEqual(at('superheat').start);
         expect(at('druid').landsAt).toBeLessThanOrEqual(at('herb-drops').start);
@@ -191,15 +206,15 @@ test('stun relog is skipped when the guests use more stun ticks than relog saves
     expect(finish(noGuest, 'thieving').finish).toBe(80);
 });
 
-test('levers: add rows exist only when on, drop rows only when off; owner levers are off by default', () => {
+test('levers: gameplay techniques need no owner approval; explicit disable remains a comparison option', () => {
     const boards = [clock('cooking', 100)];
     const acts: Activity[] = [
         job('old', 'cooking', 30, { lever: { id: 'L', role: 'drop' } }),
         job('new', 'cooking', 10, { lever: { id: 'L', role: 'add' } }),
         job('own', 'cooking', 1, { lever: { id: 'O', role: 'add', owner: true } }),
     ];
-    expect(schedule(boards, acts, opts).chosen).toEqual(['new']);
-    expect(schedule(boards, acts, { ...opts, disable: new Set(['L']) }).chosen).toEqual(['old']);
+    expect(schedule(boards, acts, opts).chosen).toEqual(['new','own']);
+    expect(schedule(boards, acts, { ...opts, disable: new Set(['L']) }).chosen).toEqual(['old','own']);
     expect(schedule(boards, acts, { ...opts, owner: new Set(['O']) }).chosen).toEqual(['new', 'own']);
 });
 
@@ -239,7 +254,7 @@ test('rival levers (research/rival-gap-list.md): ESTIMATE rows, no blocks on or 
         if (a.lever?.id.startsWith('rival-')) ids.add(a.lever.id);
         for (const p of a.patches ?? []) if (p.lever.startsWith('rival-')) ids.add(p.lever);
     }
-    expect(ids.size).toBe(9);
+    expect(ids.size).toBe(10);
     for (const a of acts.filter(x => x.id.startsWith('rival-'))) {
         // A rival row is the rival's estimate until we run it ourselves (rival-mm: research/quest-plan.md 1h).
         if (a.ticks?.evidence === 'MEASURED') expect(a.ticks.source).toContain('research/quest-plan.md');
@@ -254,6 +269,11 @@ test('rival levers (research/rival-gap-list.md): ESTIMATE rows, no blocks on or 
         expect(r.blocked).toEqual([]);
         expect(r.qp).toBe(145); // MAX_QP: every quest (research/quest-points-board.md)
     }
+    // A retired rival lever (rival-dragon-combat) only runs when named; Doric's 1 QP moves out of quests-short.
+    const r = schedule(boards, acts, { mode: 'realistic', tricks: new Set(), owner: new Set(['rival-dragon-combat']) });
+    expect(r.blocked).toEqual([]);
+    expect(r.qp).toBe(145);
+    expect(r.order.findIndex(p => p.id === 'dragon')).toBeLessThan(r.order.findIndex(p => p.id === 'def-top'));
 });
 
 // ---------- Travel (packages/planner/src/travel.ts) ----------
@@ -299,7 +319,8 @@ test('travel: bank = the nearest bank of the place (world.json); bank trips and 
     expect(leg(m, 'b', 'bank:x')).toEqual({ ticks: 7 + START_TICKS, method: 'world.json' });
     const boards = [clock('smithing', 10_000)];
     const r = schedule(boards, [job('smith', 'smithing', 100, { at: 'b', bankTrips: 3 })], { ...opts, travel: m });
-    expect(r.order[0]).toMatchObject({ ticks: 100 + 3 * 2 * 9, inner: 54, travel: 0 });
+    // Outbound is the recorded bank leg (9); return is a 5-tile estimate (5).
+    expect(r.order[0]).toMatchObject({ ticks: 100 + 3 * (9 + 5), inner: 42, travel: 0 });
     const v = schedule([clock('runecraft', 10_000)], [job('rc', 'runecraft', 100, { at: 'a', via: ['b'] })], { ...opts, travel: m });
     expect(v.order[0]).toMatchObject({ ticks: 142, inner: 42 });
 });
@@ -312,39 +333,38 @@ test('travel: a place on an island is reached through its port by boat', () => {
     expect(leg(m, 'b', 'c').method).toBe('estimate');
 });
 
-test('OUT rows (content bugs) are never scheduled; the legal Cooking route replaces cook-35', () => {
+test('no gameplay or supply policy can exclude a route', () => {
     const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
     const acts = haggisActivities();
     const out = acts.filter(a => a.out).map(a => a.id).sort();
-    expect(out).toEqual(['charge', 'cook-35', 'craft', 'fletch', 'fm-pyre', 'herb', 'login-wine', 'mage-arena', 'magic', 'mortton-oil', 'relog']);
+    expect(out).toEqual([]);
+    for(const id of ['charge','cook-35','fm-pyre','login-wine','mage-arena','mortton-oil','relog'])expect(acts.find(a=>a.id===id)?.out).toBeUndefined();
+    expect(LEVERS.filter(l=>l.owner)).toEqual([]);
+    expect(SCENARIOS[0]!.tricks).toEqual(TRICKS);
     for (const tricks of [new Set<never>(), new Set(TRICKS)]) {
         const r = schedule(boards, acts, { mode: 'realistic', tricks, owner: new Set(['charge-spam']), travel: haggisTravel() });
         for (const id of out) expect(r.chosen).not.toContain(id);
-        expect(r.chosen).toEqual(expect.arrayContaining(['cooks-assistant', 'cook-range-35', 'bank-wine', 'wine-timer']));
         expect(r.blocked).toEqual([]);
         expect(r.qp).toBe(145); // MAX_QP: every quest (research/quest-points-board.md)
     }
 });
 
-test('no active row needs an item with no legal source at this scale (research/supply-logistics.md)', () => {
-    const bad = haggisUnsourceable();
-    expect(bad.map(u => u.item)).toEqual(expect.arrayContaining(['torstol potion (unf)', 'snapdragon potion (unf)', 'toadflax potion (unf)', 'uncut dragonstone', 'dragonstone amulet', 'cosmic rune', 'rune dart tips']));
-    const max = new Map(bad.map(u => [u.item, u.max]));
-    const acts = haggisActivities();
-    // Each active row alone, with the supplies its lever patches can set.
-    for (const a of acts.filter(a => !a.out)) {
-        for (const s of [...(a.supplies ?? []), ...(a.patches ?? []).flatMap(p => p.set?.supplies ?? [])]) {
-            if (max.has(s.item)) expect({ row: a.id, item: s.item, count: s.count }).toEqual({ row: a.id, item: s.item, count: Math.min(s.count, max.get(s.item)!) });
-        }
+test('supply research is a procurement lead, not an availability cap or route ban', () => {
+    expect(haggisUnsourceable().map(u=>u.item)).toContain('uncut dragonstone');
+    const row=job('missing-stock','crafting',10,{supplies:[{item:'uncut dragonstone',count:305}],out:{reason:'old shortage',replacement:'other'}});
+    expect(applyLevers([row],{}).map(a=>a.id)).toEqual(['missing-stock']);
+    expect(suppliesFor([row],{mode:'realistic',tricks:new Set()})).toEqual([{item:'uncut dragonstone',count:305}]);
+});
+
+test('restored supply routes are alternatives, not duplicated training obligations',()=>{
+    const acts=haggisActivities();
+    for(const [first,second]of [['craft','craft-diamond'],['fletch','fletch-arrows'],['herb','herb-drops']]){
+        const a=acts.find(a=>a.id===first)!,b=acts.find(a=>a.id===second)!;
+        expect(a.variant?.group).toBeTruthy();expect(a.variant?.group).toBe(b.variant?.group);expect(a.variant?.option).not.toBe(b.variant?.option);
     }
-    // The summed manifest of every scenario, with and without the safe levers.
-    for (const sc of SCENARIOS) for (const disable of [new Set<string>(), new Set(LEVERS.map(l => l.id))]) {
-        for (const s of suppliesFor(acts, { mode: 'realistic', tricks: new Set(sc.tricks), disable })) {
-            if (max.has(s.item)) expect({ scenario: sc.id, item: s.item, count: s.count }).toEqual({ scenario: sc.id, item: s.item, count: Math.min(s.count, max.get(s.item)!) });
-        }
-    }
-    // Each OUT row for supply names its replacement, and the replacement exists.
-    for (const a of acts.filter(a => a.out?.reason.startsWith('no legal source at this scale'))) expect(acts.some(b => b.id === a.out!.replacement && !b.out)).toBe(true);
+    expect(acts.find(a=>a.id==='bank-wine')!.requires).not.toContain('cook-range-35');
+    const live=applyLevers(acts,{}).map(a=>a.id);
+    expect(live.includes('magic')&&live.includes('magic-teleport')).toBe(false);
 });
 
 test('every row of the real table has a known place, and the travel schedule has no blocks', () => {
@@ -379,4 +399,17 @@ test('waterfall-late and def-at-ranged-spot (research/combat-measure.md section 
         expect(finish(all, 'strength').finish!).toBeLessThan(overall);
         for (const lever of ['waterfall-late', 'def-at-ranged-spot']) expect(finish(run([lever]), 'overall').finish!).toBeGreaterThan(overall);
     }
+});
+
+test('anvil route finishes Magic and Smithing and beats Family Crest plus superheat', () => {
+    const boards = loadSnapshot(join(import.meta.dir, '..', '..', '..', 'research', 'hiscores-2026-10-22.json'));
+    const run = (option: string) => schedule(boards, haggisActivities(), { mode: 'realistic', tricks: new Set(TRICKS), travel: haggisTravel(), force: { 'magic-smithing': option } });
+    const anvil = run('anvil'), superheat = run('superheat');
+    const at = (r: typeof anvil, id: string) => r.boards.find(b => b.id === id)!.finish;
+    expect(anvil.blocked).toEqual([]);
+    expect(at(anvil, 'magic')).not.toBeNull();
+    expect(at(anvil, 'smithing')).not.toBeNull();
+    // Magic trains in the foreground: as a stun guest it would wait on thieving, which waits on Magic 75.
+    expect(haggisActivities().find(a => a.id === 'magic-anvil')!.inside).toBeUndefined();
+    expect(anvil.overallFinish!).toBeLessThan(superheat.overallFinish!);
 });

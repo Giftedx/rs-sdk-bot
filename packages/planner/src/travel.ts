@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type {RouteGate} from './transport-requirements';
 
 // Travel between activities on the Haggis clock.
 //
@@ -30,13 +31,15 @@ export interface Place {
     island?: Island;
     note?: string;
 }
-export interface Leg { ticks: number; method: 'same' | 'world.json' | 'path' | 'estimate' | 'boat' | 'bank-trip'; detail?: string }
+export interface Leg { ticks: number; method: 'same' | 'world.json' | 'path' | 'estimate' | 'boat' | 'bank-trip'; detail?: string;gates?:RouteGate[] }
+export type CachedPathLeg={runTicks:number;tiles:number;toll?:number;locked?:string[];gates?:RouteGate[]};
 export interface TravelCache {
     generatedFrom?: string;
-    // `${a}>${b}` (sorted ids) -> run ticks (path tiles / 2), no start ticks.
-    legs: Record<string, { runTicks: number; tiles: number; toll?: number; locked?: string[] }>;
+    // Older caches sort ids. New directed caches contain each measured direction.
+    directed?:true;
+    legs: Record<string,CachedPathLeg>;
     // world.json nearest.bank of a place with a site, and the bank tile.
-    nearestBank: Record<string, { bank: string; runTicks: number; method: 'world.json' | 'path' }>;
+    nearestBank: Record<string, { bank: string; runTicks: number; method: 'world.json' | 'path';gates?:RouteGate[] }>;
     banks: Record<string, Place>;
     // Pathfinder run ticks for MEASURED_LEGS (calibration only).
     calibration?: Record<string, { runTicks: number; tiles: number }>;
@@ -46,8 +49,23 @@ export interface TravelModel { places: Record<string, Place>; cache: TravelCache
 export const ANYWHERE = 'anywhere';
 export const BANK = 'bank';
 
+// 2026-10-28: reuse relocate-bank's east road and fleet-al-kharid-entry's
+// Lumbridge toll approach. These are corridor points, not a measured speed claim.
+// Each segment still uses sessionWalker collision/door planning. Avoid the
+// Varrock south wizard circle and the Al Kharid mine/scorpions.
+export function smeltEntryRoute(p:{worldX:number;worldZ:number;level:number}) {
+    const near=(x:number,z:number)=>p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=5;
+    if(near(3269,3167))return {name:'al-kharid-bank',fare:0,points:[] as {x:number;z:number}[]};
+    if(!near(3253,3420))throw Error('smelt entry requires Varrock East or Al Kharid bank');
+    return {name:'varrock-east-toll',fare:10,points:[
+        [3290,3404],[3295,3370],[3265,3370],[3265,3350],[3255,3330],
+        [3255,3295],[3242,3248],[3256,3228],[3266,3227],
+    ].map(([x,z])=>({x:x!,z:z!}))};
+}
+
 const key = (a: string, b: string) => (a < b ? `${a}>${b}` : `${b}>${a}`);
 const cheb = (a: Place, b: Place) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
+const gateMetadata=(path:{gates?:RouteGate[];locked?:string[]}):RouteGate[]=>path.gates?.length?path.gates:(path.locked??[]).map(id=>({id,source:'legacy travel cache; prerequisites not retained',requires:[['other:unparsed gate '+id]]}));
 
 export function place(m: TravelModel, id: string): Place {
     const p = m.places[id] ?? m.cache.banks[id];
@@ -59,10 +77,13 @@ export function place(m: TravelModel, id: string): Place {
 function walk(m: TravelModel, a: string, b: string): Leg {
     if (a === b) return { ticks: 0, method: 'same' };
     const pa = place(m, a), pb = place(m, b);
-    const nb = m.cache.nearestBank[a]?.bank === b ? m.cache.nearestBank[a] : m.cache.nearestBank[b]?.bank === a ? m.cache.nearestBank[b] : undefined;
-    if (nb) return { ticks: Math.ceil(nb.runTicks) + START_TICKS, method: nb.method };
-    const c = m.cache.legs[key(a, b)];
-    if (c) return { ticks: Math.ceil(c.runTicks) + START_TICKS, method: 'path' };
+    // Directed-edge pattern: Skretzo/shortest-path@142e73e2, Transport.java (BSD-2-Clause).
+    // nearestBank was measured from a site to its bank. It says nothing about
+    // the return. Use an explicit legacy symmetric path or a labelled estimate.
+    const nb = m.cache.nearestBank[a]?.bank === b ? m.cache.nearestBank[a] : undefined;
+    if (nb) return { ticks: Math.ceil(nb.runTicks) + START_TICKS, method: nb.method,...(nb.gates?.length?{gates:nb.gates}:{}) };
+    const c = m.cache.legs[m.cache.directed?`${a}>${b}`:key(a,b)];
+    if (c) {const gates=gateMetadata(c);return { ticks: Math.ceil(c.runTicks) + START_TICKS, method: 'path',...(gates.length?{gates}:{}) };}
     return { ticks: Math.ceil(cheb(pa, pb) * RUN_TICKS_PER_TILE) + START_TICKS, method: 'estimate' };
 }
 
@@ -74,13 +95,16 @@ export function leg(m: TravelModel, a: string, b: string): Leg {
     let ticks = 0;
     let cur = a;
     const parts: string[] = [];
-    if (ia) { const w = walk(m, cur, ia.landing); ticks += w.ticks + ia.boatTicks; parts.push(`${w.method} to ${ia.landing}, boat ${ia.boatTicks}`); cur = ia.port; }
+    const gates:RouteGate[]=[];
+    if (ia) { const w = walk(m, cur, ia.landing);gates.push(...w.gates??[]); ticks += w.ticks + ia.boatTicks; parts.push(`${w.method} to ${ia.landing}, boat ${ia.boatTicks}`); cur = ia.port; }
     if (ib) {
         const w = walk(m, cur, ib.port); ticks += w.ticks + ib.boatTicks; cur = ib.landing;
+        gates.push(...w.gates??[]);
         parts.push(`${w.method} to ${ib.port}, boat ${ib.boatTicks}`);
     }
     const w = walk(m, cur, b); ticks += w.ticks; parts.push(`${w.method} to ${b}`);
-    return { ticks, method: 'boat', detail: parts.join('; ') };
+    gates.push(...w.gates??[]);
+    return { ticks, method: 'boat', detail: parts.join('; '),...(gates.length?{gates}:{}) };
 }
 
 // The concrete place an activity goes to: 'bank' = the nearest bank of the current place.
@@ -104,7 +128,8 @@ export function bankTrips(m: TravelModel, at: string, trips: number): Leg {
     if (trips <= 0) return { ticks: 0, method: 'bank-trip' };
     const b = resolve(m, at, BANK);
     const one = leg(m, at, b).ticks;
-    return { ticks: trips * 2 * one, method: 'bank-trip', detail: `${trips} x 2 x ${one} (${b})` };
+    const back = leg(m, b, at).ticks;
+    return { ticks: trips * (one + back), method: 'bank-trip', detail: `${trips} x (${one} + ${back}) (${b})` };
 }
 
 export const TRAVEL_FILE = join(import.meta.dir, 'haggis-travel.json');

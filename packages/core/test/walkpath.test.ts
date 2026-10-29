@@ -49,6 +49,12 @@ async function run(w: ReturnType<typeof road>, to: number, maxSteps = 200) {
     return p;
 }
 
+test('a named openable chest on the route is not opened as a door',async()=>{
+ const w=road();w.deps.locs=()=>[{id:2566,name:'Chest',x:3010,z:3200,optionsWithIndex:[{text:'Open',opIndex:1}]}];
+ const r=await run(w,3030);expect(r.ok).toBe(true);expect(r.doors).toBe(0);
+ expect(w.inputs.some(i=>i.what.startsWith('open'))).toBe(false);
+});
+
 test('expandPath turns straight and diagonal corners into single tiles', () => {
     expect(expandPath({ x: 0, z: 0 }, [{ x: 2, z: 2 }, { x: 4, z: 2 }])).toEqual([{ x: 1, z: 1 }, { x: 2, z: 2 }, { x: 3, z: 2 }, { x: 4, z: 2 }]);
 });
@@ -198,7 +204,7 @@ test('an async refusal arriving after the normal still replan does not add a sec
     expect(r.detail).toContain('walk rejected 3 times');
 });
 
-test('session door policy is near-leg, same-floor and uses observed base skills/items with unknown quests', () => {
+test('session door policy is near-leg, same-floor and uses observed current skills/items with unknown quests', () => {
     const blocked:string[]=[];
     const sdk={getState:()=>({skills:[{name:'Thieving',baseLevel:50,level:99}],inventory:[{name:'Brass key',count:1}],varps:{quest:99}}),
         blockDoorTemporarily:(level:number,x:number,z:number)=>{blocked.push(`${x},${z},${level}`);return true;}};
@@ -207,8 +213,9 @@ test('session door policy is near-leg, same-floor and uses observed base skills/
         door(2676,'skill',{skill:'thieving',level:40}),door(2677,'skill',{skill:'thieving',level:60}),
         door(2678,'key',{item:'brass_key'}),door(2679,'key',{item:'other_key'}),door(2680,'quest',{varp:'quest'}),
         door(2800,'locked'),door(2681,'locked',{},1)];
-    applyKnownDoorBlocks(sdk,0,{x:2670,z:3304},{x:2690,z:3304},doors);
-    expect(blocked).toEqual(['2674,3304,0','2674,3305,0','2677,3304,0','2679,3304,0','2680,3304,0']);
+    const policy=applyKnownDoorBlocks(sdk,0,{x:2670,z:3304},{x:2690,z:3304},doors);
+    expect(policy.map(d=>`${d.x},${d.z},${d.level}`)).toEqual(['2674,3304,0','2674,3305,0','2679,3304,0','2680,3304,0']);
+    expect(blocked).toEqual([]);
 });
 
 test('two-sided locked gate is observed and blocked one coordinate at a time without endless Open', async () => {
@@ -270,4 +277,74 @@ test('empty-planner straight fallback cannot assume a blocked wall anchor is saf
     w.deps.doorBlocked=(_level,l)=>l.x===3030&&l.z===3200;
     const r=await run(w,3060);
     expect(r.ok).toBe(false);expect(r.ticks).toBe(0);expect(w.inputs).toHaveLength(0);
+});
+
+// Ardougne knight house, pinned findLongPath output (2026-10-28). Door 1530 at 2650,3305 has its wall on the
+// south edge, so the room tiles 2650,3304 and 2651,3304 leave only through it. Each path folds back past the
+// door, so several later tiles are as near as the door tile itself.
+const HOUSE_CORNERS: Record<string, { x: number; z: number }[]> = {
+    '2650,3304>2653,3302': [{x:2650,z:3305},{x:2652,z:3305},{x:2652,z:3303},{x:2653,z:3302}],
+    '2651,3304>2653,3302': [{x:2650,z:3304},{x:2650,z:3305},{x:2652,z:3305},{x:2652,z:3303},{x:2653,z:3302}],
+    '2650,3304>2654,3283': [{x:2650,z:3305},{x:2648,z:3305},{x:2648,z:3304},{x:2646,z:3304},{x:2644,z:3302},{x:2644,z:3296},
+        {x:2645,z:3296},{x:2645,z:3290},{x:2644,z:3289},{x:2644,z:3284},{x:2653,z:3284},{x:2654,z:3283}],
+};
+function house(start: { x: number; z: number }, reshut = Infinity) {
+    const pos = { ...start }, room = (p: { x: number; z: number }) => p.z === 3304 && (p.x === 2650 || p.x === 2651);
+    let tick = 0, shut = true, openAt = -1, shutAt = Infinity, route: { x: number; z: number }[] = [];
+    const inputs: string[] = [], rejected: string[] = [], listeners = new Set<() => void>();
+    const door: PathLoc = { id: 1530, x: 2650, z: 3305, name: 'Door', optionsWithIndex: [{ text: 'Open', opIndex: 1 }] };
+    const deps: PathDeps = {
+        tick: () => tick, pos: () => ({ ...pos, level: 0 }),
+        onTick: cb => { listeners.add(cb); return () => listeners.delete(cb); },
+        plan: (_l, from, to) => HOUSE_CORNERS[`${from.x},${from.z}>${to.x},${to.z}`] ?? [to],
+        locs: () => shut ? [door] : [],
+        interactLoc: () => { inputs.push(`open@${tick}`); openAt = tick + 1; },
+        // The client router refuses a room-to-outside click while the only exit is shut.
+        walk: (x, z) => {
+            inputs.push(`walk ${x},${z}@${tick}`);
+            if (shut && room(pos) && !room({ x, z })) { rejected.push(`${x},${z}`); return { success: false, phase: 'validation', reason: 'client_rejected', message: 'Failed to walk' }; }
+            route = expandPath(pos, room(pos) && !room({ x, z }) ? [{ x: 2650, z: 3304 }, { x: 2650, z: 3305 }, { x, z }] : [{ x, z }]);
+            return { success: true };
+        },
+    };
+    const step = () => {
+        tick++;
+        if (openAt >= 0 && tick >= openAt) { shut = false; openAt = -1; shutAt = tick + reshut; }
+        if (tick >= shutAt) { shut = true; shutAt = Infinity; }
+        for (let k = 0; k < 2 && route.length; k++) {
+            const n = route[0]!;
+            if (shut && room(pos) && !room(n)) break;
+            route.shift(); pos.x = n.x; pos.z = n.z;
+        }
+        for (const l of [...listeners]) l();
+    };
+    return { deps, step, inputs, rejected, pos };
+}
+
+for (const [start, goal] of [[{x:2650,z:3304},{x:2653,z:3302}],[{x:2651,z:3304},{x:2653,z:3302}],[{x:2650,z:3304},{x:2654,z:3283}]] as const)
+test(`folded house path from ${start.x},${start.z} opens the first shut door before clicking past it to ${goal.x},${goal.z}`, async () => {
+    const h = house(start);
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const done = walkPath(h.deps, [{ ...goal, tol: 0 }], { maxTicks: 80 }).then(r => result = r);
+    for (let i = 0; i < 90 && !result; i++) { await Promise.resolve(); h.step(); await Promise.resolve(); }
+    const r = await done;
+    expect(h.rejected).toEqual([]);
+    expect(h.inputs[0]).toMatch(/^open@/);
+    expect(r.doors).toBe(1);
+    expect(r.ok).toBe(true);
+    expect(h.pos).toEqual(goal);
+});
+
+// Server doors shut again 3 ticks after opening (open_and_close_doors.rs2 loc_change(inviswall, 3)).
+// A faster reshut leaves the bot on the door anchor tile itself; the walker then opens it again, as before.
+for (const reshut of [3, 4])
+test(`a door that shuts ${reshut} ticks behind the bot is not opened again`, async () => {
+    const h = house({ x: 2651, z: 3304 }, reshut);
+    let result: Awaited<ReturnType<typeof walkPath>> | undefined;
+    const done = walkPath(h.deps, [{ x: 2653, z: 3302, tol: 0 }], { maxTicks: 80 }).then(r => result = r);
+    for (let i = 0; i < 90 && !result; i++) { await Promise.resolve(); h.step(); await Promise.resolve(); }
+    const r = await done;
+    expect(r.ok).toBe(true);
+    expect(r.doors).toBe(1);
+    expect(h.inputs.filter(i => i.startsWith('open'))).toHaveLength(1);
 });

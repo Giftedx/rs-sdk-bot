@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import type { Subprocess } from 'bun';
 import { practiceDir, rsSdkRoot } from './paths';
 import { canBind, portInUse } from './ports';
@@ -21,6 +21,22 @@ export interface StackOptions {
     xpRate?: number;
     ports?: { engine: number; gateway: number };
     readyTimeoutMs?: number;
+    // Practice diagnostics only: `bun --preload <module>` for the engine process. Default launches have none.
+    enginePreload?: { module: string; env: Record<string, string> };
+}
+
+// The engine command line keeps MARKERS.engine, so safeKill still identifies the server.
+export function engineCommand(opts: StackOptions, port: number): { cmd: string[]; env: Record<string, string> } {
+    const env: Record<string, string> = {
+        NODE_TICKRATE: String(opts.tickMs ?? PROOF_TICK_MS),
+        NODE_XPRATE: String(opts.xpRate ?? 25),
+        WEB_PORT: String(port),
+    };
+    const pre = opts.enginePreload;
+    if (!pre) return { cmd: ['bun', MARKERS.engine], env };
+    if (!isAbsolute(pre.module) || !existsSync(pre.module)) throw new Error(`engine preload not found: ${pre.module}`);
+    for (const key of Object.keys(pre.env)) if (key in env) throw new Error(`engine preload cannot replace ${key}`);
+    return { cmd: ['bun', '--preload', pre.module, MARKERS.engine], env: { ...env, ...pre.env } };
 }
 
 const DEFAULT_PORTS = { engine: 8888, gateway: 7780 };
@@ -67,16 +83,13 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const timeout = opts.readyTimeoutMs ?? 180_000;
     const spawn = (cwd: string, cmd: string[], env: Record<string, string>, log: string) => {
         writeFileSync(log, '');
-        return Bun.spawn(cmd, { cwd, env: { ...process.env, ...env }, stdout: Bun.file(log), stderr: Bun.file(log) });
+        return Bun.spawn(cmd, { cwd, env: { ...process.env, ...env }, stdout: Bun.file(log), stderr: Bun.file(log) ,windowsHide:true});
     };
 
     // Spawn the server files directly (package.json `quickstart` and `gateway` are plain `bun run <file>`),
     // so the saved PID is the server itself, not a wrapper whose child could outlive it.
-    const engine = spawn(join(root, 'server', 'engine'), ['bun', MARKERS.engine], {
-        NODE_TICKRATE: String(opts.tickMs ?? PROOF_TICK_MS),
-        NODE_XPRATE: String(opts.xpRate ?? 25),
-        WEB_PORT: String(ports.engine),
-    }, logs.engine);
+    const launch = engineCommand(opts, ports.engine);
+    const engine = spawn(join(root, 'server', 'engine'), launch.cmd, launch.env, logs.engine);
     const saved: Saved = { engine: { pid: engine.pid, marker: MARKERS.engine } };
     writeFileSync(pidsFile(), JSON.stringify(saved));
     try {

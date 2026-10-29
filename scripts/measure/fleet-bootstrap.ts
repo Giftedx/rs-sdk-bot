@@ -102,7 +102,7 @@ if(import.meta.main){
         },
         async run(script,bot,timeout){
             const prefix=resolve(dir,`bootstrap-${kind}-${bot}`);
-            const proc=Bun.spawn(['bun','--preload',import.meta.path,script,bot],{cwd:root,stdout:'pipe',stderr:'pipe',env:{...process.env,DEMO_OK:'',BOOTSTRAP_OBSERVE:kind,BOOTSTRAP_PREFIX:prefix}});
+            const proc=Bun.spawn(['bun','--preload',import.meta.path,script,bot],{cwd:root,stdout:'pipe',stderr:'pipe',env:{...process.env,DEMO_OK:'',BOOTSTRAP_OBSERVE:kind,BOOTSTRAP_PREFIX:prefix},windowsHide:true});
             const timer=setTimeout(()=>proc.kill(),timeout);
             const [out,err]=await Promise.all([new Response(proc.stdout).text(),new Response(proc.stderr).text()]);const exitCode=await proc.exited;clearTimeout(timer);
             let stdout=out+err;writeFileSync(prefix+'.log',stdout);

@@ -56,7 +56,7 @@ for (const sc of SCENARIOS) {
 console.log('\n## Route comparison: Magic + Smithing (scenario a)\n');
 console.log('| Route | Mode | Smithing finish | Magic finish | Overall finish |');
 console.log('|---|---|---|---|---|');
-for (const option of ['separate', 'superheat']) for (const mode of ['floor', 'realistic'] as Mode[]) {
+for (const option of ['separate', 'superheat', 'anvil']) for (const mode of ['floor', 'realistic'] as Mode[]) {
     const opts: ScheduleOptions = { mode, tricks: new Set(), force: { 'magic-smithing': option } };
     const r = schedule(boards, activities, opts).boards;
     const g = (id: string) => fmt(r.find(b => b.id === id)!.finish);
@@ -135,8 +135,8 @@ if (args.includes('--travel')) {
         const rule = l.tiles ? `${l.tiles / 2 + START_TICKS} (${pct(mean, l.tiles / 2 + START_TICKS)})` : '-';
         console.log(`| ${l.id} | ${l.runs.join(', ')} (mean ${mean.toFixed(1)}) | ${rule} | ${p ? `${pm} (${p.tiles} tiles)` : '-'} | ${p ? pct(mean, pm) : '-'} | ${est} | ${pct(mean, est)} | ${l.note ?? ''} |`);
     }
-    console.log('\n## OUT rows (content bugs: never scheduled)\n');
-    console.log('| Row | Why OUT | Legal replacement |');
+    console.log('\n## Historical route notes (not exclusions)\n');
+    console.log('| Row | Historical note | Alternative |');
     console.log('|---|---|---|');
     for (const a of activities) if (a.out) console.log(`| ${a.id} | ${a.out.reason} | ${a.out.replacement} |`);
 }

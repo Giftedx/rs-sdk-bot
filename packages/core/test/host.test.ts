@@ -3,7 +3,14 @@ import { join } from 'node:path';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { botWrapper, hostedEntrySource, hostedOpenOptions, rewriteScript, runHost } from '../src/host';
-import type { Session } from '../src/inprocess';
+import type {Session} from '../src/inprocess';
+
+test('unexpected session end uses the hosted finisher even with a separate custom stop callback',async()=>{
+    const calls:string[]=[];
+    const options=hostedOpenOptions(()=>{},async()=>{calls.push('finish only this bot');},{onStop:async()=>{calls.push('custom work cancellation');}});
+    await options.onSessionEnd!({} as Session,'session ended: logged-out');
+    expect(calls).toEqual(['finish only this bot']);
+});
 
 test('rewriteScript points the bot import at a per-bot copy and the process globals at the host', () => {
     const src = `import { openBot, finish } from '../../packages/core/src/bot';\nconst n = process.argv[2];\nconsole.log(process.env.TICKS);\nprocess.exit(1);\n`;

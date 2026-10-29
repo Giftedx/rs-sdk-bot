@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { planHeadless, runHeadless, planSteel, runSteel, planOakBows, runOakBows } from './fletch-arrows';
-import type { Session } from '../packages/core/src/inprocess';
+import { planHeadless, runHeadless, planSteel, runSteel, planOakBows, runOakBows } from "./fletch-arrows";
+import type { Session } from "../packages/core/src/inprocess";
 
 test('headless plan rounds to15 and preserves both input reserves', () => {
     expect(planHeadless(720, 500)).toBe(390);
@@ -8,8 +8,8 @@ test('headless plan rounds to15 and preserves both input reserves', () => {
     expect(planHeadless(200, 100)).toBe(0);
 });
 
-function fixture(options: { shafts?: number; feathers?: number; stalled?: boolean; partialWithdraw?: boolean; steel?: boolean; level?: number; headless?: number; tips?: number; debitOnly?: boolean } = {}) {
-    let tick = 0, xp = 10000, bankOpen = false;
+function fixture(options: { shafts?: number; feathers?: number; stalled?: boolean; partialWithdraw?: boolean; steel?: boolean; level?: number; headless?: number; tips?: number; debitOnly?: boolean; iron?: boolean; unknown?: boolean; staleDeposit?: boolean } = {}) {
+    let tick = 0, xp = 10000, bankOpen = false, generation = 0;
     const listeners = new Set<() => void>();
     const queued: (() => void)[] = [];
     type Item = { id: number; name: string; count: number; slot: number; optionsWithIndex: [] };
@@ -18,7 +18,7 @@ function fixture(options: { shafts?: number; feathers?: number; stalled?: boolea
         { id: 315, name: 'Shrimps', count: 1, slot: 3, optionsWithIndex: [] }];
     const bank = [{ id: 52, name: 'Arrow shaft', count: options.shafts ?? 720, slot: 0 }, { id: 314, name: 'Feather', count: options.feathers ?? 500, slot: 1 },
         { id: 53, name: 'Headless arrow', count: options.headless ?? 30, slot: 2 },
-        { id: 41, name: 'Steel arrowtips', count: options.tips ?? 20, slot: 3 }, { id: 886, name: 'Steel arrow', count: 7, slot: 4 }];
+        { id: 41, name: 'Steel arrowtips', count: options.iron ? 20 : (options.tips ?? 20), slot: 3 }, { id: 886, name: 'Steel arrow', count: 7, slot: 4 }, {id:40,name:'Iron arrowtips',count:options.iron?(options.tips??90):0,slot:5},{id:884,name:'Iron arrow',count:7,slot:6}];
     const deposits: number[] = [];
     const state = () => ({ player: { worldX: 3092, worldZ: 3243, level: 0, lifeId: 1, respawnCount: 0 }, bank: { isOpen: bankOpen, items: bank }, inventory, interface: { isOpen: bankOpen } });
     const timer = setInterval(() => { for (const action of queued.splice(0)) action(); tick++; for (const cb of [...listeners]) cb(); }, 1);
@@ -30,14 +30,14 @@ function fixture(options: { shafts?: number; feathers?: number; stalled?: boolea
     };
     const s = { name: 'test', tick: () => tick, onTick: (cb: () => void) => { listeners.add(cb); return () => listeners.delete(cb); },
         ended: new Promise(() => {}), direct: async () => {},
-        sdk: { getState: state, getInventory: () => inventory, getDialog: () => ({ isOpen: false }),
+        bankObservation:()=>bankOpen&&!options.unknown?{generation,at:Date.now(),items:bank.map(i=>({...i}))}:undefined, sdk: { getState: state, getInventory: () => inventory, getDialog: () => ({ isOpen: false }),
             getSkill: () => ({ level: options.level ?? 32, baseLevel: 32 }), getSkillXp: () => xp,
-            sendUseItemOnItem: async () => { queued.push(() => {
+            sendUseItemOnItem: async (aSlot:number,bSlot:number) => { const aId=inventory.find(i=>i.slot===aSlot)?.id,bId=inventory.find(i=>i.slot===bSlot)?.id; queued.push(() => {
                 if (options.stalled) return;
-                if (options.steel) {
+                if (aId===53 && (bId===40||bId===41)) {
                     inventory.find(i => i.id === 53)!.count -= 15;
-                    inventory.find(i => i.id === 41)!.count -= 15;
-                    if (!options.debitOnly) { add(886, 'Steel arrow', 15); xp += 1875; }
+                    inventory.find(i => i.id === bId)!.count -= 15;
+                    if (!options.debitOnly) {add(bId===40?884:886,bId===40?'Iron arrow':'Steel arrow',15);xp+=bId===40?937.5:1875;} for(let n=inventory.length-1;n>=0;n--)if(inventory[n]!.count===0)inventory.splice(n,1);
                     return;
                 }
                 inventory.find(i => i.id === 52)!.count -= 15;
@@ -45,17 +45,17 @@ function fixture(options: { shafts?: number; feathers?: number; stalled?: boolea
                 add(53, 'Headless arrow', 15); xp += 375;
             }); return { success: true }; },
         }, bot: {
-            openBank: async () => { bankOpen = true; return { success: true }; }, closeBank: async () => { bankOpen = false; return { success: true }; },
+            openBank: async () => { bankOpen = true; generation++; return { success: true }; }, closeBank: async () => { bankOpen = false; return { success: true }; },
             withdrawItem: async (item: { id: number }, amount: number) => {
                 const source = bank.find(i => i.id === item.id)!;
                 const actual = options.partialWithdraw ? 5 : amount;
-                source.count -= actual; add(source.id, source.name, actual);
+                source.count -= actual; add(source.id, source.name, actual); generation++;
                 return { success: actual === amount, amountWithdrawn: actual };
             },
             depositItem: async (item: Item) => {
                 deposits.push(item.id);
                 const amount = count(item.id);
-                bank.find(i => i.id === item.id)!.count += amount;
+                bank.find(i => i.id === item.id)!.count += amount; if(!options.staleDeposit)generation++;
                 for (let n = inventory.length - 1; n >= 0; n--) if (inventory[n]!.id === item.id) inventory.splice(n, 1);
                 return { success: true, amountDeposited: amount };
             },
@@ -244,4 +244,27 @@ test('steel detects debits without output and reports actual loss instead of ret
     const f = fixture({ steel: true, headless: 390, debitOnly: true });
     try { expect(await runSteel(f.s, steelOpts)).toMatchObject({ ok: false, made: 0, banked: 0, actions: 1, headlessUsed: 15, tipsUsed: 15, headlessBank: 375, tipBank: 5 }); }
     finally { f.stop(); }
+});
+
+const ironOpts={cap:500,maximum:90,headlessReserve:200,tipReserve:0,outputReserve:0};
+test('iron recipe consumes90 of each input, banks90 new arrows and keeps300 headless reserved',async()=>{
+ const f=fixture({iron:true,headless:390});try{
+  const r=await (runSteel as any)(f.s,ironOpts,'iron');
+  expect(r).toMatchObject({ok:true,made:90,banked:90,headlessUsed:90,tipsUsed:90,headlessBank:300,tipBank:0,arrowBank:97,xpGain:5625,targetMet:true,preserved:true});
+  expect(f.bank.find(i=>i.id===884)?.count).toBe(97);expect(f.bank.find(i=>i.id===41)?.count).toBe(20);expect(f.bank.find(i=>i.id===886)?.count).toBe(7);
+ }finally{f.stop();}
+});
+test('iron current level14 preserves ingredients; current15 can craft',async()=>{
+ for(const level of [14,15]){const f=fixture({iron:true,headless:390,level});try{
+  const r=await (runSteel as any)(f.s,ironOpts,'iron');expect(r.made).toBe(level===14?0:90);expect(r.targetMet).toBe(level===15);
+ }finally{f.stop();}}
+});
+test('iron partial stock is explicit best effort and cannot satisfy an exact90 order',async()=>{
+ const f=fixture({iron:true,headless:390,tips:75});try{expect(await(runSteel as any)(f.s,ironOpts,'iron')).toMatchObject({ok:true,made:75,banked:75,planned:75,headlessBank:315,tipBank:0,targetMet:false});}finally{f.stop();}
+});
+test('iron unknown bank is not empty stock and withdraws nothing',async()=>{
+ const f=fixture({iron:true,headless:390,unknown:true});try{const r=await(runSteel as any)(f.s,ironOpts,'iron');expect(r.ok).toBe(false);expect(r.made).toBe(0);expect(f.bank.find(i=>i.id===40)?.count).toBe(90);}finally{f.stop();}
+});
+test('iron debit without product fails after one action without another consumption attempt',async()=>{
+ const f=fixture({iron:true,headless:390,debitOnly:true});try{expect(await(runSteel as any)(f.s,ironOpts,'iron')).toMatchObject({ok:false,made:0,actions:1,headlessUsed:15,tipsUsed:15});}finally{f.stop();}
 });

@@ -1,0 +1,5 @@
+.hud.left-top{left:auto!important;right:12px!important;top:8px!important;gap:0!important;z-index:10}
+.fps-counter,.live-hud,.info-panel,.live-panel,#leva__root,.joystick{display:none!important}
+.worldmap-modal-overlay{z-index:10000!important}
+.worldmap-modal{inset:35px!important}
+[class^="leva-c-kWgxhW"]{display:none!important}

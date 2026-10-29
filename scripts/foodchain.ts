@@ -49,7 +49,7 @@ function start(account: string, script: string, env: Record<string, string>, tag
     if (DRY) { say(`DRY would start ${account} ${tag} ${JSON.stringify(env)}`); return ''; }
     const log = join(logDir, `${account}-${Date.now()}.log`);
     rmSync(join(prac, `stop-${account}`), { force: true });
-    const proc = Bun.spawn(['bun', script, account], { cwd: root, env: { ...process.env, DEMO_OK: '1', RANDOM_EVENTS: '0', ...env }, stdout: Bun.file(log), stderr: Bun.file(log + '.err') });
+    const proc = Bun.spawn(['bun', script, account], { cwd: root, env: { ...process.env, DEMO_OK: '1', RANDOM_EVENTS: '0', ...env }, stdout: Bun.file(log), stderr: Bun.file(log + '.err') ,windowsHide:true});
     running.set(account, { proc, log, started: Date.now() });
     say(`start ${account} ${tag} ${JSON.stringify(env)}`);
     void proc.exited.then(() => {
@@ -102,7 +102,7 @@ async function runGive(giver: string, receiver: string, give: string) {
     if (DRY) { say(`DRY would give ${giver} -> ${receiver} ${give}`); return false; }
     const log = join(logDir, `${giver}-give-${Date.now()}.log`);
     rmSync(join(prac, `stop-${giver}`), { force: true });
-    const proc = Bun.spawn(['bun', 'scripts/give-to-banker.ts', giver, receiver], { cwd: root, env: { ...process.env, DEMO_OK: '1', RANDOM_EVENTS: '0', GIVE: give }, stdout: Bun.file(log), stderr: Bun.file(log + '.err') });
+    const proc = Bun.spawn(['bun', 'scripts/give-to-banker.ts', giver, receiver], { cwd: root, env: { ...process.env, DEMO_OK: '1', RANDOM_EVENTS: '0', GIVE: give }, stdout: Bun.file(log), stderr: Bun.file(log + '.err') ,windowsHide:true});
     running.set(giver, { proc, log, started: Date.now() });
     say(`give ${giver} -> ${receiver} ${give}`);
     await proc.exited;

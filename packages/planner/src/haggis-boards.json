@@ -1,50 +1,6 @@
 {
- "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward. Travel: `at` is the activity's place (a key of `places`, 'anywhere' for inventory work or trades, 'bank' for the nearest bank), `endAt` where it ends, `via` places it visits in order, `bankTrips` round trips to the nearest bank; legs come from haggis-travel.json (bun packages/planner/src/travel-gen.ts). `out` marks a row that relies on a content bug, or on an item with no legal source at this scale: it is never scheduled. `unsourceable` lists those items; no active row may need more than `max` of one (haggis.test.ts). `leadTime` on a row is the helper staging work for its supplies (ESTIMATE unless it says otherwise).",
- "updated": "2026-10-23",
- "unsourceable": [
-  {
-   "item": "torstol potion (unf)",
-   "max": 0,
-   "reason": "only source is the Yanille agility dungeon chest, 1 per sinister key; key 10/128 from Salarin: about 2,250 kills for 176",
-   "source": "research/supply-logistics.md Summary 1; agility_dungeon.rs2:103-120, salarin_the_twisted.rs2:17,45-46 (CODE-READ)"
-  },
-  {
-   "item": "snapdragon potion (unf)",
-   "max": 0,
-   "reason": "no drop, shop, spawn or chest gives snapdragon",
-   "source": "research/supply-logistics.md Summary 1; shared_droptables.rs2:2-34 randomherb (CODE-READ)"
-  },
-  {
-   "item": "toadflax potion (unf)",
-   "max": 0,
-   "reason": "no drop, shop, spawn or chest gives toadflax",
-   "source": "research/supply-logistics.md Summary 1; shared_droptables.rs2:2-34 randomherb (CODE-READ)"
-  },
-  {
-   "item": "uncut dragonstone",
-   "max": 0,
-   "reason": "only source is the Taverley crystal chest, 1 per crystal key (2 halves, each 1/128 of randomjewel); GE 0 sellers",
-   "source": "research/supply-logistics.md Summary 1; crystal_chest.rs2:24, shared_droptables.rs2:58-65 (CODE-READ); GE MEASURED live 2026-10-23"
-  },
-  {
-   "item": "dragonstone amulet",
-   "max": 0,
-   "reason": "made from uncut dragonstones (no source at scale)",
-   "source": "research/supply-logistics.md Summary 1 (CODE-READ)"
-  },
-  {
-   "item": "cosmic rune",
-   "max": 20,
-   "reason": "one shop holds 20 (Mage Arena, 1 per 100 ticks); GE 1 seller at 10,000",
-   "source": "research/supply-logistics.md Summary 1 (CODE-READ shops.json + MEASURED live GE)"
-  },
-  {
-   "item": "rune dart tips",
-   "max": 0,
-   "reason": "no seller and no shop; smithing them needs runite bars, Smithing 89 and Tourist Trap",
-   "source": "research/supply-logistics.md Summary 2; research/supply-costs.md:47-49 (CODE-READ + MEASURED live GE)"
-  }
- ],
+ "about": "Haggis schedule inputs. Each tick count and rate carries evidence (MEASURED / CODE-READ / ESTIMATE) and a source. Edit numbers here; no code change is needed. Rates: floor = best case (higher rate). suppliesLadder = supplies computed from the tier tables in haggis.ts. `serves` lists the boards that need the activity; XP to other skills still counts but does not pull the activity earlier. Level and QP requirements also need an activity in `requires`, so the deadline pulls the unlock forward. Travel: `at` is the activity's place (a key of `places`, 'anywhere' for inventory work or trades, 'bank' for the nearest bank), `endAt` where it ends, `via` places it visits in order, `bankTrips` round trips to the nearest bank; legs come from haggis-travel.json (bun packages/planner/src/travel-gen.ts). All gameplay techniques and supply-dependent routes are eligible. `supplyResearch` records dated acquisition leads, not caps or exclusions. Required stock must be acquired before execution. `leadTime` on a row is the helper staging work for its supplies (ESTIMATE unless it says otherwise).",
+ "updated": "2026-10-28",
  "places": {
   "lumbridge-spawn": {
    "x": 3222,
@@ -323,6 +279,11 @@
    "x": 2957,
    "z": 3511,
    "note": "Goblin Diplomacy end, npc general_wartface 297 (maps/m46_54.jm2)"
+  },
+  "doric": {
+   "x": 2952,
+   "z": 3451,
+   "note": "Doric's house north of Falador, npc doric (knowledge/ubermouse/world.json; scripts/generated/quest-doric.ts:7)"
   }
  },
  "activities": [
@@ -409,7 +370,7 @@
   },
   {
    "id": "bank-wine",
-   "label": "Walk to Al Kharid bank (toll gate), deposit the wine notes, make 1 wine at Cooking 35 (starts the 20-tick timer)",
+   "label": "Stage banked wine notes at Al Kharid; timer activation belongs to the chosen cooking route",
    "serves": [
     "cooking"
    ],
@@ -420,13 +381,13 @@
     "source": "deposit: realistic bank open 3 + deposit 2 (research/crafting-board.md cycle 1), floor booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ); + 1 tick for grapes on jug (wine.rs2:7-20, no delay, Cooking 35 checked at :8)"
    },
    "requires": [
-    "trade-start",
-    "cook-range-35"
+    "trade-start"
    ],
    "evidence": "MEASURED",
    "source": "deposit: realistic bank open 3 + deposit 2 (research/crafting-board.md cycle 1), floor booth click + deposit-All (tick-tricks-web.md 16.3, CODE-READ); + 1 tick for grapes on jug (wine.rs2:7-20, no delay, Cooking 35 checked at :8)",
    "at": "bank:al-kharid-bank:0",
-   "atNote": "Al Kharid bank through the 10-coin toll gate (border_gate.rs2:20-53): 76.5 run ticks + 2 from the kitchen vs Draynor 92 + 2 (world.json nearest.bank of range:lumbridge:0)"
+   "atNote": "Al Kharid bank through the 10-coin toll gate (border_gate.rs2:20-53): 76.5 run ticks + 2 from the kitchen vs Draynor 92 + 2 (world.json nearest.bank of range:lumbridge:0)",
+   "pending": "Shared staging cost retains the previous conservative budget. Qualify activation separately for each cooking option."
   },
   {
    "id": "cook-35",
@@ -448,16 +409,11 @@
    ],
    "variant": {
     "group": "cooking",
-    "option": "legal"
+    "option": "cocktails"
    },
    "evidence": "CODE-READ",
    "source": "gnome_cocktail_finish.rs2:28-29 stat_advance(cooking,600) = 1,500 XP; 10,847 XP for 35; wine.rs2:6-20 make_wine needs 35",
    "pending": "replace with MEASURED numbers from research/supply-floors.md when it lands",
-   "out": {
-    "reason": "gnome_cocktail_finish.rs2:29-30 stat_advance(cooking,600) with no Cooking level check (content bug, research/rival-gap-list.md section 5 item 3)",
-    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
-    "replacement": "cooks-assistant + cook-range-35"
-   },
    "at": "anywhere"
   },
   {
@@ -533,7 +489,8 @@
     "cooking": "to99"
    },
    "requires": [
-    "bank-wine"
+    "bank-wine",
+    "cook-range-35"
    ],
    "variant": {
     "group": "cooking",
@@ -565,11 +522,6 @@
    },
    "evidence": "MEASURED",
    "source": "research/tricks-plan.md: 1 playtime tick per relog",
-   "out": {
-    "reason": "login arms the fermenting_wine timer with no Cooking check (wine.rs2:72-73, login.rs2:70); owner ruled it an exploit (owner-requests.md R10)",
-    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
-    "replacement": "cooks-assistant + cook-range-35 + bank-wine + wine-timer"
-   },
    "at": "anywhere"
   },
   {
@@ -601,14 +553,17 @@
     "option": "loginWine",
     "trick": "loginWine"
    },
-   "evidence": "MEASURED",
+   "evidence": "ESTIMATE",
    "source": "research/cooking-board.md: 99 at session tick 22, 2 runs, 600 wines, Cooking 1",
-   "out": {
-    "reason": "login arms the fermenting_wine timer with no Cooking check (wine.rs2:72-73, login.rs2:70); owner ruled it an exploit (owner-requests.md R10)",
-    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
-    "replacement": "cooks-assistant + cook-range-35 + bank-wine + wine-timer"
-   },
-   "at": "anywhere"
+   "at": "anywhere",
+   "supplies": [
+    {
+     "item": "unfermented wine",
+     "count": 600,
+     "note": "Starter stock in the successful two-phase fixture; trade-start separately stages600 noted bulk. Quantities need optimization and supply-route proof."
+    }
+   ],
+   "pending": "Fresh400ms native single600batch fromCooking1 failed to reach99. Two-phase600starter+600noted bulk reached99 once. Full preparation/activation/relog timing and smaller batches remain unqualified. See .practice/workflow-repair-20261028/wine-proof.json and wine-single-batch-failed.json."
   },
   {
    "id": "fletch",
@@ -631,10 +586,10 @@
    "evidence": "MEASURED",
    "source": "research/supply-floors.md: 49, 49, 49 ticks level 1 -> 99 on practice (scripts/measure/floor-fletching.ts open loop, 5 inputs per tick, all stacks in the pack); supply delivery not included",
    "at": "anywhere",
-   "out": {
-    "reason": "no legal source at this scale: rune dart tips 1,520 (no seller, no shop; Smithing 89 + Tourist Trap + runite bars) (research/supply-logistics.md, Summary)",
-    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
-    "replacement": "fletch-arrows"
+   "procurementNote": "Recheck sources and acquire required quantity. Historical observation: no legal source at this scale: rune dart tips 1,520 (no seller, no shop; Smithing 89 + Tourist Trap + runite bars) (research/supply-logistics.md, Summary)",
+   "variant": {
+    "group": "fletching-method",
+    "option": "fletch"
    }
   },
   {
@@ -658,7 +613,11 @@
    "evidence": "MEASURED",
    "source": "arrows-only ladder (research/supply-logistics.md, Proposed substitutions); MEASURED practice, 3 runs (scripts/measure/floor-fletching.ts LADDER=arrows)",
    "leadTime": "ESTIMATE: rune arrowtips 2,595 are shop-only (GE 0 sellers): Catherby 100@40 (Mightyrod) + Ranging Guild 150@60 (N3, Ranged 40 first, 0.2 h): 250 at once + 375 per hour = 6.3 h (11.1 h Catherby alone), about 1.0M coins. Headless arrows 3,615: Bigchopper chops about 241 logs, cuts and feathers them, about 1.0 h. The critical-path job of the staging (research/supply-logistics.md, jobs 2, 3, 5)",
-   "at": "anywhere"
+   "at": "anywhere",
+   "variant": {
+    "group": "fletching-method",
+    "option": "fletch-arrows"
+   }
   },
   {
    "id": "craft",
@@ -691,10 +650,10 @@
     "margin": 1.1
    },
    "at": "bank",
-   "out": {
-    "reason": "no legal source at this scale: uncut dragonstone 305 (crystal chest only, GE 0 sellers) (research/supply-logistics.md, Summary)",
-    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
-    "replacement": "craft-diamond"
+   "procurementNote": "Recheck sources and acquire required quantity. Historical observation: no legal source at this scale: uncut dragonstone 305 (crystal chest only, GE 0 sellers) (research/supply-logistics.md, Summary)",
+   "variant": {
+    "group": "crafting-method",
+    "option": "craft"
    }
   },
   {
@@ -729,7 +688,11 @@
     "margin": 1.1
    },
    "leadTime": "ESTIMATE: uncut diamonds by GE bids over time (Moneyshot, 0.3 h active): 592 diamonds traded in 7 days (MEASURED live), bids must beat the standing 3,500; 4-7 days of waiting and about 1.8M coins for 354 (the 1.1 ladder margin asks 401). Low gems 31 by GE bids, 1-2 days, about 150k (research/supply-logistics.md, job 9)",
-   "at": "bank"
+   "at": "bank",
+   "variant": {
+    "group": "crafting-method",
+    "option": "craft-diamond"
+   }
   },
   {
    "id": "herb",
@@ -747,7 +710,8 @@
     "herblore": "to99"
    },
    "requires": [
-    "tutorial"
+    "tutorial",
+    "druid"
    ],
    "evidence": "MEASURED",
    "source": "research/supply-floors.md: 246, 246, 246 ticks Herblore 3 -> 99 on practice (scripts/measure/floor-herblore.ts, Draynor booth, 14 + 14 per trip); Herblore 1-3 needs quest XP; supply delivery not included",
@@ -757,10 +721,13 @@
     "margin": 1
    },
    "at": "bank",
-   "out": {
-    "reason": "no legal source at this scale: torstol 176 (Yanille chest only, about 2,250 Salarin kills), snapdragon 6 and toadflax 2 (no source) (research/supply-logistics.md, Summary)",
-    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
-    "replacement": "herb-drops"
+   "procurementNote": "Recheck sources and acquire required quantity. Historical observation: no legal source at this scale: torstol 176 (Yanille chest only, about 2,250 Salarin kills), snapdragon 6 and toadflax 2 (no source) (research/supply-logistics.md, Summary)",
+   "variant": {
+    "group": "herblore-method",
+    "option": "herb"
+   },
+   "minLevel": {
+    "herblore": 3
    }
   },
   {
@@ -836,7 +803,11 @@
     }
    ],
    "leadTime": "ESTIMATE: about 2,420 chaos druid kills (0.445 herb rolls per kill, knowledge/drops.json) by N4a and N4b in the Edgeville dungeon: Waterfall Quest 0.3 h, then 2.5 h each at 500 kills per hour (not measured), about 5.6 helper-hours; secondaries and 644 vials by Bigpackage, about 2.0 h (research/supply-logistics.md, jobs 10 and 11). Contested spawn: measure 1 live hour first",
-   "at": "bank"
+   "at": "bank",
+   "variant": {
+    "group": "herblore-method",
+    "option": "herb-drops"
+   }
   },
   {
    "id": "herb-unf",
@@ -859,7 +830,11 @@
    "minLevelSource": "Herblore 3 for any identify or mix (identify.param:1-3, brew_potion.param:1-3 defaults)",
    "evidence": "ESTIMATE",
    "source": "split from herb-drops: the measured row starts from unf potions (its supplies); the +150 realistic that row had before the measurement (commit b4fb3e6 removed it) is restored here as its own ESTIMATE",
-   "at": "bank"
+   "at": "bank",
+   "variant": {
+    "group": "herblore-method",
+    "option": "herb-drops"
+   }
   },
   {
    "id": "fm-burn",
@@ -922,11 +897,6 @@
    },
    "evidence": "ESTIMATE",
    "source": "quest stage 65 gate (quest_mortton.constant:31); quest time not measured",
-   "out": {
-    "reason": "only feeds fm-pyre (OUT)",
-    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
-    "replacement": "fm-burn"
-   },
    "at": "mortton"
   },
   {
@@ -964,11 +934,6 @@
      "count": 666
     }
    ],
-   "out": {
-    "reason": "mortton_pyre.rs2:1-41 reads the Firemaking level and never checks it (research/rival-gap-list.md section 5 item 5)",
-    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
-    "replacement": "fm-burn"
-   },
    "at": "mortton"
   },
   {
@@ -1052,6 +1017,77 @@
    "bankTripsSource": "helper trades at the anvil replace the bank trips (research/supply-floors.md)"
   },
   {
+   "id": "smith-anvil",
+   "label": "Smith platebodies ladder at the Varrock west anvil, helper trades bars (anvil route)",
+   "serves": [
+    "smithing"
+   ],
+   "ticks": {
+    "floor": 1312,
+    "realistic": 1316,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)"
+   },
+   "xp": {
+    "smithing": "to99"
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "anvil"
+   },
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop was 1,572 x3; a trade cannot open during the smith delay (overlap run: 0 of 31)",
+   "supplies": [
+    {
+     "item": "hammer",
+     "count": 1
+    }
+   ],
+   "suppliesLadder": {
+    "skill": "smithing",
+    "margin": 1
+   },
+   "at": "varrock-west-anvil",
+   "bankTrips": 0,
+   "bankTripsSource": "helper trades at the anvil replace the bank trips (research/supply-floors.md)"
+  },
+  {
+   "id": "magic-anvil",
+   "label": "Enchant ladder to Magic 80 (Charge level), foreground",
+   "serves": [
+    "magic"
+   ],
+   "train": {
+    "skill": "magic",
+    "toLevel": 80,
+    "xpPerTick": {
+     "floor": 493,
+     "realistic": 451,
+     "evidence": "ESTIMATE",
+     "source": "Cairn route (research/community-and-upstream.md section 7): rings 8-59, then Magic 80 for Charge. 183 enchant casts 7 -> 80 without dragonstone (MAGIC_TIERS, enchant 4 diamond from 57); ticks per cast from the MEASURED magic row: 2.96 at the booth (floor, 542 ticks), 3.23 with its bank trips (1,762 ticks / 545 casts, realistic, 592 ticks). Rate = 267,169 XP / ticks. Foreground, not inside the thieving stuns: the separate route's magic row is a stun guest, and thieving needs Monkey Madness (Magic 75), so that route never finishes."
+    }
+   },
+   "requires": [
+    "tutorial"
+   ],
+   "variant": {
+    "group": "magic-smithing",
+    "option": "anvil"
+   },
+   "evidence": "ESTIMATE",
+   "source": "Cairn route (research/community-and-upstream.md section 7): rings 8-59, then Magic 80 for Charge. 183 enchant casts 7 -> 80 without dragonstone (MAGIC_TIERS, enchant 4 diamond from 57); ticks per cast from the MEASURED magic row: 2.96 at the booth (floor, 542 ticks), 3.23 with its bank trips (1,762 ticks / 545 casts, realistic, 592 ticks). Rate = 267,169 XP / ticks. Foreground, not inside the thieving stuns: the separate route's magic row is a stun guest, and thieving needs Monkey Madness (Magic 75), so that route never finishes.",
+   "suppliesLadder": {
+    "skill": "magic",
+    "tiers": "magic-no-dragonstone",
+    "margin": 1,
+    "toLevel": 80
+   },
+   "at": "bank"
+  },
+  {
    "id": "magic",
    "label": "Enchant jewellery ladder, 3 ticks per cast",
    "serves": [
@@ -1089,7 +1125,6 @@
     },
     {
      "lever": "charge-spam",
-     "owner": true,
      "set": {
       "ticks": {
        "floor": 0,
@@ -1112,10 +1147,10 @@
     }
    ],
    "at": "bank",
-   "out": {
-    "reason": "no legal source at this scale: cosmic runes 546 (one shop of 20, GE 1 seller) and dragonstone amulets 453 (no dragonstones at scale) (research/supply-logistics.md, Summary)",
-    "rule": "gate 3 of scripts/haggis-gate.ts: every supply is staged by a helper before tick 0; an item with no legal source at this scale cannot be staged",
-    "replacement": "magic-teleport"
+   "procurementNote": "Recheck sources and acquire required quantity. Historical observation: no legal source at this scale: cosmic runes 546 (one shop of 20, GE 1 seller) and dragonstone amulets 453 (no dragonstones at scale) (research/supply-logistics.md, Summary)",
+   "lever": {
+    "id": "magic-enchant",
+    "role": "add"
    }
   },
   {
@@ -1155,7 +1190,11 @@
     "margin": 1
    },
    "leadTime": "ESTIMATE: law runes 722: GE 423 at 2,697 now (MEASURED live), the rest by bids (Moneyshot, 0.3 h active, about 1.2M coins); shops (Magic Guild 66, Mage Arena, Ape Atoll) restock 30 per hour each. Staff of air from a shop by Bigpackage (research/supply-logistics.md, job 16)",
-   "at": "anywhere"
+   "at": "anywhere",
+   "lever": {
+    "id": "magic-enchant",
+    "role": "drop"
+   }
   },
   {
    "id": "mage-arena",
@@ -1177,15 +1216,13 @@
    ],
    "lever": {
     "id": "charge-spam",
-    "role": "add",
-    "owner": true
+    "role": "add"
    },
    "evidence": "CODE-READ",
    "source": "charge.rs2:4 needs %magearena >= mage_arena_staff_given; research/gap-closers.md",
    "patches": [
     {
      "lever": "charge-spam",
-     "owner": true,
      "set": {
       "ticks": {
        "floor": 336,
@@ -1196,11 +1233,6 @@
      }
     }
    ],
-   "out": {
-    "reason": "only feeds charge (OUT)",
-    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
-    "replacement": "magic"
-   },
    "at": "mage-arena-lever"
   },
   {
@@ -1227,8 +1259,7 @@
    },
    "lever": {
     "id": "charge-spam",
-    "role": "add",
-    "owner": true
+    "role": "add"
    },
    "evidence": "CODE-READ",
    "source": "charge.rs2:1-26; magic_spells.dbrow:206-212; 3 blood + 3 fire + 3 air per cast; research/gap-closers.md",
@@ -1246,11 +1277,6 @@
      "count": 2100
     }
    ],
-   "out": {
-    "reason": "charge.rs2:1-27 has no p_delay: 5 casts a tick (research/rival-gap-list.md section 5 item 2; lever charge-spam)",
-    "rule": "owner rule: accepted mechanics yes, content bugs (missing level checks, missing delays) no",
-    "replacement": "magic (enchant ladder) or magic-43 + superheat + magic-top"
-   },
    "at": "mage-arena-lever"
   },
   {
@@ -1509,6 +1535,20 @@
     {
      "lever": "rival-altar-room-rc",
      "set": {
+      "supplies": [
+       {
+        "item": "rune essence",
+        "count": 4536
+       },
+       {
+        "item": "air talisman",
+        "count": 1
+       },
+       {
+        "item": "nature talisman",
+        "count": 1
+       }
+      ],
       "ticks": {
        "floor": 1196,
        "realistic": 1330,
@@ -2164,6 +2204,49 @@
    "at": "witch-house"
   },
   {
+   "id": "doric",
+   "label": "Doric's Quest (Mining 1 -> 49, 1 QP)",
+   "serves": [
+    "mining",
+    "questpoints"
+   ],
+   "ticks": {
+    "floor": 30,
+    "realistic": 30,
+    "evidence": "MEASURED",
+    "source": "research/quest-points-board.md \"Short rest quests\": quest-doric.ts 30/30/30 on practice from preset quest_doric (start inside Doric's house; the walk to it not counted)"
+   },
+   "xp": {
+    "mining": 32500
+   },
+   "lump": true,
+   "qp": 1,
+   "requires": [
+    "tutorial"
+   ],
+   "lever": {
+    "id": "rival-dragon-combat",
+    "role": "add"
+   },
+   "evidence": "MEASURED",
+   "source": "quest_doric.rs2:97-101 (1,300 Mining XP x25 = 32,500, 1 QP); research/leader-forensics.md:202; ticks MEASURED practice 30/30/30",
+   "supplies": [
+    {
+     "item": "clay",
+     "count": 6
+    },
+    {
+     "item": "copper ore",
+     "count": 4
+    },
+    {
+     "item": "iron ore",
+     "count": 2
+    }
+   ],
+   "at": "doric"
+  },
+  {
    "id": "dragon",
    "label": "Dragon Slayer",
    "serves": [
@@ -2224,6 +2307,32 @@
        "evidence": "MEASURED",
        "source": "research/quest-plan.md section 1g: scripts/generated/quest-dragon.ts, preset quest_dragon (beside the Guild master; every skill 99, 46 QP of quest varps, rune helm, body, legs, scimitar), practice, 3/3 PASS at 1,577, 1,531, 1,488 ticks (floor = best run, realistic = worst run); Guild master to Elvarg's death (quest complete), the walk to the Champions' Guild not counted; helper items 12,000 coins, 3 planks, 12 nails, hammer, mind bomb, unfired bowl, lobster pot, silk, teleport runes; the rival burst run is not measured by us"
       }
+     }
+    },
+    {
+     "lever": "rival-dragon-combat",
+     "set": {
+      "serves": [
+       "strength",
+       "defence",
+       "questpoints"
+      ],
+      "requires": [
+       "cooks-assistant",
+       "druid",
+       "gobdip",
+       "rj",
+       "tree",
+       "grandtree",
+       "rival-fight-arena",
+       "rival-mm",
+       "cannon",
+       "rival-seaslug",
+       "dig",
+       "doric"
+      ],
+      "minLevelSource": "Cairn route (research/community-and-upstream.md section 7): Dragon Slayer before the last spiders takes Strength 97-99 and Defence 89-98. Champions' Guild door needs 32 QP; the real QP of these rows: Cook's Assistant 1, Druidic Ritual 4, Goblin Diplomacy 5, Romeo & Juliet 5, Tree Gnome Village 2, The Grand Tree 5, Fight Arena 2, Monkey Madness 3, Dwarf Cannon 1, Sea Slug 1, The Dig Site 2, Doric's Quest 1 = 32 (the rival rows keep qp 0 because their QP stay inside quests-rest). minQp is 0 under this lever because the planner QP counter leaves those rival QP in quests-rest; requires carries the real 32-QP gate.",
+      "minQp": 0
      }
     }
    ],
@@ -2373,6 +2482,12 @@
        "rival-mm"
       ]
      }
+    },
+    {
+     "lever": "rival-dragon-combat",
+     "addRequires": [
+      "dragon"
+     ]
     }
    ],
    "at": "falador-white-knights"
@@ -2790,7 +2905,6 @@
    "patches": [
     {
      "lever": "wild-iron",
-     "owner": true,
      "set": {
       "train": {
        "skill": "mining",
@@ -2900,6 +3014,12 @@
        }
       }
      }
+    },
+    {
+     "lever": "rival-dragon-combat",
+     "addRequires": [
+      "dragon"
+     ]
     }
    ],
    "at": "falador-white-knights"
@@ -3071,6 +3191,18 @@
        "realistic": 2664,
        "evidence": "MEASURED",
        "source": "research/quest-points-board.md \"Short rest quests\": 10 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-short.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Sheep Shearer 70/70/70 (quest-sheep.ts, 1 QP); Doric's Quest 30/30/30 (quest-doric.ts, 1 QP); Imp Catcher 38/38/38 (quest-imp.ts, 1 QP); Witch's Potion 80/78/79 (quest-hetty.ts, 1 QP); Rune Mysteries 449/432/441 (quest-runemysteries.ts, 1 QP); The Restless Ghost 519/516/519 (quest-priest.ts, 1 QP); Vampire Slayer 338/330/331 (quest-vampire.ts, 3 QP); Gertrude's Cat 369/385/397 (quest-fluffs.ts, 1 QP); Monk's Friend 327/328/327 (quest-drunkmonk.ts, 1 QP); Fishing Contest 415/415/415 (quest-fishingcompo.ts, 1 QP); the rival burst run is not measured by us"
+      }
+     }
+    },
+    {
+     "lever": "rival-dragon-combat",
+     "set": {
+      "qp": 11,
+      "ticks": {
+       "floor": 2575,
+       "realistic": 2634,
+       "evidence": "MEASURED",
+       "source": "quests-short without Doric's Quest (30/30/30, its own row under rival-dragon-combat): research/quest-points-board.md \"Short rest quests\": 10 quests, each 3/3 PASS on practice from its preset in packages/practice/src/presets-short.ts (every skill 99, helper items, start beside the first NPC; the walk to it not counted); floor = sum of best runs, realistic = sum of worst runs: Sheep Shearer 70/70/70 (quest-sheep.ts, 1 QP); Doric's Quest 30/30/30 (quest-doric.ts, 1 QP); Imp Catcher 38/38/38 (quest-imp.ts, 1 QP); Witch's Potion 80/78/79 (quest-hetty.ts, 1 QP); Rune Mysteries 449/432/441 (quest-runemysteries.ts, 1 QP); The Restless Ghost 519/516/519 (quest-priest.ts, 1 QP); Vampire Slayer 338/330/331 (quest-vampire.ts, 3 QP); Gertrude's Cat 369/385/397 (quest-fluffs.ts, 1 QP); Monk's Friend 327/328/327 (quest-drunkmonk.ts, 1 QP); Fishing Contest 415/415/415 (quest-fishingcompo.ts, 1 QP)"
       }
      }
     }
@@ -3378,11 +3510,94 @@
    "evidence": "ESTIMATE",
    "source": "XP: caroline.rs2:45 stat_advance(fishing, 71750) (CODE-READ); Firemaking 30 gate quest_seaslug.rs2:43 (CODE-READ); ticks MEASURED (research/quest-plan.md section 1n); its 1 QP stay inside quests-rest (the 142-QP total), so qp is 0 here",
    "at": "caroline"
+  },
+  {
+   "id": "cocktail-wine-timer",
+   "label": "Wine timer ferments the bank (background)",
+   "serves": [
+    "cooking"
+   ],
+   "ticks": {
+    "floor": 0,
+    "realistic": 0,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: Cooking 99 lands 20 ticks after the last wine (timerWait=20, 3 runs, 376 wines); a modal (bank, level-up page) holds the NORMAL timer until it closes (probe: 30 ticks, xp+0, bank open)"
+   },
+   "background": {
+    "floor": 20,
+    "realistic": 20,
+    "evidence": "MEASURED",
+    "source": "research/supply-floors.md: Cooking 99 lands 20 ticks after the last wine (timerWait=20, 3 runs, 376 wines); a modal (bank, level-up page) holds the NORMAL timer until it closes (probe: 30 ticks, xp+0, bank open)"
+   },
+   "xp": {
+    "cooking": "to99"
+   },
+   "requires": [
+    "cook-35"
+   ],
+   "variant": {
+    "group": "cooking",
+    "option": "cocktails"
+   },
+   "evidence": "MEASURED",
+   "source": "research/supply-floors.md: Cooking 99 lands 20 ticks after the last wine (timerWait=20, 3 runs, 376 wines); a modal (bank, level-up page) holds the NORMAL timer until it closes (probe: 30 ticks, xp+0, bank open)",
+   "at": "anywhere"
   }
  ],
  "tickMs": {
   "value": 399.8,
   "evidence": "MEASURED",
   "source": "live tick (research index, commit 931c784)"
- }
+ },
+ "supplyResearch": [
+  {
+   "item": "torstol potion (unf)",
+   "reason": "Historical source observation to recheck: only source is the Yanille agility dungeon chest, 1 per sinister key; key 10/128 from Salarin: about 2,250 kills for 176",
+   "source": "research/supply-logistics.md Summary 1; agility_dungeon.rs2:103-120, salarin_the_twisted.rs2:17,45-46 (CODE-READ)",
+   "previousAssumedLimit": 0,
+   "recordedAt": "2026-10-23"
+  },
+  {
+   "item": "snapdragon potion (unf)",
+   "reason": "Historical source observation to recheck: no drop, shop, spawn or chest gives snapdragon",
+   "source": "research/supply-logistics.md Summary 1; shared_droptables.rs2:2-34 randomherb (CODE-READ)",
+   "previousAssumedLimit": 0,
+   "recordedAt": "2026-10-23"
+  },
+  {
+   "item": "toadflax potion (unf)",
+   "reason": "Historical source observation to recheck: no drop, shop, spawn or chest gives toadflax",
+   "source": "research/supply-logistics.md Summary 1; shared_droptables.rs2:2-34 randomherb (CODE-READ)",
+   "previousAssumedLimit": 0,
+   "recordedAt": "2026-10-23"
+  },
+  {
+   "item": "uncut dragonstone",
+   "reason": "Historical source observation to recheck: only source is the Taverley crystal chest, 1 per crystal key (2 halves, each 1/128 of randomjewel); GE 0 sellers",
+   "source": "research/supply-logistics.md Summary 1; crystal_chest.rs2:24, shared_droptables.rs2:58-65 (CODE-READ); GE MEASURED live 2026-10-23",
+   "previousAssumedLimit": 0,
+   "recordedAt": "2026-10-23"
+  },
+  {
+   "item": "dragonstone amulet",
+   "reason": "Historical source observation to recheck: made from uncut dragonstones (no source at scale)",
+   "source": "research/supply-logistics.md Summary 1 (CODE-READ)",
+   "previousAssumedLimit": 0,
+   "recordedAt": "2026-10-23"
+  },
+  {
+   "item": "cosmic rune",
+   "reason": "Historical source observation to recheck: one shop holds 20 (Mage Arena, 1 per 100 ticks); GE 1 seller at 10,000",
+   "source": "research/supply-logistics.md Summary 1 (CODE-READ shops.json + MEASURED live GE)",
+   "previousAssumedLimit": 20,
+   "recordedAt": "2026-10-23"
+  },
+  {
+   "item": "rune dart tips",
+   "reason": "Historical source observation to recheck: no seller and no shop; smithing them needs runite bars, Smithing 89 and Tourist Trap",
+   "source": "research/supply-logistics.md Summary 2; research/supply-costs.md:47-49 (CODE-READ + MEASURED live GE)",
+   "previousAssumedLimit": 0,
+   "recordedAt": "2026-10-23"
+  }
+ ]
 }

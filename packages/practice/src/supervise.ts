@@ -1,7 +1,28 @@
 // Keeps a live bot run going: restarts it when it ends without "RESULT ok", stops for good on a stop file, a death
 // no progress or too many failures in a row. Live runs were lost on 2026-10-23 to tick caps, a stop-and-restart by hand, and
 // Claude Code ending background jobs. Each restart logs in again, so it costs a few playtime ticks.
-// CLI: bun packages/practice/src/supervise.ts <bot> <script> [maxRestarts=20]  (env passes through: DEMO_OK, TARGET...)
+// CLI: bun packages/practice/src/supervise.ts <bot> <script> [maxRestarts=20] [scriptArgs...] (env passes through)
+
+import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
+
+export function workerCommand(bot:string,script:string,scriptArgs:readonly string[]):string[]{
+    return ['bun',script,bot,...scriptArgs];
+}
+
+export function supervisorParticipants(bot:string,raw:string|undefined):string[]{
+    const valid=(name:unknown):name is string=>typeof name==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(name);
+    if(!valid(bot))throw Error('invalid supervisor account');
+    if(!raw)return [bot];
+    const names:unknown=JSON.parse(raw);
+    if(!Array.isArray(names)||names.length<2||names.some(n=>!valid(n))
+        ||names[0].toLowerCase()!==bot.toLowerCase()||new Set(names.map(n=>n.toLowerCase())).size!==names.length)
+        throw Error('invalid coordinator participants');
+    return names;
+}
+
+export function participantsStopped(accounts:readonly string[],stopped:(account:string)=>boolean):boolean{
+    return accounts.some(stopped);
+}
 
 export interface SuperviseDeps {
     run(): Promise<{ stdout: string; exitCode: number }>;
@@ -21,10 +42,16 @@ export function isNoProgressFailure(result: string): boolean {
 // These exact worker guards require staging, gear or a config change. Retrying
 // the same command logs in again without repairing any of those prerequisites.
 export function isPrerequisiteFailure(result: string): boolean {
-    return /^RESULT fail\b/.test(result) && /\b(?:cow prerequisite:|cow kit equip failed (?:1277|1171):|oak PREPARE requires known Draynor bank start\b|cow needs positive CAP and MAX_KILLS1\.\.5\b|oak needs CAP>0 and MAX_MAKE1\.\.25\b|TRAIN_SKILL must be Attack, Strength or Defence\b|TARGET_LEVEL must be1\.\.99\b|missing shears\b|low HP during tool bootstrap\b|worker ended or cap\b)/.test(result);
+    if (!/^RESULT fail\b/.test(result)) return false;
+    // A finite combat pilot that retreats or refuses a target needs review;
+    // twenty fresh logins do not change its route, food, gear or attribution.
+    return result.startsWith('RESULT fail Fire-pilot ')
+        || result.includes('Rune Mysteries quest required: Aubury refused teleport')
+        || result.includes('Rune Mysteries prerequisite:')
+        || /\b(?:cow prerequisite:|cow kit equip failed (?:1277|1171):|oak PREPARE requires known Draynor bank start\b|cow needs positive CAP and MAX_KILLS1\.\.5\b|oak needs CAP>0 and MAX_MAKE1\.\.25\b|TRAIN_SKILL must be Attack, Strength or Defence\b|TARGET_LEVEL must be1\.\.99\b|missing shears\b|low HP during tool bootstrap\b|worker ended or cap\b)/.test(result);
 }
 
-export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up'; runs: number }> {
+export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused'; runs: number }> {
     let fails = 0;
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
@@ -37,6 +64,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (/died=true|RESULT fail died/.test(result)) return { reason: 'died', runs };
         // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
         if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
+        if (isWorkerReleaseHold(result)) return { reason: 'release-paused', runs };
         if (isNoProgressFailure(result) || isPrerequisiteFailure(result)) return { reason: 'blocked', runs };
         if (++fails > d.maxRestarts) return { reason: 'gave-up', runs };
         await d.pause(10_000);
@@ -45,17 +73,19 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
 
 if (import.meta.main) {
     const { existsSync } = await import('node:fs');
-    const [bot, script, maxArg] = process.argv.slice(2);
+    const [bot, script, maxArg,...scriptArgs] = process.argv.slice(2);
     if (!bot || !script) { console.log('usage: supervise.ts <bot> <script> [maxRestarts=20]'); process.exit(2); }
+    const participants=supervisorParticipants(bot,process.env.COORDINATOR_PARTICIPANTS);
     const r = await supervise({
         run: async () => {
-            const p = Bun.spawn(['bun', script, bot], { stdout: 'pipe', stderr: 'inherit', env: process.env });
+            if(process.env.DEMO_OK==='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
+            const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
             let text = '';
             const reader = p.stdout.getReader();
             for (;;) { const { done, value } = await reader.read(); if (done) break; const c = new TextDecoder().decode(value); text += c; process.stdout.write(c); }
             return { stdout: text, exitCode: await p.exited };
         },
-        stopped: () => existsSync(`.practice/stop-${bot}`),
+        stopped: () => participantsStopped(participants,account=>existsSync(`.practice/stop-${account}`)),
         pause: ms => Bun.sleep(ms),
         maxRestarts: Number(maxArg ?? 20),
         log: l => console.log(l),

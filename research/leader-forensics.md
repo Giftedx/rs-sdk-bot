@@ -1,3 +1,5 @@
+> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+
 # Leader forensics for the lost and close boards (2026-10-23)
 
 This file records how the #1 accounts on 13 boards got their times, and what we must build to match them.
@@ -92,7 +94,7 @@ the pack: `inv_total(inv, jug_unfermented_wine)` reads unnoted jugs only, so the
 
 Code check: works in this engine (CODE-READ + MEASURED practice). XP: 1,100 tenths x 25 = 2,750 per wine.
 
-Ours: the login route is ruled out (`owner-requests.md`, R10). The legal route is in `haggis-run.md:116-120`:
+The login route is authorized. The historical range-route comparison is in `haggis-run.md:116-120`:
 8 finished cocktails (`gnome_cooking/gnome_cocktail_finish.rs2:29-30`, 600 tenths = 1,500 XP each, no level
 check, no delay) take Cooking to 36, then one hand-made wine (`wine.rs2:7-20`, needs 35) starts the same timer.
 The cocktails cost about 2 ticks and replace the relog, so the legal route is within about 1 tick of the login

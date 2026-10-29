@@ -1,0 +1,12 @@
+{
+  "id":"wine-order",
+  "goal":"Reach the requested Cooking level from staged starter wine and owned noted bulk; confirm bank credit and clean logout before relog; preserve health and account for all input wine.",
+  "entry":"scripts/cook-wine.ts",
+  "files":["scripts/cook-wine.ts","scripts/cook-wine.test.ts","packages/practice/src/wine-order-proof.ts","packages/practice/test/wine-order-proof.test.ts","packages/core/test/bot.test.ts","packages/core/test/deposit.test.ts","packages/core/test/ticks-failure.test.ts"],
+  "consumer":"Cooking target observed in the saved account; wine input reconciled to good and bad wine",
+  "checks":[
+    {"id":"wine-regressions","phase":"regression","command":["bun","test","scripts/cook-wine.test.ts","packages/practice/test/wine-order-proof.test.ts","packages/core/test/bot.test.ts","packages/core/test/deposit.test.ts","packages/core/test/ticks-failure.test.ts","--timeout","10000"],"timeoutMs":60000},
+    {"id":"native-wine-order","phase":"practice","command":["bun","packages/practice/src/wine-order-proof.ts"],"timeoutMs":240000},
+    {"id":"saved-cooking-target","phase":"consumer","command":["bun","packages/practice/src/wine-order-proof.ts","--verify"],"timeoutMs":30000}
+  ]
+}

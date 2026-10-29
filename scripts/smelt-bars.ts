@@ -1,10 +1,13 @@
 // Furnace Bar Smelter: smelts ores into bars (bronze, iron, steel, gold, mithril) and banks locally.
 // Default location: Al Kharid furnace (3274, 3186) and bank (3269, 3167).
 // Usage: bun scripts/smelt-bars.ts <bot> [CAP ticks, default 15000] [BAR_TYPE: iron | bronze | steel | gold | mithril]
+// Nonbronze: MAX_MAKE=28, ORE_RESERVE=1, ORDER_MODE=best-effort|exact. Al Kharid or Varrock East bank entry (10gp toll).
 // Environment: DEMO_OK=1 for live server.
-import { openBot, finish, countItems } from '../packages/core/src/bot';
+import { openBot, finish } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
+import { productionBatch } from '../packages/planner/src/production-batch';
+import {runSmeltBatch} from './smelt-batch';
 
 const FURNACE_SPOT = { x: 3274, z: 3186 }; // Al Kharid Furnace
 const BANK_SPOT = { x: 3269, z: 3167 };    // Al Kharid Bank
@@ -12,7 +15,10 @@ const BANK_SPOT = { x: 3269, z: 3167 };    // Al Kharid Bank
 type BronzeState={copper:number;tin:number;bars:number;xp:number};
 export function planBronze(copper:number,tin:number,freeSlots:number,maximum:number,reserve:number){
  for(const n of [copper,tin,freeSlots,maximum,reserve])if(!Number.isSafeInteger(n)||n<0)throw new Error('invalid bronze bound');
- return Math.max(0,Math.min(copper-reserve,tin-reserve,Math.floor(freeSlots/2),maximum));
+ return productionBatch([
+  {id:436,available:copper,reserved:reserve,units:1,stackable:false},
+  {id:438,available:tin,reserved:reserve,units:1,stackable:false},
+ ],freeSlots,maximum,'best-effort').planned;
 }
 export function bronzeProgress(before:BronzeState,after:BronzeState){
  const n=after.bars-before.bars;
@@ -81,116 +87,17 @@ if (!botName) {
     process.exit(1);
 }
 
-const s = await openBot(botName).catch(e => finish([], false, `login: ${String(e)}`));
+let stopped=false;
+const s = await openBot(botName,BAR_TYPE==='bronze'?{}:{onStop:async()=>{stopped=true;}}).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     if(BAR_TYPE==='bronze'){const result=await runBronze(s,{maximum:Number(process.env.MAX_MAKE??8),reserve:Number(process.env.ORE_RESERVE??1),cap:CAP});await finish([s],result.ok,`mode=bronze ${JSON.stringify(result)}`);return;}
-    // Wait for inventory sync
-    await waitUntil(s, st => (st?.inventory?.length ?? 0) > 0, { timeoutTicks: 10 });
-
-    const pos = () => s.sdk.getState()?.player;
-    const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
-    const barCount = () => countItems(s, /bar$/i);
-    const oreCount = () => countItems(s, /ore$/i);
-    const t0 = s.tick();
-    const used = () => s.tick() - t0;
-    const over = () => used() >= CAP;
-
-    let smelted = 0, bankTrips = 0, walkTicks = 0;
-
-    const counters = () => `smelted=${smelted} heldBars=${barCount()} heldOres=${oreCount()} bankTrips=${bankTrips} walkTicks=${walkTicks}`;
-
-    const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
-        const a = s.tick();
-        for (let i = 0; i < 3 && !over(); i++) {
-            const p = pos();
-            if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
-            const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
-            if (!r.ok) {
-                console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
-                await waitTicks(s, 1);
-            }
-        }
-        walkTicks += s.tick() - a;
-        const p = pos();
-        return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
-    };
-
-    const bank = async () => {
-        await walk(BANK_SPOT.x, BANK_SPOT.z, 2);
-        const b = await s.bot.openBank();
-        if (!b.success) {
-            console.log(`WARN openBank failed: ${b.message}`);
-            await waitTicks(s, 2);
-            return;
-        }
-
-        // Deposit all bars and leftover items except needed ores
-        const bars = barCount();
-        if (bars > 0) {
-            await s.bot.depositItem(/bar$/i, -1);
-            await waitTicks(s, 1);
-        }
-
-        // Withdraw ores based on BAR_TYPE
-        if (BAR_TYPE === 'iron') {
-            await s.bot.withdrawItem(/iron ore/i, 28);
-        } else if (BAR_TYPE === 'gold') {
-            await s.bot.withdrawItem(/gold ore/i, 28);
-        } else if (BAR_TYPE === 'bronze') {
-            await s.bot.withdrawItem(/tin ore/i, 14);
-            await s.bot.withdrawItem(/copper ore/i, 14);
-        } else if (BAR_TYPE === 'steel') {
-            await s.bot.withdrawItem(/iron ore/i, 9);
-            await s.bot.withdrawItem(/coal/i, 18);
-        }
-
-        bankTrips++;
-        await s.bot.closeInterface();
-        await waitTicks(s, 1);
-    };
-
-    console.log(`START bar smelter ${botName} at=${pos()?.worldX},${pos()?.worldZ} bar=${BAR_TYPE}`);
-
-    while (!over()) {
-        if (oreCount() === 0) {
-            await bank();
-            if (oreCount() === 0) {
-                // Out of ores in bank or waiting
-                await waitTicks(s, 5);
-                continue;
-            }
-        }
-
-        const p = pos();
-        if (!p) { await waitTicks(s, 1); continue; }
-
-        if (Math.max(Math.abs(p.worldX - FURNACE_SPOT.x), Math.abs(p.worldZ - FURNACE_SPOT.z)) > 3) {
-            await walk(FURNACE_SPOT.x, FURNACE_SPOT.z, 2);
-            continue;
-        }
-
-        const furnace = s.sdk.findNearbyLoc(/furnace/i);
-        if (!furnace) {
-            await waitTicks(s, 2);
-            continue;
-        }
-
-        const oreItem = s.sdk.getInventory().find(i => /ore/i.test(i.name));
-        if (!oreItem) continue;
-
-        const before = barCount();
-        await s.sdk.sendUseItemOnLoc(oreItem.slot, furnace.x, furnace.z, furnace.id);
-        await waitUntil(s, () => barCount() > before || oreCount() === 0, { timeoutTicks: 10 });
-
-        const gained = barCount() - before;
-        if (gained > 0) {
-            smelted += gained;
-        }
-    }
-
-    const total = smelted;
-    const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
-    await finish([s], total > 0, `ticks=${used()} ${counters()} barsPer1kTicks=${perK}`);
+    const result=await runSmeltBatch(s,{
+        bar:BAR_TYPE,cap:CAP,maximum:Number(process.env.MAX_MAKE??28),reserve:Number(process.env.ORE_RESERVE??1),
+        mode:(process.env.ORDER_MODE??'best-effort') as 'exact'|'best-effort',
+        stop:()=>stopped,
+    });
+    console.log('SMELT_RESULT '+JSON.stringify(result));
+    await finish([s],result.ok,`mode=${BAR_TYPE} ${JSON.stringify(result)}`);
 } catch (e) {
     await finish([s], false, String(e));
 }

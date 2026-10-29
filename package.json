@@ -2,11 +2,15 @@
   "name": "rs-sdk-bot",
   "private": true,
   "type": "module",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
+    "deliver": "bun packages/router/src/delivery-cli.ts",
     "test": "bun test ./scripts ./packages",
     "typecheck": "tsc --noEmit",
-    "check-pin": "bun scripts/check-pin.ts"
+    "check-pin": "bun scripts/check-pin.ts",
+    "coordinate": "bun packages/router/src/coordinator-cli.ts"
   },
   "devDependencies": {
     "@types/bun": "1.3.6",

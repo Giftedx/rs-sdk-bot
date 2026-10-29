@@ -1,7 +1,78 @@
 import { test, expect } from 'bun:test';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
-import { createShim, type ClientLike } from '../src/inprocess';
+import { createShim,connectInProcess, type ClientLike } from '../src/inprocess';
 import { tradeRefusal } from '../src/tradeguard';
+import { waitTicks } from '../src/ticks';
+import { equipmentObserved } from '../src/container-observation';
+
+test('a nonlocal session cannot redirect its producer receipts into a local fixture',async()=>{
+    await expect(connectInProcess({name:'fixture',password:'unused-local-test',server:'rs-sdk-demo.fly.dev',lifecycleRoot:'isolated-fixture'})).rejects.toThrow('lifecycle root override is local-only');
+});
+
+test('equipment needs a full packet on this connection and clears on stop', async () => {
+    let component:object={};
+    const c:any=Object.assign(fakeClient(),{ptype0:0,packetsReceived:0,ifMutable:()=>component});
+    const shim=createShim(c,newSdk()), peer={};
+    const packet=async(op:number,id=1688)=>{c.ptype0=op;c.packetsReceived++;c.ifMutable(id);await Promise.resolve();};
+    expect(equipmentObserved(c)).toBe(false);
+    await packet(76); expect(equipmentObserved(c)).toBe(false);
+    await packet(107,3214); expect(equipmentObserved(c)).toBe(false);
+    await packet(107);expect(equipmentObserved(c)).toBe(false);
+    component={linkObjType:[],linkObjNumber:[]};
+    c.ptype0=107;c.packetsReceived++;c.ifMutable(1688);
+    expect(equipmentObserved(c)).toBe(false);
+    await Promise.resolve();expect(equipmentObserved(c)).toBe(true);
+    expect(equipmentObserved(peer)).toBe(false);
+    await packet(76);expect(equipmentObserved(c)).toBe(true);
+    await packet(28);expect(equipmentObserved(c)).toBe(false);
+    await packet(107);expect(equipmentObserved(c)).toBe(true);
+    shim.stop('stopped');expect(equipmentObserved(c)).toBe(false);
+});
+
+test('a tick wait started during dispatch waits for the next game tick', async () => {
+    const c = fakeClient(), sdk = newSdk(), shim = createShim(c, sdk);
+    shim.start();
+    let pending: Promise<void> | undefined, done = false;
+    const off = shim.onTick(() => {
+        pending ??= waitTicks({ ...shim, sdk }, 1).then(() => { done = true; });
+    });
+    try {
+        c.fire();
+        await Promise.resolve();
+        expect(done).toBe(false);
+        c.fire();
+        await pending;
+        expect(done).toBe(true);
+    } finally { off(); shim.stop('stopped'); }
+});
+
+test('a listener removed during tick dispatch does not run', () => {
+    const c = fakeClient(), sdk = newSdk(), shim = createShim(c, sdk);
+    let calls = 0, removeLater = () => {};
+    shim.onTick(() => removeLater());
+    removeLater = shim.onTick(() => { calls++; });
+    shim.start();
+    c.fire();
+    expect(calls).toBe(0);
+    shim.stop('stopped');
+});
+
+test('removing and re-adding the same callback defers the new subscription', () => {
+    const c = fakeClient(), sdk = newSdk(), shim = createShim(c, sdk);
+    let calls = 0, changed = false, off = () => {};
+    const callback = () => { calls++; };
+    shim.onTick(() => {
+        if (!changed) { changed = true; off(); off = shim.onTick(callback); }
+    });
+    off = shim.onTick(callback);
+    shim.start();
+    try {
+        c.fire();
+        expect(calls).toBe(0);
+        c.fire();
+        expect(calls).toBe(1);
+    } finally { off(); shim.stop('stopped'); }
+});
 
 test('the action boundary blocks unowned trades through both queue and direct calls', async () => {
     const c = fakeClient();

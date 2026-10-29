@@ -1,3 +1,5 @@
+> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+
 # Thieving ladder (model, 2026-10-22)
 
 Sources:
@@ -126,7 +128,7 @@ set (pickpocket.rs2:130), and walking is blocked too (player/scripts/movecheck.r
 writes it. It is a temporary varp (not saved), so a relog clears it.
 
 - Relog on stun: 1 playtime tick per logout+login (relog-bench.ts, practice save file); about 3.6 ticks inside the
-  bot. +17% XP over 270 ticks in practice. Not used live: the owner has not approved it, and a related change
+  bot. +17% XP over 270 ticks in practice. Authorized for live use under the current owner decision; this dated result is practice-only, and a related change
   was blocked by the Claude Code safety check.
 - Lockpick doors (no stun, no damage on a fail: locked_door.rs2:168). Ardougne: loc_2551 (level 16) at
   (2674,3304), loc_2550 (1) beside it, loc_2554 (46) at (2565,3356), loc_2555 (61) upstairs in the castle.

@@ -1,0 +1,13 @@
+Client artwork sources
+
+RuneLite logo and skill icons: runelite/runelite, runelite-client/src/main/resources/net/runelite/client/ui/runelite_16.png and skill_icons/, retrieved 2026-10-28. See RUNELITE-FULL-LICENSE.txt. Interface palette source pinned in ../RUNELITE-LICENSE.txt.
+
+Game fonts, interface textures and minimap artwork: existing vendor/rs-world/src/media and src/components/rs/minimap. See RS-WORLD-LICENSE.txt for the viewer code license. RuneScape artwork remains the property of Jagex; the code license does not relicense that artwork.
+
+Game sprite strips: existing pinned vendor/rs-sdk/server/content/sprites. Converted magenta transparency to alpha without resampling. Original Jagex game artwork; not claimed as original or BSD artwork.
+
+This is an independent spectator dashboard. It is not the RuneLite desktop client and is not affiliated with Jagex or RuneLite.
+
+Current OSRS tab, orb, prayer and emote PNG artwork: oldschool.runescape.wiki/images/, retrieved 2026-10-28. File names were checked against the Interface and Emotes page image lists. RuneScape artwork copyright Jagex. These assets are not covered by the RuneLite BSD license.
+
+Spell icons: the same OSRS Wiki image source, using names from the Ancient Magicks, Lunar spellbook and Arceuus spellbook image lists, and the named Standard spells. Icons are a visual reference and do not assert account unlocks or cast availability.

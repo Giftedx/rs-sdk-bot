@@ -7,14 +7,14 @@ import { contentRoot, knowledgeDir } from './paths';
 import { buildItems } from './items';
 import { buildNpcs } from './npcs';
 import { buildShops } from './shops';
-import { buildTransports, parseTransportHandlers, type Handler } from './transports';
-import { classifyDoor, parseTriggers, type DoorKind, type DoorNeed } from './doors';
+import { buildTransports, parseTransportHandlers, monkLadderSpawn, type Handler } from './transports';
+import { classifyDoor, parseTriggers, openedTeamDoor,type OpenDoorVariant,type DoorKind, type DoorNeed } from './doors';
 import { buildDbTables } from './dbtables';
 import { buildSkillActions } from './skills';
 import { buildQuests, parseConstants } from './quests';
 import { parseDrops } from './drops';
 
-interface Door { id: number; loc: string; x: number; z: number; level: number; kind: DoorKind; need?: DoorNeed; trigger: string; src: string }
+interface Door { id: number; loc: string; x: number; z: number; level: number; angle?:number; shape?:number;open?:OpenDoorVariant; kind: DoorKind; need?: DoorNeed; trigger: string; src: string }
 
 const root = contentRoot();
 const read = (rel: string) => readFileSync(join(root, rel), 'utf8');
@@ -37,20 +37,29 @@ const shops = buildShops(blocksOf('.inv'));
 
 const handlers: Handler[] = [];
 const skipped: { locName: string; handler: string }[] = [];
+const scriptFiles = listConfigFiles('.rs2').map(f => ({ text: read(f), file: f }));
+const triggers = parseTriggers(scriptFiles);
+const classified:{locName:string;handler:string;kind:string;reason:string}[]=[];
 const ladderDir = 'scripts/ladders+stairs/scripts';
 for (const f of readdirSync(join(root, ladderDir)).filter(f => f.endsWith('.rs2'))) {
-    const r = parseTransportHandlers(read(`${ladderDir}/${f}`), `${ladderDir}/${f}`);
+    const r = parseTransportHandlers(read(`${ladderDir}/${f}`), `${ladderDir}/${f}`,{triggers});
     handlers.push(...r.handlers);
     skipped.push(...r.skipped);
+    classified.push(...r.classified);
 }
-const { edges, unmatchedAngles } = buildTransports(handlers, locSpawns, pack('loc'));
+for(const file of ['scripts/areas/area_falador/scripts/mining_guild.rs2','scripts/areas/monastery/scripts/prayer_guild.rs2','scripts/minigames/game_ranging/scripts/ranging_guild_door.rs2']){
+    const text=read(file),names=file.includes('mining_guild')?['miningguildladder']:file.includes('prayer_guild')?['monasteryladder']:['ranging_guild_door'];
+    const r=parseTransportHandlers(text,file,{triggers});
+    handlers.push(...r.handlers.filter(h=>names.includes(h.locName)));
+}
+const locBlocks = new Map(blocksOf('.loc').map(b => [b.name, b]));
+const locPack = pack('loc');
+const dynamicSpawns=monkLadderSpawn({triggers},{text:read('scripts/quests/quest_drunkmonk/configs/quest_drunkmonk.constant'),file:'scripts/quests/quest_drunkmonk/configs/quest_drunkmonk.constant'},locPack);
+const { edges, unmatchedAngles } = buildTransports(handlers, locSpawns, locPack,locBlocks,dynamicSpawns);
 
 // Doors: wall-layer locs (shape 0-3) whose config has an Open option, like the engine's collision export
 // (server/engine/src/web/pages/api.ts:171-248). Rules come from the door's own trigger, else its category's.
-const scriptFiles = listConfigFiles('.rs2').map(f => ({ text: read(f), file: f }));
-const triggers = parseTriggers(scriptFiles);
-const locBlocks = new Map(blocksOf('.loc').map(b => [b.name, b]));
-const locPack = pack('loc');
+const locIds=new Map([...locPack].map(([id,name])=>[name,id]));
 const doors: Door[] = [];
 for (const l of locSpawns) {
     if (l.shape > 3) continue;
@@ -60,7 +69,9 @@ for (const l of locSpawns) {
     const ops = Object.entries(cfg.props).filter(([k]) => /^op\d$/.test(k)).map(([, v]) => v[0]!);
     if (!ops.some(o => /^open$/i.test(o))) continue;
     const c = classifyDoor(name, cfg.props.category?.[0], triggers);
-    doors.push({ id: l.id, loc: name, x: l.x, z: l.z, level: l.level, kind: c.kind, ...(c.need ? { need: c.need } : {}), trigger: c.trigger, src: l.src });
+    const openName=cfg.props.param?.find(p=>p.startsWith('next_loc_stage,'))?.split(',')[1]?.trim(),openId=openName?locIds.get(openName):undefined;
+    const open=c.kind==='team'&&openName===name+'_open'&&openId!==undefined?openedTeamDoor(name,l,openId):undefined;
+    doors.push({ id: l.id, loc: name, x: l.x, z: l.z, level: l.level, ...(c.need?.whenAxis!==undefined?{angle:l.angle,shape:l.shape}:{}),...(open?{open}:{}),kind: c.kind, ...(c.need ? { need: c.need } : {}), trigger: c.trigger, src: l.src });
 }
 // Phase 1b: skill actions from dbtables, quests, and drop tables.
 const dbTables = buildDbTables(blocksOf('.dbtable'), blocksOf('.dbrow'));
@@ -104,7 +115,14 @@ const counts = {
     shopStockLines: shops.reduce((n, s) => n + s.stock.length, 0),
     transportHandlers: handlers.length,
     transportEdges: edges.length,
+    transportPhysicalEdges:edges.filter(e=>!e.unplaced).length,
+    transportInteractionGeometry:edges.filter(e=>e.interaction).length,
+    transportInteractionUnknown:edges.filter(e=>!e.interaction&&!e.canonical).length,
+    transportDynamic:edges.filter(e=>e.dynamic).length,
+    transportSuperseded:edges.filter(e=>e.canonical).length,
     transportSkipped: skipped.length,
+    transportMenuCovered:classified.filter(c=>c.kind==='menu-covered').length,
+    transportNoMovement:classified.filter(c=>c.kind==='no-movement').length,
     unmatchedAngles,
     dbTables: dbTables.length,
     skillActions: skillActions.length,
@@ -129,7 +147,8 @@ writeFileSync(join(out, 'BUILD.md'), [
     '',
     '- `cost` is the static config value. The Equipment and Bank hiscore boards score this, not market price.',
     '- Banknotes (`cert_*`) are generated by the pack tool and have no config. They are not in items.json.',
-    '- `transports.json` holds ladder and stair edges only.',
+    '- `transports.json` holds ladder and stair edges only. Superseded literal rows retain their source and a verified canonical physical route; consumers dispatch its actual loc ID.',
+    '- Dynamic transports require a current own-client exact loc observation. Spawn timer/geometry provenance does not establish current availability.',
     '- `doors.json`: wall-layer locs with an Open option, classified from their trigger. About 1459 of the `locked` doors are `macro_maze_wallhigh` walls in the sealed random-event maze (random events are off on this server). `unknown` means the trigger shape was not understood; the router treats those as blocked.',
     '',
     '- `skills.json`: one row per skill action from the skill dbtables; `xp` is whole XP (content stores tenths). Smithing XP lives in structs and is `null` for now.',

@@ -1,0 +1,46 @@
+{
+  "id": "firemaking-order",
+  "goal": "skills",
+  "entry": "scripts/firemaking-order.ts",
+  "files": [
+    "scripts/firemaking-order.ts",
+    "scripts/firemaking-order.test.ts",
+    "packages/practice/src/firemaking-order-proof.ts",
+    "packages/practice/test/firemaking-order-proof.test.ts"
+  ],
+  "consumer": "An ordinary native fixture account starts away from the burn line with banked normal logs and no tinderbox. It runs scripts/firemaking-order.ts to a requested Firemaking level, buys a tinderbox inside budget, burns owned logs with rebanking, recovers from an interrupted session without reseeding, refuses a rerun at the target and refuses short log stock. Independent saved-state checks verify the Firemaking level and XP effect, the exact log and coin debit, the kept tinderbox, preserved unrelated assets and confirmed logout.",
+  "checks": [
+    {
+      "id": "firemaking-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/firemaking-order.test.ts",
+        "packages/practice/test/firemaking-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-firemaking-order-consumer",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/firemaking-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-firemaking-order-consumer",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/firemaking-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

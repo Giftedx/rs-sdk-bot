@@ -12,12 +12,17 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, realpathSync, st
 import { join, resolve, sep } from 'node:path';
 import { cpus, freemem, totalmem } from 'node:os';
 import { createHash } from 'node:crypto';
-import { collectionState, operationState, isLoopback, effectiveJob, productionGoal, boundedOperation, capacityState, hostStopNativeProof, productionReview, type NativeProof } from './collection';
+import { accountJobRows, collectionState, operationState, isLoopback, effectiveJob, productionGoal, boundedOperation, capacityState, hostStopNativeProof, productionReview, type NativeProof } from './collection';
+import {requestEvidence,gateView} from './evidence';
+import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
+import {coordinationView} from './coordination';
+import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
-import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule } from '../planner/src/haggis';
+import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
+const operatorControl=createOperatorControl({root});
 const practice = join(root, '.practice');
 const statusDir = join(practice, 'status');
 const botsDir = join(root, 'vendor', 'rs-sdk', 'bots');
@@ -32,6 +37,7 @@ const FILES = {
     haggisPlan: join(import.meta.dir, 'haggis-plan.json'),
 };
 const PORT = Number(process.env.DASH_PORT ?? 3100);
+const PAGE_FILE = resolve(process.env.DASH_PAGE ?? join(import.meta.dir, 'index.html'));
 // The state holds bot positions, inventories, banks and account names, so only this PC listens by default.
 // DASH_HOST=0.0.0.0 opens it to the network on purpose (the reveal routes still answer loopback only).
 const HOST = process.env.DASH_HOST ?? '127.0.0.1';
@@ -297,7 +303,7 @@ async function scanProcs(force = false) {
     procsAt = Date.now();
     try {
         const ps = "Get-CimInstance Win32_Process -Filter \"Name='bun.exe'\" | ForEach-Object { '{0}|{1}|{2}|{3}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.WorkingSetSize, $_.CommandLine }";
-        const p = Bun.spawn(['powershell', '-NoProfile', '-Command', ps], { stdout: 'pipe', stderr: 'ignore' });
+        const p = Bun.spawn(['powershell', '-NoProfile', '-Command', ps], { stdout: 'pipe', stderr: 'ignore' ,windowsHide:true});
         const text = await new Response(p.stdout).text();
         procs.length = 0;
         for (const line of text.split(NL)) {
@@ -624,9 +630,9 @@ function requestChanges(all: Req[], mtime: number): ReqChange[] {
     };
     try {
         const rel = 'research/owner-requests.md';
-        const wt = Bun.spawnSync(['git', 'diff', '-U0', '--', rel], { cwd: root, stdout: 'pipe', stderr: 'ignore' }).stdout.toString();
+        const wt = Bun.spawnSync(['git', 'diff', '-U0', '--', rel], { cwd: root, stdout: 'pipe', stderr: 'ignore' ,windowsHide:true}).stdout.toString();
         if (wt.trim()) take(wt, mtime, 'uncommitted');
-        const log = Bun.spawnSync(['git', 'log', '-n', '8', '-p', '-U0', '--format=@@C %h %ct', '--', rel], { cwd: root, stdout: 'pipe', stderr: 'ignore' }).stdout.toString();
+        const log = Bun.spawnSync(['git', 'log', '-n', '8', '-p', '-U0', '--format=@@C %h %ct', '--', rel], { cwd: root, stdout: 'pipe', stderr: 'ignore' ,windowsHide:true}).stdout.toString();
         for (const part of log.split(/^@@C /m).filter(Boolean)) {
             const [head, ...rest] = part.split(NL);
             const [hash, ct] = head!.split(' ');
@@ -638,13 +644,15 @@ function requestChanges(all: Req[], mtime: number): ReqChange[] {
     return changesCache.value;
 }
 function requests() {
-    const all = cached<Req[]>(FILES.requests, parseRequests, []);
+    const doc=cached(FILES.requests,text=>({all:parseRequests(text),text}),{all:[] as Req[],text:''});
+    const all=doc.all;
     const counts: Record<string, number> = {};
     for (const r of all) counts[r.kind] = (counts[r.kind] ?? 0) + 1;
     // File order is priority order ("most important to the Haggis goal first", then later additions).
     const open = all.filter(r => !['DONE', 'RULE'].includes(r.kind));
     let mtime = 0; try { mtime = statSync(FILES.requests).mtimeMs; } catch { /* missing */ }
-    return { counts, open, total: all.length, mtime, changes: requestChanges(all, mtime) };
+    const evidence=requestEvidence(doc.text);
+    return { counts, open, total: all.length, mtime, changes: requestChanges(all, mtime), ...evidence };
 }
 
 // ---------- Haggis plan: research/haggis-run.md board table if it has one, else haggis-plan.json ----------
@@ -751,7 +759,7 @@ function roleView(s: Status, job: SwarmJob | null, fresh: boolean, xpRate: numbe
 
 // ---------- main account race: the planner's schedule against the live #1 deadlines ----------
 // One source of truth: exactly the options of `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json`,
-// scenario a (no tricks, travel on, every safe lever on, owner levers off). The headline is the realistic plan; the
+// scenario a (all techniques eligible, travel on). The headline is the realistic plan; the
 // floor plan is shown next to it.
 const LIVE_HISCORES = join(root, 'research', 'hiscores-live.json');
 const BOARDS_FILE = join(root, 'packages', 'planner', 'src', 'haggis-boards.json');
@@ -770,7 +778,7 @@ function race() {
     try {
         const boards = loadSnapshot(LIVE_HISCORES);
         const acts = haggisActivities(), travel = haggisTravel();
-        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { travel, mode, tricks: new Set() });
+        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { travel, mode, tricks: new Set(TRICKS) });
         const fl = run('floor'), re = run('realistic');
         // Evidence of the inputs behind each board: the activities (levers applied) that serve it. Overall: all of them.
         const live = applyLevers(acts, {});
@@ -791,12 +799,13 @@ function race() {
         const lastAct = lastB ? [...re.order].reverse().find(p => live.find(a => a.id === p.id)?.serves.includes(lastB.id as any)) : null;
         const n = (l: typeof rows, k: 'real' | 'floor') => l.filter(r => r[k].status === 'WIN').length;
         const value = {
+            supplies: suppliesFor(acts, {travel, mode:'realistic', tricks:new Set(TRICKS)}, boards),
             rows, unmeasured: (readFileSync(BOARDS_FILE, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length,
             wins: n(rows, 'real'), floorWins: n(rows, 'floor'), gap: overall?.real.slack ?? null, floorGap: overall?.floor.slack ?? null,
             qpEnd: { realistic: re.qp, floor: fl.qp },
             last: lastB ? { board: lastB.label, finish: lastB.real.finish, slack: lastB.real.slack, activity: lastAct?.label ?? null } : null,
-            at: Date.now(), source: 'research/hiscores-live.json', sourceAt: mt(LIVE_HISCORES),
-            options: 'planner CLI scenario a: no tricks, travel on, safe levers on, owner levers off',
+            at: Date.now(), source: 'research/hiscores-live.json', sourceAt: Date.parse(JSON.parse(readFileSync(LIVE_HISCORES,'utf8')).takenAt)||0,
+            options: 'planner CLI scenario a: all techniques eligible, travel on; supplies require acquisition',
         };
         raceCache = { key, value };
         const last = gapHistory[gapHistory.length - 1];
@@ -808,19 +817,20 @@ function race() {
         return value;
     } catch (e) { return { error: String(e) }; }
 }
-// The 5 go/no-go gates: scripts/haggis-gate.ts every 10 minutes; it writes .practice/haggis-go.json.
+// Readiness report only: no --authorize here. A dashboard refresh must never authorize login.
 async function runGate() {
     if (process.env.DASH_READ_ONLY === '1') return;
-    try { await Bun.spawn(['bun', join(root, 'scripts', 'haggis-gate.ts')], { stdout: 'ignore', stderr: 'ignore', cwd: root }).exited; } catch { /* next round */ }
+    try { await Bun.spawn(['bun', join(root, 'scripts', 'haggis-gate.ts')], { stdout: 'ignore', stderr: 'ignore', cwd: root ,windowsHide:true}).exited; } catch { /* next round */ }
 }
 setInterval(() => void runGate(), 600_000);
 setTimeout(() => void runGate(), 20_000);
 // Gate details name files by absolute path; the page shows only the file name.
-const gates = () => cached<{ go: boolean; at: number; gates: { name: string; pass: boolean; detail: string }[] } | null>(GATE_FILE, t => {
+const gateReport = (file:string) => gateView(cached<{ go: boolean; at: number; gates: { name: string; pass: boolean; detail: string }[] } | null>(file, t => {
     const g = JSON.parse(t);
     for (const x of g?.gates ?? []) x.detail = String(x.detail ?? '').replace(/[A-Za-z]:[\\/](?:[^\s\\/]+[\\/])*/g, '');
     return g;
-}, null);
+}, null));
+const gates = () => { const authorization=gateReport(GATE_FILE); return authorization.go?authorization:gateReport(join(practice,'haggis-readiness.json')); };
 
 // Vault value over time (in memory, one point a minute) for the economy sparkline.
 const vaultTrend: { at: number; value: number; coins: number }[] = [];
@@ -869,16 +879,17 @@ function buildState() {
     const proofs=nativeProofs(Date.now());
     const st = readStatuses();
     const sw = swarm();
+    const accountJobs=accountJobRows(sw?.jobs);
     // File/proof reads can span a newer controller publication. Compare those
     // observations with the time after the reads, not the build's old start time.
     const now = Date.now();
-    const names = new Set([...liveAccounts(), ...st.keys(), ...(sw?.jobs ?? []).map(j => j.account)]);
+    const names = new Set([...liveAccounts(), ...st.keys(), ...accountJobs.map(j => j.account)]);
     const bots = [...names].map(name => {
         const s0 = st.get(name) ?? ({ name, at: 0, server: 'rs-sdk-demo.fly.dev', role: 'unknown', skills: [] } as Status);
         const live = roster.get(name.toLowerCase());
         const inWorld = !!live && now - live.seen < 30_000;
         const fresh = now - s0.at < 20_000;
-        const mine = (sw?.jobs ?? []).filter(j => j.account.toLowerCase() === name.toLowerCase());
+        const mine = accountJobs.filter(j => j.account.toLowerCase() === name.toLowerCase());
         // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
         const byHand = fresh && !/^localhost/.test(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
         const s = byHand ? { ...s0, role: byHand.role, goal: byHand.goal } : s0;
@@ -914,7 +925,7 @@ function buildState() {
         const reservedEntry = mine.some(j => !j.script || j.state === 'reserved');
         const res = String(s.result ?? '');
         return {
-            ...s, name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, reserved: name === MAIN }, now), live: inWorld ? live : null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
+            ...s, name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
             practice: /^localhost/.test(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
@@ -977,16 +988,25 @@ function buildState() {
         freeGB: freemem() / 2 ** 30, totalGB: totalmem() / 2 ** 30, cpu: cpuPct, cores: cpus().length,
         procs: procs.map(p => ({ ...p, up: now - p.started })),
     };
+    const objectives=cached(join(root,'docs/plans/joined-plan.md'),goalPlan,goalPlan(''));
+    const currentRace=race(),currentGates=gates();
+    const goalInputs:GoalInputs={requirements:currentRace?.supplies??null,
+        items:cached<any[]>(join(root,'knowledge/items.json'),JSON.parse,[]),
+        quests:cached<any[]>(join(root,'knowledge/quests.json'),JSON.parse,[]),
+        questConstants:cached(join(root,'vendor/rs-sdk/server/content/scripts/general/configs/quest.constant'),text=>text,''),
+        receipts:Object.fromEntries(Object.entries(GOAL_RECEIPTS).map(([key,path])=>[key,cached<any>(join(root,path),JSON.parse,null)]))};
+    const progress=goalProgress({now,bots,boards,collection,objectives,race:currentRace,gates:currentGates},goalInputs);
     return {
-        now, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards,
+        now, objectives:{...objectives,progress}, world: { ...world, tick: serverTick() }, worldPlayers: world.players, bots, boards,
+        coordination:(()=>{const file=join(practice,'coordinator/state.json');try{return coordinationView(cached(file,JSON.parse,null),statSync(file).mtimeMs,now,existsSync(join(practice,'stop-coordinator'))||existsSync(join(practice,'stop-swarm')));}catch{return coordinationView(null,0,now);}})(),
         events: events.slice(0, 160).map(e => ({ ...e, text: shortPhase(e.text), full: e.text, practice: prac.has(e.name) })),
         results: results.slice(0, 120).map(r => ({ ...r, practice: prac.has(r.name),nativeProof:resultProof(r,proofs) })), scripts: scripts(proofs), alerts: alerts(bots, now), requests: requests(), mainPlan: haggisPlan(),
         capacity: capacityState(sw,sys.freeGB,now),
         swarm: sw ? { at: sw.at, freeGB: sw.freeGB, running: sw.running, externalRunning: sw.externalRunning ?? null, pendingStartup: sw.pendingStartup ?? null, pendingReserveGB: sw.pendingReserveGB ?? null, minFreeGB: sw.minFreeGB ?? null, maxBots: sw.maxBots, jobs: sw.jobs.length } : null,
         // An open page reloads itself when index.html changes, so a deploy reaches the owner's tab.
         viewerTimings: viewerTimings.slice(0, 20),
-        race: race(), gates: gates(), chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
-        pageVersion: (() => { try { return statSync(join(import.meta.dir, 'index.html')).mtimeMs; } catch { return 0; } })(),
+        race: currentRace, gates: currentGates, chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
+        pageVersion: (() => { try { return Math.max(...[PAGE_FILE,...['map-shell.css','map-shell.js','client-shell.css','client-shell.js','client-viewer.css','operations.css','operations.js'].map(f=>join(import.meta.dir,f))].map(f=>existsSync(f)?statSync(f).mtimeMs:0)); } catch { return 0; } })(),
         icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
 }
@@ -1065,6 +1085,15 @@ Bun.serve({
     idleTimeout: 0,
     fetch(req, server) {
         const url = new URL(req.url);
+        if(url.pathname==='/api/control')return operatorControl(req,server.requestIP(req)?.address??'').then(async response=>new Response((await response.text()).replace(SECRET_RE,SECRET_MARK),{status:response.status,headers:response.headers}));
+        if(url.pathname==='/RUNELITE-LICENSE.txt')return new Response(Bun.file(join(import.meta.dir,'RUNELITE-LICENSE.txt')),{headers:{'content-type':'text/plain;charset=utf-8'}});
+        if(['/map-shell.css','/map-shell.js','/client-shell.css','/client-shell.js','/client-viewer.css','/operations.css','/operations.js'].includes(url.pathname))return new Response(Bun.file(join(import.meta.dir,url.pathname.slice(1))),{headers:{'content-type':url.pathname.endsWith('.css')?'text/css':'text/javascript','cache-control':'no-store'}});
+        if(url.pathname.startsWith('/client-assets/')) {
+            const name=url.pathname.slice('/client-assets/'.length);
+            if(!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
+            const file=Bun.file(join(import.meta.dir,'client-assets',name));
+            return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
+        }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
         if(url.pathname==='/viewer'||url.pathname==='/viewer/') {
@@ -1072,7 +1101,7 @@ Bun.serve({
             // Native isolation headers replace this root-scoped service worker;
             // the viewer must not install a worker over the dashboard itself.
             const html=readFileSync(join(viewerBuild,'index.html'),'utf8').replace(/<script\s+src="\/coi-serviceworker\.js"><\/script>/,'')
-                .replace('<head>','<head><script src="/api/viewer-bridge.js"></script>');
+                .replace('<head>','<head><script src="/api/viewer-bridge.js"></script>'+(url.searchParams.get('client')==='1'?'<link rel="stylesheet" href="/client-viewer.css">':''));
             return new Response(html,{headers:{...VIEWER_ISO,'content-type':'text/html;charset=utf-8','cache-control':'no-store'}});
         }
         const asset=viewerAsset(url.pathname);if(asset)return asset;
@@ -1104,7 +1133,7 @@ Bun.serve({
             return new Response(stream, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' } });
         }
         if (url.pathname === '/items.png') return new Response(Bun.file(join(import.meta.dir, 'items.png')), { headers: { 'content-type': 'image/png', 'cache-control': 'max-age=86400' } });
-        if (url.pathname === '/' || url.pathname === '/index.html') return new Response(Bun.file(join(import.meta.dir, 'index.html')), { headers: { ...ISO, 'content-type': 'text/html;charset=utf-8' } });
+        if (url.pathname === '/' || url.pathname === '/index.html') return new Response(Bun.file(PAGE_FILE), { headers: { ...ISO, 'content-type': 'text/html;charset=utf-8' } });
         return new Response('not found', { status: 404 });
     },
 });

@@ -1,5 +1,7 @@
 # Wider OSRS / RuneScape ecosystem: what we can reuse
 
+Historical survey. For current reuse decisions, use the [project use map](project-use-map.md). Our target is pinned rev289; coordinates, mechanics and permissions require validation. Corrections from the 2026-10-26 source review: the RuneLite XP table is **not reusable as-is** here (`planner/src/curve.ts` uses exponent L/10, not L/7); use `vendor/rs-sdk/server/content`, not the standalone rev274 clone. Abortable actions and bounded walking already exist. Old import rankings, client-status claims and categorical dismissals below are not current work orders.
+
 Date: 2026-10-22. Scope: projects outside rs-sdk / runebench (covered elsewhere) that can give a TypeScript, 2004-era (LostCity build 274, Nov 2004) agent harness ideas, algorithms, data, or code. Antiban and humanization are out of scope.
 
 Method: `gh api repos/<x>` for stars, license, and last push (all numbers read on 2026-10-22). Raw-file reads of READMEs and sample data files. WebSearch and Exa for research projects. Nothing was cloned.
@@ -119,7 +121,7 @@ All below are **BSD-2-Clause (OK)** unless noted.
 | Source | License | What | OSRS vs 2004 | Fit |
 |---|---|---|---|---|
 | OSRS Wiki MediaWiki API (`oldschool.runescape.wiki/api.php`) | **CC BY-NC-SA 3.0** [seen siteinfo] | Infoboxes, quick guides, transcripts (exact NPC dialogue, useful for `DialogRequirement`-style matching), Bucket queries (`action=bucket`; bucket `dropsline` exists, field names need checking) [seen] | OSRS. Many quests and dialogues are near-identical for 2004 F2P content. Drop rates and shops were rebalanced, so do not trust them for 2004 | Medium (knowledge files, with NC-SA attribution) |
-| OSRS Wiki prices API (`prices.runescape.wiki/api/v1/osrs/latest`) | API terms; needs a descriptive User-Agent | Live GE prices [seen working] | **Irrelevant for 2004**: no GE. Our server has its own market (`lostcity-markets`) | None |
+| OSRS Wiki prices API (`prices.runescape.wiki/api/v1/osrs/latest`) | API terms; needs a descriptive User-Agent | OSRS GE prices [seen working] | Wrong economy: our server has its own GE and public market API | Schema ideas only; use our server's prices |
 | osrsbox/osrsbox-db | 245 stars, **GPL-3.0**, last push 2022-08-07 | Items (27+ props), monsters (44 props plus drops), prayers | OSRS, stale | Low |
 | 0xNeffarion/osrsreboxed-db | 56 stars, **GPL-3.0**, 2025-01-07 | Maintained fork; PyPI `osrsreboxed` plus REST [seen README] | OSRS | Low (schema ideas for item/monster JSON) |
 | osrs-wiki/cache-mediawiki | 2 stars, GPL-3.0, 2026-10-01 | Cache → wiki content converters | OSRS | Low |
@@ -172,7 +174,7 @@ Synthesis: every successful RS RL result targets a **narrow combat sub-task insi
 | 9 | Microbot Agent Server / CLI surface | Microbot `docs/AGENT_SERVER.md`, `AGENT_SCRIPT_TOOLS.md` | BSD-2 | Observe/act tool split, heartbeat/stall detection, dynamic script deploy, screenshot-on-fail | Design | Medium-High |
 | 10 | DaxWalker algorithm notes plus Naton1 gym-socket design | github.com/itsdax/Runescape-Web-Walker-Engine ; github.com/Naton1/osrs-pvp-reinforcement-learning | Apache-2.0 ; NONE | Hierarchical Dijkstra+A* with requirement-filtered transport edges; step/reset socket plus JSON action/obs contracts for any later RL on sub-tasks | Ideas | Medium |
 
-Not recommended: OSRS item/monster DBs (GPL, wrong era), GE price API (no GE in 2004), YOLO/vision bots (we have structured state), 2009scape/Open-RSC/2006Scape code (copyleft and wrong era), closed clients beyond their API shapes.
+Not recommended: OSRS item/monster DBs (GPL, wrong era), external OSRS GE prices (different economy; our GE is authorized), YOLO/vision bots (we have structured state), 2009scape/Open-RSC/2006Scape code (copyleft and wrong era), closed clients beyond their API shapes.
 
 ## Open items
 - Hyperion and Kronos repo locations not found. Skipped.

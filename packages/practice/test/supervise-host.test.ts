@@ -1,6 +1,13 @@
 import { test, expect } from 'bun:test';
 import { classify, lastResults, superviseHost } from '../src/supervise-host';
 
+test('host release refusal pauses each account without retrying',async()=>{
+ const r=await superviseHost(['a','b'],{run:async()=>({stdout:['a','b'].map(a=>`[${a}] RESULT fail Error: no worker progress: release source changed; live starts paused`).join('\n'),exitCode:1}),
+ stopped:()=>false,pause:async()=>{throw Error('must not retry');},maxRestarts:20});
+ expect(r.ends).toEqual({a:'release-paused',b:'release-paused'});expect(r.runs).toBe(1);
+ expect(classify('RESULT fail Error: no courier progress: collection credit unbound',false)).toBe('blocked');
+});
+
 test('classify applies the supervise.ts rules to one account', () => {
     expect(classify('RESULT ok ticks=9000', false)).toBe('done');
     expect(classify('RESULT fail died ticks=10 died=true', false)).toBe('died');
@@ -10,6 +17,13 @@ test('classify applies the supervise.ts rules to one account', () => {
     expect(classify('RESULT fail walk', true)).toBe('stopped');
     expect(classify('RESULT fail walk', false)).toBeNull();
     expect(classify(undefined, false)).toBeNull();
+});
+
+test('the host blocks a real missing quest after one attempt, while success keeps priority', () => {
+    const detail='essence {"failure":"Error: Rune Mysteries quest required: Aubury refused teleport"}';
+    expect(classify(`RESULT fail ${detail}`,false)).toBe('blocked');
+    expect(classify(`RESULT ok ${detail}`,false)).toBe('done');
+    expect(classify(`RESULT fail ${detail}`,true)).toBe('stopped');
 });
 
 test('lastResults keeps the last RESULT per account from host output', () => {

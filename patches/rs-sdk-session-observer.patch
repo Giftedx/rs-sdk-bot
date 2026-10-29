@@ -1,0 +1,19 @@
+--- a/server/webclient/src/lite/session.ts
++++ b/server/webclient/src/lite/session.ts
+@@ -51,6 +51,8 @@
+      */
+     profanityFilter?: boolean;
+     quiet?: boolean;
++    /** Install connection observers before the first incoming packet is handled. */
++    onClient?(client: LiteClient): void;
+     /**
+      * Called exactly once when the packet loop ends, whatever the cause. Fires
+      * before `stopped` resolves, so a supervisor can re-login straight away.
+@@ -160,6 +162,7 @@
+         password: opts.password,
+         maxMessageLength: opts.maxMessageLength
+     });
++    try { opts.onClient?.(client); } catch (error) { connection.close(); throw error; }
+ 
+     let running = true;
+     let cycles = 0;

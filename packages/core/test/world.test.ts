@@ -5,7 +5,7 @@ const acct = (skills: Record<string, number> = {}): Account => ({ skills, varps:
 // Flat world: walking costs Chebyshev distance on the same level, never across levels.
 const flat = (from: Tile, to: Tile) => (from.level === to.level ? Math.max(Math.abs(from.x - to.x), Math.abs(from.z - to.z)) : null);
 
-const stairA = { locName: 'stairs', option: 'op1', from: { x: 10, z: 0, level: 0 }, to: { x: 10, z: 2, level: 1 }, exact: true, src: 'a', toSrc: 'a', handler: 'a' };
+const stairA = { locName: 'stairs', option: 'op1', from: { x: 10, z: 0, level: 0 }, to: { x: 10, z: 2, level: 1 }, exact: true, src: 'a', toSrc: 'a', handler: 'a',interaction:{id:1,shape:10,angle:0,width:2,height:2,blockAccessFlags:0,src:'a',configSrc:'a'} };
 const stairB = { locName: 'stairs', option: 'op1', from: { x: 50, z: 0, level: 0 }, to: { x: 50, z: 2, level: 1 }, exact: true, src: 'b', toSrc: 'b', handler: 'b' };
 
 test('a goal on another level is reached through the stair edge', () => {
@@ -103,7 +103,7 @@ test('dungeon tiles (z + 6400) do not mislead the search into a far exit', () =>
 test('near-leg blocked doors share account policy and exclude other floors/far tiles', () => {
     const make = (x: number, kind: string, need?: Door['need'], level = 0): Door => ({ id: x, loc: 'door', x, z: 10, level, kind, need, trigger: '', src: '' });
     const doors = [make(5, 'open'), make(6, 'locked'), make(7, 'one_way'), make(8, 'conditional'), make(9, 'unknown'),
-        make(10, 'skill', { skill: 'crafting', level: 10 }), make(11, 'key', { item: 'brass_key' }), make(12, 'quest', { varp: 'quest' }),
+        make(10, 'skill', { skill: 'crafting', level: 10 }), make(11, 'key', { item: 'brass_key' }), make(12, 'quest', { varp: 'quest', minimum:1 }),
         make(5000, 'locked'), make(13, 'locked', undefined, 1)];
     const account = { skills: { crafting: 10 }, varps: {}, items: ['brass_key'] };
     const from = { x: 0, z: 0, level: 0 }, to = { x: 20, z: 20, level: 0 };

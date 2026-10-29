@@ -31,7 +31,7 @@ async function prep(name: string, p: SaveConfig) { await createBot(name); await 
 function cleanup(name: string) { rmSync(join(rsSdkRoot(), 'bots', name), { recursive: true, force: true }); }
 
 async function run(script: string, bot: string, env: Record<string, string>, args: string[] = [], timeoutMs = 900_000) {
-    const proc = Bun.spawn(['bun', resolve(repo, script), bot, ...args], { cwd: rsSdkRoot(), env: { ...process.env, ...env }, stdout: 'pipe', stderr: 'pipe' });
+    const proc = Bun.spawn(['bun', resolve(repo, script), bot, ...args], { cwd: rsSdkRoot(), env: { ...process.env, ...env }, stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
     await proc.exited;

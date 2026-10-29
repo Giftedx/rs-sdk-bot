@@ -20,6 +20,15 @@ function parseObj(line: string): { item?: string; table?: string; count?: number
     const what = m[1]!.trim();
     if (what.startsWith('~')) return { table: what.slice(1) };
     const item = what === 'npc_param(death_drop)' ? 'death_drop' : what;
+    // DropParser.parse_quantity in jaidenw/2004scape-drop-search recognizes
+    // this form. Re-derive its upper bound from pinned NumberOps.RANDOM:
+    // random(n) is 0..n-1 (RANDOMINC is the separate inclusive operation).
+    const random = line.match(/obj_add\(npc_coord,\s*[^,]+?,\s*calc\(\s*random\(\s*(\d+)\s*\)\s*\+\s*(\d+)\s*\)\s*,/);
+    if (random) {
+        const n = Number(random[1]), offset = Number(random[2]);
+        const max = offset + Math.max(0, n - 1);
+        if ([n, offset, max].every(Number.isSafeInteger) && max <= 0x7fffffff) return { item, count: offset, countMax: max };
+    }
     // A ranged amount, e.g. obj_add(npc_coord, coins, ~random_range(100, 500), ...): keep both ends.
     const range = line.match(/~random_range\(\s*(\d+)\s*,\s*(\d+)\s*\)/);
     if (range) return { item, count: Number(range[1]), countMax: Number(range[2]) };

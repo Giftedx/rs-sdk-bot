@@ -4,6 +4,12 @@ Sources: `research/quest-xp.md` (XP per quest at 25x), `research/quest-route.md`
 `knowledge/quests.json`, the rev 289 quest scripts under `vendor/rs-sdk/server/content/scripts/quests/`, and the
 leader snapshot `research/hiscores-2026-10-22.json`. Evidence levels follow `research/INDEX.md`.
 
+## Current observation path (2026-10-26)
+
+Offline integration: [preparation](../.practice/shared-supply/preparation.json) now evaluates shared quest prerequisites and alternative tools from dated account flags; unknowns stay unknown. Rune Mysteries completion requires the journal flag, never the starting/reward talisman. Restart after package handoff tries Aubury for notes with bounded dialogue retries; other missing-item stages may still require recovery. [95 tests](../.practice/shared-supply/combined-tests.txt) cover the focused batch; [Native recovery](../.practice/shared-supply/rune-fixed-proof.json), 2026-10-26: seeded stage 4, Magic 40 and runes, no package/notes → flag 6 → bank; completed restart changes no inventory or position. Original runner completed the quest but falsely failed by checking Varrock teleport against the bank. [Candidate](../.practice/shared-supply/rune-finish.patch) checks the landing then walks to bank; 374 ticks, zero retries, clean logout. Installed in the [coordinated release](../.practice/release-next/activation.json); other missing-item stages and no-rune fallback remain unproved. Failed baseline retained in `rune-native-proof.json`.
+
+`packages/core/src/quest-status.ts` maps all 68 journal components. It reads each client's server-set colours passively; untouched red and untransmitted varp defaults stay unknown. Status snapshots carry per-quest flags. Existing workers are not restarted for capture. Reward extraction remains separate: `knowledge/quests.json` has 64 quests / 138 QP. [Dashboard evidence](../.practice/goal-gaps/verification.json) records observed coverage, not completion of unobserved accounts.
+
 ## 1. Measured: Waterfall Quest
 
 Script `scripts/generated/waterfall.ts`, preset `quest_waterfall` (beside Almera, 10 HP, 2 ropes, 6 air, earth and
@@ -160,9 +166,40 @@ Findings from the failed attempts:
 - Teleports cut the Nulodion trip from 741 + 741 tiles to 154 + 265 tiles (`findLongPath`), about 530 ticks saved.
   They need Magic 45, 2 law, 8 air and 1 water rune.
 
-Still open: a dialogue burst. The lite client sends one continue per page (`webclient/src/lite/actions.ts:466-476`,
-`resumedPauseButton`), so 190 of the 888 ticks are dialogue. A raw `RESUME_PAUSEBUTTON` sender could cut about half.
-The walk from the Waterfall end to the commander is not counted.
+Dialogue: the lite client sends one continue per page (`webclient/src/lite/actions.ts:466-476`,
+`resumedPauseButton`), so 190 of the 888 ticks are dialogue. The walk from the Waterfall end to the commander is not
+counted.
+
+**Dialogue burst, MEASURED practice 2026-10-29.** Claim: raw `RESUME_PAUSEBUTTON` bursts halve dialogue time.
+Conditions: local practice server at 400 ms, fresh accounts (`fresh_lumbridge`), Father Aereck's welcome talk
+(`father_aereck.rs2`: 13 continue pages in blocks of 1, 5, 4, 3 between 3 choices = 16 pages), 3 runs x 3 talks per
+method, `scripts/measure/dialogue-pace.ts`. Evidence (`.practice/dialogue-pace-20261029/runs.log`): quest-lib
+`converse` 32 ticks in all 9 talks (2.00 per page, 19 clicks a talk); same-tick answers from the tick callback 33 in all
+9; burst (the whole block of continues as raw packets, at most 5 a tick, then the choice when it shows) 15 in all 9
+(16 clicks a talk). `ResumePauseButtonHandler.ts` resumes any paused script without a page check, so blind continues
+are valid. Cairn reports 16 ticks for one page a tick and 7 for their burst; ours still waits for each choice page.
+Gap: page counts per quest are not measured, so the quest rows keep their measured ticks. Estimate only: Dwarf Cannon
+spends 190 ticks on dialogue, so a burst would save about 100 (11%); on the quest rows before Overall (about 12,400
+ticks) 7.5-11% is 930-1,400 ticks. Tried 2026-10-29 in a practice copy (`.practice/dialogue-pace-20261029/quests/`, `Q_BURST=1`: 5 blind continues on
+a page with no choice), 150 ms, 3 runs per case (`quest-runs.log`). Without the burst: Druidic Ritual 247, 244, 248
+ticks; Tree Gnome Village 800, 784, 812 (all PASS). With it: 0 of 6 PASS, each `fail talk <npc> 1`. The game advanced
+(Tree Gnome Village: the maze teleport at tick 12), but each talk step ends on `sawText` of a page the burst skipped.
+Next decision: record the text of every page the client receives, or end talk steps on quest varps.
+Recording every page text from the 31 chat interfaces (`interface.pack` ids of every interface `chat.rs2` sets text on;
+the server sets text before `IF_OPENCHAT`, so `chatModalId` cannot filter them): Druidic Ritual 216, 217, 217 with the
+burst against 248, 247, 247 without (3/3 PASS each, -31 ticks, 12.6%). Tree Gnome Village 0/3 with the burst: the
+ballista hit text (`quest_tree.rs2:23`) arrives before its page is answered, the script walks away, the walk closes the
+mesbox and `%treequest = ^tree_ballista_fired` never runs ("The wall is damaged, but not enough to climb.";
+`tree-burst-trace.log`). Quest varps cannot replace text checks live: 4 of 66 quest `.varp` files have `transmit=yes`
+(`treequest` and `druidquest` do not), so the client sees only the journal colour.
+Fix, MEASURED practice 2026-10-29 (150 ms, 3 runs per case, `quest-runs.log` "page-pending rule"): a page whose text
+arrived after the last successful answer counts as open (`dialogOpen()`) for up to 5 ticks, so no step ends while a
+page waits; any successful `sendClickDialog` or burst answers it. All 12 PASS with full rewards (Druidic Ritual 6,250
+Herblore; Tree Gnome Village 2 QP, amulet, 286,250 Attack). Druidic Ritual 217, 216, 217 against 248, 248, 247 (-31,
+12.5%); Tree Gnome Village 699, 661, 667 against 756, 796, 819 (-114, 14.4%; the ballista milestone at 71-76 instead of
+139-141). Estimate only: the quest-lib quests before Overall (about 12,000 ticks) would save 1,500-1,750 ticks. Gap:
+the change lives in a practice copy; `scripts/generated/quest-lib.ts` belongs to `fresh-rune-supply-order`.
+Was: a burst option in `quest-lib.ts` `converse`, then 3 matched quest runs.
 
 ### Cannon session after the quest (MEASURED practice)
 
@@ -584,6 +621,28 @@ Narnode is not possible, the root is set at 150) is not tried. The walk to Narno
 10 HP; the planner does not model Hitpoints.
 
 ## 1h. Monkey Madness (the `rival-mm` row): MEASURED end to end on practice
+
+### Current candidate gate, 2026-10-27
+
+Earlier whole-quest runs below do not verify the current guard candidate with today's walker. The [first full attempt](../.practice/mm-exit/guard-candidate/full-1793058431497/run1/proof.json) stopped at207ticks returning from Caranock. It logged out alive at2958,3015. The [offline model](../.practice/mm-exit/shipyard/blocked-model.json) reproduces that exact partial endpoint. `sessionWalker::applyKnownDoorBlocks` has no quest varps and blocks both shipyard gates. Outside the gate,the same pilot waypoint remains reachable.
+
+[Source decision](../.practice/mm-exit/shipyard/source-decision.json):rs-sdk `b565f2d9` `quest_grandtree.rs2::oploc1,_shipyard_gate/open_shipyard_gate` → MM stage30 → adapt existing `q.step/opLoc` to observe the authorized inside exit. Retain the generic unknown-quest guard. The sibling Grand Tree route teleports elsewhere,so it does not fit this pilot return. No external code copied. The [staged delta](../.practice/mm-exit/shipyard/lineage.json) inserts only this exit into the prior temple candidate.
+
+[Exact failed-save rehearsal](../.practice/mm-exit/shipyard/native-1793059097027/proof.json) obtains Narnode's orders4005 and logs out at the Grand Tree. It preserves five original worn items,12sharks andHP35,using one super-antipoison dose.122ticks cover this reduced checkpoint only. [Full repaired batch](../.practice/mm-exit/guard-candidate/full-1793059262250/proof.json):run1 passed5,213ticks,HPmin13,saved quest365=10,training XP,10000coins/3diamonds,gear and logout. Run2 failed at1,235ticks after three warehouse captures;HPmin10/final30,six sharks used,gear retained/logout. Run3 did not start. One pass does not qualify this candidate.
+
+[Warehouse trace](../.practice/mm-exit/warehouse/trace-1793060810065/proof.json):three unchanged reduced controls reached dentures/cellar/extraction,but each crossed the sleeping-guard rectangle before dentures;one also crossed it afterward. Pinned `mm_sleeping_monkey_guard.rs2` summons guards for humans at2762..2767,2767..2772. Long clicks let the client cut through it. Two path-only repairs failed:[first](../.practice/mm-exit/warehouse/native-1793061398574/proof.json) stopped after repeated captures with clean logout;[second](../.practice/mm-exit/warehouse/native-1793061596846/proof.json) looped west,reached HP6 and stopped,logout timed out. Both retained kit. Static rsmod simulation missed the loop. The [real LiteClient BFS fixture](../.practice/mm-exit/warehouse/client-model-before-doorway.json) reproduces it with pinned raw collision.
+
+[Reuse decision](../.practice/mm-exit/warehouse/source-decision.json):the entrance4710 at2764,2764 is named Doorway,with Open. Pinned `quest_mm.rs2:831` permits passage. Our `openOp` filter accepts Door/Gate but misses Doorway. Stage that one-word fix,retain chest exclusion and bounded door recovery,and combine it with the existing temple overlay pattern plus constrained warehouse clicks. Door fix alone still crosses the trigger in the [client model](../.practice/mm-exit/warehouse/client-model.json);the combined candidate reaches it without doing so. Doorway regression fails before repair;23walker tests/79assertions,three path tests/26assertions and candidate/driver typecheck pass. No server changes or added retries.
+
+[Three reduced native cases and independent save/log audit](../.practice/mm-exit/warehouse/native-1793062132167/independent-audit.json) pass:actual dentures,cellar,bank/logout,all five kit items and12sharks retained.248/232/300ticks;HPmin35/35/25,no food used,no observed trigger tile. Total34air,5blood,3law and3antipoison doses consumed;three seals intentionally dropped by the existing quest. These are seeded practice costs,not live/main costs or matched speed comparisons. Candidate/helper/walker SHA-256 and CRC save bytes are archived. [Full batch](../.practice/mm-exit/guard-candidate/full-1793062289389/proof.json) ended with2passes/1failure:runs1/2 passed5,128/5,145ticks,HPmin20/13,six/eight sharks depleted. Run2 reports `eats=12`:existing `quest-lib.ts::guard` increments before dispatch,so this counter is item-use attempts,not observed consumption. Do not price12sharks or infer four lost items. Actual item accounting uses CRC saves;an observed-consumption counter remains a separate quest-helper repair. Both completed runs pass actual quest/training/reward/kit/logout checks. Their saved costs are433/468air,86/93blood,one law each,24prayer doses each and4/3super-antipoison doses. No main/live cost or speed claim.
+
+Run3 stopped at3,723ticks on `walk gate1 to gate`,alive with kit retained and clean logout. Its stage110 milestone at3,426 preceded cutscene entry at3,430;`monkey` followed at3,434 while the player was in the private region. It returned underground at3,446,after the code had skipped the dungeon-exit branch. Pinned `mm_zooknock.rs2:224` queues chapter3 before the item box and chat pages. `quest_mm.rs2:169` closes the interface,delays,fades and teleports. The ignored30tick start wait and inactive `cutscene` call can mark completion before entry.
+
+[Checked phase candidate](../.practice/mm-exit/chapter3/lineage.json) reuses `converse1`,then requires observed start and cave return near Zooknock before110. The first checked version safely [refused at925ticks](../.practice/mm-exit/chapter3/native-1793065851630/proof.json);cutscene entry followed during cleanup at932. Its raw log identified the remaining material-question choice. Pinned `mm_zooknock.rs2:285-300` exits that loop via "I'll be back later." at option3. Continue0 cannot choose it. The final candidate matches that explicit exit while waiting;it does not treat a longer timeout as completion. Seven extracted-caller/helper fixtures/18assertions and typecheck pass,including the native-observed choice,late entry,never-started,never-returned and wrong-return cases.
+
+[Reduced giver native](../.practice/mm-exit/chapter3/native-1793066376954/proof.json) passes400ticks:entry26,cave return70,checkpoint110at70,cave exit354,surface gate400,clean logout. CRC saves independently agree:main3653→4,greegree0→1,equipped monkey,all five original kit items retained,sharks8→7,HP35→28,minimum21. This fixture reuses s107 flags/kit,places the actor at Zooknock with obtained talisman4023/child7,and skips unrelated child/travel setup. It proves the real handoff/queued phase and subsequent cave-exit/gate consumer;not the full quest,whole-route supply robustness,main staging or speed. Three fresh full candidate quests,installation and release remain unqualified. Main clocks,production sourceb77b9247 and the timing model are unchanged.
+
+[Old canonical release bytes](../.practice/mm-exit/warehouse/release/prepared.json) remain prepared,unqualified and predate the phase fix;they are not an install candidate. The walker delta was one filter word;other runtime changes were import relocation of staged code. The temple regression embeds its saved footprint instead of requiring an ignored practice log. [Virtual root typecheck](../.practice/mm-exit/warehouse/release/virtual-typecheck.json) passed those seven files without installing them. It does not prove the new phase or installed behaviour. Require the new full batch,updated canonical bytes,clear ownership,exact baseline hashes,canonical checks and installed consumer proof before publishing a new pin.
 
 Script `scripts/generated/quest-mm.ts` (puzzle solver `scripts/generated/mm-puzzle.ts`), presets in
 `packages/practice/src/presets-mm.ts`. The preset `quest_mm` is the planner state at the row (scenario a, order row
@@ -1430,3 +1489,4 @@ Dragon Slayer (932,500 at about 4,000 ticks = 233 per tick) is the next after th
   Slayer gates.
 - `research/quest-route.md` says the Grand Tree needs Tree Gnome Village. The rev 289 Grand Tree script gates only
   Agility 25 (CODE-READ grep). Not verified in a run.
+

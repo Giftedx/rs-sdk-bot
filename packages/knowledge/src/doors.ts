@@ -1,7 +1,15 @@
 import { cleanLines } from './text';
 
-export type DoorKind = 'open' | 'one_way' | 'key' | 'quest' | 'skill' | 'locked' | 'conditional' | 'unknown';
-export interface DoorNeed { skill?: string; level?: number; varp?: string; item?: string; side?: string }
+export type DoorKind = 'open' | 'one_way' | 'key' | 'quest' | 'skill' | 'team' | 'locked' | 'conditional' | 'unknown';
+export interface DoorNeed { skill?: string; level?: number; varp?: string; item?: string; side?: string; worn?:string; whenAxis?:boolean; minimum?:number;team?:0|1 }
+export interface OpenDoorVariant {id:number;x:number;z:number;level:number;angle:number}
+// Pinned doubledoors.rs2 uses door_open's straight-wall offset, then +3 for
+// the left leaf and +1 for the right leaf. The pack/config supplies the ID.
+export function openedTeamDoor(loc:string,at:{x:number;z:number;level:number;angle:number},id:number):OpenDoorVariant|undefined {
+ const match=loc.match(/^castlewars_(?:saradomin|zamorak)_maindoor([lr])$/);if(!match||!Number.isInteger(at.angle)||at.angle<0||at.angle>3)return;
+ const delta=[[-1,0],[0,1],[1,0],[0,-1]][at.angle]!;
+ return {id,x:at.x+delta[0]!,z:at.z+delta[1]!,level:at.level,angle:(at.angle+(match[1]==='l'?3:1))%4};
+}
 export interface Trigger { body: string; src: string }
 export type Triggers = Map<string, Trigger>; // key: `<type>,<name>`, e.g. `oploc1,brasskeydoor`, `label,open_x`
 
@@ -51,13 +59,27 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
     if (!trig && !useTrig) return { kind: 'unknown', trigger: '' };
     const src = trig?.src ?? useTrig!.src;
     const body = trig ? expand(trig.body, t) : '';
+    const cw=loc.match(/^castlewars_(saradomin|zamorak)_maindoor[lr]$/);
+    if(cw){const enemy=cw[1]==='saradomin'?'zamorak':'saradomin';if(body.includes(`%castlewars_team = ^castlewars_team_${enemy}`)&&/~check_axis_locactive\(coord\) = true/.test(body)&&/It's shut, you'll have to break it down\./.test(body))return {kind:'team',need:{team:cw[1]==='saradomin'?0:1,whenAxis:true},trigger:src};}
+    // These thresholds are pinned quest constants, not generic varp truthiness.
+    if(loc==='championdoor'&&/%qp\s*<\s*32/.test(body))return {kind:'quest',need:{varp:'qp',minimum:32},trigger:src};
+    if(/^herodoor_[lr]$/.test(loc)&&/%heroquest\s*>=\s*\^hero_complete/.test(body))return {kind:'quest',need:{varp:'heroquest',minimum:15},trigger:src};
+    if(/^legendsguilddoor[lr]$/.test(loc)&&/%legendsquest\s*>=\s*\^legends_returned_to_radimus/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:50},trigger:src};
+    if(/^legendsguildgate[lr]$/.test(loc)&&/%legendsquest\s*>\s*\^legends_not_started/.test(body)&&/if\s*\(\$entering = false\)/.test(body))return {kind:'quest',need:{varp:'legendsquest',minimum:1,whenAxis:true},trigger:src};
 
     if (useTrig && /last_useitem|inv_total/.test(useTrig.body)) {
         const item = [...useTrig.body.matchAll(/case\s+(\w+)\s*:/g)].map(m => m[1]!).find(c => c !== 'default');
         return { kind: 'key', need: item ? { item } : undefined, trigger: src };
     }
     const skill = body.match(/stat\((\w+)\)\s*<\s*(\d+)/);
-    if (skill) return { kind: 'skill', need: { skill: skill[1], level: Number(skill[2]) }, trigger: src };
+    if (skill) {
+        const worn=body.match(/inv_total\(worn,\s*(\w+)\)\s*<\s*1/);
+        const alias=body.match(/def_boolean\s+\$(\w+)\s*=\s*~check_axis(?:_locactive)?\([^;]+\);/);
+        const aliasGuard=alias?body.match(new RegExp('if\\s*\\(\\s*\\$'+alias[1]+'\\s*=\\s*(true|false)\\b')):null;
+        const directGuard=/if\s*\(\s*~check_axis\([^)]*\)\s*=\s*true\s*\)/.test(body);
+        const whenAxis=directGuard?true:aliasGuard?aliasGuard[1]==='true':undefined;
+        return {kind:'skill',need:{skill:skill[1],level:Number(skill[2]),...(worn?{worn:worn[1]}:{}),...(whenAxis!==undefined?{whenAxis}:{})},trigger:src};
+    }
     const varp = body.match(/%(\w+)/);
     if (varp && REFUSAL.test(body)) return { kind: 'quest', need: { varp: varp[1] }, trigger: src };
     const side = body.match(/coord([xz])\(coord\)\s*([<>]=?)\s*coord[xz]\(loc_coord\)/);

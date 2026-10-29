@@ -1,39 +1,25 @@
-# Equipment, Bank, Lava Maze Runite and Quest Points boards (2026-10-23)
+> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
 
-These four boards are not skill boards. Only Quest Points uses the playtime clock as its tie-break.
-Lava Maze Runite uses a wall-clock tie-break. Equipment and Bank use no time at all.
-Code cites are in `vendor/rs-sdk/server/engine/src` (engine) and `vendor/rs-sdk/server/content/scripts`
-(content), unless a path is given in full. Live data is from read-only GETs at 2026-10-23T06:30-06:40Z.
+# Equipment, Bank, Lava Maze Runite and Quest Points
 
-Caveat on the code: the live Quest Points page shows the tooltip "N ticks normalized to 400 ms per tick".
-The vendored `web/pages/hiscores.ts:60-69` has no such text. So the live server runs newer code than our
-vendor copy (see INDEX contradiction C13). Every CODE-READ below is for the vendored copy.
+## Current targets — 2026-10-26 09:32 UTC
 
-## Rank rules and deadlines
+[Raw pages, parsed targets and comparison](../.practice/joined-plan/targets-20261026-093155/comparison.json). Read-only public GETs; no account login. The full 24-board goal remains unchanged. These are targets, not owned stock or achieved ranks.
 
-Each row gives the full ORDER BY from the code, what the time key is, and the latest playtime at which
-Haggis must reach the value to rank above the current #1.
+| Board | Fresh leader / target | Rule and next evidence |
+|---|---|---|
+| Equipment | nickai3:1,366,450 base value, tied with soko | Local query orders value only; tied placement is unspecified. [Current cache audit](../.practice/shared-supply/equipment-ceiling.json):4,089 items,708 wearable; compatible-set upper bound1,366,450. All10 leader item costs match. Live unseen items remain unchecked; matching the set does not prove outright first. |
+| Bank | nickai3:17,239,359,614 base value | Local query breaks equal values by username ascending. Use17,239,359,615 for an unambiguous value lead. Up1,305,151 since02:08 UTC; do not freeze the target or equate bank base value with cash profit. Prove an owned-source value-production route. |
+| Lava Maze Runite | xulvexi:2,463 all-time;1,806 week;86 day | Separate windows. For the main all-time goal, exceed2,463;87 only addresses today's snapshot. Local ties favour earliest last ore. Prove access, return, contention and counted output; gathering other runite does not qualify. |
+| Quest Points | qu3st:145 at1,001,957 normalized ticks | Save145 QP below1,001,957 ticks. Local rule is QP descending then saved playtime ascending. Verify full route and final save; old avery deadlines below are historical. |
 
-| Board | Primary key | Tie-break | Time key | Latest playtime for Haggis |
-|---|---|---|---|---|
-| Quest Points | QP DESC | `playtime` ASC (`web/pages/RankedHiscoresWorker.ts:19`); no third key | `player.playtime` at the **save** (logout or autosave) where the QP total changed, not the tick of the quest complete (`server/login/LoginServer.ts:203-219`, written at `:213`/`:215`) | 145 QP saved at playtime **<= 1,022,261 ticks** (avery: 145 at 1,022,262, MEASURED live 06:37Z). At exactly 1,022,262 the order is undefined. 145 is the maximum, so a time win is the only win |
-| Equipment | value DESC | none (`web/pages/hiscores.ts:620`, then `LIMIT 50`) | none. The row has a `date` column (`db/types.ts:118-125`) but the query does not sort on it | Not applicable. Playtime cannot break the tie at 1,366,450 |
-| Bank | value DESC | `account.username` ASC (`web/pages/hiscores.ts:981-982`) | none | Not applicable. A tie at 16,139,489,874 goes to the name that sorts first: `haggis` sorts before `nickai3`, so a tie wins (username case not verified) |
-| Lava Maze Runite | ore count DESC | `MAX(runite_mine.timestamp)` ASC, "ties go to whoever reached the count first" (`web/pages/hiscores.ts:795-801`) | wall clock: `Date.now()` when each ore is mined (`engine/World.ts:2815-2822`), not playtime | Not a playtime deadline. Haggis needs more ores than the leader, or the same count with an earlier last-ore wall-clock time than the leader's last ore |
+Source rules: `vendor/rs-sdk/server/engine/src/web/pages/hiscores.ts` and `server/login/LoginServer.ts`; source hash retained with comparison. Local source inspection is not proof of every live implementation detail. All21 timed leaders are unchanged from02:08 UTC; the realistic model still finishes Overall at44,866 against35,916 (8,950 late).
 
-Quest Points: the owner note says the leader has 141 of 145. That was true in
-`research/hiscores-2026-10-22.json` (avery 141 at 921,761). Live at 06:37Z, avery has 145 at 1,022,262.
-So 142+ is no longer enough; Haggis needs 145 below 1,022,262.
+Equipment-score saving: unenchanted dragonstone ring1645 and ring of wealth2572 both score17,625. Skip the enchantment for this goal: avoids Magic68 and one cosmic +15earth +15water runes (`magic_spells.dbrow:50-57`). This is a score-only substitution, not a combat-effect claim. [Dashboard candidate](../.practice/shared-supply/equipment-dashboard.patch) counts either ring once and removes the false enchantment prerequisite;7 offline solver/display checks pass. Staged only while live source is frozen.
 
-## Summary
+## Historical method audit — 2026-10-23
 
-| Board | Rule (CODE-READ) | Live #1 (MEASURED live) | Our cheapest route | Cost | Owner decision |
-|---|---|---|---|---|---|
-| Equipment | Sum of `ObjType.cost` (config base price) of worn items, ammo slot skipped; snapshot at logout and autosave; `ORDER BY value DESC`, no tiebreak | nickai3 1,366,450, tied with soko 1,366,450 | Wear the maximum set (below). 1,366,450 is the code maximum, so we can only tie | About 0.95M coins in shops plus 4 drops, or about 754M coins on the GE | **Yes (E1)**: a strict #1 is impossible |
-| Bank | Sum of `ObjType.cost x count` over bank slots; same snapshot; ties by username A-Z, so `haggis` wins a tie | nickai3 16,139,489,874 | No legitimate route found. Value is base cost, so it equals wealth in coins | About 16.2B coins of value; about 40 days of 100 gold bots (ESTIMATE) | **Yes (B1)**: concede, or approve a source |
-| Lava Maze Runite | Count of runite ores mined from 2 rocks, all time; ties by the earliest last ore (wall clock) | xulvexi 1,928 (309 in the last 24 h) | Mine last, after every stamped board; playtime no longer matters then | 1,929+ ores; about 6.2 days of 24/7 mining if xulvexi stops; never closes at a 50/50 share | **Yes (R1)**: PvP against the leader, or wait |
-| Quest Points | QP from 68 quests (145 total); ties by `playtime` ASC at the save that changed the total | avery 145 at 1,022,262 ticks (deadline: 145 saved at <= 1,022,261) | All 145 QP with total playtime below 1,022,262; log out right after the last quest | Quest playtime is not measured | No; follow the rule on the logout stamp |
-
+The detailed sections below retain source, item and method research. Their old target counts, prices, dates and owner-decision proposals are historical, not current instructions. Player commerce and all gameplay techniques are authorized. Lack of a proved route does not change the goal or authorize a claim of completion.
 ## Equipment
 
 ### Rule
@@ -64,7 +50,7 @@ The largest `cost` per worn slot. Dragon halberd (250,000) is two-handed (`wearp
 | legs | Dragon platelegs | 270,000 | Bronze, iron, steel dragon drops (`drop tables/scripts/bronze_dragon.rs2:12` and others); GE ask 240M | Defence 60 (`tier60.rs2:15`) |
 | hands | Splitbark gauntlets | 5,000 | Wizard in the Wizards' Tower: 1 hollow bark + 1 fine cloth + 1,000 coins (`areas/area_wizard_tower/scripts/armourmaking_wizard.rs2:118-133`) | Magic 40, Defence 40 (`levelrequire/scripts/tier40.rs2:88`) |
 | feet | Splitbark greaves | 5,000 | Same wizard, same inputs (`armourmaking_wizard.rs2:134-147`) | Magic 40, Defence 40 (`tier40.rs2:87`) |
-| ring | Ring of wealth | 17,625 | Dragonstone ring (Crafting 55), then enchant; the enchant level is not verified | not verified |
+| ring | Dragonstone ring (ring of wealth equivalent) | 17,625 | Crafting 55; enchantment adds no worn value | Acquisition and wear still need native proof |
 | **Total** | | **1,366,450** | | |
 
 The live #1 and #2 (nickai3, soko) wear exactly this set: 1,366,450 (MEASURED live). The #3 (hoplite,

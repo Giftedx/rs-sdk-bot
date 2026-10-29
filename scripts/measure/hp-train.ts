@@ -24,11 +24,11 @@ try {
         if (!target) { await s.bot.walkTo(3253, 3290, 3); continue; }
         const a = await s.bot.attack(target);
         if (!a.success) { await waitTicks(s, 1); continue; }
-        const dead = await waitUntil(s, st => !(st?.nearbyNpcs ?? []).some((n: { index: number }) => n.index === target.index), { timeoutTicks: 120 });
-        if (dead) kills++;
+        const dead = await waitUntil(s, st => !(st?.nearbyNpcs ?? []).some((n: { index: number }) => n.index === target.index), { timeoutTicks: 120, signal: reflex.aborted });
+        if (dead && !reflex.aborted.aborted) kills++;
     }
     reflex.stop();
     const ticks = s.tick() - t0;
     console.log(`RATE hitpoints ${hpXp() - xp0} ${ticks}`);
-    await finish([s], hpLvl() >= TARGET, `hp=${hpLvl()} hpXp=${hpXp() - xp0} ticks=${ticks} kills=${kills} aborted=${reflex.aborted.aborted}`);
+    await finish([s], hpLvl() >= TARGET && !reflex.aborted.aborted, `hp=${hpLvl()} hpXp=${hpXp() - xp0} ticks=${ticks} kills=${kills} aborted=${reflex.aborted.aborted}`);
 } catch (e) { await finish([s], false, String(e)); }

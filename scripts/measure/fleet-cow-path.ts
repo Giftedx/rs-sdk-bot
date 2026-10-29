@@ -1,12 +1,11 @@
-import {readFileSync,statSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {loadPathfinding} from '../../packages/core/src/pathcache';
 const root='F:/dev-on-f/osrs-rs-research/rs-sdk-bot';
 const pf=await import(root+'/vendor/rs-sdk/sdk/pathfinding.ts');
-const rsmod:any=await import(root+'/vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod-pathfinder.js');
 const world=await import(root+'/packages/core/src/world.ts');
 const {expandPath}=await import(root+'/packages/core/src/walk.ts');
-let restored=false;
-try {const buf=readFileSync(root+'/.practice/cache/rsmod-pathfinding.snap');const headLen=buf.readUInt32LE(0),snap=buf.subarray(4+headLen);const w=statSync(root+'/vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod_bg.wasm'),d=statSync(root+'/vendor/rs-sdk/sdk/collision-data.json');const key=JSON.stringify({v:1,wasm:[w.size,Math.floor(w.mtimeMs)],data:[d.size,Math.floor(d.mtimeMs)]});if(buf.subarray(4,4+headLen).toString()===`${key}:${snap.length}`){const mem=rsmod.__wasm.memory;const need=Math.ceil(snap.length/65536)-mem.buffer.byteLength/65536;if(need>0)mem.grow(need);new Uint8Array(mem.buffer).set(snap);restored=true;}}catch{}
-const t0=performance.now();pf.initPathfinding();console.log('INIT '+JSON.stringify({restored,ms:performance.now()-t0}));
+const cache=await loadPathfinding(),restored=cache.restored;
+console.log('INIT '+JSON.stringify({restored,ms:cache.ms,scope:'cache-load-and-init'}));
 const acct={skills:{attack:1,strength:1,defence:1},items:['bronze_sword','wooden_shield','trout'],varps:{}};
 const bank={x:2655,z:3283,level:0},pen={x:2664,z:3344,level:0},nw={x:2648,z:3358,level:0},ne={x:2677,z:3358,level:0};
 const legs=[['direct-out',bank,pen],['direct-return',pen,bank],['bank-nw',bank,nw],['nw-ne',nw,ne],['ne-pen',ne,pen],['pen-ne',pen,ne],['ne-nw',ne,nw],['nw-bank',nw,bank]] as const;

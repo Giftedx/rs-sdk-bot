@@ -330,3 +330,51 @@ The whole pipeline is code, re-runnable on each revision bump. Validate it again
 3. Use rs-sdk's **world feed** as a second, server-truth sensor for threats and spot occupancy (`WORLD_FEED=true` on our engine).
 4. Use `findLongPath` path length as the distance metric. Add a stairs and ladders transition graph mined from content.
 5. Build `knowledge/*.json` from `rs-sdk/server/content` (rev 289), not from the 274 `lostcity-content` clone. Extend rather than replace `rs-sdk/wiki/generate-*.ts`.
+
+## 7. Cairn record run and live network delay (2026-10-29)
+
+**Claim: the overall record is 35,787 ticks.** `cairnmax20x` (Cairn swarm) beat stunbaron's 35,916 by 129 ticks on 2026-10-26. Evidence: https://rune.fast/ (read 2026-10-29). Gap: compare with the target in `research/hiscores-live.json` before the next plan update.
+
+**Claim: host location was their largest gain.** The write-up says each reaction landed 2-3 ticks late from California, and on the next tick from an AWS us-east-1 VPS. Conditions: their script, their client. Evidence: write-up only, no raw data.
+
+**Claim: from this PC, a request to the game app takes 100-370 ms.** Conditions: 2026-10-29, this PC, HTTPS `GET /` to `rs-sdk-demo.fly.dev`. The Fly edge is London (`fly-request-id` ends `-lhr`, two `via: fly.io` hops), so the game app is elsewhere. TCP connect to the edge took 25-58 ms (8 runs). On one reused connection, 11 requests took 100-301 ms to first byte (median 175 ms). Gap: the game socket can differ from `GET /`. Reaction delay in ticks is not measured live. `research/agility.md` lost 1 tick per click, but that was practice (local, 150 ms tick).
+
+**Their failures to guard against:** logout refused while under attack; rings delivered as notes; prayer at 0 among poison spiders; two orders to the same account at once (operator "log out" against coordinator "takeover"), which left the body undriven and dead.
+
+**Claim: Cairn's route is public, with ticks per step.** Evidence: https://rune.fast/route (read 2026-10-29). Their plan sums to 34,143 ticks. Their real run took 35,787. The overruns were the spiders (+947, 541 of them while the body died), iron mining (+313, rock competition), the body altar (+233), fly fishing (+203) and the knights (+189). Our model (`.practice/workflow-repair-20261028/unrestricted-result.json`) is 45,570 ticks, 11,427 more than their plan. Next decision: price each of their steps in our planner and list the steps we cannot yet run.
+
+| Step | Skills | Plan | Took |
+|---|---|---|---|
+| Tutorial skip, trade, Wind Strike at the coop | Magic 1-8 | 135 | 140 |
+| Firemaking on the castle row, helpers drop logs | FM 1-99 | 661 | 661 |
+| Enchant rings from 3 helpers | Magic 8-59 | 198 | 196 |
+| Doric's Quest | Mining 1-49 | 69 | 66 |
+| Air altar, 7 essence helpers | RC 1-44 | 207 | 206 |
+| Woodcutting with knife reset, bury bones between rolls | WC 1-99, Prayer 1-99 | 3,296 | 3,391 |
+| Plague City | Mining 49-64 | 591 | 595 |
+| Iron by the Ardougne zoo, knife reset | Mining 64-99 | 3,157 | 3,470 |
+| Tree Gnome Village | Attack 1-80 | 734 | 805 |
+| Gnome course to 25, The Grand Tree | Agility 1-76, Attack 80-94 | 1,582 | 1,633 |
+| Fight Arena | Attack 94-99, Thieving 1-57 | 607 | 594 |
+| Dwarf Cannon | Crafting 1-42 | 1,027 | 986 |
+| Cannon at the poison spiders | Ranged 1-50 | 488 | 511 |
+| Monkey Madness | Str 1-97, HP 42-97, Def 1-89 | 4,563 | 4,113 |
+| Mage Arena | Magic 77-81 | 547 | 637 |
+| Ardougne knights; Charge, Superheat, arrows in the stuns | Thieving 57-99, Magic 81-99, Fletching 1-99 | 2,099 | 2,288 |
+| Sea Slug, Fishing Contest | Fishing 1-78 | 859 | 791 |
+| Body altar, essence rota | RC 44-99 | 1,279 | 1,512 |
+| Fly fishing at Lumbridge, knife reset | Fishing 78-99 | 2,054 | 2,257 |
+| Cook's Assistant, Druidic Ritual, Goblin Diplomacy, Romeo and Juliet | Cooking 1-30, Herblore 1-28 | 752 | 750 |
+| Platebodies at the Varrock west anvil | Smithing 41-99 | 903 | 1,018 |
+| Bank booth: Crafting, Herblore, banked wine | Crafting 48-99, Herblore 28-99, Cooking 30-99 | 513 | 571 |
+| Dragon Slayer | Str 97-99, Def 89-98 | 1,370 | 1,430 |
+| Cannon and magic shortbow at the spiders | Def, Ranged 55-99, HP 99 | 2,152 | 3,099 |
+| Wilderness Agility Course | Agility 76-99 | 4,300 | 4,067 |
+
+**Claim: our largest extra costs against Cairn's plan are combat and Smithing, plus walking.** Conditions: 2026-10-29, `bun packages/planner/src/cairn-cli.ts`, scenario a realistic, travel on, `research/hiscores-live.json`; prices include the walk into each row. Evidence: spiders and melee top-ups 6,535 against 2,152 (+4,383); Family Crest plus superheat 4,078 against an anvil 903 (+3,175); The Dig Site 1,993, which Cairn skips (Doric's Quest and Plague City instead); Monkey Madness +938; the four early quests +859; The Grand Tree +851. Walking totals 8,254. Our iron (-639) and knights (-136) rows are cheaper than Cairn's plan, so they may be optimistic. Gap: 9 of 25 steps lack a planner row, a worker script, or the script file their capability names (Wind Strike start, castle-row fires, rings, Doric's Quest, air altar, Plague City, first spiders, Mage Arena, anvil). Next decision: price the anvil Smithing route and Cairn's combat order in the planner.
+
+**Claim: the anvil route saves 1,844 ticks, and the planner now chooses it.** Conditions: 2026-10-29, scenario a realistic, travel on, `research/hiscores-live.json`. New option `magic-smithing=anvil` (`packages/planner/src/haggis-boards.json` rows `smith-anvil`, `magic-anvil`): platebodies 1-99 with a helper trading bars at the Varrock west anvil (MEASURED 1,316 ticks practice), enchant 7-80 without dragonstone in the foreground (183 casts, ESTIMATE from the MEASURED cast rate), then Mage Arena and Charge 80-99. Evidence: Overall 45,570 -> 43,726 (floor 43,135 -> 41,158); Magic and Smithing rows 3,131 ticks with walks against 4,453 for Family Crest plus superheat. The old `separate` option never finishes: its Magic row is a stun guest of thieving, and thieving needs Monkey Madness, which needs Magic 75. Gap: Cairn's anvil is 903 ticks against our 1,316 from 1 (they arrive at Smithing 41 from Superheat in the stuns and trade in bursts); no worker script exists for the anvil or Mage Arena. Next decision: Smithing 1-41 by Superheat inside the knights' stuns, and the combat order (spiders and melee top-ups, +4,383).
+
+**Claim: Cairn's combat order does not help in our model; their combat gain is quest speed.** Conditions: 2026-10-29, scenario a realistic, travel on, `research/hiscores-live.json`; retired lever `rival-dragon-combat` (Dragon Slayer before the top-ups, a measured 30-tick Doric's Quest for the 32nd QP). Evidence: Overall 43,726 default, 44,354 with the lever (floor 41,158 -> 41,805). Dragon Slayer (2,003 with walk) replaces the Strength and Defence top-ups (2,961), but Goblin Diplomacy, Romeo and Juliet and Doric move before it, and Hitpoints then needs Witch's House at the end (772). The planner QP counter keeps the Fight Arena, Monkey Madness and Sea Slug points in quests-rest, so the lever sets Dragon Slayer's `minQp` to 0 and requires the 12 rows that give the real 32 QP. Our quest rows cost more than Cairn's: Monkey Madness 5,501 against 4,563 (their one-tick dialogue client saved 450), The Grand Tree with Agility 1-25 2,433 against 1,582, Tree Gnome Village 1,321 against 734. Ranged rates are close: their Ranged 1-99 took about 325 XP per tick without the death (998,458 XP over 3,069 ticks, which also trained Defence and Hitpoints); our row is 309. Next decision: measure our dialogue speed (ticks per page) and the walk into each quest.
+
+**Dialogue pace** (2026-10-29): MEASURED practice, 16 pages in 32 ticks with our client and 15 with a raw burst; see `research/quest-plan.md` ("Dialogue burst").

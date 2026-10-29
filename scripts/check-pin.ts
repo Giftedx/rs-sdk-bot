@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 export function checkPin(vendorDir: string, pinFile: string): { ok: boolean; expected: string; actual: string } {
     const expected = readFileSync(pinFile, 'utf8').trim();
-    const out = Bun.spawnSync(['git', '-C', vendorDir, 'rev-parse', 'HEAD'], { stdout: 'pipe', stderr: 'pipe' });
+    const out = Bun.spawnSync(['git', '-C', vendorDir, 'rev-parse', 'HEAD'], { stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
     const actual = out.stdout.toString().trim();
     return { ok: actual === expected, expected, actual };
 }

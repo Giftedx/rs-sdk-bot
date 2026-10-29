@@ -2,6 +2,10 @@ import { mkdirSync, renameSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { NAMES } from './names';
 import type { BankObservation } from './inprocess';
+import { questFlags, questDefinitions, type QuestFlag } from './quest-status';
+import {guildActorFacts} from './guild-observation';
+import {equipmentObserved} from './container-observation';
+import {observedDoorStates} from './door-policy';
 
 // Live status for the dashboard (packages/dashboard): every bot writes .practice/status/<name>.json every few ticks.
 // Role: env BOT_ROLE, else the names list the account comes from. Goal: env BOT_GOAL, else the script file.
@@ -115,17 +119,37 @@ function recordInputs(s: { tick(): number; onTick(cb: () => void): () => void; s
     });
 }
 
-export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
+export function startStatus(s: { name: string; client?: unknown; sdk: { getState(): any }; onTick(cb: () => void): () => void; tick(): number; bankObservation?(): BankObservation | null }, server: string, ledgerCounts?: () => Record<string, number>, timeline?: () => string) {
     captureMilestones();
     mkdirSync(dir, { recursive: true });
     const file = join(dir, `${s.name}.json`);
     let bank: { id: number; baseId: number; name: string; count: number }[] | null = null;
     let bankAt: number | null = null;
     const started = Date.now();
+    let quests: QuestFlag[] | null = null;
+    let questsAt: number | null = null;
+    const observeQuests = () => {
+        const observed = questFlags((s as any).client);
+        if (observed?.some(q => q.state !== 'unknown')) {
+            quests = observed; questsAt = Date.now();
+        }
+    };
     // Keep the last observation across logins, with its original age. Load only
-    // bank data from this account and server, never a previous run's activity.
+    // bank/journal data from this account and server, never prior activity.
     try {
         const prior = JSON.parse(readFileSync(file, 'utf8'));
+        const at = Object.hasOwn(prior, 'questsAt') ? prior.questsAt : prior.at;
+        const definitions = new Map(questDefinitions().map(q => [q.id, q.name]));
+        if (typeof prior.name === 'string' && prior.name.toLowerCase() === s.name.toLowerCase() && prior.server === server
+            && Number.isFinite(at) && at > 0 && at <= started
+            && Number.isFinite(prior.at) && prior.at >= at && prior.at <= started
+            && Array.isArray(prior.quests) && prior.quests.length > 0
+            && prior.quests.every((q: any) => q && definitions.get(q.id) === q.name
+                && ['not started','started','complete','unknown'].includes(q.state))
+            && new Set(prior.quests.map((q: any) => q.id)).size === prior.quests.length
+            && prior.quests.some((q: any) => q.state !== 'unknown')) {
+            quests = prior.quests; questsAt = at;
+        }
         const validId = (id: unknown) => Number.isSafeInteger(id) && (id as number) >= 0;
         if (typeof prior.name === 'string' && prior.name.toLowerCase() === s.name.toLowerCase() && prior.server === server
             && Number.isFinite(prior.bankAt) && prior.bankAt > 0 && prior.bankAt <= started
@@ -165,13 +189,23 @@ export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(
         const resultNow = own ? own.result : lastResult;
         const doc = {
             name: s.name, server, role: roleOf(s.name), goal: process.env.BOT_GOAL ?? process.argv[1]?.split(/[\\/]/).pop() ?? '',
-            phase: phaseNow, result: resultNow, at: Date.now(), started, tick: s.tick(),
+            phase: phaseNow, result: resultNow, at: Date.now(), started, tick: s.tick(), workRevision: process.env.WORKER_RELEASE ?? null,
+            coordinatorRunId: process.env.COORDINATOR_RUN_ID ?? null,
+            // The producer's lifecycle attempt for this exact session (session-lifecycle.ts); null when absent.
+            sessionAttemptId: (s as { lifecycle?: { attemptId?: unknown } }).lifecycle?.attemptId ?? null,
             pos: p ? { x: p.worldX, z: p.worldZ, level: p.level } : null,
             hp: hp ? { now: hp.level, max: hp.baseLevel } : null,
             combat: p?.combatLevel ?? null,
-            skills: (st?.skills ?? []).map((k: any) => ({ name: k.name, level: k.baseLevel, xp: k.experience })),
+            // Progress uses base level; stat() route gates use the independently
+            // observed current value (including drains/boosts), never a guess.
+            skills: (st?.skills ?? []).map((k: any) => ({ name: k.name, level: k.baseLevel, currentLevel:k.level, xp: k.experience })),
+            guildFacts: guildActorFacts(s.client, st),
+            doorStates: s.client && typeof s.client === 'object' && (s.client as {ingame?:unknown}).ingame !== true ? {} : observedDoorStates(st),
             inventory: (st?.inventory ?? []).map((i: any) => ({ id:i.id,baseId:baseId(i.id),name: i.name, count: i.count })),
             equipment: equipmentStatus(st?.equipment),
+            equipmentObserved: !!s.client&&typeof s.client==='object'&&equipmentObserved(s.client),
+            // Passive journal observations only. Older running sessions remain untouched.
+            quests, questsAt,
             bank, bankAt, ledger: ledgerCounts?.() ?? null,
             // Last 300 ticks: x XP, v observed inventory change (not net output), m move, a anim, d dialog, s stun, i idle.
             timeline: timeline?.() ?? '',
@@ -183,8 +217,9 @@ export function startStatus(s: { name: string; sdk: { getState(): any }; onTick(
         };
         try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameSync(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }
     };
+    observeQuests();
     write();
     let n = 0;
-    const off = s.onTick(() => { observeBank(); if (++n % 5 === 0) write(); });
+    const off = s.onTick(() => { observeBank(); observeQuests(); if (++n % 5 === 0) write(); });
     return { stop: () => { write(); off(); } };
 }

@@ -23,12 +23,12 @@ if(process.env.HOST_STOP_OBSERVER==='1'){
  };
 }else{
  if(process.env.REUSE_STACK!=='1')throw new Error('operator must warm one local stack');
- const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<9)throw new Error(`warm single actor admission needs9GiB; actual${free}`);
+ const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());if(free<9)throw new Error(`warm single actor admission needs9GiB; actual${free}`);
  const actor=runBotName('flhstop',1),dir=resolve('.practice/fleet-proof'),prefix=`host-stop-${actor}`;await createBot(actor);
  const path=await applyPreset(actor,{position:source.pos,skills:Object.fromEntries(source.skills.map((s:{name:string;level:number})=>[s.name,s.level])),inventory:source.inventory.map((i:{id:number;count:number})=>({id:i.id,count:i.count})),equipment:source.equipment,bank:source.bank.map((i:{id:number;count:number})=>({id:i.id,count:i.count}))});setPracticeSkills(path,source.skills);
  const initial=readPracticeSave(path);writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
  console.log(`PROOF_START host-stop actor=${actor} host=${hostSha256} prayer=${prayerSha256} historicalFixture=true freeGiB=${free}`);
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),'--preload',import.meta.path,resolve('packages/core/src/host.ts'),'scripts/train-prayer.ts',actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MAX_BURY:'175',BONE_RESERVE:'6',CAP:'200',HOST_STOP_OBSERVER:'1',HOST_STOP_ACTOR:actor,PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe'});
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),'--preload',import.meta.path,resolve('packages/core/src/host.ts'),'scripts/train-prayer.ts',actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MAX_BURY:'175',BONE_RESERVE:'6',CAP:'200',HOST_STOP_OBSERVER:'1',HOST_STOP_ACTOR:actor,PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe',windowsHide:true});
  let output='',timedOut=false;const timer=setTimeout(()=>{timedOut=true;p.kill();},120000);
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const bytes of stream){const part=new TextDecoder().decode(bytes);output+=part;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(part);}};await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);
  const worker=JSON.parse(output.match(/PRAYER_BANK (.+)$/m)?.[1]??'null'),host=output.match(/^HOST done .+$/m)?.[0]??'',request=JSON.parse(output.match(/^HOST_STOP_REQUEST (.+)$/m)?.[1]??'null');

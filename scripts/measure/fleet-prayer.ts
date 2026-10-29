@@ -66,7 +66,7 @@ if (process.env.PRAYER_PROOF_OBSERVER==='1') {
     if(booths.length!==2)throw new Error('actual Ardy bank service facts changed');
     const atBank=(p:{x:number;z:number;level:number})=>p.level===0&&booths.some((b:any)=>Math.max(Math.abs(p.x-b.tile.x),Math.abs(p.z-b.tile.z))<=2)
         &&Math.max(Math.abs(p.x-source.pos.x),Math.abs(p.z-source.pos.z))<=2;
-    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
     if(!Number.isFinite(free)||free<9)throw new Error(`one actor needs9GiB; actual=${free}`);
     const dir=resolve('.practice/fleet-proof');mkdirSync(dir,{recursive:true});
     const actor=runBotName('flpray',1),prefix=`prayer-${actor}`;
@@ -84,7 +84,7 @@ if (process.env.PRAYER_PROOF_OBSERVER==='1') {
     console.log(`PROOF_START actor=${actor} source=${sourceSha256} sourceStatusAt=${source.at} bones222=true exactSkills=true freeGiB=${free}`);
     const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),'--preload',import.meta.path,resolve(script),actor],{
         env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',PRAYER_PROOF_OBSERVER:'1',PRAYER_PROOF_ORIGIN:JSON.stringify(source.pos),
-            PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1',MAX_BURY:'175',BONE_RESERVE:'6',CAP:'1000'},stdout:'pipe',stderr:'pipe'});
+            PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1',MAX_BURY:'175',BONE_RESERVE:'6',CAP:'1000'},stdout:'pipe',stderr:'pipe',windowsHide:true});
     let output='',stoppedOnDamage=false,timedOut=false,forcedKill=false;
     const stop=(why:string)=>writeFileSync(resolve('.practice',`stop-${actor}`),why);
     const timer=setTimeout(()=>{timedOut=true;stop('local prayer proof bounded timeout');},500000);

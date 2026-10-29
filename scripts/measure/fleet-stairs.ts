@@ -29,7 +29,7 @@ if(process.argv[2]) {
    ...realInProcessDeps,
    async prepare(name){const mon=JSON.parse(readFileSync('.practice/monitor.json','utf8'));if(mon.freeGB<8 || mon.practiceBots>=6)throw new Error('practice load gate');await createBot(name);await applyPreset(name,{position:starts[next++]!,inventory:[{id:1735,count:1}]});},
    async run(script,bot,timeoutMs){
-    const p=Bun.spawn(['bun',script,bot],{stdout:'pipe',stderr:'pipe',env:{...process.env,DEMO_OK:''}});const timer=setTimeout(()=>p.kill(),timeoutMs);
+    const p=Bun.spawn(['bun',script,bot],{stdout:'pipe',stderr:'pipe',env:{...process.env,DEMO_OK:''},windowsHide:true});const timer=setTimeout(()=>p.kill(),timeoutMs);
     const [out,err]=await Promise.all([new Response(p.stdout).text(),new Response(p.stderr).text()]);const exitCode=await p.exited;clearTimeout(timer);const stdout=(out+err).replace(/^.*PASSWORD.*$/gm,'[redacted]');
     writeFileSync(resolve(dir,`stairs-${bot}.log`),stdout);console.log(stdout.split(/\r?\n/).filter(l=>/^(START|STAIRS|RESULT|LEDGER)/.test(l)).join('\n'));return{stdout,exitCode};
    },

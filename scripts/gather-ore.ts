@@ -11,16 +11,26 @@ import type { Session } from '../packages/core/src/inprocess';
 import type { NearbyLoc } from '../vendor/rs-sdk/sdk/types';
 
 const ROCK_IDS = { copper: [2090, 2091], tin: [2094, 2095], iron: [2092, 2093] };
-export function selectRock(rocks: readonly NearbyLoc[], level: number, attempt: number, floor: number, profile = 'mixed'): NearbyLoc | undefined {
+const ORE_AREAS = {
+    mixed: {mine:{x:3286,z:3368},bank:{x:3253,z:3420}},
+    clay: {mine:{x:3180,z:3372},bank:{x:3185,z:3436}},
+};
+export function mixedOreCombatProblem(combat:unknown):string|null {
+    return Number.isSafeInteger(combat)&&(combat as number)>=13?null
+        :'no ore progress: mixed mine requires combat13 above the level6 rat aggression threshold';
+}
+export function selectRock(rocks: readonly NearbyLoc[], level: number, attempt: number, floor: number, profile = 'mixed',players:readonly {x:number;z:number}[]=[]): NearbyLoc | undefined {
     if (profile === 'clay') return rocks.filter(l => l.level === floor && l.reachable !== false && [2108, 2109].includes(l.id) && l.optionsWithIndex.some(o => /^mine$/i.test(o.text))).sort((a,b) => a.distance - b.distance)[0];
     const kinds = level >= 15 ? ['copper', 'tin', 'iron'] as const : ['copper', 'tin'] as const;
-    // Prefer the next species, but use another live rock when that species is depleted.
+    // A player beside a node can finish it before our walking miner arrives. Spread onto less crowded
+    // live nodes first, then retain species rotation and distance as tie breakers. The wait guard stays bounded.
+    const candidates:{rock:NearbyLoc;pressure:number;priority:number}[]=[];
     for (let n = 0; n < kinds.length; n++) {
         const ids: readonly number[] = ROCK_IDS[kinds[(attempt + n) % kinds.length]!];
-        const rock = rocks.filter(l => l.level === floor && l.reachable !== false && ids.includes(l.id) && l.optionsWithIndex.some(o => /^mine$/i.test(o.text)))
-            .sort((a, b) => a.distance - b.distance)[0];
-        if (rock) return rock;
+        for(const rock of rocks.filter(l=>l.level===floor&&l.reachable!==false&&ids.includes(l.id)&&l.optionsWithIndex.some(o=>/^mine$/i.test(o.text))))
+            candidates.push({rock,priority:n,pressure:players.filter(p=>Math.max(Math.abs(p.x-rock.x),Math.abs(p.z-rock.z))<=1).length});
     }
+    return candidates.sort((a,b)=>a.pressure-b.pressure||a.priority-b.priority||a.rock.distance-b.rock.distance)[0]?.rock;
 }
 
 // A mined rock changes to next_loc_stage_mining until its player-scaled respawn.
@@ -106,8 +116,7 @@ async function main() {
 const PROFILE = process.env.ORE_PROFILE ?? 'mixed';
 if (!['mixed','clay'].includes(PROFILE)) throw new Error('invalid ORE_PROFILE');
 const ORE = PROFILE === 'clay' ? /^clay$/i : /ore$/i;
-const MINE_SPOT = PROFILE === 'clay' ? { x: 3180, z: 3372 } : { x: 3286, z: 3368 }; // SE Varrock Iron Mine
-const BANK_SPOT = PROFILE === 'clay' ? { x: 3185, z: 3436 } : { x: 3253, z: 3420 }; // Varrock East Bank
+const {mine:MINE_SPOT,bank:BANK_SPOT}=ORE_AREAS[PROFILE as keyof typeof ORE_AREAS];
 
 const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
 const BANK_AT = Number(process.argv[4] ?? process.env.BANK_AT ?? 27);
@@ -175,10 +184,14 @@ try {
         return !!p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol;
     };
 
+    const travel = async (destination:'bank'|'mine') => {
+        const p=destination==='bank'?BANK_SPOT:MINE_SPOT;
+        return walk(p.x,p.z,destination==='bank'?2:3);
+    };
     const bank = async () => {
         const n = oreCount();
         if (n === 0) return;
-        await walk(BANK_SPOT.x, BANK_SPOT.z, 2);
+        if(!await travel('bank'))return;
         if(damage||requestedStop||ended||died)return;
         const b = await s.bot.openBank();
         if (!b.success) {
@@ -213,8 +226,13 @@ try {
     cleanup=safetyExit;
 
     console.log(`START ore gatherer ${botName} at=${pos()?.worldX},${pos()?.worldZ}`);
+    // Admission protects new mining, while an already owned load may still be recovered by the bounded retreat.
     if(damage||requestedStop||hp()<(s.sdk.getSkill('Hitpoints')?.baseLevel??hp())||Number(process.env.MAX_TRIPS)===0)
         await safetyExit(damage?'damage':requestedStop||'owned-load recovery');
+    if(PROFILE==='mixed'){
+        const problem=mixedOreCombatProblem(pos()?.combatLevel);
+        if(problem)throw Error(problem);
+    }
     if ((pos()?.worldZ ?? 0) < 3330 && !s.sdk.getInventory().some(i=>/pickaxe$/i.test(i.name))) {
         // Bob sells the bronze pickaxe for one coin. Bootstrap here before heading north.
         await walk(3222,3218,3);
@@ -238,7 +256,7 @@ try {
     // Keep a ready miner at the mine. Only visit storage for junk or a missing tool.
     if (s.sdk.getInventory().some(i=>!/pickaxe$|^(shrimps|bread|trout|salmon)$/i.test(i.name)) ||
         !s.sdk.getInventory().some(i=>/pickaxe$/i.test(i.name))) {
-    await walk(BANK_SPOT.x, BANK_SPOT.z, 2);
+    if(!await travel('bank'))throw Error('no ore progress: cannot reach bank route');
     const opened = await s.bot.openBank();
     if (!opened.success) throw new Error(`initial bank: ${opened.message}`);
     // Deposit-all clears every slot of that ID. Repeating stale slot entries waits on absent items.
@@ -287,12 +305,13 @@ try {
 
         // Walk to mine if far away
         if (Math.max(Math.abs(p.worldX - MINE_SPOT.x), Math.abs(p.worldZ - MINE_SPOT.z)) > 15) {
-            await walk(MINE_SPOT.x, MINE_SPOT.z, 3);
+            if(!await travel('mine'))throw Error('no ore progress: cannot reach mine route');
             continue;
         }
 
         const attempt = tries++;
-        const rock = selectRock(s.sdk.getState()?.nearbyLocs ?? [], s.sdk.getSkill('Mining')?.level ?? 1, attempt, p.level, PROFILE);
+        const frame=s.sdk.getState(),peers=frame?.nearbyPlayers??[];
+        const rock = selectRock(frame?.nearbyLocs ?? [], s.sdk.getSkill('Mining')?.level ?? 1, attempt, p.level, PROFILE,peers);
         if (!rock) {
             const a = s.tick(); await waitTicks(s, 2); oreWaitTicks += s.tick() - a;
             continue;
@@ -302,7 +321,8 @@ try {
         const r = await mineRock(s, rock, over, Math.min(60, NO_ORE_TICKS - oreWaitTicks), ORE);
         if (r.reason === 'mined') { mined += r.ore; oreWaitTicks = 0; }
         else {
-            console.log(`WARN mine attempt=${attempt} rock=${rock.id}@${rock.x},${rock.z} players=${s.sdk.getState()?.nearbyPlayers.length ?? 0} reason=${r.reason} ticks=${r.ticks} observedOre=${r.ore} observedXp=${r.xp}`);
+            const adjacent=peers.filter(p=>Math.max(Math.abs(p.x-rock.x),Math.abs(p.z-rock.z))<=1).length;
+            console.log(`WARN mine attempt=${attempt} rock=${rock.id}@${rock.x},${rock.z} players=${peers.length} adjacent=${adjacent} reason=${r.reason} ticks=${r.ticks} observedOre=${r.ore} observedXp=${r.xp}`);
             oreWaitTicks += r.ticks;
             // Avoid a zero-tick rejected-action loop while still noticing newly respawned rocks promptly.
             const a = s.tick(); await waitTicks(s, 1); oreWaitTicks += s.tick() - a;

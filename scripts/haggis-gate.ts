@@ -1,56 +1,60 @@
-// Haggis go/no-go: checks the 5 gates and writes .practice/haggis-go.json, the only file that lets the main account
-// log in (packages/core/src/haggisgate.ts). Usage: bun scripts/haggis-gate.ts [live-hiscores.json]
-// 1 plan wins: realistic schedule, no tricks, every board WIN with slack >= 2% of its deadline, every input MEASURED.
-// 2 rehearsed: the last 3 files in .practice/rehearsals/ are ok, with no death, within 2% of the plan's ticks.
-// 3 supplies staged: .practice/haggis-supplies.json says staged, written within the last hour.
-// 4 fresh targets: the hiscores file used for gate 1 was written within the last hour.
-// 5 machine clear: .practice/monitor.json is under 2 minutes old, has no open warn/error alert, and >= 8 GB is free.
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { haggisActivities, haggisTravel, loadSnapshot, schedule } from '../packages/planner/src/haggis';
-import { GATE_FILE } from '../packages/core/src/haggisgate';
+// Readiness is read-only with --check. Default writes a non-authorizing report.
+// Only --authorize can issue login permission after all evidence passes.
+import {readFileSync,readdirSync,existsSync,writeFileSync,renameSync,mkdirSync} from 'node:fs';
+import {join,resolve,relative} from 'node:path';
+import {haggisActivities,haggisTravel,loadSnapshot,schedule,suppliesFor,TRICKS} from '../packages/planner/src/haggis';
+import {FLEET} from './fleet';
+import {launchContext,readBound,sha,fresh,validateSupplies,validateRehearsals,type Binding} from '../packages/core/src/launch-evidence';
 
-const root = resolve(import.meta.dir, '..');
-const prac = join(root, '.practice');
-const snap = process.argv[2] ?? join(root, 'research', 'hiscores-live.json');
-const now = Date.now();
-const HOUR = 3600_000;
-const gates: { name: string; pass: boolean; detail: string }[] = [];
-const age = (p: string) => (existsSync(p) ? now - statSync(p).mtimeMs : Infinity);
-
-// 1
-try {
-    const boardsFile = join(root, 'packages', 'planner', 'src', 'haggis-boards.json');
-    const unmeasured = (readFileSync(boardsFile, 'utf8').match(/"evidence":\s*"(ESTIMATE|CODE-READ)"/g) ?? []).length;
-    const snapFile = existsSync(snap) ? snap : join(root, 'research', 'hiscores-2026-10-22.json');
-    const r = schedule(loadSnapshot(snapFile), haggisActivities(), { travel: haggisTravel(), mode: 'realistic', tricks: new Set() }).boards;
-    const short = r.filter(b => b.status !== 'WIN' || (b.deadline !== null && (b.slack ?? -1) < Math.ceil(b.deadline * 0.02)));
-    const worst = [...r].filter(b => b.slack !== null).sort((a, b) => a.slack! - b.slack!)[0];
-    gates.push({ name: 'plan wins', pass: short.length === 0 && unmeasured === 0, detail: `${r.length - short.length}/${r.length} boards win with 2% margin; ${unmeasured} inputs not MEASURED; worst ${worst?.label} ${worst?.slack}` });
-} catch (e) { gates.push({ name: 'plan wins', pass: false, detail: `error: ${String(e)}` }); }
-
-// 2
-const rdir = join(prac, 'rehearsals');
-const reh = existsSync(rdir) ? readdirSync(rdir).filter(f => f.endsWith('.json')).sort().slice(-3).map(f => JSON.parse(readFileSync(join(rdir, f), 'utf8'))) : [];
-const rehOk = reh.length === 3 && reh.every((x: any) => x.ok && !x.died && Math.abs(x.ticks - x.planTicks) <= x.planTicks * 0.02);
-gates.push({ name: 'rehearsed', pass: rehOk, detail: `${reh.length} recent rehearsals; ${reh.filter((x: any) => x.ok).length} ok` });
-
-// 3
-const supFile = join(prac, 'haggis-supplies.json');
-const sup = existsSync(supFile) ? JSON.parse(readFileSync(supFile, 'utf8')) : null;
-gates.push({ name: 'supplies staged', pass: !!sup?.staged && now - (sup.at ?? 0) < HOUR, detail: sup ? `staged=${sup.staged}, ${Math.round((now - sup.at) / 60_000)} min old` : 'no supply manifest' });
-
-// 4
-gates.push({ name: 'fresh targets', pass: age(snap) < HOUR, detail: existsSync(snap) ? `${snap} is ${Math.round(age(snap) / 60_000)} min old` : `${snap} missing (re-read the live boards)` });
-
-// 5
-const monFile = join(prac, 'monitor.json');
-const mon = existsSync(monFile) ? JSON.parse(readFileSync(monFile, 'utf8')) : null;
-const open = (mon?.alerts ?? []).filter((a: any) => a.level !== 'fixed');
-gates.push({ name: 'machine clear', pass: !!mon && now - mon.at < 120_000 && open.length === 0 && mon.freeGB >= 8, detail: mon ? `${open.length} open alerts, ${mon.freeGB.toFixed(1)} GB free, ${Math.round((now - mon.at) / 1000)} s old` : 'watchdog not running' });
-
-const go = gates.every(g => g.pass);
-writeFileSync(GATE_FILE, JSON.stringify({ go, at: now, gates }, null, 2));
-for (const g of gates) console.log(`${g.pass ? 'PASS' : 'FAIL'}  ${g.name.padEnd(16)} ${g.detail}`);
-console.log(go ? 'GO: Haggis may log in (HAGGIS_RUN=1) within 10 minutes' : 'NO-GO: Haggis stays logged out');
-process.exit(go ? 0 : 1);
+export function evaluateLaunch(root:string,snapshot:string,now=Date.now(),authorize=false){
+ const bindings:Binding[]=[],gates:{name:string;pass:boolean;detail:string}[]=[];
+ let context='',expected:Record<string,number>={},requirements:{item:string;count:number}[]=[],expiresAt=now+600000;
+ const read=(path:string)=>{const raw=readFileSync(join(root,path));bindings.push({path,sha256:sha(raw)});return JSON.parse(raw.toString())};
+ const bound=(ref:Binding,json=true)=>readBound(root,ref,bindings,json);
+ const check=(name:string,fn:()=>string)=>{try{gates.push({name,pass:true,detail:fn()})}catch(e){gates.push({name,pass:false,detail:String(e).slice(0,300)})}};
+ check('plan wins',()=>{
+  const c=launchContext(root,snapshot);context=c.context;bindings.push(...c.bindings);
+  const opts={travel:haggisTravel(),mode:'realistic' as const,tricks:new Set(TRICKS)};
+  const activities=haggisActivities(),targets=loadSnapshot(join(root,snapshot)),plan=schedule(targets,activities,opts);
+  const rows=JSON.stringify(read('packages/planner/src/haggis-boards.json'));
+  const unknown=(rows.match(/"evidence":"(ESTIMATE|CODE-READ)"/g)??[]).length;
+  if(plan.boards.length!==24||unknown||plan.boards.some(b=>b.status!=='WIN'||(b.deadline!==null&&(b.slack??-1)<Math.ceil(b.deadline*.02))))throw Error('All 24 boards need measured inputs and winning margins; value boards need resolved rules');
+  for(const b of plan.boards)if(b.deadline!==null){if(typeof b.finish!=='number'||!Number.isFinite(b.finish)||b.finish<=0)throw Error('Invalid board finish');expected[b.id]=b.finish}
+  requirements=suppliesFor(activities,opts,targets);return 'All 24 boards pass with measured inputs and 2% margins';
+ });
+ check('rehearsed',()=>{
+  const dir=join(root,'.practice/rehearsals');
+  const runs=readdirSync(dir).filter(f=>f.endsWith('.json')).map(f=>read('.practice/rehearsals/'+f)).sort((a,b)=>b.at-a.at).slice(0,3);
+  expiresAt=Math.min(expiresAt,validateRehearsals(runs,context,expected,now,bound));return 'Three distinct full-clock rehearsals match current context and raw logs';
+ });
+ check('supplies staged',()=>{
+  const s=read('.practice/haggis-supplies.json');
+  const suppliesExpiry=validateSupplies(s,context,requirements,read('knowledge/items.json'),FLEET.filter(a=>a.role!=='main'&&a.server==='rs-sdk-demo.fly.dev').map(a=>a.name),now,bound);
+  expiresAt=Math.min(expiresAt,suppliesExpiry);return 'Exact item reservations covered by owned delivery and bank receipts';
+ });
+ check('fresh targets',()=>{
+  const s=read(snapshot),at=Date.parse(s.takenAt);
+  if(!fresh(at,now,3600000)||s.base!=='https://rs-sdk-demo.fly.dev'||s.tickMs!==400)throw Error('Target observation missing, stale, future-dated or wrong server/tick units');
+  expiresAt=Math.min(expiresAt,at+3600000);return 'Target observation is under one hour old';
+ });
+ check('machine clear',()=>{
+  // Monitor is volatile: do not hash it into the token. Limit token lifetime to this observation.
+  const m=JSON.parse(readFileSync(join(root,'.practice/monitor.json'),'utf8'));
+  if(!fresh(m.at,now,120000)||!Array.isArray(m.alerts)||m.alerts.some((a:any)=>a.level!=='fixed')||!Number.isFinite(m.freeGB)||m.freeGB<8)throw Error('Need recent monitor, no open alerts and 8 GiB free');
+  expiresAt=Math.min(expiresAt,m.at+120000);return 'Recent monitor, no alerts, memory floor met';
+ });
+ const ready=gates.every(g=>g.pass);
+ return {version:2,go:authorize&&ready,ready,at:now,expiresAt,context,snapshot,bindings:[...new Map(bindings.map(b=>[b.path,b])).values()],gates};
+}
+if(import.meta.main){
+ const root=resolve(import.meta.dir,'..'),arg=process.argv.slice(2).find(a=>!a.startsWith('--'));
+ const snapshot=arg?relative(root,resolve(arg)).replaceAll('\\','/'):'research/hiscores-live.json';
+ const report=evaluateLaunch(root,snapshot,Date.now(),process.argv.includes('--authorize'));
+ if(!process.argv.includes('--check')){
+  mkdirSync(join(root,'.practice'),{recursive:true});const file=join(root,process.argv.includes('--authorize')?'.practice/haggis-go.json':'.practice/haggis-readiness.json'),tmp=file+'.'+process.pid+'.tmp';
+  writeFileSync(tmp,JSON.stringify(report,null,2));renameSync(tmp,file);
+ }
+ for(const g of report.gates)console.log(`${g.pass?'PASS':'FAIL'}  ${g.name}: ${g.detail}`);
+ console.log(report.go?'GO: evidence-bound main login authorized':report.ready?'READY: not authorized; explicit --authorize required':'NO-GO: main remains offline');
+ process.exitCode=report.ready?0:1;
+}

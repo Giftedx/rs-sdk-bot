@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
-const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
+const html=readFileSync(process.env.DASH_PAGE || new URL('./index.html',import.meta.url),'utf8');
 const source=html.slice(html.indexOf('function chainHud(){'),html.indexOf("$('#chain').addEventListener"));
 for(const chain of [null,{cook:null,courier:null,farmers:[]},
     {cook:{name:'Cook',fresh:false,at:10},courier:null,farmers:[]},
@@ -17,9 +17,68 @@ for(const chain of [null,{cook:null,courier:null,farmers:[]},
 }
 
 const escape=(v:unknown)=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
+test('next action selects explicit instructions instead of presenting old proof as future work',()=>{
+ const code=html.slice(html.indexOf('function nextAction(b){'),html.indexOf('function latestGain('));
+ const run=new Function('b',code+';return nextAction(b);');
+ expect(run({planJob:{note:'Two batches passed. Next: qualify iron production. Keep stocks.'}})).toBe('qualify iron production');
+ expect(run({planJob:{note:'Next qualification: saved-state quest entry; keep main offline.'}})).toBe('saved-state quest entry; keep main offline');
+ expect(run({planJob:{note:'Stock met. Before re-enable, prove refill.'}})).toBe('Before re-enable, prove refill');
+ expect(run({planJob:{note:'Old proof passed.'}})).toBe('Review assignment note; next action not explicit');
+ expect(run({})).toBe('Not assigned');
+ expect(run({planJob:{note:'Next qualify gear.'},job:{note:'Next farm oak.'}})).toBe('qualify gear');
+});
+test('latest level gain requires recent successful live counters, not a heartbeat or old goal',()=>{
+ const code=html.slice(html.indexOf('function latestGain('),html.indexOf('function roster(){'));
+ const run=new Function('bots','now',code+';return latestGain(bots,now);');
+ const good={name:'Worker',at:1000,result:'ok mode=cow trainSkill=Defence targetLevel=10',counters:{startLevel:1,finalLevel:14,selectedXp:1800}};
+ expect(run([good],2000)?.name).toBe('Worker');
+ for(const change of [{practice:true},{reserved:true},{at:3000},{at:0},{result:'fail trainSkill=Defence'},{result:''},{counters:{startLevel:14,finalLevel:14,selectedXp:1}},{counters:{startLevel:1,finalLevel:100,selectedXp:1}}])expect(run([{...good,...change}],2000)).toBeNull();
+ expect(run([good],3601000)).toBeNull();
+});
+test('allocation separates useful demand waits, finished batches and repair holds',()=>{
+ const source=html.slice(html.indexOf('function allocation(b){'),html.indexOf('const ALLOCATION='));
+ const classify=new Function('b',source+';return allocation(b);');
+ expect(classify({operation:'offline',planJob:{enabled:true,state:'waiting offline: no fresh demand'}})).toBe('demand');
+ expect(classify({operation:'offline',planJob:{enabled:true,state:'ended: done after 1 runs'}})).toBe('next');
+ expect(classify({operation:'blocked',planJob:{enabled:true,state:'ended: done after 1 runs'}})).toBe('repair');
+ expect(classify({operation:'active-stale',planJob:{state:'running'}})).toBe('repair');
+ expect(classify({operation:'offline',planJob:{enabled:false,state:'disabled'},job:{state:'ended: done'}})).toBe('held');
+ expect(classify({operation:'reserved',planJob:{enabled:false}})).toBe('reserved');
+ expect(classify({operation:'observed',planJob:{enabled:false}})).toBe('observed');
+ expect(classify({operation:'offline'})).toBe('unknown');
+ expect(classify({operation:'offline',job:{enabled:true,state:'ended: done'}})).toBe('next');
+});
+test('work metric shows capped earners coin stock without claiming earnings',()=>{
+ const source=html.slice(html.indexOf('function workMetric(b){'),html.indexOf('function roster(){'));
+ const metric=new Function('b','observedAt','compact','nf',source+';return workMetric(b);');
+ const run=(b:any,fresh=true)=>metric(b,()=>fresh,String,String);
+ expect(run({role:'thieving',inventory:[{id:995,count:100},{id:995,count:50}],xpPerTick:0}).text).toBe('150 gp');
+ expect(run({role:'thieving',inventory:[]}).text).toBe('0 gp');
+ expect(run({role:'thieving'}).text).toBe('?');
+ expect(run({role:'thieving',inventory:[{id:995,count:-1}]}).text).toBe('?');
+ expect(run({role:'thieving',inventory:[{id:995,count:100}]},false).text).toBe('—');
+ expect(run({role:'smithing',xpPerTick:12}).text).toBe('12/t');
+ expect(run({role:'smithing'}).text).toBe('?');
+ expect(run({role:'thieving',inventory:[]}).title).toContain('not earnings or net profit');
+});
 const rosterSource=html.slice(html.indexOf('function hasStopProof('),html.indexOf('function roster(){'));
 function rosterFunctions(){return new Function('S','E','ago','sel','ocIcon',rosterSource+';return{offlineGoal,offWhy,rowOff,operationPhase,hasStopProof,resultKind,nativeProofPanel,boundedLabel,controllerEvidence,cleanupBadge};')({now:600000},escape,()=> '1m','',()=>'<i>raw outcome</i>');}
 const stopProof={kind:'host-stop-cleanup',outcome:'proved',level:'local-native',workerOutcome:'fail',goalMet:false,scope:'four sent inputs settled; assets banked'};
+
+test('goal cards use current plan actions while preserving evidence metrics and unknown-plan fallback',()=>{
+ const code=html.slice(html.indexOf('function goalMetrics(){'),html.indexOf('function goalCards(){'));
+ const progress=Array.from({length:6},(_,i)=>({metric:`evidence${i}`,next:'historical action'}));
+ const run=new Function('S',code+';return goalMetrics();');
+ const state={objectives:{available:true,progress,lanes:progress.map((_,i)=>({next:`current${i}`}))}};
+ expect(run(state).map((g:any)=>g.next)).toEqual(progress.map((_,i)=>`current${i}`));
+ expect(run(state).map((g:any)=>g.metric)).toEqual(progress.map(g=>g.metric));
+ state.objectives.available=false;expect(run(state)[0].next).toBe('historical action');
+ expect(progress[0]!.next).toBe('historical action');
+});
+
+test('dashboard commerce policy matches authorized GE use',()=>{
+ expect(html).toContain('GE ENABLED · LIMIT ORDERS');expect(html).not.toContain('OWNED ONLY · NO GE');
+});
 
 test('dashboard inline JavaScript parses without running browser or making requests',()=>{
     const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m=>m[1]);
@@ -27,10 +86,10 @@ test('dashboard inline JavaScript parses without running browser or making reque
 });
 test('offline roster keeps goal, failure and state readable while long raw controller note stays in title',()=>{
     const f=rosterFunctions(),raw='LONG_RAW_CONTROLLER_NOTE_'.repeat(100);
-    const row=f.rowOff({name:'Worker',role:'crafting',operation:'blocked',currentGoal:'Make useful strings',lastRes:{text:'fail made=0 held=20',ok:false,at:1},planJob:{state:'disabled',goal:'Old goal',note:raw}});
+    const row=f.rowOff({name:'Worker',role:'crafting',operation:'blocked',currentGoal:'Old worker goal',lastRes:{text:'fail made=0 held=20',ok:false,at:1},planJob:{state:'disabled',goal:'Make useful strings',note:raw}});
     const visible=row.replace(/title="[^"]*"/g,'');
     expect(visible).toContain('worker failed');expect(visible).toContain('blocked');expect(visible).toContain('disabled');
-    expect(visible).toContain('Make useful strings');expect(visible).not.toContain(raw);expect(row).toContain(raw);
+    expect(visible).toContain('Make useful strings');expect(visible).not.toContain('Old worker goal');expect(visible).not.toContain(raw);expect(row).toContain(raw);
     expect(f.offlineGoal({reserved:true,currentGoal:'private identity'})).toBe('private main · reserved');
 });
 test('raw milestones are labelled historical and stale named phases retain evidence',()=>{
@@ -100,4 +159,27 @@ test('2D mode unloads the hidden WebGL viewer instead of retaining its scene in 
     const $=(id:string)=>{if(!nodes.has(id))nodes.set(id,{removeAttribute:(a:string)=>removed.push(id+':'+a),classList:{toggle(){}},style:{},contentWindow:{postMessage(){}}});return nodes.get(id);};
     const f=new Function('$','clearTimeout',`let VIEWER_REQUEST=0,VIEWER_TIMER,VIEWER={origin:'http://localhost:3102'},rswFor='old',mode='3d',S=null;function showViewerStatus(){};${src};setMode('2d');return{mode,rswFor};`);
     expect(f($,()=>{})).toEqual({mode:'2d',rswFor:null});expect(removed).toEqual(['#rsw:src']);
+});
+
+test('goal summaries distinguish recent ranks, old stock, model gates and skill-account pairs',()=>{
+    const source=html.slice(html.indexOf('function specialistRows(){'),html.indexOf('function goalCards(){'));
+    const S:any={now:1000000,bots:[
+        {name:'Worker',at:999000,ranksAt:999000,skills:[{name:'Mining',level:99},{name:'Stat18',level:99}],ranks:[{board:'Mining',rank:2}]},
+        {name:'Old',at:100,ranksAt:100,skills:[],ranks:[{board:'Mining',rank:1}]},
+        {name:'Main',reserved:true,at:999000,ranksAt:999000,skills:[{name:'Mining',level:99}],ranks:[{board:'Mining',rank:1}]},
+        {name:'Practice',practice:true,at:999000,ranksAt:999000,skills:[{name:'Mining',level:99}],ranks:[{board:'Mining',rank:1}]}
+    ],boards:[{board:'Mining'},{board:'Equipment'}],collection:{distinct:84},capacity:{fresh:false},gates:{valid:false,gates:[{pass:true}]}};
+    const key=(s:string)=>s.toLowerCase().replace(/^lava maze /,'').replace(/[^a-z]/g,'');
+    const f=new Function('S','liveBots','observedAt','skills','ledger','boardKey',source+';return {specialistRows,goalMetrics};')(S,()=>S.bots.filter((b:any)=>!b.practice&&!b.reserved),(at:number,limit=300000)=>at>0&&at<=S.now&&S.now-at<limit,(b:any)=>b.skills.filter((s:any)=>!/^Stat\d+$/.test(s.name)),()=>null,key);
+    expect(f.specialistRows()[0].best.name).toBe('Worker');expect(f.specialistRows()[1].best).toBeUndefined();
+    const goals=f.goalMetrics();expect(goals).toHaveLength(6);expect(goals[0].metric).toBe('? active');expect(goals[1].metric).toBe('84 types');expect(goals[2].metric).toBe('1 × 99');expect(goals[3].metric).toBe('0 #1');expect(goals[4].metric).toBe('No check');expect(goals[5].metric).toBe('Unknown');
+    S.bots[0].ranksAt=S.now+1;expect(f.specialistRows()[0].best.recent).toBe(false);
+});
+
+test('Runite inspector uses the known value-board record despite display-name differences',()=>{
+    const source=html.slice(html.indexOf('function boardView(){'),html.indexOf('function inspect(){'));
+    let rows:string[]=[];
+    const run=new Function('S','chosenBoard','boardKey','specialistRows','pagedRows','row','E','age','nf','sgn',source+';boardView();');
+    run({boards:[{board:'Runite',top:{name:'Leader',value:42}}],race:{rows:[{label:'Lava Maze Runite',rule:{kind:'value'}}]}},'Lava Maze Runite',(s:string)=>s.replace('Lava Maze ',''),()=>[],(r:string[])=>rows=r,(label:string,value:unknown)=>label+': '+value,String,()=>'? ',String,String);
+    expect(rows).toContain('Record holder: Leader');expect(rows).toContain('Record time / value: 42');
 });

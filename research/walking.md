@@ -1,5 +1,11 @@
 # Walking without stalls (2026-10-23)
 
+**Reuse before repair:** [source map](project-use-map.md#failure-cases-worth-porting-next) now pins blurite reach strategies and rsmod border/access tests. Separate tile arrival, legal interaction reach and alternate endpoints. Reproduce the failing object shape, rotation, approach side, actor size and plane before changing BFS or tolerances. These are inspected upstream cases, not new local route proof.
+
+## Farm return correction (2026-10-26)
+
+Pocketrocket chased knights into the east bank room; final return left16,000 coins carried. Target distance followed the moving bot, and the exit door2669,3316 anchors a wall beside the planned path. Generic `Open` handling also mistook chests for doors. Fix: fixed market-origin target range; observed/confirmed room exit in `farmWalk`; shared walker ignores named non-door/gate objects. [Exact-state native proof](../.practice/worker-repair/bank-proof.json), [work/bank proof](../.practice/worker-repair/farm/proof.json), [live recovery log](../.practice/worker-repair/pocket-recovery-live.log). Coins recovered; broader routes and comparative speed are not proved by this case. Prior failed probes remain in `.practice/fleet-review/bank-v*-proof.json`.
+
 Owner complaint: "you move like a total moron. learn how a speedrunner and a pro at the game would move and
 master it." This file gives the stall causes in the old walk, the new walker `walkPath`
 (`packages/core/src/walk.ts`), and the measured gain. All tick counts are in game ticks.

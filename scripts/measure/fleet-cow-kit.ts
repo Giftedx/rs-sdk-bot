@@ -31,11 +31,11 @@ if(process.argv[2]==='--child'){
  }catch(e){await finish([s],false,String(e));}
 }else{
  if(process.env.REUSE_STACK!=='1')throw new Error('existing stack required');
- const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<9)throw new Error(`single-bot start requires9GiB (8floor+1reserve); actual${free}`);
+ const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());if(free<9)throw new Error(`single-bot start requires9GiB (8floor+1reserve); actual${free}`);
  const actor=runBotName('flkit',1),dir=resolve('.practice/fleet-proof'),prefix=`cow-kit-${actor}`;await createBot(actor);
  const path=await applyPreset(actor,{position:{x:2654,z:3283,level:0},coins:165,inventory:[{id:1277,count:1},{id:1277,count:1},{id:1171,count:1},{id:1171,count:1},{id:333,count:1},{id:333,count:1}]});
  const initial=readPracticeSave(path);console.log(`PROOF_START actor=${actor} source=${sourceSha256} freeGiB=${free}`);
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,'--child',actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0'},stdout:'pipe',stderr:'pipe'});let output='';const timer=setTimeout(()=>p.kill(),60000);
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,'--child',actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0'},stdout:'pipe',stderr:'pipe',windowsHide:true});let output='';const timer=setTimeout(()=>p.kill(),60000);
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(part);}};
  await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);
  const result=JSON.parse(output.match(/^KIT_PROOF (.+)$/m)?.[1]??'null');

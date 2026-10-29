@@ -1,0 +1,47 @@
+{
+  "id": "cook-consumer-entry",
+  "goal": "quests",
+  "entry": "scripts/generated/quest-cook.ts",
+  "files": [
+    "scripts/generated/quest-cook.ts",
+    "scripts/quest-cook-entry.test.ts"
+  ],
+  "consumer": "Existing quest-items-order proof supplies worker-gathered ingredients to quest-order cook from its actual gathering endpoint. Independent saved-state checks confirm Cook's Assistant completion, quest points, consumed inputs, preserved assets and logout.",
+  "checks": [
+    {
+      "id": "cook-entry-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/quest-cook-entry.test.ts",
+        "scripts/quest-order.test.ts",
+        "scripts/quest-walk.test.ts",
+        "scripts/quest-items-order.test.ts",
+        "packages/practice/test/quest-items-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-gathered-cook-consumer",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-items-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-gathered-cook-consumer",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/quest-items-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

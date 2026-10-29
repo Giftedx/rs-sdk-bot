@@ -1,3 +1,5 @@
+> Historical request ledger, last audited 2026-10-23. Statuses and operational rules below are dated. Use [AGENTS.md](../AGENTS.md) and the [current plan](../docs/plans/joined-plan.md). Numbered rows remain for dashboard compatibility.
+
 # Owner requests and standing rules (full audit, checked 2026-10-23 07:15 UTC)
 
 ## How this list was built

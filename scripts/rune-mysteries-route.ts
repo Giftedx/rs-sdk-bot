@@ -1,0 +1,69 @@
+import {chickenTrainingProfile} from './train-chickens';
+import {LUMBRIDGE_TO_DRAYNOR} from './courier-route';
+import type {PathPoint} from '../packages/core/src/walk';
+import type {QuestFlag} from '../packages/core/src/quest-status';
+
+export function runeMysteriesDecision(state:QuestFlag['state'],items:readonly number[]){
+    if(state==='complete')return 'complete';
+    if(state==='unknown')return 'observe';
+    if(state==='not started')return 'duke';
+    if(items.includes(291))return 'notes';
+    if(items.includes(290))return 'package';
+    if(items.includes(1438))return 'talisman';
+    // A package handoff can finish before the second Aubury conversation.
+    // Probe that resumable step once; absence of notes must never report success.
+    return 'recover-notes';
+}
+
+export function runeMysteriesStartProblem(combat:number|undefined):string|null {
+    return Number.isSafeInteger(combat)&&(combat ?? 0)>=13 ? null
+        : 'Rune Mysteries prerequisite: combat13 required for guarded route';
+}
+
+// Reuse the starter-training corridors. Straight lines from Draynor cross
+// the jail, and the south-east Varrock approach crosses the wizard circle.
+export function runeMysteriesWalk(from:{worldX:number;worldZ:number;level:number}|null|undefined,to:PathPoint):PathPoint[] {
+    if(!from)throw Error('Rune Mysteries prerequisite: position unknown');
+    if(from.level!==0||from.worldZ>4000)throw Error('Rune Mysteries prerequisite: known surface start required');
+    // 3088,3320 is a tree tile. The real training walk passed beside it;
+    // an exact quest step otherwise waits200 ticks against that tree.
+    const draynor=chickenTrainingProfile('draynor').route.map(p=>p.x===3088&&p.z===3320?{x:3089,z:3320,tol:1}:p);
+    const varrock=chickenTrainingProfile('varrock').route;
+    if(to.x===3109&&to.z===3167){
+        // The direct Lumbridge approach crosses bears at3176,3223 and3159,3233.
+        // Reuse the courier's lane north of that forest and the jail guards.
+        const approach=from.worldX>=3200?LUMBRIDGE_TO_DRAYNOR.map(([x,z])=>({x,z,tol:0})):[];
+        // 3092,3210 is blocked. Exact walkable points keep SDK detours out of
+        // the dark wizards' spawn+wander+hunt bounds west of the bank.
+        const north=approach.length||from.worldZ>=3230?[{x:3096,z:3230,tol:0}]:[];
+        return [...approach,...north,{x:3097,z:3212,tol:0},to];
+    }
+    const lumbridge=to.x>=3200&&to.z<3300;
+    if(lumbridge&&from.worldZ>=3330)
+        return [...varrock,{x:3226,z:3250,tol:0},to];
+    if(lumbridge&&from.worldX<3150&&from.worldZ>=3200)
+        return [...draynor.slice(1),{x:3226,z:3250,tol:0},to];
+    if(to.z>=3380&&from.worldZ<3330){
+        // The direct tower-to-Draynor leg crosses the dark wizards at3107,3233
+        // on SDK's shortest path. Leave through the same bank-side lane used
+        // on arrival before taking the north corridor.
+        const tower=from.worldX<3150&&from.worldZ<3212
+            ?[{x:3097,z:3212,tol:0},{x:3096,z:3230,tol:0},{x:3092,z:3243,tol:0}]:[];
+        return [...tower,...(from.worldX<3150?draynor.slice(1):varrock.slice(-1)),...varrock.slice(1,-1).reverse(),to];
+    }
+    return [to];
+}
+
+export async function walkRuneMysteries(from:Parameters<typeof runeMysteriesWalk>[0],to:PathPoint,step:(point:PathPoint)=>Promise<unknown>):Promise<void> {
+    // The shared quest walker retries its final point directly on a failed
+    // path. Give it one corridor point at a time so retries cannot skip one.
+    for(const point of runeMysteriesWalk(from,to))await step(point);
+}
+
+export async function exitRuneTower(io:{waitForLanding:()=>Promise<boolean>;openDoor:(label:string,x:number,z:number)=>Promise<void>;dash:(label:string,x:number,z:number,tol:number)=>Promise<void>},label='tower exit'):Promise<void> {
+    if(!await io.waitForLanding())throw Error('Rune Mysteries prerequisite: tower landing objects unobserved');
+    await io.openDoor(`${label} inner door`,3107,3162);
+    await io.dash(`${label} hall`,3108,3164,1);
+    await io.openDoor(`${label} north door`,3109,3166);
+    await io.dash(`${label} outside`,3109,3167,0);
+}

@@ -41,7 +41,7 @@ for (let i = 1; i <= runs; i++) {
             await createBot(names[k + 1]!);
             await applyPreset(names[k + 1]!, { position: { x: chunk[0]!.x, z: chunk[0]!.z, level: 0 }, varps: { 173: 1 }, inventory: chunk.map(p => ({ id: p.id, count: 1 })) });
         }
-        const proc = Bun.spawn(['bun', join(import.meta.dir, 'floor-fm-line.ts'), bot, rows!, String(nHelpers)], { cwd: repo, stdout: 'pipe', stderr: 'pipe', env: process.env });
+        const proc = Bun.spawn(['bun', join(import.meta.dir, 'floor-fm-line.ts'), bot, rows!, String(nHelpers)], { cwd: repo, stdout: 'pipe', stderr: 'pipe', env: process.env ,windowsHide:true});
         const timer = setTimeout(() => proc.kill(), 900_000);
         const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
         const exitCode = await proc.exited;

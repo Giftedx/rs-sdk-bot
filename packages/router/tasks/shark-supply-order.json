@@ -1,0 +1,116 @@
+{
+  "id": "shark-supply-order",
+  "goal": "Produce a finite banked batch of cooked sharks through an owned high-level fisher, including tool preparation, safe real entry travel, shark-specific fishing, cooking, banking and logout.",
+  "entry": "scripts/shark-supply.ts",
+  "files": [
+    "scripts/shark-supply.ts",
+    "scripts/shark-supply.test.ts",
+    "scripts/gather-fish.ts",
+    "scripts/cook-food.ts",
+    "scripts/goldfarm-stable.ts",
+    "scripts/goldfarm-stable.test.ts",
+    "scripts/goldfarm.ts",
+    "scripts/goldfarm.test.ts",
+    "scripts/foodcourier.ts",
+    "packages/core/src/bank-demand.ts",
+    "packages/core/test/bank-demand.test.ts",
+    "packages/practice/src/shark-supply-order-proof.ts",
+    "packages/practice/test/shark-supply-order-proof.test.ts",
+    "packages/practice/src/stack.ts",
+    "packages/practice/test/stack.test.ts",
+    "packages/practice/src/shark-fishing-diagnostic.ts",
+    "packages/practice/test/shark-fishing-diagnostic.test.ts",
+    "packages/core/src/session-lifecycle.ts",
+    "packages/core/test/session-lifecycle.test.ts",
+    "packages/core/src/inprocess.ts",
+    "packages/core/test/inprocess.test.ts",
+    "packages/core/src/bot.ts",
+    "packages/core/test/bot.test.ts",
+    "packages/core/src/status.ts",
+    "packages/core/test/status.test.ts",
+    "scripts/swarm.ts",
+    "scripts/swarm.test.ts",
+    "packages/core/src/session-recovery.ts",
+    "packages/core/test/session-recovery.test.ts",
+    "packages/core/src/session-recovery-permit.ts",
+    "packages/core/test/session-recovery-permit.test.ts",
+    "packages/core/src/session-recovery-dispatch.ts",
+    "packages/core/test/session-recovery-dispatch.test.ts",
+    "packages/core/src/session-admission.ts",
+    "packages/core/test/session-admission.test.ts",
+    "packages/core/src/worker-release.ts",
+    "packages/core/test/worker-release.test.ts",
+    "packages/core/test/inprocess-auth-order.test.ts",
+    "packages/practice/src/session-recovery-proof.ts",
+    "packages/practice/test/session-recovery-proof.test.ts"
+  ],
+  "consumer": "The installed account-parameterized shark worker obtains or withdraws its harpoon, travels from representative ordinary west-bank/Mightyrod entry, catches actual raw sharks through pinned memberfish op3, cooks them and banks genuinely new cooked sharks. A separately labelled local retained-state diagnostic observes server action state without changing pinned sources, mechanics or RNG; diagnostic coverage never substitutes for product acceptance. Complete native entry, finite-budget stop, byte-bound no-reseed resume and no-stock refusal independently reconcile raw/cooked/burnt fish, paid tools, food, cash, unrelated assets, life and logout. Saved verification is read-only. Downstream workers retain shark food recognition. Delivery feeds the existing Mightyrod25-shark live pilot, then its100-shark demand-bound batch and authenticated combat/staging delivery; exact old-block recovery remains a separate controller admission requirement. Session ownership is emitted by the actual per-account SDK/session producer, including pre-START partial connections, composed participants, hosted sessions and late callbacks. A current account/server/attempt-bound confirmed logout is separate from work success; unknown outcomes remain held. The existing finite Mightyrod pilot and100-shark batch remain the useful live consumers. Full actual controller/CLI recovery is a separate native gate. Its single-use child authority must bind the current delivered report, source and core runner before any controlled live connection. Unsupported caller-only script qualification and anonymous legacy evidence refuse; the retired combat hold survives cleanup and fishing. The finite controller-owned25-shark pilot is followed by100 sharks and authenticated demand delivery.",
+  "checks": [
+    {
+      "id": "shark-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/shark-supply.test.ts",
+        "scripts/goldfarm-stable.test.ts",
+        "packages/practice/test/shark-supply-order-proof.test.ts",
+        "packages/practice/test/shark-fishing-diagnostic.test.ts",
+        "packages/practice/test/stack.test.ts",
+        "packages/core/test/session-lifecycle.test.ts",
+        "packages/core/test/inprocess.test.ts",
+        "packages/core/test/bot.test.ts",
+        "packages/core/test/status.test.ts",
+        "scripts/swarm.test.ts",
+        "packages/core/test/session-recovery.test.ts",
+        "packages/core/test/session-recovery-permit.test.ts",
+        "packages/core/test/session-recovery-dispatch.test.ts",
+        "packages/core/test/session-admission.test.ts",
+        "packages/core/test/worker-release.test.ts",
+        "packages/core/test/inprocess-auth-order.test.ts",
+        "packages/practice/test/session-recovery-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "id": "native-session-recovery",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/session-recovery-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "native-shark-fishing-diagnostic",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/shark-supply-order-proof.ts",
+        "--fishing-diagnostic=F:/dev-on-f/osrs-rs-research/rs-sdk-bot/.practice/deliveries/shark-supply-order-1793240933435-SJ9QEg/entry/before.sav"
+      ],
+      "timeoutMs": 600000
+    },
+    {
+      "id": "native-shark-order",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/shark-supply-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-shark-order",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/shark-supply-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

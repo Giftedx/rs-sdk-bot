@@ -10,7 +10,7 @@ if(process.env.REUSE_STACK!=='1')throw new Error('existing local stack required'
 const sourcePaths=['scripts/measure/fleet-seers-entry.ts','scripts/foodcourier.ts','packages/core/src/walk.ts'];
 const hashes=Object.fromEntries(sourcePaths.map(p=>[p,createHash('sha256').update(readFileSync(p)).digest('hex').toUpperCase()]));
 for(const [env,path] of [['EXPECT_REVERSE_SHA','scripts/measure/fleet-seers-entry.ts'],['EXPECT_COURIER_SHA','scripts/foodcourier.ts']] as const)if(!process.env[env]||hashes[path]!==process.env[env])throw new Error(`${env} frozen source required`);
-const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
 if(free<11)throw new Error(`new second admission needs11GiB free; actual${free}`);
 const actor=runBotName('flreturn',1),dir=resolve('.practice/fleet-proof'),prefix=`return-strings-${actor}`;
 await createBot(actor);
@@ -19,7 +19,7 @@ const initial=readPracticeSave(savePath);
 writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
 console.log(`PROOF_START actor=${actor} freeGiB=${free} cargo=500notedBowstrings fare=60`);
 async function child(path:string,label:string,env:Record<string,string>){
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve(path),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:'pipe',stderr:'pipe'});let output='';
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve(path),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:'pipe',stderr:'pipe',windowsHide:true});let output='';
  const timer=setTimeout(()=>p.kill(),450000);
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}-${label}.log`),output);process.stdout.write(part);}};
  await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);

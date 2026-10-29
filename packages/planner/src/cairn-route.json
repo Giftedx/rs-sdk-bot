@@ -1,0 +1,353 @@
+{
+  "source": "https://rune.fast/route (read 2026-10-29): cairnmax20x attempt 5, 35,787 ticks, planned and actual ticks per step",
+  "steps": [
+    {
+      "id": "start",
+      "label": "Tutorial skip, trade, Wind Strike at the coop",
+      "skills": "Magic 1-8",
+      "plan": 135,
+      "took": 140,
+      "ours": [
+        "tutorial",
+        "trade-start"
+      ],
+      "scripts": []
+    },
+    {
+      "id": "fires",
+      "label": "Firemaking on the castle row, helpers drop logs",
+      "skills": "Firemaking 1-99",
+      "plan": 661,
+      "took": 661,
+      "ours": [
+        "fm-burn"
+      ],
+      "scripts": [
+        "scripts/firemaking-order.ts"
+      ],
+      "capability": "firemaking-order"
+    },
+    {
+      "id": "rings",
+      "label": "Enchant rings from 3 helpers",
+      "skills": "Magic 8-59",
+      "plan": 198,
+      "took": 196,
+      "ours": [
+        "magic-anvil",
+        "magic-43"
+      ],
+      "scripts": [
+        "scripts/magic-order.ts"
+      ],
+      "capability": "magic-order",
+      "note": "anvil route: enchant to Magic 80; superheat route: teleports to 43"
+    },
+    {
+      "id": "doric",
+      "label": "Doric's Quest",
+      "skills": "Mining 1-49",
+      "plan": 69,
+      "took": 66,
+      "ours": [
+        "doric"
+      ],
+      "scripts": [
+        "scripts/generated/quest-doric.ts"
+      ]
+    },
+    {
+      "id": "air-altar",
+      "label": "Air altar, 7 essence helpers",
+      "skills": "Runecraft 1-44",
+      "plan": 207,
+      "took": 206,
+      "ours": [],
+      "scripts": [
+        "scripts/generated/rcair.ts"
+      ],
+      "note": "our runecraft row is priced under body-altar"
+    },
+    {
+      "id": "woodcut",
+      "label": "Woodcutting with knife reset, bury bones between rolls",
+      "skills": "Woodcutting 1-99, Prayer 1-99",
+      "plan": 3296,
+      "took": 3391,
+      "ours": [
+        "woodcut",
+        "prayer"
+      ],
+      "scripts": [
+        "scripts/generated/woodcutting.ts"
+      ]
+    },
+    {
+      "id": "plague",
+      "label": "Plague City",
+      "skills": "Mining 49-64",
+      "plan": 591,
+      "took": 595,
+      "ours": [],
+      "scripts": []
+    },
+    {
+      "id": "iron",
+      "label": "Iron by the Ardougne zoo, knife reset",
+      "skills": "Mining 64-99",
+      "plan": 3157,
+      "took": 3470,
+      "ours": [
+        "mine"
+      ],
+      "scripts": [
+        "scripts/gather-ore.ts"
+      ]
+    },
+    {
+      "id": "tree-gnome",
+      "label": "Tree Gnome Village",
+      "skills": "Attack 1-80",
+      "plan": 734,
+      "took": 805,
+      "ours": [
+        "tree"
+      ],
+      "scripts": [
+        "scripts/generated/quest-tree.ts"
+      ]
+    },
+    {
+      "id": "grand-tree",
+      "label": "Gnome course to 25, The Grand Tree",
+      "skills": "Agility 1-76, Attack 80-94",
+      "plan": 1582,
+      "took": 1633,
+      "ours": [
+        "agility-25",
+        "grandtree"
+      ],
+      "scripts": [
+        "scripts/agility-order.ts",
+        "scripts/generated/quest-grandtree.ts"
+      ],
+      "capability": "agility-order"
+    },
+    {
+      "id": "fight-arena",
+      "label": "Fight Arena",
+      "skills": "Attack 94-99, Thieving 1-57",
+      "plan": 607,
+      "took": 594,
+      "ours": [
+        "rival-fight-arena"
+      ],
+      "scripts": [
+        "scripts/generated/quest-arena.ts"
+      ]
+    },
+    {
+      "id": "dwarf-cannon",
+      "label": "Dwarf Cannon",
+      "skills": "Crafting 1-42",
+      "plan": 1027,
+      "took": 986,
+      "ours": [
+        "cannon"
+      ],
+      "scripts": [
+        "scripts/generated/dwarfcannon.ts"
+      ]
+    },
+    {
+      "id": "spiders-1",
+      "label": "Cannon at the poison spiders",
+      "skills": "Ranged 1-50",
+      "plan": 488,
+      "took": 511,
+      "ours": [],
+      "scripts": [
+        "scripts/gather-ranged.ts"
+      ],
+      "note": "our ranged row is priced under spiders-2"
+    },
+    {
+      "id": "monkey-madness",
+      "label": "Monkey Madness",
+      "skills": "Strength 1-97, Hitpoints 42-97, Defence 1-89",
+      "plan": 4563,
+      "took": 4113,
+      "ours": [
+        "rival-mm"
+      ],
+      "scripts": [
+        "scripts/generated/quest-mm.ts"
+      ]
+    },
+    {
+      "id": "mage-arena",
+      "label": "Mage Arena",
+      "skills": "Magic 77-81",
+      "plan": 547,
+      "took": 637,
+      "ours": [
+        "mage-arena"
+      ],
+      "scripts": []
+    },
+    {
+      "id": "knights",
+      "label": "Ardougne knights; Charge, Superheat, arrows in the stuns",
+      "skills": "Thieving 57-99, Magic 81-99, Fletching 1-99",
+      "plan": 2099,
+      "took": 2288,
+      "ours": [
+        "thieve",
+        "charge",
+        "fletch"
+      ],
+      "scripts": [
+        "scripts/generated/thieveknights.ts"
+      ]
+    },
+    {
+      "id": "sea-slug",
+      "label": "Sea Slug, Fishing Contest",
+      "skills": "Fishing 1-78",
+      "plan": 859,
+      "took": 791,
+      "ours": [
+        "rival-seaslug"
+      ],
+      "scripts": [
+        "scripts/generated/quest-seaslug.ts",
+        "scripts/generated/quest-fishingcompo.ts"
+      ]
+    },
+    {
+      "id": "body-altar",
+      "label": "Body altar, essence rota",
+      "skills": "Runecraft 44-99",
+      "plan": 1279,
+      "took": 1512,
+      "ours": [
+        "runecraft"
+      ],
+      "scripts": [
+        "scripts/generated/rcair.ts"
+      ],
+      "note": "rcair.ts is the air altar only"
+    },
+    {
+      "id": "fly-fish",
+      "label": "Fly fishing at Lumbridge, knife reset",
+      "skills": "Fishing 78-99",
+      "plan": 2054,
+      "took": 2257,
+      "ours": [
+        "fish"
+      ],
+      "scripts": [
+        "scripts/gather-fish.ts"
+      ]
+    },
+    {
+      "id": "four-quests",
+      "label": "Cook's Assistant, Druidic Ritual, Goblin Diplomacy, Romeo and Juliet",
+      "skills": "Cooking 1-30, Herblore 1-28",
+      "plan": 752,
+      "took": 750,
+      "ours": [
+        "cooks-assistant",
+        "druid",
+        "gobdip",
+        "rj"
+      ],
+      "scripts": [
+        "scripts/generated/quest-cook.ts",
+        "scripts/generated/quest-druid.ts"
+      ],
+      "capability": "quest-order"
+    },
+    {
+      "id": "anvil",
+      "label": "Platebodies at the Varrock west anvil",
+      "skills": "Smithing 41-99",
+      "plan": 903,
+      "took": 1018,
+      "ours": [
+        "smith-anvil",
+        "crest",
+        "smith-40",
+        "superheat",
+        "magic-top"
+      ],
+      "scripts": [],
+      "note": "our anvil route, or Family Crest and superheat"
+    },
+    {
+      "id": "bank-booth",
+      "label": "Bank booth: Crafting, Herblore, banked wine",
+      "skills": "Crafting 48-99, Herblore 28-99, Cooking 30-99",
+      "plan": 513,
+      "took": 571,
+      "ours": [
+        "craft",
+        "herb",
+        "bank-wine",
+        "relog",
+        "login-wine"
+      ],
+      "scripts": [
+        "scripts/craft-jewelry.ts",
+        "scripts/cook-wine.ts"
+      ],
+      "capability": "wine-order"
+    },
+    {
+      "id": "dragon-slayer",
+      "label": "Dragon Slayer",
+      "skills": "Strength 97-99, Defence 89-98",
+      "plan": 1370,
+      "took": 1430,
+      "ours": [
+        "dragon"
+      ],
+      "scripts": [
+        "scripts/generated/quest-dragon.ts"
+      ]
+    },
+    {
+      "id": "spiders-2",
+      "label": "Cannon and magic shortbow at the spiders",
+      "skills": "Defence 98-99, Ranged 55-99, Hitpoints 97-99",
+      "plan": 2152,
+      "took": 3099,
+      "ours": [
+        "ranged",
+        "str-top",
+        "att-top",
+        "def-top",
+        "hp-top"
+      ],
+      "scripts": [
+        "scripts/gather-ranged.ts"
+      ]
+    },
+    {
+      "id": "wilderness-agility",
+      "label": "Wilderness Agility Course",
+      "skills": "Agility 76-99",
+      "plan": 4300,
+      "took": 4067,
+      "ours": [
+        "agility-52",
+        "agility"
+      ],
+      "scripts": [
+        "scripts/agility-order.ts"
+      ],
+      "capability": "agility-order"
+    }
+  ]
+}

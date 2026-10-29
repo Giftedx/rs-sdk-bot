@@ -12,23 +12,162 @@
 // the bank, wait up to WAIT (default 900) ticks for GIVE_TO, hand off and stop.
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { openBot, finish, countItems, randomEventsOf } from '../packages/core/src/bot';
+import { openBot, finish, countItems, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
+import { sendHandoff } from './courier-handoff';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { depositObserved } from '../packages/core/src/deposit';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { componentId } from '../packages/core/src/logout';
+import type { Session } from '../packages/core/src/inprocess';
+
+const starterCount=(s:Session,id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+export function starterCookingStock(s:Session){
+    return {raw:starterCount(s,2138),cooked:starterCount(s,2140),burnt:starterCount(s,2144),xp:s.sdk.getSkillXp('Cooking')??0};
+}
+
+export class StarterCookingUnresolved extends Error {}
+
+// One observed conversion. The session owner retains logout and recovery.
+export async function cookStarterChicken(s:Session,stop:()=>boolean=()=>false){
+    const before=starterCookingStock(s),start=s.tick();
+    const fire=s.sdk.getState()?.nearbyLocs.find(l=>/^fireplace$/i.test(l.name)&&l.x===3214&&l.z===3249);
+    const chicken=s.sdk.getInventory().find(i=>i.id===2138);
+    let last='',dispatchReply:unknown,accepted=false,stopped=false;
+    const isStopped=()=>stopped ||= stop();
+    const record=(phase:string,action?:unknown)=>{
+        const state=s.sdk.getState();
+        const observation={phase,action,dispatchReply,loc:fire,position:state?.player,modalOpen:state?.modalOpen,modalInterface:state?.modalInterface,
+            interface:state?.interface,dialog:s.sdk.getDialog(),messages:state?.gameMessages?.slice(-8),
+            eventBusy:randomEventsOf(s)?.busy()??false,...starterCookingStock(s)};
+        const value=JSON.stringify(observation);
+        if(value!==last){last=value;console.log('STARTER_COOKING '+JSON.stringify({tick:s.tick(),...observation}));}
+    };
+    record('entry');
+    if(isStopped())throw Error('bootstrap cooking stopped; '+last);
+    if(!fire||!chicken)throw Error('bootstrap chicken/fireplace unobserved; '+last);
+    const off=s.onTick(()=>record('observation'));
+    // Observe the primitive reply within this owned session. The supported helper still sends the only action.
+    const send=s.sdk.sendUseItemOnLoc;
+    const traced:typeof send=async(...args)=>{
+        // The helper can walk or dismiss UI before dispatch. Recheck at the actual send boundary.
+        if(isStopped())return {success:false,message:'bootstrap cooking stopped before dispatch'};
+        const reply=await send.apply(s.sdk,args);accepted ||= reply.success;dispatchReply=reply;record('dispatch',reply);return reply;
+    };
+    s.sdk.sendUseItemOnLoc=traced;
+    try{
+        // Pinned cooking.rs2: arrival delay -> refusal/event checks -> animation -> p_delay(1) -> conversion.
+        // API.md and learnings/cooking.md use this supported action. Dispatch alone does not start the conversion deadline.
+        let action:Awaited<ReturnType<Session['bot']['useItemOnLoc']>>|undefined,actionError:unknown;
+        try{action=await s.bot.useItemOnLoc(chicken,fire);}catch(error){actionError=error;}
+        record('action',action);
+        isStopped();
+        if(!accepted){
+            if(stopped)throw Error('bootstrap cooking stopped; '+last);
+            if(actionError)throw actionError;
+            throw Error('bootstrap cooking action rejected: '+JSON.stringify(action)+'; '+last);
+        }
+        // A stop forbids further work, but cannot undo cooking.rs2's p_delay(1).
+        // Keep the existing conversion bound and observe the one accepted use before returning to the owner.
+        const unresolved=(why:string)=>new StarterCookingUnresolved(`bootstrap cooking settlement unresolved: ${why}; stopped=${isStopped()}; `+last);
+        let observed:boolean;
+        try{observed=await waitUntil(s,()=>{
+            isStopped();
+            const now=starterCookingStock(s),cooked=now.cooked-before.cooked,burnt=now.burnt-before.burnt;
+            return now.raw<before.raw&&cooked+burnt>0&&(cooked===0||now.xp>before.xp);
+        },{timeoutTicks:8});}catch(error){throw unresolved('observation failed: '+String(error));}
+        record('conversion',action);
+        const after=starterCookingStock(s),consumed=before.raw-after.raw,cooked=after.cooked-before.cooked,burnt=after.burnt-before.burnt,xp=after.xp-before.xp;
+        if(!observed&&consumed===0)throw unresolved('conversion unobserved');
+        if(consumed!==1||cooked<0||burnt<0||cooked+burnt!==consumed)throw unresolved('output mismatch');
+        if(cooked>0?xp<=0:xp!==0)throw unresolved('Cooking XP unobserved or inconsistent');
+        if(isStopped())throw Error('bootstrap cooking stopped after settled conversion; '+last);
+        if(actionError)throw actionError;
+        if(!action?.success)throw Error('bootstrap cooking action failed after settled conversion: '+JSON.stringify(action)+'; '+last);
+        return {consumed,cooked,burnt,xp,ticks:s.tick()-start};
+    }finally{off();if(s.sdk.sendUseItemOnLoc===traced)s.sdk.sendUseItemOnLoc=send;}
+}
+
+// Finite bootstrap only. The caller supplies raw chickens from its owned training kills.
+export async function cookStarterChickens(s:Session,stop:()=>boolean=()=>false,options:{requiredFood?:number}={}){
+    const initial=starterCookingStock(s),start=s.tick(),requiredFood=options.requiredFood??1;
+    if(!Number.isSafeInteger(requiredFood)||requiredFood<0||requiredFood>28)throw Error('invalid starter food requirement');
+    const result=()=>{const now=starterCookingStock(s);return {ok:true,raw:initial.raw,consumed:initial.raw-now.raw,
+        cooked:now.cooked-initial.cooked,burnt:now.burnt-initial.burnt,xp:now.xp-initial.xp,remainingRaw:now.raw,ticks:s.tick()-start};};
+    if(stop())throw Error('bootstrap cooking stopped');
+    if(!initial.raw){
+        if(initial.cooked>=requiredFood)return result();
+        throw Error(`food acquisition: train chickens and collect raw chicken2138; cooked chicken2140 needs${requiredFood-initial.cooked}`);
+    }
+    const r=await walkPath(await sessionWalker(s),[{x:3092,z:3250,tol:1},{x:3089,z:3266,tol:1},{x:3100,z:3285,tol:2},
+        {x:3180,z:3258,tol:2},{x:3215,z:3249,tol:1}],{maxTicks:500,stop});
+    if(!r.ok)throw Error('bootstrap food route: '+r.detail);
+    const boundedStop=()=>stop()||s.tick()-start>=650;
+    while(starterCount(s,2138)>0&&!boundedStop()){
+        if(randomEventsOf(s)?.busy()){
+            if(!await waitUntil(s,()=>boundedStop()||!randomEventsOf(s)?.busy(),{timeoutTicks:12}))throw Error('bootstrap cooking event still busy; retain stock');
+            if(boundedStop())break;
+        }
+        await cookStarterChicken(s,boundedStop);
+    }
+    const need=Math.max(0,requiredFood-starterCount(s,2140));
+    const final={...result(),ok:!boundedStop()&&need===0};
+    console.log('STARTER_COOKING_RESULT '+JSON.stringify(final));
+    if(boundedStop())throw Error('bootstrap cooking stopped; '+JSON.stringify(final));
+    if(need)throw Error(`food acquisition: cooked chicken2140 needs${need}; collect at least${need} raw chicken2138 (burns may require another finite batch); `+JSON.stringify(final));
+    return final;
+}
+
+export function cookCourierReady(c: any, courier: string, cook: string, now: number, requireTarget = false): boolean {
+    return typeof c?.name === 'string' && c.name.toLowerCase() === courier.toLowerCase() && c.server === 'rs-sdk-demo.fly.dev'
+        && !c.result && Number.isFinite(c.at) && now-c.at >= 0 && now-c.at < 30000 && c.pos?.level === 0
+        && Math.max(Math.abs(c.pos.x-3092),Math.abs(c.pos.z-3243)) <= 12
+        && (!requireTarget || typeof c.phase === 'string' && c.phase.toLowerCase() === `collecting ${cook.toLowerCase()}`);
+}
+
+// Called while the bank is open. Fresh staged accounts hold their starter coins in the bank.
+export async function fundFishingTool(s: Session): Promise<number> {
+    const held = () => countItems(s, /^coins$/i);
+    const before = held();
+    if (before >= 5 || countItems(s, /^fly fishing rod$/i) > 0) return 0;
+    const bank = s.sdk.findBankItem(/^coins$/i);
+    if (bank && Number.isSafeInteger(bank.count) && bank.count > 0)
+        await s.bot.withdrawItem(bank, Math.min(bank.count, 25 - before));
+    if (held() < 5) for (const raw of [/^raw shrimps$/i, /^raw anchovies$/i]) {
+        const fish = s.sdk.findBankItem(raw);
+        if (fish && Number.isSafeInteger(fish.count) && fish.count > 0)
+            await s.bot.withdrawItem(fish, fish.count, { asNote: true });
+    }
+    return Math.max(0, held() - before);
+}
+export async function buyFishingSupplies(s: Session, feathers: number): Promise<number> {
+    if (countItems(s, /^fly fishing rod$/i) === 0) {
+        if (countItems(s, /^coins$/i) < 5) for (const raw of [/^raw shrimps$/i, /^raw anchovies$/i])
+            if (countItems(s, raw) > 0) await s.bot.sellToShop(raw, 'all');
+        if (!(await s.bot.buyFromShop(/^fly fishing rod$/i, 1)).success) return 0;
+    }
+    const before = countItems(s, /^feather$/i);
+    if (feathers > 0) await s.bot.buyFromShop(/^feather$/i, feathers);
+    return Math.max(0, countItems(s, /^feather$/i) - before);
+}
 
 type Tile = { x: number; z: number };
 type Pt = [number, number, number];
 const TICKS = Number(process.env.TICKS ?? 1500);
+const MAX_CATCHES = Number(process.env.MAX_CATCHES ?? Number.MAX_SAFE_INTEGER);
+if(!Number.isSafeInteger(MAX_CATCHES)||MAX_CATCHES<1)throw Error('MAX_CATCHES must be a positive safe integer');
 const FEATHER_MIN = Number(process.env.FEATHER_MIN ?? 3);
 const FEATHER_FILL = Number(process.env.FEATHER_FILL ?? 60);
 const CHICKEN_CAP = Number(process.env.CHICKEN_CAP ?? 400);
 const GIVE_TO = process.env.GIVE_TO?.trim() || '';
+const TARGETED_COLLECTION = process.env.TARGETED_COLLECTION === '1';
 const HANDOFF_ONLY = process.env.HANDOFF_ONLY === '1';
 const WAIT = Number(process.env.WAIT ?? 900);
 // TICK3=0: no knife-on-logs 3-tick step; the first bank visit banks the knife and logs (3 more fish per pack).
 // Measured worse (practice 2026-10-23, 3 x 2,500 ticks: 36.6, 48.1, 24.0 food per 1,000 ticks against 34.2, 52.0, 39.5).
 const TICK3 = process.env.TICK3 !== '0';
+// A financed courier owns replenishment in this mode. Finish the useful batch
+// instead of spending the producer's clock gathering replacement feathers.
+const EXTERNAL_REFILL=process.env.EXTERNAL_REFILL==='1';
 
 const FLY_SPOT: Tile = { x: 3239, z: 3251 };
 const FIREPLACE: Tile = { x: 3214, z: 3249 };
@@ -68,6 +207,7 @@ const LURE = /^lure$/i;
 const NEED: Record<string, number> = { 'raw trout': 15, 'raw salmon': 25, 'raw chicken': 1 };
 const WHIRLPOOL = new Set([403, 404, 405, 406]);
 
+if (import.meta.main) {
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 3);
@@ -135,7 +275,11 @@ try {
             return !died && !!p && cheb({ x: gx, z: gz }, p) <= gtol + 1;
         } finally { walkTicks += s.tick() - w0; }
     };
-    const go = async (points: Pt[], where: string) => { if (!(await walk(points))) await end(false, `walk ${where}`); };
+    const go = async (points: Pt[], where: string) => {
+        // Banking may finish after the work budget. Keep the output at its handoff point.
+        if (points === BANK_TO_FLY && over()) return;
+        if (!(await walk(points))) await end(false, `walk ${where}`);
+    };
 
     // Eats a cooked fish (or chicken) below HP 5. Always takes at least one tick.
     const eatIfLow = async (): Promise<boolean> => {
@@ -167,9 +311,8 @@ try {
         await go(TO_FIRE, 'to fireplace');
         const c0 = s.tick();
         try {
-            // MODE=wait (COOK_MODE) clicks again only after the raw item is gone; the default clicks every tick, so the
-            // next use is already queued when the p_delay ends.
-            const waitMode = process.env.COOK_MODE === 'wait';
+            // Observe depletion before the next use. Explicit fast mode remains a timing control.
+            const waitMode = (process.env.COOK_MODE ?? 'wait') === 'wait';
             let stall = 0;
             const raw0 = countItems(s, RAW_ANY), burnt0 = countItems(s, BURNT);
             let rawPrev = raw0;
@@ -254,9 +397,13 @@ try {
                 const re = new RegExp(`^${name}$`, 'i');
                 const before = countItems(s, re);
                 if (before === 0) continue;
-                const d = await s.bot.depositItem(re, -1);
-                if (!d.success) lastFail = `deposit ${name}:${d.message}`;
-                else if (COOKED.test(name)) banked += d.amountDeposited ?? (before - countItems(s, re));
+                if (COOKED.test(name)) {
+                    const ids = [...new Set(inv().filter(i => re.test(i.name)).map(i => i.id))];
+                    for (const id of ids) banked += await depositObserved(s, { id, name });
+                } else {
+                    const d = await s.bot.depositItem(re, -1);
+                    if (!d.success) lastFail = `deposit ${name}:${d.message}`;
+                }
             }
             bankFish = ['Trout', 'Salmon'].reduce((n, name) => n + (s.sdk.findBankItem(new RegExp(`^${name}$`, 'i'))?.count ?? 0), 0);
             packs++;
@@ -279,6 +426,7 @@ try {
 
     // Restocks feathers in bulk (1,000 feathers for 2,000 gp) from Gerrant's shop at Port Sarim
     const restockFeathersFromShop = async () => {
+        if (over()||EXTERNAL_REFILL) return;
         console.log(`MILESTONE restocking feathers from Gerrant's shop (Port Sarim)...`);
         const p = pos();
         if (!p || cheb(BANK, p) > 4) {
@@ -291,19 +439,24 @@ try {
                 if (coinsBank && coinsBank.count > 0) {
                     await s.bot.withdrawItem(coinsBank, Math.min(2000, coinsBank.count));
                 }
+                await fundFishingTool(s);
                 await s.bot.closeBank();
             }
         }
-        if (countItems(s, /^coins$/i) < 10) {
+        if (countItems(s, /^coins$/i) < 10 && countItems(s, /^raw (shrimps|anchovies)$/i) === 0) {
             console.log(`WARN no coins to buy feathers; falling back to chickens`);
             await chickenTrip(FEATHER_FILL, 0);
+            // Like the shop branch, refill ends at the bank. The final bank
+            // checkpoint has no later fishing leg to bring us home.
+            await go(CHICKENS_TO_FIRE, 'from chicken refill to fireplace');
+            await go(FIRE_TO_BANK, 'from chicken refill to Draynor bank');
             return;
         }
         await go(BANK_TO_SARIM, 'to Gerrant at Port Sarim');
         const sh = await s.bot.openShop(/^gerrant$/i);
         if (sh.success) {
             const f0 = countItems(s, FEATHER);
-            await s.bot.buyFromShop(FEATHER, 1000);
+            await buyFishingSupplies(s, 1000);
             await s.bot.closeShop();
             const bought = countItems(s, FEATHER) - f0;
             feathersGot += bought;
@@ -428,6 +581,7 @@ try {
             if (rodItem) await s.bot.withdrawItem(rodItem, 1);
             const fItem = s.sdk.findBankItem(FEATHER);
             if (fItem) await s.bot.withdrawItem(fItem, fItem.count);
+            await fundFishingTool(s);
             await s.bot.closeBank();
         }
         if (countItems(s, FEATHER) < 200) {
@@ -436,9 +590,15 @@ try {
     };
 
     // Withdraws every cooked fish as notes and trades them to GIVE_TO. waitTicks > 0 waits for the player to arrive.
+    const readCourierStatus = () => {
+        if (!/^[A-Za-z0-9_ -]{1,12}$/.test(GIVE_TO)) return undefined;
+        try { return JSON.parse(readFileSync(join(resolve(import.meta.dir, '..'), '.practice', 'status', `${GIVE_TO}.json`), 'utf8')); }
+        catch { return undefined; }
+    };
     const handOff = async (waitFor: number) => {
         const who = new RegExp(`^${GIVE_TO.replace(/[^a-zA-Z0-9 _-]/g, '')}$`, 'i');
-        const near = () => (st()?.nearbyPlayers ?? []).some((p: any) => who.test(p.name) && p.distance <= 12);
+        const near = () => (!TARGETED_COLLECTION || cookCourierReady(readCourierStatus(), GIVE_TO, s.name, Date.now(), true))
+            && (st()?.nearbyPlayers ?? []).some((p: any) => who.test(p.name) && p.distance <= 12);
         const g0 = s.tick();
         try {
             if (!near() && waitFor > 0) await waitUntil(s, () => near() || existsSync(stopFile), { timeoutTicks: waitFor });
@@ -456,15 +616,11 @@ try {
             const notes = inv().filter(i => COOKED.test(i.name) && !edible(i));
             const n = notes.reduce((a, i) => a + i.count, 0);
             if (n === 0) { lastFail = 'no notes to give'; return; }
-            const r = await s.bot.trade(who, { give: notes.map(i => ({ item: new RegExp(`^${i.name}$`, 'i'), amount: i.count })), timeout: 60_000, retryOnBusy: true });
-            if (r.success) { given += n; console.log(`MILESTONE gave ${r.gave.map(g => `${g.count} ${g.name}`).join(', ')} t=${now()}`); }
-            else {
-                lastFail = `trade:${r.reason} ${r.message}`;
-                console.log(`WARN trade ${r.reason} ${r.message}`);
-                // Notes back into the bank, so the next visit tries again.
-                const o2 = await s.bot.openBank();
-                if (o2.success) { for (const i of inv().filter(i => COOKED.test(i.name) && !edible(i))) await s.bot.depositItem(i, -1); await s.bot.closeBank(); }
-            }
+            const server = serverFromEnv(readFileSync(join(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8'));
+            const delivered = await sendHandoff(s,GIVE_TO,server,notes.map(i=>({id:i.id,count:i.count})),
+                () => s.bot.trade(who, { give: notes.map(i => ({ item: new RegExp(`^${i.name}$`, 'i'), amount: i.count })), timeout: 60_000, retryOnBusy: false }));
+            given += delivered;
+            console.log(`MILESTONE gave ${delivered} verified food t=${now()}`);
         } finally { giveTicks += s.tick() - g0; }
     };
 
@@ -472,10 +628,12 @@ try {
     if (HANDOFF_ONLY) {
         if (!GIVE_TO) await end(false, 'HANDOFF_ONLY needs GIVE_TO');
         const p = pos();
-        if (p && cheb(BANK, p) > 4) await go(FIRE_TO_BANK.slice(FIRE_TO_BANK.length - 2), 'to Draynor bank');
+        if (p && cheb(BANK, p) > 4) await go(FIRE_TO_BANK, 'to Draynor bank');
         await handOff(WAIT);
         await end(given > 0, 'no hand-off');
     }
+
+    if(EXTERNAL_REFILL&&(fish()<20||cook()<25))await end(false,'external refill requires Fishing20 and Cooking25');
 
     if (fish() < 20) {
         await trainNetFishing();
@@ -485,14 +643,15 @@ try {
         const o = await s.bot.openBank();
         if (o.success) {
             await s.bot.withdrawItem(ROD, 1);
+            await fundFishingTool(s);
             await s.bot.closeBank();
         }
-        if (slotOf(ROD) === undefined && countItems(s, /^coins$/i) >= 5) {
+        if (slotOf(ROD) === undefined && (countItems(s, /^coins$/i) >= 5 || countItems(s, /^raw (shrimps|anchovies)$/i) > 0)) {
             console.log('MILESTONE buying fly fishing rod at Port Sarim');
             await go(BANK_TO_SARIM, 'to Gerrant');
             const sh = await s.bot.openShop(/^gerrant$/i);
             if (sh.success) {
-                await s.bot.buyFromShop(ROD, 1);
+                await buyFishingSupplies(s, Math.max(0, 200 - countItems(s, FEATHER)));
                 await s.bot.closeShop();
             }
             await go(SARIM_TO_BANK, 'back to Draynor');
@@ -519,16 +678,12 @@ try {
     let stillAnim = 0;
     // The courier waits at Draynor bank (its fresh status file says so): hand over now, not at the next full pack
     // (2026-10-24 live: the courier waited there while the cook had 186 fish banked and three farmers waited for food).
-    const courierStatus = join(resolve(import.meta.dir, '..'), '.practice', 'status', `${GIVE_TO}.json`);
     let lastCourierTrip = -1e9;
     const courierWaiting = () => {
         if (!GIVE_TO || s.tick() - lastCourierTrip < 600) return false;
-        try {
-            const c = JSON.parse(readFileSync(courierStatus, 'utf8'));
-            return Date.now() - c.at < 30_000 && !!c.pos && Math.max(Math.abs(c.pos.x - BANK.x), Math.abs(c.pos.z - BANK.z)) <= 12;
-        } catch { return false; }
+        return cookCourierReady(readCourierStatus(), GIVE_TO, s.name, Date.now(), TARGETED_COLLECTION);
     };
-    while (!over()) {
+    while (!over() && caught < MAX_CATCHES) {
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
         if (await eatIfLow()) continue;
         if (await troll()) continue;
@@ -548,6 +703,7 @@ try {
         }
         if (feathers < FEATHER_MIN) {
             if (countItems(s, RAW_FISH) > 0 || cookedInPack() > 0) { await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); continue; }
+            if(EXTERNAL_REFILL)break;
             await restockFeathersFromShop();
             await go(BANK_TO_FLY, 'back to the river');
             continue;
@@ -615,5 +771,15 @@ try {
         fishTicks += s.tick() - f0;
     }
     if (died) await end(false, 'died');
+    if (existsSync(stopFile)) await end(false, 'stopped');
+    // Moving ends the fishing interaction. Include a catch already queued at the work limit.
+    if (cookable().length > 0 || chain !== null) {
+        const rawAtLimit = countItems(s, RAW_FISH);
+        await go(TO_FIRE, 'final cooking checkpoint');
+        caught += Math.max(0, countItems(s, RAW_FISH) - rawAtLimit);
+        await cookAll();
+    }
+    await bankTrip();
     await end(true, 'ticks');
 } catch (e) { await finish([s], false, String(e)); }
+}

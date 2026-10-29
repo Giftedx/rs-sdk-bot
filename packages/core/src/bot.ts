@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import {accountForSdk,registerRouteActor} from './door-policy';
 import { join, resolve } from 'node:path';
 import { connectInProcess, type Session } from './inprocess';
 import { isLocalServer } from './localserver';
@@ -8,6 +9,8 @@ import { startLedger, formatLedger } from './ledger';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { createWorld, rsPathLength, type Account, type World } from './world';
+import {assertLiveWorkerRelease} from './worker-release';
+import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 
@@ -32,24 +35,47 @@ export function sessionDied(initial: any, now: any): boolean {
         || (initial?.lifeId !== undefined && now.lifeId !== undefined && now.lifeId !== initial.lifeId));
 }
 
+export function watchUnexpectedEnd(s: Pick<Session,'ended'>, isSettling:()=>boolean, stopRequested:()=>boolean,
+    onEnd:(detail:string)=>Promise<unknown>):void {
+    void s.ended.then(end=>{
+        if(!isSettling()&&!stopRequested())void onEnd(`session ended: ${end.reason}`).catch(e=>console.error('Session end cleanup failed',e));
+    });
+}
+
+export async function awaitBotReady(s: Session, log: (line: string) => void): Promise<void> {
+    try {
+        // A connection may finish opening after its owner has already stopped.
+        executionContext.getStore()?.signal.throwIfAborted();
+        const ready = await waitUntil(s, st => st?.inGame && !!st.player
+            && (st.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel ?? 0)>0, { timeoutTicks: 100 });
+        executionContext.getStore()?.signal.throwIfAborted();
+        if (!ready) throw new Error(`${s.name} not in game after 100 ticks`);
+    } catch (error) {
+        s.lifecycle?.record('ready-failed', String(error));
+        // The failed/cancelled readiness wait does not own a usable worker yet.
+        // Keep its session cleanup outside that cancelled scope.
+        await executionContext.exit(async () => {
+            try { log(`LOGOUT ${await logoutSession(s)}`); }
+            finally { await closeWithin([s], 5000); }
+        });
+        throw error;
+    }
+}
+
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
-export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown> } = {}): Promise<Session> {
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown> } = {}): Promise<Session> {
+    if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
     const log = opts.log ?? ((l: string) => console.log(l));
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
     if (!password) throw new Error(`no PASSWORD in bots/${name}/bot.env`);
     const server = serverFromEnv(env);
     assertServerAllowed(server);
+    assertLiveWorkerRelease(server);
     const s = await connectInProcess({ name, password, server });
-    const ready = await waitUntil(s, st => st?.inGame && !!st.player
-        && (st.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel ?? 0)>0, { timeoutTicks: 100 });
-    if (!ready) {
-        // Logged in but not usable: log out before failing, or the account lingers and adds playtime.
-        log(`LOGOUT ${await logoutSession(s)}`);
-        await closeWithin([s], 5000);
-        throw new Error(`${name} not in game after 100 ticks`);
-    }
+    await awaitBotReady(s, log);
     const p = s.sdk.getState()!.player!;
+    s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
@@ -69,6 +95,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     });
     // Live status for the dashboard (packages/dashboard).
     statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
+    // No more game ticks arrive after disconnect. End a script waiting on them
+    // through its own session owner, while planned logout/stop keeps its result.
+    watchUnexpectedEnd(s,()=>settling.has(s),()=>stopping,detail=>
+        opts.onSessionEnd?opts.onSessionEnd(s,sessionDied(p,s.sdk.getState()?.player)?'died':detail)
+            :finish([s],false,sessionDied(p,s.sdk.getState()?.player)?'died':detail));
     return s;
 }
 
@@ -79,16 +110,15 @@ export async function getWorld(): Promise<World> {
 }
 
 export function accountOf(s: Session): Account {
-    const st = s.sdk.getState();
-    const skills: Record<string, number> = {};
-    for (const k of st?.skills ?? []) skills[k.name.toLowerCase()] = k.baseLevel;
-    return { skills, varps: {}, items: (st?.inventory ?? []).map((i: { name: string }) => i.name.toLowerCase().replace(/ /g, '_')) };
+    registerRouteActor(s.sdk,s.client);
+    return accountForSdk(s.sdk);
 }
 
 // Logs one session out in game. The click skips the action queue, and is retried through the combat window.
+// The result goes to this session's own lifecycle attempt; only its server end reason confirms logout.
 export function logoutSession(s: Session): Promise<string> {
     const adapter = { sdk: { sendClickComponent: (id: number) => s.direct({ type: 'clickComponent', componentId: id, reason: 'SDK' }) }, ended: s.ended };
-    return logout(adapter, 15_000).catch(e => `error ${String(e)}`);
+    return logout(adapter, 15_000).catch(e => `error ${String(e)}`).then(out => { s.lifecycle?.record('logout', out); return out; });
 }
 
 // A session close can hang (seen 2026-10-22: one proving run printed RESULT ok, then sat until the 300 s
@@ -113,7 +143,11 @@ const settlements = new WeakMap<Session, Promise<boolean>>();
 // The session's random event watcher, so a script can pause its loop while busy() is true.
 export const randomEventsOf = (s: Session): RandomEventWatch | undefined => randomEvents.get(s);
 
-export async function finish(sessions: Session[], ok: boolean, detail: string): Promise<never> {
+// A worker may report after confirmed logout, using counters settled beforehand.
+// Logout freezes the client cache; it cannot reveal a later server-side credit.
+// String callers keep the same interface and the session owner keeps cleanup.
+type FinishDetail = string | ((ok: boolean) => string);
+export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail): Promise<never> {
     const final = await settle(sessions, ok, detail, {
         // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
         // Logout runs first, so the account leaves the world either way; this only bounds the process.
@@ -124,15 +158,19 @@ export async function finish(sessions: Session[], ok: boolean, detail: string): 
 
 // finish() without the exit: prints RESULT, the ledgers and events, logs every account out, closes every session,
 // and returns the final ok. The bot host (host.ts) calls it once per hosted script.
-export function settle(sessions: Session[], ok: boolean, detail: string, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void } = {}): Promise<boolean> {
-    const existing = sessions.map(s => settlements.get(s)).find(Boolean);
-    if (existing) return existing;
-    const result = settleOnce(sessions, ok, detail, opts);
-    for (const s of sessions) settlements.set(s, result);
+export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void } = {}): Promise<boolean> {
+    const unique = [...new Set(sessions)];
+    const existing = [...new Set(unique.map(s => settlements.get(s)).filter((p): p is Promise<boolean> => !!p))];
+    const fresh = unique.filter(s => !settlements.has(s));
+    if (!fresh.length && existing.length === 1) return existing[0]!;
+    if (!fresh.length && existing.length > 1) return Promise.all(existing).then(results => results.every(Boolean));
+    const prior = Promise.all(existing).then(results => results.every(Boolean));
+    const result = settleOnce(fresh, ok, detail, opts, prior);
+    for (const s of fresh) settlements.set(s, result);
     return result;
 }
 
-async function settleOnce(sessions: Session[], ok: boolean, detail: string, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void }): Promise<boolean> {
+async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void }, prior: Promise<boolean>): Promise<boolean> {
     for (const s of sessions) settling.add(s);
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
@@ -147,7 +185,11 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: string, opts
     const c = await closeWithin(sessions, 5000);
     if (c.timedOut > 0) log(`WARN ${c.timedOut} session close(s) timed out`);
     if (c.timedOut > 0) ok = false;
-    log(`RESULT ${ok ? 'ok' : 'fail'} ${detail}`);
+    if (!await prior) ok = false;
+    let finalDetail: string;
+    try { finalDetail = typeof detail === 'function' ? detail(ok) : detail; }
+    catch (error) { ok = false; finalDetail = `final accounting: ${String(error)}`; }
+    log(`RESULT ${ok ? 'ok' : 'fail'} ${finalDetail}`);
     for (const s of sessions) { statuses.get(s)?.stop(); ledgers.delete(s); statuses.delete(s); randomEvents.delete(s); }
     return ok;
 }

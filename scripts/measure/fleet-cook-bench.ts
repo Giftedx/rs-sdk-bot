@@ -33,7 +33,7 @@ try {
         const started = Date.now();
         const proc = Bun.spawn(['bun', join(repo, 'scripts/cook-stock.ts'), name, '1500'], {
             cwd: rsSdkRoot(), env: { ...process.env, DEMO_OK: '0', COOK_ROUTE: route, MAX_COOK: '60', RAW_RESERVE: '50', RANDOM_EVENTS: '0' }, stdout: 'pipe', stderr: 'pipe',
-        });
+        windowsHide:true});
         const timeout = setTimeout(() => proc.kill(), 300_000);
         let text: string, exit: number;
         try {

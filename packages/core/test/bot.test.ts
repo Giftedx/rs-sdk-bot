@@ -1,5 +1,19 @@
 import { test, expect } from 'bun:test';
-import { closeWithin, settle, sessionDied } from '../src/bot';
+import { closeWithin, settle, sessionDied, watchUnexpectedEnd } from '../src/bot';
+
+test('an unexpected ended session settles a worker even when its script is waiting for ticks',async()=>{
+    let end!:(v:{reason:string})=>void;const ended=new Promise<{reason:string}>(r=>{end=r;});
+    const calls:string[]=[];
+    watchUnexpectedEnd({ended},()=>false,()=>false,async detail=>{calls.push(detail);});
+    end({reason:'logged-out'});await Promise.resolve();await Promise.resolve();
+    expect(calls).toEqual(['session ended: logged-out']);
+});
+test('normal settlement and an explicit stop do not become transient disconnect failures',async()=>{
+    for(const [settling,stopping]of [[true,false],[false,true]]){
+        let calls=0;watchUnexpectedEnd({ended:Promise.resolve({reason:'logged-out'})},()=>settling!,()=>stopping!,async()=>{calls++;});
+        await Promise.resolve();await Promise.resolve();expect(calls).toBe(0);
+    }
+});
 
 test('death detection uses actual death/life state, not legal travel or missing HP',()=>{
     const initial={lifeId:4,respawnCount:0};

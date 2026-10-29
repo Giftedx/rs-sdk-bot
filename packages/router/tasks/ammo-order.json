@@ -1,0 +1,12 @@
+{
+  "id": "ammo-order",
+  "goal": "Transfer an exact owned arrowtip order to the Fletching worker, consume it into arrows, bank the output and reject a duplicate order without another login.",
+  "entry": "scripts/handoff-inputs.ts",
+  "files": ["scripts/handoff-inputs.ts", "scripts/payout-order.ts", "scripts/courier-handoff.ts", "scripts/fletch-arrows.ts", "scripts/handoff-inputs.test.ts", "scripts/payout-order.test.ts", "scripts/iron-handoff-races.test.ts", "scripts/fletch-arrows.test.ts"],
+  "consumer": "scripts/fletch-arrows.ts consumes the delivery and banks 90 iron arrows for Ranged staging",
+  "checks": [
+    {"id": "order-regressions", "phase": "regression", "command": ["bun", "test", "scripts/handoff-inputs.test.ts", "scripts/payout-order.test.ts", "scripts/iron-handoff-races.test.ts", "scripts/fletch-arrows.test.ts", "--timeout", "10000"], "timeoutMs": 60000},
+    {"id": "native-order", "phase": "practice", "command": ["bun", "packages/practice/src/ammo-order-proof.ts"], "timeoutMs": 600000},
+    {"id": "saved-consumer-state", "phase": "consumer", "command": ["bun", "packages/practice/src/ammo-order-proof.ts", "--verify"], "timeoutMs": 30000}
+  ]
+}

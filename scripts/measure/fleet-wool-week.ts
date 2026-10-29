@@ -63,7 +63,7 @@ if(process.env.WOOL_WEEK_OBSERVER==='1'){
         throw new Error('requires actual Master Draybank HP10/all other skills1, held Shrimp/Bread/funded wallet, known equipment and no shears');
     const sourceItems=[...source.inventory,...source.bank,...source.equipment];
     if(sourceItems.some(i=>!Number.isSafeInteger(i.id)||i.id<0||!Number.isSafeInteger(i.count)||i.count<=0))throw new Error('invalid actual owned item data');
-    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
     if(!Number.isFinite(free)||free<10)throw new Error(`operator actor start needs10GiB; actual=${free}`);
     const dir=resolve('.practice/fleet-proof');mkdirSync(dir,{recursive:true});
     const actor=runBotName('flwoolw',1),prefix=`wool-week-${actor}`;
@@ -78,7 +78,7 @@ if(process.env.WOOL_WEEK_OBSERVER==='1'){
     writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
     console.log(`PROOF_START actor=${actor} source=${sourceSha256} sourceAt=${source.at} sourceBankAt=${source.bankAt} heldCoins=${count(source.inventory,995)} bankCoins=${count(source.bank,995)} unchangedFixture=true freeGiB=${free}`);
     const child=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),'--preload',import.meta.path,resolve(script),actor],{
-        env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',WOOL_WEEK_OBSERVER:'1',WOOL_WEEK_SOURCE:JSON.stringify(source),PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1',CAP:'2200',MAX_TRIPS:'3'},stdout:'pipe',stderr:'pipe'});
+        env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',WOOL_WEEK_OBSERVER:'1',WOOL_WEEK_SOURCE:JSON.stringify(source),PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1',CAP:'2200',MAX_TRIPS:'3'},stdout:'pipe',stderr:'pipe',windowsHide:true});
     let output='',timedOut=false,forcedKill=false,stoppedOnDamage=false;
     const stop=(why:string)=>writeFileSync(resolve('.practice',`stop-${actor}`),why);
     const timer=setTimeout(()=>{timedOut=true;stop('wool native bounded timeout');},950000),hard=setTimeout(()=>{forcedKill=true;child.kill();},995000);

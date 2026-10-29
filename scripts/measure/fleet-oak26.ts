@@ -15,13 +15,13 @@ const expectedBows=shaft.bank.find((i:{id:number})=>i.id===845)?.count+26,expect
 if(!Number.isInteger(noteCount)||noteCount<26)throw new Error('actual owned Oak shortfall');
 const bank=shaft.bank.map((i:{id:number;count:number})=>({id:i.id,count:i.count-(i.id===1521?noteCount:0)}));
 if(bank.find((i:{id:number})=>i.id===1521)?.count!==5)throw new Error('requires actual owned Oak represented as notes plus5 bank');
-const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());if(free<11)throw new Error('new start requires11GiB');
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());if(free<11)throw new Error('new start requires11GiB');
 const actor=runBotName('floak26',1),dir=resolve('.practice/fleet-proof'),prefix=`oak26-${actor}`;
 await createBot(actor);
 const path=await applyPreset(actor,{position:shaft.pos,skills:Object.fromEntries(shaft.skills.map((s:{name:string;level:number})=>[s.name,s.level])),inventory:[...shaft.inventory.map((i:{id:number;count:number})=>({id:i.id,count:i.count})),{id:1522,count:noteCount}],bank});
 setPracticeSkills(path,shaft.skills);const initial=readPracticeSave(path);writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
 console.log(`PROOF_START actor=${actor} freeGiB=${free} source=${sourceSha256} MAX_MAKE=26`);
-const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/fletch-arrows.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_EXPECT_SKILLS:JSON.stringify(shaft.skills),MODE:'oak-bows',MAX_MAKE:'26',LOG_RESERVE:'5',STRING_RESERVE:'5',CAP:'1000'},stdout:'pipe',stderr:'pipe'});
+const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/fletch-arrows.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_EXPECT_SKILLS:JSON.stringify(shaft.skills),MODE:'oak-bows',MAX_MAKE:'26',LOG_RESERVE:'5',STRING_RESERVE:'5',CAP:'1000'},stdout:'pipe',stderr:'pipe',windowsHide:true});
 let output='';const timer=setTimeout(()=>p.kill(),450000);
 const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(part);}};
 await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);

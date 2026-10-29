@@ -1,3 +1,5 @@
+import {payoutOrder} from './payout-order';
+import {depositObserved} from '../packages/core/src/deposit';
 // Banker: stands in the Ardougne south bank, takes trades from our own accounts only, and banks what it gets.
 // Finished accounts hand over coins and spare items with scripts/give-to-banker.ts; suppliers and the speedrunner
 // draw from here. Each trade appends a line to .practice/vault-log.jsonl ({at, from, to, items}); the dashboard sums
@@ -85,6 +87,7 @@ export function ourAccounts(server = 'rs-sdk-demo.fly.dev', lookup: (server: str
 async function main() {
 const server = serverFromEnv(readFileSync(join(root, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8'));
 const accounts = () => ourAccounts(server);
+const order = payoutOrder();
 const s = await openBot(name).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 3);
@@ -103,8 +106,8 @@ try {
         if (!o.success) { console.log(`WARN openBank ${o.message}`); return; }
         for (const item of names) {
             const exact = new RegExp(`^${item.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
-            const r = await s.bot.depositItem(exact, -1);
-            if (!r.success) console.log(`WARN deposit ${item}: ${r.message}`);
+            const r = order ? {success:(await depositObserved(s,s.sdk.getInventory().find(i=>i.name===item)!))>0,message:''} : await s.bot.depositItem(exact, -1);
+            if (!r.success) console.log(`WARN deposit ${item}: ${r?.message}`);
         }
         await waitTicks(s, 1);
         await s.bot.closeBank();
@@ -126,19 +129,26 @@ try {
             return;
         }
         const request = JSON.parse(readFileSync(file, 'utf8'));
+        order?.preflight(name,bot);
         const prepared = await preparePayout(s, request.items, process.env.PAYOUT_NOTES === '1', keep);
         const want = prepared.want;
         const exact = exactItem;
         console.log(`PAYOUT_READY ${JSON.stringify({ to: bot, ...prepared })}`);
-        const r = await s.bot.serveTrades({ from: exact(bot), give: want.map(w => ({ item: exact(w.name), amount: w.count })), maxTrades: 1, timeout: 120_000 });
-        const t = r.trades.find(t => t.success);
+        try {
+        let r:Awaited<ReturnType<typeof s.bot.serveTrades>> | undefined;
+        const serve=async()=>{r=await s.bot.serveTrades({from:exact(bot),give:want.map(w=>({item:exact(w.name),amount:w.count})),maxTrades:1,timeout:order?60000:120000});return r;};
+        if(order){const expected=order.expected(want,s.sdk.getInventory());await order.receipt.sendHandoff(s,bot,server,expected,serve);}
+        else await serve();
+        if(!r&&!order)throw Error('no payout progress: trade result missing');
+        const t = order ? {gave:want} : r?.trades.find(t => t.success);
         if (t) {
             const items = t.gave.map(i => ({ name: i.name, count: i.count }));
             appendFileSync(logFile, JSON.stringify({ at: Date.now(), from: name, to: bot, items }) + '\n');
             console.log(`MILESTONE paid ${bot} ${items.map(i => `${i.count} ${i.name}`).join(', ')}`);
             rmSync(file);
-        } else { fails.set(bot, (fails.get(bot) ?? 0) + 1); console.log(`WARN payout to ${bot} not taken: ${r.message}`); }
-        await bankAll();
+        } else { fails.set(bot, (fails.get(bot) ?? 0) + 1); console.log(`WARN payout to ${bot} not taken: ${r?.message}`); }
+        } finally { if(order) await bankAll(); }
+        if(!order) await bankAll();
     };
     while (!existsSync(stop)) {
         for (const f of existsSync(reqDir) ? readdirSync(reqDir).filter(f => f.endsWith('.json')) : []) await payOut(f.slice(0, -5));

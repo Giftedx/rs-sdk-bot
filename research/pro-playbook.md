@@ -1,16 +1,40 @@
+> Current authority, 2026-10-28: all gameplay techniques are authorized. Wine, cocktails, pyre oil, Charge, relogs and tick manipulation need no further approval. Missing supplies create acquisition work, never a route exclusion. Older restriction decisions and model totals below are historical and superseded. See [AGENTS.md](../AGENTS.md).
+
 # Pro playbook for this server (2026-10-23)
 
-Server: rs-sdk demo (LostCity rev 289, about October 2004, members, XP 25x, unlimited run, 400 ms ticks). Boards
+Scope: historical rs-sdk observations and source assumptions (rev 289, XP 25x, 400 ms ticks). Live configuration needs verification. Skill boards
 rank by logged-in ticks to reach a level. Sources: web research on OSRS speedrun and efficiency play (wiki, EHP
 tables), checked against this server's code (`vendor/rs-sdk/server`), plus our own measurements. Companion files:
 `research/tricks-plan.md` (every trick and its status), `research/quest-xp.md` (quest XP at 25x).
 
 ## How pros plan, and what that means here
 
-1. **Quests first.** Efficient players use quest XP to skip slow low levels and choose the order by unlocks and
+### Current allocation review (2026-10-26)
+
+[Saved-state audit](../.practice/fleet-review/audit.json): 22 non-main live credential folders, 21 observed logins, five active earners against a 17-account cap; about 15 GiB free before practice. Counts exclude `_template`. These are observations, not exhaustive live skill/bank refreshes. No account is missing from the config. Eighteen template rows differ from current decisions: `swarm.json` wins; `fleet.ts apply` now refuses to overwrite an existing plan (exclusive creation); templates still need review before reuse.
+
+Seven of 19 supported skills have an observed helper 99: Thieving, Crafting, Fletching, Mining, Fishing, Cooking and Woodcutting. A 99 is completion of a level target, not a board win. No observed 99 in combat, Prayer, Magic, Ranged, Runecraft, Agility, Herblore, Smithing or Firemaking. Missing/stale observations are not verified level 1.
+
+| Allocation | Next useful work | What must pass |
+|---|---|---|
+| OreElse → Smithing | Convert existing copper/tin; then bars → useful gear | [Live eight-bar proof](../.practice/fleet-review/smith-live-proof.json): two batches level1→17,16 bars, exact assets; next qualify iron/gear |
+| Bigchopper → Heroes partner | Quest unlocks instead of more oak | Current flags and saved-state quest entry; resolve Arrav timing |
+| Ballspinner / Shaftmaker | Jewelry, bows and ammo from stock | Item-level demand and production/transfer receipts |
+| Shaftsinker | Feed Runecraft specialist | Altar/quest access, owned handoff, whole-clock route |
+| Shaftshooter / Polevaulter | Fresh Ranged / Agility attempts | Local credentials only; first-login route and supplies unproved |
+| Mightyrod | Combat, bones, drops → Prayer/Herblore | Gear/delivery and survival first; preserve zero-kill block |
+| Swordinhand | Defence20 reached; alternate Arrav donor candidate | Two live cow batches preserved assets; [latest receipt](../.practice/combat-expansion/next/live-proof.json). Qualify Black Arm entry with Bigchopper |
+| Five thieves + courier/cooks | Fund named gear, quest and supply budgets | Reconcile lots; unknown opening food costs remain unknown |
+
+Critical conflicts: main stays gated, but the proposed partner waits for its Arrav certificate from main. Prove an owned alternate donor or a staged early-main handoff; do not require an impossible fully finished partner before main starts. Equipment's local score ceiling ties leaders; strict first is unresolved. Main's current model misses the timed target by 8,950 ticks; specialist wins do not close this gap. GE is authorized again: refresh old purchase/sale proposals under the [market policy](supply-logistics.md#market-policy-current). Competition needs live evidence even after practice passes.
+
+Expansion order: convert existing stock → unlock partner/gear → qualify uncovered skills → claim prepared fresh specialists → scale proved bottlenecks. Keep qualification moving across lanes; do not add another thief while uncovered lanes have a better proved use of capacity. Account creation, reserved names and source-only scripts do not count as wins.
+
+These are candidates, not a fixed route order. Compare quest time, travel and unlock value against every affected shared-clock deadline. Unlimited run is a source-default assumption, not verified live configuration. Numeric rates below apply only to their original test conditions.
+
+1. **Compare quest routes.** Efficient players use quest XP to skip slow low levels and choose the order by unlocks and
    travel ([OSRS optimal quest guide](https://oldschool.runescape.wiki/w/Optimal_quest_guide)). Here quest XP is
-   multiplied by 25 (`Player.addXp`), so quests are worth far more: all quests reach **99 Attack, 99 Strength,
-   99 Defence, 93 Agility, 88 Mining, 88 Magic, 86 Herblore, 86 Crafting, 85 Hitpoints** (`research/quest-xp.md`).
+   multiplied by 25 in the recorded configuration. [Quest XP](quest-xp.md) contains extracted totals, not a proved route or complete reward model.
 2. **Tick manipulation for gathering.** Knife on a log + "Make 1" + a click on the resource in one tick sets a
    2-tick delay without using the log. **Proven: woodcutting +29%.** Same code path for fishing (5-6 -> 3 ticks)
    and mining below a rune pickaxe. Herb tar did not exist in 2004; knife-on-log does the same job.
@@ -19,7 +43,7 @@ tables), checked against this server's code (`vendor/rs-sdk/server`), plus our o
 4. **Exact inputs on exact ticks.** The SDK runs actions one at a time (`packages/core/src/inprocess.ts` pump);
    `s.direct` sends several in one tick. Loc clicks run in the arrival tick only if the bot took no steps
    (`Player.ts:1348`), so stand still before clicking.
-5. **Travel.** Run always (infinite). Teleports by October 2004: Varrock 25, Lumbridge 31, Falador 37, Camelot 45,
+5. **Travel.** Check run energy and server configuration. `Player.updateEnergy` bypasses depletion only with `NODE_INFINITE_RUN`. Historical teleport candidates: Varrock 25, Lumbridge 31, Falador 37, Camelot 45,
    Ardougne 51 (Plague City), Watchtower 58; amulet of glory (Edgeville, Karamja, Draynor, Al Kharid); ring of
    dueling; spirit trees (Tree Gnome Village); gnome gliders (The Grand Tree); Karamja and Brimhaven boats. Not yet
    in the game: charter ships, fairy rings, carpets, canoes, games necklace, home teleport.
@@ -42,14 +66,14 @@ tables), checked against this server's code (`vendor/rs-sdk/server`), plus our o
 | Agility | 6,772 | Regicide + Grand Tree + Underground Pass quest XP, then Brimhaven arena / Wilderness course | Plan |
 | Mining | 3,964 | The Dig Site (382,500) + 3-tick iron with an adamant pickaxe at 3-rock spots | Plan |
 | Magic | 1,513 | Watchtower (382,500) + Grand Tree; then alching or teleports | Plan |
-| Herblore, Crafting, Fletching | 447 / 197 / 58 | Quest XP + zero-delay production at 5 per tick | Supply limited; check the market |
+| Herblore, Crafting, Fletching | 447 / 197 / 58 | Quest XP + zero-delay production at 5 per tick | Supply limited. Use owned stock or permitted NPC shops. |
 | Smithing | 1,337 | The Knight's Sword (318,125) + platebodies | Plan |
 | Prayer, Ranged, Hitpoints | 1,281 / 5,595 / 17,058 | Holy Grail; Temple of Ikov + cannon; quests + combat | Plan |
 | Runecraft | 2,354 | Highest altar + helper trades | Needs money and helpers |
-| Cooking | 38 | Only the login wine route is that fast | Owner decision pending |
+| Cooking | 38 | Historical target includes login wine, now authorized | Authorized. Compare all methods in [cooking-board](cooking-board.md). |
 
-## Rules for our code from now on
-- Look up how pros do a task (web), find the code that governs it, then measure with at least 3 runs.
-- Send same-tick inputs with `s.direct`; never rely on the SDK queue for timing.
-- Every script prints its time counters (pickTicks, shopTicks, walkTicks, idle, waits) so the slowest part shows.
-- Run specialists on different boards at the same time; one account per board.
+## Apply a candidate
+- Follow the [script contract](../docs/script-contract.md). Use existing code before external ideas.
+- Use `s.direct` only for a verified same-tick requirement. Confirm effects and cancellation through the existing session owner.
+- Record useful output, costs and tick counters. Compare matched runs before claiming a rate gain.
+- Allocate specialists under current ownership, admission and pause rules. One account can advance several compatible goals.

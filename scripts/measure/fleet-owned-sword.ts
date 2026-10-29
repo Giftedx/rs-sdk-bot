@@ -27,7 +27,7 @@ if(process.env.OWNED_SWORD_CHILD==='1'){
         ||count([...source.inventory,...source.bank,...source.equipment],1287)!==0)throw new Error('actual Bigpackage Westbank2600GP/2heldTrout/30bankSalmon/noAdamantsword fixture required');
     const sourceItems=[...source.inventory,...source.bank,...source.equipment];
     if(sourceItems.some(i=>!Number.isSafeInteger(i.id)||i.id<0||!Number.isSafeInteger(i.count)||i.count<=0))throw new Error('invalid owned assets');
-    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+    const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
     if(!Number.isFinite(free)||free<9)throw new Error(`one native actor needs9GiB free; actual=${free}`);
     const dir=resolve('.practice/fleet-proof');mkdirSync(dir,{recursive:true});const actor=runBotName('flswordb',1),prefix=`owned-sword-${actor}`;
     writeFileSync(resolve(dir,`${prefix}-source.json`),bytes);await createBot(actor);
@@ -36,7 +36,7 @@ if(process.env.OWNED_SWORD_CHILD==='1'){
     if([...new Set([...sourceItems,...before].map(i=>i.id))].some(id=>count(before,id)!==count(sourceItems,id))||initial.skills.some((s,i)=>s.xp!==source.skills[i]!.xp||s.level!==source.skills[i]!.level))throw new Error('exact owned native fixture mismatch');
     writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
     console.log(`PROOF_START actor=${actor} source=${sourceSha256} sourceAt=${source.at} bankAt=${source.bankAt} exactSkills=true unchangedAssets=true freeGiB=${free}`);
-    const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,actor],{env:{...process.env,OWNED_SWORD_CHILD:'1',DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe'});
+    const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,actor],{env:{...process.env,OWNED_SWORD_CHILD:'1',DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_EXPECT_SKILLS:JSON.stringify(source.skills),PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe',windowsHide:true});
     let output='',timedOut=false,forcedKill=false,stoppedOnDamage=false;
     const stop=(reason:string)=>writeFileSync(resolve('.practice',`stop-${actor}`),reason);
     const timer=setTimeout(()=>{timedOut=true;stop('owned sword native timeout');},600000),hard=setTimeout(()=>{forcedKill=true;p.kill();},645000);

@@ -528,7 +528,7 @@ console.log('SAVE=' + p);`;
         env: { ...process.env, BOT_NAME: name, PRESET: JSON.stringify(preset) },
         stdout: 'pipe',
         stderr: 'pipe',
-    });
+    windowsHide:true});
     const out = r.stdout.toString();
     const m = out.match(/SAVE=(.+)/);
     if (r.exitCode !== 0 || !m) throw new Error(`generateSave failed for ${name}: ${r.stderr.toString()}${out}`);

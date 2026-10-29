@@ -8,7 +8,7 @@ import {runBotName} from '../../packages/practice/src/prove';
 import {readPracticeSave,waitPracticeSave} from './fleet-player-save';
 const sourceSha256=createHash('sha256').update(readFileSync('scripts/fletch-arrows.ts')).digest('hex').toUpperCase();
 if(sourceSha256!=='24D5FE575F31E64881C312F425D326FD690F29DA115E2879240010C6F44FEBE3'||process.env.REUSE_STACK!=='1')throw new Error('requires frozen source and existing stack');
-const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
 if(free<11)throw new Error('practice start needs11GiB');
 const actor=runBotName('flfletch',1),dir=resolve('.practice/fleet-proof'),prefix=`fletch-bootstrap-${actor}`;
 await createBot(actor);
@@ -18,7 +18,7 @@ if(!initial.skills.every((s,i)=>s.xp===(i===3?980:0)&&s.level===(i===3?10:1)))th
 writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
 console.log(`PROOF_START actor=${actor} freeGiB=${free} source=${sourceSha256}`);
 async function run(mode:string,env:Record<string,string>){
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/fletch-arrows.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MODE:mode,CAP:'1000',...env},stdout:'pipe',stderr:'pipe'});
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),resolve('scripts/fletch-arrows.ts'),actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',MODE:mode,CAP:'1000',...env},stdout:'pipe',stderr:'pipe',windowsHide:true});
  const timer=setTimeout(()=>p.kill(),450000);let output='';
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const b of stream){const part=new TextDecoder().decode(b);output+=part;writeFileSync(resolve(dir,`${prefix}-${mode}.log`),output);process.stdout.write(part);}};
  await Promise.all([read(p.stdout),read(p.stderr)]);const code=await p.exited;clearTimeout(timer);

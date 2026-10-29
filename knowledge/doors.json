@@ -387,7 +387,20 @@
   "x": 2372,
   "z": 3119,
   "level": 0,
-  "kind": "open",
+  "angle": 1,
+  "shape": 0,
+  "open": {
+   "id": 4430,
+   "x": 2372,
+   "z": 3120,
+   "level": 0,
+   "angle": 0
+  },
+  "kind": "team",
+  "need": {
+   "team": 1,
+   "whenAxis": true
+  },
   "trigger": "scripts/minigames/game_castlewars/scripts/castlewars_maindoor.rs2:1",
   "src": "maps/m37_48.jm2:5339"
  },
@@ -397,7 +410,20 @@
   "x": 2373,
   "z": 3119,
   "level": 0,
-  "kind": "open",
+  "angle": 1,
+  "shape": 0,
+  "open": {
+   "id": 4429,
+   "x": 2373,
+   "z": 3120,
+   "level": 0,
+   "angle": 2
+  },
+  "kind": "team",
+  "need": {
+   "team": 1,
+   "whenAxis": true
+  },
   "trigger": "scripts/minigames/game_castlewars/scripts/castlewars_maindoor.rs2:8",
   "src": "maps/m37_48.jm2:5368"
  },
@@ -407,7 +433,20 @@
   "x": 2426,
   "z": 3088,
   "level": 0,
-  "kind": "open",
+  "angle": 3,
+  "shape": 0,
+  "open": {
+   "id": 4425,
+   "x": 2426,
+   "z": 3087,
+   "level": 0,
+   "angle": 0
+  },
+  "kind": "team",
+  "need": {
+   "team": 0,
+   "whenAxis": true
+  },
   "trigger": "scripts/minigames/game_castlewars/scripts/castlewars_maindoor.rs2:22",
   "src": "maps/m37_48.jm2:7380"
  },
@@ -417,7 +456,20 @@
   "x": 2427,
   "z": 3088,
   "level": 0,
-  "kind": "open",
+  "angle": 3,
+  "shape": 0,
+  "open": {
+   "id": 4426,
+   "x": 2427,
+   "z": 3087,
+   "level": 0,
+   "angle": 2
+  },
+  "kind": "team",
+  "need": {
+   "team": 0,
+   "whenAxis": true
+  },
   "trigger": "scripts/minigames/game_castlewars/scripts/castlewars_maindoor.rs2:15",
   "src": "maps/m37_48.jm2:7411"
  },
@@ -2137,10 +2189,13 @@
   "x": 2584,
   "z": 3087,
   "level": 0,
+  "angle": 2,
+  "shape": 0,
   "kind": "skill",
   "need": {
    "skill": "magic",
-   "level": 66
+   "level": 66,
+   "whenAxis": true
   },
   "trigger": "scripts/areas/area_yanille/scripts/magic_guild.rs2:7",
   "src": "maps/m40_48.jm2:5925"
@@ -2151,10 +2206,13 @@
   "x": 2584,
   "z": 3088,
   "level": 0,
+  "angle": 2,
+  "shape": 0,
   "kind": "skill",
   "need": {
    "skill": "magic",
-   "level": 66
+   "level": 66,
+   "whenAxis": true
   },
   "trigger": "scripts/areas/area_yanille/scripts/magic_guild.rs2:6",
   "src": "maps/m40_48.jm2:5926"
@@ -2175,10 +2233,13 @@
   "x": 2597,
   "z": 3087,
   "level": 0,
+  "angle": 0,
+  "shape": 0,
   "kind": "skill",
   "need": {
    "skill": "magic",
-   "level": 66
+   "level": 66,
+   "whenAxis": true
   },
   "trigger": "scripts/areas/area_yanille/scripts/magic_guild.rs2:6",
   "src": "maps/m40_48.jm2:6516"
@@ -2189,10 +2250,13 @@
   "x": 2597,
   "z": 3088,
   "level": 0,
+  "angle": 0,
+  "shape": 0,
   "kind": "skill",
   "need": {
    "skill": "magic",
-   "level": 66
+   "level": 66,
+   "whenAxis": true
   },
   "trigger": "scripts/areas/area_yanille/scripts/magic_guild.rs2:7",
   "src": "maps/m40_48.jm2:6517"
@@ -3214,10 +3278,13 @@
   "x": 2611,
   "z": 3394,
   "level": 0,
+  "angle": 3,
+  "shape": 0,
   "kind": "skill",
   "need": {
    "skill": "fishing",
-   "level": 68
+   "level": 68,
+   "whenAxis": false
   },
   "trigger": "scripts/skill_fishing/scripts/fishing_guild.rs2:1",
   "src": "maps/m40_53.jm2:5884"
@@ -4555,7 +4622,14 @@
   "x": 2728,
   "z": 3349,
   "level": 0,
-  "kind": "open",
+  "angle": 1,
+  "shape": 0,
+  "kind": "quest",
+  "need": {
+   "varp": "legendsquest",
+   "minimum": 1,
+   "whenAxis": true
+  },
   "trigger": "scripts/quests/quest_legends/scripts/legends_gate.rs2:1",
   "src": "maps/m42_52.jm2:6368"
  },
@@ -4567,7 +4641,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "legendsquest"
+   "varp": "legendsquest",
+   "minimum": 50
   },
   "trigger": "scripts/quests/quest_legends/scripts/legends_door.rs2:1",
   "src": "maps/m42_52.jm2:6370"
@@ -4578,7 +4653,14 @@
   "x": 2729,
   "z": 3349,
   "level": 0,
-  "kind": "open",
+  "angle": 1,
+  "shape": 0,
+  "kind": "quest",
+  "need": {
+   "varp": "legendsquest",
+   "minimum": 1,
+   "whenAxis": true
+  },
   "trigger": "scripts/quests/quest_legends/scripts/legends_gate.rs2:2",
   "src": "maps/m42_52.jm2:6393"
  },
@@ -4590,7 +4672,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "legendsquest"
+   "varp": "legendsquest",
+   "minimum": 50
   },
   "trigger": "scripts/quests/quest_legends/scripts/legends_door.rs2:2",
   "src": "maps/m42_52.jm2:6396"
@@ -6480,10 +6563,14 @@
   "x": 2933,
   "z": 3289,
   "level": 0,
+  "angle": 3,
+  "shape": 0,
   "kind": "skill",
   "need": {
    "skill": "crafting",
-   "level": 40
+   "level": 40,
+   "worn": "brown_apron",
+   "whenAxis": true
   },
   "trigger": "scripts/skill_crafting/scripts/crafting_guild/crafting_guild.rs2:1",
   "src": "maps/m45_51.jm2:5224"
@@ -6719,7 +6806,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "heroquest"
+   "varp": "heroquest",
+   "minimum": 15
   },
   "trigger": "scripts/areas/areas_heroes_guild/scripts/heroes_entrance.rs2:1",
   "src": "maps/m45_54.jm2:5209"
@@ -6732,7 +6820,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "heroquest"
+   "varp": "heroquest",
+   "minimum": 15
   },
   "trigger": "scripts/areas/areas_heroes_guild/scripts/heroes_entrance.rs2:2",
   "src": "maps/m45_54.jm2:5210"
@@ -24907,7 +24996,8 @@
   "level": 0,
   "kind": "quest",
   "need": {
-   "varp": "qp"
+   "varp": "qp",
+   "minimum": 32
   },
   "trigger": "scripts/areas/area_varrock/scripts/champions_guild.rs2:1",
   "src": "maps/m49_52.jm2:7899"
@@ -24948,10 +25038,14 @@
   "x": 3143,
   "z": 3444,
   "level": 0,
+  "angle": 3,
+  "shape": 0,
   "kind": "skill",
   "need": {
    "skill": "cooking",
-   "level": 32
+   "level": 32,
+   "worn": "chefs_hat",
+   "whenAxis": false
   },
   "trigger": "scripts/skill_cooking/scripts/cooking_guild.rs2:1",
   "src": "maps/m49_53.jm2:6327"

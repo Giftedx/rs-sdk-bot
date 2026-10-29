@@ -37,6 +37,14 @@ test('viewer routes only explicit roots and rejects decoded or double-encoded tr
     for(const path of ['/static/../server.ts','/static/%2e%2e%2fserver.ts','/caches/%252e%252e/file','/static/js%5csecret','/caches/C:/secret','/static/%00bad','/static/%zz','/static//js/x'])
         expect(viewerAssetRoute(path)).toBe('bad');
 });
+test('native map follow selection reaches the inspector only after rendering and private-name filtering',async()=>{
+ const b=browser();let relay:any;b.host.setInterval=(fn:any)=>{relay=fn;};installViewerBridge(b.host);
+ b.host.location.href+='&follow=HiddenActor';relay();expect(b.messages.some(m=>m.data.atlasFollow)).toBe(false);
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();relay();
+ expect(b.messages.filter(m=>m.data.atlasFollow).map(m=>m.data.atlasFollow)).toEqual(['⟦MAIN⟧']);
+ b.host.location.href=b.host.location.href.replace('follow=HiddenActor','follow=Worker');relay();
+ expect(b.messages.at(-1)!.data).toEqual({atlasFollow:'Worker'});
+});
 
 test('HTTP delivery without actual app JSON consumption never opens the privacy gate',async()=>{
     const b=browser();installViewerBridge(b.host);
@@ -99,4 +107,27 @@ test('foreign hidden-list origin is rejected without a request; serialized bridg
     const b=browser();new Function('window',viewerBridgeSource())(b.host);
     await b.consume();b.frame();b.frame();b.geometry();b.present();b.frame();
     expect(b.states().at(-1).state).toBe('ready');
+});
+
+
+test('public chat requires ready privacy and geometry, known roster identity and bounded deduplication',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m)});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ socket.message({t:'roster',p:[[7,'HiddenActor',1,1,0,3],[8,'Worker',1,1,0,3]]});
+ socket.message({t:'tick',k:1,p:[{i:7,ch:'hidden until ready'}]});expect(b.messages.some(m=>m.data.atlasChat)).toBe(false);
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const packet={t:'tick',k:2,p:[{i:7,ch:'Hello HiddenActor'},{i:8,ch:'Hello'},{i:999,ch:'Unknown identity'}]};socket.message(packet);socket.message(packet);
+ const messages=b.messages.filter(m=>m.data.atlasChat);expect(messages).toHaveLength(2);
+ expect(messages[0]!.data.atlasChat).toEqual({key:'2:7:Hello ⟦MAIN⟧',name:'⟦MAIN⟧',text:'Hello ⟦MAIN⟧'});
+ expect(messages[1]!.data.atlasChat.name).toBe('Worker');expect(JSON.stringify(messages)).not.toContain('HiddenActor');
+ expect(messages.every(m=>m.origin==='http://localhost:3102')).toBe(true);
+});
+
+
+test('native world-map open and close are relayed only after the viewer is ready',async()=>{
+ const b=browser();let relay:any,open=false;b.host.setInterval=(fn:any)=>{relay=fn;};b.host.document={querySelector:()=>open?{}:null};installViewerBridge(b.host);
+ open=true;relay();expect(b.messages.some(m=>m.data.atlasWorldMap!==undefined)).toBe(false);
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();relay();relay();
+ expect(b.messages.filter(m=>m.data.atlasWorldMap!==undefined).map(m=>m.data.atlasWorldMap)).toEqual([true]);
+ open=false;relay();expect(b.messages.at(-1)!.data).toEqual({atlasWorldMap:false});
 });

@@ -1,3 +1,7 @@
+import {payoutOrder} from './payout-order';
+import {depositObserved} from '../packages/core/src/deposit';
+import {readFileSync} from 'node:fs';
+import {serverFromEnv} from '../packages/core/src/bot';
 // Take stock from the banker (scripts/banker.ts, Ardougne south bank): writes .practice/withdraw/<bot>.json, walks
 // to the banker and trades until the items arrive. Usage: DEMO_OK=1 bun scripts/take-from-banker.ts <bot> <count>:<item>
 // [...] [--banker=Moneyshot], e.g. `Bigpackage 20000:Coins`.
@@ -17,6 +21,9 @@ const dir = join(resolve(import.meta.dir, '..'), '.practice', 'withdraw');
 const file = join(dir, `${name}.json`);
 const exact = (n: string) => new RegExp(`^${n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
+const order=payoutOrder();
+order?.preflight(banker,name);
+const server=serverFromEnv(readFileSync(join(resolve(import.meta.dir,'..'),'vendor/rs-sdk/bots',name,'bot.env'),'utf8'));
 const s = await openBot(name).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     mkdirSync(dir, { recursive: true });
@@ -26,13 +33,28 @@ try {
     if(!(await waitUntil(s,st=>st.nearbyPlayers.some((p:{name:string})=>p.name.toLowerCase()===banker.toLowerCase()),{timeoutTicks:150})))
         throw new Error('owned banker did not arrive within150ticks');
     const before = items.map(i => countItems(s, exact(i.name)));
+    // Incoming quantity is checked separately;bank the full pre-held exact-ID stack too.
+    const beforeExact = order ? s.sdk.getInventory().filter(i=>i.id===order.id).reduce((n,i)=>n+i.count,0) : 0;
     let ok = false;
-    for (let i = 0; i < 8 && !ok; i++) {
+    if(order){
+        await order.receipt.awaitCollectionOffer(s,banker,server,150);
+        const collected=await order.receipt.collectHandoff(s,banker,server,()=>s.bot.trade(exact(banker),{want:items.map(i=>({item:exact(i.name),amount:i.count})),timeout:60000}));
+        ok=items.length===1&&collected.received===items[0]!.count&&countItems(s,exact(items[0]!.name))-(before[0]!)===items[0]!.count;
+        if(!ok)throw Error('payout prerequisite: exact collection unproved');
+    } else {
+for (let i = 0; i < 8 && !ok; i++) {
         const r = await s.bot.trade(exact(banker), { want: items.map(i => ({ item: exact(i.name), amount: i.count })), timeout: 90_000 });
         ok = r.success;
         if (!ok) { console.log(`WARN trade ${r.reason} ${r.message}`); await waitTicks(s, 5); }
     }
+    }
     const got = items.map((it, k) => `${countItems(s, exact(it.name)) - before[k]!} ${it.name}`).join(', ');
+    if(order&&ok){
+        if(!(await s.bot.openBank()).success)throw Error('payout prerequisite: receiver bank unavailable');
+        const item=s.sdk.getInventory().find(i=>i.id===order.id);
+        if(!item||await depositObserved(s,item)!==beforeExact+items[0]!.count)throw Error('payout prerequisite: receiver bank credit unproved');
+        await s.bot.closeBank();
+    }
     if (!ok) rmSync(file, { force: true });
     await finish([s], ok, `got ${got}`);
 } catch (e) {

@@ -11,7 +11,7 @@ export async function createBot(name: string): Promise<{ name: string; envPath: 
     const root = rsSdkRoot();
     const envPath = join(root, 'bots', name, 'bot.env');
     if (!existsSync(envPath)) {
-        const r = Bun.spawnSync(['bun', 'bots/create-bot.ts', name, '--local', '--no-chat'], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
+        const r = Bun.spawnSync(['bun', 'bots/create-bot.ts', name, '--local', '--no-chat'], { cwd: root, stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
         if (r.exitCode !== 0 || !existsSync(envPath)) {
             throw new Error(`create-bot failed for ${name}: ${r.stderr.toString()}${r.stdout.toString()}`);
         }

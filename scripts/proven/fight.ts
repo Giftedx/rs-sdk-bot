@@ -18,10 +18,10 @@ try {
         const a = await s.bot.attack(target);
         if (!a.success) continue;
         // Dead when that NPC index is gone from the nearby list.
-        const dead = await waitUntil(s, st => !(st?.nearbyNpcs ?? []).some((n: { index: number }) => n.index === target.index), { timeoutTicks: 120 });
-        if (dead) kills++;
+        const dead = await waitUntil(s, st => !(st?.nearbyNpcs ?? []).some((n: { index: number }) => n.index === target.index), { timeoutTicks: 120, signal: reflex.aborted });
+        if (dead && !reflex.aborted.aborted) kills++;
     }
     reflex.stop();
     const gained = xp() - xp0;
-    await finish([s], kills >= 2 && gained > 0, `kills=${kills} combatXp=${gained} reflexAborted=${reflex.aborted.aborted}`);
+    await finish([s], kills >= 2 && gained > 0 && !reflex.aborted.aborted, `kills=${kills} combatXp=${gained} reflexAborted=${reflex.aborted.aborted}`);
 } catch (e) { await finish([s], false, String(e)); }

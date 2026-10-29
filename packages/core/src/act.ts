@@ -1,4 +1,5 @@
 import type { TickSource } from './ticks';
+import { watchTickStream } from './tick-stream';
 
 export type Outcome =
     | { ok: true; ticks: number }
@@ -37,13 +38,13 @@ export async function checked(s: TickSource, spec: CheckedSpec): Promise<Outcome
         const onAbort = () => finish({ ok: false, reason: 'aborted', detail: String(spec.signal?.reason ?? 'aborted'), ticks });
         spec.signal?.addEventListener('abort', onAbort);
         void s.ended?.then(e => finish({ ok: false, reason: 'aborted', detail: `${spec.name}: session ended (${e.reason})`, ticks }));
-        const off = s.onTick(() => {
+        const off = watchTickStream(s, () => {
             ticks++;
             const now = s.sdk.getState();
             if (spec.effect(before, now)) return finish({ ok: true, ticks });
             if (spec.rejectOnFeedback !== false && rejectedCount(now) > base) return finish({ ok: false, reason: 'rejected', detail: `${spec.name}: server refused the op`, ticks });
             if (ticks >= spec.timeoutTicks) return finish({ ok: false, reason: 'timeout', detail: `${spec.name}: no effect in ${ticks} ticks`, ticks });
-        });
+        }, error => finish({ ok: false, reason: 'rejected', detail: `${spec.name}: ${error.message}`, ticks }));
     });
     // The send runs alongside the tick watch and is never awaited here: a long bot.walkTo must not hold back an
     // outcome the ticks already decided. A reply with success=false (e.g. "I can't reach that!") or a throw

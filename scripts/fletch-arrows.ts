@@ -3,10 +3,13 @@
 // Usage: bun scripts/fletch-arrows.ts <bot> [CAP ticks, default 15000] [MODE: arrows | headless | steel | shafts | bows] [TIP_TYPE: rune | adamant | mithril | steel]
 // Headless env: MAX_MAKE=390 (multiple15), SHAFT_RESERVE>=100 (default200), FEATHER_RESERVE>=100.
 // Steel env: MAX_MAKE=15 (multiple15), HEADLESS_RESERVE=200, TIP_RESERVE=5, OUTPUT_RESERVE=0 (final bank floor).
+// Shafts env: MAX_MAKE=25 logs (1..25), LOG_RESERVE=0; BANK_KNIFE=1 also restores the gathering kit.
 // Root must stage owned inputs and clear recovery gates before live admission. DEMO_OK=1 permits live.
-import { openBot, finish, countItems } from '../packages/core/src/bot';
-import type { Session } from '../packages/core/src/inprocess';
-import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { openBot, finish, countItems } from "../packages/core/src/bot";
+import type { Session } from "../packages/core/src/inprocess";
+import { waitTicks, waitUntil } from "../packages/core/src/ticks";
+import { depositObserved } from "../packages/core/src/deposit";
+import {runShafts} from "./fletch-shafts";
 
 export interface HeadlessOptions { cap: number; maximum: number; shaftReserve: number; featherReserve: number; stop?: () => boolean }
 const SHAFT = 52, HEADLESS = 53, FEATHER = 314;
@@ -119,15 +122,19 @@ export function planSteel(headless: number, tips: number, maximum = 15, headless
     return Math.max(0, Math.floor(Math.min(maximum, headless - headlessReserve, tips - tipReserve) / 15) * 15);
 }
 
-export async function runSteel(s: Session, options: SteelOptions) {
+export async function runSteel(s: Session, options: SteelOptions, metal: 'steel' | 'iron' = 'steel') {
+    if (metal !== 'steel' && metal !== 'iron') throw Error('unsupported arrow metal');
+    const STEEL_TIP = metal === 'iron' ? 40 : 41, STEEL_ARROW = metal === 'iron' ? 884 : 886;
+    const STEEL_MATERIALS = new Set([HEADLESS, STEEL_TIP, STEEL_ARROW]);
+    const requiredLevel = metal === 'iron' ? 15 : 30;
     for (const [name, value] of Object.entries({ cap: options.cap, maximum: options.maximum, headlessReserve: options.headlessReserve, tipReserve: options.tipReserve, outputReserve: options.outputReserve }))
         if (!Number.isSafeInteger(value) || value < 0) throw new Error(`invalid steel ${name}`);
     if (options.cap <= 0 || options.maximum <= 0 || options.maximum % 15 || options.headlessReserve < 0 || options.tipReserve < 0)
         throw new Error('steel needs positive CAP, MAX_MAKE multiple15, nonnegative HEADLESS_RESERVE, TIP_RESERVE and OUTPUT_RESERVE');
     const synced = await waitUntil(s, () => (s.sdk.getSkill('Hitpoints')?.level ?? 0) > 0 && (s.sdk.getSkill('Fletching')?.baseLevel ?? 0) > 0, { timeoutTicks: 15 });
     if (!synced) throw new Error('steel skill sync failed');
-    // Revision289 make_arrows checks the current stat, including drains. No input is withdrawn below30.
-    const qualified = () => (s.sdk.getSkill('Fletching')?.level ?? 0) >= 30;
+    // Revision289 make_arrows checks the current stat, including drains.
+    const qualified = () => (s.sdk.getSkill('Fletching')?.level ?? 0) >= requiredLevel;
     const inv = () => s.sdk.getInventory();
     const held = (id: number) => inv().filter(i => i.id === id).reduce((n, i) => n + i.count, 0);
     const xp = () => s.sdk.getSkillXp('Fletching') ?? 0;
@@ -146,7 +153,13 @@ export async function runSteel(s: Session, options: SteelOptions) {
     let made = 0, banked = 0, actions = 0, bankTrips = 0, planned = 0, originalOutput: number | undefined;
     let stop = 'input-insufficient', failure = '';
     let bankSnapshot: { id: number; count: number }[] | undefined;
+    const capture = () => {
+        const observation = s.bankObservation?.();
+        if (!observation) throw Error('arrow bank observation unknown');
+        bankSnapshot = observation.items.map(i => ({id:i.id,count:i.count}));
+    };
     const open = async () => {
+        const generation = s.bankObservation?.()?.generation ?? 0;
         if (!s.sdk.getState()?.bank?.isOpen) {
             const result = await s.bot.openBank();
             if (!result.success) throw new Error(`steel bank: ${result.message}`);
@@ -157,13 +170,13 @@ export async function runSteel(s: Session, options: SteelOptions) {
     };
     const deposit = async () => {
         // Refresh each slot after every deposit. One deposit per actual item ID, even for many slots.
-        for (const id of new Set(inv().filter(i => STEEL_MATERIALS.has(i.id)).map(i => i.id))) {
+        for (const id of new Set(inv().filter(i => STEEL_MATERIALS.has(i.id) && i.count > 0).map(i => i.id))) {
             const item = inv().find(i => i.id === id)!;
-            await s.bot.depositItem(item, -1);
+            await depositObserved(s, item);
             if (held(id) > 0) throw new Error(`steel deposit incomplete: ${item.name}`);
         }
         await waitTicks(s, 1);
-        bankSnapshot = (s.sdk.getState()?.bank?.items ?? []).map(i => ({ id: i.id, count: i.count }));
+        capture();
     };
     const bankCount = (id: number) => bankSnapshot?.filter(i => i.id === id).reduce((n, i) => n + i.count, 0) ?? 0;
     try {
@@ -387,13 +400,28 @@ if (!botName) {
 }
 
 let stopped = false;
-const s = await openBot(botName, (MODE === 'headless' || MODE === 'steel' || MODE === 'oak-bows') ? { onStop: async () => { stopped = true; } } : {}).catch(e => finish([], false, `login: ${String(e)}`));
+const s = await openBot(botName, (MODE === 'headless' || MODE === 'iron' || MODE === 'steel' || MODE === 'oak-bows' || MODE === 'shafts') ? { onStop: async () => { stopped = true; } } : {}).catch(e => finish([], false, `login: ${String(e)}`));
+if (MODE === 'shafts') {
+    try {
+        const r=await runShafts(s,{cap:CAP,maximum:Number(process.env.MAX_MAKE??25),reserve:Number(process.env.LOG_RESERVE??0),bankKnife:process.env.BANK_KNIFE==='1',stop:()=>stopped});
+        console.log('SHAFT_BANK '+JSON.stringify(r));
+        await finish([s],r.ok,`${r.ok||r.stop==='stopped'?'':'no fletching progress: '}mode=shafts ${Object.entries(r).map(([k,v])=>`${k}=${v}`).join(' ')}`);
+    }catch(e){await finish([s],false,`no fletching progress: ${String(e)}`);}
+}
 if (MODE === 'oak-bows') {
     try {
         const r = await runOakBows(s, { cap: CAP, maximum: Number(process.env.MAX_MAKE ?? 25), logReserve: Number(process.env.LOG_RESERVE ?? 0), stringReserve: Number(process.env.STRING_RESERVE ?? 0), stop: () => stopped });
         console.log(`OAK_BOW_BANK ${JSON.stringify(r)}`);
         await finish([s], r.ok, `mode=oak-bows ${Object.entries(r).map(([k, v]) => `${k}=${v}`).join(' ')}`);
     } catch (e) { await finish([s], false, String(e)); }
+}
+if (MODE === 'iron') {
+    try {
+        const r = await runSteel(s, { cap: CAP, maximum: Number(process.env.MAX_MAKE ?? 90), headlessReserve: Number(process.env.HEADLESS_RESERVE ?? 200), tipReserve: Number(process.env.TIP_RESERVE ?? 0), outputReserve: Number(process.env.OUTPUT_RESERVE ?? 0), stop: () => stopped }, 'iron');
+        console.log('IRON_BANK ' + JSON.stringify(r));
+        const accepted = r.ok && r.targetMet;
+        await finish([s], accepted, (accepted ? '' : 'arrow prerequisite: exact order incomplete; ') + 'mode=iron ' + Object.entries(r).map(([k,v]) => k+'='+v).join(' '));
+    } catch(e) { await finish([s], false, 'arrow prerequisite: '+String(e)); }
 }
 if (MODE === 'steel') {
     try {
@@ -435,11 +463,6 @@ try {
             const tipRe = new RegExp(`${TIP_TYPE} arrowtip`, 'i');
             await s.bot.withdrawItem(/headless arrow/i, 1000);
             await s.bot.withdrawItem(tipRe, 1000);
-        } else if (MODE === 'shafts') {
-            await s.bot.depositItem(/arrow shaft/i, -1);
-            await waitTicks(s, 1);
-            if (!findItem(/^knife$/i)) await s.bot.withdrawItem(/^knife$/i, 1);
-            await s.bot.withdrawItem(/^logs$/i, 27);
         } else if (MODE === 'bows') {
             await s.bot.depositItem(/longbow$/i, -1);
             await waitTicks(s, 1);
@@ -493,25 +516,6 @@ try {
             await waitTicks(s, 2);
 
             const gained = countRe(/longbow$/i) - before;
-            if (gained > 0) fletched += gained;
-        } else if (MODE === 'shafts') {
-            const knife = findItem(/^knife$/i);
-            const logs = findItem(/^logs$/i);
-            if (!knife || !logs) {
-                await bank();
-                if (!findItem(/^logs$/i)) {
-                    await waitTicks(s, 5);
-                    continue;
-                }
-            }
-
-            const kn = findItem(/^knife$/i)!;
-            const lg = findItem(/^logs$/i)!;
-            const before = countRe(/arrow shaft/i);
-            await s.sdk.sendUseItemOnItem(kn.slot, lg.slot);
-            // In 289, dialog opens: make arrow shafts
-            await waitTicks(s, 2);
-            const gained = countRe(/arrow shaft/i) - before;
             if (gained > 0) fletched += gained;
         }
     }

@@ -1,0 +1,46 @@
+{
+  "id": "magic-order",
+  "goal": "skills",
+  "entry": "scripts/magic-order.ts",
+  "files": [
+    "scripts/magic-order.ts",
+    "scripts/magic-order.test.ts",
+    "packages/practice/src/magic-order-proof.ts",
+    "packages/practice/test/magic-order-proof.test.ts"
+  ],
+  "consumer": "An ordinary native fixture account starts at Draynor bank with HP10, banked coins and too few mind runes. It runs scripts/magic-order.ts to a requested Magic level. The run buys only the missing runes inside budget and above the cash reserve. It casts wind strike on a safe target, with every cast observed as a rune debit plus an XP change. It banks the leftover runes. It resumes an interrupted session with no reseed and no double purchase. It refuses a rerun at the target, and it refuses short runes when the budget is zero. Independent saved-state checks verify the Magic level and XP effect, the exact rune and coin debit, food eaten, unrelated assets kept, life kept and a confirmed logout.",
+  "checks": [
+    {
+      "id": "magic-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/magic-order.test.ts",
+        "packages/practice/test/magic-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-magic-order-consumer",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/magic-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-magic-order-consumer",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/magic-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

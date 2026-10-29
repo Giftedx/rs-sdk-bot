@@ -2300,6 +2300,7 @@
     "chance": 0.046875,
     "item": "bolts",
     "count": 1,
+    "countMax": 12,
     "conditional": false,
     "src": "scripts/drop tables/scripts/bronze_dragon.rs2:94"
    },
@@ -6313,7 +6314,8 @@
    {
     "chance": 0.046875,
     "item": "bolts",
-    "count": 1,
+    "count": 2,
+    "countMax": 12,
     "conditional": false,
     "src": "scripts/drop tables/scripts/iron_dragon.rs2:80"
    },
@@ -9419,7 +9421,8 @@
    {
     "chance": 0.046875,
     "item": "bolts",
-    "count": 1,
+    "count": 2,
+    "countMax": 12,
     "conditional": false,
     "src": "scripts/drop tables/scripts/steel_dragon.rs2:68"
    },

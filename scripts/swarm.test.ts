@@ -1,23 +1,127 @@
 import { test, expect } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCandidates,admitRecovery } from './swarm';
+
+test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
+ const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
+ expect(()=>admitRecovery(v,()=>{releases++;})).not.toThrow();expect(releases).toBe(1);
+ for(const patch of [{active:['rod']},{running:17},{external:17},{pending:1,freeGB:9.5}])expect(()=>admitRecovery({...v,...patch},()=>{releases++;})).toThrow();
+ expect(releases).toBe(1);expect(()=>admitRecovery(v,()=>{throw Error('source changed');})).toThrow('source changed');
+});
+
+test('orchestrator reserves every distinct participant and rejects conflicting modes and arguments',()=>{
+ const job:Job={accounts:['Donor','Receiver'],orchestrate:true,host:false,script:'scripts/handoff-inputs.ts',enabled:true,args:['batch']};
+ const parsed=parseJob(job);expect(parsed).toEqual({key:'order:Donor+Receiver',accounts:['Donor','Receiver'],host:false,job});
+ for(const patch of [{host:true},{account:'Donor'},{accounts:['Donor','donor']},{accounts:['Donor','bad/name']},{accounts:[]},{accounts:['Donor']},{args:[1]},{maxRestarts:-1}])
+  expect(parseJob({...job,...patch} as Job)).toHaveProperty('error');
+ if('error' in parsed)throw Error(parsed.error);
+ expect(overlappingRun([parsed],['receiver'])).toBe(parsed);
+ expect(completeJobCandidates(parsed,{start:['Donor'],blocked:{Receiver:'paused: stop file'}})).toEqual({start:[],blocked:{Donor:'waiting: all orchestrator participants required',Receiver:'paused: stop file'}});
+ expect(completeJobCandidates(parsed,{start:['Donor','Receiver'],blocked:{}}).start).toEqual(['Donor','Receiver']);
+});
+
+test('supervisor commands forward participants and arguments with bounded orchestrator restarts',()=>{
+ const order:Job={accounts:['Donor','Receiver'],orchestrate:true,host:false,script:'scripts/handoff-inputs.ts',enabled:true,args:['batch','2']};
+ for(const job of [order,{...order,maxRestarts:3},{account:'Donor',script:'scripts/worker.ts',enabled:true,args:['target','2']},{account:'Donor',script:'scripts/worker.ts',enabled:true,maxRestarts:0}]){
+  const p=parseJob(job);if('error' in p)throw Error(p.error);
+  const command=supervisorCommand(p,p.accounts);
+  expect(command).toEqual(['bun','packages/practice/src/supervise.ts','Donor',job.script,String(job.maxRestarts??(job.orchestrate?0:20)),...(job.orchestrate?['Receiver']:[]),...(job.args??[])]);
+ }
+ expect(missionSignature({...order,args:['batch','3']})).not.toBe(missionSignature(order));
+ expect(missionSignature({...order,orchestrate:false})).not.toBe(missionSignature(order));
+ expect(missionSignature({account:'Donor',script:'worker.ts',enabled:true,args:[],orchestrate:false})).toBe(JSON.stringify(['worker.ts',false,['donor'],[]]));
+ const host=parseJob({accounts:['Donor','Receiver'],host:true,script:'worker.ts',enabled:true});if('error' in host)throw Error(host.error);
+ expect(supervisorCommand(host,host.accounts)).toEqual(['bun','packages/practice/src/supervise-host.ts','worker.ts','20','Donor','Receiver']);
+});
+
+test('no demand cannot hide a retained failure, stop marker or release hold',()=>{
+ for(const reason of ['blocked after 1 runs','release-paused after 1 runs']){
+  const selection=startable(['Courier'],true,new Map([['Courier',{reason}]]),()=>Infinity);
+  expect(demandCandidates(selection,()=>{throw Error('not eligible for demand check');})).toBe(selection);
+ }
+ const mixed={start:['Ready'],blocked:{Courier:'ended: blocked after 1 runs'}};
+ expect(demandCandidates(mixed,()=> 'waiting offline: no demand')).toEqual({start:[],blocked:{Courier:'ended: blocked after 1 runs',Ready:'waiting offline: no demand'}});
+ expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).blocked.Courier).toBe('paused: worker release');
+});
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
-import { endedForGood, isReservation, parseJob, startable, loadEnded, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job } from './swarm';
+import { endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
+    applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
+import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
+import { createHash } from 'node:crypto';
+
+const rev=(script:string)=>JSON.stringify([script,false,['x'],[]]);
+const proofRef={server:'rs-sdk-demo.fly.dev',proof:{kind:'producer' as const,attemptId:'A'}};
+const confirmed:RepairProofs={readProof:(account,server)=>({state:'confirmed',account,server,domain:'live',attemptId:'A',loggedOutAt:1,ownerRun:null,receiptSha256:'0'.repeat(64)}),
+    verifyLegacy:()=>({state:'refused',reason:'not used'})};
+// Real producer receipts in a test-owned root, read back through the same reader the controller uses.
+const LIVE='rs-sdk-demo.fly.dev';
+const owner={pid:1,coordinatorRunId:'run-1',workerRelease:null,script:'test',role:null,participants:null};
+function lifecycleProofs(root:string):RepairProofs{return {readProof:(a,s)=>readLogoutProof(a,s,{root}),verifyLegacy:c=>verifyLegacyLogout(c,{root})};}
+function loggedOut(root:string,account:string,server=LIVE){const a=beginSessionAttempt({account,server},{root,owner});a.record('connected');a.record('ready');a.record('ended','logged-out');a.record('logout','logged-out');return a;}
+
+test('an exact scoped repair clears one failure without clearing other failures or stealing a live session', () => {
+    const dir=mkdtempSync(join(tmpdir(),'swarm-repair-')),file=join(dir,'ends.json');
+    try {
+        const ended=new Map([['Repaired',{at:100,reason:'died',revision:rev('scripts/fight.ts')}],['Other',{at:101,reason:'blocked',revision:rev('scripts/fight.ts')}]]);
+        const request={account:'Repaired',endedAt:100,...proofRef};
+        expect(applyEndRepair(request,ended,['repaired'],confirmed).changed).toBe(false);
+        expect(ended.get('Repaired')?.reason).toBe('died');
+        expect(applyEndRepair({...request,endedAt:99},ended,[],confirmed).changed).toBe(false);
+        expect(applyEndRepair(request,ended,[],confirmed).changed).toBe(true);
+        expect(ended.has('Repaired')).toBe(false);expect(ended.get('Other')?.reason).toBe('blocked');
+        persistEnded(file,ended);expect(loadEnded(file).get('Other')?.reason).toBe('blocked');
+        expect(startable(['Repaired','Other'],true,ended,()=>1,()=>200,'new').start).toEqual([]);
+        expect(startable(['Repaired'],true,ended,()=>31000,()=>200,'new').start).toEqual(['Repaired']);
+    } finally {rmSync(dir,{recursive:true,force:true});}
+});
+
+test('invalid end-state files fail closed at startup and preserve the raw failed file', () => {
+    const dir=mkdtempSync(join(tmpdir(),'swarm-repair-bad-')),file=join(dir,'ends.json');
+    try {
+        const ended=new Map([['Worker',{at:100,reason:'died'}]]);
+        for(const raw of ['{','[]','null','{"Worker":{"at":100}}','{"Worker":{"at":-1,"reason":"done"}}','{"Worker":{"at":100,"reason":"done"},"worker":{"at":101,"reason":"done"}}']){
+            writeFileSync(file,raw);
+            expect(readFileSync(file,'utf8')).toBe(raw);
+            expect(()=>loadEnded(file)).toThrow();
+        }
+        rmSync(file);
+        expect(ended.get('Worker')?.reason).toBe('died');
+        expect(loadEnded(file).size).toBe(0);
+    } finally {rmSync(dir,{recursive:true,force:true});}
+});
+
+test('invalid, stale and repeated repair requests cannot reopen completed work or clear a newer failure', () => {
+    const dir=mkdtempSync(join(tmpdir(),'swarm-repair-silent-')),file=join(dir,'ends.json');
+    try {
+        const ended=new Map<string,any>([['Worker',{at:100,reason:'done',revision:'mission'}]]);
+        persistEnded(file,new Map([['Worker',{at:100,reason:'done',revision:'mission'}]]));
+        const raw=readFileSync(file,'utf8');
+        for (const request of [null,[],{},'Worker',{account:'Worker',endedAt:-1},{account:'../Worker',endedAt:100},{account:'Worker',endedAt:100,...proofRef}])
+            expect(applyEndRepair(request,ended,[],confirmed).changed).toBe(false);
+        expect(ended.get('Worker')).toEqual({at:100,reason:'done',revision:'mission'});
+        expect(readFileSync(file,'utf8')).toBe(raw);
+        ended.set('Worker',{at:200,reason:'died',revision:rev('scripts/fight.ts')});
+        expect(applyEndRepair({account:'Worker',endedAt:100,...proofRef},ended,[],confirmed).changed).toBe(false);
+        expect(applyEndRepair({account:'Worker',endedAt:200,...proofRef},ended,[],confirmed).changed).toBe(true);
+        expect(applyEndRepair({account:'Worker',endedAt:200,...proofRef},ended,[],confirmed)).toEqual({changed:false,reason:'already clear'});
+    } finally {rmSync(dir,{recursive:true,force:true});}
+});
 
 test('food courier admission needs owned active low-food farm and dated cooked source bank; default jobs stay unchanged',()=>{
     const now=100000,owned=new Set(['farm','cook']);
     const job:Job={account:'Courier',script:'scripts/foodcourier.ts',enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccount:'Cook'};
     const farm={name:'Farm',server:'rs-sdk-demo.fly.dev',at:now-1000,result:'',bankAt:now-2000,bank:[{id:333,count:50}],inventory:[{id:329,count:25}]};
-    const cook={name:'Cook',server:'rs-sdk-demo.fly.dev',bankAt:now-5000,bank:[{id:329,count:100}]};
+    const cook={name:'Cook',server:'rs-sdk-demo.fly.dev',at:now,result:'',bankAt:now-5000,bank:[{id:329,count:100}]};
     const demand=(f:any=farm,c:any=cook,j:Job=job,o=owned)=>foodSupplyDemand(j,[f,c],o,now);
     expect(demand()).toBe(true);
     expect(demand({...farm,inventory:[{id:329,count:30}]})).toBe(false); // exactly80 is not low
     expect(demand({...farm,inventory:[{id:330,count:30}]})).toBe(false); // incoming cooked notes count too
     for(const change of [{at:now-30000},{at:now+1},{result:'ok paused'},{server:'localhost:8888'},{name:'Other'},
         {bank:null},{bankAt:null},{bankAt:now+1},{bank:[{name:'Trout',count:1}]}])expect(demand({...farm,...change})).toBe(false);
-    for(const change of [{bankAt:undefined},{bankAt:now+1},{server:'localhost:8888'},{name:'Other'},
+    for(const change of [{at:now-30000},{at:now+1},{result:'ok stopped'},{bankAt:undefined},{bankAt:now+1},{server:'localhost:8888'},{name:'Other'},
         {bank:[{id:329,count:99}]},{bank:[{id:331,count:1000}]},{bank:[{id:330,count:1000}]}])expect(demand(farm,{...cook,...change})).toBe(false);
     expect(demand(farm,cook,job,new Set(['cook']))).toBe(false);expect(demand(farm,cook,job,new Set(['farm']))).toBe(false);
     expect(demand(farm,cook,{...job,script:'scripts/goldfarm.ts'})).toBe(false);
@@ -274,4 +378,160 @@ test('payout wake rejects foreign/far/stale/malformed/offline recipients and wor
     expect(wakes(base, { items: [{ name: 'Trout', count: -1 }] })).toBe(false);
     expect(wakes(base, null)).toBe(false); // actual working food without a request cannot wake
     expect(ownedPayoutWaiting([base], undefined, owned, (names, location) => names.some(name => hasPayout(name, base, valid, now, now, location)), now)).toBe(false);
+});
+
+test('either configured cook and retained courier notes keep a hungry farm supplied',()=>{
+    const now=100000,owned=new Set(['farm','first','second','courier']);
+    const job:Job={account:'Courier',script:'scripts/foodcourier.ts',enabled:true,whenFoodLowFrom:['Farm'],foodSourceAccounts:['First','Second'],sourceFoodMinimum:1};
+    const farm={name:'Farm',server:'rs-sdk-demo.fly.dev',at:now,result:'',bankAt:now-1,bank:[],inventory:[]};
+    const second={name:'Second',server:'rs-sdk-demo.fly.dev',at:now,result:'',bankAt:now-1,bank:[{id:333,count:170}]};
+    expect(foodSupplyDemand(job,[farm,second],owned,now)).toBe(true);
+    expect(foodSupplyDemand(job,[farm,{...second,result:'fail stopped'}],owned,now)).toBe(false);
+    const courier={name:'Courier',server:'rs-sdk-demo.fly.dev',at:now-60000,result:'ok done',pos:{x:2653,z:3283,level:0},inventory:[{id:334,count:115}]};
+    expect(foodSupplyDemand(job,[farm,courier],owned,now)).toBe(true);
+    for(const patch of [{pos:{x:3222,z:3218,level:0}},{inventory:[{id:333,count:115}]},{server:'localhost:8888'},{at:now+1},{name:'Foreign'}])
+        expect(foodSupplyDemand(job,[farm,{...courier,...patch}],owned,now)).toBe(false);
+    expect(foodSupplyDemand({...job,foodSourceAccounts:['Second','Foreign']},[farm,second,courier],owned,now)).toBe(false);
+});
+
+test('scoped coordinator starts only its qualified assignments while ordinary swarm preserves existing admission',()=>{
+ const old={account:'Existing',script:'scripts/cook-wine.ts',enabled:true} as Job;
+ expect(coordinatedAdmission(old,false)).toBe(true);expect(coordinatedAdmission(old,true)).toBe(false);
+ expect(coordinatedAdmission({...old,coordinatorOwner:'coordinator'} as Job,true)).toBe(true);
+});
+
+test('repair re-reads exact producer proof: new intent, late old callback, unknown cleanup and missing proof refuse',()=>{
+    const root=mkdtempSync(join(tmpdir(),'swarm-proof-'));
+    try{
+        const proofs=lifecycleProofs(root),fail=()=>new Map([['Rod',{at:100,reason:'blocked after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]);
+        const req=(attemptId:string)=>({account:'Rod',endedAt:100,server:LIVE,proof:{kind:'producer',attemptId}});
+        expect(applyEndRepair(req('x'),fail(),[],proofs).reason).toBe('no producer logout proof');
+        const old=loggedOut(root,'Rod');
+        // A new pre-START connection supersedes the old logout before any status exists.
+        const fresh=beginSessionAttempt({account:'Rod',server:LIVE},{root,owner});
+        expect(applyEndRepair(req(old.attemptId),fail(),[],proofs).reason).toBe('logout proof superseded by a newer attempt');
+        expect(applyEndRepair(req(fresh.attemptId),fail(),[],proofs).reason).toMatch(/^logout not confirmed: connection attempt before START/);
+        fresh.record('connected');fresh.record('logout','timeout');
+        expect(applyEndRepair(req(fresh.attemptId),fail(),[],proofs).reason).toBe('logout not confirmed: logout timeout without an observed end');
+        fresh.record('ended','disconnected');
+        expect(applyEndRepair(req(fresh.attemptId),fail(),[],proofs).reason).toBe('logout not confirmed: ended disconnected');
+        // A late callback cannot rewrite a recorded end or move the latest pointer back.
+        expect(fresh.record('ended','logged-out')).toBe(false);old.record('closed');
+        expect(applyEndRepair(req(old.attemptId),fail(),[],proofs).reason).toBe('logout proof superseded by a newer attempt');
+        const last=loggedOut(root,'Rod'),ended=fail(),holds:ScriptHold[]=[];
+        expect(applyEndRepair(req(last.attemptId),ended,[],proofs,holds)).toEqual({changed:true,reason:`repaired failure cleared (producer ${last.attemptId})`});
+        expect(ended.size).toBe(0);expect(holds.map(h=>[h.account,h.script,h.at])).toEqual([['Rod','scripts/gather-fire-combat.ts',100]]);
+        expect(applyEndRepair({account:'Rod',endedAt:100,server:LIVE},fail(),[],proofs).reason).toBe('missing logout proof');
+        expect(applyEndRepair(req(last.attemptId),new Map([['Rod',{at:100,reason:'died'}]]),[],proofs).reason).toBe('failed script unknown; hold cannot be kept');
+    }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('crossed account/server, practice identity, competing owner, malformed persistence and stop files cannot release a block',()=>{
+    const root=mkdtempSync(join(tmpdir(),'swarm-cross-'));
+    try{
+        const proofs=lifecycleProofs(root),fail=()=>new Map([['Rod',{at:100,reason:'died',revision:rev('scripts/fight.ts')}]]);
+        const other=loggedOut(root,'Other'),practice=loggedOut(root,'Rod','localhost:8888');
+        expect(applyEndRepair({account:'Rod',endedAt:100,server:LIVE,proof:{kind:'producer',attemptId:other.attemptId}},fail(),[],proofs).reason).toBe('no producer logout proof');
+        expect(applyEndRepair({account:'Rod',endedAt:100,server:'localhost:8888',proof:{kind:'producer',attemptId:practice.attemptId}},fail(),[],proofs).reason).toBe('repair server is not the live server');
+        const live=loggedOut(root,'Rod'),req={account:'Rod',endedAt:100,server:LIVE,proof:{kind:'producer',attemptId:live.attemptId}};
+        expect(applyEndRepair(req,fail(),['rod'],proofs).reason).toBe('account still active');
+        // A status showing a session after the logout, outside the receipts (or another attempt), refuses.
+        const loggedAt=(readLogoutProof('Rod',LIVE,{root}) as any).loggedOutAt;
+        const withStatus=(st:any):RepairProofs=>({...proofs,status:()=>st});
+        expect(applyEndRepair(req,fail(),[],withStatus({server:LIVE,started:loggedAt+1})).reason).toBe('status shows a session the logout proof does not cover');
+        expect(applyEndRepair(req,fail(),[],withStatus({server:LIVE,sessionAttemptId:'other'})).reason).toBe('status shows a session the logout proof does not cover');
+        expect(applyEndRepair(req,fail(),[],{...proofs,status:()=>{throw Error('bad json');}}).reason).toBe('status unreadable');
+        expect(applyEndRepair(req,fail(),[],withStatus({server:LIVE,started:loggedAt-5,sessionAttemptId:live.attemptId})).changed).toBe(true);
+        // A crossed receipt behind the pointer is invalid, not proof.
+        const dir=join(root,'live','rs-sdk-demo.fly.dev','rod');
+        const file=join(dir,'attempts',`${live.attemptId}.json`),raw=readFileSync(file,'utf8');
+        writeFileSync(file,raw.replace('"account":"Rod"','"account":"Other"'));
+        expect(applyEndRepair(req,fail(),[],proofs).reason).toBe('invalid logout proof: latest attempt identity mismatch');
+        writeFileSync(file,'{');expect(applyEndRepair(req,fail(),[],proofs).reason).toBe('invalid logout proof: latest attempt missing or malformed');
+        writeFileSync(file,raw);writeFileSync(join(dir,'latest.json'),'{');
+        expect(applyEndRepair(req,fail(),[],proofs).reason).toBe('invalid logout proof: malformed latest pointer');
+        rmSync(join(dir,'latest.json'));expect(applyEndRepair(req,fail(),[],proofs).reason).toBe('invalid logout proof: attempts without a latest pointer');
+        // A real repair still leaves an operator stop in force.
+        const fixed=loggedOut(root,'Rod'),ended=fail();
+        expect(applyEndRepair({...req,proof:{kind:'producer',attemptId:fixed.attemptId}},ended,[],proofs).changed).toBe(true);
+        expect(startable(['Rod'],false,ended,()=>Infinity,undefined,'m',()=>true).blocked.Rod).toBe('paused: stop file');
+        // The default reader is identity-bound too: an invalid name is refused before any file read.
+        expect(currentLogout({account:'../x',server:LIVE,proof:{kind:'producer',attemptId:'a'}},defaultRepairProofs)).toEqual({ok:false,reason:'invalid logout proof: invalid identity'});
+    }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('old combat stays held after a fishing transition until same-script post-failure qualification',()=>{
+    const root=mkdtempSync(join(tmpdir(),'swarm-hold-'));
+    try{
+        const proofs=lifecycleProofs(root),holdsFile=join(root,'holds.json');
+        const ended=new Map([['Rod',{at:100,reason:'blocked after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]),holds:ScriptHold[]=[];
+        // Before repair the account-level failure blocks every role.
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/shark-supply.ts',holds).start).toEqual([]);
+        const first=loggedOut(root,'Rod');
+        expect(applyEndRepair({account:'Rod',endedAt:100,server:LIVE,proof:{kind:'producer',attemptId:first.attemptId}},ended,[],proofs,holds).changed).toBe(true);
+        persistHolds(holdsFile,holds);const loaded=loadHolds(holdsFile);
+        // Valid finite role transfer: fishing may start; the old combat script may not.
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/shark-supply.ts',loaded).start).toEqual(['Rod']);
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'./scripts\\gather-fire-combat.ts',loaded).blocked.Rod).toMatch(/^held: failed scripts\/gather-fire-combat.ts/);
+        // A later fishing success and account-level end deletion do not unban combat.
+        ended.set('Rod',{at:300,reason:'done',revision:rev('scripts/shark-supply.ts')});ended.delete('Rod');
+        expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/gather-fire-combat.ts',loaded).start).toEqual([]);
+        const receiptPath=join(root,'qualify.json'),write=(r:object)=>{writeFileSync(receiptPath,JSON.stringify(r));return createHash('sha256').update(readFileSync(receiptPath)).digest('hex');};
+        const latest=()=>{const p=readLogoutProof('Rod',LIVE,{root});return 'attemptId' in p?p.attemptId:'none';};
+        const good=()=>({ok:true,script:'scripts/gather-fire-combat.ts',account:'rod',at:500,attemptId:latest()});
+        const q=(sha:string,at=500)=>({kind:'script-qualified',account:'Rod',script:'scripts/gather-fire-combat.ts',holdAt:100,server:LIVE,
+            proof:{kind:'producer',attemptId:latest()},qualification:{receiptPath,receiptSha256:sha,at}});
+        expect(applyScriptQualification(q(write({...good(),script:'scripts/shark-supply.ts'})),loaded,[],proofs).changed).toBe(false);
+        expect(applyScriptQualification(q(write({...good(),at:50}),50),loaded,[],proofs).reason).toBe('qualification is not newer than the failure');
+        expect(applyScriptQualification(q(write({...good(),ok:false})),loaded,[],proofs).changed).toBe(false);
+        // A practice or other-session success is not bound to the live producer logout.
+        expect(applyScriptQualification(q(write({...good(),attemptId:'1793249737408-0000000001-0000000001'})),loaded,[],proofs).reason).toBe('qualification is not bound to the current producer logout');
+        const sha=write(good());writeFileSync(receiptPath,JSON.stringify({...good(),extra:1}));
+        expect(applyScriptQualification(q(sha),loaded,[],proofs).reason).toBe('qualification receipt hash changed');
+        const valid=write(good());
+        expect(applyScriptQualification(q(valid),loaded,['ROD'],proofs).reason).toBe('account still active');
+        beginSessionAttempt({account:'Rod',server:LIVE},{root,owner});
+        expect(applyScriptQualification(q(valid),loaded,[],proofs).changed).toBe(false);
+        loggedOut(root,'Rod');
+        expect(applyScriptQualification(q(valid),loaded,[],proofs).reason).toBe('qualification is not bound to the current producer logout');
+        expect(applyScriptQualification(q(write(good())),loaded,[],proofs).reason).toBe('script qualification unsupported: caller receipt has no producer-bound work result');
+        expect(loaded[0]!.qualified).toBeUndefined();
+        expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/gather-fire-combat.ts',loaded).start).toEqual([]);
+        for(const bad of ['{','{}','[{"account":"Rod"}]']){writeFileSync(holdsFile,bad);expect(()=>loadHolds(holdsFile)).toThrow();}
+    }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('persisted unsupported qualification fields never close a failed-script hold',()=>{
+ const root=mkdtempSync(join(tmpdir(),'unsupported-hold-')),file=join(root,'holds.json');
+ try{for(const script of ['scripts/gather-fire-combat.ts','.\\Scripts\\Gather-Fire-Combat.ts'])for(const qualified of [true,{}, {at:500,receiptPath:'caller.json',receiptSha256:'a'.repeat(64),recordedAt:501}]){
+  writeFileSync(file,JSON.stringify([{account:'Rod',script,at:100,reason:'blocked',heldAt:101,qualified}]));
+  const holds=loadHolds(file);
+  expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/gather-fire-combat.ts',holds).start).toEqual([]);
+  expect(holdCandidates({start:['Rod'],blocked:{}},'scripts/shark-supply.ts',holds).start).toEqual(['Rod']);
+ }}finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('anonymous legacy logs cannot qualify logout even with exact hashes and matching adjacent status',()=>{
+    const root=mkdtempSync(join(tmpdir(),'swarm-legacy-'));
+    try{
+        const proofs=lifecycleProofs(root),statusPath=join(root,'status.json'),logPath=join(root,'worker.log');
+        writeFileSync(statusPath,JSON.stringify({name:'Rod',server:LIVE,at:1793158560221,result:'ok'}));
+        const legacyLog='START 1 2 0\nLOGOUT_PROBE_END {}\nLOGOUT logged-out\nRESULT ok x\n';writeFileSync(logPath,legacyLog);
+        const sha=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
+        const claim={kind:'legacy-logout',account:'Rod',server:LIVE,statusPath,statusSha256:sha(statusPath),statusAt:1793158560221,logPath,logSha256:sha(logPath)};
+        const fail=()=>new Map([['Rod',{at:100,reason:'blocked after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]);
+        const req=(proof:object)=>({account:'Rod',endedAt:100,server:LIVE,proof});
+        expect(applyEndRepair(req(claim),fail(),[],proofs).reason).toBe('legacy proof refused: anonymous legacy log has no independent account/server/session attribution');
+        expect(applyEndRepair(req({...claim,account:'Other'}),fail(),[],proofs).reason).toBe('legacy proof identity mismatch');
+        expect(applyEndRepair(req({...claim,statusAt:1}),fail(),[],proofs).reason).toBe('legacy proof refused: legacy status identity mismatch');
+        // Timeout or RESULT-only text is never a legacy logout.
+        const timeout=join(root,'timeout.log');writeFileSync(timeout,'START 1 2 0\nLOGOUT timeout\nRESULT ok x\n');
+        expect(applyEndRepair(req({...claim,logPath:timeout,logSha256:sha(timeout)}),fail(),[],proofs).reason).toMatch(/^legacy proof refused: legacy log lacks/);
+        writeFileSync(logPath,'START 1 2 0\nLOGOUT logged-out\nRESULT ok y\n');
+        expect(applyEndRepair(req(claim),fail(),[],proofs).reason).toBe('legacy proof refused: legacy evidence hash changed');
+        writeFileSync(logPath,legacyLog);
+        // Any newer producer intent, even a pre-START partial connection, overrides legacy evidence.
+        beginSessionAttempt({account:'Rod',server:LIVE},{root,owner});
+        expect(applyEndRepair(req(claim),fail(),[],proofs).reason).toBe('legacy proof refused: producer evidence exists: held');
+    }finally{rmSync(root,{recursive:true,force:true});}
 });

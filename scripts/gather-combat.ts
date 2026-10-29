@@ -53,6 +53,13 @@ export function guardCowWalker(base:PathDeps,safety:()=>string|null){
     return {deps,reason:check};
 }
 
+// The cow loop owns stop/death cleanup on every bank profile. Without onStop,
+// core finish closes the session while the bank retreat is still running.
+export function cowStopControl(target:string,stopFile:()=>boolean){
+    let reason:string|undefined;
+    const options=target==='cow'?{onStop:async(_s:unknown,why:string)=>{if(reason===undefined){reason=why;console.log(`COW_STOP_OWNER ${why}`);}}}:{};
+    return {options,stop:()=>reason!==undefined||stopFile(),reason:()=>reason};
+}
 export const cowCredit=(gone:boolean,selectedXp:number,newDrops:readonly number[])=>gone&&selectedXp>0&&newDrops.length===3&&newDrops.every(n=>n>=1);
 export function cowGroundCounts(items:readonly {id:number;x:number;z:number;count:number}[]){
     const counts=new Map<string,number>();for(const i of items){const key=`${i.id}:${i.x}:${i.z}`;counts.set(key,(counts.get(key)??0)+i.count);}return counts;
@@ -132,6 +139,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
         const threat=()=>{
             observeLife();if(ended||died)return 'cow route session ended/dead';
             if(healthCutoff&&!retreating)return 'cow route banked-food HP40 cutoff';
+            // A stop request halts outbound travel. The bank retreat still runs.
+            if(!retreating&&o.stop?.())return 'cow route stop requested';
             if(hp()<=6)return 'cow route low HP';
             const now=state()?.player;
             if(now&&(now.level!==0||cowBearTile({x:now.worldX,z:now.worldZ})))return 'cow route entered bear bounds or unexpected floor';
@@ -161,7 +170,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     const bankCount=(id:number)=>count(s.bankObservation?.()?.items??[],id);
     const baseline:Record<number,number>={};
     const assetTotals=()=>{const m=new Map<number,number>();for(const i of [...(s.bankObservation?.()?.items??[]),...allKit()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
-    let initialAssets:Map<number,number>|undefined;
+    let initialAssets:Map<number,number>|undefined,initialFood:number|undefined;
+    const ownedFood=()=>s.bankObservation?.()?held(333)+bankCount(333):undefined;
     const bank=async()=>{
         retreating=true;
         const p=state()?.player;if(p)bankDistances.push(Math.max(Math.abs(p.worldX-profile.bank.x),Math.abs(p.worldZ-profile.bank.z)));
@@ -171,8 +181,8 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
         const needed=profile.foodBanked?0:Math.max(0,2-held(333));if(needed){const item=state()?.bank.items.find(i=>i.id===333);if(!item||item.count<needed||!(await s.bot.withdrawItem(item,needed,{asNote:false})).success||held(333)<2)throw new Error('no cow progress: working food restock failed');}
     };
     try {
-        await open();for(const id of ids)baseline[id]=bankCount(id);initialAssets=assetTotals();await s.bot.closeBank();
-        if(!goalReached()){
+        await open();for(const id of ids)baseline[id]=bankCount(id);initialAssets=assetTotals();initialFood=ownedFood();await s.bot.closeBank();
+        if(!goalReached()&&!over()){
         await equipCowKit(s,over);
         if(profile.foodBanked){
             await open();const food=inv().find(i=>i.id===333);if(food){const before=bankCount(333),amount=held(333);if(!(await s.bot.depositItem(food,-1)).success||!await waitUntil(s,()=>held(333)===0&&bankCount(333)===before+amount,{timeoutTicks:10}))throw new Error('no cow progress: working food secure bank failed');}
@@ -223,17 +233,19 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
                 if(!item||!(await s.bot.pickupItem(item)).success||held(id)!==before+1)throw new Error('no cow progress: credited loot pickup mismatch');}
             creditedKills++;damageXp+=selectedXp()-beforeXp;lastProgress=s.tick();console.log(`MILESTONE cow credited=${creditedKills} trainSkill=${training.skill} selectedXp=${selectedXp()-initialSelectedXp} level=${level()} attackXp=${xp()-initialXp} HP=${hp()} heldHide=${held(1739)}`);
         }
-        stop=goalReached()?'target-level':creditedKills===o.maximum?'max-kills':o.stop?.()?'stop-file':died?'died':'cap';
-    } catch(e){failure=String(e);capture('failure');console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);}
+        stop=goalReached()?'target-level':creditedKills===o.maximum?'max-kills':died?'died':o.stop?.()?'stop-file':'cap';
+    } catch(e){failure=String(e);if(stop==='cap'&&o.stop?.())stop='stop-file';capture('failure');console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);}
     finally {if(!died&&!ended)try{await bank();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();offMetrics();}
     const banked={hide:bankCount(1739)-(baseline[1739]??bankCount(1739)),bones:bankCount(526)-(baseline[526]??bankCount(526)),beef:bankCount(2132)-(baseline[2132]??bankCount(2132))};
     const finalAssets=profile.foodBanked?assetTotals():undefined;
     const preserved=profile.foodBanked?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):[...kit].every(([id,n])=>count(allKit(),id)===n)&&held(333)>=2;
+    // Owned Trout in pack and bank change only by observed eating.
+    const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
     const targetMet=(training.targetLevel!==undefined?goalReached():creditedKills===o.maximum)&&Object.values(banked).every(n=>n===creditedKills);
     const partial=training.targetLevel!==undefined&&!targetMet&&creditedKills>0&&['max-kills','cap'].includes(stop)
-        &&Object.values(banked).every(n=>n===creditedKills)&&!failure&&!died&&!ended&&preserved;
+        &&Object.values(banked).every(n=>n===creditedKills)&&!failure&&!died&&!ended&&preserved&&foodAccounted;
     if(o.diagnostics&&!failure)console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);
-    return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved,creditedKills,banked,trainSkill:training.skill,targetLevel:training.targetLevel??null,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,attackXp:xp()-initialXp,damageXp,eaten,bankTrips,hpMin,died,lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?'no cow progress: bounded target unmet':'-'),diagnostics:failure||o.diagnostics?diagnostics:[],bankProfile:profile.north?'north':'south',foodMode:profile.foodBanked?'banked':'held',healthCutoff,walkTicks,walkedTiles,detourTiles,doorInteractions,houseInteractions,maxPackSlots,bankDistances,walkLegs};
+    return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,trainSkill:training.skill,targetLevel:training.targetLevel??null,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,attackXp:xp()-initialXp,damageXp,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?'no cow progress: bounded target unmet':'-'),diagnostics:failure||o.diagnostics?diagnostics:[],bankProfile:profile.north?'north':'south',foodMode:profile.foodBanked?'banked':'held',healthCutoff,walkTicks,walkedTiles,detourTiles,doorInteractions,houseInteractions,maxPackSlots,bankDistances,walkLegs};
 }
 
 if(import.meta.main){
@@ -270,10 +282,10 @@ if (!botName) {
     process.exit(1);
 }
 
-let cowStopped=false;
-const s = await openBot(botName,TARGET_KEY==='cow'&&process.env.COW_BANK_PROFILE==='north'?{onStop:async()=>{cowStopped=true;}}:{}).catch(e => finish([], false, `login: ${String(e)}`));
+const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)));
+const s = await openBot(botName,cowStop.options).catch(e => finish([], false, `login: ${String(e)}`));
 if(TARGET_KEY==='cow'){
-    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:()=>cowStopped||existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`))});await finish([s],r.ok,`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([s],false,String(e));}
 }
 try {

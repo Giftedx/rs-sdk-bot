@@ -1,10 +1,14 @@
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 import { atTile, checked, levelIs, type Outcome } from './act';
 import { waitTicks } from './ticks';
+import { watchTickStream } from './tick-stream';
 import type { TickSource } from './ticks';
-import { blockedDoorsNear, type Account, type Door, type Leg, type Tile, type World } from './world';
+import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World,type DoorBlock } from './world';
+import {accountForSdk,withDoorPolicy} from './door-policy';
+import {refreshGuildEvidence} from './guild-observation';
 
 export interface Walker extends TickSource {
+    client?:unknown;
     sdk: TickSource['sdk'] & { blockDoorTemporarily?(level: number, x: number, z: number, ttlMs?: number): boolean };
     bot: {
         walkTo(x: number, z: number, tolerance?: number): Promise<unknown>;
@@ -20,12 +24,23 @@ const cheb = (a: Tile, b: { worldX: number; worldZ: number }) => Math.max(Math.a
 // Runs route legs in order. Each leg is a checked action; a leg is retried from wherever the bot really is,
 // so a non-exact arrival (Review Focus 4) just becomes the next leg's start.
 export async function walkRoute(s: Walker, legs: Leg[], opts: WalkOptions = {}): Promise<Outcome> {
+    const start = s.tick();
+    return cancellable(opts, async (_wrap, signal) => {
+        try { return await walkRouteInner(s, legs, { ...opts, signal }); }
+        catch (error) {
+            if (signal.aborted) return { ok: false, reason: 'aborted', detail: String(signal.reason ?? 'aborted'), ticks: s.tick() - start };
+            throw error;
+        }
+    });
+}
+
+async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promise<Outcome> {
     const retries = opts.maxRetriesPerLeg ?? 3;
     let total = 0;
     for (const leg of legs) {
         let last: Outcome | null = null;
         for (let attempt = 0; attempt < retries; attempt++) {
-            last = leg.kind === 'walk' ? await walkLeg(s, leg.to, opts) : await climbLeg(s, leg, opts);
+            last = leg.kind === 'walk' ? await walkLeg(s, leg.to, opts,leg.tolerance??2) : await climbLeg(s, leg, opts);
             total += last.ticks;
             if (last.ok || last.reason === 'aborted') break;
             // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
@@ -58,49 +73,76 @@ async function openNearestDoor(s: Walker, near: Tile): Promise<void> {
 // instead of fighting the flee walk.
 async function cancellable(opts: WalkOptions, leg: (send: (f: () => Promise<unknown>) => () => Promise<unknown>, signal: AbortSignal) => Promise<Outcome>): Promise<Outcome> {
     const ac = new AbortController();
-    const onAbort = () => ac.abort(opts.signal?.reason ?? 'aborted');
-    if (opts.signal?.aborted) onAbort(); else opts.signal?.addEventListener('abort', onAbort);
-    const wrap = (f: () => Promise<unknown>) => () => executionContext.run({ signal: ac.signal }, f).catch(e => ({ success: false, message: String(e) }));
+    const parent = executionContext.getStore();
+    const parents = [...new Set([opts.signal, parent?.signal].filter((s): s is AbortSignal => !!s))];
+    const listeners = parents.map(signal => {
+        const abort = () => ac.abort(signal.reason ?? 'aborted');
+        if (signal.aborted) abort(); else signal.addEventListener('abort', abort, { once: true });
+        return () => signal.removeEventListener('abort', abort);
+    });
+    const wrap = (f: () => Promise<unknown>) => () => executionContext.run({ ...parent, signal: ac.signal }, f).catch(e => ({ success: false, message: String(e) }));
     try {
-        return await leg(wrap, ac.signal);
+        return await executionContext.run({ ...parent, signal: ac.signal }, () => leg(wrap, ac.signal));
     } finally {
-        opts.signal?.removeEventListener('abort', onAbort);
+        for (const off of listeners) off();
         if (!ac.signal.aborted) ac.abort('leg done');
     }
 }
 
-function walkLeg(s: Walker, to: Tile, opts: WalkOptions): Promise<Outcome> {
-    return cancellable(opts, (wrap, signal) => walkLegInner(s, to, { ...opts, signal }, wrap));
+function walkLeg(s: Walker, to: Tile, opts: WalkOptions,tolerance:number): Promise<Outcome> {
+    return cancellable(opts, (wrap, signal) => walkLegInner(s, to, { ...opts, signal }, wrap,tolerance));
 }
 
-function walkLegInner(s: Walker, to: Tile, opts: WalkOptions, wrap: (f: () => Promise<unknown>) => () => Promise<unknown>): Promise<Outcome> {
+function walkLegInner(s: Walker, to: Tile, opts: WalkOptions, wrap: (f: () => Promise<unknown>) => () => Promise<unknown>,tolerance:number): Promise<Outcome> {
     const p = s.sdk.getState()?.player;
     // A long walk keeps running inside walkTo, so the budget grows with distance.
     const budget = opts.legTimeoutTicks ?? (p ? cheb(to, p) * 2 + 30 : 60);
     return checked(s, {
         name: `walk to ${to.x},${to.z},${to.level}`,
         pre: st => (st?.player?.level === to.level ? null : `on level ${st?.player?.level}, leg is on level ${to.level}`),
-        send: wrap(() => s.bot.walkTo(to.x, to.z, 2)),
+        send: wrap(() => s.bot.walkTo(to.x, to.z, tolerance)),
         rejectOnFeedback: false,
-        effect: atTile(to.x, to.z, to.level, 2),
+        effect: atTile(to.x, to.z, to.level, tolerance),
         timeoutTicks: budget,
         signal: opts.signal,
     });
 }
 
 function climbLeg(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: WalkOptions): Promise<Outcome> {
-    return cancellable(opts, (wrap, signal) => climbLegInner(s, leg, { ...opts, signal }, wrap));
+    const canonical=canonicalTransportLeg(leg);
+    if(!canonical)return Promise.resolve({ok:false,reason:'precondition',detail:'legacy transport destination does not match its canonical physical route',ticks:0});
+    return cancellable(opts, (wrap, signal) => climbLegInner(s, canonical, { ...opts, signal }, wrap));
 }
 
 function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts: WalkOptions, wrap: (f: () => Promise<unknown>) => () => Promise<unknown>): Promise<Outcome> {
-    const findLoc = (st: any) => (st?.nearbyLocs ?? []).find((l: any) => l.x === leg.at.x && l.z === leg.at.z && l.level === leg.at.level);
-    const arrive = atTile(leg.to.x, leg.to.z, leg.to.level, leg.exact ? 2 : 3);
+    const findLoc = (st: any) => (st?.nearbyLocs ?? []).find((l: any) => l.x === leg.at.x && l.z === leg.at.z && l.level === leg.at.level&&(!leg.interaction||l.id===leg.interaction.id));
+    const arrive = atTile(leg.to.x, leg.to.z, leg.to.level, leg.exact ? 0 : 3);
     const onLevel = levelIs(leg.to.level);
     return checked(s, {
         name: `${leg.loc} ${leg.option} at ${leg.at.x},${leg.at.z},${leg.at.level}`,
-        pre: st => (findLoc(st) ? null : `no loc at ${leg.at.x},${leg.at.z},${leg.at.level}`),
+        pre: st => leg.interaction&&st?.player?.level!==leg.at.level?'transport is on another plane':!transportAllowed(leg,accountForSdk(s.sdk))?'transport prerequisites not observed':leg.entry&&(st?.player?.worldX!==leg.entry.x||st?.player?.worldZ!==leg.entry.z||st?.player?.level!==leg.entry.level)?'not at required transport entry':(findLoc(st) ? null : `no loc at ${leg.at.x},${leg.at.z},${leg.at.level}`),
         send: wrap(async () => {
-            const reply=await s.bot.interactLoc(findLoc(s.sdk.getState()), Number(leg.option.replace(/^op/, '')));
+            const op=Number(leg.option.replace(/^op/, ''));
+            let reply:unknown;
+            if(leg.interaction&&!leg.entry){
+                const endpoint=await interactionApproach(s.sdk,leg.at,leg.interaction);
+                if(opts.signal?.aborted)return {success:false,message:'transport approach cancelled'};
+                if(!endpoint)return {success:false,message:'no operable transport approach'};
+                const atEndpoint=()=>{const p=s.sdk.getState()?.player;return p?.level===endpoint.level&&p.worldX===endpoint.x&&p.worldZ===endpoint.z;};
+                if(!atEndpoint()){
+                    const moved=await walkLeg(s,endpoint,opts,0);
+                    if(!moved.ok)return {success:false,message:`transport approach failed: ${moved.detail??moved.reason}`};
+                }
+                if(opts.signal?.aborted)return {success:false,message:'transport approach cancelled'};
+                const fresh=await interactionApproach(s.sdk,leg.at,leg.interaction),state=s.sdk.getState(),p=state?.player;
+                if(opts.signal?.aborted)return {success:false,message:'transport approach cancelled'};
+                if(!fresh||!p||p.level!==fresh.level||p.worldX!==fresh.x||p.worldZ!==fresh.z||!findLoc(state)||!transportAllowed(leg,accountForSdk(s.sdk)))return {success:false,message:'transport approach or prerequisites changed'};
+                const send=(s.sdk as any).sendInteractLoc;
+                if(typeof send!=='function')return {success:false,message:'geometry transport dispatch unavailable'};
+                // BotActions pre-walks toward the anchor when its distance>2,
+                // which can leave the only allowed face of a large staircase.
+                reply=await send.call(s.sdk,leg.at.x,leg.at.z,leg.interaction.id,op);
+            }else reply=await s.bot.interactLoc(findLoc(s.sdk.getState()),op);
             const r=reply as {success?:boolean;reason?:string;message?:string}|null;
             // The SDK's idle grace can end before a stair transition is published.
             // Its generic map-flag rejection has the same ambiguity. Neither proves refusal.
@@ -111,7 +153,7 @@ function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts
         }),
         // Arrival also clears the map flag. Only the requested floor AND landing prove this leg.
         rejectOnFeedback: false,
-        effect: (b, n) => onLevel(b, n) && arrive(b, n),
+        effect: (b, n) => leg.landing ? !!n?.player&&n.player.level===leg.landing.level&&n.player.worldX>=leg.landing.minX&&n.player.worldX<=leg.landing.maxX&&n.player.worldZ>=leg.landing.minZ&&n.player.worldZ<=leg.landing.maxZ : onLevel(b, n) && arrive(b, n),
         // interactLoc first walks round to a usable side of the loc (24 ticks measured for a 2x2 staircase).
         timeoutTicks: opts.legTimeoutTicks ?? 60,
         signal: opts.signal,
@@ -119,20 +161,33 @@ function climbLegInner(s: Walker, leg: Extract<Leg, { kind: 'transport' }>, opts
 }
 
 export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opts: WalkOptions = {}): Promise<Outcome> {
+    const started=s.tick();
+    let legendsEntry:'crossed'|'refused'|'unknown'|undefined;
+    await installDoorPolicy(s.sdk,s.client);
+    if(s.client){
+        const before=s.sdk.getState()?.player;
+        const requests: string[]=[];
+        const legendsTarget=to.x>=2725&&to.x<=2748&&to.z>=3350&&to.z<=3385;
+        if(before&&Math.abs(before.worldX-2570)<=8&&Math.abs(before.worldZ-3441)<=8&&to.level>before.level&&Math.abs(to.x-2570)<=8&&Math.abs(to.z-3441)<=8)requests.push('dwarf-tower');
+        if(before&&before.level===0&&before.worldX>=3041&&before.worldX<=3062&&Math.abs(before.worldZ-3483)<=5&&to.level===1&&to.x>=3040&&to.x<=3063&&to.z>=3465&&to.z<=3488)requests.push('prayer-guild');
+        if(before&&legendsTarget&&Math.abs(before.worldX-2728)<=30&&Math.abs(before.worldZ-3373)<=30)requests.push('legendsquest');
+        if(before&&legendsTarget&&before.level===0&&before.worldX>=2725&&before.worldX<=2732&&before.worldZ>=3344&&before.worldZ<=3349)requests.push('legends-entry');
+        if(requests.length){const fresh=await refreshGuildEvidence(s as any,requests as any);if(requests.includes('legends-entry'))legendsEntry=fresh.admission?.legendsEntry??'unknown';}
+        acct=accountForSdk(s.sdk);
+    }
+    // The prayer probe may itself climb. Capture start and actor after it returns.
     const p = s.sdk.getState()?.player;
     if (!p) return { ok: false, reason: 'precondition', detail: 'no player state', ticks: 0 };
     const from = { x: p.worldX, z: p.worldZ, level: p.level };
+    // A guarded first entry has already asked the server. A refusal cannot
+    // become a global portal search, and missing publication is still unknown.
+    const observedInside=from.level===0&&from.x>=2728&&from.x<=2729&&from.z>=3350&&from.z<=3351;
+    if(!observedInside&&legendsEntry==='refused')return {ok:false,reason:'precondition',detail:'Legends Guild guard refused first entry',ticks:s.tick()-started};
+    if(!observedInside&&legendsEntry==='unknown'&&(acct.questStages?.legendsquest??0)<1)return {ok:false,reason:'precondition',detail:'Legends Guild first entry was not observed',ticks:s.tick()-started};
     const r = world.route(from, to, acct);
     if (!r.ok) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
-    // The router priced a detour around doors this account cannot pass, but bot.walkTo uses the SDK pathfinder,
-    // which treats every door as open. Block those doors there too, for the area this route covers.
-    const pts = [from, to, ...r.legs.flatMap(l => (l.kind === 'walk' ? [l.to] : [l.at, l.to]))];
-    const MARGIN = 32;
-    const minX = Math.min(...pts.map(t => t.x)) - MARGIN, maxX = Math.max(...pts.map(t => t.x)) + MARGIN;
-    const minZ = Math.min(...pts.map(t => t.z)) - MARGIN, maxZ = Math.max(...pts.map(t => t.z)) + MARGIN;
-    for (const d of world.blockedDoors(acct)) {
-        if (d.x >= minX && d.x <= maxX && d.z >= minZ && d.z <= maxZ) s.sdk.blockDoorTemporarily?.(d.level, d.x, d.z, 600_000);
-    }
+    // Actor prerequisites are synchronous query masks, not long-lived refusal
+    // walls: gear/stat changes and allowed exits must be re-evaluated.
     return walkRoute(s, r.legs, opts);
 }
 
@@ -145,8 +200,9 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
 
 export interface PathTile { x: number; z: number }
 export interface PathPoint extends PathTile { tol?: number }
-export interface PathLoc { x: number; z: number; id: number; optionsWithIndex?: { text: string; opIndex: number }[] }
+export interface PathLoc { x: number; z: number; id: number; name?: string; optionsWithIndex?: { text: string; opIndex: number }[] }
 export interface PathDeps {
+    tick?(): number | undefined;
     pos(): { x: number; z: number; level: number } | null;
     onTick(cb: () => void): () => void;
     ended?: Promise<unknown>;
@@ -162,6 +218,8 @@ export interface PathDeps {
     plan(level: number, from: PathTile, to: PathTile): PathTile[];
 }
 export interface PathOptions {
+    signal?: AbortSignal;
+    idleMs?: number;        // monotonic deadline for a client that stops publishing game ticks
     look?: number;          // tiles ahead to click (default 20; the client routes inside its 104x104 scene)
     reclickAt?: number;     // click again when this many tiles of the last click remain (default 6: 3 ticks running)
     maxTicks?: number;      // tick budget (default: path tiles + 60)
@@ -172,7 +230,10 @@ export interface PathOptions {
 export interface PathResult { ok: boolean; ticks: number; still: number; clicks: number; repaths: number; doors: number; next: number; detail?: string }
 
 const d8 = (a: PathTile, b: PathTile) => Math.max(Math.abs(a.x - b.x), Math.abs(a.z - b.z));
-const openOp = (l: PathLoc) => (l.optionsWithIndex ?? []).find(o => /^open$/i.test(o.text));
+// Open chests and cupboards are not route edges. Legacy path adapters omit names;
+// live SDK locations supply them. Preserve unnamed adapters' door contract.
+const openOp = (l: PathLoc) => l.name && !/\b(?:doors?|gates?)\b/i.test(l.name)
+    ? undefined : (l.optionsWithIndex ?? []).find(o => /^open$/i.test(o.text));
 
 // Corners to single tiles. rs-sdk path segments are straight or diagonal, so a step by sign is exact for them.
 export function expandPath(from: PathTile, corners: PathTile[]): PathTile[] {
@@ -193,6 +254,8 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     const reclickAt = opts.reclickAt ?? 6;
     const log = opts.log ?? (() => {});
     const res: PathResult = { ok: false, ticks: 0, still: 0, clicks: 0, repaths: 0, doors: 0, next: 0 };
+    const signals = [...new Set([opts.signal, executionContext.getStore()?.signal].filter((signal): signal is AbortSignal => !!signal))];
+    if (signals.some(signal => signal.aborted)) return Promise.resolve({ ...res, detail: 'stopped' });
     const start = deps.pos();
     const goal = points[points.length - 1];
     if (!start) return Promise.resolve({ ...res, detail: 'no position' });
@@ -240,16 +303,7 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
     let rejectionReplan = false, rejectionReplanned = false;
     let walkReply: (reply: unknown, from: { x: number; z: number; level: number }, to: PathTile, epoch: number) => void = () => {};
 
-    const nearest = (p: PathTile): { i: number; d: number } => {
-        let best = { i: Math.max(0, idx), d: Infinity };
-        const hi = Math.min(tiles.length - 1, Math.max(0, idx) + look * 2);
-        for (let i = Math.max(0, idx); i <= hi; i++) {
-            const d = d8(tiles[i]!, p);
-            if (d <= best.d) best = { i, d };   // a tie goes forward
-        }
-        return best;
-    };
-    const shutDoorAhead = (from: number, to: number): PathLoc | null => {
+    const shutDoorAt = (from: number, to: number): { l: PathLoc; i: number } | null => {
         const ahead = new Map<string, number>();
         for (let i = Math.max(0, from); i <= Math.min(tiles.length - 1, to); i++) ahead.set(`${tiles[i]!.x},${tiles[i]!.z}`, i);
         let best: { l: PathLoc; i: number } | null = null;
@@ -257,7 +311,21 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             const i = ahead.get(`${l.x},${l.z}`);
             if (i !== undefined && openOp(l) && !blockedDoor(l) && (!best || i < best.i)) best = { l, i };
         }
-        return best?.l ?? null;
+        return best;
+    };
+    const shutDoorAhead = (from: number, to: number): PathLoc | null => shutDoorAt(from, to)?.l ?? null;
+    const nearest = (p: PathTile): { i: number; d: number } => {
+        let best = { i: Math.max(0, idx), d: Infinity };
+        const hi = Math.min(tiles.length - 1, Math.max(0, idx) + look * 2);
+        // A path that folds back past a shut door has later tiles as near as the door tile. A tie must not
+        // cross the first shut door, or the door leaves the open lookahead and the client refuses the click.
+        // A strictly nearer tile still crosses it: the door can shut again behind a bot that walked through.
+        const door = shutDoorAt(idx, hi)?.i ?? Infinity;
+        for (let i = Math.max(0, idx); i <= hi; i++) {
+            const d = d8(tiles[i]!, p);
+            if (d < best.d || (d === best.d && !(best.i <= door && i > door))) best = { i, d };   // a tie goes forward
+        }
+        return best;
     };
     const send = (what: string, f: () => unknown, reply?: (value: unknown) => void): boolean => {
         if (sentThisTick) return false;
@@ -291,10 +359,12 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
 
     return new Promise<PathResult>(resolve => {
         let done = false;
+        const abortSubscriptions: (() => void)[] = [];
         const finish = (ok: boolean, detail?: string) => {
             if (done) return;
             done = true;
             off();
+            for (const unsubscribe of abortSubscriptions) unsubscribe();
             resolve({ ...res, ok, ticks, next: ok ? points.length : (seg[Math.max(0, idx)] ?? 0), detail });
         };
         const failedDoor = (loc: PathLoc, why: string, p: PathTile) => {
@@ -386,29 +456,32 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
                 clickAhead(look);
             }
         };
-        const off = deps.onTick(() => { ticks++; decide(); });
+        const off = watchTickStream(deps, () => { ticks++; decide(); }, error => finish(false, error.message), opts.idleMs);
+        const onAbort = () => finish(false, 'stopped');
+        for (const signal of signals) {
+            if (signal.aborted) { onAbort(); break; }
+            signal.addEventListener('abort', onAbort, { once: true });
+            abortSubscriptions.push(() => signal.removeEventListener('abort', onAbort));
+        }
         void deps.ended?.then(() => finish(false, 'session ended'));
-        decide();
+        if (!done) decide();
     });
 }
 
-export function applyKnownDoorBlocks(sdk: any, level: number, from: PathTile, to: PathTile, doors?: readonly Door[]): Tile[] {
-    const state = sdk.getState();
-    const skills: Record<string, number> = {};
-    for (const skill of state?.skills ?? []) if (typeof skill.name === 'string' && Number.isFinite(skill.baseLevel)) skills[skill.name.toLowerCase()] = skill.baseLevel;
-    const items = (state?.inventory ?? []).filter((i: any) => typeof i?.name === 'string' && i.count > 0).map((i: any) => i.name.toLowerCase().replace(/ /g, '_'));
-    const account: Account = { skills, items, varps: {} }; // Unobserved quest state stays unknown.
+export function applyKnownDoorBlocks(sdk: any, level: number, from: PathTile, to: PathTile, doors?: readonly Door[]): DoorBlock[] {
+    const account=accountForSdk(sdk);
     const blocked = blockedDoorsNear({ ...from, level }, { ...to, level }, account, doors);
-    for (const d of blocked) sdk.blockDoorTemporarily?.(d.level, d.x, d.z, 600_000);
     return blocked;
 }
 
 // PathDeps for an in-process session (packages/core/src/inprocess.ts). Inputs go straight to the client, not
 // through the SDK action queue, so a click leaves on the tick it is decided.
-export async function sessionWalker(s: { sdk: any; onTick(cb: () => void): () => void; direct(a: { type: string; [k: string]: unknown }): Promise<unknown>; ended?: Promise<unknown> }): Promise<PathDeps> {
+export async function sessionWalker(s: { sdk: any; client?:unknown; onTick(cb: () => void): () => void; direct(a: { type: string; [k: string]: unknown }): Promise<unknown>; ended?: Promise<unknown> }): Promise<PathDeps> {
     const pf: any = await import('../../../vendor/rs-sdk/sdk/pathfinding');
-    const knownBlocks = new Set<string>();
+    const grid=await import('../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
+    await installDoorPolicy(s.sdk,s.client);
     return {
+        tick: () => s.sdk.getState()?.tick,
         pos: () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; },
         onTick: cb => s.onTick(cb),
         ended: s.ended,
@@ -418,11 +491,12 @@ export async function sessionWalker(s: { sdk: any; onTick(cb: () => void): () =>
         locs: () => s.sdk.getState()?.nearbyLocs ?? [],
         messages: () => s.sdk.getState()?.gameMessages ?? [],
         blockDoor: (level, loc) => s.sdk.blockDoorTemporarily?.(level, loc.x, loc.z) === true,
-        doorBlocked: (level, loc) => knownBlocks.has(`${level},${loc.x},${loc.z}`) || s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
+        doorBlocked: (level, loc) => s.sdk.isDoorTemporarilyBlocked?.(level, loc.x, loc.z) === true,
         // The session's temporary door blocks (doors walkTo found locked) stay walls for this plan too.
         plan: (level, from, to) => {
-            for (const d of applyKnownDoorBlocks(s.sdk, level, from, to)) knownBlocks.add(`${level},${d.x},${d.z}`);
-            return pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []);
+            pf.initPathfinding();
+            const blocks=applyKnownDoorBlocks(s.sdk, level, from, to).map(b=>b.whenAxis===undefined?{...b,...pf.getDoorAt(b.level,b.x,b.z)}:b);
+            return withDoorPolicy(grid,blocks,()=>pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []));
         },
     };
 }

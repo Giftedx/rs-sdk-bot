@@ -86,9 +86,7 @@ export interface Activity {
     endAt?: string;
     via?: string[];
     bankTrips?: number;
-    // OUT: the row relies on a content bug (a missing level check or a missing delay), or on an item with no legal
-    // source at this scale (research/supply-logistics.md). Never scheduled unless ScheduleOptions.includeOut is set
-    // (owner rule: accepted mechanics yes, content bugs no).
+    // Historical metadata only. Neither policy labels nor missing supplies exclude a route.
     out?: { reason: string; rule?: string; replacement: string };
 }
 
@@ -109,9 +107,9 @@ export interface ScheduleOptions {
     startXp?: Partial<Record<Skill, number>>;
     force?: Record<string, string>; // variant group -> option, to compare routes
     disable?: ReadonlySet<string>; // safe levers to switch off (to measure each lever alone)
-    owner?: ReadonlySet<string>; // owner-decision levers to switch on
+    owner?: ReadonlySet<string>; // legacy name: explicitly enable retired variants for comparison; no approval gate
     travel?: TravelModel; // price the walks between activities; without it travel is 0
-    includeOut?: boolean; // schedule OUT rows too (to show what a content bug would be worth)
+    includeOut?: boolean; // legacy compatibility, ignored: all rows are eligible
     // How schedule() picks one option per variant group: 'overall' (default) = the combination with the earliest
     // Overall finish in this mode (chooseRoute); 'ticks' = each group's option with the fewest raw ticks.
     route?: 'overall' | 'ticks';
@@ -126,23 +124,16 @@ export interface LeverPatch {
 }
 
 // A retired lever was measured and loses ticks; it stays off unless named in opts.owner (to show its size).
-const isOn = (id: string, owner: boolean | undefined, opts: Pick<ScheduleOptions, 'disable' | 'owner'>) =>
-    owner || LEVERS.some(l => l.id === id && l.retired) ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
+const isOn = (id: string, _owner: boolean | undefined, opts: Pick<ScheduleOptions, 'disable' | 'owner'>) =>
+    LEVERS.some(l => l.id === id && l.retired) ? (opts.owner?.has(id) ?? false) : !(opts.disable?.has(id) ?? false);
 
 // The activity table with the levers of `opts` applied: rows filtered, patches merged.
-// OUT rows are removed. A lever whose 'add' rows are all OUT is dead: its patches and 'drop' rows act as if it were off.
+// Missing supplies create procurement work. Historical OUT metadata cannot disable rows or their patches.
 export function applyLevers(activities: Activity[], opts: Pick<ScheduleOptions, 'disable' | 'owner' | 'includeOut'>): Activity[] {
-    const dead = new Set<string>();
-    if (!opts.includeOut) {
-        const adds = new Map<string, boolean>(); // lever -> has a live add row
-        for (const a of activities) if (a.lever?.role === 'add') adds.set(a.lever.id, (adds.get(a.lever.id) ?? false) || !a.out);
-        for (const [id, live] of adds) if (!live) dead.add(id);
-    }
-    const live = { ...opts, disable: new Set([...(opts.disable ?? []), ...dead]), owner: new Set([...(opts.owner ?? [])].filter(id => !dead.has(id))) };
-    return activities.filter(a => leverOn(a, live) && (!a.out || opts.includeOut)).map(a => {
+    return activities.filter(a => leverOn(a, opts)).map(a => {
         let out = a;
         for (const p of a.patches ?? []) {
-            if (!isOn(p.lever, p.owner, live)) continue;
+            if (!isOn(p.lever, p.owner, opts)) continue;
             out = { ...out, ...(p.set ?? {}) };
             if (p.addRequires) out = { ...out, requires: [...(out.requires ?? []), ...p.addRequires] };
             if (p.addSide && out.train) out = { ...out, train: { ...out.train, side: { ...(out.train.side ?? {}), ...p.addSide } } };
@@ -650,6 +641,8 @@ export const MAGIC_TIERS: Tier[] = [
 export const FLETCHING_ARROW_TIERS: Tier[] = FLETCHING_TIERS.filter(t => !t.id.includes('darts'));
 // Diamonds from 43 to 99 (gem.dbrow 107.5 base XP); the GE has sellers for uncut diamonds, not dragonstones.
 export const CRAFTING_NO_DRAGONSTONE_TIERS: Tier[] = CRAFTING_TIERS.filter(t => t.id !== 'dragonstone');
+// Enchants without dragonstone amulets: diamond rings carry Magic from 57 to the Charge level (anvil route).
+export const MAGIC_NO_DRAGONSTONE_TIERS: Tier[] = MAGIC_TIERS.filter(t => !t.id.includes('dragonstone'));
 // Teleports (magic_spells.dbrow levelrequired / experience in tenths / runesrequired). A staff of air pays the
 // air runes (research/supply-costs.md, Magic), so air runes are not listed. Below 25 only combat spells exist.
 export const MAGIC_TELEPORT_TIERS: Tier[] = [
@@ -669,17 +662,17 @@ const LADDERS: Record<string, Tier[]> = {
     fletching: FLETCHING_TIERS, crafting: CRAFTING_TIERS, herblore: HERBLORE_TIERS,
     firemaking: FIREMAKING_TIERS, smithing: SMITHING_TIERS, magic: MAGIC_TIERS,
     'fletching-arrows': FLETCHING_ARROW_TIERS, 'crafting-no-dragonstone': CRAFTING_NO_DRAGONSTONE_TIERS,
-    'magic-teleport': MAGIC_TELEPORT_TIERS,
+    'magic-teleport': MAGIC_TELEPORT_TIERS, 'magic-no-dragonstone': MAGIC_NO_DRAGONSTONE_TIERS,
 };
 export const BOARDS_FILE = join(import.meta.dir, 'haggis-boards.json');
 
 type ActivityJson = Activity & { suppliesLadder?: { skill: Skill; tiers?: string; margin?: number; toLevel?: number } };
 
-// Items with no legal source at the scale the run needs (research/supply-logistics.md, Summary item 1-2).
-// No active row may need more than `max` of one (packages/planner/test/haggis.test.ts).
-export interface Unsourceable { item: string; max: number; reason: string; source: string }
+// Dated procurement leads, never quantity caps. Keep the old export for existing readers.
+export interface Unsourceable { item: string; observedAvailable?: number; max?: number; reason: string; source: string }
 export function haggisUnsourceable(path = BOARDS_FILE): Unsourceable[] {
-    return (JSON.parse(readFileSync(path, 'utf8')) as { unsourceable?: Unsourceable[] }).unsourceable ?? [];
+    const data=JSON.parse(readFileSync(path,'utf8')) as {supplyResearch?:Unsourceable[];unsourceable?:Unsourceable[]};
+    return data.supplyResearch??data.unsourceable??[];
 }
 
 export function haggisActivities(path = BOARDS_FILE): Activity[] {
@@ -699,8 +692,9 @@ export function haggisTravel(path = BOARDS_FILE): TravelModel {
 }
 
 export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];
-// Gap-closer levers used in haggis-boards.json (research/gap-closers.md). Owner levers are off unless named.
+// Gap-closer choices. All techniques are authorized; retired slower variants remain available for comparison.
 export const LEVERS: { id: string; owner: boolean; label: string; retired?: boolean }[] = [
+    { id: 'magic-enchant', owner: false, label: 'Enchant ladder rather than teleport ladder; compare by disabling this option' },
     { id: 'combat-hp-bound', owner: false, label: "Melee by combat (HP-bound); melee-only quests after Overall; Witch's House split out" },
     // Retired 2026-10-23: measured, it slows Defence to 86.7 style XP/tick and loses ticks in every table
     // (research/combat-measure.md section 6); bow + cannon carries Ranged instead.
@@ -712,10 +706,8 @@ export const LEVERS: { id: string; owner: boolean; label: string; retired?: bool
     // Defence trains at the ranged row spot right after the Ranged row, before the walk to the Wilderness course.
     { id: 'def-at-ranged-spot', owner: false, label: 'Defence top-up at the Gnome battlefield right after the Ranged row (no walk back)' },
     { id: 'flinch-gather', owner: false, label: '2-tick flinch woodcutting and fishing (tick manipulation, UNVERIFIED live)' },
-    // Owner rule: accepted mechanics yes, content bugs no. charge.rs2 has no p_delay (5 casts a tick) and no "2005"
-    // note for that, so it counts as a content bug (research/rival-gap-list.md); kept here only to show its size.
-    { id: 'charge-spam', owner: true, label: 'Charge spell 80 -> 99, no delay, no recast check (content bug: OUT)' },
-    { id: 'wild-iron', owner: true, label: '5-rock Wilderness iron spot (PvP risk)' },
+    { id: 'charge-spam', owner: false, label: 'Charge spell 80 -> 99, no delay, no recast check' },
+    { id: 'wild-iron', owner: false, label: '5-rock Wilderness iron spot (PvP risk)' },
     // Rival techniques, priced from bleugreen/rs-sdk@3bd2ab0a (ESTIMATE until we measure them; research/rival-gap-list.md).
     { id: 'rival-knife-mine', owner: false, label: 'Knife-starter mining, Ardougne zoo iron rotation' },
     { id: 'rival-altar-room-rc', owner: false, label: '7-tick altar-room runecraft cycle with givers' },
@@ -727,9 +719,12 @@ export const LEVERS: { id: string; owner: boolean; label: string; retired?: bool
     { id: 'rival-stun-pack', owner: false, label: 'Stun pack: skill actions inside pickpocket stuns' },
     { id: 'rival-monkey-madness', owner: false, label: 'Monkey Madness before melee and thieving' },
     { id: 'rival-sea-slug', owner: false, label: 'Sea Slug for early Fishing' },
+    // Retired 2026-10-29: Cairn's order (research/community-and-upstream.md section 7) loses 628 ticks in our model.
+    // Dragon Slayer replaces the Strength and Defence top-ups, but Hitpoints then needs Witch's House at the end.
+    { id: 'rival-dragon-combat', owner: false, retired: true, label: 'Dragon Slayer before the melee top-ups, Doric for the 32 QP (RETIRED: loses ticks in the model)' },
 ];
 export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
-    { id: 'a', label: 'No unapproved tricks', tricks: [] },
+    { id: 'a', label: 'All server mechanics (default)', tricks: TRICKS },
     { id: 'b', label: 'With login wine', tricks: ['loginWine'] },
     { id: 'c', label: 'All tricks optional (login wine, stun relog, sacred oil)', tricks: TRICKS },
 ];
@@ -737,10 +732,29 @@ export const SCENARIOS: { id: string; label: string; tricks: Trick[] }[] = [
 // Supplies a helper stages for the activities the scenario uses, summed by item. With `boards`, the route is the
 // one schedule() uses (chooseRoute); without, the raw-tick choice. An item made by a row of the route is left out.
 export function suppliesFor(activities: Activity[], opts: ScheduleOptions, boards?: Board[]): Supply[] {
+    return goalRequirementsFor(activities, opts, boards).supplies.map(({item,count})=>({item,count}));
+}
+
+// Keep shared unlocks once, but add consumables across consumers. These are requirements,
+// not completion claims: activity IDs must not be treated as observed quest flags.
+export function goalRequirementsFor(activities: Activity[], opts: ScheduleOptions, boards?: Board[]) {
     const route = boards && opts.route !== 'ticks' ? chooseRoute(boards, activities, opts).route : {};
     const acts = chooseVariants(activities, { ...opts, force: { ...opts.force, ...route } });
     const ids = new Set(acts.map(a => a.id));
-    const out = new Map<string, number>();
-    for (const a of acts) for (const s of a.supplies ?? []) if (!s.from || !ids.has(s.from)) out.set(s.item, (out.get(s.item) ?? 0) + s.count);
-    return [...out].map(([item, count]) => ({ item, count }));
+    const out = new Map<string, {item:string;count:number;consumers:string[]}>();
+    const unlocks = new Map<string, {activity:string;consumers:string[];selected:boolean}>();
+    for (const a of acts) {
+        for (const id of a.requires ?? []) {
+            const row=unlocks.get(id)??{activity:id,consumers:[],selected:ids.has(id)};
+            if(!row.consumers.includes(a.id))row.consumers.push(a.id);
+            unlocks.set(id,row);
+        }
+        for (const s of a.supplies ?? []) if (!s.from || !ids.has(s.from)) {
+            const row=out.get(s.item)??{item:s.item,count:0,consumers:[]};
+            row.count+=s.count;
+            if(!row.consumers.includes(a.id))row.consumers.push(a.id);
+            out.set(s.item,row);
+        }
+    }
+    return {supplies:[...out.values()],unlocks:[...unlocks.values()]};
 }

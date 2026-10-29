@@ -20,7 +20,7 @@ const VYVIN_STAIRS = { x: 2984, z: 3337 };                 // stairs 1722 on lev
 const CUPBOARD = { x: 2984, z: 3336 };                     // vyvincupboardshut 2271 / vyvincupboardopen on level 2
 const ITEM = { pie: 2325, bar: 2351, portrait: 666, sword: 667, blurite: 668 };
 
-const q = await openQuest({ cap: 3000 });
+const q = await openQuest({ cap: 3000, reservedFood: { [ITEM.pie]: 1 } });
 try {
     let questDone = false;
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });

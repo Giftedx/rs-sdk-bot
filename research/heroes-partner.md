@@ -19,9 +19,9 @@ login, practice bot or planner change was made for this file.
 - **Ticks: about 13,300 / 13,800 for the quests and the skill gates (floor / realistic).** 12,941 / 13,497 of that
   is MEASURED (was 12,883 / 13,451 before the 7 partner-state re-proofs). Travel between quests is not counted. With
   travel the total is about 16,300-18,300 ticks (ESTIMATE), or 1.8-2.0 hours at 399.8 ms per tick.
-- **Timing rule:** the partner cannot finish Shield of Arrav before Haggis does Arrav, because the partner's
-  certificate comes from Haggis's curator visit. So Haggis must do the `quest-arrav` pair early. Today the planner
-  puts it after `quests-rest`, which holds Heroes' Quest. That order is wrong for Haggis too (see "Timing").
+- **Current timing decision (2026-10-26):** the main need not supply the partner's certificate. `scripts/generated/quest-arrav.ts` accepts any owned Black Arm actor as its first argument; that actor's curator visit produces two certificates. Qualify Swordinhand + Bigchopper as the alternate pair from their actual flags, kit and positions. Source inspection proves the route is parameterized, not that this pair is ready. Keep the main offline; the older main-dependent schedule below is historical.
+
+Entry review2026-10-26, source and dated live status only: both candidate journals say Arrav not started and both have Magic1. Swordinhand's saved position is Ardougne; Bigchopper's is Varrock East. The worker expects the Black Arm actor to meet the helper within30ticks after login and unconditionally uses Varrock teleport after the cupboard. Stage the meeting and qualify a walking fallback or the spell prerequisites before live admission. The shared quest helper also defaults to eating below40HP; check that policy against their15/20 maximum HP before carrying valuable quest food. No pair run was started. Owner: root; next consumer is the existing Arrav worker, with both quest flags, preserved kit/health and certificate transfers as acceptance.
 
 ## 1. Account choice
 

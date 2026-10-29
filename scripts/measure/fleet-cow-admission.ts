@@ -37,7 +37,7 @@ if(process.argv[2]==='--child'){
  }catch(e){await finish([s],false,String(e));}
 }else{
  if(process.env.REUSE_STACK!=='1')throw new Error('existing stack required');
- const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB']).stdout.toString().trim());
+ const free=Number(Bun.spawnSync(['powershell','-NoProfile','-Command','(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB'],{windowsHide:true}).stdout.toString().trim());
  if(free<9)throw new Error(`single-bot start requires9GiB (8floor+1reserve); actual${free}`);
  const actor=runBotName('flsword',1),dir=resolve('.practice/fleet-proof'),prefix=`cow-admission-${actor}`;
  await createBot(actor);
@@ -45,7 +45,7 @@ if(process.argv[2]==='--child'){
  setPracticeSkills(savePath,sword.skills.map((v:{name:string;level:number;xp:number})=>({level:v.name==='Hitpoints'?sword.hp.now:v.level,xp:v.xp})));
  const initial=readPracticeSave(savePath);writeFileSync(resolve(dir,`${prefix}-initial.json`),JSON.stringify(initial,null,2));
  console.log(`PROOF_START actor=${actor} freeGiB=${free} source=${sourceSha256} ${trainSkill}Goal10=true actualCurrentHP=${sword.hp.now} sourceAccount=${account}`);
- const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,'--child',actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe'});
+ const p=Bun.spawn(['bun','--preload',resolve('scripts/measure/fleet-observe.ts'),import.meta.path,'--child',actor],{env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',PROOF_TRACE_PATH:'1'},stdout:'pipe',stderr:'pipe',windowsHide:true});
  let output='';const timer=setTimeout(()=>p.kill(),660000);
  const read=async(stream:ReadableStream<Uint8Array>)=>{for await(const part of stream){const text=new TextDecoder().decode(part);output+=text;writeFileSync(resolve(dir,`${prefix}.log`),output);process.stdout.write(text);}};
  await Promise.all([read(p.stdout),read(p.stderr)]);const exitCode=await p.exited;clearTimeout(timer);

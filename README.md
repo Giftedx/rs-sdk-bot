@@ -2,6 +2,9 @@
 
 Bot scripts and tooling for the rs-sdk (MaxBittker/rs-sdk, MIT) demo and local practice server. Built on the pinned rs-sdk submodule.
 
+Start with [the working guide](AGENTS.md), [current plan](docs/plans/joined-plan.md), and [research map](research/INDEX.md).
+Use the [swarm script contract](docs/script-contract.md) for reusable scripts, account admission, progress and recovery.
+
 ## Setup
 
 Prerequisites: Bun 1.3.x, Git for Windows (or any Git), Node is not required.
@@ -22,15 +25,22 @@ Already cloned without `--recurse-submodules`? Run `git submodule update --init`
 | Command | What it does |
 |---|---|
 | `bun run typecheck` | `tsc --noEmit` over `scripts/`, `packages/*/src`, `packages/*/test` |
-| `bun test ./scripts ./packages` | Unit tests (about 585; 3 need a live stack and skip) |
+| `bun test ./scripts ./packages` | Unit tests; report the current pass/skip/fail counts |
 | `bun run check-pin` | Checks the `vendor/rs-sdk` checkout against `rs-sdk.pin` |
+| `bun run deliver --list` | Lists runnable capability checks |
+| `bun run deliver ammo-order` | Checks tip delivery, Fletching consumption, banked arrows and duplicate rejection on local practice accounts |
+| `bun run deliver wine-order` | Checks a reusable Cooking order, relog, stock accounting and saved target level |
+
+The persistent coordinator uses `bun run coordinate --run <unique-owner-token>`. Inspect it with `bun run coordinate --status`; pause it with `bun run coordinate --stop`. Its settings and bootstrap tasks live in `swarm.json.coordination`. See the [coordination contract](docs/script-contract.md#autonomous-coordination) for recovery and proof scope.
+
+Use the [delivery path](docs/script-contract.md#deliver-a-capability) to develop and qualify a reusable capability. Native acceptance and live release remain separate.
 
 ## Safety
 
 - The default server is the local practice server (`localhost:8888`). Connecting anywhere else needs `DEMO_OK=1` set on purpose (`packages/core/src/bot.ts`).
 - The dashboard listens on `127.0.0.1` only. `DASH_HOST=0.0.0.0` opens it to the network on purpose; its state shows bot positions, inventories, banks and account names.
 - `bot.env` holds bot credentials. It is gitignored. Never commit it or print its `PASSWORD=` line.
-- Bots log out before they exit, so playtime stops. Stop a running bot with a stop file in `.practice/` (see `packages/core/src/bot.ts`).
+- The core attempts logout before exit. Check `LOGOUT logged-out`: failed logout can leave scored playtime running until the server timeout. Stop-file handling is in `packages/core/src/bot.ts`. Preserve bots owned by another task.
 
 ## Layout
 

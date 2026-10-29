@@ -1,0 +1,123 @@
+{
+  "id": "cow-progress-order",
+  "goal": "Advance an owned ordinary combat account to a finite missing combat level with safe entry, owned food, observed XP/loot banking and logout.",
+  "entry": "scripts/gather-combat.ts",
+  "files": [
+    "scripts/gather-combat.ts",
+    "scripts/gather-combat.test.ts",
+    "scripts/quest-sustain.ts",
+    "scripts/quest-sustain.test.ts",
+    "packages/practice/src/cow-progress-order-proof.ts",
+    "packages/practice/test/cow-progress-order-proof.test.ts",
+    "packages/core/src/bank-demand.ts",
+    "packages/core/test/bank-demand.test.ts",
+    "packages/practice/src/stack.ts",
+    "packages/practice/test/stack.test.ts",
+    "packages/core/src/session-lifecycle.ts",
+    "packages/core/test/session-lifecycle.test.ts",
+    "packages/core/src/inprocess.ts",
+    "packages/core/test/inprocess.test.ts",
+    "packages/core/src/bot.ts",
+    "packages/core/test/bot.test.ts",
+    "packages/core/src/status.ts",
+    "packages/core/test/status.test.ts",
+    "scripts/swarm.ts",
+    "scripts/swarm.test.ts",
+    "packages/core/src/session-recovery.ts",
+    "packages/core/test/session-recovery.test.ts",
+    "packages/core/src/session-recovery-permit.ts",
+    "packages/core/test/session-recovery-permit.test.ts",
+    "packages/core/src/session-recovery-dispatch.ts",
+    "packages/core/test/session-recovery-dispatch.test.ts",
+    "packages/core/src/session-admission.ts",
+    "packages/core/test/session-admission.test.ts",
+    "packages/core/src/worker-release.ts",
+    "packages/core/test/worker-release.test.ts",
+    "packages/core/test/inprocess-auth-order.test.ts",
+    "packages/practice/src/session-recovery-proof.ts",
+    "packages/practice/test/session-recovery-proof.test.ts"
+  ],
+  "consumer": "Actual installed cow worker from representative Ardougne entry raises Attack9 to20, preserves kit/cash/life, accounts for food and banks actual cow outputs before confirmed logout. Uses the actual CLI and existing shared travel/food helpers. Establish current authenticated cleanup-only producer logout for an exact retired successful ordinary account with no producer history before live work; no anonymous legacy qualification or stop/hold changes.",
+  "checks": [
+    {
+      "id": "cow-progress-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/gather-combat.test.ts",
+        "scripts/quest-sustain.test.ts",
+        "packages/practice/test/cow-progress-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "cow-session-recovery-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "packages/core/test/bank-demand.test.ts",
+        "packages/practice/test/stack.test.ts",
+        "packages/core/test/session-lifecycle.test.ts",
+        "packages/core/test/inprocess.test.ts",
+        "packages/core/test/bot.test.ts",
+        "packages/core/test/status.test.ts",
+        "scripts/swarm.test.ts",
+        "packages/core/test/session-recovery.test.ts",
+        "packages/core/test/session-recovery-permit.test.ts",
+        "packages/core/test/session-recovery-dispatch.test.ts",
+        "packages/core/test/session-admission.test.ts",
+        "packages/core/test/worker-release.test.ts",
+        "packages/core/test/inprocess-auth-order.test.ts",
+        "packages/practice/test/session-recovery-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "id": "cow-router-integration-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "packages/router/test/coordinator-recovery.test.ts",
+        "packages/router/test/coordinator-session.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-session-recovery",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/session-recovery-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "cow-progress-order-native",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/cow-progress-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "cow-progress-order-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/cow-progress-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

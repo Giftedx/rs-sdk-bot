@@ -4,11 +4,12 @@ import { createBot } from './bots';
 import { rsSdkRoot } from './paths';
 import { startLite, stopLite } from './lite';
 import { applyPreset, PRESETS } from './presets';
+import { snapshotPracticeSave, verifyInitialOutcome, verifyOutcome, type OutcomeEvidence, type PracticeOutcome, type SaveSnapshot } from './prove-outcome';
 
 export interface ProveReport {
     runs: number;
     passes: number;
-    results: { ok: boolean; seconds: number; tail: string }[];
+    results: { ok: boolean; seconds: number; tail: string; logOk?: boolean; outcome?: OutcomeEvidence }[];
 }
 
 export interface ProveOptions {
@@ -43,7 +44,7 @@ export function runBotName(base: string, i: number): string {
 }
 
 async function runBun(args: string[], timeoutMs: number): Promise<{ stdout: string; exitCode: number }> {
-    const proc = Bun.spawn(['bun', ...args], { cwd: rsSdkRoot(), stdout: 'pipe', stderr: 'pipe' });
+    const proc = Bun.spawn(['bun', ...args], { cwd: rsSdkRoot(), stdout: 'pipe', stderr: 'pipe' ,windowsHide:true});
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
     const exitCode = await proc.exited;
@@ -95,15 +96,18 @@ export interface InProcessOptions {
     pass: (stdout: string) => boolean;
     timeoutMs?: number;
     parallel?: number; // runs at once; default 1. Runs that share a resource (rocks, NPCs) can affect each other.
+    outcome?: PracticeOutcome;
 }
 
 export interface InProcessDeps {
     prepare(bot: string, preset?: string): Promise<void>;
     run(script: string, bot: string, timeoutMs: number, args?: string[]): Promise<{ stdout: string; exitCode: number }>;
     cleanup(bot: string): Promise<void>;
+    snapshot?(bot: string, phase: 'before' | 'after', ready?: (snapshot: SaveSnapshot) => boolean): Promise<SaveSnapshot>;
 }
 
 export const realInProcessDeps: InProcessDeps = {
+    snapshot: snapshotPracticeSave,
     async prepare(bot, preset) {
         await createBot(bot);
         if (preset) {
@@ -138,11 +142,30 @@ export async function proveInProcess(opts: InProcessOptions, deps: InProcessDeps
         try {
             await deps.prepare(bot, opts.preset);
             for (const c of opts.companions ?? []) await deps.prepare(bot + c.suffix, c.preset);
+            let before: SaveSnapshot | undefined, outcome: OutcomeEvidence | undefined;
+            if (opts.outcome) {
+                try {
+                    if (!deps.snapshot) throw new Error('independent save backend unavailable');
+                    before = await deps.snapshot(bot, 'before');
+                    outcome = verifyInitialOutcome(opts.outcome, bot, before);
+                } catch (error) { outcome = { ok: false, detail: String(error) }; }
+                if (!outcome.ok) {
+                    results[i - 1] = { ok: false, logOk: false, outcome, seconds: (Date.now() - t0) / 1000, tail: `OUTCOME fail ${outcome.detail}` };
+                    return;
+                }
+            }
             const { stdout, exitCode } = await deps.run(opts.script, bot, opts.timeoutMs ?? 300_000, opts.scriptArgs);
             const start = startMatches(stdout, opts.preset);
-            const ok = exitCode === 0 && start.ok && opts.pass(stdout);
+            const logOk = exitCode === 0 && start.ok && opts.pass(stdout);
+            if (opts.outcome && before && deps.snapshot) {
+                try {
+                    const after = await deps.snapshot(bot, 'after', snapshot => verifyOutcome(opts.outcome!, bot, before!, snapshot).ok);
+                    outcome = verifyOutcome(opts.outcome, bot, before, after);
+                } catch (error) { outcome = { ok: false, detail: String(error), before: { bot: before.bot, sourcePath: before.sourcePath, path: before.path, sha256: before.sha256 } }; }
+            }
+            const ok = logOk && (!opts.outcome || outcome?.ok === true);
             const tail = stdout.split(/\r?\n/).filter(l => /^(START|RESULT|ERR|WARN|MILESTONE|RATE|LEDGER)/.test(l) || l.includes('Error')).slice(-16).join('\n');
-            results[i - 1] = { ok, seconds: (Date.now() - t0) / 1000, tail: start.ok ? tail : `preset not loaded: ${start.detail}\n${tail}` };
+            results[i - 1] = { ok, logOk, outcome, seconds: (Date.now() - t0) / 1000, tail: (start.ok ? tail : `preset not loaded: ${start.detail}\n${tail}`) + (outcome ? `\nOUTCOME ${outcome.ok ? 'ok' : 'fail'} ${outcome.detail}` : '') };
         } finally {
             for (const n of names) await deps.cleanup(n);
         }
