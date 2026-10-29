@@ -141,6 +141,11 @@ async function tick(state:CoordinatorState,config:any){
  await expandUsefulFleet(state,config);
  const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??json(join(projectRoot,'swarm.json')).maxBots;
  let controllerPrepared=false,liveBlocked=false;
+ // Standing swarm jobs run without a coordinator task, so the controller must run whenever one is enabled.
+ if((json(join(projectRoot,'swarm.json')).jobs??[]).some((j:any)=>j.standing===true&&j.enabled)){
+  try{await ensureSwarm(workerSourceRevision());controllerPrepared=true;sourceErrors.delete('controller');}
+  catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
+ }
  for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30;
   const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(join(coordinationDir,'publish-request.json'))});
