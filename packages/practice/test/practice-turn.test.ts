@@ -21,3 +21,14 @@ test('a dead holder gives up its turn; a live holder past the wait budget refuse
  writeFileSync(file,JSON.stringify({pid:999999,at:0}));
  await expect(withPracticeTurn(file,async()=>'ran',{...deps(()=>true),waitMs:0})).rejects.toThrow('practice turn wait expired');
 });
+
+test('a holder that asks again waits behind a check that queued while it ran',async()=>{
+ const file=join(mkdtempSync(join(tmpdir(),'turn-')),'turn.lock'),order:string[]=[];
+ const d=deps(()=>true);
+ const first=withPracticeTurn(file,async()=>{order.push('long-1');await Bun.sleep(30);},d)
+  .then(()=>withPracticeTurn(file,async()=>{order.push('long-2');},d));
+ await Bun.sleep(5);
+ const quick=withPracticeTurn(file,async()=>{order.push('quick');},d);
+ await Promise.all([first,quick]);
+ expect(order).toEqual(['long-1','quick','long-2']);
+});
