@@ -19,7 +19,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "quest",
       "goal": "Sheep Herder: 4 QP and 3,100 coins",
-      "enabled": true,
+      "enabled": false,
       "repeat": false,
       "env": {
         "CAP": "3000"
@@ -461,7 +461,7 @@
       "script": "scripts/agility-order.ts",
       "role": "thieving",
       "goal": "Agility 70 to 85 on the Gnome course",
-      "enabled": false,
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-agility-pickpockdick-band70-budget",
@@ -482,7 +482,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "combat",
       "goal": "Sheep Herder: QP toward Black Knights Fortress",
-      "enabled": false,
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-quest-sweep-hazeelcult-mightyrod",
@@ -512,7 +512,7 @@
   ],
   "coordination": {
     "enabled": true,
-    "maxActive": 5,
+    "maxActive": 8,
     "plannerIntervalMs": 30000,
     "modelTimeoutMs": 600000,
     "bootstrap": [
