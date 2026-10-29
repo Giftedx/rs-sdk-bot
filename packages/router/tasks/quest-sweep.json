@@ -1,0 +1,25 @@
+{
+  "id": "quest-sweep",
+  "goal": "Run one generated quest on an ordinary account from where it stands: take the quest's items from the nearest bank, walk to the quest start and run the generated quest script in the same login. A missing item ends the run before travel and names the items.",
+  "entry": "scripts/quest-sweep.ts",
+  "files": [
+    "scripts/quest-sweep.ts",
+    "scripts/quest-sweep.test.ts",
+    "packages/practice/src/quest-sweep-proof.ts"
+  ],
+  "consumer": "The quest shows complete in the account's quest list after a confirmed logout; a missing item refuses before travel.",
+  "checks": [
+    {
+      "id": "quest-sweep-regressions",
+      "phase": "regression",
+      "command": ["bun", "test", "scripts/quest-sweep.test.ts", "--timeout", "10000"],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "quest-sweep-practice",
+      "phase": "practice",
+      "command": ["bun", "packages/practice/src/quest-sweep-proof.ts"],
+      "timeoutMs": 900000
+    }
+  ]
+}

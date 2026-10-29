@@ -34,7 +34,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const EAT_AT = opts.eatAt ?? 40;
     const FOOD = opts.food ?? [379];
     const TRACE = opts.trace ?? process.env.Q_TRACE === '1';
-    const s: Session = opts.session ?? await openBot(opts.name ?? process.argv[2]!);
+    // quest-sweep.ts stages items and travel in its own login, then hands that session over here.
+    const s: Session = opts.session ?? (globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION ?? await openBot(opts.name ?? process.argv[2]!);
     await waitTicks(s, 3);
     const st = (): any => s.sdk.getState();
     const pos = (): any => st()?.player;
