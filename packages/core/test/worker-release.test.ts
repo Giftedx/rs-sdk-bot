@@ -57,3 +57,9 @@ test('dashboard and authoring edits do not invalidate a worker release',()=>{
   expect(()=>workerSourceRevision(root)).toThrow('runtime imports non-runtime');
  }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test('a standing owner job logs in on changed source; an ordinary live worker still needs the pin', async () => {
+    const { assertLiveWorkerRelease } = await import('../src/worker-release');
+    expect(() => assertLiveWorkerRelease('rs-sdk-demo.fly.dev', { STANDING: '1' })).not.toThrow();
+    expect(() => assertLiveWorkerRelease('rs-sdk-demo.fly.dev', {})).toThrow('release pin missing');
+});
