@@ -34,13 +34,14 @@ test('supervisor commands forward participants and arguments with bounded orches
 });
 
 test('no demand cannot hide a retained failure, stop marker or release hold',()=>{
- for(const reason of ['blocked after 1 runs','release-paused after 1 runs']){
+ for(const reason of ['blocked after 1 runs']){
   const selection=startable(['Courier'],true,new Map([['Courier',{reason}]]),()=>Infinity);
   expect(demandCandidates(selection,()=>{throw Error('not eligible for demand check');})).toBe(selection);
  }
  const mixed={start:['Ready'],blocked:{Courier:'ended: blocked after 1 runs'}};
  expect(demandCandidates(mixed,()=> 'waiting offline: no demand')).toEqual({start:[],blocked:{Courier:'ended: blocked after 1 runs',Ready:'waiting offline: no demand'}});
- expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).blocked.Courier).toBe('paused: worker release');
+ // A release pause starts again; the swarm checks the release pin itself before a non-standing start.
+ expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).start).toEqual(['Courier']);
 });
 import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

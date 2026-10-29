@@ -84,7 +84,8 @@ if (import.meta.main) {
     const participants=supervisorParticipants(bot,process.env.COORDINATOR_PARTICIPANTS);
     const r = await supervise({
         run: async () => {
-            if(process.env.DEMO_OK==='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
+            // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
+            if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:`RESULT fail ${String(e)}`,exitCode:1};}
             const p = Bun.spawn(workerCommand(bot,script,scriptArgs), { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
             let text = '';
             const reader = p.stdout.getReader();

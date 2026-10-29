@@ -363,7 +363,9 @@ export function startable(accounts: string[], repeat: boolean | undefined, ended
         const newMission = !!end?.revision && !!revision && end.revision !== revision
             && /^done(?: after \d+ runs)?$/.test(end.reason);
         // A refusal before any game tick (supervise isEntryRefusal) changed nothing, so a changed job may start again.
-        const resumable = !!end && /^refused\b/.test(end.reason) && !!end.revision && !!revision && end.revision !== revision;
+        // A release pause clears itself: a non-standing start checks the pin again, and a standing job has no pin.
+        const resumable = !!end && (/^refused\b/.test(end.reason) && !!end.revision && !!revision && end.revision !== revision
+            || /^release-paused\b/.test(end.reason));
         if (stopped?.(a)) blocked[a] = 'paused: stop file';
         else if (endedForGood(end, repeat) && !newMission && !resumable) blocked[a] = /^release-paused\b/.test(end!.reason) ? 'paused: worker release' : `ended: ${end!.reason}`;
         else if (statusAge(a) < 30_000) {
@@ -442,7 +444,7 @@ if (import.meta.main) {
         const cmd = supervisorCommand(p,accounts);
         const proc = Bun.spawn(cmd, {
             cwd: root, stdout: 'pipe', stderr: 'pipe',
-            env: { ...process.env, ...job.env, DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+            env: { ...process.env, ...job.env, DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
         windowsHide:true});
         let currentEnd: string | undefined;
         const consume = (line: string) => {
@@ -592,7 +594,7 @@ if (import.meta.main) {
                     if (!admission.allowed) for (const a of go) st[a] = admission.reason === 'maxBots' ? 'waiting: maxBots'
                         : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;
                     else {
-                        try { assertWorkerRelease();start(p, go); for (const a of go) st[a] = 'starting'; }
+                        try { if (!(job as Job & {standing?:boolean}).standing) assertWorkerRelease();start(p, go); for (const a of go) st[a] = 'starting'; }
                         catch(e) { for(const a of go) st[a]=`paused: ${String(e)}`; }
                     }
                 }

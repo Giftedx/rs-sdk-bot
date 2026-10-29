@@ -16,33 +16,23 @@
     },
     {
       "account": "Bigpackage",
-      "script": "scripts/foodcourier.ts",
-      "role": "courier",
-      "goal": "2026-10-28:returned52allocated;reserve fresh demand from remaining34newfish",
-      "enabled": false,
+      "script": "scripts/quest-sweep.ts",
+      "role": "quest",
+      "goal": "Sheep Herder: 4 QP and 3,100 coins",
+      "enabled": true,
       "repeat": false,
       "env": {
-        "FROM": "Masterbaiter",
-        "FEATHERS": "0",
-        "FARMERS": "Pocketrocket,mmtha0205,mmthv2350,Pocketpython,mmsmk1232,NabTheKnob,CoinCock,PickpockDick",
-        "CAP": "2000",
-        "FUND_FROM": "Pocketrocket"
+        "CAP": "3000"
       },
-      "whenFoodLowFrom": [
-        "Pocketrocket",
-        "mmtha0205",
-        "mmthv2350",
-        "Pocketpython",
-        "mmsmk1232",
-        "NabTheKnob",
-        "CoinCock",
-        "PickpockDick"
-      ],
       "foodLowBelow": 80,
       "foodSourceAccounts": [
         "Masterbaiter"
       ],
-      "sourceFoodMinimum": 1
+      "sourceFoodMinimum": 1,
+      "args": [
+        "sheepherder"
+      ],
+      "standing": true
     },
     {
       "account": "Shaftmaker",
@@ -109,18 +99,18 @@
     },
     {
       "account": "Abracadickra",
-      "script": "scripts/buy-owned-ge-item.ts",
+      "script": "scripts/quest-sweep.ts",
       "role": "procurement",
-      "goal": "2026-10-28: procurement/delivery complete;retain reserve while combat repeat is qualified",
-      "enabled": false,
+      "goal": "Sheep Herder: 4 QP and 3,100 coins",
+      "enabled": true,
       "repeat": false,
       "env": {
-        "ORDER_KEY": "mightyrod-scimitar-20261027",
-        "ITEM_ID": "1331",
-        "LIMIT_PRICE": "45000",
-        "CASH_RESERVE": "5000",
-        "ORDER_MS": "900000"
-      }
+        "CAP": "3000"
+      },
+      "args": [
+        "sheepherder"
+      ],
+      "standing": true
     },
     {
       "account": "Swordinhand",
@@ -486,24 +476,23 @@
       "account": "PickpockDick",
       "args": [
         "gnome",
-        "70"
+        "85"
       ],
       "maxRestarts": 0,
       "script": "scripts/agility-order.ts",
       "role": "thieving",
-      "goal": "run-agility-pickpockdick-band70-budget [task-980702fb-3ddb-4298-9e01-924870ef4b0f]",
-      "enabled": false,
+      "goal": "Agility 70 to 85 on the Gnome course",
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-agility-pickpockdick-band70-budget",
       "env": {
         "AGI_MAX_LAPS": "400",
-        "AGI_MAX_TICKS": "10000",
+        "AGI_MAX_TICKS": "14000",
         "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-980702fb-3ddb-4298-9e01-924870ef4b0f"
-      }
+        "AGI_PROGRESS_TICKS": "150"
+      },
+      "standing": true
     },
     {
       "account": "Mightyrod",
@@ -513,15 +502,15 @@
       "maxRestarts": 0,
       "script": "scripts/quest-sweep.ts",
       "role": "combat",
-      "goal": "run-quest-sweep-hazeelcult-mightyrod [task-0bdc21f6-24d5-4ce1-ad81-968bdcc22a56]",
-      "enabled": false,
+      "goal": "Hazeel Cult (good side), then Sheep Herder",
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-quest-sweep-hazeelcult-mightyrod",
       "env": {
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-0bdc21f6-24d5-4ce1-ad81-968bdcc22a56"
-      }
+        "CAP": "3000"
+      },
+      "standing": true
     }
   ],
   "coordination": {
