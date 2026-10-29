@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { assertServerAllowed, serverFromEnv, logoutSession, closeWithin } from '../packages/core/src/bot';
 import { connectInProcess } from '../packages/core/src/inprocess';
+import { NAMES } from '../packages/core/src/names';
+import { isLocalServer } from '../packages/core/src/localserver';
 
 const name = process.argv[2]!;
 const root = resolve(import.meta.dir, '..');
@@ -13,6 +15,9 @@ const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
 if (!password) throw new Error(`no PASSWORD in bots/${name}/bot.env`);
 const server = serverFromEnv(env);
 assertServerAllowed(server);
+// A live name is registered for good: take it from the reviewed joke lists (AGENTS.md "Accounts"), never ad hoc.
+if (!isLocalServer(server) && !Object.values(NAMES).flat().some(n => n.toLowerCase() === name.toLowerCase()))
+    throw new Error(`live name ${name} is not in packages/core/src/names.ts; add a real joke there first`);
 const s = await connectInProcess({ name, password, server });
 // Log out the moment the client reports it is in the game: no tutorial, no actions.
 const t0 = Date.now();
