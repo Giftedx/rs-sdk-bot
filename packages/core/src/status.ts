@@ -64,6 +64,12 @@ export function resultCounters(text: string): Record<string, number> {
     if(complete&&depth===0&&!quote)consume();
     return out;
 }
+export function renameRetry(from: string, to: string, rename: (a: string, b: string) => void = renameSync): void {
+    for (let attempt = 0; ; attempt++) {
+        try { rename(from, to); return; }
+        catch (e) { if (attempt >= 20 || !['EPERM', 'EBUSY', 'EACCES'].includes((e as NodeJS.ErrnoException).code ?? '')) throw e; Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50); }
+    }
+}
 export function noteStatusLine(name: string, line: string): void {
     const e = perBot.get(name) ?? { line: '', result: '', counters: {} };
     if (line.startsWith('MILESTONE ')) e.line = line.slice(10);
@@ -215,7 +221,9 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
             counters: own ? own.counters : lastCounters,
             env: { target: process.env.TARGET ?? null, cap: process.env.CAP ?? null },
         };
-        try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameSync(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }
+        // The coordinator reads this file every second during a live run, and on Windows that read can block the
+        // rename for a moment; the final write carries the RESULT that live acceptance needs.
+        try { writeFileSync(`${file}.tmp`, JSON.stringify(doc)); renameRetry(`${file}.tmp`, file); } catch { /* the dashboard is optional */ }
     };
     observeQuests();
     write();
