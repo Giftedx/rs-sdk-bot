@@ -37,8 +37,13 @@ export function spawnDetached(args:string[],cwd:string,stdout:string,stderr:stri
  try{const child=spawn(args[0]!,args.slice(1),{cwd,env,detached:true,windowsHide:true,stdio:['ignore',out,err]});child.unref();if(!child.pid)throw Error('detached child did not start');return child.pid;}
  finally{closeSync(out);closeSync(err);}
 }
-export function atomicJson(file:string,value:unknown){
- const temporary=file+`.tmp-${process.pid}`;writeFileSync(temporary,JSON.stringify(value,null,2));renameSync(temporary,file);
+// On Windows a reader that holds the target open (jq, an editor, the dashboard) makes the rename fail for a moment.
+export function atomicJson(file:string,value:unknown,rename:(from:string,to:string)=>void=renameSync){
+ const temporary=file+`.tmp-${process.pid}`;writeFileSync(temporary,JSON.stringify(value,null,2));
+ for(let attempt=0;;attempt++){
+  try{rename(temporary,file);return;}
+  catch(e){if(attempt>=20||!['EPERM','EBUSY','EACCES'].includes((e as NodeJS.ErrnoException).code??''))throw e;Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,50);}
+ }
 }
 export function loadState(directory=coordinationDir):CoordinatorState{
  mkdirSync(join(directory,'runs'),{recursive:true});const file=join(directory,'state.json');
