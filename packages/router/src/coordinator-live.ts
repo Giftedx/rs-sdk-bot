@@ -57,19 +57,26 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  let owner:any=null;if(existsSync(ownerFile))owner=JSON.parse(readFileSync(ownerFile,'utf8'));
  const alive=owner&&matches(owner.pid,owner.nonce);
  if(owner&&!alive&&pidExists(owner.pid))throw Error('saved controller is alive but command ownership is unknown; do not start a duplicate');
- // A rollout pauses standing jobs with a marked stop file; once the current controller runs, those marks go.
- const rolloutMark='coordinator rollout pause';
+ // A rollout pauses standing jobs by turning them off in swarm.json (the swarm stops them at their next step) and
+ // turns them on once the current controller runs: that off/on is the swarm's own resume path.
+ const pausedFile=join(dir,'rollout-paused.json');
+ const paused=():string[]=>{try{return JSON.parse(readFileSync(pausedFile,'utf8'));}catch{return [];}};
  const standing=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true&&j.enabled&&j.account).map((j:any)=>j.account);}catch{return [];}};
+ const setEnabled=(accounts:readonly string[],on:boolean)=>withPlanWrite(()=>{
+  const file=join(base,'swarm.json'),plan=JSON.parse(readFileSync(file,'utf8')),keys=new Set(accounts.map(a=>a.toLowerCase()));
+  for(const j of plan.jobs??[])if(j.standing===true&&keys.has(String(j.account).toLowerCase()))j.enabled=on;
+  atomicJson(file,plan);
+ });
+ const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
  // A coordinator run needs the whole-runtime pin; standing jobs need only the swarm's own code current.
- if(alive&&(forRun?owner.source===source:owner.swarmSource===swarmSource)){
-  for(const a of standing()){const f=join(base,'.practice','stop-'+a);try{if(readFileSync(f,'utf8')===rolloutMark)unlinkSync(f);}catch{/* no mark */}}
-  return;
- }
+ if(alive&&(forRun?owner.source===source:owner.swarmSource===swarmSource)){await resume();return;}
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
  const open=alive?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result):[];
  if(open.length){
-  const names=new Set(standing().map(a=>a.toLowerCase()));
-  for(const s of open)if(names.has(String(s.name).toLowerCase())){const f=join(base,'.practice','stop-'+s.name);if(!existsSync(f))writeFileSync(f,rolloutMark);}
+  const names=new Set(standing().map(a=>a.toLowerCase())),own=open.filter(s=>names.has(String(s.name).toLowerCase())).map(s=>String(s.name));
+  // Pause standing jobs only when nothing else holds the rollout; while a coordinator run does, they keep working.
+  if(own.length===open.length){await setEnabled(own,false);atomicJson(pausedFile,[...new Set([...paused(),...own])]);}
+  else await resume();
   throw Error('runtime rollout waits for existing sessions to settle');
  }
  const repair=join(base,'.practice/swarm-repair.json'),repairLease=repair+'.lease',rollout='rollout-'+randomUUID();let locked=false,repairLocked=false;
@@ -86,14 +93,6 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
    if(pidExists(owner.pid)){retainFence=owner;throw Error('old controller stop unconfirmed; admission remains fenced');}
   }
   if(stopped())throw Error('controller rollout owner stopped');
-  // The old controller recorded "stopped" for the standing jobs this rollout paused; the new one starts them again.
-  const ends=join(base,'.practice/swarm-deaths.json'),endRecords=loadEnded(ends);let cleared=false;
-  for(const a of standing()){
-   try{if(readFileSync(join(base,'.practice','stop-'+a),'utf8')!==rolloutMark)continue;}catch{continue;}
-   const key=[...endRecords.keys()].find(n=>n.toLowerCase()===a.toLowerCase());
-   if(key&&/^stopped\b/.test(endRecords.get(key)!.reason)){endRecords.delete(key);cleared=true;}
-  }
-  if(cleared)persistEnded(ends,endRecords);
   const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release})))(source,nonce);
   const next={pid,nonce,source,swarmSource,at:now()};
   try{atomicJson(ownerFile,next);await drain(next,next.at);if(stopped())throw Error('controller rollout owner stopped');}catch(error){

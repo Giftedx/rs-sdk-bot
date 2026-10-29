@@ -217,27 +217,6 @@
       "repeat": false
     },
     {
-      "account": "mmtha0205",
-      "args": [],
-      "maxRestarts": 0,
-      "script": "scripts/goldfarm-stable.ts",
-      "role": "thieving",
-      "goal": "run-overnight-earn-mmtha0205-20261028 [task-b544b1a2-4469-43bd-adde-ee665a62d6da]",
-      "enabled": false,
-      "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-overnight-earn-mmtha0205-20261028",
-      "env": {
-        "TICKS": "600",
-        "BANK_AT": "50000",
-        "FOOD_FROM": "",
-        "FUND_COURIER": "",
-        "RANDOM_EVENTS": "1",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-b544b1a2-4469-43bd-adde-ee665a62d6da"
-      }
-    },
-    {
       "account": "Wandwaver",
       "args": [
         "20"
@@ -511,6 +490,24 @@
         "CAP": "3000"
       },
       "standing": true
+    },
+    {
+      "account": "mmtha0205",
+      "args": [
+        "sheepherder"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/quest-sweep.ts",
+      "role": "thieving",
+      "goal": "run-quest-sheepherder-mmtha0205 [task-9b767d1e-4108-4b0e-92e9-edf1ce6aa0e0]",
+      "enabled": true,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-quest-sheepherder-mmtha0205",
+      "env": {
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-9b767d1e-4108-4b0e-92e9-edf1ce6aa0e0"
+      }
     }
   ],
   "coordination": {
