@@ -189,7 +189,8 @@ export async function crossStrongholdGate(s:Session,d:GateDeps){
   let talked=false,quiet=0;
   // The scripted box action has its own source-derived bound; it is never cut by waitTicks or a new Open.
   const settling=()=>{const st=choices[0]?.settle;return !!st&&st.end===undefined;};
-  for(let i=0;(i<G.waitTicks||settling())&&!inside();i++){
+  // Femi's last page ("Thanks again friend!") can open after the box action used up waitTicks; answer it first.
+  for(let i=0;(i<G.waitTicks||settling()||femi===1&&page().isOpen&&i<G.waitTicks+30)&&!inside();i++){
    d.left(label);await waitTicks(s,1);d.live();
    d.left(label);const observed={tick:s.tick(),page:page()},p=observed.page,key=gatePageKey(p);
    trace('observe',observed);
