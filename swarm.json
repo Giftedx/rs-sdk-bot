@@ -38,14 +38,14 @@
       "account": "Shaftmaker",
       "script": "scripts/gather-yews.ts",
       "role": "fletching",
-      "goal": "Yew logs for wealth and fletching supply",
-      "enabled": false,
+      "goal": "Normal logs: stock for Firemaking",
+      "enabled": true,
       "repeat": true,
       "env": {
-        "TREE": "yew",
-        "MAX_TRIPS": "8",
+        "TREE": "normal",
+        "MAX_TRIPS": "4",
         "BANK_AT": "25",
-        "CAP": "9000"
+        "CAP": "3000"
       },
       "standing": true
     },
@@ -82,7 +82,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "crafting",
       "goal": "Sheep Shearer from banked wool",
-      "enabled": true,
+      "enabled": false,
       "repeat": false,
       "env": {
         "CAP": "3000"
@@ -104,7 +104,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "procurement",
       "goal": "Sheep Herder: 4 QP and 3,100 coins",
-      "enabled": true,
+      "enabled": false,
       "repeat": false,
       "env": {
         "CAP": "3000"
@@ -118,16 +118,17 @@
       "account": "Swordinhand",
       "script": "scripts/gather-combat.ts",
       "role": "combat",
-      "goal": "Defence20/Strength20 ready; qualify alternate Arrav donor",
+      "goal": "Cow combat: Attack to 20",
       "enabled": true,
-      "repeat": false,
+      "repeat": true,
       "env": {
         "TARGET": "cow",
         "CAP": "1000",
         "MAX_KILLS": "5",
-        "TRAIN_SKILL": "Strength",
+        "TRAIN_SKILL": "Attack",
         "TARGET_LEVEL": "20"
-      }
+      },
+      "standing": true
     },
     {
       "account": "AFKnight",
@@ -171,14 +172,15 @@
       "account": "BowBeforeMe",
       "script": "scripts/fletch-worker.ts",
       "role": "fletching",
-      "goal": "Convert needed logs to shafts for named ammunition demand",
-      "enabled": false,
-      "repeat": false,
+      "goal": "Arrow shafts for Ranged ammo",
+      "enabled": true,
+      "repeat": true,
       "env": {
         "RANDOM_EVENTS": "1",
         "BANK_KNIFE": "1",
         "NORMAL_GROVE": "north"
-      }
+      },
+      "standing": true
     },
     {
       "account": "MineYourBiz",
@@ -296,47 +298,45 @@
       "account": "Moneyshot",
       "args": [
         "gnome",
-        "10"
+        "40"
       ],
       "maxRestarts": 0,
       "script": "scripts/agility-order.ts",
       "role": "bank",
-      "goal": "run-agility-gnome-moneyshot-13 [task-619020ea-b180-465c-b9fd-857408b4bd7e]",
-      "enabled": false,
+      "goal": "Agility 1 to 40 on Gnome",
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-agility-gnome-moneyshot-13",
       "env": {
-        "AGI_MAX_LAPS": "40",
-        "AGI_MAX_TICKS": "6000",
+        "AGI_MAX_LAPS": "400",
+        "AGI_MAX_TICKS": "10000",
         "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-619020ea-b180-465c-b9fd-857408b4bd7e"
-      }
+        "AGI_PROGRESS_TICKS": "150"
+      },
+      "standing": true
     },
     {
       "account": "NabTheKnob",
       "args": [
         "gnome",
-        "10"
+        "40"
       ],
       "maxRestarts": 0,
       "script": "scripts/agility-order.ts",
       "role": "thieving",
-      "goal": "run-agility-gnome-nabtheknob-1 [task-25fa17da-f353-4230-b518-dc18d635ccdf]",
-      "enabled": false,
+      "goal": "Agility 1 to 40 on Gnome",
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-agility-gnome-nabtheknob-1",
       "env": {
-        "AGI_MAX_LAPS": "40",
-        "AGI_MAX_TICKS": "6000",
+        "AGI_MAX_LAPS": "400",
+        "AGI_MAX_TICKS": "10000",
         "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-25fa17da-f353-4230-b518-dc18d635ccdf"
-      }
+        "AGI_PROGRESS_TICKS": "150"
+      },
+      "standing": true
     },
     {
       "account": "mmsmk1232",
@@ -387,24 +387,23 @@
       "account": "Pocketrocket",
       "args": [
         "gnome",
-        "10"
+        "40"
       ],
       "maxRestarts": 0,
       "script": "scripts/agility-order.ts",
       "role": "thieving",
-      "goal": "run-agility-gnome-pocketrocket-1 [task-aec31345-b42f-498c-9ccc-fbccca0ba478]",
-      "enabled": false,
+      "goal": "Agility 1 to 40 on Gnome",
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-agility-gnome-pocketrocket-1",
       "env": {
-        "AGI_MAX_LAPS": "40",
-        "AGI_MAX_TICKS": "6000",
+        "AGI_MAX_LAPS": "400",
+        "AGI_MAX_TICKS": "10000",
         "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-aec31345-b42f-498c-9ccc-fbccca0ba478"
-      }
+        "AGI_PROGRESS_TICKS": "150"
+      },
+      "standing": true
     },
     {
       "account": "mmthv2350",
@@ -462,7 +461,7 @@
       "script": "scripts/agility-order.ts",
       "role": "thieving",
       "goal": "Agility 70 to 85 on the Gnome course",
-      "enabled": true,
+      "enabled": false,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-agility-pickpockdick-band70-budget",
@@ -483,7 +482,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "combat",
       "goal": "Sheep Herder: QP toward Black Knights Fortress",
-      "enabled": true,
+      "enabled": false,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-quest-sweep-hazeelcult-mightyrod",
@@ -501,7 +500,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "thieving",
       "goal": "run-quest-sheepherder-mmtha0205 [task-9b767d1e-4108-4b0e-92e9-edf1ce6aa0e0]",
-      "enabled": true,
+      "enabled": false,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-quest-sheepherder-mmtha0205",
@@ -546,7 +545,7 @@
     "preferLive": true,
     "directive": "Owner2026-10-28 is away overnight and grants full PC resources for maximum USEFUL qualified account progress. Fill available live slots across levelling, quest unlocks, combat, advanced resources and endgame supply; do not stop at two live jobs. Prefer sharks and other endgame-quality supplies over new trout/salmon surplus; use already-owned food rather than waste it. Finish current capability through its live consumer and automatically assign the next useful finite job. Reuse trained helpers; create/register additional task-specific accounts once a qualified useful role or measured capacity need exists. Main/fresh scored-launch clocks remain protected. Max17 is an initial measured cap, not an end goal: after fresh useful outputs, measured host/tick/supply headroom and a reserved practice slot, expand in measured batches under current owner authority. Headless services stay quiet and lean. Keep all full-game/endgame/maxed-quest-gear/hiscore goals in scope; make real game output the priority, not another catalogue or tests-only result.",
     "autoExpand": true,
-    "focusCapability": "quest-sweep",
-    "focusSince": 1793311131399
+    "focusCapability": "shark-supply-order",
+    "focusSince": 1793316763914
   }
 }

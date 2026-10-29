@@ -190,7 +190,8 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
   // Unrelated native proofs would expire at the next focused source repair.
   // Leave them queued until the focused capability reaches its live consumer.
   const liveQualify=liveQualifies.has(r.spec.id);
-  if(!liveQualify&&resources.focusCapability&&['build','qualify'].includes(r.spec.kind)&&!focusCaps.has(r.spec.capability!))return false;
+  // With isolated builds a focus only orders work; other capabilities still build in the free slots.
+  if(!resources.isolatedBuilds&&!liveQualify&&resources.focusCapability&&['build','qualify'].includes(r.spec.kind)&&!focusCaps.has(r.spec.capability!))return false;
   if(r.spec.kind==='qualify'&&buildWaiting&&!liveQualify)return false;
   if(r.spec.kind==='run'&&running.filter(a=>a.spec.kind==='run').length>=(resources.liveLimit??Infinity))return false;
   if(r.spec.kind!=='run'&&running.filter(a=>a.spec.kind!=='run').length>=(resources.developmentLimit??Infinity))return false;
@@ -218,10 +219,11 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  };
  const consumers=ready.filter(r=>resources.preferLive?r.spec.kind==='run':productionWindow.has(r.spec.id));
  const focused=ready.filter(r=>r.spec.capability===resources.focusCapability||liveQualifies.has(r.spec.id));
- const candidates=focused.length?focused:(buildWaiting||resources.preferLive)&&consumers.length?consumers:ready;
+ const candidates=focused.length&&!resources.isolatedBuilds?focused:(buildWaiting||resources.preferLive)&&consumers.length?consumers:ready;
+ const ordered=(r:TaskRecord)=>resources.isolatedBuilds&&focused.includes(r)?1:0;
  const overdue=candidates.filter(r=>now-state.goals.find(g=>g.id===r.spec.goal)!.lastStartedAt>=30*60000);
  const pool=overdue.length?overdue:candidates;
- return pool.sort((a,b)=>(overdue.length?state.goals.find(g=>g.id===a.spec.goal)!.lastStartedAt-state.goals.find(g=>g.id===b.spec.goal)!.lastStartedAt:0)
+ return pool.sort((a,b)=>ordered(b)-ordered(a)||(overdue.length?state.goals.find(g=>g.id===a.spec.goal)!.lastStartedAt-state.goals.find(g=>g.id===b.spec.goal)!.lastStartedAt:0)
   ||score(b)-score(a)||a.createdAt-b.createdAt||a.spec.id.localeCompare(b.spec.id))[0]?.spec??null;
 }
 export function startTask(state:CoordinatorState,id:string,now:number,runId:string):TaskRecord{
