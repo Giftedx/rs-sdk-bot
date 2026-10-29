@@ -123,6 +123,19 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
   if(!Array.isArray(raw.replacements)||raw.replacements.length>24||raw.replacements.some((r:any)=>typeof r?.from!=='string'||typeof r?.to!=='string'))throw Error('invalid replacements');
   replaceTasks(candidate,raw.replacements);
  }
+ // cancel retires pending tasks that no longer serve a consumer (for example a build that only rebinds source);
+ // each consumer then depends on `use` instead, or loses that dependency.
+ if(raw.cancel!==undefined){
+  if(!Array.isArray(raw.cancel)||raw.cancel.length>24)throw Error('invalid cancel list');
+  const byId=new Map(candidate.tasks.map(r=>[r.spec.id,r]));
+  for(const c of raw.cancel){
+   const old=byId.get(c?.id);if(!old||old.status!=='pending')throw Error('cancel needs a pending task: '+c?.id);
+   if(c.use!==undefined&&!byId.has(c.use))throw Error('cancel substitute is unknown: '+c.use);
+   old.status='superseded';old.supersededBy=c.use??'cancelled';
+   for(const r of candidate.tasks)if(r.status==='pending'&&r.spec.dependsOn.includes(old.spec.id))
+    r.spec.dependsOn=[...new Set(r.spec.dependsOn.flatMap(d=>d===old.spec.id?(c.use?[c.use]:[]):[d]))];
+  }
+ }
  // A changed contract must be built before any old consumer can request its
  // new (possibly not-yet-created) files or use its old qualification.
  for(const update of updates){

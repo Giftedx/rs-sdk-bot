@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
-import {appendFileSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,writeFileSync} from 'node:fs';
-import {resolve,join} from 'node:path';
+import {appendFileSync,mkdirSync,mkdtempSync,readFileSync,readdirSync,writeFileSync,statSync} from 'node:fs';
+import {resolve,join,dirname,relative} from 'node:path';
+import ts from 'typescript';
 import {existsSync} from 'node:fs';
 import {freemem} from 'node:os';
 import {workerSourceRevision} from '../../core/src/worker-release';
@@ -37,10 +38,29 @@ export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmis
   await deps.sleep(Math.min(1000,deadline-at));
  }
 }
+// Every repo file a capability can load: its entry, owned files and check scripts, then their relative imports.
+// An edit outside this set does not change what the capability runs, so it keeps its qualification.
+export function importClosure(starts:readonly string[],base=root):string[]{
+ const seen=new Set<string>(),queue=[...starts];
+ const resolveFile=(file:string,spec:string):string|undefined=>{
+  const target=relative(resolve(base),resolve(base,dirname(file),spec)).replaceAll('\\','/');
+  return [target,target+'.ts',target+'.tsx',target+'/index.ts'].find(c=>existsSync(join(base,c))&&!statSync(join(base,c)).isDirectory());
+ };
+ while(queue.length){
+  const file=queue.pop()!;if(seen.has(file)||!existsSync(join(base,file)))continue;seen.add(file);
+  if(!/\.(?:ts|tsx|js|mjs)$/.test(file))continue;
+  for(const spec of ts.preProcessFile(readFileSync(join(base,file),'utf8'),true,true).importedFiles){
+   if(!spec.fileName.startsWith('.'))continue;
+   const next=resolveFile(file,spec.fileName);if(next&&!seen.has(next))queue.push(next);
+  }
+ }
+ return [...seen].sort();
+}
 export function deliveryFingerprint(t:DeliveryTask,base=root){
  // Entry, scope and acceptance commands are part of the qualified contract.
- const hash=createHash('sha256').update(workerSourceRevision(base)).update(JSON.stringify(t));
- for(const file of [...new Set([...t.files,'packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts'])].sort())
+ const scripts=t.checks.flatMap(c=>c.command.filter(a=>/\.(?:ts|tsx)$/.test(a)));
+ const hash=createHash('sha256').update(JSON.stringify(t));
+ for(const file of importClosure([t.entry,...t.files,...scripts,'packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts'],base))
   hash.update(file+'\0').update(readFileSync(join(base,file))).update('\0');
  return hash.digest('hex');
 }

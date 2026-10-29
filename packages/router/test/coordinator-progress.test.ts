@@ -161,3 +161,10 @@ test('whole-game view includes all19 skills, catalogue gaps and all active queue
  const s=initialState();addTasks(s,[task('bad'),run('waiting',['bad'])]);complete(s,'bad',false,2);
  expect(queueFacts(s).blocked[0]!.dependencies).toEqual([{id:'bad',status:'failed',replacement:undefined}]);expect(queueFacts(s).lastUsefulLiveAt).toBe(0);
 });
+test('cancel retires a pending build and points its consumer at the named qualification',()=>{
+ const s=initialState();addTasks(s,[task('rebind',{kind:'build'}),run('consume',['rebind'])],0);
+ acceptProposal(s,{reason:'Source binding needs only a fresh qualification',capabilities:[],tasks:[task('requalify')],cancel:[{id:'rebind',use:'requalify'}]});
+ expect(s.tasks.find(r=>r.spec.id==='rebind')!.status).toBe('superseded');
+ expect(s.tasks.find(r=>r.spec.id==='consume')!.spec.dependsOn).toEqual(['requalify']);
+ expect(()=>acceptProposal(s,{reason:'again',capabilities:[],tasks:[],cancel:[{id:'rebind'}]})).toThrow('cancel needs a pending task');
+});
