@@ -51,7 +51,11 @@ export function isPrerequisiteFailure(result: string): boolean {
         || /\b(?:cow prerequisite:|cow kit equip failed (?:1277|1171):|oak PREPARE requires known Draynor bank start\b|cow needs positive CAP and MAX_KILLS1\.\.5\b|oak needs CAP>0 and MAX_MAKE1\.\.25\b|TRAIN_SKILL must be Attack, Strength or Defence\b|TARGET_LEVEL must be1\.\.99\b|missing shears\b|low HP during tool bootstrap\b|worker ended or cap\b)/.test(result);
 }
 
-export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused'; runs: number }> {
+export function isEntryRefusal(result: string): boolean {
+    return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
+}
+
+export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused' | 'refused'; runs: number }> {
     let fails = 0;
     for (let runs = 1; ; runs++) {
         if (d.stopped()) return { reason: 'stopped', runs: runs - 1 };
@@ -65,6 +69,8 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         // Out of food: a restart only logs in again and finds the same empty bank. A resupply job must run first.
         if (/RESULT fail no food/.test(result)) return { reason: 'stopped', runs };
         if (isWorkerReleaseHold(result)) return { reason: 'release-paused', runs };
+        // A worker that refuses before it acts (no game ticks) changed nothing: the account is free for its next job.
+        if (isEntryRefusal(result)) return { reason: 'refused', runs };
         if (isNoProgressFailure(result) || isPrerequisiteFailure(result)) return { reason: 'blocked', runs };
         if (++fails > d.maxRestarts) return { reason: 'gave-up', runs };
         await d.pause(10_000);

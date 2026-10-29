@@ -362,8 +362,10 @@ export function startable(accounts: string[], repeat: boolean | undefined, ended
         // end epoch so a newer external/manual session still wins admission.
         const newMission = !!end?.revision && !!revision && end.revision !== revision
             && /^done(?: after \d+ runs)?$/.test(end.reason);
+        // A refusal before any game tick (supervise isEntryRefusal) changed nothing, so a changed job may start again.
+        const resumable = !!end && /^refused\b/.test(end.reason) && !!end.revision && !!revision && end.revision !== revision;
         if (stopped?.(a)) blocked[a] = 'paused: stop file';
-        else if (endedForGood(end, repeat) && !newMission) blocked[a] = /^release-paused\b/.test(end!.reason) ? 'paused: worker release' : `ended: ${end!.reason}`;
+        else if (endedForGood(end, repeat) && !newMission && !resumable) blocked[a] = /^release-paused\b/.test(end!.reason) ? 'paused: worker release' : `ended: ${end!.reason}`;
         else if (statusAge(a) < 30_000) {
             // The controller records done only after its supervisor has exited.
             // Its old status need not impose a second 30 s wait, but a newer
@@ -413,6 +415,7 @@ if (import.meta.main) {
     const ended = loadEnded(deathsFile);
     const holdsFile = join(prac, 'swarm-script-holds.json');
     const holds = loadHolds(holdsFile);
+    let holdsMtime = existsSync(holdsFile) ? statSync(holdsFile).mtimeMs : 0;
     const setEnded = ended.set.bind(ended);
     ended.set = (a, r) => {
         setEnded(a, r);
@@ -487,6 +490,8 @@ if (import.meta.main) {
     const tick = () => {
         let plan: Plan;
         try { plan = JSON.parse(readFileSync(planFile, 'utf8')); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
+        // An owner edit of the hold file applies live, like swarm.json.
+        try { const m = statSync(holdsFile).mtimeMs; if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile)); holdsMtime = m; } } catch { /* no hold file yet */ }
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
         const stopAll = existsSync(join(prac, 'stop-swarm'));
         inheritedRecoveries=heldRecoveryOwners(root,recoveryDispatch.active?[recoveryDispatch.active.account]:[]);

@@ -49,7 +49,7 @@
       "script": "scripts/gather-yews.ts",
       "role": "fletching",
       "goal": "Yew logs for wealth and fletching supply",
-      "enabled": true,
+      "enabled": false,
       "repeat": true,
       "env": {
         "TREE": "yew",
@@ -559,7 +559,7 @@
     "preferLive": true,
     "directive": "Owner2026-10-28 is away overnight and grants full PC resources for maximum USEFUL qualified account progress. Fill available live slots across levelling, quest unlocks, combat, advanced resources and endgame supply; do not stop at two live jobs. Prefer sharks and other endgame-quality supplies over new trout/salmon surplus; use already-owned food rather than waste it. Finish current capability through its live consumer and automatically assign the next useful finite job. Reuse trained helpers; create/register additional task-specific accounts once a qualified useful role or measured capacity need exists. Main/fresh scored-launch clocks remain protected. Max17 is an initial measured cap, not an end goal: after fresh useful outputs, measured host/tick/supply headroom and a reserved practice slot, expand in measured batches under current owner authority. Headless services stay quiet and lean. Keep all full-game/endgame/maxed-quest-gear/hiscore goals in scope; make real game output the priority, not another catalogue or tests-only result.",
     "autoExpand": true,
-    "focusCapability": "fresh-rune-supply-order",
-    "focusSince": 1793309816437
+    "focusCapability": "quest-sweep",
+    "focusSince": 1793311131399
   }
 }

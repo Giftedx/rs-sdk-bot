@@ -157,3 +157,13 @@ test('death and deliberate stop retain priority over prerequisite blocking',asyn
         expect(result).toEqual({reason,runs:1});
     }
 });
+
+test('a refusal before any game tick frees the account instead of holding it', async () => {
+    const { supervise, isEntryRefusal } = await import('../src/supervise');
+    const shark = 'RESULT fail newBankedSharks=0 caught=0 ticks=0 detail={"ticks":0,"failure":"Error: shark entry requires west bank"}';
+    expect(isEntryRefusal(shark)).toBe(true);
+    expect(isEntryRefusal('RESULT fail no wood progress ticks=407')).toBe(false);
+    expect(isEntryRefusal('RESULT fail ticks=0 died=true')).toBe(false);
+    const r = await supervise({ run: async () => ({ exitCode: 1, stdout: shark }), stopped: () => false, maxRestarts: 20, pause: async () => {} } as any);
+    expect(r).toEqual({ reason: 'refused', runs: 1 });
+});

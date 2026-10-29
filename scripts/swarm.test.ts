@@ -537,3 +537,12 @@ test('anonymous legacy logs cannot qualify logout even with exact hashes and mat
         expect(applyEndRepair(req(claim),fail(),[],proofs).reason).toBe('legacy proof refused: producer evidence exists: held');
     }finally{rmSync(root,{recursive:true,force:true});}
 });
+
+test('a refused job starts again only when it changes; a gave-up job stays held', async () => {
+    const { startable } = await import('./swarm');
+    const refused = new Map([['Fisher', { reason: 'refused after 1 runs', revision: 'shark-at-varrock' }]]);
+    expect(startable(['Fisher'], false, refused, () => Infinity, undefined, 'shark-at-varrock', () => false).start).toEqual([]);
+    expect(startable(['Fisher'], false, refused, () => Infinity, undefined, 'shark-walks', () => false).start).toEqual(['Fisher']);
+    const gaveUp = new Map([['Fisher', { reason: 'gave-up after 1 runs', revision: 'a' }]]);
+    expect(startable(['Fisher'], false, gaveUp, () => Infinity, undefined, 'b', () => false).start).toEqual([]);
+});

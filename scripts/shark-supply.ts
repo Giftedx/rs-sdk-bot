@@ -2,10 +2,10 @@
 // SHARK_CONSUMER names the endgame staging/combat demand. No repeating surplus order.
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {openBot,finish,sessionDied} from '../packages/core/src/bot';
+import {openBot,finish,sessionDied,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
-import {sessionWalker,walkPath,type PathDeps,type PathPoint,type PathTile} from '../packages/core/src/walk';
+import {goTo,sessionWalker,walkPath,type PathDeps,type PathPoint,type PathTile} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {catchSharks} from './gather-fish';
 import {cookSharks} from './cook-food';
@@ -121,6 +121,12 @@ export async function supplySharks(s:Session,o:SharkOptions) {
     try {
         if(!await waitUntil(s,st=>!!st?.inGame&&!!st.player&&hp()>0&&Array.isArray(st.equipment),{timeoutTicks:20}))throw Error('shark entry state deadline');
         first={...state()!.player!};r.hpStart=hp();r.hpMin=hp();lastHp=hp();damageBase=hp();ready=true;
+        // From anywhere else, the shared world walker takes the account to the Catherby bank first.
+        if(!sharkEntry(first)){
+            const there=await goTo(s,await getWorld(),{x:SHARK_BANK.x,z:SHARK_BANK.z,level:0},accountOf(s),{legTimeoutTicks:100});
+            if(!there.ok)throw Error(`shark travel to Catherby failed: ${there.detail}`);
+            first={...state()!.player!};
+        }
         const entry=sharkEntry(first);
         if(!entry)throw Error('shark entry requires west bank or Catherby ground floor');
         if((s.sdk.getSkill('Fishing')?.level??0)<76||(s.sdk.getSkill('Cooking')?.level??0)<80)throw Error('shark order requires Fishing76 Cooking80');
