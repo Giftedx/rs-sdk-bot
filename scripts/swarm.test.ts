@@ -547,3 +547,14 @@ test('a refused job starts again only when it changes; a gave-up job stays held'
     const gaveUp = new Map([['Fisher', { reason: 'gave-up after 1 runs', revision: 'a' }]]);
     expect(startable(['Fisher'], false, gaveUp, () => Infinity, undefined, 'b', () => false).start).toEqual([]);
 });
+
+test('an end from before producer receipts clears with a settled live status, not a fresh or unfinished one', async () => {
+    const { applyEndRepair } = await import('./swarm');
+    const LIVE_SRV = 'rs-sdk-demo.fly.dev', now = 10_000_000;
+    const ended = () => new Map([['Thief', { at: 100, reason: 'gave-up after 1 runs', revision: '["scripts/agility-order.ts"]' }]]);
+    const proofs = (st: any) => ({ readProof: () => ({ state: 'none' }) as any, verifyLegacy: () => ({ state: 'refused', reason: 'x' }) as any, now: () => now, status: () => st });
+    const req = { account: 'Thief', endedAt: 100, server: LIVE_SRV, proof: { kind: 'settled-status' } };
+    expect(applyEndRepair(req, ended(), [], proofs({ server: LIVE_SRV, result: 'fail gate', at: now - 16 * 60_000 })).changed).toBe(true);
+    expect(applyEndRepair(req, ended(), [], proofs({ server: LIVE_SRV, result: 'fail gate', at: now - 60_000 })).reason).toBe('status changed in the last 15 minutes');
+    expect(applyEndRepair(req, ended(), [], proofs({ server: LIVE_SRV, result: '', at: now - 16 * 60_000 })).reason).toBe('status shows no finished session');
+});

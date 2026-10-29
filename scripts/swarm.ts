@@ -21,7 +21,7 @@ import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { courierDeliveryWaiting } from './courier-cargo';
 import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
 import {assertWorkerRelease} from '../packages/core/src/worker-release';
-import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd} from '../packages/core/src/session-admission';
+import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd,BOOTSTRAP_STATUS_AGE_MS} from '../packages/core/src/session-admission';
 import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
@@ -235,6 +235,16 @@ export function currentLogout(request: any, proofs: RepairProofs): { ok: true; l
         if (typeof p.account !== 'string' || p.account.toLowerCase() !== request.account.toLowerCase() || p.server !== request.server) return { ok: false, reason: 'legacy proof identity mismatch' };
         const legacy = proofs.verifyLegacy(p);
         return legacy.state === 'legacy-confirmed' ? { ok: true, label: `legacy ${legacy.statusSha256}` } : { ok: false, reason: `legacy proof refused: ${legacy.reason}` };
+    }
+    // An end from before producer receipts: the session admission bootstrap rule (session-admission.ts) — a finished
+    // status on the live server, unchanged for BOOTSTRAP_STATUS_AGE_MS — shows the account is offline.
+    if (p?.kind === 'settled-status') {
+        let st: any;
+        try { st = proofs.status?.(request.account); } catch { return { ok: false, reason: 'status unreadable' }; }
+        const now = proofs.now?.() ?? Date.now();
+        if (!st || st.server !== request.server || typeof st.result !== 'string' || !st.result) return { ok: false, reason: 'status shows no finished session' };
+        if (!Number.isFinite(st.at) || now - st.at < BOOTSTRAP_STATUS_AGE_MS) return { ok: false, reason: 'status changed in the last 15 minutes' };
+        return { ok: true, label: `settled status at ${st.at}` };
     }
     return { ok: false, reason: 'missing logout proof' };
 }

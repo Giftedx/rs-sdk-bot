@@ -79,16 +79,18 @@
     },
     {
       "account": "Ballspinner",
-      "script": "scripts/gather-flax.ts",
+      "script": "scripts/quest-sweep.ts",
       "role": "crafting",
-      "goal": "Flax for bowstrings and wealth",
+      "goal": "Sheep Shearer from banked wool",
       "enabled": true,
-      "repeat": true,
+      "repeat": false,
       "env": {
-        "CAP": "6000",
-        "BANK_AT": "28"
+        "CAP": "3000"
       },
-      "standing": true
+      "standing": true,
+      "args": [
+        "sheep"
+      ]
     },
     {
       "account": "Haggis",
@@ -363,24 +365,23 @@
       "account": "CoinCock",
       "args": [
         "gnome",
-        "10"
+        "40"
       ],
       "maxRestarts": 0,
       "script": "scripts/agility-order.ts",
       "role": "thieving",
-      "goal": "run-agility-gnome-coincock-1 [task-75a582f3-230f-4f71-ac67-550167370d05]",
-      "enabled": false,
+      "goal": "Agility 1 to 40 on Gnome; live test of the Femi gate fix",
+      "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
       "coordinatorTask": "run-agility-gnome-coincock-1",
       "env": {
-        "AGI_MAX_LAPS": "40",
-        "AGI_MAX_TICKS": "6000",
+        "AGI_MAX_LAPS": "400",
+        "AGI_MAX_TICKS": "10000",
         "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150",
-        "CAP": "1600",
-        "COORDINATOR_RUN_ID": "task-75a582f3-230f-4f71-ac67-550167370d05"
-      }
+        "AGI_PROGRESS_TICKS": "150"
+      },
+      "standing": true
     },
     {
       "account": "Pocketrocket",
@@ -476,12 +477,12 @@
     {
       "account": "Mightyrod",
       "args": [
-        "hazeelcult"
+        "sheepherder"
       ],
       "maxRestarts": 0,
       "script": "scripts/quest-sweep.ts",
       "role": "combat",
-      "goal": "Hazeel Cult (good side), then Sheep Herder",
+      "goal": "Sheep Herder: QP toward Black Knights Fortress",
       "enabled": true,
       "repeat": false,
       "coordinatorOwner": "coordinator",
@@ -512,7 +513,7 @@
   ],
   "coordination": {
     "enabled": true,
-    "maxActive": 3,
+    "maxActive": 5,
     "plannerIntervalMs": 30000,
     "modelTimeoutMs": 600000,
     "bootstrap": [
