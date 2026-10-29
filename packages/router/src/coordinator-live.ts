@@ -75,7 +75,8 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  if(open.length){
   const names=new Set(standing().map(a=>a.toLowerCase())),own=open.filter(s=>names.has(String(s.name).toLowerCase())).map(s=>String(s.name));
   // Pause standing jobs only when nothing else holds the rollout; while a coordinator run does, they keep working.
-  if(own.length===open.length){await setEnabled(own,false);atomicJson(pausedFile,[...new Set([...paused(),...own])]);}
+  // Pause every enabled standing job, not only the open ones: a job paused alone restarts and reopens a session.
+  if(own.length===open.length){const all=standing();await setEnabled(all,false);atomicJson(pausedFile,[...new Set([...paused(),...all])]);}
   else await resume();
   throw Error('runtime rollout waits for existing sessions to settle');
  }
