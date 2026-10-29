@@ -7,7 +7,7 @@ function fixture(){let now=0,free=NATIVE_STARTUP_GB-1,stopped=false,starts=0;con
  return{deps,observations,start:async()=>++starts,starts:()=>starts,setFree:(v:number)=>{free=v;},stop:()=>{stopped=true;}};
 }
 test('source preparation needs less headroom than native startup, both above the floor',()=>{
- expect(SOURCE_STARTUP_GB).toBe(FREE_FLOOR_GB+3);expect(NATIVE_STARTUP_GB).toBe(FREE_FLOOR_GB+PRACTICE_RESERVE_GB);expect(SOURCE_STARTUP_GB).toBeLessThan(NATIVE_STARTUP_GB);
+ expect(SOURCE_STARTUP_GB).toBe(FREE_FLOOR_GB+2);expect(NATIVE_STARTUP_GB).toBe(FREE_FLOOR_GB+PRACTICE_RESERVE_GB);expect(SOURCE_STARTUP_GB).toBeLessThan(NATIVE_STARTUP_GB);
 });
 test('the actual delivery admission wrapper never calls its child starter below the native startup threshold',async()=>{
  const f=fixture();f.deps.sleep=async()=>{expect(f.starts()).toBe(0);f.setFree(NATIVE_STARTUP_GB);};

@@ -5,4 +5,4 @@
 export const FREE_FLOOR_GB = 4;
 export const PRACTICE_RESERVE_GB = 2.5;
 export const PRACTICE_STARTUP_GB = FREE_FLOOR_GB + PRACTICE_RESERVE_GB;
-export const SOURCE_STARTUP_GB = FREE_FLOOR_GB + 3;
+export const SOURCE_STARTUP_GB = FREE_FLOOR_GB + 2;
