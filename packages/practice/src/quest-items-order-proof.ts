@@ -12,6 +12,7 @@ import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {questSpec,questSavedChecks} from '../../../scripts/quest-order';
 import {itemSaveChecks} from '../../../scripts/quest-items-order';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
 export function parseItemResult(log:string){try{return JSON.parse(log.split(/\r?\n/).filter(l=>l.startsWith('QUEST_ITEMS_ORDER_RESULT ')).at(-1)?.slice(25)??'null');}catch{return null;}}
@@ -105,7 +106,7 @@ function verify(dir:string){
  writeFileSync(join(dir,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(dir:string){
- if(freemem()/2**30<12)throw Error('practice needs 8GiB floor plus 4GiB startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
  const lock=resolve(import.meta.dir,'../../../.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'quest-items-order',directory:dir,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;

@@ -22,6 +22,7 @@ import {killTree,safeKill} from './proc';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
+import { PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 const root=resolve(import.meta.dir,'../../..'),engine=join(root,'vendor/rs-sdk/server/engine'),runner=join(root,RECOVERY_SCRIPT);
 const HOST='localhost:8890',RELAY='localhost:8899',LOGIN_PORT=43650,PORTS=[8890,8896,8897,8899,43650,43651];
@@ -369,7 +370,7 @@ async function run(directory:string){
  const capability=recoveryCapability(process.env.DELIVERY_ID??deliveryTask?.id),routerPins=capability==='cow-progress-order'?verifyCompletedRouterPins():null;
  if(deliveryTask&&deliveryTask.id!==capability)throw Error('recovery delivery identity mismatch');
  const startedAt=Date.now(),startFreeGiB=freemem()/2**30;
- if(startFreeGiB<12)throw Error('native recovery needs12GiB startup reserve; observed '+startFreeGiB.toFixed(2));
+ if(startFreeGiB<PRACTICE_STARTUP_GB)throw Error(`native recovery needs${PRACTICE_STARTUP_GB}GiB startup reserve; observed `+startFreeGiB.toFixed(2));
  for(const port of PORTS)if(!canBind(port))throw Error('native recovery port owned: '+port);
  if(existsSync(join(directory,'proof.json'))||existsSync(join(directory,'control')))throw Error('native recovery directory already used');
  // Inside managed delivery the builder owns the global source fence. Read and retain it; claim only the practice mutex.

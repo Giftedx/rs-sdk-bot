@@ -9,9 +9,10 @@ import {recoverProofLock} from '../../practice/src/proof-lock';
 import {deliver,validateDelivery,type DeliveryTask} from './delivery';
 
 const root=resolve(import.meta.dir,'../../..');
-// Source preparation uses an estimated3GiB reserve over the8GiB floor.
-// Native launch still requires12GiB; this is checked at the actual child boundary.
-export const SOURCE_STARTUP_GB=11,NATIVE_STARTUP_GB=12;
+// Source preparation keeps an estimated 3 GiB reserve over the free-memory floor (packages/core/src/memory.ts).
+// Native launch requires PRACTICE_STARTUP_GB; this is checked at the actual child boundary.
+import {SOURCE_STARTUP_GB,PRACTICE_STARTUP_GB as NATIVE_STARTUP_GB} from '../../core/src/memory';
+export {SOURCE_STARTUP_GB,NATIVE_STARTUP_GB};
 export function nativeDeferralEvidence(reason:string):{hostDeferred?:boolean}{
  return /^(?:Error: )?HOST_DEFERRED_NATIVE_HEADROOM:/.test(reason)?{hostDeferred:true}:{};
 }

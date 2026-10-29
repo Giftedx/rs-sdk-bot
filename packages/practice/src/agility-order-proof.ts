@@ -11,6 +11,7 @@ import {runBotName} from './prove';
 import {killTree} from './proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
 const owned=['scripts/agility-order.ts','scripts/agility-order.test.ts','packages/practice/src/agility-order-proof.ts','packages/practice/test/agility-order-proof.test.ts',
@@ -1080,12 +1081,12 @@ export function verifyGnome(directory:string,source:unknown=sources(),now=Date.n
  return{ok:Object.values(checks).every(Boolean),at:now,scope:GNOME_SCOPE,checks};
 }
 async function child(directory:string,label:string,name:string,course:string,target:number,interrupt=false,budget:{entryTicks?:number;maxTicks?:number;timeoutMs?:number}={}):Promise<Child>{
- if(freemem()/2**30<8)throw Error('practice memory floor reached before child');
+ if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice memory floor reached before child');
  const log=join(directory,label+'.log');writeFileSync(log,'');
  const proc=Bun.spawn(['bun','scripts/agility-order.ts',name,course,String(target)],{cwd:root,env:{...process.env,DEMO_OK:'',...INITIALIZATION_CONFIGURATION.env,AGI_MAX_TICKS:String(budget.maxTicks??2500),AGI_ENTRY_TICKS:String(budget.entryTicks??400)},stdout:Bun.file(log),stderr:Bun.file(join(directory,label+'.err')),windowsHide:true});
  let timedOut=false,interrupted=false,termination:Promise<void>|undefined;
  const timer=setTimeout(()=>{timedOut=true;termination=killTree(proc.pid);},budget.timeoutMs??CHILD_TIMEOUT_MS);
- const memory=setInterval(()=>{if(freemem()/2**30<8&&!termination){timedOut=true;termination=killTree(proc.pid);}},1000);
+ const memory=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB&&!termination){timedOut=true;termination=killTree(proc.pid);}},1000);
  try{
   if(interrupt){const deadline=Date.now()+90000;while(proc.exitCode===null&&Date.now()<deadline){if(readFileSync(log,'utf8').includes('AGILITY_PROGRESS ')){interrupted=true;await killTree(proc.pid);break;}await Bun.sleep(50);}if(!interrupted)throw Error('could not interrupt an active order after progress');}
   const code=await proc.exited;return{code,timedOut,interrupted};
@@ -1105,7 +1106,7 @@ async function run(directory:string,mode:Mode='full',retainedPath?:string){
  };
  const gnomeMode=mode==='gnome-food'||mode==='ardougne'||mode==='gnome-consumer';
  if(mode==='food-recovery'||gnomeMode){directory=join(directory,mode);mkdirSync(directory,{recursive:true});}
- if(freemem()/2**30<12)throw Error('insufficient practice startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:mode==='full'?'agility-order':`agility-order-${mode}`}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
@@ -1314,7 +1315,7 @@ async function run(directory:string,mode:Mode='full',retainedPath?:string){
   };
   // Judge the sample from its retained bytes and log, the same way --verify does.
   const fallSample=async(sample:FallSample)=>{
-   if(freemem()/2**30<8)throw Error('practice memory floor reached before fall sample');
+   if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice memory floor reached before fall sample');
    const f=await fixture(sample.fixture,PRESETS.agility_wilderness_52!);sample.name=f.name;
    await scenario('fall',f,FALL_SAMPLE_PLAN.course,FALL_SAMPLE_PLAN.target,sample);
    const files=readFallSamples(directory).read(sample.label);

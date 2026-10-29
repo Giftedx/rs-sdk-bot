@@ -11,6 +11,7 @@ import {killTree} from './proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,setPracticeSkills,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {verifyCompletedRecoveryDelivery} from './session-recovery-proof';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
 type Kind=typeof cases[number];
@@ -126,7 +127,7 @@ export function verifyCow(directory:string){
 }
 async function run(directory:string){
  verifyCompletedRecoveryDelivery(directory);
- if(freemem()/2**30<12)throw Error('insufficient practice startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
  mkdirSync(directory,{recursive:true});
  // Exclusive delivery folder: do not overwrite previous before/ snapshots.
  if(existsSync(join(directory,'native.json'))||cases.some(id=>existsSync(join(directory,id))))throw Error('cow proof directory already used');
@@ -151,7 +152,7 @@ async function run(directory:string){
    const log=join(dir,'worker.log'),stopFile=join(root,'.practice',`stop-${name}`);
    if(existsSync(stopFile))throw Error('stale stop file for practice identity');
    const config=cowChildConfiguration(name,process.env,id);
-   const child=Bun.spawn({...config,stdout:Bun.file(log),stderr:Bun.file(join(dir,'worker.err'))});
+   const child=Bun.spawn({...config,stdout:Bun.file(log),stderr:Bun.file(join(dir,'worker.err')),windowsHide:true});
    let timedOut=false,exited=false,stopRequested=false,termination:Promise<void>|undefined,ownedStop:CowStop|undefined;
    const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},270000);
    const exit=child.exited.then(code=>{exited=true;return code;});

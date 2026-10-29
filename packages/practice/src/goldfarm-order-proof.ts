@@ -13,6 +13,7 @@ import {practiceDir} from './paths';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {farmStartProblem} from '../../../scripts/goldfarm-stable';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
 type Kind='earn'|'exhausted'|'refuse'|'error'|'unbanked';
@@ -170,7 +171,7 @@ type RunCase={id:string;kind:Kind;from?:string;preset?:SaveConfig};
 async function run(delivery:string,door=false){
  const directory=door?join(delivery,DOOR_DIR):delivery,list:RunCase[]=door?doorCases.map(k=>({id:k.id,kind:'earn',preset:k.preset})):cases;
  const env=door?DOOR_ENV:WORKER_ENV,verify=()=>door?verifyGoldfarmDoor(delivery):verifyGoldfarm(delivery);
- if(freemem()/2**30<12)throw Error('practice needs 8GiB floor plus 4GiB startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
  mkdirSync(directory,{recursive:true});
  // Exclusive delivery folder: do not overwrite earlier before/ snapshots.
  if(existsSync(join(directory,'native.json'))||list.some(k=>existsSync(join(directory,k.id))))throw Error('goldfarm proof directory already used');

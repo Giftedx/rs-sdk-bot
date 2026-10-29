@@ -1,6 +1,6 @@
 {
   "maxBots": 17,
-  "minFreeGB": 8,
+  "minFreeGB": 4,
   "jobs": [
     {
       "account": "Shaftsinker",

@@ -12,6 +12,7 @@ import {workerSourceRevision} from '../../core/src/worker-release';
 import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
 import {orderPaths,orderQuantity,orderEscrow,orderAccounting,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 // Native bulk GE order: an owned seller lists noted grapes, then the actual worker buys the exact
 // quantity, banks it and reruns the same order key. The consumer stage reads the saved bank.
@@ -69,7 +70,7 @@ function verify(directory:string){
 }
 
 async function run(directory:string){
- if(freemem()/2**30<12)throw Error('practice needs 8GiB floor plus 4GiB startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
  const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ge-bulk-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;

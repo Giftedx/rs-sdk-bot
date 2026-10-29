@@ -26,6 +26,7 @@ import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/ses
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
 import { readLogoutProof, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
+import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 
 export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -35,7 +36,6 @@ export type ParsedJob = { key: string; accounts: string[]; host: boolean; job: J
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
 const START_BUDGET_GB = 1;
 const START_RESERVE_MS = 30_000;
-const FREE_FLOOR_GB = 8;
 
 // Count evidence of active live sessions across the whole status directory, not
 // only accounts already listed in the plan. Managed sessions are counted elsewhere.

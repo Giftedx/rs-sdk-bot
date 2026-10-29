@@ -8,6 +8,7 @@ import {runBotName} from './prove';
 import {killTree} from './proc';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
 const count=(s:Save,id:number)=>(s.inventories[95]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -31,7 +32,7 @@ function verify(directory:string){
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(directory:string){
- if(freemem()/2**30<12)throw Error('insufficient practice startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
  const lock=resolve(import.meta.dir,'../../../.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'wine-order'}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;

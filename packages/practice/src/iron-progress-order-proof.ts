@@ -10,6 +10,7 @@ import {runBotName} from './prove';
 import {killTree} from './proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
@@ -58,7 +59,7 @@ export function verifyIron(directory:string){
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(directory:string){
- if(freemem()/2**30<12)throw Error('insufficient practice startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
  mkdirSync(directory,{recursive:true});
  // Exclusive delivery folder: do not overwrite previous before/ snapshots.
  if(existsSync(join(directory,'native.json'))||cases.some(id=>existsSync(join(directory,id))))throw Error('iron proof directory already used');

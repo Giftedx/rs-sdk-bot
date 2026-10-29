@@ -10,6 +10,7 @@ import {killTree} from './proc';
 import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {questSpec,questSavedChecks,savedQuest,questCompleted,runQuestOrder,questOrderRuntime} from '../../../scripts/quest-order';
 import {workerSourceRevision} from '../../core/src/worker-release';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 // Native practice for scripts/quest-order.ts: fresh completion, two recovery boundaries and pre-login refusals.
 // The consumer stage reads only retained saves, journals and logs.
@@ -85,7 +86,7 @@ function verify(directory:string){
 }
 
 async function run(directory:string){
- if(freemem()/2**30<12)throw Error('practice needs 8GiB floor plus 4GiB startup reserve');
+ if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
  const lock=resolve(import.meta.dir,'../../../.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'quest-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;

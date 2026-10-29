@@ -14,6 +14,7 @@ import {workerSourceRevision} from '../../core/src/worker-release';
 import {runeSupplyPreserved} from '../../../scripts/rune-supply';
 import {applyPreset} from './presets';
 import {setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
+import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
 const root=resolve(import.meta.dir,'../../..');
@@ -29,7 +30,7 @@ export async function withFreshRuneStack<T>(directory:string,work:(budget:ProofB
  practice:join(root,'.practice'),free:freemem,portsFree:()=>canBind(8888)&&canBind(7780),start:startStack,
 },tickMs:150|400=150):Promise<T>{
  const deadline=Date.now()+workMs;
- if(deps.free()<12*2**30)throw Error('insufficient practice startup reserve: need12GiB');
+ if(deps.free()<PRACTICE_STARTUP_GB*2**30)throw Error(`insufficient practice startup reserve: need${PRACTICE_STARTUP_GB}GiB`);
  const lock=join(deps.practice,'delivery-practice.lock'),pids=join(deps.practice,'pids.json');
  const owner=JSON.stringify({pid:process.pid,directory,task:'fresh-rune-supply-order'});
  const fd=openSync(lock,'wx');
@@ -37,14 +38,14 @@ export async function withFreshRuneStack<T>(directory:string,work:(budget:ProofB
  const ownsLock=()=>existsSync(lock)&&readFileSync(lock,'utf8')===owner;
  const budget={deadline,check:()=>{
   if(Date.now()>=deadline)throw Error('fresh rune proof work deadline; retain evidence');
-  if(deps.free()<8*2**30)throw Error('practice memory floor: need8GiB free');
+  if(deps.free()<FREE_FLOOR_GB*2**30)throw Error(`practice memory floor: need${FREE_FLOOR_GB}GiB free`);
   if(!ownsLock())throw Error('practice lock ownership changed; retain evidence');
  }};
  try{
   writeFileSync(fd,owner);writeFileSync(join(directory,'practice-owner.json'),owner,{flag:'wx'});
   // Do not overwrite even stale owner evidence. Recovery belongs to the harness.
   if(existsSync(pids)||!deps.portsFree())throw Error('practice stack ownership or occupied ports; refuse adoption');
-  if(deps.free()<12*2**30)throw Error('insufficient fresh practice startup reserve: need12GiB');
+  if(deps.free()<PRACTICE_STARTUP_GB*2**30)throw Error(`insufficient fresh practice startup reserve: need${PRACTICE_STARTUP_GB}GiB`);
   stack=await deps.start({tickMs,xpRate:25,readyTimeoutMs:60000});
   ownedPids=readFileSync(pids,'utf8');
   writeFileSync(join(directory,'stack-owner.json'),ownedPids,{flag:'wx'});

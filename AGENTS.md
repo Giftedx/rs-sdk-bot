@@ -25,7 +25,7 @@ For a new approach, check local code and [project use map](research/project-use-
 ## Accounts
 
 - The PC is available for maximum useful account progress. Fill qualified live slots across skills, quests, combat, resources and route supply. Prefer sharks over new trout or salmon; use existing stock.
-- Expand in batches of up to 4 accounts after two fresh useful live results, prepared demand and measured RAM, CPU and tick headroom. Keep 8 GiB free and one practice slot. The cap of 17 is not fixed. No further permission is needed inside these bounds.
+- Expand in batches of up to 4 accounts after two fresh useful live results, prepared demand and measured RAM, CPU and tick headroom. Keep 4 GiB free (`packages/core/src/memory.ts`) and one practice slot. The cap of 17 is not fixed. No further permission is needed inside these bounds.
 - Create an account only with a proved useful first job. A claimed or blocked account is not progress.
 - New live names: a penis joke plus a RuneScape, task or goal pun, optionally Scottish; 1-12 letters or digits. Keep existing names. Check local duplicates. First login registers the account and starts its clock.
 - Each assignment has one owner, budget, acceptance and next action. A vacant slot names its constraint.

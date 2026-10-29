@@ -4,7 +4,7 @@ import { coordinatedAdmission,demandCandidates,supervisorCommand,completeJobCand
 test('recovery uses the real admission policy, including inherited startup reserves, before checking release',()=>{
  const v={account:'Rod',active:[] as string[],running:0,external:0,pending:0,freeGB:10,minFreeGB:0,maxBots:17};let releases=0;
  expect(()=>admitRecovery(v,()=>{releases++;})).not.toThrow();expect(releases).toBe(1);
- for(const patch of [{active:['rod']},{running:17},{external:17},{pending:1,freeGB:9.5}])expect(()=>admitRecovery({...v,...patch},()=>{releases++;})).toThrow();
+ for(const patch of [{active:['rod']},{running:17},{external:17},{pending:1,freeGB:FREE_FLOOR_GB+1.5}])expect(()=>admitRecovery({...v,...patch},()=>{releases++;})).toThrow();
  expect(releases).toBe(1);expect(()=>admitRecovery(v,()=>{throw Error('source changed');})).toThrow('source changed');
 });
 
@@ -51,6 +51,7 @@ import { endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRe
     applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
 import { createHash } from 'node:crypto';
+import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 
 const rev=(script:string)=>JSON.stringify([script,false,['x'],[]]);
 const proofRef={server:'rs-sdk-demo.fly.dev',proof:{kind:'producer' as const,attemptId:'A'}};
@@ -320,7 +321,7 @@ test('pending startup reserve counts host accounts once and expires at30seconds'
     expect(pendingStartupCount([{started:now-1,accounts:['A','B']},{started:now-2,accounts:['a']},
         {started:now-30_000,accounts:['Old']},{started:now+1,accounts:['Future']}],now)).toBe(2);
 });
-test('admission reserves pending heaps and a new account before enforcing the8GiB floor', () => {
+test('admission reserves pending heaps and a new account before enforcing the free-memory floor', () => {
     const base={running:3,external:0,starting:1,pending:0,freeGB:10.5,minFreeGB:8,maxBots:6};
     expect(admissionDecision(base).allowed).toBe(true);
     expect(admissionDecision({...base,running:4,pending:1}).projectedFreeGB).toBe(8.5);
@@ -328,8 +329,8 @@ test('admission reserves pending heaps and a new account before enforcing the8Gi
     const third=admissionDecision({...base,running:5,pending:2});
     expect(third.reason).toBe('memory');expect(third.projectedFreeGB).toBe(7.5);
     expect(admissionDecision({...base,running:5,external:1}).reason).toBe('maxBots');
-    expect(admissionDecision({...base,freeGB:9,minFreeGB:0}).allowed).toBe(true);
-    expect(admissionDecision({...base,freeGB:8.9,minFreeGB:0}).reason).toBe('memory');
+    expect(admissionDecision({...base,freeGB:FREE_FLOOR_GB+1,minFreeGB:0}).allowed).toBe(true);
+    expect(admissionDecision({...base,freeGB:FREE_FLOOR_GB+0.9,minFreeGB:0}).reason).toBe('memory');
     expect(admissionDecision({...base,starting:3,freeGB:10.5}).reason).toBe('memory');
     expect(admissionDecision({...base,freeGB:NaN}).allowed).toBe(false);
 });

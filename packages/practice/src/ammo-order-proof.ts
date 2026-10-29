@@ -9,6 +9,7 @@ import {rsSdkRoot,practiceDir} from './paths';
 import {killTree} from './proc';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';
+import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 // Promoted from .practice/ammo-assembly/installed-native.ts. Exercise the actual
 // parameterized workers, then inspect saved state in a separate consumer stage.
@@ -42,7 +43,7 @@ function verify(directory:string){
 }
 
 async function run(directory:string){
-    if(freemem()/2**30<12)throw Error('practice needs 8GiB floor plus 4GiB startup reserve');
+    if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
     const requests=join(practiceDir(),'withdraw');
     if(existsSync(requests)&&readdirSync(requests).some(p=>p.endsWith('.json')))throw Error('supply requests pending; preserve their owner');
     const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');

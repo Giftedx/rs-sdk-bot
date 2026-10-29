@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
+import { FREE_FLOOR_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 // flairx60g01's retained failure: no action was sent and no game contents changed.
 // Historical regression uses the recorded logout clock28. New native evidence
@@ -150,14 +151,14 @@ test('changed ownership is retained without stopping another stack or deleting i
  expect(readFileSync(join(dir,'pids.json'),'utf8')).toBe('foreign-stack');
 }));
 test('fresh startup admission and post-start memory floor prevent registration',async()=>{
- for(const memory of [11,7])await lifecycle(async(dir,deps,events)=>{
-  let reads=0;deps.free=()=>((memory===11||reads++>1)?memory:13)*2**30;
+ for(const memory of [PRACTICE_STARTUP_GB-1,FREE_FLOOR_GB-1])await lifecycle(async(dir,deps,events)=>{
+  let reads=0;deps.free=()=>((memory===PRACTICE_STARTUP_GB-1||reads++>1)?memory:PRACTICE_STARTUP_GB+1)*2**30;
   await expect(proof.withFreshRuneStack(dir,async()=>{events.push('registration');},deps)).rejects.toThrow(/reserve|floor/);
-  expect(events).toEqual(memory===11?[]:['ready','stop']);expect(existsSync(join(dir,'delivery-practice.lock'))).toBe(false);
+  expect(events).toEqual(memory===PRACTICE_STARTUP_GB-1?[]:['ready','stop']);expect(existsSync(join(dir,'delivery-practice.lock'))).toBe(false);
  });
 });
 test('admission is checked again after acquiring ownership',async()=>lifecycle(async(dir,deps,events)=>{
- let reads=0;deps.free=()=> (reads++===0?13:11)*2**30;
+ let reads=0;deps.free=()=> (reads++===0?PRACTICE_STARTUP_GB+1:PRACTICE_STARTUP_GB-1)*2**30;
  await expect(proof.withFreshRuneStack(dir,async()=>{events.push('registration');},deps)).rejects.toThrow('fresh practice startup reserve');
  expect(events).toEqual([]);expect(existsSync(join(dir,'delivery-practice.lock'))).toBe(false);
 }));
