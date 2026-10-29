@@ -102,8 +102,29 @@ export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'
         totals: { actions: actions.length, actionsNamed: domains.reduce((n, d) => n + d.named, 0), domains: domains.length, domainsUntouched: domains.filter(d => d.named === 0).length },
         items: itemsHeld(statuses, JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'))),
         skills: skillBands(statuses), quests: questStages(statuses, practicePass, scriptFolders, quests), domains, statuses: statuses.length };
-    writeFileSync(join(root, '.practice', 'coordinator', 'scoreboard.json'), JSON.stringify(board, null, 1) + '\n');
-    return board;
+    const full = { ...board, progress: progressOf(board) };
+    writeFileSync(join(root, '.practice', 'coordinator', 'scoreboard.json'), JSON.stringify(full, null, 1) + '\n');
+    return full;
+}
+
+// The numbers that must rise while work is useful, and the end condition of the whole project. Boards are tracked by
+// the plan's scoreboard; this covers the game itself.
+export interface Progress { skillLevels: number; skills99: number; questsLive: number; questTotal: number; itemsHeld: number; actionsNamed: number; done: boolean; remaining: string[] }
+export function progressOf(b: { skills: { skill: string; bestLive: number }[]; quests: { liveComplete: string[]; folders: { qp: number }[] }; items: { held: number; tradeable: number; tradeableHeld: number }; totals: { actions: number; actionsNamed: number } }): Progress {
+    const questTotal = b.quests.folders.filter(f => f.qp > 0).length;
+    const remaining = [
+        ...b.skills.filter(s => s.bestLive < 99).map(s => `${s.skill} ${s.bestLive}/99`),
+        ...(b.quests.liveComplete.length < questTotal ? [`quests ${b.quests.liveComplete.length}/${questTotal} live`] : []),
+        ...(b.items.tradeableHeld < b.items.tradeable ? [`tradeable items ${b.items.tradeableHeld}/${b.items.tradeable} held`] : []),
+        ...(b.totals.actionsNamed < b.totals.actions ? [`actions ${b.totals.actionsNamed}/${b.totals.actions} named`] : []),
+    ];
+    return { skillLevels: b.skills.reduce((n, s) => n + s.bestLive, 0), skills99: b.skills.filter(s => s.bestLive >= 99).length,
+        questsLive: b.quests.liveComplete.length, questTotal, itemsHeld: b.items.held, actionsNamed: b.totals.actionsNamed, done: remaining.length === 0, remaining };
+}
+// Work moved the game forward when any progress number rose.
+export function improved(before: Progress, after: Progress): boolean {
+    return after.skillLevels > before.skillLevels || after.skills99 > before.skills99 || after.questsLive > before.questsLive
+        || after.itemsHeld > before.itemsHeld || after.actionsNamed > before.actionsNamed;
 }
 
 // Rebuilt when older than maxAgeMs; the planner reads it every round.
