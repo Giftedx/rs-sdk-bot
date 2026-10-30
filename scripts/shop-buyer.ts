@@ -282,7 +282,9 @@ try {
             const r = await walkPath(await sessionWalker(s), [{ x, z, tol }], { stop: over });
             if (!r.ok) {
                 console.log(`WALK fail ${r.detail} ticks=${r.ticks}`);
-                await waitTicks(s, 1);
+                // The local walk can be refused (a fence, a door the plan does not know): try the world walker.
+                const g = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+                if (!g.ok) { console.log(`WALK route fail ${g.reason} ${g.detail}`); await waitTicks(s, 1); }
             }
         }
         walkTicks += s.tick() - a;
