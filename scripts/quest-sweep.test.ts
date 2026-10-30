@@ -1,5 +1,57 @@
 import {test,expect} from 'bun:test';
-import {plan,needs,nearestBank,presetFor} from './quest-sweep';
+import {plan,needs,nearestBank,presetFor,leaveStronghold,walkCorridor,KARAMJA} from './quest-sweep';
+import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
+import type {Session} from '../packages/core/src/inprocess';
+import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
+
+// Retained bank-stage.log: goTo reported "no route to 2850,3175,0" after Brimhaven. The courier walks that tile
+// as a tolerance-5 pass-by point of one walkPath call.
+test('the Karamja corridor keeps courier waypoint tolerances and resumes from the unpassed point',async()=>{
+ let pos={x:2800,z:3200,level:0};
+ const calls:PathPoint[][]=[];
+ const walk=(async(_d:PathDeps,points:PathPoint[])=>{
+  calls.push(points);
+  if(calls.length===1){pos={x:2851,z:3176,level:0};return{ok:false,next:3,detail:'stalled'} as PathResult;}
+  pos={x:2954,z:3147,level:0};return{ok:true,next:points.length} as PathResult;
+ }) as unknown as typeof import('../packages/core/src/walk').walkPath;
+ const r=await walkCorridor({pos:()=>pos} as unknown as PathDeps,KARAMJA,walk);
+ expect(calls[0]).toEqual([{x:2774,z:3228,tol:3},{x:2800,z:3200,tol:5},{x:2850,z:3175,tol:5},{x:2920,z:3160,tol:5},{x:2956,z:3146,tol:3}]);
+ expect(calls[1]).toEqual([{x:2920,z:3160,tol:5},{x:2956,z:3146,tol:3}]);
+ expect(r).toEqual({ok:true,at:{x:2954,z:3147,level:0}});
+});
+
+test('a corridor that never reaches the last point fails after three bounded tries',async()=>{
+ let n=0;
+ const walk=(async()=>{n++;return{ok:false,next:0,detail:'no path'} as PathResult;}) as unknown as typeof import('../packages/core/src/walk').walkPath;
+ const r=await walkCorridor({pos:()=>({x:2800,z:3200,level:0})} as unknown as PathDeps,KARAMJA,walk);
+ expect(n).toBe(3);
+ expect(r.ok).toBe(false);
+});
+
+test('asset equality treats an empty worn row as absent and still sees a worn item',()=>{
+ const pack={93:[{slot:0,id:995,count:362}]};
+ expect(equipment({inventories:pack} as any)).toBe(equipment({inventories:{...pack,94:[],95:[]}} as any));
+ expect(equipment({inventories:pack} as any)).not.toBe(equipment({inventories:{...pack,94:[{slot:3,id:1351,count:1}]}} as any));
+});
+
+test('Sheep Shearer proof requires completion 22 and 3750 decoded Crafting XP at 25x',()=>{
+ const before:Parameters<typeof questSweepChecks>[1]={
+  version:9,position:{x:2459,z:3385,level:0},vars:{179:0,101:3},inventories:{},
+  skills:Array.from({length:21},(_,index)=>({index,rawExperience:1000,xp:100,level:10})),
+ };
+ const after=structuredClone(before);
+ after.vars[179]=22;after.vars[101]=4;
+ after.skills[12]!.rawExperience+=37500;after.skills[12]!.xp+=3750;
+ const record={id:'bank-stage',exit:0,timedOut:false,saveMatched:true,seconds:0};
+ const checks=()=>questSweepChecks('bank-stage',before,after,'',record);
+ expect(checks()).toMatchObject({quest:true,reward:true});
+ after.vars[179]=21;
+ expect(checks()).toMatchObject({quest:false,reward:true});
+ after.vars[179]=22;
+ after.skills[12]!.rawExperience=before.skills[12]!.rawExperience+375000;
+ after.skills[12]!.xp=before.skills[12]!.xp+37500;
+ expect(checks()).toMatchObject({quest:true,reward:false});
+});
 
 test('the plan withdraws what the pack lacks and names what the bank cannot cover',()=>{
  const need=needs({inventory:[{id:434,count:1},{id:434,count:5},{id:436,count:4},{id:440,count:2}]});
@@ -22,7 +74,39 @@ test('the nearest bank is on the same floor and closest by tiles',()=>{
  expect(nearestBank({x:2930,z:3450,level:0})).toMatchObject({x:2947,z:3368});
 });
 
+test('Gnome entry selects Ardougne north; distance selection alone does not prove its approach',()=>{
+ expect(nearestBank({x:2459,z:3385,level:0})).toMatchObject({x:2618,z:3332,level:0});
+});
+
+test('north-side bank entry opens gate190 at its loc tile and observes the southern landing',async()=>{
+ let player={worldX:2459,worldZ:3385,level:0},tick=0;
+ const clicks:unknown[]=[],walks:unknown[]=[];
+ const listeners=new Set<()=>void>();
+ const s={sdk:{getState:()=>({player})},tick:()=>tick,
+  onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
+  direct:async(a:any)=>{clicks.push(a);return{success:true};}} as unknown as Session;
+ const timer=setInterval(()=>{tick++;if(clicks.length)player={worldX:2461,worldZ:3382,level:0};for(const cb of listeners)cb();},1);
+ try{
+  const result=await leaveStronghold(s,async(to)=>{walks.push(to);player={worldX:to.x,worldZ:to.z,level:0};return{ok:true};});
+  expect(walks).toEqual([{x:2461,z:3385,level:0}]);
+  expect(clicks).toEqual([{type:'interactLoc',x:2459,z:3383,locId:190,optionIndex:1,reason:'SDK'}]);
+  expect(result.ok).toBe(true);
+  expect(player.worldZ).toBe(3382);
+ }finally{clearInterval(timer);}
+});
+
 test('every swept quest has a start tile, and an unknown quest refuses',()=>{
  expect(presetFor('doric').position).toMatchObject({level:0});
  expect(()=>presetFor('nosuchquest')).toThrow('no preset');
+});
+
+test('missing items a shop sells are bought with coins taken for them; unsold items stay missing', () => {
+    const { shopPlan } = require('./quest-sweep');
+    const item = (id: number) => ({ 1944: { debugname: 'egg', name: 'Egg', cost: 4 }, 1927: { debugname: 'bucket_milk', name: 'Bucket of milk', cost: 6 }, 753: { debugname: 'cadavaberries', name: 'Cadava berries', cost: 1 } } as any)[id];
+    const seller = (d: string) => d === 'cadavaberries' ? null : { npc: 'Shop keeper', npcId: 1, tile: { x: 1, z: 1, level: 0 } };
+    const p = shopPlan([{ id: 1944, count: 1 }, { id: 1927, count: 2 }, { id: 753, count: 1 }], { x: 0, z: 0, level: 0 }, item, seller);
+    expect(p.buys.map((b: any) => [b.id, b.count])).toEqual([[1944, 1], [1927, 2]]);
+    expect(p.unsold).toEqual([{ id: 753, count: 1 }]);
+    expect(p.coins).toBe(3 * 4 + 3 * 6 * 2 + 100);
+    expect(shopPlan([], { x: 0, z: 0, level: 0 }, item, seller).coins).toBe(0);
 });
