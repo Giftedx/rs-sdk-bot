@@ -203,7 +203,7 @@ test('completion indexes only the exact child/producer, releases its lease, and 
    const ended=new Map(Object.entries(JSON.parse(ends))) as Map<string,any>,holds:ScriptHold[]=[];
    const repaired=applyEndRepair({account:'Rod',endedAt:100,server:f.request.server,proof:{kind:'producer',attemptId:attempt.attemptId}},ended,[],{
     readProof:(a,s)=>readLogoutProof(a,s,{root}),verifyLegacy:()=>({state:'refused',reason:'not used'})},holds);
-   expect(repaired.changed).toBe(true);expect(holds[0]?.script).toBe('scripts/old.ts');
+   expect(repaired.changed).toBe(true);expect(holds).toEqual([]);
    f.put('.practice/swarm-deaths.json',Object.fromEntries(ended));f.put('.practice/swarm-script-holds.json',holds);
    expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base})).not.toThrow();
    expect(JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8')).jobs[0].enabled).toBe(true);
