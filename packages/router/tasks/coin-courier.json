@@ -1,0 +1,44 @@
+{
+  "id": "coin-courier",
+  "goal": "Move an exact number of coins from one owned account to another by trade at a shared bank: both log in, meet, trade, confirm both banks.",
+  "entry": "scripts/coin-courier.ts",
+  "files": [
+    "scripts/coin-courier.ts",
+    "scripts/coin-courier.test.ts",
+    "packages/practice/src/coin-courier-proof.ts"
+  ],
+  "consumer": "The receiver's bank gains exactly the amount and the giver's loses it; both log out.",
+  "checks": [
+    {
+      "id": "coin-courier-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/coin-courier.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "coin-courier-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/coin-courier-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "coin-courier-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/coin-courier-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}
