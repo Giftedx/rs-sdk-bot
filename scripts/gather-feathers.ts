@@ -7,10 +7,18 @@
 import { openBot, finish, getWorld, accountOf, countItems, randomEventsOf } from '../packages/core/src/bot';
 import { goTo } from '../packages/core/src/walk';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 export function parsePen(v: string | undefined): { x: number; z: number } {
     const m = (v ?? '').match(/^(\d+),(\d+)$/);
     return m ? { x: Number(m[1]), z: Number(m[2]) } : { x: 3229, z: 3298 };
+}
+
+// Chicken spawn tiles (npcs.json) nearest the pen centre: a centre can fall on a fence or an unreachable tile.
+export function penTiles(pen: { x: number; z: number }, spawns: { x: number; z: number; level: number }[]): { x: number; z: number }[] {
+    const d = (t: { x: number; z: number }) => Math.max(Math.abs(t.x - pen.x), Math.abs(t.z - pen.z));
+    return spawns.filter(t => t.level === 0 && d(t) <= 15).sort((a, b) => d(a) - d(b)).map(({ x, z }) => ({ x, z }));
 }
 
 if (import.meta.main) {
@@ -23,8 +31,14 @@ if (import.meta.main) {
     const f0 = countItems(s, FEATHER);
     let kills = 0, idle = 0;
     try {
-        const there = await goTo(s, await getWorld(), { x: PEN.x, z: PEN.z, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
-        if (!there.ok) await finish([s], false, `travel to chickens ${PEN.x},${PEN.z} failed: ${there.reason} ${there.detail}`);
+        const spawns = (JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/npcs.json'), 'utf8')) as { name: string; spawns?: { x: number; z: number; level: number }[] }[])
+            .filter(n => n.name === 'Chicken').flatMap(n => n.spawns ?? []);
+        let there: Awaited<ReturnType<typeof goTo>> | undefined;
+        for (const t of [...penTiles(PEN, spawns).slice(0, 4), PEN]) {
+            there = await goTo(s, await getWorld(), { ...t, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+            if (there.ok) break;
+        }
+        if (!there?.ok) await finish([s], false, `travel to chickens ${PEN.x},${PEN.z} failed: ${there?.reason} ${there?.detail}`);
         while (!over()) {
             if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
             const loot = (st()?.groundItems ?? []).filter((g: any) => g.distance <= 8 && g.reachable !== false && FEATHER.test(g.name))
