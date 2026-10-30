@@ -9,6 +9,7 @@ import { join, resolve } from 'node:path';
 import { openBot, settle, serverFromEnv, assertServerAllowed } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
+import { readLogoutProof } from '../packages/core/src/session-lifecycle';
 import { moveCoins, parseCoins } from './coin-courier';
 import { assertAccountOwnership, acquireAccountLeases, assertRecoverableStatus } from './handoff-inputs';
 
@@ -36,7 +37,9 @@ if (import.meta.main) {
         const owned = ownedAccounts(server);
         for (const n of names) {
             if (!owned.has(n.toLowerCase())) throw Error('not authenticated owned: ' + n);
-            if (!open.some(s => s.name.toLowerCase() === n.toLowerCase())) assertRecoverableStatus(read(join(dir, 'status', n + '.json'), null), null, () => true);
+            // A confirmed producer logout settles an account; host-run accounts write no status result line.
+            if (!open.some(s => s.name.toLowerCase() === n.toLowerCase()) && readLogoutProof(n, server).state !== 'confirmed')
+                assertRecoverableStatus(read(join(dir, 'status', n + '.json'), null), null, () => true);
         }
     };
     const results: { to: string; ok: boolean; detail: string }[] = [];
