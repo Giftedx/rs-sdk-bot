@@ -31,6 +31,14 @@ export function shopSellers(): Map<string, ShopSeller[]> {
     return index;
 }
 
+// Sellers on `at`'s level, nearest first by straight-line distance (the route search judges the real walk).
+export function sellersByDistance(item: string, at: Tile): (ShopSeller & { tile: Tile })[] {
+    const out: (ShopSeller & { tile: Tile; d: number })[] = [];
+    for (const s of shopSellers().get(item) ?? []) for (const t of s.spawns)
+        if (t.level === at.level && s.stock >= 1) out.push({ ...s, tile: t, d: Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) });
+    return out.sort((a, b) => a.d - b.d).map(({ d: _d, ...s }) => s);
+}
+
 // The seller nearest `at` on its level, by straight-line distance (the route search judges the real walk).
 export function nearestSeller(item: string, at: Tile): (ShopSeller & { tile: Tile }) | null {
     let best: (ShopSeller & { tile: Tile }) | null = null, d = Infinity;

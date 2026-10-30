@@ -11,7 +11,7 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
 import type {World} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
-import {nearestSeller} from '../packages/core/src/shop-index';
+import {nearestSeller,sellersByDistance} from '../packages/core/src/shop-index';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -45,6 +45,9 @@ export function plan(need:ReadonlyMap<number,number>,pack:readonly Item[],bank:r
   if(take<lack)missing.push({id,count:lack-take});
  }
  return{withdraw,missing};
+}
+export function nearestBanks(at:Tile):Tile[]{
+ return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)));
 }
 export function nearestBank(at:Tile):Tile{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)))[0]??BANKS[0]!;
@@ -121,14 +124,14 @@ async function reachStart(s:Session,world:World,start:Tile){
 
 // Missing quest items a shop sells: the nearest seller of each (shop-index.ts), and the coins to take for them
 // (3 times the item's base cost, plus 100). Items no shop sells stay missing.
-export type Buy={id:number;count:number;name:string;npcId:number;npc:string;tile:Tile};
+export type Buy={id:number;count:number;name:string;npcId:number;npc:string;tile:Tile;alts?:{npc:string;npcId:number;tile:Tile}[]};
 export function shopPlan(missing:readonly Item[],at:Tile,item:(id:number)=>{debugname:string;name:string;cost:number}|undefined,
- seller:(debugname:string,at:Tile)=>{npc:string;npcId:number;tile:Tile}|null){
+ seller:(debugname:string,at:Tile)=>{npc:string;npcId:number;tile:Tile}|null,alts:(debugname:string,at:Tile)=>{npc:string;npcId:number;tile:Tile}[]=()=>[]){
  const buys:Buy[]=[],unsold:Item[]=[];let coins=0;
  for(const m of missing){
   const it=item(m.id),s=it&&m.id!==COINS?seller(it.debugname,at):null;
   if(!it||!s){unsold.push(m);continue;}
-  buys.push({id:m.id,count:m.count,name:it.name,npcId:s.npcId,npc:s.npc,tile:s.tile});coins+=3*Math.max(1,it.cost)*m.count;
+  buys.push({id:m.id,count:m.count,name:it.name,npcId:s.npcId,npc:s.npc,tile:s.tile,alts:alts(it.debugname,at).filter(a=>a.npcId!==s.npcId||a.tile.x!==s.tile.x||a.tile.z!==s.tile.z).slice(0,3)});coins+=3*Math.max(1,it.cost)*m.count;
  }
  return{buys,unsold,coins:buys.length?coins+100:0};
 }
@@ -138,9 +141,12 @@ const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(r
 // Walk to each seller, open its shop and buy. Ok when the pack holds the bought counts.
 async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
- for(const b of buys){
-  const walked=await goTo(s,world,b.tile,accountOf(s),{legTimeoutTicks:100});
-  if(!walked.ok)return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} failed: ${walked.reason} ${walked.detail}`;
+ for(let b of buys){
+  // The nearest seller may be out of reach (a quest area, deadly ground): try the next ones.
+  let walked:{ok:boolean;reason?:string;detail?:string}={ok:false},via=b;
+  for(const c of [b,...(b.alts??[])]){walked=await goTo(s,world,c.tile,accountOf(s),{legTimeoutTicks:100});if(walked.ok){via={...b,...c};break;}}
+  if(!walked.ok)return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length??0} more failed: ${walked.reason} ${walked.detail}`;
+  b=via;
   const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===b.npcId).sort((x:any,y:any)=>x.distance-y.distance)[0];
   if(!npc)return `${b.npc} not in sight at ${b.tile.x},${b.tile.z}`;
   if(!(await s.bot.openShop(npc)).success)return `${b.npc} shop did not open`;
@@ -203,10 +209,14 @@ export async function sweep(account:string,quest:string,fresh?:string){
  if(plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
-  const bank=nearestBank(here());
-  console.log(`QUEST_SWEEP_BANK ${JSON.stringify({from:here(),to:bank})}`);
-  const walked=await goTo(s,world,bank,accountOf(s),{legTimeoutTicks:100});
-  console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
+  // The nearest bank may be out of reach: try the next three.
+  let walked:Awaited<ReturnType<typeof goTo>>={ok:false,reason:'precondition',detail:'no bank tried',ticks:0};
+  for(const bank of nearestBanks(here()).slice(0,4)){
+   console.log(`QUEST_SWEEP_BANK ${JSON.stringify({from:here(),to:bank})}`);
+   walked=await goTo(s,world,bank,accountOf(s),{legTimeoutTicks:100});
+   console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
+   if(walked.ok)break;
+  }
   if(!walked.ok)return fail(`bank walk failed at ${JSON.stringify(here())}: ${walked.reason} ${walked.detail}`);
   const opened=await s.bot.openBank();
   if(!opened.success)return fail('bank did not open');
@@ -215,7 +225,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const p=plan(need,pack(),rows()),meal=plan(food,pack(),rows()).withdraw;
   p.withdraw.push(...meal);
   // A missing item a shop sells is bought after the bank: take coins for it now.
-  const shop=shopPlan(p.missing,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};});
+  const shop=shopPlan(p.missing,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};},(d,at)=>sellersByDistance(d,at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile})));
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
