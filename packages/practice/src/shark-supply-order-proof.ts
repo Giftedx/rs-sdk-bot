@@ -161,7 +161,7 @@ async function child(directory:string,name:string,target:number,cap:number){
     try{return {code:await p.exited,timedOut};}finally{clearTimeout(timer);if(p.exitCode===null)await killTree(p.pid);await termination;}
 }
 async function run(directory:string){
-    if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
+    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient free memory: below the floor');
     mkdirSync(directory,{recursive:true});
     if(existsSync(join(directory,'native.json'))||cases.some(id=>existsSync(join(directory,id))))throw Error('shark proof directory already used');
     const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'shark-supply-order'}));
@@ -225,7 +225,7 @@ async function diagnose(input:string,directory:string){
     const bytes=readFileSync(input),inputSha=createHash('sha256').update(bytes).digest('hex');
     if(inputSha!==DIAGNOSTIC_INPUT_SHA)throw Error('fishing diagnostic input is not the recorded SJ9QEg entry save');
     const entry=readPracticeSave(input);if(!ordinaryEntry(entry))throw Error('fishing diagnostic input is not the ordinary entry state');
-    if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
+    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient free memory: below the floor');
     mkdirSync(dir,{recursive:true});
     const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'shark-supply-order',mode:'fishing-diagnostic'}));
     const before={sources:sources(),diagnostic:diagnosticSources()},trace=join(dir,'server-trace.jsonl');

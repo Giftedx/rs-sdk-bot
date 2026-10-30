@@ -127,7 +127,7 @@ export function verifyCow(directory:string){
 }
 async function run(directory:string){
  verifyCompletedRecoveryDelivery(directory);
- if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
+ if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient free memory: below the floor');
  mkdirSync(directory,{recursive:true});
  // Exclusive delivery folder: do not overwrite previous before/ snapshots.
  if(existsSync(join(directory,'native.json'))||cases.some(id=>existsSync(join(directory,id))))throw Error('cow proof directory already used');

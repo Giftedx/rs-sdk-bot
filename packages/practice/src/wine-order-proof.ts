@@ -32,7 +32,7 @@ function verify(directory:string){
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(directory:string){
- if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
+ if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient free memory: below the floor');
  const lock=resolve(import.meta.dir,'../../../.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'wine-order'}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;

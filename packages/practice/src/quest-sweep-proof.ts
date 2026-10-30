@@ -7,7 +7,7 @@ import {startStack,stopStack} from './stack';
 import {applyPreset} from './presets';
 import {createBot} from './bots';
 import {runBotName} from './prove';
-import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
+import {PRACTICE_STARTUP_GB, FREE_FLOOR_GB} from '../../core/src/memory';
 const root=resolve(import.meta.dir,'../../..'),dir=join(resolve(import.meta.dir,'../../..'),'.practice','quest-sweep');
 // --verify: the consumer check reads the last practice results and passes only when every case met its expectation.
 if(process.argv.includes('--verify')){
@@ -16,7 +16,7 @@ if(process.argv.includes('--verify')){
  console.log(ok?'quest-sweep practice results verified':'quest-sweep practice results failed '+JSON.stringify(r));
  process.exit(ok?0:1);
 }
-if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
+if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient free memory: below the floor');
 const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
 writeFileSync(fd,JSON.stringify({pid:process.pid,directory:dir,task:'quest-sweep'}));closeSync(fd);
 mkdirSync(dir,{recursive:true});

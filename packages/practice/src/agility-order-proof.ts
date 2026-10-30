@@ -1106,7 +1106,7 @@ async function run(directory:string,mode:Mode='full',retainedPath?:string){
  };
  const gnomeMode=mode==='gnome-food'||mode==='ardougne'||mode==='gnome-consumer';
  if(mode==='food-recovery'||gnomeMode){directory=join(directory,mode);mkdirSync(directory,{recursive:true});}
- if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error('insufficient practice startup reserve');
+ if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient free memory: below the floor');
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:mode==='full'?'agility-order':`agility-order-${mode}`}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
