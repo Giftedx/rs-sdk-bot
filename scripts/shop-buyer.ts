@@ -3,9 +3,9 @@
 // Environment: COIN_RESERVE/MAX_SPEND/MAX_ITEMS bound one run; defaults preserve existing unbounded jobs.
 // NO_BUY_TICKS=25 opts into a clean bank-and-offline stop when shelves/budget yield no buys.
 // DEMO_OK=1 is required for live; funding and route admission are separate gates.
-import { openBot, finish, countItems } from '../packages/core/src/bot';
+import { openBot, finish, countItems, getWorld, accountOf } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
-import { walkPath, sessionWalker } from '../packages/core/src/walk';
+import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
 import { bankCargo, courierWaiting, exactItem } from '../packages/core/src/cargo';
 
 export const PROFILES: Record<string, {
@@ -270,6 +270,12 @@ try {
 
     const walk = async (x: number, z: number, tol = 2): Promise<boolean> => {
         const a = s.tick();
+        // From far away (another town, a boat ride) the world walker plans the trip; walkPath covers the last tiles.
+        const p0 = pos();
+        if (p0 && Math.max(Math.abs(p0.worldX - x), Math.abs(p0.worldZ - z)) > 60) {
+            const r = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+            if (!r.ok) console.log(`WALK route fail ${r.reason} ${r.detail}`);
+        }
         for (let i = 0; i < 3 && !over(); i++) {
             const p = pos();
             if (p && Math.max(Math.abs(p.worldX - x), Math.abs(p.worldZ - z)) <= tol) break;
