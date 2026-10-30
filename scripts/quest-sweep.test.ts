@@ -131,3 +131,8 @@ test('general stores come nearest first, one tile per keeper, and only general s
  const sellers=new Map([['torch',[{shop:'generalshop7',npc:'Shop keeper',npcId:532,spawns:[t(2902,3146)],stock:1},{shop:'junglestore',npc:'Jiminua',npcId:560,spawns:[t(2767,3122)],stock:1}]],['pot',[{shop:'generalshop7',npc:'Shop keeper',npcId:532,spawns:[t(2902,3146)],stock:1},{shop:'generalshop1',npc:'Shop keeper',npcId:520,spawns:[t(3212,3246)],stock:1}]]]) as any;
  expect(generalStores(t(2768,3118),sellers).map(s=>s.npcId)).toEqual([532,520]);
 });
+
+test('garlic comes from the Draynor cupboard when the only seller is far away',()=>{
+ const at={x:3092,z:3243,level:0};
+ expect(gatherPlan([{id:1550,count:1}],at,()=>[],()=>600).gathers).toEqual([{id:1550,count:1,how:'loc'}]);
+});

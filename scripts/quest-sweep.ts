@@ -200,10 +200,14 @@ async function raiseFare(s:Session,world:World):Promise<boolean>{
  return false;
 }
 
-// Items no shop sells that the account can gather: a ground spawn (maps OBJ, spawn-index.ts), or milk from a cow
-// with an empty bucket (npc/scripts/cow_milking.rs2). The bucket is a pack item like any other: bank or shop.
+// Items no shop sells that the account can gather: a ground spawn (maps OBJ, spawn-index.ts), milk from a cow
+// with an empty bucket (npc/scripts/cow_milking.rs2), or a loc that hands the item out. The bucket is a pack item
+// like any other: bank or shop.
 export const MILK=1927,BUCKET=1925,COW=81;
-export type Gather={id:number;count:number;how:'spawn'|'milk'};
+// Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
+// 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
+export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
+export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'};
 // A spawn wins over a shop when it is nearer: eggs lie by Lumbridge, while the only egg seller is in Rellekka.
 // `seller` gives the straight-line distance to the nearest seller (Infinity when no shop sells the item).
 export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity){
@@ -213,6 +217,7 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   const sold=seller(m.id),spot=spawns(m.id,at)[0];
   if(m.id===MILK&&sold===Infinity){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
   else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
+  else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
   else still.push(m);
  }
  return{gathers,still,tools};
@@ -227,7 +232,7 @@ async function gatherItems(s:Session,world:World,gathers:readonly Gather[]):Prom
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
  const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
  for(const g of gathers){
-  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):spawnsByDistance(g.id,here())).slice(0,6);
+  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:spawnsByDistance(g.id,here())).slice(0,6);
   for(const at of sources){
    if(held(g.id)>=target)break;
    const walked=await goTo(s,world,at,accountOf(s),{legTimeoutTicks:100});
@@ -240,6 +245,12 @@ async function gatherItems(s:Session,world:World,gathers:readonly Gather[]):Prom
      const cow=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===COW).sort((a:any,b:any)=>a.distance-b.distance)[0],bucket=(st()?.inventory??[]).find((i:any)=>i.id===BUCKET);
      if(!bucket)return `milk needs an empty bucket (${BUCKET})`;
      await s.bot.useItemOnNpc(bucket,cow);
+    }else if(g.how==='loc'){
+     const src=LOC_SOURCES[g.id]!,ops=(l:any)=>(l.optionsWithIndex??[]).map((o:any)=>o.text as string);
+     const loc=()=>(st()?.nearbyLocs??[]).filter((l:any)=>l.x===src.tile.x&&l.z===src.tile.z).find((l:any)=>ops(l).some((o:string)=>src.open.test(o)||src.take.test(o)));
+     const l0=loc();if(!l0)break;
+     if(ops(l0).some((o:string)=>src.open.test(o))){await s.bot.interactLoc(l0,src.open);await waitUntil(s,()=>!!loc()&&ops(loc()).some((o:string)=>src.take.test(o)),{timeoutTicks:10});}
+     const l1=loc();if(l1&&ops(l1).some((o:string)=>src.take.test(o)))await s.bot.interactLoc(l1,src.take);
     }else{
      // A taken item respawns at its tile; wait for it there.
      if(!await waitUntil(s,()=>(st()?.groundItems??[]).some((i:any)=>i.id===g.id&&i.distance<=10),{timeoutTicks:100}))break;
@@ -248,6 +259,13 @@ async function gatherItems(s:Session,world:World,gathers:readonly Gather[]):Prom
     }
     await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
    }
+  }
+  // The route search plans from the ground floor: come down from an upstairs source.
+  for(let i=0;i<3&&here().level>0;i++){
+   const lvl=here().level,down=(st()?.nearbyLocs??[]).filter((l:any)=>(l.optionsWithIndex??[]).some((o:any)=>/climb-down/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+   if(!down)break;
+   await s.bot.interactLoc(down,/climb-down/i);
+   await waitUntil(s,()=>here().level<lvl,{timeoutTicks:30});
   }
   console.log(`QUEST_SWEEP_GATHER ${JSON.stringify({item:g.id,how:g.how,count:g.count,held:held(g.id),target})}`);
   if(held(g.id)<target)return `gathered ${g.count-(target-held(g.id))} of ${g.count} item ${g.id} (${g.how})`;

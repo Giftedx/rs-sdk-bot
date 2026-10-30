@@ -4,7 +4,8 @@
 // spent measuring the same legs between fixed stairs, docks and transports again; with this file only new
 // legs cost a search.
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { threadId } from 'node:worker_threads';
 import { dirname, join, resolve } from 'node:path';
 import { pathfindingSourceKey } from './pathcache';
 
@@ -38,9 +39,18 @@ export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
             if (!fresh.size) return;
             const merged = { ...read(), ...Object.fromEntries(fresh) };
             if (!existsSync(dirname(file))) mkdirSync(dirname(file), { recursive: true });
-            const tmp = `${file}.${process.pid}.tmp`;
+            // The route worker shares the process id: the thread id and a random part keep temp names apart.
+            const tmp = `${file}.${process.pid}.${threadId}.${Math.random().toString(36).slice(2, 8)}.tmp`;
             writeFileSync(tmp, JSON.stringify({ source: src, legs: merged } satisfies File));
-            renameSync(tmp, file);
+            // Windows refuses the rename while another bot reads the file (EPERM). The cache is an optimization:
+            // retry briefly, then keep the legs for the next save instead of failing the walk.
+            for (let i = 0; ; i++) {
+                try { renameSync(tmp, file); break; }
+                catch (e) {
+                    if (i >= 5 || !['EPERM', 'EBUSY', 'EACCES'].includes((e as NodeJS.ErrnoException).code ?? '')) { try { rmSync(tmp, { force: true }); } catch {} return; }
+                    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 50);
+                }
+            }
             fresh.clear();
         },
     };
