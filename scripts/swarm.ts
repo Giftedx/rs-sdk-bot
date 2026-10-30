@@ -270,6 +270,14 @@ export function applyEndRepair(request: any, ended: Map<string, EndRecord>, acti
     ended.delete(entry[0]);
     return { changed: true, reason: `repaired failure cleared (${logout.label})` };
 }
+// The main and fresh-clock accounts stay offline; the swarm never records an end for them.
+const PROTECTED_ACCOUNTS = ['haggis', 'shaftshooter', 'polevaulter', 'afknight'];
+// Account names (as their latest attempt spells them) of every live lifecycle folder, so an account that has no
+// plan job is still found. An unreadable folder is skipped.
+export function lifecycleAccounts(dir: string): string[] {
+    let names: string[]; try { names = readdirSync(dir); } catch { return []; }
+    return names.flatMap(n => { try { const a = JSON.parse(readFileSync(join(dir, n, 'latest.json'), 'utf8')).account; return typeof a === 'string' && ACCOUNT.test(a) ? [a] : []; } catch { return []; } });
+}
 // A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
 // held attempt and no end record, so no repair can name it. Record its end once the attempt's owner pid is gone.
 export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
@@ -277,6 +285,7 @@ export function orphanedSessionEnds(accounts: readonly string[], ended: Readonly
     const out: [string, string][] = [], seen = new Set<string>();
     for (const a of accounts) {
         const key = a.toLowerCase();
+        if (PROTECTED_ACCOUNTS.includes(key)) continue;
         if (seen.has(key) || busy.some(b => b.toLowerCase() === key) || [...ended.keys()].some(n => n.toLowerCase() === key)) continue;
         seen.add(key);
         let p: LogoutProof; try { p = proof(a); } catch { continue; }
@@ -538,7 +547,8 @@ if (import.meta.main) {
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
             const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
             const owner = (a: string, id: string) => listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt?.owner.pid;
-            for (const [a, reason] of orphanedSessionEnds(planned.flatMap(p => p.accounts), ended, busy, a => readLogoutProof(a, LIVE_SERVER), owner, alive)) {
+            const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
+            for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), owner, alive)) {
                 ended.set(a, { at: Date.now(), reason });
                 console.log(`SWARM end ${a} ${reason}`);
             }

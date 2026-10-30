@@ -43,7 +43,7 @@ test('no demand cannot hide a retained failure, stop marker or release hold',()=
  // A release pause starts again; the swarm checks the release pin itself before a non-standing start.
  expect(startable(['Courier'],true,new Map([['Courier',{reason:'release-paused'}]]),()=>Infinity).start).toEqual(['Courier']);
 });
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
@@ -584,4 +584,18 @@ test('a held session whose owner pid is gone gets an end record; live, busy or a
         a => a === 'Clean' ? { state: 'confirmed', account: a, server: 's', domain: 'live', attemptId: 'x', loggedOutAt: 1, ownerRun: null, receiptSha256: '' } : held(a),
         (_a, id) => pids[id], pid => pid === 12);
     expect(out).toEqual([['Dead', 'exit orphaned: attempt id-Dead owner 11 gone']]);
+});
+test('the orphan scan finds lifecycle accounts outside the plan and skips the protected accounts', async () => {
+    const { orphanedSessionEnds, lifecycleAccounts } = await import('./swarm');
+    const dir = mkdtempSync(join(tmpdir(), 'lifecycle-'));
+    try {
+        for (const [folder, account] of [['offplan', 'OffPlan'], ['haggis', 'Haggis']]) {
+            mkdirSync(join(dir, folder), { recursive: true });
+            writeFileSync(join(dir, folder, 'latest.json'), JSON.stringify({ account }));
+        }
+        mkdirSync(join(dir, 'broken'));
+        expect(lifecycleAccounts(dir).sort()).toEqual(['Haggis', 'OffPlan']);
+        const held = (a: string) => ({ state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: 'id', reason: 'r' });
+        expect(orphanedSessionEnds(lifecycleAccounts(dir), new Map(), [], held, () => 5, () => false).map(([a]) => a)).toEqual(['OffPlan']);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
 });
