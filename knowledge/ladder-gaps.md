@@ -119,7 +119,7 @@ Each line is a rung with no worker: unlock level, method, base XP per action, so
 
 ## Magic (47 of 52 rungs have no worker)
 
-- L1 magic spell wind strike `magic/magic_spell_wind_strike` has no worker; 5.5 XP; pending capability `magic-order`; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:1`
+- L1 magic spell wind strike `magic/magic_spell_wind_strike` has no worker; 5.5 XP; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:1`
 - L3 magic spell confuse `magic/magic_spell_confuse` has no worker; 13 XP; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:358`
 - L5 magic spell water strike `magic/magic_spell_water_strike` has no worker; 7.5 XP; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:20`
 - L9 magic spell earth strike `magic/magic_spell_earth_strike` has no worker; 9.5 XP; `knowledge/skills.json` `scripts/skill_combat/configs/magic/magic_combat_spells.dbrow:39`
@@ -267,9 +267,8 @@ Each line is a rung with no worker: unlock level, method, base XP per action, so
 - L78 Sea turtle `fishing/catch-sea-turtle` has no worker; XP unknown; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:722`
 - L80 Manta ray `fishing/catch-manta-ray` has no worker; XP unknown; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:723`
 
-## Firemaking (6 of 6 rungs have no worker)
+## Firemaking (5 of 6 rungs have no worker)
 
-- L1 Normal logs `firemaking/burn-normal-logs` has no worker; XP unknown; pending capability `firemaking-order`; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:878`
 - L15 Oak logs `firemaking/burn-oak-logs` has no worker; XP unknown; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:879`
 - L30 Willow logs `firemaking/burn-willow-logs` has no worker; XP unknown; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:880`
 - L45 Maple logs `firemaking/burn-maple-logs` has no worker; XP unknown; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:881`

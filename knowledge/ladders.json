@@ -48,7 +48,7 @@
   },
   "firemaking": {
    "methods": 6,
-   "withWorker": 0
+   "withWorker": 1
   },
   "crafting": {
    "methods": 60,
@@ -84,7 +84,8 @@
   "Strength and Hitpoints have no skill guide gear rows; their ladders hold only combat targets.",
   "Magic combat spells need a target; pick one from the Attack ladder targets.",
   "Prayer prayers (prayers dbtable) are unlocks, not XP methods, and are left out.",
-  "Cutting logs into shafts and unstrung bows (fletch_bow_table) has no level or XP column in knowledge and is left out."
+  "Cutting logs into shafts and unstrung bows (fletch_bow_table) has no level or XP column in knowledge and is left out.",
+  "worker rule unused: cap:magic-order: evidence \"casts wind strike\" not found"
  ],
  "ladders": {
   "attack": [
@@ -4002,7 +4003,7 @@
     "worker": null,
     "workers": [],
     "workerEvidence": null,
-    "pendingCapability": "magic-order",
+    "pendingCapability": null,
     "gaps": [],
     "id": "magic/magic_spell_wind_strike",
     "skill": "magic",
@@ -11940,10 +11941,12 @@
     "quest": null,
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
-    "pendingCapability": "firemaking-order",
+    "worker": "firemaking-order",
+    "workers": [
+     "firemaking-order"
+    ],
+    "workerEvidence": "scripts/firemaking-order.ts contains \"banked normal logs\"",
+    "pendingCapability": null,
     "gaps": [
      "XP per action not in knowledge (skill guide gives the level only)"
     ],
