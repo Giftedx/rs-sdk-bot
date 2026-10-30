@@ -81,7 +81,9 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
         return {kind:'skill',need:{skill:skill[1],level:Number(skill[2]),...(worn?{worn:worn[1]}:{}),...(whenAxis!==undefined?{whenAxis}:{})},trigger:src};
     }
     const varp = body.match(/%(\w+)/);
-    if (varp && REFUSAL.test(body)) return { kind: 'quest', need: { varp: varp[1] }, trigger: src };
+    // A quest check inside `if (~check_axis(...) = true)` refuses only the entering side (sheepherder_gate.rs2:
+    // leaving the plague-sheep pen is never checked); whenAxis lets the route keep it shut one way only.
+    if (varp && REFUSAL.test(body)) return { kind: 'quest', need: { varp: varp[1], ...(/if\s*\(\s*~check_axis\([^)]*\)\s*=\s*true\s*\)/.test(body) ? { whenAxis: true } : {}) }, trigger: src };
     const side = body.match(/coord([xz])\(coord\)\s*([<>]=?)\s*coord[xz]\(loc_coord\)/);
     if (side && REFUSAL.test(body)) return { kind: 'one_way', need: { side: `refuses when player ${side[1]} ${side[2]} door ${side[1]}` }, trigger: src };
     // Open and refusal branches are not an unconditional Open operation. The thieving-door

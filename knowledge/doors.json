@@ -3212,9 +3212,12 @@
   "x": 2594,
   "z": 3361,
   "level": 0,
+  "angle": 2,
+  "shape": 0,
   "kind": "quest",
   "need": {
-   "varp": "sheepherderquest"
+   "varp": "sheepherderquest",
+   "whenAxis": true
   },
   "trigger": "scripts/quests/quest_sheepherder/scripts/locs/sheepherder_gate.rs2:1",
   "src": "maps/m40_52.jm2:5586"
@@ -3225,9 +3228,12 @@
   "x": 2594,
   "z": 3362,
   "level": 0,
+  "angle": 2,
+  "shape": 0,
   "kind": "quest",
   "need": {
-   "varp": "sheepherderquest"
+   "varp": "sheepherderquest",
+   "whenAxis": true
   },
   "trigger": "scripts/quests/quest_sheepherder/scripts/locs/sheepherder_gate.rs2:1",
   "src": "maps/m40_52.jm2:5587"
