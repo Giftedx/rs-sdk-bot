@@ -3,18 +3,6 @@
   "minFreeGB": 4,
   "jobs": [
     {
-      "account": "Shaftsinker",
-      "script": "scripts/gather-essence.ts",
-      "role": "mining",
-      "goal": "Keep essence reserve; prepare Runecraft supply handoff",
-      "enabled": false,
-      "repeat": false,
-      "env": {
-        "CAP": "15000",
-        "BANK_AT": "28"
-      }
-    },
-    {
       "account": "Bigpackage",
       "script": "scripts/quest-sweep.ts",
       "role": "quest",
@@ -48,21 +36,6 @@
         "CAP": "3000"
       },
       "standing": true
-    },
-    {
-      "account": "Bigchopper",
-      "script": "scripts/gather-ranged.ts",
-      "role": "quest",
-      "goal": "Alternate Arrav partner: qualify route and sustain after completed bounded Ranged pilot",
-      "enabled": false,
-      "repeat": false,
-      "env": {
-        "CAP": "1800",
-        "MAX_KILLS": "2",
-        "AMMO": "90",
-        "FOOD": "3",
-        "FOOD_ID": "329"
-      }
     },
     {
       "account": "Woodpecker",
@@ -445,11 +418,47 @@
         "AGI_ENTRY_TICKS": "2000",
         "AGI_PROGRESS_TICKS": "150"
       }
+    },
+    {
+      "account": "Shaftsinker",
+      "args": [
+        "60"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/rune-bank-craft.ts",
+      "role": "mining",
+      "goal": "run-rune-bank-craft-shaftsinker-60 [task-7af8ee97-33ba-4219-9179-6cf416434ab7]",
+      "enabled": true,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-rune-bank-craft-shaftsinker-60",
+      "env": {
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-7af8ee97-33ba-4219-9179-6cf416434ab7"
+      }
+    },
+    {
+      "account": "Bigchopper",
+      "args": [
+        "30"
+      ],
+      "maxRestarts": 0,
+      "script": "scripts/ranged-train.ts",
+      "role": "quest",
+      "goal": "run-ranged-train-bigchopper-2 [task-9cd2e649-e794-4db8-bf64-eea6e5395860]",
+      "enabled": true,
+      "repeat": false,
+      "coordinatorOwner": "coordinator",
+      "coordinatorTask": "run-ranged-train-bigchopper-2",
+      "env": {
+        "CAP": "1600",
+        "COORDINATOR_RUN_ID": "task-9cd2e649-e794-4db8-bf64-eea6e5395860"
+      }
     }
   ],
   "coordination": {
     "enabled": true,
-    "maxActive": 8,
+    "maxActive": 6,
     "plannerIntervalMs": 30000,
     "modelTimeoutMs": 600000,
     "bootstrap": [
@@ -482,7 +491,7 @@
     "preferLive": true,
     "directive": "Owner2026-10-28 is away overnight and grants full PC resources for maximum USEFUL qualified account progress. Fill available live slots across levelling, quest unlocks, combat, advanced resources and endgame supply; do not stop at two live jobs. Prefer sharks and other endgame-quality supplies over new trout/salmon surplus; use already-owned food rather than waste it. Finish current capability through its live consumer and automatically assign the next useful finite job. Reuse trained helpers; create/register additional task-specific accounts once a qualified useful role or measured capacity need exists. Main/fresh scored-launch clocks remain protected. Max17 is an initial measured cap, not an end goal: after fresh useful outputs, measured host/tick/supply headroom and a reserved practice slot, expand in measured batches under current owner authority. Headless services stay quiet and lean. Keep all full-game/endgame/maxed-quest-gear/hiscore goals in scope; make real game output the priority, not another catalogue or tests-only result.",
     "autoExpand": true,
-    "focusCapability": "shark-supply-order",
-    "focusSince": 1793316763914
+    "focusCapability": "firemaking-order",
+    "focusSince": 1793320508218
   }
 }
