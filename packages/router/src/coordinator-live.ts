@@ -83,7 +83,8 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   const since=existsSync(pausedFile)?statSync(pausedFile).birthtimeMs||statSync(pausedFile).mtimeMs:now();
   if(!forRun&&existsSync(pausedFile)&&now()-since>ROLLOUT_DRAIN_MS){await resume();atomicJson(backoffFile,{until:now()+ROLLOUT_BACKOFF_MS,open:open.map(s=>s.name)});throw Error('standing rollout did not drain; jobs resumed, next try in '+ROLLOUT_BACKOFF_MS/60000+' min');}
   if(own.length===open.length){const all=standing();await setEnabled(all,false);if(!existsSync(pausedFile))atomicJson(pausedFile,[...new Set(all)]);else atomicJson(pausedFile,[...new Set([...paused(),...all])]);}
-  else await resume();
+  // A coordinator run holds the rollout: standing jobs keep working, and the next standing try waits the backoff.
+  else{await resume();if(!forRun)atomicJson(backoffFile,{until:now()+ROLLOUT_BACKOFF_MS,open:open.map(s=>s.name)});}
   throw Error('runtime rollout waits for existing sessions to settle');
  }
  const repair=join(base,'.practice/swarm-repair.json'),repairLease=repair+'.lease',rollout='rollout-'+randomUUID();let locked=false,repairLocked=false;

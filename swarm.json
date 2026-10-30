@@ -431,11 +431,11 @@
       "script": "scripts/agility-order.ts",
       "args": [
         "gnome",
-        "40"
+        "60"
       ],
       "host": true,
       "role": "agility",
-      "goal": "Agility 1 to 40 on Gnome, four thieves in one host process",
+      "goal": "Agility 40 to 60 on Gnome, four thieves in one host process",
       "enabled": true,
       "repeat": false,
       "standing": true,
