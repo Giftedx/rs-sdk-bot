@@ -78,7 +78,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
  const open=alive?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result):[];
  if(open.length){
-  const names=new Set(standing().map(a=>a.toLowerCase())),own=open.filter(s=>names.has(String(s.name).toLowerCase())).map(s=>String(s.name));
+  // Every standing job counts here, on or off: a job just turned off still closes its last session.
+  const allStanding=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true).flatMap((j:any)=>j.accounts??(j.account?[j.account]:[]));}catch{return [];}};
+  const names=new Set(allStanding().map(a=>a.toLowerCase())),own=open.filter(s=>names.has(String(s.name).toLowerCase())).map(s=>String(s.name));
   // Pause standing jobs only when nothing else holds the rollout; while a coordinator run does, they keep working.
   // Pause every enabled standing job, not only the open ones: a job paused alone restarts and reopens a session.
   const since=existsSync(pausedFile)?statSync(pausedFile).birthtimeMs||statSync(pausedFile).mtimeMs:now();
