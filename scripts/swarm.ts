@@ -594,6 +594,18 @@ if (import.meta.main) {
             } else if (!job.enabled || stopAll) for (const a of p.accounts) st[a] = 'disabled';
             else if (!endStateOk) for (const a of p.accounts) st[a] = 'paused: repair or source ownership unresolved';
             else {
+                // A standing owner job retries a blocked or gave-up end by itself once the account's live status shows
+                // a finished session unchanged for BOOTSTRAP_STATUS_AGE_MS. A death still waits for a person.
+                if ((job as Job & {standing?:boolean}).standing) for (const a of p.accounts) {
+                    const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
+                    if (!end || !/^(?:blocked|gave-up)\b/.test(end.reason)) continue;
+                    let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { continue; }
+                    if (s?.server !== LIVE_SERVER || !s.result || !Number.isFinite(s.at) || Date.now() - s.at < BOOTSTRAP_STATUS_AGE_MS) continue;
+                    ended.delete(key!);
+                    for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
+                    persistEnded(deathsFile, ended); persistHolds(holdsFile, holds);
+                    console.log(`SWARM standing retry ${a} after ${end.reason}`);
+                }
                 const { start: go, blocked } = completeJobCandidates(p,demandCandidates(holdCandidates(startable(p.accounts, job.repeat, ended, statusAge, statusStarted, missionSignature(job), a => existsSync(stopFile(a))),job.script,holds),()=>
                     job.whenFoodLowFrom!==undefined&&!foodSupplyDemand(job,statuses)?'waiting offline: no fresh low-food farm or dated source food stock'
                     :job.whenCargoFrom&&!courierDeliveryWaiting(job.whenCargoFrom,job.demandNear,plan.jobs)&&!ownedPayoutWaiting(statuses,job.demandNear)?'waiting offline: no nearby owned cargo or payout':null));
