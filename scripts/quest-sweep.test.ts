@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {plan,needs,nearestBank,presetFor,leaveStronghold,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET} from './quest-sweep';
+import {plan,needs,nearestBank,presetFor,leaveStronghold,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET,generalStores} from './quest-sweep';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
 import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
@@ -124,4 +124,10 @@ test('a nearer spawn beats a far shop; a nearer shop keeps the item in the shop 
  expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>500).gathers).toEqual([{id:1944,count:1,how:'spawn'}]);
  expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>20).still).toEqual([{id:1944,count:1}]);
  expect(gatherPlan([{id:MILK,count:1}],at,spawns,()=>30).still).toEqual([{id:MILK,count:1}]);
+});
+
+test('general stores come nearest first, one tile per keeper, and only general shops',()=>{
+ const t=(x:number,z:number)=>({x,z,level:0});
+ const sellers=new Map([['torch',[{shop:'generalshop7',npc:'Shop keeper',npcId:532,spawns:[t(2902,3146)],stock:1},{shop:'junglestore',npc:'Jiminua',npcId:560,spawns:[t(2767,3122)],stock:1}]],['pot',[{shop:'generalshop7',npc:'Shop keeper',npcId:532,spawns:[t(2902,3146)],stock:1},{shop:'generalshop1',npc:'Shop keeper',npcId:520,spawns:[t(3212,3246)],stock:1}]]]) as any;
+ expect(generalStores(t(2768,3118),sellers).map(s=>s.npcId)).toEqual([532,520]);
 });

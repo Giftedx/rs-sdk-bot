@@ -11,7 +11,7 @@ import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
 import type {World} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
-import {nearestSeller,sellersByDistance} from '../packages/core/src/shop-index';
+import {nearestSeller,sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
@@ -170,6 +170,36 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
  return null;
 }
 
+// General stores nearest `at`, one tile per keeper. A general store buys any item (shop/scripts/shop.rs2
+// can_sell_obj: inv_allstock).
+export function generalStores(at:Tile,sellers=shopSellers()):{npcId:number;npc:string;tile:Tile}[]{
+ const seen=new Map<string,{npcId:number;npc:string;tile:Tile}>();
+ for(const list of sellers.values())for(const s of list)if(s.shop.startsWith('general'))for(const t of s.spawns)if(t.level===at.level)seen.set(`${s.npcId}@${t.x},${t.z}`,{npcId:s.npcId,npc:s.npc,tile:t});
+ const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
+ return [...seen.values()].sort((a,b)=>d(a.tile)-d(b.tile));
+}
+// The way to every bank can cost a fare the pack cannot pay (OreElse on Karamja: 24 coins, 30 to Port Sarim, no
+// bank on the island). Sell the pack at the nearest reachable general store, cheapest item first.
+async function raiseFare(s:Session,world:World):Promise<boolean>{
+ const st=()=>s.sdk.getState() as any,coins=()=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),COINS);
+ const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
+ const start=coins();
+ for(const store of generalStores(here()).slice(0,3)){
+  const walked=await goTo(s,world,store.tile,accountOf(s),{legTimeoutTicks:100});
+  console.log(`QUEST_SWEEP_FARE_WALK ${JSON.stringify({npc:store.npc,to:store.tile,ok:walked.ok,detail:walked.detail})}`);
+  if(!walked.ok)continue;
+  const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===store.npcId).sort((a:any,b:any)=>a.distance-b.distance)[0];
+  if(!npc||!(await s.bot.openShop(npc)).success)continue;
+  await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+  const items=[...(st()?.inventory??[])].filter((i:any)=>i.id!==COINS).sort((a:any,b:any)=>(catalogItem(a.id)?.cost??0)-(catalogItem(b.id)?.cost??0));
+  for(const i of items){const before=coins();await s.bot.sellToShop(i,'all');await waitUntil(s,()=>coins()>before,{timeoutTicks:10});}
+  await s.bot.closeShop();
+  console.log(`QUEST_SWEEP_FARE ${JSON.stringify({npc:store.npc,before:start,after:coins()})}`);
+  return coins()>start;
+ }
+ return false;
+}
+
 // Items no shop sells that the account can gather: a ground spawn (maps OBJ, spawn-index.ts), or milk from a cow
 // with an empty bucket (npc/scripts/cow_milking.rs2). The bucket is a pack item like any other: bank or shop.
 export const MILK=1927,BUCKET=1925,COW=81;
@@ -270,6 +300,12 @@ export async function sweep(account:string,quest:string,fresh?:string){
   let walked:Awaited<ReturnType<typeof goTo>>={ok:false,reason:'precondition',detail:'no bank tried',ticks:0};
   for(const bank of nearestBanks(here()).slice(0,4)){
    console.log(`QUEST_SWEEP_BANK ${JSON.stringify({from:here(),to:bank})}`);
+   walked=await goTo(s,world,bank,accountOf(s),{legTimeoutTicks:100});
+   console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
+   if(walked.ok)break;
+  }
+  // No bank in reach with few coins: the exit may be a fare. Raise it at a general store and try again.
+  if(!walked.ok&&count(pack(),COINS)<200&&await raiseFare(s,world))for(const bank of nearestBanks(here()).slice(0,4)){
    walked=await goTo(s,world,bank,accountOf(s),{legTimeoutTicks:100});
    console.log(`QUEST_SWEEP_BANK_WALK ${JSON.stringify({at:here(),to:bank,outcome:walked})}`);
    if(walked.ok)break;

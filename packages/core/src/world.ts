@@ -9,8 +9,12 @@ export type Leg =
     | { kind: 'walk'; to: Tile;tolerance?:number }
     | ({ kind: 'transport'; loc: string; option: string; at: Tile; to: Tile; exact: boolean }&TransportMeta)
     | { kind: 'travel'; travel: Travel; at: Tile | null; to: Tile };
-// Coins held must pay a fare and one more: an Ardougne to Port Sarim trip takes two boats.
-const travelOk = (t: Travel, a: Account) => travelAllowed(t, t.coins > 0 ? { ...a, coins: (a.coins ?? 0) - t.coins } : a);
+// The search does not carry coins spent along a route. It first lets each boat take one fare and keeps the route
+// when its fares add up to the coins held (OreElse: 40 coins, one 30-coin boat off Karamja). Otherwise it
+// searches again with a fare and one more held for every boat: an Ardougne to Port Sarim trip takes two boats.
+const oneFare = (t: Travel, a: Account) => travelAllowed(t, a);
+const fareAndOne = (t: Travel, a: Account) => travelAllowed(t, t.coins > 0 ? { ...a, coins: (a.coins ?? 0) - t.coins } : a);
+export const routeFares = (legs: readonly Leg[]) => legs.reduce((n, l) => n + (l.kind === 'travel' ? l.travel.coins : 0), 0);
 export interface Account { skills: Record<string, number>; varps: Record<string, number>; items: string[]; coins?: number; counts?: Record<string, number>; worn?:string[]; unlocks?:string[];questStages?:Record<string,number>;castlewarsTeam?:0|1;doorStates?:Record<string,boolean>;visibleLocs?:ReadonlyArray<Tile&{id:number}> }
 
 export interface Transport extends TransportMeta { locName: string; option: string; from: Tile; to: Tile; exact: boolean; src: string; toSrc: string; handler: string }
@@ -299,7 +303,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
         blockedDoors: acct => doors.filter(d => doorBlocks(d, acct)).map(doorBlock),
         route(from, to, acct) {
             const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
-            const search=():ReturnType<World['route']>=>{
+            const search=(travelOk:(t:Travel,a:Account)=>boolean):ReturnType<World['route']>=>{
             const cache = new Map<string, number | null>();
             const walk = (a: Tile, b: Tile, tol: number,interaction?:InteractionTarget) => {
                 const k = `${key(a)}>${key(b)}:${tol}:${interaction?JSON.stringify(interaction):''}`;
@@ -388,7 +392,8 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                 const b=backward.next();if(b.done)return b.value;
             }
             };
-            const policed=()=>opts.pathLength.withPolicy?opts.pathLength.withPolicy(blocked,search):search();
+            const fares=()=>{const r=search(oneFare);return r.ok&&routeFares(r.legs)<=(acct.coins??0)?r:search(fareAndOne);};
+            const policed=()=>opts.pathLength.withPolicy?opts.pathLength.withPolicy(blocked,fares):fares();
             return opts.pathLength.withDanger?opts.pathLength.withDanger(acct,from,to,policed):policed();
         },
     };
