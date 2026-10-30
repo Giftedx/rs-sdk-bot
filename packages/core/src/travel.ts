@@ -1,8 +1,10 @@
 // Travel the route search can use besides walking, ladders and stairs: NPC boats, gliders, carts and tolls
-// (knowledge/npc-travel.json) and teleports by spell, jewellery, lever and spirit tree (knowledge/teleports.json).
+// (knowledge/npc-travel.json), teleports by spell, jewellery, lever and spirit tree (knowledge/teleports.json), and
+// agility shortcuts and passages (knowledge/shortcuts.json).
 // Each edge says what the account needs (coins, quest stages, skills, runes, items held or worn) and how the
 // walker runs it. Left out: Entrana boats (no weapon or armour may be carried), moves into the Wilderness,
-// jails and random-tile teleports (essence mine), runecraft ruins and portals.
+// jails and random-tile teleports (essence mine), runecraft ruins and portals; shortcuts with a failure roll (a
+// fall hurts a low-level account), a use-item, a first step (via) or a held-item check.
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { Account, Tile } from './world';
@@ -19,7 +21,7 @@ export type TravelRun =
     | { how: 'npc'; npc: string; op: number; options: string[]; deck?: boolean }
     | { how: 'spell'; component: string }
     | { how: 'rub'; items: string[]; option: string | null }
-    | { how: 'loc'; loc: string; op: number; option: string | null };
+    | { how: 'loc'; loc: string; op: number; option: string | null; id?: number; at?: Tile };
 export interface Travel {
     id: string; kind: string; name: string;
     from: Tile | null;                   // null: from anywhere outside the Wilderness
@@ -105,13 +107,34 @@ export function teleportTravel(records: TeleRecord[]): Travel[] {
     return out;
 }
 
+type ShortcutRecord = { kind: string; locName: string; id: number; option: string; from: Tile; to: Tile; exact: boolean; via?: unknown; failure?: unknown;
+    requires?: { skills?: { name: string; level: number }[]; varps?: { varp: string; op: string; value: number }[]; items?: unknown[]; useItem?: unknown; coins?: number | null } };
+export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
+    const out: Travel[] = [];
+    for (const e of edges) {
+        if ((e.kind !== 'shortcut' && e.kind !== 'passage') || e.via || e.failure || e.requires?.useItem || e.requires?.items?.length) continue;
+        if (e.from.level !== e.to.level && Math.abs(e.from.level - e.to.level) > 3) continue;
+        const op = Number(e.option.match(/^op(\d)$/)?.[1]);
+        if (!op) continue;
+        out.push({
+            id: `loc:${e.locName}@${e.from.x},${e.from.z},${e.from.level}>${e.to.x},${e.to.z}`, kind: e.kind, name: `${e.locName} ${e.option}`,
+            from: e.from, to: e.to, coins: e.requires?.coins ?? 0,
+            needs: [...(e.requires?.skills ?? []).map(k => ({ skill: k.name, level: k.level })), ...(e.requires?.varps ?? []).map(v => ({ varp: v.varp, op: v.op, value: v.value }))],
+            runes: [], run: { how: 'loc', loc: e.locName, op, option: null, id: e.id, at: e.from },
+            cost: Math.max(Math.abs(e.from.x - e.to.x), Math.abs(e.from.z - e.to.z)) + 3,
+        });
+    }
+    return out;
+}
+
 let all: Travel[] | undefined;
 export function loadTravel(): Travel[] {
     if (all) return all;
     const npc = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'npc-travel.json'), 'utf8')) as { records: NpcRecord[] };
     const tele = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'teleports.json'), 'utf8')) as { teleports: TeleRecord[]; staffs: { rune: string; staffs: string[] }[] };
     staffs = tele.staffs;
-    return all = [...npcTravel(npc.records), ...teleportTravel(tele.teleports)];
+    const cuts = JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'shortcuts.json'), 'utf8')) as { edges: ShortcutRecord[] };
+    return all = [...npcTravel(npc.records), ...teleportTravel(tele.teleports), ...shortcutTravel(cuts.edges)];
 }
 let staffs: { rune: string; staffs: string[] }[] = [];
 

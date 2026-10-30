@@ -105,7 +105,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
 
 let world: World | null = null;
 export async function getWorld(): Promise<World> {
-    world ??= createWorld({ pathLength: await rsPathLength() });
+    world ??= { ...createWorld({ pathLength: await rsPathLength() }), offThread: true };
     return world;
 }
 

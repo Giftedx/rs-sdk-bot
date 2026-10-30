@@ -8,6 +8,8 @@ import {accountForSdk,withDoorPolicy} from './door-policy';
 import {guardWalk} from './danger';
 import {disembark,type BoatSession} from './boat';
 import {componentId} from './logout';
+import {clientReach} from './reach';
+import {planTripOffThread} from './route-plan';
 import {readFileSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {bankStock,planTrip,takeItems,type TripPlan} from './trip';
@@ -104,8 +106,9 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
         await b.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
         await answer(arrived, 20);
     } else {
-        const name = run.loc.includes('spirit') ? /spirit tree/i : /lever|door/i;
-        const loc = (st()?.nearbyLocs ?? []).filter((l: any) => name.test(l.name ?? '')).sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
+        const name = run.loc.includes('spirit') ? /spirit tree/i : /lever|door/i, at = run.at;
+        const loc = (st()?.nearbyLocs ?? []).filter((l: any) => at && run.id !== undefined ? l.id === run.id && l.x === at.x && l.z === at.z && l.level === at.level : name.test(l.name ?? ''))
+            .sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
         if (!loc) return fail('precondition', `no ${run.loc} in sight`);
         await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
         await answer(arrived, 20);
@@ -262,7 +265,9 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     if(!observedInside&&legendsEntry==='unknown'&&(acct.questStages?.legendsquest??0)<1)return {ok:false,reason:'precondition',detail:'Legends Guild first entry was not observed',ticks:s.tick()-started};
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
     const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeItems>[0];
-    const r = name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?planTrip(world,from,to,acct,bankStock(name))
+    const stock=name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?bankStock(name):undefined;
+    const r = world.offThread?await planTripOffThread(from,to,acct,stock)
+        :stock?planTrip(world,from,to,acct,stock)
         :(()=>{const d=world.route(from,to,acct);return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
     if (!r) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
     // Actor prerequisites are synchronous query masks, not long-lived refusal
@@ -300,6 +305,8 @@ export interface PathDeps {
     doorBlocked?(level: number, loc: PathTile): boolean;
     // Path corners from `from` to `to`, without `from` (the rs-sdk findLongPath format).
     plan(level: number, from: PathTile, to: PathTile): PathTile[];
+    // Whether the client can walk from the bot's tile to `to` in its loaded scene (reach.ts); null when unknown.
+    reach?(to: { x: number; z: number; level: number }, opts?: { adjacentOk?: boolean }): boolean | null;
 }
 export interface PathOptions {
     signal?: AbortSignal;
@@ -422,8 +429,16 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
         log(what);
         return true;
     };
+    // The furthest tile within `span` the client can reach; a tile behind a closed door or out of the scene is
+    // skipped (rs2b0t selectClickTarget). Without a reach probe, the tile `span` ahead.
+    const clickIndex = (span: number): number => {
+        const top = Math.min(tiles.length - 1, Math.max(0, idx) + span);
+        if (!deps.reach) return top;
+        for (let i = top; i > Math.max(0, idx); i--) if (deps.reach({ ...tiles[i]!, level }) !== false) return i;
+        return top;
+    };
     const clickAhead = (span: number) => {
-        const i = Math.min(tiles.length - 1, Math.max(0, idx) + span);
+        const i = clickIndex(span);
         const t = tiles[i]!;
         if (sentThisTick) return;
         const from = deps.pos();
@@ -479,7 +494,9 @@ export function walkPath(deps: PathDeps, points: PathPoint[], opts: PathOptions 
             const p = deps.pos();
             if (!p) return finish(false, 'no position');
             if (p.level !== level) return finish(false, `left level ${level}`);
-            if (d8(p, goal) <= goalTol) return finish(true);
+            // Near the goal is arrival, unless the goal is out of reach and a closed door lies on the path: then
+            // the door is opened first (a bot two tiles from an NPC, behind its house wall, cannot talk to it).
+            if (d8(p, goal) <= goalTol && !(deps.reach?.({ x: goal.x, z: goal.z, level }, { adjacentOk: true }) === false && shutDoorAt(Math.max(0, idx), tiles.length - 1))) return finish(true);
             if (opts.stop?.()) return finish(false, 'stopped');
             if (ticks > maxTicks) return finish(false, `budget ${maxTicks} ticks at ${p.x},${p.z}`);
             const moved = p.x !== last.x || p.z !== last.z;
@@ -564,9 +581,12 @@ export async function sessionWalker(s: { sdk: any; client?:unknown; onTick(cb: (
     const pf: any = await import('../../../vendor/rs-sdk/sdk/pathfinding');
     const grid=await import('../../../vendor/rs-sdk/server/vendor/rsmod-pathfinder');
     await installDoorPolicy(s.sdk,s.client);
+    const pos = () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
+    const reach = clientReach(s.client, pos);
     return {
         tick: () => s.sdk.getState()?.tick,
-        pos: () => { const p = s.sdk.getState()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; },
+        pos,
+        ...(reach ? { reach } : {}),
         onTick: cb => s.onTick(cb),
         ended: s.ended,
         walk: (x, z) => s.direct({ type: 'walkTo', x, z, running: true, reason: 'SDK' }),

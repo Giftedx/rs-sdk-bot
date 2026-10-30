@@ -26,6 +26,8 @@ const GOAL_TOL = 1;
 
 export interface World {
     route(from: Tile, to: Tile, acct: Account): { ok: true; legs: Leg[]; cost: number } | { ok: false; reason: 'no_route' };
+    // Set on the shared world (bot.ts getWorld): goTo plans in route-worker.ts so a long search never blocks the client.
+    offThread?: boolean;
     // Door tiles this account cannot pass (doorBlocks), for the walker to block in the SDK pathfinder too.
     blockedDoors(acct: Account): DoorBlock[];
 }
@@ -132,23 +134,25 @@ export async function rsPathLength(): Promise<PathLength> {
         const policy=blocked.map(b=>b.whenAxis===undefined?{...b,...pf.getDoorAt(b.level,b.x,b.z)}:b);
         return withDoorPolicy(grid,policy,()=>{activePathPolicy={owner,blocked};try{return query();}finally{activePathPolicy=null;}});
     };
-    // Measured legs are kept on disk (leg-cache.ts) under the doors kept shut and the danger key.
-    const cache=legCache(),policyKeys=new WeakMap<DoorBlock[],string>();
+    // Searched legs are kept on disk (leg-cache.ts) under hashes of the doors kept shut and the danger key. A leg
+    // the cheap checks refuse is not stored: refusing it again costs less than reading it back.
+    const cache=legCache(),policyKeys=new WeakMap<DoorBlock[],string>(),dangerKeys=new Map<string,string>();
     const measure:PathLength=(from, to, blocked, tol,interaction) => {
         if (from.level !== to.level) return null;
+        (pf as any).initPathfinding();
+        if(!interaction&&tol===0&&key(from)!==key(to)&&!(pf as any).isTileWalkable(to.level,to.x,to.z))return null;
+        // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
+        if(separated(mapAreas(pf,grid,repoRoot),from,to,tol,interaction,interaction&&((x,z)=>grid.reached(to.level,x,z,to.x,to.z,interaction.width,interaction.height,1,interaction.angle,interaction.shape,interaction.blockAccessFlags))))return null;
         const d=activeDanger(),shut=policyKeys.get(blocked)??(policyKeys.set(blocked,cache.hash(blocked)),policyKeys.get(blocked)!);
+        const dk=d?dangerKeys.get(d.key)??(dangerKeys.set(d.key,cache.hash(d.key)),dangerKeys.get(d.key)!):'-';
         const k=d&&(d.kept.has(`${from.level},${from.x},${from.z}`)||d.kept.has(`${to.level},${to.x},${to.z}`))?null
-            :`${shut}|${d?.key??'-'}|${key(from)}>${key(to)}:${tol}:${interaction?JSON.stringify(interaction):''}`;
+            :`${shut}${dk}${key(from)}>${key(to)}:${tol}${interaction?':'+cache.hash(interaction):''}`;
         if(k!==null&&cache.has(k))return cache.get(k)!;
         const v=measureNow(from,to,blocked,tol,interaction);
         if(k!==null)cache.set(k,v);
         return v;
     };
     const measureNow=(from:Tile, to:Tile, blocked:DoorBlock[], tol:number,interaction?:InteractionTarget):number|null => {
-        (pf as any).initPathfinding();
-        if(!interaction&&tol===0&&key(from)!==key(to)&&!(pf as any).isTileWalkable(to.level,to.x,to.z))return null;
-        // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
-        if(separated(mapAreas(pf,grid,repoRoot),from,to,tol,interaction,interaction&&((x,z)=>grid.reached(to.level,x,z,to.x,to.z,interaction.width,interaction.height,1,interaction.angle,interaction.shape,interaction.blockAccessFlags))))return null;
         const pts:Tile[]|null=scoped(blocked,()=>{
             if(!interaction)return pf.findLongPath(from.level,from.x,from.z,to.x,to.z,500);
             const q=interaction;
@@ -279,7 +283,8 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
         for(let r=1;r<=3;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(Math.max(Math.abs(dx),Math.abs(dz))===r&&ok({...t,x:t.x+dx,z:t.z+dz}))return {...t,x:t.x+dx,z:t.z+dz};
         return t;
     };
-    const travel=(opts.travel??loadTravel()).map(t=>({...t,from:t.from&&snap(t.from),to:snap(t.to)})),fixed=travel.filter(t=>t.from),anywhere=travel.filter(t=>!t.from);
+    // A world given its own transports (a test) gets no default travel; the real world loads all of it.
+    const travel=(opts.travel??(opts.transports?[]:loadTravel())).map(t=>({...t,from:t.from&&snap(t.from),to:snap(t.to)})),fixed=travel.filter(t=>t.from),anywhere=travel.filter(t=>!t.from);
     const travelFrom=new Map<string,Travel[]>(),travelTo=new Map<string,Travel[]>();
     for(const t of fixed){travelFrom.set(key(t.from!),[...travelFrom.get(key(t.from!))??[],t]);travelTo.set(key(t.to),[...travelTo.get(key(t.to))??[],t]);}
     for(const t of anywhere)travelTo.set(key(t.to),[...travelTo.get(key(t.to))??[],t]);

@@ -125,7 +125,7 @@ voyage `p_delay(7)` (`sail.rs2:22`). The direct method is not in the scripts, be
 
 | Source | Local consumer | Decision | Why |
 |---|---|---|---|
-| rs2b2t/rs2b0t `ae56ccc9` (MIT; rsmod files ISC) `tools/nav/build-collision.ts`, `derive-doors.ts`, `derive-stairs.ts`, `src/bot/event/webwalk/geometry/{followMath,arrival,edgeCosts,pathFollowPolicy}.ts` | `packages/core/src/walk.ts`, `world.ts`, `knowledge/` | **Adapt** | Same engine family and revision; baked collision pack, 1,021 doors, 1,016 stair stand tiles, executor that clicks the furthest client-reachable tile about 20 steps ahead and re-plans only on stall, off-path or "can't reach" (cap 5). Keep our `world.ts` route search, which settles transports better. |
+| rs2b2t/rs2b0t `ae56ccc9` (MIT; rsmod files ISC) `src/bot/event/webwalk/geometry/localReach.ts`, `followMath.ts` `selectClickTarget`, `arrival.ts`, `NavWorker.ts` | `packages/core/src/reach.ts`, `walk.ts` `walkPath`, `route-worker.ts`, `route-plan.ts` | **Adapted** | Same engine family and revision. `reach.ts` copies the scene search on the client's own collision flags; `walkPath` clicks the furthest reachable tile within 20 and opens a closed door on the path before it counts a near goal as arrival; route planning runs in a worker with its own pathfinder. Our `world.ts` route search stays: it settles transports, travel and danger. |
 | Skretzo/shortest-path `142e73e` (BSD-2) | `knowledge/transports.json` schema, `world.ts` | **Adapt ideas** | Transport fields (consumable, wilderness level, duration, any-origin teleports); connectivity components to refuse impossible legs without search; closest-node fallback. |
 | chsami/Microbot `2c802e4` (BSD-2) `Rs2Walker`, `Rs2WalkerStallPolicy`, `LiveRouteValidator` | `walkPath` | **Adapt ideas** | Fixed interim target until within 5 tiles; stall by last tile change; live check of the next steps; stored blocked edges. |
 | DaxWalker client (Apache-2.0) | `walkPath` | **Adapt ideas** | Per-step classification: walk, blocked (door), jump (transport). |
@@ -133,4 +133,8 @@ voyage `p_delay(7)` (`sail.rs2:22`). The direct method is not in the scripts, be
 | RSBot (GPL-3), rune.fast and rs-sdk-fleet (no license) | none | **Reject code** | License. |
 
 **Acceptance check:** a route test set run live: Ardougne to Varrock West, Lumbridge to Varrock West (133-tick baseline), Draynor to Catherby, each with ticks, clicks, re-plans and no CPU stall over 1 s.
-**Gap:** the client-reachability check for each click and the baked collision pack are not built; the "Out of bounds access" rejection at 2617,3300 is not explained.
+
+**Claim:** "RangeError: Out of bounds access" on walk clicks follows a long route search on the bot's own thread; planned in the worker, no click is refused.
+**Conditions:** practice server, tick 150 ms, empty leg cache; route search 60-190 s cold.
+**Evidence:** `.practice/far-walk/proof.ts` Draynor 3093,3244 to Catherby 2809,3440 (combat 70): on-thread search, 3 clicks refused at the start tile; worker search, ok, 259 walk ticks after a 503-tick plan wait. Six more routes and `.practice/far-walk/door-proof.ts` pass on the worker build (MEASURED practice, 1 run each).
+**Gap:** the cause inside the client is not traced (likely its packet buffers while the thread is blocked). A cold plan still costs up to about 1,300 ticks of waiting; the leg cache (`.practice/cache/route-legs.json`) removes it for repeated legs. Live runs are not done.
