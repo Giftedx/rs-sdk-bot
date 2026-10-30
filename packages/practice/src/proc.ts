@@ -27,6 +27,14 @@ export async function killTree(pid: number): Promise<void> {
 }
 
 // Kills the tree only if the PID still runs a command containing `marker`. Returns whether it killed.
+// The matching process alone, not its children: a controller whose detached runs must outlive it.
+export async function safeKillOne(pid: number, marker: string): Promise<boolean> {
+    if (!processMatches(pid, marker)) return false;
+    if (process.platform === 'win32') Bun.spawnSync(['taskkill', '/PID', String(pid), '/F'], { stdout: 'ignore', stderr: 'ignore', windowsHide: true });
+    else { try { process.kill(pid, 'SIGTERM'); } catch {} }
+    for (let i = 0; i < 40 && commandLine(pid) !== null; i++) await Bun.sleep(100);
+    return true;
+}
 export async function safeKill(pid: number, marker: string): Promise<boolean> {
     if (!processMatches(pid, marker)) return false;
     await killTree(pid);

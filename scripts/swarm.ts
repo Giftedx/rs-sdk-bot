@@ -13,7 +13,8 @@
 // packages/practice/src/supervise-host.ts. The rules apply per account: the external guard and stop files per
 // account, and an account whose RESULT says died is never started again. A host counts as its N bots for maxBots.
 // Usage: DEMO_OK=1 bun scripts/swarm.ts [swarm.json]
-import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs';
+import { spawn as spawnChild } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { freemem } from 'node:os';
 import { renameRetry } from '../packages/core/src/status';
@@ -31,7 +32,10 @@ import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 
 export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
-type Run = { proc: ReturnType<typeof Bun.spawn>; started: number; accounts: string[]; revision: string; host?: boolean };
+// A run is a detached supervisor process: it outlives this controller, and a restarted controller adopts it from
+// .practice/swarm-runs.json. Its output goes straight to its log file, which the controller follows from `offset`.
+type Run = { pid: number; started: number; accounts: string[]; revision: string; host?: boolean; log: string; offset: number };
+export type SavedRun = Run & { key: string };
 export type ParsedJob = { key: string; accounts: string[]; host: boolean; job: Job };
 
 const ACCOUNT = /^[A-Za-z0-9_ -]{1,12}$/;
@@ -477,58 +481,85 @@ if (import.meta.main) {
     const botsRunning = () => [...runs.values()].reduce((n, r) => n + r.accounts.length, 0)+(recoveryDispatch.active?1:0)+inheritedRecoveries.length;
     const pendingCount = () => pendingStartupCount([...runs.values()], Date.now())+(recoveryDispatch.active&&Date.now()-recoveryDispatch.active.started<30000?1:0)+inheritedRecoveries.filter(r=>Date.now()-r.started<30000).length;
 
-    const start = (p: ParsedJob, accounts: string[]) => withSessionAdmission(accounts,root,()=>{
-        const job = p.job;
-        const revision = missionSignature(job);
-        const logName = p.host ? `host-${accounts[0]}.log` : `${accounts[0]}.log`;
-        const log = createWriteStream(join(logDir, logName), { flags: 'a' });
-        const cmd = supervisorCommand(p,accounts);
-        const proc = Bun.spawn(cmd, {
-            cwd: root, stdout: 'pipe', stderr: 'pipe',
-            // Each worker carries the release of the source it starts on, so a runtime change needs no swarm restart.
-            env: { ...process.env, ...job.env, WORKER_RELEASE: workerSourceRevision(root), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
-        windowsHide:true});
-        let currentEnd: string | undefined;
+    const runsFile = join(prac, 'swarm-runs.json');
+    const pidAlive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
+    const saveRuns = () => { try { const tmp = `${runsFile}.tmp-${process.pid}`; writeFileSync(tmp, JSON.stringify([...runs].map(([key, r]) => ({ key, ...r })), null, 1)); renameRetry(tmp, runsFile); } catch (e) { console.log(`SWARM runs file not saved: ${String(e)}`); } };
+    // Follow a run's log from its saved offset: end lines become end records, and when the process is gone the
+    // run ends with its last end line (or `exit <code>`).
+    const follow = (key: string, run: Run, child?: { on(e: 'exit', f: (code: number | null) => void): unknown }) => {
+        let tail = '', currentEnd: string | undefined, exitCode: number | null | undefined, done = false;
         const consume = (line: string) => {
-            if (!p.host) { currentEnd = supervisorEndLine(line) ?? currentEnd; return; }
+            if (!run.host) { currentEnd = supervisorEndLine(line) ?? currentEnd; return; }
             const m = line.match(/^SUPERVISE-HOST account (.+?) ([\w-]+) after \d+ runs/);
-            if (m) { ended.set(m[1]!, { at: Date.now(), reason: m[2]!, revision }); console.log(`SWARM end ${m[1]} ${m[2]} (host)`); }
+            if (m) { ended.set(m[1]!, { at: Date.now(), reason: m[2]!, revision: run.revision }); console.log(`SWARM end ${m[1]} ${m[2]} (host)`); }
         };
-        const pumps = [proc.stdout, proc.stderr].map(async stream => {
-            let tail = '';
-            const decoder = new TextDecoder();
-            for await (const c of stream as ReadableStream<Uint8Array>) {
-                log.write(c);
-                tail += decoder.decode(c, { stream: true });
+        const read = () => {
+            let size = 0;
+            try { size = statSync(run.log).size; } catch { return; }
+            if (size <= run.offset) return;
+            const fd = openSync(run.log, 'r');
+            try {
+                const buf = Buffer.alloc(size - run.offset);
+                readSync(fd, buf, 0, buf.length, run.offset);
+                run.offset = size;
+                tail += buf.toString('utf8');
                 const lines = tail.split(/\r?\n/);
                 tail = lines.pop() ?? '';
                 for (const line of lines) consume(line);
-            }
-            consume(tail + decoder.decode());
-        });
-        const startedAt = Date.now();
-        runs.set(p.key, { proc, started: startedAt, accounts, revision, host: p.host });
-        console.log(`SWARM start ${p.host ? `host ${accounts.join(',')}` : accounts[0]} ${job.script} ${JSON.stringify(job.env ?? {})}`);
-        void proc.exited.then(async code => {
-            // Wait for the current process's final end line. An append log may still hold an older run's end.
-            await Promise.all(pumps);
-            runs.delete(p.key);
-            if (!p.host) {
+            } finally { closeSync(fd); }
+        };
+        const finish = () => {
+            if (done) return;
+            done = true; clearInterval(timer);
+            read(); if (tail) consume(tail);
+            runs.delete(key); saveRuns();
+            const code = exitCode === undefined ? 'unknown' : exitCode;
+            if (!run.host) {
                 const reason = currentEnd ?? `exit ${code}`;
-                for(const account of accounts){
-                    ended.set(account, { at: Date.now(), reason, revision });
-                    console.log(`SWARM end ${account} ${reason}`);
-                }
+                for (const account of run.accounts) { ended.set(account, { at: Date.now(), reason, revision: run.revision }); console.log(`SWARM end ${account} ${reason}`); }
             } else {
                 // An account with no end line (the supervisor itself crashed) ends with the exit code.
-                for (const a of accounts) {
-                    if ((ended.get(a)?.at ?? 0) >= startedAt) continue;
-                    ended.set(a, { at: Date.now(), reason: `exit ${code}`, revision });
+                for (const a of run.accounts) {
+                    if ((ended.get(a)?.at ?? 0) >= run.started) continue;
+                    ended.set(a, { at: Date.now(), reason: `exit ${code}`, revision: run.revision });
                     console.log(`SWARM end ${a} exit ${code} (host)`);
                 }
             }
-            log.end();
-        });
+        };
+        const timer = setInterval(() => { const before = run.offset; read(); if (run.offset !== before) saveRuns(); if (!child && !pidAlive(run.pid)) finish(); }, 2000);
+        child?.on('exit', code => { exitCode = code; finish(); });
+    };
+    // Adopt the runs a previous controller started: a live one is followed on, a finished one gets its end now.
+    for (const saved of (() => { try { return JSON.parse(readFileSync(runsFile, 'utf8')) as SavedRun[]; } catch { return []; } })()) {
+        if (!saved?.key || !Number.isSafeInteger(saved.pid) || !Array.isArray(saved.accounts) || runs.has(saved.key)) continue;
+        const { key, ...run } = saved;
+        runs.set(key, run);
+        console.log(`SWARM adopt ${run.host ? `host ${run.accounts.join(',')}` : run.accounts[0]} pid ${run.pid}${pidAlive(run.pid) ? '' : ' (ended)'}`);
+        follow(key, run);
+    }
+    saveRuns();
+
+    const start = (p: ParsedJob, accounts: string[]) => withSessionAdmission(accounts,root,()=>{
+        const job = p.job;
+        const revision = missionSignature(job);
+        const logName = p.host ? `host-${accounts[0]}.log` : `${accounts[0]}.log`, logPath = join(logDir, logName);
+        const cmd = supervisorCommand(p,accounts);
+        // Detached, so a controller restart (a rollout) leaves the run going; its output appends to its log.
+        const offset = existsSync(logPath) ? statSync(logPath).size : 0, out = openSync(logPath, 'a');
+        let child: ReturnType<typeof spawnChild>;
+        try {
+            child = spawnChild(cmd[0]!, cmd.slice(1), {
+                cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
+                // Each worker carries the release of the source it starts on, so a runtime change needs no swarm restart.
+                env: { ...process.env, ...job.env, WORKER_RELEASE: workerSourceRevision(root), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+            });
+        } finally { closeSync(out); }
+        if (!child.pid) throw Error('supervisor did not start');
+        child.unref();
+        const run: Run = { pid: child.pid, started: Date.now(), accounts, revision, host: p.host, log: logPath, offset };
+        runs.set(p.key, run); saveRuns();
+        console.log(`SWARM start ${p.host ? `host ${accounts.join(',')}` : accounts[0]} ${job.script} ${JSON.stringify(job.env ?? {})}`);
+        follow(p.key, run, child);
     });
 
     const tick = () => {

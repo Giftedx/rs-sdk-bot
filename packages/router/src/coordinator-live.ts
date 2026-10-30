@@ -9,7 +9,7 @@ import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
-import {processMatches,safeKill} from '../../practice/src/proc';
+import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
 import {acceptStatus,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
@@ -35,10 +35,23 @@ export async function awaitControllerDrain(owner:{pid:number;nonce:string;source
  }
  throw Error('controller drain acknowledgement timed out; no process stopped');
 }
-type ControllerIdentity={pid:number;nonce:string;source:string;at?:number};
+type ControllerIdentity={pid:number;nonce:string;source:string;at?:number;detached?:boolean};
+// A detached-run controller (scripts/swarm.ts adopts its runs from .practice/swarm-runs.json) only has to be up and
+// owned: its runs outlive it, so a rollout neither drains nor pauses them.
+export async function awaitControllerAck(owner:{pid:number;nonce:string;source:string},after:number,base=projectRoot,timeoutMs=15000,
+ timing:{now?:()=>number;pause?:(ms:number)=>Promise<void>}={}){
+ const now=timing.now??Date.now,pause=timing.pause??Bun.sleep,limit=now()+timeoutMs;
+ while(now()<limit){
+  let state:any;try{state=JSON.parse(readFileSync(join(base,'.practice/swarm-state.json'),'utf8'));}catch{await pause(100);continue;}
+  if(!Number.isFinite(state.at)||state.at<=after){await pause(100);continue;}
+  if(state.controllerPid!==owner.pid||state.coordinatorOwner!==owner.nonce||state.release!==owner.source)throw Error('controller acknowledgement ownership changed');
+  return state;
+ }
+ throw Error('controller acknowledgement timed out');
+}
 type SwarmRolloutDeps={base?:string;currentSource?:()=>string;matches?:(pid:number,nonce:string)=>boolean;pidExists?:(pid:number)=>boolean;
  processes?:()=>number[];rows?:()=>any[];stop?:(pid:number,nonce:string)=>Promise<boolean>;spawn?:(source:string,nonce:string)=>number;
- drain?:(owner:ControllerIdentity,after:number)=>Promise<unknown>;now?:()=>number};
+ drain?:(owner:ControllerIdentity,after:number)=>Promise<unknown>;ack?:(owner:ControllerIdentity,after:number)=>Promise<unknown>;stopOne?:(pid:number,nonce:string)=>Promise<boolean>;now?:()=>number};
 // The swarm's own code: a standing job runs current worker source (STANDING=1), so only these files need a rollout.
 export const ROLLOUT_DRAIN_MS=5*60*1000,ROLLOUT_BACKOFF_MS=60*60*1000;
 export const SWARM_FILES=['scripts/swarm.ts','packages/practice/src/supervise.ts','packages/practice/src/supervise-host.ts'];
@@ -51,6 +64,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const currentSource=deps.currentSource??(()=>workerSourceRevision(base)),matches=deps.matches??processMatches,now=deps.now??Date.now;
  const pidExists=deps.pidExists??((pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return(e as NodeJS.ErrnoException).code!=='ESRCH';}});
  const stop=deps.stop??safeKill,drain=deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerDrain(owner,after,base));
+ const ack=deps.ack??deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerAck(owner,after,base));
+ // Stop only the controller process: a tree kill would end the detached runs it adopted.
+ const stopOne=deps.stopOne??deps.stop??safeKillOne;
  if(currentSource()!==source)throw Error('runtime changed before controller rollout');
  // A lock whose owner process is gone fences nothing: archive it into its run folder (a failed build can die holding it).
  if(existsSync(lock)){let held:any=null;try{held=JSON.parse(readFileSync(lock,'utf8'));}catch{/* unreadable lock stays a fence */}
@@ -80,7 +96,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
  // A live session rewrites its status every few seconds; one unchanged for BOOTSTRAP_STATUS_AGE_MS is not open (the
  // server drops a lost session after 200 s). A killed run's held record would otherwise block every rollout.
- const open=alive?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result&&!(Number.isFinite(s.at)&&now()-s.at>=BOOTSTRAP_STATUS_AGE_MS)):[];
+ // A detached-run controller keeps its runs through a restart: no session needs to settle first.
+ const detached=alive&&owner?.detached===true;
+ const open=alive&&!detached?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result&&!(Number.isFinite(s.at)&&now()-s.at>=BOOTSTRAP_STATUS_AGE_MS)):[];
  if(open.length){
   // Every standing job counts here, on or off: a job just turned off still closes its last session.
   const allStanding=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true).flatMap((j:any)=>j.accounts??(j.account?[j.account]:[]));}catch{return [];}};
@@ -103,15 +121,15 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   writeFileSync(repairLease,JSON.stringify({pid:process.pid,runId:rollout,nonce:rollout}),{flag:'wx'});repairLocked=true;
   if(existsSync(repair)||existsSync(repair+'.processing'))throw Error('controller rollout waits for its owned repair channel');
   if(alive){
-   await drain(owner,now());if(stopped())throw Error('controller rollout owner stopped');if(currentSource()!==source)throw Error('runtime changed during controller rollout');
-   try{await stop(owner.pid,owner.nonce);}catch(error){if(pidExists(owner.pid))retainFence=owner;throw error;}
+   if(!detached)await drain(owner,now());if(stopped())throw Error('controller rollout owner stopped');if(currentSource()!==source)throw Error('runtime changed during controller rollout');
+   try{await (detached?stopOne:stop)(owner.pid,owner.nonce);}catch(error){if(pidExists(owner.pid))retainFence=owner;throw error;}
    if(pidExists(owner.pid)){retainFence=owner;throw Error('old controller stop unconfirmed; admission remains fenced');}
   }
   if(stopped())throw Error('controller rollout owner stopped');
   const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release})))(source,nonce);
-  const next={pid,nonce,source,swarmSource,at:now()};
-  try{atomicJson(ownerFile,next);await drain(next,next.at);if(stopped())throw Error('controller rollout owner stopped');}catch(error){
-   try{await stop(pid,nonce);}catch{/* retain the fence unless process death can be confirmed */}
+  const next={pid,nonce,source,swarmSource,at:now(),detached:true};
+  try{atomicJson(ownerFile,next);await ack(next,next.at);if(stopped())throw Error('controller rollout owner stopped');}catch(error){
+   try{await stopOne(pid,nonce);}catch{/* retain the fence unless process death can be confirmed */}
    if(pidExists(pid))retainFence=next;
    else if(existsSync(ownerFile)){const saved=JSON.parse(readFileSync(ownerFile,'utf8'));if(saved.pid===pid&&saved.nonce===nonce)unlinkSync(ownerFile);}
    throw error;

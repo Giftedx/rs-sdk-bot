@@ -207,3 +207,20 @@ test('detached worker survives its launcher exiting and writes its own receipt',
  const limit=Date.now()+5000;while(!existsSync(receipt)&&Date.now()<limit)await Bun.sleep(100);
  expect(existsSync(receipt)).toBe(true);expect(readFileSync(receipt,'utf8')).toBe('owned child completed');
 },10000);
+
+test('a detached-run controller rolls over without drain or pause, and is stopped alone', async () => {
+ const f = recoveryFixture(), dir = join(f.prac, 'coordinator'), ownerFile = join(dir, 'swarm-owner.json');
+ atomicJson(ownerFile, { pid: 11, nonce: 'old-controller', source: 'old', swarmSource: 'stale', detached: true });
+ const live = new Set([11]), events: string[] = [];
+ const deps = { base: f.base, currentSource: () => 'new', matches: (pid: number) => live.has(pid), pidExists: (pid: number) => live.has(pid), processes: () => [...live], now: () => 1000,
+  rows: () => [{ server: 'rs-sdk-demo.fly.dev', name: 'Busy', at: 1000 }],
+  stop: async () => { events.push('tree-stop'); return true; },
+  stopOne: async (pid: number) => { events.push('stop-one:' + pid); live.delete(pid); return true; },
+  spawn: () => { events.push('spawn'); live.add(22); return 22; },
+  drain: async (o: { pid: number }) => { events.push('drain:' + o.pid); },
+  ack: async (o: { pid: number }) => { events.push('ack:' + o.pid); } };
+ await ensureSwarm('new', deps as any);
+ expect(events).toEqual(['stop-one:11', 'spawn', 'ack:22']);
+ expect(JSON.parse(readFileSync(ownerFile, 'utf8'))).toMatchObject({ pid: 22, detached: true });
+ expect(existsSync(join(dir, 'rollout-paused.json'))).toBe(false);
+});
