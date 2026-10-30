@@ -12,7 +12,8 @@ const pending = new Map<number, { resolve(p: TripPlan | null): void; reject(e: E
 
 function start(): BunWorker {
     if (worker) return worker;
-    const w = new Worker(new URL('./route-worker.ts', import.meta.url).href) as BunWorker;
+    // bunfig.toml preloads do not reach a Worker: it gets collision-lazy.ts itself (about 300 MB less heap).
+    const w = new Worker(new URL('./route-worker.ts', import.meta.url).href, { preload: [new URL('./collision-lazy.ts', import.meta.url).href] } as WorkerOptions) as BunWorker;
     w.onmessage = (e: MessageEvent<{ id: number; plan?: TripPlan | null; error?: string }>) => {
         const p = pending.get(e.data.id);
         if (!p) return;

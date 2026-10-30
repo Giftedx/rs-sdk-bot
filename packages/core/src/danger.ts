@@ -51,19 +51,26 @@ export const hunts = (h: Hunter, combat: number) => HUNTS_ALL.has(h.mode) || com
 // the account's combat level and at least 1.5 times the account's hitpoints. Rats and muggers stay walkable.
 export const deadly = (h: Hunter, combat: number, hitpoints: number) => hunts(h, combat) && h.combat > combat && h.combat >= 1.5 * hitpoints;
 
-// Danger tiles (deadly hunters) for this account inside a box, one margin tile past each monster's reach.
-export function dangerTiles(acct: Account, level: number, box: { minX: number; maxX: number; minZ: number; maxZ: number }, list = loadHunters()): Tile[] {
-    const combat = combatLevel(acct.skills), hp = acct.skills.hitpoints ?? 10, out = new Map<string, Tile>();
+// A tile packed into one number (level in bits 28-29, x in 14-27, z in 0-13). The whole-world danger set holds
+// about 390,000 tiles for a weak account; as {x,z,level} objects with string keys it cost 320 MB per process.
+export const pack = (level: number, x: number, z: number) => (level << 28) | (x << 14) | z;
+export const unpack = (k: number): Tile => ({ x: (k >>> 14) & 0x3fff, z: k & 0x3fff, level: k >>> 28 });
+
+// Danger tiles (deadly hunters) for this account inside a box, one margin tile past each monster's reach, packed.
+export function dangerSet(acct: Account, level: number, box: { minX: number; maxX: number; minZ: number; maxZ: number }, list = loadHunters()): Int32Array {
+    const combat = combatLevel(acct.skills), hp = acct.skills.hitpoints ?? 10, out = new Set<number>();
     for (const h of list) {
         if (!deadly(h, combat, hp)) continue;
         const r = h.reach + 1;
         for (const s of h.spawns) {
             if (s.level !== level || s.x + r < box.minX || s.x - r > box.maxX || s.z + r < box.minZ || s.z - r > box.maxZ) continue;
-            for (let x = s.x - r; x <= s.x + r; x++) for (let z = s.z - r; z <= s.z + r; z++) out.set(`${x},${z}`, { x, z, level });
+            for (let x = Math.max(0, s.x - r); x <= s.x + r; x++) for (let z = Math.max(0, s.z - r); z <= s.z + r; z++) out.add(pack(level, x, z));
         }
     }
-    return [...out.values()];
+    return Int32Array.from(out);
 }
+export const dangerTiles = (acct: Account, level: number, box: { minX: number; maxX: number; minZ: number; maxZ: number }, list = loadHunters()): Tile[] =>
+    Array.from(dangerSet(acct, level, box, list), unpack);
 
 type FloorGrid = { isFlagged(x: number, z: number, level: number, mask: number): boolean; changeFloor(x: number, z: number, level: number, add: boolean): void };
 const FLOOR = 2097152; // CollisionFlag.FLOOR
@@ -72,16 +79,22 @@ const FLOOR = 2097152; // CollisionFlag.FLOOR
 let active: { key: string; kept: ReadonlySet<string> } | null = null;
 // The danger scope a path query runs in: `key` names the closed set, `kept` the tiles left open (level,x,z).
 export const activeDanger = () => active;
-export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[], keep: readonly Tile[], query: () => T, key = '?'): T {
-    const kept = new Set(keep.map(t => `${t.level},${t.x},${t.z}`)), added: Tile[] = [], outer = active;
+export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[] | Int32Array, keep: readonly Tile[], query: () => T, key = '?'): T {
+    const kept = new Set(keep.map(t => `${t.level},${t.x},${t.z}`)), open = new Set(keep.map(t => pack(t.level, t.x, t.z))), outer = active;
+    const packed = tiles instanceof Int32Array ? tiles : Int32Array.from(tiles, t => pack(t.level, t.x, t.z));
+    const added = new Int32Array(packed.length);
+    let n = 0;
     active = { key, kept };
     try {
-        for (const t of tiles) if (!kept.has(`${t.level},${t.x},${t.z}`) && !grid.isFlagged(t.x, t.z, t.level, FLOOR)) { grid.changeFloor(t.x, t.z, t.level, true); added.push(t); }
+        for (const k of packed) {
+            const x = (k >>> 14) & 0x3fff, z = k & 0x3fff, level = k >>> 28;
+            if (!open.has(k) && !grid.isFlagged(x, z, level, FLOOR)) { grid.changeFloor(x, z, level, true); added[n++] = k; }
+        }
         const result = query();
         if (result && typeof (result as any).then === 'function') throw Error('Danger queries must be synchronous');
         return result;
     } finally {
-        for (const t of added) grid.changeFloor(t.x, t.z, t.level, false);
+        for (let i = 0; i < n; i++) { const k = added[i]!; grid.changeFloor((k >>> 14) & 0x3fff, k & 0x3fff, k >>> 28, false); }
         active = outer;
     }
 }
@@ -108,13 +121,13 @@ export function escapeTiles(acct: Account, at: Tile, list = loadHunters()): Tile
 }
 
 const WORLD = { minX: 0, maxX: 16383, minZ: 0, maxZ: 16383 };
-const routeTiles = new Map<string, Tile[]>();
+const routeTiles = new Map<string, Int32Array>();
 // Closes the account's deadly ground on every level for a whole route search. The tile set does not depend
 // on the route, so measured legs stay valid for every route with the same key.
 export function guardRoute<T>(grid: FloorGrid, acct: Account, keep: readonly Tile[], query: () => T): T {
     const key = dangerKey(acct);
     let tiles = routeTiles.get(key);
-    if (!tiles) routeTiles.set(key, tiles = [0, 1, 2, 3].flatMap(l => dangerTiles(acct, l, WORLD)));
+    if (!tiles) { const parts = [0, 1, 2, 3].map(l => dangerSet(acct, l, WORLD)), all = new Int32Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { all.set(p, at); at += p.length; } routeTiles.set(key, tiles = all); }
     // The start (keep[0]) may leave the zone it stands in. Those legs get their own cache key.
     const start = keep[0], out = start ? escapeTiles(acct, start) : [];
     return withDanger(grid, tiles, [...keep, ...out], query, out.length ? `${key}|from:${start!.level},${start!.x},${start!.z}` : key);
@@ -123,5 +136,5 @@ export function guardRoute<T>(grid: FloorGrid, acct: Account, keep: readonly Til
 // The danger tiles for a walk from `from` to `to` on one level: the box around both ends plus `pad` tiles.
 export function guardWalk<T>(grid: FloorGrid, acct: Account, from: Tile, to: Tile, pad: number, query: () => T): T {
     const box = { minX: Math.min(from.x, to.x) - pad, maxX: Math.max(from.x, to.x) + pad, minZ: Math.min(from.z, to.z) - pad, maxZ: Math.max(from.z, to.z) + pad };
-    return withDanger(grid, from.level === to.level ? dangerTiles(acct, from.level, box) : [], [from, to, ...escapeTiles(acct, from)], query);
+    return withDanger(grid, from.level === to.level ? dangerSet(acct, from.level, box) : [], [from, to, ...escapeTiles(acct, from)], query);
 }

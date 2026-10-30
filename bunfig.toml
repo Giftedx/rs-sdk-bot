@@ -1,0 +1,4 @@
+preload = ["./packages/core/src/collision-lazy.ts"]
+
+[test]
+preload = ["./packages/core/src/collision-lazy.ts"]
