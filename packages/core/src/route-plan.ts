@@ -5,7 +5,9 @@ import type { Account, Tile } from './world';
 
 // Bun workers have ref/unref: an idle worker does not keep the process alive.
 type BunWorker = Worker & { ref(): void; unref(): void };
-let worker: BunWorker | null = null, next = 0;
+let worker: BunWorker | null = null, next = 0, idle: ReturnType<typeof setTimeout> | null = null;
+// An idle worker holds a second pathfinder (about 800 MB per bot process); it closes this long after its last plan.
+export const WORKER_IDLE_MS = 30_000;
 const pending = new Map<number, { resolve(p: TripPlan | null): void; reject(e: Error): void }>();
 
 function start(): BunWorker {
@@ -16,13 +18,14 @@ function start(): BunWorker {
         if (!p) return;
         pending.delete(e.data.id);
         if (e.data.error) p.reject(Error(`route worker: ${e.data.error}`)); else p.resolve(e.data.plan ?? null);
-        if (!pending.size) w.unref();
+        if (!pending.size) { w.unref(); idle = setTimeout(() => { if (!pending.size && worker === w) { worker = null; void w.terminate(); } }, WORKER_IDLE_MS); (idle as { unref?(): void }).unref?.(); }
     };
     w.onerror = (e: ErrorEvent) => { for (const p of pending.values()) p.reject(Error(`route worker failed: ${e.message}`)); pending.clear(); worker = null; };
     return worker = w;
 }
 
 export function planTripOffThread(from: Tile, to: Tile, acct: Account, stock?: BankStock): Promise<TripPlan | null> {
+    if (idle) { clearTimeout(idle); idle = null; }
     const w = start(), id = ++next;
     w.ref();
     return new Promise((resolve, reject) => {
