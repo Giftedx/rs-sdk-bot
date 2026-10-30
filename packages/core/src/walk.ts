@@ -6,8 +6,11 @@ import type { TickSource } from './ticks';
 import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
 import {guardWalk} from './danger';
-import {sail,disembark,type BoatSession} from './boat';
-import {bankStock,planTrip,takeCoins,type TripPlan} from './trip';
+import {disembark,type BoatSession} from './boat';
+import {componentId} from './logout';
+import {readFileSync} from 'node:fs';
+import {join,resolve} from 'node:path';
+import {bankStock,planTrip,takeItems,type TripPlan} from './trip';
 import {refreshGuildEvidence} from './guild-observation';
 
 export interface Walker extends TickSource {
@@ -44,7 +47,7 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
         let last: Outcome | null = null;
         for (let attempt = 0; attempt < retries; attempt++) {
             last = leg.kind === 'walk' ? await (farWalk(s, leg.to) ? walkFar(s, leg.to, opts, leg.tolerance ?? 2) : walkLeg(s, leg.to, opts, leg.tolerance ?? 2))
-                : leg.kind === 'boat' ? await boatLeg(s, leg, opts) : await climbLeg(s, leg, opts);
+                : leg.kind === 'travel' ? await travelLeg(s, leg, opts) : await climbLeg(s, leg, opts);
             total += last.ticks;
             if (last.ok || last.reason === 'aborted') break;
             // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
@@ -63,13 +66,57 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
     return { ok: true, ticks: total };
 }
 
-// One paid boat: talk to its NPC on the dock, sail, cross the gangplank to the far dock.
-async function boatLeg(s: Walker, leg: Extract<Leg, { kind: 'boat' }>, opts: WalkOptions): Promise<Outcome> {
-    const start = s.tick(), b = s as unknown as BoatSession, stop = () => opts.signal?.aborted === true;
-    const sailed = await sail(b, { npc: new RegExp(leg.boat.npc, 'i'), choices: leg.boat.choices.map(c => new RegExp(c, 'i')), deck: leg.boat.deck, stop });
-    const landed = sailed.ok ? await disembark(b, { stop }) : sailed;
-    if (landed.ok) return { ok: true, ticks: s.tick() - start };
-    return { ok: false, reason: stop() ? 'aborted' : sailed.ok ? 'timeout' : 'rejected', detail: `boat ${leg.boat.name}: ${landed.detail}`, ticks: s.tick() - start };
+// One travel edge (travel.ts): talk to the NPC and answer its dialogue, cast the spell, rub the jewellery or
+// operate the lever or tree; then cross the gangplank when the edge lands on a ship deck. Ok when the player
+// stands within 8 tiles of the edge's arrival tile.
+async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts: WalkOptions): Promise<Outcome> {
+    const start = s.tick(), t = leg.travel, run = t.run, b = s as unknown as BoatSession & { direct(a: unknown): Promise<unknown> };
+    const stop = () => opts.signal?.aborted === true, st = () => s.sdk.getState() as any;
+    const here = () => { const p = st()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
+    const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= 8; };
+    const fail = (reason: 'rejected' | 'timeout' | 'precondition', detail: string): Outcome => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
+    const choices = run.how === 'npc' ? run.options : run.how === 'rub' || run.how === 'loc' ? (run.option ? [run.option] : []) : [];
+    const answer = async (until: () => boolean, ticks: number) => {
+        for (let i = 0; i < ticks && !until() && !stop(); i++) {
+            const d = b.sdk.getDialog();
+            if (d?.isOpen && !d.isWaiting) {
+                const norm = (x: string) => x.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g, '');
+                const opt = d.options.find(o => choices.some(c => norm(o.text) === norm(c)));
+                await b.sdk.sendClickDialog(opt ? opt.index : 0);
+            }
+            await waitTicks(s, 1);
+        }
+    };
+    const onDeck = () => here()?.level === 1;
+    if (run.how === 'npc') {
+        const npc = (st()?.nearbyNpcs ?? []).filter((n: any) => n.name?.toLowerCase() === run.npc.toLowerCase()).sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
+        if (!npc) return fail('precondition', `no ${run.npc} in sight`);
+        await b.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: run.op, reason: 'SDK' });
+        await answer(() => arrived() || (!!run.deck && onDeck()), 60);
+        if (run.deck && onDeck()) { const off = await disembark(b, { stop }); if (!off.ok) return fail('timeout', off.detail); }
+    } else if (run.how === 'spell') {
+        await b.direct({ type: 'clickComponent', componentId: componentId(run.component), reason: 'SDK' });
+        await answer(arrived, 12);
+    } else if (run.how === 'rub') {
+        const ids = new Set(run.items.map(itemId).filter((i): i is number => i !== undefined));
+        const item = (st()?.inventory ?? []).find((i: any) => ids.has(i.id));
+        if (!item) return fail('precondition', 'no charged item in the pack');
+        await b.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
+        await answer(arrived, 20);
+    } else {
+        const name = run.loc.includes('spirit') ? /spirit tree/i : /lever|door/i;
+        const loc = (st()?.nearbyLocs ?? []).filter((l: any) => name.test(l.name ?? '')).sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
+        if (!loc) return fail('precondition', `no ${run.loc} in sight`);
+        await b.direct({ type: 'interactLoc', x: loc.x, z: loc.z, locId: loc.id, optionIndex: run.op, reason: 'SDK' });
+        await answer(arrived, 20);
+    }
+    return arrived() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not at ${t.to.x},${t.to.z},${t.to.level} (at ${JSON.stringify(here())})`);
+}
+
+let itemIds: Map<string, number> | undefined;
+function itemId(debugname: string): number | undefined {
+    itemIds ??= new Map((JSON.parse(readFileSync(join(resolve(import.meta.dir, '..', '..', '..'), 'knowledge', 'items.json'), 'utf8')) as { id: number; debugname: string }[]).map(i => [i.debugname, i.id]));
+    return itemIds.get(debugname);
 }
 
 async function openNearestDoor(s: Walker, near: Tile): Promise<void> {
@@ -214,7 +261,7 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     if(!observedInside&&legendsEntry==='refused')return {ok:false,reason:'precondition',detail:'Legends Guild guard refused first entry',ticks:s.tick()-started};
     if(!observedInside&&legendsEntry==='unknown'&&(acct.questStages?.legendsquest??0)<1)return {ok:false,reason:'precondition',detail:'Legends Guild first entry was not observed',ticks:s.tick()-started};
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
-    const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeCoins>[0];
+    const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeItems>[0];
     const r = name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?planTrip(world,from,to,acct,bankStock(name))
         :(()=>{const d=world.route(from,to,acct);return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
     if (!r) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
@@ -222,7 +269,7 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // walls: gear/stat changes and allowed exits must be re-evaluated.
     const first = await walkRoute(s, r.legs, opts);
     if (!first.ok || !r.bank) return first;
-    const took = await takeCoins(banker, r.bank.coins, n => waitTicks(s, n));
+    const took = await takeItems(banker, r.bank.coins, r.bank.items, n => waitTicks(s, n));
     if (!took.ok) return { ok: false, reason: 'precondition', detail: `bank stop at ${r.bank.at.x},${r.bank.at.z}: ${took.detail}`, ticks: s.tick() - started };
     const rest = await walkRoute(s, r.bank.then, opts);
     return rest.ok ? { ok: true, ticks: s.tick() - started } : rest;

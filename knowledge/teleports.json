@@ -1,0 +1,4338 @@
+{
+ "rev": 289,
+ "teleports": [
+  {
+   "id": "spell:varrock_teleport",
+   "kind": "spell",
+   "name": "Varrock teleport",
+   "trigger": "[if_button,magic:varrock_teleport]",
+   "triggerSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:1",
+   "from": null,
+   "requires": [
+    {
+     "type": "skill",
+     "skill": "magic",
+     "level": 25,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:66"
+    },
+    {
+     "type": "note",
+     "text": "stat(magic) is the current level, so boosts count",
+     "src": "scripts/skill_magic/scripts/magic.rs2:22"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/skill_magic/scripts/spells/teleport.rs2:17"
+   },
+   "runes": [
+    {
+     "item": "firerune",
+     "id": 554,
+     "count": 1,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:67"
+    },
+    {
+     "item": "airrune",
+     "id": 556,
+     "count": 3,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:67"
+    },
+    {
+     "item": "lawrune",
+     "id": 563,
+     "count": 1,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:67"
+    }
+   ],
+   "charges": [],
+   "xp": {
+    "skill": "magic",
+    "xp": 35,
+    "tenths": 350,
+    "src": "scripts/skill_magic/configs/magic_spells.dbrow:68"
+   },
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3213,
+       "z": 3424,
+       "level": 0,
+       "src": "scripts/skill_magic/configs/magic_spells.dbrow:69",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3211,
+      "maxX": 3215,
+      "minZ": 3422,
+      "maxZ": 3426,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:51"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spell:lumbridge_teleport",
+   "kind": "spell",
+   "name": "Lumbridge teleport",
+   "trigger": "[if_button,magic:lumbridge_teleport]",
+   "triggerSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:2",
+   "from": null,
+   "requires": [
+    {
+     "type": "skill",
+     "skill": "magic",
+     "level": 31,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:75"
+    },
+    {
+     "type": "note",
+     "text": "stat(magic) is the current level, so boosts count",
+     "src": "scripts/skill_magic/scripts/magic.rs2:22"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/skill_magic/scripts/spells/teleport.rs2:17"
+   },
+   "runes": [
+    {
+     "item": "earthrune",
+     "id": 557,
+     "count": 1,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:76"
+    },
+    {
+     "item": "airrune",
+     "id": 556,
+     "count": 3,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:76"
+    },
+    {
+     "item": "lawrune",
+     "id": 563,
+     "count": 1,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:76"
+    }
+   ],
+   "charges": [],
+   "xp": {
+    "skill": "magic",
+    "xp": 41,
+    "tenths": 410,
+    "src": "scripts/skill_magic/configs/magic_spells.dbrow:77"
+   },
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3221,
+       "z": 3218,
+       "level": 0,
+       "src": "scripts/skill_magic/configs/magic_spells.dbrow:78",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3219,
+      "maxX": 3223,
+      "minZ": 3216,
+      "maxZ": 3220,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:51"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spell:falador_teleport",
+   "kind": "spell",
+   "name": "Falador teleport",
+   "trigger": "[if_button,magic:falador_teleport]",
+   "triggerSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:3",
+   "from": null,
+   "requires": [
+    {
+     "type": "skill",
+     "skill": "magic",
+     "level": 37,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:84"
+    },
+    {
+     "type": "note",
+     "text": "stat(magic) is the current level, so boosts count",
+     "src": "scripts/skill_magic/scripts/magic.rs2:22"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/skill_magic/scripts/spells/teleport.rs2:17"
+   },
+   "runes": [
+    {
+     "item": "waterrune",
+     "id": 555,
+     "count": 1,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:85"
+    },
+    {
+     "item": "airrune",
+     "id": 556,
+     "count": 3,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:85"
+    },
+    {
+     "item": "lawrune",
+     "id": 563,
+     "count": 1,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:85"
+    }
+   ],
+   "charges": [],
+   "xp": {
+    "skill": "magic",
+    "xp": 48,
+    "tenths": 480,
+    "src": "scripts/skill_magic/configs/magic_spells.dbrow:86"
+   },
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2965,
+       "z": 3378,
+       "level": 0,
+       "src": "scripts/skill_magic/configs/magic_spells.dbrow:87",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2963,
+      "maxX": 2967,
+      "minZ": 3376,
+      "maxZ": 3380,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:51"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spell:camelot_teleport",
+   "kind": "spell",
+   "name": "Camelot teleport",
+   "trigger": "[if_button,magic:camelot_teleport]",
+   "triggerSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:4",
+   "from": null,
+   "requires": [
+    {
+     "type": "skill",
+     "skill": "magic",
+     "level": 45,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:93"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:92"
+    },
+    {
+     "type": "note",
+     "text": "members spell needs a members world",
+     "src": "scripts/skill_magic/scripts/magic.rs2:14"
+    },
+    {
+     "type": "note",
+     "text": "stat(magic) is the current level, so boosts count",
+     "src": "scripts/skill_magic/scripts/magic.rs2:22"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/skill_magic/scripts/spells/teleport.rs2:17"
+   },
+   "runes": [
+    {
+     "item": "airrune",
+     "id": 556,
+     "count": 5,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:94"
+    },
+    {
+     "item": "lawrune",
+     "id": 563,
+     "count": 1,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:94"
+    }
+   ],
+   "charges": [],
+   "xp": {
+    "skill": "magic",
+    "xp": 55.5,
+    "tenths": 555,
+    "src": "scripts/skill_magic/configs/magic_spells.dbrow:95"
+   },
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2757,
+       "z": 3478,
+       "level": 0,
+       "src": "scripts/skill_magic/configs/magic_spells.dbrow:96",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2755,
+      "maxX": 2759,
+      "minZ": 3476,
+      "maxZ": 3480,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:51"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spell:ardougne_teleport",
+   "kind": "spell",
+   "name": "Ardougne teleport",
+   "trigger": "[if_button,magic:ardougne_teleport]",
+   "triggerSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:5",
+   "from": null,
+   "requires": [
+    {
+     "type": "skill",
+     "skill": "magic",
+     "level": 51,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:102"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:101"
+    },
+    {
+     "type": "varp",
+     "varp": "elenaquest",
+     "op": ">=",
+     "value": 30,
+     "quest": null,
+     "message": "You must have completed Plague City to use this spell.",
+     "src": [
+      "scripts/skill_magic/scripts/spells/teleport.rs2:22",
+      "scripts/skill_magic/scripts/spells/teleport.rs2:35",
+      "scripts/quests/quest_elena/configs/quest_elena.constant:21"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "members spell needs a members world",
+     "src": "scripts/skill_magic/scripts/magic.rs2:14"
+    },
+    {
+     "type": "note",
+     "text": "stat(magic) is the current level, so boosts count",
+     "src": "scripts/skill_magic/scripts/magic.rs2:22"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/skill_magic/scripts/spells/teleport.rs2:17"
+   },
+   "runes": [
+    {
+     "item": "waterrune",
+     "id": 555,
+     "count": 2,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:103"
+    },
+    {
+     "item": "lawrune",
+     "id": 563,
+     "count": 2,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:103"
+    }
+   ],
+   "charges": [],
+   "xp": {
+    "skill": "magic",
+    "xp": 61,
+    "tenths": 610,
+    "src": "scripts/skill_magic/configs/magic_spells.dbrow:104"
+   },
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2661,
+       "z": 3301,
+       "level": 0,
+       "src": "scripts/skill_magic/configs/magic_spells.dbrow:105",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2659,
+      "maxX": 2663,
+      "minZ": 3299,
+      "maxZ": 3303,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:51"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spell:watchtower_teleport",
+   "kind": "spell",
+   "name": "Watchtower teleport",
+   "trigger": "[if_button,magic:watchtower_teleport]",
+   "triggerSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:6",
+   "from": null,
+   "requires": [
+    {
+     "type": "skill",
+     "skill": "magic",
+     "level": 58,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:111"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:110"
+    },
+    {
+     "type": "varp",
+     "varp": "itwatchtower",
+     "op": ">=",
+     "value": 14,
+     "quest": "quest_itwatchtower",
+     "message": "You need to have completed the Watchtower Quest to use this spell.",
+     "src": [
+      "scripts/skill_magic/scripts/spells/teleport.rs2:26",
+      "scripts/skill_magic/scripts/spells/teleport.rs2:35",
+      "scripts/quests/quest_itwatchtower/configs/quest_itwatchtower.constant:13"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "members spell needs a members world",
+     "src": "scripts/skill_magic/scripts/magic.rs2:14"
+    },
+    {
+     "type": "note",
+     "text": "stat(magic) is the current level, so boosts count",
+     "src": "scripts/skill_magic/scripts/magic.rs2:22"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/skill_magic/scripts/spells/teleport.rs2:17"
+   },
+   "runes": [
+    {
+     "item": "earthrune",
+     "id": 557,
+     "count": 2,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:112"
+    },
+    {
+     "item": "lawrune",
+     "id": 563,
+     "count": 2,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:112"
+    }
+   ],
+   "charges": [],
+   "xp": {
+    "skill": "magic",
+    "xp": 68,
+    "tenths": 680,
+    "src": "scripts/skill_magic/configs/magic_spells.dbrow:113"
+   },
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2933,
+       "z": 4713,
+       "level": 2,
+       "src": "scripts/skill_magic/configs/magic_spells.dbrow:114",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2931,
+      "maxX": 2935,
+      "minZ": 4711,
+      "maxZ": 4715,
+      "level": 2
+     },
+     "moveSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:51"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spell:trollheim_teleport",
+   "kind": "spell",
+   "name": "Trollheim teleport",
+   "trigger": "[if_button,magic:trollheim_teleport]",
+   "triggerSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:7",
+   "from": null,
+   "requires": [
+    {
+     "type": "skill",
+     "skill": "magic",
+     "level": 61,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:120"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:119"
+    },
+    {
+     "type": "varp",
+     "varp": "eadgar_quest",
+     "op": ">=",
+     "value": 110,
+     "quest": "quest_eadgar",
+     "message": "You need to have completed the Eadgar's Ruse Quest to use this spell.",
+     "src": [
+      "scripts/skill_magic/scripts/spells/teleport.rs2:30",
+      "scripts/general/configs/quest.constant:66"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "members spell needs a members world",
+     "src": "scripts/skill_magic/scripts/magic.rs2:14"
+    },
+    {
+     "type": "note",
+     "text": "stat(magic) is the current level, so boosts count",
+     "src": "scripts/skill_magic/scripts/magic.rs2:22"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/skill_magic/scripts/spells/teleport.rs2:17"
+   },
+   "runes": [
+    {
+     "item": "firerune",
+     "id": 554,
+     "count": 2,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:121"
+    },
+    {
+     "item": "lawrune",
+     "id": 563,
+     "count": 2,
+     "src": "scripts/skill_magic/configs/magic_spells.dbrow:121"
+    }
+   ],
+   "charges": [],
+   "xp": {
+    "skill": "magic",
+    "xp": 68,
+    "tenths": 680,
+    "src": "scripts/skill_magic/configs/magic_spells.dbrow:122"
+   },
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2890,
+       "z": 3679,
+       "level": 0,
+       "src": "scripts/skill_magic/configs/magic_spells.dbrow:123",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2888,
+      "maxX": 2892,
+      "minZ": 3677,
+      "maxZ": 3681,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_magic/scripts/spells/teleport.rs2:51"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "jewellery:amulet_of_glory",
+   "kind": "jewellery",
+   "name": "Amulet of glory",
+   "trigger": "[opheld4,amulet_of_glory_N] Rub",
+   "triggerSrc": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:1",
+   "from": null,
+   "requires": [
+    {
+     "type": "note",
+     "text": "rub from the inventory (opheld4); no opworn trigger exists, so a worn amulet cannot teleport",
+     "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:1"
+    },
+    {
+     "type": "note",
+     "text": "each use replaces the slot with next_obj_stage",
+     "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:35"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:417"
+    },
+    {
+     "type": "note",
+     "text": "amulet_of_glory (no charges) does not teleport",
+     "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:5"
+    }
+   ],
+   "wildernessMax": {
+    "level": 30,
+    "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:19"
+   },
+   "runes": [],
+   "charges": [
+    {
+     "item": "amulet_of_glory_4",
+     "id": 1712,
+     "charges": 4,
+     "next": "amulet_of_glory_3",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:437"
+    },
+    {
+     "item": "amulet_of_glory_3",
+     "id": 1710,
+     "charges": 3,
+     "next": "amulet_of_glory_2",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:399"
+    },
+    {
+     "item": "amulet_of_glory_2",
+     "id": 1708,
+     "charges": 2,
+     "next": "amulet_of_glory_1",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:361"
+    },
+    {
+     "item": "amulet_of_glory_1",
+     "id": 1706,
+     "charges": 1,
+     "next": "amulet_of_glory",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:323"
+    }
+   ],
+   "xp": null,
+   "to": [
+    {
+     "option": "Edgeville",
+     "candidates": [
+      {
+       "x": 3087,
+       "z": 3496,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:30",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3087,
+      "maxX": 3087,
+      "minZ": 3496,
+      "maxZ": 3496,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:30"
+    },
+    {
+     "option": "Karamja",
+     "candidates": [
+      {
+       "x": 2918,
+       "z": 3176,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:31",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2918,
+      "maxX": 2918,
+      "minZ": 3176,
+      "maxZ": 3176,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:31"
+    },
+    {
+     "option": "Draynor Village",
+     "candidates": [
+      {
+       "x": 3105,
+       "z": 3251,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:32",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3105,
+      "maxX": 3105,
+      "minZ": 3251,
+      "maxZ": 3251,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:32"
+    },
+    {
+     "option": "Al Kharid",
+     "candidates": [
+      {
+       "x": 3293,
+       "z": 3163,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:33",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3293,
+      "maxX": 3293,
+      "minZ": 3163,
+      "maxZ": 3163,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/amulet_of_glory.rs2:33"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "jewellery:games_necklace",
+   "kind": "jewellery",
+   "name": "Games necklace",
+   "trigger": "[opheld4,_necklace_of_minigames]",
+   "triggerSrc": "scripts/general/scripts/enchanted_jewellry/necklace_of_minigames.rs2:1",
+   "from": null,
+   "requires": [
+    {
+     "type": "note",
+     "text": "rub from the inventory (opheld4); the last charge deletes the item",
+     "src": "scripts/general/scripts/enchanted_jewellry/necklace_of_minigames.rs2:23"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:560"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/general/scripts/enchanted_jewellry/necklace_of_minigames.rs2:11"
+   },
+   "runes": [],
+   "charges": [
+    {
+     "item": "necklace_of_minigames_8",
+     "id": 3853,
+     "charges": 8,
+     "next": "necklace_of_minigames_7",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:565"
+    },
+    {
+     "item": "necklace_of_minigames_7",
+     "id": 3855,
+     "charges": 7,
+     "next": "necklace_of_minigames_6",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:588"
+    },
+    {
+     "item": "necklace_of_minigames_6",
+     "id": 3857,
+     "charges": 6,
+     "next": "necklace_of_minigames_5",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:611"
+    },
+    {
+     "item": "necklace_of_minigames_5",
+     "id": 3859,
+     "charges": 5,
+     "next": "necklace_of_minigames_4",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:634"
+    },
+    {
+     "item": "necklace_of_minigames_4",
+     "id": 3861,
+     "charges": 4,
+     "next": "necklace_of_minigames_3",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:657"
+    },
+    {
+     "item": "necklace_of_minigames_3",
+     "id": 3863,
+     "charges": 3,
+     "next": "necklace_of_minigames_2",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:680"
+    },
+    {
+     "item": "necklace_of_minigames_2",
+     "id": 3865,
+     "charges": 2,
+     "next": "necklace_of_minigames_1",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:703"
+    },
+    {
+     "item": "necklace_of_minigames_1",
+     "id": 3867,
+     "charges": 1,
+     "next": null,
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:725"
+    }
+   ],
+   "xp": null,
+   "to": [
+    {
+     "option": "Burthorpe Games Rooms",
+     "candidates": [
+      {
+       "x": 2207,
+       "z": 4940,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/necklace_of_minigames.rs2:20",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2205,
+      "maxX": 2209,
+      "minZ": 4938,
+      "maxZ": 4942,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/necklace_of_minigames.rs2:20"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "jewellery:ring_of_dueling",
+   "kind": "jewellery",
+   "name": "Ring of dueling",
+   "trigger": "[opheld4,_category_136]",
+   "triggerSrc": "scripts/general/scripts/enchanted_jewellry/ring_of_dueling.rs2:1",
+   "from": null,
+   "requires": [
+    {
+     "type": "note",
+     "text": "rub from the inventory (opheld4); the last charge deletes the item",
+     "src": "scripts/general/scripts/enchanted_jewellry/ring_of_dueling.rs2:29"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:24"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/general/scripts/enchanted_jewellry/ring_of_dueling.rs2:11"
+   },
+   "runes": [],
+   "charges": [
+    {
+     "item": "ring_of_dueling_8",
+     "id": 2552,
+     "charges": 8,
+     "next": "ring_of_dueling_7",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:40"
+    },
+    {
+     "item": "ring_of_dueling_7",
+     "id": 2554,
+     "charges": 7,
+     "next": "ring_of_dueling_6",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:62"
+    },
+    {
+     "item": "ring_of_dueling_6",
+     "id": 2556,
+     "charges": 6,
+     "next": "ring_of_dueling_5",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:84"
+    },
+    {
+     "item": "ring_of_dueling_5",
+     "id": 2558,
+     "charges": 5,
+     "next": "ring_of_dueling_4",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:106"
+    },
+    {
+     "item": "ring_of_dueling_4",
+     "id": 2560,
+     "charges": 4,
+     "next": "ring_of_dueling_3",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:128"
+    },
+    {
+     "item": "ring_of_dueling_3",
+     "id": 2562,
+     "charges": 3,
+     "next": "ring_of_dueling_2",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:150"
+    },
+    {
+     "item": "ring_of_dueling_2",
+     "id": 2564,
+     "charges": 2,
+     "next": "ring_of_dueling_1",
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:172"
+    },
+    {
+     "item": "ring_of_dueling_1",
+     "id": 2566,
+     "charges": 1,
+     "next": null,
+     "src": "scripts/skill_magic/configs/enchanted_jewelry.obj:193"
+    }
+   ],
+   "xp": null,
+   "to": [
+    {
+     "option": "Al Kharid Duel Arena",
+     "candidates": [
+      {
+       "x": 3315,
+       "z": 3235,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/ring_of_dueling.rs2:21",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3313,
+      "maxX": 3317,
+      "minZ": 3233,
+      "maxZ": 3237,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/ring_of_dueling.rs2:21"
+    },
+    {
+     "option": "Castle Wars Arena",
+     "candidates": [
+      {
+       "x": 2440,
+       "z": 3090,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/ring_of_dueling.rs2:23",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2438,
+      "maxX": 2442,
+      "minZ": 3088,
+      "maxZ": 3092,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/ring_of_dueling.rs2:23"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "jewellery:ring_of_life",
+   "kind": "jewellery",
+   "name": "Ring of life",
+   "trigger": "[proc,ring_of_life_check]",
+   "triggerSrc": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:1",
+   "from": null,
+   "requires": [
+    {
+     "type": "worn",
+     "item": "ring_of_life",
+     "id": 2570,
+     "src": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:3"
+    },
+    {
+     "type": "members",
+     "src": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:3"
+    },
+    {
+     "type": "note",
+     "text": "fires by itself when hitpoints <= 10/100 of base hitpoints; not a chosen route leg",
+     "src": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:3"
+    }
+   ],
+   "wildernessMax": {
+    "level": 30,
+    "src": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:3"
+   },
+   "runes": [],
+   "charges": [
+    {
+     "item": "ring_of_life",
+     "id": 2570,
+     "charges": 1,
+     "next": null,
+     "src": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:14"
+    }
+   ],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3221,
+       "z": 3218,
+       "level": 0,
+       "src": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:15",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3219,
+      "maxX": 3223,
+      "minZ": 3216,
+      "maxZ": 3220,
+      "level": 0
+     },
+     "moveSrc": "scripts/general/scripts/enchanted_jewellry/ring_of_life.rs2:15"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "item:magic_strung_lyre",
+   "kind": "item",
+   "name": "Enchanted lyre",
+   "trigger": "[opheld1,magic_strung_lyre]",
+   "triggerSrc": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:246",
+   "from": null,
+   "requires": [
+    {
+     "type": "held",
+     "item": "magic_strung_lyre",
+     "id": 3691,
+     "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:246"
+    },
+    {
+     "type": "members",
+     "src": "scripts/quests/quest_viking/configs/viking.obj:59"
+    },
+    {
+     "type": "varp",
+     "varp": "viking",
+     "op": "=",
+     "value": 10,
+     "quest": "quest_viking",
+     "message": "enchanting at the shrine needs the quest complete",
+     "src": [
+      "scripts/quests/quest_viking/scripts/viking_olaf.rs2:191",
+      "scripts/general/configs/quest.constant:68"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "enchant viking_strung_lyre by using raw_shark, raw_seaturtle or raw_mantaray on viking_lake_shrine_altar; one enchant gives one teleport",
+     "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:198"
+    }
+   ],
+   "wildernessMax": {
+    "level": 20,
+    "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:248"
+   },
+   "runes": [],
+   "charges": [
+    {
+     "item": "magic_strung_lyre",
+     "id": 3691,
+     "charges": 1,
+     "next": "viking_strung_lyre",
+     "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:262"
+    }
+   ],
+   "xp": null,
+   "to": [
+    {
+     "option": "Rellekka",
+     "candidates": [
+      {
+       "x": 2662,
+       "z": 3644,
+       "level": 0,
+       "src": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:260",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2660,
+      "maxX": 2664,
+      "minZ": 3642,
+      "maxZ": 3646,
+      "level": 0
+     },
+     "moveSrc": "scripts/quests/quest_viking/scripts/viking_olaf.rs2:260"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "lever:wildinlever",
+   "kind": "lever",
+   "name": "Ardougne lever to Wilderness",
+   "trigger": "[oploc1,wildinlever]",
+   "triggerSrc": "scripts/areas/area_ardougne_east/scripts/wilderness_lever.rs2:3",
+   "from": [
+    {
+     "x": 2561,
+     "z": 3311,
+     "level": 0,
+     "src": "maps/m40_51.jm2:5505",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3154,
+       "z": 3924,
+       "level": 0,
+       "src": "scripts/areas/area_ardougne_east/configs/wilderness_lever.constant:1",
+       "wilderness": 51
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3154,
+      "maxX": 3154,
+      "minZ": 3924,
+      "maxZ": 3924,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_ardougne_east/scripts/wilderness_lever.rs2:28"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "lever:wildoutlever",
+   "kind": "lever",
+   "name": "Wilderness lever to Ardougne",
+   "trigger": "[oploc1,wildoutlever]",
+   "triggerSrc": "scripts/areas/area_ardougne_east/scripts/wilderness_lever.rs2:32",
+   "from": [
+    {
+     "x": 3153,
+     "z": 3923,
+     "level": 0,
+     "src": "maps/m49_61.jm2:4415",
+     "wilderness": 51
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2562,
+       "z": 3311,
+       "level": 0,
+       "src": "scripts/areas/area_ardougne_east/configs/wilderness_lever.constant:2",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2562,
+      "maxX": 2562,
+      "minZ": 3311,
+      "maxZ": 3311,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_ardougne_east/scripts/wilderness_lever.rs2:44"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "lever:dragonkinginlever",
+   "kind": "lever",
+   "name": "Lever into the King Black Dragon lair",
+   "trigger": "[oploc1,dragonkinginlever]",
+   "triggerSrc": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:359",
+   "from": [
+    {
+     "x": 3067,
+     "z": 10253,
+     "level": 0,
+     "src": "maps/m47_160.jm2:5158",
+     "wilderness": 42
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2717,
+       "z": 9802,
+       "level": 0,
+       "src": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:371",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2717,
+      "maxX": 2717,
+      "minZ": 9802,
+      "maxZ": 9802,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:371"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "lever:dragonkingoutlever",
+   "kind": "lever",
+   "name": "Lever out of the King Black Dragon lair",
+   "trigger": "[oploc1,dragonkingoutlever]",
+   "triggerSrc": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:374",
+   "from": [
+    {
+     "x": 2717,
+     "z": 9801,
+     "level": 0,
+     "src": "maps/m42_153.jm2:5701",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3067,
+       "z": 10254,
+       "level": 0,
+       "src": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:385",
+       "wilderness": 42
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3067,
+      "maxX": 3067,
+      "minZ": 10254,
+      "maxZ": 10254,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_wilderness/scripts/king_black_dragon.rs2:385"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "loc:zanarisdoor",
+   "kind": "loc",
+   "name": "Zanaris shed door",
+   "trigger": "[oploc1,zanarisdoor]",
+   "triggerSrc": "scripts/quests/quest_zanaris/scripts/quest_zanaris.rs2:89",
+   "from": [
+    {
+     "x": 3202,
+     "z": 3169,
+     "level": 0,
+     "src": "maps/m50_49.jm2:5006",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "worn",
+     "item": "dramen_staff",
+     "id": 772,
+     "src": "scripts/quests/quest_zanaris/scripts/quest_zanaris.rs2:93"
+    },
+    {
+     "type": "members",
+     "src": "scripts/quests/quest_zanaris/scripts/quest_zanaris.rs2:93"
+    },
+    {
+     "type": "note",
+     "text": "fires only when ~check_axis(coord, loc_coord, loc_angle) is false (player not on the door tile axis)",
+     "src": "scripts/quests/quest_zanaris/scripts/quest_zanaris.rs2:92"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3220,
+       "z": 9592,
+       "level": 0,
+       "src": "scripts/quests/quest_zanaris/scripts/quest_zanaris.rs2:99",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3220,
+      "maxX": 3220,
+      "minZ": 9592,
+      "maxZ": 9592,
+      "level": 0
+     },
+     "moveSrc": "scripts/quests/quest_zanaris/scripts/quest_zanaris.rs2:99"
+    }
+   ],
+   "gaps": [
+    "which side of the shed door gives check_axis false is not resolved from geometry"
+   ]
+  },
+  {
+   "id": "loc:zanarismagicdoor",
+   "kind": "loc",
+   "name": "Entrana dungeon magic door",
+   "trigger": "[oploc1,zanarismagicdoor]",
+   "triggerSrc": "scripts/areas/area_entrana/scripts/entrana_dungeon.rs2:6",
+   "from": [
+    {
+     "x": 2874,
+     "z": 9750,
+     "level": 0,
+     "src": "maps/m44_152.jm2:7624",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3250,
+       "z": 3772,
+       "level": 0,
+       "src": "scripts/areas/area_entrana/scripts/entrana_dungeon.rs2:8",
+       "wilderness": 32
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3250,
+      "maxX": 3250,
+      "minZ": 3772,
+      "maxZ": 3772,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_entrana/scripts/entrana_dungeon.rs2:8"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "npc:essence_mine:aubury",
+   "kind": "npc",
+   "name": "Aubury (Varrock) to the Rune essence mine",
+   "trigger": "[opnpc4,aubury]",
+   "triggerSrc": "scripts/areas/area_varrock/scripts/aubury.rs2:32",
+   "from": [
+    {
+     "x": 3253,
+     "z": 3402,
+     "level": 0,
+     "src": "maps/m50_53.jm2:12919",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "runemysteries",
+     "op": ">=",
+     "value": 6,
+     "quest": "quest_runemysteries",
+     "message": "You need to have completed the Rune Mysteries Quest to use this feature.",
+     "src": [
+      "scripts/skill_runecraft/scripts/essence_mine.rs2:2",
+      "scripts/general/configs/quest.constant:50"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "sets the essence mine exit to ^essence_mine_to_aubury",
+     "src": "scripts/areas/area_varrock/scripts/aubury.rs2:33"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Rune essence mine",
+     "candidates": [
+      {
+       "x": 2912,
+       "z": 4833,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:4",
+       "wilderness": 0
+      },
+      {
+       "x": 2915,
+       "z": 4831,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:5",
+       "wilderness": 0
+      },
+      {
+       "x": 2913,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:6",
+       "wilderness": 0
+      },
+      {
+       "x": 2910,
+       "z": 4824,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:7",
+       "wilderness": 0
+      },
+      {
+       "x": 2906,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:8",
+       "wilderness": 0
+      },
+      {
+       "x": 2908,
+       "z": 4835,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:9",
+       "wilderness": 0
+      },
+      {
+       "x": 2905,
+       "z": 4837,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:10",
+       "wilderness": 0
+      },
+      {
+       "x": 2912,
+       "z": 4838,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:11",
+       "wilderness": 0
+      },
+      {
+       "x": 2923,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:12",
+       "wilderness": 0
+      },
+      {
+       "x": 2931,
+       "z": 4842,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:13",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4856,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:14",
+       "wilderness": 0
+      },
+      {
+       "x": 2935,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:15",
+       "wilderness": 0
+      },
+      {
+       "x": 2894,
+       "z": 4839,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:16",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4845,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:17",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4858,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:18",
+       "wilderness": 0
+      },
+      {
+       "x": 2893,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:19",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:20",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4809,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:21",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4820,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:22",
+       "wilderness": 0
+      },
+      {
+       "x": 2925,
+       "z": 4818,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:23",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4811,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:24",
+       "wilderness": 0
+      },
+      {
+       "x": 2934,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:25",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 1,
+     "findsquare": "lineofsight",
+     "box": null,
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:25"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "npc:essence_mine:head_wizard",
+   "kind": "npc",
+   "name": "Sedridor (Wizards' Tower) to the Rune essence mine",
+   "trigger": "[opnpc3,head_wizard]",
+   "triggerSrc": "scripts/areas/area_wizard_tower/scripts/sedridor.rs2:44",
+   "from": [
+    {
+     "x": 3103,
+     "z": 9571,
+     "level": 0,
+     "src": "maps/m48_149.jm2:6803",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "runemysteries",
+     "op": ">=",
+     "value": 6,
+     "quest": "quest_runemysteries",
+     "message": "You need to have completed the Rune Mysteries Quest to use this feature.",
+     "src": [
+      "scripts/skill_runecraft/scripts/essence_mine.rs2:2",
+      "scripts/general/configs/quest.constant:50"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "sets the essence mine exit to ^essence_mine_to_sedridor",
+     "src": "scripts/areas/area_wizard_tower/scripts/sedridor.rs2:45"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Rune essence mine",
+     "candidates": [
+      {
+       "x": 2912,
+       "z": 4833,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:4",
+       "wilderness": 0
+      },
+      {
+       "x": 2915,
+       "z": 4831,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:5",
+       "wilderness": 0
+      },
+      {
+       "x": 2913,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:6",
+       "wilderness": 0
+      },
+      {
+       "x": 2910,
+       "z": 4824,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:7",
+       "wilderness": 0
+      },
+      {
+       "x": 2906,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:8",
+       "wilderness": 0
+      },
+      {
+       "x": 2908,
+       "z": 4835,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:9",
+       "wilderness": 0
+      },
+      {
+       "x": 2905,
+       "z": 4837,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:10",
+       "wilderness": 0
+      },
+      {
+       "x": 2912,
+       "z": 4838,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:11",
+       "wilderness": 0
+      },
+      {
+       "x": 2923,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:12",
+       "wilderness": 0
+      },
+      {
+       "x": 2931,
+       "z": 4842,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:13",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4856,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:14",
+       "wilderness": 0
+      },
+      {
+       "x": 2935,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:15",
+       "wilderness": 0
+      },
+      {
+       "x": 2894,
+       "z": 4839,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:16",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4845,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:17",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4858,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:18",
+       "wilderness": 0
+      },
+      {
+       "x": 2893,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:19",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:20",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4809,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:21",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4820,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:22",
+       "wilderness": 0
+      },
+      {
+       "x": 2925,
+       "z": 4818,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:23",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4811,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:24",
+       "wilderness": 0
+      },
+      {
+       "x": 2934,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:25",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 1,
+     "findsquare": "lineofsight",
+     "box": null,
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:25"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "npc:essence_mine:guild_wizard",
+   "kind": "npc",
+   "name": "Wizard Distentor (Magic Guild) to the Rune essence mine",
+   "trigger": "[opnpc3,guild_wizard]",
+   "triggerSrc": "scripts/areas/area_yanille/scripts/wizard_distentor.rs2:15",
+   "from": [
+    {
+     "x": 2594,
+     "z": 3089,
+     "level": 0,
+     "src": "maps/m40_48.jm2:9351",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "runemysteries",
+     "op": ">=",
+     "value": 6,
+     "quest": "quest_runemysteries",
+     "message": "You need to have completed the Rune Mysteries Quest to use this feature.",
+     "src": [
+      "scripts/skill_runecraft/scripts/essence_mine.rs2:2",
+      "scripts/general/configs/quest.constant:50"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "sets the essence mine exit to ^essence_mine_to_disentor",
+     "src": "scripts/areas/area_yanille/scripts/wizard_distentor.rs2:16"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Rune essence mine",
+     "candidates": [
+      {
+       "x": 2912,
+       "z": 4833,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:4",
+       "wilderness": 0
+      },
+      {
+       "x": 2915,
+       "z": 4831,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:5",
+       "wilderness": 0
+      },
+      {
+       "x": 2913,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:6",
+       "wilderness": 0
+      },
+      {
+       "x": 2910,
+       "z": 4824,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:7",
+       "wilderness": 0
+      },
+      {
+       "x": 2906,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:8",
+       "wilderness": 0
+      },
+      {
+       "x": 2908,
+       "z": 4835,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:9",
+       "wilderness": 0
+      },
+      {
+       "x": 2905,
+       "z": 4837,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:10",
+       "wilderness": 0
+      },
+      {
+       "x": 2912,
+       "z": 4838,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:11",
+       "wilderness": 0
+      },
+      {
+       "x": 2923,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:12",
+       "wilderness": 0
+      },
+      {
+       "x": 2931,
+       "z": 4842,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:13",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4856,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:14",
+       "wilderness": 0
+      },
+      {
+       "x": 2935,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:15",
+       "wilderness": 0
+      },
+      {
+       "x": 2894,
+       "z": 4839,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:16",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4845,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:17",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4858,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:18",
+       "wilderness": 0
+      },
+      {
+       "x": 2893,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:19",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:20",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4809,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:21",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4820,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:22",
+       "wilderness": 0
+      },
+      {
+       "x": 2925,
+       "z": 4818,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:23",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4811,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:24",
+       "wilderness": 0
+      },
+      {
+       "x": 2934,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:25",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 1,
+     "findsquare": "lineofsight",
+     "box": null,
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:25"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "npc:essence_mine:gnome_brimstail",
+   "kind": "npc",
+   "name": "Brimstail (Gnome Stronghold) to the Rune essence mine",
+   "trigger": "[opnpc3,gnome_brimstail]",
+   "triggerSrc": "scripts/areas/area_gnome/scripts/brimstail.rs2:20",
+   "from": [
+    {
+     "x": 2390,
+     "z": 9810,
+     "level": 0,
+     "src": "maps/m37_153.jm2:5845",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "runemysteries",
+     "op": ">=",
+     "value": 6,
+     "quest": "quest_runemysteries",
+     "message": "You need to have completed the Rune Mysteries Quest to use this feature.",
+     "src": [
+      "scripts/skill_runecraft/scripts/essence_mine.rs2:2",
+      "scripts/general/configs/quest.constant:50"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "sets the essence mine exit to ^essence_mine_to_brimstail",
+     "src": "scripts/areas/area_gnome/scripts/brimstail.rs2:21"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Rune essence mine",
+     "candidates": [
+      {
+       "x": 2912,
+       "z": 4833,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:4",
+       "wilderness": 0
+      },
+      {
+       "x": 2915,
+       "z": 4831,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:5",
+       "wilderness": 0
+      },
+      {
+       "x": 2913,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:6",
+       "wilderness": 0
+      },
+      {
+       "x": 2910,
+       "z": 4824,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:7",
+       "wilderness": 0
+      },
+      {
+       "x": 2906,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:8",
+       "wilderness": 0
+      },
+      {
+       "x": 2908,
+       "z": 4835,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:9",
+       "wilderness": 0
+      },
+      {
+       "x": 2905,
+       "z": 4837,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:10",
+       "wilderness": 0
+      },
+      {
+       "x": 2912,
+       "z": 4838,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:11",
+       "wilderness": 0
+      },
+      {
+       "x": 2923,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:12",
+       "wilderness": 0
+      },
+      {
+       "x": 2931,
+       "z": 4842,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:13",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4856,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:14",
+       "wilderness": 0
+      },
+      {
+       "x": 2935,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:15",
+       "wilderness": 0
+      },
+      {
+       "x": 2894,
+       "z": 4839,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:16",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4845,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:17",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4858,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:18",
+       "wilderness": 0
+      },
+      {
+       "x": 2893,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:19",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:20",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4809,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:21",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4820,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:22",
+       "wilderness": 0
+      },
+      {
+       "x": 2925,
+       "z": 4818,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:23",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4811,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:24",
+       "wilderness": 0
+      },
+      {
+       "x": 2934,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:25",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 1,
+     "findsquare": "lineofsight",
+     "box": null,
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:25"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "npc:essence_mine:ardounge_wizard",
+   "kind": "npc",
+   "name": "Wizard Cromperty (East Ardougne) to the Rune essence mine",
+   "trigger": "[opnpc3,ardounge_wizard]",
+   "triggerSrc": "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:9",
+   "from": [
+    {
+     "x": 2683,
+     "z": 3326,
+     "level": 0,
+     "src": "maps/m41_51.jm2:11012",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "runemysteries",
+     "op": ">=",
+     "value": 6,
+     "quest": "quest_runemysteries",
+     "message": "You need to have completed the Rune Mysteries Quest to use this feature.",
+     "src": [
+      "scripts/skill_runecraft/scripts/essence_mine.rs2:2",
+      "scripts/general/configs/quest.constant:50"
+     ]
+    },
+    {
+     "type": "note",
+     "text": "sets the essence mine exit to ^essence_mine_to_cromperty",
+     "src": "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:10"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Rune essence mine",
+     "candidates": [
+      {
+       "x": 2912,
+       "z": 4833,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:4",
+       "wilderness": 0
+      },
+      {
+       "x": 2915,
+       "z": 4831,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:5",
+       "wilderness": 0
+      },
+      {
+       "x": 2913,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:6",
+       "wilderness": 0
+      },
+      {
+       "x": 2910,
+       "z": 4824,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:7",
+       "wilderness": 0
+      },
+      {
+       "x": 2906,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:8",
+       "wilderness": 0
+      },
+      {
+       "x": 2908,
+       "z": 4835,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:9",
+       "wilderness": 0
+      },
+      {
+       "x": 2905,
+       "z": 4837,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:10",
+       "wilderness": 0
+      },
+      {
+       "x": 2912,
+       "z": 4838,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:11",
+       "wilderness": 0
+      },
+      {
+       "x": 2923,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:12",
+       "wilderness": 0
+      },
+      {
+       "x": 2931,
+       "z": 4842,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:13",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4856,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:14",
+       "wilderness": 0
+      },
+      {
+       "x": 2935,
+       "z": 4846,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:15",
+       "wilderness": 0
+      },
+      {
+       "x": 2894,
+       "z": 4839,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:16",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4845,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:17",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4858,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:18",
+       "wilderness": 0
+      },
+      {
+       "x": 2893,
+       "z": 4826,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:19",
+       "wilderness": 0
+      },
+      {
+       "x": 2899,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:20",
+       "wilderness": 0
+      },
+      {
+       "x": 2896,
+       "z": 4809,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:21",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4820,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:22",
+       "wilderness": 0
+      },
+      {
+       "x": 2925,
+       "z": 4818,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:23",
+       "wilderness": 0
+      },
+      {
+       "x": 2921,
+       "z": 4811,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:24",
+       "wilderness": 0
+      },
+      {
+       "x": 2934,
+       "z": 4821,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/essence_mine_teleports.enum:25",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 1,
+     "findsquare": "lineofsight",
+     "box": null,
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:25"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:blankrunestone_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Rune essence mine exit portal",
+   "trigger": "[oploc1,blankrunestone_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:28",
+   "from": [
+    {
+     "x": 2885,
+     "z": 4850,
+     "level": 0,
+     "src": "maps/m45_75.jm2:5674",
+     "wilderness": 0
+    },
+    {
+     "x": 2889,
+     "z": 4813,
+     "level": 0,
+     "src": "maps/m45_75.jm2:5890",
+     "wilderness": 0
+    },
+    {
+     "x": 2932,
+     "z": 4854,
+     "level": 0,
+     "src": "maps/m45_75.jm2:8643",
+     "wilderness": 0
+    },
+    {
+     "x": 2933,
+     "z": 4815,
+     "level": 0,
+     "src": "maps/m45_75.jm2:8669",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "note",
+     "text": "on a free world an exit that is not Aubury or Sedridor resets to Sedridor",
+     "src": "scripts/skill_runecraft/scripts/essence_mine.rs2:37"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Aubury (Varrock)",
+     "candidates": [
+      {
+       "x": 3253,
+       "z": 3401,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.constant:15",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3251,
+      "maxX": 3255,
+      "minZ": 3399,
+      "maxZ": 3403,
+      "level": 0
+     },
+     "when": "the player entered through this wizard",
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:41"
+    },
+    {
+     "option": "Sedridor (Wizards' Tower)",
+     "candidates": [
+      {
+       "x": 3106,
+       "z": 9572,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.constant:16",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3104,
+      "maxX": 3108,
+      "minZ": 9570,
+      "maxZ": 9574,
+      "level": 0
+     },
+     "when": "the player entered through this wizard, or the exit coord is unset",
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:41"
+    },
+    {
+     "option": "Wizard Distentor (Magic Guild)",
+     "candidates": [
+      {
+       "x": 2591,
+       "z": 3086,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.constant:17",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2589,
+      "maxX": 2593,
+      "minZ": 3084,
+      "maxZ": 3088,
+      "level": 0
+     },
+     "when": "the player entered through this wizard",
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:41"
+    },
+    {
+     "option": "Brimstail (Gnome Stronghold)",
+     "candidates": [
+      {
+       "x": 2390,
+       "z": 9810,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.constant:18",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2388,
+      "maxX": 2392,
+      "minZ": 9808,
+      "maxZ": 9812,
+      "level": 0
+     },
+     "when": "the player entered through this wizard",
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:41"
+    },
+    {
+     "option": "Wizard Cromperty (East Ardougne)",
+     "candidates": [
+      {
+       "x": 2684,
+       "z": 3322,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.constant:19",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2682,
+      "maxX": 2686,
+      "minZ": 3320,
+      "maxZ": 3324,
+      "level": 0
+     },
+     "when": "the player entered through this wizard",
+     "moveSrc": "scripts/skill_runecraft/scripts/essence_mine.rs2:41"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "npc:cromperty_rpdt",
+   "kind": "npc",
+   "name": "Wizard Cromperty teleport block",
+   "trigger": "[opnpc1,ardounge_wizard] dialogue: Can I be teleported please?",
+   "triggerSrc": "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:50",
+   "from": [
+    {
+     "x": 2683,
+     "z": 3326,
+     "level": 0,
+     "src": "maps/m41_51.jm2:11012",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "totemquest",
+     "op": "<",
+     "value": 5,
+     "quest": "quest_totem",
+     "message": "the teleport works only before the quest is complete",
+     "src": [
+      "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:57",
+      "scripts/general/configs/quest.constant:56"
+     ]
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2649,
+       "z": 3271,
+       "level": 0,
+       "src": "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:74",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2649,
+      "maxX": 2649,
+      "minZ": 3271,
+      "maxZ": 3271,
+      "level": 0
+     },
+     "when": "%totemquest < 3 (^totem_crate_delivered, scripts/quests/quest_totem/configs/quest_totem.constant:4)",
+     "moveSrc": "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:81"
+    },
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2638,
+       "z": 3321,
+       "level": 0,
+       "src": "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:76",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2638,
+      "maxX": 2638,
+      "minZ": 3321,
+      "maxZ": 3321,
+      "level": 0
+     },
+     "when": "%totemquest >= 3 (^totem_crate_delivered, scripts/quests/quest_totem/configs/quest_totem.constant:4)",
+     "moveSrc": "scripts/areas/area_ardougne_east/scripts/wizard_cromperty.rs2:81"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spirit_tree:ent",
+   "kind": "spirit_tree",
+   "name": "Spirit tree (ent)",
+   "trigger": "[oploc1,ent]",
+   "triggerSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:1",
+   "from": [
+    {
+     "x": 2460,
+     "z": 3445,
+     "level": 0,
+     "src": "maps/m38_53.jm2:5252",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "grandtree",
+     "op": "=",
+     "value": 160,
+     "quest": "quest_grandtree",
+     "message": "The tree doesn't feel like talking.",
+     "src": [
+      "scripts/areas/area_gnome/scripts/spirit_tree.rs2:2",
+      "scripts/general/configs/quest.constant:28"
+     ]
+    },
+    {
+     "type": "members",
+     "src": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:65"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Tree Gnome Village",
+     "candidates": [
+      {
+       "x": 2542,
+       "z": 3169,
+       "level": 0,
+       "src": "scripts/areas/area_gnome/configs/spirit_tree.constant:3",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2542,
+      "maxX": 2542,
+      "minZ": 3169,
+      "maxZ": 3169,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:74"
+    },
+    {
+     "option": "Forest north of Varrock",
+     "candidates": [
+      {
+       "x": 3179,
+       "z": 3507,
+       "level": 0,
+       "src": "scripts/areas/area_gnome/configs/spirit_tree.constant:2",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3179,
+      "maxX": 3179,
+      "minZ": 3507,
+      "maxZ": 3507,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:74"
+    },
+    {
+     "option": "Battlefield of Khazard",
+     "candidates": [
+      {
+       "x": 2555,
+       "z": 3259,
+       "level": 0,
+       "src": "scripts/areas/area_gnome/configs/spirit_tree.constant:1",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2555,
+      "maxX": 2555,
+      "minZ": 3259,
+      "maxZ": 3259,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:74"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spirit_tree:stronghold_ent",
+   "kind": "spirit_tree",
+   "name": "Spirit tree (stronghold_ent)",
+   "trigger": "[oploc1,stronghold_ent]",
+   "triggerSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:25",
+   "from": [
+    {
+     "x": 2543,
+     "z": 3168,
+     "level": 0,
+     "src": "maps/m39_49.jm2:5772",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "treequest",
+     "op": "=",
+     "value": 9,
+     "quest": "quest_tree",
+     "message": "The tree doesn't feel like talking.",
+     "src": [
+      "scripts/areas/area_gnome/scripts/spirit_tree.rs2:26",
+      "scripts/general/configs/quest.constant:57"
+     ]
+    },
+    {
+     "type": "members",
+     "src": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:65"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": "Battlefield of Khazard",
+     "candidates": [
+      {
+       "x": 2555,
+       "z": 3259,
+       "level": 0,
+       "src": "scripts/areas/area_gnome/configs/spirit_tree.constant:1",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2555,
+      "maxX": 2555,
+      "minZ": 3259,
+      "maxZ": 3259,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:74"
+    },
+    {
+     "option": "Forest north of Varrock",
+     "candidates": [
+      {
+       "x": 3179,
+       "z": 3507,
+       "level": 0,
+       "src": "scripts/areas/area_gnome/configs/spirit_tree.constant:2",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 3179,
+      "maxX": 3179,
+      "minZ": 3507,
+      "maxZ": 3507,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:74"
+    },
+    {
+     "option": "Gnome stronghold",
+     "candidates": [
+      {
+       "x": 2461,
+       "z": 3444,
+       "level": 0,
+       "src": "scripts/areas/area_gnome/configs/spirit_tree.constant:4",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2461,
+      "maxX": 2461,
+      "minZ": 3444,
+      "maxZ": 3444,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:74"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "spirit_tree:loc_1317",
+   "kind": "spirit_tree",
+   "name": "Spirit tree (loc_1317)",
+   "trigger": "[oploc1,loc_1317]",
+   "triggerSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:49",
+   "from": [
+    {
+     "x": 2555,
+     "z": 3260,
+     "level": 0,
+     "src": "maps/m39_50.jm2:5505",
+     "wilderness": 0
+    },
+    {
+     "x": 3177,
+     "z": 3506,
+     "level": 0,
+     "src": "maps/m49_54.jm2:5319",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "varp",
+     "varp": "treequest",
+     "op": "=",
+     "value": 9,
+     "quest": "quest_tree",
+     "message": "The tree doesn't feel like talking.",
+     "src": [
+      "scripts/areas/area_gnome/scripts/spirit_tree.rs2:50",
+      "scripts/general/configs/quest.constant:57"
+     ]
+    },
+    {
+     "type": "members",
+     "src": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:65"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2542,
+       "z": 3169,
+       "level": 0,
+       "src": "scripts/areas/area_gnome/configs/spirit_tree.constant:3",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": null,
+     "box": {
+      "minX": 2542,
+      "maxX": 2542,
+      "minZ": 3169,
+      "maxZ": 3169,
+      "level": 0
+     },
+     "moveSrc": "scripts/areas/area_gnome/scripts/spirit_tree.rs2:74"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:airtemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Air mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 2984,
+     "z": 3291,
+     "level": 0,
+     "src": "maps/m46_51.jm2:5458",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "air_talisman",
+     "id": 1438,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:9"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2841,
+       "z": 4830,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:12",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2841,
+      "maxX": 2841,
+      "minZ": 4830,
+      "maxZ": 4830,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:airtemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Air altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2841,
+     "z": 4828,
+     "level": 0,
+     "src": "maps/m44_75.jm2:4710",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2983,
+       "z": 3288,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:13",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2983,
+      "maxX": 2983,
+      "minZ": 3288,
+      "maxZ": 3288,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:mindtemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Mind mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 2981,
+     "z": 3513,
+     "level": 0,
+     "src": "maps/m46_54.jm2:5186",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "mind_talisman",
+     "id": 1448,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:23"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2793,
+       "z": 4829,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:26",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2793,
+      "maxX": 2793,
+      "minZ": 4829,
+      "maxZ": 4829,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:mindtemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Mind altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2793,
+     "z": 4827,
+     "level": 0,
+     "src": "maps/m43_75.jm2:6214",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2980,
+       "z": 3511,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:27",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2980,
+      "maxX": 2980,
+      "minZ": 3511,
+      "maxZ": 3511,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:watertemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Water mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 3184,
+     "z": 3164,
+     "level": 0,
+     "src": "maps/m49_49.jm2:4635",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "water_talisman",
+     "id": 1444,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:37"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2725,
+       "z": 4832,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:40",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2725,
+      "maxX": 2725,
+      "minZ": 4832,
+      "maxZ": 4832,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:watertemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Water altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2727,
+     "z": 4832,
+     "level": 0,
+     "src": "maps/m42_75.jm2:4630",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3182,
+       "z": 3162,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:41",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3182,
+      "maxX": 3182,
+      "minZ": 3162,
+      "maxZ": 3162,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:earthtemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Earth mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 3305,
+     "z": 3473,
+     "level": 0,
+     "src": "maps/m51_54.jm2:6230",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "earth_talisman",
+     "id": 1440,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:51"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2657,
+       "z": 4830,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:54",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2657,
+      "maxX": 2657,
+      "minZ": 4830,
+      "maxZ": 4830,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:earthtemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Earth altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2655,
+     "z": 4829,
+     "level": 0,
+     "src": "maps/m41_75.jm2:5212",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3303,
+       "z": 3477,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:55",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3303,
+      "maxX": 3303,
+      "minZ": 3477,
+      "maxZ": 3477,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:firetemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Fire mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 3312,
+     "z": 3254,
+     "level": 0,
+     "src": "maps/m51_50.jm2:4995",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "fire_talisman",
+     "id": 1442,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:65"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2576,
+       "z": 4848,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:68",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2576,
+      "maxX": 2576,
+      "minZ": 4848,
+      "maxZ": 4848,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:firetemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Fire altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2574,
+     "z": 4850,
+     "level": 0,
+     "src": "maps/m40_75.jm2:4495",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3310,
+       "z": 3252,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:69",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3310,
+      "maxX": 3310,
+      "minZ": 3252,
+      "maxZ": 3252,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:bodytemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Body mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 3052,
+     "z": 3444,
+     "level": 0,
+     "src": "maps/m47_53.jm2:5023",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "body_talisman",
+     "id": 1446,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:79"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2523,
+       "z": 4838,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:82",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2521,
+      "maxX": 2525,
+      "minZ": 4836,
+      "maxZ": 4840,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:bodytemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Body altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2523,
+     "z": 4825,
+     "level": 0,
+     "src": "maps/m39_75.jm2:5381",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3050,
+       "z": 3442,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:83",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3048,
+      "maxX": 3052,
+      "minZ": 3440,
+      "maxZ": 3444,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:cosmictemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Cosmic mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 3175,
+     "z": 9496,
+     "level": 0,
+     "src": "maps/m49_148.jm2:6731",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "cosmic_talisman",
+     "id": 1454,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:93"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:88 (scripts/skill_runecraft/scripts/runecraft.rs2:33)"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2142,
+       "z": 4813,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:96",
+       "wilderness": 0
+      },
+      {
+       "x": 2162,
+       "z": 4833,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:97",
+       "wilderness": 0
+      },
+      {
+       "x": 2142,
+       "z": 4853,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:98",
+       "wilderness": 0
+      },
+      {
+       "x": 2122,
+       "z": 4833,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:99",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": null,
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:cosmictemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Cosmic altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2121,
+     "z": 4833,
+     "level": 0,
+     "src": "maps/m33_75.jm2:4108",
+     "wilderness": 0
+    },
+    {
+     "x": 2142,
+     "z": 4812,
+     "level": 0,
+     "src": "maps/m33_75.jm2:4198",
+     "wilderness": 0
+    },
+    {
+     "x": 2142,
+     "z": 4854,
+     "level": 0,
+     "src": "maps/m33_75.jm2:4199",
+     "wilderness": 0
+    },
+    {
+     "x": 2163,
+     "z": 4833,
+     "level": 0,
+     "src": "maps/m33_75.jm2:4283",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3173,
+       "z": 9501,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:100",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3173,
+      "maxX": 3173,
+      "minZ": 9501,
+      "maxZ": 9501,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:chaostemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Chaos mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 3059,
+     "z": 3590,
+     "level": 0,
+     "src": "maps/m47_56.jm2:6279",
+     "wilderness": 9
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "chaos_talisman",
+     "id": 1452,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:110"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:105 (scripts/skill_runecraft/scripts/runecraft.rs2:33)"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2275,
+       "z": 4847,
+       "level": 3,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:113",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2275,
+      "maxX": 2275,
+      "minZ": 4847,
+      "maxZ": 4847,
+      "level": 3
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:naturetemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Nature mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 2868,
+     "z": 3018,
+     "level": 0,
+     "src": "maps/m44_47.jm2:6743",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "nature_talisman",
+     "id": 1462,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:132"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:127 (scripts/skill_runecraft/scripts/runecraft.rs2:33)"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2400,
+       "z": 4835,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:135",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2400,
+      "maxX": 2400,
+      "minZ": 4835,
+      "maxZ": 4835,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:naturetemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Nature altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2400,
+     "z": 4834,
+     "level": 0,
+     "src": "maps/m37_75.jm2:4775",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2865,
+       "z": 3022,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:136",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2865,
+      "maxX": 2865,
+      "minZ": 3022,
+      "maxZ": 3022,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_ruins:lawtemple_ruined",
+   "kind": "runecraft_ruins",
+   "name": "Law mysterious ruins",
+   "trigger": "[oplocu,_rc_ruins] use talisman",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:19",
+   "from": [
+    {
+     "x": 2857,
+     "z": 3380,
+     "level": 0,
+     "src": "maps/m44_52.jm2:6754",
+     "wilderness": 0
+    }
+   ],
+   "requires": [
+    {
+     "type": "held",
+     "item": "law_talisman",
+     "id": 1458,
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:146"
+    },
+    {
+     "type": "members",
+     "src": "scripts/skill_runecraft/configs/runecraft.dbrow:141 (scripts/skill_runecraft/scripts/runecraft.rs2:33)"
+    }
+   ],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2464,
+       "z": 4819,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:148",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2464,
+      "maxX": 2464,
+      "minZ": 4819,
+      "maxZ": 4819,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:45"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:lawtemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Law altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2464,
+     "z": 4817,
+     "level": 0,
+     "src": "maps/m38_75.jm2:6192",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 2858,
+       "z": 3378,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:149",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 2858,
+      "maxX": 2858,
+      "minZ": 3378,
+      "maxZ": 3378,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:chaostemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Chaos altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2282,
+     "z": 4837,
+     "level": 0,
+     "src": "maps/m35_75.jm2:7838",
+     "wilderness": 0
+    },
+    {
+     "x": 2273,
+     "z": 4856,
+     "level": 3,
+     "src": "maps/m35_75.jm2:9785",
+     "wilderness": 0
+    },
+    {
+     "x": 2276,
+     "z": 4847,
+     "level": 3,
+     "src": "maps/m35_75.jm2:9841",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3060,
+       "z": 3585,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:114",
+       "wilderness": 9
+      },
+      {
+       "x": 3060,
+       "z": 3585,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:115",
+       "wilderness": 9
+      },
+      {
+       "x": 3063,
+       "z": 3587,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:116",
+       "wilderness": 9
+      },
+      {
+       "x": 3066,
+       "z": 3591,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:117",
+       "wilderness": 9
+      },
+      {
+       "x": 3063,
+       "z": 3596,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:118",
+       "wilderness": 10
+      },
+      {
+       "x": 3060,
+       "z": 3597,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:119",
+       "wilderness": 10
+      },
+      {
+       "x": 3056,
+       "z": 3594,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:120",
+       "wilderness": 10
+      },
+      {
+       "x": 3055,
+       "z": 3591,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:121",
+       "wilderness": 9
+      },
+      {
+       "x": 3055,
+       "z": 3588,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:122",
+       "wilderness": 9
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 0,
+     "findsquare": "lineofwalk",
+     "box": null,
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": []
+  },
+  {
+   "id": "runecraft_portal:deathtemple_exit_portal",
+   "kind": "runecraft_portal",
+   "name": "Death altar exit portal",
+   "trigger": "[oploc1,_rc_exit_portal]",
+   "triggerSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:1",
+   "from": [
+    {
+     "x": 2208,
+     "z": 4829,
+     "level": 0,
+     "src": "maps/m34_75.jm2:5359",
+     "wilderness": 0
+    }
+   ],
+   "requires": [],
+   "wildernessMax": null,
+   "runes": [],
+   "charges": [],
+   "xp": null,
+   "to": [
+    {
+     "option": null,
+     "candidates": [
+      {
+       "x": 3221,
+       "z": 3218,
+       "level": 0,
+       "src": "scripts/skill_runecraft/configs/runecraft.dbrow:162",
+       "wilderness": 0
+      }
+     ],
+     "minRadius": 0,
+     "maxRadius": 2,
+     "findsquare": "lineofwalk",
+     "box": {
+      "minX": 3219,
+      "maxX": 3223,
+      "minZ": 3216,
+      "maxZ": 3220,
+      "level": 0
+     },
+     "moveSrc": "scripts/skill_runecraft/scripts/runecraft.rs2:9"
+    }
+   ],
+   "gaps": [
+    "rune_type 11 has no placed mysterious ruins; the exit_coord row value is used as written"
+   ]
+  }
+ ],
+ "staffs": [
+  {
+   "rune": "airrune",
+   "staffs": [
+    "staff_of_air",
+    "air_battlestaff",
+    "mystic_air_staff"
+   ],
+   "src": "scripts/skill_magic/configs/magic_staff.dbrow:1"
+  },
+  {
+   "rune": "waterrune",
+   "staffs": [
+    "staff_of_water",
+    "water_battlestaff",
+    "mystic_water_staff"
+   ],
+   "src": "scripts/skill_magic/configs/magic_staff.dbrow:8"
+  },
+  {
+   "rune": "earthrune",
+   "staffs": [
+    "staff_of_earth",
+    "earth_battlestaff",
+    "mystic_earth_staff",
+    "lava_battlestaff",
+    "mystic_lava_staff"
+   ],
+   "src": "scripts/skill_magic/configs/magic_staff.dbrow:15"
+  },
+  {
+   "rune": "firerune",
+   "staffs": [
+    "staff_of_fire",
+    "fire_battlestaff",
+    "mystic_fire_staff",
+    "lava_battlestaff",
+    "mystic_lava_staff"
+   ],
+   "src": "scripts/skill_magic/configs/magic_staff.dbrow:24"
+  }
+ ],
+ "rules": [
+  {
+   "text": "wilderness level = (z - zone south edge z) / 8 + 1 inside wilderness_zones; 0 outside",
+   "src": "scripts/areas/area_wilderness/scripts/wilderness_levels.rs2:11"
+  },
+  {
+   "text": "no teleport from Tutorial Island",
+   "src": "scripts/skill_magic/scripts/spells/teleport.rs2:123"
+  },
+  {
+   "text": "no teleport in the Fishing Trawler wreck",
+   "src": "scripts/skill_magic/scripts/spells/teleport.rs2:127"
+  },
+  {
+   "text": "no teleport during Fishing Trawler",
+   "src": "scripts/skill_magic/scripts/spells/teleport.rs2:131"
+  },
+  {
+   "text": "no teleport during a duel",
+   "src": "scripts/skill_magic/scripts/spells/teleport.rs2:143"
+  },
+  {
+   "text": "no teleport in Castle Wars game or waiting room",
+   "src": "scripts/skill_magic/scripts/spells/teleport.rs2:148"
+  },
+  {
+   "text": "teleport through player_teleport_normal breaks Karamja rum in the inventory",
+   "src": "scripts/skill_magic/scripts/spells/teleport.rs2:91"
+  },
+  {
+   "text": "teleport destroys the plague sample",
+   "src": "scripts/skill_magic/scripts/spells/teleport.rs2:94"
+  },
+  {
+   "text": "a members staff gives no free runes on a free world",
+   "src": "scripts/skill_magic/scripts/magic.rs2:64"
+  },
+  {
+   "text": "only the wielded weapon-slot staff replaces runes",
+   "src": "scripts/skill_magic/scripts/magic.rs2:63"
+  },
+  {
+   "text": "a matching staff removes the whole count of that rune",
+   "src": "scripts/skill_magic/scripts/magic.rs2:80"
+  },
+  {
+   "text": "map_findsquare picks a random standable tile in the square ring min..max (Chebyshev distance) that passes the line-of-walk or line-of-sight test back to the centre; it returns the centre when none passes",
+   "src": "engine/src/engine/script/handlers/ServerOps.ts:302-330 (relative to vendor/rs-sdk/server)"
+  },
+  {
+   "text": "stat_advance xp is in tenths and is multiplied by the node xpRate",
+   "src": "engine/src/engine/entity/Player.ts:1889 (relative to vendor/rs-sdk/server)"
+  }
+ ],
+ "wildernessZones": [
+  {
+   "from": {
+    "x": 2944,
+    "z": 3520,
+    "level": 0
+   },
+   "to": {
+    "x": 3391,
+    "z": 6399,
+    "level": 3
+   },
+   "src": "scripts/areas/area_wilderness/configs/wilderness_zones.dbrow:4"
+  },
+  {
+   "from": {
+    "x": 2944,
+    "z": 9920,
+    "level": 0
+   },
+   "to": {
+    "x": 3391,
+    "z": 12799,
+    "level": 0
+   },
+   "src": "scripts/areas/area_wilderness/configs/wilderness_zones.dbrow:6"
+  }
+ ],
+ "counts": {
+  "spell": 7,
+  "jewellery": 4,
+  "item": 1,
+  "lever": 4,
+  "loc": 2,
+  "npc": 6,
+  "runecraft_portal": 12,
+  "spirit_tree": 3,
+  "runecraft_ruins": 10
+ },
+ "unplaced": [],
+ "gaps": [
+  "loc:zanarisdoor: which side of the shed door gives check_axis false is not resolved from geometry",
+  "runecraft_portal:deathtemple_exit_portal: rune_type 11 has no placed mysterious ruins; the exit_coord row value is used as written"
+ ]
+}

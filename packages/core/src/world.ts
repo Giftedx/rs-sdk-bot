@@ -8,23 +8,10 @@ export type Tile = { x: number; z: number; level: number };
 export type Leg =
     | { kind: 'walk'; to: Tile;tolerance?:number }
     | ({ kind: 'transport'; loc: string; option: string; at: Tile; to: Tile; exact: boolean }&TransportMeta)
-    | { kind: 'boat'; boat: Boat; at: Tile; to: Tile };
-// A paid ship between two docks. Talk to `npc` on the dock, pick `choices` in dialogue, land on `deck` (level 1),
-// cross the gangplank (packages/core/src/boat.ts). Docks, NPCs and dialogue are the ones scripts/foodcourier.ts
-// sails live. A boat avoids White Wolf Mountain, which kills low-level accounts (danger.ts).
-export interface Boat { name: string; npc: string; choices: string[]; from: Tile; to: Tile; deck: { x: number; z: number }; fare: number }
-const SAILOR = ['^yes please'], CUSTOMS = ['journey on this ship', 'search away', '^ok[.]?$'];
-const ARDY_DOCK = { x: 2679, z: 3275, level: 0 }, BRIM_DOCK = { x: 2773, z: 3228, level: 0 }, MUSA_DOCK = { x: 2956, z: 3146, level: 0 }, SARIM_DOCK = { x: 3029, z: 3217, level: 0 };
-export const BOATS: Boat[] = [
-    { name: 'Ardougne to Brimhaven', npc: '^captain barnaby$', choices: SAILOR, from: ARDY_DOCK, to: BRIM_DOCK, deck: { x: 2775, z: 3234 }, fare: 30 },
-    { name: 'Brimhaven to Ardougne', npc: '^customs officer$', choices: CUSTOMS, from: BRIM_DOCK, to: ARDY_DOCK, deck: { x: 2683, z: 3268 }, fare: 30 },
-    { name: 'Musa Point to Port Sarim', npc: '^customs officer$', choices: CUSTOMS, from: MUSA_DOCK, to: SARIM_DOCK, deck: { x: 3032, z: 3217 }, fare: 30 },
-    { name: 'Port Sarim to Musa Point', npc: '^(seaman|captain tobias)', choices: SAILOR, from: SARIM_DOCK, to: MUSA_DOCK, deck: { x: 2956, z: 3143 }, fare: 30 },
-];
-const BOAT_COST = 40; // estimate: talk, sail and cross the gangplank, in ticks
-// Coins held must pay this fare and one more: an Ardougne to Port Sarim trip takes two boats.
-export const boatAllowed = (b: Boat, a: Account) => (a.coins ?? 0) >= 2 * b.fare;
-export interface Account { skills: Record<string, number>; varps: Record<string, number>; items: string[]; coins?: number; worn?:string[]; unlocks?:string[];questStages?:Record<string,number>;castlewarsTeam?:0|1;doorStates?:Record<string,boolean>;visibleLocs?:ReadonlyArray<Tile&{id:number}> }
+    | { kind: 'travel'; travel: Travel; at: Tile | null; to: Tile };
+// Coins held must pay a fare and one more: an Ardougne to Port Sarim trip takes two boats.
+const travelOk = (t: Travel, a: Account) => travelAllowed(t, t.coins > 0 ? { ...a, coins: (a.coins ?? 0) - t.coins } : a);
+export interface Account { skills: Record<string, number>; varps: Record<string, number>; items: string[]; coins?: number; counts?: Record<string, number>; worn?:string[]; unlocks?:string[];questStages?:Record<string,number>;castlewarsTeam?:0|1;doorStates?:Record<string,boolean>;visibleLocs?:ReadonlyArray<Tile&{id:number}> }
 
 export interface Transport extends TransportMeta { locName: string; option: string; from: Tile; to: Tile; exact: boolean; src: string; toSrc: string; handler: string }
 export interface Door { id: number; loc: string; x: number; z: number; level: number; angle?:number; shape?:number;open?:OpenDoorVariant; kind: string; need?: { skill?: string; level?: number; varp?: string; item?: string;worn?:string;whenAxis?:boolean;minimum?:number;team?:0|1 }; trigger: string; src: string }
@@ -32,7 +19,7 @@ export type DoorBlock=Tile&{whenAxis?:boolean;angle?:number;shape?:number;blockr
 
 // Walk cost on one level, or null when the path cannot end within `tol` tiles of `to`. `blocked` are door
 // tiles to keep shut. Stair and ladder tiles are objects, not floor, so they are reached from next to them.
-export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number,interaction?:InteractionTarget) => number | null)&{withPolicy?<T>(blocked:DoorBlock[],query:()=>T):T;withDanger?<T>(acct:Account,from:Tile,to:Tile,query:()=>T):T};
+export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number,interaction?:InteractionTarget) => number | null)&{withPolicy?<T>(blocked:DoorBlock[],query:()=>T):T;withDanger?<T>(acct:Account,from:Tile,to:Tile,query:()=>T):T;walkable?(t:Tile):boolean};
 
 const PORTAL_TOL = 2; // stairs can be 2x2 or larger
 const GOAL_TOL = 1;
@@ -126,6 +113,7 @@ export async function installDoorPolicy(sdk:any,client?:unknown):Promise<void>{
 }
 import { mapAreas, separated } from './components';
 import { activeDanger, guardRoute, guardWalk } from './danger';
+import { loadTravel, travelAllowed, type Travel } from './travel';
 import { legCache } from './leg-cache';
 async function loadPathfinding() {
     if (!rsPath) rsPath = await import(join(repoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts'));
@@ -181,6 +169,7 @@ export async function rsPathLength(): Promise<PathLength> {
         return len;
     };
     measure.withPolicy=scoped;
+    measure.walkable=t=>{(pf as any).initPathfinding();return (pf as any).isTileWalkable(t.level,t.x,t.z);};
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
     measure.withDanger=(acct,from,to,query)=>{mapAreas(pf,grid,repoRoot);try{return guardRoute(grid,acct,[from,to],query);}finally{cache.save();}};
@@ -273,7 +262,7 @@ function transportLowerBounds(transports: Transport[], goal: Tile,relaxedRadius=
 }
 
 // Ordinary navigation may stop beside its goal; entry qualification requests the exact tile.
-export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; boats?: Boat[]; pathLength: PathLength; goalTolerance?: 0 | 1 }): World {
+export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; travel?: Travel[]; pathLength: PathLength; goalTolerance?: 0 | 1 }): World {
     // A stair with direct op2/op3 links (Climb-up / Climb-down) uses op1 for a "which way?" menu
     // (e.g. spiralstairsmiddle op1=Climb). Clicking op1 opens a dialog and never changes floor, so drop it.
     const raw=opts.transports??loadJson<Transport[]>('transports.json');
@@ -283,11 +272,20 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; bo
     const doors = opts.doors ?? loadJson<Door[]>('doors.json');
     const incoming=new Map<string,{t:Transport;index:number}[]>();
     transports.forEach((t,index)=>incoming.set(key(t.to),[...incoming.get(key(t.to))??[],{t,index}]));
-    const boats=opts.boats??BOATS,boatsFrom=new Map<string,Boat[]>(),boatsTo=new Map<string,Boat[]>();
-    for(const b of boats){boatsFrom.set(key(b.from),[...boatsFrom.get(key(b.from))??[],b]);boatsTo.set(key(b.to),[...boatsTo.get(key(b.to))??[],b]);}
-    // For the heuristic only: a boat is a jump, so it lowers the bound like any transport.
-    const boatJumps=boats.map(b=>({from:b.from,to:b.to}) as Transport),boatJumpsBack=boats.map(b=>({from:b.to,to:b.from}) as Transport);
-    const waypoints=[...new Map([...transports.flatMap(t=>[entryOf(t),t.to]),...boats.flatMap(b=>[b.from,b.to])].map(p=>[key(p),p])).values()];
+    // Travel with a start tile is an edge between two nodes; travel from anywhere (a teleport) leaves the route start.
+    // An NPC's spawn or a computed shore tile can sit on a blocked tile; use the nearest walkable one within 3.
+    const snap=(t:Tile):Tile=>{
+        const ok=opts.pathLength.walkable;if(!ok||ok(t))return t;
+        for(let r=1;r<=3;r++)for(let dx=-r;dx<=r;dx++)for(let dz=-r;dz<=r;dz++)if(Math.max(Math.abs(dx),Math.abs(dz))===r&&ok({...t,x:t.x+dx,z:t.z+dz}))return {...t,x:t.x+dx,z:t.z+dz};
+        return t;
+    };
+    const travel=(opts.travel??loadTravel()).map(t=>({...t,from:t.from&&snap(t.from),to:snap(t.to)})),fixed=travel.filter(t=>t.from),anywhere=travel.filter(t=>!t.from);
+    const travelFrom=new Map<string,Travel[]>(),travelTo=new Map<string,Travel[]>();
+    for(const t of fixed){travelFrom.set(key(t.from!),[...travelFrom.get(key(t.from!))??[],t]);travelTo.set(key(t.to),[...travelTo.get(key(t.to))??[],t]);}
+    for(const t of anywhere)travelTo.set(key(t.to),[...travelTo.get(key(t.to))??[],t]);
+    // For the heuristic only: fixed travel is a jump, so it lowers the bound like any transport.
+    const jumps=fixed.map(t=>({from:t.from,to:t.to}) as Transport),jumpsBack=fixed.map(t=>({from:t.to,to:t.from}) as Transport);
+    const waypoints=[...new Map([...transports.flatMap(t=>[entryOf(t),t.to]),...travel.flatMap(t=>t.from?[t.from,t.to]:[t.to])].map(p=>[key(p),p])).values()];
     const strictEntries=new Set(transports.filter(t=>t.entry).map(t=>key(t.entry!)));
 
     return {
@@ -313,7 +311,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; bo
             type Result=ReturnType<World['route']>;
             function* run(backward:boolean):Generator<void,Result,void>{
                 const start=backward?to:from,finish=backward?from:to,goal=key(finish),root=key(start);
-                const lower=transportLowerBounds(backward?[...reversed,...boatJumpsBack]:[...transports,...boatJumps],finish,radius);
+                const lower=transportLowerBounds(backward?[...reversed,...jumpsBack]:[...transports,...jumps],finish,radius);
                 const h=(tile:Tile)=>lower.get(key(tile))??0;
                 type Entry={k:string;tile:Tile;g:number;f:number;prev:string|null;leg:Leg|null;walkFrom?:Tile;walkTo?:Tile;tol?:number;approach?:Transport;interaction?:InteractionTarget};
                 const heap=new MinHeap<Entry>(e=>e.f),done=new Set<string>(),via=new Map<string,{prev:string;leg:Leg}>(),best=new Map<string,number>();
@@ -348,11 +346,15 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; bo
                         const g=e.g+Math.max(0,cheb(walkFrom,target)-tol);
                         heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:{kind:'walk',to:target,tolerance:tol},walkFrom,walkTo:target,tol,interaction,approach});
                     };
-                    const enqueueBoat=(b:Boat,tile:Tile)=>{
-                        const k=key(tile);if(done.has(k)||!boatAllowed(b,acct))return;
-                        const g=e.g+BOAT_COST;heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:{kind:'boat',boat:b,at:b.from,to:b.to}});
+                    const enqueueTravel=(t:Travel,tile:Tile)=>{
+                        const k=key(tile);if(done.has(k)||!travelOk(t,acct))return;
+                        const g=e.g+t.cost;heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:{kind:'travel',travel:t,at:t.from,to:t.to}});
                     };
-                    if(!e.approach)for(const b of (backward?boatsTo:boatsFrom).get(e.k)??[])enqueueBoat(b,backward?b.from:b.to);
+                    if(!e.approach){
+                        if(!backward)for(const t of [...travelFrom.get(e.k)??[],...(e.k===root?anywhere:[])])enqueueTravel(t,t.to);
+                        // Backward, a teleport's arrival leads back to the route start, where it is cast.
+                        else for(const t of travelTo.get(e.k)??[])enqueueTravel(t,t.from??finish);
+                    }
                     if(backward){
                         if(!e.approach)for(const {t,index} of incoming.get(e.k)??[]){
                             if(!transportAllowed(t,acct))continue;

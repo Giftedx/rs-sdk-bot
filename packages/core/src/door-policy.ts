@@ -44,7 +44,8 @@ export function accountFromState(state:any):Account {
     const worn=equipment?.map(identify);
     const doorStates=observedDoorStates(state);
     const coins=held.filter((i:any)=>identify(i)==='coins').reduce((n:number,i:any)=>n+i.count,0);
-    return {visibleLocs:visibleLocs(state),skills,coins,items:held.map(identify).filter((s:unknown):s is string=>typeof s==='string'),varps:{},...(worn?.every((s:unknown)=>typeof s==='string')?{worn:worn as string[]}:{}),...(Object.keys(doorStates).length?{doorStates}:{})};
+    const counts:Record<string,number>={};for(const i of held){const n=identify(i);if(typeof n==='string')counts[n]=(counts[n]??0)+i.count;}
+    return {visibleLocs:visibleLocs(state),skills,coins,counts,items:held.map(identify).filter((s:unknown):s is string=>typeof s==='string'),varps:{},...(worn?.every((s:unknown)=>typeof s==='string')?{worn:worn as string[]}:{}),...(Object.keys(doorStates).length?{doorStates}:{})};
 }
 
 export interface FlagGrid {isFlagged(x:number,z:number,level:number,mask:number):boolean;__set(x:number,z:number,level:number,mask:number):void;changeWall?(x:number,z:number,level:number,angle:number,shape:number,blockrange:boolean,route:boolean,add:boolean):void}
