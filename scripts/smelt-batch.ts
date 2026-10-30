@@ -44,11 +44,12 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
  const r=smeltRecipe(o.bar),state=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),held=(id:number)=>count(inv(),id),xp=()=>s.sdk.getSkillXp('Smithing')??0;
  const ready=await waitUntil(s,()=>!!state()?.player&&(s.sdk.getSkill('Hitpoints')?.level??0)>0&&(s.sdk.getSkill('Smithing')?.baseLevel??0)>=r.level,{timeoutTicks:15});
  if(!ready)throw Error('smelt entry level/state unobserved');
- // From anywhere else, the world walker takes the account to Varrock East bank (no toll) first.
+ // From anywhere else, the world walker takes the account to Al Kharid bank, next to the furnace. The Varrock East
+ // entry's hand-made corridor did not plan live (OreElse: 'smelt incomplete corridor plan').
  const at=state()!.player!,atBank=(x:number,z:number)=>at.level===0&&Math.max(Math.abs(at.worldX-x),Math.abs(at.worldZ-z))<=5;
- if(!atBank(3269,3167)&&!atBank(3253,3420)){
-  const there=await goTo(s,await getWorld(),{x:3253,z:3420,level:0},accountOf(s),{legTimeoutTicks:100});
-  if(!there.ok)throw Error(`smelt travel to Varrock East bank failed: ${there.detail}`);
+ if(!atBank(3269,3167)){
+  const there=await goTo(s,await getWorld(),{x:3269,z:3167,level:0},accountOf(s),{legTimeoutTicks:100});
+  if(!there.ok&&!atBank(3253,3420))throw Error(`smelt travel to Al Kharid bank failed: ${there.detail}`);
  }
  const p0=state()!.player!,start=s.tick(),xp0=xp();
  const entry=smeltEntryRoute(p0);
