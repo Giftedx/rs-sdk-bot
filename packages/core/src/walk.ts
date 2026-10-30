@@ -7,6 +7,7 @@ import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach
 import {accountForSdk,withDoorPolicy} from './door-policy';
 import {guardWalk} from './danger';
 import {sail,disembark,type BoatSession} from './boat';
+import {bankStock,planTrip,takeCoins,type TripPlan} from './trip';
 import {refreshGuildEvidence} from './guild-observation';
 
 export interface Walker extends TickSource {
@@ -212,11 +213,19 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     const observedInside=from.level===0&&from.x>=2728&&from.x<=2729&&from.z>=3350&&from.z<=3351;
     if(!observedInside&&legendsEntry==='refused')return {ok:false,reason:'precondition',detail:'Legends Guild guard refused first entry',ticks:s.tick()-started};
     if(!observedInside&&legendsEntry==='unknown'&&(acct.questStages?.legendsquest??0)<1)return {ok:false,reason:'precondition',detail:'Legends Guild first entry was not observed',ticks:s.tick()-started};
-    const r = world.route(from, to, acct);
-    if (!r.ok) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
+    const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeCoins>[0];
+    const r = name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?planTrip(world,from,to,acct,bankStock(name))
+        :(()=>{const d=world.route(from,to,acct);return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
+    if (!r) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
     // Actor prerequisites are synchronous query masks, not long-lived refusal
     // walls: gear/stat changes and allowed exits must be re-evaluated.
-    return walkRoute(s, r.legs, opts);
+    const first = await walkRoute(s, r.legs, opts);
+    if (!first.ok || !r.bank) return first;
+    const took = await takeCoins(banker, r.bank.coins, n => waitTicks(s, n));
+    if (!took.ok) return { ok: false, reason: 'precondition', detail: `bank stop at ${r.bank.at.x},${r.bank.at.z}: ${took.detail}`, ticks: s.tick() - started };
+    const rest = await walkRoute(s, r.bank.then, opts);
+    return rest.ok ? { ok: true, ticks: s.tick() - started } : rest;
 }
 
 // ---- walkPath: walk through points the way a player clicks ahead on the minimap ----
