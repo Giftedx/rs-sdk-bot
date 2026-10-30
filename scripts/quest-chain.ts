@@ -21,6 +21,15 @@ export const QUEST_NAMES: Record<string, string> = {
     junglepotion: 'Jungle Potion', merlin: "Merlin's Crystal", seaslug: 'Sea Slug Quest', scorpion: 'Scorpion Catcher',
 };
 
+// Skill levels a quest checks before it can finish. Sea Slug: the dry sticks light only at Firemaking 30
+// (quest_seaslug.rs2:43). Fishing Contest: the contest needs Fishing 10 (hemenster_fishing.rs2:70).
+export const QUEST_SKILLS: Record<string, Record<string, number>> = { seaslug: { firemaking: 30 }, fishingcompo: { fishing: 10 } };
+// The skills a quest needs that the account lacks, as "skill have/need"; empty when it can run.
+export function questShortfall(quest: string, skills: { name: string; level: number }[] | undefined): string[] {
+    const have = new Map((skills ?? []).map(s => [s.name.toLowerCase(), s.level]));
+    return Object.entries(QUEST_SKILLS[quest] ?? {}).flatMap(([k, need]) => (have.get(k) ?? 1) < need ? [`${k} ${have.get(k) ?? 1}/${need}`] : []);
+}
+
 // A death is `RESULT fail died` or `died=true`; every quest result prints `died=false`.
 export const questDied = (result: string) => /^RESULT fail died\b/.test(result) || /\bdied=true\b/.test(result);
 
@@ -37,6 +46,8 @@ if (import.meta.main) {
     const done: string[] = [], failed: string[] = [];
     for (const q of questsLeft(list.split(','), status().quests)) {
         if (!questsLeft([q], status().quests).length) continue;
+        const short = questShortfall(q, status().skills);
+        if (short.length) { console.log(`QUEST_CHAIN ${q} skip needs ${short.join(', ')}`); continue; }
         const result = hosted() ? await inProcess(account, q) : await subprocess(account, q);
         const ok = result.startsWith('RESULT ok');
         (ok ? done : failed).push(q);

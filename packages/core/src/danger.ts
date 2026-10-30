@@ -92,6 +92,21 @@ export function dangerKey(acct: Account, list = loadHunters()): string {
     return list.flatMap((h, i) => deadly(h, combat, hp) ? [i] : []).join('.') || 'none';
 }
 
+// The deadly ground around `at`: every danger square that holds it. An account that already stands there may walk
+// out through it (a hunter spawn inside Catherby otherwise closes every walk from the beach).
+export function escapeTiles(acct: Account, at: Tile, list = loadHunters()): Tile[] {
+    const combat = combatLevel(acct.skills), hp = acct.skills.hitpoints ?? 10, out = new Map<string, Tile>();
+    for (const h of list) {
+        if (!deadly(h, combat, hp)) continue;
+        const r = h.reach + 1;
+        for (const s of h.spawns) {
+            if (s.level !== at.level || Math.abs(s.x - at.x) > r || Math.abs(s.z - at.z) > r) continue;
+            for (let x = s.x - r; x <= s.x + r; x++) for (let z = s.z - r; z <= s.z + r; z++) out.set(`${x},${z}`, { x, z, level: at.level });
+        }
+    }
+    return [...out.values()];
+}
+
 const WORLD = { minX: 0, maxX: 16383, minZ: 0, maxZ: 16383 };
 const routeTiles = new Map<string, Tile[]>();
 // Closes the account's deadly ground on every level for a whole route search. The tile set does not depend
@@ -100,11 +115,13 @@ export function guardRoute<T>(grid: FloorGrid, acct: Account, keep: readonly Til
     const key = dangerKey(acct);
     let tiles = routeTiles.get(key);
     if (!tiles) routeTiles.set(key, tiles = [0, 1, 2, 3].flatMap(l => dangerTiles(acct, l, WORLD)));
-    return withDanger(grid, tiles, keep, query, key);
+    // The start (keep[0]) may leave the zone it stands in. Those legs get their own cache key.
+    const start = keep[0], out = start ? escapeTiles(acct, start) : [];
+    return withDanger(grid, tiles, [...keep, ...out], query, out.length ? `${key}|from:${start!.level},${start!.x},${start!.z}` : key);
 }
 
 // The danger tiles for a walk from `from` to `to` on one level: the box around both ends plus `pad` tiles.
 export function guardWalk<T>(grid: FloorGrid, acct: Account, from: Tile, to: Tile, pad: number, query: () => T): T {
     const box = { minX: Math.min(from.x, to.x) - pad, maxX: Math.max(from.x, to.x) + pad, minZ: Math.min(from.z, to.z) - pad, maxZ: Math.max(from.z, to.z) + pad };
-    return withDanger(grid, from.level === to.level ? dangerTiles(acct, from.level, box) : [], [from, to], query);
+    return withDanger(grid, from.level === to.level ? dangerTiles(acct, from.level, box) : [], [from, to, ...escapeTiles(acct, from)], query);
 }

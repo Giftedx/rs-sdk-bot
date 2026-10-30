@@ -131,7 +131,7 @@ export function shopPlan(missing:readonly Item[],at:Tile,item:(id:number)=>{debu
  for(const m of missing){
   const it=item(m.id),s=it&&m.id!==COINS?seller(it.debugname,at):null;
   if(!it||!s){unsold.push(m);continue;}
-  buys.push({id:m.id,count:m.count,name:it.name,npcId:s.npcId,npc:s.npc,tile:s.tile,alts:alts(it.debugname,at).filter(a=>a.npcId!==s.npcId||a.tile.x!==s.tile.x||a.tile.z!==s.tile.z).slice(0,3)});coins+=3*Math.max(1,it.cost)*m.count;
+  buys.push({id:m.id,count:m.count,name:it.name,npcId:s.npcId,npc:s.npc,tile:s.tile,alts:alts(it.debugname,at).filter(a=>a.npcId!==s.npcId||a.tile.x!==s.tile.x||a.tile.z!==s.tile.z).slice(0,8)});coins+=3*Math.max(1,it.cost)*m.count;
  }
  return{buys,unsold,coins:buys.length?coins+100:0};
 }

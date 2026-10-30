@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { combatLevel, dangerTiles, deadly, parseHunter } from '../src/danger';
+import { combatLevel, dangerTiles, deadly, escapeTiles, parseHunter } from '../src/danger';
 import { createWorld, type PathLength } from '../src/world';
 import type { Travel } from '../src/travel';
 
@@ -12,6 +12,13 @@ test('a cowardly wolf kills an 11 HP account and ignores a combat-70 one', () =>
     expect(deadly(wolf, combatLevel({ attack: 70, strength: 70, defence: 70, hitpoints: 70 }), 70)).toBe(false);
     const box = { minX: 0, maxX: 200, minZ: 0, maxZ: 200 };
     expect(dangerTiles({ skills: { hitpoints: 11 }, varps: {}, items: [] }, 0, box, [wolf]).length).toBe(13 * 13);
+});
+
+test('an account inside a danger square may walk out through that square only', () => {
+    const weak = { skills: { hitpoints: 11 }, varps: {}, items: [] };
+    expect(escapeTiles(weak, { x: 103, z: 98, level: 0 }, [wolf]).length).toBe(13 * 13);
+    expect(escapeTiles(weak, { x: 120, z: 100, level: 0 }, [wolf])).toEqual([]);
+    expect(escapeTiles(weak, { x: 103, z: 98, level: 1 }, [wolf])).toEqual([]);
 });
 
 test('a monster without a hunt mode is no danger', () => {
