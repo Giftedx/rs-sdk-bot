@@ -150,7 +150,9 @@ export function assertAccountOwnership(names:string[],state:any,jobs:any[],stopp
             throw Error(`account lease conflict: ${name}; coordinator ${spec.id} ${record.runId}`);
     }
     for(const job of jobs)for(const name of targets)
-        if(job.enabled!==false&&(job.accounts??[job.account]).some((n:string)=>n?.toLowerCase()===name.toLowerCase())
+        // A standing owner job (swarm STANDING=1) is its own assignment: the swarm passes that job's goal as BOT_GOAL.
+        if(!(process.env.STANDING==='1'&&job.standing===true&&job.goal===process.env.BOT_GOAL)
+            &&job.enabled!==false&&(job.accounts??[job.account]).some((n:string)=>n?.toLowerCase()===name.toLowerCase())
             &&(!runId||!String(job.goal??'').includes('['+runId+']')))
             throw Error(`account lease conflict: ${name}; swarm ${job.id??job.coordinatorTask??job.script}`);
 }
