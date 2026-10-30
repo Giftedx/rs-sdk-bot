@@ -99,6 +99,9 @@ export function pendingStartupCount(runs: readonly { started: number; accounts: 
     return pending;
 }
 
+// A host or an orchestrate job is one process, whatever number of accounts it holds: it needs one startup heap.
+export function startReserve(p: { host: boolean; job: Job }, accounts: number): number { return p.host || p.job.orchestrate ? 1 : accounts; }
+
 export function admissionDecision(v: { running: number; external: number; starting: number; startingReserve?: number; pending: number; freeGB: number; minFreeGB: number; maxBots: number }) {
     const floorGB = Math.max(FREE_FLOOR_GB, v.minFreeGB);
     const reserveGB = START_BUDGET_GB * (v.pending + (v.startingReserve ?? v.starting));
@@ -689,7 +692,7 @@ if (import.meta.main) {
                     :job.whenCargoFrom&&!courierDeliveryWaiting(job.whenCargoFrom,job.demandNear,plan.jobs)&&!ownedPayoutWaiting(statuses,job.demandNear)?'waiting offline: no nearby owned cargo or payout':null));
                 Object.assign(st, blocked);
                 if (go.length > 0) {
-                    const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length, startingReserve: p.host ? 1 : go.length,
+                    const admission = admissionDecision({ running: botsRunning(), external: externalCount(), starting: go.length, startingReserve: startReserve(p, go.length),
                         pending: pendingCount(), freeGB: freemem() / 2 ** 30, minFreeGB: plan.minFreeGB, maxBots: plan.maxBots });
                     if (!admission.allowed) for (const a of go) st[a] = admission.reason === 'maxBots' ? 'waiting: maxBots'
                         : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;

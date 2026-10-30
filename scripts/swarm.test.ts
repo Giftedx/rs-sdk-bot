@@ -48,7 +48,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
-import { endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
+import { endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
     applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
 import { createHash } from 'node:crypto';
@@ -321,6 +321,12 @@ test('pending startup reserve counts host accounts once and expires at30seconds'
     const now=100_000;
     expect(pendingStartupCount([{started:now-1,accounts:['A','B']},{started:now-2,accounts:['a']},
         {started:now-30_000,accounts:['Old']},{started:now+1,accounts:['Future']}],now)).toBe(2);
+});
+test('a host or orchestrate job reserves one startup heap; separate bots reserve one each', () => {
+    const job={account:'A',script:'scripts/x.ts',enabled:true,repeat:false} as Job;
+    expect(startReserve({host:true,job},3)).toBe(1);
+    expect(startReserve({host:false,job:{...job,orchestrate:true}},8)).toBe(1);
+    expect(startReserve({host:false,job},2)).toBe(2);
 });
 test('admission reserves pending heaps and a new account before enforcing the free-memory floor', () => {
     const base={running:3,external:0,starting:1,pending:0,freeGB:10.5,minFreeGB:8,maxBots:6};
