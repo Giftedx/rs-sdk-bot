@@ -4,6 +4,9 @@
 // Usage: bun scripts/quest-chain.ts <account> <quest,quest,...>   e.g. bun scripts/quest-chain.ts Bigchopper cook,sheep
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+// In a bot host this import is rewritten to the host's per-bot openBot and finish (packages/core/src/host.ts).
+import { openBot as hostOpenBot, finish as botFinish, settle, finishHooks, openHooks } from '../packages/core/src/bot';
+import type { Session } from '../packages/core/src/inprocess';
 
 const root = resolve(import.meta.dir, '..');
 // Script name (scripts/generated/quest-<name>.ts) -> quest name in the status file.
@@ -48,12 +51,21 @@ if (import.meta.main) {
 // reports through bot.ts finishHooks instead of exiting. Alone, each quest runs in its own process.
 function hosted() { return !!(globalThis as { __rsBotHost?: unknown }).__rsBotHost; }
 async function inProcess(account: string, quest: string): Promise<string> {
-    const { finishHooks } = await import('../packages/core/src/bot');
     const { sweep } = await import('./quest-sweep');
     const key = account.toLowerCase();
+    let opened: Session | undefined;
+    // Logins for this account go through the host's openBot; its stop and session-end callbacks settle through
+    // bot.ts finish, which the finish hook turns into this quest's result.
+    openHooks.set(key, async (name, opts) => opened = await hostOpenBot(name, { ...opts, onStop: opts?.onStop ?? ((s, d) => botFinish([s], false, d)), onSessionEnd: opts?.onSessionEnd ?? ((s, d) => botFinish([s], false, d)) }));
     const ended = new Promise<string>(resolve => finishHooks.set(key, (ok, detail) => resolve(`RESULT ${ok ? 'ok' : 'fail'} ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`)));
     const crashed = sweep(account, quest, `run=${key}-${Date.now()}`).then(() => new Promise<string>(() => {}), e => `RESULT fail ${String(e).slice(0, 300)}`);
-    try { return await Promise.race([ended, crashed]); } finally { finishHooks.delete(key); }
+    try {
+        const result = await Promise.race([ended, crashed]);
+        // A crashed quest leaves its session open: log it out before the next quest logs in again (settle runs once
+        // per session, so a session finish() already settled is not settled twice).
+        if (opened && result.startsWith('RESULT fail')) await settle([opened], false, result);
+        return result;
+    } finally { finishHooks.delete(key); openHooks.delete(key); }
 }
 async function subprocess(account: string, quest: string): Promise<string> {
     const p = Bun.spawn(['bun', 'scripts/quest-sweep.ts', account, quest], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: process.env });

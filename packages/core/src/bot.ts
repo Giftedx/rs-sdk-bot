@@ -65,6 +65,10 @@ export async function awaitBotReady(s: Session, log: (line: string) => void): Pr
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
 export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown> } = {}): Promise<Session> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
+    // An in-process runner in a bot host routes this account's logins through the host's own openBot, so the host
+    // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
+    const hook = openHooks.get(name.toLowerCase());
+    if (hook) { openHooks.delete(name.toLowerCase()); try { return await hook(name, opts); } finally { openHooks.set(name.toLowerCase(), hook); } }
     const log = opts.log ?? ((l: string) => console.log(l));
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();
@@ -150,6 +154,7 @@ type FinishDetail = string | ((ok: boolean) => string);
 // An in-process runner (scripts/quest-chain.ts in a bot host) registers an account here: finish() for that account
 // then settles (RESULT, logout) and reports to the runner instead of exiting the process, which holds other bots.
 export const finishHooks = new Map<string, (ok: boolean, detail: FinishDetail) => void>();
+export const openHooks = new Map<string, (name: string, opts: Parameters<typeof openBot>[1]) => Promise<Session>>();
 export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail): Promise<never> {
     const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
     if (hook) { const final = await settle(sessions, ok, detail); hook(final, detail); return new Promise<never>(() => {}); }
