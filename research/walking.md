@@ -137,4 +137,9 @@ voyage `p_delay(7)` (`sail.rs2:22`). The direct method is not in the scripts, be
 **Claim:** "RangeError: Out of bounds access" on walk clicks follows a long route search on the bot's own thread; planned in the worker, no click is refused.
 **Conditions:** practice server, tick 150 ms, empty leg cache; route search 60-190 s cold.
 **Evidence:** `.practice/far-walk/proof.ts` Draynor 3093,3244 to Catherby 2809,3440 (combat 70): on-thread search, 3 clicks refused at the start tile; worker search, ok, 259 walk ticks after a 503-tick plan wait. Six more routes and `.practice/far-walk/door-proof.ts` pass on the worker build (MEASURED practice, 1 run each).
-**Gap:** the cause inside the client is not traced (likely its packet buffers while the thread is blocked). A cold plan still costs up to about 1,300 ticks of waiting; the leg cache (`.practice/cache/route-legs.json`) removes it for repeated legs. Live runs are not done.
+**Gap:** the cause inside the client is not traced (likely its packet buffers while the thread is blocked). A cold plan still costs up to about 1,300 ticks of waiting; the leg cache (`.practice/cache/route-legs.json`) removes it for repeated legs.
+
+**Claim:** the worker-planned walker takes an 11 HP account from Ardougne to the Grand Exchange alive, by boat round White Wolf Mountain.
+**Conditions:** live server, Pocketpython (combat 5, 11 HP, coins in pack and bank), `scripts/walk-to.ts Pocketpython 3165 3487`, partly warmed leg cache.
+**Evidence:** `.practice/swarm-logs/Pocketpython.log`: Ardougne bank 2654,3283 -> Barnaby boat -> Karamja -> Customs boat -> Port Sarim -> Grand Exchange 3165,3487; `RESULT ok walk-to {"ok":true,"ticks":511}`; LEDGER move=332 idle=149, longest idle 115 ticks at the start (planning); HP low 9 on Karamja; logout confirmed (MEASURED live, 1 run).
+**Gap:** one live run; the 2 HP of damage on Karamja is not attributed.
