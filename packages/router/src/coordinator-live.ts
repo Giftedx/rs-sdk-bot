@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
 import {admissionDecision,activeExternalLive,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
 import {liveLogoutRef} from './coordinator-session';
+import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
@@ -77,7 +78,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  // The backoff spaces rollouts of a running swarm; a dead controller is started at once.
  {let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(alive&&now()<until){await resume();return;}}
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
- const open=alive?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result):[];
+ // A live session rewrites its status every few seconds; one unchanged for BOOTSTRAP_STATUS_AGE_MS is not open (the
+ // server drops a lost session after 200 s). A killed run's held record would otherwise block every rollout.
+ const open=alive?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result&&!(Number.isFinite(s.at)&&now()-s.at>=BOOTSTRAP_STATUS_AGE_MS)):[];
  if(open.length){
   // Every standing job counts here, on or off: a job just turned off still closes its last session.
   const allStanding=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true).flatMap((j:any)=>j.accounts??(j.account?[j.account]:[]));}catch{return [];}};
