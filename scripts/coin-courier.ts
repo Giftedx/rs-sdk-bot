@@ -77,6 +77,12 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
         await observe(s, () => { const p = s.sdk.getState()?.player; return !!p && p.level === 0 && Math.max(Math.abs(p.worldX - c.x), Math.abs(p.worldZ - c.z)) <= 2; }, 'coin bank location unobserved');
         await bank(s);
     }
+    // A full pack with no coin stack has no slot for the coins: bank its last stack while the bank is open.
+    if (!coins(receiver.sdk.getInventory()) && receiver.sdk.getInventory().length >= 28) {
+        guard();
+        await receiver.bot.depositItem(receiver.sdk.getInventory().at(-1)!, -1);
+        await observe(receiver, () => receiver.sdk.getInventory().length < 28, 'coin receiver pack full');
+    }
     const before = sessions.map(state);
     if (before[0]!.bank < c.amount) throw Error('coin bank funds short');
     if (before[0]!.pack + c.amount > 2147483647 || before[1]!.pack + c.amount > 2147483647 || before[1]!.bank + c.amount > 2147483647) throw Error('coin stack overflow');
