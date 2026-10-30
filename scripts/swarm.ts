@@ -260,10 +260,12 @@ export function applyEndRepair(request: any, ended: Map<string, EndRecord>, acti
     if (entry[1].at !== request.endedAt) return { changed: false, reason: 'end record changed' };
     if (successfulEnd(entry[1].reason)) return { changed: false, reason: 'completed work needs a new mission' };
     const script = failedScript(entry[1]);
-    if (persistentEnd(entry[1].reason) && !script) return { changed: false, reason: 'failed script unknown; hold cannot be kept' };
+    // Only a death keeps its script held: gave-up and blocked mean no progress, and the repair is the fix.
+    const dead = /^died\b/.test(entry[1].reason);
+    if (dead && !script) return { changed: false, reason: 'failed script unknown; hold cannot be kept' };
     const logout = currentLogout(request, proofs);
     if (!logout.ok) return { changed: false, reason: logout.reason };
-    if (persistentEnd(entry[1].reason)) holds.push({ account: entry[0], script: script!, at: entry[1].at, reason: entry[1].reason,
+    if (dead) holds.push({ account: entry[0], script: script!, at: entry[1].at, reason: entry[1].reason,
         ...(entry[1].revision !== undefined ? { revision: entry[1].revision } : {}), heldAt: (proofs.now ?? Date.now)() });
     ended.delete(entry[0]);
     return { changed: true, reason: `repaired failure cleared (${logout.label})` };
@@ -427,7 +429,8 @@ if (import.meta.main) {
     const repairFile = join(prac, 'swarm-repair.json');
     const ended = loadEnded(deathsFile);
     const holdsFile = join(prac, 'swarm-script-holds.json');
-    const holds = loadHolds(holdsFile);
+    // Holds from a gave-up or blocked end are dropped: only a death holds its script (applyEndRepair).
+    const holds = loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason));
     let holdsMtime = existsSync(holdsFile) ? statSync(holdsFile).mtimeMs : 0;
     const setEnded = ended.set.bind(ended);
     ended.set = (a, r) => {
@@ -505,7 +508,7 @@ if (import.meta.main) {
         let plan: Plan;
         try { plan = JSON.parse(readFileSync(planFile, 'utf8')); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
         // An owner edit of the hold file applies live, like swarm.json.
-        try { const m = statSync(holdsFile).mtimeMs; if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile)); holdsMtime = m; } } catch { /* no hold file yet */ }
+        try { const m = statSync(holdsFile).mtimeMs; if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason))); holdsMtime = m; } } catch { /* no hold file yet */ }
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
         const stopAll = existsSync(join(prac, 'stop-swarm'));
         inheritedRecoveries=heldRecoveryOwners(root,recoveryDispatch.active?[recoveryDispatch.active.account]:[]);
@@ -603,7 +606,10 @@ if (import.meta.main) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
                     if (!end || !/^(?:blocked|gave-up)\b/.test(end.reason)) continue;
                     let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { continue; }
-                    if (s?.server !== LIVE_SERVER || !s.result || !Number.isFinite(s.at) || Date.now() - s.at < BOOTSTRAP_STATUS_AGE_MS) continue;
+                    // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
+                    let settled = false;
+                    try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }
+                    if (s?.server !== LIVE_SERVER || (!settled && (!s.result || !Number.isFinite(s.at) || Date.now() - s.at < BOOTSTRAP_STATUS_AGE_MS))) continue;
                     ended.delete(key!);
                     for (let i = holds.length - 1; i >= 0; i--) if (holds[i]!.account.toLowerCase() === a.toLowerCase()) holds.splice(i, 1);
                     persistEnded(deathsFile, ended); persistHolds(holdsFile, holds);

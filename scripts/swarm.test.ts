@@ -406,7 +406,7 @@ test('scoped coordinator starts only its qualified assignments while ordinary sw
 test('repair re-reads exact producer proof: new intent, late old callback, unknown cleanup and missing proof refuse',()=>{
     const root=mkdtempSync(join(tmpdir(),'swarm-proof-'));
     try{
-        const proofs=lifecycleProofs(root),fail=()=>new Map([['Rod',{at:100,reason:'blocked after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]);
+        const proofs=lifecycleProofs(root),fail=()=>new Map([['Rod',{at:100,reason:'died after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]);
         const req=(attemptId:string)=>({account:'Rod',endedAt:100,server:LIVE,proof:{kind:'producer',attemptId}});
         expect(applyEndRepair(req('x'),fail(),[],proofs).reason).toBe('no producer logout proof');
         const old=loggedOut(root,'Rod');
@@ -467,7 +467,7 @@ test('old combat stays held after a fishing transition until same-script post-fa
     const root=mkdtempSync(join(tmpdir(),'swarm-hold-'));
     try{
         const proofs=lifecycleProofs(root),holdsFile=join(root,'holds.json');
-        const ended=new Map([['Rod',{at:100,reason:'blocked after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]),holds:ScriptHold[]=[];
+        const ended=new Map([['Rod',{at:100,reason:'died after 1 runs',revision:rev('scripts/gather-fire-combat.ts')}]]),holds:ScriptHold[]=[];
         // Before repair the account-level failure blocks every role.
         expect(holdCandidates(startable(['Rod'],false,ended,()=>Infinity),'scripts/shark-supply.ts',holds).start).toEqual([]);
         const first=loggedOut(root,'Rod');
@@ -565,4 +565,13 @@ test('a host job passes its script arguments to every hosted bot', async () => {
     const cmd = supervisorCommand({ key: 'host:A+B', accounts: ['A', 'B'], host: true, job: { accounts: ['A', 'B'], script: 'scripts/agility-order.ts', args: ['gnome', '40'], host: true } as any }, ['A', 'B']);
     expect(cmd.slice(-2)).toEqual(['--args', 'gnome,40']);
     expect(parseHostArgs(['scripts/agility-order.ts', 'A', 'B', '--stagger-ms', '2000', '--args', 'gnome,40'])).toMatchObject({ names: ['A', 'B'], args: ['gnome', '40'], stagger: 2000 });
+});
+
+test('a repaired gave-up or blocked end leaves no script hold; a death does', () => {
+    const proofs: any = { readProof: () => ({ state: 'confirmed', account: 'Rod', server: 'rs-sdk-demo.fly.dev', domain: 'live', attemptId: 'a1', loggedOutAt: 50, ownerRun: null, receiptSha256: 'x' } as any), verifyLegacy: () => ({ state: 'refused' } as any), now: () => 1000 };
+    for (const [reason, held] of [['gave-up after 1 runs', 0], ['blocked after 1 runs', 0], ['died after 1 runs', 1]] as const) {
+        const ended = new Map([['Rod', { at: 100, reason, revision: JSON.stringify(['scripts/quest-chain.ts']) }]]), holds: ScriptHold[] = [];
+        expect(applyEndRepair({ account: 'Rod', endedAt: 100, server: 'rs-sdk-demo.fly.dev', proof: { kind: 'producer', attemptId: 'a1' } }, ended, [], proofs, holds).changed).toBe(true);
+        expect(holds.length).toBe(held);
+    }
 });
