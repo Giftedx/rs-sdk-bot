@@ -20,7 +20,7 @@ import { payoutWaiting, type DemandNear } from '../packages/core/src/bank-demand
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { courierDeliveryWaiting } from './courier-cargo';
 import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
-import {assertWorkerRelease} from '../packages/core/src/worker-release';
+import {assertWorkerRelease,workerSourceRevision} from '../packages/core/src/worker-release';
 import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd,BOOTSTRAP_STATUS_AGE_MS} from '../packages/core/src/session-admission';
 import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
@@ -453,7 +453,8 @@ if (import.meta.main) {
         const cmd = supervisorCommand(p,accounts);
         const proc = Bun.spawn(cmd, {
             cwd: root, stdout: 'pipe', stderr: 'pipe',
-            env: { ...process.env, ...job.env, DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+            // Each worker carries the release of the source it starts on, so a runtime change needs no swarm restart.
+            env: { ...process.env, ...job.env, WORKER_RELEASE: workerSourceRevision(root), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
         windowsHide:true});
         let currentEnd: string | undefined;
         const consume = (line: string) => {
@@ -616,7 +617,7 @@ if (import.meta.main) {
                     if (!admission.allowed) for (const a of go) st[a] = admission.reason === 'maxBots' ? 'waiting: maxBots'
                         : `waiting: projected ${admission.projectedFreeGB.toFixed(1)} GB free after ${admission.reserveGB} GB startup reserve < ${admission.floorGB} GB floor`;
                     else {
-                        try { if (!(job as Job & {standing?:boolean}).standing) assertWorkerRelease();start(p, go); for (const a of go) st[a] = 'starting'; }
+                        try { start(p, go); for (const a of go) st[a] = 'starting'; }
                         catch(e) { for(const a of go) st[a]=`paused: ${String(e)}`; }
                     }
                 }
