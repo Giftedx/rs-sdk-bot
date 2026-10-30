@@ -73,12 +73,14 @@ export async function superviseHost(accounts: string[], d: SuperviseHostDeps): P
 
 if (import.meta.main) {
     const { existsSync } = await import('node:fs');
-    const [script, maxArg, ...accounts] = process.argv.slice(2);
+    const all = process.argv.slice(2), ai = all.indexOf('--args'), hostArgs = ai >= 0 ? ['--args', all[ai + 1] ?? ''] : [];
+    const [script, maxArg, ...accounts] = ai >= 0 ? [...all.slice(0, ai), ...all.slice(ai + 2)] : all;
     if (!script || accounts.length === 0) { console.log('usage: supervise-host.ts <script> <maxRestarts> <account...>'); process.exit(2); }
     const r = await superviseHost(accounts, {
         run: async active => {
-            if(process.env.DEMO_OK==='1')try{assertWorkerRelease();}catch(e){return {stdout:active.map(a=>`[${a}] RESULT fail ${String(e)}`).join('\n'),exitCode:1};}
-            const p = Bun.spawn(['bun', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000'], { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
+            // A standing owner job has no coordinator acceptance, so it runs the current source without the release pin.
+            if(process.env.DEMO_OK==='1'&&process.env.STANDING!=='1')try{assertWorkerRelease();}catch(e){return {stdout:active.map(a=>`[${a}] RESULT fail ${String(e)}`).join('\n'),exitCode:1};}
+            const p = Bun.spawn(['bun', 'packages/core/src/host.ts', script, ...active, '--stagger-ms', '2000', ...hostArgs], { stdout: 'pipe', stderr: 'inherit', env: process.env ,windowsHide:true});
             let text = '';
             const reader = p.stdout.getReader();
             for (;;) { const { done, value } = await reader.read(); if (done) break; const c = new TextDecoder().decode(value); text += c; process.stdout.write(c); }

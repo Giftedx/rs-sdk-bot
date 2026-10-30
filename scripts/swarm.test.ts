@@ -558,3 +558,11 @@ test('an end from before producer receipts clears with a settled live status, no
     expect(applyEndRepair(req, ended(), [], proofs({ server: LIVE_SRV, result: 'fail gate', at: now - 60_000 })).reason).toBe('status changed in the last 15 minutes');
     expect(applyEndRepair(req, ended(), [], proofs({ server: LIVE_SRV, result: '', at: now - 16 * 60_000 })).reason).toBe('status shows no finished session');
 });
+
+test('a host job passes its script arguments to every hosted bot', async () => {
+    const { supervisorCommand } = await import('./swarm');
+    const { parseHostArgs } = await import('../packages/core/src/host');
+    const cmd = supervisorCommand({ key: 'host:A+B', accounts: ['A', 'B'], host: true, job: { accounts: ['A', 'B'], script: 'scripts/agility-order.ts', args: ['gnome', '40'], host: true } as any }, ['A', 'B']);
+    expect(cmd.slice(-2)).toEqual(['--args', 'gnome,40']);
+    expect(parseHostArgs(['scripts/agility-order.ts', 'A', 'B', '--stagger-ms', '2000', '--args', 'gnome,40'])).toMatchObject({ names: ['A', 'B'], args: ['gnome', '40'], stagger: 2000 });
+});

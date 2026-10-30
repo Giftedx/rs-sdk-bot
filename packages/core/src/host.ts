@@ -328,9 +328,12 @@ export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out
 // the two host flags. Reject bad values before opening any worker sessions.
 export function parseHostArgs(argv: string[]) {
     const positional: string[] = [], values = new Map<string, number>();
+    let args: string[] = [];
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]!;
         if (!arg.startsWith('--')) { positional.push(arg); continue; }
+        // --args a,b: the same script arguments for every bot, after its name (bun <script> <bot> a b).
+        if (arg === '--args') { const raw = argv[++i]; if (raw === undefined) throw new Error('--args requires a value'); args = raw.split(',').filter(Boolean); continue; }
         if (!['--stagger-ms', '--mem-every-s'].includes(arg)) throw new Error(`unknown option ${arg}`);
         if (values.has(arg)) throw new Error(`duplicate option ${arg}`);
         const raw = argv[++i];
@@ -341,14 +344,14 @@ export function parseHostArgs(argv: string[]) {
         values.set(arg, value);
     }
     const [script, ...names] = positional;
-    return { script, names, stagger: values.get('--stagger-ms') ?? 0, memEvery: values.get('--mem-every-s') ?? 0 };
+    return { script, names, args, stagger: values.get('--stagger-ms') ?? 0, memEvery: values.get('--mem-every-s') ?? 0 };
 }
 
 if (import.meta.main) {
     let parsed: ReturnType<typeof parseHostArgs>;
     try { parsed = parseHostArgs(process.argv.slice(2)); }
     catch (error) { console.error(`invalid host arguments: ${String(error)}`); process.exit(2); }
-    const { script, names, stagger, memEvery } = parsed;
+    const { script, names, args, stagger, memEvery } = parsed;
     if (!script || names.length === 0) {
         console.log('usage: bun packages/core/src/host.ts <script> <bot1> [bot2 ...] [--stagger-ms N] [--mem-every-s N]');
         process.exit(2);
@@ -360,7 +363,7 @@ if (import.meta.main) {
         peak = Math.max(peak, process.memoryUsage().rss);
         if (memEvery > 0 && Math.round((Date.now() - t0) / 1000) % memEvery === 0) console.log(`HOST ${memLine(`t=${Math.round((Date.now() - t0) / 1000)}s`)}`);
     }, 1000);
-    const results = await runHost(names.map(name => ({ name, script })), { staggerMs: stagger });
+    const results = await runHost(names.map(name => ({ name, script, args })), { staggerMs: stagger });
     clearInterval(timer);
     peak = Math.max(peak, process.memoryUsage().rss);
     const ok = results.every(r => r.ok);

@@ -61,10 +61,10 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  // turns them on once the current controller runs: that off/on is the swarm's own resume path.
  const pausedFile=join(dir,'rollout-paused.json');
  const paused=():string[]=>{try{return JSON.parse(readFileSync(pausedFile,'utf8'));}catch{return [];}};
- const standing=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true&&j.enabled&&j.account).map((j:any)=>j.account);}catch{return [];}};
+ const standing=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true&&j.enabled).flatMap((j:any)=>j.accounts??(j.account?[j.account]:[]));}catch{return [];}};
  const setEnabled=(accounts:readonly string[],on:boolean)=>withPlanWrite(()=>{
   const file=join(base,'swarm.json'),plan=JSON.parse(readFileSync(file,'utf8')),keys=new Set(accounts.map(a=>a.toLowerCase()));
-  for(const j of plan.jobs??[])if(j.standing===true&&keys.has(String(j.account).toLowerCase()))j.enabled=on;
+  for(const j of plan.jobs??[])if(j.standing===true&&(j.accounts??[j.account]).some((a:any)=>keys.has(String(a).toLowerCase())))j.enabled=on;
   atomicJson(file,plan);
  });
  const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};

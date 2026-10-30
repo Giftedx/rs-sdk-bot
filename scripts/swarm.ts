@@ -147,7 +147,7 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
 
 export function supervisorCommand(parsed:ParsedJob,accounts:string[]):string[]{
     const job=parsed.job,maxRestarts=String(job.maxRestarts??(job.orchestrate?0:20));
-    return parsed.host?['bun','packages/practice/src/supervise-host.ts',job.script,maxRestarts,...accounts]
+    return parsed.host?['bun','packages/practice/src/supervise-host.ts',job.script,maxRestarts,...accounts,...(job.args?.length?['--args',job.args.join(',')]:[])]
         :['bun','packages/practice/src/supervise.ts',accounts[0]!,job.script,maxRestarts,...(job.orchestrate?accounts.slice(1):[]),...(job.args??[])];
 }
 

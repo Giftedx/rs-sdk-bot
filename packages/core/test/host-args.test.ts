@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { parseHostArgs } from '../src/host';
 
 test('host keeps account order and zero values when flags appear between accounts', () => {
-    expect(parseHostArgs(['worker.ts', 'first', '--stagger-ms', '0', 'second', '--mem-every-s', '5'])).toEqual({ script: 'worker.ts', names: ['first', 'second'], stagger: 0, memEvery: 5 });
+    expect(parseHostArgs(['worker.ts', 'first', '--stagger-ms', '0', 'second', '--mem-every-s', '5'])).toEqual({ script: 'worker.ts', names: ['first', 'second'], args: [], stagger: 0, memEvery: 5 });
 });
 
 for (const args of [

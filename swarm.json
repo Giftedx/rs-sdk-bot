@@ -19,7 +19,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "quest",
       "goal": "Sheep Herder: 4 QP and 3,100 coins",
-      "enabled": false,
+      "enabled": true,
       "repeat": false,
       "env": {
         "CAP": "3000"
@@ -82,7 +82,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "crafting",
       "goal": "Sheep Shearer from banked wool",
-      "enabled": false,
+      "enabled": true,
       "repeat": false,
       "env": {
         "CAP": "3000"
@@ -104,7 +104,7 @@
       "script": "scripts/quest-sweep.ts",
       "role": "procurement",
       "goal": "Sheep Herder: 4 QP and 3,100 coins",
-      "enabled": false,
+      "enabled": true,
       "repeat": false,
       "env": {
         "CAP": "3000"
@@ -295,50 +295,6 @@
       "standing": true
     },
     {
-      "account": "Moneyshot",
-      "args": [
-        "gnome",
-        "40"
-      ],
-      "maxRestarts": 0,
-      "script": "scripts/agility-order.ts",
-      "role": "bank",
-      "goal": "Agility 1 to 40 on Gnome",
-      "enabled": true,
-      "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-agility-gnome-moneyshot-13",
-      "env": {
-        "AGI_MAX_LAPS": "400",
-        "AGI_MAX_TICKS": "10000",
-        "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150"
-      },
-      "standing": true
-    },
-    {
-      "account": "NabTheKnob",
-      "args": [
-        "gnome",
-        "40"
-      ],
-      "maxRestarts": 0,
-      "script": "scripts/agility-order.ts",
-      "role": "thieving",
-      "goal": "Agility 1 to 40 on Gnome",
-      "enabled": true,
-      "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-agility-gnome-nabtheknob-1",
-      "env": {
-        "AGI_MAX_LAPS": "400",
-        "AGI_MAX_TICKS": "10000",
-        "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150"
-      },
-      "standing": true
-    },
-    {
       "account": "mmsmk1232",
       "args": [
         "gnome",
@@ -360,50 +316,6 @@
         "CAP": "1600",
         "COORDINATOR_RUN_ID": "task-5fd27705-f9db-492d-bea8-3f2a475e596d"
       }
-    },
-    {
-      "account": "CoinCock",
-      "args": [
-        "gnome",
-        "40"
-      ],
-      "maxRestarts": 0,
-      "script": "scripts/agility-order.ts",
-      "role": "thieving",
-      "goal": "Agility 1 to 40 on Gnome; live test of the Femi gate fix",
-      "enabled": true,
-      "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-agility-gnome-coincock-1",
-      "env": {
-        "AGI_MAX_LAPS": "400",
-        "AGI_MAX_TICKS": "10000",
-        "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150"
-      },
-      "standing": true
-    },
-    {
-      "account": "Pocketrocket",
-      "args": [
-        "gnome",
-        "40"
-      ],
-      "maxRestarts": 0,
-      "script": "scripts/agility-order.ts",
-      "role": "thieving",
-      "goal": "Agility 1 to 40 on Gnome",
-      "enabled": true,
-      "repeat": false,
-      "coordinatorOwner": "coordinator",
-      "coordinatorTask": "run-agility-gnome-pocketrocket-1",
-      "env": {
-        "AGI_MAX_LAPS": "400",
-        "AGI_MAX_TICKS": "10000",
-        "AGI_ENTRY_TICKS": "2000",
-        "AGI_PROGRESS_TICKS": "150"
-      },
-      "standing": true
     },
     {
       "account": "mmthv2350",
@@ -507,6 +419,31 @@
       "env": {
         "CAP": "1600",
         "COORDINATOR_RUN_ID": "task-9b767d1e-4108-4b0e-92e9-edf1ce6aa0e0"
+      }
+    },
+    {
+      "accounts": [
+        "CoinCock",
+        "NabTheKnob",
+        "Pocketrocket",
+        "Moneyshot"
+      ],
+      "script": "scripts/agility-order.ts",
+      "args": [
+        "gnome",
+        "40"
+      ],
+      "host": true,
+      "role": "agility",
+      "goal": "Agility 1 to 40 on Gnome, four thieves in one host process",
+      "enabled": true,
+      "repeat": false,
+      "standing": true,
+      "env": {
+        "AGI_MAX_LAPS": "400",
+        "AGI_MAX_TICKS": "10000",
+        "AGI_ENTRY_TICKS": "2000",
+        "AGI_PROGRESS_TICKS": "150"
       }
     }
   ],
