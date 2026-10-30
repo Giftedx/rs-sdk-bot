@@ -2,7 +2,7 @@
 
 Current user instructions win. Read the [plan](docs/plans/joined-plan.md) for priorities and the [script contract](docs/script-contract.md) for acceptance. A summary cannot grant permission.
 
-Goals, all kept: wealth; all quests and unlocks; all 19 skills at 99; best-in-slot gear; useful and rare items; specialist records; full game coverage; the main account rank 1 on all 24 boards at once. Helper 99s are not board wins.
+Goals (owner): the main account Haggis rank 1 on the Overall board under the current record; specialist accounts rank 1 on each skill board they can win by a priced margin; every quest done; every useful item and best-in-slot gear held; wealth to buy them. Helper levels count only when they produce a route supply, an unlock or a specialist win. Rank 1 on all 24 boards at once is not reachable against the specialist records, so it is not a target.
 
 ## Work loop
 

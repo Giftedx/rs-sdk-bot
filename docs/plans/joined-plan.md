@@ -1,6 +1,6 @@
 # Joined plan
 
-**Live work authorized.** Keep all owner goals: wealth, all quests and unlocks, all 19 skills at 99, best-in-slot gear, useful and rare items, specialist wins, full game coverage, and the main account rank 1 on all 24 boards at once. Preserve main and fresh clocks, pauses and assets. Follow [AGENTS.md](../../AGENTS.md) and the [script contract](../script-contract.md).
+**Live work authorized.** Owner goals: Haggis rank 1 Overall under the record; specialist board wins with priced margins; all quests; all useful items and best-in-slot gear; wealth for them. Helpers work from the route supply bill (`bun packages/planner/src/supply-bill.ts`).
 
 ## Scoreboards
 
@@ -21,7 +21,7 @@ Main run, coverage and live work run at once, so no lane starves the others. Eve
 
 | Lane | Target | Next |
 |---|---|---|
-| Main simultaneous 24 | Main run gap from 43,726 to under 35,787 modelled ticks | Deliver the dialogue burst (`Q_BURST=1` in `scripts/generated/quest-lib.ts`; Druidic Ritual -31, Tree Gnome Village -114 ticks on practice, 3/3 each; about 1,500-1,750 across the quests before Overall, estimate). Then Smithing 1-41 by Superheat in the knights' stuns, the first five route steps on practice, and the live reaction delay (a us-east host if most clicks land 2+ ticks late) |
+| Main Overall | Main run gap from 43,726 to under 35,787 modelled ticks, with the route supply bill staged | Deliver the dialogue burst (`Q_BURST=1` in `scripts/generated/quest-lib.ts`; Druidic Ritual -31, Tree Gnome Village -114 ticks on practice, 3/3 each; about 1,500-1,750 across the quests before Overall, estimate). Then Smithing 1-41 by Superheat in the knights' stuns, the first five route steps on practice, and the live reaction delay (a us-east host if most clicks land 2+ ticks late) |
 | Coverage | Every scoreboard entry live, then batch | Quest burst screening (`.practice/quest-burst-coverage-20261029/`), quests from practice to live, the four missing quest scripts (Heroes' Quest, Watchtower, Legends' Quest, Tai Bwo Wannai Trio), skills at or near 1 (Magic, Firemaking, Herblore, Ranged, Agility), domains with no named action (Wilderness, Treasure Trails, Shilo Village) |
 | Specialist hiscores | A first #1 board | Price margins against `research/hiscores-2026-10-29.json`; Shaftshooter Ranged and Polevaulter Agility from fresh starts |
 | Wealth / logistics / GE | Supplies with named consumers | Spend the 75,500 coins on route supplies (anvil bars, runes); a consuming job for the 125 sharks |

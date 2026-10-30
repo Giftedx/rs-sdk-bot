@@ -30,6 +30,9 @@ if (import.meta.main) {
         const pid = spawnDetached([process.execPath, 'packages/router/src/coordinator-cli.ts', '--run', token], root, join(dir, `daemon-${stamp}.out.log`), join(dir, `daemon-${stamp}.err.log`));
         log(`coordinator restarted pid=${pid} token=${token} (previous pid=${owner?.pid ?? 'none'})`);
     }
+    // The planner reads the Overall route's supply bill against current banks (packages/planner/src/supply-bill.ts).
+    const bill = Bun.spawnSync([process.execPath, 'packages/planner/src/supply-bill.ts'], { cwd: root, stdout: 'ignore', stderr: 'pipe', windowsHide: true });
+    if (bill.exitCode !== 0) log(`supply bill failed: ${bill.stderr.toString().slice(-200)}`);
     const board = freshScoreboard(root), file = join(dir, 'scoreboard-history.jsonl');
     appendFileSync(file, JSON.stringify({ at: now, progress: board.progress }) + '\n');
     const history = readFileSync(file, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l)).filter(r => now - r.at <= 3 * STALL_MS);
