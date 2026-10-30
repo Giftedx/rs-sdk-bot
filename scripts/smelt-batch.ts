@@ -68,7 +68,8 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
   if(io)return await io.walk(x,z)&&near(x,z);
   const walker=await sessionWalker(s),plan=walker.plan;
   // The walk below runs with tol 1, so a plan that ends beside the target (a furnace or booth tile) is complete.
-  walker.plan=(level,from,to)=>{const path=plan(level,from,to),last=path.at(-1);if(!last||Math.max(Math.abs(last.x-to.x),Math.abs(last.z-to.z))>1)throw Error('smelt incomplete corridor plan');return path;};
+  // An account already beside the target gets an empty plan, which is complete too (OreElse at Al Kharid bank).
+  walker.plan=(level,from,to)=>{const path=plan(level,from,to),last=path.at(-1)??from;if(Math.max(Math.abs(last.x-to.x),Math.abs(last.z-to.z))>1)throw Error('smelt incomplete corridor plan');return path;};
   const result=await walkPath(walker,[{x,z,tol:1}],{maxTicks:Math.min(160,cleanup?160:Math.max(1,o.cap-(s.tick()-start))),stop:()=>ended||died||hpMin<7||(!cleanup&&over())||travel&&((s.sdk.getSkill('Hitpoints')?.level??0)<hpStart)});return result.ok&&near(x,z);
  };
  const bankRows=()=>s.bankObservation?.()?.items??[];
