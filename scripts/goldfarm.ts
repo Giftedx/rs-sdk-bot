@@ -17,7 +17,8 @@
 // Preset goldfarm_knights (goldfarm_nofood for the stall). Copies the 2-tick direct click and eating inside the stun from scripts/generated/thieving60.ts.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { openBot, finish, randomEventsOf, serverFromEnv } from '../packages/core/src/bot';
+import { openBot, finish, randomEventsOf, serverFromEnv, getWorld, accountOf } from '../packages/core/src/bot';
+import { goTo } from '../packages/core/src/walk';
 import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
@@ -84,11 +85,12 @@ const foodWake=process.env.CURIER_FOOD_WAKE==='1';
 const farmServer=FOOD_FROM?serverFromEnv(readFileSync(join(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8')):'';
 try {
     await waitTicks(s, 5);
-    // Farm only where the knights are. After a death the game respawns the bot in Lumbridge; walking from there to
-    // Ardougne killed mmtha0205 twice on 2026-10-23 (near 2906,3375). Getting back is a travel job, not this script's.
+    // Farm only where the knights are. From elsewhere the world walker, which avoids deadly hunters (danger.ts),
+    // takes the bot to the south bank first; a hand-made Lumbridge-Ardougne walk killed mmtha0205 near 2906,3375.
     const p0 = s.sdk.getState()?.player;
     if (!p0 || Math.max(Math.abs(p0.worldX - 2655), Math.abs(p0.worldZ - 3300)) > 60) {
-        await finish([s], false, `not in Ardougne (${p0?.worldX},${p0?.worldZ}); refusing to walk there`);
+        const there = await goTo(s, await getWorld(), { x: 2654, z: 3283, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
+        if (!there.ok) await finish([s], false, `travel to Ardougne from ${p0?.worldX},${p0?.worldZ} failed: ${there.reason} ${there.detail}`);
     }
     const st = () => s.sdk.getState();
     const pos = () => st()?.player;
