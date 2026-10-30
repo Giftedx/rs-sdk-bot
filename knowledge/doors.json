@@ -6169,7 +6169,12 @@
   "x": 2931,
   "z": 9690,
   "level": 0,
+  "angle": 3,
+  "shape": 0,
   "kind": "key",
+  "need": {
+   "whenAxis": true
+  },
   "trigger": "scripts/areas/area_taverly/dungeon/scripts/jail_doors.rs2:1",
   "src": "maps/m45_151.jm2:6770"
  },
@@ -6179,7 +6184,12 @@
   "x": 2931,
   "z": 9694,
   "level": 0,
+  "angle": 1,
+  "shape": 0,
   "kind": "key",
+  "need": {
+   "whenAxis": true
+  },
   "trigger": "scripts/areas/area_taverly/dungeon/scripts/jail_doors.rs2:1",
   "src": "maps/m45_151.jm2:6771"
  },
@@ -6249,7 +6259,12 @@
   "x": 2924,
   "z": 9803,
   "level": 0,
+  "angle": 0,
+  "shape": 0,
   "kind": "key",
+  "need": {
+   "whenAxis": true
+  },
   "trigger": "scripts/areas/area_taverly/dungeon/scripts/jail_doors.rs2:8",
   "src": "maps/m45_153.jm2:6707"
  },
@@ -25834,7 +25849,12 @@
   "x": 3251,
   "z": 3385,
   "level": 0,
+  "angle": 1,
+  "shape": 0,
   "kind": "key",
+  "need": {
+   "whenAxis": false
+  },
   "trigger": "scripts/quests/quest_blackarmgang/scripts/quest_blackarmgang.rs2:45",
   "src": "maps/m50_52.jm2:6939"
  },

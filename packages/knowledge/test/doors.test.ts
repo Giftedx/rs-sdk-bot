@@ -98,3 +98,19 @@ test('an unresolved conditional refusal plus Open is explicit conditional, not o
     const t = parseTriggers([{ file: 'conditional.rs2', text: '[oploc1,conditional]\nif (~condition) { mes("This door is locked."); return; }\n~open_door(500);' }]);
     expect(classifyDoor('conditional', undefined, t).kind).toBe('conditional');
 });
+
+test('a key door that lets the leaving side slip out is shut one way only', () => {
+    const t = parseTriggers([{ file: 'phoenix.rs2', text: `[oploc1,hideout] @unlock(false);
+[oplocu,hideout]
+if(last_useitem = hideoutkey) {
+    @unlock(true);
+}
+[label,unlock](boolean $key_used)
+def_boolean $leaving= ~check_axis(coord, loc_coord, loc_angle);
+if($leaving = false & $key_used = false) {
+    mes("The door is securely locked.");
+    return;
+}
+` }]);
+    expect(classifyDoor('hideout', undefined, t)).toEqual({ kind: 'key', need: { whenAxis: false }, trigger: 'phoenix.rs2:1' });
+});

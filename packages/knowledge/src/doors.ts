@@ -69,7 +69,12 @@ export function classifyDoor(loc: string, category: string | undefined, t: Trigg
 
     if (useTrig && /last_useitem|inv_total/.test(useTrig.body)) {
         const item = [...useTrig.body.matchAll(/case\s+(\w+)\s*:/g)].map(m => m[1]!).find(c => c !== 'default');
-        return { kind: 'key', need: item ? { item } : undefined, trigger: src };
+        // The Phoenix hideout door (quest_blackarmgang.rs2 unlock_weaponstore_door) sets `$leaving = ~check_axis(...)`
+        // and refuses only `if($leaving = false & $key_used = false)`: the leaving side opens with no key.
+        const alias = body.match(/def_boolean\s+\$(\w+)\s*=\s*~check_axis(?:_locactive)?\([^;]+\);/);
+        const guard = alias ? body.match(new RegExp('if\\s*\\(\\s*\\$' + alias[1] + '\\s*=\\s*(true|false)\\s*&[^)]*\\)\\s*\\{\\s*mes\\("[^"]*locked')) : null;
+        const need: DoorNeed = { ...(item ? { item } : {}), ...(guard ? { whenAxis: guard[1] === 'true' } : {}) };
+        return { kind: 'key', need: Object.keys(need).length ? need : undefined, trigger: src };
     }
     const skill = body.match(/stat\((\w+)\)\s*<\s*(\d+)/);
     if (skill) {
