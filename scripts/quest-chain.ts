@@ -18,6 +18,9 @@ export const QUEST_NAMES: Record<string, string> = {
     junglepotion: 'Jungle Potion', merlin: "Merlin's Crystal", seaslug: 'Sea Slug Quest', scorpion: 'Scorpion Catcher',
 };
 
+// A death is `RESULT fail died` or `died=true`; every quest result prints `died=false`.
+export const questDied = (result: string) => /^RESULT fail died\b/.test(result) || /\bdied=true\b/.test(result);
+
 export function questsLeft(quests: string[], statusQuests: { name: string; state: string }[] | undefined): string[] {
     const done = new Set((statusQuests ?? []).filter(q => q.state === 'complete').map(q => q.name.toLowerCase()));
     return quests.filter(q => !done.has((QUEST_NAMES[q] ?? q).toLowerCase()));
@@ -39,7 +42,7 @@ if (import.meta.main) {
         const ok = result.startsWith('RESULT ok');
         (ok ? done : failed).push(q);
         console.log(`QUEST_CHAIN ${q} ${ok ? 'ok' : 'fail'} ${result.slice(0, 200)}`);
-        if (/\bdied\b/i.test(result)) { console.log(`RESULT fail died during ${q} done=${done.join(',')} failed=${failed.join(',')}`); process.exit(1); }
+        if (questDied(result)) { console.log(`RESULT fail died during ${q} done=${done.join(',')} failed=${failed.join(',')}`); process.exit(1); }
         if (existsStop(account)) break;
     }
     console.log(`RESULT ${done.length ? 'ok' : 'fail'} quest-chain done=${done.join(',') || '-'} failed=${failed.join(',') || '-'}`);

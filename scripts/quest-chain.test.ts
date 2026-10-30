@@ -6,3 +6,11 @@ test('a quest the status shows complete is skipped; unknown names pass through',
     expect(questsLeft(['cook', 'sheep', 'rj'], status)).toEqual(['sheep', 'rj']);
     expect(questsLeft(['cook'], undefined)).toEqual(['cook']);
 });
+
+test('only a real death stops the chain', () => {
+    const { questDied } = require('./quest-chain');
+    expect(questDied('RESULT ok qp=1 xp=attack=2600 died=false milestones=')).toBe(false);
+    expect(questDied('RESULT fail talk halgrive 1 died=false')).toBe(false);
+    expect(questDied('RESULT fail died')).toBe(true);
+    expect(questDied('RESULT fail step x died=true')).toBe(true);
+});
