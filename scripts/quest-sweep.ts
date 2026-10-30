@@ -174,11 +174,15 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
 // with an empty bucket (npc/scripts/cow_milking.rs2). The bucket is a pack item like any other: bank or shop.
 export const MILK=1927,BUCKET=1925,COW=81;
 export type Gather={id:number;count:number;how:'spawn'|'milk'};
-export function gatherPlan(unsold:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance){
+// A spawn wins over a shop when it is nearer: eggs lie by Lumbridge, while the only egg seller is in Rellekka.
+// `seller` gives the straight-line distance to the nearest seller (Infinity when no shop sells the item).
+export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity){
  const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];
- for(const m of unsold){
-  if(m.id===MILK){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
-  else if(spawns(m.id,at).length)gathers.push({...m,how:'spawn'});
+ const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
+ for(const m of missing){
+  const sold=seller(m.id),spot=spawns(m.id,at)[0];
+  if(m.id===MILK&&sold===Infinity){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
+  else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
   else still.push(m);
  }
  return{gathers,still,tools};
@@ -279,7 +283,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
   // A missing item a shop sells is bought after the bank: take coins for it now.
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};},(d,at)=>sellersByDistance(d,at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile})));
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
-  const gather=gatherPlan(shops(p.missing).unsold,here()),tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),pack(),rows());
+  const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?nearestSeller(it.debugname,here()):null;return n?Math.max(Math.abs(n.tile.x-here().x),Math.abs(n.tile.z-here().z)):Infinity;};
+  const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt),tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),pack(),rows());
   p.withdraw.push(...tools.withdraw);
   const shop=shops([...p.missing.filter(m=>!gather.gathers.some(g=>g.id===m.id)),...tools.missing]);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);

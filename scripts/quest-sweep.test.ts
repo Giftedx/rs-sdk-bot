@@ -118,3 +118,10 @@ test('an unsold item is gathered from a ground spawn or, for milk, a cow and a b
  expect(g.tools).toEqual([{id:BUCKET,count:1}]);
  expect(g.still).toEqual([{id:440,count:2}]);
 });
+
+test('a nearer spawn beats a far shop; a nearer shop keeps the item in the shop plan',()=>{
+ const at={x:3222,z:3218,level:0},spawns=(id:number)=>id===1944?[{x:3226,z:3299,level:0}]:[];
+ expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>500).gathers).toEqual([{id:1944,count:1,how:'spawn'}]);
+ expect(gatherPlan([{id:1944,count:1}],at,spawns,()=>20).still).toEqual([{id:1944,count:1}]);
+ expect(gatherPlan([{id:MILK,count:1}],at,spawns,()=>30).still).toEqual([{id:MILK,count:1}]);
+});

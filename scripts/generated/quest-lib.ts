@@ -284,7 +284,14 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     };
     // Without a law rune in the pack (every teleport here costs one) the bot walks to the same spot instead.
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
-        if (cnt(563) < 1) { await walk(`${label} (walk, no law rune)`, [{ x, z, tol: 4 }]); return; }
+        if (cnt(563) < 1) {
+            // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
+            for (let i = 0; i < 3 && lvl() > 0; i++) {
+                const from = lvl();
+                await climb(`${label} down`, () => findLoc(l => l.distance <= 20 && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))), /climb-down/i, () => lvl() < from);
+            }
+            await walk(`${label} (walk, no law rune)`, [{ x, z, tol: 4 }]); return;
+        }
         await step(label, () => s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => near(x, z, 6), 8, 3);
     };
     // Opens the shut door on tile (x, z) on the bot's level; nothing if it is open. walkPath does not see every
