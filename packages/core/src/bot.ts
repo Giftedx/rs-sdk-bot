@@ -147,7 +147,12 @@ export const randomEventsOf = (s: Session): RandomEventWatch | undefined => rand
 // Logout freezes the client cache; it cannot reveal a later server-side credit.
 // String callers keep the same interface and the session owner keeps cleanup.
 type FinishDetail = string | ((ok: boolean) => string);
+// An in-process runner (scripts/quest-chain.ts in a bot host) registers an account here: finish() for that account
+// then settles (RESULT, logout) and reports to the runner instead of exiting the process, which holds other bots.
+export const finishHooks = new Map<string, (ok: boolean, detail: FinishDetail) => void>();
 export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail): Promise<never> {
+    const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
+    if (hook) { const final = await settle(sessions, ok, detail); hook(final, detail); return new Promise<never>(() => {}); }
     const final = await settle(sessions, ok, detail, {
         // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
         // Logout runs first, so the account leaves the world either way; this only bounds the process.

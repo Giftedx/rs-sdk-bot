@@ -36,6 +36,8 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const TRACE = opts.trace ?? process.env.Q_TRACE === '1';
     // quest-sweep.ts stages items and travel in its own login, then hands that session over here.
     const s: Session = opts.session ?? (globalThis as { QUEST_SESSION?: Session }).QUEST_SESSION ?? await openBot(opts.name ?? process.argv[2]!);
+    // quest-sweep's handoff waits for this before another bot in the same process may hand over its session.
+    (globalThis as { QUEST_SESSION_TAKEN?: () => void }).QUEST_SESSION_TAKEN?.();
     await waitTicks(s, 3);
     const st = (): any => s.sdk.getState();
     const pos = (): any => st()?.player;

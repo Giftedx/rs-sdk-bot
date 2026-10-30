@@ -7,7 +7,7 @@ import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
-import {waitUntil} from '../packages/core/src/ticks';
+import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
 import type {World} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
@@ -145,11 +145,17 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
   if(!npc)return `${b.npc} not in sight at ${b.tile.x},${b.tile.z}`;
   if(!(await s.bot.openShop(npc)).success)return `${b.npc} shop did not open`;
   await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
-  const row=(st()?.shop?.shopItems??[]).find((i:any)=>i.id===b.id);
-  if(!row||row.count<1){await s.bot.closeShop();return `${b.npc} has no ${b.name} in stock`;}
+  // Another bot may have emptied the shelf: buy what is there, wait for the restock, buy the rest. Small shops
+  // restock one item per 100 ticks (wydinstore: 3 flour), so this waits up to 12 x 50 ticks.
   const before=held(b.id);
-  await s.bot.buyFromShop(row,b.count);
-  const got=await waitUntil(s,()=>held(b.id)>=before+b.count,{timeoutTicks:10});
+  for(let i=0;i<12&&held(b.id)<before+b.count;i++){
+   const row=(st()?.shop?.shopItems??[]).find((x:any)=>x.id===b.id);
+   if(!row||row.count<1){await waitTicks(s,50);continue;}
+   const want=Math.min(before+b.count-held(b.id),row.count),had=held(b.id);
+   await s.bot.buyFromShop(row,want);
+   await waitUntil(s,()=>held(b.id)>=had+want,{timeoutTicks:10});
+  }
+  const got=held(b.id)>=before+b.count;
   console.log(`QUEST_SWEEP_BUY ${JSON.stringify({item:b.id,name:b.name,count:b.count,npc:b.npc,before,after:held(b.id),coins:held(COINS)})}`);
   await s.bot.closeShop();
   if(!got)return `bought ${held(b.id)-before} of ${b.count} ${b.name} from ${b.npc}`;
@@ -157,9 +163,23 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
  return null;
 }
 
-async function main(){
- const [account,quest]=process.argv.slice(2);
- if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest>');
+// One bot at a time hands its session over through globalThis.QUEST_SESSION, until quest-lib's openQuest has taken
+// it (QUEST_SESSION_TAKEN) or 60 s pass. `fresh` imports the quest module under a unique query, so every bot in one
+// process runs the quest's top-level code again.
+let handoff:Promise<void>=Promise.resolve();
+export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>{
+ const g=globalThis as {QUEST_SESSION?:Session;QUEST_SESSION_TAKEN?:()=>void};
+ let started!:(p:Promise<unknown>)=>void;const run=new Promise<Promise<unknown>>(r=>{started=r;});
+ handoff=handoff.then(()=>new Promise<void>(release=>{
+  const done=()=>{clearTimeout(timer);if(g.QUEST_SESSION===s)delete g.QUEST_SESSION;if(g.QUEST_SESSION_TAKEN===done)delete g.QUEST_SESSION_TAKEN;release();};
+  const timer=setTimeout(done,60_000);
+  g.QUEST_SESSION=s;g.QUEST_SESSION_TAKEN=done;
+  started(import(fresh?`${script}?${fresh}`:script).finally(()=>{if(g.QUEST_SESSION_TAKEN===done)done();}));
+ }));
+ return run.then(p=>p);
+}
+
+export async function sweep(account:string,quest:string,fresh?:string){
  const script=resolve(import.meta.dir,'generated',`quest-${quest}.ts`);
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
  const preset=presetFor(quest),need=needs(preset),food=needs(preset,true);
@@ -230,13 +250,18 @@ async function main(){
   seen.set(q.id,q.state);console.log(`QUEST_SWEEP_FLAG ${JSON.stringify(q)}`);
  }};
  observe();const off=s.onTick(observe);void s.ended.then(off);
- (globalThis as {QUEST_SESSION?:Session}).QUEST_SESSION=s;
  handed=true;
- await import(script);
+ await handOver(s,script,fresh);
  } catch(error) {
   if(handed)throw error;
   return fail(String(error));
  }
+}
+
+async function main(){
+ const [account,quest]=process.argv.slice(2);
+ if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest>');
+ await sweep(account,quest);
 }
 
 if(import.meta.main)await main();

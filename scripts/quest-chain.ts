@@ -27,18 +27,14 @@ export function questsLeft(quests: string[], statusQuests: { name: string; state
 }
 
 if (import.meta.main) {
-    const [account, list] = process.argv.slice(2);
+    // The list may arrive as one comma-joined argument or, from a host job (--args a,b), as several.
+    const [account, ...rest] = process.argv.slice(2), list = rest.join(",");
     if (!account || !list) { console.log('RESULT fail usage: quest-chain.ts <account> <quest,quest,...>'); process.exit(2); }
     const status = () => { try { return JSON.parse(readFileSync(join(root, '.practice/status', `${account}.json`), 'utf8')); } catch { return {}; } };
     const done: string[] = [], failed: string[] = [];
     for (const q of questsLeft(list.split(','), status().quests)) {
         if (!questsLeft([q], status().quests).length) continue;
-        const p = Bun.spawn(['bun', 'scripts/quest-sweep.ts', account, q], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: process.env });
-        let out = '';
-        // Child lines are indented: the supervisor reads only this chain's own RESULT line.
-        for await (const c of p.stdout) { const t = new TextDecoder().decode(c); out += t; process.stdout.write(t.replace(/^(?=.)/gm, '  | ')); }
-        await p.exited;
-        const result = out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'RESULT fail no result';
+        const result = hosted() ? await inProcess(account, q) : await subprocess(account, q);
         const ok = result.startsWith('RESULT ok');
         (ok ? done : failed).push(q);
         console.log(`QUEST_CHAIN ${q} ${ok ? 'ok' : 'fail'} ${result.slice(0, 200)}`);
@@ -47,5 +43,24 @@ if (import.meta.main) {
     }
     console.log(`RESULT ${done.length ? 'ok' : 'fail'} quest-chain done=${done.join(',') || '-'} failed=${failed.join(',') || '-'}`);
     process.exit(done.length ? 0 : 1);
+}
+// In a bot host (packages/core/src/host.ts) many accounts share this process: the quest runs here, and finish()
+// reports through bot.ts finishHooks instead of exiting. Alone, each quest runs in its own process.
+function hosted() { return !!(globalThis as { __rsBotHost?: unknown }).__rsBotHost; }
+async function inProcess(account: string, quest: string): Promise<string> {
+    const { finishHooks } = await import('../packages/core/src/bot');
+    const { sweep } = await import('./quest-sweep');
+    const key = account.toLowerCase();
+    const ended = new Promise<string>(resolve => finishHooks.set(key, (ok, detail) => resolve(`RESULT ${ok ? 'ok' : 'fail'} ${typeof detail === 'string' ? detail : JSON.stringify(detail)}`)));
+    const crashed = sweep(account, quest, `run=${key}-${Date.now()}`).then(() => new Promise<string>(() => {}), e => `RESULT fail ${String(e).slice(0, 300)}`);
+    try { return await Promise.race([ended, crashed]); } finally { finishHooks.delete(key); }
+}
+async function subprocess(account: string, quest: string): Promise<string> {
+    const p = Bun.spawn(['bun', 'scripts/quest-sweep.ts', account, quest], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: process.env });
+    let out = '';
+    // Child lines are indented: the supervisor reads only this chain's own RESULT line.
+    for await (const c of p.stdout) { const t = new TextDecoder().decode(c); out += t; process.stdout.write(t.replace(/^(?=.)/gm, '  | ')); }
+    await p.exited;
+    return out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'RESULT fail no result';
 }
 function existsStop(a: string) { try { readFileSync(join(root, '.practice', `stop-${a}`)); return true; } catch { return false; } }
