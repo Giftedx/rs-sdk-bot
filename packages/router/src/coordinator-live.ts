@@ -73,7 +73,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  if(alive&&(forRun?owner.source===source:owner.swarmSource===swarmSource)){await resume();return;}
  // A standing rollout gets ROLLOUT_DRAIN_MS to drain; then the jobs run again and the next try waits ROLLOUT_BACKOFF_MS.
  const backoffFile=join(dir,'rollout-backoff.json');
- if(!forRun){let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(now()<until)return;}
+ if(!forRun){let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(now()<until){await resume();return;}}
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
  const open=alive?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result):[];
  if(open.length){
