@@ -3,7 +3,7 @@ import {readFileSync,writeFileSync,existsSync,mkdirSync,renameSync,openSync,clos
 import {resolve} from 'node:path';import {createHash} from 'node:crypto';
 import {openBot,settle,serverFromEnv} from '../packages/core/src/bot';import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath} from '../packages/core/src/walk';
-import type {GEOffer} from '../vendor/rs-sdk/sdk/ge-types';
+import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
 export interface ItemRequest {actor:string;server:string;goal:string;item:number;quantity?:number;limit:number;reserve:number;createdAt:number;reviewAt:number;deadline:number}
@@ -104,6 +104,12 @@ export function collectionRetrySafe(j:ItemOrder,v:OrderView):boolean{
  if(j.phase!=='collecting'||!c||!o||v.coins!==c.coinsBefore||v.items!==c.itemsBefore
   ||c.coinsBefore!==roundBaseline(j).coins-priorRounds(j).escrow||c.itemsBefore!==roundBaseline(j).items)return false;
  try{const claim=terminalOrderClaim(j,o);return claim.coins===c.coins&&claim.items===c.items;}catch{return false;}
+}
+// The live exchange shows "Collect as notes" only for a claim with a notable item. The SDK refuses a
+// missing control before it sends the click, so plain collect then takes the same claim.
+export async function collectClaim(collect:(offerId:number,notes:boolean)=>Promise<GEActionResult>,offerId:number,notes:boolean){
+ const result=await collect(offerId,notes);
+ return !result.success&&notes&&result.reason==='no_control'?collect(offerId,false):result;
 }
 const BANK={x:3185,z:3436},GE={x:3181,z:3443};
 export const marketTileSafe=(p:{x:number;z:number;level:number})=>p.level===0&&p.x>=3180&&p.x<=3188&&p.z>=3433&&p.z<=3447;
@@ -209,8 +215,8 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
     // Collection is addressed by offer ID. Retry only when its entire terminal claim and both asset baselines remain visible.
     if(!collectionApplied(journal,v)){
      if(!collectionRetrySafe(journal,v)||over())throw Error('collection outcome unresolved;inspect journal before retry');
-     await s.bot.collectGEOffer(journal.offerId!,remaining>1,15000);
-     if(!await waitUntil(s,()=>collectionApplied(journal!,view()),{timeoutTicks:10}))throw Error('resumed exact collection unproved');
+     const collected=await collectClaim((id,notes)=>s.bot.collectGEOffer(id,notes,15000),journal.offerId!,remaining>1);
+     if(!await waitUntil(s,()=>collectionApplied(journal!,view()),{timeoutTicks:10}))throw Error('resumed exact collection unproved: '+collected.message);
     }
     Object.assign(journal,claimSettlement(journal,journal.claim!));journal.phase='settled';delete journal.failure;save();
    }else if(journal.phase==='open'||journal.phase==='cancelling'){
@@ -229,8 +235,8 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
      if(v.coins!==roundBaseline(journal).coins-roundEscrow||v.items!==roundBaseline(journal).items)throw Error('pre-collection asset baseline changed');
      if(s.sdk.getInventory().length>26||offer.items<0||offer.items>remaining||offer.coins<0||offer.coins>roundEscrow)throw Error('collection space or claim unproved');
      // A bulk claim is collected as banknotes so it fits one slot; overflow would stay in the exchange and fail the exact check.
-     if(terminal()||s.tick()-start>=600)throw Error('market settlement budget exhausted');journal.claim={coinsBefore:v.coins,itemsBefore:v.items,coins:offer.coins,items:offer.items};journal.phase='collecting';save();await s.bot.collectGEOffer(offer.id,remaining>1,15000);
-     if(!await waitUntil(s,()=>collectionApplied(journal!,view()),{timeoutTicks:10}))throw Error('exact order collection unproved;inspect journal before retry');Object.assign(journal,claimSettlement(journal,journal.claim));journal.phase='settled';delete journal.failure;save();
+     if(terminal()||s.tick()-start>=600)throw Error('market settlement budget exhausted');journal.claim={coinsBefore:v.coins,itemsBefore:v.items,coins:offer.coins,items:offer.items};journal.phase='collecting';save();const collected=await collectClaim((id,notes)=>s.bot.collectGEOffer(id,notes,15000),offer.id,remaining>1);
+     if(!await waitUntil(s,()=>collectionApplied(journal!,view()),{timeoutTicks:10}))throw Error('exact order collection unproved;inspect journal before retry: '+collected.message);Object.assign(journal,claimSettlement(journal,journal.claim));journal.phase='settled';delete journal.failure;save();
    }
    if(journal.phase!=='settled'||orderAccounting(journal).acquired===quantity)break;
    if(orderAccounting(journal).acquired===acquiredBeforeRound)break;
