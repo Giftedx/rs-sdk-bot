@@ -1,4 +1,4 @@
-import {readFileSync,existsSync,readdirSync,writeFileSync,renameSync,unlinkSync,mkdirSync} from 'node:fs';
+import {readFileSync,existsSync,readdirSync,writeFileSync,renameSync,unlinkSync,mkdirSync,statSync} from 'node:fs';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
@@ -39,6 +39,7 @@ type SwarmRolloutDeps={base?:string;currentSource?:()=>string;matches?:(pid:numb
  processes?:()=>number[];rows?:()=>any[];stop?:(pid:number,nonce:string)=>Promise<boolean>;spawn?:(source:string,nonce:string)=>number;
  drain?:(owner:ControllerIdentity,after:number)=>Promise<unknown>;now?:()=>number};
 // The swarm's own code: a standing job runs current worker source (STANDING=1), so only these files need a rollout.
+export const ROLLOUT_DRAIN_MS=5*60*1000,ROLLOUT_BACKOFF_MS=60*60*1000;
 export const SWARM_FILES=['scripts/swarm.ts','packages/practice/src/supervise.ts','packages/practice/src/supervise-host.ts'];
 export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=true){
  const base=deps.base??projectRoot,dir=join(base,'.practice/coordinator'),ownerFile=join(dir,'swarm-owner.json'),lock=join(dir,'build-lock.json');
@@ -70,13 +71,18 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
  // A coordinator run needs the whole-runtime pin; standing jobs need only the swarm's own code current.
  if(alive&&(forRun?owner.source===source:owner.swarmSource===swarmSource)){await resume();return;}
+ // A standing rollout gets ROLLOUT_DRAIN_MS to drain; then the jobs run again and the next try waits ROLLOUT_BACKOFF_MS.
+ const backoffFile=join(dir,'rollout-backoff.json');
+ if(!forRun){let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(now()<until)return;}
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
  const open=alive?(deps.rows??(()=>liveRows(base)))().filter(s=>s.server===LIVE_SERVER&&!s.result):[];
  if(open.length){
   const names=new Set(standing().map(a=>a.toLowerCase())),own=open.filter(s=>names.has(String(s.name).toLowerCase())).map(s=>String(s.name));
   // Pause standing jobs only when nothing else holds the rollout; while a coordinator run does, they keep working.
   // Pause every enabled standing job, not only the open ones: a job paused alone restarts and reopens a session.
-  if(own.length===open.length){const all=standing();await setEnabled(all,false);atomicJson(pausedFile,[...new Set([...paused(),...all])]);}
+  const since=existsSync(pausedFile)?statSync(pausedFile).birthtimeMs||statSync(pausedFile).mtimeMs:now();
+  if(!forRun&&existsSync(pausedFile)&&now()-since>ROLLOUT_DRAIN_MS){await resume();atomicJson(backoffFile,{until:now()+ROLLOUT_BACKOFF_MS,open:open.map(s=>s.name)});throw Error('standing rollout did not drain; jobs resumed, next try in '+ROLLOUT_BACKOFF_MS/60000+' min');}
+  if(own.length===open.length){const all=standing();await setEnabled(all,false);if(!existsSync(pausedFile))atomicJson(pausedFile,[...new Set(all)]);else atomicJson(pausedFile,[...new Set([...paused(),...all])]);}
   else await resume();
   throw Error('runtime rollout waits for existing sessions to settle');
  }
