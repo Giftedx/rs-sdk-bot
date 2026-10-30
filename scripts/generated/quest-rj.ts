@@ -4,6 +4,7 @@
 // 40 Father Lawrence, 50 Apothecary, potion on a second talk, 60 Juliet, 100 Romeo (queued completion).
 // Server truth: areas/area_varrock/scripts/juliet.rs2, romeo.rs2, father_lawrence.rs2, apothecary.rs2.
 import { openQuest } from './quest-lib';
+import { questFlags } from '../../packages/core/src/quest-status';
 
 const ROMEO = { x: 3211, z: 3425 };
 const JULIET = { x: 3158, z: 3425 };                       // level 1
@@ -35,6 +36,16 @@ try {
         await q.openDoor(`${label} north door`, 3160, 3440);
         await q.dash(`${label} out`, 3161, 3441, 1);
     };
+
+    // Resume: quest varps are not sent to the client (core/src/quest-status.ts). A started quest with no message and
+    // no potion in the pack may stand at 60, where Romeo completes it; at other stages he only repeats a line.
+    if (questFlags(q.s.client)?.find(f => f.name === 'Romeo & Juliet')?.state === 'started' && !msgItem() && !q.has(ITEM.potion)) {
+        if (q.lvl() === 1) await downstairs('romeo resume');
+        await q.walk('to romeo (resume)', [{ x: ROMEO.x, z: ROMEO.z, tol: 4 }]);
+        await q.talk('romeo resume', /^romeo$/i, [], () => questDone || !q.dialogOpen(), ROMEO, 40, true);
+        await q.waitUntil(() => questDone, 5);
+        if (questDone) { off(); await q.end(true, 'qp=5 resumed at 60'); }
+    }
 
     // 1. Juliet: "I guess I could find him." gives her message (0 -> 20).
     await toJuliet('juliet 1');
