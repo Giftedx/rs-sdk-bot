@@ -61,7 +61,8 @@ export async function completeCook(q: CookIO): Promise<{ ok: true; detail: strin
     return { ok: true, detail: 'Cook flag=complete consumed=egg:1,milk:1,flour:1; saved QP checked by quest-order' };
 }
 
-if (import.meta.main) {
+// Run directly, or imported by scripts/quest-sweep.ts (openQuest takes its session from globalThis.QUEST_SESSION).
+if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
     // CAP is a game-tick budget. Account argv and server selection remain owned by openQuest/openBot.
     const cap = Number(process.env.CAP ?? 600);
     if (!Number.isSafeInteger(cap) || cap < 1) throw Error('Cook CAP must be a positive integer');

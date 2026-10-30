@@ -137,9 +137,11 @@ try {
 } finally {await q.dispose();}
 }
 
-if(import.meta.main){
+// Run directly, or imported by scripts/quest-sweep.ts with its session in globalThis.QUEST_SESSION.
+const handed=(globalThis as {QUEST_SESSION?:Session}).QUEST_SESSION;
+if(import.meta.main||handed){
  const {openBot,finish}=await import('../../packages/core/src/bot');
- const s=await openBot(process.argv[2]!);
+ const s=handed??await openBot(process.argv[2]!);
  try{const result=await runRuneMysteries(s);await finish([s],result.ok,JSON.stringify(result));}
  catch(error){await finish([s],false,String(error));}
 }
