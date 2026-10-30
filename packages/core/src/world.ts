@@ -125,7 +125,8 @@ export async function installDoorPolicy(sdk:any,client?:unknown):Promise<void>{
     policySdks.add(sdk);
 }
 import { mapAreas, separated } from './components';
-import { guardWalk } from './danger';
+import { activeDanger, guardRoute, guardWalk } from './danger';
+import { legCache } from './leg-cache';
 async function loadPathfinding() {
     if (!rsPath) rsPath = await import(join(repoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts'));
     return rsPath!;
@@ -143,8 +144,19 @@ export async function rsPathLength(): Promise<PathLength> {
         const policy=blocked.map(b=>b.whenAxis===undefined?{...b,...pf.getDoorAt(b.level,b.x,b.z)}:b);
         return withDoorPolicy(grid,policy,()=>{activePathPolicy={owner,blocked};try{return query();}finally{activePathPolicy=null;}});
     };
+    // Measured legs are kept on disk (leg-cache.ts) under the doors kept shut and the danger key.
+    const cache=legCache(),policyKeys=new WeakMap<DoorBlock[],string>();
     const measure:PathLength=(from, to, blocked, tol,interaction) => {
         if (from.level !== to.level) return null;
+        const d=activeDanger(),shut=policyKeys.get(blocked)??(policyKeys.set(blocked,cache.hash(blocked)),policyKeys.get(blocked)!);
+        const k=d&&(d.kept.has(`${from.level},${from.x},${from.z}`)||d.kept.has(`${to.level},${to.x},${to.z}`))?null
+            :`${shut}|${d?.key??'-'}|${key(from)}>${key(to)}:${tol}:${interaction?JSON.stringify(interaction):''}`;
+        if(k!==null&&cache.has(k))return cache.get(k)!;
+        const v=measureNow(from,to,blocked,tol,interaction);
+        if(k!==null)cache.set(k,v);
+        return v;
+    };
+    const measureNow=(from:Tile, to:Tile, blocked:DoorBlock[], tol:number,interaction?:InteractionTarget):number|null => {
         (pf as any).initPathfinding();
         if(!interaction&&tol===0&&key(from)!==key(to)&&!(pf as any).isTileWalkable(to.level,to.x,to.z))return null;
         // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
@@ -171,7 +183,7 @@ export async function rsPathLength(): Promise<PathLength> {
     measure.withPolicy=scoped;
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
-    measure.withDanger=(acct,from,to,query)=>{mapAreas(pf,grid,repoRoot);return guardWalk(grid,acct,from,to,64,query);};
+    measure.withDanger=(acct,from,to,query)=>{mapAreas(pf,grid,repoRoot);try{return guardRoute(grid,acct,[from,to],query);}finally{cache.save();}};
     return measure;
 }
 

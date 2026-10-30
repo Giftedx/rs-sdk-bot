@@ -2,10 +2,11 @@
 // pathfinder masks them). A route search asks "same area?" before it runs findLongPath: a leg between two areas
 // cannot be walked, and searching it scans the whole 2048x2048 grid. Ardougne to Varrock took 180 s of search that
 // way. Labelling the map takes about 5 s for 7.7M tiles in 20,763 areas.
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { pathfindingSourceKey } from './pathcache';
 
-export type Labels = { area(level: number, x: number, z: number): number; areas: number; tiles: number };
+export type Labels = { area(level: number, x: number, z: number): number; areas: number; tiles: number; zones: Map<number, Int32Array> };
 const zoneKey = (l: number, x: number, z: number) => (l << 28) | ((x >> 3) << 14) | (z >> 3);
 const cell = (x: number, z: number) => ((x & 7) << 3) | (z & 7);
 // area(): >= 0 an area id; -1 not walkable or not labelled; -2 outside the loaded map.
@@ -35,7 +36,36 @@ export function labelAreas(zones: Iterable<[number, number, number]>, walkable: 
             }
         }
     }
-    return { area: (l, x, z) => { const v = get(l, x, z); return v < 0 ? (v === -2 ? -2 : -1) : v; }, areas, tiles };
+    return fromZones(label, areas, tiles);
+}
+
+function fromZones(label: Map<number, Int32Array>, areas: number, tiles: number): Labels {
+    const get = (l: number, x: number, z: number) => label.get(zoneKey(l, x, z))?.[cell(x, z)] ?? -2;
+    return { area: (l, x, z) => { const v = get(l, x, z); return v < 0 ? (v === -2 ? -2 : -1) : v; }, areas, tiles, zones: label };
+}
+
+// File: u32 header length, JSON header {source, areas, tiles, n}, n Int32 zone keys, n*64 Uint16 labels
+// (0xffff = not walkable). Labels fit in 16 bits while the map has under 65,535 areas.
+export function writeLabels(file: string, source: string, l: Labels): void {
+    const keys = [...l.zones.keys()], header = Buffer.from(JSON.stringify({ source, areas: l.areas, tiles: l.tiles, n: keys.length }));
+    const ids = new Uint16Array(keys.length * 64);
+    keys.forEach((k, i) => { const z = l.zones.get(k)!; for (let c = 0; c < 64; c++) ids[i * 64 + c] = z[c]! < 0 ? 0xffff : z[c]!; });
+    const len = Buffer.alloc(4); len.writeUInt32LE(header.length);
+    mkdirSync(dirname(file), { recursive: true });
+    const tmp = `${file}.${process.pid}.tmp`;
+    writeFileSync(tmp, Buffer.concat([len, header, Buffer.from(new Int32Array(keys).buffer), Buffer.from(ids.buffer)]));
+    renameSync(tmp, file);
+}
+export function readLabels(file: string, source: string): Labels | null {
+    try {
+        const b = readFileSync(file), hl = b.readUInt32LE(0), h = JSON.parse(b.subarray(4, 4 + hl).toString()) as { source: string; areas: number; tiles: number; n: number };
+        if (h.source !== source || h.areas >= 0xffff) return null;
+        const at = 4 + hl, keys = new Int32Array(b.buffer.slice(b.byteOffset + at, b.byteOffset + at + h.n * 4));
+        const ids = new Uint16Array(b.buffer.slice(b.byteOffset + at + h.n * 4, b.byteOffset + at + h.n * 4 + h.n * 128));
+        const label = new Map<number, Int32Array>();
+        keys.forEach((k, i) => { const z = new Int32Array(64); for (let c = 0; c < 64; c++) { const v = ids[i * 64 + c]!; z[c] = v === 0xffff ? -1 : v; } label.set(k, z); });
+        return fromZones(label, h.areas, h.tiles);
+    } catch { return null; }
 }
 
 // Areas a walk can start from or end at around a box of tiles; null when part of it lies outside the labelled map.
@@ -71,11 +101,14 @@ let built: Labels | undefined;
 export function mapAreas(pf: any, grid: any, repoRoot: string): Labels {
     if (built) return built;
     pf.initPathfinding();
+    const file = join(repoRoot, '.practice', 'cache', 'route-areas.bin'), source = pathfindingSourceKey();
+    if ((built = readLabels(file, source) ?? undefined)) return built;
     const data = JSON.parse(readFileSync(join(repoRoot, 'vendor/rs-sdk/sdk/collision-data.json'), 'utf8')) as { zones: [number, number, number][] };
     // Zones are given by their origin tile, as pathfinding.ts allocates them; the same mainland fill follows.
     const zones: [number, number, number][] = [...data.zones];
     for (let x = 2304; x <= 3392; x += 8) for (let z = 2944; z <= 3584; z += 8) zones.push([0, x, z]);
     built = labelAreas(zones, (l, x, z) => pf.isTileWalkable(l, x, z),
         (l, x, z, dx, dz) => grid.canTravel(l, x, z, dx, dz, 1, 0, grid.CollisionType.NORMAL));
+    if (built.areas < 0xffff) writeLabels(file, source, built);
     return built;
 }

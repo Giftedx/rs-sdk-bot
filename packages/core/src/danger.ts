@@ -69,8 +69,12 @@ type FloorGrid = { isFlagged(x: number, z: number, level: number, mask: number):
 const FLOOR = 2097152; // CollisionFlag.FLOOR
 // Runs a synchronous path query with the danger tiles blocked, then opens exactly the tiles it blocked.
 // The start and end tiles stay open, so a walk that starts or ends inside an area can still leave or arrive.
-export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[], keep: readonly Tile[], query: () => T): T {
-    const kept = new Set(keep.map(t => `${t.level},${t.x},${t.z}`)), added: Tile[] = [];
+let active: { key: string; kept: ReadonlySet<string> } | null = null;
+// The danger scope a path query runs in: `key` names the closed set, `kept` the tiles left open (level,x,z).
+export const activeDanger = () => active;
+export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[], keep: readonly Tile[], query: () => T, key = '?'): T {
+    const kept = new Set(keep.map(t => `${t.level},${t.x},${t.z}`)), added: Tile[] = [], outer = active;
+    active = { key, kept };
     try {
         for (const t of tiles) if (!kept.has(`${t.level},${t.x},${t.z}`) && !grid.isFlagged(t.x, t.z, t.level, FLOOR)) { grid.changeFloor(t.x, t.z, t.level, true); added.push(t); }
         const result = query();
@@ -78,7 +82,25 @@ export function withDanger<T>(grid: FloorGrid, tiles: readonly Tile[], keep: rea
         return result;
     } finally {
         for (const t of added) grid.changeFloor(t.x, t.z, t.level, false);
+        active = outer;
     }
+}
+
+// Names the account's deadly hunters; accounts with the same key get the same closed tiles.
+export function dangerKey(acct: Account, list = loadHunters()): string {
+    const combat = combatLevel(acct.skills), hp = acct.skills.hitpoints ?? 10;
+    return list.flatMap((h, i) => deadly(h, combat, hp) ? [i] : []).join('.') || 'none';
+}
+
+const WORLD = { minX: 0, maxX: 16383, minZ: 0, maxZ: 16383 };
+const routeTiles = new Map<string, Tile[]>();
+// Closes the account's deadly ground on every level for a whole route search. The tile set does not depend
+// on the route, so measured legs stay valid for every route with the same key.
+export function guardRoute<T>(grid: FloorGrid, acct: Account, keep: readonly Tile[], query: () => T): T {
+    const key = dangerKey(acct);
+    let tiles = routeTiles.get(key);
+    if (!tiles) routeTiles.set(key, tiles = [0, 1, 2, 3].flatMap(l => dangerTiles(acct, l, WORLD)));
+    return withDanger(grid, tiles, keep, query, key);
 }
 
 // The danger tiles for a walk from `from` to `to` on one level: the box around both ends plus `pad` tiles.
