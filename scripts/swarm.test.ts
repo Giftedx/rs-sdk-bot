@@ -575,3 +575,13 @@ test('a repaired gave-up or blocked end leaves no script hold; a death does', ()
         expect(holds.length).toBe(held);
     }
 });
+test('a held session whose owner pid is gone gets an end record; live, busy or already ended accounts do not', async () => {
+    const { orphanedSessionEnds } = await import('./swarm');
+    const held = (a: string) => ({ state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: 'id-' + a, reason: 'session active or outcome unknown' });
+    const pids: Record<string, number> = { 'id-Dead': 11, 'id-Live': 12, 'id-Busy': 13, 'id-Ended': 14 };
+    const ended = new Map([['ended', { at: 1, reason: 'exit 1' }]]);
+    const out = orphanedSessionEnds(['Dead', 'dead', 'Live', 'Busy', 'Ended', 'Clean', 'NoPid'], ended, ['busy'],
+        a => a === 'Clean' ? { state: 'confirmed', account: a, server: 's', domain: 'live', attemptId: 'x', loggedOutAt: 1, ownerRun: null, receiptSha256: '' } : held(a),
+        (_a, id) => pids[id], pid => pid === 12);
+    expect(out).toEqual([['Dead', 'exit orphaned: attempt id-Dead owner 11 gone']]);
+});

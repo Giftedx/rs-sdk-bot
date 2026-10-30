@@ -26,7 +26,7 @@ import {withSessionAdmission,missionSignature as sharedMissionSignature,successf
 import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
-import { readLogoutProof, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
+import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 
 export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
@@ -270,6 +270,23 @@ export function applyEndRepair(request: any, ended: Map<string, EndRecord>, acti
     ended.delete(entry[0]);
     return { changed: true, reason: `repaired failure cleared (${logout.label})` };
 }
+// A session whose owner died with no end line (a killed worker, or a swarm that died with its children) leaves a
+// held attempt and no end record, so no repair can name it. Record its end once the attempt's owner pid is gone.
+export function orphanedSessionEnds(accounts: readonly string[], ended: ReadonlyMap<string, EndRecord>, busy: readonly string[],
+    proof: (a: string) => LogoutProof, owner: (a: string, attemptId: string) => number | undefined, alive: (pid: number) => boolean): [string, string][] {
+    const out: [string, string][] = [], seen = new Set<string>();
+    for (const a of accounts) {
+        const key = a.toLowerCase();
+        if (seen.has(key) || busy.some(b => b.toLowerCase() === key) || [...ended.keys()].some(n => n.toLowerCase() === key)) continue;
+        seen.add(key);
+        let p: LogoutProof; try { p = proof(a); } catch { continue; }
+        if (p.state !== 'held') continue;
+        const pid = owner(a, p.attemptId);
+        if (!Number.isSafeInteger(pid) || pid! < 1 || alive(pid!)) continue;
+        out.push([a, `exit orphaned: attempt ${p.attemptId} owner ${pid} gone`]);
+    }
+    return out;
+}
 // Retained caller-receipt format is diagnostic only. There is no producer-bound work-result
 // contract yet, so a fishing/recovery logout cannot qualify an old combat script.
 export function applyScriptQualification(request: any, holds: ScriptHold[], active: readonly string[], proofs: RepairProofs) {
@@ -421,6 +438,7 @@ if (import.meta.main) {
     const runs = new Map<string, Run>();
     const recoveryDispatch=createRecoveryDispatch({base:root,server:LIVE_SERVER});
     let inheritedRecoveries: ReturnType<typeof heldRecoveryOwners> = [];
+    let orphanScanAt = 0;
     const previousEnabled = new Map<string, boolean>();
     const pendingResume = new Set<string>();
     // Legacy filename retains success/revision, paused/unknown and hard ends.
@@ -515,6 +533,16 @@ if (import.meta.main) {
         if(stopAll&&recoveryDispatch.active)writeFileSync(stopFile(recoveryDispatch.active.account),'swarm recovery stopped');
         if(stopAll)for(const held of inheritedRecoveries)writeFileSync(stopFile(held.account),'inherited recovery stopped');
         const planned=plan.jobs.flatMap(j=>{ const p=parseJob(j); return 'error' in p?[]:[p]; });
+        if (Date.now() - orphanScanAt >= 60_000) {
+            orphanScanAt = Date.now();
+            const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
+            const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
+            const owner = (a: string, id: string) => listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt?.owner.pid;
+            for (const [a, reason] of orphanedSessionEnds(planned.flatMap(p => p.accounts), ended, busy, a => readLogoutProof(a, LIVE_SERVER), owner, alive)) {
+                ended.set(a, { at: Date.now(), reason });
+                console.log(`SWARM end ${a} ${reason}`);
+            }
+        }
         // A replacement host/account configuration waits for its current owner;
         // changing the run key must neither stop it nor permit a second login.
         for(const r of runs.values()) if(!overlappingRun(planned,r.accounts)||stopAll)
