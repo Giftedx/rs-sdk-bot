@@ -16,6 +16,7 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { freemem } from 'node:os';
+import { renameRetry } from '../packages/core/src/status';
 import { payoutWaiting, type DemandNear } from '../packages/core/src/bank-demand';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { courierDeliveryWaiting } from './courier-cargo';
@@ -315,7 +316,7 @@ export function loadHolds(file: string): ScriptHold[] {
 }
 export function persistHolds(file: string, holds: readonly ScriptHold[]): void {
     const temporary = `${file}.tmp-${process.pid}`;
-    try { writeFileSync(temporary, JSON.stringify(holds, null, 1)); renameSync(temporary, file); }
+    try { writeFileSync(temporary, JSON.stringify(holds, null, 1)); renameRetry(temporary, file); }
     catch (e) { try { rmSync(temporary, { force: true }); } catch { /* retain the original error */ } throw e; }
 }
 export function persistEnded(file: string, ended: ReadonlyMap<string, EndRecord>): void {
@@ -325,7 +326,8 @@ export function persistEnded(file: string, ended: ReadonlyMap<string, EndRecord>
     const temporary = `${file}.tmp-${process.pid}`;
     try {
         writeFileSync(temporary, JSON.stringify(Object.fromEntries(ended), null, 1));
-        renameSync(temporary, file);
+        // A reader holding the file open makes Windows refuse the rename (EPERM); the controller crashed on it.
+        renameRetry(temporary, file);
     } catch (e) {
         try { rmSync(temporary, { force: true }); } catch { /* retain the original error */ }
         throw e;
