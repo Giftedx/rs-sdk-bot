@@ -50,7 +50,9 @@ export async function receiveFoodAtBank(s:Session,from:string,timeout:number,ref
 }
 
 type Tile = { x: number; z: number };
-const KNIGHT_SPOT: Tile = { x: 2653, z: 3302 };
+// KNIGHT_SPOT=x,z gives each farmer its own knights (spawns 2652,3318 2653,3300 2669,3298 2671,3313 2582,3297,
+// npcs.json): three farmers on one spot made 10.5-12.1 coins a tick against the 18.8 model.
+const KNIGHT_SPOT: Tile = (() => { const m = (process.env.KNIGHT_SPOT ?? '').match(/^(\d+),(\d+)$/); return m ? { x: Number(m[1]), z: Number(m[2]) } : { x: 2653, z: 3302 }; })();
 const BANK_SPOT: Tile = { x: 2654, z: 3283 };
 const KNIGHT = /^knight of ardougne$/i;
 const RANGE = 16;
