@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {plan,needs,nearestBank,presetFor,leaveStronghold,walkCorridor,KARAMJA} from './quest-sweep';
+import {plan,needs,nearestBank,presetFor,leaveStronghold,walkCorridor,KARAMJA,gatherPlan,MILK,BUCKET} from './quest-sweep';
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
 import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
@@ -109,4 +109,12 @@ test('missing items a shop sells are bought with coins taken for them; unsold it
     expect(p.unsold).toEqual([{ id: 753, count: 1 }]);
     expect(p.coins).toBe(3 * 4 + 3 * 6 * 2 + 100);
     expect(shopPlan([], { x: 0, z: 0, level: 0 }, item, seller).coins).toBe(0);
+});
+
+test('an unsold item is gathered from a ground spawn or, for milk, a cow and a bucket; the rest stays missing',()=>{
+ const at={x:3200,z:3200,level:0},spawns=(id:number)=>id===753?[{x:3266,z:3361,level:0}]:[];
+ const g=gatherPlan([{id:753,count:1},{id:MILK,count:1},{id:440,count:2}],at,spawns);
+ expect(g.gathers).toEqual([{id:753,count:1,how:'spawn'},{id:MILK,count:1,how:'milk'}]);
+ expect(g.tools).toEqual([{id:BUCKET,count:1}]);
+ expect(g.still).toEqual([{id:440,count:2}]);
 });

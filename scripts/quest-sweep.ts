@@ -12,6 +12,7 @@ import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/c
 import type {World} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {nearestSeller,sellersByDistance} from '../packages/core/src/shop-index';
+import {spawnsByDistance} from '../packages/core/src/spawn-index';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
@@ -169,6 +170,57 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
  return null;
 }
 
+// Items no shop sells that the account can gather: a ground spawn (maps OBJ, spawn-index.ts), or milk from a cow
+// with an empty bucket (npc/scripts/cow_milking.rs2). The bucket is a pack item like any other: bank or shop.
+export const MILK=1927,BUCKET=1925,COW=81;
+export type Gather={id:number;count:number;how:'spawn'|'milk'};
+export function gatherPlan(unsold:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance){
+ const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];
+ for(const m of unsold){
+  if(m.id===MILK){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
+  else if(spawns(m.id,at).length)gathers.push({...m,how:'spawn'});
+  else still.push(m);
+ }
+ return{gathers,still,tools};
+}
+let cowTiles:Tile[]|undefined;
+const cows=()=>cowTiles??=(JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>n.id===COW).flatMap(n=>n.spawns??[]);
+const nearest=(tiles:readonly Tile[],at:Tile)=>tiles.filter(t=>t.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)));
+
+// Walk to each source, nearest first, and take the item until the pack holds the planned count. A ground spawn is
+// waited on for its respawn; a source out of reach gives way to the next.
+async function gatherItems(s:Session,world:World,gathers:readonly Gather[]):Promise<string|null>{
+ const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
+ const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
+ for(const g of gathers){
+  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):spawnsByDistance(g.id,here())).slice(0,6);
+  for(const at of sources){
+   if(held(g.id)>=target)break;
+   const walked=await goTo(s,world,at,accountOf(s),{legTimeoutTicks:100});
+   console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:walked.detail})}`);
+   if(!walked.ok)continue;
+   for(let tries=0;tries<g.count+3&&held(g.id)<target;tries++){
+    const before=held(g.id);
+    if(g.how==='milk'){
+     if(!await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>n.id===COW),{timeoutTicks:20}))break;
+     const cow=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===COW).sort((a:any,b:any)=>a.distance-b.distance)[0],bucket=(st()?.inventory??[]).find((i:any)=>i.id===BUCKET);
+     if(!bucket)return `milk needs an empty bucket (${BUCKET})`;
+     await s.bot.useItemOnNpc(bucket,cow);
+    }else{
+     // A taken item respawns at its tile; wait for it there.
+     if(!await waitUntil(s,()=>(st()?.groundItems??[]).some((i:any)=>i.id===g.id&&i.distance<=10),{timeoutTicks:100}))break;
+     const item=(st()?.groundItems??[]).filter((i:any)=>i.id===g.id).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     await s.bot.pickupItem(item);
+    }
+    await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});
+   }
+  }
+  console.log(`QUEST_SWEEP_GATHER ${JSON.stringify({item:g.id,how:g.how,count:g.count,held:held(g.id),target})}`);
+  if(held(g.id)<target)return `gathered ${g.count-(target-held(g.id))} of ${g.count} item ${g.id} (${g.how})`;
+ }
+ return null;
+}
+
 // One bot at a time hands its session over through globalThis.QUEST_SESSION, until quest-lib's openQuest has taken
 // it (QUEST_SESSION_TAKEN) or 60 s pass. `fresh` imports the quest module under a unique query, so every bot in one
 // process runs the quest's top-level code again.
@@ -225,7 +277,12 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const p=plan(need,pack(),rows()),meal=plan(food,pack(),rows()).withdraw;
   p.withdraw.push(...meal);
   // A missing item a shop sells is bought after the bank: take coins for it now.
-  const shop=shopPlan(p.missing,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};},(d,at)=>sellersByDistance(d,at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile})));
+  const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};},(d,at)=>sellersByDistance(d,at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile})));
+  // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
+  const gather=gatherPlan(shops(p.missing).unsold,here()),tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),pack(),rows());
+  p.withdraw.push(...tools.withdraw);
+  const shop=shops([...p.missing.filter(m=>!gather.gathers.some(g=>g.id===m.id)),...tools.missing]);
+  if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
@@ -247,6 +304,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   }
   await s.bot.closeBank();
   if(shop.buys.length){const why=await buyFromShops(s,world,shop.buys);if(why)return fail(why);}
+  if(gather.gathers.length){const why=await gatherItems(s,world,gather.gathers);if(why)return fail(why);}
   const left=plan(need,pack(),[]).missing;
   if(left.length)return fail('withdraw short '+left.map(i=>`${i.id}:${i.count}`).join(','));
  }
