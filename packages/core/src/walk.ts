@@ -40,7 +40,8 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
     for (const leg of legs) {
         let last: Outcome | null = null;
         for (let attempt = 0; attempt < retries; attempt++) {
-            last = leg.kind === 'walk' ? await walkLeg(s, leg.to, opts,leg.tolerance??2) : await climbLeg(s, leg, opts);
+            last = leg.kind === 'walk' ? await (farWalk(s, leg.to) ? walkFar(s, leg.to, opts, leg.tolerance ?? 2) : walkLeg(s, leg.to, opts, leg.tolerance ?? 2))
+                : await climbLeg(s, leg, opts);
             total += last.ticks;
             if (last.ok || last.reason === 'aborted') break;
             // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
@@ -87,6 +88,22 @@ async function cancellable(opts: WalkOptions, leg: (send: (f: () => Promise<unkn
         for (const off of listeners) off();
         if (!ac.signal.aborted) ac.abort('leg done');
     }
+}
+
+// A long walk leg (a world-graph region can span hundreds of tiles) goes through walkPath: one findLongPath plan,
+// then 20-tile client clicks. bot.walkTo re-queries a 500-waypoint path every step, which used 183 s of CPU on an
+// Ardougne-to-Varrock leg and froze the session ('walk to 2897,3428,0: no effect in 100 ticks').
+export const FAR_WALK_TILES = 30;
+function farWalk(s: Walker, to: Tile): boolean {
+    const p = s.sdk.getState()?.player;
+    return !!p && p.level === to.level && cheb(to, p) > FAR_WALK_TILES && typeof (s as { direct?: unknown }).direct === 'function';
+}
+async function walkFar(s: Walker, to: Tile, opts: WalkOptions, tolerance: number): Promise<Outcome> {
+    const start = s.tick(), p = s.sdk.getState()?.player, budget = Math.max(opts.legTimeoutTicks ?? 0, p ? cheb(to, p) * 3 + 60 : 600);
+    const deps = await sessionWalker(s as unknown as Parameters<typeof sessionWalker>[0]);
+    const r = await walkPath(deps, [{ x: to.x, z: to.z, tol: tolerance }], { maxTicks: budget, signal: opts.signal });
+    return r.ok ? { ok: true, ticks: s.tick() - start }
+        : { ok: false, reason: opts.signal?.aborted ? 'aborted' : 'timeout', detail: `far walk to ${to.x},${to.z},${to.level}: ${r.detail ?? 'not arrived'}`, ticks: s.tick() - start };
 }
 
 function walkLeg(s: Walker, to: Tile, opts: WalkOptions,tolerance:number): Promise<Outcome> {

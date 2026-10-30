@@ -108,6 +108,7 @@ export async function installDoorPolicy(sdk:any,client?:unknown):Promise<void>{
     };
     policySdks.add(sdk);
 }
+import { mapAreas, separated } from './components';
 async function loadPathfinding() {
     if (!rsPath) rsPath = await import(join(repoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts'));
     return rsPath!;
@@ -129,6 +130,8 @@ export async function rsPathLength(): Promise<PathLength> {
         if (from.level !== to.level) return null;
         (pf as any).initPathfinding();
         if(!interaction&&tol===0&&key(from)!==key(to)&&!(pf as any).isTileWalkable(to.level,to.x,to.z))return null;
+        // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
+        if(separated(mapAreas(pf,grid,repoRoot),from,to,tol,interaction,interaction&&((x,z)=>grid.reached(to.level,x,z,to.x,to.z,interaction.width,interaction.height,1,interaction.angle,interaction.shape,interaction.blockAccessFlags))))return null;
         const pts:Tile[]|null=scoped(blocked,()=>{
             if(!interaction)return pf.findLongPath(from.level,from.x,from.z,to.x,to.z,500);
             const q=interaction;
