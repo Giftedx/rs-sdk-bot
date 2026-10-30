@@ -39,3 +39,15 @@ test('a restored pathfinding snapshot gives the same paths as a cold build, and 
     expect(warm.paths.every(p => p.length > 0)).toBe(true);
     expect(warm.ms).toBeLessThan(3000);
 }, 120_000);
+
+test('an open diagonal door is cleared from the grid; a locked one stays', async () => {
+    const { diagonalDoors, openDiagonalDoors } = await import('../src/pathcache');
+    const { mkdtempSync, writeFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const file = join(mkdtempSync(join(tmpdir(), 'diag-')), 'doors.json');
+    writeFileSync(file, JSON.stringify([{ x: 3160, z: 3440, level: 0, shape: 9, kind: 'open' }, { x: 1, z: 1, level: 0, shape: 9, kind: 'locked' }, { x: 2, z: 2, level: 0, kind: 'open' }]));
+    const calls: unknown[][] = [];
+    expect(openDiagonalDoors({ changeLoc: (...a: unknown[]) => { calls.push(a); } } as any, diagonalDoors(file))).toBe(1);
+    expect(calls).toEqual([[3160, 3440, 0, 1, 1, true, false, false]]);
+});

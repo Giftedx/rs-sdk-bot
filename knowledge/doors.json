@@ -1051,6 +1051,17 @@
  {
   "id": 1530,
   "loc": "loc_1530",
+  "x": 2505,
+  "z": 3256,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m39_50.jm2:4416"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
   "x": 2524,
   "z": 3254,
   "level": 0,
@@ -2440,6 +2451,20 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m40_49.jm2:6031"
+ },
+ {
+  "id": 82,
+  "loc": "fightarena_door2",
+  "x": 2606,
+  "z": 3152,
+  "level": 0,
+  "shape": 9,
+  "kind": "quest",
+  "need": {
+   "varp": "arenaquest"
+  },
+  "trigger": "scripts/quests/quest_arena/scripts/quest_arena.rs2:93",
+  "src": "maps/m40_49.jm2:6054"
  },
  {
   "id": 1530,
@@ -3866,6 +3891,17 @@
   "id": 1530,
   "loc": "loc_1530",
   "x": 2650,
+  "z": 3297,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m41_51.jm2:7400"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 2650,
   "z": 3305,
   "level": 0,
   "kind": "open",
@@ -3921,6 +3957,17 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m41_51.jm2:7970"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 2669,
+  "z": 3316,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m41_51.jm2:8033"
  },
  {
   "id": 1530,
@@ -4119,6 +4166,17 @@
   "src": "maps/m41_52.jm2:6630"
  },
  {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 2639,
+  "z": 3415,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m41_53.jm2:4885"
+ },
+ {
   "id": 1533,
   "loc": "loc_1533",
   "x": 2641,
@@ -4177,6 +4235,65 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m41_53.jm2:5263"
+ },
+ {
+  "id": 1591,
+  "loc": "lockeddoor1",
+  "x": 2654,
+  "z": 3427,
+  "level": 0,
+  "shape": 9,
+  "kind": "locked",
+  "trigger": "scripts/general_use/scripts/locked_doors.rs2:1",
+  "src": "maps/m41_53.jm2:5439"
+ },
+ {
+  "id": 2514,
+  "loc": "ranging_guild_door",
+  "x": 2658,
+  "z": 3438,
+  "level": 0,
+  "shape": 9,
+  "kind": "skill",
+  "need": {
+   "skill": "ranged",
+   "level": 40
+  },
+  "trigger": "scripts/minigames/game_ranging/scripts/ranging_guild_door.rs2:1",
+  "src": "maps/m41_53.jm2:5585"
+ },
+ {
+  "id": 1591,
+  "loc": "lockeddoor1",
+  "x": 2667,
+  "z": 3414,
+  "level": 0,
+  "shape": 9,
+  "kind": "locked",
+  "trigger": "scripts/general_use/scripts/locked_doors.rs2:1",
+  "src": "maps/m41_53.jm2:5939"
+ },
+ {
+  "id": 1591,
+  "loc": "lockeddoor1",
+  "x": 2669,
+  "z": 3442,
+  "level": 0,
+  "shape": 9,
+  "kind": "locked",
+  "trigger": "scripts/general_use/scripts/locked_doors.rs2:1",
+  "src": "maps/m41_53.jm2:6070"
+ },
+ {
+  "id": 1591,
+  "loc": "lockeddoor1",
+  "x": 2682,
+  "z": 3429,
+  "level": 0,
+  "shape": 9,
+  "kind": "locked",
+  "trigger": "scripts/general_use/scripts/locked_doors.rs2:1",
+  "src": "maps/m41_53.jm2:6549"
  },
  {
   "id": 52,
@@ -4503,6 +4620,17 @@
  {
   "id": 1530,
   "loc": "loc_1530",
+  "x": 2638,
+  "z": 4688,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m41_73.jm2:5055"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
   "x": 2640,
   "z": 4682,
   "level": 0,
@@ -4529,6 +4657,17 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m41_73.jm2:6337"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 2638,
+  "z": 4688,
+  "level": 1,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m41_73.jm2:6340"
  },
  {
   "id": 1589,
@@ -5667,6 +5806,17 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m43_73.jm2:5936"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 2766,
+  "z": 4688,
+  "level": 1,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m43_73.jm2:5939"
  },
  {
   "id": 2606,
@@ -23264,6 +23414,17 @@
   "id": 1530,
   "loc": "loc_1530",
   "x": 3046,
+  "z": 3348,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m47_52.jm2:7648"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 3046,
   "z": 3353,
   "level": 0,
   "kind": "open",
@@ -24210,6 +24371,17 @@
  {
   "id": 1536,
   "loc": "loc_1536",
+  "x": 3107,
+  "z": 3162,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m48_49.jm2:5349"
+ },
+ {
+  "id": 1536,
+  "loc": "loc_1536",
   "x": 3109,
   "z": 3166,
   "level": 0,
@@ -24326,6 +24498,17 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m48_51.jm2:4721"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 3092,
+  "z": 3274,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m48_51.jm2:4724"
  },
  {
   "id": 1530,
@@ -24522,6 +24705,17 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m48_53.jm2:5880"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 3077,
+  "z": 3415,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m48_53.jm2:5920"
  },
  {
   "id": 1516,
@@ -25164,6 +25358,17 @@
  {
   "id": 1533,
   "loc": "loc_1533",
+  "x": 3160,
+  "z": 3440,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m49_53.jm2:6902"
+ },
+ {
+  "id": 1533,
+  "loc": "loc_1533",
   "x": 3183,
   "z": 3434,
   "level": 0,
@@ -25752,6 +25957,17 @@
   "kind": "open",
   "trigger": "scripts/doors/scripts/doors.rs2:1",
   "src": "maps/m50_52.jm2:5394"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 3206,
+  "z": 3385,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m50_52.jm2:5423"
  },
  {
   "id": 1551,
@@ -26923,6 +27139,28 @@
  {
   "id": 1530,
   "loc": "loc_1530",
+  "x": 3279,
+  "z": 3939,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m51_61.jm2:4790"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 3282,
+  "z": 3934,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m51_61.jm2:4913"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
   "x": 3283,
   "z": 3931,
   "level": 0,
@@ -27381,6 +27619,17 @@
   "kind": "locked",
   "trigger": "scripts/minigames/game_mortton/scripts/mortton_catacombs.rs2:89",
   "src": "maps/m54_151.jm2:5970"
+ },
+ {
+  "id": 1530,
+  "loc": "loc_1530",
+  "x": 3484,
+  "z": 3290,
+  "level": 0,
+  "shape": 9,
+  "kind": "open",
+  "trigger": "scripts/doors/scripts/doors.rs2:1",
+  "src": "maps/m54_51.jm2:4985"
  },
  {
   "id": 1530,

@@ -59,10 +59,12 @@ const { edges, unmatchedAngles } = buildTransports(handlers, locSpawns, locPack,
 
 // Doors: wall-layer locs (shape 0-3) whose config has an Open option, like the engine's collision export
 // (server/engine/src/web/pages/api.ts:171-248). Rules come from the door's own trigger, else its category's.
+// A diagonal door (shape 9, the north door of Juliet's house at 3160,3440) blocks its whole tile; the export
+// leaves it out, so it is kept here with its shape and core/src/pathcache.ts opens it.
 const locIds=new Map([...locPack].map(([id,name])=>[name,id]));
 const doors: Door[] = [];
 for (const l of locSpawns) {
-    if (l.shape > 3) continue;
+    if (l.shape > 3 && l.shape !== 9) continue;
     const name = locPack.get(l.id);
     const cfg = name ? locBlocks.get(name) : undefined;
     if (!name || !cfg) continue;
@@ -71,7 +73,7 @@ for (const l of locSpawns) {
     const c = classifyDoor(name, cfg.props.category?.[0], triggers);
     const openName=cfg.props.param?.find(p=>p.startsWith('next_loc_stage,'))?.split(',')[1]?.trim(),openId=openName?locIds.get(openName):undefined;
     const open=c.kind==='team'&&openName===name+'_open'&&openId!==undefined?openedTeamDoor(name,l,openId):undefined;
-    doors.push({ id: l.id, loc: name, x: l.x, z: l.z, level: l.level, ...(c.need?.whenAxis!==undefined?{angle:l.angle,shape:l.shape}:{}),...(open?{open}:{}),kind: c.kind, ...(c.need ? { need: c.need } : {}), trigger: c.trigger, src: l.src });
+    doors.push({ id: l.id, loc: name, x: l.x, z: l.z, level: l.level, ...(c.need?.whenAxis!==undefined?{angle:l.angle,shape:l.shape}:l.shape===9?{shape:9}:{}),...(open?{open}:{}),kind: c.kind, ...(c.need ? { need: c.need } : {}), trigger: c.trigger, src: l.src });
 }
 // Phase 1b: skill actions from dbtables, quests, and drop tables.
 const dbTables = buildDbTables(blocksOf('.dbtable'), blocksOf('.dbrow'));

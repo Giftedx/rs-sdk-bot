@@ -28,15 +28,15 @@ Every record has `src`: a path and 1-based line, relative to the content root.
 - questPoints: 138
 - questLinesSkipped: 4
 - dropTables: 258
-- doors: 2696
-- doors_open: 938
+- doors: 2718
+- doors_open: 954
 - doors_key: 49
-- doors_locked: 1528
+- doors_locked: 1532
 - doors_unknown: 66
-- doors_quest: 74
+- doors_quest: 75
 - doors_team: 4
 - doors_one_way: 19
-- doors_skill: 11
+- doors_skill: 12
 - doors_conditional: 7
 
 ## Notes

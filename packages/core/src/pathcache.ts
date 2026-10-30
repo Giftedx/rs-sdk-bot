@@ -18,8 +18,20 @@ const PAGE=65536;
 const MAX_HEADER=65536;
 const sha256=(data:Uint8Array)=>createHash('sha256').update(data).digest('hex');
 
-export function pathfindingSourceKey(wasmFile=WASM,collisionFile=DATA): string {
-    return JSON.stringify({v:2,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile))});
+const DOORS = join(repoRoot, 'knowledge', 'doors.json');
+// Open diagonal doors (shape 9): the collision export leaves their loc collision on the tile, which seals the
+// building for the route search. The walker opens them like any door (walk.ts openNearestDoor).
+export function diagonalDoors(file=DOORS): {x:number;z:number;level:number}[] {
+    try{return (JSON.parse(readFileSync(file,'utf8')) as {x:number;z:number;level:number;shape?:number;kind:string}[])
+        .filter(d=>d.shape===9&&d.kind==='open').map(({x,z,level})=>({x,z,level}));}catch{return [];}
+}
+export function openDiagonalDoors(rsmod:{changeLoc(x:number,z:number,y:number,w:number,l:number,blockrange:boolean,route:boolean,add:boolean):void},doors=diagonalDoors()):number {
+    for(const d of doors)rsmod.changeLoc(d.x,d.z,d.level,1,1,true,false,false);
+    return doors.length;
+}
+
+export function pathfindingSourceKey(wasmFile=WASM,collisionFile=DATA,doorsFile=DOORS): string {
+    return JSON.stringify({v:3,wasm:sha256(readFileSync(wasmFile)),data:sha256(readFileSync(collisionFile)),diagonal:sha256(Buffer.from(JSON.stringify(diagonalDoors(doorsFile))))});
 }
 
 type SnapshotHeader={format:2;key:string;bytes:number;sha256:string};
@@ -115,6 +127,7 @@ async function load(file: string): Promise<{ restored: boolean; ms: number }> {
     }
     const { initPathfinding } = await import(vendor('sdk/pathfinding.ts'));
     initPathfinding();
+    openDiagonalDoors(rsmod);
     if (!restored) {
         writePathfindingSnapshot(file,k,new Uint8Array(memory.buffer));
     }
