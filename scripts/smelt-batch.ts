@@ -47,7 +47,7 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
  // From anywhere else, the world walker takes the account to Al Kharid bank, next to the furnace. The Varrock East
  // entry's hand-made corridor did not plan live (OreElse: 'smelt incomplete corridor plan').
  const at=state()!.player!,atBank=(x:number,z:number)=>at.level===0&&Math.max(Math.abs(at.worldX-x),Math.abs(at.worldZ-z))<=5;
- if(!atBank(3269,3167)){
+ if(!io&&!atBank(3269,3167)){
   const there=await goTo(s,await getWorld(),{x:3269,z:3167,level:0},accountOf(s),{legTimeoutTicks:100});
   if(!there.ok&&!atBank(3253,3420))throw Error(`smelt travel to Al Kharid bank failed: ${there.detail}`);
  }
