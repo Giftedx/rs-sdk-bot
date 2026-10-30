@@ -73,12 +73,15 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
    if(alive&&owner.runId!==runId)throw Error('another builder owns runtime source');if(owner.runId!==runId)unlinkSync(lock);
   }
   if(!existsSync(lock))writeFileSync(lock,JSON.stringify({pid:process.pid,runId,at:Date.now()}),{flag:'wx'});
+  const standing=new Set<string>(((JSON.parse(readFileSync(join(projectRoot,'swarm.json'),'utf8')).jobs??[]) as any[]).filter(j=>j.standing===true&&j.enabled).flatMap(j=>j.accounts??(j.account?[j.account]:[])).map((a:string)=>a.toLowerCase()));
   if(swarmProcesses().length){
    await Bun.sleep(6000);
    const file=join(projectRoot,'.practice/swarm-state.json'),fleet=existsSync(file)?JSON.parse(readFileSync(file,'utf8')):null;
-   if(!fleet||Date.now()-fleet.at>10000||fleet.running||fleet.pendingStartup||fleet.externalRunning)throw Error('runtime build waits for a fresh actual fleet drain');
+   // Standing owner jobs run the current source and need no drain; coordinator runs and other sessions do.
+   const busy=(fleet?.jobs??[]).filter((j:any)=>/^(running|starting|stopping)/.test(j.state??'')&&!(j.accounts??String(j.account??'').split('+')).every((a:any)=>standing.has(String(a).toLowerCase())));
+   if(!fleet||Date.now()-fleet.at>10000||busy.length||fleet.pendingStartup)throw Error('runtime build waits for a fresh actual fleet drain');
   }
-  if(liveRows().some(s=>s.server==='rs-sdk-demo.fly.dev'&&!s.result))throw Error('runtime build waits for existing sessions to settle; stale is not offline');
+  if(liveRows().some(s=>s.server==='rs-sdk-demo.fly.dev'&&!s.result&&!standing.has(String(s.name).toLowerCase())))throw Error('runtime build waits for existing sessions to settle; stale is not offline');
  };
  // An isolated build (build-workspace.ts) edits its own copy: it takes the lock and the drain only to publish.
  const mainRoot=process.env.COORDINATOR_MAIN_ROOT,isolated=!!mainRoot&&mainRoot!==projectRoot&&isWorkspace(projectRoot);

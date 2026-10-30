@@ -132,7 +132,6 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
         return {key:`order:${list.join('+')}`,accounts:[...list],host:false,job};
     }
     if (job.host) {
-        if(job.args?.length)return {error:'host mode does not support script args'};
         const list = job.accounts;
         if (!Array.isArray(list) || list.length === 0) return { error: 'host job needs a non-empty "accounts" list' };
         if (job.account) return { error: 'host job has both "account" and "accounts"' };
@@ -572,8 +571,9 @@ if (import.meta.main) {
                 continue;
             }
             const job = p.job;
-            if(existsSync(join(prac,'coordinator/build-lock.json'))){
-                state.push({account:raw.account,accounts:raw.accounts,script:raw.script,state:'waiting: coordinator owns runtime build'});
+            // A standing job runs the current source, so a publish or rollout lock does not hold it.
+            if(!(job as Job & {standing?:boolean}).standing&&existsSync(join(prac,'coordinator/build-lock.json'))){
+                state.push({account:raw.account,accounts:raw.accounts,script:raw.script,standing:false,state:'waiting: coordinator owns runtime build'});
                 continue;
             }
             observeEnabled(p.accounts, job.enabled, previousEnabled, pendingResume);
