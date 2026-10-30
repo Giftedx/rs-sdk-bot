@@ -5,6 +5,8 @@ import { watchTickStream } from './tick-stream';
 import type { TickSource } from './ticks';
 import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
+import {guardWalk} from './danger';
+import {sail,disembark,type BoatSession} from './boat';
 import {refreshGuildEvidence} from './guild-observation';
 
 export interface Walker extends TickSource {
@@ -41,7 +43,7 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
         let last: Outcome | null = null;
         for (let attempt = 0; attempt < retries; attempt++) {
             last = leg.kind === 'walk' ? await (farWalk(s, leg.to) ? walkFar(s, leg.to, opts, leg.tolerance ?? 2) : walkLeg(s, leg.to, opts, leg.tolerance ?? 2))
-                : await climbLeg(s, leg, opts);
+                : leg.kind === 'boat' ? await boatLeg(s, leg, opts) : await climbLeg(s, leg, opts);
             total += last.ticks;
             if (last.ok || last.reason === 'aborted') break;
             // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
@@ -58,6 +60,15 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
         if (!last!.ok) return { ...last!, ticks: total };
     }
     return { ok: true, ticks: total };
+}
+
+// One paid boat: talk to its NPC on the dock, sail, cross the gangplank to the far dock.
+async function boatLeg(s: Walker, leg: Extract<Leg, { kind: 'boat' }>, opts: WalkOptions): Promise<Outcome> {
+    const start = s.tick(), b = s as unknown as BoatSession, stop = () => opts.signal?.aborted === true;
+    const sailed = await sail(b, { npc: new RegExp(leg.boat.npc, 'i'), choices: leg.boat.choices.map(c => new RegExp(c, 'i')), deck: leg.boat.deck, stop });
+    const landed = sailed.ok ? await disembark(b, { stop }) : sailed;
+    if (landed.ok) return { ok: true, ticks: s.tick() - start };
+    return { ok: false, reason: stop() ? 'aborted' : sailed.ok ? 'timeout' : 'rejected', detail: `boat ${leg.boat.name}: ${landed.detail}`, ticks: s.tick() - start };
 }
 
 async function openNearestDoor(s: Walker, near: Tile): Promise<void> {
@@ -513,7 +524,8 @@ export async function sessionWalker(s: { sdk: any; client?:unknown; onTick(cb: (
         plan: (level, from, to) => {
             pf.initPathfinding();
             const blocks=applyKnownDoorBlocks(s.sdk, level, from, to).map(b=>b.whenAxis===undefined?{...b,...pf.getDoorAt(b.level,b.x,b.z)}:b);
-            return withDoorPolicy(grid,blocks,()=>pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? []));
+            // Deadly hunters' ground stays closed too (danger.ts).
+            return guardWalk(grid,accountForSdk(s.sdk),{...from,level},{...to,level},32,()=>withDoorPolicy(grid,blocks,()=>pf.findLongPath(level, from.x, from.z, to.x, to.z, 500, s.sdk.temporaryDoorBlocks?.active?.() ?? [])));
         },
     };
 }
