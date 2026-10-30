@@ -79,6 +79,11 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     const s = await connectInProcess({ name, password, server });
     await awaitBotReady(s, log);
     const p = s.sdk.getState()!.player!;
+    // Life fields copied while connected: after a disconnect the state's player is no evidence of a death (a run
+    // whose logout timed out ended the next login, and the stale player read as a new life).
+    const life = (q: any) => q ? { isDead: q.isDead, respawnCount: q.respawnCount, lifeId: q.lifeId } : undefined;
+    const born = life(p);
+    let lastLife = born;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
@@ -91,7 +96,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     let stopTicks = 0;
     let stopping = false;
     s.onTick(() => {
-        const reason = sessionDied(p,s.sdk.getState()?.player) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file' : null;
+        lastLife = life(s.sdk.getState()?.player) ?? lastLife;
+        const reason = sessionDied(born,lastLife) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file' : null;
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
             void (opts.onStop ? opts.onStop(s,reason) : finish([s], false, reason));
@@ -102,8 +108,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // No more game ticks arrive after disconnect. End a script waiting on them
     // through its own session owner, while planned logout/stop keeps its result.
     watchUnexpectedEnd(s,()=>settling.has(s),()=>stopping,detail=>
-        opts.onSessionEnd?opts.onSessionEnd(s,sessionDied(p,s.sdk.getState()?.player)?'died':detail)
-            :finish([s],false,sessionDied(p,s.sdk.getState()?.player)?'died':detail));
+        opts.onSessionEnd?opts.onSessionEnd(s,sessionDied(born,lastLife)?'died':detail)
+            :finish([s],false,sessionDied(born,lastLife)?'died':detail));
     return s;
 }
 

@@ -67,3 +67,9 @@ test('a non-local server is refused unless DEMO_OK=1 is set on purpose', async (
     expect(() => assertServerAllowed('127.evil.io', {})).toThrow(/DEMO_OK/);
     expect(() => assertServerAllowed('rs-sdk-demo.fly.dev', { DEMO_OK: '1' })).not.toThrow();
 });
+
+test('a death is judged on life fields copied while connected, not on the state after a disconnect', () => {
+    const born = { isDead: false, respawnCount: 0, lifeId: 7 };
+    expect(sessionDied(born, { ...born })).toBe(false);
+    expect(sessionDied(born, { ...born, lifeId: 8 })).toBe(true);
+});
