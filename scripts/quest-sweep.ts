@@ -5,7 +5,7 @@
 // Usage: bun scripts/quest-sweep.ts <account> <quest>      e.g. bun scripts/quest-sweep.ts Mightyrod blackknight
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
-import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
+import {openBot,finish,getWorld,accountOf,finishHooks} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
@@ -271,6 +271,9 @@ export async function sweep(account:string,quest:string,fresh?:string){
 async function main(){
  const [account,quest]=process.argv.slice(2);
  if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest>');
+ // As a bot-host entry, the quest module's finish() (plain bot.ts) reports through this entry's own finish, which
+ // the host rewrites to the per-bot one; without it the quest's finish would end the whole host.
+ if((globalThis as {__rsBotHost?:unknown}).__rsBotHost)finishHooks.set(account.toLowerCase(),(ok,detail)=>{void finish([],ok,detail);});
  // A unique query: in a bot host, each account runs the quest module afresh.
  await sweep(account,quest,`run=${account.toLowerCase()}-${Date.now()}`);
 }

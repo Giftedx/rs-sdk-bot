@@ -158,6 +158,8 @@ export const openHooks = new Map<string, (name: string, opts: Parameters<typeof 
 export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail): Promise<never> {
     const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
     if (hook) { const final = await settle(sessions, ok, detail); hook(final, detail); return new Promise<never>(() => {}); }
+    // Inside a bot host other bots share this process: log this one out and stop here, never exit the host.
+    if ((globalThis as { __rsBotHost?: unknown }).__rsBotHost) { await settle(sessions, ok, detail); console.log('WARN finish inside a bot host without a runner hook; this bot stops, the host keeps running'); return new Promise<never>(() => {}); }
     const final = await settle(sessions, ok, detail, {
         // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
         // Logout runs first, so the account leaves the world either way; this only bounds the process.
