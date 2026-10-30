@@ -280,7 +280,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             return opLoc(k, opIndex(k, re));
         }, arrived, 15, tries);
     };
+    // Without a law rune in the pack (every teleport here costs one) the bot walks to the same spot instead.
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
+        if (cnt(563) < 1) { await walk(`${label} (walk, no law rune)`, [{ x, z, tol: 4 }]); return; }
         await step(label, () => s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => near(x, z, 6), 8, 3);
     };
     // Opens the shut door on tile (x, z) on the bot's level; nothing if it is open. walkPath does not see every

@@ -1,0 +1,154 @@
+{
+ "source": "rs2b2t/rs2b0t ae56ccc9 src/bot/event/webwalk/data/specialCrossings.ts (MIT License, Copyright (c) 2026 N64Jive)",
+ "note": "Scripted gates and passages the route search treats as walls: click locName with action, answer choices in order. Entries with an NPC, a use-item, a map choice, a fixed landing tile or a quest unlock step are left out (npc-travel.json and shortcuts.json cover those trips).",
+ "crossings": [
+  {
+   "x": 3268,
+   "z": 3227,
+   "level": 0,
+   "locName": "Gate",
+   "action": "Open",
+   "choices": [
+    "Yes, ok."
+   ],
+   "coins": 10,
+   "questWaives": "Prince Ali Rescue",
+   "reopen": false,
+   "label": "Al Kharid toll gate"
+  },
+  {
+   "x": 3268,
+   "z": 3228,
+   "level": 0,
+   "locName": "Gate",
+   "action": "Open",
+   "choices": [
+    "Yes, ok."
+   ],
+   "coins": 10,
+   "questWaives": "Prince Ali Rescue",
+   "reopen": false,
+   "label": "Al Kharid toll gate"
+  },
+  {
+   "x": 2657,
+   "z": 3496,
+   "level": 0,
+   "locName": "Door",
+   "action": "Open",
+   "choices": [],
+   "coins": 0,
+   "item": {
+    "item": "Shiny key",
+    "count": 1
+   },
+   "reopen": false,
+   "label": "Temple of Ikov shiny key door (#250)"
+  },
+  {
+   "x": 2461,
+   "z": 3382,
+   "level": 0,
+   "locName": "Gate",
+   "action": "Open",
+   "choices": [
+    "OK then"
+   ],
+   "coins": 0,
+   "reopen": true,
+   "label": "Gnome Stronghold gate (Femi boxes)"
+  },
+  {
+   "x": 2945,
+   "z": 3041,
+   "level": 0,
+   "locName": "Gate",
+   "action": "Open",
+   "choices": [
+    "Glough sent me.",
+    "Ka.",
+    "Lu.",
+    "Min."
+   ],
+   "coins": 0,
+   "reopen": true,
+   "label": "Karamja shipyard gate (Ka-Lu-Min)"
+  },
+  {
+   "x": 2945,
+   "z": 3042,
+   "level": 0,
+   "locName": "Gate",
+   "action": "Open",
+   "choices": [
+    "Glough sent me.",
+    "Ka.",
+    "Lu.",
+    "Min."
+   ],
+   "coins": 0,
+   "reopen": true,
+   "label": "Karamja shipyard gate (Ka-Lu-Min)"
+  },
+  {
+   "x": 2598,
+   "z": 3477,
+   "level": 0,
+   "locName": "Log balance",
+   "action": "Walk-across",
+   "choices": [],
+   "coins": 0,
+   "skill": {
+    "name": "agility",
+    "level": 20
+   },
+   "reopen": false,
+   "label": "Coal trucks log balance"
+  },
+  {
+   "x": 2603,
+   "z": 3477,
+   "level": 0,
+   "locName": "Log balance",
+   "action": "Walk-across",
+   "choices": [],
+   "coins": 0,
+   "skill": {
+    "name": "agility",
+    "level": 20
+   },
+   "reopen": false,
+   "label": "Coal trucks log balance"
+  },
+  {
+   "x": 2709,
+   "z": 3209,
+   "level": 0,
+   "locName": "Ropeswing",
+   "action": "Swing-on",
+   "choices": [],
+   "coins": 0,
+   "skill": {
+    "name": "agility",
+    "level": 10
+   },
+   "reopen": false,
+   "label": "Brimhaven north ropeswing"
+  },
+  {
+   "x": 2511,
+   "z": 3091,
+   "level": 0,
+   "locName": "Ropeswing",
+   "action": "Swing-on",
+   "choices": [],
+   "coins": 0,
+   "skill": {
+    "name": "agility",
+    "level": 10
+   },
+   "reopen": false,
+   "label": "Ogre island ropeswing"
+  }
+ ]
+}

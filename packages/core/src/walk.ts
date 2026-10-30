@@ -77,7 +77,7 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
     const here = () => { const p = st()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
     const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= 8; };
     const fail = (reason: 'rejected' | 'timeout' | 'precondition', detail: string): Outcome => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
-    const choices = run.how === 'npc' ? run.options : run.how === 'rub' || run.how === 'loc' ? (run.option ? [run.option] : []) : [];
+    const choices = run.how === 'npc' ? run.options : run.how === 'gate' ? run.choices : run.how === 'rub' || run.how === 'loc' ? (run.option ? [run.option] : []) : [];
     const answer = async (until: () => boolean, ticks: number) => {
         for (let i = 0; i < ticks && !until() && !stop(); i++) {
             const d = b.sdk.getDialog();
@@ -105,6 +105,17 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
         if (!item) return fail('precondition', 'no charged item in the pack');
         await b.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: 4, reason: 'SDK' });
         await answer(arrived, 20);
+    } else if (run.how === 'gate') {
+        // A scripted gate: click its action, answer the dialogue, then step to the far tile while it stands open.
+        const want = run.action.toLowerCase(), near = (l: any) => l.level === run.at.level && Math.max(Math.abs(l.x - run.at.x), Math.abs(l.z - run.at.z)) <= 1;
+        const gate = (st()?.nearbyLocs ?? []).find((l: any) => near(l) && l.name?.toLowerCase() === run.loc.toLowerCase() && (l.optionsWithIndex ?? []).some((o: any) => o.text?.toLowerCase() === want));
+        if (!gate) return fail('precondition', `no ${run.loc} with ${run.action} at ${run.at.x},${run.at.z}`);
+        const op = gate.optionsWithIndex.find((o: any) => o.text?.toLowerCase() === want).opIndex;
+        const through = () => { const p = here(); return !!p && p.level === t.to.level && cheb(t.to, { worldX: p.x, worldZ: p.z }) <= 1; };
+        await b.direct({ type: 'interactLoc', x: gate.x, z: gate.z, locId: gate.id, optionIndex: op, reason: 'SDK' });
+        await answer(through, 20);
+        for (let i = 0; i < 3 && !through() && !stop(); i++) { await b.direct({ type: 'walkTo', x: t.to.x, z: t.to.z, running: true, reason: 'SDK' }); await waitTicks(s, 4); }
+        return through() ? { ok: true, ticks: s.tick() - start } : fail('timeout', `not through ${run.loc} (at ${JSON.stringify(here())})`);
     } else {
         const name = run.loc.includes('spirit') ? /spirit tree/i : /lever|door/i, at = run.at;
         const loc = (st()?.nearbyLocs ?? []).filter((l: any) => at && run.id !== undefined ? l.id === run.id && l.x === at.x && l.z === at.z && l.level === at.level : name.test(l.name ?? ''))

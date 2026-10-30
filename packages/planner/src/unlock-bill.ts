@@ -16,7 +16,7 @@ const root = resolve(import.meta.dir, '../../..');
 export type Rung = { id: string; skill: string; level: number; label: string; kind: string; xpPerAction: number | null; xpPerTick: number | null;
     inputs: { id: number; debugname: string; name: string; count: number | null }[]; requires: { id: number; debugname: string; name: string }[];
     quest: { name: string } | null; worker: string | null; workers?: string[] };
-export type Tool = { skill: string; kind?: string; rung?: string; items: string[]; level: number; mode?: string };
+export type Tool = { skill: string; kind?: string; rung?: string; items: string[]; level: number; mode?: string; rank?: number };
 export type Blocker = { kind: 'quest' | 'item' | 'tool' | 'input'; name: string; item?: string; have: number; sources: string[] };
 export type SkillRow = { account: string; skill: string; level: number; best: { id: string; label: string; level: number; worker: boolean } | null;
     blockers: Blocker[]; next: { id: string; label: string; level: number } | null };
@@ -57,8 +57,14 @@ export function skillRow(account: string, status: any, skill: string, level: num
         for (const q of best.requires) if ((mine.get(q.debugname) ?? 0) < 1) blockers.push({ kind: 'item', name: q.name, item: q.debugname, have: 0, sources: sources(q.debugname) });
         // The best tool tier this level allows, for this rung's kind or id.
         const fits = tools.filter(t => t.skill === skill && t.level <= level && (t.rung === best.id || t.kind === best.kind || (!t.rung && !t.kind)));
-        const top = fits.sort((a, b) => b.level - a.level)[0];
-        if (top && !top.items.some(i => (mine.get(i) ?? 0) > 0)) blockers.push({ kind: 'tool', name: top.items[0]!, item: top.items[0], have: 0, sources: sources(top.items[0]!) });
+        // Each tool group needs one item held; for tiered tools the best tier the level allows is the target.
+        const groups = new Map<string, Tool[]>();
+        for (const t of fits) { const k = t.rank !== undefined && (t.skill === 'woodcutting' || t.skill === 'mining') ? `tier:${t.skill}` : t.items.join('|'); groups.set(k, [...(groups.get(k) ?? []), t]); }
+        for (const [k, g] of groups) {
+            const top = g.sort((a, b) => (a.rank ?? 1) - (b.rank ?? 1) || b.level - a.level)[0]!;
+            if (k.startsWith('tier:') ? top.items.some(i => (mine.get(i) ?? 0) > 0) : g.some(t => t.items.some(i => (mine.get(i) ?? 0) > 0))) continue;
+            blockers.push({ kind: 'tool', name: top.items[0]!, item: top.items[0], have: 0, sources: sources(top.items[0]!) });
+        }
         for (const i of best.inputs) { const have = mine.get(i.debugname) ?? 0; if (have < 1) blockers.push({ kind: 'input', name: i.name, item: i.debugname, have, sources: sources(i.debugname) }); }
     }
     const next = rungs.filter(r => r.level > level).sort((a, b) => a.level - b.level || score(b) - score(a))[0] ?? null;
@@ -119,14 +125,21 @@ export function buildUnlockBill(statuses: readonly any[], base = root, prices: P
     return { rows, shopping: shoppingList(rows), toolsKnown: tools.length };
 }
 
-// knowledge/skill-tools.json records, read loosely: any record with a skill, a level and one or more item names.
+// knowledge/skill-tools.json: axe and pickaxe tiers (rank 1 is best; an axe has no Woodcutting level on this
+// server), and per-method tool records. A `bonus` item (ring of forging) is not a need.
 export function toolRecords(file: any): Tool[] {
-    const list: any[] = Array.isArray(file) ? file : Array.isArray(file?.tools) ? file.tools : Array.isArray(file?.records) ? file.records : [];
-    return list.flatMap(r => {
-        const items = (Array.isArray(r.items) ? r.items : [r.item ?? r.debugname]).map((x: any) => typeof x === 'string' ? x : x?.debugname).filter((x: any) => typeof x === 'string');
-        const level = Number(r.level ?? r.minLevel ?? r.skillLevel);
-        return typeof r.skill === 'string' && items.length && Number.isFinite(level) ? [{ skill: r.skill.toLowerCase(), kind: r.kind ?? r.appliesTo, rung: r.rung, items, level, mode: r.mode }] : [];
-    });
+    const out: Tool[] = [];
+    for (const a of file?.axes ?? []) out.push({ skill: 'woodcutting', kind: 'woodcutting_trees', items: [a.item], level: a.woodcuttingLevel ?? 1, rank: a.rank });
+    for (const p of file?.pickaxes ?? []) out.push({ skill: 'mining', kind: 'mining_table', items: [p.item], level: p.miningLevel ?? 1, rank: p.rank });
+    for (const r of file?.records ?? []) {
+        if (r.id === 'woodcutting/axe' || r.id === 'mining/pickaxe') continue;
+        for (const g of r.items ?? []) {
+            if (g.role === 'bonus' || !Array.isArray(g.anyOf) || !g.anyOf.length) continue;
+            for (const kind of r.appliesTo?.kinds?.length ? r.appliesTo.kinds : [undefined])
+                out.push({ skill: String(r.skill).toLowerCase(), kind, items: g.anyOf, level: r.minLevel ?? 1, rank: 1 });
+        }
+    }
+    return out;
 }
 
 export const PRICE_TTL_MS = 6 * 3600_000;

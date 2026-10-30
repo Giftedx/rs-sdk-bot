@@ -1,0 +1,4223 @@
+{
+ "generatedBy": "bun packages/knowledge/src/skill-tools.ts",
+ "notes": [
+  "src is a content-relative path and 1-based line under vendor/rs-sdk/server/content.",
+  "hold: held = in the inventory; worn = equipped; either = equipped right hand or inventory.",
+  "A name that starts with _ is a content category (loc or obj) as the trigger writes it.",
+  "role: tool = needed and kept; bait = needed and consumed per success; access = needed to reach the method; bonus = optional, changes the result.",
+  "consumed.perAction null means the amount depends on the stack held (see note).",
+  "appliesTo.rungs lists the knowledge/ladders.json rung ids the record covers."
+ ],
+ "counts": {
+  "woodcutting": 8,
+  "mining": 7,
+  "smithing": 3,
+  "crafting": 12,
+  "fletching": 6,
+  "firemaking": 1,
+  "herblore": 4,
+  "cooking": 2,
+  "runecraft": 1,
+  "thieving": 4,
+  "fishing": 16,
+  "agility": 1,
+  "prayer": 1
+ },
+ "axes": [
+  {
+   "item": "rune_axe",
+   "id": 1359,
+   "rank": 1,
+   "hold": "either",
+   "holdSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:220",
+   "woodcuttingLevel": null,
+   "woodcuttingLevelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "paramLevelrequire": 41,
+   "paramSrc": "scripts/skill_woodcutting/configs/axes/axes.obj:188",
+   "wieldAttack": 40,
+   "wieldSrc": "scripts/levelrequire/scripts/tier40.rs2:4",
+   "successChance": {
+    "normal_tree_table": {
+     "low": 224,
+     "high": 700,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:41"
+    },
+    "burnt_tree_table": {
+     "low": 224,
+     "high": 700,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:68"
+    },
+    "achey_tree_table": {
+     "low": 224,
+     "high": 700,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:83"
+    },
+    "oak_tree_table": {
+     "low": 112,
+     "high": 350,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:98"
+    },
+    "willow_tree_table": {
+     "low": 56,
+     "high": 175,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:113"
+    },
+    "maple_tree_table": {
+     "low": 28,
+     "high": 87,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:128"
+    },
+    "yew_tree_table": {
+     "low": 14,
+     "high": 44,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:143"
+    },
+    "magic_tree_table": {
+     "low": 7,
+     "high": 21,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:158"
+    },
+    "hollow_tree_table": {
+     "low": 64,
+     "high": 94,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:174"
+    }
+   }
+  },
+  {
+   "item": "adamant_axe",
+   "id": 1357,
+   "rank": 2,
+   "hold": "either",
+   "holdSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:223",
+   "woodcuttingLevel": null,
+   "woodcuttingLevelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "paramLevelrequire": 31,
+   "paramSrc": "scripts/skill_woodcutting/configs/axes/axes.obj:155",
+   "wieldAttack": 30,
+   "wieldSrc": "scripts/levelrequire/scripts/tier30.rs2:4",
+   "successChance": {
+    "normal_tree_table": {
+     "low": 192,
+     "high": 600,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:40"
+    },
+    "burnt_tree_table": {
+     "low": 192,
+     "high": 600,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:67"
+    },
+    "achey_tree_table": {
+     "low": 192,
+     "high": 600,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:82"
+    },
+    "oak_tree_table": {
+     "low": 96,
+     "high": 300,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:97"
+    },
+    "willow_tree_table": {
+     "low": 48,
+     "high": 150,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:112"
+    },
+    "maple_tree_table": {
+     "low": 24,
+     "high": 75,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:127"
+    },
+    "yew_tree_table": {
+     "low": 12,
+     "high": 37,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:142"
+    },
+    "magic_tree_table": {
+     "low": 6,
+     "high": 18,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:157"
+    },
+    "hollow_tree_table": {
+     "low": 59,
+     "high": 81,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:173"
+    }
+   }
+  },
+  {
+   "item": "mithril_axe",
+   "id": 1355,
+   "rank": 3,
+   "hold": "either",
+   "holdSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:226",
+   "woodcuttingLevel": null,
+   "woodcuttingLevelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "paramLevelrequire": 21,
+   "paramSrc": "scripts/skill_woodcutting/configs/axes/axes.obj:122",
+   "wieldAttack": 20,
+   "wieldSrc": "scripts/levelrequire/scripts/tier20.rs2:4",
+   "successChance": {
+    "normal_tree_table": {
+     "low": 160,
+     "high": 500,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:39"
+    },
+    "burnt_tree_table": {
+     "low": 160,
+     "high": 500,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:66"
+    },
+    "achey_tree_table": {
+     "low": 160,
+     "high": 500,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:81"
+    },
+    "oak_tree_table": {
+     "low": 80,
+     "high": 250,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:96"
+    },
+    "willow_tree_table": {
+     "low": 40,
+     "high": 125,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:111"
+    },
+    "maple_tree_table": {
+     "low": 20,
+     "high": 62,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:126"
+    },
+    "yew_tree_table": {
+     "low": 10,
+     "high": 31,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:141"
+    },
+    "magic_tree_table": {
+     "low": 5,
+     "high": 15,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:156"
+    },
+    "hollow_tree_table": {
+     "low": 46,
+     "high": 68,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:172"
+    }
+   }
+  },
+  {
+   "item": "black_axe",
+   "id": 1361,
+   "rank": 4,
+   "hold": "either",
+   "holdSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:229",
+   "woodcuttingLevel": null,
+   "woodcuttingLevelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "paramLevelrequire": 11,
+   "paramSrc": "scripts/skill_woodcutting/configs/axes/axes.obj:222",
+   "wieldAttack": 10,
+   "wieldSrc": "scripts/levelrequire/scripts/tier10.rs2:4",
+   "successChance": {
+    "normal_tree_table": {
+     "low": 144,
+     "high": 450,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:38"
+    },
+    "burnt_tree_table": {
+     "low": 144,
+     "high": 450,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:65"
+    },
+    "achey_tree_table": {
+     "low": 144,
+     "high": 450,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:80"
+    },
+    "oak_tree_table": {
+     "low": 72,
+     "high": 225,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:95"
+    },
+    "willow_tree_table": {
+     "low": 36,
+     "high": 112,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:110"
+    },
+    "maple_tree_table": {
+     "low": 18,
+     "high": 56,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:125"
+    },
+    "yew_tree_table": {
+     "low": 9,
+     "high": 28,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:140"
+    },
+    "magic_tree_table": {
+     "low": 5,
+     "high": 13,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:155"
+    },
+    "hollow_tree_table": {
+     "low": 42,
+     "high": 57,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:171"
+    }
+   }
+  },
+  {
+   "item": "steel_axe",
+   "id": 1353,
+   "rank": 5,
+   "hold": "either",
+   "holdSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:232",
+   "woodcuttingLevel": null,
+   "woodcuttingLevelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "paramLevelrequire": 6,
+   "paramSrc": "scripts/skill_woodcutting/configs/axes/axes.obj:89",
+   "wieldAttack": 5,
+   "wieldSrc": "scripts/levelrequire/scripts/tier5.rs2:4",
+   "successChance": {
+    "normal_tree_table": {
+     "low": 128,
+     "high": 400,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:37"
+    },
+    "burnt_tree_table": {
+     "low": 128,
+     "high": 400,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:64"
+    },
+    "achey_tree_table": {
+     "low": 128,
+     "high": 400,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:79"
+    },
+    "oak_tree_table": {
+     "low": 64,
+     "high": 200,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:94"
+    },
+    "willow_tree_table": {
+     "low": 32,
+     "high": 100,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:109"
+    },
+    "maple_tree_table": {
+     "low": 16,
+     "high": 50,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:124"
+    },
+    "yew_tree_table": {
+     "low": 8,
+     "high": 25,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:139"
+    },
+    "magic_tree_table": {
+     "low": 4,
+     "high": 12,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:154"
+    },
+    "hollow_tree_table": {
+     "low": 36,
+     "high": 54,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:170"
+    }
+   }
+  },
+  {
+   "item": "iron_axe",
+   "id": 1349,
+   "rank": 6,
+   "hold": "either",
+   "holdSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:235",
+   "woodcuttingLevel": null,
+   "woodcuttingLevelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "paramLevelrequire": 0,
+   "paramSrc": "scripts/skill_woodcutting/configs/axes/axes.obj:25",
+   "wieldAttack": 1,
+   "wieldSrc": "scripts/levelrequire/scripts/tier1.rs2:30",
+   "successChance": {
+    "normal_tree_table": {
+     "low": 96,
+     "high": 300,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:36"
+    },
+    "burnt_tree_table": {
+     "low": 96,
+     "high": 300,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:63"
+    },
+    "achey_tree_table": {
+     "low": 96,
+     "high": 300,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:78"
+    },
+    "oak_tree_table": {
+     "low": 48,
+     "high": 150,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:93"
+    },
+    "willow_tree_table": {
+     "low": 24,
+     "high": 75,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:108"
+    },
+    "maple_tree_table": {
+     "low": 12,
+     "high": 37,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:123"
+    },
+    "yew_tree_table": {
+     "low": 6,
+     "high": 19,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:138"
+    },
+    "magic_tree_table": {
+     "low": 3,
+     "high": 9,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:153"
+    },
+    "hollow_tree_table": {
+     "low": 28,
+     "high": 40,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:169"
+    }
+   }
+  },
+  {
+   "item": "bronze_axe",
+   "id": 1351,
+   "rank": 7,
+   "hold": "either",
+   "holdSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:238",
+   "woodcuttingLevel": null,
+   "woodcuttingLevelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "paramLevelrequire": 0,
+   "paramSrc": "scripts/skill_woodcutting/configs/axes/axes.obj:58",
+   "wieldAttack": 1,
+   "wieldSrc": "scripts/tutorial/scripts/tutorial.rs2:279",
+   "successChance": {
+    "normal_tree_table": {
+     "low": 64,
+     "high": 200,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:35"
+    },
+    "burnt_tree_table": {
+     "low": 64,
+     "high": 200,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:62"
+    },
+    "achey_tree_table": {
+     "low": 64,
+     "high": 200,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:77"
+    },
+    "oak_tree_table": {
+     "low": 32,
+     "high": 100,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:92"
+    },
+    "willow_tree_table": {
+     "low": 16,
+     "high": 50,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:107"
+    },
+    "maple_tree_table": {
+     "low": 8,
+     "high": 25,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:122"
+    },
+    "yew_tree_table": {
+     "low": 4,
+     "high": 12,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:137"
+    },
+    "magic_tree_table": {
+     "low": 2,
+     "high": 6,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:152"
+    },
+    "hollow_tree_table": {
+     "low": 18,
+     "high": 26,
+     "src": "scripts/skill_woodcutting/configs/trees.dbrow:168"
+    }
+   }
+  }
+ ],
+ "pickaxes": [
+  {
+   "item": "rune_pickaxe",
+   "id": 1275,
+   "rank": 1,
+   "hold": "either",
+   "holdSrc": "scripts/skill_mining/scripts/pickaxe_checker.rs2:4",
+   "miningLevel": 41,
+   "miningLevelSrc": "scripts/skill_mining/configs/pickaxes.obj:197",
+   "wieldAttack": 40,
+   "wieldSrc": "scripts/levelrequire/scripts/tier40.rs2:5",
+   "miningRate": 2,
+   "miningRateSrc": "scripts/skill_mining/configs/pickaxes.obj:198"
+  },
+  {
+   "item": "adamant_pickaxe",
+   "id": 1271,
+   "rank": 2,
+   "hold": "either",
+   "holdSrc": "scripts/skill_mining/scripts/pickaxe_checker.rs2:7",
+   "miningLevel": 31,
+   "miningLevelSrc": "scripts/skill_mining/configs/pickaxes.obj:127",
+   "wieldAttack": 30,
+   "wieldSrc": "scripts/levelrequire/scripts/tier30.rs2:5",
+   "miningRate": 3,
+   "miningRateSrc": "scripts/skill_mining/configs/pickaxes.obj:128"
+  },
+  {
+   "item": "mithril_pickaxe",
+   "id": 1273,
+   "rank": 3,
+   "hold": "either",
+   "holdSrc": "scripts/skill_mining/scripts/pickaxe_checker.rs2:10",
+   "miningLevel": 21,
+   "miningLevelSrc": "scripts/skill_mining/configs/pickaxes.obj:162",
+   "wieldAttack": 20,
+   "wieldSrc": "scripts/levelrequire/scripts/tier20.rs2:5",
+   "miningRate": 4,
+   "miningRateSrc": "scripts/skill_mining/configs/pickaxes.obj:163"
+  },
+  {
+   "item": "steel_pickaxe",
+   "id": 1269,
+   "rank": 4,
+   "hold": "either",
+   "holdSrc": "scripts/skill_mining/scripts/pickaxe_checker.rs2:13",
+   "miningLevel": 6,
+   "miningLevelSrc": "scripts/skill_mining/configs/pickaxes.obj:92",
+   "wieldAttack": 5,
+   "wieldSrc": "scripts/levelrequire/scripts/tier5.rs2:5",
+   "miningRate": 5,
+   "miningRateSrc": "scripts/skill_mining/configs/pickaxes.obj:93"
+  },
+  {
+   "item": "iron_pickaxe",
+   "id": 1267,
+   "rank": 5,
+   "hold": "either",
+   "holdSrc": "scripts/skill_mining/scripts/pickaxe_checker.rs2:16",
+   "miningLevel": 0,
+   "miningLevelSrc": "scripts/skill_mining/configs/pickaxes.obj:59",
+   "wieldAttack": 1,
+   "wieldSrc": "scripts/levelrequire/scripts/tier1.rs2:31",
+   "miningRate": 6,
+   "miningRateSrc": "scripts/skill_mining/configs/pickaxes.obj:60"
+  },
+  {
+   "item": "bronze_pickaxe",
+   "id": 1265,
+   "rank": 6,
+   "hold": "either",
+   "holdSrc": "scripts/skill_mining/scripts/pickaxe_checker.rs2:19",
+   "miningLevel": 0,
+   "miningLevelSrc": "scripts/skill_mining/configs/pickaxes.obj:24",
+   "wieldAttack": 1,
+   "wieldSrc": "scripts/tutorial/scripts/tutorial.rs2:279",
+   "miningRate": 7,
+   "miningRateSrc": "scripts/skill_mining/configs/pickaxes.obj:25"
+  }
+ ],
+ "records": [
+  {
+   "id": "woodcutting/axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "bronze_axe",
+      "iron_axe",
+      "steel_axe",
+      "black_axe",
+      "mithril_axe",
+      "adamant_axe",
+      "rune_axe"
+     ],
+     "ids": [
+      1351,
+      1349,
+      1353,
+      1361,
+      1355,
+      1357,
+      1359
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:8"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:8",
+   "note": "any axe in the axes table; the best one held or worn is used; no Woodcutting level gates the axe"
+  },
+  {
+   "id": "mining/pickaxe",
+   "skill": "mining",
+   "appliesTo": {
+    "kinds": [
+     "mining_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "mining/clay_rock_table",
+     "mining/copper_rock_table",
+     "mining/desertrescue_rock",
+     "mining/rune_essence_table",
+     "mining/tin_rock_table",
+     "mining/blurite_rock",
+     "mining/limestone_rock1",
+     "mining/limestone_rock2",
+     "mining/limestone_rock3",
+     "mining/iron_rock_table",
+     "mining/silver_rock_table",
+     "mining/coal_rock_table",
+     "mining/gem_rock",
+     "mining/gold_rock_table",
+     "mining/mithril_rock_table",
+     "mining/adamantite_rock_table",
+     "mining/runite_rock_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "bronze_pickaxe",
+      "iron_pickaxe",
+      "steel_pickaxe",
+      "mithril_pickaxe",
+      "adamant_pickaxe",
+      "rune_pickaxe"
+     ],
+     "ids": [
+      1265,
+      1267,
+      1269,
+      1273,
+      1271,
+      1275
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:1"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "def_obj $pickaxe = ~pickaxe_checker;",
+     "src": "scripts/skill_mining/scripts/mining.rs2:68"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:1",
+   "note": "any pickaxe in the pickaxes table whose levelrequire is at or below Mining; the best one held or worn is used"
+  },
+  {
+   "id": "smithing/anvil",
+   "skill": "smithing",
+   "appliesTo": {
+    "kinds": [
+     "smithing"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "smithing/bronze_axe",
+     "smithing/bronze_dagger",
+     "smithing/bronze_mace",
+     "smithing/bronze_med_helm",
+     "smithing/bronze_dart_tip",
+     "smithing/bronze_sword",
+     "smithing/bronze_wire",
+     "smithing/bronze_arrowheads",
+     "smithing/bronze_scimitar",
+     "smithing/bronze_longsword",
+     "smithing/bronze_full_helm",
+     "smithing/bronze_knife",
+     "smithing/bronze_sq_shield",
+     "smithing/bronze_warhammer",
+     "smithing/bronze_battleaxe",
+     "smithing/bronze_chainbody",
+     "smithing/bronze_kiteshield",
+     "smithing/bronze_claws",
+     "smithing/bronze_2h_sword",
+     "smithing/iron_dagger",
+     "smithing/bronze_platelegs",
+     "smithing/bronze_plateskirt",
+     "smithing/iron_axe",
+     "smithing/iron_mace",
+     "smithing/bronze_platebody",
+     "smithing/iron_med_helm",
+     "smithing/iron_dart_tip",
+     "smithing/iron_sword",
+     "smithing/iron_arrowheads",
+     "smithing/iron_scimitar",
+     "smithing/iron_longsword",
+     "smithing/iron_full_helm",
+     "smithing/iron_knife",
+     "smithing/iron_sq_shield",
+     "smithing/iron_warhammer",
+     "smithing/iron_battleaxe",
+     "smithing/iron_chainbody",
+     "smithing/iron_kiteshield",
+     "smithing/iron_claws",
+     "smithing/iron_2h_sword",
+     "smithing/steel_dagger",
+     "smithing/iron_platelegs",
+     "smithing/iron_plateskirt",
+     "smithing/steel_axe",
+     "smithing/steel_mace",
+     "smithing/iron_platebody",
+     "smithing/steel_med_helm",
+     "smithing/nails",
+     "smithing/steel_dart_tip",
+     "smithing/steel_sword",
+     "smithing/steel_arrowheads",
+     "smithing/steel_scimitar",
+     "smithing/steel_longsword",
+     "smithing/steel_studs",
+     "smithing/steel_full_helm",
+     "smithing/steel_knife",
+     "smithing/steel_sq_shield",
+     "smithing/steel_warhammer",
+     "smithing/steel_battleaxe",
+     "smithing/steel_chainbody",
+     "smithing/steel_kiteshield",
+     "smithing/steel_claws",
+     "smithing/steel_2h_sword",
+     "smithing/steel_platelegs",
+     "smithing/steel_plateskirt",
+     "smithing/steel_platebody",
+     "smithing/mithril_dagger",
+     "smithing/mithril_axe",
+     "smithing/mithril_mace",
+     "smithing/mithril_med_helm",
+     "smithing/mithril_dart_tip",
+     "smithing/mithril_sword",
+     "smithing/mithril_arrowheads",
+     "smithing/mithril_scimitar",
+     "smithing/mithril_longsword",
+     "smithing/mithril_full_helm",
+     "smithing/mithril_knife",
+     "smithing/mithril_sq_shield",
+     "smithing/mithril_warhammer",
+     "smithing/mithril_battleaxe",
+     "smithing/mithril_chainbody",
+     "smithing/mithril_kiteshield",
+     "smithing/mithril_claws",
+     "smithing/mithril_2h_sword",
+     "smithing/mithril_platelegs",
+     "smithing/mithril_plateskirt",
+     "smithing/mithril_platebody",
+     "smithing/adamant_dagger",
+     "smithing/adamant_axe",
+     "smithing/adamant_mace",
+     "smithing/adamant_med_helm",
+     "smithing/adamant_dart_tip",
+     "smithing/adamant_sword",
+     "smithing/adamant_arrowheads",
+     "smithing/adamant_scimitar",
+     "smithing/adamant_longsword",
+     "smithing/adamant_full_helm",
+     "smithing/adamant_knife",
+     "smithing/adamant_sq_shield",
+     "smithing/adamant_warhammer",
+     "smithing/adamant_battleaxe",
+     "smithing/adamant_chainbody",
+     "smithing/adamant_kiteshield",
+     "smithing/adamant_claws",
+     "smithing/adamant_2h_sword",
+     "smithing/rune_dagger",
+     "smithing/adamant_platelegs",
+     "smithing/adamant_plateskirt",
+     "smithing/rune_axe",
+     "smithing/rune_mace",
+     "smithing/adamant_platebody",
+     "smithing/rune_med_helm",
+     "smithing/rune_dart_tip",
+     "smithing/rune_sword",
+     "smithing/rune_arrowheads",
+     "smithing/rune_scimitar",
+     "smithing/rune_longsword",
+     "smithing/rune_full_helm",
+     "smithing/rune_knife",
+     "smithing/rune_sq_shield",
+     "smithing/rune_warhammer",
+     "smithing/rune_battleaxe",
+     "smithing/rune_chainbody",
+     "smithing/rune_kiteshield",
+     "smithing/rune_claws",
+     "smithing/rune_2h_sword",
+     "smithing/rune_platebody",
+     "smithing/rune_platelegs",
+     "smithing/rune_plateskirt"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "hammer"
+     ],
+     "ids": [
+      2347
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_smithing/scripts/smithing/smithing.rs2:101"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": null,
+     "src": "scripts/skill_smithing/scripts/smithing/smithing.rs2:106",
+     "note": "bars per the ladder rung inputs"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_anvil"
+     ],
+     "src": "scripts/skill_smithing/scripts/smithing/smithing.rs2:39"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "if(loc_type = doric_anvil) {",
+     "src": "scripts/skill_smithing/scripts/smithing/smithing.rs2:53"
+    },
+    {
+     "text": "if(%viking < ^viking_complete) {",
+     "src": "scripts/skill_smithing/scripts/smithing/smithing.rs2:67"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_smithing/scripts/smithing/smithing.rs2:101"
+  },
+  {
+   "id": "smithing/furnace",
+   "skill": "smithing",
+   "appliesTo": {
+    "kinds": [
+     "smelt"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "smithing/smelt-bronze",
+     "smithing/smelt-iron",
+     "smithing/smelt-silver",
+     "smithing/smelt-steel",
+     "smithing/smelt-gold",
+     "smithing/smelt-mithril",
+     "smithing/smelt-adamant",
+     "smithing/smelt-runite"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "ring_of_forging"
+     ],
+     "ids": [
+      2568
+     ],
+     "hold": "worn",
+     "role": "bonus",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:200",
+     "note": "iron bar: no 50% impure fail while worn (members world)"
+    },
+    {
+     "anyOf": [
+      "gauntlets_of_goldsmithing"
+     ],
+     "ids": [
+      776
+     ],
+     "hold": "worn",
+     "role": "bonus",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:216",
+     "note": "gold bar XP x2.5 while worn"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": null,
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:192",
+     "note": "ores per the ladder rung inputs"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "if(loc_type = viking_furnace | loc_type = viking_furnace2) {",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:2"
+    },
+    {
+     "text": "if ($product = iron_bar) {",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:198"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:200"
+  },
+  {
+   "id": "smithing/cannonball",
+   "skill": "smithing",
+   "appliesTo": {
+    "kinds": [],
+    "idPattern": "cannonball",
+    "rungs": []
+   },
+   "minLevel": 35,
+   "levelSrc": "scripts/skill_smithing/scripts/smelting/cannonballs.rs2:10",
+   "items": [
+    {
+     "anyOf": [
+      "ammo_mould"
+     ],
+     "ids": [
+      4
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_smithing/scripts/smelting/cannonballs.rs2:14"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "steel_bar",
+     "id": 2353,
+     "perAction": 1,
+     "src": "scripts/skill_smithing/scripts/smelting/cannonballs.rs2:18"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case steel_bar : @smelt_cannonballs;",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:15"
+    },
+    {
+     "text": "if(map_members = ^false) {",
+     "src": "scripts/skill_smithing/scripts/smelting/cannonballs.rs2:6"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_smithing/scripts/smelting/cannonballs.rs2:14"
+  },
+  {
+   "id": "crafting/gem-cutting",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "gem_cutting_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "crafting/opal_cutting",
+     "crafting/jade_cutting",
+     "crafting/red_topaz_cutting",
+     "crafting/sapphire_cutting",
+     "crafting/emerald_cutting",
+     "crafting/ruby_cutting",
+     "crafting/diamond_cutting",
+     "crafting/dragonstone_cutting"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "chisel"
+     ],
+     "ids": [
+      1755
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/scripts/gem/uncut_gem.rs2:1"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/gem/uncut_gem.rs2:22",
+     "note": "one uncut gem per the ladder rung inputs"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (oc_members($uncut_gem) = true) {",
+     "src": "scripts/skill_crafting/scripts/gem/uncut_gem.rs2:16"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/gem/uncut_gem.rs2:1"
+  },
+  {
+   "id": "crafting/leather",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "craft_leather_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "crafting/craft_leather_gloves",
+     "crafting/craft_leather_boots",
+     "crafting/craft_leather_cowl",
+     "crafting/craft_leather_vambraces",
+     "crafting/craft_leather_body",
+     "crafting/craft_leather_chaps",
+     "crafting/craft_hardleather_body",
+     "crafting/craft_coif",
+     "crafting/craft_dragonhide_vamb",
+     "crafting/craft_dragonhide_chaps",
+     "crafting/craft_dragonhide_body",
+     "crafting/craft_dragonhide_vamb_blue",
+     "crafting/craft_dragonhide_chaps_blue",
+     "crafting/craft_dragonhide_body_blue",
+     "crafting/craft_dragonhide_vamb_red",
+     "crafting/craft_dragonhide_chaps_red",
+     "crafting/craft_dragonhide_body_red",
+     "crafting/craft_dragonhide_vamb_black",
+     "crafting/craft_dragonhide_chaps_black",
+     "crafting/craft_dragonhide_body_black"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "needle"
+     ],
+     "ids": [
+      1733
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/scripts/leather/leather.rs2:31"
+    },
+    {
+     "anyOf": [
+      "thread"
+     ],
+     "ids": [
+      1734
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_crafting/scripts/leather/leather.rs2:112"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "thread",
+     "id": 1734,
+     "perAction": 0.2,
+     "src": "scripts/skill_crafting/scripts/leather/leather.rs2:124",
+     "note": "one thread per 5 items made"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/leather/leather.rs2:31"
+  },
+  {
+   "id": "crafting/glassblowing",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "glass"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "crafting/glass-beer-glass",
+     "crafting/glass-vial",
+     "crafting/glass-glass-orb"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "glassblowingpipe"
+     ],
+     "ids": [
+      1785
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/scripts/glass/glass.rs2:5"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "molten_glass",
+     "id": 1775,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/glass/glass.rs2:100"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/glass/glass.rs2:5"
+  },
+  {
+   "id": "crafting/molten-glass",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [],
+    "idPattern": null,
+    "rungs": []
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "bucket_sand",
+     "id": 1783,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/glass/glass.rs2:43"
+    },
+    {
+     "item": "soda_ash",
+     "id": 1781,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/glass/glass.rs2:45"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case bucket_sand, soda_ash : @smelt_glass;",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:16"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1",
+   "note": "supply step for glassblowing; no ladder rung"
+  },
+  {
+   "id": "crafting/jewellery-gold-ring",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "jewellery"
+    ],
+    "idPattern": "^crafting\\/jewellery-[a-z]+-ring$",
+    "rungs": [
+     "crafting/jewellery-gold-ring",
+     "crafting/jewellery-sapphire-ring",
+     "crafting/jewellery-emerald-ring",
+     "crafting/jewellery-ruby-ring",
+     "crafting/jewellery-diamond-ring",
+     "crafting/jewellery-dragonstone-ring"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "ring_mould"
+     ],
+     "ids": [
+      1592
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:29"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "gold_bar",
+     "id": 2357,
+     "perAction": 1,
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:13",
+     "note": "one bar per item (scripts/skill_crafting/scripts/jewellery/jewellery.rs2 \"inv_del(inv, $bar, 1)\"); perfect_gold_bar is used first when held"
+    },
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:244",
+     "note": "the gem named by the rung, if any"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case gold_bar, perfect_gold_bar : @craft_gold_interface;",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:13"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:29"
+  },
+  {
+   "id": "crafting/jewellery-gold-necklace",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "jewellery"
+    ],
+    "idPattern": "^crafting\\/jewellery-[a-z]+-necklace$",
+    "rungs": [
+     "crafting/jewellery-gold-necklace",
+     "crafting/jewellery-sapphire-necklace",
+     "crafting/jewellery-emerald-necklace",
+     "crafting/jewellery-ruby-necklace",
+     "crafting/jewellery-diamond-necklace",
+     "crafting/jewellery-dragonstone-necklace"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "necklace_mould"
+     ],
+     "ids": [
+      1597
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:77"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "gold_bar",
+     "id": 2357,
+     "perAction": 1,
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:13",
+     "note": "one bar per item (scripts/skill_crafting/scripts/jewellery/jewellery.rs2 \"inv_del(inv, $bar, 1)\"); perfect_gold_bar is used first when held"
+    },
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:244",
+     "note": "the gem named by the rung, if any"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case gold_bar, perfect_gold_bar : @craft_gold_interface;",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:13"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:77"
+  },
+  {
+   "id": "crafting/jewellery-gold-amulet",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "jewellery"
+    ],
+    "idPattern": "^crafting\\/jewellery-[a-z]+-amulet$",
+    "rungs": [
+     "crafting/jewellery-gold-amulet",
+     "crafting/jewellery-sapphire-amulet",
+     "crafting/jewellery-emerald-amulet",
+     "crafting/jewellery-ruby-amulet",
+     "crafting/jewellery-diamond-amulet",
+     "crafting/jewellery-dragonstone-amulet"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "amulet_mould"
+     ],
+     "ids": [
+      1595
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:125"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "gold_bar",
+     "id": 2357,
+     "perAction": 1,
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:13",
+     "note": "one bar per item (scripts/skill_crafting/scripts/jewellery/jewellery.rs2 \"inv_del(inv, $bar, 1)\"); perfect_gold_bar is used first when held"
+    },
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:244",
+     "note": "the gem named by the rung, if any"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case gold_bar, perfect_gold_bar : @craft_gold_interface;",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:13"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:125"
+  },
+  {
+   "id": "crafting/jewellery-holy-symbol",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "jewellery"
+    ],
+    "idPattern": "^crafting\\/jewellery-holy-symbol$",
+    "rungs": [
+     "crafting/jewellery-holy-symbol"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "holy_symbol_mould"
+     ],
+     "ids": [
+      1599
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/configs/jewellery/jewellery.struct:119",
+     "note": "checked at scripts/skill_crafting/scripts/jewellery/jewellery.rs2 \"inv_total(inv, $mould) = 0\""
+    }
+   ],
+   "consumed": [
+    {
+     "item": "silver_bar",
+     "id": 2355,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:332"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case silver_bar : @craft_silver;",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:14"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/configs/jewellery/jewellery.struct:119"
+  },
+  {
+   "id": "crafting/jewellery-unholy-symbol",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "jewellery"
+    ],
+    "idPattern": "^crafting\\/jewellery-unholy-symbol$",
+    "rungs": [
+     "crafting/jewellery-unholy-symbol"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "unholy_symbol_mould"
+     ],
+     "ids": [
+      1594
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/configs/jewellery/jewellery.struct:129",
+     "note": "checked at scripts/skill_crafting/scripts/jewellery/jewellery.rs2 \"inv_total(inv, $mould) = 0\""
+    }
+   ],
+   "consumed": [
+    {
+     "item": "silver_bar",
+     "id": 2355,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/jewellery/jewellery.rs2:332"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_smithing_furnace"
+     ],
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case silver_bar : @craft_silver;",
+     "src": "scripts/skill_smithing/scripts/smelting/smelting.rs2:14"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/configs/jewellery/jewellery.struct:129"
+  },
+  {
+   "id": "crafting/pottery",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "pottery"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "crafting/pottery-pot",
+     "crafting/pottery-pie-dish",
+     "crafting/pottery-bowl"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "softclay",
+     "id": 1761,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/pottery/pottery.rs2:17",
+     "note": "softclay = clay + a water container"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_potters_wheel"
+     ],
+     "src": "scripts/skill_crafting/scripts/pottery/pottery.rs2:8"
+    },
+    {
+     "anyOf": [
+      "_pottery_oven"
+     ],
+     "src": "scripts/skill_crafting/scripts/pottery/pottery.rs2:22"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "case bowl_water, bucket_water, jug_water : @make_softclay(last_useitem);",
+     "src": "scripts/skill_crafting/scripts/pottery/pottery.rs2:4"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/pottery/pottery.rs2:8"
+  },
+  {
+   "id": "crafting/spinning",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "spin"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "crafting/spin-wool",
+     "crafting/spin-flax-into-bow-strings"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "wool",
+     "id": 1737,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/spinning/spinning.rs2:10",
+     "note": "or flax, per the rung"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_spinning_wheel"
+     ],
+     "src": "scripts/skill_crafting/scripts/spinning/spinning.rs2:1"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_crafting/scripts/spinning/spinning.rs2:12"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/spinning/spinning.rs2:1"
+  },
+  {
+   "id": "crafting/battlestaff",
+   "skill": "crafting",
+   "appliesTo": {
+    "kinds": [
+     "staff"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "crafting/staff-water-battlestaff",
+     "crafting/staff-earth-battlestaff",
+     "crafting/staff-fire-battlestaff",
+     "crafting/staff-air-battlestaff"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "battlestaff",
+     "id": 1391,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/battlestaves/battlestaves.rs2:1"
+    },
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": 1,
+     "src": "scripts/skill_crafting/scripts/battlestaves/battlestaves.rs2:4",
+     "note": "the rung orb: air_orb, fire_orb, water_orb or earth_orb"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_crafting/scripts/battlestaves/battlestaves.rs2:16"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/battlestaves/battlestaves.rs2:1",
+   "note": "no tool"
+  },
+  {
+   "id": "fletching/cut-logs",
+   "skill": "fletching",
+   "appliesTo": {
+    "kinds": [],
+    "idPattern": null,
+    "rungs": []
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "knife"
+     ],
+     "ids": [
+      946
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fletching/scripts/cut_logs.rs2:4"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_fletching/scripts/cut_logs.rs2:19"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fletching/scripts/cut_logs.rs2:4",
+   "note": "knife on logs; knowledge/ladders.json holds no log-cutting rung"
+  },
+  {
+   "id": "fletching/bolt-tips",
+   "skill": "fletching",
+   "appliesTo": {
+    "kinds": [
+     "fletching_table"
+    ],
+    "idPattern": "_tips$",
+    "rungs": [
+     "fletching/fletching_opal_tips",
+     "fletching/fletching_oyster_pearl_tips",
+     "fletching/fletching_oyster_pearls_tips"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "chisel"
+     ],
+     "ids": [
+      1755
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_crafting/scripts/gem/uncut_gem.rs2:1",
+     "note": "chisel on opal or oyster pearls calls make_bolt_tips"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": 1,
+     "src": "scripts/skill_fletching/scripts/bolts.rs2:33",
+     "note": "one gem or pearl per the rung input"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_fletching/scripts/bolts.rs2:18"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_crafting/scripts/gem/uncut_gem.rs2:1"
+  },
+  {
+   "id": "fletching/arrows",
+   "skill": "fletching",
+   "appliesTo": {
+    "kinds": [
+     "fletching_table"
+    ],
+    "idPattern": "_arrow$",
+    "rungs": [
+     "fletching/fletching_bronze_arrow",
+     "fletching/fletching_iron_arrow",
+     "fletching/fletching_steel_arrow",
+     "fletching/fletching_mithril_arrow",
+     "fletching/fletching_adamant_arrow",
+     "fletching/fletching_rune_arrow"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "headless_arrow",
+     "id": 53,
+     "perAction": 1,
+     "src": "scripts/skill_fletching/scripts/arrows.rs2:76",
+     "note": "plus one arrowtip per the rung"
+    },
+    {
+     "item": "feather",
+     "id": 314,
+     "perAction": 1,
+     "src": "scripts/skill_fletching/scripts/arrows.rs2:38",
+     "note": "headless arrow step"
+    },
+    {
+     "item": "arrow_shaft",
+     "id": 52,
+     "perAction": 1,
+     "src": "scripts/skill_fletching/scripts/arrows.rs2:39",
+     "note": "headless arrow step"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_fletching/scripts/arrows.rs2:26"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fletching/scripts/arrows.rs2:76",
+   "note": "no tool"
+  },
+  {
+   "id": "fletching/darts",
+   "skill": "fletching",
+   "appliesTo": {
+    "kinds": [
+     "fletching_table"
+    ],
+    "idPattern": "_dart$",
+    "rungs": [
+     "fletching/fletching_bronze_dart",
+     "fletching/fletching_iron_dart",
+     "fletching/fletching_steel_dart",
+     "fletching/fletching_mithril_dart",
+     "fletching/fletching_adamant_dart",
+     "fletching/fletching_rune_dart"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "feather",
+     "id": 314,
+     "perAction": 1,
+     "src": "scripts/skill_fletching/scripts/darts.rs2:53",
+     "note": "plus one dart tip per the rung"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_fletching/scripts/darts.rs2:21"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fletching/scripts/darts.rs2:53",
+   "note": "no tool"
+  },
+  {
+   "id": "fletching/bolts",
+   "skill": "fletching",
+   "appliesTo": {
+    "kinds": [
+     "fletching_table"
+    ],
+    "idPattern": "_bolts$",
+    "rungs": [
+     "fletching/fletching_opal_bolts",
+     "fletching/fletching_pearl_bolts",
+     "fletching/fletching_barb_bolts"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "bolt",
+     "id": 877,
+     "perAction": 1,
+     "src": "scripts/skill_fletching/scripts/bolts.rs2:79",
+     "note": "plus one bolt tip per the rung"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_fletching/scripts/bolts.rs2:50"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fletching/scripts/bolts.rs2:79",
+   "note": "no tool"
+  },
+  {
+   "id": "fletching/stringing",
+   "skill": "fletching",
+   "appliesTo": {
+    "kinds": [
+     "fletching_table"
+    ],
+    "idPattern": "^fletching\\/stringing_",
+    "rungs": [
+     "fletching/stringing_normal_shortbow",
+     "fletching/stringing_normal_longbow",
+     "fletching/stringing_oak_shortbow",
+     "fletching/stringing_oak_longbow",
+     "fletching/stringing_willow_shortbow",
+     "fletching/stringing_willow_longbow",
+     "fletching/stringing_maple_shortbow",
+     "fletching/stringing_maple_longbow",
+     "fletching/stringing_yew_shortbow",
+     "fletching/stringing_yew_longbow",
+     "fletching/stringing_magic_shortbow",
+     "fletching/stringing_magic_longbow"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "bow_string",
+     "id": 1777,
+     "perAction": 1,
+     "src": "scripts/skill_fletching/scripts/bows.rs2:37",
+     "note": "plus the unstrung bow"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_fletching/scripts/bows.rs2:19"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fletching/scripts/bows.rs2:37",
+   "note": "no tool"
+  },
+  {
+   "id": "firemaking/burn",
+   "skill": "firemaking",
+   "appliesTo": {
+    "kinds": [
+     "burn"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "firemaking/burn-normal-logs",
+     "firemaking/burn-oak-logs",
+     "firemaking/burn-willow-logs",
+     "firemaking/burn-maple-logs",
+     "firemaking/burn-yew-logs",
+     "firemaking/burn-magic-logs"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "tinderbox"
+     ],
+     "ids": [
+      590
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_firemaking/scripts/firemaking.rs2:48"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "(rung input)",
+     "id": null,
+     "perAction": 1,
+     "src": "scripts/skill_firemaking/scripts/firemaking.rs2:38",
+     "note": "one log per the rung; the log levelrequire param is the Firemaking level"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_firemaking/scripts/firemaking.rs2:48"
+  },
+  {
+   "id": "herblore/potion",
+   "skill": "herblore",
+   "appliesTo": {
+    "kinds": [
+     "potion"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "herblore/potion-attack-potion",
+     "herblore/potion-anti-poison-potion",
+     "herblore/potion-strength-potion",
+     "herblore/potion-stat-restore-potion",
+     "herblore/potion-energy-potion",
+     "herblore/potion-defence-potion",
+     "herblore/potion-agility-potion",
+     "herblore/potion-prayer-restore-potion",
+     "herblore/potion-super-attack-potion",
+     "herblore/potion-super-anti-poison-potion",
+     "herblore/potion-fishing-potion",
+     "herblore/potion-super-energy-potion",
+     "herblore/potion-super-strength-potion",
+     "herblore/potion-weapon-poison",
+     "herblore/potion-super-restore-potion",
+     "herblore/potion-super-defence-potion",
+     "herblore/potion-anti-firebreath-potion",
+     "herblore/potion-ranging-potion",
+     "herblore/potion-magic-potion",
+     "herblore/potion-zamorak-potion"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [
+    {
+     "item": "vial_water",
+     "id": 227,
+     "perAction": 1,
+     "src": "scripts/skill_herblore/scripts/brewing/brew_potion.rs2:1",
+     "note": "plus the herb and secondary per the rung"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_herblore/scripts/brewing/brew_potion.rs2:106"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_herblore/scripts/brewing/brew_potion.rs2:1",
+   "note": "no tool; herb + vial_water makes the unfinished potion, then the secondary"
+  },
+  {
+   "id": "herblore/identify",
+   "skill": "herblore",
+   "appliesTo": {
+    "kinds": [
+     "identify"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "herblore/identify-guam-leaf",
+     "herblore/identify-rogue-s-purse",
+     "herblore/identify-snake-weed",
+     "herblore/identify-marrentill",
+     "herblore/identify-tarromin",
+     "herblore/identify-harralander",
+     "herblore/identify-ranarr-weed",
+     "herblore/identify-toadflax",
+     "herblore/identify-irit-leaf",
+     "herblore/identify-avantoe",
+     "herblore/identify-kwuarm",
+     "herblore/identify-snapdragon",
+     "herblore/identify-cadantine",
+     "herblore/identify-lantadyme",
+     "herblore/identify-dwarf-weed",
+     "herblore/identify-torstol"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_herblore/scripts/identifying/identify.rs2:60"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_herblore/scripts/identifying/identify.rs2:60",
+   "note": "no tool"
+  },
+  {
+   "id": "cooking/heat-source",
+   "skill": "cooking",
+   "appliesTo": {
+    "kinds": [
+     "cooking_generic"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "cooking/cooking_generic_anchovies",
+     "cooking/cooking_generic_bear_meat",
+     "cooking/cooking_generic_beef",
+     "cooking/cooking_generic_bread",
+     "cooking/cooking_generic_chicken",
+     "cooking/cooking_generic_drunk_dragon",
+     "cooking/cooking_generic_half_baked_batta",
+     "cooking/cooking_generic_half_baked_crunchies",
+     "cooking/cooking_generic_half_baked_gnomebowl",
+     "cooking/cooking_generic_karambwan",
+     "cooking/cooking_generic_karambwanji",
+     "cooking/cooking_generic_poor_karambwan",
+     "cooking/cooking_generic_rabbit",
+     "cooking/cooking_generic_rat_meat",
+     "cooking/cooking_generic_raw_swamp_paste",
+     "cooking/cooking_generic_sardine",
+     "cooking/cooking_generic_shrimp",
+     "cooking/cooking_generic_ugthanki_meat",
+     "cooking/cooking_generic_herring",
+     "cooking/cooking_generic_mackerel",
+     "cooking/cooking_generic_redberry_pie",
+     "cooking/cooking_snail_corpse1",
+     "cooking/cooking_generic_trout",
+     "cooking/cooking_snail_corpse2",
+     "cooking/cooking_generic_cod",
+     "cooking/cooking_generic_meat_pie",
+     "cooking/cooking_generic_pike",
+     "cooking/cooking_snail_corpse3",
+     "cooking/cooking_generic_salmon",
+     "cooking/cooking_generic_stew",
+     "cooking/cooking_generic_mort_slimey_eel",
+     "cooking/cooking_generic_apple_pie",
+     "cooking/cooking_generic_burnt_jogre_bones_in_raw_karambwanji_paste",
+     "cooking/cooking_generic_jogre_bones_in_raw_karambwanji_paste",
+     "cooking/cooking_generic_tuna",
+     "cooking/cooking_generic_pizza",
+     "cooking/cooking_generic_cake",
+     "cooking/cooking_generic_lobster",
+     "cooking/cooking_generic_bass",
+     "cooking/cooking_generic_swordfish",
+     "cooking/cooking_generic_wrapped_oomlie",
+     "cooking/cooking_generic_lava_eel",
+     "cooking/cooking_generic_pitta_bread",
+     "cooking/cooking_generic_curry",
+     "cooking/cooking_generic_shark",
+     "cooking/cooking_generic_seaturtle",
+     "cooking/cooking_generic_mantaray"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "gauntlets_of_cooking"
+     ],
+     "ids": [
+      775
+     ],
+     "hold": "worn",
+     "role": "bonus",
+     "src": "scripts/skill_cooking/scripts/cooking.rs2:135",
+     "note": "uses the row successchance_gauntlets while worn"
+    }
+   ],
+   "consumed": [],
+   "locs": [
+    {
+     "anyOf": [
+      "_cooking_oven"
+     ],
+     "src": "scripts/skill_cooking/scripts/cooking.rs2:1"
+    },
+    {
+     "anyOf": [
+      "_cooking_fire"
+     ],
+     "src": "scripts/skill_cooking/scripts/cooking.rs2:2"
+    }
+   ],
+   "conditions": [
+    {
+     "text": "} else if (loc_type = cooksquestrange & ($low_cookomatic > null | $high_cookomatic > null)) { // lumbridge cook-o-matic 100",
+     "src": "scripts/skill_cooking/scripts/cooking.rs2:138"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_cooking/scripts/cooking.rs2:135",
+   "note": "a range (_cooking_oven) or a fire (_cooking_fire); range rows may use successchance_range"
+  },
+  {
+   "id": "cooking/wine",
+   "skill": "cooking",
+   "appliesTo": {
+    "kinds": [
+     "wine"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "cooking/wine-wine"
+    ]
+   },
+   "minLevel": 35,
+   "levelSrc": "scripts/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2:8",
+   "items": [],
+   "consumed": [
+    {
+     "item": "grapes",
+     "id": 1987,
+     "perAction": 1,
+     "src": "scripts/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2:13"
+    },
+    {
+     "item": "jug_water",
+     "id": 1937,
+     "perAction": 1,
+     "src": "scripts/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2:14"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_cooking/scripts/cooking_inv/scripts/wine/wine.rs2:13",
+   "note": "no tool"
+  },
+  {
+   "id": "runecraft/altar",
+   "skill": "runecraft",
+   "appliesTo": {
+    "kinds": [
+     "runecraft_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "runecraft/runecraft_air",
+     "runecraft/runecraft_mind",
+     "runecraft/runecraft_water",
+     "runecraft/runecraft_earth",
+     "runecraft/runecraft_fire",
+     "runecraft/runecraft_body",
+     "runecraft/runecraft_cosmic",
+     "runecraft/runecraft_chaos",
+     "runecraft/runecraft_nature",
+     "runecraft/runecraft_law",
+     "runecraft/runecraft_death"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "_talismans"
+     ],
+     "ids": [
+      null
+     ],
+     "hold": "held",
+     "role": "access",
+     "src": "scripts/skill_runecraft/scripts/runecraft.rs2:20",
+     "note": "the rung talisman (ladder requires) is used on the ruins; it is not consumed"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "blankrune",
+     "id": 1436,
+     "perAction": null,
+     "src": "scripts/skill_runecraft/scripts/runecraft.rs2:94",
+     "note": "all essence held is used in one action"
+    }
+   ],
+   "locs": [
+    {
+     "anyOf": [
+      "_rc_ruins"
+     ],
+     "src": "scripts/skill_runecraft/scripts/runecraft.rs2:19"
+    },
+    {
+     "anyOf": [
+      "_rc_altar"
+     ],
+     "src": "scripts/skill_runecraft/scripts/runecraft.rs2:17"
+    }
+   ],
+   "conditions": [],
+   "gaps": [
+    "no .rs2 or .obj file under content/scripts names a tiara; only a talisman used on the ruins enters the altar"
+   ],
+   "src": "scripts/skill_runecraft/scripts/runecraft.rs2:20"
+  },
+  {
+   "id": "thieving/locked-chest",
+   "skill": "thieving",
+   "appliesTo": {
+    "kinds": [
+     "trapped_chest"
+    ],
+    "idPattern": "chest_steel_arrowtips$",
+    "rungs": [
+     "thieving/trapped_chest_chest_steel_arrowtips"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "lockpick"
+     ],
+     "ids": [
+      1523
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_thieving/scripts/chest/trapped_chest.rs2:92"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_thieving/scripts/chest/trapped_chest.rs2:92"
+  },
+  {
+   "id": "fishing/guild-entry",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [],
+    "idPattern": null,
+    "rungs": []
+   },
+   "minLevel": 68,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_guild.rs2:5",
+   "items": [],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_guild.rs2:5",
+   "note": "entry gate for the Fishing Guild spots"
+  },
+  {
+   "id": "woodcutting/axe/rune_axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "items": [
+    {
+     "anyOf": [
+      "rune_axe"
+     ],
+     "ids": [
+      1359
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:220",
+     "note": "wield Attack 40 (scripts/levelrequire/scripts/tier40.rs2:4); levelrequire param 41 (scripts/skill_woodcutting/configs/axes/axes.obj:188) is not read by woodcut.rs2"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:220",
+   "note": "woodcutting_axe_checker has no Woodcutting level check"
+  },
+  {
+   "id": "woodcutting/axe/adamant_axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "items": [
+    {
+     "anyOf": [
+      "adamant_axe"
+     ],
+     "ids": [
+      1357
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:223",
+     "note": "wield Attack 30 (scripts/levelrequire/scripts/tier30.rs2:4); levelrequire param 31 (scripts/skill_woodcutting/configs/axes/axes.obj:155) is not read by woodcut.rs2"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:223",
+   "note": "woodcutting_axe_checker has no Woodcutting level check"
+  },
+  {
+   "id": "woodcutting/axe/mithril_axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "items": [
+    {
+     "anyOf": [
+      "mithril_axe"
+     ],
+     "ids": [
+      1355
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:226",
+     "note": "wield Attack 20 (scripts/levelrequire/scripts/tier20.rs2:4); levelrequire param 21 (scripts/skill_woodcutting/configs/axes/axes.obj:122) is not read by woodcut.rs2"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:226",
+   "note": "woodcutting_axe_checker has no Woodcutting level check"
+  },
+  {
+   "id": "woodcutting/axe/black_axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "items": [
+    {
+     "anyOf": [
+      "black_axe"
+     ],
+     "ids": [
+      1361
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:229",
+     "note": "wield Attack 10 (scripts/levelrequire/scripts/tier10.rs2:4); levelrequire param 11 (scripts/skill_woodcutting/configs/axes/axes.obj:222) is not read by woodcut.rs2"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:229",
+   "note": "woodcutting_axe_checker has no Woodcutting level check"
+  },
+  {
+   "id": "woodcutting/axe/steel_axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "items": [
+    {
+     "anyOf": [
+      "steel_axe"
+     ],
+     "ids": [
+      1353
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:232",
+     "note": "wield Attack 5 (scripts/levelrequire/scripts/tier5.rs2:4); levelrequire param 6 (scripts/skill_woodcutting/configs/axes/axes.obj:89) is not read by woodcut.rs2"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:232",
+   "note": "woodcutting_axe_checker has no Woodcutting level check"
+  },
+  {
+   "id": "woodcutting/axe/iron_axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "items": [
+    {
+     "anyOf": [
+      "iron_axe"
+     ],
+     "ids": [
+      1349
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:235",
+     "note": "wield Attack 1 (scripts/levelrequire/scripts/tier1.rs2:30); levelrequire param 0 (scripts/skill_woodcutting/configs/axes/axes.obj:25) is not read by woodcut.rs2"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:235",
+   "note": "woodcutting_axe_checker has no Woodcutting level check"
+  },
+  {
+   "id": "woodcutting/axe/bronze_axe",
+   "skill": "woodcutting",
+   "appliesTo": {
+    "kinds": [
+     "woodcutting_trees"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "woodcutting/achey_tree_table",
+     "woodcutting/burnt_tree_table",
+     "woodcutting/jungle_tree_table",
+     "woodcutting/normal_tree_table",
+     "woodcutting/oak_tree_table",
+     "woodcutting/willow_tree_table",
+     "woodcutting/hollow_tree_table",
+     "woodcutting/maple_tree_table",
+     "woodcutting/yew_tree_table",
+     "woodcutting/magic_tree_table"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": "scripts/skill_woodcutting/scripts/woodcut.rs2:197",
+   "items": [
+    {
+     "anyOf": [
+      "bronze_axe"
+     ],
+     "ids": [
+      1351
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:238",
+     "note": "wield Attack 1 (scripts/tutorial/scripts/tutorial.rs2:279); levelrequire param 0 (scripts/skill_woodcutting/configs/axes/axes.obj:58) is not read by woodcut.rs2"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_woodcutting/scripts/woodcut.rs2:238",
+   "note": "woodcutting_axe_checker has no Woodcutting level check"
+  },
+  {
+   "id": "mining/pickaxe/rune_pickaxe",
+   "skill": "mining",
+   "appliesTo": {
+    "kinds": [
+     "mining_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "mining/clay_rock_table",
+     "mining/copper_rock_table",
+     "mining/desertrescue_rock",
+     "mining/rune_essence_table",
+     "mining/tin_rock_table",
+     "mining/blurite_rock",
+     "mining/limestone_rock1",
+     "mining/limestone_rock2",
+     "mining/limestone_rock3",
+     "mining/iron_rock_table",
+     "mining/silver_rock_table",
+     "mining/coal_rock_table",
+     "mining/gem_rock",
+     "mining/gold_rock_table",
+     "mining/mithril_rock_table",
+     "mining/adamantite_rock_table",
+     "mining/runite_rock_table"
+    ]
+   },
+   "minLevel": 41,
+   "levelSrc": "scripts/skill_mining/configs/pickaxes.obj:197",
+   "items": [
+    {
+     "anyOf": [
+      "rune_pickaxe"
+     ],
+     "ids": [
+      1275
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:4",
+     "note": "wield Attack 40 (scripts/levelrequire/scripts/tier40.rs2:5); mining_rate 2 (scripts/skill_mining/configs/pickaxes.obj:198)"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:4"
+  },
+  {
+   "id": "mining/pickaxe/adamant_pickaxe",
+   "skill": "mining",
+   "appliesTo": {
+    "kinds": [
+     "mining_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "mining/clay_rock_table",
+     "mining/copper_rock_table",
+     "mining/desertrescue_rock",
+     "mining/rune_essence_table",
+     "mining/tin_rock_table",
+     "mining/blurite_rock",
+     "mining/limestone_rock1",
+     "mining/limestone_rock2",
+     "mining/limestone_rock3",
+     "mining/iron_rock_table",
+     "mining/silver_rock_table",
+     "mining/coal_rock_table",
+     "mining/gem_rock",
+     "mining/gold_rock_table",
+     "mining/mithril_rock_table",
+     "mining/adamantite_rock_table",
+     "mining/runite_rock_table"
+    ]
+   },
+   "minLevel": 31,
+   "levelSrc": "scripts/skill_mining/configs/pickaxes.obj:127",
+   "items": [
+    {
+     "anyOf": [
+      "adamant_pickaxe"
+     ],
+     "ids": [
+      1271
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:7",
+     "note": "wield Attack 30 (scripts/levelrequire/scripts/tier30.rs2:5); mining_rate 3 (scripts/skill_mining/configs/pickaxes.obj:128)"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:7"
+  },
+  {
+   "id": "mining/pickaxe/mithril_pickaxe",
+   "skill": "mining",
+   "appliesTo": {
+    "kinds": [
+     "mining_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "mining/clay_rock_table",
+     "mining/copper_rock_table",
+     "mining/desertrescue_rock",
+     "mining/rune_essence_table",
+     "mining/tin_rock_table",
+     "mining/blurite_rock",
+     "mining/limestone_rock1",
+     "mining/limestone_rock2",
+     "mining/limestone_rock3",
+     "mining/iron_rock_table",
+     "mining/silver_rock_table",
+     "mining/coal_rock_table",
+     "mining/gem_rock",
+     "mining/gold_rock_table",
+     "mining/mithril_rock_table",
+     "mining/adamantite_rock_table",
+     "mining/runite_rock_table"
+    ]
+   },
+   "minLevel": 21,
+   "levelSrc": "scripts/skill_mining/configs/pickaxes.obj:162",
+   "items": [
+    {
+     "anyOf": [
+      "mithril_pickaxe"
+     ],
+     "ids": [
+      1273
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:10",
+     "note": "wield Attack 20 (scripts/levelrequire/scripts/tier20.rs2:5); mining_rate 4 (scripts/skill_mining/configs/pickaxes.obj:163)"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:10"
+  },
+  {
+   "id": "mining/pickaxe/steel_pickaxe",
+   "skill": "mining",
+   "appliesTo": {
+    "kinds": [
+     "mining_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "mining/clay_rock_table",
+     "mining/copper_rock_table",
+     "mining/desertrescue_rock",
+     "mining/rune_essence_table",
+     "mining/tin_rock_table",
+     "mining/blurite_rock",
+     "mining/limestone_rock1",
+     "mining/limestone_rock2",
+     "mining/limestone_rock3",
+     "mining/iron_rock_table",
+     "mining/silver_rock_table",
+     "mining/coal_rock_table",
+     "mining/gem_rock",
+     "mining/gold_rock_table",
+     "mining/mithril_rock_table",
+     "mining/adamantite_rock_table",
+     "mining/runite_rock_table"
+    ]
+   },
+   "minLevel": 6,
+   "levelSrc": "scripts/skill_mining/configs/pickaxes.obj:92",
+   "items": [
+    {
+     "anyOf": [
+      "steel_pickaxe"
+     ],
+     "ids": [
+      1269
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:13",
+     "note": "wield Attack 5 (scripts/levelrequire/scripts/tier5.rs2:5); mining_rate 5 (scripts/skill_mining/configs/pickaxes.obj:93)"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:13"
+  },
+  {
+   "id": "mining/pickaxe/iron_pickaxe",
+   "skill": "mining",
+   "appliesTo": {
+    "kinds": [
+     "mining_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "mining/clay_rock_table",
+     "mining/copper_rock_table",
+     "mining/desertrescue_rock",
+     "mining/rune_essence_table",
+     "mining/tin_rock_table",
+     "mining/blurite_rock",
+     "mining/limestone_rock1",
+     "mining/limestone_rock2",
+     "mining/limestone_rock3",
+     "mining/iron_rock_table",
+     "mining/silver_rock_table",
+     "mining/coal_rock_table",
+     "mining/gem_rock",
+     "mining/gold_rock_table",
+     "mining/mithril_rock_table",
+     "mining/adamantite_rock_table",
+     "mining/runite_rock_table"
+    ]
+   },
+   "minLevel": 0,
+   "levelSrc": "scripts/skill_mining/configs/pickaxes.obj:59",
+   "items": [
+    {
+     "anyOf": [
+      "iron_pickaxe"
+     ],
+     "ids": [
+      1267
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:16",
+     "note": "wield Attack 1 (scripts/levelrequire/scripts/tier1.rs2:31); mining_rate 6 (scripts/skill_mining/configs/pickaxes.obj:60)"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:16"
+  },
+  {
+   "id": "mining/pickaxe/bronze_pickaxe",
+   "skill": "mining",
+   "appliesTo": {
+    "kinds": [
+     "mining_table"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "mining/clay_rock_table",
+     "mining/copper_rock_table",
+     "mining/desertrescue_rock",
+     "mining/rune_essence_table",
+     "mining/tin_rock_table",
+     "mining/blurite_rock",
+     "mining/limestone_rock1",
+     "mining/limestone_rock2",
+     "mining/limestone_rock3",
+     "mining/iron_rock_table",
+     "mining/silver_rock_table",
+     "mining/coal_rock_table",
+     "mining/gem_rock",
+     "mining/gold_rock_table",
+     "mining/mithril_rock_table",
+     "mining/adamantite_rock_table",
+     "mining/runite_rock_table"
+    ]
+   },
+   "minLevel": 0,
+   "levelSrc": "scripts/skill_mining/configs/pickaxes.obj:24",
+   "items": [
+    {
+     "anyOf": [
+      "bronze_pickaxe"
+     ],
+     "ids": [
+      1265
+     ],
+     "hold": "either",
+     "role": "tool",
+     "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:19",
+     "note": "wield Attack 1 (scripts/tutorial/scripts/tutorial.rs2:279); mining_rate 7 (scripts/skill_mining/configs/pickaxes.obj:25)"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_mining/scripts/pickaxe_checker.rs2:19"
+  },
+  {
+   "id": "fishing/spot/freshfish/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-trout",
+     "fishing/catch-salmon"
+    ]
+   },
+   "minLevel": 20,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:27",
+   "items": [
+    {
+     "anyOf": [
+      "fly_fishing_rod"
+     ],
+     "ids": [
+      309
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:33"
+    },
+    {
+     "anyOf": [
+      "feather"
+     ],
+     "ids": [
+      314
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:22",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "feather",
+     "id": 314,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:81",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:1",
+   "catches": [
+    {
+     "item": "raw_trout",
+     "id": 335,
+     "level": 20,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:27",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:81"
+    },
+    {
+     "item": "raw_salmon",
+     "id": 331,
+     "level": 30,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:80",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:81"
+    }
+   ],
+   "option": {
+    "name": "Lure",
+    "trigger": "[opnpc1,_freshfish]",
+    "spot": "_freshfish",
+    "npcs": 12,
+    "src": "scripts/skill_fishing/configs/fishing.npc:72"
+   }
+  },
+  {
+   "id": "fishing/spot/freshfish/op3",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-pike"
+    ]
+   },
+   "minLevel": 25,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:93",
+   "items": [
+    {
+     "anyOf": [
+      "fishing_rod"
+     ],
+     "ids": [
+      307
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:99"
+    },
+    {
+     "anyOf": [
+      "fishing_bait"
+     ],
+     "ids": [
+      313
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:16",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "fishing_bait",
+     "id": 313,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:144",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:4",
+   "catches": [
+    {
+     "item": "raw_pike",
+     "id": 349,
+     "level": 25,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:93",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/freshfish.rs2:144"
+    }
+   ],
+   "option": {
+    "name": "Bait",
+    "trigger": "[opnpc3,_freshfish]",
+    "spot": "_freshfish",
+    "npcs": 12,
+    "src": "scripts/skill_fishing/configs/fishing.npc:73"
+   }
+  },
+  {
+   "id": "fishing/spot/rarefish/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-lobster"
+    ]
+   },
+   "minLevel": 40,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:23",
+   "items": [
+    {
+     "anyOf": [
+      "lobster_pot"
+     ],
+     "ids": [
+      301
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:29"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (inzone(^miscellania_lower_bound, ^miscellania_upper_bound, coord) = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:34"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_not_started) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:36"
+    },
+    {
+     "text": "if(%misc_approval >= ^MISC_APPROVAL_100_PERCENT) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:42"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_complete) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:44"
+    },
+    {
+     "text": "if (inzone(^miscellania_lower_bound, ^miscellania_upper_bound, coord) = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:92"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_not_started) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:93"
+    },
+    {
+     "text": "if(%misc_approval >= ^MISC_APPROVAL_100_PERCENT) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:99"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_complete) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:101"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:1",
+   "catches": [
+    {
+     "item": "raw_lobster",
+     "id": 377,
+     "level": 40,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:23",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:72"
+    }
+   ],
+   "option": {
+    "name": "Cage",
+    "trigger": "[opnpc1,_rarefish]",
+    "spot": "_rarefish",
+    "npcs": 4,
+    "src": "scripts/skill_fishing/configs/fishing.npc:135"
+   }
+  },
+  {
+   "id": "fishing/spot/rarefish/op3",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-tuna",
+     "fishing/catch-swordfish"
+    ]
+   },
+   "minLevel": 35,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:128",
+   "items": [
+    {
+     "anyOf": [
+      "harpoon"
+     ],
+     "ids": [
+      311
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:135"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (inzone(^miscellania_lower_bound, ^miscellania_upper_bound, coord) = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:139"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_not_started) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:141"
+    },
+    {
+     "text": "if(%misc_approval >= ^MISC_APPROVAL_100_PERCENT) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:147"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_complete) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:149"
+    },
+    {
+     "text": "if (inzone(^miscellania_lower_bound, ^miscellania_upper_bound, coord) = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:198"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_not_started) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:199"
+    },
+    {
+     "text": "if(%misc_approval >= ^MISC_APPROVAL_100_PERCENT) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:205"
+    },
+    {
+     "text": "if(%misc_quest = ^misc_complete) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:207"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:3",
+   "catches": [
+    {
+     "item": "raw_tuna",
+     "id": 359,
+     "level": 35,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:128",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:176"
+    },
+    {
+     "item": "raw_swordfish",
+     "id": 371,
+     "level": 50,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:175",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/rarefish.rs2:176"
+    }
+   ],
+   "option": {
+    "name": "Harpoon",
+    "trigger": "[opnpc3,_rarefish]",
+    "spot": "_rarefish",
+    "npcs": 4,
+    "src": "scripts/skill_fishing/configs/fishing.npc:136"
+   }
+  },
+  {
+   "id": "fishing/spot/memberfish/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-caskets",
+     "fishing/catch-mackerel",
+     "fishing/catch-oyster",
+     "fishing/catch-cod",
+     "fishing/catch-bass"
+    ]
+   },
+   "minLevel": 16,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:87",
+   "items": [
+    {
+     "anyOf": [
+      "big_net"
+     ],
+     "ids": [
+      305
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:93"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if(~mm_wearing_greegree = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:83"
+    },
+    {
+     "text": "if(~mm_wearing_greegree = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:123"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:1",
+   "catches": [
+    {
+     "item": "leather_boots",
+     "id": 1061,
+     "level": 16,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:87",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:158"
+    },
+    {
+     "item": "seaweed",
+     "id": 401,
+     "level": 16,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:87",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:164"
+    },
+    {
+     "item": "leather_gloves",
+     "id": 1059,
+     "level": 16,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:87",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:170"
+    },
+    {
+     "item": "raw_mackerel",
+     "id": 353,
+     "level": 16,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:87",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:176"
+    },
+    {
+     "item": "oystershell",
+     "id": 407,
+     "level": 16,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:87",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:188"
+    },
+    {
+     "item": "casket",
+     "id": 405,
+     "level": 16,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:87",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:194"
+    },
+    {
+     "item": "raw_cod",
+     "id": 341,
+     "level": 23,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:199",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:203"
+    },
+    {
+     "item": "raw_bass",
+     "id": 363,
+     "level": 46,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:208",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:212"
+    }
+   ],
+   "option": {
+    "name": "Net",
+    "trigger": "[opnpc1,_memberfish]",
+    "spot": "_memberfish",
+    "npcs": 6,
+    "src": "scripts/skill_fishing/configs/fishing.npc:156"
+   }
+  },
+  {
+   "id": "fishing/spot/memberfish/op3",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-shark"
+    ]
+   },
+   "minLevel": 76,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:14",
+   "items": [
+    {
+     "anyOf": [
+      "harpoon"
+     ],
+     "ids": [
+      311
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:21"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if(~mm_wearing_greegree = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:10"
+    },
+    {
+     "text": "if(~mm_wearing_greegree = true) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:52"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:2",
+   "catches": [
+    {
+     "item": "raw_shark",
+     "id": 383,
+     "level": 76,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:14",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/memberfish.rs2:42"
+    }
+   ],
+   "option": {
+    "name": "Harpoon",
+    "trigger": "[opnpc3,_memberfish]",
+    "spot": "_memberfish",
+    "npcs": 6,
+    "src": "scripts/skill_fishing/configs/fishing.npc:157"
+   }
+  },
+  {
+   "id": "fishing/spot/saltfish/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-shrimp",
+     "fishing/catch-anchovies"
+    ]
+   },
+   "minLevel": 1,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "net"
+     ],
+     "ids": [
+      303
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:28"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:1",
+   "note": "no Fishing level check on this option; level 1 is the stat floor",
+   "catches": [
+    {
+     "item": "raw_shrimp",
+     "id": 317,
+     "level": 1,
+     "levelSrc": null,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:50"
+    },
+    {
+     "item": "raw_anchovies",
+     "id": 321,
+     "level": 15,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:49",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:50"
+    }
+   ],
+   "option": {
+    "name": "Net",
+    "trigger": "[opnpc1,_saltfish]",
+    "spot": "_saltfish",
+    "npcs": 9,
+    "src": "scripts/skill_fishing/configs/fishing.npc:219"
+   }
+  },
+  {
+   "id": "fishing/spot/saltfish/op3",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-sardine",
+     "fishing/catch-herring"
+    ]
+   },
+   "minLevel": 5,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:86",
+   "items": [
+    {
+     "anyOf": [
+      "fishing_rod"
+     ],
+     "ids": [
+      307
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:92"
+    },
+    {
+     "anyOf": [
+      "fishing_bait"
+     ],
+     "ids": [
+      313
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:16",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "fishing_bait",
+     "id": 313,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:118",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:4",
+   "catches": [
+    {
+     "item": "raw_sardine",
+     "id": 327,
+     "level": 5,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:86",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:118"
+    },
+    {
+     "item": "raw_herring",
+     "id": 345,
+     "level": 10,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:117",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/saltfish.rs2:118"
+    }
+   ],
+   "option": {
+    "name": "Bait",
+    "trigger": "[opnpc3,_saltfish]",
+    "spot": "_saltfish",
+    "npcs": 9,
+    "src": "scripts/skill_fishing/configs/fishing.npc:220"
+   }
+  },
+  {
+   "id": "fishing/spot/0_45_152_lavafish/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": []
+   },
+   "minLevel": 53,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:84",
+   "items": [
+    {
+     "anyOf": [
+      "oily_fishing_rod"
+     ],
+     "ids": [
+      1585
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:90"
+    },
+    {
+     "anyOf": [
+      "fishing_bait"
+     ],
+     "ids": [
+      313
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:16",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "fishing_bait",
+     "id": 313,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:66",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:2",
+   "catches": [
+    {
+     "item": "raw_lava_eel",
+     "id": 2148,
+     "level": 53,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:84",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:66"
+    }
+   ],
+   "option": {
+    "name": "Bait",
+    "trigger": "[opnpc1,0_45_152_lavafish]",
+    "spot": "0_45_152_lavafish",
+    "npcs": 1,
+    "src": "scripts/skill_fishing/configs/fishing.npc:534"
+   }
+  },
+  {
+   "id": "fishing/spot/category_632/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-shrimp",
+     "fishing/catch-karambwanji"
+    ]
+   },
+   "minLevel": 5,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:26",
+   "items": [
+    {
+     "anyOf": [
+      "net"
+     ],
+     "ids": [
+      303
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:32"
+    }
+   ],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:1",
+   "catches": [
+    {
+     "item": "tbwt_raw_karambwanji",
+     "id": 3150,
+     "level": 5,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:26",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:53"
+    },
+    {
+     "item": "raw_shrimp",
+     "id": 317,
+     "level": 5,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:26",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:57"
+    }
+   ],
+   "option": {
+    "name": "Net",
+    "trigger": "[opnpc1,_category_632]",
+    "spot": "_category_632",
+    "npcs": 2,
+    "src": "scripts/skill_fishing/configs/fishing.npc:571"
+   }
+  },
+  {
+   "id": "fishing/spot/category_633/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-karambwan"
+    ]
+   },
+   "minLevel": 65,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:104",
+   "items": [
+    {
+     "anyOf": [
+      "tbwt_karambwan_vessel_loaded_with_karambwanji"
+     ],
+     "ids": [
+      3159
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:112"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "tbwt_karambwan_vessel_loaded_with_karambwanji",
+     "id": 3159,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:125",
+     "note": "inv_del on this option path; tbwt_karambwan_vessel is given back"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if(%tbwt_lubufu < ^tbwt_lubufu_complete) {",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:100"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:13",
+   "catches": [
+    {
+     "item": "tbwt_raw_karambwan",
+     "id": 3142,
+     "level": 65,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:104",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/tbwt.rs2:127"
+    }
+   ],
+   "option": {
+    "name": "Fish",
+    "trigger": "[opnpc1,_category_633]",
+    "spot": "_category_633",
+    "npcs": 3,
+    "src": "scripts/skill_fishing/configs/fishing.npc:602"
+   }
+  },
+  {
+   "id": "fishing/spot/slimeyfish/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-slimey-eel"
+    ]
+   },
+   "minLevel": 28,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/slimeyfish.rs2:13",
+   "items": [
+    {
+     "anyOf": [
+      "fishing_rod"
+     ],
+     "ids": [
+      307
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/slimeyfish.rs2:18"
+    },
+    {
+     "anyOf": [
+      "fishing_bait"
+     ],
+     "ids": [
+      313
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:16",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "fishing_bait",
+     "id": 313,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/slimeyfish.rs2:43",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/slimeyfish.rs2:1",
+   "catches": [
+    {
+     "item": "mort_slimey_eel",
+     "id": 3379,
+     "level": 28,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/slimeyfish.rs2:13",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/slimeyfish.rs2:43"
+    }
+   ],
+   "option": {
+    "name": "Bait",
+    "trigger": "[opnpc1,_slimeyfish]",
+    "spot": "_slimeyfish",
+    "npcs": 3,
+    "src": "scripts/skill_fishing/configs/fishing.npc:772"
+   }
+  },
+  {
+   "id": "fishing/spot/loc_2630/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": []
+   },
+   "minLevel": 53,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:84",
+   "items": [
+    {
+     "anyOf": [
+      "oily_fishing_rod"
+     ],
+     "ids": [
+      1585
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:90"
+    },
+    {
+     "anyOf": [
+      "fishing_bait"
+     ],
+     "ids": [
+      313
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:16",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "fishing_bait",
+     "id": 313,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish_loc.rs2:57",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish_loc.rs2:1",
+   "catches": [
+    {
+     "item": "raw_lava_eel",
+     "id": 2148,
+     "level": 53,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/lavafish.rs2:84",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/lavafish_loc.rs2:57"
+    }
+   ],
+   "option": {
+    "name": "Bait",
+    "trigger": "[oploc1,loc_2630]",
+    "spot": "loc_2630",
+    "npcs": 0,
+    "src": "scripts/_unpack/225/all.loc:12805"
+   }
+  },
+  {
+   "id": "fishing/spot/loc_2027/op1",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-trout",
+     "fishing/catch-salmon"
+    ]
+   },
+   "minLevel": 20,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:5",
+   "items": [
+    {
+     "anyOf": [
+      "fly_fishing_rod"
+     ],
+     "ids": [
+      309
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:11"
+    },
+    {
+     "anyOf": [
+      "feather"
+     ],
+     "ids": [
+      314
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:22",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "feather",
+     "id": 314,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:53",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:3",
+   "catches": [
+    {
+     "item": "raw_trout",
+     "id": 335,
+     "level": 20,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:5",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:53"
+    },
+    {
+     "item": "raw_salmon",
+     "id": 331,
+     "level": 30,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:52",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:53"
+    }
+   ],
+   "option": {
+    "name": "Lure",
+    "trigger": "[oploc1,loc_2027]",
+    "spot": "loc_2027",
+    "npcs": 0,
+    "src": "scripts/_unpack/225/all.loc:11335"
+   }
+  },
+  {
+   "id": "fishing/spot/loc_2027/op2",
+   "skill": "fishing",
+   "appliesTo": {
+    "kinds": [
+     "catch"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "fishing/catch-pike"
+    ]
+   },
+   "minLevel": 25,
+   "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:63",
+   "items": [
+    {
+     "anyOf": [
+      "fishing_rod"
+     ],
+     "ids": [
+      307
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:69"
+    },
+    {
+     "anyOf": [
+      "fishing_bait"
+     ],
+     "ids": [
+      313
+     ],
+     "hold": "held",
+     "role": "bait",
+     "src": "scripts/skill_fishing/configs/fishing_equipment.struct:16",
+     "note": "one is removed per catch"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "fishing_bait",
+     "id": 313,
+     "perAction": 1,
+     "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:110",
+     "note": "per fish caught, not per attempt"
+    }
+   ],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:61",
+   "catches": [
+    {
+     "item": "raw_pike",
+     "id": 349,
+     "level": 25,
+     "levelSrc": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:63",
+     "src": "scripts/skill_fishing/scripts/fishing_spots/waterfall.rs2:110"
+    }
+   ],
+   "option": {
+    "name": "Bait",
+    "trigger": "[oploc2,loc_2027]",
+    "spot": "loc_2027",
+    "npcs": 0,
+    "src": "scripts/_unpack/225/all.loc:11336"
+   }
+  },
+  {
+   "id": "herblore/grind-unicorn_horn",
+   "skill": "herblore",
+   "appliesTo": {
+    "kinds": [
+     "potion"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "herblore/potion-anti-poison-potion",
+     "herblore/potion-super-anti-poison-potion"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "pestle_and_mortar"
+     ],
+     "ids": [
+      233
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_herblore/scripts/grinding/grind_ingredient.rs2:27"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "unicorn_horn",
+     "id": 237,
+     "perAction": 1,
+     "src": "scripts/skill_herblore/configs/grinding/grindables.obj:13",
+     "note": "ground into unicorn_horn_dust"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_herblore/scripts/grinding/grind_ingredient.rs2:38"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_herblore/scripts/grinding/grind_ingredient.rs2:27",
+   "note": "makes unicorn_horn_dust, a potion secondary"
+  },
+  {
+   "id": "herblore/grind-blue_dragon_scale",
+   "skill": "herblore",
+   "appliesTo": {
+    "kinds": [
+     "potion"
+    ],
+    "idPattern": null,
+    "rungs": []
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [
+    {
+     "anyOf": [
+      "pestle_and_mortar"
+     ],
+     "ids": [
+      233
+     ],
+     "hold": "held",
+     "role": "tool",
+     "src": "scripts/skill_herblore/scripts/grinding/grind_ingredient.rs2:27"
+    }
+   ],
+   "consumed": [
+    {
+     "item": "blue_dragon_scale",
+     "id": 243,
+     "perAction": 1,
+     "src": "scripts/skill_herblore/configs/grinding/grindables.obj:28",
+     "note": "ground into dragon_scale_dust"
+    }
+   ],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (map_members = ^false) {",
+     "src": "scripts/skill_herblore/scripts/grinding/grind_ingredient.rs2:38"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_herblore/scripts/grinding/grind_ingredient.rs2:27",
+   "note": "makes dragon_scale_dust, a potion secondary"
+  },
+  {
+   "id": "thieving/pickpocket",
+   "skill": "thieving",
+   "appliesTo": {
+    "kinds": [
+     "pickpocket"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "thieving/pickpocket_man",
+     "thieving/pickpocket_woman",
+     "thieving/pickpocket_farmer",
+     "thieving/pickpocket_warrior",
+     "thieving/pickpocket_rogue",
+     "thieving/pickpocket_guard",
+     "thieving/pickpocket_viking",
+     "thieving/pickpocket_knight_of_ardougne",
+     "thieving/pickpocket_watchman",
+     "thieving/pickpocket_paladin",
+     "thieving/pickpocket_gnome",
+     "thieving/pickpocket_hero"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_thieving/scripts/pickpocketing",
+   "note": "scan of 1 script file(s) found no inv or worn item check"
+  },
+  {
+   "id": "thieving/stall",
+   "skill": "thieving",
+   "appliesTo": {
+    "kinds": [
+     "stealing"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "thieving/stealing_etc_veg_market",
+     "thieving/stealing_misc_veg_market",
+     "thieving/stealing_bakery_stall",
+     "thieving/stealing_tea_stall",
+     "thieving/stealing_silk_stall",
+     "thieving/stealing_fur_stall",
+     "thieving/stealing_viking_fur_stall",
+     "thieving/stealing_etc_fish_market",
+     "thieving/stealing_misc_fish_market",
+     "thieving/stealing_viking_fish_stall",
+     "thieving/stealing_silver_stall",
+     "thieving/stealing_spice_stall",
+     "thieving/stealing_gem_stall"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_thieving/scripts/stalls",
+   "note": "scan of 1 script file(s) found no inv or worn item check"
+  },
+  {
+   "id": "thieving/trapped-chest",
+   "skill": "thieving",
+   "appliesTo": {
+    "kinds": [
+     "trapped_chest"
+    ],
+    "idPattern": "^(?!.*chest_steel_arrowtips$)",
+    "rungs": [
+     "thieving/trapped_chest_chest_10_coins",
+     "thieving/trapped_chest_chest_nature_rune",
+     "thieving/trapped_chest_chest_50_coins",
+     "thieving/trapped_chest_chest_blood_runes",
+     "thieving/trapped_chest_chest_ardougne_castle"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [],
+   "locs": [],
+   "conditions": [
+    {
+     "text": "if (inv_total(inv, lockpick) < 1) {",
+     "src": "scripts/skill_thieving/scripts/chest/trapped_chest.rs2:92"
+    }
+   ],
+   "gaps": [],
+   "src": "scripts/skill_thieving/scripts/chest/trapped_chest.rs2",
+   "note": "scan of 1 script file(s) found the item checks in conditions; none is a tool gate for this method. Only chest_steel_arrowtips calls attempt_locked_chest (lockpick); see thieving/locked-chest"
+  },
+  {
+   "id": "agility/course",
+   "skill": "agility",
+   "appliesTo": {
+    "kinds": [
+     "course"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "agility/course-gnome-stronghold-agility-course",
+     "agility/course-gnomeball-game",
+     "agility/course-low-level-agility-arena-obstacles",
+     "agility/course-medium-level-agility-arena-obstacles",
+     "agility/course-barbarian-outpost-agility-course",
+     "agility/course-high-level-agility-arena-obstacles",
+     "agility/course-wilderness-course"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_agility/scripts",
+   "note": "scan of 5 script file(s) found no inv or worn item check"
+  },
+  {
+   "id": "prayer/bury",
+   "skill": "prayer",
+   "appliesTo": {
+    "kinds": [
+     "bury"
+    ],
+    "idPattern": null,
+    "rungs": [
+     "prayer/bury-babydragon_bones",
+     "prayer/bury-bat_bones",
+     "prayer/bury-big_bones",
+     "prayer/bury-bones",
+     "prayer/bury-bones_burnt",
+     "prayer/bury-dragon_bones",
+     "prayer/bury-tbwt_beast_bones",
+     "prayer/bury-tbwt_burnt_jogre_bones",
+     "prayer/bury-tbwt_burnt_jogre_bones_in_cooked_karambwanji_paste",
+     "prayer/bury-tbwt_burnt_jogre_bones_in_raw_karambwanji_paste",
+     "prayer/bury-tbwt_burnt_jogre_bones_marinated_in_karambwanji",
+     "prayer/bury-tbwt_jogre_bones",
+     "prayer/bury-tbwt_jogre_bones_in_cooked_karambwanji_paste",
+     "prayer/bury-tbwt_jogre_bones_in_raw_karambwanji_paste",
+     "prayer/bury-tbwt_jogre_bones_marinated_in_karambwanji",
+     "prayer/bury-wolf_bones"
+    ]
+   },
+   "minLevel": null,
+   "levelSrc": null,
+   "items": [],
+   "consumed": [],
+   "locs": [],
+   "conditions": [],
+   "gaps": [],
+   "src": "scripts/skill_prayer/scripts/bury_bone.rs2",
+   "note": "scan of 1 script file(s) found no inv or worn item check"
+  }
+ ],
+ "gaps": [
+  "fishing: _category_453 op1 \"Fish\" (scripts/skill_fishing/configs/fishing.npc:8) has no [opnpc1,_category_453] handler under scripts/skill_fishing/scripts/fishing_spots; its npcs are handled by name at scripts/quests/quest_fishingcompo/scripts/hemenster_fishing.rs2:1 (not a skill method)",
+  "herblore: chocolate_dust is a potion input but scripts/skill_herblore/configs/grinding/grindables.obj has no grind recipe that makes it",
+  "runecraft/altar: no .rs2 or .obj file under content/scripts names a tiara; only a talisman used on the ruins enters the altar"
+ ]
+}

@@ -21,7 +21,8 @@ export type TravelRun =
     | { how: 'npc'; npc: string; op: number; options: string[]; deck?: boolean }
     | { how: 'spell'; component: string }
     | { how: 'rub'; items: string[]; option: string | null }
-    | { how: 'loc'; loc: string; op: number; option: string | null; id?: number; at?: Tile };
+    | { how: 'loc'; loc: string; op: number; option: string | null; id?: number; at?: Tile }
+    | { how: 'gate'; loc: string; action: string; at: Tile; choices: string[] };
 export interface Travel {
     id: string; kind: string; name: string;
     from: Tile | null;                   // null: from anywhere outside the Wilderness
@@ -125,6 +126,35 @@ export function shortcutTravel(edges: ShortcutRecord[]): Travel[] {
         });
     }
     return out;
+}
+
+// Scripted gates (knowledge/special-crossings.json, from rs2b0t). The route search sees such a gate as a wall, so
+// each becomes two edges between the walkable tiles nearest the gate on its two sides: tiles within 3 of the
+// gate that lie in different connected areas (components.ts). A gate with one area or more than two is skipped.
+type CrossingRecord = { x: number; z: number; level: number; locName: string; action: string; choices: string[]; coins: number;
+    item?: { item: string; count: number }; skill?: { name: string; level: number }; label: string };
+export function crossingTravel(records: CrossingRecord[], areaOf: (t: Tile) => number): Travel[] {
+    const out: Travel[] = [];
+    for (const c of records) {
+        if (c.item) continue;
+        const at = { x: c.x, z: c.z, level: c.level }, sides = new Map<number, Tile>();
+        for (let r = 1; r <= 3; r++) for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
+            if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+            const t = { x: c.x + dx, z: c.z + dz, level: c.level }, a = areaOf(t);
+            if (a >= 0 && !sides.has(a)) sides.set(a, t);
+        }
+        if (sides.size !== 2) continue;
+        const [a, b] = [...sides.values()];
+        for (const [from, to] of [[a!, b!], [b!, a!]]) out.push({
+            id: `gate:${c.label}@${c.x},${c.z}:${from.x},${from.z}`, kind: 'gate', name: c.label, from, to, coins: c.coins,
+            needs: c.skill ? [{ skill: c.skill.name.toLowerCase(), level: c.skill.level }] : [], runes: [],
+            run: { how: 'gate', loc: c.locName, action: c.action, at, choices: c.choices }, cost: 8,
+        });
+    }
+    return out;
+}
+export function loadCrossings(): CrossingRecord[] {
+    return (JSON.parse(readFileSync(join(repoRoot, 'knowledge', 'special-crossings.json'), 'utf8')) as { crossings: CrossingRecord[] }).crossings;
 }
 
 let all: Travel[] | undefined;

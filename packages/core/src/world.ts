@@ -19,7 +19,7 @@ export type DoorBlock=Tile&{whenAxis?:boolean;angle?:number;shape?:number;blockr
 
 // Walk cost on one level, or null when the path cannot end within `tol` tiles of `to`. `blocked` are door
 // tiles to keep shut. Stair and ladder tiles are objects, not floor, so they are reached from next to them.
-export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number,interaction?:InteractionTarget) => number | null)&{withPolicy?<T>(blocked:DoorBlock[],query:()=>T):T;withDanger?<T>(acct:Account,from:Tile,to:Tile,query:()=>T):T;walkable?(t:Tile):boolean};
+export type PathLength = ((from: Tile, to: Tile, blocked: DoorBlock[], tol: number,interaction?:InteractionTarget) => number | null)&{withPolicy?<T>(blocked:DoorBlock[],query:()=>T):T;withDanger?<T>(acct:Account,from:Tile,to:Tile,query:()=>T):T;walkable?(t:Tile):boolean;areaOf?(t:Tile):number};
 
 const PORTAL_TOL = 2; // stairs can be 2x2 or larger
 const GOAL_TOL = 1;
@@ -115,7 +115,7 @@ export async function installDoorPolicy(sdk:any,client?:unknown):Promise<void>{
 }
 import { mapAreas, separated } from './components';
 import { activeDanger, guardRoute, guardWalk } from './danger';
-import { loadTravel, travelAllowed, type Travel } from './travel';
+import { crossingTravel, loadCrossings, loadTravel, travelAllowed, type Travel } from './travel';
 import { legCache } from './leg-cache';
 async function loadPathfinding() {
     if (!rsPath) rsPath = await import(join(repoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts'));
@@ -174,6 +174,7 @@ export async function rsPathLength(): Promise<PathLength> {
     };
     measure.withPolicy=scoped;
     measure.walkable=t=>{(pf as any).initPathfinding();return (pf as any).isTileWalkable(t.level,t.x,t.z);};
+    measure.areaOf=t=>mapAreas(pf,grid,repoRoot).area(t.level,t.x,t.z);
     // Ground of monsters that would kill this account is closed for the whole search (danger.ts).
     // Labels first: built under closed danger tiles they would carry one account's danger to every account.
     measure.withDanger=(acct,from,to,query)=>{mapAreas(pf,grid,repoRoot);try{return guardRoute(grid,acct,[from,to],query);}finally{cache.save();}};
@@ -284,7 +285,8 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
         return t;
     };
     // A world given its own transports (a test) gets no default travel; the real world loads all of it.
-    const travel=(opts.travel??(opts.transports?[]:loadTravel())).map(t=>({...t,from:t.from&&snap(t.from),to:snap(t.to)})),fixed=travel.filter(t=>t.from),anywhere=travel.filter(t=>!t.from);
+    const real=!opts.travel&&!opts.transports&&opts.pathLength.areaOf;
+    const travel=(opts.travel??(opts.transports?[]:[...loadTravel(),...(real?crossingTravel(loadCrossings(),opts.pathLength.areaOf!):[])])).map(t=>({...t,from:t.from&&snap(t.from),to:snap(t.to)})),fixed=travel.filter(t=>t.from),anywhere=travel.filter(t=>!t.from);
     const travelFrom=new Map<string,Travel[]>(),travelTo=new Map<string,Travel[]>();
     for(const t of fixed){travelFrom.set(key(t.from!),[...travelFrom.get(key(t.from!))??[],t]);travelTo.set(key(t.to),[...travelTo.get(key(t.to))??[],t]);}
     for(const t of anywhere)travelTo.set(key(t.to),[...travelTo.get(key(t.to))??[],t]);
