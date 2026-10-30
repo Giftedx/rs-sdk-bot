@@ -288,7 +288,11 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
             for (let i = 0; i < 3 && lvl() > 0; i++) {
                 const from = lvl();
-                await climb(`${label} down`, () => findLoc(l => l.distance <= 20 && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text))), /climb-down/i, () => lvl() < from);
+                const down = findLoc(l => l.distance <= 20 && (l.optionsWithIndex ?? []).some((o: any) => /climb-down/i.test(o.text)));
+                if (!down) await fail(`${label}: no way down from level ${from}`);
+                // bot.interactLoc opens a shut door on the way to the stairs.
+                await s.bot.interactLoc(down, down.optionsWithIndex.find((o: any) => /climb-down/i.test(o.text)).opIndex);
+                await waitUntil(s, () => lvl() < from, { timeoutTicks: 30 });
             }
             await walk(`${label} (walk, no law rune)`, [{ x, z, tol: 4 }]); return;
         }

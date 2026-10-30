@@ -258,7 +258,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const down=(st()?.nearbyLocs??[]).filter((l:any)=>(l.optionsWithIndex??[]).some((o:any)=>/climb-down/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
   if(!down)return fail(`no way down from level ${st()?.player?.level}`);
   const level=st()?.player?.level??0,op=down.optionsWithIndex.find((o:any)=>/climb-down/i.test(o.text))?.opIndex??1;
-  await s.direct({type:'interactLoc',x:down.x,z:down.z,locId:down.id,optionIndex:op,reason:'SDK'});
+  // bot.interactLoc opens a shut door on the way (Juliet's room door stands between her and the stairs).
+  await s.bot.interactLoc(down,op);
   await waitUntil(s,()=>(st()?.player?.level??level)<level,{timeoutTicks:30});
  }
  const pack=():Item[]=>(st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count}));
