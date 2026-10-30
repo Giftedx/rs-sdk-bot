@@ -63,3 +63,28 @@ test('a standing owner job logs in on changed source; an ordinary live worker st
     expect(() => assertLiveWorkerRelease('rs-sdk-demo.fly.dev', { STANDING: '1' })).not.toThrow();
     expect(() => assertLiveWorkerRelease('rs-sdk-demo.fly.dev', {})).toThrow('release pin missing');
 });
+
+test('an empty-result live row is closed only when its own producer lifecycle shows the account offline',async()=>{
+ const {closedSessionRow,LOST_SESSION_DROP_MS}=await import('../src/worker-release');
+ const {beginSessionAttempt}=await import('../src/session-lifecycle');
+ const root=mkdtempSync(join(tmpdir(),'release-rows-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
+ const owner=(pid:number)=>({pid,coordinatorRunId:null,workerRelease:null,script:'test',role:null,participants:null});
+ try{
+  const start=(account:string,pid:number)=>{const a=beginSessionAttempt({account,server},{root,owner:owner(pid)});a.record('connected');a.record('ready');return a;};
+  const done=start('Done',11);done.record('ended','logged-out');
+  const later=start('Later',12);const newer=start('Later',13);newer.record('ended','logged-out');
+  const dead=start('Dead',14),live=start('Live',15),fresh=start('Fresh',16),gone=start('Gone',17);start('Gone',18);
+  const now=1_000_000_000_000,old=now-LOST_SESSION_DROP_MS,row=(a:{account:string;attemptId:string},at=old)=>({name:a.account,server,result:'',at,workRevision:pin,sessionAttemptId:a.attemptId});
+  const alive=(pid:number)=>pid===15,closed=(r:any)=>closedSessionRow(r,server,{root},alive,now);
+  expect(closed(row(done))).toBe(true);        // its own attempt confirmed logout
+  expect(closed(row(later))).toBe(true);       // a newer attempt confirmed logout
+  expect(closed(row(dead))).toBe(true);        // owner gone and past the server's lost-session drop
+  expect(closed(row(live))).toBe(false);       // owner alive
+  expect(closed(row(fresh,now-LOST_SESSION_DROP_MS+1))).toBe(false); // owner gone, inside the drop window
+  expect(closed(row(gone))).toBe(false);       // a newer held attempt is not this row
+  expect(closed({...row(dead),sessionAttemptId:undefined})).toBe(false);
+  expect(closed({...row(done),name:'Nobody'})).toBe(false);
+  expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(dead)],now,closed)).not.toThrow();
+  expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(live)],now,closed)).toThrow('peer state unknown');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});

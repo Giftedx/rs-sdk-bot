@@ -3,6 +3,7 @@ import {readFileSync,readdirSync,existsSync} from 'node:fs';
 import {join,resolve,dirname,relative} from 'node:path';
 import ts from 'typescript';
 import {isLocalServer} from './localserver';
+import {readLogoutProof,listAttempts,type LogoutProof} from './session-lifecycle';
 
 const root=resolve(import.meta.dir,'../../..');
 // One fleet revision includes helpers and both host/single launch paths, not
@@ -48,8 +49,8 @@ export function assertWorkerRelease(env:Record<string,string|undefined>=process.
     return pin;
 }
 
-export function assertCompatibleWorkers(pin:string,server:string,statuses:readonly any[],now=Date.now()):void {
-    const unfinished=statuses.filter(s=>s?.server===server&&!s.result);
+export function assertCompatibleWorkers(pin:string,server:string,statuses:readonly any[],now=Date.now(),closed:(row:any)=>boolean=()=>false):void {
+    const unfinished=statuses.filter(s=>s?.server===server&&!s.result&&!closed(s));
     if(unfinished.some(s=>!Number.isFinite(s.at)||s.at<=0||s.at>now||now-s.at>=30_000))
         throw Error('no worker progress: release peer state unknown; verify offline before rollout');
     if(unfinished.some(s=>s.workRevision!==pin))
@@ -73,8 +74,23 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
         if(!entry.endsWith('.json'))continue;
         statuses.push(JSON.parse(readFileSync(join(base,'.practice/status',entry),'utf8')));
     }}catch{throw Error('no worker progress: release peer state unknown; unreadable status evidence');}
-    assertCompatibleWorkers(pin,server,statuses);
+    assertCompatibleWorkers(pin,server,statuses,Date.now(),row=>closedSessionRow(row,server,{root:join(base,'.practice/session-lifecycle')}));
 }
+
+// The server drops a session whose client is gone after 200 s.
+export const LOST_SESSION_DROP_MS=200_000;
+// A live status row without a result is a closed session only when the account's own producer lifecycle says so:
+// its newest attempt (the row's attempt or a later one) confirmed logout, or the row's own attempt is still the newest,
+// its owner process is gone and the row is older than the server's lost-session drop.
+export function closedSessionRow(row:any,server:string,opts:{root?:string}={},alive:(pid:number)=>boolean=pidAlive,now=Date.now()):boolean {
+    if(typeof row?.name!=='string'||typeof row.sessionAttemptId!=='string'||!row.sessionAttemptId)return false;
+    let latest:LogoutProof;try{latest=readLogoutProof(row.name,server,opts);}catch{return false;}
+    if(latest.state==='confirmed')return latest.attemptId>=row.sessionAttemptId;
+    if(latest.state!=='held'||latest.attemptId!==row.sessionAttemptId||!Number.isFinite(row.at)||now-row.at<LOST_SESSION_DROP_MS)return false;
+    let pid:unknown;try{pid=listAttempts(row.name,server,opts).find(a=>a.attemptId===latest.attemptId)?.receipt?.owner.pid;}catch{return false;}
+    return Number.isSafeInteger(pid)&&(pid as number)>0&&!alive(pid as number);
+}
+function pidAlive(pid:number):boolean{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException).code!=='ESRCH';}}
 
 // Read-only candidate ID. Printing it does not approve or activate a release.
 if(import.meta.main)console.log(workerSourceRevision());
