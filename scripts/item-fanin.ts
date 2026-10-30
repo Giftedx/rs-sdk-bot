@@ -1,6 +1,7 @@
 // Several owned donors hand one stackable item to one receiver, one after another, at Varrock West bank (the
 // meeting tiles scripts/coin-courier.ts proved live). The receiver stays logged in between donors; each donor
-// trades every one it holds in its pack, then logs out. At the end the receiver banks what it got. The trade runs
+// takes the whole banked stack out at Varrock West (arrowtips bought into a bank) and trades every one it holds,
+// then logs out. At the end the receiver banks what it got. The trade runs
 // through courier-handoff.ts with a receipt per pair under .practice/item-fanin/<order>-<donor>.
 // Built for feathers: the chicken farmers (scripts/gather-feathers.ts) keep theirs in the pack, and BowBeforeMe
 // holds the arrow shafts for headless arrows.
@@ -76,12 +77,17 @@ if (import.meta.main) {
             try {
                 check([f.receiver, name], [receiver]);
                 donor = await openBot(name, { onStop: async () => cancel(), onSessionEnd: async () => cancel() });
+                await to(donor, meet[0]);
+                if ((await donor.bot.openBank()).success && await waitUntil(donor, () => !!donor!.sdk.getState()?.bank?.isOpen, { timeoutTicks: 20 })) {
+                    const row = donor.sdk.getState()?.bank?.items.find(i => exactItem(f.item).test(i.name));
+                    if (row) { const n0 = held(donor.sdk.getInventory(), row.id); await donor.bot.withdrawItem(row, row.count); await waitUntil(donor, () => held(donor!.sdk.getInventory(), row.id) > n0, { timeoutTicks: 10 }); }
+                    await donor.bot.closeBank();
+                }
                 const stack = donor.sdk.getInventory().find(i => exactItem(f.item).test(i.name));
-                if (!stack) { detail = `no ${f.item} in the pack`; ok = true; }
+                if (!stack) { detail = `no ${f.item} in the pack or bank`; ok = true; }
                 else {
                     count = held(donor.sdk.getInventory(), stack.id);
                     const before = held(receiver.sdk.getInventory(), stack.id);
-                    await to(donor, meet[0]);
                     const handoff = createHandoff([stack.id], join(dir, 'item-fanin', `${order}-${name}`));
                     const transfers = await Promise.allSettled([
                         handoff.sendHandoff(donor, f.receiver, server, [{ id: stack.id, count }], async () => {
