@@ -432,6 +432,18 @@ if (MODE === 'steel') {
 }
 if (MODE === 'headless') {
     try {
+        // BANK_PACK=1: bank the whole pack first. A pack left full by other jobs (quest leftovers) is not
+        // protected kit, and headless needs three free slots.
+        if (process.env.BANK_PACK === '1') {
+            if (!(await s.bot.openBank()).success) throw new Error('headless BANK_PACK: bank did not open');
+            await waitTicks(s, 1);
+            for (const id of new Set(s.sdk.getInventory().map(i => i.id))) {
+                const item = s.sdk.getInventory().find(i => i.id === id);
+                if (item) await s.bot.depositItem(item, -1);
+            }
+            await waitTicks(s, 1);
+            await s.bot.closeBank();
+        }
         const r = await runHeadless(s, { cap: CAP, maximum: Number(process.env.MAX_MAKE ?? 390), shaftReserve: Number(process.env.SHAFT_RESERVE ?? 200), featherReserve: Number(process.env.FEATHER_RESERVE ?? 100), stop: () => stopped });
         console.log(`HEADLESS_BANK ${JSON.stringify(r)}`);
         await finish([s], r.ok, `mode=headless ${Object.entries(r).map(([k, v]) => `${k}=${v}`).join(' ')}`);
