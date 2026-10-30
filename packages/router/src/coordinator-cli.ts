@@ -142,7 +142,8 @@ async function tick(state:CoordinatorState,config:any){
  const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??json(join(projectRoot,'swarm.json')).maxBots;
  let controllerPrepared=false,liveBlocked=false;
  // Standing swarm jobs run without a coordinator task, so the controller must run whenever one is enabled.
- if((json(join(projectRoot,'swarm.json')).jobs??[]).some((j:any)=>j.standing===true&&j.enabled)){
+ // Also while a rollout has standing jobs paused: they are off then, and only this call turns them on again.
+ if((json(join(projectRoot,'swarm.json')).jobs??[]).some((j:any)=>j.standing===true&&j.enabled)||existsSync(join(coordinationDir,'rollout-paused.json'))){
   try{await ensureSwarm(workerSourceRevision(),{},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
