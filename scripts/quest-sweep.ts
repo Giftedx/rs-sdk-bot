@@ -261,7 +261,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
 async function main(){
  const [account,quest]=process.argv.slice(2);
  if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest>');
- await sweep(account,quest);
+ // A unique query: in a bot host, each account runs the quest module afresh.
+ await sweep(account,quest,`run=${account.toLowerCase()}-${Date.now()}`);
 }
 
 if(import.meta.main)await main();
