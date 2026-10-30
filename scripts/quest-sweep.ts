@@ -59,6 +59,14 @@ async function main(){
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
  const here=():Tile=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:{x:0,z:0,level:-1};};
  const world=await getWorld();
+ // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there) climbs down first.
+ for(let i=0;i<3&&(st()?.player?.level??0)>0;i++){
+  const down=(st()?.nearbyLocs??[]).filter((l:any)=>(l.optionsWithIndex??[]).some((o:any)=>/climb-down/i.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+  if(!down)return fail(`no way down from level ${st()?.player?.level}`);
+  const level=st()?.player?.level??0,op=down.optionsWithIndex.find((o:any)=>/climb-down/i.test(o.text))?.opIndex??1;
+  await s.direct({type:'interactLoc',x:down.x,z:down.z,locId:down.id,optionIndex:op,reason:'SDK'});
+  await waitUntil(s,()=>(st()?.player?.level??level)<level,{timeoutTicks:30});
+ }
  const pack=():Item[]=>(st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count}));
  if(plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length){
   const bank=nearestBank(here());

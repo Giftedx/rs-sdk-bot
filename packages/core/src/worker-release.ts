@@ -64,9 +64,10 @@ export function isWorkerReleaseHold(result:string):boolean {
 // in-memory supervisor. Existing connected sessions are never polled or killed.
 export function assertLiveWorkerRelease(server:string,env:Record<string,string|undefined>=process.env,base=root):void {
     if(isLocalServer(server))return;
-    if(existsSync(join(base,'.practice/coordinator/build-lock.json')))throw Error('no worker progress: release coordinator build in progress; live starts paused');
-    // A standing owner job (swarm STANDING=1) has no coordinator acceptance and runs the current source.
+    // A standing owner job (swarm STANDING=1) has no coordinator acceptance and runs the current source, so neither
+    // a publish lock nor the release pin holds it.
     if(env.STANDING==='1')return;
+    if(existsSync(join(base,'.practice/coordinator/build-lock.json')))throw Error('no worker progress: release coordinator build in progress; live starts paused');
     const pin=assertWorkerRelease(env,base),statuses:any[]=[];
     try{for(const entry of readdirSync(join(base,'.practice/status'))){
         if(!entry.endsWith('.json'))continue;
