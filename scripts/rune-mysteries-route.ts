@@ -15,9 +15,9 @@ export function runeMysteriesDecision(state:QuestFlag['state'],items:readonly nu
     return 'recover-notes';
 }
 
-export function runeMysteriesStartProblem(combat:number|undefined):string|null {
-    return Number.isSafeInteger(combat)&&(combat ?? 0)>=13 ? null
-        : 'Rune Mysteries prerequisite: combat13 required for guarded route';
+// Any combat level may start: below 13 the walk skips the guarded corridors (walkRuneMysteries).
+export function runeMysteriesStartProblem(_combat:number|undefined):string|null {
+    return null;
 }
 
 // Reuse the starter-training corridors. Straight lines from Draynor cross
@@ -54,7 +54,10 @@ export function runeMysteriesWalk(from:{worldX:number;worldZ:number;level:number
     return [to];
 }
 
-export async function walkRuneMysteries(from:Parameters<typeof runeMysteriesWalk>[0],to:PathPoint,step:(point:PathPoint)=>Promise<unknown>):Promise<void> {
+export async function walkRuneMysteries(from:Parameters<typeof runeMysteriesWalk>[0]&{combatLevel?:number},to:PathPoint,step:(point:PathPoint)=>Promise<unknown>):Promise<void> {
+    // Below combat 13 the corridors pass guards that attack: walk straight to the target, and the shared walker's
+    // plan closes the ground of monsters that would kill this account (packages/core/src/danger.ts).
+    if((from?.combatLevel??0)<13){await step(to);return;}
     // The shared quest walker retries its final point directly on a failed
     // path. Give it one corridor point at a time so retries cannot skip one.
     for(const point of runeMysteriesWalk(from,to))await step(point);

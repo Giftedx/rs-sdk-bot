@@ -11,9 +11,10 @@ test('starting talisman is not completion; package handoff interruption resumes 
  expect(runeMysteriesDecision('started',[291])).toBe('notes');
  expect(runeMysteriesDecision('complete',[])).toBe('complete');
 });
-test('a new miner must qualify before entering the guarded Rune Mysteries route',()=>{
- for(const combat of [undefined,NaN,3,12,12.5])expect(runeMysteriesStartProblem(combat)).toMatch(/combat13/);
- expect(runeMysteriesStartProblem(13)).toBeNull();
+test('any combat level may start; below 13 the walk goes straight to the target',async()=>{
+ for(const combat of [undefined,3,12,13])expect(runeMysteriesStartProblem(combat)).toBeNull();
+ const seen:any[]=[];await walkRuneMysteries({worldX:3092,worldZ:3243,level:0,combatLevel:3},{x:3205,z:3209,tol:2},async point=>{seen.push(point);});
+ expect(seen).toEqual([{x:3205,z:3209,tol:2}]);
 });
 test('Draynor to the Duke uses the proved north corridor instead of the jail shortcut',()=>{
  const route=runeMysteriesWalk({worldX:3092,worldZ:3243,level:0},{x:3205,z:3209,tol:2});
@@ -58,10 +59,10 @@ test('the Draynor tower approach uses the walkable bank-side lane; unknown floor
 
 test('a failed corridor leg cannot fall back directly to the final destination',async()=>{
  const seen:PathPoint[]=[];
- await expect(walkRuneMysteries({worldX:3092,worldZ:3243,level:0},{x:3205,z:3209,tol:2},async point=>{seen.push(point);throw Error('route failure');})).rejects.toThrow('route failure');
+ await expect(walkRuneMysteries({worldX:3092,worldZ:3243,level:0,combatLevel:20},{x:3205,z:3209,tol:2},async point=>{seen.push(point);throw Error('route failure');})).rejects.toThrow('route failure');
  expect(seen).toEqual([{x:3092,z:3250,tol:0}]);
  const completed:PathPoint[]=[];
- await walkRuneMysteries({worldX:3092,worldZ:3243,level:0},{x:3205,z:3209,tol:2},async point=>{completed.push(point);});
+ await walkRuneMysteries({worldX:3092,worldZ:3243,level:0,combatLevel:20},{x:3205,z:3209,tol:2},async point=>{completed.push(point);});
  expect(completed).toContainEqual({x:3089,z:3320,tol:1});expect(completed.at(-1)).toEqual({x:3205,z:3209,tol:2});
 });
 
