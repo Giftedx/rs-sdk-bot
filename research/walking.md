@@ -116,3 +116,21 @@ voyage `p_delay(7)` (`sail.rs2:22`). The direct method is not in the scripts, be
 - The Port Sarim to GE waypoints go through Lumbridge (danger-checked route). `findLongPath` from 3029,3217 to
   3181,3440 is 57 corners on a shorter line; check it with `bun research/route-danger.ts` before use.
 - `disembark()` and `sail()` still use the SDK queue. They were not measured slower, but they were not changed.
+
+## Long-route walker: source decision
+
+**Claim:** long cross-map legs fail because the SDK `bot.walkTo` asks `findLongPath` for a 500-waypoint route every round. A goal it cannot reach makes `find_closest_approach_point` scan the full 2048x2048 grid (`vendor/rsmod-pathfinder/src/rsmod/pathfinder.rs:1121-1134`). Live result: mmtha0205 used 183 s of CPU on an Ardougne-to-Varrock leg and never moved ("walk to 2897,3428,0: no effect in 100 ticks"); Masterbaiter failed the same leg.
+**Conditions:** rev 289 LostCity engine, `clientRoutefinder: true`, server queue of 25 client waypoints (`PathingEntity.ts:42`), client clicks capped to the loaded 104x104 area.
+**Evidence:** `.practice/swarm-logs/mmtha0205.log`; practice proof `.practice/far-walk/out.log` (walkPath route: no CPU stall; the client rejects the first 8-tile click with "RangeError: Out of bounds access" from a fresh spawn at 2617,3300).
+
+| Source | Local consumer | Decision | Why |
+|---|---|---|---|
+| rs2b2t/rs2b0t `ae56ccc9` (MIT; rsmod files ISC) `tools/nav/build-collision.ts`, `derive-doors.ts`, `derive-stairs.ts`, `src/bot/event/webwalk/geometry/{followMath,arrival,edgeCosts,pathFollowPolicy}.ts` | `packages/core/src/walk.ts`, `world.ts`, `knowledge/` | **Adapt** | Same engine family and revision; baked collision pack, 1,021 doors, 1,016 stair stand tiles, executor that clicks the furthest client-reachable tile about 20 steps ahead and re-plans only on stall, off-path or "can't reach" (cap 5). Keep our `world.ts` route search, which settles transports better. |
+| Skretzo/shortest-path `142e73e` (BSD-2) | `knowledge/transports.json` schema, `world.ts` | **Adapt ideas** | Transport fields (consumable, wilderness level, duration, any-origin teleports); connectivity components to refuse impossible legs without search; closest-node fallback. |
+| chsami/Microbot `2c802e4` (BSD-2) `Rs2Walker`, `Rs2WalkerStallPolicy`, `LiveRouteValidator` | `walkPath` | **Adapt ideas** | Fixed interim target until within 5 tiles; stall by last tile change; live check of the next steps; stored blocked edges. |
+| DaxWalker client (Apache-2.0) | `walkPath` | **Adapt ideas** | Per-step classification: walk, blocked (door), jump (transport). |
+| UberMouse/rs-sdk `21210b63` (MIT) `world.json` | `knowledge/` | **Reuse data** | 869 gates, 816 crossings, 1,015 connectors; baseline Lumbridge to Varrock West 133 ticks. |
+| RSBot (GPL-3), rune.fast and rs-sdk-fleet (no license) | none | **Reject code** | License. |
+
+**Acceptance check:** a route test set run live: Ardougne to Varrock West, Lumbridge to Varrock West (133-tick baseline), Draynor to Catherby, each with ticks, clicks, re-plans and no CPU stall over 1 s.
+**Gap:** the client-reachability check for each click and the baked collision pack are not built; the "Out of bounds access" rejection at 2617,3300 is not explained.
