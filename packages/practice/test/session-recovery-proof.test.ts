@@ -877,7 +877,7 @@ test('isolated recovery proof needs no publish lock and still rejects runtime or
  const predicate=text.match(/const proof=\{ok:([^\r\n]+),/)!;
  expect(predicate).not.toBeNull();
  const expression=predicate[1]!.replaceAll('(c:any)','(c)');
- const evaluate=new Function('cases','checks','source','workerSourceRevision','runnerSha256','hash','runner',`return (${expression});`);
+ const evaluate=new Function('cases','checks','source','launchRevision','runnerSha256','hash','runner',`return (${expression});`);
  const valid=(revision:string,runnerHash:string)=>evaluate([{ok:true}],{offline:{ok:true}},'runtime',()=>revision,'runner',()=>runnerHash,'runner.ts');
  expect(valid('runtime','runner')).toBe(true);
  expect(valid('changed','runner')).toBe(false);

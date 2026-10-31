@@ -14,7 +14,7 @@ import {RECOVERY_SCRIPT,NATIVE_RECOVERY_CHECKS,assertFleetResolved,launchPermitt
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
 import {accountDir,domainOf,readLogoutProof,listAttempts,beginSessionAttempt} from '../../core/src/session-lifecycle';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {launchRevision} from '../../core/src/worker-release';
 import {admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -92,7 +92,7 @@ export function verifyCompletedRouterPins(base=root){
 export function verifyCompletedRecoveryDelivery(directory:string){
  const proof=JSON.parse(readFileSync(join(directory,'proof.json'),'utf8'));
  if(proof.capability!=='cow-progress-order'||!isDeepStrictEqual(proof.routerPins,verifyCompletedRouterPins()))throw Error('completed recovery delivery integration changed');
- verifyNativeRecoveryProof(proof,directory,{runtimeRevision:workerSourceRevision(),runnerSha256:hash(runner)});
+ verifyNativeRecoveryProof(proof,directory,{runtimeRevision:launchRevision(),runnerSha256:hash(runner)});
  return true;
 }
 
@@ -520,7 +520,7 @@ async function run(directory:string){
  // Isolated proof owns only the practice mutex. Runtime revision and runner hash bind its source.
  mkdirSync(directory,{recursive:true});
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:capability,mode:'native-session-recovery'}));
- const source=workerSourceRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
+ const source=launchRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
  const children:ReturnType<typeof Bun.spawn>[]=[],recoveryChildren:{pid:number;nonce:string}[]=[],cases:any[]=[],tasks=new Map<string,any>(),ends:Record<string,any>={},jobs:any[]=[];
  const ownedStops:OwnedStop[]=[],junctions:string[]=[];
  const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE};
@@ -580,7 +580,7 @@ async function run(directory:string){
    },
    // Exactly the dispatcher's native default: same base, source callback and actual launcher.
    launch:r=>observeRecoveryBoundary('launchPermittedRecovery',recoveryAuthorityInputs(base,r),
-    ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>workerSourceRevision()}),observeBoundary)});
+    ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>launchRevision()}),observeBoundary)});
   let fixtureIndex=0;
   const fixture=async(server:string,preset:Parameters<typeof applyPreset>[1],completed=false)=>{
    // The name token cycles every 28 minutes (prove.ts runBotName), and fixture folders from earlier proofs stay in
@@ -956,7 +956,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
    'vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
   if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');
-  const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===workerSourceRevision()&&runnerSha256===hash(runner),
+  const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===launchRevision()&&runnerSha256===hash(runner),
    level:'native-controller-recovery',at:Date.now(),runtimeRevision:source,runnerSha256,bindings,
    server:{host:HOST,relay:RELAY,loginPort:LOGIN_PORT,tickMs:150,takeoverWindowMs:TAKEOVER_WINDOW_MS,world:sha(JSON.stringify(worldConfig)),observer:hash(observer)},
    starting:{at:startedAt,freeGiB:startFreeGiB,fenceSha256:null},controller:{pid:process.pid,marker:CONTROLLER_MARKER,argv:process.argv.slice(1)},

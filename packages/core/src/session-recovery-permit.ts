@@ -2,7 +2,7 @@ import {existsSync,mkdirSync,readFileSync,writeFileSync,linkSync,realpathSync,un
 import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {workerSourceRevision} from './worker-release';
+import {launchRevision} from './worker-release';
 import {processMatchesRecent,safeKill} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
@@ -114,7 +114,7 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
  const owner=json(join(base,'.practice/coordinator/swarm-owner.json'));
  if(!Number.isSafeInteger(owner.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce
   ||owner.source!==r.source||!matches(owner.pid,owner.nonce)||(issuing&&owner.pid!==process.pid))throw Error('recovery controller owner changed');
- if((options.source??(()=>workerSourceRevision(base)))()!==r.source)throw Error('recovery source changed');
+ if((options.source??(()=>launchRevision(base)))()!==r.source)throw Error('recovery source changed');
  assertRecoveryNotStopped(r.account,base);
  const record=json(join(base,'.practice/coordinator/state.json')).tasks?.find((t:any)=>t.status==='running'&&t.runId===r.runId);
  const spec=record?.spec,authorization=spec?.sessionRecovery;
@@ -299,7 +299,7 @@ export function launchPermittedRecovery(r:ControlledRecoveryRequest,base:string,
  if(sha(readFileSync(runner))!==permit.runnerSha256)throw Error('recovery runner differs from permit');
  writeFileSync(paths.input,JSON.stringify(r),{flag:'wx'});mkdirSync(paths.output,{recursive:true});
  const child=Bun.spawn([process.execPath,runner,paths.input,paths.output,...(options.nativeFixture?['--permit-base='+base]:[])],{
-  cwd:repo,env:{...process.env,WORKER_RELEASE:r.source},windowsHide:true,stdin:'pipe',
+  cwd:repo,env:{...process.env,WORKER_RELEASE:r.source,WORKER_ENTRY:''},windowsHide:true,stdin:'pipe',
   stdout:Bun.file(join(dirname(paths.input),'worker.log')),stderr:Bun.file(join(dirname(paths.input),'worker.err'))});
  let bindError:unknown;try{bindRecoveryChild(r,child.pid,base,options);}catch(error){bindError=error;}
  const completion=(async()=>{
