@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { accountFrom, assess, catalogue, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { accountFrom, assess, catalogue, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -135,4 +135,16 @@ test('a paused handed-over job stays in the merge with its own settings', () => 
     expect(merged.jobs.map(j => j.account)).toEqual(['Hocuspokeus', 'Haggis']);
     expect(merged.jobs[0]).toEqual(jobs[0]);
     expect(mergeJobs(jobs, side, []).jobs.map(j => j.account)).toEqual(['Haggis']);
+});
+
+test('a paused handed-over job keeps its pen reserved and claimed', () => {
+    const jobs = [
+        { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', env: { PEN: '3017,3288' }, enabled: true, autopilot: side },
+        { account: 'Woodpecker', script: 'scripts/gather-feathers.ts', env: { PEN: '3229,3298' }, enabled: true, autopilot: side },
+        { account: 'CoinCock', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2670,3306' }, enabled: true },
+        { account: 'OreElse', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: false },
+    ];
+    const r = reservedResources(jobs, side, new Set(['hocuspokeus']), a => a === 'CoinCock' ? 'other' : side);
+    expect(Object.keys(r.taken).sort()).toEqual(['knight:2671,3313', 'pen:3017,3288']);
+    expect(r.ownHeld).toEqual(['pen:3017,3288']);
 });
