@@ -11,6 +11,7 @@ import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 import {assertLiveWorkerRelease} from './worker-release';
+import { createTickRecorder } from './tick-record';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
 // Ticks without xp, an item change or dialog before a session counts as stalled and stops (STALL_TICKS=0: never).
@@ -66,12 +67,16 @@ export async function awaitBotReady(s: Session, log: (line: string) => void): Pr
 }
 
 // `opts.log` receives the START and LOGOUT lines; the bot host (host.ts) passes a per-bot log. Default console.log.
-export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown> } = {}): Promise<Session> {
+// `opts.record` names the worker script and its arguments for the run record (tick-record.ts); the bot host passes
+// the hosted script, a standalone worker uses its own process arguments.
+export async function openBot(name: string, opts: { log?: (line: string) => void; onStop?: (s: Session, detail: string) => Promise<unknown>; onSessionEnd?: (s: Session, detail: string) => Promise<unknown>; record?: { script: string; argv: string[] } } = {}): Promise<Session> {
     if (executionContext.getStore()?.signal.aborted) return new Promise(() => {});
     // An in-process runner in a bot host routes this account's logins through the host's own openBot, so the host
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
     const hook = openHooks.get(name.toLowerCase());
     if (hook) { openHooks.delete(name.toLowerCase()); try { return await hook(name, opts); } finally { openHooks.set(name.toLowerCase(), hook); } }
+    // A replay (replay.ts) serves its recorded accounts through hooks and never logs in for real.
+    if (process.env.REPLAY_ONLY === '1') throw new Error(`replay has no record for ${name}; it never logs in`);
     // Never log in an account the other fleet side owns (fleet/owners.json): two machines would fight over it.
     assertSideOwns(name);
     const log = opts.log ?? ((l: string) => console.log(l));
@@ -91,6 +96,9 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     let lastLife = born;
     s.lifecycle?.record('ready', `${p.worldX} ${p.worldZ} ${p.level}`);
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
+    const record = createTickRecorder({ account: name, server, script: opts.record?.script ?? process.argv[1] ?? 'unknown',
+        argv: opts.record?.argv ?? process.argv.slice(2), startedAt: Date.now() });
+    if (record) s.record?.(record);
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
     ledgers.set(s, led);

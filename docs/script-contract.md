@@ -43,7 +43,17 @@ Capability definitions live in `packages/router/tasks/<id>.json`: entry point, o
 
 Not required: proof of every failure window, independent decoders, purity of the proof tooling, or live results before the first live pilot.
 
-**Review.** One independent review per build. The reviewer approves unless it finds a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names the file and line, the scenario and the consequence. Concerns outside the work order are notes for a later task, not rejections.
+**Review.** One independent review per build, by the other model. The reviewer approves unless it finds a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names the file and line, the scenario and the consequence. Concerns outside the work order are notes for a later task, not rejections.
+
+The review blocks delivery unless all of these hold (`reviewGate`, `packages/router/src/model-worker.ts`):
+
+1. The build ran in its own workspace and changed only the capability's owned files.
+2. Native qualification passed on that source.
+3. The worker replays the 3 newest recorded runs of the capability that started before the build, and each replay is clean or differs only in command types the build task lists in `replayAllow`.
+
+The gate runs each replay in a scratch copy of the build's source with its own `.practice`, so a replayed worker never writes live receipts or status. A build that passes the gate delivers at once and writes `review-gate.json` in its run folder. Its review then runs as a `review` task (`<build id>-review`). A rejection stops the next runs of that capability, not a run already started, until a repair build changes the owned files. The rejection shows as a failed review task in `bun run coordinate --status` and as the error of each refused run. Any other build delivers only after an approving verdict.
+
+**Run records.** Every session that `openBot` opens, live or practice, writes a per-tick record to `.practice/ticks/<script>/<account>-<startedAt>.ticks.ndjson.gz` (`packages/core/src/tick-record.ts`): each state publication as a delta of changed top-level keys, each command sent and each result. A synthetic skilling run (`tick-record-measure.ts`) costs 0.23-0.25 ms of process CPU per tick and 2.2-2.4 MB of gzip per 6,000 ticks. Each script keeps its 24 newest records. `TICK_RECORD=0` turns recording off. `bun packages/core/src/replay.ts <record> [--entry <script>]` runs the current worker against a record and prints the first tick where it sends a different command. A decision that reads the wall clock can differ on replay with no code change, and a replay serves one account per record.
 
 **Live release.** Live starts need a `WORKER_RELEASE` pin (`packages/core/src/worker-release.ts`) that matches the qualified source. The first live run is a bounded pilot. A worker is batch-ready after two useful live runs.
 
