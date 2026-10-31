@@ -48,7 +48,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
-import { enabledByAccount, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
+import { enabledByAccount, foreignRun, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
     applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
 import { createHash } from 'node:crypto';
@@ -629,4 +629,15 @@ test('a host job off beside one account on and one off reads each account on its
     const previous = new Map<string, boolean>(), pending = new Set<string>();
     for (let tick = 0; tick < 3; tick++) for (const p of planned) for (const a of p.accounts) observeEnabled([a], enabled.get(a.toLowerCase()) === true, previous, pending);
     expect(pending.size).toBe(0);
+});
+
+test('a run another job of the account started is foreign to a job that is off or changed; its own run is not', () => {
+    const ok = (p: ReturnType<typeof parseJob>): p is Exclude<typeof p, { error: string }> => !('error' in p);
+    const standing = parseJob({ account: 'Rod', script: 'scripts/goldfarm.ts', enabled: true, standing: true, env: { KNIGHT_SPOT: '1,1' } } as any);
+    const finished = parseJob({ account: 'Rod', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator', env: { CAP: '1600' } } as any);
+    const planned = [standing, finished].filter(ok);
+    const run = { revision: missionSignature(planned[0]!.job) };
+    expect(foreignRun(planned, planned[1]!, run)).toBe(true);
+    expect(foreignRun(planned, planned[0]!, run)).toBe(false);
+    expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });

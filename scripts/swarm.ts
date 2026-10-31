@@ -178,6 +178,13 @@ export function completeJobCandidates(parsed:ParsedJob,selection:{start:string[]
 // Display edits, enabling and repeat policy do not turn completed work into new work.
 export function missionSignature(job:Job):string{return sharedMissionSignature(job);}
 
+// A run that another planned job of the same account started (its mission signature is the run's revision). A job that
+// is off, or whose mission changed, must not stop or re-plan a run it does not own: a coordinator job left off beside a
+// standing job would otherwise stop that standing bot on every tick.
+export function foreignRun(planned: readonly ParsedJob[], p: ParsedJob, run: { revision: string }): boolean {
+    if (run.revision === missionSignature(p.job)) return false;
+    return planned.some(q => q !== p && missionSignature(q.job) === run.revision);
+}
 export function overlappingRun<T extends { accounts: readonly string[] }>(runs: Iterable<T>, accounts: readonly string[]): T | undefined {
     const names = new Set(accounts.map(a => a.toLowerCase()));
     return [...runs].find(r => r.accounts.some(a => names.has(a.toLowerCase())));
@@ -684,7 +691,9 @@ if (import.meta.main) {
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => rmSync(stopFile(a), {force:true})))
                 persistEnded(deathsFile, ended);
             const st: Record<string, string> = {};
-            if (r) {
+            if (r && foreignRun(planned, p, r) && !stopAll) {
+                for (const a of p.accounts) st[a] = 'waiting: another job of this account is running';
+            } else if (r) {
                 const stop = !job.enabled || stopAll;
                 for (const a of p.accounts) {
                     if (!r.accounts.some(name => name.toLowerCase() === a.toLowerCase())) st[a] = 'waiting: current mission still running';
