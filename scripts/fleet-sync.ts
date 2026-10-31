@@ -41,7 +41,10 @@ export function runSync(push = true): string {
     const statuses = existsSync(statusDir) ? readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } }) : [];
     const owners = loadOwners(join(dir, 'fleet', 'owners.json')), snap = snapshot(statuses, mySide(), owners);
     mkdirSync(join(dir, 'fleet', 'snapshots'), { recursive: true });
-    writeFileSync(join(dir, 'fleet', 'snapshots', `${snap.side}.json`), JSON.stringify(snap) + '\n');
+    // Write only when an account changed: the time stamp alone makes no commit.
+    const file = join(dir, 'fleet', 'snapshots', `${snap.side}.json`);
+    const prior = (() => { try { return JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).accounts); } catch { return ''; } })();
+    if (prior !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
     git(dir, 'add', '--', 'fleet');
     const staged = !git(dir, 'diff', '--cached', '--quiet').ok;
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
