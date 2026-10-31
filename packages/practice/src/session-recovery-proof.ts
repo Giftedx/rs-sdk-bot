@@ -583,7 +583,10 @@ async function run(directory:string){
     ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>workerSourceRevision()}),observeBoundary)});
   let fixtureIndex=0;
   const fixture=async(server:string,preset:Parameters<typeof applyPreset>[1],completed=false)=>{
-   const name=runBotName('flrcv',++fixtureIndex);
+   // The name token cycles every 28 minutes (prove.ts runBotName), and fixture folders from earlier proofs stay in
+   // vendor/rs-sdk/bots, so a taken name is skipped: the next index gives a new one.
+   let name=runBotName('flrcv',++fixtureIndex);
+   for(let tries=0;tries<40&&existsSync(join(root,'vendor/rs-sdk/bots',name));tries++)name=runBotName('flrcv',++fixtureIndex);
    if(existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('fixture identity exists');
    await createBot(name);const envPath=join(root,'vendor/rs-sdk/bots',name,'bot.env');
    writeFileSync(envPath,readFileSync(envPath,'utf8').replace(/^SERVER=.*$/m,'SERVER='+server));
