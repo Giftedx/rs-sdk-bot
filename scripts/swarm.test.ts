@@ -48,7 +48,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
-import { endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
+import { enabledByAccount, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
     applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
 import { createHash } from 'node:crypto';
@@ -604,4 +604,15 @@ test('the orphan scan finds lifecycle accounts outside the plan and skips the pr
         const held = (a: string) => ({ state: 'held' as const, account: a, server: 's', domain: 'live' as const, attemptId: 'id', reason: 'r' });
         expect(orphanedSessionEnds(lifecycleAccounts(dir), new Map(), [], held, () => 5, () => false).map(([a]) => a)).toEqual(['OffPlan']);
     } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('two jobs for one account do not queue a resume on every tick', () => {
+    const planned = [parseJob({ account: 'YewFirst', script: 'scripts/session-check.ts', enabled: false } as any), parseJob({ account: 'YewFirst', script: 'scripts/shop-buyer.ts', enabled: true } as any)]
+        .filter((p): p is Exclude<typeof p, { error: string }> => !('error' in p));
+    const enabled = enabledByAccount(planned);
+    expect(enabled.get('yewfirst')).toBe(true);
+    const previous = new Map<string, boolean>(), pending = new Set<string>();
+    for (let tick = 0; tick < 3; tick++) for (const p of planned) observeEnabled(p.accounts, p.accounts.some(a => enabled.get(a.toLowerCase()) === true), previous, pending);
+    expect(pending.size).toBe(0);
+    expect(enabledByAccount([parseJob({ account: 'Moneyshot', script: 'scripts/x.ts', enabled: false } as any)].filter((p): p is Exclude<typeof p, { error: string }> => !('error' in p))).get('moneyshot')).toBe(false);
 });
