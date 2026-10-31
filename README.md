@@ -48,7 +48,7 @@ Use the [delivery path](docs/script-contract.md#deliver-a-capability) to develop
 - `packages/practice` - local practice presets, supervisor, host
 - `packages/knowledge` - builds `knowledge/*.json` from rs-sdk content (`bun packages/knowledge/src/build.ts`)
 - `packages/planner` - rate and board planning
-- `packages/dashboard` - local web dashboard (`bun packages/dashboard/server.ts`)
+- `packages/dashboard` - local web dashboard (`bun packages/dashboard/server.ts`); `scripts/dashboard-publish.ts` relays its state to the hosted dashboard (the rs-fleet-command repository) and applies the owner's commands from it
 - `packages/router` - authors bot scripts through a Claude CLI loop (`packages/router/src/author-cli.ts`)
 - `scripts/` - bot scripts; `scripts/generated/` and `scripts/measure/` are produced or measured runs
 - `vendor/` - third-party reference clones. `vendor/rs-sdk` is the tracked submodule; the others are gitignored, re-created by `scripts/clone-vendor.sh`
