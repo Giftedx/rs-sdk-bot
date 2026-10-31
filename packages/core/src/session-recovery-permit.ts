@@ -3,7 +3,7 @@ import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {workerSourceRevision} from './worker-release';
-import {processMatches,safeKill} from '../../practice/src/proc';
+import {processMatchesRecent,safeKill} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
@@ -12,7 +12,7 @@ export const RECOVERY_SCHEMA='session-recovery/1';
 export const RECOVERY_BINDING_MS=45000;
 // The controller heartbeat (.practice/swarm-state.json, written every 2 s) counts as current for this long. A heartbeat
 // older than this means the controller stalled or died, so the window stays short; the checks between a fleet read and
-// its use must stay fast (processMatches caches its PowerShell lookups for that reason).
+// its use must stay fast (processMatchesRecent reuses its PowerShell lookups for that reason).
 export const FLEET_HEARTBEAT_MAX_MS=10000;
 export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
@@ -108,7 +108,8 @@ export function assertFleetResolved(path:string,account:string,controllerPid:num
 function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuing=false,ownedChild=false){
  validateRecoveryRequest(r);if(r.kind!=='session-recovery')throw Error('not a controlled recovery request');
  if(options.nativeFixture)assertNativeFixtureRoot(base,r.server);
- const now=(options.now??Date.now)(),matches=options.matches??processMatches;
+ // Observation of the owners, not kill authorization: the cached lookup is allowed here (see proc.ts).
+ const now=(options.now??Date.now)(),matches=options.matches??processMatchesRecent;
  const owner=json(join(base,'.practice/coordinator/swarm-owner.json'));
  if(!Number.isSafeInteger(owner.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce
   ||owner.source!==r.source||!matches(owner.pid,owner.nonce)||(issuing&&owner.pid!==process.pid))throw Error('recovery controller owner changed');
