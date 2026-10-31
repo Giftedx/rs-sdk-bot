@@ -88,11 +88,13 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
  // A coordinator run needs the whole-runtime pin; standing jobs need only the swarm's own code current.
  // Workers carry the release of the source they start on (swarm.ts), so only the swarm's own code needs a rollout.
- if(alive&&owner.swarmSource===swarmSource){await resume();return;}
+ // A run also needs the controller's WORKER_RELEASE to equal its own source: recovery permits bind to it.
+ const runtimeCurrent=!forRun||owner?.source===source;
+ if(alive&&owner.swarmSource===swarmSource&&runtimeCurrent){await resume();return;}
  // A standing rollout gets ROLLOUT_DRAIN_MS to drain; then the jobs run again and the next try waits ROLLOUT_BACKOFF_MS.
  const backoffFile=join(dir,'rollout-backoff.json');
  // The backoff spaces rollouts of a running swarm; a dead controller is started at once.
- {let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(alive&&now()<until){await resume();return;}}
+ {let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(alive&&now()<until&&runtimeCurrent){await resume();return;}}
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
  // A live session rewrites its status every few seconds; one unchanged for BOOTSTRAP_STATUS_AGE_MS is not open (the
  // server drops a lost session after 200 s). A killed run's held record would otherwise block every rollout.
@@ -156,7 +158,7 @@ export function replaceAssignments(jobs:any[],accounts:string[],replacement:any)
   return[{...job,accounts:remaining}];
  }).concat([replacement]);
 }
-export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean}={}){
+export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number}={}){
  const base=options.base??projectRoot,rows=liveRows(base);
  if(options.recoveryPreflight&&(!options.preflight||!task.sessionRecovery||task.account!==account||task.sessionRecovery.account!==account))throw Error('authenticated recovery can only preflight its exact account');
  const pendingRepair=(name:string,end:any)=>options.preflight&&task.repairs?.some(r=>r.account.toLowerCase()===name.toLowerCase()&&r.endedAt===end.at);
@@ -197,7 +199,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }
- const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:accounts.length,pending:0,freeGB:freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
+ const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:accounts.length,pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
  if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
  const goal=`${task.id} [${runId}]`,job={...(accounts.length>1?{accounts,orchestrate:true}:{account}),args:task.args??[],maxRestarts:0,script,role:task.role??existing?.role??'helper',goal,enabled:true,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:task.id,
   env:{...task.env,CAP:task.env?.CAP??'1600',COORDINATOR_RUN_ID:runId,...(task.launch==='main'?{HAGGIS_RUN:'1'}:{})}};
