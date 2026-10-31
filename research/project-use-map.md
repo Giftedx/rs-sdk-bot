@@ -114,7 +114,7 @@ Paths below are repository-relative search entry points from the saved trees. Ro
 | OSRSB/OsrsBot | `docs/rsb/methods/{Bank,Walking}.html`, script lifecycle docs: API coverage checklist | Documentation reference; docs do not prove available implementation |
 | open-osrs/runelite | Client events, plugin lifecycle, interaction abstractions | Reference; no client migration or duplicate framework |
 | runelite/plugin-hub | `plugins/*`: repository URL + commit discovery | Follow the manifest to actual source; hub is not the plugin code |
-| runelite/runelite | Skill/item managers, events, cache definitions | Reference; modern IDs, XP and UI differ |
+| runelite/runelite | Skill/item managers, events, cache definitions; the dashboard's plugins | Reference; modern IDs, XP and UI differ. Dashboard parts: [runelite-parity](runelite-parity.md) |
 | MaxBittker/rs-sdk | `sdk`, `learnings`, `server/content`, SDK tests | First choice; use our pinned checkout and patches, not upstream HEAD blindly |
 | dennisdev/rs-map-viewer | `src/rs/pathfinder`, `src/rs/scene/CollisionMap.ts`: collision and map inspection | Reference; a rendered tile does not prove reachability |
 | Explv/Explv.github.io | `js/model`, `js/controls`: coordinates, regions, planes, route overlays | Reference; port coordinate model, validate map origin/zoom |
