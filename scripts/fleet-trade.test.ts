@@ -32,9 +32,21 @@ test('an order is only made between listed accounts on one server', () => {
 });
 
 test('a snapshot holds only this side’s accounts and no credentials', () => {
-    const owners = new Map([['taker', { side: 'cloud' as const, server: 's' }]]);
-    const snap = snapshot([{ name: 'Giver', server: 's', bank: [{ id: 379, name: 'Lobster', count: 9 }], password: 'x', skills: [{ name: 'Fishing', level: 99, xp: 1 }] }, { name: 'Taker', server: 's' }], 'local', owners, 7);
+    const owners = new Map([['taker', { side: 'cloud' as const, server: 's' }], ['giver', { side: 'local' as const, server: 's' }]]);
+    const snap = snapshot([{ name: 'Practicebot', server: 'localhost:8888' }, { name: 'Giver', server: 's', bank: [{ id: 379, name: 'Lobster', count: 9 }], password: 'x', skills: [{ name: 'Fishing', level: 99, xp: 1 }] }, { name: 'Taker', server: 's' }], 'local', owners, 7);
     expect(snap.accounts.map(a => a.name)).toEqual(['Giver']);
     expect(JSON.stringify(snap)).not.toContain('password');
     expect(snap.accounts[0]!.skills).toEqual([{ name: 'Fishing', level: 99 }]);
+});
+
+test('the agent acts only for its own side, skips busy and running accounts, and frees the rest', async () => {
+    const { dueTrades, swarmBusy } = await import('./fleet-agent');
+    const owners = new Map([['giver', { side: 'local' as const, server: 's' }], ['taker', { side: 'cloud' as const, server: 's' }], ['busyone', { side: 'local' as const, server: 's' }]]);
+    const orders = [order({}), order({ id: 'o2', from: 'BusyOne', to: 'Taker' })];
+    const busy = swarmBusy([{ account: 'BusyOne', enabled: true }, { accounts: ['Other'], enabled: true }, { account: 'Giver', enabled: false }]);
+    expect([...busy].sort()).toEqual(['busyone', 'other']);
+    const due = dueTrades(orders, [], 'local', owners, busy, new Set(), 2000);
+    expect(due.map(d => [d.account, d.order.id, d.busy])).toEqual([['Giver', 'o1', false], ['BusyOne', 'o2', true]]);
+    expect(dueTrades(orders, [], 'local', owners, busy, new Set(['giver']), 2000).map(d => d.account)).toEqual(['BusyOne']);
+    expect(dueTrades(orders, [], 'cloud', owners, busy, new Set(), 2000).map(d => d.account)).toEqual(['Taker']);
 });
