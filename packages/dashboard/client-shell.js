@@ -177,19 +177,25 @@
     const set=(cls,now,max)=>{const el=bars.querySelector('.'+cls);el.querySelector('i').style.height=(max>0?Math.max(0,Math.min(100,now/max*100)):0)+'%';el.querySelector('span').textContent=now??'';el.title=cls==='hp'?'Hitpoints '+now+' / '+max:'Prayer '+now+' / '+max;};
     set('hp',b.hp.now,b.hp.max);set('prayer',pr?.currentLevel??0,pr?.level??0);
   }
+  // Desktop notifications (RuneLite's notifier): level-ups, deaths and idling, when the owner switched them on.
+  const NOTIFY_KEY='atlas-notify';
+  const notifyOn=()=>{try{return localStorage.getItem(NOTIFY_KEY)==='1';}catch{return false;}};
+  function setNotify(on){try{localStorage.setItem(NOTIFY_KEY,on?'1':'0');}catch{/* private window */}if(on&&'Notification' in window&&Notification.permission==='default')Notification.requestPermission();}
+  function desktopNotify(text){if(!notifyOn()||!('Notification' in window)||Notification.permission!=='granted'||document.hasFocus())return;try{new Notification('RuneLite \u2014 Swarm',{body:text,icon:asset('runelite.png'),tag:text.slice(0,40)});}catch{/* blocked */}}
+  window.atlasNotify={on:notifyOn,set:setNotify};
   let idleFor=null,idleRun=0,idleTold=false;
   function idleNotifier(b){
     if(!b||b.name!==idleFor){idleFor=b?.name??null;idleRun=0;idleTold=false;return;}
-    if(b.fresh&&b.action==='idle'){idleRun++;if(idleRun>=3&&!idleTold){idleTold=true;notify(safeName(b.name)+' is now idle!');}}else{idleRun=0;idleTold=false;}
+    if(b.fresh&&b.action==='idle'){idleRun++;if(idleRun>=3&&!idleTold){idleTold=true;notify(safeName(b.name)+' is now idle!');desktopNotify(safeName(b.name)+' is now idle!');}}else{idleRun=0;idleTold=false;}
   }
   // Level-ups for every live account, in the game's words, as the chat shows them.
   const levelsSeen=new Map();
   // Deaths in the game's words; the deaths already on record when the page opens are not announced again.
   const deathsSeen=new Set();let deathsPrimed=false;
-  function deaths(){for(const b of S.bots){if(b.practice||!b.death)continue;const key=b.name+'|'+b.death.at;if(deathsSeen.has(key))continue;deathsSeen.add(key);if(deathsPrimed){chat.push({kind:'Private',name:safeName(b.name),text:'Oh dear, you are dead!',at:b.death.at});renderChat();}}deathsPrimed=true;}
+  function deaths(){for(const b of S.bots){if(b.practice||!b.death)continue;const key=b.name+'|'+b.death.at;if(deathsSeen.has(key))continue;deathsSeen.add(key);if(deathsPrimed){chat.push({kind:'Private',name:safeName(b.name),text:'Oh dear, you are dead!',at:b.death.at});renderChat();desktopNotify(safeName(b.name)+': Oh dear, you are dead!');}}deathsPrimed=true;}
   function levelUps(){
     for(const b of S.bots){if(b.practice||!Array.isArray(b.skills))continue;const prev=levelsSeen.get(b.name);const now={};for(const k of b.skills)now[k.name]=k.level;
-      if(prev)for(const [skill,lvl] of Object.entries(now))if(prev[skill]!=null&&lvl>prev[skill]&&skill!=='Overall'){chat.push({kind:'Game',name:safeName(b.name),text:`Congratulations, you've just advanced ${/^[AEIOU]/.test(skill)?'an':'a'} ${skill} level. Your ${skill} level is now ${lvl}.`,at:Date.now()});if(chat.length>200)chat.shift();renderChat();}
+      if(prev)for(const [skill,lvl] of Object.entries(now))if(prev[skill]!=null&&lvl>prev[skill]&&skill!=='Overall'){chat.push({kind:'Game',name:safeName(b.name),text:`Congratulations, you've just advanced ${/^[AEIOU]/.test(skill)?'an':'a'} ${skill} level. Your ${skill} level is now ${lvl}.`,at:Date.now()});if(chat.length>200)chat.shift();renderChat();desktopNotify(safeName(b.name)+' advanced a '+skill+' level: '+lvl);}
       levelsSeen.set(b.name,now);}
   }
   // XP globes (RuneLite): a ring of progress to the next level for each skill gained in the last ten seconds.
@@ -213,6 +219,7 @@
   $('#client-account').onchange=e=>{if(e.target.value)pick(e.target.value);else{sel=null;window.atlasFreeCamera=true;refresh();}};
   function toast(text){hud.querySelector('.game-toast')?.remove();const el=document.createElement('div');el.className='game-toast';el.textContent=text;hud.append(el);setTimeout(()=>el.remove(),5000);}
   hud.onclick=e=>{const t=e.target.closest('[data-game-tab]');if(t){if(t.dataset.gameTab===selectedTab)hud.classList.toggle('game-panel-hidden');else{selectedTab=t.dataset.gameTab;hud.classList.remove('game-panel-hidden');gamePanel();}}const c=e.target.closest('[data-chat]');if(c){channel=c.dataset.chat;hud.querySelectorAll('[data-chat]').forEach(b=>b.classList.toggle('active',b===c));renderChat();}if(e.target.closest('.chat-toggle,[data-toggle-chat]'))hud.classList.toggle('chat-hidden');const p=e.target.closest('[data-open-plugin]');if(p)showPlugin(p.dataset.openPlugin);if(e.target.closest('.game-logout')){selectedTab='logout';hud.classList.remove('game-panel-hidden');gamePanel();}if(e.target.closest('[data-logout]')){if(window.FleetShim?.signedIn?.())window.FleetShim.signOut();else toast('Nothing to log out of: this is the spectator view.');}if(e.target.closest('.game-xp'))showPlugin('xp');const a=e.target.closest('[data-view-action]');if(a)toast(a.dataset.viewAction+' · spectator view; no game input sent');const q=e.target.closest('[data-quest]');if(q){questDetail=q.dataset.quest;gamePanel();}const fr=e.target.closest('[data-friend]');if(fr){pick(fr.dataset.friend);}if(e.target.closest('[data-quest-back]')){questDetail=null;gamePanel();}const sk=e.target.closest('[data-skill]');if(sk){const st=level(sk.dataset.skill);toast(sk.dataset.skill+(st?' · Level '+st.level+' · '+st.xp.toLocaleString()+' XP':' · not reported by this game'));}if(e.target.closest('[data-report]'))toast('Player reporting is available in the game client. This view does not send reports.');};
+  body.addEventListener('change',e=>{if(e.target.dataset.notify!==undefined){setNotify(e.target.checked);toast(e.target.checked?('Notification' in window?(Notification.permission==='denied'?'Notifications are blocked for this site in the browser.':'Desktop notifications on: level-ups, deaths and idling.'):'This browser has no notifications.'):'Desktop notifications off.');}});
   body.addEventListener('input',e=>{if(e.target.id==='ge-search'){geQuery=e.target.value.trim().toLowerCase();const pos=e.target.selectionStart;body.innerHTML=gePanel();const again=body.querySelector('#ge-search');if(again){again.focus();again.setSelectionRange(pos,pos);}}if(e.target.id==='hs-name'){hiscoreName=e.target.value.trim();const b=S.bots.find(x=>x.name.toLowerCase()===hiscoreName.toLowerCase());if(b||!hiscoreName){hiscoreName=b?b.name:'';const el=body.querySelector('.hs-panel');if(el){const input=e.target,pos=input.selectionStart;body.innerHTML=hiscorePanel();const again=body.querySelector('#hs-name');if(again){again.focus();again.setSelectionRange(pos,pos);}}}}});
   hud.addEventListener('click',e=>{const f=e.target.closest('.infobox[data-xp-focus]');if(f){pick(f.dataset.xpFocus);}});
   body.addEventListener('click',e=>{const w=e.target.closest('.rl-world[data-xp-focus]');if(w){pick(w.dataset.xpFocus);body.innerHTML=worldsPanel();return;}if(e.target.closest('[data-xp-reset]')){const store=xpStore();delete store[sel];saveXpStore(store);body.innerHTML=xpTracker();}const f=e.target.closest('[data-xp-focus]');if(f){pick(f.dataset.xpFocus);showPlugin('xp');}});
