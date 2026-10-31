@@ -158,7 +158,7 @@ export function replaceAssignments(jobs:any[],accounts:string[],replacement:any)
   return[{...job,accounts:remaining}];
  }).concat([replacement]);
 }
-export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number}={}){
+export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean}={}){
  const base=options.base??projectRoot,rows=liveRows(base);
  if(options.recoveryPreflight&&(!options.preflight||!task.sessionRecovery||task.account!==account||task.sessionRecovery.account!==account))throw Error('authenticated recovery can only preflight its exact account');
  const pendingRepair=(name:string,end:any)=>options.preflight&&task.repairs?.some(r=>r.account.toLowerCase()===name.toLowerCase()&&r.endedAt===end.at);
@@ -197,9 +197,14 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  // The recovery preflight of its own account parks the hand job next (prepareLiveRecovery turns it off), and the
  // account's last session ended without a result or with a failure: that is what the recovery repairs. The production
  // install after the recovery applies both checks against the parked job and the recovered status.
- const parkedForRecovery=!!options.recoveryPreflight&&task.sessionRecovery?.account===account&&!!existing&&!reserved&&existing.coordinatorOwner!=='coordinator';
+ const handJob=!!existing&&!reserved&&existing.coordinatorOwner!=='coordinator';
+ const parkedForRecovery=!!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob;
+ // After the recovery, the parked hand job is released by this run's confirmed recovery logout: a recovery login writes
+ // no ok result, so the status cannot show one.
+ const recovered=options.recovered??((name:string)=>recoveredSessionForRun(name,LIVE_SERVER,runId,source,base));
+ const releasedByRecovery=!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob&&existing.enabled===false&&recovered(account);
  if(existing?.standing===true&&existing.enabled&&!parkedForRecovery)throw Error('account runs an owner standing job: '+existing.script);
- if(existing&&!reserved&&existing.coordinatorOwner!=='coordinator'&&!parkedForRecovery){
+ if(handJob&&!parkedForRecovery&&!releasedByRecovery){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }

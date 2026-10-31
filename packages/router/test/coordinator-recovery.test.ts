@@ -257,3 +257,13 @@ test('the recovery preflight parks an enabled standing hand job whose last sessi
  atomicJson(join(f.base,'swarm.json'),{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:true,repeat:true,standing:true}]});
  expect(()=>installJob(plain,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true})).toThrow('owner standing job');
 });
+
+test('after the recovery, the production install treats the parked hand job as released only by this run confirmed recovery',()=>{
+ const f=authenticatedFixture();
+ atomicJson(join(f.base,'swarm.json'),{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:false,repeat:true,standing:true},{account:'Other',script:'keep.ts',enabled:true}]});
+ atomicJson(join(f.prac,'status/Mightyrod.json'),{name:'Mightyrod',server:'rs-sdk-demo.fly.dev',result:'fail session ended: disconnected'});
+ expect(()=>installJob(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true,recovered:()=>false})).toThrow('not confirmed');
+ expect(()=>installJob(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true,recovered:()=>true})).not.toThrow();
+ const plain={...f.task};delete plain.sessionRecovery;
+ expect(()=>installJob(plain,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true,recovered:()=>true})).toThrow('not confirmed');
+});
