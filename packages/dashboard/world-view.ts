@@ -58,3 +58,51 @@ export function lookupView(name: string, rows: HiscoreRow[] | null, at: number |
     const online = !!seen && now - seen.seen < ONLINE_MS;
     return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null };
 }
+
+// Bot farms: other players whose names follow one pattern, online now. A numbered series ("Money 01" … "Money 43",
+// "Johnbpockt02") groups by its stem; random names that share their first two characters and their length, with
+// at least three digits ("671nb2fxy", "6728br6td"), group by that prefix. Groups of three or more are listed, each
+// with how many members stand at each of our claimed spots. Fleet accounts are never counted.
+export function farmsView(roster: ReadonlyMap<string, Seen & { name?: string }>, fleet: ReadonlySet<string>, spots: { resource: string; others: string[] }[], now: number, min = 3) {
+    const groups = new Map<string, { key: string; label: string; names: string[]; numbers: number[]; tiles: [number, number][] }>();
+    for (const [n, p] of roster) {
+        const name = p.name ?? n;
+        if (now - p.seen >= ONLINE_MS || fleet.has(name.toLowerCase())) continue;
+        const series = name.match(/^(.*?[A-Za-z])[ _-]?(\d{1,3})$/), random = /^[0-9a-z]{8,12}$/i.test(name) && (name.match(/\d/g) ?? []).length >= 3 && /[a-z]/i.test(name);
+        const key = series ? 'series:' + series[1]!.toLowerCase().trim() : random ? `random:${name.slice(0, 2).toLowerCase()}:${name.length}` : null;
+        if (!key) continue;
+        const g = groups.get(key) ?? { key, label: series ? series[1]!.trim() + ' ##' : `${name.slice(0, 2)}… (${name.length} characters, random)`, names: [], numbers: [], tiles: [] };
+        g.names.push(name); if (series) g.numbers.push(Number(series[2])); g.tiles.push([p.x, p.z]); groups.set(key, g);
+    }
+    return [...groups.values()].filter(g => g.names.length >= min).map(g => {
+        const members = new Set(g.names);
+        return { key: g.key, label: g.label, count: g.names.length, names: g.names.sort(), range: g.numbers.length ? [Math.min(...g.numbers), Math.max(...g.numbers)] as [number, number] : null, tiles: g.tiles,
+            atSpots: spots.map(s => ({ resource: s.resource, count: s.others.filter(o => members.has(o)).length })).filter(s => s.count > 0) };
+    }).sort((a, b) => b.atSpots.reduce((n, s) => n + s.count, 0) - a.atSpots.reduce((n, s) => n + s.count, 0) || b.count - a.count);
+}
+
+// Overtake planner: for each board, the fleet account with the best rank, the XP it needs to pass the next rows of the
+// top 10, and the hours that takes at its measured rate when it trains that skill now. Boards rank by level, then by the
+// shorter time. A row at our level below 99 is passed with one more level. Board time stops at 99, so a row at 99
+// with a shorter time is out of reach for a finished account: only a new account under that time passes it (newAccount).
+export type FleetSkill = { name: string; level: number; xp: number | null };
+export type FleetAccount = { name: string; skills: FleetSkill[]; ranks: { board: string; rank: number; level: number; time: string }[]; goalSkill?: string | null; xpPerHour?: number | null };
+const secondsOf = (t: string) => { let s = 0; for (const [, n, u] of t.matchAll(/(\d+)([hms])/g)) s += Number(n) * (u === 'h' ? 3600 : u === 'm' ? 60 : 1); return s; };
+export function overtakeView(tops: ReadonlyMap<string, { rows: BoardRow[] }>, accounts: FleetAccount[], xpForLevel: (level: number) => number) {
+    const out: any[] = [];
+    for (const [board, t] of tops) {
+        if (board === 'Overall' || board === 'Quest Points') continue;
+        let best: { a: FleetAccount; rank: number; level: number; seconds: number } | null = null;
+        for (const a of accounts) { const r = a.ranks?.find(x => x.board === board); if (r && (!best || r.rank < best.rank)) best = { a, rank: r.rank, level: r.level, seconds: secondsOf(r.time) }; }
+        if (!best) continue;
+        const skill = best.a.skills?.find(k => k.name === board), xp = skill?.xp ?? null, rate = best.a.goalSkill === board && best.a.xpPerHour && best.a.xpPerHour > 0 ? best.a.xpPerHour : null;
+        const above = t.rows.filter(r => r.rank < best!.rank);
+        const picks = [...new Map([above[above.length - 1], above[0]].filter(Boolean).map(r => [r!.rank, r!])).values()];
+        const targets = picks.map(r => {
+            const newAccount = r.level >= 99 && best!.level >= 99, goal = r.level > best!.level ? r.level : best!.level + 1, need = newAccount || xp == null ? null : Math.max(0, xpForLevel(Math.min(99, goal)) - xp);
+            return { rank: r.rank, name: r.name, level: r.level, seconds: Math.round(r.ticks * 0.4), newAccount, goal: newAccount ? null : Math.min(99, goal), xpNeeded: need, hours: need != null && rate ? need / rate : null };
+        });
+        out.push({ board, account: best.a.name, rank: best.rank, level: best.level, seconds: best.seconds, xp, xpPerHour: rate, inTop: best.rank <= t.rows.length, targets });
+    }
+    return out;
+}
