@@ -111,6 +111,22 @@
   "YewFirst": {
    "side": "local",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "BraveHardon": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "TossTheCaber": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Swordswallow": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Unsheathed": {
+   "side": "cloud",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
