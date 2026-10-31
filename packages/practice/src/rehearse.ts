@@ -45,8 +45,8 @@ export interface Segment {
         items?: Record<string, {min?: number; max?: number; in?: Where}>; // keyed by obj id
         position?: {x: number; z: number; level: number; radius: number};
     };
-    // Stores a library save: when `when` holds (read from the endpoint save each poll), after `afterTicks`, else the end save.
-    capture?: {name: string; segment: string; afterTicks?: number; when?: {skill: string; level: number}};
+    // Stores a library save: when `when` (an expectation on the endpoint save, read each poll) holds, after `afterTicks`, else the end save.
+    capture?: {name: string; segment: string; afterTicks?: number; when?: Segment['expect']};
     timeoutMs?: number;
 }
 
@@ -144,8 +144,8 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
             try {
                 if (cap.when || s.tick - window.enter >= cap.afterTicks!) {
                     const c = await captureSave(account, port);
-                    const level = cap.when ? summarize(c.bytes).skills[cap.when.skill]?.level ?? 1 : 0;
-                    if (c.source.via === 'endpoint' && (!cap.when || level >= cap.when.level)) {
+                    const {version: _v, ...now} = summarize(c.bytes);
+                    if (c.source.via === 'endpoint' && (!cap.when || Object.values(checkExpect(now, cap.when)).every(Boolean))) {
                         addEntry({name: cap.name, bytes: c.bytes, source: c.source, segment: cap.segment, rsSdk: rsSdkRevision()});
                         captured = {name: cap.name, via: c.source.via, tick: c.source.tick};
                     }
