@@ -1,7 +1,7 @@
 // Unit-only checks of the native recovery proof's pure parts. No world, login server or game child starts here.
 import {test,expect,spyOn} from 'bun:test';
 import * as fs from 'node:fs';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,symlinkSync,existsSync,rmSync,statSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,symlinkSync,existsSync,rmSync,statSync,renameSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createHash} from 'node:crypto';
@@ -651,7 +651,7 @@ test('proof stop files are created exclusively and retained through normal and f
   // Same path, replaced by another owner after the claim: different file, then same bytes on a new file, then changed bytes in place.
   const replaced=claimStopArtifact(join(dir,'stop-Swap'),'proof marker 3');rmSync(replaced.path);writeFileSync(replaced.path,'operator stop');
   expect(releaseStopArtifact(replaced)).toBe('retained');expect(readFileSync(replaced.path,'utf8')).toBe('operator stop');
-  const copied=claimStopArtifact(join(dir,'stop-Copy'),'proof marker 4');rmSync(copied.path);writeFileSync(copied.path,'proof marker 4');
+  const copied=claimStopArtifact(join(dir,'stop-Copy'),'proof marker 4');renameSync(copied.path,copied.path+'.old');writeFileSync(copied.path,'proof marker 4'); // the old file keeps its inode, so Linux cannot reuse it
   expect(statSync(copied.path,{bigint:true}).ino).not.toBe(copied.ino);
   expect(releaseStopArtifact(copied)).toBe('retained');expect(existsSync(copied.path)).toBe(true);
   const edited=claimStopArtifact(join(dir,'stop-Edit'),'proof marker 5');writeFileSync(edited.path,'operator stop');
