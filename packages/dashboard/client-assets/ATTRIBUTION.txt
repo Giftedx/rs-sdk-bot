@@ -11,3 +11,5 @@ This is an independent spectator dashboard. It is not the RuneLite desktop clien
 Current OSRS tab, orb, prayer and emote PNG artwork: oldschool.runescape.wiki/images/, retrieved 2026-10-28. File names were checked against the Interface and Emotes page image lists. RuneScape artwork copyright Jagex. These assets are not covered by the RuneLite BSD license.
 
 Spell icons: the same OSRS Wiki image source, using names from the Ancient Magicks, Lunar spellbook and Arceuus spellbook image lists, and the named Standard spells. Icons are a visual reference and do not assert account unlocks or cast availability.
+
+rl-*.png: plugin sidebar icons from the RuneLite client (github.com/runelite/runelite, runelite-client/src/main/resources), BSD 2-Clause, see RUNELITE-FULL-LICENSE.txt.

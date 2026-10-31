@@ -239,14 +239,18 @@ function capacityView(){
 
 function machine(){return S.sys||{}}
 async function loadMap(){if(MAPI||!S.map?.ready)return;try{const buf=new Uint8Array(await(await fetch('/api/map')).arrayBuffer());const m=S.map,c=document.createElement('canvas');c.width=m.w;c.height=m.h;const g=c.getContext('2d'),img=g.createImageData(m.w,m.h);
-  const col=[[6,6,5],[38,40,26],[14,30,44],[60,56,40]];for(let i=0;i<buf.length;i++){const px=i%m.w,pz=Math.floor(i/m.w),o=((m.h-1-pz)*m.w+px)*4,[r,gg,bb]=col[buf[i]]||col[0];img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=bb;img.data[o+3]=255}g.putImageData(img,0,0);MAPI=c;drawMap()}catch{}}
+  const col=[[6,6,5],[38,40,26],[14,30,44],[60,56,40]];for(let i=0;i<buf.length;i++){const px=i%m.w,pz=Math.floor(i/m.w),o=((m.h-1-pz)*m.w+px)*4,[r,gg,bb]=col[buf[i]]||col[0];img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=bb;img.data[o+3]=255}g.putImageData(img,0,0);MAPI=c;drawMap();const art=new Image();art.onload=()=>{MAPI=art;window.atlasMapPx=art.width/(m.w*m.scale);drawMap()};art.src='/worldmap.png'}catch{}}
 function drawMap(){if(mode!=='2d'||!S)return;const c=$('#map'),w=c.clientWidth,h=c.clientHeight;if(!w)return;if(c.width!==w||c.height!==h){c.width=w;c.height=h}const g=c.getContext('2d'),m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};
-  const sc=Math.min(w/(m.w*m.scale),h/(m.h*m.scale)),ox=(w-m.w*m.scale*sc)/2,oy=(h-m.h*m.scale*sc)/2,X=x=>ox+(x-m.x0)*sc,Z=z=>oy+(m.h*m.scale-(z-m.z0))*sc;
-  g.fillStyle='#050504';g.fillRect(0,0,w,h);if(MAPI){g.imageSmoothingEnabled=false;g.drawImage(MAPI,ox,oy,m.w*m.scale*sc,m.h*m.scale*sc)}
-  g.font='11px "Barlow Semi Condensed",sans-serif';for(const[n,x,z]of PLACES){g.fillStyle='#a3957a';g.fillRect(X(x)-1.5,Z(z)-1.5,3,3);g.fillText(n,X(x)+5,Z(z)+3)}
+  // The 2D camera (client-shell.js atlasCam: centre tile and pixels a tile) replaces the fit when it is set.
+  const fit=Math.min(w/(m.w*m.scale),h/(m.h*m.scale)),cam=window.atlasCam,sc=cam?.ppt||fit,ox=cam?w/2-(cam.cx-m.x0)*sc:(w-m.w*m.scale*sc)/2,oy=cam?h/2-(m.h*m.scale-(cam.cz-m.z0))*sc:(h-m.h*m.scale*sc)/2,X=x=>ox+(x-m.x0)*sc,Z=z=>oy+(m.h*m.scale-(z-m.z0))*sc;window.atlasFitPpt=fit;
+  g.fillStyle='#050504';g.fillRect(0,0,w,h);if(MAPI){g.imageSmoothingEnabled=!!window.atlasMapPx;g.drawImage(MAPI,ox,oy,m.w*m.scale*sc,m.h*m.scale*sc)}
+  if(sc>=2.5&&window.atlasSquare){g.imageSmoothingEnabled=true;const x0=Math.floor((m.x0+(0-ox)/sc)/64),x1=Math.floor((m.x0+(w-ox)/sc)/64),zTop=m.z0+m.h*m.scale-(0-oy)/sc,zBottom=m.z0+m.h*m.scale-(h-oy)/sc;for(let mx=x0;mx<=x1;mx++)for(let mz=Math.floor(zBottom/64);mz<=Math.floor(zTop/64);mz++){const img=window.atlasSquare(mx,mz);if(img)g.drawImage(img,X(mx*64),Z(mz*64+64),64*sc,64*sc)}}
+  if(sc<2.5){g.font='11px "Barlow Semi Condensed",sans-serif';for(const[n,x,z]of PLACES){g.fillStyle='#a3957a';g.fillRect(X(x)-1.5,Z(z)-1.5,3,3);g.fillText(n,X(x)+5,Z(z)+3)}}
   c._p=[];for(const b of S.bots){const p=b.live||b.pos;if(!p||p.z>6400)continue;const[cl]=st(b),col=cl==='on'?'#7ed36a':cl==='wd'?'#e9b949':'#74684f',x=X(p.x),z=Z(p.z);c._p.push([x,z,b.name]);
     if(cl==='on'){g.beginPath();g.arc(x,z,11,0,7);g.fillStyle='#7ed36a26';g.fill()}g.beginPath();g.arc(x,z,sel===b.name?6:4.5,0,7);g.fillStyle=col;g.fill();if(sel===b.name){g.lineWidth=2;g.strokeStyle='#e9b949';g.stroke()}
-    if(sel===b.name){g.fillStyle='#ece2c6';g.font='700 12px "Barlow Semi Condensed",sans-serif';g.fillText(b.name===MARK?'main':b.name,x+8,z-6)}}}
+    // Tile indicator (RuneLite): the followed account's tile, zoomed in; name tags carry the combat level then.
+    if(sel===b.name&&sc>=2.5){g.lineWidth=1.5;g.strokeStyle='#00ffff';g.strokeRect(X(p.x)-sc/2,Z(p.z)-sc/2,sc,sc)}
+    if(sel===b.name||cl==='on'){g.fillStyle=sel===b.name?'#ece2c6':'#7ed36a';g.font=(sel===b.name?'700 12px':'11px')+' "Barlow Semi Condensed",sans-serif';g.fillText((b.name===MARK?'main':b.name)+(sc>=2.5&&b.combat?' (level-'+b.combat+')':''),x+8,z-6)}}}
 $('#map').onclick=e=>{const c=$('#map'),r=c.getBoundingClientRect();let best=null,bd=300;for(const[x,z,n]of c._p||[]){const d=(x-(e.clientX-r.left))**2+(z-(e.clientY-r.top))**2;if(d<bd){bd=d;best=n}}if(best)pick(best)};
 // HTTP and iframe load prove delivery only. A rendered/private-ready message proves the scene.
 function viewerFrameUrl(value,base){
@@ -274,7 +278,8 @@ function viewerStatusText(v,m){
 function showViewerStatus(){
   const text=viewerStatusText(VIEWER,mode),notice=$('#viewer-status');
   $('#map-h').textContent=text;$('#map-h').title=text;
-  notice.hidden=!['checking','loading','unavailable'].includes(VIEWER.state);notice.textContent=text;
+  // An unavailable viewer is a header note, not a box over the map: the 2D map is the view then.
+  notice.hidden=!['checking','loading'].includes(VIEWER.state);notice.textContent=text;
   $('#mw').classList.toggle('loading3d',mode==='3d'&&VIEWER.state!=='ready');
   $('#b3').textContent=['checking','loading'].includes(VIEWER.state)?'3D…':'3D';
 }
@@ -431,4 +436,4 @@ window.addEventListener('resize',()=>{if(S)render()});window.onerror=m=>{$('#con
 function receive(j){S=j;lastReceived=Date.now();connected=true;render()}
 if(STATIC)fetch('/api/state').then(r=>r.json()).then(receive);else{let version=null;const es=new EventSource('/events');es.onmessage=e=>{const j=JSON.parse(e.data);if(version&&j.pageVersion!==version){location.reload();return}version=j.pageVersion;receive(j)};es.onerror=()=>{connected=false;connectionState()};setInterval(connectionState,2000)}
 
-</script><script src="/map-shell.js"></script><script src="/client-shell.js"></script><script src="/operations.js"></script></body></html>
+</script><script src="/map-shell.js"></script><script src="/xp-tracker.js"></script><script src="/client-shell.js"></script><script src="/operations.js"></script></body></html>
