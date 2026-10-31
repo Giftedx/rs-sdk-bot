@@ -45,3 +45,4 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .progress-remaining span{background:#1b1b1b;padding:3px 6px;border-radius:2px;color:#ff981f}
 .hs-max span{color:#00ff00}
 .side-accounts summary{cursor:pointer;color:#a0a0a0;margin-top:5px}
+.ignore-why{display:block;font-size:11px;color:#a0a0a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
