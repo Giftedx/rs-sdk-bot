@@ -93,7 +93,9 @@ export function applyRules(state:CoordinatorState,deps:RuleDeps,now=Date.now()):
    priority:spec.priority,estimatedMs:spec.estimatedMs,...(spec.timeoutMs?{timeoutMs:spec.timeoutMs}:{}),
    ...(moved.args?{args:moved.args}:{}),...(moved.env?{env:moved.env}:{}),accept:moved.accept,rule:'next-band',
    why:`Rule next-band: ${last.spec.id} reached ${skill} ${reached} live on ${account} with qualification ${qualification.spec.id} at the current source and an approved review. This run takes ${skill} to ${next} with the same worker inputs and budgets. Consumer: the ${skill} board entry for ${account}; the next band follows by the same rule.`};
-  addTasks(state,[task],now);ids.add(id);added.push(task);openRuleTasks++;
+  // One capability's invalid output must not stop the rules for the others.
+  try{addTasks(state,[task],now);}catch{continue;}
+  ids.add(id);added.push(task);openRuleTasks++;
  }
  return added;
 }

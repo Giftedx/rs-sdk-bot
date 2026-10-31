@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {initialState,addTasks,startTask,finishTask,chooseTask,type CoordTask,type CoordinatorState} from '../src/coordinator';
+import {initialState,addTasks,startTask,finishTask,chooseTask,compactState,type CoordTask,type CoordinatorState} from '../src/coordinator';
 import {applyRules,nextBand,retarget,type RuleDeps} from '../src/coordinator-rules';
 
 const NOW=10_000_000;
@@ -73,4 +73,12 @@ test('band targets follow method unlocks and the observed level',()=>{
  expect(t!.accept).toEqual({skills:{Ranged:50}});
  expect(retarget(band('x',30,{args:['10000'],env:{CAP:'30'}}),'Ranged',30,40)).toBeNull();
  expect(retarget(band('x',37,{args:undefined,env:{TARGET_LEVEL:'37',CAP:'6000'}}),'Magic',37,45)?.env).toEqual({TARGET_LEVEL:'45',CAP:'6000'});
+});
+test('archived dependencies of a finished band do not block its next band',()=>{
+ const s=initialState();
+ addTasks(s,[{id:'old-qualify',goal:'skills',kind:'qualify',capability:'ranged-train',dependsOn:[],priority:15,estimatedMs:1000,why:'Old qualify'}],0);
+ finish(s,'old-qualify',true,{delivery:{ok:true,source:'old'}},10);
+ const fresh=chain();s.tasks.push(...fresh.tasks);s.tasks.find(r=>r.spec.id==='run-ranged-30')!.spec.dependsOn.push('old-qualify');
+ expect(compactState(s,NOW,1000).map(r=>r.spec.id)).toEqual(['old-qualify']);
+ expect(applyRules(s,deps(),NOW).map(t=>t.id)).toEqual(['chain-ranged-train-bigchopper-ranged40']);
 });
