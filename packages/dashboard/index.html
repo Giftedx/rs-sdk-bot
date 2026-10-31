@@ -274,7 +274,8 @@ function viewerStatusText(v,m){
 function showViewerStatus(){
   const text=viewerStatusText(VIEWER,mode),notice=$('#viewer-status');
   $('#map-h').textContent=text;$('#map-h').title=text;
-  notice.hidden=!['checking','loading','unavailable'].includes(VIEWER.state);notice.textContent=text;
+  // An unavailable viewer is a header note, not a box over the map: the 2D map is the view then.
+  notice.hidden=!['checking','loading'].includes(VIEWER.state);notice.textContent=text;
   $('#mw').classList.toggle('loading3d',mode==='3d'&&VIEWER.state!=='ready');
   $('#b3').textContent=['checking','loading'].includes(VIEWER.state)?'3D…':'3D';
 }
