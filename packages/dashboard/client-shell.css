@@ -63,4 +63,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .farm-row{border-top:1px solid #242424;padding:4px 0}
 .farm-row summary{display:grid;grid-template-columns:1fr auto;gap:2px 8px;cursor:pointer;color:#ddd;font:12px Arial}
 .farm-row summary span:nth-child(3){grid-column:1/-1}
-
+.minimap-compass{cursor:pointer;pointer-events:auto;transform-origin:50% 50%}
+.game-minimap canvas{cursor:crosshair}
