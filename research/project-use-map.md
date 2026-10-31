@@ -176,9 +176,22 @@ First slice (offline): `goalRequirementsFor` retains shared consumers; preparati
 
 - **Keep:** MaxBittker/rs-sdk; MaxBittker/rsmod-pathfinder; MaxBittker/rs-world; dennisdev/rs-map-viewer; LostCityRS/Engine-TS, LostCityRS/Content, LostCityRS/Client-TS, LostCityRS/Server and LostCityRS/RuneScriptTS. Use the pinned rev289 content with engine, patches and target configuration; separate LostCity clones may be rev274. Viewer/setup projects are not game mechanics.
 - **Keep + targeted trial:** UberMouse/rs-sdk. Nearest-bank data already has a consumer in `packages/planner/src/travel.ts`; review only missing reach/connectors, route requirements, scenarios or model assumptions. Do not repeat the old full-import proposal.
-- **Trial:** bleugreen/rs-sdk. Allowed run ordering, task budgets, handoffs, stage receipts and measured bottlenecks. Refresh source and compare with our implementation before porting; published route estimates do not establish our win.
+- **Unavailable:** bleugreen/rs-sdk returns 404; `rival-gap-list.md` at `3bd2ab0a` is the last read. Its process record is bleugreen/rune.fast (no license, facts only); see [other teams' setups](community-and-upstream.md#8-other-teams-setups-tooling-and-process-against-ours).
+- **Trial (process):** UberMouse/rs-sdk conductor (MIT): save library with live snapshots, tick recordings with replay, guards at every tick wait. MaxBittker/rs-sdk `db0cc51e` takeover commits. Supalosa/rs-sdk `codex/lockstep-clock` (MIT). Table below.
 - **Reference:** samheutmaker/lumbridge-ai (tripwires/coordination); Skyvern-AI/jevscape (bounded actions, goal/reflex separation); TestingPurposes/rs-sdk-fleet (memory/supervision/simulation ideas); chrisbremmer/rs-fleet; markeljan/rs-sdk-dashboard. Keep our runtime/dashboard; license and evidence vary.
 - **Hold unless a concrete gap:** ineedbots/lc-headless, OpenChatGit/CScape, dginovker/LostCityClientBot, dginovker/LostCityServerBots, AndresI19/rs-mcp-server, CornThatLefty/OSRSBot, vhsgreed/jev-plays-runescape, maxwelllord/AgentPairRSBench. These are leads, not proved upgrades.
+
+**Development-loop sources** (source -> local consumer -> reuse/adapt/reject -> check). Evidence and ranking: [community-and-upstream.md section 8](community-and-upstream.md#86-ranked-changes-that-would-most-speed-up-our-progress).
+
+| Source | Local consumer | Decision | Check |
+|---|---|---|---|
+| Cairn `run.ts` at a named commit per live run (rune.fast `attempts-timeline.json` R3) | `packages/core/src/worker-release.ts` whole-tree pin | adapt: pin each capability's import closure | an edit outside a capability's closure leaves its pin and live slots unchanged |
+| UberMouse `conductor/tools/{save,load,library}.ts`, engine `GET /save`, `POST /kick` (`9df2d4c9`, MIT) | `packages/practice/src/presets.ts`, `stack.ts` | adapt: rewrite; keep notice if code is copied | a saved mid-quest state loads on practice and the worker resumes |
+| UberMouse `conductor/tools/replay.ts`, `*.ticks.ndjson.gz` | `packages/core/src/{bot,act,ticks}.ts`, `packages/router/src/coordinator-worker.ts` | adapt | a no-behaviour refactor replays clean on 3 recorded runs |
+| MaxBittker/rs-sdk `97725db3`, `2c7d4607`, `db0cc51e` (MIT) | `vendor/rs-sdk` pin `b565f2d9`, `packages/core/src/session-recovery*.ts` | reuse: move the pin | practice: a killed client's account resumes on re-login; demo behaviour checked |
+| Cairn `build` recipe, no review node (910 runs) | `docs/script-contract.md` Review, `packages/router/src/coordinator-planner.ts:107` | adapt: owner decision | build-done to first pilot time on the next 3 builds |
+| Supalosa `codex/lockstep-clock` `40358da0` (MIT) | `packages/practice/src/stack.ts` | trial after the above | practice ticks per wall second against 150 ms ticks |
+| Spenny12 `walk-speed` `46cdcb1e` (MIT) | `packages/core/src/walk.ts` | reject: `walk.ts:295` already avoids per-corner `walkTo` waits | none |
 
 ### 2. Quests, progression and goal planning
 
