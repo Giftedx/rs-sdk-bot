@@ -304,3 +304,16 @@ test('restart counts inherited children without replay, ignores dead children, a
  expect(heldRecoveryOwners(f.base,[],()=>false,now)).toEqual([]);
  expect(()=>assertNoRecoveryLease('Rod',f.base)).toThrow('lease');expect(existsSync(recoveryPermitPaths(f.request,f.base).used)).toBe(false);
 });
+
+test('authenticated cleanup admits a stopped end and still honours owner stops and exact end identity',()=>{
+ for(const fault of ['none','stop','changed-end','active-assignment']){
+  const f=fixture();
+  f.put('.practice/swarm-deaths.json',{Rod:{at:fault==='changed-end'?101:100,reason:'stopped after 1 runs',revision:'retired-mission'}});
+  if(fault==='stop')f.put('.practice/stop-Rod','owner pause');
+  if(fault==='active-assignment')f.put('swarm.json',{jobs:[{account:'Rod',script:'scripts/old.ts',enabled:true}]});
+  const before=readFileSync(join(f.base,'.practice/swarm-deaths.json'),'utf8');
+  if(fault==='none')expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).not.toThrow();
+  else expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow(fault==='stop'?'owner stopped':fault==='changed-end'?'exact failure changed':'assignment is active');
+  expect(readFileSync(join(f.base,'.practice/swarm-deaths.json'),'utf8')).toBe(before);
+ }
+});
