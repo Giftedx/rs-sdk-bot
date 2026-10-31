@@ -4,7 +4,7 @@ import {join,dirname,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
-import {beginSessionAttempt,readLogoutProof} from '../src/session-lifecycle';
+import {beginSessionAttempt,lifecycleOwner,readLogoutProof} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
@@ -81,6 +81,27 @@ test('successful retired cleanup requires a new actual mission, no hold, no prod
   if(fault==='none')expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).not.toThrow();
   else{expect(()=>issueRecoveryPermit(f.request,f.base,f.options),fault).toThrow();expect(existsSync(recoveryPermitPaths(f.request,f.base).lease),fault).toBe(false);}
   expect(readFileSync(join(f.base,'.practice/swarm-deaths.json'),'utf8')).toBe(ends);expect(readFileSync(join(f.base,'.practice/swarm-script-holds.json'),'utf8')).toBe(holds);
+ }
+});
+test('a retired account whose newest session is held by a dead owner gets a permit pinned to that attempt',()=>{
+ const dead=Bun.spawnSync(['bun','-e','0']).pid;
+ for(const foreign of [false,true]){
+  const f=completedFixture(),root=join(f.base,'.practice/session-lifecycle');
+  const a=beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:{...lifecycleOwner(),pid:dead}});a.record('ready');a.record('ended','disconnected');
+  expect(readLogoutProof('Rod',f.request.server,{root}).state).toBe('held');
+  expect(issueRecoveryPermit(f.request,f.base,f.options).priorAttemptId).toBe(a.attemptId);
+  // A producer attempt that appears after issuance, before the recovery child binds, refuses the permit.
+  if(foreign)beginSessionAttempt({account:'Rod',server:f.request.server},{root,owner:{...lifecycleOwner(),pid:dead}});
+  if(foreign)expect(()=>bindRecoveryChild(f.request,process.pid,f.base,f.options)).toThrow();
+  else expect(()=>bindRecoveryChild(f.request,process.pid,f.base,f.options)).not.toThrow();
+ }
+});
+test('a retired account whose held session owner is alive, or whose history is confirmed, still refuses',()=>{
+ for(const fault of ['alive','confirmed']){
+  const f=completedFixture(),root=join(f.base,'.practice/session-lifecycle');
+  const a=beginSessionAttempt({account:'Rod',server:f.request.server},{root});a.record('ready');a.record('ended',fault==='confirmed'?'logged-out':'disconnected');
+  expect(()=>issueRecoveryPermit(f.request,f.base,f.options),fault).toThrow();
+  expect(existsSync(recoveryPermitPaths(f.request,f.base).lease),fault).toBe(false);
  }
 });
 test('completed permit pins the exact successful end and actual mission through consumption',()=>{

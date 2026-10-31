@@ -67,10 +67,10 @@ export function createRecoveryDispatch(options:DispatchOptions){
     };
     void launched.completion.then(completed=>finished({changed:false,sessionRecovered:true,completed,reason:'confirmed session cleanup; old failure retained'}),
      ()=>finished({changed:false,sessionRecovered:false,reason:'recovery child held; inspect fixed child output and retained account lease; no retry'}));
-   }catch{
+   }catch(error){
     seen.add(raw);
-    const leased=existsSync(paths.lease);
-    emit(raw,{changed:false,sessionRecovered:false,reason:leased?'recovery setup failed after issuance; account lease held; no retry':'recovery setup refused; no lease issued; no retry'});
+    const leased=existsSync(paths.lease),cause=String((error as Error)?.message??error).slice(0,200);
+    emit(raw,{changed:false,sessionRecovered:false,cause,reason:leased?'recovery setup failed after issuance; account lease held; no retry':'recovery setup refused; no lease issued; no retry'});
    }
    return true;
   },

@@ -305,7 +305,7 @@ export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:R
    if(existsSync(file+'.results.jsonl'))for(const line of readFileSync(file+'.results.jsonl','utf8').trim().split('\n').slice(-100)){
     let result:any,owned:any;try{result=JSON.parse(line);owned=JSON.parse(result.raw);}catch{continue;}
     if(owned.nonce!==request.nonce||owned.runId!==runId)continue;
-    if(result.result?.sessionRecovered!==true)throw Error('controller held authenticated recovery: '+(result.result?.reason??'unknown'));
+    if(result.result?.sessionRecovered!==true)throw Error('controller held authenticated recovery: '+(result.result?.reason??'unknown')+(result.result?.cause?' ('+result.result.cause+')':''));
     liveLogoutRef(request.account,base,true);return;
    }
    await Bun.sleep(Math.min(500,Math.max(1,limit-Date.now())));
