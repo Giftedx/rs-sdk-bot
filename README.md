@@ -55,7 +55,7 @@ Use the [delivery path](docs/script-contract.md#deliver-a-capability) to develop
 - `docs/` and `research/` - design notes and measured results. `research/INDEX.md` lists the research files.
 - `patches/rs-sdk.md` - how we work around rs-sdk behaviour
 
-## Cloud fleet side
+## Codex cloud fleet side
 
 Set `FLEET_SIDE=cloud` in every shell and supply `FLEET_SEED` securely through environment settings. Keep a separate backup of the same seed. The seed derives cloud account passwords; never print it or commit/copy a `bot.env`. Register names on the fleet-data branch through `scripts/fleet-sync.ts` before login. Local-side accounts and Haggis remain outside the cloud controller's ownership.
 
@@ -63,7 +63,7 @@ A fresh checkout applies the repository's SDK setup patch with `git -C vendor/rs
 
 The cloud runtime uses Bun's explicit WebSocket proxy option for the game host when `HTTPS_PROXY` is present. Fetch and sockets retain normal TLS verification. GitHub PR creation also needs access to `api.github.com`.
 
-Use a cloud-only swarm plan and point both controllers at it:
+Use a cloud-only swarm plan and point the cloud swarm and sync agent at it:
 
 ```bash
 export FLEET_SIDE=cloud
