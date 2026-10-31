@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { botWrapper, hostedEntrySource, hostedOpenOptions, rewriteScript, runHost } from '../src/host';
@@ -14,8 +14,10 @@ test('unexpected session end uses the hosted finisher even with a separate custo
 
 test('rewriteScript points the bot import at a per-bot copy and the process globals at the host', () => {
     const src = `import { openBot, finish } from '../../packages/core/src/bot';\nconst n = process.argv[2];\nconsole.log(process.env.TICKS);\nprocess.exit(1);\n`;
-    const out = rewriteScript(src, 'a-1', 'F:/r/scripts/measure', 'F:/r/packages/core/src/bot.ts');
-    expect(out).toContain(`from 'F:/r/packages/core/src/bot.ts?hostbot=a-1'`);
+    const base = resolve(tmpdir(), 'rs-host-rewrite');
+    const bot = join(base, 'packages/core/src/bot.ts').replaceAll('\\', '/');
+    const out = rewriteScript(src, 'a-1', join(base, 'scripts/measure'), bot);
+    expect(out).toContain(`from '${bot}?hostbot=a-1'`);
     expect(out).toContain('const n = __host.argv[2];');
     expect(out).toContain('__host.console.log(__host.env.TICKS);');
     expect(out).toContain('__host.exit(1);');
