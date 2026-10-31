@@ -12,7 +12,7 @@ test('real CLI rejects unknown combat target before reading account config; vali
         // The synchronous Windows child bridge reported ETIMEDOUT during broad
         // runs while the identical isolated CLI passed. Await the real child
         // and both pipes, retaining the same5s deadline and exit/output checks.
-        const child=Bun.spawn([process.execPath,resolve(import.meta.dir,'gather-combat.ts'),name,'1',...(target==='imp'?[]:[target])],{env:{...process.env,DEMO_OK:'0',TARGET:target},stdout:'pipe',stderr:'pipe'});
+        const child=Bun.spawn([process.execPath,resolve(import.meta.dir,'gather-combat.ts'),name,'1',...(target==='imp'?[]:[target])],{env:{...process.env,FLEET_SIDE:'local',DEMO_OK:'0',TARGET:target},windowsHide:true,stdout:'pipe',stderr:'pipe'});
         let timedOut=false;
         const timer=setTimeout(()=>{timedOut=true;child.kill();},5000);
         let output:string;
