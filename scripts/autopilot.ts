@@ -79,7 +79,7 @@ export function pass(planFile: string, dry: boolean): string[] {
     });
     const out = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 } });
 
-    const { jobs, fresh } = mergeJobs(swarm.jobs, side, out);
+    const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, paused);
     for (const x of out) {
         if (!x.template) { log.push(`AUTOPILOT vacant ${x.account}: ${x.reason}`); delete state.assigned[x.account]; continue; }
         if (fresh.includes(x.account) || state.assigned[x.account]?.template !== x.template.id) {

@@ -193,8 +193,11 @@ export function plannableAccounts(jobs: readonly any[], side: string, listed: re
     return listed.filter(n => { const k = n.toLowerCase(); return !hard.has(k) && !paused.has(k) && (optIn.has(k) || !named.has(k)); });
 }
 
-export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[]): { jobs: any[]; fresh: string[] } {
-    const mine = (j: any) => j?.autopilot === side, next = jobs.filter(j => !mine(j)), fresh: string[] = [];
+// A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat
+// settings, so lifting the pause later resumes that job instead of handing the account a fresh enabled one.
+export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[], keep: ReadonlySet<string> = new Set()): { jobs: any[]; fresh: string[] } {
+    const mine = (j: any) => j?.autopilot === side, kept = (j: any) => [j?.account, ...(j?.accounts ?? [])].some((a: string) => a && keep.has(a.toLowerCase()));
+    const next = jobs.filter(j => !mine(j) || kept(j)), fresh: string[] = [];
     for (const x of out) {
         if (!x.template) continue;
         const prior = jobs.find(j => mine(j) && j.account === x.account && j.template === x.template!.id);

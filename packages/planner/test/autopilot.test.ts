@@ -124,3 +124,15 @@ test('the planner gets handed-over and unnamed accounts; enabled jobs, reservati
     expect(plannableAccounts(jobs, side, listed, new Set(['hocuspokeus']))).toEqual(['Woodpecker', 'YewFirst', 'Fresh']);
     expect(plannableAccounts(jobs, 'other', listed, new Set())).toEqual(['Fresh']);
 });
+
+test('a paused handed-over job stays in the merge with its own settings', () => {
+    const jobs = [
+        { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', enabled: false, repeat: false, autopilot: side, template: 'feathers@3017,3288' },
+        { account: 'Woodpecker', script: 'scripts/gather-feathers.ts', enabled: true, repeat: true, autopilot: side, template: 'feathers@3229,3298' },
+        { account: 'Haggis', script: '', enabled: false },
+    ];
+    const merged = mergeJobs(jobs, side, [], new Set(['hocuspokeus']));
+    expect(merged.jobs.map(j => j.account)).toEqual(['Hocuspokeus', 'Haggis']);
+    expect(merged.jobs[0]).toEqual(jobs[0]);
+    expect(mergeJobs(jobs, side, []).jobs.map(j => j.account)).toEqual(['Haggis']);
+});
