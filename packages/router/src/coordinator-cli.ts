@@ -1,8 +1,8 @@
-import {existsSync,readFileSync,writeFileSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
+import {existsSync,readFileSync,writeFileSync,appendFileSync,unlinkSync,watch,mkdirSync,readdirSync,renameSync} from 'node:fs';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,FOCUS_FAILURE_LIMIT,type CoordinatorState} from './coordinator';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,compactState,FOCUS_FAILURE_LIMIT,type CoordinatorState} from './coordinator';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite} from './coordinator-store';
 import {planWork,acceptProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
@@ -111,11 +111,25 @@ function launchTask(state:CoordinatorState,id:string){
  const workspace=record.spec.kind==='build'&&record.spec.capability?prepareWorkspace(projectRoot,record.spec.capability,deliveryTask(record.spec.capability).files).root:projectRoot;
  record.pid=spawn('--worker',runId,dir,workspace);saveState(state);event('task-started',{id,runId,pid:record.pid,agent:record.agent,...(workspace!==projectRoot?{workspace}:{})});
 }
+// A planner run's input names the state file (about 100 bytes) instead of carrying the state (about 4.9 MB per run).
+export function plannerState(input:{state?:CoordinatorState;statePath?:string}):CoordinatorState{
+ if(input.state)return input.state;
+ if(typeof input.statePath!=='string')throw Error('planner input names no state');
+ return json(input.statePath);
+}
+// Old finished tasks move to an append-only archive before the state is saved; nothing is deleted.
+export function archiveFinishedTasks(state:CoordinatorState,now=Date.now(),directory=coordinationDir){
+ const archived=compactState(state,now);
+ if(!archived.length)return 0;
+ const archive=join(directory,'archive');mkdirSync(archive,{recursive:true});
+ appendFileSync(join(archive,'tasks.jsonl'),archived.map(r=>JSON.stringify(r)).join('\n')+'\n');
+ return archived.length;
+}
 async function child(mode:string,runId:string){
  const dir=runDirectory(runId);atomicJson(join(dir,'owner.json'),{pid:process.pid,runId,at:Date.now()});
  try{
   const input=json(join(dir,'input.json'));
-  if(mode==='--planner'){const proposal=await planWork(input.state,dir,input.timeoutMs,input.agent??'claude');atomicJson(join(dir,'proposal.json'),proposal);}
+  if(mode==='--planner'){const proposal=await planWork(plannerState(input),dir,input.timeoutMs,input.agent??'claude');atomicJson(join(dir,'proposal.json'),proposal);}
   else{const output=await executeTask(input.task,input.dependencies,dir,runId,input.startedAt,input.agent??'claude');atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,agent:input.agent??'claude',ok:output.ok===true,at:Date.now(),output});}
  }catch(error){
   if(mode==='--planner')atomicJson(join(dir,'planner-error.json'),{error:String(error)});
@@ -200,11 +214,14 @@ async function tick(state:CoordinatorState,config:any){
  if(!state.planner&&(actionable||state.lastPlanReason.startsWith('planner failed:')||Date.now()-state.lastPlanAt>Math.max(config.plannerIntervalMs??0,IDLE_PLAN_MS))&&Date.now()-state.lastPlanAt>(actionable?1000:30000)){
   if(existsSync(planRequest))unlinkSync(planRequest);
   const agent=state.tasks.some(r=>r.status==='running'&&r.agent==='codex'&&r.spec.kind==='build')?'claude':'codex';
-  const runId='plan-'+randomUUID(),dir=runDirectory(runId);atomicJson(join(dir,'input.json'),{state,agent,timeoutMs:config.modelTimeoutMs??600000});
+  const runId='plan-'+randomUUID(),dir=runDirectory(runId);atomicJson(join(dir,'input.json'),{statePath:join(coordinationDir,'state.json'),agent,timeoutMs:config.modelTimeoutMs??600000});
   state.planner={runId,agent,startedAt:Date.now()};saveState(state);state.planner.pid=spawn('--planner',runId,dir);event('planner-started',{runId,pid:state.planner.pid,agent});
  }
+ const archived=archiveFinishedTasks(state);if(archived)event('tasks-archived',{count:archived,remaining:state.tasks.length});
  saveState(state);
 }
+// One recursive watch is one OS handle on Windows: 16 ms CPU per 10 s over 2,447 run folders, against 63 ms for a
+// watch per open folder. The folder count does not make it dearer.
 export function waitForWork(timeoutMs=1000,directory=coordinationDir){
  return new Promise<void>(resolve=>{
   let watcher:ReturnType<typeof watch>|undefined;

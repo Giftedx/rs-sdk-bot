@@ -88,3 +88,41 @@ test('an unchanged state is not rewritten',()=>{
  expect(saveState(state,dir)).toBe(true);expect(readFileSync(file+'.previous','utf8')).toBe(bytes);
  expect(loadState(dir).tasks).toHaveLength(1);
 });
+import {compactState,ARCHIVE_AFTER_MS,type TaskRecord} from '../src/coordinator';
+import {archiveFinishedTasks,plannerState} from '../src/coordinator-cli';
+const record=(id:string,status:TaskRecord['status'],at:number,spec:Partial<TaskRecord['spec']>={}):TaskRecord=>({
+ spec:{id,goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:1,estimatedMs:1,why:'t',...spec},status,createdAt:at,attempts:1,
+ ...(status==='pending'?{}:{startedAt:at,runId:'task-'+id,receipt:{taskId:id,runId:'task-'+id,ok:status==='succeeded',at,output:{big:'x'.repeat(100)}}})});
+test('old finished tasks leave the state except those open tasks name and the newest of each capability and kind',()=>{
+ const day=24*60*60*1000,now=10*day,state=initialState();
+ state.tasks=[
+  record('old-fail',  'failed',   now-5*day),
+  record('old-ok',    'succeeded',now-4*day),
+  record('named-ok',  'succeeded',now-6*day,{capability:'ammo-order'}),
+  record('newest-ammo','failed',  now-3*day,{capability:'ammo-order'}),
+  record('old-build', 'failed',   now-5*day,{kind:'build'}),
+  record('new-build', 'failed',   now-4*day,{kind:'build'}),
+  record('young-fail','failed',   now-1*day),
+  record('supers',    'superseded',now-9*day,{capability:'fish-order'}),
+  record('supers2',   'superseded',now-8*day,{capability:'fish-order'}),
+  record('provider',  'succeeded',now-7*day,{kind:'provision',capability:undefined}),
+  record('consumer',  'pending',  now-7*day,{kind:'run',dependsOn:['named-ok'],accountFrom:'provider'}),
+ ];
+ const archived=compactState(state,now);
+ expect(archived.map(r=>r.spec.id)).toEqual(['supers','old-fail','old-build','old-ok']);
+ expect(state.tasks.map(r=>r.spec.id)).toEqual(['named-ok','newest-ammo','new-build','young-fail','supers2','provider','consumer']);
+ expect(compactState(state,now)).toEqual([]);
+ expect(compactState(state,now+ARCHIVE_AFTER_MS)).toEqual([]);
+});
+test('archived tasks append to the archive file and the state shrinks; a planner input names the state file',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'coord-archive-')),day=24*60*60*1000,now=10*day,state=initialState();
+ state.tasks=[record('a','failed',now-5*day),record('b','failed',now-4*day),record('c','failed',now-3*day)];
+ expect(archiveFinishedTasks(state,now,dir)).toBe(2);
+ const lines=readFileSync(join(dir,'archive/tasks.jsonl'),'utf8').trim().split('\n').map(l=>JSON.parse(l));
+ expect(lines.map(r=>r.spec.id)).toEqual(['a','b']);expect(state.tasks.map(r=>r.spec.id)).toEqual(['c']);
+ expect(archiveFinishedTasks(state,now,dir)).toBe(0);
+ saveState(state,dir);
+ expect(plannerState({statePath:join(dir,'state.json')}).tasks.map(r=>r.spec.id)).toEqual(['c']);
+ expect(plannerState({state}).tasks).toBe(state.tasks);
+ expect(()=>plannerState({})).toThrow('names no state');
+});

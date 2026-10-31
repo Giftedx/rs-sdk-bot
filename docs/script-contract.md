@@ -60,6 +60,6 @@ Bind results to source, server, tick speed and starting state. Speed claims need
 - The planner reads the scoreboard, the plan and the queue. Every task names the scoreboard entries it moves. A planning round starts on a new receipt, failure or request, otherwise every 30 minutes.
 - A build authors and proves in its own workspace (`../rs-sdk-bot-build/<capability>`, `packages/router/src/build-workspace.ts`). Only publishing its declared files into the main checkout waits for a drained fleet, so live runs continue during builds. A main checkout changed since the build started refuses the publish.
 - A focus capability holds development until its first useful live result or three failed builds in a row.
-- A run needs a current qualification of the same capability. State, receipts and model output live in `.practice/coordinator/`.
+- A run needs a current qualification of the same capability. State, receipts and model output live in `.practice/coordinator/`. A finished task older than two days moves from `state.json` to the append-only `archive/tasks.jsonl`, unless an open task names it or it is the newest finished task of its capability and kind. A planner run's `input.json` names `state.json`; it does not copy it.
 
 Commands: `bun run coordinate --status`, `--submit <proposal.json>`, `--plan`, `--stop`. To resume after a pause, remove `.practice/stop-coordinator` and start `bun run coordinate --run <owner-token>`.
