@@ -21,7 +21,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const plugins=[['fleet','Fleet'],['xp','XP Tracker'],['boards','Hiscores'],['ge','Grand Exchange'],['prs','Pull requests'],['jobs','Agents & jobs'],['goals','Project goals'],['account','Account overview'],['stock','Supply ledger'],['activity','Activity'],['machine','Host resources']];
   const fallback='<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8m-8 5h8"/></svg>';
   // RuneLite's own sidebar icons (client-assets/rl-*.png, see ATTRIBUTION.txt), one per plugin.
-  const RAIL_ICONS=['fleet','xp','hiscore','loot','worlds','ge','prs','jobs','goals','account','boards','activity','world','machine','settings','operations','dispatch','alerts','library','manager'],RAIL_FILE={sides:'worlds'};
+  const RAIL_ICONS=['fleet','xp','hiscore','loot','worlds','ge','prs','jobs','goals','account','boards','activity','world','machine','settings','operations','dispatch','alerts','library','manager'],RAIL_FILE={boards:'hiscore'};
   const railIcon=id=>{const f=RAIL_FILE[id]||id;return RAIL_ICONS.includes(f)?`<img src="${asset('rl-'+f+'.png')}" alt="">`:null;};window.atlasRailIcon=railIcon;
   const icons={xp:railIcon('xp')};
   rail.innerHTML=plugins.filter(([id])=>window.atlasOperator()||!OPERATOR_PLUGINS.includes(id)).map(([id,label])=>`<button data-client-plugin="${id}" aria-label="${label}" title="${label}">${railIcon(id)||oldRail.querySelector(`[data-plugin="${id}"]`)?.innerHTML||fallback}</button>`).join('')+'<span class="rail-gap"></span><button data-client-plugin="settings" aria-label="Client settings" title="Client settings">'+railIcon('settings')+'</button>';app.append(rail);
