@@ -612,7 +612,21 @@ test('two jobs for one account do not queue a resume on every tick', () => {
     const enabled = enabledByAccount(planned);
     expect(enabled.get('yewfirst')).toBe(true);
     const previous = new Map<string, boolean>(), pending = new Set<string>();
-    for (let tick = 0; tick < 3; tick++) for (const p of planned) observeEnabled(p.accounts, p.accounts.some(a => enabled.get(a.toLowerCase()) === true), previous, pending);
+    for (let tick = 0; tick < 3; tick++) for (const p of planned) for (const a of p.accounts) observeEnabled([a], enabled.get(a.toLowerCase()) === true, previous, pending);
     expect(pending.size).toBe(0);
     expect(enabledByAccount([parseJob({ account: 'Moneyshot', script: 'scripts/x.ts', enabled: false } as any)].filter((p): p is Exclude<typeof p, { error: string }> => !('error' in p))).get('moneyshot')).toBe(false);
+});
+
+test('a host job off beside one account on and one off reads each account on its own', () => {
+    const ok = (p: ReturnType<typeof parseJob>): p is Exclude<typeof p, { error: string }> => !('error' in p);
+    const planned = [
+        parseJob({ accounts: ['A', 'B'], host: true, script: 'scripts/quest-chain.ts', enabled: false } as any),
+        parseJob({ account: 'A', script: 'scripts/x.ts', enabled: true } as any),
+        parseJob({ account: 'B', script: 'scripts/y.ts', enabled: false } as any),
+    ].filter(ok);
+    const enabled = enabledByAccount(planned);
+    expect([enabled.get('a'), enabled.get('b')]).toEqual([true, false]);
+    const previous = new Map<string, boolean>(), pending = new Set<string>();
+    for (let tick = 0; tick < 3; tick++) for (const p of planned) for (const a of p.accounts) observeEnabled([a], enabled.get(a.toLowerCase()) === true, previous, pending);
+    expect(pending.size).toBe(0);
 });
