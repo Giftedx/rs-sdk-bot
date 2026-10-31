@@ -11,7 +11,7 @@ import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout} from '..
 import {recoveryCloseModal} from '../../core/src/session-recovery';
 import type {Session} from '../../core/src/inprocess';
 import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,type RecoveryBoundary} from '../src/session-recovery-proof';
-import {NATIVE_RECOVERY_CHECKS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
+import {NATIVE_RECOVERY_CHECKS,RECOVERY_BINDING_MS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {admitRecovery} from '../../../scripts/swarm';
@@ -238,7 +238,7 @@ test('child readiness waits for delayed publication, but absent, crossed and lat
  const paths=recoveryPermitPaths(r,base),bound={pid:process.pid,nonce:r.nonce,runId:r.runId};
  const signal={...bound,source:r.source};
  const stream=(value:unknown)=>new ReadableStream<Uint8Array>({start(c){c.enqueue(new TextEncoder().encode(JSON.stringify(value)));c.close();}});
- const permit=(remaining=10000)=>writeFileSync(paths.permit,JSON.stringify({issuedAt:Date.now()-10000+remaining}));
+ const permit=(remaining=RECOVERY_BINDING_MS)=>writeFileSync(paths.permit,JSON.stringify({issuedAt:Date.now()-RECOVERY_BINDING_MS+remaining}));
  mkdirSync(join(paths.child,'..'),{recursive:true});
  try{
   permit();let published=false;
