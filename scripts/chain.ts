@@ -4,18 +4,13 @@
 // Usage: bun scripts/chain.ts <account> "<script> [arg ...] [KEY=value ...]" ["<step>" ...]
 //   e.g. bun scripts/chain.ts Masterbaiter "scripts/gather-fish.ts cage 3000" "scripts/cook-food.ts 2000 lobster"
 // The account goes in as each script's first argument. KEY=value tokens set that step's environment.
+// A host job with this script (packages/core/src/host.ts) runs the same step texts in-process, one bot per account.
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { runChild } from '../packages/core/src/run-child';
+import { parseStep, type Step } from '../packages/core/src/chain-step';
 
-export type Step = { script: string; args: string[]; env: Record<string, string> };
-export function parseStep(text: string): Step {
-    const [script, ...rest] = text.trim().split(/\s+/);
-    if (!script || !/^scripts\/[\w./-]+\.ts$/.test(script)) throw Error(`chain step needs a scripts/*.ts path: ${text}`);
-    const env: Record<string, string> = {}, args: string[] = [];
-    for (const t of rest) { const m = t.match(/^([A-Z][A-Z0-9_]*)=(.*)$/); if (m) env[m[1]!] = m[2]!; else args.push(t); }
-    return { script, args, env };
-}
+export { parseStep, type Step };
 
 if (import.meta.main) {
     const [account, ...texts] = process.argv.slice(2);

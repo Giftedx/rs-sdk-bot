@@ -121,3 +121,41 @@ test('runHost runs one script per bot in one process, each with its own argv, lo
     expect(lines.some(l => l.includes('NEVER'))).toBe(false);
     expect(lines.some(l => l.startsWith('[exiter] RESULT'))).toBe(false);
 });
+
+test('a chain bot runs its steps in order inside the host, repeats rounds and ends with the chain RESULT', async () => {
+    const lines: string[] = [];
+    const logDir = join(tmpdir(), `host-chain-test-${process.pid}`);
+    const script = 'packages/core/test/fixtures/host-echo.ts';
+    try {
+        const r = await runHost([
+            { name: 'alpha', script: 'scripts/chain.ts', env: { ROUNDS: '2' }, steps: [{ script, args: [], env: { HOST_TEST_TAG: 'one' } }, { script, args: [], env: { HOST_TEST_TAG: 'two' } }] },
+            { name: 'failer', script: 'scripts/chain.ts', steps: [{ script, args: [], env: {} }] },
+        ], { out: l => lines.push(l), logDir, guard: false });
+        expect(r.map(x => [x.name, x.code, x.result])).toEqual([['alpha', 0, 'RESULT ok chain rounds=2 ok=4 failed=0'], ['failer', 1, 'RESULT fail chain rounds=1 ok=0 failed=1']]);
+        const alpha = lines.filter(l => l.startsWith('[alpha] HELLO') || l.startsWith('[alpha] CHAIN') || l.startsWith('[alpha] RESULT'));
+        const step = (round: number) => `[alpha] CHAIN round=${round} ${script} ok RESULT ok bot=alpha`;
+        expect(alpha).toEqual([
+            '[alpha] HELLO alpha env=one', '[alpha] RESULT ok bot=alpha', step(1),
+            '[alpha] HELLO alpha env=two', '[alpha] RESULT ok bot=alpha', step(1),
+            '[alpha] HELLO alpha env=one', '[alpha] RESULT ok bot=alpha', step(2),
+            '[alpha] HELLO alpha env=two', '[alpha] RESULT ok bot=alpha', step(2),
+            '[alpha] RESULT ok chain rounds=2 ok=4 failed=0',
+        ]);
+        expect(lines).toContain(`[failer] CHAIN round=1 ${script} fail RESULT fail bot=failer`);
+        expect(lines.some(l => l.includes('NEVER'))).toBe(false);
+    } finally { rmSync(logDir, { recursive: true, force: true }); }
+});
+
+test('a stop file ends a chain bot before its next step', async () => {
+    const { writeFileSync, mkdirSync } = await import('node:fs');
+    const name = `chainstop${process.pid}`;
+    const root = resolve(import.meta.dir, '..', '..', '..');
+    const stop = join(root, '.practice', `stop-${name}`);
+    const logDir = join(tmpdir(), `host-chain-stop-${process.pid}`);
+    mkdirSync(join(root, '.practice'), { recursive: true });
+    writeFileSync(stop, 'test');
+    try {
+        const [r] = await runHost([{ name, script: 'scripts/chain.ts', env: { ROUNDS: '0' }, steps: [{ script: 'packages/core/test/fixtures/host-echo.ts', args: [], env: {} }] }], { out: () => {}, logDir, guard: false });
+        expect(r!.result).toBe('RESULT fail chain rounds=0 ok=0 failed=0 stop file');
+    } finally { rmSync(stop, { force: true }); rmSync(logDir, { recursive: true, force: true }); }
+});

@@ -12,6 +12,8 @@
 // (packages/core/src/host.ts, about 140 MB per bot instead of about 550 MB, research/bot-host.md) under
 // packages/practice/src/supervise-host.ts. The rules apply per account: the external guard and stop files per
 // account, and an account whose RESULT says died is never started again. A host counts as its N bots for maxBots.
+// "envByAccount": {"<account>": {"KEY": "value"}} gives one hosted account its own variables on top of "env". A host
+// job whose script is scripts/chain.ts runs its "args" as chain steps inside the host, one chain per account.
 // Usage: DEMO_OK=1 bun scripts/swarm.ts [swarm.json]
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs';
 import { spawn as spawnChild } from 'node:child_process';
@@ -31,7 +33,7 @@ import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutCla
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
 
-export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
+export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
 // A run is a detached supervisor process: it outlives this controller, and a restarted controller adopts it from
 // .practice/swarm-runs.json. Its output goes straight to its log file, which the controller follows from `offset`.
@@ -153,16 +155,28 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
         if (job.account) return { error: 'host job has both "account" and "accounts"' };
         if (list.some(a => typeof a !== 'string' || !ACCOUNT.test(a))) return { error: 'bad account name in "accounts"' };
         if (new Set(list.map(a => a.toLowerCase())).size !== list.length) return { error: 'account listed twice' };
+        // envByAccount: one env map per listed account, on top of the job's env (host.ts --env).
+        const per = job.envByAccount;
+        if (per !== undefined) {
+            if (typeof per !== 'object' || per === null || Array.isArray(per)) return { error: '"envByAccount" must map an account to its env' };
+            for (const [a, e] of Object.entries(per)) {
+                if (!list.includes(a)) return { error: `envByAccount names ${a}, which is not in "accounts"` };
+                if (typeof e !== 'object' || e === null || Array.isArray(e) || Object.values(e).some(v => typeof v !== 'string')) return { error: `envByAccount for ${a} must map KEY to a string` };
+            }
+        }
         return { key: `host:${list.join('+')}`, accounts: [...list], host: true, job };
     }
     if (job.accounts) return { error: '"accounts" needs "host": true' };
+    if (job.envByAccount) return { error: '"envByAccount" needs "host": true' };
     if (typeof job.account !== 'string' || !ACCOUNT.test(job.account)) return { error: 'no account' };
     return { key: job.account, accounts: [job.account], host: false, job };
 }
 
 export function supervisorCommand(parsed:ParsedJob,accounts:string[]):string[]{
     const job=parsed.job,maxRestarts=String(job.maxRestarts??(job.orchestrate?0:20));
-    return parsed.host?['bun','packages/practice/src/supervise-host.ts',job.script,maxRestarts,...accounts,...(job.args?.length?['--args',job.args.join(',')]:[])]
+    // A host job: one --arg per script argument (values may hold commas) and one --env per account variable.
+    return parsed.host?['bun','packages/practice/src/supervise-host.ts',job.script,maxRestarts,...accounts,...(job.args??[]).flatMap(a=>['--arg',a]),
+            ...accounts.flatMap(a=>Object.entries(job.envByAccount?.[a]??{}).flatMap(([k,v])=>['--env',a,`${k}=${v}`]))]
         :['bun','packages/practice/src/supervise.ts',accounts[0]!,job.script,maxRestarts,...(job.orchestrate?accounts.slice(1):[]),...(job.args??[])];
 }
 
