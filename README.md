@@ -100,14 +100,18 @@ The environment sets `HTTPS_PROXY`. Fetch inherits it; `packages/core/src/websoc
 Run only `claude-cloud` jobs, from a plan outside the code checkout, with the repository's admission limits (`maxBots` 4, `minFreeGB` 4) and one job per account marked `"autopilot": "claude-cloud"` so the planner owns it:
 
 ```bash
-mkdir -p .practice/cloud-handoff
+mkdir -p .practice/cloud-handoff .practice/status .practice/swarm-logs   # the release check reads .practice/status; a missing directory refuses every live login
 export SWARM_PLAN=$PWD/.practice/cloud-handoff/swarm.json
 bun scripts/fleet.ts create <name>      # a name from packages/core/src/names.ts; writes vendor/rs-sdk/bots/<name>/bot.env
 # add {"side": "claude-cloud", "server": "rs-sdk-demo.fly.dev"} under that name in .practice/fleet-data/fleet/owners.json, then:
 bun scripts/fleet-sync.ts
+# first login: registers the name and skips Tutorial Island (about 10 ticks, lands at Lumbridge 3222,3222, logs out)
+DEMO_OK=1 WORKER_RELEASE=$(bun packages/core/src/worker-release.ts) bun scripts/measure/tutorial.ts <name>
+printf '{\n  "maxBots": 4,\n  "minFreeGB": 4,\n  "jobs": []\n}\n' > .practice/cloud-handoff/swarm.json
+bun scripts/autopilot.ts .practice/cloud-handoff/swarm.json --dry   # then without --dry: writes one marked standing job per account
 DEMO_OK=1 bun scripts/swarm.ts .practice/cloud-handoff/swarm.json
 DEMO_OK=1 bun scripts/fleet-agent.ts --daemon
-FLEET_SIDE=claude-cloud bun scripts/autopilot.ts .practice/cloud-handoff/swarm.json --daemon
+bun scripts/autopilot.ts .practice/cloud-handoff/swarm.json --daemon
 ```
 
-A fresh account has Thieving 1, so the planner's first template is feathers at a chicken pen; `fleet/claims/<side>.json` on the fleet-data branch keeps it off the pens the `cloud` and `local` sides hold. A useful live result is a bank or inventory gain in `.practice/status/<name>.json` after a bounded run with `LOGOUT logged-out`; sync after each so the snapshot carries the fresh observation.
+The plan starts with an empty jobs list; a hand-written placeholder job with `"enabled": false` would make the planner treat the account as paused. A fresh account on the mainland gets `thieving55` (`scripts/generated/thieving60.ts`, Lumbridge men, then the Ardougne boat and market): its share of the knight farm it unlocks is worth more per tick than feathers, so the planner takes a feather pen only when every knight spot is reserved. `fleet/claims/<side>.json` on the fleet-data branch keeps each side off the pens and spots another side holds. A useful live result is a bank or inventory gain in `.practice/status/<name>.json` after a bounded run with `LOGOUT logged-out`; sync after each so the snapshot carries the fresh observation.
