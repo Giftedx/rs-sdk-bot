@@ -1,11 +1,14 @@
 // Shares fleet state between the two machines through git, on the fleet-data branch in its own worktree
 // (.practice/fleet-data), never in the code checkout: pulls the other side's orders, receipts and snapshot, writes
 // this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn and skill levels of this
-// side's listed accounts from .practice/status, never practice bots or credentials), commits fleet/ and pushes.
+// side's listed accounts from .practice/status, never practice bots or credentials) and this side's claim
+// (fleet/claims/<side>.json: the knight spots, pens and shops the enabled jobs of this side's plan hold, SWARM_PLAN or
+// swarm.json, so other sides' planners stay off them), commits fleet/ and pushes.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
+import { claimFor } from '../packages/planner/src/autopilot';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data';
@@ -45,12 +48,18 @@ export function runSync(push = true): string {
     const file = join(dir, 'fleet', 'snapshots', `${snap.side}.json`);
     const prior = (() => { try { return JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).accounts); } catch { return ''; } })();
     if (prior !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
+    // The claim's time stamp is its freshness, so every sync rewrites it. An unreadable plan writes nothing: the old
+    // claim ages out instead of releasing spots the plan may still hold.
+    const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
+    const jobs = (() => { try { const p = JSON.parse(readFileSync(planFile, 'utf8')); return Array.isArray(p.jobs) ? p.jobs as any[] : null; } catch { return null; } })();
+    const claim = jobs && claimFor(jobs, snap.side, a => owners.get(a.toLowerCase())?.side ?? 'local');
+    if (claim) { mkdirSync(join(dir, 'fleet', 'claims'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'claims', `${snap.side}.json`), JSON.stringify(claim) + '\n'); }
     git(dir, 'add', '--', 'fleet');
     const staged = !git(dir, 'diff', '--cached', '--quiet').ok;
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
-    return `side=${snap.side} accounts=${snap.accounts.length} committed=${staged} pushed=${push && ahead}`;
+    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : 'unreadable plan'} committed=${staged} pushed=${push && ahead}`;
 }
 
 if (import.meta.main) {

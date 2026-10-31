@@ -1,13 +1,14 @@
 // Autopilot CLI: writes this fleet side's swarm jobs (packages/planner/src/autopilot.ts) into swarm.json. It replaces
 // only jobs marked "autopilot": <this side>, keeps every other job, and never plans an account that an unmarked job
 // names or another side owns. Each pass retires a planner job whose log since assignment shows repeated fail RESULTs,
-// a death or near-total tick waste, and picks that account's next best template. Resources this side holds go to
-// fleet/claims/<side>.json in the fleet-data worktree, which scripts/fleet-sync.ts shares, so sides never share a spot.
+// a death or near-total tick waste, and picks that account's next best template. Other sides' fresh claims
+// (fleet/claims/<side>.json, written by scripts/fleet-sync.ts from each side's plan) count as taken, so sides never
+// share a spot.
 // Usage: bun scripts/autopilot.ts [swarm.json] [--dry] [--daemon]   (--daemon: a pass every 10 minutes)
 // Run beside DEMO_OK=1 bun scripts/swarm.ts and bun scripts/fleet-agent.ts --daemon, with FLEET_SIDE set.
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { FLEET_DIR, FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
+import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { accountFrom, assess, catalogue, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources } from '../packages/planner/src/autopilot';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
@@ -56,10 +57,9 @@ export function pass(planFile: string, dry: boolean): string[] {
     }
 
     // Resources other jobs hold: this file's other jobs (paused planner jobs included), and other sides' fresh claims.
-    // Enabled hand-made jobs of this side's accounts go into this side's claim too, so a side with its own plan sees them.
     const listedNames = Object.keys(readJson(join(FLEET_DIR(), 'owners.json'), { accounts: {} }).accounts ?? {});
     const paused = new Set(listedNames.filter(n => existsSync(join(prac, `stop-${n}`))).map(n => n.toLowerCase()));
-    const { taken, ownHeld } = reservedResources(swarm.jobs, side, paused, a => owners.get(a.toLowerCase())?.side ?? 'local');
+    const taken = reservedResources(swarm.jobs, side, paused);
     const claimDir = join(FLEET_DIR(), 'claims');
     if (existsSync(claimDir)) for (const f of readdirSync(claimDir).filter(f => f.endsWith('.json'))) {
         const c = readJson(join(claimDir, f), null);
@@ -88,10 +88,6 @@ export function pass(planFile: string, dry: boolean): string[] {
     writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
     mkdirSync(join(prac, 'autopilot'), { recursive: true });
     writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
-    if (existsSync(join(FLEET_WORKTREE, 'fleet', 'owners.json'))) {
-        mkdirSync(join(FLEET_WORKTREE, 'fleet', 'claims'), { recursive: true });
-        writeAtomic(join(FLEET_WORKTREE, 'fleet', 'claims', `${side}.json`), JSON.stringify({ side, at: Date.now(), resources: [...new Set([...ownHeld, ...out.flatMap(x => x.resources)])].sort() }) + '\n');
-    }
     return log;
 }
 
