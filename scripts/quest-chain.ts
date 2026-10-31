@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 // In a bot host this import is rewritten to the host's per-bot openBot and finish (packages/core/src/host.ts).
 import { openBot as hostOpenBot, finish as botFinish, settle, finishHooks, openHooks } from '../packages/core/src/bot';
 import type { Session } from '../packages/core/src/inprocess';
+import { runChild } from '../packages/core/src/run-child';
 
 const root = resolve(import.meta.dir, '..');
 // Script name (scripts/generated/quest-<name>.ts) -> quest name in the status file.
@@ -78,12 +79,5 @@ async function inProcess(account: string, quest: string): Promise<string> {
         return result;
     } finally { finishHooks.delete(key); openHooks.delete(key); }
 }
-async function subprocess(account: string, quest: string): Promise<string> {
-    const p = Bun.spawn(['bun', 'scripts/quest-sweep.ts', account, quest], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: process.env });
-    let out = '';
-    // Child lines are indented: the supervisor reads only this chain's own RESULT line.
-    for await (const c of p.stdout) { const t = new TextDecoder().decode(c); out += t; process.stdout.write(t.replace(/^(?=.)/gm, '  | ')); }
-    await p.exited;
-    return out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'RESULT fail no result';
-}
+function subprocess(account: string, quest: string): Promise<string> { return runChild(['scripts/quest-sweep.ts', account, quest]); }
 function existsStop(a: string) { try { readFileSync(join(root, '.practice', `stop-${a}`)); return true; } catch { return false; } }
