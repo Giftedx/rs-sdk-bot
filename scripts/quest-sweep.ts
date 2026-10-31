@@ -187,7 +187,7 @@ async function raiseFare(s:Session,world:World):Promise<boolean>{
  const start=coins();
  for(const store of generalStores(here()).slice(0,3)){
   const walked=await goTo(s,world,store.tile,accountOf(s),{legTimeoutTicks:100});
-  console.log(`QUEST_SWEEP_FARE_WALK ${JSON.stringify({npc:store.npc,to:store.tile,ok:walked.ok,detail:walked.detail})}`);
+  console.log(`QUEST_SWEEP_FARE_WALK ${JSON.stringify({npc:store.npc,to:store.tile,ok:walked.ok,detail:"detail" in walked?walked.detail:undefined})}`);
   if(!walked.ok)continue;
   const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===store.npcId).sort((a:any,b:any)=>a.distance-b.distance)[0];
   if(!npc||!(await s.bot.openShop(npc)).success)continue;

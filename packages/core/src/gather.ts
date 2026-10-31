@@ -48,7 +48,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
   for(const at of sources){
    if(held(g.id)>=target)break;
    const walked=await goTo(s,world,at,accountOf(s),{legTimeoutTicks:100});
-   console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:walked.detail})}`);
+   console.log(`QUEST_SWEEP_GATHER_WALK ${JSON.stringify({item:g.id,how:g.how,to:at,ok:walked.ok,detail:"detail" in walked?walked.detail:undefined})}`);
    if(!walked.ok)continue;
    for(let tries=0;tries<g.count+3&&held(g.id)<target;tries++){
     const before=held(g.id);

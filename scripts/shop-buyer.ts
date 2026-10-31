@@ -75,18 +75,6 @@ export const PROFILES: Record<string, {
         bankSpot: { x: 2809, z: 3441 }, // Catherby Bank
         items: [{ re: /^lobster pot$/i, buyPerTick: 1 }],
     },
-    // Aubury's rune shop (runeshop: 2000 fire, 2000 earth): the route bill's fire and earth runes.
-    aubury: {
-        npc: /^aubury$/i,
-        npcSpot: { x: 3253, z: 3402 },
-        bankSpot: { x: 3253, z: 3420 }, // Varrock East Bank
-        items: [
-            { re: /^fire rune$/i, buyPerTick: 50 },
-            { re: /^earth rune$/i, buyPerTick: 50 },
-            { re: /^air rune$/i, buyPerTick: 50 },
-            { re: /^water rune$/i, buyPerTick: 50 },
-        ],
-    },
     taverley: {
         npc: /^jatix$/i,
         npcSpot: { x: 2908, z: 3443 },
