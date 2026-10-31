@@ -58,4 +58,9 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .spot-names{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
 .spot-names button{background:#1b1b1b;border:0;color:#ff981f;font:11px Arial;padding:2px 5px;border-radius:2px;cursor:pointer}
 .lookup-card{margin-top:6px}
+.ot-row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;border-top:1px solid #242424;padding:4px 0;font:12px Arial;color:#ddd}
+.ot-row span:last-child{color:#a0a0a0}
+.farm-row{border-top:1px solid #242424;padding:4px 0}
+.farm-row summary{display:grid;grid-template-columns:1fr auto;gap:2px 8px;cursor:pointer;color:#ddd;font:12px Arial}
+.farm-row summary span:nth-child(3){grid-column:1/-1}
 

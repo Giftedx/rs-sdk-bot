@@ -108,8 +108,17 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const b=list.find(x=>x.board===rivalBoard)||list[0];rivalBoard=b.board;
     return `<div class="xp-panel"><select id="rival-board" class="rl-search" aria-label="Board">${list.map(x=>`<option ${x.board===b.board?'selected':''}>${E(x.board)}</option>`).join('')}</select>`+
       `<div class="xp-box"><div class="xp-head"><span>${E(b.board)}</span><span class="xp-gain">read ${age(b.at)} ago</span></div><div class="xp-stats"><span>Our best <b>${b.ours?'#'+nf(b.ours.rank)+' '+E(safeName(b.ours.name)):'not ranked'}</b></span><span>Online now <b>${b.rows.filter(r=>r.online&&!r.fleet).length} of ${b.rows.filter(r=>!r.fleet).length}</b></span></div></div>`+
+      overtakeBox(b.board)+
       b.rows.map(r=>`<button class="rival-row${r.fleet?' rival-ours':''}" data-lookup="${E(r.name)}" title="${E(r.name)}: level ${r.level}, ${nf(r.ticks)} ticks${r.online?', online '+placeOf(r.x,r.z):''}"><span>#${nf(r.rank)}</span><span>${E(safeName(r.name))}</span><span>${r.level}</span><span>${boardTime(r.ticks)}</span><span class="${r.online?'friend-on':'friend-off'}">${r.online?E(placeOf(r.x,r.z)):'offline'}</span></button>`).join('')+
       '<p class="xp-muted">Click a player to look them up. Gold rows are fleet accounts.</p></div>';
+  }
+  // Overtake planner: the fleet's best account on the board, and what it needs to pass the next rows of the top 10.
+  const hoursText=h=>h==null?null:h<1?Math.max(1,Math.round(h*60))+' min':h<48?h.toFixed(1)+' h':Math.round(h/24)+' days';
+  function overtakeBox(board){
+    const o=(S.overtake||[]).find(x=>x.board===board);if(!o)return board==='Overall'||board==='Quest Points'?'':'<div class="xp-box"><span class="xp-muted">No fleet account is ranked on this board.</span></div>';
+    const line=t=>t.newAccount?`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (99 in ${boardTime(t.seconds/0.4)})</span><span>${o.level>=99?'board time stops at 99':'our board time is already past theirs'}: a new account must reach 99 in under ${boardTime(t.seconds/0.4)}</span></div>`
+      :`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (level ${t.level})</span><span>level ${t.goal}${t.deadline!=null?' within '+boardTime(t.deadline/0.4)+' more board time':''}: ${t.xpNeeded==null?'XP not reported':nf(t.xpNeeded)+' XP'}${t.hours!=null?' · about '+hoursText(t.hours)+' at '+nf(Math.round(o.xpPerHour))+' XP/hr':t.xpNeeded!=null?' · not training this skill now':''}</span></div>`;
+    return `<div class="xp-box"><div class="xp-head"><span>Overtake · ${E(safeName(o.account))}</span><span class="xp-gain">#${nf(o.rank)} · level ${o.level}</span></div>${o.targets.length?o.targets.map(line).join(''):'<span class="xp-muted">Already #1 on this board.</span>'}</div>`;
   }
   // World plugin: who stands at the spots our bots claim, and a lookup of any player (hiscores and where they are).
   let worldLookup=null,worldLookupName='';
@@ -118,8 +127,15 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const crowded=spots.filter(s=>s.others.length).length;
     return `<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>Look up a player</span></div><form id="wp-form"><input id="wp-name" class="rl-search" list="wp-names" maxlength="12" placeholder="Player name..." value="${E(worldLookupName)}" aria-label="Player name"><datalist id="wp-names">${roster.filter(r=>!fleet.has(String(r[0]).toLowerCase())).slice(0,400).map(r=>`<option value="${E(r[0])}">`).join('')}</datalist></form><div id="wp-result">${worldLookup?lookupCard(worldLookup):'<span class="xp-muted">Any player: levels, ranks and where they are now. Right-click a dot on the map to look that player up.</span>'}</div></div>`+
       `<div class="xp-box"><div class="xp-head"><span>Our spots</span><span class="${crowded?'side-late':'xp-gain'}">${crowded} with other players</span></div>${spots.map(s=>`<div class="spot-row"><div class="xp-head"><span>${E(s.kind)} ${E(placeOf(s.x,s.z))}</span><span class="${s.others.length?'side-late':'xp-muted'}">${s.others.length} other${s.others.length===1?'':'s'}</span></div><div class="xp-meta"><span>${E(s.side)} side · ${s.ours.length} of ours</span><span>${s.x}, ${s.z}</span></div>${s.others.length?'<div class="spot-names">'+s.others.slice(0,12).map(n=>`<button data-lookup="${E(n)}">${E(n)}</button>`).join('')+(s.others.length>12?`<span class="xp-muted">+${s.others.length-12} more</span>`:'')+'</div>':''}</div>`).join('')||'<span class="xp-muted">No claimed spot has a tile.</span>'}${named.length?`<p class="xp-muted">Claimed without a tile: ${named.map(s=>E(s.resource)).join(', ')}</p>`:''}</div>`+
+      farmsBox()+
       `<div class="xp-box"><div class="xp-head"><span>Online now</span><span class="xp-gain">${nf(roster.length)}</span></div><div class="xp-meta"><span>${roster.filter(r=>fleet.has(String(r[0]).toLowerCase())).length} of them are ours</span><span>world feed, every 6 s</span></div></div>`+
       '<p class="xp-muted">Other players count within 10 tiles of a claimed tile on the ground floor. All of this is public game data.</p></div>';
+  }
+  // Bot farms: other players online whose names follow one pattern, and how many of them stand at our spots.
+  function farmsBox(){
+    const farms=S.farms||[];if(!farms.length)return '<div class="xp-box"><div class="xp-head"><span>Bot farms</span></div><span class="xp-muted">No group of three or more patterned names is online.</span></div>';
+    return `<div class="xp-box"><div class="xp-head"><span>Bot farms</span><span class="xp-gain">${farms.length} groups · ${nf(farms.reduce((n,g)=>n+g.count,0))} players</span></div>`+farms.slice(0,12).map(g=>{const at=g.atSpots.reduce((n,s)=>n+s.count,0),where=[...new Map(g.tiles.map(([x,z])=>[placeOf(x,z),0])).keys()].slice(0,2).join(', ');
+      return `<details class="farm-row"><summary><span>${E(g.label)}</span><span>${g.count} online${g.range?' · numbers '+g.range[0]+'–'+g.range[1]:''}</span><span class="${at?'side-late':'xp-muted'}">${at?at+' at our spots':'not at our spots'}</span></summary><div class="xp-meta"><span>${E(where)}</span></div><div class="spot-names">${g.names.slice(0,24).map(n=>`<button data-lookup="${E(n)}">${E(n)}</button>`).join('')}${g.names.length>24?`<span class="xp-muted">+${g.names.length-24} more</span>`:''}</div></details>`;}).join('')+'<p class="xp-muted">A farm is three or more online players with one name pattern: a numbered series, or random names with the same first two characters and length.</p></div>';
   }
   function lookupCard(l){
     if(l.error)return '<span class="side-late">'+E(l.error)+'</span>';

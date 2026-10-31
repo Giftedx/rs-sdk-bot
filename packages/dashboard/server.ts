@@ -18,7 +18,7 @@ import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
-import {contentionView,hiscoreRows,lookupView,rivalsView,rosterView,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow} from './world-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow} from './world-view';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
@@ -1063,7 +1063,7 @@ function buildState() {
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
             lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).slice(0, 3).map(x => x.name)), ...contention.flatMap(s => s.others)])];
             const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 120).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now)]));
-            return { roster: rosterView(roster, now), rivals, contention, lookups: looked };
+            return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
         scoreboard: cached(FILES.scoreboard, text => scoreboardView(JSON.parse(text)), scoreboardView(null)), fleetSides: fleetSides(now),
