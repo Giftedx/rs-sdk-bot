@@ -7,6 +7,7 @@ import {runShafts} from './fletch-shafts';
 import {runHeadless} from './fletch-arrows';
 type Session=Awaited<ReturnType<typeof openBot>>;
 const BANK={x:3092,z:3243,level:0},KNIFE={x:3224,z:3202,level:0},TREES={x:3226,z:3237,level:0};
+const CORRIDOR=[{x:3092,z:3266,level:0},{x:3140,z:3270,level:0},{x:3180,z:3258,level:0},{x:3218,z:3256,level:0}];
 export function supplyPlan(logs:number,headless:number,cap:number){
  if(!Number.isSafeInteger(logs)||logs<1||logs>25||!Number.isSafeInteger(headless)||headless<0||headless%15||headless>Math.floor(Math.max(0,logs*15-200)/15)*15||!Number.isSafeInteger(cap)||cap<100||cap>10000)throw Error('supply requires LOGS1..25, HEADLESS multiple15 within shaft reserve200, CAP100..10000');
  return {logs,headless,shafts:logs*15};
@@ -20,8 +21,8 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
  const travel=async(t:typeof BANK)=>{
   const p=s.sdk.getState()?.player;if(p&&p.level===t.level&&Math.max(Math.abs(p.worldX-t.x),Math.abs(p.worldZ-t.z))<=2)return;
   // The courier's north-bank lane avoids the jail/road approach. Keep the supply route north of the Lumbridge spiders.
-  if(t===BANK){await walk({x:3226,z:3266,level:0});await walk({x:3092,z:3266,level:0});}
-  else if(t===TREES){await walk({x:3092,z:3266,level:0});await walk({x:3226,z:3266,level:0});}
+  if(t===BANK)for(const step of [...CORRIDOR].reverse())await walk(step);
+  else if(t===TREES)for(const step of CORRIDOR)await walk(step);
   await walk(t);
  };
  const bank=async()=>{await travel(BANK);if(!(await s.bot.openBank()).success)throw Error('supply bank unavailable');};
