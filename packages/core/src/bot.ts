@@ -6,6 +6,7 @@ import { isLocalServer } from './localserver';
 import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { stalled, startLedger, formatLedger } from './ledger';
+import { assertSideOwns } from './fleet';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { createWorld, rsPathLength, type Account, type World } from './world';
@@ -71,6 +72,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // tracks the session and logs it out when the runner ends. The hook is lifted for the call it makes back here.
     const hook = openHooks.get(name.toLowerCase());
     if (hook) { openHooks.delete(name.toLowerCase()); try { return await hook(name, opts); } finally { openHooks.set(name.toLowerCase(), hook); } }
+    // Never log in an account the other fleet side owns (fleet/owners.json): two machines would fight over it.
+    assertSideOwns(name);
     const log = opts.log ?? ((l: string) => console.log(l));
     const env = readFileSync(join(repoRoot, 'vendor', 'rs-sdk', 'bots', name, 'bot.env'), 'utf8');
     const password = env.match(/^PASSWORD=(.*)$/m)?.[1]?.trim();

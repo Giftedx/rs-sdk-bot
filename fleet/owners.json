@@ -1,0 +1,116 @@
+{
+ "accounts": {
+  "Abracadickra": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Ballspinner": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Bigchopper": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Bigpackage": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "BowBeforeMe": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "CoinCock": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "FishAndChips": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Hocuspokeus": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Magicwanda": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Masterbaiter": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Mightyrod": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "MineYourBiz": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "mmsmk1232": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "mmtha0205": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "mmthv2350": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Moneyshot": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "NabTheKnob": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "OreElse": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "PickpockDick": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Pocketpython": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Pocketrocket": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Shaftmaker": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Shaftsinker": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Swordinhand": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Wandwaver": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Woodenstaff": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "Woodpecker": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "YewFirst": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
+  }
+ }
+}

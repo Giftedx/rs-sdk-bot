@@ -2,6 +2,7 @@
 // live helper accounts hold (their status inventory, worn and last seen bank), and the shortfall to make or buy.
 // Usage: bun packages/planner/src/supply-bill.ts [hiscores snapshot]   writes .practice/coordinator/supply-bill.json
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mySide } from '../../core/src/fleet';
 import { join, resolve } from 'node:path';
 import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from './haggis';
 
@@ -32,9 +33,13 @@ export function supplyBill(supplies: readonly { item: string; count: number }[],
     });
 }
 
-export function liveHelperStatuses(base = root): any[] {
-    const dir = join(base, '.practice/status');
-    return readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } })
+// This machine's live statuses, plus the accounts the other fleet side published in fleet/snapshots (scripts/fleet-sync.ts),
+// so the bill counts stock on both machines.
+export function liveHelperStatuses(base = root, fleetDir = join(base, 'fleet', 'snapshots'), side = mySide()): any[] {
+    const read = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
+    const mine = read(join(base, '.practice/status')), theirs = read(fleetDir).filter(x => x?.side && x.side !== side).flatMap(x => x.accounts ?? []);
+    const names = new Set(mine.map(s => String(s?.name).toLowerCase()));
+    return [...mine, ...theirs.filter(a => !names.has(String(a?.name).toLowerCase()))]
         .filter(s => s?.server === 'rs-sdk-demo.fly.dev' && typeof s.name === 'string' && s.name.toLowerCase() !== 'haggis');
 }
 

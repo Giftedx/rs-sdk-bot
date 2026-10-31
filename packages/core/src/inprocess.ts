@@ -6,7 +6,7 @@ import type { SDKConfig } from '../../../vendor/rs-sdk/sdk/types';
 import { loadPathfinding } from './pathcache';
 import { assertLoginAllowed } from './haggisgate';
 import { isLocalServer } from './localserver';
-import { ownedAccounts, recordOwnedAccount, tradeRefusal } from './tradeguard';
+import { ownedAccounts, tradePartners, recordOwnedAccount, tradeRefusal } from './tradeguard';
 import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
 import { setEquipmentObserved } from './container-observation';
 import { beginSessionAttempt, type SessionAttempt } from './session-lifecycle';
@@ -326,7 +326,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
             const created = createShim(client, sdk, action => {
                 const a=action as any;
                 const trading=a.type==='interactPlayer'&&a.optionIndex===4 || ['clickComponent','clickComponentWithOption'].includes(a.type)&&[3420,3546].includes(a.componentId);
-                return trading ? tradeRefusal(a,sdk.getState(),ownedAccounts(host)) : null;
+                return trading ? tradeRefusal(a,sdk.getState(),tradePartners(host)) : null;
             });
             shim = created;
             created.start();

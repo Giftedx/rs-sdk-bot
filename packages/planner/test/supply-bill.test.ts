@@ -16,3 +16,16 @@ test('the shortfall subtracts stock across helpers and lists the holders', () =>
     expect(bill[0]).toMatchObject({ need: 560, owned: 400, short: 160, holders: [{ account: 'A', count: 300 }, { account: 'B', count: 100 }] });
     expect(bill[1]).toMatchObject({ short: 1, ids: [] });
 });
+
+test('the bill counts the other fleet side’s snapshot, not this side’s own', async () => {
+    const { liveHelperStatuses } = await import('../src/supply-bill');
+    const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
+    const { join } = await import('node:path');
+    const { tmpdir } = await import('node:os');
+    const base = mkdtempSync(join(tmpdir(), 'bill-')), snaps = join(base, 'snaps');
+    mkdirSync(join(base, '.practice/status'), { recursive: true }); mkdirSync(snaps);
+    writeFileSync(join(base, '.practice/status/Giver.json'), JSON.stringify({ name: 'Giver', server: 'rs-sdk-demo.fly.dev', bank: [{ id: 379, count: 5 }] }));
+    writeFileSync(join(snaps, 'cloud.json'), JSON.stringify({ side: 'cloud', accounts: [{ name: 'Taker', server: 'rs-sdk-demo.fly.dev', bank: [{ id: 379, count: 7 }] }, { name: 'Giver', server: 'rs-sdk-demo.fly.dev' }] }));
+    writeFileSync(join(snaps, 'local.json'), JSON.stringify({ side: 'local', accounts: [{ name: 'Old', server: 'rs-sdk-demo.fly.dev' }] }));
+    expect(liveHelperStatuses(base, snaps, 'local').map(s => s.name).sort()).toEqual(['Giver', 'Taker']);
+});

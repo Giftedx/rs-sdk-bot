@@ -8,7 +8,7 @@ function trace(reject:boolean,lateStop=false){
  const lifecycleRoot=mkdtempSync(join(tmpdir(),'auth-order-'));
  const events=[];let stopped=false;
  mock.module(${JSON.stringify(resolve(root,'packages/core/src/pathcache.ts'))},()=>({loadPathfinding:async()=>{events.push('local-setup');stopped=${lateStop};return{};}}));
- mock.module(${JSON.stringify(resolve(root,'packages/core/src/tradeguard.ts'))},()=>({recordOwnedAccount:()=>events.push('record'),ownedAccounts:()=>new Set(),tradeRefusal:()=>null}));
+ mock.module(${JSON.stringify(resolve(root,'packages/core/src/tradeguard.ts'))},()=>({recordOwnedAccount:()=>events.push('record'),ownedAccounts:()=>new Set(),tradePartners:()=>new Set(),tradeRefusal:()=>null}));
  mock.module(${JSON.stringify(resolve(root,'vendor/rs-sdk/server/webclient/src/lite/session.ts'))},()=>({startSession:async opts=>{
   events.push('authenticating');if(${reject})throw Error('simulated credential rejection');
   events.push('authenticated');const client={ingame:true,collectBotState:()=>({}),executeBotAction:()=>({success:true}),setOnGameTickCallback:()=>{}};

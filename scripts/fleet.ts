@@ -3,7 +3,7 @@
 // New accounts are disabled until their bot.env exists and the operator enables them. Bot passwords are never printed.
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import type { Job } from './swarm';
 
 const repoRoot = resolve(import.meta.dir, '..');
@@ -227,12 +227,16 @@ export function createAccount(name: string, server = 'rs-sdk-demo.fly.dev'): str
     const dir = join(botsDir, name);
     mkdirSync(dir, { recursive: true });
     const envFile = join(dir, 'bot.env');
-    if (!existsSync(envFile)) {
-        // The game server accepts 1-20 character passwords; base64url of 15 bytes is exactly 20.
-        const password = randomBytes(15).toString('base64url');
-        writeFileSync(envFile, `SERVER=${server}\nPASSWORD=${password}\n`);
-    }
+    if (!existsSync(envFile)) writeFileSync(envFile, `SERVER=${server}\nPASSWORD=${accountPassword(name, server)}\n`);
     return dir;
+}
+
+// The game server accepts 1-20 character passwords; base64url of 15 bytes is exactly 20. A machine that loses its
+// files after each session (the cloud fleet side) sets FLEET_SEED, a secret kept in its environment settings: the
+// password is then HMAC-SHA256(seed, server:name), so any later session rebuilds the same bot.env with `create`.
+export function accountPassword(name: string, server: string, seed = process.env.FLEET_SEED): string {
+    if (!seed) return randomBytes(15).toString('base64url');
+    return createHmac('sha256', seed).update(`${server.toLowerCase()}:${name.toLowerCase()}`).digest().subarray(0, 15).toString('base64url');
 }
 
 export function writeFleetPlan(out:string,plan:FleetPlan,liveFile=swarmFile):void {

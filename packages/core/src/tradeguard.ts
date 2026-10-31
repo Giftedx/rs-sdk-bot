@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { listedAccounts } from './fleet';
 
 const root = resolve(import.meta.dir, '../../..');
 const verifiedFile = join(root, '.practice/owned-accounts.json');
@@ -43,6 +44,12 @@ export function ownedAccounts(server: string): Set<string> {
     }
     cached.set(server,{at:Date.now(),version,names});
     return new Set(names);
+}
+
+// Trade partners: accounts this machine proved, plus every account fleet/owners.json lists on either side (a cloud
+// account trades with a local one without either machine holding the other's credentials).
+export function tradePartners(server: string): Set<string> {
+    return new Set([...ownedAccounts(server), ...listedAccounts(server)]);
 }
 
 export function tradeRefusal(action: any, state: any, owned: ReadonlySet<string>): string | null {
