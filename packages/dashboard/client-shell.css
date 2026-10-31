@@ -44,6 +44,10 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .progress-remaining{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
 .progress-remaining span{background:#1b1b1b;padding:3px 6px;border-radius:2px;color:#ff981f}
 .hs-max span{color:#00ff00}
-.side-accounts summary{cursor:pointer;color:#a0a0a0;margin-top:5px}
 .ignore-why{display:block;font-size:11px;color:#a0a0a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .equip-row{display:flex;align-items:center;gap:6px;padding:2px 0}
+.game-places{position:absolute;right:6px;top:176px;z-index:30;background:#3e3529ee;border:2px ridge #5b5243;padding:6px;display:flex;flex-direction:column;gap:5px;pointer-events:auto;font:12px Arial;color:#ff981f;max-width:calc(100% - 12px)}
+.game-places[hidden]{display:none}
+.game-places .map-place{display:flex!important;position:static!important;background:none;border:0;padding:0;flex-wrap:wrap}
+.hs-mode{margin:6px 0}
+
