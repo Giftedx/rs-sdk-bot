@@ -1,5 +1,5 @@
 import {describe,expect,test} from 'bun:test';
-import {controlView,publicView,trimState,MAIN_MARK,WHY_LIMIT,FINISHED_KEEP} from './publish-relay';
+import {controlView,publicView,trimState,withSides,MAIN_MARK,WHY_LIMIT,FINISHED_KEEP} from './publish-relay';
 
 const state=()=>({now:1,bots:[
   {name:'CoinCock',env:{target:null},sessionAttemptId:'1-2',workRevision:'abc',inputs:{},coordinatorRunId:null,bank:[{name:'Coins',count:5}],pos:{x:1,z:2},reserved:false},
@@ -43,5 +43,14 @@ describe('hosted views',()=>{
  test('a state that still names the main account is refused',()=>{
   expect(()=>publicView({bots:[{name:'CoinCock',goal:'give to Haggis'}]})).toThrow('nothing published');
   expect(()=>publicView({bots:[],mainPlan:{note:'haggis route'}})).toThrow('nothing published');
+ });
+});
+
+describe('withSides',()=>{
+ test('each bot names its side; unlisted accounts are local; other state is untouched',()=>{
+  const s=withSides({now:1,bots:[{name:'CoinCock'},{name:'CloudBot'}]},new Map([['cloudbot',{side:'cloud'}]]));
+  expect(s.bots.map((b:any)=>b.side)).toEqual(['local','cloud']);
+  expect(s.now).toBe(1);
+  expect(withSides({bots:null},new Map())).toEqual({bots:null});
  });
 });

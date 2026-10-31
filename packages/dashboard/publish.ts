@@ -13,7 +13,8 @@
 import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
-import {controlView,publicView,MAIN_ACCOUNT} from './publish-relay';
+import {controlView,publicView,withSides,MAIN_ACCOUNT} from './publish-relay';
+import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
 import {validateCommand,authorizeCommand,applyCommand,receiptPath,writeReceipt,ACTIONS,ID_RE,MAX_AGE_MS} from './publish-commands';
 
 const root=resolve(import.meta.dir,'..','..'),prac=join(root,'.practice');
@@ -48,7 +49,9 @@ async function ensureDashboard(){
 let mapWritten=false;
 async function collect(){
  await ensureDashboard();
- const state=await (await dash('/api/state')).json();
+ const ownersFile=[join(FLEET_WORKTREE,'fleet','owners.json'),join(root,'fleet','owners.json')].find(existsSync);
+ const owners=(()=>{try{return ownersFile?loadOwners(ownersFile):new Map();}catch{return new Map();}})();
+ const state=withSides(await (await dash('/api/state')).json(),owners);
  const meta=await (async()=>{try{const r=await dash('/api/control',undefined,10_000);return r.ok?await r.json():null;}catch{return null;}})();
  let map:Uint8Array|null=null;
  if(!mapWritten&&state?.map?.ready){try{const r=await dash('/api/map');if(r.ok)map=new Uint8Array(await r.arrayBuffer());}catch{/* next cycle */}}
