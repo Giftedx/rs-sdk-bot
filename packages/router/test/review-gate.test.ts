@@ -44,7 +44,10 @@ test('an out-of-scope build still waits for its review',async()=>{
  expect(reviewGate({scope:scope([]),records:2,replays:[clean,clean]}).reason).toContain('found 2');
  const differ={status:'differ' as const,difference:{tick:9,index:4,expected:{a:{type:'walkTo'}},actual:{a:{type:'interactNpc'}}}};
  expect(reviewGate({scope:scope([]),records:3,replays:[clean,differ,clean]}).blocking).toBe(true);
- expect(reviewGate({scope:scope([]),records:3,replays:[clean,differ,clean],allow:['walkTo','interactNpc']}).blocking).toBe(false);
+ // replayAllow reaches the replay itself; a difference it still reports blocks, allowed swaps do not.
+ expect(reviewGate({scope:scope([]),records:3,replays:[clean,differ,clean],allow:['walkTo','interactNpc']}).blocking).toBe(true);
+ const swapped=reviewGate({scope:scope([]),records:3,replays:[clean,{status:'clean',allowed:2},clean],allow:['walkTo']});
+ expect(swapped.blocking).toBe(false);expect(swapped.reason).toContain('2 commands changed within walkTo');
  expect(reviewGate({scope:scope([]),records:3,replays:[clean,{status:'error',error:'boom'},clean]}).blocking).toBe(true);
 });
 

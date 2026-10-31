@@ -49,7 +49,7 @@ The review blocks delivery unless all of these hold (`reviewGate`, `packages/rou
 
 1. The build ran in its own workspace and changed only the capability's owned files.
 2. Native qualification passed on that source.
-3. The worker replays the 3 newest recorded runs of the capability that started before the build, and each replay is clean or differs only in command types the build task lists in `replayAllow`.
+3. The worker replays the 3 newest recorded runs of the capability that started before the build, and each replay is clean. The replay gets the build task's `replayAllow` command types: a command swapped for another within those types at the same tick counts as allowed, and the replay goes on comparing every later command.
 
 The gate runs each replay in a scratch copy of the build's source with its own `.practice`, so a replayed worker never writes live receipts or status. A build that passes the gate delivers at once and writes `review-gate.json` in its run folder. Its review then runs as a `review` task (`<build id>-review`). A rejection stops the next runs of that capability, not a run already started, until a repair build changes the owned files. The rejection shows as a failed review task in `bun run coordinate --status` and as the error of each refused run. Any other build delivers only after an approving verdict.
 

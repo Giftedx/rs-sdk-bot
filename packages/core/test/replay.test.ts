@@ -5,7 +5,7 @@ import { createShim, type ClientLike, type Session } from '../src/inprocess';
 import { openBot } from '../src/bot';
 import { waitTicks } from '../src/ticks';
 import { replayRecord } from '../src/replay';
-import { tickRecorder, stateDelta, applyDelta } from '../src/tick-record';
+import { tickRecorder, stateDelta, applyDelta, createTickRecorder, readRecord } from '../src/tick-record';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -14,7 +14,7 @@ import { gzipSync } from 'node:zlib';
 const turn = () => new Promise<void>(r => setImmediate(r));
 
 // A worker in the shape of scripts/*.ts: open, wait on ticks, send commands, log out with a direct click.
-async function worker(open: () => Promise<Session>, secondWalk: number) {
+async function worker(open: () => Promise<Session>, secondWalk: number, logout = 2458) {
     const s = await open();
     await waitTicks(s, 2);
     await s.sdk.sendWalk(3200, 3200);
@@ -22,7 +22,7 @@ async function worker(open: () => Promise<Session>, secondWalk: number) {
     const xp = s.sdk.getState()?.skills?.[0]?.experience ?? 0;
     await s.sdk.sendWalk(xp > 0 ? secondWalk : 1, 3201);
     await waitTicks(s, 1);
-    await s.direct({ type: 'clickComponent', componentId: 2458, reason: 'SDK' });
+    await s.direct({ type: 'clickComponent', componentId: logout, reason: 'SDK' });
 }
 
 // Records one run of `worker` on a fake client: results come one tick after each command; xp rises at tick 3.
@@ -112,4 +112,25 @@ test('the replay command runs a worker file against a gzip record', async () => 
     const missing = run(['--entry', 'packages/core/test/fixtures/no-such-worker.ts']);
     expect(missing.out.status).toBe('error');
     expect(missing.code).toBe(2);
+});
+
+test('an allowed command swap is counted and every later command is still compared', async () => {
+    const lines = await record();
+    const swap = await replayRecord(lines, () => worker(() => openBot('Replayer'), 3301), { allow: ['walkTo'] });
+    expect(swap).toMatchObject({ status: 'clean', allowed: 1, commands: 3 });
+    const later = await replayRecord(lines, () => worker(() => openBot('Replayer'), 3301, 9999), { allow: ['walkTo'] });
+    expect(later.status).toBe('differ');
+    expect(later.allowed).toBe(1);
+    expect(later.difference).toMatchObject({ index: 2, expected: { a: { componentId: 2458 }, direct: true }, actual: { a: { componentId: 9999 } } });
+});
+
+test('a record file is complete once its flush resolves', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'record-flush-'));
+    const r = createTickRecorder({ account: 'Flusher', server: 'localhost:8888', script: 'scripts/flush.ts', argv: [], startedAt: 7 }, { root, env: {} })!;
+    for (let t = 1; t <= 50; t++) r.publish(t, { tick: t, inventory: [{ id: t }] }, 's');
+    r.end(50, 'logged-out');
+    await r.flushed;
+    const lines = readRecord(r.file);
+    expect(lines[0]).toMatchObject({ k: 'meta', account: 'Flusher' });
+    expect(lines.at(-1)).toMatchObject({ k: 'end', reason: 'logged-out', ticks: 50 });
 });

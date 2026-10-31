@@ -98,7 +98,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     log(`START ${p.worldX} ${p.worldZ} ${p.level}`);
     const record = createTickRecorder({ account: name, server, script: opts.record?.script ?? process.argv[1] ?? 'unknown',
         argv: opts.record?.argv ?? process.argv.slice(2), startedAt: Date.now() });
-    if (record) s.record?.(record);
+    if (record && s.record) { s.record(record); records.set(s, record); }
     // Every session keeps a tick ledger (packages/core/src/ledger.ts); finish() prints it.
     const led = startLedger(s as any);
     ledgers.set(s, led);
@@ -162,6 +162,9 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
 const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
 const randomEvents = new Map<Session, RandomEventWatch>();
+const records = new Map<Session, NonNullable<ReturnType<typeof createTickRecorder>>>();
+// A record whose file is not complete in this time is left as it is; the exit does not wait longer.
+const RECORD_FLUSH_MS = 3000;
 const settling = new WeakSet<Session>();
 const settlements = new WeakMap<Session, Promise<boolean>>();
 // The session's random event watcher, so a script can pause its loop while busy() is true.
@@ -217,6 +220,13 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     const c = await closeWithin(sessions, 5000);
     if (c.timedOut > 0) log(`WARN ${c.timedOut} session close(s) timed out`);
     if (c.timedOut > 0) ok = false;
+    // The session end normally ends its record; a close that timed out may not have. Then wait for the file.
+    await Promise.all(sessions.map(s => {
+        const r = records.get(s); if (!r) return;
+        records.delete(s);
+        r.end(s.tick(), 'settled');
+        return Promise.race([r.flushed, Bun.sleep(RECORD_FLUSH_MS)]);
+    }));
     if (!await prior) ok = false;
     let finalDetail: string;
     try { finalDetail = typeof detail === 'function' ? detail(ok) : detail; }

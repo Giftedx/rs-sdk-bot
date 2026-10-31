@@ -3,13 +3,15 @@
 // the recorded states tick by tick and returns the recorded results. A refactor with no behaviour change replays
 // clean. The idea and the `*.ticks.ndjson.gz` name come from UberMouse conductor `tools/replay.ts` (MIT); no code is copied.
 //
-//   bun packages/core/src/replay.ts <record.ticks.ndjson.gz> [--entry scripts/x.ts] [--json]
+//   bun packages/core/src/replay.ts <record.ticks.ndjson.gz> [--entry scripts/x.ts] [--allow walkTo,interactNpc] [--json]
 //
-// Exit 0 clean, 1 a different command, 2 the replay could not run.
+// Exit 0 clean, 1 a different command, 2 the replay could not run. `--allow` names command types that a build
+// changes on purpose: a replayed command of an allowed type at the same tick in place of a recorded one of an
+// allowed type counts in `allowed`, gets the recorded result, and the comparison goes on to the end.
 // Limits: a worker decision that reads the wall clock (Date.now, Bun.sleep) or files written during the run can
 // differ on replay with no code change. One record is one session; a second account's openBot refuses.
+import { readFileSync } from 'node:fs';
 import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
 import { createShim, inProcessSdkConfig, type ClientLike, type Session } from './inprocess';
@@ -21,22 +23,26 @@ export interface ReplayDifference { tick: number; index: number; expected: Repla
 export interface ReplayResult {
     status: 'clean' | 'differ' | 'error';
     account: string; script: string; ticks: number; commands: number; cut: boolean;
+    // Commands that differed only within the allowed types (`opts.allow`).
+    allowed: number;
     difference?: ReplayDifference; error?: string;
 }
+const typeOf = (a: unknown) => (a as { type?: unknown } | null)?.type;
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const turn = () => new Promise<void>(r => setImmediate(r));
 
 // `run` starts the worker (the CLI imports its entry). `actionWaitMs` bounds the wait for each recorded command;
 // path searches run off-thread, so a command can need several event-loop turns.
-export async function replayRecord(lines: any[], run: () => Promise<unknown>, opts: { actionWaitMs?: number; settleTurns?: number } = {}): Promise<ReplayResult> {
+export async function replayRecord(lines: any[], run: () => Promise<unknown>, opts: { actionWaitMs?: number; settleTurns?: number; allow?: readonly string[] } = {}): Promise<ReplayResult> {
+    const allow = new Set(opts.allow ?? []);
     const meta = lines[0];
     if (meta?.k !== 'meta' || meta.v !== RECORD_VERSION) throw new Error('not a version ' + RECORD_VERSION + ' tick record');
     const waitMs = opts.actionWaitMs ?? 3000, settleTurns = opts.settleTurns ?? 6;
     const expected = lines.filter(l => l.k === 'a');
     const firstPublish = lines.find(l => l.k === 'p' || l.k === 's');
     const offset = firstPublish?.t ?? 0;
-    const result: ReplayResult = { status: 'clean', account: meta.account, script: meta.script, ticks: 0, commands: 0, cut: false };
+    const result: ReplayResult = { status: 'clean', account: meta.account, script: meta.script, ticks: 0, commands: 0, cut: false, allowed: 0 };
     let state: Record<string, unknown> = {};
     let next = 0, directNext: number | null = null;
     const queued: number[] = [];
@@ -52,12 +58,15 @@ export async function replayRecord(lines: any[], run: () => Promise<unknown>, op
             if (result.difference) return;
             const want = expected[next], t = tick + offset;
             const actual = { t, a: action, direct };
-            if (!want || want.t !== t || !same(want.a, action) || !!want.direct !== direct) {
+            const swapped = !!want && want.t === t && !!want.direct === direct && !same(want.a, action)
+                && allow.has(String(typeOf(want.a))) && allow.has(String(typeOf(action)));
+            if (swapped) result.allowed++;
+            else if (!want || want.t !== t || !same(want.a, action) || !!want.direct !== direct) {
                 differ({ tick: Math.min(t, want?.t ?? t), index, expected: want ? { t: want.t, a: want.a, direct: !!want.direct } : null, actual });
                 return;
             }
             next++; result.commands++;
-            if ((action as { type?: string })?.type === 'wait') return;
+            if (typeOf(want.a) === 'wait') return;
             if (direct) directNext = want.i; else queued.push(want.i);
         },
     };
@@ -145,7 +154,7 @@ export async function replayRecord(lines: any[], run: () => Promise<unknown>, op
 }
 
 export function formatDifference(r: ReplayResult): string {
-    if (r.status === 'clean') return `clean ${r.commands} commands over ${r.ticks} ticks${r.cut ? ' (record cut)' : ''}`;
+    if (r.status === 'clean') return `clean ${r.commands} commands over ${r.ticks} ticks${r.allowed ? `, ${r.allowed} allowed differences` : ''}${r.cut ? ' (record cut)' : ''}`;
     if (r.status === 'error') return `error ${r.error}`;
     const d = r.difference!;
     return `differ at tick ${d.tick} command ${d.index}: recorded ${JSON.stringify(d.expected)} replayed ${JSON.stringify(d.actual)}`;
@@ -154,10 +163,11 @@ export function formatDifference(r: ReplayResult): string {
 if (import.meta.main) {
     const args = process.argv.slice(2);
     const json = args.includes('--json');
-    const entryAt = args.indexOf('--entry');
-    const file = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--entry');
+    const entryAt = args.indexOf('--entry'), allowAt = args.indexOf('--allow');
+    const file = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--entry' && args[i - 1] !== '--allow');
+    const allow = allowAt >= 0 ? (args[allowAt + 1] ?? '').split(',').filter(Boolean) : [];
     const realExit = process.exit.bind(process);
-    if (!file) { console.error('usage: bun packages/core/src/replay.ts <record.ticks.ndjson.gz> [--entry scripts/x.ts] [--json]'); realExit(2); }
+    if (!file) { console.error('usage: bun packages/core/src/replay.ts <record.ticks.ndjson.gz> [--entry scripts/x.ts] [--allow walkTo,interactNpc] [--json]'); realExit(2); }
     let out: ReplayResult;
     try {
         const lines = readRecord(file!);
@@ -168,9 +178,18 @@ if (import.meta.main) {
         process.argv = [process.argv[0]!, entry, ...(lines[0].argv ?? [])];
         // A worker that exits stops itself, not the replay.
         process.exit = ((code?: number) => { throw new Error(`worker exited ${code ?? 0}`); }) as typeof process.exit;
-        out = await replayRecord(lines, () => import(pathToFileURL(entry).href));
+        // A worker runs its body under `if (import.meta.main)`. As in host.ts hostedEntrySource, only this entry
+        // loads with that define, never its helpers.
+        Bun.plugin({
+            name: 'rs-replay-entry',
+            setup(build) {
+                build.onLoad({ filter: /[?&]replayentry=1/ }, a => ({ loader: 'js',
+                    contents: new Bun.Transpiler({ loader: 'ts', target: 'bun', define: { 'import.meta.main': 'true' } }).transformSync(readFileSync(a.path.split('?')[0]!, 'utf8')) }));
+            },
+        });
+        out = await replayRecord(lines, () => import(`${entry.replace(/\\/g, '/')}?replayentry=1`), { allow });
     } catch (error) {
-        out = { status: 'error', account: '', script: '', ticks: 0, commands: 0, cut: false, error: String(error) };
+        out = { status: 'error', account: '', script: '', ticks: 0, commands: 0, cut: false, allowed: 0, error: String(error) };
     }
     console.log(json ? JSON.stringify({ file: join(file!), ...out }) : formatDifference(out));
     realExit(out.status === 'clean' ? 0 : out.status === 'differ' ? 1 : 2);

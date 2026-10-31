@@ -65,24 +65,21 @@ export function assignedWorker(kind:string,records:{spec:{kind:string};agent?:Mo
 }
 // Review gate (docs/script-contract.md, Review). A build waits for its review unless all of these hold: its changes
 // stay inside the capability's owned files, and the current worker replays the REPLAY_RUNS newest recorded runs
-// of that capability (packages/core/src/replay.ts) clean, or differs only in command types the build task lists in
-// replayAllow. Native qualification has passed before this gate. A non-blocking build delivers at once; its
-// review runs afterwards as a review task, and a rejection stops the capability's next runs (rejectedReview).
+// of that capability (packages/core/src/replay.ts, run with --allow <replayAllow>) clean. The replay counts a
+// command swapped within the allowed types in `allowed` and goes on comparing, so every later command is still
+// checked. Native qualification has passed before this gate. A non-blocking build delivers at once; its review
+// runs afterwards as a review task, and a rejection stops the capability's next runs (rejectedReview).
 export const REPLAY_RUNS=3;
-export interface ReplayOutcome{status:'clean'|'differ'|'error';file?:string;difference?:{tick:number;index:number;expected:{a:any}|null;actual:{a:any}|null};error?:string}
+export interface ReplayOutcome{status:'clean'|'differ'|'error';file?:string;allowed?:number;difference?:{tick:number;index:number;expected:{a:any}|null;actual:{a:any}|null};error?:string}
 export function reviewGate(input:{scope:{known:boolean;changed:string[];owned:readonly string[];reason?:string};records:number;replays:ReplayOutcome[];allow?:readonly string[]}):{blocking:boolean;reason:string}{
  if(!input.scope.known)return{blocking:true,reason:'review blocks: '+(input.scope.reason??'build changes are unknown')};
  const outside=input.scope.changed.filter(f=>!input.scope.owned.includes(f));
  if(outside.length)return{blocking:true,reason:'review blocks: build changed files outside its owned list: '+outside.slice(0,8).join(', ')+(outside.length>8?' and '+(outside.length-8)+' more':'')};
  if(input.records<REPLAY_RUNS||input.replays.length<REPLAY_RUNS)return{blocking:true,reason:`review blocks: replay needs ${REPLAY_RUNS} recorded runs from before the build, found ${input.records}`};
- const allow=new Set(input.allow??[]);
  for(const r of input.replays){
   if(r.status==='error')return{blocking:true,reason:'review blocks: replay failed on '+(r.file??'a record')+': '+String(r.error??'').slice(0,300)};
-  if(r.status==='differ'){
-   const types=[r.difference?.expected?.a?.type,r.difference?.actual?.a?.type].filter((t):t is string=>typeof t==='string');
-   if(!types.length||!types.every(t=>allow.has(t)))return{blocking:true,reason:`review blocks: replay of ${r.file??'a record'} differs at tick ${r.difference?.tick} command ${r.difference?.index}: recorded ${JSON.stringify(r.difference?.expected?.a??null)} replayed ${JSON.stringify(r.difference?.actual?.a??null)}`};
-  }
+  if(r.status!=='clean')return{blocking:true,reason:`review blocks: replay of ${r.file??'a record'} differs at tick ${r.difference?.tick} command ${r.difference?.index}: recorded ${JSON.stringify(r.difference?.expected?.a??null)} replayed ${JSON.stringify(r.difference?.actual?.a??null)}`};
  }
- const differs=input.replays.filter(r=>r.status==='differ').length;
- return{blocking:false,reason:`review runs after delivery: owned files only; replay ${differs?`differs only in allowed commands (${[...allow].join(', ')}) on ${differs} of`:'clean on'} ${input.replays.length} recorded runs`};
+ const allowed=input.replays.reduce((n,r)=>n+(r.allowed??0),0);
+ return{blocking:false,reason:`review runs after delivery: owned files only; replay clean on ${input.replays.length} recorded runs`+(allowed?` with ${allowed} commands changed within ${(input.allow??[]).join(', ')}`:'')};
 }

@@ -98,7 +98,8 @@ export function tickRecorder(meta: RecordMeta, sink: { write(line: string): void
 export const scriptKey = (script: string) => basename(script).replace(/\.[cm]?[jt]s$/, '');
 
 // One record per session. TICK_RECORD=0 turns recording off. Returns null when the folder cannot be written.
-export function createTickRecorder(meta: RecordMeta, opts: { root?: string; env?: Record<string, string | undefined> } = {}): (TickRecorder & { file: string }) | null {
+// `flushed` resolves when the file is complete after end(); a process that exits before it loses the gzip trailer.
+export function createTickRecorder(meta: RecordMeta, opts: { root?: string; env?: Record<string, string | undefined> } = {}): (TickRecorder & { file: string; flushed: Promise<void> }) | null {
     const env = opts.env ?? process.env;
     if (env.TICK_RECORD === '0') return null;
     try {
@@ -109,12 +110,11 @@ export function createTickRecorder(meta: RecordMeta, opts: { root?: string; env?
         const gzip = createGzip({ level: 6 });
         const out = createWriteStream(file);
         gzip.pipe(out);
-        gzip.on('error', () => {});
-        out.on('error', () => {});
+        const flushed = new Promise<void>(done => { out.on('close', () => done()); out.on('error', () => done()); gzip.on('error', () => done()); });
         // A repo-relative script, so a replay in a build workspace runs that workspace's copy.
         const rel = relative(opts.root ?? repoRoot, meta.script);
         const script = isAbsolute(meta.script) && !rel.startsWith('..') && !isAbsolute(rel) ? rel.replace(/\\/g, '/') : meta.script;
-        return { file, ...tickRecorder({ ...meta, script }, { write: l => { gzip.write(l); }, close: () => { gzip.end(); } }) };
+        return { file, flushed, ...tickRecorder({ ...meta, script }, { write: l => { gzip.write(l); }, close: () => { gzip.end(); } }) };
     } catch {
         return null;
     }

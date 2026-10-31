@@ -42,8 +42,8 @@ export async function finishBuildDelivery(capability:string,prepared:any,deps:{f
 }
 
 // Replays one recorded run against this checkout's worker code (packages/core/src/replay.ts) in its own process.
-export async function replayRun(root:string,file:string,timeoutMs=180000):Promise<ReplayOutcome>{
- const child=Bun.spawn([process.execPath,'packages/core/src/replay.ts','--json',file],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});
+export async function replayRun(root:string,file:string,allow:readonly string[]=[],timeoutMs=180000):Promise<ReplayOutcome>{
+ const child=Bun.spawn([process.execPath,'packages/core/src/replay.ts','--json',file,...(allow.length?['--allow',allow.join(',')]:[])],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});
  const timer=setTimeout(()=>child.kill(),timeoutMs);
  const [out,err]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text()]);
  await child.exited;clearTimeout(timer);
@@ -59,7 +59,7 @@ export async function buildReviewGate(input:{root:string;isolated:boolean;entry:
  const records=scope.known&&!outside.length?recentRecords(input.entry,input.startedAt,REPLAY_RUNS,input.recordRoot??input.root):[];
  const replays:ReplayOutcome[]=[];
  let scratch:string|undefined;
- const replay=input.replay??(file=>replayRun(scratch??=prepareReplayRoot(input.root),file));
+ const replay=input.replay??(file=>replayRun(scratch??=prepareReplayRoot(input.root),file,input.allow));
  try{
   if(records.length===REPLAY_RUNS)for(const file of records){
    const r=await replay(file);replays.push(r);
