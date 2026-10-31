@@ -50,8 +50,14 @@ test('overtake gives the XP and hours to pass the next rows; a 99 that is slower
     const acct = { name: 'Mine', skills: [{ name: 'Attack', level: 70, xp: 70_500 }], ranks: [{ board: 'Attack', rank: 4, level: 70, time: '1h 0m 0s' }], goalSkill: 'Attack', xpPerHour: 4750 };
     const [v] = overtakeView(tops, [acct], xpFor);
     expect([v.board, v.account, v.rank, v.seconds, v.xpPerHour]).toEqual(['Attack', 'Mine', 4, 3600, 4750]);
-    expect(v.targets.map((x: any) => [x.rank, x.newAccount, x.goal, x.xpNeeded, x.hours])).toEqual([[3, false, 71, 500, 500 / 4750], [1, false, 99, 28500, 6]]);
+    expect(v.targets.map((x: any) => [x.rank, x.newAccount, x.goal, x.xpNeeded, x.hours])).toEqual([[3, false, 71, 500, 500 / 4750], [1, true, null, null, null]]);
     const maxed = overtakeView(tops, [{ ...acct, skills: [{ name: 'Attack', level: 99, xp: 99_000 }], ranks: [{ board: 'Attack', rank: 2, level: 99, time: '9h 0m 0s' }] }], xpFor)[0];
-    expect(maxed.targets).toEqual([{ rank: 1, name: 'Top', level: 99, seconds: 3600, newAccount: true, goal: null, xpNeeded: null, hours: null }]);
+    expect(maxed.targets).toEqual([{ rank: 1, name: 'Top', level: 99, seconds: 3600, newAccount: true, goal: null, xpNeeded: null, hours: null, deadline: null }]);
+    // Our 1 h of board time is already over theirs (800 s): level 80 does not pass them, 81 does; a 99 we are slower than needs a new account.
+    const slow = overtakeView(new Map([['Attack', { rows: [{ rank: 1, name: 'Top', level: 99, ticks: 7500 }, { rank: 2, name: 'Quick', level: 80, ticks: 2000 }] }]]), [acct], xpFor)[0];
+    expect(slow.targets.map((x: any) => [x.name, x.goal, x.newAccount])).toEqual([['Quick', 81, false], ['Top', null, true]]);
+    // With time to spare, their level is enough, before the deadline: 10 XP at 4,750 XP/hr is about 8 s; 2 h are left.
+    const roomy = overtakeView(new Map([['Attack', { rows: [{ rank: 1, name: 'Far', level: 71, ticks: 27000 }] }]]), [{ ...acct, skills: [{ name: 'Attack', level: 70, xp: 70_990 }] }], xpFor)[0].targets[0];
+    expect([roomy.goal, roomy.xpNeeded, roomy.deadline]).toEqual([71, 10, 7200]);
     expect(overtakeView(tops, [{ ...acct, goalSkill: 'Mining' }], xpFor)[0].targets[1].hours).toBeNull();
 });

@@ -83,8 +83,10 @@ export function farmsView(roster: ReadonlyMap<string, Seen & { name?: string }>,
 
 // Overtake planner: for each board, the fleet account with the best rank, the XP it needs to pass the next rows of the
 // top 10, and the hours that takes at its measured rate when it trains that skill now. Boards rank by level, then by the
-// shorter time. A row at our level below 99 is passed with one more level. Board time stops at 99, so a row at 99
-// with a shorter time is out of reach for a finished account: only a new account under that time passes it (newAccount).
+// shorter time, and our board time only grows. Reaching a row's level passes it only while our time stays under theirs:
+// otherwise the goal is one level more, and past 99 there is none, so only a new account under that time passes it
+// (newAccount). Board time stops at 99, so a finished account never gets faster. deadline: the board time we have left
+// for a same-level pass.
 export type FleetSkill = { name: string; level: number; xp: number | null };
 export type FleetAccount = { name: string; skills: FleetSkill[]; ranks: { board: string; rank: number; level: number; time: string }[]; goalSkill?: string | null; xpPerHour?: number | null };
 const secondsOf = (t: string) => { let s = 0; for (const [, n, u] of t.matchAll(/(\d+)([hms])/g)) s += Number(n) * (u === 'h' ? 3600 : u === 'm' ? 60 : 1); return s; };
@@ -99,8 +101,12 @@ export function overtakeView(tops: ReadonlyMap<string, { rows: BoardRow[] }>, ac
         const above = t.rows.filter(r => r.rank < best!.rank);
         const picks = [...new Map([above[above.length - 1], above[0]].filter(Boolean).map(r => [r!.rank, r!])).values()];
         const targets = picks.map(r => {
-            const newAccount = r.level >= 99 && best!.level >= 99, goal = r.level > best!.level ? r.level : best!.level + 1, need = newAccount || xp == null ? null : Math.max(0, xpForLevel(Math.min(99, goal)) - xp);
-            return { rank: r.rank, name: r.name, level: r.level, seconds: Math.round(r.ticks * 0.4), newAccount, goal: newAccount ? null : Math.min(99, goal), xpNeeded: need, hours: need != null && rate ? need / rate : null };
+            const theirs = Math.round(r.ticks * 0.4), xpTo = (l: number) => xp == null ? null : Math.max(0, xpForLevel(l) - xp);
+            // Our board time when we reach their level: the time so far plus the hours to get there, when the rate is known.
+            const sameNeed = r.level > best!.level ? xpTo(r.level) : null, sameAt = best!.seconds + (sameNeed != null && rate ? sameNeed / rate * 3600 : 0);
+            const sameLevel = r.level > best!.level && sameAt < theirs, goal = sameLevel ? r.level : Math.max(r.level, best!.level) + 1;
+            const newAccount = goal > 99 || best!.level >= 99, need = newAccount ? null : xpTo(goal);
+            return { rank: r.rank, name: r.name, level: r.level, seconds: theirs, newAccount, goal: newAccount ? null : goal, xpNeeded: need, hours: need != null && rate ? need / rate : null, deadline: sameLevel ? theirs - best!.seconds : null };
         });
         out.push({ board, account: best.a.name, rank: best.rank, level: best.level, seconds: best.seconds, xp, xpPerHour: rate, inTop: best.rank <= t.rows.length, targets });
     }

@@ -116,8 +116,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const hoursText=h=>h==null?null:h<1?Math.max(1,Math.round(h*60))+' min':h<48?h.toFixed(1)+' h':Math.round(h/24)+' days';
   function overtakeBox(board){
     const o=(S.overtake||[]).find(x=>x.board===board);if(!o)return board==='Overall'||board==='Quest Points'?'':'<div class="xp-box"><span class="xp-muted">No fleet account is ranked on this board.</span></div>';
-    const line=t=>t.newAccount?`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (99 in ${boardTime(t.seconds/0.4)})</span><span>board time stops at 99: a new account must reach 99 in under ${boardTime(t.seconds/0.4)}</span></div>`
-      :`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (level ${t.level})</span><span>level ${t.goal}: ${t.xpNeeded==null?'XP not reported':nf(t.xpNeeded)+' XP'}${t.hours!=null?' · about '+hoursText(t.hours)+' at '+nf(Math.round(o.xpPerHour))+' XP/hr':t.xpNeeded!=null?' · not training this skill now':''}</span></div>`;
+    const line=t=>t.newAccount?`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (99 in ${boardTime(t.seconds/0.4)})</span><span>${o.level>=99?'board time stops at 99':'our board time is already past theirs'}: a new account must reach 99 in under ${boardTime(t.seconds/0.4)}</span></div>`
+      :`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (level ${t.level})</span><span>level ${t.goal}${t.deadline!=null?' within '+boardTime(t.deadline/0.4)+' more board time':''}: ${t.xpNeeded==null?'XP not reported':nf(t.xpNeeded)+' XP'}${t.hours!=null?' · about '+hoursText(t.hours)+' at '+nf(Math.round(o.xpPerHour))+' XP/hr':t.xpNeeded!=null?' · not training this skill now':''}</span></div>`;
     return `<div class="xp-box"><div class="xp-head"><span>Overtake · ${E(safeName(o.account))}</span><span class="xp-gain">#${nf(o.rank)} · level ${o.level}</span></div>${o.targets.length?o.targets.map(line).join(''):'<span class="xp-muted">Already #1 on this board.</span>'}</div>`;
   }
   // World plugin: who stands at the spots our bots claim, and a lookup of any player (hiscores and where they are).
