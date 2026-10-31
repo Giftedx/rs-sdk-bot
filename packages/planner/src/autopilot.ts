@@ -79,9 +79,13 @@ export function plan(inp: Inputs): Assignment[] {
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
+// A training job does not repeat: its ok RESULT means the target level is met, and a rerun would log in, find the level
+// met and log out (a scored login for nothing). The swarm keeps the account's `done` end until the next pass hands it
+// a job with a different mission, which the met level unlocks. A run that ends short of the target is a fail RESULT,
+// which the supervisor retries and the swarm's standing retry resumes, with or without repeat.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
-    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: true, standing: true,
+    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: !t.trains, standing: true,
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
 }
 
