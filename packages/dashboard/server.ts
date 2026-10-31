@@ -471,7 +471,8 @@ function lookupPlayer(name: string): Promise<{ name: string; at: number; rows: H
     return job;
 }
 let lookupWanted: string[] = [];
-setInterval(() => { for (const n of lookupWanted.slice(0, 10)) void lookupPlayer(n); }, 60_000);
+// Fresh entries are skipped first, so the next ten that need a lookup get one, however long the list is.
+setInterval(() => { for (const n of lookupWanted.filter(n => { const hit = lookups.get(n.toLowerCase()); return !hit || Date.now() - hit.at >= 1_800_000; }).slice(0, 10)) void lookupPlayer(n); }, 60_000);
 
 // Equipment, Bank and Runite boards: #1 holder and value, scraped every 10 min.
 const extraTop = new Map<string, { name: string; value: string; at: number } | null>();
