@@ -8,6 +8,7 @@ import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
 import {projectRoot,atomicJson} from './coordinator-store';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
+import {readMergedPlan} from '../../core/src/coordinator-jobs';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -39,7 +40,7 @@ export function briefSpec(spec:CoordTask){
  return{...rest,why:clip(why,200),...(env?{env:Object.keys(env)}:{}),...(args?{args:args.length}:{})};
 }
 export function readWorld(){
- const plan=JSON.parse(readFileSync(join(projectRoot,'swarm.json'),'utf8'));
+ const plan=readMergedPlan(projectRoot);
  const dir=join(projectRoot,'.practice/status'),statuses:any[]=[];
  if(existsSync(dir))for(const file of readdirSync(dir)){
   if(!file.endsWith('.json'))continue;

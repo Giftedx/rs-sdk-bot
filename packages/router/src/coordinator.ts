@@ -226,6 +226,23 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  return pool.sort((a,b)=>ordered(b)-ordered(a)||(overdue.length?state.goals.find(g=>g.id===a.spec.goal)!.lastStartedAt-state.goals.find(g=>g.id===b.spec.goal)!.lastStartedAt:0)
   ||score(b)-score(a)||a.createdAt-b.createdAt||a.spec.id.localeCompare(b.spec.id))[0]?.spec??null;
 }
+// Finished tasks older than this leave state.json for the archive. Their receipts hold most of the file's bytes.
+export const ARCHIVE_AFTER_MS=2*24*60*60*1000;
+export const finishedAt=(r:TaskRecord)=>r.receipt?.at??r.startedAt??r.createdAt;
+/** Remove old finished tasks from the state and return them, oldest first. Kept: open tasks, every task an open task
+ * names (dependsOn, accountFrom, participants), and the newest finished task of each capability and kind, so
+ * qualifications, the last build outcome and account bindings stay in the state. */
+export function compactState(state:CoordinatorState,now:number,keepMs=ARCHIVE_AFTER_MS):TaskRecord[]{
+ const open=state.tasks.filter(r=>r.status==='pending'||r.status==='running');
+ const named=new Set(open.flatMap(r=>[...r.spec.dependsOn,...provisionRefs(r.spec)]));
+ const newest=new Map<string,TaskRecord>();
+ for(const r of state.tasks){if(r.status==='pending'||r.status==='running')continue;const key=`${r.spec.capability??''}\0${r.spec.kind}`;const held=newest.get(key);if(!held||finishedAt(r)>finishedAt(held))newest.set(key,r);}
+ const keepers=new Set(newest.values());
+ const archived=state.tasks.filter(r=>!(r.status==='pending'||r.status==='running')&&!named.has(r.spec.id)&&!keepers.has(r)&&now-finishedAt(r)>keepMs);
+ if(!archived.length)return [];
+ const gone=new Set(archived);state.tasks=state.tasks.filter(r=>!gone.has(r));
+ return archived.sort((a,b)=>finishedAt(a)-finishedAt(b));
+}
 export function startTask(state:CoordinatorState,id:string,now:number,runId:string):TaskRecord{
  const record=state.tasks.find(r=>r.spec.id===id);if(!record||record.status!=='pending')throw Error('task is not pending');
  record.status='running';record.runId=runId;record.startedAt=now;record.attempts++;

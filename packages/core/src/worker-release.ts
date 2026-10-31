@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {readFileSync,readdirSync,existsSync} from 'node:fs';
+import {readFileSync,readdirSync,existsSync,statSync} from 'node:fs';
 import {join,resolve,dirname,relative} from 'node:path';
 import ts from 'typescript';
 import {isLocalServer} from './localserver';
@@ -36,6 +36,33 @@ export function workerSourceRevision(base=root):string {
     workerSourceRoots.forEach(walk);
     for(const p of ['package.json','bun.lock','tsconfig.json'])hash.update(p+'\0').update(readFileSync(join(base,p))).update('\0');
     return hash.digest('hex');
+}
+
+// The same files' paths, sizes and modification times, with no file read: a coordinator loop checks this
+// (about 75 ms) and hashes the files (about 400 ms) only when it changes.
+export function workerSourceStamp(base=root):string {
+    const hash=createHash('sha256');
+    const walk=(relative:string)=>{
+        for(const e of readdirSync(join(base,relative),{withFileTypes:true}).sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0)){
+            if(['node_modules','.git','.practice'].includes(e.name))continue;
+            const p=`${relative}/${e.name}`;
+            if(toolingRoots.includes(p))continue;
+            if(e.isDirectory())walk(p);
+            else if(/\.(?:ts|tsx|js|mjs|cjs|json|wasm)$/.test(e.name)&&!e.name.endsWith('.test.ts')){
+                const s=statSync(join(base,p));hash.update(p+'\0'+s.size+'\0'+s.mtimeMs+'\0');
+            }
+        }
+    };
+    workerSourceRoots.forEach(walk);
+    for(const p of ['package.json','bun.lock','tsconfig.json']){const s=statSync(join(base,p));hash.update(p+'\0'+s.size+'\0'+s.mtimeMs+'\0');}
+    return hash.digest('hex');
+}
+const revisionByStamp=new Map<string,{stamp:string;value:string}>();
+// workerSourceRevision for a base whose stamp has not changed since this process last hashed it.
+export function cachedWorkerSourceRevision(base=root):string {
+    const stamp=workerSourceStamp(base),cached=revisionByStamp.get(base);
+    if(cached&&cached.stamp===stamp)return cached.value;
+    const value=workerSourceRevision(base);revisionByStamp.set(base,{stamp,value});return value;
 }
 
 function importedPath(base:string,file:string,spec:string):string{

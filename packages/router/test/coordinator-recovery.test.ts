@@ -6,6 +6,8 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {initialState,addTasks,startTask,chooseTask,validateTask} from '../src/coordinator';
 import {atomicJson,saveState,loadState,runDirectory} from '../src/coordinator-store';
+import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinatorJobs} from '../../core/src/coordinator-jobs';
+const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
 import {reconcile} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
 import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
@@ -55,8 +57,8 @@ test('authenticated recovery authorization is exact and ordinary-account only',(
 });
 test('only authenticated preflight may park an uncertain session; production install still refuses it',()=>{
  const f=authenticatedFixture();beginSessionAttempt({account:'Mightyrod',server:'rs-sdk-demo.fly.dev'},{root:join(f.prac,'session-lifecycle')});
- const before=readFileSync(join(f.prac,'swarm-deaths.json'),'utf8');expect(f.prepare).not.toThrow();
- expect(JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8')).jobs[0].enabled).toBe(false);
+ const before=readFileSync(join(f.prac,'swarm-deaths.json'),'utf8'),owner=readFileSync(join(f.base,'swarm.json'),'utf8');expect(f.prepare).not.toThrow();
+ expect(jobOf(f.base,'Mightyrod').enabled).toBe(false);expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(owner);
  expect(()=>installJob(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base})).toThrow('not confirmed');
  expect(()=>installJob(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,recoveryPreflight:true})).toThrow('only preflight');
  expect(readFileSync(join(f.prac,'swarm-deaths.json'),'utf8')).toBe(before);
@@ -119,8 +121,12 @@ test('recovery preflight leaves the block and assignments untouched on stop, ses
  }
 });
 test('successful preflight parks the failed assignment and retains its evidence before any controller request',()=>{
- const f=recoveryFixture();f.prepare();const plan=JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8'));
- expect(plan.jobs[0]).toMatchObject({account:'Mightyrod',enabled:false,repeat:true,script:'old.ts'});expect(plan.jobs[1].enabled).toBe(true);
+ const f=recoveryFixture(),owner=readFileSync(join(f.base,'swarm.json'),'utf8');f.prepare();
+ // The parked copy lives in the coordinator's file and shadows the owner job; swarm.json keeps its bytes.
+ expect(jobOf(f.base,'Mightyrod')).toMatchObject({account:'Mightyrod',enabled:false,repeat:true,script:'old.ts'});expect(jobOf(f.base,'Other').enabled).toBe(true);
+ expect(readMergedPlan(f.base).jobs.filter((j:any)=>j.account==='Mightyrod')).toHaveLength(1);
+ expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(owner);
+ expect(JSON.parse(readFileSync(coordinatorJobsPath(f.base),'utf8')).jobs).toEqual([{account:'Mightyrod',script:'old.ts',enabled:false,repeat:true}]);
  expect(JSON.parse(readFileSync(join(f.prac,'swarm-deaths.json'),'utf8')).Mightyrod.at).toBe(1);
  const proof=JSON.parse(readFileSync(join(f.prac,'coordinator/runs',f.run,'recovery-before.json'),'utf8'));expect(proof.assignments[0].enabled).toBe(true);expect(proof.ended.Mightyrod.at).toBe(1);
 });
@@ -156,7 +162,7 @@ test('an exact controller refusal keeps its reason and a different nonce cannot 
 });
 test('controller acknowledgement clears only the exact block after the old assignment is parked',async()=>{
  const f=recoveryFixture();f.prepare();const file=join(f.prac,'swarm-repair.json'),deaths=join(f.prac,'swarm-deaths.json');
- const controller=(async()=>{await Bun.sleep(20);expect(JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8')).jobs[0].enabled).toBe(false);
+ const controller=(async()=>{await Bun.sleep(20);expect(jobOf(f.base,'Mightyrod').enabled).toBe(false);
   renameSync(file,file+'.processing');const request=JSON.parse(readFileSync(file+'.processing','utf8')),ends=loadEnded(deaths);
   const root=join(f.prac,'session-lifecycle');
   expect(applyEndRepair(request,ends,[],{readProof:(a,s)=>readLogoutProof(a,s,{root}),verifyLegacy:c=>verifyLegacyLogout(c,{root})}).changed).toBe(true);persistEnded(deaths,ends);unlinkSync(file+'.processing');})();
@@ -249,11 +255,15 @@ test('the recovery preflight parks an enabled standing hand job whose last sessi
  const f=authenticatedFixture();
  atomicJson(join(f.base,'swarm.json'),{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:true,repeat:true,standing:true},{account:'Other',script:'keep.ts',enabled:true}]});
  atomicJson(join(f.prac,'status/Mightyrod.json'),{name:'Mightyrod',server:'rs-sdk-demo.fly.dev',result:'fail session ended: disconnected'});
+ const owner=readFileSync(join(f.base,'swarm.json'),'utf8');
  expect(f.prepare).not.toThrow();
- const jobs=JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8')).jobs;
- expect(jobs[0]).toMatchObject({account:'Mightyrod',enabled:false,standing:true});
+ // The parked copy is in the coordinator's file; the merged plan the swarm runs shows the hand job off and still
+ // standing, and the owner's swarm.json keeps its bytes.
+ expect(jobOf(f.base,'Mightyrod')).toMatchObject({account:'Mightyrod',enabled:false,standing:true});
+ expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(owner);
  expect(()=>installJob(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true})).toThrow('not confirmed');
  const plain={...f.task};delete plain.sessionRecovery;
+ writeCoordinatorJobs(f.base,emptyCoordinatorJobs());
  atomicJson(join(f.base,'swarm.json'),{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:true,repeat:true,standing:true}]});
  expect(()=>installJob(plain,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true})).toThrow('owner standing job');
 });

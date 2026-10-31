@@ -1,6 +1,6 @@
-// Swarm controller: one place that decides which live account runs what. Reads swarm.json every 2 s (edits apply
-// live), starts each enabled job under packages/practice/src/supervise.ts, and writes .practice/swarm-state.json for
-// the dashboard. Admission counts managed and fresh external live accounts against maxBots. Each new account
+// Swarm controller: one place that decides which live account runs what. Reads swarm.json (the owner's jobs) and
+// .practice/coordinator/jobs.json (the coordinator's jobs) every 2 s as one plan (edits apply live), starts each
+// enabled job under packages/practice/src/supervise.ts, and writes .practice/swarm-state.json for the dashboard. Admission counts managed and fresh external live accounts against maxBots. Each new account
 // reserves 1 GiB for 30 s; projected free RAM must retain max(8 GiB, minFreeGB). It never starts an account whose status file changed in the
 // last 30 s and that it did not start itself: a second login kicks the first session.
 // Successful jobs restart with "repeat": true or a changed work revision. Death, no-progress and exhausted retries stay blocked.
@@ -31,6 +31,7 @@ import {createRecoveryDispatch} from '../packages/core/src/session-recovery-disp
 import { createHash } from 'node:crypto';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
+import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
 
 export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
@@ -481,6 +482,8 @@ export function coordinatedAdmission(job:Job,scoped:boolean):boolean{
 if (import.meta.main) {
     const root = resolve(import.meta.dir, '..');
     const planFile = resolve(process.argv[2] ?? join(root, 'swarm.json'));
+    // Windows paths compare without case: the drive letter differs between a shell's cwd and import.meta.dir.
+    const rootPlan = process.platform === 'win32' ? planFile.toLowerCase() === resolve(root, 'swarm.json').toLowerCase() : planFile === resolve(root, 'swarm.json');
     const coordinatorOwner=process.argv.find(a=>a.startsWith('--coordinator='))?.slice('--coordinator='.length);
     const prac = join(root, '.practice');
     const side = mySide();
@@ -604,7 +607,8 @@ if (import.meta.main) {
 
     const tick = () => {
         let plan: Plan;
-        try { plan = JSON.parse(readFileSync(planFile, 'utf8')); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
+        // The coordinator's jobs join the root plan only; a practice plan file given on the command line runs alone.
+        try { plan = mergedPlan(JSON.parse(readFileSync(planFile, 'utf8')), rootPlan ? readCoordinatorJobs(root) : emptyCoordinatorJobs()); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
         // An owner edit of the hold file applies live, like swarm.json.
         try { const m = statSync(holdsFile).mtimeMs; if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason))); holdsMtime = m; } } catch { /* no hold file yet */ }
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
