@@ -198,6 +198,28 @@ export function bindRecoveryChild(r:ControlledRecoveryRequest,pid:number,base:st
  current(r,base,options,true);if(!Number.isSafeInteger(pid)||pid<1)throw Error('invalid recovery child');
  writeFileSync(recoveryPermitPaths(r,base).child,JSON.stringify({pid,nonce:r.nonce,runId:r.runId}),{flag:'wx'});
 }
+// The controller sends readiness on its private pipe after current validation and child publication.
+// Readiness is not admission: consumeRecoveryConnection still checks all authority and single-use guards.
+export async function waitForRecoveryChildBinding(r:ControlledRecoveryRequest,base:string,ready:ReadableStream<Uint8Array>){
+ const paths=recoveryPermitPaths(r,base),permit=json(paths.permit);
+ const deadline=permit.issuedAt+10000;
+ if(!Number.isFinite(permit.issuedAt)||Date.now()<permit.issuedAt||Date.now()>=deadline)throw Error('recovery connection admission expired');
+ const reader=ready.getReader();let timer:ReturnType<typeof setTimeout>|undefined;
+ try{
+  const raw=await Promise.race([
+   (async()=>{let text='';const decoder=new TextDecoder();let bytes=0;
+    for(;;){const {value,done}=await reader.read();if(done)break;
+     bytes+=value.byteLength;if(bytes>1024)throw Error('recovery child identity changed');text+=decoder.decode(value,{stream:true});}
+    return text+decoder.decode();})(),
+   new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('recovery child not bound')),Math.max(0,deadline-Date.now()));}),
+  ]);
+  if(Date.now()>=deadline)throw Error('recovery connection admission expired');
+  if(!raw||!existsSync(paths.child))throw Error('recovery child not bound');
+  let message,child;try{message=JSON.parse(raw);child=json(paths.child);}catch{throw Error('recovery child identity changed');}
+  if(message?.pid!==process.pid||message.nonce!==r.nonce||message.runId!==r.runId||message.source!==r.source
+   ||child?.pid!==process.pid||child.nonce!==r.nonce||child.runId!==r.runId)throw Error('recovery child identity changed');
+ }finally{clearTimeout(timer);await reader.cancel().catch(()=>{});}
+}
 // Called exactly once before connect. The returned guard may run again before cleanup.
 export function consumeRecoveryPermit(r:ControlledRecoveryRequest,base:string,options:Checks={}){
  return consumeRecoveryConnection(r,base,options).guard;
@@ -268,13 +290,18 @@ export function launchPermittedRecovery(r:ControlledRecoveryRequest,base:string,
  if(sha(readFileSync(runner))!==permit.runnerSha256)throw Error('recovery runner differs from permit');
  writeFileSync(paths.input,JSON.stringify(r),{flag:'wx'});mkdirSync(paths.output,{recursive:true});
  const child=Bun.spawn([process.execPath,runner,paths.input,paths.output,...(options.nativeFixture?['--permit-base='+base]:[])],{
-  cwd:repo,env:{...process.env,WORKER_RELEASE:r.source},windowsHide:true,
+  cwd:repo,env:{...process.env,WORKER_RELEASE:r.source},windowsHide:true,stdin:'pipe',
   stdout:Bun.file(join(dirname(paths.input),'worker.log')),stderr:Bun.file(join(dirname(paths.input),'worker.err'))});
  let bindError:unknown;try{bindRecoveryChild(r,child.pid,base,options);}catch(error){bindError=error;}
  const completion=(async()=>{
   let timedOut=false;
   const timer=setTimeout(()=>{timedOut=true;void safeKill(child.pid,r.nonce);},125000);timer.unref();
-  try{const code=await child.exited;if(bindError)throw bindError;if(timedOut)throw Error('recovery child deadline; lease held');return finishRecoveryPermit(r,code,base,options);}
+  try{
+   try{if(!bindError)await child.stdin.write(JSON.stringify({pid:child.pid,nonce:r.nonce,runId:r.runId,source:r.source}));}
+   catch(error){bindError??=error;}
+   finally{try{await child.stdin.end();}catch(error){bindError??=error;}}
+   const code=await child.exited;if(bindError)throw bindError;if(timedOut)throw Error('recovery child deadline; lease held');return finishRecoveryPermit(r,code,base,options);
+  }
   finally{clearTimeout(timer);}
  })();
  return {child,completion,paths};

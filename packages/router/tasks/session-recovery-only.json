@@ -1,0 +1,78 @@
+{
+  "id": "session-recovery-only",
+  "goal": "Release an owned live account whose last session ended without a confirmed logout: the controller authenticated recovery logs it in and out, then the entry logs in, confirms it is in game and logs out. No gameplay.",
+  "entry": "scripts/session-check.ts",
+  "files": [
+    "scripts/session-check.ts",
+    "scripts/swarm.ts",
+    "packages/core/src/session-lifecycle.ts",
+    "packages/core/src/inprocess.ts",
+    "packages/core/src/bot.ts",
+    "packages/core/src/status.ts",
+    "packages/core/src/session-recovery.ts",
+    "packages/core/src/session-recovery-permit.ts",
+    "packages/core/src/session-recovery-dispatch.ts",
+    "packages/core/src/session-admission.ts",
+    "packages/core/src/worker-release.ts",
+    "packages/practice/src/session-recovery-proof.ts",
+    "scripts/session-check.test.ts",
+    "packages/core/test/session-lifecycle.test.ts",
+    "packages/core/test/inprocess.test.ts",
+    "packages/core/test/bot.test.ts",
+    "packages/core/test/status.test.ts",
+    "scripts/swarm.test.ts",
+    "packages/core/test/session-recovery.test.ts",
+    "packages/core/test/session-recovery-permit.test.ts",
+    "packages/core/test/session-recovery-dispatch.test.ts",
+    "packages/core/test/session-admission.test.ts",
+    "packages/core/test/worker-release.test.ts",
+    "packages/core/test/inprocess-auth-order.test.ts",
+    "packages/practice/test/session-recovery-proof.test.ts"
+  ],
+  "consumer": "A held-logout live account (latest attempt ready, owner gone, saved end) reaches readLogoutProof confirmed through the controller recovery; the entry then reports sessionChecked=1 and a producer-confirmed logout with no item, position or skill change.",
+  "checks": [
+    {
+      "id": "session-recovery-only-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/session-check.test.ts",
+        "packages/core/test/session-lifecycle.test.ts",
+        "packages/core/test/inprocess.test.ts",
+        "packages/core/test/bot.test.ts",
+        "packages/core/test/status.test.ts",
+        "scripts/swarm.test.ts",
+        "packages/core/test/session-recovery.test.ts",
+        "packages/core/test/session-recovery-permit.test.ts",
+        "packages/core/test/session-recovery-dispatch.test.ts",
+        "packages/core/test/session-admission.test.ts",
+        "packages/core/test/worker-release.test.ts",
+        "packages/core/test/inprocess-auth-order.test.ts",
+        "packages/practice/test/session-recovery-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 180000
+    },
+    {
+      "id": "native-session-recovery",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/session-recovery-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "session-recovery-only-verified",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "scripts/session-check.ts",
+        "--verify"
+      ],
+      "timeoutMs": 60000
+    }
+  ]
+}

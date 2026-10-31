@@ -7,12 +7,264 @@ import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {EventEmitter} from 'node:events';
 import {accountDir,beginSessionAttempt} from '../../core/src/session-lifecycle';
-import {observePartialOwner} from '../src/session-recovery-proof';
-import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,observeRecoveryBoundary,recoveryAuthorityInputs,type RecoveryBoundary} from '../src/session-recovery-proof';
-import {NATIVE_RECOVERY_CHECKS,verifyNativeRecoveryProof,launchPermittedRecovery,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
+import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout} from '../src/session-recovery-proof';
+import {recoveryCloseModal} from '../../core/src/session-recovery';
+import type {Session} from '../../core/src/inprocess';
+import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,type RecoveryBoundary} from '../src/session-recovery-proof';
+import {NATIVE_RECOVERY_CHECKS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
+import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {admitRecovery} from '../../../scripts/swarm';
-import {CHECK_CASES,deriveChecks,reconcileSaves,reconcileNegativeControls,stockOf,authReplies,observeAuth,noRecoveryLogin,installAuthObserver,evidenceFiles,retainRequiredRecoveryCase,requireRecoveryRegistration,recoveryArtifactPresence,recoveryConsumptionBytes,claimStopArtifact,releaseStopArtifact,classifyCooldownWindow,ownerSessionEvidence,loginAfterTakeoverWindow,latestOwnerLoginBefore,TAKEOVER_WINDOW_MS} from '../src/session-recovery-proof';
+import {CHECK_CASES,deriveChecks,reconcileSaves,reconcileNegativeControls,stockOf,authReplies,observeAuth,noRecoveryLogin,installAuthObserver,evidenceFiles,retainRequiredRecoveryCase,requireRecoveryRegistration,recoveryArtifactPresence,recoveryConsumptionBytes,claimStopArtifact,releaseStopArtifact,classifyCooldownWindow,ownerSessionEvidence,loginAfterTakeoverWindow,orphanServerEnd,latestOwnerLoginBefore,recoverySessionAuth,TAKEOVER_WINDOW_MS,installButtonObserver,buttonTraceFor} from '../src/session-recovery-proof';
+
+test('recovery accepts player_kit and requires an observed modal close within the observation budget',async()=>{
+ for(const [modalInterface,closes] of [[3559,true],[3559,false],[12,true]] as const){
+  const state={inGame:true,modalOpen:true,modalInterface};
+  const actions:unknown[]=[];let ticks=0,listener:(()=>void)|undefined;
+  const session={sdk:{getState:()=>state},tick:()=>ticks,
+   onTick:(cb:()=>void)=>{listener=cb;return()=>{listener=undefined;};},
+   direct:async(action:{type:string})=>{actions.push(action);return{success:true};},
+  } as unknown as Session;
+  const pending=recoveryCloseModal(session,20);
+  await Promise.resolve();
+  expect(actions).toEqual([modalInterface===3559?{type:'acceptCharacterDesign'}:{type:'closeModal',reason:'session recovery'}]);
+  // Dispatch success leaves the observed screen open. Only a later game tick can prove closure.
+  expect(listener).toBeDefined();
+  for(let i=1;i<=10;i++){
+   if(i===2&&closes)state.modalOpen=false;
+   ticks++;listener?.();
+  }
+  expect(await pending).toBe(closes);
+  expect(listener).toBeUndefined();
+ }
+});
+
+test('ten rapid buffered ticks do not exhaust the budget before a delayed closure response, and session end refuses',async()=>{
+ const log=spyOn(console,'log').mockImplementation(()=>{});
+ const realSet=globalThis.setTimeout,realClear=globalThis.clearTimeout,budgets=new Set<unknown>();
+ globalThis.setTimeout=((fn:()=>void,ms?:number)=>{const h=realSet(fn,ms);if(ms===2000)budgets.add(h);return h;}) as typeof setTimeout;
+ globalThis.clearTimeout=((h:Parameters<typeof clearTimeout>[0])=>{budgets.delete(h);realClear(h);}) as typeof clearTimeout;
+ try{
+  for(const mode of ['delayed','ended'] as const){
+   const state={inGame:true,modalOpen:true,modalInterface:3559};
+   let ticks=0,listener:(()=>void)|undefined,end:(v:{reason:string})=>void=()=>{};
+   const ended=new Promise<{reason:string}>(r=>{end=r;});
+   const session={client:{flush(){}},sdk:{getState:()=>state},tick:()=>ticks,ended,
+    onTick:(cb:()=>void)=>{listener=cb;return()=>{listener=undefined;};},
+    direct:async()=>({success:true}),
+   } as unknown as Session;
+   const pending=recoveryCloseModal(session);
+   await Promise.resolve();await Promise.resolve();
+   expect(listener).toBeDefined();
+   // The client replays buffered ticks 2->12 within milliseconds, before the server's IF_CLOSE arrives.
+   for(let i=0;i<10;i++){ticks++;listener?.();}
+   let settled=false;void pending.then(()=>{settled=true;});
+   await new Promise(r=>setTimeout(r,30));
+   expect(settled).toBe(false);expect(listener).toBeDefined();expect(budgets.size).toBe(1);
+   if(mode==='delayed'){state.modalOpen=false;ticks++;listener?.();}
+   else end({reason:'disconnected'});
+   expect(await pending).toBe(mode==='delayed');
+   expect(listener).toBeUndefined();
+   // The default 2000 ms budget timer is cleared on every exit.
+   expect(budgets.size).toBe(0);
+  }
+ }finally{globalThis.setTimeout=realSet;globalThis.clearTimeout=realClear;log.mockRestore();}
+});
+
+test('queued recovery cleanup flushes before observing the modal effect',async()=>{
+ for(const modalInterface of [3559,12]){
+  const state={inGame:true,modalOpen:true,modalInterface};
+  const events:string[]=[];let tick=0,queued=false,delivered=false,listener:(()=>void)|undefined;
+  const client={flush(){
+   expect(this).toBe(client);expect(queued).toBe(true);
+   events.push('flush');queued=false;delivered=true;
+  }};
+  const session={client,sdk:{getState:()=>state},tick:()=>tick,
+   onTick:(cb:()=>void)=>{events.push('observe');listener=cb;return()=>{listener=undefined;};},
+   direct:async(action:{type:string})=>{events.push(action.type);queued=true;return{success:true};},
+  } as unknown as Session;
+  const pending=recoveryCloseModal(session);
+  await Promise.resolve();
+  // The server can apply only delivered bytes, on a later tick. Dispatch alone cannot close the modal.
+  expect(state.modalOpen).toBe(true);
+  for(tick=1;tick<=10&&listener;tick++){
+   if(delivered)state.modalOpen=false;
+   listener();
+  }
+  expect(await pending).toBe(true);
+  expect(events).toEqual([modalInterface===3559?'acceptCharacterDesign':'closeModal','flush','observe']);
+  expect(queued).toBe(false);expect(listener).toBeUndefined();
+ }
+});
+
+test('modal diagnostics separate dispatch refusal, fallback selection and absent observed closure without changing cleanup',async()=>{
+ const rows:any[]=[];
+ const log=spyOn(console,'log').mockImplementation((line:unknown)=>{
+  if(typeof line==='string'&&line.startsWith('RECOVERY_MODAL '))rows.push(JSON.parse(line.slice('RECOVERY_MODAL '.length)));
+ });
+ try{
+  for(const mode of ['refused','fallback','unclosed','closed','threw'] as const){
+   rows.length=0;
+   const state={inGame:true,modalOpen:true,modalInterface:3559};
+   let ticks=0,listener:(()=>void)|undefined,calls=0;
+   const original=Error('PASSWORD=secret');
+   const client={mainModalId:3559,interfaces:{list:[{clientCode:326,layerId:100},{clientCode:326,layerId:mode==='fallback'?200:3559}]},password:'secret'};
+   const session={client,sdk:{getState:()=>state},tick:()=>ticks,
+    onTick:(cb:()=>void)=>{listener=cb;return()=>{listener=undefined;};},
+    direct:async(action:unknown)=>{calls++;expect(action).toEqual({type:'acceptCharacterDesign'});
+     if(mode==='threw')throw original;
+     return {success:mode!=='refused',message:'PASSWORD=secret',extra:client};},
+   } as unknown as Session;
+   const pending=recoveryCloseModal(session,20);
+   if(mode==='threw'){
+    await expect(pending).rejects.toBe(original);
+    expect(rows.at(-1).phase).toBe('dispatch-threw');expect(listener).toBeUndefined();
+   }else{
+    await Promise.resolve();expect(listener).toBeDefined();
+    // A true action result and a modal-matched button still do not prove closure.
+    expect(rows.find(r=>r.phase==='dispatch-returned')).toMatchObject({success:mode!=='refused',modalOpen:true});
+    for(let i=1;i<=10;i++){
+     if(mode==='closed'&&i===2){state.modalOpen=false;client.mainModalId=-1;}
+     ticks++;listener?.();
+    }
+    expect(await pending).toBe(mode==='closed');
+    expect(rows.at(-1)).toMatchObject({phase:'finished',closed:mode==='closed'});
+    expect(listener).toBeUndefined();
+   }
+   expect(calls).toBe(1);
+   expect(rows[0]).toMatchObject({phase:'before-dispatch',modalInterface:3559,clientModal:3559,
+    candidates:[{id:0,layerId:100},{id:1,layerId:mode==='fallback'?200:3559}],
+    predictedAccept:mode==='fallback'?0:1,selection:mode==='fallback'?'fallback':'modal'});
+   expect(JSON.stringify(rows)).not.toContain('secret');
+  }
+ }finally{log.mockRestore();}
+});
+
+test('modal wire trace records queued design and accept payloads and later server opcodes, then restores dispatch',async()=>{
+ const rows:any[]=[];
+ const log=spyOn(console,'log').mockImplementation((line:unknown)=>{
+  if(typeof line==='string'&&line.startsWith('RECOVERY_MODAL '))rows.push(JSON.parse(line.slice('RECOVERY_MODAL '.length)));
+ });
+ try{
+  for(const closes of [false,true]){
+   rows.length=0;
+   const state={inGame:true,modalOpen:true,modalInterface:3559};
+   let ticks=0,listener:(()=>void)|undefined,activations=0;
+   const out={data:new Uint8Array(64),pos:3};
+   class Lite{activate(){activations++;}}
+   const client=Object.assign(new Lite(),{mainModalId:3559,interfaces:{list:[]},out,packetsReceived:10,ptype0:0,
+    designGender:true,designKits:[0,0,0,0,0,0,0],designColours:[0,0,0,0,0]});
+   const session={client,sdk:{getState:()=>state},tick:()=>ticks,
+    onTick:(cb:()=>void)=>{listener=cb;return()=>{listener=undefined;};},
+    direct:async()=>{
+     // Encoded opcode, gender, seven kits, five colours, encoded opcode, button id 3651.
+     out.data.set([200,client.designGender?0:1,...client.designKits,...client.designColours,201,3651>>8,3651&255],out.pos);out.pos+=17;
+     return {success:true};},
+   } as unknown as Session;
+   const pending=recoveryCloseModal(session,20);
+   await Promise.resolve();
+   for(let i=1;i<=10;i++){
+    ticks++;
+    if(i===2){client.packetsReceived++;client.ptype0=closes?23:119;client.activate();client.activate();}
+    if(i===2&&closes)state.modalOpen=false;
+    listener?.();
+   }
+   expect(await pending).toBe(closes);
+   expect(rows[0].design).toEqual({gender:true,kits:[0,0,0,0,0,0,0],colours:[0,0,0,0,0]});
+   expect(rows.find(r=>r.phase==='design-prepared').design).toEqual({gender:true,kits:[0,10,18,26,33,36,42],colours:[0,0,0,0,0]});
+   expect(rows.find(r=>r.phase==='dispatch-returned').outgoing).toEqual({length:17,gender:0,kits:[0,10,18,26,33,36,42],colours:[0,0,0,0,0],button:3651});
+   // One received packet is recorded once, even when the client activates again for an action.
+   expect(rows.at(-1).incoming).toEqual([{tick:2,opcode:closes?23:119,ifClose:closes,ifOpenMain:!closes}]);
+   expect(activations).toBe(2);
+   expect(Object.prototype.hasOwnProperty.call(client,'activate')).toBe(false);
+  }
+ }finally{log.mockRestore();}
+});
+
+test('tutorial recovery repairs the zero-kit initialization using enabled pinned body parts and colour bounds, preserving valid designs',async()=>{
+ const content=join(import.meta.dir,'../../../vendor/rs-sdk/server');
+ const ids=new Map(readFileSync(join(content,'content/pack/idk.pack'),'utf8').trim().split(/\r?\n/).map(row=>{
+  const [id,name]=row.split('=');return [name,Number(id)] as const;
+ }));
+ const parts=['hair','jaw','torso','arms','hands','legs','feet'];
+ const allowed=(gender:boolean)=>{
+  const sex=gender?'man':'woman',groups=parts.map(()=>[] as number[]);
+  const raw=readFileSync(join(content,`content/scripts/player/configs/${sex}.idk`),'utf8');
+  for(const block of raw.split('[').slice(1)){
+   const name=block.slice(0,block.indexOf(']')),type=block.match(/^type=(.+)\r?$/m)?.[1]?.trim();
+   const part=parts.findIndex(p=>type===`${sex}_${p}`);
+   if(part>=0&&!/^disable=yes\r?$/m.test(block))groups[part]!.push(ids.get(name)!);
+  }
+  if(!gender)groups[1]!.push(-1);
+  return groups;
+ };
+ const palette=readFileSync(join(content,'engine/src/engine/entity/Player.ts'),'utf8')
+  .match(/DESIGN_BODY_COLORS: number\[\]\[\] = \[([\s\S]*?)\n    \];/)![1]!;
+ const bounds=[...palette.matchAll(/\[([^\]]+)\]/g)].map(m=>m[1]!.split(',').length);
+ expect(bounds).toEqual([12,16,16,6,8]);
+ const log=spyOn(console,'log').mockImplementation(()=>{});
+ try{
+  for(const gender of [true,false])for(const mode of ['initial','valid','invalid-colours','disabled'] as const){
+   const groups=allowed(gender),valid=groups.map(g=>g.at(-1)!);
+   const kits=mode==='initial'?Array(7).fill(0):mode==='disabled'?[9,10,18,32,35,41,44]:valid;
+   const colours=mode==='initial'?[0,0,0,0,0]:mode==='invalid-colours'?[12,16,-1,6,8]:bounds.map(n=>n-1);
+   const client={designGender:gender,designKits:[...kits],designColours:[...colours]};
+   const originalKits=client.designKits,originalColours=client.designColours;
+   const state={inGame:true,modalOpen:true,modalInterface:3559};
+   let tick=0,listener:(()=>void)|undefined;
+   const session={client,sdk:{getState:()=>state},tick:()=>tick,
+    onTick:(cb:()=>void)=>{listener=cb;return()=>{listener=undefined;};},
+    direct:async(action:unknown)=>{
+     expect(action).toEqual({type:'acceptCharacterDesign'});
+     expect(client.designGender).toBe(gender);
+     expect(client.designKits.every((id,i)=>groups[i]!.includes(id))).toBe(true);
+     expect(client.designColours.every((n,i)=>Number.isInteger(n)&&n>=0&&n<bounds[i]!)).toBe(true);
+     for(let i=0;i<7;i++)if(groups[i]!.includes(kits[i]!))expect(client.designKits[i]).toBe(kits[i]);
+     if(mode==='valid'){expect(client.designKits).toBe(originalKits);expect(client.designColours).toBe(originalColours);}
+     if(mode==='invalid-colours')expect(client.designColours).toEqual([0,0,0,0,0]);
+     return {success:true};},
+   } as unknown as Session;
+   const pending=recoveryCloseModal(session);await Promise.resolve();
+   // A valid packet alone is not modal closure.
+   expect(listener).toBeDefined();tick=1;state.modalOpen=false;listener?.();
+   expect(await pending).toBe(true);
+  }
+ }finally{log.mockRestore();}
+});
+
+test('child readiness waits for delayed publication, but absent, crossed and late bindings refuse without consumption',async()=>{
+ const base=mkdtempSync(join(tmpdir(),'recovery-handshake-'));
+ const r={schema:'session-recovery/1',kind:'session-recovery',account:'Rod',server:'localhost:8890',runId:'handshake',nonce:'one',endedAt:1,source:'a'.repeat(64)} as ControlledRecoveryRequest;
+ const paths=recoveryPermitPaths(r,base),bound={pid:process.pid,nonce:r.nonce,runId:r.runId};
+ const signal={...bound,source:r.source};
+ const stream=(value:unknown)=>new ReadableStream<Uint8Array>({start(c){c.enqueue(new TextEncoder().encode(JSON.stringify(value)));c.close();}});
+ const permit=(remaining=10000)=>writeFileSync(paths.permit,JSON.stringify({issuedAt:Date.now()-10000+remaining}));
+ mkdirSync(join(paths.child,'..'),{recursive:true});
+ try{
+  permit();let published=false;
+  const delayed=new ReadableStream<Uint8Array>({start(c){setTimeout(()=>{
+   writeFileSync(paths.child,JSON.stringify(bound));published=true;
+   c.enqueue(new TextEncoder().encode(JSON.stringify(signal)));c.close();
+  },1100);}});
+  await waitForRecoveryChildBinding(r,base,delayed);expect(published).toBe(true);
+  expect(existsSync(paths.used)).toBe(false);
+  for(const field of ['pid','nonce','runId','source'] as const){
+   permit();await expect(waitForRecoveryChildBinding(r,base,stream({...signal,[field]:field==='pid'?process.pid+1:'other'}))).rejects.toThrow('identity changed');
+  }
+  for(const field of ['pid','nonce','runId'] as const){
+   permit();writeFileSync(paths.child,JSON.stringify({...bound,[field]:field==='pid'?process.pid+1:'other'}));
+   await expect(waitForRecoveryChildBinding(r,base,stream(signal))).rejects.toThrow('identity changed');
+  }
+  fs.unlinkSync(paths.child);permit();
+  await expect(waitForRecoveryChildBinding(r,base,stream(signal))).rejects.toThrow('not bound');
+  permit(30);let cancelled=false;
+  const silent=new ReadableStream<Uint8Array>({cancel(){cancelled=true;}});
+  await expect(waitForRecoveryChildBinding(r,base,silent)).rejects.toThrow('not bound');expect(cancelled).toBe(true);
+  permit();await expect(waitForRecoveryChildBinding(r,base,new ReadableStream({start(c){c.close();}}))).rejects.toThrow('not bound');
+  permit(0);await expect(waitForRecoveryChildBinding(r,base,stream(signal))).rejects.toThrow('admission expired');
+  expect(existsSync(paths.used)).toBe(false);expect(existsSync(paths.output)).toBe(false);
+ }finally{rmSync(base,{recursive:true,force:true});}
+});
 
 test('native pre-child observation separates actual memory, capacity, release and launcher authority refusals hidden by dispatch',()=>{
  for(const fault of ['memory','maxBots','release','authority'] as const){
@@ -23,7 +275,7 @@ test('native pre-child observation separates actual memory, capacity, release an
   mkdirSync(coordinator,{recursive:true});
   // The actual launcher must refuse this invalid controller before source/task checks or child issuance.
   writeFileSync(join(coordinator,'swarm-owner.json'),JSON.stringify({pid:0,nonce:'invalid-owner',source:r.source}));
-  const input={account:r.account,active:[],running:fault==='maxBots'?17:0,external:0,pending:0,freeGB:fault==='memory'?8:32,minFreeGB:8,maxBots:17};
+  const input={account:r.account,active:[],running:fault==='maxBots'?17:0,external:0,pending:0,freeGB:fault==='memory'?FREE_FLOOR_GB:PRACTICE_STARTUP_GB+32,minFreeGB:FREE_FLOOR_GB,maxBots:17};
   let launches=0;
   try{
    if(fault==='release')delete process.env.WORKER_RELEASE;
@@ -116,10 +368,41 @@ test('a dead owner stays separate from its unresolved partial attempt',()=>parti
  const a=f.publish(),p=join(f.dir,'attempts',a.attemptId+'.json'),receipt=JSON.parse(readFileSync(p,'utf8'));receipt.owner.pid=2147483647;writeFileSync(p,JSON.stringify(receipt));
  const o=f.observe(2147483647);expect(o.ownerIntentVisible).toBe(true);expect(o.proof.state).toBe('held');expect(o.checks.ownerAlive).toBe(false);expect(o.checks.beforeStart).toBe(true);
 }));
-test('native diagnostic keeps finite original first-intent selection and explicit missing-observation timeout',()=>{
+test('partial owner waits past receipt publication for the stalled handshake and retains its first read, with bounded listener cleanup',async()=>{
+ const root=mkdtempSync(join(tmpdir(),'partial-handshake-')),account='Rod',server='localhost:8899',events=new EventEmitter();
+ const latest=join(accountDir(account,server,root),'latest.json');
+ try{
+  const attempt=beginSessionAttempt({account,server},{root}),pointer=readFileSync(latest);rmSync(latest);
+  const interval=observePartialOwner(account,server,root,process.pid);
+  expect(interval.proof).toMatchObject({state:'invalid',reason:'attempts without a latest pointer'});
+  let reads=0;
+  const pending=afterStalledConnection(events,async()=>({pid:process.pid})).then(owner=>{
+   reads++;return observePartialOwner(account,server,root,owner.pid);
+  });
+  await Promise.resolve();
+  expect(reads).toBe(0);expect(events.listenerCount('stalled')).toBe(1);
+  writeFileSync(latest,pointer);await Promise.resolve();expect(reads).toBe(0);
+  events.emit('stalled');const selected=await pending;
+  expect(reads).toBe(1);expect(selected.proof).toMatchObject({state:'held',attemptId:attempt.attemptId});
+  expect(Object.values(selected.checks).every(Boolean)).toBe(true);expect(events.listenerCount('stalled')).toBe(0);
+  expect(interval.proof.state).toBe('invalid');
+  // A handshake is a boundary, not permission to retry invalid evidence into a pass.
+  const invalid=afterStalledConnection(events,async()=>process.pid).then(pid=>observePartialOwner(account,server,root,pid));
+  rmSync(latest);events.emit('stalled');const first=await invalid;
+  writeFileSync(latest,pointer);events.emit('stalled');expect(first.proof.state).toBe('invalid');
+  await expect(afterStalledConnection(events,async()=>process.pid,10)).rejects.toThrow('stalled connection acceptance timeout');
+  expect(events.listenerCount('stalled')).toBe(0);
+  const failure=Error('owner failed');
+  await expect(afterStalledConnection(events,async()=>{throw failure;})).rejects.toBe(failure);
+  expect(events.listenerCount('stalled')).toBe(0);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('native partial observation follows the relay acceptance and keeps the first result',()=>{
  const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');
- expect(text).toContain('observations.length<301');expect(text).toContain('if(observation.ownerIntentVisible)selected=observation;');
- expect(text).toContain("if(!selected)throw Error('partial owner intent observation missing before deadline; see partial-observations.json')");
+ expect(text).toContain("if(ws.data.stalled){stalled.emit('stalled');return;}");
+ expect(text).toContain("afterStalledConnection(relay.stalled,()=>owner(P,dir,'partial',lifeRoot))");
+ expect(text).toContain('observations:[selected],selectedIndex:0');
  expect(text).toContain('const partial=selected.proof');expect(text).toContain("join(dir,'partial-refusal.json')");
 });
 
@@ -281,6 +564,56 @@ test('the emitted native preload uses the same self-contained observer implement
  expect(socket.send(JSON.stringify({response:0,replyTo:'id_a'}))).toBe(true);
  expect(authReplies(lines.join('\n'),0,'rod','player_logout')).toHaveLength(1);
  expect(lines.join('\n')).not.toContain('secret');
+});
+test('the world button observer is self-contained, keeps dispatch results and records protected refusal and decoded opcodes',()=>{
+ const world={currentTick:7},protIf={id:86},protIdk={id:27};
+ class Component{static rows:Record<number,any>={3651:{buttonType:1,rootLayer:3559},3559:{overlay:false}};static get(id:number){return Component.rows[id];}}
+ const repository={getDecoder(prot:any){return {prot};}};
+ class NetworkPlayer{
+  username='Flrcv1';modalMain=3559;modalState=1;protect=true;delayed=false;allowDesign=true;resumeButtons:number[]=[];activeScript=null;client={available:17};userLimit=0;clientLimit=0;restrictedLimit=0;
+  isComponentVisible(com:any){return com.rootLayer===this.modalMain;}busy(){return true;}
+  runScript(_s:any,protect=false,force=false){return !force&&protect&&(this.protect||this.delayed)?-1:0;}
+  decodeIn(){repository.getDecoder(protIdk);repository.getDecoder(protIf);this.client.available=0;return true;}
+ }
+ class IfButtonHandler{handle(message:any,player:any){player.runScript({script:{name:'[if_button,player_kit:accept]'}},true);return message.com===3651;}}
+ class IdkSaveDesignHandler{handle(_m:any,player:any){if(!player.allowDesign)throw Error('kept');return true;}}
+ const lines:string[]=[];
+ new Function('m','write','('+installButtonObserver.toString()+')(m,write);')({NetworkPlayer,IfButtonHandler,IdkSaveDesignHandler,Component,Repository:repository,World:world},(line:string)=>lines.push(line));
+ const player=new NetworkPlayer();
+ expect(player.decodeIn()).toBe(true);expect(repository.getDecoder(protIf)).toEqual({prot:protIf});
+ expect(new IdkSaveDesignHandler().handle({gender:0,idkit:[9,9]},player)).toBe(true);
+ expect(new IfButtonHandler().handle({com:3651},player)).toBe(true);
+ player.allowDesign=false;expect(()=>new IdkSaveDesignHandler().handle({gender:0},player)).toThrow('kept');
+ const trace=buttonTraceFor(lines.join('\n')+'\nBUTTON_HANDLE {bad',player.username);
+ expect(trace.ready).toBe(true);expect(trace.malformed).toBe(1);
+ expect(trace.rows.map((r:any)=>r.kind)).toEqual(['BUTTON_LIVE','BUTTON_DECODE','BUTTON_DESIGN','BUTTON_HANDLE','BUTTON_DESIGN']);
+ expect(trace.rows[1]).toMatchObject({tick:7,before:17,after:0,packets:[27,86],modalMain:3559});
+ expect(trace.rows[3]).toMatchObject({com:3651,buttonType:1,rootLayer:3559,rootOverlay:false,visible:true,protect:true,busy:true,result:true,
+  runs:[{script:'[if_button,player_kit:accept]',protectRequested:true,force:false,protect:true,delayed:false,state:-1}],modalMainAfter:3559});
+ expect(trace.rows[4]).toMatchObject({allowDesign:false,result:'threw'});
+ expect(lines.join('\n')).not.toContain('idkit');
+});
+
+test('the world observer times buffered messages and empty decode reads only while the modal is open',()=>{
+ const world={currentTick:20};let clock=1000;
+ class ClientSocket{player:any=null;state=1;available=0;buffer(data:Uint8Array){this.available+=data.length;}}
+ class WSClientSocket extends ClientSocket{}
+ class NetworkPlayer{username='Flrcv1';modalMain=3559;client=new WSClientSocket();decodeIn(){this.client.available=0;return true;}}
+ const lines:string[]=[];
+ new Function('m','write','now','('+installButtonObserver.toString()+')(m,write,now);')({NetworkPlayer,IfButtonHandler:class{handle(){return true;}},
+  IdkSaveDesignHandler:class{handle(){return true;}},Component:{get:()=>null},Repository:{getDecoder:()=>null},World:world,WSClientSocket},(line:string)=>lines.push(line),()=>clock);
+ const player=new NetworkPlayer();player.client.player=player;
+ const loose=new WSClientSocket();loose.buffer(new Uint8Array(5));
+ player.decodeIn();
+ clock=1150;world.currentTick=21;player.client.buffer(new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]));
+ expect(player.client.available).toBe(17);
+ player.modalMain=-1;clock=1300;player.client.buffer(new Uint8Array(3));player.decodeIn();
+ const trace=buttonTraceFor(lines.join('\n'),player.username);
+ expect(trace.runtime).toMatchObject({wire:true});
+ expect(trace.rows.map((r:any)=>r.kind)).toEqual(['BUTTON_LIVE','BUTTON_POLL','BUTTON_WIRE']);
+ expect(trace.rows[1]).toMatchObject({tick:20,at:1000,before:0,modalMain:3559});
+ expect(trace.rows[2]).toMatchObject({tick:21,at:1150,length:17,before:0,after:17,state:1});
+ expect(lines.join('\n')).not.toMatch(/"data"|\[1,2,3/);
 });
 
 test('a final seal proves the observation is complete; lost paired records, clock faults and post-seal traffic refuse',()=>{
@@ -454,12 +787,74 @@ test('owner preservation needs server-side evidence; a stale client view after a
  expect(ownerSessionEvidence('AUTH_REPLY {','rod',o).ok).toBe(false);
  expect(latestOwnerLoginBefore(kept,'rod',40)).toBe(21);expect(latestOwnerLoginBefore('AUTH_REPLY {','rod',40)).toBeUndefined();
 });
+test('owner logout observation waits for a delayed auth reply but refuses an absent or failed acknowledgement',async()=>{
+ const o={since:40,releaseAt:600,ownerLoginReplyAt:21,ownerAttempt:'a2',latestAttemptBeforeRelease:'a2'};
+ const before=warmLog(500,3,[]),pending=before+'\n'+request(610,'cleanup','rod','player_logout');
+ const complete=pending+'\n'+reply(611,'cleanup');
+ const run=(logs:string[])=>{
+  let elapsed=0,reads=0;
+  const result=waitOwnerAuthLogout(()=>logs[Math.min(reads++,logs.length-1)]!,'rod',o,
+   {timeoutMs:100,now:()=>elapsed,pause:async ms=>{elapsed+=ms;}});
+  return {result,reads:()=>reads,elapsed:()=>elapsed};
+ };
+ const delayed=run([before,pending,complete]);
+ expect(ownerSessionEvidence(await delayed.result,'rod',o).ok).toBe(true);
+ expect(delayed.reads()).toBe(3);
+ const absent=run([pending]);
+ await expect(absent.result).rejects.toThrow('owner auth logout acknowledgement timeout');
+ expect(absent.elapsed()).toBe(100);
+ await expect(run([before]).result).rejects.toThrow('owner auth logout acknowledgement timeout');
+ await expect(run([pending+'\n'+reply(611,'cleanup',1)]).result).rejects.toThrow('owner auth logout acknowledgement failed');
+ const duplicate=complete+'\n'+request(612,'extra','rod','player_logout')+'\n'+reply(613,'extra');
+ expect(ownerSessionEvidence(await run([duplicate]).result,'rod',o).ok).toBe(false);
+ expect(ownerSessionEvidence(await run([complete]).result,'rod',{...o,latestAttemptBeforeRelease:'other'}).ok).toBe(false);
+ expect(ownerSessionEvidence(await run([complete]).result,'rod',{...o,ownerLoginReplyAt:4}).ok).toBe(false);
+ const takeover=complete+'\n'+request(614,'late-recovery')+'\n'+reply(615,'late-recovery');
+ expect(ownerSessionEvidence(await run([takeover]).result,'rod',o).ok).toBe(false);
+});
+
 test('orphan recovery is measured after the bound window from the latest prior login',()=>{
  const log=(at:number)=>[...authHead(),request(3,'owner'),reply(4,'owner'),request(at,'recovery'),reply(at+1,'recovery')].join('\n');
  expect(loginAfterTakeoverWindow(log(1004),'rod',100,1000)).toEqual({ok:true,gapMs:1000});
  expect(loginAfterTakeoverWindow(log(1003),'rod',100,1000)).toEqual({ok:false,gapMs:999});
  expect(loginAfterTakeoverWindow([...authHead(),request(1004,'recovery'),reply(1005,'recovery')].join('\n'),'rod',100,1000)).toEqual({ok:false,gapMs:null});
  expect(loginAfterTakeoverWindow('AUTH_REPLY {','rod',100,1000)).toEqual({ok:false,gapMs:null});
+});
+test('orphan recovery enters only after the server acknowledges the killed owner logout, not after the takeover window alone',()=>{
+ // Retained failure: .practice/deliveries/magic-order-1793350899339-Ejxpem/cases/orphan. The recovery connected at
+ // 1793351104965, the world flushed the dead owner at 1793351105987, and the login was refused 'Account already logged in'.
+ const killedAt=1793351044000,a='flrcvxctch18';
+ const owner=[request(1793351040000,'owner',a),reply(1793351040100,'owner')];
+ const end=[request(1793351105987,'id_59682722-758b-4e65-9c3a-dfdd0608a4fe',a,'player_logout'),reply(1793351105990,'id_59682722-758b-4e65-9c3a-dfdd0608a4fe')];
+ // The takeover window from the owner login is already open, but no server-side end exists yet.
+ expect(loginAfterTakeoverWindow([...authHead(),...owner,request(1793351104965,'r',a),reply(1793351104966,'r')].join('\n'),a,1793351104000,TAKEOVER_WINDOW_MS).ok).toBe(true);
+ expect(orphanServerEnd([...authHead(),...owner].join('\n'),a,killedAt)).toEqual({ok:false,at:null});
+ expect(orphanServerEnd([...authHead(),...owner,...end].join('\n'),a,killedAt)).toEqual({ok:true,at:1793351105990});
+ // A logout before the kill, a refused logout, a second logout or a login after the kill is not the orphan end.
+ expect(orphanServerEnd([...authHead(),...owner,...end].join('\n'),a,1793351106000).ok).toBe(false);
+ expect(orphanServerEnd([...authHead(),...owner,end[0]!,reply(1793351105990,'id_59682722-758b-4e65-9c3a-dfdd0608a4fe',1)].join('\n'),a,killedAt).ok).toBe(false);
+ expect(orphanServerEnd([...authHead(),...owner,...end,request(1793351106000,'again',a,'player_logout'),reply(1793351106001,'again')].join('\n'),a,killedAt).ok).toBe(false);
+ expect(orphanServerEnd([...authHead(),...owner,request(1793351105000,'early',a),reply(1793351105001,'early',3),...end].join('\n'),a,killedAt).ok).toBe(false);
+ expect(orphanServerEnd([...authHead(),...owner,request(1793351105987,'x','other','player_logout'),reply(1793351105990,'x')].join('\n'),a,killedAt).ok).toBe(false);
+ expect(orphanServerEnd('AUTH_REPLY {',a,killedAt)).toEqual({ok:false,at:null});
+ const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');
+ expect(text).toMatch(/const killedAt=Date\.now\(\);await killTree\(o\.p\.pid\);[\s\S]{0,500}if\(!end\.ok\)throw Error\('orphan server-side logout not observed'\);[\s\S]{0,600}c=await positive\('orphan'/);
+});
+test('orphan recovery final logout is the recovery session logout, never the preceding cleanup logout',()=>{
+ // Retained trace: .practice/deliveries/magic-order-1793338323363-1c1xyl/cases/orphan/auth-replies.json
+ const a='flrcvxvo2h18',r=(at:number,requestAt:number,replyTo:string,type:'player_login'|'player_logout',response=0,connection=1)=>({at,requestAt,connection,replyTo,type,account:a,response});
+ const cleanup=r(1793338533120,1793338533117,'id_b5db4e33-51d6-4d0e-af83-2780344e198d','player_logout');
+ const login=r(1793338534020,1793338534018,'id_55a04879-1756-46db-a5c5-b78c1e055e8c','player_login');
+ const final=r(1793338536423,1793338536420,'id_8817d5f3-cbcd-4b99-8853-9be6c2313b4f','player_logout');
+ expect(recoverySessionAuth([cleanup,login,final],'FlrcvxVo2h18')).toEqual({loginAcknowledged:true,logoutAcknowledged:true});
+ expect(recoverySessionAuth([cleanup,login],a)).toEqual({loginAcknowledged:true,logoutAcknowledged:false});
+ expect(recoverySessionAuth([login,cleanup],a).logoutAcknowledged).toBe(false);
+ expect(recoverySessionAuth([cleanup,login,{...final,response:1}],a).logoutAcknowledged).toBe(false);
+ expect(recoverySessionAuth([cleanup,login,{...final,connection:2}],a).logoutAcknowledged).toBe(false);
+ expect(recoverySessionAuth([cleanup,login,{...final,account:'other'}],a).logoutAcknowledged).toBe(false);
+ expect(recoverySessionAuth([cleanup,login,final,{...final,replyTo:'again',at:final.at+5,requestAt:final.at+2}],a).logoutAcknowledged).toBe(false);
+ expect(recoverySessionAuth([cleanup,login,{...login,replyTo:'second',at:login.at+9,requestAt:login.at+5},final],a)).toEqual({loginAcknowledged:false,logoutAcknowledged:false});
+ expect(recoverySessionAuth([cleanup],a)).toEqual({loginAcknowledged:false,logoutAcknowledged:false});
 });
 test('the native proof binds the private takeover window and opens it just before the recovery submit',()=>{
  const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');
@@ -472,6 +867,21 @@ test('the native proof binds the private takeover window and opens it just befor
 });
 test('the module main does not run on import',()=>{
  expect(readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8')).toContain('if(import.meta.main)');
+});
+
+test('isolated recovery proof needs no publish lock and still rejects runtime or runner drift',()=>{
+ const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');
+ expect(text).not.toContain('build-lock.json');
+ const predicate=text.match(/const proof=\{ok:([^\r\n]+),/)!;
+ expect(predicate).not.toBeNull();
+ const expression=predicate[1]!.replaceAll('(c:any)','(c)');
+ const evaluate=new Function('cases','checks','source','workerSourceRevision','runnerSha256','hash','runner',`return (${expression});`);
+ const valid=(revision:string,runnerHash:string)=>evaluate([{ok:true}],{offline:{ok:true}},'runtime',()=>revision,'runner',()=>runnerHash,'runner.ts');
+ expect(valid('runtime','runner')).toBe(true);
+ expect(valid('changed','runner')).toBe(false);
+ expect(valid('runtime','changed')).toBe(false);
+ expect(text).toContain("openSync(lock,'wx')");
+ expect(text).toContain('closeSync(fd);unlinkSync(lock)');
 });
 test('native recovery uses the current delivery identity with the shark default',()=>{
  expect(recoveryCapability('cow-progress-order')).toBe('cow-progress-order');expect(recoveryCapability('shark-supply-order')).toBe('shark-supply-order');
@@ -507,5 +917,27 @@ test('a timer-only fleet snapshot stays stale at a late handoff; a fresh owned h
   expect(fleetHandoff(()=>write(now-10000),path,account,process.pid,()=>now).verdict).toBe('resolved');
   expect(fleetHandoff(()=>writeFileSync(path,'{'),path,account,process.pid,()=>now)).toEqual({at:null,observedAt:now,ageMs:null,verdict:'malformed'});
   expect(fleetHandoff(()=>rmSync(path),path,account,process.pid,()=>now).verdict).toBe('missing');
+ }finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('the orphan child reading mid-heartbeat sees a complete fleet view, never fleet-malformed',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'fleet-publish-')),path=join(dir,'.practice','swarm-state.json'),account='flrcvxxhah18';
+ const view=(at:number)=>({at,controllerPid:process.pid,jobs:[{account,state:'disabled'}]});
+ const childRead=(at:number)=>{try{assertFleetResolved(path,account,process.pid,()=>at);return 'resolved';}catch(e){return String((e as Error).message).replace(/^recovery fleet ownership unresolved: /,'');}};
+ try{
+  publishControlFile(path,view(1793340900899));
+  // Retained failure: a direct overwrite truncates first; the child read in that gap and held with fleet-malformed.
+  writeFileSync(path,'');expect(childRead(1793340900900)).toBe('malformed');
+  publishControlFile(path,view(1793340900899));
+  const seen:string[]=[];let busy=2;
+  publishControlFile(path,view(1793340901899),{
+   write:(p,d)=>{expect(p).not.toBe(path);writeFileSync(p,d,{flag:'wx'});seen.push(childRead(1793340901900));},
+   rename:(from,to)=>{seen.push(childRead(1793340901900));if(busy-->0)throw Object.assign(Error('busy'),{code:'EPERM'});fs.renameSync(from,to);},
+   pause:()=>{}});
+  expect(seen).toEqual(['resolved','resolved','resolved','resolved']);
+  expect(JSON.parse(readFileSync(path,'utf8')).at).toBe(1793340901899);
+  // A persistent refusal keeps the old complete view and removes its private temporary file.
+  expect(()=>publishControlFile(path,view(1793340902899),{write:(p,d)=>writeFileSync(p,d,{flag:'wx'}),rename:()=>{throw Object.assign(Error('denied'),{code:'EACCES'});},pause:()=>{}})).toThrow('denied');
+  expect(JSON.parse(readFileSync(path,'utf8')).at).toBe(1793340901899);
+  expect(fs.readdirSync(join(dir,'.practice'))).toEqual(['swarm-state.json']);
  }finally{rmSync(dir,{recursive:true,force:true});}
 });

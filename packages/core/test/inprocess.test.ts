@@ -1,12 +1,35 @@
 import { test, expect } from 'bun:test';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
-import { createShim,connectInProcess, type ClientLike } from '../src/inprocess';
+import { createShim,connectInProcess,clientTransportState,observeClientTransport, type ClientLike } from '../src/inprocess';
 import { tradeRefusal } from '../src/tradeguard';
 import { waitTicks } from '../src/ticks';
 import { equipmentObserved } from '../src/container-observation';
 
 test('a nonlocal session cannot redirect its producer receipts into a local fixture',async()=>{
     await expect(connectInProcess({name:'fixture',password:'unused-local-test',server:'rs-sdk-demo.fly.dev',lifecycleRoot:'isolated-fixture'})).rejects.toThrow('lifecycle root override is local-only');
+});
+
+test('the transport observer records each client socket write without payloads and restores send', () => {
+    let clock = 500, tick = 3;
+    class Socket { readyState = 1; bufferedAmount = 0; extensions = 'permessage-deflate'; protocol = 'binary'; sent: number[] = [];
+        send(data: Uint8Array) { this.sent.push(data.length); this.bufferedAmount += data.length; } }
+    const socket = new Socket(), out = { pos: 17 }, rows: any[] = [];
+    const client = { conn: { closed: false, out, stream: { socket } }, password: 'secret' };
+    expect(clientTransportState(client)).toEqual({ outPos: 17, closed: false, readyState: 1, bufferedAmount: 0, extensions: 'permessage-deflate' });
+    expect(clientTransportState({})).toBeNull();
+    const observer = observeClientTransport(client, r => rows.push(r), { now: () => clock, tick: () => tick, limit: 1 });
+    clock = 510; socket.send(new Uint8Array([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9])); out.pos = 0;
+    clock = 520; tick = 4; socket.send(new Uint8Array(3)); socket.send(new Uint8Array(1));
+    expect(socket.sent).toEqual([17, 3, 1]);
+    expect(rows.map(r => r.kind)).toEqual(['attached', 'write', 'record-limit']);
+    expect(rows[1]).toEqual({ kind: 'write', seq: 1, at: 510, tick: 3, length: 17, readyState: 1, bufferedBefore: 0, bufferedAfter: 17, outcome: 'returned' });
+    expect(clientTransportState(client)).toMatchObject({ outPos: 0, bufferedAmount: 21 });
+    expect(JSON.stringify(rows)).not.toMatch(/secret|\[9,9/);
+    observer.restore();
+    expect(Object.prototype.hasOwnProperty.call(socket, 'send')).toBe(false);
+    const missing: any[] = [];
+    observeClientTransport({ conn: { out } }, r => missing.push(r), { now: () => 1 }).restore();
+    expect(missing).toEqual([{ kind: 'unavailable', at: 1 }]);
 });
 
 test('equipment needs a full packet on this connection and clears on stop', async () => {

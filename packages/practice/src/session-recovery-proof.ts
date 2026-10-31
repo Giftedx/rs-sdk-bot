@@ -4,11 +4,12 @@
 // core session-recovery CLI, per-account producer and finishRecoveryPermit that the swarm uses. Raw records and
 // proof.json go to DELIVERY_DIR. On success it prints exactly one RECOVERY_NATIVE_PROOF {path,sha256} line.
 import {Database} from 'bun:sqlite';
-import {appendFileSync,closeSync,copyFileSync,cpSync,existsSync,lstatSync,mkdirSync,openSync,readFileSync,readdirSync,rmdirSync,statSync,symlinkSync,unlinkSync,writeFileSync} from 'node:fs';
+import {appendFileSync,closeSync,copyFileSync,cpSync,existsSync,lstatSync,mkdirSync,openSync,readFileSync,readdirSync,renameSync,rmdirSync,statSync,symlinkSync,unlinkSync,writeFileSync} from 'node:fs';
 import {dirname,join,relative,resolve} from 'node:path';
 import {createHash,generateKeyPairSync,randomUUID} from 'node:crypto';
 import {freemem} from 'node:os';
 import {isDeepStrictEqual} from 'node:util';
+import {EventEmitter} from 'node:events';
 import {RECOVERY_SCRIPT,NATIVE_RECOVERY_CHECKS,assertFleetResolved,launchPermittedRecovery,recoveryPermitPaths,heldRecoveryOwners,recoveredSessionForRun,verifyNativeRecoveryProof,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
@@ -22,7 +23,7 @@ import {killTree,safeKill} from './proc';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
-import { PRACTICE_STARTUP_GB } from '../../core/src/memory';
+import { FREE_FLOOR_GB,PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 const root=resolve(import.meta.dir,'../../..'),engine=join(root,'vendor/rs-sdk/server/engine'),runner=join(root,RECOVERY_SCRIPT);
 const HOST='localhost:8890',RELAY='localhost:8899',LOGIN_PORT=43650,PORTS=[8890,8896,8897,8899,43650,43651];
@@ -95,11 +96,22 @@ export function verifyCompletedRecoveryDelivery(directory:string){
  return true;
 }
 
-// Diagnostic only. Keep the original receipt-first readiness predicate and its FIRST reader
-// result. Later file bytes cannot explain what that reader saw. In particular, beginSessionAttempt
-// publishes the receipt before latest.json; that interval is invalid for admission, never logout.
-// Source decision: retained YrH1p7 partial predicate + session-lifecycle publication/reader order
-// -> native recovery/shark consumer -> observe before repair -> staged native-session-recovery.
+// The stalled relay accepts only after beginSessionAttempt returns with both files published.
+// Subscribe before starting the owner so a fast handshake cannot be missed.
+export async function afterStalledConnection<T>(events:EventEmitter,start:()=>Promise<T>,budgetMs=30000):Promise<T>{
+ let accept!:()=>void;
+ const accepted=new Promise<void>(resolve=>{accept=resolve;});
+ events.once('stalled',accept);
+ let timer:ReturnType<typeof setTimeout>|undefined;
+ const deadline=new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('stalled connection acceptance timeout')),budgetMs);});
+ try{
+  const [owner]=await Promise.race([Promise.all([Promise.resolve().then(start),accepted]),deadline]);
+  return owner;
+ }finally{clearTimeout(timer);events.off('stalled',accept);}
+}
+
+// Keep the FIRST reader result. Later file bytes cannot replace invalid evidence.
+// The receipt-before-latest publication interval is invalid for admission, never logout.
 export function observePartialOwner(account:string,server:string,lifecycleRoot:string,ownerPid:number){
  const order:{step:string;at:number}[]=[];
  const mark=(step:string)=>{order.push({step,at:Date.now()});};
@@ -211,6 +223,79 @@ export function installAuthObserver(Server:any,write:(line:string)=>void=(line)=
  log('AUTH_READY',{schema:1});
  return {seal(){log('AUTH_SEALED',{records:count,healthy});sealed=true;}};
 }
+// Read-only world dispatch observer for the modal case. Source: pinned NetworkPlayer.ts decodeIn/read (decoded
+// opcodes per tick), IfButtonHandler.ts (component checks, protected executeScript) and Player.ts runScript
+// (-1 = no protected access). It records component and player state, never message payloads or save fields.
+// Keep this function self-contained: its JS is used as the practice world preload.
+// While a player's main modal is open it also records, with wall-clock times: each websocket message the world
+// buffers for that player (pinned web/websocket.ts message -> ClientSocket.buffer; length only) and each tick's
+// decode read (available bytes). This separates a missing client write, a transport delay and a world scheduling delay.
+export function installButtonObserver(m:{NetworkPlayer:any;IfButtonHandler:any;IdkSaveDesignHandler:any;Component:any;Repository:any;World:any;WSClientSocket?:any},write:(line:string)=>void=(line)=>console.log(line),now:()=>number=Date.now){
+ // IDK_SAVEDESIGN, IF_BUTTON, CLOSE_MODAL
+ const watch=[27,86,93],live=new Set<string>();let count=0,wireCount=0,decoding:{packets:number[]}|null=null,button:{runs:object[]}|null=null;
+ const int=(v:unknown)=>Number.isSafeInteger(v)?v as number:null,who=(p:any)=>typeof p?.username==='string'?p.username.toLowerCase():null;
+ const read=(f:()=>unknown)=>{try{return f();}catch{return null;}};
+ const row=(kind:string,value:object)=>kind+' '+JSON.stringify({tick:read(()=>int(m.World.currentTick)),at:read(()=>int(now())),...value});
+ const log=(kind:string,value:object)=>{try{if(count++<4096)write(row(kind,value));}catch{/* observation cannot change dispatch */}};
+ // A separate budget, so per-tick modal rows can never displace dispatch records.
+ const wire=(kind:string,value:object)=>{try{if(wireCount++<8192)write(row(kind,value));}catch{/* observation cannot change transport */}};
+ const S=m.WSClientSocket?.prototype,buffer=S?.buffer;
+ if(S&&typeof buffer==='function')S.buffer=function(this:any,...args:any[]){
+  const player=read(()=>this.player) as any,open=!!player&&int(player.modalMain)!==null&&int(player.modalMain)!==-1;
+  const before=open?read(()=>int(this.available)):null;
+  try{return Reflect.apply(buffer,this,args);}
+  finally{if(open)wire('BUTTON_WIRE',{account:who(player),length:read(()=>int(args[0]?.length)),before,after:read(()=>int(this.available)),state:read(()=>int(this.state))});}
+ };
+ const P=m.NetworkPlayer.prototype,decodeIn=P.decodeIn,runScript=P.runScript,getDecoder=m.Repository.getDecoder;
+ const ifHandle=m.IfButtonHandler.prototype.handle,idkHandle=m.IdkSaveDesignHandler.prototype.handle;
+ P.decodeIn=function(this:any,...args:any[]){
+  const before=read(()=>int(this.client?.available)),prev=decoding,own={packets:[] as number[]};decoding=own;
+  try{return Reflect.apply(decodeIn,this,args);}
+  finally{
+   decoding=prev;
+   const account=who(this);
+   if(account&&!live.has(account)){live.add(account);log('BUTTON_LIVE',{account});}
+   if(own.packets.some(o=>watch.includes(o))||int(this.modalMain)!==-1&&!!before)log('BUTTON_DECODE',{account,before,after:read(()=>int(this.client?.available)),packets:own.packets.slice(0,32),
+    modalMain:int(this.modalMain),limits:[int(this.userLimit),int(this.clientLimit),int(this.restrictedLimit)]});
+   else if(account&&int(this.modalMain)!==null&&int(this.modalMain)!==-1)wire('BUTTON_POLL',{account,before,modalMain:int(this.modalMain)});
+  }
+ };
+ m.Repository.getDecoder=function(this:any,...args:any[]){
+  if(decoding)read(()=>decoding!.packets.push(int(args[0]?.id)??-1));
+  return Reflect.apply(getDecoder,this,args);
+ };
+ P.runScript=function(this:any,...args:any[]){
+  const pre=button?{protect:this.protect===true,delayed:this.delayed===true}:null,state=Reflect.apply(runScript,this,args);
+  if(button&&button.runs.length<4)button.runs.push({script:read(()=>typeof args[0]?.script?.name==='string'?args[0].script.name:null),protectRequested:args[1]===true,force:args[2]===true,...pre,state:int(state)});
+  return state;
+ };
+ m.IfButtonHandler.prototype.handle=function(this:any,message:any,player:any,...rest:any[]){
+  const com:any=read(()=>m.Component.get(message?.com)),root:any=com?read(()=>m.Component.get(com.rootLayer)):null;
+  const row={account:who(player),com:int(message?.com),defined:!!com,buttonType:int(com?.buttonType),rootLayer:int(com?.rootLayer),rootOverlay:typeof root?.overlay==='boolean'?root.overlay:null,
+   visible:com?read(()=>player.isComponentVisible(com)===true):null,modalMain:int(player?.modalMain),modalState:int(player?.modalState),protect:player?.protect===true,delayed:player?.delayed===true,
+   busy:read(()=>player.busy()===true),resumeButton:read(()=>player.resumeButtons.includes(message.com)),activeScript:!!player?.activeScript,allowDesign:player?.allowDesign===true};
+  const prev=button,own={runs:[] as object[]};button=own;let result:unknown='threw';
+  try{result=Reflect.apply(ifHandle,this,[message,player,...rest]);return result;}
+  finally{button=prev;log('BUTTON_HANDLE',{...row,result:typeof result==='boolean'?result:'threw',runs:own.runs,modalMainAfter:int(player?.modalMain),modalStateAfter:int(player?.modalState)});}
+ };
+ m.IdkSaveDesignHandler.prototype.handle=function(this:any,message:any,player:any,...rest:any[]){
+  const allowDesign=player?.allowDesign===true;let result:unknown='threw';
+  try{result=Reflect.apply(idkHandle,this,[message,player,...rest]);return result;}
+  finally{log('BUTTON_DESIGN',{account:who(player),allowDesign,gender:int(message?.gender),result:typeof result==='boolean'?result:'threw',modalMain:int(player?.modalMain)});}
+ };
+ log('BUTTON_READY',{schema:1,wire:typeof buffer==='function',cwd:read(()=>process.cwd()),execPath:read(()=>process.execPath)});
+}
+// The records for one account, kept with the case evidence. Malformed lines are kept as a count, never copied.
+export function buttonTraceFor(log:string,account:string){
+ const a=account.toLowerCase(),rows:object[]=[];let malformed=0,ready=false,runtime:object|null=null;
+ for(const line of log.split(/\r?\n/)){
+  if(!line.startsWith('BUTTON_'))continue;
+  const space=line.indexOf(' '),kind=line.slice(0,space);
+  try{const r=JSON.parse(line.slice(space+1));if(kind==='BUTTON_READY'){ready=true;runtime={wire:r?.wire===true,cwd:typeof r?.cwd==='string'?r.cwd:null,execPath:typeof r?.execPath==='string'?r.execPath:null};}
+   else if(r?.account===a)rows.push({kind,...r});}catch{malformed++;}
+ }
+ return {ready,malformed,runtime,rows};
+}
 export type AttributedAuthReply={at:number;requestAt:number;connection:number;replyTo:string|number;type:'player_login'|'player_logout';account:string;response:number};
 export function observeAuth(log:string,requireSealed=false){
  const requests=new Map<string,any>(),replied=new Set<string>(),connections=new Set<number>(),replies:AttributedAuthReply[]=[];
@@ -274,6 +359,26 @@ export function classifyCooldownWindow(log:string,account:string,w:{signalAt:num
  if(answers.length!==1||answers[0]!.response!==3)return fail('recovery login inside the window was not refused with response 3',{...timing,response:answers[0]?.response??null});
  return {ok:true,reason:'recovery login refused with response 3 inside the open takeover window',windowMs:w.windowMs,...timing,response:3};
 }
+// The owner process can exit before the world receives its LoginServer logout acknowledgement.
+// Observe that reply without changing the session owner's cleanup or its deadline.
+export async function waitOwnerAuthLogout(readLog:()=>string,account:string,o:{releaseAt:number;ownerLoginReplyAt:number|undefined},
+ observation:{timeoutMs:number;now?:()=>number;pause?:(ms:number)=>Promise<unknown>}={timeoutMs:5000}){
+ if(!Number.isSafeInteger(observation.timeoutMs)||observation.timeoutMs<=0)throw Error('owner auth observation deadline invalid');
+ const now=observation.now??Date.now,pause=observation.pause??(ms=>Bun.sleep(ms)),until=now()+observation.timeoutMs;
+ for(;;){
+  const log=readLog();let auth:ReturnType<typeof observeAuth>|undefined;
+  // A request without its reply is incomplete evidence, including while a reply is in flight.
+  try{auth=observeAuth(log);}catch{}
+  if(auth&&o.ownerLoginReplyAt!==undefined){
+   const logouts=auth.replies.filter(r=>r.account===account.toLowerCase()&&r.type==='player_logout'&&r.requestAt>=o.ownerLoginReplyAt!);
+   if(logouts.some(r=>r.response!==0))throw Error('owner auth logout acknowledgement failed');
+   if(logouts.some(r=>r.requestAt>=o.releaseAt))return log;
+  }
+  const left=until-now();
+  if(left<=0)throw Error('owner auth logout acknowledgement timeout: matching successful reply not observed');
+  await pause(Math.min(50,left));
+ }
+}
 // Owner preservation from server-side records only. A client getState() view can outlive a server takeover.
 export function ownerSessionEvidence(log:string,account:string,o:{since:number;releaseAt:number;ownerLoginReplyAt:number|undefined;ownerAttempt:string|undefined;latestAttemptBeforeRelease:string|undefined}){
  const a=account.toLowerCase();let mine:AttributedAuthReply[];
@@ -288,6 +393,17 @@ export function ownerSessionEvidence(log:string,account:string,o:{since:number;r
  const ownerLogoutAfterRelease=logouts.length===1&&logouts[0]!.requestAt>=o.releaseAt;
  return {ok:noRecoveryLoginSuccess&&ownerLoginLatest&&ownerAttemptLatest&&ownerLogoutAfterRelease,noRecoveryLoginSuccess,ownerLoginLatest,ownerAttemptLatest,ownerLogoutAfterRelease};
 }
+// The recovery session is its single acknowledged login; its final logout is the single logout requested on that
+// login's connection after the login reply, and it must succeed. A cleanup logout before that login (an orphan's
+// server-side end) belongs to an earlier session and never satisfies the final logout.
+export function recoverySessionAuth(replies:AttributedAuthReply[],account:string){
+ const a=account.toLowerCase(),mine=replies.filter(r=>r.account===a);
+ const logins=mine.filter(r=>r.type==='player_login'&&r.response===0),login=logins.length===1?logins[0]!:undefined;
+ const later=login?mine.filter(r=>r.requestAt>=login.at):[];
+ const logouts=later.filter(r=>r.type==='player_logout');
+ const logoutAcknowledged=!!login&&logouts.length===1&&logouts[0]!.response===0&&logouts[0]!.connection===login.connection&&!later.some(r=>r.type==='player_login');
+ return {loginAcknowledged:!!login,logoutAcknowledged};
+}
 // The latest login success before `since` and the single recovery login after it, measured against the bound window.
 export function loginAfterTakeoverWindow(log:string,account:string,since:number,windowMs:number){
  try{
@@ -296,6 +412,17 @@ export function loginAfterTakeoverWindow(log:string,account:string,since:number,
   if(!prior||next.length!==1)return {ok:false,gapMs:null};
   const gapMs=next[0]!.requestAt-prior.at;return {ok:gapMs>=windowMs,gapMs};
  }catch{return {ok:false,gapMs:null};}
+}
+// Pinned World.ts:2602 answers a login with 5 ('Account already logged in') while the killed owner's player sits in
+// logoutRequests, from its idle removal until the login server acknowledges that logout. The orphan's server-side end
+// is the single acknowledged logout requested after the kill.
+export function orphanServerEnd(log:string,account:string,killedAt:number){
+ try{
+  const ends=observeAuth(log).replies.filter(r=>r.account===account.toLowerCase()&&r.requestAt>=killedAt);
+  const logouts=ends.filter(r=>r.type==='player_logout');
+  if(logouts.length!==1||logouts[0]!.response!==0||ends.some(r=>r.type==='player_login'))return {ok:false,at:null};
+  return {ok:true,at:logouts[0]!.at};
+ }catch{return {ok:false,at:null};}
 }
 export function latestOwnerLoginBefore(log:string,account:string,before:number){
  try{return observeAuth(log).replies.filter(r=>r.account===account.toLowerCase()&&r.type==='player_login'&&r.response===0&&r.at<before).at(-1)?.at;}catch{return undefined;}
@@ -343,10 +470,27 @@ export function fleetHandoff(publish:()=>void,path:string,account:string,control
  try{assertFleetResolved(path,account,controllerPid,()=>observedAt);}catch(error){verdict=String((error as Error).message).replace(/^recovery fleet ownership unresolved: /,'')||'error';}
  return {at,observedAt,ageMs:typeof at==='number'?observedAt-at:null,verdict};
 }
+// The recovery child reads the fixture's control files from its own process at any moment. A direct overwrite
+// truncates first, so the child can read an empty or partial fleet view ('fleet-malformed') and hold its lease.
+// Publish a complete private file, then rename it over the old one. Windows can briefly refuse the rename while
+// a reader has the target open; after the bounded retry the previous complete view stays and ages honestly.
+export type ControlWriteOps={write:(path:string,data:string)=>void;rename:(from:string,to:string)=>void;pause:(ms:number)=>void};
+const controlWriteOps:ControlWriteOps={write:(p,d)=>writeFileSync(p,d,{flag:'wx'}),rename:renameSync,pause:ms=>Bun.sleepSync(ms)};
+export function publishControlFile(path:string,value:unknown,ops:ControlWriteOps=controlWriteOps){
+ mkdirSync(dirname(path),{recursive:true});
+ const temp=`${path}.${process.pid}.${randomUUID()}.tmp`;ops.write(temp,JSON.stringify(value,null,1));
+ for(let attempt=1;;attempt++){
+  try{ops.rename(temp,path);return;}
+  catch(error){
+   if(attempt>=20||!['EPERM','EACCES','EBUSY'].includes((error as NodeJS.ErrnoException).code??'')){try{unlinkSync(temp);}catch{}throw error;}
+   ops.pause(10);
+  }
+ }
+}
 
 // Websocket relay to the private world. 'stall' accepts the socket and never answers: a real pre-START hang.
 function startRelay(port:number,target:number){
- let mode:'forward'|'stall'='forward';const sockets=new Set<any>();
+ let mode:'forward'|'stall'='forward';const sockets=new Set<any>(),stalled=new EventEmitter();
  const server=Bun.serve<{upstream:WebSocket|null;queue:any[];stalled:boolean}>({port,hostname:'::',
   async fetch(req,srv){
    if(req.headers.get('upgrade')?.toLowerCase()==='websocket'){
@@ -356,13 +500,13 @@ function startRelay(port:number,target:number){
    const url=new URL(req.url);return fetch(`http://localhost:${target}${url.pathname}${url.search}`);
   },
   websocket:{
-   open(ws){sockets.add(ws);if(ws.data.stalled)return;const up=new WebSocket(`ws://localhost:${target}`,'binary');up.binaryType='arraybuffer';ws.data.upstream=up;
+   open(ws){sockets.add(ws);if(ws.data.stalled){stalled.emit('stalled');return;}const up=new WebSocket(`ws://localhost:${target}`,'binary');up.binaryType='arraybuffer';ws.data.upstream=up;
     up.onopen=()=>{for(const m of ws.data.queue)up.send(m);ws.data.queue=[];};
     up.onmessage=e=>{try{ws.sendBinary(new Uint8Array(e.data as ArrayBuffer));}catch{}};up.onclose=()=>{try{ws.close();}catch{}};up.onerror=()=>{try{ws.close();}catch{}};},
    message(ws,m){if(ws.data.stalled)return;const up=ws.data.upstream;if(up?.readyState===WebSocket.OPEN)up.send(m);else ws.data.queue.push(m);},
    close(ws){sockets.delete(ws);try{ws.data.upstream?.close();}catch{}},
   }});
- return {set(m:'forward'|'stall'){mode=m;},stop(){for(const s of sockets)try{s.close();}catch{}server.stop(true);}};
+ return {stalled,set(m:'forward'|'stall'){mode=m;},stop(){for(const s of sockets)try{s.close();}catch{}server.stop(true);}};
 }
 
 async function run(directory:string){
@@ -373,9 +517,7 @@ async function run(directory:string){
  if(startFreeGiB<PRACTICE_STARTUP_GB)throw Error(`native recovery needs${PRACTICE_STARTUP_GB}GiB startup reserve; observed `+startFreeGiB.toFixed(2));
  for(const port of PORTS)if(!canBind(port))throw Error('native recovery port owned: '+port);
  if(existsSync(join(directory,'proof.json'))||existsSync(join(directory,'control')))throw Error('native recovery directory already used');
- // Inside managed delivery the builder owns the global source fence. Read and retain it; claim only the practice mutex.
- const fence=join(root,'.practice/coordinator/build-lock.json');if(!existsSync(fence))throw Error('managed delivery source fence missing');
- const fenceSha=hash(fence);
+ // Isolated proof owns only the practice mutex. Runtime revision and runner hash bind its source.
  mkdirSync(directory,{recursive:true});
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:capability,mode:'native-session-recovery'}));
  const source=workerSourceRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
@@ -383,7 +525,7 @@ async function run(directory:string){
  const ownedStops:OwnedStop[]=[],junctions:string[]=[];
  const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE};
  let relay:ReturnType<typeof startRelay>|undefined,pulse:ReturnType<typeof setInterval>|undefined,stamp=String(Date.now()).slice(-6);
- const put=(path:string,value:unknown)=>{const f=join(base,path);mkdirSync(dirname(f),{recursive:true});writeFileSync(f,JSON.stringify(value,null,1));};
+ const put=(path:string,value:unknown)=>publishControlFile(join(base,path),value);
  const progress=()=>writeFileSync(join(directory,'progress.json'),JSON.stringify({source,runnerSha256,cases},null,2));
  try{
   // Private world: fresh keys, private DB and saves. Only immutable packed content is linked.
@@ -404,7 +546,16 @@ async function run(directory:string){
   const spawnServer=(args:string[],log:string,extra:Record<string,string>={})=>{const p=Bun.spawn(args,{cwd:workspace,env:{...env,...extra},stdout:Bun.file(join(directory,log+'.out.log')),stderr:Bun.file(join(directory,log+'.err.log')),windowsHide:true});children.push(p);return p;};
   const waitLog=async(p:ReturnType<typeof Bun.spawn>,file:string,pattern:RegExp)=>{const until=Date.now()+60000;while(Date.now()<until){if(p.exitCode!==null)throw Error('native server exited: '+file);if(existsSync(join(directory,file))&&pattern.test(readFileSync(join(directory,file),'utf8')))return;await Bun.sleep(200);}throw Error('native server readiness timeout: '+file);};
   const login=spawnServer([process.execPath,'--preload',observer,join(engine,'src/login.ts')],'login',{WEB_MANAGEMENT_PORT:'8897',LOGIN_TAKEOVER_MIN_MS:String(TAKEOVER_WINDOW_MS)});await waitLog(login,'login.out.log',/Login server listening/);
-  const world=spawnServer([process.execPath,join(engine,'src/app.ts')],'world');await waitLog(world,'world.out.log',/World ready|World is ready|World started|world is ready/i);
+  // The world observer attaches after app.ts has loaded its modules, so the preload never changes import order.
+  // A missing or failed attach is recorded and the proof continues; the modal case keeps whatever was observed.
+  const worldObserver=join(directory,'observe-world.ts'),buttonTrace=join(directory,'button-observations.log'),attachRequest=join(directory,'button-attach-request'),attachAck=join(directory,'button-attached');
+  writeFileSync(buttonTrace,'',{flag:'wx'});
+  const engineModule=(p:string)=>JSON.stringify(join(engine,'src',p));
+  writeFileSync(worldObserver,`import{appendFileSync,existsSync,writeFileSync}from'node:fs';const trace=${JSON.stringify(buttonTrace)};const timer=setInterval(async()=>{if(!existsSync(${JSON.stringify(attachRequest)}))return;clearInterval(timer);try{const[n,b,d,c,r,w,s]=await Promise.all([${['engine/entity/NetworkPlayer.ts','network/game/client/handler/IfButtonHandler.ts','network/game/client/handler/IdkSaveDesignHandler.ts','cache/config/Component.ts','network/game/client/ClientGameProtRepository.ts','engine/World.ts','server/ws/WSClientSocket.ts'].map(p=>'import('+engineModule(p)+')').join(',')}]);(${installButtonObserver.toString()})({NetworkPlayer:n.NetworkPlayer,IfButtonHandler:b.default,IdkSaveDesignHandler:d.default,Component:c.default,Repository:r.default,World:w.default,WSClientSocket:s.default},line=>appendFileSync(trace,line+'\\n'));writeFileSync(${JSON.stringify(attachAck)},'attached');}catch{writeFileSync(${JSON.stringify(attachAck)},'failed');}},50);timer.unref();`);
+  const world=spawnServer([process.execPath,'--preload',worldObserver,join(engine,'src/app.ts')],'world');await waitLog(world,'world.out.log',/World ready|World is ready|World started|world is ready/i);
+  writeFileSync(attachRequest,'attach');
+  for(const until=Date.now()+10000;!existsSync(attachAck)&&Date.now()<until;)await Bun.sleep(50);
+  appendFileSync(buttonTrace,'BUTTON_ATTACH '+JSON.stringify({state:existsSync(attachAck)?readFileSync(attachAck,'utf8'):'timeout'})+'\n');
   relay=startRelay(8899,8890);
   process.env.LOGIN_RSAN=BigInt('0x'+Buffer.from(jwk.n!,'base64url').toString('hex')).toString();process.env.LOGIN_RSAE='65537';process.env.WORKER_RELEASE=source;
   const loginLog=()=>readFileSync(authTrace,'utf8');
@@ -416,14 +567,15 @@ async function run(directory:string){
   put('packages/router/tasks/'+capability+'.json',JSON.parse(readFileSync(join(root,'packages/router/tasks',capability+'.json'),'utf8')));
   put('.practice/swarm-script-holds.json',[]);
   put('.practice/coordinator/swarm-owner.json',{pid:process.pid,nonce:CONTROLLER_MARKER,source});
-  const writeState=()=>{put('.practice/coordinator/state.json',{tasks:[...tasks.values()]});put('.practice/swarm-deaths.json',ends);put('swarm.json',{maxBots:17,minFreeGB:8,jobs});};
+  const writeState=()=>{put('.practice/coordinator/state.json',{tasks:[...tasks.values()]});put('.practice/swarm-deaths.json',ends);put('swarm.json',{maxBots:17,minFreeGB:FREE_FLOOR_GB,jobs});};
   const beat=()=>put('.practice/swarm-state.json',{at:Date.now(),controllerPid:process.pid,jobs:jobs.map(j=>({account:j.account,state:'disabled'}))});
-  writeState();beat();pulse=setInterval(beat,1000);
+  // A failed timer publish keeps the previous complete view; the strict reader refuses it as stale, never malformed.
+  writeState();beat();pulse=setInterval(()=>{try{beat();}catch{}},1000);
   const boundaries:RecoveryBoundary[]=[];
   const observeBoundary=(event:RecoveryBoundary)=>{boundaries.push(event);appendFileSync(join(directory,'recovery-boundaries.jsonl'),JSON.stringify(event)+'\n');};
   const dispatcher=(server:string)=>createRecoveryDispatch({base,server,nativeFixture:true,
    admit:r=>{
-    const owners=heldRecoveryOwners(base),input={account:r.account,active:[],running:owners.length,external:0,pending:0,freeGB:freemem()/2**30,minFreeGB:8,maxBots:17};
+    const owners=heldRecoveryOwners(base),input={account:r.account,active:[],running:owners.length,external:0,pending:0,freeGB:freemem()/2**30,minFreeGB:FREE_FLOOR_GB,maxBots:17};
     return observeRecoveryBoundary('admitRecovery',{admission:input,heldOwners:owners,authority:recoveryAuthorityInputs(base,r)},()=>admitRecovery(input),observeBoundary);
    },
    // Exactly the dispatcher's native default: same base, source callback and actual launcher.
@@ -521,12 +673,12 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    const {runId,owner:taskOwner}=await task(f,id),r=requestFor(f,runId,'one-'+id),sub=submit(d,r,taskOwner.pid);
    const result=await awaitResult(sub.raw,sub.from),persisted=await freshSave(f,before);copyFileSync(f.save,join(dir,'after.sav'));
    const after=readPracticeSave(join(dir,'after.sav')),receipt=receiptOf(r),paths=recoveryPermitPaths(r,base),proof=readLogoutProof(f.name,f.server,{root:lifeRoot});
-   const replies=authReplies(loginLog(),since,f.name);writeFileSync(join(dir,'auth-replies.json'),JSON.stringify(replies));fixtureFiles(f,dir,r);
+   const replies=authReplies(loginLog(),since,f.name),session=recoverySessionAuth(replies,f.name);writeFileSync(join(dir,'auth-replies.json'),JSON.stringify(replies));fixtureFiles(f,dir,r);
    for(const p of [join(dirname(paths.input),'worker.log'),join(dirname(paths.input),'worker.err')])if(existsSync(p))copyFileSync(p,join(dir,'recovery-'+p.split(/[\\/]/).at(-1)));
    const rec=reconcileSaves(before,after,expectedPosition??before.position);
    return {dir,before,after,receipt,result,runId,record:(level:string,more:Record<string,boolean>={})=>record(id,level,{
     childLaunched:!!sub.child,dispatcherConfirmed:result?.sessionRecovered===true&&result.changed===false,receiptConfirmed:receipt?.state==='confirmed'&&receipt.logout==='logged-out',
-    loginAcknowledged:replies.filter(x=>x.type==='player_login'&&x.response===0).length===1,logoutAcknowledged:replies.filter(x=>x.type==='player_logout'&&x.response===0).length===1,
+    loginAcknowledged:session.loginAcknowledged,logoutAcknowledged:session.logoutAcknowledged,
     ...recoveryArtifactPresence(paths),leaseReleased:!existsSync(paths.lease),producerConfirmed:proof.state==='confirmed'&&proof.attemptId===receipt?.attemptId,
     recoveredForRun:recoveredSessionForRun(f.name,f.server,runId,source,base),failureRetained:deathBytes()===ended,freshSave:persisted,
     savedInventories:rec.inventories,savedSkills:rec.skills,savedPosition:rec.position,noGameplayClaim:receipt?.scope?.gameplay===false&&receipt.scope.repairsFailure===false&&receipt.scope.qualifiesScript===false,
@@ -663,9 +815,10 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    // Capture refusal BEFORE asking the legitimate owner to log out. Keep cleanup and later evidence too.
    const refusal={at:Date.now(),since,auth:observeAuth(loginLog()),attempts:listAttempts(B.name,B.server,{root:lifeRoot}).map(a=>a.attemptId).sort(),result,child:sub.child,lease:existsSync(recoveryPermitPaths(r,base).lease)};
    writeFileSync(join(dir,'refusal-interval.json'),JSON.stringify(refusal,null,2));
-   const releaseAt=await o.release();
-   const replies=authReplies(loginLog(),since,B.name),cleanup=readLogoutProof(B.name,B.server,{root:lifeRoot});
-   const preserved=ownerSessionEvidence(loginLog(),B.name,{since,releaseAt,ownerLoginReplyAt:latestOwnerLoginBefore(loginLog(),B.name,since),ownerAttempt:o.ready.attemptId,latestAttemptBeforeRelease:refusal.attempts.at(-1)});
+   const ownerLoginReplyAt=latestOwnerLoginBefore(loginLog(),B.name,since),releaseAt=await o.release();
+   const ownerAuth=await waitOwnerAuthLogout(loginLog,B.name,{releaseAt,ownerLoginReplyAt});
+   const replies=authReplies(ownerAuth,since,B.name),cleanup=readLogoutProof(B.name,B.server,{root:lifeRoot});
+   const preserved=ownerSessionEvidence(ownerAuth,B.name,{since,releaseAt,ownerLoginReplyAt,ownerAttempt:o.ready.attemptId,latestAttemptBeforeRelease:refusal.attempts.at(-1)});
    writeFileSync(join(dir,'owner-evidence.json'),JSON.stringify({releaseAt,preserved},null,2));
    writeFileSync(join(dir,'refusals.json'),JSON.stringify({result,directError,connects,cliCodes},null,2));writeFileSync(join(dir,'auth-replies.json'),JSON.stringify(replies));fixtureFiles(B,dir,r);
    absenceGuards.push({id:'ownership',f:B,since,attempts:ownerAttempts});
@@ -684,11 +837,13 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
    const C=await fixture(HOST,preset),dir=caseDir('cooldown'),external=join(directory,'external-lifecycle'),o=await owner(C,dir,'warm',external);
    let warm=undefined as Awaited<ReturnType<typeof o.takeover>>|undefined;
    const h=await held('cooldown',C,d8890,async()=>{warm=await o.takeover();}),out=await h.finish();
-   const ownerAttempts=listAttempts(C.name,C.server,{root:external}).map(a=>a.attemptId).sort(),releaseAt=await o.release();
-   const proof=readLogoutProof(C.name,C.server,{root:lifeRoot}),ownerProof=readLogoutProof(C.name,C.server,{root:external});
    const window=classifyCooldownWindow(loginLog(),C.name,{signalAt:warm!.signalAt,warmAt:warm!.at,since:h.submittedAt,windowMs:TAKEOVER_WINDOW_MS});
-   const preserved=ownerSessionEvidence(loginLog(),C.name,{since:h.submittedAt,releaseAt,ownerLoginReplyAt:(window as {takeoverReplyAt?:number}).takeoverReplyAt,ownerAttempt:warm!.attemptId,latestAttemptBeforeRelease:ownerAttempts.at(-1)});
-   const replies=authReplies(loginLog(),h.since,C.name);writeFileSync(join(dir,'auth-replies.json'),JSON.stringify(replies));
+   const ownerLoginReplyAt=(window as {takeoverReplyAt?:number}).takeoverReplyAt;
+   const ownerAttempts=listAttempts(C.name,C.server,{root:external}).map(a=>a.attemptId).sort(),releaseAt=await o.release();
+   const ownerAuth=await waitOwnerAuthLogout(loginLog,C.name,{releaseAt,ownerLoginReplyAt});
+   const proof=readLogoutProof(C.name,C.server,{root:lifeRoot}),ownerProof=readLogoutProof(C.name,C.server,{root:external});
+   const preserved=ownerSessionEvidence(ownerAuth,C.name,{since:h.submittedAt,releaseAt,ownerLoginReplyAt,ownerAttempt:warm!.attemptId,latestAttemptBeforeRelease:ownerAttempts.at(-1)});
+   const replies=authReplies(ownerAuth,h.since,C.name);writeFileSync(join(dir,'auth-replies.json'),JSON.stringify(replies));
    writeFileSync(join(dir,'cooldown-window.json'),JSON.stringify({warm,submittedAt:h.submittedAt,releaseAt,window,preserved,ownerAttempts,ownerProof},null,2));
    record('cooldown','native-actual-cli',{takeoverWindowOpen:window.ok===true,serverCooldown:window.ok===true&&out.replies.filter((x:AttributedAuthReply)=>x.type==='player_login'&&x.account===C.name.toLowerCase()&&x.response===3).length===1,
     dispatcherHeld:out.result?.sessionRecovered===false,receiptHeld:out.receipt?.state==='held',
@@ -699,18 +854,27 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // 7 orphan: the owner process dies while its producer attempt is unresolved; the controller recovers after the takeover window.
   {
    const D=await fixture(HOST,preset),dir=caseDir('orphan'),o=await owner(D,dir,'orphan',lifeRoot);
-   await killTree(o.p.pid);await o.p.exited;const wait=o.ready.loggedInAt+TAKEOVER_WINDOW_MS+1000-Date.now();if(wait>0)await Bun.sleep(wait);
+   const killedAt=Date.now();await killTree(o.p.pid);await o.p.exited;
+   // The world removes the dead player only after its no-connection timeout; recovery enters after that observed end.
+   let end=orphanServerEnd(loginLog(),D.name,killedAt);const endBy=Date.now()+240000;
+   while(!end.ok&&Date.now()<endBy){await Bun.sleep(100);end=orphanServerEnd(loginLog(),D.name,killedAt);}
+   writeFileSync(join(dir,'orphan-server-end.json'),JSON.stringify({killedAt,...end}));
+   if(!end.ok)throw Error('orphan server-side logout not observed');
+   const wait=o.ready.loggedInAt+TAKEOVER_WINDOW_MS+1000-Date.now();if(wait>0)await Bun.sleep(wait);
    const old=o.ready.attemptId,heldBefore=readLogoutProof(D.name,D.server,{root:lifeRoot}),since=Date.now();
    const pos=o.ready.state.player,c=await positive('orphan',D,{x:pos.x,z:pos.z,level:pos.level});
    const oldAttempt=listAttempts(D.name,D.server,{root:lifeRoot}).find(a=>a.attemptId===old),gap=loginAfterTakeoverWindow(loginLog(),D.name,since,TAKEOVER_WINDOW_MS);
    writeFileSync(join(c.dir,'takeover-window.json'),JSON.stringify({since,windowMs:TAKEOVER_WINDOW_MS,...gap}));
-   c.record('native-actual-cli',{orphanHeldBefore:heldBefore.state==='held'&&heldBefore.attemptId===old,oldAttemptStillUnconfirmed:!!oldAttempt?.receipt&&!oldAttempt.receipt.events.some(e=>e.kind==='ended'&&e.detail==='logged-out'),afterTakeoverWindow:gap.ok});
+   c.record('native-actual-cli',{orphanHeldBefore:heldBefore.state==='held'&&heldBefore.attemptId===old,oldAttemptStillUnconfirmed:!!oldAttempt?.receipt&&!oldAttempt.receipt.events.some(e=>e.kind==='ended'&&e.detail==='logged-out'),afterTakeoverWindow:gap.ok,serverEndedBeforeRecovery:end.at!==null&&end.at<since});
   }
   // 8 modal: a fresh character logs in to the server-opened design screen; the actual CLI closes it and confirms.
   {
    const M=await fixture(HOST,{...preset,position:{x:3094,z:3106,level:0},varps:{281:0,300:1000}});
    if(readPracticeSave(M.save).vars[281]!==0)throw Error('modal fixture tutorial varp not applied');
    const c=await positive('modal',M,undefined,r=>({modalObservedOpen:r?.before?.modalOpen===true,modalClosed:r?.after?.modalOpen===false}));
+   // Server-side dispatch of the accept button, retained before the case verdict can stop the proof.
+   const buttons=readFileSync(buttonTrace,'utf8');
+   writeFileSync(join(c.dir,'button-dispatch.json'),JSON.stringify({attach:buttons.match(/^BUTTON_ATTACH (.*)$/m)?.[1]??null,...buttonTraceFor(buttons,M.name)},null,1));
    c.record('native-actual-cli',{},);
    writeFileSync(join(c.dir,'server-side-effect.json'),JSON.stringify({varp281Before:c.before.vars[281],varp281After:c.after.vars[281],note:'player_kit close trigger advances tutorial progress; stock, skills and position are reconciled separately'}));
    cases.at(-1)!.evidence=evidenceFiles(directory,join('cases','modal'));progress();
@@ -739,18 +903,10 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   // 10 partial: a producer intent before START. Its live owner refuses; after that owner dies the controller recovers.
   {
    const P=await fixture(RELAY,preset),dir=caseDir('partial-owner-alive'),d=dispatcher(RELAY);relay.set('stall');
-   const o=await owner(P,dir,'partial',lifeRoot),until=Date.now()+30000;
-   const observations:ReturnType<typeof observePartialOwner>[]=[],observationPath=join(dir,'partial-observations.json');
-   let selected:ReturnType<typeof observePartialOwner>|undefined;
-   do{
-    const observation=observePartialOwner(P.name,P.server,lifeRoot,o.ready.pid);observations.push(observation);
-    if(observation.ownerIntentVisible)selected=observation;
-    writeFileSync(observationPath,JSON.stringify({ownerReady:o.ready,deadline:until,observations,selectedIndex:selected?observations.length-1:null,timedOut:!selected&&Date.now()>=until},null,2));
-    if(selected||Date.now()>=until)break;
-    await Bun.sleep(100);
-   }while(observations.length<301);
-   if(!selected)throw Error('partial owner intent observation missing before deadline; see partial-observations.json');
-   // One read at the FIRST matching intent, even when invalid. Do not poll away a failed conjunct.
+   const o=await afterStalledConnection(relay.stalled,()=>owner(P,dir,'partial',lifeRoot));
+   const selected=observePartialOwner(P.name,P.server,lifeRoot,o.ready.pid);
+   writeFileSync(join(dir,'partial-observations.json'),JSON.stringify({ownerReady:o.ready,observations:[selected],selectedIndex:0,timedOut:false},null,2));
+   // One read after actual stalled acceptance, even when invalid. Do not poll away a failed conjunct.
    const partial=selected.proof,since=Date.now(),ownerAttempts=selected.attempts.map(a=>a.attemptId).sort();
    const {runId,owner:t}=await task(P,'partial-alive'),r=requestFor(P,runId,'one-partial-alive'),sub=submit(d,r,t.pid),result=await awaitResult(sub.raw,sub.from,5000);
    const paths=recoveryPermitPaths(r,base),refusal={at:Date.now(),since,result,child:sub.child,lease:existsSync(paths.lease),permit:existsSync(paths.permit),
@@ -797,10 +953,10 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
    'vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
   if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');
-  const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===workerSourceRevision()&&runnerSha256===hash(runner)&&fenceSha===hash(fence),
+  const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===workerSourceRevision()&&runnerSha256===hash(runner),
    level:'native-controller-recovery',at:Date.now(),runtimeRevision:source,runnerSha256,bindings,
    server:{host:HOST,relay:RELAY,loginPort:LOGIN_PORT,tickMs:150,takeoverWindowMs:TAKEOVER_WINDOW_MS,world:sha(JSON.stringify(worldConfig)),observer:hash(observer)},
-   starting:{at:startedAt,freeGiB:startFreeGiB,fenceSha256:fenceSha},controller:{pid:process.pid,marker:CONTROLLER_MARKER,argv:process.argv.slice(1)},
+   starting:{at:startedAt,freeGiB:startFreeGiB,fenceSha256:null},controller:{pid:process.pid,marker:CONTROLLER_MARKER,argv:process.argv.slice(1)},
    scope:'Private native practice world only. Session cleanup is not game production, does not repair an account end and does not qualify any gameplay script. No live login.',
    capability,routerPins,cases,checks};
   const proofPath=join(directory,'proof.json');writeFileSync(proofPath,JSON.stringify(proof,null,2));

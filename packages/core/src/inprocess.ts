@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import type { BotActions } from '../../../vendor/rs-sdk/sdk/actions';
@@ -213,6 +213,56 @@ export interface Session {
     bankObservation?(): BankObservation | null;
     // This session's own lifecycle attempt (session-lifecycle.ts). Absent on test doubles.
     lifecycle?: SessionAttempt;
+}
+
+// Read-only transport observation of one LiteClient: LiteClient.conn -> GameConnection.out/stream ->
+// ClientStream.socket (vendor lite/net/GameConnection.ts, io/ClientStream.ts). Lengths, times and socket state
+// only; never packet bytes, credentials or exception text.
+type TransportSocket = { send?: (...a: unknown[]) => unknown; readyState?: unknown; bufferedAmount?: unknown; extensions?: unknown; protocol?: unknown };
+const safeInt = (v: unknown) => Number.isSafeInteger(v) ? v as number : null;
+function transportParts(client: unknown) {
+    const conn = (client as { conn?: { out?: { pos?: unknown }; closed?: unknown; stream?: { socket?: TransportSocket } } } | undefined)?.conn;
+    return { conn, socket: conn?.stream?.socket };
+}
+export function clientTransportState(client: unknown) {
+    try {
+        const { conn, socket } = transportParts(client);
+        if (!conn) return null;
+        return { outPos: safeInt(conn.out?.pos), closed: typeof conn.closed === 'boolean' ? conn.closed : null,
+            readyState: safeInt(socket?.readyState), bufferedAmount: safeInt(socket?.bufferedAmount),
+            extensions: typeof socket?.extensions === 'string' ? socket.extensions.slice(0, 128) : null };
+    } catch { return null; }
+}
+export function observeClientTransport(client: unknown, write: (row: object) => void,
+    opts: { now?: () => number; tick?: () => number; limit?: number } = {}) {
+    const now = opts.now ?? Date.now, limit = opts.limit ?? 512;
+    const emit = (row: object) => { try { write(row); } catch { /* Observation cannot change transport. */ } };
+    const tick = () => { try { return safeInt(opts.tick?.()); } catch { return null; } };
+    const { socket } = transportParts(client);
+    const original = socket?.send;
+    if (!socket || typeof original !== 'function') { emit({ kind: 'unavailable', at: now() }); return { restore() {} }; }
+    const own = Object.prototype.hasOwnProperty.call(socket, 'send');
+    let seq = 0;
+    emit({ kind: 'attached', at: now(), tick: tick(), ...clientTransportState(client),
+        protocol: typeof socket.protocol === 'string' ? socket.protocol.slice(0, 32) : null });
+    socket.send = function (this: unknown, ...args: unknown[]) {
+        const at = now(), before = safeInt(socket.bufferedAmount);
+        const data = args[0] as { byteLength?: unknown; length?: unknown } | undefined;
+        let outcome = 'threw';
+        try { const result = Reflect.apply(original, this, args); outcome = 'returned'; return result; }
+        finally {
+            if (seq < limit) emit({ kind: 'write', seq: ++seq, at, tick: tick(), length: safeInt(data?.byteLength) ?? safeInt(data?.length),
+                readyState: safeInt(socket.readyState), bufferedBefore: before, bufferedAfter: safeInt(socket.bufferedAmount), outcome });
+            else if (seq++ === limit) emit({ kind: 'record-limit', at: now() });
+        }
+    };
+    return { restore() { if (socket.send === original) return; if (own) socket.send = original; else delete socket.send; } };
+}
+export function inProcessRuntimePaths() {
+    const real = (p: string) => { try { return realpathSync(p); } catch { return null; } };
+    const session = vendor('server/webclient/src/lite/session.ts'), stream = vendor('server/webclient/src/io/ClientStream.ts');
+    return { cwd: process.cwd(), execPath: process.execPath, adapter: import.meta.path, repoRoot, repoReal: real(repoRoot),
+        liteSession: session, liteSessionReal: real(session), clientStream: stream, clientStreamReal: real(stream) };
 }
 
 // The lite session spreads logins with a random jitter on remote servers (session.ts:122, 5 s default) to spare the
