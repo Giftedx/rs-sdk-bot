@@ -139,7 +139,7 @@ test('rehearsal bots are pointed at the local isolated engine', () => {
 });
 
 test('every library segment uses the expectation schema and starts from a library save that exists', () => {
-    const lib = readLibrary() as {entries: {name: string}[]; segments: import('../src/rehearse').Segment[]};
+    const lib = readLibrary() as unknown as {entries: {name: string}[]; segments: import('../src/rehearse').Segment[]};
     const empty = summarize(smith());
     for (const seg of lib.segments) {
         expect(() => checkExpect(empty, seg.expect)).not.toThrow();
