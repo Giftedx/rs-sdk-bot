@@ -1,0 +1,49 @@
+{
+  "proof": "live",
+  "accounts": [
+    {
+      "name": "BraveHardon",
+      "side": "cloud",
+      "server": "rs-sdk-demo.fly.dev",
+      "script": "scripts/gather-feathers.ts",
+      "result": "CHAIN round=1 scripts/gather-feathers.ts ok RESULT ok feathers=60 gained=60 kills=10 idle=0 ticks=448",
+      "feathersHeld": 60,
+      "logout": "logged-out",
+      "sessionAttemptId": "1793411345333-0000005395-0000000001",
+      "workerRelease": "ec4d8badbba54df18ce2bdc9723a75a607599ea466f699b0e7af37737f31cf6e"
+    },
+    {
+      "name": "TossTheCaber",
+      "side": "cloud",
+      "server": "rs-sdk-demo.fly.dev",
+      "script": "scripts/gather-feathers.ts",
+      "result": "CHAIN round=1 scripts/gather-feathers.ts ok RESULT ok feathers=35 gained=35 kills=13 idle=0 ticks=609",
+      "feathersHeld": 35,
+      "logout": "logged-out",
+      "sessionAttemptId": "1793411346849-0000005432-0000000001",
+      "workerRelease": "ec4d8badbba54df18ce2bdc9723a75a607599ea466f699b0e7af37737f31cf6e"
+    },
+    {
+      "name": "Swordswallow",
+      "side": "cloud",
+      "server": "rs-sdk-demo.fly.dev",
+      "script": "scripts/gather-feathers.ts",
+      "result": "CHAIN round=1 scripts/gather-feathers.ts ok RESULT ok feathers=50 gained=50 kills=8 idle=0 ticks=357",
+      "feathersHeld": 50,
+      "logout": "logged-out",
+      "sessionAttemptId": "1793411346185-0000005419-0000000001",
+      "workerRelease": "ec4d8badbba54df18ce2bdc9723a75a607599ea466f699b0e7af37737f31cf6e"
+    },
+    {
+      "name": "Unsheathed",
+      "side": "cloud",
+      "server": "rs-sdk-demo.fly.dev",
+      "script": "scripts/gather-feathers.ts",
+      "result": "SUPERVISE run 1 exit 0: RESULT ok feathers=35 gained=10 kills=5 idle=0 ticks=335",
+      "feathersHeld": 35,
+      "logout": "logged-out",
+      "sessionAttemptId": "1793412280983-0000008739-0000000001",
+      "workerRelease": "e456adf3ca2b4442e35c270e22cc57615fa559571ec9d088521ffe50ab700069"
+    }
+  ]
+}
