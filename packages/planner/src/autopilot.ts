@@ -92,7 +92,8 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
     const ok = results.filter(l => l.startsWith('RESULT ok')).length, fail = results.length - ok;
-    const died = results.find(l => /\bdied\b|\bdeath\b/i.test(l));
+    // goldfarm and thieving60 print died=false on a healthy run: only a bare word or a field that is not false counts.
+    const died = results.find(l => /\b(?:died|death)\b(?!=)|\b(?:died|death)=(?!false\b)/i.test(l));
     if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail };
     const tail = results.slice(-RETIRE_FAILS);
     if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail'))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail };
@@ -184,8 +185,11 @@ export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assi
     for (const x of out) {
         if (!x.template) continue;
         const prior = jobs.find(j => mine(j) && j.account === x.account && j.template === x.template!.id);
-        if (!prior) fresh.push(x.account);
-        next.push(prior ?? jobFor(x, side));
+        if (prior) { next.push(prior); continue; }
+        fresh.push(x.account);
+        // An owner pause belongs to the account: a new template keeps it disabled and keeps its repeat policy.
+        const paused = jobs.find(j => mine(j) && j.account === x.account && j.enabled === false);
+        next.push(paused ? { ...jobFor(x, side), enabled: false, repeat: paused.repeat } : jobFor(x, side));
     }
     return { jobs: next, fresh };
 }
