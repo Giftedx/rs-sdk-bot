@@ -1,4 +1,4 @@
-import {readFileSync,writeFileSync,copyFileSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
+import {readFileSync,writeFileSync,copyFileSync,existsSync,openSync,closeSync,unlinkSync,mkdirSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {freemem} from 'node:os';
 import {startStack} from './stack';
@@ -20,6 +20,9 @@ type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
 export const ORDER={item:1987,quantity:300,limit:5,ask:3,reserve:100,coins:2000};
 const BANK_TILE={x:3185,z:3436,level:0};
+// The live consumer entry: Pocketpython at north Varrock with 11 HP, 26 carried salmon and 60 coins.
+export const NORTH_CASE={position:{x:3165,z:3487,level:0},hitpoints:11,
+ carried:[...Array.from({length:26},()=>({id:329,count:1})),{id:995,count:60}],order:{...ORDER,quantity:500,coins:3000}};
 const held=(s:Save,container:number,match:(id:number)=>boolean)=>(s.inventories[container]??[]).filter(i=>match(i.id)).reduce((n,i)=>n+i.count,0);
 const coins=(s:Save)=>[93,94,95].reduce((n,c)=>n+held(s,c,id=>id===995),0);
 const resultLine=(log:string,tag:string)=>{const line=log.split('\n').find(l=>l.startsWith(tag+' '));try{return line?JSON.parse(line.slice(tag.length+1)):null;}catch{return null;}};
@@ -38,8 +41,9 @@ export function bulkOrderChecks(p:{before:Save;after:Save;repeat:Save;journal:It
   seller:sell.code===0&&resultLine(sell.log,'GE_SELL_RESULT')?.ok===true&&sell.log.split(/\r?\n/).includes('LOGOUT logged-out'),
   bank:held(after,95,id=>id===o.item)===o.quantity,
   assets,
-  // Every carried form, including banknotes, was banked. The pack and worn items are unchanged.
-  pack:[93,94].every(c=>JSON.stringify(after.inventories[c]??[])===JSON.stringify(before.inventories[c]??[])),
+  // Every carried form, including banknotes and entry coins, was banked. Other pack and worn items are unchanged.
+  pack:JSON.stringify(after.inventories[93]??[])===JSON.stringify((before.inventories[93]??[]).filter(i=>i.id!==995))
+   &&JSON.stringify(after.inventories[94]??[])===JSON.stringify(before.inventories[94]??[]),
   coins:spent>=o.quantity&&spent<=escrow&&coins(after)>=o.reserve,
   journal:!!journal&&journal.phase==='settled'&&orderQuantity(journal.request)===o.quantity&&journal.request.item===o.item&&journal.request.limit===o.limit
    &&journal.request.reserve===o.reserve&&journal.coinsBefore===coins(before)&&journal.itemsBefore===0&&Number.isSafeInteger(journal.offerId)
@@ -56,16 +60,36 @@ export function bulkOrderChecks(p:{before:Save;after:Save;repeat:Save;journal:It
  };
 }
 
-function verify(directory:string){
+function verifyCase(directory:string,remote=false){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
  const log=(label:string)=>readFileSync(join(directory,label+'.log'),'utf8')+readFileSync(join(directory,label+'.err'),'utf8');
  const journal=existsSync(join(directory,'journal.json'))?JSON.parse(readFileSync(join(directory,'journal.json'),'utf8')) as ItemOrder:null;
- const checks={...bulkOrderChecks({before:readPracticeSave(join(directory,'before.sav')),after:readPracticeSave(join(directory,'after.sav')),repeat:readPracticeSave(join(directory,'repeat.sav')),journal,
-  sell:{code:meta.sellCode,log:log('sell')},buy:{code:meta.buyCode,log:log('buy')},again:{code:meta.againCode,log:log('again')}}),
+ const repeat=readPracticeSave(join(directory,'repeat.sav'));
+ const checks={...bulkOrderChecks({before:readPracticeSave(join(directory,'before.sav')),after:readPracticeSave(join(directory,'after.sav')),repeat,journal,
+  sell:{code:meta.sellCode,log:log('sell')},buy:{code:meta.buyCode,log:log('buy')},again:{code:meta.againCode,log:log('again')},order:remote?NORTH_CASE.order:ORDER}),
+  ...(remote?{remoteEntry:northEntryCheck(readPracticeSave(join(directory,'before.sav')),log('buy')),
+   refusal:duplicateRefusalCheck(repeat,readPracticeSave(join(directory,'refused.sav')),{code:meta.refuseCode,log:log('refuse')},NORTH_CASE.order.item)}:{}),
   identity:journal?.request.actor===meta.buyer&&journal?.request.goal===meta.orderKey&&journal?.request.server==='localhost:8888',
   source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000};
- const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,source:meta.source,order:ORDER,
+ return{ok:Object.values(checks).every(Boolean),at:Date.now(),checks,source:meta.source,order:remote?NORTH_CASE.order:ORDER,
   scope:'Native150ms/25x: one owned buyer, one owned seller at a lower ask; exact noted fill banked; rerun resumes. No live price, liquidity or wine-throughput claim.'};
+}
+// The real CLI started at the north Varrock entry and walked the north approach.
+export function northEntryCheck(before:Save,log:string){
+ const p=NORTH_CASE.position,lines=log.split(/\r?\n/);
+ return before.position.x===p.x&&before.position.z===p.z&&before.position.level===p.level&&(before.skills[3]?.level??0)===NORTH_CASE.hitpoints
+  &&lines.includes(`START ${p.x} ${p.z} ${p.level}`)&&lines.some(l=>l.startsWith('GE_MARKET_ENTRY ')&&l.includes('"stage":"north-approach"'));
+}
+// A second order key for already owned stock is refused before any GE mutation; assets stay and the session logs out.
+export function duplicateRefusalCheck(before:Save,after:Save,run:Run,item:number){
+ const r=resultLine(run.log,'OWNED_GE_ITEM'),rows=(s:Save)=>JSON.stringify([93,94,95].map(c=>s.inventories[c]??[]));
+ return run.code===1&&r?.ok===false&&r.phase==='unplaced'&&String(r.failure).includes('owned item already present')
+  &&r.newItemsThisSession===0&&r.cashDeltaThisSession===0&&held(after,95,id=>id===item)>0&&rows(after)===rows(before)
+  &&run.log.split(/\r?\n/).includes('LOGOUT logged-out');
+}
+function verify(directory:string){
+ const bank=verifyCase(directory),north=verifyCase(join(directory,'north'),true);
+ const report={...bank,ok:bank.ok&&north.ok,checks:{...bank.checks,north:north.ok},north};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 
@@ -74,39 +98,49 @@ async function run(directory:string){
  const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ge-bulk-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
- const command=async(args:string[],env:Record<string,string>,label:string):Promise<Run>=>{
+ const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=150000):Promise<Run>=>{
   const out=join(directory,label+'.log'),err=join(directory,label+'.err');
   const child=Bun.spawn(['bun',...args],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:Bun.file(out),stderr:Bun.file(err),windowsHide:true});
-  let expired=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{expired=true;termination=killTree(child.pid);},150000);
+  let expired=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{expired=true;termination=killTree(child.pid);},timeoutMs);
   const code=await child.exited;clearTimeout(timer);await termination;
   return{code:expired?-1:code,log:readFileSync(out,'utf8')+readFileSync(err,'utf8')};
  };
  try{
-  const source=workerSourceRevision(),[buyer,seller]=[runBotName('flgebuy',1),runBotName('flgesell',1)],orderKey='native-'+Date.now(),paths:Record<string,string>={};
   stack=await startStack({tickMs:150,readyTimeoutMs:60000});
-  const seeds:[string,{id:number;count:number}][]=[[buyer,{id:995,count:ORDER.coins}],[seller,{id:ORDER.item,count:ORDER.quantity}]];
+  const root=directory;
+  for(const remote of [false,true]){
+  directory=remote?join(root,'north'):root;mkdirSync(directory,{recursive:true});
+  const order=remote?NORTH_CASE.order:ORDER;
+  const source=workerSourceRevision(),[buyer,seller]=[runBotName('flgebuy',remote?2:1),runBotName('flgesell',remote?2:1)],orderKey='native-'+Date.now(),paths:Record<string,string>={};
+  const seeds:[string,{id:number;count:number}][]=[[buyer,{id:995,count:order.coins}],[seller,{id:order.item,count:order.quantity}]];
   for(const [name,stock] of seeds){
    if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
    await createBot(name);
    if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8')))throw Error('practice only');
-   paths[name]=await applyPreset(name,{position:BANK_TILE,skills:{Hitpoints:10},bank:[stock,...(name===buyer?[{id:329,count:2}]:[])]});
-   if(name===buyer){const initial=readPracticeSave(paths[name]!);setPracticeSkills(paths[name]!,initial.skills.map(s=>({level:s.index===3?3:s.level,xp:s.xp})));}
+   paths[name]=await applyPreset(name,remote&&name===buyer
+    ?{position:NORTH_CASE.position,skills:{Hitpoints:NORTH_CASE.hitpoints},inventory:NORTH_CASE.carried,bank:[stock,{id:329,count:2}]}
+    :{position:BANK_TILE,skills:{Hitpoints:10},bank:[stock,...(name===buyer?[{id:329,count:2}]:[])]});
+   if(name===buyer&&!remote){const initial=readPracticeSave(paths[name]!);setPracticeSkills(paths[name]!,initial.skills.map(s=>({level:s.index===3?3:s.level,xp:s.xp})));}
   }
   copyFileSync(paths[buyer]!,join(directory,'before.sav'));
-  const sell=await command(['packages/practice/src/ge-bulk-order-proof.ts','--sell',seller,String(ORDER.item),String(ORDER.quantity),String(ORDER.ask)],{},'sell');
-  const env={ORDER_KEY:orderKey,ITEM_ID:String(ORDER.item),QUANTITY:String(ORDER.quantity),LIMIT_PRICE:String(ORDER.limit),CASH_RESERVE:String(ORDER.reserve),ORDER_MS:'600000',FILL_WAIT_TICKS:'20'};
-  const buy=sell.code===0?await command(['scripts/buy-owned-ge-item.ts',buyer],env,'buy'):{code:1,log:''};
+  const sell=await command(['packages/practice/src/ge-bulk-order-proof.ts','--sell',seller,String(order.item),String(order.quantity),String(order.ask)],{},'sell');
+  const env={ORDER_KEY:orderKey,ITEM_ID:String(order.item),QUANTITY:String(order.quantity),LIMIT_PRICE:String(order.limit),CASH_RESERVE:String(order.reserve),ORDER_MS:'600000',FILL_WAIT_TICKS:'20'};
+  const buy=sell.code===0?await command(['scripts/buy-owned-ge-item.ts',buyer],env,'buy',remote?330000:150000):{code:1,log:''};
   if(sell.code!==0){writeFileSync(join(directory,'buy.log'),'');writeFileSync(join(directory,'buy.err'),'seller failed');}
-  const saved=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===ORDER.item)===ORDER.quantity);
+  const saved=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);
   copyFileSync(paths[buyer]!,join(directory,'after.sav'));if(!saved.matched)throw Error('exact purchased bank stock not saved');
   const journalPath=orderPaths(serverFromEnv(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8')),buyer,orderKey).journal;
   writeFileSync(join(directory,'journal.json'),existsSync(journalPath)?readFileSync(journalPath):'null');
   // The rerun must find the settled journal and leave the GE untouched.
   const again=await command(['scripts/buy-owned-ge-item.ts',buyer],env,'again');
-  const repeated=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===ORDER.item)===ORDER.quantity);
+  const repeated=await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);
   copyFileSync(paths[buyer]!,join(directory,'repeat.sav'));if(!repeated.matched)throw Error('resumed bank stock not saved');
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,orderKey,buyer,seller,sellCode:sell.code,buyCode:buy.code,againCode:again.code},null,2));
-  return verify(directory);
+  // A new order key for the same owned item must refuse instead of buying duplicate stock.
+  const refuse=remote?await command(['scripts/buy-owned-ge-item.ts',buyer],{...env,ORDER_KEY:orderKey+'-dup'},'refuse'):undefined;
+  if(refuse){await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);copyFileSync(paths[buyer]!,join(directory,'refused.sav'));}
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,orderKey,buyer,seller,sellCode:sell.code,buyCode:buy.code,againCode:again.code,refuseCode:refuse?.code},null,2));
+  }
+  return verify(root);
  }finally{
   try{await stack?.stop();}finally{closeSync(fd);unlinkSync(lock);}
  }

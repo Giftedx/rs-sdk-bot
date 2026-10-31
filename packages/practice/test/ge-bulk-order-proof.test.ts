@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {bulkOrderChecks,ORDER} from '../src/ge-bulk-order-proof';
+import {bulkOrderChecks,ORDER,NORTH_CASE,northEntryCheck,duplicateRefusalCheck} from '../src/ge-bulk-order-proof';
 import type {ItemOrder} from '../../../scripts/buy-owned-ge-item';
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},
@@ -15,6 +15,35 @@ const input={before:save([{id:995,count:2000}]),after:save([{id:995,count:1100},
 
 test('exact banked quantity, bounded spend, kept reserve and resumed rerun pass',()=>{
  expect(bulkOrderChecks(input)).toEqual({entry:true,seller:true,bank:true,assets:true,pack:true,coins:true,journal:true,result:true,logout:true,restart:true,healthy:true});
+});
+test('north Varrock case requires the saved north start, carried food and coins, the north approach and the exact bank order',()=>{
+ const o=NORTH_CASE.order,carry=NORTH_CASE.carried,salmon=carry.filter(i=>i.id===329);
+ const before={...save([{id:995,count:o.coins},{id:329,count:2}],carry),position:NORTH_CASE.position};before.skills[3]!.level=NORTH_CASE.hitpoints;
+ const total=o.coins+60,spent=o.quantity*o.ask;
+ const after=save([{id:995,count:total-spent},{id:o.item,count:o.quantity},{id:329,count:2}],salmon);after.skills[3]!.level=NORTH_CASE.hitpoints;
+ const j:ItemOrder={...journal,request:{...request,quantity:o.quantity},coinsBefore:total,acquired:o.quantity,refund:o.quantity*(o.limit-o.ask)};
+ const p={...input,before,after,repeat:after,journal:j,order:o,buy:{code:0,log:line({ok:true,targetMet:true,conserved:true,banked:true,reserveKept:true,
+  acquired:o.quantity,spent,phase:'settled',offerId:7})}};
+ expect(Object.values(bulkOrderChecks(p)).every(Boolean)).toBe(true);
+ const trace='START 3165 3487 0\nGE_MARKET_ENTRY {"stage":"north-approach"}\n';
+ expect(northEntryCheck(before,trace)).toBe(true);
+ expect(northEntryCheck(input.before,trace)).toBe(false);
+ expect(northEntryCheck(before,'START 3165 3487 0\n')).toBe(false);
+ expect(northEntryCheck(before,'START 3185 3436 0\nGE_MARKET_ENTRY {"stage":"north-approach"}\n')).toBe(false);
+ expect(bulkOrderChecks({...p,after:save([{id:995,count:total-spent},{id:o.item,count:o.quantity}],carry)}).pack).toBe(false);
+ expect(bulkOrderChecks({...p,after:save([{id:995,count:total-spent+3},{id:o.item,count:o.quantity-1},{id:329,count:2}],salmon)}).bank).toBe(false);
+ expect(bulkOrderChecks({...p,repeat:save([{id:995,count:total-2*spent},{id:o.item,count:o.quantity*2},{id:329,count:2}],salmon)}).restart).toBe(false);
+});
+test('a duplicate order key refuses without GE mutation, keeps assets and logs out',()=>{
+ const owned=save([{id:995,count:1100},{id:1987,count:300}]);
+ const refused=(r:object,code=1)=>({code,log:line(r)});
+ const ok={ok:false,phase:'unplaced',failure:'Error: owned item already present;allocate it instead of buying duplicate stock',newItemsThisSession:0,cashDeltaThisSession:0};
+ expect(duplicateRefusalCheck(owned,owned,refused(ok),1987)).toBe(true);
+ expect(duplicateRefusalCheck(owned,owned,refused(ok,0),1987)).toBe(false);
+ expect(duplicateRefusalCheck(owned,owned,refused({...ok,phase:'settled'}),1987)).toBe(false);
+ expect(duplicateRefusalCheck(owned,owned,refused({...ok,failure:'Error: GE interface unavailable'}),1987)).toBe(false);
+ expect(duplicateRefusalCheck(owned,save([{id:995,count:1000},{id:1987,count:300}]),refused(ok),1987)).toBe(false);
+ expect(duplicateRefusalCheck(owned,owned,{code:1,log:'OWNED_GE_ITEM '+JSON.stringify(ok)+'\n'},1987)).toBe(false);
 });
 test('a short fill, an overspend or a lost reserve fails the consumer',()=>{
  expect(bulkOrderChecks({...input,after:save([{id:995,count:1100},{id:1987,count:299}])}).bank).toBe(false);

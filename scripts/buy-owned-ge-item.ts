@@ -1,8 +1,8 @@
 // One owned item/order of an exact quantity. Persistent intent, capped unit price and observed bank settlement.
 import {readFileSync,writeFileSync,existsSync,mkdirSync,renameSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {resolve} from 'node:path';import {createHash} from 'node:crypto';
-import {openBot,settle,serverFromEnv} from '../packages/core/src/bot';import type {Session} from '../packages/core/src/inprocess';
-import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath} from '../packages/core/src/walk';
+import {openBot,settle,serverFromEnv,getWorld,accountOf} from '../packages/core/src/bot';import type {Session} from '../packages/core/src/inprocess';
+import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath,goTo} from '../packages/core/src/walk';
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
@@ -113,20 +113,83 @@ export async function collectClaim(collect:(offerId:number,notes:boolean)=>Promi
 }
 const BANK={x:3185,z:3436},GE={x:3181,z:3443};
 export const marketTileSafe=(p:{x:number;z:number;level:number})=>p.level===0&&p.x>=3180&&p.x<=3188&&p.z>=3433&&p.z<=3447;
-// Remote bank travel needs a shared, session-neutral ferry helper.
-export function marketEntryFailure(p:{worldX:number;worldZ:number;level:number}|null|undefined,hp:number){
+// North Varrock arrival observed live at 3165,3487,0. Its only pinned exit is north-east, and findLongPath
+// enters Varrock from the north. The 3241,3507 waypoint keeps the path 6+ tiles from the brownbear spawn at
+// 3230,3500 (research/route-danger.ts with margin 5: 0 danger spawns).
+export const NORTH_ENTRY={x:3165,z:3487},NORTH_APPROACH=[{x:3198,z:3508},{x:3241,z:3507},{x:3244,z:3503},{...BANK,tol:1}];
+const BROWN_BEAR={x:3230,z:3500};
+export const northEntryTile=(p:{x:number;z:number;level:number})=>p.level===0&&Math.max(Math.abs(p.x-NORTH_ENTRY.x),Math.abs(p.z-NORTH_ENTRY.z))<=3;
+export const northApproachTile=(p:{x:number;z:number;level:number})=>p.level===0&&p.x>=3160&&p.x<=3248&&p.z>=3428&&p.z<=3512
+ &&Math.max(Math.abs(p.x-BROWN_BEAR.x),Math.abs(p.z-BROWN_BEAR.z))>=6;
+async function northApproach(s:Session,signal:AbortSignal){
+ const deps=await sessionWalker(s),plan=deps.plan;
+ deps.plan=(level,from,goal)=>{const corners=plan(level,from,goal);if(!corners.length||[from,...expandPath(from,corners)].some(p=>!northApproachTile({...p,level})))throw Error('north approach path outside known corridor');return corners;};
+ return walkPath(deps,NORTH_APPROACH,{signal,maxTicks:400});
+}
+function marketHealthFailure(p:{worldX:number;worldZ:number;level:number}|null|undefined,hp:number){
  const where=p?`${p.worldX},${p.worldZ},${p.level}`:'unknown';
- if(!p||!marketTileSafe({x:p.worldX,z:p.worldZ,level:p.level}))return `unsupported market entry: position=${where} currentHP=${hp}; requires observed Varrock West/GE start; remote bank relocation unavailable in this worker`;
- if(!Number.isFinite(hp)||hp<=0)return `market entry: position=${where} currentHP=${hp}; living actor required`;
- if(hp<=6&&Math.max(Math.abs(p.worldX-BANK.x),Math.abs(p.worldZ-BANK.z))>3)return `market health preparation: position=${where} currentHP=${hp}; requires bank approach within3 before healing`;
+ if(!p||!Number.isFinite(hp)||hp<=0)return `market entry: position=${where} currentHP=${hp}; living actor required`;
+ if(hp<=6&&(p.level!==0||Math.max(Math.abs(p.worldX-BANK.x),Math.abs(p.worldZ-BANK.z))>3))return `market health preparation: position=${where} currentHP=${hp}; requires bank approach within3 before healing`;
  return null;
+}
+export function marketEntryFailure(p:{worldX:number;worldZ:number;level:number}|null|undefined,hp:number){
+ const health=marketHealthFailure(p,hp);if(health)return health;
+ if(!p||!marketTileSafe({x:p.worldX,z:p.worldZ,level:p.level}))return `unsupported market entry: position=${p?.worldX},${p?.worldZ},${p?.level} currentHP=${hp}; requires observed Varrock West/GE arrival`;
+ return null;
+}
+function marketEntryTrace(s:Session,stage:string,detail:Record<string,unknown>={}){
+ const p=s.sdk.getState()?.player;
+ console.log('GE_MARKET_ENTRY '+JSON.stringify({stage,at:Date.now(),tick:s.tick(),position:p?{x:p.worldX,z:p.worldZ,level:p.level}:null,
+  hp:s.sdk.getSkill('Hitpoints')?.level??null,stateAge:s.sdk.getStateAge(),...detail}));
+}
+export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(signal:AbortSignal)=>Promise<{ok:boolean;ticks:number;detail?:string}>=async signal=>{
+ const at=s.sdk.getState()?.player;
+ if(at&&northEntryTile({x:at.worldX,z:at.worldZ,level:at.level})){marketEntryTrace(s,'north-approach',{waypoints:NORTH_APPROACH});return northApproach(s,signal);}
+ marketEntryTrace(s,'world-start');const loadingAt=Date.now(),world=await getWorld();
+ marketEntryTrace(s,'world-ready',{elapsedMs:Date.now()-loadingAt});signal.throwIfAborted();
+ const observedWorld={...world,route:(...args:Parameters<typeof world.route>)=>{
+  const planningAt=Date.now();marketEntryTrace(s,'route-start',{from:args[0],to:args[1]});
+  const result=world.route(...args);
+  marketEntryTrace(s,'route-returned',{elapsedMs:Date.now()-planningAt,ok:result.ok,...(result.ok?{legs:result.legs.length,cost:result.cost}:{reason:result.reason})});
+  return result;
+ }};
+ const account=accountOf(s);marketEntryTrace(s,'go-to-start');
+ return goTo(s,observedWorld,{...BANK,level:0},account,{signal,maxRetriesPerLeg:1,legTimeoutTicks:1200});
+}){
+ const hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,initial=s.sdk.getState()?.player,p0=initial?{...initial}:undefined,hp0=hp();
+ const health=marketHealthFailure(p0,hp0);if(health||p0?.isDead)throw Error(health??'market entry: living actor required');
+ if(!p0)throw Error('market position unknown');
+ if(marketTileSafe({x:p0.worldX,z:p0.worldZ,level:p0.level}))return;
+ const start=s.tick(),ac=new AbortController();let ended=false,lastTrace=start;
+ const guard=()=>{
+  const p=s.sdk.getState()?.player;
+  if(ended||stop()||s.tick()-start>=1200||!p||hp()<hp0||!Number.isFinite(hp())||hp()<=0||p.isDead||p.lifeId!==p0.lifeId||(p.respawnCount??0)>(p0.respawnCount??0)){
+   if(!ac.signal.aborted)marketEntryTrace(s,'travel-abort',{ended,elapsedTicks:s.tick()-start});
+   ac.abort('market trip health/stop/tick budget');
+  }
+  if(!ac.signal.aborted&&s.tick()-lastTrace>=100){lastTrace=s.tick();marketEntryTrace(s,'travel-pending',{elapsedTicks:s.tick()-start});}
+ };
+ const off=s.onTick(guard);void s.ended.then(()=>{ended=true;guard();});
+ try{
+  guard();ac.signal.throwIfAborted();marketEntryTrace(s,'travel-start');const result=await travel(ac.signal);
+  marketEntryTrace(s,'travel-returned',{ok:result.ok,ticks:result.ticks,detail:result.detail});guard();
+  const p=s.sdk.getState()?.player,entry=marketEntryFailure(p,hp());
+  if(!result.ok||ac.signal.aborted||entry||s.sdk.getStateAge()>5000)throw Error(result.detail??entry??'bank arrival unproved');
+ }catch(error){
+  marketEntryTrace(s,'travel-error',{error:String(error)});
+  const p=s.sdk.getState()?.player;
+  throw Error(`market bank travel failed: position=${p?`${p.worldX},${p.worldZ},${p.level}`:'unknown'} currentHP=${hp()} ticks=${s.tick()-start}; ${String(error)}`);
+ }finally{off();ac.abort('market trip ended');}
 }
 const catalogue=():{id:number;name:string}[]=>JSON.parse(readFileSync(new URL('../knowledge/items.json',import.meta.url),'utf8'));
 
 export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:string,stop:()=>boolean,cancel:boolean,fillWaitTicks:number){
  validateRequest(request);const quantity=orderQuantity(request),isItem=orderItemMatcher(request.item,catalogue());
  if(s.name.toLowerCase()!==request.actor.toLowerCase())throw Error('order actor identity mismatch');
+ marketEntryTrace(s,'entry-state-wait');
  if(!await waitUntil(s,()=>stop()||!!s.sdk.getState()?.player&&s.sdk.getStateAge()<=5000&&!!s.sdk.getSkill('Hitpoints'),{timeoutTicks:15})||stop())throw Error('observed market entry state deadline/stop');
+ marketEntryTrace(s,'entry-state-ready');
+ await prepareMarketEntry(s,()=>stop()||Date.now()>=request.deadline);
  const state=()=>s.sdk.getState(),held=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,start=s.tick(),hp0=hp(),p0=state()?.player;
  const entryFailure=marketEntryFailure(p0,hp0);if(entryFailure)throw Error(entryFailure);
  if(!p0)throw Error('market position unknown');

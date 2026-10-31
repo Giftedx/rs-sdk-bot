@@ -1,9 +1,86 @@
 import {test,expect} from 'bun:test';import {reconcilePlacement,collectionApplied,collectionRetrySafe,validateRequest,marketTileSafe,observeOrderProgress,terminalOrderClaim,orderAccounting,orderItemMatcher,orderEscrow,placementRetrySafe,type ItemOrder,type OrderView} from './buy-owned-ge-item';
 import type {GEOffer} from '../vendor/rs-sdk/sdk/ge-types';
-import {mock} from 'bun:test';
+import {mock,spyOn} from 'bun:test';
 import {mkdtempSync,readFileSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {prepareMarketEntry,marketEntryFailure,northEntryTile,northApproachTile,NORTH_ENTRY,NORTH_APPROACH} from './buy-owned-ge-item';
+import type {Session} from '../packages/core/src/inprocess';
+import {expandPath} from '../packages/core/src/walk';
+
+test('north Varrock entry 3165,3487,0 takes the bounded pinned approach; the market rectangle stays unchanged',async()=>{
+ expect(marketEntryFailure({worldX:3165,worldZ:3487,level:0},11)).toContain('unsupported market entry');
+ expect(northEntryTile({x:3165,z:3487,level:0})).toBe(true);expect(northEntryTile({x:2654,z:3283,level:0})).toBe(false);
+ const pf:any=await import('../vendor/rs-sdk/sdk/pathfinding');pf.initPathfinding();
+ let from={...NORTH_ENTRY};const tiles=[from];
+ for(const point of NORTH_APPROACH){
+  const corners=pf.findLongPath(0,from.x,from.z,point.x,point.z,500);expect(corners.at(-1)).toMatchObject({x:point.x,z:point.z});
+  tiles.push(...expandPath(from,corners));from=tiles.at(-1)!;
+ }
+ expect(tiles.length).toBeLessThanOrEqual(260);expect(tiles.every(t=>northApproachTile({...t,level:0}))).toBe(true);
+ expect(marketTileSafe({...tiles.at(-1)!,level:0})).toBe(true);expect(northApproachTile({x:3233,z:3503,level:0})).toBe(false);
+ const player={worldX:3165,worldZ:3487,level:0,lifeId:1,respawnCount:0};let calls=0;
+ const s={sdk:{getState:()=>({player}),getStateAge:()=>0,getSkill:()=>({level:11})},tick:()=>0,
+  ended:new Promise(()=>{}),onTick:()=>()=>{}} as unknown as Session;
+ const log=spyOn(console,'log').mockImplementation(()=>{});
+ try{await prepareMarketEntry(s,()=>false,async()=>{calls++;Object.assign(player,{worldX:3185,worldZ:3436});return{ok:true,ticks:241};});}finally{log.mockRestore();}
+ expect(calls).toBe(1);expect(marketEntryFailure(player,11)).toBeNull();
+},60000);
+
+test('market travel: diagnostics bracket travel with observed position and ticks',async()=>{
+ const player={worldX:2654,worldZ:3283,level:0,lifeId:1,respawnCount:0};let tick=7;
+ const s={sdk:{getState:()=>({player}),getStateAge:()=>0,getSkill:()=>({level:10})},tick:()=>tick,
+  ended:new Promise(()=>{}),onTick:()=>()=>{}} as unknown as Session;
+ const lines:string[]=[],log=spyOn(console,'log').mockImplementation((line)=>{lines.push(String(line));});
+ try{
+  await prepareMarketEntry(s,()=>false,async()=>{
+   expect(lines.some(l=>l.includes('"stage":"travel-start"'))).toBe(true);
+   tick=12;Object.assign(player,{worldX:3185,worldZ:3436});return{ok:true,ticks:5};
+  });
+ }finally{log.mockRestore();}
+ const rows=lines.filter(l=>l.startsWith('GE_MARKET_ENTRY ')).map(l=>JSON.parse(l.slice('GE_MARKET_ENTRY '.length)));
+ expect(rows.map(r=>r.stage)).toEqual(['travel-start','travel-returned']);
+ expect(rows[0]).toMatchObject({tick:7,position:{x:2654,z:3283,level:0},hp:10});
+ expect(rows[1]).toMatchObject({tick:12,position:{x:3185,z:3436,level:0},hp:10,ok:true});
+ expect(rows.every(r=>Number.isFinite(r.at))).toBe(true);
+});
+
+test('market travel: remote actors travel once; supported starts skip travel',async()=>{
+ for(const remote of [true,false]){
+  const player={worldX:remote?2654:3185,worldZ:remote?3283:3436,level:0,lifeId:1,respawnCount:0};
+  const callbacks=new Set<()=>void>();let calls=0;
+  const s={sdk:{getState:()=>({player}),getStateAge:()=>0,getSkill:()=>({level:10})},tick:()=>0,
+   ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);}} as unknown as Session;
+  await prepareMarketEntry(s,()=>false,async()=>{calls++;Object.assign(player,{worldX:3185,worldZ:3436});return{ok:true,ticks:1};});
+  expect(calls).toBe(remote?1:0);expect(callbacks.size).toBe(0);
+ }
+});
+
+test('market travel: refusal, false arrival and tick exhaustion retain the stuck position',async()=>{
+ for(const mode of ['refused','false-arrival','timeout','stop','damage','death']){
+  const player={worldX:2654,worldZ:3283,level:0,lifeId:1,respawnCount:0};
+  const callbacks=new Set<()=>void>();let tick=0,hp=10,stopped=false,aborted=false;
+  const s={sdk:{getState:()=>({player}),getStateAge:()=>0,getSkill:()=>({level:hp})},tick:()=>tick,
+   ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);}} as unknown as Session;
+  await expect(prepareMarketEntry(s,()=>stopped,async signal=>{
+   if(mode==='timeout')tick=1200;if(mode==='stop')stopped=true;if(mode==='damage')hp=9;if(mode==='death')player.lifeId++;
+   for(const cb of callbacks)cb();
+   aborted=signal.aborted;
+   return{ok:mode==='false-arrival',ticks:tick};
+  })).rejects.toThrow('position=2654,3283,0');
+  expect(aborted).toBe(['timeout','stop','damage','death'].includes(mode));
+  expect(callbacks.size).toBe(0);
+ }
+});
+
+test('market travel: low HP approach and living actor checks precede travel',async()=>{
+ for(const hp of [0,3,NaN]){
+  const s={sdk:{getState:()=>({player:{worldX:2654,worldZ:3283,level:0}}),getSkill:()=>({level:hp})}} as unknown as Session;
+  let calls=0;
+  await expect(prepareMarketEntry(s,()=>false,async()=>{calls++;return{ok:true,ticks:0};})).rejects.toThrow(hp===3?'bank approach within3':'living actor');
+  expect(calls).toBe(0);
+ }
+});
 const request={actor:'Abracadickra',server:'rs-sdk-demo.fly.dev',goal:'combat-sword',item:1331,limit:45000,reserve:5000,createdAt:1000,reviewAt:2000,deadline:3000};
 const offer=(extra:Partial<GEOffer>={}):GEOffer=>({id:9,slot:0,item:1331,name:'Adamant scimitar',side:'buy',quantity:1,price:45000,remaining:1,filled:0,state:'open',items:0,coins:0,gross:0,tax:0,...extra});
 const journal=():ItemOrder=>({version:1,request,phase:'placing',coinsBefore:50000,itemsBefore:0,previousIds:[2],at:1000});
@@ -117,6 +194,7 @@ if(process.env.GE_BUYER_WORKER_TEST!=='1')test('worker paths run in an isolated 
 });
 else{
  mock.module('../packages/core/src/walk',()=>({
+  goTo:async()=>{throw Error('unexpected remote travel in bank fixture');},
   sessionWalker:async(s:any)=>({s,plan:()=>[]}),expandPath:()=>[],
   walkPath:async(d:any,points:any[])=>{const p=points[0];Object.assign(d.s.sdk.getState().player,{worldX:p.x,worldZ:p.z});return{ok:true};},
  }));
