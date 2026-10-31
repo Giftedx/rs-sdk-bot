@@ -5,13 +5,15 @@ import { connectInProcess, type Session } from './inprocess';
 import { isLocalServer } from './localserver';
 import { logout } from './logout';
 import { waitUntil } from './ticks';
-import { startLedger, formatLedger } from './ledger';
+import { stalled, startLedger, formatLedger } from './ledger';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
 import { createWorld, rsPathLength, type Account, type World } from './world';
 import {assertLiveWorkerRelease} from './worker-release';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
+// Ticks without xp, an item change or dialog before a session counts as stalled and stops (STALL_TICKS=0: never).
+const STALL_TICKS = Number(process.env.STALL_TICKS ?? 900);
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 
 // Opens an in-process session for a bot created by packages/practice (reads its bot.env),
@@ -97,7 +99,8 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     let stopping = false;
     s.onTick(() => {
         lastLife = life(s.sdk.getState()?.player) ?? lastLife;
-        const reason = sessionDied(born,lastLife) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file' : null;
+        const reason = sessionDied(born,lastLife) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
+            : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items or dialog` : null;
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
             void (opts.onStop ? opts.onStop(s,reason) : finish([s], false, reason));

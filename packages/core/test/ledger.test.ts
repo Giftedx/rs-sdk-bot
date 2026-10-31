@@ -58,3 +58,14 @@ test('startLedger copies reused inventory objects and reports inventory separate
     expect(result.idlePct).toBe(50);
     expect(formatLedger(result)).toContain('inventory=1');
 });
+
+test('a session is stalled after a window with no xp, item change or dialog', async () => {
+    const { stalled } = await import('../src/ledger');
+    const row = (kind: any, tick: number) => ({ tick, kind, at: '0,0' });
+    const walking = Array.from({ length: 900 }, (_, i) => row(i % 2 ? 'move' : 'idle', i));
+    expect(stalled(walking, 900)).toBe(true);
+    expect(stalled([...walking.slice(1), row('inventory', 901)], 900)).toBe(false);
+    expect(stalled([...walking.slice(0, 450), row('dialog', 450), ...walking.slice(451)], 900)).toBe(false);
+    expect(stalled(walking.slice(0, 899), 900)).toBe(false);
+    expect(stalled(walking, 0)).toBe(false);
+});

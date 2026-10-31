@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { openBot, finish, randomEventsOf, serverFromEnv, getWorld, accountOf } from '../packages/core/src/bot';
 import { goTo } from '../packages/core/src/walk';
+import { depositPack } from '../packages/core/src/deposit';
 import { waitTicks } from '../packages/core/src/ticks';
 import type {Session} from '../packages/core/src/inprocess';
 import {ownedAccounts} from '../packages/core/src/tradeguard';
@@ -114,7 +115,7 @@ try {
     const stopFile = `.practice/stop-${process.argv[2]}`;
 
     let picks = 0, noops = 0, fails = 0, eaten = 0, bankTrips = 0, bankTicks = 0, walkTicks = 0, idleTicks = 0, eatTicks = 0, banked = 0;
-    let bankFails = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0;
+    let bankFails = 0, emptyTrips = 0, stallTrips = 0, stallTicks = 0, stolen = 0, refused = 0, stallEmptyTrips = 0, stallPickTicks = 0;
     const banned = new Map<number, number>();
     let noopRun = 0, noopTarget = -1, bans = 0, stunUntil = 0;
     let shopTrips = 0, shopTicks = 0, bought = 0, shopRetryAt = 0, lastSteal = -1_000_000;
@@ -193,6 +194,9 @@ try {
                 const d = await s.bot.depositItem(n, -1);
                 if (!d.success) lastFail = `deposit notes:${d.message}`;
             }
+            // A pack filled by an earlier job (quest leftovers) leaves no room for food: bank all but coins and food.
+            if (28 - inv().length - KEEP_FREE <= 0) await depositPack(s, i => /^coins$/i.test(i.name) || FOOD_ORDER.some(re => re.test(i.name)));
+            const food0 = inv().length;
             // Cooked fish first, then lobsters, until the pack is full less KEEP_FREE.
             for (const re of BANK_FOOD) {
                 const inBank = s.sdk.findBankItem(re);
@@ -211,6 +215,9 @@ try {
                 if (w.success) banked -= w.amountWithdrawn ?? n;
             }
             console.log(`BANK trip=${bankTrips} banked=${banked} bigFood=${bigFood()} bankFood=${left} t=${now()}`);
+            // Three trips that bank no coins and take no food are a loop, not farming: stop and say so.
+            emptyTrips = c > 0 || inv().length > food0 ? 0 : emptyTrips + 1;
+            if (emptyTrips >= 3) await finish([s], banked > 0, `goldfarm no progress: ${emptyTrips} bank trips gained no coins or food; pack=${inv().length} bankFood=${left} ${lastFail}`);
             await s.bot.closeBank();
         } finally { bankTicks += s.tick() - b0; }
     };

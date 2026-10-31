@@ -76,3 +76,12 @@ export function formatLedger(sum: ReturnType<typeof summarize>): string {
     return `LEDGER ticks=${sum.ticks} xp=${c.xp} inventory=${c.inventory} move=${c.move} anim=${c.anim} dialog=${c.dialog} stun=${c.stun} idle=${c.idle} idlePct=${sum.idlePct.toFixed(1)} `
         + `longestIdle=${sum.longestIdle.map(x => `${x.length}@t${x.start}(${x.at})`).join(',')}`;
 }
+
+// A session is stalled when its last `window` ticks hold no xp, no inventory change and no dialog: walking,
+// waiting or animating that long without gaining anything is a loop (a bank trip that cannot take food, a
+// chop with no logs), not work. bot.ts stops such a session.
+export function stalled(rows: readonly TickRow[], window: number): boolean {
+    if (window <= 0 || rows.length < window) return false;
+    for (let i = rows.length - window; i < rows.length; i++) { const k = rows[i]!.kind; if (k === 'xp' || k === 'inventory' || k === 'dialog') return false; }
+    return true;
+}
