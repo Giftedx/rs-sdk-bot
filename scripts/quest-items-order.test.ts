@@ -1,10 +1,36 @@
 import {expect,test,spyOn} from 'bun:test';
 import * as sessionOwner from '../packages/core/src/bot';
 import * as saves from './measure/fleet-player-save';
-import {itemRecipe,itemEntry,itemSaveChecks,runQuestItemsOrder,gatherQuestItems,operateQuestHopper,probeQuestFlourBin} from './quest-items-order';
+import {itemRecipe,itemEntry,itemSaveChecks,runQuestItemsOrder,gatherQuestItems,operateQuestHopper,probeQuestFlourBin,cookHettyMeat} from './quest-items-order';
 export const fixture=(pack:{id:number;count:number}[]=[],bank:{id:number;count:number}[]=[],vars:Record<number,number>={})=>({version:9,position:{x:3092,z:3247,level:0},skills:[{index:3,level:10,rawExperience:11540,xp:1154}],vars,
  inventories:{93:pack.map((i,slot)=>({...i,slot})),95:bank.map((i,slot)=>({...i,slot}))}});
 const kit=[{id:1925,count:1},{id:1931,count:1}],products=[{id:1944,count:1},{id:1927,count:1},{id:1933,count:1}];
+test('Hetty recipe reuses owned ingredients and needs no Cook containers',()=>{
+ expect(itemRecipe('hetty').items).toEqual([1957,221,2146]);
+ expect(itemEntry('hetty',fixture([], [{id:995,count:25}]))).toBeNull();
+ expect(itemEntry('hetty',fixture([],[],{67:3}))).toBe('quest already complete');
+});
+test('meat conversion needs actual debit and credit; owned burnt meat does no work',async()=>{
+ for(const mode of ['raw-cooked','raw-burnt','cooked','burnt','no-effect']){
+  const state:any={inventory:[{id:mode==='cooked'?2142:mode==='burnt'?2146:2132,count:1}]};
+  const actions:number[]=[];
+  const s:any={sdk:{getState:()=>state,findNearbyLoc:()=>({id:2728,x:2970,z:3209})},bot:{useItemOnLoc:async(item:any)=>{
+   actions.push(item.id);if(mode!=='no-effect')state.inventory=[{id:item.id===2142||mode==='raw-burnt'?2146:2142,count:1}];return {success:true};
+  }}};
+  const observe=async(pred:()=>boolean,label:string)=>{if(!pred())throw Error(label+': effect unobserved');};
+  if(mode==='no-effect'){await expect(cookHettyMeat(s,observe)).rejects.toThrow('effect unobserved');continue;}
+  const transitions=await cookHettyMeat(s,observe);
+  expect(state.inventory).toEqual([{id:2146,count:1}]);
+  expect(actions.length).toBe(mode==='burnt'?0:mode==='raw-cooked'?2:1);
+  expect(transitions.length).toBe(actions.length);
+ }
+});
+test('Hetty acquisition saved check includes costs, owned tail and retained stock',()=>{
+ const b=fixture([{id:1277,count:1}],[{id:995,count:25},{id:300,count:1}]);
+ const a=fixture([{id:1957,count:1},{id:221,count:1},{id:2146,count:1},{id:300,count:1}],[{id:1277,count:1},{id:995,count:21}]);
+ expect(Object.values(itemSaveChecks('hetty',b,a)).every(Boolean)).toBe(true);
+ expect(itemSaveChecks('hetty',b,fixture(a.inventories[93],[])).assets).toBe(false);
+});
 test('entry keeps missing containers, complete quests and duplicate orders explicit',()=>{
  expect(itemEntry('cook',fixture([],kit))).toBeNull();
  expect(itemEntry('cook',fixture([],kit.slice(1)))).toBe('missing container 1925');

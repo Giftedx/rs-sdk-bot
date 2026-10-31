@@ -1,6 +1,6 @@
 import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
-import {questItemsConsumerChecks,parseItemResult,cookLiveJobSavedChecks,cookLiveRepeatSavedChecks,COOK_JOB_NATIVE_NULL_VARPS} from '../src/quest-items-order-proof';
+import {HETTY_MATCHED_ENTRY,hettyCarriedEntry,hettyLiveJobSavedChecks,hettyMainlandReady,hettyRegisteredEntry,hettyTutorialJobSavedChecks,tutorialGrantedSave,HETTY_TUTORIAL_GRANT,questItemsConsumerChecks,parseItemResult,cookLiveJobSavedChecks,cookLiveRepeatSavedChecks,COOK_JOB_NATIVE_NULL_VARPS} from '../src/quest-items-order-proof';
 const save=(pack:{id:number;count:number}[],bank:{id:number;count:number}[],vars:Record<number,number>={})=>({version:9,position:{x:3092,z:3243,level:0},skills:[{index:3,level:10,rawExperience:11540,xp:1154}],vars,inventories:{93:pack.map((i,slot)=>({...i,slot})),95:bank.map((i,slot)=>({...i,slot}))}});
 const products=[{id:1944,count:1},{id:1927,count:1},{id:1933,count:1}],asset={id:1351,count:1};
 const before=save([asset],[{id:1925,count:1},{id:1931,count:1}]),gathered=save(products,[asset]),after=save([],[asset],{29:2,101:1});
@@ -79,4 +79,95 @@ test('ordinary CLI proof checks saved reward and all assets independently of a c
  expect(cookLiveJobSavedChecks(b,{...a,vars:{29:2}},r).questPoints).toBe(false);
  expect(cookLiveJobSavedChecks(b,{...a,inventories:{93:[],95:[]}},r).assets).toBe(false);
  expect(cookLiveJobSavedChecks(b,a,{...r,log:r.log.replace('LOGOUT logged-out','LOGOUT timeout')}).worker).toBe(false);
+});
+
+test('Hetty proof rejects injected entry and reconciles saved effects independently',()=>{
+ const b={...save([{id:1277,count:1}],[{id:995,count:25}]),position:{x:3222,z:3218,level:0},skills:Array.from({length:21},(_,index)=>({index,level:index===3?10:1,rawExperience:index===3?9800:0,xp:index===3?980:0}))};
+ const a={...b,vars:{67:3,101:1},inventories:{...b.inventories,95:[{slot:0,id:995,count:21}]},skills:b.skills.map(k=>k.index===6?{...k,level:31,rawExperience:81250,xp:8125}:k)};
+ const r={code:0,log:'LOGOUT logged-out\nQUEST_COOK_JOB_RESULT '+JSON.stringify({ok:true,questKey:'hetty',ticks:100,logout:true,gather:{ok:true,purchases:[{id:221,coins:3},{id:2132,coins:1}],transitions:[{from:2132,to:2142},{from:2142,to:2146}]},quest:{ok:true},checks:{alive:true},before:{lifeId:0,respawns:0},after:{lifeId:0,respawns:0}})};
+ expect(hettyMainlandReady(b)).toBe(true);
+ expect(hettyMainlandReady({...b,skills:a.skills})).toBe(false);
+ expect(Object.values(hettyLiveJobSavedChecks(b,a,r)).every(Boolean)).toBe(true);
+ expect(hettyLiveJobSavedChecks(b,{...a,vars:{67:3}},r).questPoints).toBe(false);
+ expect(hettyLiveJobSavedChecks(b,{...a,skills:b.skills},r).reward).toBe(false);
+ expect(hettyLiveJobSavedChecks(b,{...a,inventories:b.inventories},r).coins).toBe(false);
+ expect(hettyLiveJobSavedChecks(b,{...a,inventories:{93:[],95:a.inventories[95]}},r).assets).toBe(false);
+ expect(hettyLiveJobSavedChecks(b,a,{...r,log:r.log.replace('LOGOUT logged-out','LOGOUT timeout')}).worker).toBe(false);
+});
+
+test('pinned tutorial_complete grant is the reconciled tutorial kit',()=>{
+ const root=new URL('../../../vendor/rs-sdk/server/content/',import.meta.url);
+ const ids=Object.fromEntries(readFileSync(new URL('pack/obj.pack',root),'utf8').split(/\r?\n/).map(l=>l.split('=')).map(([id,name])=>[name,Number(id)]));
+ const label=readFileSync(new URL('scripts/tutorial/scripts/tutorial.rs2',root),'utf8').split('[label,tutorial_complete]')[1]!.split('\n[')[0]!;
+ const added=(inv:string)=>[...label.matchAll(new RegExp(`inv_add\\(${inv}, (\\w+), (\\d+)\\)`,'g'))].map(m=>[ids[m[1]!],Number(m[2])]);
+ for(const inv of ['inv','worn','bank'])expect(label).toContain(`inv_clear(${inv});`);
+ expect(added('inv')).toEqual(HETTY_TUTORIAL_GRANT.pack.map(x=>[...x]));
+ expect(added('bank')).toEqual(HETTY_TUTORIAL_GRANT.bank.map(x=>[...x]));
+ expect(label).toContain('%tutorial = ^tutorial_complete;');
+});
+
+test('native fixture matches the retained populated quest entry before travel and coin deposit',()=>{
+ const skills=Array.from({length:21},(_,index)=>({index,level:index===3?10:index===7?30:1,rawExperience:index===3?9800:index===7?75000:0,xp:index===3?980:index===7?7500:0}));
+ const slots=(rows:{id:number;count:number}[])=>rows.map((i,slot)=>({slot,...i}));
+ const entry={version:6,position:{x:3209,z:3214,level:0},skills,vars:{281:1000,29:2,63:6,179:22,192:2,67:0,101:6},inventories:{
+  93:slots(HETTY_MATCHED_ENTRY.inventory!),94:HETTY_MATCHED_ENTRY.equipment!,95:slots(HETTY_MATCHED_ENTRY.bank!)}};
+ expect(hettyCarriedEntry(entry)).toBe(true);
+ expect(entry.inventories[93]).toHaveLength(21);expect(entry.inventories[95]).toHaveLength(29);
+ expect(entry.inventories[93][0]).toEqual({slot:0,id:995,count:1902});
+ expect(entry.inventories[95][0]).toEqual({slot:0,id:995,count:15606});
+ expect(entry.inventories[93][10]).toEqual({slot:10,id:2132,count:1});
+ expect(entry.inventories[94]).toEqual([{id:284,count:1,slot:4},{id:285,count:1,slot:7}]);
+ for(const position of [{x:3092,z:3243,level:0},{x:3209,z:3215,level:0}])expect(hettyCarriedEntry({...entry,position})).toBe(false);
+ for(const [container,count] of [[93,5],[95,20]] as const){
+  expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,[container]:entry.inventories[container].map(i=>i.id===995?{...i,count}:i)}})).toBe(false);
+ }
+ expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,93:entry.inventories[93].filter(i=>i.id!==2132)}})).toBe(false);
+ expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,94:[]}})).toBe(false);
+ expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,93:[...entry.inventories[93]].reverse()}})).toBe(false);
+ expect(hettyCarriedEntry({...entry,vars:{...entry.vars,67:3}})).toBe(false);
+ expect(hettyCarriedEntry({...entry,vars:{...entry.vars,101:0}})).toBe(false);
+ expect(hettyCarriedEntry({...entry,skills:skills.map(k=>k.index===6?{...k,xp:8125,level:31}:k)})).toBe(false);
+});
+
+test('registration login recount keeps the staged six quest points',()=>{
+ // Retained registration save: only cookquest complete, so login ~update_questpoints wrote %qp 6->1.
+ const root=new URL('../../../',import.meta.url);
+ const ids=new Map(readFileSync(new URL('vendor/rs-sdk/server/content/pack/varp.pack',root),'utf8').split(/\r?\n/).map(l=>l.split('=')).map(([id,name])=>[name!,Number(id)]));
+ const facts=JSON.parse(readFileSync(new URL('knowledge/quests.json',root),'utf8')) as {varp:string;complete:number;questPoints:number}[];
+ const recount=(vars:Record<number,number>)=>facts.filter(q=>ids.has(q.varp)&&vars[ids.get(q.varp)!]===q.complete).reduce((n,q)=>n+q.questPoints,0);
+ const vars=HETTY_MATCHED_ENTRY.varps!;
+ expect(recount(vars)).toBe(vars[ids.get('qp')!]);
+ expect(recount({29:2})).toBe(1);
+ const skills=Array.from({length:21},(_,index)=>({index,level:index===3?10:index===7?30:1,rawExperience:index===3?9800:index===7?75000:0,xp:index===3?980:index===7?7500:0}));
+ const slots=(rows:{id:number;count:number}[])=>rows.map((i,slot)=>({slot,...i}));
+ const entry={version:9,position:{x:3209,z:3214,level:0},skills,vars:{...vars},inventories:{
+  93:slots(HETTY_MATCHED_ENTRY.inventory!),94:HETTY_MATCHED_ENTRY.equipment!,95:slots(HETTY_MATCHED_ENTRY.bank!)}};
+ expect(hettyCarriedEntry({...entry,vars:{...vars,101:recount(vars)}})).toBe(true);
+ expect(hettyCarriedEntry({...entry,vars:{281:1000,29:2,101:1}})).toBe(false);
+ for(const id of [63,179,192])expect(hettyCarriedEntry({...entry,vars:{...vars,[id]:0}})).toBe(false);
+});
+
+test('registered Tutorial Island entry is not mainland readiness; the grant is reconciled before quest costs',()=>{
+ const skills=Array.from({length:21},(_,index)=>({index,level:index===3?10:1,rawExperience:index===3?9800:0,xp:index===3?980:0}));
+ // Observed registration save: START3094,3106,0, empty containers, varp281=1.
+ const registered={version:9,position:{x:3094,z:3106,level:0},skills,vars:{281:1},inventories:{93:[],94:[],95:[]}};
+ expect(hettyRegisteredEntry(registered)).toBe(true);
+ expect(hettyMainlandReady(registered)).toBe(false);
+ const granted=tutorialGrantedSave(registered);
+ expect(hettyMainlandReady({...granted,position:{x:3222,z:3218,level:0}})).toBe(true);
+ for(const change of [{vars:{281:1000}},{position:{x:3222,z:3218,level:0}},{inventories:{93:[{slot:0,id:1277,count:1}],94:[],95:[]}},{skills:skills.map(k=>k.index===6?{...k,level:2,rawExperience:830,xp:83}:k)}])
+  expect(hettyRegisteredEntry({...registered,...change})).toBe(false);
+ // Quest spending: eye 3 + beef 1 from the banked 25; every other granted item retained.
+ const after={...granted,position:{x:3092,z:3243,level:0},vars:{67:3,101:1,281:1000},
+  inventories:{93:granted.inventories[93],94:[],95:[{slot:0,id:995,count:21}]},
+  skills:skills.map(k=>k.index===6?{...k,level:31,rawExperience:81250,xp:8125}:k)};
+ const r={code:0,log:'LOGOUT logged-out\nQUEST_COOK_JOB_RESULT '+JSON.stringify({ok:true,questKey:'hetty',ticks:100,logout:true,gather:{ok:true,purchases:[{id:221,coins:3},{id:2132,coins:1}],transitions:[{from:2132,to:2142},{from:2142,to:2146}]},quest:{ok:true},checks:{alive:true},before:{lifeId:0,respawns:0},after:{lifeId:0,respawns:0}})};
+ expect(Object.values(hettyTutorialJobSavedChecks(registered,after,r)).every(Boolean)).toBe(true);
+ // Without grant reconciliation the granted kit reads as unexplained assets and coins.
+ expect(hettyLiveJobSavedChecks(registered,after,r).assets).toBe(false);
+ expect(hettyLiveJobSavedChecks(registered,after,r).coins).toBe(false);
+ expect(hettyTutorialJobSavedChecks(registered,{...after,vars:{67:3,101:1,281:1}},r).tutorial).toBe(false);
+ expect(hettyTutorialJobSavedChecks(registered,{...after,inventories:{...after.inventories,93:after.inventories[93].filter(i=>i.id!==1277)}},r).assets).toBe(false);
+ expect(hettyTutorialJobSavedChecks(registered,{...after,inventories:{...after.inventories,95:[{slot:0,id:995,count:20}]}},r).coins).toBe(false);
+ expect(hettyTutorialJobSavedChecks({...registered,vars:{281:1000}},after,r).tutorialEntry).toBe(false);
 });

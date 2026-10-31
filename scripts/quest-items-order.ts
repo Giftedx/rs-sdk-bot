@@ -15,7 +15,8 @@ import {readPracticeSave,waitPracticeSave} from './measure/fleet-player-save';
 
 type Item={id:number;count:number};
 type Save=ReturnType<typeof readPracticeSave>;
-export const QUEST_ITEM_RECIPES={cook:{items:[1944,1927,1933],containers:[1925,1931],grain:1947}} as const;
+export const QUEST_ITEM_RECIPES={cook:{items:[1944,1927,1933],containers:[1925,1931],grain:1947},
+ hetty:{items:[1957,221,2146],containers:[],grain:1947}} as const;
 const total=(items:readonly Item[]|undefined,id:number)=>(items??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 export function itemRecipe(key:string){
  if(!Object.hasOwn(QUEST_ITEM_RECIPES,key))throw Error(`quest items: unknown quest ${key}`);
@@ -25,12 +26,27 @@ export function itemEntry(key:string,save:Save){
  const recipe=itemRecipe(key),spec=questSpec(key),pack=save.inventories[93]??[];
  if(savedQuest(save,spec).done)return 'quest already complete';
  if(recipe.items.every(id=>total(pack,id)===1))return 'items already in pack';
- for(const [product,container] of [[1927,1925],[1933,1931]])
+ if(key==='cook')for(const [product,container] of [[1927,1925],[1933,1931]])
   if(!total(pack,product!)&&!total(save.inventories[95],product!)&&!total(pack,container!)&&!total(save.inventories[95],container!))return `missing container ${container}`;
  return null;
 }
 export function itemSaveChecks(key:string,before:Save,after:Save){
  const r=itemRecipe(key),spec=questSpec(key),pack=after.inventories[93]??[];
+ if(key==='hetty'){
+  const assets=(s:Save,id:number)=>total(s.inventories[93],id)+total(s.inventories[95],id);
+  const meat=[2146,2142,2132].find(id=>assets(before,id)>0);
+  const ids=new Set([before,after].flatMap(s=>[...(s.inventories[93]??[]),...(s.inventories[95]??[])].map(i=>i.id)));
+  const coins=(assets(before,221)?0:3)+(meat?0:1);
+  return {
+   pack:r.items.every(id=>total(pack,id)===1)&&pack.every(i=>[1957,221,2146,300,995].includes(i.id)),
+   quest:savedQuest(after,spec).progress===savedQuest(before,spec).progress&&savedQuest(after,spec).qp===savedQuest(before,spec).qp,
+   ingredients:[1957,221].every(id=>assets(after,id)===Math.max(1,assets(before,id)))&&assets(after,2146)===Math.max(1,assets(before,2146))&&[2132,2142].every(id=>assets(after,id)===assets(before,id)-(meat===id?1:0)),
+   coins:assets(after,995)===assets(before,995)-coins,
+   assets:[...ids].filter(id=>![1957,221,2146,2142,2132,995].includes(id)).every(id=>assets(before,id)===assets(after,id)),
+   equipment:JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]),
+   alive:(after.skills.find(s=>s.index===3)?.level??0)>0,
+  };
+ }
  const changed=new Set<number>([...r.items,...r.containers,r.grain]);
  const ids=new Set([...(before.inventories[93]??[]),...(before.inventories[95]??[]),...pack,...(after.inventories[95]??[])].map(i=>i.id));
  const assets=(s:Save,id:number)=>total(s.inventories[93],id)+total(s.inventories[95],id);
@@ -79,8 +95,27 @@ export async function operateQuestHopper(s:Session,fill:boolean,observe:Observe)
  }
 }
 
+// cooking_generic.dbrow: raw beef -> cooked or burnt meat; cooked meat -> burnt meat.
+// Both inventory counts must change before the next action is allowed.
+export async function cookHettyMeat(s:Session,observe:Observe){
+ const cnt=(id:number)=>total(s.sdk.getState()?.inventory,id);
+ const transitions:{from:number;to:number}[]=[];
+ if(cnt(2146))return transitions;
+ const range=s.sdk.findNearbyLoc(/^range$/i);if(!range)throw Error('Hetty range missing');
+ for(const from of [2132,2142])if(cnt(from)){
+  const item=s.sdk.getState()!.inventory.find(i=>i.id===from)!;
+  const held=cnt(from),cooked=cnt(2142),burnt=cnt(2146);
+  await s.bot.useItemOnLoc(item,range);
+  await observe(()=>cnt(from)===held-1&&(cnt(2146)===burnt+1||(from===2132&&cnt(2142)===cooked+1)),`meat conversion ${from}`,24);
+  transitions.push({from,to:cnt(2146)===burnt+1?2146:2142});
+ }
+ if(!cnt(2146))throw Error('Hetty burnt meat unobserved');
+ return transitions;
+}
+
 // Helpers never close a session. The entry owns settle and the saved-state check.
 export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:number,options:{onBank?:(bank:BankObservation)=>void;stop?:()=>boolean}={}){
+ if(key==='hetty'&&(!Number.isSafeInteger(cap)||cap<1||cap>6000))throw Error('Hetty CAP must be 1..6000');
  const r=itemRecipe(key),spec=questSpec(key),deadline=s.tick()+cap,abort=new AbortController();
  let ended=false;
  void s.ended.then(()=>{ended=true;abort.abort();});
@@ -131,6 +166,45 @@ export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:
   // Normalize surplus by depositing first, then withdrawing one. No item is dropped.
   for(const id of new Set(inv().map(i=>i.id))){check();const item=inv().find(i=>i.id===id);if(item)await depositObserved(s,item);}
   for(const id of r.items)if(total(s.bankObservation?.()?.items,id)>0)await withdraw(id);
+  if(key==='hetty'){
+   // Prefer owned burnt, cooked, then raw meat. Tail stock suppresses the server's rat drop.
+   if(total(s.bankObservation?.()?.items,300)>0)await withdraw(300);
+   if(!cnt(2146))for(const id of [2142,2132])if(total(s.bankObservation?.()?.items,id)>0){await withdraw(id);break;}
+   const meat=!cnt(2146)&&!cnt(2142)&&!cnt(2132),eye=!cnt(221);
+   const budget=(meat?1:0)+(eye?3:0);
+   for(let n=0;n<budget;n++)await withdraw(995);
+   await closeBank();
+   const purchases:{id:number;coins:number}[]=[],transitions:{from:number;to:number}[]=[];
+   const buy=async(id:number,seller:RegExp,x:number,z:number,limit:number)=>{
+    await walk(x,z);check();
+    if(!(await s.bot.openShop(seller)).success)throw Error('Hetty shop refused');
+    try{
+     const shelf=s.sdk.getState()?.shop.shopItems.find(i=>i.id===id);
+     if(!shelf||shelf.count<1||!Number.isSafeInteger(shelf.buyPrice)||shelf.buyPrice<1||shelf.buyPrice>limit||cnt(995)<shelf.buyPrice)throw Error(`Hetty price/stock refused ${id}`);
+     const coins=cnt(995),held=cnt(id),price=shelf.buyPrice;
+     await s.bot.buyFromShop(shelf,1);
+     await observe(()=>cnt(id)===held+1&&cnt(995)===coins-price,`purchase ${id}`);
+     purchases.push({id,coins:price});
+     console.log('QUEST_HETTY_PURCHASE '+JSON.stringify(purchases.at(-1)));
+    }finally{if(!(await s.bot.closeShop()).success)throw Error('Hetty shop close refused');}
+   };
+   // Pinned port_sarim.npc sells at 1000/1000; additives.obj eye cost=3,
+   // food_uncooked.obj beef cost=1. Total <=4 of the ordinary 25 starter coins.
+   // Both shops are on the walking route; no fare, combat or helper is needed for meat.
+   await walk(3089,3266);await walk(3050,3266);
+   if(eye)await buy(221,/^betty$/i,3013,3258,3);
+   if(meat)await buy(2132,/^wydin$/i,3013,3204,1);
+   if(!cnt(1957)){
+    await walk(2950,3255);
+    const onion=s.sdk.findNearbyLoc(/^onion$/i);if(!onion)throw Error('Hetty onion missing');
+    await s.bot.interactLoc(onion,2);await observe(()=>cnt(1957)===1,'onion pick');
+   }
+   if(!cnt(2146)){
+    await walk(2971,3210);
+    transitions.push(...await cookHettyMeat(s,observe));
+   }
+   check();return {ok:true,ticks:cap-(deadline-s.tick()),pack:inv().map(i=>({id:i.id,count:i.count})),purchases,transitions};
+  }
   if(!cnt(1927))await withdraw(1925);
   if(!cnt(1933))await withdraw(1931);
   // A held grain from an interrupted run is reusable. Saved hopper/flour vars are account state.

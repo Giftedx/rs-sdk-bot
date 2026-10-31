@@ -29,6 +29,9 @@ interface Order{key:string;label:string;script:string;varp:string;items:(Item&{e
 // direct line crosses the dark wizards south of Draynor).
 const DRAYNOR_BANK:PathPoint[]=[{x:3218,z:3256,tol:2},{x:3180,z:3258,tol:2},{x:3140,z:3270,tol:2},{x:3100,z:3270,tol:2},{x:3089,z:3266,tol:2},{x:3092,z:3250,tol:2},{x:3092,z:3243,tol:1}];
 export const QUEST_ORDERS:Readonly<Record<string,Order>>={
+ hetty:{key:'hetty',label:"Witch's Potion",script:'scripts/generated/quest-hetty.ts',varp:'hetty',
+  items:[{id:1957,name:'Onion',count:1},{id:221,name:'Eye of newt',count:1},{id:2146,name:'Burnt meat',count:1},{id:300,name:"Rat's tail",count:1}],
+  bank:DRAYNOR_BANK,deadlineTicks:6000},
  // quest_cook.rs2:76-91: the hand-in deletes one of each item; the queued completion sets %cookquest and %qp.
  cook:{key:'cook',label:"Cook's Assistant",script:'scripts/generated/quest-cook.ts',varp:'cookquest',
   items:[{id:1944,name:'Egg',count:1,exact:true},{id:1927,name:'Bucket of milk',count:1,exact:true},{id:1933,name:'Pot of flour',count:1,exact:true}],

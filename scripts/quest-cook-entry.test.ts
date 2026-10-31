@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { completeCook } from './generated/quest-cook';
+import { executeHetty } from './generated/quest-hetty';
 import { parseJm2 } from '../packages/knowledge/src/jm2';
 
 function fixture(x = 3092, z = 3243) {
@@ -125,4 +126,25 @@ test('door failure propagates and stops before entering or talking', async () =>
     f.io.openDoor = async () => { throw Error('door effect unobserved'); };
     await expect(completeCook(f.io)).rejects.toThrow('door effect unobserved');
     expect(f.calls).toEqual(['cook kitchen door approach']);
+});
+
+test('generated Hetty reuses owned tails, supports started entry and needs completion plus debits',async()=>{
+ for(const mode of ['new','started','no-credit','no-debit']){
+  let colour=mode==='started'?0xf8f800:0xf80000;
+  const inv=new Map([[1957,2],[221,2],[2146,2],[300,2]]),calls:string[]=[];
+  const q:any={s:{client:{ingame:true,ifType:()=>({colour})}},st:()=>({inventory:[...inv].map(([id,count])=>({id,count}))}),
+   cnt:(id:number)=>inv.get(id)??0,has:(id:number)=>(inv.get(id)??0)>0,
+   waitUntil:async(pred:()=>boolean)=>pred(),milestone:()=>{},openDoor:async()=>{},
+   talk:async(label:string,_re:RegExp,_patterns:RegExp[],ok:()=>boolean)=>{
+    calls.push(label);
+    if(label==='hetty 1')colour=0xf8f800;
+    else if(mode!=='no-debit')for(const id of inv.keys())inv.set(id,inv.get(id)!-1);
+    if(!ok())throw Error('hand-in effect unobserved');
+   },
+   step:async(_label:string,_send:unknown,ok:()=>boolean)=>{if(mode!=='no-credit')colour=0x00f800;if(!ok())throw Error('completion unobserved');},
+   converse:async()=>true,dialogOpen:()=>false,
+   dash:async()=>{throw Error('owned tail must skip rat hunt');}};
+  if(mode==='no-credit'||mode==='no-debit')await expect(executeHetty(q)).rejects.toThrow('unobserved');
+  else {expect((await executeHetty(q)).ok).toBe(true);expect(calls).toEqual(mode==='new'?['hetty 1','hetty 2']:['hetty 2']);}
+ }
 });

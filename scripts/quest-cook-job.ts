@@ -9,12 +9,14 @@ import {questFlags} from '../packages/core/src/quest-status';
 import {sessionWalker,walkPath,type PathPoint} from '../packages/core/src/walk';
 import {gatherQuestItems} from './quest-items-order';
 import {completeCook} from './generated/quest-cook';
+import {completeHetty} from './generated/quest-hetty';
 import {questSpec} from './quest-order';
+import {leaveRuneStarter} from './rune-supply';
 
 type Item={id:number;count:number};
 export interface CookJobSnapshot {
  account:string;position:{x:number;z:number;level:number};hp:number;lifeId:number;respawns:number;
- quest:'unknown'|'not started'|'started'|'complete';qp:number;cookingXp:number;
+ quest:'unknown'|'not started'|'started'|'complete';qp:number;cookingXp:number;magicXp?:number;
  pack:Item[];bank:Item[];equipment:(Item&{slot:number})[];bankGeneration:number;
 }
 const sum=(items:readonly Item[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -40,23 +42,23 @@ export function cookJobChecks(before:CookJobSnapshot,after:CookJobSnapshot){
  };
 }
 export function parseCookJobArgs(args:string[],budget=process.env.CAP??'2400'){
- const [name]=args,cap=Number(budget);
- if(args.length!==1||!name||!/^[A-Za-z0-9]{1,12}$/.test(name)||!Number.isSafeInteger(cap)||cap<1)
-  throw Error('usage: quest-cook-job <account>; CAP must be a positive integer');
- return {name,cap};
+ const [name,quest]=args,cap=Number(budget);
+ if((args.length!==1&&!(args.length===2&&quest==='hetty'))||!name||!/^[A-Za-z0-9]{1,12}$/.test(name)||!Number.isSafeInteger(cap)||cap<1||(quest==='hetty'&&cap>6000))
+  throw Error('usage: quest-cook-job <account> [hetty]; CAP must be a positive integer (Hetty <=6000)');
+ return quest==='hetty'?{name,cap,quest:'hetty' as const}:{name,cap};
 }
-const flag=(s:Session)=>questFlags(s.client)?.find(q=>q.name==="Cook's Assistant")?.state??'unknown';
+const flag=(s:Session,key='cook')=>questFlags(s.client)?.find(q=>q.name===questSpec(key).label)?.state??'unknown';
 const equipmentReady=(s:Session)=>!!s.client&&typeof s.client==='object'&&equipmentObserved(s.client);
 // QP is transmitted (all.varp [qp]); use the server-written table, as guild-observation does.
 // Private Cook/hopper/flour varps are never read. Zero QP is valid once the quest list arrives.
 const qp=(s:Session)=>Number((s.client as any).varServ?.[questSpec('cook').qpVarpId]);
-export function observeCookJobSnapshot(s:Session,requireBank=true):CookJobSnapshot {
+export function observeCookJobSnapshot(s:Session,requireBank=true,key='cook'):CookJobSnapshot {
  const state=s.sdk.getState(),p=state?.player,b=s.bankObservation?.()??(!requireBank?{items:[],generation:0}:null);
  if(!p||!b||!Array.isArray(state.inventory)||!Array.isArray(state.equipment)||!equipmentReady(s)||
-    flag(s)==='unknown'||!Number.isSafeInteger(qp(s))||qp(s)<0||s.sdk.getSkillXp('Cooking')===null)
+    flag(s,key)==='unknown'||!Number.isSafeInteger(qp(s))||qp(s)<0||s.sdk.getSkillXp('Cooking')===null||(key==='hetty'&&s.sdk.getSkillXp('Magic')===null))
   throw Error('Cook snapshot unobserved');
  return {account:p.name,position:{x:p.worldX,z:p.worldZ,level:p.level},hp:p.hp,
-  lifeId:p.lifeId,respawns:p.respawnCount,quest:flag(s),qp:qp(s),cookingXp:s.sdk.getSkillXp('Cooking')!,
+  lifeId:p.lifeId,respawns:p.respawnCount,quest:flag(s,key),qp:qp(s),cookingXp:s.sdk.getSkillXp('Cooking')!,...(key==='hetty'?{magicXp:s.sdk.getSkillXp('Magic')!}:{}),
   pack:state.inventory.map(i=>({id:i.id,count:i.count})),bank:b.items.map(i=>({id:i.id,count:i.count})),
   equipment:state.equipment.map(i=>({id:i.id,count:i.count,slot:i.slot})),bankGeneration:b.generation};
 }
@@ -135,7 +137,76 @@ export async function runQuestCookJob(name:string,cap:number){
  return {ok:Boolean(workOk&&settled&&logout&&gather?.ok===true&&quest?.ok===true&&!!checks&&Object.values(checks).every(Boolean)),
   account:name,gather,quest,checks,before,after,logout,detail,ticks:cap-(deadline-s.tick())};
 }
+// Pinned prices: Betty eye=3, Wydin beef=1. Only missing inputs may be bought.
+export function hettyJobChecks(before:CookJobSnapshot,after:CookJobSnapshot,purchases:{id:number;coins:number}[]){
+ const ids=new Set([...holdings(before),...holdings(after)].map(i=>i.id));
+ const owned=(id:number)=>assets(before,id),left=(id:number)=>assets(after,id);
+ const eye=owned(221)?0:1,meat=[2146,2142,2132].every(id=>!owned(id))?1:0;
+ const selected=owned(2146)?2146:owned(2142)?2142:owned(2132)?2132:0;
+ const debit=purchases.reduce((n,p)=>n+p.coins,0);
+ const equipment=(s:CookJobSnapshot)=>JSON.stringify([...s.equipment].sort((a,b)=>a.slot-b.slot));
+ return {
+  entry:before.quest==='not started'||before.quest==='started',
+  identity:before.account.toLowerCase()===after.account.toLowerCase(),
+  quest:after.quest==='complete',questPoints:after.qp===before.qp+1,
+  reward:after.magicXp!==undefined&&before.magicXp!==undefined&&after.magicXp-before.magicXp===8125,
+  purchases:purchases.length===eye+meat&&purchases.filter(p=>p.id===221&&p.coins===3).length===eye&&purchases.filter(p=>p.id===2132&&p.coins===1).length===meat,
+  coins:left(995)===owned(995)-debit,
+  ingredients:[1957,221,300].every(id=>left(id)===Math.max(0,owned(id)-1))&&[2146,2142,2132].every(id=>left(id)===owned(id)-(selected===id?1:0)),
+  assets:[...ids].filter(id=>![995,1957,221,300,2146,2142,2132].includes(id)).every(id=>owned(id)===left(id)),
+  equipment:equipment(before)===equipment(after),
+  alive:after.hp>0&&after.lifeId===before.lifeId&&after.respawns===before.respawns,
+  bank:after.bankGeneration>before.bankGeneration,
+ };
+}
+
+export async function runQuestHettyJob(name:string,cap:number){
+ parseCookJobArgs([name,'hetty'],String(cap));
+ const s=await openBot(name),deadline=s.tick()+cap;
+ let before:CookJobSnapshot|undefined,after:CookJobSnapshot|undefined;
+ let gather:Awaited<ReturnType<typeof gatherQuestItems>>|undefined,quest:Awaited<ReturnType<typeof completeHetty>>|undefined;
+ let checks:ReturnType<typeof hettyJobChecks>|undefined,detail='',workOk=false,ended=false,life:number|undefined,respawns:number|undefined;
+ void s.ended.then(()=>{ended=true;});
+ const stopped=()=>{const p=s.sdk.getState()?.player;return ended||s.tick()>=deadline||!!p&&(p.isDead||(life!==undefined&&p.lifeId!==life)||(respawns!==undefined&&p.respawnCount!==respawns));};
+ const guard=()=>{if(stopped())throw Error('Hetty job stopped/deadline/death');};
+ const observe=async(pred:()=>boolean,ticks:number)=>{guard();const reached=await waitUntil(s,()=>{guard();return pred();},{timeoutTicks:Math.max(1,Math.min(ticks,deadline-s.tick()))});guard();if(!reached)throw Error('Hetty effect unobserved');};
+ try{
+  // Registration leaves an ordinary account on Tutorial Island without a quest list.
+  // The bounded starter exit observes the mainland grant before quest observation.
+  await observe(()=>!!s.sdk.getState()?.player,20);
+  const start=s.sdk.getState()!.player!;life=start.lifeId;respawns=start.respawnCount;
+  if(start.name.toLowerCase()!==name.toLowerCase())throw Error('Hetty identity mismatch');
+  await leaveRuneStarter(s,stopped);guard();
+  await observe(()=>{try{observeCookJobSnapshot(s,false,'hetty');return true;}catch{return false;}},20);
+  const entry=observeCookJobSnapshot(s,false,'hetty');life=entry.lifeId;respawns=entry.respawns;
+  if(entry.account.toLowerCase()!==name.toLowerCase())throw Error('Hetty identity mismatch');
+  if(entry.hp<10)throw Error('Hetty entry needs at least 10 HP');
+  if(entry.quest==='complete')throw Error('quest already complete');
+  console.log('QUEST_HETTY_OBSERVED_ENTRY '+JSON.stringify(entry));
+  gather=await gatherQuestItems(s,'hetty',null,deadline-s.tick(),{stop:stopped,onBank:bank=>{
+   before={...entry,bank:bank.items.map(i=>({id:i.id,count:i.count})),bankGeneration:bank.generation};
+   console.log('QUEST_HETTY_ENTRY '+JSON.stringify(before));
+  }});
+  guard();if(!gather.ok||!before)throw Error('Hetty gather incomplete');
+  const walk=await walkPath(await sessionWalker(s),[{x:2965,z:3210,tol:1},{x:2968,z:3206,tol:1}],{maxTicks:deadline-s.tick(),stop:stopped});
+  guard();if(!walk.ok)throw Error('Hetty approach: '+walk.detail);
+  quest=await completeHetty(s,deadline-s.tick(),stopped);guard();
+  // Rimmington -> Port Sarim -> Draynor: ground walking only, no fare.
+  const back=await walkPath(await sessionWalker(s),[{x:2965,z:3210,tol:1},{x:3000,z:3266,tol:2},{x:3050,z:3266,tol:2},{x:3089,z:3266,tol:1},{x:3092,z:3250,tol:1},{x:3092,z:3243,tol:1}],{maxTicks:deadline-s.tick(),stop:stopped});
+  guard();if(!back.ok)throw Error('Hetty retained stock: '+back.detail);
+  const generation=s.bankObservation?.()?.generation??0;
+  if(!(await s.bot.openBank()).success)throw Error('Hetty final bank refused');
+  await observe(()=>(s.bankObservation?.()?.generation??0)>generation,12);
+  after=observeCookJobSnapshot(s,true,'hetty');checks=hettyJobChecks(before,after,gather.purchases??[]);
+  if(!(await s.bot.closeBank()).success)throw Error('Hetty final bank close refused');
+  guard();if(!Object.values(checks).every(Boolean))throw Error('Hetty final checks failed');
+  workOk=true;detail='Hetty complete; QP+1, Magic+8125, costs, assets and life observed';
+ }catch(error){detail=String(error);}
+ let logout=false;
+ const settled=await settle([s],workOk,detail,{log:line=>{console.log(line);if(line==='LOGOUT logged-out')logout=true;if(/^WARN .*?(?:logout|session close)/.test(line))logout=false;}});
+ return {ok:!!(workOk&&settled&&logout&&gather?.ok&&quest?.ok),account:name,questKey:'hetty',gather,quest,checks,before,after,logout,detail,ticks:cap-(deadline-s.tick())};
+}
 if(import.meta.main){
- try{const {name,cap}=parseCookJobArgs(process.argv.slice(2));const result=await runQuestCookJob(name,cap);console.log('QUEST_COOK_JOB_RESULT '+JSON.stringify(result));process.exitCode=result.ok?0:1;}
+ try{const args=process.argv.slice(2),parsed=parseCookJobArgs(args,process.env.CAP??(args[1]==='hetty'?'6000':'2400'));const {name,cap}=parsed;const result='quest' in parsed?await runQuestHettyJob(name,cap):await runQuestCookJob(name,cap);console.log('QUEST_COOK_JOB_RESULT '+JSON.stringify(result));process.exitCode=result.ok?0:1;}
  catch(error){console.error(String(error));process.exitCode=1;}
 }

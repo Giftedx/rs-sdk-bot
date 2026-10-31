@@ -1,6 +1,6 @@
 {
   "id": "quest-items-order",
-  "goal": "Run one complete ordinary-account Cook's Assistant job: observe live entry, reuse owned kit and stock, gather missing ingredients, complete the quest, preserve unrelated assets and confirm logout.",
+  "goal": "Complete a supported ordinary-account quest through bounded acquisition of missing inputs, useful quest and XP effects, reconciled costs and confirmed logout.",
   "entry": "scripts/quest-cook-job.ts",
   "files": [
     "scripts/quest-items-order.ts",
@@ -12,9 +12,12 @@
     "scripts/generated/quest-cook.ts",
     "scripts/quest-cook-entry.test.ts",
     "scripts/quest-order.ts",
-    "scripts/quest-order.test.ts"
+    "scripts/quest-order.test.ts",
+    "scripts/generated/quest-hetty.ts",
+    "packages/core/src/deposit.ts",
+    "packages/core/test/deposit.test.ts"
   ],
-  "consumer": "The actual parameterized live-worker CLI, invoked in native proof from representative normal entry with the same args as live, gathers missing inputs and completes Cooks Assistant. Saved quest flag, quest points, XP/reward, retained assets and logout agree. No privileged/local --save requirement in the live entry. Existing native fixture adapters remain separate.",
+  "consumer": "The account-parameterized live CLI preserves Cook invocation and accepts the hetty argument. The Hetty job reuses owned inputs, acquires only missing ingredients, completes Witch's Potion and confirms logout. Practice invokes the same worker CLI and reaches carried-coin deposit reconciliation. Acceptance establishes quest completion, QP+1, Magic+8125 at25x, declared costs, retained assets and life, a clear refusal and logout. The connected finite live consumer is Moneyshot completing Witch's Potion and reaching Magic31.",
   "checks": [
     {
       "id": "quest-items-regressions",
@@ -26,6 +29,7 @@
         "scripts/quest-cook-job.test.ts",
         "packages/practice/test/quest-items-order-proof.test.ts",
         "scripts/quest-order.test.ts",
+        "packages/core/test/deposit.test.ts",
         "--timeout",
         "10000"
       ],
