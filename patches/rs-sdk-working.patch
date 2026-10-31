@@ -1,0 +1,144 @@
+diff --git a/server/engine/tools/pack/config/PackShared.ts b/server/engine/tools/pack/config/PackShared.ts
+index 2812a3ec5..519b1df50 100644
+--- a/server/engine/tools/pack/config/PackShared.ts
++++ b/server/engine/tools/pack/config/PackShared.ts
+@@ -633,7 +633,8 @@ export async function packConfigs(cache: FileStream, modelFlags: number[]) {
+                 idx.release();
+             },
+             (client: Packet, _server: Packet): boolean => {
+-                return Packet.checkcrc(client.data, 0, client.pos, -795412965);
++                // rs-sdk appends grand_exchange_booth (loc5116); the first5116 records retain canonical CRC -795412965.
++                return Packet.checkcrc(client.data, 0, client.pos, 1515714638);
+             }
+         );
+     }
+@@ -708,7 +709,8 @@ export async function packConfigs(cache: FileStream, modelFlags: number[]) {
+                 idx.release();
+             },
+             (client: Packet, _server: Packet): boolean => {
+-                return Packet.checkcrc(client.data, 0, client.pos, 424938091);
++                // Appended grand_exchange_teller; canonical prefix CRC 424938091.
++                return Packet.checkcrc(client.data, 0, client.pos, 2103202885);
+             }
+         );
+     }
+@@ -783,7 +785,8 @@ export async function packConfigs(cache: FileStream, modelFlags: number[]) {
+                 idx.release();
+             },
+             (client: Packet, _server: Packet): boolean => {
+-                return Packet.checkcrc(client.data, 0, client.pos, 266133304);
++                // Extended through pvp_death_mark1000; canonical prefix CRC 266133304.
++                return Packet.checkcrc(client.data, 0, client.pos, 1317612926);
+             }
+         );
+     }
+@@ -850,3 +853,5 @@ export async function packConfigs(cache: FileStream, modelFlags: number[]) {
+ 
+     cache.write(0, 2, fs.readFileSync('data/pack/client/config'));
+ }
++
++
+diff --git a/server/engine/tools/pack/interface/PackClient.ts b/server/engine/tools/pack/interface/PackClient.ts
+index 88a931a7f..057d8deb3 100644
+--- a/server/engine/tools/pack/interface/PackClient.ts
++++ b/server/engine/tools/pack/interface/PackClient.ts
+@@ -42,7 +42,9 @@ export function packClientInterface(cache: FileStream, modelFlags: number[]) {
+     }
+ 
+     const packed = fs.readFileSync('data/pack/client/interface');
+-    if (Environment.build.verify && !Packet.checkcrc(packed, 0, packed.length, 123011849)) {
++    // rs-sdk adds496 GE components (40000..40495); excluding them reproduces stock CRC123011849.
++    // Fixed fork CRC: do not refresh from generated or cached bytes at runtime.
++    if (Environment.build.verify && !Packet.checkcrc(packed, 0, packed.length, 282644100)) {
+         throw new Error('interface checksum mismatch!\nYou can disable this safety check by setting BUILD_VERIFY=false');
+     }
+ 
+diff --git a/server/webclient/src/lite/session-end.test.ts b/server/webclient/src/lite/session-end.test.ts
+new file mode 100644
+index 000000000..ea4adf869
+--- /dev/null
++++ b/server/webclient/src/lite/session-end.test.ts
+@@ -0,0 +1,23 @@
++import {expect,test} from 'bun:test';
++import {pumpSessionEnd} from './session.js';
++import ClientStream from '../io/ClientStream.js';
++import {ServerProt} from '../io/ServerProt.js';
++
++test('drains a logout packet buffered before the socket close',async()=>{
++ const socket:any={};const stream=new ClientStream(socket);let loggedOut=false;
++ socket.onmessage({data:Uint8Array.of(ServerProt.LOGOUT).buffer});socket.onclose({});
++ const reason=await pumpSessionEnd({isLoggedOut:()=>loggedOut,isInGame:()=>!stream.isClosed,pumpPackets:async()=>{if(stream.available>0)loggedOut=(await stream.read())===ServerProt.LOGOUT;}});
++ expect(reason).toBe('logged-out');expect(stream.available).toBe(0);
++});
++test('an abrupt socket close without logout stays disconnected',async()=>{
++ expect(await pumpSessionEnd({isLoggedOut:()=>false,isInGame:()=>false,pumpPackets:async()=>{}})).toBe('disconnected');
++});
++test('an open session stays active after draining',async()=>{
++ expect(await pumpSessionEnd({isLoggedOut:()=>false,isInGame:()=>true,pumpPackets:async()=>{}})).toBeNull();
++});
++test('an already observed logout does not read the closed stream again',async()=>{
++ expect(await pumpSessionEnd({isLoggedOut:()=>true,isInGame:()=>false,pumpPackets:async()=>{throw Error('read after logout');}})).toBe('logged-out');
++});
++test('a packet stream error is not converted into successful logout',async()=>{
++ await expect(pumpSessionEnd({isLoggedOut:()=>false,isInGame:()=>true,pumpPackets:async()=>{throw Error('bad stream');}})).rejects.toThrow('bad stream');
++});
+diff --git a/server/webclient/src/lite/session.ts b/server/webclient/src/lite/session.ts
+index f7c5e5a67..99fb031f8 100644
+--- a/server/webclient/src/lite/session.ts
++++ b/server/webclient/src/lite/session.ts
+@@ -33,6 +33,15 @@ const KEEPALIVE_CYCLES = 50;
+  */
+ const IDLE_CYCLES = 3000; // ~60s, i.e. ~200 missed server ticks
+ 
++export async function pumpSessionEnd(client: Pick<LiteClient, 'isLoggedOut' | 'isInGame' | 'pumpPackets'>): Promise<'logged-out' | 'disconnected' | null> {
++    if (client.isLoggedOut()) return 'logged-out';
++    // Remote close preserves queued bytes. Drain the final LOGOUT before deciding
++    // this was an unacknowledged disconnect; a close alone still cannot prove logout.
++    await client.pumpPackets();
++    if (client.isLoggedOut()) return 'logged-out';
++    return client.isInGame() ? null : 'disconnected';
++}
++
+ export interface SessionOptions {
+     /** Spread remote fleet starts over 5s by default; 0 disables the delay. */
+     loginJitterMs?: number;
+@@ -51,6 +60,8 @@ export interface SessionOptions {
+      */
+     profanityFilter?: boolean;
+     quiet?: boolean;
++    /** Install connection observers before the first incoming packet is handled. */
++    onClient?(client: LiteClient): void;
+     /**
+      * Called exactly once when the packet loop ends, whatever the cause. Fires
+      * before `stopped` resolves, so a supervisor can re-login straight away.
+@@ -160,6 +171,7 @@ export async function startSession(opts: SessionOptions): Promise<LiteSession> {
+         password: opts.password,
+         maxMessageLength: opts.maxMessageLength
+     });
++    try { opts.onClient?.(client); } catch (error) { connection.close(); throw error; }
+ 
+     let running = true;
+     let cycles = 0;
+@@ -174,17 +186,12 @@ export async function startSession(opts: SessionOptions): Promise<LiteSession> {
+         let end: SessionEnd = { reason: 'stopped' };
+ 
+         while (running) {
+-            if (client.isLoggedOut()) {
+-                end = { reason: 'logged-out' };
+-                break;
+-            }
+-            if (!client.isInGame()) {
+-                end = { reason: 'disconnected' };
+-                break;
+-            }
+-
+             try {
+-                await client.pumpPackets();
++                const reason = await pumpSessionEnd(client);
++                if (reason) {
++                    end = { reason };
++                    break;
++                }
+ 
+                 if (++cycles % KEEPALIVE_CYCLES === 0) {
+                     client.writeOpcode(ClientProt.NO_TIMEOUT);
