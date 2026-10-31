@@ -193,6 +193,20 @@ export function plannableAccounts(jobs: readonly any[], side: string, listed: re
     return listed.filter(n => { const k = n.toLowerCase(); return !hard.has(k) && !paused.has(k) && (optIn.has(k) || !named.has(k)); });
 }
 
+// Resources the jobs in the file hold against this side's planning: every enabled unmarked job, and every enabled
+// marked job whose account is paused (a stop file; mergeJobs keeps that job as it is, so its pen or spot stays its own).
+// ownHeld is the part held by this side's own accounts, which goes into this side's fleet claim.
+export function reservedResources(jobs: readonly any[], side: string, paused: ReadonlySet<string>, sideOf: (account: string) => string): { taken: Record<string, number>; ownHeld: string[] } {
+    const taken: Record<string, number> = {}, ownHeld: string[] = [];
+    const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean) as string[];
+    const holds = (j: any) => j?.enabled !== false && (j?.autopilot !== side || names(j).some(a => paused.has(a.toLowerCase())));
+    for (const j of jobs) if (holds(j)) for (const r of jobResources(j)) {
+        taken[r] = (taken[r] ?? 0) + 1;
+        if (names(j).every(a => sideOf(a) === side)) ownHeld.push(r);
+    }
+    return { taken, ownHeld };
+}
+
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat
 // settings, so lifting the pause later resumes that job instead of handing the account a fresh enabled one.
 export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[], keep: ReadonlySet<string> = new Set()): { jobs: any[]; fresh: string[] } {

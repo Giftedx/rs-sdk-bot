@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync,
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
-import { accountFrom, assess, catalogue, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts } from '../packages/planner/src/autopilot';
+import { accountFrom, assess, catalogue, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources } from '../packages/planner/src/autopilot';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from '../packages/planner/src/haggis';
 import { tickWaste, wasteShare } from './tick-waste';
@@ -55,14 +55,11 @@ export function pass(planFile: string, dry: boolean): string[] {
         if (r.retire) { state.retired[pairKey(j.account, j.template)] = r.reason; log.push(`AUTOPILOT retire ${j.account} ${j.template}: ${r.reason}`); }
     }
 
-    // Resources other jobs hold: this file's other jobs, and other sides' fresh claims.
-    const taken: Record<string, number> = {};
+    // Resources other jobs hold: this file's other jobs (paused planner jobs included), and other sides' fresh claims.
     // Enabled hand-made jobs of this side's accounts go into this side's claim too, so a side with its own plan sees them.
-    const ownHeld: string[] = [], sideOfAccount = (a: string) => owners.get(a.toLowerCase())?.side ?? 'local';
-    for (const j of swarm.jobs) if (!mineMarked(j) && j.enabled !== false) for (const r of jobResources(j)) {
-        taken[r] = (taken[r] ?? 0) + 1;
-        if ([j.account, ...(j.accounts ?? [])].filter(Boolean).every((a: string) => sideOfAccount(a) === side)) ownHeld.push(r);
-    }
+    const listedNames = Object.keys(readJson(join(FLEET_DIR(), 'owners.json'), { accounts: {} }).accounts ?? {});
+    const paused = new Set(listedNames.filter(n => existsSync(join(prac, `stop-${n}`))).map(n => n.toLowerCase()));
+    const { taken, ownHeld } = reservedResources(swarm.jobs, side, paused, a => owners.get(a.toLowerCase())?.side ?? 'local');
     const claimDir = join(FLEET_DIR(), 'claims');
     if (existsSync(claimDir)) for (const f of readdirSync(claimDir).filter(f => f.endsWith('.json'))) {
         const c = readJson(join(claimDir, f), null);
@@ -70,9 +67,8 @@ export function pass(planFile: string, dry: boolean): string[] {
         for (const r of c.resources) if (typeof r === 'string') taken[r] = (taken[r] ?? 0) + 1;
     }
 
-    const listed = Object.keys(readJson(join(FLEET_DIR(), 'owners.json'), { accounts: {} }).accounts ?? {});
+    const listed = listedNames;
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
-    const paused = new Set(listed.filter(n => existsSync(join(prac, `stop-${n}`))).map(n => n.toLowerCase()));
     const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), paused).map(n => {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id));
