@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { accountFrom, assess, catalogue, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { accountFrom, assess, catalogue, heldAccounts, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, unitValue, type Acct, type Inputs } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -107,4 +107,16 @@ test('a status file becomes base levels and held counts by name', () => {
     const a = accountFrom('Pal', side, { skills: [{ name: 'Thieving', level: 56 }], inventory: [{ id: 314, name: 'Feather', count: 40 }], bank: [{ id: 314, count: 60 }], equipment: null }, id => id === 314 ? 'Feather' : undefined);
     expect(a).toEqual({ name: 'Pal', side, skills: { Hitpoints: 10, Thieving: 56 }, items: { feather: 100 } });
     expect(accountFrom('New', side, null, () => undefined).skills).toEqual({ Hitpoints: 10 });
+});
+
+test('a finished coordinator job releases its account; hand jobs, reservations and running coordinator jobs hold theirs', () => {
+    const jobs = [
+        { account: 'Haggis', script: '', enabled: false },
+        { account: 'Woodpecker', script: 'scripts/chain.ts', enabled: true, autopilot: side },
+        { account: 'YewFirst', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator' },
+        { account: 'Moneyshot', script: 'scripts/quest-cook-job.ts', enabled: true, coordinatorOwner: 'coordinator' },
+        { accounts: ['NabTheKnob', 'Swordinhand'], host: true, script: 'scripts/quest-chain.ts', enabled: false, standing: true },
+    ];
+    expect([...heldAccounts(jobs, side)].sort()).toEqual(['haggis', 'moneyshot', 'nabtheknob', 'swordinhand']);
+    expect(heldAccounts(jobs, 'other').has('woodpecker')).toBe(true);
 });
