@@ -1015,10 +1015,10 @@ function buildState() {
     };
 }
 
-// Each side's last fleet-data sync (snapshots) and the open cross-side orders; a side with no snapshot is not listed.
+// Each side's last fleet-data sync (snapshots) and the cross-side orders not yet done (orders and receipts); a side with no snapshot is not listed.
 function fleetSides(now: number) {
     const list = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : [];
-    return fleetSidesView(list(join(FILES.fleet, 'snapshots')), list(join(FILES.fleet, 'orders')), now);
+    return fleetSidesView(list(join(FILES.fleet, 'snapshots')), list(join(FILES.fleet, 'orders')), now, list(join(FILES.fleet, 'receipts')));
 }
 
 const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number; holdFrames: number }[] = [];

@@ -12,14 +12,17 @@ test('scoreboard keeps the remaining list, best live level per skill and the cov
  expect(scoreboardView(null).available).toBe(false);expect(scoreboardView({skills:[]}).available).toBe(false);
 });
 
-test('fleet sides give each side its sync age, accounts, total levels and coins; late orders and sides are marked',()=>{
+test('fleet sides give each side its sync age, accounts, total levels and coins; late orders and sides are marked; done orders drop out',()=>{
  const now=10_000_000;
  const v=fleetSidesView([
   {side:'cloud',at:now-60_000,accounts:[{name:'Zed',at:now-60_000,skills:[{name:'Attack',level:22},{name:'Overall',level:99}],bank:[{id:995,count:100}],inventory:[{name:'Coins',count:5}]}]},
   {side:'local',at:now-4*SIDE_SYNC_MS,accounts:[{name:'Bee',at:1},{name:'Ann',at:2,skills:[]}]},
-  {bad:true}],[{id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1},{from:'A'}],now);
+  {bad:true}],[{id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1},{from:'A'},
+  {id:'o2',from:'A',to:'B',item:'Coins',count:9,start:4,end:now+1},{id:'o3',from:'A',to:'B',item:'Coins',count:9,start:3,end:now+1},{id:'o4',from:'A',to:'B',item:'Coins',count:9,start:2,end:now+1}],now,
+  [{id:'o2',role:'from',ok:true},{id:'o2',role:'to',ok:true},{id:'o3',role:'from',ok:true},{id:'o4',role:'to',ok:false}]);
  expect(v.sides.map(s=>s.side)).toEqual(['local','cloud']);
  expect(v.sides[0]!.late).toBe(true);expect(v.sides[1]!.late).toBe(false);expect(v.sides[0]!.accounts.map(a=>a.name)).toEqual(['Ann','Bee']);
  expect(v.sides[1]!.accounts[0]).toEqual({name:'Zed',at:now-60_000,total:22,coins:105});expect(v.sides[0]!.accounts[1]!.total).toBeNull();
- expect(v.orders).toEqual([{id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1,late:true}]);
+ expect(v.orders[0]).toEqual({id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1,state:'open',late:true});
+ expect(v.orders.map(o=>o.id+':'+o.state)).toEqual(['o1:open','o3:half','o4:failed']);
 });
