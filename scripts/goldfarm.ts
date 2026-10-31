@@ -83,6 +83,7 @@ const PICK_TICKS = Number(process.env.PICK_TICKS ?? 2);
 
 if(import.meta.main){
 console.log(`ERR-TRACE opening ${process.argv[2]}`);
+console.log(`KNIGHT_SPOT ${KNIGHT_SPOT.x},${KNIGHT_SPOT.z}`);
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 const foodWake=process.env.CURIER_FOOD_WAKE==='1';
 const farmServer=FOOD_FROM?serverFromEnv(readFileSync(join(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8')):'';

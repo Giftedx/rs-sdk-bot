@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto';
 import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
+import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
 import {recoveryHeldDiagnostic,recoveryBoundary,recoveryDiagnosticFromLog} from '../src/session-recovery';
 import {missionSignature} from '../src/session-admission';
@@ -205,8 +206,11 @@ test('completion indexes only the exact child/producer, releases its lease, and 
     readProof:(a,s)=>readLogoutProof(a,s,{root}),verifyLegacy:()=>({state:'refused',reason:'not used'})},holds);
    expect(repaired.changed).toBe(true);expect(holds).toEqual([]);
    f.put('.practice/swarm-deaths.json',Object.fromEntries(ended));f.put('.practice/swarm-script-holds.json',holds);
+   const owner=readFileSync(join(f.base,'swarm.json'),'utf8');
    expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base})).not.toThrow();
-   expect(JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8')).jobs[0].enabled).toBe(true);
+   // The installed job is the coordinator's file's; it shadows the retired swarm.json job, whose bytes stay.
+   const jobs=readMergedPlan(f.base).jobs;expect(jobs).toHaveLength(1);expect(jobs[0]).toMatchObject({account:'Rod',script:'scripts/new.ts',enabled:true,coordinatorOwner:'coordinator'});
+   expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(owner);expect(JSON.parse(readFileSync(coordinatorJobsPath(f.base),'utf8')).jobs).toHaveLength(1);
   }
  }
 });

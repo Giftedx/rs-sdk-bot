@@ -48,7 +48,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasPayout } from '../packages/core/src/bank-demand';
 import { supervise } from '../packages/practice/src/supervise';
-import { enabledByAccount, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
+import { enabledByAccount, foreignRun, endedForGood, isReservation, parseJob, startable, loadEnded, applyEndRepair, persistEnded, supervisorEndLine, activeExternalLive, pendingStartupCount, admissionDecision, startReserve, missionSignature, overlappingRun, observeEnabled, applyResume, ownedPayoutWaiting,foodSupplyDemand,type Job,type RepairProofs,
     applyScriptQualification, holdCandidates, loadHolds, persistHolds, currentLogout, defaultRepairProofs, type ScriptHold } from './swarm';
 import { beginSessionAttempt, readLogoutProof, verifyLegacyLogout } from '../packages/core/src/session-lifecycle';
 import { createHash } from 'node:crypto';
@@ -569,8 +569,23 @@ test('a host job passes its script arguments to every hosted bot', async () => {
     const { supervisorCommand } = await import('./swarm');
     const { parseHostArgs } = await import('../packages/core/src/host');
     const cmd = supervisorCommand({ key: 'host:A+B', accounts: ['A', 'B'], host: true, job: { accounts: ['A', 'B'], script: 'scripts/agility-order.ts', args: ['gnome', '40'], host: true } as any }, ['A', 'B']);
-    expect(cmd.slice(-2)).toEqual(['--args', 'gnome,40']);
-    expect(parseHostArgs(['scripts/agility-order.ts', 'A', 'B', '--stagger-ms', '2000', '--args', 'gnome,40'])).toMatchObject({ names: ['A', 'B'], args: ['gnome', '40'], stagger: 2000 });
+    expect(cmd.slice(-4)).toEqual(['--arg', 'gnome', '--arg', '40']);
+    expect(parseHostArgs(['scripts/agility-order.ts', 'A', 'B', '--stagger-ms', '2000', '--arg', 'gnome', '--arg', '40'])).toMatchObject({ names: ['A', 'B'], args: ['gnome', '40'], stagger: 2000 });
+});
+
+test('a host job gives each account its own env, for the accounts it starts', async () => {
+    const { supervisorCommand, parseJob, missionSignature } = await import('./swarm');
+    const job: Job = { accounts: ['A', 'B', 'C'], host: true, script: 'scripts/chain.ts', args: ['scripts/generated/thieving60.ts TARGET=55 CAP=3000', 'scripts/goldfarm.ts'], env: { ROUNDS: '1' }, envByAccount: { A: { KNIGHT_SPOT: '2670,3306' }, C: { KNIGHT_SPOT: '2653,3302', TICKS: '9000' } }, enabled: true };
+    const p = parseJob(job); if ('error' in p) throw Error(p.error);
+    expect(supervisorCommand(p, ['A', 'C'])).toEqual(['bun', 'packages/practice/src/supervise-host.ts', 'scripts/chain.ts', '20', 'A', 'C',
+        '--arg', 'scripts/generated/thieving60.ts TARGET=55 CAP=3000', '--arg', 'scripts/goldfarm.ts', '--env', 'A', 'KNIGHT_SPOT=2670,3306', '--env', 'C', 'KNIGHT_SPOT=2653,3302', '--env', 'C', 'TICKS=9000']);
+    expect(parseJob({ ...job, envByAccount: { Z: { K: '1' } } })).toEqual({ error: 'envByAccount names Z, which is not in "accounts"' });
+    expect(parseJob({ ...job, envByAccount: { A: { K: 1 } } as any })).toEqual({ error: 'envByAccount for A must map KEY to a string' });
+    expect(parseJob({ account: 'A', script: 'scripts/goldfarm.ts', enabled: true, envByAccount: { A: { K: '1' } } })).toEqual({ error: '"envByAccount" needs "host": true' });
+    const base = missionSignature({ ...job, envByAccount: undefined });
+    expect(base).toBe(missionSignature({ ...job, envByAccount: {} }));
+    expect(missionSignature(job)).not.toBe(base);
+    expect(missionSignature({ ...job, envByAccount: { ...job.envByAccount, A: { KNIGHT_SPOT: '2671,3313' } } })).not.toBe(missionSignature(job));
 });
 
 test('a repaired gave-up or blocked end leaves no script hold; a death does', () => {
@@ -629,4 +644,15 @@ test('a host job off beside one account on and one off reads each account on its
     const previous = new Map<string, boolean>(), pending = new Set<string>();
     for (let tick = 0; tick < 3; tick++) for (const p of planned) for (const a of p.accounts) observeEnabled([a], enabled.get(a.toLowerCase()) === true, previous, pending);
     expect(pending.size).toBe(0);
+});
+
+test('a run another job of the account started is foreign to a job that is off or changed; its own run is not', () => {
+    const ok = (p: ReturnType<typeof parseJob>): p is Exclude<typeof p, { error: string }> => !('error' in p);
+    const standing = parseJob({ account: 'Rod', script: 'scripts/goldfarm.ts', enabled: true, standing: true, env: { KNIGHT_SPOT: '1,1' } } as any);
+    const finished = parseJob({ account: 'Rod', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator', env: { CAP: '1600' } } as any);
+    const planned = [standing, finished].filter(ok);
+    const run = { revision: missionSignature(planned[0]!.job) };
+    expect(foreignRun(planned, planned[1]!, run)).toBe(true);
+    expect(foreignRun(planned, planned[0]!, run)).toBe(false);
+    expect(foreignRun(planned, planned[0]!, { revision: 'changed-mission' })).toBe(false);
 });

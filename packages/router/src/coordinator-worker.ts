@@ -16,7 +16,7 @@ const PUBLISH_WAIT_MS=45*60*1000;
 import {buildWorkOrder,preparedNativeDelivery,type CoordTask} from './coordinator';
 import {loadState} from './coordinator-store';
 import {workerSourceRevision} from '../../core/src/worker-release';
-import {runModel,rejectedReview,type ModelWorker} from './model-worker';
+import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdict} from './model-worker';
 import type {DeliveryResult} from './delivery';
 
 type BuildStageResult=Pick<AuthorResult,'ok'|'delivery'|'diagnostic'|'blocked'|'lastTail'>&{resumedPreparedSource?:string};
@@ -53,9 +53,9 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
  if(task.kind==='review'){
   const fingerprint=capabilitySource;
   const before=fingerprint();
-  const review=await runModel(agent,'Independently review this delivered capability: its code, callers, tests and saved delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Claimed review work order: '+task.why+' Definition: '+JSON.stringify(definition)+' Relevant completed dependency receipts: '+JSON.stringify(dependencies),task.timeoutMs??300000,true);
+  const review=await runModel(agent,'Independently review this delivered capability: its code, callers, tests and saved delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Claimed review work order: '+task.why+' Definition: '+JSON.stringify(definition)+' Relevant completed dependency receipts: '+JSON.stringify(reviewDependencies(dependencies,definition.id,task.dependsOn)),task.timeoutMs??300000,true);
   atomicJson(join(directory,'review-model.json'),review);
-  const verdict=review.ok?parseModelObject(review.text):{approved:false,reason:review.text};
+  const verdict=reviewVerdict(review,parseModelObject);
   return{ok:verdict.approved===true&&fingerprint()===before,review:verdict,evidence:'source-review',source:before,agent};
  }
  if(task.kind==='run'){

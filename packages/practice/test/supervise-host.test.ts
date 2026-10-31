@@ -72,3 +72,15 @@ test('host blocks a no-progress account on its first run while retrying a transi
     expect(calls).toEqual([['stuck', 'transient', 'dead'], ['transient']]);
     expect(result.ends).toEqual({ stuck: 'blocked', transient: 'done', dead: 'died' });
 });
+
+test('the host supervisor keeps script arguments and passes each run only the env of its accounts', async () => {
+    const { parseSuperviseHostArgs, hostOptions } = await import('../src/supervise-host');
+    const p = parseSuperviseHostArgs(['scripts/goldfarm.ts', '20', 'a', 'b', '--arg', 'x,y', '--env', 'a', 'KNIGHT_SPOT=2670,3306', '--env', 'b', 'KNIGHT_SPOT=2653,3302', '--args', 'p,q']);
+    expect(p).toEqual({ script: 'scripts/goldfarm.ts', maxRestarts: 20, accounts: ['a', 'b'], args: ['x,y', 'p', 'q'], env: { a: { KNIGHT_SPOT: '2670,3306' }, b: { KNIGHT_SPOT: '2653,3302' } } });
+    expect(hostOptions(p, ['a', 'b'])).toEqual(['--arg', 'x,y', '--arg', 'p', '--arg', 'q', '--env', 'a', 'KNIGHT_SPOT=2670,3306', '--env', 'b', 'KNIGHT_SPOT=2653,3302']);
+    expect(hostOptions(p, ['b'])).toEqual(['--arg', 'x,y', '--arg', 'p', '--arg', 'q', '--env', 'b', 'KNIGHT_SPOT=2653,3302']);
+    expect(() => parseSuperviseHostArgs(['s.ts', '20'])).toThrow(/usage/);
+    expect(() => parseSuperviseHostArgs(['s.ts', 'many', 'a'])).toThrow(/maxRestarts/);
+    expect(() => parseSuperviseHostArgs(['s.ts', '20', 'a', '--env', 'c', 'K=1'])).toThrow(/c/);
+    expect(() => parseSuperviseHostArgs(['s.ts', '20', 'a', '--bogus'])).toThrow(/unknown option/);
+});

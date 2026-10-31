@@ -7,6 +7,7 @@ import {processMatchesRecent,safeKill} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
+import {readMergedPlan} from './coordinator-jobs';
 
 export const RECOVERY_SCHEMA='session-recovery/1';
 export const RECOVERY_BINDING_MS=45000;
@@ -126,7 +127,7 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
  const end=Object.entries(json(join(base,'.practice/swarm-deaths.json'))).find(([a])=>same(a,r.account))?.[1] as any;
  const completed=successfulEnd(end?.reason??'');
  if(end?.at!==r.endedAt||!completed&&! /^(?:blocked|died|gave-up|exit|no-progress|stopped)(?:\b| )/.test(end.reason??''))throw Error('recovery exact failure changed');
- const assignments=json(join(base,'swarm.json')).jobs.filter((j:any)=>(j.accounts??[j.account]).some((a:any)=>same(a,r.account)));
+ const assignments=readMergedPlan(base).jobs.filter((j:any)=>(j.accounts??[j.account]).some((a:any)=>same(a,r.account)));
  if(assignments.some((j:any)=>j.enabled||!j.script||/fresh.clock|24 boards|main simultaneous/i.test(j.goal??'')))throw Error('recovery assignment is active or reserved');
  let missionRevision:string|undefined;
  if(completed){

@@ -100,7 +100,8 @@ Limits:
 
 - Only the script file is rewritten. A helper module that calls `finish()` or reads `process.argv[2]` sees the host
   values.
-- `process.env` per bot is a copy taken at start; the CLI gives every bot the host's env.
+- `process.env` per bot is a copy taken at start: the host's env plus that bot's `--env <bot> KEY=value` values
+  (swarm.json `envByAccount`).
 - One bot's uncaught error is logged as `[host] ...` and does not stop the others. If a script throws at top level,
   the host logs out that bot's sessions (a crashed single process drops them without logout).
 - Vendor log lines (`Pathfinding initialized`, `[lite] ... session ended`) are not prefixed with the bot name.
@@ -110,7 +111,15 @@ Usage:
 
 ```
 bun packages/core/src/host.ts scripts/goldfarm.ts botA botB botC botD [--stagger-ms N] [--mem-every-s N]
+    [--arg value]... [--env botA KNIGHT_SPOT=2670,3306]...
+bun packages/core/src/host.ts scripts/chain.ts botA botB --arg "scripts/generated/thieving60.ts TARGET=55 CAP=3000" --arg scripts/goldfarm.ts
 ```
+
+With `scripts/chain.ts` as the script, each `--arg` is a chain step and every bot runs the steps in order inside the
+host (one instance per step, each logs in and out; `ROUNDS` in the bot's env repeats the list; a stop file ends the
+chain between steps). The bot's last line is the chain's `RESULT ok|fail chain rounds=N ok=K failed=F`, as
+`scripts/chain.ts` prints it, so `supervise-host.ts` reads the same end. A died step does not stop the chain, the
+same as under chain.ts (gap: the death is not propagated to the supervisor's `died` end in either form).
 
 Output: `[bot] line` on stdout, and the bare lines in `.practice/logs/host-<bot>.log`. `HOST done ok=k/N ...
 peakRssMB=...` at the end; exit 0 when every script finished ok.
@@ -216,6 +225,33 @@ Both logged out (`LOGOUT logged-out`). The other bot kept running to 600 ticks. 
 covered by unit tests only (`packages/practice/test/supervise-host.test.ts`, `scripts/swarm.test.ts`).
 `scripts/swarm.ts` itself needs `DEMO_OK=1`, so its loop was not run here.
 
+## 3d. Per-bot env: 4 goldfarm bots with distinct KNIGHT_SPOT values in one host
+
+Claim: `--env <bot> KEY=value` reaches each hosted bot and only that bot, at the same memory and output as the
+shared-env host. Conditions: `scripts/goldfarm.ts`, preset `goldfarm_knights`, `TICKS=600`, `RANDOM_EVENTS=0`, 4
+fresh accounts per run, one host with `--stagger-ms 2000` and `--env` spots 2670,3306 / 2653,3302 / 2582,3297 /
+2652,3318 (the live farmers' spots), local practice stack (150 ms tick), 17 live bots running on the same PC. 3
+runs. Memory is the host process's Windows working set sampled every 5 s with `tasklist`; "steady mean" uses the
+samples between the fourth `START` and the first `RESULT` (17 samples per run); "host peak RSS" is Bun's own
+1 s sample in `HOST done`. Evidence path: `.practice/host-proof/run{1,2,3}.{log,json}`, runner
+`.practice/host-proof/run.ts` (not committed).
+
+| Run | Working set steady mean | Working set peak | Host peak RSS | Coins/tick per bot | Idle % per bot |
+|---|---|---|---|---|---|
+| 1 | 349 MB | 386 MB | 441 MB | 15.56, 18.00, 18.50, 15.06 | 3.6, 3.3, 2.6, 4.3 |
+| 2 | 388 MB | 418 MB | 700 MB | 18.14, 18.89, 15.39, 13.25 | 3.0, 3.1, 4.0, 10.4 |
+| 3 | 381 MB | 405 MB | 704 MB | 15.83, 16.17, 13.23, 14.83 | 4.1, 4.0, 8.3, 3.8 |
+| Mean | **373 MB (93 per bot)** | 403 MB | 615 MB | 16.07 | 4.5 |
+
+Every bot printed its own `KNIGHT_SPOT x,z` line (the value given to its name, 12 of 12). All 12 bot runs printed
+`RESULT ok` (600-601 ticks) and `LOGOUT logged-out`; every host printed `HOST done ok=4/4` in 97-98 s and exited 0;
+no `[host]`, `WARN` or `ERROR` line. Coins/tick (16.07) and idle (4.5 %) sit inside the section 3 spread (15.07 and
+5.5 %). The working set is lower than section 3's 546 MB mean; the two measures differ (`tasklist` here,
+`Get-Process` there) and the fleet load differs, so this is not a speed comparison.
+
+Gaps: the chain mode (section 2 usage) has unit proof only (`packages/core/test/host.test.ts`: steps in order, 2
+rounds, stop file); no practice chain run. 600 ticks is a short proof; section 3b has the long run.
+
 ## 4. What (b), a slimmer client, would take
 
 The lite client is already browserless. Upstream measured 13.8 MB marginal per bot with 8 bots in one process
@@ -238,7 +274,8 @@ Recommendation: use the host. 4 bots in one host cost about one bot process plus
 ## Open
 
 - More than 4 bots per host not measured. CPU per host not measured.
-- Swarm host jobs exist (section 3c); the live farmers are not moved yet (owner switch).
+- Swarm host jobs exist (section 3c) with per-account env and chain steps (section 3d); the live farmers are not
+  moved yet (owner switch: the proposed `swarm.json` host jobs are in the PR that added section 3d).
 - Live runs not done (practice only).
 
 ## Repeated route search

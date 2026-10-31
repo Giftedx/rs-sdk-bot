@@ -4,9 +4,14 @@
 //
 // Usage (local practice server, same as a script run):
 //   bun packages/core/src/host.ts <script> <bot1> [bot2 ...] [--stagger-ms N] [--mem-every-s N]
-// Each bot runs <script> as if started with `bun <script> <bot>`. Output lines go to stdout as `[bot] line` and,
-// without the prefix, to .practice/logs/host-<bot>.log. The host exits when every script has finished, with 0 when
-// every script finished ok.
+//       [--arg <value>]... [--args a,b] [--env <bot> KEY=value]...
+// Each bot runs <script> as if started with `bun <script> <bot> <args>`. `--env` adds one variable to one bot's
+// environment (repeat it per variable); every bot also sees the host's own environment. Output lines go to stdout
+// as `[bot] line` and, without the prefix, to .practice/logs/host-<bot>.log. The host exits when every script has
+// finished, with 0 when every script finished ok.
+// When <script> is scripts/chain.ts, each `--arg` is a chain step ("scripts/x.ts arg KEY=value", see chain.ts) and
+// every bot runs the steps in order inside this process: each step logs in and out like a chain child, ROUNDS in
+// the bot's environment repeats the list, and the bot's last RESULT line is the chain's (`RESULT ok chain ...`).
 //
 // Scripts run unchanged. When the host loads a script it rewrites the source of that one file:
 //   import.meta.main                         -> true (parser define on this entry only, never its helpers)
@@ -17,11 +22,12 @@
 // Limits: only the script file itself is rewritten. A helper module that calls finish() or reads process.argv[2]
 // for the bot name sees the host values, not the bot's. Scripts that call process.exit() directly stop there (the
 // rest of that script does not run), as in a real exit.
-import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { inspect } from 'node:util';
 import ts from 'typescript';
 import { openBot, settle } from './bot';
+import { parseStep, type Step } from './chain-step';
 import type { Session } from './inprocess';
 import { noteStatusLine } from './status';
 import { workerExecution } from './worker-execution';
@@ -37,7 +43,13 @@ export interface HostedBot {
     script: string;
     args?: string[];
     env?: Record<string, string>;
+    // Scripts in a row, as scripts/chain.ts runs them: each step logs in and out; env.ROUNDS repeats the list
+    // (0: until a stop file or a round with no ok step). With steps, `script` and `args` are not run.
+    steps?: Step[];
 }
+
+// The chain script path names the host's chain mode: its arguments are step texts, not script arguments.
+export const isChainScript = (script: string): boolean => /(^|[\\/])scripts[\\/]chain\.ts$/.test(script);
 
 export interface HostedResult {
     name: string;
@@ -209,6 +221,138 @@ export function memLine(tag = ''): string {
     return `MEM${tag ? ' ' + tag : ''} rss=${mb(m.rss)} heapUsed=${mb(m.heapUsed)} external=${mb(m.external)} arrayBuffers=${mb(m.arrayBuffers)}`;
 }
 
+type Sink = (line: string) => void;
+
+// One bot's output sink: the dashboard status line, the bot's log file and the prefixed host stdout line.
+function botSink(name: string, logFile: string, out: Sink): Sink {
+    return line => {
+        for (const l of line.split(/\r?\n/)) {
+            noteStatusLine(name, l);
+            try { appendFileSync(logFile, l + '\n'); } catch { /* the log file is optional */ }
+            out(`[${name}] ${l}`);
+        }
+    };
+}
+
+// One script run for one bot: its own argv, env, console, exit and finish. A chain bot gets one per step.
+function createInstance(name: string, id: string, script: string, args: string[], env: Record<string, string | undefined>, sink: Sink, open: typeof openBot): Instance {
+    let resolveDone!: (code: number) => void;
+    const done = new Promise<number>(r => { resolveDone = r; });
+    let finished = false;
+    const never = new Promise<never>(() => {});
+    const inst: Instance = {
+        id,
+        name,
+        argv: [process.argv[0]!, script, name, ...args],
+        env,
+        console: {
+            log: (...a) => inst.log(fmt(a)),
+            info: (...a) => inst.log(fmt(a)),
+            warn: (...a) => inst.log(fmt(a)),
+            error: (...a) => inst.log(fmt(a)),
+        },
+        log(line) {
+            for (const l of line.split(/\r?\n/)) {
+                if (l.startsWith('RESULT ')) inst.result = l;
+                sink(l);
+            }
+        },
+        exit(code = 0) {
+            inst.execution.stop(new Error(`worker exited ${code}`));
+            if (!finished) {
+                finished = true;
+                const pending = [...inst.openings];
+                if (inst.sessions.length || pending.length) {
+                    void inst.execution.cleanup(async () => {
+                        await Promise.allSettled(pending);
+                        return settle(inst.sessions, code === 0 && !pending.length, `script exit ${code}`, { log: l => inst.log(l) });
+                    })
+                        .then(ok => resolveDone(code || (ok ? 0 : 1)), e => { inst.log(`WARN exit cleanup failed: ${fmt([e])}`); resolveDone(code || 1); });
+                } else resolveDone(code);
+            }
+            throw new HostExit(code);
+        },
+        async openBot(botName, o) {
+            if (finished || inst.execution.signal.aborted || executionContext.getStore()?.signal.aborted) return never;
+            const opening = (async () => {
+                const s = await open(botName, hostedOpenOptions(l => inst.log(l), (s,detail) => inst.finish([s], false, detail), o));
+                if (finished || inst.execution.signal.aborted) {
+                    await inst.execution.cleanup(() => settle([s], false, 'session opened after worker stopped', { log: l => inst.log(l) }));
+                    throw inst.execution.signal.reason ?? new Error('worker stopped during open');
+                }
+                inst.execution.bind(s);
+                inst.sessions.push(s);
+                return s;
+            })();
+            inst.openings.add(opening);
+            try { return await opening; } finally { inst.openings.delete(opening); }
+        },
+        async finish(sessions, ok, detail) {
+            if (finished) return never;
+            finished = true;
+            const pending = [...inst.openings];
+            inst.execution.stop(new Error(`worker finished: ${detail}`));
+            // Same steps as finish() in bot.ts, without the process exit: RESULT, ledgers, logout, close.
+            const final = await inst.execution.cleanup(async () => {
+                await Promise.allSettled(pending);
+                return settle([...new Set([...sessions, ...inst.sessions])], ok && !pending.length, detail, { log: l => inst.log(l) });
+            }).catch(e => { inst.log(`WARN settle failed: ${fmt([e])}`); return false; });
+            resolveDone(final ? 0 : 1);
+            // Like process.exit: nothing after finish() in the script runs.
+            return never;
+        },
+        sessions: [],
+        result: '',
+        done,
+        execution: workerExecution((level, args) => inst.console[level](...args)),
+        openings: new Set(),
+    };
+    return inst;
+}
+
+// Imports the instance's script once (a fresh module per id) and waits for its end.
+async function runInstance(inst: Instance): Promise<{ code: number; result: string }> {
+    registry.set(inst.id, inst);
+    const url = `${inst.argv[1]!.replace(/\\/g, '/')}?${SCRIPT_Q}=${encodeURIComponent(inst.id)}`;
+    import(url).then(
+        // The script body ended without finish() or exit(): like a script process with nothing left to run.
+        () => { void inst.finish(inst.sessions, false, 'script ended without finish'); },
+        async e => {
+            if (e instanceof HostExit) return;
+            inst.log(`ERROR script threw: ${fmt([e])}`);
+            // A script process that crashes drops its sessions; here they are logged out first.
+            await inst.finish(inst.sessions, false, `script threw: ${String(e).slice(0, 200)}`);
+        },
+    );
+    const code = await inst.done;
+    registry.delete(inst.id);
+    return { code, result: inst.result };
+}
+
+// The chain of scripts/chain.ts inside the host: the same rounds, stop file and RESULT line, one instance per step.
+async function runChain(name: string, stamp: string, steps: Step[], env: Record<string, string | undefined>, sink: Sink, open: typeof openBot): Promise<{ code: number; result: string }> {
+    const rounds = Number(env.ROUNDS ?? 1);
+    const stopped = () => existsSync(join(repoRoot, '.practice', `stop-${name}`));
+    let ok = 0, failed = 0, round = 0;
+    while ((rounds === 0 || round < rounds) && !stopped()) {
+        round++;
+        let roundOk = 0;
+        for (const [k, st] of steps.entries()) {
+            if (stopped()) break;
+            const inst = createInstance(name, `${name}-${stamp}-r${round}s${k}`, resolve(repoRoot, st.script), st.args, { ...env, ...st.env }, sink, open);
+            const r = await runInstance(inst);
+            const result = r.result || 'RESULT fail no result';
+            const good = result.startsWith('RESULT ok');
+            good ? (ok++, roundOk++) : failed++;
+            sink(`CHAIN round=${round} ${st.script} ${good ? 'ok' : 'fail'} ${result.slice(0, 200)}`);
+        }
+        if (!roundOk) break;
+    }
+    const result = `RESULT ${ok ? 'ok' : 'fail'} chain rounds=${round} ok=${ok} failed=${failed}${stopped() ? ' stop file' : ''}`;
+    sink(result);
+    return { code: ok ? 0 : 1, result };
+}
+
 export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out?: (line: string) => void; logDir?: string; guard?: boolean; open?: typeof openBot } = {}): Promise<HostedResult[]> {
     const out = opts.out ?? ((l: string) => process.stdout.write(l + '\n'));
     const logDir = opts.logDir ?? join(repoRoot, '.practice', 'logs');
@@ -220,120 +364,40 @@ export async function runHost(bots: HostedBot[], opts: { staggerMs?: number; out
         if (names.has(b.name)) throw new Error(`bot ${b.name} listed twice`);
         names.add(b.name);
     }
-
-    const instances: Instance[] = [];
+    const open = opts.open ?? openBot;
+    const runs: Promise<{ code: number; result: string }>[] = [];
     for (const [i, b] of bots.entries()) {
-        const script = resolve(b.script);
-        const id = `${b.name}-${Date.now().toString(36)}-${i}`;
+        if (i > 0 && opts.staggerMs) await Bun.sleep(opts.staggerMs);
         const logFile = join(logDir, `host-${b.name}.log`);
         writeFileSync(logFile, '');
-        let resolveDone!: (code: number) => void;
-        const done = new Promise<number>(r => { resolveDone = r; });
-        let finished = false;
-        const never = new Promise<never>(() => {});
-        const inst: Instance = {
-            id,
-            name: b.name,
-            argv: [process.argv[0]!, script, b.name, ...(b.args ?? [])],
-            env: { ...process.env, ...(b.env ?? {}) },
-            console: {
-                log: (...a) => inst.log(fmt(a)),
-                info: (...a) => inst.log(fmt(a)),
-                warn: (...a) => inst.log(fmt(a)),
-                error: (...a) => inst.log(fmt(a)),
-            },
-            log(line) {
-                for (const l of line.split(/\r?\n/)) {
-                    if (l.startsWith('RESULT ')) inst.result = l;
-                    noteStatusLine(b.name, l);
-                    try { appendFileSync(logFile, l + '\n'); } catch { /* the log file is optional */ }
-                    out(`[${b.name}] ${l}`);
-                }
-            },
-            exit(code = 0) {
-                inst.execution.stop(new Error(`worker exited ${code}`));
-                if (!finished) {
-                    finished = true;
-                    const pending = [...inst.openings];
-                    if (inst.sessions.length || pending.length) {
-                        void inst.execution.cleanup(async () => {
-                            await Promise.allSettled(pending);
-                            return settle(inst.sessions, code === 0 && !pending.length, `script exit ${code}`, { log: l => inst.log(l) });
-                        })
-                            .then(ok => resolveDone(code || (ok ? 0 : 1)), e => { inst.log(`WARN exit cleanup failed: ${fmt([e])}`); resolveDone(code || 1); });
-                    } else resolveDone(code);
-                }
-                throw new HostExit(code);
-            },
-            async openBot(name, o) {
-                if (finished || inst.execution.signal.aborted || executionContext.getStore()?.signal.aborted) return never;
-                const opening = (async () => {
-                    const s = await (opts.open ?? openBot)(name, hostedOpenOptions(l => inst.log(l), (s,detail) => inst.finish([s], false, detail), o));
-                    if (finished || inst.execution.signal.aborted) {
-                        await inst.execution.cleanup(() => settle([s], false, 'session opened after worker stopped', { log: l => inst.log(l) }));
-                        throw inst.execution.signal.reason ?? new Error('worker stopped during open');
-                    }
-                    inst.execution.bind(s);
-                    inst.sessions.push(s);
-                    return s;
-                })();
-                inst.openings.add(opening);
-                try { return await opening; } finally { inst.openings.delete(opening); }
-            },
-            async finish(sessions, ok, detail) {
-                if (finished) return never;
-                finished = true;
-                const pending = [...inst.openings];
-                inst.execution.stop(new Error(`worker finished: ${detail}`));
-                // Same steps as finish() in bot.ts, without the process exit: RESULT, ledgers, logout, close.
-                const final = await inst.execution.cleanup(async () => {
-                    await Promise.allSettled(pending);
-                    return settle([...new Set([...sessions, ...inst.sessions])], ok && !pending.length, detail, { log: l => inst.log(l) });
-                }).catch(e => { inst.log(`WARN settle failed: ${fmt([e])}`); return false; });
-                resolveDone(final ? 0 : 1);
-                // Like process.exit: nothing after finish() in the script runs.
-                return never;
-            },
-            sessions: [],
-            result: '',
-            done,
-            execution: workerExecution((level, args) => inst.console[level](...args)),
-            openings: new Set(),
-        };
-        registry.set(id, inst);
-        instances.push(inst);
+        const sink = botSink(b.name, logFile, out);
+        const env = { ...process.env, ...(b.env ?? {}) };
+        const stamp = `${Date.now().toString(36)}-${i}`;
+        runs.push(b.steps ? runChain(b.name, stamp, b.steps, env, sink, open)
+            : runInstance(createInstance(b.name, `${b.name}-${stamp}`, resolve(b.script), b.args ?? [], env, sink, open)));
     }
-
-    for (const [i, inst] of instances.entries()) {
-        if (i > 0 && opts.staggerMs) await Bun.sleep(opts.staggerMs);
-        const url = `${inst.argv[1]!.replace(/\\/g, '/')}?${SCRIPT_Q}=${encodeURIComponent(inst.id)}`;
-        import(url).then(
-            // The script body ended without finish() or exit(): like a script process with nothing left to run.
-            () => { void inst.finish(inst.sessions, false, 'script ended without finish'); },
-            async e => {
-                if (e instanceof HostExit) return;
-                inst.log(`ERROR script threw: ${fmt([e])}`);
-                // A script process that crashes drops its sessions; here they are logged out first.
-                await inst.finish(inst.sessions, false, `script threw: ${String(e).slice(0, 200)}`);
-            },
-        );
-    }
-
-    const codes = await Promise.all(instances.map(i => i.done));
-    for (const inst of instances) registry.delete(inst.id);
-    return instances.map((inst, k) => ({ name: inst.name, ok: codes[k] === 0, code: codes[k]!, result: inst.result }));
+    const ends = await Promise.all(runs);
+    return bots.map((b, k) => ({ name: b.name, ok: ends[k]!.code === 0, code: ends[k]!.code, result: ends[k]!.result }));
 }
 
 // jopt-simple's required argument + typed conversion boundary, rewritten for
-// the two host flags. Reject bad values before opening any worker sessions.
+// the host flags. Reject bad values before opening any worker sessions.
 export function parseHostArgs(argv: string[]) {
-    const positional: string[] = [], values = new Map<string, number>();
-    let args: string[] = [];
+    const positional: string[] = [], values = new Map<string, number>(), args: string[] = [], env: Record<string, Record<string, string>> = {};
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i]!;
         if (!arg.startsWith('--')) { positional.push(arg); continue; }
-        // --args a,b: the same script arguments for every bot, after its name (bun <script> <bot> a b).
-        if (arg === '--args') { const raw = argv[++i]; if (raw === undefined) throw new Error('--args requires a value'); args = raw.split(',').filter(Boolean); continue; }
+        // --args a,b or --arg a: script arguments for every bot, after its name (bun <script> <bot> a b).
+        if (arg === '--args') { const raw = argv[++i]; if (raw === undefined) throw new Error('--args requires a value'); args.push(...raw.split(',').filter(Boolean)); continue; }
+        if (arg === '--arg') { const raw = argv[++i]; if (raw === undefined) throw new Error('--arg requires a value'); args.push(raw); continue; }
+        // --env <bot> KEY=value: one variable for one bot; repeat per variable.
+        if (arg === '--env') {
+            const name = argv[++i], pair = argv[++i];
+            const m = pair?.match(/^([A-Z_][A-Z0-9_]*)=([^]*)$/);
+            if (!name || name.startsWith('--') || !m) throw new Error('--env requires <bot> KEY=value');
+            (env[name] ??= {})[m[1]!] = m[2]!;
+            continue;
+        }
         if (!['--stagger-ms', '--mem-every-s'].includes(arg)) throw new Error(`unknown option ${arg}`);
         if (values.has(arg)) throw new Error(`duplicate option ${arg}`);
         const raw = argv[++i];
@@ -344,18 +408,29 @@ export function parseHostArgs(argv: string[]) {
         values.set(arg, value);
     }
     const [script, ...names] = positional;
-    return { script, names, args, stagger: values.get('--stagger-ms') ?? 0, memEvery: values.get('--mem-every-s') ?? 0 };
+    for (const name of Object.keys(env)) if (!names.includes(name)) throw new Error(`--env names ${name}, which is not a hosted bot`);
+    return { script, names, args, env, stagger: values.get('--stagger-ms') ?? 0, memEvery: values.get('--mem-every-s') ?? 0 };
+}
+
+// The bots a parsed command line runs: a chain script turns the arguments into every bot's steps.
+export function hostedBots(parsed: Pick<ReturnType<typeof parseHostArgs>, 'script' | 'names' | 'args' | 'env'>): HostedBot[] {
+    const script = parsed.script!;
+    const steps = isChainScript(script) ? parsed.args.map(parseStep) : undefined;
+    if (steps && steps.length === 0) throw new Error('a chain host needs at least one --arg step');
+    return parsed.names.map(name => ({ name, script, args: parsed.args, env: parsed.env[name], ...(steps ? { steps } : {}) }));
 }
 
 if (import.meta.main) {
-    let parsed: ReturnType<typeof parseHostArgs>;
-    try { parsed = parseHostArgs(process.argv.slice(2)); }
-    catch (error) { console.error(`invalid host arguments: ${String(error)}`); process.exit(2); }
-    const { script, names, args, stagger, memEvery } = parsed;
-    if (!script || names.length === 0) {
-        console.log('usage: bun packages/core/src/host.ts <script> <bot1> [bot2 ...] [--stagger-ms N] [--mem-every-s N]');
-        process.exit(2);
-    }
+    let parsed: ReturnType<typeof parseHostArgs>, bots: HostedBot[];
+    try {
+        parsed = parseHostArgs(process.argv.slice(2));
+        if (!parsed.script || parsed.names.length === 0) {
+            console.log('usage: bun packages/core/src/host.ts <script> <bot1> [bot2 ...] [--stagger-ms N] [--mem-every-s N] [--arg v]... [--env <bot> KEY=value]...');
+            process.exit(2);
+        }
+        bots = hostedBots(parsed);
+    } catch (error) { console.error(`invalid host arguments: ${String(error)}`); process.exit(2); }
+    const { script, names, stagger, memEvery } = parsed;
     const t0 = Date.now();
     console.log(`HOST start bots=${names.length} script=${script} pid=${process.pid} ${memLine()}`);
     let peak = 0;
@@ -363,7 +438,7 @@ if (import.meta.main) {
         peak = Math.max(peak, process.memoryUsage().rss);
         if (memEvery > 0 && Math.round((Date.now() - t0) / 1000) % memEvery === 0) console.log(`HOST ${memLine(`t=${Math.round((Date.now() - t0) / 1000)}s`)}`);
     }, 1000);
-    const results = await runHost(names.map(name => ({ name, script, args })), { staggerMs: stagger });
+    const results = await runHost(bots, { staggerMs: stagger });
     clearInterval(timer);
     peak = Math.max(peak, process.memoryUsage().rss);
     const ok = results.every(r => r.ok);
