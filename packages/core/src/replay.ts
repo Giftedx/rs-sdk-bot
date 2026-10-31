@@ -41,7 +41,8 @@ export async function replayRecord(lines: any[], run: () => Promise<unknown>, op
     let next = 0, directNext: number | null = null;
     const queued: number[] = [];
     const waiters = new Map<number, (r: unknown) => void>(), results = new Map<number, unknown>();
-    let tickCb: (() => void) | null = null;
+    // Set by the shim through the client; the cast keeps tsc from narrowing it to null.
+    let tickCb = null as (() => void) | null;
 
     const differ = (d: ReplayDifference) => { if (!result.difference) { result.difference = d; result.status = 'differ'; } };
     const compare: TickRecorder = {

@@ -28,7 +28,7 @@ async function worker(open: () => Promise<Session>, secondWalk: number) {
 // Records one run of `worker` on a fake client: results come one tick after each command; xp rises at tick 3.
 async function record(): Promise<any[]> {
     const lines: any[] = [];
-    let tick = 0, cb: (() => void) | null = null;
+    let tick = 0, cb = null as (() => void) | null;
     const held: { done: number; resolve: (v: unknown) => void }[] = [];
     const client: ClientLike = {
         collectBotState: (t: number) => ({ tick: t, inGame: true, player: { worldX: 3222, worldZ: 3218, level: 0 }, skills: [{ name: 'Attack', experience: t >= 3 ? 50 : 0 }], inventory: [] }),
