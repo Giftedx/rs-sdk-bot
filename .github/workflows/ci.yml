@@ -24,5 +24,8 @@ jobs:
           (cd vendor/rs-sdk && bun install --frozen-lockfile --production)
           (cd vendor/rs-sdk/server/webclient && bun install --frozen-lockfile)
       - run: bun run check-pin
-      - run: bun run typecheck
+      - name: Typecheck (tsc needs more than the default Node heap for this repo)
+        run: bun run typecheck
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
       - run: bun test ./scripts ./packages
