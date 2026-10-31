@@ -179,6 +179,13 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
 
 // This side's new swarm job list: every job without this side's marker stays as it is; a planner job whose account
 // keeps its template stays unchanged (its swarm revision and run go on); a changed or new assignment gets a fresh job.
+// The accounts this side's planner may not touch: every account an unmarked job names, except a coordinator-owned job
+// that is off (its run is over, so the account is free again). A reservation (no script) keeps its account held.
+export function heldAccounts(jobs: readonly any[], side: string): Set<string> {
+    const releases = (j: any) => j?.coordinatorOwner === 'coordinator' && j.enabled === false;
+    return new Set(jobs.filter(j => j?.autopilot !== side && !releases(j)).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter(Boolean).map((a: string) => a.toLowerCase()));
+}
+
 export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[]): { jobs: any[]; fresh: string[] } {
     const mine = (j: any) => j?.autopilot === side, next = jobs.filter(j => !mine(j)), fresh: string[] = [];
     for (const x of out) {

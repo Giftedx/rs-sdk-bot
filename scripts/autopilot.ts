@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync,
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
-import { accountFrom, assess, catalogue, jobResources, mergeJobs, norm, pairKey, plan } from '../packages/planner/src/autopilot';
+import { accountFrom, assess, catalogue, heldAccounts, jobResources, mergeJobs, norm, pairKey, plan } from '../packages/planner/src/autopilot';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from '../packages/planner/src/haggis';
 import { tickWaste, wasteShare } from './tick-waste';
@@ -45,7 +45,7 @@ export function pass(planFile: string, dry: boolean): string[] {
     const prices: Record<string, number> = {};
     for (const i of items) if (typeof i.name === 'string' && !/^cert_/.test(i.debugname ?? '') && !(norm(i.name) in prices)) prices[norm(i.name)] = i.cost ?? 0;
     const mineMarked = (j: any) => j?.autopilot === side;
-    const held = new Set(swarm.jobs.filter((j: any) => !mineMarked(j)).flatMap((j: any) => [j.account, ...(j.accounts ?? [])]).filter(Boolean).map((a: string) => a.toLowerCase()));
+    const held = heldAccounts(swarm.jobs, side);
 
     // Retire planner jobs whose own log lines show no progress.
     const log: string[] = [];
