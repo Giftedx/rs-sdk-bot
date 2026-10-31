@@ -248,7 +248,9 @@ function drawMap(){if(mode!=='2d'||!S)return;const c=$('#map'),w=c.clientWidth,h
   if(sc<2.5){g.font='11px "Barlow Semi Condensed",sans-serif';for(const[n,x,z]of PLACES){g.fillStyle='#a3957a';g.fillRect(X(x)-1.5,Z(z)-1.5,3,3);g.fillText(n,X(x)+5,Z(z)+3)}}
   c._p=[];for(const b of S.bots){const p=b.live||b.pos;if(!p||p.z>6400)continue;const[cl]=st(b),col=cl==='on'?'#7ed36a':cl==='wd'?'#e9b949':'#74684f',x=X(p.x),z=Z(p.z);c._p.push([x,z,b.name]);
     if(cl==='on'){g.beginPath();g.arc(x,z,11,0,7);g.fillStyle='#7ed36a26';g.fill()}g.beginPath();g.arc(x,z,sel===b.name?6:4.5,0,7);g.fillStyle=col;g.fill();if(sel===b.name){g.lineWidth=2;g.strokeStyle='#e9b949';g.stroke()}
-    if(sel===b.name||cl==='on'){g.fillStyle=sel===b.name?'#ece2c6':'#7ed36a';g.font=(sel===b.name?'700 12px':'11px')+' "Barlow Semi Condensed",sans-serif';g.fillText(b.name===MARK?'main':b.name,x+8,z-6)}}}
+    // Tile indicator (RuneLite): the followed account's tile, zoomed in; name tags carry the combat level then.
+    if(sel===b.name&&sc>=2.5){g.lineWidth=1.5;g.strokeStyle='#00ffff';g.strokeRect(X(p.x)-sc/2,Z(p.z)-sc/2,sc,sc)}
+    if(sel===b.name||cl==='on'){g.fillStyle=sel===b.name?'#ece2c6':'#7ed36a';g.font=(sel===b.name?'700 12px':'11px')+' "Barlow Semi Condensed",sans-serif';g.fillText((b.name===MARK?'main':b.name)+(sc>=2.5&&b.combat?' (level-'+b.combat+')':''),x+8,z-6)}}}
 $('#map').onclick=e=>{const c=$('#map'),r=c.getBoundingClientRect();let best=null,bd=300;for(const[x,z,n]of c._p||[]){const d=(x-(e.clientX-r.left))**2+(z-(e.clientY-r.top))**2;if(d<bd){bd=d;best=n}}if(best)pick(best)};
 // HTTP and iframe load prove delivery only. A rendered/private-ready message proves the scene.
 function viewerFrameUrl(value,base){
