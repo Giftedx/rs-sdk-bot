@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {fleetSidesView,scoreboardView,SIDE_SYNC_MS} from './fleet-view';
+import {fleetSidesView,remoteBots,scoreboardView,SIDE_SYNC_MS} from './fleet-view';
 
 test('scoreboard keeps the remaining list, best live level per skill and the coverage counts',()=>{
  const raw={at:'2026-10-31T11:20:12.643Z',totals:{actions:10,actionsNamed:4},items:{tradeable:20,tradeableHeld:3},
@@ -25,4 +25,17 @@ test('fleet sides give each side its sync age, accounts, total levels and coins;
  expect(v.sides[1]!.accounts[0]).toEqual({name:'Zed',at:now-60_000,total:22,coins:105});expect(v.sides[0]!.accounts[1]!.total).toBeNull();
  expect(v.orders[0]).toEqual({id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1,state:'open',late:true});
  expect(v.orders.map(o=>o.id+':'+o.state)).toEqual(['o1:open','o3:half','o4:failed']);
+});
+
+test('other sides become fleet rows with snapshot levels and items, a world-feed position, and no XP',()=>{
+ const now=1_000_000;
+ const snaps=[{side:'local',at:1,accounts:[{name:'Mine'}]},{side:'cloud',at:now-5000,accounts:[{name:'TossTheCaber',server:'rs-sdk-demo.fly.dev',at:now-6000,skills:[{name:'Attack',level:22}],inventory:[{id:995,name:'Coins',count:5}],bank:[],equipment:[]},{name:'Dup'},{name:'bad name!'}]}];
+ const roster=new Map([['tossthecaber',{x:3200,z:3200,level:0,combat:30,seen:now-1000}]]);
+ const rows=remoteBots(snaps,new Set(['dup']),roster,new Map([['tossthecaber',5]]),now);
+ expect(rows.map(r=>r.name)).toEqual(['TossTheCaber']);
+ const r=rows[0];
+ expect(r.side).toBe('cloud');expect(r.remote).toBe(true);expect(r.fresh).toBe(true);expect(r.operation).toBe('observed');
+ expect(r.pos).toEqual({x:3200,z:3200,level:0});expect(r.combat).toBe(30);expect(r.skills).toEqual([{name:'Attack',level:22,xp:null}]);
+ const late=remoteBots(snaps,new Set(),new Map([['tossthecaber',{x:1,z:2,level:0,combat:3,seen:now-60_000}]]),new Map(),now);
+ expect(late.find(x=>x.name==='TossTheCaber').fresh).toBe(false);expect(late.find(x=>x.name==='TossTheCaber').pos).toEqual({x:1,z:2,level:0});
 });

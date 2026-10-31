@@ -246,7 +246,7 @@ $('#map').onclick=e=>{const c=$('#map'),r=c.getBoundingClientRect();let best=nul
 // HTTP and iframe load prove delivery only. A rendered/private-ready message proves the scene.
 function viewerFrameUrl(value,base){
   const u=new URL(value||'/viewer/',base),b=new URL(base);
-  if(u.origin!==b.origin||u.pathname!=='/viewer/')throw Error('Unsupported viewer address');
+  if(u.origin!==b.origin||!u.pathname.endsWith('/viewer/'))throw Error('Unsupported viewer address');
   return u;
 }
 function viewerCameraUrl(url,pos){
@@ -292,7 +292,7 @@ async function request3D(){
     if(!response.ok)throw Error('Viewer health request failed');const health=await response.json();
     if(request!==VIEWER_REQUEST)return;
     if(!health.available)throw Error(health.reason||'viewer service is not available');
-    const url=viewerFrameUrl(health.url,location.origin);
+    const url=viewerFrameUrl(health.url,document.baseURI);
     VIEWER={state:'loading',detail:'Loading 3D scene… waiting for rendering and private-name protection.',origin:url.origin,url:url.href,feed:null};
     $('#rsw').removeAttribute('src');rswFor=null;
     VIEWER_TIMER=setTimeout(()=>{if(request===VIEWER_REQUEST&&VIEWER.state==='loading')viewerUnavailable('scene readiness timed out');},45000);
@@ -322,7 +322,7 @@ function syncWorld(){
   if(!f.getAttribute('src')){
     const url=viewerCameraUrl(viewerFrameUrl(VIEWER.url,location.origin),window.atlasDestination);
     url.searchParams.set('live','wss://rs-sdk-demo.fly.dev/worldfeed');url.searchParams.set('embed','0');url.searchParams.set('client','1');url.searchParams.set('fps','20');url.searchParams.set('scale',String(window.atlasQuality||1));
-    url.searchParams.set('hideNamesFrom',location.origin+'/api/hidden-names');url.searchParams.set('highlightFrom',location.origin+'/api/our-names');
+    url.searchParams.set('hideNamesFrom',new URL('api/hidden-names',document.baseURI).href);url.searchParams.set('highlightFrom',new URL('api/our-names',document.baseURI).href);
     if(Q.get('flight')==='0')url.searchParams.set('flight','0');if(Q.get('cache')==='0')url.searchParams.set('cache','0');
     if(sel&&!window.atlasFreeCamera)url.searchParams.set('follow',sel);rswFor=sel;f.src=url.href;
   }else if(rswFor!==sel&&sel&&!window.atlasFreeCamera){rswFor=sel;f.contentWindow?.postMessage({follow:sel},VIEWER.origin);}

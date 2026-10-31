@@ -132,6 +132,7 @@ test('3D embed accepts only its same-origin viewer route and checks both message
     const src=html.slice(html.indexOf('function viewerFrameUrl('),html.indexOf('function showViewerStatus(){'));
     const f=new Function(src+';return{viewerFrameUrl,viewerMessage,viewerStatusText,viewerCanReveal};')(),frame={};
     expect(f.viewerFrameUrl('/viewer/','http://127.0.0.1:3102').href).toBe('http://127.0.0.1:3102/viewer/');
+    expect(f.viewerFrameUrl('viewer/','https://owner.github.io/rs-fleet-command/').href).toBe('https://owner.github.io/rs-fleet-command/viewer/');
     expect(()=>f.viewerFrameUrl('http://localhost:3000/','http://127.0.0.1:3102')).toThrow();
     expect(()=>f.viewerFrameUrl('/api/state','http://127.0.0.1:3102')).toThrow();
     const message={source:frame,origin:'http://127.0.0.1:3102',data:{viewerState:{state:'ready',renderReady:true,privacyReady:true}}};

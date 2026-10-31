@@ -46,3 +46,4 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .hs-max span{color:#00ff00}
 .side-accounts summary{cursor:pointer;color:#a0a0a0;margin-top:5px}
 .ignore-why{display:block;font-size:11px;color:#a0a0a0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.equip-row{display:flex;align-items:center;gap:6px;padding:2px 0}
