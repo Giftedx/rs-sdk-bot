@@ -1,0 +1,38 @@
+{
+  "entries": [],
+  "segments": [
+    {
+      "id": "seed-smithing-alkharid",
+      "start": {"preset": "smelt_bars_alkharid"},
+      "script": "scripts/smelt-bars.ts",
+      "args": ["600", "iron"],
+      "expect": {"skills": {"Smithing": 50}, "items": {"2351": {"min": 1}}},
+      "capture": {"name": "smithing-50-alkharid-iron-bars", "segment": "Smithing 50 at the Al Kharid furnace mid smelt: iron ore and iron bars held, more ore banked (bar supply for the anvil step)", "afterTicks": 60},
+      "timeoutMs": 240000
+    },
+    {
+      "id": "magic-chain-1-15",
+      "route": {"file": "packages/planner/src/cairn-route.json", "step": "rings"},
+      "start": {"save": {
+        "position": {"x": 3185, "z": 3436, "level": 0},
+        "inventory": [{"id": 333, "count": 1}, {"id": 333, "count": 1}, {"id": 333, "count": 1}, {"id": 1351, "count": 1}],
+        "bank": [{"id": 556, "count": 37}, {"id": 558, "count": 31}, {"id": 995, "count": 400}, {"id": 1511, "count": 5}]
+      }},
+      "script": "scripts/magic-order.ts",
+      "env": {"TARGET_LEVEL": "15", "RUNE_BUDGET": "200", "CASH_RESERVE": "100", "MAX_CASTS": "200", "CAP": "1500"},
+      "expect": {"skills": {"Magic": 15}},
+      "capture": {"name": "magic-8-wind-strike-runes", "segment": "Magic 8 mid wind strike at the Lumbridge chickens, air and mind runes held (route boundary start -> rings at Magic 8)", "when": {"skill": "Magic", "level": 8}},
+      "timeoutMs": 300000
+    },
+    {
+      "id": "magic-8-15",
+      "route": {"file": "packages/planner/src/cairn-route.json", "step": "rings"},
+      "start": {"snapshot": "magic-8-wind-strike-runes"},
+      "script": "scripts/magic-order.ts",
+      "env": {"TARGET_LEVEL": "15", "RUNE_BUDGET": "200", "CASH_RESERVE": "100", "MAX_CASTS": "200", "CAP": "1500"},
+      "plan": {"ticks": 0, "source": "PENDING"},
+      "expect": {"skills": {"Magic": 15}},
+      "timeoutMs": 300000
+    }
+  ]
+}
