@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { accountFrom, assess, catalogue, heldAccounts, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { accountFrom, assess, catalogue, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, unitValue, type Acct, type Inputs } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -109,14 +109,18 @@ test('a status file becomes base levels and held counts by name', () => {
     expect(accountFrom('New', side, null, () => undefined).skills).toEqual({ Hitpoints: 10 });
 });
 
-test('a finished coordinator job releases its account; hand jobs, reservations and running coordinator jobs hold theirs', () => {
+test('the planner gets handed-over and unnamed accounts; enabled jobs, reservations and stop files keep theirs', () => {
     const jobs = [
         { account: 'Haggis', script: '', enabled: false },
-        { account: 'Woodpecker', script: 'scripts/chain.ts', enabled: true, autopilot: side },
+        { account: 'Woodpecker', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side },
         { account: 'YewFirst', script: 'scripts/session-check.ts', enabled: false, coordinatorOwner: 'coordinator' },
+        { account: 'YewFirst', script: 'scripts/shop-buyer.ts', enabled: true, autopilot: side },
+        { account: 'Shaftmaker', script: 'scripts/firemaking-order.ts', enabled: false, coordinatorOwner: 'coordinator' },
         { account: 'Moneyshot', script: 'scripts/quest-cook-job.ts', enabled: true, coordinatorOwner: 'coordinator' },
+        { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side },
         { accounts: ['NabTheKnob', 'Swordinhand'], host: true, script: 'scripts/quest-chain.ts', enabled: false, standing: true },
     ];
-    expect([...heldAccounts(jobs, side)].sort()).toEqual(['haggis', 'moneyshot', 'nabtheknob', 'swordinhand']);
-    expect(heldAccounts(jobs, 'other').has('woodpecker')).toBe(true);
+    const listed = ['Haggis', 'Woodpecker', 'YewFirst', 'Shaftmaker', 'Moneyshot', 'Hocuspokeus', 'NabTheKnob', 'Fresh'];
+    expect(plannableAccounts(jobs, side, listed, new Set(['hocuspokeus']))).toEqual(['Woodpecker', 'YewFirst', 'Fresh']);
+    expect(plannableAccounts(jobs, 'other', listed, new Set())).toEqual(['Fresh']);
 });

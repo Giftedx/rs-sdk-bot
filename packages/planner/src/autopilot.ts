@@ -180,11 +180,17 @@ export function accountFrom(name: string, side: string, status: any, itemName: (
 
 // This side's new swarm job list: every job without this side's marker stays as it is; a planner job whose account
 // keeps its template stays unchanged (its swarm revision and run go on); a changed or new assignment gets a fresh job.
-// The accounts this side's planner may not touch: every account an unmarked job names, except a coordinator-owned job
-// that is off (its run is over, so the account is free again). A reservation (no script) keeps its account held.
-export function heldAccounts(jobs: readonly any[], side: string): Set<string> {
-    const releases = (j: any) => j?.coordinatorOwner === 'coordinator' && j.enabled === false;
-    return new Set(jobs.filter(j => j?.autopilot !== side && !releases(j)).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter(Boolean).map((a: string) => a.toLowerCase()));
+// The accounts this side's planner may give a job: those a marked job names (handed over), or those no job names at all
+// (a fresh account). An enabled unmarked job (a hand job or a coordinator run) keeps its account, a reservation (no
+// script) keeps its account, and an owner pause (a stop file) keeps its account. An unmarked job that is off holds an
+// account only when no marked job names it: a finished coordinator run does not block a handover, but by itself it
+// frees nothing, since the coordinator may plan that account next.
+export function plannableAccounts(jobs: readonly any[], side: string, listed: readonly string[], paused: ReadonlySet<string>): string[] {
+    const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean).map((a: string) => a.toLowerCase());
+    const mine = (j: any) => j?.autopilot === side;
+    const hard = new Set(jobs.filter(j => !mine(j) && (j?.enabled !== false || !j?.script)).flatMap(names));
+    const optIn = new Set(jobs.filter(mine).flatMap(names)), named = new Set(jobs.flatMap(names));
+    return listed.filter(n => { const k = n.toLowerCase(); return !hard.has(k) && !paused.has(k) && (optIn.has(k) || !named.has(k)); });
 }
 
 export function mergeJobs(jobs: readonly any[], side: string, out: readonly Assignment[]): { jobs: any[]; fresh: string[] } {

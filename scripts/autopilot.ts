@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync,
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
-import { accountFrom, assess, catalogue, heldAccounts, jobResources, mergeJobs, norm, pairKey, plan } from '../packages/planner/src/autopilot';
+import { accountFrom, assess, catalogue, jobResources, mergeJobs, norm, pairKey, plan, plannableAccounts } from '../packages/planner/src/autopilot';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from '../packages/planner/src/haggis';
 import { tickWaste, wasteShare } from './tick-waste';
@@ -45,7 +45,6 @@ export function pass(planFile: string, dry: boolean): string[] {
     const prices: Record<string, number> = {};
     for (const i of items) if (typeof i.name === 'string' && !/^cert_/.test(i.debugname ?? '') && !(norm(i.name) in prices)) prices[norm(i.name)] = i.cost ?? 0;
     const mineMarked = (j: any) => j?.autopilot === side;
-    const held = heldAccounts(swarm.jobs, side);
 
     // Retire planner jobs whose own log lines show no progress.
     const log: string[] = [];
@@ -73,7 +72,8 @@ export function pass(planFile: string, dry: boolean): string[] {
 
     const listed = Object.keys(readJson(join(FLEET_DIR(), 'owners.json'), { accounts: {} }).accounts ?? {});
     const statusDir = join(prac, 'status'), statusFiles = existsSync(statusDir) ? readdirSync(statusDir) : [];
-    const accounts = listed.filter(n => owners.get(n.toLowerCase())?.side === side && !held.has(n.toLowerCase())).map(n => {
+    const paused = new Set(listed.filter(n => existsSync(join(prac, `stop-${n}`))).map(n => n.toLowerCase()));
+    const accounts = plannableAccounts(swarm.jobs, side, listed.filter(n => owners.get(n.toLowerCase())?.side === side), paused).map(n => {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id));
     });
