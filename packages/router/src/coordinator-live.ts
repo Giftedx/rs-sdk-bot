@@ -88,11 +88,13 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
  // A coordinator run needs the whole-runtime pin; standing jobs need only the swarm's own code current.
  // Workers carry the release of the source they start on (swarm.ts), so only the swarm's own code needs a rollout.
- if(alive&&owner.swarmSource===swarmSource){await resume();return;}
+ // A run also needs the controller's WORKER_RELEASE to equal its own source: recovery permits bind to it.
+ const runtimeCurrent=!forRun||owner?.source===source;
+ if(alive&&owner.swarmSource===swarmSource&&runtimeCurrent){await resume();return;}
  // A standing rollout gets ROLLOUT_DRAIN_MS to drain; then the jobs run again and the next try waits ROLLOUT_BACKOFF_MS.
  const backoffFile=join(dir,'rollout-backoff.json');
  // The backoff spaces rollouts of a running swarm; a dead controller is started at once.
- {let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(alive&&now()<until){await resume();return;}}
+ {let until=0;try{until=JSON.parse(readFileSync(backoffFile,'utf8')).until;}catch{/* none */}if(alive&&now()<until&&runtimeCurrent){await resume();return;}}
  if((deps.processes??swarmProcesses)().some(pid=>!alive||pid!==owner.pid))throw Error('another controller owns the swarm; development remains eligible');
  // A live session rewrites its status every few seconds; one unchanged for BOOTSTRAP_STATUS_AGE_MS is not open (the
  // server drops a lost session after 200 s). A killed run's held record would otherwise block every rollout.
