@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - name: Apply checked-in SDK setup patch
+        run: git -C vendor/rs-sdk apply ../../patches/rs-sdk-working.patch
+      - name: Install dependencies without rewriting the root lockfile
+        run: |
+          bun install --no-save
+          (cd vendor/rs-sdk && bun install --frozen-lockfile --production)
+          (cd vendor/rs-sdk/server/webclient && bun install --frozen-lockfile)
+      - run: bun run check-pin
+      - run: bun run typecheck
+      - run: bun test ./scripts ./packages

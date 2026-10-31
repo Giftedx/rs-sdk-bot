@@ -1,4 +1,5 @@
-// Two controllers share the demo server: this PC (side 'local') and a cloud agent (side 'cloud', FLEET_SIDE=cloud).
+// Several controllers share the demo server, each a named side: this PC is 'local' (the default), the Codex cloud
+// environment 'cloud', a Claude Code cloud environment 'claude-cloud' (FLEET_SIDE=<name>).
 // fleet/owners.json names the side and server of each account; credentials never enter it (bot.env stays on the
 // machine that owns the account). A controller logs in only accounts of its own side (bot.ts openBot), so two
 // machines never fight over one session; an account the file does not list is local. Trades trust the accounts the
@@ -13,16 +14,21 @@ const root = resolve(import.meta.dir, '..', '..', '..');
 // never rebases the code checkout other sessions edit. fleet/ on master is the seed for a machine without it.
 export const FLEET_WORKTREE = join(root, '.practice', 'fleet-data');
 export const FLEET_DIR = () => resolve(process.env.FLEET_DIR ?? (existsSync(join(FLEET_WORKTREE, 'fleet', 'owners.json')) ? join(FLEET_WORKTREE, 'fleet') : join(root, 'fleet')));
-export type Side = 'local' | 'cloud';
+export type Side = string;
 export type Owner = { side: Side; server: string };
-export const mySide = (): Side => (process.env.FLEET_SIDE === 'cloud' ? 'cloud' : 'local');
+export const SIDE_NAME = /^[a-z][a-z0-9-]{0,23}$/;
+export function mySide(): Side {
+    const side = process.env.FLEET_SIDE || 'local';
+    if (!SIDE_NAME.test(side)) throw Error(`fleet: FLEET_SIDE must be a short lower-case name, not ${side}`);
+    return side;
+}
 
 export function loadOwners(file = join(FLEET_DIR(), 'owners.json')): Map<string, Owner> {
     if (!existsSync(file)) return new Map();
     const raw = JSON.parse(readFileSync(file, 'utf8')) as { accounts?: Record<string, Owner> };
     const out = new Map<string, Owner>();
     for (const [name, o] of Object.entries(raw.accounts ?? {})) {
-        if (!/^[A-Za-z0-9]{1,12}$/.test(name) || (o?.side !== 'local' && o?.side !== 'cloud') || typeof o.server !== 'string') throw Error(`fleet owners: bad entry ${name}`);
+        if (!/^[A-Za-z0-9]{1,12}$/.test(name) || typeof o?.side !== 'string' || !SIDE_NAME.test(o.side) || typeof o.server !== 'string') throw Error(`fleet owners: bad entry ${name}`);
         out.set(name.toLowerCase(), { side: o.side, server: o.server.toLowerCase() });
     }
     return out;
