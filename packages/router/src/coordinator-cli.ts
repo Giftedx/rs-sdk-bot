@@ -3,18 +3,45 @@ import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
 import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,FOCUS_FAILURE_LIMIT,type CoordinatorState} from './coordinator';
-import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,event,spawnDetached,recoverPlanWrite,withPlanWrite} from './coordinator-store';
+import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite} from './coordinator-store';
 import {planWork,acceptProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {cachedWorkerSourceRevision} from '../../core/src/worker-release';
+import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
 import {processMatches,killTree} from '../../practice/src/proc';
 import {prepareWorkspace} from './build-workspace';
 
 const cli='packages/router/src/coordinator-cli.ts';
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
+// The owner's swarm.json with the coordinator's own jobs and settings merged in (packages/core/src/coordinator-jobs.ts).
+const readPlan=()=>readMergedPlan(projectRoot);
+// The runtime hash reads every worker source file (about 400 ms); cachedWorkerSourceRevision recomputes it only when a
+// file's size or modification time changed (a stat walk, about 75 ms). One loop reuses the answer; a rollout's
+// post-drain check minutes later looks again.
+export const REVISION_FRESH_MS=2000;
+let revisionCache:{value:string;at:number}|undefined;
+export function currentRevision(now=Date.now(),compute=cachedWorkerSourceRevision):string{
+ if(!revisionCache||now-revisionCache.at>=REVISION_FRESH_MS||now<revisionCache.at)revisionCache={value:compute(),at:now};
+ return revisionCache.value;
+}
+// Coordinator-owned jobs and settings written into swarm.json by an earlier coordinator move to the coordinator's
+// file; the owner's jobs keep their order. Returns what moved, or null when swarm.json holds none.
+export function migrateCoordinatorJobs(base=projectRoot){
+ const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),plan=JSON.parse(raw);
+ const owned=(plan.jobs??[]).filter((j:any)=>j.coordinatorOwner==='coordinator');
+ const settings=['focusCapability','focusSince','lastExpansionAt'].filter(k=>plan.coordination&&k in plan.coordination);
+ if(!owned.length&&!settings.length)return null;
+ const own=readCoordinatorJobs(base);
+ own.jobs=[...own.jobs,...owned];
+ for(const key of settings){(own.coordination as any)[key]??=plan.coordination[key];delete plan.coordination[key];}
+ plan.jobs=(plan.jobs??[]).filter((j:any)=>j.coordinatorOwner!=='coordinator');
+ writeCoordinatorJobs(base,own);
+ atomicText(path,JSON.stringify(plan,null,2)+(raw.endsWith('\n')?'\n':''));
+ return{jobs:owned.length,settings,file:COORDINATOR_JOBS_FILE};
+}
 const stop=join(projectRoot,'.practice/stop-coordinator');
 const restart=join(coordinationDir,'restart');
 const planRequest=join(coordinationDir,'plan-request');
@@ -39,11 +66,12 @@ async function expandUsefulFleet(state:CoordinatorState,config:any){
   if(same&&row.at>old!.at)latency=row.tick>old!.tick?(row.at-old!.at)/(row.tick-old!.tick):null;
   tickSamples.set(name,{started:row.started,tick:row.tick,at:row.at,latency});if(latency===null)stalled=true;else latencies.push(latency);
  }
- const path=join(projectRoot,'swarm.json'),plan=json(path),last=plan.coordination?.lastExpansionAt??0;
+ const plan=readPlan(),last=plan.coordination?.lastExpansionAt??0;
  const useful=state.tasks.filter(r=>r.spec.kind==='run'&&r.status==='succeeded'&&r.receipt?.output?.evidence==='live'&&r.receipt.at>last&&now-r.receipt.at<900000).length;
  const target=fleetExpansion({limit:plan.maxBots,demand,freeGB:freemem()/2**30,reserveGB:plan.minFreeGB,cpu:usage,tickMs:latencies.length?Math.max(...latencies):null,stalled,usefulResults:useful,now,lastExpandedAt:last});
  if(target===plan.maxBots)return;
- await withPlanWrite(()=>{const current=json(path);if(current.maxBots!==plan.maxBots)return;current.maxBots=target;current.coordination.maxLive=target;current.coordination.lastExpansionAt=now;atomicJson(path,current);Object.assign(config,current.coordination);event('fleet-capacity-expanded',{from:plan.maxBots,to:target,freeGB:freemem()/2**30,cpu:usage,tickMs:Math.max(...latencies),usefulResults:useful});});
+ // The grant lives in the coordinator's file over the owner's current maxBots; an owner edit of maxBots discards it.
+ await withPlanWrite(()=>{const current=readPlan();if(current.maxBots!==plan.maxBots)return;const own=readCoordinatorJobs(projectRoot);own.expansion={maxBots:target,over:json(join(projectRoot,'swarm.json')).maxBots};own.coordination.lastExpansionAt=now;writeCoordinatorJobs(projectRoot,own);config.maxLive=target;config.lastExpansionAt=now;event('fleet-capacity-expanded',{from:plan.maxBots,to:target,freeGB:freemem()/2**30,cpu:usage,tickMs:Math.max(...latencies),usefulResults:useful});});
 }
 const existsPid=(pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}};
 export function reconcile(state:CoordinatorState,alive:(pid:number,marker:string)=>boolean=processMatches,directory=coordinationDir,pidExists=existsPid){
@@ -95,15 +123,20 @@ async function child(mode:string,runId:string){
   process.exitCode=1;
  }
 }
+function clearFocus(capability:string){
+ const own=readCoordinatorJobs(projectRoot);
+ if(own.coordination.focusCapability!==capability)return;
+ delete own.coordination.focusCapability;delete own.coordination.focusSince;writeCoordinatorJobs(projectRoot,own);
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  // Adopt before reconciliation: even a just-finished failed build keeps its
  // delivery focus while the planner prepares its exact repair.
  const focus=!config.focusCapability&&activeBuildFocus(state);
  if(focus)await withPlanWrite(()=>{
-  const path=join(projectRoot,'swarm.json'),plan=json(path),coordination=plan.coordination;
+  const own=readCoordinatorJobs(projectRoot),coordination=own.coordination;
   coordination.focusCapability??=focus.capability;coordination.focusSince??=focus.since;
-  atomicJson(path,plan);config.focusCapability=coordination.focusCapability;config.focusSince=coordination.focusSince;
+  writeCoordinatorJobs(projectRoot,own);config.focusCapability=coordination.focusCapability;config.focusSince=coordination.focusSince;
   event('fleet-focus-adopted',{capability:config.focusCapability,since:config.focusSince});
  });
  reconcile(state);
@@ -131,20 +164,20 @@ async function tick(state:CoordinatorState,config:any){
  }
  // Model/native capacity is independent from finite live account jobs.
  if(config.focusCapability&&state.tasks.some(r=>r.spec.capability===config.focusCapability&&r.spec.kind==='run'&&r.status==='succeeded'&&r.receipt?.output?.evidence==='live'&&r.receipt.at>=(config.focusSince??0))){
-  await withPlanWrite(()=>{const path=join(projectRoot,'swarm.json'),plan=json(path);if(plan.coordination.focusCapability===config.focusCapability){delete plan.coordination.focusCapability;delete plan.coordination.focusSince;atomicJson(path,plan);}delete config.focusCapability;delete config.focusSince;event('fleet-focus-delivered',{evidence:'live'});});
+  await withPlanWrite(()=>{clearFocus(config.focusCapability);delete config.focusCapability;delete config.focusSince;event('fleet-focus-delivered',{evidence:'live'});});
  }
  // A focus that failed FOCUS_FAILURE_LIMIT builds in a row releases the other lanes; activeBuildFocus does not re-adopt it.
  if(config.focusCapability&&failedBuildStreak(state,config.focusCapability)>=FOCUS_FAILURE_LIMIT){
   const released=config.focusCapability;
-  await withPlanWrite(()=>{const path=join(projectRoot,'swarm.json'),plan=json(path);if(plan.coordination.focusCapability===released){delete plan.coordination.focusCapability;delete plan.coordination.focusSince;atomicJson(path,plan);}delete config.focusCapability;delete config.focusSince;event('fleet-focus-released',{capability:released,failedBuilds:failedBuildStreak(state,released)});});
+  await withPlanWrite(()=>{clearFocus(released);delete config.focusCapability;delete config.focusSince;event('fleet-focus-released',{capability:released,failedBuilds:failedBuildStreak(state,released)});});
  }
  await expandUsefulFleet(state,config);
- const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??json(join(projectRoot,'swarm.json')).maxBots;
+ const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??readPlan().maxBots;
  let controllerPrepared=false,liveBlocked=false;
  // Standing swarm jobs run without a coordinator task, so the controller must run whenever one is enabled.
  // Also while a rollout has standing jobs paused: they are off then, and only this call turns them on again.
- if((json(join(projectRoot,'swarm.json')).jobs??[]).some((j:any)=>j.standing===true&&j.enabled)||existsSync(join(coordinationDir,'rollout-paused.json'))){
-  try{await ensureSwarm(workerSourceRevision(),{},false);sourceErrors.delete('controller');}
+ if((readPlan().jobs??[]).some((j:any)=>j.standing===true&&j.enabled)||existsSync(join(coordinationDir,'rollout-paused.json'))){
+  try{await ensureSwarm(currentRevision(),{currentSource:()=>currentRevision()},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
  for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
@@ -154,7 +187,7 @@ async function tick(state:CoordinatorState,config:any){
   // The single dispatcher prepares the controller before parallel live children
   // can race to create it. Controller startup does not log accounts in.
   if(task.kind==='run'&&!controllerPrepared){
-   try{await ensureSwarm(workerSourceRevision());controllerPrepared=true;sourceErrors.delete('controller');}
+   try{await ensureSwarm(currentRevision(),{currentSource:()=>currentRevision()});controllerPrepared=true;sourceErrors.delete('controller');}
    catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);liveBlocked=true;continue;}
   }
   launchTask(state,task.id);
@@ -192,7 +225,7 @@ async function main(){
  if(mode==='--restart'){writeFileSync(restart,'reload coordinator; preserve owned children');console.log('Coordinator reload requested');return;}
  if(mode==='--stop'){writeFileSync(stop,'owner pause '+new Date().toISOString());console.log('Coordinator stop requested');return;}
  if(mode!=='--run'&&mode!=='--once')throw Error('Use --run, --once, --status or --stop');
- const config=json(join(projectRoot,'swarm.json')).coordination;if(!config?.enabled)throw Error('swarm.json coordination.enabled required');
+ const config=readPlan().coordination;if(!config?.enabled)throw Error('swarm.json coordination.enabled required');
  const lease=join(coordinationDir,'owner.json');
  if(existsSync(lease)){
   const owner=json(lease),held=()=>owner.pid!==process.pid&&(processMatches(owner.pid,owner.nonce)||existsPid(owner.pid));
@@ -204,6 +237,7 @@ async function main(){
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm')))throw Error('coordinator or swarm is paused; resume only under owner authority');
  if(!state.tasks.length){addTasks(state,config.bootstrap??[]);saveState(state);}
  event('coordinator-started',{pid:process.pid,nonce});
+ {const moved=await withPlanWrite(()=>migrateCoordinatorJobs());if(moved)event('coordinator-jobs-moved',moved);}
  do{
   try{await tick(state,config);}catch(error){event('loop-error',String(error));await Bun.sleep(7000);}
   if(mode==='--once')break;await waitForWork();
@@ -216,8 +250,7 @@ async function main(){
   event('coordinator-reload',{children:'preserved for adoption',successor:pid});return;
  }
  if(existsSync(stop)||existsSync(join(projectRoot,'.practice/stop-swarm'))){
-  const plan=json(join(projectRoot,'swarm.json'));
-  for(const job of plan.jobs.filter((j:any)=>j.coordinatorOwner==='coordinator'&&j.enabled!==false)){
+  for(const job of readCoordinatorJobs(projectRoot).jobs.filter((j:any)=>j.coordinatorOwner==='coordinator'&&j.enabled!==false)){
    await disableOwnJob(job.env?.COORDINATOR_RUN_ID);
    for(const account of job.accounts??[job.account])if(account){const file=join(projectRoot,'.practice','stop-'+account);if(!existsSync(file))writeFileSync(file,'coordinator owner pause');}
   }

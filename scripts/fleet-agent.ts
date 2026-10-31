@@ -10,12 +10,14 @@ import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
 import { pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
 import { runSync } from './fleet-sync';
+import { readMergedPlan } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
 const readJson = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
 
-// Accounts with an enabled swarm job belong to the swarm while it runs them.
+// Accounts with an enabled swarm job (the owner's in swarm.json or the coordinator's in .practice/coordinator/jobs.json)
+// belong to the swarm while it runs them.
 export function swarmBusy(jobs: readonly any[]): Set<string> {
     return new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
 }
@@ -53,7 +55,7 @@ if (import.meta.main) {
         sync();
         const dir = FLEET_DIR(), now = Date.now();
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
-        const busy = swarmBusy((() => { try { return JSON.parse(readFileSync(join(root, 'swarm.json'), 'utf8')).jobs ?? []; } catch { return []; } })());
+        const busy = swarmBusy((() => { try { return readMergedPlan(root).jobs ?? []; } catch { return []; } })());
         for (const t of dueTrades(orders, receipts, mySide(), loadOwners(), busy, running, now)) {
             if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
             running.add(t.account.toLowerCase());

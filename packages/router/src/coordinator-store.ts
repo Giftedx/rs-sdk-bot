@@ -39,7 +39,10 @@ export function spawnDetached(args:string[],cwd:string,stdout:string,stderr:stri
 }
 // On Windows a reader that holds the target open (jq, an editor, the dashboard) makes the rename fail for a moment.
 export function atomicJson(file:string,value:unknown,rename:(from:string,to:string)=>void=renameSync){
- const temporary=file+`.tmp-${process.pid}`;writeFileSync(temporary,JSON.stringify(value,null,2));
+ atomicText(file,JSON.stringify(value,null,2),rename);
+}
+export function atomicText(file:string,text:string,rename:(from:string,to:string)=>void=renameSync){
+ const temporary=file+`.tmp-${process.pid}`;writeFileSync(temporary,text);
  for(let attempt=0;;attempt++){
   try{rename(temporary,file);return;}
   catch(e){if(attempt>=20||!['EPERM','EBUSY','EACCES'].includes((e as NodeJS.ErrnoException).code??''))throw e;Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,50);}
@@ -54,8 +57,13 @@ export function loadState(directory=coordinationDir):CoordinatorState{
  for(const record of state.tasks){validateTask(record.spec);if(!['pending','running','succeeded','failed','superseded'].includes(record.status))throw Error('invalid task state');}
  return state;
 }
-export function saveState(state:CoordinatorState,directory=coordinationDir){
- const file=join(directory,'state.json');if(existsSync(file))copyFileSync(file,file+'.previous');atomicJson(file,state);
+// The bytes this process last wrote per file. An unchanged state (the common idle loop) writes nothing: the file
+// is several MB and would otherwise be rewritten, with its .previous copy, on every loop.
+const savedBytes=new Map<string,string>();
+export function saveState(state:CoordinatorState,directory=coordinationDir):boolean{
+ const file=join(directory,'state.json'),bytes=JSON.stringify(state,null,2);
+ if(savedBytes.get(file)===bytes&&existsSync(file))return false;
+ if(existsSync(file))copyFileSync(file,file+'.previous');atomicText(file,bytes);savedBytes.set(file,bytes);return true;
 }
 export function runDirectory(runId:string,directory=coordinationDir){
  if(!/^[-a-z0-9]+$/.test(runId))throw Error('invalid run identity');const path=join(directory,'runs',runId);mkdirSync(path,{recursive:true});return path;

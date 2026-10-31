@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease} from '../src/worker-release';
+import {workerSourceRoots,workerSourceRevision,workerSourceStamp,cachedWorkerSourceRevision,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease} from '../src/worker-release';
 
 test('release pin covers helper edits, additions and deletion; notes and receipts do not change it',()=>{
  const root=mkdtempSync(join(tmpdir(),'worker-release-'));
@@ -86,5 +86,22 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   expect(closed({...row(done),name:'Nobody'})).toBe(false);
   expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(dead)],now,closed)).not.toThrow();
   expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(live)],now,closed)).toThrow('peer state unknown');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('the stamp follows size and modification time; the cached revision rehashes only when the stamp moves',()=>{
+ const root=mkdtempSync(join(tmpdir(),'worker-stamp-'));
+ try{
+  for(const dir of [...workerSourceRoots,'.practice/status','research'])mkdirSync(join(root,dir),{recursive:true});
+  for(const f of ['package.json','bun.lock','tsconfig.json','scripts/worker.ts','packages/shared.ts'])writeFileSync(join(root,f),'original');
+  const stamp=workerSourceStamp(root),pin=workerSourceRevision(root);
+  expect(cachedWorkerSourceRevision(root)).toBe(pin);expect(cachedWorkerSourceRevision(root)).toBe(pin);
+  writeFileSync(join(root,'research/notes.md'),'edit');writeFileSync(join(root,'.practice/status/bot.json'),'{}');
+  expect(workerSourceStamp(root)).toBe(stamp);
+  writeFileSync(join(root,'scripts/worker.ts'),'changed!');
+  expect(workerSourceStamp(root)).not.toBe(stamp);
+  const next=workerSourceRevision(root);expect(next).not.toBe(pin);expect(cachedWorkerSourceRevision(root)).toBe(next);
+  writeFileSync(join(root,'vendor/rs-sdk/sdk/helper.ts'),'new');
+  expect(cachedWorkerSourceRevision(root)).toBe(workerSourceRevision(root));
  }finally{rmSync(root,{recursive:true,force:true});}
 });

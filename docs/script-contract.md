@@ -53,7 +53,9 @@ Bind results to source, server, tick speed and starting state. Speed claims need
 
 ## Autonomous coordination
 
-`packages/router/src/coordinator-cli.ts` runs one queue of `build`, `qualify`, `review`, `provision` and finite `run` tasks for Claude and Codex. `swarm.json.coordination` sets parallelism and planner limits; `swarm.json.jobs` stays the live assignment authority.
+`packages/router/src/coordinator-cli.ts` runs one queue of `build`, `qualify`, `review`, `provision` and finite `run` tasks for Claude and Codex. `swarm.json.coordination` sets parallelism and planner limits; `swarm.json.jobs` holds the owner's live assignments and limits, and the coordinator never writes that file.
+
+- The coordinator's own live state lives in `.practice/coordinator/jobs.json` (`packages/core/src/coordinator-jobs.ts`): the `run` jobs it installs (`coordinatorOwner: "coordinator"`, same job shape), the owner jobs it parks for a recovery, the delivery focus (`focusCapability`, `focusSince`), the granted fleet expansion (`expansion.maxBots` over the owner's `maxBots`; an owner edit of `maxBots` discards it) and the standing accounts a controller rollout pauses. `scripts/swarm.ts`, `scripts/fleet-agent.ts`, the planner and the recovery permit read both files as one plan: the owner's jobs, then each coordinator job in install order, each taking its accounts away from the owner job that names them. A coordinator that finds coordinator-owned jobs or focus settings in `swarm.json` moves them into its file at start.
 
 - The planner reads the scoreboard, the plan and the queue. Every task names the scoreboard entries it moves. A planning round starts on a new receipt, failure or request, otherwise every 30 minutes.
 - A build authors and proves in its own workspace (`../rs-sdk-bot-build/<capability>`, `packages/router/src/build-workspace.ts`). Only publishing its declared files into the main checkout waits for a drained fleet, so live runs continue during builds. A main checkout changed since the build started refuses the publish.
