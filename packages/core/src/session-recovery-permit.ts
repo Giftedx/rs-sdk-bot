@@ -9,6 +9,7 @@ import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
 
 export const RECOVERY_SCHEMA='session-recovery/1';
+export const RECOVERY_BINDING_MS=45000;
 export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
 type EvidenceRef={path:string;sha256:string};
@@ -202,7 +203,9 @@ export function bindRecoveryChild(r:ControlledRecoveryRequest,pid:number,base:st
 // Readiness is not admission: consumeRecoveryConnection still checks all authority and single-use guards.
 export async function waitForRecoveryChildBinding(r:ControlledRecoveryRequest,base:string,ready:ReadableStream<Uint8Array>){
  const paths=recoveryPermitPaths(r,base),permit=json(paths.permit);
- const deadline=permit.issuedAt+10000;
+ // A recovery child is a fresh bun process that loads the SDK and the collision data before it binds: on this PC with
+ // builds running that takes longer than 10 s. The window stays well inside the 150 s permit lifetime.
+ const deadline=permit.issuedAt+RECOVERY_BINDING_MS;
  if(!Number.isFinite(permit.issuedAt)||Date.now()<permit.issuedAt||Date.now()>=deadline)throw Error('recovery connection admission expired');
  const reader=ready.getReader();let timer:ReturnType<typeof setTimeout>|undefined;
  try{
