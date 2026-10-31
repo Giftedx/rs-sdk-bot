@@ -377,9 +377,8 @@ export function persistEnded(file: string, ended: ReadonlyMap<string, EndRecord>
     }
 }
 
-// An account is enabled when any job that names it is enabled. Two jobs for one account (a coordinator run job left
-// off beside a standing hand job) must not read as "off, then on" on every tick: that queued a resume every 2 s and
-// wiped the orphan end record every minute, so the account never settled.
+// An account is enabled when any job that names it is enabled. Every job of an account reads the same flag for it, so
+// an account named by one job that is off and one that is on is on, with no change to observe between the two.
 export function enabledByAccount(planned: readonly ParsedJob[]): Map<string, boolean> {
     const out = new Map<string, boolean>();
     for (const p of planned) for (const a of p.accounts) { const k = a.toLowerCase(); out.set(k, (out.get(k) ?? false) || p.job.enabled === true); }
@@ -679,7 +678,7 @@ if (import.meta.main) {
                 state.push({account:raw.account,accounts:raw.accounts,script:raw.script,standing:false,state:'waiting: coordinator owns runtime build'});
                 continue;
             }
-            observeEnabled(p.accounts, p.accounts.some(a => accountEnabled.get(a.toLowerCase()) === true), previousEnabled, pendingResume);
+            for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
             if(stopAll) for(const a of p.accounts) writeFileSync(stopFile(a),'swarm stopped');
             const r = overlappingRun(runs.values(), p.accounts);
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => rmSync(stopFile(a), {force:true})))
