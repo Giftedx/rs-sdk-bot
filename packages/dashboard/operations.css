@@ -21,3 +21,4 @@
 button.op-kpi{text-align:left;cursor:pointer;font:inherit;color:inherit}
 button.op-kpi:hover{filter:brightness(1.15)}
 .op-late{color:#ff3030!important}
+.op-kpi-bad b{color:#ff6b5b}

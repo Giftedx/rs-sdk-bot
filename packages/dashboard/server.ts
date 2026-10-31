@@ -323,6 +323,24 @@ async function scanProcs(force = false) {
 }
 setInterval(() => void scanProcs(), 30_000);
 
+// ---------- pull requests: the bot repository's open and lately merged PRs (gh), every 5 minutes ----------
+// The hosted publisher fetches the same list; the local page reads it from here.
+let prRows: any[] = [];
+async function refreshPrs() {
+    const fields = 'number,title,headRefName,state,isDraft,updatedAt,author,url';
+    const list = async (state: string, limit: string) => {
+        const p = Bun.spawn(['gh', 'pr', 'list', '--repo', 'Giftedx/rs-sdk-bot', '--state', state, '--limit', limit, '--json', fields], { stdout: 'pipe', stderr: 'ignore', windowsHide: true });
+        const text = await new Response(p.stdout).text();
+        if (await p.exited !== 0) throw Error(`gh pr list ${state} failed`);
+        return JSON.parse(text) as any[];
+    };
+    try {
+        prRows = [...await list('open', '50'), ...await list('merged', '15')].map(r => ({ number: r.number, title: String(r.title ?? ''), branch: String(r.headRefName ?? ''), state: String(r.state ?? ''), draft: r.isDraft === true, updatedAt: String(r.updatedAt ?? ''), author: String(r.author?.login ?? ''), url: String(r.url ?? '') }));
+    } catch { /* gh missing or offline: keep the last list */ }
+}
+setInterval(() => void refreshPrs(), 300_000);
+void refreshPrs();
+
 // ---------- world feed: who is in the world, server tick, player count ----------
 const roster = new Map<string, { x: number; z: number; level: number; combat: number; seen: number }>();
 const firstSeen = new Map<string, number>();
@@ -1014,6 +1032,7 @@ function buildState() {
         viewerTimings: viewerTimings.slice(0, 20),
         race: currentRace, gates: currentGates, chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
         pageVersion: (() => { try { return Math.max(...[PAGE_FILE,...['map-shell.css','map-shell.js','client-shell.css','client-shell.js','client-viewer.css','operations.css','operations.js','xp-tracker.js'].map(f=>join(import.meta.dir,f))].map(f=>existsSync(f)?statSync(f).mtimeMs:0)); } catch { return 0; } })(),
+        prs: prRows,
         scoreboard: cached(FILES.scoreboard, text => scoreboardView(JSON.parse(text)), scoreboardView(null)), fleetSides: fleetSides(now),
         icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
