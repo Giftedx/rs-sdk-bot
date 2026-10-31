@@ -10,6 +10,10 @@ import {missionSignature,successfulEnd} from './session-admission';
 
 export const RECOVERY_SCHEMA='session-recovery/1';
 export const RECOVERY_BINDING_MS=45000;
+// The controller heartbeat (.practice/swarm-state.json, written every 2 s) counts as current for this long. A heartbeat
+// older than this means the controller stalled or died, so the window stays short; the checks between a fleet read and
+// its use must stay fast (processMatches caches its PowerShell lookups for that reason).
+export const FLEET_HEARTBEAT_MAX_MS=10000;
 export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
 type EvidenceRef={path:string;sha256:string};
@@ -87,8 +91,8 @@ export function verifyNativeRecoveryProof(proof:any,proofDirectory:string,expect
  return true;
 }
 export const FLEET_REFUSALS=['missing','malformed','controller','future','stale','account-active'] as const;
-// The controller publishes fleet state from its own process. Owner, task and source checks take about a second,
-// so the age is measured from a clock read taken after the fleet read, never from an earlier one.
+// The controller publishes fleet state from its own process. The age is measured from a clock read taken after the
+// fleet read, never from an earlier one, and FLEET_HEARTBEAT_MAX_MS bounds it.
 export function assertFleetResolved(path:string,account:string,controllerPid:number,clock:()=>number=Date.now){
  const refuse=(field:(typeof FLEET_REFUSALS)[number])=>{throw Error('recovery fleet ownership unresolved: '+field);};
  let raw:string;try{raw=readFileSync(path,'utf8');}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')refuse('missing');throw error;}
@@ -97,7 +101,7 @@ export function assertFleetResolved(path:string,account:string,controllerPid:num
  if(!fleet||typeof fleet!=='object'||!Number.isFinite(fleet.at)||!Array.isArray(fleet.jobs)||fleet.jobs.some((j:any)=>!j||typeof j!=='object'))refuse('malformed');
  if(fleet.controllerPid!==controllerPid)refuse('controller');
  if(observedAt-fleet.at<0)refuse('future');
- if(observedAt-fleet.at>10000)refuse('stale');
+ if(observedAt-fleet.at>FLEET_HEARTBEAT_MAX_MS)refuse('stale');
  if(fleet.jobs.some((j:any)=>(same(j.account,account)||Array.isArray(j.accounts)&&j.accounts.some((a:unknown)=>same(a,account)))
   &&/^(?:running|starting|stopping)/.test(typeof j.state==='string'?j.state:'')))refuse('account-active');
 }

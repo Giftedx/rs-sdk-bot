@@ -14,8 +14,15 @@ export function commandLine(pid: number): string | null {
     return r.stdout.toString().trim() || null;
 }
 
-export function processMatches(pid: number, marker: string): boolean {
-    return commandLine(pid)?.includes(marker) ?? false;
+// One PowerShell start per call costs about 1.4 s on this PC, and a recovery authority check asks twice within a few
+// seconds, so a command line is reused for a short time. Kill paths read commandLine() directly and never this cache.
+const recentCommandLines = new Map<number, { at: number; line: string | null }>();
+export const PROCESS_MATCH_CACHE_MS = 3000;
+export function processMatches(pid: number, marker: string, now = Date.now()): boolean {
+    const hit = recentCommandLines.get(pid);
+    const line = hit && now - hit.at < PROCESS_MATCH_CACHE_MS ? hit.line : commandLine(pid);
+    if (!hit || now - hit.at >= PROCESS_MATCH_CACHE_MS) recentCommandLines.set(pid, { at: now, line });
+    return line?.includes(marker) ?? false;
 }
 
 export async function killTree(pid: number): Promise<void> {
