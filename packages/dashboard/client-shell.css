@@ -50,4 +50,12 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .game-places[hidden]{display:none}
 .game-places .map-place{display:flex!important;position:static!important;background:none;border:0;padding:0;flex-wrap:wrap}
 .hs-mode{margin:6px 0}
+.rival-row{display:grid;grid-template-columns:44px 1fr 30px 62px 92px;gap:4px;align-items:center;width:100%;background:#1b1b1b;color:#ddd;border:0;border-radius:2px;padding:4px 6px;margin-top:2px;text-align:left;font:12px Arial;cursor:pointer}
+.rival-row:hover{background:#242424}
+.rival-row span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rival-ours{color:#ffd700}
+.spot-row{border-top:1px solid #242424;padding:5px 0}
+.spot-names{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.spot-names button{background:#1b1b1b;border:0;color:#ff981f;font:11px Arial;padding:2px 5px;border-radius:2px;cursor:pointer}
+.lookup-card{margin-top:6px}
 

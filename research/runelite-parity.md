@@ -40,8 +40,9 @@ Use this for every new or changed part.
 |---|---|---|---|---|
 | `fleet` | `friendlist`, `party` | adapt | Every account on every side, with filters (working, attention, held, side), side sync age and cross-side orders. RuneLite has no fleet. Party is the nearest idea: shared status of a group. | none |
 | `xp` | `xptracker` | adapt | XP gained, XP/hr, progress to level, time to level, reset, saved between sessions (browser storage). XP comes from status snapshots, not per drop. | Copy "hide maxed skills" and "pause". Reject "actions done/left/hr", because no per-action XP is reported. |
-| `boards` | `hiscore` | adapt | Account view: RuneLite's layout (skill grid, overall, rank on hover) for fleet accounts. Fleet view: our scoreboard and the best fleet rank on each of the 24 boards. RuneLite has no fleet view. | Copy the lookup of any player name, not only fleet accounts (the server fetches the demo hiscore page). Reject the endpoint selector and the bounty lookup: there are no such boards here. |
+| `boards` | `hiscore` | adapt | Account view: RuneLite's layout (skill grid, overall, rank on hover) for fleet accounts. Fleet view: our scoreboard and the best fleet rank on each of the 24 boards. Rivals view: each board's top 10 from the demo hiscores, with our accounts marked and who is online now and where. RuneLite has no fleet or rivals view. | Reject the endpoint selector and the bounty lookup: there are no such boards here. |
 | `ge` | `grandexchange` | adapt | Route supplies with the market's buy, sell and stock, and "We hold" from the fleet's banks. Our market has no offer slots. | Show our bots' open market offers once a status file reports them. Reject GE limits and the limit timer: no data. |
+| `world` | `hiscore` (player lookup), `opponentinfo`, `playerindicators` | adapt | Look up any player: hiscore levels and ranks, combat level, online state and place from the world feed, a button to show them on the map; right-click any dot on the map to look that player up. Our spots: other players within 10 tiles of each tile our bots claim (fleet-data `claims`). Online count. The local server reads the hiscores; the hosted page has the lookups the server keeps (the top 3 of each board and the players at our spots), because the demo hiscores send no CORS header. | Worn items of any player from the world feed's appearance block (needs a detail subscription and an appearance decoder). Named claims (`shop:aubury`) have no tile, so they have no count. |
 | `stock` | `bank` (bank value), `loottracker` | adapt | Every bank or one bank, and the Transfers view (flow between fleet accounts). RuneLite's loot tracker counts NPC drops; we have no drop events. | Copy "show bank value": the total at market prices. |
 | `account` | `account`, `info` | adapt | One account: status, HP, combat, total, bank coins, assignment, why it stopped, commands, linked jobs. | none |
 | `activity` | `chathistory`, `loottracker` (history list) | adapt | Finished and stopped game runs, live or practice, as readable lines with repeats folded. | none |
@@ -73,7 +74,7 @@ Use this for every new or changed part.
 | `orbs` | status orbs, `regenmeter` | adapt | HP and Prayer orbs from the snapshot. | Reject run energy and special attack orbs: not reported. Reject the regen meter: no regen timer. |
 | `xp-drops` | `xpdrop` | copy | Skill icon and XP gained, rising under the XP button. | Reject prayer-coloured drops: no active prayer state. |
 | `xp-globes` | `xpglobes` | copy | A progress ring per recently trained skill, with XP left in the tooltip. | Copy "show XP/hr" in the tooltip. |
-| `minimap` | `minimap` | adapt | Map art around the followed account; every fleet bot is a dot. | Copy the per-type dot colours: other players from the world feed in white, fleet bots in green. |
+| `minimap` | `minimap` | adapt | Map art around the followed account. Fleet bots are green dots (bright when playing), other players from the world feed are white. | none |
 | `places` | `worldmap` (destinations) | adapt | A place list (Go, Locate) for the camera. | Reject fairy rings, teleports and the other OSRS map layers. |
 | `overlay` | overlay panels (`xptracker` on-screen box) | adapt | The followed account's status, goal, phase, XP/hr and session; in free camera, fleet totals. | none |
 | `infoboxes` | `timersandbuffs`, infobox manager | adapt | One box per playing bot (trained skill, session), or the followed account's session and goal time. | Reject buff timers: no buff state. |
@@ -82,7 +83,7 @@ Use this for every new or changed part.
 | `notify` | RuneLite notifier | copy | Desktop notifications for level-ups, deaths and idling, behind a Configuration switch. | none |
 | `bank-window` | game bank, `bank` | adapt | The bank of the followed account in the game's bank frame. | Copy the bank value line (market prices). |
 | `context-menu` | `menuentryswapper`, `examine` | adapt | Item options (Use, Wield/Wear/Eat/Drink, Drop, Examine) and map-dot options (Follow, Account, XP Tracker, Pause, Examine). They act on the dashboard, not the game. | none |
-| `name-tags` | `playerindicators`, `tileindicators` | adapt | Name tags for fleet bots and a tile under the followed account on the 2D map. | none |
+| `name-tags` | `playerindicators`, `tileindicators` | adapt | Name tags for fleet bots and a tile under the followed account on the 2D map. Other players on the ground floor are small grey dots; right-click one to look it up. | none |
 | `3d` | none (the rs-world viewer) | own | The pinned rs-world viewer with the live world feed; the main account renamed "Hidden". | none |
 | `screens` | `loginscreen` | adapt | The game's loading and connection-lost screens, driven by the state stream. | none |
 
