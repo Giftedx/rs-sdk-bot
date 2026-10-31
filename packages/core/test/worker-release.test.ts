@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,workerSourceStamp,cachedWorkerSourceRevision,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease} from '../src/worker-release';
+import {workerSourceRoots,workerSourceRevision,workerSourceStamp,cachedWorkerSourceRevision,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
 
 test('release pin covers helper edits, additions and deletion; notes and receipts do not change it',()=>{
  const root=mkdtempSync(join(tmpdir(),'worker-release-'));
@@ -16,7 +16,13 @@ test('release pin covers helper edits, additions and deletion; notes and receipt
   expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('coordinator build in progress');
   expect(()=>assertLiveWorkerRelease('localhost:8888',{},root)).not.toThrow();
   rmSync(join(root,'.practice/coordinator/build-lock.json'));
-  writeFileSync(join(root,'.practice/status/legacy.json'),JSON.stringify({server:'rs-sdk-demo.fly.dev',at:Date.now(),result:''}));
+  // A standing peer on another release does not hold a live start; a coordinator peer on another release does.
+  writeFileSync(join(root,'swarm.json'),JSON.stringify({jobs:[{account:'Fish',script:'scripts/x.ts',standing:true,enabled:true}]}));
+  writeFileSync(join(root,'.practice/status/legacy.json'),JSON.stringify({name:'Fish',server:'rs-sdk-demo.fly.dev',at:Date.now(),result:'',workRevision:'b'.repeat(64)}));
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).not.toThrow();
+  writeFileSync(join(root,'.practice/status/legacy.json'),JSON.stringify({name:'Manual',server:'rs-sdk-demo.fly.dev',at:Date.now(),result:'',workRevision:'b'.repeat(64)}));
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('coordinated rollout');
+  writeFileSync(join(root,'.practice/status/legacy.json'),JSON.stringify({name:'Fish',server:'rs-sdk-demo.fly.dev',at:Date.now(),result:'',coordinatorRunId:'task-legacy'}));
   expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('coordinated rollout');
   rmSync(join(root,'.practice/status/legacy.json'));
   expect(()=>assertWorkerRelease({},root)).toThrow('pin missing');
@@ -31,11 +37,18 @@ test('release pin covers helper edits, additions and deletion; notes and receipt
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 
-test('live cohort refuses a fresh legacy or different worker, but allows matching or completed sessions',()=>{
- const pin='a'.repeat(64),base={server:'rs-sdk-demo.fly.dev',at:100,result:''};
- for(const workRevision of [undefined,'b'.repeat(64)])expect(()=>assertCompatibleWorkers(pin,base.server,[{...base,workRevision}],101)).toThrow('coordinated rollout');
- for(const row of [{...base,workRevision:pin},{...base,result:'ok'},{...base,server:'localhost:8888'}])
-  expect(()=>assertCompatibleWorkers(pin,base.server,[row],101)).not.toThrow();
+test('live cohort refuses a fresh peer on another release unless a standing job names it; matching or completed sessions pass',()=>{
+ const pin='a'.repeat(64),other='b'.repeat(64),base={name:'Fish',server:'rs-sdk-demo.fly.dev',at:100,result:'',coordinatorRunId:'task-1'};
+ const standing=(row:any)=>standingPeer(row,new Set(['fish']));
+ for(const workRevision of [undefined,other])expect(()=>assertCompatibleWorkers(pin,base.server,[{...base,workRevision}],101,()=>false,standing)).toThrow('coordinated rollout');
+ // A named standing worker carries the release it started on; it never holds a coordinator run back.
+ for(const row of [{...base,workRevision:pin},{...base,result:'ok'},{...base,server:'localhost:8888'},{...base,coordinatorRunId:null,workRevision:other}])
+  expect(()=>assertCompatibleWorkers(pin,base.server,[row],101,()=>false,standing)).not.toThrow();
+ // An unnamed peer, a peer without a revision, or a coordinator peer on another release still refuses.
+ for(const row of [{...base,name:'Manual',coordinatorRunId:null,workRevision:other},{...base,coordinatorRunId:null,workRevision:undefined},{...base,coordinatorRunId:'task-2',workRevision:other}])
+  expect(()=>assertCompatibleWorkers(pin,base.server,[row],101,()=>false,standing)).toThrow('coordinated rollout');
+ // A stale heartbeat still refuses, standing or not.
+ expect(()=>assertCompatibleWorkers(pin,base.server,[{...base,coordinatorRunId:null,workRevision:pin,at:60}],100001,()=>false,standing)).toThrow('peer state unknown');
 });
 
 test('missing, future or stale heartbeats cannot prove an unfinished peer has left',()=>{

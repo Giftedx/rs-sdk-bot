@@ -14,8 +14,22 @@ export function commandLine(pid: number): string | null {
     return r.stdout.toString().trim() || null;
 }
 
+// Uncached: every kill path (safeKill, safeKillOne, killTree callers) authorizes with this, and a reused PID must
+// never pass on an old command line.
 export function processMatches(pid: number, marker: string): boolean {
     return commandLine(pid)?.includes(marker) ?? false;
+}
+
+// Observation only, never authorization to kill. One PowerShell start per lookup costs about 1.4 s on this PC, and a
+// recovery authority check asks for the same two command lines at permit issue and again at child binding a few
+// seconds later, so a command line is reused for a short time.
+const recentCommandLines = new Map<number, { at: number; line: string | null }>();
+export const PROCESS_MATCH_CACHE_MS = 3000;
+export function processMatchesRecent(pid: number, marker: string, now = Date.now()): boolean {
+    const hit = recentCommandLines.get(pid);
+    const line = hit && now - hit.at < PROCESS_MATCH_CACHE_MS ? hit.line : commandLine(pid);
+    if (!hit || now - hit.at >= PROCESS_MATCH_CACHE_MS) recentCommandLines.set(pid, { at: now, line });
+    return line?.includes(marker) ?? false;
 }
 
 export async function killTree(pid: number): Promise<void> {

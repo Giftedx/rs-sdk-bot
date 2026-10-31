@@ -240,3 +240,11 @@ Recommendation: use the host. 4 bots in one host cost about one bot process plus
 - More than 4 bots per host not measured. CPU per host not measured.
 - Swarm host jobs exist (section 3c); the live farmers are not moved yet (owner switch).
 - Live runs not done (practice only).
+
+## Repeated route search
+
+`world.ts` and `leg-cache.ts` -> bot and route-worker planning -> numeric lower-bound storage, per-query tile keys, explicit generator cleanup and complete opened-danger cache scopes -> 20 exact golden route regressions and three matched warm-cache measurements. Walk-cache loading retains a null-prototype object without an entries array and duplicate Map.
+
+On Linux/Bun 1.3.14 with four CPU cores, RSS after the two long benchmark routes is 1,301/1,297/1,301 MiB for master and 662/664/671 MiB for the optimized source (48.8% lower on average). Combined route times are 8,010/7,331/7,417 ms and 1,970/2,158/2,157 ms (72.4% lower). Both versions receive a warm-up and alternate on the same machine/cache. The worker-inclusive stage is 1,233/1,233/1,242 MiB and 889/884/898 MiB, about 28% lower; it is distinct from the after-two-routes acceptance point. `route-memory.json` retains raw output and source hashes.
+
+A first route still needs native path searches. A fresh-cache golden run passes all 20 exact routes (22 tests including cache contracts, 138.63 s). The danger cache key includes every opened tile, including a final destination that may lie inside another cached leg. Different masks use distinct keys; cached endpoint walks can be reused when the complete policy matches. The fixture preserves exact costs and leg sequences, including equal-cost choices.
