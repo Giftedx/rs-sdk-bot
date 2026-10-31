@@ -167,7 +167,7 @@
   hud.addEventListener('mouseout',e=>{if(e.target.closest('[data-skill]')&&!e.relatedTarget?.closest?.('[data-skill]'))hud.querySelector('.game-tip').hidden=true;});
   let welcomed=false;
   function chatFeed(){
-    if(!welcomed){welcomed=true;chat.push({kind:'Game',text:'Welcome to RuneScape.',at:Date.now()});}
+    if(!welcomed){welcomed=true;chat.push({kind:'Game',text:'Welcome to RuneScape.',at:Date.now()});if(!window.atlasOperator())chat.push({kind:'Game',text:'You are watching the Swarm fleet. Sign in as owner (title bar) to command it; ::help lists the chat commands.',at:Date.now()});}
     const rows=[...(S.events||[]).filter(e=>!e.practice).map(e=>({at:e.at,name:e.name,text:e.full||e.text,kind:'Game'})),...(S.results||[]).filter(r=>!r.practice).map(r=>({at:r.at,name:r.name,text:(r.ok?'finished: ':'stopped: ')+String(r.text).slice(0,120),kind:r.ok?'Game':'Private'}))]
       .sort((a,b)=>a.at-b.at).slice(-60);
     let added=0;
