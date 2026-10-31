@@ -1,5 +1,6 @@
 import {test,expect} from 'bun:test';
 import {codexArgs,assignedWorker,rejectedReview,modelFailure} from '../src/model-worker';
+import {reviewDependencies,reviewVerdict} from '../src/model-worker';
 import {initialState,addTasks,validateTask} from '../src/coordinator';
 import {waitForWork} from '../src/coordinator-cli';
 import {mkdtempSync,writeFileSync} from 'node:fs';
@@ -35,4 +36,22 @@ test('a failed independent review blocks that source until repaired or supersede
  const bad={evidence:'source-review',source:'same',_task:{capability:'ge',at:1},review:{approved:false,reason:'unfilled escrow'}};
  expect(rejectedReview({bad},'ge','same')).toBe('unfilled escrow');expect(rejectedReview({bad},'ge','repaired')).toBeNull();
  expect(rejectedReview({bad,good:{...bad,_task:{capability:'ge',at:2},review:{approved:true}}},'ge','same')).toBeNull();
+});
+
+test('a review carries only its capability history and dependencies, newest first, within the input cap',()=>{
+ const deps:Record<string,any>={
+  'qualify-x-1':{ok:true,delivery:{id:'x'},_task:{capability:'x',at:1}},
+  'review-x-2':{ok:false,review:{approved:false,reason:'r'},_task:{capability:'x',at:2}},
+  'build-y-1':{ok:true,delivery:{id:'y'},_task:{capability:'y',at:3}},
+  'dep-z':{ok:true,_task:{capability:'z',at:4}},
+ };
+ const picked=reviewDependencies(deps,'x',['dep-z']);
+ expect(Object.keys(picked)).toEqual(['dep-z','review-x-2','qualify-x-1']);
+ expect(Object.keys(reviewDependencies(deps,'x',['dep-z'],60))).toEqual(['dep-z']);
+});
+test('a failed or malformed model answer is a failed review, not a rejection',()=>{
+ expect(()=>reviewVerdict({ok:false,text:'turn/start failed: Input exceeds the maximum length'},JSON.parse)).toThrow('review model unavailable');
+ expect(()=>reviewVerdict({ok:true,text:'I rejected it.'},t=>({text:t}))).toThrow('malformed');
+ expect(reviewVerdict({ok:true,text:'{"approved":false,"reason":"defect at a.ts:1"}'},JSON.parse)).toEqual({approved:false,reason:'defect at a.ts:1'});
+ expect(reviewVerdict({ok:true,text:'{"approved":true}'},JSON.parse)).toEqual({approved:true,reason:''});
 });

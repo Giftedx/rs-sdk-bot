@@ -4,6 +4,23 @@ import {runClaude} from './author';
 import {projectRoot,coordinationDir} from './coordinator-store';
 import {killTree} from '../../practice/src/proc';
 export type ModelWorker='codex'|'claude';
+// The receipts a review prompt carries: the task's own dependencies and this capability's history, newest first, within
+// a size the model accepts. The whole coordinator history ran past Codex's 1,048,576-character input limit.
+export const REVIEW_INPUT_MAX_CHARS=400000;
+export function reviewDependencies(dependencies:Record<string,any>,capability:string,dependsOn:readonly string[],maxChars=REVIEW_INPUT_MAX_CHARS):Record<string,any>{
+ const relevant=Object.entries(dependencies).filter(([id,d])=>dependsOn.includes(id)||d?._task?.capability===capability||d?.delivery?.id===capability)
+  .sort((a,b)=>(dependsOn.includes(b[0])?1:0)-(dependsOn.includes(a[0])?1:0)||(b[1]?._task?.at??0)-(a[1]?._task?.at??0));
+ const out:Record<string,any>={};let size=0;
+ for(const [id,d] of relevant){const text=JSON.stringify(d);if(size+text.length>maxChars)break;out[id]=d;size+=text.length;}
+ return out;
+}
+// A verdict exists only when the model answered. A failed or expired call is a failed review task, never a rejection.
+export function reviewVerdict(review:{ok:boolean;text:string},parse:(text:string)=>any):{approved:boolean;reason:string}{
+ if(!review.ok)throw Error('review model unavailable: '+String(review.text).slice(0,300));
+ const verdict=parse(review.text);
+ if(typeof verdict?.approved!=='boolean')throw Error('review verdict malformed');
+ return {approved:verdict.approved,reason:String(verdict.reason??'')};
+}
 export function rejectedReview(dependencies:Record<string,any>,capability:string,source:string){
  const latest=Object.values(dependencies).filter(d=>d?.evidence==='source-review'&&d._task?.capability===capability&&d.source===source).sort((a,b)=>b._task.at-a._task.at)[0];
  return latest?.review?.approved===false?String(latest.review.reason):null;
