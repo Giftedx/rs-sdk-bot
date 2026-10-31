@@ -29,6 +29,7 @@ import {createRecoveryDispatch} from '../packages/core/src/session-recovery-disp
 import { createHash } from 'node:crypto';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
+import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
 
 export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
@@ -125,6 +126,13 @@ export function isReservation(job: Job): boolean {
 }
 
 // A host job lists its accounts; a single job names one. Returns an error string for a job the swarm must skip.
+// The first account of a job that another fleet side owns (fleet/owners.json): this controller never starts it, so one
+// swarm.json can carry every side's jobs.
+export function otherSideAccount(accounts: readonly string[], side: string, owners: ReadonlyMap<string, Owner>): { account: string; side: string } | undefined {
+    for (const a of accounts) { const s = sideOf(a, owners as Map<string, Owner>); if (s !== side) return { account: a, side: s }; }
+    return undefined;
+}
+
 export function parseJob(job: Job): ParsedJob | { error: string } {
     if (!job || typeof job.script !== 'string' || !job.script) return { error: 'no script' };
     if(job.orchestrate!==undefined&&typeof job.orchestrate!=='boolean')return {error:'bad orchestrate mode'};
@@ -447,6 +455,7 @@ if (import.meta.main) {
     const planFile = resolve(process.argv[2] ?? join(root, 'swarm.json'));
     const coordinatorOwner=process.argv.find(a=>a.startsWith('--coordinator='))?.slice('--coordinator='.length);
     const prac = join(root, '.practice');
+    const side = mySide();
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     if (process.env.DEMO_OK !== '1') { console.log('swarm: set DEMO_OK=1 (live server)'); process.exit(2); }
@@ -634,6 +643,8 @@ if (import.meta.main) {
         } catch (e) { endStateOk = false; console.log(`SWARM repair unavailable; new starts paused: ${String(e)}`); }
         const externalCount = () => activeExternalLive(statuses, [...runs.values()].flatMap(r => r.accounts).concat(recoveryDispatch.active?[recoveryDispatch.active.account]:[],inheritedRecoveries.map(r=>r.account)), Date.now()).length;
         const state: Record<string, unknown>[] = [];
+        let owners: Map<string, Owner>;
+        try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
         for (const raw of plan.jobs) {
             if(!coordinatedAdmission(raw,!!coordinatorOwner)){
                 state.push({account:raw.account,accounts:raw.accounts,script:raw.script,state:'existing assignment; awaiting coordinator qualification'});
@@ -649,6 +660,11 @@ if (import.meta.main) {
                 continue;
             }
             const job = p.job;
+            const foreign = otherSideAccount(p.accounts, side, owners);
+            if (foreign) {
+                state.push({ account: raw.account ?? p.accounts.join('+'), script: raw.script, enabled: raw.enabled, state: `other side: ${foreign.account} belongs to ${foreign.side}` });
+                continue;
+            }
             // A standing job runs the current source, so a publish or rollout lock does not hold it.
             if(!(job as Job & {standing?:boolean}).standing&&existsSync(join(prac,'coordinator/build-lock.json'))){
                 state.push({account:raw.account,accounts:raw.accounts,script:raw.script,standing:false,state:'waiting: coordinator owns runtime build'});
