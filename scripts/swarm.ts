@@ -377,6 +377,14 @@ export function persistEnded(file: string, ended: ReadonlyMap<string, EndRecord>
     }
 }
 
+// An account is enabled when any job that names it is enabled. Two jobs for one account (a coordinator run job left
+// off beside a standing hand job) must not read as "off, then on" on every tick: that queued a resume every 2 s and
+// wiped the orphan end record every minute, so the account never settled.
+export function enabledByAccount(planned: readonly ParsedJob[]): Map<string, boolean> {
+    const out = new Map<string, boolean>();
+    for (const p of planned) for (const a of p.accounts) { const k = a.toLowerCase(); out.set(k, (out.get(k) ?? false) || p.job.enabled === true); }
+    return out;
+}
 export function observeEnabled(accounts: readonly string[], enabled: boolean, previous: Map<string, boolean>, pending: Set<string>): void {
     for (const a of accounts) {
         const key=a.toLowerCase();
@@ -585,6 +593,7 @@ if (import.meta.main) {
         if(stopAll&&recoveryDispatch.active)writeFileSync(stopFile(recoveryDispatch.active.account),'swarm recovery stopped');
         if(stopAll)for(const held of inheritedRecoveries)writeFileSync(stopFile(held.account),'inherited recovery stopped');
         const planned=plan.jobs.flatMap(j=>{ const p=parseJob(j); return 'error' in p?[]:[p]; });
+        const accountEnabled = enabledByAccount(planned);
         if (Date.now() - orphanScanAt >= 60_000) {
             orphanScanAt = Date.now();
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
@@ -670,7 +679,7 @@ if (import.meta.main) {
                 state.push({account:raw.account,accounts:raw.accounts,script:raw.script,standing:false,state:'waiting: coordinator owns runtime build'});
                 continue;
             }
-            observeEnabled(p.accounts, job.enabled, previousEnabled, pendingResume);
+            observeEnabled(p.accounts, p.accounts.some(a => accountEnabled.get(a.toLowerCase()) === true), previousEnabled, pendingResume);
             if(stopAll) for(const a of p.accounts) writeFileSync(stopFile(a),'swarm stopped');
             const r = overlappingRun(runs.values(), p.accounts);
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => rmSync(stopFile(a), {force:true})))
