@@ -43,7 +43,10 @@ export function replaceTasks(state:CoordinatorState,replacements:{from:string;to
   if(old.status==='pending')old.status='superseded';old.supersededBy=to;
  }
  const done=new Set<string>(),active=new Set<string>();
- const visit=(id:string)=>{if(active.has(id))throw Error('replacement dependency cycle: '+id);if(done.has(id))return;active.add(id);for(const dep of records.get(id)!.spec.dependsOn){if(!records.has(dep))throw Error('missing replacement dependency');visit(dep);}active.delete(id);done.add(id);};
+ // Only open tasks run again, so only their dependencies must exist. compactState keeps the newest finished task of each
+ // capability and kind, and that task's own dependencies may be archived.
+ const open=(id:string)=>['pending','running'].includes(records.get(id)!.status);
+ const visit=(id:string)=>{if(active.has(id))throw Error('replacement dependency cycle: '+id);if(done.has(id))return;if(!open(id)){done.add(id);return;}active.add(id);for(const dep of records.get(id)!.spec.dependsOn){if(!records.has(dep))throw Error('missing replacement dependency');visit(dep);}active.delete(id);done.add(id);};
  for(const r of state.tasks)visit(r.spec.id);
 }
 
