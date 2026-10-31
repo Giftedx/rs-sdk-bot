@@ -53,7 +53,10 @@ export function assertCompatibleWorkers(pin:string,server:string,statuses:readon
     const unfinished=statuses.filter(s=>s?.server===server&&!s.result&&!closed(s));
     if(unfinished.some(s=>!Number.isFinite(s.at)||s.at<=0||s.at>now||now-s.at>=30_000))
         throw Error('no worker progress: release peer state unknown; verify offline before rollout');
-    if(unfinished.some(s=>s.workRevision!==pin))
+    // A standing worker (no coordinatorRunId) carries the release of the source it started on and skips this check for
+    // itself (assertLiveWorkerRelease), and a coordinator run holds the rollout while it works, so only an unfinished
+    // coordinator peer on another release makes the cohort incompatible.
+    if(unfinished.some(s=>s.coordinatorRunId&&s.workRevision!==pin))
         throw Error('no worker progress: active legacy/different release; wait offline for coordinated rollout');
 }
 
