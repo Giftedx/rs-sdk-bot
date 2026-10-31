@@ -10,6 +10,8 @@ Offline integration: [preparation](../.practice/shared-supply/preparation.json) 
 
 `packages/core/src/quest-status.ts` maps all 68 journal components. It reads each client's server-set colours passively; untouched red and untransmitted varp defaults stay unknown. Status snapshots carry per-quest flags. Existing workers are not restarted for capture. Reward extraction remains separate: `knowledge/quests.json` has 64 quests / 138 QP. [Dashboard evidence](../.practice/goal-gaps/verification.json) records observed coverage, not completion of unobserved accounts.
 
+Coverage reuses the pinned `questlist.if` journal labels to map observed completion to quest folders, including `fortress` → `quest_blackknight`. The coordinator's quest frontier consumes these stages: live completion outranks practice and script presence; unknown or missing journal flags do not promote a folder. `packages/router/test/coverage.test.ts` checks all 68 mappings and the planner frontier. This classification proves no additional quest completion.
+
 ## 1. Measured: Waterfall Quest
 
 Script `scripts/generated/waterfall.ts`, preset `quest_waterfall` (beside Almera, 10 HP, 2 ropes, 6 air, earth and

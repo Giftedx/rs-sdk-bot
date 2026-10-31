@@ -5,6 +5,8 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { GameAction } from '../../knowledge/src/actions';
+import { parseConfigs } from '../../knowledge/src/config';
+import { QUEST_SOURCE } from '../../core/src/quest-status';
 
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'] as const;
 export const BANDS = [[1, 40], [40, 70], [70, 99]] as const;
@@ -54,6 +56,13 @@ export const questScript = (folder: string): string => SCRIPT_ALIAS[folder] ?? '
 const QP_FALLBACK: Record<string, number> = { quest_cog: 1, quest_elemental_workshop: 1, quest_mm: 3, quest_troll_love: 2 };
 const VARP_FOLDER: Record<string, string> = { goblinquest: 'quest_gobdip', elenaquest: 'quest_elena', waterfall_quest: 'quest_waterfall', horrorquest: 'quest_horror' };
 
+// Journal labels are the names emitted by questFlags, not varps or script names.
+export function questJournalNames(root = resolve(import.meta.dir, '../../..')): Map<string, string> {
+    return new Map(parseConfigs(readFileSync(join(root, QUEST_SOURCE), 'utf8'), QUEST_SOURCE)
+        .filter(b => b.props.buttontype?.[0] === 'normal' && b.props.text?.[0])
+        .map(b => [b.name === 'fortress' ? 'quest_blackknight' : `quest_${b.name}`, b.props.text![0]!]));
+}
+
 export function skillBands(statuses: Status[]) {
     return SKILLS.map(skill => {
         const best = Math.max(1, ...statuses.flatMap(s => (s.skills ?? []).filter(k => k.name.toLowerCase() === skill.toLowerCase()).map(k => k.level)));
@@ -61,11 +70,11 @@ export function skillBands(statuses: Status[]) {
     });
 }
 
-export function questStages(statuses: Status[], practicePass: Set<string>, scriptFolders: Set<string>, quests: { varp: string; folder: string; questPoints: number }[]) {
+export function questStages(statuses: Status[], practicePass: Set<string>, scriptFolders: Set<string>, quests: { varp: string; folder: string; questPoints: number; name?: string }[]) {
     const done = new Set(statuses.flatMap(s => (s.quests ?? []).filter(q => q.state === 'complete').map(q => q.name.toLowerCase())));
     const names = [...new Set(statuses.flatMap(s => (s.quests ?? []).map(q => q.name)))];
     return { liveComplete: names.filter(n => done.has(n.toLowerCase())).sort(), journalQuests: names.length,
-        folders: quests.map(q => ({ folder: q.folder, qp: q.questPoints, stage: (practicePass.has(q.folder) ? 'practice' : scriptFolders.has(q.folder) ? 'named' : 'none') as Stage })) };
+        folders: quests.map(q => ({ folder: q.folder, qp: q.questPoints, stage: (q.name && done.has(q.name.toLowerCase()) ? 'live' : practicePass.has(q.folder) ? 'practice' : scriptFolders.has(q.folder) ? 'named' : 'none') as Stage })) };
 }
 
 export function domainStages(actions: GameAction[], text: string) {
@@ -89,8 +98,9 @@ export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'
     // The 68 quest folders of the content are the quest list (knowledge/quests.json lacks 4 folders).
     const known = new Map<string, number>((JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')) as { folder: string | null; varp: string; questPoints: number }[])
         .map(q => [q.folder ?? VARP_FOLDER[q.varp] ?? q.varp, q.questPoints]));
+    const journalNames = questJournalNames(root);
     const quests = readdirSync(join(root, 'vendor', 'rs-sdk', 'server', 'content', 'scripts', 'quests')).filter(f => f.startsWith('quest_'))
-        .map(folder => ({ varp: folder, folder, questPoints: known.get(folder) ?? QP_FALLBACK[folder] ?? 0 }));
+        .map(folder => ({ varp: folder, folder, name: journalNames.get(folder), questPoints: known.get(folder) ?? QP_FALLBACK[folder] ?? 0 }));
     const gen = join(root, 'scripts', 'generated');
     const scriptFolders = new Set(quests.map(q => q.folder).filter(f => existsSync(join(gen, questScript(f)))));
     const byScript = new Map(quests.map(q => [questScript(q.folder), q.folder]));
@@ -140,5 +150,5 @@ if (import.meta.main) {
     console.log(`actions ${board.totals.actions}, named ${board.totals.actionsNamed} (${Math.round(100 * board.totals.actionsNamed / board.totals.actions)}%); domains ${board.totals.domains}, untouched ${board.totals.domainsUntouched}; owned live statuses ${statuses.length}`);
     console.log(`skills at 99 live: ${s.filter(k => k.bestLive >= 99).length}/19; under 40: ${s.filter(k => k.bestLive < 40).map(k => `${k.skill} ${k.bestLive}`).join(', ')}`);
     console.log(`items held now: ${board.items.held}/${board.items.items} (tradeable ${board.items.tradeableHeld}/${board.items.tradeable})`);
-    console.log(`quests complete live: ${q.liveComplete.length}/${q.journalQuests} journal quests; folders practice ${q.folders.filter(f => f.stage === 'practice').length}, named ${q.folders.filter(f => f.stage === 'named').length}, none ${q.folders.filter(f => f.stage === 'none').length} of ${q.folders.length}`);
+    console.log(`quests complete live: ${q.liveComplete.length}/${q.journalQuests} journal quests; folders live ${q.folders.filter(f => f.stage === 'live').length}, practice ${q.folders.filter(f => f.stage === 'practice').length}, named ${q.folders.filter(f => f.stage === 'named').length}, none ${q.folders.filter(f => f.stage === 'none').length} of ${q.folders.length}`);
 }
