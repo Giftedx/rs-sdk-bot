@@ -15,8 +15,11 @@
   const oldRail=document.querySelector('.plugin-rail');
   const plugins=[['fleet','Fleet'],['xp','XP Tracker'],['jobs','Agents & jobs'],['goals','Project goals'],['account','Account overview'],['bank','Bank'],['stock','Shared stock'],['boards','Hiscores'],['allocation','Allocation'],['activity','Activity'],['world','World map'],['machine','Host resources']];
   const fallback='<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8m-8 5h8"/></svg>';
-  const icons={xp:'<svg viewBox="0 0 24 24"><path d="M3 19L9 9l4 5 7-10M3 21h18"/></svg>'};
-  rail.innerHTML=plugins.map(([id,label])=>`<button data-client-plugin="${id}" aria-label="${label}" title="${label}">${icons[id]||oldRail.querySelector(`[data-plugin="${id}"]`)?.innerHTML||fallback}</button>`).join('')+'<span class="rail-gap"></span><button data-client-plugin="settings" aria-label="Client settings" title="Client settings">⚙</button>';app.append(rail);
+  // RuneLite's own sidebar icons (client-assets/rl-*.png, see ATTRIBUTION.txt), one per plugin.
+  const RAIL_ICONS=['fleet','xp','jobs','goals','account','bank','stock','boards','allocation','activity','world','machine','settings','operations','dispatch','alerts','library','manager'];
+  const railIcon=id=>RAIL_ICONS.includes(id)?`<img src="${asset('rl-'+id+'.png')}" alt="">`:null;window.atlasRailIcon=railIcon;
+  const icons={xp:railIcon('xp')};
+  rail.innerHTML=plugins.map(([id,label])=>`<button data-client-plugin="${id}" aria-label="${label}" title="${label}">${railIcon(id)||oldRail.querySelector(`[data-plugin="${id}"]`)?.innerHTML||fallback}</button>`).join('')+'<span class="rail-gap"></span><button data-client-plugin="settings" aria-label="Client settings" title="Client settings">'+railIcon('settings')+'</button>';app.append(rail);
   const fleet=$('#fleet-panel'),inspect=$('#inspect-panel'),boards=$('.boards'),allocation=$('#allocation-panel'),journal=$('.map-dock'),places=$('.map-place');
   const parked=document.createElement('div');parked.hidden=true;app.append(parked);
   for(const el of [fleet,inspect,boards,allocation,journal,places])parked.append(el);
