@@ -6,6 +6,7 @@ import {GOALS,addTasks,type CoordTask} from '../router/src/coordinator';
 import {atomicJson,spawnDetached} from '../router/src/coordinator-store';
 import {NAMES} from '../core/src/names';
 import {validateDelivery} from '../router/src/delivery';
+import {appendOwnerRequest,REQUEST_MAX} from './publish-commands';
 
 export function createOperatorControl(options:{root:string;nonce?:string;alive?:(pid:number)=>boolean;spawn?:typeof spawnDetached}){
  const {root}=options,nonce=options.nonce??randomUUID(),directory=join(root,'.practice/coordinator'),audit=join(root,'.practice/dashboard-controls');
@@ -35,7 +36,7 @@ export function createOperatorControl(options:{root:string;nonce?:string;alive?:
    const bytes=await req.text();if(bytes.length>32768)throw Error('Command exceeds 32 KiB');
    const input=JSON.parse(bytes),id=input.id;
    if(typeof id!=='string'||!/^[a-f0-9]{8}-[a-f0-9-]{27}$/.test(id))throw Error('Command identity required');
-   const action=input.action;if(!['plan','pause','resume','queue','account-pause','account-release'].includes(action))throw Error('Unknown operator command');
+   const action=input.action;if(!['plan','pause','resume','queue','account-pause','account-release','request'].includes(action))throw Error('Unknown operator command');
    mkdirSync(audit,{recursive:true});const receipt=join(audit,id+'.json');
    if(existsSync(receipt)){const prior=read(receipt);if(prior.input!==bytes)throw Error('Command identity was already used for different input');return Response.json(prior);}
    let taskId:string|undefined;
@@ -64,6 +65,9 @@ export function createOperatorControl(options:{root:string;nonce?:string;alive?:
     const file=join(root,'.practice','stop-'+input.account);
     if(action==='account-pause'){if(!existsSync(file))writeFileSync(file,'dashboard-stop:'+id,{flag:'wx'});}
     else{if(!existsSync(file)||!readFileSync(file,'utf8').startsWith('dashboard-stop:'))throw Error('This hold belongs elsewhere; inspect it before changing it');unlinkSync(file);}
+   }else if(action==='request'){
+    if(typeof input.text!=='string'||!input.text.trim()||input.text.length>REQUEST_MAX)throw Error(`A request needs text of up to ${REQUEST_MAX} characters`);
+    appendOwnerRequest(root,input.text);
    }else if(action==='plan'){
     if(existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm')))throw Error('Coordinator is paused; resume it before requesting a plan');
     mkdirSync(directory,{recursive:true});writeFileSync(join(directory,'plan-request'),'local operator requested a fresh plan');
@@ -78,7 +82,7 @@ export function createOperatorControl(options:{root:string;nonce?:string;alive?:
     try{spawn([process.execPath,'packages/router/src/coordinator-cli.ts','--run','operator-'+id],root,join(directory,'operator.out.log'),join(directory,'operator.err.log'));}
     catch(error){writeFileSync(join(root,'.practice/stop-coordinator'),'resume failed; owner pause retained');throw error;}
    }
-   const result={id,action,taskId,at:Date.now(),status:action==='queue'?'submitted':action==='pause'||action==='account-pause'?'stop-requested':action==='account-release'?'dashboard-hold-released':action==='resume'?'start-requested':'plan-requested',input:bytes};
+   const result={id,action,taskId,at:Date.now(),status:action==='queue'?'submitted':action==='pause'||action==='account-pause'?'stop-requested':action==='account-release'?'dashboard-hold-released':action==='resume'?'start-requested':action==='request'?'request-recorded':'plan-requested',input:bytes};
    atomicJson(receipt,result);return Response.json(result);
   }catch(error){return Response.json({error:error instanceof Error?error.message:String(error)},{status:400});}
  };

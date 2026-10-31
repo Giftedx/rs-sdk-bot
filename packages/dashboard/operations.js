@@ -57,7 +57,7 @@
  const defaultHidden=['overview','cargo','practice','requests','raw','pack','gear','skills'];
  const pluginNames={operations:'Command centre',jobs:'Agents & jobs',library:'Script library',dispatch:'Command desk',alerts:'Attention centre',stock:'Supply ledger',fleet:'Fleet',goals:'Project goals',account:'Account overview',bank:'Bank',boards:'Hiscores',allocation:'Allocation',activity:'Activity',world:'World map',machine:'Host resources',manager:'Plugin settings',overview:'Overview',cargo:'Cargo',practice:'Practice',requests:'Past requests',raw:'Raw evidence',pack:'Inventory details',gear:'Equipment details',skills:'Experience tracker'};
  function manager(){const hidden=saved('hidden',defaultHidden);return page(title('Workspace preferences','Plugin settings','Choose the toolbar entries you use. Every plugin remains available through command search.')+'<div class="op-plugin-manager">'+Object.entries(pluginNames).filter(([id])=>!['operations','manager'].includes(id)).map(([id,name])=>`<label><input type="checkbox" data-pin="${id}" ${hidden.includes(id)?'':'checked'}>${name}</label>`).join('')+'</div><label class="op-sub">Sidebar width<select id="op-width" class="op-wide-setting">'+(![288,340,420].includes(saved('width',340))?'<option value="'+saved('width',340)+'" selected>Custom · '+saved('width',340)+' px</option>':'')+'<option value="288" '+(saved('width',340)===288?'selected':'')+'>Compact · 288 px</option><option value="340" '+(saved('width',340)===340?'selected':'')+'>Comfortable · 340 px</option><option value="420" '+(saved('width',340)===420?'selected':'')+'>Wide · 420 px</option></select></label><div class="op-actions">'+button('Find a plugin','palette')+button('Game settings','game-settings')+button('Reset workspace','reset-workspace')+'</div>');}
- window.atlasPluginNames={...pluginNames,board:'Board detail'};
+ window.atlasPluginNames={...pluginNames,board:'Board detail'};window.atlasCommand=(action,extra)=>command(action,extra?.task,extra?.definition,extra?.account,extra?.text);
  const views={operations,fleet,account,raw,allocation:allocationPanel,activity,jobs,library,dispatch,alerts,stock,manager};window.atlasPlugins={};for(const [id,render]of Object.entries(views))window.atlasPlugins[id]={label:pluginNames[id],render:target=>{target.innerHTML=render();}};
  function renderCurrent(force=false){
   const id=api.selectedPlugin(),active=document.activeElement;if(!force&&body.contains(active)&&/INPUT|SELECT|TEXTAREA/.test(active.tagName))return;
@@ -68,9 +68,9 @@
  }
  function toast(text){$('.op-toast')?.remove();const el=document.createElement('div');el.className='op-toast';el.textContent=text;app.append(el);setTimeout(()=>el.remove(),6500);}
  async function loadMeta(){try{const r=await fetch('/api/control');if(!r.ok)throw Error('Command API unavailable ('+r.status+')');meta=await r.json();metaError='';}catch(e){metaError=e.message;}renderCurrent();}
- async function command(action,task,definition,account){
+ async function command(action,task,definition,account,text){
   if(!meta)await loadMeta();if(!meta)throw Error('Command service is unavailable. Your draft is saved.');
-  const id=task?.id?.replace(/^operator-/,'')||crypto.randomUUID(),envelope=JSON.stringify({id,action,...(task?{task}:{}),...(definition?{definition}:{}),...(account?{account}:{})});
+  const id=task?.id?.replace(/^operator-/,'')||crypto.randomUUID(),envelope=JSON.stringify({id,action,...(task?{task}:{}),...(definition?{definition}:{}),...(account?{account}:{}),...(text?{text}:{})});
   for(let attempt=0;attempt<2;attempt++){
    const previousNonce=meta.nonce,response=await fetch('/api/control',{method:'POST',headers:{'content-type':'application/json','x-atlas-control':previousNonce},body:envelope});
    let result;try{result=await response.json();}catch{throw Error('Command service returned HTTP '+response.status+'. Your draft is saved.');}

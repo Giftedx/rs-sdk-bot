@@ -105,3 +105,24 @@ describe('applyCommand',()=>{
   expect(readReceipts(root)).toEqual([{id:ID,action:'account-pause',account:'CoinCock',at:NOW,status:'stop-requested',source:'remote'}]);
  });
 });
+
+describe('owner requests',()=>{
+ test('a request command needs text, and other actions take none',()=>{
+  expect(validateCommand({id:ID,action:'request',at:NOW,text:'  make the map fly  '})).toEqual({id:ID,action:'request',at:NOW,text:'make the map fly'});
+  expect(()=>validateCommand({id:ID,action:'request',at:NOW})).toThrow('needs text');
+  expect(()=>validateCommand({id:ID,action:'request',at:NOW,text:'x'.repeat(501)})).toThrow('needs text');
+  expect(()=>validateCommand({id:ID,action:'swarm-pause',at:NOW,text:'no'})).toThrow('takes no text');
+ });
+ test('the request lands as the next numbered row of the ledger table, pipes made safe',async()=>{
+  const root=mkdtempSync(join(tmpdir(),'fleet-req-'));mkdirSync(join(root,'research'),{recursive:true});
+  writeFileSync(join(root,'research','owner-requests.md'),'# Open owner requests\n\nIntro.\n\n| # | Request | Status | Evidence | Next action |\n|---|---|---|---|---|\n| 1 | "first" | PARTIAL | e | n |\n| 7 | "seventh" | NOT STARTED | e | n |\n\n## Done\n\n| # | Request | Status |\n|---|---|---|\n| 9 | "old" | DONE |\n');
+  const out=await applyCommand({id:ID,action:'request',at:NOW,text:'map | fly\nbetween bots'},{root});
+  expect(out).toEqual({status:'request-recorded',note:'row 8 in research/owner-requests.md'});
+  const lines=readFileSync(join(root,'research','owner-requests.md'),'utf8').split('\n');
+  expect(lines[7]).toBe('| 7 | "seventh" | NOT STARTED | e | n |');
+  expect(lines[8]).toBe('| 8 | "map / fly between bots" | NOT STARTED | Sent from the hosted dashboard | Triage: name the goal, the useful output and its consumer |');
+  expect(lines[9]).toBe('');
+  expect(lines.at(-2)).toBe('| 9 | "old" | DONE |');
+  rmSync(root,{recursive:true,force:true});
+ });
+});
