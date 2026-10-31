@@ -1,0 +1,130 @@
+{
+  "baselineCommit": "6f582f8",
+  "platform": "Linux",
+  "bun": "1.3.14",
+  "cpuQuota": 4,
+  "condition": "Both versions warmed once against the same compatible disk cache; three alternating baseline/installed-source pairs. Baseline loader supplies master world.ts/leg-cache.ts to both main and route-worker contexts. RSS acceptance point is after the two long routes; worker-inclusive RSS is also retained.",
+  "source": {
+    "packages/core/src/world.ts": "f63546a84a0d2c087c9c16e982689ab902cb32245af892de8e3aa603e6a8f086",
+    "packages/core/src/leg-cache.ts": "afb6f44f2bdab17cefdc5dc229ab3bb633214d1ab70db5ace3987832646e661a"
+  },
+  "rssReductionPercent": 48.78173890741216,
+  "routeTimeReductionPercent": 72.38333772739256,
+  "coldGolden": {
+    "tests": 22,
+    "pass": 22,
+    "fail": 0,
+    "seconds": 138.63,
+    "exactRoutes": 20
+  },
+  "pairs": [
+    {
+      "before": {
+        "stages": {
+          "route Ardougne-Varrock": {
+            "rssMiB": 919,
+            "ms": 3156
+          },
+          "route Lumbridge-Catherby": {
+            "rssMiB": 1301,
+            "ms": 4854
+          },
+          "route worker plan": {
+            "rssMiB": 1233,
+            "ms": 5167
+          }
+        },
+        "raw": "base                       rss=20 heap=1 ext=0 ab=0 1ms\nimport bot+walk            rss=81 heap=1 ext=4 ab=0 181ms\nPathfinding initialized in 13ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nloadPathfinding            rss=229 heap=40 ext=203 ab=100 169ms\ncreateWorld                rss=399 heap=40 ext=206 ab=100 195ms\nmapAreas                   rss=399 heap=40 ext=208 ab=100 10ms\nroute Ardougne-Varrock     rss=919 heap=473 ext=292 ab=140 3156ms\nroute Lumbridge-Catherby   rss=1301 heap=401 ext=289 ab=140 4854ms\nspawn index                rss=1350 heap=401 ext=289 ab=140 36ms\nshop index                 rss=1351 heap=401 ext=289 ab=140 26ms\nPathfinding initialized in 11ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nroute worker plan          rss=1233 heap=351 ext=289 ab=140 5167ms\n"
+      },
+      "after": {
+        "stages": {
+          "route Ardougne-Varrock": {
+            "rssMiB": 696,
+            "ms": 968
+          },
+          "route Lumbridge-Catherby": {
+            "rssMiB": 662,
+            "ms": 1002
+          },
+          "route worker plan": {
+            "rssMiB": 889,
+            "ms": 1508
+          }
+        },
+        "raw": "base                       rss=16 heap=0 ext=0 ab=0 1ms\nimport bot+walk            rss=82 heap=0 ext=4 ab=0 186ms\nPathfinding initialized in 16ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nloadPathfinding            rss=229 heap=40 ext=203 ab=100 171ms\ncreateWorld                rss=385 heap=40 ext=207 ab=100 172ms\nmapAreas                   rss=386 heap=40 ext=207 ab=100 8ms\nroute Ardougne-Varrock     rss=696 heap=40 ext=109 ab=0 968ms\nroute Lumbridge-Catherby   rss=662 heap=208 ext=110 ab=0 1002ms\nspawn index                rss=715 heap=208 ext=110 ab=0 36ms\nshop index                 rss=717 heap=208 ext=110 ab=0 22ms\nPathfinding initialized in 11ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nroute worker plan          rss=889 heap=169 ext=110 ab=0 1508ms\n"
+      }
+    },
+    {
+      "before": {
+        "stages": {
+          "route Ardougne-Varrock": {
+            "rssMiB": 919,
+            "ms": 3101
+          },
+          "route Lumbridge-Catherby": {
+            "rssMiB": 1297,
+            "ms": 4230
+          },
+          "route worker plan": {
+            "rssMiB": 1233,
+            "ms": 4937
+          }
+        },
+        "raw": "base                       rss=20 heap=1 ext=0 ab=0 1ms\nimport bot+walk            rss=81 heap=1 ext=4 ab=0 180ms\nPathfinding initialized in 13ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nloadPathfinding            rss=230 heap=40 ext=203 ab=100 180ms\ncreateWorld                rss=398 heap=40 ext=206 ab=100 192ms\nmapAreas                   rss=399 heap=40 ext=208 ab=100 9ms\nroute Ardougne-Varrock     rss=919 heap=473 ext=292 ab=140 3101ms\nroute Lumbridge-Catherby   rss=1297 heap=402 ext=289 ab=140 4230ms\nspawn index                rss=1347 heap=402 ext=289 ab=140 38ms\nshop index                 rss=1349 heap=402 ext=289 ab=140 21ms\nPathfinding initialized in 17ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nroute worker plan          rss=1233 heap=351 ext=289 ab=140 4937ms\n"
+      },
+      "after": {
+        "stages": {
+          "route Ardougne-Varrock": {
+            "rssMiB": 717,
+            "ms": 1055
+          },
+          "route Lumbridge-Catherby": {
+            "rssMiB": 664,
+            "ms": 1103
+          },
+          "route worker plan": {
+            "rssMiB": 884,
+            "ms": 1519
+          }
+        },
+        "raw": "base                       rss=16 heap=0 ext=0 ab=0 1ms\nimport bot+walk            rss=82 heap=0 ext=4 ab=0 220ms\nPathfinding initialized in 15ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nloadPathfinding            rss=228 heap=40 ext=203 ab=100 181ms\ncreateWorld                rss=390 heap=40 ext=207 ab=100 176ms\nmapAreas                   rss=391 heap=40 ext=207 ab=100 10ms\nroute Ardougne-Varrock     rss=717 heap=40 ext=109 ab=0 1055ms\nroute Lumbridge-Catherby   rss=664 heap=208 ext=110 ab=0 1103ms\nspawn index                rss=713 heap=208 ext=110 ab=0 38ms\nshop index                 rss=715 heap=208 ext=110 ab=0 26ms\nPathfinding initialized in 18ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nroute worker plan          rss=884 heap=169 ext=110 ab=0 1519ms\n"
+      }
+    },
+    {
+      "before": {
+        "stages": {
+          "route Ardougne-Varrock": {
+            "rssMiB": 921,
+            "ms": 2918
+          },
+          "route Lumbridge-Catherby": {
+            "rssMiB": 1301,
+            "ms": 4499
+          },
+          "route worker plan": {
+            "rssMiB": 1242,
+            "ms": 5010
+          }
+        },
+        "raw": "base                       rss=20 heap=1 ext=0 ab=0 1ms\nimport bot+walk            rss=82 heap=1 ext=4 ab=0 175ms\nPathfinding initialized in 14ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nloadPathfinding            rss=230 heap=40 ext=203 ab=100 174ms\ncreateWorld                rss=395 heap=40 ext=206 ab=100 202ms\nmapAreas                   rss=396 heap=40 ext=208 ab=100 7ms\nroute Ardougne-Varrock     rss=921 heap=474 ext=292 ab=140 2918ms\nroute Lumbridge-Catherby   rss=1301 heap=401 ext=289 ab=140 4499ms\nspawn index                rss=1348 heap=401 ext=289 ab=140 39ms\nshop index                 rss=1350 heap=401 ext=289 ab=140 23ms\nPathfinding initialized in 12ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nroute worker plan          rss=1242 heap=351 ext=289 ab=140 5010ms\n"
+      },
+      "after": {
+        "stages": {
+          "route Ardougne-Varrock": {
+            "rssMiB": 683,
+            "ms": 1018
+          },
+          "route Lumbridge-Catherby": {
+            "rssMiB": 671,
+            "ms": 1139
+          },
+          "route worker plan": {
+            "rssMiB": 898,
+            "ms": 1507
+          }
+        },
+        "raw": "base                       rss=16 heap=0 ext=0 ab=0 1ms\nimport bot+walk            rss=82 heap=0 ext=4 ab=0 185ms\nPathfinding initialized in 20ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nloadPathfinding            rss=228 heap=40 ext=203 ab=100 239ms\ncreateWorld                rss=384 heap=40 ext=207 ab=100 178ms\nmapAreas                   rss=384 heap=40 ext=207 ab=100 8ms\nroute Ardougne-Varrock     rss=683 heap=40 ext=109 ab=0 1018ms\nroute Lumbridge-Catherby   rss=671 heap=208 ext=110 ab=0 1139ms\nspawn index                rss=725 heap=208 ext=110 ab=0 36ms\nshop index                 rss=727 heap=208 ext=110 ab=0 21ms\nPathfinding initialized in 12ms (0 zones + 0 mainland fill, 0 tiles, 2691 doors masked, 5 one-way doors blocked)\nroute worker plan          rss=898 heap=169 ext=110 ab=0 1507ms\n"
+      }
+    }
+  ]
+}

@@ -121,7 +121,7 @@ export async function installDoorPolicy(sdk:any,client?:unknown):Promise<void>{
 import { mapAreas, separated } from './components';
 import { activeDanger, guardRoute, guardWalk } from './danger';
 import { crossingTravel, loadCrossings, loadTravel, travelAllowed, type Travel } from './travel';
-import { legCache } from './leg-cache';
+import { legCache, routeDangerHash } from './leg-cache';
 async function loadPathfinding() {
     if (!rsPath) rsPath = await import(join(repoRoot, 'vendor', 'rs-sdk', 'sdk', 'pathfinding.ts'));
     return rsPath!;
@@ -141,7 +141,7 @@ export async function rsPathLength(): Promise<PathLength> {
     };
     // Searched legs are kept on disk (leg-cache.ts) under hashes of the doors kept shut and the danger key. A leg
     // the cheap checks refuse is not stored: refusing it again costs less than reading it back.
-    const cache=legCache(),policyKeys=new WeakMap<DoorBlock[],string>(),dangerKeys=new Map<string,string>();
+    const cache=legCache(),policyKeys=new WeakMap<DoorBlock[],string>(),dangerKeys=new WeakMap<object,string>();
     const measure:PathLength=(from, to, blocked, tol,interaction) => {
         if (from.level !== to.level) return null;
         (pf as any).initPathfinding();
@@ -149,12 +149,11 @@ export async function rsPathLength(): Promise<PathLength> {
         // Different connected areas: no walk exists, and the search would scan the whole grid (components.ts).
         if(separated(mapAreas(pf,grid,repoRoot),from,to,tol,interaction,interaction&&((x,z)=>grid.reached(to.level,x,z,to.x,to.z,interaction.width,interaction.height,1,interaction.angle,interaction.shape,interaction.blockAccessFlags))))return null;
         const d=activeDanger(),shut=policyKeys.get(blocked)??(policyKeys.set(blocked,cache.hash(blocked)),policyKeys.get(blocked)!);
-        const dk=d?dangerKeys.get(d.key)??(dangerKeys.set(d.key,cache.hash(d.key)),dangerKeys.get(d.key)!):'-';
-        const k=d&&(d.kept.has(`${from.level},${from.x},${from.z}`)||d.kept.has(`${to.level},${to.x},${to.z}`))?null
-            :`${shut}${dk}${key(from)}>${key(to)}:${tol}${interaction?':'+cache.hash(interaction):''}`;
-        if(k!==null&&cache.has(k))return cache.get(k)!;
+        const dk=d?dangerKeys.get(d)??(dangerKeys.set(d,routeDangerHash(d,cache)),dangerKeys.get(d)!):'-';
+        const k=`kept:${shut}${dk}${key(from)}>${key(to)}:${tol}${interaction?':'+cache.hash(interaction):''}`;
+        if(cache.has(k))return cache.get(k)!;
         const v=measureNow(from,to,blocked,tol,interaction);
-        if(k!==null)cache.set(k,v);
+        cache.set(k,v);
         return v;
     };
     const measureNow=(from:Tile, to:Tile, blocked:DoorBlock[], tol:number,interaction?:InteractionTarget):number|null => {
@@ -210,6 +209,7 @@ class MinHeap<T> {
     private a: T[] = [];
     constructor(private score: (t: T) => number) {}
     get size() { return this.a.length; }
+    clear() { this.a = []; }
     push(t: T) {
         const a = this.a;
         a.push(t);
@@ -249,26 +249,37 @@ function loadJson<T>(name: string): T {
 // (OlZe PathfinderDijkstra). Collision-free walk costs only underestimate the
 // real walks, retaining lazy path measurements without pruning cheap detours.
 function transportLowerBounds(transports: Transport[], goal: Tile,relaxedRadius=PORTAL_TOL): Map<string, number> {
-    const nodes = [...new Map([goal, ...transports.flatMap(t => [entryOf(t), t.to])].map(tile => [key(tile), tile])).values()];
-    const incoming = new Map<string, Transport[]>();
-    const radii=new Map<string,number>();for(const t of transports){const q=t.interaction,k=key(entryOf(t));radii.set(k,Math.max(radii.get(k)??PORTAL_TOL,q?.width??1,q?.height??1));}
-    for (const t of transports) incoming.set(key(t.to), [...(incoming.get(key(t.to)) ?? []), t]);
-    const best = new Map<string, number>([[key(goal), 0]]);
-    const queue = new MinHeap<{ tile: Tile; cost: number }>(entry => entry.cost);
-    queue.push({ tile: goal, cost: 0 });
-    const relax = (tile: Tile, cost: number) => {
-        if (cost >= (best.get(key(tile)) ?? Infinity)) return;
-        best.set(key(tile), cost); queue.push({ tile, cost });
+    const byKey = new Map<string, number>(), nodes: Tile[] = [], keys: string[] = [];
+    const add = (tile: Tile) => {
+        const k = key(tile), old = byKey.get(k);
+        if (old !== undefined) return old;
+        const i = nodes.length; byKey.set(k, i); nodes.push(tile); keys.push(k); return i;
+    };
+    add(goal);
+    for (const t of transports) { add(entryOf(t)); add(t.to); }
+    const incoming: number[][] = Array.from({ length: nodes.length }, () => []);
+    const radii = new Float64Array(nodes.length).fill(PORTAL_TOL);
+    for (const t of transports) {
+        const from = byKey.get(key(entryOf(t)))!, to = byKey.get(key(t.to))!;
+        incoming[to]!.push(from);
+        radii[from] = Math.max(radii[from]!, t.interaction?.width ?? 1, t.interaction?.height ?? 1);
+    }
+    const best = new Float64Array(nodes.length).fill(Infinity); best[0] = 0;
+    const queue = new MinHeap<{ index: number; cost: number }>(entry => entry.cost);
+    queue.push({ index: 0, cost: 0 });
+    const relax = (index: number, cost: number) => {
+        if (cost >= best[index]!) return;
+        best[index] = cost; queue.push({ index, cost });
     };
     while (queue.size) {
-        const entry = queue.pop()!;
-        if (entry.cost !== best.get(key(entry.tile))) continue;
-        const tolerance = key(entry.tile) === key(goal) ? GOAL_TOL : Math.max(relaxedRadius,radii.get(key(entry.tile))??PORTAL_TOL);
-        for (const predecessor of nodes) if (predecessor.level === entry.tile.level)
-            relax(predecessor, entry.cost + Math.max(0, cheb(predecessor, entry.tile) - tolerance));
-        for (const edge of incoming.get(key(entry.tile)) ?? []) relax(entryOf(edge), entry.cost + TRANSPORT_COST);
+        const e = queue.pop()!;
+        if (e.cost !== best[e.index]) continue;
+        const tile = nodes[e.index]!, tolerance = e.index === 0 ? GOAL_TOL : Math.max(relaxedRadius, radii[e.index]!);
+        for (let i = 0; i < nodes.length; i++) if (nodes[i]!.level === tile.level)
+            relax(i, e.cost + Math.max(0, cheb(nodes[i]!, tile) - tolerance));
+        for (const from of incoming[e.index]!) relax(from, e.cost + TRANSPORT_COST);
     }
-    return best;
+    return new Map(keys.flatMap((k, i) => Number.isFinite(best[i]) ? [[k, best[i]!] as const] : []));
 }
 
 // Ordinary navigation may stop beside its goal; entry qualification requests the exact tile.
@@ -304,6 +315,8 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
         navigationGraph: () => ({transports,travel}),
         blockedDoors: acct => doors.filter(d => doorBlocks(d, acct)).map(doorBlock),
         route(from, to, acct) {
+            const tileKeys=new WeakMap<Tile,string>();
+            const key=(tile:Tile)=>{let value=tileKeys.get(tile);if(value===undefined){value=`${tile.x},${tile.z},${tile.level}`;tileKeys.set(tile,value);}return value;};
             const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
             const search=(travelOk:(t:Travel,a:Account)=>boolean):ReturnType<World['route']>=>{
             const cache = new Map<string, number | null>();
@@ -329,6 +342,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                 type Entry={k:string;tile:Tile;g:number;f:number;prev:string|null;leg:Leg|null;walkFrom?:Tile;walkTo?:Tile;tol?:number;approach?:Transport;interaction?:InteractionTarget};
                 const heap=new MinHeap<Entry>(e=>e.f),done=new Set<string>(),via=new Map<string,{prev:string;leg:Leg}>(),best=new Map<string,number>();
                 heap.push({k:root,tile:start,g:0,f:h(start),prev:null,leg:null});
+                try {
                 while(heap.size){
                     const e=heap.pop()!;
                     if(done.has(e.k))continue;
@@ -336,7 +350,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                         // Both orientations measure the original FORWARD edge,
                         // under the same synchronous policy and shared cache.
                         const c=walk(e.walkFrom!,e.walkTo,e.tol!,e.interaction);
-                        if(c!==null){const g=best.get(e.prev!)!+c;heap.push({...e,walkTo:undefined,g,f:g+h(e.tile)});}
+                        if(c!==null){const g=best.get(e.prev!)!+c;heap.push({...e,leg:{kind:'walk',to:e.walkTo,tolerance:e.tol},walkTo:undefined,g,f:g+h(e.tile)});}
                         yield;
                         continue;
                     }
@@ -351,13 +365,15 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                     const enqueueTransport=(t:Transport,k:string,tile:Tile,approach?:Transport)=>{
                         if(done.has(k))return;
                         const g=e.g+TRANSPORT_COST;
+
                         heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:legOf(t),approach});
                     };
                     const enqueueWalk=(tile:Tile,k:string,target:Tile,tol:number,interaction?:InteractionTarget,approach?:Transport)=>{
                         const walkFrom=backward?tile:e.tile;
                         if(done.has(k)||k===e.k||walkFrom.level!==target.level||cheb(walkFrom,target)>MAX_LEG)return;
                         const g=e.g+Math.max(0,cheb(walkFrom,target)-tol);
-                        heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:{kind:'walk',to:target,tolerance:tol},walkFrom,walkTo:target,tol,interaction,approach});
+
+                        heap.push({k,tile,g,f:g+h(tile),prev:e.k,leg:null,walkFrom,walkTo:target,tol,interaction,approach});
                     };
                     const enqueueTravel=(t:Travel,tile:Tile)=>{
                         const k=key(tile);if(done.has(k)||!travelOk(t,acct))return;
@@ -387,12 +403,13 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
                     }
                 }
                 return {ok:false,reason:'no_route'};
+                } finally { heap.clear(); done.clear(); via.clear(); best.clear(); lower.clear(); }
             }
             const forward=run(false),backward=run(true);
-            for(;;){
+            try { for(;;){
                 const a=forward.next();if(a.done)return a.value;
                 const b=backward.next();if(b.done)return b.value;
-            }
+            } } finally { forward.return({ok:false,reason:'no_route'}); backward.return({ok:false,reason:'no_route'}); cache.clear(); }
             };
             const fares=()=>{const r=search(oneFare);return r.ok&&routeFares(r.legs)<=(acct.coins??0)?r:search(fareAndOne);};
             const policed=()=>opts.pathLength.withPolicy?opts.pathLength.withPolicy(blocked,fares):fares();
