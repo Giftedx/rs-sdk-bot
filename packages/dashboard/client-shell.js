@@ -26,8 +26,9 @@
   let selectedTab='inventory',selectedPlugin='fleet',channel='All',spellbook='Standard',context=null,questDetail=null;
   const chat=[],seen=new Set();let lastAccountOptions='';
   const account=()=>S?.bots?.find(b=>b.name===sel);
-  const notify=text=>{chat.push({kind:'Game',text});if(chat.length>200)chat.shift();renderChat();};
-  function renderChat(){const rows=chat.filter(r=>channel==='All'||r.kind===channel);hud.querySelector('.game-chat-lines').innerHTML=rows.map(r=>`<p class="${r.kind==='Public'?'chat-public':r.kind==='Private'?'chat-private':'chat-system'}">${r.name?'<b>'+E(r.name)+'</b>: ':''}${E(r.text)}</p>`).join('')||`<p class="chat-system">${channel==='All'||channel==='Public'?'No public messages received in this area.':channel+' messages are not reported by the spectator feed.'}</p>`;const log=hud.querySelector('.game-chat-lines');log.scrollTop=log.scrollHeight;}
+  const notify=text=>{chat.push({kind:'Game',text,at:Date.now()});if(chat.length>200)chat.shift();renderChat();};
+  const stamp=at=>at?`<span class="chat-time">[${new Date(at).toTimeString().slice(0,5)}]</span> `:'';
+  function renderChat(){const rows=chat.filter(r=>channel==='All'||r.kind===channel);hud.querySelector('.game-chat-lines').innerHTML=rows.map(r=>`<p class="${r.kind==='Public'?'chat-public':r.kind==='Private'?'chat-private':'chat-system'}">${stamp(r.at)}${r.name?'<b>'+E(r.name)+'</b>: ':''}${E(r.text)}</p>`).join('')||`<p class="chat-system">${channel==='All'||channel==='Public'?'No public messages received in this area.':channel+' messages are not reported by the spectator feed.'}</p>`;const log=hud.querySelector('.game-chat-lines');log.scrollTop=log.scrollHeight;}
   const channels=['All','Game','Public','Private','Channel','Clan','Trade'];
   hud.querySelector('.chat-channels').innerHTML=channels.map(c=>`<button data-chat="${c}" class="${c==='All'?'active':''}">${c}${['Public','Private','Channel','Clan','Trade'].includes(c)?'<small>On</small>':''}</button>`).join('')+'<button data-report>Report</button>';
   const rows=hud.querySelectorAll('.tab-row');tabs.forEach(([id,label,sprite],i)=>rows[i<7?0:1].insertAdjacentHTML('beforeend',`<button data-game-tab="${id}" aria-label="${label}" title="${label}" class="${id===selectedTab?'active':''}"><img class="game-tab-icon" src="${asset('tab-'+id+'.png')}" alt=""></button>`));
@@ -42,7 +43,7 @@
     if(selectedTab==='combat'){const weapon=b?.equipment?.find(e=>e.slot===3)?.name||'Unarmed';html=`<h3>${E(weapon)}</h3><p style="text-align:center">Combat level: ${E(b?.combat??'—')}</p><div class="game-combat">${['Stab','Lunge','Slash','Block'].map(n=>`<button data-view-action="${n}">⚔<br>${n}</button>`).join('')}</div><p class="game-muted" style="text-align:center">Observed account combat options</p><button class="game-control" data-view-action="Auto retaliate">Auto Retaliate: —</button><p class="game-muted">Combat style is not reported.</p>`;}
     if(selectedTab==='quests'){
       const quests=b?.quests||[];
-      html='<h3>Quest List</h3><p class="game-muted" style="text-align:center">'+(b?.questsAt?'Observed '+age(b.questsAt)+' ago':'No quest snapshot')+'</p><div class="game-list">'+quests.map(q=>`<button style="color:${q.state==='complete'||q.state==='completed'?'#00ff00':q.state==='not started'?'#ff3030':'#ffff00'}" data-quest="${E(q.name)}">${E(q.name)}</button>`).join('')+'</div>';
+      const qp=b?.ranks?.find(r=>r.board==='Quest Points')?.level??quests.filter(q=>q.state==='complete'||q.state==='completed').length;html='<h3>Quest List</h3><p style="text-align:center">Quest Points: '+(b?E(qp):'—')+'</p><p class="game-muted" style="text-align:center">'+(b?.questsAt?'Observed '+age(b.questsAt)+' ago':'No quest snapshot')+'</p><div class="game-list">'+quests.map(q=>`<button style="color:${q.state==='complete'||q.state==='completed'?'#00ff00':q.state==='not started'?'#ff3030':'#ffff00'}" data-quest="${E(q.name)}">${E(q.name)}</button>`).join('')+'</div>';
       if(!quests.length)html+='<p class="game-muted">Quest progress has not been reported for this account.</p>';
       if(questDetail){const q=quests.find(q=>q.name===questDetail);html='<h3>'+E(questDetail)+'</h3><p style="text-align:center">'+E(q?.state||'Not reported')+'</p><p class="game-muted">'+(b?.questsAt?'Last observed '+age(b.questsAt)+' ago.':'No quest snapshot.')+'</p><button class="game-control" data-quest-back>Back to quest list</button>';}
     }
@@ -129,7 +130,7 @@
   function overlay(){
     const b=account(),el=hud.querySelector('.game-overlay');
     const line=(k,v)=>`<div><span>${E(k)}</span><b>${E(v)}</b></div>`;
-    if(!b){const live=S.bots.filter(x=>x.fresh&&!x.practice),gold=S.economy?.goldPerTick||0;el.innerHTML='<h4>Fleet</h4>'+line('Playing',live.length+' / '+S.bots.filter(x=>!x.practice).length)+line('Coins/hr',gp(Math.round(gold*9000)))+line('AI jobs',String(S.coordination?.counts?.running??0)+' working')+line('Alerts',String(S.alerts?.length??0));return;}
+    if(!b){const live=S.bots.filter(x=>x.fresh&&!x.practice),gold=S.economy?.goldPerTick||0;el.innerHTML='<h4>Fleet</h4>'+line('Playing',live.length+' / '+S.bots.filter(x=>!x.practice).length)+line('Coins/hr',gp(Math.round(gold*9000)))+line('AI jobs',String(S.coordination?.counts?.running??0)+' working')+line('Alerts',String(S.alerts?.length??0))+(S.worldPlayers?line('Online',nf(S.worldPlayers)):'');return;}
     const [,state]=st(b);
     el.innerHTML='<h4>'+E(safeName(b.name))+'</h4>'+line('Status',state)+line('Goal',(b.goalSkill?b.goalSkill+' '+b.goalLevel:'')||String(b.goal||'').slice(0,28))+(b.phaseShort?line('Phase',String(b.phaseShort).slice(0,28)):'')+(b.xpPerHour?line('XP/hr',nf(Math.round(b.xpPerHour))):'')+(b.eta?line('To target',b.eta):'')+(b.uptime?line('Session',dur(b.uptime)):'');
   }
@@ -140,11 +141,11 @@
   hud.addEventListener('mouseout',e=>{if(e.target.closest('[data-skill]')&&!e.relatedTarget?.closest?.('[data-skill]'))hud.querySelector('.game-tip').hidden=true;});
   let welcomed=false;
   function chatFeed(){
-    if(!welcomed){welcomed=true;chat.push({kind:'Game',text:'Welcome to RuneScape.'});}
+    if(!welcomed){welcomed=true;chat.push({kind:'Game',text:'Welcome to RuneScape.',at:Date.now()});}
     const rows=[...(S.events||[]).filter(e=>!e.practice).map(e=>({at:e.at,name:e.name,text:e.full||e.text,kind:'Game'})),...(S.results||[]).filter(r=>!r.practice).map(r=>({at:r.at,name:r.name,text:(r.ok?'finished: ':'stopped: ')+String(r.text).slice(0,120),kind:r.ok?'Game':'Private'}))]
       .sort((a,b)=>a.at-b.at).slice(-60);
     let added=0;
-    for(const r of rows){const key=r.kind+'|'+r.at+'|'+r.name+'|'+r.text;if(seen.has(key))continue;seen.add(key);if(seen.size>800)seen.delete(seen.values().next().value);chat.push({kind:r.kind,name:safeName(r.name),text:r.text});added++;}
+    for(const r of rows){const key=r.kind+'|'+r.at+'|'+r.name+'|'+r.text;if(seen.has(key))continue;seen.add(key);if(seen.size>800)seen.delete(seen.values().next().value);chat.push({kind:r.kind,name:safeName(r.name),text:r.text,at:r.at});added++;}
     while(chat.length>200)chat.shift();
     if(added)renderChat();
   }
@@ -155,7 +156,12 @@
     const set=(cls,now,max)=>{const el=bars.querySelector('.'+cls);el.querySelector('i').style.height=(max>0?Math.max(0,Math.min(100,now/max*100)):0)+'%';el.querySelector('span').textContent=now??'';el.title=cls==='hp'?'Hitpoints '+now+' / '+max:'Prayer '+now+' / '+max;};
     set('hp',b.hp.now,b.hp.max);set('prayer',pr?.currentLevel??0,pr?.level??0);
   }
-  function refresh(){if(!S)return;minimap();xpDrops(account());overlay();chatFeed();statusBars(account());if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='loot'&&body.dataset.plugin==='loot'&&!body.contains(document.activeElement)){const top=body.scrollTop;body.innerHTML=lootPanel();body.scrollTop=top;}infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account(),options=JSON.stringify(S.bots.filter(b=>!b.practice).map(b=>[b.name,b.inWorld]));if(options!==lastAccountOptions){lastAccountOptions=options;$('#client-account').innerHTML='<option value="">Free camera</option>'+S.bots.filter(b=>!b.practice).map(b=>`<option value="${E(b.name)}">${b.inWorld?'● ':'○ '}${E(safeName(b.name))}</option>`).join('');}$('#client-account').value=sel||'';$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
+  let idleFor=null,idleRun=0,idleTold=false;
+  function idleNotifier(b){
+    if(!b||b.name!==idleFor){idleFor=b?.name??null;idleRun=0;idleTold=false;return;}
+    if(b.fresh&&b.action==='idle'){idleRun++;if(idleRun>=3&&!idleTold){idleTold=true;notify(safeName(b.name)+' is now idle!');}}else{idleRun=0;idleTold=false;}
+  }
+  function refresh(){if(!S)return;minimap();xpDrops(account());overlay();chatFeed();statusBars(account());idleNotifier(account());if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='loot'&&body.dataset.plugin==='loot'&&!body.contains(document.activeElement)){const top=body.scrollTop;body.innerHTML=lootPanel();body.scrollTop=top;}infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account(),options=JSON.stringify(S.bots.filter(b=>!b.practice).map(b=>[b.name,b.inWorld]));if(options!==lastAccountOptions){lastAccountOptions=options;$('#client-account').innerHTML='<option value="">Free camera</option>'+S.bots.filter(b=>!b.practice).map(b=>`<option value="${E(b.name)}">${b.inWorld?'● ':'○ '}${E(safeName(b.name))}</option>`).join('');}$('#client-account').value=sel||'';$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
     hud.querySelector('.game-orbs').innerHTML=[['hp','♥',b?.hp?.now,b?.hp?.max],['prayer','✦',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','ϟ',b?.runEnergy,null],['spec','⚔',b?.specialAttack,null]].map(([id,symbol,value,max])=>`<div class="game-orb" title="${id}: ${value??'not reported'}${max?' / '+max:''}"><img class="orb-art" src="${asset('orb-'+id+'.png')}" alt=""><span>${value??'—'}</span></div>`).join('');gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
@@ -195,7 +201,7 @@
       notify('Sending '+send.action+(send.extra.account?' '+send.extra.account:'')+'…');
       window.atlasCommand(send.action,send.extra).then(r=>notify(send.action+': '+String(r?.status||'sent').replaceAll('-',' ')),e=>notify('Refused: '+(e?.message||e)));
     }else notify('Chat is view-only in spectator mode. Commands: ::request · ::pause · ::resume · ::plugin · ::focus · ::help');};
-  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow)return;const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seen.has(m.key))return;seen.add(m.key);if(seen.size>500)seen.delete(seen.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500)});if(chat.length>200)chat.shift();renderChat();});
+  window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==$('#rsw').contentWindow)return;const m=e.data?.atlasChat;if(typeof e.data?.atlasWorldMap==='boolean')hud.classList.toggle('worldmap-open',e.data.atlasWorldMap);if(!m||typeof m.text!=='string'||typeof m.name!=='string'||typeof m.key!=='string'||seen.has(m.key))return;seen.add(m.key);if(seen.size>500)seen.delete(seen.values().next().value);chat.push({kind:'Public',name:m.name.slice(0,32),text:m.text.slice(0,500),at:Date.now()});if(chat.length>200)chat.shift();renderChat();});
   window.addEventListener('keydown',e=>{
     if(e.key==='Tab'&&e.target===document.body)e.stopPropagation();
     if(e.key==='Escape'){context?.remove();hud.querySelector('.game-bank')?.remove();hud.querySelector('.game-toast')?.remove();}
