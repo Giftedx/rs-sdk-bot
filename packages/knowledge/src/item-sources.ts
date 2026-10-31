@@ -61,7 +61,7 @@ export interface ItemSources {
     sources: Source[]; usable: number; blocked: boolean;
 }
 interface Rung {
-    id: string; skill: string; level: number; kind: string; src: string; xpPerAction: number | null; xpPerTick: number | null; ticksPerAction?: number | null;
+    id: string; skill: string; level: number; kind: string; src: string; xpPerAction: number | null; xpPerTick: number | null; ticksPerAction?: number | null; timing?: { basis?: string } | null;
     inputs: { debugname: string; count: number | null }[]; outputs: { debugname: string; count: number | null }[]; requires: { debugname: string }[];
     where: { locs: string[]; npcs: string[] } | null; quest: { name: string } | null; members: boolean | null;
 }
@@ -434,9 +434,11 @@ export function buildItemSources(opts: Options = {}) {
 
 
     const ticksFrom = (r: Rung, perAction: number | null): Pick<Cost, 'helperTicksPerUnit' | 'ticksBasis' | 'ticksNote'> => {
-        const t = r.ticksPerAction ?? (r.xpPerTick && r.xpPerAction ? (r.xpPerAction * XP_RATE) / r.xpPerTick : null);
-        if (t === null) return { helperTicksPerUnit: null, ticksBasis: 'unknown', ticksNote: `no measured rate for ${r.id} in knowledge/ladders.json` };
-        return { helperTicksPerUnit: r3(t / (perAction ?? 1)), ticksBasis: 'measured', ticksNote: `${r.id} rate from knowledge/rates.json via ladders.json${perAction === null ? '; assumes 1 unit per action' : ''}` };
+        // A measured rate (rates.json, xpPerTick at 25x) wins over the content timing model (ticksPerAction, timing.basis).
+        const one = perAction === null ? '; assumes 1 unit per action' : '';
+        if (r.xpPerTick && r.xpPerAction) return { helperTicksPerUnit: r3((r.xpPerAction * XP_RATE) / r.xpPerTick / (perAction ?? 1)), ticksBasis: 'measured', ticksNote: `${r.id} rate from knowledge/rates.json via ladders.json${one}` };
+        if (r.ticksPerAction) return { helperTicksPerUnit: r3(r.ticksPerAction / (perAction ?? 1)), ticksBasis: 'model', ticksNote: `${r.id} ticksPerAction from knowledge/ladders.json (timing ${r.timing?.basis ?? 'model'}, at the unlock level)${one}` };
+        return { helperTicksPerUnit: null, ticksBasis: 'unknown', ticksNote: `no rate or timing for ${r.id} in knowledge/ladders.json` };
     };
 
     const out: ItemSources[] = [];
