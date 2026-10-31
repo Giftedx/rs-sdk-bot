@@ -67,6 +67,25 @@ export const PROFILES: Record<string, {
             { re: /eye of newt/i, buyPerTick: 50 },
         ],
     },
+    // Harry's Catherby fishing shop (fishingshop2): a lobster pot for the Catherby lobster chain.
+    harry: {
+        npc: /^harry$/i,
+        npcSpot: { x: 2834, z: 3445 },
+        bankSpot: { x: 2809, z: 3441 }, // Catherby Bank
+        items: [{ re: /^lobster pot$/i, buyPerTick: 1 }],
+    },
+    // Aubury's rune shop (runeshop: 2000 fire, 2000 earth): the route bill's fire and earth runes.
+    aubury: {
+        npc: /^aubury$/i,
+        npcSpot: { x: 3253, z: 3402 },
+        bankSpot: { x: 3253, z: 3420 }, // Varrock East Bank
+        items: [
+            { re: /^fire rune$/i, buyPerTick: 50 },
+            { re: /^earth rune$/i, buyPerTick: 50 },
+            { re: /^air rune$/i, buyPerTick: 50 },
+            { re: /^water rune$/i, buyPerTick: 50 },
+        ],
+    },
     taverley: {
         npc: /^jatix$/i,
         npcSpot: { x: 2908, z: 3443 },
@@ -247,7 +266,10 @@ if (!botName || !PROFILES[profileKey]) {
     process.exit(1);
 }
 
-const conf = PROFILES[profileKey]!;
+// ITEMS=<regex> keeps only the profile items a run needs (ITEMS='fire rune' buys no other rune).
+const itemFilter = process.env.ITEMS ? new RegExp(process.env.ITEMS, 'i') : null;
+const conf = itemFilter ? { ...PROFILES[profileKey]!, items: PROFILES[profileKey]!.items.filter(i => itemFilter.test(i.re.source)) } : PROFILES[profileKey]!;
+if (!conf.items.length) throw new Error(`ITEMS=${process.env.ITEMS} matches no ${profileKey} item`);
 const s = await openBot(botName).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     // Wait up to 10 ticks for inventory to sync
