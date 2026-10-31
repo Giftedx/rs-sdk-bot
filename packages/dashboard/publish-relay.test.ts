@@ -5,7 +5,7 @@ const state=()=>({now:1,bots:[
   {name:'CoinCock',env:{target:null},sessionAttemptId:'1-2',workRevision:'abc',inputs:{},coordinatorRunId:null,bank:[{name:'Coins',count:5}],pos:{x:1,z:2},reserved:false},
   {name:MAIN_MARK,reserved:true,bank:[],env:{}},
  ],coordination:{available:true,tasks:[{id:'t1',why:'w'.repeat(1000),detail:'d'.repeat(1000),status:'pending'}]},
- sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]}});
+ sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]},requests:{open:[{id:'1',request:'owner words'}]},race:{rows:[]},gates:{go:false}});
 const meta={nonce:'secret-nonce',goals:['wealth'],roles:['supply'],paused:false,fleetPaused:false,capabilities:[],accountHolds:[{name:'AFKnight',owner:'other'}],requests:[{id:'r1',action:'plan',at:1,status:'plan-requested'}]};
 
 describe('hosted views',()=>{
@@ -22,6 +22,7 @@ describe('hosted views',()=>{
  });
  test('control keeps every bot and holding, carries the operator metadata without its nonce, and the reveal name',()=>{
   const c=controlView(state(),meta);
+  expect(c.mainPlan.rows[0].note).toBe(`${MAIN_MARK} first`);expect(c.requests.open[0].request).toBe('owner words');
   expect(c.bots).toHaveLength(2);
   expect(c.bots[0].bank[0].count).toBe(5);
   expect(c.control).toEqual({goals:['wealth'],roles:['supply'],paused:false,fleetPaused:false,capabilities:[],accountHolds:[{name:'AFKnight',owner:'other'}],requests:meta.requests});
@@ -37,7 +38,8 @@ describe('hosted views',()=>{
   expect(p.bots[0].bank).toEqual([{name:'Coins',count:5}]);
   expect(p.sys.procs).toEqual([]);
   expect('viewerTimings' in p).toBe(false);
-  expect(p.mainPlan.rows[0].note).toBe(`${MAIN_MARK} first`);
+  expect(p.mainPlan).toBeNull();expect(p.race).toBeNull();expect(p.gates).toBeNull();expect(p.requests).toEqual({});
+  expect(JSON.stringify(p)).not.toContain('owner words');
   expect(p.hosted.kind).toBe('public');
  });
  test('a state that still names the main account is refused',()=>{
