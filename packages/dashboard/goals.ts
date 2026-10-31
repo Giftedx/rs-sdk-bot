@@ -4,18 +4,17 @@ import { SKILLS } from '../planner/src/haggis';
 import { xpForLevel } from '../planner/src/curve';
 
 // The joined plan owns goal wording and pause state. Metrics remain separate observations.
-const CORE_LANES = ['Main Overall', 'Coverage', 'Specialist hiscores', 'Wealth / logistics / GE', 'Gear / collection', 'Efficiency / visibility'];
 export function goalPlan(text: string) {
     const section = text.split(/^## (?:Lanes|Goals and next evidence(?: after resume)?)[ \t]*\r?$/m)[1]?.split(/^## /m)[0] ?? '';
-    // Columns come from the header row (Lane, Owner, Target, Next), so the table may add a column.
-    const rows = section.split('\n').filter(line => /^\|[^-]/.test(line)).map(line => line.split('|').slice(1, -1).map(v => v.trim()));
-    const head = (rows[0] ?? []).map(h => h.toLowerCase()), col = (name: string) => head.indexOf(name);
-    const at = { title: col('lane'), owner: col('owner'), target: col('target'), next: col('next') };
-    const lanes = rows.slice(1).map(r => ({ title: r[at.title] ?? '', target: r[at.target] ?? '', next: r[at.next] ?? '', ...(at.owner >= 0 ? { owner: r[at.owner] ?? '' } : {}) }))
-        .filter(row => row.title && row.target && row.next);
-    // The six core lanes must all be there; a plan may add more (Autopilot).
-    const titles = new Set(lanes.map(l => l.title));
-    return { paused: /\*\*Execution paused by the user/.test(text), available: at.title >= 0 && at.target >= 0 && at.next >= 0 && CORE_LANES.every(t => titles.has(t)), lanes };
+    const titles=['Main Overall','Coverage','Specialist hiscores','Wealth / logistics / GE','Gear / collection','Efficiency / visibility'];
+    const rows=section.split('\n').filter(line=>line.trim().startsWith('|')).map(line=>line.split('|').slice(1,-1).map(v=>v.trim()));
+    const header=rows.shift()??[],column=(name:string)=>header.findIndex(v=>v.toLowerCase()===name);
+    const titleColumn=column('lane')<0?column('goal'):column('lane'),targetColumn=column('target'),nextColumn=column('next');
+    const parsed=titleColumn<0||targetColumn<0||nextColumn<0?[]:rows.map(row=>({title:row[titleColumn]??'',target:row[targetColumn]??'',next:row[nextColumn]??''})).filter(row=>row.title&&row.target&&row.next);
+    // Goal cards use these six positions. Operational lanes such as Autopilot
+    // retain their plan ownership without shifting a specialist's goal card.
+    const lanes=titles.flatMap(title=>{const row=parsed.find(row=>row.title===title);return row?[row]:[];});
+    return { paused: /\*\*Execution paused by the user/.test(text), available: lanes.length === titles.length, lanes };
 }
 
 export type GoalRow = { label:string; value:string; at?:number; source:string; tone?:'warn'|'good'|'dm' };
