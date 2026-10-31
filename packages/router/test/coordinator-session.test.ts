@@ -58,7 +58,8 @@ test('installation checks every participant and the durable failed-script histor
  const partner=f.attempt('Partner');partner.record('ended','logged-out');
  writeFileSync(join(f.base,'.practice/swarm-script-holds.json'),JSON.stringify([{account:'Rod',script:'old.ts',at:1,reason:'blocked',heldAt:2}]));
  expect(()=>installJob(task,'Rod','old.ts','test','source',{}, {base:f.base})).toThrow('failed script');
- expect(()=>installJob(task,'Rod','new.ts','test','source',{}, {base:f.base,preflight:true})).not.toThrow();
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{}, {base:f.base,preflight:true,freeGB:0})).toThrow('live admission waiting: memory');
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{}, {base:f.base,preflight:true,freeGB:64})).not.toThrow();
  expect(readFileSync(path,'utf8')).toBe(JSON.stringify(plan));
 });
 
