@@ -1,5 +1,6 @@
 // Publishes this PC's dashboard state for the hosted dashboard (the rs-fleet-command repository) and applies the
-// owner's commands from it. Usage: bun scripts/dashboard-publish.ts [--once] [--daemon]
+// owner's commands from it. Usage: bun packages/dashboard/publish.ts [--once] [--daemon]
+// It lives in the dashboard package, a tooling root outside the worker release hash, so it never rolls the fleet.
 // Env: FLEET_COMMAND_REPO  owner/name of the dashboard repository (unset: write the files only, publish nothing)
 //      CYCLE_S  seconds between cycles (60)   PUBLIC_EVERY_S  least seconds between public pushes (600)
 //      FLEET_COMMAND_DIR  clone folder (.practice/fleet-command)   DASH_PORT  the local dashboard's port (3100)
@@ -12,10 +13,10 @@
 import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
-import {controlView,publicView,MAIN_ACCOUNT} from '../packages/dashboard/publish-relay';
-import {validateCommand,authorizeCommand,applyCommand,receiptPath,writeReceipt,ACTIONS,ID_RE,MAX_AGE_MS} from '../packages/dashboard/publish-commands';
+import {controlView,publicView,MAIN_ACCOUNT} from './publish-relay';
+import {validateCommand,authorizeCommand,applyCommand,receiptPath,writeReceipt,ACTIONS,ID_RE,MAX_AGE_MS} from './publish-commands';
 
-const root=resolve(import.meta.dir,'..'),prac=join(root,'.practice');
+const root=resolve(import.meta.dir,'..','..'),prac=join(root,'.practice');
 const REPO=process.env.FLEET_COMMAND_REPO??'';
 const DIR=resolve(process.env.FLEET_COMMAND_DIR??join(prac,'fleet-command'));
 const CYCLE_MS=Math.max(15,Number(process.env.CYCLE_S)||60)*1000,PUBLIC_MS=Math.max(60,Number(process.env.PUBLIC_EVERY_S)||600)*1000;
@@ -160,7 +161,7 @@ if(import.meta.main){
  const lock=join(prac,'dashboard-publish.lock');
  if(process.argv.includes('--daemon')){
   const out=openSync(join(prac,'dashboard-publish.log'),'a');
-  const child=spawn(process.execPath,[join(root,'scripts','dashboard-publish.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,out],env:process.env});
+  const child=spawn(process.execPath,[join(root,'packages','dashboard','publish.ts')],{cwd:root,detached:true,windowsHide:true,stdio:['ignore',out,out],env:process.env});
   closeSync(out);child.unref();console.log(`PUBLISH started pid ${child.pid} (log .practice/dashboard-publish.log)`);process.exit(0);
  }
  if(existsSync(lock)){const pid=Number(readFileSync(lock,'utf8'));if(pid!==process.pid&&alive(pid)){console.log(`PUBLISH already running pid ${pid}`);process.exit(0);}}
