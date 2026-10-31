@@ -30,7 +30,9 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  const bots=(s.bots??[]).filter((b:any)=>b?.name!==MAIN_MARK&&!b?.reserved&&String(b?.name??'').toLowerCase()!==main.toLowerCase()).map((b:any)=>{const copy={...b};for(const f of BOT_PRIVATE)delete copy[f];return copy;});
  // The owner's request ledger and the main run's plan, race and launch gates are the owner's: control only.
  const {viewerTimings:_timings,requests:_requests,mainPlan:_plan,race:_race,gates:_gates,...rest}=s;
- const out={...rest,bots,sys:s.sys?{...s.sys,procs:[]}:s.sys,requests:{},mainPlan:null,race:null,gates:null,hosted:{at:Date.now(),kind:'public'}};
+ // The queue's task texts are the agents' working notes: counts and agents stay, the tasks do not.
+ const coordination=s.coordination&&typeof s.coordination==='object'?{...s.coordination,tasks:[]}:s.coordination;
+ const out={...rest,bots,coordination,sys:s.sys?{...s.sys,procs:[]}:s.sys,requests:{},mainPlan:null,race:null,gates:null,hosted:{at:Date.now(),kind:'public'}};
  const text=JSON.stringify(out);
  if(new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(text))throw Error('public view still names the main account; nothing published');
  return out;

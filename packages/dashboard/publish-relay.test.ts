@@ -39,6 +39,7 @@ describe('hosted views',()=>{
   expect(p.sys.procs).toEqual([]);
   expect('viewerTimings' in p).toBe(false);
   expect(p.mainPlan).toBeNull();expect(p.race).toBeNull();expect(p.gates).toBeNull();expect(p.requests).toEqual({});
+  expect(p.coordination.tasks).toEqual([]);expect(p.coordination.available).toBe(true);expect(JSON.stringify(p)).not.toContain('w'.repeat(50));
   expect(JSON.stringify(p)).not.toContain('owner words');
   expect(p.hosted.kind).toBe('public');
  });
