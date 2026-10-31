@@ -21,6 +21,15 @@ export function penTiles(pen: { x: number; z: number }, spawns: { x: number; z: 
     return spawns.filter(t => t.level === 0 && d(t) <= 15).sort((a, b) => d(a) - d(b)).map(({ x, z }) => ({ x, z }));
 }
 
+// A route may finish beside a spawn, on the other side of a fence. Only an
+// observed exact-tile arrival establishes entry into the pen.
+export async function finishPenEntry(s: { sdk: { getState(): any }; bot: { walkTo(x:number,z:number,tolerance?:number):Promise<unknown> } }, tile: {x:number;z:number}): Promise<boolean> {
+    const inside = () => { const p=s.sdk.getState()?.player; return p?.level===0&&p.worldX===tile.x&&p.worldZ===tile.z; };
+    if (inside()) return true;
+    await s.bot.walkTo(tile.x,tile.z,0);
+    return inside();
+}
+
 if (import.meta.main) {
     const name = process.argv[2]!, PEN = parsePen(process.env.PEN);
     const TICKS = Number(process.env.TICKS ?? 3000), TARGET = Number(process.env.TARGET ?? 2000);
@@ -33,12 +42,12 @@ if (import.meta.main) {
     try {
         const spawns = (JSON.parse(readFileSync(resolve(import.meta.dir, '../knowledge/npcs.json'), 'utf8')) as { name: string; spawns?: { x: number; z: number; level: number }[] }[])
             .filter(n => n.name === 'Chicken').flatMap(n => n.spawns ?? []);
-        let there: Awaited<ReturnType<typeof goTo>> | undefined;
+        let there: Awaited<ReturnType<typeof goTo>> | undefined, entered=false;
         for (const t of [...penTiles(PEN, spawns).slice(0, 4), PEN]) {
             there = await goTo(s, await getWorld(), { ...t, level: 0 }, accountOf(s), { legTimeoutTicks: 100 });
-            if (there.ok) break;
+            if (there.ok && await finishPenEntry(s,t)) { entered=true; break; }
         }
-        if (!there?.ok) await finish([s], false, `travel to chickens ${PEN.x},${PEN.z} failed: ${there?.reason} ${there?.detail}`);
+        if (!entered) await finish([s], false, `travel to chickens ${PEN.x},${PEN.z} failed: ${there&&!there.ok?there.reason+' '+there.detail:'exact pen entry unobserved'}`);
         while (!over()) {
             if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
             const loot = (st()?.groundItems ?? []).filter((g: any) => g.distance <= 8 && g.reachable !== false && FEATHER.test(g.name))
@@ -57,6 +66,8 @@ if (import.meta.main) {
             if (await waitUntil(s, x => !(x?.nearbyNpcs ?? []).some((n: any) => n.index === c.index && (n.hp ?? 1) > 0), { timeoutTicks: 20 })
                 && ++kills % 25 === 0) console.log(`FEATHERS kills=${kills} feathers=${countItems(s, FEATHER)} idle=${idle} t=${s.tick() - start}`);
         }
+        // A pickup can meet the order while the previous chicken still retaliates.
+        await waitUntil(s, x => x?.player?.combat?.inCombat === false, { timeoutTicks: 30 });
         const got = countItems(s, FEATHER) - f0;
         await finish([s], got > 0, `feathers=${countItems(s, FEATHER)} gained=${got} kills=${kills} idle=${idle} ticks=${s.tick() - start}`);
     } catch (e) { await finish([s], false, String(e)); }

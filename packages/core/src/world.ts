@@ -29,6 +29,7 @@ const PORTAL_TOL = 2; // stairs can be 2x2 or larger
 const GOAL_TOL = 1;
 
 export interface World {
+    navigationGraph?(): {transports: readonly Transport[]; travel: readonly Travel[]};
     route(from: Tile, to: Tile, acct: Account): { ok: true; legs: Leg[]; cost: number } | { ok: false; reason: 'no_route' };
     // Set on the shared world (bot.ts getWorld): goTo plans in route-worker.ts so a long search never blocks the client.
     offThread?: boolean;
@@ -300,6 +301,7 @@ export function createWorld(opts: { transports?: Transport[]; doors?: Door[]; tr
     const strictEntries=new Set(transports.filter(t=>t.entry).map(t=>key(t.entry!)));
 
     return {
+        navigationGraph: () => ({transports,travel}),
         blockedDoors: acct => doors.filter(d => doorBlocks(d, acct)).map(doorBlock),
         route(from, to, acct) {
             const blocked = doors.filter(d => doorBlocks(d, acct)).map(doorBlock);
