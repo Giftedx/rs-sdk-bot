@@ -49,15 +49,27 @@ export function assertWorkerRelease(env:Record<string,string|undefined>=process.
     return pin;
 }
 
-export function assertCompatibleWorkers(pin:string,server:string,statuses:readonly any[],now=Date.now(),closed:(row:any)=>boolean=()=>false):void {
+// A standing peer runs the source its swarm pinned at start and is exempt from release equality, like its own start
+// (assertLiveWorkerRelease). It must be an account a standing job in swarm.json names, carry a revision, and no
+// coordinator run. Any other unfinished peer on another release (a manual session, a coordinator run) is incompatible.
+export function standingPeer(row:any,standingAccounts:ReadonlySet<string>):boolean {
+    return typeof row?.name==='string'&&standingAccounts.has(row.name.toLowerCase())&&row.coordinatorRunId==null
+        &&typeof row.workRevision==='string'&&/^[a-f0-9]{64}$/.test(row.workRevision);
+}
+export function assertCompatibleWorkers(pin:string,server:string,statuses:readonly any[],now=Date.now(),closed:(row:any)=>boolean=()=>false,standing:(row:any)=>boolean=()=>false):void {
     const unfinished=statuses.filter(s=>s?.server===server&&!s.result&&!closed(s));
     if(unfinished.some(s=>!Number.isFinite(s.at)||s.at<=0||s.at>now||now-s.at>=30_000))
         throw Error('no worker progress: release peer state unknown; verify offline before rollout');
-    // A standing worker (no coordinatorRunId) carries the release of the source it started on and skips this check for
-    // itself (assertLiveWorkerRelease), and a coordinator run holds the rollout while it works, so only an unfinished
-    // coordinator peer on another release makes the cohort incompatible.
-    if(unfinished.some(s=>s.coordinatorRunId&&s.workRevision!==pin))
+    if(unfinished.some(s=>s.workRevision!==pin&&!standing(s)))
         throw Error('no worker progress: active legacy/different release; wait offline for coordinated rollout');
+}
+// Every standing job counts, on or off: a job just turned off still owns its open session. Unreadable means none.
+export function standingAccounts(base=root):Set<string> {
+    try{
+        const jobs=JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs;
+        return new Set((Array.isArray(jobs)?jobs:[]).filter((j:any)=>j?.standing===true)
+            .flatMap((j:any)=>j.accounts??(j.account?[j.account]:[])).filter((a:unknown)=>typeof a==='string').map((a:string)=>a.toLowerCase()));
+    }catch{return new Set();}
 }
 
 export function isWorkerReleaseHold(result:string):boolean {
@@ -77,7 +89,8 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
         if(!entry.endsWith('.json'))continue;
         statuses.push(JSON.parse(readFileSync(join(base,'.practice/status',entry),'utf8')));
     }}catch{throw Error('no worker progress: release peer state unknown; unreadable status evidence');}
-    assertCompatibleWorkers(pin,server,statuses,Date.now(),row=>closedSessionRow(row,server,{root:join(base,'.practice/session-lifecycle')}));
+    const owners=standingAccounts(base);
+    assertCompatibleWorkers(pin,server,statuses,Date.now(),row=>closedSessionRow(row,server,{root:join(base,'.practice/session-lifecycle')}),row=>standingPeer(row,owners));
 }
 
 // The server drops a session whose client is gone after 200 s.
