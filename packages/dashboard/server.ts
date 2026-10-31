@@ -1133,6 +1133,7 @@ Bun.serve({
             return new Response(stream, { headers: { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' } });
         }
         if (url.pathname === '/items.png') return new Response(Bun.file(join(import.meta.dir, 'items.png')), { headers: { 'content-type': 'image/png', 'cache-control': 'max-age=86400' } });
+        if (/^\/map-squares\/\d{1,3}_\d{1,3}\.png$/.test(url.pathname)) { const file = join(import.meta.dir, 'map-squares', url.pathname.slice(13)); return existsSync(file) ? new Response(Bun.file(file), { headers: { 'content-type': 'image/png', 'cache-control': 'max-age=86400' } }) : new Response('no square', { status: 404 }); }
         // The game's map art (packages/dashboard/tools/export-world-map.ts); absent, the page keeps the collision map.
         if (url.pathname === '/worldmap.png') { const file = join(import.meta.dir, 'worldmap.png'); return existsSync(file) ? new Response(Bun.file(file), { headers: { 'content-type': 'image/png', 'cache-control': 'max-age=86400' } }) : new Response('no world map', { status: 404 }); }
         if (url.pathname === '/' || url.pathname === '/index.html') return new Response(Bun.file(PAGE_FILE), { headers: { ...ISO, 'content-type': 'text/html;charset=utf-8' } });
