@@ -348,6 +348,7 @@ try {
     };
 
     console.log(`START shop-buyer ${botName} profile=${profileKey} coins=${coins()}`);
+    let loggedEmpty = false;
     // BANK_PACK=1: bank everything but coins first; a pack left full by other jobs leaves no slot to buy into.
     if (process.env.BANK_PACK === '1') {
         await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
@@ -407,6 +408,8 @@ try {
 
         if (shop?.isOpen && shop.shopItems) {
             const purchases = planShopPurchases(conf.items, shop.shopItems, s.sdk.getInventory(), stock, Math.max(0, Math.min(coins() - COIN_RESERVE, MAX_SPEND - spentTotal)), Number(process.env.STOCK_TARGET ?? 500), MAX_ITEMS - boughtTotal);
+            // Say why nothing is bought: the shelf as seen, the budget and the free slots.
+            if (!purchases.length && !loggedEmpty) { loggedEmpty = true; console.log('SHOP_NONE ' + JSON.stringify({ shelf: shop.shopItems.filter(i => conf.items.some(t => t.re.test(i.name))).map(i => ({ name: i.name, count: i.count, price: i.buyPrice })), coins: coins(), free: 28 - s.sdk.getInventory().length, bank: conf.items.map(t => [...stock].find(([n]) => t.re.test(n))) })); }
             for (const purchase of purchases) {
                 const remaining = Math.min(purchase.amount, MAX_ITEMS - boughtTotal);
                 if (remaining <= 0) break;
