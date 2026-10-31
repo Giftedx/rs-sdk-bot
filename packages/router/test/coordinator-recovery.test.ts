@@ -224,3 +224,23 @@ test('a detached-run controller rolls over without drain or pause, and is stoppe
  expect(JSON.parse(readFileSync(ownerFile, 'utf8'))).toMatchObject({ pid: 22, detached: true });
  expect(existsSync(join(dir, 'rollout-paused.json'))).toBe(false);
 });
+
+test('a run rolls a controller whose release differs from its source; a standing check reuses it', async () => {
+ const f = recoveryFixture(), dir = join(f.prac, 'coordinator'), ownerFile = join(dir, 'swarm-owner.json');
+ atomicJson(ownerFile, { pid: 11, nonce: 'old-controller', source: 'old', swarmSource: 'stale', detached: true });
+ const live = new Set([11]), events: string[] = [];let next = 22;
+ const deps = { base: f.base, currentSource: () => 'new', matches: (pid: number) => live.has(pid), pidExists: (pid: number) => live.has(pid), processes: () => [...live], now: () => 1000,
+  rows: () => [],
+  stopOne: async (pid: number) => { events.push('stop-one:' + pid); live.delete(pid); return true; },
+  spawn: () => { const pid = next++; events.push('spawn:' + pid); live.add(pid); return pid; },
+  ack: async () => {} };
+ await ensureSwarm('new', deps as any);
+ atomicJson(join(dir, 'rollout-backoff.json'), { until: 5000 });
+ deps.currentSource = () => 'newer';
+ events.length = 0;
+ await ensureSwarm('newer', deps as any, false);
+ expect(events).toEqual([]);
+ await ensureSwarm('newer', deps as any);
+ expect(events).toEqual(['stop-one:22', 'spawn:23']);
+ expect(JSON.parse(readFileSync(ownerFile, 'utf8'))).toMatchObject({ pid: 23, source: 'newer' });
+});
