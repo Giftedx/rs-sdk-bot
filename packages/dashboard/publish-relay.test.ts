@@ -44,7 +44,9 @@ describe('hosted views',()=>{
  });
  test('a state that still names the main account is refused',()=>{
   expect(()=>publicView({bots:[{name:'CoinCock',goal:'give to Haggis'}]})).toThrow('nothing published');
-  expect(()=>publicView({bots:[],mainPlan:{note:'haggis route'}})).toThrow('nothing published');
+  expect(()=>publicView({bots:[],objectives:{lanes:[{next:'haggis route'}]}})).toThrow('nothing published');
+  // A field the public view removes cannot trip the check: it is gone before the check runs.
+  expect(publicView({bots:[],mainPlan:{note:'haggis route'}}).mainPlan).toBeNull();
  });
 });
 
