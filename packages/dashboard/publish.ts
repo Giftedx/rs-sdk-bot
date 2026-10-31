@@ -33,6 +33,18 @@ function run(cmd:string[],cwd=root):{ok:boolean;out:string}{
 }
 const gh=(...args:string[])=>run(['gh',...args]);
 const ghJson=(...args:string[])=>{const r=gh(...args);if(!r.ok)throw Error(r.out.slice(0,300));return JSON.parse(r.out);};
+// The repository's pull requests, for the page's Pull requests plugin (every agent lane and its PRs are public).
+const BOT_REPO='Giftedx/rs-sdk-bot';
+let prs={at:0,rows:[] as any[]};
+function pullRequests(now:number){
+ if(now-prs.at<300_000)return prs.rows;
+ try{
+  const fields='number,title,headRefName,state,isDraft,updatedAt,author,url';
+  const open=ghJson('pr','list','--repo',BOT_REPO,'--state','open','--limit','50','--json',fields),merged=ghJson('pr','list','--repo',BOT_REPO,'--state','merged','--limit','15','--json',fields);
+  prs={at:now,rows:[...open,...merged].map((r:any)=>({number:r.number,title:String(r.title??''),branch:String(r.headRefName??''),state:String(r.state??''),draft:r.isDraft===true,updatedAt:String(r.updatedAt??''),author:String(r.author?.login??''),url:String(r.url??'')}))};
+ }catch(e){console.log(`PUBLISH prs unavailable: ${String(e).slice(0,120)}`);prs.at=now;}
+ return prs.rows;
+}
 const ownedNames=()=>{const d=join(root,'vendor','rs-sdk','bots');return existsSync(d)?readdirSync(d,{withFileTypes:true}).filter(n=>n.isDirectory()&&/^[A-Za-z0-9]{1,12}$/.test(n.name)).map(n=>n.name):[];};
 
 // ---------- the local dashboard: the collector ----------
@@ -51,7 +63,7 @@ async function collect(){
  await ensureDashboard();
  const ownersFile=[join(FLEET_WORKTREE,'fleet','owners.json'),join(root,'fleet','owners.json')].find(existsSync);
  const owners=(()=>{try{return ownersFile?loadOwners(ownersFile):new Map();}catch{return new Map();}})();
- const state=withSides(await (await dash('/api/state')).json(),owners);
+ const state={...withSides(await (await dash('/api/state')).json(),owners),prs:pullRequests(Date.now())};
  const meta=await (async()=>{try{const r=await dash('/api/control',undefined,10_000);return r.ok?await r.json():null;}catch{return null;}})();
  let map:Uint8Array|null=null;
  if(!mapWritten&&state?.map?.ready){try{const r=await dash('/api/map');if(r.ok)map=new Uint8Array(await r.arrayBuffer());}catch{/* next cycle */}}
