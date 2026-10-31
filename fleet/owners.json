@@ -127,6 +127,22 @@
   "Unsheathed": {
    "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Quickhandjob": {
+   "side": "claude-cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "TrouserSnake": {
+   "side": "claude-cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "TheFullMonty": {
+   "side": "claude-cloud",
+   "server": "rs-sdk-demo.fly.dev"
+  },
+  "UnderMyKilt": {
+   "side": "claude-cloud",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
