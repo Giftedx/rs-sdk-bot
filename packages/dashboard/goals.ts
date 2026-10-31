@@ -9,8 +9,8 @@ export function goalPlan(text: string) {
     const titles=['Main Overall','Coverage','Specialist hiscores','Wealth / logistics / GE','Gear / collection','Efficiency / visibility'];
     const rows=section.split('\n').filter(line=>line.trim().startsWith('|')).map(line=>line.split('|').slice(1,-1).map(v=>v.trim()));
     const header=rows.shift()??[],column=(name:string)=>header.findIndex(v=>v.toLowerCase()===name);
-    const titleColumn=column('lane')<0?column('goal'):column('lane'),targetColumn=column('target'),nextColumn=column('next');
-    const parsed=titleColumn<0||targetColumn<0||nextColumn<0?[]:rows.map(row=>({title:row[titleColumn]??'',target:row[targetColumn]??'',next:row[nextColumn]??''})).filter(row=>row.title&&row.target&&row.next);
+    const titleColumn=column('lane')<0?column('goal'):column('lane'),targetColumn=column('target'),nextColumn=column('next'),ownerColumn=column('owner');
+    const parsed=titleColumn<0||targetColumn<0||nextColumn<0?[]:rows.map(row=>({title:row[titleColumn]??'',target:row[targetColumn]??'',next:row[nextColumn]??'',...(ownerColumn<0?{}:{owner:row[ownerColumn]??''})})).filter(row=>row.title&&row.target&&row.next);
     // Goal cards use these six positions. Operational lanes such as Autopilot
     // retain their plan ownership without shifting a specialist's goal card.
     const lanes=titles.flatMap(title=>{const row=parsed.find(row=>row.title===title);return row?[row]:[];});
