@@ -5,7 +5,8 @@ const state=()=>({now:1,bots:[
   {name:'CoinCock',env:{target:null},sessionAttemptId:'1-2',workRevision:'abc',inputs:{},coordinatorRunId:null,bank:[{name:'Coins',count:5}],pos:{x:1,z:2},reserved:false},
   {name:MAIN_MARK,reserved:true,bank:[],env:{}},
  ],coordination:{available:true,tasks:[{id:'t1',why:'w'.repeat(1000),detail:'d'.repeat(1000),status:'pending'}]},
- sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],vault:{coins:9},collection:{items:[]},economy:{supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:3,farmers:[{name:'CoinCock'}],trend:[1]},mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]},requests:{open:[{id:'1',request:'owner words'}]},race:{rows:[]},gates:{go:false}});
+ sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],vault:{coins:9},collection:{items:[]},economy:{supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:3,farmers:[{name:'CoinCock'}],trend:[1]},mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]},requests:{open:[{id:'1',request:'owner words'}]},race:{rows:[]},gates:{go:false},
+ fleetSides:{at:1,sides:[{side:'cloud',at:1,late:false,accounts:[{name:'TossTheCaber',at:1,total:40,coins:900},{name:MAIN_MARK,at:1,total:1,coins:1}]}],orders:[]}});
 const meta={nonce:'secret-nonce',goals:['wealth'],roles:['supply'],paused:false,fleetPaused:false,capabilities:[],accountHolds:[{name:'AFKnight',owner:'other'}],requests:[{id:'r1',action:'plan',at:1,status:'plan-requested'}]};
 
 describe('hosted views',()=>{
@@ -41,6 +42,7 @@ describe('hosted views',()=>{
   expect(p.mainPlan).toBeNull();expect(p.race).toBeNull();expect(p.gates).toBeNull();expect(p.requests).toEqual({});
   expect(p.coordination.tasks).toEqual([]);expect(p.coordination.available).toBe(true);expect(JSON.stringify(p)).not.toContain('w'.repeat(50));
   expect(JSON.stringify(p)).not.toContain('owner words');
+  expect(p.fleetSides.sides[0].accounts).toEqual([{name:'TossTheCaber',at:1,total:40}]);
   expect(p.hosted.kind).toBe('public');
  });
  test('a state that still names the main account is refused',()=>{

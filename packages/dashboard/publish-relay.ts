@@ -35,7 +35,9 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  const economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,goldPerTick:0,farmers:[],trend:[]}:s.economy;
  // The queue's task texts are the agents' working notes: counts and agents stay, the tasks do not.
  const coordination=s.coordination&&typeof s.coordination==='object'?{...s.coordination,tasks:[]}:s.coordination;
- const out={...rest,bots,coordination,economy,vault:null,collection:null,sys:s.sys?{...s.sys,procs:[]}:s.sys,requests:{},mainPlan:null,race:null,gates:null,hosted:{at:Date.now(),kind:'public'}};
+ // Other sides' accounts and sync times are public; their coins are bank stock, so they stay with the owner.
+ const fleetSides=s.fleetSides&&Array.isArray(s.fleetSides.sides)?{...s.fleetSides,sides:s.fleetSides.sides.map((side:any)=>({...side,accounts:(side.accounts??[]).filter((a:any)=>a?.name!==MAIN_MARK&&String(a?.name??'').toLowerCase()!==main.toLowerCase()).map(({coins:_coins,...a}:any)=>a)}))}:s.fleetSides;
+ const out={...rest,bots,coordination,economy,fleetSides,vault:null,collection:null,sys:s.sys?{...s.sys,procs:[]}:s.sys,requests:{},mainPlan:null,race:null,gates:null,hosted:{at:Date.now(),kind:'public'}};
  const text=JSON.stringify(out);
  if(new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(text))throw Error('public view still names the main account; nothing published');
  return out;

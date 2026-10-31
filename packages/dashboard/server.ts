@@ -17,6 +17,7 @@ import {requestEvidence,gateView} from './evidence';
 import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import {coordinationView} from './coordination';
+import {fleetSidesView,scoreboardView} from './fleet-view';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
@@ -35,6 +36,8 @@ const FILES = {
     requests: join(root, 'research', 'owner-requests.md'),
     haggisRun: join(root, 'research', 'haggis-run.md'),
     haggisPlan: join(import.meta.dir, 'haggis-plan.json'),
+    scoreboard: join(practice, 'coordinator', 'scoreboard.json'),
+    fleet: join(practice, 'fleet-data', 'fleet'),
 };
 const PORT = Number(process.env.DASH_PORT ?? 3100);
 const PAGE_FILE = resolve(process.env.DASH_PAGE ?? join(import.meta.dir, 'index.html'));
@@ -1007,8 +1010,15 @@ function buildState() {
         viewerTimings: viewerTimings.slice(0, 20),
         race: currentRace, gates: currentGates, chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
         pageVersion: (() => { try { return Math.max(...[PAGE_FILE,...['map-shell.css','map-shell.js','client-shell.css','client-shell.js','client-viewer.css','operations.css','operations.js','xp-tracker.js'].map(f=>join(import.meta.dir,f))].map(f=>existsSync(f)?statSync(f).mtimeMs:0)); } catch { return 0; } })(),
+        scoreboard: cached(FILES.scoreboard, text => scoreboardView(JSON.parse(text)), scoreboardView(null)), fleetSides: fleetSides(now),
         icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
     };
+}
+
+// Each side's last fleet-data sync (snapshots) and the cross-side orders not yet done (orders and receipts); a side with no snapshot is not listed.
+function fleetSides(now: number) {
+    const list = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : [];
+    return fleetSidesView(list(join(FILES.fleet, 'snapshots')), list(join(FILES.fleet, 'orders')), now, list(join(FILES.fleet, 'receipts')));
 }
 
 const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number; holdFrames: number }[] = [];
