@@ -19,17 +19,19 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
  const check=()=>{if(stop()||s.tick()-start>=cap||(s.sdk.getSkill('Hitpoints')?.level??0)<hp||s.sdk.getState()?.player?.isDead)throw Error('supply stopped, capped or damaged');};
  const walk=async(t:typeof BANK)=>{check();const r=await goTo(s,await getWorld(),t,accountOf(s),{legTimeoutTicks:100});if(!r.ok)throw Error('supply route '+r.reason+' '+r.detail);check();};
  const travel=async(t:typeof BANK)=>{
-  const p=s.sdk.getState()?.player;if(p&&p.level===t.level&&Math.max(Math.abs(p.worldX-t.x),Math.abs(p.worldZ-t.z))<=2)return;
+  check();const p=s.sdk.getState()?.player;if(p&&p.level===t.level&&Math.max(Math.abs(p.worldX-t.x),Math.abs(p.worldZ-t.z))<=2)return;
   // The courier's north-bank lane avoids the jail/road approach. Keep the supply route north of the Lumbridge spiders.
   if(t===BANK)for(const step of [...CORRIDOR].reverse())await walk(step);
-  else if(t===TREES)for(const step of CORRIDOR)await walk(step);
+  else if(t===TREES||t===KNIFE)for(const step of CORRIDOR)await walk(step);
   await walk(t);
  };
  const bank=async()=>{await travel(BANK);if(!(await s.bot.openBank()).success)throw Error('supply bank unavailable');};
  const deposit=async()=>{for(const id of [1511,946]){const item=s.sdk.getInventory().find(i=>i.id===id);if(item)await depositObserved(s,item);}await s.bot.closeBank();};
  let gathered=0,shafts:any,arrows:any;
  try{
-  if(!s.sdk.getInventory().some(i=>/axe$/i.test(i.name)))throw Error('supply owned axe required');
+  if(!s.sdk.getInventory().some(i=>/^bronze axe$/i.test(i.name))){
+   await bank();const axe=s.sdk.getState()?.bank.items.find(i=>i.id===1351);if(!axe||!(await s.bot.withdrawItem(axe,1,{asNote:false})).success||!await waitUntil(s,()=>held(1351)===1,{timeoutTicks:5}))throw Error('supply owned bronze axe required');await s.bot.closeBank();
+  }
   // Feather holders can carry a full starter kit. Only logs and the knife move into the bank; trees stay inside the existing Lumbridge safe box.
   if(!held(946)){
    await travel(KNIFE);
@@ -39,11 +41,12 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
   await bank();await deposit();
   let lastGain=s.tick();
   while(gathered<plan.logs){
-   await travel(TREES);
+   await travel(TREES);lastGain=s.tick();
    while(gathered<plan.logs&&s.sdk.getInventory().length<27){
-    check();const old=held(1511),tree=s.sdk.getState()?.nearbyLocs.filter(l=>l.x>=3214&&l.x<=3239&&l.z>=3226&&l.z<=3250&&/^tree$/i.test(l.name)&&l.optionsWithIndex.some(o=>/chop/i.test(o.text))&&l.reachable!==false).sort((a,b)=>a.distance-b.distance)[0];
-    if(!tree)throw Error('supply normal tree unavailable');
-    await s.bot.interactLoc(tree,'Chop down');await waitUntil(s,()=>held(1511)>old||stop(),{timeoutTicks:12});
+    check();if(s.sdk.getDialog()?.isOpen){await s.sdk.sendClickDialog(0);await waitTicks(s,1);}
+    const old=held(1511),tree=s.sdk.getState()?.nearbyLocs.filter(l=>l.x>=3214&&l.x<=3239&&l.z>=3226&&l.z<=3250&&/^tree$/i.test(l.name)&&l.optionsWithIndex.some(o=>/chop/i.test(o.text))&&l.reachable!==false).sort((a,b)=>a.distance-b.distance)[0];
+    if(!tree){if(s.tick()-lastGain>240)throw Error('supply no normal tree after respawn budget');await waitTicks(s,4);continue;}
+    const result=await s.bot.interactLoc(tree,tree.optionsWithIndex.find(o=>/chop/i.test(o.text))!.text);if(!result.success)console.log('WOOD_SUPPLY_CHOP_REFUSED '+JSON.stringify({tree:{id:tree.id,x:tree.x,z:tree.z},result}));await waitUntil(s,()=>held(1511)>old||stop(),{timeoutTicks:12});
     const gain=held(1511)-old;if(gain>0){gathered+=gain;lastGain=s.tick();}
     if(s.tick()-lastGain>80)throw Error('supply no log progress');
    }
