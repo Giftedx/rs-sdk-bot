@@ -76,3 +76,38 @@ DEMO_OK=1 bun scripts/fleet-agent.ts --daemon
 Create that plan before starting the agent; an unreadable or malformed plan stops trading. Preserve the repository's admission limits and include only cloud-owned jobs. The agent excludes enabled jobs in `SWARM_PLAN` and pins each trade child to the current source. Inspect `.practice/fleet-agent.lock` for an existing owner before starting another daemon. Completed finite jobs stay disabled until a new useful assignment is authorized.
 
 Rebuild each cloud account with `bun scripts/fleet.ts create <name>` at session startup, preserving the spelling in `fleet/owners.json`; Linux credential directory names are case sensitive. A tutorial account needs mainland entry before its first production job. Confirm a useful result and `LOGOUT logged-out` separately; a gathered item with a logout timeout is a failed run.
+
+## Claude Code cloud fleet side
+
+The Claude Code cloud environment is the `claude-cloud` side. Its container is fresh each session, so every session starts with the same setup; the commands below are the ones that work there.
+
+```bash
+git submodule update --init
+git -C vendor/rs-sdk config core.autocrlf false
+git -C vendor/rs-sdk apply ../../patches/rs-sdk-working.patch
+bun install
+(cd vendor/rs-sdk && bun install --frozen-lockfile --production)
+(cd vendor/rs-sdk/server/webclient && bun install --frozen-lockfile)
+export FLEET_SIDE=claude-cloud
+bun scripts/fleet-sync.ts
+git -C .practice/fleet-data config rebase.autoStash true
+```
+
+`FLEET_SEED` is a secret in the environment's settings (the cloud environment menu in the session's title bar, then Edit, under environment variables), the same rule as the Codex side. A session reads it only when it starts after the secret is saved; a running session cannot pick it up. Without it `bun scripts/fleet.ts create <name>` writes a random password that no other session can rebuild, so create no account until `[ -n "$FLEET_SEED" ]` is true.
+
+The environment sets `HTTPS_PROXY`. Fetch inherits it; `packages/core/src/websocket-proxy.ts` gives the game WebSocket the same proxy for every non-local side. The relayed gateway `wss://rs-sdk-demo.fly.dev/gateway` opens through the proxy; the direct gateway port `7443` does not, and the SDK's own 3 s check falls back to the relay (`GATEWAY_DIRECT=false` skips the check).
+
+Run only `claude-cloud` jobs, from a plan outside the code checkout, with the repository's admission limits (`maxBots` 4, `minFreeGB` 4) and one job per account marked `"autopilot": "claude-cloud"` so the planner owns it:
+
+```bash
+mkdir -p .practice/cloud-handoff
+export SWARM_PLAN=$PWD/.practice/cloud-handoff/swarm.json
+bun scripts/fleet.ts create <name>      # a name from packages/core/src/names.ts; writes vendor/rs-sdk/bots/<name>/bot.env
+# add {"side": "claude-cloud", "server": "rs-sdk-demo.fly.dev"} under that name in .practice/fleet-data/fleet/owners.json, then:
+bun scripts/fleet-sync.ts
+DEMO_OK=1 bun scripts/swarm.ts .practice/cloud-handoff/swarm.json
+DEMO_OK=1 bun scripts/fleet-agent.ts --daemon
+FLEET_SIDE=claude-cloud bun scripts/autopilot.ts .practice/cloud-handoff/swarm.json --daemon
+```
+
+A fresh account has Thieving 1, so the planner's first template is feathers at a chicken pen; `fleet/claims/<side>.json` on the fleet-data branch keeps it off the pens the `cloud` and `local` sides hold. A useful live result is a bank or inventory gain in `.practice/status/<name>.json` after a bounded run with `LOGOUT logged-out`; sync after each so the snapshot carries the fresh observation.
