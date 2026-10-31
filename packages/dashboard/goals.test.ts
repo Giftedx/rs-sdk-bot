@@ -59,3 +59,11 @@ test('catalog aliases resolve real coins and strung bows without counting lookal
  const b={...bot(),bank:[{id:617,count:100},{id:72,count:1}]};expect(goalProgress(state([b]),i)[1]!.metric).toBe('0/2');b.bank=[{id:995,count:10},{id:861,count:1}];expect(goalProgress(state([b]),i)[1]!.metric).toBe('2/2');
  const malformed={...i,items:null,quests:{},questConstants:null} as any;expect(()=>goalProgress(state(),malformed)).not.toThrow();expect(goalProgress(state(),malformed)[2]!.blocker).toContain('Quest source unavailable');
 });
+
+test('owner columns and operational lanes preserve the six dashboard goal targets and positions',()=>{
+ const titles=['Main Overall','Coverage','Specialist hiscores','Wealth / logistics / GE','Gear / collection','Efficiency / visibility'];
+ const legacy='## Lanes\n| Lane | Target | Next |\n|---|---|---|\n'+titles.map(t=>`| ${t} | target ${t} | next ${t} |`).join('\n');
+ const named='## Lanes\n| Lane | Owner | Target | Next |\n|---|---|---|---|\n| Autopilot | Claude cloud | automate jobs | planner |\n'+[...titles].reverse().map(t=>`| ${t} | worker | target ${t} | next ${t} |`).join('\n');
+ expect(goalPlan(named).lanes.map(({owner,...row})=>row)).toEqual(goalPlan(legacy).lanes);expect(goalPlan(named).available).toBe(true);
+ expect(goalPlan(named).lanes[2]).toEqual({title:'Specialist hiscores',target:'target Specialist hiscores',next:'next Specialist hiscores',owner:'worker'});
+});

@@ -77,6 +77,9 @@ test('planner jobs carry the marker, repeat and standing, and the merge keeps un
     expect(merged.jobs).toEqual([human, theirs, kept]);
     expect(merged.fresh).toEqual([]);
     expect(mergeJobs([human], side, [x!]).fresh).toEqual(['ThiefA']);
+    // An owner pause on the old template stays on the new one.
+    const paused = { ...stale, account: 'ThiefA', enabled: false, repeat: false };
+    expect(mergeJobs([paused], side, [x!]).jobs).toEqual([{ ...job, enabled: false, repeat: false }]);
 });
 
 test('existing jobs hold their resources, chain steps included', () => {
@@ -93,6 +96,8 @@ test('assess retires repeated fails, a death and near-total waste, and keeps pro
     expect(assess(['RESULT ok feathers=30 gained=30', 'RESULT fail no chickens']).retire).toBe(false);
     expect(assess(['[x] RESULT fail no chickens', '| RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2 });
     expect(assess(['RESULT fail died at 2652,3318']).reason).toMatch(/^death/);
+    expect(assess(['RESULT fail coinsGained=10 died=true banked=0']).reason).toMatch(/^death/);
+    expect(assess(['RESULT ok coinsGained=1000 died=false banked=1000']).retire).toBe(false);
     expect(assess(['LEDGER ticks=1000 xp=0 move=500 anim=10 dialog=0 stun=0 idle=450', 'RESULT ok feathers=0 gained=0']).reason).toMatch(/^tick waste 95%/);
     expect(assess(['LEDGER ticks=1000 xp=0 move=300 anim=600 dialog=0 stun=0 idle=100', 'RESULT ok feathers=90 gained=90']).retire).toBe(false);
     expect(assess(['LEDGER ticks=100 xp=0 move=50 anim=0 dialog=0 stun=0 idle=50']).retire).toBe(false);

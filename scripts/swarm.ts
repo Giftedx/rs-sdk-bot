@@ -125,7 +125,6 @@ export function isReservation(job: Job): boolean {
     return !!job && typeof job.account === 'string' && !job.accounts && !job.script;
 }
 
-// A host job lists its accounts; a single job names one. Returns an error string for a job the swarm must skip.
 // The first account of a job that another fleet side owns (fleet/owners.json): this controller never starts it, so one
 // swarm.json can carry every side's jobs.
 export function otherSideAccount(accounts: readonly string[], side: string, owners: ReadonlyMap<string, Owner>): { account: string; side: string } | undefined {
@@ -133,6 +132,7 @@ export function otherSideAccount(accounts: readonly string[], side: string, owne
     return undefined;
 }
 
+// A host job lists its accounts; a single job names one. Returns an error string for a job the swarm must skip.
 export function parseJob(job: Job): ParsedJob | { error: string } {
     if (!job || typeof job.script !== 'string' || !job.script) return { error: 'no script' };
     if(job.orchestrate!==undefined&&typeof job.orchestrate!=='boolean')return {error:'bad orchestrate mode'};

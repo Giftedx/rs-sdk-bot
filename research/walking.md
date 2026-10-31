@@ -143,3 +143,11 @@ voyage `p_delay(7)` (`sail.rs2:22`). The direct method is not in the scripts, be
 **Conditions:** live server, Pocketpython (combat 5, 11 HP, coins in pack and bank), `scripts/walk-to.ts Pocketpython 3165 3487`, partly warmed leg cache.
 **Evidence:** `.practice/swarm-logs/Pocketpython.log`: Ardougne bank 2654,3283 -> Barnaby boat -> Karamja -> Customs boat -> Port Sarim -> Grand Exchange 3165,3487; `RESULT ok walk-to {"ok":true,"ticks":511}`; LEDGER move=332 idle=149, longest idle 115 ticks at the start (planning); HP low 9 on Karamja; logout confirmed (MEASURED live, 1 run).
 **Gap:** one live run; the 2 HP of damage on Karamja is not attributed.
+
+## Offline fleet reachability
+
+The collision-component audit covers 9,549 distinct preset, seller, spawn and fixed-script tiles from Lumbridge and 11 banks for weak (10 HP, 30 coins) and strong (70 melee/HP, 20,000 coins) profiles. It checks 229,176 directed source/target/profile cases. Source hashes, every result and masked area/fare/danger/door observations are retained in `route-audit.json.gz`; `route-audit-summary.json` gives totals. These are offline reachability results, not game progress or shortest route times. Quest flags, items and unlocks are empty in both profiles.
+
+Source `components.ts`, native collision and the normalized `world.ts` portal graph -> `scripts/route-audit.ts` -> reuse collision labels, adapt to bidirectional regions plus directed boundary edges -> one-way-door and fare-budget regressions. Fare budgets accumulate across boats. A final danger tile is probed only as an endpoint; intrinsic collision stays closed.
+
+The chicken pen at 3197,3353 is unreachable from Lumbridge for both profiles. A live feather worker stopped outside at 3196,3351 and produced nothing. `gather-feathers.ts` requires an observed exact spawn-tile arrival after world navigation; an SDK success outside the fence cannot admit the job. The worker also allows a bounded combat settlement before logout. Lumbridge, south-Falador and Draynor pens have useful cloud feather runs; the Varrock pen has no useful run. The live run logs remain in the cloud task's `.practice/cloud-handoff/` and swarm logs; they are distinct from the compressed offline report.

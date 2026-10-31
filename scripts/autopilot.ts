@@ -58,7 +58,12 @@ export function pass(planFile: string, dry: boolean): string[] {
 
     // Resources other jobs hold: this file's other jobs, and other sides' fresh claims.
     const taken: Record<string, number> = {};
-    for (const j of swarm.jobs) if (!mineMarked(j) && j.enabled !== false) for (const r of jobResources(j)) taken[r] = (taken[r] ?? 0) + 1;
+    // Enabled hand-made jobs of this side's accounts go into this side's claim too, so a side with its own plan sees them.
+    const ownHeld: string[] = [], sideOfAccount = (a: string) => owners.get(a.toLowerCase())?.side ?? 'local';
+    for (const j of swarm.jobs) if (!mineMarked(j) && j.enabled !== false) for (const r of jobResources(j)) {
+        taken[r] = (taken[r] ?? 0) + 1;
+        if ([j.account, ...(j.accounts ?? [])].filter(Boolean).every((a: string) => sideOfAccount(a) === side)) ownHeld.push(r);
+    }
     const claimDir = join(FLEET_DIR(), 'claims');
     if (existsSync(claimDir)) for (const f of readdirSync(claimDir).filter(f => f.endsWith('.json'))) {
         const c = readJson(join(claimDir, f), null);
@@ -89,7 +94,7 @@ export function pass(planFile: string, dry: boolean): string[] {
     writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
     if (existsSync(join(FLEET_WORKTREE, 'fleet', 'owners.json'))) {
         mkdirSync(join(FLEET_WORKTREE, 'fleet', 'claims'), { recursive: true });
-        writeAtomic(join(FLEET_WORKTREE, 'fleet', 'claims', `${side}.json`), JSON.stringify({ side, at: Date.now(), resources: out.flatMap(x => x.resources).sort() }) + '\n');
+        writeAtomic(join(FLEET_WORKTREE, 'fleet', 'claims', `${side}.json`), JSON.stringify({ side, at: Date.now(), resources: [...new Set([...ownHeld, ...out.flatMap(x => x.resources)])].sort() }) + '\n');
     }
     return log;
 }
