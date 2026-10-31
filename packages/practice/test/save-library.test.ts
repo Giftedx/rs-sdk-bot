@@ -2,11 +2,12 @@ import {expect, test} from 'bun:test';
 import {Database} from 'bun:sqlite';
 import {mkdirSync, mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
-import {join} from 'node:path';
+import {basename, join} from 'node:path';
 import {createSaveData} from '../../../vendor/rs-sdk/sdk/test/utils/save-generator';
 import {handleSaveRequest, type SaveWorld} from '../src/save-endpoint';
 import {addEntry, endpointBase, entryBytes, findEntry, loadSnapshot, readLibrary, replaceCheckpoint, summarize} from '../src/save-library';
 import {checkExpect, pointBotAt, TickWindow} from '../src/rehearse';
+import {pidsFile} from '../src/stack';
 
 // createSaveData stamps the clock into each save, so the fixture is built once.
 const SMITH = createSaveData({position: {x: 3274, z: 3186, level: 0}, skills: {Smithing: 50},
@@ -135,4 +136,23 @@ test('rehearsal bots are pointed at the local isolated engine', () => {
     expect(text).toContain('SERVER=localhost:8910\n');
     expect(text).toContain('GATEWAY_URL=ws://localhost:7791');
     expect(text).not.toContain('\r');
+});
+
+test('every library segment uses the expectation schema and starts from a library save that exists', () => {
+    const lib = readLibrary() as {entries: {name: string}[]; segments: import('../src/rehearse').Segment[]};
+    const empty = summarize(smith());
+    for (const seg of lib.segments) {
+        expect(() => checkExpect(empty, seg.expect)).not.toThrow();
+        if (seg.capture?.when) {
+            expect(Object.keys(checkExpect(empty, seg.capture.when)).length).toBeGreaterThan(0);
+        }
+        if ('snapshot' in seg.start) expect(lib.entries.map(e => e.name)).toContain(seg.start.snapshot);
+    }
+    expect(() => checkExpect(empty, {skill: 'Magic', level: 8} as never)).toThrow(/unknown expectation keys/);
+});
+
+test('a named stack instance has its own pid file', () => {
+    expect(basename(pidsFile())).toBe('pids.json');
+    expect(basename(pidsFile('rehearse'))).toBe('pids-rehearse.json');
+    expect(() => pidsFile('../x')).toThrow(/invalid stack instance/);
 });

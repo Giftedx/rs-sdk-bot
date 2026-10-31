@@ -3,7 +3,7 @@
 // `segments`). The runner loads the start under a fresh practice account, runs the worker, reads the engine tick when
 // the account enters and leaves the world, and compares the end save with the expectation. With `capture` it also
 // stores a state in the library: mid-run from the save endpoint (no logout), or the end save.
-// Practice only: the engine is local, on ports apart from the shared practice slot (8888), and every bot.env is
+// Practice only: the engine is local, on ports, a pid file and logs apart from the shared practice slot (8888), and every bot.env is
 // rewritten to that local engine before login.
 // Usage: bun packages/practice/src/rehearse.ts <segment-id> [--start] [--out <dir>]
 //   --start  start an isolated practice engine with the save endpoint, and stop it at the end.
@@ -62,6 +62,8 @@ export function itemCount(s: SaveSummary, id: string, where: Where = 'any'): num
 }
 
 export function checkExpect(s: SaveSummary, expect: Segment['expect']): Record<string, boolean> {
+    const unknown = Object.keys(expect).filter(k => !['skills', 'items', 'position'].includes(k));
+    if (unknown.length) throw new Error(`unknown expectation keys: ${unknown.join(', ')}`);
     const out: Record<string, boolean> = {};
     for (const [skill, min] of Object.entries(expect.skills ?? {})) {
         if (!SKILLS.includes(skill as never)) throw new Error(`unknown skill ${skill}`);
@@ -115,6 +117,8 @@ export interface RehearsalReport {
 
 export async function rehearse(seg: Segment, opts: {out: string; port?: number; engine?: number; gateway?: number}): Promise<RehearsalReport> {
     const port = opts.port ?? ISOLATED.save, engine = opts.engine ?? ISOLATED.engine, gateway = opts.gateway ?? ISOLATED.gateway;
+    if (seg.capture?.when && !Object.keys(seg.capture.when).length) throw new Error(`${seg.id}: capture.when has no condition`);
+    if (seg.capture?.when) checkExpect({position: {x: 0, z: 0, level: 0}, skills: {}, inventory: {}, worn: {}, bank: {}, varps: 0}, seg.capture.when);
     mkdirSync(opts.out, {recursive: true});
     const account = runBotName('rh' + seg.id.replace(/[^a-z0-9]/gi, '').slice(0, 3), 1);
     if (existsSync(join(rsSdkRoot(), 'bots', account))) throw new Error('fresh account required');
@@ -193,7 +197,7 @@ export async function rehearse(seg: Segment, opts: {out: string; port?: number; 
 export async function startIsolatedStack(): Promise<Stack> {
     if (freemem() / 2 ** 30 < PRACTICE_STARTUP_GB) throw new Error(`practice startup needs ${PRACTICE_STARTUP_GB} GiB free`);
     return startStack({tickMs: Number(process.env.REHEARSE_TICK_MS ?? 150), xpRate: 25, ports: {engine: ISOLATED.engine, gateway: ISOLATED.gateway},
-        readyTimeoutMs: 300_000, enginePreload: {module: resolve(import.meta.dir, 'save-endpoint.ts'), env: ISOLATED_ENGINE_ENV}});
+        readyTimeoutMs: 300_000, enginePreload: {module: resolve(import.meta.dir, 'save-endpoint.ts'), env: ISOLATED_ENGINE_ENV}, instance: 'rehearse'});
 }
 
 if (import.meta.main) {

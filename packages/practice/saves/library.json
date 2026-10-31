@@ -194,8 +194,9 @@
         "name": "magic-9-wind-strike-runes",
         "segment": "Magic 8+ mid wind strike, air and mind runes held (route boundary start -> rings, Magic 8+)",
         "when": {
-          "skill": "Magic",
-          "level": 8
+          "skills": {
+            "Magic": 8
+          }
         }
       },
       "timeoutMs": 300000
