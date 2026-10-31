@@ -5,7 +5,7 @@ const state=()=>({now:1,bots:[
   {name:'CoinCock',env:{target:null},sessionAttemptId:'1-2',workRevision:'abc',inputs:{},coordinatorRunId:null,bank:[{name:'Coins',count:5}],pos:{x:1,z:2},reserved:false},
   {name:MAIN_MARK,reserved:true,bank:[],env:{}},
  ],coordination:{available:true,tasks:[{id:'t1',why:'w'.repeat(1000),detail:'d'.repeat(1000),status:'pending'}]},
- sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]},requests:{open:[{id:'1',request:'owner words'}]},race:{rows:[]},gates:{go:false}});
+ sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],vault:{coins:9},collection:{items:[]},economy:{supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:3,farmers:[{name:'CoinCock'}],trend:[1]},mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]},requests:{open:[{id:'1',request:'owner words'}]},race:{rows:[]},gates:{go:false}});
 const meta={nonce:'secret-nonce',goals:['wealth'],roles:['supply'],paused:false,fleetPaused:false,capabilities:[],accountHolds:[{name:'AFKnight',owner:'other'}],requests:[{id:'r1',action:'plan',at:1,status:'plan-requested'}]};
 
 describe('hosted views',()=>{
@@ -33,9 +33,9 @@ describe('hosted views',()=>{
  test('public drops the main account row, private bot fields, the process list and viewer timings; keeps the map data',()=>{
   const p=publicView(state());
   expect(p.bots.map((b:any)=>b.name)).toEqual(['CoinCock']);
-  for(const f of ['env','sessionAttemptId','workRevision','inputs','coordinatorRunId'])expect(f in p.bots[0]).toBe(false);
+  for(const f of ['env','sessionAttemptId','workRevision','inputs','coordinatorRunId','bank','bankAt'])expect(f in p.bots[0]).toBe(false);
   expect(p.bots[0].pos).toEqual({x:1,z:2});
-  expect(p.bots[0].bank).toEqual([{name:'Coins',count:5}]);
+  expect(p.vault).toBeNull();expect(p.collection).toBeNull();expect(p.economy).toEqual({supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:0,farmers:[],trend:[]});
   expect(p.sys.procs).toEqual([]);
   expect('viewerTimings' in p).toBe(false);
   expect(p.mainPlan).toBeNull();expect(p.race).toBeNull();expect(p.gates).toBeNull();expect(p.requests).toEqual({});
