@@ -17,7 +17,7 @@ import {requestEvidence,gateView} from './evidence';
 import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import {coordinationView} from './coordination';
-import {fleetSidesView,scoreboardView} from './fleet-view';
+import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
@@ -369,7 +369,7 @@ type RankRec = { at: number; name: string; board: string; rank: number; level: n
 const rankHist = new Map<string, RankRec[]>(); // name|board -> history, oldest first
 for (const r of tailJsonl<RankRec>(FILES.ranks, 5000)) { const k = r.name + '|' + r.board; const l = rankHist.get(k) ?? []; l.push(r); rankHist.set(k, l); }
 async function refreshRanks() {
-    for (const name of liveAccounts()) {
+    for (const name of [...liveAccounts(), ...remoteNames()]) {
         const r = ranks.get(name);
         if (r && Date.now() - r.at < 300_000) continue;
         try {
@@ -949,6 +949,10 @@ function buildState() {
             death: (() => { const x0 = newestDeath.get(name), x = x0 && now - x0.at < 86_400_000 && (!s.started || x0.at >= s.started) ? x0 : null; return x ? { at: x.at, text: x.text } : null; })(),
         };
     });
+    // The other sides' accounts (Codex cloud, Claude cloud): snapshot items and levels, world-feed position, hiscore ranks.
+    const local = new Set(bots.map(b => b.name.toLowerCase()));
+    for (const r of remoteBots(snapshotFiles(), local, roster, firstSeen, now, process.env.FLEET_SIDE ?? 'local'))
+        (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: (ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), spark: [], rateSkill: 'all skills' });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
@@ -1016,9 +1020,12 @@ function buildState() {
 }
 
 // Each side's last fleet-data sync (snapshots) and the cross-side orders not yet done (orders and receipts); a side with no snapshot is not listed.
+// Declarations, not consts: refreshRanks runs at load, above this point.
+function fleetList(dir: string): any[] { return existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : []; }
+function snapshotFiles() { return fleetList(join(FILES.fleet, 'snapshots')); }
+function remoteNames(): string[] { return snapshotFiles().filter(s => s?.side !== (process.env.FLEET_SIDE ?? 'local')).flatMap(s => (s?.accounts ?? []).map((a: any) => String(a?.name ?? ''))).filter(n => /^[A-Za-z0-9]{1,12}$/.test(n)); }
 function fleetSides(now: number) {
-    const list = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).map(f => cached<any>(join(dir, f), JSON.parse, null)) : [];
-    return fleetSidesView(list(join(FILES.fleet, 'snapshots')), list(join(FILES.fleet, 'orders')), now, list(join(FILES.fleet, 'receipts')));
+    return fleetSidesView(snapshotFiles(), fleetList(join(FILES.fleet, 'orders')), now, fleetList(join(FILES.fleet, 'receipts')));
 }
 
 const viewerTimings: { at: number; mode: string; ms: number; tiles: number; frames: number; blankFrames: number; holdFrames: number }[] = [];
@@ -1127,7 +1134,7 @@ Bun.serve({
         // The 3D viewer (localhost:3000) fetches the names whose nameplates it must hide, so the dashboard page
         // never holds the name: the iframe URL carries only this endpoint.
         // Our live accounts, for the viewer's gold nameplates (the main account stays hidden, not highlighted).
-        if (url.pathname === '/api/our-names') return Response.json(liveAccounts().filter(n => n !== MAIN), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
+        if (url.pathname === '/api/our-names') return Response.json([...liveAccounts(), ...remoteNames()].filter(n => n !== MAIN), { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         if (['/api/reveal', '/api/hidden-names'].includes(url.pathname) && !isLoopback(server.requestIP(req)?.address ?? '')) return new Response('forbidden', { status: 403 });
         if (url.pathname === '/api/hidden-names') return Response.json([MAIN], { headers: { 'access-control-allow-origin': 'http://localhost:3000', 'cross-origin-resource-policy': 'cross-origin', 'cache-control': 'no-store' } });
         // The server may listen on every address (DASH_HOST); only this PC may read the main account's name.

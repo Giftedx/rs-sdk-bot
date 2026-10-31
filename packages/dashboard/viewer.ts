@@ -15,6 +15,11 @@ export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relati
 export function installViewerBridge(host:any) {
     let privacyReady=false,renderReady=false,feedConnected:boolean|null=null,failed=false,announced=false;
     let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false;
+    // A hosted page must not hold the hidden name itself: its list carries "h:<FNV-1a of the lower-case name>" entries.
+    // The bridge then renames a matching roster player to HIDDEN_ALIAS before the viewer reads the message, and gives
+    // the viewer that alias to hide. Names keep the one character set the list allows, so a plain loop hashes them.
+    const HIDDEN_ALIAS='Hidden',hiddenHashes=new Set<string>(),learned=new Set<string>();
+    const fnv=(value:string)=>{let h=0x811c9dc5;for(let i=0;i<value.length;i++){h^=value.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');};
     const undo:(()=>void)[]=[];
     const emit=(detail='A geometry frame was presented; terrain streaming may continue.')=>{
         if(host.parent===host)return;
@@ -26,7 +31,7 @@ export function installViewerBridge(host:any) {
     const url=new host.URL(host.location.href),hidden=url.searchParams.get('hideNamesFrom');
     let hiddenUrl:any;
     try{hiddenUrl=new host.URL(hidden,host.location.href);}catch{fail('Private name filter URL is unavailable.');return;}
-    if(!hidden||hiddenUrl.origin!==host.location.origin||hiddenUrl.pathname!=='/api/hidden-names'||hiddenUrl.search){fail('Private name filter must use this dashboard.');return;}
+    if(!hidden||hiddenUrl.origin!==host.location.origin||!hiddenUrl.pathname.endsWith('/api/hidden-names')||hiddenUrl.search){fail('Private name filter must use this dashboard.');return;}
     const glType=host.WebGL2RenderingContext;
     if(!glType){fail('WebGL2 is unavailable; use the 2D map.');return;}
     emit('Loading the private name filter and a rendered geometry frame.');
@@ -41,12 +46,14 @@ export function installViewerBridge(host:any) {
         response.json=async()=>{
             try{
                 const list=await json();
-                if(!Array.isArray(list)||list.length<1||list.length>64||list.some(n=>typeof n!=='string'||!/^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw new Error('invalid name filter');
-                hiddenNames=new Set(list.map(n=>n.toLowerCase()));
+                if(!Array.isArray(list)||list.length<1||list.length>64||list.some(n=>typeof n!=='string'||!/^(?:[A-Za-z0-9_ -]{1,12}|h:[0-9a-f]{8})$/.test(n)))throw new Error('invalid name filter');
+                const names=list.filter(n=>!n.startsWith('h:'));
+                for(const n of list)if(n.startsWith('h:'))hiddenHashes.add(n.slice(2));
+                hiddenNames=new Set([...names.map(n=>n.toLowerCase()),...learned]);
                 // embed.ts applies its hidden Set in the promise continuation.
                 // Two animation turns follow that actual .json() consumption.
                 host.requestAnimationFrame(()=>host.requestAnimationFrame(()=>{if(!failed){privacyReady=true;emit();}}));
-                return list;
+                return hiddenHashes.size?[...names,HIDDEN_ALIAS]:list;
             }catch(e){fail('Private name filter was not applied; the viewer stays hidden.');throw e;}
         };
         return response;
@@ -89,6 +96,16 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('open',()=>{feedConnected=true;emit();});
                 this.addEventListener('close',()=>{feedConnected=false;emit();});
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
+                // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
+                let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
+                const rename=(event:any)=>{
+                    if(!hiddenHashes.size||typeof event?.data!=='string')return event;
+                    let data:string=event.data;
+                    if(data.includes('"roster"'))try{const m=JSON.parse(data);if(m.t==='roster'&&Array.isArray(m.p))for(const p of m.p)if(Array.isArray(p)&&typeof p[1]==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(p[1])&&hiddenHashes.has(fnv(p[1].toLowerCase()))){learned.add(p[1].toLowerCase());hiddenNames.add(p[1].toLowerCase());}}catch{/* not JSON: left as it is */}
+                    for(const name of learned)data=data.replace(new RegExp('\\b'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),HIDDEN_ALIAS);
+                    return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
+                };
+                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>fn.call(this,rename(event)):fn);}});}
                 const names=new Map<number,string>(),seenChat=new Set<string>();
                 const mask=(value:string)=>{for(const name of hiddenNames)value=value.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'⟦MAIN⟧');return value;};
                 this.addEventListener('message',(event:any)=>{

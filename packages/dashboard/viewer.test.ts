@@ -131,3 +131,19 @@ test('native world-map open and close are relayed only after the viewer is ready
  expect(b.messages.filter(m=>m.data.atlasWorldMap!==undefined).map(m=>m.data.atlasWorldMap)).toEqual([true]);
  open=false;relay();expect(b.messages.at(-1)!.data).toEqual({atlasWorldMap:false});
 });
+
+test('a hosted hash list renames the matching player before the viewer reads the feed and never needs the name',async()=>{
+ const b=browser(['h:afac05c6'],'http://localhost:3102/sub/api/hidden-names');
+ class Socket {listeners:Function[]=[];handler:any=null;constructor(..._args:any[]){}addEventListener(t:string,fn:Function){if(t==='message')this.listeners.push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.listeners)f(e);this.handler?.(e);}}
+ b.host.WebSocket=Socket;b.host.MessageEvent=class {data:string;origin:string;constructor(_t:string,init:any){this.data=init.data;this.origin=init.origin;}};
+ installViewerBridge(b.host);
+ expect(await (await b.host.fetch('http://localhost:3102/sub/api/hidden-names')).json()).toEqual(['Hidden']);
+ const socket:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),seen:string[]=[];socket.onmessage=(e:any)=>seen.push(e.data);
+ socket.message({t:'roster',p:[[7,'HiddenActor',1,1,0,3],[8,'Worker',1,1,0,3]]});
+ socket.message({t:'tick',k:3,p:[{i:7,ch:'hi hiddenactor'}]});
+ expect(seen.join('')).not.toMatch(/hiddenactor/i);expect(JSON.parse(seen[0]!).p[0][1]).toBe('Hidden');expect(JSON.parse(seen[0]!).p[1][1]).toBe('Worker');
+ b.frame();b.frame();b.geometry();b.present();b.frame();expect(b.states().at(-1).state).toBe('ready');
+ expect(JSON.stringify(b.messages)).not.toMatch(/hiddenactor/i);
+});

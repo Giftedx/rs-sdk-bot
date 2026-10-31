@@ -31,3 +31,26 @@ export function fleetSidesView(snapshots:any[],orders:any[],now:number,receipts:
   .filter(o=>o.state!=='done').sort((a,b)=>(b.start??0)-(a.start??0));
  return{at:now,sides,orders:open};
 }
+
+type Seen={x:number;z:number;level:number;combat:number;seen:number};
+// The other sides' accounts as fleet rows: bank, pack, worn items and levels from their snapshot (levels only: the
+// snapshot carries no XP), the position and combat level from the world feed, which sees every player on the server.
+// A row is fresh while the feed saw the account in the last 30 seconds; the snapshot itself is up to a sync period old.
+export function remoteBots(snapshots:any[],localNames:ReadonlySet<string>,roster:ReadonlyMap<string,Seen>,firstSeen:ReadonlyMap<string,number>,now:number,mySide='local'){
+ const rows:any[]=[];
+ for(const s of snapshots){
+  if(!s||typeof s.side!=='string'||s.side===mySide||!Array.isArray(s.accounts))continue;
+  for(const a of s.accounts){
+   const name=String(a?.name??'');if(!/^[A-Za-z0-9]{1,12}$/.test(name)||localNames.has(name.toLowerCase()))continue;
+   const live=roster.get(name.toLowerCase()),inWorld=!!live&&now-live.seen<30_000;
+   rows.push({name,server:String(a.server??''),side:s.side,remote:true,at:Number.isFinite(a.at)?a.at:null,snapshotAt:Number.isFinite(s.at)?s.at:null,
+    role:s.side,goal:`${s.side} side`,currentGoal:'',
+    skills:Array.isArray(a.skills)?a.skills.map((k:any)=>({name:String(k.name),level:Number(k.level)||1,xp:null})):[],
+    inventory:Array.isArray(a.inventory)?a.inventory:null,equipment:Array.isArray(a.equipment)?a.equipment:null,bank:Array.isArray(a.bank)?a.bank:null,bankAt:Number.isFinite(a.at)?a.at:null,
+    pos:live?{x:live.x,z:live.z,level:live.level}:null,live:inWorld?live:null,combat:live?.combat??null,
+    fresh:inWorld,inWorld,operation:inWorld?'observed':'offline',practice:false,reserved:false,
+    seenInFeed:firstSeen.has(name.toLowerCase()),lastSeen:live?.seen??null});
+  }
+ }
+ return rows;
+}
