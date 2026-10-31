@@ -8,6 +8,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
+import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { accountFrom, assess, catalogue, jobResources, mergeJobs, norm, pairKey, plan } from '../packages/planner/src/autopilot';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from '../packages/planner/src/haggis';
@@ -95,8 +96,9 @@ export function pass(planFile: string, dry: boolean): string[] {
 
 if (import.meta.main) {
     const args = process.argv.slice(2), planFile = resolve(args.find(a => !a.startsWith('--')) ?? join(root, 'swarm.json'));
-    const once = () => { try { const l = pass(planFile, args.includes('--dry')); console.log(l.join('\n')); console.log(`RESULT ok autopilot jobs=${l.filter(x => / (assign|keep) /.test(x)).length} retired=${l.filter(x => / retire /.test(x)).length}`); return true; }
+    // The whole pass runs under the account-plan lock: the coordinator installs its own jobs into the same file.
+    const once = async () => { try { const l = await withPlanWrite(() => pass(planFile, args.includes('--dry')), join(prac, 'coordinator')); console.log(l.join('\n')); console.log(`RESULT ok autopilot jobs=${l.filter(x => / (assign|keep) /.test(x)).length} retired=${l.filter(x => / retire /.test(x)).length}`); return true; }
         catch (e) { console.log(`RESULT fail autopilot ${String(e)}`); return false; } };
-    if (!args.includes('--daemon')) process.exit(once() ? 0 : 1);
-    once(); setInterval(once, 10 * 60_000);
+    if (!args.includes('--daemon')) process.exit(await once() ? 0 : 1);
+    await once(); setInterval(once, 10 * 60_000);
 }
