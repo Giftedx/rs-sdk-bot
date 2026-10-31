@@ -48,9 +48,31 @@ Use the [delivery path](docs/script-contract.md#deliver-a-capability) to develop
 - `packages/practice` - local practice presets, supervisor, host
 - `packages/knowledge` - builds `knowledge/*.json` from rs-sdk content (`bun packages/knowledge/src/build.ts`)
 - `packages/planner` - rate and board planning
-- `packages/dashboard` - local web dashboard (`bun packages/dashboard/server.ts`)
+- `packages/dashboard` - local web dashboard (`bun packages/dashboard/server.ts`); `packages/dashboard/publish.ts` relays its state to the hosted dashboard (the rs-fleet-command repository) and applies the owner's commands from it
 - `packages/router` - authors bot scripts through a Claude CLI loop (`packages/router/src/author-cli.ts`)
 - `scripts/` - bot scripts; `scripts/generated/` and `scripts/measure/` are produced or measured runs
 - `vendor/` - third-party reference clones. `vendor/rs-sdk` is the tracked submodule; the others are gitignored, re-created by `scripts/clone-vendor.sh`
 - `docs/` and `research/` - design notes and measured results. `research/INDEX.md` lists the research files.
 - `patches/rs-sdk.md` - how we work around rs-sdk behaviour
+
+## Codex cloud fleet side
+
+Set `FLEET_SIDE=cloud` in every shell and supply `FLEET_SEED` securely through environment settings. Keep a separate backup of the same seed. The seed derives cloud account passwords; never print it or commit/copy a `bot.env`. Register names on the fleet-data branch through `scripts/fleet-sync.ts` before login. Local-side accounts and Haggis remain outside the cloud controller's ownership.
+
+A fresh checkout applies the repository's SDK setup patch with `git -C vendor/rs-sdk apply ../../patches/rs-sdk-working.patch` after submodule initialization. Do not apply it twice. The patch is setup input; code tasks leave vendor source alone.
+
+The cloud runtime uses Bun's explicit WebSocket proxy option for the game host when `HTTPS_PROXY` is present. Fetch and sockets retain normal TLS verification. GitHub PR creation also needs access to `api.github.com`.
+
+Use a cloud-only swarm plan and point the cloud swarm and sync agent at it:
+
+```bash
+export FLEET_SIDE=cloud
+export SWARM_PLAN=/workspace/rs-sdk-bot/.practice/cloud-handoff/swarm.json
+bun scripts/fleet-sync.ts
+git -C .practice/fleet-data config rebase.autoStash true
+DEMO_OK=1 bun scripts/fleet-agent.ts --daemon
+```
+
+Create that plan before starting the agent; an unreadable or malformed plan stops trading. Preserve the repository's admission limits and include only cloud-owned jobs. The agent excludes enabled jobs in `SWARM_PLAN` and pins each trade child to the current source. Inspect `.practice/fleet-agent.lock` for an existing owner before starting another daemon. Completed finite jobs stay disabled until a new useful assignment is authorized.
+
+Rebuild each cloud account with `bun scripts/fleet.ts create <name>` at session startup, preserving the spelling in `fleet/owners.json`; Linux credential directory names are case sensitive. A tutorial account needs mainland entry before its first production job. Confirm a useful result and `LOGOUT logged-out` separately; a gathered item with a logout timeout is a failed run.

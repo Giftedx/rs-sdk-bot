@@ -1,5 +1,9 @@
-import { test, expect } from 'bun:test';
+import { beforeAll, test, expect } from 'bun:test';
+import { loadPathfinding } from '../src/pathcache';
 import { createWorld, rsPathLength, type Account } from '../src/world';
+
+// Build the same collision grid as production before the world caches region labels.
+beforeAll(async () => { await loadPathfinding(); }, 120_000);
 
 const acct: Account = { skills: {}, varps: {}, items: [] };
 

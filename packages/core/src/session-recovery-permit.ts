@@ -3,12 +3,17 @@ import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
 import {workerSourceRevision} from './worker-release';
-import {processMatches,safeKill} from '../../practice/src/proc';
+import {processMatchesRecent,safeKill} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
 import {missionSignature,successfulEnd} from './session-admission';
 
 export const RECOVERY_SCHEMA='session-recovery/1';
+export const RECOVERY_BINDING_MS=45000;
+// The controller heartbeat (.practice/swarm-state.json, written every 2 s) counts as current for this long. A heartbeat
+// older than this means the controller stalled or died, so the window stays short; the checks between a fleet read and
+// its use must stay fast (processMatchesRecent reuses its PowerShell lookups for that reason).
+export const FLEET_HEARTBEAT_MAX_MS=10000;
 export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
 type EvidenceRef={path:string;sha256:string};
@@ -86,8 +91,8 @@ export function verifyNativeRecoveryProof(proof:any,proofDirectory:string,expect
  return true;
 }
 export const FLEET_REFUSALS=['missing','malformed','controller','future','stale','account-active'] as const;
-// The controller publishes fleet state from its own process. Owner, task and source checks take about a second,
-// so the age is measured from a clock read taken after the fleet read, never from an earlier one.
+// The controller publishes fleet state from its own process. The age is measured from a clock read taken after the
+// fleet read, never from an earlier one, and FLEET_HEARTBEAT_MAX_MS bounds it.
 export function assertFleetResolved(path:string,account:string,controllerPid:number,clock:()=>number=Date.now){
  const refuse=(field:(typeof FLEET_REFUSALS)[number])=>{throw Error('recovery fleet ownership unresolved: '+field);};
  let raw:string;try{raw=readFileSync(path,'utf8');}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')refuse('missing');throw error;}
@@ -96,14 +101,15 @@ export function assertFleetResolved(path:string,account:string,controllerPid:num
  if(!fleet||typeof fleet!=='object'||!Number.isFinite(fleet.at)||!Array.isArray(fleet.jobs)||fleet.jobs.some((j:any)=>!j||typeof j!=='object'))refuse('malformed');
  if(fleet.controllerPid!==controllerPid)refuse('controller');
  if(observedAt-fleet.at<0)refuse('future');
- if(observedAt-fleet.at>10000)refuse('stale');
+ if(observedAt-fleet.at>FLEET_HEARTBEAT_MAX_MS)refuse('stale');
  if(fleet.jobs.some((j:any)=>(same(j.account,account)||Array.isArray(j.accounts)&&j.accounts.some((a:unknown)=>same(a,account)))
   &&/^(?:running|starting|stopping)/.test(typeof j.state==='string'?j.state:'')))refuse('account-active');
 }
 function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuing=false,ownedChild=false){
  validateRecoveryRequest(r);if(r.kind!=='session-recovery')throw Error('not a controlled recovery request');
  if(options.nativeFixture)assertNativeFixtureRoot(base,r.server);
- const now=(options.now??Date.now)(),matches=options.matches??processMatches;
+ // Observation of the owners, not kill authorization: the cached lookup is allowed here (see proc.ts).
+ const now=(options.now??Date.now)(),matches=options.matches??processMatchesRecent;
  const owner=json(join(base,'.practice/coordinator/swarm-owner.json'));
  if(!Number.isSafeInteger(owner.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce
   ||owner.source!==r.source||!matches(owner.pid,owner.nonce)||(issuing&&owner.pid!==process.pid))throw Error('recovery controller owner changed');
@@ -202,7 +208,9 @@ export function bindRecoveryChild(r:ControlledRecoveryRequest,pid:number,base:st
 // Readiness is not admission: consumeRecoveryConnection still checks all authority and single-use guards.
 export async function waitForRecoveryChildBinding(r:ControlledRecoveryRequest,base:string,ready:ReadableStream<Uint8Array>){
  const paths=recoveryPermitPaths(r,base),permit=json(paths.permit);
- const deadline=permit.issuedAt+10000;
+ // A recovery child is a fresh bun process that loads the SDK and the collision data before it binds: on this PC with
+ // builds running that takes longer than 10 s. The window stays well inside the 150 s permit lifetime.
+ const deadline=permit.issuedAt+RECOVERY_BINDING_MS;
  if(!Number.isFinite(permit.issuedAt)||Date.now()<permit.issuedAt||Date.now()>=deadline)throw Error('recovery connection admission expired');
  const reader=ready.getReader();let timer:ReturnType<typeof setTimeout>|undefined;
  try{
@@ -234,7 +242,7 @@ export function consumeRecoveryConnection(r:ControlledRecoveryRequest,base:strin
   current(r,base,options,false,ownedChild);if(!existsSync(paths.child))throw Error('recovery child not bound');
   const child=json(paths.child);if(child.pid!==process.pid||child.nonce!==r.nonce||child.runId!==r.runId)throw Error('recovery child identity changed');
  };
- check();const permit=json(paths.permit);if((options.now??Date.now)()>permit.issuedAt+10000)throw Error('recovery connection admission expired');
+ check();const permit=json(paths.permit);if((options.now??Date.now)()>permit.issuedAt+RECOVERY_BINDING_MS)throw Error('recovery connection admission expired');
  if(existsSync(paths.used))throw Error('recovery nonce already consumed');
  writeFileSync(paths.used,JSON.stringify({pid:process.pid,nonce:r.nonce,permitSha256:sha(readFileSync(paths.permit))}),{flag:'wx'});
  const used=readFileSync(paths.used,'utf8');

@@ -3,7 +3,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from
 import {join,dirname,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
-import {RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
@@ -237,12 +237,12 @@ test('remote launcher refuses before publishing a permit or account lease',()=>{
  expect(()=>launchPermittedRecovery(f.request,f.base,{...f.options,nativeFixture:true})).toThrow('no lease issued');
  expect(existsSync(recoveryPermitPaths(f.request,f.base).lease)).toBe(false);expect(existsSync(recoveryPermitPaths(f.request,f.base).permit)).toBe(false);
 });
-test('connect admission expires at10seconds while an already consumed guard retains150second cleanup time',()=>{
+test('connect admission expires at the binding window while an already consumed guard retains150second cleanup time',()=>{
  const f=fixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);
  const guard=consumeRecoveryPermit(f.request,f.base,f.options);f.options.now=()=>now+125000;f.put('.practice/swarm-state.json',{at:now+125000,controllerPid:process.pid,jobs:[]});
  expect(()=>guard()).not.toThrow();
- const late=fixture();issueRecoveryPermit(late.request,late.base,late.options);bindRecoveryChild(late.request,process.pid,late.base,late.options);late.options.now=()=>now+10001;
- late.put('.practice/swarm-state.json',{at:now+10001,controllerPid:process.pid,jobs:[]});expect(()=>consumeRecoveryPermit(late.request,late.base,late.options)).toThrow('admission expired');
+ const late=fixture();issueRecoveryPermit(late.request,late.base,late.options);bindRecoveryChild(late.request,process.pid,late.base,late.options);late.options.now=()=>now+RECOVERY_BINDING_MS+1;
+ late.put('.practice/swarm-state.json',{at:now+RECOVERY_BINDING_MS+1,controllerPid:process.pid,jobs:[]});expect(()=>consumeRecoveryPermit(late.request,late.base,late.options)).toThrow('admission expired');
 });
 test('a heartbeat published during the slow owner and source checks admits the valid child exactly once',()=>{
  // Observed native refusal (child43504): about1.2s of process and source checks ran between the clock read and the
@@ -265,7 +265,7 @@ const fleetFaults:Record<string,[string,(f:ReturnType<typeof fixture>)=>void]>={
  noTime:['malformed',f=>f.put('.practice/swarm-state.json',{at:'now',controllerPid:process.pid,jobs:[]})],
  crossed:['controller',f=>f.put('.practice/swarm-state.json',{at:now,controllerPid:process.pid+1,jobs:[]})],
  future:['future',f=>f.put('.practice/swarm-state.json',{at:now+1,controllerPid:process.pid,jobs:[]})],
- stale:['stale',f=>f.put('.practice/swarm-state.json',{at:now-10001,controllerPid:process.pid,jobs:[]})],
+ stale:['stale',f=>f.put('.practice/swarm-state.json',{at:now-FLEET_HEARTBEAT_MAX_MS-1,controllerPid:process.pid,jobs:[]})],
  running:['account-active',f=>f.put('.practice/swarm-state.json',{at:now,controllerPid:process.pid,jobs:[{account:'rod',state:'running'}]})],
  composed:['account-active',f=>f.put('.practice/swarm-state.json',{at:now,controllerPid:process.pid,jobs:[{account:'Ann+Rod',accounts:['Ann','Rod'],state:'starting'}]})],
 };

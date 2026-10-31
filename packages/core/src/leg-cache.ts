@@ -22,18 +22,24 @@ export interface LegCache {
     save(): void;
 }
 
+// The final route endpoint is opened by the danger mask, even when it is not
+// an endpoint of a particular cached walk leg. Include every opened tile.
+export function routeDangerHash(danger:{key:string;kept:ReadonlySet<string>},cache:Pick<LegCache,'hash'>):string{
+    return cache.hash([danger.key,[...danger.kept].sort()]);
+}
+
 let shared: LegCache | undefined;
 export function legCache(file = LEG_CACHE_FILE, source?: string): LegCache {
     if (shared && file === LEG_CACHE_FILE && source === undefined) return shared;
     const src = source ?? pathfindingSourceKey() + ':' + createHash('sha256').update(readFileSync(join(repoRoot, 'knowledge', 'npcs.json'))).digest('hex');
     const read = (): Record<string, number | null> => {
-        try { const f = JSON.parse(readFileSync(file, 'utf8')) as File; return f.source === src ? f.legs : {}; } catch { return {}; }
+        try { const f = JSON.parse(readFileSync(file, 'utf8')) as File; return f.source === src && f.legs && typeof f.legs === 'object' && !Array.isArray(f.legs) ? Object.setPrototypeOf(f.legs, null) : Object.create(null); } catch { return Object.create(null); }
     };
-    const legs = new Map(Object.entries(read())), fresh = new Map<string, number | null>();
+    const legs = read(), fresh = new Map<string, number | null>();
     const c: LegCache = {
-        has: k => legs.has(k),
-        get: k => legs.get(k),
-        set: (k, v) => { legs.set(k, v); fresh.set(k, v); },
+        has: k => Object.hasOwn(legs, k),
+        get: k => legs[k],
+        set: (k, v) => { legs[k] = v; fresh.set(k, v); },
         hash: value => createHash('sha1').update(JSON.stringify(value)).digest('hex').slice(0, 12),
         save: () => {
             if (!fresh.size) return;

@@ -11,7 +11,7 @@ import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout} from '..
 import {recoveryCloseModal} from '../../core/src/session-recovery';
 import type {Session} from '../../core/src/inprocess';
 import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,type RecoveryBoundary} from '../src/session-recovery-proof';
-import {NATIVE_RECOVERY_CHECKS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,NATIVE_RECOVERY_CHECKS,RECOVERY_BINDING_MS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {admitRecovery} from '../../../scripts/swarm';
@@ -238,7 +238,7 @@ test('child readiness waits for delayed publication, but absent, crossed and lat
  const paths=recoveryPermitPaths(r,base),bound={pid:process.pid,nonce:r.nonce,runId:r.runId};
  const signal={...bound,source:r.source};
  const stream=(value:unknown)=>new ReadableStream<Uint8Array>({start(c){c.enqueue(new TextEncoder().encode(JSON.stringify(value)));c.close();}});
- const permit=(remaining=10000)=>writeFileSync(paths.permit,JSON.stringify({issuedAt:Date.now()-10000+remaining}));
+ const permit=(remaining=RECOVERY_BINDING_MS)=>writeFileSync(paths.permit,JSON.stringify({issuedAt:Date.now()-RECOVERY_BINDING_MS+remaining}));
  mkdirSync(join(paths.child,'..'),{recursive:true});
  try{
   permit();let published=false;
@@ -651,7 +651,9 @@ test('proof stop files are created exclusively and retained through normal and f
   // Same path, replaced by another owner after the claim: different file, then same bytes on a new file, then changed bytes in place.
   const replaced=claimStopArtifact(join(dir,'stop-Swap'),'proof marker 3');rmSync(replaced.path);writeFileSync(replaced.path,'operator stop');
   expect(releaseStopArtifact(replaced)).toBe('retained');expect(readFileSync(replaced.path,'utf8')).toBe('operator stop');
-  const copied=claimStopArtifact(join(dir,'stop-Copy'),'proof marker 4');renameSync(copied.path,copied.path+'.old');writeFileSync(copied.path,'proof marker 4'); // the old file keeps its inode, so Linux cannot reuse it
+  const copied=claimStopArtifact(join(dir,'stop-Copy'),'proof marker 4');
+  // Keep the original inode allocated so replacement identity does not depend on allocator reuse.
+  renameSync(copied.path,copied.path+'.previous');writeFileSync(copied.path,'proof marker 4');
   expect(statSync(copied.path,{bigint:true}).ino).not.toBe(copied.ino);
   expect(releaseStopArtifact(copied)).toBe('retained');expect(existsSync(copied.path)).toBe(true);
   const edited=claimStopArtifact(join(dir,'stop-Edit'),'proof marker 5');writeFileSync(edited.path,'operator stop');
@@ -913,8 +915,8 @@ test('a timer-only fleet snapshot stays stale at a late handoff; a fresh owned h
   for(const state of ['running','starting','stopping'])expect(fleetHandoff(()=>write(now,state),path,account,process.pid,()=>now).verdict).toBe('account-active');
   expect(fleetHandoff(()=>write(now,'disabled',process.pid+1),path,account,process.pid,()=>now).verdict).toBe('controller');
   expect(fleetHandoff(()=>write(now+1),path,account,process.pid,()=>now).verdict).toBe('future');
-  expect(fleetHandoff(()=>write(now-10001),path,account,process.pid,()=>now).verdict).toBe('stale');
-  expect(fleetHandoff(()=>write(now-10000),path,account,process.pid,()=>now).verdict).toBe('resolved');
+  expect(fleetHandoff(()=>write(now-FLEET_HEARTBEAT_MAX_MS-1),path,account,process.pid,()=>now).verdict).toBe('stale');
+  expect(fleetHandoff(()=>write(now-FLEET_HEARTBEAT_MAX_MS),path,account,process.pid,()=>now).verdict).toBe('resolved');
   expect(fleetHandoff(()=>writeFileSync(path,'{'),path,account,process.pid,()=>now)).toEqual({at:null,observedAt:now,ageMs:null,verdict:'malformed'});
   expect(fleetHandoff(()=>rmSync(path),path,account,process.pid,()=>now).verdict).toBe('missing');
  }finally{rmSync(dir,{recursive:true,force:true});}
