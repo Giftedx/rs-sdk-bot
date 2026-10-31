@@ -1,4 +1,5 @@
-import {test,expect} from 'bun:test';
+import {test,expect,spyOn} from 'bun:test';
+import * as os from 'node:os';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
@@ -50,6 +51,8 @@ test('hash-bound anonymous legacy bootstrap refuses; a new producer attempt stil
  f.attempt('Rod');expect(()=>liveLogoutRef('Rod',f.base)).toThrow('not confirmed');
 });
 test('installation checks every participant and the durable failed-script history without mutating the plan',()=>{
+ const memory=spyOn(os,'freemem').mockReturnValue(32*2**30);
+ try{
  const f=fixture(),plan={maxBots:17,minFreeGB:0,jobs:[]},path=join(f.base,'swarm.json');writeFileSync(path,JSON.stringify(plan));
  f.attempt('Rod').record('ended','logged-out');f.attempt('Partner');
  const task:any={id:'test',goal:'gear',participants:['Rod','Partner']};
@@ -58,8 +61,12 @@ test('installation checks every participant and the durable failed-script histor
  const partner=f.attempt('Partner');partner.record('ended','logged-out');
  writeFileSync(join(f.base,'.practice/swarm-script-holds.json'),JSON.stringify([{account:'Rod',script:'old.ts',at:1,reason:'blocked',heldAt:2}]));
  expect(()=>installJob(task,'Rod','old.ts','test','source',{}, {base:f.base})).toThrow('failed script');
+ memory.mockReturnValue(0);
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{}, {base:f.base,preflight:true})).toThrow('live admission waiting: memory');
+ memory.mockReturnValue(32*2**30);
  expect(()=>installJob(task,'Rod','new.ts','test','source',{}, {base:f.base,preflight:true})).not.toThrow();
  expect(readFileSync(path,'utf8')).toBe(JSON.stringify(plan));
+ }finally{memory.mockRestore();}
 });
 
 test('an account with no producer attempts may start once its live status is 15 minutes old; repairs still need producer proof',()=>{
