@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
 import { pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
 import { runSync } from './fleet-sync';
+import {workerSourceRevision} from '../packages/core/src/worker-release';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
@@ -33,6 +34,16 @@ export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[]
     return due;
 }
 
+export function readAgentJobs(file=resolve(process.env.SWARM_PLAN??join(root,'swarm.json'))): readonly any[]{
+    // An unreadable plan cannot grant a trade worker ownership of its accounts.
+    const plan=JSON.parse(readFileSync(file,'utf8'));
+    if(!Array.isArray(plan.jobs))throw Error('fleet agent: invalid swarm plan');
+    return plan.jobs;
+}
+export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=workerSourceRevision(root)){
+    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release};
+}
+
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
 
 if (import.meta.main) {
@@ -53,12 +64,12 @@ if (import.meta.main) {
         sync();
         const dir = FLEET_DIR(), now = Date.now();
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
-        const busy = swarmBusy((() => { try { return JSON.parse(readFileSync(join(root, 'swarm.json'), 'utf8')).jobs ?? []; } catch { return []; } })());
+        const busy = swarmBusy(readAgentJobs());
         for (const t of dueTrades(orders, receipts, mySide(), loadOwners(), busy, running, now)) {
             if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
             running.add(t.account.toLowerCase());
             console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
-            const p = Bun.spawn(['bun', 'scripts/fleet-trade.ts', t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: { ...process.env, FLEET_DIR: dir } });
+            const p = Bun.spawn(['bun', 'scripts/fleet-trade.ts', t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
             void (async () => {
                 const out = await new Response(p.stdout).text();
                 console.log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);

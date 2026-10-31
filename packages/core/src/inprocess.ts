@@ -1,3 +1,4 @@
+import {installGameWebSocketProxy} from './websocket-proxy';
 import { mkdirSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import type { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
@@ -285,6 +286,7 @@ let pathfindingReady = false;
 export async function connectInProcess(opts: { name: string; password: string; server?: string; members?: boolean; lifecycleRoot?:string; beforeConnect?:()=>void }): Promise<Session> {
     if(opts.lifecycleRoot&&!isLocalServer(opts.server??'localhost:8888'))throw Error('lifecycle root override is local-only');
     assertLoginAllowed(opts.name);
+    installGameWebSocketProxy();
     // dom-shim must load before any webclient `#/` module (session.ts:15 does the same).
     await import(vendor('server/webclient/src/lite/dom-shim.ts'));
     const { startSession } = await import(vendor('server/webclient/src/lite/session.ts'));
