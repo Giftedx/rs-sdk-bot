@@ -13,6 +13,8 @@ export interface CoordTask {
  repairs?:{account:string;endedAt:number}[];
  sessionRecovery?:{account:string;endedAt:number};
  agent?:'codex'|'claude';
+ /** Set when a deterministic rule (coordinator-rules.ts) created the task. */
+ rule?:'next-band';
 }
 export interface Receipt {taskId:string;runId:string;ok:boolean;at:number;output:any;error?:string}
 export interface TaskRecord {
@@ -87,6 +89,7 @@ function provisionRefs(task:CoordTask):string[]{
 }
 export function validateTask(t:CoordTask){
  if(t.agent!==undefined&&!['codex','claude'].includes(t.agent))throw Error('invalid worker agent');
+ if(t.rule!==undefined&&(t.rule!=='next-band'||t.kind!=='run'))throw Error('invalid rule task');
  if(t.repairs!==undefined&&(!Array.isArray(t.repairs)||t.repairs.some(r=>!r||!ACCOUNT.test(r.account)||!Number.isFinite(r.endedAt)||r.endedAt<0)))throw Error('invalid exact recovery request');
  if(t.sessionRecovery!==undefined&&(t.kind!=='run'||t.launch&&t.launch!=='ordinary'||t.account!==t.sessionRecovery?.account
   ||!ACCOUNT.test(t.sessionRecovery.account)||['haggis','shaftshooter','polevaulter'].includes(t.sessionRecovery.account.toLowerCase())

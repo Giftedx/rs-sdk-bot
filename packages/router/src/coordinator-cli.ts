@@ -13,6 +13,7 @@ import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS
 import {assignedWorker} from './model-worker';
 import {processMatches,killTree} from '../../practice/src/proc';
 import {prepareWorkspace} from './build-workspace';
+import {applyRules,skillUnlocks} from './coordinator-rules';
 
 const cli='packages/router/src/coordinator-cli.ts';
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
@@ -142,6 +143,22 @@ function clearFocus(capability:string){
  if(own.coordination.focusCapability!==capability)return;
  delete own.coordination.focusCapability;delete own.coordination.focusSince;writeCoordinatorJobs(projectRoot,own);
 }
+// Rules (coordinator-rules.ts) run before any model round and whatever the planner's state. A fingerprint reads each
+// candidate's import closure, so a pass runs on a new receipt or every RULE_RECHECK_MS, not every loop.
+const RULE_RECHECK_MS=5*60*1000;
+let rulePass={at:0,receipts:-1};
+let unlocks:((skill:string)=>number[])|undefined;
+function runRules(state:CoordinatorState,liveLimit:number){
+ const receipts=state.tasks.filter(r=>r.receipt).length,now=Date.now();
+ if(receipts===rulePass.receipts&&now-rulePass.at<RULE_RECHECK_MS)return;
+ rulePass={at:now,receipts};
+ try{
+  const added=applyRules(state,{fingerprint:cap=>deliveryFingerprint(deliveryTask(cap)),unlocks:unlocks??=skillUnlocks(projectRoot),maxOpen:liveLimit,
+   paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
+   level:(account,skill)=>{try{return json(join(projectRoot,'.practice/status',account+'.json')).skills?.find((v:any)=>v.name===skill)?.level;}catch{return undefined;}}},now);
+  if(added.length){saveState(state);event('rule-tasks-added',{tasks:added.map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept}))});}
+ }catch(error){event('rule-pass-failed',String(error));}
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  // Adopt before reconciliation: even a just-finished failed build keeps its
@@ -187,6 +204,7 @@ async function tick(state:CoordinatorState,config:any){
  }
  await expandUsefulFleet(state,config);
  const developmentLimit=config.maxActive??2,liveLimit=config.maxLive??readPlan().maxBots;
+ runRules(state,liveLimit);
  let controllerPrepared=false,liveBlocked=false;
  // Standing swarm jobs run without a coordinator task, so the controller must run whenever one is enabled.
  // Also while a rollout has standing jobs paused: they are off then, and only this call turns them on again.
