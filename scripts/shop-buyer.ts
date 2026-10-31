@@ -7,6 +7,7 @@ import { openBot, finish, countItems, getWorld, accountOf } from '../packages/co
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker, goTo } from '../packages/core/src/walk';
 import { bankCargo, courierWaiting, exactItem } from '../packages/core/src/cargo';
+import { depositPack } from '../packages/core/src/deposit';
 
 export const PROFILES: Record<string, {
     npc: RegExp;
@@ -347,6 +348,11 @@ try {
     };
 
     console.log(`START shop-buyer ${botName} profile=${profileKey} coins=${coins()}`);
+    // BANK_PACK=1: bank everything but coins first; a pack left full by other jobs leaves no slot to buy into.
+    if (process.env.BANK_PACK === '1') {
+        await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
+        if ((await s.bot.openBank()).success) { await waitTicks(s, 1); await depositPack(s, i => /^coins$/i.test(i.name)); await s.bot.closeInterface(); }
+    }
     await bank();
 
     while (!over() && !ended) {

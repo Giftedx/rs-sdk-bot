@@ -201,6 +201,9 @@ try {
             const toolName = isCage ? 'Lobster pot' : 'Harpoon';
             console.log(`Withdrawing ${toolName}...`);
             await s.bot.withdrawItem(requiredTool, 1);
+            // No tool in the pack or the bank: stop now instead of banking for the whole cap.
+            if (!await waitUntil(s, () => inv().some(i => requiredTool.test(i.name)), { timeoutTicks: 5 }))
+                await finish([s], false, `no ${toolName} in the pack or the bank`);
         }
 
         await waitTicks(s, 1);

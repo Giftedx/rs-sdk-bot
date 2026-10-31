@@ -8,6 +8,7 @@
 import { openBot, finish, countItems } from "../packages/core/src/bot";
 import type { Session } from "../packages/core/src/inprocess";
 import { waitTicks, waitUntil } from "../packages/core/src/ticks";
+import { depositPack } from "../packages/core/src/deposit";
 import { depositObserved } from "../packages/core/src/deposit";
 import {runShafts} from "./fletch-shafts";
 
@@ -437,11 +438,7 @@ if (MODE === 'headless') {
         if (process.env.BANK_PACK === '1') {
             if (!(await s.bot.openBank()).success) throw new Error('headless BANK_PACK: bank did not open');
             await waitTicks(s, 1);
-            for (const id of new Set(s.sdk.getInventory().map(i => i.id))) {
-                const item = s.sdk.getInventory().find(i => i.id === id);
-                if (item) await s.bot.depositItem(item, -1);
-            }
-            await waitTicks(s, 1);
+            await depositPack(s);
             await s.bot.closeBank();
         }
         const r = await runHeadless(s, { cap: CAP, maximum: Number(process.env.MAX_MAKE ?? 390), shaftReserve: Number(process.env.SHAFT_RESERVE ?? 200), featherReserve: Number(process.env.FEATHER_RESERVE ?? 100), stop: () => stopped });
