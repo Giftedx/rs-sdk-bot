@@ -220,7 +220,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   {
     const c=hud.querySelector('canvas.minimap-frame'),g=hiDpi(c,181,165),cx=98.5,cy=84.5;
     const stone=(x,y,inner,outer)=>{const gr=g.createRadialGradient(x,y,inner,x,y,outer);gr.addColorStop(0,'#3b3427');gr.addColorStop(0.35,'#9c8e72');gr.addColorStop(0.7,'#6b604d');gr.addColorStop(1,'#2a251c');g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.arc(x,y,inner,0,Math.PI*2,true);g.fillStyle=gr;g.fill('evenodd');g.lineWidth=1;g.strokeStyle='#000';g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.stroke();g.beginPath();g.arc(x,y,inner,0,Math.PI*2);g.stroke();};
-    stone(cx,cy,73,80);stone(21,18.5,15,19.5);
+    stone(cx,cy,73,80);
+    // The compass socket: a dark well the compass sits in, large enough that its N and needle both show.
+    g.beginPath();g.arc(22,21,17,0,Math.PI*2);g.fillStyle='#16130e';g.fill();stone(22,21,17,21);
   }
   // The minimap: the 2D map art around the observed account at 4 px a tile, every bot a dot, the observed one a
   // white square in the centre. With no account it shows the whole known world.
