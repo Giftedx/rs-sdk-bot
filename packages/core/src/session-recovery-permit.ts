@@ -237,7 +237,7 @@ export function consumeRecoveryConnection(r:ControlledRecoveryRequest,base:strin
   current(r,base,options,false,ownedChild);if(!existsSync(paths.child))throw Error('recovery child not bound');
   const child=json(paths.child);if(child.pid!==process.pid||child.nonce!==r.nonce||child.runId!==r.runId)throw Error('recovery child identity changed');
  };
- check();const permit=json(paths.permit);if((options.now??Date.now)()>permit.issuedAt+10000)throw Error('recovery connection admission expired');
+ check();const permit=json(paths.permit);if((options.now??Date.now)()>permit.issuedAt+RECOVERY_BINDING_MS)throw Error('recovery connection admission expired');
  if(existsSync(paths.used))throw Error('recovery nonce already consumed');
  writeFileSync(paths.used,JSON.stringify({pid:process.pid,nonce:r.nonce,permitSha256:sha(readFileSync(paths.permit))}),{flag:'wx'});
  const used=readFileSync(paths.used,'utf8');
