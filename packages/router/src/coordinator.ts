@@ -15,6 +15,8 @@ export interface CoordTask {
  agent?:'codex'|'claude';
  // Build only: command types whose replay difference is this build's stated change (model-worker.ts reviewGate).
  replayAllow?:string[];
+ /** Set when a deterministic rule (coordinator-rules.ts) created the task. */
+ rule?:'next-band';
 }
 export interface Receipt {taskId:string;runId:string;ok:boolean;at:number;output:any;error?:string}
 export interface TaskRecord {
@@ -89,6 +91,7 @@ function provisionRefs(task:CoordTask):string[]{
 }
 export function validateTask(t:CoordTask){
  if(t.agent!==undefined&&!['codex','claude'].includes(t.agent))throw Error('invalid worker agent');
+ if(t.rule!==undefined&&(t.rule!=='next-band'||t.kind!=='run'))throw Error('invalid rule task');
  if(t.repairs!==undefined&&(!Array.isArray(t.repairs)||t.repairs.some(r=>!r||!ACCOUNT.test(r.account)||!Number.isFinite(r.endedAt)||r.endedAt<0)))throw Error('invalid exact recovery request');
  if(t.sessionRecovery!==undefined&&(t.kind!=='run'||t.launch&&t.launch!=='ordinary'||t.account!==t.sessionRecovery?.account
   ||!ACCOUNT.test(t.sessionRecovery.account)||['haggis','shaftshooter','polevaulter'].includes(t.sessionRecovery.account.toLowerCase())
@@ -120,7 +123,8 @@ export function addTasks(state:CoordinatorState,tasks:CoordTask[],now=Date.now()
  if(!Array.isArray(tasks)||tasks.length>24)throw Error('invalid task batch');
  const all=new Map(state.tasks.map(r=>[r.spec.id,r.spec]));
  for(const task of tasks){validateTask(task);if(all.has(task.id))throw Error('task already exists: '+task.id);all.set(task.id,task);}
- const done=new Set<string>(),active=new Set<string>();
+ // A finished task never runs again, so its own dependencies need not exist: compactState may archive them.
+ const done=new Set<string>(state.tasks.filter(r=>r.status!=='pending'&&r.status!=='running').map(r=>r.spec.id)),active=new Set<string>();
  const visit=(id:string)=>{
   if(active.has(id))throw Error('dependency cycle: '+id);if(done.has(id))return;
   const task=all.get(id);if(!task)throw Error('missing dependency: '+id);active.add(id);
