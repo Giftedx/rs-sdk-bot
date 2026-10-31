@@ -147,3 +147,21 @@ test('a hosted hash list renames the matching player before the viewer reads the
  b.frame();b.frame();b.geometry();b.present();b.frame();expect(b.states().at(-1).state).toBe('ready');
  expect(JSON.stringify(b.messages)).not.toMatch(/hiddenactor/i);
 });
+
+test('a roster that arrives before the hash list loads waits, then reaches the viewer renamed; chat never names the player',async()=>{
+ const b=browser(['h:afac05c6'],'http://localhost:3102/sub/api/hidden-names');
+ class Socket {listeners:Function[]=[];handler:any=null;constructor(..._args:any[]){}addEventListener(t:string,fn:Function){if(t==='message')this.listeners.push(fn);}
+  get onmessage(){return this.handler;}set onmessage(fn:any){this.handler=fn;}
+  message(m:any){const e={data:JSON.stringify(m),origin:'wss://x'};for(const f of this.listeners)f(e);this.handler?.(e);}}
+ b.host.WebSocket=Socket;b.host.MessageEvent=class {data:string;origin:string;constructor(_t:string,init:any){this.data=init.data;this.origin=init.origin;}};
+ installViewerBridge(b.host);
+ const socket:any=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed'),seen:string[]=[];socket.onmessage=(e:any)=>seen.push(e.data);
+ socket.message({t:'roster',p:[[7,'HiddenActor',1,1,0,3],[8,'Worker',1,1,0,3]]});
+ expect(seen).toEqual([]);
+ await (await b.host.fetch('http://localhost:3102/sub/api/hidden-names')).json();
+ expect(seen).toHaveLength(1);expect(JSON.parse(seen[0]!).p[0][1]).toBe('Hidden');
+ b.frame();b.frame();b.geometry();b.present();b.frame();expect(b.states().at(-1).state).toBe('ready');
+ socket.message({t:'tick',k:4,p:[{i:7,ch:'I am HiddenActor'}]});
+ const chat=b.messages.filter(m=>m.data.atlasChat);expect(chat).toHaveLength(1);
+ expect(JSON.stringify(chat)).not.toMatch(/hiddenactor/i);expect(seen.join('')).not.toMatch(/hiddenactor/i);
+});

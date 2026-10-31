@@ -19,6 +19,8 @@ export function installViewerBridge(host:any) {
     // The bridge then renames a matching roster player to HIDDEN_ALIAS before the viewer reads the message, and gives
     // the viewer that alias to hide. Names keep the one character set the list allows, so a plain loop hashes them.
     const HIDDEN_ALIAS='Hidden',hiddenHashes=new Set<string>(),learned=new Set<string>();
+    // Feed messages wait until the name filter has loaded, so a roster that arrives first is filtered too.
+    let filterLoaded=false;const held:(()=>void)[]=[];
     const fnv=(value:string)=>{let h=0x811c9dc5;for(let i=0;i<value.length;i++){h^=value.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');};
     const undo:(()=>void)[]=[];
     const emit=(detail='A geometry frame was presented; terrain streaming may continue.')=>{
@@ -50,6 +52,7 @@ export function installViewerBridge(host:any) {
                 const names=list.filter(n=>!n.startsWith('h:'));
                 for(const n of list)if(n.startsWith('h:'))hiddenHashes.add(n.slice(2));
                 hiddenNames=new Set([...names.map(n=>n.toLowerCase()),...learned]);
+                filterLoaded=true;for(const deliver of held.splice(0))deliver();
                 // embed.ts applies its hidden Set in the promise continuation.
                 // Two animation turns follow that actual .json() consumption.
                 host.requestAnimationFrame(()=>host.requestAnimationFrame(()=>{if(!failed){privacyReady=true;emit();}}));
@@ -105,7 +108,7 @@ export function installViewerBridge(host:any) {
                     for(const name of learned)data=data.replace(new RegExp('\\b'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),HIDDEN_ALIAS);
                     return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
                 };
-                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>fn.call(this,rename(event)):fn);}});}
+                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>{if(!filterLoaded){if(held.length<5000)held.push(()=>fn.call(this,rename(event)));return;}fn.call(this,rename(event));}:fn);}});}
                 const names=new Map<number,string>(),seenChat=new Set<string>();
                 const mask=(value:string)=>{for(const name of hiddenNames)value=value.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'⟦MAIN⟧');return value;};
                 this.addEventListener('message',(event:any)=>{
