@@ -11,7 +11,7 @@ import {afterStalledConnection,observePartialOwner,waitOwnerAuthLogout} from '..
 import {recoveryCloseModal} from '../../core/src/session-recovery';
 import type {Session} from '../../core/src/inprocess';
 import {recoveryCapability,verifyCompletedRouterPins,fleetHandoff,publishControlFile,observeRecoveryBoundary,recoveryAuthorityInputs,type RecoveryBoundary} from '../src/session-recovery-proof';
-import {NATIVE_RECOVERY_CHECKS,RECOVERY_BINDING_MS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,NATIVE_RECOVERY_CHECKS,RECOVERY_BINDING_MS,assertFleetResolved,verifyNativeRecoveryProof,launchPermittedRecovery,waitForRecoveryChildBinding,recoveryPermitPaths,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {admitRecovery} from '../../../scripts/swarm';
@@ -915,8 +915,8 @@ test('a timer-only fleet snapshot stays stale at a late handoff; a fresh owned h
   for(const state of ['running','starting','stopping'])expect(fleetHandoff(()=>write(now,state),path,account,process.pid,()=>now).verdict).toBe('account-active');
   expect(fleetHandoff(()=>write(now,'disabled',process.pid+1),path,account,process.pid,()=>now).verdict).toBe('controller');
   expect(fleetHandoff(()=>write(now+1),path,account,process.pid,()=>now).verdict).toBe('future');
-  expect(fleetHandoff(()=>write(now-10001),path,account,process.pid,()=>now).verdict).toBe('stale');
-  expect(fleetHandoff(()=>write(now-10000),path,account,process.pid,()=>now).verdict).toBe('resolved');
+  expect(fleetHandoff(()=>write(now-FLEET_HEARTBEAT_MAX_MS-1),path,account,process.pid,()=>now).verdict).toBe('stale');
+  expect(fleetHandoff(()=>write(now-FLEET_HEARTBEAT_MAX_MS),path,account,process.pid,()=>now).verdict).toBe('resolved');
   expect(fleetHandoff(()=>writeFileSync(path,'{'),path,account,process.pid,()=>now)).toEqual({at:null,observedAt:now,ageMs:null,verdict:'malformed'});
   expect(fleetHandoff(()=>rmSync(path),path,account,process.pid,()=>now).verdict).toBe('missing');
  }finally{rmSync(dir,{recursive:true,force:true});}

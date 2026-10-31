@@ -3,7 +3,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from
 import {join,dirname,resolve} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
-import {RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
@@ -265,7 +265,7 @@ const fleetFaults:Record<string,[string,(f:ReturnType<typeof fixture>)=>void]>={
  noTime:['malformed',f=>f.put('.practice/swarm-state.json',{at:'now',controllerPid:process.pid,jobs:[]})],
  crossed:['controller',f=>f.put('.practice/swarm-state.json',{at:now,controllerPid:process.pid+1,jobs:[]})],
  future:['future',f=>f.put('.practice/swarm-state.json',{at:now+1,controllerPid:process.pid,jobs:[]})],
- stale:['stale',f=>f.put('.practice/swarm-state.json',{at:now-10001,controllerPid:process.pid,jobs:[]})],
+ stale:['stale',f=>f.put('.practice/swarm-state.json',{at:now-FLEET_HEARTBEAT_MAX_MS-1,controllerPid:process.pid,jobs:[]})],
  running:['account-active',f=>f.put('.practice/swarm-state.json',{at:now,controllerPid:process.pid,jobs:[{account:'rod',state:'running'}]})],
  composed:['account-active',f=>f.put('.practice/swarm-state.json',{at:now,controllerPid:process.pid,jobs:[{account:'Ann+Rod',accounts:['Ann','Rod'],state:'starting'}]})],
 };
