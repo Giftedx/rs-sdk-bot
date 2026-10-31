@@ -13,7 +13,8 @@ import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
 import {acceptStatus,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
-import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,shadowAssignments} from '../../core/src/coordinator-jobs';
+import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {readLogoutProof} from '../../core/src/session-lifecycle';
 
 // A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
 // controller: no PowerShell command-line probe is needed while its pid is alive.
@@ -170,6 +171,39 @@ export function replaceAssignments(jobs:any[],accounts:string[],replacement:any)
   return[{...job,accounts:remaining}];
  }).concat([replacement]);
 }
+// A finished run leaves its job in the coordinator's file, turned off (disableOwnJob). That job still owns its accounts
+// in the merged plan, and a composed one refuses a later run on one participant. Release the named accounts from a
+// coordinator job only when its run has an ok receipt for its task, no swarm run holds any participant and every
+// participant has a confirmed logout. Other participants keep a disabled job, so their owner jobs stay shadowed.
+// Any other job (active, failed, held, owner or unproved) is returned unchanged.
+export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly string[],base=projectRoot):CoordinatorJobs{
+ const wanted=new Set(accounts.map(n=>n.toLowerCase()));
+ let running:Set<string>|null|undefined;
+ const swarmRuns=()=>{
+  if(running!==undefined)return running;
+  try{const runs=JSON.parse(readFileSync(join(base,'.practice/swarm-runs.json'),'utf8'));
+   running=Array.isArray(runs)?new Set(runs.flatMap((r:any)=>Array.isArray(r?.accounts)?r.accounts:[null]).map((n:unknown)=>String(n).toLowerCase())):null;}
+  catch(e){running=(e as NodeJS.ErrnoException).code==='ENOENT'?new Set():null;}
+  return running;
+ };
+ const completed=(job:any,names:string[])=>{
+  const runId=job.env?.COORDINATOR_RUN_ID;
+  if(job.coordinatorOwner!=='coordinator'||job.enabled!==false||typeof job.coordinatorTask!=='string'||typeof runId!=='string'||!/^[-a-z0-9]+$/.test(runId))return false;
+  let receipt:any;try{receipt=JSON.parse(readFileSync(join(base,'.practice/coordinator/runs',runId,'receipt.json'),'utf8'));}catch{return false;}
+  if(receipt?.ok!==true||receipt.runId!==runId||receipt.taskId!==job.coordinatorTask)return false;
+  const active=swarmRuns();if(!active||names.some(n=>active.has(n.toLowerCase())))return false;
+  const root=join(base,'.practice/session-lifecycle');
+  return names.every(n=>readLogoutProof(n,LIVE_SERVER,{root}).state==='confirmed');
+ };
+ const jobs=own.jobs.flatMap(job=>{
+  const names=jobAccounts(job),remaining=names.filter(n=>!wanted.has(n.toLowerCase()));
+  if(remaining.length===names.length||!completed(job,names))return[job];
+  if(!remaining.length)return[];
+  const {account:_account,orchestrate:_orchestrate,...rest}=job;
+  return[{...rest,accounts:remaining,enabled:false}];
+ });
+ return{...own,jobs};
+}
 export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean}={}){
  const base=options.base??projectRoot,rows=liveRows(base);
  if(options.recoveryPreflight&&(!options.preflight||!task.sessionRecovery||task.account!==account||task.sessionRecovery.account!==account))throw Error('authenticated recovery can only preflight its exact account');
@@ -177,7 +211,8 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  if(accounts.some(n=>typeof n!=='string'||! /^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw Error('participant binding unavailable');
  const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownRaw=existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null;
- const own=readCoordinatorJobs(base),plan=mergedPlan(JSON.parse(raw),own),now=Date.now();
+ // Release first: the merged-plan split check and the overlay replacement below both read this result.
+ const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),accounts,base),plan=mergedPlan(JSON.parse(raw),own),now=Date.now();
  const existing=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===account.toLowerCase()));
  const holds=loadHolds(join(base,'.practice/swarm-script-holds.json'));
  for(const participant of accounts){
@@ -249,7 +284,7 @@ export function prepareLiveRecovery(task:CoordTask,account:string,script:string,
  if(task.sessionRecovery)recoveryQualification(task,dependencies,source,base);
  installJob(task,account,script,runId,source,dependencies,{base,preflight:true,recoveryPreflight:!!task.sessionRecovery});
  const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownFile=join(base,COORDINATOR_JOBS_FILE),ownRaw=existsSync(ownFile)?readFileSync(ownFile,'utf8'):null;
- const own=readCoordinatorJobs(base),plan=mergedPlan(JSON.parse(raw),own),names=new Set(participants.map(n=>n.toLowerCase()));
+ const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),participants,base),plan=mergedPlan(JSON.parse(raw),own),names=new Set(participants.map(n=>n.toLowerCase()));
  const before=structuredClone(plan.jobs);
  // Park the held accounts: a disabled copy of their job goes into the coordinator's file, where it shadows the owner
  // job's accounts in the merged view. An owner job with other accounts keeps those.
