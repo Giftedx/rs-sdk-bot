@@ -239,7 +239,7 @@ function capacityView(){
 
 function machine(){return S.sys||{}}
 async function loadMap(){if(MAPI||!S.map?.ready)return;try{const buf=new Uint8Array(await(await fetch('/api/map')).arrayBuffer());const m=S.map,c=document.createElement('canvas');c.width=m.w;c.height=m.h;const g=c.getContext('2d'),img=g.createImageData(m.w,m.h);
-  const col=[[6,6,5],[38,40,26],[14,30,44],[60,56,40]];for(let i=0;i<buf.length;i++){const px=i%m.w,pz=Math.floor(i/m.w),o=((m.h-1-pz)*m.w+px)*4,[r,gg,bb]=col[buf[i]]||col[0];img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=bb;img.data[o+3]=255}g.putImageData(img,0,0);MAPI=c;drawMap()}catch{}}
+  const col=[[6,6,5],[38,40,26],[14,30,44],[60,56,40]];for(let i=0;i<buf.length;i++){const px=i%m.w,pz=Math.floor(i/m.w),o=((m.h-1-pz)*m.w+px)*4,[r,gg,bb]=col[buf[i]]||col[0];img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=bb;img.data[o+3]=255}g.putImageData(img,0,0);MAPI=c;drawMap();const art=new Image();art.onload=()=>{MAPI=art;window.atlasMapPx=art.width/(m.w*m.scale);drawMap()};art.src='/worldmap.png'}catch{}}
 function drawMap(){if(mode!=='2d'||!S)return;const c=$('#map'),w=c.clientWidth,h=c.clientHeight;if(!w)return;if(c.width!==w||c.height!==h){c.width=w;c.height=h}const g=c.getContext('2d'),m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};
   const sc=Math.min(w/(m.w*m.scale),h/(m.h*m.scale)),ox=(w-m.w*m.scale*sc)/2,oy=(h-m.h*m.scale*sc)/2,X=x=>ox+(x-m.x0)*sc,Z=z=>oy+(m.h*m.scale-(z-m.z0))*sc;
   g.fillStyle='#050504';g.fillRect(0,0,w,h);if(MAPI){g.imageSmoothingEnabled=false;g.drawImage(MAPI,ox,oy,m.w*m.scale*sc,m.h*m.scale*sc)}

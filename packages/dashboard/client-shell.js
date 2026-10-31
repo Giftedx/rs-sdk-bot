@@ -136,7 +136,7 @@
   function minimap(){const c=hud.querySelector('.game-minimap canvas');if(!c||!S)return;const g=c.getContext('2d'),W=c.width,H=c.height,m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};const b=account(),p=b?.live||b?.pos;
     const PX=p?4:Math.min(W/(m.w*m.scale),H/(m.h*m.scale)),cx=p?p.x:m.x0+m.w*m.scale/2,cz=p?p.z:m.z0+m.h*m.scale/2;
     g.clearRect(0,0,W,H);g.save();g.beginPath();g.arc(W/2,H/2,W/2,0,7);g.clip();g.fillStyle='#000';g.fillRect(0,0,W,H);
-    if(typeof MAPI!=='undefined'&&MAPI){const sw=W/PX/m.scale,sh=H/PX/m.scale,sx=(cx-m.x0)/m.scale-sw/2,sy=(m.h-1-(cz-m.z0)/m.scale)-sh/2;g.imageSmoothingEnabled=!p;g.drawImage(MAPI,sx,sy,sw,sh,0,0,W,H);}
+    if(typeof MAPI!=='undefined'&&MAPI){const ppt=window.atlasMapPx||1/m.scale,sw=W/PX*ppt,sh=H/PX*ppt,sx=(cx-m.x0+0.5)*ppt-sw/2,sy=(m.z0+m.h*m.scale-cz-0.5)*ppt-sh/2;g.imageSmoothingEnabled=!p||!!window.atlasMapPx;g.drawImage(MAPI,sx,sy,sw,sh,0,0,W,H);}
     for(const o of S.bots){const q=o.live||o.pos;if(!q||q.z>6400||o===b)continue;const x=W/2+(q.x-cx)*PX,y=H/2-(q.z-cz)*PX;if(x<0||y<0||x>W||y>H)continue;const[cl]=st(o);g.fillStyle=cl==='on'?'#7ed36a':'#fff';g.fillRect(x-1.5,y-1.5,3,3);}
     if(p){g.fillStyle='#fff';g.fillRect(W/2-2,H/2-2,4,4);}g.restore();}
   // XP drops (OSRS): each skill gain since the last observation floats up under the XP orb with its icon.
