@@ -291,12 +291,17 @@
       else notify('The command desk is not loaded.');};
     document.body.append(context);
   });
-  hud.querySelector('form').onsubmit=e=>{e.preventDefault();const input=hud.querySelector('input'),text=input.value.trim();input.value='';if(!text)return;if(text.startsWith('::plugin ')){const id=text.slice(9).trim();if(plugins.some(p=>p[0]===id))showPlugin(id);else notify('Unknown plugin. Use fleet, jobs, goals, bank, stock, boards, activity, world or machine.');}else if(text.startsWith('::focus ')){const name=text.slice(8).trim(),b=S?.bots.find(b=>b.name.toLowerCase()===name.toLowerCase());if(b)pick(b.name);else notify('No observed account matches that name.');}else if(/^::(request|pause|resume|help)\b/.test(text)){
+  hud.querySelector('form').onsubmit=e=>{e.preventDefault();const input=hud.querySelector('input'),text=input.value.trim();input.value='';if(!text)return;if(text.startsWith('::plugin ')){const id=text.slice(9).trim();if(plugins.some(p=>p[0]===id))showPlugin(id);else notify('Unknown plugin. Use fleet, jobs, goals, bank, stock, boards, activity, world or machine.');}else if(text.startsWith('::focus ')){const name=text.slice(8).trim(),b=S?.bots.find(b=>b.name.toLowerCase()===name.toLowerCase());if(b)pick(b.name);else notify('No observed account matches that name.');}else if(/^::(request|pause|resume|help|swarm|job|coordinator)\b/.test(text)){
       const [,verb,rest='']=text.match(/^::(\w+)\s*(.*)$/)||[];
-      if(verb==='help'){notify('Commands: ::request <text> (owner request ledger) · ::pause <account> · ::resume <account> · ::plugin <id> · ::focus <account>');return;}
+      if(verb==='help'){notify('Commands: ::request <text> · ::pause <account> · ::resume <account> · ::job <account> on|off · ::swarm pause|resume · ::coordinator pause|resume · ::plugin <id> · ::focus <account>');return;}
       if(!window.atlasCommand){notify('The command desk is not loaded.');return;}
-      const send=verb==='request'?(rest?{action:'request',extra:{text:rest.slice(0,500)}}:null):(rest&&/^[A-Za-z0-9]{1,12}$/.test(rest)?{action:verb==='pause'?'account-pause':'account-release',extra:{account:rest}}:null);
-      if(!send){notify(verb==='request'?'::request needs the request text.':'::'+verb+' needs an account name.');return;}
+      let send=null;
+      if(verb==='request')send=rest?{action:'request',extra:{text:rest.slice(0,500)}}:null;
+      else if(verb==='swarm')send=/^(pause|resume)$/.test(rest)?{action:'swarm-'+rest,extra:{}}:null;
+      else if(verb==='coordinator')send=/^(pause|resume)$/.test(rest)?{action:rest,extra:{}}:null;
+      else if(verb==='job'){const m=rest.match(/^([A-Za-z0-9]{1,12})\s+(on|off)$/);send=m?{action:m[2]==='on'?'job-enable':'job-disable',extra:{account:m[1]}}:null;}
+      else send=rest&&/^[A-Za-z0-9]{1,12}$/.test(rest)?{action:verb==='pause'?'account-pause':'account-release',extra:{account:rest}}:null;
+      if(!send){notify(verb==='request'?'::request needs the request text.':verb==='swarm'||verb==='coordinator'?'::'+verb+' pause or ::'+verb+' resume.':verb==='job'?'::job <account> on or off.':'::'+verb+' needs an account name.');return;}
       notify('Sending '+send.action+(send.extra.account?' '+send.extra.account:'')+'…');
       window.atlasCommand(send.action,send.extra).then(r=>notify(send.action+': '+String(r?.status||'sent').replaceAll('-',' ')),e=>notify('Refused: '+(e?.message||e)));
     }else notify('Chat is view-only in spectator mode. Commands: ::request · ::pause · ::resume · ::plugin · ::focus · ::help');};
