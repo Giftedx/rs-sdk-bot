@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {initialState,addTasks,startTask,chooseTask,validateTask} from '../src/coordinator';
 import {atomicJson,saveState,loadState,runDirectory} from '../src/coordinator-store';
-import {readMergedPlan,coordinatorJobsPath} from '../../core/src/coordinator-jobs';
+import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinatorJobs} from '../../core/src/coordinator-jobs';
 const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
 import {reconcile} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
@@ -255,11 +255,15 @@ test('the recovery preflight parks an enabled standing hand job whose last sessi
  const f=authenticatedFixture();
  atomicJson(join(f.base,'swarm.json'),{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:true,repeat:true,standing:true},{account:'Other',script:'keep.ts',enabled:true}]});
  atomicJson(join(f.prac,'status/Mightyrod.json'),{name:'Mightyrod',server:'rs-sdk-demo.fly.dev',result:'fail session ended: disconnected'});
+ const owner=readFileSync(join(f.base,'swarm.json'),'utf8');
  expect(f.prepare).not.toThrow();
- const jobs=JSON.parse(readFileSync(join(f.base,'swarm.json'),'utf8')).jobs;
- expect(jobs[0]).toMatchObject({account:'Mightyrod',enabled:false,standing:true});
+ // The parked copy is in the coordinator's file; the merged plan the swarm runs shows the hand job off and still
+ // standing, and the owner's swarm.json keeps its bytes.
+ expect(jobOf(f.base,'Mightyrod')).toMatchObject({account:'Mightyrod',enabled:false,standing:true});
+ expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(owner);
  expect(()=>installJob(f.task,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true})).toThrow('not confirmed');
  const plain={...f.task};delete plain.sessionRecovery;
+ writeCoordinatorJobs(f.base,emptyCoordinatorJobs());
  atomicJson(join(f.base,'swarm.json'),{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:true,repeat:true,standing:true}]});
  expect(()=>installJob(plain,'Mightyrod','new.ts',f.run,'new',f.deps,{base:f.base,preflight:true})).toThrow('owner standing job');
 });
