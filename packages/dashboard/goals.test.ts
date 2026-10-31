@@ -64,6 +64,6 @@ test('owner columns and operational lanes preserve the six dashboard goal target
  const titles=['Main Overall','Coverage','Specialist hiscores','Wealth / logistics / GE','Gear / collection','Efficiency / visibility'];
  const legacy='## Lanes\n| Lane | Target | Next |\n|---|---|---|\n'+titles.map(t=>`| ${t} | target ${t} | next ${t} |`).join('\n');
  const named='## Lanes\n| Lane | Owner | Target | Next |\n|---|---|---|---|\n| Autopilot | Claude cloud | automate jobs | planner |\n'+[...titles].reverse().map(t=>`| ${t} | worker | target ${t} | next ${t} |`).join('\n');
- expect(goalPlan(named)).toEqual(goalPlan(legacy));expect(goalPlan(named).available).toBe(true);
- expect(goalPlan(named).lanes[2]).toEqual({title:'Specialist hiscores',target:'target Specialist hiscores',next:'next Specialist hiscores'});
+ expect(goalPlan(named).lanes.map(({owner,...row})=>row)).toEqual(goalPlan(legacy).lanes);expect(goalPlan(named).available).toBe(true);
+ expect(goalPlan(named).lanes[2]).toEqual({title:'Specialist hiscores',target:'target Specialist hiscores',next:'next Specialist hiscores',owner:'worker'});
 });
