@@ -37,7 +37,15 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  const coordination=s.coordination&&typeof s.coordination==='object'?{...s.coordination,tasks:[]}:s.coordination;
  // Other sides' accounts and sync times are public; their coins are bank stock, so they stay with the owner.
  const fleetSides=s.fleetSides&&Array.isArray(s.fleetSides.sides)?{...s.fleetSides,sides:s.fleetSides.sides.map((side:any)=>({...side,accounts:(side.accounts??[]).filter((a:any)=>a?.name!==MAIN_MARK&&String(a?.name??'').toLowerCase()!==main.toLowerCase()).map(({coins:_coins,...a}:any)=>a)}))}:s.fleetSides;
- const out={...rest,bots,coordination,economy,fleetSides,vault:null,collection:null,sys:s.sys?{...s.sys,procs:[]}:s.sys,requests:{},mainPlan:null,race:null,gates:null,hosted:{at:Date.now(),kind:'public'}};
+ // Other players are public game data (world feed, hiscores); the main account leaves every list.
+ const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
+ const roster=Array.isArray(s.roster)?s.roster.filter((r:any)=>!isMain(r?.[0])):s.roster;
+ const rivals=Array.isArray(s.rivals)?s.rivals.map((b:any)=>({...b,ours:isMain(b?.ours?.name)?null:b?.ours??null,rows:(b.rows??[]).filter((r:any)=>!isMain(r?.name))})):s.rivals;
+ const contention=Array.isArray(s.contention)?s.contention.map((c:any)=>({...c,others:(c.others??[]).filter((n:any)=>!isMain(n)),ours:(c.ours??[]).filter((n:any)=>!isMain(n))})):s.contention;
+ const lookups=s.lookups&&typeof s.lookups==='object'?Object.fromEntries(Object.entries(s.lookups).filter(([k,v]:any)=>!isMain(k)&&!isMain(v?.name))):s.lookups;
+ const farms=Array.isArray(s.farms)?s.farms.map((g:any)=>({...g,names:(g.names??[]).filter((n:any)=>!isMain(n))})):s.farms;
+ const overtake=Array.isArray(s.overtake)?s.overtake.filter((o:any)=>!isMain(o?.account)):s.overtake;
+ const out={...rest,bots,coordination,economy,fleetSides,roster,rivals,contention,lookups,farms,overtake,vault:null,collection:null,sys:s.sys?{...s.sys,procs:[]}:s.sys,requests:{},mainPlan:null,race:null,gates:null,hosted:{at:Date.now(),kind:'public'}};
  const text=JSON.stringify(out);
  if(new RegExp(main.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i').test(text))throw Error('public view still names the main account; nothing published');
  return out;

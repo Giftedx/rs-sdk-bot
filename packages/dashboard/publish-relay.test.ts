@@ -6,7 +6,10 @@ const state=()=>({now:1,bots:[
   {name:MAIN_MARK,reserved:true,bank:[],env:{}},
  ],coordination:{available:true,tasks:[{id:'t1',why:'w'.repeat(1000),detail:'d'.repeat(1000),status:'pending'}]},
  sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],vault:{coins:9},collection:{items:[]},economy:{supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:3,farmers:[{name:'CoinCock'}],trend:[1]},mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]},requests:{open:[{id:'1',request:'owner words'}]},race:{rows:[]},gates:{go:false},
- fleetSides:{at:1,sides:[{side:'cloud',at:1,late:false,accounts:[{name:'TossTheCaber',at:1,total:40,coins:900},{name:MAIN_MARK,at:1,total:1,coins:1}]}],orders:[]}});
+ fleetSides:{at:1,sides:[{side:'cloud',at:1,late:false,accounts:[{name:'TossTheCaber',at:1,total:40,coins:900},{name:MAIN_MARK,at:1,total:1,coins:1}]}],orders:[]},
+ roster:[['Zezima',1,2,0,99],[MAIN_MARK,3,4,0,3]],rivals:[{board:'Attack',at:1,ours:{rank:2,name:MAIN_MARK},rows:[{rank:1,name:'Zezima'},{rank:2,name:MAIN_MARK}]}],
+ contention:[{side:'local',resource:'knight:1,2',others:['Zezima',MAIN_MARK],ours:[MAIN_MARK]}],lookups:{zezima:{name:'Zezima'},[MAIN_MARK]:{name:MAIN_MARK}},
+ farms:[{label:'Money ##',names:['Money 01',MAIN_MARK]}],overtake:[{board:'Attack',account:'CoinCock'},{board:'Magic',account:MAIN_MARK}]});
 const meta={nonce:'secret-nonce',goals:['wealth'],roles:['supply'],paused:false,fleetPaused:false,capabilities:[],accountHolds:[{name:'AFKnight',owner:'other'}],requests:[{id:'r1',action:'plan',at:1,status:'plan-requested'}]};
 
 describe('hosted views',()=>{
@@ -43,6 +46,9 @@ describe('hosted views',()=>{
   expect(p.coordination.tasks).toEqual([]);expect(p.coordination.available).toBe(true);expect(JSON.stringify(p)).not.toContain('w'.repeat(50));
   expect(JSON.stringify(p)).not.toContain('owner words');
   expect(p.fleetSides.sides[0].accounts).toEqual([{name:'TossTheCaber',at:1,total:40}]);
+  expect(p.roster).toEqual([['Zezima',1,2,0,99]]);expect(p.rivals[0].ours).toBeNull();expect(p.rivals[0].rows).toEqual([{rank:1,name:'Zezima'}]);
+  expect(p.contention[0].others).toEqual(['Zezima']);expect(p.contention[0].ours).toEqual([]);expect(Object.keys(p.lookups)).toEqual(['zezima']);
+  expect(p.farms[0].names).toEqual(['Money 01']);expect(p.overtake.map((o:any)=>o.account)).toEqual(['CoinCock']);
   expect(p.hosted.kind).toBe('public');
  });
  test('a state that still names the main account is refused',()=>{

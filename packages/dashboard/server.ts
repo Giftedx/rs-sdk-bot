@@ -18,6 +18,7 @@ import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow} from './world-view';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
@@ -342,7 +343,7 @@ setInterval(() => void refreshPrs(), 300_000);
 void refreshPrs();
 
 // ---------- world feed: who is in the world, server tick, player count ----------
-const roster = new Map<string, { x: number; z: number; level: number; combat: number; seen: number }>();
+const roster = new Map<string, { name: string; x: number; z: number; level: number; combat: number; seen: number }>();
 const firstSeen = new Map<string, number>();
 const world = { players: 0, tick: 0, tickAt: 0, tickMs: 400, connected: false, rev: 0 };
 function connectFeed() {
@@ -362,7 +363,7 @@ function connectFeed() {
                     if (!Array.isArray(p) || p.length < 6) continue;
                     const n = String(p[1]).toLowerCase();
                     if (!firstSeen.has(n)) firstSeen.set(n, now);
-                    roster.set(n, { x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
+                    roster.set(n, { name: String(p[1]), x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
                 }
             } catch (err) {
                 console.error(`world feed message failed: ${String(err)}`);
@@ -391,12 +392,7 @@ async function refreshRanks() {
         const r = ranks.get(name);
         if (r && Date.now() - r.at < 300_000) continue;
         try {
-            const text = (await (await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`)).text()).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
-            const rows: Row[] = [];
-            for (const b of SKILL_BOARDS) {
-                const m = text.match(new RegExp(`${b} ([0-9,]+) ([0-9]+) ((?:\\d+h )?(?:\\d+m )?\\d+s)`));
-                if (m && Number(m[2]) > 1) rows.push({ board: b, rank: Number(m[1]!.replace(/,/g, '')), level: Number(m[2]), time: m[3]! });
-            }
+            const rows: Row[] = hiscoreRows(await (await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`)).text(), SKILL_BOARDS);
             ranks.set(name, { at: Date.now(), rows });
             for (const row of rows) {
                 const k = name + '|' + row.board, l = rankHist.get(k) ?? [], last = l[l.length - 1];
@@ -433,16 +429,17 @@ function parseBoard(html: string): { rank: number; name: string; level: number; 
     return names.map((name, i) => ({ rank: nums[i]!, name, level: nums[n + i]!, ticks: ticks[i]! }));
 }
 const liveTop = new Map<string, { name: string; level: number; ticks: number; at: number }>();
+const boardTops = new Map<string, { at: number; rows: BoardRow[] }>();
 async function refreshLiveTops() {
     for (const b of SKILL_BOARDS) {
         try {
             const rows = parseBoard(await (await fetch(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`, { signal: AbortSignal.timeout(15_000) })).text());
-            if (rows[0]) liveTop.set(b, { name: rows[0].name, level: rows[0].level, ticks: rows[0].ticks, at: Date.now() });
+            if (rows[0]) { liveTop.set(b, { name: rows[0].name, level: rows[0].level, ticks: rows[0].ticks, at: Date.now() }); boardTops.set(b, { at: Date.now(), rows: rows.slice(0, RIVALS_PER_BOARD) }); }
         } catch { /* keep the last value */ }
         await Bun.sleep(1000);
     }
 }
-setInterval(() => void refreshLiveTops(), 3_600_000);
+setInterval(() => void refreshLiveTops(), 900_000);
 void refreshLiveTops();
 function topOf(board: string): { name: string; level: number; ticks: number; at: number; live: boolean } | null {
     const l = liveTop.get(board);
@@ -451,6 +448,32 @@ function topOf(board: string): { name: string; level: number; ticks: number; at:
     return s ? { name: s.name, level: s.level, ticks: s.ticks, at: Date.parse(snapshot.takenAt) || 0, live: false } : null;
 }
 const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
+// Player lookups (World plugin): any player's hiscore page, one request every 1.2 s, each kept 30 minutes. The page
+// asks through /api/player; in the background the top 3 of each board and the strangers at our spots are kept fresh,
+// because the hosted page cannot reach the hiscores itself (no CORS) and reads these from its published state.
+const lookups = new Map<string, { name: string; at: number; rows: HiscoreRow[] }>();
+let lookupChain: Promise<unknown> = Promise.resolve();
+function lookupPlayer(name: string): Promise<{ name: string; at: number; rows: HiscoreRow[] } | null> {
+    const key = name.toLowerCase(), hit = lookups.get(key);
+    if (hit && Date.now() - hit.at < 1_800_000) return Promise.resolve(hit);
+    const job = lookupChain.then(async () => {
+        const again = lookups.get(key);
+        if (again && Date.now() - again.at < 1_800_000) return again;
+        try {
+            const r = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(key)}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            const entry = { name, at: Date.now(), rows: r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [] };
+            lookups.set(key, entry);
+            if (lookups.size > 400) lookups.delete(lookups.keys().next().value!);
+            return entry;
+        } catch { return null; } finally { await Bun.sleep(1200); }
+    });
+    lookupChain = job.catch(() => null);
+    return job;
+}
+let lookupWanted: string[] = [];
+// Fresh entries are skipped first, so the next ten that need a lookup get one, however long the list is.
+setInterval(() => { for (const n of lookupWanted.filter(n => { const hit = lookups.get(n.toLowerCase()); return !hit || Date.now() - hit.at >= 1_800_000; }).slice(0, 10)) void lookupPlayer(n); }, 60_000);
+
 // Equipment, Bank and Runite boards: #1 holder and value, scraped every 10 min.
 const extraTop = new Map<string, { name: string; value: string; at: number } | null>();
 async function refreshExtra() {
@@ -1032,6 +1055,16 @@ function buildState() {
         viewerTimings: viewerTimings.slice(0, 20),
         race: currentRace, gates: currentGates, chain: foodChain(st, now), gapHistory: gapHistory.slice(-120).map(g => ({ at: g.at, gap: g.gap, floorGap: g.floorGap ?? null })), economy,
         pageVersion: (() => { try { return Math.max(...[PAGE_FILE,...['map-shell.css','map-shell.js','client-shell.css','client-shell.js','client-viewer.css','operations.css','operations.js','xp-tracker.js'].map(f=>join(import.meta.dir,f))].map(f=>existsSync(f)?statSync(f).mtimeMs:0)); } catch { return 0; } })(),
+        ...(() => {
+            // Other players: the roster, each board's rivals, who stands at our claimed spots, and the cached lookups.
+            const fleet = new Set(bots.map(b => b.name.toLowerCase()));
+            const best = new Map(SKILL_BOARDS.map(b => { let top: { rank: number; name: string } | null = null; for (const bot of bots as any[]) for (const r of bot.ranks ?? []) if (r.board === b && (!top || r.rank < top.rank)) top = { rank: r.rank, name: bot.name }; return [b, top] as const; }));
+            const rivals = rivalsView(boardTops, roster, fleet, best, now);
+            const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
+            lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).slice(0, 3).map(x => x.name)), ...contention.flatMap(s => s.others)])];
+            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 120).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now)]));
+            return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
+        })(),
         prs: prRows,
         scoreboard: cached(FILES.scoreboard, text => scoreboardView(JSON.parse(text)), scoreboardView(null)), fleetSides: fleetSides(now),
         icons, vault: v, collection, map: { ...MAP, ready: !!mapBytes }, sys, snapshotAt: snapshot?.takenAt ?? null, liveTopsAt: Math.max(0, ...[...liveTop.values()].map(t => t.at)), liveTops: liveTop.size,
@@ -1129,6 +1162,12 @@ Bun.serve({
             if(!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
             const file=Bun.file(join(import.meta.dir,'client-assets',name));
             return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
+        }
+        if (url.pathname === '/api/player') {
+            const name = url.searchParams.get('name') ?? '';
+            if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return Response.json({ error: 'a player name is 1-12 letters, digits, spaces, - or _' }, { status: 400 });
+            if (name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
+            return lookupPlayer(name).then(hit => Response.json(lookupView(name, hit?.rows ?? null, hit?.at ?? null, roster.get(name.toLowerCase()), Date.now())));
         }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
