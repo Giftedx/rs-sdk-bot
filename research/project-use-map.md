@@ -186,6 +186,7 @@ First slice (offline): `goalRequirementsFor` retains shared consumers; preparati
 | Source | Local consumer | Decision | Check |
 |---|---|---|---|
 | Cairn `run.ts` at a named commit per live run (rune.fast `attempts-timeline.json` R3) | `packages/core/src/worker-release.ts` whole-tree pin | adapt: pin each capability's import closure | an edit outside a capability's closure leaves its pin and live slots unchanged |
+| UberMouse plans: phases chosen by pure `when` predicates, no LLM (`conductor/README.md` "Plans") | `packages/planner/src/autopilot.ts`, `scripts/swarm.ts`, `packages/router/src/coordinator-live.ts` | adapt: the next job of a qualified chain needs no model round | with the coordinator stopped, a qualified chain starts its next finite batch on the receipt |
 | UberMouse `conductor/tools/{save,load,library}.ts`, engine `GET /save`, `POST /kick` (`9df2d4c9`, MIT) | `packages/practice/src/presets.ts`, `stack.ts` | adapt: rewrite; keep notice if code is copied | a saved mid-quest state loads on practice and the worker resumes |
 | UberMouse `conductor/tools/replay.ts`, `*.ticks.ndjson.gz` | `packages/core/src/{bot,act,ticks}.ts`, `packages/router/src/coordinator-worker.ts` | adapt | a no-behaviour refactor replays clean on 3 recorded runs |
 | MaxBittker/rs-sdk `97725db3`, `2c7d4607`, `db0cc51e` (MIT) | `vendor/rs-sdk` pin `b565f2d9`, `packages/core/src/session-recovery*.ts` | reuse: move the pin | practice: a killed client's account resumes on re-login; demo behaviour checked |
