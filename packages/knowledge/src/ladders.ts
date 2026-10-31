@@ -5,7 +5,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { knowledgeDir } from './paths';
-import { loadContent, modelRung, modelXpPerTickAt, ticksPerSuccess, XP_RATE, XP_RATE_SRC, type Content, type Row, type Timing } from './method-model';
+import { coordTile, loadContent, modelBands, modelRung, modelXpPerTickAt, statRandomChance, ticksPerSuccess, XP_RATE, XP_RATE_SRC, type Band, type Content, type Row, type Timing } from './method-model';
 
 export const SKILLS = ['attack', 'defence', 'strength', 'hitpoints', 'ranged', 'prayer', 'magic', 'cooking', 'woodcutting',
     'fletching', 'fishing', 'firemaking', 'crafting', 'smithing', 'mining', 'herblore', 'agility', 'thieving', 'runecraft'] as const;
@@ -35,7 +35,8 @@ export interface Method {
     tools: ItemRef[];
     xpSrc: string | null; xpNote: string | null;
     ticksPerAction: number | null; timing: Timing | null;
-    modelXpPerTick: number | null; modelXpPerTick99: number | null;
+    modelXpPerTick: number | null; modelXpPerTick99: number | null; modelBands: Band[];
+    enables: { feeds: string[]; teleport: { x: number; z: number; level: number; src: string } | null };
     inputsBuyable: boolean | null; members: boolean | null;
     quest: { name: string; varp: string | null; src: string } | null;
     xpPerTick: number | null; rateMethod: string | null;
@@ -157,7 +158,8 @@ export function buildLadders(d: Data) {
     const buyable = (inputs: ItemRef[]) => inputs.length === 0 ? null : inputs.every(i => i.shops.length > 0);
     const base = (o: Partial<Method> & Pick<Method, 'id' | 'skill' | 'level' | 'kind' | 'label' | 'source' | 'src'>): Method => ({
         xpPerAction: null, inputs: [], outputs: [], requires: [], where: null, inputsBuyable: null, members: null, quest: null,
-        tools: [], xpSrc: null, xpNote: null, ticksPerAction: null, timing: null, modelXpPerTick: null, modelXpPerTick99: null,
+        tools: [], xpSrc: null, xpNote: null, ticksPerAction: null, timing: null, modelXpPerTick: null, modelXpPerTick99: null, modelBands: [],
+        enables: { feeds: [], teleport: null },
         xpPerTick: null, rateMethod: null, worker: null, workers: [], workerEvidence: null, pendingCapability: null, gaps: [], ...o,
     });
     const methods: Method[] = [];
@@ -335,6 +337,16 @@ export function buildLadders(d: Data) {
         m.ticksPerAction = f.timing ? round(ticksPerSuccess(f.timing, m.level)) : null;
         m.modelXpPerTick = modelXpPerTickAt(m.xpPerAction, f.timing, m.level);
         m.modelXpPerTick99 = modelXpPerTickAt(m.xpPerAction, f.timing, 99);
+        m.modelBands = modelBands(m.xpPerAction, f.timing, m.level);
+        // Chance per roll at the unlock level and at 99 (null where the tool is not usable yet).
+        if (m.timing) m.timing.rolls = m.timing.rolls.map(r => {
+            const at = (l: number) => r.toolLevel > l ? null : round(r.fixedChance ?? statRandomChance(l, r.low!, r.high!));
+            return { ...r, chanceAtUnlock: at(m.level), chanceAt99: at(99) };
+        });
+        if (a?.table === 'magic_spell_table') {
+            const tc = cell(rowOf(a.table, a.row) as DbRow | undefined, 'tele_coord')?.[0], tile = tc ? coordTile(tc) : null;
+            if (tile) m.enables.teleport = { ...tile, src: (rowOf(a.table, a.row) as DbRow).src.tele_coord![0]! };
+        }
         // Item gaps are re-derived from the items the rung holds after the model.
         m.gaps = m.gaps.filter(g => !/^item ".*" not resolved/.test(g));
         for (const it of [...m.inputs, ...m.outputs]) if (it.id === null) m.gaps.push(`item "${it.name}" not resolved in knowledge/items.json`);
@@ -346,6 +358,11 @@ export function buildLadders(d: Data) {
                 .map(n => ({ npc: n.debugname, spawns: n.spawns.length, sample: n.spawns.slice(0, 3) }));
         }
     }
+
+    // 4d. What each rung enables: rungs that consume its outputs as inputs or tools.
+    const usedBy = new Map<string, string[]>();
+    for (const m of methods) for (const it of [...m.inputs, ...m.tools, ...m.requires]) if (it.debugname) usedBy.set(it.debugname, [...(usedBy.get(it.debugname) ?? []), m.id]);
+    for (const m of methods) m.enables.feeds = [...new Set(m.outputs.flatMap(o => o.debugname ? usedBy.get(o.debugname) ?? [] : []))].filter(id => id !== m.id).sort();
 
     // 5. Rates.
     const byId = new Map(methods.map(m => [m.id, m]));
@@ -389,7 +406,8 @@ export function buildLadders(d: Data) {
     return {
         generatedBy: 'bun packages/knowledge/src/ladders.ts',
         xpNote: 'xpPerAction is base content XP per action (one script run; arrows make 15, runecraft uses 27 essence); the server multiplier is not applied. xpPerTick is set only from knowledge/rates.json (measured).',
-        modelNote: `ticksPerAction is the expected ticks per successful action at the unlock level, from script timing and success rolls (timing.src). modelXpPerTick = xpPerAction x ${XP_RATE} (${XP_RATE_SRC}) / ticksPerAction at the unlock level; modelXpPerTick99 is the same at level 99. Both are derived, never measured, and exclude banking, walking, resupply and level-up dialogs.`,
+        modelNote: `ticksPerAction is the expected ticks per successful action at the unlock level, from script timing and success rolls (timing.src). modelXpPerTick = xpPerAction x ${XP_RATE} (${XP_RATE_SRC}) / ticksPerAction at the unlock level; modelXpPerTick99 is the same at level 99; modelBands gives the model from the unlock level to 99, split every 10 levels and where the best tool changes, and timing.rolls[].chanceAtUnlock / chanceAt99 give each stat_random chance. All are derived, never measured, and exclude banking, walking, resupply and level-up dialogs.`,
+        enablesNote: 'enables.feeds lists rungs that use this rung output as an input, tool or requirement; enables.teleport is the spell destination (magic_spell_table tele_coord). Tool tiers are the toolLevel of each roll in timing.rolls.',
         counts, notes, ladders,
     };
 }

@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { knowledgeDir } from '../src/paths';
-import { loadContent, modelRung, modelXpPerTickAt, pDelayTicks, statRandomChance, ticksPerSuccess, type Row } from '../src/method-model';
+import { coordTile, loadContent, modelBands, modelRung, modelXpPerTickAt, pDelayTicks, statRandomChance, ticksPerSuccess, type Row } from '../src/method-model';
 
 const c = loadContent();
 const dbtables = JSON.parse(readFileSync(join(knowledgeDir(), 'dbtables.json'), 'utf8')) as { table: string; rows: (Row & { def: string })[] }[];
@@ -83,4 +83,28 @@ test('every ladder value with a model carries content source lines', () => {
         if (m.modelXpPerTick !== null) expect(m.ticksPerAction).not.toBeNull();
         if (m.rateMethod === null) expect(m.xpPerTick).toBeNull(); // the model never fills the measured rate
     }
+});
+
+test('model bands follow the level and the best axe', () => {
+    const f = rung({ id: 'woodcutting/oak_tree_table', skill: 'woodcutting', kind: 'woodcutting_trees', level: 15, row: row('woodcutting_trees', 'oak_tree_table')! });
+    const bands = modelBands(37.5, f.timing, 15);
+    expect(bands[0]!.from).toBe(15);
+    expect(bands.at(-1)!.to).toBe(99);
+    expect(bands.find(b => b.from === 41)!.tool).toBe('rune_axe'); // rune axe levelrequire 41
+    for (let i = 1; i < bands.length; i++) expect(bands[i]!.from).toBe(bands[i - 1]!.to + 1);
+    expect(bands.at(-1)!.xpPerTickTo).toBe(modelXpPerTickAt(37.5, f.timing, 99));
+    // A rung with no roll is one flat band.
+    const bury = rung({ id: 'prayer/bury-bones', skill: 'prayer', kind: 'bury', level: 1, inputs: ['bones'] });
+    expect(modelBands(bury.xpPerAction, bury.timing, 1)).toEqual([{ from: 1, to: 99, tool: null, xpPerTickFrom: 56.25, xpPerTickTo: 56.25 }]);
+});
+
+test('content coords become tiles; the ladder records chances and what a rung enables', () => {
+    expect(coordTile('0_50_53_13_32')).toEqual({ level: 0, x: 3213, z: 3424 });
+    const out = JSON.parse(readFileSync(join(knowledgeDir(), 'ladders.json'), 'utf8')) as { ladders: Record<string, any[]> };
+    const all = Object.values(out.ladders).flat();
+    const oak = all.find(m => m.id === 'woodcutting/oak_tree_table')!;
+    expect(oak.timing.rolls.find((r: any) => r.tool === 'bronze_axe').chanceAtUnlock).toBe(Math.round(statRandomChance(15, 32, 100) * 100) / 100);
+    expect(oak.timing.rolls.find((r: any) => r.tool === 'rune_axe').chanceAtUnlock).toBeNull(); // needs level 41
+    expect(all.find(m => m.id === 'magic/magic_spell_teleport_varrock')!.enables.teleport).toMatchObject({ x: 3213, z: 3424 });
+    expect(all.find(m => m.id === 'smithing/smelt-bronze')!.enables.feeds).toContain('smithing/bronze_dagger');
 });
