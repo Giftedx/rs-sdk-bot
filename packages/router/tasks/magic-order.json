@@ -6,9 +6,15 @@
     "scripts/magic-order.ts",
     "scripts/magic-order.test.ts",
     "packages/practice/src/magic-order-proof.ts",
-    "packages/practice/test/magic-order-proof.test.ts"
+    "packages/practice/test/magic-order-proof.test.ts",
+    "packages/practice/src/session-recovery-proof.ts",
+    "packages/practice/test/session-recovery-proof.test.ts",
+    "packages/core/src/session-recovery.ts",
+    "packages/core/src/session-recovery-permit.ts",
+    "packages/core/src/inprocess.ts",
+    "packages/core/test/inprocess.test.ts"
   ],
-  "consumer": "An ordinary native fixture account starts at Draynor bank with HP10, banked coins and too few mind runes. It runs scripts/magic-order.ts to a requested Magic level. The run buys only the missing runes inside budget and above the cash reserve. It casts wind strike on a safe target, with every cast observed as a rune debit plus an XP change. It banks the leftover runes. It resumes an interrupted session with no reseed and no double purchase. It refuses a rerun at the target, and it refuses short runes when the budget is zero. Independent saved-state checks verify the Magic level and XP effect, the exact rune and coin debit, food eaten, unrelated assets kept, life kept and a confirmed logout.",
+  "consumer": "The connected finite consumer run-magic-woodenstaff-authenticated-13 uses the existing controller-authorized recovery for Woodenstaff's exact endedAt 1793204110260, then runs scripts/magic-order.ts to Magic13 with its existing budgets. Practice invokes the real account-parameterized worker CLI, verifies useful Magic XP and level, reconciles declared rune, coin and food costs, preserves unrelated assets, checks a clear refusal and confirms logout. Retain the existing native recovery gate without adding scenarios. The next useful consumer acquires missing runes and advances the next Magic band using the best unlocked method.",
   "checks": [
     {
       "id": "magic-order-regressions",
@@ -18,10 +24,21 @@
         "test",
         "scripts/magic-order.test.ts",
         "packages/practice/test/magic-order-proof.test.ts",
+        "packages/practice/test/session-recovery-proof.test.ts",
+        "packages/core/test/inprocess.test.ts",
         "--timeout",
         "10000"
       ],
       "timeoutMs": 60000
+    },
+    {
+      "id": "native-session-recovery",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/session-recovery-proof.ts"
+      ],
+      "timeoutMs": 900000
     },
     {
       "id": "native-magic-order-consumer",

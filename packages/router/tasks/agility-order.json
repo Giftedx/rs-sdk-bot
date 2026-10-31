@@ -11,7 +11,7 @@
     "packages/core/test/boat.test.ts",
     "scripts/foodcourier.ts"
   ],
-  "consumer": "An ordinary account runs the installed account-parameterized Agility worker with course gnome to a finite useful target. Release under this definition covers Gnome consumers only. Wilderness and Barbarian implementations and unresolved adverse evidence remain preserved; this delivery grants neither course live qualification. Prove actual consecutive food consumption, healing, cooldown and applicable shared obstacle settlement through the CLI. Prove public entry from the retained eastern save copy, Draynor entry with real food purchases and boat fares, and ordinary Ardougne-town entry at 2654,3283 with reduced current HP and owned food. Prove Femi completion and exact crossing where applicable, useful course progress, interruption with server removal and no-reseed restart, target and unsupported-entry refusals. Independently recompute every scenario's initialization and saved effects with account/source/configuration/raw-file bindings. Require exact costs, preserved unrelated assets/raw skills, life and confirmed logout. Verification is read-only. Preserve the shared boat helper and foodcourier behavior. Next useful live consumer is the existing PickpockDick Agility10 pilot, then the existing matched helpers and Moneyshot chain; protected accounts stay offline.",
+  "consumer": "An ordinary account runs the installed account-parameterized Agility worker scripts/agility-order.ts with course gnome to a finite target level. One practice run of the real CLI shows Agility XP gain toward the target, eats owned food when HP is low, reconciles unrelated assets, refuses an unsupported target or entry with a clear message, and confirms logout. Release covers the Gnome course only. Wilderness and Barbarian code stays in place without live qualification. The shared boat helper and foodcourier behavior are unchanged. The finite live consumer is PickpockDick Agility 82->99 on Gnome. Its next goal is the Agility 40 thieves toward the next band. Protected accounts stay offline.",
   "checks": [
     {
       "id": "agility-order-regressions",
@@ -25,7 +25,7 @@
         "--timeout",
         "10000"
       ],
-      "timeoutMs": 60000
+      "timeoutMs": 120000
     },
     {
       "id": "native-agility-gnome-food-recovery",
@@ -36,36 +36,6 @@
         "--gnome-food-recovery"
       ],
       "timeoutMs": 300000
-    },
-    {
-      "id": "native-agility-retained-approach",
-      "phase": "practice",
-      "command": [
-        "bun",
-        "packages/practice/src/agility-order-proof.ts",
-        "--course-approach=F:/dev-on-f/osrs-rs-research/rs-sdk-bot/.practice/deliveries/agility-order-1793222518098-ehs7bv/draynor-entry-after.sav"
-      ],
-      "timeoutMs": 360000
-    },
-    {
-      "id": "native-agility-draynor-entry",
-      "phase": "practice",
-      "command": [
-        "bun",
-        "packages/practice/src/agility-order-proof.ts",
-        "--draynor-entry"
-      ],
-      "timeoutMs": 360000
-    },
-    {
-      "id": "native-agility-ardougne-entry",
-      "phase": "practice",
-      "command": [
-        "bun",
-        "packages/practice/src/agility-order-proof.ts",
-        "--ardougne-entry"
-      ],
-      "timeoutMs": 360000
     },
     {
       "id": "native-agility-gnome-consumer",

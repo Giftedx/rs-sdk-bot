@@ -1,0 +1,46 @@
+{
+  "id": "druid-meats-order",
+  "goal": "quests",
+  "entry": "scripts/druid-meats.ts",
+  "files": [
+    "scripts/druid-meats.ts",
+    "scripts/druid-meats.test.ts",
+    "packages/practice/src/druid-meats-proof.ts",
+    "packages/practice/test/druid-meats-proof.test.ts"
+  ],
+  "consumer": "An ordinary combat account (HP 75 fixture near Ardougne) runs scripts/druid-meats.ts <account>. For each Druidic Ritual meat the account does not own (raw beef 2132, raw rat meat 2134, raw bear meat 2136, raw chicken 2138), it walks to a safe spawn, kills one target, picks up the meat and banks it. Saved state shows all four meats banked, unrelated assets kept, life kept and a confirmed logout. A rerun with all four meats owned refuses before travel.",
+  "checks": [
+    {
+      "id": "druid-meats-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/druid-meats.test.ts",
+        "packages/practice/test/druid-meats-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "native-druid-meats-consumer",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/druid-meats-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "saved-druid-meats-consumer",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/druid-meats-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}

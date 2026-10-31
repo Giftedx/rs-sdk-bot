@@ -1,0 +1,44 @@
+{
+  "id": "ranged-train",
+  "goal": "Train Ranged with an owned bow: wield the best bow the account can use, buy arrows at a shop when the bank has too few, kill safe targets, pick up arrows, bank, repeat to a target level.",
+  "entry": "scripts/ranged-train.ts",
+  "files": [
+    "scripts/ranged-train.ts",
+    "scripts/ranged-train.test.ts",
+    "packages/practice/src/ranged-train-proof.ts"
+  ],
+  "consumer": "Ranged level rises to the target; arrows and coins spent are counted; no death; logout confirmed.",
+  "checks": [
+    {
+      "id": "ranged-train-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/ranged-train.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "ranged-train-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/ranged-train-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "ranged-train-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/ranged-train-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}
