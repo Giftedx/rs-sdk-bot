@@ -208,11 +208,52 @@
   }
   function screens(){const loading=hud.querySelector('#game-loading'),lost=hud.querySelector('#game-lost');if(loading&&S)loading.hidden=true;if(lost)lost.hidden=!(S&&(typeof connected!=='undefined'&&!connected||typeof lastReceived!=='undefined'&&Date.now()-lastReceived>10000));}
   setInterval(screens,2000);
-  function refresh(){if(!S)return;screens();minimap();xpDrops(account());overlay();chatFeed();statusBars(account());idleNotifier(account());levelUps();deaths();if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='loot'&&body.dataset.plugin==='loot'&&!body.contains(document.activeElement)){const top=body.scrollTop;body.innerHTML=lootPanel();body.scrollTop=top;}infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account(),options=JSON.stringify(S.bots.filter(b=>!b.practice).map(b=>[b.name,b.inWorld]));if(options!==lastAccountOptions){lastAccountOptions=options;$('#client-account').innerHTML='<option value="">Free camera</option>'+S.bots.filter(b=>!b.practice).map(b=>`<option value="${E(b.name)}">${b.inWorld?'● ':'○ '}${E(safeName(b.name))}</option>`).join('');}$('#client-account').value=sel||'';$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
+  // The 2D camera, the game's view: it follows the watched account at FOLLOW_PX a tile and flies to a new target;
+  // the wheel zooms about the cursor and a drag pans, which lets go of the account (free camera).
+  const FOLLOW_PX=5,MIN_PX=0.3,MAX_PX=10;
+  const cam={cx:null,cz:null,ppt:null,tx:null,tz:null,tppt:null,user:false,userPpt:null,raf:0};
+  function mapInfo(){return S?.map||{x0:2368,z0:2880,w:560,h:416,scale:2};}
+  function camTarget(){
+    const m=mapInfo(),b=account(),p=b&&(b.live||b.pos);
+    if(p&&!window.atlasFreeCamera){cam.tx=p.x;cam.tz=p.z;cam.tppt=cam.userPpt||FOLLOW_PX;return;}
+    const d=window.atlasDestination;if(d&&Number.isFinite(d.x)){cam.tx=d.x;cam.tz=d.z;cam.tppt=cam.userPpt||FOLLOW_PX;return;}
+    if(cam.user&&cam.cx!=null){cam.tx=cam.cx;cam.tz=cam.cz;cam.tppt=cam.ppt;return;}
+    cam.tx=m.x0+m.w*m.scale/2;cam.tz=m.z0+m.h*m.scale/2;cam.tppt=window.atlasFitPpt||1;
+  }
+  function camStep(){
+    cam.raf=0;if(cam.tx==null)return;
+    if(cam.cx==null){cam.cx=cam.tx;cam.cz=cam.tz;cam.ppt=cam.tppt;}
+    else{const k=0.14;cam.cx+=(cam.tx-cam.cx)*k;cam.cz+=(cam.tz-cam.cz)*k;cam.ppt+=(cam.tppt-cam.ppt)*k;}
+    const done=Math.abs(cam.tx-cam.cx)<0.05&&Math.abs(cam.tz-cam.cz)<0.05&&Math.abs(cam.tppt-cam.ppt)<0.002;
+    if(done){cam.cx=cam.tx;cam.cz=cam.tz;cam.ppt=cam.tppt;}
+    window.atlasCam={cx:cam.cx,cz:cam.cz,ppt:cam.ppt};
+    if(typeof drawMap==='function')drawMap();
+    if(!done)cam.raf=requestAnimationFrame(camStep);
+  }
+  function camUpdate(){camTarget();if(!cam.raf)cam.raf=requestAnimationFrame(camStep);}
+  window.atlasCamera={follow(){window.atlasFreeCamera=false;cam.user=false;window.atlasDestination=null;camUpdate();},reset(){window.atlasFreeCamera=true;cam.user=false;cam.userPpt=null;window.atlasDestination=null;camUpdate();},state:()=>({...cam})};
+  {
+    const map=document.getElementById('map');
+    if(map){
+      map.addEventListener('wheel',e=>{e.preventDefault();if(cam.ppt==null)return;const r=map.getBoundingClientRect(),m=mapInfo();
+        const before=cam.ppt,after=Math.min(MAX_PX,Math.max(MIN_PX,before*Math.pow(1.0015,-e.deltaY)));
+        // Keep the tile under the cursor where it is.
+        const mx=e.clientX-r.left-r.width/2,mz=e.clientY-r.top-r.height/2;
+        cam.cx+=mx/before-mx/after;cam.cz-=mz/before-mz/after;cam.ppt=after;cam.userPpt=after;cam.user=true;
+        if(window.atlasFreeCamera||!account()){cam.tx=cam.cx;cam.tz=cam.cz;}cam.tppt=after;window.atlasCam={cx:cam.cx,cz:cam.cz,ppt:cam.ppt};drawMap();},{passive:false});
+      let drag=null,dragged=false;
+      map.addEventListener('pointerdown',e=>{if(e.button!==0)return;drag={x:e.clientX,z:e.clientY,cx:cam.cx,cz:cam.cz};dragged=false;map.setPointerCapture(e.pointerId);});
+      map.addEventListener('pointermove',e=>{if(!drag||cam.ppt==null)return;const dx=e.clientX-drag.x,dz=e.clientY-drag.z;if(!dragged&&Math.hypot(dx,dz)<4)return;dragged=true;window.atlasFreeCamera=true;window.atlasDestination=null;cam.user=true;cam.cx=drag.cx-dx/cam.ppt;cam.cz=drag.cz+dz/cam.ppt;cam.tx=cam.cx;cam.tz=cam.cz;cam.tppt=cam.ppt;window.atlasCam={cx:cam.cx,cz:cam.cz,ppt:cam.ppt};drawMap();});
+      map.addEventListener('pointerup',()=>{drag=null;if(dragged)refresh();});
+      map.addEventListener('click',e=>{if(dragged){dragged=false;e.stopImmediatePropagation();}},true);
+      map.addEventListener('dblclick',()=>{if(account()){window.atlasCamera.follow();}});
+    }
+  }
+  function refresh(){if(!S)return;camUpdate();screens();minimap();xpDrops(account());overlay();chatFeed();statusBars(account());idleNotifier(account());levelUps();deaths();if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='loot'&&body.dataset.plugin==='loot'&&!body.contains(document.activeElement)){const top=body.scrollTop;body.innerHTML=lootPanel();body.scrollTop=top;}infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account(),options=JSON.stringify(S.bots.filter(b=>!b.practice).map(b=>[b.name,b.inWorld]));if(options!==lastAccountOptions){lastAccountOptions=options;$('#client-account').innerHTML='<option value="">Free camera</option>'+S.bots.filter(b=>!b.practice).map(b=>`<option value="${E(b.name)}">${b.inWorld?'● ':'○ '}${E(safeName(b.name))}</option>`).join('');}$('#client-account').value=sel||'';$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
     hud.querySelector('.game-orbs').innerHTML=[['hp','♥',b?.hp?.now,b?.hp?.max],['prayer','✦',level('Prayer')?.currentLevel,level('Prayer')?.level],['run','ϟ',b?.runEnergy,null],['spec','⚔',b?.specialAttack,null]].map(([id,symbol,value,max])=>`<div class="game-orb" title="${id}: ${value??'not reported'}${max?' / '+max:''}"><img class="orb-art" src="${asset('orb-'+id+'.png')}" alt=""><span>${value??'—'}</span></div>`).join('');gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
-  const previousPick=pick;pick=function(name){previousPick(name);refresh();};
+  const previousPick=pick;pick=function(name){previousPick(name);cam.user=false;refresh();};
   rail.onclick=e=>{const b=e.target.closest('[data-client-plugin]');if(b){if(b.dataset.clientPlugin==='settings'){selectedTab='settings';hud.classList.remove('game-panel-hidden');gamePanel();}else showPlugin(b.dataset.clientPlugin);}};
   const togglePlugin=()=>{app.classList.toggle('client-collapsed');app.classList.toggle('mobile-plugin',!app.classList.contains('client-collapsed'));};$('#client-sidebar').onclick=togglePlugin;plugin.querySelector('[aria-label="Close plugin"]').onclick=togglePlugin;
   $('#client-more').onchange=e=>{if(e.target.value)showPlugin(e.target.value);e.target.value='';};
