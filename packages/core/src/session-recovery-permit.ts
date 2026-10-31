@@ -2,7 +2,7 @@ import {existsSync,mkdirSync,readFileSync,writeFileSync,linkSync,realpathSync,un
 import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {launchRevision} from './worker-release';
+import {capabilityRevision,launchRevision} from './worker-release';
 import {processMatchesRecent,safeKill} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
@@ -19,7 +19,7 @@ export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
 type EvidenceRef={path:string;sha256:string};
 export type ControlledRecoveryRequest=RecoveryRequest&{kind:'session-recovery';qualification:{delivery:EvidenceRef;proof:EvidenceRef}};
-export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;nativeFixture?:boolean};
+export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;capability?:(capability:unknown)=>string|undefined;nativeFixture?:boolean};
 type Checks=RecoveryPermitChecks;
 type Permit={schema:'session-recovery-permit/1';request:ControlledRecoveryRequest;controller:{pid:number;nonce:string;source:string};issuedAt:number;expiresAt:number;runnerSha256:string;nativeFixture:boolean;completedEnd?:unknown;missionRevision?:string};
 const sha=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');
@@ -160,7 +160,8 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
  if(!options.nativeFixture){
  const delivery=evidence(r.qualification?.delivery,base),proof=evidence(r.qualification?.proof,base);
  const gate=delivery.checks?.find((c:any)=>c.id==='native-session-recovery'&&c.phase==='practice');
- if(delivery.ok!==true||delivery.stage!=='delivered'||delivery.id!==spec.capability||delivery.runtimeRevision!==r.source
+ // The delivery records its capability release (delivery-cli.ts); the native proof and r.source are the launch release.
+ if(delivery.ok!==true||delivery.stage!=='delivered'||delivery.id!==spec.capability||typeof delivery.runtimeRevision!=='string'||delivery.runtimeRevision!==(options.capability??(c=>capabilityRelease(c,base)))(spec.capability)
   ||!Number.isFinite(delivery.at)||delivery.at<=r.endedAt||delivery.at>now
   ||!gate||delivery.checks.some((c:any)=>c.exitCode!==0||c.timedOut)
   ||proof.ok!==true)throw Error('recovery lacks current controller-native qualification');
@@ -173,6 +174,14 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
  if(emitted.sha256!==r.qualification.proof.sha256||realpathSync(resolve(base,emitted.path))!==realpathSync(resolve(base,r.qualification.proof.path)))throw Error('recovery native proof gate binding changed');
  }
  return {owner:{pid:owner.pid,nonce:owner.nonce,source:owner.source},now,runnerSha256,completedEnd:completed?end:undefined,missionRevision,latest};
+}
+// The current capability release of a delivery task's entry, read as data (runtime core must not import the router).
+function capabilityRelease(capability:unknown,base:string):string|undefined{
+ try{
+  if(typeof capability!=='string'||!/^[a-z0-9-]+$/.test(capability))return undefined;
+  const definition=json(join(base,'packages/router/tasks',capability+'.json'));
+  return definition.id===capability&&typeof definition.entry==='string'?capabilityRevision([definition.entry],base):undefined;
+ }catch{return undefined;}
 }
 // The controller publishes a complete immutable permit, then atomically claims the account.
 // A crash, malformed marker or failed child leaves its lease held. This module never clears an end or retries.

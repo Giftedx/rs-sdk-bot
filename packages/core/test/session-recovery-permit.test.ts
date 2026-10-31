@@ -47,7 +47,7 @@ function fixture(){
   detail:JSON.stringify({stdout:join(base,'.practice/deliveries/fixture/gate.out.log')})}]});
  const request:any={schema:'session-recovery/1',kind:'session-recovery',account:'Rod',server:'localhost:8888',runId:'task-run',nonce:'one',endedAt:100,source,
   qualification:{delivery:ref('.practice/deliveries/fixture/report.json'),proof:ref('.practice/deliveries/fixture/recovery.json')}};
- const options={now:()=>now,matches:(_pid:number,_marker:string)=>true,source:()=>source};
+ const options={now:()=>now,matches:(_pid:number,_marker:string)=>true,source:()=>source,capability:(c:unknown)=>c==='shark-supply-order'?source:undefined};
  return {base,put,request,options,runnerHash};
 }
 
@@ -307,4 +307,16 @@ test('restart counts inherited children without replay, ignores dead children, a
  expect(heldRecoveryOwners(f.base,['rod'],()=>true,now)).toEqual([]);
  expect(heldRecoveryOwners(f.base,[],()=>false,now)).toEqual([]);
  expect(()=>assertNoRecoveryLease('Rod',f.base)).toThrow('lease');expect(existsSync(recoveryPermitPaths(f.request,f.base).used)).toBe(false);
+});
+test('the delivery binds to its capability release while the request binds to the launch release',()=>{
+ const f=fixture(),capability='c'.repeat(64);
+ try{
+  const report=JSON.parse(readFileSync(join(f.base,'.practice/deliveries/fixture/report.json'),'utf8'));
+  f.put('.practice/deliveries/fixture/report.json',{...report,runtimeRevision:capability});
+  f.request.qualification.delivery={path:'.practice/deliveries/fixture/report.json',sha256:createHash('sha256').update(readFileSync(join(f.base,'.practice/deliveries/fixture/report.json'))).digest('hex')};
+  const options={...f.options,capability:()=>capability};
+  expect(()=>issueRecoveryPermit(f.request,f.base,{...options,capability:()=>source})).toThrow('controller-native qualification');
+  expect(()=>issueRecoveryPermit(f.request,f.base,{...options,capability:()=>undefined})).toThrow('controller-native qualification');
+  expect(()=>issueRecoveryPermit(f.request,f.base,options)).not.toThrow();
+ }finally{rmSync(f.base,{recursive:true,force:true});}
 });
