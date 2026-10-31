@@ -194,8 +194,12 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,source,base))throw Error('account session ownership is not settled');
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
  if(end&&persistentEnd(end.reason)&&!pendingRepair(account,end))throw Error('account recovery needs a verified repair: '+end.reason);
- if(existing?.standing===true&&existing.enabled)throw Error('account runs an owner standing job: '+existing.script);
- if(existing&&!reserved&&existing.coordinatorOwner!=='coordinator'){
+ // The recovery preflight of its own account parks the hand job next (prepareLiveRecovery turns it off), and the
+ // account's last session ended without a result or with a failure: that is what the recovery repairs. The production
+ // install after the recovery applies both checks against the parked job and the recovered status.
+ const parkedForRecovery=!!options.recoveryPreflight&&task.sessionRecovery?.account===account&&!!existing&&!reserved&&existing.coordinatorOwner!=='coordinator';
+ if(existing?.standing===true&&existing.enabled&&!parkedForRecovery)throw Error('account runs an owner standing job: '+existing.script);
+ if(existing&&!reserved&&existing.coordinatorOwner!=='coordinator'&&!parkedForRecovery){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }
