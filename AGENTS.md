@@ -18,6 +18,14 @@ The [coordinator](docs/script-contract.md#autonomous-coordination) owns its queu
 
 On Windows every background subprocess uses `windowsHide:true`. Run only the services a job needs. Check ownership before stopping a process.
 
+## Several agents
+
+Several agents work at once: sessions on this PC (Claude Code, Codex) and cloud sessions (Codex, Claude Code). Each takes work from the lane the [plan](docs/plans/joined-plan.md) Lanes table gives it.
+
+- One change, one branch `<agent>/<topic>`, one PR to `master`. Before work, check `gh pr list` and open a draft PR, so two agents never edit the same files. Merge when `bun run typecheck` and `bun test ./scripts ./packages` pass; never force-push `master`.
+- A local agent works in its own worktree (`git worktree add ../rs-sdk-bot-<agent> -b <agent>/<topic>`). Only the main checkout runs the local swarm, coordinator and fleet agent.
+- Each machine runs bots only for its own fleet side (Accounts, below). Cross-side resources move through fleet orders, never by logging in another side's account.
+
 ## Research-first gate
 
 For a new approach, check local code and [project use map](research/project-use-map.md) first. Search upstream only for an unresolved boundary or a repeated failure. Record **source -> local consumer -> reuse/adapt/reject -> check** in the topic file. Check license and attribution before copying code.
@@ -30,7 +38,7 @@ For a new approach, check local code and [project use map](research/project-use-
 - New live names must be actually funny: a real penis joke where the RuneScape meaning and the innuendo both work for the role, ideally a known phrase or a true double meaning (Moneyshot, Earlyshooter, Porksword, YewGotWood, MeatNTwoVeg, TossTheCaber). A rude word bolted onto a skill word is not a joke (CoinCock, PickpockDick, NabTheKnob). Scottish where it fits. 1-12 letters or digits. Take names from `packages/core/src/names.ts` only; add new ones there to the same standard. Keep existing accounts. First login registers the account and starts its clock.
 - Each assignment has one owner, budget, acceptance and next action. A vacant slot names its constraint.
 - `swarm.json` owns live assignments. `scripts/fleet.ts` holds templates; `apply` only creates a missing plan.
-- Two machines share the server: this PC (`local`) and a cloud agent (`FLEET_SIDE=cloud`). `fleet/owners.json` names each account's side; `openBot` refuses the other side's accounts. The cloud creates its own accounts with `bun scripts/fleet.ts create <name>` and `FLEET_SEED` set (a secret in its environment settings, never in git), so later sessions rebuild the same `bot.env`. Cross-side transfers are orders (`scripts/fleet-order.ts`) that each side runs with `scripts/fleet-trade.ts`; `scripts/fleet-sync.ts` shares orders, receipts and bank snapshots on the `fleet-data` branch (worktree `.practice/fleet-data`), and `bun scripts/fleet-agent.ts --daemon` runs that sync every 10 minutes and this side's part of each order, for accounts with no enabled swarm job.
+- Several machines share the server, each a named fleet side (`FLEET_SIDE`): this PC `local`, Codex cloud `cloud`, Claude Code cloud `claude-cloud`. `fleet/owners.json` names each account's side; `openBot` refuses the other side's accounts. A cloud side creates its own accounts with `bun scripts/fleet.ts create <name>` and `FLEET_SEED` set (a secret in its environment settings, never in git), so later sessions rebuild the same `bot.env`. Cross-side transfers are orders (`scripts/fleet-order.ts`) that each side runs with `scripts/fleet-trade.ts`; `scripts/fleet-sync.ts` shares orders, receipts and bank snapshots on the `fleet-data` branch (worktree `.practice/fleet-data`), and `bun scripts/fleet-agent.ts --daemon` runs that sync every 10 minutes and this side's part of each order, for accounts with no enabled swarm job.
 
 ## Game and host limits
 

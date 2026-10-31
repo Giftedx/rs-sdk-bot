@@ -19,14 +19,15 @@ The planner's best set wins 2 of 24 boards (Quest Points, Hitpoints); no known s
 
 Main run, coverage and live work run at once, so no lane starves the others. Every free live slot runs a whole-band batch or supplies a named consumer.
 
-| Lane | Target | Next |
-|---|---|---|
-| Main Overall | Main run gap from 43,726 to under 35,787 modelled ticks, with the route supply bill staged | Deliver the dialogue burst (`Q_BURST=1` in `scripts/generated/quest-lib.ts`; Druidic Ritual -31, Tree Gnome Village -114 ticks on practice, 3/3 each; about 1,500-1,750 across the quests before Overall, estimate). Then Smithing 1-41 by Superheat in the knights' stuns, the first five route steps on practice, and the live reaction delay (a us-east host if most clicks land 2+ ticks late) |
-| Coverage | Every scoreboard entry live, then batch | Quest burst screening (`.practice/quest-burst-coverage-20261029/`), quests from practice to live, the four missing quest scripts (Heroes' Quest, Watchtower, Legends' Quest, Tai Bwo Wannai Trio), skills at or near 1 (Magic, Firemaking, Herblore, Ranged, Agility), domains with no named action (Wilderness, Treasure Trails, Shilo Village) |
-| Specialist hiscores | A first #1 board | Price margins against `research/hiscores-2026-10-29.json`; Shaftshooter Ranged and Polevaulter Agility from fresh starts |
-| Wealth / logistics / GE | Supplies with named consumers | Spend the 75,500 coins on route supplies (anvil bars, runes); a consuming job for the 125 sharks |
-| Gear / collection | Route kit and best-in-slot gear | Combat cleanup and unattended release for Mightyrod; cow Defence batches |
-| Efficiency / visibility | Coordinator running with the throughput fixes | Restart after the screening; prove the first workspace build; requalify `fresh-rune-supply-order` |
+| Lane | Owner | Target | Next |
+|---|---|---|---|
+| Main Overall | local Codex | Main run gap from 43,726 to under 35,787 modelled ticks, with the route supply bill staged | Deliver the dialogue burst (`Q_BURST=1` in `scripts/generated/quest-lib.ts`; Druidic Ritual -31, Tree Gnome Village -114 ticks on practice, 3/3 each; about 1,500-1,750 across the quests before Overall, estimate). Then Smithing 1-41 by Superheat in the knights' stuns, the first five route steps on practice, and the live reaction delay (a us-east host if most clicks land 2+ ticks late) |
+| Coverage | Codex cloud (`cloud` side) | Every scoreboard entry live, then batch | Quests from practice to live on cloud accounts, the four missing quest scripts (Heroes' Quest, Watchtower, Legends' Quest, Tai Bwo Wannai Trio), skills at or near 1 (Magic, Firemaking, Herblore, Ranged, Agility); the offline reachability audit (`scripts/route-audit.ts`) for every quest start, shop, spawn and job tile |
+| Autopilot | Claude cloud (`claude-cloud` side) | Every account on every side in a useful job with no hand edits | A planner that writes each side's swarm jobs from the route supply bill, account skills and `scripts/tick-waste.ts`, from proven scripts only, as `scripts/chain.ts` chains that repeat; it retires stalled jobs |
+| Specialist hiscores | local Claude | A first #1 board | Price margins against `research/hiscores-2026-10-29.json`; Shaftshooter Ranged and Polevaulter Agility from fresh starts |
+| Wealth / logistics / GE | local Claude | Supplies with named consumers | Goldfarm on split knight spots; lobster chains for the 607 short; cross-side orders (`scripts/fleet-order.ts`) between local and cloud stock |
+| Gear / collection | local Claude | Route kit and best-in-slot gear | Combat cleanup and unattended release for Mightyrod; cow Defence batches |
+| Efficiency / visibility | Codex cloud | Faster, smaller bot processes and a green test gate | Linux CI (needs GitHub Actions billing); route search memory and time down 30% (`scripts/measure/route-memory.ts`) with a golden route test |
 
 ## Blockers
 
