@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793501374019,
+  "exportedAt": 1793501974826,
   "sources": {
     "state": {
-      "observedAt": 1793501361999.0493,
-      "ageMs": 12019.95068359375,
-      "stale": false,
+      "observedAt": 1793501500705.8975,
+      "ageMs": 474120.1025390625,
+      "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793501373749,
-      "ageMs": 270,
+      "observedAt": 1793501974204,
+      "ageMs": 622,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 1018270.1945800781,
+      "ageMs": 1619077.1945800781,
       "stale": true,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-49076743-cb62-468c-af0b-0ee836e90501",
-      "agent": "codex",
-      "startedAt": 1793501361955,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
@@ -536,7 +531,7 @@
           "pid": 23188,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         },
         {
@@ -550,7 +545,7 @@
           "pid": 29116,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         },
         {
@@ -564,11 +559,56 @@
           "pid": 35424,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         }
       ],
-      "pending": [],
+      "pending": [
+        {
+          "id": "qualify-oreelse-release-refusal-cleanup",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "queued",
+          "dependencies": []
+        },
+        {
+          "id": "run-oreelse-release-refusal-cleanup",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-oreelse-release-refusal-cleanup",
+              "status": "pending"
+            },
+            {
+              "id": "run-ranged-bigchopper-qualified-band70",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-iron-oreelse-settled-anvil85",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-oreelse-release-refusal-cleanup",
+              "status": "pending"
+            }
+          ]
+        }
+      ],
       "failed": [
         {
           "id": "refresh-quest-order-c1d361f0c8774961",
