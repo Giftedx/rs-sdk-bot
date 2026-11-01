@@ -45,7 +45,12 @@ export async function huntFight(s:Session,npc:{id:number;index:number},stop:()=>
  while(s.tick()-start<100){
   if(stop())throw Error('earth hunt fight stopped');
   const current=s.sdk.getState()?.nearbyNpcs.find(n=>n.index===npc.index&&n.id===npc.id&&(n.hp??1)>0);
-  if(!current&&(s.sdk.getSkillXp('Strength')??0)>before)return;
+  if(!current){
+   if((s.sdk.getSkillXp('Strength')??0)>before)return true;
+   const credited=await waitUntil(s,()=>stop()||(s.sdk.getSkillXp('Strength')??0)>before,{timeoutTicks:Math.min(3,100-(s.tick()-start))});
+   if(stop())throw Error('earth hunt fight stopped');
+   return credited&&(s.sdk.getSkillXp('Strength')??0)>before;
+  }
   const epoch=foodEpoch();
   if(current&&retries<3&&(epoch!==food||s.tick()-sent>=16)){
    food=epoch;sent=s.tick();retries++;await s.bot.attack(current);
@@ -136,7 +141,8 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
      if(held(id)&&!o.killsPerTarget)break;
      const npc=st()?.nearbyNpcs.filter(n=>target.npcIds.includes(n.id)&&!n.inCombat&&(n.hp??1)>0&&n.reachable!==false&&Math.max(Math.abs(n.x-target.spot.x),Math.abs(n.z-target.spot.z))<=18).sort((a,b)=>a.distance-b.distance)[0];
      if(!npc){await waitTicks(s,1);continue;}
-     await huntFight(s,npc,()=>over()||!!sustain.failure()||hp()<=6,()=>Object.values(ledger.eaten).reduce((n,v)=>n+v,0));kills++;lastOutput=s.tick();
+     if(!await huntFight(s,npc,()=>over()||!!sustain.failure()||hp()<=6,()=>Object.values(ledger.eaten).reduce((n,v)=>n+v,0)))continue;
+     kills++;lastOutput=s.tick();
      const dropped=await collectHuntLoot(s,over,true);if(dropped)ledger.found![dropped.id]=(ledger.found![dropped.id]??0)+dropped.count;
      console.log('EARTH_PRODUCTION_KILL '+JSON.stringify({kills,target:id,hp:hp(),tick:s.tick()}));
     }

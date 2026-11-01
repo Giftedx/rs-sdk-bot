@@ -56,6 +56,13 @@ test('a vanished target can still receive delayed own credit; a living stalled t
   try{if(lost)expect(await huntFight(s,npc,()=>false,()=>0)).toBe(true);else{await expect(huntFight(s,npc,()=>false,()=>0)).rejects.toThrow('earth hunt fight credit deadline');expect(attacks).toBe(4);}}finally{clearInterval(timer);}
  }
 });
+
+test('a stop during lost-target credit settlement still rejects the fight',async()=>{
+ let tick=0;const callbacks=new Set<()=>void>();
+ const s={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},sdk:{getSkillXp:()=>0,getState:()=>({nearbyNpcs:[]})},bot:{attack:async()=>({success:false})}} as any;
+ const timer=setInterval(()=>{tick++;for(const cb of callbacks)cb();},1);
+ try{await expect(huntFight(s,{id:100,index:2888},()=>tick>=1,()=>0)).rejects.toThrow('earth hunt fight stopped');}finally{clearInterval(timer);}
+});
 test('unknown inputs never dispatch crafting or authorize an unsupported hunt',()=>{
  for(const n of [-1,NaN,Infinity,1.2])expect(()=>productionBatch(9,875,n,100)).toThrow();
  expect(talismanTarget(1440)).toEqual({id:1440,npcIds:[1,2,3,4,5,6],spot:{x:3221,z:3219}});
