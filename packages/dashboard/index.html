@@ -277,7 +277,7 @@ function showViewerStatus(){
 }
 function setMode(m,preserve=false){
   if(m==='2d'&&!preserve){VIEWER_REQUEST++;clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'idle',detail:''};}
-  if(m==='2d'){$('#rsw').removeAttribute('src');rswFor=null;window.atlasOpponentClear?.();}
+  if(m==='2d'){$('#rsw').removeAttribute('src');rswFor=null;globalThis.atlasOpponentClear?.();}
   mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},VIEWER.origin);
   $('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';
   showViewerStatus();if(S){syncWorld();drawMap();}
