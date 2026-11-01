@@ -168,10 +168,21 @@ export function activeBuildFocus(state:CoordinatorState):{capability:string;sinc
  const record=state.tasks.find(r=>r.status==='running'&&r.spec.kind==='build'&&r.spec.capability&&failedBuildStreak(state,r.spec.capability)<FOCUS_FAILURE_LIMIT);
  return record?{capability:record.spec.capability!,since:record.startedAt??record.createdAt}:null;
 }
+// Builds that would publish the same file. Two builds of one capability share one workspace, so they always overlap;
+// other capabilities overlap when their owned files (`ownedFiles`) share a path. A publish that waits (`publishing`)
+// counts as a running build. A build that starts beside an overlapping one fails at publish and loses its work.
+export function buildOverlap(capability:string,busy:readonly string[],ownedFiles?:(capability:string)=>readonly string[]):string|null{
+ if(busy.includes(capability))return capability;
+ if(!ownedFiles)return null;
+ let mine:readonly string[];try{mine=ownedFiles(capability);}catch{return null;}
+ for(const other of busy){let theirs:readonly string[];try{theirs=ownedFiles(other);}catch{continue;}if(mine.some(f=>theirs.includes(f)))return other;}
+ return null;
+}
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
-export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean}={}):CoordTask|null{
+export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[]}={}):CoordTask|null{
  const records=new Map(state.tasks.map(r=>[r.spec.id,r])),running=state.tasks.filter(r=>r.status==='running');
+ const busyBuilds=[...new Set([...running.filter(r=>r.spec.kind==='build'&&r.spec.capability).map(r=>r.spec.capability!),...(resources.publishing?[resources.publishing]:[])])];
  const focusCaps=new Set<string>(),visited=new Set<string>();
  const includeFocus=(id:string)=>{
   if(visited.has(id))return;visited.add(id);const record=records.get(id);if(!record)return;
@@ -184,7 +195,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  }
  const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>records.get(id)?.status==='succeeded'));
  const sourceReady=resources.sourceReady??resources.nativeReady;
- const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false);};
+ const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false)&&!(resources.isolatedBuilds&&buildOverlap(r.spec.capability!,busyBuilds,resources.ownedFiles));};
  const buildWaiting=pending.some(r=>r.spec.kind==='build'&&canBuild(r)&&(!resources.focusCapability||focusCaps.has(r.spec.capability!)));
  // Give a freshly qualified capability one finite consumer before another
  // build invalidates it. The runtime still verifies source/review/admission.
