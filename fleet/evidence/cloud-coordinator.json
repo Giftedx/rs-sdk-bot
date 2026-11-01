@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793502345378,
+  "exportedAt": 1793502945470,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 59140190.73095703,
+      "ageMs": 59740282.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793502343587,
-      "ageMs": 1791,
+      "observedAt": 1793502944248,
+      "ageMs": 1222,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 59548619.74682617,
+      "ageMs": 60148711.74682617,
       "stale": true,
       "error": null
     }
@@ -76,23 +76,23 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 0,
+    "reportedRunning": 1,
     "observationStale": false,
     "jobs": [
       {
         "account": "TossTheCaber",
-        "script": "scripts/quest-cook-job.ts",
-        "state": "disabled"
+        "script": "scripts/generated/quest-priest.ts",
+        "state": "running"
       },
       {
         "account": "BraveHardon",
         "script": "scripts/quest-cook-job.ts",
-        "state": "ended: gave-up after 1 runs"
+        "state": "ended: done after 1 runs"
       },
       {
         "account": "Swordswallow",
-        "script": "scripts/generated/quest-runemysteries.ts",
-        "state": "ended: done after 1 runs"
+        "script": "scripts/generated/quest-priest.ts",
+        "state": "ended: gave-up after 1 runs"
       },
       {
         "account": "Unsheathed",
