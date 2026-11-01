@@ -18,18 +18,22 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800){
  const servers=names.map(n=>{assertSideOwns(n);return serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',n,'bot.env'),'utf8'));});
  if(new Set(servers.map(s=>s.toLowerCase())).size!==1)throw Error('carrier participants must share one server');
  type Carrier={s:Session;ready:boolean;deliveries:number;refills:number[];flight?:Promise<void>};
- const opened:Session[]=[],crew:Carrier[]=[],rows:unknown[]=[];let done=false,failure:unknown;
- const stop=()=>done||!!failure||opened.some(s=>s.tick()>cap)||names.some(n=>existsSync(join(root,'.practice/stop-'+n)));
- const fail=(s:Session,detail:string)=>{failure=Error(s.name+': '+detail);stopCarriers();};
- const open=async(name:string)=>{const s=await openBot(name,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);return s;};
- const launchRefill=(d:Carrier)=>{d.flight=restock(d.s).then(t=>{d.refills.push(t);d.ready=true;}).catch(e=>{if(!done){failure=e;stopCarriers();}});};
+ const opened:Session[]=[],crew:Carrier[]=[],rows:unknown[]=[],cancel=new AbortController();let done=false,failure:unknown,monitor:(()=>void)|undefined;
+ const stop=()=>{
+  if(cancel.signal.aborted)return true;
+  if(done||failure||opened.some(s=>s.tick()>cap)||names.some(n=>existsSync(join(root,'.practice/stop-'+n)))){cancel.abort(failure??Error('carrier route stopped'));stopCarriers();return true;}
+  return false;
+ };
+ const fail=(s:Session,detail:string)=>{failure=Error(s.name+': '+detail);cancel.abort(failure);stopCarriers();};
+ const open=async(name:string)=>{const s=await openBot(name,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);if(opened.length===1)monitor=s.onTick(()=>{stop();});return s;};
+ const launchRefill=(d:Carrier)=>{d.flight=restock(d.s).then(t=>{d.refills.push(t);d.ready=true;}).catch(e=>{if(!done){failure=e;cancel.abort(e);stopCarriers();}});};
  try{
   await getWorld();const donor=await open(names[1]!);await waitTicks(donor,3);assertRuneDonor(state(donor).player,donor.sdk.getInventory());
   const s=await open(names[0]!);if(!await waitUntil(s,()=>!!state(s)?.player&&!!s.sdk.getSkill('Runecraft'),{timeoutTicks:10}))throw Error('fresh player state unavailable');
   assertFreshRuneSkills(state(s).skills);
   const prefix=await freshBodyStart(s,donor,stop,async()=>{
    for(const n of names.slice(2)){if(stop())throw Error('carrier setup stopped');const h=await open(n);await waitTicks(h,3);if(!inside(h)||ess(h)!==27)throw Error('staged carrier not observed');crew.push({s:h,ready:true,deliveries:0,refills:[]});}
-  });
+  },cancel);
   const initial:Carrier={s:donor,ready:false,deliveries:1,refills:[]};crew.push(initial);launchRefill(initial);
   const xp=()=>s.sdk.getSkillXp('Runecraft')??0,start=s.tick();let batches=1,waiting=0;
   while(xp()<xpForLevel(99)){
@@ -48,5 +52,5 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800){
   const levelTick=s.tick();done=true;stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));
   const result={prefix,batches,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,levelTick,masterTicks:s.tick(),bodyLoopTicks:levelTick-start,waiting,rows,crew:crew.map(h=>({name:h.s.name,deliveries:h.deliveries,refills:h.refills}))};
   const logout=await settle(opened,true,'fresh Runecraft99 with carrier banks');return {ok:logout,...result,logout};
- }catch(error){done=true;stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));const logout=await settle(opened,false,String(error));return {ok:false,failure:String(error),logout};}
+ }catch(error){done=true;cancel.abort(error);stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));const logout=await settle(opened,false,String(error));return {ok:false,failure:String(error),logout};}finally{monitor?.();}
 }

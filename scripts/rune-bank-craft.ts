@@ -263,7 +263,7 @@ async function runeBankCli(){
    const {runRuneCarriers}=await import('./rune-carriers');
    const roster=runeCarrierRoster(process.argv.slice(2)),r=await runRuneCarriers(roster,Number(process.env.CAP??2800));
    console.log('RUNE_CARRIERS_RESULT '+JSON.stringify(r));
-   await finish([],r.ok,'failure' in r?r.failure:`runecraft=${r.level} batches=${r.batches}`);
+   await finish([],r.ok,'failure' in r?r.failure??'carrier route failed':`runecraft=${r.level} batches=${r.batches}`);
   }catch(error){await finish([],false,String(error));}
  }
  const target=runeBankTarget(Number(process.argv[3]??99));
