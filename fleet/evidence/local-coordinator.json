@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793503507054,
+  "exportedAt": 1793504107912,
   "sources": {
     "state": {
-      "observedAt": 1793503497873.882,
-      "ageMs": 9180.117919921875,
+      "observedAt": 1793504048846.5178,
+      "ageMs": 59065.482177734375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793503505168,
-      "ageMs": 1886,
+      "observedAt": 1793504107656,
+      "ageMs": 256,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 3151305.194580078,
+      "ageMs": 3752163.194580078,
       "stale": true,
       "error": null
     }
@@ -31,22 +31,7 @@
   },
   "workers": {
     "claude": {
-      "running": [
-        {
-          "id": "build-combat-giant-style-3",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "cow-progress-order",
-          "runId": "task-e2028ed9-2675-4a8a-ad1f-6103f0ebdbae",
-          "startedAt": 1793503340532,
-          "recordStatus": "running",
-          "pid": 36352,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        }
-      ],
+      "running": [],
       "pending": [],
       "failed": [
         {
@@ -518,6 +503,16 @@
           "startedAt": 1793498244478,
           "at": 1793500585440,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-combat-giant-style-3",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-e2028ed9-2675-4a8a-ad1f-6103f0ebdbae",
+          "startedAt": 1793503340532,
+          "at": 1793503643485,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": null,
@@ -536,28 +531,14 @@
     "codex": {
       "running": [
         {
-          "id": "run-quest-restless-bigchopper-east-entry",
-          "kind": "run",
+          "id": "build-druid-meats-independent-draynor-entry",
+          "kind": "build",
           "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-b087435c-e680-44ac-a67a-042b7017e30c",
-          "startedAt": 1793503339017,
+          "capability": "druid-meats-order",
+          "runId": "task-7bf41f3b-2646-47c7-856c-5587a0b602ee",
+          "startedAt": 1793504047344,
           "recordStatus": "running",
-          "pid": 30640,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        },
-        {
-          "id": "qualify-ranged-current-source-band80",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": "task-9e42e823-2069-43a6-9293-1324f38c6da3",
-          "startedAt": 1793503339065,
-          "recordStatus": "running",
-          "pid": 35072,
+          "pid": 22148,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -565,16 +546,6 @@
         }
       ],
       "pending": [
-        {
-          "id": "qualify-oreelse-installed-binding-fix",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "queued",
-          "dependencies": []
-        },
         {
           "id": "run-oreelse-bound-cleanup",
           "kind": "run",
@@ -585,7 +556,7 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-oreelse-installed-binding-fix",
+              "id": "qualify-recovery-after-druid-publication",
               "status": "pending"
             }
           ]
@@ -2836,6 +2807,56 @@
           "startedAt": 1793502816104,
           "at": 1793502835152,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-quest-restless-bigchopper-east-entry",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-b087435c-e680-44ac-a67a-042b7017e30c",
+          "startedAt": 1793503339017,
+          "at": 1793503665331,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-oreelse-installed-binding-fix",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-8b4b562c-a985-4c65-86b6-b77236ad675a",
+          "startedAt": 1793503613428,
+          "at": 1793503636144,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ranged-bigchopper-band80",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-5b717911-c52a-47ed-9513-f43d0d5f114d",
+          "startedAt": 1793503666180,
+          "at": 1793503669336,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-magic-falador45-fresh-3",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-42ff728f-4322-4b7d-969a-e6ec5967f734",
+          "startedAt": 1793503598494,
+          "at": 1793503598983,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-oreelse-binding-fix-headroom",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-6fd2d588-d267-4dbd-bd2b-7ad2cb7f4895",
+          "startedAt": 1793503832320,
+          "at": 1793503955765,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2859,13 +2880,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-iron-installed-binding-fix",
+        "id": "qualify-ranged-current-source-band80",
         "kind": "qualify",
         "goal": "skills",
-        "capability": "iron-progress-order",
-        "runId": "task-a2426003-39b9-442a-8aa3-71efd84358bf",
-        "startedAt": 1793503131256,
-        "at": 1793503338743,
+        "capability": "ranged-train",
+        "runId": "task-9e42e823-2069-43a6-9293-1324f38c6da3",
+        "startedAt": 1793503339065,
+        "at": 1793503612599,
         "evidence": "qualify"
       }
     },
@@ -3221,21 +3242,6 @@
           "dependencies": [
             {
               "id": "run-session-recovery-mmsmk1232-10",
-              "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-session-recovery-mightyrod-10",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-session-recovery-mmthv2350-10",
               "status": "pending"
             }
           ]
@@ -3915,8 +3921,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "run-druid-meats-mightyrod-ground",
-              "status": "failed"
+              "id": "run-druid-meats-mightyrod-draynor-consumer",
+              "status": "pending"
             }
           ]
         },
@@ -3934,23 +3940,8 @@
               "status": "pending"
             },
             {
-              "id": "run-druid-meats-mightyrod-ground",
-              "status": "failed"
-            }
-          ]
-        },
-        {
-          "id": "run-ranged-bigchopper-band80",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-ranged-current-source-band80",
-              "status": "running"
+              "id": "run-druid-meats-mightyrod-draynor-consumer",
+              "status": "pending"
             }
           ]
         },
@@ -3965,7 +3956,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-3",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3980,11 +3971,64 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-3",
-              "status": "running"
+              "status": "failed"
             },
             {
               "id": "qualify-combat-giant-style-3",
               "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-recovery-mightyrod-druid-release-end",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-recovery-after-druid-publication",
+              "status": "pending"
+            },
+            {
+              "id": "build-druid-meats-independent-draynor-entry",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-druid-meats-mightyrod-draynor-consumer",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "druid-meats-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-druid-meats-independent-draynor-entry",
+              "status": "running"
+            },
+            {
+              "id": "run-recovery-mightyrod-druid-release-end",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "qualify-recovery-after-druid-publication",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-druid-meats-independent-draynor-entry",
+              "status": "running"
             }
           ]
         }
@@ -3998,7 +4042,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 3,
+    "reportedRunning": 2,
     "observationStale": false,
     "jobs": [
       {
@@ -4144,7 +4188,7 @@
       {
         "account": "Bigchopper",
         "script": "scripts/quest-sweep.ts",
-        "state": "running"
+        "state": "disabled"
       }
     ]
   },
