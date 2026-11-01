@@ -349,7 +349,7 @@ const stateName=s=>({'observed':'observed','active-stale':'stale','unobserved':'
 const metric=(label,value)=>`<div class="statbox"><b class="${String(value).length>7?'word':''}">${E(value)}</b><span>${E(label)}</span></div>`;
 const row=(label,value,cls='',title='')=>`<div class="data-row" title="${E(title||label)}"><span class="label">${E(label)}</span><b class="value ${cls}">${E(value)}</b></div>`;
 function specialistRows(){
- return (S.boards||[]).map(board=>{const entries=liveBots().flatMap(b=>(b.ranks||[]).filter(r=>boardKey(r.board)===boardKey(board.board)).map(r=>({...r,name:b.name,at:b.ranksAt,recent:observedAt(b.ranksAt,600000)})));
+ return (S.boards||[]).map(board=>{const entries=liveBots().flatMap(b=>(b.ranks||[]).filter(r=>boardKey(r.board)===boardKey(board.board)).map(r=>({...r,name:b.name,at:r.at??b.ranksAt,recent:observedAt(r.at??b.ranksAt,600000)})));
   const recent=entries.filter(r=>r.recent),best=(recent.length?recent:entries).sort((a,b)=>a.rank-b.rank)[0];return {...board,best};});
 }
 function goalMetrics(){

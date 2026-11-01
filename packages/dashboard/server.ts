@@ -492,8 +492,10 @@ async function refreshExtra() {
         } catch { /* next round */ }
     }
 }
-// An account's rows on the value boards, in the shape of its skill rows (the value as the time text).
-const valueRanks = (name: string): Row[] => EXTRA.flatMap(e => { const r = extraBoards.get(e.board)?.rows.find(x => x.name.toLowerCase() === name.toLowerCase()); return r ? [{ board: e.board, rank: r.rank, level: 0, time: r.text }] : []; });
+// An account's rows on the value boards, in the shape of its skill rows (the value as the time text), with the
+// board read's own time (`at`): the account's ranksAt is the time of its skill page. A read older than 30 minutes
+// (the page has failed since) is not shown.
+const valueRanks = (name: string): (Row & { at: number })[] => EXTRA.flatMap(e => { const t = extraBoards.get(e.board), r = t && Date.now() - t.at < 1_800_000 ? t.rows.find(x => x.name.toLowerCase() === name.toLowerCase()) : undefined; return r ? [{ board: e.board, rank: r.rank, level: 0, time: r.text, at: t!.at }] : []; });
 setInterval(() => void refreshExtra(), 600_000);
 void refreshExtra();
 
@@ -1002,7 +1004,7 @@ function buildState() {
     // The other sides' accounts (Codex cloud, Claude cloud): snapshot items and levels, world-feed position, hiscore ranks.
     const local = new Set(bots.map(b => b.name.toLowerCase()));
     for (const r of remoteBots(snapshotFiles(), local, roster, firstSeen, now, process.env.FLEET_SIDE ?? 'local'))
-        (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: (ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), spark: [], rateSkill: 'all skills' });
+        (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: [...(ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), ...valueRanks(r.name)], spark: [], rateSkill: 'all skills' });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
