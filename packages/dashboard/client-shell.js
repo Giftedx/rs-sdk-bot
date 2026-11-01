@@ -270,7 +270,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The minimap: the 2D map art around the observed account at 4 px a tile, every bot a dot, the observed one a
   // white square in the centre. With no account it shows the whole known world.
   // In 3D it turns with the viewer's camera (yaw from the bridge, the viewer's own formula) and centres on the followed
-  // account, or on the camera in free camera and while it follows another player; the viewer's minimap is hidden (client-viewer.css). In 2D it stays north-up.
+  // account, or on the camera in free camera and while it follows another player; the viewer's minimap is hidden
+  // (client-viewer.css). In 2D it stays north-up.
   // The bridge sends the camera only when it moves, so the last one holds while the 3D frame is loaded.
   let miniView={cx:0,cz:0,PX:1,angle:0};
   function minimap(){const c=hud.querySelector('.game-minimap canvas');if(!c||!S)return;const g=c.getContext('2d'),W=c.width,H=c.height,m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};const b=account(),bp=b?.live||b?.pos;
