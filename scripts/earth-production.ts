@@ -27,6 +27,11 @@ export function talismanTarget(id:number){
  throw Error('unsupported earth access drop');
 }
 export const productionMode=(profile:string)=>profile==='owned-talismans'?'talismans':profile==='owned-craft'?'craft':undefined;
+export async function stageOwnedEquipment(ids:readonly number[],worn:()=>readonly number[],withdraw:(id:number,n:number)=>Promise<void>,close:()=>Promise<unknown>,equip:(id:number)=>Promise<void>){
+ for(const id of ids)if(!worn().includes(id))await withdraw(id,1);
+ await close();
+ for(const id of ids)if(!worn().includes(id))await equip(id);
+}
 export async function collectHuntLoot(s:Session,stop:()=>boolean,afterKill=false){
  const loot=()=>s.sdk.getState()?.groundItems.find(i=>[1438,1440,557].includes(i.id)&&i.distance<=10);
  if(stop())throw Error('earth hunt pickup stopped');
@@ -73,7 +78,7 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
  const banked=(id:number)=>banks().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  if(!await waitUntil(s,()=>!!pos()&&hp()>12&&!!s.client&&equipmentObserved(s.client as object),{timeoutTicks:25}))throw Error('earth production entry life/equipment unknown');
  const life=pos(),originalEquipment=eq().map(i=>i.id),style=st()?.combatStyle?.currentStyle,retaliate=st()?.autoRetaliateEnabled;
- let ended=false,cleanup=false,hpMin=hp(),failure='',kills=0,trips=0,lastOutput=start,initial:Map<number,number>|undefined;
+ let ended=false,cleanup=false,foodActive=false,hpMin=hp(),failure='',kills=0,trips=0,lastOutput=start,initial:Map<number,number>|undefined;
  void s.ended.then(()=>{ended=true;});
  const ledger:Ledger={consumed:0,crafted:0,air:0,eaten:{},found:{}};
  const terminal=()=>ended||sessionDied(life,pos())||hp()<=0;
@@ -81,7 +86,7 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
  const over=()=>terminal()||stopped()||s.tick()-start>=o.cap+(cleanup?1500:0);
  const off=s.onTick(()=>{hpMin=Math.min(hpMin,hp());});
  const sustain=startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async a=>{const r=await s.direct(a);return{success:!!r&&typeof r==='object'&&'success'in r&&r.success===true};}},
-  {food:FOOD,eatAt:25,onConsumed:e=>{ledger.eaten[e.id]=(ledger.eaten[e.id]??0)+1;}});
+  {food:FOOD,eatAt:25,reserved:()=>foodActive&&!st()?.bank.isOpen?{}:Object.fromEntries(FOOD.map(id=>[id,held(id)])),onConsumed:e=>{ledger.eaten[e.id]=(ledger.eaten[e.id]??0)+1;}});
  const check=()=>{if(over()||sustain.failure()||hp()<=6)throw Error('earth production stop/life/deadline: '+(sustain.failure()??''));};
  const travel=async(to:{x:number;z:number})=>{
   check();const ac=new AbortController(),guard=()=>{if(over()||sustain.failure()||hp()<=6)ac.abort();},off=s.onTick(guard);
@@ -115,9 +120,9 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
   if(o.mode==='talismans'){
    if(!Number.isSafeInteger(style)||typeof retaliate!=='boolean')throw Error('earth production combat controls unknown');
    if(s.sdk.getSkill('Attack')!.baseLevel<30||s.sdk.getSkill('Defence')!.baseLevel<10)throw Error('earth hunt combat prerequisites');
-   for(const id of [1277,1171,1115]){if(!eq().some(i=>i.id===id)){await withdraw(id,1);await equip(id);}}
    let slots=0;for(const id of FOOD){const n=Math.min(banked(id),Math.max(0,12-slots));await withdraw(id,n);slots+=n;}
-   if(!slots)throw Error('earth hunt owned food required');await s.bot.closeBank();
+   if(!slots)throw Error('earth hunt owned food required');
+   await stageOwnedEquipment([1277,1171,1115],()=>eq().map(i=>i.id),withdraw,()=>s.bot.closeBank(),equip);foodActive=true;
    if(!(await s.sdk.sendSetCombatStyle(1)).success||!await waitUntil(s,()=>st()?.combatStyle?.currentStyle===1,{timeoutTicks:8}))throw Error('earth hunt strength style unobserved');
    if(retaliate){await s.direct({type:'clickComponent',componentId:151,reason:'owned talisman hunt controls'});if(!await waitUntil(s,()=>st()?.autoRetaliateEnabled===false,{timeoutTicks:8}))throw Error('earth hunt auto-retaliate unobserved');}
    for(const id of [1440,1438]){
@@ -155,9 +160,10 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
   try{if(!terminal()&&!stopped()){
    if(insideAirAltar(pos()))await exitAirAltar(s,over);if(insideEarth())await exitEarth();
    await travel(o.mode==='talismans'?WEST:EAST);
+   await sustain.settle();if(sustain.failure())throw Error(sustain.failure()!);
    for(const item of [...eq()])if(!originalEquipment.includes(item.id)){await s.bot.unequipItem(item);if(!await waitUntil(s,()=>!eq().some(i=>i.id===item.id),{timeoutTicks:10}))throw Error('earth kit unequip unobserved');}
-   await sustain.settle();if(sustain.failure())throw Error(sustain.failure()!);await open();await deposit();
-   for(const id of originalEquipment)if(!eq().some(i=>i.id===id)){await withdraw(id,1);await equip(id);}banks();await s.bot.closeBank();
+   await open();await deposit();
+   await stageOwnedEquipment(originalEquipment,()=>eq().map(i=>i.id),withdraw,async()=>{banks();await s.bot.closeBank();},equip);
    if(o.mode==='talismans'){
     if(style!==undefined&&st()?.combatStyle?.currentStyle!==style){await s.sdk.sendSetCombatStyle(style);if(!await waitUntil(s,()=>st()?.combatStyle?.currentStyle===style,{timeoutTicks:8}))throw Error('earth style restore unobserved');}
     if(retaliate!==undefined&&st()?.autoRetaliateEnabled!==retaliate){await s.direct({type:'clickComponent',componentId:retaliate?150:151,reason:'restore earth hunt controls'});if(!await waitUntil(s,()=>st()?.autoRetaliateEnabled===retaliate,{timeoutTicks:8}))throw Error('earth auto-retaliate restore unobserved');}
