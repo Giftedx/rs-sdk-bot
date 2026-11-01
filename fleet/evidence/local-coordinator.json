@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793502575739,
+  "exportedAt": 1793502846042,
   "sources": {
     "state": {
-      "observedAt": 1793502188397.9773,
-      "ageMs": 387341.0227050781,
-      "stale": true,
+      "observedAt": 1793502837890.8506,
+      "ageMs": 8151.1494140625,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793502574359,
-      "ageMs": 1380,
+      "observedAt": 1793502845005,
+      "ageMs": 1037,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 2219990.194580078,
+      "ageMs": 2490293.194580078,
       "stale": true,
       "error": null
     }
@@ -27,7 +27,12 @@
     "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": null
+    "planner": {
+      "runId": "plan-28477452-6a4b-4a2b-826a-c2e3f178f2ff",
+      "agent": "codex",
+      "startedAt": 1793502816165,
+      "processState": "alive"
+    }
   },
   "workers": {
     "claude": {
@@ -519,70 +524,8 @@
       }
     },
     "codex": {
-      "running": [
-        {
-          "id": "run-ranged-bigchopper-qualified-band70",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": "task-5d46efdd-b0f0-4758-92dd-08c0b3c86e75",
-          "startedAt": 1793496331821,
-          "recordStatus": "running",
-          "pid": 23188,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": true,
-          "blocker": null
-        },
-        {
-          "id": "qualify-magic-falador45-fresh-2",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-18e66cc5-d484-4d57-8a49-78c68a6ee326",
-          "startedAt": 1793501111643,
-          "recordStatus": "running",
-          "pid": 29116,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": true,
-          "blocker": null
-        },
-        {
-          "id": "qualify-oreelse-release-refusal-cleanup",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-3fee2520-1d6f-49ce-be53-5f1a54e2b378",
-          "startedAt": 1793502135381,
-          "recordStatus": "running",
-          "pid": 33472,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": true,
-          "blocker": null
-        }
-      ],
+      "running": [],
       "pending": [
-        {
-          "id": "run-oreelse-release-refusal-cleanup",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-oreelse-release-refusal-cleanup",
-              "status": "running"
-            },
-            {
-              "id": "run-ranged-bigchopper-qualified-band70",
-              "status": "running"
-            }
-          ]
-        },
         {
           "id": "run-iron-oreelse-settled-anvil85",
           "kind": "run",
@@ -594,7 +537,7 @@
           "dependencies": [
             {
               "id": "run-oreelse-release-refusal-cleanup",
-              "status": "pending"
+              "status": "failed"
             }
           ]
         }
@@ -2781,6 +2724,16 @@
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
+          "id": "run-magic-falador45-fresh",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-20223d17-a63c-4e15-a784-3337ad3b77d3",
+          "startedAt": 1793502739523,
+          "at": 1793502750174,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
           "id": "build-combat-giant-style-2",
           "kind": "build",
           "goal": "skills",
@@ -2809,16 +2762,26 @@
           "startedAt": 1793501147775,
           "at": 1793501158267,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-oreelse-release-refusal-cleanup",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-5800f616-073b-4183-9b01-e2276f9eb249",
+          "startedAt": 1793502816104,
+          "at": 1793502835152,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
-        "id": "run-ranged-bigchopper-admitted-band60",
+        "id": "run-ranged-bigchopper-qualified-band70",
         "kind": "run",
         "goal": "skills",
         "capability": "ranged-train",
-        "runId": "task-1d85c1d4-dda3-4db1-a545-aef190b51df2",
-        "startedAt": 1793492281382,
-        "at": 1793495565609,
+        "runId": "task-5d46efdd-b0f0-4758-92dd-08c0b3c86e75",
+        "startedAt": 1793496331821,
+        "at": 1793502814427,
         "evidence": "live"
       },
       "lastRecovery": {
@@ -2832,13 +2795,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-druid-meats-ground-entry",
+        "id": "qualify-oreelse-release-refusal-cleanup",
         "kind": "qualify",
-        "goal": "quests",
-        "capability": "druid-meats-order",
-        "runId": "task-4cf76270-7841-4b4f-9b93-ffd0af558a28",
-        "startedAt": 1793501105325,
-        "at": 1793502133920,
+        "goal": "skills",
+        "capability": "session-recovery-only",
+        "runId": "task-3fee2520-1d6f-49ce-be53-5f1a54e2b378",
+        "startedAt": 1793502135381,
+        "at": 1793502745403,
         "evidence": "qualify"
       }
     },
@@ -3898,21 +3861,6 @@
           ]
         },
         {
-          "id": "run-magic-falador45-fresh",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-magic-falador45-fresh-2",
-              "status": "running"
-            }
-          ]
-        },
-        {
           "id": "qualify-quest-sweep-druid-main",
           "kind": "qualify",
           "goal": "quests",
@@ -4045,11 +3993,6 @@
         "state": "ended: exit orphaned: attempt 1793474282434-0000012792-0000000001 owner 12792 gone"
       },
       {
-        "account": "Shaftmaker",
-        "script": "scripts/chain.ts",
-        "state": "disabled"
-      },
-      {
         "account": "mmsmk1232",
         "script": "scripts/goldfarm.ts",
         "state": "disabled"
@@ -4092,16 +4035,21 @@
       {
         "account": "Bigchopper",
         "script": "scripts/ranged-train.ts",
-        "state": "running"
-      },
-      {
-        "account": "OreElse",
-        "script": "scripts/smelt-bars.ts",
         "state": "disabled"
       },
       {
         "account": "Mightyrod",
         "script": "scripts/druid-meats.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Shaftmaker",
+        "script": "scripts/magic-order.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "OreElse",
+        "script": "scripts/chain.ts",
         "state": "disabled"
       }
     ]
