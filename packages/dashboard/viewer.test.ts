@@ -179,3 +179,18 @@ test('the 3D camera reaches the page after readiness, and the page presses the h
  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasOpenWorldMap:true}});
  expect(clicked).toEqual(['.minimap-container .compass','.minimap-container .worldmap-icon']);
 });
+
+test('opponent information: the followed player\'s target after a hit, renamed when hidden, cleared when it stops facing',async()=>{
+ const b=browser();class Socket {listeners=new Map<string,Function[]>();constructor(..._args:any[]){}addEventListener(t:string,fn:Function){this.listeners.set(t,[...(this.listeners.get(t)||[]),fn]);}message(m:any){for(const f of this.listeners.get('message')||[])f({data:JSON.stringify(m)});}}
+ b.host.WebSocket=Socket;installViewerBridge(b.host);b.host.location.href+='&follow=Worker';const socket=new b.host.WebSocket('wss://rs-sdk-demo.fly.dev/worldfeed');
+ socket.message({t:'roster',p:[[7,'HiddenActor',1,1,0,3],[8,'Worker',1,1,0,3]]});
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+ const opp=()=>b.messages.filter(m=>'atlasOpponent' in m.data).map(m=>m.data.atlasOpponent);
+ // Facing a knight with no hit yet (pickpocketing): nothing to show.
+ socket.message({t:'tick',k:1,p:[{i:8,f:1,fe:23}],n:[{i:23,f:1,t:26}]});expect(opp()).toEqual([]);
+ socket.message({t:'tick',k:2,n:[{i:23,hm:[[3,1]],hp:[9,12]}]});expect(opp()).toEqual([{kind:'npc',type:26,hp:[9,12]}]);
+ socket.message({t:'tick',k:3,n:[{i:23,hm:[[3,1]],hp:[9,12]}]});expect(opp()).toHaveLength(1);
+ socket.message({t:'tick',k:4,p:[{i:8,fe:32768+7},{i:7,hm:[[2,1]],hp:[5,10]}]});
+ expect(opp()[1]).toEqual({kind:'player',name:'⟦MAIN⟧',hp:[5,10]});expect(JSON.stringify(b.messages)).not.toContain('HiddenActor');
+ socket.message({t:'tick',k:5,p:[{i:8,fe:-1}]});expect(opp()[2]).toBeNull();
+});
