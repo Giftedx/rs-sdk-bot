@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793511406386,
+  "exportedAt": 1793511466390,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 68201198.73095703,
+      "ageMs": 68261202.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793511404347,
-      "ageMs": 2039,
+      "observedAt": 1793511466351,
+      "ageMs": 39,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 68609627.74682617,
+      "ageMs": 68669631.74682617,
       "stale": true,
       "error": null
     }
@@ -76,7 +76,7 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 0,
+    "reportedRunning": 1,
     "observationStale": false,
     "jobs": [
       {
@@ -97,7 +97,7 @@
       {
         "account": "Unsheathed",
         "script": "scripts/shop-buyer.ts",
-        "state": "external (status fresh, not started by swarm)"
+        "state": "running"
       }
     ]
   },
