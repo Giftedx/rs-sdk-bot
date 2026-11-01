@@ -14,6 +14,7 @@ import {inside,leaveBody,enterBody,stopCarriers} from './rune-carrier-bank';
 import {leaveRuneStarter,runeSupplyAssets} from './rune-supply';
 import {assertRuneDonor} from './rune-carrier-roster';
 import {runeStageRoster,runeCarrierShortfall} from './rune-carrier-stage-contract';
+import {runeStageStatus} from './rune-carrier-stage-status';
 
 export async function mainRuneStage(args:readonly string[]){
  const {mode,names}=runeStageRoster(args),root=resolve(import.meta.dir,'..'),dir=join(root,'.practice');
@@ -25,7 +26,7 @@ export async function mainRuneStage(args:readonly string[]){
  const runId=process.env.COORDINATOR_RUN_ID??'',read=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
  assertAccountOwnership(names,read(join(dir,'coordinator/state.json')),read(join(root,'swarm.json')).jobs,n=>existsSync(join(dir,'stop-'+n)),runId);
  for(const n of names)if(existsSync(join(dir,'status',n+'.json')))assertRecoverableStatus(read(join(dir,'status',n+'.json')),undefined,()=>true);
- const release=acquireAccountLeases(names,runId),cancel=new AbortController(),opened:Session[]=[],active=new Set<Session>(),closing=new Set<Session>(),monitors:(()=>void)[]=[],flights:Promise<unknown>[]=[],rows:unknown[]=[];
+ const release=acquireAccountLeases(names,runId),cancel=new AbortController(),opened:Session[]=[],active=new Set<Session>(),closing=new Set<Session>(),monitors:(()=>void)[]=[],flights:Promise<unknown>[]=[],rows:unknown[]=[],log=runeStageStatus(names);
  let failure:unknown,done=false,logout=true,receivedEssence=0,receivedTalismans=0;
  const stop=()=>{
   if(cancel.signal.aborted)return true;
@@ -37,7 +38,7 @@ export async function mainRuneStage(args:readonly string[]){
  const fail=(s:Session,detail:string)=>{if(!closing.has(s)&&!done){failure=Error(s.name+': '+detail);stop();}};
  const open=async(n:string)=>{check();const s=await openBot(n,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);active.add(s);monitors.push(s.onTick(stop));
   if(!await waitUntil(s,()=>stop()||!!state(s)?.player&&state(s).skills?.length===21,{timeoutTicks:20}))throw Error('Rune staging initial state unavailable');check();return s;};
- const close=async(s:Session,ok:boolean)=>{closing.add(s);logout=(await settle([s],ok,'finite Rune carrier staging'))&&logout;active.delete(s);};
+ const close=async(s:Session,ok:boolean)=>{closing.add(s);logout=(await settle([s],ok,'finite Rune carrier staging',{log:line=>log(s.name,line)}))&&logout;active.delete(s);};
  const xp=(s:Session)=>JSON.stringify(state(s).skills.map(i=>[i.name,i.experience]));
  const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const bankItems=(s:Session)=>{const b=s.bankObservation?.();if(!b)throw Error('Rune staging bank unobserved');return b.items;};
