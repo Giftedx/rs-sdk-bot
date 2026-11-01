@@ -4,7 +4,7 @@ import{join,resolve}from'node:path';
 import{createHash}from'node:crypto';
 import{freemem}from'node:os';
 import{createBot}from'./bots';
-import{applyPreset}from'./presets';
+import{applyPreset,type SaveConfig}from'./presets';
 import{practiceDir,rsSdkRoot}from'./paths';
 import{runBotName}from'./prove';
 import{killTree}from'./proc';
@@ -25,6 +25,7 @@ const amount=(log:string,key:string)=>Number(log.split(/\r?\n/).filter(l=>l.star
 const exits=(r:Run)=>({exit:r.code===0&&!r.timedOut,logout:/^LOGOUT logged-out\r?$/m.test(r.log)&&!/^WARN .*?(logout|session close)/m.test(r.log)});
 const unchanged=(a:Save,b:Save,allowed:number[]=[])=>[...new Set([...Object.values(a.inventories).flat(),...Object.values(b.inventories).flat()].map(i=>i.id))].every(id=>allowed.includes(id)||total(a,id)===total(b,id));
 const atBank=(s:Save)=>s.position.level===0&&Math.max(Math.abs(s.position.x-3253),Math.abs(s.position.z-3420))<=4;
+export const shopSupplyFixture=(coins:number,extra:SaveConfig={}):SaveConfig=>({position:{x:3185,z:3436,level:0},skills:{Attack:49,Strength:10,Defence:11,Hitpoints:35},inventory:[{id:1277,count:1}],bank:[{id:995,count:coins},{id:554,count:1482},{id:557,count:3},{id:1521,count:7}],...extra});
 export function shopSupplyChecks(before:Save,after:Save,r:Run){const spent=amount(r.log,'spentTotal');return{
  ...exits(r),entry:total(before,557)===3&&total(before,554)===1482&&total(before,995)===352288,
  target:bank(after,557)===1139&&total(after,557)===1139&&amount(r.log,'boughtTotal')===1136&&amount(r.log,'targetMet')===1,
@@ -105,7 +106,7 @@ export async function runShopSupplyNative(directory:string){
   const seed=async(index:number,coins:number,extra:Record<string,unknown>={})=>{
    const name=runBotName('flshop',index);if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice identity already exists');
    const {envPath}=await createBot(name);writeFileSync(envPath,geProofAccountEnv(readFileSync(envPath,'utf8'),endpoint));assertGeProofAccount(readFileSync(envPath,'utf8'),endpoint.env);actors.add(name);
-   const path=await applyPreset(name,{position:{x:3185,z:3436,level:0},skills:{Hitpoints:35},inventory:[{id:1277,count:1}],bank:[{id:995,count:coins},{id:554,count:1482},{id:557,count:3},{id:1521,count:7}],...extra});return{name,path};
+   const path=await applyPreset(name,shopSupplyFixture(coins,extra));return{name,path};
   };
   const buyer=await seed(1,352288);copyFileSync(buyer.path,join(directory,'before.sav'));
   const empty=await command(buyer.name,'empty-ge',false);if(empty.code===0||!empty.log.includes('"acquired":0')||!empty.log.includes('LOGOUT logged-out'))throw Error('real zero-fill GE settlement not proved');
