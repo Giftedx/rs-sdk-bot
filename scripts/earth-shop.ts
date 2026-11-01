@@ -9,10 +9,36 @@ import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
 
 export function earthRefillAmount(shelf:number,missing:number){
  if(![shelf,missing].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('earth refill quantities unknown');
- return Math.min(50,shelf,missing);
+ return Math.min(1,shelf,missing);
 }
 export const earthSeedNeeded=(shelf:number,carried:number,seeded:boolean)=>Number.isSafeInteger(shelf)&&shelf>=0&&carried>=1&&!seeded;
 export const earthRefillStop=(idle:number,affordable:boolean):'budget'|'stock-wait'|undefined=>!affordable?'budget':idle>=25?'stock-wait':undefined;
+
+export async function sellEarthSeedObserved(s:Session,stop:()=>boolean){
+ const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);
+ const earth=count(557),coins=count(995);if(earth<1)throw Error('earth seed is not owned');
+ await s.bot.sellToShop(/^earth rune$/i,1);
+ const paired=()=>count(557)===earth-1&&count(995)>coins;
+ if(!await waitUntil(s,()=>stop()||paired(),{timeoutTicks:10})||stop()||!paired())
+  throw Error('earth seed debit/positive credit unobserved; zero-price sale remains unresolved');
+ return count(995)-coins;
+}
+
+// Item and coin packets need not arrive in the same publication. Price the observed paired change.
+export async function buyEarthObserved(s:Session,n:number,reserve:number,remaining:number,stop:()=>boolean){
+ if(n!==1)throw Error('earth settlement requires one purchase packet');
+ const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);
+ const coins=count(995),earth=count(557);
+ await buyWithBudget(s.bot,s.sdk,'Earth rune',n,reserve,remaining);
+ if(count(557)===earth&&count(995)===coins)await waitTicks(s,2);
+ const changed=()=>count(557)!==earth||count(995)!==coins;
+ if(changed()&&!await waitUntil(s,()=>stop()||count(557)>earth&&count(995)<coins,{timeoutTicks:6}))throw Error('earth purchase paired debit/credit unobserved');
+ if(stop())throw Error('earth purchase stopped before settlement');
+ const bought=count(557)-earth,spent=coins-count(995);
+ if(!Number.isSafeInteger(bought)||bought<0||bought>n||!Number.isSafeInteger(spent)||spent<0||spent>remaining||count(995)<reserve
+  ||bought===0&&spent!==0||bought>0&&spent<bought)throw Error('earth purchase paired accounting unresolved');
+ return{bought,spent};
+}
 
 export async function runEarthRefill(s:Session,o:{profile:string;cap:number;target:number;maximum:number;spend:number;reserve:number;seedUsed:number;stop:()=>boolean}){
  const conf=PROFILES[o.profile];
@@ -60,11 +86,8 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
    if(!(await s.bot.openShop(conf.npc)).success||!await waitUntil(s,()=>st()?.shop.isOpen===true&&shelf()!==undefined,{timeoutTicks:10}))throw Error('earth refill shop unobserved');
    console.log('EARTH_REFILL_SHELF '+JSON.stringify({tick:s.tick(),count:shelf(),carried:held(557)}));
    if(earthSeedNeeded(shelf()!,held(557),o.seedUsed===1)){
-    const earth=held(557),coins=held(995);uncertain=true;
-    await s.bot.sellToShop(/^earth rune$/i,1);
-    if(!await waitUntil(s,()=>held(557)===earth-1&&held(995)>=coins,{timeoutTicks:10}))throw Error('earth seed debit/credit unobserved');
-    await waitTicks(s,1);
-    seeded=1;seedCredit=held(995)-coins;uncertain=false;lastProgress=s.tick();
+    uncertain=true;seedCredit=await sellEarthSeedObserved(s,over);
+    seeded=1;uncertain=false;lastProgress=s.tick();
     console.log('EARTH_REFILL_SEED '+JSON.stringify({tick:s.tick(),seeded,seedCredit,count:shelf()}));
    }
    lastProgress=s.tick();let previous=shelf();
@@ -76,7 +99,7 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
      const item=st()!.shop.shopItems.find(i=>i.id===557)!,unit=maximumUnitCost(item,st()!.shop.shopConfig);
      const unavailable=earthRefillStop(s.tick()-lastProgress,held(995)-o.reserve>=unit&&o.spend-spentTotal>=unit);
      if(unavailable){stop=unavailable;break;}
-     uncertain=true;const result=await buyWithBudget(s.bot,s.sdk,'Earth rune',n,o.reserve,o.spend-spentTotal);
+     uncertain=true;const result=await buyEarthObserved(s,n,o.reserve,o.spend-spentTotal,over);
      boughtTotal+=result.bought;spentTotal+=result.spent;uncertain=false;
      if(result.bought){lastProgress=s.tick();continue;}
      if(result.spent)throw Error('earth debit without observed runes');
