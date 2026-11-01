@@ -41,6 +41,15 @@
       "timeoutMs": 900000
     },
     {
+      "id": "rune-carrier-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/rune-carriers-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
       "id": "rune-bank-craft-saved",
       "phase": "consumer",
       "command": [
@@ -49,15 +58,6 @@
         "--verify"
       ],
       "timeoutMs": 30000
-    },
-    {
-      "id": "rune-carrier-practice",
-      "phase": "practice",
-      "command": [
-        "bun",
-        "packages/practice/src/rune-carriers-proof.ts"
-      ],
-      "timeoutMs": 1380000
     },
     {
       "id": "rune-carrier-saved",

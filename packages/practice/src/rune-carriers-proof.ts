@@ -52,7 +52,7 @@ async function run(dir:string){
   const started=Date.now(),child=Bun.spawn(['bun','scripts/rune-bank-craft.ts',...names,'--carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'2800'},windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
   let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
   const stop=()=>{termination??=killTree(child.pid);};
-  const timer=setTimeout(()=>{timedOut=true;stop();},1200000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
+  const timer=setTimeout(()=>{timedOut=true;stop();},880000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
   const code=await child.exited;clearTimeout(timer);clearInterval(floor);await termination;
   const meta={source,names,freshAbsent,code,timedOut,lowMemory,elapsedMs:Date.now()-started,publications:[] as {name:string;expectedTicks:number;matched:boolean}[]};
   writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));
