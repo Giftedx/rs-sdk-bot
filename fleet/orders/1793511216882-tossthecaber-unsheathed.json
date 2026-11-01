@@ -1,0 +1,22 @@
+{
+  "id": "1793511216882-tossthecaber-unsheathed",
+  "server": "rs-sdk-demo.fly.dev",
+  "from": "TossTheCaber",
+  "to": "Unsheathed",
+  "item": "Coins",
+  "count": 400,
+  "start": 1793511216882,
+  "end": 1793511816882,
+  "meet": [
+    {
+      "x": 2654,
+      "z": 3283,
+      "level": 0
+    },
+    {
+      "x": 2655,
+      "z": 3283,
+      "level": 0
+    }
+  ]
+}
