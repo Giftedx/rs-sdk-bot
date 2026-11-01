@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793500773064,
+  "exportedAt": 1793501374019,
   "sources": {
     "state": {
-      "observedAt": 1793500757087.423,
-      "ageMs": 15976.576904296875,
+      "observedAt": 1793501361999.0493,
+      "ageMs": 12019.95068359375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793500771220,
-      "ageMs": 1844,
+      "observedAt": 1793501373749,
+      "ageMs": 270,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 417315.1945800781,
+      "ageMs": 1018270.1945800781,
       "stale": true,
       "error": null
     }
@@ -27,7 +27,12 @@
     "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": null
+    "planner": {
+      "runId": "plan-49076743-cb62-468c-af0b-0ee836e90501",
+      "agent": "codex",
+      "startedAt": 1793501361955,
+      "processState": "alive"
+    }
   },
   "workers": {
     "claude": {
@@ -535,28 +540,28 @@
           "blocker": null
         },
         {
-          "id": "build-iron-fresh-baseline-anvil",
-          "kind": "build",
+          "id": "qualify-magic-falador45-fresh-2",
+          "kind": "qualify",
           "goal": "skills",
-          "capability": "iron-progress-order",
-          "runId": "task-4cfb16c4-3860-4ea3-9c5c-960fd23eb9f9",
-          "startedAt": 1793500401642,
+          "capability": "magic-order",
+          "runId": "task-18e66cc5-d484-4d57-8a49-78c68a6ee326",
+          "startedAt": 1793501111643,
           "recordStatus": "running",
-          "pid": 11148,
+          "pid": 29116,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
           "blocker": null
         },
         {
-          "id": "build-combat-giant-style-2",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "cow-progress-order",
-          "runId": "task-dd197ff1-9456-4858-aa93-08e765ff2e2e",
-          "startedAt": 1793500755398,
+          "id": "qualify-druid-meats-ground-entry",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "druid-meats-order",
+          "runId": "task-4cf76270-7841-4b4f-9b93-ffd0af558a28",
+          "startedAt": 1793501105325,
           "recordStatus": "running",
-          "pid": 30444,
+          "pid": 35424,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -2686,6 +2691,16 @@
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
+          "id": "qualify-iron-retained-anvil-consumer",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-66ef0803-a982-40a1-b480-8e3daa67f5be",
+          "startedAt": 1793500818791,
+          "at": 1793501110473,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
           "id": "review-falador-same-script-recovery-admission",
           "kind": "review",
           "goal": "skills",
@@ -2744,6 +2759,26 @@
           "startedAt": 1793499842528,
           "at": 1793500360738,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-combat-giant-style-2",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-dd197ff1-9456-4858-aa93-08e765ff2e2e",
+          "startedAt": 1793500755398,
+          "at": 1793501105037,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-iron-oreelse-approved-anvil85",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-22e00b95-83e3-40e3-84b7-ba5ca7a6aeef",
+          "startedAt": 1793501147775,
+          "at": 1793501158267,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2767,14 +2802,14 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-ranged-current-source-band70",
-        "kind": "qualify",
+        "id": "build-iron-fresh-baseline-anvil",
+        "kind": "build",
         "goal": "skills",
-        "capability": "ranged-train",
-        "runId": "task-86823b74-e8b4-48a0-b1d0-5fb85db2f0a4",
-        "startedAt": 1793496022654,
-        "at": 1793496330641,
-        "evidence": "qualify"
+        "capability": "iron-progress-order",
+        "runId": "task-4cfb16c4-3860-4ea3-9c5c-960fd23eb9f9",
+        "startedAt": 1793500401642,
+        "at": 1793500817600,
+        "evidence": "build"
       }
     },
     "unassigned": {
@@ -2821,44 +2856,6 @@
           "dependencies": [
             {
               "id": "build-shark-child-deadline-aligned",
-              "status": "failed"
-            }
-          ]
-        },
-        {
-          "id": "qualify-quest-sweep-druid",
-          "kind": "qualify",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-druid-meats-mightyrod-upstairs",
-              "status": "failed"
-            }
-          ]
-        },
-        {
-          "id": "run-quest-druid-mightyrod",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-quest-sweep-druid",
-              "status": "pending"
-            },
-            {
-              "id": "run-druid-meats-mightyrod-upstairs",
-              "status": "failed"
-            },
-            {
-              "id": "build-totem-reconciled-publication-baseline",
               "status": "failed"
             }
           ]
@@ -3837,40 +3834,6 @@
           ]
         },
         {
-          "id": "qualify-iron-retained-anvil-consumer",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "iron-progress-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "build-iron-fresh-baseline-anvil",
-              "status": "running"
-            }
-          ]
-        },
-        {
-          "id": "run-iron-oreelse-retained-anvil85",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "iron-progress-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "build-iron-fresh-baseline-anvil",
-              "status": "running"
-            },
-            {
-              "id": "qualify-iron-retained-anvil-consumer",
-              "status": "pending"
-            }
-          ]
-        },
-        {
           "id": "qualify-combat-giant-style-1",
           "kind": "qualify",
           "goal": "skills",
@@ -3881,7 +3844,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-2",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3896,7 +3859,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-2",
-              "status": "running"
+              "status": "failed"
             },
             {
               "id": "qualify-combat-giant-style-1",
@@ -3914,8 +3877,57 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-magic-falador45-fresh",
-              "status": "failed"
+              "id": "qualify-magic-falador45-fresh-2",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-druid-meats-mightyrod-ground",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "druid-meats-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-druid-meats-ground-entry",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "qualify-quest-sweep-druid-main",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-druid-meats-mightyrod-ground",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-quest-druid-mightyrod-main",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-quest-sweep-druid-main",
+              "status": "pending"
+            },
+            {
+              "id": "run-druid-meats-mightyrod-ground",
+              "status": "pending"
             }
           ]
         }
@@ -4003,11 +4015,6 @@
         "state": "disabled"
       },
       {
-        "account": "OreElse",
-        "script": "scripts/chain.ts",
-        "state": "disabled"
-      },
-      {
         "account": "PickpockDick",
         "script": "scripts/goldfarm.ts",
         "state": "ended: died after 1 runs"
@@ -4076,6 +4083,11 @@
         "account": "Bigchopper",
         "script": "scripts/ranged-train.ts",
         "state": "running"
+      },
+      {
+        "account": "OreElse",
+        "script": "scripts/smelt-bars.ts",
+        "state": "disabled"
       }
     ]
   },
