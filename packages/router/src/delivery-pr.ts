@@ -8,6 +8,8 @@ import {tmpdir} from 'node:os';
 import {dirname,isAbsolute,join} from 'node:path';
 import {atomicJson} from './coordinator-store';
 import {BASE_DIR,fileHash,mergeText,type WorkspaceBase} from './build-workspace';
+import {importClosure} from './delivery-cli';
+import {releaseFiles,workerLaunchers} from '../../core/src/worker-release';
 
 export interface DeliveryPr{
  taskId:string;capability:string;branch:string;files:string[];snapshot:string;base:string;title:string;body:string;
@@ -52,6 +54,13 @@ export function prBody(input:{taskId:string;capability:string;files:string[];pre
  ].join('\n');
 }
 
+// Every file the build's source can run: the capability release of its entry, which follows literal worker paths a
+// worker starts as a subprocess, plus the import closure of its owned files and tests.
+export function deliverySourceSet(entry:string,files:readonly string[],root:string):string[]{
+ let release:string[]=[];try{release=releaseFiles([entry,...workerLaunchers],root);}catch{/* an unreleasable entry keeps the import closure */}
+ return [...new Set([...release,...importClosure([entry,...files],root)])].sort();
+}
+
 const readRecords=(dir:string):DeliveryPr[]=>existsSync(dir)?readdirSync(dir).filter(n=>n.endsWith('.json')).flatMap(n=>{try{return[JSON.parse(readFileSync(join(dir,n),'utf8'))];}catch{return[];}}):[];
 
 // Copies the build's version of each published file and the bytes it started from into the run folder, and records
@@ -88,13 +97,15 @@ async function checkPrerequisites(pr:DeliveryPr,dir:string,mainRoot:string,run:R
   const file=join(dir,id+'.json');if(!existsSync(file))continue;
   const before:DeliveryPr=JSON.parse(readFileSync(file,'utf8'));
   if(before.state==='empty')continue;
-  if(before.state!=='opened')throw new DeliveryWait('waiting for earlier delivery '+before.branch+' ('+before.state+')');
+  if(before.state!=='opened')throw new DeliveryWait('waiting for earlier delivery '+before.branch+' ('+before.state+(before.state==='conflict'?': resolve it by hand':'')+')');
   const state=(await must(run,['gh','pr','view',before.branch,'--json','state','--jq','.state'],mainRoot)).trim();
   if(state!=='MERGED')throw new DeliveryWait('waiting for earlier delivery '+before.branch+' to merge ('+state+')');
  }
 }
 // The build's change to each file, merged onto master's version in `tree`. Overlapping master edits refuse the PR.
 function applyChange(pr:DeliveryPr,tree:string){
+ // A request staged before base snapshots existed holds whole files only; copying them could revert master.
+ if(typeof pr.base!=='string')throw new DeliveryConflict('delivery was staged without base snapshots; commit '+pr.snapshot+' by hand against origin/master');
  const conflicts:string[]=[];
  const merged=pr.files.map(f=>{
   const target=join(tree,f),master=existsSync(target)?readFileSync(target,'utf8'):'';

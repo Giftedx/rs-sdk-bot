@@ -4,14 +4,14 @@ import {freemem} from 'node:os';
 import {createHash} from 'node:crypto';
 import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
 import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
-import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask,importClosure} from './delivery-cli';
+import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
 import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
 import {readWorld,parseModelObject} from './coordinator-planner';
 import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
 import {projectRoot,coordinationDir,atomicJson} from './coordinator-store';
 import {isWorkspace,publishWorkspace,workspaceChanges,prepareReplayRoot,removeReplayRoot} from './build-workspace';
 import {recentRecords} from '../../core/src/tick-record';
-import {stageDeliveryPr} from './delivery-pr';
+import {stageDeliveryPr,deliverySourceSet} from './delivery-pr';
 
 // A drained fleet for a publish: finite live runs end within their own timeouts (at most 30 minutes in practice).
 const PUBLISH_WAIT_MS=45*60*1000;
@@ -129,7 +129,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
    const out=publishWorkspace(mainRoot!,definition.id,definition.files);atomicJson(join(directory,'publish.json'),{...out,at:Date.now(),from:projectRoot,to:mainRoot});
    // The coordinator opens the PR later (delivery-pr.ts); a staging failure never fails the delivered build.
    let deliveryPr:any=null;
-   try{const pr=stageDeliveryPr({workspace:projectRoot,runDir:directory,coordinationDir,taskId:task.id,capability:definition.id,files:out.published,sourceSet:importClosure([definition.entry,...definition.files],projectRoot),result:{...result,published:out}});deliveryPr=pr&&{branch:pr.branch,state:pr.state};}
+   try{const pr=stageDeliveryPr({workspace:projectRoot,runDir:directory,coordinationDir,taskId:task.id,capability:definition.id,files:out.published,sourceSet:deliverySourceSet(definition.entry,definition.files,projectRoot),result:{...result,published:out}});deliveryPr=pr&&{branch:pr.branch,state:pr.state};}
    catch(error){deliveryPr={error:String(error)};}
    return{...result,published:out,deliveryPr};
   }finally{if(existsSync(request)&&JSON.parse(readFileSync(request,'utf8')).runId===runId)unlinkSync(request);}

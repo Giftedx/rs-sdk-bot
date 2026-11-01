@@ -2,7 +2,8 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,retryDelayMs,PREREQUISITE_WAIT_MS,type Run} from '../src/delivery-pr';
+import {stageDeliveryPr,processDeliveryPrs,committable,deliveryPrDir,retryDelayMs,PREREQUISITE_WAIT_MS,deliverySourceSet,type Run} from '../src/delivery-pr';
+import {resolve} from 'node:path';
 import {prepareWorkspace,publishWorkspace} from '../src/build-workspace';
 
 const lines=(...l:string[])=>l.join('\n')+'\n';
@@ -96,4 +97,19 @@ test('swarm.json and .practice never reach a delivery commit',()=>{
  const s=setup(),root=s.build();
  expect(stage(s,root,'build-two',['swarm.json'])).toBeNull();
  expect(existsSync(join(deliveryPrDir(s.coord),'build-two.json'))).toBe(false);
+});
+
+test('a request staged without base snapshots stops as a conflict instead of copying whole files',async()=>{
+ const s=setup(),root=s.build();publishWorkspace(s.main,'iron-progress-order',[FILE]);
+ const pr:any=stage(s,root,'build-old',[FILE],0)!;delete pr.base;delete pr.prerequisites;
+ writeFileSync(join(deliveryPrDir(s.coord),'build-old.json'),JSON.stringify(pr));
+ const git=stub(),out=await processDeliveryPrs(s.coord,s.main,git.run,0,s.base);
+ expect(out.conflicts[0]!.lastError).toContain('staged without base snapshots');
+ expect(git.calls.some(c=>c[1]==='push'||c[1]==='commit')).toBe(false);
+});
+
+test('the source set follows a worker that the entry starts as a subprocess',()=>{
+ const set=deliverySourceSet('scripts/quest-order.ts',[],resolve(import.meta.dir,'../../..'));
+ expect(set).toContain('scripts/generated/quest-cook.ts');
+ expect(set).toContain('scripts/quest-order.ts');
 });
