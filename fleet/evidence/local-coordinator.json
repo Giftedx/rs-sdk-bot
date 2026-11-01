@@ -1,0 +1,4095 @@
+{
+  "schema": "coordinator-progress/1",
+  "side": "local",
+  "exportedAt": 1793499991901,
+  "sources": {
+    "state": {
+      "observedAt": 1793499989356.4866,
+      "ageMs": 2544.513427734375,
+      "stale": false,
+      "error": null
+    },
+    "swarm": {
+      "observedAt": 1793499990117,
+      "ageMs": 1784,
+      "stale": false,
+      "error": null
+    },
+    "owner": {
+      "observedAt": 1793499491088.667,
+      "ageMs": 500812.3330078125,
+      "stale": true,
+      "error": null
+    }
+  },
+  "coordinator": {
+    "paused": false,
+    "pid": 20496,
+    "processState": "alive",
+    "processIdentity": "unverified",
+    "planner": {
+      "runId": "plan-e960917e-5808-496f-94fd-1d1a3962e2a6",
+      "agent": "codex",
+      "startedAt": 1793499989178,
+      "processState": "alive"
+    }
+  },
+  "workers": {
+    "claude": {
+      "running": [
+        {
+          "id": "build-combat-giant-style-1",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-9697598f-140a-4e47-a7b0-48ed2f47de0c",
+          "startedAt": 1793498244478,
+          "recordStatus": "running",
+          "pid": 22156,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        }
+      ],
+      "pending": [],
+      "failed": [
+        {
+          "id": "build-druid-meats-upstairs-exit",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "druid-meats-order",
+          "runId": "task-7e7e67e9-a3d6-49fa-bf8e-4a99034d3c3c",
+          "startedAt": 1793327174751,
+          "at": 1793327546602,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-authenticated-admission",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-1aa8f35e-5e84-4476-9cd6-83be82fb7195",
+          "startedAt": 1793337801850,
+          "at": 1793337939565,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-recovery-logout-attribution",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-b76b4d6d-1d36-46ea-9d8e-c7810ba630e8",
+          "startedAt": 1793338677394,
+          "at": 1793338969488,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-handshake-headroom-resume",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-19b0396e-ff27-4c4d-9024-1a12191a22e5",
+          "startedAt": 1793340024385,
+          "at": 1793340075100,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-retained-capacity-delivery",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-927f43f7-8381-4541-868d-4419592818e4",
+          "startedAt": 1793340597265,
+          "at": 1793340921820,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-karamja-waypoint",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-7d838b8a-a61b-4cf5-aa25-e5dc81f56ed2",
+          "startedAt": 1793341768316,
+          "at": 1793342184585,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-native-orphan-lease-boundary",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-bb90b15a-f27b-4670-8c57-219d64cd366e",
+          "startedAt": 1793350125906,
+          "at": 1793350661018,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-orphan-connection-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-5c7a874b-1810-425f-a325-fcbe60fd7da6",
+          "startedAt": 1793351216119,
+          "at": 1793351701522,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-design-server-effect",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-58ea0c5f-8551-42b2-8ec3-c854cbe34710",
+          "startedAt": 1793352404649,
+          "at": 1793353161512,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-magic-valid-packet-dispatch-boundary",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-8e77d3e6-a45c-4fcc-a624-bb0690df5a65",
+          "startedAt": 1793354054949,
+          "at": 1793354332497,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-observed-button-dispatch",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-0f64de73-4af4-4d11-a0c4-86625815b543",
+          "startedAt": 1793354420618,
+          "at": 1793354992621,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-magic-flush-transport-boundary",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-b23d2c69-7d6a-4888-8121-e5d0310a4fd3",
+          "startedAt": 1793355657998,
+          "at": 1793355861123,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-measured-transport-boundary",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-63c572a0-206f-4e2f-8eae-e2c406c4e000",
+          "startedAt": 1793355958323,
+          "at": 1793356446523,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-modal-response-wait",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-f1989052-dcb9-4cb0-ab89-c12184373b04",
+          "startedAt": 1793357185591,
+          "at": 1793357716132,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-shark-eastern-entry-proof-aligned",
+          "kind": "build",
+          "goal": "wealth",
+          "capability": "shark-supply-order",
+          "runId": "task-7c43f229-5125-4566-b29f-013bad7ef6a1",
+          "startedAt": 1793359917102,
+          "at": 1793360996978,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-shark-guarded-proof-merge",
+          "kind": "build",
+          "goal": "wealth",
+          "capability": "shark-supply-order",
+          "runId": "task-83d9e193-2560-42ca-b6bd-4e57a60e1a89",
+          "startedAt": 1793371137222,
+          "at": 1793371815537,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-clocktower-pickpockdick-water-entry",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-1f41e572-a9fb-40c6-ba0e-d84aa0ca1984",
+          "startedAt": 1793372946094,
+          "at": 1793373023394,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-clocktower-owned-bucket-entry",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-c0010fd2-275a-4b59-831b-64c3fe58cae8",
+          "startedAt": 1793373371491,
+          "at": 1793373825059,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-goblin-acquisition-life-monitor",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-a52a7598-6010-4f2d-b15c-46d32dc55776",
+          "startedAt": 1793380865228,
+          "at": 1793382002761,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-cow-recovery-carrier-current",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-d2e78769-a12e-43fc-a180-e5fd4cd0cced",
+          "startedAt": 1793385884525,
+          "at": 1793385901854,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-session-recovery-only-2",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-2db6888a-8547-4e2f-97f3-b527a1f7fd4d",
+          "startedAt": 1793390414052,
+          "at": 1793390971531,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-fishing-contest-western-dwarf-approach",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-140939fd-e6b1-47a8-be8a-b63bd679bde5",
+          "startedAt": 1793402228187,
+          "at": 1793402980492,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-fishing-contest-guarded-path-consumer",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-425b39e4-88e6-4572-8be5-a36a016fd38d",
+          "startedAt": 1793403443604,
+          "at": 1793404514009,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-fishing-contest-retained-delivery-publication",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-17e7b181-e502-4309-840a-a83233f369ab",
+          "startedAt": 1793405065599,
+          "at": 1793405385993,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-session-recovery-only-3",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-57bc78d2-644d-4e5a-a406-9bc975aa4df6",
+          "startedAt": 1793406924733,
+          "at": 1793407088391,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-ruins-exterior-approach",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-da9fbd15-b6ff-4cc3-a9df-492c361f1400",
+          "startedAt": 1793410044008,
+          "at": 1793410317277,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-session-recovery-only-4",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7516cfca-38d9-459f-9ce0-5d0993cff240",
+          "startedAt": 1793413035308,
+          "at": 1793413140458,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-bounded-lock-handoff",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-620d88ec-4f59-417c-b993-d5b5f65e244a",
+          "startedAt": 1793414491043,
+          "at": 1793414551805,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-firemaking-zero-cost-entry-budget",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-674d6a48-f400-49d6-9e37-276951d9b7a6",
+          "startedAt": 1793418596221,
+          "at": 1793419001855,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-retained-native-redelivery",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-f3f0b284-ed81-4f08-85e3-da4c68b61ef4",
+          "startedAt": 1793420853254,
+          "at": 1793420983602,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-exclusive-practice-observation",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-fdfd88a1-5c38-4bc9-8e42-a6dbb996e730",
+          "startedAt": 1793421560281,
+          "at": 1793423873332,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-existing-diagnostic-handoff",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-ba86a566-bbee-42f2-8255-abef515759e9",
+          "startedAt": 1793424147945,
+          "at": 1793424310664,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-private-login-readiness",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-d10d911f-4434-40a9-9fc4-75cbae32d7bf",
+          "startedAt": 1793427843405,
+          "at": 1793428072954,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-current-source-integration",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-bfe99a8c-af0a-416c-8d38-236dfcd70cbe",
+          "startedAt": 1793429121079,
+          "at": 1793430093418,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-recovery-peer-release-consumer-admission",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-805a4fc9-abca-4e2f-862b-de15c89ce57c",
+          "startedAt": 1793433009945,
+          "at": 1793433138019,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-standing-peer-release-policy",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-5155b1db-7dd0-4a07-bc34-a387febc8e36",
+          "startedAt": 1793433231560,
+          "at": 1793434064374,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-fresh-baseline-publish",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-6c7bc9c7-9d0c-456c-9aa4-34c52b8d8d08",
+          "startedAt": 1793434214729,
+          "at": 1793434962831,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-hetty-western-entry-compatible-workspace",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-52f8012b-7b0d-4608-8e4e-c16ada5fed88",
+          "startedAt": 1793437287961,
+          "at": 1793438676752,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-recovery-confirmed-logout-cleanup-hold",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-854bc813-8380-416e-b659-e4605b752848",
+          "startedAt": 1793437289304,
+          "at": 1793437414556,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-exclusive-publication",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-2ec7e760-6ce5-4bbd-b7f8-36fb224eb7de",
+          "startedAt": 1793440855391,
+          "at": 1793441062921,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-totem-reconciled-publication-baseline",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-b24281c5-defe-4f09-b41f-73ec7dbc5fb0",
+          "startedAt": 1793464502243,
+          "at": 1793464595311,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ge-bounded-topup-and-western-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-61d123b9-21a7-42b4-8d5f-4a4b1ffad966",
+          "startedAt": 1793469464398,
+          "at": 1793470177727,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ge-rescue-observed-practice-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-cb9acf95-583c-46c8-872d-e3a3e98e9920",
+          "startedAt": 1793471504168,
+          "at": 1793471833445,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-ranged-eighth-kill-credit-boundary",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-df57fe93-1ce7-4c22-adbb-b52d6b75da32",
+          "startedAt": 1793475559587,
+          "at": 1793475727069,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-iron-owned-anvil-unlock85",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-693e2a16-d74b-4446-a10f-8afdb8d26e66",
+          "startedAt": 1793481552126,
+          "at": 1793482825143,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-iron-owned-anvil-unlock85-repair-1",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-2a993544-4157-43f4-a9fb-f5841eb79f71",
+          "startedAt": 1793483362811,
+          "at": 1793484380492,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-iron-owned-anvil-unlock85-repair-2",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-5b99fb9f-2800-4062-8a91-65f5ba394f8e",
+          "startedAt": 1793487363160,
+          "at": 1793488021960,
+          "blocker": "task failed; inspect the preserved local receipt"
+        }
+      ],
+      "lastUsefulLive": null,
+      "lastRecovery": null,
+      "lastPreparation": {
+        "id": "review-magic-controller-repair-dispatch-boundary",
+        "kind": "review",
+        "goal": "skills",
+        "capability": "magic-order",
+        "runId": "task-93a1e8e4-a0ce-4522-beef-408c178063d6",
+        "startedAt": 1793480842353,
+        "at": 1793480895722,
+        "evidence": "review"
+      }
+    },
+    "codex": {
+      "running": [
+        {
+          "id": "run-ranged-bigchopper-qualified-band70",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-5d46efdd-b0f0-4758-92dd-08c0b3c86e75",
+          "startedAt": 1793496331821,
+          "recordStatus": "running",
+          "pid": 23188,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "qualify-magic-falador45-fresh",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-937024a8-9f47-4cb3-96f1-18aab223a4c2",
+          "startedAt": 1793499842528,
+          "recordStatus": "running",
+          "pid": 23744,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        }
+      ],
+      "pending": [],
+      "failed": [
+        {
+          "id": "refresh-quest-order-c1d361f0c8774961",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-order",
+          "runId": "task-ccd69c87-3c1a-48bd-a1e9-d1bea6688094",
+          "startedAt": 1793177183290,
+          "at": 1793177186504,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "refresh-wine-order-40f8d216fa3b01e7",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "wine-order",
+          "runId": "task-19972248-6701-4f20-a128-b6abdf932f6a",
+          "startedAt": 1793177153907,
+          "at": 1793177157064,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-wine-stock-without-live-input-gate-10",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "wine-stock-order",
+          "runId": "task-7cd7c4ed-c23b-4a4e-9f78-62ea2437aaa9",
+          "startedAt": 1793179179298,
+          "at": 1793180335345,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-rune-tick-stall-14",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "fresh-rune-supply-order",
+          "runId": "task-b3670bd4-f4fb-42b3-989d-49e8fdc9f0b2",
+          "startedAt": 1793218688057,
+          "at": 1793218889034,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-agility-final-continuation-33",
+          "kind": "review",
+          "goal": "specialists",
+          "capability": "agility-order",
+          "runId": "task-ff3ceb16-448b-45aa-b549-3172448a67a2",
+          "startedAt": 1793239142894,
+          "at": 1793239426648,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-fresh-rune-supply-order-3",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "fresh-rune-supply-order",
+          "runId": "task-76b096a7-18fd-4f01-8aa5-250ea182f123",
+          "startedAt": 1793314964869,
+          "at": 1793315636329,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-retained-first-bank-headroom",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "fresh-rune-supply-order",
+          "runId": "task-b12a5b6a-a1a3-4c9e-b971-4221a81308f2",
+          "startedAt": 1793319877886,
+          "at": 1793320577021,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-coin-courier-pocketpython-abracadickra",
+          "kind": "run",
+          "goal": "wealth",
+          "capability": "coin-courier",
+          "runId": "task-638372be-015b-4d1f-a89b-fc6764e5fd9c",
+          "startedAt": 1793324383331,
+          "at": 1793324384323,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-agility-order-5",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "agility-order",
+          "runId": "task-0ff35154-2774-4156-9942-2c8a6940ba18",
+          "startedAt": 1793321340795,
+          "at": 1793322034615,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-agility-thin-redeliver",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "agility-order",
+          "runId": "task-06d7c9cf-6e82-4b2a-9d55-869c22ecf8b1",
+          "startedAt": 1793323378300,
+          "at": 1793324270610,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-rune-bank-craft-shaftsinker-60-cap",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-e3ec1c00-ee9e-4bfa-add7-9e768160ac7c",
+          "startedAt": 1793366980104,
+          "at": 1793366982431,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-iron-entry-no-toll",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-ba429ece-4295-4710-b295-f436fdb53ae7",
+          "startedAt": 1793326359241,
+          "at": 1793327256839,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-magic-woodenstaff-13-repair",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-8df6f374-3610-4b35-8290-d479ea0ea3b1",
+          "startedAt": 1793337666891,
+          "at": 1793337669333,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-druid-meats-mightyrod-upstairs",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "druid-meats-order",
+          "runId": "task-a248d9ce-7568-4b7c-a1f8-f8b2ffae921c",
+          "startedAt": 1793328346960,
+          "at": 1793328356175,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-firemaking-yewfirst-band30-admitted",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-fd69adfc-fcf2-472d-adbe-f9f05421820e",
+          "startedAt": 1793334461507,
+          "at": 1793334471525,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-grapes-pocketpython-north-entry",
+          "kind": "run",
+          "goal": "main24",
+          "capability": "ge-bulk-order",
+          "runId": "task-814d951c-f6d4-4946-bdb7-db3002107d5b",
+          "startedAt": 1793337184098,
+          "at": 1793337187333,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-magic-woodenstaff-authenticated-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-72f35eae-22cd-4356-956a-6a7ec7b014e2",
+          "startedAt": 1793359184556,
+          "at": 1793359186287,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-isolated-recovery-delivery",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-10718520-da5d-489d-9f41-52bb69d1f646",
+          "startedAt": 1793338109296,
+          "at": 1793338549336,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-recovery-child-handshake",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-fa9e0df8-58e3-4e01-b16b-72f93c0d440d",
+          "startedAt": 1793339094668,
+          "at": 1793339493314,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-gnome-bank-entry",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-5ea2defe-c0f2-4702-ad23-6a78ab6d5fcd",
+          "startedAt": 1793340266510,
+          "at": 1793340527793,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-pinned-gnome-crossing",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-b791ad86-82ef-41ae-88fa-f9b976224f08",
+          "startedAt": 1793341022625,
+          "at": 1793341606221,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-quest-sweep-karamja-entry",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-f7f9b373-68bb-4e3d-aec2-26352d9e2391",
+          "startedAt": 1793342675450,
+          "at": 1793342788654,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-quest-sweep-import-fixed",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-1e5ad442-92c0-417d-a653-02124924465d",
+          "startedAt": 1793342911348,
+          "at": 1793343244626,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-quest-sheep-moneyshot-current-end",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-972d7f99-2284-4920-8516-9647b0b2fcc7",
+          "startedAt": 1793343575472,
+          "at": 1793343577247,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-quest-monk-bigchopper",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-b571e5d2-9f4c-41cc-8929-998864d4efa0",
+          "startedAt": 1793345639742,
+          "at": 1793345640164,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-quest-monk-bigchopper-current-source",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-c5ed7876-705d-43d7-a999-6fd5dc3e369c",
+          "startedAt": 1793345859478,
+          "at": 1793345861889,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-firemaking-yewfirst-owned-band30",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-cd3246ef-7f8b-42e2-8dc3-9a3bc26ffc6f",
+          "startedAt": 1793350032663,
+          "at": 1793350035177,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-recovery-modal-close",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-f41e5dee-c3c0-4e77-9c50-28a4d8e1db71",
+          "startedAt": 1793350740604,
+          "at": 1793351114182,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-design-cleanup-effect",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-f777426a-282c-42ae-a78a-96d0e16cf7e2",
+          "startedAt": 1793351831387,
+          "at": 1793352305592,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-valid-design-packet",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-069b3fd1-b93c-45c0-9870-66f28874e503",
+          "startedAt": 1793353317151,
+          "at": 1793353810453,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-flush-design-before-wait",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-f1de1605-8ab4-4463-9ad9-247e0f0c2ee1",
+          "startedAt": 1793355116505,
+          "at": 1793355544714,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-await-owner-auth-reply",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-a3475e07-f9db-4b3a-bcca-f7db63498680",
+          "startedAt": 1793356579660,
+          "at": 1793357064320,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-shark-publish-reconcile",
+          "kind": "build",
+          "goal": "wealth",
+          "capability": "shark-supply-order",
+          "runId": "task-d6dce662-76f7-413e-8865-e5707e35eba6",
+          "startedAt": 1793361085780,
+          "at": 1793361165254,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ranged-bigchopper-owned-band40",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-7bc16ae8-e39a-4dac-aeac-9e59fa1158eb",
+          "startedAt": 1793361808878,
+          "at": 1793361811260,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-firemaking-yewfirst-reviewed-band30",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-74542d83-3115-41ee-bc16-97617fcfb404",
+          "startedAt": 1793364143858,
+          "at": 1793364146259,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-combat-missing-band-live-entry",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-ddc63894-4c1f-4fc2-b4bd-004a0b9df08d",
+          "startedAt": 1793369191018,
+          "at": 1793369333332,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-shark-child-deadline-aligned",
+          "kind": "build",
+          "goal": "wealth",
+          "capability": "shark-supply-order",
+          "runId": "task-90200fe2-2ba9-4e12-a64c-a3fcc8e5f441",
+          "startedAt": 1793371989961,
+          "at": 1793372616569,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-pirate-treasure-ordinary-entry",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-e7bec1fa-4e46-4925-b12f-6d60325cc023",
+          "startedAt": 1793378262778,
+          "at": 1793378406966,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-goblin-owned-acquisition",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-0173a99f-288b-45d0-954d-f4da3ab1007e",
+          "startedAt": 1793379501588,
+          "at": 1793380778750,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-goblin-publication-consumer-boundary",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-f7993ce0-f413-4ba4-bdb5-442cd3d39b3f",
+          "startedAt": 1793382118927,
+          "at": 1793382242185,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-items-hetty-complete-acquisition",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-8e81a768-bbb0-4eff-b735-b78befc82237",
+          "startedAt": 1793384536245,
+          "at": 1793385245579,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-quest-items-hetty-first-live",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-ed6935b8-b246-4f22-b3c5-de6fad74778c",
+          "startedAt": 1793385856473,
+          "at": 1793385863763,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-cow-main-recovery-carrier",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-bd22c2d9-2ffd-420e-9223-2d6512dda4d2",
+          "startedAt": 1793386006498,
+          "at": 1793386037338,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-cow-scoped-fixture-delivery",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-56a600d2-8ad3-4eb8-89a8-b8a777d626c5",
+          "startedAt": 1793386400454,
+          "at": 1793386670148,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmtha0205",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7919398d-b85d-41d3-a48b-0a8580b139ff",
+          "startedAt": 1793389996553,
+          "at": 1793390006265,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-abracadickra",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c175e8bd-43f2-481f-a4c9-9ad42c5bf2e7",
+          "startedAt": 1793389996422,
+          "at": 1793390000719,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mightyrod",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-062a79e0-a218-40ed-a643-a1b83656e683",
+          "startedAt": 1793389996511,
+          "at": 1793390005598,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-nabtheknob",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-0af27270-7559-4bb0-9200-ec046ace7fbc",
+          "startedAt": 1793389996759,
+          "at": 1793390005590,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-pocketrocket",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-8c21f6c2-41d7-4c25-86cc-c2a86af21db2",
+          "startedAt": 1793389997056,
+          "at": 1793390002735,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmthv2350",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-9624efcc-e461-4403-bb98-15c148062cc1",
+          "startedAt": 1793389996599,
+          "at": 1793390002074,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-magicwanda",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-8ce5dae7-5f52-4c4a-be3c-d526e1b5d4b2",
+          "startedAt": 1793389996466,
+          "at": 1793390040541,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-woodenstaff",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-eaac44a4-e91f-4f23-b3a0-9ec0173b75d2",
+          "startedAt": 1793389997264,
+          "at": 1793390004864,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-shaftmaker",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-b48a70ea-1153-42ff-a722-c6468c976fd8",
+          "startedAt": 1793389997122,
+          "at": 1793390003531,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-swordinhand",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-81f0bfdb-36f9-4ea2-a68c-66ccebcb92bf",
+          "startedAt": 1793389997196,
+          "at": 1793390004192,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-session-recovery-live-peer-gate",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-9098b49e-e0ab-4e2f-bcbd-ef3075cc1f84",
+          "startedAt": 1793389974137,
+          "at": 1793390099155,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-shaftmaker-2",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c96b179e-6b7c-435e-8fd7-cbf1741e7109",
+          "startedAt": 1793390135697,
+          "at": 1793390136008,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-swordinhand-2",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-82cbcf4a-4f56-42c0-9bfb-134dd5f8de60",
+          "startedAt": 1793390146981,
+          "at": 1793390147271,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-nabtheknob-2",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-af1eb227-26b4-49ae-ba2a-7c4f0f641c72",
+          "startedAt": 1793390157888,
+          "at": 1793390158166,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-shaftmaker-3",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-895a9c63-d22a-4ae0-a5bc-72c4da9450b6",
+          "startedAt": 1793417634072,
+          "at": 1793417636442,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "refresh-session-recovery-only-3f916fdc68a56481",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-55ff24bf-092c-42a5-ad27-9f2fa1e1b787",
+          "startedAt": 1793391741212,
+          "at": 1793391809928,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-session-recovery-restored-headroom",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-4d620705-3fd4-421e-9a44-644568351239",
+          "startedAt": 1793393734786,
+          "at": 1793393798029,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-session-recovery-reserved-capacity",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-89f9bf14-21a0-4f5d-ac95-923569a1d290",
+          "startedAt": 1793393882202,
+          "at": 1793394107705,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-session-recovery-measured-envelope",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-76396b1b-b365-43bb-80f5-077264646a4a",
+          "startedAt": 1793394197941,
+          "at": 1793394283845,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-hetty-moneyshot-magic31",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-306c0155-61fa-4b4b-ad17-0f78af1f5a76",
+          "startedAt": 1793394508337,
+          "at": 1793394617217,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-hetty-coin-deposit-consumer",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-582d2a72-1154-4234-b322-927c34c5eae8",
+          "startedAt": 1793394741710,
+          "at": 1793395356822,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-hetty-moneyshot-deposit-qualified",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-e8acedd8-24c0-4173-8745-a60ded804202",
+          "startedAt": 1793396791732,
+          "at": 1793396793780,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-hetty-matched-deposit-entry",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-9648c20e-0c72-4ca2-b9a0-3fd36a57d458",
+          "startedAt": 1793395514773,
+          "at": 1793395785270,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "refresh-quest-items-order-a0a773f1482bc657",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-674eeb40-55e9-4a99-98a3-4f3b370744ec",
+          "startedAt": 1793396470190,
+          "at": 1793396594248,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-hetty-moneyshot-current-admission",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-abebf80f-bed2-4eaa-99cf-1bb2c6098afe",
+          "startedAt": 1793397014183,
+          "at": 1793397020545,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-fishing-contest-ordinary-entry-boundary",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-9773e650-8fc5-45c4-a7e4-47507497326e",
+          "startedAt": 1793401226680,
+          "at": 1793401409471,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-fishing-contest-eastern-entry",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-f1f87e88-33c3-4ebd-a7d7-7355fb2fb7e3",
+          "startedAt": 1793401506867,
+          "at": 1793402059559,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-fishing-contest-vine-corridor-consumer",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-17baf9c8-547a-4099-88c9-90f42334d351",
+          "startedAt": 1793403078663,
+          "at": 1793403368593,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-fishing-contest-trophy-gate-exit",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-1f733251-4e75-4fc2-8d92-06c81cee5303",
+          "startedAt": 1793404587297,
+          "at": 1793404974945,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-fishing-contest-source-drift-publication",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-15cfbd54-40a8-4700-b6f0-0161bfa654c3",
+          "startedAt": 1793405495926,
+          "at": 1793405601200,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-firemaking-bigchopper-owned-band",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-32f09b10-4b3d-4455-8dff-dddc7c095000",
+          "startedAt": 1793405858023,
+          "at": 1793405860669,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-firemaking-bigchopper-normal15",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-9796628b-77d0-4254-9637-7d86dfa9f748",
+          "startedAt": 1793406646626,
+          "at": 1793406649303,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-firemaking-bigchopper-native-admission",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-77136692-08be-4568-8670-57d1f837db66",
+          "startedAt": 1793405921360,
+          "at": 1793406116696,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-firemaking-stable-source-consumer",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-3d29918d-afdb-47e4-9b59-4faaaffd25ff",
+          "startedAt": 1793406168860,
+          "at": 1793406366935,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-session-recovery-retained-capacity-delivery",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-57a5a9d1-a42c-4ff9-9811-187a509cf3cf",
+          "startedAt": 1793407225150,
+          "at": 1793407290010,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-ladder-current-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-0643cb72-008a-495a-8c0f-8b46ad303d1f",
+          "startedAt": 1793407666917,
+          "at": 1793407906826,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-rune-mind-route-consumer",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-1e252d00-86e1-443c-8128-971cd99a0658",
+          "startedAt": 1793409813553,
+          "at": 1793409942719,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-consumer-combat-fixture",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-439964d9-f011-4ea5-a1dd-39e127e9e98d",
+          "startedAt": 1793410740047,
+          "at": 1793413032117,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-ge-rune-body-consumer",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-cbc5dde0-708a-40b9-8670-8fe6b56c55b4",
+          "startedAt": 1793425032837,
+          "at": 1793425148735,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-rune-body-shaftsinker",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-fb0a60dc-db79-4883-a438-50a09b075372",
+          "startedAt": 1793425312319,
+          "at": 1793425315275,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-swordinhand-5",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-9046bc65-e9a0-48c5-8600-88d75faa06b0",
+          "startedAt": 1793416254387,
+          "at": 1793416258941,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-recovery-abandoned-practice-lock",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7cf2f19d-205c-407f-953a-851a4d823c33",
+          "startedAt": 1793413221180,
+          "at": 1793413316250,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-exact-lock-settlement",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-939c1d88-9cc9-4ace-9a54-72789abd3cd3",
+          "startedAt": 1793413400741,
+          "at": 1793414265841,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-practice-owned-lock-preflight",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-08b82638-356c-4bbd-ba2a-c3cc66f4d9ab",
+          "startedAt": 1793414789419,
+          "at": 1793415541951,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-recovery-prelease-admission-refusal",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-f3d59f38-71b9-47b3-b089-f5d953a2384c",
+          "startedAt": 1793416313918,
+          "at": 1793416446520,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-swordinhand-6",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-251ead3d-c77a-4f20-906f-727b32dcf520",
+          "startedAt": 1793416675295,
+          "at": 1793416675605,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mightyrod-8",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-ddce5794-ced3-45f7-9b0a-70e153024d2f",
+          "startedAt": 1793417555575,
+          "at": 1793417557991,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-yewfirst-8",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-8dfac3c3-2092-4118-9162-bf3309a450df",
+          "startedAt": 1793417689827,
+          "at": 1793417692280,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-ballspinner-8",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-21b1a4ce-2f81-486d-9bc5-22679e0f79d0",
+          "startedAt": 1793417706787,
+          "at": 1793417709488,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-firemaking-shaftmaker-connected-normal15",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-1cdbdafd-cd59-4811-9bc3-c4f5260a0ea4",
+          "startedAt": 1793417973603,
+          "at": 1793418023376,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-firemaking-shaftmaker-entry-route",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-d261e08c-9a32-4ad0-874f-73720c4e45d6",
+          "startedAt": 1793418115678,
+          "at": 1793418447017,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-firemaking-shaftmaker-entry-normal15",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-c0bd2dae-42b0-4b97-afb4-1949d42023ae",
+          "startedAt": 1793419984019,
+          "at": 1793419986279,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-firemaking-nearby-western-site",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-f25ee771-e9fc-4286-89a2-9efc9fb258fb",
+          "startedAt": 1793419152034,
+          "at": 1793419612065,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-firemaking-same-script-release-boundary",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-1a873665-6853-471d-b69f-d93bc0db00cc",
+          "startedAt": 1793420028919,
+          "at": 1793420108682,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-fishing-contest-current-source-integration",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-dc27edd3-dd4a-4fe2-b90a-49f40c086c4b",
+          "startedAt": 1793420179608,
+          "at": 1793420328370,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-mind-entry-observed-boundary",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-ba71f817-ab88-4145-b0c1-6501529fbdac",
+          "startedAt": 1793421258534,
+          "at": 1793421494164,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-retained-dispatch-resume",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-ca5d4481-fae7-4587-b2b6-556a07920912",
+          "startedAt": 1793423988835,
+          "at": 1793424049393,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-rune-mind-warning-dismissal",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": "task-d50b74ff-1b6b-42e5-b148-fe7bd68ed6aa",
+          "startedAt": 1793424394768,
+          "at": 1793424603496,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-rune-buyer-active-owner-handoff",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-cc6bebdf-78a0-40b5-986c-16239fbc058c",
+          "startedAt": 1793425377227,
+          "at": 1793425378737,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-rune-buyer-handoff-bounded-input",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-4de3265f-7adb-4d9d-9665-93fe718735f2",
+          "startedAt": 1793425457316,
+          "at": 1793425458814,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-hetty-shaftmaker-finite-consumer",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-6e5dfcc6-7540-4158-83be-99d486c5d6b3",
+          "startedAt": 1793426111805,
+          "at": 1793426785314,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-standing-peer-release-boundary",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-ee585e63-26a9-46f7-9c11-5fa00bb19c22",
+          "startedAt": 1793427191674,
+          "at": 1793427531671,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-completed-admission-boundary",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-45e5a6f8-01dc-4c4d-969d-ebba63123221",
+          "startedAt": 1793428154528,
+          "at": 1793429030730,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-9d05d0cd-1dd6-4fba-b0cf-486e0e49c1d5",
+          "startedAt": 1793430960926,
+          "at": 1793430963584,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-woodpecker-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-5c5a90ce-d9b7-4360-8727-04fbb3390a2f",
+          "startedAt": 1793444465458,
+          "at": 1793444466969,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "refresh-session-recovery-only-0d08a6cbacae3d4f",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-4af0c65f-65cd-4632-8934-1365a48b49c7",
+          "startedAt": 1793429106892,
+          "at": 1793429982070,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-preserve-account-enabled-state",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-120310e5-d5c8-4129-a748-84fff551eb31",
+          "startedAt": 1793430960974,
+          "at": 1793431633457,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-8fe575a5-0b68-48ec-8122-c1c6659810a7",
+          "startedAt": 1793431069087,
+          "at": 1793431071820,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mightyrod-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-3924e29c-cc30-4d37-840f-f1e239329a17",
+          "startedAt": 1793466616850,
+          "at": 1793466618342,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-yewfirst-12",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-248a371d-88a7-423a-b3b6-7ab0f14289bb",
+          "startedAt": 1793431189251,
+          "at": 1793431207224,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-12",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-cf82385f-4981-4c6d-89bd-7cc13c219dc1",
+          "startedAt": 1793431532222,
+          "at": 1793431534791,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-shaftmaker-current-main-entry",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-aa06cccd-4b14-4b36-94e5-fc714a55535c",
+          "startedAt": 1793432736629,
+          "at": 1793432785856,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7cc6feba-9573-4bc4-86df-5eeb262770a0",
+          "startedAt": 1793432736682,
+          "at": 1793432739338,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mightyrod-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-5950c2a7-370e-40fc-9449-cafb29adaefb",
+          "startedAt": 1793466626642,
+          "at": 1793466628227,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-serialized-entry",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-b031846b-04ed-48c7-bf6b-33d778a4ebc7",
+          "startedAt": 1793439940480,
+          "at": 1793439943225,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-20",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-46e61e17-d4dd-4bfd-9c4c-da1c7c82b3c2",
+          "startedAt": 1793432854124,
+          "at": 1793432897763,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-90548",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-b5028f0b-b4f7-4284-8b2c-a5689dd826e8",
+          "startedAt": 1793432915817,
+          "at": 1793432961280,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-90549",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-75536bd2-b47f-4a80-b7c3-4612c4ba8735",
+          "startedAt": 1793432985983,
+          "at": 1793433031325,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigchopper-90550",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-513fa41b-b5f5-48ad-9366-2e49fadc5bc0",
+          "startedAt": 1793433176490,
+          "at": 1793433176785,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-coincock-90551",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-a12cc7be-186d-40f9-96bd-37ef3410d3c8",
+          "startedAt": 1793433208040,
+          "at": 1793433208340,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-hetty-confirmed-logout-entry",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-ed11c190-3670-4513-8d20-c21b27b19136",
+          "startedAt": 1793434954404,
+          "at": 1793435091070,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-hetty-shaftmaker-confirmed-logout-consumer",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-7c0c4402-1e65-4aab-acea-b8b558c0039b",
+          "startedAt": 1793436078946,
+          "at": 1793436102508,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-coincock-90566",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-f64b2022-7d2d-4b95-82f1-b0b197df509e",
+          "startedAt": 1793434017139,
+          "at": 1793434017464,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-coincock-90567",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-9d9e14cb-2b73-4fee-a2d0-0a084ad2ff6c",
+          "startedAt": 1793434049225,
+          "at": 1793434049532,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-coincock-90568",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7908f17a-4d3f-47e7-8779-2dce899026db",
+          "startedAt": 1793434078098,
+          "at": 1793434078391,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-magicwanda-90569",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-1ff75431-1507-4253-ac79-1349778c6228",
+          "startedAt": 1793434109689,
+          "at": 1793434109987,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-magicwanda-90570",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-759cd916-c500-41c6-89b4-30ee378d24df",
+          "startedAt": 1793434140486,
+          "at": 1793434140786,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-magicwanda-90571",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-e7ffde48-00f7-4123-8a78-79b80bb86910",
+          "startedAt": 1793434171282,
+          "at": 1793434171590,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmsmk1232-90572",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-4adf25df-0a98-4595-beba-5c1463c8f57c",
+          "startedAt": 1793434200100,
+          "at": 1793434200400,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmsmk1232-90573",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-a6eff3e7-b9d3-4607-89a4-ad560a3f1a71",
+          "startedAt": 1793434229973,
+          "at": 1793434230288,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmsmk1232-90574",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c56e5edb-17c0-43e1-a230-6cc66dad5ed9",
+          "startedAt": 1793434262631,
+          "at": 1793434262946,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmthv2350-90575",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-2a305b1c-796e-4a18-855d-2b0e607b97f2",
+          "startedAt": 1793434291816,
+          "at": 1793434292148,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmthv2350-90576",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-043109be-552c-4ad0-a9ae-8c539b541dec",
+          "startedAt": 1793434323456,
+          "at": 1793434323797,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmthv2350-90577",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-6e1c95ba-b942-4c29-8d9e-11bf36c8705b",
+          "startedAt": 1793434353726,
+          "at": 1793434354069,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-oreelse-90578",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-2be62bc7-2a01-4999-b336-f21022cfd1a6",
+          "startedAt": 1793434384561,
+          "at": 1793434384876,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-oreelse-90579",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-a3789ab9-3cfd-441a-a8b9-1de8ac7f5e18",
+          "startedAt": 1793434413015,
+          "at": 1793434413343,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-oreelse-90580",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-ff7f438f-14a4-4276-8199-c2629df489ef",
+          "startedAt": 1793434443109,
+          "at": 1793434443435,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-pickpockdick-90581",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-805ece0c-ae23-4c69-94d9-87698f3eaac4",
+          "startedAt": 1793434476262,
+          "at": 1793434476578,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-pickpockdick-90582",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-d5982e91-64e2-4a0c-a335-579dd918b564",
+          "startedAt": 1793434505451,
+          "at": 1793434505752,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-pickpockdick-90583",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-547fb744-98db-412f-8db8-cf61517cb4da",
+          "startedAt": 1793434534220,
+          "at": 1793434534518,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-pocketpython-90584",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-157b27ba-49bf-4d03-930b-16a134435515",
+          "startedAt": 1793434566773,
+          "at": 1793434567096,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-session-recovery-only-7",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-589f3aab-35bc-47a9-a408-fa9473f65e3f",
+          "startedAt": 1793435322880,
+          "at": 1793435453368,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-session-recovery-only-8",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7989128f-01fc-45bd-a8f5-8074bfbd04f6",
+          "startedAt": 1793435680904,
+          "at": 1793435747357,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-yewfirst-child-bound",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-aa276c71-4c64-43a1-b5cc-5eabdeade828",
+          "startedAt": 1793436936297,
+          "at": 1793436980393,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-session-recovery-only-9",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-fadaa01e-cbc1-4e5e-aea9-9dd051ace16c",
+          "startedAt": 1793436939836,
+          "at": 1793436980806,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-hetty-retained-western-bank-entry",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-items-order",
+          "runId": "task-252b6865-2f8e-4eb7-84ed-643dd034eed9",
+          "startedAt": 1793437080128,
+          "at": 1793437104532,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-session-recovery-only-10",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-5532bd3b-ee8c-4a3a-b3b7-33a5e5c9a005",
+          "startedAt": 1793437248567,
+          "at": 1793437265273,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-recovery-held-lease-consumer-path",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-bd24c1c5-6ff5-4965-831f-54eb2e89b5e5",
+          "startedAt": 1793437513335,
+          "at": 1793437515372,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-recovery-held-lease-bounded-input",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-04d0a968-bb54-462b-a27c-07493215e229",
+          "startedAt": 1793437638784,
+          "at": 1793437640506,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-shaftmaker-independent-entry",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": "task-d26031b2-8c77-4239-955a-c8d83e04339f",
+          "startedAt": 1793439784920,
+          "at": 1793439785326,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-coincock-90635",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-f866e61d-ec84-4869-87a6-8e73b10e6a91",
+          "startedAt": 1793438163401,
+          "at": 1793438163826,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-coincock-90636",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-205c21e7-5f26-4984-b72c-6a5af27b4b07",
+          "startedAt": 1793438187011,
+          "at": 1793438187404,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-firemaking-shaftmaker-draynor-normal15",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-51f500ca-8ef2-469c-91b2-167bcf2f2360",
+          "startedAt": 1793440441566,
+          "at": 1793440441912,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mmthv2350-90681",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-bafb685c-b631-4d8d-91ff-fb5da5e9b741",
+          "startedAt": 1793440969105,
+          "at": 1793440970068,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-quest-monk-bigchopper-owned-stock",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-7a59b749-ce37-4e90-b92d-afdc37791a3c",
+          "startedAt": 1793441528315,
+          "at": 1793441531127,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-ballspinner-90684",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-9ab89905-d5d2-43e4-95f5-a1b28155096f",
+          "startedAt": 1793441638082,
+          "at": 1793441640936,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-ballspinner-90685",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7ebce172-bb7e-4f89-b994-e42d4139c3b0",
+          "startedAt": 1793441667920,
+          "at": 1793441670492,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-ballspinner-90686",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c937b4a4-f6c3-4b4f-a389-ad399dc7e0fc",
+          "startedAt": 1793441698887,
+          "at": 1793441703252,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90687",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-db605450-1235-4b3b-ae9d-2913b0014dad",
+          "startedAt": 1793441729332,
+          "at": 1793441732034,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90688",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-3f464343-7b3c-4abd-b7eb-ea72ee42944a",
+          "startedAt": 1793441758613,
+          "at": 1793441761133,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90689",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-47b6761c-2f6d-4433-bff9-29134245cc22",
+          "startedAt": 1793441788156,
+          "at": 1793441791752,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-90690",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-8832fb2d-3a89-4a52-b92f-f277f3db4f82",
+          "startedAt": 1793441820934,
+          "at": 1793441823559,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-90691",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-5da46718-1bbf-428d-84e5-13a59c4f70a2",
+          "startedAt": 1793441850735,
+          "at": 1793441853895,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-seaslug-shaftmaker-firemaking-unlock",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-d837bcf3-f26d-447a-b548-39398442251a",
+          "startedAt": 1793441856102,
+          "at": 1793441859123,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-90692",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c972bf24-1f91-4fb0-a080-cc9c968cf90f",
+          "startedAt": 1793441880164,
+          "at": 1793441888359,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-wandwaver-totem-entry",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-63b6d914-4bd2-4e75-a825-c7ac646fa2cc",
+          "startedAt": 1793442164882,
+          "at": 1793442170144,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90699",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-d21a63df-aef9-4481-b64e-786e276b1fed",
+          "startedAt": 1793442199434,
+          "at": 1793442202118,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90700",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-cc75cc3d-68f2-4659-b842-cc93070384d0",
+          "startedAt": 1793442289929,
+          "at": 1793442292479,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-wandwaver-totem-recovery-refusal",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c360f502-4c26-4883-ae9d-3d8085380b1d",
+          "startedAt": 1793442367661,
+          "at": 1793442467542,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90701",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-45c252b1-2cde-413c-8cd4-c2120b9b65e9",
+          "startedAt": 1793442379797,
+          "at": 1793442382617,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90702",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c8eee93f-12bf-403f-9865-b1ab06d2abc8",
+          "startedAt": 1793442470900,
+          "at": 1793442473425,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90703",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-c072bedf-2fd1-44bc-9bd3-0d1400830e18",
+          "startedAt": 1793442561829,
+          "at": 1793442562143,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-recovery-completed-held-producer",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-2865393d-09b5-4ad2-a7fb-4ced4a927796",
+          "startedAt": 1793443233211,
+          "at": 1793443661347,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-totem-wandwaver-recovered-consumer",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-7d2e5bf7-c47e-4c5e-ba39-ad1fc6790979",
+          "startedAt": 1793444480570,
+          "at": 1793444686233,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90704",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-a85cadb7-3b7d-49e7-8e97-e9d64865e186",
+          "startedAt": 1793442591366,
+          "at": 1793442591704,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-bigpackage-90705",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7e36a901-0ccf-4d57-b41c-5fd415d0a72e",
+          "startedAt": 1793442621113,
+          "at": 1793442621432,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-90706",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7fd89698-dd39-48ba-b39e-eaff0acda415",
+          "startedAt": 1793442654263,
+          "at": 1793442654586,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-90707",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-70fef170-c884-4bd8-952f-066b8c167bf7",
+          "startedAt": 1793442682385,
+          "at": 1793442682715,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-90708",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-f0a9eee0-5208-42cc-887e-7e21dd89b32a",
+          "startedAt": 1793442715118,
+          "at": 1793442715470,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mineyourbiz-90709",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-7ea89ab5-de0c-49dc-9718-52b1e16cb4fb",
+          "startedAt": 1793442743767,
+          "at": 1793442744128,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mineyourbiz-90710",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-6056b1bb-767a-4e9c-a646-dc14cfdd0142",
+          "startedAt": 1793442776645,
+          "at": 1793442776982,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-mineyourbiz-90711",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-e8e505a8-8b55-4365-bdf3-ac78697d1905",
+          "startedAt": 1793442805117,
+          "at": 1793442805472,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-wandwaver-90712",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-d630fb80-eff4-4026-8263-e7d2211a6cba",
+          "startedAt": 1793442837362,
+          "at": 1793442837696,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-wandwaver-90713",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-b6f7639e-3708-4eb0-bd36-d28b5a92b7d5",
+          "startedAt": 1793442865320,
+          "at": 1793442865651,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-session-recovery-wandwaver-90714",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-eb36af9f-488a-41c9-a0af-a0284e83b48f",
+          "startedAt": 1793442896846,
+          "at": 1793442897198,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-totem-no-law-crossing-consumer",
+          "kind": "review",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-d18b5f76-4129-49f6-92ca-7bc378cfd143",
+          "startedAt": 1793444797233,
+          "at": 1793444893516,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-totem-started-customs-consumer",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-a7ea0177-fb90-404e-99d5-8c2af746b540",
+          "startedAt": 1793445020286,
+          "at": 1793445060699,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-recovery-shaftsinker-talisman-entry",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-ba9bb7be-1c8b-46b5-a8bb-83133a433ab9",
+          "startedAt": 1793447668999,
+          "at": 1793447675685,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-shaftmaker-five-law-runes",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-2c64a6fd-79b4-48b6-bcb4-31c0d5ef6822",
+          "startedAt": 1793466708446,
+          "at": 1793466726681,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-shaftmaker-authorized-earth-topup",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-9f4d6f10-2332-45f6-9fc5-c375c43f25d3",
+          "startedAt": 1793473821923,
+          "at": 1793473876150,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ge-one-respawn-magic-consumer",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-1b73a987-a5b4-49cd-addb-bedd8a112c03",
+          "startedAt": 1793470816856,
+          "at": 1793471417127,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-shaftmaker-one-respawn-law",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-2f8a15b2-3ac1-4c5c-9864-7303b902ebc1",
+          "startedAt": 1793473082334,
+          "at": 1793473083818,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ge-rescue-unloaded-practice-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-af2aa7a1-da6b-4f7b-bc0f-8cddd4fb3580",
+          "startedAt": 1793471916171,
+          "at": 1793472241925,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-ge-pocket-preset-worker-identity",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-c301fdc4-d0a1-4744-a2f4-dbbbf5923576",
+          "startedAt": 1793472318358,
+          "at": 1793472439697,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-recovery-shaftmaker-earth-settlement",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-df11ad84-3adf-42fa-b342-7f4a9fcb48a5",
+          "startedAt": 1793474453734,
+          "at": 1793474459385,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-shaftmaker-earth-repriced-single",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-523e2181-27fc-45cb-bd95-66382346ac01",
+          "startedAt": 1793477468919,
+          "at": 1793477517864,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-shaftmaker-earth-recovery-setup-refusal",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-8e3d9220-0d14-4b5a-9cc2-eb38e57892df",
+          "startedAt": 1793474505062,
+          "at": 1793474610594,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ranged-catherby-owned-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-1d3e854b-a9de-498c-b453-b94fc9f3d301",
+          "startedAt": 1793474730619,
+          "at": 1793475483966,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ranged-bigchopper-unlock30",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-24514518-3f11-4537-b7a2-a11d9bc3c055",
+          "startedAt": 1793476388652,
+          "at": 1793476390150,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-ranged-completed-standing-owner-handoff",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-a2c8aee4-9a7c-4c91-99ce-9acd4e5656dc",
+          "startedAt": 1793476449591,
+          "at": 1793476528245,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-magic-shaftmaker-shop-funded37",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-69c7fac5-7958-4de1-b592-13b80f903331",
+          "startedAt": 1793478984543,
+          "at": 1793479047585,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-magic-shaftmaker-owned-earth37",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-cd045526-6c4c-48c1-af08-b4e04fac3f51",
+          "startedAt": 1793480477326,
+          "at": 1793480478757,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-magic-completed-composed-handoff-release",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-8a27d07b-ce8f-49be-844c-4443628f3d33",
+          "startedAt": 1793480541432,
+          "at": 1793480605799,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ranged-bigchopper-unlock30-2",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-e45f7c70-de20-4b45-b413-49396b755ff9",
+          "startedAt": 1793482746448,
+          "at": 1793482746770,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-shaftmaker-falador-air-shortfall",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-28e415f7-e60e-40ce-a697-30a44567d07a",
+          "startedAt": 1793483219019,
+          "at": 1793483265890,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-handoff-falador-shaftsinker-shaftmaker",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ammo-order",
+          "runId": "task-cd683bca-4391-4c16-9b7e-5d6624d85c39",
+          "startedAt": 1793487352138,
+          "at": 1793487442135,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-handoff-falador-near-bank-owned-runes",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ammo-order",
+          "runId": "task-d237bbe3-3b2a-4a56-b0ac-fea038eca0f9",
+          "startedAt": 1793487591277,
+          "at": 1793487592902,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-bowbeforeme-maple-for-ranged40",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-ce47490c-e3f8-45ae-be05-a9fa81c83fa2",
+          "startedAt": 1793488158922,
+          "at": 1793488215153,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-iron-reconcile-retained-anvil-source",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-0d99d834-0eb9-4e85-908f-2451b17b52db",
+          "startedAt": 1793488599715,
+          "at": 1793488652311,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "review-falador-same-script-recovery-admission",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "ammo-order",
+          "runId": "task-7ad0b0b4-3596-4451-90e8-979b49c1c45c",
+          "startedAt": 1793488527732,
+          "at": 1793488598702,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-recovery-shaftmaker-aubury-falador",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-3b12cf87-a8b7-4321-86b6-b4319bb08d98",
+          "startedAt": 1793489444375,
+          "at": 1793489445983,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ranged-bigchopper-owned-band60",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-0eb0438e-d521-4bda-b396-2fa6688cc2e5",
+          "startedAt": 1793492199474,
+          "at": 1793492200917,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ranged-bigchopper-owned-band70",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-63bcb3c8-9b19-4d6a-bb50-237efe3823ee",
+          "startedAt": 1793495649211,
+          "at": 1793495650848,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ranged-bigchopper-headroom-band70",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-c33303e5-de9f-4ead-9d02-910f057fccd9",
+          "startedAt": 1793495851357,
+          "at": 1793495851800,
+          "blocker": "task failed; inspect the preserved local receipt"
+        }
+      ],
+      "lastUsefulLive": {
+        "id": "run-ranged-bigchopper-admitted-band60",
+        "kind": "run",
+        "goal": "skills",
+        "capability": "ranged-train",
+        "runId": "task-1d85c1d4-dda3-4db1-a545-aef190b51df2",
+        "startedAt": 1793492281382,
+        "at": 1793495565609,
+        "evidence": "live"
+      },
+      "lastRecovery": {
+        "id": "run-recovery-shaftmaker-ge-held-end",
+        "kind": "run",
+        "goal": "skills",
+        "capability": "session-recovery-only",
+        "runId": "task-b636d681-eab5-4def-b619-d72e9b5009d7",
+        "startedAt": 1793473578918,
+        "at": 1793473641928,
+        "evidence": "live-session-recovery"
+      },
+      "lastPreparation": {
+        "id": "qualify-ranged-current-source-band70",
+        "kind": "qualify",
+        "goal": "skills",
+        "capability": "ranged-train",
+        "runId": "task-86823b74-e8b4-48a0-b1d0-5fb85db2f0a4",
+        "startedAt": 1793496022654,
+        "at": 1793496330641,
+        "evidence": "qualify"
+      }
+    },
+    "unassigned": {
+      "running": [],
+      "pending": [
+        {
+          "id": "run-firemaking-yewfirst-60",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-firemaking-yewfirst-recovered-band30",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-rune-magicwanda-band40-owned-binding",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "fresh-rune-supply-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-rune-retained-first-bank-headroom",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-shark-masterbaiter-100-thin",
+          "kind": "run",
+          "goal": "wealth",
+          "capability": "shark-supply-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-shark-child-deadline-aligned",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "qualify-quest-sweep-druid",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-druid-meats-mightyrod-upstairs",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-quest-druid-mightyrod",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-quest-sweep-druid",
+              "status": "pending"
+            },
+            {
+              "id": "run-druid-meats-mightyrod-upstairs",
+              "status": "failed"
+            },
+            {
+              "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-agility-pickpockdick-99",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "agility-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-agility-order-thin",
+              "status": "pending"
+            },
+            {
+              "id": "build-agility-thin-redeliver",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "qualify-agility-order-thin",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "agility-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-agility-thin-redeliver",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-rune-bank-craft-shaftsinker-70-cap",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-rune-bank-craft-shaftsinker-60-cap",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-ge-jugs-pocketpython-north-entry",
+          "kind": "run",
+          "goal": "main24",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-grapes-pocketpython-north-entry",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-quest-restless-bigchopper-current-source",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-quest-monk-bigchopper-owned-stock",
+              "status": "failed"
+            },
+            {
+              "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-quest-goblin-pickpockdick-acquired",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-goblin-acquisition-life-monitor",
+              "status": "failed"
+            },
+            {
+              "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "qualify-cow-scoped-main-consumer",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-cow-scoped-fixture-delivery",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-fishing-contest-mineyourbiz-western-entry",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-firemaking-bigchopper-oak30",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-firemaking-bigchopper-serialized-normal15",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-bigpackage-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-bigchopper-10",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-coincock-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-bigpackage-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-magicwanda-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-coincock-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-magicwanda-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mineyourbiz-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-masterbaiter-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-moneyshot-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mineyourbiz-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-oreelse-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-moneyshot-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pickpockdick-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-oreelse-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pocketpython-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-pickpockdick-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pocketrocket-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-pocketpython-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mmsmk1232-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-woodpecker-10",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mmthv2350-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mmsmk1232-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mightyrod-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mmthv2350-10",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-ballspinner-10",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-yewfirst-child-bound",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-firemaking-yewfirst-recovered-band30",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-yewfirst-child-bound",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-coincock-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-bigchopper-12",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-magicwanda-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-coincock-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mmsmk1232-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-magicwanda-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mmthv2350-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mmsmk1232-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-oreelse-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mmthv2350-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pickpockdick-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-oreelse-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pocketpython-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-pickpockdick-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pocketrocket-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-pocketpython-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-woodpecker-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-recovery-shaftsinker-talisman-entry",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-moneyshot-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-woodpecker-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-yewfirst-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mightyrod-11",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-ballspinner-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-yewfirst-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-bigpackage-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-ballspinner-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-bigpackage-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mineyourbiz-11",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-masterbaiter-11",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-coincock-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-bigchopper-serialized-entry",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-magicwanda-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-coincock-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mmsmk1232-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-magicwanda-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mmthv2350-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mmsmk1232-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-oreelse-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mmthv2350-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pickpockdick-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-oreelse-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pocketpython-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-pickpockdick-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-pocketrocket-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-pocketpython-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-woodpecker-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-recovery-shaftsinker-talisman-entry",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-moneyshot-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-woodpecker-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-ballspinner-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-mightyrod-13",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-bigpackage-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-ballspinner-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-masterbaiter-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-bigpackage-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-session-recovery-mineyourbiz-13",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-masterbaiter-13",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-firemaking-bigchopper-serialized-normal15",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-session-recovery-bigchopper-serialized-entry",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-clocktower-wandwaver-after-totem",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-totem-wandwaver-customs-consumer",
+              "status": "pending"
+            },
+            {
+              "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "qualify-recovery-totem-failed-end",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-recovery-wandwaver-totem-failed-end",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-recovery-totem-failed-end",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-totem-wandwaver-customs-consumer",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            },
+            {
+              "id": "run-recovery-wandwaver-totem-failed-end",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "qualify-ge-shaftsinker-settled-talisman",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-recovery-shaftsinker-talisman-entry",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-ge-shaftsinker-settled-body-talisman",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-ge-shaftsinker-settled-talisman",
+              "status": "pending"
+            },
+            {
+              "id": "run-recovery-shaftsinker-talisman-entry",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "qualify-rune-shaftsinker-acquired-body80",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-shaftsinker-settled-body-talisman",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-rune-shaftsinker-acquired-body80",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "rune-bank-craft",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-rune-shaftsinker-acquired-body80",
+              "status": "pending"
+            },
+            {
+              "id": "run-ge-shaftsinker-settled-body-talisman",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-handoff-maple-bowbeforeme-bigchopper",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ammo-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-bowbeforeme-maple-for-ranged40",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "qualify-iron-retained-anvil-consumer",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-iron-reconcile-retained-anvil-source",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-iron-oreelse-retained-anvil85",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-iron-reconcile-retained-anvil-source",
+              "status": "failed"
+            },
+            {
+              "id": "qualify-iron-retained-anvil-consumer",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "qualify-combat-giant-style-1",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-combat-giant-style-1",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-combat-mightyrod-strength90",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-combat-giant-style-1",
+              "status": "running"
+            },
+            {
+              "id": "qualify-combat-giant-style-1",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-magic-falador45-fresh",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-magic-falador45-fresh",
+              "status": "running"
+            }
+          ]
+        }
+      ],
+      "failed": [],
+      "lastUsefulLive": null,
+      "lastRecovery": null,
+      "lastPreparation": null
+    }
+  },
+  "swarm": {
+    "controllerPid": 32608,
+    "processState": "alive",
+    "reportedRunning": 3,
+    "observationStale": false,
+    "jobs": [
+      {
+        "account": "AFKnight",
+        "script": "scripts/gather-combat.ts",
+        "state": "existing assignment; awaiting coordinator qualification"
+      },
+      {
+        "account": "Shaftshooter",
+        "script": "",
+        "state": "existing assignment; awaiting coordinator qualification"
+      },
+      {
+        "account": "Polevaulter",
+        "script": "",
+        "state": "existing assignment; awaiting coordinator qualification"
+      },
+      {
+        "account": "Masterbaiter",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "FishAndChips",
+        "script": "scripts/chain.ts",
+        "state": "running"
+      },
+      {
+        "account": "Bigpackage",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "MineYourBiz",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "mmtha0205",
+        "script": "scripts/shop-buyer.ts",
+        "state": "ended: died after 1 runs"
+      },
+      {
+        "account": "NabTheKnob",
+        "script": "scripts/quest-chain.ts",
+        "state": "ended: done"
+      },
+      {
+        "account": "Swordinhand",
+        "script": "scripts/quest-chain.ts",
+        "state": "ended: done"
+      },
+      {
+        "account": "Abracadickra",
+        "script": "scripts/quest-chain.ts",
+        "state": "ended: done"
+      },
+      {
+        "account": "Woodenstaff",
+        "script": "scripts/quest-chain.ts",
+        "state": "ended: done"
+      },
+      {
+        "account": "CoinCock",
+        "script": "scripts/goldfarm.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Magicwanda",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "OreElse",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "PickpockDick",
+        "script": "scripts/goldfarm.ts",
+        "state": "ended: died after 1 runs"
+      },
+      {
+        "account": "Pocketpython",
+        "script": "scripts/goldfarm.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Pocketrocket",
+        "script": "scripts/shop-buyer.ts",
+        "state": "ended: exit orphaned: attempt 1793474282434-0000012792-0000000001 owner 12792 gone"
+      },
+      {
+        "account": "Shaftmaker",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "mmsmk1232",
+        "script": "scripts/goldfarm.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "mmthv2350",
+        "script": "scripts/shop-buyer.ts",
+        "state": "ended: exit orphaned: attempt 1793474244334-0000034940-0000000001 owner 34940 gone"
+      },
+      {
+        "account": "Shaftsinker",
+        "script": "scripts/rune-bank-craft.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Mightyrod",
+        "script": "scripts/quest-chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Ballspinner",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Moneyshot",
+        "script": "scripts/goldfarm.ts",
+        "state": "running"
+      },
+      {
+        "account": "Wandwaver",
+        "script": "scripts/quest-sweep.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Hocuspokeus",
+        "script": "scripts/quest-cook-job.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "BowBeforeMe",
+        "script": "scripts/buy-owned-ge-item.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Bigchopper",
+        "script": "scripts/ranged-train.ts",
+        "state": "running"
+      }
+    ]
+  },
+  "limits": [
+    "PID existence does not establish process identity or useful output.",
+    "Source freshness is separate from export freshness.",
+    "Only succeeded live gameplay run receipts count as useful live coordinator results; session recovery is separate.",
+    "Model attribution covers coordinator tasks; swarm gameplay is reported separately.",
+    "Archived coordinator task history is not included."
+  ]
+}
