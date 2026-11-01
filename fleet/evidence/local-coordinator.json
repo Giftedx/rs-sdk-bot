@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793500712994,
+  "exportedAt": 1793500773064,
   "sources": {
     "state": {
-      "observedAt": 1793500586904.139,
-      "ageMs": 126089.86108398438,
-      "stale": true,
+      "observedAt": 1793500757087.423,
+      "ageMs": 15976.576904296875,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793500710999,
-      "ageMs": 1995,
+      "observedAt": 1793500771220,
+      "ageMs": 1844,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 357245.1945800781,
+      "ageMs": 417315.1945800781,
       "stale": true,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-80cfe9c9-a54b-4ec5-a70f-9c4eb0072557",
-      "agent": "claude",
-      "startedAt": 1793500586864,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
@@ -536,7 +531,7 @@
           "pid": 23188,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         },
         {
@@ -550,7 +545,21 @@
           "pid": 11148,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "build-combat-giant-style-2",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-dd197ff1-9456-4858-aa93-08e765ff2e2e",
+          "startedAt": 1793500755398,
+          "recordStatus": "running",
+          "pid": 30444,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
           "blocker": null
         }
       ],
@@ -3871,8 +3880,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-combat-giant-style-1",
-              "status": "failed"
+              "id": "build-combat-giant-style-2",
+              "status": "running"
             }
           ]
         },
@@ -3886,8 +3895,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-combat-giant-style-1",
-              "status": "failed"
+              "id": "build-combat-giant-style-2",
+              "status": "running"
             },
             {
               "id": "qualify-combat-giant-style-1",
