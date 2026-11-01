@@ -502,8 +502,8 @@ setInterval(() => void refreshExtra(), 600_000);
 void refreshExtra();
 
 // ---------- Grand Exchange prices and item icons ----------
-// Icons: items.png is the 32x32 sprite sheet (64 per row, index = item id) copied from
-// vendor/lostcity-markets/storage/app/private/items-274.png; items.json maps lower-case names to ids (its obj.json).
+// Icons: export-item-icons.ts renders items.png from the installed game config and models.
+// The sheet has 64 32x32 cells per row, indexed by item id; items.json maps lower-case names to ids.
 // The live market API ids win over items.json when both know a name.
 const itemIds = new Map<string, number>(Object.entries((() => { try { return JSON.parse(readFileSync(join(import.meta.dir, 'items.json'), 'utf8')) as Record<string, number>; } catch { return {}; } })()));
 const marketIds = new Map<string, number>();

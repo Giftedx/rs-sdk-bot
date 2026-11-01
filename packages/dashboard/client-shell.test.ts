@@ -2,6 +2,24 @@ import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
 
+function questPanel(bot:any,filter='all'){
+ const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'){"),shell.indexOf("    if(selectedTab==='friends')"));
+ return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='';let html='';${code};return html;`)(bot,filter,String,String);
+}
+
+test('quest points need a point observation, not the number of completed quests',()=>{
+ const bot={quests:[{name:'One quest',state:'complete'}]};
+ expect(questPanel(bot)).toContain('Quest Points: —');
+ expect(questPanel({...bot,ranks:[{board:'Quest Points',level:4}]})).toContain('Quest Points: 4');
+});
+
+test('unknown quest flags stay separate from observed started quests',()=>{
+ const bot={quests:[{name:'Unobserved quest',state:'unknown'},{name:'Observed quest',state:'started'}]};
+ const panel=questPanel(bot,'in progress');
+ expect(panel).toContain('Started 1');expect(panel).toContain('Unknown 1');expect(panel).not.toContain('data-quest="Unobserved quest"');
+ expect(questPanel(bot,'unknown')).toContain('data-quest="Unobserved quest"');
+});
+
 test('infoboxes: boosted and drained skills of the followed account; Hitpoints and Prayer stay in the orbs',()=>{
  const code=shell.slice(shell.indexOf('  function infoboxes(){'),shell.indexOf('  // Board progress'));
  const el={innerHTML:''};
