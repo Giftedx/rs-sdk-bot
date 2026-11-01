@@ -76,18 +76,18 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .game-hud .game-minimap canvas.minimap-frame{position:absolute;left:0;top:0;width:181px;height:165px;border-radius:0;background:none;pointer-events:none}
 /* The game's compass is 51 px with its N near the edge: shown at 40 px in the socket's well, clipped round. */
 .game-hud .minimap-compass{left:2px;top:1px;width:40px;height:40px;clip-path:circle(17px at 50% 50%)}
-/* The game's minimap layout (measured from oldschool.runescape.wiki/images/Minimap.png): the ring 17 px lower in its box
-   so the compass sits above its top-left; the orbs and the XP orb at the game's offsets from the ring's centre. */
-.game-hud .game-minimap{height:182px}
-.game-hud .game-minimap canvas:not(.minimap-frame){top:28.5px}
-.game-hud .game-minimap canvas.minimap-frame{height:182px}
-.game-hud .minimap-compass{left:1px;top:0;width:37px;height:37px;clip-path:circle(16px at 50% 50%)}
-.game-hud .game-orbs{right:162px;top:53px;gap:6.5px}
+/* The game's minimap layout (oldschool.runescape.wiki/images/Minimap.png, measured from the fitted ring centre): the
+   compass dial at (-72.7, -62), the XP orb at (-117.2, -45.5), HP at (-94.2, -24.5), Prayer at (-95.2, +9); 27 px orbs. */
+.game-hud .minimap-compass{left:5.8px;top:2.5px;width:40px;height:40px;clip-path:circle(17px at 50% 50%)}
+.game-hud .game-orbs{right:167.2px;top:52.5px;gap:6.5px}
 .game-hud .game-orb{height:27px}
-.game-hud .game-orb.orb-hp{margin-right:3.5px}
-.game-hud .game-orb.orb-prayer{margin-right:0}
+.game-hud .game-orb.orb-hp{margin-right:0}
+.game-hud .game-orb.orb-prayer{margin-right:1px}
 .game-hud .orb-art{width:27px;height:27px}
-.game-hud .orb-num{height:17px;min-width:22px;margin-right:-4px;padding:0 7px 0 4px;font-size:14px;line-height:17px}
-.game-hud .game-xp{right:192.5px;top:30.5px}
-.game-hud .game-logout{top:192px}
+.game-hud .orb-num{height:17px;min-width:22px;margin-right:-4px;margin-top:6px;padding:0 7px 0 4px;font-size:14px;line-height:17px}
+.game-hud .game-xp{right:190.2px;top:31.5px;width:27px;height:27px}
+/* Colours sampled from the game's minimap picture: number plates dark brown with a #685a4b edge, the XP button gold
+   letters on a dark disc. */
+.game-hud .orb-num{background:#2b241b;border:1px solid #685a4b;border-right:0;box-shadow:0 0 0 1px #000;border-radius:4px 0 0 4px;min-width:26px;padding:0 8px 0 5px}
+.game-hud .game-xp{background:#2b241b;border:1px solid #000;box-shadow:inset 0 0 0 2px #5d544a;font:13px RSBold,RS,sans-serif;color:#ffb83f;text-shadow:1px 1px #000;line-height:24px}
 

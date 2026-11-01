@@ -12,7 +12,7 @@
 const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Defence','Herblore','Fishing','Ranged','Thieving','Cooking','Prayer','Crafting','Firemaking','Magic','Fletching','Woodcutting','Runecraft','Slayer','Farming','Construction','Hunter','Sailing'];
   const skillFile=n=>n.toLowerCase()==='runecraft'?'runecraft':n.toLowerCase();
   const hud=document.createElement('div');hud.className='game-hud';
-  hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker"><img src="${asset('rl-xp.png')}" alt=""></button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="146"></canvas><canvas class="minimap-frame" aria-hidden="true"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass"><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><button class="game-logout" title="Logout menu">⏻</button><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
+  hud.innerHTML=`<button class="game-xp" title="XP Tracker" aria-label="XP Tracker">XP</button><div class="game-orbs" aria-label="Player status"></div><div class="xp-drops" aria-hidden="true"></div><div class="xp-globes" aria-label="XP globes"></div><div class="game-overlay" aria-label="Overlay"></div><div class="game-infoboxes" aria-label="Infoboxes"></div><div class="game-tip" hidden></div><div class="game-screen" id="game-loading"><div class="game-screen-box"><h2>Welcome to RuneScape</h2><p>Loading - please wait.</p></div></div><div class="game-screen" id="game-lost" hidden><div class="game-screen-box"><p>Connection lost.</p><p>Please wait - attempting to reestablish.</p></div></div><div class="game-minimap" aria-label="Minimap"><canvas width="146" height="146"></canvas><canvas class="minimap-frame" aria-hidden="true"></canvas><img class="minimap-compass" src="${asset('compass.png')}" alt="" title="Compass"><button class="game-worldmap" data-places title="Places: move the camera" aria-label="Places"><img src="${asset('worldmap-icon.png')}" alt=""></button></div><button class="game-logout" title="Logout menu">⏻</button><section class="game-tabs" aria-label="Game interface"><nav class="tab-row" aria-label="Primary game tabs"></nav><div class="game-panel" id="game-panel"></div><nav class="tab-row" aria-label="Social and settings tabs"></nav></section><button class="chat-toggle" aria-label="Toggle chat">▾ Chat</button><section class="game-chat" aria-label="In-game chat"><div class="game-chat-lines" role="log" aria-live="polite"></div><form class="chat-input"><span id="chat-name">Spectator:</span><input aria-label="Chat message or local command" autocomplete="off" placeholder="*"></form><nav class="chat-channels" aria-label="Chat channels"></nav></section>`;
   app.append(hud);
   const title=document.createElement('div');title.className='client-title';title.innerHTML=`<img src="${asset('runelite.png')}" alt=""><span>RuneLite — Swarm</span><span class="connection">● Live world</span><select aria-label="Observed account" id="client-account"><option value="">Free camera</option></select><button id="client-sidebar" title="Toggle plugin sidebar" aria-label="Toggle plugin sidebar">❯</button>`;app.append(title);
   const plugin=document.createElement('aside');plugin.className='client-plugin';plugin.setAttribute('aria-label','RuneLite plugins');plugin.innerHTML='<div class="client-plugin-title"><span id="client-plugin-name">Fleet</span><select id="client-more" aria-label="More plugins"><option value="">⋮</option><option value="raw">Raw evidence</option></select><button aria-label="Close plugin">×</button></div><div class="client-plugin-body"></div>';app.append(plugin);
@@ -200,32 +200,34 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   // Orbs as RuneLite draws them: a stone ring, a dark well, a liquid fill as high as the value (red HP, cyan Prayer)
   // with a gloss and the skill icon on top, and the number on a plate to the left in RuneLite's red-yellow-green.
-  const orbIcons={hp:'skill-hitpoints.png',prayer:'skill-prayer.png'},orbFill={hp:['#ef3b2f','#7c0c09'],prayer:['#5ee0f5','#11718c']},orbImg={};
+  const orbIcons={hp:'skill-hitpoints.png',prayer:'skill-prayer.png'},orbFill={hp:['#e2382c','#b00905'],prayer:['#4a3d78','#27203b']},orbImg={};
   const orbColour=(v,max)=>{if(v==null||!max)return '#ffff00';const f=Math.max(0,Math.min(1,v/max));return `rgb(${Math.round(f<0.5?255:510*(1-f))},${Math.round(f<0.5?510*f:255)},0)`;};
   const hiDpi=(c,w,h)=>{const r=Math.max(1,Math.round(window.devicePixelRatio||1));c.width=w*r;c.height=h*r;c.style.width=w+'px';c.style.height=h+'px';const g=c.getContext('2d');g.scale(r,r);return g;};
-  // Size and place as the game's minimap (oldschool.runescape.wiki/images/Minimap.png, measured from the ring's centre):
-  // 27 px orbs, HP at (-92.5, -41), Prayer at (-89, -7.5), the XP orb at (-119, -64), the compass at (-79, -83).
+  // Size and place as the game's minimap (oldschool.runescape.wiki/images/Minimap.png; ring centre fitted to the ring's
+  // edge pixels, outer radius 81): 27 px orbs, HP at (-94.2, -24.5), Prayer at (-95.2, +9), the XP orb at
+  // (-117.2, -45.5), the compass dial at (-72.7, -62).
   const ORB=27;
   function drawOrb(c){
-    const id=c.dataset.orb,frac=Number(c.dataset.frac)||0,g=hiDpi(c,ORB,ORB),m=ORB/2,R=m-0.5,r=R-3.5;
-    const ring=g.createRadialGradient(m-3,m-4,3,m,m,R);ring.addColorStop(0,'#b3a385');ring.addColorStop(0.75,'#6e6350');ring.addColorStop(1,'#2a251c');
-    g.beginPath();g.arc(m,m,R,0,Math.PI*2);g.fillStyle=ring;g.fill();g.lineWidth=1;g.strokeStyle='#000';g.stroke();
-    g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.fillStyle='#101010';g.fill();
+    const id=c.dataset.orb,frac=Number(c.dataset.frac)||0,g=hiDpi(c,ORB,ORB),m=ORB/2,R=m-0.5,r=R-3;
+    // The game's orb: a dark frame (#5d544a) with a black edge, a dark empty part, and the colour disc as high as the value.
+    g.beginPath();g.arc(m,m,R,0,Math.PI*2);g.fillStyle='#5d544a';g.fill();g.lineWidth=1;g.strokeStyle='#000';g.stroke();
+    g.beginPath();g.arc(m,m,R-1.5,0,Math.PI*2);g.strokeStyle='#7a6f60';g.stroke();
+    g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.fillStyle='#1a1510';g.fill();
     g.save();g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.clip();
-    const top=m+r-2*r*frac,liquid=g.createLinearGradient(0,top,0,m+r);liquid.addColorStop(0,orbFill[id][0]);liquid.addColorStop(1,orbFill[id][1]);g.fillStyle=liquid;g.fillRect(0,top,ORB,ORB);
-    g.fillStyle='rgba(255,255,255,0.16)';g.beginPath();g.ellipse(m-1.5,m-5,6.5,3.5,-0.3,0,Math.PI*2);g.fill();g.restore();
-    g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.strokeStyle='rgba(0,0,0,0.7)';g.stroke();
-    const draw=img=>g.drawImage(img,m-6.5,m-6.5,13,13);
+    const top=m+r-2*r*frac,disc=g.createRadialGradient(m-3,m-4,1,m,m,r);disc.addColorStop(0,orbFill[id][0]);disc.addColorStop(1,orbFill[id][1]);g.fillStyle=disc;g.fillRect(0,top,ORB,ORB);g.restore();
+    g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.strokeStyle='#000';g.stroke();
+    // The icon a little brighter with a dark edge, so the heart stands out on the red disc as in the game.
+    const draw=img=>{g.save();g.shadowColor='rgba(0,0,0,0.85)';g.shadowOffsetX=1;g.shadowOffsetY=1;g.filter='brightness(1.35)';g.drawImage(img,m-6.5,m-6.5,13,13);g.restore();};
     let img=orbImg[id];if(!img){img=orbImg[id]=new Image();img.src=asset(orbIcons[id]);}
     if(img.complete&&img.naturalWidth)draw(img);else img.addEventListener('load',()=>draw(img),{once:true});
   }
   // The minimap frame: a stone ring round the map and a socket for the compass, drawn once at the screen's scale.
   {
-    const c=hud.querySelector('canvas.minimap-frame'),g=hiDpi(c,181,182),cx=98.5,cy=101.5;
-    const stone=(x,y,inner,outer)=>{const gr=g.createRadialGradient(x,y,inner,x,y,outer);gr.addColorStop(0,'#3b3427');gr.addColorStop(0.35,'#9c8e72');gr.addColorStop(0.7,'#6b604d');gr.addColorStop(1,'#2a251c');g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.arc(x,y,inner,0,Math.PI*2,true);g.fillStyle=gr;g.fill('evenodd');g.lineWidth=1;g.strokeStyle='#000';g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.stroke();g.beginPath();g.arc(x,y,inner,0,Math.PI*2);g.stroke();};
+    const c=hud.querySelector('canvas.minimap-frame'),g=hiDpi(c,181,165),cx=98.5,cy=84.5;
+    const stone=(x,y,inner,outer)=>{const gr=g.createRadialGradient(x,y,inner,x,y,outer);gr.addColorStop(0,'#1e1a10');gr.addColorStop(0.25,'#322b19');gr.addColorStop(0.8,'#3d3420');gr.addColorStop(1,'#746a5a');g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.arc(x,y,inner,0,Math.PI*2,true);g.fillStyle=gr;g.fill('evenodd');g.lineWidth=1;g.strokeStyle='#000';g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.stroke();g.beginPath();g.arc(x,y,inner,0,Math.PI*2);g.stroke();};
     stone(cx,cy,73,80);
-    // The compass socket: a dark well the compass sits in, large enough that its N and needle both show.
-    g.beginPath();g.arc(19.5,18.5,16,0,Math.PI*2);g.fillStyle='#16130e';g.fill();stone(19.5,18.5,16,19.5);
+    // The compass sits on a light face, as in the game (about #b4a890), large enough that its N and needle both show.
+    const face=g.createRadialGradient(23,20,2,25.8,22.5,17);face.addColorStop(0,'#d6ccb3');face.addColorStop(1,'#a39880');g.beginPath();g.arc(25.8,22.5,17,0,Math.PI*2);g.fillStyle=face;g.fill();stone(25.8,22.5,17,21);
   }
   // The minimap: the 2D map art around the observed account at 4 px a tile, every bot a dot, the observed one a
   // white square in the centre. With no account it shows the whole known world.
