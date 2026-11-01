@@ -447,6 +447,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // level (npc-names.json, from the server's npc configs) and hitpoints; it stays 5 seconds after combat ends.
   // One shared table load; while it loads, only the newest update draws, into the one box.
   let npcNames=null,npcNamesLoad=null,opponentHide=0,opponentLatest=null;
+  // The box belongs to the viewer that sent it: a viewer reload (a new follow) or the 2D map clears it at once.
+  function opponentClear(){opponentLatest=null;clearTimeout(opponentHide);const el=hud.querySelector('.game-opponent');if(el)el.hidden=true;}
+  window.atlasOpponentClear=opponentClear;$('#rsw')?.addEventListener('load',opponentClear);
   async function opponentBox(o){
     opponentLatest=o;
     if(!o){clearTimeout(opponentHide);opponentHide=setTimeout(()=>{const el=hud.querySelector('.game-opponent');if(el)el.hidden=true;},5000);return;}
