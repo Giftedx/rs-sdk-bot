@@ -25,6 +25,31 @@ const STICKS = { x: 2784, z: 3289 };                       // damp sticks (1467)
 const GLASS_DOOR = { x: 2765, z: 3287 };                  // loc_1533 east wall; broken glass (1469) at 2765,3289
 const ITEM = { paste: 1941, torch: 596, lit: 594, damp: 1467, glass: 1469, dry: 1468, food: 379 };
 
+type TorchQuest = Pick<Awaited<ReturnType<typeof openQuest>>,
+    'has' | 'talk' | 'converse' | 'dialogOpen' | 'guard' | 'fail' | 's' | 'slot' | 'waitUntil' | 'msgCount'>;
+
+// Pinned bailey.rs2 stage seaslug_spoken_kent gives torch_unlit (596); m43_51.jm2 NPC 695 at 2763,3276,0.
+// Acquire before rubbing: quest_seaslug.rs2 advances stage even when successful rubbing has no torch to light.
+export async function lightSeaSlugTorch(q: TorchQuest): Promise<void> {
+    await q.guard('torch entry');
+    if (!q.has(ITEM.torch) && !q.has(ITEM.lit)) {
+        await q.talk('bailey torch', /^bailey$/i, [], () => q.has(ITEM.torch), { x: 2763, z: 3276 }, 60);
+        await q.converse([], () => !q.dialogOpen(), 10);
+        await q.guard('bailey torch receipt');
+        if (!q.has(ITEM.torch)) await q.fail('Bailey torch not received');
+    }
+    for (let i = 0; i < 6 && !q.has(ITEM.lit); i++) {
+        await q.guard('light torch');
+        if (!q.has(ITEM.torch)) await q.fail('no unlit torch');
+        if (!q.has(ITEM.dry)) await q.fail('no dry sticks');
+        await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.dry)!, optionIndex: 1, reason: 'SDK' });
+        await q.waitUntil(() => q.has(ITEM.lit) || q.msgCount(/smoke momentarily then die out\.$/i) > i, 6);
+    }
+    if (!q.has(ITEM.lit)) await q.fail('torch not lit');
+}
+
+// quest-sweep imports with an already owned session.
+if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
 const q = await openQuest({ cap: 2000, eatAt: 40, food: [ITEM.food] });
 if (!fixBridgedLocChanges((q.s as any).client)) console.log('WARN bridge fix not applied');
 try {
@@ -95,14 +120,8 @@ try {
     await q.talk('holgart island', /^holgart$/i, [], () => q.near(PLATFORM.x, PLATFORM.z, 6), ISLAND, 40);
     await q.converse([], () => !q.dialogOpen(), 10);
 
-    // 7. Rub the dry sticks with the torch in the pack (stat_random(firemaking, 64, 512): at 99 it rarely fails).
-    for (let i = 0; i < 6 && !q.has(ITEM.lit); i++) {
-        await q.guard('light torch');
-        if (!q.has(ITEM.dry)) await q.fail('no dry sticks');
-        await q.s.direct({ type: 'useInventoryItem', slot: q.slot(ITEM.dry)!, optionIndex: 1, reason: 'SDK' });
-        await q.waitUntil(() => q.has(ITEM.lit) || q.msgCount(/smoke momentarily then die out\.$/i) > i, 6);
-    }
-    if (!q.has(ITEM.lit)) await q.fail('torch not lit');
+    // 7. The free Bailey torch also supports normal prepared entry at Firemaking 30.
+    await lightSeaSlugTorch(q);
     q.milestone(7);
 
     // 8-11. Upstairs: Kennith, the panel, Kennith, the crane.
@@ -131,3 +150,5 @@ try {
     await q.end(questDone, `qp=1 questMsg=${questDone}`);
 
 } catch (e) { await q.fail(String(e)); }
+
+}
