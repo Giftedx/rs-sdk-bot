@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {chickenTrainingStyle,chickenTrainingKit,chickenTrainingProfile,chickenTrainingThreat,chickenTrainingTarget,trainChickens} from './train-chickens';
+import {chickenTrainingStyle,chickenTrainingKit,chickenTrainingProfile,chickenTrainingThreat,chickenTrainingTarget,chickenStrengthGoal,chickenTrainingHealth,guardArdougneTrainingWalker,trainChickens} from './train-chickens';
 import {mixedOreCombatProblem} from './gather-ore';
 
 test('qualification keeps combat13 by default and admits the bounded combat29 courier target',()=>{
@@ -46,4 +46,33 @@ test('Draynor wizard threshold follows its hunt3 plus one tile; jail guards and 
 
 test('bootstrap chicken demand is finite and invalid demand fails before game actions',async()=>{
  for(const rawChicken of [-1,13,1.5,NaN])await expect(trainChickens({} as any,1800,'draynor',13,{rawChicken})).rejects.toThrow('0..12');
+});
+
+test('Ardougne is a local bank-to-farm profile and requires a bounded Strength goal',()=>{
+ const p=chickenTrainingProfile('ardougne');expect(p.route[0]).toMatchObject({x:2654,z:3283});
+ expect(p.pen).toMatchObject({x0:2686,x1:2700,z0:3268,z1:3283});
+ expect(()=>chickenStrengthGoal('ardougne',undefined,undefined)).toThrow('explicit Strength');
+ expect(chickenStrengthGoal('ardougne','Strength',13)).toBe(13);
+ for(const [skill,level] of [['Attack',13],['Strength',0],['Strength',13.5],['Strength',100]] as const)
+  expect(()=>chickenStrengthGoal('ardougne',skill,level)).toThrow();
+});
+test('partial HP admission is explicit and does not relax the original full-health profiles',()=>{
+ expect(()=>chickenTrainingHealth('ardougne',27,35)).not.toThrow();
+ for(const hp of [0,10,26,NaN])expect(()=>chickenTrainingHealth('ardougne',hp,35)).toThrow('at least27');
+ expect(()=>chickenTrainingHealth('varrock',27,35)).toThrow('full HP');
+ expect(()=>chickenTrainingHealth('draynor',35,35)).not.toThrow();
+ expect(chickenTrainingThreat({name:'Bear',distance:4},'ardougne')).toBe(true);
+ expect(chickenTrainingThreat({name:'Giant bat',distance:9},'ardougne')).toBe(false);
+});
+test('Ardougne route guard blocks direct and partial-path fallbacks outside the admitted corridor',()=>{
+ let sent=0;
+ const base={pos:()=>({x:2655,z:3283,level:0}),plan:(_l:number,_f:any,to:any)=>[to],walk:()=>{sent++;return{};},interactLoc:()=>({})} as any;
+ const safe=guardArdougneTrainingWalker(base);
+ safe.deps.walk(2691,3277);expect(sent).toBe(1);
+ safe.deps.walk(2765,3422);expect(sent).toBe(1);expect(safe.reason()).toContain('outside admitted');
+ const detour=guardArdougneTrainingWalker({...base,plan:(_l:number,_f:any,to:any)=>[{x:2640,z:3274},to]});
+ expect(detour.deps.plan(0,{x:2655,z:3283},{x:2691,z:3277})).toEqual([]);
+ detour.deps.walk(2691,3277);expect(sent).toBe(1);
+ const partial=guardArdougneTrainingWalker({...base,plan:()=>[{x:2660,z:3283}]});
+ partial.deps.walk(2691,3277);expect(sent).toBe(1);
 });
