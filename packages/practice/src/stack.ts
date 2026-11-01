@@ -23,6 +23,8 @@ export interface StackOptions {
     readyTimeoutMs?: number;
     // Practice diagnostics only: `bun --preload <module>` for the engine process. Default launches have none.
     enginePreload?: { module: string; env: Record<string, string> };
+    // A second stack beside the shared one: its own pids-<instance>.json, <service>-<instance>.log and stop.
+    instance?: string;
 }
 
 // The engine command line keeps MARKERS.engine, so safeKill still identifies the server.
@@ -66,8 +68,14 @@ export { killTree } from './proc';
 export const MARKERS = { engine: 'src/app.ts', gateway: 'gateway.ts' } as const;
 type Saved = Record<string, { pid: number; marker: string }>;
 
-function pidsFile(): string {
-    return join(practiceDir(), 'pids.json');
+function suffix(instance?: string): string {
+    if (instance === undefined) return '';
+    if (!/^[a-z0-9-]{1,32}$/.test(instance)) throw new Error(`invalid stack instance ${instance}`);
+    return `-${instance}`;
+}
+
+export function pidsFile(instance?: string): string {
+    return join(practiceDir(), `pids${suffix(instance)}.json`);
 }
 
 export async function startStack(opts: StackOptions = {}): Promise<Stack> {
@@ -76,9 +84,10 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
         if (!canBind(port)) throw new Error(`port ${port} in use`);
     }
     const root = rsSdkRoot();
+    const tag = suffix(opts.instance);
     const logs = {
-        engine: join(practiceDir(), 'logs', 'engine.log'),
-        gateway: join(practiceDir(), 'logs', 'gateway.log'),
+        engine: join(practiceDir(), 'logs', `engine${tag}.log`),
+        gateway: join(practiceDir(), 'logs', `gateway${tag}.log`),
     };
     const timeout = opts.readyTimeoutMs ?? 180_000;
     const spawn = (cwd: string, cmd: string[], env: Record<string, string>, log: string) => {
@@ -91,7 +100,7 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
     const launch = engineCommand(opts, ports.engine);
     const engine = spawn(join(root, 'server', 'engine'), launch.cmd, launch.env, logs.engine);
     const saved: Saved = { engine: { pid: engine.pid, marker: MARKERS.engine } };
-    writeFileSync(pidsFile(), JSON.stringify(saved));
+    writeFileSync(pidsFile(opts.instance), JSON.stringify(saved));
     try {
         await waitReady(engine, 'engine', logs.engine, timeout);
     } catch (e) {
@@ -104,7 +113,7 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
         AGENT_PORT: String(ports.gateway),
     }, logs.gateway);
     saved.gateway = { pid: gateway.pid, marker: MARKERS.gateway };
-    writeFileSync(pidsFile(), JSON.stringify(saved));
+    writeFileSync(pidsFile(opts.instance), JSON.stringify(saved));
     try {
         await waitReady(gateway, 'gateway', logs.gateway, timeout);
     } catch (e) {
@@ -113,14 +122,15 @@ export async function startStack(opts: StackOptions = {}): Promise<Stack> {
         throw e;
     }
 
-    return { logs, stop: stopStack };
+    return { logs, stop: () => stopStack(opts.instance) };
 }
 
-export async function stopStack(): Promise<void> {
-    if (!existsSync(pidsFile())) return;
-    const saved = JSON.parse(readFileSync(pidsFile(), 'utf8')) as Saved;
+export async function stopStack(instance?: string): Promise<void> {
+    const file = pidsFile(instance);
+    if (!existsSync(file)) return;
+    const saved = JSON.parse(readFileSync(file, 'utf8')) as Saved;
     for (const [name, p] of Object.entries(saved)) {
         if (!(await safeKill(p.pid, p.marker))) console.warn(`stop: ${name} pid ${p.pid} is not running ${p.marker}; left alone`);
     }
-    rmSync(pidsFile());
+    rmSync(file);
 }
