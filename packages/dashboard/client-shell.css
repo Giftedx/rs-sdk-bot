@@ -106,3 +106,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .lookup-worn-item{display:flex;flex-direction:column;align-items:center;gap:1px;background:#1e1e1e;border:1px solid #333;padding:2px}.lookup-worn-item small{font:10px Arial;color:#ccc;text-align:center;overflow-wrap:anywhere}
 /* Boosts (RuneLite boosts): green when a skill is boosted, red when drained. */
 .infobox.boost-up span{color:#0f0}.infobox.boost-down span{color:#f00}
+/* Player lookup: a level where the player is ahead of every fleet account. */
+.lookup-card .hs-cell.hs-ahead span{color:#ff5040}

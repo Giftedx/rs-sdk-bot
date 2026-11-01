@@ -19,10 +19,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const plugin=document.createElement('aside');plugin.className='client-plugin';plugin.setAttribute('aria-label','RuneLite plugins');plugin.innerHTML='<div class="client-plugin-title"><span id="client-plugin-name">Fleet</span><select id="client-more" aria-label="More plugins"><option value="">⋮</option><option value="raw">Raw evidence</option></select><button aria-label="Close plugin">×</button></div><div class="client-plugin-body"></div>';app.append(plugin);
   const body=plugin.querySelector('.client-plugin-body'),rail=document.createElement('nav');rail.className='client-rail';rail.setAttribute('aria-label','RuneLite plugin toolbar');
   const oldRail=document.querySelector('.plugin-rail');
-  const plugins=[['fleet','Fleet'],['xp','XP Tracker'],['boards','Hiscores'],['world','World'],['ge','Grand Exchange'],['prs','Pull requests'],['jobs','Agents & jobs'],['goals','Project goals'],['account','Account overview'],['stock','Supply ledger'],['activity','Activity'],['machine','Host resources']];
+  const plugins=[['fleet','Fleet'],['xp','XP Tracker'],['boards','Hiscores'],['world','World'],['ge','Grand Exchange'],['prs','Pull requests'],['jobs','Agents & jobs'],['goals','Project goals'],['account','Account overview'],['stock','Supply ledger'],['activity','Activity'],['machine','Host resources'],['info','Info']];
   const fallback='<svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8m-8 5h8"/></svg>';
   // RuneLite's own sidebar icons (client-assets/rl-*.png, see ATTRIBUTION.txt), one per plugin.
-  const RAIL_ICONS=['fleet','xp','hiscore','loot','worlds','ge','prs','jobs','goals','account','boards','activity','world','machine','settings','operations','dispatch','alerts','library','manager'],RAIL_FILE={boards:'hiscore'};
+  const RAIL_ICONS=['fleet','xp','hiscore','loot','worlds','ge','prs','jobs','goals','account','boards','activity','world','machine','settings','operations','dispatch','alerts','library','manager'],RAIL_FILE={boards:'hiscore',info:'library'};
   const railIcon=id=>{const f=RAIL_FILE[id]||id;return RAIL_ICONS.includes(f)?`<img src="${asset('rl-'+f+'.png')}" alt="">`:null;};window.atlasRailIcon=railIcon;
   const icons={xp:railIcon('xp')};
   rail.innerHTML=plugins.filter(([id])=>window.atlasOperator()||!OPERATOR_PLUGINS.includes(id)).map(([id,label])=>`<button data-client-plugin="${id}" aria-label="${label}" title="${label}">${railIcon(id)||oldRail.querySelector(`[data-plugin="${id}"]`)?.innerHTML||fallback}</button>`).join('')+'<span class="rail-gap"></span><button data-client-plugin="settings" aria-label="Client settings" title="Client settings">'+railIcon('settings')+'</button>';app.append(rail);
@@ -138,6 +138,21 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   // World plugin: who stands at the spots our bots claim, and a lookup of any player (hiscores and where they are).
   let worldLookup=null,worldLookupName='';
+  // Info (RuneLite info): what this page is, how fresh its data is, what the marks mean, and where the data comes from.
+  function infoPanel(){
+    const fleet=S.bots.filter(b=>!b.practice&&!b.reserved),playing=fleet.filter(b=>b.fresh),sides=S.fleetSides?.sides||[],hosted=S.hosted?.kind==='public';
+    const row=(k,v)=>`<div class="xp-meta"><span>${E(k)}</span><span>${v}</span></div>`;
+    return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine), shown in a RuneLite-style client. The 3D view and the map show every player online; gold names are our accounts.</p></div>'+
+      '<div class="xp-box"><div class="xp-head"><span>Data</span></div>'+
+      row('This page',hosted?'public snapshot, '+(S.hosted?.at?age(S.hosted.at)+' old':'age unknown')+' · new one every 10 minutes':window.atlasOperator()?'owner view, live':'live')+
+      row('World feed','every player, live in 3D; the roster every 10 ticks')+
+      row('Online now',S.worldPlayers?nf(S.worldPlayers)+' players':'—')+
+      row('Our accounts',playing.length+' playing of '+fleet.length+(sides.length?' · '+sides.length+' machines':''))+
+      row('Hiscores','rs-sdk-demo.fly.dev, read every 5 to 15 minutes')+'</div>'+
+      '<div class="xp-box"><div class="xp-head"><span>Marks</span></div>'+
+      row('Gold name','one of our accounts')+row('Green dot','our account on the map (bright: playing)')+row('Grey dot','another player')+row('⟦MAIN⟧ / Hidden','an account this page does not show')+row('~ before a rank','the last rank we read; it can be old')+'</div>'+
+      '<div class="xp-box"><div class="xp-head"><span>Sources</span></div><p class="xp-muted">Client look: RuneLite (BSD 2-Clause), 3D view: rs-world, game data: the Lost City server content (MIT). Licences and image credits: <a href="'+asset('ATTRIBUTION.txt')+'" target="_blank" rel="noopener">ATTRIBUTION.txt</a>. RuneScape art belongs to Jagex.</p></div></div>';
+  }
   function worldPanel(){
     const spots=(S.contention||[]).filter(s=>s.x!=null),named=(S.contention||[]).filter(s=>s.x==null),roster=S.roster||[],fleet=new Set(S.bots.map(b=>b.name.toLowerCase()));
     const crowded=spots.filter(s=>s.others.length).length;
@@ -156,7 +171,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function lookupCard(l){
     if(l.error)return '<span class="side-late">'+E(l.error)+'</span>';
     const rank=n=>l.rows?.find(r=>r.board===n);
-    const grid=l.rows?skills.filter(n=>reported(null,n)).map(n=>{const r=rank(n);return `<div class="hs-cell" title="${E(n+(r?'\nLevel: '+r.level+'\nRank: '+nf(r.rank)+'\nTime: '+r.time:'\nNot ranked'))}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt="${E(n)}"><span>${r?r.level:'--'}</span></div>`;}).join(''):'';
+    // Our best level per skill beside theirs: a red level is one where this player is ahead of every fleet account.
+    const ours=n=>{let best=null;for(const b of S.bots){if(b.practice||b.reserved)continue;const s=b.skills?.find(k=>k.name===n);if(s&&(!best||s.level>best.level))best={level:s.level,name:safeName(b.name)};}return best;};
+    const grid=l.rows?skills.filter(n=>reported(null,n)).map(n=>{const r=rank(n),o=ours(n);return `<div class="hs-cell${r&&o&&r.level>o.level?' hs-ahead':''}" title="${E(n+(r?'\nLevel: '+r.level+'\nRank: '+nf(r.rank)+'\nTime: '+r.time:'\nNot ranked')+(o?'\nOur best: '+o.level+' ('+o.name+')':''))}"><img src="${asset('skill-'+skillFile(n)+'.png')}" alt="${E(n)}"><span>${r?r.level:'--'}</span></div>`;}).join(''):'';
     const overall=rank('Overall'),qp=rank('Quest Points');
     return `<div class="lookup-card"><div class="xp-head"><span>${E(l.name)}</span><span class="${l.online?'friend-on':'friend-off'}">${l.online?'online '+E(placeOf(l.x,l.z)):l.lastSeen?'last seen '+age(l.lastSeen)+' ago':'not seen online'}</span></div><div class="xp-stats">${l.combat!=null?`<span>Combat <b>${l.combat}</b></span>`:''}${overall?`<span>Overall <b>#${nf(overall.rank)} · ${overall.level}</b></span>`:''}${qp?`<span>QP <b>${qp.level}</b></span>`:''}</div>`+
       (l.rows?(l.rows.length?`<div class="hs-grid">${grid}</div>`:'<p class="xp-muted">Not on the demo hiscores.</p>'):`<p class="xp-muted">${E(l.note||'Hiscores not loaded.')}</p>`)+
@@ -208,7 +225,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return '<div class="xp-panel">'+[...groups].map(([agent,list])=>`<div class="xp-box"><div class="xp-head"><span>${E(agent)}</span><span class="xp-gain">${list.filter(r=>r.state==='OPEN').length} open</span></div>${list.sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt)).slice(0,12).map(r=>`<a class="pr-row" href="${E(r.url)}" target="_blank" rel="noopener"><span class="pr-num">#${r.number}</span><span class="pr-title">${E(r.title)}</span>${chipFor(r)}<span class="pr-age">${r.updatedAt?age(Date.parse(r.updatedAt))+' ago':''}</span></a>`).join('')}</div>`).join('')+'</div>';
   }
   function showPlugin(id){if(!window.atlasOperator()&&OPERATOR_PLUGINS.includes(id)){toast('Sign in as owner for the command tools.');id='fleet';}const priorPlugin=selectedPlugin;window.atlasBeforePluginChange?.(priorPlugin,id);selectedPlugin=id;app.classList.remove('client-collapsed');app.classList.add('mobile-plugin');for(const el of [fleet,inspect,boards,allocation,journal])parked.append(el);body.replaceChildren();$('#client-plugin-name').textContent=window.atlasPlugins?.[id]?.label||window.atlasPluginNames?.[id]||plugins.find(p=>p[0]===id)?.[1]||({raw:'Raw evidence'}[id]||'Settings');
-    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(id==='xp')body.innerHTML=xpTracker();else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='boards')hiscores();else if(id==='world')body.innerHTML=worldPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
+    body.dataset.plugin=id;plugin.dataset.plugin=id;if(window.atlasPlugins?.[id]){window.atlasPlugins[id].render(body);}else if(id==='xp')body.innerHTML=xpTracker();else if(id==='ge')body.innerHTML=gePanel();else if(id==='prs')body.innerHTML=prsPanel();else if(id==='fleet')body.append(fleet);else if(id==='boards')hiscores();else if(id==='world')body.innerHTML=worldPanel();else if(id==='info')body.innerHTML=infoPanel();else if(id==='activity'){body.append(journal);journal.style.setProperty('display','block','important');journal.style.position='static';journal.style.width='100%';journal.style.height='auto';}else{body.append(inspect);choose(id==='settings'?'machine':id);if(id==='goals'&&window.atlasOperator()){const form=document.createElement('form');form.className='goal-request';form.innerHTML='<input name="text" maxlength="500" placeholder="Tell the agents what you want next..." aria-label="New owner request"><button>Send</button><small>Goes to research/owner-requests.md as the next numbered row.</small>';body.prepend(form);}}
     rail.querySelectorAll('[data-client-plugin]').forEach(b=>b.classList.toggle('on',b.dataset.clientPlugin===id));if(S&&id==='fleet')roster();window.atlasAfterPluginChange?.(priorPlugin,id);
   }
   function openBank(){
