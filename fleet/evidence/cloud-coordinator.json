@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793504145558,
+  "exportedAt": 1793504745588,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 60940370.73095703,
+      "ageMs": 61540400.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793504144385,
-      "ageMs": 1173,
+      "observedAt": 1793504744455,
+      "ageMs": 1133,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 61348799.74682617,
+      "ageMs": 61948829.74682617,
       "stale": true,
       "error": null
     }
@@ -76,13 +76,13 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 0,
+    "reportedRunning": 1,
     "observationStale": false,
     "jobs": [
       {
         "account": "TossTheCaber",
-        "script": "scripts/generated/quest-priest.ts",
-        "state": "ended: done after 1 runs"
+        "script": "scripts/fishcook.ts",
+        "state": "running"
       },
       {
         "account": "BraveHardon",
@@ -92,7 +92,7 @@
       {
         "account": "Swordswallow",
         "script": "scripts/generated/quest-priest.ts",
-        "state": "ended: gave-up after 1 runs"
+        "state": "ended: done after 1 runs"
       },
       {
         "account": "Unsheathed",
