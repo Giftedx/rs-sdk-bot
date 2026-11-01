@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793493289804,
+  "exportedAt": 1793493914035,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 50084616.73095703,
+      "ageMs": 50708847.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793493288332,
-      "ageMs": 1472,
+      "observedAt": 1793493912399,
+      "ageMs": 1636,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 50493045.74682617,
+      "ageMs": 51117276.74682617,
       "stale": true,
       "error": null
     }
@@ -76,7 +76,7 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 1,
+    "reportedRunning": 2,
     "observationStale": false,
     "jobs": [
       {
@@ -91,13 +91,13 @@
       },
       {
         "account": "Swordswallow",
-        "script": "scripts/quest-cook-job.ts",
+        "script": "scripts/generated/woodcutting.ts",
         "state": "running"
       },
       {
         "account": "Unsheathed",
-        "script": "scripts/gather-feathers.ts",
-        "state": "ended: done after 1 runs"
+        "script": "scripts/quest-cook-job.ts",
+        "state": "running"
       }
     ]
   },
