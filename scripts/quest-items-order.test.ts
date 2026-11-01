@@ -1,10 +1,40 @@
 import {expect,test,spyOn} from 'bun:test';
 import * as sessionOwner from '../packages/core/src/bot';
 import * as saves from './measure/fleet-player-save';
-import {itemRecipe,itemEntry,itemSaveChecks,runQuestItemsOrder,gatherQuestItems,operateQuestHopper,probeQuestFlourBin,cookHettyMeat} from './quest-items-order';
+import {itemRecipe,itemEntry,itemSaveChecks,runQuestItemsOrder,gatherQuestItems,operateQuestHopper,probeQuestFlourBin,cookHettyMeat,openHettyFoodShop} from './quest-items-order';
 export const fixture=(pack:{id:number;count:number}[]=[],bank:{id:number;count:number}[]=[],vars:Record<number,number>={})=>({version:9,position:{x:3092,z:3247,level:0},skills:[{index:3,level:10,rawExperience:11540,xp:1154}],vars,
  inventories:{93:pack.map((i,slot)=>({...i,slot})),95:bank.map((i,slot)=>({...i,slot}))}});
 const kit=[{id:1925,count:1},{id:1931,count:1}],products=[{id:1944,count:1},{id:1927,count:1},{id:1933,count:1}];
+function foodShopFixture(x=3010,reachable=false){
+ const npc={id:557,index:42,name:'Wydin',x,z:3204,reachable,optionsWithIndex:[{text:'Trade',opIndex:3}]};
+ const state={player:{worldX:3015,worldZ:3206,level:0},nearbyNpcs:[npc],shop:{isOpen:false}};
+ const actions:number[][]=[];
+ const s:any={sdk:{getState:()=>state,getDialog:()=>({isOpen:false}),sendInteractNpc:async(...args:number[])=>{
+  actions.push(args);state.shop.isOpen=true;return {success:true};
+ }},bot:{openShop:()=>{throw Error('automatic door walk forbidden');}}};
+ const observe=async(pred:()=>boolean,label:string,ticks?:number)=>{expect(ticks).toBe(24);if(!pred())throw Error(`${label}: effect unobserved`);};
+ return {s,npc,state,actions,observe};
+}
+test('Hetty refuses the closed employee-room boundary without dispatching Trade or walking',async()=>{
+ const f=foodShopFixture();
+ await expect(openHettyFoodShop(f.s,f.observe,()=>{})).rejects.toThrow('Hetty public Wydin');
+ expect(f.actions).toEqual([]);expect(f.state.shop.isOpen).toBe(false);
+});
+test('Hetty waits for the observed reachable public keeper and sends its actual Trade option',async()=>{
+ const f=foodShopFixture();
+ await openHettyFoodShop(f.s,async(pred,label,ticks)=>{
+  if(label==='Hetty public Wydin'){expect(pred()).toBe(false);f.npc.x=3014;f.npc.reachable=true;}
+  await f.observe(pred,label,ticks);
+ },()=>{});
+ expect(f.actions).toEqual([[42,3]]);expect(f.state.shop.isOpen).toBe(true);
+});
+test('Hetty never treats a dispatch acknowledgement as an open shop or acts after stop',async()=>{
+ const f=foodShopFixture(3014,true);
+ f.s.sdk.sendInteractNpc=async()=>({success:true});
+ await expect(openHettyFoodShop(f.s,f.observe,()=>{})).rejects.toThrow('Hetty food shop open');
+ await expect(openHettyFoodShop(f.s,f.observe,()=>{throw Error('stopped');})).rejects.toThrow('stopped');
+ expect(f.actions).toEqual([]);
+});
 test('Hetty recipe reuses owned ingredients and needs no Cook containers',()=>{
  expect(itemRecipe('hetty').items).toEqual([1957,221,2146]);
  expect(itemEntry('hetty',fixture([], [{id:995,count:25}]))).toBeNull();
