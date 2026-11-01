@@ -1,29 +1,42 @@
 import type {Session} from "../packages/core/src/inprocess";
 import {waitTicks,waitUntil} from "../packages/core/src/ticks";
-const eager=true,requestGap=10;
+const eager=true;
 const inv=(s:Session)=>s.sdk.getInventory(),ess=(s:Session)=>inv(s).filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0);
 const state=(s:Session)=>s.sdk.getState()!,trade=(s:Session)=>state(s).trade;
 const index=(s:Session,n:string)=>state(s).nearbyPlayers.find(p=>p.name.toLowerCase()===n.toLowerCase())?.index;
+const messages=(s:Session)=>state(s).gameMessages??[];
+const cursor=(s:Session)=>Math.max(0,...messages(s).map(m=>m.observationId??0));
 async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
  const at=s.tick();
  if(!await waitUntil(s,()=>ess(h)===27&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
- let opened=false,offerSent=false,last='',requestAt=-Infinity;const confirmed=new Set<Session>();
+ let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>();
  while(s.tick()-at<35&&ess(s)!==27&&!stop()){
   {
    await new Promise<void>(resolve=>setImmediate(resolve));
    await Promise.all([s.sdk.scanGroundItems(0),h.sdk.scanGroundItems(0)]);
   }
+  if(stop())break;
   if(ess(s)===27&&ess(h)===0)break;
   const snapshot=JSON.stringify([s,h].map(a=>({name:a.name,open:trade(a)?.isOpen,screen:trade(a)?.screen,partner:trade(a)?.partner,
    my:trade(a)?.myOffer?.reduce((n,i)=>n+i.count,0),their:trade(a)?.theirOffer?.reduce((n,i)=>n+i.count,0),accepted:trade(a)?.myAccepted})));
   if(snapshot!==last){console.log('RC_TRADE_STATE '+JSON.stringify({at:Date.now(),tick:s.tick(),actors:JSON.parse(snapshot)}));last=snapshot;}
   if(trade(s)?.isOpen||trade(h)?.isOpen)opened=true;
-  if(!trade(s)?.isOpen&&!trade(h)?.isOpen&&!opened&&s.tick()-requestAt>=requestGap){
-   const si=index(h,s.name),hi=index(s,h.name);
-   if(si!==undefined&&hi!==undefined){
-    await h.direct({type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});
-    await s.direct({type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});
-    requestAt=s.tick();
+  if(!trade(s)?.isOpen&&!trade(h)?.isOpen&&!opened&&!responseSent){
+   const incoming=()=>messages(s).some(m=>m.type===4&&m.sender?.toLowerCase()===h.name.toLowerCase()
+    &&m.text==='wishes to trade with you.'&&(m.observationId??0)>incomingCursor);
+   // Retry only a server-refused request. The incoming request acknowledges acceptance after the craft delay.
+   if(requestPending&&!incoming()&&messages(h).some(m=>m.type===0&&m.sender===''
+    &&m.text.toLowerCase()===s.name.toLowerCase()+' is busy at the moment.'&&(m.observationId??0)>busyCursor))requestPending=false;
+   if(!requestPending&&!stop()){
+    const si=index(h,s.name),hi=index(s,h.name);
+    if(si!==undefined&&hi!==undefined){
+     incomingCursor=cursor(s);busyCursor=cursor(h);
+     await h.direct({type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});requestPending=true;
+    }
+   }
+   if(requestPending&&incoming()&&!stop()){
+    const hi=index(s,h.name);
+    if(hi!==undefined){await s.direct({type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});responseSent=true;}
    }
   }
   for(const actor of [h,s]){
