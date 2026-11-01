@@ -257,6 +257,9 @@ export async function runRuneBankCraft(s:Session,target=99,options:{cap?:number;
 }
 
 async function runeBankCli(){
+ if(['--rune-carriers','--rune-opening'].includes(process.argv.at(-1)??'')){
+  const {mainRuneStage}=await import('./rune-carrier-stage');await mainRuneStage(process.argv.slice(2));return;
+ }
  if(process.argv.includes('--carriers')){
   try{
    const {runeCarrierRoster}=await import('./rune-carrier-roster');

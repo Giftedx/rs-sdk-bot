@@ -11,7 +11,7 @@ import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-
 import {releaseRevision} from '../../core/src/worker-release';
 import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 const root=resolve(import.meta.dir,'../../..');
-const source=()=>releaseRevision(['scripts/handoff-inputs.ts','packages/practice/src/rune-carrier-stage-proof.ts']);
+const source=()=>releaseRevision(['scripts/rune-bank-craft.ts','packages/practice/src/rune-carrier-stage-proof.ts']);
 const kit:Record<number,number>={1351:1,590:1,303:1,315:1,1925:1,1931:1,2309:1,1265:1,1205:1,1277:1,1171:1,841:1,882:25,556:25,558:15,555:6,557:4,559:2,995:25};
 const assets=(s:ReturnType<typeof readPracticeSave>)=>{const out:Record<number,number>={};for(const i of Object.values(s.inventories).flat())out[i.id]=(out[i.id]??0)+i.count;return out;};
 const amount=(s:ReturnType<typeof readPracticeSave>,id:number,inventory?:number)=>Object.entries(s.inventories).filter(([key])=>inventory===undefined||Number(key)===inventory).flatMap(([,items])=>items).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -36,7 +36,7 @@ function verify(dir:string){
   publications:meta.phases.every((p:any)=>p.publications.length===(p.id==='stage'?5:p.id==='repeat'?4:1)&&p.publications.every((q:any)=>q.matched&&readFileSync(join(dir,p.id+'-'+q.index+'.sav')).readInt32BE(24)===q.expectedTicks)),
   logout:meta.phases.reduce((n:number,p:any)=>n+[...readFileSync(join(dir,p.id+'.log'),'utf8').matchAll(/^LOGOUT (.*)$/gm)].reduce((m,x)=>m+(x[1]!.match(/\blogged-out\b/g)??[]).length,0),0)===10,
   leases:meta.names.every((n:string)=>!existsSync(join(root,'.practice/account-leases',n.toLowerCase()+'.lock')))};
- const report={ok:Object.values(checks).every(Boolean),checks,names:meta.names,phases:meta.phases,source:meta.source,tickMs:150,xpRate:25,scope:'Actual finite handoff CLI. Four authentic fresh carriers receive owned kits, bank and stage; repeat sends nothing; supplier stages the opening pack. Supplier inputs are fixtures. No live claim.'};
+ const report={ok:Object.values(checks).every(Boolean),checks,names:meta.names,phases:meta.phases,source:meta.source,tickMs:150,xpRate:25,scope:'Actual Rune worker CLI. Four authentic fresh carriers receive owned kits, bank and stage; repeat sends nothing; supplier starts at Varrock west bank and stages the opening pack. Supplier inputs are fixtures. No live claim.'};
  writeFileSync(join(dir,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(dir:string){
@@ -55,7 +55,7 @@ async function run(dir:string){
   for(const id of ['stage','repeat','opening']){
    const active=id==='stage'?[0,1,2,3,4]:id==='repeat'?[1,2,3,4]:[0],base=paths.map(p=>existsSync(p)?readFileSync(p).readInt32BE(24):0),started=Date.now();
    const args=id==='opening'?[name,'--rune-opening']:[...names,'--rune-carriers'];
-   const child=Bun.spawn(['bun','scripts/handoff-inputs.ts',...args],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'1600'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
+   const child=Bun.spawn(['bun','scripts/rune-bank-craft.ts',...args],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'1600'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},240000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
