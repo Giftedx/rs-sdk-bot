@@ -450,8 +450,9 @@ function topOf(board: string): { name: string; level: number; ticks: number; at:
 }
 const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
 // Player lookups (World plugin): any player's hiscore page, one request every 1.2 s, each kept 30 minutes. The page
-// asks through /api/player; in the background the top 3 of each board and the strangers at our spots are kept fresh,
-// because the hosted page cannot reach the hiscores itself (no CORS) and reads these from its published state.
+// asks through /api/player; in the background each board's 10 rivals and the strangers at our spots (about 200
+// names, 10 a minute against the 30-minute cache) are kept fresh, because the hosted page cannot reach the hiscores
+// itself (no CORS) and reads these from its published state.
 type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; name: string }[] | null; wornAt: number | null };
 const lookups = new Map<string, Lookup>();
 // Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
@@ -1079,8 +1080,8 @@ function buildState() {
             const best = new Map(SKILL_BOARDS.map(b => { let top: { rank: number; name: string } | null = null; for (const bot of bots as any[]) for (const r of bot.ranks ?? []) if (r.board === b && (!top || r.rank < top.rank)) top = { rank: r.rank, name: bot.name }; return [b, top] as const; }));
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
-            lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).slice(0, 3).map(x => x.name)), ...contention.flatMap(s => s.others)])];
-            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 120).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
+            lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).map(x => x.name)), ...contention.flatMap(s => s.others)])];
+            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
             return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,

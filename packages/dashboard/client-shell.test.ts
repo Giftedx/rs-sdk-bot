@@ -31,3 +31,12 @@ test('an old lookup failure cannot overwrite the player chosen afterward',async(
  h.lookup('Old');h.lookup('New');await Bun.sleep(0);rejectOld(Error('Old lookup failed'));await Bun.sleep(0);
  expect(h.value().name).toBe('New');expect(h.value().rows).toEqual([]);
 });
+
+test('infoboxes: a reached goal has no goal box', () => {
+ const code=shell.slice(shell.indexOf('  function infoboxes(){'),shell.indexOf('  // Board progress'));
+ const el={innerHTML:''};
+ const run=new Function('account','hud','E','asset','skillFile','dur','age','realSkill',code+';infoboxes();');
+ const stubs=[{querySelector:()=>el},String,(n:string)=>n,(n:string)=>n.toLowerCase(),String,String,(k:any)=>k.name!=='Overall'] as const;
+ run(()=>({name:'Worker',goalSkill:'Thieving',goalLevel:99,goalNow:99,eta:'0m 0s',skills:[]}),...stubs);expect(el.innerHTML).not.toContain('Thieving');
+ run(()=>({name:'Worker',goalSkill:'Thieving',goalLevel:99,goalNow:60,eta:'2h',skills:[]}),...stubs);expect(el.innerHTML).toContain('Thieving 60 → 99 in 2h');
+});

@@ -146,7 +146,8 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
   const response=await runModel(agent,prompt,Math.max(1,authorDeadline-Date.now()),false);
   atomicJson(join(directory,`author-response-${attempt}.json`),response);return response;
  };
- let prepared:any=null;try{prepared=preparedNativeDelivery(loadState(),definition.id,deliveryFingerprint(definition));}catch{/* incomplete or changed source needs the ordinary author */}
+ let prepared:any=null;try{prepared=preparedNativeDelivery(loadState(),definition.id,deliveryFingerprint(definition),task.resumeSource);}catch{/* incomplete or changed source needs the ordinary author */}
+ if(task.resumeSource&&!prepared)throw Error('explicit prepared source continuation no longer matches a native delivery');
  const built=await finishBuildDelivery(definition.id,prepared,{fingerprint:()=>deliveryFingerprint(definition),
  author:()=>authorLoop({id:definition.id,goal:definition.goal+'\n'+buildWorkOrder(task,dependencies,directory),preset:'',delivery:definition},{maxFixes:2,proveRuns:1,repairRegressions:true},{runModel:authorModel,exists:fileExists,prove:async()=>{throw Error('delivery required');},deliver:runDeliveryTask,diagnose:runDiagnosticTask}),
  deliver:()=>runDeliveryTask(definition),record:result=>atomicJson(join(directory,'author.json'),result),
