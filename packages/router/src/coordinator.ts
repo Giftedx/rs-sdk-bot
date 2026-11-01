@@ -145,6 +145,7 @@ export function lastBuildOutcome(state:CoordinatorState,capability:string){
 }
 // Prepared source skips authoring only. The executor reruns delivery and the applicable review before publication.
 export function preparedNativeDelivery(state:CoordinatorState,capability:string,source:string,resumeSource?:string){
+ if(resumeSource!==undefined&&resumeSource!==source)return null;
  const output=lastBuildOutcome(state,capability);
  if(output?.hostDeferred===true&&output.sourcePrepared===true&&output.delivery?.hostDeferred===true&&!output.delivery.diagnostic&&output.delivery.source===source)return output.delivery;
  if(resumeSource!==source)return null;
