@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793504745588,
+  "exportedAt": 1793505345634,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 61540400.73095703,
+      "ageMs": 62140446.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793504744455,
-      "ageMs": 1133,
+      "observedAt": 1793505344691,
+      "ageMs": 943,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 61948829.74682617,
+      "ageMs": 62548875.74682617,
       "stale": true,
       "error": null
     }
@@ -76,22 +76,22 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 1,
+    "reportedRunning": 0,
     "observationStale": false,
     "jobs": [
       {
         "account": "TossTheCaber",
         "script": "scripts/fishcook.ts",
-        "state": "running"
+        "state": "disabled"
       },
       {
         "account": "BraveHardon",
-        "script": "scripts/generated/quest-priest.ts",
+        "script": "scripts/quest-cook-job.ts",
         "state": "ended: done after 1 runs"
       },
       {
         "account": "Swordswallow",
-        "script": "scripts/generated/quest-priest.ts",
+        "script": "scripts/gather-yews.ts",
         "state": "ended: done after 1 runs"
       },
       {
