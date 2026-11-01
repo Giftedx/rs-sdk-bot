@@ -38,7 +38,23 @@ test('a mid-fight food action re-engages the same observed target within one fig
  let tick=0,food=0,xp=0,attacks=0;const callbacks=new Set<()=>void>(),npc={id:1,index:7,hp:7};let alive=true;
  const s={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},sdk:{getSkillXp:()=>xp,getState:()=>({nearbyNpcs:alive?[npc]:[]})},bot:{attack:async(n:any)=>{expect(n.index).toBe(7);attacks++;return{success:true};}}} as any;
  const timer=setInterval(()=>{tick++;if(tick===3)food++;if(attacks>=2&&tick>=5){xp=700;alive=false;}for(const cb of callbacks)cb();},1);
- try{await huntFight(s,npc,()=>false,()=>food);expect(attacks).toBe(2);expect(tick).toBeLessThan(100);}finally{clearInterval(timer);}
+ try{expect(await huntFight(s,npc,()=>false,()=>food)).toBe(true);expect(attacks).toBe(2);expect(tick).toBeLessThan(100);}finally{clearInterval(timer);}
+});
+
+test('a target lost to another player during approach yields without claiming a kill',async()=>{
+ let tick=0,alive=true,attacks=0;const callbacks=new Set<()=>void>(),npc={id:100,index:2888,hp:5};
+ const s={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},sdk:{getSkillXp:()=>82100,getState:()=>({nearbyNpcs:alive?[npc]:[]})},bot:{attack:async()=>{attacks++;alive=false;return{success:false,message:'target disappeared'};}}} as any;
+ const timer=setInterval(()=>{tick++;for(const cb of callbacks)cb();},1);
+ try{expect(await huntFight(s,npc,()=>false,()=>0)).toBe(false);expect(attacks).toBe(1);expect(tick).toBeLessThan(10);}finally{clearInterval(timer);}
+});
+
+test('a vanished target can still receive delayed own credit; a living stalled target keeps its deadline',async()=>{
+ for(const lost of [true,false]){
+  let tick=0,xp=0,attacks=0;const callbacks=new Set<()=>void>(),npc={id:100,index:2888,hp:5};
+  const s={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},sdk:{getSkillXp:()=>xp,getState:()=>({nearbyNpcs:lost?[]:[npc]})},bot:{attack:async()=>{attacks++;return{success:true};}}} as any;
+  const timer=setInterval(()=>{tick++;if(lost&&tick===2)xp=500;for(const cb of callbacks)cb();},1);
+  try{if(lost)expect(await huntFight(s,npc,()=>false,()=>0)).toBe(true);else{await expect(huntFight(s,npc,()=>false,()=>0)).rejects.toThrow('earth hunt fight credit deadline');expect(attacks).toBe(4);}}finally{clearInterval(timer);}
+ }
 });
 test('unknown inputs never dispatch crafting or authorize an unsupported hunt',()=>{
  for(const n of [-1,NaN,Infinity,1.2])expect(()=>productionBatch(9,875,n,100)).toThrow();
