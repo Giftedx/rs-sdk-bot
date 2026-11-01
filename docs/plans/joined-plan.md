@@ -36,7 +36,6 @@ Main run, coverage and live work run at once, so no lane starves the others. Eve
 - Main launch gates fail: plan wins, rehearsal, staged supplies, fresh targets (`research/hiscores-live.json` predates the record), machine clear. Bank staging is 5/73. The main account stays offline.
 - [Monkey Madness](../../.practice/mm-exit/guard-candidate/full-1793062289389/proof.json) passes 2/3 full runs; installed qualification and rehearsal are open. [Arrav](../../research/heroes-partner.md) needs route, sustain or Magic prerequisites.
 - [GE](../../.practice/ge-origin/qualified.json): origin and bounded offer/refund qualify; two webclient errors and shared ownership recovery are open.
-- `packages/practice/src/cow-progress-order-proof.ts:154` starts a process without `windowsHide`.
 
 ## Evidence
 

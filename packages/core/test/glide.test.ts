@@ -31,7 +31,7 @@ test('glide clicks ahead along the path and never stands still before the goal',
     expect(w.clicks[0]).toBe(3015);
 });
 
-// Seen 2026-10-23 on Karamja: a partial path left the bot clicking toward a tile it could not reach, and the
+// Seen on Karamja: a partial path left the bot clicking toward a tile it could not reach, and the
 // leg took about 600 ticks instead of about 150. Three clicks with no progress must end the glide.
 test('glide stops after 3 clicks without getting closer to the goal', async () => {
     const w = world();

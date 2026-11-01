@@ -50,7 +50,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     brew_potions_bank: { position: { x: 3253, z: 3420, level: 0 }, skills: { Herblore: 50 }, inventory: [{ id: 99, count: 14 }, { id: 231, count: 14 }], bank: [{ id: 99, count: 100 }, { id: 231, count: 100 }] },
     craft_jewelry_bank: { position: { x: 3269, z: 3167, level: 0 }, skills: { Crafting: 50 }, inventory: [{ id: 1755, count: 1 }, { id: 1623, count: 27 }], bank: [{ id: 1623, count: 100 }] },
     gather_combat_druid: { position: { x: 3115, z: 9928, level: 0 }, skills: { Attack: 60, Strength: 60, Defence: 60, Hitpoints: 60 }, equipment: [{ id: 1333, count: 1, slot: 3 }, { id: 1113, count: 1, slot: 4 }, { id: 1079, count: 1, slot: 7 }], inventory: [{ id: 379, count: 5 }] },
-    // Trees within reach, measured by the 2026-10-22 spike run.
+    // Trees within reach, measured by the spike run.
     wc_lumbridge: { position: { x: 3224, z: 3245, level: 0 }, inventory: [{ id: 1351, count: 1 }] },
     // Lumbridge castle courtyard, ground floor (vendor/rs-sdk/learnings/walking.md: castle 3222,3218).
     floors_lumbridge: { position: LUMBRIDGE },
@@ -111,7 +111,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     door_2551: { position: { x: 2675, z: 3304, level: 0 }, skills: { Thieving: 16 } },
     // Waterfall Quest test: next to Almera at Baxtorian Falls (2521,3495), 10 HP, 2 ropes (954), 6 each of air (556),
     // earth (557) and water (555) runes, 18 lobsters (379), 500 coins. 10 lobsters ran out in the falls (MEASURED
-    // practice 2026-10-23: eats=10 lobsters=0 at death); a helper hands Haggis the food.
+    // practice: eats=10 lobsters=0 at death); a helper hands Haggis the food.
     quest_waterfall: { position: { x: 2522, z: 3494, level: 0 }, coins: 500, inventory: [{ id: 954, count: 1 }, { id: 954, count: 1 }, { id: 556, count: 6 }, { id: 557, count: 6 }, { id: 555, count: 6 }, ...Array.from({ length: 18 }, () => ({ id: 379, count: 1 }))] },
     // Waterfall Quest from step 6: inside the falls at the key crate (2589,9888), %waterfall_quest (varp 65) = 5,
     // Glarial's amulet (295), urn (296), 6 each of air, earth and water runes, 10 lobsters. Tests the fire giant crossing.
@@ -236,7 +236,7 @@ export const PRESETS: Record<string, SaveConfig> = {
     // Trade pair: giver holds 100 coins, receiver stands one tile east (3223,3218).
     trade_giver: { position: LUMBRIDGE, coins: 100 },
     trade_receiver: { position: { x: 3223, z: 3218, level: 0 } },
-    // Fishing resume test, the live Mightyrod state of 2026-10-23: near Bob's Axes (3236,3206), Fishing 22, Thieving 50,
+    // Fishing resume test, a recorded live Mightyrod state: near Bob's Axes (3236,3206), Fishing 22, Thieving 50,
     // 0 coins, 28 items (starter kit, small net 303, fly fishing rod 309, 24 feathers 314, knife 946, 7 logs 1511,
     // shrimps 315, bread 2309). A save cannot set current HP, so this starts at 10 HP, not 2.
     fish_resume: {
@@ -452,7 +452,7 @@ export const PRESETS: Record<string, SaveConfig> = {
         skills: { Woodcutting: l, Attack: 70, Strength: 70, Defence: 70, Hitpoints: 70 },
         inventory: [{ id: 1359, count: 1 }, { id: 946, count: 1 }, ...Array.from({ length: 15 }, () => ({ id: 1511, count: 1 }))],
     }])),
-    // Combat 70s: a Fishing-only preset died at the Lumbridge river spot (practice 2026-10-24, respawned at 3222,3216).
+    // Combat 70s: a Fishing-only preset died at the Lumbridge river spot (practice, respawned at 3222,3216).
     // Fishing ladder from the Sea Slug level (scripts/measure/floor-fish.ts): fly at the Lumbridge river (fly rod 309,
     // feathers 314, knife 946, logs 1511); cage (pot 301) and harpoon (311) at Musa Point.
     ...Object.fromEntries([74, 85].flatMap(l => [
