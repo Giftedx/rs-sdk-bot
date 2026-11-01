@@ -1,7 +1,7 @@
 import { expect, test, spyOn } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as ticks from '../packages/core/src/ticks';
-import { fundFishingTool, buyFishingSupplies, cookCourierReady, cookStarterChickens, finiteFoodProfile, finiteFoodWork, finiteFoodCanCatch, finiteFoodEntryPosition } from './fishcook';
+import { fundFishingTool, buyFishingSupplies, cookCourierReady, cookStarterChickens, finiteFoodProfile, finiteFoodWork, finiteFoodCanCatch, finiteFoodEntryPosition, finiteFoodKindsWork, finiteFoodPreferredRaw, finiteFoodSpotAllowed, finiteFoodExitReady } from './fishcook';
 function account(bankCoins = 25, coins = 0, rod = false) {
     const inventory: any[] = [{ name: 'Coins', count: coins }, ...(rod ? [{ name: 'Fly fishing rod', count: 1 }] : [])];
     let withdrew = 0;
@@ -223,4 +223,59 @@ test('finite food admits actual Ghost cemetery entry and Draynor while refusing 
  expect(finiteFoodEntryPosition({worldX:3248,worldZ:3193,level:0})).toBe(true);
  expect(finiteFoodEntryPosition({worldX:3092,worldZ:3242,level:0})).toBe(true);
  for(const p of [undefined,{worldX:3248,worldZ:3193,level:1},{worldX:2655,worldZ:3283,level:0},{worldX:3104,worldZ:9576,level:0}])expect(finiteFoodEntryPosition(p)).toBe(false);
+});
+
+
+test('single-kind budget is explicit, finite and leaves owned feathers reserved',()=>{
+ const p=finiteFoodProfile('16','1')!;expect(p).toEqual({target:16,netCap:16,flyCap:48,catchCap:64,noProgressTicks:240,singleKind:true});
+ expect(85-p.flyCap).toBe(37);expect(finiteFoodProfile('1','1')!.flyCap).toBe(3);
+ for(const [target,mode] of [[undefined,'1'],['16','2'],['17','1']] as const)expect(()=>finiteFoodProfile(target,mode)).toThrow();
+ expect(finiteFoodProfile('16','0')).toEqual(finiteFoodProfile('16'));
+});
+test('16 mixed fish never satisfy the single-kind consumer; only new bank deposits count',()=>{
+ const p=finiteFoodProfile('16','1')!,z={trout:0,salmon:0};
+ expect(finiteFoodKindsWork(p,{trout:8,salmon:8},z,z).done).toBe(false);
+ expect(finiteFoodKindsWork(p,{trout:16,salmon:5},z,z).done).toBe(true);
+ expect(finiteFoodKindsWork(p,{trout:3,salmon:17},z,z).done).toBe(true);
+ // Unchanged old bank stock is not supplied to the new-deposit counter.
+ expect(finiteFoodKindsWork(p,z,z,z).done).toBe(false);
+});
+test('single-kind batching waits for enough raw of a kind rather than an aggregate deficit',()=>{
+ const p=finiteFoodProfile('16','1')!,bank={trout:13,salmon:9},z={trout:0,salmon:0};
+ expect(finiteFoodKindsWork(p,bank,z,{trout:1,salmon:4}).fish).toBe(true);
+ expect(finiteFoodKindsWork(p,bank,z,{trout:3,salmon:4})).toEqual({needed:3,cook:true,fish:false,done:false});
+ expect(finiteFoodKindsWork(p,bank,{trout:3,salmon:0},{trout:0,salmon:4})).toEqual({needed:0,cook:false,fish:false,done:false});
+ expect(finiteFoodPreferredRaw(p,bank,z,{trout:3,salmon:4})).toBe(335);
+});
+test('single-kind cooking finishes the attainable kind before converting unnecessary byproduct',()=>{
+ const p=finiteFoodProfile('16','1')!,z={trout:0,salmon:0};
+ expect(finiteFoodPreferredRaw(p,{trout:15,salmon:8},z,{trout:1,salmon:5})).toBe(335);
+ expect(finiteFoodPreferredRaw(p,{trout:14,salmon:15},z,{trout:2,salmon:1})).toBe(331);
+ expect(finiteFoodPreferredRaw(p,{trout:15,salmon:15},z,{trout:1,salmon:1})).toBe(331);
+ expect(finiteFoodPreferredRaw(p,{trout:16,salmon:10},z,{trout:0,salmon:2})).toBeUndefined();
+});
+test('aggregate finite batching and stopping retain their original contract',()=>{
+ const p=finiteFoodProfile('16')!,z={trout:0,salmon:0};
+ expect(finiteFoodKindsWork(p,{trout:8,salmon:8},z,z)).toEqual(finiteFoodWork(p,16,0,0));
+ expect(finiteFoodKindsWork(p,{trout:5,salmon:6},{trout:2,salmon:1},{trout:2,salmon:0})).toEqual(finiteFoodWork(p,11,3,2));
+ expect(finiteFoodPreferredRaw(p,z,z,{trout:16,salmon:16})).toBeUndefined();
+});
+test('only the guarded finite profile admits the eight canonical moving river spots',()=>{
+ const npc={id:329,name:'Fishing spot',reachable:true,optionsWithIndex:[{text:'Lure',opIndex:1},{text:'Bait',opIndex:3}]};
+ const points=[[3239,3241],[3239,3242],[3239,3243],[3239,3244],[3238,3251],[3238,3252],[3238,3254],[3238,3255]];
+ for(const [x,z] of points){expect(finiteFoodSpotAllowed({...npc,x,z},true)).toBe(true);expect(finiteFoodSpotAllowed({...npc,x,z})).toBe(z!>=3248);}
+ for(const patch of [{id:403,x:3238,z:3254},{id:330,x:3238,z:3254},{x:3239,z:3240},{x:3240,z:3252},{x:3239,z:3250},{x:3238,z:3254,reachable:false},{x:3238,z:3254,optionsWithIndex:[{text:'Bait',opIndex:3}]}])expect(finiteFoodSpotAllowed({...npc,...patch},true)).toBe(false);
+ // The standing producer preserves its broader north-only selection and no new reachability guard.
+ expect(finiteFoodSpotAllowed({...npc,id:330,x:3240,z:3252,reachable:false})).toBe(true);
+});
+
+test('a late safety stop overrides completed bank receipts, including the final catch-limit checkpoint',()=>{
+ const p=finiteFoodProfile('16','1')!,bank={trout:0,salmon:0},z={trout:0,salmon:0},pos={worldX:3092,worldZ:3242,level:0};
+ let blocked=false;const exit=()=>finiteFoodExitReady(p,finiteFoodKindsWork(p,bank,z,z).done,13,32,blocked,pos);
+ expect(exit()).toBe(false);bank.trout=16;bank.salmon=5;expect(exit()).toBe(true);
+ // A stop, timeout or damage can arrive while the last bank receipts settle.
+ blocked=true;expect(exit()).toBe(false);
+ expect(finiteFoodExitReady(p,true,13,32,false,{worldX:3239,worldZ:3251,level:0})).toBe(false);
+ expect(finiteFoodExitReady(p,true,13,32,false,{...pos,level:1})).toBe(false);
+ expect(finiteFoodExitReady(p,true,13,49,false,pos)).toBe(false);
 });
