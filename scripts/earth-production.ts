@@ -63,6 +63,13 @@ export function productionConserved(before:ReadonlyMap<number,number>,after:Read
  return [...new Set([...expected.keys(),...after.keys()])].every(id=>(expected.get(id)??0)===(after.get(id)??0)&&(expected.get(id)??0)>=0);
 }
 
+export async function depositEarthInventory(s:Session,check:()=>void){
+ for(const id of new Set(s.sdk.getInventory().map(i=>i.id))){
+  check();const item=s.sdk.getInventory().find(i=>i.id===id);
+  if(item)await depositObserved(s,item);
+ }
+}
+
 export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';cap:number;target:number;reserve:number;killsPerTarget?:number;stop:()=>boolean}){
  if(!['talismans','craft'].includes(o.mode)||![o.cap,o.target,o.reserve].every(n=>Number.isSafeInteger(n)&&n>=0)||o.cap<1||o.cap>20000||o.target<1)throw Error('invalid earth production bounds');
  if(o.killsPerTarget!==undefined&&(!Number.isSafeInteger(o.killsPerTarget)||o.killsPerTarget<0||o.killsPerTarget>3))throw Error('invalid finite hunt pilot');
@@ -89,8 +96,8 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
   try{const r=await goTo(s,await getWorld(),{...to,level:0},actor,{legTimeoutTicks:150,signal:ac.signal});if(!r.ok)throw Error('earth production route: '+JSON.stringify(r));}finally{off();}check();
  };
  const open=async()=>{check();await s.bot.dismissBlockingUI();await openEarthBankObserved(s);banks();};
- const deposit=async()=>{for(const i of [...inv()]){check();await depositObserved(s,i);}banks();};
- const withdraw=async(id:number,n:number)=>{if(!n)return;check();const item=st()?.bank.items.find(i=>i.id===id),b=banked(id),p=held(id);if(!item||b<n)throw Error('earth production missing owned '+id);await s.bot.withdrawItem(item,n);if(!await waitUntil(s,()=>over()||held(id)===p+n&&banked(id)===b-n,{timeoutTicks:12})||over())throw Error('earth production withdrawal unobserved '+id);};
+ const deposit=async()=>{await depositEarthInventory(s,check);banks();};
+ const withdraw=async(id:number,n:number)=>{if(!n)return;await open();const item=st()?.bank.items.find(i=>i.id===id),b=banked(id),p=held(id);if(!item||b<n)throw Error('earth production missing owned '+id);await s.bot.withdrawItem(item,n);if(!await waitUntil(s,()=>over()||held(id)===p+n&&banked(id)===b-n,{timeoutTicks:12})||over())throw Error('earth production withdrawal unobserved '+id);};
  const equip=async(id:number)=>{if(eq().some(i=>i.id===id))return;const item=inv().find(i=>i.id===id);if(!item)throw Error('earth production kit missing '+id);await s.bot.equipItem(item);if(!await waitUntil(s,()=>over()||eq().some(i=>i.id===id),{timeoutTicks:10})||over())throw Error('earth production equip unobserved');};
  const insideEarth=()=>!!pos()&&pos()!.level===0&&pos()!.worldX>=2645&&pos()!.worldX<=2670&&pos()!.worldZ>=4820&&pos()!.worldZ<=4845;
  const exitEarth=async()=>{

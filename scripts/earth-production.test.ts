@@ -1,5 +1,31 @@
-import {expect,test} from 'bun:test';
-import {productionBatch,productionConserved,talismanTarget,huntFight,collectHuntLoot} from './earth-production';
+import {expect,test,spyOn} from 'bun:test';
+import {productionBatch,productionConserved,talismanTarget,huntFight,collectHuntLoot,depositEarthInventory} from './earth-production';
+
+test('Earth cleanup banks eight nonstackable cakes and the remaining kit once per current item ID',async()=>{
+ let pack=[...Array.from({length:8},(_,slot)=>({id:1891,name:'Cake',count:1,slot})),
+  {id:1277,name:'Bronze sword',count:1,slot:8},{id:1277,name:'Bronze sword',count:1,slot:9}];
+ let generation=9,checks=0;
+ const bank=[{id:1891,name:'Cake',count:0},{id:1277,name:'Bronze sword',count:3}];
+ const calls:number[]=[],receipts:any[]=[];
+ const s:any={name:'fixture',tick:()=>1,sdk:{getInventory:()=>pack,getState:()=>({inventory:pack})},
+  bankObservation:()=>({generation,at:1,items:bank}),
+  bot:{depositItem:async(item:any,amount:number)=>{
+   expect(pack.find(i=>i.id===item.id)).toBe(item);expect(amount).toBe(-1);calls.push(item.id);
+   bank.find(i=>i.id===item.id)!.count+=pack.filter(i=>i.id===item.id).reduce((n,i)=>n+i.count,0);
+   pack=pack.filter(i=>i.id!==item.id).map((i,slot)=>({...i,slot}));generation++;
+   return{success:true};
+  }}};
+ const log=spyOn(console,'log').mockImplementation(line=>{if(String(line).startsWith('DEPOSIT_RECEIPT '))receipts.push(JSON.parse(String(line).slice('DEPOSIT_RECEIPT '.length)));});
+ try{
+  await depositEarthInventory(s,()=>{checks++;});
+  expect(pack).toEqual([]);expect(calls).toEqual([1891,1277]);expect(checks).toBe(2);
+  expect(bank.map(i=>i.count)).toEqual([8,5]);
+  expect(receipts.map(r=>({id:r.itemId,amount:r.amount,packAfter:r.packAfter,bankBefore:r.bankBefore,bankAfter:r.bankAfter,generationBefore:r.generationBefore,generationAfter:r.generationAfter}))).toEqual([
+   {id:1891,amount:8,packAfter:0,bankBefore:0,bankAfter:8,generationBefore:9,generationAfter:10},
+   {id:1277,amount:2,packAfter:0,bankBefore:3,bankAfter:5,generationBefore:10,generationAfter:11}]);
+  await depositEarthInventory(s,()=>{checks++;});expect(calls).toEqual([1891,1277]);expect(checks).toBe(2);
+ }finally{log.mockRestore();}
+});
 
 test('a level-one order buys only the air unlock, then switches to earth and bounds its last batch',()=>{
  expect(productionBatch(1,0,1137,625)).toEqual({rune:556,talisman:1438,essence:7,multiple:1});
