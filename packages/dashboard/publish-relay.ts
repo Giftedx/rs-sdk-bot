@@ -35,7 +35,14 @@ const PUBLIC_BOT=['name','server','side','remote','practice','reserved','at','st
 const PUBLIC_KEYS=['now','world','worldPlayers','boards','roster','rivals','contention','lookups','farms','icons','map','pageVersion','snapshotAt','liveTopsAt','liveTops'] as const;
 // Goal texts can carry a coordinator task id ("run-x [task-1a2b]") and, after a colon or in brackets, stock counts
 // ("Smithing from banked ore: 1630 bronze and 571 iron", "cooked lobsters (607 short)"): the public keeps the headline.
-const publicGoal=(g:any)=>typeof g==='string'?g.replace(/\s*\[task-[^\]]*\]/g,'').split(':')[0]!.replace(/\s*\([^)]*\)/g,'').trim():g;
+// A coordinator job id ("run-ranged-<account>-band50") is a file name, not a goal: the public text names its kind.
+const RUN_KIND:Record<string,string>={ranged:'Ranged training',ge:'Grand Exchange trade',handoff:'item hand-off',quest:'quests'};
+const publicGoal=(g:any)=>{
+ if(typeof g!=='string')return g;
+ const run=/^run-([a-z]+)-/.exec(g.trim());
+ if(run)return RUN_KIND[run[1]!]??run[1]+' run';
+ return g.replace(/\s*\[task-[^\]]*\]/g,'').split(':')[0]!.replace(/\s*\([^)]*\)/g,'').trim();
+};
 export function publicView(state:any,main=MAIN_ACCOUNT){
  const s=trimState(state);
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
@@ -51,7 +58,7 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  // The queue's counts and agents stay; the task texts are the agents' working notes.
  out.coordination=s.coordination&&typeof s.coordination==='object'?{available:s.coordination.available,fresh:s.coordination.fresh,paused:s.coordination.paused,counts:s.coordination.counts,agents:s.coordination.agents,tasks:[]}:null;
  // Other sides' accounts and sync times are public; their coins are bank stock.
- out.fleetSides=s.fleetSides&&Array.isArray(s.fleetSides.sides)?{...s.fleetSides,sides:s.fleetSides.sides.map((side:any)=>({...side,accounts:(side.accounts??[]).filter((a:any)=>!isMain(a?.name)).map(({coins:_coins,...a}:any)=>a)}))}:null;
+ out.fleetSides=s.fleetSides&&Array.isArray(s.fleetSides.sides)?{at:s.fleetSides.at??null,sides:s.fleetSides.sides.map((side:any)=>({...side,accounts:(side.accounts??[]).filter((a:any)=>!isMain(a?.name)).map(({coins:_coins,...a}:any)=>a)}))}:null;
  // Other players are public game data (world feed, hiscores); the main account leaves every list.
  if(Array.isArray(out.roster))out.roster=out.roster.filter((r:any)=>!isMain(r?.[0]));
  if(Array.isArray(out.rivals))out.rivals=out.rivals.map((b:any)=>({...b,ours:isMain(b?.ours?.name)?null:b?.ours??null,rows:(b.rows??[]).filter((r:any)=>!isMain(r?.name))}));

@@ -44,7 +44,7 @@ export function remoteBots(snapshots:any[],localNames:ReadonlySet<string>,roster
    const name=String(a?.name??'');if(!/^[A-Za-z0-9]{1,12}$/.test(name)||localNames.has(name.toLowerCase()))continue;
    const live=roster.get(name.toLowerCase()),inWorld=!!live&&now-live.seen<30_000;
    rows.push({name,server:String(a.server??''),side:s.side,remote:true,at:Number.isFinite(a.at)?a.at:null,snapshotAt:Number.isFinite(s.at)?s.at:null,
-    role:s.side,goal:`${s.side} side`,currentGoal:'',
+    role:null,goal:null,currentGoal:'',
     skills:Array.isArray(a.skills)?a.skills.map((k:any)=>({name:String(k.name),level:Number(k.level)||1,xp:null})):[],
     inventory:Array.isArray(a.inventory)?a.inventory:null,equipment:Array.isArray(a.equipment)?a.equipment:null,bank:Array.isArray(a.bank)?a.bank:null,bankAt:Number.isFinite(a.at)?a.at:null,
     pos:live?{x:live.x,z:live.z,level:live.level}:null,live:inWorld?live:null,combat:live?.combat??null,
