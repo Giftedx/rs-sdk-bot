@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793515643515,
+  "exportedAt": 1793515913853,
   "sources": {
     "state": {
-      "observedAt": 1793515628552.159,
-      "ageMs": 14962.841064453125,
+      "observedAt": 1793515905324.2605,
+      "ageMs": 8528.739501953125,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793515640551,
-      "ageMs": 2964,
+      "observedAt": 1793515913084,
+      "ageMs": 769,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 10218221.283447266,
+      "ageMs": 10488559.283447266,
       "stale": true,
       "error": null
     }
@@ -501,14 +501,14 @@
     "codex": {
       "running": [
         {
-          "id": "run-recovery-bigchopper-authenticated-entry",
-          "kind": "run",
+          "id": "review-ranged-practice-bind-cause",
+          "kind": "review",
           "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-ef5690f6-c5e0-4149-a082-f962088bfc96",
-          "startedAt": 1793515595238,
+          "capability": "ranged-train",
+          "runId": "task-4b9abcab-6bb7-431a-9e23-545ad430236e",
+          "startedAt": 1793515905276,
           "recordStatus": "running",
-          "pid": 34936,
+          "pid": 8324,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -2828,6 +2828,16 @@
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
+          "id": "qualify-ranged-recovered-band80",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-68a7b558-60a7-463b-ab2b-aab9bf8230f0",
+          "startedAt": 1793515658931,
+          "at": 1793515666660,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
           "id": "run-ge-oreelse-doric-clay-six",
           "kind": "run",
           "goal": "quests",
@@ -2876,6 +2886,16 @@
           "startedAt": 1793514014700,
           "at": 1793514017902,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-ranged-free-practice-port",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-b8c79a46-a607-4b31-94a9-b954a6d3b689",
+          "startedAt": 1793515731578,
+          "at": 1793515738729,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2889,13 +2909,13 @@
         "evidence": "live"
       },
       "lastRecovery": {
-        "id": "run-recovery-shaftmaker-depleted-shop-end",
+        "id": "run-recovery-bigchopper-authenticated-entry",
         "kind": "run",
         "goal": "skills",
         "capability": "session-recovery-only",
-        "runId": "task-018e0614-a62f-439a-a4e6-d5d2cbe61921",
-        "startedAt": 1793514805516,
-        "at": 1793514867898,
+        "runId": "task-ef5690f6-c5e0-4149-a082-f962088bfc96",
+        "startedAt": 1793515595238,
+        "at": 1793515658416,
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
@@ -3965,40 +3985,6 @@
           ]
         },
         {
-          "id": "qualify-ranged-recovered-band80",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-recovery-bigchopper-authenticated-entry",
-              "status": "running"
-            }
-          ]
-        },
-        {
-          "id": "run-ranged-bigchopper-recovered-band80",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-ranged-recovered-band80",
-              "status": "pending"
-            },
-            {
-              "id": "run-recovery-bigchopper-authenticated-entry",
-              "status": "running"
-            }
-          ]
-        },
-        {
           "id": "run-ge-oreelse-doric-iron-one",
           "kind": "run",
           "goal": "quests",
@@ -4076,6 +4062,36 @@
               "status": "pending"
             }
           ]
+        },
+        {
+          "id": "build-ranged-observed-underground-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "review-ranged-practice-bind-cause",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-ranged-bigchopper-supported-entry-band80",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-ranged-observed-underground-entry",
+              "status": "pending"
+            }
+          ]
         }
       ],
       "failed": [],
@@ -4087,7 +4103,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 3,
+    "reportedRunning": 2,
     "observationStale": false,
     "jobs": [
       {
@@ -4232,7 +4248,7 @@
       },
       {
         "account": "Bigchopper",
-        "script": "scripts/chain.ts",
+        "script": "scripts/session-check.ts",
         "state": "disabled"
       }
     ]

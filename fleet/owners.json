@@ -143,6 +143,10 @@
   "UnderMyKilt": {
    "side": "claude-cloud",
    "server": "rs-sdk-demo.fly.dev"
+  },
+  "Billionaire": {
+   "side": "local",
+   "server": "rs-sdk-demo.fly.dev"
   }
  }
 }
