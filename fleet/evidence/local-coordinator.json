@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793516875200,
+  "exportedAt": 1793517475901,
   "sources": {
     "state": {
-      "observedAt": 1793516856040.6416,
-      "ageMs": 19159.3583984375,
-      "stale": false,
+      "observedAt": 1793517341517.641,
+      "ageMs": 134383.35888671875,
+      "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793516874934,
-      "ageMs": 266,
+      "observedAt": 1793517475355,
+      "ageMs": 546,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 11449906.283447266,
+      "ageMs": 12050607.283447266,
       "stale": true,
       "error": null
     }
@@ -501,17 +501,17 @@
     "codex": {
       "running": [
         {
-          "id": "run-ge-shaftmaker-imp-red-bead",
-          "kind": "run",
+          "id": "qualify-recovery-shaftmaker-bead-settlement",
+          "kind": "qualify",
           "goal": "quests",
-          "capability": "ge-bulk-order",
-          "runId": "task-2288e4ed-9784-4ea4-9783-961116210d96",
-          "startedAt": 1793516855823,
+          "capability": "session-recovery-only",
+          "runId": "task-f78ecdfa-03f3-45eb-a581-e057d7f7612f",
+          "startedAt": 1793517341465,
           "recordStatus": "running",
-          "pid": 35908,
+          "pid": 22288,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         }
       ],
@@ -2896,6 +2896,16 @@
           "startedAt": 1793516629729,
           "at": 1793516677838,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-shaftmaker-imp-red-bead",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": "task-2288e4ed-9784-4ea4-9783-961116210d96",
+          "startedAt": 1793516855823,
+          "at": 1793517104801,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -4089,7 +4099,7 @@
           "dependencies": [
             {
               "id": "run-ge-shaftmaker-imp-red-bead",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4137,6 +4147,55 @@
               "status": "pending"
             }
           ]
+        },
+        {
+          "id": "run-recovery-shaftmaker-bead-settlement",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-recovery-shaftmaker-bead-settlement",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "qualify-quest-sweep-shaftmaker-seaslug-entry",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-recovery-shaftmaker-bead-settlement",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-seaslug-shaftmaker-settled-entry",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-quest-sweep-shaftmaker-seaslug-entry",
+              "status": "pending"
+            },
+            {
+              "id": "run-recovery-shaftmaker-bead-settlement",
+              "status": "pending"
+            }
+          ]
         }
       ],
       "failed": [],
@@ -4148,7 +4207,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 4,
+    "reportedRunning": 3,
     "observationStale": false,
     "jobs": [
       {
@@ -4263,7 +4322,7 @@
       },
       {
         "account": "Billionaire",
-        "script": "scripts/generated/thieving60.ts",
+        "script": "scripts/goldfarm.ts",
         "state": "running"
       },
       {
@@ -4299,7 +4358,7 @@
       {
         "account": "Shaftmaker",
         "script": "scripts/buy-owned-ge-item.ts",
-        "state": "running"
+        "state": "disabled"
       }
     ]
   },
