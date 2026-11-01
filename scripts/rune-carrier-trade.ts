@@ -7,7 +7,7 @@ const index=(s:Session,n:string)=>state(s).nearbyPlayers.find(p=>p.name.toLowerC
 async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
  const at=s.tick();
  if(!await waitUntil(s,()=>ess(h)===27&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
- let opened=false,offerSent=false,last='',requestAt=-Infinity;
+ let opened=false,offerSent=false,last='',requestAt=-Infinity;const confirmed=new Set<Session>();
  while(s.tick()-at<35&&ess(s)!==27&&!stop()){
   {
    await new Promise<void>(resolve=>setImmediate(resolve));
@@ -29,7 +29,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
   for(const actor of [h,s]){
    const t=trade(actor);if(!t?.isOpen)continue;
    if(t.partner&&t.partner.toLowerCase()!==(actor===s?h.name:s.name).toLowerCase())throw Error('unexpected carrier trade partner');
-   if(t.myAccepted)continue;
+   if(t.myAccepted||confirmed.has(actor))continue;
    const giver=actor===h?t.myOffer:t.theirOffer,receiver=actor===h?t.theirOffer:t.myOffer;
    if(receiver?.length||(giver??[]).some(i=>i.id!==1436)||(giver??[]).reduce((n,i)=>n+i.count,0)>27)throw Error('unexpected carrier trade stock');
    if(t.screen==='confirm'&&(giver??[]).reduce((n,i)=>n+i.count,0)!==27)throw Error('incomplete carrier confirmation');
@@ -52,7 +52,12 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
     if(!pendingOwnedOffer&&total===0)continue;
     if(!pendingOwnedOffer&&total!==27)throw Error('unexpected essence offer '+total);
     if(!t.myAccepted)await actor.sdk.sendAcceptTrade();
-   }else if(t.screen==='confirm'&&!t.myAccepted)await actor.sdk.sendAcceptTrade();
+   }else if(t.screen==='confirm'&&!t.myAccepted){
+    const accepted=await actor.sdk.sendAcceptTrade();
+    if(!accepted.success)throw Error('carrier confirmation refused '+accepted.message);
+    // Interface text and offers may clear before the modal and inventory credit.
+    confirmed.add(actor);
+   }
   }
   await Promise.race([waitTicks(s,1),waitTicks(h,1)]);
  }
