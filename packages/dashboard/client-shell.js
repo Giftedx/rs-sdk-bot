@@ -270,11 +270,11 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // The minimap: the 2D map art around the observed account at 4 px a tile, every bot a dot, the observed one a
   // white square in the centre. With no account it shows the whole known world.
   // In 3D it turns with the viewer's camera (yaw from the bridge, the viewer's own formula) and centres on the followed
-  // account, or on the camera in free camera; the viewer's minimap is hidden (client-viewer.css). In 2D it stays north-up.
+  // account, or on the camera in free camera and while it follows another player; the viewer's minimap is hidden (client-viewer.css). In 2D it stays north-up.
   // The bridge sends the camera only when it moves, so the last one holds while the 3D frame is loaded.
   let miniView={cx:0,cz:0,PX:1,angle:0};
   function minimap(){const c=hud.querySelector('.game-minimap canvas');if(!c||!S)return;const g=c.getContext('2d'),W=c.width,H=c.height,m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};const b=account(),bp=b?.live||b?.pos;
-    const c3=typeof mode!=='undefined'&&mode==='3d'&&window.atlasCam3d&&$('#rsw')?.getAttribute('src')?window.atlasCam3d:null,p=c3&&(!bp||window.atlasFreeCamera)?{x:c3.x,z:c3.z}:bp,angle=c3?(2047-c3.yaw)*Math.PI/1024:0;
+    const c3=typeof mode!=='undefined'&&mode==='3d'&&window.atlasCam3d&&$('#rsw')?.getAttribute('src')?window.atlasCam3d:null,p=c3&&(!bp||window.atlasFreeCamera||window.atlasFollowOther)?{x:c3.x,z:c3.z}:bp,angle=c3?(2047-c3.yaw)*Math.PI/1024:0;
     const PX=p?4:Math.min(W/(m.w*m.scale),H/(m.h*m.scale)),cx=p?p.x:m.x0+m.w*m.scale/2,cz=p?p.z:m.z0+m.h*m.scale/2;miniView={cx,cz,PX,angle};
     const compass=hud.querySelector('.minimap-compass');if(compass)compass.style.transform=angle?`rotate(${angle*180/Math.PI}deg)`:'';
     g.clearRect(0,0,W,H);g.save();g.beginPath();g.arc(W/2,H/2,W/2,0,7);g.clip();g.fillStyle='#000';g.fillRect(0,0,W,H);if(angle){g.translate(W/2,H/2);g.rotate(angle);g.translate(-W/2,-H/2);}
