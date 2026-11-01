@@ -12,3 +12,22 @@ test('infoboxes: boosted and drained skills of the followed account; Hitpoints a
  expect(el.innerHTML).toContain('class="infobox boost-down" title="Strength drained: 45 / 50"');
  expect(el.innerHTML).not.toContain('Defence');expect(el.innerHTML).not.toContain('Hitpoints');expect(el.innerHTML).not.toContain('Prayer');
 });
+
+function lookupHarness(fetch:typeof globalThis.fetch){
+ const code=shell.slice(shell.indexOf('  function lookup(name){'),shell.indexOf('  window.atlasLookup=lookup;'));
+ const target={innerHTML:''};
+ return new Function('fetch','body','lookupCard',`let worldLookupName='',worldLookup=null,selectedPlugin='world';const showPlugin=()=>{};${code};return{lookup,value:()=>worldLookup};`)(fetch,{querySelector:()=>target},JSON.stringify);
+}
+
+test('player lookup shows HTTP errors instead of an unnamed empty player',async()=>{
+ const h=lookupHarness(async()=>Response.json({error:'Player service unavailable'},{status:503}));
+ h.lookup('Worker');await Bun.sleep(0);
+ expect(h.value().name).toBe('Worker');expect(h.value().note).toContain('Player service unavailable');
+});
+
+test('an old lookup failure cannot overwrite the player chosen afterward',async()=>{
+ let rejectOld!:(error:Error)=>void;
+ const h=lookupHarness((url:any)=>String(url).includes('Old')?new Promise((_resolve,reject)=>{rejectOld=reject;}):Promise.resolve(Response.json({name:'New',rows:[]})));
+ h.lookup('Old');h.lookup('New');await Bun.sleep(0);rejectOld(Error('Old lookup failed'));await Bun.sleep(0);
+ expect(h.value().name).toBe('New');expect(h.value().rows).toEqual([]);
+});

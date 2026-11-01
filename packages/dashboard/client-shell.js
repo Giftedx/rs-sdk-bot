@@ -184,7 +184,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function lookup(name){
     name=String(name||'').trim();if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return;worldLookupName=name;worldLookup={name,rows:null,note:'Looking up…'};
     if(selectedPlugin!=='world')showPlugin('world');else{const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(worldLookup);}
-    fetch('/api/player?name='+encodeURIComponent(name)).then(r=>r.json()).then(j=>{if(worldLookupName!==name)return;worldLookup=j;const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(j);}).catch(e=>{worldLookup={name,error:'Lookup failed: '+(e?.message||e)};const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(worldLookup);});
+    fetch('/api/player?name='+encodeURIComponent(name)).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error||'Player service returned HTTP '+r.status);return j;}).then(j=>{if(worldLookupName!==name)return;worldLookup=j;const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(j);}).catch(e=>{if(worldLookupName!==name)return;worldLookup={name,rows:null,note:'Lookup failed: '+(e?.message||e)};const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(worldLookup);});
   }
   window.atlasLookup=lookup;
   // Infoboxes (RuneLite): the watched account's session and time to target, or one box per playing bot.
