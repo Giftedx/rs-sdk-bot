@@ -9,18 +9,20 @@ import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from '.
 import {readWorld,parseModelObject} from './coordinator-planner';
 import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
 import {projectRoot,coordinationDir,atomicJson} from './coordinator-store';
-import {isWorkspace,publishWorkspace} from './build-workspace';
+import {isWorkspace,publishWorkspace,workspaceChanges,prepareReplayRoot,removeReplayRoot} from './build-workspace';
+import {recentRecords} from '../../core/src/tick-record';
 
 // A drained fleet for a publish: finite live runs end within their own timeouts (at most 30 minutes in practice).
 const PUBLISH_WAIT_MS=45*60*1000;
 import {buildWorkOrder,preparedNativeDelivery,type CoordTask} from './coordinator';
 import {loadState} from './coordinator-store';
 import {capabilityRevision} from '../../core/src/worker-release';
-import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdict} from './model-worker';
+import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdict,reviewGate,REPLAY_RUNS,type ReplayOutcome} from './model-worker';
 import type {DeliveryResult} from './delivery';
 
 type BuildStageResult=Pick<AuthorResult,'ok'|'delivery'|'diagnostic'|'blocked'|'lastTail'>&{resumedPreparedSource?:string};
-export async function finishBuildDelivery(capability:string,prepared:any,deps:{fingerprint:()=>string;author:()=>Promise<BuildStageResult>;deliver:()=>Promise<DeliveryResult>;review:(result:BuildStageResult,source:string)=>Promise<{approved:boolean;reason:string}>;record:(result:BuildStageResult)=>void},agent:ModelWorker){
+// `gate` decides whether the review blocks delivery (model-worker.ts reviewGate). Without it every review blocks.
+export async function finishBuildDelivery(capability:string,prepared:any,deps:{fingerprint:()=>string;author:()=>Promise<BuildStageResult>;deliver:()=>Promise<DeliveryResult>;review:(result:BuildStageResult,source:string)=>Promise<{approved:boolean;reason:string}>;record:(result:BuildStageResult)=>void;gate?:()=>Promise<{blocking:boolean;reason:string}>},agent:ModelWorker){
  let resume=false;if(prepared&&!prepared.diagnostic)try{resume=prepared.source===deps.fingerprint();}catch{/* missing or changed source needs the author */}
  const result:BuildStageResult=resume?await(async()=>{const delivery=await deps.deliver();return{ok:delivery.ok,delivery,lastTail:delivery.reason,resumedPreparedSource:prepared.source};})():await deps.author();
  deps.record(result);
@@ -30,8 +32,41 @@ export async function finishBuildDelivery(capability:string,prepared:any,deps:{f
  if(!result.ok||!result.delivery?.ok||result.delivery.stage!=='delivered')return{ok:false,evidence:result.delivery?'native':'source',delivery:result.delivery,diagnostic:result.diagnostic,blocked:result.blocked,error:result.lastTail};
  const source=deps.fingerprint();
  if(result.delivery.source!==source)return{ok:false,evidence:'native',delivery:result.delivery,error:'delivered source changed before review'};
+ const gate=deps.gate?await deps.gate().catch(error=>({blocking:true,reason:'review blocks: gate failed: '+String(error)})):{blocking:true,reason:'review blocks'};
+ if(!gate.blocking){
+  const unchanged=deps.fingerprint()===source;
+  return{ok:unchanged,delivery:{...result.delivery,id:capability},review:{deferred:true,reason:gate.reason},evidence:'native',agent,...(!unchanged?{error:'source changed during replay'}:{})};
+ }
  const verdict=await deps.review(result,source),unchanged=deps.fingerprint()===source;
- return{ok:verdict.approved===true&&unchanged,delivery:{...result.delivery,id:capability},review:verdict,evidence:'native',agent,...(!unchanged?{error:'source changed during review'}:{})};
+ return{ok:verdict.approved===true&&unchanged,delivery:{...result.delivery,id:capability},review:verdict,gate:gate.reason,evidence:'native',agent,...(!unchanged?{error:'source changed during review'}:{})};
+}
+
+// Replays one recorded run against this checkout's worker code (packages/core/src/replay.ts) in its own process.
+export async function replayRun(root:string,file:string,allow:readonly string[]=[],timeoutMs=180000):Promise<ReplayOutcome>{
+ const child=Bun.spawn([process.execPath,'packages/core/src/replay.ts','--json',file,...(allow.length?['--allow',allow.join(',')]:[])],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true});
+ const timer=setTimeout(()=>child.kill(),timeoutMs);
+ const [out,err]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text()]);
+ await child.exited;clearTimeout(timer);
+ try{const line=out.trim().split(/\r?\n/).at(-1)!;const r=JSON.parse(line);return{...r,file};}
+ catch{return{status:'error',file,error:'replay printed no result: '+(err||out).slice(-300)};}
+}
+// The review gate's inputs for one build: its changed files (isolated workspace only) and replays of the newest
+// recorded runs that started before the build.
+export async function buildReviewGate(input:{root:string;isolated:boolean;entry:string;owned:readonly string[];startedAt:number;allow?:readonly string[];replay?:(file:string)=>Promise<ReplayOutcome>;recordRoot?:string}){
+ const changes=input.isolated?workspaceChanges(input.root):{known:false,changed:[]};
+ const scope={...changes,owned:input.owned,reason:input.isolated?'build workspace has no file list':'build edits the main checkout'};
+ const outside=scope.changed.filter(f=>!input.owned.includes(f));
+ const records=scope.known&&!outside.length?recentRecords(input.entry,input.startedAt,REPLAY_RUNS,input.recordRoot??input.root):[];
+ const replays:ReplayOutcome[]=[];
+ let scratch:string|undefined;
+ const replay=input.replay??(file=>replayRun(scratch??=prepareReplayRoot(input.root),file,input.allow));
+ try{
+  if(records.length===REPLAY_RUNS)for(const file of records){
+   const r=await replay(file);replays.push(r);
+   if(r.status==='error')break;
+  }
+ }finally{if(scratch)removeReplayRoot(scratch);}
+ return reviewGate({scope,records:records.length,replays,allow:input.allow});
 }
 
 export async function executeTask(task:CoordTask,dependencies:Record<string,any>,directory:string,runId:string,startedAt:number,agent:ModelWorker='claude'){
@@ -110,6 +145,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
  const built=await finishBuildDelivery(definition.id,prepared,{fingerprint:()=>deliveryFingerprint(definition),
  author:()=>authorLoop({id:definition.id,goal:definition.goal+'\n'+buildWorkOrder(task,dependencies,directory),preset:'',delivery:definition},{maxFixes:2,proveRuns:1,repairRegressions:true},{runModel:authorModel,exists:fileExists,prove:async()=>{throw Error('delivery required');},deliver:runDeliveryTask,diagnose:runDiagnosticTask}),
  deliver:()=>runDeliveryTask(definition),record:result=>atomicJson(join(directory,'author.json'),result),
+ gate:async()=>{const gate=await buildReviewGate({root:projectRoot,isolated,entry:definition.entry,owned:definition.files,startedAt,allow:task.replayAllow});atomicJson(join(directory,'review-gate.json'),{...gate,at:Date.now()});return gate;},
  review:async(result)=>{
  const review=await runModel(agent==='claude'?'codex':'claude','Review this completed capability independently: the declared source, callers, tests and delivery logs. Do not edit or launch anything. Return ONLY JSON {approved:boolean,reason:string}. Check that the work order was fulfilled through its real worker and that the acceptance bar in docs/script-contract.md holds. Review rule (docs/script-contract.md, Review): approve unless you find a concrete defect in the claimed scope: a wrong game action, asset loss, a death risk, an unbounded loop, a missing logout, a crash, or a broken existing caller. Each rejection names file:line, the scenario and the consequence. Do not reject for missing live results (live runs follow approval), for proof-tooling style, for tests you would add, or for later stages; put those in reason as notes. Work order: '+buildWorkOrder(task,dependencies,directory)+' Definition: '+JSON.stringify(definition)+' Delivery: '+JSON.stringify(result.delivery),300000,true);
  atomicJson(join(directory,'review-model.json'),review);

@@ -11,6 +11,7 @@ import { ownedAccounts, tradePartners, recordOwnedAccount, tradeRefusal } from '
 import { ServerProt } from '../../../vendor/rs-sdk/server/webclient/src/io/ServerProt';
 import { setEquipmentObserved } from './container-observation';
 import { beginSessionAttempt, type SessionAttempt } from './session-lifecycle';
+import type { TickRecorder } from './tick-record';
 
 // Runs BotSDK + BotActions in the same process as a LiteClient, with no gateway.
 // BotSDK only speaks WebSocket (sdk/index.ts:272), so the shim fakes a connected socket and feeds it the
@@ -42,6 +43,8 @@ export interface Shim {
     // Sends one action straight to the client, skipping the queue (used for logout, which must not wait
     // behind a slow or stuck action).
     direct(action: { type: string; [k: string]: unknown }): Promise<unknown>;
+    // Starts the per-tick run record (tick-record.ts) from the next publication; null stops it.
+    record(recorder: TickRecorder | null): void;
 }
 
 type Queued = { actionId: string; action: { type: string; ticks?: number } };
@@ -54,6 +57,9 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     let waitLeft = 0;
     let waitDone: (() => void) | null = null;
     const queue: Queued[] = [];
+    let recorder: TickRecorder | null = null;
+    let commands = 0;
+    const indexes = new Map<string, number>();
     const listeners = new Set<() => void>();
     // ifMutable is used by text/model packets too. Only inventory packets for the
     // bank component establish data readiness. ptype0 + packetsReceived identify
@@ -92,7 +98,11 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     if (trackedMutable) client.ifMutable = trackedMutable;
 
     const deliver = (msg: object) => s.handleMessage(JSON.stringify(msg));
-    const pushState = () => deliver({ type: 'sdk_state', state: client.collectBotState(tick), stateReceivedAt: Date.now() });
+    const pushState = (kind: 's' | 'p' = 'p') => {
+        const state = client.collectBotState(tick);
+        recorder?.publish(tick, state, kind);
+        deliver({ type: 'sdk_state', state, stateReceivedAt: Date.now() });
+    };
     const execute = (action: unknown) => {
         const refusal = guard?.(action);
         return refusal ? { success: false, reason: 'unowned_partner', message: refusal } : client.executeBotAction(action);
@@ -102,7 +112,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         if (stopped) return;
         try {
             tick++;
-            pushState();
+            pushState('s');
             if (waitLeft > 0 && --waitLeft === 0) waitDone?.();
             // Like SDL_DispatchEventWatchList: freeze this dispatch's membership,
             // but respect removals. A new wait must start on the next game tick.
@@ -133,6 +143,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         }
         running = false;
         if (stopped) return;
+        const index = indexes.get(next.actionId);
+        if (index !== undefined) { indexes.delete(next.actionId); recorder?.result(tick, index, result); }
         deliver({ type: 'sdk_action_result', actionId: next.actionId, result });
         pushState();
         void pump();
@@ -145,6 +157,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             s.authenticated = true;
             s.send = (msg: { type: string; actionId?: string; action?: Queued['action'] }) => {
                 if (msg.type === 'sdk_action' && msg.actionId && msg.action) {
+                    if (recorder) { const index = commands++; indexes.set(msg.actionId, index); recorder.action(tick, index, msg.action, false); }
                     queue.push({ actionId: msg.actionId, action: msg.action });
                     void pump();
                 }
@@ -160,6 +173,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             if (trackedMutable && client.ifMutable === trackedMutable) client.ifMutable = originalMutable;
             client.setOnGameTickCallback(null);
             queue.length = 0;
+            recorder?.end(tick, reason);
+            recorder = null;
             waitDone?.();
             s.connectionState = 'disconnected';
             s.ws = null;
@@ -193,7 +208,17 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
         },
         async direct(action) {
             if (stopped) return { success: false, message: 'session stopped' };
-            return execute(action);
+            if (!recorder) return execute(action);
+            const index = commands++, own = recorder;
+            own.action(tick, index, action, true);
+            const result = await execute(action);
+            own.result(tick, index, result);
+            return result;
+        },
+        record(next) {
+            if (recorder && recorder !== next) recorder.end(tick, 'record replaced');
+            recorder = stopped ? null : next;
+            if (recorder) recorder.publish(tick, client.collectBotState(tick), 'p');
         },
     };
 }
@@ -214,6 +239,8 @@ export interface Session {
     bankObservation?(): BankObservation | null;
     // This session's own lifecycle attempt (session-lifecycle.ts). Absent on test doubles.
     lifecycle?: SessionAttempt;
+    // Per-tick run record (tick-record.ts). Absent on test doubles.
+    record?(recorder: TickRecorder | null): void;
 }
 
 // Read-only transport observation of one LiteClient: LiteClient.conn -> GameConnection.out/stream ->
@@ -362,6 +389,7 @@ export async function startInProcessSession(opts: { name: string; password: stri
         onTick: cb => sh.onTick(cb),
         bankObservation: () => sh.bankObservation(),
         direct: a => sh.direct(a),
+        record: r => sh.record(r),
         ended,
         client: session.client,
         lifecycle: attempt,

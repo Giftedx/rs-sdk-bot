@@ -13,6 +13,8 @@ export interface CoordTask {
  repairs?:{account:string;endedAt:number}[];
  sessionRecovery?:{account:string;endedAt:number};
  agent?:'codex'|'claude';
+ // Build only: command types whose replay difference is this build's stated change (model-worker.ts reviewGate).
+ replayAllow?:string[];
  /** Set when a deterministic rule (coordinator-rules.ts) created the task. */
  rule?:'next-band';
 }
@@ -104,6 +106,7 @@ export function validateTask(t:CoordTask){
  if(t.accountFrom!==undefined&&(typeof t.accountFrom!=='string'||!TASK_ID.test(t.accountFrom)))throw Error('invalid provision task reference');
  if(t.participants!==undefined&&(!Array.isArray(t.participants)||!t.participants.length||t.participants.some(n=>typeof n!=='string'||!(n.startsWith('@')?TASK_ID.test(n.slice(1)):ACCOUNT.test(n)))
   ||new Set(t.participants.map(n=>n.toLowerCase())).size!==t.participants.length))throw Error('invalid participants');
+ if(t.replayAllow!==undefined&&(t.kind!=='build'||!Array.isArray(t.replayAllow)||t.replayAllow.length>16||t.replayAllow.some(a=>typeof a!=='string'||!/^[A-Za-z]{1,40}$/.test(a))))throw Error('invalid replay allowance');
  if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args');
  if(t.acceptIndex!==undefined&&(!Number.isSafeInteger(t.acceptIndex)||t.acceptIndex<0||t.acceptIndex>=(t.participants?.length??1)))throw Error('invalid acceptance participant index');
  if(t.kind==='run'){
@@ -255,11 +258,20 @@ export function startTask(state:CoordinatorState,id:string,now:number,runId:stri
  record.status='running';record.runId=runId;record.startedAt=now;record.attempts++;
  state.goals.find(g=>g.id===record.spec.goal)!.lastStartedAt=now;state.sequence++;return record;
 }
+// The review task for a build that delivered without waiting. It runs with the other model, on the published source.
+export function deferredReviewTask(build:CoordTask,agent:'codex'|'claude'|undefined,gate:string):CoordTask{
+ return{id:build.id+'-review',goal:build.goal,kind:'review',dependsOn:[build.id],priority:90,estimatedMs:300000,capability:build.capability,
+  agent:agent==='claude'?'codex':'claude',
+  why:'Review of build '+build.id+', which delivered before review ('+gate+'). A rejection stops this capability\'s next runs until a repair build. Build work order: '+build.why.slice(0,1500)};
+}
 export function finishTask(state:CoordinatorState,receipt:Receipt):boolean{
  const record=state.tasks.find(r=>r.spec.id===receipt.taskId);
  if(!record||record.status!=='running'||record.runId!==receipt.runId||!Number.isFinite(receipt.at)||receipt.at<(record.startedAt??Infinity))return false;
  record.receipt=receipt;record.status=receipt.ok?'succeeded':'failed';
  if(receipt.ok){const goal=state.goals.find(g=>g.id===record.spec.goal)!;goal.lastSucceededAt=receipt.at;goal.completedTasks++;}
+ // A build that delivered before review queues that review now (model-worker.ts reviewGate).
+ if(receipt.ok&&record.spec.kind==='build'&&receipt.output?.review?.deferred===true&&!state.tasks.some(r=>r.spec.id===record.spec.id+'-review'))
+  addTasks(state,[deferredReviewTask(record.spec,receipt.output.agent??record.agent,String(receipt.output.review.reason??''))],receipt.at);
  state.sequence++;return true;
 }
 export function acceptStatus(task:CoordTask,s:any,ctx:{account:string;goal:string;source:string;startedAt:number;now:number;runId?:string}):boolean{
