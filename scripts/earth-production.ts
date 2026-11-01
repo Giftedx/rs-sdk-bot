@@ -40,24 +40,43 @@ export async function collectHuntLoot(s:Session,stop:()=>boolean,afterKill=false
  return{id:item.id,count:item.count};
 }
 export async function huntFight(s:Session,npc:{id:number;index:number},stop:()=>boolean,foodEpoch:()=>number){
- const before=s.sdk.getSkillXp('Strength')??0,start=s.tick();let sent=start,food=foodEpoch(),retries=0;
- await s.bot.attack(npc as Parameters<typeof s.bot.attack>[0]);
+ const before=s.sdk.getSkillXp('Strength'),start=s.tick();let sent=start,food=foodEpoch(),retries=0;
+ if(before==null||!Number.isFinite(before))throw Error('earth hunt strength XP unknown');
+ const revision=s.sdk.getState()?.revision??start;
+ let engaged=false,dead=false;
+ const observe=()=>{
+  const st=s.sdk.getState(),combat=st?.player?.combat;
+  if(combat?.inCombat&&combat.targetType==='npc'&&combat.targetIndex===npc.index)engaged=true;
+  if(st?.combatEvents?.some(e=>(e.observationId??e.tick)>revision&&e.type==='damage_dealt'&&e.targetType==='npc'&&e.targetIndex===npc.index))engaged=true;
+  if(st?.nearbyNpcs.some(n=>n.index===npc.index&&n.id===npc.id&&n.hp===0))dead=true;
+ };
+ const attack=async(target:Parameters<typeof s.bot.attack>[0])=>{
+  const result=await s.bot.attack(target);observe();
+  if(stop())throw Error('earth hunt fight stopped');
+  if(s.tick()-start>=100)throw Error('earth hunt fight credit deadline');
+  if(result.success){engaged=true;return true;}
+  // The SDK maps sendInteractNpc's target_not_found to timeout and preserves its message.
+  const missing=result.reason==='npc_not_found'||result.reason==='timeout'&&/\btarget_not_found\b/.test(result.message);
+  const st=s.sdk.getState();
+  if(missing&&(engaged||(s.sdk.getSkillXp('Strength')??0)>before))return true;
+  if(missing&&dead&&!engaged&&st&&!st.nearbyNpcs.some(n=>n.index===npc.index&&n.id===npc.id)&&s.sdk.getSkillXp('Strength')===before)return false;
+  throw Error('earth hunt attack refused: '+result.reason+'; '+result.message);
+ };
+ const off=s.onTick(observe);
+ try{
+ observe();if(!await attack(npc as Parameters<typeof s.bot.attack>[0]))return 'uncredited' as const;
  while(s.tick()-start<100){
   if(stop())throw Error('earth hunt fight stopped');
   const current=s.sdk.getState()?.nearbyNpcs.find(n=>n.index===npc.index&&n.id===npc.id&&(n.hp??1)>0);
-  if(!current){
-   if((s.sdk.getSkillXp('Strength')??0)>before)return true;
-   const credited=await waitUntil(s,()=>stop()||(s.sdk.getSkillXp('Strength')??0)>before,{timeoutTicks:Math.min(3,100-(s.tick()-start))});
-   if(stop())throw Error('earth hunt fight stopped');
-   return credited&&(s.sdk.getSkillXp('Strength')??0)>before;
-  }
+  if(!current&&(s.sdk.getSkillXp('Strength')??0)>before)return 'credited' as const;
   const epoch=foodEpoch();
   if(current&&retries<3&&(epoch!==food||s.tick()-sent>=16)){
-   food=epoch;sent=s.tick();retries++;await s.bot.attack(current);
+   food=epoch;sent=s.tick();retries++;if(!await attack(current))return 'uncredited' as const;
   }
   await waitTicks(s,1);
  }
  throw Error('earth hunt fight credit deadline');
+ }finally{off();}
 }
 type Ledger={consumed:number;crafted:number;air:number;eaten:Record<number,number>;found?:Record<number,number>};
 export function productionConserved(before:ReadonlyMap<number,number>,after:ReadonlyMap<number,number>,l:Ledger){
@@ -141,7 +160,8 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
      if(held(id)&&!o.killsPerTarget)break;
      const npc=st()?.nearbyNpcs.filter(n=>target.npcIds.includes(n.id)&&!n.inCombat&&(n.hp??1)>0&&n.reachable!==false&&Math.max(Math.abs(n.x-target.spot.x),Math.abs(n.z-target.spot.z))<=18).sort((a,b)=>a.distance-b.distance)[0];
      if(!npc){await waitTicks(s,1);continue;}
-     if(!await huntFight(s,npc,()=>over()||!!sustain.failure()||hp()<=6,()=>Object.values(ledger.eaten).reduce((n,v)=>n+v,0)))continue;
+     const outcome=await huntFight(s,npc,()=>over()||!!sustain.failure()||hp()<=6,()=>Object.values(ledger.eaten).reduce((n,v)=>n+v,0));
+     if(outcome==='uncredited')continue;
      kills++;lastOutput=s.tick();
      const dropped=await collectHuntLoot(s,over,true);if(dropped)ledger.found![dropped.id]=(ledger.found![dropped.id]??0)+dropped.count;
      console.log('EARTH_PRODUCTION_KILL '+JSON.stringify({kills,target:id,hp:hp(),tick:s.tick()}));
