@@ -55,11 +55,12 @@ export async function runOwnedSale(s:Session,r:SaleRequest,path:string,stop:()=>
   return{ok:j.phase==='settled',journal:j,replay:false};
  }catch(e){if(j){j.failure=String(e);save();}return{ok:false,journal:j,error:String(e)};}
 }
+export function saleStopRequested(actor:string,exists:(path:string)=>boolean=existsSync){return exists(resolve('.practice','stop-'+actor))||exists(resolve('.practice','stop-all'));}
 if(import.meta.main){
  const actor=process.argv[2]!,goal=process.env.ORDER_KEY??'owned-surplus-sale',server=serverFromEnv(readFileSync(resolve('vendor/rs-sdk/bots',actor,'bot.env'),'utf8'));
  const paths=orderPaths(server,actor,'sell-'+goal);mkdirSync(paths.base,{recursive:true});if(existsSync(paths.lock)){const owner=JSON.parse(readFileSync(paths.lock,'utf8'));if(!Number.isSafeInteger(owner.pid)||owner.pid<1)throw Error('unknown market lock owner');let alive=true;try{process.kill(owner.pid,0);}catch(e){if((e as NodeJS.ErrnoException).code==='ESRCH')alive=false;else throw e;}if(alive)throw Error('market actor already owned');unlinkSync(paths.lock);}const fd=openSync(paths.lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,actor,goal}));closeSync(fd);let s:Session|undefined;
  try{const old:SaleJournal|undefined=existsSync(paths.journal)?JSON.parse(readFileSync(paths.journal,'utf8')):undefined,r=old?.request??{actor,server,goal,item:Number(process.env.ITEM_ID),quantity:Number(process.env.QUANTITY),price:Number(process.env.SELL_PRICE),floor:Number(process.env.FLOOR_PRICE),reserveItems:Number(process.env.RESERVE_ITEMS??0),deadline:Date.now()+Number(process.env.ORDER_MS??60000)};
  if(r.actor!==actor||r.server!==server||r.goal!==goal)throw Error('sale CLI identity mismatch');for(const[key,field]of [['ITEM_ID','item'],['QUANTITY','quantity'],['SELL_PRICE','price'],['FLOOR_PRICE','floor'],['RESERVE_ITEMS','reserveItems']]as const)if(process.env[key]!==undefined&&Number(process.env[key])!==r[field])throw Error('sale CLI budget mismatch');validateSale(r);
- s=await openBot(actor);const result=await runOwnedSale(s,r,paths.journal,()=>existsSync(resolve('.practice','stop-'+actor)),Number(process.env.FILL_WAIT_TICKS??40),process.env.CANCEL==='1');console.log('OWNED_GE_SALE '+JSON.stringify(result));process.exitCode=await settle([s],result.ok,JSON.stringify(result))?0:1;
+ s=await openBot(actor);const result=await runOwnedSale(s,r,paths.journal,()=>saleStopRequested(actor),Number(process.env.FILL_WAIT_TICKS??40),process.env.CANCEL==='1');console.log('OWNED_GE_SALE '+JSON.stringify(result));process.exitCode=await settle([s],result.ok,JSON.stringify(result))?0:1;
  }catch(e){if(s)await settle([s],false,String(e));throw e;}finally{unlinkSync(paths.lock);}
 }

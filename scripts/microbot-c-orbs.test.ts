@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {orbEffect,orbRecipes,chargeInventory} from './microbot-c-orbs';
+import {orbEffect,orbRecipes,chargeInventory,orbStopRequested} from './microbot-c-orbs';
 import {spellOnNativeLoc,installSpellLocBridge} from './microbot-c-spell-loc';
 import {elementalRuneCost} from './microbot-magic-items';
 test('native spell location encodes route then OPLOCT x,z,loc,spell',()=>{
@@ -31,4 +31,12 @@ test('finite orb order confirms conversions and preserves unrelated stock',async
 test('instance executor bridge delegates other actions and restores method',()=>{
  const original=(a:any)=>a.type;const client={executeBotAction:original};const restore=installSpellLocBridge(client);
  expect(client.executeBotAction({type:'closeModal'})).toBe('closeModal');restore();expect(client.executeBotAction).toBe(original);
+});
+
+test('CLI global stop callback prevents a second real charge action',async()=>{
+ const items=[{id:567,count:2},{id:573,count:0},{id:564,count:6},{id:556,count:60}];let xp=100,words=0,globalStop=false,tick=0;
+ const client={executeBotAction:(_:unknown)=>({success:false}),isInGame:()=>true,localPlayer:{},toSceneTile:()=>({x:1,z:2}),locSceneInfo:()=>({shape:10}),routeToLoc:()=>true,writeOpcode:()=>{},out:{p2:()=>{if(++words%4===0){items[0]!.count--;items[1]!.count++;items[2]!.count-=3;items[3]!.count-=30;xp+=76;globalStop=true;}}}};
+ const s:any={client,direct:(a:unknown)=>client.executeBotAction(a),tick:()=>tick,onTick:(cb:()=>void)=>{let active=true;const next=()=>queueMicrotask(()=>{if(active){tick++;cb();next();}});next();return()=>{active=false;};},sdk:{getInventory:()=>items,getEquipment:()=>[],getSkill:()=>({baseLevel:66,level:66}),getSkillXp:()=>xp,getState:()=>({player:{lifeId:1},nearbyLocs:[{id:2152,x:3000,z:4000}]})}};
+ const stop=()=>orbStopRequested('fixture',false,path=>path==='.practice/stop-all'&&globalStop,'');
+ expect(stop()).toBe(false);const result=await chargeInventory(s,'air',2,80,stop);expect(result.ok).toBe(false);expect(result.made).toBe(1);expect(words).toBe(4);expect(items[0]!.count).toBe(1);expect(stop()).toBe(true);
 });
