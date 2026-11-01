@@ -14,6 +14,12 @@ export function earthRefillAmount(shelf:number,missing:number){
 export const earthSeedNeeded=(shelf:number,carried:number,seeded:boolean)=>Number.isSafeInteger(shelf)&&shelf>=0&&carried>=1&&!seeded;
 export const earthRefillStop=(idle:number,affordable:boolean):'budget'|'stock-wait'|undefined=>!affordable?'budget':idle>=25?'stock-wait':undefined;
 
+// The session exposes bankObservation only while the bank is open. The account has one mutation owner.
+export function retainedEarthBank(read:()=>{items:readonly {id:number;count:number}[]}|null|undefined){
+ let confirmed:{id:number;count:number}[]=[];
+ return()=>{const live=read();if(live)confirmed=live.items.map(i=>({id:i.id,count:i.count}));return confirmed;};
+}
+
 export async function sellEarthSeedObserved(s:Session,stop:()=>boolean){
  const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);
  const earth=count(557),coins=count(995);if(earth<1)throw Error('earth seed is not owned');
@@ -51,8 +57,9 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
  const stopped=()=>o.stop()||existsSync(`.practice/stop-${s.name}`);
  const over=()=>terminal()||stopped()||s.tick()-start>=o.cap;
  const held=(id:number)=>inv().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
- const banked=(id:number)=>(s.bankObservation?.()?.items??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
- const assets=()=>{const m=new Map<number,number>();for(const i of [...inv(),...s.sdk.getEquipment(),...(s.bankObservation?.()?.items??[])])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
+ const bankItems=retainedEarthBank(()=>s.bankObservation?.());
+ const banked=(id:number)=>bankItems().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+ const assets=()=>{const m=new Map<number,number>();for(const i of [...inv(),...s.sdk.getEquipment(),...bankItems()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
  const shelf=()=>st()?.shop.shopItems.find(i=>i.id===557)?.count;
  let boughtTotal=0,spentTotal=0,seeded=0,seedCredit=0,stockGrowth=false,stop='cap',failure='',uncertain=false;
  let initial:Map<number,number>|undefined,hpMin=hp(),lastProgress=start;
@@ -68,6 +75,7 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
  };
  const bank=async(cleanup=false)=>{await s.bot.dismissBlockingUI();await walk(conf.bankSpot,cleanup);await openBank();
   for(const i of [...inv()])if(cleanup||i.id!==995)await depositObserved(s,i);
+  bankItems();
  };
  const withdraw=async(id:number,n:number)=>{if(over())throw Error('earth refill stopped before withdrawal');if(!n)return;const item=st()?.bank.items.find(i=>i.id===id),before=held(id),stored=banked(id);
   if(!item||stored<n)throw Error('earth refill missing owned item '+id);

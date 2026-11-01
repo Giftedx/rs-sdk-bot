@@ -1,5 +1,15 @@
 import {test,expect} from 'bun:test';
-import {earthRefillAmount,earthSeedNeeded,earthRefillStop,buyEarthObserved,sellEarthSeedObserved} from './earth-shop';
+import {earthRefillAmount,earthSeedNeeded,earthRefillStop,buyEarthObserved,sellEarthSeedObserved,retainedEarthBank} from './earth-shop';
+
+test('closing the bank retains its confirmed assets and exact outstanding order quantity',()=>{
+ let live:any={items:[{id:557,count:2},{id:995,count:320288}]};
+ const bank=retainedEarthBank(()=>live);
+ expect(bank()).toEqual(live.items);const old=live.items;live=null;
+ expect(bank().find(i=>i.id===557)?.count).toBe(2);
+ old[0].count=9000;expect(bank()[0]?.count).toBe(2);
+ live={items:[{id:557,count:53},{id:995,count:352047}]};bank();live=null;
+ expect(bank()).toEqual([{id:557,count:53},{id:995,count:352047}]);
+});
 
 test('competing buyers must not make a single available refill unbuyable',()=>{
  expect(earthRefillAmount(0,1136)).toBe(0);
