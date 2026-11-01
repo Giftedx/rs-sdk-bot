@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793502846042,
+  "exportedAt": 1793502906120,
   "sources": {
     "state": {
-      "observedAt": 1793502837890.8506,
-      "ageMs": 8151.1494140625,
+      "observedAt": 1793502877514.2024,
+      "ageMs": 28605.797607421875,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793502845005,
-      "ageMs": 1037,
+      "observedAt": 1793502904780,
+      "ageMs": 1340,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 2490293.194580078,
+      "ageMs": 2550371.194580078,
       "stale": true,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-28477452-6a4b-4a2b-826a-c2e3f178f2ff",
-      "agent": "codex",
-      "startedAt": 1793502816165,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
@@ -524,7 +519,22 @@
       }
     },
     "codex": {
-      "running": [],
+      "running": [
+        {
+          "id": "review-oreelse-held-recovery-child",
+          "kind": "review",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-073992d2-cbaa-43dc-9262-de580e96a87f",
+          "startedAt": 1793502877464,
+          "recordStatus": "running",
+          "pid": 13948,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        }
+      ],
       "pending": [
         {
           "id": "run-iron-oreelse-settled-anvil85",
@@ -3902,7 +3912,7 @@
     }
   },
   "swarm": {
-    "controllerPid": 32608,
+    "controllerPid": 12824,
     "processState": "alive",
     "reportedRunning": 3,
     "observationStale": false,
@@ -3945,27 +3955,27 @@
       {
         "account": "mmtha0205",
         "script": "scripts/shop-buyer.ts",
-        "state": "ended: died after 1 runs"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "NabTheKnob",
         "script": "scripts/quest-chain.ts",
-        "state": "ended: done"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "Swordinhand",
         "script": "scripts/quest-chain.ts",
-        "state": "ended: done"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "Abracadickra",
         "script": "scripts/quest-chain.ts",
-        "state": "ended: done"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "Woodenstaff",
         "script": "scripts/quest-chain.ts",
-        "state": "ended: done"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "CoinCock",
@@ -3980,7 +3990,7 @@
       {
         "account": "PickpockDick",
         "script": "scripts/goldfarm.ts",
-        "state": "ended: died after 1 runs"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "Pocketpython",
@@ -3990,7 +4000,7 @@
       {
         "account": "Pocketrocket",
         "script": "scripts/shop-buyer.ts",
-        "state": "ended: exit orphaned: attempt 1793474282434-0000012792-0000000001 owner 12792 gone"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "mmsmk1232",
@@ -4000,7 +4010,7 @@
       {
         "account": "mmthv2350",
         "script": "scripts/shop-buyer.ts",
-        "state": "ended: exit orphaned: attempt 1793474244334-0000034940-0000000001 owner 34940 gone"
+        "state": "paused: repair or source ownership unresolved"
       },
       {
         "account": "Shaftsinker",
