@@ -39,23 +39,31 @@ describe('hosted views',()=>{
   expect(p.bots.map((b:any)=>b.name)).toEqual(['CoinCock']);
   for(const f of ['env','sessionAttemptId','workRevision','inputs','coordinatorRunId','bank','bankAt'])expect(f in p.bots[0]).toBe(false);
   expect(p.bots[0].pos).toEqual({x:1,z:2});
-  expect(p.vault).toBeNull();expect(p.collection).toBeNull();expect(p.economy).toEqual({supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:0,farmers:[],trend:[]});
-  expect(p.sys.procs).toEqual([]);
-  expect('viewerTimings' in p).toBe(false);
-  expect(p.mainPlan).toBeNull();expect(p.race).toBeNull();expect(p.gates).toBeNull();expect(p.requests).toEqual({});
+  expect(p.economy).toEqual({supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:0,farmers:[],trend:[]});
+  // Everything outside the whitelist is absent: banks, the plan, host resources, scripts, pull requests.
+  for(const k of ['vault','collection','sys','viewerTimings','mainPlan','race','gates','requests','objectives','gapHistory','scripts','prs','capacity','swarm','scoreboard','overtake','chain'])expect(k in p).toBe(false);
   expect(p.coordination.tasks).toEqual([]);expect(p.coordination.available).toBe(true);expect(JSON.stringify(p)).not.toContain('w'.repeat(50));
   expect(JSON.stringify(p)).not.toContain('owner words');
   expect(p.fleetSides.sides[0].accounts).toEqual([{name:'TossTheCaber',at:1,total:40}]);
   expect(p.roster).toEqual([['Zezima',1,2,0,99]]);expect(p.rivals[0].ours).toBeNull();expect(p.rivals[0].rows).toEqual([{rank:1,name:'Zezima'}]);
   expect(p.contention[0].others).toEqual(['Zezima']);expect(p.contention[0].ours).toEqual([]);expect(Object.keys(p.lookups)).toEqual(['zezima']);
-  expect(p.farms[0].names).toEqual(['Money 01']);expect(p.overtake.map((o:any)=>o.account)).toEqual(['CoinCock']);
+  expect(p.farms[0].names).toEqual(['Money 01']);
   expect(p.hosted.kind).toBe('public');
  });
  test('a state that still names the main account is refused',()=>{
   expect(()=>publicView({bots:[{name:'CoinCock',goal:'give to Haggis'}]})).toThrow('nothing published');
-  expect(()=>publicView({bots:[],objectives:{lanes:[{next:'haggis route'}]}})).toThrow('nothing published');
-  // A field the public view removes cannot trip the check: it is gone before the check runs.
-  expect(publicView({bots:[],mainPlan:{note:'haggis route'}}).mainPlan).toBeNull();
+  expect(()=>publicView({bots:[],roster:[['x',1,2,0,3]],farms:[{names:['n'],label:'haggis ##'}]})).toThrow('nothing published');
+  // A field outside the whitelist cannot trip the check: it never reaches the public file.
+  expect('mainPlan' in publicView({bots:[],mainPlan:{note:'haggis route'},objectives:{lanes:[{next:'haggis route'}]}})).toBe(false);
+ });
+ test('public bots keep game-visible fields and lose run counters, banks and coordinator internals',()=>{
+  const b={name:'CoinCock',pos:{x:1,z:2},skills:[{name:'Attack',level:5,xp:400}],inventory:[{name:'Coins',count:9}],equipment:[],ranks:[],goal:'run-ge-coin [task-1a2b] buy (607 short): 1630 bronze in the bank',
+   phase:'banked=15000 packCoins=5100',phaseShort:'banked 15.0K',result:'ok banked=15000',lastRes:{text:'ok banked=15000'},ledger:{coins:1},counters:{banked:15000},job:{script:'x'},planJob:{next:'y'},nativeProof:{ok:true},timeline:'xxi',role4:{coinsPerTick:3},bank:[{name:'Coins',count:1}],bankAt:1,env:{a:1}};
+  const p=publicView({bots:[b],results:[{at:1,name:'CoinCock',ok:true,goal:'coins [task-9]',text:'ok banked=15000 packCoins=5100',counters:{banked:15000}}],events:[{at:1,name:'CoinCock',text:'banked 15.0K',full:'banked=15000'}]});
+  expect(Object.keys(p.bots[0]).sort()).toEqual(['equipment','goal','inventory','name','pos','ranks','skills']);
+  expect(p.bots[0].goal).toBe('run-ge-coin buy');
+  expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,practice:undefined,text:'coins'}]);expect(p.events).toEqual([]);
+  expect(JSON.stringify(p)).not.toMatch(/banked|packCoins|15000/);
  });
 });
 
