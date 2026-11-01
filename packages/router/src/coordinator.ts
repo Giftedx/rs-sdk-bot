@@ -140,10 +140,14 @@ export function lastBuildOutcome(state:CoordinatorState,capability:string){
  return state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt&&r.receipt.output!=null)
   .sort((a,b)=>b.receipt!.at-a.receipt!.at)[0]?.receipt?.output;
 }
-// A host deferral is neither a qualification nor a request to rewrite prepared source.
+// Prepared source skips authoring only. The executor reruns delivery and the applicable review before publication.
 export function preparedNativeDelivery(state:CoordinatorState,capability:string,source:string){
  const output=lastBuildOutcome(state,capability);
- return output?.hostDeferred===true&&output.sourcePrepared===true&&output.delivery?.hostDeferred===true&&!output.delivery.diagnostic&&output.delivery.source===source?output.delivery:null;
+ if(output?.hostDeferred===true&&output.sourcePrepared===true&&output.delivery?.hostDeferred===true&&!output.delivery.diagnostic&&output.delivery.source===source)return output.delivery;
+ return state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt)
+  .sort((a,b)=>b.receipt!.at-a.receipt!.at)
+  .map(r=>r.receipt!.output?.delivery)
+  .find(d=>d?.ok===true&&d.stage==='delivered'&&d.evidence==='native'&&!d.diagnostic&&d.source===source)??null;
 }
 /** Null means a referenced identity is unproved, invalid, or aliases another participant. */
 export function boundAccounts(task:CoordTask,state:CoordinatorState):string[]|null{
