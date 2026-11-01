@@ -3,8 +3,27 @@ import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOption
 import * as walking from '../packages/core/src/walk';
 import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
-import {rangedMemoryFloor,rangedSaveSettled} from '../packages/practice/src/ranged-train-proof';
+import {rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
+
+test('proof selects a whole isolated endpoint set and refuses eight exhausted candidates',()=>{
+ const endpoints=(o:ReturnType<typeof rangedStackOptions>)=>[o.ports.engine,o.ports.gateway,...Object.values(o.enginePreload!.env).map(Number)];
+ const first=rangedStackOptions(()=>true),ports=endpoints(first);
+ expect(ports).toEqual([19100,19101,19102,44100,44101,44102,44103]);
+ expect(first).toMatchObject({tickMs:150,xpRate:25,readyTimeoutMs:60000,instance:`ranged-train-${process.pid}`});
+ expect(first.enginePreload!.module.endsWith('save-endpoint.ts')).toBe(true);
+ for(const blocked of ports){
+  const checked:number[]=[];
+  const next=rangedStackOptions(port=>{checked.push(port);return port!==blocked;});
+  expect(endpoints(next)).toEqual([19110,19111,19112,44110,44111,44112,44113]);
+  expect(checked).toContain(blocked);
+  expect(checked).not.toContain(8888);expect(checked).not.toContain(7780);
+ }
+ const checked:number[]=[];
+ expect(()=>rangedStackOptions(port=>{checked.push(port);return port%10!==3;})).toThrow('no bindable isolated ranged-train port set (8 candidates)');
+ expect(checked).toHaveLength(56);
+ expect(new Set(checked).size).toBe(56);
+});
 test('proof holds the free-memory floor, not the start reserve that delivery admits',()=>{
  for(const free of [FREE_FLOOR_GB,PRACTICE_STARTUP_GB-0.1,PRACTICE_STARTUP_GB])expect(()=>rangedMemoryFloor(free,'before stack')).not.toThrow();
  for(const free of [FREE_FLOOR_GB-0.01,0,NaN])expect(()=>rangedMemoryFloor(free,'before child')).toThrow('practice memory floor reached before child');
@@ -61,13 +80,15 @@ test('options keep defaults, accept argv target and cap, and refuse unbounded in
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.
-function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false){
+function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false){
  type Item={id:number;name:string;count:number};
  const item=(id:number,count:number):Item=>({id,name:id===995?'Coins':id===1985?'Cheese':String(id),count});
  let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0,respawnAt:number|undefined;
  let pack:Item[]=catherby?[item(995,3250),item(1515,2),item(946,1),item(1893,4)]:[],equipment:Item[]=[],bank=[item(843,1),item(882,60),...(catherby?[item(995,452202)]:[item(329,3)])];
  if(upgrade)bank.push(item(849,1),item(888,20));
+ if(underground){pack=[item(556,3),item(557,1),item(553,1)];equipment=[item(552,1),item(1277,1),item(1171,1)];}
  const state:any={player:{worldX:catherby?2807:3253,worldZ:catherby?3441:3421,level:0},autoRetaliateEnabled:false,bank:{isOpen:false,items:bank},nearbyNpcs:[],groundItems:[]};
+ if(underground){state.player.worldX=3113;state.player.worldZ=9555;}
  const attacks:{target:number;trip:number;tick:number;kit:number[]}[]=[],listeners=new Set<()=>void>();
  const add=(items:Item[],id:number,n:number)=>{const found=items.find(i=>i.id===id);if(found)found.count+=n;else items.push(item(id,n));};
  const target=()=>({index:active,id:41,x:3233,z:3297,tileX:3233,tileZ:3297,distance:1,reachable:true,inCombat:false,hp:3,maxHp:3});
@@ -86,7 +107,7 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
   bankObservation:()=>({generation,items:bank}),
   sdk:{getState:()=>({...state,inventory:pack}),getInventory:()=>pack,getEquipment:()=>equipment,getSkill:(name:string)=>name==='Ranged'?{baseLevel:level,level}:{level:16},getSkillXp:()=>xp,
    sendSetCombatStyle:async()=>{state.combatStyle={known:true,currentStyle:1,styles:[{index:1,trainsSkills:['Ranged']}]};}},
-  bot:{openBank:async()=>{state.bank.isOpen=true;generation++;return{success:true};},closeBank:async()=>{state.bank.isOpen=false;},
+   bot:{openBank:async()=>{if(state.player.worldZ>9000)throw Error('bank before underground exit');state.bank.isOpen=true;generation++;return{success:true};},closeBank:async()=>{state.bank.isOpen=false;},
    openShop:async()=>{state.shop={isOpen:true,shopItems:[{id:1985,name:'Cheese',count:3,baseCost:4,buyPrice:5}],shopConfig:{sellMultiplier:1000}};return{success:true};},
    closeShop:async()=>{state.shop.isOpen=false;},
    buyFromShop:async(_name:RegExp,n:number)=>{add(pack,1985,n);add(pack,995,-5*n);state.shop.shopItems[0].count-=n;return{success:true};},
@@ -104,16 +125,31 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
  const walker=spyOn(walking,'sessionWalker').mockImplementation(async()=>({} as any));
  const planner=spyOn(trips,'planTripOffThread').mockImplementation(async(from,to)=>({cost:1,legs:from.x===to.x&&from.z===to.z?[]:[{kind:'travel',to,travel:{coins:30,runes:[],needs:[]}}]} as any));
  const worldRoute=spyOn(walking,'walkRoute').mockImplementation(async(_s,legs)=>{
-  const last=legs.at(-1);if(last){state.player.worldX=last.to.x;state.player.worldZ=last.to.z;add(pack,995,-30);}return{ok:true,ticks:1};
+  const last=legs.at(-1);if(last){const cellar=state.player.worldZ>9000;state.player.worldX=last.to.x;state.player.worldZ=last.to.z;if(!cellar)add(pack,995,-30);}return{ok:true,ticks:1};
  });
  const route=spyOn(walking,'walkPath').mockImplementation(async(_deps,points)=>{
   const p=points.at(-1)!;state.player.worldX=p.x;state.player.worldZ=p.z;
   if(p.z===3297){trip++;if(!state.nearbyNpcs.length)next();}
   return{ok:true,ticks:0,still:0,clicks:0,repaths:0,doors:0,next:points.length};
  });
- return{s,attacks,assets:()=>[...bank,...pack,...equipment],run:(overrides={})=>runRangedTrain(s,{...rangedTrainOptions({},['bun','s','unit']),maxTrips:2,buyArrows:0,...(catherby?{maxSpend:5000,coinReserve:400000}:{}),...overrides}),
+ if(underground)planner.mockImplementation(async(from,to)=>({cost:1,legs:from.z>9000?[{kind:'transport',to,at:{x:3103,z:9576,level:0}}]:[]} as any));
+ return{s,attacks,planner,worldRoute,assets:()=>[...bank,...pack,...equipment],run:(overrides={})=>runRangedTrain(s,{...rangedTrainOptions({},['bun','s','unit']),maxTrips:2,buyArrows:0,...(catherby?{maxSpend:5000,coinReserve:400000}:{}),...overrides}),
   close:()=>{clearInterval(timer);route.mockRestore();walker.mockRestore();planner.mockRestore();worldRoute.mockRestore();}};
 }
+
+test('observed underground entry routes before banking and preserves the skull, runes and amulet',async()=>{
+ expect(rangedEntry({worldX:3113,worldZ:9555,level:0})).toEqual({x:3253,z:3421});
+ expect(rangedEntry({worldX:3113,worldZ:9555,level:1})).toBeNull();
+ expect(rangedEntry({worldX:3114,worldZ:9555,level:0})).toBeNull();
+ const f=trainingFixture(['kill','kill'],false,false,true);
+ try{
+  const r=await f.run();
+  expect(r).toMatchObject({ok:true,targetMet:true,kills:2,travelSpent:0,coinDebit:0,accounting:true,preserved:true,equipmentRestored:true,died:false});
+  expect(f.planner.mock.calls[0]!.slice(0,2)).toEqual([{x:3113,z:9555,level:0},{x:3253,z:3421,level:0}]);
+  expect(f.worldRoute).toHaveBeenCalledTimes(1);
+  for(const [id,n] of [[556,3],[557,1],[553,1],[552,1],[1277,1],[1171,1]])expect(f.assets().filter(i=>i.id===id).reduce((s,i)=>s+i.count,0)).toBe(n!);
+ }finally{f.close();}
+});
 
 test('Catherby mixed pack is banked, missing food is bought, and fares reconcile with the shared budget',async()=>{
  const f=trainingFixture(['kill','kill'],true);

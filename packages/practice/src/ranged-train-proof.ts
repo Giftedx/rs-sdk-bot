@@ -3,7 +3,9 @@ import {readFileSync,writeFileSync,copyFileSync,existsSync,mkdirSync,openSync,cl
 import {join,resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
-import {startStack} from './stack';
+import {startStack,type StackOptions} from './stack';
+import {canBind} from './ports';
+import {pointBotAt} from './rehearse';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
@@ -18,13 +20,13 @@ const owned=['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/
 const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned.map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const ARROWS=[882,884,886,888,890,892],COINS=995,BONES=526,CHICKEN=2138,FEATHER=314,FOOD=1985,BANK={x:3253,z:3421};
-const TARGET=30,MAX_SPEND=5000,COIN_RESERVE=400000;
-// Representative Catherby entry: mixed pack, owned shortbow and iron arrows, no banked training food.
-export const RANGED_FIXTURE:SaveConfig={position:{x:2807,z:3441,level:0},
- skills:{Attack:65,Defence:10,Strength:11,Hitpoints:50,Ranged:21},
- inventory:[{id:995,count:3250},...[315,1895,303,309,1893,1893,1893,1893,1895,590,1515,1515,946].map(id=>({id,count:1})),{id:314,count:755}],
- equipment:[{id:1277,count:1,slot:3},{id:1171,count:1,slot:5}],
- bank:[{id:COINS,count:452202},{id:841,count:1},{id:884,count:82},{id:882,count:25},{id:1511,count:15},{id:1521,count:8951}]};
+const TARGET=71,MAX_SPEND=5000,COIN_RESERVE=400000;
+// Observed underground entry and protected quest kit. Bank contents are fixture stock, not a live snapshot.
+export const RANGED_FIXTURE:SaveConfig={position:{x:3113,z:9555,level:0},
+ skills:{Attack:65,Defence:10,Strength:11,Hitpoints:60,Ranged:70},
+ inventory:[{id:556,count:3},{id:557,count:1},{id:553,count:1}],
+ equipment:[{id:552,count:1,slot:2},{id:1277,count:1,slot:3},{id:1171,count:1,slot:5}],
+ bank:[{id:COINS,count:455452},{id:841,count:1},{id:884,count:82},{id:882,count:25},{id:1511,count:15},{id:1521,count:8951}]};
 export function rangedChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
  return {cmd:['bun','scripts/ranged-train.ts',name,String(TARGET),'10000'],cwd:root,
   env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',MIN_ARROWS:'100',BUY_ARROWS:'100',BUY_ARROW_ID:'884',MAX_SPEND:String(MAX_SPEND),COIN_RESERVE:String(COIN_RESERVE),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'20'},windowsHide:true};
@@ -40,8 +42,8 @@ export function rangedSaveChecks(before:Save,after:Save,r:any){
  const free=new Set([...ARROWS,COINS,BONES,CHICKEN,FEATHER,FOOD]);
  const arrows=(s:Save)=>ARROWS.reduce((n,id)=>n+total(s,id),0);
  return {
-  entry:before.skills[4]!.level===21&&before.position.x===2807&&before.position.z===3441&&total(before,841)===1&&arrows(before)===107&&total(before,COINS)===455452&&total(before,329)===0&&total(before,333)===0,
-  target:r?.ok===true&&r.targetMet===true&&r.stop==='target-level'&&after.skills[4]!.level>=TARGET&&r.finalLevel===after.skills[4]!.level&&r.startLevel===21,
+  entry:before.skills[4]!.level===70&&before.position.x===3113&&before.position.z===9555&&before.position.level===0&&total(before,553)===1&&total(before,552)===1&&total(before,556)===3&&total(before,557)===1&&total(before,841)===1&&arrows(before)===107&&total(before,COINS)===455452&&total(before,329)===0&&total(before,333)===0,
+  target:r?.ok===true&&r.targetMet===true&&r.stop==='target-level'&&after.skills[4]!.level>=TARGET&&r.finalLevel===after.skills[4]!.level&&r.startLevel===70,
   xp:Number.isSafeInteger(r?.xpGain)&&r.xpGain>0&&after.skills[4]!.xp-before.skills[4]!.xp===r.xpGain,
   bow:r?.bow===841&&r.arrow===884&&total(after,841)===1,
   arrows:Number.isSafeInteger(r?.arrowsBought)&&r.arrowsBought>=0&&Number.isSafeInteger(r.arrowsSpent)&&r.arrowsSpent>=0&&r.arrowsSpent<=r.shots
@@ -72,14 +74,29 @@ export function verifyRanged(directory:string){
   fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
   beforeHash:meta.before===hash(join(directory,'before.sav')),afterHash:meta.after===hash(join(directory,'after.sav')),logHash:meta.log===hash(join(directory,'worker.log'))};
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,
-  scope:'One native 150ms/25x Catherby Ranged21->30 order with owned shortbow and ammunition, purchased food and reconciled fares. No live or speed claim.',
-  nextConsumer:'Bigchopper: target30, CAP10000, MAX_SPEND5000, COIN_RESERVE400000, MIN_ARROWS100, BUY_ARROWS100, BUY_ARROW_ID884, AMMO100, KILLS_PER_TRIP8, MAX_TRIPS20. Then acquire only missing maple-bow inputs for30->40.'};
+  scope:'One native 150ms/25x underground Ranged70->71 order with protected quest kit, owned shortbow and ammunition, purchased food and reconciled fares. No live or speed claim.',
+  nextConsumer:'run-ranged-bigchopper-supported-entry-band80: target80, CAP48000, MAX_SPEND5000, COIN_RESERVE400000, MIN_ARROWS200, BUY_ARROWS200, BUY_ARROW_ID884, AMMO100, FOOD3, FOOD_ID329, KILLS_PER_TRIP8, MAX_TRIPS50. Fresh bank stock required. Then80->90.'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 // Delivery admits the practice start reserve before this process starts; the proof holds only the floor.
 export function rangedMemoryFloor(freeGiB:number,stage:string){if(!(freeGiB>=FREE_FLOOR_GB))throw Error(`practice memory floor reached ${stage}: need ${FREE_FLOOR_GB}GiB, observed ${freeGiB.toFixed(2)}GiB`);}
 const freeGiB=()=>freemem()/2**30;
+type IsolatedOptions=StackOptions&{ports:{engine:number;gateway:number};instance:string};
+export function rangedStackOptions(bind=canBind):IsolatedOptions{
+ // All engine listeners share this host with the default stack and need separate ports.
+ for(let i=0;i<8;i++){
+  const web=19100+i*10,internal=44100+i*10;
+  const ports={engine:web,gateway:web+1};
+  const env={WEB_MANAGEMENT_PORT:String(web+2),NODE_PORT:String(internal),LOGIN_PORT:String(internal+1),FRIEND_PORT:String(internal+2),LOGGER_PORT:String(internal+3)};
+  if([ports.engine,ports.gateway,...Object.values(env).map(Number)].every(bind))return{
+   tickMs:150,xpRate:25,readyTimeoutMs:60000,ports,instance:`ranged-train-${process.pid}`,
+   enginePreload:{module:resolve(import.meta.dir,'save-endpoint.ts'),env},
+  };
+ }
+ throw Error('no bindable isolated ranged-train port set (8 candidates)');
+}
 async function run(directory:string){
+ if(!existsSync(join(root,'.practice/delivery-native.lock')))throw Error('practice turn required: run through delivery');
  rangedMemoryFloor(freeGiB(),'before stack');
  if(freeGiB()<PRACTICE_STARTUP_GB)throw Error('practice startup reserve short');
  mkdirSync(directory,{recursive:true});
@@ -90,8 +107,10 @@ async function run(directory:string){
  try{
   const pin=source(),name=runBotName('flrng',1),botDir=join(root,'vendor/rs-sdk/bots',name);
   if(existsSync(botDir))throw Error('isolated practice identity already exists');
-  stack=await startStack({tickMs:150,xpRate:25,readyTimeoutMs:60000});await createBot(name);
-  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+  const options=rangedStackOptions();
+  stack=await startStack(options);
+  const {envPath}=await createBot(name);
+  pointBotAt(envPath,options.ports.engine,options.ports.gateway);
   const path=await applyPreset(name,RANGED_FIXTURE);copyFileSync(path,join(directory,'before.sav'));
   const log=join(directory,'worker.log'),config=rangedChildConfiguration(name);
   rangedMemoryFloor(freeGiB(),'before child');
@@ -110,7 +129,7 @@ async function run(directory:string){
   let refusalTimedOut=false;const refusalTimer=setTimeout(()=>{refusalTimedOut=true;void killTree(refusal.pid);},60000);
   const refusalCode=await refusal.exited;clearTimeout(refusalTimer);
   copyFileSync(path,join(directory,'refusal-after.sav'));
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:150,xpRate:25,name,code,timedOut,refusalCode,refusalTimedOut,persisted:persisted.matched,
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:150,xpRate:25,stack:options,name,code,timedOut,refusalCode,refusalTimedOut,persisted:persisted.matched,
    refusalBefore:hash(join(directory,'refusal-before.sav')),refusalAfter:hash(join(directory,'refusal-after.sav')),refusalLog:hash(refusalLog),
    before:hash(join(directory,'before.sav')),after:hash(join(directory,'after.sav')),log:hash(log)},null,2));
   return verifyRanged(directory);

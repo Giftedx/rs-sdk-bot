@@ -1,4 +1,4 @@
-// Ranged from Varrock East or Catherby bank to a target; owned bows, safe chickens and counted preparation.
+// Ranged from supported bank or observed Wizards' Tower cellar entry; owned bows and counted preparation.
 // Usage: bun scripts/ranged-train.ts <bot> [TARGET_LEVEL] [CAP ticks]
 // Env: MIN_ARROWS, BUY_ARROWS, BUY_ARROW_ID, MAX_SPEND, COIN_RESERVE, AMMO, FOOD, FOOD_ID, KILLS_PER_TRIP, MAX_TRIPS.
 // MAX_SPEND includes food, arrows and fares. COIN_RESERVE protects total owned coins.
@@ -41,6 +41,8 @@ export function chooseArrow(owned:readonly Item[],bowReq:number,ranged:number,mi
 }
 export function rangedEntry(p:{worldX:number;worldZ:number;level:number}|null|undefined){
  if(!p||p.level!==0)return null;
+ // Observed entry only. The shared planner owns the pinned cellar ladder and surface route.
+ if(p.worldX===3113&&p.worldZ===9555)return BANK;
  for(const bank of [BANK,{x:2809,z:3441}])if(Math.max(Math.abs(p.worldX-bank.x),Math.abs(p.worldZ-bank.z))<=6)return bank;
  return null;
 }
@@ -70,9 +72,11 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),eq=()=>s.sdk.getEquipment(),held=(id:number)=>count(inv(),id),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
  const level=()=>s.sdk.getSkill('Ranged')?.baseLevel??0,xp=()=>s.sdk.getSkillXp('Ranged')??0,coins=()=>held(COINS);
  if(!await waitUntil(s,()=>hp()>0&&level()>0,{timeoutTicks:15}))throw Error('ranged-train prerequisite: skill observation unknown');
+ if(!await waitUntil(s,()=>!!rangedEntry(st()?.player),{timeoutTicks:15}))throw Error('ranged-train prerequisite: Varrock East, Catherby bank or observed Wizards Tower cellar entry required');
  const originalRetaliate=st()?.autoRetaliateEnabled;if(typeof originalRetaliate!=='boolean')throw Error('ranged-train prerequisite: auto-retaliate telemetry unknown');
  const p0=st()?.player,start=s.tick(),startLevel=level(),startXp=xp(),originalEquipment=eq().map(i=>i.id);
- const entry=rangedEntry(p0);if(!p0||!entry)throw Error('ranged-train prerequisite: Varrock East or Catherby bank start required');
+ const entry=rangedEntry(p0);if(!p0||!entry)throw Error('ranged-train prerequisite: supported entry observation lost');
+ const entryItems=[...inv(),...eq()].map(i=>({id:i.id,count:i.count}));
  if(originalEquipment.some(id=>BOW_IDS.includes(id)||ARROW_IDS.includes(id)))throw Error('ranged-train prerequisite: bow and arrows must start unequipped');
  let ended=false,died=false,cleanup=false,armed=false,lastAmmo=0,hpMin=hp(),kills=0,trips=0,eaten=0,picked=0,shots=0,bought=0,coinsSpent=0,coinsWithdrawn=0,shopVisits=0,failure='',stop='cap';
  let bowUsed=0,arrowUsed=0,foodId=o.foodId,foodBought=0,foodSpent=0,travelSpent=0;let bankReady=false;
@@ -107,6 +111,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
   const p=st()?.player;if(!p)throw Error('ranged-train travel state unknown');
   const actor=accountOf(s),acct={...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:coins()};
   const plan=await planTripOffThread({x:p.worldX,z:p.worldZ,level:p.level},{...to,level:0},acct);
+  if(over()||sustain.failure()||hp()<=6)throw Error('ranged-train travel deadline/health/stop');
   if(!plan||plan.bank||plan.legs.some(l=>l.kind==='travel'&&(l.travel.runes.length||l.travel.needs.some(n=>'held' in n))))throw Error('ranged-train funded travel unavailable');
   const fare=routeFares(plan.legs),wallet=coins();if(fare>preparationFunds(sum(owned(),[COINS]),coinsSpent,o.maxSpend,o.coinReserve)||fare>wallet)throw Error('ranged-train travel budget refused');
   const ac=new AbortController(),offTravel=s.onTick(()=>{if(over()||sustain.failure()||hp()<=6)ac.abort('ranged-train travel deadline/health/stop');});
@@ -155,7 +160,8 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
   await walk([{...BANK,tol:1}]);await open();await deposit([arrow.id,...(coinsWithdrawn>0?[COINS]:[])]);
  };
  try{
-  await open();initial=owned();
+  if(!near(entry,6))await travel(entry);
+  await open();initial=[...snapshot,...entryItems];
   await deposit(inv().map(i=>i.id));
   if(sum(owned(),[COINS])<o.coinReserve)throw Error('ranged-train prerequisite: coin reserve short');
   await stageFood();
