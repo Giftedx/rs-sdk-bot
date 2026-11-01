@@ -419,7 +419,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   });
   hud.querySelector('form').onsubmit=e=>{e.preventDefault();const input=hud.querySelector('input'),text=input.value.trim();input.value='';if(!text)return;if(text.startsWith('::plugin ')){const id=text.slice(9).trim();if(plugins.some(p=>p[0]===id))showPlugin(id);else notify('Unknown plugin. Use '+plugins.map(p=>p[0]).join(', ')+'.');}else if(text.startsWith('::focus ')){const name=text.slice(8).trim(),b=S?.bots.find(b=>b.name.toLowerCase()===name.toLowerCase());if(b)pick(b.name);else notify('No observed account matches that name.');}else if(/^::(request|pause|resume|help|swarm|job|coordinator)\b/.test(text)){
       const [,verb,rest='']=text.match(/^::(\w+)\s*(.*)$/)||[];
-      if(verb==='help'){notify(window.atlasOperator()?'Commands: ::request <text> · ::pause <account> · ::resume <account> · ::job <account> on|off · ::swarm pause|resume · ::coordinator pause|resume · ::plugin <id> · ::focus <account>':'Commands: ::plugin <id> · ::focus <account>. Sign in as owner for ::request, ::pause, ::resume, ::job, ::swarm and ::coordinator.');return;}
+      if(verb==='help'){notify(window.atlasOperator()?'Commands: !lvl <skill> · !total · !qp · !cmb · ::request <text> · ::pause <account> · ::resume <account> · ::job <account> on|off · ::swarm pause|resume · ::coordinator pause|resume · ::plugin <id> · ::focus <account>':'Commands: !lvl <skill> · !total · !qp · !cmb · ::plugin <id> · ::focus <account>. Sign in as owner for ::request, ::pause, ::resume, ::job, ::swarm and ::coordinator.');return;}
       if(!window.atlasOperator()){notify('Sign in as owner to send commands.');return;}
       if(!window.atlasCommand){notify('The command desk is not loaded.');return;}
       let send=null;
@@ -431,7 +431,16 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       if(!send){notify(verb==='request'?'::request needs the request text.':verb==='swarm'||verb==='coordinator'?'::'+verb+' pause or ::'+verb+' resume.':verb==='job'?'::job <account> on or off.':'::'+verb+' needs an account name.');return;}
       notify('Sending '+send.action+(send.extra.account?' '+send.extra.account:'')+'…');
       window.atlasCommand(send.action,send.extra).then(r=>notify(send.action+': '+String(r?.status||'sent').replaceAll('-',' ')),e=>notify('Refused: '+(e?.message||e)));
-    }else notify('Chat is view-only in spectator mode. Commands: ::request · ::pause · ::resume · ::plugin · ::focus · ::help');};
+    }else if(/^!(lvl|level|total|qp|cmb)\b/i.test(text)){const reply=chatLookup(text);chat.push({kind:'Game',name:'',text:reply,at:Date.now()});if(chat.length>200)chat.shift();renderChat();}
+    else notify('Chat is view-only in spectator mode. Commands: !lvl <skill> · !total · !qp · !cmb · ::plugin · ::focus · ::help');};
+  // Chat commands (RuneLite chatcommands): !lvl <skill>, !total, !qp and !cmb answer for the followed account in the
+  // chat, with the level and its demo hiscore rank.
+  function chatLookup(text){const b=account();if(!b)return 'Follow an account first (title bar or ::focus <name>).';const [cmd,...rest]=text.slice(1).toLowerCase().split(/\s+/),arg=rest.join(' '),who=safeName(b.name),rank=board=>b.ranks?.find(r=>r.board===board),fmt=(board,level)=>{const r=rank(board);return level+(r?.rank?' · rank #'+nf(r.rank):'');};
+    if(cmd==='cmb'){const lv=Object.fromEntries((b.skills||[]).map(s=>[s.name,s.level])),c=window.atlasXp?.combat?.(lv);return c?who+': combat level '+c.level+'.':who+': no levels reported.';}
+    if(cmd==='qp'){const r=rank('Quest Points');return who+': '+(r?r.level+' quest points'+(r.rank?' · rank #'+nf(r.rank):''):'quest points not reported')+'.';}
+    if(cmd==='total'){const t=b.skills?.filter(realSkill).reduce((n,s)=>n+s.level,0);return t?who+': total level '+fmt('Overall',t)+'.':who+': no levels reported.';}
+    const alias={att:'Attack',atk:'Attack',def:'Defence',str:'Strength',hp:'Hitpoints',range:'Ranged',ranging:'Ranged',pray:'Prayer',mage:'Magic',cook:'Cooking',wc:'Woodcutting',fletch:'Fletching',fish:'Fishing',fm:'Firemaking',craft:'Crafting',smith:'Smithing',mine:'Mining',herb:'Herblore',agil:'Agility',thiev:'Thieving',rc:'Runecraft'};
+    const skill=alias[arg]||skills.find(n=>n.toLowerCase()===arg||n.toLowerCase().startsWith(arg)&&arg.length>=3);if(!skill)return 'Usage: !lvl <skill>, for example !lvl mining.';const s=level(skill);return s?who+': '+skill+' level '+fmt(skill,s.level)+'.':who+': '+skill+' is not reported.';}
   // Opponent information (RuneLite opponentinfo): the followed account's target in the 3D view, with its name, combat
   // level (npc-names.json, from the server's npc configs) and hitpoints; it stays 5 seconds after combat ends.
   let npcNames=null,opponentHide=0;
