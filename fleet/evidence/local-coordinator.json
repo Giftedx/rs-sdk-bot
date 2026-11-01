@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793505940229,
+  "exportedAt": 1793506541184,
   "sources": {
     "state": {
-      "observedAt": 1793505895640.0872,
-      "ageMs": 44588.912841796875,
-      "stale": false,
+      "observedAt": 1793506375877.07,
+      "ageMs": 165306.92993164062,
+      "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793505937208,
-      "ageMs": 3021,
+      "observedAt": 1793506539447,
+      "ageMs": 1737,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 514935.2834472656,
+      "ageMs": 1115890.2834472656,
       "stale": true,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 31676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-f81c8e6d-4286-4564-a489-e646001099f9",
-      "agent": "codex",
-      "startedAt": 1793505889699,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
@@ -536,56 +531,21 @@
     "codex": {
       "running": [
         {
-          "id": "run-recovery-mightyrod-druid-release-end",
+          "id": "run-quest-druid-mightyrod-main",
           "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-3c685e12-3e04-4aff-a6b9-c30bf0d2f53c",
-          "startedAt": 1793505891122,
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-8d10e1fd-bba1-4d02-9011-0a52ba9f0351",
+          "startedAt": 1793506362354,
           "recordStatus": "running",
-          "pid": 11776,
+          "pid": 2752,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         }
       ],
-      "pending": [
-        {
-          "id": "run-iron-oreelse-bound-anvil85",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "iron-progress-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-oreelse-serialized-bound-cleanup",
-              "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-oreelse-serialized-bound-cleanup",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-recovery-mightyrod-druid-release-end",
-              "status": "running"
-            },
-            {
-              "id": "run-recovery-shaftmaker-aubury-falador-r1",
-              "status": "failed"
-            }
-          ]
-        }
-      ],
+      "pending": [],
       "failed": [
         {
           "id": "refresh-quest-order-c1d361f0c8774961",
@@ -2909,33 +2869,33 @@
         }
       ],
       "lastUsefulLive": {
-        "id": "run-ranged-bigchopper-qualified-band70",
+        "id": "run-iron-oreelse-bound-anvil85",
         "kind": "run",
         "goal": "skills",
-        "capability": "ranged-train",
-        "runId": "task-5d46efdd-b0f0-4758-92dd-08c0b3c86e75",
-        "startedAt": 1793496331821,
-        "at": 1793502814427,
+        "capability": "iron-progress-order",
+        "runId": "task-384f16cd-b6cf-4582-acb3-5eb06b5aa7d1",
+        "startedAt": 1793506133354,
+        "at": 1793506332938,
         "evidence": "live"
       },
       "lastRecovery": {
-        "id": "run-recovery-shaftmaker-ge-held-end",
+        "id": "run-oreelse-idle-slot-cleanup",
         "kind": "run",
         "goal": "skills",
         "capability": "session-recovery-only",
-        "runId": "task-b636d681-eab5-4def-b619-d72e9b5009d7",
-        "startedAt": 1793473578918,
-        "at": 1793473641928,
+        "runId": "task-d9e520e4-a679-4c94-b7d3-1a9c175c47dc",
+        "startedAt": 1793506065460,
+        "at": 1793506132425,
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-recovery-owned-release-window",
+        "id": "qualify-quest-sweep-druid-main",
         "kind": "qualify",
-        "goal": "skills",
-        "capability": "session-recovery-only",
-        "runId": "task-adf14577-8740-4bca-9e08-fe1c8b24bbad",
-        "startedAt": 1793505398880,
-        "at": 1793505888616,
+        "goal": "quests",
+        "capability": "quest-sweep",
+        "runId": "task-e78d3f6e-0358-4f64-9354-d61f33cdd293",
+        "startedAt": 1793506245400,
+        "at": 1793506361680,
         "evidence": "qualify"
       }
     },
@@ -3961,40 +3921,6 @@
           ]
         },
         {
-          "id": "qualify-quest-sweep-druid-main",
-          "kind": "qualify",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-druid-meats-mightyrod-draynor-consumer",
-              "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-quest-druid-mightyrod-main",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-quest-sweep-druid-main",
-              "status": "pending"
-            },
-            {
-              "id": "run-druid-meats-mightyrod-draynor-consumer",
-              "status": "pending"
-            }
-          ]
-        },
-        {
           "id": "qualify-combat-giant-style-3",
           "kind": "qualify",
           "goal": "skills",
@@ -4025,21 +3951,6 @@
             {
               "id": "qualify-combat-giant-style-3",
               "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-druid-meats-mightyrod-draynor-consumer",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "druid-meats-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-recovery-mightyrod-druid-release-end",
-              "status": "running"
             }
           ]
         }
@@ -4127,6 +4038,11 @@
         "state": "disabled"
       },
       {
+        "account": "OreElse",
+        "script": "scripts/chain.ts",
+        "state": "disabled"
+      },
+      {
         "account": "PickpockDick",
         "script": "scripts/goldfarm.ts",
         "state": "ended: died after 1 runs"
@@ -4182,11 +4098,6 @@
         "state": "disabled"
       },
       {
-        "account": "OreElse",
-        "script": "scripts/chain.ts",
-        "state": "disabled"
-      },
-      {
         "account": "Bigchopper",
         "script": "scripts/quest-sweep.ts",
         "state": "disabled"
@@ -4198,8 +4109,8 @@
       },
       {
         "account": "Mightyrod",
-        "script": "scripts/quest-chain.ts",
-        "state": "disabled"
+        "script": "scripts/quest-sweep.ts",
+        "state": "running"
       }
     ]
   },
