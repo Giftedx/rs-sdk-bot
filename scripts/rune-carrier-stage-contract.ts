@@ -8,3 +8,8 @@ export function runeCarrierShortfall(items:readonly {id:number;count:number}[]){
  const count=(id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  return {essence:Math.max(0,405-count(1436)),talismans:Math.max(0,1-count(1446))};
 }
+export async function runeStageAuthenticate<T extends {name:string}>(name:string,open:()=>Promise<T>,owned:()=>ReadonlySet<string>):Promise<T>{
+ const session=await open();
+ if(session.name.toLowerCase()!==name.toLowerCase()||!owned().has(name.toLowerCase()))throw Error('Rune staging needs authenticated owned participants');
+ return session;
+}
