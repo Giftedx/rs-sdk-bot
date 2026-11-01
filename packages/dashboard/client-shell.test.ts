@@ -27,6 +27,21 @@ test('unknown quest flags stay separate from observed started quests',()=>{
  expect(questPanel(bot,'unknown')).toContain('data-quest="Unobserved quest"');
 });
 
+test('friends use world presence rather than the age of the last status file',()=>{
+ const code=shell.slice(shell.indexOf("    if(selectedTab==='friends')"),shell.indexOf("    if(selectedTab==='settings')"));
+ const html=new Function('S','E','safeName',`const selectedTab='friends';let html='';${code};return html;`)({bots:[{name:'Offline',fresh:true,inWorld:false},{name:'Online',fresh:false,inWorld:true}]},String,String);
+ expect(html).toContain('<span>Offline</span><span class="friend-off">Offline</span>');
+ expect(html).toContain('<span>Online</span><span class="friend-on">local</span>');
+ expect(html.indexOf('data-friend="Online"')).toBeLessThan(html.indexOf('data-friend="Offline"'));
+});
+
+test('the Playing overlay excludes a freshly logged-out account',()=>{
+ const code=shell.slice(shell.indexOf('  function overlay(){'),shell.indexOf('    const [,state]=st(b);'));
+ const element={innerHTML:''};
+ new Function('S','account','hud','E','window',`${code}};overlay();`)({bots:[{name:'Stopped',fresh:true,operation:'offline'}]},()=>null,{querySelector:()=>element},String,{atlasOperator:()=>true});
+ expect(element.innerHTML).toContain('<span>Playing</span><b>0 / 1</b>');
+});
+
 test('infoboxes: boosted and drained skills of the followed account; Hitpoints and Prayer stay in the orbs',()=>{
  const code=shell.slice(shell.indexOf('  function infoboxes(){'),shell.indexOf('  // Board progress'));
  const el={innerHTML:''};
