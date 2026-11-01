@@ -4,7 +4,8 @@
   // The local page is the operator's console. Hosted, the shim (window.FleetShim) says whether the owner signed in;
   // a spectator sees the game and the viewing plugins only.
   window.atlasOperator=()=>!window.FleetShim||!!window.FleetShim.signedIn?.();
-  const OPERATOR_PLUGINS=['operations','dispatch','raw','jobs','machine','stock'];
+  // Owner-only: commands, jobs, banks, host resources, the plan (goals) and the private repository's pull requests.
+  const OPERATOR_PLUGINS=['operations','dispatch','raw','jobs','machine','stock','goals','prs'];
   // Only the tabs with observed data and no plugin that shows the same: Fleet holds the stopped accounts (the old
   // Ignore List) and Account overview the account summary (the old Account Management tab).
   const tabs=[['skills','Skills'],['quests','Quest List'],['inventory','Inventory'],['equipment','Worn Equipment'],['friends','Friends List'],['settings','Settings']];
@@ -115,7 +116,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Overtake planner: the fleet's best account on the board, and what it needs to pass the next rows of the top 10.
   const hoursText=h=>h==null?null:h<1?Math.max(1,Math.round(h*60))+' min':h<48?h.toFixed(1)+' h':Math.round(h/24)+' days';
   function overtakeBox(board){
-    const o=(S.overtake||[]).find(x=>x.board===board);if(!o)return board==='Overall'||board==='Quest Points'?'':'<div class="xp-box"><span class="xp-muted">No fleet account is ranked on this board.</span></div>';
+    if(!window.atlasOperator())return '';const o=(S.overtake||[]).find(x=>x.board===board);if(!o)return board==='Overall'||board==='Quest Points'?'':'<div class="xp-box"><span class="xp-muted">No fleet account is ranked on this board.</span></div>';
     const line=t=>t.newAccount?`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (99 in ${boardTime(t.seconds/0.4)})</span><span>${o.level>=99?'board time stops at 99':'our board time is already past theirs'}: a new account must reach 99 in under ${boardTime(t.seconds/0.4)}</span></div>`
       :`<div class="ot-row"><span>Pass #${t.rank} ${E(t.name)} (level ${t.level})</span><span>level ${t.goal}${t.deadline!=null?' within '+boardTime(t.deadline/0.4)+' more board time':''}: ${t.xpNeeded==null?'XP not reported':nf(t.xpNeeded)+' XP'}${t.hours!=null?' · about '+hoursText(t.hours)+' at '+nf(Math.round(o.xpPerHour))+' XP/hr':t.xpNeeded!=null?' · not training this skill now':''}</span></div>`;
     return `<div class="xp-box"><div class="xp-head"><span>Overtake · ${E(safeName(o.account))}</span><span class="xp-gain">#${nf(o.rank)} · level ${o.level}</span></div>${o.targets.length?o.targets.map(line).join(''):'<span class="xp-muted">Already #1 on this board.</span>'}</div>`;
@@ -162,7 +163,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   }
   // Board progress (the coordinator's scoreboard): what remains, the fleet's best live level per skill, quests and items.
   function progressPanel(){
-    const p=S.scoreboard;if(!p?.available)return '<div class="xp-box"><span class="xp-muted">The coordinator scoreboard is not available.</span></div>';
+    const p=S.scoreboard;if(!p?.available)return window.atlasOperator()?'<div class="xp-box"><span class="xp-muted">The coordinator scoreboard is not available.</span></div>':'';
     const old=!p.at||Date.now()-p.at>15*60e3,frac=(a,b)=>a==null||b==null?'—':nf(a)+' / '+nf(b);
     return `<div class="xp-panel progress-panel"><div class="xp-box"><div class="xp-head"><span>Board progress</span><span class="${old?'side-late':'xp-gain'}">${p.at?'updated '+age(p.at)+' ago':'age unknown'}</span></div><div class="xp-stats"><span>Skill levels <b>${nf(p.skillLevels??0)}</b></span><span>99s <b>${p.skills99??'—'}</b></span><span>Quests live <b>${frac(p.quests.live,p.quests.total)}</b></span><span>Items held <b>${frac(p.items.held,p.items.total)}</b></span></div></div>`+
       `<div class="xp-box"><div class="xp-head"><span>Remaining</span><span class="xp-gain">${p.done?'done':p.remaining.length}</span></div><div class="progress-remaining">${p.remaining.map(r=>`<span>${E(r)}</span>`).join('')||'<span class="xp-muted">Nothing remains.</span>'}</div></div></div>`;

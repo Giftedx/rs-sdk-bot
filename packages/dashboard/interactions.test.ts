@@ -26,3 +26,11 @@ test('account preparation clears an unrelated capability and qualified scripts b
 });
 
 test('a later failed qualification prevents automatic live-run preparation',()=>{const draft=prepare({input:{capability:'wine-order'},tasks:[{id:'old-pass',capability:'wine-order',status:'succeeded',evidence:'native',finishedAt:100},{id:'new-failure',capability:'wine-order',status:'failed',evidence:'native',finishedAt:200}]});expect(draft.kind).toBe('qualify');expect(draft.dependency).toBe('');});
+
+test('the activity journal badges a public result by its ok flag, not its text',()=>{
+ const code=source.slice(source.indexOf(' function activity(){'),source.indexOf(' function dispatch(){'));
+ const run=new Function('S','window',`const activityFilter='live',page=x=>x,title=()=>'',E=String,safeName=String,age=()=>'1m',resultSummary=String,badge=(_c,t)=>'['+t+']';${code};return activity();`);
+ const html=run({results:[{at:1,name:'A',ok:true,text:'Train Mining'},{at:2,name:'B',ok:false,text:'Train Fishing'}]},{atlasOperator:()=>false});
+ expect(html).toContain('[finished]');expect(html).toContain('[stopped]');
+ expect(run({results:[{at:1,name:'A',text:'ok mode=x'}]},{})).toContain('[finished]');
+});
