@@ -3,13 +3,17 @@
 // names or another side owns. Each pass retires a planner job whose log since assignment shows repeated fail RESULTs,
 // a death or near-total tick waste, and picks that account's next best template. Resources this side holds go to
 // fleet/claims/<side>.json in the fleet-data worktree, which scripts/fleet-sync.ts shares, so sides never share a spot.
+// A job that only lacks coins gets them from a free account of this side: the pass writes a fleet order
+// (fleet/orders), scripts/fleet-agent.ts runs the trade, and a later pass gives the job.
 // Usage: bun scripts/autopilot.ts [swarm.json] [--dry] [--daemon]   (--daemon: a pass every 10 minutes)
 // Run beside DEMO_OK=1 bun scripts/swarm.ts and bun scripts/fleet-agent.ts --daemon, with FLEET_SIDE set.
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
-import { accountFrom, assess, catalogue, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources } from '../packages/planner/src/autopilot';
+import { accountFrom, assess, catalogue, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
+import { mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import type { Order, Receipt } from './fleet-trade';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
 import { haggisActivities, haggisTravel, loadSnapshot, suppliesFor, TRICKS } from '../packages/planner/src/haggis';
 import { tickWaste, wasteShare } from './tick-waste';
@@ -35,6 +39,33 @@ function routeBill(items: any[]): BillRow[] {
         console.log(`AUTOPILOT bill from the last saved supply bill: ${String(e).slice(0, 120)}`);
         return readJson(join(prac, 'coordinator/supply-bill.json'), { rows: [] }).rows;
     }
+}
+
+// The fleet order format of scripts/fleet-order.ts, built here so the planner does not load the bot client that
+// scripts/fleet-trade.ts imports. scripts/fleet-agent.ts checks every order with validOrder before it trades.
+export function coinOrder(from: string, to: string, coins: number, server: string, now: number): Order {
+    const start = now + 15 * 60_000;
+    return { id: `${start}-${from}-${to}`.toLowerCase(), server, from, to, item: 'coins', count: coins, start, end: start + 40 * 60_000 };
+}
+// Accounts with an enabled job, as scripts/fleet-agent.ts swarmBusy counts them: the agent trades for no other account.
+const enabledAccounts = (jobs: readonly any[]) => new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
+// Accounts in a fleet order that is still open: its window has not ended and a party has no receipt yet.
+export function inOpenOrder(orders: readonly Order[], receipts: readonly Receipt[], now: number): Set<string> {
+    const open = orders.filter(o => o.end > now && !(['from', 'to'] as const).every(role => receipts.some(r => r.id === o.id && r.role === role)));
+    return new Set(open.flatMap(o => [o.from, o.to]).map(n => n.toLowerCase()));
+}
+// A funded assignment becomes a coin order now and the job on a later pass, once the coins are in the account. Until
+// then the account is vacant, so the fleet agent can log it in for the trade. An account already in an open order waits.
+export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>, order: (from: string, to: string, coins: number) => Order) {
+    const orders: Order[] = [], log: string[] = [];
+    const assignments = out.map(x => {
+        if (!x.fund) return x;
+        const f = x.fund, busy = [f.from, f.to].some(n => open.has(n.toLowerCase()));
+        if (!busy) orders.push(order(f.from, f.to, f.coins));
+        log.push(`AUTOPILOT fund ${f.to} ${f.coins} coins from ${f.from} for ${f.template}${busy ? ': waits for an open order' : ''}`);
+        return { account: x.account, value: 0, resources: [], reason: `vacant: awaits ${f.coins} coins from ${f.from} for ${f.template}` };
+    });
+    return { assignments, orders, log };
 }
 
 export function pass(planFile: string, dry: boolean): string[] {
@@ -73,7 +104,20 @@ export function pass(planFile: string, dry: boolean): string[] {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id));
     });
-    const out = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 } });
+    // Coin donors: this side's accounts with no enabled swarm or coordinator job, no stop file and no open order, as
+    // their last status reports them. The fleet agent runs a trade only for such accounts.
+    const fleetDir = FLEET_DIR(), now = Date.now();
+    const orders: Order[] = existsSync(join(fleetDir, 'orders')) ? readdirSync(join(fleetDir, 'orders')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'orders', f), null)).filter(o => typeof o?.id === 'string' && Number.isSafeInteger(o?.end)) : [];
+    const receipts: Receipt[] = existsSync(join(fleetDir, 'receipts')) ? readdirSync(join(fleetDir, 'receipts')).filter(f => f.endsWith('.json')).map(f => readJson(join(fleetDir, 'receipts', f), null)).filter(Boolean) : [];
+    const open = inOpenOrder(orders, receipts, now), busy = enabledAccounts(withCoordinatorJobs(swarm.jobs, readCoordinatorJobs(root).jobs));
+    const donors = listed.filter(n => owners.get(n.toLowerCase())?.side === side && n.toLowerCase() !== 'haggis' && ![busy, paused, open].some(s => s.has(n.toLowerCase()))).map(n => {
+        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
+        return { name: n, coins: accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id)).items.coin ?? 0 };
+    }).filter(d => d.coins > 0);
+    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, donors });
+    const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
+    const out = funding.assignments;
+    log.push(...funding.log);
 
     const { jobs, fresh } = mergeJobs(swarm.jobs, side, out, paused);
     for (const x of out) {
@@ -88,6 +132,8 @@ export function pass(planFile: string, dry: boolean): string[] {
     writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
     mkdirSync(join(prac, 'autopilot'), { recursive: true });
     writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
+    if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });
+    for (const o of funding.orders) writeAtomic(join(fleetDir, 'orders', `${o.id}.json`), JSON.stringify(o, null, 1) + '\n');
     if (existsSync(join(FLEET_WORKTREE, 'fleet', 'owners.json'))) {
         mkdirSync(join(FLEET_WORKTREE, 'fleet', 'claims'), { recursive: true });
         writeAtomic(join(FLEET_WORKTREE, 'fleet', 'claims', `${side}.json`), JSON.stringify({ side, at: Date.now(), resources: [...new Set([...ownHeld, ...out.flatMap(x => x.resources)])].sort() }) + '\n');
