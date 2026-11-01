@@ -39,17 +39,18 @@ test('delayed carrier transfer opening avoids cancellation and reconciles27 esse
  import{mock}from'bun:test';import{resolve}from'node:path';
  let phase=0,pending,duplicate=false,cancelled=false;
  const requests=[],closed=()=>({isOpen:false,screen:null,myOffer:[],theirOffer:[],myAccepted:false});
- const s={name:'Crafter',pack:[],trade:closed()},h={name:'Carrier',pack:Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})),trade:closed()};
+ const s={name:'Crafter',pack:[],trade:closed(),messages:[]},h={name:'Carrier',pack:Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})),trade:closed(),messages:[]};
  const essence=a=>a.pack.filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0),before=[essence(s),essence(h)];
  for(const [a,other]of [[s,h],[h,s]]){
-  a.tick=()=>phase;a.direct=async()=>{requests.push({name:a.name,tick:phase});if(phase>0&&phase<3)duplicate=true;return{success:true}};
-  a.sdk={getInventory:()=>a.pack,getState:()=>({trade:a.trade,nearbyPlayers:[{name:other.name,index:1}]}),scanGroundItems:async()=>{},sendOfferItem:async(slot,amount)=>{
+  a.tick=()=>phase;a.direct=async()=>{if(requests.some(r=>r.name===a.name))duplicate=true;requests.push({name:a.name,tick:phase});return{success:true}};
+  a.sdk={getInventory:()=>a.pack,getState:()=>({trade:a.trade,gameMessages:a.messages,nearbyPlayers:[{name:other.name,index:1}]}),scanGroundItems:async()=>{},sendOfferItem:async(slot,amount)=>{
    if(a!==h||amount!==-1||!a.pack.some(i=>i.slot===slot))throw Error('unexpected offer');
    a.trade.myOffer=a.pack.map(i=>({...i}));other.trade.theirOffer=a.trade.myOffer.map(i=>({...i}));a.trade.myAccepted=false;other.trade.myAccepted=false;return{success:true};
   },sendAcceptTrade:async()=>{a.trade.myAccepted=true;return{success:true}}};
  }
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
   if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;
+   if(phase===1)s.messages.push({type:4,sender:h.name,text:'wishes to trade with you.',observationId:1});
    if(phase===3)for(const [a,o]of [[s,h],[h,s]])a.trade={...closed(),isOpen:true,screen:'offer',partner:o.name};
    if(phase===4){
     if(duplicate){cancelled=true;for(const [a,o]of [[s,h],[h,s]])a.trade={...closed(),isOpen:true,screen:'offer',partner:o.name};}
@@ -64,8 +65,63 @@ test('delayed carrier transfer opening avoids cancellation and reconciles27 esse
  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
  if(child.exitCode!==0)throw Error(child.stderr.toString());const result=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
  expect(result.error).toBe('');expect(result.duplicate).toBe(false);expect(result.cancelled).toBe(false);
- expect(result.requests).toEqual([{name:'Carrier',tick:0},{name:'Crafter',tick:0}]);
+ expect(result.requests).toEqual([{name:'Carrier',tick:0},{name:'Crafter',tick:1}]);
  expect(result.before).toEqual([0,27]);expect(result.after).toEqual([27,0]);expect(result.deltas).toEqual([27,-27]);
+});
+
+function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'='fresh'){
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';
+ let phase=0,pending,outstanding=false,received=false,duplicate=false,premature=false,opening=-1,escrow=[];
+ const requests=[],events=[],closed=()=>({isOpen:false,screen:null,myOffer:[],theirOffer:[],myAccepted:false});
+ const s={name:'Crafter',pack:[{id:1446,count:1,slot:0}],trade:closed(),messages:[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:7}],seq:7};
+ const h={name:'Carrier',pack:[{id:1446,count:1,slot:0},...Array.from({length:27},(_,i)=>({id:1436,count:1,slot:i+1}))],trade:closed(),messages:[{type:0,sender:'',text:'Crafter is busy at the moment.',observationId:7}],seq:7};
+ const message=(a,type,sender,text)=>a.messages.push({type,sender,text,observationId:++a.seq});
+ for(const[a,other]of [[s,h],[h,s]]){
+  a.tick=()=>phase;a.direct=async()=>{
+   requests.push({name:a.name,tick:phase});
+   if(a===h){
+    if(outstanding)duplicate=true;outstanding=true;const busy=phase<${busyUntil};
+    events.push({at:phase+1,run:()=>{if(busy){outstanding=false;message(h,0,'','Crafter is busy at the moment.');}else if('${mode}'!=='missing'){received=true;message(s,4,'cArRiEr','wishes to trade with you.');}}});
+   }else if(!received||phase<${busyUntil})premature=true;
+   else if(opening<0)opening=phase+1;
+   return{success:true};
+  };
+  a.sdk={getInventory:()=>a.pack,getState:()=>({trade:a.trade,gameMessages:a.messages,nearbyPlayers:[{name:other.name,index:1}]}),scanGroundItems:async()=>{},sendOfferItem:async(slot,amount)=>{
+   if(a!==h||amount!==-1||!h.pack.some(i=>i.slot===slot&&i.id===1436))throw Error('unexpected offer');
+   escrow=h.pack.filter(i=>i.id===1436);h.pack=h.pack.filter(i=>i.id!==1436);h.trade.myOffer=escrow;s.trade.theirOffer=escrow;return{success:true};
+  },sendAcceptTrade:async()=>{a.trade.myAccepted=true;return{success:true}}};
+ }
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
+  if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;
+   if(phase===1){message(s,4,'Other','wishes to trade with you.');message(s,2,'Carrier','wishes to trade with you.');}
+   for(const e of events.filter(e=>e.at===phase))e.run();
+   if(phase===opening)for(const[a,o]of [[s,h],[h,s]])a.trade={...closed(),isOpen:true,screen:'offer',partner:o.name};
+   else if(duplicate&&opening>=0&&phase===opening+1){h.pack.push(...escrow);escrow=[];for(const[a,o]of [[s,h],[h,s]])a.trade={...closed(),isOpen:true,screen:'offer',partner:o.name};}
+   else if(!duplicate&&s.trade.screen==='offer'&&s.trade.myAccepted&&h.trade.myAccepted)for(const a of[s,h]){a.trade.screen='confirm';a.trade.myAccepted=false;}
+   else if(!duplicate&&s.trade.screen==='confirm'&&s.trade.myAccepted&&h.trade.myAccepted){s.pack.push(...escrow);escrow=[];s.trade=closed();h.trade=closed();}
+   pending=undefined;r();}));return pending;
+ }}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h,()=> '${mode}'==='stop'&&phase>=2);}catch(e){error=String(e);}
+ const count=(a,id)=>a.pack.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+ console.log(JSON.stringify({error,phase,requests,duplicate,premature,after:[count(s,1436),count(h,1436)],talismans:[count(s,1446),count(h,1446)]}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+test('carrier retries only acknowledged busy requests and responds once to a fresh exact-player request',()=>{
+ for(const busy of [0,3,7]){
+  const r=acknowledgedTransfer(busy);expect(r.error).toBe('');expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);
+  expect(r.requests.filter((a:any)=>a.name==='Carrier')).toHaveLength(busy+1);
+  expect(r.requests.filter((a:any)=>a.name==='Crafter')).toEqual([{name:'Crafter',tick:busy+1}]);
+  expect(r.phase).toBeLessThanOrEqual(busy+5);expect(r.after).toEqual([27,0]);expect(r.talismans).toEqual([1,1]);
+ }
+});
+test('stale, wrong-player and player-chat requests cannot open a handoff or send a response after stop',()=>{
+ const missing=acknowledgedTransfer(0,'missing');expect(missing.error).toContain('essence transfer did not reconcile');
+ expect(missing.requests).toEqual([{name:'Carrier',tick:0}]);expect(missing.after).toEqual([0,27]);expect(missing.phase).toBeLessThanOrEqual(35);
+ const stopped=acknowledgedTransfer(7,'stop');expect(stopped.error).toContain('essence transfer did not reconcile');
+ expect(stopped.requests.every((a:any)=>a.name==='Carrier'&&a.tick<2)).toBe(true);expect(stopped.after).toEqual([0,27]);
 });
 
 test('a delayed walking handshake is not cancelled by repeated trade requests',()=>{
