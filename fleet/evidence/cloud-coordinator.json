@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793508946153,
+  "exportedAt": 1793509546222,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 65740965.73095703,
+      "ageMs": 66341034.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793508945554,
-      "ageMs": 599,
+      "observedAt": 1793509545688,
+      "ageMs": 534,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 66149394.74682617,
+      "ageMs": 66749463.74682617,
       "stale": true,
       "error": null
     }
@@ -76,23 +76,23 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 1,
+    "reportedRunning": 2,
     "observationStale": false,
     "jobs": [
       {
         "account": "TossTheCaber",
-        "script": "scripts/fishcook.ts",
-        "state": "running"
+        "script": "scripts/foodcourier.ts",
+        "state": "ended: done after 1 runs"
       },
       {
         "account": "BraveHardon",
-        "script": "scripts/quest-cook-job.ts",
-        "state": "ended: done after 1 runs"
+        "script": "scripts/generated/quest-runemysteries.ts",
+        "state": "running"
       },
       {
         "account": "Swordswallow",
         "script": "scripts/gather-yews.ts",
-        "state": "disabled"
+        "state": "running"
       },
       {
         "account": "Unsheathed",
