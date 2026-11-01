@@ -8,7 +8,6 @@ import {goTo} from '../packages/core/src/walk';
 import {waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
 import {assertAccountOwnership,assertRecoverableStatus,acquireAccountLeases} from './handoff-inputs';
-import {preparePayout} from './banker';
 import {ownedSwap,state} from './rune-carrier-trade';
 import {inside,leaveBody,enterBody,stopCarriers} from './rune-carrier-bank';
 import {leaveRuneStarter,runeSupplyAssets} from './rune-supply';
@@ -49,19 +48,20 @@ export async function mainRuneStage(args:readonly string[]){
   if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>stop()||state(s).bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:20}))throw Error('Rune staging fresh bank unavailable');check();
  };
  const deposit=async(s:Session)=>{for(const id of new Set(s.sdk.getInventory().map(i=>i.id))){check();const item=s.sdk.getInventory().find(i=>i.id===id);if(item)await depositObserved(s,item);check();}};
- const withdraw=async(s:Session,id:number,n:number)=>{
-  check();const before=count(bankItems(s),id),held=count(s.sdk.getInventory(),id),item=state(s).bank.items.find(i=>i.id===id);
+ const withdraw=async(s:Session,id:number,n:number,asNote=false)=>{
+  check();const packId=asNote?id+1:id,before=count(bankItems(s),id),held=count(s.sdk.getInventory(),packId),item=state(s).bank.items.find(i=>i.id===id);
   if(!item||before<n)throw Error('Rune staging shortage '+id);
-  if(!(await s.bot.withdrawItem(item,n,{asNote:false})).success||!await waitUntil(s,()=>stop()||count(s.sdk.getInventory(),id)===held+n&&count(bankItems(s),id)===before-n,{timeoutTicks:15}))throw Error('Rune staging withdrawal did not reconcile '+id);check();
+  if(!(await s.bot.withdrawItem(item,n,{asNote})).success||!await waitUntil(s,()=>stop()||count(s.sdk.getInventory(),packId)===held+n&&count(bankItems(s),id)===before-n,{timeoutTicks:15}))throw Error('Rune staging withdrawal did not reconcile '+id);check();
  };
- const record=(s:Session,extra:object)=>{const p=state(s).player!;const row={name:s.name,tick:s.tick(),position:{x:p.worldX,z:p.worldZ,level:p.level},inventory:runeSupplyAssets(s.sdk.getInventory()),bank:bankItems(s),...extra};rows.push(row);console.log('RUNE_CARRIER_STAGE '+JSON.stringify(row));};
+ const snapshot=(s:Session)=>bankItems(s).map(i=>({...i}));
+ const record=(s:Session,bank:ReturnType<typeof snapshot>,extra:object)=>{const p=state(s).player!;const row={name:s.name,tick:s.tick(),position:{x:p.worldX,z:p.worldZ,level:p.level},inventory:runeSupplyAssets(s.sdk.getInventory()),bank,...extra};rows.push(row);console.log('RUNE_CARRIER_STAGE '+JSON.stringify(row));};
  try{
   await getWorld();check();
   if(mode==='opening'){
    const s=await open(names[0]!),beforeXp=xp(s);await bank(s);await deposit(s);
    if(count(bankItems(s),1436)<432||count(bankItems(s),1446)<2||count(bankItems(s),1438)<1)throw Error('opening donor reserve needs432 essence,2 body talismans and1 air talisman');
-   await withdraw(s,1436,27);await withdraw(s,1438,1);await s.bot.closeBank();check();await travel(s,3222,3223);assertRuneDonor(state(s).player,s.sdk.getInventory());
-   if(xp(s)!==beforeXp)throw Error('Rune staging changed donor XP');record(s,{role:'opening',receivedEssence:0,receivedTalismans:0});await close(s,true);
+   await withdraw(s,1436,27);await withdraw(s,1438,1);const stored=snapshot(s);await s.bot.closeBank();check();await travel(s,3222,3223);assertRuneDonor(state(s).player,s.sdk.getInventory());
+   if(xp(s)!==beforeXp)throw Error('Rune staging changed donor XP');record(s,stored,{role:'opening',receivedEssence:0,receivedTalismans:0});await close(s,true);
   }else{
    const prepared:Promise<{s:Session;beforeXp:string;shortfall:ReturnType<typeof runeCarrierShortfall>;beforeEssence:number;beforeTalismans:number}>[]=[];
    for(const name of names.slice(1)){
@@ -79,26 +79,26 @@ export async function mainRuneStage(args:readonly string[]){
    for(const r of receivers){
     check();const {s,shortfall}=r;
     if(shortfall.essence||shortfall.talismans){
-     const giver=source!,e0=count(bankItems(giver),1436),t0=count(bankItems(giver),1446);
-     const want=[...(shortfall.essence?[{name:'Rune essence',count:shortfall.essence}]:[]),...(shortfall.talismans?[{name:'Body talisman',count:shortfall.talismans}]:[])];
-     await preparePayout(giver,want,true);check();
-     if(!await waitUntil(giver,()=>stop()||count(bankItems(giver),1436)===e0-shortfall.essence&&count(bankItems(giver),1446)===t0-shortfall.talismans,{timeoutTicks:15}))throw Error('Rune staging supplier bank debit mismatch');check();
+     const giver=source!;await bank(giver);const e0=count(bankItems(giver),1436),t0=count(bankItems(giver),1446);
+     if(shortfall.essence)await withdraw(giver,1436,shortfall.essence,true);
+     if(shortfall.talismans)await withdraw(giver,1446,shortfall.talismans,true);
+     if(count(bankItems(giver),1436)!==e0-shortfall.essence||count(bankItems(giver),1446)!==t0-shortfall.talismans)throw Error('Rune staging supplier bank debit mismatch');
      const pack=giver.sdk.getInventory();
      if(pack.some(i=>![1437,1446,1447].includes(i.id))||count(pack,1437)!==shortfall.essence||count(pack,1446)+count(pack,1447)!==shortfall.talismans)throw Error('Rune staging payout pack mismatch');
-     await ownedSwap(giver,s,runeSupplyAssets(pack),{},stop);check();receivedEssence+=shortfall.essence;receivedTalismans+=shortfall.talismans;
+     await giver.bot.closeBank();check();await ownedSwap(giver,s,runeSupplyAssets(pack),{},stop);check();receivedEssence+=shortfall.essence;receivedTalismans+=shortfall.talismans;
     }
     const ready=(async()=>{
      await bank(s);await deposit(s);
      if(count(bankItems(s),1436)!==r.beforeEssence+shortfall.essence||count(bankItems(s),1446)!==r.beforeTalismans+shortfall.talismans)throw Error('Rune staging receiver bank credit mismatch');
-     await withdraw(s,1446,1);await withdraw(s,1436,27);await s.bot.closeBank();check();await enterBody(s);check();
-     if(!inside(s)||count(s.sdk.getInventory(),1436)!==27||count(s.sdk.getInventory(),1446)!==1||count(bankItems(s),1436)<378||xp(s)!==r.beforeXp)throw Error('Rune carrier readiness unobserved');
-     record(s,{role:'carrier',receivedEssence:shortfall.essence,receivedTalismans:shortfall.talismans});await close(s,true);
+     await withdraw(s,1446,1);await withdraw(s,1436,27);const stored=snapshot(s);await s.bot.closeBank();check();await enterBody(s);check();
+     if(!inside(s)||count(s.sdk.getInventory(),1436)!==27||count(s.sdk.getInventory(),1446)!==1||count(stored,1436)<378||xp(s)!==r.beforeXp)throw Error('Rune carrier readiness unobserved');
+     record(s,stored,{role:'carrier',receivedEssence:shortfall.essence,receivedTalismans:shortfall.talismans});await close(s,true);
     })();flights.push(ready.catch(e=>{failure=e;stop();}));
    }
    if(source){
     await bank(source);
     if(count(bankItems(source),1436)!==sourceEssence-receivedEssence||count(bankItems(source),1446)!==sourceTalismans-receivedTalismans||source.sdk.getInventory().length||xp(source)!==sourceXp)throw Error('Rune staging supplier final reconciliation failed');
-    record(source,{role:'supplier',debitedEssence:receivedEssence,debitedTalismans:receivedTalismans});await source.bot.closeBank();await close(source,true);
+    record(source,snapshot(source),{role:'supplier',debitedEssence:receivedEssence,debitedTalismans:receivedTalismans});await source.bot.closeBank();await close(source,true);
    }
    await Promise.all(flights);check();
   }
