@@ -161,10 +161,51 @@ test('successful preflight parks the failed assignment and retains its evidence 
  expect(JSON.parse(readFileSync(join(f.prac,'swarm-deaths.json'),'utf8')).Mightyrod.at).toBe(1);
  const proof=JSON.parse(readFileSync(join(f.prac,'coordinator/runs',f.run,'recovery-before.json'),'utf8'));expect(proof.assignments[0].enabled).toBe(true);expect(proof.ended.Mightyrod.at).toBe(1);
 });
-test('same-script repair refuses before spending the failure or disabling the old assignment',()=>{
+test('same-script death repair refuses before spending the failure or disabling the old assignment',()=>{
  const f=recoveryFixture(),path=join(f.base,'swarm.json'),before=readFileSync(path,'utf8');
+ atomicJson(join(f.prac,'swarm-deaths.json'),{Mightyrod:{at:1,reason:'died',revision:JSON.stringify(['old.ts',false,['mightyrod'],[]])}});
  expect(()=>prepareLiveRecovery(f.task,'Mightyrod','./old.ts',f.run,'new',f.deps,f.base)).toThrow('same-script');
  expect(readFileSync(path,'utf8')).toBe(before);expect(loadEnded(join(f.prac,'swarm-deaths.json')).get('Mightyrod')?.at).toBe(1);
+});
+
+for(const reason of ['blocked after 1 runs','gave-up after 1 runs'])test('qualified same-script '+reason+' preflights without clearing its exact end or enabling the job',()=>{
+ const f=recoveryFixture(),path=join(f.base,'swarm.json');
+ atomicJson(path,{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:false,repeat:false},{account:'Other',script:'keep.ts',enabled:true}]});
+ atomicJson(join(f.prac,'status/Mightyrod.json'),{name:'Mightyrod',server:'rs-sdk-demo.fly.dev',result:'fail prior job'});
+ atomicJson(join(f.prac,'swarm-deaths.json'),{Mightyrod:{at:1,reason,revision:JSON.stringify(['old.ts',false,['mightyrod'],[]])}});
+ const owner=readFileSync(path,'utf8');
+ expect(()=>prepareLiveRecovery(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,f.base)).not.toThrow();
+ expect(readFileSync(path,'utf8')).toBe(owner);expect(loadEnded(join(f.prac,'swarm-deaths.json')).get('Mightyrod')?.at).toBe(1);
+ expect(jobOf(f.base,'Mightyrod').enabled).toBe(false);expect(jobOf(f.base,'Other').enabled).toBe(true);
+ expect(()=>installJob(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,{base:f.base,freeGB:64})).toThrow('recovery');
+});
+
+test('a qualified five-actor non-death repair checks every exact end and keeps all actors disabled',()=>{
+ const f=recoveryFixture(),names=['Mightyrod','Carrier1','Carrier2','Carrier3','Carrier4'],path=join(f.base,'swarm.json');
+ atomicJson(path,{minFreeGB:0,maxBots:17,jobs:names.map(account=>({account,script:'old.ts',enabled:false,repeat:false}))});
+ const ends=Object.fromEntries(names.map((name,i)=>[name,{at:i+1,reason:'gave-up after 1 runs',revision:JSON.stringify(['old.ts',false,names.map(n=>n.toLowerCase()),[]])}]));
+ atomicJson(join(f.prac,'swarm-deaths.json'),ends);
+ for(const name of names){atomicJson(join(f.prac,'status',name+'.json'),{name,server:'rs-sdk-demo.fly.dev',result:'fail prior composed job'});beginSessionAttempt({account:name,server:'rs-sdk-demo.fly.dev'},{root:join(f.prac,'session-lifecycle')}).record('ended','logged-out');}
+ delete f.task.account;f.task.participants=names;f.task.repairs=names.map((account,i)=>({account,endedAt:i+1}));f.deps.build.delivery.at=10;
+ const owner=readFileSync(path,'utf8');
+ expect(()=>prepareLiveRecovery(f.task,names[0]!,'old.ts',f.run,'new',f.deps,f.base)).not.toThrow();
+ expect(readFileSync(path,'utf8')).toBe(owner);expect(Object.fromEntries(loadEnded(join(f.prac,'swarm-deaths.json')))).toEqual(ends);
+ expect(names.every(name=>jobOf(f.base,name).enabled===false)).toBe(true);
+ expect(()=>installJob(f.task,names[0]!,'old.ts',f.run,'new',f.deps,{base:f.base,freeGB:64})).toThrow('participant assignment is not confirmed complete');
+});
+
+for(const invalid of ['stale','failed','foreign capability','wrong source','unconfirmed logout'])test('same-script non-death repair preserves its end on '+invalid,()=>{
+ const f=recoveryFixture(),path=join(f.base,'swarm.json');
+ atomicJson(path,{minFreeGB:0,maxBots:17,jobs:[{account:'Mightyrod',script:'old.ts',enabled:false,repeat:false}]});
+ atomicJson(join(f.prac,'status/Mightyrod.json'),{name:'Mightyrod',server:'rs-sdk-demo.fly.dev',result:'fail prior job'});
+ if(invalid==='stale')f.deps.build.delivery.at=1;
+ if(invalid==='failed')f.deps.build.delivery.ok=false;
+ if(invalid==='foreign capability')f.deps.build.delivery.id='other';
+ if(invalid==='wrong source')f.deps.build.delivery.runtimeRevision='old';
+ if(invalid==='unconfirmed logout')beginSessionAttempt({account:'Mightyrod',server:'rs-sdk-demo.fly.dev'},{root:join(f.prac,'session-lifecycle')});
+ const owner=readFileSync(path,'utf8');
+ expect(()=>prepareLiveRecovery(f.task,'Mightyrod','old.ts',f.run,'new',f.deps,f.base)).toThrow(invalid==='unconfirmed logout'?'logout':'fresh post-failure');
+ expect(readFileSync(path,'utf8')).toBe(owner);expect(loadEnded(join(f.prac,'swarm-deaths.json')).get('Mightyrod')?.at).toBe(1);
 });
 test('a recovery timeout fails, cancels its own unclaimed request and never writes controller end state',async()=>{
  const f=recoveryFixture();f.prepare();const end=readFileSync(join(f.prac,'swarm-deaths.json'),'utf8');
