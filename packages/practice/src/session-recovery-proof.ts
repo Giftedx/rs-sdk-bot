@@ -168,7 +168,7 @@ export const CHECK_CASES:Record<(typeof NATIVE_RECOVERY_CHECKS)[number],string[]
  offline:['offline'],orphan:['orphan'],modal:['modal'],authFailure:['auth-failure'],cooldown:['cooldown'],partial:['partial'],timeout:['timeout'],
  lateCallback:['restart-late-callback'],ownership:['ownership','partial-owner-alive'],stop:['stop'],singleUse:['single-use','restart-late-callback'],
  stock:['offline','orphan','modal','partial','stock-negative-controls'],
- completed:['completed','completed-refusals'],
+ completed:['completed','completed-held-producer','completed-refusals'],
 };
 // Each check is derived from observed cases. A check passes only when every named case was observed and passed.
 export function deriveChecks(cases:{id:string;ok:boolean;level:string;evidence:{path:string;sha256:string}[]}[]){
@@ -724,6 +724,25 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     holdsRetained:readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8')===holds,
     assignmentsRetained:readFileSync(join(base,'swarm.json'),'utf8')===assignments,
     noStopCreated:!existsSync(join(base,'.practice','stop-'+C.name)),
+   });
+  }
+  // Saved retired producer setup, then the real controller -> CLI cleanup. No gameplay or interruption scenario.
+  {
+   const C=await fixture(HOST,preset,true),dir=caseDir('completed-held-producer');
+   const retired=Bun.spawn([process.execPath,'-e','process.exit(0)'],{windowsHide:true,stdout:'ignore',stderr:'ignore'});children.push(retired);
+   if(await retired.exited!==0)throw Error('retired producer fixture owner did not exit');
+   const old=beginSessionAttempt({account:C.name,server:C.server},{root:lifeRoot,
+    owner:{pid:retired.pid,coordinatorRunId:null,workerRelease:source,script:'scripts/retired-fixture.ts',role:'supply',participants:null}});
+   old.record('connected');old.record('ready');old.record('ended','disconnected');old.record('logout','disconnected');old.record('closed');
+   C.endedAt=Date.now();ends[C.name].at=C.endedAt;writeState();
+   const retained=listAttempts(C.name,C.server,{root:lifeRoot}),beforeProof=readLogoutProof(C.name,C.server,{root:lifeRoot});
+   writeFileSync(join(dir,'producer-before.json'),JSON.stringify({beforeProof,retained},null,2));
+   const out=await positive('completed-held-producer',C),after=listAttempts(C.name,C.server,{root:lifeRoot});
+   out.record('native-actual-controller-core-cli',{
+    heldReadyProducerBefore:beforeProof.state==='held'&&beforeProof.attemptId===old.attemptId,
+    priorProducerPreserved:isDeepStrictEqual(retained,after.slice(0,retained.length)),
+    singleRecoveryChild:after.length===retained.length+1&&after.at(-1)?.receipt?.owner.script===RECOVERY_SCRIPT,
+    successfulEndRetained:ends[C.name].reason==='done after 1 runs'&&ends[C.name].at===C.endedAt,
    });
   }
   {

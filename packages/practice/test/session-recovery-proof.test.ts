@@ -889,7 +889,7 @@ test('native recovery uses the current delivery identity with the shark default'
  expect(recoveryCapability('cow-progress-order')).toBe('cow-progress-order');expect(recoveryCapability('shark-supply-order')).toBe('shark-supply-order');
  expect(()=>recoveryCapability('../cow')).toThrow();expect(()=>recoveryCapability('')).toThrow();
  const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');expect(text).toContain('process.env.DELIVERY_ID??deliveryTask?.id');
- expect(CHECK_CASES.completed).toEqual(['completed','completed-refusals']);
+ expect(CHECK_CASES.completed).toEqual(['completed','completed-held-producer','completed-refusals']);
 });
 test('completed router pins fail closed if either actual integration file drifts',()=>{
  const base=mkdtempSync(join(tmpdir(),'completed-router-pins-'));
