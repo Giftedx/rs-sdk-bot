@@ -3410,14 +3410,14 @@
       }
     ],
     "blockers": [
-      "Existing fletch-arrows supports finite native shafts/headless/steel and legacy native arrow modes; generic production adds native bow/dart/bolt/tip recipe consumers. Donor arbitrary configurable item-pair combination is not universal native recipe parity; modern arrow tiers require their exact content. No native practice/live proof inferred."
+      "Existing fletch-arrows supports finite native shafts/headless/steel and legacy native arrow modes; generic production adds native bow/dart/bolt/tip recipe consumers. Donor arbitrary configurable item-pair combination is not universal native recipe parity; modern arrow tiers require their exact content. Native practice proof applies to the178 inventory profiles only; no live proof inferred."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/arrowmaker/ArrowScript.java",
         "decision": "partial",
         "consumer": "scripts/fletch-arrows.ts",
-        "gap": "Existing fletch-arrows supports finite native shafts/headless/steel and legacy native arrow modes; generic production adds native bow/dart/bolt/tip recipe consumers. Donor arbitrary configurable item-pair combination is not universal native recipe parity; modern arrow tiers require their exact content. No native practice/live proof inferred."
+        "gap": "Existing fletch-arrows supports finite native shafts/headless/steel and legacy native arrow modes; generic production adds native bow/dart/bolt/tip recipe consumers. Donor arbitrary configurable item-pair combination is not universal native recipe parity; modern arrow tiers require their exact content. Native practice proof applies to the178 inventory profiles only; no live proof inferred."
       }
     ],
     "variants": [
@@ -3508,7 +3508,7 @@
         ]
       }
     ],
-    "proof": "Source inspection and pinned native content search only; local consumers are reuse candidates/subsets, not claims of full donor parity."
+    "proof": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps."
   },
   {
     "name": "astralrc",
@@ -3780,14 +3780,14 @@
       }
     ],
     "blockers": [
-      "Native generic bank production implements178 exact recipe profiles:12 cut bows +12 string bows, leather/dhide with thread0or1, glass3, herb identification18, standard brew/unf,6 darts,6 bolt/tip conversions, cooking prep including four-input cake and seven water sources with four dough choices and returned containers. Existing fletch-arrows covers native arrows/headless. Item/NPC/teleport magic are separate finite consumers. Donor crossbow assembly, javelin fletching, wooden shields, broad/amethyst/dragon/redwood tiers, enchanted bolts and lunar spells have no corresponding native fletching/spell handlers established; native skill_fletching source contains arrows/darts/bolts/cut_logs/bows/ogre only. No blanket donor processor parity or native qualification claim."
+      "Native generic bank production implements178 exact recipe profiles:12 cut bows +12 string bows, leather/dhide with thread0or1, glass3, herb identification18, standard brew/unf,6 darts,6 bolt/tip conversions, cooking prep including four-input cake and seven water sources with four dough choices and returned containers. Existing fletch-arrows covers native arrows/headless. Item/NPC/teleport magic are separate finite consumers. Donor crossbow assembly, javelin fletching, wooden shields, broad/amethyst/dragon/redwood tiers, enchanted bolts and lunar spells have no corresponding native fletching/spell handlers established; native skill_fletching source contains arrows/darts/bolts/cut_logs/bows/ogre only. No blanket donor processor parity or full release claim."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/autobankstander/AutoBankStanderScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-production.ts",
-        "gap": "Native generic bank production implements178 exact recipe profiles:12 cut bows +12 string bows, leather/dhide with thread0or1, glass3, herb identification18, standard brew/unf,6 darts,6 bolt/tip conversions, cooking prep including four-input cake and seven water sources with four dough choices and returned containers. Existing fletch-arrows covers native arrows/headless. Item/NPC/teleport magic are separate finite consumers. Donor crossbow assembly, javelin fletching, wooden shields, broad/amethyst/dragon/redwood tiers, enchanted bolts and lunar spells have no corresponding native fletching/spell handlers established; native skill_fletching source contains arrows/darts/bolts/cut_logs/bows/ogre only. No blanket donor processor parity or native qualification claim."
+        "gap": "Native generic bank production implements178 exact recipe profiles:12 cut bows +12 string bows, leather/dhide with thread0or1, glass3, herb identification18, standard brew/unf,6 darts,6 bolt/tip conversions, cooking prep including four-input cake and seven water sources with four dough choices and returned containers. Existing fletch-arrows covers native arrows/headless. Item/NPC/teleport magic are separate finite consumers. Donor crossbow assembly, javelin fletching, wooden shields, broad/amethyst/dragon/redwood tiers, enchanted bolts and lunar spells have no corresponding native fletching/spell handlers established; native skill_fletching source contains arrows/darts/bolts/cut_logs/bows/ogre only. No blanket donor processor parity or full release claim."
       }
     ],
     "variants": [
@@ -4131,7 +4131,7 @@
         ]
       }
     ],
-    "proof": "Source inspection and pinned native content search; no practice or live proof. New item-magic port: bun test ./scripts/microbot-magic-items.test.ts --timeout 15000: Focused owned unit tests pass."
+    "proof": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps."
   },
   {
     "name": "autobuyer",
@@ -5072,14 +5072,14 @@
       }
     ],
     "blockers": [
-      "Native generic bank worker implements validated178 recipes including four-input cake, inventory/menu dispatch, returned containers and leather thread0or1. Donor arbitrary four-input recipe identifiers and chemistry amulet substitutions are not treated as validated recipes; only parsed/explicit native profiles are supported. Modern chemistry amulet behavior has no established native handler. Banking/travel/native qualification remains separate."
+      "Native generic bank worker implements validated178 recipes including four-input cake, inventory/menu dispatch, returned containers and leather thread0or1. Donor arbitrary four-input recipe identifiers and chemistry amulet substitutions are not treated as validated recipes; only parsed/explicit native profiles are supported. Modern chemistry amulet behavior has no established native handler. Inventory-profile banking has bounded native practice proof. Route and live qualification remain separate."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/banksbankstander/BanksBankStanderScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-production.ts",
-        "gap": "Native generic bank worker implements validated178 recipes including four-input cake, inventory/menu dispatch, returned containers and leather thread0or1. Donor arbitrary four-input recipe identifiers and chemistry amulet substitutions are not treated as validated recipes; only parsed/explicit native profiles are supported. Modern chemistry amulet behavior has no established native handler. Banking/travel/native qualification remains separate."
+        "gap": "Native generic bank worker implements validated178 recipes including four-input cake, inventory/menu dispatch, returned containers and leather thread0or1. Donor arbitrary four-input recipe identifiers and chemistry amulet substitutions are not treated as validated recipes; only parsed/explicit native profiles are supported. Modern chemistry amulet behavior has no established native handler. Inventory-profile banking has bounded native practice proof. Route and live qualification remain separate."
       }
     ],
     "variants": [
@@ -5107,7 +5107,7 @@
         ]
       }
     ],
-    "proof": "Source inspection and pinned native content search only; local consumers are reuse candidates/subsets, not claims of full donor parity."
+    "proof": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps."
   },
   {
     "name": "bankseller",

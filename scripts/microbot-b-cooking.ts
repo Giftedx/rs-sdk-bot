@@ -35,7 +35,9 @@ export function nativeHeatSources():ReadonlyMap<number,Heat>{
 export function cookSnapshot(s:BotWorldState){const items:Record<number,number>={};for(const i of s.inventory)items[i.id]=(items[i.id]??0)+i.count;return{items,xp:s.skills.find(k=>k.name==='Cooking')?.experience??0};}
 export function cookingEffect(r:CookRecipe,b:ReturnType<typeof cookSnapshot>,a:ReturnType<typeof cookSnapshot>):{kind:'cooked'|'burnt';product:number}|null{
  const keys=new Set([...Object.keys(b.items),...Object.keys(a.items)].map(Number));
- if([...keys].every(id=>(a.items[id]??0)===(b.items[id]??0))&&a.xp===b.xp)return null;
+ // Native gnome resolvers can award XP one tick before consuming the raw item.
+ // XP alone never credits a cooked product; the wait still needs the exact inventory effect.
+ if([...keys].every(id=>(a.items[id]??0)===(b.items[id]??0))&&a.xp>=b.xp)return null;
  for(const [kind,products] of [['cooked',r.products],['burnt',r.burnt===undefined?[]:[r.burnt]]] as const){for(const product of products){
   const expected=new Map([[r.raw,-1]]);expected.set(product,(expected.get(product)??0)+1);
   if(r.additional!==undefined&&(kind==='burnt'||!r.noAdditionalSuccess))expected.set(r.additional,(expected.get(r.additional)??0)+1);

@@ -79,6 +79,24 @@ Staged workers require the stated site, access, skills, tools, runes, food and o
 Output remains held unless the worker explicitly proves banking. A staged result does not prove an unattended bank/refill route.
 Existing walking, supply and chain workers can compose these jobs. Untested compositions remain unqualified.
 
+## Native practice proof
+
+The actual CLI passes all178 unique inventory-production profiles at a staged Al Kharid bank, with298 products banked.
+The independent saved-state audit checks exact inputs, products, returned containers, optional thread, XP, HP and confirmed logout.
+The large-oyster command is `bolt-tips:pearl_bolttips:bigoysterpearls`; it produces24 tips. The small-oyster command produces6.
+
+The staged native checks also pass all23 furnace-jewellery recipes,21 item-spell profiles, six tanning recipes and furnace glass.
+They check saved item/coin/XP changes and logout. They do not prove travel, replenishment or live release.
+Cooking requires separate native coverage for its fire-only row, gnome ingredient state and Tinsay reward gate.
+Thorough karambwan requires the private native Tinsay reward state; otherwise the server cooks the poisonous variant.
+Gnome toad variants can publish XP one tick ahead of their item change; XP alone never credits output.
+
+Evidence stays in `.practice/microbot-ports/native-sweep-3/`, `native-furnace-cooking/` and `native-magic-tanning/`.
+Each directory holds worker hashes, actual CLI logs and CRC-checked saves. The inventory sweep also holds `saved-audit.json`.
+These runs use a separate members practice server at150ms per tick, XP1, required skills99 and staged owned fixture stock.
+Worker hashes bind the recorded entry files. These receipts do not bind every imported runtime byte or qualify an unattended release.
+Retained failed and incomplete fixtures remain failures; a wrapper exit code alone is not proof.
+
 ## Reuse and blockers
 
 Core session admission, owned actions, waits, cancellation, logout, status, replay and bank observations remain their existing consumers.

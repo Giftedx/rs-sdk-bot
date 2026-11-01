@@ -1,6 +1,17 @@
 import {test,expect} from 'bun:test';
 import {cookingRecipes,cookingEffect,runCookingBatch,type CookingDriver} from './microbot-b-cooking';
 import type {BotWorldState} from '../vendor/rs-sdk/sdk/types';
+
+test('native gnome resolver XP waits for the later inventory publication',()=>{
+ const r=cookingRecipes().recipes.find(r=>r.name==='cooking_generic_unfinished_gnome_batta')!;
+ const before={items:{[r.raw]:1,995:1000},xp:100};
+ expect(cookingEffect(r,before,{items:{...before.items},xp:160})).toBeNull();
+ const product=r.products[0]!;
+ const output={items:{[product]:1,995:1000,...r.additional===undefined?{}:{[r.additional]:1}},xp:160};
+ expect(cookingEffect(r,before,output)?.kind).toBe('cooked');
+ expect(()=>cookingEffect(r,before,{items:{...before.items},xp:99})).toThrow();
+ expect(()=>cookingEffect(r,before,{...output,items:{...output.items,995:999}})).toThrow();
+});
 test('every useful native cooking row has reconciled success and burn/container outcomes',()=>{
  const {recipes,blocked}=cookingRecipes();expect(recipes.length).toBeGreaterThan(45);expect(blocked.length).toBe(3);
  for(const r of recipes){

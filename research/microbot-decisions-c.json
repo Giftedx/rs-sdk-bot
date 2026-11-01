@@ -4309,14 +4309,14 @@
       }
     ],
     "blockers": [
-      "Root-owned generic bank production has native pie-shell recipe (pastry_dough + piedish -> pie_shell). Practice bank-output and logout qualification remains pending."
+      "Finite native pie-shell bank worker has saved-output and logout practice proof. Owned live inputs, live pilot and repeat policy remain unqualified; the practice fixture does not grant live release."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/natepieshells/PieScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-production.ts",
-        "gap": "Root-owned generic bank production has native pie-shell recipe (pastry_dough + piedish -> pie_shell). Practice bank-output and logout qualification remains pending.",
+        "gap": "Finite native pie-shell bank worker has saved-output and logout practice proof. Owned live inputs, live pilot and repeat policy remain unqualified; the practice fixture does not grant live release.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/natepieshells/PieScript.java",
@@ -4473,9 +4473,9 @@
         "sha256": "b573545f19f941da2dff800ea648d555fc859301e690a57d7151dd7ae67eec39"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim.",
     "supportedWorkQueue": [
-      "Root-owned generic bank production has native pie-shell recipe (pastry_dough + piedish -> pie_shell). Practice bank-output and logout qualification remains pending."
+      "Finite native pie-shell bank worker has saved-output and logout practice proof. Owned live inputs, live pilot and repeat policy remain unqualified; the practice fixture does not grant live release."
     ]
   },
   {

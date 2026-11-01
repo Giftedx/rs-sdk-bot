@@ -7070,7 +7070,7 @@
       }
     ],
     "blockers": [
-      "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. No practice release proof."
+      "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. Inventory-profile native practice proof does not qualify furnace jewellery, progressive routes or live release."
     ],
     "scriptDecisions": [
       {
@@ -8385,7 +8385,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source review and bounded native inventory-profile practice proof; no live release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -8395,7 +8395,8 @@
       },
       "scriptCount": 8,
       "sourceFileCount": 30,
-      "unit": "bun test ./scripts/microbot-b-jewellery.test.ts: 3 pass, 0 fail, 84 assertions;23 native structs and mock staged loop, no native furnace proof"
+      "unit": "bun test ./scripts/microbot-b-jewellery.test.ts: 3 pass, 0 fail, 84 assertions;23 native structs and mock staged loop, no native furnace proof",
+      "nativeInventory": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps."
     }
   },
   {
@@ -20054,7 +20055,7 @@
       }
     ],
     "blockers": [
-      "Native bank recipes cover supported bow cuts/stringing, shafts, darts, bolt tips and tipped bolts; existing finite arrow/shaft workers remain consumers. Donor progressive strategy is an explicit recipe/level job sequence rather than automatic all-tier parity. Amethyst/dragon/redwood and unsupported modern ammunition recipes lack native handlers; no practice release proof for new generic recipes."
+      "Native bank recipes cover supported bow cuts/stringing, shafts, darts, bolt tips and tipped bolts; existing finite arrow/shaft workers remain consumers. Donor progressive strategy is an explicit recipe/level job sequence rather than automatic all-tier parity. Amethyst/dragon/redwood and unsupported modern ammunition recipes lack native handlers; generic inventory recipes have bounded native practice proof; route and live release remain open."
     ],
     "scriptDecisions": [
       {
@@ -20065,7 +20066,7 @@
           "scripts/fletch-arrows.ts",
           "scripts/fletch-shafts.ts"
         ],
-        "gap": "Native bank recipes cover supported bow cuts/stringing, shafts, darts, bolt tips and tipped bolts; existing finite arrow/shaft workers remain consumers. Donor progressive strategy is an explicit recipe/level job sequence rather than automatic all-tier parity. Amethyst/dragon/redwood and unsupported modern ammunition recipes lack native handlers; no practice release proof for new generic recipes.",
+        "gap": "Native bank recipes cover supported bow cuts/stringing, shafts, darts, bolt tips and tipped bolts; existing finite arrow/shaft workers remain consumers. Donor progressive strategy is an explicit recipe/level job sequence rather than automatic all-tier parity. Amethyst/dragon/redwood and unsupported modern ammunition recipes lack native handlers; generic inventory recipes have bounded native practice proof; route and live release remain open.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/fletching/FletchingScript.java",
@@ -20286,7 +20287,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source review and bounded native inventory-profile practice proof; no live release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -20295,7 +20296,8 @@
         "matchCount": 885
       },
       "scriptCount": 1,
-      "sourceFileCount": 7
+      "sourceFileCount": 7,
+      "nativeInventory": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps."
     }
   },
   {
