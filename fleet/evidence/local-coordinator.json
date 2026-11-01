@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793511407761,
+  "exportedAt": 1793512008596,
   "sources": {
     "state": {
-      "observedAt": 1793511353159.25,
-      "ageMs": 54601.75,
+      "observedAt": 1793512000507.3428,
+      "ageMs": 8088.6572265625,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793511406537,
-      "ageMs": 1224,
+      "observedAt": 1793512007787,
+      "ageMs": 809,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 5982467.283447266,
+      "ageMs": 6583302.283447266,
       "stale": true,
       "error": null
     }
@@ -31,30 +31,24 @@
   },
   "workers": {
     "claude": {
-      "running": [],
-      "pending": [
+      "running": [
         {
           "id": "build-combat-giant-style-5",
           "kind": "build",
           "goal": "skills",
           "capability": "cow-progress-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "queued",
-          "dependencies": []
+          "runId": "task-56b1dad2-d473-451e-a046-decc98035d7d",
+          "startedAt": 1793511822451,
+          "recordStatus": "running",
+          "pid": 22420,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
         }
       ],
+      "pending": [],
       "failed": [
-        {
-          "id": "build-magic-recovery-logout-attribution",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-b76b4d6d-1d36-46ea-9d8e-c7810ba630e8",
-          "startedAt": 1793338677394,
-          "at": 1793338969488,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
         {
           "id": "build-magic-handshake-headroom-resume",
           "kind": "build",
@@ -540,52 +534,8 @@
       }
     },
     "codex": {
-      "running": [
-        {
-          "id": "build-magic-retained-quote-native-release",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-c32015ee-0780-421b-b6b2-b9a24a26fa90",
-          "startedAt": 1793510544214,
-          "recordStatus": "running",
-          "pid": 35476,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        },
-        {
-          "id": "qualify-recovery-bigchopper-restless-end-2",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-d6e85c77-65e5-45df-82c5-fd562a9e6026",
-          "startedAt": 1793511221166,
-          "recordStatus": "running",
-          "pid": 19336,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        }
-      ],
+      "running": [],
       "pending": [
-        {
-          "id": "run-recovery-shaftmaker-quote-end",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-recovery-shaftmaker-quote-serialized",
-              "status": "pending"
-            }
-          ]
-        },
         {
           "id": "run-magic-shaftmaker-ready-quote-falador45",
           "kind": "run",
@@ -596,17 +546,13 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-magic-retained-quote-native-release",
-              "status": "running"
-            },
-            {
-              "id": "run-recovery-shaftmaker-quote-end",
+              "id": "run-recovery-shaftmaker-final-published-source",
               "status": "pending"
             }
           ]
         },
         {
-          "id": "qualify-recovery-shaftmaker-quote-serialized",
+          "id": "qualify-recovery-shaftmaker-final-published-source",
           "kind": "qualify",
           "goal": "skills",
           "capability": "session-recovery-only",
@@ -615,8 +561,23 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-magic-retained-quote-native-release",
+              "id": "build-combat-giant-style-5",
               "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-recovery-shaftmaker-final-published-source",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-recovery-shaftmaker-final-published-source",
+              "status": "pending"
             }
           ]
         }
@@ -2953,6 +2914,16 @@
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
+          "id": "run-recovery-bigchopper-restless-end",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-0a169020-fbb8-4c2b-8a91-895235368411",
+          "startedAt": 1793511769694,
+          "at": 1793511777188,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
           "id": "run-ge-oreelse-doric-clay-six",
           "kind": "run",
           "goal": "quests",
@@ -2960,6 +2931,26 @@
           "runId": "task-0b31b999-ea35-42c2-9b71-abf1aa5598a3",
           "startedAt": 1793511221078,
           "at": 1793511280545,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-quest-sweep-mightyrod-quest-batch",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-adf121f5-c2ad-490d-8e63-b1f4c37e67bc",
+          "startedAt": 1793511769942,
+          "at": 1793511891076,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-recovery-shaftmaker-quote-free-slot",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-9d9cf9e4-a220-47fe-94a9-2e778c3fbcd8",
+          "startedAt": 1793511834035,
+          "at": 1793511845595,
           "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
@@ -2984,14 +2975,14 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-ge-oreelse-doric-shortfall",
-        "kind": "qualify",
-        "goal": "quests",
-        "capability": "ge-bulk-order",
-        "runId": "task-27d09fda-a6d9-48c7-b9e9-e5c5268a7492",
-        "startedAt": 1793510527299,
-        "at": 1793511219944,
-        "evidence": "qualify"
+        "id": "build-magic-retained-quote-native-release",
+        "kind": "build",
+        "goal": "skills",
+        "capability": "magic-order",
+        "runId": "task-c32015ee-0780-421b-b6b2-b9a24a26fa90",
+        "startedAt": 1793510544214,
+        "at": 1793511821407,
+        "evidence": "build"
       }
     },
     "unassigned": {
@@ -4026,7 +4017,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-5",
-              "status": "pending"
+              "status": "running"
             }
           ]
         },
@@ -4041,26 +4032,11 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-5",
-              "status": "pending"
+              "status": "running"
             },
             {
               "id": "qualify-combat-giant-style-3",
               "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-recovery-bigchopper-restless-end",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-recovery-bigchopper-restless-end-2",
-              "status": "running"
             }
           ]
         },
@@ -4075,7 +4051,7 @@
           "dependencies": [
             {
               "id": "run-recovery-bigchopper-restless-end",
-              "status": "pending"
+              "status": "failed"
             }
           ]
         },
@@ -4094,7 +4070,7 @@
             },
             {
               "id": "run-recovery-bigchopper-restless-end",
-              "status": "pending"
+              "status": "failed"
             }
           ]
         },
@@ -4148,21 +4124,6 @@
           ]
         },
         {
-          "id": "qualify-quest-sweep-mightyrod-quest-batch",
-          "kind": "qualify",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-recovery-bigchopper-restless-end-2",
-              "status": "running"
-            }
-          ]
-        },
-        {
           "id": "run-quest-blackknight-mightyrod",
           "kind": "run",
           "goal": "quests",
@@ -4173,7 +4134,7 @@
           "dependencies": [
             {
               "id": "qualify-quest-sweep-mightyrod-quest-batch",
-              "status": "pending"
+              "status": "failed"
             }
           ]
         },
@@ -4188,7 +4149,7 @@
           "dependencies": [
             {
               "id": "qualify-quest-sweep-mightyrod-quest-batch",
-              "status": "pending"
+              "status": "failed"
             },
             {
               "id": "run-quest-blackknight-mightyrod",
@@ -4207,7 +4168,7 @@
           "dependencies": [
             {
               "id": "qualify-quest-sweep-mightyrod-quest-batch",
-              "status": "pending"
+              "status": "failed"
             },
             {
               "id": "run-quest-haunted-mightyrod",
@@ -4364,13 +4325,13 @@
         "state": "disabled"
       },
       {
-        "account": "Shaftmaker",
-        "script": "scripts/magic-order.ts",
+        "account": "OreElse",
+        "script": "scripts/buy-owned-ge-item.ts",
         "state": "disabled"
       },
       {
-        "account": "OreElse",
-        "script": "scripts/buy-owned-ge-item.ts",
+        "account": "Shaftmaker",
+        "script": "scripts/chain.ts",
         "state": "disabled"
       }
     ]
