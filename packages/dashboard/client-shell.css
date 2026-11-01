@@ -104,3 +104,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 /* Worn items in a player lookup (World plugin): icon and name per worn slot. */
 .lookup-worn-head{margin-top:6px}.lookup-worn{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px;margin:3px 0}
 .lookup-worn-item{display:flex;flex-direction:column;align-items:center;gap:1px;background:#1e1e1e;border:1px solid #333;padding:2px}.lookup-worn-item small{font:10px Arial;color:#ccc;text-align:center;overflow-wrap:anywhere}
+/* Boosts (RuneLite boosts): green when a skill is boosted, red when drained. */
+.infobox.boost-up span{color:#0f0}.infobox.boost-down span{color:#f00}

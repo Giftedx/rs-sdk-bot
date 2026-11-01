@@ -77,7 +77,7 @@ Use this for every new or changed part.
 | `minimap` | `minimap` | adapt | One minimap for 2D and 3D: map art around the followed account (in 3D free camera, around the 3D camera). Fleet bots are green dots (bright when playing), other players from the world feed are white. In 3D it turns with the camera's yaw like RuneLite's, and the compass turns the camera north; in 2D it faces north and a click moves the camera there. The rs-world viewer's own minimap is hidden. | none |
 | `places` | `worldmap` (destinations) | adapt | A place list (Go, Locate) for the camera; in 3D it also opens the viewer's world map of every player. | Reject fairy rings, teleports and the other OSRS map layers. |
 | `overlay` | overlay panels (`xptracker` on-screen box) | adapt | The followed account's status, goal, phase, XP/hr and session; in free camera, fleet totals. | none |
-| `infoboxes` | `timersandbuffs`, infobox manager | adapt | One box per playing bot (trained skill, session), or the followed account's session and goal time. | Reject buff timers: no buff state. |
+| `infoboxes` | `timersandbuffs`, `boosts`, infobox manager | adapt | One box per playing bot (trained skill, session), or the followed account's session, goal time and boosted or drained skills (current level against base level; Hitpoints and Prayer are the orbs). | Reject buff timers: no buff state. |
 | `chat` | game chat, `timestamp`, `chatcommands`, `chatnotifications` | adapt | Fleet events and results as game messages, timestamps, level-up and death messages, RuneLite's `!lvl <skill>`, `!total`, `!qp` and `!cmb` for the followed account (level and demo hiscore rank), and `::` commands that control the fleet. | Reject `!kc`, `!pb`, `!gc` and the other kill-count and minigame commands: no such data. |
 | `idle` | `idlenotifier` | adapt | "is now idle" after 3 idle snapshots of the followed account, and a low-hitpoints message at a quarter of the maximum. | Reject energy, oxygen and special attack thresholds. |
 | `notify` | RuneLite notifier | copy | Desktop notifications for level-ups, deaths and idling, behind a Configuration switch. | none |
@@ -97,7 +97,7 @@ Use this for every new or changed part.
 | `statusbars` | A copy of the HP and Prayer orbs. |
 | `prayer`, `spellbook`, `attackstyles` | No active prayer, spell or combat style is reported. |
 | `loottracker` (NPC drops) | No drop events. Fleet transfers are in Supply ledger. |
-| `boosts`, `timersandbuffs` (buffs), `poison`, `specialcounter` | No boost, buff, poison or special attack state. |
+| `timersandbuffs` (buffs), `poison`, `specialcounter` | No buff, poison or special attack state. |
 | Boss, raid and minigame plugins (`barrows`, `raids`, `corp`, `zalcano`, `wintertodt`, `tithefarm` and others) | That content is not in a 2004 world. |
 | `slayer`, `herbiboars`, `hunter`, `poh` | Skills or content not in a 2004 world. |
 | `screenshot`, `discord`, `twitch`, `gpu` settings | Client features; the page is a viewer, not the game client. |
