@@ -25,7 +25,7 @@ import { xpForLevel } from '../planner/src/curve';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
-const operatorControl=createOperatorControl({root});
+const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
 const practice = join(root, '.practice');
 const statusDir = join(practice, 'status');
 const botsDir = join(root, 'vendor', 'rs-sdk', 'bots');
@@ -467,6 +467,7 @@ function lookupPlayer(name: string): Promise<Lookup | null> {
         if (again && Date.now() - again.at < 1_800_000) return again;
         try {
             const r = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(key)}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            if (!r.ok && r.status !== 404) return null;
             const rows = r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [], seen = roster.get(key), online = !!seen && Date.now() - seen.seen < ONLINE_MS;
             const worn = online ? await wornOf(name, seen) : null;
             const entry: Lookup = { name, at: Date.now(), rows, worn, wornAt: worn ? Date.now() : null };
@@ -501,8 +502,8 @@ setInterval(() => void refreshExtra(), 600_000);
 void refreshExtra();
 
 // ---------- Grand Exchange prices and item icons ----------
-// Icons: items.png is the 32x32 sprite sheet (64 per row, index = item id) copied from
-// vendor/lostcity-markets/storage/app/private/items-274.png; items.json maps lower-case names to ids (its obj.json).
+// Icons: export-item-icons.ts renders items.png from the installed game config and models.
+// The sheet has 64 32x32 cells per row, indexed by item id; items.json maps lower-case names to ids.
 // The live market API ids win over items.json when both know a name.
 const itemIds = new Map<string, number>(Object.entries((() => { try { return JSON.parse(readFileSync(join(import.meta.dir, 'items.json'), 'utf8')) as Record<string, number>; } catch { return {}; } })()));
 const marketIds = new Map<string, number>();
@@ -1116,7 +1117,7 @@ function current() {
             if (latest.json) {
                 try {
                     const stale = JSON.parse(latest.json);
-                    stale.stateError = String(e);
+                    stale.stateError = String(e).replace(SECRET_RE, SECRET_MARK);
                     latest = { at: Date.now(), json: JSON.stringify(stale) };
                 } catch {
                     // If the previous state cannot be parsed, fall through to a minimal error state.
@@ -1124,7 +1125,7 @@ function current() {
             }
             if (!latest.json) {
                 latest = { at: Date.now(), json: JSON.stringify({
-                    now: Date.now(), stateError: String(e), bots: [], boards: [], events: [], results: [],
+                    now: Date.now(), stateError: String(e).replace(SECRET_RE, SECRET_MARK), bots: [], boards: [], events: [], results: [],
                     scripts: [], alerts: [], requests: [], mainPlan: null, capacity: null, swarm: null,
                     viewerTimings: [], race: null, gates: [], chain: null, gapHistory: [], economy: null,
                     pageVersion: 0, icons: {}, vault: null, collection: null, map: { ...MAP, ready: false },
@@ -1185,7 +1186,7 @@ Bun.serve({
             const name = url.searchParams.get('name') ?? '';
             if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return Response.json({ error: 'a player name is 1-12 letters, digits, spaces, - or _' }, { status: 400 });
             if (name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
-            return lookupPlayer(name).then(hit => Response.json(lookupView(name, hit?.rows ?? null, hit?.at ?? null, roster.get(name.toLowerCase()), Date.now(), hit?.worn ?? null, hit?.wornAt ?? null)));
+            return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
         }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
