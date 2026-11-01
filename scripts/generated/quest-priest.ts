@@ -5,12 +5,15 @@
 // Server truth: areas/area_lumbridge/scripts/father_aereck.rs2:40-50, father_urhney.rs2:30-57,
 // quests/quest_priest/scripts/restless_ghost.rs2, quest_priest.rs2.
 import { openQuest } from './quest-lib';
+import {waitUntil} from '../../packages/core/src/ticks';
+import {leaveGhostBasement} from '../ghost-basement-exit';
 
 const AERECK = { x: 3244, z: 3206 };
 const URHNEY = { x: 3235, z: 3153 };
 const COFFIN = { x: 3249, z: 3192 };                      // shutghostcoffin 2145, open: restless_ghost_altar
 const GHOST = { x: 3249, z: 3194 };                       // npc_add(0_50_49_49_58, ghostx)
 const LADDER_TOP = { id: 2147, x: 3104, z: 3162 };
+const LADDER_UP = { x: 3103, z: 9576 };
 const SKULL_AT = { x: 3120, z: 9567 };                    // obj 553 in maps/m48_149.jm2 (0 48 31)
 const ITEM = { amulet: 552, skull: 553 };
 
@@ -63,6 +66,10 @@ try {
 
     // 5. Lumbridge teleport, the coffin again (it shuts after 300 ticks, quest_priest.rs2:14), the skull on the open
     // coffin queues the completion (:53-65).
+    if(q.cnt(563)<1)await leaveGhostBasement({pos:q.pos,openDoor:q.openDoor,dash:q.dash,
+        waitForLadder:()=>waitUntil(q.s,()=>!!q.locAt(LADDER_UP.x,LADDER_UP.z),{timeoutTicks:15}),
+        climbLadder:()=>q.climb('skull ladder up',()=>q.locAt(LADDER_UP.x,LADDER_UP.z),/climb-up|climb/i,()=>!inBasement()),
+        waitForLanding:()=>waitUntil(q.s,()=>!!q.locAt(LADDER_TOP.x,LADDER_TOP.z),{timeoutTicks:15})});
     await q.teleport('lumbridge teleport', 'magic:lumbridge_teleport', 3221, 3218);
     await openCoffin('skull');
     const altar = () => q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z && (l.optionsWithIndex ?? []).some((o: any) => /^close$/i.test(o.text)));
