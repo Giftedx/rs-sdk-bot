@@ -48,6 +48,37 @@ export async function lightSeaSlugTorch(q: TorchQuest): Promise<void> {
     if (!q.has(ITEM.lit)) await q.fail('torch not lit');
 }
 
+type PasteQuest = Pick<Awaited<ReturnType<typeof openQuest>>,
+    'has' | 'cnt' | 'near' | 'lvl' | 'guard' | 'fail' | 's' | 'st' | 'waitUntil'>;
+
+// shop-buyer stages owned paste in Ardougne south bank. Other missing-input starts refuse before travelling.
+export async function takeSeaSlugPaste(q: PasteQuest): Promise<void> {
+    await q.guard('paste entry');
+    if (q.has(ITEM.paste)) return;
+    if (q.lvl() !== 0 || !q.near(2654, 3283, 6)) await q.fail('missing held paste: start at Ardougne south bank');
+    const generation = q.s.bankObservation?.()?.generation ?? -1;
+    await q.guard('paste bank');
+    if (!(await q.s.bot.openBank()).success) await q.fail('paste bank unavailable');
+    await q.guard('paste bank observation');
+    const fresh = await q.waitUntil(() => !!q.st()?.bank?.isOpen && (q.s.bankObservation?.()?.generation ?? -1) > generation, 6);
+    if (!fresh) await q.fail('paste bank unobserved');
+    const before = q.s.bankObservation!()!;
+    const stored = (items: { id: number; count: number }[]) => items.filter(i => i.id === ITEM.paste).reduce((n, i) => n + i.count, 0);
+    const bankBefore = stored(before.items), packBefore = q.cnt(ITEM.paste);
+    const paste = q.st()?.bank?.items.find((i: { id: number }) => i.id === ITEM.paste);
+    if (bankBefore < 1 || !paste) await q.fail('owned bank paste missing');
+    await q.guard('paste withdrawal');
+    if (!(await q.s.bot.withdrawItem(paste, 1, { asNote: false })).success) await q.fail('paste withdrawal refused');
+    const received = await q.waitUntil(() => {
+        const after = q.s.bankObservation?.();
+        return !!after && after.generation > before.generation && stored(after.items) === bankBefore - 1 && q.cnt(ITEM.paste) === packBefore + 1;
+    }, 6);
+    await q.guard('paste receipt');
+    if (!received) await q.fail('paste withdrawal unobserved');
+    if (!(await q.s.bot.closeBank()).success) await q.fail('paste bank close refused');
+    await q.guard('paste ready');
+}
+
 // quest-sweep imports with an already owned session.
 if (import.meta.main || (globalThis as { QUEST_SESSION?: unknown }).QUEST_SESSION) {
 const q = await openQuest({ cap: 2000, eatAt: 40, food: [ITEM.food] });
@@ -77,6 +108,8 @@ try {
         await q.converse([], () => ok() && !q.dialogOpen(), 30);
         if (!ok()) await q.fail(`shout ${label}`);
     };
+
+    await takeSeaSlugPaste(q);
 
     // 1-3. Caroline; Holgart twice (the paste); the row boat to the platform.
     await q.talk('caroline 1', /^caroline$/i, [/i suppose so/i], () => q.sawText(/i'll reward you for your time/i), CAROLINE, 40);
