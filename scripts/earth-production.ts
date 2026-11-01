@@ -27,6 +27,18 @@ export function talismanTarget(id:number){
  throw Error('unsupported earth access drop');
 }
 export const productionMode=(profile:string)=>profile==='owned-talismans'?'talismans':profile==='owned-craft'?'craft':undefined;
+export async function collectHuntLoot(s:Session,stop:()=>boolean,afterKill=false){
+ const loot=()=>s.sdk.getState()?.groundItems.find(i=>[1438,1440,557].includes(i.id)&&i.distance<=10);
+ if(stop())throw Error('earth hunt pickup stopped');
+ // npc_death waits for arrival (up to two ticks), then its animation, before the drop table runs.
+ if(afterKill)await waitUntil(s,()=>stop()||!!loot(),{timeoutTicks:6});
+ if(stop())throw Error('earth hunt pickup stopped');const item=loot();if(!item)return null;
+ const count=()=>s.sdk.getInventory().filter(i=>i.id===item.id).reduce((n,i)=>n+i.count,0),before=count();
+ await s.bot.pickupItem(item);
+ const observed=await waitUntil(s,()=>stop()||count()===before+item.count,{timeoutTicks:10});
+ if(stop()||!observed||count()!==before+item.count)throw Error('earth hunt pickup settlement unobserved');
+ return{id:item.id,count:item.count};
+}
 export async function huntFight(s:Session,npc:{id:number;index:number},stop:()=>boolean,foodEpoch:()=>number){
  const before=s.sdk.getSkillXp('Strength')??0,start=s.tick();let sent=start,food=foodEpoch(),retries=0;
  await s.bot.attack(npc as Parameters<typeof s.bot.attack>[0]);
@@ -113,12 +125,13 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
     while(o.killsPerTarget?kills-firstKill<o.killsPerTarget:!held(id)){
      check();if(kills>=500||s.tick()-lastOutput>240)throw Error('earth hunt no kill progress');
      if(hp()<18&&!inv().some(i=>FOOD.includes(i.id)))throw Error('earth hunt food exhausted; retreat');
-     const loot=st()?.groundItems.find(i=>[1438,1440,557].includes(i.id)&&i.distance<=10);
-     if(loot){const n=held(loot.id);await s.bot.pickupItem(loot);await waitUntil(s,()=>over()||held(loot.id)>n,{timeoutTicks:10});check();const gained=held(loot.id)-n;if(gained>0)ledger.found![loot.id]=(ledger.found![loot.id]??0)+gained;if(held(id)&&!o.killsPerTarget)break;}
+     const loot=await collectHuntLoot(s,over);if(loot)ledger.found![loot.id]=(ledger.found![loot.id]??0)+loot.count;
+     if(held(id)&&!o.killsPerTarget)break;
      const npc=st()?.nearbyNpcs.filter(n=>target.npcIds.includes(n.id)&&!n.inCombat&&(n.hp??1)>0&&n.reachable!==false&&Math.max(Math.abs(n.x-target.spot.x),Math.abs(n.z-target.spot.z))<=18).sort((a,b)=>a.distance-b.distance)[0];
      if(!npc){await waitTicks(s,1);continue;}
      await huntFight(s,npc,()=>over()||!!sustain.failure()||hp()<=6,()=>Object.values(ledger.eaten).reduce((n,v)=>n+v,0));kills++;lastOutput=s.tick();
-     await waitTicks(s,2);console.log('EARTH_PRODUCTION_KILL '+JSON.stringify({kills,target:id,hp:hp(),tick:s.tick()}));
+     const dropped=await collectHuntLoot(s,over,true);if(dropped)ledger.found![dropped.id]=(ledger.found![dropped.id]??0)+dropped.count;
+     console.log('EARTH_PRODUCTION_KILL '+JSON.stringify({kills,target:id,hp:hp(),tick:s.tick()}));
     }
    }
   }else{
@@ -159,6 +172,6 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
 }
 if(import.meta.main){
  let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}});
- try{const r=await runEarthProduction(s,{mode:process.argv[3] as 'talismans'|'craft',cap:Number(process.argv[4]),target:Number(process.env.STOCK_TARGET),reserve:Number(process.env.COIN_RESERVE),killsPerTarget:Number(process.env.HUNT_KILLS_PER_TARGET??0),stop:()=>stopped});console.log('EARTH_PRODUCTION '+JSON.stringify(r));await settle([s],r.ok,Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' '));process.exitCode=r.ok?0:1;}
+ try{const r=await runEarthProduction(s,{mode:process.argv[3] as 'talismans'|'craft',cap:Number(process.argv[4]),target:Number(process.env.STOCK_TARGET),reserve:Number(process.env.COIN_RESERVE),killsPerTarget:Number(process.env.HUNT_KILLS_PER_TARGET??0),stop:()=>stopped});console.log('EARTH_PRODUCTION '+JSON.stringify(r));process.exitCode=await settle([s],r.ok,Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' '))?0:1;}
  catch(e){await settle([s],false,String(e));process.exitCode=1;}
 }

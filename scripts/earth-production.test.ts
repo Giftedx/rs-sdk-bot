@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {productionBatch,productionConserved,talismanTarget,huntFight} from './earth-production';
+import {productionBatch,productionConserved,talismanTarget,huntFight,collectHuntLoot} from './earth-production';
 
 test('a level-one order buys only the air unlock, then switches to earth and bounds its last batch',()=>{
  expect(productionBatch(1,0,1137,625)).toEqual({rune:556,talisman:1438,essence:7,multiple:1});
@@ -19,6 +19,12 @@ test('unknown inputs never dispatch crafting or authorize an unsupported hunt',(
  expect(talismanTarget(1440)).toEqual({id:1440,npcIds:[1,2,3,4,5,6],spot:{x:3221,z:3219}});
  expect(talismanTarget(1438).npcIds).toEqual([100]);
  expect(()=>talismanTarget(557)).toThrow();
+});
+test('a talisman published after the NPC death delay is collected before leaving the kill',async()=>{
+ let tick=0,picked=0;const callbacks=new Set<()=>void>(),pack:any[]=[],ground:any[]=[];
+ const s={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},sdk:{getInventory:()=>pack,getState:()=>({groundItems:ground})},bot:{pickupItem:async()=>{picked++;pack.push({id:1440,count:1});return{success:true};}}} as any;
+ const timer=setInterval(()=>{tick++;if(tick===4)ground.push({id:1440,count:1,distance:1});for(const cb of callbacks)cb();},1);
+ try{expect(await collectHuntLoot(s,()=>false,true)).toEqual({id:1440,count:1});expect(picked).toBe(1);}finally{clearInterval(timer);}
 });
 test('conservation binds essence debit, crafted output and food-stage transformations',()=>{
  const before=new Map([[995,352310],[554,1482],[557,2],[1436,20],[1891,1],[1438,1],[1440,1]]);
