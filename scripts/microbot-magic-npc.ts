@@ -11,14 +11,14 @@ import {componentId} from '../packages/core/src/logout';
 import {objId} from './measure/floor-bands';
 import {nativeTeleport,runTeleportMagic} from './microbot-magic-teleport';
 import {elementalRuneCost,itemMagicRecipe,runItemMagic,type Recipe} from './microbot-magic-items';
-export interface NpcSpell{name:string;component:string;level:number;runes:Record<number,number>;debuff:boolean;members:boolean}
+export interface NpcSpell{name:string;component:string;level:number;runes:Record<number,number>;debuff:boolean;members:boolean;requiredWorn?:number}
 export function nativeNpcSpell(name:string):NpcSpell{
- if(!/^(?:(?:wind|water|earth|fire)_(?:strike|bolt|blast|wave)|confuse|weaken|curse|vulnerability|enfeeble|stun|bind|snare|entangle)$/.test(name))throw Error('unsupported standard NPC spell');
+ if(!/^(?:(?:wind|water|earth|fire)_(?:strike|bolt|blast|wave)|confuse|weaken|curse|vulnerability|enfeeble|stun|bind|snare|entangle|crumble_undead|saradomin_strike|claws_of_guthix|flames_of_zamorak|iban_blast)$/.test(name))throw Error('unsupported standard NPC spell');
  const text=readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/configs/magic/magic_combat_spells.dbrow','utf8');
  const body=text.split('[magic_spell_'+name+']')[1]?.split('\n[')[0];if(!body)throw Error('native NPC spell missing');
  const field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim();
  const runes=field('runesrequired')!.split(','),costs:Record<number,number>={};for(let i=0;i<runes.length;i+=2)if(runes[i]!=='null')costs[objId(runes[i]!)]=Number(runes[i+1]);
- return{name,component:field('spellcom')!,level:Number(field('levelrequired')),runes:costs,debuff:/stat_change|freeze_time/.test(body),members:field('members')==='true'};
+ const worn=field('wornrequired');return{name,component:field('spellcom')!,level:Number(field('levelrequired')),runes:costs,debuff:/stat_change|freeze_time/.test(body),members:field('members')==='true',...(worn&&worn!=='null'?{requiredWorn:objId(worn)}:{})};
 }
 export function selectMagicTarget(npcs:readonly NearbyNpc[],id:number,avoid:ReadonlySet<number>,own:number){
  return npcs.filter(n=>n.id===id&&!avoid.has(n.index)&&(n.hp===null||n.hp>0)&&n.reachable!==false&&(!n.inCombat||n.targetIndex===32768+own)&&n.optionsWithIndex.some(o=>/^attack$/i.test(o.text))).sort((a,b)=>a.distance-b.distance)[0];
@@ -33,6 +33,7 @@ export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:n
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),xp=()=>s.sdk.getSkillXp('Magic')??0,hpxp=()=>s.sdk.getSkillXp('Hitpoints')??0,hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
  const counts=()=>{const r:Record<number,number>={};for(const i of inv())r[i.id]=(r[i.id]??0)+i.count;return r;};
  if(spell.members&&!o.members)throw Error('member NPC spell requires explicit member batch scope');
+ const checkWorn=()=>{if(spell.requiredWorn!==undefined&&!s.sdk.getEquipment().some(i=>i.slot===3&&i.id===spell.requiredWorn))throw Error('NPC spell requires worn staff '+spell.requiredWorn);};checkWorn();
  const p0=st()?.player,hp0=hp(),own=(s.client as {selfSlot?:number}|undefined)?.selfSlot;
  if(!p0||hp0<10||!Number.isInteger(own)||(s.sdk.getSkill('Magic')?.level??0)<spell.level)throw Error('NPC magic player/skill/owner state unknown');
  // attackstyle_magic is transmitted varp108. Native mode3 can enqueue
@@ -47,6 +48,7 @@ export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:n
  const rest=async(n:number)=>{for(let i=0;i<n&&!over();i++)await waitTicks(s,1);};
  try{
  while(casts<o.casts&&attempts<o.casts*3&&!over()){
+  checkWorn();
   await s.bot.dismissBlockingUI();if(over())break;
   const target=selectMagicTarget(st()?.nearbyNpcs??[],o.npc,avoid,own!);if(!target){stop='no eligible target';break;}
   const costs=Object.fromEntries(Object.entries(spell.runes).map(([id,n])=>[id,elementalRuneCost(Number(id),n,s.sdk.getEquipment(),o.members??false)])) as Record<number,number>;

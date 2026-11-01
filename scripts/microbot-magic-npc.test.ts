@@ -1,4 +1,5 @@
 import {test,expect} from 'bun:test';
+import{readFileSync}from'node:fs';
 import {nativeNpcSpell,npcCastEffect,selectMagicTarget,runNpcMagic} from './microbot-magic-npc';
 test('native standard strike/bolt/blast/wave and six debuffs resolve exact costs',()=>{
  for(const el of ['wind','water','earth','fire'])for(const tier of ['strike','bolt','blast','wave'])expect(nativeNpcSpell(el+'_'+tier).level).toBeGreaterThan(0);
@@ -28,4 +29,18 @@ test('finite NPC magic refuses native repeating autocast or unknown mode before 
  const s:any={client:{selfSlot:3,var:vars},sdk:{getState:()=>({player:{lifeId:1}}),getSkill:()=>({level:99})},direct:async()=>{actions++;}};
  await expect(runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:1,casts:1,cap:100})).rejects.toThrow('disable native autocast');expect(actions).toBe(0);
  delete s.client.var;await expect(runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:1,casts:1,cap:100})).rejects.toThrow('autocast mode unknown');expect(actions).toBe(0);
+});
+
+test('all thirty real player spells resolve exact native component, level, membership, costs and worn item',()=>{
+ const names=[...['wind','water','earth','fire'].flatMap(e=>['strike','bolt','blast','wave'].map(t=>e+'_'+t)),...['confuse','weaken','curse','vulnerability','enfeeble','stun','bind','snare','entangle','crumble_undead','saradomin_strike','claws_of_guthix','flames_of_zamorak','iban_blast']];expect(names).toHaveLength(30);
+ const db=readFileSync('vendor/rs-sdk/server/content/scripts/skill_combat/configs/magic/magic_combat_spells.dbrow','utf8'),items=new Map(readFileSync('vendor/rs-sdk/server/content/pack/obj.pack','utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=(.+)$/);return m?[[m[2]!,Number(m[1])]as const]:[];}));
+ for(const name of names){const spell=nativeNpcSpell(name),body=db.split('[magic_spell_'+name+']')[1]!.split('\n[')[0]!,field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim(),runes=field('runesrequired')!.split(','),expected:Record<number,number>={};for(let i=0;i<runes.length;i+=2)if(runes[i]!=='null')expected[items.get(runes[i]!)!]=Number(runes[i+1]);expect(spell.component).toBe(field('spellcom')!);expect(spell.level).toBe(Number(field('levelrequired')));expect(spell.members).toBe(field('members')==='true');expect(spell.runes).toEqual(expected);expect(spell.requiredWorn).toBe(field('wornrequired')?items.get(field('wornrequired')!):undefined);}
+ expect(nativeNpcSpell('crumble_undead')).toMatchObject({level:39,members:false,runes:{562:1,556:2,557:2}});
+ for(const [name,id]of [['saradomin_strike',2415],['claws_of_guthix',2416],['flames_of_zamorak',2417],['iban_blast',1409]]as const)expect(nativeNpcSpell(name).requiredWorn).toBe(id);
+ for(const name of ['skeleton_mage','skeleton_mage_attack','nezikchened','saradomin_strike_npc','claws_of_guthix_npc','flames_of_zamorak_npc','ice_barrage'])expect(()=>nativeNpcSpell(name)).toThrow('unsupported');
+});
+test('required staves and member scope reject before any UI or paid spell action',async()=>{
+ let actions=0;const s:any={sdk:{getEquipment:()=>[{slot:3,id:1381}],getState:()=>{actions++;throw Error('should not inspect player');}},bot:{dismissBlockingUI:async()=>{actions++;}},direct:async()=>{actions++;}};
+ for(const name of ['saradomin_strike','claws_of_guthix','flames_of_zamorak','iban_blast']){const spell=nativeNpcSpell(name);await expect(runNpcMagic(s,spell,{npc:1,casts:1,cap:30,members:true})).rejects.toThrow('requires worn staff');await expect(runNpcMagic({}as any,spell,{npc:1,casts:1,cap:30})).rejects.toThrow('member NPC spell');}
+ s.sdk.getEquipment=()=>[{slot:0,id:1409}];await expect(runNpcMagic(s,nativeNpcSpell('iban_blast'),{npc:1,casts:1,cap:30,members:true})).rejects.toThrow('requires worn staff');expect(actions).toBe(0);
 });
