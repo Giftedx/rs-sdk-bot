@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
-function handoff(mode:'publication'|'wrong-item'){
+function handoff(mode:'publication'|'reset-publication'|'wrong-item'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
  let phase=0,accepts=0,pending;
@@ -10,7 +10,7 @@ function handoff(mode:'publication'|'wrong-item'){
  const s=make('Crafter',false),h=make('Carrier',true);
  if('${mode}'==='wrong-item'){s.trade.theirOffer=[{id:995,count:27}];h.trade.myOffer=[{id:995,count:27}];}
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
-  if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;if(phase===1){h.trade={isOpen:false};s.trade.myOffer=[];s.trade.theirOffer=[];}else{s.trade={isOpen:false};}pending=undefined;r();}));return pending;
+  if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;if(phase===1){h.trade={isOpen:false};s.trade.myOffer=[];s.trade.theirOffer=[];if('${mode}'==='reset-publication')s.trade.myAccepted=false;}else{s.trade={isOpen:false};}pending=undefined;r();}));return pending;
  }}));
  const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h);}catch(e){error=String(e);}
  console.log(JSON.stringify({error,accepts,phase,received:s.sdk.getInventory().length}));
@@ -23,4 +23,7 @@ test('accepted confirmation may clear before recipient inventory is published',(
 });
 test('wrong confirmation stock still refuses before either accept',()=>{
  const result=handoff('wrong-item');expect(result.error).toContain('unexpected carrier trade stock');expect(result.accepts).toBe(0);
+});
+test('sent confirmation survives an acceptance flag reset before inventory publication',()=>{
+ const result=handoff('reset-publication');expect(result.error).toBe('');expect(result.accepts).toBe(2);expect(result.received).toBe(27);
 });
