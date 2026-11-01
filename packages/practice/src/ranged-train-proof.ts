@@ -11,13 +11,14 @@ import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from './proc';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision} from '../../core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 
 type Save=ReturnType<typeof readPracticeSave>;
 const root=resolve(import.meta.dir,'../../..');
 const owned=['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts'];
-const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned.map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
+export const rangedProofSource=()=>({runtime:capabilityRevision(['scripts/ranged-train.ts'],root),files:Object.fromEntries(owned.map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
+const source=rangedProofSource;
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const ARROWS=[882,884,886,888,890,892],COINS=995,BONES=526,CHICKEN=2138,FEATHER=314,FOOD=1985,BANK={x:3253,z:3421};
 const TARGET=71,MAX_SPEND=5000,COIN_RESERVE=400000;

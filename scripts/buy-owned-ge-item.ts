@@ -57,13 +57,13 @@ export function orderAccounting(journal?:ItemOrder){
   escrow:unresolved?null:settled?0:prior.escrow-(journal.progress?.gross??0),maximumExposure:settled&&valid?0:prior.escrow,outcomeUnresolved:unresolved};
 }
 // A different finite acquisition method may use a fully refunded zero-fill intent, never an unresolved offer.
-export function earthShopFallback(request:ItemRequest,journal:ItemOrder|undefined,cap:number,spent=0){
+export function earthShopFallback(request:ItemRequest,journal:ItemOrder|undefined,cap:number,spent=0,profile='aubury'){
  validateRequest(request);const q=orderQuantity(request),a=orderAccounting(journal);
  if(!journal||journal.phase!=='settled'||JSON.stringify(journal.request)!==JSON.stringify(request)
   ||request.item!==557||request.rescueMode||request.expectedOwned===undefined||journal.itemsBefore!==request.expectedOwned
   ||a.outcomeUnresolved||a.escrow!==0||a.acquired!==0||a.spent!==0||a.refund!==orderEscrow(request)
-  ||!Number.isSafeInteger(cap)||cap<1||cap>1600||!Number.isSafeInteger(spent)||spent<0||spent>=orderEscrow(request))throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and cap1..1600');
- return{args:['aubury',String(cap),'2000'],env:{ITEMS:'earth rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(request.expectedOwned+q),MAX_ITEMS:String(q),
+  ||!['aubury','betty'].includes(profile)||!Number.isSafeInteger(cap)||cap<1||cap>(profile==='betty'?3000:1600)||!Number.isSafeInteger(spent)||spent<0||spent>=orderEscrow(request))throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and bounded shop cap');
+ return{args:[profile,String(cap),'2000'],env:{ITEMS:'earth rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(request.expectedOwned+q),MAX_ITEMS:String(q),
   MAX_SPEND:String(orderEscrow(request)-spent),COIN_RESERVE:String(request.reserve),FLOAT:String(request.reserve+orderEscrow(request)-spent),NO_BUY_TICKS:'25',BANK_PACK:'1'}};
 }
 export function shopFallbackSpent(state:any,request:ItemRequest){
@@ -455,11 +455,11 @@ if(import.meta.main){
   if(request.actor.toLowerCase()!==actor.toLowerCase()||request.server!==server||request.goal!==goal||process.env.ITEM_ID&&Number(process.env.ITEM_ID)!==request.item||process.env.QUANTITY&&Number(process.env.QUANTITY)!==orderQuantity(request)||process.env.EXPECTED_OWNED&&Number(process.env.EXPECTED_OWNED)!==request.expectedOwned||process.env.LIMIT_PRICE&&Number(process.env.LIMIT_PRICE)!==request.limit||process.env.CASH_RESERVE&&Number(process.env.CASH_RESERVE)!==request.reserve||process.env.ORDER_MS&&Number(process.env.ORDER_MS)!==request.deadline-request.createdAt)throw Error('existing request identity/budget mismatch');
   validateRequest(request);
   if(process.env.SHOP_PROFILE){
-   if(process.env.SHOP_PROFILE!=='aubury'||process.env.CANCEL==='1')throw Error('unsupported shop fallback');
+   if(!['aubury','betty'].includes(process.env.SHOP_PROFILE)||process.env.CANCEL==='1')throw Error('unsupported shop fallback');
    const fallbackPath=journalPath+'.shop.json',fallback=existsSync(fallbackPath)?JSON.parse(readFileSync(fallbackPath,'utf8')):undefined;
    const saveFallback=(value:unknown)=>{writeFileSync(fallbackPath+'.tmp',JSON.stringify(value,null,2));renameSync(fallbackPath+'.tmp',fallbackPath);};
-   const spent=shopFallbackSpent(fallback,request),plan=earthShopFallback(request,old,Number(process.env.CAP??1600),spent);
-   console.log('SHOP_FALLBACK '+JSON.stringify({method:'aubury',originalOfferId:old!.offerId,originalJournalPreserved:true,item:request.item,quantity:orderQuantity(request),target:request.expectedOwned!+orderQuantity(request),maxSpend:orderEscrow(request),reserve:request.reserve}));
+   const spent=shopFallbackSpent(fallback,request),plan=earthShopFallback(request,old,Number(process.env.CAP??1600),spent,process.env.SHOP_PROFILE);
+   console.log('SHOP_FALLBACK '+JSON.stringify({method:process.env.SHOP_PROFILE,originalOfferId:old!.offerId,originalJournalPreserved:true,item:request.item,quantity:orderQuantity(request),target:request.expectedOwned!+orderQuantity(request),maxSpend:orderEscrow(request)-spent,reserve:request.reserve}));
    saveFallback({request,phase:'running',spent,at:Date.now()});
    const child=Bun.spawn([process.execPath,'scripts/shop-buyer.ts',actor,...plan.args],{windowsHide:true,stdout:'pipe',stderr:'pipe',env:{...process.env,...plan.env,SHOP_PROFILE:''}});
    const [out,err,code]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);

@@ -11,7 +11,8 @@ import {runBotName} from './prove';
 import {killTree,commandLine} from './proc';
 import {rsSdkRoot,practiceDir} from './paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision} from '../../core/src/worker-release';
+export const geProofRuntime=()=>capabilityRevision(['scripts/buy-owned-ge-item.ts'],resolve(import.meta.dir,'../../..'));
 import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
 import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
@@ -114,7 +115,7 @@ export function verifyCase(directory:string,remote=false){
    refusal:duplicateRefusalCheck(repeat,readPracticeSave(join(directory,'refused.sav')),{code:meta.refuseCode,log:log('refuse')},NORTH_CASE.order.item)}:{}),
   identity:journal?.request.actor===meta.buyer&&journal?.request.goal===meta.orderKey&&journal?.request.server===endpoints.server,
   // Saved effects have no age limit. This timestamp check does not grant live admission.
-  source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
+  source:meta.source===geProofRuntime(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
  return{ok:Object.values(checks).every(Boolean),at:now,ageMs,checks,endpoints:{ports:endpoints.ports,instance:endpoints.instance},source:meta.source,order:remote?NORTH_CASE.order:ORDER,
   scope:'Native150ms/25x: one owned buyer, one owned seller at a lower ask; exact noted fill banked; rerun resumes. No live price, liquidity or wine-throughput claim.'};
 }
@@ -180,7 +181,7 @@ function verifyMagic(directory:string){
  const checks={...magicOrderChecks({before:read('before'),law:read('law'),earth:read('earth'),repeat:read('repeat'),refuseBefore:read('refuse-before'),refused:read('refused'),lawJournal:l,earthJournal:e,buy:run('buy'),topup:run('topup'),again:run('again'),refuse:run('refuse')}),
   identity:l?.request.actor===meta.buyer&&e?.request.actor===meta.buyer&&l?.request.server===endpoints.server&&e?.request.server===endpoints.server&&l?.request.goal===meta.lawKey&&e?.request.goal===meta.earthKey,
   sellers:['sell-law','sell-earth'].every(label=>{const r=run(label);return r.code===0&&resultLine(r.log,'GE_SELL_RESULT')?.ok===true&&r.log.split(/\r?\n/).includes('LOGOUT logged-out');}),
-  source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
+  source:meta.source===geProofRuntime(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
  return{ok:Object.values(checks).every(Boolean),at:now,ageMs,checks,scope:'Native practice rescue and finite law/earth acquisitions for unchanged Magic37 consumer; no Magic levels or live credit claimed.'};
 }
 
@@ -253,7 +254,7 @@ async function run(directory:string){
   for(const remote of [false,true]){
   directory=remote?join(root,'north'):root;mkdirSync(directory,{recursive:true});
   const order=remote?NORTH_CASE.order:ORDER;
-  const source=workerSourceRevision(),[buyer,seller]=[runBotName('flgebuy',remote?2:1),runBotName('flgesell',remote?2:1)],orderKey='native-'+Date.now(),paths:Record<string,string>={};
+  const source=geProofRuntime(),[buyer,seller]=[runBotName('flgebuy',remote?2:1),runBotName('flgesell',remote?2:1)],orderKey='native-'+Date.now(),paths:Record<string,string>={};
   const seeds:[string,{id:number;count:number}][]=[[buyer,{id:995,count:order.coins}],[seller,{id:order.item,count:order.quantity}]];
   for(const [name,stock] of seeds){
    await createOwnedBot(name);
@@ -281,7 +282,7 @@ async function run(directory:string){
   writeFileSync(join(directory,'native.json'),JSON.stringify({...metadata,at:Date.now(),source,orderKey,buyer,seller,sellCode:sell.code,buyCode:buy.code,againCode:again.code,refuseCode:refuse?.code},null,2));
   }
   directory=join(root,'magic');mkdirSync(directory,{recursive:true});
-  const [buyer,seller,refuser]=[runBotName('flgemag',1),runBotName('flgemags',1),runBotName('flgeref',1)],source=workerSourceRevision();
+  const [buyer,seller,refuser]=[runBotName('flgemag',1),runBotName('flgemags',1),runBotName('flgeref',1)],source=geProofRuntime();
   for(const name of [buyer,seller,refuser])await createOwnedBot(name);
   const preset={skills:{Hitpoints:10,Magic:31},inventory:MAGIC_CASE.pack,bank:MAGIC_CASE.bank};
   const buyerPath=await applyPreset(buyer,{...preset,position:BANK_TILE});

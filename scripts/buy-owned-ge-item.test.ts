@@ -146,6 +146,10 @@ test('earth shop fallback preserves an exactly settled zero-fill GE journal and 
  for(const bad of [undefined,{...j,phase:'open'},{...j,refund:45439},{...j,acquired:1},{...j,itemsBefore:4}])expect(()=>earthShopFallback(r,bad as any,1600)).toThrow();
  expect(()=>earthShopFallback({...r,item:555},j,1600)).toThrow();
  expect(()=>earthShopFallback(r,j,1601)).toThrow();
+ expect(earthShopFallback(r,j,3000,1000,'betty').args).toEqual(['betty','3000','2000']);
+ expect(earthShopFallback(r,j,3000,1000,'betty').env.MAX_SPEND).toBe('44440');
+ expect(()=>earthShopFallback(r,j,3001,0,'betty')).toThrow();
+ expect(()=>earthShopFallback(r,j,1600,0,'unknown')).toThrow();
 });
 const view=(offers:GEOffer[]=[offer()],coins=5000,items=0):OrderView=>({actor:request.actor,server:request.server,offers,coins,items});
 test('bank and exchange approaches share one ground-floor boundary',()=>{
