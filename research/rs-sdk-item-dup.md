@@ -104,6 +104,18 @@ same tick unless a count-class gap says otherwise.
 | `zone/Zone.ts:302-326` | When a zone is at object capacity, the first `DESPAWN`-class object in list order is deleted to make room — any player's drop, not the cheapest/oldest intent of the comment. |
 | `death.rs2:243,245` | `move_priciest_item_on_hero_to_death` keeps 1 unit of a stackable death-keep item, not the whole stack. |
 
+## Historical RS2/OSRS dup classes mapped to the pin
+
+| Historical class | Engine primitive at the pin | Status |
+|---|---|---|
+| AutoRune trade-item count spoof (`runescape.fandom.com`, Nov 2003 article; "Duping (video games)" Wikipedia) | Trade offers are server-side containers: `tradeoffer` is filled by `inv_moveitem` from the client-validated `OpHeld*` handlers; counts come from engine-side `inv_total` clamps. The client packet layer carries item/slot, not quantity. | closed (`InvButtonHandler`, `OpHeldHandler` validate slot + item; offer container holds server-verified stacks) |
+| Logout/death mid-trade race (classic late-2005 "both confirm" dupes) | `both_moveinv` executes inside one synchronous script run after both accepts; close triggers return each stake exactly once (`trade.rs2:240-291`) | closed (single-threaded engine, no ask-for-window) |
+| Same-tick double-click of a menu/dialogue action | `resumeButtons` consumed-and-cleared per click (`IfButtonHandler`), `player.delayed` gates on `OpHeld*` | closed (the un-delayed `IfButtonHandler` remains a hardening note) |
+| Integer overflow in stacks (2.1B wrap-era bugs) | `Inventory.STACK_LIMIT = 0x7fffffff` clamped in `Inventory.add` (`Inventory.ts:143-146`), bank-per-slot full check (`bank.rs2:88-98`) | closed |
+| One-time reward re-grant (2003 genie-lamp family; Wikipedia's Nov 2003 magebot entry) | `xplamp.rs2:107`: `inv_del` before `stat_advance`; second confirm is gated by `isComponentVisible` after `if_close` | closed at code level; unverified residue: no empirical same-tick double-click test has been run (requires a second fixture build; XP-shaped, not a wealth mint) |
+| Pouch/multi-container raw-count bugs (2019 OSRS pouch dupe family) | Content has no multi-container items; pouch flow audited (`runecraft.rs2:48-99` is a one-shot same-frame trade) | closed |
+| Trade-window client-authoritative confirm (2008 lending dups) | `both_moveinv` re-reads the true server-side offer container at confirm time | closed |
+
 ## Trade retarget desync (scam vector, not a dup)
 
 `[opplayer4,_]` never checks the initiator's own busy state and overwrites `%tradepartner`
