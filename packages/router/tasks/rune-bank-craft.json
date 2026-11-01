@@ -5,6 +5,8 @@
   "files": [
     "scripts/rune-bank-craft.ts",
     "scripts/rune-bank-craft.test.ts",
+    "packages/practice/src/rune-proof-receipt.ts",
+    "packages/practice/test/rune-proof-receipt.test.ts",
     "packages/practice/src/rune-bank-craft-proof.ts",
     "scripts/rune-carriers.ts",
     "scripts/rune-carrier-start.ts",
@@ -25,6 +27,7 @@
         "bun",
         "test",
         "scripts/rune-bank-craft.test.ts",
+        "packages/practice/test/rune-proof-receipt.test.ts",
         "scripts/rune-carrier-roster.test.ts",
         "scripts/rune-carrier-cancel.test.ts",
         "scripts/rune-carrier-trade.test.ts",
