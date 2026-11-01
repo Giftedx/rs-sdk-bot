@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793499915156,
+  "exportedAt": 1793500125170,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 56709968.73095703,
+      "ageMs": 56919982.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793499913288,
-      "ageMs": 1868,
+      "observedAt": 1793500123311,
+      "ageMs": 1859,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 57118397.74682617,
+      "ageMs": 57328411.74682617,
       "stale": true,
       "error": null
     }
@@ -81,8 +81,8 @@
     "jobs": [
       {
         "account": "TossTheCaber",
-        "script": "scripts/generated/thieving60.ts",
-        "state": "disabled"
+        "script": "scripts/train-chickens.ts",
+        "state": "running"
       },
       {
         "account": "BraveHardon",
@@ -97,7 +97,7 @@
       {
         "account": "Unsheathed",
         "script": "scripts/generated/quest-runemysteries.ts",
-        "state": "running"
+        "state": "ended: done after 1 runs"
       }
     ]
   },
