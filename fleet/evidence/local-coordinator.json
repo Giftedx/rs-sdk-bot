@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793514442079,
+  "exportedAt": 1793515042704,
   "sources": {
     "state": {
-      "observedAt": 1793514406627.5632,
-      "ageMs": 35451.436767578125,
+      "observedAt": 1793515013392.3892,
+      "ageMs": 29311.61083984375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793514440196,
-      "ageMs": 1883,
+      "observedAt": 1793515042062,
+      "ageMs": 642,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 9016785.283447266,
+      "ageMs": 9617410.283447266,
       "stale": true,
       "error": null
     }
@@ -27,23 +27,18 @@
     "pid": 31676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": null
+    "planner": {
+      "runId": "plan-b090cc1a-c0b9-4318-91eb-dbf8d7d749f3",
+      "agent": "codex",
+      "startedAt": 1793515013354,
+      "processState": "alive"
+    }
   },
   "workers": {
     "claude": {
       "running": [],
       "pending": [],
       "failed": [
-        {
-          "id": "build-quest-sweep-karamja-waypoint",
-          "kind": "build",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-7d838b8a-a61b-4cf5-aa25-e5dc81f56ed2",
-          "startedAt": 1793341768316,
-          "at": 1793342184585,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
         {
           "id": "build-magic-native-orphan-lease-boundary",
           "kind": "build",
@@ -509,84 +504,8 @@
       }
     },
     "codex": {
-      "running": [
-        {
-          "id": "qualify-recovery-shaftmaker-depleted-shop-end",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-7d76f263-8a86-423d-8a08-948f6784a5df",
-          "startedAt": 1793514142117,
-          "recordStatus": "running",
-          "pid": 27004,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        }
-      ],
-      "pending": [
-        {
-          "id": "run-ge-shaftmaker-falador-water2",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "ge-bulk-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-ge-shaftmaker-recovered-falador-air14",
-              "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-magic-shaftmaker-ge-funded-falador45",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-ge-shaftmaker-falador-water2",
-              "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-recovery-shaftmaker-depleted-shop-end",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-recovery-shaftmaker-depleted-shop-end",
-              "status": "running"
-            }
-          ]
-        },
-        {
-          "id": "run-ge-shaftmaker-recovered-falador-air14",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "ge-bulk-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-recovery-shaftmaker-depleted-shop-end",
-              "status": "pending"
-            }
-          ]
-        }
-      ],
+      "running": [],
+      "pending": [],
       "failed": [
         {
           "id": "refresh-quest-order-c1d361f0c8774961",
@@ -2960,33 +2879,33 @@
         }
       ],
       "lastUsefulLive": {
-        "id": "run-smithing-oreelse-bronze-finish99",
+        "id": "run-magic-shaftmaker-ge-funded-falador45",
         "kind": "run",
         "goal": "skills",
-        "capability": "iron-progress-order",
-        "runId": "task-02c5869f-2b57-4c34-ba21-6b80b2d5808e",
-        "startedAt": 1793507881900,
-        "at": 1793510380700,
+        "capability": "magic-order",
+        "runId": "task-d8fdf7bc-e46d-4d35-9fa4-99273050b556",
+        "startedAt": 1793514965431,
+        "at": 1793515012594,
         "evidence": "live"
       },
       "lastRecovery": {
-        "id": "run-recovery-shaftmaker-selected-fresh-proof",
+        "id": "run-recovery-shaftmaker-depleted-shop-end",
         "kind": "run",
         "goal": "skills",
         "capability": "session-recovery-only",
-        "runId": "task-76b7fc17-fec1-41df-b776-167e6094aabb",
-        "startedAt": 1793513376552,
-        "at": 1793513451618,
+        "runId": "task-018e0614-a62f-439a-a4e6-d5d2cbe61921",
+        "startedAt": 1793514805516,
+        "at": 1793514867898,
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-ge-shaftmaker-rune-shortfall",
+        "id": "qualify-recovery-shaftmaker-depleted-shop-end",
         "kind": "qualify",
         "goal": "skills",
-        "capability": "ge-bulk-order",
-        "runId": "task-e9ee7e3e-4b8b-4112-9fe2-7f95f3d70798",
-        "startedAt": 1793513781558,
-        "at": 1793514013416,
+        "capability": "session-recovery-only",
+        "runId": "task-7d76f263-8a86-423d-8a08-948f6784a5df",
+        "startedAt": 1793514142117,
+        "at": 1793514804192,
         "evidence": "qualify"
       }
     },
@@ -4307,13 +4226,13 @@
         "state": "disabled"
       },
       {
-        "account": "Shaftmaker",
-        "script": "scripts/magic-order.ts",
+        "account": "Mightyrod",
+        "script": "scripts/quest-sweep.ts",
         "state": "disabled"
       },
       {
-        "account": "Mightyrod",
-        "script": "scripts/quest-sweep.ts",
+        "account": "Shaftmaker",
+        "script": "scripts/magic-order.ts",
         "state": "disabled"
       }
     ]
