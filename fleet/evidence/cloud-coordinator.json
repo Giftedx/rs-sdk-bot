@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793507746064,
+  "exportedAt": 1793508346113,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 64540876.73095703,
+      "ageMs": 65140925.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793507745387,
-      "ageMs": 677,
+      "observedAt": 1793508345457,
+      "ageMs": 656,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 64949305.74682617,
+      "ageMs": 65549354.74682617,
       "stale": true,
       "error": null
     }
@@ -76,13 +76,13 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 0,
+    "reportedRunning": 1,
     "observationStale": false,
     "jobs": [
       {
         "account": "TossTheCaber",
         "script": "scripts/fishcook.ts",
-        "state": "disabled"
+        "state": "running"
       },
       {
         "account": "BraveHardon",
