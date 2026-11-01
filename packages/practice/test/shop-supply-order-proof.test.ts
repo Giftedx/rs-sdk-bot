@@ -5,9 +5,17 @@ import {runEarthProduction} from '../../../scripts/earth-production';
 import {setEquipmentObserved} from '../../core/src/container-observation';
 import {createSaveData} from '../../../vendor/rs-sdk/sdk/test/utils/save-generator';
 import {parsePracticeSave} from '../../../scripts/measure/fleet-player-save';
-import{bettySupplyChecks,shopSupplyChecks,shopRepeatChecks,shopRefusalChecks}from'../src/shop-supply-order-proof';
+import{bettySupplyChecks,shopSupplyChecks,shopRepeatChecks,shopRefusalChecks,shopSupplyFixture}from'../src/shop-supply-order-proof';
 const save=(earth=3,coins=352288)=>({position:{x:3252,z:3420,level:0},skills:{3:{level:35,xp:10000}},inventories:{93:[],94:[],95:[{id:557,count:earth},{id:554,count:1482},{id:995,count:coins},{id:1277,count:1}]}} as any);
 const run=(bought=1136,spent=6816,target=1)=>({code:0,timedOut:false,hpMin:35,log:`LOGOUT logged-out\nRESULT ok ticks=500 boughtTotal=${bought} spentTotal=${spent} stop=stock-target targetMet=${target}\n`});
+
+test('shop route fixture has the live consumer combat entry and unchanged health acceptance',()=>{
+ const fixture=shopSupplyFixture(352288),saved=parsePracticeSave(createSaveData(fixture));
+ expect([0,1,2,3].map(i=>saved.skills[i]!.level)).toEqual([49,11,10,35]);
+ expect(saved.inventories[95]!.find(i=>i.id===995)?.count).toBe(352288);
+ const before=save(),after=save(1139,345472);after.skills[3].level=34;
+ expect(shopSupplyChecks(before,after,run()).health).toBe(false);
+});
 
 test('persisted hunt kit survives equip closing the bank; missing1171 still refuses',async()=>{
  const world=spyOn(coreBot,'getWorld').mockResolvedValue({} as any);
