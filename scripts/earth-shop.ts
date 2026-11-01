@@ -1,4 +1,4 @@
-// One earth order from ordinary shop restock. One owned seed at most; retain one shelf rune.
+// One earth order from ordinary shop restock. One owned seed per order; request a one-rune shelf floor.
 import {existsSync} from 'node:fs';
 import {openBot,settle,getWorld,accountOf,sessionDied} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -42,7 +42,7 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
  const bank=async(cleanup=false)=>{await s.bot.dismissBlockingUI();await walk(conf.bankSpot,cleanup);await openBank();
   for(const i of [...inv()])if(cleanup||i.id!==995)await depositObserved(s,i);
  };
- const withdraw=async(id:number,n:number)=>{if(!n)return;const item=st()?.bank.items.find(i=>i.id===id),before=held(id),stored=banked(id);
+ const withdraw=async(id:number,n:number)=>{if(over())throw Error('earth refill stopped before withdrawal');if(!n)return;const item=st()?.bank.items.find(i=>i.id===id),before=held(id),stored=banked(id);
   if(!item||stored<n)throw Error('earth refill missing owned item '+id);
   await s.bot.withdrawItem(item,n);
   if(!await waitUntil(s,()=>held(id)===before+n&&banked(id)===stored-n,{timeoutTicks:10}))throw Error('earth refill withdrawal unobserved');
@@ -50,7 +50,7 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
  try{
   await bank();initial=assets();
   const missing=Math.max(0,o.target-(initial.get(557)??0));
-  if(missing>o.maximum)throw Error('earth refill existing stock below authorized order');
+  if(missing>o.maximum+o.seedUsed)throw Error('earth refill existing stock below authorized order');
   if(missing){
    const needed=Math.max(0,o.reserve+o.spend-held(995));await withdraw(995,Math.min(needed,banked(995)));
    if(held(995)<=o.reserve)throw Error('earth refill reserve unavailable');
@@ -67,10 +67,10 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
     console.log('EARTH_REFILL_SEED '+JSON.stringify({tick:s.tick(),seeded,seedCredit,count:shelf()}));
    }
    lastProgress=s.tick();let previous=shelf();
-   while(!over()&&banked(557)+held(557)<o.target&&boughtTotal<o.maximum+seeded&&spentTotal<o.spend){
+   while(!over()&&banked(557)+held(557)<o.target&&boughtTotal<o.maximum+o.seedUsed+seeded&&spentTotal<o.spend){
     const count=shelf();if(count===undefined)throw Error('earth shelf observation lost');
     if(previous!==count){console.log('EARTH_REFILL_STOCK '+JSON.stringify({tick:s.tick(),count,boughtTotal,spentTotal}));if(count>(previous??count)){stockGrowth=true;lastProgress=s.tick();}previous=count;}
-    const n=earthRefillAmount(count,Math.min(o.target-banked(557)-held(557),o.maximum+seeded-boughtTotal));
+    const n=earthRefillAmount(count,Math.min(o.target-banked(557)-held(557),o.maximum+o.seedUsed+seeded-boughtTotal));
     if(n>0){
      uncertain=true;const result=await buyWithBudget(s.bot,s.sdk,'Earth rune',n,o.reserve,o.spend-spentTotal);
      boughtTotal+=result.bought;spentTotal+=result.spent;uncertain=false;
