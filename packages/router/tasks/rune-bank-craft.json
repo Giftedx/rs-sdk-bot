@@ -13,7 +13,8 @@
     "scripts/rune-carrier-roster.ts",
     "scripts/rune-carrier-roster.test.ts",
     "scripts/rune-carrier-cancel.test.ts",
-    "packages/practice/src/rune-carriers-proof.ts"
+    "packages/practice/src/rune-carriers-proof.ts",
+    "scripts/rune-carrier-trade.test.ts"
   ],
   "consumer": "Ordinary mode raises Runecraft XP and banks the matching runes with exact essence consumption and logout. Fresh carrier mode reaches99 through the tutorial, owned starter-kit and talisman swaps, air/body travel and real carrier banking; preserve starter assets, reconcile all seventeen accounts and confirm every logout. A native finish is not a live scoreboard win.",
   "checks": [
@@ -26,6 +27,7 @@
         "scripts/rune-bank-craft.test.ts",
         "scripts/rune-carrier-roster.test.ts",
         "scripts/rune-carrier-cancel.test.ts",
+        "scripts/rune-carrier-trade.test.ts",
         "--timeout",
         "10000"
       ],
