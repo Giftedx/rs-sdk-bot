@@ -279,8 +279,8 @@ test('a heartbeat published during the slow owner and source checks admits the v
  const paths=recoveryPermitPaths(f.request,f.base);expect(existsSync(paths.lease)).toBe(true);expect(existsSync(join(paths.output,'receipt.json'))).toBe(false);
 });
 test('a completed launch binds its child although each process lookup ages the blocked controller heartbeat',()=>{
- // Observed native refusal (completed case, child13392): issue and binding ran 12 s synchronously, so the controller's
- // 1 s heartbeat timer never ran; a second pair of PowerShell lookups at binding aged the heartbeat past the window.
+ // Issue and binding run synchronously in the controller, so its heartbeat cannot advance between them. Repeated
+ // process lookups at binding must not age that heartbeat past FLEET_HEARTBEAT_MAX_MS.
  for(const shared of [false,true]){
   const f=completedFixture();let clock=now;
   f.options.now=()=>clock;

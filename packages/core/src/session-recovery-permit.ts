@@ -319,8 +319,8 @@ export function finishRecoveryPermit(r:ControlledRecoveryRequest,exitCode:number
 }
 
 // Issue and binding run in one synchronous controller call, which blocks the controller's heartbeat writer. Each
-// PowerShell command-line lookup costs over 1 s under load, so a second lookup at binding aged the heartbeat past
-// FLEET_HEARTBEAT_MAX_MS. Binding reuses the issue observations of this one call; it still re-reads every file and the
+// PowerShell command-line lookup costs over 1 s under load, so repeating the lookups at binding can age the heartbeat
+// past FLEET_HEARTBEAT_MAX_MS. Binding reuses the issue observations of this one call; it still re-reads every file and the
 // source stamp, and the child's consumeRecoveryConnection observes both processes again in its own process.
 export function launchObservations(options:Checks):Checks{
  const lookup=options.matches??processMatchesRecent,seen=new Map<string,boolean>();
