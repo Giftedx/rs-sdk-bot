@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793510176267,
+  "exportedAt": 1793510776338,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 66971079.73095703,
+      "ageMs": 67571150.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793510175928,
-      "ageMs": 339,
+      "observedAt": 1793510776286,
+      "ageMs": 52,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 67379508.74682617,
+      "ageMs": 67979579.74682617,
       "stale": true,
       "error": null
     }
@@ -76,7 +76,7 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 1,
+    "reportedRunning": 0,
     "observationStale": false,
     "jobs": [
       {
@@ -87,7 +87,7 @@
       {
         "account": "BraveHardon",
         "script": "scripts/generated/quest-runemysteries.ts",
-        "state": "running"
+        "state": "disabled"
       },
       {
         "account": "Swordswallow",
@@ -96,8 +96,8 @@
       },
       {
         "account": "Unsheathed",
-        "script": "scripts/generated/quest-priest.ts",
-        "state": "ended: done after 1 runs"
+        "script": "scripts/generated/thieving60.ts",
+        "state": "disabled"
       }
     ]
   },
