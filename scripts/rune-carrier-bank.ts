@@ -42,7 +42,7 @@ async function restock(s:Session){
   if(stock<1||!tal)throw Error('carrier body talisman unavailable');
   if(!(await s.bot.withdrawItem(tal,1)).success||!await waitUntil(s,()=>count(s,1446)===1&&(s.bankObservation!()?.items.filter(i=>i.id===1446).reduce((n,i)=>n+i.count,0)??NaN)===stock-1,{timeoutTicks:15}))throw Error('carrier talisman debit/credit mismatch');
  }
- const before=s.bankObservation!()!.items.filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0);
+ check(s);const before=s.bankObservation!()!.items.filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0);
  if(before<27||ess(s)!==0||count(s,1446)!==1)throw Error('carrier bank entry stock mismatch');
  const item=state(s).bank.items.find(i=>i.id===1436);if(!item)throw Error('essence bank slot missing');
  const reply=await s.bot.withdrawItem(item,27);if(!reply.success)throw Error('carrier withdrawal refused');
@@ -58,4 +58,3 @@ async function restock(s:Session){
 
 export {restock,inside};
 export const stopCarriers=()=>{stopped=true;};
-
