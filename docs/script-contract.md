@@ -62,6 +62,14 @@ Not required: proof of every failure window, independent decoders, purity of the
 
 Bind results to source, server, tick speed and starting state. Speed claims need three matched runs per condition with raw times and spread. Level, XP, bank value and net profit are different measures.
 
+## Recover a session
+
+A live start needs the account's logout proof (`packages/core/src/session-admission.ts` `liveLogoutRef`): the newest producer attempt ended `logged-out`. A session without that proof is held.
+
+- On a server in `TAKEOVER_SERVERS` (`packages/core/src/session-takeover.ts`), a held session may start again by re-login when the attempt is the recorded latest and no owner process of an attempt after the last confirmed logout still runs. The new login attaches to the Player in the world; its own logout writes the next proof. A repair never uses this path.
+- On every other server, a held session recovers only through the authenticated recovery path (`packages/core/src/session-recovery.ts`, `session-recovery-permit.ts`): one permitted login, modal cleanup, logout, producer proof. The live server is not in `TAKEOVER_SERVERS`.
+- Add a server to `TAKEOVER_SERVERS` only with evidence that a re-login there attaches to the Player in the world, recorded in `research/community-and-upstream.md` 8.6. Never kill or take over a live session to collect it.
+
 ## Autonomous coordination
 
 `packages/router/src/coordinator-cli.ts` runs one queue of `build`, `qualify`, `review`, `provision` and finite `run` tasks for Claude and Codex. `swarm.json.coordination` sets parallelism and planner limits; `swarm.json.jobs` holds the owner's live assignments and limits, and the coordinator never writes that file.

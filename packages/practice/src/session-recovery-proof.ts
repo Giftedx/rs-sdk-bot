@@ -413,7 +413,7 @@ export function loginAfterTakeoverWindow(log:string,account:string,since:number,
   const gapMs=next[0]!.requestAt-prior.at;return {ok:gapMs>=windowMs,gapMs};
  }catch{return {ok:false,gapMs:null};}
 }
-// Pinned World.ts:2602 answers a login with 5 ('Account already logged in') while the killed owner's player sits in
+// Pinned World.ts:2635 answers a login with 5 ('Account already logged in') while the killed owner's player sits in
 // logoutRequests, from its idle removal until the login server acknowledges that logout. The orphan's server-side end
 // is the single acknowledged logout requested after the kill.
 export function orphanServerEnd(log:string,account:string,killedAt:number){
