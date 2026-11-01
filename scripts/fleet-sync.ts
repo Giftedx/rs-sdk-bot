@@ -1,7 +1,8 @@
 // Shares fleet state between the two machines through git, on the fleet-data branch in its own worktree
 // (.practice/fleet-data), never in the code checkout: pulls the other side's orders, receipts and snapshot, writes
 // this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn and skill levels of this
-// side's listed accounts from .practice/status, never practice bots or credentials), commits fleet/ and pushes.
+// side's listed accounts from .practice/status, never practice bots or credentials) and this side's live assignments
+// (fleet/plans/<side>.json from the swarm plan, so other machines and audits see what runs), commits fleet/ and pushes.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -15,6 +16,14 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
         name: s.name, server: s.server, at: s.at, bank: rows(s.bank), inventory: rows(s.inventory), equipment: rows(s.equipment),
         skills: (s.skills ?? []).map((k: any) => ({ name: k.name, level: k.level })),
     })) };
+}
+// The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
+// uncommitted while it runs; this copy is what other sides read.
+const PLAN_FIELDS = ['account', 'accounts', 'script', 'args', 'env', 'enabled', 'standing', 'repeat', 'goal', 'role', 'template', 'autopilot', 'resources'] as const;
+export function planView(jobs: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now()) {
+    const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter((n: unknown): n is string => typeof n === 'string');
+    const own = jobs.filter(j => j?.role !== 'main' && names(j).length > 0 && names(j).every(n => owners.get(n.toLowerCase())?.side === side));
+    return { side, at: now, jobs: own.map(j => Object.fromEntries(PLAN_FIELDS.filter(k => j[k] !== undefined).map(k => [k, j[k]]))) };
 }
 const git = (cwd: string, ...args: string[]) => {
     const p = Bun.spawnSync(['git', ...args], { cwd, stdout: 'pipe', stderr: 'pipe', windowsHide: true });
@@ -45,6 +54,14 @@ export function runSync(push = true): string {
     const file = join(dir, 'fleet', 'snapshots', `${snap.side}.json`);
     const prior = (() => { try { return JSON.stringify(JSON.parse(readFileSync(file, 'utf8')).accounts); } catch { return ''; } })();
     if (prior !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
+    const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
+    if (existsSync(planFile)) {
+        const view = planView(JSON.parse(readFileSync(planFile, 'utf8')).jobs ?? [], snap.side, owners);
+        mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
+        const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
+        const was = (() => { try { return JSON.stringify(JSON.parse(readFileSync(out, 'utf8')).jobs); } catch { return ''; } })();
+        if (was !== JSON.stringify(view.jobs)) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
+    }
     git(dir, 'add', '--', 'fleet');
     const staged = !git(dir, 'diff', '--cached', '--quiet').ok;
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
