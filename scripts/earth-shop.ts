@@ -19,6 +19,12 @@ export function retainedEarthBank(read:()=>{items:readonly {id:number;count:numb
  let confirmed:{id:number;count:number}[]=[];
  return()=>{const live=read();if(live)confirmed=live.items.map(i=>({id:i.id,count:i.count}));return confirmed;};
 }
+export async function openEarthBankObserved(s:Session){
+ const previous=s.bankObservation?.();
+ if(s.sdk.getState()?.bank.isOpen&&previous)return;
+ const generation=previous?.generation??0;
+ if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))throw Error('earth refill bank unobserved');
+}
 
 export async function sellEarthSeedObserved(s:Session,stop:()=>boolean){
  const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);
@@ -70,9 +76,7 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
   const off=s.onTick(cancel);let r;try{cancel();r=await goTo(s,await getWorld(),{...to,level:0},accountOf(s),{legTimeoutTicks:100,signal:abort.signal});}finally{off();}
   if(!r.ok||terminal()||!cleanup&&over())throw Error('earth refill route refused: '+JSON.stringify(r));
  };
- const openBank=async()=>{const generation=s.bankObservation?.()?.generation??0;
-  if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!st()?.bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))throw Error('earth refill bank unobserved');
- };
+ const openBank=()=>openEarthBankObserved(s);
  const bank=async(cleanup=false)=>{await s.bot.dismissBlockingUI();await walk(conf.bankSpot,cleanup);await openBank();
   for(const i of [...inv()])if(cleanup||i.id!==995)await depositObserved(s,i);
   bankItems();
