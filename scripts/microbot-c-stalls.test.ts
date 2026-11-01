@@ -1,5 +1,5 @@
 import {expect,test} from 'bun:test';
-import {stallRecipes,stallEffect,stealStall} from './microbot-c-stalls';
+import {stallRecipes,stallEffect,stealStall,stallWatched,withStallSightBlocker} from './microbot-c-stalls';
 import {watchProductionLife} from './microbot-c-lifetime';
 import {monitoredPlayer} from './microbot-c-player-monitor';
 test('all thirteen native stall rows resolve location and loot IDs',()=>{
@@ -12,6 +12,20 @@ test('stall progress requires one declared loot item and XP',()=>{
  expect(stallEffect(r,before,[{id:r.loot[0]!,count:3}],20,44)).toBe(true);
  expect(stallEffect(r,before,[{id:r.loot[0]!,count:3}],20,20)).toBe(false);
  expect(stallEffect(r,before,[{id:995,count:3}],20,44)).toBe(false);
+});
+test('stall approach waits for the exact native owner and guard sight rules',()=>{
+ const tea=stallRecipes().find(r=>r.name==='stealing_tea_stall')!;
+ expect(tea.owners).toContain(595);
+ const player={worldX:3268,worldZ:3410,level:0};
+ expect(stallWatched(tea,player,[{id:595,x:3271,z:3411,inCombat:false}],()=>true)).toBe(true);
+ expect(stallWatched(tea,player,[{id:595,x:3271,z:3411,inCombat:false}],()=>false)).toBe(false);
+ expect(stallWatched(tea,player,[{id:595,x:3274,z:3411,inCombat:false}],()=>true)).toBe(false);
+ expect(stallWatched(tea,player,[{id:1,x:3269,z:3410,inCombat:false}],()=>true)).toBe(false);
+});
+test('native stall projectile clipping is scoped to its sight query and restores walk flags on error',()=>{
+ let mask=256;const grid={isFlagged:(_x:number,_z:number,_l:number,bits:number)=>(mask&bits)!==0,__set:(_x:number,_z:number,_l:number,bits:number)=>{mask=bits;}};
+ expect(withStallSightBlocker(grid,{x:1,z:2,level:0,width:1,length:1},()=>mask)).toBe(256|131072);
+ expect(mask).toBe(256);expect(()=>withStallSightBlocker(grid,{x:1,z:2,level:0,width:1,length:1},()=>{throw Error('query');})).toThrow('query');expect(mask).toBe(256);
 });
 test('finite silk worker retains declared loot and unrelated inventory',async()=>{
  const r=stallRecipes().find(r=>r.name==='stealing_silk_stall')!,items=[{id:r.loot[0]!,count:2},{id:995,count:9}];let xp=1;
