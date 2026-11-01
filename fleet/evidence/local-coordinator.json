@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793518677558,
+  "exportedAt": 1793519308552,
   "sources": {
     "state": {
-      "observedAt": 1793518662101.8293,
-      "ageMs": 15456.170654296875,
+      "observedAt": 1793519254332.985,
+      "ageMs": 54219.014892578125,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793518676516,
-      "ageMs": 1042,
+      "observedAt": 1793519306953,
+      "ageMs": 1599,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 13252264.283447266,
+      "ageMs": 13883258.283447266,
       "stale": true,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 31676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-260a7db6-72fa-4dbc-81b1-b1be975f8315",
-      "agent": "codex",
-      "startedAt": 1793518622381,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
@@ -514,7 +509,22 @@
       }
     },
     "codex": {
-      "running": [],
+      "running": [
+        {
+          "id": "build-quest-sweep-retained-full-delivery",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-c5fdd727-d58a-46a7-bc21-8b2588adab4a",
+          "startedAt": 1793519252818,
+          "recordStatus": "running",
+          "pid": 23020,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        }
+      ],
       "pending": [],
       "failed": [
         {
@@ -2906,6 +2916,16 @@
           "startedAt": 1793518172828,
           "at": 1793518381365,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-service-exit-codex",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-8b3b6b21-f0ee-4f9a-84c1-a1edda2fe5ed",
+          "startedAt": 1793518682474,
+          "at": 1793519169578,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -3069,8 +3089,8 @@
               "status": "failed"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
@@ -3103,8 +3123,8 @@
               "status": "failed"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
@@ -3801,8 +3821,8 @@
               "status": "failed"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
@@ -3854,8 +3874,8 @@
               "status": "pending"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
@@ -4058,8 +4078,8 @@
               "status": "pending"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
@@ -4077,8 +4097,8 @@
               "status": "failed"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
@@ -4096,8 +4116,8 @@
               "status": "pending"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
@@ -4175,13 +4195,13 @@
               "status": "pending"
             },
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         },
         {
-          "id": "run-seaslug-shaftmaker-service-observed-consumer",
+          "id": "run-seaslug-shaftmaker-retained-delivery-consumer",
           "kind": "run",
           "goal": "quests",
           "capability": "quest-sweep",
@@ -4190,8 +4210,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-quest-sweep-service-exit-evidence",
-              "status": "failed"
+              "id": "build-quest-sweep-retained-full-delivery",
+              "status": "running"
             }
           ]
         }
@@ -4316,12 +4336,12 @@
       {
         "account": "Moneyshot",
         "script": "scripts/goldfarm.ts",
-        "state": "running"
+        "state": "running; updated mission queued"
       },
       {
         "account": "Billionaire",
         "script": "scripts/goldfarm.ts",
-        "state": "running"
+        "state": "running; updated mission queued"
       },
       {
         "account": "Wandwaver",
