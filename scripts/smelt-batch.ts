@@ -3,8 +3,8 @@ import {resolve} from 'node:path';
 import type {Session} from '../packages/core/src/inprocess';
 import {depositObserved} from '../packages/core/src/deposit';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
-import {goTo,sessionWalker,walkPath} from '../packages/core/src/walk';
-import {getWorld,accountOf} from '../packages/core/src/bot';
+import {sessionWalker,walkPath,goTo} from '../packages/core/src/walk';
+import {accountOf,getWorld} from '../packages/core/src/bot';
 import {parseConfigs} from '../packages/knowledge/src/config';
 import {productionBatch} from '../packages/planner/src/production-batch';
 import {smeltEntryRoute} from '../packages/planner/src/travel';
@@ -39,19 +39,13 @@ export function smeltEffect(r:SmeltRecipe,before:Stock,after:Stock,xpBefore:numb
  if(r.iron&&made===0&&xpAfter===xpBefore)return{kind:'loss',made:0};
  throw Error('smelt output/XP mismatch');
 }
-export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:number;reserve:number;mode:'exact'|'best-effort';stop?:()=>boolean},io?:{walk:(x:number,z:number)=>Promise<boolean>}){
+export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:number;reserve:number;mode:'exact'|'best-effort';stop?:()=>boolean},io?:{walk:(x:number,z:number)=>Promise<boolean>;recover?:(x:number,z:number)=>Promise<boolean>}){
  if(![o.cap,o.maximum,o.reserve].every(Number.isSafeInteger)||o.cap<1||o.maximum<1||o.reserve<0||!['exact','best-effort'].includes(o.mode))throw Error('invalid finite smelt order');
  const r=smeltRecipe(o.bar),state=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),held=(id:number)=>count(inv(),id),xp=()=>s.sdk.getSkillXp('Smithing')??0;
  const ready=await waitUntil(s,()=>!!state()?.player&&(s.sdk.getSkill('Hitpoints')?.level??0)>0&&(s.sdk.getSkill('Smithing')?.baseLevel??0)>=r.level,{timeoutTicks:15});
  if(!ready)throw Error('smelt entry level/state unobserved');
- // From anywhere else, the world walker takes the account to Al Kharid bank, next to the furnace. The Varrock East
- // entry's hand-made corridor did not plan live (OreElse: 'smelt incomplete corridor plan').
- const at=state()!.player!,atBank=(x:number,z:number)=>at.level===0&&Math.max(Math.abs(at.worldX-x),Math.abs(at.worldZ-z))<=5;
- if(!io&&!atBank(3269,3167)){
-  const there=await goTo(s,await getWorld(),{x:3269,z:3167,level:0},accountOf(s),{legTimeoutTicks:100});
-  if(!there.ok&&!atBank(3253,3420))throw Error(`smelt travel to Al Kharid bank failed: ${there.detail}`);
- }
  const p0=state()!.player!,start=s.tick(),xp0=xp();
+ const entryBank={x:p0.worldX,z:p0.worldZ};
  const entry=smeltEntryRoute(p0);
  // The pinned furnace auto-selects steel if iron is used while carrying2coal.
  // Preserve that stock rather than silently producing a different bar.
@@ -63,16 +57,30 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
  const off=s.onTick(()=>{const p=state()?.player;hpMin=Math.min(hpMin,s.sdk.getSkill('Hitpoints')?.level??hpMin);died||=hpMin<=0||!!p&&(p.isDead||(p.respawnCount??0)>(p0.respawnCount??0)||(p0.lifeId!==undefined&&p.lifeId!==p0.lifeId));});
  const over=()=>ended||died||hpMin<7||!!o.stop?.()||s.tick()-start>=o.cap;
  const near=(x:number,z:number,tol=3)=>{const p=state()?.player;return !!p&&p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=tol;};
- let travel=false,travelTicks=0,coinsSpent=0,arrival=false;
+ let travel=false,travelTicks=0,coinsSpent=0,arrival=false,crossed=false;
+ const passed:{x:number;z:number}[]=[];
+ const recover=async(x:number,z:number,cleanup=false)=>{
+  if(ended||died||hpMin<7||(!cleanup&&over()))return false;
+  if(io)return !!io.recover&&await io.recover(x,z)&&near(x,z);
+  const ac=new AbortController(),began=s.tick(),budget=cleanup?160:Math.min(160,Math.max(1,o.cap-(s.tick()-start)));
+  const off=s.onTick(()=>{if(ended||died||hpMin<7||s.tick()-began>=budget||(!cleanup&&over()))ac.abort('smelt recovery deadline/stop');});
+  try{
+   const r=await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{maxRetriesPerLeg:1,legTimeoutTicks:budget,signal:ac.signal});
+   return r.ok&&near(x,z);
+  }finally{off();}
+ };
  const walk=async(x:number,z:number,cleanup=false)=>{
   if(io)return await io.walk(x,z)&&near(x,z);
   const walker=await sessionWalker(s),plan=walker.plan;
-  // The walk below runs with tol 1, so a plan that ends beside the target (a furnace or booth tile) is complete.
-  // An account already beside the target gets an empty plan, which is complete too (OreElse at Al Kharid bank).
-  walker.plan=(level,from,to)=>{const path=plan(level,from,to),last=path.at(-1)??from;if(Math.max(Math.abs(last.x-to.x),Math.abs(last.z-to.z))>1)throw Error('smelt incomplete corridor plan');return path;};
-  const result=await walkPath(walker,[{x,z,tol:1}],{maxTicks:Math.min(160,cleanup?160:Math.max(1,o.cap-(s.tick()-start))),stop:()=>ended||died||hpMin<7||(!cleanup&&over())||travel&&((s.sdk.getSkill('Hitpoints')?.level??0)<hpStart)});return result.ok&&near(x,z);
+  // A plan must end inside the walk tolerance. Blocked targets (furnace, counters) end on an adjacent tile,
+  // and a bot already at the target gets an empty plan. A farther end is a partial plan, never a fallback.
+  const tol=1,inside=(t:{x:number;z:number})=>Math.max(Math.abs(t.x-x),Math.abs(t.z-z))<=tol;
+  walker.plan=(level,from,to)=>{const path=plan(level,from,to);if(!inside(path.at(-1)??from))throw Error('smelt incomplete corridor plan');return path;};
+  // A hit stops travel; a cleanup walk to the near bank keeps moving rather than stand in a fight.
+  const result=await walkPath(walker,[{x,z,tol}],{maxTicks:Math.min(160,cleanup?160:Math.max(1,o.cap-(s.tick()-start))),stop:()=>ended||died||hpMin<7||(!cleanup&&(over()||travel&&((s.sdk.getSkill('Hitpoints')?.level??0)<hpStart)))});return result.ok&&near(x,z);
  };
- const bankRows=()=>s.bankObservation?.()?.items??[];
+ let lastBank:Stock|undefined;
+ const bankRows=()=>{const observed=s.bankObservation?.();if(observed)lastBank=observed.items.map(i=>({id:i.id,count:i.count}));return lastBank??[];};
  const totals=()=>{const rows=[...inv(),...s.sdk.getEquipment(),...bankRows()],m=new Map<number,number>();for(const i of rows)m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
  let initial:Map<number,number>|undefined;
  const hpStart=hpMin;
@@ -107,11 +115,19 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
    const needed=Math.max(0,entry.fare-held(995));
    if(needed){const coins=state()?.bank.items.find(i=>i.id===995),before=held(995);
     if(!coins||!(await s.bot.withdrawItem(coins,needed,{asNote:false})).success||!await waitUntil(s,()=>held(995)===before+needed,{timeoutTicks:8}))throw Error('smelt fare withdrawal unobserved');}
+   if(!await waitUntil(s,()=>count(bankRows(),995)+held(995)===(initial!.get(995)??0),{timeoutTicks:8}))throw Error('smelt fare bank balance unobserved');
    if(!(await s.bot.closeBank()).success||!await waitUntil(s,()=>!state()?.bank.isOpen,{timeoutTicks:5}))throw Error('smelt entry bank close unobserved');
-   for(const point of entry.points){if(over()||!await walk(point.x,point.z))throw Error('smelt entry corridor incomplete');}
+   for(const point of entry.points){
+    if(over())throw Error('smelt entry stopped');
+    let reached=false,detail='';
+    try{reached=await walk(point.x,point.z);}catch(error){detail=String(error);}
+    if(!reached&&!await recover(point.x,point.z))throw Error(`smelt entry corridor incomplete at ${point.x},${point.z}${detail?': '+detail:''}`);
+    passed.push(point);
+   }
    const guard=s.sdk.getNearbyNpcs().filter(n=>n.id===925).sort((a,b)=>a.distance-b.distance)[0];
    if(!guard||!(await s.sdk.sendInteractNpc(guard.index,1)).success)throw Error('smelt west toll guard unavailable');
    const cash=held(995),deadline=s.tick()+45;let answered=false;
+   try{
    while(!near(3268,3227,1)|| (state()?.player?.worldX??0)<3268){
     if(over()||s.tick()>=deadline)throw Error('smelt toll crossing deadline');
     const d=s.sdk.getDialog();
@@ -122,8 +138,9 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
     }
     await waitTicks(s,1);
    }
+   crossed=true;
    if(!await waitUntil(s,()=>cash-held(995)===(answered?entry.fare:0),{timeoutTicks:5}))throw Error('smelt toll debit unobserved');
-   coinsSpent=cash-held(995);
+   }finally{coinsSpent=cash-held(995);}
    if(coinsSpent!==(answered?entry.fare:0))throw Error('smelt toll debit mismatch');
    for(const [x,z] of [[3272,3227],[3275,3212],[3273,3194],[3269,3167]])if(over()||!await walk(x!,z!))throw Error('smelt destination corridor incomplete');
    travel=false;travelTicks=s.tick()-start;
@@ -159,18 +176,28 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
   if(made>=o.maximum)stop='target';
  }catch(error){failure='no smelt progress: '+String(error);}
  finally{try{if(!ended&&!died){
-  // Never turn an interrupted entry into a blind cross-map cleanup walk.
-  if(arrival){
-   if(s.sdk.getDialog()?.isOpen){await s.direct({type:'closeModal',reason:'SDK'});if(!await waitUntil(s,()=>!s.sdk.getDialog()?.isOpen,{timeoutTicks:5}))throw Error('smelt final dialog close unobserved');}
+  if(s.sdk.getDialog()?.isOpen){await s.direct({type:'closeModal',reason:'SDK'});if(!await waitUntil(s,()=>!s.sdk.getDialog()?.isOpen,{timeoutTicks:5}))throw Error('smelt final dialog close unobserved');}
+  // Never turn an interrupted entry into a blind cross-map cleanup walk. East of the gate the Al Kharid
+  // bank is the near bank; a retreat west would pay the toll again.
+  if(arrival||crossed){
    await bank(false,true);
   }
-  else if(near(3253,3420,5)&&!state()?.bank.isOpen)await observeBank();
- }}catch(error){failure=failure||'no smelt progress: final bank: '+String(error);}off();}
- const finalObservation=s.bankObservation?.(),final=initial&&finalObservation?totals():new Map<number,number>();
+  else if(entry.fare){
+   // Retrace only the observed entry corridor. Escape a stalled hostile leg
+   // before the session owner attempts logout; never start a second logout.
+   if(!near(3253,3420,5)){
+    for(const point of [...passed].reverse())if(!await recover(point.x,point.z,true))throw Error('smelt entry retreat incomplete');
+    if(!await recover(entryBank.x,entryBank.z,true))throw Error('smelt entry bank retreat incomplete');
+   }
+   if(!state()?.bank.isOpen)await observeBank();
+  }
+ }}catch(error){failure=failure?failure+'; final bank: '+String(error):'no smelt progress: final bank: '+String(error);}off();}
+ if(travel)travelTicks=s.tick()-start;
+ const finalObservation=s.bankObservation?.(),final=initial?totals():new Map<number,number>();
  const banked=initial&&finalObservation?(final.get(r.product)??0)-(initial.get(r.product)??0)-held(r.product):null;
  const preserved=[...kit].every(([id,n])=>id===995?true:held(id)===n);
  const allIds=new Set([...(initial?.keys()??[]),...final.keys()]);
- const conserved=initial&&finalObservation?[...allIds].every(id=>{
+ const conserved=initial&&lastBank?[...allIds].every(id=>{
   const ingredient=r.ingredients.find(i=>i.id===id),expected=(initial!.get(id)??0)+(id===r.product?made:0)-(ingredient?consumedOre*ingredient.units:0)-(id===995?coinsSpent:0);
   return(final.get(id)??0)===expected;
  }):null;
