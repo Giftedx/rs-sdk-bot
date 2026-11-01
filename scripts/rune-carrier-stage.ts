@@ -51,7 +51,10 @@ export async function mainRuneStage(args:readonly string[]){
  const withdraw=async(s:Session,id:number,n:number,asNote=false)=>{
   check();const packId=asNote?id+1:id,before=count(bankItems(s),id),held=count(s.sdk.getInventory(),packId),item=state(s).bank.items.find(i=>i.id===id);
   if(!item||before<n)throw Error('Rune staging shortage '+id);
-  if(!(await s.bot.withdrawItem(item,n,{asNote})).success||!await waitUntil(s,()=>stop()||count(s.sdk.getInventory(),packId)===held+n&&count(bankItems(s),id)===before-n,{timeoutTicks:15}))throw Error('Rune staging withdrawal did not reconcile '+id);check();
+  if(!(await s.bot.withdrawItem(item,n,{asNote})).success||!await waitUntil(s,()=>{
+   if(stop())return true;const observed=s.bankObservation?.();
+   return count(s.sdk.getInventory(),packId)===held+n&&!!observed&&count(observed.items,id)===before-n;
+  },{timeoutTicks:15}))throw Error('Rune staging withdrawal did not reconcile '+id);check();
  };
  const snapshot=(s:Session)=>bankItems(s).map(i=>({...i}));
  const record=(s:Session,bank:ReturnType<typeof snapshot>,extra:object)=>{const p=state(s).player!;const row={name:s.name,tick:s.tick(),position:{x:p.worldX,z:p.worldZ,level:p.level},inventory:runeSupplyAssets(s.sdk.getInventory()),bank,...extra};rows.push(row);console.log('RUNE_CARRIER_STAGE '+JSON.stringify(row));};
