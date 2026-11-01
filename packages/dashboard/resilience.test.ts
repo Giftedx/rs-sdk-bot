@@ -3,6 +3,15 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
 const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
 
+test('stream loss and collector errors reach the visible title indicator without another render',()=>{
+ const code=html.slice(html.indexOf('function connectionState(){'),html.indexOf("$('#inspector').addEventListener"));
+ for(const [connected,state,expected] of [[false,{},'FROZEN'],[true,{stateError:'unavailable'},'STATE ERROR']] as const){
+  const hidden={textContent:'',className:'',title:''},visible={textContent:'● LIVE',className:'connection',title:''};
+  new Function('connected','lastReceived','S','document','$',code+';connectionState();')(connected,Date.now(),state,{body:{classList:{toggle:()=>{}}},querySelector:()=>visible},()=>hidden);
+  expect(visible.textContent).toBe(expected);expect(visible.className).toContain('warning-state');
+ }
+});
+
 test('a chosen account cannot be replaced by another account when its snapshot disappears',()=>{
  const code=html.slice(html.indexOf('function render(){'),html.indexOf(" $('#pause').textContent"));
  const choose=new Function('S','window','picked','sel',`const TOUR=false,liveBots=()=>S.bots;${code}};render();return sel;`);
