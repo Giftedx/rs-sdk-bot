@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793511196370,
+  "exportedAt": 1793511256374,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 67991182.73095703,
+      "ageMs": 68051186.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793511196328,
-      "ageMs": 42,
+      "observedAt": 1793511256335,
+      "ageMs": 39,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 68399611.74682617,
+      "ageMs": 68459615.74682617,
       "stale": true,
       "error": null
     }
