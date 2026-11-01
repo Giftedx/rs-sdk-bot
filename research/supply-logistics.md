@@ -253,8 +253,6 @@ Herblore replacement detail (CODE-READ `shared_droptables.rs2:2-34`, XP from `su
 | talismans (air, fire, body, nature, law) | Air: GE 1 at 3. Fire, body: 0 sellers. Nature: 0 sellers, bid 50,000. Law: not in the market catalog (404). Drops: body talisman from giants 0.0156; nature talisman from `randomjewel` | not resolved | MEASURED live + CODE-READ; open |
 | lobsters 610 | GE: 20 at 152 now, bid 120, 1,303 traded in 7 days (12:25Z). Bigpackage holds 115 notes (swarm.json note, not checked). Or fish at Catherby: 27 lobsters in 600 ticks at Fishing 70 = 405 per hour, plain clicks; cooking needs Cooking 40 | Bigpackage (GE) or Mightyrod (fish between arrowtip buys) | MEASURED live + MEASURED practice (`gathering-tricks.md:44`) |
 | water 6,807, earth 7,175 runes (only for enchant) | Shops: Aubury (3253,3402) 2000@10, Betty Port Sarim (3012,3259) 1000@10. About 3,600 per hour together for both runes | Bigpackage | CODE-READ; about 100k coins ESTIMATE |
-
-Owned Earth production uses the pinned `drop tables/scripts/man.rs2` Earth-talisman table (2/128) and ordinary `goblin.rs2` Air-talisman table (1/128), then `skill_runecraft/scripts/runecraft.rs2` and its altar rows. These sources feed `scripts/earth-production.ts` through the existing refunded Earth-order entry. Reuse the Air actions and observed bank, food and travel helpers; keep the separate crafting and carrier workers unchanged. The source calculation uses the server's flat level curve, 25x XP and each batch's actual rune multiplier. Random access drops, saved conservation, bounded food, altar entry/exit and the final live bank remain distinct checks; practice fixture inputs do not prove procurement.
 | law runes 722 (Magic teleport substitute) | GE: 423 at 2,697 (1.14M). Shops: Magic Guild 1000@300 (Magic 66), Mage Arena 250@300, Ape Atoll 250@300 (Monkey Madness) | Moneyshot (GE) | MEASURED live + CODE-READ |
 | cosmic runes 546, jewellery 546 | **No source at scale** for the dragonstone amulets (453). Drop the enchant method | - | CODE-READ |
 | rune armour set | Oziach rune platebody 2@500 (3069,3517); Champions' Guild platelegs and coif (3191,3351, 32 QP) | Bigpackage | CODE-READ; price not quoted (rerun `market-snapshot.ts` with the ids) |
@@ -267,6 +265,8 @@ Owned Earth production uses the pinned `drop tables/scripts/man.rs2` Earth-talis
 | anti-dragon shield | Duke Horacio, free at the Dragon Slayer stage | the main | CODE-READ |
 | Equipment set | Shops: dragon battleaxe 200,000 and right shield half 750,000 (Heroes', Legends' quests). Drops or GE asks for the helm, chainbody, platelegs, left half: about 754M | out of reach (owner decision E1) | CODE-READ + MEASURED live (`boards-special.md:56-81`) |
 | Bank value | 16.2B of base cost | out of reach (owner decision B1) | `boards-special.md:134-150` |
+
+Owned Earth production uses the pinned `drop tables/scripts/man.rs2` Earth-talisman table (2/128) and ordinary `goblin.rs2` Air-talisman table (1/128), then `skill_runecraft/scripts/runecraft.rs2` and its altar rows. These sources feed `scripts/earth-production.ts` through the existing refunded Earth-order entry. Reuse the Air actions and observed bank, food and travel helpers; keep the separate crafting and carrier workers unchanged. The source calculation uses the server's flat level curve, 25x XP and each batch's actual rune multiplier. Random access drops, saved conservation, bounded food, altar entry/exit and the final live bank remain distinct checks; practice fixture inputs do not prove procurement.
 
 ## 3. Job list
 
