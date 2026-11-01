@@ -81,7 +81,8 @@ export async function ownedSwap(a:Session,b:Session,giveA:Items,giveB:Items,stop
   await new Promise<void>(resolve=>setImmediate(resolve));await Promise.all(actors.map(s=>s.sdk.scanGroundItems(0)));
   const trades=actors.map(s=>s.sdk.getTradeState());
   if(trades.some(t=>t.isOpen))opened=true;
-  if(!opened&&a.tick()>lastRequest){
+  // Repeated requests can decline a trade that opens while the actors walk together.
+  if(!opened&&a.tick()-lastRequest>=10){
    const targets=actors.map((s,i)=>s.sdk.getState()?.nearbyPlayers.find(p=>p.name.toLowerCase()===actors[1-i]!.name.toLowerCase()));
    if(targets.every(Boolean)){for(let i=0;i<2;i++)await actors[i]!.direct({type:'interactPlayer',playerIndex:targets[i]!.index,optionIndex:4,reason:'SDK'});lastRequest=a.tick();}
   }
