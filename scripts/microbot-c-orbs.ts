@@ -1,3 +1,4 @@
+import {existsSync} from 'node:fs';
 import {openBot,settle} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
@@ -38,10 +39,11 @@ export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:
  detail ||= life.reason();return{ok:!detail&&preserved&&made===maximum,made,preserved,ticks:s.tick()-start,detail,initial,final};
 }
 if(import.meta.main){
- const name=process.argv[2]??'',kind=process.argv[3] as OrbKind,maximum=Number(process.argv[4]??1),cap=Number(process.argv[5]??80);
+ const name=process.argv[2]??'',kind=process.argv[3] as OrbKind,maximum=Number(process.argv[4]??1),cap=Number(process.argv[5]??(process.env.ORB_TRIP==='1'?6000:80));
  if(!name||!Object.hasOwn(orbRecipes,kind)||!Number.isSafeInteger(maximum)||maximum<1||!Number.isSafeInteger(cap)||cap<1)throw Error('Usage (members world): bun scripts/microbot-c-orbs.ts <account> <air|water|earth|fire> [quantity] [ticks]');
  let stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});
+ const stop=()=>stopped||existsSync('.practice/stop-'+name)||existsSync('.practice/stop-microbot-orbs')||!!process.env.STOP_FILE&&existsSync(process.env.STOP_FILE);
  const s=await openBot(name);let ok=false;
- try{const result=await chargeInventory(s,kind,maximum,cap,()=>stopped);console.log('ORB_RESULT '+JSON.stringify(result));ok=result.ok;}
+ try{const result=process.env.ORB_TRIP==='1'?await (await import('./microbot-orb-trip')).runOrbTrips(s,kind,orbRecipes[kind],chargeInventory,{target:maximum,batch:Number(process.env.ORB_BATCH??1),cap,stop}):await chargeInventory(s,kind,maximum,cap,stop);console.log('ORB_RESULT '+JSON.stringify(result));ok=result.ok;}
  finally{ok=await settle([s],ok,'finite orb order');}process.exitCode=ok?0:1;
 }
