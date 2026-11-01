@@ -1,5 +1,6 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
+import {levelForXp} from '../packages/planner/src/curve';
 function handoff(mode:'publication'|'reset-publication'|'wrong-item'|'refused'|'no-credit'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
@@ -69,29 +70,30 @@ test('delayed carrier transfer opening avoids cancellation and reconciles27 esse
  expect(result.before).toEqual([0,27]);expect(result.after).toEqual([27,0]);expect(result.deltas).toEqual([27,-27]);
 });
 
-function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'levelup'='fresh'){
+function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'levelup'|'level54'|'unrelated-dialog'|'levelup-stop'='fresh'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
- let phase=0,pending,outstanding=false,received=false,duplicate=false,premature=false,opening=-1,escrow=[],dialogClosedAt=-1,clicks=0,craftCredit=false,acknowledgements=0,refusals=0;
+ let phase=0,pending,outstanding=false,received=false,duplicate=false,premature=false,opening=-1,escrow=[];
+ let modal=${['levelup','level54','unrelated-dialog','levelup-stop'].includes(mode)},closes=0,unlock=false;
  const requests=[],events=[],closed=()=>({isOpen:false,screen:null,myOffer:[],theirOffer:[],myAccepted:false});
  const s={name:'Crafter',pack:[{id:1446,count:1,slot:0}],trade:closed(),messages:[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:7}],seq:7};
  const h={name:'Carrier',pack:[{id:1446,count:1,slot:0},...Array.from({length:27},(_,i)=>({id:1436,count:1,slot:i+1}))],trade:closed(),messages:[{type:0,sender:'',text:'Crafter is busy at the moment.',observationId:7}],seq:7};
- s.dialog={isOpen:false,options:[]};
- const before=[s,h].map(a=>a.pack.filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0));
  const message=(a,type,sender,text)=>a.messages.push({type,sender,text,observationId:++a.seq});
  for(const[a,other]of [[s,h],[h,s]]){
-  a.tick=()=>phase;a.direct=async()=>{
+  a.tick=()=>phase;a.direct=async(action)=>{
+   if(action.type==='closeModal'){
+    if(a!==s)throw Error('wrong actor closed');closes++;events.push({at:phase+1,run:()=>{modal=false;}});return{success:true};
+   }
    requests.push({name:a.name,tick:phase});
    if(a===h){
-    if(outstanding)duplicate=true;outstanding=true;const busy='${mode}'==='levelup'?(!craftCredit||phase<3||s.dialog.isOpen):phase<${busyUntil};
-    events.push({at:phase+1,run:()=>{if(busy){refusals++;outstanding=false;message(h,0,'','Crafter is busy at the moment.');}else if('${mode}'!=='missing'){acknowledgements++;received=true;message(s,4,'cArRiEr','wishes to trade with you.');}}});
-   }else if(!received||phase<${busyUntil}||s.dialog.isOpen)premature=true;
+    if(outstanding)duplicate=true;outstanding=true;const busy=phase<${busyUntil}||modal;
+    events.push({at:phase+1,run:()=>{if(busy){outstanding=false;message(h,0,'','Crafter is busy at the moment.');}else if('${mode}'!=='missing'){received=true;message(s,4,'cArRiEr','wishes to trade with you.');}}});
+   }else if(!received||phase<${busyUntil})premature=true;
    else if(opening<0)opening=phase+1;
    return{success:true};
   };
-  a.sdk={getInventory:()=>a.pack,getState:()=>({trade:a.trade,dialog:a.dialog,gameMessages:a.messages,nearbyPlayers:[{name:other.name,index:1}]}),scanGroundItems:async()=>{},clickDialogByText:async pattern=>{
-   if(a!==s||!s.dialog.isOpen||!pattern.test(s.dialog.options[0].text))throw Error('unobserved continue');
-   clicks++;events.push({at:phase+2,run:()=>{s.dialog={isOpen:false,options:[]};dialogClosedAt=phase;}});return{success:true};
+  a.sdk={getInventory:()=>a.pack,getState:()=>({trade:a.trade,gameMessages:a.messages,dialog:a===s?{isOpen:modal,options:[{index:1,text:'Click here to continue',componentId:4270,buttonType:6}],allComponents:[{id:4268,text:unlock?'Members can now craft @dbl@Law Runes@bla@.':'${mode==='unrelated-dialog'?'Choose an option.':'@dbl@Congratulations, you just advanced a runecraft level.'}'}]}:undefined,nearbyPlayers:[{name:other.name,index:1}]}),scanGroundItems:async()=>{},clickDialogByText:async()=>{
+   events.push({at:phase+1,run:()=>{if('${mode}'==='level54'&&!unlock)unlock=true;else modal=false;}});return{success:true};
   },sendOfferItem:async(slot,amount)=>{
    if(a!==h||amount!==-1||!h.pack.some(i=>i.slot===slot&&i.id===1436))throw Error('unexpected offer');
    escrow=h.pack.filter(i=>i.id===1436);h.pack=h.pack.filter(i=>i.id!==1436);h.trade.myOffer=escrow;s.trade.theirOffer=escrow;return{success:true};
@@ -99,10 +101,6 @@ function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'le
  }
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
   if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;
-   if('${mode}'==='levelup'){
-    if(phase===1){craftCredit=true;message(s,0,'',"You bind the temple's power into Body Runes.");s.pack.push({id:559,count:54,slot:1});}
-    if(phase===3)s.dialog={isOpen:true,isWaiting:false,pageId:'level37',options:[{index:1,text:'Click here to continue',componentId:4270,buttonType:6}],allComponents:[{id:4268,text:'@dbl@Congratulations, you just advanced a runecraft level.'},{id:4269,text:'Your runecraft level is now 37.'}]};
-   }
    if(phase===1){message(s,4,'Other','wishes to trade with you.');message(s,2,'Carrier','wishes to trade with you.');}
    for(const e of events.filter(e=>e.at===phase))e.run();
    if(phase===opening)for(const[a,o]of [[s,h],[h,s]])a.trade={...closed(),isOpen:true,screen:'offer',partner:o.name};
@@ -111,9 +109,9 @@ function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'le
    else if(!duplicate&&s.trade.screen==='confirm'&&s.trade.myAccepted&&h.trade.myAccepted){s.pack.push(...escrow);escrow=[];s.trade=closed();h.trade=closed();}
    pending=undefined;r();}));return pending;
  }}));
- const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h,()=> '${mode}'==='stop'&&phase>=2);}catch(e){error=String(e);}
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h,()=> '${mode}'==='levelup-stop'||('${mode}'==='stop'&&phase>=2));}catch(e){error=String(e);}
  const count=(a,id)=>a.pack.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
- console.log(JSON.stringify({error,phase,requests,duplicate,premature,clicks,dialogClosedAt,craftCredit,acknowledgements,refusals,before,runes:count(s,559),after:[count(s,1436),count(h,1436)],talismans:[count(s,1446),count(h,1446)]}));
+ console.log(JSON.stringify({error,phase,requests,duplicate,premature,closes,modal,after:[count(s,1436),count(h,1436)],talismans:[count(s,1446),count(h,1446)]}));
  `;
  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
  if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
@@ -126,18 +124,25 @@ test('carrier retries only acknowledged busy requests and responds once to a fre
   expect(r.phase).toBeLessThanOrEqual(busy+5);expect(r.after).toEqual([27,0]);expect(r.talismans).toEqual([1,1]);
  }
 });
-test('craft credit before a persistent level-up requires observed Continue closure before fresh handoff acknowledgement',()=>{
- const r=acknowledgedTransfer(0,'levelup');
- expect(r.error).toBe('');expect(r.craftCredit).toBe(true);expect(r.runes).toBe(54);
- expect(r.clicks).toBe(1);expect(r.dialogClosedAt).toBe(5);expect(r.refusals).toBeGreaterThan(0);
- expect(r.acknowledgements).toBe(1);expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);
- expect(r.requests.filter((a:any)=>a.name==='Carrier'&&a.tick>=3&&a.tick<r.dialogClosedAt)).toEqual([]);
- expect(r.requests.filter((a:any)=>a.name==='Crafter')).toEqual([{name:'Crafter',tick:6}]);
- expect(r.before).toEqual([0,27]);expect(r.after).toEqual([27,0]);
- expect(r.after.map((n:number,i:number)=>n-r.before[i])).toEqual([27,-27]);expect(r.talismans).toEqual([1,1]);
- expect(r.phase).toBeLessThan(35);
+
+test('a Runecraft level-up dialog is dismissed before a fresh trade request can arrive',()=>{
+ const r=acknowledgedTransfer(0,'levelup');expect(r.error).toBe('');expect(r.closes).toBe(1);
+ expect(r.duplicate).toBe(false);expect(r.premature).toBe(false);expect(r.after).toEqual([27,0]);
+ expect(r.talismans).toEqual([1,1]);expect(r.phase).toBeLessThanOrEqual(6);
 });
 
+test('the reachable level54 reward page cannot keep the next essence handoff busy',()=>{
+ expect(levelForXp(3375+8*27*7.5*25)).toBe(54);
+ const r=acknowledgedTransfer(0,'level54');expect(r.error).toBe('');expect(r.modal).toBe(false);
+ expect(r.after).toEqual([27,0]);expect(r.talismans).toEqual([1,1]);
+});
+
+test('the handoff preserves unrelated dialogs and sends no dismissal after stop',()=>{
+ const unrelated=acknowledgedTransfer(0,'unrelated-dialog');expect(unrelated.closes).toBe(0);
+ expect(unrelated.error).toContain('essence transfer did not reconcile');expect(unrelated.after).toEqual([0,27]);
+ const stopped=acknowledgedTransfer(0,'levelup-stop');expect(stopped.closes).toBe(0);expect(stopped.requests).toEqual([]);
+ expect(stopped.after).toEqual([0,27]);
+});
 test('stale, wrong-player and player-chat requests cannot open a handoff or send a response after stop',()=>{
  const missing=acknowledgedTransfer(0,'missing');expect(missing.error).toContain('essence transfer did not reconcile');
  expect(missing.requests).toEqual([{name:'Carrier',tick:0}]);expect(missing.after).toEqual([0,27]);expect(missing.phase).toBeLessThanOrEqual(35);

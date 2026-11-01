@@ -9,7 +9,7 @@ const cursor=(s:Session)=>Math.max(0,...messages(s).map(m=>m.observationId??0));
 async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
  const at=s.tick();
  if(!await waitUntil(s,()=>ess(h)===27&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
- let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,continueSent=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>();
+ let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,levelupDismissed=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>();
  while(s.tick()-at<35&&ess(s)!==27&&!stop()){
   {
    await new Promise<void>(resolve=>setImmediate(resolve));
@@ -23,18 +23,9 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
   if(trade(s)?.isOpen||trade(h)?.isOpen)opened=true;
   if(!trade(s)?.isOpen&&!trade(h)?.isOpen&&!opened&&!responseSent){
    const dialog=state(s).dialog;
-   if(dialog?.isOpen){
-    // Craft credit can precede the level-up page. Busy recipients cannot acknowledge a trade.
-    const text=[dialog.text,...(dialog.allComponents??[]).map(c=>c.text)].join(' ');
-    if(!continueSent&&!stop()&&/Congratulations, you just advanced a runecraft level\./i.test(text)
-     &&dialog.options.length===1&&/^Click here to continue$/i.test(dialog.options[0]!.text)){
-     const reply=await s.sdk.clickDialogByText(/^Click here to continue$/i);
-     if(!reply.success)throw Error('carrier level-up Continue refused '+reply.message);
-     continueSent=true;
-    }
-    // Observe closure inside the same35tick budget before another request or response.
-    await Promise.race([waitTicks(s,1),waitTicks(h,1)]);
-    continue;
+   if(!levelupDismissed&&dialog?.isOpen&&dialog.allComponents?.some(c=>/^(@dbl@)?Congratulations, you just advanced a runecraft level\.$/i.test(c.text))){
+    // This modal keeps the crafter busy, so an incoming trade request cannot arrive until it closes.
+    await s.direct({type:'closeModal',reason:'SDK'});levelupDismissed=true;
    }
    const incoming=()=>messages(s).some(m=>m.type===4&&m.sender?.toLowerCase()===h.name.toLowerCase()
     &&m.text==='wishes to trade with you.'&&(m.observationId??0)>incomingCursor);
