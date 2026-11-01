@@ -1,36 +1,36 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793505339432,
+  "exportedAt": 1793505940229,
   "sources": {
     "state": {
-      "observedAt": 1793505329472.2554,
-      "ageMs": 9959.74462890625,
+      "observedAt": 1793505895640.0872,
+      "ageMs": 44588.912841796875,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793505338554,
-      "ageMs": 878,
+      "observedAt": 1793505937208,
+      "ageMs": 3021,
       "stale": false,
       "error": null
     },
     "owner": {
-      "observedAt": 1793504891763.0144,
-      "ageMs": 447668.9855957031,
+      "observedAt": 1793505425293.7166,
+      "ageMs": 514935.2834472656,
       "stale": true,
       "error": null
     }
   },
   "coordinator": {
     "paused": false,
-    "pid": 31620,
+    "pid": 31676,
     "processState": "alive",
     "processIdentity": "unverified",
     "planner": {
-      "runId": "plan-1dd6ee26-f4bb-4e56-be18-df354bef6f93",
+      "runId": "plan-f81c8e6d-4286-4564-a489-e646001099f9",
       "agent": "codex",
-      "startedAt": 1793505329432,
+      "startedAt": 1793505889699,
       "processState": "alive"
     }
   },
@@ -534,23 +534,23 @@
       }
     },
     "codex": {
-      "running": [],
-      "pending": [
+      "running": [
         {
-          "id": "run-oreelse-bound-cleanup",
+          "id": "run-recovery-mightyrod-druid-release-end",
           "kind": "run",
           "goal": "skills",
           "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
-            }
-          ]
-        },
+          "runId": "task-3c685e12-3e04-4aff-a6b9-c30bf0d2f53c",
+          "startedAt": 1793505891122,
+          "recordStatus": "running",
+          "pid": 11776,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        }
+      ],
+      "pending": [
         {
           "id": "run-iron-oreelse-bound-anvil85",
           "kind": "run",
@@ -561,8 +561,27 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "run-oreelse-bound-cleanup",
+              "id": "run-oreelse-serialized-bound-cleanup",
               "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-oreelse-serialized-bound-cleanup",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-recovery-mightyrod-druid-release-end",
+              "status": "running"
+            },
+            {
+              "id": "run-recovery-shaftmaker-aubury-falador-r1",
+              "status": "failed"
             }
           ]
         }
@@ -2859,6 +2878,16 @@
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
+          "id": "run-recovery-shaftmaker-aubury-falador-r1",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-0760d02f-98bd-4579-8f72-509bdb0087da",
+          "startedAt": 1793505891170,
+          "at": 1793505894304,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
           "id": "refresh-session-recovery-only-79ba2f99108b96f6",
           "kind": "qualify",
           "goal": "skills",
@@ -2900,14 +2929,14 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "review-recovery-orphan-source-change-boundary",
-        "kind": "review",
-        "goal": "quests",
+        "id": "qualify-recovery-owned-release-window",
+        "kind": "qualify",
+        "goal": "skills",
         "capability": "session-recovery-only",
-        "runId": "task-ccc2eeb7-d7a2-4346-9654-970620c4a8ce",
-        "startedAt": 1793505053188,
-        "at": 1793505241956,
-        "evidence": "review"
+        "runId": "task-adf14577-8740-4bca-9e08-fe1c8b24bbad",
+        "startedAt": 1793505398880,
+        "at": 1793505888616,
+        "evidence": "qualify"
       }
     },
     "unassigned": {
@@ -3098,10 +3127,6 @@
             {
               "id": "run-session-recovery-bigchopper-10",
               "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3117,10 +3142,6 @@
             {
               "id": "run-session-recovery-bigpackage-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3136,10 +3157,6 @@
             {
               "id": "run-session-recovery-coincock-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3155,10 +3172,6 @@
             {
               "id": "run-session-recovery-magicwanda-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3174,10 +3187,6 @@
             {
               "id": "run-session-recovery-masterbaiter-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3193,10 +3202,6 @@
             {
               "id": "run-session-recovery-mineyourbiz-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3212,10 +3217,6 @@
             {
               "id": "run-session-recovery-moneyshot-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3231,10 +3232,6 @@
             {
               "id": "run-session-recovery-oreelse-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3250,10 +3247,6 @@
             {
               "id": "run-session-recovery-pickpockdick-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3269,10 +3262,6 @@
             {
               "id": "run-session-recovery-pocketpython-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3287,10 +3276,6 @@
           "dependencies": [
             {
               "id": "run-session-recovery-woodpecker-10",
-              "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
               "status": "failed"
             }
           ]
@@ -3307,10 +3292,6 @@
             {
               "id": "run-session-recovery-mmsmk1232-10",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3325,10 +3306,6 @@
           "dependencies": [
             {
               "id": "run-session-recovery-yewfirst-child-bound",
-              "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
               "status": "failed"
             }
           ]
@@ -3360,10 +3337,6 @@
             {
               "id": "run-session-recovery-bigchopper-12",
               "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3379,10 +3352,6 @@
             {
               "id": "run-session-recovery-coincock-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3398,10 +3367,6 @@
             {
               "id": "run-session-recovery-magicwanda-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3417,10 +3382,6 @@
             {
               "id": "run-session-recovery-mmsmk1232-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3436,10 +3397,6 @@
             {
               "id": "run-session-recovery-mmthv2350-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3455,10 +3412,6 @@
             {
               "id": "run-session-recovery-oreelse-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3474,10 +3427,6 @@
             {
               "id": "run-session-recovery-pickpockdick-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3493,10 +3442,6 @@
             {
               "id": "run-session-recovery-pocketpython-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3511,10 +3456,6 @@
           "dependencies": [
             {
               "id": "run-recovery-shaftsinker-talisman-entry",
-              "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
               "status": "failed"
             }
           ]
@@ -3531,10 +3472,6 @@
             {
               "id": "run-session-recovery-woodpecker-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3549,10 +3486,6 @@
           "dependencies": [
             {
               "id": "run-session-recovery-mightyrod-11",
-              "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
               "status": "failed"
             }
           ]
@@ -3569,10 +3502,6 @@
             {
               "id": "run-session-recovery-yewfirst-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3588,10 +3517,6 @@
             {
               "id": "run-session-recovery-ballspinner-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3607,10 +3532,6 @@
             {
               "id": "run-session-recovery-bigpackage-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3626,10 +3547,6 @@
             {
               "id": "run-session-recovery-masterbaiter-11",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3644,10 +3561,6 @@
           "dependencies": [
             {
               "id": "run-session-recovery-bigchopper-serialized-entry",
-              "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
               "status": "failed"
             }
           ]
@@ -3664,10 +3577,6 @@
             {
               "id": "run-session-recovery-coincock-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3683,10 +3592,6 @@
             {
               "id": "run-session-recovery-magicwanda-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3702,10 +3607,6 @@
             {
               "id": "run-session-recovery-mmsmk1232-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3721,10 +3622,6 @@
             {
               "id": "run-session-recovery-mmthv2350-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3740,10 +3637,6 @@
             {
               "id": "run-session-recovery-oreelse-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3759,10 +3652,6 @@
             {
               "id": "run-session-recovery-pickpockdick-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3778,10 +3667,6 @@
             {
               "id": "run-session-recovery-pocketpython-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3796,10 +3681,6 @@
           "dependencies": [
             {
               "id": "run-recovery-shaftsinker-talisman-entry",
-              "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
               "status": "failed"
             }
           ]
@@ -3816,10 +3697,6 @@
             {
               "id": "run-session-recovery-woodpecker-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3834,10 +3711,6 @@
           "dependencies": [
             {
               "id": "run-session-recovery-mightyrod-13",
-              "status": "failed"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
               "status": "failed"
             }
           ]
@@ -3854,10 +3727,6 @@
             {
               "id": "run-session-recovery-ballspinner-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3873,10 +3742,6 @@
             {
               "id": "run-session-recovery-bigpackage-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3892,10 +3757,6 @@
             {
               "id": "run-session-recovery-masterbaiter-13",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -3960,10 +3821,6 @@
             {
               "id": "qualify-recovery-totem-failed-end",
               "status": "pending"
-            },
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
             }
           ]
         },
@@ -4172,21 +4029,6 @@
           ]
         },
         {
-          "id": "run-recovery-mightyrod-druid-release-end",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
-            }
-          ]
-        },
-        {
           "id": "run-druid-meats-mightyrod-draynor-consumer",
           "kind": "run",
           "goal": "quests",
@@ -4197,22 +4039,7 @@
           "dependencies": [
             {
               "id": "run-recovery-mightyrod-druid-release-end",
-              "status": "pending"
-            }
-          ]
-        },
-        {
-          "id": "run-recovery-shaftmaker-aubury-falador-r1",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "failed"
+              "status": "running"
             }
           ]
         }
@@ -4226,7 +4053,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 2,
+    "reportedRunning": 3,
     "observationStale": false,
     "jobs": [
       {
@@ -4355,11 +4182,6 @@
         "state": "disabled"
       },
       {
-        "account": "Mightyrod",
-        "script": "scripts/druid-meats.ts",
-        "state": "disabled"
-      },
-      {
         "account": "OreElse",
         "script": "scripts/chain.ts",
         "state": "disabled"
@@ -4372,6 +4194,11 @@
       {
         "account": "Shaftmaker",
         "script": "scripts/firemaking-order.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Mightyrod",
+        "script": "scripts/quest-chain.ts",
         "state": "disabled"
       }
     ]
