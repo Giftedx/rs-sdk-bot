@@ -125,14 +125,14 @@ export function cookCourierReady(c: any, courier: string, cook: string, now: num
 }
 
 // Called while the bank is open. Fresh staged accounts hold their starter coins in the bank.
-export async function fundFishingTool(s: Session): Promise<number> {
+export async function fundFishingTool(s: Session, limit=25, allowSale=true): Promise<number> {
     const held = () => countItems(s, /^coins$/i);
     const before = held();
     if (before >= 5 || countItems(s, /^fly fishing rod$/i) > 0) return 0;
     const bank = s.sdk.findBankItem(/^coins$/i);
     if (bank && Number.isSafeInteger(bank.count) && bank.count > 0)
-        await s.bot.withdrawItem(bank, Math.min(bank.count, 25 - before));
-    if (held() < 5) for (const raw of [/^raw shrimps$/i, /^raw anchovies$/i]) {
+        await s.bot.withdrawItem(bank, Math.min(bank.count, limit - before));
+    if (allowSale && held() < 5) for (const raw of [/^raw shrimps$/i, /^raw anchovies$/i]) {
         const fish = s.sdk.findBankItem(raw);
         if (fish && Number.isSafeInteger(fish.count) && fish.count > 0)
             await s.bot.withdrawItem(fish, fish.count, { asNote: true });
@@ -150,9 +150,25 @@ export async function buyFishingSupplies(s: Session, feathers: number): Promise<
     return Math.max(0, countItems(s, /^feather$/i) - before);
 }
 
+export type FiniteFoodProfile={target:number;netCap:number;flyCap:number;catchCap:number;noProgressTicks:number};
+export function finiteFoodProfile(raw:string|undefined):FiniteFoodProfile|undefined{
+ if(raw===undefined)return undefined;const target=Number(raw);
+ if(!Number.isSafeInteger(target)||target<1||target>28)throw Error('FOOD_TARGET must be1..28 new banked trout/salmon');
+ return {target,netCap:16,flyCap:target*2,catchCap:16+target*2,noProgressTicks:240};
+}
+export function finiteFoodWork(profile:FiniteFoodProfile,banked:number,packCooked:number,raw:number){
+ const needed=Math.max(0,profile.target-banked-packCooked);
+ return {needed,cook:needed>0&&raw>0,fish:raw<needed,done:banked===profile.target};
+}
+export function finiteFoodCanCatch(profile:FiniteFoodProfile,net:number,fly:number,phase:'net'|'fly'){
+ // Reserve one accepted in-flight catch before movement cancels the interaction.
+ return net+fly<profile.catchCap-1&&(phase==='net'?net<profile.netCap-1:fly<profile.flyCap-1);
+}
 type Tile = { x: number; z: number };
 type Pt = [number, number, number];
+const FINITE=finiteFoodProfile(process.env.FOOD_TARGET);
 const TICKS = Number(process.env.TICKS ?? 1500);
+if(FINITE&&(!Number.isSafeInteger(TICKS)||TICKS<1||TICKS>6000||process.env.GIVE_TO||process.env.HANDOFF_ONLY==='1'||process.env.EXTERNAL_REFILL==='1'))throw Error('finite food needs TICKS1..6000 and no handoff/external refill');
 const MAX_CATCHES = Number(process.env.MAX_CATCHES ?? Number.MAX_SAFE_INTEGER);
 if(!Number.isSafeInteger(MAX_CATCHES)||MAX_CATCHES<1)throw Error('MAX_CATCHES must be a positive safe integer');
 const FEATHER_MIN = Number(process.env.FEATHER_MIN ?? 3);
@@ -164,7 +180,7 @@ const HANDOFF_ONLY = process.env.HANDOFF_ONLY === '1';
 const WAIT = Number(process.env.WAIT ?? 900);
 // TICK3=0: no knife-on-logs 3-tick step; the first bank visit banks the knife and logs (3 more fish per pack).
 // Measured worse (practice 2026-10-23, 3 x 2,500 ticks: 36.6, 48.1, 24.0 food per 1,000 ticks against 34.2, 52.0, 39.5).
-const TICK3 = process.env.TICK3 !== '0';
+const TICK3 = !FINITE && process.env.TICK3 !== '0';
 // A financed courier owns replenishment in this mode. Finish the useful batch
 // instead of spending the producer's clock gathering replacement feathers.
 const EXTERNAL_REFILL=process.env.EXTERNAL_REFILL==='1';
@@ -231,10 +247,19 @@ try {
     const make1 = componentId('skill_multi3:make1_a');
 
     let died = false, hpMin = hp(), lastFail = '';
+    const initialHp=hp(),initialLife=pos()?.lifeId,initialRespawns=pos()?.respawnCount;let finiteHurt=false,netCaught=0,flyCaught=0,lastRawNet=0,lastRawFly=0,lastCatchTick=s.tick();
+    const rawIds=(ids:number[])=>inv().filter(i=>ids.includes(i.id)).reduce((n,i)=>n+i.count,0);
+    lastRawNet=rawIds([317,321]);lastRawFly=rawIds([335,331]);
     let last = pos();
     const off = s.onTick(() => {
         const p = pos();
         hpMin = Math.min(hpMin, hp());
+        if(FINITE){
+         finiteHurt ||= hp()<initialHp||p?.isDead===true||p?.lifeId!==initialLife||p?.respawnCount!==initialRespawns;
+         const net=rawIds([317,321]),fly=rawIds([335,331]);
+         const a=Math.max(0,net-lastRawNet),b=Math.max(0,fly-lastRawFly);netCaught+=a;flyCaught+=b;
+         if(a+b>0)lastCatchTick=s.tick();lastRawNet=net;lastRawFly=fly;
+        }
         if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20 && cheb({ x: 3222, z: 3218 }, p) <= 3) died = true;
         last = p;
@@ -251,23 +276,23 @@ try {
         const ticks = now();
         const p = pos();
         const tries = cooked + burnt;
-        const detail = `ticks=${ticks} caught=${caught} cooked=${cooked} burnt=${burnt} burnPct=${(100 * burnt / Math.max(1, tries)).toFixed(1)} banked=${banked} bankFish=${bankFish} given=${given} `
+        const detail = (FINITE?`foodTarget=${FINITE.target} netCaught=${netCaught} flyCaught=${flyCaught} catchCap=${FINITE.catchCap} `:'')+`ticks=${ticks} caught=${caught} cooked=${cooked} burnt=${burnt} burnPct=${(100 * burnt / Math.max(1, tries)).toFixed(1)} banked=${banked} bankFish=${bankFish} given=${given} `
             + `foodPerKTicks=${(1000 * banked / Math.max(1, ticks)).toFixed(1)} cooking=${cook0}->${cook()} fishXp=${fishXp() - fishXp0} packs=${packs} cycles=${cycles} kills=${kills} feathersGot=${feathersGot} `
             + `fishTicks=${fishTicks} cookTicks=${cookTicks} walkTicks=${walkTicks} bankTicks=${bankTicks} chickenTicks=${chickenTicks} giveTicks=${giveTicks} idleTicks=${idleTicks} spotWaits=${spotWaits} reclicks=${reclicks} `
             + `events=${events} eats=${eats} feathers=${countItems(s, FEATHER)} packCooked=${cookedInPack()} hp=${hp()} hpMin=${hpMin} died=${died} at=${p?.worldX},${p?.worldZ},${p?.level}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
-    const over = () => died || now() >= TICKS || existsSync(stopFile);
+    const over = () => died || !!FINITE&&finiteHurt || now() >= TICKS || existsSync(stopFile);
 
     const walk = async (points: Pt[]): Promise<boolean> => {
         const w0 = s.tick();
         try {
             const [gx, gz, gtol] = points[points.length - 1]!;
             let left = points.map(([x, z, tol]) => ({ x, z, tol }));
-            for (let i = 0; i < 3 && !died; i++) {
+            for (let i = 0; i < 3 && !died && !(FINITE&&over()); i++) {
                 const p = pos();
                 if (p && cheb({ x: gx, z: gz }, p) <= gtol + 1) return true;
-                const r = await walkPath(await sessionWalker(s), left, { stop: () => died });
+                const r = await walkPath(await sessionWalker(s), left, { stop: () => died||!!FINITE&&over(), ...(FINITE?{maxTicks:Math.max(1,Math.min(600,TICKS-now()))}:{}) });
                 if (!r.ok) { lastFail = `walk ${r.detail}`; await waitTicks(s, 1); }
                 left = left.slice(Math.min(r.next, left.length - 1));
             }
@@ -277,12 +302,14 @@ try {
     };
     const go = async (points: Pt[], where: string) => {
         // Banking may finish after the work budget. Keep the output at its handoff point.
-        if (points === BANK_TO_FLY && over()) return;
+        if (points === BANK_TO_FLY && (over()||FINITE&&banked>=FINITE.target)) return;
         if (!(await walk(points))) await end(false, `walk ${where}`);
+        if(FINITE&&(points===BANK_TO_FLY||points===BANK_TO_NET))lastCatchTick=s.tick();
     };
 
     // Eats a cooked fish (or chicken) below HP 5. Always takes at least one tick.
     const eatIfLow = async (): Promise<boolean> => {
+        if(FINITE)return false;
         if (hp() >= 5) return false;
         const f = inv().find(i => /^(trout|salmon|cooked chicken)$/i.test(i.name) && edible(i));
         if (!f) return false;
@@ -316,7 +343,7 @@ try {
             let stall = 0;
             const raw0 = countItems(s, RAW_ANY), burnt0 = countItems(s, BURNT);
             let rawPrev = raw0;
-            while (cookable().length > 0 && stall < 12 && !died) {
+            while (cookable().length > 0 && stall < 12 && !died && !(FINITE&&over()) && (!FINITE||finiteFoodWork(FINITE,banked,cookedInPack(),countItems(s,RAW_FISH)).cook)) {
                 if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
                 const fire = (st()?.nearbyLocs ?? []).find((l: any) => /^fireplace$/i.test(l.name) && l.x === FIREPLACE.x && l.z === FIREPLACE.z) as any;
                 if (!fire) { lastFail = 'no fireplace'; stall++; await waitTicks(s, 1); continue; }
@@ -331,7 +358,7 @@ try {
                 if (raw < rawPrev) stall = 0; else stall++;
                 rawPrev = raw;
             }
-            if (stall >= 12) console.log(`WARN cooking stalled: ${lastFail}`);
+            if (stall >= 12) {if(FINITE)await end(false,'finite cooking no progress');console.log(`WARN cooking stalled: ${lastFail}`);}
             // Burnt items have their own names; every other raw item that went is a success.
             const b = countItems(s, BURNT) - burnt0;
             burnt += b;
@@ -386,11 +413,12 @@ try {
         const b0 = s.tick();
         try {
             const o = await s.bot.openBank();
-            if (!o.success) { lastFail = `bank:${o.message}`; await waitTicks(s, 1); return; }
+            if (!o.success) {if(FINITE)await end(false,'finite bank open failed'); lastFail = `bank:${o.message}`; await waitTicks(s, 1); return; }
             // Raw fish the level cannot cook yet (salmon below 25) goes in too, or it would fill the pack for good.
             // One deposit-all per item name (a second call on a name already gone waits for its timeout: 614 bank
             // ticks in the first practice run).
             // Deposit every item that is not needed for fly fishing (raw/cooked fish, burnt fish, starter shrimps/bread, etc.)
+            const finiteDeposit=FINITE?{food:cookedInPack(),banked}:null;
             const KEEP = TICK3 ? /^(fly fishing rod|feather|coins|knife|logs)$/i : /^(fly fishing rod|feather|coins)$/i;
             const toDeposit = [...new Set(inv().filter(i => !KEEP.test(i.name)).map(i => i.name as string))];
             for (const name of toDeposit) {
@@ -405,13 +433,14 @@ try {
                     if (!d.success) lastFail = `deposit ${name}:${d.message}`;
                 }
             }
+            if(finiteDeposit&&(cookedInPack()!==0||banked-finiteDeposit.banked!==finiteDeposit.food))await end(false,'finite cooked deposit unresolved');
             bankFish = ['Trout', 'Salmon'].reduce((n, name) => n + (s.sdk.findBankItem(new RegExp(`^${name}$`, 'i'))?.count ?? 0), 0);
             packs++;
             console.log(`BANK pack=${packs} banked=${banked} bankFish=${bankFish} t=${now()}`);
 
             // Top up feathers from bank if available
             const fInBank = s.sdk.findBankItem(FEATHER);
-            if (fInBank && fInBank.count > 0 && countItems(s, FEATHER) < 100) {
+            if (!FINITE && fInBank && fInBank.count > 0 && countItems(s, FEATHER) < 100) {
                 await s.bot.withdrawItem(fInBank, fInBank.count);
             }
             await s.bot.closeBank();
@@ -426,7 +455,7 @@ try {
 
     // Restocks feathers in bulk (1,000 feathers for 2,000 gp) from Gerrant's shop at Port Sarim
     const restockFeathersFromShop = async () => {
-        if (over()||EXTERNAL_REFILL) return;
+        if (over()||EXTERNAL_REFILL||FINITE) return;
         console.log(`MILESTONE restocking feathers from Gerrant's shop (Port Sarim)...`);
         const p = pos();
         if (!p || cheb(BANK, p) > 4) {
@@ -439,7 +468,7 @@ try {
                 if (coinsBank && coinsBank.count > 0) {
                     await s.bot.withdrawItem(coinsBank, Math.min(2000, coinsBank.count));
                 }
-                await fundFishingTool(s);
+                await fundFishingTool(s,FINITE?5:25,!FINITE);
                 await s.bot.closeBank();
             }
         }
@@ -475,6 +504,7 @@ try {
             await go(FLY_TO_BANK, 'to Draynor bank');
         }
         let o = await s.bot.openBank();
+        if(FINITE&&!o.success)await end(false,'finite net bank unavailable');
         if (o.success) {
             for (const it of inv().filter(i => /^(fly fishing rod|raw chicken|cooked chicken|burnt chicken|trout|salmon|burnt fish)$/i.test(i.name))) {
                 await s.bot.depositItem(new RegExp(`^${it.name}$`, 'i'), -1);
@@ -487,10 +517,12 @@ try {
             }
             await s.bot.closeBank();
         }
+        if(FINITE&&countItems(s,/^small fishing net$/i)===0)await end(false,'finite food requires owned small fishing net');
         if (countItems(s, /^small fishing net$/i) === 0) {
             console.log(`Buying small fishing net at Port Sarim...`);
             await go(BANK_TO_SARIM, 'to Gerrant');
             const sh = await s.bot.openShop(/^gerrant$/i);
+            if(FINITE&&!sh.success)await end(false,'finite rod shop unavailable');
             if (sh.success) {
                 await s.bot.buyFromShop(/^small fishing net$/i, 1);
                 await s.bot.closeShop();
@@ -502,7 +534,8 @@ try {
         }
 
         let stall = 0;
-        while (!over() && fish() < 20) {
+        while (!over() && fish() < 20 && (!FINITE||finiteFoodCanCatch(FINITE,netCaught,flyCaught,'net'))) {
+            if(FINITE&&s.tick()-lastCatchTick>FINITE.noProgressTicks)await end(false,'finite net no progress');
             if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
             if (await eatIfLow()) continue;
             if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) {
@@ -512,6 +545,7 @@ try {
             if (invLen() >= 28) {
                 await go(NET_TO_BANK, 'to Draynor bank');
                 const ob = await s.bot.openBank();
+                if(FINITE&&!ob.success)await end(false,'finite net deposit bank unavailable');
                 if (ob.success) {
                     for (const name of ['Raw shrimps', 'Raw anchovies']) {
                         const cnt = countItems(s, new RegExp(`^${name}$`, 'i'));
@@ -567,9 +601,11 @@ try {
             }
         }
 
+        if(FINITE&&fish()<20)await end(false,'finite net bootstrap budget/stop');
         console.log(`MILESTONE Fishing reached ${fish()}! Transitioning to fly fishing...`);
         await go(NET_TO_BANK, 'to Draynor bank');
         o = await s.bot.openBank();
+        if(FINITE&&!o.success)await end(false,'finite bank unavailable');
         if (o.success) {
             await s.bot.depositItem(/^small fishing net$/i, 1);
             for (const name of ['Raw shrimps', 'Raw anchovies']) {
@@ -580,8 +616,8 @@ try {
             const rodItem = s.sdk.findBankItem(ROD);
             if (rodItem) await s.bot.withdrawItem(rodItem, 1);
             const fItem = s.sdk.findBankItem(FEATHER);
-            if (fItem) await s.bot.withdrawItem(fItem, fItem.count);
-            await fundFishingTool(s);
+            if (!FINITE&&fItem) await s.bot.withdrawItem(fItem, fItem.count);
+            await fundFishingTool(s,FINITE?5:25,!FINITE);
             await s.bot.closeBank();
         }
         if (countItems(s, FEATHER) < 200) {
@@ -633,6 +669,20 @@ try {
         await end(given > 0, 'no hand-off');
     }
 
+    if(FINITE){
+     const p=pos();if(!p||p.level!==0||cheb(BANK,p)>4||!Number.isSafeInteger(p.combatLevel)||p.combatLevel<29||!Number.isSafeInteger(initialLife)||!Number.isSafeInteger(initialRespawns)||initialHp<27||hp()!==(s.sdk.getSkill('Hitpoints')?.baseLevel??0)||cook()<25)await end(false,'finite food needs safe Draynor combat29 fullHP27 Cooking25 entry');
+     if(inv().some(i=>[317,318,321,322,335,336,331,332,333,334,329,330,379,380].includes(i.id)))await end(false,'finite food requires clean raw/cooked entry pack');
+     if(!(await s.bot.openBank()).success)await end(false,'finite food entry bank unavailable');
+     const f=s.sdk.findBankItem(FEATHER),held=countItems(s,FEATHER);
+     if(held+(f?.count??0)<FINITE.flyCap)await end(false,'finite food missing owned feather budget');
+     if(held>FINITE.flyCap)await s.bot.depositItem(FEATHER,held-FINITE.flyCap);
+     if(held<FINITE.flyCap)await s.bot.withdrawItem(FEATHER,FINITE.flyCap-held);
+     if(countItems(s,FEATHER)!==FINITE.flyCap)await end(false,'finite feather withdrawal unobserved');
+     if(!countItems(s,ROD)&&!s.sdk.findBankItem(ROD)&&countItems(s,/^coins$/i)+(s.sdk.findBankItem(/^coins$/i)?.count??0)<5)await end(false,'finite food missing5 coins for rod');
+     if(fish()<20&&!countItems(s,/^small fishing net$/i)&&!s.sdk.findBankItem(/^small fishing net$/i))await end(false,'finite food requires owned small fishing net');
+     await s.bot.closeBank();lastCatchTick=s.tick();
+    }
+
     if(EXTERNAL_REFILL&&(fish()<20||cook()<25))await end(false,'external refill requires Fishing20 and Cooking25');
 
     if (fish() < 20) {
@@ -641,17 +691,20 @@ try {
 
     if (slotOf(ROD) === undefined) {
         const o = await s.bot.openBank();
+        if(FINITE&&!o.success)await end(false,'finite bank unavailable');
         if (o.success) {
             await s.bot.withdrawItem(ROD, 1);
-            await fundFishingTool(s);
+            await fundFishingTool(s,FINITE?5:25,!FINITE);
             await s.bot.closeBank();
         }
         if (slotOf(ROD) === undefined && (countItems(s, /^coins$/i) >= 5 || countItems(s, /^raw (shrimps|anchovies)$/i) > 0)) {
             console.log('MILESTONE buying fly fishing rod at Port Sarim');
             await go(BANK_TO_SARIM, 'to Gerrant');
             const sh = await s.bot.openShop(/^gerrant$/i);
+            if(FINITE&&!sh.success)await end(false,'finite rod shop unavailable');
             if (sh.success) {
-                await buyFishingSupplies(s, Math.max(0, 200 - countItems(s, FEATHER)));
+                await buyFishingSupplies(s, FINITE?0:Math.max(0, 200 - countItems(s, FEATHER)));
+                if(FINITE&&countItems(s,ROD)!==1)await end(false,'finite rod purchase unobserved');
                 await s.bot.closeShop();
             }
             await go(SARIM_TO_BANK, 'back to Draynor');
@@ -665,15 +718,17 @@ try {
         const p = pos();
         if (p && cheb(BANK, p) > 4) await go(FIRE_TO_BANK, 'to Draynor bank for cleanup');
         const o = await s.bot.openBank();
+        if(FINITE&&!o.success)await end(false,'finite bank unavailable');
         if (o.success) {
             for (const item of [...new Set(inv().filter(i => !KEEP_FLY.test(i.name)).map(i => i.name as string))]) {
                 await s.bot.depositItem(new RegExp(`^${item}$`, 'i'), -1);
             }
             await s.bot.closeBank();
         }
-        await go(BANK_TO_FLY, 'back to Lumbridge river');
+        if(!FINITE)await go(BANK_TO_FLY, 'back to Lumbridge river');
     }
 
+    if(FINITE)await go(BANK_TO_FLY,'finite initial safe river route');
     let chain: { index: number } | null = null;
     let stillAnim = 0;
     // The courier waits at Draynor bank (its fresh status file says so): hand over now, not at the next full pack
@@ -683,7 +738,17 @@ try {
         if (!GIVE_TO || s.tick() - lastCourierTrip < 600) return false;
         return cookCourierReady(readCourierStatus(), GIVE_TO, s.name, Date.now(), TARGETED_COLLECTION);
     };
-    while (!over() && caught < MAX_CATCHES) {
+    while (!over() && caught < MAX_CATCHES && (!FINITE||!finiteFoodWork(FINITE,banked,cookedInPack(),countItems(s,RAW_FISH)).done)) {
+        if(FINITE){
+         if(s.tick()-lastCatchTick>FINITE.noProgressTicks)await end(false,'finite fly no progress');
+         const work=finiteFoodWork(FINITE,banked,cookedInPack(),countItems(s,RAW_FISH));
+         if(!work.fish||!finiteFoodCanCatch(FINITE,netCaught,flyCaught,'fly')){
+          await cookAll();await bankTrip();lastCatchTick=s.tick();
+          if(banked===FINITE.target)break;
+          if(!finiteFoodCanCatch(FINITE,netCaught,flyCaught,'fly'))break;
+          await go(BANK_TO_FLY,'finite refill trip');chain=null;lastCatchTick=s.tick();continue;
+         }
+        }
         if (randomEventsOf(s)?.busy()) { idleTicks++; await waitTicks(s, 1); continue; }
         if (await eatIfLow()) continue;
         if (await troll()) continue;
@@ -701,9 +766,9 @@ try {
             await go(FIRE_TO_FLY, 'back to the river');
             continue;
         }
-        if (feathers < FEATHER_MIN) {
+        if (feathers < (FINITE?1:FEATHER_MIN)) {
             if (countItems(s, RAW_FISH) > 0 || cookedInPack() > 0) { await cookAll(); await bankTrip(); await go(BANK_TO_FLY, 'back to the river'); continue; }
-            if(EXTERNAL_REFILL)break;
+            if(EXTERNAL_REFILL||FINITE)break;
             await restockFeathersFromShop();
             await go(BANK_TO_FLY, 'back to the river');
             continue;
@@ -770,7 +835,9 @@ try {
         caught += Math.max(0, countItems(s, RAW_FISH) - raw0);
         fishTicks += s.tick() - f0;
     }
+    if(FINITE&&banked===FINITE.target)await end(!over()&&netCaught<=FINITE.netCap&&flyCaught<=FINITE.flyCap&&netCaught+flyCaught<=FINITE.catchCap&&!!pos()&&cheb(BANK,pos()!)<=4,'finite exact food output');
     if (died) await end(false, 'died');
+    if(FINITE&&over())await end(false,finiteHurt?'finite damage/death guard':'finite tick/stop budget');
     if (existsSync(stopFile)) await end(false, 'stopped');
     // Moving ends the fishing interaction. Include a catch already queued at the work limit.
     if (cookable().length > 0 || chain !== null) {
@@ -780,6 +847,7 @@ try {
         await cookAll();
     }
     await bankTrip();
+    if(FINITE)await end(banked===FINITE.target&&netCaught<=FINITE.netCap&&flyCaught<=FINITE.flyCap&&netCaught+flyCaught<=FINITE.catchCap,'finite food target/catch budget');
     await end(true, 'ticks');
 } catch (e) { await finish([s], false, String(e)); }
 }
