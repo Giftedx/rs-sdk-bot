@@ -87,5 +87,7 @@ test('public item values cover only what public bots carry or wear',()=>{
 test('a state is warm once the server has read the market and the board tops',()=>{
  expect(stateWarm({rivals:[],economy:{pricesAt:1}})).toBe(false);
  expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:null}})).toBe(false);
+ // The server's value before its first market read.
+ expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:0}})).toBe(false);
  expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:1}})).toBe(true);
 });

@@ -144,7 +144,7 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
  return applied;
 }
 
-let lastSitePush=0,lastPublic='',lastControl='';
+let lastSitePush=0,lastPublic='',lastControl='',coldSince=0;
 async function cycle(){
  const now=Date.now();
  let {state,meta,map}=await collect();
@@ -161,8 +161,9 @@ async function cycle(){
   const main=join(DIR,'repo');
   if(control!==lastControl){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl=control;}
   // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
-  // whole push period, so the push waits for a warm state (at most three periods).
-  if(pub!==lastPublic&&now-lastSitePush>=PUBLIC_MS&&(stateWarm(state)||now-lastSitePush>=3*PUBLIC_MS)){
+  // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
+  const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
+  if(pub!==lastPublic&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
    const site=join(DIR,'site');
    for(const n of readdirSync(site))if(n!=='.git')rmSync(join(site,n),{recursive:true,force:true});
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});
