@@ -156,6 +156,9 @@ export function finiteFoodProfile(raw:string|undefined):FiniteFoodProfile|undefi
  if(!Number.isSafeInteger(target)||target<1||target>28)throw Error('FOOD_TARGET must be1..28 new banked trout/salmon');
  return {target,netCap:16,flyCap:target*2,catchCap:16+target*2,noProgressTicks:240};
 }
+export function finiteFoodEntryPosition(p:{worldX:number;worldZ:number;level:number}|undefined){
+ return !!p&&p.level===0&&(Math.max(Math.abs(p.worldX-3092),Math.abs(p.worldZ-3243))<=4||p.worldX>=3217&&p.worldX<=3253&&p.worldZ>=3190&&p.worldZ<=3255);
+}
 export function finiteFoodWork(profile:FiniteFoodProfile,banked:number,packCooked:number,raw:number){
  const needed=Math.max(0,profile.target-banked-packCooked);
  return {needed,cook:needed>0&&raw>0,fish:raw<needed,done:banked===profile.target};
@@ -670,8 +673,9 @@ try {
     }
 
     if(FINITE){
-     const p=pos();if(!p||p.level!==0||cheb(BANK,p)>4||!Number.isSafeInteger(p.combatLevel)||p.combatLevel<29||!Number.isSafeInteger(initialLife)||!Number.isSafeInteger(initialRespawns)||initialHp<27||hp()!==(s.sdk.getSkill('Hitpoints')?.baseLevel??0)||cook()<25)await end(false,'finite food needs safe Draynor combat29 fullHP27 Cooking25 entry');
+     const p=pos();if(!finiteFoodEntryPosition(p)||!p||!Number.isSafeInteger(p.combatLevel)||p.combatLevel<29||!Number.isSafeInteger(initialLife)||!Number.isSafeInteger(initialRespawns)||initialHp<27||hp()!==(s.sdk.getSkill('Hitpoints')?.baseLevel??0)||cook()<25)await end(false,'finite food needs audited Draynor/Lumbridge combat29 fullHP27 Cooking25 entry');
      if(inv().some(i=>[317,318,321,322,335,336,331,332,333,334,329,330,379,380].includes(i.id)))await end(false,'finite food requires clean raw/cooked entry pack');
+     if(cheb(BANK,p)>4)await go(FLY_TO_BANK,'finite Lumbridge entry to Draynor bank');
      if(!(await s.bot.openBank()).success)await end(false,'finite food entry bank unavailable');
      const f=s.sdk.findBankItem(FEATHER),held=countItems(s,FEATHER);
      if(held+(f?.count??0)<FINITE.flyCap)await end(false,'finite food missing owned feather budget');
