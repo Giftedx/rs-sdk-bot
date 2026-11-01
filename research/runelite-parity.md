@@ -53,7 +53,7 @@ Use this for every new or changed part.
 | `goals` | none | own | The plan's lanes, with blockers and next actions. | none |
 | `prs` | none | own | Pull requests by agent. | none |
 | `machine` | none | own | Bots running against the cap, RAM headroom, CPU and processes. | none |
-| `manager` | `config` | copy | The plugin list with switches and search, notifications and sidebar width. | none |
+| `manager` | `config` | copy | The plugin list with switches and search, notifications and sidebar width, opened by the wrench at the foot of the rail as in RuneLite. | none |
 | `raw` | `devtools` | adapt | The selected account's observed record as JSON. It is in the ⋮ menu, not the rail. | none |
 
 ### Game tabs
