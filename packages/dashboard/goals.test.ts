@@ -67,3 +67,10 @@ test('owner columns and operational lanes preserve the six dashboard goal target
  expect(goalPlan(named).lanes.map(({owner,...row})=>row)).toEqual(goalPlan(legacy).lanes);expect(goalPlan(named).available).toBe(true);
  expect(goalPlan(named).lanes[2]).toEqual({title:'Specialist hiscores',target:'target Specialist hiscores',next:'next Specialist hiscores',owner:'worker'});
 });
+
+test('a value-board rank counts by its own read time, not the skill page time',()=>{
+ const old={...bot(),ranksAt:now-1000,ranks:[{board:'Equipment',rank:1,level:0,at:now-700000}]};
+ expect(goalProgress(state([old]),inputs())[3]!.metric).toBe('Unknown');
+ const fresh={...bot(),ranksAt:1,ranks:[{board:'Equipment',rank:1,level:0,at:now-1000}]};
+ expect(goalProgress(state([fresh]),inputs())[3]!.metric).toBe('1 #1');
+});
