@@ -28,8 +28,7 @@ test('with the planner failed, a band that reached its target queues the next ba
  // The normal dispatcher picks it up; nothing waits for a model round.
  expect(chooseTask(s,NOW)?.id).toBe(t.id);
 });
-test('no task without a fresh approved qualification',()=>{
- expect(applyRules(chain(),deps({fingerprint:()=>'src-b'}),NOW)).toEqual([]);
+test('no task without a readable source and an approved review',()=>{
  expect(applyRules(chain(),deps({fingerprint:()=>{throw Error('source missing');}}),NOW)).toEqual([]);
  const rejected=chain();addTasks(rejected,[{id:'review-ranged-2',goal:'skills',kind:'review',capability:'ranged-train',dependsOn:[],priority:15,estimatedMs:1000,why:'Review ranged'}],NOW);
  finish(rejected,'review-ranged-2',true,{review:{approved:false,reason:'scripts/ranged-train.ts:10 death risk'},evidence:'source-review'},NOW-1000);
@@ -37,6 +36,29 @@ test('no task without a fresh approved qualification',()=>{
  const noReview=chain();noReview.tasks=noReview.tasks.filter(r=>r.spec.kind!=='review');
  expect(applyRules(noReview,deps(),NOW)).toEqual([]);
  expect(applyRules(chain(),deps(),NOW+25*60*60*1000)).toEqual([]);
+});
+test('a stale qualification after a successful band queues one refresh qualify and the next band behind it',()=>{
+ const s=chain(),added=applyRules(s,deps({fingerprint:()=>'src-b'}),NOW);
+ expect(added.map(t=>[t.id,t.kind])).toEqual([['refresh-ranged-train-src-b','qualify'],['chain-ranged-train-bigchopper-ranged40','run']]);
+ expect(added[0]).toMatchObject({capability:'ranged-train',dependsOn:[]});
+ expect(added[1]).toMatchObject({rule:'next-band',accept:{skills:{Ranged:40}},dependsOn:['refresh-ranged-train-src-b','run-ranged-30']});
+ // The qualify runs first; the band waits for it.
+ expect(chooseTask(s,NOW)?.id).toBe('refresh-ranged-train-src-b');
+ expect(applyRules(s,deps({fingerprint:()=>'src-b'}),NOW+1)).toEqual([]);
+ // A refresh already queued for another consumer is reused, never duplicated.
+ const queued=chain();addTasks(queued,[{id:'refresh-ranged-train-src-b',goal:'skills',kind:'qualify',capability:'ranged-train',dependsOn:[],priority:15,estimatedMs:240000,why:'Refresh'}],NOW);
+ expect(applyRules(queued,deps({fingerprint:()=>'src-b'}),NOW).map(t=>[t.id,t.dependsOn])).toEqual([['chain-ranged-train-bigchopper-ranged40',['refresh-ranged-train-src-b','run-ranged-30']]]);
+});
+test('a current qualification queues only the run',()=>{
+ expect(applyRules(chain(),deps(),NOW).map(t=>t.kind)).toEqual(['run']);
+});
+test('a failed refresh stops the rule',()=>{
+ const s=chain(),[refresh]=applyRules(s,deps({fingerprint:()=>'src-b'}),NOW);
+ finish(s,refresh!.id,false,{delivery:{ok:false,source:'src-b'},error:'native qualification failed'},NOW+1000);
+ expect(applyRules(s,deps({fingerprint:()=>'src-b'}),NOW+1500)).toEqual([]);
+ // The blocked band stays pending until the planner clears it; the failed refresh still stops the rule after that.
+ s.tasks.find(r=>r.spec.rule)!.status='superseded';
+ expect(applyRules(s,deps({fingerprint:()=>'src-b'}),NOW+2000)).toEqual([]);
 });
 test('no duplicate run for the same account and capability',()=>{
  const s=chain();expect(applyRules(s,deps(),NOW)).toHaveLength(1);
