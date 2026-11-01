@@ -6031,7 +6031,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/aiomagic/scripts/TeleportScript.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/aiomagic",
-          "gap": "Finite staged item magic covers native low/high alch,8 superheat metals and11 jewelry conversions. Standard NPC runner covers16 damage spells,6 debuffs,3 binds, observed splash-only and serial alch/teleport combos. Native7 teleport recipes include Ardougne/Watchtower/Trollheim; server gates quest+read-scroll requirements and explicit MEMBERS=1 scopes member rune expectations. Bank replenishment, target access/travel and donor aggressive combo cadence remain unqualified. Lunar Spin Flax, lead/cupronickel and modern teleport choices have no established native content. No practice/live proof.",
+          "gap": "Finite staged item magic covers native low/high alch,8 superheat metals and11 jewelry conversions. Standard NPC runner covers16 damage spells,6 debuffs,3 binds, observed splash-only and serial alch/teleport combos. Native7 teleport recipes include Ardougne/Watchtower/Trollheim; server gates quest+read-scroll requirements and explicit MEMBERS=1 scopes member rune expectations. Bank replenishment, target access/travel and donor aggressive combo cadence remain unqualified. Lunar Spin Flax, lead/cupronickel and modern teleport choices have no established native content. Item-spell native practice passes21 profiles. NPC/teleport, replenishment, travel and live qualification remain separate.",
           "review": {
             "name": "aiomagic",
             "decision": "partial",
@@ -6412,7 +6412,7 @@
               }
             ],
             "blockers": [
-              "Finite staged item magic covers native low/high alch,8 superheat metals and11 jewelry conversions. Standard NPC runner covers16 damage spells,6 debuffs,3 binds, observed splash-only and serial alch/teleport combos. Native7 teleport recipes include Ardougne/Watchtower/Trollheim; server gates quest+read-scroll requirements and explicit MEMBERS=1 scopes member rune expectations. Bank replenishment, target access/travel and donor aggressive combo cadence remain unqualified. Lunar Spin Flax, lead/cupronickel and modern teleport choices have no established native content. No practice/live proof."
+              "Finite staged item magic covers native low/high alch,8 superheat metals and11 jewelry conversions. Standard NPC runner covers16 damage spells,6 debuffs,3 binds, observed splash-only and serial alch/teleport combos. Native7 teleport recipes include Ardougne/Watchtower/Trollheim; server gates quest+read-scroll requirements and explicit MEMBERS=1 scopes member rune expectations. Bank replenishment, target access/travel and donor aggressive combo cadence remain unqualified. Lunar Spin Flax, lead/cupronickel and modern teleport choices have no established native content. Item-spell native practice passes21 profiles. NPC/teleport, replenishment, travel and live qualification remain separate."
             ],
             "scriptDecisions": [
               {
@@ -6524,7 +6524,10 @@
                 ]
               }
             ],
-            "proof": "Focused worker unit tests include real runner mock debit/XP/teleport destination and serial NPC+alch effects; no native practice or live proof.",
+            "proof": {
+              "sourceReview": "Focused worker unit tests include real runner mock debit/XP/teleport destination and serial NPC+alch effects; no native practice or live proof.",
+              "nativePractice": "Native practice passes all21 item-spell profiles with exact saved inputs/products/coins/XP/HP and logout. Evidence .practice/microbot-ports/native-magic-tanning/. NPC spells, teleports and route/live release remain separate."
+            },
             "implementedEntries": [
               "scripts/microbot-magic-items.ts",
               "scripts/microbot-magic-npc.ts",
@@ -9115,7 +9118,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/bankseller/BankSellerStartingWidgets.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/bankseller",
-          "gap": "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation), coordinated with owner market PR116. Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability.",
+          "gap": "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation). Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability.",
           "review": {
             "name": "bankseller",
             "decision": "partial",
@@ -9198,14 +9201,14 @@
               }
             ],
             "blockers": [
-              "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation), coordinated with owner market PR116. Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
+              "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation). Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
             ],
             "scriptDecisions": [
               {
                 "path": "src/main/java/net/runelite/client/plugins/microbot/bankseller/BankSellerScript.java",
                 "decision": "partial",
                 "consumer": "scripts/buy-owned-ge-item.ts",
-                "gap": "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation), coordinated with owner market PR116. Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
+                "gap": "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation). Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
               }
             ],
             "variants": [
@@ -10504,7 +10507,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/bonestobananas/util/ElementalStaff.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/bonestobananas",
-          "gap": "Root-owned finite port has unit proof; bank/server SDK practice and live qualification remain separate. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:49, src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:50. Native search receipt: research/microbot-server-search-a.ndjson:50",
+          "gap": "Finite port has unit and native saved bank-output/logout proof. The native two-tick spell delay and following publication boundary precede the bank click; live and repeat qualification remain separate. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:49, src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:50. Native search receipt: research/microbot-server-search-a.ndjson:50",
           "review": {
             "name": "bonestobananas",
             "decision": "port",
@@ -10597,18 +10600,21 @@
               }
             ],
             "blockers": [
-              "Root-owned finite port has unit proof; bank/server SDK practice and live qualification remain separate. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:49, src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:50. Native search receipt: research/microbot-server-search-a.ndjson:50"
+              "Finite port has unit and native saved bank-output/logout proof. The native two-tick spell delay and following publication boundary precede the bank click; live and repeat qualification remain separate. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:49, src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:50. Native search receipt: research/microbot-server-search-a.ndjson:50"
             ],
             "scriptDecisions": [
               {
                 "path": "src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java",
                 "decision": "port",
                 "consumer": "scripts/microbot-bones.ts",
-                "gap": "Root-owned finite port has unit proof; bank/server SDK practice and live qualification remain separate."
+                "gap": "Finite port has unit and native saved bank-output/logout proof. The native two-tick spell delay and following publication boundary precede the bank click; live and repeat qualification remain separate."
               }
             ],
             "variants": [],
-            "proof": "Source inspection and pinned native content search only; local consumers are reuse candidates/subsets, not claims of full donor parity."
+            "proof": {
+              "sourceReview": "Source inspection and pinned native content search only; local consumers are reuse candidates/subsets, not claims of full donor parity.",
+              "nativePractice": "Native practice actual CLI plus independent CRC-save audit:5 banked wines and5 banked bananas, held output0, coins1000 unchanged, HP50 unchanged, saved CookingXP550/MagicXP25 and confirmed logout. Members server,150ms/tick,XP1, skills99, owned inputs at Al Kharid bank. Worker hashes plus11034 core/SDK/engine/content dependency hashes remain unchanged across run. Evidence .practice/microbot-ports/native-bank-final-2/{result.json,saved-audit.json,runtime-source-start.json,runtime-source-check.json,*-before.sav,*-after.sav}. No live, replenishment-route or unattended release claim."
+            }
           }
         },
         {
@@ -12870,7 +12876,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/cooking/scripts/BurnBakingScript.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/cooking",
-          "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; no practice/native cooking qualification.",
+          "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified.",
           "review": {
             "name": "cooking",
             "decision": "partial",
@@ -14788,7 +14794,7 @@
               }
             ],
             "blockers": [
-              "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; no practice/native cooking qualification."
+              "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified."
             ],
             "scriptDecisions": [
               {
@@ -14800,7 +14806,7 @@
                   "scripts/cook-stock.ts",
                   "scripts/cook-wine.ts"
                 ],
-                "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; no practice/native cooking qualification.",
+                "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified.",
                 "sourceEvidence": [
                   {
                     "path": "src/main/java/net/runelite/client/plugins/microbot/cooking/scripts/AutoCookingScript.java",
@@ -15013,7 +15019,7 @@
                   "scripts/cook-stock.ts",
                   "scripts/cook-wine.ts"
                 ],
-                "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; no practice/native cooking qualification.",
+                "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified.",
                 "sourceEvidence": [
                   {
                     "path": "src/main/java/net/runelite/client/plugins/microbot/cooking/scripts/BurnBakingScript.java",
@@ -15684,7 +15690,7 @@
               }
             ],
             "proof": {
-              "level": "source review; no practice or live qualification",
+              "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
               "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
               "nativeSearch": {
                 "root": "vendor/rs-sdk/server/content/scripts",
@@ -15694,7 +15700,8 @@
               },
               "scriptCount": 2,
               "sourceFileCount": 10,
-              "unit": "bun test ./scripts/microbot-b-cooking.test.ts:3 pass,0 fail,122 assertions;55 useful native rows plus explicit3 exclusions; mock staged cooking, no native heat proof"
+              "unit": "bun test ./scripts/microbot-b-cooking.test.ts:3 pass,0 fail,122 assertions;55 useful native rows plus explicit3 exclusions; mock staged cooking, no native heat proof",
+              "nativePractice": "Native practice passes all55 useful table rows and16 extra gnome ingredient cases, including fire-only swamp paste, both karambwan choices with Tinsay reward322=8, and both60XP gnome resolver branches. Exact saved assets/XP/HP/logout checks and complete71case aggregate pass. Evidence .practice/microbot-ports/native-cooking-final/. Required skills99, members, staged inputs; no route/live release. Worker hashes bind entry files and176 core source files; the vendor junction is outside that dependency snapshot."
             }
           }
         },
@@ -15752,7 +15759,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/crafting/scripts/StaffScript.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/crafting",
-          "gap": "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. Inventory-profile native practice proof does not qualify furnace jewellery, progressive routes or live release.",
+          "gap": "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. Native practice covers178 inventory profiles and23 staged jewellery recipes; progressive routes, bank replenishment and live release remain unqualified.",
           "review": {
             "name": "crafting",
             "decision": "partial",
@@ -18830,7 +18837,7 @@
               }
             ],
             "blockers": [
-              "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. Inventory-profile native practice proof does not qualify furnace jewellery, progressive routes or live release."
+              "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. Native practice covers178 inventory profiles and23 staged jewellery recipes; progressive routes, bank replenishment and live release remain unqualified."
             ],
             "scriptDecisions": [
               {
@@ -20145,7 +20152,7 @@
               }
             ],
             "proof": {
-              "level": "Source review and bounded native inventory-profile practice proof; no live release.",
+              "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
               "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
               "nativeSearch": {
                 "root": "vendor/rs-sdk/server/content/scripts",
@@ -20156,7 +20163,8 @@
               "scriptCount": 8,
               "sourceFileCount": 30,
               "unit": "bun test ./scripts/microbot-b-jewellery.test.ts: 3 pass, 0 fail, 84 assertions;23 native structs and mock staged loop, no native furnace proof",
-              "nativeInventory": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps."
+              "nativeInventory": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps.",
+              "nativePractice": "Native practice passes all23 staged furnace-jewellery recipes, plus the178 inventory production profiles. Evidence .practice/microbot-ports/native-furnace-cooking/ and native-sweep-3/. These are worker-bound saved assets/XP/HP/logout checks, not bank replenishment, travel or live qualification."
             }
           }
         },
@@ -39262,7 +39270,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/glassmake/GabulhasGlassMakeScript.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/glassmake",
-          "gap": "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Staging, banking routes and native qualification remain open; native furnace yields are not Lunar spell yields.",
+          "gap": "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Native staged furnace effect/logout checks pass. Supply/banking routes and live qualification remain open; native furnace yields are not Lunar spell yields.",
           "review": {
             "name": "glassmake",
             "decision": "partial",
@@ -39512,7 +39520,7 @@
               }
             ],
             "blockers": [
-              "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Staging, banking routes and native qualification remain open; native furnace yields are not Lunar spell yields."
+              "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Native staged furnace effect/logout checks pass. Supply/banking routes and live qualification remain open; native furnace yields are not Lunar spell yields."
             ],
             "scriptDecisions": [
               {
@@ -39522,7 +39530,7 @@
                   "scripts/microbot-production.ts",
                   "scripts/microbot-glass.ts"
                 ],
-                "gap": "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Staging, banking routes and native qualification remain open; native furnace yields are not Lunar spell yields.",
+                "gap": "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Native staged furnace effect/logout checks pass. Supply/banking routes and live qualification remain open; native furnace yields are not Lunar spell yields.",
                 "sourceEvidence": [
                   {
                     "path": "src/main/java/net/runelite/client/plugins/microbot/glassmake/GabulhasGlassMakeScript.java",
@@ -39653,7 +39661,7 @@
               }
             ],
             "proof": {
-              "level": "source review; no practice or live qualification",
+              "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
               "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
               "nativeSearch": {
                 "root": "vendor/rs-sdk/server/content/scripts",
@@ -39662,7 +39670,8 @@
                 "matchCount": 30
               },
               "scriptCount": 1,
-              "sourceFileCount": 5
+              "sourceFileCount": 5,
+              "nativePractice": "Native practice passes ordinary sand+ash furnace glass with returned bucket, saved XP/assets/HP and logout. Evidence .practice/microbot-ports/native-magic-tanning/. Lunar Superglass Make is absent; supply/bank routes and live release remain separate."
             }
           }
         },
@@ -48668,7 +48677,7 @@
               }
             ],
             "proof": {
-              "level": "source review; no practice or live qualification",
+              "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
               "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
               "nativeSearch": {
                 "root": "vendor/rs-sdk/server/content/scripts",
@@ -48677,7 +48686,8 @@
                 "matchCount": 35
               },
               "scriptCount": 1,
-              "sourceFileCount": 6
+              "sourceFileCount": 6,
+              "nativePractice": "Native practice passes the11 jewellery item-spell conversions, within the21 item-spell cases. Evidence .practice/microbot-ports/native-magic-tanning/. Bank replenishment and live release remain separate."
             }
           }
         },
@@ -62145,7 +62155,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/natewinemaker/WineScript.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/natewinemaker",
-          "gap": "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; practice/live bank stock and useful wine outcome qualification remains pending.",
+          "gap": "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified.",
           "review": {
             "name": "natewinemaker",
             "decision": "partial",
@@ -62205,14 +62215,14 @@
               }
             ],
             "blockers": [
-              "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; practice/live bank stock and useful wine outcome qualification remains pending."
+              "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified."
             ],
             "scriptDecisions": [
               {
                 "path": "src/main/java/net/runelite/client/plugins/microbot/natewinemaker/WineScript.java",
                 "decision": "partial",
                 "consumer": "scripts/microbot-wine.ts,scripts/microbot-production.ts,scripts/cook-wine.ts",
-                "gap": "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; practice/live bank stock and useful wine outcome qualification remains pending.",
+                "gap": "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified.",
                 "actionEvidence": [
                   {
                     "path": "src/main/java/net/runelite/client/plugins/microbot/natewinemaker/WineScript.java",
@@ -62427,9 +62437,12 @@
                 "sha256": "85d7c8415bad945714f8fb55583351c4b7f17c361a34b2d4375d78c6444f51b6"
               }
             ],
-            "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+            "proof": {
+              "sourceReview": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+              "nativePractice": "Native practice actual CLI plus independent CRC-save audit:5 banked wines and5 banked bananas, held output0, coins1000 unchanged, HP50 unchanged, saved CookingXP550/MagicXP25 and confirmed logout. Members server,150ms/tick,XP1, skills99, owned inputs at Al Kharid bank. Worker hashes plus11034 core/SDK/engine/content dependency hashes remain unchanged across run. Evidence .practice/microbot-ports/native-bank-final-2/{result.json,saved-audit.json,runtime-source-start.json,runtime-source-check.json,*-before.sav,*-after.sav}. No live, replenishment-route or unattended release claim."
+            },
             "supportedWorkQueue": [
-              "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; practice/live bank stock and useful wine outcome qualification remains pending."
+              "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified."
             ]
           }
         },
@@ -62920,7 +62933,7 @@
             "src/main/java/net/runelite/client/plugins/microbot/npctanner/npcTannerScript.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/npctanner",
-          "gap": "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Practice effect/logout proof pending.",
+          "gap": "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified.",
           "review": {
             "name": "npctanner",
             "decision": "partial",
@@ -62979,14 +62992,14 @@
               }
             ],
             "blockers": [
-              "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Practice effect/logout proof pending."
+              "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified."
             ],
             "scriptDecisions": [
               {
                 "path": "src/main/java/net/runelite/client/plugins/microbot/npctanner/npcTannerScript.java",
                 "decision": "partial",
                 "consumer": "scripts/microbot-c-tanner.ts",
-                "gap": "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Practice effect/logout proof pending.",
+                "gap": "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified.",
                 "actionEvidence": [
                   {
                     "path": "src/main/java/net/runelite/client/plugins/microbot/npctanner/npcTannerScript.java",
@@ -63201,9 +63214,12 @@
                 "sha256": "af45d5cecc08368ce5e7f773410d6e7dda81eafe55ca12add44d8a7f287db6d3"
               }
             ],
-            "proof": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+            "proof": {
+              "sourceReview": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+              "nativePractice": "Native practice passes all6 tanning recipes with exact saved hide/product/coin/HP changes and logout. Evidence .practice/microbot-ports/native-magic-tanning/. Bank shuttle and live release remain unqualified."
+            },
             "supportedWorkQueue": [
-              "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Practice effect/logout proof pending."
+              "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified."
             ]
           }
         },
@@ -83164,14 +83180,15 @@
             "src/main/java/net/runelite/client/plugins/microbot/thieving/npc/WealthyCitizenStrategy.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot-Hub/tree/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/thieving",
-          "gap": "Native men/warrior/guard/knight ladder reused; donor strategy files include targets and aids beyond that ladder. Configurable per-target finite worker and all strategy parity remain open.",
+          "gap": "Existing native training ladder is reused. scripts/microbot-a-pickpocket.ts adds all12 native target profiles and39 NPC IDs with exact loot/failure/food/stun receipts. Donor Vyrewatch/modern elves and aids require matching native handlers; automatic strategy routes, bank refill and practice/live release remain unqualified.",
           "review": {
             "name": "thieving",
             "decision": "partial",
             "behaviour": "Strategy-based pickpocket targets, food/bank management, highlighted/custom selection, optional special handling and world hops",
             "localConsumers": [
               "scripts/generated/thieving60.ts",
-              "scripts/generated/thieveknights.ts"
+              "scripts/generated/thieveknights.ts",
+              "scripts/microbot-a-pickpocket.ts"
             ],
             "sourceEvidence": [
               {
@@ -83223,14 +83240,18 @@
               }
             ],
             "blockers": [
-              "Native men/warrior/guard/knight ladder reused; donor strategy files include targets and aids beyond that ladder. Configurable per-target finite worker and all strategy parity remain open."
+              "Existing native training ladder is reused. scripts/microbot-a-pickpocket.ts adds all12 native target profiles and39 NPC IDs with exact loot/failure/food/stun receipts. Donor Vyrewatch/modern elves and aids require matching native handlers; automatic strategy routes, bank refill and practice/live release remain unqualified."
             ],
             "scriptDecisions": [
               {
                 "path": "src/main/java/net/runelite/client/plugins/microbot/thieving/ThievingScript.java",
                 "decision": "partial",
-                "consumer": "scripts/generated/thieving60.ts,scripts/generated/thieveknights.ts",
-                "gap": "Native men/warrior/guard/knight ladder reused; donor strategy files include targets and aids beyond that ladder. Configurable per-target finite worker and all strategy parity remain open.",
+                "consumer": [
+                  "scripts/generated/thieving60.ts",
+                  "scripts/generated/thieveknights.ts",
+                  "scripts/microbot-a-pickpocket.ts"
+                ],
+                "gap": "Existing native training ladder is reused. scripts/microbot-a-pickpocket.ts adds all12 native target profiles and39 NPC IDs with exact loot/failure/food/stun receipts. Donor Vyrewatch/modern elves and aids require matching native handlers; automatic strategy routes, bank refill and practice/live release remain unqualified.",
                 "actionEvidence": [
                   {
                     "path": "src/main/java/net/runelite/client/plugins/microbot/thieving/ThievingScript.java",
@@ -83959,7 +83980,7 @@
             ],
             "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
             "supportedWorkQueue": [
-              "Native men/warrior/guard/knight ladder reused; donor strategy files include targets and aids beyond that ladder. Configurable per-target finite worker and all strategy parity remain open."
+              "Existing native training ladder is reused. scripts/microbot-a-pickpocket.ts adds all12 native target profiles and39 NPC IDs with exact loot/failure/food/stun receipts. Donor Vyrewatch/modern elves and aids require matching native handlers; automatic strategy routes, bank refill and practice/live release remain unqualified."
             ]
           }
         },

@@ -4537,14 +4537,14 @@
       }
     ],
     "blockers": [
-      "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; practice/live bank stock and useful wine outcome qualification remains pending."
+      "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/natewinemaker/WineScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-wine.ts,scripts/microbot-production.ts,scripts/cook-wine.ts",
-        "gap": "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; practice/live bank stock and useful wine outcome qualification remains pending.",
+        "gap": "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/natewinemaker/WineScript.java",
@@ -4759,9 +4759,12 @@
         "sha256": "85d7c8415bad945714f8fb55583351c4b7f17c361a34b2d4375d78c6444f51b6"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": {
+      "sourceReview": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+      "nativePractice": "Native practice actual CLI plus independent CRC-save audit:5 banked wines and5 banked bananas, held output0, coins1000 unchanged, HP50 unchanged, saved CookingXP550/MagicXP25 and confirmed logout. Members server,150ms/tick,XP1, skills99, owned inputs at Al Kharid bank. Worker hashes plus11034 core/SDK/engine/content dependency hashes remain unchanged across run. Evidence .practice/microbot-ports/native-bank-final-2/{result.json,saved-audit.json,runtime-source-start.json,runtime-source-check.json,*-before.sav,*-after.sav}. No live, replenishment-route or unattended release claim."
+    },
     "supportedWorkQueue": [
-      "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; practice/live bank stock and useful wine outcome qualification remains pending."
+      "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified."
     ]
   },
   {
@@ -5269,14 +5272,14 @@
       }
     ],
     "blockers": [
-      "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Practice effect/logout proof pending."
+      "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/npctanner/npcTannerScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-c-tanner.ts",
-        "gap": "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Practice effect/logout proof pending.",
+        "gap": "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/npctanner/npcTannerScript.java",
@@ -5491,9 +5494,12 @@
         "sha256": "af45d5cecc08368ce5e7f773410d6e7dda81eafe55ca12add44d8a7f287db6d3"
       }
     ],
-    "proof": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+    "proof": {
+      "sourceReview": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+      "nativePractice": "Native practice passes all6 tanning recipes with exact saved hide/product/coin/HP changes and logout. Evidence .practice/microbot-ports/native-magic-tanning/. Bank shuttle and live release remain unqualified."
+    },
     "supportedWorkQueue": [
-      "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Practice effect/logout proof pending."
+      "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified."
     ]
   },
   {
@@ -24711,7 +24717,8 @@
     "behaviour": "Strategy-based pickpocket targets, food/bank management, highlighted/custom selection, optional special handling and world hops",
     "localConsumers": [
       "scripts/generated/thieving60.ts",
-      "scripts/generated/thieveknights.ts"
+      "scripts/generated/thieveknights.ts",
+      "scripts/microbot-a-pickpocket.ts"
     ],
     "sourceEvidence": [
       {
@@ -24763,14 +24770,18 @@
       }
     ],
     "blockers": [
-      "Native men/warrior/guard/knight ladder reused; donor strategy files include targets and aids beyond that ladder. Configurable per-target finite worker and all strategy parity remain open."
+      "Existing native training ladder is reused. scripts/microbot-a-pickpocket.ts adds all12 native target profiles and39 NPC IDs with exact loot/failure/food/stun receipts. Donor Vyrewatch/modern elves and aids require matching native handlers; automatic strategy routes, bank refill and practice/live release remain unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/thieving/ThievingScript.java",
         "decision": "partial",
-        "consumer": "scripts/generated/thieving60.ts,scripts/generated/thieveknights.ts",
-        "gap": "Native men/warrior/guard/knight ladder reused; donor strategy files include targets and aids beyond that ladder. Configurable per-target finite worker and all strategy parity remain open.",
+        "consumer": [
+          "scripts/generated/thieving60.ts",
+          "scripts/generated/thieveknights.ts",
+          "scripts/microbot-a-pickpocket.ts"
+        ],
+        "gap": "Existing native training ladder is reused. scripts/microbot-a-pickpocket.ts adds all12 native target profiles and39 NPC IDs with exact loot/failure/food/stun receipts. Donor Vyrewatch/modern elves and aids require matching native handlers; automatic strategy routes, bank refill and practice/live release remain unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/thieving/ThievingScript.java",
@@ -25499,7 +25510,7 @@
     ],
     "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
     "supportedWorkQueue": [
-      "Native men/warrior/guard/knight ladder reused; donor strategy files include targets and aids beyond that ladder. Configurable per-target finite worker and all strategy parity remain open."
+      "Existing native training ladder is reused. scripts/microbot-a-pickpocket.ts adds all12 native target profiles and39 NPC IDs with exact loot/failure/food/stun receipts. Donor Vyrewatch/modern elves and aids require matching native handlers; automatic strategy routes, bank refill and practice/live release remain unqualified."
     ]
   },
   {

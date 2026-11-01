@@ -81,21 +81,27 @@ Existing walking, supply and chain workers can compose these jobs. Untested comp
 
 ## Native practice proof
 
-The actual CLI passes all178 unique inventory-production profiles at a staged Al Kharid bank, with298 products banked.
+The actual CLI passes all 178 unique inventory-production profiles at a staged Al Kharid bank, with 298 products banked.
 The independent saved-state audit checks exact inputs, products, returned containers, optional thread, XP, HP and confirmed logout.
-The large-oyster command is `bolt-tips:pearl_bolttips:bigoysterpearls`; it produces24 tips. The small-oyster command produces6.
+The large-oyster command is `bolt-tips:pearl_bolttips:bigoysterpearls`; it produces 24 tips. The small-oyster command produces 6.
 
-The staged native checks also pass all23 furnace-jewellery recipes,21 item-spell profiles, six tanning recipes and furnace glass.
+The staged native checks also pass all 23 furnace-jewellery recipes, 21 item-spell profiles, six tanning recipes and furnace glass.
 They check saved item/coin/XP changes and logout. They do not prove travel, replenishment or live release.
-Cooking requires separate native coverage for its fire-only row, gnome ingredient state and Tinsay reward gate.
+Native cooking passes all 55 useful table rows and 16 gnome ingredient cases, including its fire-only row and Tinsay reward gate.
 Thorough karambwan requires the private native Tinsay reward state; otherwise the server cooks the poisonous variant.
 Gnome toad variants can publish XP one tick ahead of their item change; XP alone never credits output.
 
-Evidence stays in `.practice/microbot-ports/native-sweep-3/`, `native-furnace-cooking/` and `native-magic-tanning/`.
+Evidence stays in `.practice/microbot-ports/native-sweep-3/`, `native-furnace-cooking/`, `native-magic-tanning/` and `native-cooking-final/`.
 Each directory holds worker hashes, actual CLI logs and CRC-checked saves. The inventory sweep also holds `saved-audit.json`.
-These runs use a separate members practice server at150ms per tick, XP1, required skills99 and staged owned fixture stock.
+These runs use a separate members practice server at 150 ms per tick, XP rate 1, required skills 99 and staged owned fixture stock.
 Worker hashes bind the recorded entry files. These receipts do not bind every imported runtime byte or qualify an unattended release.
 Retained failed and incomplete fixtures remain failures; a wrapper exit code alone is not proof.
+
+Wine and Bones to Bananas pass a separate bank check with five finished products each, no held output, unchanged coins and HP, and confirmed logout.
+The saved XP gains are 550 Cooking and 25 Magic. Bones banking waits through the native spell delay and the following publication boundary.
+Evidence: `.practice/microbot-ports/native-bank-final-2/`, including the independent `saved-audit.json`.
+This run also binds and rechecks 11,034 core, SDK, engine and content files, with worker hashes in `result.json`.
+It remains a bounded staged practice result, not live or unattended release.
 
 ## Reuse and blockers
 

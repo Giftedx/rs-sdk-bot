@@ -42,7 +42,7 @@ export async function runBonesConversion(io:BonesIO,o:{maximum:number;cap:number
 
 // Bank-side worker. The caller owns staging and travel. Plain runes make costs explicit.
 export async function runBonesBank(s:import('../packages/core/src/inprocess').Session,o:{maximum:number;cap:number;members?:boolean;stop?:()=>boolean}){
- const {waitUntil}=await import('../packages/core/src/ticks');
+ const {waitUntil,waitTicks}=await import('../packages/core/src/ticks');
  const {depositObserved}=await import('../packages/core/src/deposit');
  const {componentId}=await import('../packages/core/src/logout');
  const {elementalRuneCost}=await import('./microbot-magic-items');
@@ -69,6 +69,7 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
   if(!await waitUntil(s,()=>ready()&&(s.bankObservation?.()?.generation??-1)>generation,{timeoutTicks:10}))throw Error('bones conversion fresh bank unknown');
  };
  const read=():BonesSnapshot=>({...Object.fromEntries(Object.entries(ids).map(([k,id])=>[k,count(id)])) as Omit<BonesSnapshot,'xp'>,xp:s.sdk.getSkillXp('Magic')??0});
+ const conversionStart=s.tick();
  const result=await runBonesConversion({tick:()=>s.tick(),stopped,level:()=>s.sdk.getSkill('Magic')?.level??0,read,costs,
   prepare:async maximum=>{
    await open();
@@ -91,7 +92,14 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
   },
   cast:()=>s.direct({type:'clickComponent',componentId:componentId('magic:bones_to_bananas'),reason:'SDK'}),
   wait:done=>waitUntil(s,done,{timeoutTicks:12}),
-  deposit:async()=>{await open();const item=inv().find(i=>i.id===ids.bananas);return item?depositObserved(s,item):0;},
+  deposit:async()=>{
+   // Native convert_bones.rs2 delays two ticks after publishing the converted items.
+   // Cross the following publication boundary before sending a bank click.
+   if(o.cap-(s.tick()-conversionStart)<=3)throw Error('bones conversion bank budget exhausted');
+   await waitTicks(s,3);
+   if(stopped()||s.tick()-conversionStart>=o.cap)throw Error('bones conversion stopped before bank');
+   await open();const item=inv().find(i=>i.id===ids.bananas);return item?depositObserved(s,item):0;
+  },
   close:async()=>{if(!stopped())await s.bot.closeBank();},
  },o);
  if(stopped()){result.ok=false;result.failure='bones conversion session stopped';}

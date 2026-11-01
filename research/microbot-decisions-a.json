@@ -2819,7 +2819,7 @@
       }
     ],
     "blockers": [
-      "Finite staged item magic covers native low/high alch,8 superheat metals and11 jewelry conversions. Standard NPC runner covers16 damage spells,6 debuffs,3 binds, observed splash-only and serial alch/teleport combos. Native7 teleport recipes include Ardougne/Watchtower/Trollheim; server gates quest+read-scroll requirements and explicit MEMBERS=1 scopes member rune expectations. Bank replenishment, target access/travel and donor aggressive combo cadence remain unqualified. Lunar Spin Flax, lead/cupronickel and modern teleport choices have no established native content. No practice/live proof."
+      "Finite staged item magic covers native low/high alch,8 superheat metals and11 jewelry conversions. Standard NPC runner covers16 damage spells,6 debuffs,3 binds, observed splash-only and serial alch/teleport combos. Native7 teleport recipes include Ardougne/Watchtower/Trollheim; server gates quest+read-scroll requirements and explicit MEMBERS=1 scopes member rune expectations. Bank replenishment, target access/travel and donor aggressive combo cadence remain unqualified. Lunar Spin Flax, lead/cupronickel and modern teleport choices have no established native content. Item-spell native practice passes21 profiles. NPC/teleport, replenishment, travel and live qualification remain separate."
     ],
     "scriptDecisions": [
       {
@@ -2931,7 +2931,10 @@
         ]
       }
     ],
-    "proof": "Focused worker unit tests include real runner mock debit/XP/teleport destination and serial NPC+alch effects; no native practice or live proof.",
+    "proof": {
+      "sourceReview": "Focused worker unit tests include real runner mock debit/XP/teleport destination and serial NPC+alch effects; no native practice or live proof.",
+      "nativePractice": "Native practice passes all21 item-spell profiles with exact saved inputs/products/coins/XP/HP and logout. Evidence .practice/microbot-ports/native-magic-tanning/. NPC spells, teleports and route/live release remain separate."
+    },
     "implementedEntries": [
       "scripts/microbot-magic-items.ts",
       "scripts/microbot-magic-npc.ts",
@@ -5191,14 +5194,14 @@
       }
     ],
     "blockers": [
-      "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation), coordinated with owner market PR116. Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
+      "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation). Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/bankseller/BankSellerScript.java",
         "decision": "partial",
         "consumer": "scripts/buy-owned-ge-item.ts",
-        "gap": "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation), coordinated with owner market PR116. Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
+        "gap": "GE protocol and SDK sell path exist: BotActions.searchGE(query,sell), inventory-funded placeGEOffer(side=sell), cancelGEOffer and collectGEOffer. Remaining work is an owned sell-order policy/recovery integration (offer intent journal, exact item escrow, floor/price, fill/tax and cancellation/collection reconciliation). Existing buy-order journal is a reference, not a sell implementation. No claim that GE selling lacks protocol or native capability."
       }
     ],
     "variants": [
@@ -6324,18 +6327,21 @@
       }
     ],
     "blockers": [
-      "Root-owned finite port has unit proof; bank/server SDK practice and live qualification remain separate. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:49, src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:50. Native search receipt: research/microbot-server-search-a.ndjson:50"
+      "Finite port has unit and native saved bank-output/logout proof. The native two-tick spell delay and following publication boundary precede the bank click; live and repeat qualification remain separate. Donor behaviour references: src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:49, src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java:50. Native search receipt: research/microbot-server-search-a.ndjson:50"
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java",
         "decision": "port",
         "consumer": "scripts/microbot-bones.ts",
-        "gap": "Root-owned finite port has unit proof; bank/server SDK practice and live qualification remain separate."
+        "gap": "Finite port has unit and native saved bank-output/logout proof. The native two-tick spell delay and following publication boundary precede the bank click; live and repeat qualification remain separate."
       }
     ],
     "variants": [],
-    "proof": "Source inspection and pinned native content search only; local consumers are reuse candidates/subsets, not claims of full donor parity."
+    "proof": {
+      "sourceReview": "Source inspection and pinned native content search only; local consumers are reuse candidates/subsets, not claims of full donor parity.",
+      "nativePractice": "Native practice actual CLI plus independent CRC-save audit:5 banked wines and5 banked bananas, held output0, coins1000 unchanged, HP50 unchanged, saved CookingXP550/MagicXP25 and confirmed logout. Members server,150ms/tick,XP1, skills99, owned inputs at Al Kharid bank. Worker hashes plus11034 core/SDK/engine/content dependency hashes remain unchanged across run. Evidence .practice/microbot-ports/native-bank-final-2/{result.json,saved-audit.json,runtime-source-start.json,runtime-source-check.json,*-before.sav,*-after.sav}. No live, replenishment-route or unattended release claim."
+    }
   },
   {
     "name": "bradleycombat",

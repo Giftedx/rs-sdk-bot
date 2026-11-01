@@ -51,14 +51,14 @@ test('SDK adapter withdraws finite unnoted inputs and pairs final bank receipts'
  const ids={526:'Bones',1963:'Banana',557:'Earth rune',555:'Water rune',561:'Nature rune'};
  const pack:{id:number;name:string;count:number;slot:number}[]=[];
  const bank=new Map([[526,7],[557,4],[555,4],[561,2],[1963,9]]);
- let generation=1,xp=100,tick=0,casts=0,bankOpen=false;
+ let generation=1,xp=100,tick=0,casts=0,bankOpen=false,busyUntil=0;
  const items=()=>[...bank].map(([id,count])=>({id,name:ids[id as keyof typeof ids]!,count}));
  const add=(id:number,n:number)=>{const item=pack.find(i=>i.id===id);if(item)item.count+=n;else pack.push({id,name:ids[id as keyof typeof ids]!,count:n,slot:pack.length});};
- const s={name:'mock',tick:()=>tick,ended:new Promise(()=>{}),onTick:()=>()=>{},
+ const s={name:'mock',tick:()=>tick,ended:new Promise(()=>{}),onTick:(fn:()=>void)=>{let active=true;const pump=()=>{if(active){tick++;fn();queueMicrotask(pump);}};queueMicrotask(pump);return()=>{active=false;};},
   sdk:{getEquipment:()=>[],getInventory:()=>pack.filter(i=>i.count>0),getState:()=>({player:{lifeId:1,worldX:0,worldZ:0,level:0},inventory:pack.filter(i=>i.count>0),bank:{isOpen:bankOpen}}),
    getSkill:()=>({level:15}),getSkillXp:()=>xp},
   bankObservation:()=>({generation,items:items()}),
-  bot:{openBank:async()=>{bankOpen=true;generation++;return{success:true}},closeBank:async()=>{bankOpen=false},
+  bot:{openBank:async()=>{if(tick<busyUntil)return{success:false};bankOpen=true;generation++;return{success:true}},closeBank:async()=>{bankOpen=false},
    withdrawItem:async(pattern:RegExp,n:number,o:{asNote:boolean})=>{
     expect(o.asNote).toBe(false);const entry=items().find(i=>pattern.test(i.name));
     if(!entry||entry.count<n)return {success:false};
@@ -66,7 +66,7 @@ test('SDK adapter withdraws finite unnoted inputs and pairs final bank receipts'
    depositItem:async(item:{id:number})=>{const p=pack.find(i=>i.id===item.id)!;bank.set(p.id,(bank.get(p.id)??0)+p.count);p.count=0;generation++;return {success:true};}},
   direct:async()=>{casts++;tick++;const bones=pack.find(i=>i.id===526)!;add(1963,bones.count);bones.count=0;
    for(const [id,n] of [[557,2],[555,2],[561,1]])pack.find(i=>i.id===id)!.count-=n!;
-   xp+=25;return {success:true};}};
+   xp+=25;busyUntil=tick+3;return {success:true};}};
  const result=await runBonesBank(s as any,{maximum:5,cap:40});
  expect(result).toMatchObject({ok:true,made:5,banked:5,casts:1});
  expect(casts).toBe(1);expect(bank.get(1963)).toBe(14);expect(bank.get(526)).toBe(2);

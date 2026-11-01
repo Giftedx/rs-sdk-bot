@@ -3084,7 +3084,7 @@
       }
     ],
     "blockers": [
-      "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; no practice/native cooking qualification."
+      "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified."
     ],
     "scriptDecisions": [
       {
@@ -3096,7 +3096,7 @@
           "scripts/cook-stock.ts",
           "scripts/cook-wine.ts"
         ],
-        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; no practice/native cooking qualification.",
+        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/cooking/scripts/AutoCookingScript.java",
@@ -3309,7 +3309,7 @@
           "scripts/cook-stock.ts",
           "scripts/cook-wine.ts"
         ],
-        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; no practice/native cooking qualification.",
+        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/cooking/scripts/BurnBakingScript.java",
@@ -3980,7 +3980,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -3990,7 +3990,8 @@
       },
       "scriptCount": 2,
       "sourceFileCount": 10,
-      "unit": "bun test ./scripts/microbot-b-cooking.test.ts:3 pass,0 fail,122 assertions;55 useful native rows plus explicit3 exclusions; mock staged cooking, no native heat proof"
+      "unit": "bun test ./scripts/microbot-b-cooking.test.ts:3 pass,0 fail,122 assertions;55 useful native rows plus explicit3 exclusions; mock staged cooking, no native heat proof",
+      "nativePractice": "Native practice passes all55 useful table rows and16 extra gnome ingredient cases, including fire-only swamp paste, both karambwan choices with Tinsay reward322=8, and both60XP gnome resolver branches. Exact saved assets/XP/HP/logout checks and complete71case aggregate pass. Evidence .practice/microbot-ports/native-cooking-final/. Required skills99, members, staged inputs; no route/live release. Worker hashes bind entry files and176 core source files; the vendor junction is outside that dependency snapshot."
     }
   },
   {
@@ -7070,7 +7071,7 @@
       }
     ],
     "blockers": [
-      "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. Inventory-profile native practice proof does not qualify furnace jewellery, progressive routes or live release."
+      "Native item recipes use generic bank production; native furnace jewellery ports all23 struct rows as staged batches. Other wheel/furnace locations and progressive staging policies are unqualified. Donor amethyst, costume needle, bracelets, onyx/zenyte and lantern/fishbowl/light-orb glass options lack matching native recipes. Native glass supports beer glass/vial/unpowered orb only; staged jewellery has no bank replenishment. Native practice covers178 inventory profiles and23 staged jewellery recipes; progressive routes, bank replenishment and live release remain unqualified."
     ],
     "scriptDecisions": [
       {
@@ -8385,7 +8386,7 @@
       }
     ],
     "proof": {
-      "level": "Source review and bounded native inventory-profile practice proof; no live release.",
+      "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -8396,7 +8397,8 @@
       "scriptCount": 8,
       "sourceFileCount": 30,
       "unit": "bun test ./scripts/microbot-b-jewellery.test.ts: 3 pass, 0 fail, 84 assertions;23 native structs and mock staged loop, no native furnace proof",
-      "nativeInventory": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps."
+      "nativeInventory": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps.",
+      "nativePractice": "Native practice passes all23 staged furnace-jewellery recipes, plus the178 inventory production profiles. Evidence .practice/microbot-ports/native-furnace-cooking/ and native-sweep-3/. These are worker-bound saved assets/XP/HP/logout checks, not bank replenishment, travel or live qualification."
     }
   },
   {
@@ -27055,7 +27057,7 @@
       }
     ],
     "blockers": [
-      "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Staging, banking routes and native qualification remain open; native furnace yields are not Lunar spell yields."
+      "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Native staged furnace effect/logout checks pass. Supply/banking routes and live qualification remain open; native furnace yields are not Lunar spell yields."
     ],
     "scriptDecisions": [
       {
@@ -27065,7 +27067,7 @@
           "scripts/microbot-production.ts",
           "scripts/microbot-glass.ts"
         ],
-        "gap": "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Staging, banking routes and native qualification remain open; native furnace yields are not Lunar spell yields.",
+        "gap": "Lunar Superglass Make, giant seaweed and spell overproduction/ground pickup are absent. Native beer-glass/vial/orb blowing uses generic bank recipes; scripts/microbot-glass.ts ports ordinary sand+soda-ash furnace smelting with returned empty bucket. Native staged furnace effect/logout checks pass. Supply/banking routes and live qualification remain open; native furnace yields are not Lunar spell yields.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/glassmake/GabulhasGlassMakeScript.java",
@@ -27196,7 +27198,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -27205,7 +27207,8 @@
         "matchCount": 30
       },
       "scriptCount": 1,
-      "sourceFileCount": 5
+      "sourceFileCount": 5,
+      "nativePractice": "Native practice passes ordinary sand+ash furnace glass with returned bucket, saved XP/assets/HP and logout. Evidence .practice/microbot-ports/native-magic-tanning/. Lunar Superglass Make is absent; supply/bank routes and live release remain separate."
     }
   },
   {
@@ -35941,7 +35944,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -35950,7 +35953,8 @@
         "matchCount": 35
       },
       "scriptCount": 1,
-      "sourceFileCount": 6
+      "sourceFileCount": 6,
+      "nativePractice": "Native practice passes the11 jewellery item-spell conversions, within the21 item-spell cases. Evidence .practice/microbot-ports/native-magic-tanning/. Bank replenishment and live release remain separate."
     }
   },
   {
