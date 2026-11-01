@@ -45,7 +45,7 @@ export function bettySupplyChecks(before:Save,after:Save,r:Run){const spent=amou
  coins:Number.isSafeInteger(spent)&&spent>0&&spent<=2000&&total(before,995)-total(after,995)===spent&&total(after,995)>=30000,
  assets:unchanged(before,after,[557,995])&&bank(after,554)===1482,health:Number.isFinite(r.hpMin)&&r.hpMin>0,
 };}
-const files=['scripts/buy-owned-ge-item.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
+const files=['scripts/buy-owned-ge-item.ts','scripts/earth-shop.ts','scripts/earth-shop.test.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
 const source=()=>({runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
 export function verifyShopSupply(directory:string){
