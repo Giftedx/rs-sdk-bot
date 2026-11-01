@@ -218,16 +218,18 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),accounts,base),plan=mergedPlan(JSON.parse(raw),own),now=Date.now();
  const existing=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===account.toLowerCase()));
  const holds=loadHolds(join(base,'.practice/swarm-script-holds.json'));
+ const settledOwnerJob=(job:any,name:string,end:any)=>job?.coordinatorOwner!=='coordinator'&&job?.enabled===false&&(!end||!persistentEnd(end.reason))&&readLogoutProof(name,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed';
  for(const participant of accounts){
   if(!(options.recoveryPreflight&&participant===task.sessionRecovery?.account))liveLogoutRef(participant,base);
   if(openHold(holds,participant,script))throw Error('failed script still held for '+participant+': '+script);
  }
  for(const participant of accounts.filter(n=>n.toLowerCase()!==account.toLowerCase())){
   const occupied=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===participant.toLowerCase()));
+  const ended=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===participant.toLowerCase())?.[1];
   if(occupied&&(!occupied.script||/fresh.clock|24 boards|main simultaneous/i.test(occupied.goal??'')))throw Error('participant has a protected reservation: '+participant);
-  if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
+  if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!settledOwnerJob(occupied,participant,ended)&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
   if(existsSync(join(base,'.practice','stop-'+participant)))throw Error('participant has an owner stop file');
-  const ended=loadEnded(join(base,'.practice/swarm-deaths.json')).get(participant);if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended))throw Error('participant needs verified recovery');
+  if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended))throw Error('participant needs verified recovery');
   if(rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result))throw Error('participant session not settled');
  }
  const reserved=existing&&(!existing.script||/fresh.clock|24 boards|main simultaneous/i.test(existing.goal??''));
@@ -256,7 +258,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  const releasedByRecovery=!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob&&existing.enabled===false&&recovered(account);
  // A disabled hand job whose account has no persistent end and a confirmed producer logout is settled: the owner
  // stopped the work and no session holds the account, so a new mission installs without an ok result or a recovery.
- const settled=handJob&&existing.enabled===false&&(!end||!persistentEnd(end.reason))&&readLogoutProof(account,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed';
+ const settled=handJob&&settledOwnerJob(existing,account,end);
  if(existing?.standing===true&&existing.enabled&&!parkedForRecovery)throw Error('account runs an owner standing job: '+existing.script);
  if(handJob&&!parkedForRecovery&&!releasedByRecovery&&!settled){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
