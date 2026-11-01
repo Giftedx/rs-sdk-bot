@@ -163,9 +163,10 @@ function runRules(state:CoordinatorState,liveLimit:number){
 // Opens staged delivery PRs (delivery-pr.ts) beside the loop: git and gh never hold dispatch or live delivery.
 let deliveryPrs:Promise<void>|undefined;
 function openDeliveryPrs(){
- deliveryPrs??=processDeliveryPrs(coordinationDir,projectRoot).then(({opened,failed})=>{
+ deliveryPrs??=processDeliveryPrs(coordinationDir,projectRoot).then(({opened,failed,conflicts})=>{
   for(const pr of opened)event('delivery-pr-opened',{task:pr.taskId,branch:pr.branch,state:pr.state,url:pr.url});
   for(const pr of failed)event('delivery-pr-failed',{task:pr.taskId,branch:pr.branch,attempts:pr.attempts,nextAt:pr.nextAt,error:pr.lastError});
+  for(const pr of conflicts)event('delivery-pr-conflict',{task:pr.taskId,branch:pr.branch,error:pr.lastError});
  }).catch(error=>event('delivery-pr-failed',String(error))).finally(()=>{deliveryPrs=undefined;});
 }
 async function tick(state:CoordinatorState,config:any){

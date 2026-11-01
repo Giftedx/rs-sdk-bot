@@ -4,7 +4,7 @@ import {freemem} from 'node:os';
 import {createHash} from 'node:crypto';
 import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
 import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
-import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
+import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask,importClosure} from './delivery-cli';
 import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
 import {readWorld,parseModelObject} from './coordinator-planner';
 import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
@@ -129,7 +129,7 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
    const out=publishWorkspace(mainRoot!,definition.id,definition.files);atomicJson(join(directory,'publish.json'),{...out,at:Date.now(),from:projectRoot,to:mainRoot});
    // The coordinator opens the PR later (delivery-pr.ts); a staging failure never fails the delivered build.
    let deliveryPr:any=null;
-   try{const pr=stageDeliveryPr({mainRoot:mainRoot!,runDir:directory,coordinationDir,taskId:task.id,capability:definition.id,files:out.published,result:{...result,published:out}});deliveryPr=pr&&{branch:pr.branch,state:pr.state};}
+   try{const pr=stageDeliveryPr({workspace:projectRoot,runDir:directory,coordinationDir,taskId:task.id,capability:definition.id,files:out.published,sourceSet:importClosure([definition.entry,...definition.files],projectRoot),result:{...result,published:out}});deliveryPr=pr&&{branch:pr.branch,state:pr.state};}
    catch(error){deliveryPr={error:String(error)};}
    return{...result,published:out,deliveryPr};
   }finally{if(existsSync(request)&&JSON.parse(readFileSync(request,'utf8')).runId===runId)unlinkSync(request);}
