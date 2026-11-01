@@ -62,7 +62,9 @@ export function inventoryRecipes():InventoryRecipe[]{
  for(const row of blocks('scripts/skill_fletching/configs/bolts/bolts.dbrow')){
   const input=field(row.body,'item'),value=field(row.body,'product');if(!input||!value)continue;
   const [product,units]=value.split(','),tips=product!.endsWith('bolttips');
-  add((tips?'bolt-tips:':'tip-bolts:')+product,[input,...(tips?[]:['bolt'])],product!,'Fletching',Number(field(row.body,'level')),true,'scripts/skill_fletching/scripts/bolts.rs2',tips?['chisel']:[],true);
+  const label=(tips?'bolt-tips:':'tip-bolts:')+product;
+  const name=recipes.some(r=>r.name===label)?label+':'+input:label;
+  add(name,[input,...(tips?[]:['bolt'])],product!,'Fletching',Number(field(row.body,'level')),true,'scripts/skill_fletching/scripts/bolts.rs2',tips?['chisel']:[],true);
   const recipe=recipes.at(-1)!;recipe.productUnits=Number(units);if(!tips)for(const ingredient of recipe.inputs)ingredient.units=Number(units);
  }
  const param=(body:string,key:string)=>body.match(new RegExp('^param='+key+',(.+)$','m'))?.[1]?.trim();
@@ -104,6 +106,7 @@ export function inventoryRecipes():InventoryRecipe[]{
  add('prepare:uncooked-pizza',['incomplete_pizza','cheese'],'uncooked_pizza','Cooking',35,false,pizza);
  for(const [topping,product,level,members] of [['cooked_meat','meat_pizza',45,false],['cooked_chicken','meat_pizza',45,false],['anchovies','anchovie_pizza',55,false],['pineapple_ring','pineapple_pizza',65,true],['pineapple_chunks','pineapple_pizza',65,true]] as const)
   add('top-pizza:'+topping,['plain_pizza',topping],product,'Cooking',level,true,pizza,[],members);
+ if(new Set(recipes.map(r=>r.name)).size!==recipes.length)throw Error('duplicate inventory production profile');
  return recipes;
 }
 export function productionEffect(r:InventoryRecipe,b:ProductionSnapshot,a:ProductionSnapshot):'none'|'made'|'loss'|'invalid'{

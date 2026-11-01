@@ -2,6 +2,7 @@ import {test,expect} from 'bun:test';
 import {inventoryRecipes,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
 test('every inventory recipe resolves native IDs and preserves tools in its receipt',()=>{
  const recipes=inventoryRecipes();expect(recipes.length).toBeGreaterThanOrEqual(20);
+ expect(new Set(recipes.map(r=>r.name)).size).toBe(recipes.length);
  const gem=recipes.find(r=>r.name==='cut-sapphire')!;
  const b={items:{[gem.inputs[0]!.id]:1,[gem.tools[0]!]:1},xp:100};
  const a={items:{[gem.product]:1,[gem.tools[0]!]:1},xp:150};
@@ -37,6 +38,9 @@ test('native bankstanding recipes include herb identification and named mixtures
  expect(recipes.find(r=>r.name==='brew:3dose1attack')!.inputs.length).toBe(2);
  expect(recipes.find(r=>r.name==='brew:unf_guam_potion')).toMatchObject({level:3,xp:false});
  expect(recipes.find(r=>r.name==='darts:bronze_dart')!.productUnits).toBe(10);
+ const small=recipes.find(r=>r.name==='bolt-tips:pearl_bolttips')!,large=recipes.find(r=>r.name==='bolt-tips:pearl_bolttips:bigoysterpearls')!;
+ expect(small.product).toBe(large.product);expect(small.inputs[0]!.id).not.toBe(large.inputs[0]!.id);
+ expect([small.productUnits,large.productUnits]).toEqual([6,24]);
 });
 test('dough and cake require exact returned containers',()=>{
  const r=inventoryRecipes().find(r=>r.name==='dough:bread:jug_water')!,items=Object.fromEntries(r.inputs.map(i=>[i.id,i.units]));
