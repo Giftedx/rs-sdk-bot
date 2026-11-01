@@ -1,12 +1,12 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
-function handoff(mode:'publication'|'reset-publication'|'wrong-item'){
+function handoff(mode:'publication'|'reset-publication'|'wrong-item'|'refused'|'no-credit'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
  let phase=0,accepts=0,pending;
  const pack=n=>Array.from({length:n},()=>({id:1436,count:1,slot:0}));
  const make=(name,giver)=>{const a={name,tick:()=>phase};a.trade={isOpen:true,screen:'confirm',partner:giver?'Crafter':'Carrier',myAccepted:false,myOffer:giver?pack(27):[],theirOffer:giver?[]:pack(27)};
- a.sdk={getInventory:()=>giver?pack(phase===0?27:0):pack(phase>=2?27:0),getState:()=>({trade:a.trade,nearbyPlayers:[]}),scanGroundItems:async()=>{},sendAcceptTrade:async()=>{accepts++;a.trade.myAccepted=true;return{success:true}}};return a;};
+ a.sdk={getInventory:()=>giver?pack(phase===0?27:0):pack(phase>=2&&'${mode}'!=='no-credit'?27:0),getState:()=>({trade:a.trade,nearbyPlayers:[]}),scanGroundItems:async()=>{},sendAcceptTrade:async()=>{accepts++;if('${mode}'==='refused')return{success:false,message:'declined'};a.trade.myAccepted=true;return{success:true}}};return a;};
  const s=make('Crafter',false),h=make('Carrier',true);
  if('${mode}'==='wrong-item'){s.trade.theirOffer=[{id:995,count:27}];h.trade.myOffer=[{id:995,count:27}];}
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
@@ -26,4 +26,10 @@ test('wrong confirmation stock still refuses before either accept',()=>{
 });
 test('sent confirmation survives an acceptance flag reset before inventory publication',()=>{
  const result=handoff('reset-publication');expect(result.error).toBe('');expect(result.accepts).toBe(2);expect(result.received).toBe(27);
+});
+test('a refused confirmation does not count as sent',()=>{
+ const result=handoff('refused');expect(result.error).toContain('carrier confirmation refused declined');expect(result.received).toBe(0);
+});
+test('sent confirmations still require both inventory publications',()=>{
+ const result=handoff('no-credit');expect(result.error).toContain('essence transfer did not reconcile');expect(result.received).toBe(0);
 });
