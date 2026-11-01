@@ -23,7 +23,8 @@ export function installViewerBridge(host:any) {
     let filterLoaded=false;const held:(()=>void)[]=[];
     const fnv=(value:string)=>{let h=0x811c9dc5;for(let i=0;i<value.length;i++){h^=value.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');};
     const undo:(()=>void)[]=[];
-    const emit=(detail='A geometry frame was presented; terrain streaming may continue.')=>{
+    // The loading text names the step still open: the private-name filter, or the first drawn frame.
+    const emit=(detail=!privacyReady?'Loading the 3D world… applying the name filter.':!renderReady?'Loading the 3D world… drawing the first frame.':'3D world ready.')=>{
         if(host.parent===host)return;
         const state=failed?'error':privacyReady&&renderReady?'ready':'loading';
         host.parent.postMessage({viewerState:{state,privacyReady,renderReady,feedConnected,detail}},host.location.origin);
