@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793500532831,
+  "exportedAt": 1793500592886,
   "sources": {
     "state": {
-      "observedAt": 1793500403409.9307,
-      "ageMs": 129421.0693359375,
-      "stale": true,
+      "observedAt": 1793500586904.139,
+      "ageMs": 5981.861083984375,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793500532317,
-      "ageMs": 514,
+      "observedAt": 1793500592496,
+      "ageMs": 390,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 177082.19458007812,
+      "ageMs": 237137.19458007812,
       "stale": true,
       "error": null
     }
@@ -27,26 +27,16 @@
     "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": null
+    "planner": {
+      "runId": "plan-80cfe9c9-a54b-4ec5-a70f-9c4eb0072557",
+      "agent": "claude",
+      "startedAt": 1793500586864,
+      "processState": "alive"
+    }
   },
   "workers": {
     "claude": {
-      "running": [
-        {
-          "id": "build-combat-giant-style-1",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "cow-progress-order",
-          "runId": "task-9697598f-140a-4e47-a7b0-48ed2f47de0c",
-          "startedAt": 1793498244478,
-          "recordStatus": "running",
-          "pid": 22156,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": true,
-          "blocker": null
-        }
-      ],
+      "running": [],
       "pending": [],
       "failed": [
         {
@@ -508,6 +498,16 @@
           "startedAt": 1793487363160,
           "at": 1793488021960,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-combat-giant-style-1",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-9697598f-140a-4e47-a7b0-48ed2f47de0c",
+          "startedAt": 1793498244478,
+          "at": 1793500585440,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": null,
@@ -536,7 +536,7 @@
           "pid": 23188,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         },
         {
@@ -550,7 +550,7 @@
           "pid": 11148,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         }
       ],
@@ -3872,7 +3872,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-1",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3887,7 +3887,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-1",
-              "status": "running"
+              "status": "failed"
             },
             {
               "id": "qualify-combat-giant-style-1",
