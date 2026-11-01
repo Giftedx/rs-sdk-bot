@@ -49,15 +49,20 @@ export function decodeAppearance(b64:string):Appearance|null{
  return {name:name37(v),combat:u1(),worn};
 }
 
-// Worn items of an online player: a short world feed subscription around their tile, until their appearance block
-// arrives (4 s at most). It holds one of the feed's client slots (128 on the server) only for that time.
-export function readWorn(feed:string,name:string,seen:{x:number;z:number},objs:Map<number,{name:string}>,ms=4000):Promise<{slot:string;name:string}[]|null>{
+// Worn items of an online player: a short world feed subscription around them, until their appearance block
+// arrives (6 s at most). It holds one of the feed's client slots (128 on the server) only for that time. The
+// lookup's position can be 10 ticks old and a running player moves 2 tiles a tick, so the socket also reads the
+// roster (every 10 ticks) and moves its 21x21 square to where the roster last saw the player.
+export function readWorn(feed:string,name:string,seen:{x:number;z:number},objs:Map<number,{name:string}>,ms=6000):Promise<{slot:string;name:string}[]|null>{
  return new Promise(resolveWorn=>{
-  let done=false;const ws=new WebSocket(feed);
+  let done=false;const ws=new WebSocket(feed),key=name.toLowerCase();let at={x:seen.x,z:seen.z};
   const finish=(v:{slot:string;name:string}[]|null)=>{if(done)return;done=true;clearTimeout(timer);try{ws.close();}catch{/* closed */}resolveWorn(v);};
   const timer=setTimeout(()=>finish(null),ms);
-  ws.onopen=()=>ws.send(JSON.stringify({t:'sub',x:seen.x-4,z:seen.z-4,w:9,h:9}));
-  ws.onmessage=e=>{try{const m=JSON.parse(String(e.data));if(m.t!=='tick')return;for(const r of m.p??[]){if(typeof r.ap!=='string')continue;const a=decodeAppearance(r.ap);if(a&&a.name===name.toLowerCase())finish(a.worn.map(w=>({slot:WEAR_SLOTS[w.slot]??String(w.slot),name:objs.get(w.obj)?.name??'item '+w.obj})));}}catch{/* next message */}};
+  const sub=()=>ws.send(JSON.stringify({t:'sub',x:at.x-10,z:at.z-10,w:21,h:21}));
+  ws.onopen=()=>{sub();ws.send(JSON.stringify({t:'roster',on:true}));};
+  ws.onmessage=e=>{try{const m=JSON.parse(String(e.data));
+   if(m.t==='roster'){const p=(m.p??[]).find((r:any)=>Array.isArray(r)&&String(r[1]).toLowerCase()===key);if(p&&(Math.abs(p[2]-at.x)>6||Math.abs(p[3]-at.z)>6)){at={x:p[2],z:p[3]};sub();}return;}
+   if(m.t!=='tick')return;for(const r of m.p??[]){if(typeof r.ap!=='string')continue;const a=decodeAppearance(r.ap);if(a&&a.name===key)finish(a.worn.map(w=>({slot:WEAR_SLOTS[w.slot]??String(w.slot),name:objs.get(w.obj)?.name??'item '+w.obj})));}}catch{/* next message */}};
   ws.onerror=()=>finish(null);
  });
 }
