@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793507142014,
+  "exportedAt": 1793507742742,
   "sources": {
     "state": {
-      "observedAt": 1793507118044.2737,
-      "ageMs": 23969.726318359375,
+      "observedAt": 1793507724481.725,
+      "ageMs": 18260.27490234375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793507141771,
-      "ageMs": 243,
+      "observedAt": 1793507742081,
+      "ageMs": 661,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 1716720.2834472656,
+      "ageMs": 2317448.2834472656,
       "stale": true,
       "error": null
     }
@@ -531,14 +531,14 @@
     "codex": {
       "running": [
         {
-          "id": "run-iron-oreelse-owned-band90",
+          "id": "run-smithing-oreelse-iron-leg99",
           "kind": "run",
           "goal": "skills",
           "capability": "iron-progress-order",
-          "runId": "task-fd3fa85e-8c8f-4031-a943-d724889a5749",
-          "startedAt": 1793507117949,
+          "runId": "task-49589105-aa59-4d8d-9d8e-a7fd8b00fea8",
+          "startedAt": 1793507724431,
           "recordStatus": "running",
-          "pid": 13544,
+          "pid": 34804,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -665,16 +665,6 @@
           "runId": "task-8df6f374-3610-4b35-8290-d479ea0ea3b1",
           "startedAt": 1793337666891,
           "at": 1793337669333,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "run-firemaking-yewfirst-band30-admitted",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "firemaking-order",
-          "runId": "task-fd69adfc-fcf2-472d-adbe-f9f05421820e",
-          "startedAt": 1793334461507,
-          "at": 1793334471525,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2869,13 +2859,13 @@
         }
       ],
       "lastUsefulLive": {
-        "id": "run-monk-mightyrod-owned-inputs",
+        "id": "run-iron-oreelse-owned-band90",
         "kind": "run",
-        "goal": "quests",
-        "capability": "quest-sweep",
-        "runId": "task-041e7be9-a44a-468b-83f2-8629e4cfb9ef",
-        "startedAt": 1793506684576,
-        "at": 1793507037640,
+        "goal": "skills",
+        "capability": "iron-progress-order",
+        "runId": "task-fd3fa85e-8c8f-4031-a943-d724889a5749",
+        "startedAt": 1793507117949,
+        "at": 1793507620865,
         "evidence": "live"
       },
       "lastRecovery": {
@@ -3951,6 +3941,21 @@
             {
               "id": "qualify-combat-giant-style-3",
               "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-smithing-oreelse-bronze-finish99",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-smithing-oreelse-iron-leg99",
+              "status": "running"
             }
           ]
         }
