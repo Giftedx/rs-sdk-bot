@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {earthRefillAmount,earthSeedNeeded,earthRefillStop,buyEarthObserved} from './earth-shop';
+import {earthRefillAmount,earthSeedNeeded,earthRefillStop,buyEarthObserved,sellEarthSeedObserved} from './earth-shop';
 
 test('competing buyers must not make a single available refill unbuyable',()=>{
  expect(earthRefillAmount(0,1136)).toBe(0);
@@ -8,6 +8,14 @@ test('competing buyers must not make a single available refill unbuyable',()=>{
  expect(earthRefillAmount(1000,7)).toBe(1);
  expect(earthRefillAmount(1000,1136)).toBe(1);
  expect(()=>earthRefillAmount(NaN,1)).toThrow();
+});
+test('seed sale credit must arrive before a purchase can use its wallet baseline',async()=>{
+ let coins=1000,earth=1,tick=0;const listeners=new Set<()=>void>();
+ const inventory=()=>[{id:995,name:'Coins',count:coins},{id:557,name:'Earth rune',count:earth}];
+ const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),
+  sdk:{getInventory:inventory,getState:()=>({tick,inventory:inventory()})},bot:{sellToShop:async()=>{earth--;return{success:true};}}};
+ const clock=setInterval(()=>{tick++;if(tick===3)coins+=2;for(const cb of [...listeners])cb();},2);
+ try{expect(await sellEarthSeedObserved(s,()=>false)).toBe(2);expect(tick).toBeGreaterThanOrEqual(3);}finally{clearInterval(clock);}
 });
 test('an item packet before its coin debit cannot settle a purchase at zero cost',async()=>{
  let coins=1000,earth=0,tick=0;const listeners=new Set<()=>void>();

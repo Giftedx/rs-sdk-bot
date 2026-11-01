@@ -14,6 +14,16 @@ export function earthRefillAmount(shelf:number,missing:number){
 export const earthSeedNeeded=(shelf:number,carried:number,seeded:boolean)=>Number.isSafeInteger(shelf)&&shelf>=0&&carried>=1&&!seeded;
 export const earthRefillStop=(idle:number,affordable:boolean):'budget'|'stock-wait'|undefined=>!affordable?'budget':idle>=25?'stock-wait':undefined;
 
+export async function sellEarthSeedObserved(s:Session,stop:()=>boolean){
+ const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);
+ const earth=count(557),coins=count(995);if(earth<1)throw Error('earth seed is not owned');
+ await s.bot.sellToShop(/^earth rune$/i,1);
+ const paired=()=>count(557)===earth-1&&count(995)>coins;
+ if(!await waitUntil(s,()=>stop()||paired(),{timeoutTicks:10})||stop()||!paired())
+  throw Error('earth seed debit/positive credit unobserved; zero-price sale remains unresolved');
+ return count(995)-coins;
+}
+
 // Item and coin packets need not arrive in the same publication. Price the observed paired change.
 export async function buyEarthObserved(s:Session,n:number,reserve:number,remaining:number,stop:()=>boolean){
  if(n!==1)throw Error('earth settlement requires one purchase packet');
@@ -76,11 +86,8 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
    if(!(await s.bot.openShop(conf.npc)).success||!await waitUntil(s,()=>st()?.shop.isOpen===true&&shelf()!==undefined,{timeoutTicks:10}))throw Error('earth refill shop unobserved');
    console.log('EARTH_REFILL_SHELF '+JSON.stringify({tick:s.tick(),count:shelf(),carried:held(557)}));
    if(earthSeedNeeded(shelf()!,held(557),o.seedUsed===1)){
-    const earth=held(557),coins=held(995);uncertain=true;
-    await s.bot.sellToShop(/^earth rune$/i,1);
-    if(!await waitUntil(s,()=>held(557)===earth-1&&held(995)>=coins,{timeoutTicks:10}))throw Error('earth seed debit/credit unobserved');
-    await waitTicks(s,1);
-    seeded=1;seedCredit=held(995)-coins;uncertain=false;lastProgress=s.tick();
+    uncertain=true;seedCredit=await sellEarthSeedObserved(s,over);
+    seeded=1;uncertain=false;lastProgress=s.tick();
     console.log('EARTH_REFILL_SEED '+JSON.stringify({tick:s.tick(),seeded,seedCredit,count:shelf()}));
    }
    lastProgress=s.tick();let previous=shelf();
