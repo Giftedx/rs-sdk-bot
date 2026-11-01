@@ -16,3 +16,9 @@ export function trawlerInterruption(before:BotWorldState,after:BotWorldState){
  if(insideLegacyTrawler(before)&&insideLegacyTrawler(after)&&Math.floor(before.player!.worldX/64)!==Math.floor(after.player!.worldX/64))return 'flood-form' as const;
  return null;
 }
+
+// Solo inflow can add four water on each five-tick timer event.
+// Ten water leaves room for four events (16 water) below the 30 flood threshold.
+export function trawlerNetWindow(ripped:boolean,water:number,activeLeaks:number){
+ return ripped&&Number.isInteger(water)&&water>=0&&water<=10&&activeLeaks===0;
+}

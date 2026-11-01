@@ -4,7 +4,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
-import {insideLegacyTrawler,trawlerEffect,trawlerInterruption} from './microbot-trawler-trip-effects';
+import {insideLegacyTrawler,trawlerEffect,trawlerInterruption,trawlerNetWindow} from './microbot-trawler-trip-effects';
 import {runVisibleGroundLoot} from './microbot-b-mining-loot';
 export function trawlerCatchRows(component:{linkObjType:ArrayLike<number>|null;linkObjNumber:ArrayLike<number>|null}|undefined){
  if(!component?.linkObjType||!component.linkObjNumber)throw Error('owned trawler reward inventory unavailable');
@@ -42,13 +42,13 @@ export async function runTrawlerTrip(s:Session,o:{cap:number;stop?:()=>boolean;c
    const target=state.nearbyLocs.find(l=>[2172,2173].includes(l.id));
    if(target){if(held(954)<1)throw Error('trawler rope exhausted');const before=st();await loc(target.id);let effect=false;await wait(()=>{effect=trawlerEffect(before,st(),'net');return won()||effect||st().gameMessages.some(m=>m.tick>before.tick&&/fail to repair the net/.test(m.text))},10);if(won())break;if(effect){nets++;ripped=false;}}
    else ripped=false;
-   if(!ripped||flooded)await ladder(0);else await step();
+   await ladder(0);
   }else{
    const leak=state.nearbyLocs.filter(l=>l.id===2167).sort((a,b)=>a.distance-b.distance)[0];
-   if(ripped&&water<=60){await ladder(1);}
+   if(trawlerNetWindow(ripped,water,state.nearbyLocs.filter(l=>l.id===2167).length)){console.log('TRAWLER_NET_WINDOW '+JSON.stringify({tick:s.tick(),water,activeLeaks:0}));await ladder(1);}
    else if(leak){if(held(1941)<1)throw Error('trawler paste exhausted');const before=st();await loc(2167);const result=await effectWait(before,'leak','fill',12);if(result.effect)leaks++;if(won())break;if(!result.effect&&!result.interrupted)throw Error('trawler leak effect absent');}
    else if(flooded){const before=st(),bucket=inv().find(i=>i.id===583);if(!bucket)throw Error('bailing bucket absent');if(!(await s.sdk.sendUseItem(bucket.slot,1)).success)throw Error('trawler bailing refused');const result=await effectWait(before,'bail','fill',8);if(result.effect)bails++;if(won())break;if(!result.effect&&!result.interrupted)throw Error('trawler bailing failed');}
-   else if(ripped)await ladder(1);else await step();
+   else await step();
   }
  }
  if(!await wait(()=>st().player?.level===0&&Math.floor(st().player!.worldZ/64)===49,40)||!won())throw Error('trawler win unobserved');

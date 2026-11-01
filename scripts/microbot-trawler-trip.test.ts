@@ -21,3 +21,15 @@ test('only the native rip dialog and flood form explain a cancelled pending acti
  expect(trawlerInterruption(a,{...a,dialog:{isOpen:true,isWaiting:false,options:[],text:'Another modal'}})).toBeNull();
  expect(trawlerInterruption(a,a)).toBeNull();
 });
+
+import {trawlerNetWindow} from './microbot-trawler-trip-effects';
+test('net excursions leave active leaks and high water to the hold crew',()=>{
+ expect(trawlerNetWindow(true,7,0)).toBe(true);
+ expect(trawlerNetWindow(true,7,1)).toBe(false);
+ expect(trawlerNetWindow(true,10,0)).toBe(true);
+ expect(trawlerNetWindow(true,11,0)).toBe(false);
+ expect(trawlerNetWindow(true,20,0)).toBe(false);
+ expect(trawlerNetWindow(true,38,0)).toBe(false);
+ expect(trawlerNetWindow(true,60,3)).toBe(false);
+ expect(trawlerNetWindow(false,0,0)).toBe(false);
+});
