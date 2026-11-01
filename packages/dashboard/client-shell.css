@@ -108,3 +108,5 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .infobox.boost-up span{color:#0f0}.infobox.boost-down span{color:#f00}
 /* Player lookup: a level where the player is ahead of every fleet account. */
 .lookup-card .hs-cell.hs-ahead span{color:#ff5040}
+/* Info plugin rows: a label column and a value column that wraps. */
+.info-row{display:grid;grid-template-columns:7.5em 1fr;gap:2px 8px;font:11px Arial;color:#ccc;padding:2px 0}.info-row span:first-child{color:#999}

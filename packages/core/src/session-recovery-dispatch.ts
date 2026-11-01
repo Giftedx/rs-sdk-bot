@@ -2,7 +2,7 @@ import {appendFileSync,existsSync,readFileSync,renameSync,rmSync,mkdirSync,write
 import {createHash} from 'node:crypto';
 import {join,dirname} from 'node:path';
 import {launchPermittedRecovery,recoveryPermitPaths,validateRecoveryRequest,assertNativeFixtureRoot,assertRecoveryNotStopped,FLEET_REFUSALS,type ControlledRecoveryRequest} from './session-recovery-permit';
-import {launchRevision} from './worker-release';
+import {cachedLaunchRevision} from './worker-release';
 
 type ActiveRecovery={account:string;started:number;pid:number};
 type Launch={child:{pid:number};completion:Promise<unknown>};
@@ -50,7 +50,7 @@ export function createRecoveryDispatch(options:DispatchOptions){
   pendingReceipt=undefined;
  };
  const emit=(raw:string,result:unknown,archive?:string)=>{pendingReceipt={raw,result,archive,logged:false};flush();};
- const launch=options.launch??((r:ControlledRecoveryRequest)=>launchPermittedRecovery(r,base,options.nativeFixture?{nativeFixture:true,source:()=>launchRevision()}:{}));
+ const launch=options.launch??((r:ControlledRecoveryRequest)=>launchPermittedRecovery(r,base,options.nativeFixture?{nativeFixture:true,source:()=>cachedLaunchRevision()}:{}));
  return{
   get active():Readonly<ActiveRecovery>|undefined{return active?{...active}:undefined;},
   handle(raw:string,admit=options.admit):boolean{

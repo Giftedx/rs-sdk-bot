@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView } from './world-view';
+import { contentionView, farmsView, hiscoreRows, lookupView, overtakeView, rivalsView, rosterView, valueBoardRows } from './world-view';
 
 const now = 1_000_000;
 const roster = new Map([
@@ -61,4 +61,12 @@ test('overtake gives the XP and hours to pass the next rows; a 99 that is slower
     const roomy = overtakeView(new Map([['Attack', { rows: [{ rank: 1, name: 'Far', level: 71, ticks: 27000 }] }]]), [{ ...acct, skills: [{ name: 'Attack', level: 70, xp: 70_990 }] }], xpFor)[0].targets[0];
     expect([roomy.goal, roomy.xpNeeded, roomy.deadline]).toEqual([71, 10, 7200]);
     expect(overtakeView(tops, [{ ...acct, goalSkill: 'Mining' }], xpFor)[0].targets[1].hours).toBeNull();
+});
+
+test('value boards: rank, name and exact value per row; only the first table (Runite adds This week and Today)', () => {
+    const row = (rank: number, name: string, cell: string, img = '') => `<tr>\n<td align="right">${rank}</td>\n${img}<td><a href="/hiscores/player/${name}?profile=main" class="c">${name}</a></td>\n${cell}\n</tr>`;
+    const outfit = row(1, 'soko', '<td align="right" class="yellow" title="1,366,450 gp">1366K</td>', '<td><img src="/sprite/player/x.png"></td>\n') + row(2, 'brotha', '<td align="right" class="yellow" title="1,149,713 gp">1149K</td>');
+    expect(valueBoardRows('<table>' + outfit + '</table>')).toEqual([{ rank: 1, name: 'soko', value: 1366450, text: '1366K' }, { rank: 2, name: 'brotha', value: 1149713, text: '1149K' }]);
+    const runite = row(1, 'xulvexi', '<td align="right" class="yellow">2,463</td>') + row(2, 'goo001', '<td align="right" class="yellow">1,948</td>') + row(1, 'ukwih8pbm', '<td align="right" class="yellow">338</td>');
+    expect(valueBoardRows(runite).map(r => [r.rank, r.name, r.value])).toEqual([[1, 'xulvexi', 2463], [2, 'goo001', 1948]]);
 });
