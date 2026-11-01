@@ -7,6 +7,7 @@ import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
 import {equipmentObserved} from '../packages/core/src/container-observation';
+import {productionMode} from './earth-production';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
 // expectedOwned (EXPECTED_OWNED) authorizes topping up exactly that many already held units. Absent, any held unit refuses the order.
 export interface ItemRequest {actor:string;server:string;goal:string;item:number;quantity?:number;expectedOwned?:number;rescueMode?:'npc-respawn-once';limit:number;reserve:number;createdAt:number;reviewAt:number;deadline:number}
@@ -59,12 +60,12 @@ export function orderAccounting(journal?:ItemOrder){
 // A different finite acquisition method may use a fully refunded zero-fill intent, never an unresolved offer.
 export function earthShopFallback(request:ItemRequest,journal:ItemOrder|undefined,cap:number,spent=0,profile='aubury'){
  validateRequest(request);const q=orderQuantity(request),a=orderAccounting(journal);
- const refill=profile.endsWith('-refill'),shop=refill?profile.slice(0,-7):profile;
+ const production=productionMode(profile),refill=profile.endsWith('-refill'),shop=refill?profile.slice(0,-7):profile;
  if(!journal||journal.phase!=='settled'||JSON.stringify(journal.request)!==JSON.stringify(request)
   ||request.item!==557||request.rescueMode||request.expectedOwned===undefined||journal.itemsBefore!==request.expectedOwned
   ||a.outcomeUnresolved||a.escrow!==0||a.acquired!==0||a.spent!==0||a.refund!==orderEscrow(request)
-  ||!['aubury','betty'].includes(shop)||!Number.isSafeInteger(cap)||cap<1||cap>(refill?16000:shop==='betty'?3000:1600)||!Number.isSafeInteger(spent)||spent<0||spent>=orderEscrow(request))throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and bounded shop cap');
- return{entry:refill?'scripts/earth-shop.ts':'scripts/shop-buyer.ts',args:[shop,String(cap),'2000'],env:{ITEMS:'earth rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(request.expectedOwned+q),MAX_ITEMS:String(q),
+  ||!production&&!['aubury','betty'].includes(shop)||!Number.isSafeInteger(cap)||cap<1||cap>(production?20000:refill?16000:shop==='betty'?3000:1600)||!Number.isSafeInteger(spent)||spent<0||spent>=orderEscrow(request))throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and bounded acquisition cap');
+ return{entry:production?'scripts/earth-production.ts':refill?'scripts/earth-shop.ts':'scripts/shop-buyer.ts',args:production?[production,String(cap)]:[shop,String(cap),'2000'],env:{ITEMS:'earth rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(request.expectedOwned+q),MAX_ITEMS:String(q),
   MAX_SPEND:String(orderEscrow(request)-spent),COIN_RESERVE:String(request.reserve),FLOAT:String(request.reserve+orderEscrow(request)-spent),NO_BUY_TICKS:'25',BANK_PACK:'1'}};
 }
 export function shopFallbackSpent(state:any,request:ItemRequest){
