@@ -33,9 +33,11 @@ export function bestBow(owned:readonly Item[],ranged:number){
  return BOWS.filter(b=>b.req<=ranged&&count(owned,b.id)>0).reduce<typeof BOWS[number]|undefined>((best,b)=>!best||b.req>best.req?b:best,undefined);
 }
 export const usableArrows=(bowReq:number,ranged:number)=>ARROWS.filter(a=>a.req<=bowReq&&a.req<=ranged).map(a=>a.id);
-// Prefer the strongest owned usable arrow, then the largest stack within that tier.
-export function chooseArrow(owned:readonly Item[],bowReq:number,ranged:number){
- return usableArrows(bowReq,ranged).map(id=>({id,count:count(owned,id)})).filter(a=>a.count>0).sort((a,b)=>b.id-a.id)[0];
+// The strongest owned usable arrow whose stack can start a trip (at least MIN_TRIP_ARROWS). A stronger stack too small
+// for a trip gives way to a weaker usable one instead of stopping the order.
+export const MIN_TRIP_ARROWS=3;
+export function chooseArrow(owned:readonly Item[],bowReq:number,ranged:number,min=MIN_TRIP_ARROWS){
+ return usableArrows(bowReq,ranged).map(id=>({id,count:count(owned,id)})).filter(a=>a.count>=min).sort((a,b)=>b.id-a.id)[0];
 }
 export function rangedEntry(p:{worldX:number;worldZ:number;level:number}|null|undefined){
  if(!p||p.level!==0)return null;
@@ -163,7 +165,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
    await deposit([BONES,CHICKEN,FEATHER,...ARROW_IDS]);
    const bow=bestBow(owned(),level());if(!bow)throw Error('ranged-train prerequisite: no owned bow usable at Ranged '+level());
    if(sum(owned(),usableArrows(bow.req,level()))<o.minArrows)await restock(bow.req);
-   const arrow=chooseArrow(owned(),bow.req,level());if(!arrow||arrow.count<3){stop='ammo-short';break;}
+   const arrow=chooseArrow(owned(),bow.req,level());if(!arrow){stop='ammo-short';break;}
    if(count(owned(),foodId)<o.food)await stageFood();
    const food=Math.max(0,o.food-held(foodId));if(stored(foodId)<food)throw Error('ranged-train prerequisite: stage unnoted food '+foodId);
    // Bow, quiver stack, food, two displaced melee items, two non-stacking drops per kill and feathers.

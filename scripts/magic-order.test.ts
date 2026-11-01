@@ -100,6 +100,10 @@ test('only checked banks and central Varrock are supported starts',()=>{
  expect(startRegion({x:3092,z:3243,level:0})).toBe('draynor');
  expect(startRegion({x:3185,z:3436,level:0})).toBe('varrock-west');
  expect(startRegion({x:3253,z:3420,level:0})).toBe('varrock-east');
+ // The Falador and Camelot teleport cleanups end at these banks; the next order starts from them.
+ expect(startRegion({x:2946,z:3370,level:0})).toBe('falador');
+ expect(startRegion({x:2725,z:3491,level:0})).toBe('seers');
+ expect(startRegion({x:2946,z:3370,level:1})).toBeNull();
  expect(startRegion({...CAST_SITE,level:0})).toBe('varrock');
  expect(startRegion({x:3253,z:3402,level:0})).toBe('varrock');
  expect(startRegion({x:3222,z:3218,level:0})).toBeNull();

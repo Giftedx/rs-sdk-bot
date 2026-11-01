@@ -8,10 +8,10 @@
 // plus a Magic XP rise. Shop: scripts/shop-buyer.ts PROFILES.aubury, maximumUnitCost and buyWithBudget (reuse).
 // Routes: scripts/train-chickens.ts chickenTrainingProfile legs (reuse, danger-checked in that source).
 // Acceptance belongs to packages/practice/src/magic-order-proof.ts.
-import {openBot,finish,randomEventsOf} from '../packages/core/src/bot';
+import {openBot,finish,randomEventsOf,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil,type TickSource} from '../packages/core/src/ticks';
-import {walkPath,sessionWalker,type PathPoint} from '../packages/core/src/walk';
+import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {componentId} from '../packages/core/src/logout';
 import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
@@ -80,6 +80,8 @@ export function teleportEffect(t:Teleport,costs:RuneCounts,before:RuneCounts&{xp
 export const WIND_STRIKE={level:1,air:1,mind:1,xp:5.5,component:'magic:wind_strike'} as const;
 type Tile={x:number;z:number};
 export const BANKS={draynor:{x:3092,z:3243},varrockWest:{x:3185,z:3436},varrockEast:{x:3253,z:3420}} as const;
+// The banks the Falador and Camelot teleport cleanup ends at (the walks in the cleanup below).
+export const CLEANUP_BANKS={falador:{x:2946,z:3370},seers:{x:2725,z:3491}} as const;
 // research/route-danger.ts: Varrock East bank -> 3244,3407 and Varrock West bank -> 3244,3407 pass 0 aggressive
 // spawns (margin 3). The shop door 3253,3398 passes 7 tiles from the mugger at 3249,3391 (reach 8). The mugger
 // (all.npc: strength 5, strengthbonus -21) and the men and women here hit at most 1, so an HP10 account survives
@@ -120,13 +122,16 @@ export function magicPreflight(o:Pick<MagicOptions,'target'>,level:number,plane:
  return null;
 }
 const d8=(a:Tile,b:Tile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
-export type Region='draynor'|'varrock-west'|'varrock-east'|'varrock';
-// Supported starts: a checked bank, or anywhere in central Varrock (an interrupted cast or shop visit).
+export type Region='draynor'|'varrock-west'|'varrock-east'|'varrock'|'falador'|'seers';
+// Supported starts: a checked bank, anywhere in central Varrock (an interrupted cast or shop visit), or a bank a
+// teleport cleanup ends at (Falador, Seers), from which the shared route planner walks to Varrock East bank first.
 export function startRegion(p:{x:number;z:number;level:number}):Region|null{
  if(p.level!==0)return null;
  if(d8(p,BANKS.draynor)<=8)return 'draynor';
  if(d8(p,BANKS.varrockWest)<=6)return 'varrock-west';
  if(d8(p,BANKS.varrockEast)<=6)return 'varrock-east';
+ if(d8(p,CLEANUP_BANKS.falador)<=6)return 'falador';
+ if(d8(p,CLEANUP_BANKS.seers)<=6)return 'seers';
  return p.x>=3170&&p.x<=3270&&p.z>=3380&&p.z<=3450?'varrock':null;
 }
 // Draynor bank -> Varrock East bank: the Draynor chicken leg up to 3200,3310, then the Varrock leg from 3200,3348
@@ -254,7 +259,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   magic:{level:level(),xp:xp0},pack:{air:pack(AIR),mind:pack(MIND),coins:pack(COINS)},inventory:project(s.sdk.getInventory()),equipment:project(s.sdk.getEquipment())}));
  const refusal=magicPreflight(o,level(),pos()!.level);
  if(refusal){r.stop=refusal;r.ticks=s.tick()-start;return r;}
- const region=startRegion(at()!);
+ let region=startRegion(at()!);
  if(!region){r.stop='unsupported start region';r.failure=`no checked route from ${JSON.stringify(at())}`;return r;}
  const airCost=s.sdk.getEquipment().some(i=>AIR_STAFF.test(i.name))?0:WIND_STRIKE.air;
  // `moved` turns on at the first withdrawal. A refusal before it leaves every item in place.
@@ -369,6 +374,11 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  try{
   // Entry bank: observe owned runes and coins before any purchase or cast.
   r.stop='entry-bank';
+  if(region==='falador'||region==='seers'){
+   const moved=await goTo(s,await getWorld(),{...BANKS.varrockEast,level:0},accountOf(s),{legTimeoutTicks:100});
+   if(!moved.ok)throw Error(`no route from the ${region} cleanup bank to Varrock East bank: ${JSON.stringify(moved)}`);
+   region='varrock-east';
+  }
   if(region==='varrock')await walk([{...BANKS.varrockEast,tol:2}],'entry bank');
   await openBank();
   const owned={air:pack(AIR)+banked(AIR),mind:pack(MIND)+banked(MIND),coins:pack(COINS)+banked(COINS)};entryCoins=owned.coins;

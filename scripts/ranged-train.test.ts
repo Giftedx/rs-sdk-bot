@@ -172,3 +172,10 @@ test('an owned bow and arrows unlocked by a kill are staged before the next targ
   expect(f.attacks.map(a=>a.kit.sort((a,b)=>a-b))).toEqual([[843,882],[849,888]]);
  }finally{f.close();}
 });
+
+test('a stronger arrow stack too small for a trip gives way to a usable weaker stack',()=>{
+ const owned=[{id:884,count:2},{id:882,count:500}] as any;
+ expect(chooseArrow(owned,1,1)?.id).toBe(882);
+ expect(chooseArrow([{id:884,count:40},{id:882,count:500}] as any,1,1)?.id).toBe(884);
+ expect(chooseArrow([{id:884,count:2}] as any,1,1)).toBeUndefined();
+});
