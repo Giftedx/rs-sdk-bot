@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793513840973,
+  "exportedAt": 1793514442079,
   "sources": {
     "state": {
-      "observedAt": 1793513781611.0793,
-      "ageMs": 59361.920654296875,
+      "observedAt": 1793514406627.5632,
+      "ageMs": 35451.436767578125,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793513839654,
-      "ageMs": 1319,
+      "observedAt": 1793514440196,
+      "ageMs": 1883,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 8415679.283447266,
+      "ageMs": 9016785.283447266,
       "stale": true,
       "error": null
     }
@@ -511,28 +511,14 @@
     "codex": {
       "running": [
         {
-          "id": "run-quest-blackknight-mightyrod",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-77a2d61e-9f29-46ec-a92a-a035bc19fe22",
-          "startedAt": 1793513496937,
-          "recordStatus": "running",
-          "pid": 24748,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        },
-        {
-          "id": "qualify-ge-shaftmaker-rune-shortfall",
+          "id": "qualify-recovery-shaftmaker-depleted-shop-end",
           "kind": "qualify",
           "goal": "skills",
-          "capability": "ge-bulk-order",
-          "runId": "task-e9ee7e3e-4b8b-4112-9fe2-7f95f3d70798",
-          "startedAt": 1793513781558,
+          "capability": "session-recovery-only",
+          "runId": "task-7d76f263-8a86-423d-8a08-948f6784a5df",
+          "startedAt": 1793514142117,
           "recordStatus": "running",
-          "pid": 2252,
+          "pid": 27004,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -540,21 +526,6 @@
         }
       ],
       "pending": [
-        {
-          "id": "run-ge-shaftmaker-falador-air14",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "ge-bulk-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-ge-shaftmaker-rune-shortfall",
-              "status": "running"
-            }
-          ]
-        },
         {
           "id": "run-ge-shaftmaker-falador-water2",
           "kind": "run",
@@ -565,11 +536,7 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-ge-shaftmaker-rune-shortfall",
-              "status": "running"
-            },
-            {
-              "id": "run-ge-shaftmaker-falador-air14",
+              "id": "run-ge-shaftmaker-recovered-falador-air14",
               "status": "pending"
             }
           ]
@@ -585,6 +552,36 @@
           "dependencies": [
             {
               "id": "run-ge-shaftmaker-falador-water2",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-recovery-shaftmaker-depleted-shop-end",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-recovery-shaftmaker-depleted-shop-end",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-ge-shaftmaker-recovered-falador-air14",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-recovery-shaftmaker-depleted-shop-end",
               "status": "pending"
             }
           ]
@@ -719,16 +716,6 @@
           "runId": "task-72f35eae-22cd-4356-956a-6a7ec7b014e2",
           "startedAt": 1793359184556,
           "at": 1793359186287,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "build-quest-sweep-pinned-gnome-crossing",
-          "kind": "build",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-b791ad86-82ef-41ae-88fa-f9b976224f08",
-          "startedAt": 1793341022625,
-          "at": 1793341606221,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2942,6 +2929,16 @@
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
+          "id": "run-quest-blackknight-mightyrod",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-77a2d61e-9f29-46ec-a92a-a035bc19fe22",
+          "startedAt": 1793513496937,
+          "at": 1793514156488,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
           "id": "run-recovery-shaftmaker-quote-free-slot",
           "kind": "run",
           "goal": "skills",
@@ -2949,6 +2946,16 @@
           "runId": "task-9d9cf9e4-a220-47fe-94a9-2e778c3fbcd8",
           "startedAt": 1793511834035,
           "at": 1793511845595,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-ge-shaftmaker-falador-air14",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ge-bulk-order",
+          "runId": "task-c38e6831-ad18-4b29-8b38-45e5e26e536d",
+          "startedAt": 1793514014700,
+          "at": 1793514017902,
           "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
@@ -2973,13 +2980,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-quest-sweep-stable-source-batch",
+        "id": "qualify-ge-shaftmaker-rune-shortfall",
         "kind": "qualify",
-        "goal": "quests",
-        "capability": "quest-sweep",
-        "runId": "task-b8cffb9e-fe38-4070-84a9-f64654f23f00",
-        "startedAt": 1793513376621,
-        "at": 1793513495600,
+        "goal": "skills",
+        "capability": "ge-bulk-order",
+        "runId": "task-e9ee7e3e-4b8b-4112-9fe2-7f95f3d70798",
+        "startedAt": 1793513781558,
+        "at": 1793514013416,
         "evidence": "qualify"
       }
     },
@@ -4132,7 +4139,7 @@
           "dependencies": [
             {
               "id": "run-quest-blackknight-mightyrod",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4161,7 +4168,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 3,
+    "reportedRunning": 2,
     "observationStale": false,
     "jobs": [
       {
@@ -4307,7 +4314,7 @@
       {
         "account": "Mightyrod",
         "script": "scripts/quest-sweep.ts",
-        "state": "running"
+        "state": "disabled"
       }
     ]
   },
