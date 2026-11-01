@@ -1,4 +1,4 @@
-import {test,expect} from 'bun:test';import {reconcilePlacement,collectionApplied,collectionRetrySafe,validateRequest,marketTileSafe,observeOrderProgress,terminalOrderClaim,orderAccounting,orderItemMatcher,orderEscrow,placementRetrySafe,type ItemOrder,type OrderView} from './buy-owned-ge-item';
+import {test,expect} from 'bun:test';import {shopFallbackSpent,earthShopFallback,reconcilePlacement,collectionApplied,collectionRetrySafe,validateRequest,marketTileSafe,observeOrderProgress,terminalOrderClaim,orderAccounting,orderItemMatcher,orderEscrow,placementRetrySafe,type ItemOrder,type OrderView} from './buy-owned-ge-item';
 import type {GEOffer} from '../vendor/rs-sdk/sdk/ge-types';
 import {mock,spyOn} from 'bun:test';
 import {mkdtempSync,readFileSync,writeFileSync,rmSync,existsSync} from 'node:fs';
@@ -132,6 +132,21 @@ test('market travel: low HP approach and living actor checks precede travel',asy
 const request={actor:'Abracadickra',server:'rs-sdk-demo.fly.dev',goal:'combat-sword',item:1331,limit:45000,reserve:5000,createdAt:1000,reviewAt:2000,deadline:3000};
 const offer=(extra:Partial<GEOffer>={}):GEOffer=>({id:9,slot:0,item:1331,name:'Adamant scimitar',side:'buy',quantity:1,price:45000,remaining:1,filled:0,state:'open',items:0,coins:0,gross:0,tax:0,...extra});
 const journal=():ItemOrder=>({version:1,request,phase:'placing',coinsBefore:50000,itemsBefore:0,previousIds:[2],at:1000});
+test('earth shop fallback preserves an exactly settled zero-fill GE journal and its budget',()=>{
+ const r={...request,item:557,quantity:1136,expectedOwned:3,limit:40,reserve:30000};
+ const j:ItemOrder={...journal(),request:r,phase:'settled',itemsBefore:3,acquired:0,refund:45440};
+ const before=JSON.stringify(j),p=earthShopFallback(r,j,1600);
+ expect(p.args).toEqual(['aubury','1600','2000']);expect(p.env).toMatchObject({ITEMS:'earth rune',MAX_ITEMS:'1136',STOCK_TARGET:'1139',MAX_SPEND:'45440',COIN_RESERVE:'30000',FLOAT:'75440',NO_BUY_TICKS:'25'});
+ expect(JSON.stringify(j)).toBe(before);
+ const spent=shopFallbackSpent({request:r,phase:'settled',spent:1000},r);
+ expect(earthShopFallback(r,j,1600,spent).env.MAX_SPEND).toBe('44440');
+ expect(()=>shopFallbackSpent({request:r,phase:'running',spent:1000},r)).toThrow('unresolved');
+ expect(()=>shopFallbackSpent({request:{...r,item:555},phase:'settled',spent:1000},r)).toThrow('unresolved');
+ expect(()=>earthShopFallback(r,j,1600,45440)).toThrow();
+ for(const bad of [undefined,{...j,phase:'open'},{...j,refund:45439},{...j,acquired:1},{...j,itemsBefore:4}])expect(()=>earthShopFallback(r,bad as any,1600)).toThrow();
+ expect(()=>earthShopFallback({...r,item:555},j,1600)).toThrow();
+ expect(()=>earthShopFallback(r,j,1601)).toThrow();
+});
 const view=(offers:GEOffer[]=[offer()],coins=5000,items=0):OrderView=>({actor:request.actor,server:request.server,offers,coins,items});
 test('bank and exchange approaches share one ground-floor boundary',()=>{
  expect(marketTileSafe({x:3185,z:3436,level:0})).toBe(true);expect(marketTileSafe({x:3181,z:3443,level:0})).toBe(true);

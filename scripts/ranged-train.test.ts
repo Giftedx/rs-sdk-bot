@@ -3,8 +3,13 @@ import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOption
 import * as walking from '../packages/core/src/walk';
 import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
-import {rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
+import {rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
+
+test('stock-only native continuation disables arrow buying without reducing admission or target checks',()=>{
+ const c=rangedChildConfiguration('fixture');expect(c.env.BUY_ARROWS).toBe('0');expect(c.env.COIN_RESERVE).toBe('400000');
+ expect(c.cmd.slice(-2)).toEqual(['71','10000']);expect(c.env.KILLS_PER_TRIP).toBe('8');
+});
 
 test('proof selects a whole isolated endpoint set and refuses eight exhausted candidates',()=>{
  const endpoints=(o:ReturnType<typeof rangedStackOptions>)=>[o.ports.engine,o.ports.gateway,...Object.values(o.enginePreload!.env).map(Number)];

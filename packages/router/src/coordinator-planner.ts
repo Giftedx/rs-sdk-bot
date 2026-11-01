@@ -179,7 +179,7 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
  }
  replaceTasks(candidate,[]); // Validate cycles introduced by promotion edges too.
  for(const build of (raw.tasks as CoordTask[]).filter(t=>t.kind==='build')){
-  const reaches=(id:string):boolean=>id===build.id||candidate.tasks.find(r=>r.spec.id===id)!.spec.dependsOn.some(reaches);
+  const reaches=(id:string):boolean=>id===build.id||(candidate.tasks.find(r=>r.spec.id===id)?.spec.dependsOn.some(reaches)??false);
   if(!candidate.tasks.some(r=>r.status==='pending'&&r.spec.kind==='run'&&reaches(r.spec.id)))throw Error('build requires a finite live consumer dependency: '+build.id);
  }
  for(const d of definitions)atomicJson(join(base,'packages/router/tasks',d.id+'.json'),d);
