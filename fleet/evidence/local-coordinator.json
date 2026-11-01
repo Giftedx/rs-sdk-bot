@@ -1,33 +1,38 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793504708603,
+  "exportedAt": 1793505339432,
   "sources": {
     "state": {
-      "observedAt": 1793504658601.8328,
-      "ageMs": 50001.167236328125,
+      "observedAt": 1793505329472.2554,
+      "ageMs": 9959.74462890625,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793504708056,
-      "ageMs": 547,
+      "observedAt": 1793505338554,
+      "ageMs": 878,
       "stale": false,
       "error": null
     },
     "owner": {
-      "observedAt": 1793500355748.8054,
-      "ageMs": 4352854.194580078,
+      "observedAt": 1793504891763.0144,
+      "ageMs": 447668.9855957031,
       "stale": true,
       "error": null
     }
   },
   "coordinator": {
     "paused": false,
-    "pid": 20676,
+    "pid": 31620,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": null
+    "planner": {
+      "runId": "plan-1dd6ee26-f4bb-4e56-be18-df354bef6f93",
+      "agent": "codex",
+      "startedAt": 1793505329432,
+      "processState": "alive"
+    }
   },
   "workers": {
     "claude": {
@@ -529,22 +534,7 @@
       }
     },
     "codex": {
-      "running": [
-        {
-          "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-0e0e1bef-9e7f-4f78-aec7-65a960563084",
-          "startedAt": 1793504658556,
-          "recordStatus": "running",
-          "pid": 2920,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        }
-      ],
+      "running": [],
       "pending": [
         {
           "id": "run-oreelse-bound-cleanup",
@@ -556,12 +546,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-recovery-after-druid-publication",
-              "status": "failed"
-            },
-            {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -2871,6 +2857,26 @@
           "startedAt": 1793504426867,
           "at": 1793504450000,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "refresh-session-recovery-only-79ba2f99108b96f6",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-0e0e1bef-9e7f-4f78-aec7-65a960563084",
+          "startedAt": 1793504658556,
+          "at": 1793504981371,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "chain-firemaking-order-shaftmaker-firemaking41",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "firemaking-order",
+          "runId": "task-f6b1bcb2-989e-422b-ab63-ca592911e79c",
+          "startedAt": 1793505017278,
+          "at": 1793505117061,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2894,14 +2900,14 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "build-druid-meats-independent-draynor-entry",
-        "kind": "build",
+        "id": "review-recovery-orphan-source-change-boundary",
+        "kind": "review",
         "goal": "quests",
-        "capability": "druid-meats-order",
-        "runId": "task-7bf41f3b-2646-47c7-856c-5587a0b602ee",
-        "startedAt": 1793504047344,
-        "at": 1793504425924,
-        "evidence": "build"
+        "capability": "session-recovery-only",
+        "runId": "task-ccc2eeb7-d7a2-4346-9654-970620c4a8ce",
+        "startedAt": 1793505053188,
+        "at": 1793505241956,
+        "evidence": "review"
       }
     },
     "unassigned": {
@@ -3095,7 +3101,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3114,7 +3120,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3133,7 +3139,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3152,7 +3158,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3171,7 +3177,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3190,7 +3196,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3209,7 +3215,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3228,7 +3234,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3247,7 +3253,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3266,7 +3272,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3285,7 +3291,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3304,7 +3310,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3323,7 +3329,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3357,7 +3363,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3376,7 +3382,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3395,7 +3401,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3414,7 +3420,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3433,7 +3439,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3452,7 +3458,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3471,7 +3477,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3490,7 +3496,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3509,7 +3515,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3528,7 +3534,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3547,7 +3553,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3566,7 +3572,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3585,7 +3591,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3604,7 +3610,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3623,7 +3629,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3642,7 +3648,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3661,7 +3667,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3680,7 +3686,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3699,7 +3705,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3718,7 +3724,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3737,7 +3743,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3756,7 +3762,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3775,7 +3781,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3794,7 +3800,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3813,7 +3819,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3832,7 +3838,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3851,7 +3857,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3870,7 +3876,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3889,7 +3895,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3957,7 +3963,7 @@
             },
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4175,12 +4181,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-recovery-after-druid-publication",
-              "status": "failed"
-            },
-            {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4210,7 +4212,7 @@
           "dependencies": [
             {
               "id": "refresh-session-recovery-only-79ba2f99108b96f6",
-              "status": "running"
+              "status": "failed"
             }
           ]
         }
@@ -4358,11 +4360,6 @@
         "state": "disabled"
       },
       {
-        "account": "Shaftmaker",
-        "script": "scripts/magic-order.ts",
-        "state": "disabled"
-      },
-      {
         "account": "OreElse",
         "script": "scripts/chain.ts",
         "state": "disabled"
@@ -4370,6 +4367,11 @@
       {
         "account": "Bigchopper",
         "script": "scripts/quest-sweep.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Shaftmaker",
+        "script": "scripts/firemaking-order.ts",
         "state": "disabled"
       }
     ]
