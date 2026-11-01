@@ -142,7 +142,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let worldLookup=null,worldLookupName='';
   // Info (RuneLite info): what this page is, how fresh its data is, what the marks mean, and where the data comes from.
   function infoPanel(){
-    const fleet=S.bots.filter(b=>!b.practice&&!b.reserved),playing=fleet.filter(b=>b.fresh),sides=S.fleetSides?.sides||[],hosted=S.hosted?.kind==='public';
+    const fleet=S.bots.filter(b=>!b.practice&&!b.reserved),playing=fleet.filter(b=>b.operation==='observed'),sides=S.fleetSides?.sides||[],hosted=S.hosted?.kind==='public';
     const row=(k,v)=>`<div class="info-row"><span>${E(k)}</span><span>${v}</span></div>`;
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine), shown in a RuneLite-style client. The 3D view and the map show every player online; gold names are our accounts.</p></div>'+
       '<div class="xp-box"><div class="xp-head"><span>Data</span></div>'+
@@ -210,13 +210,14 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   let geQuery='';
   let geAll=false;
   function gePanel(){
-    const offered=i=>i.ask!=null||i.bid!=null,owner=window.atlasOperator(),held=new Map();
-    if(owner)for(const b of S.bots)if(!b.practice&&!b.reserved&&Array.isArray(b.bank))for(const it of b.bank)held.set(it.name,(held.get(it.name)||0)+(it.count||0));
+    const offered=i=>i.ask!=null||i.bid!=null,owner=window.atlasOperator(),held=new Map(),nameOnly=new Map();
+    if(owner)for(const b of S.bots)if(!b.practice&&!b.reserved&&Array.isArray(b.bank))for(const it of b.bank){const id=it.baseId??it.id,target=Number.isInteger(id)?held:nameOnly,key=Number.isInteger(id)?id:it.name;target.set(key,(target.get(key)||0)+(it.count||0));}
+    const heldCount=i=>{const known=held.get(i.id)||0,unknown=nameOnly.get(i.name)||0;if(unknown&&(S.economy?.supplies||[]).filter(x=>x.name===i.name).length>1)return known?nf(known)+' + ?':'?';return nf(known+unknown);};
     const all=(S.economy?.supplies||[]).filter(i=>i.name&&(!geQuery||i.name.toLowerCase().includes(geQuery))),hidden=all.filter(i=>!offered(i)).length;
     const rows=all.filter(i=>geAll||offered(i)).sort((a,b)=>Number(b.ask!=null||b.bid!=null)-Number(a.ask!=null||a.bid!=null)||(b.stock||0)-(a.stock||0)||a.name.localeCompare(b.name));
     const price=v=>v==null?'—':nf(Math.round(v))+' gp';
     return `<div class="ge-panel"><input id="ge-search" class="rl-search" placeholder="Search for an item..." value="${E(geQuery)}" aria-label="Search items"><div class="xp-meta"><span>${all.length-hidden} route supplies with offers</span><span>prices ${S.economy?.pricesAt?age(S.economy.pricesAt)+' old':'unknown'}</span></div>${hidden?`<button class="game-control" data-ge-all>${geAll?'Hide':'Show'} the ${hidden} with no offer</button>`:''}`+
-      rows.slice(0,80).map(i=>`<div class="ge-row" title="${E(i.name)}: buy ${price(i.ask)}, sell ${price(i.bid)}, stock ${nf(i.stock||0)}, average ${price(i.vwap)}, shop ${price(i.base)}"><span class="ge-icon">${icon(i.name,32)}</span><div class="ge-main"><div class="ge-name">${E(i.name)}</div><div class="ge-prices"><span>Buy <b>${price(i.ask)}</b></span><span>Sell <b>${price(i.bid)}</b></span><span>Stock <b>${nf(i.stock||0)}</b></span>${owner?`<span>We hold <b>${nf(held.get(i.name)||0)}</b></span>`:''}</div></div></div>`).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>')+'</div>';
+      rows.slice(0,80).map(i=>`<div class="ge-row" title="${E(i.name)}: buy ${price(i.ask)}, sell ${price(i.bid)}, stock ${nf(i.stock||0)}, average ${price(i.vwap)}, shop ${price(i.base)}"><span class="ge-icon">${icon(i.name,32)}</span><div class="ge-main"><div class="ge-name">${E(i.name)}</div><div class="ge-prices"><span>Buy <b>${price(i.ask)}</b></span><span>Sell <b>${price(i.bid)}</b></span><span>Stock <b>${nf(i.stock||0)}</b></span>${owner?`<span>We hold <b>${heldCount(i)}</b></span>`:''}</div></div></div>`).join('')+(rows.length?'':'<p class="xp-muted">No item matches.</p>')+'</div>';
   }
   // Pull requests plugin: the bot repository's open and lately merged pull requests, by the agent whose branch they are.
   const AGENT_OF=b=>/^claude-cloud\//.test(b)?'Claude cloud':/^cloud\//.test(b)?'Codex cloud':/^claude\//.test(b)?'Claude on the PC':/^codex\//.test(b)?'Codex on the PC':'Other';
@@ -480,7 +481,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     opponentLatest=o;
     if(!o){clearTimeout(opponentHide);opponentHide=setTimeout(()=>{const el=hud.querySelector('.game-opponent');if(el)el.hidden=true;},5000);return;}
     clearTimeout(opponentHide);
-    if(o.kind==='npc'&&!npcNames){npcNamesLoad??=fetch(asset('npc-names.json')).then(r=>r.ok?r.json():[]).catch(()=>[]);npcNames=await npcNamesLoad;if(opponentLatest!==o)return;}
+    if(o.kind==='npc'&&!npcNames){npcNamesLoad??=fetch(asset('npc-names.json'),{signal:AbortSignal.timeout(5000)}).then(r=>r.ok?r.json():null).catch(()=>null).finally(()=>{npcNamesLoad=null;});npcNames=await npcNamesLoad;if(opponentLatest!==o)return;}
     const [cur,max]=o.hp,npc=o.kind==='npc'?npcNames?.[o.type]:null,name=o.kind==='player'?String(o.name).slice(0,12):npc?.[0]??'Unknown npc',lvl=npc?.[1];
     let el=hud.querySelector('.game-opponent');if(!el){el=document.createElement('div');el.className='game-opponent';el.setAttribute('aria-live','polite');hud.append(el);}
     el.hidden=false;el.innerHTML='<b>'+E(name)+(lvl?' <small>(level-'+lvl+')</small>':'')+'</b><div class="opponent-hp"><i style="width:'+Math.max(0,Math.min(100,Math.round(cur/Math.max(1,max)*100)))+'%"></i><span>'+cur+' / '+max+'</span></div>';
