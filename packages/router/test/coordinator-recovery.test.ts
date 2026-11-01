@@ -1,4 +1,9 @@
-import {test,expect} from 'bun:test';
+import {test,expect,beforeEach,afterEach,spyOn} from 'bun:test';
+import * as os from 'node:os';
+// Recovery fixtures model an admitted host. Admission limits have their own explicit memory cases.
+let memory:{mockRestore():void}|undefined;
+beforeEach(()=>{memory=spyOn(os,'freemem').mockReturnValue(8*2**30);});
+afterEach(()=>{memory?.mockRestore();});
 import {mkdtempSync,readFileSync,writeFileSync,existsSync,mkdirSync,readdirSync,renameSync,unlinkSync} from 'node:fs';
 import {applyEndRepair,loadEnded,persistEnded} from '../../../scripts/swarm';
 import {beginSessionAttempt,readLogoutProof,verifyLegacyLogout} from '../../core/src/session-lifecycle';

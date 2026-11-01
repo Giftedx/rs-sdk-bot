@@ -1,5 +1,14 @@
 import {test,expect} from 'bun:test';
-import {earthRefillAmount,earthSeedNeeded,earthRefillStop,buyEarthObserved,sellEarthSeedObserved,retainedEarthBank} from './earth-shop';
+import {earthRefillAmount,earthSeedNeeded,earthRefillStop,buyEarthObserved,sellEarthSeedObserved,retainedEarthBank,openEarthBankObserved} from './earth-shop';
+
+test('a confirmed already-open bank needs no new open packet or generation',async()=>{
+ let opens=0;const s:any={sdk:{getState:()=>({bank:{isOpen:true}})},bankObservation:()=>({generation:7,items:[{id:557,count:53}]}),bot:{openBank:async()=>{opens++;return{success:true};}}};
+ await openEarthBankObserved(s);expect(opens).toBe(0);
+});
+test('a closed bank still requires its newly observed opening',async()=>{
+ let opened=false,opens=0;const s:any={sdk:{getState:()=>({bank:{isOpen:opened}})},bankObservation:()=>opened?{generation:8,items:[]}:null,bot:{openBank:async()=>{opens++;opened=true;return{success:true};}}};
+ await openEarthBankObserved(s);expect(opens).toBe(1);
+});
 
 test('closing the bank retains its confirmed assets and exact outstanding order quantity',()=>{
  let live:any={items:[{id:557,count:2},{id:995,count:320288}]};
