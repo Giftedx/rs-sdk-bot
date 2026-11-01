@@ -75,9 +75,10 @@ export async function ownedSwap(a:Session,b:Session,giveA:Items,giveB:Items,stop
  const actors=[a,b],gives=[giveA,giveB],before=actors.map(s=>count(s.sdk.getInventory()));
  const expected=before.map((items,i)=>{const next={...items};for(const [id,n] of Object.entries(gives[i]!)){if(n<=0||items[Number(id)]!==n)throw Error('swap must give the complete observed item count');next[Number(id)]=(next[Number(id)]??0)-n;}for(const [id,n]of Object.entries(gives[1-i]!))next[Number(id)]=(next[Number(id)]??0)+n;return next;});
  const complete=()=>actors.every((s,i)=>equal(count(s.sdk.getInventory()),expected[i]!));
+ const closed=()=>actors.every(s=>!s.sdk.getTradeState().isOpen);
  if(complete())throw Error('swap must change owned stock');
  const start=a.tick(),sent=[false,false];let opened=false,lastRequest=-Infinity;
- while(a.tick()-start<50&&!complete()&&!stop()){
+ while(a.tick()-start<50&&(!complete()||!closed())&&!stop()){
   await new Promise<void>(resolve=>setImmediate(resolve));await Promise.all(actors.map(s=>s.sdk.scanGroundItems(0)));
   const trades=actors.map(s=>s.sdk.getTradeState());
   if(trades.some(t=>t.isOpen))opened=true;
@@ -98,6 +99,8 @@ export async function ownedSwap(a:Session,b:Session,giveA:Items,giveB:Items,stop
   }
   await Promise.race(actors.map(s=>waitTicks(s,1)));
  }
+ if(stop())throw Error('owned swap stopped');
  if(!complete())throw Error('owned swap did not reconcile');
+ if(!closed())throw Error('owned swap trade windows stayed open');
  return {ticks:a.tick()-start,before,after:actors.map(s=>count(s.sdk.getInventory()))};
 }
