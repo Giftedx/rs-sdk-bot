@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793508974475,
+  "exportedAt": 1793509575275,
   "sources": {
     "state": {
-      "observedAt": 1793508962962.8345,
-      "ageMs": 11512.16552734375,
+      "observedAt": 1793509510581.1033,
+      "ageMs": 64693.896728515625,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793508973113,
-      "ageMs": 1362,
+      "observedAt": 1793509573486,
+      "ageMs": 1789,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 3549181.2834472656,
+      "ageMs": 4149981.2834472656,
       "stale": true,
       "error": null
     }
@@ -32,7 +32,18 @@
   "workers": {
     "claude": {
       "running": [],
-      "pending": [],
+      "pending": [
+        {
+          "id": "build-combat-giant-style-4",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "queued",
+          "dependencies": []
+        }
+      ],
       "failed": [
         {
           "id": "build-magic-authenticated-admission",
@@ -545,20 +556,6 @@
           "blocker": null
         },
         {
-          "id": "qualify-recovery-shaftmaker-quote-end",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-e8d8554e-e30a-4778-b73d-868b6a3574aa",
-          "startedAt": 1793508961233,
-          "recordStatus": "running",
-          "pid": 36140,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        },
-        {
           "id": "build-magic-bounded-shop-quote-readiness",
           "kind": "build",
           "goal": "skills",
@@ -567,6 +564,20 @@
           "startedAt": 1793508961283,
           "recordStatus": "running",
           "pid": 10752,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "qualify-recovery-bigchopper-restless-end",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-e715caf9-2660-40d6-8333-487e185c6084",
+          "startedAt": 1793509510528,
+          "recordStatus": "running",
+          "pid": 35172,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -584,8 +595,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-recovery-shaftmaker-quote-end",
-              "status": "running"
+              "id": "qualify-recovery-shaftmaker-quote-serialized",
+              "status": "pending"
             }
           ]
         },
@@ -605,6 +616,21 @@
             {
               "id": "run-recovery-shaftmaker-quote-end",
               "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "qualify-recovery-shaftmaker-quote-serialized",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-magic-bounded-shop-quote-readiness",
+              "status": "running"
             }
           ]
         }
@@ -2929,6 +2955,16 @@
           "startedAt": 1793508313600,
           "at": 1793508487292,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-recovery-shaftmaker-quote-end",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-e8d8554e-e30a-4778-b73d-868b6a3574aa",
+          "startedAt": 1793508961233,
+          "at": 1793509104535,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -3993,8 +4029,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-combat-giant-style-3",
-              "status": "failed"
+              "id": "build-combat-giant-style-4",
+              "status": "pending"
             }
           ]
         },
@@ -4008,11 +4044,60 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-combat-giant-style-3",
-              "status": "failed"
+              "id": "build-combat-giant-style-4",
+              "status": "pending"
             },
             {
               "id": "qualify-combat-giant-style-3",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-recovery-bigchopper-restless-end",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-recovery-bigchopper-restless-end",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "qualify-ranged-recovered-band80",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-recovery-bigchopper-restless-end",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-ranged-bigchopper-recovered-band80",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-ranged-recovered-band80",
+              "status": "pending"
+            },
+            {
+              "id": "run-recovery-bigchopper-restless-end",
               "status": "pending"
             }
           ]
