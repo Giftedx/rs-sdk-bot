@@ -3,7 +3,6 @@ import {createSaveData} from '../../../vendor/rs-sdk/sdk/test/utils/save-generat
 import {afterAll} from 'bun:test';
 import {readFileSync,writeFileSync,mkdtempSync,unlinkSync,rmdirSync,rmSync,readdirSync,copyFileSync,cpSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {spawnSync} from 'node:child_process';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {verify,verificationReport,sources,foodRecoveryChecks,verifyFoodRecovery,FOOD_RECOVERY_CONFIGURATION,restartInitialProjection} from '../src/agility-order-proof';
 import {INFLIGHT_FOOD_CONFIGURATION,inflightFoodChecks,inflightFoodOutcome,verifyInflightFood} from '../src/agility-order-proof';
@@ -20,6 +19,13 @@ import {verifyGnome,verifyGnomeFood,verifyArdougneEntry,verifyGnomeConsumer,veri
  gnomeFoodChecks,ardougneEntryChecks,healSequence,GNOME_STEPS,GNOME_SCOPE,GNOME_FOOD_CONFIGURATION,ARDOUGNE_CONFIGURATION,ARDOUGNE_ENTRY_CONFIGURATION,
  GNOME_CONSUMER_CONFIGURATION,GNOME_CONSUMER_PLAN,GNOME_FOOD_RESTART_CONFIGURATION,DRAYNOR_START} from '../src/agility-order-proof';
 import {PRESETS} from '../src/presets';
+
+async function proofCli(mode:string,dir:string,timeout=10000){
+ const child=Bun.spawn([process.execPath,'packages/practice/src/agility-order-proof.ts',mode],
+  {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir},stdout:'pipe',stderr:'pipe',windowsHide:true,timeout});
+ const [status,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
+ return{status,stdout,stderr};
+}
 import {COURSES} from '../../../scripts/agility-order';
 
 // Synthetic unit evidence only. These bytes cannot be a native delivery receipt.
@@ -796,9 +802,7 @@ test('actual --verify CLI leaves all evidence names and bytes unchanged on succe
   const generated=verificationReport(dir);
   expect(Object.entries(generated.checks).filter(([,v])=>!v)).toEqual([]);
   writeFileSync(join(dir,'consumer.json'),JSON.stringify(generated));
-  const cli=async()=>{const p=Bun.spawn([process.execPath,'packages/practice/src/agility-order-proof.ts','--verify'],
-   {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir},stdout:'pipe',stderr:'pipe',windowsHide:true,timeout:10000});
-   const [status,stdout,stderr]=await Promise.all([p.exited,new Response(p.stdout).text(),new Response(p.stderr).text()]);return{status,stdout,stderr};};
+  const cli=()=>proofCli('--verify',dir);
   let tree=evidenceTree(dir),child=await cli();
   expect(child.status).toBe(0);expect(JSON.parse(child.stdout.trim()).ok).toBe(true);
   expect(evidenceTree(dir)).toEqual(tree);
@@ -857,21 +861,19 @@ const rawMutations:{name:string;edit:(b:Buffer)=>void}[]=[
  {name:'unsupported varp',edit:b=>{const at=savedFields(b).vars.get(300)!;b[at]=b[at]!^1;}},
 ];
 
-test('recorded initialization is CRC-read but final --verify rejects old food-free bundles',()=>{
+test('recorded initialization is CRC-read but final --verify rejects old food-free bundles',async()=>{
  const {dir}=recordedCopy();
  try{
   const read=readFallSamples(dir).read('fall-1')!;
   expect(read.initialFiles!.sha256.after).toBe(read.sha256.before);
   expect(Object.values(read.initial.checks).every(Boolean)).toBe(true);
-  const child=spawnSync(process.execPath,['packages/practice/src/agility-order-proof.ts','--verify'],
-   {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir},encoding:'utf8',windowsHide:true,timeout:10000});
-  expect(child.error).toBeUndefined();expect(child.status).toBe(1);
+  const child=await proofCli('--verify',dir);
+  expect(child.status).toBe(1);
   const result=JSON.parse(child.stdout.trim());expect(result.ok).toBe(false);expect(result.checks['fall-1.initialized']).toBe(true);
   expect(result.checks['food.files']).toBe(false);
   // The final CLI must also reject the historical readable-only flags.
   const p=join(dir,'initial-5.json'),init=JSON.parse(readFileSync(p,'utf8'));init.checks={readable:true};writeFileSync(p,JSON.stringify(init));
-  const rejected=spawnSync(process.execPath,['packages/practice/src/agility-order-proof.ts','--verify'],
-   {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir},encoding:'utf8',windowsHide:true,timeout:10000});
+  const rejected=await proofCli('--verify',dir);
   expect(rejected.status).toBe(1);expect(JSON.parse(rejected.stdout.trim()).checks['fall-1.initialized']).toBe(false);
  }finally{rmSync(dir,{recursive:true,force:true});}
 },30000);
@@ -1122,10 +1124,9 @@ function gnomeHandle(root:string,keep:string,dirs:Record<string,string>,metas:Re
  return{root,dirs,metas,source,write,rehash,cleanup:()=>{rmSync(root,{recursive:true,force:true});rmSync(keep,{recursive:true,force:true});}};
 }
 const failed=(checks:Record<string,boolean>)=>Object.entries(checks).filter(([,v])=>!v).map(([k])=>k);
-const gnomeCli=(dir:string)=>spawnSync(process.execPath,['packages/practice/src/agility-order-proof.ts','--verify-gnome'],
- {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir},encoding:'utf8',windowsHide:true,timeout:20000});
+const gnomeCli=(dir:string)=>proofCli('--verify-gnome',dir,20000);
 
-test('bound restart rejects substituted entry, missing artifacts and rehashed checkpoint mutations through Gnome verification',()=>{
+test('bound restart rejects substituted entry, missing artifacts and rehashed checkpoint mutations through Gnome verification',async()=>{
  const rebind=(g:ReturnType<typeof gnomeCopy>)=>{
   const d=g.dirs['gnome-consumer']!,r=g.metas['gnome-consumer'].cases.find((c:any)=>c.label==='restart');
   const j=JSON.parse(readFileSync(join(d,'interruption.json'),'utf8'));
@@ -1173,7 +1174,7 @@ test('bound restart rejects substituted entry, missing artifacts and rehashed ch
   expect(r.ok,attack.name).toBe(false);expect(evidenceTree(g.root),attack.name).toEqual(tree);
   if(attack.name==='higher XP initial substitution'){
    expect(r.checks['consumer.restart.initial']).toBe(false);
-   const cli=gnomeCli(g.root);expect(cli.status).toBe(1);expect(evidenceTree(g.root)).toEqual(tree);
+   const cli=await gnomeCli(g.root);expect(cli.status).toBe(1);expect(evidenceTree(g.root)).toEqual(tree);
   }
  }finally{g.cleanup();}}
 },60000);
@@ -1205,18 +1206,18 @@ test('Gnome step list matches the installed worker course and isolates other cou
  expect(GNOME_CONSUMER_PLAN.filter(p=>p.course!=='gnome').map(p=>[p.label,p.reason])).toEqual([['wilderness-entry','wilderness requires entry level 52']]);
 });
 
-test('read-only Gnome verifier accepts the complete synthetic delivery through functions and the actual CLI',()=>{
+test('read-only Gnome verifier accepts the complete synthetic delivery through functions and the actual CLI',async()=>{
  const g=gnomeCopy();try{
   const tree=evidenceTree(g.root);
   const r=verifyGnome(g.root,g.source);
   expect(failed(r.checks)).toEqual([]);expect(r.ok).toBe(true);expect(r.scope).toBe(GNOME_SCOPE);
   expect(evidenceTree(g.root)).toEqual(tree);
-  const child=gnomeCli(g.root);
-  expect(child.error).toBeUndefined();expect(child.status,child.stdout+child.stderr).toBe(0);expect(JSON.parse(child.stdout.trim()).ok).toBe(true);
+  const child=await gnomeCli(g.root);
+  expect(child.status,child.stdout+child.stderr).toBe(0);expect(JSON.parse(child.stdout.trim()).ok).toBe(true);
   expect(evidenceTree(g.root)).toEqual(tree);
   // A failing delivery keeps its exact names and bytes too; the rejected report stays untouched.
   rmSync(g.dirs.ardougne!,{recursive:true,force:true});
-  const rejected=evidenceTree(g.root),bad=gnomeCli(g.root);
+  const rejected=evidenceTree(g.root),bad=await gnomeCli(g.root);
   expect(bad.status).toBe(1);const out=JSON.parse(bad.stdout.trim());expect(out.ok).toBe(false);expect(out.checks['ardougne.files']).toBe(false);
   expect(evidenceTree(g.root)).toEqual(rejected);
   expect(verifyGnome(g.root,g.source).ok).toBe(false);expect(evidenceTree(g.root)).toEqual(rejected);
@@ -1333,8 +1334,7 @@ test('Gnome verifier rejects omitted, substituted, stale, CRC-invalid, metadata-
  }finally{g.cleanup();}}
 },120000);
 
-test('proof CLI rejects an unknown mode before any practice work',()=>{
- const child=spawnSync(process.execPath,['packages/practice/src/agility-order-proof.ts','--gnome-wilderness'],
-  {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:tmpdir()},encoding:'utf8',windowsHide:true,timeout:10000});
+test('proof CLI rejects an unknown mode before any practice work',async()=>{
+ const child=await proofCli('--gnome-wilderness',tmpdir());
  expect(child.status).toBe(1);expect(child.stderr).toContain('unknown agility proof mode');
 });
