@@ -1,6 +1,66 @@
 import { expect, test } from 'bun:test';
-import { waterfallFood, prepareWaterfallPack, waterfallConserved, waterfallDialogue, waterfallResumeAtBookcase } from './waterfall';
+import { waterfallFood, prepareWaterfallPack, waterfallConserved, waterfallDialogue, waterfallResumeAtBookcase, dropWaterfallRunes } from './waterfall';
 import type { Session } from '../../packages/core/src/inprocess';
+function runeDropFixture(mode: 'moving' | 'missing-credit' | 'occupied' | 'neighbour' | 'unstable' = 'moving') {
+    let tick = 0;
+    const listeners = new Set<() => void>(), actions: { tick: number; action: any; z: number }[] = [];
+    const state: any = { tick, player: { worldX: 2557, worldZ: 3443, level: 0, isDead: false },
+        inventory: [556,557,555].map((id,slot) => ({ id, count: 6, slot })), groundItems: [] };
+    if (mode === 'occupied') state.groundItems.push({ id: 556, count: 6, x: 2557, z: 3444 });
+    if (mode === 'neighbour' || mode === 'missing-credit') state.groundItems.push({ id: 556, count: 6, x: 2557, z: 3443 });
+    const timer = setInterval(() => {
+        tick++; state.tick = tick;
+        state.player.worldZ = mode === 'unstable' ? (tick % 2 ? 3444 : 3443) : tick === 2 ? 3443 : 3444;
+        for (const cb of [...listeners]) cb();
+    }, 1);
+    const s = { tick: () => tick, onTick: (cb: () => void) => { listeners.add(cb); return () => { listeners.delete(cb); }; },
+        sdk: { getState: () => state, getStateAge: () => 0 }, direct: async (action: any) => {
+            actions.push({ tick, action, z: state.player.worldZ });
+            if (action.type === 'dropItem') {
+                const item = state.inventory.find((i: any) => i.slot === action.slot)!;
+                state.inventory = state.inventory.filter((i: any) => i !== item);
+                if (mode !== 'missing-credit') state.groundItems.push({ ...item, x: 2557, z: 3444 });
+            }
+            return { success: true };
+        } } as unknown as Session;
+    return { s, state, actions, close: () => clearInterval(timer) };
+}
+test('owned rune drop waits for two stable publications after pending movement before sending one batch', async () => {
+    const f = runeDropFixture();
+    try {
+        const receipt = await dropWaterfallRunes(f.s, () => false, 12);
+        expect(receipt).toMatchObject({ x: 2557, z: 3444 });
+        const drops = f.actions.filter(a => a.action.type === 'dropItem');
+        expect(drops).toHaveLength(3); expect(drops.every(a => a.tick >= 4 && a.z === 3444)).toBe(true);
+        expect(f.state.inventory).toEqual([]); expect(receipt.counts.every(c => c.count === 6)).toBe(true);
+    } finally { f.close(); }
+});
+test('inventory debit and an unrelated neighbouring pile cannot substitute for owned ground credit', async () => {
+    const f = runeDropFixture('missing-credit');
+    try {
+        await expect(dropWaterfallRunes(f.s, () => false, 9)).rejects.toThrow('stopped/stale/deadline');
+        expect(f.actions.filter(a => a.action.type === 'dropItem')).toHaveLength(3);
+        expect(f.state.inventory).toEqual([]); expect(f.state.groundItems).toHaveLength(1);
+    } finally { f.close(); }
+});
+test('an occupied exact tile refuses before dropping; a neighbouring pile stays untouched', async () => {
+    const f = runeDropFixture('occupied'), n = runeDropFixture('neighbour');
+    try {
+        await expect(dropWaterfallRunes(f.s, () => false, 12)).rejects.toThrow('empty tile');
+        expect(f.actions.filter(a => a.action.type === 'dropItem')).toHaveLength(0);
+        await dropWaterfallRunes(n.s, () => false, 12);
+        expect(n.state.groundItems.find((i: any) => i.z === 3443).count).toBe(6);
+    } finally { f.close(); n.close(); }
+});
+test('an unstable actor and an owner stop cannot send rune drops', async () => {
+    const f = runeDropFixture('unstable'), stopped = runeDropFixture();
+    try {
+        await expect(dropWaterfallRunes(f.s, () => false, 7)).rejects.toThrow('stopped/stale/deadline');
+        expect(f.actions.filter(a => a.action.type === 'dropItem')).toHaveLength(0);
+        await expect(dropWaterfallRunes(stopped.s, () => true)).rejects.toThrow('stopped/stale/deadline');
+        expect(stopped.actions).toEqual([]);
+    } finally { f.close(); stopped.close(); }
+});
 test('old lobster thresholds remain6/9; owned fish30HP retains more than two max11hits', () => {
     expect(waterfallFood()).toMatchObject({ id: 379, heal: 12, eatAt: 6, crossAt: 9 });
     expect(waterfallFood('salmon')).toMatchObject({ id: 329, heal: 9, eatAt: 30, crossAt: 30, count: 16 });
