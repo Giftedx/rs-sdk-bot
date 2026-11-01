@@ -90,7 +90,7 @@ test('options keep defaults, accept argv target and cap, and refuse unbounded in
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.
-function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false){
+function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'){
  type Item={id:number;name:string;count:number};
  const item=(id:number,count:number):Item=>({id,name:id===995?'Coins':id===1985?'Cheese':String(id),count});
  let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0,respawnAt:number|undefined;
@@ -104,7 +104,10 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
  const target=()=>({index:active,id:41,x:3233,z:3297,tileX:3233,tileZ:3297,distance:1,reachable:true,inCombat:false,hp:3,maxHp:3});
  const next=()=>{active++;attempt=0;state.nearbyNpcs=active<outcomes.length?[target()]:[];};
  const kill=()=>{const npc=state.nearbyNpcs[0]??target();xp+=300;level=upgrade?(xp>=600?30:20):xp>=600||outcomes[active]==='retry'?10:8;state.nearbyNpcs=[];
-  state.groundItems=[{...item(526,1),x:npc.tileX,z:npc.tileZ,distance:0},{...item(2138,1),x:npc.tileX,z:npc.tileZ,distance:0}];};
+  state.groundItems=[{...item(526,1),x:npc.tileX,z:npc.tileZ,distance:0},{...item(2138,1),x:npc.tileX,z:npc.tileZ,distance:0}];
+  if(ammoRace){equipment.find(i=>i.id===882)!.count--;for(const cb of [...listeners])cb();
+   state.groundItems.push({ ...item(882,1),x:npc.tileX,z:npc.tileZ,distance:0},...(ammoRace==='foreign'?[{...item(884,1),x:npc.tileX,z:npc.tileZ,distance:0}]:[]));}
+ };
  const timer=setInterval(()=>{
   tick++;
   if(attempt===1&&tick===firstAttack+4&&['retry','stalled'].includes(outcomes[active]!))xp+=200;
@@ -130,7 +133,7 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
     if(outcomes[active]==='noloot'&&attempt===1){xp+=300;state.nearbyNpcs=[];respawnAt=tick+3;}
     if(outcomes[active]==='kill'||outcomes[active]==='retry'&&attempt===4||outcomes[active]==='noloot'&&attempt===2)kill();
     return{success:true};},
-   pickupItem:async(i:Item)=>{add(pack,i.id,i.count);state.groundItems=state.groundItems.filter((g:Item)=>g!==i);}},
+   pickupItem:async(i:Item)=>{if(!(ammoRace==='own-missing'&&i.id===882))add(pack,i.id,i.count);state.groundItems=state.groundItems.filter((g:Item)=>g!==i&&!(ammoRace==='foreign'&&i.id===882&&g.id===884));}},
  }as unknown as Session;
  const walker=spyOn(walking,'sessionWalker').mockImplementation(async()=>({} as any));
  const planner=spyOn(trips,'planTripOffThread').mockImplementation(async(from,to)=>({cost:1,legs:from.x===to.x&&from.z===to.z?[]:[{kind:'travel',to,travel:{coins:30,runes:[],needs:[]}}]} as any));
@@ -146,6 +149,14 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
  return{s,attacks,planner,worldRoute,assets:()=>[...bank,...pack,...equipment],run:(overrides={})=>runRangedTrain(s,{...rangedTrainOptions({},['bun','s','unit']),maxTrips:2,buyArrows:0,...(catherby?{maxSpend:5000,coinReserve:400000}:{}),...overrides}),
   close:()=>{clearInterval(timer);route.mockRestore();walker.mockRestore();planner.mockRestore();worldRoute.mockRestore();}};
 }
+
+for(const race of ['foreign','own-missing'] as const)test(`optional ammunition race ${race} cannot stop an accounted Ranged band`,async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,false,race);
+ try{const r=await f.run();expect(r).toMatchObject({ok:true,targetMet:true,kills:2,accounting:true,preserved:true,equipmentRestored:true,died:false});
+  expect(r.arrowsSpent).toBe(race==='own-missing'?2:0);
+  expect(f.assets().some(i=>i.id===884&&i.count>0)).toBe(false);
+ }finally{f.close();}
+});
 
 test('observed underground entry routes before banking and preserves the skull, runes and amulet',async()=>{
  expect(rangedEntry({worldX:3113,worldZ:9555,level:0})).toEqual({x:3253,z:3421});

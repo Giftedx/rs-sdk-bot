@@ -105,7 +105,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const walk=async(points:PathPoint[])=>{const r=await walkPath(guarded,points,{look:4,maxTicks:500,stop:over});if(!r.ok)throw Error('ranged-train route failed '+r.detail);};
  const near=(t:{x:number;z:number},tol:number)=>{const p=st()?.player;return !!p&&p.level===0&&Math.max(Math.abs(p.worldX-t.x),Math.abs(p.worldZ-t.z))<=tol;};
  const ground=()=>st()?.groundItems??[];
- const pickup=async(id:number,x:number,z:number)=>{const item=ground().find(i=>i.id===id&&i.x===x&&i.z===z),before=held(id);if(!item)throw Error('ranged-train fresh loot missing '+id);await s.bot.pickupItem(item);if(!await waitUntil(s,()=>held(id)>before,{timeoutTicks:8}))throw Error('ranged-train pickup effect missing '+id);return held(id)-before;};
+ const pickup=async(id:number,x:number,z:number,required=true)=>{const item=ground().find(i=>i.id===id&&i.x===x&&i.z===z),before=held(id);if(!item){if(required)throw Error('ranged-train fresh loot missing '+id);return 0;}await s.bot.pickupItem(item);const observed=await waitUntil(s,()=>held(id)>before||over(),{timeoutTicks:8});if(over())throw Error('ranged-train pickup stopped');if(!observed&&required)throw Error('ranged-train pickup effect missing '+id);return Math.max(0,held(id)-before);};
  // Shared trip search and execution; exclude consumable teleports so fares are the only travel debit.
  const travel=async(to:{x:number;z:number})=>{
   const p=st()?.player;if(!p)throw Error('ranged-train travel state unknown');
@@ -217,8 +217,8 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
     }
     if(!credited){lostTargets++;continue;}
     await pickup(BONES,x,z);await pickup(CHICKEN,x,z);kills++;tripKills++;lastProgress=s.tick();
-    if(ground().some(i=>i.id===FEATHER&&i.x===x&&i.z===z))await pickup(FEATHER,x,z);
-    for(const item of ground().filter(i=>ARROW_IDS.includes(i.id)&&i.distance<=7&&i.x>=3220&&i.x<=3248&&i.z>=3280&&i.z<=3310).slice(0,4))picked+=await pickup(item.id,item.x,item.z);
+    if(ground().some(i=>i.id===FEATHER&&i.x===x&&i.z===z))await pickup(FEATHER,x,z,false);
+    for(const item of ground().filter(i=>i.id===arrow.id&&i.distance<=7&&i.x>=3220&&i.x<=3248&&i.z>=3280&&i.z<=3310).slice(0,4))picked+=await pickup(item.id,item.x,item.z,false);
     console.log('RANGED_TRAIN_KILL '+JSON.stringify({kills,level:level(),xp:xp()-startXp,ammo:sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS),picked,hp:hp(),tick:s.tick()}));
     if(bestBow(owned(),level())?.id!==bow.id||chooseArrow(owned(),bow.req,level())?.id!==arrow.id)break;
    }
