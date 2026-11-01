@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793515042704,
+  "exportedAt": 1793515643515,
   "sources": {
     "state": {
-      "observedAt": 1793515013392.3892,
-      "ageMs": 29311.61083984375,
+      "observedAt": 1793515628552.159,
+      "ageMs": 14962.841064453125,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793515042062,
-      "ageMs": 642,
+      "observedAt": 1793515640551,
+      "ageMs": 2964,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 9617410.283447266,
+      "ageMs": 10218221.283447266,
       "stale": true,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 31676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-b090cc1a-c0b9-4318-91eb-dbf8d7d749f3",
-      "agent": "codex",
-      "startedAt": 1793515013354,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
@@ -504,7 +499,22 @@
       }
     },
     "codex": {
-      "running": [],
+      "running": [
+        {
+          "id": "run-recovery-bigchopper-authenticated-entry",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-ef5690f6-c5e0-4149-a082-f962088bfc96",
+          "startedAt": 1793515595238,
+          "recordStatus": "running",
+          "pid": 34936,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        }
+      ],
       "pending": [],
       "failed": [
         {
@@ -635,16 +645,6 @@
           "runId": "task-72f35eae-22cd-4356-956a-6a7ec7b014e2",
           "startedAt": 1793359184556,
           "at": 1793359186287,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "qualify-quest-sweep-karamja-entry",
-          "kind": "qualify",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-f7f9b373-68bb-4e3d-aec2-26352d9e2391",
-          "startedAt": 1793342675450,
-          "at": 1793342788654,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2899,13 +2899,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-recovery-shaftmaker-depleted-shop-end",
+        "id": "qualify-recovery-bigchopper-authenticated-entry",
         "kind": "qualify",
         "goal": "skills",
         "capability": "session-recovery-only",
-        "runId": "task-7d76f263-8a86-423d-8a08-948f6784a5df",
-        "startedAt": 1793514142117,
-        "at": 1793514804192,
+        "runId": "task-74800f54-3bcb-4575-96c4-c76fd3cfe1ad",
+        "startedAt": 1793515082102,
+        "at": 1793515594652,
         "evidence": "qualify"
       }
     },
@@ -3974,8 +3974,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "run-recovery-bigchopper-restless-end",
-              "status": "failed"
+              "id": "run-recovery-bigchopper-authenticated-entry",
+              "status": "running"
             }
           ]
         },
@@ -3993,8 +3993,8 @@
               "status": "pending"
             },
             {
-              "id": "run-recovery-bigchopper-restless-end",
-              "status": "failed"
+              "id": "run-recovery-bigchopper-authenticated-entry",
+              "status": "running"
             }
           ]
         },
@@ -4087,7 +4087,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 2,
+    "reportedRunning": 3,
     "observationStale": false,
     "jobs": [
       {
@@ -4216,11 +4216,6 @@
         "state": "disabled"
       },
       {
-        "account": "Bigchopper",
-        "script": "scripts/quest-sweep.ts",
-        "state": "disabled"
-      },
-      {
         "account": "OreElse",
         "script": "scripts/buy-owned-ge-item.ts",
         "state": "disabled"
@@ -4233,6 +4228,11 @@
       {
         "account": "Shaftmaker",
         "script": "scripts/magic-order.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Bigchopper",
+        "script": "scripts/chain.ts",
         "state": "disabled"
       }
     ]
