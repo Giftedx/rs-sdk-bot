@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793507742742,
+  "exportedAt": 1793508373613,
   "sources": {
     "state": {
-      "observedAt": 1793507724481.725,
-      "ageMs": 18260.27490234375,
+      "observedAt": 1793508347857.74,
+      "ageMs": 25755.260009765625,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793507742081,
-      "ageMs": 661,
+      "observedAt": 1793508372579,
+      "ageMs": 1034,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 2317448.2834472656,
+      "ageMs": 2948319.2834472656,
       "stale": true,
       "error": null
     }
@@ -531,14 +531,28 @@
     "codex": {
       "running": [
         {
-          "id": "run-smithing-oreelse-iron-leg99",
+          "id": "run-smithing-oreelse-bronze-finish99",
           "kind": "run",
           "goal": "skills",
           "capability": "iron-progress-order",
-          "runId": "task-49589105-aa59-4d8d-9d8e-a7fd8b00fea8",
-          "startedAt": 1793507724431,
+          "runId": "task-02c5869f-2b57-4c34-ba21-6b80b2d5808e",
+          "startedAt": 1793507881900,
           "recordStatus": "running",
-          "pid": 34804,
+          "pid": 24320,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "run-magic-shaftmaker-current-falador45",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-9ff30ef0-e602-468c-a2cb-0021de038689",
+          "startedAt": 1793508313600,
+          "recordStatus": "running",
+          "pid": 33608,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -2859,13 +2873,13 @@
         }
       ],
       "lastUsefulLive": {
-        "id": "run-iron-oreelse-owned-band90",
+        "id": "run-smithing-oreelse-iron-leg99",
         "kind": "run",
         "goal": "skills",
         "capability": "iron-progress-order",
-        "runId": "task-fd3fa85e-8c8f-4031-a943-d724889a5749",
-        "startedAt": 1793507117949,
-        "at": 1793507620865,
+        "runId": "task-49589105-aa59-4d8d-9d8e-a7fd8b00fea8",
+        "startedAt": 1793507724431,
+        "at": 1793507880638,
         "evidence": "live"
       },
       "lastRecovery": {
@@ -2879,13 +2893,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-quest-sweep-druid-main",
+        "id": "qualify-magic-shaftmaker-current-falador45",
         "kind": "qualify",
-        "goal": "quests",
-        "capability": "quest-sweep",
-        "runId": "task-e78d3f6e-0358-4f64-9354-d61f33cdd293",
-        "startedAt": 1793506245400,
-        "at": 1793506361680,
+        "goal": "skills",
+        "capability": "magic-order",
+        "runId": "task-b8bbf6f5-040b-4aa4-8da4-e52e0e5ced6a",
+        "startedAt": 1793507784061,
+        "at": 1793508312608,
         "evidence": "qualify"
       }
     },
@@ -3943,21 +3957,6 @@
               "status": "pending"
             }
           ]
-        },
-        {
-          "id": "run-smithing-oreelse-bronze-finish99",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "iron-progress-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-smithing-oreelse-iron-leg99",
-              "status": "running"
-            }
-          ]
         }
       ],
       "failed": [],
@@ -3969,7 +3968,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 3,
+    "reportedRunning": 4,
     "observationStale": false,
     "jobs": [
       {
@@ -4073,6 +4072,11 @@
         "state": "disabled"
       },
       {
+        "account": "Mightyrod",
+        "script": "scripts/quest-chain.ts",
+        "state": "disabled"
+      },
+      {
         "account": "Ballspinner",
         "script": "scripts/chain.ts",
         "state": "disabled"
@@ -4103,18 +4107,13 @@
         "state": "disabled"
       },
       {
-        "account": "Shaftmaker",
-        "script": "scripts/firemaking-order.ts",
-        "state": "disabled"
-      },
-      {
-        "account": "Mightyrod",
-        "script": "scripts/quest-sweep.ts",
-        "state": "disabled"
-      },
-      {
         "account": "OreElse",
         "script": "scripts/smelt-bars.ts",
+        "state": "running"
+      },
+      {
+        "account": "Shaftmaker",
+        "script": "scripts/magic-order.ts",
         "state": "running"
       }
     ]
