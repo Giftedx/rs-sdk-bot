@@ -72,6 +72,16 @@ test('a disabled owner job with a confirmed logout and no persistent end admits 
  expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).not.toThrow();
 });
 
+test('composed admission reserves one process while retaining every account slot and the memory floor',()=>{
+ const f=fixture(),path=join(f.base,'swarm.json'),plan={maxBots:17,minFreeGB:4,jobs:[]};writeFileSync(path,JSON.stringify(plan));
+ const task:any={id:'test',goal:'skills',participants:['Crafter',...Array.from({length:16},(_,i)=>'Carrier'+i)]};
+ expect(()=>installJob(task,'Crafter','worker.ts','test','source',{}, {base:f.base,preflight:true,freeGB:6})).not.toThrow();
+ expect(()=>installJob(task,'Crafter','worker.ts','test','source',{}, {base:f.base,preflight:true,freeGB:4.5})).toThrow('live admission waiting: memory');
+ writeFileSync(path,JSON.stringify({...plan,maxBots:16}));
+ expect(()=>installJob(task,'Crafter','worker.ts','test','source',{}, {base:f.base,preflight:true,freeGB:64})).toThrow('live admission waiting: maxBots');
+ expect(JSON.parse(readFileSync(path,'utf8')).jobs).toEqual([]);
+});
+
 test('a persistent end or an enabled owner job still blocks that install',()=>{
  const f=fixture(),path=join(f.base,'swarm.json');
  writeFileSync(path,JSON.stringify({maxBots:17,minFreeGB:0,jobs:[{account:'Rod',script:'old.ts',enabled:false,repeat:false}]}));

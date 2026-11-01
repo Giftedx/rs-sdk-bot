@@ -3,7 +3,7 @@ import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
-import {admissionDecision,activeExternalLive,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
+import {admissionDecision,startReserve,activeExternalLive,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
@@ -262,10 +262,10 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }
- const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:accounts.length,pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
- if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
  const goal=`${task.id} [${runId}]`,job={...(accounts.length>1?{accounts,orchestrate:true}:{account}),args:task.args??[],maxRestarts:0,script,role:task.role??existing?.role??'helper',goal,enabled:true,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:task.id,
   env:{...task.env,CAP:task.env?.CAP??'1600',COORDINATOR_RUN_ID:runId,...(task.launch==='main'?{HAGGIS_RUN:'1'}:{})}};
+ const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:startReserve({host:false,job},accounts.length),pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
+ if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
  // The merged view checks the split (a composed owner job keeps all its participants); only the coordinator's own
  // file is written. swarm.json stays the owner's: the controller merges both files (packages/core/src/coordinator-jobs.ts).
  const before=plan.jobs;replaceAssignments(plan.jobs,accounts,job);
