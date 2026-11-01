@@ -29,3 +29,9 @@ test('both unavailable subscriptions retain both failures and stop after one fal
  const calls:ModelWorker[]=[];const result=await runPlannerModel('codex','plan',10000,async agent=>{calls.push(agent);return limited;});
  expect(calls).toEqual(['codex','claude']);expect(result.ok).toBe(false);expect(result.attempts).toHaveLength(2);
 });
+test('fallback startup exceptions preserve the subscription receipt and the startup cause',async()=>{
+ const result=await runPlannerModel('claude','plan',10000,async agent=>{if(agent==='claude')return limited;throw Error('Codex CLI unavailable');});
+ expect(result.ok).toBe(false);expect(result.attempts).toHaveLength(2);
+ expect(result.attempts[0]!.text).toBe(limited.text);expect(result.attempts[1]!.text).toContain('Codex CLI unavailable');
+ expect(result.text).toContain('Codex CLI unavailable');
+});

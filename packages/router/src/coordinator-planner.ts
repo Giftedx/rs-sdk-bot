@@ -197,7 +197,8 @@ export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:
  if(!first.ok&&/\b(?:you['’]ve hit your (?:weekly|daily|monthly|usage) limit|usage limit reached)\b/i.test(first.text)){
   const remaining=timeoutMs-(now()-start);
   if(remaining>0){
-   const fallback:ModelWorker=agent==='claude'?'codex':'claude',result=await run(fallback,prompt,remaining,true);
+   const fallback:ModelWorker=agent==='claude'?'codex':'claude';let result:Awaited<ReturnType<typeof runModel>>;
+   try{result=await run(fallback,prompt,remaining,true);}catch(error){result={ok:false,text:'planner startup failed: '+String(error),costUsd:0};}
    attempts.push({agent:fallback,...result});return{...result,attempts};
   }
  }
