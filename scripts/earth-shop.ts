@@ -46,7 +46,7 @@ export async function buyEarthObserved(s:Session,n:number,reserve:number,remaini
  const unit=maximumUnitCost(item,state.shop.shopConfig);
  if(Math.min(coins-reserve,remaining)<unit)throw Error('earth purchase worst-price funding unavailable');
  const messageAfter=Math.max(0,...(state.gameMessages??[]).map(m=>m.observationId??0));
- const refused=()=>(s.sdk.getState()?.gameMessages??[]).some(m=>Number.isSafeInteger(m.observationId)&&(m.observationId??0)>messageAfter&&/^The shop has run out of stock\.$/i.test(m.text));
+ const refused=()=>(s.sdk.getState()?.gameMessages??[]).some(m=>m.type===0&&m.sender===''&&Number.isSafeInteger(m.observationId)&&(m.observationId??0)>messageAfter&&/^The shop has run out of stock\.$/i.test(m.text));
  const paired=()=>count(557)===earth+1&&count(995)<coins;
  // The public packet API checks the open shop and slot. The server owns its current stock check.
  if(!(await s.sdk.sendShopBuy(item.slot,1)).success)throw Error('earth purchase dispatch refused');
