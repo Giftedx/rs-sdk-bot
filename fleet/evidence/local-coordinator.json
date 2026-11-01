@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793501974826,
+  "exportedAt": 1793502575739,
   "sources": {
     "state": {
-      "observedAt": 1793501500705.8975,
-      "ageMs": 474120.1025390625,
+      "observedAt": 1793502188397.9773,
+      "ageMs": 387341.0227050781,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793501974204,
-      "ageMs": 622,
+      "observedAt": 1793502574359,
+      "ageMs": 1380,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 1619077.1945800781,
+      "ageMs": 2219990.194580078,
       "stale": true,
       "error": null
     }
@@ -549,14 +549,14 @@
           "blocker": null
         },
         {
-          "id": "qualify-druid-meats-ground-entry",
+          "id": "qualify-oreelse-release-refusal-cleanup",
           "kind": "qualify",
-          "goal": "quests",
-          "capability": "druid-meats-order",
-          "runId": "task-4cf76270-7841-4b4f-9b93-ffd0af558a28",
-          "startedAt": 1793501105325,
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-3fee2520-1d6f-49ce-be53-5f1a54e2b378",
+          "startedAt": 1793502135381,
           "recordStatus": "running",
-          "pid": 35424,
+          "pid": 33472,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": true,
@@ -564,16 +564,6 @@
         }
       ],
       "pending": [
-        {
-          "id": "qualify-oreelse-release-refusal-cleanup",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "queued",
-          "dependencies": []
-        },
         {
           "id": "run-oreelse-release-refusal-cleanup",
           "kind": "run",
@@ -585,7 +575,7 @@
           "dependencies": [
             {
               "id": "qualify-oreelse-release-refusal-cleanup",
-              "status": "pending"
+              "status": "running"
             },
             {
               "id": "run-ranged-bigchopper-qualified-band70",
@@ -728,16 +718,6 @@
           "runId": "task-8df6f374-3610-4b35-8290-d479ea0ea3b1",
           "startedAt": 1793337666891,
           "at": 1793337669333,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "run-druid-meats-mightyrod-upstairs",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "druid-meats-order",
-          "runId": "task-a248d9ce-7568-4b7c-a1f8-f8b2ffae921c",
-          "startedAt": 1793328346960,
-          "at": 1793328356175,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2811,6 +2791,16 @@
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
+          "id": "run-druid-meats-mightyrod-ground",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "druid-meats-order",
+          "runId": "task-8a6162ef-3cc6-493a-935f-1d40a146babe",
+          "startedAt": 1793502135322,
+          "at": 1793502143835,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
           "id": "run-iron-oreelse-approved-anvil85",
           "kind": "run",
           "goal": "skills",
@@ -2842,14 +2832,14 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "build-iron-fresh-baseline-anvil",
-        "kind": "build",
-        "goal": "skills",
-        "capability": "iron-progress-order",
-        "runId": "task-4cfb16c4-3860-4ea3-9c5c-960fd23eb9f9",
-        "startedAt": 1793500401642,
-        "at": 1793500817600,
-        "evidence": "build"
+        "id": "qualify-druid-meats-ground-entry",
+        "kind": "qualify",
+        "goal": "quests",
+        "capability": "druid-meats-order",
+        "runId": "task-4cf76270-7841-4b4f-9b93-ffd0af558a28",
+        "startedAt": 1793501105325,
+        "at": 1793502133920,
+        "evidence": "qualify"
       }
     },
     "unassigned": {
@@ -3923,21 +3913,6 @@
           ]
         },
         {
-          "id": "run-druid-meats-mightyrod-ground",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "druid-meats-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-druid-meats-ground-entry",
-              "status": "running"
-            }
-          ]
-        },
-        {
           "id": "qualify-quest-sweep-druid-main",
           "kind": "qualify",
           "goal": "quests",
@@ -3948,7 +3923,7 @@
           "dependencies": [
             {
               "id": "run-druid-meats-mightyrod-ground",
-              "status": "pending"
+              "status": "failed"
             }
           ]
         },
@@ -3967,7 +3942,7 @@
             },
             {
               "id": "run-druid-meats-mightyrod-ground",
-              "status": "pending"
+              "status": "failed"
             }
           ]
         }
@@ -4090,11 +4065,6 @@
         "state": "disabled"
       },
       {
-        "account": "Mightyrod",
-        "script": "scripts/quest-chain.ts",
-        "state": "disabled"
-      },
-      {
         "account": "Ballspinner",
         "script": "scripts/chain.ts",
         "state": "disabled"
@@ -4127,6 +4097,11 @@
       {
         "account": "OreElse",
         "script": "scripts/smelt-bars.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Mightyrod",
+        "script": "scripts/druid-meats.ts",
         "state": "disabled"
       }
     ]
