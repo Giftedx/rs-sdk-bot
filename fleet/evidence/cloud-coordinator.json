@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793509546222,
+  "exportedAt": 1793510176267,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 66341034.73095703,
+      "ageMs": 66971079.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793509545688,
-      "ageMs": 534,
+      "observedAt": 1793510175928,
+      "ageMs": 339,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 66749463.74682617,
+      "ageMs": 67379508.74682617,
       "stale": true,
       "error": null
     }
@@ -76,13 +76,13 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 2,
+    "reportedRunning": 1,
     "observationStale": false,
     "jobs": [
       {
         "account": "TossTheCaber",
-        "script": "scripts/foodcourier.ts",
-        "state": "ended: done after 1 runs"
+        "script": "scripts/generated/quest-seaslug.ts",
+        "state": "disabled"
       },
       {
         "account": "BraveHardon",
@@ -91,8 +91,8 @@
       },
       {
         "account": "Swordswallow",
-        "script": "scripts/gather-yews.ts",
-        "state": "running"
+        "script": "scripts/firemaking-order.ts",
+        "state": "disabled"
       },
       {
         "account": "Unsheathed",
