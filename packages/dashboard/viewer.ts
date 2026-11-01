@@ -14,7 +14,7 @@ export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relati
 // A geometry draw followed by a screen present is not a promise that every tile loaded.
 export function installViewerBridge(host:any) {
     let privacyReady=false,renderReady=false,feedConnected:boolean|null=null,failed=false,announced=false;
-    let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false;
+    let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false,publishedCamera='';
     // A hosted page must not hold the hidden name itself: its list carries "h:<FNV-1a of the lower-case name>" entries.
     // The bridge then renames a matching roster player to HIDDEN_ALIAS before the viewer reads the message, and gives
     // the viewer that alias to hide. Names keep the one character set the list allows, so a plain loop hashes them.
@@ -126,6 +126,13 @@ export function installViewerBridge(host:any) {
             }}catch{/* Non-feed sockets do not affect readiness. */}
         }
     };
+    // The page's minimap stands in for the viewer's own (hidden by client-viewer.css): its compass and world-map buttons
+    // press the viewer's, which stay in the page for this.
+    host.addEventListener('message',(event:any)=>{
+        if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
+        if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
+        if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
+    });
     host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
     // The pinned viewer publishes its current follow target in its URL. Relay
@@ -134,7 +141,10 @@ export function installViewerBridge(host:any) {
         if(!privacyReady||!renderReady||failed||host.parent===host)return;
         const worldMap=!!host.document?.querySelector('.worldmap-modal-overlay');
         if(worldMap!==publishedWorldMap){publishedWorldMap=worldMap;host.parent.postMessage({atlasWorldMap:worldMap},host.location.origin);}
-        const follow=new host.URL(host.location.href).searchParams.get('follow');
+        // The viewer keeps its camera in its own URL (cx, cz in tiles, y = yaw 0-2047): the page's minimap turns with it.
+        const params=new host.URL(host.location.href).searchParams,cx=Number(params.get('cx')),cz=Number(params.get('cz')),yaw=Number(params.get('y'));
+        if(params.has('cx')&&Number.isFinite(cx)&&Number.isFinite(cz)&&Number.isFinite(yaw)){const key=cx+','+cz+','+yaw;if(key!==publishedCamera){publishedCamera=key;host.parent.postMessage({atlasCamera3d:{x:cx,z:cz,yaw:yaw&2047}},host.location.origin);}}
+        const follow=params.get('follow');
         if(!follow||follow===publishedFollow||!/^[A-Za-z0-9_ -]{1,12}$/.test(follow))return;
         publishedFollow=follow;
         host.parent.postMessage({atlasFollow:hiddenNames.has(follow.toLowerCase())?'⟦MAIN⟧':follow},host.location.origin);

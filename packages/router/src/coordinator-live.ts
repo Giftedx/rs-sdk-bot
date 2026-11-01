@@ -7,7 +7,7 @@ import {admissionDecision,activeExternalLive,loadEnded,persistEnded,persistentEn
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
 import {acceptStatus,type CoordTask} from './coordinator';
@@ -72,7 +72,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const swarmSource=closure.digest('hex');
  const stopped=()=>existsSync(join(base,'.practice/stop-coordinator'))||existsSync(join(base,'.practice/stop-swarm'));
  if(stopped())throw Error('controller rollout owner stopped');
- const currentSource=deps.currentSource??(()=>workerSourceRevision(base)),matches=deps.matches??processMatches,now=deps.now??Date.now;
+ const currentSource=deps.currentSource??(()=>launchRevision(base)),matches=deps.matches??processMatches,now=deps.now??Date.now;
  const pidExists=deps.pidExists??((pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return(e as NodeJS.ErrnoException).code!=='ESRCH';}});
  const stop=deps.stop??safeKill,drain=deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerDrain(owner,after,base));
  const ack=deps.ack??deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerAck(owner,after,base));
@@ -99,9 +99,9 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   writeCoordinatorJobs(base,own);
  },dir);
  const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
- // A coordinator run needs the whole-runtime pin; standing jobs need only the swarm's own code current.
- // Workers carry the release of the source they start on (swarm.ts), so only the swarm's own code needs a rollout.
- // A run also needs the controller's WORKER_RELEASE to equal its own source: recovery permits bind to it.
+ // `source` is the launch release (worker-release.ts): the swarm, its launchers and the recovery runner. A coordinator
+ // run needs the controller on it, because recovery permits bind to the controller's WORKER_RELEASE; standing jobs need
+ // only the swarm's own code current. Workers carry their own capability release (swarm.ts), so no rollout follows it.
  const runtimeCurrent=!forRun||owner?.source===source;
  if(alive&&owner.swarmSource===swarmSource&&runtimeCurrent){await resume();return;}
  // A standing rollout gets ROLLOUT_DRAIN_MS to drain; then the jobs run again and the next try waits ROLLOUT_BACKOFF_MS.
@@ -141,7 +141,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
    if(pidExists(owner.pid)){retainFence=owner;throw Error('old controller stop unconfirmed; admission remains fenced');}
   }
   if(stopped())throw Error('controller rollout owner stopped');
-  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release})))(source,nonce);
+  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release,WORKER_ENTRY:''})))(source,nonce);
   const next={pid,nonce,source,swarmSource,at:now(),detached:true};
   try{atomicJson(ownerFile,next);await ack(next,next.at);if(stopped())throw Error('controller rollout owner stopped');}catch(error){
    try{await stopOne(pid,nonce);}catch{/* retain the fence unless process death can be confirmed */}
@@ -204,8 +204,9 @@ export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly st
  });
  return{...own,jobs};
 }
-export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean}={}){
- const base=options.base??projectRoot,rows=liveRows(base);
+export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean;launch?:string}={}){
+ // `source` is the run's capability release; a recovery session binds to the launch release (default: the same value).
+ const base=options.base??projectRoot,rows=liveRows(base),launch=options.launch??source;
  if(options.recoveryPreflight&&(!options.preflight||!task.sessionRecovery||task.account!==account||task.sessionRecovery.account!==account))throw Error('authenticated recovery can only preflight its exact account');
  const pendingRepair=(name:string,end:any)=>options.preflight&&task.repairs?.some(r=>r.account.toLowerCase()===name.toLowerCase()&&r.endedAt===end.at);
  const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
@@ -239,7 +240,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  }
  if(existsSync(join(base,'.practice','stop-'+account)))throw Error('account has a stop file; preserve its owner');
  const unfinished=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result);
- if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,source,base))throw Error('account session ownership is not settled');
+ if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,launch,base))throw Error('account session ownership is not settled');
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
  if(end&&persistentEnd(end.reason)&&!pendingRepair(account,end))throw Error('account recovery needs a verified repair: '+end.reason);
  // The recovery preflight of its own account parks the hand job next (prepareLiveRecovery turns it off), and the
@@ -249,7 +250,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  const parkedForRecovery=!!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob;
  // After the recovery, the parked hand job is released by this run's confirmed recovery logout: a recovery login writes
  // no ok result, so the status cannot show one.
- const recovered=options.recovered??((name:string)=>recoveredSessionForRun(name,LIVE_SERVER,runId,source,base));
+ const recovered=options.recovered??((name:string)=>recoveredSessionForRun(name,LIVE_SERVER,runId,launch,base));
  const releasedByRecovery=!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob&&existing.enabled===false&&recovered(account);
  if(existing?.standing===true&&existing.enabled&&!parkedForRecovery)throw Error('account runs an owner standing job: '+existing.script);
  if(handJob&&!parkedForRecovery&&!releasedByRecovery){
@@ -270,7 +271,7 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  writeCoordinatorJobs(base,own);return{goal,source,account,installedAt:now};
 }
 /** Check admission while the failure still holds, then park its old assignment before the controller can clear it. */
-export function prepareLiveRecovery(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot){
+export function prepareLiveRecovery(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot,launch=source){
  const participants=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  for(const repair of task.repairs??[]){
   if(!participants.some(n=>n?.toLowerCase()===repair.account.toLowerCase()))throw Error('repair must name a participant');
@@ -282,7 +283,7 @@ export function prepareLiveRecovery(task:CoordTask,account:string,script:string,
   if(persistentEnd(end.reason)&&failedScript(end)===scriptKey(script))throw Error('same-script recovery needs explicit script qualification before clearing the failure');
  }
  if(task.sessionRecovery)recoveryQualification(task,dependencies,source,base);
- installJob(task,account,script,runId,source,dependencies,{base,preflight:true,recoveryPreflight:!!task.sessionRecovery});
+ installJob(task,account,script,runId,source,dependencies,{base,preflight:true,recoveryPreflight:!!task.sessionRecovery,launch});
  const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownFile=join(base,COORDINATOR_JOBS_FILE),ownRaw=existsSync(ownFile)?readFileSync(ownFile,'utf8'):null;
  const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),participants,base),plan=mergedPlan(JSON.parse(raw),own),names=new Set(participants.map(n=>n.toLowerCase()));
  const before=structuredClone(plan.jobs);
@@ -323,9 +324,10 @@ export function recoveryQualification(task:CoordTask,dependencies:Record<string,
  if(typeof proof.path!=='string'||! /^[a-f0-9]{64}$/.test(proof.sha256??''))throw Error('authenticated recovery native artifact malformed');
  return{delivery:{path:reportPath,sha256:createHash('sha256').update(bytes).digest('hex')},proof};
 }
-export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000){
+// `source` is the capability release its delivery proved; the request binds to the controller's launch release.
+export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source){
  const authorization=task.sessionRecovery;if(!authorization)throw Error('authenticated recovery task flag missing');
- const request:ControlledRecoveryRequest={schema:RECOVERY_SCHEMA,kind:'session-recovery',...authorization,server:LIVE_SERVER,runId,nonce:randomUUID(),source,
+ const request:ControlledRecoveryRequest={schema:RECOVERY_SCHEMA,kind:'session-recovery',...authorization,server:LIVE_SERVER,runId,nonce:randomUUID(),source:launch,
   qualification:recoveryQualification(task,dependencies,source,base)};
  const file=join(base,'.practice/swarm-repair.json'),lease=file+'.lease';
  writeFileSync(lease,JSON.stringify({pid:process.pid,runId,nonce:request.nonce}),{flag:'wx'});
@@ -380,16 +382,16 @@ export async function requestLiveRecovery(repair:{account:string;endedAt:number}
  }
 }
 /** Completed work stays recorded. Only its authenticated cleanup may admit a different mission. */
-export function preserveCompletedLiveEnd(task:CoordTask,repair:{account:string;endedAt:number},script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot):boolean{
+export function preserveCompletedLiveEnd(task:CoordTask,repair:{account:string;endedAt:number},script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot,launch=source):boolean{
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([name])=>name.toLowerCase()===repair.account.toLowerCase())?.[1];
  if(!end||end.at!==repair.endedAt)throw Error('end record changed after session cleanup');
  if(!/^done(?: after \d+ runs)?$/.test(end.reason))return false;
  if(task.account!==repair.account||task.sessionRecovery?.account!==repair.account||task.sessionRecovery.endedAt!==repair.endedAt
   ||!task.repairs?.some(r=>r.account===repair.account&&r.endedAt===repair.endedAt))throw Error('completed end needs exact authenticated cleanup authorization');
- const installed=installJob(task,repair.account,script,runId,source,dependencies,{base,preflight:true});
+ const installed=installJob(task,repair.account,script,runId,source,dependencies,{base,preflight:true,launch});
  if(typeof end.revision!=='string'||!end.revision||end.revision===installed.revision)throw Error('completed work needs a different mission');
  const proof=liveLogoutRef(repair.account,base,true);
- if(proof?.kind!=='producer'||!recoveredSessionForRun(repair.account,LIVE_SERVER,runId,source,base))throw Error('completed end needs current run producer cleanup');
+ if(proof?.kind!=='producer'||!recoveredSessionForRun(repair.account,LIVE_SERVER,runId,launch,base))throw Error('completed end needs current run producer cleanup');
  return true;
 }
 export async function disableOwnJob(runId:string,base=projectRoot){return withPlanWrite(()=>{
@@ -399,19 +401,23 @@ export async function disableOwnJob(runId:string,base=projectRoot){return withPl
 },join(base,'.practice/coordinator'));}
 export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>,definition:{entry:string},runId:string,startedAt:number){
  const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n);
- const account=accounts?.[0]??accountFor(task,dependencies),target=accounts?.[task.acceptIndex??0]??account,source=workerSourceRevision();
+ const account=accounts?.[0]??accountFor(task,dependencies),target=accounts?.[task.acceptIndex??0]??account;
+ // Three releases (docs/script-contract.md, Release scope): `capability` is what the entry's delivery recorded,
+ // `source` is what the swarm pins on this job's worker (entry and the code files its arguments name), `launch` is the
+ // controller's and its recovery runner's.
+ const capability=capabilityRevision([definition.entry]),source=capabilityRevision(workerEntries(definition.entry,task.args??[])),launch=launchRevision();
  if((accounts??[account]).some(a=>existsSync(join(projectRoot,'.practice/stop-'+a))))throw Error('live account owner stopped before controller setup');
- await ensureSwarm(source);
+ await ensureSwarm(launch);
  if(task.repairs?.length){
-  await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,source,dependencies));
+  await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch));
   if(task.sessionRecovery){
-   await requestAuthenticatedRecovery(task,dependencies,source,runId);
+   await requestAuthenticatedRecovery(task,dependencies,capability,runId,projectRoot,180000,launch);
    // Check the indexed cleanup and every ordinary install condition before consuming the old end.
-   await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{preflight:true}));
+   await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{preflight:true,launch}));
   }
-  for(const repair of task.repairs)if(!preserveCompletedLiveEnd(task,repair,definition.entry,runId,source,dependencies))await requestLiveRecovery(repair,runId);
+  for(const repair of task.repairs)if(!preserveCompletedLiveEnd(task,repair,definition.entry,runId,source,dependencies,projectRoot,launch))await requestLiveRecovery(repair,runId);
  }
- const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies)),deadline=Date.now()+(task.timeoutMs??Math.min(86400000,Math.max(900000,task.estimatedMs*1.5)));
+ const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{launch})),deadline=Date.now()+(task.timeoutMs??Math.min(86400000,Math.max(900000,task.estimatedMs*1.5)));
  try{
   while(Date.now()<deadline){
    if(existsSync(join(projectRoot,'.practice/stop-coordinator')))throw Error('coordinator stopped');

@@ -74,8 +74,8 @@ Use this for every new or changed part.
 | `orbs` | status orbs, `regenmeter` | adapt | HP and Prayer orbs from the snapshot. | Reject run energy and special attack orbs: not reported. Reject the regen meter: no regen timer. |
 | `xp-drops` | `xpdrop` | copy | Skill icon and XP gained, rising under the XP button. | Reject prayer-coloured drops: no active prayer state. |
 | `xp-globes` | `xpglobes` | copy | A progress ring per recently trained skill, with XP left in the tooltip. | Copy "show XP/hr" in the tooltip. |
-| `minimap` | `minimap` | adapt | Map art around the followed account. Fleet bots are green dots (bright when playing), other players from the world feed are white. | none |
-| `places` | `worldmap` (destinations) | adapt | A place list (Go, Locate) for the camera. | Reject fairy rings, teleports and the other OSRS map layers. |
+| `minimap` | `minimap` | adapt | One minimap for 2D and 3D: map art around the followed account (in 3D free camera, around the 3D camera). Fleet bots are green dots (bright when playing), other players from the world feed are white. In 3D it turns with the camera's yaw like RuneLite's, and the compass turns the camera north; in 2D it faces north and a click moves the camera there. The rs-world viewer's own minimap is hidden. | none |
+| `places` | `worldmap` (destinations) | adapt | A place list (Go, Locate) for the camera; in 3D it also opens the viewer's world map of every player. | Reject fairy rings, teleports and the other OSRS map layers. |
 | `overlay` | overlay panels (`xptracker` on-screen box) | adapt | The followed account's status, goal, phase, XP/hr and session; in free camera, fleet totals. | none |
 | `infoboxes` | `timersandbuffs`, infobox manager | adapt | One box per playing bot (trained skill, session), or the followed account's session and goal time. | Reject buff timers: no buff state. |
 | `chat` | game chat, `timestamp`, `chatcommands`, `chatnotifications` | adapt | Fleet events and results as game messages, timestamps, level-up and death messages, and `::` commands that control the fleet (not RuneLite's lookups). | none |

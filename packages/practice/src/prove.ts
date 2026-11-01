@@ -53,8 +53,8 @@ async function runBun(args: string[], timeoutMs: number): Promise<{ stdout: stri
 }
 
 // Each run logs in a fresh account. A dropped session stays in the engine for TIMEOUT_NO_CONNECTION
-// (500 ticks), and a relogin then takes over the in-memory player and discards the save file
-// (World.ts:988-1035). A name that never logged in has no session, so its preset save is what loads.
+// (500 ticks), and a relogin then attaches to the in-memory player and ignores the save file
+// (World.ts processLogins). A name that never logged in has no session, so its preset save is what loads.
 export const realDeps: ProveDeps = {
     async prepare(bot, preset) {
         await createBot(bot);

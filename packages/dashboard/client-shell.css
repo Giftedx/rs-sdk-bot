@@ -63,4 +63,16 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .farm-row{border-top:1px solid #242424;padding:4px 0}
 .farm-row summary{display:grid;grid-template-columns:1fr auto;gap:2px 8px;cursor:pointer;color:#ddd;font:12px Arial}
 .farm-row summary span:nth-child(3){grid-column:1/-1}
-
+.minimap-compass{cursor:pointer;pointer-events:auto;transform-origin:50% 50%}
+.game-minimap canvas{cursor:crosshair}
+/* Orbs and XP button in RuneLite's arc down the left of the minimap. */
+.game-hud .game-orbs{position:absolute;right:164px;top:47px;display:flex;flex-direction:column;align-items:flex-end;gap:2px;pointer-events:auto}
+.game-hud .game-orb{position:relative;display:flex;align-items:center;height:34px;min-width:0;padding:0;margin:0;gap:0;border:0;border-radius:0;background:none;box-shadow:none}
+.game-hud .game-orb.orb-prayer{margin-right:4px}
+.game-hud .orb-num{position:relative;z-index:0;min-width:24px;height:19px;margin-right:-5px;padding:0 8px 0 5px;background:linear-gradient(#3e382d,#1b1812);border:1px solid #000;border-right:0;border-radius:3px 0 0 3px;font:15px RS;line-height:19px;text-align:right;text-shadow:1px 1px #000}
+.game-hud .orb-art{position:relative;z-index:1;width:34px;height:34px;image-rendering:auto;filter:drop-shadow(0 1px 1px #000)}
+.game-hud .game-xp{right:189px;top:14px;width:26px;height:26px;padding:0;border:1px solid #000;border-radius:50%;background:radial-gradient(circle at 40% 35%,#b3a385,#6e6350 70%,#2a251c);box-shadow:inset 0 0 0 3px #1c1914;display:grid;place-items:center}
+.game-hud .game-xp img{width:16px;height:16px;image-rendering:pixelated}
+.game-hud .game-minimap canvas.minimap-frame{position:absolute;left:0;top:0;width:181px;height:165px;border-radius:0;background:none;pointer-events:none}
+/* The game's compass is 51 px with its N near the edge: shown at 40 px in the socket's well, clipped round. */
+.game-hud .minimap-compass{left:2px;top:1px;width:40px;height:40px;clip-path:circle(17px at 50% 50%)}

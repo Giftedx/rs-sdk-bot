@@ -156,3 +156,23 @@ test('a named stack instance has its own pid file', () => {
     expect(basename(pidsFile('rehearse'))).toBe('pids-rehearse.json');
     expect(() => pidsFile('../x')).toThrow(/invalid stack instance/);
 });
+
+// db0cc51e Player.save: version 10 appends playtimeMs and 21 levelPlaytimeMs (8 bytes each) before the CRC.
+// The vendor generator writes version 6 (4-byte varps), so the base is an engine-written version 9 library save.
+const engineSave = () => entryBytes(findEntry('smithing-50-alkharid-iron-bars'));
+const withVersion = (version: number) => {
+    const body = Buffer.concat([Buffer.from(engineSave()).subarray(0, -4), Buffer.alloc(8 * 22)]);
+    body.writeUInt16BE(version, 2);
+    const out = Buffer.alloc(body.length + 4);
+    body.copy(out);
+    out.writeUInt32BE(Bun.hash.crc32(body) >>> 0, body.length);
+    return out;
+};
+test('a version 10 save summarizes like version 9; a newer version is refused', () => {
+    const {version, ...s} = summarize(withVersion(10));
+    const {version: old9, ...old} = summarize(engineSave());
+    expect(old9).toBe(9);
+    expect(version).toBe(10);
+    expect(s).toEqual(old);
+    expect(() => summarize(withVersion(11))).toThrow(/unsupported local save version/);
+});

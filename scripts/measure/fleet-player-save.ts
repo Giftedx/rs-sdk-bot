@@ -1,11 +1,12 @@
-// Focused local proof reader. Layout: engine/entity/PlayerLoading.ts; CRC: presets-mm.ts.
+// Focused local proof reader. Layout: engine/entity/PlayerLoading.ts; CRC: presets-mm.ts. Version 10 appends
+// millisecond playtimes after the parts read here, so versions 5-10 share this layout.
 import {readFileSync,writeFileSync} from 'node:fs';
 import {basename,dirname,resolve} from 'node:path';
 function checked(b:Buffer){if(b.length<140||b.readUInt16BE(0)!==0x2004)throw new Error('invalid local player save');if((Bun.hash.crc32(b.subarray(0,-4))>>>0)!==b.readUInt32BE(b.length-4))throw new Error('local player save CRC mismatch');return b;}
 function bytes(path:string){return checked(readFileSync(path));}
 export function readPracticeSave(path:string){return parsePracticeSave(readFileSync(path));}
 export function parsePracticeSave(raw:Uint8Array){
- const b=checked(Buffer.from(raw)),version=b.readUInt16BE(2);if(version<5||version>9)throw new Error(`unsupported local save version${version}`);
+ const b=checked(Buffer.from(raw)),version=b.readUInt16BE(2);if(version<5||version>10)throw new Error(`unsupported local save version${version}`);
  const skills=Array.from({length:21},(_,i)=>({index:i,rawExperience:b.readInt32BE(28+i*5),xp:Math.trunc(b.readInt32BE(28+i*5)/10),level:b.readUInt8(32+i*5)}));
  let at=133;const u1=()=>b.readUInt8(at++),u2=()=>{const n=b.readUInt16BE(at);at+=2;return n;},i4=()=>{const n=b.readInt32BE(at);at+=4;return n;};
  const varInt=()=>{let byte=u1(),n=0;while(byte&128){n=(n|(byte&127))<<7;byte=u1();}return(n|byte)>>>0;};
