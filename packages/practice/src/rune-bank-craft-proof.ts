@@ -2,7 +2,7 @@
 // One staged account: Rune Mysteries done, air/mind talismans and 30 essence banked, 5 air runes held.
 // At xpRate1 the first 27 air essence unlock mind. The remaining 3 essence must become mind runes.
 import {readFileSync,writeFileSync,appendFileSync,copyFileSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {join,resolve,basename} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {freemem} from 'node:os';
 import {startStack} from './stack';
@@ -12,7 +12,8 @@ import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
 import {killTree} from './proc';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {releaseRevision} from '../../core/src/worker-release';
+import {runeProofReceiptChecks} from './rune-proof-receipt';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {wrapTransparent} from './shark-fishing-diagnostic';
 
@@ -87,6 +88,7 @@ export function runeBankSaveChecks(before:Save,after:Save,xpRate=XP_RATE){
   assets:[...new Set([...Object.keys(a),...Object.keys(b)])].every(id=>converted.has(Number(id))||(a[Number(id)]??0)===(b[Number(id)]??0)),
   life:after.skills[3]!.level>0};
 }
+const runeProofSource=()=>releaseRevision(['scripts/rune-bank-craft.ts','packages/practice/src/rune-bank-craft-proof.ts']);
 function verify(directory:string){
  const before=readPracticeSave(join(directory,'before.sav')),after=readPracticeSave(join(directory,'after.sav'));
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8')),log=readFileSync(join(directory,'worker.log'),'utf8');
@@ -107,7 +109,7 @@ function verify(directory:string){
    &&after.skills.every((s,i)=>s.rawExperience===refused.skills[i]!.rawExperience)&&refused.skills[3]!.level>0,
   refusalLogout:(refusalLog.match(/^LOGOUT logged-out\r?$/gm)??[]).length===1&&!/^WARN .*logout/m.test(refusalLog),
   life:!/"died"/.test(log),
-  source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000};
+  ...runeProofReceiptChecks(meta,runeProofSource(),directory)};
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),
   scope:'One staged practice account, 27 air essence then 3 mind essence after level 2, tick150 xpRate1. Other altars, live, unattended and speed remain unproved.',
   checks,used,runecraftXp:after.skills[RC]!.xp,workerElapsedMs:meta.workerElapsedMs};
@@ -120,7 +122,7 @@ async function run(directory:string){
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'rune-bank-craft'}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
-  const source=workerSourceRevision(),name=runBotName('rbc',1);
+  const source=runeProofSource(),name=runBotName('rbc',1);
   const botDir=resolve(import.meta.dir,'../../../vendor/rs-sdk/bots',name);if(existsSync(botDir))throw Error('fresh account required');
   const preload=join(directory,'rune-entry-preload.ts'),trace=join(directory,'rune-entry-engine.jsonl');
   writeFileSync(preload,`import {isMainThread} from 'node:worker_threads';\nif(isMainThread){const {installRuneEntryObserver}=await import(${JSON.stringify(pathToFileURL(import.meta.path).href)});\nawait installRuneEntryObserver(process.cwd(),${JSON.stringify(trace)},${JSON.stringify(name)});}\n`);
@@ -147,7 +149,7 @@ async function run(directory:string){
   // Same account and stock, without reseeding: exhausted essence must refuse with logout.
   const refusal=await worker('refusal.log','refusal.err');
   copyFileSync(path,join(directory,'refusal.sav'));
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),name,source,code,timedOut,published:saved.matched,workerElapsedMs,refusal},null,2));
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),delivery:basename(directory),name,source,code,timedOut,published:saved.matched,workerElapsedMs,refusal},null,2));
   return verify(directory);
  }finally{try{await stack?.stop();}finally{try{
   if(stack)for(const [service,path] of Object.entries(stack.logs))if(existsSync(path))copyFileSync(path,join(directory,`${service}.log`));
