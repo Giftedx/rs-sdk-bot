@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793506541184,
+  "exportedAt": 1793507142014,
   "sources": {
     "state": {
-      "observedAt": 1793506375877.07,
-      "ageMs": 165306.92993164062,
-      "stale": true,
+      "observedAt": 1793507118044.2737,
+      "ageMs": 23969.726318359375,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793506539447,
-      "ageMs": 1737,
+      "observedAt": 1793507141771,
+      "ageMs": 243,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 1115890.2834472656,
+      "ageMs": 1716720.2834472656,
       "stale": true,
       "error": null
     }
@@ -531,17 +531,17 @@
     "codex": {
       "running": [
         {
-          "id": "run-quest-druid-mightyrod-main",
+          "id": "run-iron-oreelse-owned-band90",
           "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-8d10e1fd-bba1-4d02-9011-0a52ba9f0351",
-          "startedAt": 1793506362354,
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-fd3fa85e-8c8f-4031-a943-d724889a5749",
+          "startedAt": 1793507117949,
           "recordStatus": "running",
-          "pid": 2752,
+          "pid": 13544,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         }
       ],
@@ -2869,13 +2869,13 @@
         }
       ],
       "lastUsefulLive": {
-        "id": "run-iron-oreelse-bound-anvil85",
+        "id": "run-monk-mightyrod-owned-inputs",
         "kind": "run",
-        "goal": "skills",
-        "capability": "iron-progress-order",
-        "runId": "task-384f16cd-b6cf-4582-acb3-5eb06b5aa7d1",
-        "startedAt": 1793506133354,
-        "at": 1793506332938,
+        "goal": "quests",
+        "capability": "quest-sweep",
+        "runId": "task-041e7be9-a44a-468b-83f2-8629e4cfb9ef",
+        "startedAt": 1793506684576,
+        "at": 1793507037640,
         "evidence": "live"
       },
       "lastRecovery": {
@@ -4038,11 +4038,6 @@
         "state": "disabled"
       },
       {
-        "account": "OreElse",
-        "script": "scripts/chain.ts",
-        "state": "disabled"
-      },
-      {
         "account": "PickpockDick",
         "script": "scripts/goldfarm.ts",
         "state": "ended: died after 1 runs"
@@ -4110,6 +4105,11 @@
       {
         "account": "Mightyrod",
         "script": "scripts/quest-sweep.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "OreElse",
+        "script": "scripts/smelt-bars.ts",
         "state": "running"
       }
     ]
