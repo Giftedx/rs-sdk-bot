@@ -43,6 +43,9 @@ const publicGoal=(g:any)=>{
  if(run)return RUN_KIND[run[1]!]??run[1]+' run';
  return g.replace(/\s*\[task-[^\]]*\]/g,'').split(':')[0]!.replace(/\s*\([^)]*\)/g,'').trim();
 };
+// The server has read the market and the board tops since it started: what the public page shows first.
+// The server starts with pricesAt 0 and sets it when a market read finishes.
+export const stateWarm=(s:any)=>Array.isArray(s?.rivals)&&s.rivals.length>0&&Number(s?.economy?.pricesAt)>0;
 export function publicView(state:any,main=MAIN_ACCOUNT){
  const s=trimState(state);
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();

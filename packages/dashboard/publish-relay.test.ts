@@ -1,5 +1,5 @@
 import {describe,expect,test} from 'bun:test';
-import {controlView,publicView,trimState,withSides,MAIN_MARK,WHY_LIMIT,FINISHED_KEEP} from './publish-relay';
+import {controlView,publicView,trimState,withSides,MAIN_MARK,WHY_LIMIT,FINISHED_KEEP,stateWarm} from './publish-relay';
 
 const state=()=>({now:1,bots:[
   {name:'CoinCock',env:{target:null},sessionAttemptId:'1-2',workRevision:'abc',inputs:{},coordinatorRunId:null,bank:[{name:'Coins',count:5}],pos:{x:1,z:2},reserved:false},
@@ -82,4 +82,12 @@ test('public item values cover only what public bots carry or wear',()=>{
  const p=publicView({bots:[{name:'CoinCock',inventory:[{name:'Lobster',count:2}],equipment:[{name:'Bronze axe'}],bank:[{name:'Rune bar',count:9}]}],
   economy:{supplies:[],pricesAt:1,itemValues:{Lobster:150,'Bronze axe':16,'Rune bar':5000},itemExamine:{Lobster:'This looks tasty.','Rune bar':'A bar of rune.'}}});
  expect(p.economy.itemValues).toEqual({Lobster:150,'Bronze axe':16});expect(p.economy.itemExamine).toEqual({Lobster:'This looks tasty.'});
+});
+
+test('a state is warm once the server has read the market and the board tops',()=>{
+ expect(stateWarm({rivals:[],economy:{pricesAt:1}})).toBe(false);
+ expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:null}})).toBe(false);
+ // The server's value before its first market read.
+ expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:0}})).toBe(false);
+ expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:1}})).toBe(true);
 });
