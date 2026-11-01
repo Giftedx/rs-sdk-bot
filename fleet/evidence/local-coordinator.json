@@ -1,33 +1,38 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793500322625,
+  "exportedAt": 1793500382672,
   "sources": {
     "state": {
-      "observedAt": 1793500269516.0396,
-      "ageMs": 53108.96044921875,
+      "observedAt": 1793500362088.3655,
+      "ageMs": 20583.634521484375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793500321454,
-      "ageMs": 1171,
+      "observedAt": 1793500381695,
+      "ageMs": 977,
       "stale": false,
       "error": null
     },
     "owner": {
-      "observedAt": 1793500268131.1946,
-      "ageMs": 54493.805419921875,
+      "observedAt": 1793500355748.8054,
+      "ageMs": 26923.194580078125,
       "stale": false,
       "error": null
     }
   },
   "coordinator": {
     "paused": false,
-    "pid": 34372,
+    "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": null
+    "planner": {
+      "runId": "plan-f7e2ad9a-b280-421e-ad5b-56e909feff2b",
+      "agent": "codex",
+      "startedAt": 1793500362050,
+      "processState": "alive"
+    }
   },
   "workers": {
     "claude": {
@@ -49,16 +54,6 @@
       ],
       "pending": [],
       "failed": [
-        {
-          "id": "build-druid-meats-upstairs-exit",
-          "kind": "build",
-          "goal": "quests",
-          "capability": "druid-meats-order",
-          "runId": "task-7e7e67e9-a3d6-49fa-bf8e-4a99034d3c3c",
-          "startedAt": 1793327174751,
-          "at": 1793327546602,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
         {
           "id": "build-magic-authenticated-admission",
           "kind": "build",
@@ -544,20 +539,6 @@
           "startedAt": 1793496331821,
           "recordStatus": "running",
           "pid": 23188,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        },
-        {
-          "id": "qualify-magic-falador45-fresh",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-937024a8-9f47-4cb3-96f1-18aab223a4c2",
-          "startedAt": 1793499842528,
-          "recordStatus": "running",
-          "pid": 23744,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -2735,6 +2716,16 @@
           "startedAt": 1793495851357,
           "at": 1793495851800,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-magic-falador45-fresh",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-937024a8-9f47-4cb3-96f1-18aab223a4c2",
+          "startedAt": 1793499842528,
+          "at": 1793500360738,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -3906,7 +3897,7 @@
           "dependencies": [
             {
               "id": "qualify-magic-falador45-fresh",
-              "status": "running"
+              "status": "failed"
             }
           ]
         }
