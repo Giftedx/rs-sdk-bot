@@ -1,6 +1,6 @@
 import type {Session} from "../packages/core/src/inprocess";
 import {waitTicks,waitUntil} from "../packages/core/src/ticks";
-const eager=true,requestGap=1;
+const eager=true,requestGap=10;
 const inv=(s:Session)=>s.sdk.getInventory(),ess=(s:Session)=>inv(s).filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0);
 const state=(s:Session)=>s.sdk.getState()!,trade=(s:Session)=>state(s).trade;
 const index=(s:Session,n:string)=>state(s).nearbyPlayers.find(p=>p.name.toLowerCase()===n.toLowerCase())?.index;
