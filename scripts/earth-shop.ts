@@ -5,11 +5,11 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
-import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
+import {PROFILES,maximumUnitCost,shopFinishOk} from './shop-buyer';
 
 export function earthRefillAmount(shelf:number,missing:number){
  if(![shelf,missing].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('earth refill quantities unknown');
- return Math.min(1,shelf,missing);
+ return Math.min(1,missing);
 }
 export const earthSeedNeeded=(shelf:number,carried:number,seeded:boolean)=>Number.isSafeInteger(shelf)&&shelf>=0&&carried>=1&&!seeded;
 export const earthRefillStop=(idle:number,affordable:boolean):'budget'|'stock-wait'|undefined=>!affordable?'budget':idle>=25?'stock-wait':undefined;
@@ -41,13 +41,19 @@ export async function buyEarthObserved(s:Session,n:number,reserve:number,remaini
  if(n!==1)throw Error('earth settlement requires one purchase packet');
  const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);
  const coins=count(995),earth=count(557);
- await buyWithBudget(s.bot,s.sdk,'Earth rune',n,reserve,remaining);
- if(count(557)===earth&&count(995)===coins)await waitTicks(s,2);
- const changed=()=>count(557)!==earth||count(995)!==coins;
- if(changed()&&!await waitUntil(s,()=>stop()||count(557)>earth&&count(995)<coins,{timeoutTicks:6}))throw Error('earth purchase paired debit/credit unobserved');
+ const state=s.sdk.getState(),item=state?.shop.shopItems.find(i=>i.id===557);
+ if(!state?.shop.isOpen||!item||!Number.isSafeInteger(item.slot))throw Error('earth purchase slot unobserved');
+ const unit=maximumUnitCost(item,state.shop.shopConfig);
+ if(Math.min(coins-reserve,remaining)<unit)throw Error('earth purchase worst-price funding unavailable');
+ const messageAfter=Math.max(0,...(state.gameMessages??[]).map(m=>m.observationId??0));
+ const refused=()=>(s.sdk.getState()?.gameMessages??[]).some(m=>Number.isSafeInteger(m.observationId)&&(m.observationId??0)>messageAfter&&/^The shop has run out of stock\.$/i.test(m.text));
+ const paired=()=>count(557)===earth+1&&count(995)<coins;
+ // The public packet API checks the open shop and slot. The server owns its current stock check.
+ if(!(await s.sdk.sendShopBuy(item.slot,1)).success)throw Error('earth purchase dispatch refused');
+ if(!await waitUntil(s,()=>stop()||paired()||refused(),{timeoutTicks:6}))throw Error('earth purchase unacknowledged; retain unresolved intent');
  if(stop())throw Error('earth purchase stopped before settlement');
  const bought=count(557)-earth,spent=coins-count(995);
- if(!Number.isSafeInteger(bought)||bought<0||bought>n||!Number.isSafeInteger(spent)||spent<0||spent>remaining||count(995)<reserve
+ if(!Number.isSafeInteger(bought)||bought<0||bought>n||!Number.isSafeInteger(spent)||spent<0||spent>Math.min(unit,remaining)||count(995)<reserve
   ||bought===0&&spent!==0||bought>0&&spent<bought)throw Error('earth purchase paired accounting unresolved');
  return{bought,spent};
 }
@@ -130,11 +136,13 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
   &&[...before].every(([id,n])=>[557,995].includes(id)||(final.get(id)??0)===n);
  const targetMet=banked(557)>=o.target&&held(557)===0,atBank=held(995)===0&&!!pos()&&pos()!.level===0&&Math.max(Math.abs(pos()!.worldX-conf.bankSpot.x),Math.abs(pos()!.worldZ-conf.bankSpot.z))<=4;
  if(uncertain||!conserved)throw Error('earth refill accounting unresolved; retain running intent: '+failure);
- return {ok:!failure&&!terminal()&&!stopped()&&atBank&&targetMet,targetMet:targetMet?1:0,bank:atBank,conserved,boughtTotal,spentTotal,seeded,seedCredit,stockGrowth,hpMin,stop,target:o.target,finalEarth:final.get(557)??0,finalCoins:final.get(995)??0,ticks:s.tick()-start,failure:failure||'-'};
+ const safeOffline=!failure&&!terminal()&&!stopped()&&atBank;
+ return {ok:safeOffline&&targetMet,safeOffline,targetMet:targetMet?1:0,bank:atBank,conserved,boughtTotal,spentTotal,seeded,seedCredit,stockGrowth,hpMin,stop,target:o.target,finalEarth:final.get(557)??0,finalCoins:final.get(995)??0,ticks:s.tick()-start,failure:failure||'-'};
 }
 if(import.meta.main){
  let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}});
  try{const r=await runEarthRefill(s,{profile:process.argv[3]!,cap:Number(process.argv[4]),target:Number(process.env.STOCK_TARGET),maximum:Number(process.env.MAX_ITEMS),spend:Number(process.env.MAX_SPEND),reserve:Number(process.env.COIN_RESERVE),seedUsed:Number(process.env.EARTH_SEED_USED??0),stop:()=>stopped});
-  console.log('EARTH_REFILL '+JSON.stringify(r));process.exitCode=await settle([s],r.ok,Object.entries(r).map(([k,v])=>`${k}=${v}`).join(' '))?0:1;
+  const quiescent=r.safeOffline&&shopFinishOk(0,false,r.stop);
+  console.log('EARTH_REFILL '+JSON.stringify(r));process.exitCode=await settle([s],r.ok||quiescent,Object.entries(r).map(([k,v])=>`${k}=${v}`).join(' '))?0:1;
  }catch(e){await settle([s],false,String(e));process.exitCode=1;}
 }
