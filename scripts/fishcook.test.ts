@@ -1,7 +1,7 @@
 import { expect, test, spyOn } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as ticks from '../packages/core/src/ticks';
-import { fundFishingTool, buyFishingSupplies, cookCourierReady, cookStarterChickens } from './fishcook';
+import { fundFishingTool, buyFishingSupplies, cookCourierReady, cookStarterChickens, finiteFoodProfile, finiteFoodWork, finiteFoodCanCatch } from './fishcook';
 function account(bankCoins = 25, coins = 0, rod = false) {
     const inventory: any[] = [{ name: 'Coins', count: coins }, ...(rod ? [{ name: 'Fly fishing rod', count: 1 }] : [])];
     let withdrew = 0;
@@ -185,4 +185,36 @@ for(const mode of ['stalled','lost-output','missing-xp'])test(`bootstrap refuses
   await expect(cookStarterChickens(s)).rejects.toThrow(mode==='stalled'?'conversion unobserved':mode==='lost-output'?'output mismatch':'Cooking XP unobserved');
   expect(m.actions()).toBe(1);expect(m.tick()).toBeLessThanOrEqual(21);
  });
+});
+
+
+test('finite supported food profile is explicit and bounds bootstrap, fly catches and a queued catch',()=>{
+ expect(finiteFoodProfile(undefined)).toBeUndefined();
+ const p=finiteFoodProfile('16')!;expect(p).toEqual({target:16,netCap:16,flyCap:32,catchCap:48,noProgressTicks:240});
+ for(const v of ['', '0','29','1.5','NaN'])expect(()=>finiteFoodProfile(v)).toThrow('FOOD_TARGET');
+ expect(finiteFoodCanCatch(p,14,0,'net')).toBe(true);
+ expect(finiteFoodCanCatch(p,15,0,'net')).toBe(false);
+ expect(finiteFoodCanCatch(p,13,30,'fly')).toBe(true);
+ expect(finiteFoodCanCatch(p,13,31,'fly')).toBe(false);
+});
+test('finite useful output stops at16 new deposits and cooks only the remaining deficit after burns',()=>{
+ const p=finiteFoodProfile('16')!;
+ expect(finiteFoodWork(p,0,0,16)).toEqual({needed:16,cook:true,fish:false,done:false});
+ expect(finiteFoodWork(p,0,14,0)).toEqual({needed:2,cook:false,fish:true,done:false});
+ expect(finiteFoodWork(p,14,0,2)).toEqual({needed:2,cook:true,fish:false,done:false});
+ // An already accepted extra raw catch stays raw; it must not become a seventeenth food.
+ expect(finiteFoodWork(p,14,2,1)).toEqual({needed:0,cook:false,fish:false,done:false});
+ expect(finiteFoodWork(p,16,0,1)).toEqual({needed:0,cook:false,fish:false,done:true});
+});
+test('finite rod funding withdraws only5 owned coins and never liquidates bootstrap stock',async()=>{
+ const a=account(1123);await fundFishingTool(a.session,5,false);expect(a.held()).toBe(5);expect(a.bank()).toBe(1118);
+ let calls=0;const empty:any={sdk:{getState:()=>({inventory:[]}),findBankItem:()=>({name:'Raw shrimps',count:13})},bot:{withdrawItem:async()=>{calls++;return{success:true};}}};
+ // This model has no coin row; a missing budget cannot sell or withdraw fish.
+ empty.sdk.findBankItem=(re:RegExp)=>re.test('Raw shrimps')?{name:'Raw shrimps',count:13}:undefined;
+ expect(await fundFishingTool(empty,5,false)).toBe(0);expect(calls).toBe(0);
+});
+test('rod-only acquisition leaves the owned feather budget untouched and costs exactly5 coins',async()=>{
+ const inventory:any[]=[{name:'Coins',count:5},{name:'Feather',count:32}];const calls:string[]=[];
+ const s:any={sdk:{getState:()=>({inventory})},bot:{buyFromShop:async(re:RegExp,n:number)=>{calls.push(re.source);expect(re.test('Fly fishing rod')).toBe(true);expect(n).toBe(1);inventory[0].count-=5;inventory.push({name:'Fly fishing rod',count:1});return{success:true};}}};
+ expect(await buyFishingSupplies(s,0)).toBe(0);expect(calls).toHaveLength(1);expect(inventory[0].count).toBe(0);expect(inventory[1].count).toBe(32);
 });
