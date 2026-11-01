@@ -78,7 +78,7 @@ export function smithSaveChecks(before:Save,after:Save,result:any,kind:'anvil'|'
   health:after.skills[3]?.level===before.skills[3]?.level&&after.skills[3]!.level>0&&result?.died===false&&result?.hpMin===before.skills[3]?.level,
  };
 }
-const cases=['entry','interrupted','anvil','refusal'] as const;
+const cases=['entry','limited','interrupted','anvil','refusal'] as const;
 type Case=typeof cases[number];
 const smithCase=(id:Case):id is 'anvil'|'refusal'=>id==='anvil'||id==='refusal';
 export function verifyIron(directory:string){
@@ -98,9 +98,10 @@ const smithPreset=(level:number):SaveConfig=>({position:{x:3269,z:3166,level:0},
  bank:[{id:2351,count:349},{id:2349,count:1641},{id:2347,count:1},{id:995,count:396828},{id:440,count:1}]});
 const smithEnv={ORDER_ACTION:'smith',PRODUCT_ID:String(SMITH_ORDER.product),MAX_MAKE:String(SMITH_ORDER.maximum),BAR_RESERVE:String(SMITH_ORDER.reserve)};
 const smeltPreset=(id:Case):SaveConfig=>({position:id==='entry'?{x:3252,z:3420,level:0}:{x:3269,z:3167,level:0},skills:{Mining:99,Smithing:31,Hitpoints:16},
- inventory:[{id:1265,count:1},{id:315,count:2}],bank:[{id:440,count:684},{id:995,count:24},{id:436,count:7},{id:438,count:9},{id:2349,count:3}]});
+ inventory:[{id:1265,count:1},{id:315,count:2}],bank:[{id:440,count:id==='limited'?2:684},{id:995,count:24},{id:436,count:7},{id:438,count:9},{id:2349,count:3}]});
 const CASES:Record<Case,{preset:SaveConfig;cap:string;env:Record<string,string>;timeoutMs:number}>={
  entry:{preset:smeltPreset('entry'),cap:'2500',env:{MAX_MAKE:'6',ORE_RESERVE:'1',ORDER_MODE:'exact'},timeoutMs:240000},
+ limited:{preset:smeltPreset('limited'),cap:'2500',env:{MAX_MAKE:'6',ORE_RESERVE:'1',ORDER_MODE:'exact'},timeoutMs:240000},
  interrupted:{preset:smeltPreset('interrupted'),cap:'1',env:{MAX_MAKE:'6',ORE_RESERVE:'1',ORDER_MODE:'exact'},timeoutMs:240000},
  // CAP 1600 ticks is 240 s at 150 ms; the margin covers the bounded final bank walk and logout.
  anvil:{preset:smithPreset(84),cap:String(SMITH_ORDER.cap),env:smithEnv,timeoutMs:330000},

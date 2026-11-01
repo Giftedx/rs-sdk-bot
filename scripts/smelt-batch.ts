@@ -44,6 +44,12 @@ export async function runSmeltBatch(s:Session,o:{bar:string;cap:number;maximum:n
  const r=smeltRecipe(o.bar),state=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),held=(id:number)=>count(inv(),id),xp=()=>s.sdk.getSkillXp('Smithing')??0;
  const ready=await waitUntil(s,()=>!!state()?.player&&(s.sdk.getSkill('Hitpoints')?.level??0)>0&&(s.sdk.getSkill('Smithing')?.baseLevel??0)>=r.level,{timeoutTicks:15});
  if(!ready)throw Error('smelt entry level/state unobserved');
+ // Keep arbitrary ordinary starts supported. Known bank starts use the audited corridor below.
+ const at=state()!.player!,atBank=(x:number,z:number)=>at.level===0&&Math.max(Math.abs(at.worldX-x),Math.abs(at.worldZ-z))<=5;
+ if(!io&&!atBank(3269,3167)&&!atBank(3253,3420)){
+  const there=await goTo(s,await getWorld(),{x:3269,z:3167,level:0},accountOf(s),{legTimeoutTicks:100});
+  if(!there.ok)throw Error(`smelt travel to Al Kharid bank failed: ${there.detail}`);
+ }
  const p0=state()!.player!,start=s.tick(),xp0=xp();
  const entryBank={x:p0.worldX,z:p0.worldZ};
  const entry=smeltEntryRoute(p0);
