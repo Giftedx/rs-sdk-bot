@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793508373613,
+  "exportedAt": 1793508974475,
   "sources": {
     "state": {
-      "observedAt": 1793508347857.74,
-      "ageMs": 25755.260009765625,
+      "observedAt": 1793508962962.8345,
+      "ageMs": 11512.16552734375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793508372579,
-      "ageMs": 1034,
+      "observedAt": 1793508973113,
+      "ageMs": 1362,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 2948319.2834472656,
+      "ageMs": 3549181.2834472656,
       "stale": true,
       "error": null
     }
@@ -545,21 +545,70 @@
           "blocker": null
         },
         {
-          "id": "run-magic-shaftmaker-current-falador45",
-          "kind": "run",
+          "id": "qualify-recovery-shaftmaker-quote-end",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-e8d8554e-e30a-4778-b73d-868b6a3574aa",
+          "startedAt": 1793508961233,
+          "recordStatus": "running",
+          "pid": 36140,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "build-magic-bounded-shop-quote-readiness",
+          "kind": "build",
           "goal": "skills",
           "capability": "magic-order",
-          "runId": "task-9ff30ef0-e602-468c-a2cb-0021de038689",
-          "startedAt": 1793508313600,
+          "runId": "task-72789a66-9901-4f0e-b3b4-82b9faa41198",
+          "startedAt": 1793508961283,
           "recordStatus": "running",
-          "pid": 33608,
+          "pid": 10752,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
           "blocker": null
         }
       ],
-      "pending": [],
+      "pending": [
+        {
+          "id": "run-recovery-shaftmaker-quote-end",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-recovery-shaftmaker-quote-end",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-magic-shaftmaker-ready-quote-falador45",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-magic-bounded-shop-quote-readiness",
+              "status": "running"
+            },
+            {
+              "id": "run-recovery-shaftmaker-quote-end",
+              "status": "pending"
+            }
+          ]
+        }
+      ],
       "failed": [
         {
           "id": "refresh-quest-order-c1d361f0c8774961",
@@ -2870,6 +2919,16 @@
           "startedAt": 1793505017278,
           "at": 1793505117061,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "run-magic-shaftmaker-current-falador45",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-9ff30ef0-e602-468c-a2cb-0021de038689",
+          "startedAt": 1793508313600,
+          "at": 1793508487292,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -3968,7 +4027,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 4,
+    "reportedRunning": 3,
     "observationStale": false,
     "jobs": [
       {
@@ -4114,7 +4173,7 @@
       {
         "account": "Shaftmaker",
         "script": "scripts/magic-order.ts",
-        "state": "running"
+        "state": "disabled"
       }
     ]
   },
