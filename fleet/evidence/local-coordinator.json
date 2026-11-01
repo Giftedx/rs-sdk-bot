@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793515913853,
+  "exportedAt": 1793516274338,
   "sources": {
     "state": {
-      "observedAt": 1793515905324.2605,
-      "ageMs": 8528.739501953125,
+      "observedAt": 1793516273621.053,
+      "ageMs": 716.947021484375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793515913084,
-      "ageMs": 769,
+      "observedAt": 1793516272620,
+      "ageMs": 1718,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 10488559.283447266,
+      "ageMs": 10849044.283447266,
       "stale": true,
       "error": null
     }
@@ -501,14 +501,14 @@
     "codex": {
       "running": [
         {
-          "id": "review-ranged-practice-bind-cause",
-          "kind": "review",
+          "id": "build-ranged-observed-underground-entry",
+          "kind": "build",
           "goal": "skills",
           "capability": "ranged-train",
-          "runId": "task-4b9abcab-6bb7-431a-9e23-545ad430236e",
-          "startedAt": 1793515905276,
+          "runId": "task-289a1c22-07ca-4a6c-bbd1-1ae3a9f87d7a",
+          "startedAt": 1793515978915,
           "recordStatus": "running",
-          "pid": 8324,
+          "pid": 36744,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -645,16 +645,6 @@
           "runId": "task-72f35eae-22cd-4356-956a-6a7ec7b014e2",
           "startedAt": 1793359184556,
           "at": 1793359186287,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "qualify-quest-sweep-import-fixed",
-          "kind": "qualify",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-1e5ad442-92c0-417d-a653-02124924465d",
-          "startedAt": 1793342911348,
-          "at": 1793343244626,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2919,14 +2909,14 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-recovery-bigchopper-authenticated-entry",
-        "kind": "qualify",
+        "id": "review-ranged-practice-bind-cause",
+        "kind": "review",
         "goal": "skills",
-        "capability": "session-recovery-only",
-        "runId": "task-74800f54-3bcb-4575-96c4-c76fd3cfe1ad",
-        "startedAt": 1793515082102,
-        "at": 1793515594652,
-        "evidence": "qualify"
+        "capability": "ranged-train",
+        "runId": "task-4b9abcab-6bb7-431a-9e23-545ad430236e",
+        "startedAt": 1793515905276,
+        "at": 1793515977675,
+        "evidence": "review"
       }
     },
     "unassigned": {
@@ -4064,21 +4054,6 @@
           ]
         },
         {
-          "id": "build-ranged-observed-underground-entry",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "review-ranged-practice-bind-cause",
-              "status": "running"
-            }
-          ]
-        },
-        {
           "id": "run-ranged-bigchopper-supported-entry-band80",
           "kind": "run",
           "goal": "skills",
@@ -4089,7 +4064,7 @@
           "dependencies": [
             {
               "id": "build-ranged-observed-underground-entry",
-              "status": "pending"
+              "status": "running"
             }
           ]
         }
