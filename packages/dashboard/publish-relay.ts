@@ -41,6 +41,8 @@ const publicGoal=(g:any)=>{
  if(typeof g!=='string')return g;
  const run=/^run-([a-z]+)-/.exec(g.trim());
  if(run)return RUN_KIND[run[1]!]??run[1]+' run';
+ // A script file name ("magic-order.ts") reads as its words.
+ if(/^[\w-]+\.ts$/.test(g.trim()))return g.trim().replace(/\.ts$/,'').replace(/[-_]+/g,' ');
  return g.replace(/\s*\[task-[^\]]*\]/g,'').split(':')[0]!.replace(/\s*\([^)]*\)/g,'').trim();
 };
 // The server has read the market and the board tops since it started: what the public page shows first.
@@ -50,11 +52,12 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  const s=trimState(state);
  const isMain=(n:any)=>n===MAIN_MARK||String(n??'').toLowerCase()===main.toLowerCase();
  const pick=(o:any,keys:readonly string[])=>Object.fromEntries(keys.filter(k=>o&&k in o).map(k=>[k,o[k]]));
- const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved).map((b:any)=>{const copy:any=pick(b,PUBLIC_BOT);for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);return copy;});
+ // Practice bots play on this PC's local test server, not the public world: their runs are the owner's testing.
+ const bots=(s.bots??[]).filter((b:any)=>!isMain(b?.name)&&!b?.reserved&&!b?.practice).map((b:any)=>{const copy:any=pick(b,PUBLIC_BOT);for(const k of ['goal','currentGoal'])if(k in copy)copy[k]=publicGoal(copy[k]);return copy;});
  const out:any=pick(s,PUBLIC_KEYS);
  out.bots=bots;
  // A finished or stopped run, by its goal: the run's counters (coins banked, items bought) are the owner's.
- out.results=(s.results??[]).filter((r:any)=>!isMain(r?.name)).map((r:any)=>({at:r.at,name:r.name,ok:r.ok,practice:r.practice,text:publicGoal(r.goal)??''}));
+ out.results=(s.results??[]).filter((r:any)=>!isMain(r?.name)&&!r?.practice).map((r:any)=>({at:r.at,name:r.name,ok:r.ok,text:publicGoal(r.goal)??''}));
  out.events=[];out.alerts=[];
  // Market prices are public; the fleet's income and its farmers are the owner's.
  // Item values only for what a public bot carries or wears: the bank's item list is the owner's.
