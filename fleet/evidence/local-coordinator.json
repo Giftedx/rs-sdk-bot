@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793518076712,
+  "exportedAt": 1793518677558,
   "sources": {
     "state": {
-      "observedAt": 1793518001955.0771,
-      "ageMs": 74756.9228515625,
+      "observedAt": 1793518662101.8293,
+      "ageMs": 15456.170654296875,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793518076246,
-      "ageMs": 466,
+      "observedAt": 1793518676516,
+      "ageMs": 1042,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 12651418.283447266,
+      "ageMs": 13252264.283447266,
       "stale": true,
       "error": null
     }
@@ -27,7 +27,12 @@
     "pid": 31676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": null
+    "planner": {
+      "runId": "plan-260a7db6-72fa-4dbc-81b1-b1be975f8315",
+      "agent": "codex",
+      "startedAt": 1793518622381,
+      "processState": "alive"
+    }
   },
   "workers": {
     "claude": {
@@ -483,6 +488,16 @@
           "startedAt": 1793511822451,
           "at": 1793512636204,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-service-exit-evidence",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-8ef92f46-32dd-41e0-9578-6110953f5ad5",
+          "startedAt": 1793518615999,
+          "at": 1793518621126,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": null,
@@ -499,22 +514,7 @@
       }
     },
     "codex": {
-      "running": [
-        {
-          "id": "review-practice-current-owner-seaslug-ranged",
-          "kind": "review",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-8de8f3af-6ccb-4f2c-87d8-230ae68e2736",
-          "startedAt": 1793518001901,
-          "recordStatus": "running",
-          "pid": 32592,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        }
-      ],
+      "running": [],
       "pending": [],
       "failed": [
         {
@@ -645,26 +645,6 @@
           "runId": "task-72f35eae-22cd-4356-956a-6a7ec7b014e2",
           "startedAt": 1793359184556,
           "at": 1793359186287,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "run-quest-monk-bigchopper",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-b571e5d2-9f4c-41cc-8929-998864d4efa0",
-          "startedAt": 1793345639742,
-          "at": 1793345640164,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "run-quest-monk-bigchopper-current-source",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-c5ed7876-705d-43d7-a999-6fd5dc3e369c",
-          "startedAt": 1793345859478,
-          "at": 1793345861889,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2916,6 +2896,16 @@
           "startedAt": 1793517939669,
           "at": 1793517947726,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-isolated-native-entry",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-a0699ee8-8720-4ece-9029-8cd48ef3c62b",
+          "startedAt": 1793518172828,
+          "at": 1793518381365,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2939,14 +2929,14 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-recovery-shaftmaker-bead-settlement",
-        "kind": "qualify",
+        "id": "review-quest-isolated-engine-disconnect",
+        "kind": "review",
         "goal": "quests",
-        "capability": "session-recovery-only",
-        "runId": "task-f78ecdfa-03f3-45eb-a581-e057d7f7612f",
-        "startedAt": 1793517341465,
-        "at": 1793517874597,
-        "evidence": "qualify"
+        "capability": "quest-sweep",
+        "runId": "task-1be09c35-e24e-493e-af0d-9e2c0ee94bdb",
+        "startedAt": 1793518465962,
+        "at": 1793518537814,
+        "evidence": "review"
       }
     },
     "unassigned": {
@@ -3077,6 +3067,10 @@
             {
               "id": "build-totem-reconciled-publication-baseline",
               "status": "failed"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
+              "status": "failed"
             }
           ]
         },
@@ -3106,6 +3100,10 @@
           "dependencies": [
             {
               "id": "build-totem-reconciled-publication-baseline",
+              "status": "failed"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
               "status": "failed"
             }
           ]
@@ -3801,6 +3799,10 @@
             {
               "id": "build-totem-reconciled-publication-baseline",
               "status": "failed"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
+              "status": "failed"
             }
           ]
         },
@@ -3850,6 +3852,10 @@
             {
               "id": "run-recovery-wandwaver-totem-failed-end",
               "status": "pending"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
+              "status": "failed"
             }
           ]
         },
@@ -4050,6 +4056,10 @@
             {
               "id": "run-ge-oreelse-doric-iron-one",
               "status": "pending"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
+              "status": "failed"
             }
           ]
         },
@@ -4064,6 +4074,10 @@
           "dependencies": [
             {
               "id": "run-quest-blackknight-mightyrod",
+              "status": "failed"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
               "status": "failed"
             }
           ]
@@ -4080,6 +4094,10 @@
             {
               "id": "run-quest-haunted-mightyrod",
               "status": "pending"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
+              "status": "failed"
             }
           ]
         },
@@ -4155,11 +4173,15 @@
             {
               "id": "run-ge-shaftmaker-imp-white-bead",
               "status": "pending"
+            },
+            {
+              "id": "build-quest-sweep-service-exit-evidence",
+              "status": "failed"
             }
           ]
         },
         {
-          "id": "run-seaslug-shaftmaker-settled-entry",
+          "id": "run-seaslug-shaftmaker-service-observed-consumer",
           "kind": "run",
           "goal": "quests",
           "capability": "quest-sweep",
@@ -4168,7 +4190,7 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-quest-sweep-shaftmaker-seaslug-entry",
+              "id": "build-quest-sweep-service-exit-evidence",
               "status": "failed"
             }
           ]
