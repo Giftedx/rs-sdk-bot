@@ -48,7 +48,7 @@ async function run(dir:string){
   const name=runBotName('flrs',0),names=[name,...['b','c','d','e'].map(s=>name+s)],paths=names.map(n=>join(root,'vendor/rs-sdk/server/engine/data/players/main',n+'.sav'));
   if(paths.some(existsSync))throw Error('staging names already have saved state');
   for(const n of names){const bot=await createBot(n);pointBotAt(bot.envPath,ISOLATED.engine,ISOLATED.gateway);}
-  await applyPreset(name,{position:{x:3094,z:3491,level:0},inventory:[],bank:[{id:1436,count:6000},{id:1446,count:6},{id:1438,count:1},{id:995,count:100000},{id:590,count:1}]});
+  await applyPreset(name,{position:{x:3185,z:3436,level:0},skills:{Attack:47,Hitpoints:33,Cooking:30,Crafting:51,Mining:99,Thieving:99,Runecraft:99},inventory:[{id:1438,count:1}],bank:[{id:1436,count:6000},{id:1446,count:6},{id:995,count:100000},{id:590,count:1}]});
   copyFileSync(paths[0]!,join(dir,'source-before.sav'));
   const meta={source:source(),delivery:basename(dir),at:Date.now(),names,freshAbsent:paths.slice(1).every(p=>!existsSync(p)),phases:[] as any[]};
   const saveMeta=()=>writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));saveMeta();
