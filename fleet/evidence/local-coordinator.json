@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793500382672,
+  "exportedAt": 1793500442729,
   "sources": {
     "state": {
-      "observedAt": 1793500362088.3655,
-      "ageMs": 20583.634521484375,
+      "observedAt": 1793500403409.9307,
+      "ageMs": 39319.0693359375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793500381695,
-      "ageMs": 977,
+      "observedAt": 1793500441940,
+      "ageMs": 789,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 26923.194580078125,
+      "ageMs": 86980.19458007812,
       "stale": false,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 20676,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-f7e2ad9a-b280-421e-ad5b-56e909feff2b",
-      "agent": "codex",
-      "startedAt": 1793500362050,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
@@ -539,6 +534,20 @@
           "startedAt": 1793496331821,
           "recordStatus": "running",
           "pid": 23188,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "build-iron-fresh-baseline-anvil",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "iron-progress-order",
+          "runId": "task-4cfb16c4-3860-4ea3-9c5c-960fd23eb9f9",
+          "startedAt": 1793500401642,
+          "recordStatus": "running",
+          "pid": 11148,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -3828,8 +3837,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-iron-reconcile-retained-anvil-source",
-              "status": "failed"
+              "id": "build-iron-fresh-baseline-anvil",
+              "status": "running"
             }
           ]
         },
@@ -3843,8 +3852,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-iron-reconcile-retained-anvil-source",
-              "status": "failed"
+              "id": "build-iron-fresh-baseline-anvil",
+              "status": "running"
             },
             {
               "id": "qualify-iron-retained-anvil-consumer",
