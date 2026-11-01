@@ -141,7 +141,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Info (RuneLite info): what this page is, how fresh its data is, what the marks mean, and where the data comes from.
   function infoPanel(){
     const fleet=S.bots.filter(b=>!b.practice&&!b.reserved),playing=fleet.filter(b=>b.fresh),sides=S.fleetSides?.sides||[],hosted=S.hosted?.kind==='public';
-    const row=(k,v)=>`<div class="xp-meta"><span>${E(k)}</span><span>${v}</span></div>`;
+    const row=(k,v)=>`<div class="info-row"><span>${E(k)}</span><span>${v}</span></div>`;
     return '<div class="xp-panel"><div class="xp-box"><div class="xp-head"><span>RuneLite — Swarm</span></div><p class="xp-muted">A team of bot accounts on the rs-sdk demo world (the Lost City 2004 engine), shown in a RuneLite-style client. The 3D view and the map show every player online; gold names are our accounts.</p></div>'+
       '<div class="xp-box"><div class="xp-head"><span>Data</span></div>'+
       row('This page',hosted?'public snapshot, '+(S.hosted?.at?age(S.hosted.at)+' old':'age unknown')+' · new one every 10 minutes':window.atlasOperator()?'owner view, live':'live')+
