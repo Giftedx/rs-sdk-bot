@@ -192,9 +192,20 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
  }
  Object.assign(state,candidate);state.lastPlanReason=raw.reason;return raw.tasks.length;
 }
+export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:number,run:typeof runModel=runModel,now:()=>number=Date.now){
+ const start=now(),first=await run(agent,prompt,timeoutMs,true),attempts=[{agent,...first}];
+ if(!first.ok&&/\b(?:you['’]ve hit your (?:weekly|daily|monthly|usage) limit|usage limit reached)\b/i.test(first.text)){
+  const remaining=timeoutMs-(now()-start);
+  if(remaining>0){
+   const fallback:ModelWorker=agent==='claude'?'codex':'claude',result=await run(fallback,prompt,remaining,true);
+   attempts.push({agent:fallback,...result});return{...result,attempts};
+  }
+ }
+ return{...first,attempts};
+}
 export async function planWork(state:CoordinatorState,directory:string,timeoutMs:number,agent:ModelWorker='codex'){
  const world=readWorld();atomicJson(join(directory,'world.json'),world);const prompt=plannerPrompt(state,world,join(directory,'world.json'));writeFileSync(join(directory,'prompt.txt'),prompt);
- const result=await runModel(agent,prompt,timeoutMs,true);atomicJson(join(directory,'model.json'),result);
+ const result=await runPlannerModel(agent,prompt,timeoutMs);atomicJson(join(directory,'model.json'),result);
  if(!result.ok)throw Error('subscription planner unavailable: '+result.text.slice(-400));
  return parseModelObject(result.text);
 }
