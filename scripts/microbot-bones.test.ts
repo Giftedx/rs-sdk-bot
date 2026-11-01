@@ -51,14 +51,14 @@ test('SDK adapter withdraws finite unnoted inputs and pairs final bank receipts'
  const ids={526:'Bones',1963:'Banana',557:'Earth rune',555:'Water rune',561:'Nature rune'};
  const pack:{id:number;name:string;count:number;slot:number}[]=[];
  const bank=new Map([[526,7],[557,4],[555,4],[561,2],[1963,9]]);
- let generation=1,xp=100,tick=0,casts=0;
+ let generation=1,xp=100,tick=0,casts=0,bankOpen=false;
  const items=()=>[...bank].map(([id,count])=>({id,name:ids[id as keyof typeof ids]!,count}));
  const add=(id:number,n:number)=>{const item=pack.find(i=>i.id===id);if(item)item.count+=n;else pack.push({id,name:ids[id as keyof typeof ids]!,count:n,slot:pack.length});};
  const s={name:'mock',tick:()=>tick,ended:new Promise(()=>{}),onTick:()=>()=>{},
-  sdk:{getEquipment:()=>[],getInventory:()=>pack.filter(i=>i.count>0),getState:()=>({player:{lifeId:1,worldX:0,worldZ:0,level:0},inventory:pack.filter(i=>i.count>0)}),
+  sdk:{getEquipment:()=>[],getInventory:()=>pack.filter(i=>i.count>0),getState:()=>({player:{lifeId:1,worldX:0,worldZ:0,level:0},inventory:pack.filter(i=>i.count>0),bank:{isOpen:bankOpen}}),
    getSkill:()=>({level:15}),getSkillXp:()=>xp},
   bankObservation:()=>({generation,items:items()}),
-  bot:{openBank:async()=>({success:true}),closeBank:async()=>{},
+  bot:{openBank:async()=>{bankOpen=true;generation++;return{success:true}},closeBank:async()=>{bankOpen=false},
    withdrawItem:async(pattern:RegExp,n:number,o:{asNote:boolean})=>{
     expect(o.asNote).toBe(false);const entry=items().find(i=>pattern.test(i.name));
     if(!entry||entry.count<n)return {success:false};
@@ -71,7 +71,15 @@ test('SDK adapter withdraws finite unnoted inputs and pairs final bank receipts'
  expect(result).toMatchObject({ok:true,made:5,banked:5,casts:1});
  expect(casts).toBe(1);expect(bank.get(1963)).toBe(14);expect(bank.get(526)).toBe(2);
 });
-test('plain-rune adapter refuses a substituting staff before bank or spell actions',async()=>{
- const s={sdk:{getState:()=>({player:{}}),getSkill:()=>({level:15}),getEquipment:()=>[{slot:3,name:'Staff of earth'}]}};
- await expect(runBonesBank(s as any,{maximum:5,cap:40})).rejects.toThrow('without water or earth rune substitution');
+test('staff receipts require exactly the substituted native rune costs',()=>{
+ const before={bones:2,bananas:0,earth:0,water:2,nature:1,xp:100};
+ const after={bones:0,bananas:2,earth:0,water:0,nature:0,xp:125};
+ expect(bonesEffect(before,after,{earth:0,water:2,nature:1})).toBe(true);
+ expect(bonesEffect(before,after)).toBe(false);
+});
+test('final bones deposit cannot turn an expired budget or cancellation into success',async()=>{
+ const cap=fixture();cap.io.deposit=async()=>{cap.io.tick=()=>100;return 3;};
+ expect((await runBonesConversion(cap.io,{maximum:3,cap:40})).ok).toBe(false);
+ const stopped=fixture();stopped.io.deposit=async()=>{stopped.io.stopped=()=>true;return 3;};
+ expect((await runBonesConversion(stopped.io,{maximum:3,cap:40})).ok).toBe(false);
 });

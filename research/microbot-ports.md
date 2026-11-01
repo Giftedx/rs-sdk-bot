@@ -1,96 +1,150 @@
 # Microbot ports
 
-## Scope and coverage
+## Coverage
 
-Port gameplay behaviour from both public production namespaces. Reuse existing rs-sdk workers when they meet the same need.
-The [generated inventory](microbot-ports.json) includes every Java file, including files without `Script` or `Plugin` suffixes.
-Tests, resources and unrelated RuneLite plugins are outside its scope. Private and third-party repositories are not covered.
+The [catalog](microbot-ports.json) covers both pinned public Microbot production namespaces, including plugins without a `Script` suffix.
+Tests, resources, unrelated RuneLite plugins, private repositories and other third-party repositories are outside this scope.
 
-| Source | Commit | Java files | Modules | Script-suffix files |
+| Repository | Commit | Java files | Groups | Script files |
 |---|---|---:|---:|---:|
 | [Microbot](https://github.com/chsami/Microbot) | `13b518350c4c81d64e4cfbb45b3d5d2f38488825` | 1,444 | 44 | 11 |
 | [Microbot-Hub](https://github.com/chsami/Microbot-Hub) | `cd648f48d536c01c58aa82aa4d353fb31ce6e102` | 1,567 | 173 | 212 |
 
-Both recursive tree responses report `truncated=false`. Inventory coverage is complete within this scope.
-Behaviour review and ports are incomplete. One Hub script has a behaviour rewrite with unit and simulated SDK adapter proof.
-The remaining modules are explicitly `unreviewed`. Candidate worker matches do not claim parity.
-Root Java files appear as individual inventory entries. Module counts are namespace groups, not a count of runnable bots.
+Both recursive trees report `truncated=false`. All 217 groups and 223 Script-suffix files have source decisions.
+Root Java classes count as individual groups. These counts are not a count of runnable bots.
+The coverage gate rejects missing groups, nested scripts, source evidence, consumers and blockers.
+Source review is complete within this scope. Full donor parity, native qualification and live release are incomplete.
+`partial` does not mean the server lacks the whole activity. `source-reviewed` does not mean game-tested.
 
-## Rewrite method
+The decisions live in `microbot-decisions-{core,a,b,c}.json`. The catalog is generated from them and the pinned trees.
+Do not hand-edit the catalog. Exact [negative searches](microbot-server-search-a.ndjson) identify native scopes and patterns.
 
-1. Pin the commit. Read the script, config, helper calls and licence. Keep attribution for adapted logic.
-2. Find the local worker and its finite consumer. Extend that worker when it already serves the job.
-3. Trace each game action through SDK dispatch to the pinned server handler and its item or XP effect.
-4. Map items, NPCs, objects, interfaces, coordinates and requirements from local content. Do not copy OSRS IDs or routes without checks.
-5. Replace scheduled Java loops and sleeps with tick waits, bounded actions, cancellation and observed state.
-6. Replace mouse, overlay and client injection code with structured SDK calls. Keep gameplay decisions separate from client presentation.
-7. Check input debits, product credits, XP, protected items and fresh bank receipts. A command success is not a product receipt.
-8. Run focused regressions, then native practice through the existing admission lock. Keep failed evidence.
-9. Qualify a bounded live consumer under its account owner and exact worker release. Two useful live results precede batch release.
+```powershell
+bun scripts/microbot-catalog.ts --summary
+bun scripts/microbot-catalog.ts --show crafting
+bun scripts/microbot-catalog.ts --show cluesolver
+bun scripts/microbot-catalog.ts --blocked
+bun scripts/microbot-catalog.ts --remaining
+```
 
-Some scripts depend on game content absent from the older server. Each such port needs an explicit content gap.
-A TypeScript stub cannot replace a missing boss, skill, region, spell or minigame.
-Do not mark source retrieval, a filename match, or successful compilation as a working port.
+## Native consumers
 
-## Existing consumers to compare
+These bounded TypeScript behaviours replace Java loops, mouse input and sleeps with structured SDK actions and observed receipts.
+The [script contract](../docs/script-contract.md) owns qualification and release requirements.
+New workers have source/unit proof unless a separate native receipt qualifies their exact bytes.
 
-| Donor behaviour | Existing path | Action |
+| Behaviour | Consumer | Implemented native scope |
 |---|---|---|
-| Mining, fishing, woodcutting | `scripts/gather-ore.ts`, `scripts/fishcook.ts`, `scripts/wc-loop.ts` | Compare profiles and state transitions before adding code |
-| Smelting and anvil work | `scripts/smelt-batch.ts`, smithing workers | Check recipes, ingredient accounting and bounded banking |
-| Flax spinning, cooking, wine | `scripts/spin-bowstrings.ts`, `scripts/cook-stock.ts`, `scripts/cook-wine.ts` | Reuse bank/travel paths and compare recovery |
-| Thieving, Agility, Magic | `scripts/goldfarm.ts`, `scripts/agility-order.ts`, `scripts/magic-order.ts` | Check exact methods, requirements and targets |
-| Bank and walker utilities | `packages/core/src/deposit.ts`, `packages/core/src/walk.ts` | Keep existing observation generations, paired receipts and cancellation |
+| Inventory production | [production](../scripts/microbot-production.ts) | 178 profiles: gems, battlestaves, amulets, leather/dhide, glass, bow cutting/stringing, darts, bolts, herbs, mixtures, dough, pies, cakes, stew and pizza |
+| Ordinary wine | [wine](../scripts/microbot-wine.ts) | Grapes/water, fresh bank receipts, fermentation and separate good/bad output audit |
+| Furnace glass | [glass](../scripts/microbot-glass.ts) | Staged sand/ash, glass, returned buckets and XP |
+| Bones to Bananas | [bones](../scripts/microbot-bones.ts) | Finite bank order and exact rune/bone/banana/XP receipts, including native staff substitution |
+| Item spells | [item magic](../scripts/microbot-magic-items.ts) | Low/high alchemy, eight Superheat metals and native jewellery conversions |
+| NPC spells | [NPC magic](../scripts/microbot-magic-npc.ts) | Damage/debuff/bind spells, splash observations and serial alchemy/teleport combinations |
+| Teleports | [teleports](../scripts/microbot-magic-teleport.ts) | Seven native destinations with rune/XP/location receipts |
+| Action graphs | [actions](../scripts/microbot-a-actions.ts) | Typed target resolvers, declared effects, bounded success/failure edges; no source-code evaluation |
+| Cannonballs | [cannonballs](../scripts/microbot-a-cannonballs.ts) | Al Kharid bank/furnace/return, four balls per bar, mould and bank proof |
+| Chompies | [Chompy](../scripts/microbot-a-chompy.ts) | Staged post-quest bellows/toad/bait/own kill/pluck/pickup |
+| Blue dragons | [ranged camp](../scripts/microbot-a-ranged-camp.ts) | Staged safespot, own kill/drop receipts and return to safespot |
+| Merchant sales | [shop sale](../scripts/microbot-a-shop-sell.ts) | Explicit shop/item/quantity/floor/reserve and exact asset receipts |
+| Nature chest | [chest](../scripts/microbot-b-nature-chest.ts) | Staged trap search, bounded attempts and rune/coin/XP receipts |
+| Pickpocketing | [pickpocket](../scripts/microbot-a-pickpocket.ts) | All 12 native target profiles and 39 NPC IDs, multi-row rewards, native failure damage/stun and food accounting |
+| Mining | [mining](../scripts/microbot-b-mining.ts) | Native depleting ore/metal/gem/limestone/quest profiles and perfect-gold context; essence reuses its existing worker |
+| Ground collection | [looting](../scripts/microbot-b-mining-loot.ts) | Visible ID/name/static-value filters, whole-pile capacity and exact inventory credits; no kill-ownership claim |
+| Fishing | [fishing](../scripts/microbot-b-fishing.ts) | Eight native methods, including karambwan rebaiting; shark uses the existing worker |
+| KBD | [KBD](../scripts/microbot-b-kbd.ts) | One staged encounter, explicit gear/potion/prayer policy, attributed drops and emergency teleport |
+| Furnace jewellery | [jewellery](../scripts/microbot-b-jewellery.ts) | All 23 native gold/perfect-gold/silver recipes and native menu/asset receipts |
+| Cooking | [cooking](../scripts/microbot-b-cooking.ts) | Native useful cooking table, heat restrictions, cooked/burnt accounting and containers |
+| Legacy Trawler | [Trawler](../scripts/microbot-b-trawler.ts) | Staged net repair, leak patching and bailing; not the complete trip/reward controller |
+| Tanning | [tanning](../scripts/microbot-c-tanner.ts) | All six native outputs with hide/coin/product receipts |
+| Orb charging | [orbs](../scripts/microbot-c-orbs.ts) | Four obelisks, native staff costs and recorded spell-on-location dispatch |
+| Stall theft | [stalls](../scripts/microbot-c-stalls.ts) | All 13 native stall rows, loot/XP and stock checks |
+| Player monitor | [monitor](../scripts/microbot-c-player-monitor.ts) | Finite radius/ignore/new-player policy, stop or confirmed logout |
+| Kitten/kingdom care | [care](../scripts/microbot-c-care.ts) | Owned kitten feed/wool/stroke; Miscellania herb weeding with sickle and Herblore 35 |
+| QOL actions | [QOL](../scripts/microbot-c-qol.ts) | Finite special attack, prayer hold/restoration and owned cannon refill |
+| Clues | [clue steps](../scripts/microbot-c-clues.ts) | Exact native definitions and supported clue transitions; per-definition gaps retained |
+| Clue puzzles | [puzzles](../scripts/microbot-c-clue-puzzle.ts) | Existing Monkey Madness solver, native board, recorded slides and mapped staged turn-ins |
+| Clue guardians | [guardians](../scripts/microbot-c-clue-guardian.ts) | All 30 native guardian/casket mappings, new own-target binding and repeat-dig credit; actual fights remain unqualified |
 
-These are source review leads. They are not adopted Microbot code or proved equivalent implementations.
-See [project use map](project-use-map.md) for the existing utility source decisions.
+All 276 native clue descriptors identify an executor and entry ID.
+They contain 222 direct steps, 30 guardian steps, 18 puzzle originals/boxes and six challenge companion items linked to their original clue.
+The direct steps contain 42 digs, 68 searches, 32 talks, six numeric challenges and 74 casket opens.
+Source mappings do not prove that their access routes, guardian mitigation or runtime observations pass on the server.
 
-## Bones to Bananas
+Inventory production banks each confirmed product and returned container. Fragile gem failures count as losses.
+Thread debits zero or one per native five-use cycle. Multi-output recipes require an explicit output batch multiple.
+Ten darts are ten products, not ten recipe actions. Bank-per-action production has no throughput qualification.
 
-Source: [BonesToBananasScript.java](https://github.com/chsami/Microbot-Hub/blob/cd648f48d536c01c58aa82aa4d353fb31ce6e102/src/main/java/net/runelite/client/plugins/microbot/bonestobananas/BonesToBananasScript.java).
-Local consumer: [finite bank worker](../scripts/microbot-bones.ts).
-Decision: rewrite the withdraw, cast and bank cycle. Replace timer polling and sleeps with exact receipts and a finite target.
-The original withdraws all runes and bones. The rewrite withdraws each cast's runes and caps bone withdrawal by remaining demand and free slots.
-The [BSD notice](microbot-ports-LICENSE.txt) applies to this behaviour adaptation.
+Staged workers require the stated site, access, skills, tools, runes, food and owned inputs.
+Output remains held unless the worker explicitly proves banking. A staged result does not prove an unattended bank/refill route.
+Existing walking, supply and chain workers can compose these jobs. Untested compositions remain unqualified.
 
-Server evidence at SDK commit `db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb`:
+## Reuse and blockers
 
-- `content/scripts/skill_magic/configs/magic_spells.dbrow`, `magic_spell_bones_to_bananas`: Magic 15, 2 earth, 2 water, 1 nature, 25 base XP.
-- `content/scripts/skill_magic/scripts/spells/convert_bones.rs2`: converts all regular bones in the pack, then deletes runes and grants XP.
-- `content/pack/obj.pack`: bones 526 and banana 1963.
-- `content/scripts/skill_magic/scripts/magic.rs2`: equipped elemental staves change rune costs.
+Core session admission, owned actions, waits, cancellation, logout, status, replay and bank observations remain their existing consumers.
+Existing mining, woodcutting, flax, wool, fish/shark, food, Firemaking, Prayer, rune supply and native quest workers remain in use.
+`scripts/agility-order.ts` already covers Gnome, Barbarian and Wilderness courses.
+Native quests use `scripts/generated/quest-lib.ts`, quest workers and requirements.
+Main-checkout `scripts/smith-batch.ts` supplies configurable native smithing. Its catalog entry records its external path and hash.
+Integration remains with that source's owner. It is not duplicated here.
+See the [project use map](project-use-map.md) for existing utility decisions.
 
-Acceptance: convert exactly `MAX_MAKE` owned bones, observe every cast's rune and bone debits, banana credits and XP rise, then prove matching bank credits.
-Useful output: a finite owned banana order and Magic XP. No account assignment or demand is created by this port.
-Cost: 2 earth, 2 water and 1 nature per cast. Each cast converts all held regular bones.
-Scope: staged bank-side start, Magic 15, plain runes, no water/earth/lava staff equipped.
-The staff preflight prevents spending against an incompatible receipt. Staff substitution support remains open.
-Existing pack bananas must be banked before entry. The worker never buys inputs or enables a swarm job.
+The catalog entry's `review.blockers`, `scriptDecisions`, variants and native evidence own each exact blocker.
+Use `--show <name>` for the full record. Do not reduce all partial entries to “unsupported”.
+
+| Boundary | Distinction |
+|---|---|
+| Missing modern content | Fossil Island ammonites, Wintertodt, Tempoross, Sailing and modern Hunter sites have exact donor requirements and native searches attached to their entries. |
+| Different native mechanics | Native Miscellania uses sickle/herb weeding, not the donor rake/fairy-ring route. Native Trawler lacks the enormous-tentacle contribution mechanic. |
+| Supported native integration | Bank/refill/escape routes, guardian mitigation, clue access requirements and full Trawler rewards remain explicit integration or qualification gaps. Clue handlers and puzzle turn-in mappings have finite consumers. |
+| GE policy | SDK sell/search/place/cancel/collect exists. Owned sale-order escrow/recovery and portfolio repricing remain policy/integration work alongside the GE owner's PR. Protocol availability does not prove profitable flipping. |
+| Client presentation | Java applets/JARs, Swing, overlays, hotkeys, desktop recordings and OSRS widget constants are not gameplay ports. Underlying game actions have separate decisions. |
+| Shared resources | Another owner can hold the practice slot. A blocked qualification does not authorize a second controller, server replacement or account takeover. |
+| Evidence | Source inspection, simulated SDK loops, native saved-state proof and live pilots prove different things. Missing native/live proof remains a release gap. |
+
+New bank adapters reject non-bank modals and stale observations before withdrawal.
+Per-session native bridges keep the ownership guard and command recorder, then restore the original executor.
+Orb dispatch follows native `OPLOCT`; puzzle slides follow native `OPHELD5`.
+Message receipts must be fresh native messages. Player chat cannot supply them.
+Finite NPC spell batches reject repeating autocast before spending runes.
+
+## Checks and use
 
 ```powershell
-$env:MAX_MAKE='25'
+bun run typecheck
+bun test ./scripts ./packages
+```
+
+Focused tests live in `scripts/microbot-*.test.ts`. Adapter regressions exercise SDK calls against simulated state, not only recipe arithmetic.
+The actual server is required for native effects, saved-state and logout proof. No job is enabled by this research or its tests.
+
+Example finite pie-shell order at a staged bank:
+
+```powershell
+$env:MAX_MAKE='5'
 $env:CAP='500'
-bun scripts/microbot-bones.ts <owned-account>
+bun scripts/microbot-production.ts <owned-account> pie-shell
 ```
 
-Live execution also requires the normal release and admission gates. Do not use the main account for qualification.
-The caller owns travel, staging, account leases and demand. Tick limits bound production. Bank cleanup can exceed that limit.
-Proof: `scripts/microbot-bones.test.ts` checks exact and partial receipts, target bounds, failed casts and the SDK banking adapter.
-The simulated adapter converts 5 bones, spends one cast and proves a 5-banana bank increase while retaining 2 bank bones.
-Gap: native practice, saved-state audit, live pilot, equipment substitution, broader profiles and fleet capability registration are unverified.
-Owner: `codex/microbot-ports`, [draft PR](https://github.com/Giftedx/rs-sdk-bot/pull/114).
-Next action: qualify this finite consumer when the shared practice slot is free, then compare the supported existing workers above.
+`MEMBERS=1` selects an explicit members-world scope. Native content still enforces membership and quest access.
+That setting is not proof of a successful action. Read each worker's prerequisites before composing a route.
+Live execution requires a qualified release. Main-account launch gates remain authoritative.
 
-## Reproduce the inventory
+## Source and reproduction
 
-Save each pinned GitHub recursive tree as `{sha,truncated,paths}`, where `paths` contains all blob paths.
-Run the generator against those two files. A truncated tree fails instead of silently dropping scripts.
+The [BSD notice](microbot-ports-LICENSE.txt) covers adapted Microbot-Hub behaviour.
+No foreign JVM runtime, anti-ban delay framework or pathfinder is installed.
+Native definitions use the SDK base commit `db0cc51e0a8f9f0d6a7d60c44e534412bb0601bb`.
+The local vendor checkout has other owners' patches and generated-state changes. A base commit does not bind those bytes.
+Qualification must bind the actual source files and runtime release.
+
+Save each pinned tree as `{sha,truncated,paths}`, where `paths` contains every blob path.
+With all four decision files present, generate the catalog:
 
 ```powershell
-bun scripts/microbot-catalog.ts <core-tree.json> <hub-tree.json> research/microbot-ports.json
-bun test scripts/microbot-catalog.test.ts scripts/microbot-bones.test.ts
+bun scripts/microbot-catalog.ts <core-tree.json> <hub-tree.json> research/microbot-ports.json --require-reviewed
 ```
 
-Raw tree responses, inspected donor source and licence are under `.practice/microbot-ports/` in the main checkout.
-Retained donor-file SHA-256: `c0913d4558f67ce9ad8eb3c28f94f974642c44f2b372a13b38c973927a1103ef`.
-The immutable source link identifies the upstream bytes. The retained-file hash identifies the local saved copy.
+Raw archives, inspected source, reference checks and test logs stay in `.practice/microbot-ports/`.
+The original tree snapshots also exist in that task folder in the main checkout.
+Code and review remain on `codex/microbot-ports`, [draft PR 114](https://github.com/Giftedx/rs-sdk-bot/pull/114).

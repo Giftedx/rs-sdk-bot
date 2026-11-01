@@ -1,0 +1,34 @@
+import {expect,test} from 'bun:test';
+import {stallRecipes,stallEffect,stealStall} from './microbot-c-stalls';
+import {watchProductionLife} from './microbot-c-lifetime';
+import {monitoredPlayer} from './microbot-c-player-monitor';
+test('all thirteen native stall rows resolve location and loot IDs',()=>{
+ const rows=stallRecipes();expect(rows).toHaveLength(13);expect(new Set(rows.map(r=>r.loc)).size).toBe(13);
+ expect(rows.find(r=>r.name==='stealing_silk_stall')).toMatchObject({level:20,respawn:16});
+ expect(rows.filter(r=>r.questGate)).toHaveLength(2);
+});
+test('stall progress requires one declared loot item and XP',()=>{
+ const r=stallRecipes().find(r=>r.name==='stealing_silk_stall')!,before=[{id:r.loot[0]!,count:2}];
+ expect(stallEffect(r,before,[{id:r.loot[0]!,count:3}],20,44)).toBe(true);
+ expect(stallEffect(r,before,[{id:r.loot[0]!,count:3}],20,20)).toBe(false);
+ expect(stallEffect(r,before,[{id:995,count:3}],20,44)).toBe(false);
+});
+test('finite silk worker retains declared loot and unrelated inventory',async()=>{
+ const r=stallRecipes().find(r=>r.name==='stealing_silk_stall')!,items=[{id:r.loot[0]!,count:2},{id:995,count:9}];let xp=1;
+ const s:any={tick:()=>0,sdk:{getInventory:()=>items,getSkill:()=>({level:99}),getSkillXp:()=>xp,getState:()=>({player:{lifeId:1},nearbyLocs:[{id:r.loc,x:1,z:2}]}),sendInteractLoc:async(_x:number,_z:number,id:number,op:number)=>{expect([id,op]).toEqual([r.loc,2]);items[0]!.count++;xp+=24;return{success:true};}}};
+ expect(await stealStall(s,r.name,1,40)).toMatchObject({ok:true,made:1,preserved:true});expect(items[1]!.count).toBe(9);
+});
+test('life guard snapshots mutable respawn identity and latches death',()=>{
+ const state:any={player:{lifeId:7,respawnCount:1}},s:any={sdk:{getState:()=>state,getSkill:()=>({level:10})}};
+ const life=watchProductionLife(s);state.player.respawnCount=2;expect(life.reason()).toBe('life changed');state.player.respawnCount=1;expect(life.stopped()).toBe(true);
+});
+test('production life stops on damage, requested stop and ended session',async()=>{
+ let hp=10,stop=false,end!:()=>void;const s:any={ended:new Promise<void>(r=>{end=r;}),sdk:{getState:()=>({player:{lifeId:1}}),getSkill:()=>({level:hp})}};
+ const a=watchProductionLife(s);hp=9;expect(a.reason()).toBe('damage observed');hp=10;
+ const b=watchProductionLife(s,()=>stop);stop=true;expect(b.reason()).toBe('stop requested');stop=false;
+ const c=watchProductionLife(s);end();await Promise.resolve();expect(c.reason()).toBe('session ended');
+});
+test('player monitor filters baseline, radius and explicitly ignored owners',()=>{
+ const players=[{name:'Owned',index:1,distance:2},{name:'Old',index:2,distance:3},{name:'New',index:3,distance:4}],p={radius:5,ignore:['owned'],onlyNew:true,action:'stop' as const};
+ expect(monitoredPlayer(players,p,new Set(['old']))?.name).toBe('New');expect(monitoredPlayer(players,{...p,radius:1},new Set())).toBeUndefined();
+});
