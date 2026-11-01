@@ -4,9 +4,9 @@ import {earthRefillAmount,earthSeedNeeded,earthRefillStop,buyEarthObserved} from
 test('competing buyers must not make a single available refill unbuyable',()=>{
  expect(earthRefillAmount(0,1136)).toBe(0);
  expect(earthRefillAmount(1,1136)).toBe(1);
- expect(earthRefillAmount(3,1136)).toBe(3);
- expect(earthRefillAmount(1000,7)).toBe(7);
- expect(earthRefillAmount(1000,1136)).toBe(50);
+ expect(earthRefillAmount(3,1136)).toBe(1);
+ expect(earthRefillAmount(1000,7)).toBe(1);
+ expect(earthRefillAmount(1000,1136)).toBe(1);
  expect(()=>earthRefillAmount(NaN,1)).toThrow();
 });
 test('an item packet before its coin debit cannot settle a purchase at zero cost',async()=>{

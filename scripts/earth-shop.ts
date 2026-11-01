@@ -9,13 +9,14 @@ import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
 
 export function earthRefillAmount(shelf:number,missing:number){
  if(![shelf,missing].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('earth refill quantities unknown');
- return Math.min(50,shelf,missing);
+ return Math.min(1,shelf,missing);
 }
 export const earthSeedNeeded=(shelf:number,carried:number,seeded:boolean)=>Number.isSafeInteger(shelf)&&shelf>=0&&carried>=1&&!seeded;
 export const earthRefillStop=(idle:number,affordable:boolean):'budget'|'stock-wait'|undefined=>!affordable?'budget':idle>=25?'stock-wait':undefined;
 
 // Item and coin packets need not arrive in the same publication. Price the observed paired change.
 export async function buyEarthObserved(s:Session,n:number,reserve:number,remaining:number,stop:()=>boolean){
+ if(n!==1)throw Error('earth settlement requires one purchase packet');
  const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((v,i)=>v+i.count,0);
  const coins=count(995),earth=count(557);
  await buyWithBudget(s.bot,s.sdk,'Earth rune',n,reserve,remaining);
