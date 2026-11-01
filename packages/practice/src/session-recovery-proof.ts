@@ -14,7 +14,7 @@ import {RECOVERY_SCRIPT,NATIVE_RECOVERY_CHECKS,assertFleetResolved,launchPermitt
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
 import {accountDir,domainOf,readLogoutProof,listAttempts,beginSessionAttempt} from '../../core/src/session-lifecycle';
-import {launchRevision} from '../../core/src/worker-release';
+import {launchRevision,cachedLaunchRevision} from '../../core/src/worker-release';
 import {admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -580,7 +580,7 @@ async function run(directory:string){
    },
    // Exactly the dispatcher's native default: same base, source callback and actual launcher.
    launch:r=>observeRecoveryBoundary('launchPermittedRecovery',recoveryAuthorityInputs(base,r),
-    ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>launchRevision()}),observeBoundary)});
+    ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>cachedLaunchRevision()}),observeBoundary)});
   let fixtureIndex=0;
   const fixture=async(server:string,preset:Parameters<typeof applyPreset>[1],completed=false)=>{
    // The name token cycles every 28 minutes (prove.ts runBotName), and fixture folders from earlier proofs stay in

@@ -3,7 +3,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from
 import {join,dirname,resolve,relative} from 'node:path';
 import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
-import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
+import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
@@ -277,6 +277,25 @@ test('a heartbeat published during the slow owner and source checks admits the v
  const {guard}=consumeRecoveryConnection(f.request,f.base,f.options);expect(()=>guard()).not.toThrow();
  expect(()=>consumeRecoveryConnection(f.request,f.base,f.options)).toThrow('consumed');
  const paths=recoveryPermitPaths(f.request,f.base);expect(existsSync(paths.lease)).toBe(true);expect(existsSync(join(paths.output,'receipt.json'))).toBe(false);
+});
+test('a completed launch binds its child although each process lookup ages the blocked controller heartbeat',()=>{
+ // Observed native refusal (completed case, child13392): issue and binding ran 12 s synchronously, so the controller's
+ // 1 s heartbeat timer never ran; a second pair of PowerShell lookups at binding aged the heartbeat past the window.
+ for(const shared of [false,true]){
+  const f=completedFixture();let clock=now;
+  f.options.now=()=>clock;
+  f.options.matches=()=>{clock+=3000;return true;};
+  const checks=shared?launchObservations(f.options):f.options;
+  issueRecoveryPermit(f.request,f.base,checks);
+  const paths=recoveryPermitPaths(f.request,f.base);
+  if(shared){bindRecoveryChild(f.request,process.pid,f.base,checks);expect(existsSync(paths.child)).toBe(true);}
+  else{expect(()=>bindRecoveryChild(f.request,process.pid,f.base,checks)).toThrow('recovery fleet ownership unresolved: stale');expect(existsSync(paths.child)).toBe(false);}
+  expect(existsSync(paths.lease)).toBe(true);expect(existsSync(paths.used)).toBe(false);
+ }
+ // The shared observations never outlive the launch: a fresh launch looks the processes up again.
+ const f=completedFixture();let calls=0;f.options.matches=()=>{calls++;return true;};
+ const first=launchObservations(f.options);first.matches!(1,'a');first.matches!(1,'a');launchObservations(f.options).matches!(1,'a');
+ expect(calls).toBe(2);
 });
 const fleetFaults:Record<string,[string,(f:ReturnType<typeof fixture>)=>void]>={
  missing:['missing',f=>rmSync(join(f.base,'.practice/swarm-state.json'))],

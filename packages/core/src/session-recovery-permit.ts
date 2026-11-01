@@ -2,7 +2,7 @@ import {existsSync,mkdirSync,readFileSync,writeFileSync,linkSync,realpathSync,un
 import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {capabilityRevision,launchRevision} from './worker-release';
+import {capabilityRevision,cachedLaunchRevision} from './worker-release';
 import {processMatchesRecent,safeKill} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
@@ -13,7 +13,8 @@ export const RECOVERY_SCHEMA='session-recovery/1';
 export const RECOVERY_BINDING_MS=45000;
 // The controller heartbeat (.practice/swarm-state.json, written every 2 s) counts as current for this long. A heartbeat
 // older than this means the controller stalled or died, so the window stays short; the checks between a fleet read and
-// its use must stay fast (processMatchesRecent reuses its PowerShell lookups for that reason).
+// its use must stay fast. The controller's own heartbeat cannot advance while it issues and binds synchronously, so
+// the launch reuses the issue-time process observations at binding (launchObservations) and the source check is cached.
 export const FLEET_HEARTBEAT_MAX_MS=10000;
 export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
@@ -115,7 +116,7 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
  const owner=json(join(base,'.practice/coordinator/swarm-owner.json'));
  if(!Number.isSafeInteger(owner.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce
   ||owner.source!==r.source||!matches(owner.pid,owner.nonce)||(issuing&&owner.pid!==process.pid))throw Error('recovery controller owner changed');
- if((options.source??(()=>launchRevision(base)))()!==r.source)throw Error('recovery source changed');
+ if((options.source??(()=>cachedLaunchRevision(base)))()!==r.source)throw Error('recovery source changed');
  assertRecoveryNotStopped(r.account,base);
  const record=json(join(base,'.practice/coordinator/state.json')).tasks?.find((t:any)=>t.status==='running'&&t.runId===r.runId);
  const spec=record?.spec,authorization=spec?.sessionRecovery;
@@ -317,17 +318,25 @@ export function finishRecoveryPermit(r:ControlledRecoveryRequest,exitCode:number
  unlinkSync(paths.lease);return completed;
 }
 
+// Issue and binding run in one synchronous controller call, which blocks the controller's heartbeat writer. Each
+// PowerShell command-line lookup costs over 1 s under load, so a second lookup at binding aged the heartbeat past
+// FLEET_HEARTBEAT_MAX_MS. Binding reuses the issue observations of this one call; it still re-reads every file and the
+// source stamp, and the child's consumeRecoveryConnection observes both processes again in its own process.
+export function launchObservations(options:Checks):Checks{
+ const lookup=options.matches??processMatchesRecent,seen=new Map<string,boolean>();
+ return {...options,matches:(pid,marker)=>{const key=pid+' '+marker;let hit=seen.get(key);if(hit===undefined){hit=lookup(pid,marker);seen.set(key,hit);}return hit;}};
+}
 export function launchPermittedRecovery(r:ControlledRecoveryRequest,base:string,options:Checks={}){
  // Remote issuance requires the current same-capability delivered native proof (authority); a fixture is local-only.
  if(!isLocalServer(r.server)&&(options.nativeFixture||resolve(base)!==resolve(import.meta.dir,'../../..')))throw Error('recovery remote launch outside the repository controller; no lease issued');
  const repo=resolve(import.meta.dir,'../../..'),runner=join(repo,RECOVERY_SCRIPT);
- const permit=issueRecoveryPermit(r,base,options),paths=recoveryPermitPaths(r,base);
+ const launch=launchObservations(options),permit=issueRecoveryPermit(r,base,launch),paths=recoveryPermitPaths(r,base);
  if(sha(readFileSync(runner))!==permit.runnerSha256)throw Error('recovery runner differs from permit');
  writeFileSync(paths.input,JSON.stringify(r),{flag:'wx'});mkdirSync(paths.output,{recursive:true});
  const child=Bun.spawn([process.execPath,runner,paths.input,paths.output,...(options.nativeFixture?['--permit-base='+base]:[])],{
   cwd:repo,env:{...process.env,WORKER_RELEASE:r.source,WORKER_ENTRY:''},windowsHide:true,stdin:'pipe',
   stdout:Bun.file(join(dirname(paths.input),'worker.log')),stderr:Bun.file(join(dirname(paths.input),'worker.err'))});
- let bindError:unknown;try{bindRecoveryChild(r,child.pid,base,options);}catch(error){bindError=error;}
+ let bindError:unknown;try{bindRecoveryChild(r,child.pid,base,launch);}catch(error){bindError=error;}
  const completion=(async()=>{
   let timedOut=false;
   const timer=setTimeout(()=>{timedOut=true;void safeKill(child.pid,r.nonce);},125000);timer.unref();
