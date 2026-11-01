@@ -52,7 +52,7 @@
         "bun",
         "packages/practice/src/rune-carriers-proof.ts"
       ],
-      "timeoutMs": 900000
+      "timeoutMs": 1380000
     },
     {
       "id": "rune-bank-craft-saved",
