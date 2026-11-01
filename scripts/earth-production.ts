@@ -58,7 +58,8 @@ export async function huntFight(s:Session,npc:{id:number;index:number},stop:()=>
   // The SDK maps sendInteractNpc's target_not_found to timeout and preserves its message.
   const missing=result.reason==='npc_not_found'||result.reason==='timeout'&&/\btarget_not_found\b/.test(result.message);
   const st=s.sdk.getState();
-  if(missing&&(engaged||(s.sdk.getSkillXp('Strength')??0)>before))return true;
+  // A refused retry can race with the ongoing kill. Only the outer target/XP check credits it.
+  if(missing&&engaged)return true;
   if(missing&&dead&&!engaged&&st&&!st.nearbyNpcs.some(n=>n.index===npc.index&&n.id===npc.id)&&s.sdk.getSkillXp('Strength')===before)return false;
   throw Error('earth hunt attack refused: '+result.reason+'; '+result.message);
  };

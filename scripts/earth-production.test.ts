@@ -84,39 +84,6 @@ test('a mid-fight food action re-engages the same observed target within one fig
  const timer=setInterval(()=>{tick++;if(tick===3)food++;if(attacks>=2&&tick>=5){xp=700;alive=false;}for(const cb of callbacks)cb();},1);
  try{await huntFight(s,npc,()=>false,()=>food);expect(attacks).toBe(2);expect(tick).toBeLessThan(100);}finally{clearInterval(timer);}
 });
-test('a missing-target retry settles already-published or delayed own kill credit',async()=>{
- for(const delay of [0,2]){
-  let tick=0,xp=82100,attacks=0,alive=true,creditAt=Infinity;
-  const callbacks=new Set<()=>void>(),npc={id:100,index:2888,hp:5};
-  const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},
-   sdk:{getSkillXp:()=>xp,getState:()=>({revision:tick,nearbyNpcs:alive?[npc]:[],combatEvents:[]})},
-   bot:{attack:async()=>{
-    attacks++;if(attacks===1)return{success:true};
-    await waitTicks(s,1);alive=false;creditAt=tick+delay;if(!delay)xp+=500;
-    return{success:false,reason:'timeout',message:'Failed to interact with NPC: target_not_found'};
-   }}};
-  const timer=setInterval(()=>{tick++;if(delay&&tick===creditAt)xp+=500;for(const cb of callbacks)cb();},1);
-  try{
-   expect(await huntFight(s,npc,()=>false,()=>tick>=3?1:0)).toBe('credited');
-   expect(xp).toBe(82600);expect(attacks).toBe(2);expect(tick).toBeLessThan(100);expect(callbacks.size).toBe(0);
-  }finally{clearInterval(timer);}
- }
-});
-
-test('missing-target credit settlement keeps the fight deadline and honours stops',async()=>{
- for(const stopAt of [6,Infinity]){
-  let tick=0,attacks=0,alive=true;const callbacks=new Set<()=>void>(),npc={id:100,index:2888,hp:5};
-  const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},
-   sdk:{getSkillXp:()=>82100,getState:()=>({revision:tick,nearbyNpcs:alive?[npc]:[],combatEvents:[]})},
-   bot:{attack:async()=>{if(++attacks===1)return{success:true};alive=false;return{success:false,reason:'npc_not_found',message:'gone'};}}};
-  const timer=setInterval(()=>{tick++;for(const cb of callbacks)cb();},1);
-  try{
-   await expect(huntFight(s,npc,()=>tick>=stopAt,()=>tick>=3?1:0)).rejects.toThrow(stopAt===6?'earth hunt fight stopped':'earth hunt fight credit deadline');
-   expect(tick).toBe(stopAt===6?6:100);expect(attacks).toBe(2);expect(callbacks.size).toBe(0);
-  }finally{clearInterval(timer);}
- }
-});
-
 test('unknown XP and initial or repeated attack refusals remain explicit failures',async()=>{
  for(const scenario of ['unknown-xp','missing-final-xp','initial-refusal','repeated-refusal']){
   let tick=0,xp:number|undefined=scenario==='unknown-xp'?undefined:82100,attacks=0,alive=true;
@@ -136,6 +103,41 @@ test('unknown XP and initial or repeated attack refusals remain explicit failure
   }finally{clearInterval(timer);}
  }
 });
+test.each([
+ ['npc_not_found','published'],['npc_not_found','delayed'],['npc_not_found','absent'],
+ ['timeout','published'],['timeout','delayed'],['timeout','absent'],
+])('an engaged %s retry settles %s own XP within the original fight deadline',async(reason,timing)=>{
+ let tick=0,xp=82100,attacks=0,alive=true,settled=false;
+ const npc={id:100,index:2888,hp:5},callbacks=new Set<()=>void>();
+ const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},
+  sdk:{getSkillXp:()=>xp,getState:()=>({revision:tick,nearbyNpcs:alive?[npc]:[],combatEvents:[]})},
+  bot:{attack:async(target:any)=>{
+   expect(target.index).toBe(npc.index);attacks++;
+   if(attacks===1)return{success:true};
+   expect(tick).toBe(16);
+   await waitTicks(s,4);alive=false;
+   if(timing==='published')xp+=700;
+   return{success:false,reason,message:'Failed to interact with NPC: target_not_found'};
+  }}};
+ const timer=setInterval(()=>{
+  tick++;
+  if(tick===23&&timing==='delayed')xp+=700;
+  if(tick===22&&timing==='delayed')expect(settled).toBe(false);
+  for(const cb of callbacks)cb();
+ },1);
+ try{
+  const fight=huntFight(s,npc,()=>false,()=>0).then(result=>{settled=true;return result;});
+  if(timing==='absent'){
+   await expect(fight).rejects.toThrow('earth hunt fight credit deadline');
+   expect(tick).toBe(100);expect(xp).toBe(82100);
+  }else{
+   expect(await fight).toBe('credited');expect(xp).toBe(82800);
+   expect(tick).toBe(timing==='published'?21:23);
+  }
+  expect(attacks).toBe(2);expect(callbacks.size).toBe(0);
+ }finally{clearInterval(timer);}
+},10000);
+
 test('unknown inputs never dispatch crafting or authorize an unsupported hunt',()=>{
  for(const n of [-1,NaN,Infinity,1.2])expect(()=>productionBatch(9,875,n,100)).toThrow();
  expect(talismanTarget(1440)).toEqual({id:1440,npcIds:[1,2,3,4,5,6],spot:{x:3221,z:3219}});
