@@ -57,3 +57,34 @@ test('a delayed walking handshake is not cancelled by repeated trade requests',(
  if(child.exitCode!==0)throw Error(child.stderr.toString());const result=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
  expect(result.error).toBe('');expect(result.duplicate).toBe(false);expect(result.requests).toBe(2);expect(result.received).toBe(406);
 });
+
+function swapWindow(mode:'late'|'stuck'|'stop'){
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';
+ let phase=0,pending,accepts=0;
+ const stock=[{id:1437,count:405,slot:0},{id:1447,count:1,slot:1}],closed=()=>({isOpen:false,screen:null,myOffer:[],theirOffer:[],myAccepted:false});
+ const a={name:'Supplier',pack:stock,trade:{...closed(),isOpen:true,screen:'confirm',partner:'Carrier',myOffer:stock}},b={name:'Carrier',pack:[],trade:{...closed(),isOpen:true,screen:'confirm',partner:'Supplier',theirOffer:stock}};
+ for(const s of [a,b]){s.tick=()=>phase;s.sdk={getInventory:()=>s.pack,getState:()=>({nearbyPlayers:[]}),getTradeState:()=>s.trade,scanGroundItems:async()=>{},sendAcceptTrade:async()=>{accepts++;s.trade.myAccepted=true;return{success:true}}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
+  if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;
+   if(phase===1&&a.trade.myAccepted&&b.trade.myAccepted){b.pack=stock;a.pack=[];for(const s of [a,b]){s.trade.myOffer=[];s.trade.theirOffer=[];s.trade.myAccepted=false;}}
+   if(phase===2)a.trade=closed();
+   if(phase===3&&'${mode}'!=='stuck')b.trade=closed();
+   pending=undefined;r();}));return pending;
+ }}));
+ const{ownedSwap}=await import('./scripts/rune-carrier-trade');let error='';try{await ownedSwap(a,b,{1437:405,1447:1},{},()=> '${mode}'==='stop'&&phase>=2);}catch(e){error=String(e);}
+ console.log(JSON.stringify({error,phase,accepts,received:b.pack.reduce((n,i)=>n+i.count,0),bankReady:!a.trade.isOpen&&!b.trade.isOpen}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe'});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+
+test('paired inventory settlement waits for both trade windows before the bank consumer',()=>{
+ const r=swapWindow('late');expect(r.error).toBe('');expect(r.received).toBe(406);expect(r.accepts).toBe(2);expect(r.bankReady).toBe(true);expect(r.phase).toBe(3);
+});
+test('a stuck trade window refuses within the existing50tick budget despite settled stock',()=>{
+ const r=swapWindow('stuck');expect(r.error).toContain('trade windows stayed open');expect(r.received).toBe(406);expect(r.phase).toBe(50);expect(r.accepts).toBe(2);
+});
+test('stop after inventory settlement prevents a new bank action',()=>{
+ const r=swapWindow('stop');expect(r.error).toContain('owned swap stopped');expect(r.received).toBe(406);expect(r.phase).toBe(2);expect(r.bankReady).toBe(false);
+});
