@@ -22,6 +22,7 @@ import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
+import { isLocalServer } from '../core/src/localserver';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
@@ -142,12 +143,18 @@ function readStatuses(): Map<string, Status> {
             const mtime = statSync(p).mtimeMs;
             let hit = statusCache.get(p);
             if (!hit || hit.mtime !== mtime) {
-                hit = { mtime, doc: JSON.parse(readFileSync(p, 'utf8')) };
-                statusCache.set(p, hit);
+                const doc = JSON.parse(readFileSync(p, 'utf8'));
+                if (!doc || typeof doc.name !== 'string' || !doc.name || typeof doc.server !== 'string'
+                    || !Number.isFinite(doc.at) || doc.at < 0
+                    || ['phase','role','goal','result','timeline'].some(k => doc[k] != null && typeof doc[k] !== 'string')
+                    || ['skills','inventory','bank','equipment','quests'].some(k => doc[k] != null && !Array.isArray(doc[k]))
+                    || (doc.skills ?? []).some((k: any) => !k || typeof k.name !== 'string')) continue;
+                hit = { mtime, doc };
                 track(hit.doc);
+                statusCache.set(p, hit);
             }
             const s = hit.doc;
-            if (/^localhost/.test(s.server) && Date.now() - s.at > 30 * 60_000) continue; // stale practice bots
+            if (isLocalServer(s.server) && Date.now() - s.at > 30 * 60_000) continue; // stale practice bots
             out.set(s.name, s);
         } catch { /* being written */ }
     }
@@ -164,6 +171,7 @@ const foodOf = (l: any[] | null | undefined) => (l ?? []).filter((i: any) => i?.
 // Coins at the first status of each run (name + started), so "made this run" survives a dashboard restart only
 // within one process; it restarts from the next status after that.
 const runStartCoins = new Map<string, number>();
+const sampleSessions = new Map<string, string>();
 const samples = new Map<string, Sample[]>();
 const spark = new Map<string, number[]>();
 type Ev = { at: number; name: string; text: string };
@@ -172,6 +180,12 @@ const lastPhase = new Map<string, string>();
 const phaseSince = new Map<string, { at: number; exact: boolean }>();
 for (const e of [...events].reverse()) phaseSince.set(e.name + NL + e.text, { at: e.at, exact: true });
 function track(s: Status) {
+    const session = JSON.stringify([s.server, s.started ?? null]);
+    if (sampleSessions.get(s.name) !== session) {
+        samples.delete(s.name);
+        spark.delete(s.name);
+        sampleSessions.set(s.name, session);
+    }
     const xp = (s.skills ?? []).reduce((n: number, k: any) => n + (k.xp ?? 0), 0);
     const sk: Record<string, number> = {};
     for (const k of s.skills ?? []) sk[k.name] = k.xp ?? 0;
@@ -577,7 +591,7 @@ type Transfer = { at: number; from: string; to: string; items: Item[] };
 const keyName = (n: string) => n.toLowerCase();
 function vault(bots: any[], now: number) {
     const log = cached<Transfer[]>(FILES.vault, t => t.split(NL).filter(Boolean).flatMap(l => { try { return [JSON.parse(l) as Transfer]; } catch { return []; } }), []);
-    const live = bots.filter(b => !/^localhost/.test(b.server));
+    const live = bots.filter(b => !isLocalServer(b.server));
     const byKey = new Map(live.map(b => [keyName(b.name), b]));
     const names = new Set<string>([...live.filter(b => b.at).map(b => keyName(b.name))]);
     for (const t of log) { names.add(keyName(t.from)); names.add(keyName(t.to)); }
@@ -768,7 +782,7 @@ function haggisPlan() {
 type Alert = { at: number; name: string; kind: 'death' | 'failure' | 'blocked' | 'stuck' | 'idle' | 'logout' | 'efficiency'; text: string; practice?: boolean };
 const productionReviews=new Map<string,{at:number;texts:string[]}>();
 // Practice bots: every status file that ever named a localhost server, including ones too old for the roster.
-const practiceNames = () => new Set([...statusCache.values()].filter(c => /^localhost/.test(c.doc.server)).map(c => c.doc.name));
+const practiceNames = () => new Set([...statusCache.values()].filter(c => isLocalServer(c.doc.server)).map(c => c.doc.name));
 function alerts(bots: any[], now: number): Alert[] {
     const out: Alert[] = [];
     const prac = practiceNames();
@@ -913,7 +927,7 @@ const vaultTrend: { at: number; value: number; coins: number }[] = [];
 // Food chain card (research/food-chain.md): the newest fish cook, courier and gold farmers in the live status files
 // of the last 6 hours. A courier that last ran give-to-banker.ts with fish still counts as the courier.
 function foodChain(st: Map<string, Status>, now: number) {
-    const recent = [...st.values()].filter(s => now - s.at < 6 * 3_600_000 && !/^localhost/.test(s.server) && s.name !== MAIN);
+    const recent = [...st.values()].filter(s => now - s.at < 6 * 3_600_000 && !isLocalServer(s.server) && s.name !== MAIN);
     const newest = (f: (s: Status) => boolean) => recent.filter(f).sort((a, b) => b.at - a.at)[0] ?? null;
     const n = (l: any[] | null | undefined, re: RegExp) => (l ?? []).filter((i: any) => re.test(i?.name ?? '')).reduce((k: number, i: any) => k + i.count, 0);
     const FISH = /^(trout|salmon)$/i, fresh = (s: Status) => now - s.at < 20_000;
@@ -966,7 +980,7 @@ function buildState() {
         const fresh = now - s0.at < 20_000;
         const mine = accountJobs.filter(j => j.account.toLowerCase() === name.toLowerCase());
         // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
-        const byHand = fresh && !/^localhost/.test(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
+        const byHand = fresh && !isLocalServer(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
         const s = byHand ? { ...s0, role: byHand.role, goal: byHand.goal } : s0;
         const rankRows = [...(ranks.get(name)?.rows ?? []), ...valueRanks(name)];
         const guess = NO_ROLE.has(s.role) && name !== MAIN ? inferRole(s, rankRows) : null;
@@ -1002,7 +1016,7 @@ function buildState() {
         return {
             ...s, name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
-            practice: /^localhost/.test(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
+            practice: isLocalServer(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
             xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: spark.get(name) ?? [], rateSkill: skill ?? "all skills", xpLeft,
             eta: ticksLeft != null ? fmtTicks(ticksLeft) : null, finish: finish != null ? fmtTicks(finish) : null,
