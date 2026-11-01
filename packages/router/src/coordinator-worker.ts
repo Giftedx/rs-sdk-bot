@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 import {admissionDecision,activeExternalLive} from '../../../scripts/swarm';
 import {authorLoop,runClaude,fileExists,type AuthorResult} from './author';
 import {deliveryTask,deliveryFingerprint,runDeliveryTask,runDiagnosticTask} from './delivery-cli';
-import {createAccountProvisionDeps,provisionAccount} from './account-provision';
+import {createAccountProvisionDeps,provisionAccount,REGISTRATION_SCRIPT} from './account-provision';
 import {readWorld,parseModelObject} from './coordinator-planner';
 import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
 import {projectRoot,coordinationDir,atomicJson} from './coordinator-store';
@@ -16,7 +16,7 @@ import {recentRecords} from '../../core/src/tick-record';
 const PUBLISH_WAIT_MS=45*60*1000;
 import {buildWorkOrder,preparedNativeDelivery,type CoordTask} from './coordinator';
 import {loadState} from './coordinator-store';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision} from '../../core/src/worker-release';
 import {runModel,rejectedReview,type ModelWorker,reviewDependencies,reviewVerdict,reviewGate,REPLAY_RUNS,type ReplayOutcome} from './model-worker';
 import type {DeliveryResult} from './delivery';
 
@@ -71,9 +71,10 @@ export async function buildReviewGate(input:{root:string;isolated:boolean;entry:
 
 export async function executeTask(task:CoordTask,dependencies:Record<string,any>,directory:string,runId:string,startedAt:number,agent:ModelWorker='claude'){
  if(task.kind==='provision'){
-  const source=workerSourceRevision();
-  if(!Object.values(dependencies).some((d:any)=>d?.delivery?.ok&&d.delivery.runtimeRevision===source))throw Error('account creation waits for fresh native proof of its prepared first job');
-  const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:source});
+  // A delivery records the capability release of its own entry (delivery-cli.ts); it is fresh while that is unchanged.
+  const fresh=(d:any)=>{try{return d?.delivery?.ok===true&&d.delivery.runtimeRevision===capabilityRevision([deliveryTask(d.delivery.id).entry]);}catch{return false;}};
+  if(!Object.values(dependencies).some(fresh))throw Error('account creation waits for fresh native proof of its prepared first job');
+  const world=readWorld(),deps=createAccountProvisionDeps({workerRelease:capabilityRevision([REGISTRATION_SCRIPT])});
   const admission=admissionDecision({running:activeExternalLive(world.statuses,[],Date.now()).length,external:0,starting:1,startingReserve:1,pending:0,freeGB:freemem()/2**30,minFreeGB:world.capacity.minFreeGB,maxBots:world.capacity.maxBots});
   if(!admission.allowed)throw Error('account claim waits for measured capacity: '+admission.reason);
   const create=deps.createLocalAccount;

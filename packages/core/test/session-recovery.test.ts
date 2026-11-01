@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
-import {workerSourceRevision} from '../src/worker-release';
+import {launchRevision} from '../src/worker-release';
 import {beginSessionAttempt,listAttempts} from '../src/session-lifecycle';
 import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,recoverSession,validateRecoveryRequest,recoveryBoundary,recoveryHeldDiagnostic,recoveryDiagnosticFromLog,RECOVERY_SETUP_PHASES,type RecoveryRequest} from '../src/session-recovery';
 const source='a'.repeat(64),server='localhost:8888';
@@ -36,7 +36,7 @@ test('diagnostic publication cannot create a connection admission or a producer 
  expect(f.counts().connected).toBe(0);expect(listAttempts(f.request.account,server,{root:f.root})).toHaveLength(0);
 });
 test('actual CLI reports safe setup refusals before credentials, producer intent or output publication',async()=>{
- const dir=mkdtempSync(join(tmpdir(),'recovery-cli-refusal-')),repo=resolve(import.meta.dir,'../../..'),source=workerSourceRevision();
+ const dir=mkdtempSync(join(tmpdir(),'recovery-cli-refusal-')),repo=resolve(import.meta.dir,'../../..'),source=launchRevision();
  const body={schema:RECOVERY_SCHEMA,account:'Recoverme',server:'localhost:8888',runId:'offline-cli-test',nonce:'one',endedAt:1,source};
  const cases=[
   {input:null,phase:'request-read',reason:'io-enoent'},

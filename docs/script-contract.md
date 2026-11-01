@@ -57,9 +57,28 @@ The gate runs each replay in a scratch copy of the build's source with its own `
 
 **Live release.** Live starts need a `WORKER_RELEASE` pin (`packages/core/src/worker-release.ts`) that matches the qualified source. The first live run is a bounded pilot. A worker is batch-ready after two useful live runs.
 
+**Release scope.** A release hash covers the files one process can run, not the whole tree (`releaseFiles`, `capabilityRevision`, `launchRevision`). An edit outside those files leaves the release, the qualification and live admission unchanged.
+
+- The files are the entries, then every file they reach: relative imports (resolved like bun: exact path, `.js` to `.ts`, added `.ts`/`.tsx`/`.d.ts`/`.js`/`.mjs`/`.cjs`/`.json`, a folder's `package.json` `main` or `index`) and string literals that name a file or folder under `knowledge/`, `scripts/` or `packages/`, or a file under `vendor/` (`'../knowledge/npcs.json'`, `'scripts/generated'`, `'packages/core/src/host.ts'`, `'rsmod_bg.wasm'`). Consecutive literal arguments of one call are one path: `join(root,'knowledge','npcs.json')` names that file, and `join(root,'knowledge',name)` names the folder. A named code file is followed in turn. A named folder adds every file in it. A worker that reads data by a path built at runtime must name its folder in a literal. The literals of `worker-release.ts` and `launch-evidence.ts` do not count: they name files only to hash them.
+- Every worker that imports the core pathing reads all of `knowledge/` (`packages/core/src/world.ts` `loadJson(name)`, `packages/knowledge/src/paths.ts` `knowledgeDir()`), so an edit to any knowledge file changes those releases.
+- Every release also covers `vendor/rs-sdk/sdk`, `vendor/rs-sdk/server/webclient/src`, `package.json`, `bun.lock` and `tsconfig.json`. Test files are never in a release.
+- An unresolved relative import, an import outside the repository or an `@rsbot/` workspace import stops the release with `no worker progress: release ...`. It is never skipped.
+- The capability release (`capabilityRevision`) adds the worker launchers `packages/practice/src/supervise.ts` and `supervise-host.ts` to the job's entries. The entries are the job script and every job argument that names a repository code file (`workerEntries`: a `scripts/chain.ts` job's step scripts). The swarm starts each worker with `WORKER_RELEASE` and `WORKER_ENTRY` (the entries, comma-separated); the status row records both (`workRevision`, `workEntry`). `delivery-cli.ts` records the capability release of its entry as `runtimeRevision`; the coordinator compares deliveries, provision gates and live results, and a recovery permit compares its delivery, with the capability release of the same entry.
+- The launch release (`launchRevision`) covers `scripts/swarm.ts`, both launchers and the recovery runner `packages/core/src/session-recovery.ts`. The controller runs with it, `swarm-owner.json` stores it, and a recovery permit, its runner and its lifecycle receipt bind to it. A process with no `WORKER_ENTRY` is checked against the launch release.
+- A live start is held while an unfinished non-standing peer on the same server runs a stale release of its own entries (its `workRevision` differs from the current release of its `workEntry`). A row with no `workEntry` is compared with the launch release, so a worker started before the scoped release holds starts until it ends. Standing peers keep their exemption.
+- The practice proofs in `packages/practice/src/*-proof.ts` and `scripts/supply-chain.ts` keep the whole-tree `workerSourceRevision` for their own evidence; it does not gate live starts.
+
 ## Prove and measure
 
 Bind results to source, server, tick speed and starting state. Speed claims need three matched runs per condition with raw times and spread. Level, XP, bank value and net profit are different measures.
+
+## Recover a session
+
+A live start needs the account's logout proof (`packages/core/src/session-admission.ts` `liveLogoutRef`): the newest producer attempt ended `logged-out`. A session without that proof is held.
+
+- On a server in `TAKEOVER_SERVERS` (`packages/core/src/session-takeover.ts`), a held session may start again by re-login when the attempt is the recorded latest and no owner process of an attempt after the last confirmed logout still runs. The new login attaches to the Player in the world; its own logout writes the next proof. A repair never uses this path.
+- On every other server, a held session recovers only through the authenticated recovery path (`packages/core/src/session-recovery.ts`, `session-recovery-permit.ts`): one permitted login, modal cleanup, logout, producer proof. The live server is not in `TAKEOVER_SERVERS`.
+- Add a server to `TAKEOVER_SERVERS` only with evidence that a re-login there attaches to the Player in the world, recorded in `research/community-and-upstream.md` 8.6. Never kill or take over a live session to collect it.
 
 ## Autonomous coordination
 

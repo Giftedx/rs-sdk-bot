@@ -8,7 +8,7 @@ import {planWork,acceptProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
 import {deliveryTask,deliveryFingerprint,SOURCE_STARTUP_GB,NATIVE_STARTUP_GB} from './delivery-cli';
 import {disableOwnJob,ensureSwarm,liveRows} from './coordinator-live';
-import {cachedWorkerSourceRevision} from '../../core/src/worker-release';
+import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
 import {processMatches,killTree} from '../../practice/src/proc';
@@ -19,12 +19,12 @@ const cli='packages/router/src/coordinator-cli.ts';
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
 // The owner's swarm.json with the coordinator's own jobs and settings merged in (packages/core/src/coordinator-jobs.ts).
 const readPlan=()=>readMergedPlan(projectRoot);
-// The runtime hash reads every worker source file (about 400 ms); cachedWorkerSourceRevision recomputes it only when a
-// file's size or modification time changed (a stat walk, about 75 ms). One loop reuses the answer; a rollout's
-// post-drain check minutes later looks again.
+// The controller's launch release (packages/core/src/worker-release.ts) reads its release files (about 500 ms);
+// cachedLaunchRevision recomputes it only when one of those files or folders changed size or modification time.
+// One loop reuses the answer; a rollout's post-drain check minutes later looks again.
 export const REVISION_FRESH_MS=2000;
 let revisionCache:{value:string;at:number}|undefined;
-export function currentRevision(now=Date.now(),compute=cachedWorkerSourceRevision):string{
+export function currentRevision(now=Date.now(),compute=cachedLaunchRevision):string{
  if(!revisionCache||now-revisionCache.at>=REVISION_FRESH_MS||now<revisionCache.at)revisionCache={value:compute(),at:now};
  return revisionCache.value;
 }

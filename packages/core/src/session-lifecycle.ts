@@ -128,7 +128,8 @@ export function beginSessionAttempt(identity: { account: string; server: string;
     };
 }
 
-// The read contract for admission and repair. Only `confirmed` permits a release step.
+// The read contract for admission and repair. Only `confirmed` permits a release step; on a takeover server a
+// `held` session whose owner is gone may start again by re-login (session-takeover.ts).
 export type LogoutProof =
     | { state: 'confirmed'; account: string; server: string; domain: LifecycleDomain; attemptId: string; loggedOutAt: number; ownerRun: string | null; receiptSha256: string }
     | { state: 'none'; account: string; server: string; domain: LifecycleDomain }
