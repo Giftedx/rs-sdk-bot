@@ -31,6 +31,25 @@ same tick unless a count-class gap says otherwise.
   player-triggerable. The fix would be `overflow = completed - player.invAdd(to, obj, completed)` —
   one line each in the two handlers, closing the whole class for future content.
 
+- **Engine-level live proof (`engines behave identically here, not on a shared world).** An isolated
+  sandbox world (`.practice/dup-test/`, private engine copy, private market DB, private players
+  folder) rebuilt its pack with a test-only `[debugproc,dupe]` fixture whose single line calls
+  `inv_moveitem` with a client-chosen count. On that world one command minted exactly:
+  inventory 100 coins -> request 1,000,000,000 -> 100 re-added -> one ground stack of 999,999,900
+  (client-visible as the u16-clamped `Coinsx65535`) -> pickup -> 1,000,000,000 coins.
+  `.practice/dup-test/result.txt` and `.practice/billionaire-claim/live-run.txt` hold the transcripts.
+- **The public demo deployment has no live trigger.** `rs-sdk-demo.fly.dev` runs the audited engine
+  and content: upstream `main` equals this pin (`git fetch origin main == db0cc51`), its
+  `GET /crc` byte-for-byte equals our pack's `makeCrcs` buffer (9 jag CRCs + the
+  `hash<<1+1` aggregate, verified with `.practice/dup-test/fingerprint-ours.ts`), and every served
+  count source is one of the verified clamps above. The debugproc/admin cheat gates
+  (`ClientCheatHandler.ts:57,189`) need `staffModLevel` 4 / 3, which the login server never grants
+  through registration (`LoginServer.ts:459-467` writes username, password hash, IP and date only).
+  Live attempts from a normal account on the demo server minted 0 coins (transcripts in
+  `.practice/billionaire-claim/live-run.txt`). The wealth boards support the same reading: the top
+  bank-holder built two 2-detail-legible accumulations over hundreds of hours of playtime at
+  farm rates, not with tiny-playtime mint stacks.
+
 ## Finding 2: blind `inv_del` in deferred production queues
 
 - **Claim.** `Inventory.remove` under-deletes silently (`server/engine/src/engine/Inventory.ts:152-213`)
