@@ -1,17 +1,18 @@
 import {readFileSync,writeFileSync,copyFileSync,existsSync,openSync,closeSync,unlinkSync,mkdirSync} from 'node:fs';
-import {join,resolve} from 'node:path';
+import {join,resolve,sep} from 'node:path';
 import {freemem} from 'node:os';
+import {Database} from 'bun:sqlite';
 import {startStack} from './stack';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
-import {killTree} from './proc';
+import {killTree,commandLine} from './proc';
 import {rsSdkRoot,practiceDir} from './paths';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
-import {orderPaths,orderQuantity,orderEscrow,orderAccounting,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
+import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 
 // Native bulk GE order: an owned seller lists noted grapes, then the actual worker buys the exact
@@ -23,6 +24,7 @@ const BANK_TILE={x:3185,z:3436,level:0};
 // The live consumer entry: Pocketpython at north Varrock with 11 HP, 26 carried salmon and 60 coins.
 export const NORTH_CASE={position:{x:3165,z:3487,level:0},hitpoints:11,
  carried:[...Array.from({length:26},()=>({id:329,count:1})),{id:995,count:60}],order:{...ORDER,quantity:500,coins:3000}};
+export const MAGIC_CASE={position:{x:2853,z:3452,level:0},bank:[{id:995,count:19911},{id:557,count:4},{id:556,count:25},{id:1351,count:1}],pack:[{id:590,count:1}]};
 const held=(s:Save,container:number,match:(id:number)=>boolean)=>(s.inventories[container]??[]).filter(i=>match(i.id)).reduce((n,i)=>n+i.count,0);
 const coins=(s:Save)=>[93,94,95].reduce((n,c)=>n+held(s,c,id=>id===995),0);
 const resultLine=(log:string,tag:string)=>{const line=log.split('\n').find(l=>l.startsWith(tag+' '));try{return line?JSON.parse(line.slice(tag.length+1)):null;}catch{return null;}};
@@ -89,8 +91,86 @@ export function duplicateRefusalCheck(before:Save,after:Save,run:Run,item:number
 }
 function verify(directory:string){
  const bank=verifyCase(directory),north=verifyCase(join(directory,'north'),true);
- const report={...bank,ok:bank.ok&&north.ok,checks:{...bank.checks,north:north.ok},north};
+ const magic=verifyMagic(join(directory,'magic'));
+ const report={...bank,ok:bank.ok&&north.ok&&magic.ok,checks:{...bank.checks,north:north.ok,magic:magic.ok},north,magic};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
+}
+
+export function magicOrderChecks(p:{before:Save;law:Save;earth:Save;repeat:Save;refuseBefore:Save;refused:Save;lawJournal:ItemOrder;earthJournal:ItemOrder;buy:Run;topup:Run;again:Run;refuse:Run}){
+ const {before,law,earth,repeat,refuseBefore,refused,lawJournal:l,earthJournal:e}=p;
+ const buy=resultLine(p.buy.log,'OWNED_GE_ITEM'),topup=resultLine(p.topup.log,'OWNED_GE_ITEM'),again=resultLine(p.again.log,'OWNED_GE_ITEM');
+ const totals=(s:Save)=>bankTotals([93,94,95].flatMap(c=>s.inventories[c]??[]));
+ const expected=(laws:number,earths:number,spent:number)=>bankTotals([...MAGIC_CASE.bank.filter(i=>![995,557].includes(i.id)),{id:995,count:19911-spent},{id:557,count:earths},{id:590,count:1},...(laws?[{id:563,count:laws}]:[])]);
+ const lawSpent=coins(before)-coins(law),earthSpent=coins(law)-coins(earth);
+ const logs=p.buy.log.split(/\r?\n/),traces=logs.filter(l=>l.startsWith('GE_MARKET_ENTRY ')).map(l=>JSON.parse(l.slice(16)));
+ const stages=traces.map(t=>t.stage),receipt=l?.rescue;
+ const sameContainers=(a:Save,b:Save)=>[93,94,95].every(c=>JSON.stringify(bankTotals(a.inventories[c]??[]))===JSON.stringify(bankTotals(b.inventories[c]??[])));
+ const settled=(j:ItemOrder,item:number,quantity:number,owned:number,limit:number,spent:number)=>!!j&&j.phase==='settled'&&!j.failure&&j.request.item===item&&orderQuantity(j.request)===quantity
+  &&j.itemsBefore===owned&&j.acquired===quantity&&j.request.limit===limit&&j.request.reserve===10000&&!orderAccounting(j).outcomeUnresolved&&orderAccounting(j).spent===spent;
+ return{
+  entry:JSON.stringify(before.position)===JSON.stringify(MAGIC_CASE.position)&&JSON.stringify(totals(before))===JSON.stringify(expected(0,4,0)),
+  rescue:logs.includes('START 2853 3452 0')&&stages.filter(s=>s==='rescue-intent').length===1&&stages.filter(s=>s==='rescue-respawned').length===1
+   &&stages.indexOf('rescue-respawned')>stages.indexOf('rescue-intent')&&stages.indexOf('rescue-bank-reconciled')>stages.indexOf('rescue-respawned')
+   &&receipt?.phase==='bank-reconciled'&&JSON.stringify(bankTotals(receipt.bank))===JSON.stringify(bankTotals(MAGIC_CASE.bank))
+   &&traces.some(t=>t.stage==='rescue-respawned'&&t.hp===10&&t.position.level===0&&Math.max(Math.abs(t.position.x-3221),Math.abs(t.position.z-3218))<=3),
+  laws:settled(l,563,5,0,1000,lawSpent)&&l.request.rescueMode==='npc-respawn-once'&&l.coinsBefore===19911&&held(law,95,id=>id===563)===5,
+  topup:settled(e,557,1,4,20,earthSpent)&&e.request.expectedOwned===4&&e.request.rescueMode===undefined&&e.coinsBefore===coins(law)&&held(earth,95,id=>id===557)===5,
+  costs:lawSpent>=5&&lawSpent<=5000&&earthSpent>=1&&earthSpent<=20&&lawSpent+earthSpent<=5020&&coins(earth)>=10000,
+  assets:JSON.stringify(totals(law))===JSON.stringify(expected(5,4,lawSpent))&&JSON.stringify(totals(earth))===JSON.stringify(expected(5,5,lawSpent+earthSpent))
+   &&[law,earth,repeat].every(s=>held(s,93,id=>id===590)===1&&(s.inventories[93]??[]).length===1&&(s.inventories[94]??[]).length===0),
+  result:[{r:p.buy,v:buy,n:5},{r:p.topup,v:topup,n:1}].every(({r,v,n})=>r.code===0&&v?.ok===true&&v.acquired===n&&v.targetMet===true&&v.conserved===true&&v.unrelated===true&&v.banked===true&&v.reserveKept===true&&!v.died&&!v.damaged),
+  restart:p.again.code===0&&again?.ok===true&&again.newItemsThisSession===0&&again.cashDeltaThisSession===0&&sameContainers(law,repeat)&&again.offerId===l.offerId,
+  refusal:p.refuse.code===1&&p.refuse.log.includes('rescue refused:')&&!p.refuse.log.includes('"stage":"rescue-intent"')
+   &&sameContainers(refuseBefore,refused)&&JSON.stringify(refuseBefore.position)===JSON.stringify(refused.position)&&refused.skills[3]?.level===refuseBefore.skills[3]?.level,
+  logout:[p.buy,p.topup,p.again,p.refuse].every(r=>r.log.split(/\r?\n/).includes('LOGOUT logged-out')),
+  healthy:[law,earth,repeat].every(s=>s.skills[3]?.level===10&&s.position.level===0&&s.position.x>=3180&&s.position.x<=3188&&s.position.z>=3433&&s.position.z<=3447),
+ };
+}
+function verifyMagic(directory:string){
+ const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
+ const read=(label:string)=>readPracticeSave(join(directory,label+'.sav'));
+ const run=(label:string):Run=>({code:meta[label+'Code'],log:readFileSync(join(directory,label+'.log'),'utf8')+readFileSync(join(directory,label+'.err'),'utf8')});
+ const l=JSON.parse(readFileSync(join(directory,'law-journal.json'),'utf8')),e=JSON.parse(readFileSync(join(directory,'earth-journal.json'),'utf8'));
+ const checks={...magicOrderChecks({before:read('before'),law:read('law'),earth:read('earth'),repeat:read('repeat'),refuseBefore:read('refuse-before'),refused:read('refused'),lawJournal:l,earthJournal:e,buy:run('buy'),topup:run('topup'),again:run('again'),refuse:run('refuse')}),
+  identity:l?.request.actor===meta.buyer&&e?.request.actor===meta.buyer&&l?.request.server==='localhost:8888'&&e?.request.server==='localhost:8888'&&l?.request.goal===meta.lawKey&&e?.request.goal===meta.earthKey,
+  sellers:['sell-law','sell-earth'].every(label=>{const r=run(label);return r.code===0&&resultLine(r.log,'GE_SELL_RESULT')?.ok===true&&r.log.split(/\r?\n/).includes('LOGOUT logged-out');}),
+  source:meta.source===workerSourceRevision(),fresh:Date.now()-meta.at>=0&&Date.now()-meta.at<900000};
+ return{ok:Object.values(checks).every(Boolean),checks,scope:'Native practice rescue and finite law/earth acquisitions for unchanged Magic37 consumer; no Magic levels or live credit claimed.'};
+}
+
+// A save write does not release the engine's player state. Stop the owned stack before staging.
+export async function stageWithStoppedStack<T>(path:string,stop:()=>Promise<void>,stage:()=>Promise<string>,position:{x:number;z:number;level:number},
+ restart:()=>Promise<T>,read:typeof readPracticeSave=readPracticeSave):Promise<T>{
+ await stop();
+ const staged=await stage(),p=read(staged).position;
+ if(resolve(staged)!==resolve(path)||p.x!==position.x||p.z!==position.z||p.level!==position.level)throw Error(`staged entry save unconfirmed at ${p.x},${p.z},${p.level}`);
+ return await restart();
+}
+
+// PlayerLoading.load prefers the GE ledger checkpoint (market.sqlite accounts) over the .sav. With the stack stopped, replace only
+// this practice buyer's existing checkpoint with the verified pocket save. Its carried, worn and bank assets must already match.
+export function syncPracticeCheckpoint(db:Database,actor:string,pocketPath:string,position:{x:number;z:number;level:number},evidence:string){
+ const pocket=readFileSync(pocketPath),staged=readPracticeSave(pocketPath),owner=actor.toLowerCase().replace(/[^a-z0-9]/g,'_');
+ if(staged.position.x!==position.x||staged.position.z!==position.z||staged.position.level!==position.level)throw Error('pocket save position unconfirmed');
+ return db.transaction(()=>{
+  const open=db.query<{n:number},[string]>("SELECT count(*) AS n FROM offers WHERE owner=? AND (slot>=0 OR state='open')").get(owner)!.n;
+  if(open!==0)throw Error(`practice buyer has ${open} outstanding GE offers; checkpoint not staged`);
+  const row=db.query<{save:Uint8Array},[string]>('SELECT save FROM accounts WHERE owner=?').get(owner);
+  if(!row)return null;
+  writeFileSync(evidence,row.save);const previous=readPracticeSave(evidence);
+  if(![93,94,95].every(c=>JSON.stringify(bankTotals(previous.inventories[c]??[]))===JSON.stringify(bankTotals(staged.inventories[c]??[]))))
+   throw Error('checkpoint assets differ from pocket save; checkpoint not staged');
+  const count=()=>db.query<{n:number},[]>('SELECT count(*) AS n FROM accounts').get()!.n,rows=count();
+  if(db.query('UPDATE accounts SET save=? WHERE owner=?').run(pocket,owner).changes!==1)throw Error('checkpoint update unconfirmed');
+  const saved=db.query<{save:Uint8Array},[string]>('SELECT save FROM accounts WHERE owner=?').get(owner)?.save;
+  if(!saved||Buffer.compare(Buffer.from(saved),pocket)!==0||count()!==rows)throw Error('checkpoint update unconfirmed');
+  return previous.position;
+ })();
+}
+function practiceMarket(){
+ const engine=resolve(rsSdkRoot(),'server','engine'),path=resolve(engine,process.env.GE_DATABASE??'data/market.sqlite');
+ if(!path.startsWith(engine+sep)||!existsSync(path))throw Error(`owned practice market database unresolved: ${path}`);
+ return path;
 }
 
 async function run(directory:string){
@@ -140,6 +220,49 @@ async function run(directory:string){
   if(refuse){await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);copyFileSync(paths[buyer]!,join(directory,'refused.sav'));}
   writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,orderKey,buyer,seller,sellCode:sell.code,buyCode:buy.code,againCode:again.code,refuseCode:refuse?.code},null,2));
   }
+  directory=join(root,'magic');mkdirSync(directory,{recursive:true});
+  const [buyer,seller,refuser]=[runBotName('flgemag',1),runBotName('flgemags',1),runBotName('flgeref',1)],source=workerSourceRevision();
+  for(const name of [buyer,seller,refuser]){if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');await createBot(name);}
+  const preset={skills:{Hitpoints:10,Magic:31},inventory:MAGIC_CASE.pack,bank:MAGIC_CASE.bank};
+  const buyerPath=await applyPreset(buyer,{...preset,position:BANK_TILE});
+  const snapshot=await command(['packages/practice/src/ge-bulk-order-proof.ts','--snapshot',buyer],{},'snapshot');
+  if(snapshot.code!==0||!snapshot.log.split(/\r?\n/).includes('LOGOUT logged-out'))throw Error('rescue bank snapshot/logout unproved');
+  // Keep the practice lock and the observed bank snapshot across this owned stack restart.
+  const ownedPids=Object.values(JSON.parse(readFileSync(join(practiceDir(),'pids.json'),'utf8')) as Record<string,{pid:number}>).map(p=>p.pid);
+  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8')))throw Error('practice only');
+  const market=practiceMarket();
+  stack=await stageWithStoppedStack(buyerPath,async()=>{
+   await stack!.stop();
+   if(ownedPids.some(pid=>commandLine(pid)!==null))throw Error('owned practice stack termination unproved; entry not staged');
+  },async()=>{
+   const staged=await applyPreset(buyer,{...preset,position:MAGIC_CASE.position}),db=new Database(market,{strict:true});
+   try{db.exec('PRAGMA busy_timeout=5000');syncPracticeCheckpoint(db,buyer,staged,MAGIC_CASE.position,join(directory,'before-checkpoint.sav'));}finally{db.close();}
+   return staged;
+  },MAGIC_CASE.position,
+  ()=>startStack({tickMs:150,readyTimeoutMs:60000}));
+  copyFileSync(buyerPath,join(directory,'before.sav'));
+  await applyPreset(seller,{position:BANK_TILE,skills:{Hitpoints:10},bank:[{id:563,count:5},{id:557,count:1}]});
+  const sellLaw=await command(['packages/practice/src/ge-bulk-order-proof.ts','--sell',seller,'563','5','1000'],{},'sell-law');
+  const sellEarth=await command(['packages/practice/src/ge-bulk-order-proof.ts','--sell',seller,'557','1','20'],{},'sell-earth');
+  if(sellLaw.code||sellEarth.code)throw Error('magic input sellers failed');
+  const lawKey='native-law-'+Date.now(),earthKey='native-earth-'+Date.now();
+  const lawEnv={RESCUE_MODE:'npc-respawn-once',ORDER_KEY:lawKey,ITEM_ID:'563',QUANTITY:'5',LIMIT_PRICE:'1000',CASH_RESERVE:'10000',ORDER_MS:'900000',FILL_WAIT_TICKS:'50',EXPECTED_OWNED:''};
+  const buy=await command(['scripts/buy-owned-ge-item.ts',buyer],lawEnv,'buy',240000);
+  const lawSaved=await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===563)===5);copyFileSync(buyerPath,join(directory,'law.sav'));
+  if(buy.code||!lawSaved.matched)throw Error('rescue law acquisition failed; inspect magic/buy.log and buy.err');
+  const journal=(key:string)=>orderPaths('localhost:8888',buyer,key).journal;
+  copyFileSync(journal(lawKey),join(directory,'law-journal.json'));
+  const again=await command(['scripts/buy-owned-ge-item.ts',buyer],lawEnv,'again');
+  await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===563)===5);copyFileSync(buyerPath,join(directory,'repeat.sav'));
+  const topup=await command(['scripts/buy-owned-ge-item.ts',buyer],{...lawEnv,RESCUE_MODE:'',ORDER_KEY:earthKey,ITEM_ID:'557',QUANTITY:'1',LIMIT_PRICE:'20',EXPECTED_OWNED:'4',ORDER_MS:'600000'},'topup');
+  const earthSaved=await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===557)===5);copyFileSync(buyerPath,join(directory,'earth.sav'));
+  if(topup.code||!earthSaved.matched)throw Error('authorized four-plus-one earth acquisition failed');
+  copyFileSync(journal(earthKey),join(directory,'earth-journal.json'));
+  const refusePath=await applyPreset(refuser,{...preset,position:MAGIC_CASE.position,inventory:[...MAGIC_CASE.pack,{id:995,count:1}]});
+  copyFileSync(refusePath,join(directory,'refuse-before.sav'));
+  const refuse=await command(['scripts/buy-owned-ge-item.ts',refuser],{...lawEnv,ORDER_KEY:lawKey+'-refuse'},'refuse');
+  await waitPracticeSave(refusePath,s=>held(s,93,id=>id===590)===1);copyFileSync(refusePath,join(directory,'refused.sav'));
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,buyer,lawKey,earthKey,buyCode:buy.code,topupCode:topup.code,againCode:again.code,refuseCode:refuse.code,'sell-lawCode':sellLaw.code,'sell-earthCode':sellEarth.code},null,2));
   return verify(root);
  }finally{
   try{await stack?.stop();}finally{closeSync(fd);unlinkSync(lock);}
@@ -167,7 +290,18 @@ async function sell(name:string,item:number,quantity:number,price:number){
 
 if(import.meta.main){
  try{
-  if(process.argv[2]==='--sell'){
+  if(process.argv[2]==='--snapshot'){
+   const name=process.argv[3]!;
+   if(!name||!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8')))throw Error('practice snapshot required');
+   const s=await openBot(name);let ok=false,detail='';
+   try{
+    const generation=s.bankObservation?.()?.generation??0;
+    if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))throw Error('snapshot fresh bank unproved');
+    const bank=s.bankObservation?.();if(!bank)throw Error('snapshot bank unavailable');bankTotals(bank.items);
+    ok=true;detail='observed rescue bank baseline';
+   }catch(error){detail=String(error);}
+   await finish([s],ok,detail);
+  }else if(process.argv[2]==='--sell'){
    const [name,item,quantity,price]=process.argv.slice(3);
    if(!name||!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8')))throw Error('practice seller required');
    await sell(name,Number(item),Number(quantity),Number(price));

@@ -8,20 +8,80 @@
 // plus a Magic XP rise. Shop: scripts/shop-buyer.ts PROFILES.aubury, maximumUnitCost and buyWithBudget (reuse).
 // Routes: scripts/train-chickens.ts chickenTrainingProfile legs (reuse, danger-checked in that source).
 // Acceptance belongs to packages/practice/src/magic-order-proof.ts.
-import {openBot,finish,randomEventsOf} from '../packages/core/src/bot';
+import {openBot,finish,randomEventsOf,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil,type TickSource} from '../packages/core/src/ticks';
-import {walkPath,sessionWalker,type PathPoint} from '../packages/core/src/walk';
+import {walkPath,sessionWalker,goTo,type PathPoint} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {componentId} from '../packages/core/src/logout';
 import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
 import {chickenTrainingProfile} from './train-chickens';
 import {startQuestSustain,questFoodDefinitions,selectQuestFood} from './quest-sustain';
+import {loadTravel} from '../packages/core/src/travel';
+import {LUMBRIDGE_TO_DRAYNOR} from './courier-route';
 
 export const AIR=556,MIND=558,COINS=995;
+export const TELE_RUNE_IDS={air:AIR,mind:MIND,earth:557,water:555,fire:554,law:563} as const;
+export type Rune=keyof typeof TELE_RUNE_IDS;
+export type RuneCounts=Record<Rune,number>;
+export const TELEPORTS=[
+ {name:'camelot',level:45,xp:55.5,members:true},
+ {name:'falador',level:37,xp:48,members:false},
+ {name:'lumbridge',level:31,xp:41,members:false},
+ {name:'varrock',level:25,xp:35,members:false},
+].map(t=>{
+ const component=`magic:${t.name}_teleport`,edge=loadTravel().find(e=>e.run.how==='spell'&&e.run.component===component);
+ if(!edge)throw Error(`missing teleport travel ${component}`);
+ const costs=Object.fromEntries(Object.keys(TELE_RUNE_IDS).map(k=>[k,edge.runes.find(r=>r.item===`${k}rune`)?.count??0])) as RuneCounts;
+ return {...t,component,to:edge.to,costs};
+});
+export type Teleport=typeof TELEPORTS[number];
+// Only the observed right-hand staff substitutes. Unknown member access excludes Camelot.
+export function teleportCosts(t:Teleport,worn:readonly {slot:number;id:number}[],members=false):RuneCounts{
+ const costs={...t.costs};
+ const staff=worn.find(i=>i.slot===3)?.id;
+ const substitutes:Record<number,Rune>={1381:'air',1383:'water',1385:'earth',1387:'fire',1397:'air',1395:'water',1399:'earth',1393:'fire',1405:'air',1403:'water',1407:'earth',1401:'fire'};
+ if(staff!==undefined&&(staff<=1387||members)&&substitutes[staff])costs[substitutes[staff]!]=0;
+ return costs;
+}
+export function selectTeleport(level:number,target:number,owned:RuneCounts,worn:readonly {slot:number;id:number}[]=[],members=false){
+ if(level>=target)return undefined;
+ return TELEPORTS.find(t=>level>=t.level&&(!t.members||members)&&Object.entries(teleportCosts(t,worn,members)).every(([k,n])=>owned[k as Rune]>=n));
+}
+const SHOP_RUNES=['air','mind','earth','water','fire'] as const;
+// Base spell XP gives an upper bound without assuming the server's XP multiplier.
+// Owned law runes and MAX_CASTS bound the batch; Aubury cannot supply laws.
+export function teleportShortfall(xp:number,target:number,maxCasts:number,t:Teleport,costs:RuneCounts,owned:RuneCounts):RuneCounts{
+ const casts=Math.min(castsNeeded(xp,target,t.xp,maxCasts),costs.law?Math.floor(owned.law/costs.law):maxCasts);
+ return Object.fromEntries(Object.keys(TELE_RUNE_IDS).map(k=>[k,Math.max(0,casts*costs[k as Rune]-owned[k as Rune])])) as RuneCounts;
+}
+export function teleportPurchaseCost(missing:RuneCounts,stock:readonly {id:number;count:number;baseCost:number}[],config:{sellMultiplier:number}|undefined,allowance:number){
+ if(missing.law>0)return null;
+ let total=0;
+ for(const k of SHOP_RUNES){
+  if(!missing[k])continue;
+  const item=stock.find(i=>i.id===TELE_RUNE_IDS[k]);
+  if(!item||item.count<missing[k]||missing[k]>1000)return null;
+  total+=missing[k]*maximumUnitCost(item,config);
+ }
+ return total<=allowance?total:null;
+}
+export function purchaseEffect(rune:Rune,requested:number,before:RuneCounts&{coins:number},after:RuneCounts&{coins:number},got:{bought:number;spent:number},allowance:number){
+ return got.bought===requested&&requested>0&&got.spent>0&&got.spent<=allowance&&before.coins-after.coins===got.spent
+  &&(Object.keys(TELE_RUNE_IDS) as Rune[]).every(k=>after[k]-before[k]===(k===rune?requested:0));
+}
+export function teleportEffect(t:Teleport,costs:RuneCounts,before:RuneCounts&{xp:number},after:RuneCounts&{xp:number},position:{x:number;z:number;level:number}):CastEffect{
+ const deltas=Object.keys(TELE_RUNE_IDS).map(k=>before[k as Rune]-after[k as Rune]);
+ if(deltas.every(n=>n===0)&&after.xp===before.xp)return 'none';
+ if(deltas.some((n,i)=>n<0||n>costs[Object.keys(TELE_RUNE_IDS)[i] as Rune]))return 'invalid';
+ return deltas.every((n,i)=>n===costs[Object.keys(TELE_RUNE_IDS)[i] as Rune])&&after.xp>before.xp
+  &&position.level===t.to.level&&Math.max(Math.abs(position.x-t.to.x),Math.abs(position.z-t.to.z))<=2?'cast':'partial';
+}
 export const WIND_STRIKE={level:1,air:1,mind:1,xp:5.5,component:'magic:wind_strike'} as const;
 type Tile={x:number;z:number};
 export const BANKS={draynor:{x:3092,z:3243},varrockWest:{x:3185,z:3436},varrockEast:{x:3253,z:3420}} as const;
+// The banks the Falador and Camelot teleport cleanup ends at (the walks in the cleanup below).
+export const CLEANUP_BANKS={falador:{x:2946,z:3370},seers:{x:2725,z:3491}} as const;
 // research/route-danger.ts: Varrock East bank -> 3244,3407 and Varrock West bank -> 3244,3407 pass 0 aggressive
 // spawns (margin 3). The shop door 3253,3398 passes 7 tiles from the mugger at 3249,3391 (reach 8). The mugger
 // (all.npc: strength 5, strengthbonus -21) and the men and women here hit at most 1, so an HP10 account survives
@@ -62,13 +122,16 @@ export function magicPreflight(o:Pick<MagicOptions,'target'>,level:number,plane:
  return null;
 }
 const d8=(a:Tile,b:Tile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
-export type Region='draynor'|'varrock-west'|'varrock-east'|'varrock';
-// Supported starts: a checked bank, or anywhere in central Varrock (an interrupted cast or shop visit).
+export type Region='draynor'|'varrock-west'|'varrock-east'|'varrock'|'falador'|'seers';
+// Supported starts: a checked bank, anywhere in central Varrock (an interrupted cast or shop visit), or a bank a
+// teleport cleanup ends at (Falador, Seers), from which the shared route planner walks to Varrock East bank first.
 export function startRegion(p:{x:number;z:number;level:number}):Region|null{
  if(p.level!==0)return null;
  if(d8(p,BANKS.draynor)<=8)return 'draynor';
  if(d8(p,BANKS.varrockWest)<=6)return 'varrock-west';
  if(d8(p,BANKS.varrockEast)<=6)return 'varrock-east';
+ if(d8(p,CLEANUP_BANKS.falador)<=6)return 'falador';
+ if(d8(p,CLEANUP_BANKS.seers)<=6)return 'seers';
  return p.x>=3170&&p.x<=3270&&p.z>=3380&&p.z<=3450?'varrock':null;
 }
 // Draynor bank -> Varrock East bank: the Draynor chicken leg up to 3200,3310, then the Varrock leg from 3200,3348
@@ -172,12 +235,14 @@ const AIR_STAFF=/^(staff of air|air battlestaff|mystic air staff)$/i;
 
 export interface MagicResult{ok:boolean;stop:string;target:number;level:number;casts:number;runesUsed:{air:number;mind:number};
  bought:{air:number;mind:number};coinsSpent:number;magicXpGained:number;hpXpGained:number;hpMin:number;eats:number;
- missing?:{air:number;mind:number};banked?:{air:number;mind:number;coins:number};failure?:string;ticks:number}
+ missing?:{air:number;mind:number};banked?:{air:number;mind:number;coins:number};failure?:string;ticks:number;
+ teleportRunesUsed?:RuneCounts;teleportRunesBought?:RuneCounts}
 
 export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>boolean=()=>false):Promise<MagicResult>{
  const start=s.tick();let ended=false;void s.ended.then(()=>{ended=true;});
  const state=()=>s.sdk.getState(),pos=()=>state()?.player;
  const pack=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+ const runeCounts=(count:(id:number)=>number)=>Object.fromEntries(Object.entries(TELE_RUNE_IDS).map(([k,id])=>[k,count(id)])) as RuneCounts;
  const banked=(id:number)=>(s.bankObservation?.()?.items??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const magicXp=()=>s.sdk.getSkillXp('Magic')??NaN,hpXp=()=>s.sdk.getSkillXp('Hitpoints')??NaN;
  const level=()=>s.sdk.getSkill('Magic')?.baseLevel??0,hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
@@ -194,7 +259,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   magic:{level:level(),xp:xp0},pack:{air:pack(AIR),mind:pack(MIND),coins:pack(COINS)},inventory:project(s.sdk.getInventory()),equipment:project(s.sdk.getEquipment())}));
  const refusal=magicPreflight(o,level(),pos()!.level);
  if(refusal){r.stop=refusal;r.ticks=s.tick()-start;return r;}
- const region=startRegion(at()!);
+ let region=startRegion(at()!);
  if(!region){r.stop='unsupported start region';r.failure=`no checked route from ${JSON.stringify(at())}`;return r;}
  const airCost=s.sdk.getEquipment().some(i=>AIR_STAFF.test(i.name))?0:WIND_STRIKE.air;
  // `moved` turns on at the first withdrawal. A refusal before it leaves every item in place.
@@ -258,18 +323,34 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  const remaining=()=>castsNeeded(magicXp(),o.target,baseXpEstimate(casts),o.maxCasts-r.casts);
  // Leftover runes and withdrawn coins go back to the bank on every exit that can reach one safely.
  const secure=async()=>{
-  const carried=pack(AIR)+pack(MIND)+(coinsWithdrawn>0?pack(COINS):0);
+  const carried=(r.teleportRunesUsed?Object.values(TELE_RUNE_IDS):[AIR,MIND]).reduce((n,id)=>n+pack(id),0)+(coinsWithdrawn>0?pack(COINS):0);
   if(!moved||!carried||ended||hp()<=HEALTH.critical)return;
   cleanup=true;
   const deadline=s.tick()+CAST.bankTicks,late=()=>ended||s.tick()>=deadline;
   if(!bankOpen){
    if(s.sdk.getState()?.shop?.isOpen)await s.bot.closeShop();
-   const p=at()!,home=d8(p,BANKS.draynor)<=30?BANKS.draynor:!startRegion(p)?undefined:d8(p,BANKS.varrockWest)<=6?BANKS.varrockWest:BANKS.varrockEast;
+   let p=at()!;
+   if(r.teleportRunesUsed){
+    const landing=TELEPORTS.find(t=>p.level===t.to.level&&d8(p,t.to)<=2);
+    if(landing?.name==='lumbridge'){
+     await walk(LUMBRIDGE_TO_DRAYNOR.map(([x,z,tol])=>({x,z,tol})),'Lumbridge to Draynor bank',CAST.bankTicks,late);p=at()!;
+    }else if(landing?.name==='falador'){
+     await walk([{x:2946,z:3368,tol:2},{x:2946,z:3370,tol:2}],'Falador bank',CAST.bankTicks,late);
+     await openBank();
+    }else if(landing?.name==='camelot'){
+     await walk([{x:2726,z:3485,tol:2},{x:2725,z:3491,tol:2}],'Seers bank',CAST.bankTicks,late);
+     await openBank();
+    }
+   }
+   const home=d8(p,BANKS.draynor)<=30?BANKS.draynor:!startRegion(p)?undefined:d8(p,BANKS.varrockWest)<=6?BANKS.varrockWest:BANKS.varrockEast;
+   if(!bankOpen){
    if(!home){r.failure=(r.failure?r.failure+'; ':'')+'leftover runes carried: no checked route to a bank';return;}
    if(d8(p,home)>2)await walk([{...home,tol:2}],'bank leftovers',CAST.bankTicks,late);
    await openBank();
+   }
   }
   const b={air:await deposit(AIR),mind:await deposit(MIND),coins:coinsWithdrawn>0?await deposit(COINS):0};
+  if(r.teleportRunesUsed)for(const id of [557,555,554,563])await deposit(id);
   r.banked=b;console.log('MAGIC_ORDER_BANKED '+JSON.stringify({tick:s.tick(),...b,bank:{air:banked(AIR),mind:banked(MIND),coins:banked(COINS)}}));
   await closeBank();
  };
@@ -293,12 +374,107 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  try{
   // Entry bank: observe owned runes and coins before any purchase or cast.
   r.stop='entry-bank';
+  if(region==='falador'||region==='seers'){
+   const moved=await goTo(s,await getWorld(),{...BANKS.varrockEast,level:0},accountOf(s),{legTimeoutTicks:100});
+   if(!moved.ok)throw Error(`no route from the ${region} cleanup bank to Varrock East bank: ${JSON.stringify(moved)}`);
+   region='varrock-east';
+  }
   if(region==='varrock')await walk([{...BANKS.varrockEast,tol:2}],'entry bank');
   await openBank();
   const owned={air:pack(AIR)+banked(AIR),mind:pack(MIND)+banked(MIND),coins:pack(COINS)+banked(COINS)};entryCoins=owned.coins;
   const allowance0=spendAllowance(o.budget,0,owned.coins,o.reserve);
   console.log('MAGIC_ORDER_ENTRY '+JSON.stringify({tick:s.tick(),region,position:at(),hp:hp(),magic:{level:level(),xp:xp0},owned,
    pack:{air:pack(AIR),mind:pack(MIND),coins:pack(COINS)},bank:{air:banked(AIR),mind:banked(MIND),coins:banked(COINS)},allowance:allowance0,airCost}));
+  if(level()>=25){
+   // UPDATE_PID reports account membership, not map_members. It only admits a bounded
+   // candidate attempt. Debit, XP and destination must still prove the spell actually ran.
+   let members=(s.client as {membersAccount?:number}|undefined)?.membersAccount===1;
+   const worn=()=>s.sdk.getEquipment();
+   const totalRunes=runeCounts(id=>pack(id)+banked(id)),availableLevel=Math.min(level(),s.sdk.getSkill('Magic')?.level??0);
+   // Keep the highest funded method; only consider a shop-funded candidate when no owned cast is possible.
+   const first=selectTeleport(availableLevel,o.target,totalRunes,worn(),members)
+    ??(allowance0>0?TELEPORTS.find(t=>availableLevel>=t.level&&(!t.members||members)&&totalRunes.law>=teleportCosts(t,worn(),members).law):undefined);
+   if(!first){r.stop='short teleport runes';await closeBank();return r;}
+   const missing=teleportShortfall(magicXp(),o.target,o.maxCasts,first,teleportCosts(first,worn(),members),totalRunes);
+   const shopNeeded=allowance0>0&&SHOP_RUNES.some(k=>missing[k]>0);
+   r.teleportRunesUsed=runeCounts(()=>0);r.teleportRunesBought=runeCounts(()=>0);moved=true;
+   // teleport.rs2 post_tele_checks destroys carried quest cargo (rum, samples, monkey, fungus).
+   // Bank unrelated cargo before casting. Totals, rather than container location, remain unchanged.
+   for(const id of new Set(s.sdk.getInventory().map(i=>i.id)))if(!(Object.values(TELE_RUNE_IDS) as number[]).includes(id)){
+    if(over())throw Object.assign(Error(reason()??'stopped'),{stop:reason()});
+    const item=s.sdk.getInventory().find(i=>i.id===id);if(item)await depositObserved(s,item);
+   }
+   for(const id of Object.values(TELE_RUNE_IDS))await withdraw(id,banked(id));
+   if(shopNeeded){
+    coinsWithdrawn=Math.min(banked(COINS),Math.max(0,allowance0-pack(COINS)));await withdraw(COINS,coinsWithdrawn);
+   }
+   await closeBank();r.stop='casting';
+   if(shopNeeded){
+    r.stop='teleport supplies';
+    if(region==='draynor')await walk(draynorToVarrock(),'Draynor to Varrock East bank');
+    await walk([AUBURY.outside,AUBURY.inside],'Aubury shop');
+    check();
+    const npc=state()?.nearbyNpcs.find(n=>AUBURY.npc.test(n.name));
+    const opened=npc?await s.bot.openShop(npc):undefined;
+    if(!opened?.success||!await waitUntil(s,()=>!!state()?.shop?.isOpen,{timeoutTicks:10}))throw Error('Aubury shop unavailable');
+    try{
+     check();const shop=state()!.shop!;
+     const allowance=spendAllowance(o.budget,spent,entryCoins-spent,o.reserve);
+     if(teleportPurchaseCost(missing,shop.shopItems,shop.shopConfig,allowance)===null)
+      throw Error('Aubury teleport stock or budget shortfall');
+     for(const k of SHOP_RUNES){
+      const amount=missing[k];if(amount<=0)continue;check();
+      const before={...runeCounts(pack),coins:pack(COINS)},left=spendAllowance(o.budget,spent,entryCoins-spent,o.reserve);
+      const name=k[0]!.toUpperCase()+k.slice(1)+' rune';
+      const got=await buyWithBudget(s.bot,s.sdk,name,amount,Math.max(0,pack(COINS)-left),left);
+      const after={...runeCounts(pack),coins:pack(COINS)};
+      spent+=got.spent;r.coinsSpent=spent;r.teleportRunesBought[k]+=got.bought;
+      if(k==='air'||k==='mind')r.bought[k]+=got.bought;
+      console.log('MAGIC_ORDER_PURCHASE '+JSON.stringify({tick:s.tick(),rune:name,requested:amount,...got,
+       packBefore:before,packAfter:after,coinsAfter:after.coins,missing,allowance:left,totalSpent:spent}));
+      if(!purchaseEffect(k,amount,before,after,got,left))throw Error(`${name} exact purchase accounting failed`);
+     }
+    }finally{await s.bot.closeShop();}
+    // Leave the shop before teleporting; the landing cleanup owns the remaining bank trip.
+    await walk([AUBURY.outside],'Aubury exit');r.stop='casting';
+   }
+   let misses=0;
+   while(level()<o.target){
+    if(over()){stop=reason();break;}check();
+    if(r.casts>=o.maxCasts){stop='max casts';break;}
+    if(randomEventsOf(s)?.busy()){await waitTicks(s,1);continue;}
+    if(await fed())continue;
+    const spell=selectTeleport(Math.min(level(),s.sdk.getSkill('Magic')?.level??0),o.target,runeCounts(pack),worn(),members);
+    if(!spell){stop='teleport rune exhaustion';break;}
+    let costs=teleportCosts(spell,worn(),members);
+    if(state()?.dialog?.isOpen||state()?.modalOpen){
+     await s.direct({type:'closeModal',reason:'SDK'});
+     if(!await waitUntil(s,st=>!st?.dialog?.isOpen&&!st?.modalOpen,{timeoutTicks:CAST.effectTicks}))throw Error('teleport modal remained open');
+    }
+    if(over()){stop=reason();break;}check();
+    const before={...runeCounts(pack),xp:magicXp()};
+    const reply=await s.direct({type:'clickComponent',componentId:componentId(spell.component),reason:'SDK'}) as {success?:boolean}|undefined;
+    if(reply?.success===false)throw Error('teleport dispatch refused');
+    await waitUntil(s,()=>ended||over()||(teleportEffect(spell,costs,before,{...runeCounts(pack),xp:magicXp()},at()!)==='cast'&&pos()?.animId===-1),{timeoutTicks:CAST.effectTicks});
+    check();const after={...runeCounts(pack),xp:magicXp()};let effect=teleportEffect(spell,costs,before,after,at()!);
+    if(effect!=='cast'&&members&&!spell.members){
+     const freeCosts=teleportCosts(spell,worn(),false);
+     if(teleportEffect(spell,freeCosts,before,after,at()!)==='cast'){costs=freeCosts;members=false;effect='cast';}
+    }
+    if(effect==='none'&&members&&!over()){
+     // A member-only candidate or staff can be refused on a free world. A clean
+     // no-effect observation spends nothing. Exclude that assumption for this session.
+     members=false;continue;
+    }
+    if(effect==='none'&&!over()&&++misses<CAST.missLimit)continue;
+    if(effect!=='cast'||pos()?.animId!==-1)throw Error(`teleport effect ${effect}: ${JSON.stringify({spell:spell.name,before,after,position:at()})}`);
+    misses=0;r.casts++;
+    for(const k of Object.keys(TELE_RUNE_IDS) as Rune[])r.teleportRunesUsed[k]+=costs[k];
+    r.runesUsed.air+=costs.air;r.runesUsed.mind+=costs.mind;
+    console.log('MAGIC_ORDER_CAST '+JSON.stringify({tick:s.tick(),cast:r.casts,spell:spell.name,costs,before,after,position:at(),gain:{magic:after.xp-before.xp,hp:0},magic:{level:level(),xp:after.xp}}));
+   }
+   r.stop=level()>=o.target?'target':stop??'stopped';
+  }else{
   const short=runeShortfall(1,owned.air,owned.mind,airCost);
   if((short.air||short.mind)&&(o.budget===0||allowance0<=0)){
    r.stop='short runes';r.missing=short;await closeBank();return r;
@@ -381,6 +557,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
   }
   r.stop=level()>=o.target?'target':stop??'stopped';
   if(r.stop==='rune exhaustion'){r.missing=runeShortfall(remaining(),pack(AIR),pack(MIND),airCost);}
+  }
  }catch(error){
   r.failure=String(error);r.stop=(error as {stop?:string}).stop??(ended?'session ended':'failure');
  }finally{
@@ -391,7 +568,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  }
  r.eats=eats;r.level=level();r.magicXpGained=Math.round((magicXp()-xp0)*10)/10;r.hpXpGained=Math.round((hpXp()-hpXp0)*10)/10;
  r.ticks=s.tick()-start;
- r.ok=r.stop==='target'&&r.level>=o.target&&r.casts>0&&!r.failure&&(pack(AIR)+pack(MIND)===0);
+ r.ok=r.stop==='target'&&r.level>=o.target&&r.casts>0&&!r.failure&&(r.teleportRunesUsed?Object.values(TELE_RUNE_IDS):[AIR,MIND]).every(id=>pack(id)===0);
  return r;
 }
 

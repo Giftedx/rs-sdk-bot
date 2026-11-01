@@ -1,12 +1,20 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds} from './ranged-train';
 import * as walking from '../packages/core/src/walk';
+import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
-import {rangedMemoryFloor} from '../packages/practice/src/ranged-train-proof';
+import {rangedMemoryFloor,rangedSaveSettled} from '../packages/practice/src/ranged-train-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
 test('proof holds the free-memory floor, not the start reserve that delivery admits',()=>{
  for(const free of [FREE_FLOOR_GB,PRACTICE_STARTUP_GB-0.1,PRACTICE_STARTUP_GB])expect(()=>rangedMemoryFloor(free,'before stack')).not.toThrow();
  for(const free of [FREE_FLOOR_GB-0.01,0,NaN])expect(()=>rangedMemoryFloor(free,'before child')).toThrow('practice memory floor reached before child');
+});
+test('proof captures only the save whose XP delta equals the final result at the bank',()=>{
+ const save=(xp:number,x:number,z:number)=>({skills:Object.assign([],{4:{xp}}),position:{x,z,level:0}}) as any,before=save(1000,2807,3441);
+ expect(rangedSaveSettled(before,save(3400,3253,3421),{xpGain:2400})).toBe(true);
+ expect(rangedSaveSettled(before,save(3100,3253,3421),{xpGain:2400})).toBe(false);
+ expect(rangedSaveSettled(before,save(3400,3236,3294),{xpGain:2400})).toBe(false);
+ expect(rangedSaveSettled(before,save(3400,3253,3421),null)).toBe(false);
 });
 test('best bow is the highest owned tier the Ranged level can wield; shortbow wins a tie',()=>{
  const all=[841,839,843,845,849,847,853,851,857,855,861,859].map(id=>({id,count:1}));
@@ -20,8 +28,17 @@ test('arrows follow the bow levelrequire and the wearer level',()=>{
  expect(usableArrows(5,4)).toEqual([882,884]);
  expect(usableArrows(5,7)).toEqual([882,884,886]);
  expect(usableArrows(40,40)).toEqual([882,884,886,888,890,892]);
- expect(chooseArrow([{id:884,count:10},{id:882,count:45},{id:886,count:99}],1,7)).toEqual({id:882,count:45});
+ expect(chooseArrow([{id:884,count:10},{id:882,count:45},{id:886,count:99}],1,7)).toEqual({id:884,count:10});
  expect(chooseArrow([{id:886,count:99}],1,7)).toBeUndefined();
+});
+test('Catherby entry and preparation budget preserve the total reserve',()=>{
+ expect(rangedEntry({worldX:2807,worldZ:3441,level:0})).toEqual({x:2809,z:3441});
+ expect(rangedEntry({worldX:2807,worldZ:3441,level:1})).toBeNull();
+ expect(rangedEntry({worldX:3000,worldZ:3000,level:0})).toBeNull();
+ expect(preparationFunds(455452,0,5000,400000)).toBe(5000);
+ expect(preparationFunds(400100,50,5000,400000)).toBe(100);
+ expect(preparationFunds(455452,4999,5000,400000)).toBe(1);
+ expect(preparationFunds(399999,0,5000,400000)).toBe(0);
 });
 test('purchase chunk stays inside budget, wallet reserve, shelf and packet size',()=>{
  expect(buyChunk(60,2000,10,800,800,0)).toBe(10);
@@ -44,21 +61,25 @@ test('options keep defaults, accept argv target and cap, and refuse unbounded in
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.
-function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled')[]){
+function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false){
  type Item={id:number;name:string;count:number};
- const item=(id:number,count:number):Item=>({id,name:String(id),count});
- let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0;
- let pack:Item[]=[],equipment:Item[]=[],bank=[item(843,1),item(882,60),item(329,3)];
- const state:any={player:{worldX:3253,worldZ:3421,level:0},autoRetaliateEnabled:false,bank:{isOpen:false,items:bank},nearbyNpcs:[],groundItems:[]};
- const attacks:{target:number;trip:number;tick:number}[]=[],listeners=new Set<()=>void>();
+ const item=(id:number,count:number):Item=>({id,name:id===995?'Coins':id===1985?'Cheese':String(id),count});
+ let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0,respawnAt:number|undefined;
+ let pack:Item[]=catherby?[item(995,3250),item(1515,2),item(946,1),item(1893,4)]:[],equipment:Item[]=[],bank=[item(843,1),item(882,60),...(catherby?[item(995,452202)]:[item(329,3)])];
+ if(upgrade)bank.push(item(849,1),item(888,20));
+ const state:any={player:{worldX:catherby?2807:3253,worldZ:catherby?3441:3421,level:0},autoRetaliateEnabled:false,bank:{isOpen:false,items:bank},nearbyNpcs:[],groundItems:[]};
+ const attacks:{target:number;trip:number;tick:number;kit:number[]}[]=[],listeners=new Set<()=>void>();
  const add=(items:Item[],id:number,n:number)=>{const found=items.find(i=>i.id===id);if(found)found.count+=n;else items.push(item(id,n));};
  const target=()=>({index:active,id:41,x:3233,z:3297,tileX:3233,tileZ:3297,distance:1,reachable:true,inCombat:false,hp:3,maxHp:3});
  const next=()=>{active++;attempt=0;state.nearbyNpcs=active<outcomes.length?[target()]:[];};
- const kill=()=>{xp+=300;level=xp>=600||outcomes[active]==='retry'?10:8;state.nearbyNpcs=[];state.groundItems=[{...item(526,1),x:3233,z:3297,distance:0},{...item(2138,1),x:3233,z:3297,distance:0}];};
+ const kill=()=>{const npc=state.nearbyNpcs[0]??target();xp+=300;level=upgrade?(xp>=600?30:20):xp>=600||outcomes[active]==='retry'?10:8;state.nearbyNpcs=[];
+  state.groundItems=[{...item(526,1),x:npc.tileX,z:npc.tileZ,distance:0},{...item(2138,1),x:npc.tileX,z:npc.tileZ,distance:0}];};
  const timer=setInterval(()=>{
   tick++;
   if(attempt===1&&tick===firstAttack+4&&['retry','stalled'].includes(outcomes[active]!))xp+=200;
-  if(state.player.worldZ===3297&&!state.nearbyNpcs.length&&!state.groundItems.length)next();
+  // Same index returns on another tile; its loot never appears on the frozen tile.
+  if(tick===respawnAt){respawnAt=undefined;state.nearbyNpcs=[{...target(),x:3236,z:3294,tileX:3236,tileZ:3294}];}
+  if(respawnAt===undefined&&state.player.worldZ===3297&&!state.nearbyNpcs.length&&!state.groundItems.length)next();
   for(const cb of [...listeners])cb();
  },1);
  const s={name:'unit',tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},
@@ -66,25 +87,47 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled')[]){
   sdk:{getState:()=>({...state,inventory:pack}),getInventory:()=>pack,getEquipment:()=>equipment,getSkill:(name:string)=>name==='Ranged'?{baseLevel:level,level}:{level:16},getSkillXp:()=>xp,
    sendSetCombatStyle:async()=>{state.combatStyle={known:true,currentStyle:1,styles:[{index:1,trainsSkills:['Ranged']}]};}},
   bot:{openBank:async()=>{state.bank.isOpen=true;generation++;return{success:true};},closeBank:async()=>{state.bank.isOpen=false;},
+   openShop:async()=>{state.shop={isOpen:true,shopItems:[{id:1985,name:'Cheese',count:3,baseCost:4,buyPrice:5}],shopConfig:{sellMultiplier:1000}};return{success:true};},
+   closeShop:async()=>{state.shop.isOpen=false;},
+   buyFromShop:async(_name:RegExp,n:number)=>{add(pack,1985,n);add(pack,995,-5*n);state.shop.shopItems[0].count-=n;return{success:true};},
    withdrawItem:async(i:Item,n:number)=>{i.count-=n;add(pack,i.id,n);generation++;},
    depositItem:async(i:Item)=>{add(bank,i.id,i.count);pack=pack.filter(p=>p.id!==i.id);generation++;return{success:true};},
-   equipItem:async(i:Item)=>{equipment.push({...i});pack=pack.filter(p=>p.id!==i.id);},
+   equipItem:async(i:Item)=>{const bows=[843,849],arrows=[882,888],group=bows.includes(i.id)?bows:arrows;for(const old of equipment.filter(e=>group.includes(e.id)))add(pack,old.id,old.count);equipment=equipment.filter(e=>!group.includes(e.id));equipment.push({...i});pack=pack.filter(p=>p.id!==i.id);},
    unequipItem:async(i:Item)=>{add(pack,i.id,i.count);equipment=equipment.filter(p=>p.id!==i.id);},
-   attack:async()=>{attempt++;attacks.push({target:active,trip,tick});if(attempt===1)firstAttack=tick;
+   attack:async()=>{attempt++;attacks.push({target:active,trip,tick,kit:equipment.map(i=>i.id)});if(attempt===1)firstAttack=tick;
     if(outcomes[active]==='lost')state.nearbyNpcs=[];
-    if(outcomes[active]==='kill'||outcomes[active]==='retry'&&attempt===4)kill();
+    if(outcomes[active]==='noloot'&&attempt===1){xp+=300;state.nearbyNpcs=[];respawnAt=tick+3;}
+    if(outcomes[active]==='kill'||outcomes[active]==='retry'&&attempt===4||outcomes[active]==='noloot'&&attempt===2)kill();
     return{success:true};},
    pickupItem:async(i:Item)=>{add(pack,i.id,i.count);state.groundItems=state.groundItems.filter((g:Item)=>g!==i);}},
  }as unknown as Session;
  const walker=spyOn(walking,'sessionWalker').mockImplementation(async()=>({} as any));
+ const planner=spyOn(trips,'planTripOffThread').mockImplementation(async(from,to)=>({cost:1,legs:from.x===to.x&&from.z===to.z?[]:[{kind:'travel',to,travel:{coins:30,runes:[],needs:[]}}]} as any));
+ const worldRoute=spyOn(walking,'walkRoute').mockImplementation(async(_s,legs)=>{
+  const last=legs.at(-1);if(last){state.player.worldX=last.to.x;state.player.worldZ=last.to.z;add(pack,995,-30);}return{ok:true,ticks:1};
+ });
  const route=spyOn(walking,'walkPath').mockImplementation(async(_deps,points)=>{
   const p=points.at(-1)!;state.player.worldX=p.x;state.player.worldZ=p.z;
   if(p.z===3297){trip++;if(!state.nearbyNpcs.length)next();}
   return{ok:true,ticks:0,still:0,clicks:0,repaths:0,doors:0,next:points.length};
  });
- return{s,attacks,run:()=>runRangedTrain(s,{...rangedTrainOptions({},['bun','s','unit']),maxTrips:2,buyArrows:0}),
-  close:()=>{clearInterval(timer);route.mockRestore();walker.mockRestore();}};
+ return{s,attacks,assets:()=>[...bank,...pack,...equipment],run:(overrides={})=>runRangedTrain(s,{...rangedTrainOptions({},['bun','s','unit']),maxTrips:2,buyArrows:0,...(catherby?{maxSpend:5000,coinReserve:400000}:{}),...overrides}),
+  close:()=>{clearInterval(timer);route.mockRestore();walker.mockRestore();planner.mockRestore();worldRoute.mockRestore();}};
 }
+
+test('Catherby mixed pack is banked, missing food is bought, and fares reconcile with the shared budget',async()=>{
+ const f=trainingFixture(['kill','kill'],true);
+ try{
+  const r=await f.run();
+  expect(r).toMatchObject({ok:true,foodId:1985,foodBought:3,foodSpent:15,travelSpent:60,coinsSpent:75,coinDebit:75,accounting:true,preserved:true});
+  for(const [id,n] of [[1515,2],[946,1],[1893,4]])expect(f.assets().filter(i=>i.id===id).reduce((s,i)=>s+i.count,0)).toBe(n!);
+ }finally{f.close();}
+});
+
+test('a reserve shortfall refuses preparation before purchases or attacks',async()=>{
+ const f=trainingFixture(['kill'],true);
+ try{const r=await f.run({coinReserve:999999});expect(r.ok).toBe(false);expect(r.failure).toContain('coin reserve short');expect(r.coinsSpent).toBe(0);expect(f.attacks).toHaveLength(0);expect(r.preserved).toBe(true);}finally{f.close();}
+});
 
 test('lost targets give no kill credit, continue the trip, and bank at five losses per trip',async()=>{
  const f=trainingFixture(['lost','lost','lost','lost','kill','lost','lost','lost','lost','lost','kill']);
@@ -106,4 +149,33 @@ test('an XP stall retries the present target at eight ticks, at most three times
    else{expect(r.ok).toBe(false);expect(r.kills).toBe(0);expect(r.failure).toContain('ranged-train combat/credit stalled');}
   }finally{f.close();}
  }
+});
+
+test('valid XP without loot freezes the tile, credits no kill, and continues to the same index respawned elsewhere',async()=>{
+ const f=trainingFixture(['noloot']),logs:string[]=[],log=spyOn(console,'log').mockImplementation((line:string)=>{logs.push(String(line));});
+ try{
+  const r=await f.run();
+  expect(r).toMatchObject({ok:true,kills:1,targetMet:true,accounting:true,preserved:true});
+  expect(f.attacks.map(a=>a.target)).toEqual([0,0]);
+  const gap=f.attacks[1]!.tick-f.attacks[0]!.tick;expect(gap).toBeGreaterThanOrEqual(12);expect(gap).toBeLessThan(50);
+  const lost=logs.filter(l=>l.startsWith('RANGED_TRAIN_LOST ')).map(l=>JSON.parse(l.slice(18)));
+  expect(lost).toHaveLength(1);expect(lost[0]).toMatchObject({index:0,id:41,tile:{x:3233,z:3297},xp:300,bones:0,chicken:0,appeared:[]});
+  for(const [id,n] of [[526,1],[2138,1]])expect(f.assets().filter(i=>i.id===id).reduce((s,i)=>s+i.count,0)).toBe(n!);
+ }finally{log.mockRestore();f.close();}
+});
+
+test('an owned bow and arrows unlocked by a kill are staged before the next target',async()=>{
+ const f=trainingFixture(['kill','kill'],false,true);
+ try{
+  const r=await f.run({target:30});
+  expect(r).toMatchObject({ok:true,trips:2,bow:849,arrow:888,accounting:true,preserved:true});
+  expect(f.attacks.map(a=>a.kit.sort((a,b)=>a-b))).toEqual([[843,882],[849,888]]);
+ }finally{f.close();}
+});
+
+test('a stronger arrow stack too small for a trip gives way to a usable weaker stack',()=>{
+ const owned=[{id:884,count:2},{id:882,count:500}] as any;
+ expect(chooseArrow(owned,1,1)?.id).toBe(882);
+ expect(chooseArrow([{id:884,count:40},{id:882,count:500}] as any,1,1)?.id).toBe(884);
+ expect(chooseArrow([{id:884,count:2}] as any,1,1)).toBeUndefined();
 });

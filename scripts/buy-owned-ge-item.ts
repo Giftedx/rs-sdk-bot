@@ -5,13 +5,17 @@ import {openBot,settle,serverFromEnv,getWorld,accountOf} from '../packages/core/
 import {waitUntil} from '../packages/core/src/ticks';import {depositObserved} from '../packages/core/src/deposit';import {sessionWalker,walkPath,expandPath,goTo} from '../packages/core/src/walk';
 import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
+import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
+import {equipmentObserved} from '../packages/core/src/container-observation';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
-export interface ItemRequest {actor:string;server:string;goal:string;item:number;quantity?:number;limit:number;reserve:number;createdAt:number;reviewAt:number;deadline:number}
+// expectedOwned (EXPECTED_OWNED) authorizes topping up exactly that many already held units. Absent, any held unit refuses the order.
+export interface ItemRequest {actor:string;server:string;goal:string;item:number;quantity?:number;expectedOwned?:number;rescueMode?:'npc-respawn-once';limit:number;reserve:number;createdAt:number;reviewAt:number;deadline:number}
 export interface OrderView {actor:string;server:string;offers:readonly GEOffer[];coins:number;items:number}
 // Root acquired/refund stay cumulative. Root refund is the unused original budget.
 // Each archived round retains its actual returned escrow and private fill evidence.
 export interface SettledRound {offerId:number;quantity:number;acquired:number;refund:number;progress?:MarketProgress}
-export interface ItemOrder {submission?:'prepared'|'attempted';rounds?:SettledRound[];version:1;request:ItemRequest;phase:'placing'|'open'|'cancelling'|'collecting'|'settled';coinsBefore:number;itemsBefore:number;previousIds:number[];at:number;offerId?:number;progress?:MarketProgress;claim?:{coinsBefore:number;itemsBefore:number;coins:number;items:number};acquired?:number;refund?:number;failure?:string}
+export interface RescueReceipt {phase:'attempted'|'respawned'|'bank-reconciled';lifeId:number;respawnCount:number;targetIndex:number;bank:{id:number;count:number}[];bankAt:number}
+export interface ItemOrder {rescue?:RescueReceipt;submission?:'prepared'|'attempted';rounds?:SettledRound[];version:1;request:ItemRequest;phase:'entry'|'placing'|'open'|'cancelling'|'collecting'|'settled';coinsBefore:number;itemsBefore:number;previousIds:number[];at:number;offerId?:number;progress?:MarketProgress;claim?:{coinsBefore:number;itemsBefore:number;coins:number;items:number};acquired?:number;refund?:number;failure?:string}
 export const orderQuantity=(r:ItemRequest)=>r.quantity??1;
 export const orderEscrow=(r:ItemRequest)=>orderQuantity(r)*r.limit;
 // Older journals have one round and no submission marker. They remain readable, but an
@@ -47,7 +51,7 @@ export function orderAccounting(journal?:ItemOrder){
  if(settled)valid=valid&&Number.isSafeInteger(a)&&active>=0&&active<=prior.quantity&&Number.isSafeInteger(refund)&&refund>=0&&refund<=total
   &&(active===0?gross===0:gross>=active&&gross<=active*journal.request.limit)
   &&(!journal.progress||journal.progress.filled===active&&journal.progress.gross===gross&&journal.progress.tax===0);
- const unresolved=!valid||['placing','cancelling','collecting'].includes(journal.phase);
+ const unresolved=!valid||['entry','placing','cancelling','collecting'].includes(journal.phase);
  const knownSpent=settled&&valid?spent:prior.spent+(journal.phase==='open'&&valid?(journal.progress?.gross??0):0);
  return{acquired:settled&&valid?a:prior.acquired,refund:settled&&valid?refund:0,spent:knownSpent,
   escrow:unresolved?null:settled?0:prior.escrow-(journal.progress?.gross??0),maximumExposure:settled&&valid?0:prior.escrow,outcomeUnresolved:unresolved};
@@ -57,7 +61,8 @@ function claimSettlement(j:ItemOrder,c:{items:number;coins:number}){
  const p=priorRounds(j);return{acquired:p.acquired+c.items,refund:orderEscrow(j.request)-p.spent-p.escrow+c.coins};
 }
 export function validateRequest(r:ItemRequest){
- if(!/^[a-z0-9]{1,12}$/i.test(r.actor)||!r.server||!/^[a-z0-9_-]{1,64}$/i.test(r.goal)||![r.item,r.limit].every(n=>Number.isSafeInteger(n)&&n>0&&n<=2147483647)||r.quantity!==undefined&&!(Number.isSafeInteger(r.quantity)&&r.quantity>0)||orderEscrow(r)>2147483647||!Number.isSafeInteger(r.reserve)||r.reserve<0||![r.createdAt,r.reviewAt,r.deadline].every(n=>Number.isSafeInteger(n)&&n>0)||r.reviewAt<r.createdAt||r.deadline<=r.reviewAt)throw Error('invalid item order request');
+ if(r.rescueMode!==undefined&&r.rescueMode!=='npc-respawn-once')throw Error('unsupported RESCUE_MODE');
+ if(!/^[a-z0-9]{1,12}$/i.test(r.actor)||!r.server||!/^[a-z0-9_-]{1,64}$/i.test(r.goal)||![r.item,r.limit].every(n=>Number.isSafeInteger(n)&&n>0&&n<=2147483647)||r.quantity!==undefined&&!(Number.isSafeInteger(r.quantity)&&r.quantity>0)||r.expectedOwned!==undefined&&!(Number.isSafeInteger(r.expectedOwned)&&r.expectedOwned>=0&&r.expectedOwned<=2147483647)||orderEscrow(r)>2147483647||!Number.isSafeInteger(r.reserve)||r.reserve<0||![r.createdAt,r.reviewAt,r.deadline].every(n=>Number.isSafeInteger(n)&&n>0)||r.reviewAt<r.createdAt||r.deadline<=r.reviewAt)throw Error('invalid item order request');
 }
 // Banknotes share the item's published name and have no config (knowledge/BUILD.md), so they are absent from the catalogue.
 // A catalogued item with the same name is a different item and never counts.
@@ -181,21 +186,120 @@ export async function prepareMarketEntry(s:Session,stop:()=>boolean,travel:(sign
   throw Error(`market bank travel failed: position=${p?`${p.worldX},${p.worldZ},${p.level}`:'unknown'} currentHP=${hp()} ticks=${s.tick()-start}; ${String(error)}`);
  }finally{off();ac.abort('market trip ended');}
 }
+// A new order starts only from the fresh holding its request names: none by default, or exactly expectedOwned.
+export function ownedBaseline(r:ItemRequest,held:number){
+ if(r.expectedOwned===undefined){if(held>0)throw Error('owned item already present;allocate it instead of buying duplicate stock');}
+ else if(held!==r.expectedOwned)throw Error(`owned item baseline ${held} differs from EXPECTED_OWNED ${r.expectedOwned}`);
+}
 const catalogue=():{id:number;name:string}[]=>JSON.parse(readFileSync(new URL('../knowledge/items.json',import.meta.url),'utf8'));
 
-export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:string,stop:()=>boolean,cancel:boolean,fillWaitTicks:number){
+// RESCUE_MODE=npc-respawn-once authorizes one NPC death only from this observed pocket.
+// Source: death.rs2 keeps three items when unskulled and restores stats near 3221,3218.
+// Reuse that mechanic here; ordinary walking, admission and sessionDied remain guarded.
+export const rescuePocket=(p:{worldX:number;worldZ:number;level:number}|null|undefined)=>!!p&&p.level===0&&p.worldX===2853&&p.worldZ===3452;
+export function rescueKit(s:Session){
+ const st=s.sdk.getState(),p=st?.player,pack=s.sdk.getInventory();
+ return !!st&&s.sdk.getStateAge()<=5000&&st.isSkulled===false&&!!p
+  &&!!s.client&&typeof s.client==='object'&&equipmentObserved(s.client)&&Array.isArray(st.equipment)&&st.equipment.length===0&&s.sdk.getEquipment().length===0
+  &&pack.length===1&&pack[0]?.id===590&&pack[0].count===1;
+}
+export function bankTotals(rows:readonly {id:number;count:number}[]){
+ const m=new Map<number,number>();
+ for(const r of rows){if(!Number.isSafeInteger(r.id)||r.id<0||!Number.isSafeInteger(r.count)||r.count<=0)throw Error('invalid rescue bank snapshot');m.set(r.id,(m.get(r.id)??0)+r.count);}
+ return [...m].sort((a,b)=>a[0]-b[0]);
+}
+function rescueBank(request:ItemRequest){
+ const snapshot=JSON.parse(readFileSync(resolve('.practice/status',request.actor+'.json'),'utf8'));
+ if(snapshot.name?.toLowerCase()!==request.actor.toLowerCase()||snapshot.server!==request.server||!Number.isSafeInteger(snapshot.bankAt)
+  ||snapshot.bankAt<=0||snapshot.bankAt>Date.now()||!Array.isArray(snapshot.bank))throw Error('owned rescue bank snapshot required');
+ bankTotals(snapshot.bank);
+ return{bank:snapshot.bank.map((i:{id:number;count:number})=>({id:i.id,count:i.count})),bankAt:snapshot.bankAt};
+}
+export type RescueControl={active:boolean;start:number;lifeId:number;respawnCount:number};
+// Only the worker's onStop callback may acknowledge the single expected death. A disconnect is never accepted.
+export function expectedRescueStop(s:Session,detail:string,c:RescueControl){
+ const p=s.sdk.getState()?.player;
+ return detail==='died'&&c.active&&s.tick()-c.start<240&&!!p&&s.sdk.getStateAge()<=5000
+  &&p.lifeId>=c.lifeId&&p.lifeId<=c.lifeId+1&&p.respawnCount>=c.respawnCount&&p.respawnCount<=c.respawnCount+1;
+}
+export async function rescueMarketEntry(s:Session,request:ItemRequest,journalPath:string,stop:()=>boolean,c:RescueControl,
+ suppliedSnapshot:ReturnType<typeof rescueBank>|undefined=undefined,stage:(signal:AbortSignal)=>Promise<{ok:boolean}>=async signal=>{
+  return walkPath(await sessionWalker(s),LUMBRIDGE_TO_DRAYNOR.map(([x,z,tol])=>({x,z,tol})),{signal,maxTicks:500});
+ }){
+ const st=s.sdk.getState(),p=st?.player,hp=s.sdk.getSkill('Hitpoints');
+ if(existsSync(journalPath))throw Error('rescue intent already exists; uncertain rescue cannot repeat');
+ if(stop()||!rescuePocket(p)||!rescueKit(s)||!p||p.isDead||!hp||!Number.isFinite(hp.level)||hp.level<=0
+  ||!Number.isSafeInteger(p.lifeId)||!Number.isSafeInteger(p.respawnCount)||!Number.isFinite(hp.baseLevel)||hp.baseLevel<=6)throw Error('rescue refused: pocket, fresh unskulled state, sole tinderbox590 and no equipment required');
+ const wolf=st?.nearbyNpcs.filter(n=>n.kind==='npc'&&/^white wolf$/i.test(n.name)&&n.reachable===true&&n.combatLevel===25
+  &&Number.isSafeInteger(n.index)&&n.index>=0&&Number.isFinite(n.distance)&&n.distance<=16&&n.distance>0
+  &&n.optionsWithIndex.some(o=>/^attack$/i.test(o.text))).sort((a,b)=>a.distance-b.distance)[0];
+ if(!wolf)throw Error('rescue refused: observed reachable White wolf25 required');
+ const snapshot=suppliedSnapshot??rescueBank(request);
+ const totals=new Map(bankTotals(snapshot.bank));ownedBaseline(request,totals.get(request.item)??0);
+ if((totals.get(995)??0)<orderEscrow(request)+request.reserve)throw Error('rescue refused: owned bank funding/reserve missing');
+ const receipt:RescueReceipt={phase:'attempted',lifeId:p.lifeId,respawnCount:p.respawnCount,targetIndex:wolf.index,...snapshot};
+ const j:ItemOrder={version:1,request,phase:'entry',coinsBefore:totals.get(995)??0,itemsBefore:totals.get(request.item)??0,previousIds:[],at:Date.now(),rescue:receipt};
+ const save=()=>{j.at=Date.now();writeFileSync(journalPath+'.tmp',JSON.stringify(j,null,2));renameSync(journalPath+'.tmp',journalPath);};
+ const initial={lifeId:p.lifeId,respawnCount:p.respawnCount},baseHp=hp.baseLevel,start=s.tick();
+ let ended=false;void s.ended.then(()=>{ended=true;});
+ const halted=()=>ended||stop()||Date.now()>=request.deadline;
+ try{
+  if(halted()||!rescueKit(s)||!rescuePocket(s.sdk.getState()?.player))throw Error('rescue pre-engagement state changed');
+  save();Object.assign(c,{active:true,start, ...initial});
+  marketEntryTrace(s,'rescue-intent',{targetIndex:wolf.index,lifeId:initial.lifeId,respawnCount:initial.respawnCount});
+  // The attempted marker precedes the only attack call, including a call that mutates then throws.
+  try{await s.sdk.sendInteractNpc(wolf.index,wolf.optionsWithIndex.find(o=>/^attack$/i.test(o.text))!.opIndex);}catch(error){marketEntryTrace(s,'rescue-attack-return',{error:String(error)});}
+  const observed=await waitUntil(s,()=>{
+   const q=s.sdk.getState()?.player;
+   if(halted())throw Error('rescue stopped/disconnected/deadline');
+   if(s.sdk.getStateAge()>5000||!q)throw Error('rescue state unknown');
+   if(q.lifeId>initial.lifeId+1||q.respawnCount>initial.respawnCount+1)throw Error('rescue unexpected second death');
+   return q.lifeId===initial.lifeId+1&&q.respawnCount===initial.respawnCount+1&&!q.isDead
+    &&q.level===0&&Math.max(Math.abs(q.worldX-3221),Math.abs(q.worldZ-3218))<=3
+    &&s.sdk.getSkill('Hitpoints')?.level===baseHp&&rescueKit(s);
+  },{timeoutTicks:Math.max(1,240-(s.tick()-start))});
+  if(!observed||halted()||s.tick()-start>=240)throw Error('rescue single Lumbridge respawn/retained kit/restored HP unproved');
+  c.active=false;receipt.phase='respawned';save();marketEntryTrace(s,'rescue-respawned',{...initial});
+  const ac=new AbortController(),q0={...s.sdk.getState()!.player!},stageStart=s.tick();
+  const guard=()=>{const q=s.sdk.getState()?.player;if(halted()||s.tick()-stageStart>=500||!q||q.isDead||q.lifeId!==q0.lifeId||q.respawnCount!==q0.respawnCount||s.sdk.getSkill('Hitpoints')?.level!==baseHp||!rescueKit(s))ac.abort('rescue staging health/stop/state');};
+  const off=s.onTick(guard);
+  try{
+   guard();ac.signal.throwIfAborted();const walked=await stage(ac.signal);guard();ac.signal.throwIfAborted();
+   const q=s.sdk.getState()?.player;
+   if(!walked.ok||!q||q.level!==0||Math.max(Math.abs(q.worldX-DRAYNOR_BANK.x),Math.abs(q.worldZ-DRAYNOR_BANK.z))>2)throw Error('rescue Draynor arrival unproved');
+   const generation=s.bankObservation?.()?.generation??0;
+   if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>{guard();return ac.signal.aborted||!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation;},{timeoutTicks:15,signal:ac.signal}))throw Error('rescue fresh Draynor bank unproved');
+   guard();ac.signal.throwIfAborted();const bank=s.bankObservation?.();
+   if(!bank||JSON.stringify(bankTotals(bank.items))!==JSON.stringify(bankTotals(snapshot.bank)))throw Error('rescue complete bank assets changed');
+   await s.bot.closeBank();guard();ac.signal.throwIfAborted();receipt.phase='bank-reconciled';save();marketEntryTrace(s,'rescue-bank-reconciled',{bank:bank.items});
+  }finally{off();ac.abort();}
+  return j;
+ }catch(error){j.failure=String(error);save();throw error;}
+ finally{c.active=false;}
+}
+
+export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:string,stop:()=>boolean,cancel:boolean,fillWaitTicks:number,rescueControl:RescueControl={active:false,start:0,lifeId:0,respawnCount:0}){
  validateRequest(request);const quantity=orderQuantity(request),isItem=orderItemMatcher(request.item,catalogue());
  if(s.name.toLowerCase()!==request.actor.toLowerCase())throw Error('order actor identity mismatch');
  marketEntryTrace(s,'entry-state-wait');
  if(!await waitUntil(s,()=>stop()||!!s.sdk.getState()?.player&&s.sdk.getStateAge()<=5000&&!!s.sdk.getSkill('Hitpoints'),{timeoutTicks:15})||stop())throw Error('observed market entry state deadline/stop');
  marketEntryTrace(s,'entry-state-ready');
+ let entryJournal:ItemOrder|undefined;
+ if(existsSync(journalPath)){
+  entryJournal=JSON.parse(readFileSync(journalPath,'utf8'));
+  if(entryJournal?.version!==1||!['entry','placing','open','cancelling','collecting','settled'].includes(entryJournal.phase)||!Array.isArray(entryJournal.previousIds)||JSON.stringify(entryJournal.request)!==JSON.stringify(request))throw Error('journal request identity/config/state changed');
+  if(entryJournal.rescue&&entryJournal.rescue.phase!=='bank-reconciled'||entryJournal.phase==='entry'&&entryJournal.rescue?.phase!=='bank-reconciled')throw Error('uncertain rescue intent; inspect before any action');
+ }
+ if(request.rescueMode&&!entryJournal){
+  if(cancel)throw Error('cannot cancel unsubmitted rescue order');
+  entryJournal=await rescueMarketEntry(s,request,journalPath,stop,rescueControl);
+ }
  await prepareMarketEntry(s,()=>stop()||Date.now()>=request.deadline);
  const state=()=>s.sdk.getState(),held=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,start=s.tick(),hp0=hp(),p0=state()?.player;
  const entryFailure=marketEntryFailure(p0,hp0);if(entryFailure)throw Error(entryFailure);
  if(!p0)throw Error('market position unknown');
  let hpGuard=hp0;const foodUsed:{id:number;count:number}[]=[],preparationFood=new Set<number>();
- let ended=false,died=false,damaged=false,hpMin=hp0,failure='',bankItems:readonly {id:number;name:string;count:number}[]=[],baseline:Map<number,number>|undefined,journal:ItemOrder|undefined;
- if(existsSync(journalPath)){journal=JSON.parse(readFileSync(journalPath,'utf8'));if(journal?.version!==1||!['placing','open','cancelling','collecting','settled'].includes(journal.phase)||!Array.isArray(journal.previousIds)||JSON.stringify(journal.request)!==JSON.stringify(request))throw Error('journal request identity/config/state changed');}
+ let ended=false,died=false,damaged=false,hpMin=hp0,failure='',bankItems:readonly {id:number;name:string;count:number}[]=[],baseline:Map<number,number>|undefined,journal:ItemOrder|undefined=entryJournal;
  const save=()=>{if(!journal)throw Error('missing order journal');journal.at=Date.now();writeFileSync(journalPath+'.tmp',JSON.stringify(journal,null,2));renameSync(journalPath+'.tmp',journalPath);};
  void s.ended.then(()=>{ended=true;});const off=s.onTick(()=>{const p=state()?.player;hpMin=Math.min(hpMin,hp());damaged||=hp()<hpGuard||!!p&&!marketTileSafe({x:p.worldX,z:p.worldZ,level:p.level});died||=hp()<=0||!!p?.isDead||p?.lifeId!==p0.lifeId||(p?.respawnCount??0)>(p0.respawnCount??0);});
  const terminal=()=>ended||died,over=()=>terminal()||damaged||stop()||s.tick()-start>=500;
@@ -217,7 +321,9 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
   return{actor:s.name,server:request.server,offers:ge.offers,coins:coinsTotal(),items:itemTotal()};
  };
  try{
-  await walk(BANK);await openBank();baseline=assets();await bankPack();
+  await walk(BANK);await openBank();baseline=assets();
+  if(journal?.phase==='entry'&&(JSON.stringify(bankTotals(bankItems))!==JSON.stringify(bankTotals(journal.rescue!.bank))||!rescueKit(s)))throw Error('rescue market bank/kit changed');
+  await bankPack();
   // One owned salmon/trout/lobster crosses the >6 HP entry floor. Cash is never spent on preparation.
   if(hp()<=6){
    if(over())throw Error('market health preparation stopped');
@@ -246,9 +352,9 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
     if(cancel||Date.now()>=request.deadline||over()||(journal.rounds?.length??0)>=16)throw Error('exact order deadline/cancel/recovery budget exhausted; accounted stock and refund retained');
     remaining=quantity-accounted.acquired;roundEscrow=remaining*request.limit;
    }
-   const needsFunding=!journal||journal.phase==='settled'||journal.phase==='placing'&&journal.submission==='prepared';
+   const needsFunding=!journal||journal.phase==='entry'||journal.phase==='settled'||journal.phase==='placing'&&journal.submission==='prepared';
    if(needsFunding){
-    if(cancel)throw Error('no submitted order to cancel');if(!journal&&itemTotal()>0)throw Error('owned item already present;allocate it instead of buying duplicate stock');
+    if(cancel)throw Error('no submitted order to cancel');if(!journal)ownedBaseline(request,itemTotal());
     if(Date.now()>=request.deadline||over()||coinsTotal()<roundEscrow+request.reserve||s.sdk.getInventory().length>26)throw Error('order expired,owned reserve missing or two collection slots unavailable');
     if(journal&&journal.phase==='placing'&&(coinsTotal()!==roundBaseline(journal).coins||itemTotal()!==roundBaseline(journal).items))throw Error('prepared order asset baseline changed');
     const coins=s.sdk.findBankItem(/^coins$/i),beforeBank=count(bankItems,i=>i.id===995),gen=s.bankObservation?.()?.generation??0;
@@ -261,10 +367,10 @@ export async function runOwnedItem(s:Session,request:ItemRequest,journalPath:str
     const prior=priorRounds(journal),accounted=orderAccounting(journal),v=view();
     if(journal.offerId===undefined||v.offers.some(o=>o.id===journal!.offerId)||accounted.outcomeUnresolved)throw Error('previous settled offer still visible or unproved');
     const round:SettledRound={offerId:journal.offerId,quantity:prior.quantity,acquired:accounted.acquired-prior.acquired,refund:prior.escrow-(accounted.spent-prior.spent),progress:journal.progress};
-    journal={version:1,request,phase:'placing',submission:'prepared',coinsBefore:journal.coinsBefore,itemsBefore:journal.itemsBefore,
+     journal={rescue:journal.rescue,version:1,request,phase:'placing',submission:'prepared',coinsBefore:journal.coinsBefore,itemsBefore:journal.itemsBefore,
      previousIds:v.offers.map(o=>o.id),at:Date.now(),rounds:[...(journal.rounds??[]),round]};save();
    }
-   if(!journal){const v=view();journal={version:1,request,phase:'placing',submission:'prepared',coinsBefore:v.coins,itemsBefore:v.items,previousIds:v.offers.map(o=>o.id),at:Date.now()};save();}
+   if(!journal||journal.phase==='entry'){const v=view();ownedBaseline(request,v.items);journal={rescue:journal?.rescue,version:1,request,phase:'placing',submission:'prepared',coinsBefore:v.coins,itemsBefore:v.items,previousIds:v.offers.map(o=>o.id),at:Date.now()};save();}
    const acquiredBeforeRound=priorRounds(journal).acquired;
    if(journal.phase==='placing'&&placementRetrySafe(journal,view())){
     if(Date.now()>=request.deadline||over())throw Error('order deadline/stop before submission');
@@ -329,8 +435,12 @@ if(import.meta.main){
  if(existsSync(lock)){const owner=JSON.parse(readFileSync(lock,'utf8'));if(!Number.isSafeInteger(owner.pid)||owner.pid<1)throw Error('unknown market lock owner');let alive=true;try{process.kill(owner.pid,0);}catch(e){if((e as NodeJS.ErrnoException).code==='ESRCH')alive=false;else throw e;}if(alive)throw Error('market actor already owned');unlinkSync(lock);}
  const fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,actor,server,goal,at:Date.now()}));closeSync(fd);let s:Session|undefined,stopped=false;
  try{
-  const old=existsSync(journalPath)?JSON.parse(readFileSync(journalPath,'utf8')) as ItemOrder:undefined,now=Date.now(),period=Number(process.env.ORDER_MS??900000),request:ItemRequest=old?.request??{actor,server,goal,item:Number(process.env.ITEM_ID??1331),quantity:Number(process.env.QUANTITY??1),limit:Number(process.env.LIMIT_PRICE??45000),reserve:Number(process.env.CASH_RESERVE??5000),createdAt:now,reviewAt:now+Math.min(300000,Math.max(1,Math.floor(period/3))),deadline:now+period};
-  if(request.actor.toLowerCase()!==actor.toLowerCase()||request.server!==server||request.goal!==goal||process.env.ITEM_ID&&Number(process.env.ITEM_ID)!==request.item||process.env.QUANTITY&&Number(process.env.QUANTITY)!==orderQuantity(request)||process.env.LIMIT_PRICE&&Number(process.env.LIMIT_PRICE)!==request.limit||process.env.CASH_RESERVE&&Number(process.env.CASH_RESERVE)!==request.reserve||process.env.ORDER_MS&&Number(process.env.ORDER_MS)!==request.deadline-request.createdAt)throw Error('existing request identity/budget mismatch');
-  validateRequest(request);s=await openBot(actor,{onStop:async()=>{stopped=true;}});const result=await runOwnedItem(s,request,journalPath,()=>stopped,process.env.CANCEL==='1',fillWaitTicks);console.log('OWNED_GE_ITEM '+JSON.stringify(result));const ok=await settle([s],result.ok,JSON.stringify(result));unlinkSync(lock);process.exit(ok?0:1);
+  const old=existsSync(journalPath)?JSON.parse(readFileSync(journalPath,'utf8')) as ItemOrder:undefined,now=Date.now(),period=Number(process.env.ORDER_MS??900000),request:ItemRequest=old?.request??{actor,server,goal,item:Number(process.env.ITEM_ID??1331),quantity:Number(process.env.QUANTITY??1),...(process.env.EXPECTED_OWNED?{expectedOwned:Number(process.env.EXPECTED_OWNED)}:{}),...(process.env.RESCUE_MODE?{rescueMode:process.env.RESCUE_MODE as ItemRequest['rescueMode']}:{}),limit:Number(process.env.LIMIT_PRICE??45000),reserve:Number(process.env.CASH_RESERVE??5000),createdAt:now,reviewAt:now+Math.min(300000,Math.max(1,Math.floor(period/3))),deadline:now+period};
+  if(process.env.RESCUE_MODE&&process.env.RESCUE_MODE!==request.rescueMode)throw Error('existing rescue mode mismatch');
+  if(request.actor.toLowerCase()!==actor.toLowerCase()||request.server!==server||request.goal!==goal||process.env.ITEM_ID&&Number(process.env.ITEM_ID)!==request.item||process.env.QUANTITY&&Number(process.env.QUANTITY)!==orderQuantity(request)||process.env.EXPECTED_OWNED&&Number(process.env.EXPECTED_OWNED)!==request.expectedOwned||process.env.LIMIT_PRICE&&Number(process.env.LIMIT_PRICE)!==request.limit||process.env.CASH_RESERVE&&Number(process.env.CASH_RESERVE)!==request.reserve||process.env.ORDER_MS&&Number(process.env.ORDER_MS)!==request.deadline-request.createdAt)throw Error('existing request identity/budget mismatch');
+  validateRequest(request);const rescue:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
+  s=await openBot(actor,{onStop:async(session,detail)=>{if(!expectedRescueStop(session,detail,rescue))stopped=true;},onSessionEnd:async()=>{stopped=true;}});
+  const stop=()=>stopped||existsSync(resolve('.practice',`stop-${actor}`));
+  const result=await runOwnedItem(s,request,journalPath,stop,process.env.CANCEL==='1',fillWaitTicks,rescue);console.log('OWNED_GE_ITEM '+JSON.stringify(result));const ok=await settle([s],result.ok,JSON.stringify(result));unlinkSync(lock);process.exit(ok?0:1);
  }catch(error){if(s){await settle([s],false,String(error));if(existsSync(lock))unlinkSync(lock);process.exit(1);}if(existsSync(lock))unlinkSync(lock);throw error;}
 }

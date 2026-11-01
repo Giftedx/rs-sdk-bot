@@ -6,6 +6,7 @@
     "scripts/quest-sweep.ts",
     "scripts/quest-sweep.test.ts",
     "scripts/generated/quest-fishingcompo.ts",
+    "scripts/generated/quest-totem.ts",
     "scripts/generated/quest-lib.ts",
     "scripts/quest-walk.ts",
     "scripts/quest-walk.test.ts",
@@ -17,7 +18,7 @@
     "packages/core/test/danger.test.ts",
     "packages/practice/src/quest-sweep-proof.ts"
   ],
-  "consumer": "Existing run-fishing-contest-mineyourbiz-western-entry completes Fishing Contest on ordinary MineYourBiz after controller handoff, using refreshed owned tools,65 coins and food qualified for the McGrubor traversal. The real worker CLI proves ordinary eastern entry, quest completion, reconciled assets, clear refusal and logout on practice. The finite live consumer promotes Fishing Contest practice->live and unlocks mountain-tunnel travel for the next prepared quest.",
+  "consumer": "run-totem-wandwaver-customs-consumer completes Tribal Totem on ordinary Wandwaver through the real account-parameterized quest-sweep CLI. Practice demonstrates the useful completion from started Brimhaven entry with Magic1, no law rune, funded customs travel and owned supported healing food. Assets reconcile, missing inputs produce a clear refusal, and logout is confirmed. The finite live consumer promotes Tribal Totem named->live. Actual completion and confirmed logout release the existing Clock Tower consumer.",
   "checks": [
     {
       "id": "quest-sweep-regressions",
