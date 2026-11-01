@@ -2,7 +2,9 @@ import {readFileSync,writeFileSync,copyFileSync,existsSync,openSync,closeSync,un
 import {join,resolve,sep} from 'node:path';
 import {freemem} from 'node:os';
 import {Database} from 'bun:sqlite';
-import {startStack} from './stack';
+import {startStack,stopStack,pidsFile,type StackOptions} from './stack';
+import {canBind} from './ports';
+import {randomUUID} from 'node:crypto';
 import {createBot} from './bots';
 import {applyPreset} from './presets';
 import {runBotName} from './prove';
@@ -19,6 +21,42 @@ import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../c
 // quantity, banks it and reruns the same order key. The consumer stage reads the saved bank.
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;log:string};
+export function geProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
+ if(!ports||![ports.engine,ports.gateway,ports.management,ports.tcp].every(p=>Number.isSafeInteger(p)&&p>=1024&&p<=65535&&p!==8888&&p!==7780&&p!==8898&&p!==43594)
+  ||new Set([ports.engine,ports.gateway,ports.management,ports.tcp]).size!==4||!/^ge-[a-z0-9-]{1,29}$/.test(instance))throw Error('owned practice endpoints required');
+ const server=`127.0.0.1:${ports.engine}`,gateway=`ws://127.0.0.1:${ports.gateway}`;
+ const env={GE_PROOF_ENGINE:String(ports.engine),GE_PROOF_GATEWAY:String(ports.gateway),GE_PROOF_INSTANCE:instance,
+  AGENT_PORT:String(ports.gateway),GATEWAY_URL:`http://127.0.0.1:${ports.gateway}`,WEB_MANAGEMENT_PORT:String(ports.management),NODE_PORT:String(ports.tcp),GE_DATABASE:`data/market-${instance}.sqlite`};
+ return{ports:{...ports},instance,server,gateway,env};
+}
+export function selectGeProofEndpoints(bind:typeof canBind=canBind,random:()=>number=Math.random){
+ for(let i=0;i<100;i++){
+  const engine=20000+Math.floor(random()*20000),gateway=engine+1,management=engine+2,tcp=engine+3;
+  if([engine,gateway,management,tcp].every(bind))return geProofEndpoints({engine,gateway,management,tcp},'ge-'+randomUUID().replaceAll('-','').slice(0,20));
+ }
+ throw Error('owned practice ports unavailable');
+}
+
+type ProofEndpoints=ReturnType<typeof geProofEndpoints>;
+export function assertGeProofAccount(text:string,env:Record<string,string|undefined>=process.env){
+ const p=geProofEndpoints({engine:Number(env.GE_PROOF_ENGINE),gateway:Number(env.GE_PROOF_GATEWAY),management:Number(env.WEB_MANAGEMENT_PORT),tcp:Number(env.NODE_PORT)},env.GE_PROOF_INSTANCE??'');
+ if(serverFromEnv(text)!==p.server||text.match(/^GATEWAY_URL=(.*)$/m)?.[1]?.trim()!==p.gateway)throw Error('owned practice account required');
+ return p.server;
+}
+export function geProofAccountEnv(text:string,p:ProofEndpoints){
+ if(!/^SERVER=localhost:8888\r?$/m.test(text))throw Error('new practice account required');
+ return text.replace(/^SERVER=.*$/gm,`SERVER=${p.server}`).replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=${p.gateway}`);
+}
+export async function startGeProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
+ const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+ try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:150,readyTimeoutMs:60000});}
+ finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
+}
+function savedEndpoints(meta:any){
+ const p=geProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
+ if(meta.server!==p.server)throw Error('saved owned practice endpoint mismatch');
+ return p;
+}
 export const ORDER={item:1987,quantity:300,limit:5,ask:3,reserve:100,coins:2000};
 const BANK_TILE={x:3185,z:3436,level:0};
 // The live consumer entry: Pocketpython at north Varrock with 11 HP, 26 carried salmon and 60 coins.
@@ -62,8 +100,10 @@ export function bulkOrderChecks(p:{before:Save;after:Save;repeat:Save;journal:It
  };
 }
 
-function verifyCase(directory:string,remote=false){
+export function verifyCase(directory:string,remote=false){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
+ const now=Date.now(),ageMs=now-meta.at;
+ const endpoints=savedEndpoints(meta);
  const log=(label:string)=>readFileSync(join(directory,label+'.log'),'utf8')+readFileSync(join(directory,label+'.err'),'utf8');
  const journal=existsSync(join(directory,'journal.json'))?JSON.parse(readFileSync(join(directory,'journal.json'),'utf8')) as ItemOrder:null;
  const repeat=readPracticeSave(join(directory,'repeat.sav'));
@@ -71,9 +111,10 @@ function verifyCase(directory:string,remote=false){
   sell:{code:meta.sellCode,log:log('sell')},buy:{code:meta.buyCode,log:log('buy')},again:{code:meta.againCode,log:log('again')},order:remote?NORTH_CASE.order:ORDER}),
   ...(remote?{remoteEntry:northEntryCheck(readPracticeSave(join(directory,'before.sav')),log('buy')),
    refusal:duplicateRefusalCheck(repeat,readPracticeSave(join(directory,'refused.sav')),{code:meta.refuseCode,log:log('refuse')},NORTH_CASE.order.item)}:{}),
-  identity:journal?.request.actor===meta.buyer&&journal?.request.goal===meta.orderKey&&journal?.request.server==='localhost:8888',
-  source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000};
- return{ok:Object.values(checks).every(Boolean),at:Date.now(),checks,source:meta.source,order:remote?NORTH_CASE.order:ORDER,
+  identity:journal?.request.actor===meta.buyer&&journal?.request.goal===meta.orderKey&&journal?.request.server===endpoints.server,
+  // Saved effects have no age limit. This timestamp check does not grant live admission.
+  source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
+ return{ok:Object.values(checks).every(Boolean),at:now,ageMs,checks,endpoints:{ports:endpoints.ports,instance:endpoints.instance},source:meta.source,order:remote?NORTH_CASE.order:ORDER,
   scope:'Native150ms/25x: one owned buyer, one owned seller at a lower ask; exact noted fill banked; rerun resumes. No live price, liquidity or wine-throughput claim.'};
 }
 // The real CLI started at the north Varrock entry and walked the north approach.
@@ -92,7 +133,9 @@ export function duplicateRefusalCheck(before:Save,after:Save,run:Run,item:number
 function verify(directory:string){
  const bank=verifyCase(directory),north=verifyCase(join(directory,'north'),true);
  const magic=verifyMagic(join(directory,'magic'));
- const report={...bank,ok:bank.ok&&north.ok&&magic.ok,checks:{...bank.checks,north:north.ok,magic:magic.ok},north,magic};
+ const endpoints=['','north','magic'].map(part=>JSON.parse(readFileSync(join(directory,part,'native.json'),'utf8')).endpoints);
+ const sameEndpoints=endpoints.every(p=>JSON.stringify(p)===JSON.stringify(endpoints[0]));
+ const report={...bank,ok:bank.ok&&north.ok&&magic.ok&&sameEndpoints,checks:{...bank.checks,north:north.ok,magic:magic.ok,sameEndpoints},north,magic};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 
@@ -128,14 +171,16 @@ export function magicOrderChecks(p:{before:Save;law:Save;earth:Save;repeat:Save;
 }
 function verifyMagic(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
+ const now=Date.now(),ageMs=now-meta.at;
+ const endpoints=savedEndpoints(meta);
  const read=(label:string)=>readPracticeSave(join(directory,label+'.sav'));
  const run=(label:string):Run=>({code:meta[label+'Code'],log:readFileSync(join(directory,label+'.log'),'utf8')+readFileSync(join(directory,label+'.err'),'utf8')});
  const l=JSON.parse(readFileSync(join(directory,'law-journal.json'),'utf8')),e=JSON.parse(readFileSync(join(directory,'earth-journal.json'),'utf8'));
  const checks={...magicOrderChecks({before:read('before'),law:read('law'),earth:read('earth'),repeat:read('repeat'),refuseBefore:read('refuse-before'),refused:read('refused'),lawJournal:l,earthJournal:e,buy:run('buy'),topup:run('topup'),again:run('again'),refuse:run('refuse')}),
-  identity:l?.request.actor===meta.buyer&&e?.request.actor===meta.buyer&&l?.request.server==='localhost:8888'&&e?.request.server==='localhost:8888'&&l?.request.goal===meta.lawKey&&e?.request.goal===meta.earthKey,
+  identity:l?.request.actor===meta.buyer&&e?.request.actor===meta.buyer&&l?.request.server===endpoints.server&&e?.request.server===endpoints.server&&l?.request.goal===meta.lawKey&&e?.request.goal===meta.earthKey,
   sellers:['sell-law','sell-earth'].every(label=>{const r=run(label);return r.code===0&&resultLine(r.log,'GE_SELL_RESULT')?.ok===true&&r.log.split(/\r?\n/).includes('LOGOUT logged-out');}),
-  source:meta.source===workerSourceRevision(),fresh:Date.now()-meta.at>=0&&Date.now()-meta.at<900000};
- return{ok:Object.values(checks).every(Boolean),checks,scope:'Native practice rescue and finite law/earth acquisitions for unchanged Magic37 consumer; no Magic levels or live credit claimed.'};
+  source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=now};
+ return{ok:Object.values(checks).every(Boolean),at:now,ageMs,checks,scope:'Native practice rescue and finite law/earth acquisitions for unchanged Magic37 consumer; no Magic levels or live credit claimed.'};
 }
 
 // A save write does not release the engine's player state. Stop the owned stack before staging.
@@ -167,26 +212,42 @@ export function syncPracticeCheckpoint(db:Database,actor:string,pocketPath:strin
   return previous.position;
  })();
 }
-function practiceMarket(){
- const engine=resolve(rsSdkRoot(),'server','engine'),path=resolve(engine,process.env.GE_DATABASE??'data/market.sqlite');
+function practiceMarket(endpoints:ProofEndpoints){
+ const engine=resolve(rsSdkRoot(),'server','engine'),path=resolve(engine,endpoints.env.GE_DATABASE);
  if(!path.startsWith(engine+sep)||!existsSync(path))throw Error(`owned practice market database unresolved: ${path}`);
  return path;
 }
 
 async function run(directory:string){
+ if(!process.env.DELIVERY_DIR||!existsSync(join(practiceDir(),'delivery-native.lock')))throw Error('native turn required: run through delivery');
+ for(const path of ['before.sav','north/before.sav','magic/before.sav','magic/before-checkpoint.sav','magic/refuse-before.sav'])
+  if(existsSync(join(directory,path)))throw Error(`preserve before snapshot: ${path}`);
  if(freemem()/2**30<PRACTICE_STARTUP_GB)throw Error(`practice needs ${FREE_FLOOR_GB}GiB floor plus ${PRACTICE_RESERVE_GB}GiB startup reserve`);
+ const owned=selectGeProofEndpoints(),metadata={server:owned.server,endpoints:{ports:owned.ports,instance:owned.instance}};
+ const actors=new Set<string>();
+ const createOwnedBot=async(name:string)=>{
+  if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
+  const {envPath}=await createBot(name);
+  writeFileSync(envPath,geProofAccountEnv(readFileSync(envPath,'utf8'),owned));
+  assertGeProofAccount(readFileSync(envPath,'utf8'),owned.env);
+  actors.add(name);
+ };
  const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'ge-bulk-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  const command=async(args:string[],env:Record<string,string>,label:string,timeoutMs=150000):Promise<Run>=>{
+  if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice free memory below floor');
+  const actor=args[0]==='scripts/buy-owned-ge-item.ts'?args[1]:args[2];
+  if(!actor||!actors.has(actor))throw Error('owned practice actor required');
+  assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',actor,'bot.env'),'utf8'),owned.env);
   const out=join(directory,label+'.log'),err=join(directory,label+'.err');
-  const child=Bun.spawn(['bun',...args],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env},stdout:Bun.file(out),stderr:Bun.file(err),windowsHide:true});
+  const child=Bun.spawn(['bun',...args],{cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...env,...owned.env},stdout:Bun.file(out),stderr:Bun.file(err),windowsHide:true});
   let expired=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{expired=true;termination=killTree(child.pid);},timeoutMs);
   const code=await child.exited;clearTimeout(timer);await termination;
   return{code:expired?-1:code,log:readFileSync(out,'utf8')+readFileSync(err,'utf8')};
  };
  try{
-  stack=await startStack({tickMs:150,readyTimeoutMs:60000});
+  stack=await startGeProofStack(owned);
   const root=directory;
   for(const remote of [false,true]){
   directory=remote?join(root,'north'):root;mkdirSync(directory,{recursive:true});
@@ -194,9 +255,7 @@ async function run(directory:string){
   const source=workerSourceRevision(),[buyer,seller]=[runBotName('flgebuy',remote?2:1),runBotName('flgesell',remote?2:1)],orderKey='native-'+Date.now(),paths:Record<string,string>={};
   const seeds:[string,{id:number;count:number}][]=[[buyer,{id:995,count:order.coins}],[seller,{id:order.item,count:order.quantity}]];
   for(const [name,stock] of seeds){
-   if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');
-   await createBot(name);
-   if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8')))throw Error('practice only');
+   await createOwnedBot(name);
    paths[name]=await applyPreset(name,remote&&name===buyer
     ?{position:NORTH_CASE.position,skills:{Hitpoints:NORTH_CASE.hitpoints},inventory:NORTH_CASE.carried,bank:[stock,{id:329,count:2}]}
     :{position:BANK_TILE,skills:{Hitpoints:10},bank:[stock,...(name===buyer?[{id:329,count:2}]:[])]});
@@ -218,19 +277,19 @@ async function run(directory:string){
   // A new order key for the same owned item must refuse instead of buying duplicate stock.
   const refuse=remote?await command(['scripts/buy-owned-ge-item.ts',buyer],{...env,ORDER_KEY:orderKey+'-dup'},'refuse'):undefined;
   if(refuse){await waitPracticeSave(paths[buyer]!,s=>held(s,95,id=>id===order.item)===order.quantity);copyFileSync(paths[buyer]!,join(directory,'refused.sav'));}
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,orderKey,buyer,seller,sellCode:sell.code,buyCode:buy.code,againCode:again.code,refuseCode:refuse?.code},null,2));
+  writeFileSync(join(directory,'native.json'),JSON.stringify({...metadata,at:Date.now(),source,orderKey,buyer,seller,sellCode:sell.code,buyCode:buy.code,againCode:again.code,refuseCode:refuse?.code},null,2));
   }
   directory=join(root,'magic');mkdirSync(directory,{recursive:true});
   const [buyer,seller,refuser]=[runBotName('flgemag',1),runBotName('flgemags',1),runBotName('flgeref',1)],source=workerSourceRevision();
-  for(const name of [buyer,seller,refuser]){if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice name already exists');await createBot(name);}
+  for(const name of [buyer,seller,refuser])await createOwnedBot(name);
   const preset={skills:{Hitpoints:10,Magic:31},inventory:MAGIC_CASE.pack,bank:MAGIC_CASE.bank};
   const buyerPath=await applyPreset(buyer,{...preset,position:BANK_TILE});
   const snapshot=await command(['packages/practice/src/ge-bulk-order-proof.ts','--snapshot',buyer],{},'snapshot');
   if(snapshot.code!==0||!snapshot.log.split(/\r?\n/).includes('LOGOUT logged-out'))throw Error('rescue bank snapshot/logout unproved');
   // Keep the practice lock and the observed bank snapshot across this owned stack restart.
-  const ownedPids=Object.values(JSON.parse(readFileSync(join(practiceDir(),'pids.json'),'utf8')) as Record<string,{pid:number}>).map(p=>p.pid);
-  if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8')))throw Error('practice only');
-  const market=practiceMarket();
+  const ownedPids=Object.values(JSON.parse(readFileSync(pidsFile(owned.instance),'utf8')) as Record<string,{pid:number}>).map(p=>p.pid);
+  assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',buyer,'bot.env'),'utf8'),owned.env);
+  const market=practiceMarket(owned);
   stack=await stageWithStoppedStack(buyerPath,async()=>{
    await stack!.stop();
    if(ownedPids.some(pid=>commandLine(pid)!==null))throw Error('owned practice stack termination unproved; entry not staged');
@@ -239,7 +298,7 @@ async function run(directory:string){
    try{db.exec('PRAGMA busy_timeout=5000');syncPracticeCheckpoint(db,buyer,staged,MAGIC_CASE.position,join(directory,'before-checkpoint.sav'));}finally{db.close();}
    return staged;
   },MAGIC_CASE.position,
-  ()=>startStack({tickMs:150,readyTimeoutMs:60000}));
+  ()=>startGeProofStack(owned));
   copyFileSync(buyerPath,join(directory,'before.sav'));
   await applyPreset(seller,{position:BANK_TILE,skills:{Hitpoints:10},bank:[{id:563,count:5},{id:557,count:1}]});
   const sellLaw=await command(['packages/practice/src/ge-bulk-order-proof.ts','--sell',seller,'563','5','1000'],{},'sell-law');
@@ -250,7 +309,7 @@ async function run(directory:string){
   const buy=await command(['scripts/buy-owned-ge-item.ts',buyer],lawEnv,'buy',240000);
   const lawSaved=await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===563)===5);copyFileSync(buyerPath,join(directory,'law.sav'));
   if(buy.code||!lawSaved.matched)throw Error('rescue law acquisition failed; inspect magic/buy.log and buy.err');
-  const journal=(key:string)=>orderPaths('localhost:8888',buyer,key).journal;
+  const journal=(key:string)=>orderPaths(owned.server,buyer,key).journal;
   copyFileSync(journal(lawKey),join(directory,'law-journal.json'));
   const again=await command(['scripts/buy-owned-ge-item.ts',buyer],lawEnv,'again');
   await waitPracticeSave(buyerPath,s=>held(s,95,id=>id===563)===5);copyFileSync(buyerPath,join(directory,'repeat.sav'));
@@ -262,10 +321,10 @@ async function run(directory:string){
   copyFileSync(refusePath,join(directory,'refuse-before.sav'));
   const refuse=await command(['scripts/buy-owned-ge-item.ts',refuser],{...lawEnv,ORDER_KEY:lawKey+'-refuse'},'refuse');
   await waitPracticeSave(refusePath,s=>held(s,93,id=>id===590)===1);copyFileSync(refusePath,join(directory,'refused.sav'));
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,buyer,lawKey,earthKey,buyCode:buy.code,topupCode:topup.code,againCode:again.code,refuseCode:refuse.code,'sell-lawCode':sellLaw.code,'sell-earthCode':sellEarth.code},null,2));
+  writeFileSync(join(directory,'native.json'),JSON.stringify({...metadata,at:Date.now(),source,buyer,lawKey,earthKey,buyCode:buy.code,topupCode:topup.code,againCode:again.code,refuseCode:refuse.code,'sell-lawCode':sellLaw.code,'sell-earthCode':sellEarth.code},null,2));
   return verify(root);
  }finally{
-  try{await stack?.stop();}finally{closeSync(fd);unlinkSync(lock);}
+  try{await (stack?stack.stop():stopStack(owned.instance));}finally{closeSync(fd);unlinkSync(lock);}
  }
 }
 
@@ -292,7 +351,8 @@ if(import.meta.main){
  try{
   if(process.argv[2]==='--snapshot'){
    const name=process.argv[3]!;
-   if(!name||!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8')))throw Error('practice snapshot required');
+   if(!name)throw Error('practice snapshot required');
+   assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
    const s=await openBot(name);let ok=false,detail='';
    try{
     const generation=s.bankObservation?.()?.generation??0;
@@ -303,7 +363,8 @@ if(import.meta.main){
    await finish([s],ok,detail);
   }else if(process.argv[2]==='--sell'){
    const [name,item,quantity,price]=process.argv.slice(3);
-   if(!name||!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8')))throw Error('practice seller required');
+   if(!name)throw Error('practice seller required');
+   assertGeProofAccount(readFileSync(join(rsSdkRoot(),'bots',name,'bot.env'),'utf8'));
    await sell(name,Number(item),Number(quantity),Number(price));
   }else{
    if(!process.env.DELIVERY_DIR)throw Error('run through bun run deliver ge-bulk-order');
