@@ -309,4 +309,7 @@ export async function main(io:{root?:string;openBot?:typeof openBot;settle?:type
     }
     console.log('HANDOFF_RESULT '+JSON.stringify(out));process.exitCode=out.ok?0:1;
 }
-if(import.meta.main) main().catch(e=>{console.error(`HANDOFF_RESULT ${JSON.stringify({ok:false,phase:'preflight',reason:String(e)})}`);console.log(`RESULT fail no handoff progress: ${String(e)}`);process.exitCode=1;});
+if(import.meta.main){
+ const stage=['--rune-carriers','--rune-opening'].includes(process.argv.at(-1)??'');
+ (stage?import('./rune-carrier-stage').then(m=>m.mainRuneStage(process.argv.slice(2))):main()).catch(e=>{console.error(`HANDOFF_RESULT ${JSON.stringify({ok:false,phase:'preflight',reason:String(e)})}`);console.log(`RESULT fail no handoff progress: ${String(e)}`);process.exitCode=1;});
+}
