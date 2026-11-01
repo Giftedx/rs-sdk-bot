@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793512008596,
+  "exportedAt": 1793512609193,
   "sources": {
     "state": {
-      "observedAt": 1793512000507.3428,
-      "ageMs": 8088.6572265625,
-      "stale": false,
+      "observedAt": 1793512293895.2515,
+      "ageMs": 315297.74853515625,
+      "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793512007787,
-      "ageMs": 809,
+      "observedAt": 1793512608233,
+      "ageMs": 960,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 6583302.283447266,
+      "ageMs": 7183899.283447266,
       "stale": true,
       "error": null
     }
@@ -43,7 +43,7 @@
           "pid": 22420,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         }
       ],
@@ -711,16 +711,6 @@
           "runId": "task-72f35eae-22cd-4356-956a-6a7ec7b014e2",
           "startedAt": 1793359184556,
           "at": 1793359186287,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "build-magic-recovery-child-handshake",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-fa9e0df8-58e3-4e01-b16b-72f93c0d440d",
-          "startedAt": 1793339094668,
-          "at": 1793339493314,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
