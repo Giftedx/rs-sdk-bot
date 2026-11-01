@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793516274338,
+  "exportedAt": 1793516875200,
   "sources": {
     "state": {
-      "observedAt": 1793516273621.053,
-      "ageMs": 716.947021484375,
+      "observedAt": 1793516856040.6416,
+      "ageMs": 19159.3583984375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793516272620,
-      "ageMs": 1718,
+      "observedAt": 1793516874934,
+      "ageMs": 266,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 10849044.283447266,
+      "ageMs": 11449906.283447266,
       "stale": true,
       "error": null
     }
@@ -501,14 +501,14 @@
     "codex": {
       "running": [
         {
-          "id": "build-ranged-observed-underground-entry",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": "task-289a1c22-07ca-4a6c-bbd1-1ae3a9f87d7a",
-          "startedAt": 1793515978915,
+          "id": "run-ge-shaftmaker-imp-red-bead",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": "task-2288e4ed-9784-4ea4-9783-961116210d96",
+          "startedAt": 1793516855823,
           "recordStatus": "running",
-          "pid": 36744,
+          "pid": 35908,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -645,16 +645,6 @@
           "runId": "task-72f35eae-22cd-4356-956a-6a7ec7b014e2",
           "startedAt": 1793359184556,
           "at": 1793359186287,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "run-quest-sheep-moneyshot-current-end",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-972d7f99-2284-4920-8516-9647b0b2fcc7",
-          "startedAt": 1793343575472,
-          "at": 1793343577247,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2886,6 +2876,26 @@
           "startedAt": 1793515731578,
           "at": 1793515738729,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ranged-observed-underground-entry",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-289a1c22-07ca-4a6c-bbd1-1ae3a9f87d7a",
+          "startedAt": 1793515978915,
+          "at": 1793516373410,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ranged-native-consumer-release",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-b08db8c7-dc16-4e40-a0e7-2a60980801ed",
+          "startedAt": 1793516629729,
+          "at": 1793516677838,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2909,13 +2919,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "review-ranged-practice-bind-cause",
+        "id": "review-ranged-practice-resource-owner",
         "kind": "review",
         "goal": "skills",
         "capability": "ranged-train",
-        "runId": "task-4b9abcab-6bb7-431a-9e23-545ad430236e",
-        "startedAt": 1793515905276,
-        "at": 1793515977675,
+        "runId": "task-bbcf2ce2-cdcc-44f5-b408-47420ee2a824",
+        "startedAt": 1793516524753,
+        "at": 1793516628672,
         "evidence": "review"
       }
     },
@@ -4054,7 +4064,7 @@
           ]
         },
         {
-          "id": "run-ranged-bigchopper-supported-entry-band80",
+          "id": "run-ranged-bigchopper-native-consumer-band80",
           "kind": "run",
           "goal": "skills",
           "capability": "ranged-train",
@@ -4063,8 +4073,68 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-ranged-observed-underground-entry",
+              "id": "build-ranged-native-consumer-release",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-ge-shaftmaker-imp-yellow-bead",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-shaftmaker-imp-red-bead",
               "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-ge-shaftmaker-imp-black-bead",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-shaftmaker-imp-yellow-bead",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-ge-shaftmaker-imp-white-bead",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-shaftmaker-imp-black-bead",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-quest-imp-shaftmaker-owned-beads",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-shaftmaker-imp-white-bead",
+              "status": "pending"
             }
           ]
         }
@@ -4078,7 +4148,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 2,
+    "reportedRunning": 4,
     "observationStale": false,
     "jobs": [
       {
@@ -4192,6 +4262,11 @@
         "state": "running"
       },
       {
+        "account": "Billionaire",
+        "script": "scripts/generated/thieving60.ts",
+        "state": "running"
+      },
+      {
         "account": "Wandwaver",
         "script": "scripts/quest-sweep.ts",
         "state": "disabled"
@@ -4217,14 +4292,14 @@
         "state": "disabled"
       },
       {
-        "account": "Shaftmaker",
-        "script": "scripts/magic-order.ts",
-        "state": "disabled"
-      },
-      {
         "account": "Bigchopper",
         "script": "scripts/session-check.ts",
         "state": "disabled"
+      },
+      {
+        "account": "Shaftmaker",
+        "script": "scripts/buy-owned-ge-item.ts",
+        "state": "running"
       }
     ]
   },
