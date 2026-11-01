@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793500051971,
+  "exportedAt": 1793500112232,
   "sources": {
     "state": {
-      "observedAt": 1793500022610.6902,
-      "ageMs": 29360.309814453125,
+      "observedAt": 1793500057194.6587,
+      "ageMs": 55037.34130859375,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793500050348,
-      "ageMs": 1623,
+      "observedAt": 1793500110575,
+      "ageMs": 1657,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793499491088.667,
-      "ageMs": 560882.3330078125,
+      "ageMs": 621143.3330078125,
       "stale": true,
       "error": null
     }
@@ -674,16 +674,6 @@
           "runId": "task-e3ec1c00-ee9e-4bfa-add7-9e768160ac7c",
           "startedAt": 1793366980104,
           "at": 1793366982431,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "build-iron-entry-no-toll",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "iron-progress-order",
-          "runId": "task-ba429ece-4295-4710-b295-f436fdb53ae7",
-          "startedAt": 1793326359241,
-          "at": 1793327256839,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
