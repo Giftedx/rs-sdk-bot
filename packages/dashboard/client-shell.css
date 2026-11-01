@@ -97,3 +97,7 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .quest-search{width:100%;box-sizing:border-box;background:#332b20!important;border:1px solid #5a4d39;color:#ff981f;font:14px RS;padding:2px 4px;margin-bottom:4px}
 .xp-buttons{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.xp-hide{font:11px Arial;color:#aaa;margin-top:6px;display:flex;gap:4px;align-items:center}
 .bank-value{position:absolute;right:34px;top:7px;font:14px RS;color:#ff981f}
+/* Opponent information (RuneLite opponentinfo): top centre, clear of the overlay panel; the name and a red/green bar. */
+.game-hud .game-opponent{position:absolute;left:50%;transform:translateX(-50%);top:8px;z-index:6;min-width:130px;padding:4px 6px;background:rgba(62,53,41,.85);border:1px solid #1e1a14;outline:1px solid #5a4d39;font:12px RS;color:#fff;text-align:center;pointer-events:none}
+.game-opponent b{font-weight:normal;display:block;margin-bottom:3px}.game-opponent small{color:#ff0;font:12px RS}
+.opponent-hp{position:relative;height:15px;background:#900}.opponent-hp i{position:absolute;inset:0 auto 0 0;background:#0a0}.opponent-hp span{position:relative;font:12px RS;line-height:15px;text-shadow:1px 1px #000}

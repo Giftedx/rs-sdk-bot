@@ -13,3 +13,5 @@ Current OSRS tab, orb, prayer and emote PNG artwork: oldschool.runescape.wiki/im
 Spell icons: the same OSRS Wiki image source, using names from the Ancient Magicks, Lunar spellbook and Arceuus spellbook image lists, and the named Standard spells. Icons are a visual reference and do not assert account unlocks or cast availability.
 
 rl-*.png: plugin sidebar icons from the RuneLite client (github.com/runelite/runelite, runelite-client/src/main/resources), BSD 2-Clause, see RUNELITE-FULL-LICENSE.txt.
+
+npc-names.json: npc names and shown combat levels from the pinned server content (vendor/rs-sdk/server/content: pack/npc.pack and scripts/**/*.npc), MIT License, Copyright (c) 2023-2026 Lost City. Written by packages/dashboard/tools/export-npc-names.ts.

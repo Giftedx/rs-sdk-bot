@@ -16,7 +16,7 @@ const HUD: Record<string, [string, string]> = {
     orbs: [shell, 'game-orbs'], 'xp-drops': [shell, 'xp-drops'], 'xp-globes': [shell, 'xp-globes'], minimap: [shell, 'game-minimap'],
     places: [shell, 'game-places'], overlay: [shell, 'game-overlay'], infoboxes: [shell, 'game-infoboxes'], chat: [shell, 'game-chat'],
     idle: [shell, 'function idleNotifier'], notify: [shell, 'function desktopNotify'], 'bank-window': [shell, 'game-bank'],
-    'context-menu': [shell, 'game-context'], 'name-tags': [page, 'Tile indicator (RuneLite)'], '3d': [page, 'id="rsw"'], screens: [shell, 'game-loading'],
+    'context-menu': [shell, 'game-context'], opponent: [shell, 'game-opponent'], 'name-tags': [page, 'Tile indicator (RuneLite)'], '3d': [page, 'id="rsw"'], screens: [shell, 'game-loading'],
 };
 const parts = doc.slice(doc.indexOf('## Parts'), doc.indexOf('## Not used'));
 const rows = new Map([...parts.matchAll(/^\| `([a-z0-9-]+)` \| ([^|]+) \| (copy|adapt|reject|own) \|/gm)].map(m => [m[1]!, { source: m[2]!.trim(), decision: m[3]! }]));
