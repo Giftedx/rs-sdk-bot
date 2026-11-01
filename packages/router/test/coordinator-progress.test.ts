@@ -88,6 +88,7 @@ test('source preparation intentionally drains live writers; a host deferral does
  expect(chooseTask(s,6,resources)?.id).toBe('live');
  expect(chooseTask(s,7,{...resources,nativeReady:true})?.id).toBe('resume');
  expect(preparedNativeDelivery(s,'quest-order','a'.repeat(64))).toBe(delivery);
+ expect(preparedNativeDelivery(s,'quest-order','a'.repeat(64),'b'.repeat(64))).toBeNull();
  expect(preparedNativeDelivery(s,'quest-order','b'.repeat(64))).toBeNull();
  startTask(s,'resume',8,'undrained');finishTask(s,{taskId:'resume',runId:'undrained',ok:false,at:9,output:null,error:'runtime build waits for a fresh actual fleet drain'});
  expect(preparedNativeDelivery(s,'quest-order','a'.repeat(64))).toBe(delivery);
