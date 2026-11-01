@@ -6,7 +6,7 @@ Game execution remains paused. Local records do not prove live competition condi
 
 Version 2 file references contain repository-relative `path` and lowercase `sha256`. Context binds runnable source, planner data, item catalog, upstream pin and target rules/leaders. A timestamp-only target refresh preserves rehearsal context. Changed evidence bytes invalidate permission.
 
-- **Plan:** the realistic schedule with all tricks wins Overall by at least 2% of its deadline, and every activity that ends by the Overall finish has MEASURED inputs. Other boards do not gate the launch.
+- **Plan:** the realistic schedule with all tricks wins Overall by at least 2% of its deadline, and every activity that starts before the Overall finish has MEASURED inputs. Other boards do not gate the launch.
 - **Supplies:** `.practice/haggis-supplies.json`: `version`, `context`, `at`, `allocations`. Each allocation has `item`, `itemId`, `count`, `holder`, `recipient:"haggis"`, `bank` and `delivery` references. Quantities exactly cover resolved planner requirements.
 - **Bank:** `name`, `server`, `bankAt`, `bank` items with numeric `id` or `baseId` and `count`. The holder is owned; server is `rs-sdk-demo.fly.dev`.
 - **Delivery:** `ok:true`, `observed:true`, live `server`, distinct owned `from`/`to`, `at`, and `items`, `before`, `after` arrays. Recipient delta matches transferred quantities. Delivery precedes bank observation. Name-only logs are insufficient.

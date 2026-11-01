@@ -8,14 +8,15 @@ import {launchContext,readBound,sha,fresh,validateSupplies,validateRehearsals,ty
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
 
 // The main goal is Overall rank 1 under the record (AGENTS.md), not all 24 boards. Overall must win by a 2% margin,
-// and every activity that ends by the Overall finish must have MEASURED inputs. Work after Overall does not gate it.
+// and every activity that starts before the Overall finish must have MEASURED inputs: one still running then sets
+// the finish rate. Work that starts after Overall does not gate it.
 export function overallWins(plan:ScheduleResult,activities:Activity[]):string{
  const o=plan.boards.find(b=>b.id==='overall');
  if(!o||o.deadline===null||typeof o.finish!=='number'||!Number.isFinite(o.finish)||o.finish<=0)throw Error('Overall board missing or never finishes');
  const margin=Math.ceil(o.deadline*.02);
  if(o.status!=='WIN'||(o.slack??-1)<margin)throw Error(`Overall needs a ${margin}-tick margin: finish ${o.finish}, deadline ${o.deadline}, slack ${o.slack}`);
  const byId=new Map(activities.map(a=>[a.id,a]));
- const unmeasured=[...new Set(plan.order.filter(p=>p.end<=o.finish!).map(p=>p.id))].filter(id=>{const a=byId.get(id);return !a||/"evidence":"(ESTIMATE|CODE-READ)"/.test(JSON.stringify(a))});
+ const unmeasured=[...new Set(plan.order.filter(p=>p.start<o.finish!).map(p=>p.id))].filter(id=>{const a=byId.get(id);return !a||/"evidence":"(ESTIMATE|CODE-READ)"/.test(JSON.stringify(a))});
  if(unmeasured.length)throw Error(`${unmeasured.length} activities before Overall lack MEASURED inputs: ${unmeasured.slice(0,8).join(', ')}`);
  return `Overall wins by ${o.slack} ticks (margin ${margin}) with measured inputs`;
 }
