@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793499991901,
+  "exportedAt": 1793500051971,
   "sources": {
     "state": {
-      "observedAt": 1793499989356.4866,
-      "ageMs": 2544.513427734375,
+      "observedAt": 1793500022610.6902,
+      "ageMs": 29360.309814453125,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793499990117,
-      "ageMs": 1784,
+      "observedAt": 1793500050348,
+      "ageMs": 1623,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793499491088.667,
-      "ageMs": 500812.3330078125,
+      "ageMs": 560882.3330078125,
       "stale": true,
       "error": null
     }
@@ -27,12 +27,7 @@
     "pid": 20496,
     "processState": "alive",
     "processIdentity": "unverified",
-    "planner": {
-      "runId": "plan-e960917e-5808-496f-94fd-1d1a3962e2a6",
-      "agent": "codex",
-      "startedAt": 1793499989178,
-      "processState": "alive"
-    }
+    "planner": null
   },
   "workers": {
     "claude": {
