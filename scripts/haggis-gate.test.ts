@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { overallWins } from './haggis-gate';
 
 const act = (id: string, evidence: string) => ({ id, evidence, source: 'test' }) as any;
-const plan = (slack: number, order: { id: string; end: number }[]) => ({
+const plan = (slack: number, order: { id: string; start: number; end: number }[]) => ({
     order,
     boards: [
         { id: 'overall', deadline: 35_000, finish: 35_000 - slack, slack, status: slack > 0 ? 'WIN' : 'LATE' },
