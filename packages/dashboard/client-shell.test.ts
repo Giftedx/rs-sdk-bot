@@ -7,6 +7,13 @@ function questPanel(bot:any,filter='all'){
  return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='';let html='';${code};return html;`)(bot,filter,String,String);
 }
 
+test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
+ const code=shell.slice(shell.indexOf('  function accountChoices(){'),shell.indexOf('  function refresh(){'));
+ const choices=new Function('S','sel',code+';return accountChoices();')({bots:[{name:'Other',inWorld:true}]},'Chosen');
+ expect(choices).toContainEqual({name:'Chosen',inWorld:false,missing:true});
+ expect(choices.filter((b:any)=>b.name==='Chosen')).toHaveLength(1);
+});
+
 test('quest points need a point observation, not the number of completed quests',()=>{
  const bot={quests:[{name:'One quest',state:'complete'}]};
  expect(questPanel(bot)).toContain('Quest Points: —');

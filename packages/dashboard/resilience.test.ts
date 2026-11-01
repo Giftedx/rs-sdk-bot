@@ -3,6 +3,15 @@ import {readFileSync} from 'node:fs';
 const html=readFileSync(new URL('./index.html',import.meta.url),'utf8');
 const server=readFileSync(new URL('./server.ts',import.meta.url),'utf8');
 
+test('a chosen account cannot be replaced by another account when its snapshot disappears',()=>{
+ const code=html.slice(html.indexOf('function render(){'),html.indexOf(" $('#pause').textContent"));
+ const choose=new Function('S','window','picked','sel',`const TOUR=false,liveBots=()=>S.bots;${code}};render();return sel;`);
+ const state={bots:[{name:'Other',operation:'observed'}]};
+ expect(choose(state,{},true,'Chosen')).toBe('Chosen');
+ expect(choose(state,{},false,null)).toBe('Other');
+ expect(choose(state,{atlasFreeCamera:true},false,null)).toBeNull();
+});
+
 test('map HTTP errors and truncated bodies stay retryable instead of becoming cached map pixels',async()=>{
  const code=html.slice(html.indexOf('async function loadMap(){'),html.indexOf('function drawMap(){'));
  for(const response of [()=>new Response('building',{status:503}),()=>new Response(new Uint8Array([1]))]){

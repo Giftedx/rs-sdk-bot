@@ -4,6 +4,7 @@ import '../../../vendor/rs-sdk/server/webclient/src/lite/dom-shim';
 import {readFileSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {deflateSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
 
 const {ItemViewer}=await import('../../../vendor/rs-sdk/server/webclient/src/viewer/ItemViewer');
 const {default:ObjType}=await import('../../../vendor/rs-sdk/server/webclient/src/config/ObjType');
@@ -35,5 +36,6 @@ const html=readFileSync(page,'utf8');
 const generated=`const ITEM_SPRITE_COUNT=${count};const LOCAL_ITEMS=${JSON.stringify(names)};`;
 if(!/(?:const ITEM_SPRITE_COUNT=\d+;)?const LOCAL_ITEMS=\{[^\r\n]+\};/.test(html))throw Error('Local item table not found');
 writeFileSync(out+'/items.png',png);writeFileSync(out+'/items.json',JSON.stringify(names));
-writeFileSync(page,html.replace(/(?:const ITEM_SPRITE_COUNT=\d+;)?const LOCAL_ITEMS=\{[^\r\n]+\};/,()=>generated));
+const hash=createHash('sha256').update(png).digest('hex');
+writeFileSync(page,html.replace(/(?:const ITEM_SPRITE_COUNT=\d+;)?const LOCAL_ITEMS=\{[^\r\n]+\};/,()=>generated).replace(/\/items\.png(?:\?v=[a-f0-9]+)?/g,'/items.png?v='+hash));
 console.log(JSON.stringify({count,names:Object.keys(names).length,width,height,bytes:png.length}));

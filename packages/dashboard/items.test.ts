@@ -1,7 +1,13 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {inflateSync} from 'node:zlib';
+import {createHash} from 'node:crypto';
 const dir=import.meta.dir,html=readFileSync(dir+'/index.html','utf8'),names=JSON.parse(readFileSync(dir+'/items.json','utf8'));
+
+test('the sprite URL changes with the sheet so cached older artwork cannot hide new IDs',()=>{
+ const hash=createHash('sha256').update(readFileSync(dir+'/items.png')).digest('hex');
+ expect(html.includes('/items.png?v='+hash)).toBe(true);
+});
 
 test('the local item sheet contains the final game item IDs with visible artwork',()=>{
  const png=readFileSync(dir+'/items.png'),width=png.readUInt32BE(16),height=png.readUInt32BE(20);
