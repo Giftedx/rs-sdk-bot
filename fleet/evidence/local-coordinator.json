@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793502906120,
+  "exportedAt": 1793503507054,
   "sources": {
     "state": {
-      "observedAt": 1793502877514.2024,
-      "ageMs": 28605.797607421875,
+      "observedAt": 1793503497873.882,
+      "ageMs": 9180.117919921875,
       "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793502904780,
-      "ageMs": 1340,
+      "observedAt": 1793503505168,
+      "ageMs": 1886,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793500355748.8054,
-      "ageMs": 2550371.194580078,
+      "ageMs": 3151305.194580078,
       "stale": true,
       "error": null
     }
@@ -31,7 +31,22 @@
   },
   "workers": {
     "claude": {
-      "running": [],
+      "running": [
+        {
+          "id": "build-combat-giant-style-3",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-e2028ed9-2675-4a8a-ad1f-6103f0ebdbae",
+          "startedAt": 1793503340532,
+          "recordStatus": "running",
+          "pid": 36352,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        }
+      ],
       "pending": [],
       "failed": [
         {
@@ -521,14 +536,28 @@
     "codex": {
       "running": [
         {
-          "id": "review-oreelse-held-recovery-child",
-          "kind": "review",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-073992d2-cbaa-43dc-9262-de580e96a87f",
-          "startedAt": 1793502877464,
+          "id": "run-quest-restless-bigchopper-east-entry",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-b087435c-e680-44ac-a67a-042b7017e30c",
+          "startedAt": 1793503339017,
           "recordStatus": "running",
-          "pid": 13948,
+          "pid": 30640,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "qualify-ranged-current-source-band80",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-9e42e823-2069-43a6-9293-1324f38c6da3",
+          "startedAt": 1793503339065,
+          "recordStatus": "running",
+          "pid": 35072,
           "processState": "alive",
           "processIdentity": "unverified",
           "observationStale": false,
@@ -537,7 +566,32 @@
       ],
       "pending": [
         {
-          "id": "run-iron-oreelse-settled-anvil85",
+          "id": "qualify-oreelse-installed-binding-fix",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "queued",
+          "dependencies": []
+        },
+        {
+          "id": "run-oreelse-bound-cleanup",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-oreelse-installed-binding-fix",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-iron-oreelse-bound-anvil85",
           "kind": "run",
           "goal": "skills",
           "capability": "iron-progress-order",
@@ -546,8 +600,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "run-oreelse-release-refusal-cleanup",
-              "status": "failed"
+              "id": "run-oreelse-bound-cleanup",
+              "status": "pending"
             }
           ]
         }
@@ -2805,13 +2859,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "qualify-oreelse-release-refusal-cleanup",
+        "id": "qualify-iron-installed-binding-fix",
         "kind": "qualify",
         "goal": "skills",
-        "capability": "session-recovery-only",
-        "runId": "task-3fee2520-1d6f-49ce-be53-5f1a54e2b378",
-        "startedAt": 1793502135381,
-        "at": 1793502745403,
+        "capability": "iron-progress-order",
+        "runId": "task-a2426003-39b9-442a-8aa3-71efd84358bf",
+        "startedAt": 1793503131256,
+        "at": 1793503338743,
         "evidence": "qualify"
       }
     },
@@ -2923,25 +2977,6 @@
           "dependencies": [
             {
               "id": "run-ge-grapes-pocketpython-north-entry",
-              "status": "failed"
-            }
-          ]
-        },
-        {
-          "id": "run-quest-restless-bigchopper-current-source",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-quest-monk-bigchopper-owned-stock",
-              "status": "failed"
-            },
-            {
-              "id": "build-totem-reconciled-publication-baseline",
               "status": "failed"
             }
           ]
@@ -3903,6 +3938,55 @@
               "status": "failed"
             }
           ]
+        },
+        {
+          "id": "run-ranged-bigchopper-band80",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-ranged-current-source-band80",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "qualify-combat-giant-style-3",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-combat-giant-style-3",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-combat-mightyrod-strength90-r3",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-combat-giant-style-3",
+              "status": "running"
+            },
+            {
+              "id": "qualify-combat-giant-style-3",
+              "status": "pending"
+            }
+          ]
         }
       ],
       "failed": [],
@@ -3955,27 +4039,27 @@
       {
         "account": "mmtha0205",
         "script": "scripts/shop-buyer.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: died after 1 runs"
       },
       {
         "account": "NabTheKnob",
         "script": "scripts/quest-chain.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: done"
       },
       {
         "account": "Swordinhand",
         "script": "scripts/quest-chain.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: done"
       },
       {
         "account": "Abracadickra",
         "script": "scripts/quest-chain.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: done"
       },
       {
         "account": "Woodenstaff",
         "script": "scripts/quest-chain.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: done"
       },
       {
         "account": "CoinCock",
@@ -3990,7 +4074,7 @@
       {
         "account": "PickpockDick",
         "script": "scripts/goldfarm.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: died after 1 runs"
       },
       {
         "account": "Pocketpython",
@@ -4000,7 +4084,7 @@
       {
         "account": "Pocketrocket",
         "script": "scripts/shop-buyer.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: exit orphaned: attempt 1793474282434-0000012792-0000000001 owner 12792 gone"
       },
       {
         "account": "mmsmk1232",
@@ -4010,7 +4094,7 @@
       {
         "account": "mmthv2350",
         "script": "scripts/shop-buyer.ts",
-        "state": "paused: repair or source ownership unresolved"
+        "state": "ended: exit orphaned: attempt 1793474244334-0000034940-0000000001 owner 34940 gone"
       },
       {
         "account": "Shaftsinker",
@@ -4043,11 +4127,6 @@
         "state": "disabled"
       },
       {
-        "account": "Bigchopper",
-        "script": "scripts/ranged-train.ts",
-        "state": "disabled"
-      },
-      {
         "account": "Mightyrod",
         "script": "scripts/druid-meats.ts",
         "state": "disabled"
@@ -4061,6 +4140,11 @@
         "account": "OreElse",
         "script": "scripts/chain.ts",
         "state": "disabled"
+      },
+      {
+        "account": "Bigchopper",
+        "script": "scripts/quest-sweep.ts",
+        "state": "running"
       }
     ]
   },
