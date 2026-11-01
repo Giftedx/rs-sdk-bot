@@ -23,7 +23,7 @@ function verify(dir:string){
  const total=(i:number,id:number)=>Object.values(saves[i].inventories).flat().filter((t:any)=>t.id===id).reduce((n:number,t:any)=>n+t.count,0),all=(id:number)=>saves.reduce((n:number,_:unknown,i:number)=>n+total(i,id),0);
  const airXp=27*125,batches=Math.ceil((xpForLevel(99)-airXp)/(27*187.5)),consumed=batches*27;
  const bodyRunes=Array.from({length:batches},(_,i)=>27*(Math.floor(levelForXp(airXp+i*27*187.5)/46)+1)).reduce((n,x)=>n+x,0);
- const checks={exit:meta.code===0&&!meta.timedOut&&!meta.lowMemory,source:JSON.stringify(hashes())===JSON.stringify(meta.source),saveVersion:saves.every((s:any)=>s.version===10),fresh:meta.freshAbsent===true&&saves[0].vars[281]===1000,
+ const checks={exit:meta.code===0&&!meta.timedOut&&!meta.lowMemory,source:JSON.stringify(hashes())===JSON.stringify(meta.source),saveVersion:saves.every((s:any)=>s.version===10),publications:meta.publications?.length===helpers+1&&meta.publications.every((p:any,i:number)=>p.name===meta.names[i]&&p.matched===true&&readFileSync(join(dir,i+'-after.sav')).readInt32BE(24)===p.expectedTicks),fresh:meta.freshAbsent===true&&saves[0].vars[281]===1000,
   xp:saves[0].skills[20].rawExperience===(airXp+consumed*187.5)*10&&saves[0].skills[20].level===99,runes:all(559)===bodyRunes+2&&all(556)===52,
   essence:total(0,1436)===0&&all(1436)===helpers*405-consumed,talisman:all(1446)===helpers+1&&all(1438)===1,
   helper:saves.slice(1).every((s:any)=>s.skills[20].rawExperience===0),coins:all(995)===25,starter:!!result&&Object.entries(result.prefix.starterKit).every(([id,n])=>all(Number(id))===Number(n)+(Number(id)===556?27:Number(id)===559?bodyRunes:0)),
