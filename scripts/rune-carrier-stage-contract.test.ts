@@ -14,6 +14,7 @@ test('failed authentication and an unproved session cannot stage',async()=>{
  let checks=0;
  await expect(runeStageAuthenticate('Fresh',async()=>{throw Error('login refused');},()=>{checks++;return new Set(['fresh']);})).rejects.toThrow('login refused');expect(checks).toBe(0);
  await expect(runeStageAuthenticate('Fresh',async()=>({name:'Fresh'}),()=>new Set())).rejects.toThrow('authenticated owned');
+ await expect(runeStageAuthenticate('Fresh',async()=>({name:'Other'}),()=>new Set(['fresh']))).rejects.toThrow('authenticated owned');
 });
 test('opening preparation owns only the supplier',()=>{
  expect(runeStageRoster(['Supplier','--rune-opening'])).toEqual({mode:'opening',names:['Supplier']});

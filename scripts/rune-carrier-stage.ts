@@ -13,7 +13,7 @@ import {ownedSwap,state} from './rune-carrier-trade';
 import {inside,leaveBody,enterBody,stopCarriers} from './rune-carrier-bank';
 import {leaveRuneStarter,runeSupplyAssets} from './rune-supply';
 import {assertRuneDonor} from './rune-carrier-roster';
-import {runeStageRoster,runeCarrierShortfall} from './rune-carrier-stage-contract';
+import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate} from './rune-carrier-stage-contract';
 import {runeStageStatus} from './rune-carrier-stage-status';
 
 export async function mainRuneStage(args:readonly string[]){
@@ -21,8 +21,7 @@ export async function mainRuneStage(args:readonly string[]){
  const cap=Number(process.env.CAP??1600);if(!Number.isSafeInteger(cap)||cap<1||cap>2800)throw Error('Rune staging budget must be1..2800');
  const servers=names.map(n=>{assertSideOwns(n);return serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',n,'bot.env'),'utf8'));});
  if(new Set(servers.map(s=>s.toLowerCase())).size!==1)throw Error('Rune staging participants must share a server');
- const server=servers[0]!;assertServerAllowed(server);const owned=ownedAccounts(server);
- if(names.some(n=>!owned.has(n.toLowerCase())))throw Error('Rune staging needs authenticated owned participants');
+ const server=servers[0]!;assertServerAllowed(server);
  const runId=process.env.COORDINATOR_RUN_ID??'',read=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
  assertAccountOwnership(names,read(join(dir,'coordinator/state.json')),read(join(root,'swarm.json')).jobs,n=>existsSync(join(dir,'stop-'+n)),runId);
  for(const n of names)if(existsSync(join(dir,'status',n+'.json')))assertRecoverableStatus(read(join(dir,'status',n+'.json')),undefined,()=>true);
@@ -36,8 +35,8 @@ export async function mainRuneStage(args:readonly string[]){
  };
  const check=()=>{if(stop())throw cancel.signal.reason;};
  const fail=(s:Session,detail:string)=>{if(!closing.has(s)&&!done){failure=Error(s.name+': '+detail);stop();}};
- const open=async(n:string)=>{check();const s=await openBot(n,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);active.add(s);monitors.push(s.onTick(stop));
-  if(!await waitUntil(s,()=>stop()||!!state(s)?.player&&state(s).skills?.length===21,{timeoutTicks:20}))throw Error('Rune staging initial state unavailable');check();return s;};
+ const open=async(n:string)=>runeStageAuthenticate(n,async()=>{check();const s=await openBot(n,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);active.add(s);monitors.push(s.onTick(stop));
+  if(!await waitUntil(s,()=>stop()||!!state(s)?.player&&state(s).skills?.length===21,{timeoutTicks:20}))throw Error('Rune staging initial state unavailable');check();return s;},()=>ownedAccounts(server));
  const close=async(s:Session,ok:boolean)=>{closing.add(s);logout=(await settle([s],ok,'finite Rune carrier staging',{log:line=>log(s.name,line)}))&&logout;active.delete(s);};
  const xp=(s:Session)=>JSON.stringify(state(s).skills.map(i=>[i.name,i.experience]));
  const count=(items:readonly {id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
