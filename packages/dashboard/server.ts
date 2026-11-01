@@ -18,7 +18,7 @@ import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
-import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow} from './world-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
 import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
@@ -481,17 +481,21 @@ let lookupWanted: string[] = [];
 // Fresh entries are skipped first, so the next ten that need a lookup get one, however long the list is.
 setInterval(() => { for (const n of lookupWanted.filter(n => { const hit = lookups.get(n.toLowerCase()); return !hit || Date.now() - hit.at >= 1_800_000; }).slice(0, 10)) void lookupPlayer(n); }, 60_000);
 
-// Equipment, Bank and Runite boards: #1 holder and value, scraped every 10 min.
-const extraTop = new Map<string, { name: string; value: string; at: number } | null>();
+// Equipment, Bank and Runite boards: each page's top 50, read every 10 min, for the #1 holder, our accounts' ranks
+// (a value board has no per-player page) and the value at the page's last rank.
+const extraBoards = new Map<string, { at: number; rows: ValueRow[] }>();
 async function refreshExtra() {
     for (const e of EXTRA) {
         try {
-            const text = (await (await fetch(`${DEMO}/hiscores/${e.path}?profile=main`)).text()).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
-            const m = text.match(/(?:# Name [A-Za-z ]*?|All time) 1 (\S+) ([0-9.,]+[KMB]?)/);
-            extraTop.set(e.board, m ? { name: m[1]!, value: m[2]!, at: Date.now() } : null);
+            const rows = valueBoardRows(await (await fetch(`${DEMO}/hiscores/${e.path}?profile=main`)).text());
+            if (rows.length) extraBoards.set(e.board, { at: Date.now(), rows });
         } catch { /* next round */ }
     }
 }
+// An account's rows on the value boards, in the shape of its skill rows (the value as the time text), with the
+// board read's own time (`at`): the account's ranksAt is the time of its skill page. A read older than 30 minutes
+// (the page has failed since) is not shown.
+const valueRanks = (name: string): (Row & { at: number })[] => EXTRA.flatMap(e => { const t = extraBoards.get(e.board), r = t && Date.now() - t.at < 1_800_000 ? t.rows.find(x => x.name.toLowerCase() === name.toLowerCase()) : undefined; return r ? [{ board: e.board, rank: r.rank, level: 0, time: r.text, at: t!.at }] : []; });
 setInterval(() => void refreshExtra(), 600_000);
 void refreshExtra();
 
@@ -944,7 +948,7 @@ function buildState() {
         // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
         const byHand = fresh && !/^localhost/.test(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
         const s = byHand ? { ...s0, role: byHand.role, goal: byHand.goal } : s0;
-        const rankRows = ranks.get(name)?.rows ?? [];
+        const rankRows = [...(ranks.get(name)?.rows ?? []), ...valueRanks(name)];
         const guess = NO_ROLE.has(s.role) && name !== MAIN ? inferRole(s, rankRows) : null;
         const skill = byHand ? byHand.skill ?? null : ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
         const sk = skill ? (s.skills ?? []).find((k: any) => k.name === skill) : null;
@@ -1000,7 +1004,7 @@ function buildState() {
     // The other sides' accounts (Codex cloud, Claude cloud): snapshot items and levels, world-feed position, hiscore ranks.
     const local = new Set(bots.map(b => b.name.toLowerCase()));
     for (const r of remoteBots(snapshotFiles(), local, roster, firstSeen, now, process.env.FLEET_SIDE ?? 'local'))
-        (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: (ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), spark: [], rateSkill: 'all skills' });
+        (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: [...(ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), ...valueRanks(r.name)], spark: [], rateSkill: 'all skills' });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
@@ -1016,8 +1020,8 @@ function buildState() {
             : { kind: 'level', ahead: false, text: `-${top.level - best.level} lvl`, close: Math.max(0, best.level / top.level) * 0.8 }) : null;
         return { board: b, top: top ? { name: top.name, level: top.level, time: fmtTicks(top.ticks), ticks: top.ticks, live: top.live, at: top.at } : null, best, gap, kind: 'skill' };
     }), ...EXTRA.map(e => {
-        const t = extraTop.get(e.board);
-        return { board: e.board, top: t ? { name: t.name, level: null, time: t.value, ticks: null } : null, best: null, gap: null, kind: 'value' };
+        const t = extraBoards.get(e.board), first = t?.rows[0], last = t?.rows[t.rows.length - 1];
+        return { board: e.board, top: first ? { name: first.name, level: null, time: first.text, ticks: null } : null, best: null, gap: null, kind: 'value', cutoff: last ? { rank: last.rank, text: last.text } : null };
     })];
     const v = vault(bots, now);
     const cargoDir = join(practice, 'cargo');

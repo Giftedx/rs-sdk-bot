@@ -254,8 +254,11 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  // no ok result, so the status cannot show one.
  const recovered=options.recovered??((name:string)=>recoveredSessionForRun(name,LIVE_SERVER,runId,launch,base));
  const releasedByRecovery=!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob&&existing.enabled===false&&recovered(account);
+ // A disabled hand job whose account has no persistent end and a confirmed producer logout is settled: the owner
+ // stopped the work and no session holds the account, so a new mission installs without an ok result or a recovery.
+ const settled=handJob&&existing.enabled===false&&(!end||!persistentEnd(end.reason))&&readLogoutProof(account,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed';
  if(existing?.standing===true&&existing.enabled&&!parkedForRecovery)throw Error('account runs an owner standing job: '+existing.script);
- if(handJob&&!parkedForRecovery&&!releasedByRecovery){
+ if(handJob&&!parkedForRecovery&&!releasedByRecovery&&!settled){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }

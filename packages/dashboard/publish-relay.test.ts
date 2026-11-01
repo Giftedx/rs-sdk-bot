@@ -64,7 +64,7 @@ describe('hosted views',()=>{
   const p=publicView({bots:[b],results:[{at:1,name:'CoinCock',ok:true,goal:'coins [task-9]',text:'ok banked=15000 packCoins=5100',counters:{banked:15000}}],events:[{at:1,name:'CoinCock',text:'banked 15.0K',full:'banked=15000'}]});
   expect(Object.keys(p.bots[0]).sort()).toEqual(['currentGoal','equipment','goal','inventory','name','pos','ranks','skills']);
   expect(p.bots[0].goal).toBe('coins buy');expect(p.bots[0].currentGoal).toBe('Ranged training');
-  expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,practice:undefined,text:'coins'}]);expect(p.events).toEqual([]);
+  expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,text:'coins'}]);expect(p.events).toEqual([]);
   expect(JSON.stringify(p)).not.toMatch(/banked|packCoins|15000/);
  });
 });
@@ -90,4 +90,11 @@ test('a state is warm once the server has read the market and the board tops',()
  // The server's value before its first market read.
  expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:0}})).toBe(false);
  expect(stateWarm({rivals:[{board:'Overall'}],economy:{pricesAt:1}})).toBe(true);
+});
+
+test('practice bots and their runs stay with the owner; script file goals read as words',()=>{
+ const p=publicView({bots:[{name:'CoinCock',goal:'magic-order.ts'},{name:'flmagexzky12',practice:true,goal:'magic-order.ts'}],
+  results:[{at:1,name:'CoinCock',ok:true,goal:'smelt-bars.ts'},{at:2,name:'flmagexzky12',ok:false,practice:true,goal:'magic-order.ts'}]});
+ expect(p.bots.map((b:any)=>b.name)).toEqual(['CoinCock']);expect(p.bots[0].goal).toBe('magic order');
+ expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,text:'smelt bars'}]);
 });
