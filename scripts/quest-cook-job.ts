@@ -7,7 +7,7 @@ import {waitUntil} from '../packages/core/src/ticks';
 import {equipmentObserved} from '../packages/core/src/container-observation';
 import {questFlags} from '../packages/core/src/quest-status';
 import {sessionWalker,walkPath,type PathPoint} from '../packages/core/src/walk';
-import {gatherQuestItems} from './quest-items-order';
+import {gatherQuestItems,hettyTravelChecks,type HettyTravelDebit} from './quest-items-order';
 import {completeCook} from './generated/quest-cook';
 import {completeHetty} from './generated/quest-hetty';
 import {questSpec} from './quest-order';
@@ -138,7 +138,7 @@ export async function runQuestCookJob(name:string,cap:number){
   account:name,gather,quest,checks,before,after,logout,detail,ticks:cap-(deadline-s.tick())};
 }
 // Pinned prices: Betty eye=3, Wydin beef=1. Only missing inputs may be bought.
-export function hettyJobChecks(before:CookJobSnapshot,after:CookJobSnapshot,purchases:{id:number;coins:number}[]){
+export function hettyJobChecks(before:CookJobSnapshot,after:CookJobSnapshot,purchases:{id:number;coins:number}[],travel:HettyTravelDebit[]=[]){
  const ids=new Set([...holdings(before),...holdings(after)].map(i=>i.id));
  const owned=(id:number)=>assets(before,id),left=(id:number)=>assets(after,id);
  const eye=owned(221)?0:1,meat=[2146,2142,2132].every(id=>!owned(id))?1:0;
@@ -151,7 +151,8 @@ export function hettyJobChecks(before:CookJobSnapshot,after:CookJobSnapshot,purc
   quest:after.quest==='complete',questPoints:after.qp===before.qp+1,
   reward:after.magicXp!==undefined&&before.magicXp!==undefined&&after.magicXp-before.magicXp===8125,
   purchases:purchases.length===eye+meat&&purchases.filter(p=>p.id===221&&p.coins===3).length===eye&&purchases.filter(p=>p.id===2132&&p.coins===1).length===meat,
-  coins:left(995)===owned(995)-debit,
+  travel:hettyTravelChecks(travel)&&debit<=4&&travel.reduce((n,d)=>n+d.coins,0)+debit<=64,
+  coins:left(995)===owned(995)-debit-travel.reduce((n,d)=>n+d.coins,0),
   ingredients:[1957,221,300].every(id=>left(id)===Math.max(0,owned(id)-1))&&[2146,2142,2132].every(id=>left(id)===owned(id)-(selected===id?1:0)),
   assets:[...ids].filter(id=>![995,1957,221,300,2146,2142,2132].includes(id)).every(id=>owned(id)===left(id)),
   equipment:equipment(before)===equipment(after),
@@ -163,13 +164,16 @@ export function hettyJobChecks(before:CookJobSnapshot,after:CookJobSnapshot,purc
 export async function runQuestHettyJob(name:string,cap:number){
  parseCookJobArgs([name,'hetty'],String(cap));
  const s=await openBot(name),deadline=s.tick()+cap;
+ // Reserve bounded recovery inside CAP. The parent owns retreat and logout.
+ const workDeadline=deadline-Math.min(64,cap-1);
  let before:CookJobSnapshot|undefined,after:CookJobSnapshot|undefined;
  let gather:Awaited<ReturnType<typeof gatherQuestItems>>|undefined,quest:Awaited<ReturnType<typeof completeHetty>>|undefined;
  let checks:ReturnType<typeof hettyJobChecks>|undefined,detail='',workOk=false,ended=false,life:number|undefined,respawns:number|undefined;
  void s.ended.then(()=>{ended=true;});
- const stopped=()=>{const p=s.sdk.getState()?.player;return ended||s.tick()>=deadline||!!p&&(p.isDead||(life!==undefined&&p.lifeId!==life)||(respawns!==undefined&&p.respawnCount!==respawns));};
+ const unsafe=()=>{const p=s.sdk.getState()?.player;return ended||!!p&&(p.isDead||(life!==undefined&&p.lifeId!==life)||(respawns!==undefined&&p.respawnCount!==respawns));};
+ const stopped=()=>unsafe()||s.tick()>=workDeadline;
  const guard=()=>{if(stopped())throw Error('Hetty job stopped/deadline/death');};
- const observe=async(pred:()=>boolean,ticks:number)=>{guard();const reached=await waitUntil(s,()=>{guard();return pred();},{timeoutTicks:Math.max(1,Math.min(ticks,deadline-s.tick()))});guard();if(!reached)throw Error('Hetty effect unobserved');};
+ const observe=async(pred:()=>boolean,ticks:number)=>{guard();const reached=await waitUntil(s,()=>{guard();return pred();},{timeoutTicks:Math.max(1,Math.min(ticks,workDeadline-s.tick()))});guard();if(!reached)throw Error('Hetty effect unobserved');};
  try{
   // Registration leaves an ordinary account on Tutorial Island without a quest list.
   // The bounded starter exit observes the mainland grant before quest observation.
@@ -183,25 +187,40 @@ export async function runQuestHettyJob(name:string,cap:number){
   if(entry.hp<10)throw Error('Hetty entry needs at least 10 HP');
   if(entry.quest==='complete')throw Error('quest already complete');
   console.log('QUEST_HETTY_OBSERVED_ENTRY '+JSON.stringify(entry));
-  gather=await gatherQuestItems(s,'hetty',null,deadline-s.tick(),{stop:stopped,onBank:bank=>{
+  gather=await gatherQuestItems(s,'hetty',null,workDeadline-s.tick(),{stop:stopped,onBank:bank=>{
    before={...entry,bank:bank.items.map(i=>({id:i.id,count:i.count})),bankGeneration:bank.generation};
    console.log('QUEST_HETTY_ENTRY '+JSON.stringify(before));
   }});
   guard();if(!gather.ok||!before)throw Error('Hetty gather incomplete');
-  const walk=await walkPath(await sessionWalker(s),[{x:2965,z:3210,tol:1},{x:2968,z:3206,tol:1}],{maxTicks:deadline-s.tick(),stop:stopped});
+  const walk=await walkPath(await sessionWalker(s),[{x:2965,z:3210,tol:1},{x:2968,z:3206,tol:1}],{maxTicks:workDeadline-s.tick(),stop:stopped});
   guard();if(!walk.ok)throw Error('Hetty approach: '+walk.detail);
-  quest=await completeHetty(s,deadline-s.tick(),stopped);guard();
+  quest=await completeHetty(s,workDeadline-s.tick(),stopped);guard();
   // Rimmington -> Port Sarim -> Draynor: ground walking only, no fare.
-  const back=await walkPath(await sessionWalker(s),[{x:2965,z:3210,tol:1},{x:3000,z:3266,tol:2},{x:3050,z:3266,tol:2},{x:3089,z:3266,tol:1},{x:3092,z:3250,tol:1},{x:3092,z:3243,tol:1}],{maxTicks:deadline-s.tick(),stop:stopped});
+  const back=await walkPath(await sessionWalker(s),[{x:2965,z:3210,tol:1},{x:3000,z:3266,tol:2},{x:3050,z:3266,tol:2},{x:3089,z:3266,tol:1},{x:3092,z:3250,tol:1},{x:3092,z:3243,tol:1}],{maxTicks:workDeadline-s.tick(),stop:stopped});
   guard();if(!back.ok)throw Error('Hetty retained stock: '+back.detail);
   const generation=s.bankObservation?.()?.generation??0;
   if(!(await s.bot.openBank()).success)throw Error('Hetty final bank refused');
   await observe(()=>(s.bankObservation?.()?.generation??0)>generation,12);
-  after=observeCookJobSnapshot(s,true,'hetty');checks=hettyJobChecks(before,after,gather.purchases??[]);
+  after=observeCookJobSnapshot(s,true,'hetty');checks=hettyJobChecks(before,after,gather.purchases??[],gather.travel??[]);
   if(!(await s.bot.closeBank()).success)throw Error('Hetty final bank close refused');
   guard();if(!Object.values(checks).every(Boolean))throw Error('Hetty final checks failed');
   workOk=true;detail='Hetty complete; QP+1, Magic+8125, costs, assets and life observed';
- }catch(error){detail=String(error);}
+ }catch(error){
+  detail=String(error);
+  const p=s.sdk.getState()?.player;
+  if(!unsafe()&&p?.combat?.inCombat&&p.level===0&&p.worldX>=2953&&p.worldX<=2960&&p.worldZ>=3201&&p.worldZ<=3206){
+   try{
+    // The rat house door is opened before combat. Leave through that doorway;
+    // staying beside the rat keeps renewing combat_preventlogout's 16-tick lock.
+    const retreat=await walkPath(await sessionWalker(s),[{x:2956,z:3206,tol:0},{x:2956,z:3214,tol:1}],
+     {maxTicks:Math.max(1,Math.min(32,deadline-s.tick())),stop:()=>unsafe()||s.tick()>=deadline});
+    if(!retreat.ok)throw Error('retreat: '+retreat.detail);
+    const quiet=await waitUntil(s,()=>unsafe()||s.sdk.getState()?.player?.combat?.inCombat===false,
+     {timeoutTicks:Math.max(1,Math.min(32,deadline-s.tick()))});
+    if(!quiet||unsafe())throw Error('combat exit unobserved');
+   }catch(recovery){detail+='; Hetty recovery: '+String(recovery);}
+  }
+ }
  let logout=false;
  const settled=await settle([s],workOk,detail,{log:line=>{console.log(line);if(line==='LOGOUT logged-out')logout=true;if(/^WARN .*?(?:logout|session close)/.test(line))logout=false;}});
  return {ok:!!(workOk&&settled&&logout&&gather?.ok&&quest?.ok),account:name,questKey:'hetty',gather,quest,checks,before,after,logout,detail,ticks:cap-(deadline-s.tick())};

@@ -1,5 +1,10 @@
 import {test,expect} from 'bun:test';
-import {bulkOrderChecks,ORDER,NORTH_CASE,northEntryCheck,duplicateRefusalCheck} from '../src/ge-bulk-order-proof';
+import {bulkOrderChecks,ORDER,NORTH_CASE,northEntryCheck,duplicateRefusalCheck,MAGIC_CASE,magicOrderChecks,stageWithStoppedStack,syncPracticeCheckpoint} from '../src/ge-bulk-order-proof';
+import {Database} from 'bun:sqlite';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import type {ItemOrder} from '../../../scripts/buy-owned-ge-item';
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},
@@ -12,6 +17,102 @@ const input={before:save([{id:995,count:2000}]),after:save([{id:995,count:1100},
  sell:{code:0,log:'GE_SELL_RESULT {"ok":true,"detail":"x"}\nLOGOUT logged-out\n'},
  buy:{code:0,log:line({ok:true,targetMet:true,conserved:true,banked:true,reserveKept:true,acquired:300,spent:900,phase:'settled',offerId:7})},
  again:{code:0,log:line({ok:true,targetMet:true,conserved:true,banked:true,reserveKept:true,phase:'settled',offerId:7,newItemsThisSession:0,cashDeltaThisSession:0})}};
+
+function magicInput(){
+ const before={...save(MAGIC_CASE.bank,MAGIC_CASE.pack),position:MAGIC_CASE.position};
+ const bank=(earth:number,coins:number)=>MAGIC_CASE.bank.map(i=>({...i,count:i.id===557?earth:i.id===995?coins:i.count})).concat({id:563,count:5});
+ const law=save(bank(4,14911),MAGIC_CASE.pack),earth=save(bank(5,14891),MAGIC_CASE.pack);
+ const lawJournal:ItemOrder={...journal,request:{...request,item:563,quantity:5,limit:1000,reserve:10000,rescueMode:'npc-respawn-once'},coinsBefore:19911,acquired:5,refund:0,
+  rescue:{phase:'bank-reconciled',lifeId:1,respawnCount:0,targetIndex:7,bank:MAGIC_CASE.bank,bankAt:1}};
+ const earthJournal:ItemOrder={...journal,request:{...request,item:557,quantity:1,expectedOwned:4,limit:20,reserve:10000},coinsBefore:14911,itemsBefore:4,acquired:1,refund:0};
+ const effect=(n:number)=>({ok:true,acquired:n,targetMet:true,conserved:true,unrelated:true,banked:true,reserveKept:true,died:false,damaged:false});
+ const traces='START 2853 3452 0\n'+['rescue-intent','rescue-respawned','rescue-bank-reconciled'].map(stage=>'GE_MARKET_ENTRY '+JSON.stringify({stage,hp:10,position:{x:3221,z:3218,level:0}})+'\n').join('');
+ const refuseBefore={...before,inventories:{...before.inventories,93:[{id:590,count:1,slot:0},{id:995,count:1,slot:1}]}};
+ return{before,law,earth,repeat:law,refuseBefore,refused:refuseBefore,lawJournal,earthJournal,
+  buy:{code:0,log:traces+line(effect(5))},topup:{code:0,log:line(effect(1))},again:{code:0,log:line({ok:true,newItemsThisSession:0,cashDeltaThisSession:0,offerId:7})},
+  refuse:{code:1,log:'RESULT false rescue refused: sole tinderbox590 required\nLOGOUT logged-out\n'}};
+}
+test('pocket staging waits for stack stop completion and the buyer waits for verified staging and restart',async()=>{
+ const bankSave=save(MAGIC_CASE.bank,MAGIC_CASE.pack),pocketSave={...bankSave,position:MAGIC_CASE.position};
+ const stopped=Promise.withResolvers<void>(),starting=Promise.withResolvers<void>(),ready=Promise.withResolvers<void>();
+ const events:string[]=[];let disk=bankSave;
+ const pending=stageWithStoppedStack('x.sav',async()=>{
+  events.push('stop');await stopped.promise;
+  disk=bankSave;events.push('stopped');
+ },async()=>{events.push('stage');disk=pocketSave;return 'x.sav';},MAGIC_CASE.position,
+ async()=>{events.push('restart');starting.resolve();await ready.promise;events.push('ready');return 'owned-stack';},
+ ()=>{events.push('verify');return disk;}).then(stack=>{events.push('buyer');return stack;});
+ expect(events).toEqual(['stop']);
+ stopped.resolve();await starting.promise;
+ expect(events).toEqual(['stop','stopped','stage','verify','restart']);
+ expect(disk.position).toEqual(MAGIC_CASE.position);
+ ready.resolve();expect(await pending).toBe('owned-stack');
+ expect(events).toEqual(['stop','stopped','stage','verify','restart','ready','buyer']);
+ const refused:string[]=[];
+ const stage=async()=>{refused.push('stage');return 'x.sav';},restart=async()=>{refused.push('restart');};
+ await expect(stageWithStoppedStack('x.sav',async()=>{throw Error('stop failed');},stage,MAGIC_CASE.position,restart,()=>pocketSave)).rejects.toThrow('stop failed');
+ expect(refused).toEqual([]);
+ await expect(stageWithStoppedStack('x.sav',async()=>{},stage,MAGIC_CASE.position,restart,()=>bankSave)).rejects.toThrow('unconfirmed at 3185,3436,0');
+ expect(refused).toEqual(['stage']);
+});
+// Minimal v9 save bytes in the layout readPracticeSave decodes.
+function saveBytes(position:{x:number;z:number;level:number},inventories:Record<number,{id:number;count:number}[]>){
+ const b=Buffer.alloc(1024);b.writeUInt16BE(0x2004,0);b.writeUInt16BE(9,2);b.writeUInt16BE(position.x,4);b.writeUInt16BE(position.z,6);b.writeUInt8(position.level,8);
+ for(let i=0;i<21;i++)b.writeUInt8(i===3?10:1,32+i*5);
+ let at=133;b.writeUInt16BE(0,at);at+=2;const types=Object.keys(inventories);b.writeUInt8(types.length,at++);
+ for(const type of types){const items=inventories[Number(type)]!;b.writeUInt16BE(Number(type),at);b.writeUInt16BE(items.length,at+2);at+=4;
+  for(const i of items){b.writeUInt16BE(i.id+1,at);at+=2;if(i.count<255)b.writeUInt8(i.count,at++);else{b.writeUInt8(255,at++);b.writeInt32BE(i.count,at);at+=4;}}}
+ const out=b.subarray(0,at+4);out.writeUInt32BE(Bun.hash.crc32(out.subarray(0,at))>>>0,at);return out;
+}
+test('pocket staging replaces only the buyer bank checkpoint that PlayerLoading prefers over the .sav',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ge-checkpoint-')),pocketPath=join(dir,'pocket.sav'),evidence=join(dir,'before-checkpoint.sav');
+ const kit={93:MAGIC_CASE.pack,94:[],95:MAGIC_CASE.bank},pocket=saveBytes(MAGIC_CASE.position,kit),bank=saveBytes({x:3185,z:3436,level:0},kit);
+ writeFileSync(pocketPath,pocket);
+ const db=new Database(':memory:');
+ db.exec("CREATE TABLE accounts(owner TEXT PRIMARY KEY, save BLOB NOT NULL);CREATE TABLE offers(id INTEGER PRIMARY KEY, owner TEXT NOT NULL, slot INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'open')");
+ const other=saveBytes({x:3200,z:3200,level:0},{95:[{id:995,count:7}]});
+ db.query('INSERT INTO accounts VALUES (?,?),(?,?)').run('flgemag1',bank,'other',other);
+ db.query("INSERT INTO offers(owner,slot,state) VALUES ('flgemag1',-1,'done'),('other',0,'open')").run();
+ const row=(owner:string)=>Buffer.from(db.query<{save:Uint8Array},[string]>('SELECT save FROM accounts WHERE owner=?').get(owner)!.save);
+ try{
+  expect(syncPracticeCheckpoint(db,'FlGeMag1',pocketPath,MAGIC_CASE.position,evidence)).toEqual({x:3185,z:3436,level:0});
+  expect(readPracticeSave(evidence).position).toEqual({x:3185,z:3436,level:0});
+  expect(Buffer.compare(row('flgemag1'),pocket)).toBe(0);
+  expect(Buffer.compare(row('other'),other)).toBe(0);
+  // Refusals leave the checkpoint unchanged: open buyer offer, changed assets, wrong pocket position.
+  db.query('UPDATE accounts SET save=? WHERE owner=?').run(bank,'flgemag1');
+  db.query("INSERT INTO offers(owner,slot,state) VALUES ('flgemag1',2,'open')").run();
+  expect(()=>syncPracticeCheckpoint(db,'flgemag1',pocketPath,MAGIC_CASE.position,evidence)).toThrow('1 outstanding GE offers');
+  db.query("DELETE FROM offers WHERE owner='flgemag1' AND slot=2").run();
+  db.query('UPDATE accounts SET save=? WHERE owner=?').run(saveBytes({x:3185,z:3436,level:0},{...kit,95:MAGIC_CASE.bank.slice(1)}),'flgemag1');
+  expect(()=>syncPracticeCheckpoint(db,'flgemag1',pocketPath,MAGIC_CASE.position,evidence)).toThrow('checkpoint assets differ');
+  db.query('UPDATE accounts SET save=? WHERE owner=?').run(bank,'flgemag1');
+  expect(()=>syncPracticeCheckpoint(db,'flgemag1',pocketPath,{x:3185,z:3436,level:0},evidence)).toThrow('pocket save position unconfirmed');
+  expect(Buffer.compare(row('flgemag1'),bank)).toBe(0);
+  expect(syncPracticeCheckpoint(db,'absent',pocketPath,MAGIC_CASE.position,evidence)).toBeNull();
+ }finally{db.close();rmSync(dir,{recursive:true,force:true});}
+});
+test('saved exact pocket rescue, law five and authorized earth four-plus-one reconcile the full kit,5020 cap and10000 reserve',()=>{
+ expect(Object.values(magicOrderChecks(magicInput())).every(Boolean)).toBe(true);
+});
+test('magic consumer rejects missing rescue, repeated intent, missing law, excess earth, lost bank assets and absent logout',()=>{
+ const p=magicInput();
+ expect(magicOrderChecks({...p,buy:{...p.buy,log:line({ok:true})}}).rescue).toBe(false);
+ expect(magicOrderChecks({...p,buy:{...p.buy,log:'GE_MARKET_ENTRY {"stage":"rescue-intent"}\n'+p.buy.log}}).rescue).toBe(false);
+ expect(magicOrderChecks({...p,law:save([{id:995,count:14911}],MAGIC_CASE.pack)}).laws).toBe(false);
+ expect(magicOrderChecks({...p,earth:save([{id:557,count:6},{id:995,count:14891}],MAGIC_CASE.pack)}).topup).toBe(false);
+ expect(magicOrderChecks({...p,law:{...p.law,inventories:{...p.law.inventories,95:p.law.inventories[95].filter(i=>i.id!==1351)}}}).assets).toBe(false);
+ expect(magicOrderChecks({...p,topup:{...p.topup,log:p.topup.log.replace('LOGOUT logged-out','LOGOUT timeout')}}).logout).toBe(false);
+});
+test('magic consumer rejects an unproved top-up baseline, changed refusal assets, repeat mutation and extra spend',()=>{
+ const p=magicInput();
+ expect(magicOrderChecks({...p,earthJournal:{...p.earthJournal,request:{...p.earthJournal.request,expectedOwned:undefined}}}).topup).toBe(false);
+ expect(magicOrderChecks({...p,refused:p.law}).refusal).toBe(false);
+ expect(magicOrderChecks({...p,repeat:p.earth}).restart).toBe(false);
+ const costly={...p.earth,inventories:{...p.earth.inventories,95:p.earth.inventories[95].map(i=>i.id===995?{...i,count:i.count-1}:i)}};
+ expect(magicOrderChecks({...p,earth:costly}).costs).toBe(false);
+ expect(magicOrderChecks({...p,lawJournal:{...p.lawJournal,rescue:undefined}}).rescue).toBe(false);
+});
 
 test('exact banked quantity, bounded spend, kept reserve and resumed rerun pass',()=>{
  expect(bulkOrderChecks(input)).toEqual({entry:true,seller:true,bank:true,assets:true,pack:true,coins:true,journal:true,result:true,logout:true,restart:true,healthy:true});
