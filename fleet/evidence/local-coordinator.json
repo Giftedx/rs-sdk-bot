@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793517475901,
+  "exportedAt": 1793518076712,
   "sources": {
     "state": {
-      "observedAt": 1793517341517.641,
-      "ageMs": 134383.35888671875,
-      "stale": true,
+      "observedAt": 1793518001955.0771,
+      "ageMs": 74756.9228515625,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793517475355,
-      "ageMs": 546,
+      "observedAt": 1793518076246,
+      "ageMs": 466,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 12050607.283447266,
+      "ageMs": 12651418.283447266,
       "stale": true,
       "error": null
     }
@@ -501,17 +501,17 @@
     "codex": {
       "running": [
         {
-          "id": "qualify-recovery-shaftmaker-bead-settlement",
-          "kind": "qualify",
+          "id": "review-practice-current-owner-seaslug-ranged",
+          "kind": "review",
           "goal": "quests",
-          "capability": "session-recovery-only",
-          "runId": "task-f78ecdfa-03f3-45eb-a581-e057d7f7612f",
-          "startedAt": 1793517341465,
+          "capability": "quest-sweep",
+          "runId": "task-8de8f3af-6ccb-4f2c-87d8-230ae68e2736",
+          "startedAt": 1793518001901,
           "recordStatus": "running",
-          "pid": 22288,
+          "pid": 32592,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         }
       ],
@@ -2906,6 +2906,16 @@
           "startedAt": 1793516855823,
           "at": 1793517104801,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-quest-sweep-shaftmaker-seaslug-entry",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-6a4d73d8-538e-4293-acb4-336c6c6ae679",
+          "startedAt": 1793517939669,
+          "at": 1793517947726,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2919,24 +2929,24 @@
         "evidence": "live"
       },
       "lastRecovery": {
-        "id": "run-recovery-bigchopper-authenticated-entry",
+        "id": "run-recovery-shaftmaker-bead-settlement",
         "kind": "run",
-        "goal": "skills",
+        "goal": "quests",
         "capability": "session-recovery-only",
-        "runId": "task-ef5690f6-c5e0-4149-a082-f962088bfc96",
-        "startedAt": 1793515595238,
-        "at": 1793515658416,
+        "runId": "task-47733f05-d27b-41bc-ab58-36204e1311f1",
+        "startedAt": 1793517875194,
+        "at": 1793517939378,
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "review-ranged-practice-resource-owner",
-        "kind": "review",
-        "goal": "skills",
-        "capability": "ranged-train",
-        "runId": "task-bbcf2ce2-cdcc-44f5-b408-47420ee2a824",
-        "startedAt": 1793516524753,
-        "at": 1793516628672,
-        "evidence": "review"
+        "id": "qualify-recovery-shaftmaker-bead-settlement",
+        "kind": "qualify",
+        "goal": "quests",
+        "capability": "session-recovery-only",
+        "runId": "task-f78ecdfa-03f3-45eb-a581-e057d7f7612f",
+        "startedAt": 1793517341465,
+        "at": 1793517874597,
+        "evidence": "qualify"
       }
     },
     "unassigned": {
@@ -4149,36 +4159,6 @@
           ]
         },
         {
-          "id": "run-recovery-shaftmaker-bead-settlement",
-          "kind": "run",
-          "goal": "quests",
-          "capability": "session-recovery-only",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "qualify-recovery-shaftmaker-bead-settlement",
-              "status": "running"
-            }
-          ]
-        },
-        {
-          "id": "qualify-quest-sweep-shaftmaker-seaslug-entry",
-          "kind": "qualify",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "run-recovery-shaftmaker-bead-settlement",
-              "status": "pending"
-            }
-          ]
-        },
-        {
           "id": "run-seaslug-shaftmaker-settled-entry",
           "kind": "run",
           "goal": "quests",
@@ -4189,11 +4169,7 @@
           "dependencies": [
             {
               "id": "qualify-quest-sweep-shaftmaker-seaslug-entry",
-              "status": "pending"
-            },
-            {
-              "id": "run-recovery-shaftmaker-bead-settlement",
-              "status": "pending"
+              "status": "failed"
             }
           ]
         }
@@ -4357,7 +4333,7 @@
       },
       {
         "account": "Shaftmaker",
-        "script": "scripts/buy-owned-ge-item.ts",
+        "script": "scripts/session-check.ts",
         "state": "disabled"
       }
     ]
