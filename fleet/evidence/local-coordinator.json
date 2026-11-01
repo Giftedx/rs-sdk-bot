@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793519909473,
+  "exportedAt": 1793520510114,
   "sources": {
     "state": {
-      "observedAt": 1793519720484.3726,
-      "ageMs": 188988.62744140625,
-      "stale": true,
+      "observedAt": 1793520490597.7598,
+      "ageMs": 19516.240234375,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793519909236,
-      "ageMs": 237,
+      "observedAt": 1793520509584,
+      "ageMs": 530,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 14484179.283447266,
+      "ageMs": 15084820.283447266,
       "stale": true,
       "error": null
     }
@@ -509,23 +509,19 @@
       }
     },
     "codex": {
-      "running": [
+      "running": [],
+      "pending": [
         {
-          "id": "build-ranged-isolated-practice-consumer",
+          "id": "build-ranged-native-after-resource-release",
           "kind": "build",
           "goal": "skills",
           "capability": "ranged-train",
-          "runId": "task-1a7645e0-b2f7-47c8-86fb-c89aae77426f",
-          "startedAt": 1793519718885,
-          "recordStatus": "running",
-          "pid": 14960,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": true,
-          "blocker": null
+          "runId": null,
+          "startedAt": null,
+          "status": "queued",
+          "dependencies": []
         }
       ],
-      "pending": [],
       "failed": [
         {
           "id": "refresh-quest-order-c1d361f0c8774961",
@@ -2936,6 +2932,26 @@
           "startedAt": 1793519252818,
           "at": 1793519426220,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ranged-isolated-practice-consumer",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-1a7645e0-b2f7-47c8-86fb-c89aae77426f",
+          "startedAt": 1793519718885,
+          "at": 1793520199973,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-ranged-retained-capacity-release",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-3822ad83-61aa-42eb-a8e5-34114d7971ad",
+          "startedAt": 1793520368592,
+          "at": 1793520434716,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -4211,7 +4227,7 @@
           ]
         },
         {
-          "id": "run-ranged-bigchopper-isolated-proof-band80",
+          "id": "run-ranged-bigchopper-capacity-released-band80",
           "kind": "run",
           "goal": "skills",
           "capability": "ranged-train",
@@ -4220,8 +4236,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-ranged-isolated-practice-consumer",
-              "status": "running"
+              "id": "build-ranged-native-after-resource-release",
+              "status": "pending"
             }
           ]
         }
