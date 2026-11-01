@@ -101,3 +101,8 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .game-hud .game-opponent{position:absolute;left:50%;transform:translateX(-50%);top:8px;z-index:6;min-width:130px;padding:4px 6px;background:rgba(62,53,41,.85);border:1px solid #1e1a14;outline:1px solid #5a4d39;font:12px RS;color:#fff;text-align:center;pointer-events:none}
 .game-opponent b{font-weight:normal;display:block;margin-bottom:3px}.game-opponent small{color:#ff0;font:12px RS}
 .opponent-hp{position:relative;height:15px;background:#900}.opponent-hp i{position:absolute;inset:0 auto 0 0;background:#0a0}.opponent-hp span{position:relative;font:12px RS;line-height:15px;text-shadow:1px 1px #000}
+/* Worn items in a player lookup (World plugin): icon and name per worn slot. */
+.lookup-worn-head{margin-top:6px}.lookup-worn{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px;margin:3px 0}
+.lookup-worn-item{display:flex;flex-direction:column;align-items:center;gap:1px;background:#1e1e1e;border:1px solid #333;padding:2px}.lookup-worn-item small{font:10px Arial;color:#ccc;text-align:center;overflow-wrap:anywhere}
+/* Boosts (RuneLite boosts): green when a skill is boosted, red when drained. */
+.infobox.boost-up span{color:#0f0}.infobox.boost-down span{color:#f00}

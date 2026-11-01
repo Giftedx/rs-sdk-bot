@@ -56,7 +56,7 @@ export function publicView(state:any,main=MAIN_ACCOUNT){
  // Market prices are public; the fleet's income and its farmers are the owner's.
  // Item values only for what a public bot carries or wears: the bank's item list is the owner's.
  const carried=new Set(bots.flatMap((b:any)=>[...(b.inventory??[]),...(b.equipment??[])]).map((i:any)=>i?.name).filter(Boolean));
- out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues:Object.fromEntries(Object.entries(s.economy.itemValues??{}).filter(([n])=>carried.has(n))),goldPerTick:0,farmers:[],trend:[]}:null;
+ out.economy=s.economy&&typeof s.economy==='object'?{supplies:s.economy.supplies??[],pricesAt:s.economy.pricesAt??null,itemValues:Object.fromEntries(Object.entries(s.economy.itemValues??{}).filter(([n])=>carried.has(n))),itemExamine:Object.fromEntries(Object.entries(s.economy.itemExamine??{}).filter(([n])=>carried.has(n))),goldPerTick:0,farmers:[],trend:[]}:null;
  // The queue's counts and agents stay; the task texts are the agents' working notes.
  out.coordination=s.coordination&&typeof s.coordination==='object'?{available:s.coordination.available,fresh:s.coordination.fresh,paused:s.coordination.paused,counts:s.coordination.counts,agents:s.coordination.agents,tasks:[]}:null;
  // Other sides' accounts and sync times are public; their coins are bank stock.
