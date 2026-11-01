@@ -69,7 +69,13 @@ same tick unless a count-class gap says otherwise.
   `smithing.rs2:271-301`, gold jewellery `jewellery.rs2:181-272`, glass/leather both recheck inside
   the queue body.
 - **Gap.** The defences depend purely on engine cancellation. Rechecking totals inside each queue body
-  immediately before `inv_del` removes that dependency.
+  immediately before `inv_del` removes that dependency. **The one assumed gate is now engine-read
+  in person:** death/toxin/agility deaths all route through `[proc,player_death]` (`death.rs2:1-8`),
+  whose `p_stopaction` (`death.rs2:4`) runs `stopAction()` -> `clearPendingAction()` ->
+  `closeModal()` -> `weakQueue.clear()` (`Player.ts:875-877`, `:1085-1088`) before item loss, so a
+  pending `weakqueue*` batch is purged rather than left to fire with empty inventories. A blind
+  `inv_del`/`inv_add` body cannot be carried across a deaths-vanishing event; the crack stays closed
+  unless the engine loses the `p_stopaction` or the weak-clear default changes.
 
 ## Surfaces audited clean (verified in source)
 
