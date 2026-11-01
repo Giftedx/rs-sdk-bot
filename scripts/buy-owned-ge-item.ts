@@ -57,14 +57,19 @@ export function orderAccounting(journal?:ItemOrder){
   escrow:unresolved?null:settled?0:prior.escrow-(journal.progress?.gross??0),maximumExposure:settled&&valid?0:prior.escrow,outcomeUnresolved:unresolved};
 }
 // A different finite acquisition method may use a fully refunded zero-fill intent, never an unresolved offer.
-export function earthShopFallback(request:ItemRequest,journal:ItemOrder|undefined,cap:number){
+export function earthShopFallback(request:ItemRequest,journal:ItemOrder|undefined,cap:number,spent=0){
  validateRequest(request);const q=orderQuantity(request),a=orderAccounting(journal);
  if(!journal||journal.phase!=='settled'||JSON.stringify(journal.request)!==JSON.stringify(request)
   ||request.item!==557||request.rescueMode||request.expectedOwned===undefined||journal.itemsBefore!==request.expectedOwned
   ||a.outcomeUnresolved||a.escrow!==0||a.acquired!==0||a.spent!==0||a.refund!==orderEscrow(request)
-  ||!Number.isSafeInteger(cap)||cap<1||cap>1600)throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and cap1..1600');
+  ||!Number.isSafeInteger(cap)||cap<1||cap>1600||!Number.isSafeInteger(spent)||spent<0||spent>=orderEscrow(request))throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and cap1..1600');
  return{args:['aubury',String(cap),'2000'],env:{ITEMS:'earth rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(request.expectedOwned+q),MAX_ITEMS:String(q),
-  MAX_SPEND:String(orderEscrow(request)),COIN_RESERVE:String(request.reserve),FLOAT:String(request.reserve+orderEscrow(request)),NO_BUY_TICKS:'25',BANK_PACK:'1'}};
+  MAX_SPEND:String(orderEscrow(request)-spent),COIN_RESERVE:String(request.reserve),FLOAT:String(request.reserve+orderEscrow(request)-spent),NO_BUY_TICKS:'25',BANK_PACK:'1'}};
+}
+export function shopFallbackSpent(state:any,request:ItemRequest){
+ if(state===undefined)return 0;
+ if(state?.phase!=='settled'||JSON.stringify(state.request)!==JSON.stringify(request)||!Number.isSafeInteger(state.spent)||state.spent<0||state.spent>orderEscrow(request))throw Error('shop fallback spend is unresolved; reconcile retained intent before retry');
+ return state.spent as number;
 }
 function roundBaseline(j:ItemOrder){const p=priorRounds(j);return{...p,coins:j.coinsBefore-p.spent,items:j.itemsBefore+p.acquired};}
 function claimSettlement(j:ItemOrder,c:{items:number;coins:number}){
@@ -451,10 +456,18 @@ if(import.meta.main){
   validateRequest(request);
   if(process.env.SHOP_PROFILE){
    if(process.env.SHOP_PROFILE!=='aubury'||process.env.CANCEL==='1')throw Error('unsupported shop fallback');
-   const plan=earthShopFallback(request,old,Number(process.env.CAP??1600));
+   const fallbackPath=journalPath+'.shop.json',fallback=existsSync(fallbackPath)?JSON.parse(readFileSync(fallbackPath,'utf8')):undefined;
+   const saveFallback=(value:unknown)=>{writeFileSync(fallbackPath+'.tmp',JSON.stringify(value,null,2));renameSync(fallbackPath+'.tmp',fallbackPath);};
+   const spent=shopFallbackSpent(fallback,request),plan=earthShopFallback(request,old,Number(process.env.CAP??1600),spent);
    console.log('SHOP_FALLBACK '+JSON.stringify({method:'aubury',originalOfferId:old!.offerId,originalJournalPreserved:true,item:request.item,quantity:orderQuantity(request),target:request.expectedOwned!+orderQuantity(request),maxSpend:orderEscrow(request),reserve:request.reserve}));
-   const child=Bun.spawn([process.execPath,'scripts/shop-buyer.ts',actor,...plan.args],{windowsHide:true,stdout:'inherit',stderr:'inherit',env:{...process.env,...plan.env,SHOP_PROFILE:''}});
-   const code=await child.exited;unlinkSync(lock);process.exit(code);
+   saveFallback({request,phase:'running',spent,at:Date.now()});
+   const child=Bun.spawn([process.execPath,'scripts/shop-buyer.ts',actor,...plan.args],{windowsHide:true,stdout:'pipe',stderr:'pipe',env:{...process.env,...plan.env,SHOP_PROFILE:''}});
+   const [out,err,code]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
+   process.stdout.write(out);process.stderr.write(err);
+   const result=out.split(/\r?\n/).filter(l=>l.startsWith('RESULT ')).at(-1),debit=Number(result?.match(/\bspentTotal=(\d+)/)?.[1]??NaN);
+   if(!Number.isSafeInteger(debit)||debit<0||debit>orderEscrow(request)-spent)throw Error('shop fallback spend unconfirmed; retained running intent refuses retry');
+   saveFallback({request,phase:'settled',spent:spent+debit,at:Date.now()});
+   unlinkSync(lock);process.exit(code);
   }
   const rescue:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
   s=await openBot(actor,{onStop:async(session,detail)=>{if(!expectedRescueStop(session,detail,rescue))stopped=true;},onSessionEnd:async()=>{stopped=true;}});

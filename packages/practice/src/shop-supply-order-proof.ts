@@ -53,6 +53,8 @@ export function verifyShopSupply(directory:string){
   lifecycle:Object.values(meta.runs).every((r:any)=>r.logout?.state==='confirmed'),
   artifacts:Object.entries(meta.hashes).every(([f,h])=>hash(join(directory,f))===h),
   fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
+  originalJournal:hash(join(directory,'original-ge-journal.json'))===hash(join(directory,'original-ge-journal-after.json')),
+  fallbackSpend:(()=>{const j=JSON.parse(readFileSync(join(directory,'fallback-spend.json'),'utf8'));return j.phase==='settled'&&j.request.item===557&&j.request.quantity===1136&&j.request.expectedOwned===3&&j.spent===total(saved('before'),995)-total(saved('after'),995);})(),
  };
  const report={ok:Object.values(checks).every(Boolean),checks,at:Date.now(),source:meta.source,scope:'Native 150ms/25x existing shop-buyer CLI: exact 1136-earth acquisition, retained1482fire, repeat and funds refusal; no live or rank claim.'};
  writeFileSync(join(directory,'verified.json'),JSON.stringify(report,null,2));return report;
@@ -84,13 +86,15 @@ export async function runShopSupplyNative(directory:string){
   const buyer=await seed(1,352288);copyFileSync(buyer.path,join(directory,'before.sav'));
   const empty=await command(buyer.name,'empty-ge',false);if(empty.code===0||!empty.log.includes('"acquired":0')||!empty.log.includes('LOGOUT logged-out'))throw Error('real zero-fill GE settlement not proved');
   const journal=orderPaths(endpoint.server,buyer.name,'native-earth-shop').journal,journalBefore=hash(journal);
+  copyFileSync(journal,join(directory,'original-ge-journal.json'));
   const buy=await command(buyer.name,'buy');
   const after=await waitPracticeSave(buyer.path,s=>bank(s,557)===1139&&atBank(s),{timeoutMs:15000});copyFileSync(buyer.path,join(directory,'after.sav'));if(!after.matched)throw Error('useful exact earth output not saved');
   const repeat=await command(buyer.name,'repeat');await waitPracticeSave(buyer.path,s=>bank(s,557)===1139&&atBank(s));copyFileSync(buyer.path,join(directory,'repeat.sav'));
   if(hash(journal)!==journalBefore)throw Error('shop fallback changed the GE journal');
+  copyFileSync(journal,join(directory,'original-ge-journal-after.json'));copyFileSync(journal+'.shop.json',join(directory,'fallback-spend.json'));
   const poor=await seed(2,30000);copyFileSync(poor.path,join(directory,'refuse-before.sav'));
   const refuse=await command(poor.name,'refuse',false);await waitPracticeSave(poor.path,s=>s.position.x===3185&&s.position.z===3436);copyFileSync(poor.path,join(directory,'refused.sav'));
-  const paths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log'];
+  const paths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json'];
   writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,endpoint:{ports:endpoint.ports,instance:endpoint.instance},runs:{buy,repeat,refuse},hashes:Object.fromEntries(paths.map(f=>[f,hash(join(directory,f))]))},null,2));
   return verifyShopSupply(directory);
  }finally{

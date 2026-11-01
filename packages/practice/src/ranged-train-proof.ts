@@ -29,7 +29,7 @@ export const RANGED_FIXTURE:SaveConfig={position:{x:3113,z:9555,level:0},
  bank:[{id:COINS,count:455452},{id:841,count:1},{id:884,count:82},{id:882,count:25},{id:1511,count:15},{id:1521,count:8951}]};
 export function rangedChildConfiguration(name:string,inherited:NodeJS.ProcessEnv=process.env){
  return {cmd:['bun','scripts/ranged-train.ts',name,String(TARGET),'10000'],cwd:root,
-  env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',MIN_ARROWS:'100',BUY_ARROWS:'100',BUY_ARROW_ID:'884',MAX_SPEND:String(MAX_SPEND),COIN_RESERVE:String(COIN_RESERVE),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'20'},windowsHide:true};
+  env:{...inherited,DEMO_OK:'',RANDOM_EVENTS:'0',MIN_ARROWS:'100',BUY_ARROWS:'0',BUY_ARROW_ID:'884',MAX_SPEND:String(MAX_SPEND),COIN_RESERVE:String(COIN_RESERVE),AMMO:'100',FOOD:'3',FOOD_ID:'329',KILLS_PER_TRIP:'8',MAX_TRIPS:'20'},windowsHide:true};
 }
 const total=(s:Save,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const worn=(s:Save)=>(s.inventories[94]??[]).map(i=>i.id).sort((a,b)=>a-b);
@@ -67,6 +67,7 @@ export function verifyRanged(directory:string){
  const rb=readPracticeSave(join(directory,'refusal-before.sav')),ra=readPracticeSave(join(directory,'refusal-after.sav')),rl=readFileSync(join(directory,'refusal.log'),'utf8');
  const refusalIds=new Set([...Object.values(rb.inventories).flat(),...Object.values(ra.inventories).flat()].map(i=>i.id));
  const checks:Record<string,boolean>={...rangedSaveChecks(before,after,rangedResult(log)),...rangedChildChecks(meta.code,meta.timedOut,log),
+  stockOnly:rangedResult(log)?.arrowsBought===0&&rangedResult(log)?.shopVisits===0,
   refusal:meta.refusalCode!==0&&!meta.refusalTimedOut&&/coin reserve short/.test(rl)&&!/^RESULT ok/m.test(rl)
    &&(rl.match(/^LOGOUT logged-out$/gm)??[]).length===1&&[...refusalIds].every(id=>total(rb,id)===total(ra,id))&&rb.skills[4]!.xp===ra.skills[4]!.xp,
   refusalHashes:meta.refusalBefore===hash(join(directory,'refusal-before.sav'))&&meta.refusalAfter===hash(join(directory,'refusal-after.sav'))&&meta.refusalLog===hash(join(directory,'refusal.log')),
@@ -74,8 +75,8 @@ export function verifyRanged(directory:string){
   fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
   beforeHash:meta.before===hash(join(directory,'before.sav')),afterHash:meta.after===hash(join(directory,'after.sav')),logHash:meta.log===hash(join(directory,'worker.log'))};
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),checks,
-  scope:'One native 150ms/25x underground Ranged70->71 order with protected quest kit, owned shortbow and ammunition, purchased food and reconciled fares. No live or speed claim.',
-  nextConsumer:'run-ranged-bigchopper-supported-entry-band80: target80, CAP48000, MAX_SPEND5000, COIN_RESERVE400000, MIN_ARROWS200, BUY_ARROWS200, BUY_ARROW_ID884, AMMO100, FOOD3, FOOD_ID329, KILLS_PER_TRIP8, MAX_TRIPS50. Fresh bank stock required. Then80->90.'};
+  scope:'One native150ms/25x underground Ranged70->71 order with protected quest kit, owned shortbow and stock-only ammunition, purchased food and reconciled fares. No live or speed claim.',
+  nextConsumer:'run-ranged-bigchopper-stock-only80: target80, CAP35000, MAX_SPEND4419, COIN_RESERVE400000, MIN_ARROWS200, BUY_ARROWS0, AMMO100, FOOD3, FOOD_ID329, KILLS_PER_TRIP8, MAX_TRIPS50. Fresh bank stock required. Then80->90.'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 // Delivery admits the practice start reserve before this process starts; the proof holds only the floor.
