@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793510175967,
+  "exportedAt": 1793510806893,
   "sources": {
     "state": {
-      "observedAt": 1793509770340.768,
-      "ageMs": 405626.23193359375,
-      "stale": true,
+      "observedAt": 1793510739861.6626,
+      "ageMs": 67031.33740234375,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793510175920,
-      "ageMs": 47,
+      "observedAt": 1793510806369,
+      "ageMs": 524,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 4750673.283447266,
+      "ageMs": 5381599.283447266,
       "stale": true,
       "error": null
     }
@@ -31,34 +31,20 @@
   },
   "workers": {
     "claude": {
-      "running": [
+      "running": [],
+      "pending": [
         {
-          "id": "build-combat-giant-style-4",
+          "id": "build-combat-giant-style-5",
           "kind": "build",
           "goal": "skills",
           "capability": "cow-progress-order",
-          "runId": "task-43077fdc-7d34-4704-9d9a-bd879e02c584",
-          "startedAt": 1793509631465,
-          "recordStatus": "running",
-          "pid": 33136,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": true,
-          "blocker": null
+          "runId": null,
+          "startedAt": null,
+          "status": "queued",
+          "dependencies": []
         }
       ],
-      "pending": [],
       "failed": [
-        {
-          "id": "build-magic-authenticated-admission",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-1aa8f35e-5e84-4476-9cd6-83be82fb7195",
-          "startedAt": 1793337801850,
-          "at": 1793337939565,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
         {
           "id": "build-magic-recovery-logout-attribution",
           "kind": "build",
@@ -528,6 +514,16 @@
           "startedAt": 1793503340532,
           "at": 1793503643485,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-combat-giant-style-4",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "cow-progress-order",
+          "runId": "task-43077fdc-7d34-4704-9d9a-bd879e02c584",
+          "startedAt": 1793509631465,
+          "at": 1793510543462,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": null,
@@ -546,17 +542,31 @@
     "codex": {
       "running": [
         {
-          "id": "run-smithing-oreelse-bronze-finish99",
-          "kind": "run",
+          "id": "build-magic-retained-quote-native-release",
+          "kind": "build",
           "goal": "skills",
-          "capability": "iron-progress-order",
-          "runId": "task-02c5869f-2b57-4c34-ba21-6b80b2d5808e",
-          "startedAt": 1793507881900,
+          "capability": "magic-order",
+          "runId": "task-c32015ee-0780-421b-b6b2-b9a24a26fa90",
+          "startedAt": 1793510544214,
           "recordStatus": "running",
-          "pid": 24320,
+          "pid": 35476,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
+          "blocker": null
+        },
+        {
+          "id": "qualify-ge-oreelse-doric-shortfall",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": "task-27d09fda-a6d9-48c7-b9e9-e5c5268a7492",
+          "startedAt": 1793510527299,
+          "recordStatus": "running",
+          "pid": 32596,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": false,
           "blocker": null
         }
       ],
@@ -587,7 +597,7 @@
           "dependencies": [
             {
               "id": "build-magic-retained-quote-native-release",
-              "status": "pending"
+              "status": "running"
             },
             {
               "id": "run-recovery-shaftmaker-quote-end",
@@ -606,19 +616,9 @@
           "dependencies": [
             {
               "id": "build-magic-retained-quote-native-release",
-              "status": "pending"
+              "status": "running"
             }
           ]
-        },
-        {
-          "id": "build-magic-retained-quote-native-release",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "queued",
-          "dependencies": []
         }
       ],
       "failed": [
@@ -730,16 +730,6 @@
           "runId": "task-e3ec1c00-ee9e-4bfa-add7-9e768160ac7c",
           "startedAt": 1793366980104,
           "at": 1793366982431,
-          "blocker": "task failed; inspect the preserved local receipt"
-        },
-        {
-          "id": "run-magic-woodenstaff-13-repair",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-8df6f374-3610-4b35-8290-d479ea0ea3b1",
-          "startedAt": 1793337666891,
-          "at": 1793337669333,
           "blocker": "task failed; inspect the preserved local receipt"
         },
         {
@@ -2974,13 +2964,13 @@
         }
       ],
       "lastUsefulLive": {
-        "id": "run-smithing-oreelse-iron-leg99",
+        "id": "run-smithing-oreelse-bronze-finish99",
         "kind": "run",
         "goal": "skills",
         "capability": "iron-progress-order",
-        "runId": "task-49589105-aa59-4d8d-9d8e-a7fd8b00fea8",
-        "startedAt": 1793507724431,
-        "at": 1793507880638,
+        "runId": "task-02c5869f-2b57-4c34-ba21-6b80b2d5808e",
+        "startedAt": 1793507881900,
+        "at": 1793510380700,
         "evidence": "live"
       },
       "lastRecovery": {
@@ -4035,8 +4025,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-combat-giant-style-4",
-              "status": "running"
+              "id": "build-combat-giant-style-5",
+              "status": "pending"
             }
           ]
         },
@@ -4050,8 +4040,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-combat-giant-style-4",
-              "status": "running"
+              "id": "build-combat-giant-style-5",
+              "status": "pending"
             },
             {
               "id": "qualify-combat-giant-style-3",
@@ -4069,8 +4059,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "qualify-recovery-bigchopper-restless-end",
-              "status": "failed"
+              "id": "qualify-recovery-bigchopper-restless-end-2",
+              "status": "pending"
             }
           ]
         },
@@ -4107,6 +4097,89 @@
               "status": "pending"
             }
           ]
+        },
+        {
+          "id": "run-ge-oreelse-doric-clay-six",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-ge-oreelse-doric-shortfall",
+              "status": "running"
+            }
+          ]
+        },
+        {
+          "id": "run-ge-oreelse-doric-iron-one",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "ge-bulk-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-ge-oreelse-doric-shortfall",
+              "status": "running"
+            },
+            {
+              "id": "run-ge-oreelse-doric-clay-six",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "qualify-quest-doric-oreelse-staged-ores",
+          "kind": "qualify",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "run-ge-oreelse-doric-iron-one",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "run-quest-doric-oreelse-staged-ores",
+          "kind": "run",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-quest-doric-oreelse-staged-ores",
+              "status": "pending"
+            },
+            {
+              "id": "run-ge-oreelse-doric-iron-one",
+              "status": "pending"
+            }
+          ]
+        },
+        {
+          "id": "qualify-recovery-bigchopper-restless-end-2",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "qualify-ge-oreelse-doric-shortfall",
+              "status": "running"
+            }
+          ]
         }
       ],
       "failed": [],
@@ -4118,7 +4191,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 3,
+    "reportedRunning": 2,
     "observationStale": false,
     "jobs": [
       {
@@ -4259,7 +4332,7 @@
       {
         "account": "OreElse",
         "script": "scripts/smelt-bars.ts",
-        "state": "running"
+        "state": "disabled"
       },
       {
         "account": "Shaftmaker",
