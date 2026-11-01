@@ -1,30 +1,30 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793500262568,
+  "exportedAt": 1793500322625,
   "sources": {
     "state": {
-      "observedAt": 1793500057194.6587,
-      "ageMs": 205373.34130859375,
-      "stale": true,
+      "observedAt": 1793500269516.0396,
+      "ageMs": 53108.96044921875,
+      "stale": false,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793500261288,
-      "ageMs": 1280,
+      "observedAt": 1793500321454,
+      "ageMs": 1171,
       "stale": false,
       "error": null
     },
     "owner": {
-      "observedAt": 1793499491088.667,
-      "ageMs": 771479.3330078125,
-      "stale": true,
+      "observedAt": 1793500268131.1946,
+      "ageMs": 54493.805419921875,
+      "stale": false,
       "error": null
     }
   },
   "coordinator": {
     "paused": false,
-    "pid": 20496,
+    "pid": 34372,
     "processState": "alive",
     "processIdentity": "unverified",
     "planner": null
@@ -43,7 +43,7 @@
           "pid": 22156,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         }
       ],
@@ -546,7 +546,7 @@
           "pid": 23188,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         },
         {
@@ -560,7 +560,7 @@
           "pid": 23744,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": true,
+          "observationStale": false,
           "blocker": null
         }
       ],
