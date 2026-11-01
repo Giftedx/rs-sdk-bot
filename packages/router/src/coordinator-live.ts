@@ -173,9 +173,11 @@ export function replaceAssignments(jobs:any[],accounts:string[],replacement:any)
 }
 // A finished run leaves its job in the coordinator's file, turned off (disableOwnJob). That job still owns its accounts
 // in the merged plan, and a composed one refuses a later run on one participant. Release the named accounts from a
-// coordinator job only when its run has an ok receipt for its task, no swarm run holds any participant and every
-// participant has a confirmed logout. Other participants keep a disabled job, so their owner jobs stay shadowed.
-// Any other job (active, failed, held, owner or unproved) is returned unchanged.
+// coordinator job when its run holds a terminal receipt for its task, the job is off, no swarm run holds any participant
+// and every participant has a confirmed logout. A failed receipt is terminal: the confirmed logout releases the account,
+// not the outcome of its work, so a dead job cannot shadow an account whose session is already settled. Other
+// participants keep a disabled job, so their owner jobs stay shadowed.
+// Any other job (active, missing receipt, held, owner or unproved) is returned unchanged.
 export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly string[],base=projectRoot):CoordinatorJobs{
  const wanted=new Set(accounts.map(n=>n.toLowerCase()));
  let running:Set<string>|null|undefined;
@@ -190,7 +192,7 @@ export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly st
   const runId=job.env?.COORDINATOR_RUN_ID;
   if(job.coordinatorOwner!=='coordinator'||job.enabled!==false||typeof job.coordinatorTask!=='string'||typeof runId!=='string'||!/^[-a-z0-9]+$/.test(runId))return false;
   let receipt:any;try{receipt=JSON.parse(readFileSync(join(base,'.practice/coordinator/runs',runId,'receipt.json'),'utf8'));}catch{return false;}
-  if(receipt?.ok!==true||receipt.runId!==runId||receipt.taskId!==job.coordinatorTask)return false;
+  if(typeof receipt?.ok!=='boolean'||receipt.runId!==runId||receipt.taskId!==job.coordinatorTask)return false;
   const active=swarmRuns();if(!active||names.some(n=>active.has(n.toLowerCase())))return false;
   const root=join(base,'.practice/session-lifecycle');
   return names.every(n=>readLogoutProof(n,LIVE_SERVER,{root}).state==='confirmed');
