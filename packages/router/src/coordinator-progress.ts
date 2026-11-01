@@ -1,11 +1,11 @@
 // Side evidence for fleet-sync; observes existing owners without assigning, restarting or stopping workers.
-// Usage: FLEET_SIDE=local bun scripts/coordinator-progress.ts [--daemon] [--interval-ms=30000]
+// Usage: FLEET_SIDE=local bun packages/router/src/coordinator-progress.ts [--daemon] [--interval-ms=30000]
 import {existsSync,mkdirSync,readFileSync,statSync,writeFileSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
-import type {CoordinatorState,TaskRecord} from '../packages/router/src/coordinator';
-import {atomicJson} from '../packages/router/src/coordinator-store';
-import {FLEET_DIR,mySide} from '../packages/core/src/fleet';
+import type {CoordinatorState,TaskRecord} from './coordinator';
+import {atomicJson} from './coordinator-store';
+import {FLEET_DIR,mySide} from '../../core/src/fleet';
 
 type Model='claude'|'codex'|'unassigned';
 export type ProcessObservation='alive'|'dead'|'unknown';
@@ -61,7 +61,7 @@ function readInput<T>(file:string):Input<T>{
  try{return{value:JSON.parse(readFileSync(file,'utf8')),observedAt:statSync(file).mtimeMs};}
  catch(e){return{value:null,observedAt:null,error:(e as NodeJS.ErrnoException).code==='ENOENT'?'missing':'unreadable'};}
 }
-export function exportProgress(root=resolve(import.meta.dir,'..'),fleet=FLEET_DIR(),side=mySide(),now=Date.now()){
+export function exportProgress(root=resolve(import.meta.dir,'../../..'),fleet=FLEET_DIR(),side=mySide(),now=Date.now()){
  const state=readInput<CoordinatorState>(join(root,'.practice/coordinator/state.json'));
  if(!state.error&&(!state.value||!Array.isArray(state.value.tasks)||state.value.version!==1||state.value.tasks.some(r=>!r||!r.spec||typeof r.spec.id!=='string'||!Array.isArray(r.spec.dependsOn))))Object.assign(state,{value:null,error:'unreadable',observedAt:null});
  const swarm=readInput<Swarm>(join(root,'.practice/swarm-state.json'));
@@ -80,7 +80,7 @@ export function acquireExporterLock(file:string){
 if(import.meta.main){
  const args=process.argv.slice(2),daemon=args.includes('--daemon'),interval=Number(args.find(a=>a.startsWith('--interval-ms='))?.split('=')[1]??30000);
  if(args.some(a=>a!=='--daemon'&&!a.startsWith('--interval-ms='))||!Number.isSafeInteger(interval)||interval<15000||interval>300000)throw Error('Use [--daemon] [--interval-ms=15000..300000]');
- const root=resolve(import.meta.dir,'..'),release=acquireExporterLock(join(root,'.practice/coordinator-progress.lock'));
+ const root=resolve(import.meta.dir,'../../..'),release=acquireExporterLock(join(root,'.practice/coordinator-progress.lock'));
  const done=()=>{release();process.exit(0);};process.on('SIGINT',done);process.on('SIGTERM',done);
  try{do{const result=exportProgress();console.log(`COORDINATOR_PROGRESS side=${result.report.side} file=${result.file}`);if(!daemon)break;await Bun.sleep(interval);}while(true);}finally{release();}
 }

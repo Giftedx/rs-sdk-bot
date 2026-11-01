@@ -2,8 +2,9 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {initialState,type TaskRecord} from '../packages/router/src/coordinator';
-import {summarizeProgress,exportProgress,acquireExporterLock,STALE_MS} from './coordinator-progress';
+import {initialState,type TaskRecord} from '../src/coordinator';
+import {workerSourceRevision} from '../../core/src/worker-release';
+import {summarizeProgress,exportProgress,acquireExporterLock,STALE_MS} from '../src/coordinator-progress';
 const now=1793487000000;
 function record(id:string,overrides:Partial<TaskRecord>={}):TaskRecord{return{spec:{id,goal:'wealth',kind:'run',capability:'earn',dependsOn:[],priority:1,estimatedMs:1000,why:'fixture',agent:'codex'},status:'pending',runId:'run-'+id,createdAt:now-10000,attempts:0,...overrides};}
 function summarize(tasks:TaskRecord[],extra:any={}){
@@ -61,4 +62,16 @@ test('one-shot export preserves source bytes and exposes missing or unreadable o
 test('singleton lock refuses another exporter and releases only its own bytes',()=>{
  const dir=mkdtempSync(join(tmpdir(),'progress-lock-')),file=join(dir,'nested','owner');
  try{const release=acquireExporterLock(file);expect(()=>acquireExporterLock(file)).toThrow('lock exists');writeFileSync(file,'another owner');release();expect(readFileSync(file,'utf8')).toBe('another owner');rmSync(file);const release2=acquireExporterLock(file);release2();expect(existsSync(file)).toBe(false);}finally{rmSync(dir,{recursive:true,force:true});}
+});
+
+test('deploying router progress tooling leaves the gameplay worker fingerprint unchanged',()=>{
+ const root=mkdtempSync(join(tmpdir(),'progress-release-'));
+ try{
+  for(const path of ['scripts','packages','vendor/rs-sdk/sdk','vendor/rs-sdk/server/webclient/src'])mkdirSync(join(root,path),{recursive:true});
+  for(const path of ['package.json','bun.lock','tsconfig.json'])writeFileSync(join(root,path),'{}');
+  writeFileSync(join(root,'scripts/worker.ts'),'export const worker=1;');const before=workerSourceRevision(root);
+  mkdirSync(join(root,'packages/router/src'),{recursive:true});
+  writeFileSync(join(root,'packages/router/src/coordinator-progress.ts'),readFileSync(join(import.meta.dir,'../src/coordinator-progress.ts')));
+  expect(workerSourceRevision(root)).toBe(before);
+ }finally{rmSync(root,{recursive:true,force:true});}
 });
