@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793505945718,
+  "exportedAt": 1793506245745,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 62740530.73095703,
+      "ageMs": 63040557.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793505944864,
-      "ageMs": 854,
+      "observedAt": 1793506244972,
+      "ageMs": 773,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 63148959.74682617,
+      "ageMs": 63448986.74682617,
       "stale": true,
       "error": null
     }
@@ -92,7 +92,7 @@
       {
         "account": "Swordswallow",
         "script": "scripts/gather-yews.ts",
-        "state": "ended: done after 1 runs"
+        "state": "disabled"
       },
       {
         "account": "Unsheathed",

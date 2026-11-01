@@ -1,0 +1,22 @@
+{
+ "id": "1793506251758-swordswallow-tossthecaber",
+ "server": "rs-sdk-demo.fly.dev",
+ "from": "Swordswallow",
+ "to": "TossTheCaber",
+ "item": "Logs",
+ "count": 8,
+ "start": 1793506251758,
+ "end": 1793506551758,
+ "meet": [
+  {
+   "x": 3092,
+   "z": 3242,
+   "level": 0
+  },
+  {
+   "x": 3093,
+   "z": 3242,
+   "level": 0
+  }
+ ]
+}
