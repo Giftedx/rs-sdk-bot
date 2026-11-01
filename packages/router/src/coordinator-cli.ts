@@ -15,6 +15,7 @@ import {processMatches,killTree} from '../../practice/src/proc';
 import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
 import {processDeliveryPrs} from './delivery-pr';
+import {freshScoreboard} from './coverage';
 
 const cli='packages/router/src/coordinator-cli.ts';
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
@@ -147,14 +148,23 @@ function clearFocus(capability:string){
 // Rules (coordinator-rules.ts) run before any model round and whatever the planner's state. A fingerprint reads each
 // candidate's import closure, so a pass runs on a new receipt or every RULE_RECHECK_MS, not every loop.
 const RULE_RECHECK_MS=5*60*1000;
+// The rule reads the fleet best from the scoreboard file; it rebuilds the scoreboard only when the file is older than this.
+const RULE_BOARD_MAX_AGE_MS=60*60*1000;
 let rulePass={at:0,receipts:-1};
 let unlocks:((skill:string)=>number[])|undefined;
+// A skipped chain is reported once per reason, not on every pass.
+const ruleSkips=new Set<string>();
 function runRules(state:CoordinatorState,liveLimit:number){
  const receipts=state.tasks.filter(r=>r.receipt).length,now=Date.now();
  if(receipts===rulePass.receipts&&now-rulePass.at<RULE_RECHECK_MS)return;
  rulePass={at:now,receipts};
  try{
+  let board:any;try{board=freshScoreboard(projectRoot,RULE_BOARD_MAX_AGE_MS);}catch{board=null;}
+  const fleetSkills:any[]|undefined=Array.isArray(board?.fleetSkills)?board.fleetSkills:undefined;
   const added=applyRules(state,{fingerprint:cap=>deliveryFingerprint(deliveryTask(cap)),unlocks:unlocks??=skillUnlocks(projectRoot),maxOpen:liveLimit,
+   side:board?.fleet?.side??process.env.FLEET_SIDE??'local',
+   fleetBest:skill=>fleetSkills?.find(r=>String(r.skill).toLowerCase()===skill.toLowerCase()),
+   skipped:skip=>{const key=JSON.stringify(skip);if(!ruleSkips.has(key)){ruleSkips.add(key);event('rule-skipped',{rule:'next-band',...skip});}},
    paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
    level:(account,skill)=>{try{return json(join(projectRoot,'.practice/status',account+'.json')).skills?.find((v:any)=>v.name===skill)?.level;}catch{return undefined;}}},now);
   if(added.length){saveState(state);event('rule-tasks-added',{tasks:added.map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept}))});}
