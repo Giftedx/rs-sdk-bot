@@ -5,13 +5,14 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
-import {PROFILES,buyWithBudget} from './shop-buyer';
+import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
 
 export function earthRefillAmount(shelf:number,missing:number){
  if(![shelf,missing].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('earth refill quantities unknown');
  return Math.min(50,shelf,missing);
 }
 export const earthSeedNeeded=(shelf:number,carried:number,seeded:boolean)=>Number.isSafeInteger(shelf)&&shelf>=0&&carried>=1&&!seeded;
+export const earthRefillStop=(idle:number,affordable:boolean):'budget'|'stock-wait'|undefined=>!affordable?'budget':idle>=25?'stock-wait':undefined;
 
 export async function runEarthRefill(s:Session,o:{profile:string;cap:number;target:number;maximum:number;spend:number;reserve:number;seedUsed:number;stop:()=>boolean}){
  const conf=PROFILES[o.profile];
@@ -69,14 +70,18 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
    lastProgress=s.tick();let previous=shelf();
    while(!over()&&banked(557)+held(557)<o.target&&boughtTotal<o.maximum+o.seedUsed+seeded&&spentTotal<o.spend){
     const count=shelf();if(count===undefined)throw Error('earth shelf observation lost');
-    if(previous!==count){console.log('EARTH_REFILL_STOCK '+JSON.stringify({tick:s.tick(),count,boughtTotal,spentTotal}));if(count>(previous??count)){stockGrowth=true;lastProgress=s.tick();}previous=count;}
+    if(previous!==count){console.log('EARTH_REFILL_STOCK '+JSON.stringify({tick:s.tick(),count,boughtTotal,spentTotal}));if(count>(previous??count))stockGrowth=true;previous=count;}
     const n=earthRefillAmount(count,Math.min(o.target-banked(557)-held(557),o.maximum+o.seedUsed+seeded-boughtTotal));
     if(n>0){
+     const item=st()!.shop.shopItems.find(i=>i.id===557)!,unit=maximumUnitCost(item,st()!.shop.shopConfig);
+     const unavailable=earthRefillStop(s.tick()-lastProgress,held(995)-o.reserve>=unit&&o.spend-spentTotal>=unit);
+     if(unavailable){stop=unavailable;break;}
      uncertain=true;const result=await buyWithBudget(s.bot,s.sdk,'Earth rune',n,o.reserve,o.spend-spentTotal);
      boughtTotal+=result.bought;spentTotal+=result.spent;uncertain=false;
      if(result.bought){lastProgress=s.tick();continue;}
      if(result.spent)throw Error('earth debit without observed runes');
-     stop='budget';break;
+     // Another buyer can consume the observed shelf before this packet arrives.
+     // No debit is a funded race, not a reason to reset the progress clock.
     }
     if(s.tick()-lastProgress>=25){stop='stock-wait';break;}
     await waitTicks(s,1);

@@ -456,7 +456,7 @@ if(import.meta.main){
   if(request.actor.toLowerCase()!==actor.toLowerCase()||request.server!==server||request.goal!==goal||process.env.ITEM_ID&&Number(process.env.ITEM_ID)!==request.item||process.env.QUANTITY&&Number(process.env.QUANTITY)!==orderQuantity(request)||process.env.EXPECTED_OWNED&&Number(process.env.EXPECTED_OWNED)!==request.expectedOwned||process.env.LIMIT_PRICE&&Number(process.env.LIMIT_PRICE)!==request.limit||process.env.CASH_RESERVE&&Number(process.env.CASH_RESERVE)!==request.reserve||process.env.ORDER_MS&&Number(process.env.ORDER_MS)!==request.deadline-request.createdAt)throw Error('existing request identity/budget mismatch');
   validateRequest(request);
   if(process.env.SHOP_PROFILE){
-   if(!['aubury','betty'].includes(process.env.SHOP_PROFILE)||process.env.CANCEL==='1')throw Error('unsupported shop fallback');
+   if(process.env.CANCEL==='1')throw Error('shop fallback cannot cancel an order');
    const fallbackPath=journalPath+'.shop.json',fallback=existsSync(fallbackPath)?JSON.parse(readFileSync(fallbackPath,'utf8')):undefined;
    const saveFallback=(value:unknown)=>{writeFileSync(fallbackPath+'.tmp',JSON.stringify(value,null,2));renameSync(fallbackPath+'.tmp',fallbackPath);};
    const spent=shopFallbackSpent(fallback,request),plan=earthShopFallback(request,old,Number(process.env.CAP??1600),spent,process.env.SHOP_PROFILE);
