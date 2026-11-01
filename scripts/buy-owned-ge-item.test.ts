@@ -151,6 +151,9 @@ test('earth shop fallback preserves an exactly settled zero-fill GE journal and 
  expect(()=>earthShopFallback(r,j,3001,0,'betty')).toThrow();
  expect(earthShopFallback(r,j,16000,1000,'betty-refill')).toMatchObject({entry:'scripts/earth-shop.ts',args:['betty','16000','2000'],env:{MAX_SPEND:'44440',MAX_ITEMS:'1136',STOCK_TARGET:'1139',NO_BUY_TICKS:'25'}});
  expect(()=>earthShopFallback(r,j,16001,0,'betty-refill')).toThrow();
+ expect(earthShopFallback(r,j,20000,0,'owned-talismans')).toMatchObject({entry:'scripts/earth-production.ts',args:['talismans','20000'],env:{STOCK_TARGET:'1139',MAX_SPEND:'45440'}});
+ expect(earthShopFallback(r,j,20000,0,'owned-craft').args).toEqual(['craft','20000']);
+ expect(()=>earthShopFallback(r,j,20001,0,'owned-craft')).toThrow();
  expect(()=>earthShopFallback(r,j,1600,0,'unknown')).toThrow();
 });
 const view=(offers:GEOffer[]=[offer()],coins=5000,items=0):OrderView=>({actor:request.actor,server:request.server,offers,coins,items});

@@ -15,6 +15,7 @@ import{capabilityRevision}from'../../core/src/worker-release';
 import{readLogoutProof}from'../../core/src/session-lifecycle';
 import{orderPaths}from'../../../scripts/buy-owned-ge-item';
 import{FREE_FLOOR_GB,PRACTICE_STARTUP_GB}from'../../core/src/memory';
+import{productionConserved}from'../../../scripts/earth-production';
 type Save=ReturnType<typeof readPracticeSave>;
 type Run={code:number;timedOut:boolean;log:string;hpMin:number;logout?:ReturnType<typeof readLogoutProof>};
 const root=resolve(import.meta.dir,'../../..');
@@ -54,8 +55,10 @@ export function refillSupplyChecks(before:Save,after:Save,r:Run){
   result:result?.ok===true&&result?.conserved===true,
  };
 }
-const files=['scripts/buy-owned-ge-item.ts','scripts/earth-shop.ts','scripts/earth-shop.test.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
+const files=['scripts/buy-owned-ge-item.ts','scripts/earth-shop.ts','scripts/earth-shop.test.ts','scripts/earth-production.ts','scripts/earth-production.test.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
+const ownedTotals=(s:Save)=>{const m=new Map<number,number>();for(const c of [93,94,95])for(const i of s.inventories[c]??[])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
+const productionSaved=(before:Save,after:Save,v:any)=>productionConserved(ownedTotals(before),ownedTotals(after),{consumed:v.consumed,crafted:v.crafted,air:v.air,eaten:v.eaten,found:v.found})&&JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]);
 const source=()=>({runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
 export function verifyShopSupply(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
@@ -74,6 +77,8 @@ export function verifyShopSupply(directory:string){
   refill:Object.values(refillSupplyChecks(saved('refill-before'),saved('refill-after'),run('refill'))).every(Boolean),
   refillRepeat:unchanged(saved('refill-after'),saved('refill-repeat'))&&exits(run('refill-repeat')).exit&&amount(run('refill-repeat').log,'boughtTotal')===0&&amount(run('refill-repeat').log,'seeded')===0,
   refillLedger:(()=>{const j=JSON.parse(readFileSync(join(directory,'refill-ledger.json'),'utf8'));return j.phase==='settled'&&j.seeded===1&&j.spent===amount(run('refill').log,'spentTotal');})(),
+  ownedHunt:(()=>{const r=run('owned-hunt'),v=JSON.parse(r.log.split(/\r?\n/).find(l=>l.startsWith('EARTH_PRODUCTION '))!.slice(17));return r.code===0&&!r.timedOut&&v.ok===true&&v.kills===2&&v.pilotReady===1&&v.conserved===true&&v.equipmentRestored===true&&productionSaved(saved('hunt-before'),saved('hunt-after'),v)&&r.hpMin>6&&bank(saved('hunt-after'),995)===bank(saved('hunt-before'),995)&&bank(saved('hunt-after'),554)===1482;})(),
+  ownedCraft:(()=>{const r=run('owned-craft'),v=JSON.parse(r.log.split(/\r?\n/).find(l=>l.startsWith('EARTH_PRODUCTION '))!.slice(17));return r.code===0&&!r.timedOut&&v.ok===true&&v.targetMet===1&&v.trips===2&&v.conserved===true&&productionSaved(saved('craft-before'),saved('craft-after'),v)&&v.consumed>0&&v.consumed<60&&bank(saved('craft-after'),557)>=103&&bank(saved('craft-after'),557)<=105&&bank(saved('craft-after'),554)===1482&&total(saved('craft-before'),1436)-total(saved('craft-after'),1436)===v.consumed&&r.hpMin>6;})(),
  };
  const report={ok:Object.values(checks).every(Boolean),checks,at:Date.now(),source:meta.source,scope:'Native 150ms/25x existing shop-buyer CLI: exact 1136-earth acquisition, retained1482fire, repeat and funds refusal; no live or rank claim.'};
  writeFileSync(join(directory,'verified.json'),JSON.stringify(report,null,2));return report;
@@ -85,10 +90,10 @@ export async function runShopSupplyNative(directory:string){
  const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'shop-supply-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startGeProofStack>>|undefined;
- const command=async(name:string,label:string,shop=true,quantity=1136,profile='aubury'):Promise<Run>=>{
+ const command=async(name:string,label:string,shop=true,quantity=1136,profile='aubury',extra:Record<string,string>={}):Promise<Run>=>{
   if(!actors.has(name)||freemem()/2**30<FREE_FLOOR_GB)throw Error('owned actor/native memory boundary');
   const started=Date.now(),out=join(directory,label+'.log'),err=join(directory,label+'.err');
-  const child=Bun.spawn(['bun','scripts/buy-owned-ge-item.ts',name],{cwd:root,windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err),env:{...process.env,...endpoint.env,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_KEY:'native-earth-shop',ITEM_ID:'557',QUANTITY:String(quantity),EXPECTED_OWNED:'3',LIMIT_PRICE:'40',CASH_RESERVE:'30000',ORDER_MS:'900000',FILL_WAIT_TICKS:'0',CAP:profile.endsWith('-refill')?'16000':profile==='betty'?'3000':'1600',SHOP_PROFILE:shop?profile:''}});
+  const child=Bun.spawn(['bun','scripts/buy-owned-ge-item.ts',name],{cwd:root,windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err),env:{...process.env,...endpoint.env,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_KEY:'native-earth-shop',ITEM_ID:'557',QUANTITY:String(quantity),EXPECTED_OWNED:'3',LIMIT_PRICE:'40',CASH_RESERVE:'30000',ORDER_MS:'900000',FILL_WAIT_TICKS:'0',CAP:profile.startsWith('owned-')?'20000':profile.endsWith('-refill')?'16000':profile==='betty'?'3000':'1600',SHOP_PROFILE:shop?profile:'',...extra}});
   let hpMin=Infinity,ready=false,timedOut=false,termination:Promise<void>|undefined;
   const observe=()=>{try{const s=JSON.parse(readFileSync(join(root,'.practice/status',name+'.json'),'utf8'));if(s.started>=started-2000&&s.name===name&&Number.isFinite(s.hp?.now)){if(s.hp.now>0)ready=true;if(ready)hpMin=Math.min(hpMin,s.hp.now);}}catch{}};
   const monitor=setInterval(observe,100),timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid);},240000);
@@ -97,10 +102,10 @@ export async function runShopSupplyNative(directory:string){
  };
  try{
   stack=await startGeProofStack(endpoint);
-  const seed=async(index:number,coins:number)=>{
+  const seed=async(index:number,coins:number,extra:Record<string,unknown>={})=>{
    const name=runBotName('flshop',index);if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('practice identity already exists');
    const {envPath}=await createBot(name);writeFileSync(envPath,geProofAccountEnv(readFileSync(envPath,'utf8'),endpoint));assertGeProofAccount(readFileSync(envPath,'utf8'),endpoint.env);actors.add(name);
-   const path=await applyPreset(name,{position:{x:3185,z:3436,level:0},skills:{Hitpoints:35},inventory:[{id:1277,count:1}],bank:[{id:995,count:coins},{id:554,count:1482},{id:557,count:3},{id:1521,count:7}]});return{name,path};
+   const path=await applyPreset(name,{position:{x:3185,z:3436,level:0},skills:{Hitpoints:35},inventory:[{id:1277,count:1}],bank:[{id:995,count:coins},{id:554,count:1482},{id:557,count:3},{id:1521,count:7}],...extra});return{name,path};
   };
   const buyer=await seed(1,352288);copyFileSync(buyer.path,join(directory,'before.sav'));
   const empty=await command(buyer.name,'empty-ge',false);if(empty.code===0||!empty.log.includes('"acquired":0')||!empty.log.includes('LOGOUT logged-out'))throw Error('real zero-fill GE settlement not proved');
@@ -125,8 +130,18 @@ export async function runShopSupplyNative(directory:string){
   copyFileSync(seeded.path,join(directory,'refill-after.sav'));if(!refillSaved.matched)throw Error('seeded refill target not saved');
   const refillRepeat=await command(seeded.name,'refill-repeat',true,50,'betty-refill');await waitPracticeSave(seeded.path,s=>bank(s,557)===53);
   copyFileSync(seeded.path,join(directory,'refill-repeat.sav'));copyFileSync(orderPaths(endpoint.server,seeded.name,'native-earth-shop').journal+'.shop.json',join(directory,'refill-ledger.json'));
+  const hunter=await seed(5,352288,{skills:{Attack:49,Strength:10,Defence:11,Hitpoints:35},inventory:[],bank:[{id:995,count:352288},{id:554,count:1482},{id:557,count:3},{id:1277,count:1},{id:1171,count:1},{id:1115,count:1},{id:1891,count:8}]});
+  await command(hunter.name,'hunt-empty-ge',false,100);
+  copyFileSync(hunter.path,join(directory,'hunt-before.sav'));
+  const ownedHunt=await command(hunter.name,'owned-hunt',true,100,'owned-talismans',{HUNT_KILLS_PER_TARGET:'1'});
+  await waitPracticeSave(hunter.path,s=>s.position.z===3436||ownedHunt.code!==0);copyFileSync(hunter.path,join(directory,'hunt-after.sav'));
+  const crafter=await seed(6,352288,{skills:{Runecraft:51,Hitpoints:35},inventory:[],bank:[{id:995,count:352288},{id:554,count:1482},{id:557,count:3},{id:1436,count:60},{id:1438,count:1},{id:1440,count:1}]});await command(crafter.name,'craft-empty-ge',false,100);
+  copyFileSync(crafter.path,join(directory,'craft-before.sav'));
+  const ownedCraft=await command(crafter.name,'owned-craft',true,100,'owned-craft');
+  await waitPracticeSave(crafter.path,s=>bank(s,557)>=103||ownedCraft.code!==0);copyFileSync(crafter.path,join(directory,'craft-after.sav'));
   const paths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json','betty-before.sav','betty-after.sav','betty.log','betty-empty-ge.log','refill-before.sav','refill-after.sav','refill-repeat.sav','refill.log','refill-repeat.log','refill-empty-ge.log','refill-ledger.json'];
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,endpoint:{ports:endpoint.ports,instance:endpoint.instance},runs:{buy,repeat,refuse,betty,refill,'refill-repeat':refillRepeat},hashes:Object.fromEntries(paths.map(f=>[f,hash(join(directory,f))]))},null,2));
+  paths.push('hunt-before.sav','hunt-after.sav','craft-before.sav','craft-after.sav','owned-hunt.log','owned-craft.log');
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,endpoint:{ports:endpoint.ports,instance:endpoint.instance},runs:{buy,repeat,refuse,betty,refill,'refill-repeat':refillRepeat,'owned-hunt':ownedHunt,'owned-craft':ownedCraft},hashes:Object.fromEntries(paths.map(f=>[f,hash(join(directory,f))]))},null,2));
   return verifyShopSupply(directory);
  }finally{
   try{await(stack?stack.stop():stopStack(endpoint.instance));}finally{closeSync(fd);if(existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}
