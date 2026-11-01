@@ -13,6 +13,8 @@ export interface CoordTask {
  repairs?:{account:string;endedAt:number}[];
  sessionRecovery?:{account:string;endedAt:number};
  agent?:'codex'|'claude';
+ // Explicit continuation only: rerun delivery and review without changing this exact prepared source.
+ resumeSource?:string;
  // Build only: command types whose replay difference is this build's stated change (model-worker.ts reviewGate).
  replayAllow?:string[];
  /** Set when a deterministic rule (coordinator-rules.ts) created the task. */
@@ -91,6 +93,7 @@ function provisionRefs(task:CoordTask):string[]{
 }
 export function validateTask(t:CoordTask){
  if(t.agent!==undefined&&!['codex','claude'].includes(t.agent))throw Error('invalid worker agent');
+ if(t.resumeSource!==undefined&&(t.kind!=='build'||typeof t.resumeSource!=='string'||!/^[a-f0-9]{64}$/.test(t.resumeSource)))throw Error('invalid prepared source continuation');
  if(t.rule!==undefined&&(t.rule!=='next-band'||t.kind!=='run'))throw Error('invalid rule task');
  if(t.repairs!==undefined&&(!Array.isArray(t.repairs)||t.repairs.some(r=>!r||!ACCOUNT.test(r.account)||!Number.isFinite(r.endedAt)||r.endedAt<0)))throw Error('invalid exact recovery request');
  if(t.sessionRecovery!==undefined&&(t.kind!=='run'||t.launch&&t.launch!=='ordinary'||t.account!==t.sessionRecovery?.account
@@ -141,9 +144,10 @@ export function lastBuildOutcome(state:CoordinatorState,capability:string){
   .sort((a,b)=>b.receipt!.at-a.receipt!.at)[0]?.receipt?.output;
 }
 // Prepared source skips authoring only. The executor reruns delivery and the applicable review before publication.
-export function preparedNativeDelivery(state:CoordinatorState,capability:string,source:string){
+export function preparedNativeDelivery(state:CoordinatorState,capability:string,source:string,resumeSource?:string){
  const output=lastBuildOutcome(state,capability);
  if(output?.hostDeferred===true&&output.sourcePrepared===true&&output.delivery?.hostDeferred===true&&!output.delivery.diagnostic&&output.delivery.source===source)return output.delivery;
+ if(resumeSource!==source)return null;
  return state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt)
   .sort((a,b)=>b.receipt!.at-a.receipt!.at)
   .map(r=>r.receipt!.output?.delivery)

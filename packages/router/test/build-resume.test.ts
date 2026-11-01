@@ -1,6 +1,6 @@
 import{test,expect}from'bun:test';
 import{finishBuildDelivery}from'../src/coordinator-worker';
-import{initialState,addTasks,startTask,finishTask,preparedNativeDelivery}from'../src/coordinator';
+import{initialState,addTasks,startTask,finishTask,preparedNativeDelivery,validateTask}from'../src/coordinator';
 import type{DeliveryResult}from'../src/delivery';
 const source='a'.repeat(64);
 function fixture(){let author=0,delivered=0,reviewed=0,current=source;const records:any[]=[];
@@ -22,15 +22,26 @@ test('a completed native delivery survives an unavailable handoff author and sti
   addTasks(s,[{id,kind:'build',goal:'skills',capability:'fixture',dependsOn:[],priority:100,estimatedMs:1000,why:'Train the connected finite consumer'}],0);
   startTask(s,id,at-1,id);finishTask(s,{taskId:id,runId:id,ok:false,at,output});
  }
- const prepared=preparedNativeDelivery(s,'fixture',source);
+ expect(preparedNativeDelivery(s,'fixture',source)).toBeNull();
+ const prepared=preparedNativeDelivery(s,'fixture',source,source);
  expect(prepared).toBe(f.delivery);
  const result=await finishBuildDelivery('fixture',prepared,f.deps,'claude');
  expect(result.ok).toBe(true);expect(f.counts()).toEqual({author:0,delivered:1,reviewed:1});
- expect(preparedNativeDelivery(s,'fixture','b'.repeat(64))).toBeNull();
+ expect(preparedNativeDelivery(s,'fixture','b'.repeat(64),source)).toBeNull();
+ const ordinary=fixture();
+ expect((await finishBuildDelivery('fixture',preparedNativeDelivery(s,'fixture',source),ordinary.deps,'codex')).ok).toBe(true);
+ expect(ordinary.counts().author).toBe(1);
  f.deps.review=async()=>({approved:false,reason:'concrete defect'});
  expect((await finishBuildDelivery('fixture',prepared,f.deps,'claude')).ok).toBe(false);
  f.delivery.diagnostic={checkId:'observation',complete:true};
- expect(preparedNativeDelivery(s,'fixture',source)).toBeNull();
+ expect(preparedNativeDelivery(s,'fixture',source,source)).toBeNull();
+});
+
+test('explicit source continuation is a validated build-only request',()=>{
+ const task={id:'resume',kind:'build' as const,goal:'skills' as const,capability:'fixture',dependsOn:[],priority:100,estimatedMs:1000,why:'Continue exact delivered source',resumeSource:source};
+ expect(()=>validateTask(task)).not.toThrow();
+ expect(()=>validateTask({...task,resumeSource:'wrong'})).toThrow('prepared source');
+ expect(()=>validateTask({...task,kind:'qualify'})).toThrow('prepared source');
 });
 test('a first build may create declared files before any complete-source fingerprint exists',async()=>{
  const f=fixture();f.deps.fingerprint=()=>{if(f.counts().author===0)throw Error('new declared source file not created yet');return source;};
