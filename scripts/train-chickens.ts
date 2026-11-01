@@ -1,6 +1,7 @@
 // One-time qualification for the mixed ore mine. Rat6 ignores players above combat12 outside the Wilderness
 // (engine/entity/Npc.ts checkNotTooStrong). Train on Lumbridge chickens, then return the owned kit to its bank.
 import {existsSync} from 'node:fs';
+import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import {openBot,finish,randomEventsOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
@@ -48,7 +49,44 @@ export function guardArdougneTrainingWalker(base:PathDeps){
         interactLoc:(loc,op)=>reason?refuse():base.interactLoc(loc,op)};
     return {deps,reason:()=>reason};
 }
-export function chickenTrainingHealth(bank:string,current:number,maximum:number){
+export type ChickenEntry='standard'|'lower-health';
+export function chickenTrainingEntry(entry:string='standard'):ChickenEntry{
+    if(entry!=='standard'&&entry!=='lower-health')throw Error('unsupported training entry mode');
+    return entry;
+}
+// Ordinary melee pays at least13 HP units per40 Strength/Defence units per damage point in pinned combat.rs2.
+export function chickenCombatUnlockPlan(levels:{Attack:number;Defence:number;Hitpoints:number;Prayer:number;Ranged:number;Magic:number},xp:{Strength:number;Defence:number;Hitpoints:number},target=29){
+    if(Object.values(levels).some(n=>!Number.isSafeInteger(n)||n<1||n>99)||Object.values(xp).some(n=>!Number.isFinite(n)||n<0))throw Error('combat unlock observations unavailable');
+    if(levelForXp(xp.Defence)!==levels.Defence||levelForXp(xp.Hitpoints)!==levels.Hitpoints)throw Error('combat unlock XP and levels disagree');
+    let best:{strength:number;defence:number;hitpoints:number;combat:number;requiredXp:number}|undefined;
+    for(let strength=levelForXp(xp.Strength);strength<=99;strength++)for(let defence=levelForXp(xp.Defence);defence<=99;defence++){
+        const requiredXp=Math.max(0,xpForLevel(strength)-xp.Strength)+Math.max(0,xpForLevel(defence)-xp.Defence);
+        const hitpoints=levelForXp(xp.Hitpoints+Math.floor(requiredXp*13/40));
+        const combat=Math.floor(.25*(defence+hitpoints+Math.floor(levels.Prayer/2))+Math.max(.325*(levels.Attack+strength),.325*(Math.floor(levels.Ranged/2)+levels.Ranged),.325*(Math.floor(levels.Magic/2)+levels.Magic)));
+        if(combat>=target&&(!best||requiredXp<best.requiredXp||requiredXp===best.requiredXp&&strength>best.strength))best={strength,defence,hitpoints,combat,requiredXp};
+    }
+    if(!best)throw Error('melee cannot establish requested combat unlock');
+    return best;
+}
+export function chickenCombatUnlockStyle(levels:{Strength:number;Defence:number},plan:{strength:number;defence:number}):number {
+    // With owned bronze sword bonus5, Strength6 keeps a max hit of2 in defensive style: ((6+8)*69+320)/640.
+    // One short Strength phase improves the following Defence phase, with at most two further style switches.
+    if(levels.Strength<Math.min(6,plan.strength))return 1;
+    if(levels.Defence<plan.defence)return 3;
+    if(levels.Strength<plan.strength)return 1;
+    throw Error('planned melee levels exhausted before observed combat unlock');
+}
+export function chickenCombatUnlockMode(bank:string,skill:string|undefined,level:number|undefined,entry:ChickenEntry,target:number){
+    if(skill!=='CombatUnlock')return false;
+    if(bank!=='ardougne'||entry!=='lower-health'||level!==undefined||target!==29)throw Error('CombatUnlock requires lower-health Ardougne combat29 without a fixed skill target');
+    return true;
+}
+export function chickenTrainingHealth(bank:string,current:number,maximum:number,entry:ChickenEntry='standard'){
+    chickenTrainingEntry(entry);
+    if(entry==='lower-health'){
+        if(bank!=='ardougne'||!Number.isSafeInteger(current)||!Number.isSafeInteger(maximum)||current<10||maximum<19||current>maximum)throw Error('lower-health Ardougne entry requires10 current HP and19 maximum HP; damage budget is zero');
+        return;
+    }
     if(!Number.isSafeInteger(current)||!Number.isSafeInteger(maximum)||current>maximum
         ||(bank==='ardougne'?current<27:current!==maximum||current<10))
         throw Error(bank==='ardougne'?'Ardougne training requires at least27 current HP; damage budget is zero':'training requires full HP');
@@ -73,9 +111,11 @@ export function chickenTrainingTarget(target=13):number {
     return target;
 }
 
-export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,options:{rawChicken?:number;stop?:()=>boolean;trainSkill?:string;targetLevel?:number}={}) {
+export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,options:{rawChicken?:number;stop?:()=>boolean;trainSkill?:string;targetLevel?:number;entry?:ChickenEntry}={}) {
     chickenTrainingTarget(target);
-    const profile=chickenTrainingProfile(bank),route=profile.route,home=route[0]!,strengthTarget=chickenStrengthGoal(bank,options.trainSkill,options.targetLevel);
+    const entry=chickenTrainingEntry(options.entry);
+    const profile=chickenTrainingProfile(bank),route=profile.route,home=route[0]!,balanced=chickenCombatUnlockMode(bank,options.trainSkill,options.targetLevel,entry,target),strengthTarget=balanced?undefined:chickenStrengthGoal(bank,options.trainSkill,options.targetLevel);
+    if(entry==='lower-health'&&!balanced)throw Error('lower-health entry requires explicit CombatUnlock goal');
     if(!Number.isSafeInteger(cap)||cap<1)throw Error('invalid training cap');
     const rawTarget=options.rawChicken??0;
     if(!Number.isSafeInteger(rawTarget)||rawTarget<0||rawTarget>12)throw Error('raw chicken target must be0..12');
@@ -84,9 +124,11 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
     const combat=()=>pos()?.combatLevel??0,first=pos(),start=s.tick();
     if(!first||first.level!==0||Math.max(Math.abs(first.worldX-home.x),Math.abs(first.worldZ-home.z))>6)
         throw Error(`training requires ${bank} bank start`);
-    chickenTrainingHealth(bank,hp(),s.sdk.getSkill('Hitpoints')?.baseLevel??0);
+    chickenTrainingHealth(bank,hp(),s.sdk.getSkill('Hitpoints')?.baseLevel??0,entry);
     if(strengthTarget!==undefined){const level=(name:string)=>s.sdk.getSkill(name)?.baseLevel??0;const projected=Math.floor(.25*(level('Defence')+level('Hitpoints')+Math.floor(level('Prayer')/2))+.325*(level('Attack')+strengthTarget));
         if(projected<target)throw Error('Strength target cannot establish the requested combat unlock');}
+    const unlockPlan=balanced?chickenCombatUnlockPlan(Object.fromEntries(['Attack','Defence','Hitpoints','Prayer','Ranged','Magic'].map(name=>[name,s.sdk.getSkill(name)?.baseLevel??0])) as any,{Strength:s.sdk.getSkillXp('Strength')??NaN,Defence:s.sdk.getSkillXp('Defence')??NaN,Hitpoints:s.sdk.getSkillXp('Hitpoints')??NaN},target):undefined;
+    if(unlockPlan)console.log('COMBAT_UNLOCK_PLAN '+JSON.stringify(unlockPlan));
     const goal=()=>combat()>=target&&(strengthTarget===undefined||(s.sdk.getSkill('Strength')?.baseLevel??0)>=strengthTarget);
     let hpMin=hp(),previousHP=hp(),hurt=false,ended=false,kills=0;
     s.ended.then(()=>{ended=true;});
@@ -110,6 +152,7 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
         if(!(await s.bot.openBank()).success)throw Error('training bank unavailable');
         await waitTicks(s,2);const before=assets();
         const kit=chickenTrainingKit([...s.sdk.getInventory(),...s.sdk.getEquipment(),...(state()?.bank.items??[])]);
+        if(entry==='lower-health'&&(!kit.includes(1277)||!kit.includes(1171)))throw Error('lower-health training requires owned bronze sword and wooden shield');
         for(const id of kit){
             if([...s.sdk.getInventory(),...s.sdk.getEquipment()].some(i=>i.id===id))continue;
             const item=state()?.bank.items.find(i=>i.id===id);
@@ -130,11 +173,12 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
             if(xp()>lastXp){lastXp=xp();progress=s.tick();}
             if(s.tick()-progress>120)throw Error('no training progress: no melee XP for120ticks');
             if(randomEventsOf(s)?.busy()){await waitTicks(s,1);continue;}
-            const style=strengthTarget===undefined?chickenTrainingStyle({Attack:s.sdk.getSkill('Attack')?.baseLevel??0,
+            const style=unlockPlan?chickenCombatUnlockStyle({Strength:s.sdk.getSkill('Strength')?.baseLevel??0,Defence:s.sdk.getSkill('Defence')?.baseLevel??0},unlockPlan):strengthTarget===undefined?chickenTrainingStyle({Attack:s.sdk.getSkill('Attack')?.baseLevel??0,
                 Strength:s.sdk.getSkill('Strength')?.baseLevel??0,Defence:s.sdk.getSkill('Defence')?.baseLevel??0}):1;
             if(state()?.combatStyle?.currentStyle!==style){
                 if(!(await s.sdk.sendSetCombatStyle(style)).success||!await waitUntil(s,()=>state()?.combatStyle?.known===true&&state()?.combatStyle?.currentStyle===style,{timeoutTicks:6}))
                     throw Error('training style not confirmed');
+                console.log('MILESTONE training-style '+JSON.stringify({style,strength:s.sdk.getSkill('Strength')?.baseLevel,defence:s.sdk.getSkill('Defence')?.baseLevel}));
             }
             const chicken=state()?.nearbyNpcs.filter(n=>/^chicken$/i.test(n.name)&&!n.inCombat&&(n.hp??1)>0&&n.reachable!==false
                 &&n.x>=profile.pen.x0&&n.x<=profile.pen.x1&&n.z>=profile.pen.z0&&n.z<=profile.pen.z1).sort((a,b)=>a.distance-b.distance)[0];
@@ -169,15 +213,16 @@ export async function trainChickens(s:Session,cap=1800,bank='varrock',target=13,
         const after=assets(),preserved=[...before].every(([id,n])=>(after.get(id)??0)>=n);
         await s.bot.closeBank();
         const p=pos(),atBank=!!p&&p.level===0&&Math.max(Math.abs(p.worldX-home.x),Math.abs(p.worldZ-home.z))<=3;
-        return{ok:goal()&&atBank&&!hurt&&preserved,combat:combat(),strength:s.sdk.getSkill('Strength')?.baseLevel,ticks:s.tick()-start,kills,hpMin,preserved,atBank,position:p&&{x:p.worldX,z:p.worldZ,level:p.level}};
+        return{ok:goal()&&atBank&&!hurt&&preserved,combat:combat(),strength:s.sdk.getSkill('Strength')?.baseLevel,defence:s.sdk.getSkill('Defence')?.baseLevel,unlockPlan,ticks:s.tick()-start,kills,hpMin,preserved,atBank,position:p&&{x:p.worldX,z:p.worldZ,level:p.level}};
     } finally {off();}
 }
 
 if(import.meta.main){
     const bank=process.env.TRAIN_BANK??'varrock';chickenTrainingProfile(bank);
     const target=chickenTrainingTarget(Number(process.env.TRAIN_COMBAT??13));
-    const trainSkill=process.env.TRAIN_SKILL,targetLevel=process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL);chickenStrengthGoal(bank,trainSkill,targetLevel);
+    const entry=chickenTrainingEntry(process.env.TRAIN_ENTRY);
+    const trainSkill=process.env.TRAIN_SKILL,targetLevel=process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL);if(!chickenCombatUnlockMode(bank,trainSkill,targetLevel,entry,target))chickenStrengthGoal(bank,trainSkill,targetLevel);
     const s=await openBot(process.argv[2]!);
-    try{const r=await trainChickens(s,Number(process.env.CAP??1800),bank,target,{trainSkill,targetLevel});console.log('TRAINING '+JSON.stringify(r));await finish([s],r.ok,`${r.ok?'':'no training progress: '}chicken-qualification ${JSON.stringify(r)}`);}
+    try{const r=await trainChickens(s,Number(process.env.CAP??1800),bank,target,{trainSkill,targetLevel,entry});console.log('TRAINING '+JSON.stringify(r));await finish([s],r.ok,`${r.ok?'':'no training progress: '}chicken-qualification ${JSON.stringify(r)}`);}
     catch(e){await finish([s],false,'no training progress: '+String(e));}
 }
