@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793509575275,
+  "exportedAt": 1793510175967,
   "sources": {
     "state": {
-      "observedAt": 1793509510581.1033,
-      "ageMs": 64693.896728515625,
-      "stale": false,
+      "observedAt": 1793509770340.768,
+      "ageMs": 405626.23193359375,
+      "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793509573486,
-      "ageMs": 1789,
+      "observedAt": 1793510175920,
+      "ageMs": 47,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 4149981.2834472656,
+      "ageMs": 4750673.283447266,
       "stale": true,
       "error": null
     }
@@ -31,19 +31,23 @@
   },
   "workers": {
     "claude": {
-      "running": [],
-      "pending": [
+      "running": [
         {
           "id": "build-combat-giant-style-4",
           "kind": "build",
           "goal": "skills",
           "capability": "cow-progress-order",
-          "runId": null,
-          "startedAt": null,
-          "status": "queued",
-          "dependencies": []
+          "runId": "task-43077fdc-7d34-4704-9d9a-bd879e02c584",
+          "startedAt": 1793509631465,
+          "recordStatus": "running",
+          "pid": 33136,
+          "processState": "alive",
+          "processIdentity": "unverified",
+          "observationStale": true,
+          "blocker": null
         }
       ],
+      "pending": [],
       "failed": [
         {
           "id": "build-magic-authenticated-admission",
@@ -552,35 +556,7 @@
           "pid": 24320,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        },
-        {
-          "id": "build-magic-bounded-shop-quote-readiness",
-          "kind": "build",
-          "goal": "skills",
-          "capability": "magic-order",
-          "runId": "task-72789a66-9901-4f0e-b3b4-82b9faa41198",
-          "startedAt": 1793508961283,
-          "recordStatus": "running",
-          "pid": 10752,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
-          "blocker": null
-        },
-        {
-          "id": "qualify-recovery-bigchopper-restless-end",
-          "kind": "qualify",
-          "goal": "skills",
-          "capability": "session-recovery-only",
-          "runId": "task-e715caf9-2660-40d6-8333-487e185c6084",
-          "startedAt": 1793509510528,
-          "recordStatus": "running",
-          "pid": 35172,
-          "processState": "alive",
-          "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         }
       ],
@@ -610,8 +586,8 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-magic-bounded-shop-quote-readiness",
-              "status": "running"
+              "id": "build-magic-retained-quote-native-release",
+              "status": "pending"
             },
             {
               "id": "run-recovery-shaftmaker-quote-end",
@@ -629,10 +605,20 @@
           "status": "waiting-dependencies",
           "dependencies": [
             {
-              "id": "build-magic-bounded-shop-quote-readiness",
-              "status": "running"
+              "id": "build-magic-retained-quote-native-release",
+              "status": "pending"
             }
           ]
+        },
+        {
+          "id": "build-magic-retained-quote-native-release",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": null,
+          "startedAt": null,
+          "status": "queued",
+          "dependencies": []
         }
       ],
       "failed": [
@@ -2965,6 +2951,26 @@
           "startedAt": 1793508961233,
           "at": 1793509104535,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-magic-bounded-shop-quote-readiness",
+          "kind": "build",
+          "goal": "skills",
+          "capability": "magic-order",
+          "runId": "task-72789a66-9901-4f0e-b3b4-82b9faa41198",
+          "startedAt": 1793508961283,
+          "at": 1793509630203,
+          "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "qualify-recovery-bigchopper-restless-end",
+          "kind": "qualify",
+          "goal": "skills",
+          "capability": "session-recovery-only",
+          "runId": "task-e715caf9-2660-40d6-8333-487e185c6084",
+          "startedAt": 1793509510528,
+          "at": 1793509690936,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -4030,7 +4036,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-4",
-              "status": "pending"
+              "status": "running"
             }
           ]
         },
@@ -4045,7 +4051,7 @@
           "dependencies": [
             {
               "id": "build-combat-giant-style-4",
-              "status": "pending"
+              "status": "running"
             },
             {
               "id": "qualify-combat-giant-style-3",
@@ -4064,7 +4070,7 @@
           "dependencies": [
             {
               "id": "qualify-recovery-bigchopper-restless-end",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
