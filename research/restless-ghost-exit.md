@@ -1,0 +1,7 @@
+# Restless Ghost surface exit
+
+Source -> consumer -> adapt -> check: `scripts/generated/quest-priest.ts`, shared `quest-lib.ts` teleport fallback and `quest-runemysteries.ts` ladder exit -> ordinary no-law-rune Unsheathed entry -> explicitly climb the named Wizards’ Tower basement ladder and leave the tower before the existing surface fallback -> focused exit tests and native actual quest CLI from the observed entry with assets and logout reconciled.
+
+The basement uses level0 with worldZ above9000. Floor descent alone cannot reach the surface. Pinned reward is1QP and1125PrayerXP before25x. The qualified cloud candidate (`cloud/ghost-qualified-11ace`, runtime `6a9e5e8bbd2bd1daf5f3be0dbff510f9bedf6fe0cc35f879e0497afe9f81fa32`) completes normal Unsheathed entry in778native logged ticks: Prayer1→47,28125XP,QP2→3,allownedassets retained,minimumHP51 from53,nofood,confirmedlogout. Evidence: `.practice/ghost-exit/latest-native-proof.json` in the qualified candidate worktree.
+
+Protection unlocks at the skill threshold; its use consumes current Prayer points and needs recharge. The proof does not establish infinite protection. The clean master delivery has different runtime dependencies and is not qualified by the cloud candidate proof. Gap: fresh qualification for the master delivery base and one finite cloud pilot on the exact qualified candidate, then a second matched consumer if the first succeeds.
