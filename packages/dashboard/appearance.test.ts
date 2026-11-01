@@ -22,6 +22,6 @@ test('appearance: an npc transform has no worn items; a short or broken block is
  expect(decodeAppearance('AAA')).toBeNull();expect(decodeAppearance('not base64!')).toBeNull();
 });
 test('content table: pack ids joined to config names, with shown levels',()=>{
- const t=configTable('0=a\n1=b\n2=c',['[a]\nname=Bronze sword\n[b]\nname=Man\nvislevel=2\n[c]\ndesc=no name']);
- expect([...t]).toEqual([[0,{name:'Bronze sword'}],[1,{name:'Man',level:2}]]);
+ const t=configTable('0=a\n1=b\n2=c',['[a]\nname=Bronze sword\ndesc=A razor sharp sword.\n[b]\nname=Man\nvislevel=2\n[c]\ndesc=no name']);
+ expect([...t]).toEqual([[0,{name:'Bronze sword',desc:'A razor sharp sword.'}],[1,{name:'Man',level:2}]]);
 });

@@ -1035,6 +1035,8 @@ function buildState() {
         pricesAt,
         // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
         // else the shop base price), for the page's item prices and bank value.
+        // The game's examine text of each held item (obj configs), for the page's Examine option.
+        itemExamine: (() => { const out: Record<string, string> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const d = Number.isInteger(i?.id) ? OBJS.get(i.id)?.desc : undefined; if (d && i.name) out[i.name] = d; } return out; })(),
         itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } return out; })(),
     };
     const icons: Record<string, number | null> = {};

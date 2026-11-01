@@ -8,21 +8,23 @@ import {join} from 'node:path';
 
 export const WEAR_SLOTS=['Head','Cape','Neck','Weapon','Body','Shield','Arms','Legs','Hair','Hands','Feet','Jaw'] as const;
 
-// A content pack ("<id>=<config key>") joined with its configs ("[key]" blocks): id -> name and shown level.
-export function configTable(pack:string,configs:string[]):Map<number,{name:string;level?:number}>{
- const byKey=new Map<string,{name?:string;level?:number}>();
- for(const text of configs){let cur:{name?:string;level?:number}|null=null;
+// A content pack ("<id>=<config key>") joined with its configs ("[key]" blocks): id -> name, shown level and
+// examine text.
+type ContentEntry={name:string;level?:number;desc?:string};
+export function configTable(pack:string,configs:string[]):Map<number,ContentEntry>{
+ const byKey=new Map<string,{name?:string;level?:number;desc?:string}>();
+ for(const text of configs){let cur:{name?:string;level?:number;desc?:string}|null=null;
   for(const line of text.split(/\r?\n/)){const head=/^\[([^\]]+)\]/.exec(line);if(head){cur={};byKey.set(head[1]!,cur);continue;}if(!cur)continue;
-   const kv=/^(name|vislevel)=(.*)$/.exec(line);if(!kv)continue;if(kv[1]==='name')cur.name=kv[2]!.trim();else if(/^\d+$/.test(kv[2]!.trim()))cur.level=Number(kv[2]);}}
- const out=new Map<number,{name:string;level?:number}>();
- for(const line of pack.split(/\r?\n/)){const m=/^(\d+)=(.+)$/.exec(line.trim());const c=m&&byKey.get(m[2]!);if(m&&c?.name)out.set(Number(m[1]),c.level?{name:c.name,level:c.level}:{name:c.name});}
+   const kv=/^(name|vislevel|desc)=(.*)$/.exec(line);if(!kv)continue;if(kv[1]==='name')cur.name=kv[2]!.trim();else if(kv[1]==='desc')cur.desc=kv[2]!.trim();else if(/^\d+$/.test(kv[2]!.trim()))cur.level=Number(kv[2]);}}
+ const out=new Map<number,ContentEntry>();
+ for(const line of pack.split(/\r?\n/)){const m=/^(\d+)=(.+)$/.exec(line.trim());const c=m&&byKey.get(m[2]!);if(m&&c?.name)out.set(Number(m[1]),{name:c.name,...(c.level?{level:c.level}:{}),...(c.desc?{desc:c.desc}:{})});}
  return out;
 }
 function files(dir:string,ext:string):string[]{return readdirSync(dir).flatMap(f=>{const p=join(dir,f);return statSync(p).isDirectory()?files(p,ext):p.endsWith(ext)?[p]:[];});}
 // The pinned server content's table for one config type ('npc', 'obj'); empty when the content is not checked out.
 export function loadContentTable(content:string,type:'npc'|'obj'){
  try{return configTable(readFileSync(join(content,'pack',type+'.pack'),'utf8'),files(join(content,'scripts'),'.'+type).map(f=>readFileSync(f,'utf8')));}
- catch{return new Map<number,{name:string;level?:number}>();}
+ catch{return new Map<number,ContentEntry>();}
 }
 
 const BASE37=' abcdefghijklmnopqrstuvwxyz0123456789';
