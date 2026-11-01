@@ -1,13 +1,21 @@
 {
   "id": "rune-bank-craft",
-  "goal": "Craft air runes from rune essence already in the bank: withdraw essence at the nearest bank, walk to the air altar, craft, bank the runes, repeat to a target level or until essence runs out.",
+  "goal": "Craft banked essence at the best owned altar, or run the fresh carrier mode with one crafter and a complete owned carrier roster.",
   "entry": "scripts/rune-bank-craft.ts",
   "files": [
     "scripts/rune-bank-craft.ts",
     "scripts/rune-bank-craft.test.ts",
-    "packages/practice/src/rune-bank-craft-proof.ts"
+    "packages/practice/src/rune-bank-craft-proof.ts",
+    "scripts/rune-carriers.ts",
+    "scripts/rune-carrier-start.ts",
+    "scripts/rune-carrier-trade.ts",
+    "scripts/rune-carrier-bank.ts",
+    "scripts/rune-carrier-roster.ts",
+    "scripts/rune-carrier-roster.test.ts",
+    "scripts/rune-carrier-cancel.test.ts",
+    "packages/practice/src/rune-carriers-proof.ts"
   ],
-  "consumer": "Runecraft XP and banked air runes rise by the essence spent; the essence count drops by the same amount; logout confirmed.",
+  "consumer": "Ordinary mode raises Runecraft XP and banks the matching runes with exact essence consumption and logout. Fresh carrier mode reaches99 through the tutorial, owned starter-kit and talisman swaps, air/body travel and real carrier banking; preserve starter assets, reconcile all seventeen accounts and confirm every logout. A native finish is not a live scoreboard win.",
   "checks": [
     {
       "id": "rune-bank-craft-regressions",
@@ -16,6 +24,8 @@
         "bun",
         "test",
         "scripts/rune-bank-craft.test.ts",
+        "scripts/rune-carrier-roster.test.ts",
+        "scripts/rune-carrier-cancel.test.ts",
         "--timeout",
         "10000"
       ],
@@ -31,11 +41,30 @@
       "timeoutMs": 900000
     },
     {
+      "id": "rune-carrier-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/rune-carriers-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
       "id": "rune-bank-craft-saved",
       "phase": "consumer",
       "command": [
         "bun",
         "packages/practice/src/rune-bank-craft-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    },
+    {
+      "id": "rune-carrier-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/rune-carriers-proof.ts",
         "--verify"
       ],
       "timeoutMs": 30000
