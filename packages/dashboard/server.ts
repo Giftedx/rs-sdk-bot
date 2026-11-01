@@ -1026,6 +1026,9 @@ function buildState() {
         trend: vaultTrend.map(t => t.value),
         supplies: keySupplyIds().map(id => ({ id, ...(marketById.get(id) ?? { name: '?', ask: null, bid: null, stock: 0, vwap: null, base: null }) })).filter(x => x.name !== '?'),
         pricesAt,
+        // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
+        // else the shop base price), for the page's item prices and bank value.
+        itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } return out; })(),
     };
     const icons: Record<string, number | null> = {};
     const see = (l: any) => { for (const i of l ?? []) if (i?.name && !(i.name in icons)) icons[i.name] = iconId(i.name); };

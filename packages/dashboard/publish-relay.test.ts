@@ -39,7 +39,7 @@ describe('hosted views',()=>{
   expect(p.bots.map((b:any)=>b.name)).toEqual(['CoinCock']);
   for(const f of ['env','sessionAttemptId','workRevision','inputs','coordinatorRunId','bank','bankAt'])expect(f in p.bots[0]).toBe(false);
   expect(p.bots[0].pos).toEqual({x:1,z:2});
-  expect(p.economy).toEqual({supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:0,farmers:[],trend:[]});
+  expect(p.economy).toEqual({supplies:[{name:'Lobster',ask:100}],pricesAt:7,itemValues:{},goldPerTick:0,farmers:[],trend:[]});
   // Everything outside the whitelist is absent: banks, the plan, host resources, scripts, pull requests.
   for(const k of ['vault','collection','sys','viewerTimings','mainPlan','race','gates','requests','objectives','gapHistory','scripts','prs','capacity','swarm','scoreboard','overtake','chain'])expect(k in p).toBe(false);
   expect(p.coordination.tasks).toEqual([]);expect(p.coordination.available).toBe(true);expect(JSON.stringify(p)).not.toContain('w'.repeat(50));
@@ -76,4 +76,10 @@ describe('withSides',()=>{
   expect(s.now).toBe(1);
   expect(withSides({bots:null},new Map())).toEqual({bots:null});
  });
+});
+
+test('public item values cover only what public bots carry or wear',()=>{
+ const p=publicView({bots:[{name:'CoinCock',inventory:[{name:'Lobster',count:2}],equipment:[{name:'Bronze axe'}],bank:[{name:'Rune bar',count:9}]}],
+  economy:{supplies:[],pricesAt:1,itemValues:{Lobster:150,'Bronze axe':16,'Rune bar':5000}}});
+ expect(p.economy.itemValues).toEqual({Lobster:150,'Bronze axe':16});
 });
