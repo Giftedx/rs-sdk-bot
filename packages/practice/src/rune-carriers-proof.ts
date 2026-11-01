@@ -54,10 +54,19 @@ async function run(dir:string){
   const stop=()=>{termination??=killTree(child.pid);};
   const timer=setTimeout(()=>{timedOut=true;stop();},1200000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
   const code=await child.exited;clearTimeout(timer);clearInterval(floor);await termination;
+  const meta={source,names,freshAbsent,code,timedOut,lowMemory,elapsedMs:Date.now()-started,publications:[] as {name:string;expectedTicks:number;matched:boolean}[]};
+  writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));
   for(let i=0;i<paths.length;i++)if(existsSync(paths[i]!)){
-   await waitPracticeSave(paths[i]!,s=>code!==0||i!==0||s.skills[20]!.level===99,{timeoutMs:6000});copyFileSync(paths[i]!,join(dir,i+'-after.sav'));
+   if(code===0){
+    const status=JSON.parse(readFileSync(join(root,'.practice/status',names[i]+'.json'),'utf8'));
+    if(status.name!==names[i]||status.server!=='localhost:8910'||status.started<started||!/^ok(?:\s|$)/.test(status.result??'')||!Number.isSafeInteger(status.tick)||status.tick<1)throw Error('fresh completed carrier status unavailable: '+names[i]);
+    const expectedTicks=(i?readFileSync(join(dir,i+'-before.sav')).readInt32BE(24):0)+status.tick;
+    const saved=await waitPracticeSave(paths[i]!,()=>readFileSync(paths[i]!).readInt32BE(24)===expectedTicks,{timeoutMs:6000});
+    meta.publications.push({name:names[i]!,expectedTicks,matched:saved.matched});writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));
+    if(!saved.matched)throw Error('final carrier save publication timed out: '+names[i]);
+   }
+   copyFileSync(paths[i]!,join(dir,i+'-after.sav'));
   }
-  writeFileSync(join(dir,'native.json'),JSON.stringify({source,names,freshAbsent,code,timedOut,lowMemory,elapsedMs:Date.now()-started},null,2));
   return verify(dir);
  }finally{try{await stack?.stop();}finally{
   if(stack)for(const [service,path]of Object.entries(stack.logs))if(existsSync(path))copyFileSync(path,join(dir,service+'.log'));
