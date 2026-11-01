@@ -789,24 +789,25 @@ function evidenceTree(dir:string):Record<string,string>{
   else result[name]=digest(readFileSync(join(dir,name)));
  }};walk('');return result;
 }
-test('actual --verify CLI leaves all evidence names and bytes unchanged on success and failure',()=>{
+test('actual --verify CLI leaves all evidence names and bytes unchanged on success and failure',async()=>{
  const {dir}=recordedCopy(),food=recoveryUnitBundle();
  try{
   cpSync(food.dir,join(dir,'food-recovery'),{recursive:true});
   const generated=verificationReport(dir);
   expect(Object.entries(generated.checks).filter(([,v])=>!v)).toEqual([]);
   writeFileSync(join(dir,'consumer.json'),JSON.stringify(generated));
-  const cli=()=>spawnSync(process.execPath,['packages/practice/src/agility-order-proof.ts','--verify'],
-   {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir},encoding:'utf8',windowsHide:true,timeout:10000});
-  let tree=evidenceTree(dir),child=cli();
-  expect(child.error).toBeUndefined();expect(child.status).toBe(0);expect(JSON.parse(child.stdout.trim()).ok).toBe(true);
+  const cli=async()=>{const p=Bun.spawn([process.execPath,'packages/practice/src/agility-order-proof.ts','--verify'],
+   {cwd:resolve(import.meta.dir,'../../..'),env:{...process.env,DELIVERY_DIR:dir},stdout:'pipe',stderr:'pipe',windowsHide:true,timeout:10000});
+   const [status,stdout,stderr]=await Promise.all([p.exited,new Response(p.stdout).text(),new Response(p.stderr).text()]);return{status,stdout,stderr};};
+  let tree=evidenceTree(dir),child=await cli();
+  expect(child.status).toBe(0);expect(JSON.parse(child.stdout.trim()).ok).toBe(true);
   expect(evidenceTree(dir)).toEqual(tree);
   // Imported functions have the same read-only contract.
   expect(verify(dir).ok).toBe(true);expect(evidenceTree(dir)).toEqual(tree);
   writeFileSync(join(dir,'food-recovery','inflight-1.log'),food.ilog.replace('"anim":741','"anim":-1'));
-  tree=evidenceTree(dir);child=cli();expect(child.status).toBe(1);expect(JSON.parse(child.stdout.trim()).ok).toBe(false);
+  tree=evidenceTree(dir);child=await cli();expect(child.status).toBe(1);expect(JSON.parse(child.stdout.trim()).ok).toBe(false);
   expect(evidenceTree(dir)).toEqual(tree);expect(verify(dir).ok).toBe(false);expect(evidenceTree(dir)).toEqual(tree);
-  unlinkSync(join(dir,'consumer.json'));tree=evidenceTree(dir);child=cli();expect(child.status).toBe(1);
+  unlinkSync(join(dir,'consumer.json'));tree=evidenceTree(dir);child=await cli();expect(child.status).toBe(1);
   expect(evidenceTree(dir)).toEqual(tree);
  }finally{rmSync(dir,{recursive:true,force:true});rmSync(food.dir,{recursive:true,force:true});}
 },30000);
@@ -1211,7 +1212,7 @@ test('read-only Gnome verifier accepts the complete synthetic delivery through f
   expect(failed(r.checks)).toEqual([]);expect(r.ok).toBe(true);expect(r.scope).toBe(GNOME_SCOPE);
   expect(evidenceTree(g.root)).toEqual(tree);
   const child=gnomeCli(g.root);
-  expect(child.error).toBeUndefined();expect(child.status).toBe(0);expect(JSON.parse(child.stdout.trim()).ok).toBe(true);
+  expect(child.error).toBeUndefined();expect(child.status,child.stdout+child.stderr).toBe(0);expect(JSON.parse(child.stdout.trim()).ok).toBe(true);
   expect(evidenceTree(g.root)).toEqual(tree);
   // A failing delivery keeps its exact names and bytes too; the rejected report stays untouched.
   rmSync(g.dirs.ardougne!,{recursive:true,force:true});
