@@ -34,6 +34,40 @@ test('sent confirmations still require both inventory publications',()=>{
  const result=handoff('no-credit');expect(result.error).toContain('essence transfer did not reconcile');expect(result.received).toBe(0);
 });
 
+test('delayed carrier transfer opening avoids cancellation and reconciles27 essence on both actors',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';
+ let phase=0,pending,duplicate=false,cancelled=false;
+ const requests=[],closed=()=>({isOpen:false,screen:null,myOffer:[],theirOffer:[],myAccepted:false});
+ const s={name:'Crafter',pack:[],trade:closed()},h={name:'Carrier',pack:Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})),trade:closed()};
+ const essence=a=>a.pack.filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0),before=[essence(s),essence(h)];
+ for(const [a,other]of [[s,h],[h,s]]){
+  a.tick=()=>phase;a.direct=async()=>{requests.push({name:a.name,tick:phase});if(phase>0&&phase<3)duplicate=true;return{success:true}};
+  a.sdk={getInventory:()=>a.pack,getState:()=>({trade:a.trade,nearbyPlayers:[{name:other.name,index:1}]}),scanGroundItems:async()=>{},sendOfferItem:async(slot,amount)=>{
+   if(a!==h||amount!==-1||!a.pack.some(i=>i.slot===slot))throw Error('unexpected offer');
+   a.trade.myOffer=a.pack.map(i=>({...i}));other.trade.theirOffer=a.trade.myOffer.map(i=>({...i}));a.trade.myAccepted=false;other.trade.myAccepted=false;return{success:true};
+  },sendAcceptTrade:async()=>{a.trade.myAccepted=true;return{success:true}}};
+ }
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
+  if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;
+   if(phase===3)for(const [a,o]of [[s,h],[h,s]])a.trade={...closed(),isOpen:true,screen:'offer',partner:o.name};
+   if(phase===4){
+    if(duplicate){cancelled=true;for(const [a,o]of [[s,h],[h,s]])a.trade={...closed(),isOpen:true,screen:'offer',partner:o.name};}
+    else if(s.trade.myAccepted&&h.trade.myAccepted)for(const a of [s,h]){a.trade.screen='confirm';a.trade.myAccepted=false;}
+   }
+   if(phase===5&&!cancelled&&s.trade.screen==='confirm'&&h.trade.screen==='confirm'&&s.trade.myAccepted&&h.trade.myAccepted){s.pack=h.pack;h.pack=[];s.trade=closed();h.trade=closed();}
+   pending=undefined;r();}));return pending;
+ }}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h);}catch(e){error=String(e);}
+ const after=[essence(s),essence(h)];console.log(JSON.stringify({error,requests,duplicate,cancelled,before,after,deltas:after.map((n,i)=>n-before[i])}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());const result=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ expect(result.error).toBe('');expect(result.duplicate).toBe(false);expect(result.cancelled).toBe(false);
+ expect(result.requests).toEqual([{name:'Carrier',tick:0},{name:'Crafter',tick:0}]);
+ expect(result.before).toEqual([0,27]);expect(result.after).toEqual([27,0]);expect(result.deltas).toEqual([27,-27]);
+});
+
 test('a delayed walking handshake is not cancelled by repeated trade requests',()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
