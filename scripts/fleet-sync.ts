@@ -2,11 +2,13 @@
 // (.practice/fleet-data), never in the code checkout: pulls the other side's orders, receipts and snapshot, writes
 // this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn and skill levels of this
 // side's listed accounts from .practice/status, never practice bots or credentials) and this side's live assignments
-// (fleet/plans/<side>.json from the swarm plan, so other machines and audits see what runs), commits fleet/ and pushes.
+// (fleet/plans/<side>.json: the swarm plan merged with the coordinator's jobs, as scripts/swarm.ts runs them, so other
+// machines and audits see what runs), commits fleet/ and pushes.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
+import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..');
 const BRANCH = 'fleet-data';
@@ -56,7 +58,7 @@ export function runSync(push = true): string {
     if (prior !== JSON.stringify(snap.accounts)) writeFileSync(file, JSON.stringify(snap) + '\n');
     const planFile = resolve(process.env.SWARM_PLAN ?? join(root, 'swarm.json'));
     if (existsSync(planFile)) {
-        const view = planView(JSON.parse(readFileSync(planFile, 'utf8')).jobs ?? [], snap.side, owners);
+        const view = planView(mergeJobs(JSON.parse(readFileSync(planFile, 'utf8')).jobs ?? [], readCoordinatorJobs(root).jobs), snap.side, owners);
         mkdirSync(join(dir, 'fleet', 'plans'), { recursive: true });
         const out = join(dir, 'fleet', 'plans', `${snap.side}.json`);
         const was = (() => { try { return JSON.stringify(JSON.parse(readFileSync(out, 'utf8')).jobs); } catch { return ''; } })();

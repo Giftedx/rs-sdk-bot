@@ -1,5 +1,13 @@
 import { test, expect } from 'bun:test';
 import { planView } from './fleet-sync';
+import { mergeJobs } from '../packages/core/src/coordinator-jobs';
+
+test('a coordinator job takes its account in the view, as the swarm runs it', () => {
+    const owners = new Map([['oreelse', { side: 'local', server: 'rs-sdk-demo.fly.dev' }]]) as any;
+    const owner = [{ account: 'OreElse', script: 'scripts/goldfarm.ts', enabled: true }];
+    const coordinator = [{ account: 'OreElse', script: 'scripts/magic-order.ts', enabled: true, goal: 'run-magic' }];
+    expect(planView(mergeJobs(owner, coordinator), 'local', owners, 1).jobs.filter(j => j.enabled)).toEqual([{ account: 'OreElse', script: 'scripts/magic-order.ts', enabled: true, goal: 'run-magic' }]);
+});
 
 test('the plan view holds only this side\'s jobs, never the main account or job notes', () => {
     const owners = new Map([['oreelse', { side: 'local', server: 'rs-sdk-demo.fly.dev' }], ['haggis', { side: 'local', server: 'rs-sdk-demo.fly.dev' }],
