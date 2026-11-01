@@ -1135,6 +1135,16 @@ without producing lit torch 594 (`quest_seaslug.rs2`), so receipt precedes rubbi
 `scripts/quest-seaslug-torch.test.ts`. Normal entry at low Hitpoints and Firemaking 30 still needs a real-CLI native
 proof with no preset torch, separately staged prerequisites, reconciled assets, quest flag, XP and confirmed logout;
 the high-level preset measurements above do not prove that entry.
+The `khazard_paste` profile in `scripts/shop-buyer.ts` reuses observed purchase, banking and budget logic for
+swamp paste1941 only: keeper555 at2641,3171; stock500/restock20 (`port_khazard.inv`), base30
+(`skill_cooking/configs/cooking_generic/cooking.obj`), sell multiplier1400 (`port_khazard.npc`). Nominal full-stock
+price is42; observed price controls spending. Finite caller: `ITEMS='swamp paste' MAX_ITEMS=1 STOCK_TARGET=1
+BANK_AT=1 MAX_SPEND=252 FLOAT=452 COIN_RESERVE=200 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1`.
+It returns paste banked at Ardougne south2654,3283; Sea Slug accepts that entry by withdrawing exactly one
+unnoted with a fresh bank debit and pack credit receipt. Missing paste elsewhere refuses before travel. This path
+requires a low-HP route/prerequisite native proof before live staging. Eight normal logs from zero produce8000XP,
+Firemaking31; normal conditional qualification uses that reachable baseline, no torch, and separately priced paste.
+
 
 ### Cause of "I can't reach that!" at the broken glass (test runs t1-t13)
 

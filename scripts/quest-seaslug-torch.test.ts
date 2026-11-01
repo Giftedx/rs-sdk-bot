@@ -66,3 +66,58 @@ test('Bailey approach matches the pinned NPC spawn', () => {
     expect(map.npcs.filter(n => n.id === 695).map(n => [n.x, n.z, n.level])).toEqual([[2763, 3276, 0]]);
     expect(readFileSync('vendor/rs-sdk/server/content/pack/npc.pack', 'utf8')).toContain('695=bailey');
 });
+
+import { takeSeaSlugPaste } from './generated/quest-seaslug';
+import { PROFILES, planShopPurchases, maximumUnitCost } from './shop-buyer';
+function pasteFixture() {
+    let pack = 0, bank = 1, generation = 0, open = false, near = true, stop = false, receipt = true, fresh = true, accepts = true;
+    const calls: string[] = [];
+    const observation = () => ({ generation, items: [{ id: 1941, name: 'Swamp paste', count: bank }] });
+    const q = {
+        has: () => pack > 0, cnt: () => pack, near: () => near, lvl: () => 0,
+        guard: async () => { if (stop) throw Error('stopped'); }, fail: async (message: string) => { throw Error(message); },
+        st: () => ({ bank: { isOpen: open, items: bank > 0 ? [{ id: 1941, name: 'Swamp paste', count: bank }] : [] } }),
+        waitUntil: async (observed: () => boolean) => observed(),
+        s: { bankObservation: observation, bot: {
+            openBank: async () => { calls.push('open'); open = true; if (fresh) generation++; return { success: true }; },
+            withdrawItem: async (_item: unknown, amount: number, options: unknown) => {
+                calls.push('withdraw'); expect(amount).toBe(1); expect(options).toEqual({ asNote: false });
+                if (accepts) { pack++; if (receipt) { bank--; generation++; } }
+                return { success: accepts };
+            },
+            closeBank: async () => { calls.push('close'); open = false; return { success: true }; },
+        } },
+    } as unknown as Parameters<typeof takeSeaSlugPaste>[0];
+    return { q, calls, counts: () => [pack, bank], held: () => { pack = 1; },
+        missing: () => { bank = 0; }, away: () => { near = false; }, stop: () => { stop = true; },
+        stale: () => { fresh = false; }, noReceipt: () => { receipt = false; }, refuse: () => { accepts = false; } };
+}
+test('banked paste withdraws exactly one unnoted with fresh debit and credit receipt', async () => {
+    const f = pasteFixture(); await takeSeaSlugPaste(f.q);
+    expect(f.calls).toEqual(['open', 'withdraw', 'close']); expect(f.counts()).toEqual([1, 0]);
+    const held = pasteFixture(); held.held(); await takeSeaSlugPaste(held.q); expect(held.calls).toEqual([]);
+});
+test('missing paste entry refuses unknown location, absent stock, stale bank and stop', async () => {
+    for (const [mode, error] of [['away', 'start at Ardougne'], ['missing', 'owned bank paste missing'], ['stale', 'bank unobserved'], ['stop', 'stopped']] as const) {
+        const f = pasteFixture(); f[mode](); await expect(takeSeaSlugPaste(f.q)).rejects.toThrow(error);
+        expect(f.calls).not.toContain('withdraw');
+    }
+});
+test('paste credit alone or refused withdrawal cannot claim a bank receipt', async () => {
+    const f = pasteFixture(); f.noReceipt(); await expect(takeSeaSlugPaste(f.q)).rejects.toThrow('withdrawal unobserved');
+    const refused = pasteFixture(); refused.refuse(); await expect(takeSeaSlugPaste(refused.q)).rejects.toThrow('withdrawal refused');
+});
+test('Khazard paste profile targets exact pinned shopkeeper and only one paste under finite budget', () => {
+    const profile = PROFILES.khazard_paste!;
+    expect(profile.npc.test('Shop keeper')).toBe(true); expect(profile.npc.test('Shopkeeper')).toBe(false);
+    expect(profile.npcSpot).toEqual({ x: 2641, z: 3171 }); expect(profile.bankSpot).toEqual({ x: 2654, z: 3283 });
+    expect(profile.items).toHaveLength(1); expect(profile.items[0]!.re.test('Swamp paste')).toBe(true);
+    expect(planShopPurchases(profile.items, [{ name: 'Swamp paste', count: 500, buyPrice: 42 }], [], new Map(), 252, 1, 1)).toEqual([{ name: 'Swamp paste', amount: 1 }]);
+    expect(maximumUnitCost({ baseCost: 30 }, { sellMultiplier: 1400 })).toBe(192);
+    const map = parseJm2('m41_49.jm2', readFileSync('vendor/rs-sdk/server/content/maps/m41_49.jm2', 'utf8'));
+    expect(map.npcs.some(n => n.id === 555 && n.x === 2641 && n.z === 3171 && n.level === 0)).toBe(true);
+    const inv = readFileSync('vendor/rs-sdk/server/content/scripts/areas/area_ardougne_east/configs/port_khazard/port_khazard.inv', 'utf8');
+    expect(inv).toContain('stock12=swamppaste,500,20');
+    expect(readFileSync('vendor/rs-sdk/server/content/scripts/areas/area_ardougne_east/configs/port_khazard/port_khazard.npc', 'utf8')).toContain('param=shop_sell_multiplier,1400');
+    expect(readFileSync('vendor/rs-sdk/server/content/scripts/skill_cooking/configs/cooking_generic/cooking.obj', 'utf8')).toContain('[swamppaste]\nname=Swamp paste\ndesc=A tar like substance mixed with flour and warmed.\ncost=30');
+});
