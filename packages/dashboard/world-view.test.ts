@@ -29,7 +29,8 @@ test('spot contention counts other players near a claimed tile on the ground flo
     expect(v[1]).toEqual({ side: 'local', resource: 'shop:aubury', kind: 'shop', x: null, z: null, others: [], ours: [] });
 });
 test('a lookup carries the hiscore rows and the last world-feed sighting', () => {
-    expect(lookupView('Zezima', [], 7, roster.get('zezima'), now)).toEqual({ name: 'Zezima', at: 7, rows: [], online: true, x: 2585, z: 3300, plane: 0, combat: 99, lastSeen: now - 1000 });
+    expect(lookupView('Zezima', [], 7, roster.get('zezima'), now)).toEqual({ name: 'Zezima', at: 7, rows: [], online: true, x: 2585, z: 3300, plane: 0, combat: 99, lastSeen: now - 1000, worn: null, wornAt: null });
+    expect(lookupView('Zezima', [], 7, roster.get('zezima'), now, [{ slot: 'Weapon', name: 'Bronze sword' }], 8)).toMatchObject({ worn: [{ slot: 'Weapon', name: 'Bronze sword' }], wornAt: 8 });
     expect(lookupView('Nobody', null, null, undefined, now).online).toBe(false);
 });
 

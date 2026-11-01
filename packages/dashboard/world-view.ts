@@ -54,9 +54,10 @@ export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen &
 }
 
 // One looked-up player: hiscore rows (or null when not fetched), and where the world feed last saw them.
-export function lookupView(name: string, rows: HiscoreRow[] | null, at: number | null, seen: Seen | undefined, now: number) {
+// worn: the player's worn items read from the world feed when the lookup ran (online players only).
+export function lookupView(name: string, rows: HiscoreRow[] | null, at: number | null, seen: Seen | undefined, now: number, worn: { slot: string; name: string }[] | null = null, wornAt: number | null = null) {
     const online = !!seen && now - seen.seen < ONLINE_MS;
-    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null };
+    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null, worn, wornAt };
 }
 
 // Bot farms: other players whose names follow one pattern, online now. A numbered series ("Money 01" … "Money 43",

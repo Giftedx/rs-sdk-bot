@@ -18,7 +18,8 @@ import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
-import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow} from './world-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow} from './world-view';
+import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
@@ -451,9 +452,13 @@ const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'resea
 // Player lookups (World plugin): any player's hiscore page, one request every 1.2 s, each kept 30 minutes. The page
 // asks through /api/player; in the background the top 3 of each board and the strangers at our spots are kept fresh,
 // because the hosted page cannot reach the hiscores itself (no CORS) and reads these from its published state.
-const lookups = new Map<string, { name: string; at: number; rows: HiscoreRow[] }>();
+type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; name: string }[] | null; wornAt: number | null };
+const lookups = new Map<string, Lookup>();
+// Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
+const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
+const wornOf = (name: string, seen: { x: number; z: number } | undefined) => seen && OBJS.size ? readWorn(DEMO.replace(/^http/, 'ws') + '/worldfeed', name, seen, OBJS) : Promise.resolve(null);
 let lookupChain: Promise<unknown> = Promise.resolve();
-function lookupPlayer(name: string): Promise<{ name: string; at: number; rows: HiscoreRow[] } | null> {
+function lookupPlayer(name: string): Promise<Lookup | null> {
     const key = name.toLowerCase(), hit = lookups.get(key);
     if (hit && Date.now() - hit.at < 1_800_000) return Promise.resolve(hit);
     const job = lookupChain.then(async () => {
@@ -461,7 +466,9 @@ function lookupPlayer(name: string): Promise<{ name: string; at: number; rows: H
         if (again && Date.now() - again.at < 1_800_000) return again;
         try {
             const r = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(key)}?profile=main`, { signal: AbortSignal.timeout(15_000) });
-            const entry = { name, at: Date.now(), rows: r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [] };
+            const rows = r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [], seen = roster.get(key), online = !!seen && Date.now() - seen.seen < ONLINE_MS;
+            const worn = online ? await wornOf(name, seen) : null;
+            const entry: Lookup = { name, at: Date.now(), rows, worn, wornAt: worn ? Date.now() : null };
             lookups.set(key, entry);
             if (lookups.size > 400) lookups.delete(lookups.keys().next().value!);
             return entry;
@@ -1033,6 +1040,7 @@ function buildState() {
     const icons: Record<string, number | null> = {};
     const see = (l: any) => { for (const i of l ?? []) if (i?.name && !(i.name in icons)) icons[i.name] = iconId(i.name); };
     for (const b of bots as any[]) { see(b.inventory); see(b.bank); }
+    for (const l of lookups.values()) see(l.worn);
     see(v.items); see([{ name: 'Coins' }]); for (const t of v.log) see(t.items); for (const f of v.flow) see(f.items);
     const prac = practiceNames();
     const sys = {
@@ -1065,7 +1073,7 @@ function buildState() {
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
             lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).slice(0, 3).map(x => x.name)), ...contention.flatMap(s => s.others)])];
-            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 120).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now)]));
+            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 120).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
             return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
@@ -1170,7 +1178,7 @@ Bun.serve({
             const name = url.searchParams.get('name') ?? '';
             if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return Response.json({ error: 'a player name is 1-12 letters, digits, spaces, - or _' }, { status: 400 });
             if (name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
-            return lookupPlayer(name).then(hit => Response.json(lookupView(name, hit?.rows ?? null, hit?.at ?? null, roster.get(name.toLowerCase()), Date.now())));
+            return lookupPlayer(name).then(hit => Response.json(lookupView(name, hit?.rows ?? null, hit?.at ?? null, roster.get(name.toLowerCase()), Date.now(), hit?.worn ?? null, hit?.wornAt ?? null)));
         }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});

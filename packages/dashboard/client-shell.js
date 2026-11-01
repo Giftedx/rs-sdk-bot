@@ -160,6 +160,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const overall=rank('Overall'),qp=rank('Quest Points');
     return `<div class="lookup-card"><div class="xp-head"><span>${E(l.name)}</span><span class="${l.online?'friend-on':'friend-off'}">${l.online?'online '+E(placeOf(l.x,l.z)):l.lastSeen?'last seen '+age(l.lastSeen)+' ago':'not seen online'}</span></div><div class="xp-stats">${l.combat!=null?`<span>Combat <b>${l.combat}</b></span>`:''}${overall?`<span>Overall <b>#${nf(overall.rank)} · ${overall.level}</b></span>`:''}${qp?`<span>QP <b>${qp.level}</b></span>`:''}</div>`+
       (l.rows?(l.rows.length?`<div class="hs-grid">${grid}</div>`:'<p class="xp-muted">Not on the demo hiscores.</p>'):`<p class="xp-muted">${E(l.note||'Hiscores not loaded.')}</p>`)+
+      // Worn items from the player's appearance in the world feed, read with the lookup (online players only).
+      (Array.isArray(l.worn)?`<div class="xp-head lookup-worn-head"><span>Worn items</span>${l.wornAt?`<span class="xp-muted">${age(l.wornAt)} ago</span>`:''}</div>`+(l.worn.length?`<div class="lookup-worn">${l.worn.map(w=>`<span class="lookup-worn-item" title="${E(w.slot+': '+w.name)}">${icon(w.name,32)}<small>${E(w.name)}</small></span>`).join('')}</div>`:'<p class="xp-muted">Wears nothing.</p>'):'')+
       (l.at?`<p class="xp-muted">Hiscores read ${age(l.at)} ago.</p>`:'')+(l.online?`<button class="game-control" data-world-go="${l.x},${l.z}">Show on the map</button>`:'')+'</div>';
   }
   function lookup(name){
