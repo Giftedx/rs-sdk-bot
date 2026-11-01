@@ -9,7 +9,7 @@ const cursor=(s:Session)=>Math.max(0,...messages(s).map(m=>m.observationId??0));
 async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
  const at=s.tick();
  if(!await waitUntil(s,()=>ess(h)===27&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
- let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>();
+ let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,levelupDismissed=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>();
  while(s.tick()-at<35&&ess(s)!==27&&!stop()){
   {
    await new Promise<void>(resolve=>setImmediate(resolve));
@@ -22,6 +22,11 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
   if(snapshot!==last){console.log('RC_TRADE_STATE '+JSON.stringify({at:Date.now(),tick:s.tick(),actors:JSON.parse(snapshot)}));last=snapshot;}
   if(trade(s)?.isOpen||trade(h)?.isOpen)opened=true;
   if(!trade(s)?.isOpen&&!trade(h)?.isOpen&&!opened&&!responseSent){
+   const dialog=state(s).dialog;
+   if(!levelupDismissed&&dialog?.isOpen&&dialog.allComponents?.some(c=>/^(@dbl@)?Congratulations, you just advanced a runecraft level\.$/i.test(c.text))){
+    // This modal keeps the crafter busy, so an incoming trade request cannot arrive until it closes.
+    await s.direct({type:'closeModal',reason:'SDK'});levelupDismissed=true;
+   }
    const incoming=()=>messages(s).some(m=>m.type===4&&m.sender?.toLowerCase()===h.name.toLowerCase()
     &&m.text==='wishes to trade with you.'&&(m.observationId??0)>incomingCursor);
    // Retry only a server-refused request. The incoming request acknowledges acceptance after the craft delay.
