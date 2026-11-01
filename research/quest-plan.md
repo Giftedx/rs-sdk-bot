@@ -1127,6 +1127,15 @@ in the pack (7, Firemaking 30, `quest_seaslug.rs2:42-63`); Kennith (8); kick the
 (11); Holgart to the shore; Caroline (`caroline.rs2:33-48`, 71,750 Fishing x25 = 179,375). The dry sticks come from
 damp sticks (1467, spawn 2784,3289) and broken glass (1469, spawns 2765,3278 and 2765,3289, `maps/m43_51.jm2` OBJ).
 
+Normal prepared entry needs Firemaking 30 and swamp paste 1941, not a helper-supplied torch. Pinned
+`area_fishing_platform/scripts/bailey.rs2` gives unlit torch 596 at stage 6; NPC 695 spawns at 2763,3276,0
+(`maps/m43_51.jm2`). The existing worker adapts this dialogue after returning from Kent only when neither torch
+is held, observes receipt, and keeps the six-attempt lighting bound. Rubbing without a torch can advance stage 7
+without producing lit torch 594 (`quest_seaslug.rs2`), so receipt precedes rubbing. Focused check:
+`scripts/quest-seaslug-torch.test.ts`. Normal entry at low Hitpoints and Firemaking 30 still needs a real-CLI native
+proof with no preset torch, separately staged prerequisites, reconciled assets, quest flag, XP and confirmed logout;
+the high-level preset measurements above do not prove that entry.
+
 ### Cause of "I can't reach that!" at the broken glass (test runs t1-t13)
 
 The engine collision is correct. The platform tiles are bridged: the level-1 map flag of each tile has LinkBelow
