@@ -277,7 +277,8 @@ function showViewerStatus(){
 }
 function setMode(m,preserve=false){
   if(m==='2d'&&!preserve){VIEWER_REQUEST++;clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'idle',detail:''};}
-  if(m==='2d'){$('#rsw').removeAttribute('src');rswFor=null;globalThis.atlasOpponentClear?.();}
+  // Leaving 3D ends a follow of another player: the 2D map and the overlay return to the selected account.
+  if(m==='2d'){$('#rsw').removeAttribute('src');rswFor=null;globalThis.atlasOpponentClear?.();if(globalThis.atlasFollowOther){globalThis.atlasFollowOther=null;globalThis.atlasOverlay?.();}}
   mode=m;$('#rsw').contentWindow?.postMessage({fps:m==='3d'?20:1},VIEWER.origin);
   $('#mw').classList.toggle('d2',m==='2d');$('#b3').classList.toggle('on',m==='3d');$('#b2').classList.toggle('on',m==='2d');$('#legend').style.display=m==='2d'?'flex':'none';
   showViewerStatus();if(S){syncWorld();drawMap();}
@@ -399,9 +400,9 @@ function inspect(){
  $('#detail-page').textContent=`${detailPage+1} / ${detailPages}`;$('#detail-prev').disabled=detailPage===0;$('#detail-next').disabled=detailPage>=detailPages-1;
 }
 function boardGrid(){const specialist=specialistRows(),rows=(S.race?.rows?.length?S.race.rows:(S.boards||[]).map(b=>({label:b.board})));put('#board-grid',rows.map(r=>{const b=specialist.find(b=>boardKey(b.board)===boardKey(r.label))?.best,model=boardMode==='model',board=(S.boards||[]).find(x=>boardKey(x.board)===boardKey(r.label)),below=!b&&board?.kind==='value'&&board.cutoff,value=model?(r.real?.status==='WIN'?'WIN':r.real?.slack!=null?compact(r.real.slack):'?'):(b?(b.recent?'#':'~#')+nf(b.rank):below?nf(board.cutoff.rank)+'+':'?'),cls=model?(r.real?.status==='WIN'?'win':r.real?.status==='LATE'?'late':'unknown'):(b?.recent?'':'unknown');return `<button class="board ${cls}" data-board="${E(r.label)}" title="${E(model?'Main route model, not a game result':b?safeName(b.name)+' · '+age(b.at)+' old · tie rules unverified':below?'None of our accounts is in the top '+board.cutoff.rank+'; #'+board.cutoff.rank+' holds '+board.cutoff.text:'No owned rank observation')}">${skillIcon(r.label)}<span class="bname">${E(r.label)}</span><b class="${model&&r.real?.status==='LATE'?'bad':''}">${E(value)}</b></button>`}).join(''));$('#board-mode').textContent=boardMode==='model'?'Main model · ticks':'Specialists · rank';$('#board-age').textContent=boardMode==='model'?`Targets ${age(S.race?.sourceAt)} old`:'~ = old rank · ? = unknown · #1 may tie';}
-function pick(n){if(!n)return;if(window.atlasFollowOther){window.atlasFollowOther=null;rswFor=null;}sel=n;picked=true;view='account';detailPage=0;render();}
+function pick(n){if(!n)return;if(window.atlasFollowOther){window.atlasFollowOther=null;rswFor=null;window.atlasOverlay?.();}sel=n;picked=true;view='account';detailPage=0;render();}
 // Any online player, followed by the 3D camera (a player lookup's Follow button); picking one of our accounts returns.
-window.atlasFollow3d=name=>{const f=$('#rsw');if(mode!=='3d'||VIEWER.state!=='ready'||!f.contentWindow||!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return false;window.atlasFollowOther=name;f.contentWindow.postMessage({follow:name},VIEWER.origin);syncWorld();return true;};
+window.atlasFollow3d=name=>{const f=$('#rsw');if(mode!=='3d'||VIEWER.state!=='ready'||!f.contentWindow||!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return false;window.atlasFollowOther=name;f.contentWindow.postMessage({follow:name},VIEWER.origin);syncWorld();window.atlasOverlay?.();return true;};
 function choose(v){view=v;detailPage=0;render();}
 function render(){if(!S)return;S.bots??=[];if(!window.atlasFreeCamera&&(!sel||!S.bots.some(b=>b.name===sel)))sel=liveBots().find(b=>b.operation==='observed')?.name||null;
  if(TOUR&&S.now-TOUR_AT>60000){TOUR_AT=S.now;const a=liveBots().filter(running);if(a.length)sel=a[(a.findIndex(b=>b.name===sel)+1)%a.length].name;}
