@@ -159,6 +159,6 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
 }
 if(import.meta.main){
  let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}});
- try{const r=await runEarthProduction(s,{mode:process.argv[3] as 'talismans'|'craft',cap:Number(process.argv[4]),target:Number(process.env.STOCK_TARGET),reserve:Number(process.env.COIN_RESERVE),killsPerTarget:Number(process.env.HUNT_KILLS_PER_TARGET??0),stop:()=>stopped});console.log('EARTH_PRODUCTION '+JSON.stringify(r));await settle([s],r.ok,Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' '));process.exitCode=r.ok?0:1;}
+ try{const r=await runEarthProduction(s,{mode:process.argv[3] as 'talismans'|'craft',cap:Number(process.argv[4]),target:Number(process.env.STOCK_TARGET),reserve:Number(process.env.COIN_RESERVE),killsPerTarget:Number(process.env.HUNT_KILLS_PER_TARGET??0),stop:()=>stopped});console.log('EARTH_PRODUCTION '+JSON.stringify(r));process.exitCode=await settle([s],r.ok,Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' '))?0:1;}
  catch(e){await settle([s],false,String(e));process.exitCode=1;}
 }
