@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793519308552,
+  "exportedAt": 1793519909473,
   "sources": {
     "state": {
-      "observedAt": 1793519254332.985,
-      "ageMs": 54219.014892578125,
-      "stale": false,
+      "observedAt": 1793519720484.3726,
+      "ageMs": 188988.62744140625,
+      "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793519306953,
-      "ageMs": 1599,
+      "observedAt": 1793519909236,
+      "ageMs": 237,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 13883258.283447266,
+      "ageMs": 14484179.283447266,
       "stale": true,
       "error": null
     }
@@ -511,17 +511,17 @@
     "codex": {
       "running": [
         {
-          "id": "build-quest-sweep-retained-full-delivery",
+          "id": "build-ranged-isolated-practice-consumer",
           "kind": "build",
-          "goal": "quests",
-          "capability": "quest-sweep",
-          "runId": "task-c5fdd727-d58a-46a7-bc21-8b2588adab4a",
-          "startedAt": 1793519252818,
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": "task-1a7645e0-b2f7-47c8-86fb-c89aae77426f",
+          "startedAt": 1793519718885,
           "recordStatus": "running",
-          "pid": 23020,
+          "pid": 14960,
           "processState": "alive",
           "processIdentity": "unverified",
-          "observationStale": false,
+          "observationStale": true,
           "blocker": null
         }
       ],
@@ -2926,6 +2926,16 @@
           "startedAt": 1793518682474,
           "at": 1793519169578,
           "blocker": "task failed; inspect the preserved local receipt"
+        },
+        {
+          "id": "build-quest-sweep-retained-full-delivery",
+          "kind": "build",
+          "goal": "quests",
+          "capability": "quest-sweep",
+          "runId": "task-c5fdd727-d58a-46a7-bc21-8b2588adab4a",
+          "startedAt": 1793519252818,
+          "at": 1793519426220,
+          "blocker": "task failed; inspect the preserved local receipt"
         }
       ],
       "lastUsefulLive": {
@@ -2949,13 +2959,13 @@
         "evidence": "live-session-recovery"
       },
       "lastPreparation": {
-        "id": "review-quest-isolated-engine-disconnect",
+        "id": "review-quest-engine-exit255-boundary",
         "kind": "review",
         "goal": "quests",
         "capability": "quest-sweep",
-        "runId": "task-1be09c35-e24e-493e-af0d-9e2c0ee94bdb",
-        "startedAt": 1793518465962,
-        "at": 1793518537814,
+        "runId": "task-87f89218-5036-41f1-a61c-0ac2cec0fd4f",
+        "startedAt": 1793519507590,
+        "at": 1793519615564,
         "evidence": "review"
       }
     },
@@ -3090,7 +3100,7 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3124,7 +3134,7 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3822,7 +3832,7 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -3875,7 +3885,7 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4079,7 +4089,7 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4098,7 +4108,7 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4117,21 +4127,6 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
-            }
-          ]
-        },
-        {
-          "id": "run-ranged-bigchopper-native-consumer-band80",
-          "kind": "run",
-          "goal": "skills",
-          "capability": "ranged-train",
-          "runId": null,
-          "startedAt": null,
-          "status": "waiting-dependencies",
-          "dependencies": [
-            {
-              "id": "build-ranged-native-consumer-release",
               "status": "failed"
             }
           ]
@@ -4196,7 +4191,7 @@
             },
             {
               "id": "build-quest-sweep-retained-full-delivery",
-              "status": "running"
+              "status": "failed"
             }
           ]
         },
@@ -4211,6 +4206,21 @@
           "dependencies": [
             {
               "id": "build-quest-sweep-retained-full-delivery",
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "id": "run-ranged-bigchopper-isolated-proof-band80",
+          "kind": "run",
+          "goal": "skills",
+          "capability": "ranged-train",
+          "runId": null,
+          "startedAt": null,
+          "status": "waiting-dependencies",
+          "dependencies": [
+            {
+              "id": "build-ranged-isolated-practice-consumer",
               "status": "running"
             }
           ]
