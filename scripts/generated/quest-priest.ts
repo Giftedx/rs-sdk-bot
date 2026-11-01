@@ -7,6 +7,7 @@
 import { openQuest } from './quest-lib';
 import {waitUntil} from '../../packages/core/src/ticks';
 import {leaveGhostBasement} from '../ghost-basement-exit';
+import {readSkullResume,validateSkullResume,SKULL_WAIT_TICKS} from '../ghost-skull-entry';
 
 const AERECK = { x: 3244, z: 3206 };
 const URHNEY = { x: 3235, z: 3153 };
@@ -24,6 +25,21 @@ try {
     const inBasement = () => (q.pos()?.worldZ ?? 0) > 9000;
     const ghostState = () => q.sawText(/try and get the skull back/i);
 
+    const openCoffin = async (label: string): Promise<void> => {
+        await q.walk(`${label} shed`, [{ x: 3246, z: 3193, tol: 1 }]);
+        await q.openDoor(`${label} shed door`, 3247, 3193);
+        const shut = () => q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)));
+        const open = () => q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z && (l.optionsWithIndex ?? []).some((o: any) => /^close$/i.test(o.text)));
+        await q.step(`${label} coffin`, () => { const c = shut(); return c ? q.opLoc(c, q.opIndex(c, /^open$/i)) : q.waitTicks(1); }, () => !!open(), 10, 4);
+    };
+    const resume=process.env.GHOST_ENTRY;
+    if(resume&&resume!=='skull-pickup')throw Error('unsupported GHOST_ENTRY');
+    if(resume){
+        if(!process.env.GHOST_PRIOR_RUN)throw Error('skull resume needs GHOST_PRIOR_RUN');
+        const proof=readSkullResume(process.env.GHOST_PRIOR_RUN),p=q.pos();
+        validateSkullResume(proof.prior,proof.log,proof.logout,{name:process.argv[2]!,x:p?.worldX??-1,z:p?.worldZ??-1,level:p?.level??-1,inventory:q.s.sdk.getInventory(),equipment:q.s.sdk.getEquipment()});
+        q.milestone(3);
+    }else{
     // 1. Aereck: "I'm looking for a quest!" sets 1.
     await q.talk('aereck', /^father aereck$/i, [/looking for a quest/i], () => q.sawText(/father urhney is an expert/i), AERECK);
     q.milestone(1);
@@ -39,13 +55,6 @@ try {
 
     // 3. The graveyard shed (door loc_1530 at 3247,3193): open the coffin, which spawns the ghost; talk with the amulet
     // worn: "Yep, now tell me what the problem is." sets 3 (restless_ghost.rs2:16-29, 130-139).
-    const openCoffin = async (label: string): Promise<void> => {
-        await q.walk(`${label} shed`, [{ x: 3246, z: 3193, tol: 1 }]);
-        await q.openDoor(`${label} shed door`, 3247, 3193);
-        const shut = () => q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z && (l.optionsWithIndex ?? []).some((o: any) => /^open$/i.test(o.text)));
-        const open = () => q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z && (l.optionsWithIndex ?? []).some((o: any) => /^close$/i.test(o.text)));
-        await q.step(`${label} coffin`, () => { const c = shut(); return c ? q.opLoc(c, q.opIndex(c, /^open$/i)) : q.waitTicks(1); }, () => !!open(), 10, 4);
-    };
     await openCoffin('ghost');
     await q.talk('ghost', /^restless ghost$/i, [/yep, now tell me what the problem is/i], ghostState, GHOST, 60);
     q.milestone(3);
@@ -60,7 +69,9 @@ try {
     await q.dash('corridor', 3109, 9560, 1);
     await q.openDoor('skull door', 3111, 9559);
     await q.walk('to skull', [{ x: SKULL_AT.x, z: SKULL_AT.z, tol: 1 }]);
+    }
     const skullOnGround = (): any => (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.skull);
+    if(!await q.waitUntil(()=>!!skullOnGround(),SKULL_WAIT_TICKS))throw Error('shared skull unavailable within '+SKULL_WAIT_TICKS+' ticks');
     await q.step('take skull', () => { const g = skullOnGround(); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.skull), 10, 5);
     q.milestone(4);
 
