@@ -388,12 +388,18 @@ const ranks = new Map<string, { at: number; rows: Row[] }>();
 type RankRec = { at: number; name: string; board: string; rank: number; level: number };
 const rankHist = new Map<string, RankRec[]>(); // name|board -> history, oldest first
 for (const r of tailJsonl<RankRec>(FILES.ranks, 5000)) { const k = r.name + '|' + r.board; const l = rankHist.get(k) ?? []; l.push(r); rankHist.set(k, l); }
+let ranksRefreshing = false;
 async function refreshRanks() {
+    if (ranksRefreshing) return;
+    ranksRefreshing = true;
+    try {
     for (const name of [...liveAccounts(), ...remoteNames()]) {
         const r = ranks.get(name);
         if (r && Date.now() - r.at < 300_000) continue;
         try {
-            const rows: Row[] = hiscoreRows(await (await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`)).text(), SKILL_BOARDS);
+            const response = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Player ranks HTTP ${response.status}`);
+            const rows: Row[] = hiscoreRows(await response.text(), SKILL_BOARDS);
             ranks.set(name, { at: Date.now(), rows });
             for (const row of rows) {
                 const k = name + '|' + row.board, l = rankHist.get(k) ?? [], last = l[l.length - 1];
@@ -405,6 +411,7 @@ async function refreshRanks() {
         } catch { /* next round */ }
         await Bun.sleep(1200);
     }
+    } finally { ranksRefreshing = false; }
 }
 setInterval(() => void refreshRanks(), 60_000);
 void refreshRanks();
@@ -434,7 +441,9 @@ const boardTops = new Map<string, { at: number; rows: BoardRow[] }>();
 async function refreshLiveTops() {
     for (const b of SKILL_BOARDS) {
         try {
-            const rows = parseBoard(await (await fetch(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`, { signal: AbortSignal.timeout(15_000) })).text());
+            const response = await fetch(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Board HTTP ${response.status}`);
+            const rows = parseBoard(await response.text());
             if (rows[0]) { liveTop.set(b, { name: rows[0].name, level: rows[0].level, ticks: rows[0].ticks, at: Date.now() }); boardTops.set(b, { at: Date.now(), rows: rows.slice(0, RIVALS_PER_BOARD) }); }
         } catch { /* keep the last value */ }
         await Bun.sleep(1000);
@@ -489,7 +498,9 @@ const extraBoards = new Map<string, { at: number; rows: ValueRow[] }>();
 async function refreshExtra() {
     for (const e of EXTRA) {
         try {
-            const rows = valueBoardRows(await (await fetch(`${DEMO}/hiscores/${e.path}?profile=main`)).text());
+            const response = await fetch(`${DEMO}/hiscores/${e.path}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Value board HTTP ${response.status}`);
+            const rows = valueBoardRows(await response.text());
             if (rows.length) extraBoards.set(e.board, { at: Date.now(), rows });
         } catch { /* next round */ }
     }
@@ -516,19 +527,26 @@ const keySupplyIds = () => cached<number[]>(KEY_SUPPLY_FILE, t => Object.values(
 let pricesAt = 0;
 async function refreshPrices() {
     try {
+        const nextIds = new Map<string, number>(), nextMarket = new Map<number, typeof marketById extends Map<number, infer T> ? T : never>(), nextPrices = new Map<string, number>();
         // 100 items per page (the API refuses more); about 15 pages.
         for (let offset = 0, total = 1; offset < total; offset += 100) {
-            const j = await (await fetch(`${DEMO}/api/market/items?limit=100&offset=${offset}`, { signal: AbortSignal.timeout(15_000) })).json() as { items: any[]; total: number };
+            const response = await fetch(`${DEMO}/api/market/items?limit=100&offset=${offset}`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Market HTTP ${response.status}`);
+            const j = await response.json() as { items: any[]; total: number };
+            if (!Number.isSafeInteger(j.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('Invalid market page');
             total = Math.min(j.total ?? 0, 5000);
             // The market is thin: one trade set Bread's lastPrice to 1,000,000. Use the 7-day VWAP when the item
             // traded at least 3 times, else the shop base price.
             for (const i of j.items ?? []) {
-                if (i.id != null) { marketIds.set(String(i.name).toLowerCase(), Number(i.id)); marketById.set(Number(i.id), { name: i.name, ask: i.ask ?? null, bid: i.bid ?? null, stock: i.sellQuantity ?? 0, vwap: i.vwap ?? null, base: i.basePrice ?? null }); }
+                if (i.id != null) { nextIds.set(String(i.name).toLowerCase(), Number(i.id)); nextMarket.set(Number(i.id), { name: i.name, ask: i.ask ?? null, bid: i.bid ?? null, stock: i.sellQuantity ?? 0, vwap: i.vwap ?? null, base: i.basePrice ?? null }); }
                 const p = i.vwap != null && (i.trades ?? 0) >= 3 ? i.vwap : i.basePrice;
-                if (p != null) prices.set(String(i.name).toLowerCase(), Number(p));
+                if (p != null) nextPrices.set(String(i.name).toLowerCase(), Number(p));
             }
             await Bun.sleep(500); // 2 requests a second at most
         }
+        marketIds.clear();for (const [key,value] of nextIds) marketIds.set(key,value);
+        marketById.clear();for (const [key,value] of nextMarket) marketById.set(key,value);
+        prices.clear();for (const [key,value] of nextPrices) prices.set(key,value);
         pricesAt = Date.now();
     } catch { /* next round */ }
 }
@@ -1178,7 +1196,7 @@ Bun.serve({
         if(['/map-shell.css','/map-shell.js','/client-shell.css','/client-shell.js','/client-viewer.css','/operations.css','/operations.js','/xp-tracker.js'].includes(url.pathname))return new Response(Bun.file(join(import.meta.dir,url.pathname.slice(1))),{headers:{'content-type':url.pathname.endsWith('.css')?'text/css':'text/javascript','cache-control':'no-store'}});
         if(url.pathname.startsWith('/client-assets/')) {
             const name=url.pathname.slice('/client-assets/'.length);
-            if(!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
+            if(name!=='npc-names.json'&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
             const file=Bun.file(join(import.meta.dir,'client-assets',name));
             return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
         }
