@@ -21,7 +21,8 @@ type EvidenceRef={path:string;sha256:string};
 export type ControlledRecoveryRequest=RecoveryRequest&{kind:'session-recovery';qualification:{delivery:EvidenceRef;proof:EvidenceRef}};
 export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;capability?:(capability:unknown)=>string|undefined;nativeFixture?:boolean};
 type Checks=RecoveryPermitChecks;
-type Permit={schema:'session-recovery-permit/1';request:ControlledRecoveryRequest;controller:{pid:number;nonce:string;source:string};issuedAt:number;expiresAt:number;runnerSha256:string;nativeFixture:boolean;completedEnd?:unknown;missionRevision?:string};
+type ProducerRef={attemptId:string;sha256:string|null};
+type Permit={schema:'session-recovery-permit/1';request:ControlledRecoveryRequest;controller:{pid:number;nonce:string;source:string};issuedAt:number;expiresAt:number;runnerSha256:string;nativeFixture:boolean;completedEnd?:unknown;missionRevision?:string;producerHistory?:ProducerRef[]};
 const sha=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');
 const json=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
 const same=(a:unknown,b:unknown)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
@@ -187,10 +188,22 @@ function capabilityRelease(capability:unknown,base:string):string|undefined{
 // A crash, malformed marker or failed child leaves its lease held. This module never clears an end or retries.
 export function issueRecoveryPermit(r:ControlledRecoveryRequest,base:string,options:Checks={}):Permit{
  const checked=authority(r,base,options,true),paths=recoveryPermitPaths(r,base);
- if(checked.completedEnd&&(checked.latest.state!=='none'||listAttempts(r.account,r.server,{root:join(base,'.practice/session-lifecycle')}).length))throw Error('recovery completed account already has producer history');
+ let producerHistory:ProducerRef[]|undefined;
+ if(checked.completedEnd){
+  const attempts=listAttempts(r.account,r.server,{root:join(base,'.practice/session-lifecycle')}),last=attempts.at(-1),a=last?.receipt;
+  // A retired producer that reached START but disconnected needs cleanup, not a new owner for its history.
+  // authority already checks that its owner is gone. Partial intents and confirmed histories stay refused.
+  const held=checked.latest.state==='held'&&checked.latest.attemptId===last?.attemptId&&a
+   &&attempts.every(t=>t.receipt&&same(t.receipt.account,r.account)&&t.receipt.server===r.server&&t.receipt.attemptId===t.attemptId)
+   &&a.createdAt<=a.updatedAt&&a.updatedAt<=r.endedAt
+   &&a.events.some(e=>e.kind==='ready')&&a.events.find(e=>e.kind==='ended')?.detail==='disconnected'
+   &&a.events.filter(e=>e.kind==='logout').at(-1)?.detail==='disconnected';
+  if(!(checked.latest.state==='none'&&attempts.length===0)&&!held)throw Error('recovery completed account already has producer history');
+  producerHistory=attempts.map(({attemptId,sha256})=>({attemptId,sha256}));
+ }
  assertNoRecoveryLease(r.account,base);
  const permit:Permit={schema:'session-recovery-permit/1',request:r,controller:checked.owner,issuedAt:checked.now,expiresAt:checked.now+150000,runnerSha256:checked.runnerSha256,nativeFixture:!!options.nativeFixture,
-  ...(checked.completedEnd?{completedEnd:checked.completedEnd,missionRevision:checked.missionRevision}:{})};
+  ...(checked.completedEnd?{completedEnd:checked.completedEnd,missionRevision:checked.missionRevision,producerHistory}:{})};
  mkdirSync(dirname(paths.permit),{recursive:true});writeFileSync(paths.permit,JSON.stringify(permit),{flag:'wx'});linkSync(paths.permit,paths.lease);return permit;
 }
 function current(r:ControlledRecoveryRequest,base:string,options:Checks,controller=false,ownedChild=false):Permit{
@@ -198,12 +211,16 @@ function current(r:ControlledRecoveryRequest,base:string,options:Checks,controll
  if(!isDeepStrictEqual(p.completedEnd,checked.completedEnd)||p.missionRevision!==checked.missionRevision)throw Error('recovery completed end or mission changed');
  if(p.completedEnd){
   const attempts=listAttempts(r.account,r.server,{root:join(base,'.practice/session-lifecycle')});
-  if(attempts.length){
-   const child=existsSync(paths.child)?json(paths.child):null,used=existsSync(paths.used)?json(paths.used):null,a=attempts[0]?.receipt;
-   if(attempts.length!==1||!a||child?.pid!==used?.pid||used?.nonce!==r.nonce||a.createdAt<p.issuedAt
+  const history:ProducerRef[]=p.producerHistory??[],retained=attempts.slice(0,history.length).map(({attemptId,sha256})=>({attemptId,sha256}));
+  if(!isDeepStrictEqual(history,retained))throw Error('recovery completed producer ownership changed');
+  const fresh=attempts.slice(history.length);
+  if(fresh.length){
+   const child=existsSync(paths.child)?json(paths.child):null,used=existsSync(paths.used)?json(paths.used):null,a=fresh[0]?.receipt;
+   if(fresh.length!==1||!a||child?.pid!==used?.pid||used?.nonce!==r.nonce||a.createdAt<p.issuedAt
+    ||!('attemptId' in checked.latest)||checked.latest.attemptId!==fresh[0]?.attemptId
     ||a.owner.pid!==child.pid||a.owner.coordinatorRunId!==r.runId||a.owner.workerRelease!==r.source||a.owner.script!==RECOVERY_SCRIPT)
     throw Error('recovery completed producer ownership changed');
-  }else if(checked.latest.state!=='none')throw Error('recovery completed producer ownership changed');
+  }else if(history.length?checked.latest.state!=='held'||checked.latest.attemptId!==history.at(-1)?.attemptId:checked.latest.state!=='none')throw Error('recovery completed producer ownership changed');
  }
  if(p.schema!=='session-recovery-permit/1'||p.nativeFixture!==!!options.nativeFixture||!isDeepStrictEqual(p.request,r)||!isDeepStrictEqual(p.controller,checked.owner)
   ||p.runnerSha256!==checked.runnerSha256||!Number.isFinite(p.issuedAt)||p.issuedAt>checked.now||p.expiresAt!==p.issuedAt+150000||checked.now>=p.expiresAt
