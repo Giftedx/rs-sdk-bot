@@ -2019,8 +2019,8 @@ An honourable loss also completes the trial, so the vote and the quest flag do n
 
 The fourth-form victory queue emits the unique defeat dialogue and grants `viking_sword`
 ([viking_thorvald.rs2:304](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L304)).
-Use the owned fight record, that dialogue and the same-session reward grant as evidence; holding a blade alone
-does not prove a kill. The generated worker attacks all four forms but accepts the return from the arena without
+Use the account's fight record, the victory dialogue and the reward grant from that fight as evidence. A blade in
+inventory alone does not prove victory. The generated worker attacks all four forms but accepts the return from the arena without
 checking which outcome caused it
 ([quest-viking.ts:409](../scripts/generated/quest-viking.ts#L409)). A complete-quest result from that worker must
 remain separate from a verified fourth-form victory. Native qualification and live victory evidence for this
