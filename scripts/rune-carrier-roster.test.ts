@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import {runeCarrierRoster,assertFreshRuneSkills,assertRuneDonor} from './rune-carrier-roster';
-const skills=Array.from({length:21},(_,i)=>({name:i===3?'Hitpoints':'Skill'+i,baseLevel:i===3?10:1,xp:i===3?980:0}));
+const skills=Array.from({length:21},(_,i)=>({name:i===3?'Hitpoints':'Skill'+i,baseLevel:i===3?10:1,experience:i===3?980:0}));
 test('the composed worker uses the complete ordered supervisor roster',()=>{
  expect(runeCarrierRoster(['Wandwaver','Shaftsinker','Bigchopper','--carriers'])).toEqual(['Wandwaver','Shaftsinker','Bigchopper']);
  for(const args of [['Wandwaver','--carriers'],['Wandwaver','Shaftsinker','shaftsinker','--carriers'],['Wandwaver','99','--carriers','extra']])expect(()=>runeCarrierRoster(args)).toThrow();
@@ -9,7 +9,7 @@ test('the composed worker uses the complete ordered supervisor roster',()=>{
 test('a missing or trained skill refuses the fresh route',()=>{
  expect(()=>assertFreshRuneSkills(skills)).not.toThrow();
  expect(()=>assertFreshRuneSkills(skills.slice(1))).toThrow();
- expect(()=>assertFreshRuneSkills(skills.map((s,i)=>i===20?{...s,xp:1}:s))).toThrow();
+ expect(()=>assertFreshRuneSkills(skills.map((s,i)=>i===20?{...s,experience:1}:s))).toThrow();
  expect(()=>assertFreshRuneSkills(skills.map((s,i)=>i===0?{...s,baseLevel:2}:s))).toThrow();
 });
 test('the opening donor is checked before the fresh account logs in',()=>{
