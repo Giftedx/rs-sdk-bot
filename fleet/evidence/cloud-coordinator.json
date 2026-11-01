@@ -1,0 +1,111 @@
+{
+  "schema": "coordinator-progress/1",
+  "side": "cloud",
+  "exportedAt": 1793493289804,
+  "sources": {
+    "state": {
+      "observedAt": 1793443205187.269,
+      "ageMs": 50084616.73095703,
+      "stale": true,
+      "error": null
+    },
+    "swarm": {
+      "observedAt": 1793493288332,
+      "ageMs": 1472,
+      "stale": false,
+      "error": null
+    },
+    "owner": {
+      "observedAt": 1793442796758.2532,
+      "ageMs": 50493045.74682617,
+      "stale": true,
+      "error": null
+    }
+  },
+  "coordinator": {
+    "paused": true,
+    "pid": 27505,
+    "processState": "dead",
+    "processIdentity": "unverified",
+    "planner": null
+  },
+  "workers": {
+    "claude": {
+      "running": [],
+      "pending": [],
+      "failed": [],
+      "lastUsefulLive": null,
+      "lastRecovery": null,
+      "lastPreparation": null
+    },
+    "codex": {
+      "running": [],
+      "pending": [],
+      "failed": [],
+      "lastUsefulLive": null,
+      "lastRecovery": {
+        "id": "cloud-recover-unsheathed",
+        "kind": "run",
+        "goal": "wealth",
+        "capability": "session-recovery-only",
+        "runId": "task-492b4692-c42f-45e2-b847-7d0418469cbf",
+        "startedAt": 1793443177240,
+        "at": 1793443203888,
+        "evidence": "live-session-recovery"
+      },
+      "lastPreparation": {
+        "id": "cloud-recovery-qualified",
+        "kind": "qualify",
+        "goal": "wealth",
+        "capability": "session-recovery-only",
+        "runId": "task-ff627776-2538-4f03-92fb-b93acfeb101a",
+        "startedAt": 1793442796767,
+        "at": 1793443139589,
+        "evidence": "qualify"
+      }
+    },
+    "unassigned": {
+      "running": [],
+      "pending": [],
+      "failed": [],
+      "lastUsefulLive": null,
+      "lastRecovery": null,
+      "lastPreparation": null
+    }
+  },
+  "swarm": {
+    "controllerPid": 934,
+    "processState": "alive",
+    "reportedRunning": 1,
+    "observationStale": false,
+    "jobs": [
+      {
+        "account": "TossTheCaber",
+        "script": "scripts/generated/thieving60.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "BraveHardon",
+        "script": "scripts/generated/thieving60.ts",
+        "state": "disabled"
+      },
+      {
+        "account": "Swordswallow",
+        "script": "scripts/quest-cook-job.ts",
+        "state": "running"
+      },
+      {
+        "account": "Unsheathed",
+        "script": "scripts/gather-feathers.ts",
+        "state": "ended: done after 1 runs"
+      }
+    ]
+  },
+  "limits": [
+    "PID existence does not establish process identity or useful output.",
+    "Source freshness is separate from export freshness.",
+    "Only succeeded live gameplay run receipts count as useful live coordinator results; session recovery is separate.",
+    "Model attribution covers coordinator tasks; swarm gameplay is reported separately.",
+    "Archived coordinator task history is not included."
+  ]
+}
