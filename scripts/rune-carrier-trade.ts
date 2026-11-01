@@ -29,6 +29,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
   for(const actor of [h,s]){
    const t=trade(actor);if(!t?.isOpen)continue;
    if(t.partner&&t.partner.toLowerCase()!==(actor===s?h.name:s.name).toLowerCase())throw Error('unexpected carrier trade partner');
+   if(t.myAccepted)continue;
    const giver=actor===h?t.myOffer:t.theirOffer,receiver=actor===h?t.theirOffer:t.myOffer;
    if(receiver?.length||(giver??[]).some(i=>i.id!==1436)||(giver??[]).reduce((n,i)=>n+i.count,0)>27)throw Error('unexpected carrier trade stock');
    if(t.screen==='confirm'&&(giver??[]).reduce((n,i)=>n+i.count,0)!==27)throw Error('incomplete carrier confirmation');
