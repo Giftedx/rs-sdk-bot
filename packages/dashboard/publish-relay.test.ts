@@ -6,7 +6,7 @@ const state=()=>({now:1,bots:[
   {name:MAIN_MARK,reserved:true,bank:[],env:{}},
  ],coordination:{available:true,tasks:[{id:'t1',why:'w'.repeat(1000),detail:'d'.repeat(1000),status:'pending'}]},
  sys:{freeGB:5,procs:[{pid:1,script:'swarm.ts'}]},viewerTimings:[{ms:1}],vault:{coins:9},collection:{items:[]},economy:{supplies:[{name:'Lobster',ask:100}],pricesAt:7,goldPerTick:3,farmers:[{name:'CoinCock'}],trend:[1]},mainPlan:{rows:[{board:'Overall',note:`${MAIN_MARK} first`}]},requests:{open:[{id:'1',request:'owner words'}]},race:{rows:[]},gates:{go:false},
- fleetSides:{at:1,sides:[{side:'cloud',at:1,late:false,accounts:[{name:'TossTheCaber',at:1,total:40,coins:900},{name:MAIN_MARK,at:1,total:1,coins:1}]}],orders:[]},
+ fleetSides:{at:1,sides:[{side:'cloud',at:1,late:false,accounts:[{name:'TossTheCaber',at:1,total:40,coins:900},{name:MAIN_MARK,at:1,total:1,coins:1}]}],orders:[{from:'BowBeforeMe',to:'Shaftsinker',item:'Air talisman',count:1}]},
  roster:[['Zezima',1,2,0,99],[MAIN_MARK,3,4,0,3]],rivals:[{board:'Attack',at:1,ours:{rank:2,name:MAIN_MARK},rows:[{rank:1,name:'Zezima'},{rank:2,name:MAIN_MARK}]}],
  contention:[{side:'local',resource:'knight:1,2',others:['Zezima',MAIN_MARK],ours:[MAIN_MARK]}],lookups:{zezima:{name:'Zezima'},[MAIN_MARK]:{name:MAIN_MARK}},
  farms:[{label:'Money ##',names:['Money 01',MAIN_MARK]}],overtake:[{board:'Attack',account:'CoinCock'},{board:'Magic',account:MAIN_MARK}]});
@@ -45,6 +45,8 @@ describe('hosted views',()=>{
   expect(p.coordination.tasks).toEqual([]);expect(p.coordination.available).toBe(true);expect(JSON.stringify(p)).not.toContain('w'.repeat(50));
   expect(JSON.stringify(p)).not.toContain('owner words');
   expect(p.fleetSides.sides[0].accounts).toEqual([{name:'TossTheCaber',at:1,total:40}]);
+  // Orders between our own accounts are the owner's logistics.
+  expect('orders' in p.fleetSides).toBe(false);
   expect(p.roster).toEqual([['Zezima',1,2,0,99]]);expect(p.rivals[0].ours).toBeNull();expect(p.rivals[0].rows).toEqual([{rank:1,name:'Zezima'}]);
   expect(p.contention[0].others).toEqual(['Zezima']);expect(p.contention[0].ours).toEqual([]);expect(Object.keys(p.lookups)).toEqual(['zezima']);
   expect(p.farms[0].names).toEqual(['Money 01']);
@@ -57,11 +59,11 @@ describe('hosted views',()=>{
   expect('mainPlan' in publicView({bots:[],mainPlan:{note:'haggis route'},objectives:{lanes:[{next:'haggis route'}]}})).toBe(false);
  });
  test('public bots keep game-visible fields and lose run counters, banks and coordinator internals',()=>{
-  const b={name:'CoinCock',pos:{x:1,z:2},skills:[{name:'Attack',level:5,xp:400}],inventory:[{name:'Coins',count:9}],equipment:[],ranks:[],goal:'run-ge-coin [task-1a2b] buy (607 short): 1630 bronze in the bank',
+  const b={name:'CoinCock',pos:{x:1,z:2},skills:[{name:'Attack',level:5,xp:400}],inventory:[{name:'Coins',count:9}],equipment:[],ranks:[],goal:'coins [task-1a2b] buy (607 short): 1630 bronze in the bank',currentGoal:'run-ranged-coincock-owned-band50',
    phase:'banked=15000 packCoins=5100',phaseShort:'banked 15.0K',result:'ok banked=15000',lastRes:{text:'ok banked=15000'},ledger:{coins:1},counters:{banked:15000},job:{script:'x'},planJob:{next:'y'},nativeProof:{ok:true},timeline:'xxi',role4:{coinsPerTick:3},bank:[{name:'Coins',count:1}],bankAt:1,env:{a:1}};
   const p=publicView({bots:[b],results:[{at:1,name:'CoinCock',ok:true,goal:'coins [task-9]',text:'ok banked=15000 packCoins=5100',counters:{banked:15000}}],events:[{at:1,name:'CoinCock',text:'banked 15.0K',full:'banked=15000'}]});
-  expect(Object.keys(p.bots[0]).sort()).toEqual(['equipment','goal','inventory','name','pos','ranks','skills']);
-  expect(p.bots[0].goal).toBe('run-ge-coin buy');
+  expect(Object.keys(p.bots[0]).sort()).toEqual(['currentGoal','equipment','goal','inventory','name','pos','ranks','skills']);
+  expect(p.bots[0].goal).toBe('coins buy');expect(p.bots[0].currentGoal).toBe('Ranged training');
   expect(p.results).toEqual([{at:1,name:'CoinCock',ok:true,practice:undefined,text:'coins'}]);expect(p.events).toEqual([]);
   expect(JSON.stringify(p)).not.toMatch(/banked|packCoins|15000/);
  });
