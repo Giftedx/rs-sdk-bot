@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "cloud",
-  "exportedAt": 1793501745332,
+  "exportedAt": 1793502345378,
   "sources": {
     "state": {
       "observedAt": 1793443205187.269,
-      "ageMs": 58540144.73095703,
+      "ageMs": 59140190.73095703,
       "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793501743467,
-      "ageMs": 1865,
+      "observedAt": 1793502343587,
+      "ageMs": 1791,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793442796758.2532,
-      "ageMs": 58948573.74682617,
+      "ageMs": 59548619.74682617,
       "stale": true,
       "error": null
     }
@@ -76,7 +76,7 @@
   "swarm": {
     "controllerPid": 934,
     "processState": "alive",
-    "reportedRunning": 1,
+    "reportedRunning": 0,
     "observationStale": false,
     "jobs": [
       {
@@ -97,7 +97,7 @@
       {
         "account": "Unsheathed",
         "script": "scripts/generated/quest-priest.ts",
-        "state": "running"
+        "state": "ended: done after 1 runs"
       }
     ]
   },
