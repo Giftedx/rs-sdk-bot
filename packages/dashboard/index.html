@@ -232,14 +232,15 @@ function capacityView(){
 function machine(){return S.sys||{}}
 async function loadMap(){if(MAPI||!S.map?.ready)return;try{const response=await fetch('/api/map');if(!response.ok)return;const buf=new Uint8Array(await response.arrayBuffer()),m=S.map;if(buf.length!==m.w*m.h)return;const c=document.createElement('canvas');c.width=m.w;c.height=m.h;const g=c.getContext('2d'),img=g.createImageData(m.w,m.h);
   const col=[[6,6,5],[38,40,26],[14,30,44],[60,56,40]];for(let i=0;i<buf.length;i++){const px=i%m.w,pz=Math.floor(i/m.w),o=((m.h-1-pz)*m.w+px)*4,[r,gg,bb]=col[buf[i]]||col[0];img.data[o]=r;img.data[o+1]=gg;img.data[o+2]=bb;img.data[o+3]=255}g.putImageData(img,0,0);MAPI=c;drawMap();const art=new Image();art.onload=()=>{MAPI=art;window.atlasMapPx=art.width/(m.w*m.scale);drawMap()};art.src='/worldmap.png'}catch{}}
+function mapWorld(){const selected=S.bots.find(b=>b.name===sel),practice=!!selected?.practice;return {practice,bots:S.bots.filter(b=>practice?b.practice&&b.server===selected.server:!b.practice),roster:practice?[]:S.roster||[]};}
 function drawMap(){if(mode!=='2d'||!S)return;const c=$('#map'),w=c.clientWidth,h=c.clientHeight;if(!w)return;if(c.width!==w||c.height!==h){c.width=w;c.height=h}const g=c.getContext('2d'),m=S.map||{x0:2368,z0:2880,w:560,h:416,scale:2};
   // The 2D camera (client-shell.js atlasCam: centre tile and pixels a tile) replaces the fit when it is set.
   const fit=Math.min(w/(m.w*m.scale),h/(m.h*m.scale)),cam=window.atlasCam,sc=cam?.ppt||fit,ox=cam?w/2-(cam.cx-m.x0)*sc:(w-m.w*m.scale*sc)/2,oy=cam?h/2-(m.h*m.scale-(cam.cz-m.z0))*sc:(h-m.h*m.scale*sc)/2,X=x=>ox+(x-m.x0)*sc,Z=z=>oy+(m.h*m.scale-(z-m.z0))*sc;window.atlasFitPpt=fit;
   g.fillStyle='#050504';g.fillRect(0,0,w,h);if(MAPI){g.imageSmoothingEnabled=!!window.atlasMapPx;g.drawImage(MAPI,ox,oy,m.w*m.scale*sc,m.h*m.scale*sc)}
   if(sc>=2.5&&window.atlasSquare){g.imageSmoothingEnabled=true;const x0=Math.floor((m.x0+(0-ox)/sc)/64),x1=Math.floor((m.x0+(w-ox)/sc)/64),zTop=m.z0+m.h*m.scale-(0-oy)/sc,zBottom=m.z0+m.h*m.scale-(h-oy)/sc;for(let mx=x0;mx<=x1;mx++)for(let mz=Math.floor(zBottom/64);mz<=Math.floor(zTop/64);mz++){const img=window.atlasSquare(mx,mz);if(img)g.drawImage(img,X(mx*64),Z(mz*64+64),64*sc,64*sc)}}
   if(sc<2.5){g.font='11px "Barlow Semi Condensed",sans-serif';for(const[n,x,z]of PLACES){g.fillStyle='#a3957a';g.fillRect(X(x)-1.5,Z(z)-1.5,3,3);g.fillText(n,X(x)+5,Z(z)+3)}}
-  c._q=[];{const fleet=new Set(S.bots.map(b=>b.name.toLowerCase()));g.fillStyle='#d8d8d8';for(const [n,px,pz,pl] of S.roster||[]){if(pl!==0||fleet.has(String(n).toLowerCase()))continue;const x=X(px),z=Z(pz);if(x<0||z<0||x>w||z>h)continue;g.fillRect(x-1,z-1,2,2);c._q.push([x,z,n]);}}
-  c._p=[];for(const b of S.bots){const p=b.live||b.pos;if(!p||p.z>6400)continue;const[cl]=st(b),col=cl==='on'?'#7ed36a':cl==='wd'?'#e9b949':'#74684f',x=X(p.x),z=Z(p.z);c._p.push([x,z,b.name]);
+  c._q=[];{const fleet=new Set(mapWorld().bots.map(b=>b.name.toLowerCase()));g.fillStyle='#d8d8d8';for(const [n,px,pz,pl] of mapWorld().roster){if(pl!==0||fleet.has(String(n).toLowerCase()))continue;const x=X(px),z=Z(pz);if(x<0||z<0||x>w||z>h)continue;g.fillRect(x-1,z-1,2,2);c._q.push([x,z,n]);}}
+  c._p=[];for(const b of mapWorld().bots){const p=b.live||b.pos;if(!p||p.z>6400)continue;const[cl]=st(b),col=cl==='on'?'#7ed36a':cl==='wd'?'#e9b949':'#74684f',x=X(p.x),z=Z(p.z);c._p.push([x,z,b.name]);
     if(cl==='on'){g.beginPath();g.arc(x,z,11,0,7);g.fillStyle='#7ed36a26';g.fill()}g.beginPath();g.arc(x,z,sel===b.name?6:4.5,0,7);g.fillStyle=col;g.fill();if(sel===b.name){g.lineWidth=2;g.strokeStyle='#e9b949';g.stroke()}
     // Tile indicator (RuneLite): the followed account's tile, zoomed in; name tags carry the combat level then.
     if(sel===b.name&&sc>=2.5){g.lineWidth=1.5;g.strokeStyle='#00ffff';g.strokeRect(X(p.x)-sc/2,Z(p.z)-sc/2,sc,sc)}
@@ -289,6 +290,7 @@ function viewerUnavailable(reason){
   $('#rsw').removeAttribute('src');rswFor=null;setMode('2d',true);
 }
 async function request3D(){
+  if(S?.bots?.find(b=>b.name===sel)?.practice){viewerUnavailable('Practice observations use the 2D map. The 3D viewer shows the live world.');return;}
   const request=++VIEWER_REQUEST;clearTimeout(VIEWER_TIMER);VIEWER={...VIEWER,state:'checking',detail:'',feed:null};showViewerStatus();
   try{
     const response=await fetch('/api/viewer-health',{signal:AbortSignal.timeout(3000)});
@@ -319,7 +321,7 @@ window.addEventListener('message',e=>{
   if(e.data?.viewerTiming)fetch('/api/viewer-timing',{method:'POST',body:JSON.stringify(e.data.viewerTiming)}).catch(()=>{});
 });
 function syncWorld(){
-  const b=S.bots.find(x=>x.name===sel);$('#follow').textContent=window.atlasFreeCamera?(b?`${b.name} · last position ${age(b.at)} old`:'Free camera · explore the world'):mode==='3d'?(window.atlasFollowOther?`following ${window.atlasFollowOther} · pick one of our accounts to return`:b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${S.bots.filter(b=>b.live||b.pos).length} last-known positions`;
+  const b=S.bots.find(x=>x.name===sel);if(b?.practice&&mode==='3d'){viewerUnavailable('Practice observations use the 2D map. The 3D viewer shows the live world.');return;}$('#follow').textContent=window.atlasFreeCamera?(b?`${b.name} · last position ${age(b.at)} old`:'Free camera · explore the world'):mode==='3d'?(window.atlasFollowOther?`following ${window.atlasFollowOther} · pick one of our accounts to return`:b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${mapWorld().bots.filter(b=>b.live||b.pos).length} last-known positions`;
   showViewerStatus();if(mode!=='3d'||!VIEWER.url)return;
   const f=$('#rsw');
   if(!f.getAttribute('src')){
@@ -354,8 +356,10 @@ function specialistRows(){
  return (S.boards||[]).map(board=>{const entries=liveBots().flatMap(b=>(b.ranks||[]).filter(r=>boardKey(r.board)===boardKey(board.board)).map(r=>({...r,name:b.name,at:r.at??b.ranksAt,recent:observedAt(r.at??b.ranksAt,600000)})));
   const recent=entries.filter(r=>r.recent),best=(recent.length?recent:entries).sort((a,b)=>a.rank-b.rank)[0];return {...board,best};});
 }
+function goalPlanFor(g){const title={'Fleet & wealth':'Wealth / logistics / GE','Collection & gear':'Gear / collection','Quests · unlocks · 99s':'Coverage','Specialist hiscores':'Specialist hiscores','Main Overall':'Main Overall','Tick efficiency':'Efficiency / visibility'}[g.title];return S.objectives?.lanes?.find(l=>l.title===title);}
+function applyGoalPlan(g){const plan=goalPlanFor(g);return {...g,plan,next:S.objectives?.available&&plan?.next?plan.next:g.next};}
 function goalMetrics(){
- if(S.objectives?.progress?.length===6)return S.objectives.progress.map((g,i)=>({...g,next:S.objectives.available&&S.objectives.lanes?.[i]?.next?S.objectives.lanes[i].next:g.next}));
+ if(S.objectives?.progress?.length===6)return S.objectives.progress.map(applyGoalPlan);
  const bots=liveBots(),c=S.collection,obs=bots.filter(b=>b.at&&b.at<=S.now),maxed=obs.flatMap(b=>skills(b).filter(k=>k.level>=99)),L=bots.filter(b=>observedAt(b.at,20000)&&b.operation==='observed').map(ledger).filter(Boolean),ticks=L.reduce((n,l)=>n+l.t,0),idle=ticks?L.reduce((n,l)=>n+l.t*l.p.idle,0)/ticks:null;
  const br=specialistRows(),known=br.filter(r=>r.best?.recent),first=known.filter(r=>r.best.rank===1),gate=S.gates,passes=gate?.valid?gate.gates.filter(g=>g.pass).length:null;
  return [
@@ -363,11 +367,11 @@ function goalMetrics(){
   {title:'Collection & gear',metric:c?`${c.distinct} types`:'Unknown',meta:c?.missingIds?'name + ID observations':'observed bank item IDs',next:'Define missing items + best gear'},
   {title:'Quests · unlocks · 99s',metric:obs.length?`${maxed.length} × 99`:'Unknown',meta:`${obs.length} accounts observed`,next:'Quest / unlock census missing'},
   {title:'Specialist hiscores',metric:known.length?`${first.length} #1`:'Unknown',meta:`${known.length} boards with recent ranks`,next:'Verify ties; prove next contender'},
-  {title:'Main · all 24',metric:passes===null?'No check':`${passes} / 5`,meta:'launch checks · not completion',next:S.gates?.go?'Permission issued; check expiry':'Prove route + staging + rehearsals'},
+  {title:'Main Overall',metric:passes===null?'No check':`${passes} / 5`,meta:'launch checks · not completion',next:S.gates?.go?'Permission issued; check expiry':'Prove route + staging + rehearsals'},
   {title:'Tick efficiency',metric:idle===null?'Unknown':`${idle.toFixed(0)}%`,meta:'unchanged ticks · observed',next:'Measure net output per tick'}
- ];
+ ].map(applyGoalPlan);
 }
-function goalCards(){put('#goals',goalMetrics().map((g,i)=>`<button class="goal ${view==='goals'&&lane===i?'on':''}" data-lane="${i}" title="${E((S.objectives?.lanes?.[i]?.target||g.title)+' · Next: '+g.next)}" aria-label="${E(g.title)}"><span class="label">0${i+1} / ${E(g.title)}</span><strong class="metric">${E(g.metric)}</strong><span class="meta">${E(g.meta)}</span><span class="next">↳ ${E(g.next)}</span></button>`).join(''));}
+function goalCards(){put('#goals',goalMetrics().map((g,i)=>`<button class="goal ${view==='goals'&&lane===i?'on':''}" data-lane="${i}" title="${E((g.plan?.target||g.title)+' · Next: '+g.next)}" aria-label="${E(g.title)}"><span class="label">0${i+1} / ${E(g.title)}</span><strong class="metric">${E(g.metric)}</strong><span class="meta">${E(g.meta)}</span><span class="next">↳ ${E(g.next)}</span></button>`).join(''));}
 function pagedRows(items,heading,sub='',prefix='',hint=''){
  const box=$('#inspector');put(box,`<h3>${E(heading)}</h3>${sub?`<p class="subline">${E(sub)}</p>`:''}${prefix}<div class="data-list" id="rows"></div>${hint?`<p class="hint">${E(hint)}</p>`:''}`);
  const size=Math.max(1,Math.floor($('#rows').clientHeight/(innerWidth>=1800?30:innerWidth<700?25:26)));detailPages=Math.max(1,Math.ceil(items.length/size));detailPage=Math.min(detailPage,detailPages-1);put('#rows',items.slice(detailPage*size,(detailPage+1)*size).join('')||'<p class="dm">No observation available</p>');
@@ -378,7 +382,7 @@ function accountView(){const b=S.bots.find(b=>b.name===sel);if(!b){pagedRows([],
  pagedRows(items,safeName(b.name),offlineGoal(b),stats,hasStopProof(b.nativeProof)?'Stop cleanup proved; work goal not met.':b.practice?'Practice evidence only.':'Observed state; inventory changes are not net output.');
 }
 function goalsView(){
- const g=goalMetrics()[lane],plan=S.objectives?.lanes?.[lane];
+ const g=goalMetrics()[lane],plan=g.plan;
  const prefix=`<p class="next-proof"><b>Blocker</b> · ${E(g.blocker||'Goal evidence unavailable')}<br><b>Next</b> · ${E(g.next)}</p>`;
  const items=(g.rows||[]).map(r=>row(r.label,r.value+(r.at?' · '+age(r.at):''),r.tone||'',`${r.label}: ${r.value}\nSource: ${r.source}${r.at?'\nObserved: '+new Date(r.at).toISOString():''}`));
  pagedRows(items,g.title,`${g.level||'UNKNOWN'} · ${plan?.target||'Plan source unavailable'}`,prefix,'Dated evidence · hover a row for its source. Counts are not total completion.');
@@ -390,13 +394,13 @@ function inspect(){
  const box=$('#inspector'),world=$('#world-panel');if((view!=='world'||innerWidth>=1200)&&world.parentElement===box){$('#world-home').prepend(world);box._h=null;}
  $('#detail-menu').value=view==='board'?'goals':view;document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('on',b.dataset.view===view));
  detailPages=1;
- if(view==='world'){pagedRows([row('World feed',S.world?.connected===true?'connected':'unknown'),row('Players',S.worldPlayers??'?'),row('Known positions',S.bots.filter(b=>b.live||b.pos).length),row('Followed account',safeName(sel)),row('Map mode',mode)],'World observation','Select a fleet account or map marker to follow.','','Position history is not proof that an account is logged in.');}
+ if(view==='world'){pagedRows([row('World feed',S.world?.connected===true?'connected':'unknown'),row('Players',S.worldPlayers??'?'),row('Known positions',mapWorld().bots.filter(b=>b.live||b.pos).length),row('Followed account',safeName(sel)),row('Map mode',mode)],'World observation','Select a fleet account or map marker to follow.','','Position history is not proof that an account is logged in.');}
 
  else if(view==='account')accountView();else if(view==='goals')goalsView();else if(view==='board')boardView();
  else if(view==='bank'){const b=S.bots.find(b=>b.name===sel),items=b?.bank,at=b?.bankAt,totals=new Map();for(const item of items||[]){const key=item.baseId??item.id??item.name,prev=totals.get(key)||{name:item.name||'Item '+key,count:0};prev.count+=item.count??1;totals.set(key,prev)}pagedRows(totals.size?[...totals.values()].map(i=>row(i.name,nf(i.count))):Array.isArray(items)?[row('Observed items','0')]:[],`Bank · ${safeName(b?.name)}`,Array.isArray(items)?`${items.length} slots · observed ${age(at)} ago`:'No observation available','','Snapshot only. Select another account in Fleet.');}
  else if(view==='stock'){const c=S.collection||{};pagedRows((c.items||[]).map(i=>row(i.name,compact(i.count),i.identified?'':'warn')),`${c.distinct??'?'} observed item types`,`${(c.banks||[]).filter(b=>b.state==='stale').length} stale banks · packs and cargo excluded`,'','Historical stock observations; no coverage denominator.');}
  else if(view==='activity'||view==='practice'){const practice=view==='practice',rr=(S.results||[]).filter(r=>!!r.practice===practice);pagedRows(rr.map(r=>row(`${age(r.at)} · ${safeName(r.name)}`,resultKind(r),resultKind(r)==='ok'?'good':'warn',r.text)),practice?'Practice evidence':'Live activity',`${rr.length} retained results · raw outcomes`,practice?`<p class="next-proof">${S.bots.filter(b=>b.practice&&b.operation==='observed').length} practice accounts observed. Practice proof does not prove live contention.</p>`:'','Select Raw evidence for the chosen account’s full record.');}
- else if(view==='machine'){const s=machine(),c=S.capacity,gb=v=>Number.isFinite(v)?v.toFixed(1)+' GiB':'?';pagedRows([row('Bots running',c?`${c.active} / ${c.cap}`:'?',c&&!c.fresh?'warn':''),row('RAM headroom',gb(c?.headroomGB),c?.headroomGB<0?'bad':'good','Free RAM minus the floor and the startup reserve. Below zero the swarm starts no new bot.'),row('Free RAM',gb(s.freeGB)+(Number.isFinite(s.totalGB)?' of '+gb(s.totalGB):'')),row('RAM floor',gb(c?.floorGB)),row('Startup reserve',S.swarm?.pendingReserveGB==null?'?':S.swarm.pendingReserveGB+' GiB'),row('Queued starts',c?.queued??'?'),row('CPU',Number.isFinite(s.cpu)?s.cpu.toFixed(0)+'%':'?'),row('Controller age',age(S.swarm?.at),observedAt(S.swarm?.at,30000)?'':'warn'),...(s.procs||[]).map(p=>row(p.script,`${p.mb} MB · ${p.pid}`))],'Host resources','Read-only observation; no process controls');}
+ else if(view==='machine'){const s=machine(),c=S.capacity,gb=v=>Number.isFinite(v)?v.toFixed(1)+' GiB':'?';pagedRows([row('Bots running',c?`${c.active??'?'} / ${c.cap??'?'}`:'?',c&&!c.fresh?'warn':''),row('RAM headroom',gb(c?.headroomGB),!Number.isFinite(c?.headroomGB)?'warn':c.headroomGB<0?'bad':'good','Free RAM minus the floor and the startup reserve. Below zero the swarm starts no new bot.'),row('Free RAM',gb(s.freeGB)+(Number.isFinite(s.totalGB)?' of '+gb(s.totalGB):'')),row('RAM floor',gb(c?.floorGB)),row('Startup reserve',S.swarm?.pendingReserveGB==null?'?':S.swarm.pendingReserveGB+' GiB'),row('Queued starts',c?.queued??'?'),row('CPU',Number.isFinite(s.cpu)?s.cpu.toFixed(0)+'%':'?'),row('Controller age',age(S.swarm?.at),observedAt(S.swarm?.at,30000)?'':'warn'),...(s.procs||[]).map(p=>row(p.script,`${p.mb} MB · ${p.pid}`))],'Host resources','Read-only observation; no process controls');}
  else if(view==='raw'){const b=S.bots.find(b=>b.name===sel);const text=safeName(JSON.stringify({account:b?.name,at:b?.at,goal:offlineGoal(b||{}),result:b?.lastRes||b?.result,phase:b?.phase,controller:b?.planJob,cleanup:b?.nativeProof},null,2));put(box,`<h3>Raw · ${E(safeName(b?.name))}</h3><pre class="evidence-page"></pre>`);const pre=box.querySelector('pre'),cols=Math.max(10,Math.floor(pre.clientWidth/7.3)),lines=text.split('\n').flatMap(line=>line.length?Array.from({length:Math.ceil(line.length/cols)},(_,i)=>line.slice(i*cols,(i+1)*cols)):['']),size=Math.max(1,Math.floor(pre.clientHeight/18)-1);detailPages=Math.max(1,Math.ceil(lines.length/size));detailPage=Math.min(detailPage,detailPages-1);pre.textContent=lines.slice(detailPage*size,(detailPage+1)*size).join('\n');}
  $('#detail-page').textContent=`${detailPage+1} / ${detailPages}`;$('#detail-prev').disabled=detailPage===0;$('#detail-next').disabled=detailPage>=detailPages-1;
 }
