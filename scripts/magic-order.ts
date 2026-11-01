@@ -14,6 +14,7 @@ import {waitTicks,waitUntil,type TickSource} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,type PathPoint} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {componentId} from '../packages/core/src/logout';
+import {equipmentObserved} from '../packages/core/src/container-observation';
 import {PROFILES,buyWithBudget,maximumUnitCost} from './shop-buyer';
 import {chickenTrainingProfile} from './train-chickens';
 import {startQuestSustain,questFoodDefinitions,selectQuestFood} from './quest-sustain';
@@ -186,7 +187,9 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
  const r:MagicResult={ok:false,stop:'entry',target:o.target,level:0,casts:0,runesUsed:{air:0,mind:0},bought:{air:0,mind:0},
   coinsSpent:0,magicXpGained:0,hpXpGained:0,hpMin:0,eats:0,ticks:0};
  const ready=()=>{const p=pos(),m=s.sdk.getSkill('Magic'),h=s.sdk.getSkill('Hitpoints');
-  return !!p&&p.worldX>0&&!!m&&m.baseLevel>0&&!!h&&h.baseLevel>0&&Number.isFinite(magicXp())&&Number.isFinite(hpXp())&&Array.isArray(state()?.inventory);};
+  return !!p&&p.worldX>0&&!!m&&m.baseLevel>0&&!!h&&h.baseLevel>0&&Number.isFinite(magicXp())&&Number.isFinite(hpXp())&&Array.isArray(state()?.inventory)
+   // The air-rune cost reads the worn staff, so equipment must be the server's packet, not the empty default.
+   &&!!s.client&&typeof s.client==='object'&&equipmentObserved(s.client);};
  if(!await waitUntil(s,ready,{timeoutTicks:30})){r.stop='entry';r.failure='entry state unobserved';return r;}
  const xp0=magicXp(),hpXp0=hpXp();r.level=level();r.hpMin=hp();
  const project=(list:{slot:number;id:number;count:number}[])=>list.map(({slot,id,count})=>({slot,id,count}));
