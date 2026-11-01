@@ -14,6 +14,7 @@ import {assignedWorker} from './model-worker';
 import {processMatches,killTree} from '../../practice/src/proc';
 import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
+import {processDeliveryPrs} from './delivery-pr';
 
 const cli='packages/router/src/coordinator-cli.ts';
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
@@ -159,8 +160,17 @@ function runRules(state:CoordinatorState,liveLimit:number){
   if(added.length){saveState(state);event('rule-tasks-added',{tasks:added.map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept}))});}
  }catch(error){event('rule-pass-failed',String(error));}
 }
+// Opens staged delivery PRs (delivery-pr.ts) beside the loop: git and gh never hold dispatch or live delivery.
+let deliveryPrs:Promise<void>|undefined;
+function openDeliveryPrs(){
+ deliveryPrs??=processDeliveryPrs(coordinationDir,projectRoot).then(({opened,failed})=>{
+  for(const pr of opened)event('delivery-pr-opened',{task:pr.taskId,branch:pr.branch,state:pr.state,url:pr.url});
+  for(const pr of failed)event('delivery-pr-failed',{task:pr.taskId,branch:pr.branch,attempts:pr.attempts,nextAt:pr.nextAt,error:pr.lastError});
+ }).catch(error=>event('delivery-pr-failed',String(error))).finally(()=>{deliveryPrs=undefined;});
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
+ openDeliveryPrs();
  // Adopt before reconciliation: even a just-finished failed build keeps its
  // delivery focus while the planner prepares its exact repair.
  const focus=!config.focusCapability&&activeBuildFocus(state);
@@ -212,9 +222,11 @@ async function tick(state:CoordinatorState,config:any){
   try{await ensureSwarm(currentRevision(),{currentSource:()=>currentRevision()},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
+ const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
  for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
-  const freeGB=freemem()/2**30;
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(join(coordinationDir,'publish-request.json'))});
+  const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
+  let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
+  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children
   // can race to create it. Controller startup does not log accounts in.
