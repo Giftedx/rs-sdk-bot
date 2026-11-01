@@ -1,10 +1,10 @@
 import {test,expect} from 'bun:test';
 import {earthRefillAmount,earthSeedNeeded} from './earth-shop';
 
-test('refill leaves one shelf rune and buys only the outstanding order',()=>{
+test('competing buyers must not make a single available refill unbuyable',()=>{
  expect(earthRefillAmount(0,1136)).toBe(0);
- expect(earthRefillAmount(1,1136)).toBe(0);
- expect(earthRefillAmount(3,1136)).toBe(2);
+ expect(earthRefillAmount(1,1136)).toBe(1);
+ expect(earthRefillAmount(3,1136)).toBe(3);
  expect(earthRefillAmount(1000,7)).toBe(7);
  expect(earthRefillAmount(1000,1136)).toBe(50);
  expect(()=>earthRefillAmount(NaN,1)).toThrow();

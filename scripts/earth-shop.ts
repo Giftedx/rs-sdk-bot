@@ -1,4 +1,4 @@
-// One earth order from ordinary shop restock. One owned seed per order; request a one-rune shelf floor.
+// One earth order from ordinary shop restock. One owned seed per order; observe every tick.
 import {existsSync} from 'node:fs';
 import {openBot,settle,getWorld,accountOf,sessionDied} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
@@ -9,7 +9,7 @@ import {PROFILES,buyWithBudget} from './shop-buyer';
 
 export function earthRefillAmount(shelf:number,missing:number){
  if(![shelf,missing].every(n=>Number.isSafeInteger(n)&&n>=0))throw Error('earth refill quantities unknown');
- return Math.min(50,Math.max(0,shelf-1),missing);
+ return Math.min(50,shelf,missing);
 }
 export const earthSeedNeeded=(shelf:number,carried:number,seeded:boolean)=>Number.isSafeInteger(shelf)&&shelf>=0&&carried>=1&&!seeded;
 
@@ -74,7 +74,7 @@ export async function runEarthRefill(s:Session,o:{profile:string;cap:number;targ
     if(n>0){
      uncertain=true;const result=await buyWithBudget(s.bot,s.sdk,'Earth rune',n,o.reserve,o.spend-spentTotal);
      boughtTotal+=result.bought;spentTotal+=result.spent;uncertain=false;
-     if(result.bought){lastProgress=s.tick();if(shelf()===0){stop='shelf-drained';break;}continue;}
+     if(result.bought){lastProgress=s.tick();continue;}
      if(result.spent)throw Error('earth debit without observed runes');
      stop='budget';break;
     }
