@@ -9,7 +9,7 @@ import {addTasks,boundAccounts,type CoordinatorState,type CoordTask,type TaskRec
 
 export const RULES={
  'next-band':{
-  trigger:'The newest finished live run of a capability succeeded within CHAIN_FRESH_MS with a single skill target, on one ordinary account, with no supply run of another capability in its dependencies (the worker buys or holds its own inputs).',
+  trigger:'The newest finished live run of a capability succeeded within CHAIN_FRESH_MS with a single skill target, on one ordinary account, with no supply run of another capability in its dependencies (the worker buys or holds its own inputs). The account leads the fleet in that skill over all sides, or its next band reaches the fleet best.',
   acceptance:'The same skill reaches the next band: the next method unlock at least MIN_BAND_STEP levels above the reached level, else BAND_STEP levels, at most 99.',
  },
 } as const;
@@ -31,7 +31,15 @@ export interface RuleDeps{
  paused:(account:string)=>boolean;
  /** Open rule tasks never exceed this (the live limit). */
  maxOpen:number;
+ /** This fleet side (FLEET_SIDE). */
+ side:string;
+ /** Fleet best of a skill over all sides (scoreboard.json fleetSkills); undefined when the scoreboard cannot be read. */
+ fleetBest:(skill:string)=>FleetBest|undefined;
+ /** Called for a chain the rule leaves because its band cannot raise the board. */
+ skipped?:(skip:RuleSkip)=>void;
 }
+export interface FleetBest{best:number;account:string|null;side:string|null}
+export interface RuleSkip{capability:string;account:string;skill:string;next:number;reason:string}
 const at=(r:TaskRecord)=>r.receipt?.at??0;
 const finished=(r:TaskRecord)=>(r.status==='succeeded'||r.status==='failed')&&!!r.receipt;
 /** Newest succeeded build or qualify whose native delivery matches the current source; null when none. */
@@ -93,6 +101,14 @@ export function applyRules(state:CoordinatorState,deps:RuleDeps,now=Date.now()):
   const [skill,target]=targets[0]!;
   const reached=Math.max(target,deps.level(account,skill)??0);
   const next=nextBand(reached,deps.unlocks(skill));if(next===null)continue;
+  // A band below another account's level does not raise the board: only the fleet leader, or a band that reaches the
+  // fleet best, continues.
+  const fleet=deps.fleetBest(skill);
+  const leader=!!fleet&&fleet.side===deps.side&&fleet.account?.toLowerCase()===account.toLowerCase();
+  if(!fleet||!leader&&next<fleet.best){
+   deps.skipped?.({capability,account,skill,next,reason:fleet?`fleet best ${skill} ${fleet.best} is held by ${fleet.account} (${fleet.side}); ${account} band to ${next} does not reach it`:`fleet best ${skill} unknown: scoreboard unreadable`});
+   continue;
+  }
   const moved=retarget(spec,skill,target,next);if(!moved)continue;
   let id=`chain-${slug(capability)}-${slug(account)}-${slug(skill)}${next}`;
   for(let n=2;ids.has(id);n++)id=`chain-${slug(capability)}-${slug(account)}-${slug(skill)}${next}-${n}`;

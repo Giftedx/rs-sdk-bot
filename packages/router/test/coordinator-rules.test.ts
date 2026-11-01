@@ -1,9 +1,10 @@
 import {test,expect} from 'bun:test';
 import {initialState,addTasks,startTask,finishTask,chooseTask,compactState,type CoordTask,type CoordinatorState} from '../src/coordinator';
-import {applyRules,nextBand,retarget,type RuleDeps} from '../src/coordinator-rules';
+import {applyRules,nextBand,retarget,type RuleDeps,type RuleSkip} from '../src/coordinator-rules';
 
 const NOW=10_000_000;
-const deps=(extra:Partial<RuleDeps>={}):RuleDeps=>({fingerprint:()=>'src-a',unlocks:()=>[20,30,31,40,50],level:()=>undefined,paused:()=>false,maxOpen:4,...extra});
+const deps=(extra:Partial<RuleDeps>={}):RuleDeps=>({fingerprint:()=>'src-a',unlocks:()=>[20,30,31,40,50],level:()=>undefined,paused:()=>false,maxOpen:4,
+ side:'local',fleetBest:()=>({best:30,account:'Bigchopper',side:'local'}),...extra});
 const finish=(s:CoordinatorState,id:string,ok:boolean,output:any,at:number)=>{startTask(s,id,at-10,'run-'+id);finishTask(s,{taskId:id,runId:'run-'+id,ok,at,output});};
 const band=(id:string,level:number,extra:Partial<CoordTask>={}):CoordTask=>({id,goal:'skills',kind:'run',capability:'ranged-train',account:'Bigchopper',dependsOn:['qualify-ranged'],priority:40,estimatedMs:600000,
  why:'Ranged band',args:[String(level),'10000'],env:{CAP:'10000',MIN_ARROWS:'200'},accept:{skills:{Ranged:level}},...extra});
@@ -59,6 +60,23 @@ test('a failed refresh stops the rule',()=>{
  // The blocked band stays pending until the planner clears it; the failed refresh still stops the rule after that.
  s.tasks.find(r=>r.spec.rule)!.status='superseded';
  expect(applyRules(s,deps({fingerprint:()=>'src-b'}),NOW+2000)).toEqual([]);
+});
+test('the fleet leader of a skill continues its chain',()=>{
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:30,account:'bigchopper',side:'local'})}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
+});
+test('a band far below a 99 held by another account is skipped and reported',()=>{
+ const skips:RuleSkip[]=[];
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:99,account:'Shaftshooter',side:'local'}),skipped:s=>skips.push(s)}),NOW)).toEqual([]);
+ expect(skips).toEqual([{capability:'ranged-train',account:'Bigchopper',skill:'Ranged',next:40,reason:'fleet best Ranged 99 is held by Shaftshooter (local); Bigchopper band to 40 does not reach it'}]);
+ // The same account name on another side is not this account.
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:99,account:'Bigchopper',side:'cloud'})}),NOW)).toEqual([]);
+ expect(applyRules(chain(),deps({fleetBest:()=>undefined}),NOW)).toEqual([]);
+ // A skipped band adds no refresh qualify either.
+ expect(applyRules(chain(),deps({fingerprint:()=>'src-b',fleetBest:()=>({best:99,account:'Shaftshooter',side:'cloud'})}),NOW)).toEqual([]);
+});
+test('a non-leader whose next band reaches the fleet best continues',()=>{
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:40,account:'Shaftshooter',side:'cloud'})}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:35,account:'Shaftshooter',side:'local'})}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
 });
 test('no duplicate run for the same account and capability',()=>{
  const s=chain();expect(applyRules(s,deps(),NOW)).toHaveLength(1);
