@@ -1,5 +1,5 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,needsRangedRecovery} from './ranged-train';
 import {foodBites} from './gather-ranged';
 import * as walking from '../packages/core/src/walk';
 import type {Session} from '../packages/core/src/inprocess';
@@ -43,6 +43,13 @@ test('options keep defaults, accept argv target and cap, and refuse unbounded in
  expect(rangedTrainOptions({TARGET_LEVEL:'20'},['bun','s','Bot','12','4000'])).toMatchObject({target:12,cap:4000});
  for(const env of [{CAP:'100'},{BUY_ARROW_ID:'888'},{FOOD_ID:'315'},{MAX_TRIPS:'0'},{AMMO:'x'},{MAX_SPEND:'-1'}])expect(()=>rangedTrainOptions(env,['bun','s','Bot'])).toThrow('bounded options');
  expect(rangedTrainOptions({FOOD_ID:'1891'},['bun','s','Bot']).foodId).toBe(1891);
+});
+test('recovery runs only off the bank tile or with the bow or quiver worn',()=>{
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:0},[])).toBe(false);
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:0},[1171])).toBe(false);
+ expect(needsRangedRecovery({worldX:3231,worldZ:3299,level:0},[])).toBe(true);
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:1},[])).toBe(true);
+ expect(needsRangedRecovery({worldX:3254,worldZ:3420,level:0},[841,884])).toBe(true);
 });
 test('cake food counts bites across its stages; a fish is one bite',()=>{
  expect(foodBites([{id:1891,count:2},{id:1893,count:1},{id:1895,count:3},{id:1901,count:4}],1891)).toBe(2*3+2+3);
