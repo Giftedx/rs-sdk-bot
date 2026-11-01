@@ -316,7 +316,10 @@ export function prepareLiveRecovery(task:CoordTask,account:string,script:string,
  writeCoordinatorJobs(base,own);
 }
 export function recoveryQualification(task:CoordTask,dependencies:Record<string,any>,source:string,base=projectRoot):ControlledRecoveryRequest['qualification']{
- const candidate=Object.values(dependencies).find((d:any)=>d?.delivery?.ok&&d.delivery.stage==='delivered'&&d.delivery.id===task.capability&&d.delivery.runtimeRevision===source) as any;
+ const endedAt=task.sessionRecovery?.endedAt??0,now=Date.now();
+ const candidate=Object.values(dependencies).filter((d:any)=>d?.delivery?.ok&&d.delivery.stage==='delivered'&&d.delivery.id===task.capability&&d.delivery.runtimeRevision===source
+  &&Number.isFinite(d.delivery.at)&&d.delivery.at>endedAt&&d.delivery.at<=now)
+  .sort((a:any,b:any)=>b.delivery.at-a.delivery.at)[0];
  const reportPath=candidate?.delivery?.directory&&join(candidate.delivery.directory,'report.json');
  if(!reportPath)throw Error('authenticated recovery requires its current native delivery');
  const bytes=readFileSync(reportPath),report=JSON.parse(bytes.toString('utf8'));

@@ -10,7 +10,7 @@ import {readMergedPlan,coordinatorJobsPath,writeCoordinatorJobs,emptyCoordinator
 const jobOf=(base:string,account:string)=>readMergedPlan(base).jobs.find((j:any)=>(j.accounts??[j.account]).includes(account));
 import {reconcile} from '../src/coordinator-cli';
 import {acceptProposal,parseModelObject} from '../src/coordinator-planner';
-import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
+import {replaceAssignments,prepareLiveRecovery,requestLiveRecovery,requestAuthenticatedRecovery,recoveryQualification,installJob,awaitControllerDrain,ensureSwarm,preserveCompletedLiveEnd} from '../src/coordinator-live';
 import type {CoordTask} from '../src/coordinator';
 const seed=()=>{const s=initialState();addTasks(s,[{id:'producer',goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:2,estimatedMs:1,why:'native producer'},{id:'consumer',goal:'gear',kind:'qualify',capability:'ammo-order',dependsOn:['producer'],priority:2,estimatedMs:1,why:'next useful consumer'}]);startTask(s,'producer',Date.now()-20000,'recovery-run');return s;};
 function recoveryFixture(){
@@ -31,6 +31,32 @@ function authenticatedFixture(){
  const delivery={...f.deps.build.delivery,directory,source:'fixture',checks:[{id:'native-session-recovery',phase:'practice',exitCode:0,detail:JSON.stringify({stdout:out})}]};
  writeFileSync(join(directory,'report.json'),JSON.stringify(delivery));Object.assign(f.deps.build.delivery,delivery);return f;
 }
+
+test('authenticated recovery selects the newest current delivery after its exact failed end',()=>{
+ const f=authenticatedFixture();f.task.sessionRecovery!.endedAt=20;
+ const gate=(name:string,at:number,runtimeRevision='new')=>{
+  const directory=join(f.prac,'deliveries',name);mkdirSync(directory,{recursive:true});
+  const out=join(directory,'gate.out.log');
+  writeFileSync(out,'RECOVERY_NATIVE_PROOF '+JSON.stringify({path:join(directory,'proof.json'),sha256:'0'.repeat(64)})+'\n');
+  const delivery={...f.deps.build.delivery,directory,at,runtimeRevision,
+   checks:[{id:'native-session-recovery',phase:'practice',exitCode:0,detail:JSON.stringify({stdout:out})}]};
+  writeFileSync(join(directory,'report.json'),JSON.stringify(delivery));return{delivery};
+ };
+ const newest=gate('newest',40),deps={old:f.deps.build,future:gate('future',Date.now()+60000),
+  fresh:gate('fresh',30),wrongSource:gate('wrong-source',50,'other'),newest};
+ for(const dependencies of [deps,Object.fromEntries(Object.entries(deps).reverse())]){
+  const qualification=recoveryQualification(f.task,dependencies,'new',f.base);
+  expect(qualification.delivery.path).toBe(join(newest.delivery.directory,'report.json'));
+  expect(qualification.proof.path).toBe(join(newest.delivery.directory,'proof.json'));
+ }
+});
+
+test('authenticated recovery refuses deliveries at or before the failed end',()=>{
+ const f=authenticatedFixture();f.task.sessionRecovery!.endedAt=2;
+ expect(()=>recoveryQualification(f.task,f.deps,'new',f.base)).toThrow('current native delivery');
+ f.task.sessionRecovery!.endedAt=3;
+ expect(()=>recoveryQualification(f.task,f.deps,'new',f.base)).toThrow('current native delivery');
+});
 
 test('completed recovery preserves success and refuses missing authorization, same mission or unrelated producer proof',()=>{
  for(const scenario of ['authorization','same-mission','missing-revision','unrelated-proof','changed-end','stop']){
