@@ -3206,7 +3206,7 @@
         },
         {
           "name": "bonestobananas",
-          "status": "rewritten-unit-tested",
+          "status": "rewrite-available",
           "compatibility": "server-source-confirmed",
           "localCandidates": [
             "scripts/microbot-bones.ts"

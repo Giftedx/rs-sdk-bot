@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {bonesEffect,runBonesConversion,type BonesIO} from './microbot-bones';
+import {bonesEffect,runBonesConversion,runBonesBank,type BonesIO} from './microbot-bones';
 
 test('conversion requires every bone, product, rune debit and XP receipt',()=>{
  const before={bones:4,bananas:3,earth:4,water:4,nature:2,xp:100};
@@ -32,4 +32,46 @@ test('invalid options and missing level refuse all casts',async()=>{
  const f=fixture();await expect(runBonesConversion(f.io,{maximum:0,cap:40})).rejects.toThrow();
  f.io.level=()=>14;expect((await runBonesConversion(f.io,{maximum:5,cap:40})).ok).toBe(false);
  expect(f.counts().casts).toBe(0);
+});
+test('input exhaustion, cancellation and bank mismatch cannot report success',async()=>{
+ const missing=fixture();missing.io.prepare=async()=>false;
+ expect((await runBonesConversion(missing.io,{maximum:5,cap:40})).ok).toBe(false);
+ expect(missing.counts().casts).toBe(0);
+ const stopped=fixture();stopped.io.stopped=()=>true;
+ expect((await runBonesConversion(stopped.io,{maximum:5,cap:40})).ok).toBe(false);
+ expect(stopped.counts().casts).toBe(0);
+ const bank=fixture();bank.io.deposit=async()=>0;
+ expect((await runBonesConversion(bank.io,{maximum:5,cap:40})).ok).toBe(false);
+ expect(bank.counts().casts).toBe(1);
+ const cap=fixture();cap.io.prepare=async()=>{cap.io.tick=()=>100;return true;};
+ expect((await runBonesConversion(cap.io,{maximum:5,cap:40})).ok).toBe(false);
+ expect(cap.counts().casts).toBe(0);
+});
+test('SDK adapter withdraws finite unnoted inputs and pairs final bank receipts',async()=>{
+ const ids={526:'Bones',1963:'Banana',557:'Earth rune',555:'Water rune',561:'Nature rune'};
+ const pack:{id:number;name:string;count:number;slot:number}[]=[];
+ const bank=new Map([[526,7],[557,4],[555,4],[561,2],[1963,9]]);
+ let generation=1,xp=100,tick=0,casts=0;
+ const items=()=>[...bank].map(([id,count])=>({id,name:ids[id as keyof typeof ids]!,count}));
+ const add=(id:number,n:number)=>{const item=pack.find(i=>i.id===id);if(item)item.count+=n;else pack.push({id,name:ids[id as keyof typeof ids]!,count:n,slot:pack.length});};
+ const s={name:'mock',tick:()=>tick,ended:new Promise(()=>{}),onTick:()=>()=>{},
+  sdk:{getEquipment:()=>[],getInventory:()=>pack.filter(i=>i.count>0),getState:()=>({player:{lifeId:1,worldX:0,worldZ:0,level:0},inventory:pack.filter(i=>i.count>0)}),
+   getSkill:()=>({level:15}),getSkillXp:()=>xp},
+  bankObservation:()=>({generation,items:items()}),
+  bot:{openBank:async()=>({success:true}),closeBank:async()=>{},
+   withdrawItem:async(pattern:RegExp,n:number,o:{asNote:boolean})=>{
+    expect(o.asNote).toBe(false);const entry=items().find(i=>pattern.test(i.name));
+    if(!entry||entry.count<n)return {success:false};
+    bank.set(entry.id,entry.count-n);add(entry.id,n);generation++;return {success:true};},
+   depositItem:async(item:{id:number})=>{const p=pack.find(i=>i.id===item.id)!;bank.set(p.id,(bank.get(p.id)??0)+p.count);p.count=0;generation++;return {success:true};}},
+  direct:async()=>{casts++;tick++;const bones=pack.find(i=>i.id===526)!;add(1963,bones.count);bones.count=0;
+   for(const [id,n] of [[557,2],[555,2],[561,1]])pack.find(i=>i.id===id)!.count-=n!;
+   xp+=25;return {success:true};}};
+ const result=await runBonesBank(s as any,{maximum:5,cap:40});
+ expect(result).toMatchObject({ok:true,made:5,banked:5,casts:1});
+ expect(casts).toBe(1);expect(bank.get(1963)).toBe(14);expect(bank.get(526)).toBe(2);
+});
+test('plain-rune adapter refuses a substituting staff before bank or spell actions',async()=>{
+ const s={sdk:{getState:()=>({player:{}}),getSkill:()=>({level:15}),getEquipment:()=>[{slot:3,name:'Staff of earth'}]}};
+ await expect(runBonesBank(s as any,{maximum:5,cap:40})).rejects.toThrow('without water or earth rune substitution');
 });

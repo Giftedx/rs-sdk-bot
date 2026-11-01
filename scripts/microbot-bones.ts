@@ -45,7 +45,14 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
  const ids={bones:526,bananas:1963,earth:557,water:555,nature:561} as const;
  const inv=()=>s.sdk.getInventory();
  const count=(id:number)=>inv().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
- const state=()=>s.sdk.getState();const p0=state()?.player;
+ const state=()=>s.sdk.getState();
+ if(!await waitUntil(s,()=>!!state()?.player&&!!s.sdk.getSkill('Magic')&&!!s.sdk.getSkill('Hitpoints'),{timeoutTicks:10}))
+  throw Error('bones conversion initial state unavailable');
+ const p0=state()!.player;
+ // A substituting staff changes the receipt. Refuse this plain-rune variant before spending inputs.
+ const staff=s.sdk.getEquipment().find(i=>i.slot===3);
+ if(staff&&/water|earth|lava/i.test(staff.name)&&/staff/i.test(staff.name))
+  throw Error('plain-rune bones conversion requires a weapon without water or earth rune substitution');
  const protectedItems=new Map(inv().filter(i=>!Object.values(ids).includes(i.id as any)).map(i=>[i.id,count(i.id)]));
  let ended=false;void s.ended.then(()=>{ended=true;});
  const stopped=()=>{const p=state()?.player;return ended||!p||p.isDead||
@@ -62,7 +69,8 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
    await open();
    for(const [name,need] of [['earth',2],['water',2],['nature',1]] as const){
     const id=ids[name],missing=Math.max(0,need-count(id));
-    if(missing){const r=await s.bot.withdrawItem(new RegExp(`^${name} rune$`,'i'),missing,{asNote:false});if(!r.success)return false;}
+    if(missing){const before=count(id);const r=await s.bot.withdrawItem(new RegExp(`^${name} rune$`,'i'),missing,{asNote:false});
+     if(!r.success||!await waitUntil(s,()=>count(id)===before+missing,{timeoutTicks:10}))return false;}
    }
    const owned=count(ids.bones);
    if(owned>maximum)return false;
@@ -81,6 +89,7 @@ export async function runBonesBank(s:import('../packages/core/src/inprocess').Se
   deposit:async()=>{await open();const item=inv().find(i=>i.id===ids.bananas);return item?depositObserved(s,item):0;},
   close:async()=>{if(!stopped())await s.bot.closeBank();},
  },o);
+ if(stopped()){result.ok=false;result.failure='bones conversion session stopped';}
  if([...protectedItems].some(([id,n])=>count(id)!==n)){result.ok=false;result.failure='bones conversion protected inventory changed';}
  console.log('MICROBOT_BONES '+JSON.stringify(result));return result;
 }

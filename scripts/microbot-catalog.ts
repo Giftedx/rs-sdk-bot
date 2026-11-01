@@ -21,8 +21,8 @@ export function catalog(repo:string,tree:{sha:string;truncated:boolean;paths:str
   javaFiles:java.length,modules:modules.map(name=>{
    const files=java.filter(p=>p.startsWith(prefix+name+'/')||p===prefix+name);
    const localCandidates=(analogues[name]??[]).filter(p=>existsSync(resolve(root,p)));
-   const reviewed=repo.endsWith('-Hub')&&name==='bonestobananas';
-   return {name,status:reviewed?'rewritten-unit-tested':'unreviewed',
+   const reviewed=repo==='chsami/Microbot-Hub'&&tree.sha==='cd648f48d536c01c58aa82aa4d353fb31ce6e102'&&name==='bonestobananas';
+   return {name,status:reviewed?'rewrite-available':'unreviewed',
     compatibility:reviewed?'server-source-confirmed':'unknown',localCandidates,
     scripts:files.filter(p=>p.endsWith('Script.java')),plugins:files.filter(p=>p.endsWith('Plugin.java')),
     files,sourceUrl:`https://github.com/${repo}/tree/${tree.sha}/${prefix}${name}`,
