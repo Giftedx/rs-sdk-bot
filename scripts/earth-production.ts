@@ -59,7 +59,7 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
  const banks=retainedEarthBank(()=>s.bankObservation?.());
  const owned=()=>{const m=new Map<number,number>();for(const i of [...inv(),...eq(),...banks()])m.set(i.id,(m.get(i.id)??0)+i.count);return m;};
  const banked=(id:number)=>banks().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
- if(!await waitUntil(s,()=>!!pos()&&hp()>12&&equipmentObserved(s.client),{timeoutTicks:25}))throw Error('earth production entry life/equipment unknown');
+ if(!await waitUntil(s,()=>!!pos()&&hp()>12&&!!s.client&&equipmentObserved(s.client as object),{timeoutTicks:25}))throw Error('earth production entry life/equipment unknown');
  const life=pos(),originalEquipment=eq().map(i=>i.id),style=st()?.combatStyle?.currentStyle,retaliate=st()?.autoRetaliateEnabled;
  let ended=false,cleanup=false,hpMin=hp(),failure='',kills=0,trips=0,lastOutput=start,initial:Map<number,number>|undefined;
  void s.ended.then(()=>{ended=true;});
@@ -90,7 +90,7 @@ export async function runEarthProduction(s:Session,o:{mode:'talismans'|'craft';c
  };
  const enterEarth=async()=>{
   await travel({x:3303,z:3477});await s.bot.dismissBlockingUI();
-  const at={x:3305,z:3473,level:0},q={id:2455,shape:10,angle:0,width:3,height:3,blockAccessFlags:0};
+  const at={x:3305,z:3473,level:0},q={id:2455,shape:10,angle:0,width:3,height:3,blockAccessFlags:0,src:'maps/m51_54.jm2',configSrc:'scripts/skill_runecraft/configs/runecraft.loc'};
   const loc=st()?.nearbyLocs.find(l=>l.id===q.id&&l.x===at.x&&l.z===at.z),item=inv().find(i=>i.id===1440);
   if(!loc||!item)throw Error('earth ruins/talisman unobserved');const face=await interactionApproach(s.sdk,at,q);if(!face)throw Error('earth ruins face unavailable');
   const w=await walkPath(await sessionWalker(s),[{x:face.x,z:face.z,tol:0}],{maxTicks:60,stop:over});check();if(!w.ok||pos()?.worldX!==face.x||pos()?.worldZ!==face.z)throw Error('earth ruins face unobserved');
