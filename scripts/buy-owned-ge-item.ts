@@ -56,6 +56,16 @@ export function orderAccounting(journal?:ItemOrder){
  return{acquired:settled&&valid?a:prior.acquired,refund:settled&&valid?refund:0,spent:knownSpent,
   escrow:unresolved?null:settled?0:prior.escrow-(journal.progress?.gross??0),maximumExposure:settled&&valid?0:prior.escrow,outcomeUnresolved:unresolved};
 }
+// A different finite acquisition method may use a fully refunded zero-fill intent, never an unresolved offer.
+export function earthShopFallback(request:ItemRequest,journal:ItemOrder|undefined,cap:number){
+ validateRequest(request);const q=orderQuantity(request),a=orderAccounting(journal);
+ if(!journal||journal.phase!=='settled'||JSON.stringify(journal.request)!==JSON.stringify(request)
+  ||request.item!==557||request.rescueMode||request.expectedOwned===undefined||journal.itemsBefore!==request.expectedOwned
+  ||a.outcomeUnresolved||a.escrow!==0||a.acquired!==0||a.spent!==0||a.refund!==orderEscrow(request)
+  ||!Number.isSafeInteger(cap)||cap<1||cap>1600)throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and cap1..1600');
+ return{args:['aubury',String(cap),'2000'],env:{ITEMS:'earth rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(request.expectedOwned+q),MAX_ITEMS:String(q),
+  MAX_SPEND:String(orderEscrow(request)),COIN_RESERVE:String(request.reserve),FLOAT:String(request.reserve+orderEscrow(request)),NO_BUY_TICKS:'25',BANK_PACK:'1'}};
+}
 function roundBaseline(j:ItemOrder){const p=priorRounds(j);return{...p,coins:j.coinsBefore-p.spent,items:j.itemsBefore+p.acquired};}
 function claimSettlement(j:ItemOrder,c:{items:number;coins:number}){
  const p=priorRounds(j);return{acquired:p.acquired+c.items,refund:orderEscrow(j.request)-p.spent-p.escrow+c.coins};
@@ -438,7 +448,15 @@ if(import.meta.main){
   const old=existsSync(journalPath)?JSON.parse(readFileSync(journalPath,'utf8')) as ItemOrder:undefined,now=Date.now(),period=Number(process.env.ORDER_MS??900000),request:ItemRequest=old?.request??{actor,server,goal,item:Number(process.env.ITEM_ID??1331),quantity:Number(process.env.QUANTITY??1),...(process.env.EXPECTED_OWNED?{expectedOwned:Number(process.env.EXPECTED_OWNED)}:{}),...(process.env.RESCUE_MODE?{rescueMode:process.env.RESCUE_MODE as ItemRequest['rescueMode']}:{}),limit:Number(process.env.LIMIT_PRICE??45000),reserve:Number(process.env.CASH_RESERVE??5000),createdAt:now,reviewAt:now+Math.min(300000,Math.max(1,Math.floor(period/3))),deadline:now+period};
   if(process.env.RESCUE_MODE&&process.env.RESCUE_MODE!==request.rescueMode)throw Error('existing rescue mode mismatch');
   if(request.actor.toLowerCase()!==actor.toLowerCase()||request.server!==server||request.goal!==goal||process.env.ITEM_ID&&Number(process.env.ITEM_ID)!==request.item||process.env.QUANTITY&&Number(process.env.QUANTITY)!==orderQuantity(request)||process.env.EXPECTED_OWNED&&Number(process.env.EXPECTED_OWNED)!==request.expectedOwned||process.env.LIMIT_PRICE&&Number(process.env.LIMIT_PRICE)!==request.limit||process.env.CASH_RESERVE&&Number(process.env.CASH_RESERVE)!==request.reserve||process.env.ORDER_MS&&Number(process.env.ORDER_MS)!==request.deadline-request.createdAt)throw Error('existing request identity/budget mismatch');
-  validateRequest(request);const rescue:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
+  validateRequest(request);
+  if(process.env.SHOP_PROFILE){
+   if(process.env.SHOP_PROFILE!=='aubury'||process.env.CANCEL==='1')throw Error('unsupported shop fallback');
+   const plan=earthShopFallback(request,old,Number(process.env.CAP??1600));
+   console.log('SHOP_FALLBACK '+JSON.stringify({method:'aubury',originalOfferId:old!.offerId,originalJournalPreserved:true,item:request.item,quantity:orderQuantity(request),target:request.expectedOwned!+orderQuantity(request),maxSpend:orderEscrow(request),reserve:request.reserve}));
+   const child=Bun.spawn([process.execPath,'scripts/shop-buyer.ts',actor,...plan.args],{windowsHide:true,stdout:'inherit',stderr:'inherit',env:{...process.env,...plan.env,SHOP_PROFILE:''}});
+   const code=await child.exited;unlinkSync(lock);process.exit(code);
+  }
+  const rescue:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
   s=await openBot(actor,{onStop:async(session,detail)=>{if(!expectedRescueStop(session,detail,rescue))stopped=true;},onSessionEnd:async()=>{stopped=true;}});
   const stop=()=>stopped||existsSync(resolve('.practice',`stop-${actor}`));
   const result=await runOwnedItem(s,request,journalPath,stop,process.env.CANCEL==='1',fillWaitTicks,rescue);console.log('OWNED_GE_ITEM '+JSON.stringify(result));const ok=await settle([s],result.ok,JSON.stringify(result));unlinkSync(lock);process.exit(ok?0:1);

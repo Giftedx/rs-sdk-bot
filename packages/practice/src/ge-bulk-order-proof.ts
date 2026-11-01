@@ -16,6 +16,7 @@ import {openBot,finish,serverFromEnv} from '../../core/src/bot';
 import {waitUntil} from '../../core/src/ticks';
 import {orderPaths,orderQuantity,orderEscrow,orderAccounting,bankTotals,type ItemOrder} from '../../../scripts/buy-owned-ge-item';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
+import {runShopSupplyNative,verifyShopSupply} from './shop-supply-order-proof';
 
 // Native bulk GE order: an owned seller lists noted grapes, then the actual worker buys the exact
 // quantity, banks it and reruns the same order key. The consumer stage reads the saved bank.
@@ -369,7 +370,9 @@ if(import.meta.main){
   }else{
    if(!process.env.DELIVERY_DIR)throw Error('run through bun run deliver ge-bulk-order');
    const directory=resolve(process.env.DELIVERY_DIR);
-   process.exitCode=(process.argv[2]==='--verify'?verify(directory):await run(directory)).ok?0:1;
+   const ge=process.argv[2]==='--verify'?verify(directory):await run(directory);
+   const shop=ge.ok?(process.argv[2]==='--verify'?verifyShopSupply(join(directory,'shop')):await runShopSupplyNative(join(directory,'shop'))):null;
+   const report={ok:ge.ok&&shop?.ok===true,ge,shop};console.log(JSON.stringify(report));process.exitCode=report.ok?0:1;
   }
  }catch(error){console.error(String(error));process.exitCode=1;}
 }

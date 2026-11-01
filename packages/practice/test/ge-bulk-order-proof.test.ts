@@ -308,3 +308,4 @@ test('saved exact output accepts cumulative recovery receipts and rejects a reus
  expect(bulkOrderChecks({...input,journal:{...recovered,progress:{...recovered.progress!,quantity:300}}}).journal).toBe(false);
  expect(bulkOrderChecks({...input,journal:{...recovered,progress:{...recovered.progress!,gross:539}}}).journal).toBe(false);
 });
+import './shop-supply-order-proof.test';

@@ -5,6 +5,7 @@ const run=(bought=1136,spent=6816,target=1)=>({code:0,timedOut:false,hpMin:35,lo
 test('saved shop supply binds exact new stock, money, retained fire, assets and logout',()=>{
  const before=save(),after=save(1139,345472);
  expect(Object.values(shopSupplyChecks(before,after,run())).every(Boolean)).toBe(true);
+ expect(Object.values(shopSupplyChecks(before,after,{...run(),log:'MILESTONE bank boughtTotal=0\n'+run().log})).every(Boolean)).toBe(true);
  for(const mutate of [(s:any)=>s.inventories[95][0].count--,(s:any)=>s.inventories[95][1].count--,(s:any)=>s.inventories[95][2].count--,(s:any)=>s.inventories[95][3].count--]){
   const bad=structuredClone(after);mutate(bad);expect(Object.values(shopSupplyChecks(before,bad,run())).every(Boolean)).toBe(false);
  }
