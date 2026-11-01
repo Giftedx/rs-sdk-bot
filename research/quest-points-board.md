@@ -2025,3 +2025,14 @@ checking which outcome caused it
 ([quest-viking.ts:409](../scripts/generated/quest-viking.ts#L409)). A complete-quest result from that worker must
 remain separate from a verified fourth-form victory. Native qualification and live victory evidence for this
 boss remain open; check this outcome before the completion account takes Thorvald's trial.
+
+Code-read candidate: stage food and spare rings of recoil after Peer banks the account's items. The entry check
+does not exclude food or the ring's `category_656`
+([entry check](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L435),
+[ring config](../vendor/rs-sdk/server/content/scripts/skill_magic/configs/enchanted_jewelry.obj#L1)). On a members map,
+the fourth-form damage queue explicitly applies recoil and consumes ring charges
+([damage queue](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L383)).
+A ring shatters at 40 reflected damage
+([charge rule](../vendor/rs-sdk/server/content/scripts/general/scripts/enchanted_jewellry/ring_of_recoil.rs2#L1)).
+Entry with these supplies, ring replacement, food use, the victory and the connected full quest route need native
+proof before this candidate can support a live assignment.
