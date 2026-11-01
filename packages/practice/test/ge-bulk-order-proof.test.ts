@@ -7,7 +7,9 @@ import {tmpdir} from 'node:os';
 import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import type {ItemOrder} from '../../../scripts/buy-owned-ge-item';
 import {verifyCase} from '../src/ge-bulk-order-proof';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision} from '../../core/src/worker-release';
+import {geProofRuntime} from '../src/ge-bulk-order-proof';
+test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/buy-owned-ge-item.ts']));});
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},
  skills:Array.from({length:21},(_,i)=>({index:i,level:i===3?10:1,xp:0,rawExperience:0})),
@@ -23,7 +25,7 @@ const input={before:save([{id:995,count:2000}]),after:save([{id:995,count:1100},
 test('elapsed verification delay alone does not invalidate same-source saved GE effects',()=>{
  const dir=mkdtempSync(join(tmpdir(),'ge-saved-age-')),at=1793520000000;
  const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-saved-age');
- const meta={at,source:workerSourceRevision(),server:p.server,endpoints:{ports:p.ports,instance:p.instance},buyer:request.actor,orderKey:request.goal,sellCode:0,buyCode:0,againCode:0};
+ const meta={at,source:geProofRuntime(),server:p.server,endpoints:{ports:p.ports,instance:p.instance},buyer:request.actor,orderKey:request.goal,sellCode:0,buyCode:0,againCode:0};
  const clock=spyOn(Date,'now').mockReturnValue(at);
  try{
   for(const label of ['before','after','repeat'] as const){const s=input[label];writeFileSync(join(dir,label+'.sav'),saveBytes(s.position,s.inventories));}

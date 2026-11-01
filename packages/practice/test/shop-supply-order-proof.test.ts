@@ -1,5 +1,5 @@
 import{test,expect}from'bun:test';
-import{shopSupplyChecks,shopRepeatChecks,shopRefusalChecks}from'../src/shop-supply-order-proof';
+import{bettySupplyChecks,shopSupplyChecks,shopRepeatChecks,shopRefusalChecks}from'../src/shop-supply-order-proof';
 const save=(earth=3,coins=352288)=>({position:{x:3252,z:3420,level:0},skills:{3:{level:35,xp:10000}},inventories:{93:[],94:[],95:[{id:557,count:earth},{id:554,count:1482},{id:995,count:coins},{id:1277,count:1}]}} as any);
 const run=(bought=1136,spent=6816,target=1)=>({code:0,timedOut:false,hpMin:35,log:`LOGOUT logged-out\nRESULT ok ticks=500 boughtTotal=${bought} spentTotal=${spent} stop=stock-target targetMet=${target}\n`});
 test('saved shop supply binds exact new stock, money, retained fire, assets and logout',()=>{
@@ -19,4 +19,9 @@ test('target repeat cannot buy again or debit coins; refusal retains every asset
  const poor=save(3,30000),refused={...run(0,0,0),log:run(0,0,0).log.replace('stock-target','stock-wait')};
  expect(Object.values(shopRefusalChecks(poor,poor,refused)).every(Boolean)).toBe(true);
  expect(Object.values(shopRefusalChecks(poor,save(3,29999),refused)).every(Boolean)).toBe(false);
+});
+test('alternate Betty profile proves its route, useful stock and the same conserved budget',()=>{
+ const before=save(),after=save(53,351888);after.position={x:3092,z:3243,level:0};
+ expect(Object.values(bettySupplyChecks(before,after,run(50,400))).every(Boolean)).toBe(true);
+ after.inventories[95][0].count--;expect(Object.values(bettySupplyChecks(before,after,run(50,400))).every(Boolean)).toBe(false);
 });

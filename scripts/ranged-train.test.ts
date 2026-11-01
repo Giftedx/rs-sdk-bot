@@ -3,12 +3,17 @@ import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOption
 import * as walking from '../packages/core/src/walk';
 import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
-import {rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
+import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
+import {capabilityRevision} from '../packages/core/src/worker-release';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../packages/core/src/memory';
 
 test('stock-only native continuation disables arrow buying without reducing admission or target checks',()=>{
  const c=rangedChildConfiguration('fixture');expect(c.env.BUY_ARROWS).toBe('0');expect(c.env.COIN_RESERVE).toBe('400000');
  expect(c.cmd.slice(-2)).toEqual(['71','10000']);expect(c.env.KILLS_PER_TRIP).toBe('8');
+});
+test('native Ranged proof binds its actual worker closure and owned files',()=>{
+ const s=rangedProofSource();expect(s.runtime).toBe(capabilityRevision(['scripts/ranged-train.ts']));
+ expect(Object.keys(s.files)).toEqual(['scripts/ranged-train.ts','scripts/ranged-train.test.ts','packages/practice/src/ranged-train-proof.ts']);
 });
 
 test('proof selects a whole isolated endpoint set and refuses eight exhausted candidates',()=>{

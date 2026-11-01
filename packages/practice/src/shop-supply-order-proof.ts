@@ -39,6 +39,12 @@ export function shopRefusalChecks(before:Save,after:Save,r:Run){
  return{...exits(r),exit:!r.timedOut&&(ordinary?r.code===1:r.code===0),assets:unchanged(before,after),health:Number.isFinite(r.hpMin)&&r.hpMin>0,
  refusal:ordinary||amount(r.log,'boughtTotal')===0&&amount(r.log,'spentTotal')===0&&amount(r.log,'targetMet')===0&&/stop=(?:stock-wait|coin-reserve|bounded-purchase-unaffordable)/.test(r.log)};
 }
+export function bettySupplyChecks(before:Save,after:Save,r:Run){const spent=amount(r.log,'spentTotal');return{
+ ...exits(r),target:bank(after,557)===53&&total(after,557)===53&&amount(r.log,'boughtTotal')===50&&amount(r.log,'targetMet')===1,
+ bank:after.position.level===0&&Math.max(Math.abs(after.position.x-3092),Math.abs(after.position.z-3243))<=4,
+ coins:Number.isSafeInteger(spent)&&spent>0&&spent<=2000&&total(before,995)-total(after,995)===spent&&total(after,995)>=30000,
+ assets:unchanged(before,after,[557,995])&&bank(after,554)===1482,health:Number.isFinite(r.hpMin)&&r.hpMin>0,
+};}
 const files=['scripts/buy-owned-ge-item.ts','scripts/shop-buyer.ts','scripts/shop-buyer.test.ts','packages/practice/src/shop-supply-order-proof.ts','packages/practice/test/shop-supply-order-proof.test.ts'];
 const hash=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
 const source=()=>({runtime:capabilityRevision(['scripts/buy-owned-ge-item.ts'],root),files:Object.fromEntries(files.map(f=>[f,hash(join(root,f))]))});
@@ -55,6 +61,7 @@ export function verifyShopSupply(directory:string){
   fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
   originalJournal:hash(join(directory,'original-ge-journal.json'))===hash(join(directory,'original-ge-journal-after.json')),
   fallbackSpend:(()=>{const j=JSON.parse(readFileSync(join(directory,'fallback-spend.json'),'utf8'));return j.phase==='settled'&&j.request.item===557&&j.request.quantity===1136&&j.request.expectedOwned===3&&j.spent===total(saved('before'),995)-total(saved('after'),995);})(),
+  betty:Object.values(bettySupplyChecks(saved('betty-before'),saved('betty-after'),run('betty'))).every(Boolean),
  };
  const report={ok:Object.values(checks).every(Boolean),checks,at:Date.now(),source:meta.source,scope:'Native 150ms/25x existing shop-buyer CLI: exact 1136-earth acquisition, retained1482fire, repeat and funds refusal; no live or rank claim.'};
  writeFileSync(join(directory,'verified.json'),JSON.stringify(report,null,2));return report;
@@ -66,10 +73,10 @@ export async function runShopSupplyNative(directory:string){
  const lock=join(practiceDir(),'delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,task:'shop-supply-order',directory,at:Date.now()}));
  let stack:Awaited<ReturnType<typeof startGeProofStack>>|undefined;
- const command=async(name:string,label:string,shop=true,quantity=1136):Promise<Run>=>{
+ const command=async(name:string,label:string,shop=true,quantity=1136,profile='aubury'):Promise<Run>=>{
   if(!actors.has(name)||freemem()/2**30<FREE_FLOOR_GB)throw Error('owned actor/native memory boundary');
   const started=Date.now(),out=join(directory,label+'.log'),err=join(directory,label+'.err');
-  const child=Bun.spawn(['bun','scripts/buy-owned-ge-item.ts',name],{cwd:root,windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err),env:{...process.env,...endpoint.env,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_KEY:'native-earth-shop',ITEM_ID:'557',QUANTITY:String(quantity),EXPECTED_OWNED:'3',LIMIT_PRICE:'40',CASH_RESERVE:'30000',ORDER_MS:'900000',FILL_WAIT_TICKS:'0',CAP:'1600',SHOP_PROFILE:shop?'aubury':''}});
+  const child=Bun.spawn(['bun','scripts/buy-owned-ge-item.ts',name],{cwd:root,windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err),env:{...process.env,...endpoint.env,DEMO_OK:'',RANDOM_EVENTS:'0',ORDER_KEY:'native-earth-shop',ITEM_ID:'557',QUANTITY:String(quantity),EXPECTED_OWNED:'3',LIMIT_PRICE:'40',CASH_RESERVE:'30000',ORDER_MS:'900000',FILL_WAIT_TICKS:'0',CAP:profile==='betty'?'3000':'1600',SHOP_PROFILE:shop?profile:''}});
   let hpMin=Infinity,ready=false,timedOut=false,termination:Promise<void>|undefined;
   const observe=()=>{try{const s=JSON.parse(readFileSync(join(root,'.practice/status',name+'.json'),'utf8'));if(s.started>=started-2000&&s.name===name&&Number.isFinite(s.hp?.now)){if(s.hp.now>0)ready=true;if(ready)hpMin=Math.min(hpMin,s.hp.now);}}catch{}};
   const monitor=setInterval(observe,100),timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid);},240000);
@@ -94,8 +101,13 @@ export async function runShopSupplyNative(directory:string){
   copyFileSync(journal,join(directory,'original-ge-journal-after.json'));copyFileSync(journal+'.shop.json',join(directory,'fallback-spend.json'));
   const poor=await seed(2,30000);copyFileSync(poor.path,join(directory,'refuse-before.sav'));
   const refuse=await command(poor.name,'refuse',false);await waitPracticeSave(poor.path,s=>s.position.x===3185&&s.position.z===3436);copyFileSync(poor.path,join(directory,'refused.sav'));
-  const paths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json'];
-  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,endpoint:{ports:endpoint.ports,instance:endpoint.instance},runs:{buy,repeat,refuse},hashes:Object.fromEntries(paths.map(f=>[f,hash(join(directory,f))]))},null,2));
+  const alternate=await seed(3,352288);copyFileSync(alternate.path,join(directory,'betty-before.sav'));
+  const emptyBetty=await command(alternate.name,'betty-empty-ge',false,50);if(emptyBetty.code===0||!emptyBetty.log.includes('"acquired":0')||!emptyBetty.log.includes('LOGOUT logged-out'))throw Error('alternate zero-fill GE settlement unproved');
+  const betty=await command(alternate.name,'betty',true,50,'betty');
+  const bettySaved=await waitPracticeSave(alternate.path,s=>bank(s,557)===53&&s.position.level===0&&Math.max(Math.abs(s.position.x-3092),Math.abs(s.position.z-3243))<=4,{timeoutMs:15000});
+  copyFileSync(alternate.path,join(directory,'betty-after.sav'));if(!bettySaved.matched)throw Error('alternate shop stock not saved');
+  const paths=['before.sav','after.sav','repeat.sav','refuse-before.sav','refused.sav','buy.log','repeat.log','refuse.log','empty-ge.log','original-ge-journal.json','original-ge-journal-after.json','fallback-spend.json','betty-before.sav','betty-after.sav','betty.log','betty-empty-ge.log'];
+  writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,endpoint:{ports:endpoint.ports,instance:endpoint.instance},runs:{buy,repeat,refuse,betty},hashes:Object.fromEntries(paths.map(f=>[f,hash(join(directory,f))]))},null,2));
   return verifyShopSupply(directory);
  }finally{
   try{await(stack?stack.stop():stopStack(endpoint.instance));}finally{closeSync(fd);if(existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).pid===process.pid)unlinkSync(lock);}
