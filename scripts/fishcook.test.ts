@@ -1,7 +1,7 @@
 import { expect, test, spyOn } from 'bun:test';
 import * as walking from '../packages/core/src/walk';
 import * as ticks from '../packages/core/src/ticks';
-import { fundFishingTool, buyFishingSupplies, cookCourierReady, cookStarterChickens, finiteFoodProfile, finiteFoodWork, finiteFoodCanCatch } from './fishcook';
+import { fundFishingTool, buyFishingSupplies, cookCourierReady, cookStarterChickens, finiteFoodProfile, finiteFoodWork, finiteFoodCanCatch, finiteFoodEntryPosition } from './fishcook';
 function account(bankCoins = 25, coins = 0, rod = false) {
     const inventory: any[] = [{ name: 'Coins', count: coins }, ...(rod ? [{ name: 'Fly fishing rod', count: 1 }] : [])];
     let withdrew = 0;
@@ -217,4 +217,10 @@ test('rod-only acquisition leaves the owned feather budget untouched and costs e
  const inventory:any[]=[{name:'Coins',count:5},{name:'Feather',count:32}];const calls:string[]=[];
  const s:any={sdk:{getState:()=>({inventory})},bot:{buyFromShop:async(re:RegExp,n:number)=>{calls.push(re.source);expect(re.test('Fly fishing rod')).toBe(true);expect(n).toBe(1);inventory[0].count-=5;inventory.push({name:'Fly fishing rod',count:1});return{success:true};}}};
  expect(await buyFishingSupplies(s,0)).toBe(0);expect(calls).toHaveLength(1);expect(inventory[0].count).toBe(0);expect(inventory[1].count).toBe(32);
+});
+
+test('finite food admits actual Ghost cemetery entry and Draynor while refusing unknown surface routes',()=>{
+ expect(finiteFoodEntryPosition({worldX:3248,worldZ:3193,level:0})).toBe(true);
+ expect(finiteFoodEntryPosition({worldX:3092,worldZ:3242,level:0})).toBe(true);
+ for(const p of [undefined,{worldX:3248,worldZ:3193,level:1},{worldX:2655,worldZ:3283,level:0},{worldX:3104,worldZ:9576,level:0}])expect(finiteFoodEntryPosition(p)).toBe(false);
 });
