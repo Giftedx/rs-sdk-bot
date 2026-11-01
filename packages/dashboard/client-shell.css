@@ -76,3 +76,18 @@ body{background:#171717}.app{display:block!important;height:100dvh!important;pad
 .game-hud .game-minimap canvas.minimap-frame{position:absolute;left:0;top:0;width:181px;height:165px;border-radius:0;background:none;pointer-events:none}
 /* The game's compass is 51 px with its N near the edge: shown at 40 px in the socket's well, clipped round. */
 .game-hud .minimap-compass{left:2px;top:1px;width:40px;height:40px;clip-path:circle(17px at 50% 50%)}
+/* The game's minimap layout (measured from oldschool.runescape.wiki/images/Minimap.png): the ring 17 px lower in its box
+   so the compass sits above its top-left; the orbs and the XP orb at the game's offsets from the ring's centre. */
+.game-hud .game-minimap{height:182px}
+.game-hud .game-minimap canvas:not(.minimap-frame){top:28.5px}
+.game-hud .game-minimap canvas.minimap-frame{height:182px}
+.game-hud .minimap-compass{left:1px;top:0;width:37px;height:37px;clip-path:circle(16px at 50% 50%)}
+.game-hud .game-orbs{right:162px;top:53px;gap:6.5px}
+.game-hud .game-orb{height:27px}
+.game-hud .game-orb.orb-hp{margin-right:3.5px}
+.game-hud .game-orb.orb-prayer{margin-right:0}
+.game-hud .orb-art{width:27px;height:27px}
+.game-hud .orb-num{height:17px;min-width:22px;margin-right:-4px;padding:0 7px 0 4px;font-size:14px;line-height:17px}
+.game-hud .game-xp{right:192.5px;top:30.5px}
+.game-hud .game-logout{top:192px}
+

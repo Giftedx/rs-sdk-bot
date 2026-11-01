@@ -203,26 +203,29 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   const orbIcons={hp:'skill-hitpoints.png',prayer:'skill-prayer.png'},orbFill={hp:['#ef3b2f','#7c0c09'],prayer:['#5ee0f5','#11718c']},orbImg={};
   const orbColour=(v,max)=>{if(v==null||!max)return '#ffff00';const f=Math.max(0,Math.min(1,v/max));return `rgb(${Math.round(f<0.5?255:510*(1-f))},${Math.round(f<0.5?510*f:255)},0)`;};
   const hiDpi=(c,w,h)=>{const r=Math.max(1,Math.round(window.devicePixelRatio||1));c.width=w*r;c.height=h*r;c.style.width=w+'px';c.style.height=h+'px';const g=c.getContext('2d');g.scale(r,r);return g;};
+  // Size and place as the game's minimap (oldschool.runescape.wiki/images/Minimap.png, measured from the ring's centre):
+  // 27 px orbs, HP at (-92.5, -41), Prayer at (-89, -7.5), the XP orb at (-119, -64), the compass at (-79, -83).
+  const ORB=27;
   function drawOrb(c){
-    const id=c.dataset.orb,frac=Number(c.dataset.frac)||0,g=hiDpi(c,34,34),R=16.5,r=12.5;
-    const ring=g.createRadialGradient(13,12,4,17,17,R);ring.addColorStop(0,'#b3a385');ring.addColorStop(0.75,'#6e6350');ring.addColorStop(1,'#2a251c');
-    g.beginPath();g.arc(17,17,R,0,Math.PI*2);g.fillStyle=ring;g.fill();g.lineWidth=1;g.strokeStyle='#000';g.stroke();
-    g.beginPath();g.arc(17,17,r,0,Math.PI*2);g.fillStyle='#101010';g.fill();
-    g.save();g.beginPath();g.arc(17,17,r,0,Math.PI*2);g.clip();
-    const top=17+r-2*r*frac,liquid=g.createLinearGradient(0,top,0,17+r);liquid.addColorStop(0,orbFill[id][0]);liquid.addColorStop(1,orbFill[id][1]);g.fillStyle=liquid;g.fillRect(0,top,34,34);
-    g.fillStyle='rgba(255,255,255,0.16)';g.beginPath();g.ellipse(15,11,8,4.5,-0.3,0,Math.PI*2);g.fill();g.restore();
-    g.beginPath();g.arc(17,17,r,0,Math.PI*2);g.strokeStyle='rgba(0,0,0,0.7)';g.stroke();
-    const draw=img=>g.drawImage(img,17-8,17-8,16,16);
+    const id=c.dataset.orb,frac=Number(c.dataset.frac)||0,g=hiDpi(c,ORB,ORB),m=ORB/2,R=m-0.5,r=R-3.5;
+    const ring=g.createRadialGradient(m-3,m-4,3,m,m,R);ring.addColorStop(0,'#b3a385');ring.addColorStop(0.75,'#6e6350');ring.addColorStop(1,'#2a251c');
+    g.beginPath();g.arc(m,m,R,0,Math.PI*2);g.fillStyle=ring;g.fill();g.lineWidth=1;g.strokeStyle='#000';g.stroke();
+    g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.fillStyle='#101010';g.fill();
+    g.save();g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.clip();
+    const top=m+r-2*r*frac,liquid=g.createLinearGradient(0,top,0,m+r);liquid.addColorStop(0,orbFill[id][0]);liquid.addColorStop(1,orbFill[id][1]);g.fillStyle=liquid;g.fillRect(0,top,ORB,ORB);
+    g.fillStyle='rgba(255,255,255,0.16)';g.beginPath();g.ellipse(m-1.5,m-5,6.5,3.5,-0.3,0,Math.PI*2);g.fill();g.restore();
+    g.beginPath();g.arc(m,m,r,0,Math.PI*2);g.strokeStyle='rgba(0,0,0,0.7)';g.stroke();
+    const draw=img=>g.drawImage(img,m-6.5,m-6.5,13,13);
     let img=orbImg[id];if(!img){img=orbImg[id]=new Image();img.src=asset(orbIcons[id]);}
     if(img.complete&&img.naturalWidth)draw(img);else img.addEventListener('load',()=>draw(img),{once:true});
   }
   // The minimap frame: a stone ring round the map and a socket for the compass, drawn once at the screen's scale.
   {
-    const c=hud.querySelector('canvas.minimap-frame'),g=hiDpi(c,181,165),cx=98.5,cy=84.5;
+    const c=hud.querySelector('canvas.minimap-frame'),g=hiDpi(c,181,182),cx=98.5,cy=101.5;
     const stone=(x,y,inner,outer)=>{const gr=g.createRadialGradient(x,y,inner,x,y,outer);gr.addColorStop(0,'#3b3427');gr.addColorStop(0.35,'#9c8e72');gr.addColorStop(0.7,'#6b604d');gr.addColorStop(1,'#2a251c');g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.arc(x,y,inner,0,Math.PI*2,true);g.fillStyle=gr;g.fill('evenodd');g.lineWidth=1;g.strokeStyle='#000';g.beginPath();g.arc(x,y,outer,0,Math.PI*2);g.stroke();g.beginPath();g.arc(x,y,inner,0,Math.PI*2);g.stroke();};
     stone(cx,cy,73,80);
     // The compass socket: a dark well the compass sits in, large enough that its N and needle both show.
-    g.beginPath();g.arc(22,21,17,0,Math.PI*2);g.fillStyle='#16130e';g.fill();stone(22,21,17,21);
+    g.beginPath();g.arc(19.5,18.5,16,0,Math.PI*2);g.fillStyle='#16130e';g.fill();stone(19.5,18.5,16,19.5);
   }
   // The minimap: the 2D map art around the observed account at 4 px a tile, every bot a dot, the observed one a
   // white square in the centre. With no account it shows the whole known world.
