@@ -6,7 +6,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
 import {sessionWalker,walkPath,expandPath,type PathPoint} from '../packages/core/src/walk';
-import {rangedCredit,selectRangedTarget,makeRangedHealer} from './gather-ranged';
+import {rangedCredit,selectRangedTarget,makeRangedHealer,FOOD_CHAINS,foodBites} from './gather-ranged';
 type Item={id:number;count:number};
 // levelrequire from server/content/scripts/skill_combat/configs/ranged/{bows,arrows}.obj.
 // player_ranged.rs2 refuses arrows whose levelrequire exceeds the bow's levelrequire.
@@ -48,8 +48,8 @@ export function rangedTrainOptions(env:Record<string,string|undefined>,argv:stri
  const o={target:n(argv[3]??env.TARGET_LEVEL,10),cap:n(argv[4]??env.CAP,3000),minArrows:n(env.MIN_ARROWS,30),buyArrows:n(env.BUY_ARROWS,60),buyArrowId:n(env.BUY_ARROW_ID,882),
   maxSpend:n(env.MAX_SPEND,500),coinReserve:n(env.COIN_RESERVE,0),ammo:n(env.AMMO,60),food:n(env.FOOD,3),foodId:n(env.FOOD_ID,329),killsPerTrip:n(env.KILLS_PER_TRIP,5),maxTrips:n(env.MAX_TRIPS,10)};
  const bad=Object.entries(o).filter(([,v])=>!Number.isSafeInteger(v)||v<0).map(([k])=>k);
- if(bad.length||o.target<2||o.target>99||o.cap<800||o.ammo<15||o.ammo>500||o.food<2||o.food>8||o.killsPerTrip<1||o.killsPerTrip>8||o.maxTrips<1||o.maxTrips>50||!LOWE_ARROWS.includes(o.buyArrowId)||![329,333].includes(o.foodId))
-  throw Error('ranged-train prerequisite: bounded options '+(bad.join(',')||'target2..99,cap>=800,ammo15..500,food2..8,kills1..8,trips1..50,Lowe arrow,food329/333'));
+ if(bad.length||o.target<2||o.target>99||o.cap<800||o.ammo<15||o.ammo>500||o.food<2||o.food>8||o.killsPerTrip<1||o.killsPerTrip>8||o.maxTrips<1||o.maxTrips>50||!LOWE_ARROWS.includes(o.buyArrowId)||!FOOD_CHAINS[o.foodId])
+  throw Error('ranged-train prerequisite: bounded options '+(bad.join(',')||'target2..99,cap>=800,ammo15..500,food2..8,kills1..8,trips1..50,Lowe arrow,food329/333/1891/1897'));
  return o;
 }
 export async function runRangedTrain(s:Session,o:RangedTrainOptions){
@@ -76,7 +76,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const deposit=async(ids:readonly number[])=>{for(const id of new Set(inv().filter(i=>ids.includes(i.id)&&i.count>0).map(i=>i.id)))await depositObserved(s,inv().find(i=>i.id===id)!);capture();};
  const equip=async(id:number)=>{const item=inv().find(i=>i.id===id);if(!item)throw Error('ranged-train equip input absent '+id);const before=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);await s.bot.equipItem(item);if(!await waitUntil(s,()=>count(eq(),id)>0,{timeoutTicks:10})||(ARROW_IDS.includes(id)&&sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS)!==before))throw Error('ranged-train equip effect unknown '+id);};
  const unequip=async(ids:readonly number[])=>{for(const item of eq().filter(i=>ids.includes(i.id))){await s.bot.unequipItem(item);if(!await waitUntil(s,()=>!eq().some(i=>i.id===item.id),{timeoutTicks:10}))throw Error('ranged-train unequip unobserved '+item.id);}};
- const heal=makeRangedHealer(s,()=>{eaten++;},o.foodId);
+ const heal=makeRangedHealer(s,()=>{eaten++;},o.foodId),foodChain=FOOD_CHAINS[o.foodId]!;
  const base=await sessionWalker(s);
  const guarded={...base,walk:async(x:number,z:number)=>{await heal();const p=base.pos();if(!p||p.level!==0)throw Error('ranged-train walk plane unknown');const path=base.plan(0,p,{x,z}),last=path.at(-1);if(Math.max(Math.abs(p.x-x),Math.abs(p.z-z))>1&&(!last||Math.max(Math.abs(last.x-x),Math.abs(last.z-z))>1))throw Error('ranged-train incomplete route refused');if(expandPath(p,path).some(t=>t.x<3250&&t.z>=3350&&t.z<=3390))throw Error('ranged-train dark-wizard corridor refused');return base.walk(x,z);}};
  const walk=async(points:PathPoint[])=>{const r=await walkPath(guarded,points,{look:4,maxTicks:500,stop:over});if(!r.ok)throw Error('ranged-train route failed '+r.detail);};
@@ -111,11 +111,11 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
    const bow=bestBow(owned(),level());if(!bow)throw Error('ranged-train prerequisite: no owned bow usable at Ranged '+level());
    if(sum(owned(),usableArrows(bow.req,level()))<o.minArrows)await restock(bow.req);
    const arrow=chooseArrow(owned(),bow.req,level());if(!arrow||arrow.count<3){stop='ammo-short';break;}
-   const food=Math.max(0,o.food-held(o.foodId));if(stored(o.foodId)<food)throw Error('ranged-train prerequisite: stage unnoted food '+o.foodId);
+   const food=Math.max(0,o.food-sum(inv(),foodChain));if(sum(snapshot,foodChain)<food)throw Error('ranged-train prerequisite: stage unnoted food '+o.foodId);
    // Bow, quiver stack, food, two displaced melee items, two non-stacking drops per kill and feathers.
    if(28-inv().length<2*o.killsPerTrip+5+food)throw Error('ranged-train prerequisite: pack needs loot and unequipped-kit slots');
    if(!count(eq(),bow.id)&&!held(bow.id))await withdraw(bow.id,1);
-   await withdraw(arrow.id,Math.min(o.ammo,stored(arrow.id)));await withdraw(o.foodId,food);await close();
+   await withdraw(arrow.id,Math.min(o.ammo,stored(arrow.id)));for(let left=food;left>0;){const id=[...foodChain].reverse().find(i=>stored(i)>0)!,k=Math.min(left,stored(id));await withdraw(id,k);left-=k;}await close();
    if(st()?.autoRetaliateEnabled)await s.direct({type:'clickComponent',componentId:151,reason:'Ranged exact target XP: auto-retaliate OFF'});if(!await waitUntil(s,()=>st()?.autoRetaliateEnabled===false,{timeoutTicks:8}))throw Error('ranged-train auto-retaliate OFF unobserved');
    if(!count(eq(),bow.id))await equip(bow.id);
    if(held(arrow.id)>0)await equip(arrow.id);
@@ -165,7 +165,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
    if(!near(BANK,4)){if((st()?.player?.worldZ??0)<3380)await walk(BACK);else await walk([{...BANK,tol:1}]);}
    armed=false;await unequip([...ARROW_IDS,...BOW_IDS]);
    for(const id of originalEquipment)if(!eq().some(i=>i.id===id))await equip(id);
-   await open();await deposit([...BOW_IDS,...ARROW_IDS,o.foodId,BONES,CHICKEN,FEATHER,...(coinsWithdrawn>0?[COINS]:[])]);await close();
+   await open();await deposit([...BOW_IDS,...ARROW_IDS,...foodChain,BONES,CHICKEN,FEATHER,...(coinsWithdrawn>0?[COINS]:[])]);await close();
    if(st()?.autoRetaliateEnabled!==originalRetaliate){await s.direct({type:'clickComponent',componentId:originalRetaliate?150:151,reason:'restore original auto-retaliate'});if(!await waitUntil(s,()=>st()?.autoRetaliateEnabled===originalRetaliate,{timeoutTicks:8}))throw Error('ranged-train auto-retaliate restore unobserved');}
   }catch(e){failure=[failure,'cleanup '+String(e)].filter(Boolean).join('; ');}
   off();
@@ -173,10 +173,10 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const final=owned(),total=(items:readonly Item[]|undefined,id:number)=>count(items??[],id);
  const arrows=arrowAccount(sum(initial??[],ARROW_IDS),bought,sum(final,ARROW_IDS),shots);
  const coinDebit=total(initial,COINS)-total(final,COINS);
- const loot=new Set([BONES,CHICKEN,FEATHER,o.foodId,COINS,...ARROW_IDS]);
+ const loot=new Set([BONES,CHICKEN,FEATHER,...foodChain,COINS,...ARROW_IDS]);
  const preserved=!!initial&&[...new Set([...initial.map(i=>i.id),...final.map(i=>i.id)])].every(id=>loot.has(id)||total(initial,id)===total(final,id));
  const equipmentRestored=JSON.stringify(eq().map(i=>i.id).sort())===JSON.stringify([...originalEquipment].sort());
- const accounting=!!initial&&arrows.ok&&coinDebit===coinsSpent&&total(final,o.foodId)===total(initial,o.foodId)-eaten&&total(final,BONES)-total(initial,BONES)===kills&&total(final,CHICKEN)-total(initial,CHICKEN)===kills;
+ const accounting=!!initial&&arrows.ok&&coinDebit===coinsSpent&&foodBites(final,o.foodId)===foodBites(initial??[],o.foodId)-eaten&&total(final,BONES)-total(initial,BONES)===kills&&total(final,CHICKEN)-total(initial,CHICKEN)===kills;
  const targetMet=level()>=o.target;
  return{ok:!failure&&!died&&!ended&&targetMet&&preserved&&accounting&&equipmentRestored,targetMet,stop,targetLevel:o.target,startLevel,finalLevel:level(),xpGain:xp()-startXp,
   bow:bowUsed,arrow:arrowUsed,trips,kills,shots,picked,arrowsSpent:arrows.spent,arrowsBought:bought,coinsSpent,coinDebit,shopVisits,eaten,hpMin,hp:hp(),died,

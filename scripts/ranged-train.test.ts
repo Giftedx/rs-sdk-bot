@@ -1,5 +1,6 @@
 import {test,expect,spyOn} from 'bun:test';
 import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain} from './ranged-train';
+import {foodBites} from './gather-ranged';
 import * as walking from '../packages/core/src/walk';
 import type {Session} from '../packages/core/src/inprocess';
 import {rangedMemoryFloor} from '../packages/practice/src/ranged-train-proof';
@@ -41,6 +42,12 @@ test('options keep defaults, accept argv target and cap, and refuse unbounded in
  expect(o).toMatchObject({target:10,cap:3000,minArrows:30,buyArrowId:882,maxSpend:500,foodId:329,killsPerTrip:5,maxTrips:10});
  expect(rangedTrainOptions({TARGET_LEVEL:'20'},['bun','s','Bot','12','4000'])).toMatchObject({target:12,cap:4000});
  for(const env of [{CAP:'100'},{BUY_ARROW_ID:'888'},{FOOD_ID:'315'},{MAX_TRIPS:'0'},{AMMO:'x'},{MAX_SPEND:'-1'}])expect(()=>rangedTrainOptions(env,['bun','s','Bot'])).toThrow('bounded options');
+ expect(rangedTrainOptions({FOOD_ID:'1891'},['bun','s','Bot']).foodId).toBe(1891);
+});
+test('cake food counts bites across its stages; a fish is one bite',()=>{
+ expect(foodBites([{id:1891,count:2},{id:1893,count:1},{id:1895,count:3},{id:1901,count:4}],1891)).toBe(2*3+2+3);
+ expect(foodBites([{id:329,count:5},{id:1891,count:1}],329)).toBe(5);
+ expect(()=>foodBites([],315)).toThrow('unsupported food');
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.

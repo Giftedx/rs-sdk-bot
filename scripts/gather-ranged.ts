@@ -21,20 +21,27 @@ export function selectRangedTarget(npcs:readonly NearbyNpc[],plane:number|undefi
  if(plane!==0)return;
  return npcs.filter(n=>[41,1017].includes(n.id)&&n.x>=3220&&n.x<=3248&&n.z>=3280&&n.z<=3310&&n.reachable!==false&&!n.inCombat&&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp)).sort((a,b)=>a.distance-b.distance)[0];
 }
+// Bite stages of each supported food, first bite first. cakes.obj next_obj_stage: cake -> partial_cake -> cake_slice.
+export const FOOD_CHAINS:Readonly<Record<number,readonly number[]>>={329:[329],333:[333],1891:[1891,1893,1895],1897:[1897,1899,1901]};
+// Bites left in the items: each stage counts the stages still to eat.
+export function foodBites(items:readonly Item[],foodId:number){
+ const chain=FOOD_CHAINS[foodId];if(!chain)throw Error("ranged prerequisite: unsupported food ID");
+ return chain.reduce((n,id,i)=>n+count(items,id)*(chain.length-i),0);
+}
 export function makeRangedHealer(s:Session,consumed:()=>void,foodId=333){
- if(![329,333].includes(foodId))throw Error("ranged prerequisite: unsupported food ID");
- const FOOD=foodId;
+ const chain=FOOD_CHAINS[foodId];if(!chain)throw Error("ranged prerequisite: unsupported food ID");
  let inFlight:Promise<void>|undefined;
- const hp=()=>s.sdk.getSkill("Hitpoints")?.level??0,held=()=>count(s.sdk.getInventory(),FOOD);
+ const hp=()=>s.sdk.getSkill("Hitpoints")?.level??0;
  return ():Promise<void>=>{
   if(inFlight)return inFlight;
   if(hp()>6)return Promise.resolve();
   inFlight=Promise.resolve().then(async()=>{
-   const item=s.sdk.getInventory().find(i=>i.id===FOOD);
+   // The most-eaten stage first, so partial cakes free their slots before whole ones are started.
+   const item=[...chain].reverse().map(id=>s.sdk.getInventory().find(i=>i.id===id)).find(i=>!!i);
    if(!item){if(hp()<=3)throw Error("ranged food exhausted below retreat floor");return;}
-   const before=held(),beforeHp=hp();await s.bot.eatFood(item);
+   const id=item.id,held=()=>count(s.sdk.getInventory(),id),before=held(),beforeHp=hp();await s.bot.eatFood(item);
    if(!await waitUntil(s,()=>held()===before-1&&hp()>beforeHp,{timeoutTicks:8}))throw Error("ranged food debit/health unobserved");
-   consumed();console.log("RANGED_FOOD "+JSON.stringify({before,after:held(),beforeHp,afterHp:hp(),tick:s.tick()}));
+   consumed();console.log("RANGED_FOOD "+JSON.stringify({id,before,after:held(),beforeHp,afterHp:hp(),tick:s.tick()}));
   }).finally(()=>{inFlight=undefined;});
   return inFlight;
  };
