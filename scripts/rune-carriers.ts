@@ -24,7 +24,7 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
   if(done||failure||opened.some(s=>s.tick()>cap)||names.some(n=>existsSync(join(root,'.practice/stop-'+n)))){cancel.abort(failure??Error('carrier route stopped'));stopCarriers();return true;}
   return false;
  };
- const fail=(s:Session,detail:string)=>{failure=Error(s.name+': '+detail);cancel.abort(failure);stopCarriers();};
+ const fail=(s:Session,detail:string)=>{failure??=Error(s.name+': '+detail);cancel.abort(failure);stopCarriers();};
  const open=async(name:string)=>{const s=await openBot(name,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);if(opened.length===1)monitor=s.onTick(()=>{stop();});return s;};
  const openTogether=async(list:readonly string[],ready:(s:Session)=>Promise<void>=async()=>{})=>{
   let firstFailure:{reason:unknown}|undefined;
@@ -79,7 +79,7 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
   const levelTick=s.tick();done=true;stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));
   const result={prefix,batches,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,levelTick,masterTicks:s.tick(),bodyLoopTicks:levelTick-start,waiting,rows,crew:crew.map(h=>({name:h.s.name,deliveries:h.deliveries,refills:h.refills}))};
   const logout=await settle(opened,true,'fresh Runecraft99 with carrier banks');return {ok:logout,...result,logout};
- }catch(error){done=true;cancel.abort(error);stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));const logout=await settle(opened,false,String(error));return {ok:false,failure:String(error),logout};}finally{monitor?.();}
+ }catch(error){const reason=failure??error;done=true;cancel.abort(reason);stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));const logout=await settle(opened,false,String(reason));return {ok:false,failure:String(reason),logout};}finally{monitor?.();}
 }
 
 export function continuationLoads(xp:number,stocks:readonly number[],xpPerEssence=187.5){
@@ -137,7 +137,7 @@ export async function continueRuneBody(s:Session,helpers:readonly Session[],stop
    const ready=()=>batches===0?crew[loan]!.ready:crew.some(d=>d.ready);
    if(!await waitUntil(s,()=>stop()||!!childFailure||ready(),{timeoutTicks:250}))throw Error('continuation carrier return unobserved');
    if(childFailure)throw childFailure;check();
-   const d=batches===0?crew[loan]!:crew.find(d=>d.ready)!;d.ready=false;
+   const d=batches===0?crew[loan]!:crew.filter(d=>d.ready).sort((a,b)=>a.spent-b.spent)[0]!;d.ready=false;
    const n=d.amount,prev=xp(),level=s.sdk.getSkill('Runecraft')?.baseLevel??0,runes=s.sdk.getInventory().filter(i=>i.id===559).reduce((a,b)=>a+b.count,0);
    if(batches===0)await ownedSwap(s,d.s,{1446:1},{1436:n},stop);
    else await transfer(s,d.s,stop,n);

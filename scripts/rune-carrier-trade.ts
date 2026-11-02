@@ -95,7 +95,9 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
     const total=(offer??[]).reduce((n,i)=>n+i.count,0);
     // The giver has exclusively staged amount essence and queued Offer-All before its accept.
     // The recipient gives nothing. Final success still requires both inventory publications.
-    const pendingOwnedOffer=actor===s&&eager&&offerSent&&total===0&&trade(h)?.myOffer?.reduce((n,i)=>n+i.count,0)===amount;
+    const helperTrade=trade(h);
+    const acknowledgedOwnedOffer=helperTrade?.isOpen&&helperTrade.screen==='offer'&&helperTrade.myAccepted&&offerAccepted.has(h);
+    const pendingOwnedOffer=actor===s&&eager&&offerSent&&total===0&&(helperTrade?.myOffer?.reduce((n,i)=>n+i.count,0)===amount||acknowledgedOwnedOffer);
     if(!pendingOwnedOffer&&total===0)continue;
     if(!pendingOwnedOffer&&total!==amount)throw Error('unexpected essence offer '+total);
     if(!t.myAccepted){const accepted=await actor.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(actor);}
