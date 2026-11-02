@@ -36,18 +36,19 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
    done=true;const logout=await settle(opened,true,'persisted body Runecraft99 banked');return {ok:logout,...result,logout};
   }
   const donor=await open(names[1]!);await waitTicks(donor,3);assertRuneDonor(state(donor).player,donor.sdk.getInventory());
-  for(const n of names.slice(2)){
-   if(stop())throw Error('carrier setup stopped');const h=await open(n);await waitTicks(h,3);
-   if(!inside(h)||ess(h)!==27||h.sdk.getInventory().filter(i=>i.id===1446).reduce((sum,i)=>sum+i.count,0)!==1)throw Error('staged carrier not observed');
-   crew.push({s:h,ready:true,deliveries:0,refills:[]});
-  }
-  // Keep the measured fresh route and cleanup budget before its first login.
-  if(stop()||opened.some(h=>cap-h.tick()<2300))throw Error('helper warmup leaves insufficient fresh route budget');
-  console.log('RUNE_CARRIER_PREWARM '+JSON.stringify({freshOpened:false,actors:opened.map(h=>({name:h.name,tick:h.tick(),remaining:cap-h.tick()}))}));
+  if(stop()||cap-donor.tick()<2300)throw Error('donor warmup leaves insufficient fresh route budget');
   const s=await open(names[0]!);if(!await waitUntil(s,()=>!!state(s)?.player&&!!s.sdk.getSkill('Runecraft'),{timeoutTicks:10}))throw Error('fresh player state unavailable');
   assertFreshRuneSkills(state(s).skills);
   const prefix=await freshBodyStart(s,donor,stop,async()=>{
-   if(stop()||crew.some(h=>!h.ready||!inside(h.s)||ess(h.s)!==27))throw Error('prepared carrier changed during fresh prefix');
+   // Same-address player turns follow login order. Open carriers after the
+   // crafter, during its travel, so its expired craft delay clears first.
+   for(const n of names.slice(2)){
+    if(stop())throw Error('carrier setup stopped');const h=await open(n);await waitTicks(h,3);
+    if(!inside(h)||ess(h)!==27||h.sdk.getInventory().filter(i=>i.id===1446).reduce((sum,i)=>sum+i.count,0)!==1)throw Error('staged carrier not observed');
+    if(stop()||cap-h.tick()<2300)throw Error('helper warmup leaves insufficient fresh route budget');
+    crew.push({s:h,ready:true,deliveries:0,refills:[]});
+   }
+   console.log('RUNE_CARRIER_READY '+JSON.stringify({masterTick:s.tick(),actors:crew.map(h=>({name:h.s.name,tick:h.s.tick(),remaining:cap-h.s.tick()}))}));
   },cancel);
   const initial:Carrier={s:donor,ready:false,deliveries:1,refills:[]};crew.push(initial);launchRefill(initial);
   const xp=()=>s.sdk.getSkillXp('Runecraft')??0,start=s.tick();let batches=1,waiting=0;

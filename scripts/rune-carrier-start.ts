@@ -43,10 +43,10 @@ export async function freshBodyStart(s:Session,h:Session,stop:()=>boolean,prepar
   const inside=()=>{const p=state(s).player!;return Math.floor(p.worldX/64)===39&&Math.floor(p.worldZ/64)===75;};
   const entry=await dispatchRuneEntry(s,{entered:inside,stop,dispatch:()=>s.sdk.sendUseItemOnLoc(tal.slot,at.x,at.z,q.id)});if(!entry.entered)throw Error('body entry unobserved');
   const walk=await walkPath(await sessionWalker(s),[{x:2523,z:4832,tol:0}],{maxTicks:30,stop});if(!walk.ok)throw Error('body altar walk failed');
+  await carrierFlight;if(failure)throw failure;check();
   const altar=state(s).nearbyLocs.find(l=>l.id===2483);if(!altar)throw Error('body altar unobserved');
   await s.direct({type:'interactLoc',x:altar.x,z:altar.z,locId:altar.id,optionIndex:1,reason:'SDK'});
   if(!await waitUntil(s,()=>ess(s)===0&&(s.sdk.getSkillXp('Runecraft')??0)>=8437,{timeoutTicks:15}))throw Error('first body craft effects missing');record(s,'first-body-crafted');
-  await carrierFlight;if(failure)throw failure;
   return {air,masterTicks:s.tick(),helperTicks:h.tick(),events,starterKit:kit,xp:s.sdk.getSkillXp('Runecraft')};
  }catch(error){cancel.abort(error);throw error;}finally{await Promise.allSettled([donorFlight,carrierFlight]);}
 }
