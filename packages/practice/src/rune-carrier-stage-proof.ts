@@ -55,7 +55,7 @@ async function run(dir:string){
   for(const id of ['stage','repeat','opening']){
    const active=id==='stage'?[0,1,2,3,4]:id==='repeat'?[1,2,3,4]:[0],base=paths.map(p=>existsSync(p)?readFileSync(p).readInt32BE(24):0),started=Date.now();
    const args=id==='opening'?[name,'--rune-opening']:[...names,'--rune-carriers'];
-   const child=Bun.spawn(['bun','scripts/rune-bank-craft.ts',...args],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'1600'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
+   const child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...args],{cwd:root,env:{...process.env,DEMO_OK:'',CAP:'1600'},windowsHide:true,stdout:Bun.file(join(dir,id+'.log')),stderr:Bun.file(join(dir,id+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},240000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
