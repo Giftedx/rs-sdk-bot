@@ -1,14 +1,14 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 
-function prewarmCase(late:boolean){
+function prewarmCase(late:boolean,connectFailure=false){
  const code=`
  import{mock}from'bun:test';import{resolve,join,dirname}from'node:path';import{mkdirSync,writeFileSync,rmSync}from'node:fs';
  const stem='flwarm'+Math.random().toString(36).slice(2,5),labels=['Fresh','Donor',...Array.from({length:15},(_,i)=>'Helper'+i)],names=labels.map((_,i)=>stem+i.toString(36)),role=n=>labels[names.indexOf(n)],opened=[],closed=[],created=[];let prefix=false,prefixOpened=[];
  const botRoot=resolve('vendor/rs-sdk/bots');mkdirSync(botRoot,{recursive:true});
  for(const name of names){const path=join(botRoot,name);mkdirSync(path);created.push(path);writeFileSync(join(path,'bot.env'),'SERVER=localhost:8910\\n');}
  const modules={
- '../packages/core/src/bot':{getWorld:async()=>({}),serverFromEnv:()=> 'localhost:8910',openBot:async name=>{opened.push(role(name));return{name,tick:()=>${late}&&role(name)==='Donor'?501:0,onTick:()=>()=>{},sdk:{getInventory:()=>[{id:1446,count:1}],getSkill:()=>({baseLevel:1}),getState:()=>({player:{},skills:[]})}}},settle:async actors=>{closed.push(...actors.map(a=>role(a.name)));return true}},
+ '../packages/core/src/bot':{getWorld:async()=>({}),serverFromEnv:()=> 'localhost:8910',openBot:async name=>{opened.push(role(name));if(${connectFailure}&&role(name)==='Helper0'){await new Promise(r=>setTimeout(r,5));throw Error('fixture helper connection refused')}if(${connectFailure}&&role(name)==='Helper14')await new Promise(r=>setTimeout(r,35));return{name,tick:()=>${late}&&role(name)==='Donor'?501:0,onTick:()=>()=>{},sdk:{getInventory:()=>[{id:1446,count:1}],getSkill:()=>({baseLevel:1}),getState:()=>({player:{},skills:[]})}}},settle:async actors=>{closed.push(...actors.map(a=>role(a.name)));return true}},
  '../packages/core/src/fleet':{assertSideOwns:()=>{}},
  '../packages/core/src/ticks':{waitTicks:async()=>{},waitUntil:async(_s,p)=>p()},
  './rune-carrier-roster':{runeCarrierRoster:a=>a.filter(n=>!n.startsWith('--')),assertRuneDonor:()=>{},assertFreshRuneSkills:()=>{}},
@@ -28,6 +28,10 @@ test('the crafter logs in before carrier preparation overlaps its prefix',()=>{
 });
 test('an exhausted donor budget stops before the fresh crafter login',()=>{
  const r=prewarmCase(true);expect(r.opened).toEqual(['Donor']);expect(r.prefix).toBe(false);expect(r.closed).toEqual(r.opened);expect(r.result.failure).toContain('fresh route budget');
+});
+test('overlapping helper logins drain a late connection before cleanup after another fails',()=>{
+ const r=prewarmCase(false,true);expect(r.result.ok).toBe(false);expect(r.result.failure).toContain('fixture helper connection refused');
+ expect(r.opened).toHaveLength(17);expect(r.closed).toHaveLength(16);expect(r.closed).toContain('Helper14');expect(r.closed).not.toContain('Helper0');
 });
 
 // Module stubs run in their own process so they cannot change another test's SDK.
