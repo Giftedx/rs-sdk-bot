@@ -11,6 +11,12 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
  const at=s.tick();
  if(!await waitUntil(s,()=>ess(h)===amount&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
  let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,levelupDismissed=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>(),offerAccepted=new Set<Session>();
+ const tickWaits=new Map<Session,Promise<void>>();
+ const nextTick=(actor:Session)=>{
+  let pending=tickWaits.get(actor);
+  if(!pending){pending=waitTicks(actor,1).then(()=>{tickWaits.delete(actor);});tickWaits.set(actor,pending);}
+  return pending;
+ };
  // Read-only scheduling evidence: publications can continue while an awaited control step cannot resume.
  const observationCursors=new Map([[s,cursor(s)],[h,cursor(h)]]);
  let phase='loop',phaseAt=s.tick(),phaseTime=performance.now();
@@ -103,7 +109,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
   // Remote interface packets can arrive after PLAYER_INFO in another pump.
   // The next scans publish current client state without sending game packets.
   // Keep the server-tick deadline, but do not hold a ready handshake for a tick.
-  mark('next-publication');await Promise.race([waitTicks(s,1),waitTicks(h,1),Bun.sleep(20)]);mark('loop-condition');
+  mark('next-publication');await Promise.race([nextTick(s),nextTick(h),Bun.sleep(20)]);mark('loop-condition');
  }
  observe('loop-exit');mark('inventory-reconciliation');
  if(!await waitUntil(s,()=>ess(s)===amount&&ess(h)===0,{timeoutTicks:5}))throw Error('essence transfer did not reconcile');

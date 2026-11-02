@@ -1,6 +1,18 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {levelForXp} from '../packages/planner/src/curve';
+test('polling preserves tick-stall failure with at most one wait per actor',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';let active=0,peak=0,requests=0;
+ const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of [[s,h],[h,s]]){a.tick=()=>0;a.direct=async()=>{requests++;return{success:true}};a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],getState:()=>({trade:{isOpen:false},gameMessages:[],nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{active++;peak=Math.max(peak,active);return new Promise((_,reject)=>setTimeout(()=>{active--;reject(Error('TickStallError: frozen tick stream'))},100));}}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,peak,requests}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:1500});
+ if(child.exitCode!==0)throw Error('Transfer did not propagate frozen-tick failure: '+child.stderr.toString());
+ const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);expect(r.error).toContain('TickStallError');expect(r.peak).toBe(2);expect(r.requests).toBe(1);
+});
 test('a between-tick owned trade request is answered without waiting for another game tick',()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
