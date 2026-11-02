@@ -8,6 +8,13 @@ test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
  new Function('window','$','viewerMessage','viewerCanReveal',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER,sel=null;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true);
  handler({source:frame,origin:'http://test',data:{}});expect(sent).toEqual([{atlasFreeCamera:true}]);
 });
+
+test('a chosen camera destination stays labelled as the destination, not the selected account position',()=>{
+ const code=html.slice(html.indexOf('function syncWorld(){'),html.indexOf('function chainHud(){'));
+ const follow={textContent:''};
+ new Function('$',`const S={bots:[{name:'Worker',at:1}]},sel='Worker',mode='2d',VIEWER={url:null},window={atlasFreeCamera:true,atlasDestination:{x:3200,z:3450}},age=()=>'old',showViewerStatus=()=>{};${code};syncWorld();`)(()=>follow);
+ expect(follow.textContent).toContain('3200, 3450');expect(follow.textContent).not.toContain('Worker');
+});
 const source=html.slice(html.indexOf('function chainHud(){'),html.indexOf("$('#chain').addEventListener"));
 for(const chain of [null,{cook:null,courier:null,farmers:[]},
     {cook:{name:'Cook',fresh:false,at:10},courier:null,farmers:[]},

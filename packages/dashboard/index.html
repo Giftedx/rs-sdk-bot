@@ -321,7 +321,7 @@ window.addEventListener('message',e=>{
   if(e.data?.viewerTiming)fetch('/api/viewer-timing',{method:'POST',body:JSON.stringify(e.data.viewerTiming)}).catch(()=>{});
 });
 function syncWorld(){
-  const b=S.bots.find(x=>x.name===sel);if(b?.practice&&mode==='3d'){viewerUnavailable('Practice observations use the 2D map. The 3D viewer shows the live world.');return;}$('#follow').textContent=window.atlasFreeCamera?(b?`${b.name} · last position ${age(b.at)} old`:'Free camera · explore the world'):mode==='3d'?(window.atlasFollowOther?`following ${window.atlasFollowOther} · pick one of our accounts to return`:b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${mapWorld().bots.filter(b=>b.live||b.pos).length} last-known positions`;
+  const b=S.bots.find(x=>x.name===sel);if(b?.practice&&mode==='3d'){viewerUnavailable('Practice observations use the 2D map. The 3D viewer shows the live world.');return;}$('#follow').textContent=window.atlasFreeCamera?(window.atlasDestination?`Camera · ${window.atlasDestination.x}, ${window.atlasDestination.z} · no game input`:b?`${b.name} · last position ${age(b.at)} old`:'Free camera · explore the world'):mode==='3d'?(window.atlasFollowOther?`following ${window.atlasFollowOther} · pick one of our accounts to return`:b?`following ${b.name}${b.inWorld?'':' (not in the world)'}`:'free camera'):`${mapWorld().bots.filter(b=>b.live||b.pos).length} last-known positions`;
   showViewerStatus();if(mode!=='3d'||!VIEWER.url)return;
   const f=$('#rsw');
   if(!f.getAttribute('src')){
