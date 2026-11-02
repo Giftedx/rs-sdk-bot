@@ -1,6 +1,16 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
-import {runeContinuationHelpers,runeContinuationVarpDifferences} from '../packages/practice/src/rune-continuation-proof';
+import {runeContinuationHelpers,runeContinuationVarpDifferences,runeMeasurementBankedOutput} from '../packages/practice/src/rune-continuation-proof';
+
+test('saved measurement rejects moving otherwise conserved output from bank to backpack',()=>{
+ const before={inventories:{93:[],95:[{slot:0,id:559,count:12522}]}},after={inventories:{93:[] as {slot:number;id:number;count:number}[],95:[{slot:0,id:559,count:13494}]}};
+ expect(runeMeasurementBankedOutput(before,after,972)).toBe(true);
+ const mutated=structuredClone(after);mutated.inventories[95][0]!.count-=972;mutated.inventories[93].push({slot:0,id:559,count:972});
+ const total=(s:typeof after)=>Object.values(s.inventories).flat().reduce((n,i)=>n+i.count,0);
+ expect(total(mutated)).toBe(total(after));
+ expect(runeMeasurementBankedOutput(before,mutated,972)).toBe(false);
+ expect(runeMeasurementBankedOutput(before,after,973)).toBe(false);
+});
 
 test('continuation reconciles dense and sparse lifecycle varps without accepting quest or unexplained changes',()=>{
  const before={version:6,vars:Object.fromEntries(Array.from({length:309},(_,id)=>[id,id===63?6:id===281?1000:0]))};

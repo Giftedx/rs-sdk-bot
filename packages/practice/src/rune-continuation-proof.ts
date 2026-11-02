@@ -23,6 +23,10 @@ const files=['scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/ru
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 const total=(s:ReturnType<typeof readPracticeSave>,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const pack=(s:ReturnType<typeof readPracticeSave>,id?:number)=>(s.inventories[93]??[]).filter(i=>id===undefined||i.id===id).reduce((n,i)=>n+i.count,0);
+export function runeMeasurementBankedOutput(before:Pick<ReturnType<typeof readPracticeSave>,'inventories'>,after:Pick<ReturnType<typeof readPracticeSave>,'inventories'>,crafted:number){
+ const count=(s:typeof before,container:number)=>(s.inventories[container]??[]).filter(i=>i.id===559).reduce((n,i)=>n+i.count,0);
+ return count(after,93)===0&&count(after,95)-count(before,95)===crafted;
+}
 const result=(log:string)=>{const line=log.split(/\r?\n/).find(l=>l.startsWith('RUNE_CARRIERS_RESULT '));return line?JSON.parse(line.slice(21)):null;};
 const logouts=(log:string)=>[...log.matchAll(/^LOGOUT (.*)$/gm)].reduce((n,m)=>n+(m[1]!.match(/\blogged-out\b/g)??[]).length,0);
 const assets=(s:ReturnType<typeof readPracticeSave>)=>{
@@ -100,6 +104,7 @@ export function verifyRuneContinuation(dir:string){
   const checks={exit:m.execution.code===0&&!m.execution.timedOut&&!m.execution.lowMemory,
    result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
    entry:b[0].skills[20].level===99&&a[0].skills[20].level===99,assets:preserved,
+   bankedOutput:runeMeasurementBankedOutput(b[0],a[0],972),
    effects:b.reduce((n:number,s:any)=>n+total(s,1436),0)-a.reduce((n:number,s:any)=>n+total(s,1436),0)===324&&total(a[0],559)-total(b[0],559)===972,
    clocks:meta.names.every((_:string,i:number)=>readFileSync(join(dir,i+'-'+m.prefix+'-after.sav')).readInt32BE(24)>readFileSync(join(dir,i+'-'+m.prefix+'-before.sav')).readInt32BE(24)),
    milestone:b[0].version===10&&a[0].version===10&&masterBefore.readInt32BE(masterBefore.length-184)===masterAfter.readInt32BE(masterAfter.length-184),
