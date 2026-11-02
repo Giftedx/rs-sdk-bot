@@ -1,6 +1,57 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {levelForXp} from '../packages/planner/src/curve';
+test('polling preserves tick-stall failure with at most one wait per actor',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';let active=0,peak=0,requests=0;
+ const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of [[s,h],[h,s]]){a.tick=()=>0;a.direct=async()=>{requests++;return{success:true}};a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],getState:()=>({trade:{isOpen:false},gameMessages:[],nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{active++;peak=Math.max(peak,active);return new Promise((_,reject)=>setTimeout(()=>{active--;reject(Error('TickStallError: frozen tick stream'))},100));}}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,peak,requests}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:1500});
+ if(child.exitCode!==0)throw Error('Transfer did not propagate frozen-tick failure: '+child.stderr.toString());
+ const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);expect(r.error).toContain('TickStallError');expect(r.peak).toBe(2);expect(r.requests).toBe(1);
+});
+test('a between-tick owned trade request is answered without waiting for another game tick',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';
+ let tick=0,responseMs=-1,requests=0,raw=[];const started=performance.now();
+ const s={name:'Crafter',messages:[]},h={name:'Carrier',messages:[]};
+ for(const[a,o]of [[s,h],[h,s]]){
+  a.tick=()=>tick;a.direct=async()=>{if(a===h){requests++;setTimeout(()=>raw=[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1}],30);}else responseMs=performance.now()-started;return{success:true}};
+  a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],
+   getState:()=>({trade:{isOpen:false},gameMessages:a.messages,nearbyPlayers:[{name:o.name,index:1}]}),
+   scanGroundItems:async()=>{if(a===s)s.messages=raw;}};
+ }
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>new Promise(r=>setTimeout(()=>{tick++;r()},400))}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>responseMs>=0)}catch{}
+ console.log(JSON.stringify({responseMs,requests}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ expect(r.requests).toBe(1);expect(r.responseMs).toBeGreaterThanOrEqual(25);expect(r.responseMs).toBeLessThan(200);
+});
+test('an offer acceptance is sent once while its published flag is delayed',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,offerAccepts=0,confirmAccepts=0;
+ const pack=()=>Array.from({length:27},(_,slot)=>({id:1436,count:1,slot}));
+ const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of [[s,h],[h,s]]){
+  a.tick=()=>phase;a.trade={isOpen:true,screen:'offer',partner:o.name,myAccepted:false,myOffer:a===h?pack():[],theirOffer:a===s?pack():[]};
+  a.sdk={getInventory:()=>a===s?(phase>=3?pack():[]):(phase>=3?[]:pack()),getState:()=>({trade:a.trade,nearbyPlayers:[]}),scanGroundItems:async()=>{},
+   sendAcceptTrade:async()=>{if(a.trade.screen==='offer')offerAccepts++;else confirmAccepts++;return{success:true}}};
+ }
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
+  if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;if(phase===2)for(const a of[s,h])a.trade.screen='confirm';if(phase===3)for(const a of[s,h])a.trade={isOpen:false};pending=undefined;r()}));return pending;
+ }}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}
+ console.log(JSON.stringify({error,offerAccepts,confirmAccepts}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ expect(r.error).toBe('');expect(r.offerAccepts).toBe(2);expect(r.confirmAccepts).toBe(2);
+});
 function handoff(mode:'publication'|'reset-publication'|'wrong-item'|'refused'|'no-credit'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';
