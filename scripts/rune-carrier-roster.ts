@@ -1,10 +1,17 @@
 // The orchestrate supervisor forwards every participant, then the mode flag.
+export function runeCarrierMeasurePacks(mode:string|undefined):number|undefined{
+ if(!mode?.startsWith('--body-measure'))return;
+ const match=/^--body-measure=([1-9][0-9]*)$/.exec(mode),n=Number(match?.[1]);
+ if(!match||!Number.isSafeInteger(n)||n<12||n>48)throw Error('body measurement requires12..48 full packs');
+ return n;
+}
 export function runeCarrierRoster(args:readonly string[]):string[]{
  const mode=args.at(-1);
- if(!['--carriers','--body-continuation'].includes(mode??'')||args.filter(a=>a==='--carriers'||a==='--body-continuation').length!==1)throw Error('carrier mode needs the complete roster followed by --carriers or --body-continuation');
+ const measure=runeCarrierMeasurePacks(mode);
+ if(!['--carriers','--body-continuation'].includes(mode??'')&&measure===undefined||args.filter(a=>a==='--carriers'||a==='--body-continuation'||a.startsWith('--body-measure')).length!==1)throw Error('carrier mode needs the complete roster followed by one mode flag');
  const names=args.slice(0,-1);
  if(names.length<3||names.length>17||names.some(n=>!/^[A-Za-z0-9]{1,12}$/.test(n))||new Set(names.map(n=>n.toLowerCase())).size!==names.length)throw Error('carrier mode needs one crafter and2..16 distinct owned carriers');
- if(mode==='--body-continuation'&&names.length!==17)throw Error('body continuation requires the retained16 owned helpers');
+ if((mode==='--body-continuation'||measure!==undefined)&&names.length!==17)throw Error('body continuation requires the retained16 owned helpers');
  return names;
 }
 export function assertFreshRuneSkills(skills:readonly {name:string;baseLevel:number;experience:number}[]|null|undefined){
