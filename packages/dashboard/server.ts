@@ -371,15 +371,18 @@ function connectFeed() {
                 const now = Date.now();
                 if (m.t === 'hello') { world.players = m.players ?? world.players; world.tick = m.tick ?? world.tick; world.tickAt = now; world.tickMs = m.tickMs ?? 400; world.rev = m.rev ?? 0; }
                 if (m.t !== 'roster') return;
-                if (!Array.isArray(m.p)) return;
+                if (!Array.isArray(m.p) || !m.p.every((p:any)=>Array.isArray(p)&&p.length>=6&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite))) return;
                 world.players = m.p.length;
                 if (m.k) { world.tick = m.k; world.tickAt = now; }
+                const present=new Set<string>();
                 for (const p of m.p) {
-                    if (!Array.isArray(p) || p.length < 6) continue;
                     const n = String(p[1]).toLowerCase();
+                    present.add(n);
                     if (!firstSeen.has(n)) firstSeen.set(n, now);
                     roster.set(n, { name: String(p[1]), x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
                 }
+                // Each roster packet is the full visible player set, not a delta.
+                for(const name of roster.keys())if(!present.has(name))roster.delete(name);
             } catch (err) {
                 console.error(`world feed message failed: ${String(err)}`);
             }

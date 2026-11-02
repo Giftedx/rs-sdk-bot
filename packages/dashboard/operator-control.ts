@@ -18,7 +18,9 @@ export function createOperatorControl(options:{root:string;readOnly?:boolean;non
  });}
  function metadata(){
   const inbox=join(directory,'requests');
-  return{nonce,readOnly:!!options.readOnly,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
+  let coordinatorRunning=false;
+  try{const owner=read(join(directory,'owner.json'));coordinatorRunning=Number.isSafeInteger(owner.pid)&&owner.pid>0&&alive(owner.pid);}catch{}
+  return{nonce,readOnly:!!options.readOnly,coordinatorRunning,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
    accountHolds:owned().filter(name=>existsSync(join(root,'.practice','stop-'+name))).map(name=>({name,owner:readFileSync(join(root,'.practice','stop-'+name),'utf8').startsWith('dashboard-stop:')?'dashboard':'other'})),
    requests:existsSync(audit)?readdirSync(audit).filter(n=>/^[a-f0-9-]+\.json$/.test(n)).map(n=>{
     const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json');return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status:r.action==='queue'?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status};
