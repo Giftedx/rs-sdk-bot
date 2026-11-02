@@ -1,6 +1,35 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 
+function prewarmCase(late:boolean){
+ const code=`
+ import{mock}from'bun:test';import{resolve,join,dirname}from'node:path';import{mkdirSync,writeFileSync,rmSync}from'node:fs';
+ const stem='flwarm'+Math.random().toString(36).slice(2,5),labels=['Fresh','Donor',...Array.from({length:15},(_,i)=>'Helper'+i)],names=labels.map((_,i)=>stem+i.toString(36)),role=n=>labels[names.indexOf(n)],opened=[],closed=[],created=[];let prefix=false;
+ const botRoot=resolve('vendor/rs-sdk/bots');mkdirSync(botRoot,{recursive:true});
+ for(const name of names){const path=join(botRoot,name);mkdirSync(path);created.push(path);writeFileSync(join(path,'bot.env'),'SERVER=localhost:8910\\n');}
+ const modules={
+ '../packages/core/src/bot':{getWorld:async()=>({}),serverFromEnv:()=> 'localhost:8910',openBot:async name=>{opened.push(role(name));return{name,tick:()=>${late}&&role(name)==='Donor'?501:0,onTick:()=>()=>{},sdk:{getInventory:()=>[{id:1446,count:1}],getSkill:()=>({baseLevel:1}),getState:()=>({player:{},skills:[]})}}},settle:async actors=>{closed.push(...actors.map(a=>role(a.name)));return true}},
+ '../packages/core/src/fleet':{assertSideOwns:()=>{}},
+ '../packages/core/src/ticks':{waitTicks:async()=>{},waitUntil:async(_s,p)=>p()},
+ './rune-carrier-roster':{runeCarrierRoster:a=>a.filter(n=>!n.startsWith('--')),assertRuneDonor:()=>{},assertFreshRuneSkills:()=>{}},
+ './rune-carrier-start':{freshBodyStart:async()=>{prefix=true;throw Error('fixture prefix stopped')}},
+ './rune-carrier-trade':{state:a=>a.sdk.getState(),ess:()=>27,transfer:async()=>0,ownedSwap:async()=>({ticks:0})},
+ './rune-carrier-bank':{inside:()=>true,stopCarriers:()=>{},restock:async()=>0,bankCarrier:async()=>({}),withdrawCarrier:async()=>{},closeCarrierBank:async()=>{},stageCarrier:async()=>{}}
+ };
+ for(const[p,m]of Object.entries(modules))mock.module(resolve('scripts',p),()=>m);
+ try{const{runRuneCarriers}=await import('./scripts/rune-carriers');const result=await runRuneCarriers(names,2800);console.log(JSON.stringify({opened,closed,prefix,result}));}
+ finally{for(const path of created){if(dirname(path)!==botRoot)throw Error('fixture path escaped');rmSync(path,{recursive:true});}}
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+test('all existing helpers are observed before the fresh crafter login',()=>{
+ const r=prewarmCase(false);expect(r.opened).toEqual(['Donor',...Array.from({length:15},(_,i)=>'Helper'+i),'Fresh']);expect(r.prefix).toBe(true);expect(r.closed).toEqual(r.opened);
+});
+test('slow helper warmup logs out without opening the fresh crafter',()=>{
+ const r=prewarmCase(true);expect(r.opened).not.toContain('Fresh');expect(r.opened).toHaveLength(16);expect(r.prefix).toBe(false);expect(r.closed).toEqual(r.opened);expect(r.result.failure).toContain('fresh route budget');
+});
+
 // Module stubs run in their own process so they cannot change another test's SDK.
 function prefixCase(which:'stop-walk'|'prefix-error'){
  const code=`
