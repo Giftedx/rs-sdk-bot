@@ -66,3 +66,34 @@ test('a stop during donor travel prevents bank actions',()=>{
 test('a prefix failure cancels helper setup before it drains',()=>{
  const result=prefixCase('prefix-error');expect(result.cancelled).toBe(true);expect(result.helperLogins).toBeLessThanOrEqual(1);expect(result.bankActions).toBe(0);
 });
+
+test('prefix travel overlaps preparation and the first body craft waits for readiness',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';
+ let preparing=false,prepared=false,travelDuringPreparation=false,craftedAfterReady=false,release;
+ const actor=name=>({name,tick:()=>1,inventory:[],xp:0,state:{player:{worldX:2523,worldZ:4832,level:0},bank:{items:[{id:1446,count:1},{id:1436,count:27}]}},
+  bankObservation(){return{generation:1,items:this.state.bank.items}},
+  sdk:{getInventory(){return this.owner.inventory},getSkillXp(){return this.owner.xp}},
+  bot:{openBank:async()=>({success:true}),closeBank:async()=>({success:true}),async withdrawItem(item,n){item.count-=n;h.inventory.push({id:item.id,count:n,slot:h.inventory.length});return{success:true}}},
+  async direct(){craftedAfterReady=prepared;this.xp=8437}});
+ const s=actor('crafter'),h=actor('donor');for(const a of[s,h])a.sdk.owner=a;
+ const mods={
+ '../packages/core/src/bot':{getWorld:async()=>({}),accountOf:()=>({})},
+ '../packages/core/src/ticks':{waitUntil:async()=>true},
+ '../packages/core/src/walk':{goTo:async(a,_w,to)=>{if(a===s&&to.x===3050){travelDuringPreparation=preparing&&!prepared;setTimeout(()=>release(),10)}return{ok:true}},walkPath:async()=>({ok:true}),sessionWalker:async()=>({})},
+ '../packages/core/src/deposit':{depositObserved:async()=>{}},
+ '../packages/core/src/world':{interactionApproach:async()=>({})},
+ './rune-supply':{leaveRuneStarter:async()=>{},runeSupplyAssets:()=>({})},
+ './generated/rcair':{enterAirAltar:async()=>{},craftAirRunes:async()=>({}),exitAirAltar:async()=>{}},
+ './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({at:{},q:{}}),dispatchRuneEntry:async()=>({entered:true})},
+ './rune-carrier-trade':{state:a=>({...a.state,nearbyLocs:[{id:2483,x:2523,z:4832}]}),ess:()=>0,ownedSwap:async()=>{s.inventory=[{id:1446,count:1,slot:0}];return{}}}
+ };
+ for(const[p,m]of Object.entries(mods))mock.module(resolve('scripts',p),()=>m);
+ const{freshBodyStart}=await import('./scripts/rune-carrier-start');
+ await freshBodyStart(s,h,()=>false,async()=>{preparing=true;await new Promise(r=>release=r);prepared=true});
+ console.log(JSON.stringify({travelDuringPreparation,craftedAfterReady}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ expect(r.travelDuringPreparation).toBe(true);expect(r.craftedAfterReady).toBe(true);
+});
