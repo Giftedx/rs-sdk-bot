@@ -5,7 +5,7 @@ import {interactionApproach} from '../packages/core/src/world';
 import {depositObserved} from '../packages/core/src/deposit';
 import {RUNE_ALTARS,ruinTarget,dispatchRuneEntry} from './rune-bank-craft';
 import {ess,state} from './rune-carrier-trade';
-const body=RUNE_ALTARS.find(a=>a.name==='body')!,bank={x:3092,z:3496},staging={x:2523,z:4833};
+const body=RUNE_ALTARS.find(a=>a.name==='body')!,bank={x:3094,z:3491},staging={x:2523,z:4833};
 const events:unknown[]=[];
 const pos=(s:Session)=>state(s).player!;
 const inside=(s:Session)=>pos(s).level===0&&Math.floor(pos(s).worldX/64)===39&&Math.floor(pos(s).worldZ/64)===75;
