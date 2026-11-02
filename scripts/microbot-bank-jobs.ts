@@ -1,3 +1,4 @@
+export function bankTravelTolerance(family:string,productionSite:boolean):number{return productionSite&&['cooking','magic-npc'].includes(family)?0:2;}
 import{readFileSync,existsSync}from'node:fs';
 import{openBot,finish,getWorld,accountOf}from'../packages/core/src/bot';
 import type{Session}from'../packages/core/src/inprocess';
@@ -14,13 +15,13 @@ import{inventoryRecipes,runInventoryBank}from'./microbot-production';
 import{runMixedWine}from'./microbot-wine';
 import{runBonesBank}from'./microbot-bones';
 import{miningProfiles,runAtSiteMining,incidentalMiningGems}from'./microbot-b-mining';
-import{FISH_PROFILES,runStagedFishing,type FishMethod}from'./microbot-b-fishing';
+import{FISH_PROFILES,runStagedFishing,searchNativeCatherbyFishing,type FishMethod}from'./microbot-b-fishing';
 import{stallRecipes,stealStall}from'./microbot-c-stalls';
 
 export type Tile={x:number;z:number;level:number};
 // Harvest targets are minimum useful output; manufacturing batches remain exact.
 export type BankJob={family:'jewellery'|'cooking'|'tanning'|'glass'|'magic'|'inventory'|'wine'|'bones'|'mining'|'fishing'|'stalls';recipe:string;target:number;batch:number;cap:number;returnTicks:number;members:boolean;reserve?:number;bank?:Tile;site?:Tile;heat?:Heat;alchemyTarget?:string;tool?:number};
-export type BankProfile={inputs:Record<number,number>;tools:number[];outputs:number[];capacityOutputs?:Record<number,number>;bank:Tile;site:Tile;prepare?:(stop:()=>boolean)=>Promise<void>;run:(n:number,cap:number,stop:()=>boolean)=>Promise<void|number>};
+export type BankProfile={inputs:Record<number,number>;tools:number[];outputs:number[];capacityOutputs?:Record<number,number>;bank:Tile;site:Tile;prepare?:(stop:()=>boolean)=>Promise<void>;deferBankRecovery?:()=>boolean;run:(n:number,cap:number,stop:()=>boolean)=>Promise<void|number>};
 const AK={x:3269,z:3167,level:0},FURNACE={x:3275,z:3186,level:0};
 const nativeItems=new Set(readFileSync('vendor/rs-sdk/server/content/pack/obj.pack','utf8').split(/\r?\n/).flatMap(row=>{const m=row.match(/^(\d+)=/);return m?[Number(m[1])]:[];}));
 export type BankRouteJob=Omit<BankJob,'family'>&{family:string};
@@ -72,7 +73,7 @@ async function profile(s:Session,j:BankJob):Promise<BankProfile>{
   const r=miningProfiles().find(p=>p.name===j.recipe)!;return{...base,inputs:{},tools:[j.tool??1265],outputs:[...new Set([...r.products,...incidentalMiningGems])],capacityOutputs:{[r.products[0]!]:2},run:async(n,cap,stop)=>{const result=await runAtSiteMining({state,tick:()=>s.tick(),stop,mine:async l=>(await s.sdk.sendInteractLoc(l.x,l.z,l.id,1)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),clearModal:async()=>{await s.sdk.sendCloseModal();}},r,{maximum:n,cap,idleTicks:Math.min(300,cap)});return result.made;}};
  }
  if(j.family==='fishing'){
-  const method=j.recipe as FishMethod,r=FISH_PROFILES[method];return{bank:j.bank??{x:2809,z:3441,level:0},site:j.site??{x:2840,z:3432,level:0},inputs:r.bait?{[r.bait]:method==='karambwan'?3:1}:{},tools:[r.tool],outputs:[...r.products,...method==='karambwan'?[3159]:[]],capacityOutputs:{[r.products[0]!]:1},run:async(n,cap,stop)=>{const before=new Map(r.products.map(id=>[id,s.sdk.getInventory().filter(i=>i.id===id).reduce((a,i)=>a+i.count,0)]));await runStagedFishing({state,tick:()=>s.tick(),stopped:stop,interact:(i,op)=>s.sdk.sendInteractNpc(i,op),combine:(a,b)=>s.sdk.sendUseItemOnItem(a,b),wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1)},{method,amount:n,cap,maxAttempts:Math.max(10,n*3),progressTicks:Math.min(300,cap)});const at=state()!.player!;await s.sdk.sendWalk(at.worldX,at.worldZ);await waitTicks(s,1);return r.products.reduce((a,id)=>a+s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0)-(before.get(id)??0),0);}};
+  const method=j.recipe as FishMethod,r=FISH_PROFILES[method];return{bank:j.bank??{x:2809,z:3441,level:0},site:j.site??{x:2840,z:3432,level:0},inputs:r.bait?{[r.bait]:method==='karambwan'?3:1}:{},tools:[r.tool],outputs:[...r.products,...method==='karambwan'?[3159]:[]],capacityOutputs:{[r.products[0]!]:1},run:async(n,cap,stop)=>{const before=new Map(r.products.map(id=>[id,s.sdk.getInventory().filter(i=>i.id===id).reduce((a,i)=>a+i.count,0)]));await runStagedFishing({state,tick:()=>s.tick(),stopped:stop,interact:(i,op)=>s.sdk.sendInteractNpc(i,op),combine:(a,b)=>s.sdk.sendUseItemOnItem(a,b),wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),search:(pass,guard)=>searchNativeCatherbyFishing(s,method,pass,()=>stop()||guard())},{method,amount:n,cap,maxAttempts:Math.max(10,n*3),progressTicks:Math.min(300,cap)});const at=state()!.player!;await s.sdk.sendWalk(at.worldX,at.worldZ);await waitTicks(s,1);return r.products.reduce((a,id)=>a+s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0)-(before.get(id)??0),0);}};
  }
  if(j.family==='stalls'){
   const r=stallRecipes().find(r=>r.name===j.recipe)!;return{...base,inputs:{},tools:[],outputs:r.loot,capacityOutputs:{[r.loot[0]!]:1},run:async(n,cap,stop)=>{const result=await stealStall(s,j.recipe,n,cap,stop);checked(result);return result.made;}};
@@ -102,8 +103,8 @@ export async function runBankProfile(s:Session,j:BankRouteJob,p:BankProfile,requ
  const stop=()=>dead()||requestStop()||existsSync(`.practice/stop-${s.name}`)||existsSync('.practice/stop-all')||s.tick()-start>=j.cap-j.returnTicks||(s.sdk.getSkill('Hitpoints')?.level??0)<hp0;
  const returningStop=()=>dead()||s.tick()-start>=j.cap;
  const observedBank=()=>{const at=s.sdk.getState()?.player;return !dead()&&!!at&&at.level===p.bank.level&&Math.max(Math.abs(at.worldX-p.bank.x),Math.abs(at.worldZ-p.bank.z))<=3;};
- let completed=0,trips=0,banked:Record<number,number>={},failure='',atBank=observedBank();
- const travel=async(to:Tile,returning=false)=>{atBank=observedBank();const check=returning?returningStop:stop;if(check())throw Error('bank job stopped before travel');const atStart=s.sdk.getState()?.player,tol=to===p.site&&j.family==='cooking'?0:2;if(atStart&&atStart.level===to.level&&Math.max(Math.abs(atStart.worldX-to.x),Math.abs(atStart.worldZ-to.z))<=tol)return;const controller=new AbortController(),off=s.onTick(()=>{if(check())controller.abort('bank job travel bound');});try{const from=s.sdk.getState()?.player,remaining=Math.max(1,j.cap-(s.tick()-start));const result=from&&from.level===to.level&&Math.max(Math.abs(from.worldX-to.x),Math.abs(from.worldZ-to.z))<=128?await walkPath(await sessionWalker(s),[{...to,tol:to===p.site&&j.family==="cooking"?0:2}],{stop:check}):await goTo(s,await getWorld(),to,accountOf(s),{signal:controller.signal,legTimeoutTicks:Math.min(120,remaining),maxRetriesPerLeg:1});if(!result.ok)throw Error('bank job route '+result.detail);const at=s.sdk.getState()?.player;atBank=!!at&&at.level===p.bank.level&&Math.max(Math.abs(at.worldX-p.bank.x),Math.abs(at.worldZ-p.bank.z))<=3;}finally{off();atBank=observedBank();}};
+ let completed=0,trips=0,banked:Record<number,number>={},failure='',atBank=observedBank(),recoveryDeferred=false;
+ const travel=async(to:Tile,returning=false)=>{atBank=observedBank();const check=returning?returningStop:stop;if(check())throw Error('bank job stopped before travel');const atStart=s.sdk.getState()?.player,tol=bankTravelTolerance(j.family,to===p.site);if(atStart&&atStart.level===to.level&&Math.max(Math.abs(atStart.worldX-to.x),Math.abs(atStart.worldZ-to.z))<=tol)return;const controller=new AbortController(),off=s.onTick(()=>{if(check())controller.abort('bank job travel bound');});try{const from=s.sdk.getState()?.player,remaining=Math.max(1,j.cap-(s.tick()-start));const result=from&&from.level===to.level&&Math.max(Math.abs(from.worldX-to.x),Math.abs(from.worldZ-to.z))<=128?await walkPath(await sessionWalker(s),[{...to,tol}],{stop:check}):await goTo(s,await getWorld(),to,accountOf(s),{signal:controller.signal,legTimeoutTicks:Math.min(120,remaining),maxRetriesPerLeg:1});if(!result.ok)throw Error('bank job route '+result.detail);const at=s.sdk.getState()?.player;atBank=!!at&&at.level===p.bank.level&&Math.max(Math.abs(at.worldX-p.bank.x),Math.abs(at.worldZ-p.bank.z))<=3;}finally{off();atBank=observedBank();}};
  const open=async()=>{if(returningStop())throw Error('bank job bank budget exhausted');if(s.sdk.getState()?.bank.isOpen&&s.bankObservation?.())return;await s.sdk.sendCloseModal();await waitUntil(s,()=>!s.sdk.getState()?.interface.isOpen&&!s.sdk.getState()?.dialog.isOpen,{timeoutTicks:8});const g=s.bankObservation?.()?.generation??-1;const result=await s.bot.openBank();if(!result.success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??-1)>g,{timeoutTicks:12}))throw Error('bank job fresh bank unavailable');};
  const secure=async(credit:boolean)=>{await open();for(const id of related){const item=inv().find(i=>i.id===id);if(item){const n=await depositObserved(s,item);if(credit&&p.outputs.includes(id))banked[id]=(banked[id]??0)+n;}}};
  try{
@@ -123,12 +124,12 @@ export async function runBankProfile(s:Session,j:BankRouteJob,p:BankProfile,requ
    // Native spell/production handlers can retain a delay after publishing output.
    await waitTicks(s,3);await travel(p.bank,true);await secure(true);
   }
- }catch(error){failure=String(error);try{if(!dead()){for(const item of inv())if(!protectedPack.has(item.id))related.add(item.id);await s.sdk.sendCloseModal();await travel(p.bank,true);await secure(true);}}catch(recovery){failure+='; return '+String(recovery);}}
- finally{if(!dead())await s.bot.closeBank();}
+ }catch(error){failure=String(error);try{recoveryDeferred=p.deferBankRecovery?.()??false;}catch(decision){recoveryDeferred=true;failure+='; recovery decision '+String(decision);}try{if(!dead()&&!recoveryDeferred){for(const item of inv())if(!protectedPack.has(item.id))related.add(item.id);await s.sdk.sendCloseModal();await travel(p.bank,true);await secure(true);}}catch(recovery){failure+='; return '+String(recovery);}}
+ finally{if(!dead()&&!recoveryDeferred)await s.bot.closeBank();}
  atBank=observedBank();
  if([...protectedPack].some(([id,n])=>count(id)!==n))failure+='; protected stock changed';
  if((s.sdk.getSkill('Hitpoints')?.level??0)<hp0)failure+='; health changed';
  const ok=!failure&&completed>=j.target&&atBank&&!dead()&&!requestStop()&&s.tick()-start<j.cap;
- return{ok,family:j.family,recipe:j.recipe,completed,trips,banked,atBank,ticks:s.tick()-start,failure:failure||'-'};
+ return{ok,family:j.family,recipe:j.recipe,completed,trips,banked,atBank,recoveryDeferred,ticks:s.tick()-start,failure:failure||'-'};
 }
 if(import.meta.main){const account=process.argv[2],path=process.argv[3];if(!account||!path)throw Error('usage: microbot-bank-jobs.ts account job.json');const job=JSON.parse(readFileSync(path,'utf8')) as BankJob;validateBankJob(job);let stopped=false;const s=await openBot(account,{onStop:async()=>{stopped=true;}});try{const result=await runBankJob(s,job,()=>stopped);console.log('BANK_JOB '+JSON.stringify(result));await finish([s],result.ok,JSON.stringify(result));}catch(error){await finish([s],false,String(error));}}

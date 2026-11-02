@@ -39,3 +39,12 @@ test('configured return cannot bypass native high-Wilderness teleport restrictio
  let dispatches=0;const s:any={tick:()=>0,sdk:{getState:()=>({player:{lifeId:1,level:0,worldX:3000,worldZ:3800}}),getSkill:()=>({level:99})},direct:async()=>{dispatches++;}};
  await expect(returnMagicTrip(s,{name:'varrock',component:'magic:varrock_teleport',level:25,members:false,runes:{554:1,556:3,563:1},to:{x:3213,z:3424,level:0}},true,40)).rejects.toThrow('legal Wilderness exit');expect(dispatches).toBe(0);
 });
+
+
+test('NPC magic reaches the exact declared pen site before selecting a walking-reachable target',async()=>{
+ const {bankTravelTolerance}=await import('./microbot-bank-jobs');const {walkPath}=await import('../packages/core/src/walk');
+ let at={x:3199,z:3354,level:0},tick=0,clicks=0;const listeners=new Set<()=>void>(),site={x:3197,z:3353};
+ const deps:any={pos:()=>at,tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f)},locs:()=>[],plan:()=>[site],walk:(x:number,z:number)=>{clicks++;at={x,z,level:0};},interactLoc:()=>{throw Error('unexpected loc');}};
+ const timer=setInterval(()=>{tick++;for(const f of listeners)f();},1);
+ try{const result=await walkPath(deps,[{...site,tol:bankTravelTolerance('magic-npc',true)}],{maxTicks:10});expect(result.ok).toBe(true);expect(clicks).toBeGreaterThan(0);expect(at).toEqual({...site,level:0});expect(bankTravelTolerance('magic-npc',false)).toBe(2);expect(bankTravelTolerance('fishing',true)).toBe(2);expect(bankTravelTolerance('cooking',true)).toBe(0);}finally{clearInterval(timer);}
+});

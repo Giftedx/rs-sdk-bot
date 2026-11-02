@@ -1,10 +1,10 @@
-import {readFileSync,existsSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {runBankProfile,validateBankRouteJob,type BankRouteJob,type BankProfile} from './microbot-bank-jobs';
 import {nativeNpcSpell,runNpcMagic} from './microbot-magic-npc';
-import {nativeTeleport,runTeleportMagic,teleportReceipt,type NativeTeleport} from './microbot-magic-teleport';
+import {nativeTeleport,runTeleportMagic,magicStopRequested,teleportReceipt,type NativeTeleport} from './microbot-magic-teleport';
 import {componentId} from '../packages/core/src/logout';
 import {combatTeleportAllowed} from './microbot-combat-trip';
 import {elementalRuneCost,itemMagicRecipe,itemSpellCosts} from './microbot-magic-items';
@@ -66,4 +66,4 @@ export async function runMagicBankTrips(s:Session,j:MagicBankJob,stop:()=>boolea
  if(result.atBank&&!restored){await s.direct({type:'clickComponent',componentId:retaliate?150:151,reason:'restore finite magic trip ownership'});restored=await waitUntil(s,()=>s.sdk.getState()?.autoRetaliateEnabled===retaliate,{timeoutTicks:8});}
  const combatPreserved=names.every((n,i)=>(s.sdk.getSkillXp(n)??0)===before[i]);return{...result,ok:result.ok&&restored&&prayerRestored&&combatPreserved,retaliateRestored:restored,prayerRestored,combatPreserved};
 }
-if(import.meta.main){const[name,path]=process.argv.slice(2);if(!name||!path)throw Error('usage: microbot-magic-trip.ts account job.json');const job=JSON.parse(readFileSync(path,'utf8'))as MagicBankJob;validateMagicBankJob(job);let stopped=false;const s=await openBot(name,{onStop:async()=>{stopped=true;}});try{const result=await runMagicBankTrips(s,job,()=>stopped||existsSync('.practice/stop-'+name)||existsSync('.practice/stop-all')||existsSync('.practice/stop-microbot-magic')||!!process.env.STOP_FILE&&existsSync(process.env.STOP_FILE));await finish([s],result.ok,JSON.stringify(result));}catch(e){await finish([s],false,String(e));}}
+if(import.meta.main){const[name,path]=process.argv.slice(2);if(!name||!path)throw Error('usage: microbot-magic-trip.ts account job.json');const job=JSON.parse(readFileSync(path,'utf8'))as MagicBankJob;validateMagicBankJob(job);let stopped=false;const s=await openBot(name,{onStop:async()=>{stopped=true;}});try{const result=await runMagicBankTrips(s,job,()=>magicStopRequested(name,stopped));await finish([s],result.ok,JSON.stringify(result));}catch(e){await finish([s],false,String(e));}}

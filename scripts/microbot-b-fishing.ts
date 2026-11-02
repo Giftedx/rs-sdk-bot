@@ -6,6 +6,8 @@ import {openBot,finish} from '../packages/core/src/bot';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {catchSharks} from './gather-fish';
 import type {BotWorldState,NearbyNpc} from '../vendor/rs-sdk/sdk/types';
+import type{Session}from'../packages/core/src/inprocess';
+import{walkPath,sessionWalker}from'../packages/core/src/walk';
 
 const content=resolve(import.meta.dir,'../vendor/rs-sdk/server/content');
 export const FISH_PROFILES={
@@ -25,9 +27,16 @@ export function fishSpotIds(method:FishMethod){
  const profile=FISH_PROFILES[method];
  return npcDefs.filter(block=>new RegExp(`^category=${profile.category}\\r?$`,'m').test(block)).map(block=>npcPack.get(block.match(/^\[([^\]]+)\]/)?.[1]??'')).filter((id):id is number=>id!==undefined);
 }
-export function pickFishSpot(s:BotWorldState,method:FishMethod):NearbyNpc|undefined{
+export function pickFishSpot(s:BotWorldState,method:FishMethod,radius=8):NearbyNpc|undefined{
  const p=FISH_PROFILES[method],ids=fishSpotIds(method);
- return s.nearbyNpcs.filter(n=>ids.includes(n.id)&&n.reachable!==false&&n.distance<=8&&n.optionsWithIndex.some(o=>o.opIndex===p.op&&o.text.toLowerCase()===p.label.toLowerCase())).sort((a,b)=>a.distance-b.distance)[0];
+ return s.nearbyNpcs.filter(n=>ids.includes(n.id)&&n.reachable!==false&&n.distance<=radius&&n.optionsWithIndex.some(o=>o.opIndex===p.op&&o.text.toLowerCase()===p.label.toLowerCase())).sort((a,b)=>a.distance-b.distance)[0];
+}
+export function catherbyFishingSearchPoints(){const body=readFileSync(resolve(content,'scripts/skill_fishing/configs/fishing_movement.enum'),'utf8').split('[fishing_movement_catherby_enum]')[1]!.split('\n[')[0]!;const points=[...body.matchAll(/^val=\d+,(\d+)_(\d+)_(\d+)_(\d+)_(\d+)/gm)].map(m=>({x:Number(m[2])*64+Number(m[4]),z:Number(m[3])*64+Number(m[5]),level:Number(m[1])}));return[points[0]!,points[Math.floor(points.length/2)]!,points.at(-1)!];}
+export async function searchNativeCatherbyFishing(s:Session,method:FishMethod,pass:number,stop:()=>boolean){
+ const player=s.sdk.getState()?.player;if(!player||player.level!==0||player.worldX<2800||player.worldX>2870||player.worldZ<3410||player.worldZ>3455||!['net','seaBait','cage','harpoon'].includes(method)||pass>=3||stop())return false;
+ const visible=pickFishSpot(s.sdk.getState()!,method,16),target=visible??catherbyFishingSearchPoints()[pass];if(!target)return false;
+ let end:{x:number;z:number}|undefined;for(const distance of[2,3,4]){for(const[x,z]of[[target.x,target.z+distance],[target.x-distance,target.z+distance],[target.x+distance,target.z+distance]]){const path=s.sdk.findPath(x!,z!);if(path.success&&path.reachedDestination===true){end={x:x!,z:z!};break;}}if(end)break;}
+ if(!end)return false;console.log('FISH_SEARCH '+JSON.stringify({method,pass,visible:visible?.index,target:{x:target.x,z:target.z},shore:end}));const result=await walkPath(await sessionWalker(s),[{...end,tol:0}],{maxTicks:20,stop});if(!result.ok||stop())return false;await waitTicks(s,1);return true;
 }
 const count=(s:BotWorldState,id:number)=>s.inventory.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const fishCount=(s:BotWorldState,method:FishMethod)=>FISH_PROFILES[method].products.reduce((n,id)=>n+count(s,id),0);
@@ -38,7 +47,7 @@ const protectedKit=(s:BotWorldState,method:FishMethod)=>{
  return JSON.stringify([...s.inventory.filter(i=>!allow.has(i.id)).reduce((m,i)=>m.set(i.id,(m.get(i.id)??0)+i.count),new Map<number,number>())].sort((a,b)=>a[0]-b[0]));
 };
 export interface FishBatchOptions{method:FishMethod;amount:number;cap:number;maxAttempts:number;progressTicks:number}
-export interface FishDriver{state:()=>BotWorldState|null;tick:()=>number;stopped:()=>boolean;interact:(index:number,op:number)=>Promise<{success:boolean}>;combine:(a:number,b:number)=>Promise<{success:boolean}>;wait:(test:()=>boolean,ticks:number)=>Promise<boolean>;step:()=>Promise<void>}
+export interface FishDriver{state:()=>BotWorldState|null;tick:()=>number;stopped:()=>boolean;interact:(index:number,op:number)=>Promise<{success:boolean}>;combine:(a:number,b:number)=>Promise<{success:boolean}>;wait:(test:()=>boolean,ticks:number)=>Promise<boolean>;step:()=>Promise<void>;search?:(pass:number,stop:()=>boolean)=>Promise<boolean>}
 export function karambwanLoadEffect(before:BotWorldState,after:BotWorldState){
  return count(before,3157)-count(after,3157)===1&&count(after,3159)-count(before,3159)===1&&count(before,3150)-count(after,3150)===1;
 }
@@ -56,13 +65,13 @@ export async function runStagedFishing(d:FishDriver,o:FishBatchOptions){
  if((initial.skills.find(k=>k.name==='Fishing')?.level??0)<profile.level)throw Error(`requires Fishing${profile.level}`);
  if(!count(initial,profile.tool)&&!(o.method==='karambwan'&&count(initial,3159)))throw Error(`missing fishing tool ${profile.tool}`);
  if(initial.inventory.length>=28)throw Error('fishing requires free space');
- const start=d.tick(),base=fishCount(initial,o.method);let last=base,progress=start,attempts=0,baitUsed=0,active:number|undefined;
+ const start=d.tick(),base=fishCount(initial,o.method);let last=base,progress=start,attempts=0,baitUsed=0,active:number|undefined,searches=0,missingSince=start;
  const state=()=>{const s=d.state();if(!s?.player)throw Error('fishing session ended');if(d.stopped())throw Error('fishing stopped');if(d.tick()-start>=o.cap)throw Error('fishing tick cap');if(s.player.level!==initial.player!.level||s.player.lifeId!==initial.player!.lifeId||hp(s)!==hp(initial)||s.player.isDead)throw Error('fishing health or plane changed');if(protectedKit(s,o.method)!==protectedKit(initial,o.method))throw Error('fishing protected assets changed');return s;};
  while(last-base<o.amount){
   let s=state();if(d.tick()-progress>=o.progressTicks)throw Error('fishing no progress');
   if(s.inventory.length>=28)throw Error('fishing pack full before target');
   if(profile.bait&&count(s,profile.bait)<1&&!(o.method==='karambwan'&&count(s,3159)))throw Error('fishing bait exhausted');
-  const spot=pickFishSpot(s,o.method);if(!spot){await d.step();continue;}
+  const spot=pickFishSpot(s,o.method);if(!spot){active=undefined;if(d.search){if(searches>=3||!await d.search(searches++,()=>{state();return false;}))throw Error('fishing no compatible native spot after bounded search');state();}else{if(d.tick()-missingSince>=Math.min(12,o.progressTicks))throw Error('fishing no compatible native spot');await d.step();}continue;}searches=0;missingSince=d.tick();
   if(o.method==='karambwan'){
    if(attempts>=o.maxAttempts)throw Error('karambwan attempt limit');
    if(!count(s,3159)){

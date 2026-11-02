@@ -4,7 +4,8 @@ import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
 import {sessionWalker,walkPath,expandPath,type PathPoint} from '../packages/core/src/walk';
-import type {NearbyNpc} from '../vendor/rs-sdk/sdk/types';
+import{createCombatLoot,telegrabPolicy,type TelegrabPolicy}from'./microbot-telegrab';
+import type {GroundItem,NearbyNpc} from '../vendor/rs-sdk/sdk/types';
 type Item={id:number;count:number};
 const BOW=841,AMMO=884,FOOD=333,BONES=526,CHICKEN=2138,FEATHER=314,BANK={x:3253,z:3421};
 const OUT:PathPoint[]=[{x:3280,z:3429,tol:2},{x:3275,z:3380,tol:2},{x:3260,z:3335,tol:2},{x:3233,z:3297,tol:0}];
@@ -39,7 +40,8 @@ export function makeRangedHealer(s:Session,consumed:()=>void,foodId=333){
   return inFlight;
  };
 }
-export async function runRanged(s:Session,o:{cap:number;maximum:number;ammo:number;food:number;foodId?:number;stop?:()=>boolean}){
+export async function pickupRangedLoot(s:Session,loot:Pick<ReturnType<typeof createCombatLoot>,'pickup'>,item:GroundItem){const held=()=>count(s.sdk.getInventory(),item.id),before=held(),reply=await loot.pickup(item);if(reply.telegrab&&!reply.success)throw Error('ranged loot unavailable '+item.id);if(!await waitUntil(s,()=>held()>before,{timeoutTicks:8}))throw Error('ranged pickup effect missing '+item.id);return held()-before;}
+export async function runRanged(s:Session,o:{cap:number;maximum:number;ammo:number;food:number;foodId?:number;telegrab?:TelegrabPolicy;stop?:()=>boolean}){
  if(!Number.isSafeInteger(o.cap)||o.cap<800||!Number.isSafeInteger(o.maximum)||o.maximum<1||o.maximum>5||!Number.isSafeInteger(o.ammo)||o.ammo<15||o.ammo>200||!Number.isSafeInteger(o.food)||o.food<2||o.food>8)throw Error('ranged prerequisite: bounded cap>=800,kills1..5,ammo15..200,food2..8');
  const FOOD=o.foodId??333;if(![329,333].includes(FOOD))throw Error("ranged prerequisite: unsupported food ID");
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),eq=()=>s.sdk.getEquipment(),held=(id:number)=>count(inv(),id),hp=()=>s.sdk.getSkill('Hitpoints')?.level??0,xp=()=>s.sdk.getSkillXp('Ranged')??0;
@@ -66,7 +68,8 @@ export async function runRanged(s:Session,o:{cap:number;maximum:number;ammo:numb
  const walk=async(points:PathPoint[])=>{const r=await walkPath(guarded,points,{look:4,maxTicks:500,stop:over});if(!r.ok)throw Error('ranged route failed '+r.detail);};
  const close=async()=>{await s.bot.closeBank();if(!await waitUntil(s,()=>!st()?.bank?.isOpen,{timeoutTicks:5}))throw Error('ranged bank close unobserved');};
  const ground=()=>st()?.groundItems??[];
- const pickup=async(id:number,x:number,z:number)=>{const item=ground().find(i=>i.id===id&&i.x===x&&i.z===z),before=held(id);if(!item)throw Error('ranged fresh loot missing '+id);await s.bot.pickupItem(item);if(!await waitUntil(s,()=>held(id)>before,{timeoutTicks:8}))throw Error('ranged pickup effect missing '+id);return held(id)-before;};
+ const loot=createCombatLoot(s,o.telegrab?{...o.telegrab,stop:()=>over()||!!o.telegrab?.stop?.()}:undefined);
+ const pickup=async(id:number,x:number,z:number)=>{const item=ground().find(i=>i.id===id&&i.x===x&&i.z===z);if(!item)throw Error('ranged fresh loot missing '+id);return pickupRangedLoot(s,loot,item);};
  try{
   await open();initial=totals();
   if((initial.get(BOW)??0)<1||(initial.get(AMMO)??0)<o.ammo||(initial.get(FOOD)??0)<o.food)throw Error('ranged prerequisite: stage owned bow,ammo and selected unnoted food');
@@ -117,9 +120,9 @@ export async function runRanged(s:Session,o:{cap:number;maximum:number;ammo:numb
   }catch(e){failure=[failure,'cleanup '+String(e)].filter(Boolean).join('; ');}off();
  }
  const final=totals(),consumedAmmo=(initial?.get(AMMO)??0)-(final.get(AMMO)??0),gained=(id:number)=>(final.get(id)??0)-(initial?.get(id)??0);
- const preserved=!!initial&&[...new Set([...initial.keys(),...final.keys()])].every(id=>[AMMO,FOOD,BONES,CHICKEN,FEATHER].includes(id)||(initial!.get(id)??0)===(final.get(id)??0));
+ const preserved=!!initial&&[...new Set([...initial.keys(),...final.keys()])].every(id=>[AMMO,FOOD,BONES,CHICKEN,FEATHER].includes(id)||(final.get(id)??0)===(initial!.get(id)??0)-(loot.runesUsed[id]??0));
  const targetMet=kills===o.maximum&&xp()>initialXp&&gained(BONES)===kills&&gained(CHICKEN)===kills;
  const accounting=!!initial&&!ammoUnknown&&gained(FOOD)===-eaten&&consumedAmmo>=0&&consumedAmmo<=shotsObserved&&stored(AMMO)===(final.get(AMMO)??0);
- return{ok:!failure&&!died&&!ended&&targetMet&&preserved&&accounting,ticks:s.tick()-start,kills,xpGain:xp()-initialXp,startHp:initialHp,hpMin,hp:hp(),eaten,pickedAmmo,shotsObserved,unrecoveredAmmo:consumedAmmo,ammoBank:stored(AMMO),bowBank:stored(BOW),foodBank:stored(FOOD),boneGain:gained(BONES),chickenGain:gained(CHICKEN),featherGain:gained(FEATHER),bankTrips,preserved,accounting,targetMet,died,stop,failure:failure||'-'};
+ return{telegrabCasts:loot.casts,telegrabRunes:loot.runesUsed,ok:!failure&&!died&&!ended&&targetMet&&preserved&&accounting,ticks:s.tick()-start,kills,xpGain:xp()-initialXp,startHp:initialHp,hpMin,hp:hp(),eaten,pickedAmmo,shotsObserved,unrecoveredAmmo:consumedAmmo,ammoBank:stored(AMMO),bowBank:stored(BOW),foodBank:stored(FOOD),boneGain:gained(BONES),chickenGain:gained(CHICKEN),featherGain:gained(FEATHER),bankTrips,preserved,accounting,targetMet,died,stop,failure:failure||'-'};
 }
-if(import.meta.main){let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}});try{const r=await runRanged(s,{cap:Number(process.env.CAP??1800),maximum:Number(process.env.MAX_KILLS??2),ammo:Number(process.env.AMMO??90),food:Number(process.env.FOOD??3),foodId:Number(process.env.FOOD_ID??333),stop:()=>stopped});console.log('RANGED_BANK '+JSON.stringify(r));await finish([s],r.ok,(r.ok?'':r.stop==='stop-file'?'stop file ':'no Ranged progress: ')+JSON.stringify(r));}catch(e){await finish([s],false,'no Ranged progress: '+String(e));}}
+if(import.meta.main){let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}});try{const r=await runRanged(s,{cap:Number(process.env.CAP??1800),maximum:Number(process.env.MAX_KILLS??2),ammo:Number(process.env.AMMO??90),food:Number(process.env.FOOD??3),foodId:Number(process.env.FOOD_ID??333),telegrab:telegrabPolicy(),stop:()=>stopped});console.log('RANGED_BANK '+JSON.stringify(r));await finish([s],r.ok,(r.ok?'':r.stop==='stop-file'?'stop file ':'no Ranged progress: ')+JSON.stringify(r));}catch(e){await finish([s],false,'no Ranged progress: '+String(e));}}

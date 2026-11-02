@@ -1175,7 +1175,8 @@
       "scripts/microbot-b-cooking.ts",
       "scripts/microbot-production.ts",
       "scripts/cook-stock.ts",
-      "scripts/cook-wine.ts"
+      "scripts/cook-wine.ts",
+      "scripts/microbot-bank-jobs.ts"
     ],
     "sourceEvidence": [
       {
@@ -3084,7 +3085,7 @@
       }
     ],
     "blockers": [
-      "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified."
+      "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. The staged cooker has no donor target-level chain. scripts/microbot-bank-jobs.ts supplies finite owned bank/heat/refill trips; its native cooking proof covers the recorded recipe and site, not every table row or access route. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; Bank/heat/refill combinations beyond the recorded native bank-job case and live release remain unqualified."
     ],
     "scriptDecisions": [
       {
@@ -3094,9 +3095,10 @@
           "scripts/microbot-b-cooking.ts",
           "scripts/microbot-production.ts",
           "scripts/cook-stock.ts",
-          "scripts/cook-wine.ts"
+          "scripts/cook-wine.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
-        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified.",
+        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. The staged cooker has no donor target-level chain. scripts/microbot-bank-jobs.ts supplies finite owned bank/heat/refill trips; its native cooking proof covers the recorded recipe and site, not every table row or access route. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; Bank/heat/refill combinations beyond the recorded native bank-job case and live release remain unqualified.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/cooking/scripts/AutoCookingScript.java",
@@ -3307,9 +3309,10 @@
           "scripts/microbot-b-cooking.ts",
           "scripts/microbot-production.ts",
           "scripts/cook-stock.ts",
-          "scripts/cook-wine.ts"
+          "scripts/cook-wine.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
-        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. Automatic donor target-level chain and all bank/heat travel/replenishment are not implemented in staged cooker. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; bank/heat travel, replenishment and live release remain unqualified.",
+        "gap": "Finite staged cooker ports55 useful native table rows including bread/pies/cake/stew, fish, quest cooking, both karambwan choices and staged gnome variants; root bank recipes prepare native dough/cake/stew/pizza. Exact output/container/XP accounting and source restrictions are unit-tested. The staged cooker has no donor target-level chain. scripts/microbot-bank-jobs.ts supplies finite owned bank/heat/refill trips; its native cooking proof covers the recorded recipe and site, not every table row or access route. Raw oomlie is natively forbidden until wrapped;2 bone reheats are no-op outputs. Humidify and modern missing food rows are absent; Native staged practice passes55 useful rows and16 gnome ingredient branches; Bank/heat/refill combinations beyond the recorded native bank-job case and live release remain unqualified.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/cooking/scripts/BurnBakingScript.java",
@@ -3980,7 +3983,7 @@
       }
     ],
     "proof": {
-      "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
+      "level": "Source review plus bounded native practice where linked; no live or repeat release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -3991,7 +3994,13 @@
       "scriptCount": 2,
       "sourceFileCount": 10,
       "unit": "bun test ./scripts/microbot-b-cooking.test.ts:3 pass,0 fail,122 assertions;55 useful native rows plus explicit3 exclusions; mock staged cooking, no native heat proof",
-      "nativePractice": "Native practice passes all55 useful table rows and16 extra gnome ingredient cases, including fire-only swamp paste, both karambwan choices with Tinsay reward322=8, and both60XP gnome resolver branches. Exact saved assets/XP/HP/logout checks and complete71case aggregate pass. Evidence .practice/microbot-ports/native-cooking-final/. Required skills99, members, staged inputs; no route/live release. Worker hashes bind entry files and176 core source files; the vendor junction is outside that dependency snapshot."
+      "nativePractice": "Native practice passes all55 useful table rows and16 extra gnome ingredient cases, including fire-only swamp paste, both karambwan choices with Tinsay reward322=8, and both60XP gnome resolver branches. Exact saved assets/XP/HP/logout checks and complete71case aggregate pass. Evidence .practice/microbot-ports/native-cooking-final/. Required skills99, members, staged inputs; no route/live release. Worker hashes bind entry files and176 core source files; the vendor junction is outside that dependency snapshot.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      }
     }
   },
   {
@@ -4002,7 +4011,8 @@
       "scripts/microbot-production.ts",
       "scripts/spin-bowstrings.ts",
       "scripts/microbot-b-jewellery.ts",
-      "scripts/microbot-magic-items.ts"
+      "scripts/microbot-magic-items.ts",
+      "scripts/microbot-bank-jobs.ts"
     ],
     "sourceEvidence": [
       {
@@ -7080,7 +7090,8 @@
         "consumer": [
           "scripts/microbot-b-jewellery.ts",
           "scripts/microbot-production.ts",
-          "scripts/microbot-magic-items.ts"
+          "scripts/microbot-magic-items.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
         "gap": "23 native furnace structs plus gem cutting/stringing/enchant subset. Modern bracelets/opal-jade-topaz silver jewellery/onyx/zenyte lack native furnace recipe rows. Staged furnace/enchant workers do not auto-replenish at bank.",
         "sourceEvidence": [
@@ -7695,7 +7706,8 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/crafting/scripts/DefaultScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-production.ts"
+          "scripts/microbot-production.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
         "gap": "Native leather/hard leather and green/blue/red/black dhide rows are bank recipes. Donor costume needle and modern leather variants lack native item-use semantics.",
         "sourceEvidence": [
@@ -7785,7 +7797,8 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/crafting/scripts/DragonLeatherScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-production.ts"
+          "scripts/microbot-production.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
         "gap": "Native leather/hard leather and green/blue/red/black dhide rows are bank recipes. Donor costume needle and modern leather variants lack native item-use semantics.",
         "sourceEvidence": [
@@ -8065,7 +8078,8 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/crafting/scripts/GemsScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-production.ts"
+          "scripts/microbot-production.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
         "gap": "All eight native cut-gem recipes and native bolt-tip recipes; amethyst arrow/bolt/dart-tip recipe is absent.",
         "sourceEvidence": [
@@ -8205,7 +8219,8 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/crafting/scripts/GlassblowingScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-production.ts"
+          "scripts/microbot-production.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
         "gap": "Beer glass, vial and unpowered orb are native menu choices. Candle/oil lantern, fishbowl, lens and light-orb variants lack native glass menu/recipe handlers.",
         "sourceEvidence": [
@@ -8298,7 +8313,8 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/crafting/scripts/StaffScript.java",
         "decision": "port",
         "consumer": [
-          "scripts/microbot-production.ts"
+          "scripts/microbot-production.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
         "gap": "All four native orb/battlestaff recipes; donor progressive tier choice and bank staging use explicit recipe/job parameters, practice unqualified.",
         "sourceEvidence": [
@@ -8386,7 +8402,7 @@
       }
     ],
     "proof": {
-      "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
+      "level": "Source review plus bounded native practice where linked; no live or repeat release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -8398,7 +8414,13 @@
       "sourceFileCount": 30,
       "unit": "bun test ./scripts/microbot-b-jewellery.test.ts: 3 pass, 0 fail, 84 assertions;23 native structs and mock staged loop, no native furnace proof",
       "nativeInventory": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim. Other named workers and donor variants retain their separate proof gaps.",
-      "nativePractice": "Native practice passes all23 staged furnace-jewellery recipes, plus the178 inventory production profiles. Evidence .practice/microbot-ports/native-furnace-cooking/ and native-sweep-3/. These are worker-bound saved assets/XP/HP/logout checks, not bank replenishment, travel or live qualification."
+      "nativePractice": "Native practice passes all23 staged furnace-jewellery recipes, plus the178 inventory production profiles. Evidence .practice/microbot-ports/native-furnace-cooking/ and native-sweep-3/. These are worker-bound saved assets/XP/HP/logout checks, not bank replenishment, travel or live qualification.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      }
     }
   },
   {
@@ -8406,7 +8428,8 @@
     "decision": "partial",
     "behaviour": "NMZ herb boxes, diary staves/essence/flax, Miscellania handling and approval work",
     "localConsumers": [
-      "scripts/microbot-c-care.ts"
+      "scripts/microbot-c-care.ts",
+      "scripts/microbot-misc-coffer.ts"
     ],
     "sourceEvidence": [
       {
@@ -8930,16 +8953,17 @@
       }
     ],
     "blockers": [
-      "NMZ/diary daily claims are absent. Native Miscellania adaptation is weeding herbs with Herblore35 and worn sickle; finite worker confirms the native effect message/XP, not a modern rake or transmitted numeric approval. Kingdom deposit and full daily route are not ported; donor disabled task branches remain disabled."
+      "Native herb care and optional finite noted-resource collection followed by one declared coffer deposit are implemented. Ghrim accepts observed Yes for collection or No to skip; exact report/pack credits and capacity precede fresh management balance and amount entry. The actual final CLI qualifies1020 noted maple logs plus a50000-coin deposit: coffer1000→51000, exact coin debit, unrelated assets/HP/gear preserved, CRC-save audit and logout. This is one bounded declared collection/deposit, not full daily-route or kingdom-income production-rate parity. Native bank resource delivery is commented out, so collection targets carried notes. Withdrawal/worker allocation, NMZ/modern diary rewards and disabled donor branches remain outside this consumer."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/dailytasks/DailyTasksScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-c-care.ts"
+          "scripts/microbot-c-care.ts",
+          "scripts/microbot-misc-coffer.ts"
         ],
-        "gap": "NMZ/diary daily claims are absent. Native Miscellania adaptation is weeding herbs with Herblore35 and worn sickle; finite worker confirms the native effect message/XP, not a modern rake or transmitted numeric approval. Kingdom deposit and full daily route are not ported; donor disabled task branches remain disabled.",
+        "gap": "Native herb care and optional finite noted-resource collection followed by one declared coffer deposit are implemented. Ghrim accepts observed Yes for collection or No to skip; exact report/pack credits and capacity precede fresh management balance and amount entry. The actual final CLI qualifies1020 noted maple logs plus a50000-coin deposit: coffer1000→51000, exact coin debit, unrelated assets/HP/gear preserved, CRC-save audit and logout. This is one bounded declared collection/deposit, not full daily-route or kingdom-income production-rate parity. Native bank resource delivery is commented out, so collection targets carried notes. Withdrawal/worker allocation, NMZ/modern diary rewards and disabled donor branches remain outside this consumer.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/dailytasks/DailyTasksScript.java",
@@ -8975,7 +8999,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Bounded native actual-CLI collection plus exact declared coffer deposit; no full daily-route or live qualification.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -8984,7 +9008,16 @@
         "matchCount": 118
       },
       "scriptCount": 1,
-      "sourceFileCount": 5
+      "sourceFileCount": 5,
+      "cofferContract": "Observed member account, completed Throne of Miscellania, owned carried funds and scalar original life/HP. Ghrim1375 -> How is the Kingdom faring? -> Yes for declared collection or No to skip -> exact native resource report/pack note credit -> fresh management UI10984/com87 balance -> com88/P_COUNTDIALOG for exact declared deposit. Capacity, balance, coin and unrelated pack/gear receipts bound each action; uncertain collection or amount submission is not retried.",
+      "cofferConsumer": "scripts/microbot-misc-coffer.ts",
+      "cofferTests": "scripts/microbot-misc-coffer.test.ts",
+      "nativePractice": {
+        "evidence": ".practice/microbot-ports/next-native-gaps/misc-coffer-native-1793589000895/result.json",
+        "sourceCheck": ".practice/microbot-ports/next-native-gaps/misc-coffer-native-1793589000895/source-drift.json",
+        "scope": "1020 maple notes1518 collected and50000 coins deposited in the same final CLI; coffer1000→51000, submitted/collectionConfirmed/preserved true, pending false, independent CRC-save checks and logout.11194 captured files and286 release-closure files unchanged.",
+        "conditions": "Members practice, completed Throne of Miscellania, owned carried funds, declared50000 amount and seeded native resource points2048/10 wood workers. No daily production-rate or automatic allocation claim."
+      }
     }
   },
   {
@@ -10320,7 +10353,8 @@
     "decision": "partial",
     "behaviour": "KBD trip preparation, weapon variants, dragonfire sustain, loot/regear and Ferox return",
     "localConsumers": [
-      "scripts/microbot-b-kbd.ts"
+      "scripts/microbot-b-kbd.ts",
+      "scripts/microbot-combat-trip.ts"
     ],
     "sourceEvidence": [
       {
@@ -11298,7 +11332,7 @@
       }
     ],
     "blockers": [
-      "One finite staged native dragon50 kill ports shield/prayer, potion transforms, shark sustain, own-XP plus guaranteed-drop kill credit, bones/hide pickup and Varrock emergency return. Route entry, regear, arbitrary donor ranged/modern equipment variants, random rare-drop pickup and death recovery are not ported. No practice/native encounter qualification exists; policy and mock loop tests are not release evidence."
+      "Native rune-sword bank kit, Wilderness ladder/lever entry, exact potion transforms, food/prayer refill, owned-target resume, zero-damage swing observations, attributed guaranteed and rare loot, Varrock escape and bank return have one full native trip proof. Other donor equipment and ranged variants, repeated refills, contested encounters, death recovery and live release remain unqualified."
     ],
     "scriptDecisions": [
       {
@@ -11307,7 +11341,7 @@
         "consumer": [
           "scripts/microbot-b-kbd.ts"
         ],
-        "gap": "One finite staged native dragon50 kill ports shield/prayer, potion transforms, shark sustain, own-XP plus guaranteed-drop kill credit, bones/hide pickup and Varrock emergency return. Route entry, regear, arbitrary donor ranged/modern equipment variants, random rare-drop pickup and death recovery are not ported. No practice/native encounter qualification exists; policy and mock loop tests are not release evidence.",
+        "gap": "Native rune-sword bank kit, Wilderness ladder/lever entry, exact potion transforms, food/prayer refill, owned-target resume, zero-damage swing observations, attributed guaranteed and rare loot, Varrock escape and bank return have one full native trip proof. Other donor equipment and ranged variants, repeated refills, contested encounters, death recovery and live release remain unqualified. KBD-only native actual CLI passes full owned-bank kit, Wilderness ladder/lever entry, one credited boss kill, legal Varrock escape, final bank and logout. Independent CRC saves confirm984 Attack XP,326.1 Hitpoints XP,35 teleport Magic XP, six sharks consumed including bounded return, finalHP86, dragon bones536x1,black dragonhide1747x1 and bronze arrows882x310 banked, exact potion/rune/kit/assets and empty pack. This fixture plans and audits KBD only; it does not qualify Blue. Evidence .practice/microbot-ports/combat-native-final-11-1793592818359/result.json; .practice/microbot-ports/combat-native-final-11-1793592818359/independent-audit.json;11366 recorded source/config entries unchanged.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/drokbd/DroKbdScript.java",
@@ -12043,7 +12077,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source, focused regressions and bounded native actual-CLI plus independent saved-asset qualification of the exact linked recipe/configuration; no live or repeat release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -12053,7 +12087,11 @@
       },
       "scriptCount": 1,
       "sourceFileCount": 11,
-      "unit": "bun test ./scripts/microbot-b-kbd.test.ts: 5 pass, 0 fail, 24 assertions; includes mocked one-kill return and stop cleanup, no native encounter proof"
+      "unit": "Nine KBD tests pass with36assertions, including interrupted target recovery and zero-damage paid swings; these are simulated regressions.",
+      "nativePractice": ".practice/microbot-ports/combat-native-final-11-1793592818359/result.json: KBD-only native actual CLI passes full owned-bank kit, Wilderness ladder/lever entry, one credited boss kill, legal Varrock escape, final bank and logout. Independent CRC saves confirm984 Attack XP,326.1 Hitpoints XP,35 teleport Magic XP, six sharks consumed including bounded return, finalHP86, dragon bones536x1,black dragonhide1747x1 and bronze arrows882x310 banked, exact potion/rune/kit/assets and empty pack. This fixture plans and audits KBD only; it does not qualify Blue.",
+      "pitCleanup": ".practice/microbot-ports/combat-native-final-7/2.log: forced stop in high-Wilderness entrance pit exits by native lever, teleports legally and banks without fighting; exact kit minus teleport runes, HP99 and logout. No forbidden high-Wilderness teleport is attempted.",
+      "sourceCheck": ".practice/microbot-ports/combat-native-final-11-1793592818359/runtime-source-check.json:11366 recorded source/config entries unchanged.",
+      "independentAudit": ".practice/microbot-ports/combat-native-final-11-1793592818359/independent-audit.json: explicit kbd recipe coverage passes CRC saved assets, guaranteed bank loot, full XP, native consumable bounds and unchanged kit; receipt.delta is not the expected-assets oracle."
     }
   },
   {
@@ -14203,7 +14241,7 @@
       {
         "path": "vendor/rs-sdk/server/content/scripts/quests/quest_itexam/scripts/arcaeological_expert.rs2",
         "line": 173,
-        "claim": "~chatnpc(\"<p,neutral>Ah, yes \u00e2\u20ac\u201c a fine bone example... no noticeable fractures... and in good condition. These are common cow bones, however; they have no archaeological value.\");"
+        "claim": "~chatnpc(\"<p,neutral>Ah, yes â€“ a fine bone example... no noticeable fractures... and in good condition. These are common cow bones, however; they have no archaeological value.\");"
       },
       {
         "path": "vendor/rs-sdk/server/content/scripts/quests/quest_hunt/scripts/redbeard_frank.rs2",
@@ -19108,9 +19146,10 @@
   {
     "name": "fishingtrawler",
     "decision": "partial",
-    "behaviour": "Modern donor boarding/tentacle/contribution/rewards versus native legacy repair/bail mechanics",
+    "behaviour": "Finite native legacy Trawler trip with owned supplies and banked catch",
     "localConsumers": [
-      "scripts/microbot-b-trawler.ts"
+      "scripts/microbot-b-trawler.ts",
+      "scripts/microbot-trawler-trip.ts"
     ],
     "sourceEvidence": [
       {
@@ -19343,16 +19382,17 @@
       }
     ],
     "blockers": [
-      "Finite staged native net repairs, leak patches and flooded-hold bail/empty cycles are ported with inventory/XP reconciliation and RNG-fail handling. Boarding, whole-trip success and catch-reward collection are not ported; donor enormous-tentacle chopping/contribution widgets have no native mechanic. Support-cycle unit proof is not a won fishing trip."
+      "Native legacy bank kit,boarding,leak/net/bucket control,win,catch recovery and bank return have complete-source native practice proof. Modern enormous-tentacle/contribution/outfit mechanics are absent. Other crew conditions,throughput and live repeat release remain unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/fishingtrawler/FishingTrawlerScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-b-trawler.ts"
+          "scripts/microbot-b-trawler.ts",
+          "scripts/microbot-trawler-trip.ts"
         ],
-        "gap": "Finite staged native net repairs, leak patches and flooded-hold bail/empty cycles are ported with inventory/XP reconciliation and RNG-fail handling. Boarding, whole-trip success and catch-reward collection are not ported; donor enormous-tentacle chopping/contribution widgets have no native mechanic. Support-cycle unit proof is not a won fishing trip.",
+        "gap": "Native legacy bank kit,boarding,leak/net/bucket control,win,catch recovery and bank return have complete-source native practice proof. Modern enormous-tentacle/contribution/outfit mechanics are absent. Other crew conditions,throughput and live repeat release remain unqualified.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/fishingtrawler/FishingTrawlerScript.java",
@@ -19473,7 +19513,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source review, focused tests and bounded native practice receipts in nativePractice; no live or repeat release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -19483,7 +19523,8 @@
       },
       "scriptCount": 1,
       "sourceFileCount": 4,
-      "unit": "bun test ./scripts/microbot-b-trawler.test.ts: 3 pass, 0 fail, 10 assertions; support actions only, no trip reward proof"
+      "unit": "bun test ./scripts/microbot-b-trawler.test.ts: 3 pass, 0 fail, 10 assertions; support actions only, no trip reward proof",
+      "nativePractice": "Actual full CLI .practice/microbot-ports/trawler-native-1793563470312/result.json:1656ticks,96paste/2rope,63bails,HP50 unchanged,saved FishingXP+317/CraftingXP+10. All5 catch items banked:raw manta389,raw lobster377,raw shark383,glass690,pot1931,one each;pack/reward escrow empty,CRC/assets/logout pass. Same-source overflow .practice/microbot-ports/trawler-overflow-1793563483732/result.json:all40 banked,urgent12 recovered66/100ticks,owned relay12 recovered257/300ticks and public after100. Both complete11191-entry source manifests include transitive worker/root configs,planner,knowledge and full native trees;zero drift. Members practice80ms/tick,XP1,Fishing99/HP50,owned500paste/20rope/bucket. Net excursions require zero leaks and water<=10; one attempt returns to the hold. No live or repeat release."
     }
   },
   {
@@ -24634,7 +24675,11 @@
     "decision": "partial",
     "behaviour": "GE offer management delegated to Flipping Copilot and timed monitoring",
     "localConsumers": [
-      "scripts/buy-owned-ge-item.ts"
+      "scripts/microbot-ge-buy-list.ts",
+      "scripts/buy-owned-ge-item.ts",
+      "scripts/sell-owned-ge-item.ts",
+      "scripts/microbot-ge-trip.ts",
+      "scripts/microbot-ge-plan.ts"
     ],
     "sourceEvidence": [
       {
@@ -24940,19 +24985,28 @@
         "path": "vendor/rs-sdk/server/content/scripts/interface_bank/scripts/grand_exchange.rs2",
         "line": 7,
         "claim": "[opnpc2,grand_exchange_teller]"
+      },
+      {
+        "path": "vendor/rs-sdk/server/engine/src/engine/market/MarketStore.ts",
+        "line": 157,
+        "claim": "Native seller tax accumulates floor(gross/20) per offer; cancellation retains remaining owned items for collection and replacement."
       }
     ],
     "blockers": [
-      "Owned buy worker covers explicit bounded acquisition orders, not profitable flipping. Copilot price/offer service, sell/reprice policy and remote GE UI integration have no native parity."
+      "Supported local execution includes finite configured-list/percentage buys and explicit suggested-price sell plans. The sell plan persists parent/round intent before mutation, recovers current escrow before later prices, relists only unsold owned units after settlement/bank return, sums native per-offer tax and audits consecutive all-assets/gear ledgers. Bounds include1..8 prices, lot1..24, floor, reserve, deadline, fill wait, tick cap, actor/server ownership and scalar original-life/HP. Finish lists an explicit owned lot or preserves a freshly observed identified resting sell; unfilled item escrow and collectible proceeds are separate from settled/banked results. Stop cleanup never overrides fatal-life/HP gates. Terminal settled replay performs no SDK actions; resting replay needs fresh private identity/progress. Donor FlipperScript reads price/quantity advice from the external Copilot service; its price-selection algorithm is not present in the pinned donor bundle. Local native execution does not require invented portfolio or profit prediction. The recorded price-plan/Finish, default-seller and buy-list native cases pass exact saved audits; other plans/configurations remain unqualified. No outside-demand, liquidity, realised-profit or live-repeat claim."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/geflipper/FlipperScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/buy-owned-ge-item.ts"
+          "scripts/microbot-ge-buy-list.ts",
+          "scripts/buy-owned-ge-item.ts",
+          "scripts/sell-owned-ge-item.ts",
+          "scripts/microbot-ge-trip.ts",
+          "scripts/microbot-ge-plan.ts"
         ],
-        "gap": "Owned buy worker covers explicit bounded acquisition orders, not profitable flipping. Copilot price/offer service, sell/reprice policy and remote GE UI integration have no native parity.",
+        "gap": "Supported local execution includes finite configured-list/percentage buys and explicit suggested-price sell plans. The sell plan persists parent/round intent before mutation, recovers current escrow before later prices, relists only unsold owned units after settlement/bank return, sums native per-offer tax and audits consecutive all-assets/gear ledgers. Bounds include1..8 prices, lot1..24, floor, reserve, deadline, fill wait, tick cap, actor/server ownership and scalar original-life/HP. Finish lists an explicit owned lot or preserves a freshly observed identified resting sell; unfilled item escrow and collectible proceeds are separate from settled/banked results. Stop cleanup never overrides fatal-life/HP gates. Terminal settled replay performs no SDK actions; resting replay needs fresh private identity/progress. Donor FlipperScript reads price/quantity advice from the external Copilot service; its price-selection algorithm is not present in the pinned donor bundle. Local native execution does not require invented portfolio or profit prediction. The recorded price-plan/Finish, default-seller and buy-list native cases pass exact saved audits; other plans/configurations remain unqualified. No outside-demand, liquidity, realised-profit or live-repeat claim.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/geflipper/FlipperScript.java",
@@ -25038,7 +25092,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source/native contract review, focused unit checks and bounded native execution for the exact linked configurations; no outside-demand, profit or live-repeat release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -25047,7 +25101,70 @@
         "matchCount": 4
       },
       "scriptCount": 1,
-      "sourceFileCount": 16
+      "sourceFileCount": 16,
+      "nativePractice": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11410 runtime/306 worker entries unchanged. Partial settlement is banked with targetMet=false.",
+      "unit": "New bank adapter focused result:4 tests pass,43 assertions. Cases cover deferred unknown escrow,in-place recovery without another withdrawal,partial targetMet=false,settled replay without market/withdraw calls,changed-asset rejection,unsubmitted abort and corrupt/missing-parent rejection.",
+      "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
+      "sourceBinding": {
+        "manifest": ".practice/microbot-ports/ge-trip-native-1793593287177/source.json",
+        "check": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
+        "runtimeEntries": 11410,
+        "workerEntries": 306,
+        "changed": [],
+        "workerChanged": []
+      },
+      "consumerScope": "Finite bank-to-GE-to-bank surplus adapter reuses the staged seller and shared bank profile for one declared lot per goal. It persists parent intent and initial all-assets/gear ledger before staging, records settled/aborted outcome before return, and recovers attempted/open/cancelling/collecting escrow in place with cancel=true and fatal-only cleanup guards before bank movement or new withdrawals. Unknown escrow defers bank recovery; prepared/no-placement intents abort unsubmitted on recovery/stop/deadline and return owned stock. Settled replay places and withdraws nothing, then audits fresh final-bank assets against initial stock plus filled/net deltas. Price/floor, bank reserve, deadline, fill wait, cap, actor lock, original-life/HP and audit budgets bound the lot. Partial/unfilled finite closure can report ok=true only when settled and banked, with targetMet=false; it does not mean every unit sold. Missing/corrupt/conflicting journals stop before market actions. Finite partial-recovery and full actual CLI bank trips pass with exact saved assets and logout in .practice/microbot-ports/ge-trip-native-1793593287177/proof.json; this is not a live or profit qualification.",
+      "bankAdapter": {
+        "consumer": "scripts/microbot-ge-trip.ts",
+        "level": "Finite native partial-recovery and full actual CLI bank trips pass; no live or profitable-trading release.",
+        "preparedFixture": ".practice/microbot-ports/ge-trip-native.ts",
+        "fixtureStatus": "Both native cases pass with exact saved bank assets, empty packs and owned-partner logout. Partial three-log lot fills two for192 net with one initial withdrawal across three sessions; full CLI lot fills one for96 net. Settled replays forbid market and withdrawal calls.",
+        "receipt": ".practice/microbot-ports/ge-trip-native-1793593287177/proof.json",
+        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
+        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
+        "conditions": "Members practice,150ms ticks,XP rate1, declared fixed owned lots and resting owned buy offers;11410 runtime and306 worker dependency files unchanged during the check."
+      },
+      "stagedPractice": "Staged seller consumer native engine proof .practice/microbot-ports/ge-native-1793563522538/proof.json: lot3 fills2 against an older101 bid,gross202,tax10,net192 and unsold1 returns. The fixture stages and banks the owned assets: seller207coins/3logs,buyer798coins/2logs. Lost SDK placement/observation/cancel/collection responses reconcile across logout/relogin; settled staged replay sends no new sale/credit. The staged seller CLI full lot1 at101 gives96net; fixture banking yields seller111coins/2reserved logs,buyer899coins/1log. Both cases retain unrelated gold bars and clean logout. This receipt qualifies neither scripts/microbot-ge-trip.ts nor the separate buy-owned CLI; the SDK buyer is the owned fixture counterparty.",
+      "stagedSourceBinding": {
+        "manifest": ".practice/microbot-ports/ge-native-1793563522538/source.json",
+        "check": ".practice/microbot-ports/ge-native-1793563522538/runtime-check.json",
+        "runtimeEntries": 11390,
+        "workerEntries": 289,
+        "changed": [],
+        "workerChanged": [],
+        "workerBytes": "Recorded staged-seller UTF-8/LF receipt hash:5c64e36059a3cead94ada3c51663276624a85aa47b3756d36cb18933cf4e8178. This binding applies only to the captured staged seller consumer."
+      },
+      "currentAdapter": "scripts/microbot-ge-plan.ts",
+      "focusedChecks": "Plan/seller/bank-trip regressions25 tests168 assertions; default bank-trip behaviour remains covered.",
+      "currentSourceSha256": {
+        "scripts/microbot-ge-plan.ts": "CBEA14E2DC29C36036D4A67AD30265BAF7415C4B26F7104E800F36FF1CCF519A",
+        "scripts/sell-owned-ge-item.ts": "CDF3D8E9006C80D556E3F9DE442C08C0C76B4B6C5AAE024D4B27AF1342F1B18C"
+      },
+      "donorPolicy": "FlipperScript.java:1226-1234 reads external suggestion;1509-1510 interprets Abort/Modify;1713-1726 reads suggested item/price/quantity. FlipperConfig.java:210-213 requests Finish cancellation/collection/listing and leaves active sells resting. Copilot price advice is an external dependency, not a missing native GE execution protocol.",
+      "planNative": {
+        "evidence": ".practice/microbot-ports/ge-trip-native-1793594882322/proof.json",
+        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793594882322/runtime-check.json",
+        "scope": "Four bounded native cases pass: malformed durable identity after actual CLI login returns expected code1, logs out, preserves exact saved assets/skills and the journal, and releases its actor lock; Finish lists an owned lot3, leaves2 unfilled items plus114 coins as resting escrow after1 fill, and fresh replay changes no offer; explicit continuation cancels/collects then relists only2 remaining units, completing3 sales for gross321/tax15/net306. The full actual CLI sells1 for gross119/tax5/net114; original-stop case submits nothing. Exact independent CRC seller/buyer logs,coins,gold,HP50,empty packs/gear and logout checks pass. Runtime11483 and worker307 entries unchanged. Native owned matching proves these execution mechanics, not outside demand, profitable price advice or live release."
+      },
+      "defaultNative": {
+        "evidence": ".practice/microbot-ports/ge-trip-native-1793593287177/proof.json",
+        "savedBankAudit": ".practice/microbot-ports/ge-trip-native-1793593287177/saved-bank-audit.json",
+        "sourceCheck": ".practice/microbot-ports/ge-trip-native-1793593287177/runtime-check.json",
+        "scope": "Default finite-lot adapter passes native partial lost-placement/cancel/collect recovery (lot3 fills2, gross202/tax10/net192, seller bank207 coins/3 Logs) and full actual CLI (lot1 fills1, gross101/tax5/net96, seller bank111 coins/2 Logs). Owned counterparty exact CRC bank assets, unrelated gold, empty packs/gear, logout and no repeated market/withdraw replay pass;11410 runtime/306 worker entries unchanged. Partial settlement is banked with targetMet=false."
+      },
+      "buyListNative": {
+        "evidence": ".practice/microbot-ports/ge-buy-list-native-1793593054350/proof.json",
+        "sourceCheck": ".practice/microbot-ports/ge-buy-list-native-1793593054350/source-check.json",
+        "scope": "Two bounded native cases pass: actual configured-list CLI banks2 Logs and3 Air runes for5 coins; lost-placement recovery banks2 Logs for2 coins, buys no Air, withdraws once and closes with targetMet=false. Durable replay submits no new orders. Exact CRC all-assets/HP/gear/no-XP and logout audits pass;11417 source/config entries unchanged. The recorded declared lists, guide/percentage choices, caps, budget and reserve are qualified; other lists, prices and access conditions are not blanket-qualified."
+      },
+      "planSourceBinding": {
+        "manifest": ".practice/microbot-ports/ge-trip-native-1793594882322/source.json",
+        "check": ".practice/microbot-ports/ge-trip-native-1793594882322/runtime-check.json",
+        "runtimeEntries": 11483,
+        "workerEntries": 307,
+        "changed": [],
+        "workerChanged": []
+      }
     }
   },
   {
@@ -35360,7 +35477,8 @@
     "decision": "partial",
     "behaviour": "Bank configured jewellery, equip rune-saving staff and cast tier enchant",
     "localConsumers": [
-      "scripts/microbot-magic-items.ts"
+      "scripts/microbot-magic-items.ts",
+      "scripts/microbot-bank-jobs.ts"
     ],
     "sourceEvidence": [
       {
@@ -35804,16 +35922,17 @@
       }
     ],
     "blockers": [
-      "Finite staged native jewellery conversion is ported; banking/replenishment is not part of new worker. Native enchant table only defines levels1..5 rings/strung amulets and sapphire necklace; bracelets and later gem-tier variants lack convertobj rows."
+      "Finite native jewellery conversion is ported; the shared bank controller stages and banks item-spell batches. Its representative native proof uses high alchemy, so enchant-bank compositions retain qualification gaps. Native enchant rows cover levels1..5 rings/strung amulets and sapphire necklace; bracelets/later gem tiers lack convertobj rows."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/jewelleryenchant/JewelleryEnchantScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-magic-items.ts"
+          "scripts/microbot-magic-items.ts",
+          "scripts/microbot-bank-jobs.ts"
         ],
-        "gap": "Finite staged native jewellery conversion is ported; banking/replenishment is not part of new worker. Native enchant table only defines levels1..5 rings/strung amulets and sapphire necklace; bracelets and later gem-tier variants lack convertobj rows.",
+        "gap": "Finite native jewellery conversion is ported; the shared bank controller stages and banks item-spell batches. Its representative native proof uses high alchemy, so enchant-bank compositions retain qualification gaps. Native enchant rows cover levels1..5 rings/strung amulets and sapphire necklace; bracelets/later gem tiers lack convertobj rows.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/jewelleryenchant/JewelleryEnchantScript.java",
@@ -35944,7 +36063,7 @@
       }
     ],
     "proof": {
-      "level": "Source/unit review and the bounded native practice checks described in nativePractice; no live release.",
+      "level": "Source review plus bounded native practice where linked; no live or repeat release.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -35954,7 +36073,13 @@
       },
       "scriptCount": 1,
       "sourceFileCount": 6,
-      "nativePractice": "Native practice passes the11 jewellery item-spell conversions, within the21 item-spell cases. Evidence .practice/microbot-ports/native-magic-tanning/. Bank replenishment and live release remain separate."
+      "nativePractice": "Native practice passes the11 jewellery item-spell conversions, within the21 item-spell cases. Evidence .practice/microbot-ports/native-magic-tanning/. Bank replenishment and live release remain separate.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      }
     }
   },
   {
@@ -37344,7 +37469,7 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/kraken/KrakenConfig.java",
         "line": 33,
-        "claim": "description = \"Min GE value (price \u00c3\u2014 qty) to loot. Only used when 'Also loot by GE value' is on.\","
+        "claim": "description = \"Min GE value (price Ã— qty) to loot. Only used when 'Also loot by GE value' is on.\","
       },
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/kraken/KrakenConfig.java",
@@ -38470,7 +38595,7 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/leaguestoolkit/LeaguesToolkitConfig.java",
         "line": 361,
-        "claim": "description = \"Automates the Kraken boss fight \u00e2\u20ac\u201d disturb tentacles, wake boss, attack, repeat\","
+        "claim": "description = \"Automates the Kraken boss fight â€” disturb tentacles, wake boss, attack, repeat\","
       },
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/leaguestoolkit/LeaguesToolkitConfig.java",
@@ -38643,7 +38768,7 @@
       }
     ],
     "blockers": [
-      "Client synthetic key/camera and League-specific configuration is not an owned finite gameplay output."
+      "Client synthetic key/camera and League-only configuration have no owned native gameplay equivalent. SnapeGrassTelegrabber uses native-supported Telekinetic Grab, but its fixed1736,3170 spawn lies in absent native map m27_49 and its optional Banker's briefcase is not native. The shared combat Telegrab action has native bank-loop proof; it does not qualify this modern fixed-location route."
     ],
     "scriptDecisions": [
       {
@@ -38685,7 +38810,11 @@
         "matchCount": 2
       },
       "scriptCount": 1,
-      "sourceFileCount": 19
+      "sourceFileCount": 19,
+      "nativeTelegrabSubset": {
+        "evidence": ".practice/microbot-ports/telegrab-native-1793589020023/result.json",
+        "scope": "Shared action/bank-loop subset only; fixed1736,3170 Snape spawn, absent map m27_49 and optional non-native Banker's briefcase are not supplied."
+      }
     }
   },
   {
@@ -38709,7 +38838,7 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/leftclickcast/LeftClickCastConfig.java",
         "line": 26,
-        "claim": "description = \"The currently active spell. Synced with the active slot \u00e2\u20ac\u201d pressing a slot hotkey updates this, and editing this updates the active slot's spell.\","
+        "claim": "description = \"The currently active spell. Synced with the active slot â€” pressing a slot hotkey updates this, and editing this updates the active slot's spell.\","
       },
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/leftclickcast/LeftClickCastConfig.java",
@@ -39065,7 +39194,8 @@
       "scripts/gather-spawn.ts",
       "scripts/gather-flax.ts",
       "scripts/microbot-b-nature-chest.ts",
-      "scripts/microbot-b-mining-loot.ts"
+      "scripts/microbot-b-mining-loot.ts",
+      "scripts/microbot-loot-trip.ts"
     ],
     "sourceEvidence": [
       {
@@ -39699,16 +39829,18 @@
       }
     ],
     "blockers": [
-      "Finite visible-ground collection ports exact ID/name lists, native static pile-cost range and mixed union, capacity checks, full inventory receipts and protected baseline stock. Visibility includes server-authorised private/public pickups; it does not prove own kill or original-drop ownership. Native static cost is not GE market value. Dynamic GE pricing, banking/route replenishment, donor modern fields and world-hop-on-player remain absent. Nature chest remains a staged same-floor consumer; no practice qualification."
+      "General visible-ground looting supports exact ID/name lists, explicit native GE last-trade valuation for the value branch, static native costs for declared unquoted list entries, capacity checks, full inventory receipts and protected baseline stock. GE value mode uses a strict whole-pile minimum and strict unit maximum; the native owned2-Law pile at4 coins/unit passes pile8>min5 and unit4<max5 while static240 would fail. The native general-list bank consumer collects4 Law runes over2 trips and banks exact4, with independent three-actor assets/XP/HP99/logout; both linked proofs bind11211 unchanged source/config entries. Native visibility authorizes private/public pickup but does not prove original-drop or own-kill credit. Other item/site/value combinations need qualification; Nature chest retains its separate staged same-floor scope. Donor modern fields and world-hop-on-player are not supplied.",
+      "Overlapping spent-bolt stacks have an observed quantity mismatch: the second id877 pickup shows13 in ground debit but16 in owned pack credit. The exact-pile guard rejects it. The source of the SDK/server observation mismatch is unresolved; packet dispatch success is not exact quantity proof. Blue-dragon reward collection excludes spent ammunition while retaining exact net ammo accounting."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/looter/scripts/DefaultScript.java",
         "decision": "partial",
         "consumer": [
-          "scripts/microbot-b-mining-loot.ts"
+          "scripts/microbot-b-mining-loot.ts",
+          "scripts/microbot-loot-trip.ts"
         ],
-        "gap": "Finite visible-ground collection ports exact ID/name lists, native static pile-cost range and mixed union, capacity checks, full inventory receipts and protected baseline stock. Visibility includes server-authorised private/public pickups; it does not prove own kill or original-drop ownership. Native static cost is not GE market value. Dynamic GE pricing, banking/route replenishment, donor modern fields and world-hop-on-player remain absent. Nature chest remains a staged same-floor consumer; no practice qualification.",
+        "gap": "General visible-ground looting supports exact ID/name lists, explicit native GE last-trade valuation for the value branch, static native costs for declared unquoted list entries, capacity checks, full inventory receipts and protected baseline stock. GE value mode uses a strict whole-pile minimum and strict unit maximum; the native owned2-Law pile at4 coins/unit passes pile8>min5 and unit4<max5 while static240 would fail. The native general-list bank consumer collects4 Law runes over2 trips and banks exact4, with independent three-actor assets/XP/HP99/logout; both linked proofs bind11211 unchanged source/config entries. Native visibility authorizes private/public pickup but does not prove original-drop or own-kill credit. Other item/site/value combinations need qualification; Nature chest retains its separate staged same-floor scope. Donor modern fields and world-hop-on-player are not supplied.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/looter/scripts/DefaultScript.java",
@@ -39959,7 +40091,7 @@
       }
     ],
     "proof": {
-      "level": "source review; no practice or live qualification",
+      "level": "Source review, focused unit checks and bounded native general-loot bank/GE-value cases; no own-kill, outside-demand, live or repeat release claim.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
@@ -39970,7 +40102,27 @@
       "scriptCount": 3,
       "sourceFileCount": 11,
       "unit": "bun test ./scripts/microbot-b-nature-chest.test.ts: 4 pass, 0 fail, 17 assertions",
-      "groundLootUnit": "bun test ./scripts/microbot-b-mining-loot.test.ts:4 pass,0 fail,16 assertions; pure selection/capacity and mocked inventory acquisition, no native pickup proof"
+      "groundLootUnit": "Focused ground selection/capacity/value/receipt checks remain distinct from the linked actual native pickup and bank proofs.",
+      "observedBoundary": {
+        "evidence": ".practice/ticks/microbot-a-ranged-camp/flcfxzjm00-1793561150795.ticks.ndjson.gz",
+        "ticks": [
+          681,
+          683
+        ],
+        "claim": "Visible ground id877 total21->8; held13->29. No exact-pile credit for that action. This is an observation boundary, not evidence that native pickups are absent."
+      },
+      "generalBank": {
+        "consumer": "scripts/microbot-loot-trip.ts",
+        "evidence": ".practice/microbot-ports/mining-loot-native-1793593331707/result.json",
+        "sourceCheck": ".practice/microbot-ports/mining-loot-native-1793593331707/source-check.json",
+        "sourceSha256": "444eec023ad92e93a02be8756b5bef8c17e0ada865268bb43641bf994f8e6eca",
+        "scope": "Four native Law runes collected and banked over2 trips; exact three-actor owned stock, XP, HP99 and logout;11211 unchanged source/config entries."
+      },
+      "nativeGEValue": {
+        "evidence": ".practice/microbot-ports/loot-ge-native-1793592861851/result.json",
+        "sourceCheck": ".practice/microbot-ports/loot-ge-native-1793592861851/source-check.json",
+        "scope": "Actual owned trade establishes Law unit price4; exact2-Law pile8 passes strict min5/unit max5 while static240 fails. Collector banks2 Law; exact all-three owned assets, XP0,HP99/logout;11211 unchanged source/config entries. No outside-market price or profit claim."
+      }
     }
   },
   {

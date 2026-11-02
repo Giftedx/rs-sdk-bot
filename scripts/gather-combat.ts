@@ -2,6 +2,7 @@
 // Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant]
 // Environment: DEMO_OK=1 for live server.
 import { openBot, finish, countItems } from '../packages/core/src/bot';
+import{createCombatLoot,telegrabPolicy}from'./microbot-telegrab';
 import type { Session } from '../packages/core/src/inprocess';
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -276,6 +277,7 @@ if(TARGET_KEY!=='cow'&&!Object.prototype.hasOwnProperty.call(CONFIGS,TARGET_KEY)
     await finish([],false,`no combat progress: unsupported target ${TARGET_KEY}`);
 const conf = CONFIGS[TARGET_KEY] ?? CONFIGS.druid!;
 const botName = process.argv[2];
+const telegrab=telegrabPolicy();if(telegrab&&TARGET_KEY==='cow')throw Error('Telegrab loot option applies to generic druid/giant or Ranged; cow ownership receipt remains unchanged');
 
 if (!botName) {
     console.error('Usage: bun scripts/gather-combat.ts <botName> [CAP] [TARGET: druid | giant]');
@@ -294,6 +296,7 @@ try {
     const t0 = s.tick();
     const used = () => s.tick() - t0;
     const over = () => used() >= CAP;
+    const loot=createCombatLoot(s,telegrab?{...telegrab,stop:()=>over()||cowStop.stop()}:undefined);
 
     let kills = 0, itemsLooted = 0, bankTrips = 0, walkTicks = 0;
 
@@ -362,7 +365,8 @@ try {
 
         // Check for ground loot
         if (invSpace > 0) {
-            const r = await s.bot.pickupItem(conf.drops);
+            const candidate=telegrab?s.sdk.getState()?.groundItems.filter(i=>conf.drops.test(i.name)).sort((a,b)=>a.distance-b.distance)[0]:undefined;
+            const r = telegrab?(candidate?await loot.pickup(candidate):{success:false}):await s.bot.pickupItem(conf.drops);
             if (r.success) {
                 itemsLooted++;
                 await waitTicks(s, 1);

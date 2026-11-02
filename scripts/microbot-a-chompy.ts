@@ -13,7 +13,7 @@ export function chompyHuntingTile(p:{worldX:number;worldZ:number;level:number}){
 export const CHOMPY={live:1015,dead:1016,toad:1013,bait:2875,bow:2883,arrow:2866,empty:2871,full:2872,one:2874,two:2873,feather:314} as const;
 export function bellowsCharges(rows:readonly{id:number;count:number}[]){return rows.reduce((n,i)=>n+i.count*(i.id===CHOMPY.full?3:i.id===CHOMPY.two?2:i.id===CHOMPY.one?1:0),0);}
 export function ownChompyNotches(messages:readonly{text:string;tick:number;observationId?:number}[],cursor:number){return messages.filter(m=>(m.observationId??m.tick)>cursor&&/^You scratch a notch on your bow for the chompy bird kill\.$/.test(m.text)).length;}
-export async function runChompy(s:Session,o:{kills:number;cap:number;maxBaits:number;stop?:()=>boolean}){
+export async function runChompy(s:Session,o:{kills:number;cap:number;maxBaits:number;stop?:()=>boolean;stageBait?:(stop:()=>boolean)=>Promise<void>;upkeep?:()=>Promise<void>}){
  if(![o.kills,o.cap,o.maxBaits].every(Number.isSafeInteger)||o.kills<1||o.kills>5||o.cap<1||o.cap>20000||o.maxBaits<o.kills||o.maxBaits>15)throw Error('invalid finite chompy limits');
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),held=(id:number)=>inv().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),npcs=()=>s.sdk.getNearbyNpcs();
  const p0=st()?.player,hp0=s.sdk.getSkill('Hitpoints')?.level??0;
@@ -21,16 +21,16 @@ export async function runChompy(s:Session,o:{kills:number;cap:number;maxBaits:nu
  if(!questFlags(s.client)?.some(q=>/chompy/i.test(q.name)&&q.state==='complete'))throw Error('Chompy quest completion unobserved');
  const worn=s.sdk.getEquipment();if(!worn.some(i=>i.slot===3&&i.id===CHOMPY.bow)||!worn.some(i=>i.slot===13&&i.id===CHOMPY.arrow&&i.count>0))throw Error('wear ogre bow and ogre arrows');
  if(npcs().some(n=>n.id===CHOMPY.live||n.id===CHOMPY.dead))throw Error('start without existing chompy targets');
- const start=s.tick(),raw=objId('raw_chompy'),raw0=held(raw),feathers0=held(CHOMPY.feather),xp0=s.sdk.getSkillXp('Ranged')??0;
+ const life0=p0.lifeId,start=s.tick(),raw=objId('raw_chompy'),raw0=held(raw),feathers0=held(CHOMPY.feather),xp0=s.sdk.getSkillXp('Ranged')??0;
  let ended=false,kills=0,baits=0,plucked=0,failure='',stop='target';void s.ended.then(()=>{ended=true;});
- const unsafe=()=>{const p=st()?.player;return !p||p.isDead||p.lifeId!==p0.lifeId||!chompyHuntingTile(p)||(s.sdk.getSkill('Hitpoints')?.level??0)<hp0;};
+ const unsafe=()=>{const p=st()?.player;return !p||p.isDead||p.lifeId!==life0||!chompyHuntingTile(p)||(s.sdk.getSkill('Hitpoints')?.level??0)<hp0;};
  const over=()=>ended||unsafe()||!!o.stop?.()||s.tick()-start>=o.cap;
  const cursor=()=>Math.max(-1,...(st()?.gameMessages??[]).map(m=>m.observationId??m.tick));
  const wait=async(predicate:()=>boolean,ticks:number)=>await waitUntil(s,()=>over()||predicate(),{timeoutTicks:Math.min(ticks,Math.max(1,o.cap-(s.tick()-start)))})&&!over()&&predicate();
  const near=(x:number,z:number)=>{const p=st()?.player;return !!p&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=8;};
  try{
  while(kills<o.kills&&baits<o.maxBaits&&!over()){
-  await s.bot.dismissBlockingUI();if(over())break;
+  await o.upkeep?.();await s.bot.dismissBlockingUI();if(over())break;
   if(held(CHOMPY.bait)===0){
    if(held(CHOMPY.bait)>=3)throw Error('too many carried toads');
    let bellow=inv().find(i=>[CHOMPY.full,CHOMPY.two,CHOMPY.one].includes(i.id as any));
@@ -41,9 +41,25 @@ export async function runChompy(s:Session,o:{kills:number;cap:number;maxBaits:nu
     bellow=inv().find(i=>i.id===CHOMPY.full);
    }
    const toad=npcs().filter(n=>n.id===CHOMPY.toad&&n.reachable!==false&&near(n.x,n.z)).sort((a,b)=>a.distance-b.distance)[0];if(!bellow||!toad||inv().length>=28)throw Error('toad/bellows/free slot missing');
-   const charges=bellowsCharges(inv()),bait0=held(CHOMPY.bait);
-   if(!(await s.sdk.sendUseItemOnNpc(bellow.slot,toad.index)).success||!await wait(()=>held(CHOMPY.bait)===bait0+1&&bellowsCharges(inv())===charges-1,15))throw Error('toad inflation effect missing');
+   const inflationStock=()=>JSON.stringify(inv().map(i=>({id:i.id,count:i.count,slot:i.slot})).sort((a,b)=>a.slot-b.slot)),stock0=inflationStock();
+   const charges=bellowsCharges(inv()),bait0=held(CHOMPY.bait),inflationCursor=cursor(),deadline=s.tick()+30;
+   const effect=()=>held(CHOMPY.bait)===bait0+1&&bellowsCharges(inv())===charges-1;
+   const begun=()=>(st()?.gameMessages??[]).some(m=>m.type===0&&(m.observationId??m.tick)>inflationCursor&&m.text==='You manage to catch the toad and inflate it with the swamp gas.');
+   let selected=toad,last={x:st()!.player!.worldX,z:st()!.player!.worldZ},lastMove=s.tick();
+   const paid=()=>{const at=st()?.player;if(at&&(at.worldX!==last.x||at.worldZ!==last.z)){last={x:at.worldX,z:at.worldZ};lastMove=s.tick();}return effect();};
+   for(let attempt=0;attempt<3&&!effect()&&!over();attempt++){
+    const origin={x:selected.x,z:selected.z},currentBellows=inv().find(i=>i.id===bellow!.id);if(over())break;if(!currentBellows||attempt>0&&(begun()||inflationStock()!==stock0))throw Error('toad inflation changed before retarget');if(!(await s.sdk.sendUseItemOnNpc(currentBellows.slot,selected.index)).success)throw Error('toad inflation dispatch refused');
+    if(deadline>s.tick()&&await wait(paid,Math.min(10,deadline-s.tick())))break;
+    const current=npcs().find(n=>n.id===CHOMPY.toad&&n.index===selected.index),uncharged=held(CHOMPY.bait)===bait0&&bellowsCharges(inv())===charges&&inflationStock()===stock0;
+    if(!begun()&&!uncharged&&!effect())throw Error('toad inflation inventory changed without native intro');
+    // Only replace an unstarted moving-target approach. Native intro precedes
+    // its delayed charge debit, so any intro forbids another item-on-NPC input.
+    const replacement=!begun()&&uncharged&&current&&(current.x!==origin.x||current.z!==origin.z)&&s.tick()-lastMove>=3?npcs().filter(n=>n.id===CHOMPY.toad&&n.reachable!==false&&near(n.x,n.z)).sort((a,b)=>a.distance-b.distance)[0]:undefined;
+    if(!replacement||attempt===2||s.tick()>=deadline){if(deadline>s.tick())await wait(paid,deadline-s.tick());break;}selected=replacement;
+   }
+   if(!effect())throw Error('toad inflation effect missing');
   }
+  await o.stageBait?.(over);if(over())break;
   if(npcs().some(n=>n.id===CHOMPY.live))throw Error('unowned pre-bait chompy appeared');
   const bait=inv().find(i=>i.id===CHOMPY.bait),p=st()?.player;if(!bait||!p||!chompyHuntingTile(p))throw Error('bait stage missing');
   const b0=held(CHOMPY.bait),placed={x:p.worldX,z:p.worldZ},c=cursor();
@@ -52,10 +68,20 @@ export async function runChompy(s:Session,o:{kills:number;cap:number;maxBaits:nu
   // A bait may fail its random spawn roll. Bound the wait and charge it against maxBaits.
   if(!await wait(()=>npcs().some(n=>n.id===CHOMPY.live&&near(n.x,n.z)),110)){if(over())break;continue;}
   const bird=npcs().filter(n=>n.id===CHOMPY.live&&near(n.x,n.z)).sort((a,b)=>a.distance-b.distance)[0];if(!bird)throw Error('spawn target lost');
-  if(!(await s.sdk.sendInteractNpc(bird.index,5)).success)throw Error('chompy attack refused');
-  if(!await wait(()=>ownChompyNotches(st()?.gameMessages??[],c)>0,160))throw Error('own chompy kill notch not observed');
-  if(ownChompyNotches(st()?.gameMessages??[],c)!==1)throw Error('ambiguous chompy kill count');kills++;
-  const corpse=npcs().filter(n=>n.id===CHOMPY.dead&&near(n.x,n.z)).sort((a,b)=>a.distance-b.distance)[0];if(!corpse)throw Error('own kill corpse missing');
+  await o.upkeep?.();if(over())break;
+  const corpseBaseline=new Set(npcs().filter(n=>n.id===CHOMPY.dead).map(n=>n.index));let lastLive={x:bird.tileX??bird.x,z:bird.tileZ??bird.z},ambiguous=false;
+  const observe=()=>{const rows=npcs(),live=rows.find(n=>n.id===CHOMPY.live&&n.index===bird.index);if(live)lastLive={x:live.tileX??live.x,z:live.tileZ??live.z};if(rows.some(n=>n.id===CHOMPY.live&&n.index!==bird.index))ambiguous=true;};
+  const ownCorpse=()=>{observe();const fresh=npcs().filter(n=>n.id===CHOMPY.dead&&!corpseBaseline.has(n.index));return!ambiguous&&fresh.length===1&&(fresh[0]!.tileX??fresh[0]!.x)===lastLive.x&&(fresh[0]!.tileZ??fresh[0]!.z)===lastLive.z?fresh[0]:undefined;};
+  const unwatch=s.onTick(observe);let corpse:ReturnType<typeof npcs>[number]|undefined;
+  try{
+   if(!(await s.sdk.sendInteractNpc(bird.index,5)).success)throw Error('chompy attack refused');
+   if(!await wait(()=>ownChompyNotches(st()?.gameMessages??[],c)>0,160))throw Error('own chompy kill notch not observed');
+   if(ambiguous||ownChompyNotches(st()?.gameMessages??[],c)!==1)throw Error('ambiguous chompy kill count');kills++;
+   // Native death stops movement, waits arrivedelay, then creates a new NPC at
+   // the owned bird's final coordinate. Player distance does not bind ownership.
+   if(!await wait(()=>!!ownCorpse(),8))throw Error('own kill corpse missing or ambiguous');corpse=ownCorpse();
+  }finally{unwatch();}
+  if(!corpse)throw Error('own kill corpse missing or ambiguous');
   const f0=held(CHOMPY.feather);
   if(!(await s.sdk.sendInteractNpc(corpse.index,4)).success||!await wait(()=>held(CHOMPY.feather)>=f0+10&&!npcs().some(n=>n.index===corpse.index&&n.id===CHOMPY.dead),12))throw Error('pluck effect missing');plucked++;
   const meat=s.sdk.getGroundItems().find(i=>i.id===raw&&i.x===corpse.x&&i.z===corpse.z);if(!meat)throw Error('raw chompy loot missing');const r0=held(raw);

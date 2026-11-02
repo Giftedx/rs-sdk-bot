@@ -1,0 +1,47 @@
+import{readFileSync,existsSync}from'node:fs';
+import{openBot,finish,serverFromEnv}from'../packages/core/src/bot';
+import{inProcessSdkConfig,type Session}from'../packages/core/src/inprocess';
+import{MarketClient}from'../vendor/rs-sdk/sdk/market';
+import{waitUntil,waitTicks}from'../packages/core/src/ticks';
+import{runBankProfile,validateBankRouteJob,type BankRouteJob}from'./microbot-bank-jobs';
+import{runVisibleGroundLoot,type LootPolicy}from'./microbot-b-mining-loot';
+
+export interface LootTripJob{target:number;batch:number;cap:number;returnTicks:number;members:boolean;bank:{x:number;z:number;level:number};site:{x:number;z:number;level:number};policy:Omit<LootPolicy,'maximumUnits'|'cap'>;valuation?:{source:'native-ge-last-trade';ids:number[];thresholds?:'donor'}}
+const ids=readFileSync('vendor/rs-sdk/server/content/pack/obj.pack','utf8').split(/\r?\n/).flatMap(l=>{const m=l.match(/^(\d+)=/);return m?[Number(m[1])]:[];});
+export type LootQuoteSnapshot={origin:string;observedAt:number;prices:Readonly<Record<number,Readonly<{price:number;lastTradeAt:number}>>>};
+type Definition=(id:number)=>{name:string;cost:number;stackable:boolean}|undefined;
+export async function fetchLootQuotes(origin:string,scope:readonly number[],stop:()=>boolean,market:Pick<MarketClient,'item'>=new MarketClient(origin),now:()=>number=Date.now):Promise<LootQuoteSnapshot>{
+ if(!scope.length||scope.length>16||new Set(scope).size!==scope.length||scope.some(id=>!Number.isSafeInteger(id)||id<1||!ids.includes(id)))throw Error('invalid finite native quote scope');
+ if(stop())throw Error('loot quotes stopped');const began=now();
+ // At most sixteen read-only item endpoints, each with MarketClient's ten-second timeout.
+ const quotes=await Promise.all(scope.map(id=>market.item(id)));if(stop())throw Error('loot quotes stopped');if(now()-began>15000)throw Error('loot quote collection deadline');
+ const prices:Record<number,{price:number;lastTradeAt:number}>={};for(const[index,q]of quotes.entries()){if(q.id!==scope[index]||!Number.isSafeInteger(q.lastPrice)||q.lastPrice!<=0||q.lastPrice!>2147483647||!Number.isSafeInteger(q.lastTradeAt)||q.lastTradeAt!<0||q.lastTradeAt!>now())throw Error('native GE last trade unavailable');prices[q.id]=Object.freeze({price:q.lastPrice!,lastTradeAt:q.lastTradeAt!});}
+ return Object.freeze({origin:new URL(origin).origin,observedAt:now(),prices:Object.freeze(prices)});
+}
+export function lootQuoteDefinition(snapshot:LootQuoteSnapshot,origin:string,definition:Definition,now:()=>number=Date.now,policy?:LootTripJob['policy']):Definition{
+ if(snapshot.origin!==new URL(origin).origin)throw Error('loot quote origin differs from session');if(!Number.isSafeInteger(snapshot.observedAt)||now()<snapshot.observedAt||now()-snapshot.observedAt>60000)throw Error('loot quote admission stale');
+ const prices=Object.fromEntries(Object.entries(snapshot.prices).map(([id,q])=>{if(!Number.isSafeInteger(q.price)||q.price<1)throw Error('invalid native quote');return[id,q.price];}));
+ return id=>{const d=definition(id),cost=prices[id];if(!d)return undefined;if(cost!==undefined)return{...d,cost};const listed=policy&&policy.mode!=='value'&&(policy.ids.includes(id)||policy.names.some(n=>n.toLowerCase()===d.name.toLowerCase()));return listed?d:undefined;};
+}
+export function donorLootEligible(item:{id:number;name:string;count:number},p:LootTripJob['policy'],definition:Definition){const d=definition(item.id);if(!d||!Number.isSafeInteger(item.count)||item.count<1||!Number.isSafeInteger(d.cost*item.count))return false;const listed=p.ids.includes(item.id)||p.names.some(n=>n.toLowerCase()===item.name.toLowerCase()),valued=d.cost*item.count>p.minimumValue&&d.cost<p.maximumValue;return p.mode==='list'?listed:p.mode==='value'?valued:listed||valued;}
+export function lootTripOutputs(p:LootTripJob['policy'],definition:(id:number)=>{name:string;cost:number;stackable:boolean}|undefined,donor=false){
+ if(!['list','value','mixed'].includes(p.mode)||!Number.isSafeInteger(p.minimumValue)||p.minimumValue<0||!Number.isSafeInteger(p.maximumValue)||p.maximumValue<0||!donor&&p.maximumValue<p.minimumValue||!Number.isSafeInteger(p.radius)||p.radius<1||p.radius>12||!Number.isSafeInteger(p.idleTicks)||p.idleTicks<1||p.ids.some(id=>!Number.isSafeInteger(id)||!ids.includes(id))||p.names.some(n=>typeof n!=='string'||!n.trim())||p.mode==='list'&&!p.ids.length&&!p.names.length)throw Error('invalid native bank-loot policy');
+ const names=new Set(p.names.map(n=>n.toLowerCase())),found=new Set<string>();
+ const outputs=ids.filter(id=>{const d=definition(id);if(!d||typeof d.name!=='string'||!Number.isSafeInteger(d.cost)||d.cost<0||typeof d.stackable!=='boolean')return false;const named=names.has(d.name.toLowerCase());if(named)found.add(d.name.toLowerCase());const listed=p.ids.includes(id)||named,valued=d.cost<=p.maximumValue&&(d.cost>0||p.minimumValue===0);return p.mode==='list'?listed:p.mode==='value'?valued:listed||valued;});
+ if([...names].some(n=>!found.has(n))||!outputs.length)throw Error('native loot names or outputs unresolved');return outputs;
+}
+export async function runLootTrip(s:Session,j:LootTripJob,stop:()=>boolean=()=>false,quotes?:LootQuoteSnapshot){
+ const route:BankRouteJob={family:'looting',recipe:j.policy.mode,target:j.target,batch:j.batch,cap:j.cap,returnTicks:j.returnTicks,members:j.members,bank:j.bank,site:j.site};validateBankRouteJob(route);
+ const client=s.client as{objType:(id:number)=>{name:string;cost:number;stackable:boolean}};let definition:Definition=id=>client.objType(id);
+ if(j.valuation){if(j.valuation.source!=='native-ge-last-trade'||j.valuation.thresholds!==undefined&&j.valuation.thresholds!=='donor'||!quotes||JSON.stringify([...j.valuation.ids].sort((a,b)=>a-b))!==JSON.stringify(Object.keys(quotes.prices).map(Number).sort((a,b)=>a-b)))throw Error('prelogin quote snapshot must cover declared value scope');definition=lootQuoteDefinition(quotes,s.sdk.config.browserLaunchUrl,definition,Date.now,j.policy);}
+ const donor=j.valuation?.thresholds==='donor',outputs=lootTripOutputs(j.policy,definition,donor),capacity=outputs.find(id=>!definition(id)!.stackable)??outputs[0]!;
+ const valueSource=j.valuation?'native GE last-trade snapshot for value branch; native static cost only for explicit unquoted list entries':'native static item cost; not GE price';
+ const receipts:(Omit<Awaited<ReturnType<typeof runVisibleGroundLoot>>,'staticValue'>&{staticValue?:number;quotedValue?:number;listedStaticValue?:number})[]=[];
+ const result=await runBankProfile(s,route,{bank:j.bank,site:j.site,inputs:{},tools:[],outputs,capacityOutputs:{[capacity]:1},run:async(n,cap,halt)=>{
+  const r=await runVisibleGroundLoot({state:()=>{const st=s.sdk.getState();return donor&&st?{...st,groundItems:st.groundItems.filter(i=>donorLootEligible(i,j.policy,definition))}:st;},tick:()=>s.tick(),stop:halt,definition,pickup:async i=>(await s.sdk.sendPickup(i.x,i.z,i.id)).success,wait:(test,ticks)=>waitUntil(s,test,{timeoutTicks:ticks}),step:()=>waitTicks(s,1),clearModal:async()=>{await s.sdk.sendCloseModal();}},{...j.policy,...donor?{mode:'list' as const,ids:outputs,names:[],minimumValue:0,maximumValue:2147483647}:{},maximumUnits:n,cap});const quotedValue=j.valuation?Object.entries(r.acquired).reduce((sum,[id,n])=>sum+n*(quotes!.prices[Number(id)]?.price??0),0):undefined;receipts.push({...r,valueSource,staticValue:j.valuation?undefined:r.staticValue,quotedValue,listedStaticValue:j.valuation?r.staticValue-quotedValue!:undefined});return r.units;
+ }},()=>stop()||existsSync('.practice/stop-all')||existsSync(`.practice/stop-${s.name}`));
+ const acquired:Record<number,number>={};for(const r of receipts)for(const[id,n]of Object.entries(r.acquired))acquired[Number(id)]=(acquired[Number(id)]??0)+n;
+ const reconciled=new Set([...Object.keys(acquired),...Object.keys(result.banked)]);const exact=[...reconciled].every(id=>(acquired[Number(id)]??0)===(result.banked[Number(id)]??0));
+ return{...result,ok:result.ok&&exact,acquired,receipts,bankReconciled:exact,valueSource,thresholds:donor?'strict pile minimum and strict unit maximum':'inclusive whole-pile bounds',valuation:j.valuation?quotes:undefined,attribution:'visible native pickup and owned bank receipts; no kill-credit claim'};
+}
+if(import.meta.main){const name=process.argv[2],file=process.argv[3];if(!name||!file)throw Error('usage: microbot-loot-trip.ts account job.json');const job=JSON.parse(readFileSync(file,'utf8'))as LootTripJob;let stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});const stop=()=>stopped||existsSync('.practice/stop-all')||existsSync(`.practice/stop-${name}`)||!!process.env.STOP_FILE&&existsSync(process.env.STOP_FILE);let quotes:LootQuoteSnapshot|undefined;if(job.valuation){if(job.valuation.source!=='native-ge-last-trade')throw Error('unsupported loot valuation');const server=serverFromEnv(readFileSync(new URL(`../vendor/rs-sdk/bots/${name}/bot.env`,import.meta.url),'utf8')),config=inProcessSdkConfig({name,password:'unused-read-only',server});quotes=await fetchLootQuotes(new URL(config.browserLaunchUrl!).origin,job.valuation.ids,stop);}if(stop())throw Error('looter stopped before login');const s=await openBot(name);void s.ended.then(()=>{stopped=true;});try{const r=await runLootTrip(s,job,stop,quotes);console.log('LOOT_TRIP '+JSON.stringify(r));await finish([s],r.ok,JSON.stringify(r));}catch(error){await finish([s],false,String(error));}}

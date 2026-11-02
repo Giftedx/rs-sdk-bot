@@ -2,14 +2,14 @@
 // Finite staged standard-book casts: bun scripts/microbot-magic-npc.ts <account> <spell> <npc-id> [casts=1] [cap=1200].
 // COMBO_ALCH=high-alch|low-alch, ALCH_ITEM=debugname; SPLASH_ONLY=1 requires no Hitpoints XP after impact.
 // Debuffed/frozen targets can refuse repeat casts. Rotate observed targets, then stop after bounded no-effect attempts.
-import {readFileSync,existsSync} from 'node:fs';
+import {readFileSync} from 'node:fs';
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import type {NearbyNpc} from '../vendor/rs-sdk/sdk/types';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {componentId} from '../packages/core/src/logout';
 import {objId} from './measure/floor-bands';
-import {nativeTeleport,runTeleportMagic} from './microbot-magic-teleport';
+import {nativeTeleport,runTeleportMagic,magicStopRequested} from './microbot-magic-teleport';
 import {elementalRuneCost,itemMagicRecipe,runItemMagic,type Recipe} from './microbot-magic-items';
 export interface NpcSpell{name:string;component:string;level:number;runes:Record<number,number>;debuff:boolean;members:boolean;requiredWorn?:number}
 export function nativeNpcSpell(name:string):NpcSpell{
@@ -28,7 +28,7 @@ export function npcCastEffect(costs:Record<number,number>,before:Record<number,n
  if([...keys].every(k=>(before[Number(k)]??0)===(after[Number(k)]??0))&&xp0===xp1)return 'none';
  return xp1>xp0&&[...keys].every(k=>(before[Number(k)]??0)-(after[Number(k)]??0)===(costs[Number(k)]??0))?'cast':'invalid';
 }
-export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:number;cap:number;splashOnly?:boolean;combo?:Recipe;teleport?:string;members?:boolean;stop?:()=>boolean}){
+export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:number;cap:number;splashOnly?:boolean;combo?:Recipe;teleport?:string;members?:boolean;hpFloor?:number;stop?:()=>boolean}){
  if(![o.npc,o.casts,o.cap].every(Number.isSafeInteger)||o.npc<0||o.casts<1||o.casts>1000||o.cap<1||o.cap>100000)throw Error('invalid finite NPC magic limits');
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),xp=()=>s.sdk.getSkillXp('Magic')??0,hpxp=()=>s.sdk.getSkillXp('Hitpoints')??0,hp=()=>s.sdk.getSkill('Hitpoints')?.level??0;
  const counts=()=>{const r:Record<number,number>={};for(const i of inv())r[i.id]=(r[i.id]??0)+i.count;return r;};
@@ -36,6 +36,8 @@ export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:n
  const checkWorn=()=>{if(spell.requiredWorn!==undefined&&!s.sdk.getEquipment().some(i=>i.slot===3&&i.id===spell.requiredWorn))throw Error('NPC spell requires worn staff '+spell.requiredWorn);};checkWorn();
  const p0=st()?.player,hp0=hp(),own=(s.client as {selfSlot?:number}|undefined)?.selfSlot;
  if(!p0||hp0<10||!Number.isInteger(own)||(s.sdk.getSkill('Magic')?.level??0)<spell.level)throw Error('NPC magic player/skill/owner state unknown');
+ const hpFloor=o.hpFloor??hp0;if(!Number.isSafeInteger(hpFloor)||hpFloor<10||hpFloor>hp0)throw Error('NPC magic HP floor must be integer10..initialHP');
+ const life0=p0.lifeId,respawns0=p0.respawnCount??0,level0=p0.level,x0=p0.worldX,z0=p0.worldZ;
  // attackstyle_magic is transmitted varp108. Native mode3 can enqueue
  // repeat casts during the receipt/cooldown wait, outside this finite batch.
  const autocastMode=(s.client as {var?:number[]}|undefined)?.var?.[108];
@@ -43,7 +45,7 @@ export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:n
  if(autocastMode===3)throw Error('disable native autocast before finite NPC magic');
  const teleport=o.teleport?nativeTeleport(o.teleport):undefined;if(teleport?.members&&!o.members)throw Error('member combo teleport requires member scope');
  const start=s.tick(),xp0=xp(),hpxp0=hpxp(),avoid=new Set<number>();let ended=false,casts=0,combos=0,attempts=0,failure='',stop='target';void s.ended.then(()=>{ended=true;});
- const unsafe=()=>{const p=st()?.player;return !p||p.isDead||p.lifeId!==p0.lifeId||hp()<hp0||!((p.level===p0.level&&Math.max(Math.abs(p.worldX-p0.worldX),Math.abs(p.worldZ-p0.worldZ))<=10)||(teleport&&p.level===teleport.to.level&&Math.max(Math.abs(p.worldX-teleport.to.x),Math.abs(p.worldZ-teleport.to.z))<=10));};
+ const unsafe=()=>{const p=st()?.player;return !p||p.isDead||p.lifeId!==life0||(p.respawnCount??0)>respawns0||hp()<hpFloor||!((p.level===level0&&Math.max(Math.abs(p.worldX-x0),Math.abs(p.worldZ-z0))<=10)||(teleport&&p.level===teleport.to.level&&Math.max(Math.abs(p.worldX-teleport.to.x),Math.abs(p.worldZ-teleport.to.z))<=10));};
  const over=()=>ended||unsafe()||!!o.stop?.()||s.tick()-start>=o.cap;
  const rest=async(n:number)=>{for(let i=0;i<n&&!over();i++)await waitTicks(s,1);};
  try{
@@ -70,4 +72,4 @@ export async function runNpcMagic(s:Session,spell:NpcSpell,o:{npc:number;casts:n
  }catch(e){failure=String(e);stop='failure';}
  return{ok:!failure&&!over()&&casts===o.casts&&(!o.combo||combos===casts),stop,failure,casts,combos,attempts,magicXp:xp()-xp0,hitpointsXp:hpxp()-hpxp0,ticks:s.tick()-start};
 }
-if(import.meta.main){let s:Session|undefined,stopped=false;try{const [account,name,npc,casts,cap]=process.argv.slice(2);if(!account||!name||npc===undefined)throw Error('account, native spell and NPC ID required');const spell=nativeNpcSpell(name),combo=process.env.COMBO_ALCH?itemMagicRecipe(process.env.COMBO_ALCH,process.env.ALCH_ITEM):undefined;s=await openBot(account,{onStop:async()=>{stopped=true;}});const r=await runNpcMagic(s,spell,{npc:Number(npc),casts:Number(casts??1),cap:Number(cap??1200),splashOnly:process.env.SPLASH_ONLY==='1',combo,teleport:process.env.COMBO_TELEPORT,members:process.env.MEMBERS==='1',stop:()=>stopped||existsSync('.practice/stop-microbot-magic')});console.log('NPC_MAGIC_RESULT '+JSON.stringify(r));await finish([s],r.ok,JSON.stringify(r));}catch(e){await finish(s?[s]:[],false,String(e));}}
+if(import.meta.main){let s:Session|undefined,stopped=false;try{const [account,name,npc,casts,cap]=process.argv.slice(2);if(!account||!name||npc===undefined)throw Error('account, native spell and NPC ID required');const spell=nativeNpcSpell(name),combo=process.env.COMBO_ALCH?itemMagicRecipe(process.env.COMBO_ALCH,process.env.ALCH_ITEM):undefined;s=await openBot(account,{onStop:async()=>{stopped=true;}});const r=await runNpcMagic(s,spell,{npc:Number(npc),casts:Number(casts??1),cap:Number(cap??1200),splashOnly:process.env.SPLASH_ONLY==='1',combo,teleport:process.env.COMBO_TELEPORT,members:process.env.MEMBERS==='1',stop:()=>magicStopRequested(account,stopped)});console.log('NPC_MAGIC_RESULT '+JSON.stringify(r));await finish([s],r.ok,JSON.stringify(r));}catch(e){await finish(s?[s]:[],false,String(e));}}

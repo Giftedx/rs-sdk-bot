@@ -349,7 +349,10 @@
     "behaviour": "Progressive copper/tin/iron/coal plus configured ore, banking/drop/keep rules, clay bracelet, gem bag, basalt salt exchange",
     "localConsumers": [
       "scripts/gather-ore.ts",
-      "scripts/microbot-b-mining.ts"
+      "scripts/microbot-b-mining.ts",
+      "scripts/microbot-bank-jobs.ts",
+      "scripts/microbot-mining-drop.ts",
+      "scripts/microbot-mining-progressive.ts"
     ],
     "sourceEvidence": [
       {
@@ -385,14 +388,14 @@
     ],
     "serverEvidence": [],
     "blockers": [
-      "Generic finite staged native miner covers17depleting rock profiles, including coal/gold/mithril/adamantite/runite; essence reuses existing gather worker. Automatic bank/drop routes, progressive donor location progression and modern basalt/clay-bracelet/gem-bag variants remain gaps. Source/unit only; no refreshed practice/live mining qualification."
+      "Finite mining covers17 native rock profiles, eligible owned picks, bank/site loops and explicit drop mode. The linked native drop case starts with26 iron ore, drops exactly26, mines2 iron for70 Mining XP in63 ticks and preserves Rune pick1275; exact owned three-actor assets/XP/HP99/logout and11211 unchanged source/config entries pass alongside the linked general-loot bank case. Progressive declared bank routing passes the current native Tin1-to-Iron1 case over2 trips/256 ticks, with raw Mining XP+525, other XP unchanged, HP99, owned pick/gold/37 coins and exact final-bank/logout audits. Combined progressive-drop actual CLI also passes its declared two-batch Tin-to-Iron case in133 ticks: drops26 Tin, mines one Tin for17.5 XP, reselects Iron and mines one for35 XP. Independent CRC saves confirm raw Mining XP+525, all other XP unchanged, HP99, retained Tin1/Iron1/bronze pick1265/37 coins, unchanged bank gold, gear/control state, final declared Iron site and logout;11209 source/config entries unchanged. This does not qualify higher-tier routes, other kits, contested sites or live release. Other mine/site/drop configurations need qualification. Modern basalt,clay bracelet and gem bag require matching native content; no missing native bank protocol claim."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/mining/AutoMiningScript.java",
         "decision": "partial",
         "consumer": "scripts/gather-ore.ts,scripts/microbot-b-mining.ts",
-        "gap": "Generic finite staged native miner covers17depleting rock profiles, including coal/gold/mithril/adamantite/runite; essence reuses existing gather worker. Automatic bank/drop routes, progressive donor location progression and modern basalt/clay-bracelet/gem-bag variants remain gaps. Source/unit only; no refreshed practice/live mining qualification.",
+        "gap": "Finite mining covers17 native rock profiles, eligible owned picks, bank/site loops and explicit drop mode. The linked native drop case starts with26 iron ore, drops exactly26, mines2 iron for70 Mining XP in63 ticks and preserves Rune pick1275; exact owned three-actor assets/XP/HP99/logout and11211 unchanged source/config entries pass alongside the linked general-loot bank case. Progressive declared bank routing passes the current native Tin1-to-Iron1 case over2 trips/256 ticks, with raw Mining XP+525, other XP unchanged, HP99, owned pick/gold/37 coins and exact final-bank/logout audits. Combined progressive-drop actual CLI also passes its declared two-batch Tin-to-Iron case in133 ticks: drops26 Tin, mines one Tin for17.5 XP, reselects Iron and mines one for35 XP. Independent CRC saves confirm raw Mining XP+525, all other XP unchanged, HP99, retained Tin1/Iron1/bronze pick1265/37 coins, unchanged bank gold, gear/control state, final declared Iron site and logout;11209 source/config entries unchanged. This does not qualify higher-tier routes, other kits, contested sites or live release. Other mine/site/drop configurations need qualification. Modern basalt,clay bracelet and gem bag require matching native content; no missing native bank protocol claim.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/mining/AutoMiningScript.java",
@@ -728,9 +731,41 @@
         "sha256": "03adbabb1f94522130dabd01ecb300cbc5dbbfcef5a0bbabb61ae4168b5369e0"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": {
+      "sourceReview": "Source/unit checks cover17 native depleting rock profiles, owned pick eligibility and finite bank/site integration; linked native bank proof applies to its recorded profile/site.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      },
+      "level": "Source review plus bounded native practice where linked; no live or repeat release.",
+      "dropMode": {
+        "consumer": "scripts/microbot-mining-drop.ts",
+        "evidence": ".practice/microbot-ports/mining-loot-native-1793593331707/result.json",
+        "sourceCheck": ".practice/microbot-ports/mining-loot-native-1793593331707/source-check.json",
+        "sourceSha256": "6f15b7ad6bc9f062e7e0217ca78572b309c64773ac1950faa8018dbf28583b5a",
+        "scope": "Exact native26-ore drop then2 iron/70 XP/63 ticks, Rune pick1275 retained; independent owned assets/XP/HP99/logout;11211 unchanged source/config entries."
+      },
+      "progressive": {
+        "consumer": "scripts/microbot-mining-progressive.ts",
+        "evidence": ".practice/microbot-ports/mining-progressive-native-1793593506494/result.json",
+        "savedBankAudit": ".practice/microbot-ports/mining-progressive-native-1793593506494/saved-bank-audit.json",
+        "auditConsumer": ".practice/microbot-ports/mining-progressive-saved-audit.ts",
+        "sourceCheck": ".practice/microbot-ports/mining-progressive-native-1793593506494/source-check.json",
+        "scope": "Actual CLI Tin1 then Iron1, two bank trips/256 ticks; independent CRC saved-assets audit confirms raw Mining XP+525, all other XP unchanged, HP99, original owned pick/gold/37 coins, exact ore bank outputs and logout.11209 source/config entries unchanged. Native save serializes only initialized containers; absent worn inventory and initialized empty worn inventory both contain no equipment. The original result retains its sole gear-oracle issue; the independent audit normalizes absent/empty arrays and passes all other original asset/XP/HP/bank checks. No production change, route-wide or live release claim. The separately linked progressiveDrop receipt qualifies only its declared two-batch drop configuration."
+      },
+      "progressiveDrop": {
+        "consumer": "scripts/microbot-mining-progressive.ts",
+        "evidence": ".practice/microbot-ports/mining-progressive-drop-native-1793594537246/result.json",
+        "sourceCheck": ".practice/microbot-ports/mining-progressive-drop-native-1793594537246/source-check.json",
+        "savedBefore": ".practice/microbot-ports/mining-progressive-drop-native-1793594537246/before.sav",
+        "savedAfter": ".practice/microbot-ports/mining-progressive-drop-native-1793594537246/after.sav",
+        "scope": "Actual CLI maximum2/batch1, mode drop, keep1265/995, declared Tin and Iron sites, starts at Mining14 one displayed XP below15. Drops exactly26 initial Tin, mines Tin1 (17 displayed XP;175 raw), reselects unlocked Iron and mines Iron1 (35 XP);133 total ticks. Independent CRC save checks confirm raw Mining+525 (52.5 XP), all other XP unchanged, HP99, pack Tin1/Iron1/bronze pick1265/37 coins, bank gold2357x1 unchanged, equivalent empty equipment, auto-retaliate control preserved, final Iron site3286,3368 level0 and logout.11209 recorded source/config entries unchanged. Higher seven routes, other/lower kits, contested sites and live repeat release remain unqualified."
+      }
+    },
     "supportedWorkQueue": [
-      "Generic finite staged native miner covers17depleting rock profiles, including coal/gold/mithril/adamantite/runite; essence reuses existing gather worker. Automatic bank/drop routes, progressive donor location progression and modern basalt/clay-bracelet/gem-bag variants remain gaps. Source/unit only; no refreshed practice/live mining qualification."
+      "Qualify additional declared native mine/bank/site configurations, higher-tier routes, other kits and contested conditions separately; retain the exact progressive-bank, at-site-drop and two-batch progressive-drop source/config scopes."
     ]
   },
   {
@@ -1684,7 +1719,7 @@
         "variants": [
           {
             "line": 44,
-            "text": "name = \"\u2699\ufe0f General Settings\","
+            "text": "name = \"⚙️ General Settings\","
           },
           {
             "line": 45,
@@ -1700,7 +1735,7 @@
           },
           {
             "line": 58,
-            "text": "name = \"\ud83c\udf7d\ufe0f Healing Settings\","
+            "text": "name = \"🍽️ Healing Settings\","
           },
           {
             "line": 59,
@@ -1708,7 +1743,7 @@
           },
           {
             "line": 65,
-            "text": "name = \"\ud83d\udd25 Brazier Management\","
+            "text": "name = \"🔥 Brazier Management\","
           },
           {
             "line": 66,
@@ -1716,7 +1751,7 @@
           },
           {
             "line": 72,
-            "text": "name = \"\ud83c\udfc6 Reward Collection\","
+            "text": "name = \"🏆 Reward Collection\","
           },
           {
             "line": 73,
@@ -1724,7 +1759,7 @@
           },
           {
             "line": 79,
-            "text": "name = \"\ud83d\udecc Break System\","
+            "text": "name = \"🛌 Break System\","
           },
           {
             "line": 80,
@@ -1732,7 +1767,7 @@
           },
           {
             "line": 86,
-            "text": "name = \"\ud83c\udf9b\ufe0f Advanced Options\","
+            "text": "name = \"🎛️ Advanced Options\","
           },
           {
             "line": 87,
@@ -1744,7 +1779,7 @@
           },
           {
             "line": 95,
-            "text": "name = \"\ud83d\udd25 Relight Braziers\","
+            "text": "name = \"🔥 Relight Braziers\","
           },
           {
             "line": 96,
@@ -1756,7 +1791,7 @@
           },
           {
             "line": 106,
-            "text": "name = \"\u27b3 Fletch Roots to Kindling\","
+            "text": "name = \"➳ Fletch Roots to Kindling\","
           },
           {
             "line": 107,
@@ -1768,7 +1803,7 @@
           },
           {
             "line": 117,
-            "text": "name = \"\u2692\ufe0f Fix Broken Braziers\","
+            "text": "name = \"⚒️ Fix Broken Braziers\","
           },
           {
             "line": 118,
@@ -1780,11 +1815,11 @@
           },
           {
             "line": 128,
-            "text": "name = \"\u2744\ufe0f Dodge Snowfall\","
+            "text": "name = \"❄️ Dodge Snowfall\","
           },
           {
             "line": 129,
-            "text": "description = \"Step out of incoming snowfall AoE damage. Most players don't bother \u2014 eating food/potions is usually more efficient than interrupting your action to step.\","
+            "text": "description = \"Step out of incoming snowfall AoE damage. Most players don't bother — eating food/potions is usually more efficient than interrupting your action to step.\","
           },
           {
             "line": 139,
@@ -1804,7 +1839,7 @@
           },
           {
             "line": 159,
-            "text": "name = \"\ud83c\udf56 Food Type\","
+            "text": "name = \"🍖 Food Type\","
           },
           {
             "line": 160,
@@ -1816,7 +1851,7 @@
           },
           {
             "line": 171,
-            "text": "name = \"\ud83d\udc8a Healing Items Per Trip\","
+            "text": "name = \"💊 Healing Items Per Trip\","
           },
           {
             "line": 172,
@@ -1828,7 +1863,7 @@
           },
           {
             "line": 182,
-            "text": "name = \"\ud83d\udce6 Restock Healing Items Threshold\","
+            "text": "name = \"📦 Restock Healing Items Threshold\","
           },
           {
             "line": 183,
@@ -1840,7 +1875,7 @@
           },
           {
             "line": 193,
-            "text": "name = \"\ud83c\udf21\ufe0f Consume at Warmth Level\","
+            "text": "name = \"🌡️ Consume at Warmth Level\","
           },
           {
             "line": 194,
@@ -1852,7 +1887,7 @@
           },
           {
             "line": 207,
-            "text": "name = \"\ud83c\udfaf Preferred Brazier Location\","
+            "text": "name = \"🎯 Preferred Brazier Location\","
           },
           {
             "line": 208,
@@ -1864,7 +1899,7 @@
           },
           {
             "line": 219,
-            "text": "name = \"\ud83c\udfc6 Enable Reward Cart Collection\","
+            "text": "name = \"🏆 Enable Reward Cart Collection\","
           },
           {
             "line": 220,
@@ -1876,11 +1911,11 @@
           },
           {
             "line": 230,
-            "text": "name = \"\ud83d\udcca Minimum Rewards Threshold\","
+            "text": "name = \"📊 Minimum Rewards Threshold\","
           },
           {
             "line": 231,
-            "text": "description = \"Collect rewards when cart has this many rewards (\u00b1variance)\","
+            "text": "description = \"Collect rewards when cart has this many rewards (±variance)\","
           },
           {
             "line": 240,
@@ -1888,11 +1923,11 @@
           },
           {
             "line": 241,
-            "text": "name = \"\ud83c\udfb2 Collection Variance\","
+            "text": "name = \"🎲 Collection Variance\","
           },
           {
             "line": 242,
-            "text": "description = \"Random variance (\u00b1) added to minimum threshold for natural timing\","
+            "text": "description = \"Random variance (±) added to minimum threshold for natural timing\","
           },
           {
             "line": 252,
@@ -1900,7 +1935,7 @@
           },
           {
             "line": 253,
-            "text": "name = \"\ud83d\udecc Enable Smart Break System\","
+            "text": "name = \"🛌 Enable Smart Break System\","
           },
           {
             "line": 254,
@@ -1912,7 +1947,7 @@
           },
           {
             "line": 264,
-            "text": "name = \"\u23f0 Min Break Interval (minutes)\","
+            "text": "name = \"⏰ Min Break Interval (minutes)\","
           },
           {
             "line": 265,
@@ -1924,7 +1959,7 @@
           },
           {
             "line": 275,
-            "text": "name = \"\u23f0 Max Break Interval (minutes)\","
+            "text": "name = \"⏰ Max Break Interval (minutes)\","
           },
           {
             "line": 276,
@@ -1936,7 +1971,7 @@
           },
           {
             "line": 286,
-            "text": "name = \"\ud83d\udeaa Logout Break Chance (%)\","
+            "text": "name = \"🚪 Logout Break Chance (%)\","
           },
           {
             "line": 287,
@@ -1948,7 +1983,7 @@
           },
           {
             "line": 297,
-            "text": "name = \"\ud83d\ude34 AFK Break Min Duration (minutes)\","
+            "text": "name = \"😴 AFK Break Min Duration (minutes)\","
           },
           {
             "line": 298,
@@ -1960,7 +1995,7 @@
           },
           {
             "line": 308,
-            "text": "name = \"\ud83d\ude34 AFK Break Max Duration (minutes)\","
+            "text": "name = \"😴 AFK Break Max Duration (minutes)\","
           },
           {
             "line": 309,
@@ -1972,7 +2007,7 @@
           },
           {
             "line": 319,
-            "text": "name = \"\ud83d\udeaa Logout Break Min Duration (minutes)\","
+            "text": "name = \"🚪 Logout Break Min Duration (minutes)\","
           },
           {
             "line": 320,
@@ -1984,7 +2019,7 @@
           },
           {
             "line": 330,
-            "text": "name = \"\ud83d\udeaa Logout Break Max Duration (minutes)\","
+            "text": "name = \"🚪 Logout Break Max Duration (minutes)\","
           },
           {
             "line": 331,
@@ -1996,7 +2031,7 @@
           },
           {
             "line": 342,
-            "text": "name = \"\ud83c\udfad Humanized Timing\","
+            "text": "name = \"🎭 Humanized Timing\","
           },
           {
             "line": 343,
@@ -2008,7 +2043,7 @@
           },
           {
             "line": 353,
-            "text": "name = \"\ud83d\uddb1\ufe0f Random Mouse Movements\","
+            "text": "name = \"🖱️ Random Mouse Movements\","
           },
           {
             "line": 354,
@@ -2020,7 +2055,7 @@
           },
           {
             "line": 364,
-            "text": "name = \"\ud83d\udcf9 Camera Movement Frequency\","
+            "text": "name = \"📹 Camera Movement Frequency\","
           },
           {
             "line": 365,
@@ -2032,7 +2067,7 @@
           },
           {
             "line": 375,
-            "text": "name = \"\ud83d\udcca Show Antiban Overlay\","
+            "text": "name = \"📊 Show Antiban Overlay\","
           },
           {
             "line": 376,
@@ -2058,11 +2093,11 @@
         "variants": [
           {
             "line": 7,
-            "text": "POTIONS(\"\ud83e\udd44 Potions (Recommended)\", \"FREE - crafted automatically inside Wintertodt\"),"
+            "text": "POTIONS(\"🥄 Potions (Recommended)\", \"FREE - crafted automatically inside Wintertodt\"),"
           },
           {
             "line": 8,
-            "text": "FOOD(\"\ud83c\udf56 Food\", \"Costs GP - withdrawn from bank automatically\");"
+            "text": "FOOD(\"🍖 Food\", \"Costs GP - withdrawn from bank automatically\");"
           },
           {
             "line": 15,
@@ -4257,7 +4292,8 @@
     "decision": "partial",
     "behaviour": "Withdraw paired pie dishes/pastry dough, combine, wait for batch and bank shells",
     "localConsumers": [
-      "scripts/microbot-production.ts"
+      "scripts/microbot-production.ts",
+      "scripts/microbot-bank-jobs.ts"
     ],
     "sourceEvidence": [
       {
@@ -4315,7 +4351,10 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/natepieshells/PieScript.java",
         "decision": "partial",
-        "consumer": "scripts/microbot-production.ts",
+        "consumer": [
+          "scripts/microbot-production.ts",
+          "scripts/microbot-bank-jobs.ts"
+        ],
         "gap": "Finite native pie-shell bank worker has saved-output and logout practice proof. Owned live inputs, live pilot and repeat policy remain unqualified; the practice fixture does not grant live release.",
         "actionEvidence": [
           {
@@ -4473,7 +4512,16 @@
         "sha256": "b573545f19f941da2dff800ea648d555fc859301e690a57d7151dd7ae67eec39"
       }
     ],
-    "proof": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim.",
+    "proof": {
+      "sourceReview": "Native practice: all178 unique inventory-production profiles passed the actual CLI at150ms/tick, XP1 and members scope, staged at Al Kharid bank with required skills99 and owned fixture inputs. Saved assets/XP/HP/logout independently reconcile;298 products banked. Evidence .practice/microbot-ports/native-sweep-3/{result.json,saved-audit.json,*-before.sav,*-after.sav}; worker hashes in result.json. These receipts bind the recorded worker files, not every imported runtime byte. No live, route-throughput or unattended release claim.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      },
+      "level": "Source review plus bounded native practice where linked; no live or repeat release."
+    },
     "supportedWorkQueue": [
       "Finite native pie-shell bank worker has saved-output and logout practice proof. Owned live inputs, live pilot and repeat policy remain unqualified; the practice fixture does not grant live release."
     ]
@@ -4485,7 +4533,8 @@
     "localConsumers": [
       "scripts/microbot-wine.ts",
       "scripts/microbot-production.ts",
-      "scripts/cook-wine.ts"
+      "scripts/cook-wine.ts",
+      "scripts/microbot-bank-jobs.ts"
     ],
     "sourceEvidence": [
       {
@@ -4760,8 +4809,15 @@
       }
     ],
     "proof": {
-      "sourceReview": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
-      "nativePractice": "Native practice actual CLI plus independent CRC-save audit:5 banked wines and5 banked bananas, held output0, coins1000 unchanged, HP50 unchanged, saved CookingXP550/MagicXP25 and confirmed logout. Members server,150ms/tick,XP1, skills99, owned inputs at Al Kharid bank. Worker hashes plus11034 core/SDK/engine/content dependency hashes remain unchanged across run. Evidence .practice/microbot-ports/native-bank-final-2/{result.json,saved-audit.json,runtime-source-start.json,runtime-source-check.json,*-before.sav,*-after.sav}. No live, replenishment-route or unattended release claim."
+      "sourceReview": "Pinned source and native content static review. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+      "nativePractice": "Native practice actual CLI plus independent CRC-save audit:5 banked wines and5 banked bananas, held output0, coins1000 unchanged, HP50 unchanged, saved CookingXP550/MagicXP25 and confirmed logout. Members server,150ms/tick,XP1, skills99, owned inputs at Al Kharid bank. Worker hashes plus11034 core/SDK/engine/content dependency hashes remain unchanged across run. Evidence .practice/microbot-ports/native-bank-final-2/{result.json,saved-audit.json,runtime-source-start.json,runtime-source-check.json,*-before.sav,*-after.sav}. No live, replenishment-route or unattended release claim.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      },
+      "level": "Source review plus bounded native practice where linked; no live or repeat release."
     },
     "supportedWorkQueue": [
       "Root-owned finite ordinary grapes/water mixing and fermentation consumer implements native recipe; native practice proves5 banked good wines with exact stock/XP/logout receipts; live owned stock, supply routes and repeat release remain unqualified."
@@ -5220,7 +5276,8 @@
     "behaviour": "Bank and tan cowhide to soft/hard leather or green/blue/red/black dragonhide, refill coins and optionally energy/stamina",
     "localConsumers": [
       "scripts/microbot-c-tanner.ts",
-      "scripts/microbot-c-lifetime.ts"
+      "scripts/microbot-c-lifetime.ts",
+      "scripts/microbot-bank-jobs.ts"
     ],
     "sourceEvidence": [
       {
@@ -5272,14 +5329,17 @@
       }
     ],
     "blockers": [
-      "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified."
+      "All six native tanning outputs have staged saved-state proof. The shared bank controller also proves three separate soft-leather bank/site trips with exact hide/coin/output conservation and logout. Other hide bank trips, donor stamina potions, other locations and live repeat release are unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/npctanner/npcTannerScript.java",
         "decision": "partial",
-        "consumer": "scripts/microbot-c-tanner.ts",
-        "gap": "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified.",
+        "consumer": [
+          "scripts/microbot-c-tanner.ts",
+          "scripts/microbot-bank-jobs.ts"
+        ],
+        "gap": "All six native tanning outputs have staged saved-state proof. The shared bank controller also proves three separate soft-leather bank/site trips with exact hide/coin/output conservation and logout. Other hide bank trips, donor stamina potions, other locations and live repeat release are unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/npctanner/npcTannerScript.java",
@@ -5496,10 +5556,17 @@
     ],
     "proof": {
       "sourceReview": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
-      "nativePractice": "Native practice passes all6 tanning recipes with exact saved hide/product/coin/HP changes and logout. Evidence .practice/microbot-ports/native-magic-tanning/. Bank shuttle and live release remain unqualified."
+      "nativePractice": "Native practice passes all6 tanning recipes with exact saved hide/product/coin/HP changes and logout. Evidence .practice/microbot-ports/native-magic-tanning/. Bank shuttle and live release remain unqualified.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      },
+      "level": "Source review plus bounded native practice where linked; no live or repeat release."
     },
     "supportedWorkQueue": [
-      "Finite staged inventory tanning covers all six native outputs; automatic bank shuttle and stamina potion branch are outside this port. Native staged practice passes6 outputs with saved item/coin/logout checks. Bank shuttle and live release remain unqualified."
+      "All six native tanning outputs have staged saved-state proof. The shared bank controller also proves three separate soft-leather bank/site trips with exact hide/coin/output conservation and logout. Other hide bank trips, donor stamina potions, other locations and live repeat release are unqualified."
     ]
   },
   {
@@ -5510,7 +5577,8 @@
       "scripts/microbot-c-orbs.ts",
       "scripts/microbot-c-spell-loc.ts",
       "scripts/microbot-c-player-monitor.ts",
-      "scripts/microbot-magic-items.ts"
+      "scripts/microbot-magic-items.ts",
+      "scripts/microbot-orb-trip.ts"
     ],
     "sourceEvidence": [
       {
@@ -5592,14 +5660,18 @@
       }
     ],
     "blockers": [
-      "Staged native four-element orb output is implemented, including native slot-3 elemental staff substitution and recorded spell-on-location dispatch. Donor automatic bank shuttle, wilderness travel/escape, inventory loadout and world hopping remain open; finite player-monitor can stop/logout but never world-hop. Practice/live output and logout proof pending."
+      "Finite native four-element bank/refill routes implement default Varrock/Falador spell returns plus explicit owned elemental staff selection, finite ordinary energy doses and charged Glory return to native Edgeville bank. The combined air/staff/finite-energy/Glory case and the five recorded default/staff variants each pass two actual CLI bank trips with exact saved effects and unchanged source. Staff substitution changes orb/return rune costs; energy waits for a fresh native completion message plus dose/restoration, and Glory waits for post-CLOSE_MODAL observation plus exact charge/landing. Other option/site combinations, player-triggered route integration and live repeat release remain unqualified. Donor stamina/Ferox/Dueling-to-Ferox and integrated world hopping are not supplied.",
+      "Standalone player monitoring remains separate from orb trips; no native player-triggered integration receipt or full donor encounter policy claim."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/orbcharger/scripts/AirOrbScript.java",
         "decision": "partial",
-        "consumer": "scripts/microbot-c-orbs.ts",
-        "gap": "Staged native four-element orb output is implemented, including native slot-3 elemental staff substitution and recorded spell-on-location dispatch. Donor automatic bank shuttle, wilderness travel/escape, inventory loadout and world hopping remain open; finite player-monitor can stop/logout but never world-hop. Practice/live output and logout proof pending.",
+        "consumer": [
+          "scripts/microbot-c-orbs.ts",
+          "scripts/microbot-orb-trip.ts"
+        ],
+        "gap": "Finite native four-element bank/refill routes implement default Varrock/Falador spell returns plus explicit owned elemental staff selection, finite ordinary energy doses and charged Glory return to native Edgeville bank. The current combined air/staff/finite-energy/Glory case passes two actual CLI bank trips with exact saved effects and unchanged source; the five recorded default/staff variants pass the linked final-source two-trip native qualification. Staff substitution changes orb/return rune costs; energy waits for a fresh native completion message plus dose/restoration, and Glory waits for post-CLOSE_MODAL observation plus exact charge/landing. Other option/site combinations, player-triggered route integration and live repeat release remain unqualified. Donor stamina/Ferox/Dueling-to-Ferox and integrated world hopping are not supplied.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/orbcharger/scripts/AirOrbScript.java",
@@ -5727,7 +5799,7 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/orbcharger/scripts/PlayerDetectionScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-c-player-monitor.ts",
-        "gap": "Staged native four-element orb output is implemented, including native slot-3 elemental staff substitution and recorded spell-on-location dispatch. Donor automatic bank shuttle, wilderness travel/escape, inventory loadout and world hopping remain open; finite player-monitor can stop/logout but never world-hop. Practice/live output and logout proof pending.",
+        "gap": "Standalone finite player monitoring supports stop/logout in source and unit checks. It is not integrated into the orb-trip CLI, has no native player-triggered integration receipt and does not hop worlds.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/orbcharger/scripts/PlayerDetectionScript.java",
@@ -5941,9 +6013,43 @@
         "sha256": "e692c7aa5c1b1a27df37525780103d4d47110bf5276d98a47ebe85ec1825b46c"
       }
     ],
-    "proof": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+    "proof": {
+      "level": "Source review, focused unit checks and bounded native bank-trip qualification; no live or repeat release.",
+      "unit": "20 focused orb tests/89 assertions pass, including deferred CLOSE_MODAL before actual core Glory Rub/dialogue, native energy completion before following loc input, exact charges/landing/doses/restoration, stale-message rejection and staff equip bank closure.",
+      "nativePractice": {
+        "options": {
+          "receipt": ".practice/microbot-ports/orb-native-finite-energy-1793589741862/proof.json",
+          "sourceCheck": ".practice/microbot-ports/orb-native-finite-energy-1793589741862/source-check.json",
+          "scope": "One combined air variant passes2 bank/refill trips:2 air orbs banked, owned staff1381 selected and preserved,6 cosmic/2 raw orbs consumed, elemental/return rune debit0;2 ordinary energy doses convert3008→3012, and2 exact Glory returns convert1712→1708. Exact152 Magic XP, all non-Magic XP unchanged, saved assets/potion-bottle/HP/gear/control/bank/logout checks pass.11427 source/config files unchanged.",
+          "conditions": "Members practice,150ms/XP1, combat/Magic/Prayer/Agility99, declared owned staff/runes/orbs/potions/Glory, Edgeville home and NODE_INFINITE_RUN=false."
+        },
+        "defaultRoutes": {
+          "receipt": ".practice/microbot-ports/orb-native-1793590776688/proof.json",
+          "savedBankAudit": ".practice/microbot-ports/orb-native-1793590776688/saved-bank-audit.json",
+          "sourceCheck": ".practice/microbot-ports/orb-native-1793590776688/source-check.json",
+          "scope": "Five bounded native variants each pass2 bank/refill trips: default earth/air/fire/water spell-return routes and owned air-staff/paid-spell-return variant. Each banks2 orbs and retains2 raw orbs and the unrelated gold bar; independent CRC bank assets, exact rune/potion/XP/HP/control accounting, empty final pack/equipment, logout and11427 unchanged source/config entries pass. These five declared option/site configurations are qualified; other combinations and live repeats are not."
+        }
+      },
+      "sourceBinding": {
+        "manifest": ".practice/microbot-ports/orb-native-finite-energy-1793589741862/source.json",
+        "check": ".practice/microbot-ports/orb-native-finite-energy-1793589741862/source-check.json",
+        "entries": 11427,
+        "changed": [],
+        "workerBytes": "Current orb entry and trip module match the receipt hashes. This binding qualifies only the recorded finite-energy air/staff/Glory case.",
+        "defaultRoutes": {
+          "manifest": ".practice/microbot-ports/orb-native-1793590776688/source-start.json",
+          "check": ".practice/microbot-ports/orb-native-1793590776688/source-check.json",
+          "scope": "11427 recorded source/config entries unchanged for these five configurations; finite energy/Glory retains its separate linked manifest."
+        }
+      },
+      "implementedOptions": {
+        "staff": "ORB_STAFF=owned or exact native staff ID",
+        "energy": "ORB_ENERGY_ID plus finite ORB_ENERGY_DOSES and threshold ORB_ENERGY_BELOW; ordinary10/20-point native energy potions only",
+        "return": "ORB_RETURN=glory uses inventory Rub and native Edgeville home; absent option keeps the paid spell return"
+      }
+    },
     "supportedWorkQueue": [
-      "Staged native four-element orb output is implemented, including native slot-3 elemental staff substitution and recorded spell-on-location dispatch. Donor automatic bank shuttle, wilderness travel/escape, inventory loadout and world hopping remain open; finite player-monitor can stop/logout but never world-hop. Practice/live output and logout proof pending."
+      "Additional option/site combinations, player-monitor integration/native trigger proof and live repeat release remain open."
     ]
   },
   {
@@ -8140,14 +8246,14 @@
       }
     ],
     "blockers": [
-      "Finite session owner can detect radius-filtered nearby players, ignore named owners, optionally trigger only new names, then stop or request confirmed native logout. Donor world-hop, GUI flash/sound, wilderness-only filter and emergency inventory-item policy remain outside scope. Practice trigger/logout proof pending."
+      "Finite monitor supports radius/ignore/new-player policies, native wilderness-zone filtering, confirmed logout and one declared observed inventory-item option with exact expected all-pack delta. The linked native town wilderness-only filter performs no action; the same owned nearby peer then triggers exactly one Attack potion121→123 with Attack20→25. Exact owned stock, XP0,HP99 and both logouts pass with11193 unchanged source/config entries. Global/account/role stop guards have focused unit coverage. This qualifies those filter/item cases, not every map or item; multi-page teleport-jewellery/dialogue/landing behaviour, donor world hopping and GUI flash/sound are not supplied."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/playermonitor/PlayerMonitorScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-c-player-monitor.ts",
-        "gap": "Finite session owner can detect radius-filtered nearby players, ignore named owners, optionally trigger only new names, then stop or request confirmed native logout. Donor world-hop, GUI flash/sound, wilderness-only filter and emergency inventory-item policy remain outside scope. Practice trigger/logout proof pending.",
+        "gap": "Finite monitor supports radius/ignore/new-player policies, native wilderness-zone filtering, confirmed logout and one declared observed inventory-item option with exact expected all-pack delta. The linked native town wilderness-only filter performs no action; the same owned nearby peer then triggers exactly one Attack potion121→123 with Attack20→25. Exact owned stock, XP0,HP99 and both logouts pass with11193 unchanged source/config entries. Global/account/role stop guards have focused unit coverage. This qualifies those filter/item cases, not every map or item; multi-page teleport-jewellery/dialogue/landing behaviour, donor world hopping and GUI flash/sound are not supplied.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/playermonitor/PlayerMonitorScript.java",
@@ -8663,9 +8769,9 @@
         "sha256": "e0d1f1a1b8a6db793dc99e11bdcc30b2b76ea038646ed5d11a11243205f6ae50"
       }
     ],
-    "proof": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+    "proof": "Source/unit guards plus bounded native filter/item qualification. Evidence .practice/microbot-ports/player-monitor-item-native-1793592083801/result.json; .practice/microbot-ports/player-monitor-item-native-1793592083801/source-check.json:11193 unchanged entries; worker SHA256 ed0dd17e0158a40a7260e77a948a78c71327c02c2060dd522b309a10f5646570. Native town wilderness-only filter sends no input, then same owned peer triggers one potion121→123 and Attack20→25; exact two-actor saved assets, XP0,HP99 and both logouts. No full map/item/teleport-jewellery policy, live or repeat claim.",
     "supportedWorkQueue": [
-      "Finite session owner can detect radius-filtered nearby players, ignore named owners, optionally trigger only new names, then stop or request confirmed native logout. Donor world-hop, GUI flash/sound, wilderness-only filter and emergency inventory-item policy remain outside scope. Practice trigger/logout proof pending."
+      "Qualify additional declared filter/item/map combinations and any caller integration separately; retain unsupported world-hop, GUI and multi-page teleport-jewellery boundaries."
     ]
   },
   {
@@ -21132,7 +21238,7 @@
           },
           {
             "line": 157,
-            "text": "description = \"Catch harpoonfish with your hands (requires Barbarian Fishing training). When off, auto-equip supplies the best harpoon you own \u2014 infernal first for max permits.\","
+            "text": "description = \"Catch harpoonfish with your hands (requires Barbarian Fishing training). When off, auto-equip supplies the best harpoon you own — infernal first for max permits.\","
           },
           {
             "line": 166,
@@ -25518,7 +25624,8 @@
     "decision": "partial",
     "behaviour": "Ardougne baker/silk plus modern stall strategies, selected loot bank/drop policies and world hop",
     "localConsumers": [
-      "scripts/microbot-c-stalls.ts"
+      "scripts/microbot-c-stalls.ts",
+      "scripts/microbot-bank-jobs.ts"
     ],
     "sourceEvidence": [
       {
@@ -25575,14 +25682,17 @@
       }
     ],
     "blockers": [
-      "All 13 native stall recipe rows have finite staged-inventory consumers with loot/XP and stock checks. Donor bank/drop route variants and Fortis stall/gem bag/hopping are not covered. Viking fish/fur retain native Fremennik Trials gate. Practice/live output/logout proof pending."
+      "All13 native stall recipes have finite loot/XP/stock consumers. Native owner/guard sight is observed with scoped projectile clipping. Three tea-stall bank/site trips pass exact saved loot/XP/HP/logout checks. Other stall sites/routes retain qualification gaps; Viking fish/fur need Fremennik Trials. Modern Fortis stall, gem bag and world hopping are outside native scope."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/thievingstalls/StallThievingScript.java",
         "decision": "partial",
-        "consumer": "scripts/microbot-c-stalls.ts",
-        "gap": "All 13 native stall recipe rows have finite staged-inventory consumers with loot/XP and stock checks. Donor bank/drop route variants and Fortis stall/gem bag/hopping are not covered. Viking fish/fur retain native Fremennik Trials gate. Practice/live output/logout proof pending.",
+        "consumer": [
+          "scripts/microbot-c-stalls.ts",
+          "scripts/microbot-bank-jobs.ts"
+        ],
+        "gap": "All13 native stall recipes have finite loot/XP/stock consumers. Native owner/guard sight is observed with scoped projectile clipping. Three tea-stall bank/site trips pass exact saved loot/XP/HP/logout checks. Other stall sites/routes retain qualification gaps; Viking fish/fur need Fremennik Trials. Modern Fortis stall, gem bag and world hopping are outside native scope.",
         "actionEvidence": []
       }
     ],
@@ -25803,9 +25913,18 @@
         "sha256": "baf7f55a531e430eefc12353838ef422232c5817594b651f38990a92ca87184d"
       }
     ],
-    "proof": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+    "proof": {
+      "sourceReview": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+      "bankPractice": {
+        "consumer": "scripts/microbot-bank-jobs.ts",
+        "evidence": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/result.json",
+        "sourceCheck": ".practice/microbot-ports/bank-job-native-profile-refactor-1793584619841/runtime-source-check.json",
+        "scope": "All11 recorded recipe/site cases pass owned bank/refill/return, independent saved-asset and logout checks;11507 source/config entries unchanged. This qualifies the listed cases, not every supported recipe/site or live repeat release."
+      },
+      "level": "Source review plus bounded native practice where linked; no live or repeat release."
+    },
     "supportedWorkQueue": [
-      "All 13 native stall recipe rows have finite staged-inventory consumers with loot/XP and stock checks. Donor bank/drop route variants and Fortis stall/gem bag/hopping are not covered. Viking fish/fur retain native Fremennik Trials gate. Practice/live output/logout proof pending."
+      "All13 native stall recipes have finite loot/XP/stock consumers. Native owner/guard sight is observed with scoped projectile clipping. Three tea-stall bank/site trips pass exact saved loot/XP/HP/logout checks. Other stall sites/routes retain qualification gaps; Viking fish/fur need Fremennik Trials. Modern Fortis stall, gem bag and world hopping are outside native scope."
     ]
   },
   {
@@ -31921,7 +32040,9 @@
     "decision": "partial",
     "behaviour": "Attack timer metronome plus automatic offensive lazy prayer flicking derived from weapon/animation/sound",
     "localConsumers": [
-      "packages/core/src/reflex.ts"
+      "packages/core/src/reflex.ts",
+      "scripts/microbot-prayer-flick.ts",
+      "scripts/gather-combat.ts"
     ],
     "sourceEvidence": [
       {
@@ -31983,7 +32104,7 @@
       }
     ],
     "blockers": [
-      "Overlay metronome is client-only. Offensive attack-cycle flick automation is not implemented by existing reflex food/prayer helper and requires finite consumer proof."
+      "Native offensive prayer reset uses serial observed OFF then ON every3 ticks against the native5-tick drain timer, with all other prayers off and guarded resumption of the same owned cow target when toggles clear its interaction. Both linked native modes bank one cow hide,bones and beef through existing runCows. Flick records0 prayer drain,23 reset cycles and24 attack resumptions; held records11 drain and1 resumption. Exact saved stock/HP/XP/controls, CRC audits and logout pass with11198 unchanged source/config entries. These are recorded finite cow-consumer outcomes, not a speed claim, uninterrupted-buff promise, incoming protection, attack prediction, donor Lazy metronome/UI parity or live release."
     ],
     "scriptDecisions": [],
     "variants": [
@@ -32133,9 +32254,20 @@
         "sha256": "5deb55d7eacb2e32445ab910bea7409b001f8216f71612a3726faf8024f101a5"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": {
+      "level": "Source/native contract review, focused unit checks and bounded native cow-bank qualification of both recorded modes; no live or speed claim.",
+      "consumer": "scripts/microbot-prayer-flick.ts",
+      "tests": "scripts/microbot-prayer-flick.test.ts",
+      "contract": "Offensive indices1,2,4,5,10,11 only; initially all prayers off. Serial observed OFF then observed ON resets every three ticks against the native five-tick normal drain timer. Existing runCows owns combat and banking. Original-life, HP floor, peer, prayer-point and caller-stop guards bound the helper. A lost reply or any observation error that leaves a transition unknown parks the helper: no extra toggle, prayerStateUncertain=true and restored=false. Normal cleanup requires observed all-off and never inputs on a replaced life. No incoming protection, attack prediction or uninterrupted buff claim.",
+      "nativeProof": {
+        "evidence": ".practice/microbot-ports/prayer-flick-native-resume-1793593343250/result.json",
+        "sourceCheck": ".practice/microbot-ports/prayer-flick-native-resume-1793593343250/source-check.json",
+        "sourceSha256": "a1d1d1a888ffe08d3820287ead166f22b229e0268a62216c50b7bd7c0b800daf",
+        "scope": "Both modes independently CRC-save exact one-cow hide/bone/beef bank outputs, stock, HP/XP/controls and logout. Flick0 prayer drain/23 cycles/24 resumptions; held11 drain/1 resumption;11198 recorded source/config entries unchanged. No speed or uninterrupted-buff claim."
+      }
+    },
     "supportedWorkQueue": [
-      "Overlay metronome is client-only. Offensive attack-cycle flick automation is not implemented by existing reflex food/prayer helper and requires finite consumer proof."
+      "Qualify additional declared offensive-prayer/target configurations separately; retain donor metronome/UI and attack-prediction differences."
     ]
   },
   {

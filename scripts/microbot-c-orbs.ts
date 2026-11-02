@@ -45,6 +45,6 @@ if(import.meta.main){
  let stopped=false;process.once('SIGINT',()=>{stopped=true;});process.once('SIGTERM',()=>{stopped=true;});
  const stop=()=>orbStopRequested(name,stopped);
  const s=await openBot(name);let ok=false;
- try{const result=process.env.ORB_TRIP==='1'?await (await import('./microbot-orb-trip')).runOrbTrips(s,kind,orbRecipes[kind],chargeInventory,{target:maximum,batch:Number(process.env.ORB_BATCH??1),cap,stop}):await chargeInventory(s,kind,maximum,cap,stop);console.log('ORB_RESULT '+JSON.stringify(result));ok=result.ok;}
+ try{const result=process.env.ORB_TRIP==='1'?await (await import('./microbot-orb-trip')).runOrbTrips(s,kind,orbRecipes[kind],chargeInventory,{target:maximum,batch:Number(process.env.ORB_BATCH??1),cap,stop,...(await import('./microbot-orb-trip')).orbOptions()}):await chargeInventory(s,kind,maximum,cap,stop);console.log('ORB_RESULT '+JSON.stringify(result));ok=result.ok;}
  finally{ok=await settle([s],ok,'finite orb order');}process.exitCode=ok?0:1;
 }

@@ -35,3 +35,9 @@ test('a replaced life at the same bank cannot authorize cleanup on the new life'
  const bank={x:3185,z:3436,level:0},result=await runBankProfile(s,{family:'magic-teleport',recipe:'varrock',target:1,batch:1,cap:100,returnTicks:50,members:true},{bank,site:bank,inputs:{},tools:[],outputs:[],run:async()=>{player.lifeId=2;return 1;}});
  expect(result.ok).toBe(false);expect(result.atBank).toBe(false);
 });
+
+test('unknown market escrow preserves carried lot evidence instead of banking it',async()=>{
+ let open=true,generation=1,stock=10,withdrawals=0,closes=0,modalCloses=0,unknown=false;const held:any[]=[],player={name:'Owned',lifeId:1,level:0,worldX:3185,worldZ:3436};const s:any={name:'Owned',tick:()=>0,ended:new Promise(()=>{}),client:{objType:()=>({stackable:false})},bankObservation:()=>open?{generation,items:[{id:1511,count:stock}]}:null,onTick:()=>()=>{},sdk:{getState:()=>({player,bank:{isOpen:open,items:open?[{id:1511,count:stock}]:[]},interface:{isOpen:false},dialog:{isOpen:false}}),getInventory:()=>held,getSkill:()=>({level:99}),sendCloseModal:async()=>{modalCloses++;}},bot:{closeBank:async()=>{open=false;closes++;},withdrawItem:async(_:unknown,n:number)=>{withdrawals++;stock-=n;generation++;for(let i=0;i<n;i++)held.push({id:1511,count:1,slot:i});},depositItem:async()=>{throw Error('must preserve unknown escrow evidence');}}};
+ const bank={x:3185,z:3436,level:0},r=await runBankProfile(s,{family:'ge-sale-lot',recipe:'logs',target:1,batch:1,cap:1000,returnTicks:100,members:true},{bank,site:bank,inputs:{1511:3},tools:[],outputs:[995,1511],deferBankRecovery:()=>unknown,run:async()=>{player.worldX=3181;player.worldZ=3448;unknown=true;throw Error('placement outcome unknown');}});
+ expect(r.ok).toBe(false);expect(r.recoveryDeferred).toBe(true);expect(r.atBank).toBe(false);expect(held.reduce((n,i)=>n+i.count,0)).toBe(3);expect(stock).toBe(7);expect(withdrawals).toBe(1);expect(closes).toBe(1);expect(modalCloses).toBe(0);
+});

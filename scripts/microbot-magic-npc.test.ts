@@ -1,3 +1,4 @@
+import {magicStopRequested} from './microbot-magic-teleport';
 import {test,expect} from 'bun:test';
 import{readFileSync}from'node:fs';
 import {nativeNpcSpell,npcCastEffect,selectMagicTarget,runNpcMagic} from './microbot-magic-npc';
@@ -43,4 +44,28 @@ test('required staves and member scope reject before any UI or paid spell action
  let actions=0;const s:any={sdk:{getEquipment:()=>[{slot:3,id:1381}],getState:()=>{actions++;throw Error('should not inspect player');}},bot:{dismissBlockingUI:async()=>{actions++;}},direct:async()=>{actions++;}};
  for(const name of ['saradomin_strike','claws_of_guthix','flames_of_zamorak','iban_blast']){const spell=nativeNpcSpell(name);await expect(runNpcMagic(s,spell,{npc:1,casts:1,cap:30,members:true})).rejects.toThrow('requires worn staff');await expect(runNpcMagic({}as any,spell,{npc:1,casts:1,cap:30})).rejects.toThrow('member NPC spell');}
  s.sdk.getEquipment=()=>[{slot:0,id:1409}];await expect(runNpcMagic(s,nativeNpcSpell('iban_blast'),{npc:1,casts:1,cap:30,members:true})).rejects.toThrow('requires worn staff');expect(actions).toBe(0);
+});
+
+test('shared CLI global stop prevents a paid staged NPC cast',async()=>{
+ let actions=0;const s:any={tick:()=>0,ended:new Promise(()=>{}),client:{selfSlot:1,var:Array(109).fill(0)},sdk:{getInventory:()=>[],getEquipment:()=>[],getSkill:()=>({level:99}),getSkillXp:()=>0,getState:()=>({player:{lifeId:1,level:0,worldX:3197,worldZ:3353},nearbyNpcs:[]})},direct:async()=>{actions++;return{success:true};}},stop=()=>magicStopRequested('owned',false,path=>path==='.practice/stop-all','');
+ const r=await runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:41,casts:1,cap:50,stop});expect(r.ok).toBe(false);expect(r.casts).toBe(0);expect(actions).toBe(0);
+});
+
+async function hpFloorFixture(floor:number|undefined,change:'hit'|'below'|'life'|'respawn'|'move'='hit'){
+ let tick=0,xp=0,hp=99,actions=0,done=false;const listeners=new Set<()=>void>(),player={lifeId:1,respawnCount:0,isDead:false,level:0,worldX:3197,worldZ:3353},inventory=[{id:556,count:10},{id:558,count:10}];
+ const s:any={client:{selfSlot:1,var:Array(109).fill(0)},ended:new Promise(()=>{}),tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},bot:{dismissBlockingUI:async()=>{}},sdk:{getState:()=>({player,nearbyNpcs:[{id:41,index:7,hp:10,reachable:true,inCombat:false,distance:1,optionsWithIndex:[{text:'Attack'}]}]}),getInventory:()=>inventory,getEquipment:()=>[],getSkill:(name:string)=>({level:name==='Hitpoints'?hp:99}),getSkillXp:(name:string)=>name==='Magic'?xp:0},direct:async()=>{actions++;inventory.forEach(i=>i.count--);xp+=5;if(actions===1){if(change==='hit')hp=95;if(change==='below')hp=89;if(change==='life')player.lifeId=2;if(change==='respawn')player.respawnCount=1;if(change==='move')player.worldX+=11;}return{success:true};}};
+ const pending=runNpcMagic(s,nativeNpcSpell('wind_strike'),{npc:41,casts:2,cap:80,...floor===undefined?{}:{hpFloor:floor}}).then(r=>{done=true;return r;});
+ for(let n=0;n<85&&!done;n++){tick++;for(const f of [...listeners])f();for(let k=0;k<12;k++)await Promise.resolve();}
+ return{result:await pending,actions};
+}
+test('NPC magic keeps strict initial HP by default and permits only a declared bounded floor',async()=>{
+ const strict=await hpFloorFixture(undefined);expect(strict.result.ok).toBe(false);expect(strict.actions).toBe(1);
+ const bounded=await hpFloorFixture(90);expect(bounded.result.ok).toBe(true);expect(bounded.actions).toBe(2);
+ const below=await hpFloorFixture(90,'below');expect(below.result.ok).toBe(false);expect(below.actions).toBe(1);
+});
+test('scalar initial life, respawn and position prevent a second paid action after mutable cached state changes',async()=>{
+ for(const change of ['life','respawn','move']as const){const r=await hpFloorFixture(90,change);expect(r.result.ok).toBe(false);expect(r.actions).toBe(1);}
+});
+test('declared HP floor rejects unknown, fractional, too low and above initial HP before paid input',async()=>{
+ for(const floor of [NaN,9,90.5,100])await expect(hpFloorFixture(floor)).rejects.toThrow('HP floor');
 });

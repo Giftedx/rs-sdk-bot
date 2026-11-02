@@ -18,21 +18,32 @@ export function salePlacement(j:SaleJournal,v:SaleView){identity(j,v);const foun
 export function salePlacementReady(j:SaleJournal,v:SaleView){try{return !!salePlacement(j,v);}catch(e){if(String(e).includes('sale escrow debit mismatch'))return false;throw e;}}
 export function saleClaim(j:SaleJournal,o:GEOffer){saleProgress(j,o);if(o.state==='open'||o.remaining!==0||o.items!==j.request.quantity-o.filled||o.coins!==o.gross-o.tax||o.state==='completed'&&o.filled!==j.request.quantity)throw Error('sale terminal escrow mismatch');return{items:o.items,coins:o.coins};}
 export function saleCollected(j:SaleJournal,v:SaleView){identity(j,v);return !!j.claim&&!!j.progress&&j.claim.items===j.request.quantity-j.progress.filled&&j.claim.coins===j.progress.gross-j.progress.tax&&!v.offers.some(o=>o.id===j.offerId)&&v.items===j.itemsBefore-j.request.quantity+j.claim.items&&v.coins===j.coinsBefore+j.claim.coins;}
+export function saleResting(j:SaleJournal,v:SaleView){
+ identity(j,v);const o=v.offers.find(o=>o.id===j.offerId);if(j.phase!=='open'||!o||o.state!=='open'||v.items!==j.itemsBefore-j.request.quantity||v.coins!==j.coinsBefore)throw Error('resting sale escrow/offer changed');
+ const progress=saleProgress(j,o);if(o.remaining!==j.request.quantity-o.filled||o.remaining<1||o.items!==0||o.coins!==o.gross-o.tax)throw Error('resting sale private escrow inconsistent');
+ return{offerId:o.id,remaining:o.remaining,filled:o.filled,gross:progress.gross,tax:progress.tax,itemsEscrow:o.remaining+o.items,unfilledItems:o.remaining,collectibleItems:o.items,coinsEscrow:o.coins};
+}
 // The caller supplies a genuine surplus lot in the normal-item pack. Reserved stock stays carried.
-// No repricing, replacement orders, auto-repeat or partial collection is permitted.
-export async function runOwnedSale(s:Session,r:SaleRequest,path:string,stop:()=>boolean,waitTicks=40,cancel=false){
+// Replacement orders belong to a separate explicit plan, after settlement.
+// leaveOpen preserves a freshly observed owned sell escrow; it never reports
+// settlement, bank return or collected proceeds for that resting offer.
+export async function runOwnedSale(s:Session,r:SaleRequest,path:string,stop:()=>boolean,waitTicks=40,cancel=false,options:{leaveOpen?:boolean;fatal?:()=>boolean}={}){
  validateSale(r);if(s.name.toLowerCase()!==r.actor.toLowerCase()||!Number.isSafeInteger(waitTicks)||waitTicks<0||waitTicks>200)throw Error('sale actor/wait invalid');
  if(!await waitUntil(s,()=>!!s.sdk.getState()?.player&&s.sdk.getStateAge()<5000,{timeoutTicks:15}))throw Error('fresh sale entry absent');
  const entry=marketEntryFailure(s.sdk.getState()?.player,s.sdk.getSkill('Hitpoints')?.level??0);if(entry)throw Error(entry);
- const start=s.tick(),hp=s.sdk.getSkill('Hitpoints')!.level;let ended=false;void s.ended.then(()=>{ended=true;});
- const unsafe=()=>ended||stop()||s.tick()-start>350||(s.sdk.getSkill('Hitpoints')?.level??0)<hp;
+ const start=s.tick(),hp=s.sdk.getSkill('Hitpoints')!.level,original=s.sdk.getState()?.player,life=original?.lifeId,respawns=original?.respawnCount??0;let ended=false;void s.ended.then(()=>{ended=true;});
+ const fatal=()=>{const p=s.sdk.getState()?.player;return ended||!p||p.isDead||p.lifeId!==life||(p.respawnCount??0)!==respawns||(s.sdk.getSkill('Hitpoints')?.level??0)<hp||!!options.fatal?.();};
+ const unsafe=()=>fatal()||stop()||s.tick()-start>350;
  const held=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  let j:SaleJournal|undefined=existsSync(path)?JSON.parse(readFileSync(path,'utf8')):undefined;
  if(j&&(j.version!==1||JSON.stringify(j.request)!==JSON.stringify(r)||!['prepared','attempted','open','cancelling','collecting','settled'].includes(j.phase)))throw Error('sale journal identity/config changed');
  const save=()=>{writeFileSync(path+'.tmp',JSON.stringify(j,null,2));renameSync(path+'.tmp',path);};
  const view=():SaleView=>{const ge=s.sdk.getGEState();if(!ge||s.sdk.getStateAge()>5000)throw Error('fresh private sale observation absent');return{actor:s.name,server:r.server,coins:held(995),items:held(r.item),offers:ge.offers};};
  try{
-  if(unsafe())throw Error('sale stopped before exchange');if(!(await s.bot.openGE(15000)).success)throw Error('sale exchange unavailable');
+  if(options.leaveOpen&&!Number.isSafeInteger(life))throw Error('Finish original life unknown');
+  const finishCleanup=options.leaveOpen&&j&&['open','cancelling','collecting'].includes(j.phase)&&!fatal();
+  if(unsafe()&&!finishCleanup)throw Error('sale stopped before exchange');if(!(await s.bot.openGE(15000)).success)throw Error('sale exchange unavailable');
+  if(fatal())throw Error('sale original life/HP changed during exchange entry');
   if(!j){const v=view();if(cancel||Date.now()>=r.deadline||v.items<r.quantity+r.reserveItems||s.sdk.getInventory().length>26)throw Error('sale surplus/deadline/collection space missing');j={version:1,request:r,phase:'prepared',coinsBefore:v.coins,itemsBefore:v.items,previousIds:v.offers.map(o=>o.id)};save();}
   if(j.phase==='settled'){if(!saleCollected(j,view()))throw Error('settled sale assets changed');return{ok:true,journal:j,replay:true};}
   if(j.phase==='prepared'){
@@ -40,13 +51,18 @@ export async function runOwnedSale(s:Session,r:SaleRequest,path:string,stop:()=>
    j.phase='attempted';save();try{await s.bot.placeGEOffer({item:r.item,quantity:r.quantity,side:'sell',price:r.price},20000);}catch{/* Reconcile native effects before any retry. */}
   }
   if(j.phase==='attempted'){await waitUntil(s,()=>salePlacementReady(j!,view()),{timeoutTicks:10});const o=salePlacement(j,view());if(!o)throw Error('sale dispatch unknown; no second sell authorized');j.offerId=o.id;j.phase='open';save();}
+  if(j.phase==='open'&&options.leaveOpen&&!cancel&&!unsafe()&&Date.now()<r.deadline){
+   const v=view(),o=v.offers.find(o=>o.id===j!.offerId);if(!o||v.items!==j.itemsBefore-r.quantity||v.coins!==j.coinsBefore)throw Error('resting sale escrow/offer changed');
+   j.progress=saleProgress(j,o);save();if(o.state==='open')return{ok:true,resting:true,settled:false,banked:false,journal:j,offer:{id:o.id,...saleResting(j,v)},replay:false};
+  }
   if(j.phase==='open'&&!cancel&&!unsafe()&&Date.now()<r.deadline&&waitTicks)await waitUntil(s,()=>unsafe()||Date.now()>=r.deadline||view().offers.find(o=>o.id===j!.offerId)?.state!=='open',{timeoutTicks:waitTicks});
   if(j.phase==='open'||j.phase==='cancelling'){
    let v=view(),o=v.offers.find(o=>o.id===j!.offerId);if(!o||v.items!==j.itemsBefore-r.quantity||v.coins!==j.coinsBefore)throw Error('sale escrow/offer changed');j.progress=saleProgress(j,o);save();
-   if(o.state==='open'){if(ended)throw Error('sale disconnected');j.phase='cancelling';save();try{await s.bot.cancelGEOffer(o.id,15000);}catch{/* A lost response can still have cancelled. */}await waitUntil(s,()=>view().offers.find(o=>o.id===j!.offerId)?.state!=='open',{timeoutTicks:10});v=view();o=v.offers.find(o=>o.id===j!.offerId);if(!o)throw Error('cancelled sale absent');}
+   if(o.state==='open'){if(fatal())throw Error('sale original life/HP unavailable for cancellation');j.phase='cancelling';save();try{await s.bot.cancelGEOffer(o.id,15000);}catch{/* A lost response can still have cancelled. */}await waitUntil(s,()=>view().offers.find(o=>o.id===j!.offerId)?.state!=='open',{timeoutTicks:10});v=view();o=v.offers.find(o=>o.id===j!.offerId);if(!o)throw Error('cancelled sale absent');}
    j.progress=saleProgress(j,o);j.claim=saleClaim(j,o);j.phase='collecting';save();
   }
   if(j.phase==='collecting'){
+   if(fatal())throw Error('sale original life/HP unavailable for collection');
    let v=view();if(!saleCollected(j,v)){const o=v.offers.find(o=>o.id===j!.offerId);if(!o||JSON.stringify(saleClaim(j,o))!==JSON.stringify(j.claim)||v.coins!==j.coinsBefore||v.items!==j.itemsBefore-r.quantity)throw Error('sale collection outcome unknown');
     try{await collectClaim((id,notes)=>s.bot.collectGEOffer(id,notes,15000),j.offerId!,false);}catch{/* Verify exact pack credit. */}
     if(!await waitUntil(s,()=>saleCollected(j!,view()),{timeoutTicks:10}))throw Error('sale collection not reconciled');
