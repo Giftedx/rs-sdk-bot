@@ -88,6 +88,7 @@ test('persisted95 uses mixed retained stock and positions without tutorial or st
  expect(failure).toBe('Error: first bank refusal');
  expect(starterCalls).toBe(0);expect(swaps).toBeGreaterThanOrEqual(2);
  expect(r.xp0).toBe(793125);expect(r.level).toBe(99);expect(r.consumed).toBe(1096);expect(r.crafted).toBe(3288);
+ expect(new Set(r.rows.slice(0,16).map((row:any)=>row.helper)).size).toBe(16);
  expect(r.before.slice(1).reduce((n:number,b:any)=>n+(b[1436]??0),0)).toBe(8628);
  expect(r.after[0][559]).toBe(9234+7+3288);expect(r.after[0][995]).toBe(500);
  expect(r.after[2][1446]).toBe(2);expect(r.after[0][1446]??0).toBe(0);expect(tick).toBeLessThan(2800);
