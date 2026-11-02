@@ -2,6 +2,34 @@ import {expect,test} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const shell=readFileSync(new URL('./client-shell.js',import.meta.url),'utf8');
 
+test('the fleet search shortcut focuses the visible search control',()=>{
+ const code=shell.slice(shell.lastIndexOf("  window.addEventListener('keydown'"),shell.indexOf('  window.atlasClient='));
+ let handler:any,focused='',opened='';
+ new Function('window','document','$','showPlugin',code)({addEventListener:(_t:string,f:any)=>handler=f},{body:{}},(s:string)=>({focus:()=>focused=s}),(id:string)=>opened=id);
+ handler({key:'/',target:{tagName:'BODY'},preventDefault:()=>{},stopPropagation:()=>{}});
+ expect(opened).toBe('fleet');expect(focused).toBe('#op-fleet-search');
+});
+
+test('Free camera clears the selected account and asks the 3D viewer to stop following',()=>{
+ const code=shell.slice(shell.indexOf("  $('#client-account').onchange="),shell.indexOf('  function toast('));
+ const picker:any={},messages:any[]=[],window:any={atlasFollowOther:'Worker'};let renders=0;
+ const selected=new Function('$','window','location','render',`let sel='Worker',picked=false,rswFor='Worker';const pick=()=>{},refresh=()=>{};${code};return()=>{$('#client-account').onchange({target:{value:''}});return sel;};`)((s:string)=>s==='#client-account'?picker:{contentWindow:{postMessage:(m:any)=>messages.push(m)}},window,{origin:'http://localhost'},()=>renders++);
+ expect(selected()).toBeNull();expect(window.atlasFollowOther).toBeNull();expect(window.atlasFreeCamera).toBe(true);
+ expect(messages).toEqual([{atlasFreeCamera:true}]);expect(renders).toBe(1);
+});
+
+test('an open bank redraws newer observations and closes when its account changes',()=>{
+ const code=shell.slice(shell.indexOf('  function openBank(){'),shell.indexOf('  // Orbs as RuneLite'));
+ let current:any={name:'Worker',bankAt:1,bank:[{name:'Coins',count:10}]},removed=false;
+ const nodes:any={};const node=(s:string)=>nodes[s]??=(s==='input'?{value:''}:{insertAdjacentHTML:()=>{},innerHTML:'',textContent:''});
+ const modal:any={dataset:{},setAttribute:()=>{},querySelector:node,remove:()=>removed=true};
+ new Function('account','document','hud','window','E','safeName','age','stackValue','gp','icon','qty','priceTip',`${code};openBank();`)(()=>current,{createElement:()=>modal},{querySelector:()=>null,append:()=>{}},{atlasOperator:()=>true},String,String,String,()=>({value:10,unpriced:0}),String,()=>'',String,()=> '');
+ expect(node('.bank-items').innerHTML).toContain('× 10');
+ current={...current,bankAt:2,bank:[{name:'Coins',count:25}]};node('input').oninput();
+ expect(node('.bank-items').innerHTML).toContain('× 25');
+ current={name:'Other',bank:[]};node('input').oninput();expect(removed).toBe(true);
+});
+
 function questPanel(bot:any,filter='all'){
  const code=shell.slice(shell.indexOf("    if(selectedTab==='quests'){"),shell.indexOf("    if(selectedTab==='friends')"));
  return new Function('b','questFilter','E','age',`const selectedTab='quests',questQuery='',questDetail='';let html='';${code};return html;`)(bot,filter,String,String);

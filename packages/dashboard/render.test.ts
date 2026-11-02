@@ -1,6 +1,13 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(process.env.DASH_PAGE || new URL('./index.html',import.meta.url),'utf8');
+
+test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
+ const code=html.slice(html.indexOf("window.addEventListener('message',e=>{"),html.indexOf('function syncWorld(){'));
+ const sent:any[]=[];let handler:any;const frame={postMessage:(m:any)=>sent.push(m)},window:any={atlasFreeCamera:true,addEventListener:(_t:string,f:any)=>handler=f};
+ new Function('window','$','viewerMessage','viewerCanReveal',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER,sel=null;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true);
+ handler({source:frame,origin:'http://test',data:{}});expect(sent).toEqual([{atlasFreeCamera:true}]);
+});
 const source=html.slice(html.indexOf('function chainHud(){'),html.indexOf("$('#chain').addEventListener"));
 for(const chain of [null,{cook:null,courier:null,farmers:[]},
     {cook:{name:'Cook',fresh:false,at:10},courier:null,farmers:[]},
