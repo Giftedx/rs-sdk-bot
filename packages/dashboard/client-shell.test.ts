@@ -37,9 +37,11 @@ function questPanel(bot:any,filter='all'){
 
 test('the account picker retains a missing chosen account instead of displaying Free camera',()=>{
  const code=shell.slice(shell.indexOf('  function accountChoices(){'),shell.indexOf('  function refresh(){'));
- const choices=new Function('S','sel',code+';return accountChoices();')({bots:[{name:'Other',inWorld:true}]},'Chosen');
+ const choices=new Function('S','sel','window',code+';return accountChoices();')({bots:[{name:'Other',inWorld:true}]},'Chosen',{});
  expect(choices).toContainEqual({name:'Chosen',inWorld:false,missing:true});
  expect(choices.filter((b:any)=>b.name==='Chosen')).toHaveLength(1);
+ const followed=new Function('S','sel','window',code+';return accountChoices();')({bots:[]},null,{atlasFollowOther:'Stranger'});
+ expect(followed).toContainEqual({name:'Stranger',inWorld:true,following:true});
 });
 
 test('quest points need a point observation, not the number of completed quests',()=>{
