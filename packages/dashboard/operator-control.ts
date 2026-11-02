@@ -8,7 +8,7 @@ import {NAMES} from '../core/src/names';
 import {validateDelivery} from '../router/src/delivery';
 import {appendOwnerRequest,applyCommand,validateCommand,REQUEST_MAX} from './publish-commands';
 
-export function createOperatorControl(options:{root:string;nonce?:string;alive?:(pid:number)=>boolean;spawn?:typeof spawnDetached}){
+export function createOperatorControl(options:{root:string;readOnly?:boolean;nonce?:string;alive?:(pid:number)=>boolean;spawn?:typeof spawnDetached}){
  const {root}=options,nonce=options.nonce??randomUUID(),directory=join(root,'.practice/coordinator'),audit=join(root,'.practice/dashboard-controls');
  const alive=options.alive??((pid:number)=>{try{process.kill(pid,0);return true;}catch{return false;}}),spawn=options.spawn??spawnDetached;
  const read=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
@@ -18,7 +18,7 @@ export function createOperatorControl(options:{root:string;nonce?:string;alive?:
  });}
  function metadata(){
   const inbox=join(directory,'requests');
-  return{nonce,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
+  return{nonce,readOnly:!!options.readOnly,goals:GOALS,roles:Object.keys(NAMES).filter(n=>n!=='main'),paused:existsSync(join(root,'.practice/stop-coordinator')),fleetPaused:existsSync(join(root,'.practice/stop-swarm')),capabilities:catalog(),
    accountHolds:owned().filter(name=>existsSync(join(root,'.practice','stop-'+name))).map(name=>({name,owner:readFileSync(join(root,'.practice','stop-'+name),'utf8').startsWith('dashboard-stop:')?'dashboard':'other'})),
    requests:existsSync(audit)?readdirSync(audit).filter(n=>/^[a-f0-9-]+\.json$/.test(n)).map(n=>{
     const r=read(join(audit,n)),file=join(inbox,r.id+'.request.json');return{id:r.id,action:r.action,at:r.at,taskId:r.taskId??null,status:r.action==='queue'?(existsSync(file+'.accepted')?'accepted':existsSync(file+'.rejected')?'rejected':'submitted'):r.status};
@@ -29,6 +29,7 @@ export function createOperatorControl(options:{root:string;nonce?:string;alive?:
   if(!['127.0.0.1','localhost','[::1]'].includes(new URL(req.url).hostname))return Response.json({error:'Use the local dashboard address'},{status:403});
   if(req.method==='GET')return Response.json(metadata(),{headers:{'cache-control':'no-store'}});
   if(req.method!=='POST')return new Response('Method not allowed',{status:405});
+  if(options.readOnly)return Response.json({error:'This dashboard is read-only; commands are disabled'},{status:403});
   const url=new URL(req.url);
   if(req.headers.get('origin')!==url.origin||req.headers.get('x-atlas-control')!==nonce)return Response.json({error:'Reload the local dashboard before sending a command'},{status:403});
   if(!req.headers.get('content-type')?.startsWith('application/json'))return Response.json({error:'JSON command required'},{status:415});

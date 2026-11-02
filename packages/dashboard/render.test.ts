@@ -66,10 +66,12 @@ function rosterFunctions(){return new Function('S','E','ago','sel','ocIcon',rost
 const stopProof={kind:'host-stop-cleanup',outcome:'proved',level:'local-native',workerOutcome:'fail',goalMet:false,scope:'four sent inputs settled; assets banked'};
 
 test('goal cards use current plan actions while preserving evidence metrics and unknown-plan fallback',()=>{
- const code=html.slice(html.indexOf('function goalMetrics(){'),html.indexOf('function goalCards(){'));
- const progress=Array.from({length:6},(_,i)=>({metric:`evidence${i}`,next:'historical action'}));
+ const code=html.slice(html.indexOf('function goalPlanFor('),html.indexOf('function goalCards(){'));
+ const titles=['Fleet & wealth','Collection & gear','Quests · unlocks · 99s','Specialist hiscores','Main Overall','Tick efficiency'];
+ const planTitles=['Wealth / logistics / GE','Gear / collection','Coverage','Specialist hiscores','Main Overall','Efficiency / visibility'];
+ const progress=titles.map((title,i)=>({title,metric:`evidence${i}`,next:'historical action'}));
  const run=new Function('S',code+';return goalMetrics();');
- const state={objectives:{available:true,progress,lanes:progress.map((_,i)=>({next:`current${i}`}))}};
+ const state={objectives:{available:true,progress,lanes:planTitles.map((title,i)=>({title,next:`current${i}`}))}};
  expect(run(state).map((g:any)=>g.next)).toEqual(progress.map((_,i)=>`current${i}`));
  expect(run(state).map((g:any)=>g.metric)).toEqual(progress.map(g=>g.metric));
  state.objectives.available=false;expect(run(state)[0].next).toBe('historical action');
@@ -78,6 +80,15 @@ test('goal cards use current plan actions while preserving evidence metrics and 
 
 test('dashboard commerce policy matches authorized GE use',()=>{
  expect(html).toContain('GE ENABLED · LIMIT ORDERS');expect(html).not.toContain('OWNED ONLY · NO GE');
+});
+
+test('host resources keep missing capacity and RAM headroom unknown',()=>{
+ const code=html.slice(html.indexOf('function inspect(){'),html.indexOf('function connectionState(){'));
+ const end=code.indexOf('\nfunction ',1),inspectCode=end<0?code:code.slice(0,end);
+ const run=new Function('S',`let view='machine',detailPages=1,detailPage=0,captured;const innerWidth=1280,document={querySelectorAll:()=>[]},box={},world={parentElement:null},$=s=>s==='#inspector'?box:s==='#world-panel'?world:{},machine=()=>S.sys,row=(label,value,tone)=>({label,value,tone}),pagedRows=rows=>{captured=rows},age=()=>'',observedAt=()=>false;${inspectCode};inspect();return captured;`);
+ const rows=run({capacity:{active:null,cap:null,fresh:false,headroomGB:null},sys:{freeGB:8,totalGB:32}});
+ expect(rows.find((r:any)=>r.label==='Bots running').value).toBe('? / ?');
+ expect(rows.find((r:any)=>r.label==='RAM headroom')).toEqual({label:'RAM headroom',value:'?',tone:'warn'});
 });
 
 test('dashboard inline JavaScript parses without running browser or making requests',()=>{
