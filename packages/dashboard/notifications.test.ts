@@ -17,3 +17,15 @@ test('granted notification delivery respects toggle and focus, test bypasses foc
 function idleHarness(){const code=shell.slice(shell.indexOf('  let idleFor='),shell.indexOf('  // Level-ups'));const notices:string[]=[];return {notices,run:new Function('notify','desktopNotify','safeName',code+';return idleNotifier;')((s:string)=>notices.push(s),()=>{},String)};}
 test('idle alert counts new observations rather than redraws',()=>{const h=idleHarness(),b={name:'Worker',fresh:true,at:1,action:'idle'};for(let i=0;i<5;i++)h.run(b);expect(h.notices).toHaveLength(0);h.run({...b,at:2});h.run({...b,at:3});expect(h.notices).toEqual(['Worker is now idle!']);h.run({...b,at:4});expect(h.notices).toHaveLength(1);});
 test('practice does not send live health or idle alerts; fresh low health alerts immediately',()=>{const h=idleHarness(),b={name:'Worker',fresh:true,practice:true,at:1,action:'idle',hp:{now:1,max:20}};for(let at=1;at<=5;at++)h.run({...b,at});expect(h.notices).toHaveLength(0);h.run({...b,practice:false,at:6});expect(h.notices).toEqual(['Worker has low hitpoints: 1 / 20']);});
+
+test('pending permission exposes a cancel control wired to disable notifications',async()=>{
+ let resolve:any;const controls:any={'[data-notify-cancel]':[{hidden:true}],'[data-notify]':[{checked:false}],'[data-notify-status]':[{textContent:''}],'[data-notify-test]':[{disabled:true}]};
+ const code=shell.slice(shell.indexOf('  const NOTIFY_KEY='),shell.indexOf('  let idleFor='));
+ const N:any={permission:'default',requestPermission:()=>new Promise(r=>resolve=r)},storage=new Map();
+ const api=new Function('window','Notification','body','localStorage','toast',code+';return window.atlasNotify;')({Notification:N},N,{querySelectorAll:(s:string)=>controls[s]||[]},{getItem:(k:string)=>storage.get(k),setItem:(k:string,v:string)=>storage.set(k,v)},()=>{});
+ const pending=api.set(true);expect(controls['[data-notify-cancel]'][0].hidden).toBe(false);
+ const handlerCode=shell.slice(shell.indexOf("  body.addEventListener('click',e=>{if(e.target.closest('[data-notify-test]'))"),shell.indexOf('  hud.onclick='));
+ let handler:any;new Function('body','setNotify','testNotify',handlerCode)({addEventListener:(_type:string,fn:any)=>handler=fn},api.set,()=>{});
+ handler({target:{closest:(selector:string)=>selector==='[data-notify-cancel]'}});
+ expect(controls['[data-notify-cancel]'][0].hidden).toBe(true);N.permission='granted';resolve('granted');await pending;expect(api.on()).toBe(false);
+});
