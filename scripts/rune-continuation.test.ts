@@ -24,7 +24,7 @@ test('bankCarrier reaches the booth face before opening a fresh bank and deposit
  const code=`
  import {mock} from 'bun:test';
  import {resolve} from 'node:path';
- let player={worldX:3092,worldZ:3495,level:0},generation=7,open=false,approaches=0,opens=0;
+ let player={worldX:3011,worldZ:3355,level:0},generation=7,open=false,approaches=0,opens=0;
  let inventory=[{id:1446,count:1},{id:1436,count:27}],items=[{id:1436,count:108}];
  const loc={id:2213,x:3095,z:3491,level:0,name:'Bank booth',distance:4,optionsWithIndex:[{text:'Use',opIndex:1},{text:'Use-quickly',opIndex:2}]};
  const s={name:'retained',tick:()=>100,bankObservation:()=>({generation,items}),
@@ -33,7 +33,7 @@ test('bankCarrier reaches the booth face before opening a fresh bank and deposit
  };
  const modules={
  '../packages/core/src/ticks':{waitUntil:async(_s,p)=>p()},
- '../packages/core/src/walk':{sessionWalker:async()=>s,walkPath:async(_w,[p])=>{player={worldX:p.x,worldZ:p.z,level:0};return {ok:true};}},
+ '../packages/core/src/walk':{sessionWalker:async()=>s,walkPath:async(_w,[p])=>{if(p.x===3092&&p.z===3496){player={worldX:3092,worldZ:3491,level:0};return{ok:false,ticks:151,still:23,repaths:3,detail:'live bank waypoint stalled'}}player={worldX:p.x,worldZ:p.z,level:0};return {ok:true};}},
  '../packages/core/src/world':{interactionApproach:async(_sdk,at,q)=>{approaches++;if(at.x!==3095||at.z!==3491||at.level!==0||q.id!==2213||q.shape!==10||q.angle!==3||q.width!==1||q.height!==1||q.blockAccessFlags!==0)throw Error('wrong booth geometry');return {x:3094,z:3491,level:0};}},
  '../packages/core/src/deposit':{depositObserved:async(_s,item)=>{if(!open||generation<=7)throw Error('stale bank');const held=inventory.find(i=>i.id===item.id);const bank=items.find(i=>i.id===item.id);if(bank)bank.count+=held.count;else items.push({...held});inventory=inventory.filter(i=>i.id!==item.id);generation++;}},
  './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({}),dispatchRuneEntry:async()=>({})},
