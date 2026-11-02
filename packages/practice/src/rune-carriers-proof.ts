@@ -12,9 +12,10 @@ import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-
 import {killTree} from './proc';
 import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 import {xpForLevel,levelForXp} from '../../planner/src/curve';
+import {runRunePipeline,verifyRunePipeline} from './rune-pipeline-proof';
 const root=resolve(import.meta.dir,'../../..'),helpers=16;
 const TICK_MS=400,WORKER_CAP=2800,WORKER_TIMEOUT_MS=WORKER_CAP*TICK_MS+60000;
-const files=['scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','packages/practice/src/rune-carriers-proof.ts'];
+const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','packages/practice/src/rune-carriers-proof.ts'];
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 
 function verify(dir:string){
@@ -28,7 +29,7 @@ function verify(dir:string){
   xp:saves[0].skills[20].rawExperience===(airXp+consumed*187.5)*10&&saves[0].skills[20].level===99,runes:all(559)===bodyRunes+2&&all(556)===52,
   essence:total(0,1436)===0&&all(1436)===helpers*405-consumed,talisman:all(1446)===helpers+1&&all(1438)===1,
   helper:saves.slice(1).every((s:any)=>s.skills[20].rawExperience===0),coins:all(995)===25,starter:!!result?.prefix?.starterKit&&Object.entries(result.prefix.starterKit).every(([id,n])=>all(Number(id))===Number(n)+(Number(id)===556?27:Number(id)===559?bodyRunes:0)),
-  handoff:result?.craftAfter==='trade-message',restock:result?.batches===batches&&result.crew.every((h:any)=>h.refills.length>0),logout:result?.logout===true&&[...stdout.matchAll(/^LOGOUT (.*)$/gm)].reduce((n,m)=>n+(m[1]!.match(/\blogged-out\b/g)??[]).length,0)===helpers+1};
+  handoff:result?.craftAfter==='trade-message'&&result?.pipeline===true,handlers:verifyRunePipeline(join(dir,'handlers')).ok,restock:result?.batches===batches&&result.crew.every((h:any)=>h.refills.length>0),logout:result?.logout===true&&[...stdout.matchAll(/^LOGOUT (.*)$/gm)].reduce((n,m)=>n+(m[1]!.match(/\blogged-out\b/g)??[]).length,0)===helpers+1};
  const master=readFileSync(join(dir,'0-after.sav')),accountTicks=meta.names.map((_:string,i:number)=>readFileSync(join(dir,i+'-after.sav')).readInt32BE(24)-(i?readFileSync(join(dir,i+'-before.sav')).readInt32BE(24):0));
  const report={ok:Object.values(checks).every(Boolean),checks,craftAfter:result?.craftAfter,workerFailure:result?.failure??null,source:meta.source,names:meta.names,tickMs:400,xpRate:25,infiniteRun:true,buildLiveReload:false,levelTicks:saves[0].version===10?master.readInt32BE(master.length-184):null,accountTicks,combinedTicks:accountTicks.reduce((n:number,t:number)=>n+t,0),elapsedMs:meta.elapsedMs,
   scope:'Actual rune-bank-craft CLI, authentic fresh master to99,16 bank carriers, pre-supplied helper kits and positions. No live rank claim.'};
@@ -39,6 +40,7 @@ async function run(dir:string){
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,task:'rune-carriers',directory:dir}));closeSync(fd);
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
+  if(!(await runRunePipeline(join(dir,'handlers'))).ok)throw Error('Pinned trade controller fixture failed before native launch');
   const source=hashes();for(const f of files)copyFileSync(join(root,f),join(dir,basename(f)));
   stack=await startStack({tickMs:TICK_MS,xpRate:25,readyTimeoutMs:60000,ports:ISOLATED,instance:'rune-carriers',enginePreload:{module:join(root,'packages/practice/src/save-endpoint.ts'),env:{...ISOLATED_ENGINE_ENV,BUILD_LIVE_RELOAD:'false',BUILD_STARTUP:'false',NODE_INFINITE_RUN:'true'}}});
   const name=runBotName('flrc',0),names=[name,...Array.from({length:helpers},(_,i)=>name+String.fromCharCode(98+i))],paths=names.map(n=>join(root,'vendor/rs-sdk/server/engine/data/players/main',n+'.sav'));
@@ -50,7 +52,7 @@ async function run(dir:string){
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
   const freshAbsent=!existsSync(paths[0]!);if(!freshAbsent)throw Error('master save exists before first login');
-  const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,'--carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(WORKER_CAP),RUNE_CRAFT_AFTER:'trade-message',BODY_XP_RATE:'25'},windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
+  const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,'--carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(WORKER_CAP),RUNE_CRAFT_AFTER:'trade-message',RUNE_HANDOFF_PIPELINE:'1',BODY_XP_RATE:'25'},windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
   let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
   const stop=()=>{termination??=killTree(child.pid);};
   const timer=setTimeout(()=>{timedOut=true;stop();},WORKER_TIMEOUT_MS),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);

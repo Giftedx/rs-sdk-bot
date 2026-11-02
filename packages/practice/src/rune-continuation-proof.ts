@@ -19,7 +19,7 @@ export const runeContinuationHelpers=[
  [3092,3495,0,135],[3084,3464,0,135],[3077,3452,0,135],[3069,3431,0,135],
  [3058,3429,0,135],[2523,4833,27,135],[2523,4833,27,135],[2523,4833,27,135],
 ] as const;
-const files=['scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','packages/practice/src/rune-continuation-proof.ts'];
+const files=['scripts/rune-pipeline.ts','scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/rune-carrier-start.ts','scripts/rune-carrier-trade.ts','scripts/rune-carrier-bank.ts','scripts/rune-carrier-roster.ts','packages/practice/src/rune-continuation-proof.ts'];
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 const total=(s:ReturnType<typeof readPracticeSave>,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const pack=(s:ReturnType<typeof readPracticeSave>,id?:number)=>(s.inventories[93]??[]).filter(i=>id===undefined||i.id===id).reduce((n,i)=>n+i.count,0);
@@ -102,7 +102,7 @@ export function verifyRuneContinuation(dir:string){
   });
   const masterBefore=readFileSync(join(dir,'0-'+m.prefix+'-before.sav')),masterAfter=readFileSync(join(dir,'0-'+m.prefix+'-after.sav'));
   const checks={exit:m.execution.code===0&&!m.execution.timedOut&&!m.execution.lowMemory,
-   result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
+   result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.pipeline===(m.craftAfter==='trade-message')&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
    entry:b[0].skills[20].level===99&&a[0].skills[20].level===99,assets:preserved,
    bankedOutput:runeMeasurementBankedOutput(b[0],a[0],972),
    effects:b.reduce((n:number,s:any)=>n+total(s,1436),0)-a.reduce((n:number,s:any)=>n+total(s,1436),0)===324&&total(a[0],559)-total(b[0],559)===972,
@@ -137,7 +137,7 @@ async function run(dir:string){
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
   const launch=async(prefix:string,mode='--body-continuation',craftAfter='inventory')=>{
-   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CRAFT_AFTER:craftAfter},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
+   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CRAFT_AFTER:craftAfter,RUNE_HANDOFF_PIPELINE:craftAfter==='trade-message'?'1':'0'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},CAP*TICK_MS+60000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
