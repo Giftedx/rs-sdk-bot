@@ -1,6 +1,6 @@
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
-import {walkPath,sessionWalker} from '../packages/core/src/walk';
+import {walkPath,walkRoute,sessionWalker} from '../packages/core/src/walk';
 import {interactionApproach} from '../packages/core/src/world';
 import {depositObserved} from '../packages/core/src/deposit';
 import {RUNE_ALTARS,ruinTarget,dispatchRuneEntry} from './rune-bank-craft';
@@ -10,7 +10,7 @@ const events:unknown[]=[];
 const pos=(s:Session)=>state(s).player!;
 const inside=(s:Session)=>pos(s).level===0&&Math.floor(pos(s).worldX/64)===39&&Math.floor(pos(s).worldZ/64)===75;
 const count=(s:Session,id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
-let stopped=false;
+let stopped=false;const cancellation=new AbortController();
 const check=(s:Session)=>{if(stopped||s.tick()>Number(process.env.CAP??2800)||s.sdk.getSkill('Hitpoints')?.level===0)throw Error('carrier stopped or over budget');};
 async function walk(s:Session,p:{x:number;z:number},tol=0){
  check(s);const r=await walkPath(await sessionWalker(s),[{...p,tol}],{maxTicks:150,stop:()=>stopped});
@@ -63,7 +63,7 @@ async function enterBody(s:Session){
 }
 
 export {restock,inside,leaveBody,enterBody};
-export const stopCarriers=()=>{stopped=true;};
+export const stopCarriers=()=>{stopped=true;cancellation.abort();};
 
 export type CarrierAssets=Record<number,number>;
 export const carrierAssets=(items:readonly {id:number;count:number}[])=>{
@@ -72,10 +72,14 @@ export const carrierAssets=(items:readonly {id:number;count:number}[])=>{
 // Continuation observes the bank before it allocates retained stock.
 export async function bankCarrier(s:Session):Promise<CarrierAssets>{
  check(s);if(!s.bankObservation)throw Error('carrier bank observation unavailable');
+ const fromFalador=pos(s).level===0&&pos(s).worldX>=3010&&pos(s).worldX<=3016&&pos(s).worldZ>=3352&&pos(s).worldZ<=3358;
  if(inside(s))await leaveBody(s);
  else if(pos(s).level!==0||!((pos(s).worldX>=3035&&pos(s).worldX<=3105&&pos(s).worldZ>=3410&&pos(s).worldZ<=3510)
-  ||(pos(s).worldX>=3010&&pos(s).worldX<=3016&&pos(s).worldZ>=3352&&pos(s).worldZ<=3358)))throw Error('continuation bank route position unavailable');
- await walk(s,bank,2);
+  ||fromFalador))throw Error('continuation bank route position unavailable');
+ if(fromFalador){
+  const r=await walkRoute(s,[{kind:'walk',to:{...bank,level:0},tolerance:2}],{signal:cancellation.signal});check(s);
+  if(!r.ok)throw Error('continuation staging walk '+JSON.stringify(r));
+ }else await walk(s,bank,2);
  // maps/m48_54.jm2:6375 places bankbooth as shape10 angle3; bank_booth.loc is 1x1 with no forceapproach.
  // Travel tolerance leaves the SDK free to walk at the counter and enter unrelated door recovery.
  const at={x:3095,z:3491,level:0},q={id:2213,shape:10,angle:3,width:1,height:1,blockAccessFlags:0,

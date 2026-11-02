@@ -20,11 +20,11 @@ test('continuation reconciles dense and sparse lifecycle varps without accepting
  for(const [id,value]of [[63,5],[21,1118209],[24,2148532225]])expect(runeContinuationVarpDifferences(before,{...falador,vars:{...falador.vars,[id!]:value!}},'craft','falador-bank').some(d=>d.id===id)).toBe(true);
 });
 
-test('bankCarrier reaches the booth face before opening a fresh bank and depositing retained stock',()=>{
+function bankApproach(mode:'far'|'near'|'cancel'){
  const code=`
  import {mock} from 'bun:test';
  import {resolve} from 'node:path';
- let player={worldX:3011,worldZ:3355,level:0},generation=7,open=false,approaches=0,opens=0;
+ let player={worldX:${mode==='near'?3092:3011},worldZ:${mode==='near'?3491:3355},level:0},generation=7,open=false,approaches=0,opens=0,routes=0,aborted=false;const budgets=[];
  let inventory=[{id:1446,count:1},{id:1436,count:27}],items=[{id:1436,count:108}];
  const loc={id:2213,x:3095,z:3491,level:0,name:'Bank booth',distance:4,optionsWithIndex:[{text:'Use',opIndex:1},{text:'Use-quickly',opIndex:2}]};
  const s={name:'retained',tick:()=>100,bankObservation:()=>({generation,items}),
@@ -33,21 +33,31 @@ test('bankCarrier reaches the booth face before opening a fresh bank and deposit
  };
  const modules={
  '../packages/core/src/ticks':{waitUntil:async(_s,p)=>p()},
- '../packages/core/src/walk':{sessionWalker:async()=>s,walkPath:async(_w,[p])=>{if(p.x===3092&&p.z===3496){player={worldX:3092,worldZ:3491,level:0};return{ok:false,ticks:151,still:23,repaths:3,detail:'live bank waypoint stalled'}}player={worldX:p.x,worldZ:p.z,level:0};return {ok:true};}},
+ '../packages/core/src/walk':{sessionWalker:async()=>s,walkPath:async(_w,[p],opts)=>{budgets.push(opts.maxTicks);if(player.worldZ<3400)throw Error('long Falador staging exceeds refill150tick budget');if(p.x===3092&&p.z===3496){player={worldX:3092,worldZ:3491,level:0};return{ok:false,ticks:151,still:23,repaths:3,detail:'live bank waypoint stalled'}}player={worldX:p.x,worldZ:p.z,level:0};return {ok:true};},
+ walkRoute:async(_w,[leg],opts)=>{routes++;if(leg.kind!=='walk'||leg.to.x!==3094||leg.to.z!==3491||leg.to.level!==0||leg.tolerance!==2||!opts.signal)throw Error('wrong staging leg');if('${mode}'==='cancel'){queueMicrotask(()=>stopCarriers());await new Promise(r=>opts.signal.addEventListener('abort',()=>{aborted=true;r();},{once:true}));return{ok:false,reason:'aborted',ticks:1};}player={worldX:leg.to.x,worldZ:leg.to.z,level:0};return{ok:true,ticks:161};}},
  '../packages/core/src/world':{interactionApproach:async(_sdk,at,q)=>{approaches++;if(at.x!==3095||at.z!==3491||at.level!==0||q.id!==2213||q.shape!==10||q.angle!==3||q.width!==1||q.height!==1||q.blockAccessFlags!==0)throw Error('wrong booth geometry');return {x:3094,z:3491,level:0};}},
  '../packages/core/src/deposit':{depositObserved:async(_s,item)=>{if(!open||generation<=7)throw Error('stale bank');const held=inventory.find(i=>i.id===item.id);const bank=items.find(i=>i.id===item.id);if(bank)bank.count+=held.count;else items.push({...held});inventory=inventory.filter(i=>i.id!==item.id);generation++;}},
  './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({}),dispatchRuneEntry:async()=>({})},
  './rune-carrier-trade':{state:a=>a.sdk.getState(),ess:()=>0}
  };
  for(const [p,m]of Object.entries(modules))mock.module(resolve('scripts',p),()=>m);
- const {bankCarrier}=await import('./scripts/rune-carrier-bank');
- const assets=await bankCarrier(s);console.log(JSON.stringify({assets,approaches,opens,generation,inventory}));
+ const {bankCarrier,stopCarriers}=await import('./scripts/rune-carrier-bank');
+ let assets,failure;try{assets=await bankCarrier(s);}catch(e){failure=String(e);}console.log(JSON.stringify({assets,failure,approaches,opens,generation,inventory,routes,budgets,aborted}));
  `;
  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
  if(child.exitCode!==0)throw Error(child.stderr.toString());
- const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+test('Falador staging uses the distance-budget route before observing the booth and bank',()=>{
+ const r=bankApproach('far');expect(r.failure).toBeUndefined();expect(r.routes).toBe(1);expect(r.budgets).toEqual([150]);
  expect(r.assets).toEqual({1436:135,1446:1});expect(r.inventory).toEqual([]);
  expect(r.approaches).toBeGreaterThan(0);expect(r.opens).toBe(1);expect(r.generation).toBe(10);
+});
+test('near-bank staging retains its150tick walks and exact booth face',()=>{
+ const r=bankApproach('near');expect(r.failure).toBeUndefined();expect(r.routes).toBe(0);expect(r.budgets).toEqual([150,150]);expect(r.opens).toBe(1);
+});
+test('stopping a long staging leg aborts it before opening or depositing',()=>{
+ const r=bankApproach('cancel');expect(r.aborted).toBe(true);expect(r.failure).toContain('carrier stopped');expect(r.opens).toBe(0);expect(r.inventory).toEqual([{id:1446,count:1},{id:1436,count:27}]);
 });
 
 test('persisted95 uses mixed retained stock and positions without tutorial or starter swaps',()=>{
