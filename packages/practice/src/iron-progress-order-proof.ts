@@ -1,9 +1,10 @@
 // Harness entry only. Import and --verify never start services or log in.
 import {copyFileSync,readFileSync,writeFileSync,mkdirSync,existsSync,openSync,closeSync,unlinkSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {freemem} from 'node:os';
-import {startStack} from './stack';
+import {startStack,PROOF_TICK_MS,type StackOptions} from './stack';
+import {canBind} from './ports';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
@@ -20,6 +21,31 @@ const serverFiles=[smithing+'scripts/smelting/smelting.rs2',smithing+'configs/sm
  smithing+'scripts/smithing/smithing.rs2',smithing+'configs/smithing/smithing.dbrow',smithing+'configs/smithing/smithing.struct',smithing+'configs/smithing/smithing.inv',smithing+'configs/smelting/smelting.obj'];
 // Delivery takes the practice turn and admits native startup at startupGb; this proof keeps the floor per child.
 export const ADMISSION={floorGb:FREE_FLOOR_GB,startupGb:PRACTICE_STARTUP_GB};
+export function ironProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
+ const values=[ports?.engine,ports?.gateway,ports?.management,ports?.tcp];
+ if(!values.every(p=>Number.isSafeInteger(p)&&p>=1024&&p<=65535&&![8888,7780,8898,43594].includes(p))
+  ||new Set(values).size!==4||!/^iron-[a-z0-9-]{1,25}$/.test(instance))throw Error('owned practice endpoints required');
+ const server=`127.0.0.1:${ports.engine}`,gateway=`ws://127.0.0.1:${ports.gateway}`;
+ return{ports:{...ports},instance,server,gateway,env:{AGENT_PORT:String(ports.gateway),GATEWAY_URL:`http://127.0.0.1:${ports.gateway}`,
+  WEB_MANAGEMENT_PORT:String(ports.management),NODE_PORT:String(ports.tcp),GE_DATABASE:`data/market-${instance}.sqlite`}};
+}
+type ProofEndpoints=ReturnType<typeof ironProofEndpoints>;
+export function selectIronProofEndpoints(bind:typeof canBind=canBind,random:()=>number=Math.random){
+ for(let i=0;i<100;i++){
+  const engine=20000+Math.floor(random()*20000),ports={engine,gateway:engine+1,management:engine+2,tcp:engine+3};
+  if(Object.values(ports).every(bind))return ironProofEndpoints(ports,'iron-'+randomUUID().replaceAll('-','').slice(0,20));
+ }
+ throw Error('owned practice ports unavailable');
+}
+export function ironProofAccountEnv(text:string,p:ProofEndpoints){
+ if(!/^SERVER=localhost:8888\r?$/m.test(text)||!/^GATEWAY_URL=ws:\/\/localhost:7780\r?$/m.test(text))throw Error('new practice account required');
+ return text.replace(/^SERVER=.*$/gm,`SERVER=${p.server}`).replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=${p.gateway}`);
+}
+export async function startIronProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
+ const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+ try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:PROOF_TICK_MS,xpRate:25,readyTimeoutMs:60000});}
+ finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
+}
 const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries([...owned,...serverFiles].map(p=>[p,createHash('sha256').update(readFileSync(join(root,p))).digest('hex')]))});
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const count=(s:Save,container:number,id:number)=>(s.inventories[container]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -83,7 +109,9 @@ type Case=typeof cases[number];
 const smithCase=(id:Case):id is 'anvil'|'refusal'=>id==='anvil'||id==='refusal';
 export function verifyIron(directory:string){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
+ const endpoints=ironProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
  const checks:Record<string,boolean>={source:JSON.stringify(meta.source)===JSON.stringify(source()),configuration:meta.tickMs===150&&meta.xpRate===25,fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,cases:JSON.stringify(meta.cases?.map((c:any)=>c.id))===JSON.stringify(cases)};
+ checks.endpoints=meta.server===endpoints.server;
  for(const id of cases){
   const dir=join(directory,id),c=meta.cases?.find((v:any)=>v.id===id);
   const before=readPracticeSave(join(dir,'before.sav')),after=readPracticeSave(join(dir,'after.sav')),log=readFileSync(join(dir,'worker.log'),'utf8');
@@ -107,6 +135,11 @@ const CASES:Record<Case,{preset:SaveConfig;cap:string;env:Record<string,string>;
  anvil:{preset:smithPreset(84),cap:String(SMITH_ORDER.cap),env:smithEnv,timeoutMs:330000},
  refusal:{preset:smithPreset(30),cap:String(SMITH_ORDER.cap),env:smithEnv,timeoutMs:60000},
 };
+export function childConfiguration(name:string,id:Case,inherited:NodeJS.ProcessEnv=process.env,endpoints?:ProofEndpoints){
+ const c=CASES[id];
+ return{cmd:['bun','scripts/smelt-bars.ts',name,c.cap,'iron'],cwd:root,windowsHide:true,
+  env:{...inherited,...endpoints?.env,...(endpoints?{GATEWAY_URL:endpoints.gateway}:{}),DEMO_OK:'',RANDOM_EVENTS:'0',...c.env}};
+}
 async function run(directory:string){
  if(!existsSync(join(root,'.practice/delivery-native.lock')))throw Error('practice turn required: run through delivery');
  if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient free memory: below the floor');
@@ -116,24 +149,24 @@ async function run(directory:string){
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'iron-progress-order'}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
-  const pin=source(),receipts=[];
-  stack=await startStack({tickMs:150,xpRate:25,readyTimeoutMs:60000});
+  const pin=source(),receipts=[],endpoints=selectIronProofEndpoints();
+  stack=await startIronProofStack(endpoints);
   for(const [index,id] of cases.entries()){
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('insufficient practice free memory floor');
    const dir=join(directory,id);mkdirSync(dir);
    const name=runBotName('knobiron',index+1),botDir=join(root,'vendor/rs-sdk/bots',name);
    if(existsSync(botDir))throw Error('isolated practice identity already exists');
-   await createBot(name);
-   if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+   const account=await createBot(name);
+   writeFileSync(account.envPath,ironProofAccountEnv(readFileSync(account.envPath,'utf8'),endpoints));
    const c=CASES[id],path=await applyPreset(name,c.preset);copyFileSync(path,join(dir,'before.sav'));
-   const child=Bun.spawn(['bun','scripts/smelt-bars.ts',name,c.cap,'iron'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'0',...c.env},stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err')),windowsHide:true});
+   const child=Bun.spawn({...childConfiguration(name,id,process.env,endpoints),stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
    let timedOut=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},c.timeoutMs);
    const code=await child.exited;clearTimeout(timer);await termination;
    const before=readPracticeSave(join(dir,'before.sav'));
    const persisted=await waitPracticeSave(path,s=>(s.vars[134]??0)>(before.vars[134]??0),{timeoutMs:15000});
    copyFileSync(path,join(dir,'after.sav'));
    receipts.push({id,name,code,timedOut,persisted:persisted.matched,before:hash(join(dir,'before.sav')),after:hash(join(dir,'after.sav')),log:hash(join(dir,'worker.log'))});
-   writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:150,xpRate:25,cases:receipts},null,2));
+   writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source:pin,tickMs:150,xpRate:25,server:endpoints.server,endpoints:{ports:endpoints.ports,instance:endpoints.instance},cases:receipts},null,2));
    // Preserve the failed case; do not proceed with a still-owned account.
    if(!persisted.matched||timedOut)throw Error('iron child logout/save deadline; evidence retained');
   }
