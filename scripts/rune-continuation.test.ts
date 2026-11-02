@@ -14,6 +14,10 @@ test('continuation reconciles dense and sparse lifecycle varps without accepting
   }
  }
  expect(runeContinuationVarpDifferences({...after,vars:{...after.vars,4:12345}},refusal,'refusal').some(d=>d.id===4)).toBe(true);
+ const falador={...after,vars:{...after.vars,21:1118208,24:2148532224}};
+ expect(runeContinuationVarpDifferences(before,falador,'craft','falador-bank')).toEqual([]);
+ expect(runeContinuationVarpDifferences(before,falador,'craft').map(d=>d.id)).toEqual([21,24]);
+ for(const [id,value]of [[63,5],[21,1118209],[24,2148532225]])expect(runeContinuationVarpDifferences(before,{...falador,vars:{...falador.vars,[id!]:value!}},'craft','falador-bank').some(d=>d.id===id)).toBe(true);
 });
 
 test('bankCarrier reaches the booth face before opening a fresh bank and depositing retained stock',()=>{

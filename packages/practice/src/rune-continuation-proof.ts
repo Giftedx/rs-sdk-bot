@@ -29,7 +29,7 @@ const assets=(s:ReturnType<typeof readPracticeSave>)=>{
  const out:Record<number,number>={};for(const i of Object.values(s.inventories).flat())out[i.id]=(out[i.id]??0)+i.count;return out;
 };
 type SavedVarps={version:number;vars:Record<number,number>};
-export function runeContinuationVarpDifferences(b:SavedVarps,a:SavedVarps,phase:'craft'|'refusal'){
+export function runeContinuationVarpDifferences(b:SavedVarps,a:SavedVarps,phase:'craft'|'refusal',entry:'body'|'falador-bank'='body'){
  // PlayerLoading reads dense v6 values, but Player.save writes only nonzero permanent v10 values.
  // Player's constructor gives absent non-int varps -1. These are the fixture's zero-valued coord/boolean vars.
  const nullDefaults=new Set([4,9,13,16,28,64,181,209,367]);
@@ -49,6 +49,9 @@ export function runeContinuationVarpDifferences(b:SavedVarps,a:SavedVarps,phase:
    if(id===300&&before===0)expected=1000;
    // music.dbrow: Forever(2,16), Gnome Theme(2,20), Heart and Mind(6,14), Barbarianism(9,1).
    if(id===21)expected=before|1114112;
+   // music.dbrow: Falador bank route adds Fanfare(2,12), Workshop(5,20), Scape Soft(5,31).
+   if(entry==='falador-bank'&&id===21)expected|=1<<12;
+   if(entry==='falador-bank'&&id===24)expected=before|(1<<20)|(1<<31);
    if(id===25)expected=before|16384;
    if(id===346)expected=before|2;
   }
@@ -63,7 +66,7 @@ export function verifyRuneContinuation(dir:string){
  const before=meta.names.map((_:string,i:number)=>readPracticeSave(join(dir,i+'-before.sav'))),after=meta.names.map((_:string,i:number)=>readPracticeSave(join(dir,i+'-after.sav')));
  const log=readFileSync(join(dir,'worker.log'),'utf8'),r=result(log),refusal=readFileSync(join(dir,'refusal.log'),'utf8'),rr=result(refusal);
  const consumed=1096,crafted=3288;
- const varpDifferences=before.map((b:ReturnType<typeof readPracticeSave>,i:number)=>({name:meta.names[i],differences:runeContinuationVarpDifferences(b,after[i]!,'craft')}));
+ const varpDifferences=before.map((b:ReturnType<typeof readPracticeSave>,i:number)=>({name:meta.names[i],differences:runeContinuationVarpDifferences(b,after[i]!,'craft',i===0&&b.position.x===3011&&b.position.z===3355&&b.position.level===0?'falador-bank':'body')}));
  const refusalVarpDifferences=after.map((b:ReturnType<typeof readPracticeSave>,i:number)=>({name:meta.names[i],differences:runeContinuationVarpDifferences(b,readPracticeSave(join(dir,i+'-refusal.sav')),'refusal')}));
  const preserved=before.every((b:ReturnType<typeof readPracticeSave>,i:number)=>{
   const a=after[i]!,ids=new Set([...Object.keys(assets(b)),...Object.keys(assets(a))]);
