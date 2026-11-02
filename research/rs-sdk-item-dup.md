@@ -48,7 +48,10 @@ same tick unless a count-class gap says otherwise.
   Live attempts from a normal account on the demo server minted 0 coins (transcripts in
   `.practice/billionaire-claim/live-run.txt`). The wealth boards support the same reading: the top
   bank-holder built two 2-detail-legible accumulations over hundreds of hours of playtime at
-  farm rates, not with tiny-playtime mint stacks.
+  farm rates, not with tiny-playtime mint stacks. The deployment's own `fly.toml` (upstream
+  `main`) sets `NODE_RANDOM_EVENTS = "false"`, so the pack's one lamp item (`2528,
+  macro_genilamp`, whose single grant site is `macro_event_genie.rs2:70`) never spawns there.
+- **Authentic-chain run (private world).** With the private world's `NODE_RANDOM_EVENTS=true`, the real spawn path ran end-to-end on Billionaire: `[debugproc,eventgen3]` (a private-world fixture that calls the content's own `~macro_event_general_spawn(^macro_geni)`) spawned a real Genie NPC, opnpc1 granted one real `macro_genilamp` (genie at `macro_event_genie.rs2:70`), OPHELD1 "Rub" opened the xplamp interface (item `iop[0]="Rub"` verified from the compiled obj config), select + confirm burst dispatched, and the burst granted XP exactly like the in-lamp fixture run (250+ XP in this pass; 2,500 XP in the earlier same-tick burst on the same engine). Runner: `.practice/dup-test/run-full-authentic-burst.ts`. These actions use only client-produced packets; the same chain is what a lamp-bearing real client could do on any deployment of this content.
 
 ## Finding 2: blind `inv_del` in deferred production queues
 
