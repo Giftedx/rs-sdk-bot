@@ -64,3 +64,44 @@ async function enterBody(s:Session){
 
 export {restock,inside,leaveBody,enterBody};
 export const stopCarriers=()=>{stopped=true;};
+
+export type CarrierAssets=Record<number,number>;
+export const carrierAssets=(items:readonly {id:number;count:number}[])=>{
+ const totals:CarrierAssets={};for(const i of items)totals[i.id]=(totals[i.id]??0)+i.count;return totals;
+};
+// Continuation observes the bank before it allocates retained stock.
+export async function bankCarrier(s:Session):Promise<CarrierAssets>{
+ check(s);if(!s.bankObservation)throw Error('carrier bank observation unavailable');
+ if(inside(s))await leaveBody(s);
+ else if(pos(s).level!==0||!((pos(s).worldX>=3035&&pos(s).worldX<=3105&&pos(s).worldZ>=3410&&pos(s).worldZ<=3510)
+  ||(pos(s).worldX>=3010&&pos(s).worldX<=3016&&pos(s).worldZ>=3352&&pos(s).worldZ<=3358)))throw Error('continuation bank route position unavailable');
+ await walk(s,bank,2);
+ // maps/m48_54.jm2:6375 places bankbooth as shape10 angle3; bank_booth.loc is 1x1 with no forceapproach.
+ // Travel tolerance leaves the SDK free to walk at the counter and enter unrelated door recovery.
+ const at={x:3095,z:3491,level:0},q={id:2213,shape:10,angle:3,width:1,height:1,blockAccessFlags:0,
+  src:'maps/m48_54.jm2:6375',configSrc:'scripts/interface_bank/configs/bank_booth.loc'};
+ const face=await interactionApproach(s.sdk,at,q);check(s);
+ if(!face)throw Error(s.name+': continuation bank interaction face unavailable');
+ await walk(s,face);
+ const gen=s.bankObservation()?.generation??0,reply=await s.bot.openBank();
+ check(s);
+ if(!reply.success||!await waitUntil(s,()=>stopped||!!state(s).bank.isOpen&&(s.bankObservation!()?.generation??0)>gen,{timeoutTicks:15}))throw Error(s.name+': continuation bank unobserved '+JSON.stringify({reply,generation:gen,position:pos(s)}));
+ check(s);const before=carrierAssets([...s.sdk.getInventory(),...s.bankObservation()!.items]);
+ for(const id of new Set(s.sdk.getInventory().map(i=>i.id))){check(s);await depositObserved(s,s.sdk.getInventory().find(i=>i.id===id)!);}
+ check(s);const after=carrierAssets(s.bankObservation()!.items);
+ if(s.sdk.getInventory().length||JSON.stringify(Object.entries(before).sort())!==JSON.stringify(Object.entries(after).sort()))throw Error('continuation deposit mismatch');
+ return after;
+}
+export async function withdrawCarrier(s:Session,id:number,n:number){
+ check(s);const held=count(s,id),stock=s.bankObservation!()?.items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0)??0;
+ const item=state(s).bank.items.find(i=>i.id===id);
+ if(!Number.isSafeInteger(n)||n<1||stock<n||!item)throw Error(`continuation supply shortage item${id} needs${n} has${stock}`);
+ if(!(await s.bot.withdrawItem(item,n)).success||!await waitUntil(s,()=>stopped||count(s,id)===held+n&&(s.bankObservation!()?.items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0)??NaN)===stock-n,{timeoutTicks:15}))throw Error('continuation withdrawal mismatch');
+ check(s);
+}
+export async function closeCarrierBank(s:Session){check(s);if(!(await s.bot.closeBank()).success)throw Error('continuation bank close refused');check(s);}
+export async function stageCarrier(s:Session,n:number,fromBank=false){
+ if(!fromBank)await bankCarrier(s);
+ await withdrawCarrier(s,1446,1);if(n>0)await withdrawCarrier(s,1436,n);
+ await closeCarrierBank(s);await enterBody(s);
+}

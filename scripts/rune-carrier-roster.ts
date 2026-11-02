@@ -1,8 +1,10 @@
 // The orchestrate supervisor forwards every participant, then the mode flag.
 export function runeCarrierRoster(args:readonly string[]):string[]{
- if(args.at(-1)!=='--carriers'||args.filter(a=>a==='--carriers').length!==1)throw Error('carrier mode needs the complete roster followed by --carriers');
+ const mode=args.at(-1);
+ if(!['--carriers','--body-continuation'].includes(mode??'')||args.filter(a=>a==='--carriers'||a==='--body-continuation').length!==1)throw Error('carrier mode needs the complete roster followed by --carriers or --body-continuation');
  const names=args.slice(0,-1);
  if(names.length<3||names.length>17||names.some(n=>!/^[A-Za-z0-9]{1,12}$/.test(n))||new Set(names.map(n=>n.toLowerCase())).size!==names.length)throw Error('carrier mode needs one crafter and2..16 distinct owned carriers');
+ if(mode==='--body-continuation'&&names.length!==17)throw Error('body continuation requires the retained16 owned helpers');
  return names;
 }
 export function assertFreshRuneSkills(skills:readonly {name:string;baseLevel:number;experience:number}[]|null|undefined){
