@@ -260,13 +260,13 @@ async function runeBankCli(){
  if(['--rune-carriers','--rune-opening'].includes(process.argv.at(-1)??'')){
   const {mainRuneStage}=await import('./rune-carrier-stage');await mainRuneStage(process.argv.slice(2));return;
  }
- if(process.argv.includes('--carriers')){
+ if(process.argv.includes('--carriers')||process.argv.includes('--body-continuation')){
   try{
    const {runeCarrierRoster}=await import('./rune-carrier-roster');
    const {runRuneCarriers}=await import('./rune-carriers');
-   const roster=runeCarrierRoster(process.argv.slice(2)),r=await runRuneCarriers(roster,Number(process.env.CAP??2800));
+   const roster=runeCarrierRoster(process.argv.slice(2)),r=await runRuneCarriers(roster,Number(process.env.CAP??2800),{bodyContinuation:process.argv.includes('--body-continuation')});
    console.log('RUNE_CARRIERS_RESULT '+JSON.stringify(r));
-   await finish([],r.ok,'failure' in r?r.failure??'carrier route failed':`runecraft=${r.level} batches=${r.batches}`);
+   await finish([],r.ok,'failure' in r?r.failure??'carrier route failed':`runecraft=${r.level} batches=${r.batches}`);return;
   }catch(error){await finish([],false,String(error));}
  }
  const target=runeBankTarget(Number(process.argv[3]??99));
