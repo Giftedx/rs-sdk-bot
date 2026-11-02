@@ -15,6 +15,14 @@ test('a chosen camera destination stays labelled as the destination, not the sel
  new Function('$',`const S={bots:[{name:'Worker',at:1}]},sel='Worker',mode='2d',VIEWER={url:null},window={atlasFreeCamera:true,atlasDestination:{x:3200,z:3450}},age=()=>'old',showViewerStatus=()=>{};${code};syncWorld();`)(()=>follow);
  expect(follow.textContent).toContain('3200, 3450');expect(follow.textContent).not.toContain('Worker');
 });
+test('following a visitor clears the free camera destination before rendering',()=>{
+ const code=html.slice(html.indexOf('window.atlasFollow3d='),html.indexOf('\n',html.indexOf('window.atlasFollow3d=')));
+ const sent:any[]=[];const window:any={atlasFreeCamera:true,atlasDestination:{x:3200,z:3450}};let rendered:any;
+ new Function('window','$','render',`const mode='3d',VIEWER={state:'ready',origin:'http://viewer'};${code}`)(window,()=>({contentWindow:{postMessage:(m:any)=>sent.push(m)}}),()=>rendered={free:window.atlasFreeCamera,destination:window.atlasDestination,following:window.atlasFollowOther});
+ expect(window.atlasFollow3d('Visitor')).toBe(true);
+ expect(rendered).toEqual({free:false,destination:null,following:'Visitor'});
+ expect(sent).toEqual([{follow:'Visitor'}]);
+});
 const source=html.slice(html.indexOf('function chainHud(){'),html.indexOf("$('#chain').addEventListener"));
 for(const chain of [null,{cook:null,courier:null,farmers:[]},
     {cook:{name:'Cook',fresh:false,at:10},courier:null,farmers:[]},
