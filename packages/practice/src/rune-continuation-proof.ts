@@ -23,6 +23,10 @@ const files=['scripts/rune-bank-craft.ts','scripts/rune-carriers.ts','scripts/ru
 const hashes=()=>Object.fromEntries(files.map(f=>[f,createHash('sha256').update(readFileSync(join(root,f))).digest('hex')]));
 const total=(s:ReturnType<typeof readPracticeSave>,id:number)=>Object.values(s.inventories).flat().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const pack=(s:ReturnType<typeof readPracticeSave>,id?:number)=>(s.inventories[93]??[]).filter(i=>id===undefined||i.id===id).reduce((n,i)=>n+i.count,0);
+export function runeMeasurementBankedOutput(before:Pick<ReturnType<typeof readPracticeSave>,'inventories'>,after:Pick<ReturnType<typeof readPracticeSave>,'inventories'>,crafted:number){
+ const count=(s:typeof before,container:number)=>(s.inventories[container]??[]).filter(i=>i.id===559).reduce((n,i)=>n+i.count,0);
+ return count(after,93)===0&&count(after,95)-count(before,95)===crafted;
+}
 const result=(log:string)=>{const line=log.split(/\r?\n/).find(l=>l.startsWith('RUNE_CARRIERS_RESULT '));return line?JSON.parse(line.slice(21)):null;};
 const logouts=(log:string)=>[...log.matchAll(/^LOGOUT (.*)$/gm)].reduce((n,m)=>n+(m[1]!.match(/\blogged-out\b/g)??[]).length,0);
 const assets=(s:ReturnType<typeof readPracticeSave>)=>{
@@ -87,8 +91,29 @@ export function verifyRuneContinuation(dir:string){
   logout:r?.logout===true&&logouts(log)===17,
   refusal:meta.refusal.code!==0&&!meta.refusal.timedOut&&!meta.refusal.lowMemory&&rr?.ok===false&&/persisted body crafter below99/.test(rr?.failure??'')&&logouts(refusal)===17,
   refusalAssets:meta.names.every((_:string,i:number)=>{const b=after[i],a=readPracticeSave(join(dir,i+'-refusal.sav'));return JSON.stringify(assets(a))===JSON.stringify(assets(b))&&JSON.stringify(a.inventories[94]??[])===JSON.stringify(b.inventories[94]??[])&&JSON.stringify(a.skills)===JSON.stringify(b.skills)&&refusalVarpDifferences[i]!.differences.length===0;})};
- const report={ok:Object.values(checks).every(Boolean),checks,workerFailure:r?.failure??null,source:meta.source,runtimeRevision:meta.runtimeRevision,names:meta.names,tickMs:TICK_MS,xpRate:25,cap:CAP,consumed,crafted,publications:meta.publications,varpDifferences,refusalVarpDifferences,
-  scope:'Real persisted-body CLI, retained16 helper fixture, finite99, banked initial plus new output and refused completed entry. No live rank or unattended claim.'};
+ const measurements=(meta.measurements??[]).map((m:any)=>{
+  const b=meta.names.map((_:string,i:number)=>readPracticeSave(join(dir,i+'-'+m.prefix+'-before.sav'))),a=meta.names.map((_:string,i:number)=>readPracticeSave(join(dir,i+'-'+m.prefix+'-after.sav'))),measuredLog=readFileSync(join(dir,m.prefix+'.log'),'utf8'),rr=result(measuredLog);
+  const preserved=b.every((old:ReturnType<typeof readPracticeSave>,i:number)=>{
+   const next=a[i]!,spent=(rr?.rows??[]).filter((row:any)=>row.helper===meta.names[i]).reduce((n:number,row:any)=>n+row.consumed,0),ids=new Set([...Object.keys(assets(old)),...Object.keys(assets(next))]);
+   return [...ids].every(key=>{const id=Number(key),expected=id===1436?(i===0?0:-spent):id===559&&i===0?972:0;return total(next,id)-total(old,id)===expected;})
+    &&JSON.stringify(old.inventories[94]??[])===JSON.stringify(next.inventories[94]??[])
+    &&next.skills.every((s:any,j:number)=>s.rawExperience===old.skills[j]!.rawExperience+(i===0&&j===20?607500:0))
+    &&runeContinuationVarpDifferences(old,next,'craft').length===0&&pack(next,1436)===0&&next.skills[3].level>=old.skills[3].level;
+  });
+  const masterBefore=readFileSync(join(dir,'0-'+m.prefix+'-before.sav')),masterAfter=readFileSync(join(dir,'0-'+m.prefix+'-after.sav'));
+  const checks={exit:m.execution.code===0&&!m.execution.timedOut&&!m.execution.lowMemory,
+   result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
+   entry:b[0].skills[20].level===99&&a[0].skills[20].level===99,assets:preserved,
+   bankedOutput:runeMeasurementBankedOutput(b[0],a[0],972),
+   effects:b.reduce((n:number,s:any)=>n+total(s,1436),0)-a.reduce((n:number,s:any)=>n+total(s,1436),0)===324&&total(a[0],559)-total(b[0],559)===972,
+   clocks:meta.names.every((_:string,i:number)=>readFileSync(join(dir,i+'-'+m.prefix+'-after.sav')).readInt32BE(24)>readFileSync(join(dir,i+'-'+m.prefix+'-before.sav')).readInt32BE(24)),
+   milestone:b[0].version===10&&a[0].version===10&&masterBefore.readInt32BE(masterBefore.length-184)===masterAfter.readInt32BE(masterAfter.length-184),
+   publications:m.publications?.length===17&&m.publications.every((p:any)=>p.matched&&p.ticks<=CAP),logout:rr?.logout===true&&logouts(measuredLog)===17};
+  return {craftAfter:m.craftAfter,ok:Object.values(checks).every(Boolean),checks,packs:rr?.batches,consumed:rr?.consumed,crafted:rr?.crafted,xp:a[0].skills[20].rawExperience/10-b[0].skills[20].rawExperience/10,elapsedMs:m.execution.elapsedMs};
+ });
+ Object.assign(checks,{measurements:measurements.length===2&&['inventory','trade-message'].every(condition=>measurements.some((m:any)=>m.craftAfter===condition&&m.ok))});
+ const report={ok:Object.values(checks).every(Boolean),checks,measurements,workerFailure:r?.failure??null,source:meta.source,runtimeRevision:meta.runtimeRevision,names:meta.names,tickMs:TICK_MS,xpRate:25,cap:CAP,consumed,crafted,publications:meta.publications,varpDifferences,refusalVarpDifferences,
+  scope:'Real persisted-body CLI, retained16 helper fixture, finite99 and completed-entry refusal, then12 full packs on existing99 in each craft condition. Saved assets, increasing clocks, unchanged99 milestone and17logouts per measurement. No live speed or rank claim.'};
  writeFileSync(join(dir,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(dir:string){
@@ -111,14 +136,14 @@ async function run(dir:string){
    const bytes=readFileSync(paths[i]!);bytes.writeInt32BE(2788+i,24);bytes.writeUInt32BE(Bun.hash.crc32(bytes.subarray(0,-4))>>>0,bytes.length-4);writeFileSync(paths[i]!,bytes);
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
-  const launch=async(prefix:string)=>{
-   const started=Date.now(),child=Bun.spawn(['bun','scripts/rune-bank-craft.ts',...names,'--body-continuation'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
+  const launch=async(prefix:string,mode='--body-continuation',craftAfter='inventory')=>{
+   const started=Date.now(),child=Bun.spawn(['bun','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CRAFT_AFTER:craftAfter},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},CAP*TICK_MS+60000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
    const code=await child.exited;clearTimeout(timer);clearInterval(floor);await termination;return {code,timedOut,lowMemory,started,elapsedMs:Date.now()-started};
   };
-  const execution=await launch('worker'),meta={source,runtimeRevision,names,...execution,publications:[] as {name:string;ticks:number;matched:boolean}[],refusal:{} as Awaited<ReturnType<typeof launch>>};
+  const execution=await launch('worker'),meta={source,runtimeRevision,names,...execution,publications:[] as {name:string;ticks:number;matched:boolean}[],refusal:{} as Awaited<ReturnType<typeof launch>>,measurements:[] as {prefix:string;craftAfter:string;execution:Awaited<ReturnType<typeof launch>>;publications:{name:string;ticks:number;matched:boolean}[]}[]};
   writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));
   for(let i=0;i<names.length;i++){
    if(execution.code===0){
@@ -139,6 +164,25 @@ async function run(dir:string){
    const expected=readFileSync(join(dir,i+'-after.sav')).readInt32BE(24)+status.tick;
    const published=await waitPracticeSave(paths[i]!,()=>readFileSync(paths[i]!).readInt32BE(24)===expected,{timeoutMs:6000});
    if(!published.matched)throw Error('refusal save publication unobserved');copyFileSync(paths[i]!,join(dir,i+'-refusal.sav'));
+  }
+  for(const craftAfter of ['inventory','trade-message']){
+   const prefix='measure-'+craftAfter;
+   for(let i=0;i<names.length;i++)copyFileSync(paths[i]!,join(dir,i+'-'+prefix+'-before.sav'));
+   const execution=await launch(prefix,'--body-measure=12',craftAfter),measurement={prefix,craftAfter,execution,publications:[] as {name:string;ticks:number;matched:boolean}[]};
+   meta.measurements.push(measurement);writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));
+   for(let i=0;i<names.length;i++){
+    if(execution.code===0){
+     const status=JSON.parse(readFileSync(join(root,'.practice/status',names[i]+'.json'),'utf8'));
+     if(status.started<execution.started||!/^ok(?:\s|$)/.test(status.result??'')||!Number.isSafeInteger(status.tick))throw Error('measurement status unavailable');
+     const expected=readFileSync(join(dir,i+'-'+prefix+'-before.sav')).readInt32BE(24)+status.tick;
+     const publication=await waitPracticeSave(paths[i]!,()=>readFileSync(paths[i]!).readInt32BE(24)===expected,{timeoutMs:6000});
+     measurement.publications.push({name:names[i]!,ticks:status.tick,matched:publication.matched});
+     if(!publication.matched)throw Error('measurement save publication unobserved');
+    }
+    copyFileSync(paths[i]!,join(dir,i+'-'+prefix+'-after.sav'));
+   }
+   writeFileSync(join(dir,'native.json'),JSON.stringify(meta,null,2));
+   if(execution.code!==0)throw Error('bounded measurement failed; inspect '+prefix+'.log');
   }
   return verifyRuneContinuation(dir);
  }finally{try{await stack?.stop();}finally{

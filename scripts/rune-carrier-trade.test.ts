@@ -77,6 +77,28 @@ test('early owned-offer acceptance cannot accept empty, partial or wrong-item co
  for(const mode of ['empty','partial','wrong-item'] as const){const r=delayedOffer(mode);expect(r.error).not.toBe('');expect(r.confirms).toBe(0);}
 });
 
+function acceptedCraftCase(mode:'fresh'|'stale'|'spoofed'|'no-movement'|'refused'|'stop'){
+ const code=`import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,craftAt=-1,crafts=0;
+ const pack=()=>Array.from({length:27},(_,slot)=>({id:1436,count:1,slot}));const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>phase;a.messages=[{type:0,sender:'',text:'Accepted trade.',observationId:1}];a.trade={isOpen:true,screen:'confirm',partner:o.name,myAccepted:false,myOffer:a===h?pack():[],theirOffer:a===s?pack():[]};
+ a.sdk={getInventory:()=>a===h?(phase===0?pack():[]):(phase>=2&&craftAt<0&&'${mode}'!=='no-movement'?pack():[]),getState:()=>({trade:a.trade,gameMessages:a.messages,nearbyPlayers:[]}),scanGroundItems:async()=>{},sendAcceptTrade:async()=>{a.trade.myAccepted=true;return{success:true}}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;if(phase===1)for(const a of[s,h]){a.trade={isOpen:false};if('${mode}'!=='stale')a.messages.push({type:'${mode}'==='spoofed'?2:0,sender:'${mode}'==='spoofed'?'Stranger':'',text:'Accepted trade.',observationId:2});}pending=undefined;r();}));return pending;}}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h,()=> '${mode}'==='stop'&&phase>=1,27,{send:async()=>{crafts++;craftAt=phase;if('${mode}'==='refused')throw Error('fixture altar refused');},complete:()=>craftAt>=0&&phase>=3&&'${mode}'!=='no-movement'});}catch(e){error=String(e)}console.log(JSON.stringify({error,craftAt,crafts,phase}));`;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+test('combined crafting can start on both fresh server acceptance messages before credit publication',()=>{
+ const r=acceptedCraftCase('fresh');expect(r.error).toBe('');expect(r.craftAt).toBe(1);expect(r.crafts).toBe(1);expect(r.phase).toBeGreaterThanOrEqual(3);
+});
+test('stale or spoofed acceptance cannot start a combined craft before observed credit',()=>{
+ for(const mode of ['stale','spoofed'] as const){const r=acceptedCraftCase(mode);expect(r.error).toBe('');expect(r.craftAt).toBe(2);expect(r.crafts).toBe(1);}
+});
+test('combined handoff refuses missing effects, a refused altar action and stop without blind craft retries',()=>{
+ const missing=acceptedCraftCase('no-movement');expect(missing.error).not.toBe('');expect(missing.crafts).toBe(1);
+ const refused=acceptedCraftCase('refused');expect(refused.error).toContain('fixture altar refused');expect(refused.crafts).toBe(1);
+ const stopped=acceptedCraftCase('stop');expect(stopped.error).not.toBe('');expect(stopped.crafts).toBe(0);
+});
+
 function handoff(mode:'publication'|'reset-publication'|'wrong-item'|'refused'|'no-credit'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';

@@ -6,11 +6,16 @@ const state=(s:Session)=>s.sdk.getState()!,trade=(s:Session)=>state(s).trade;
 const index=(s:Session,n:string)=>state(s).nearbyPlayers.find(p=>p.name.toLowerCase()===n.toLowerCase())?.index;
 const messages=(s:Session)=>state(s).gameMessages??[];
 const cursor=(s:Session)=>Math.max(0,...messages(s).map(m=>m.observationId??0));
-async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27){
+async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27,craft?:{send:()=>Promise<void>;complete:()=>boolean}){
  if(!Number.isSafeInteger(amount)||amount<1||amount>27)throw Error('carrier transfer amount must be1..27');
  const at=s.tick();
  if(!await waitUntil(s,()=>ess(h)===amount&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
  let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,levelupDismissed=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>(),offerAccepted=new Set<Session>();
+ let craftAt:number|undefined;
+ const acceptedCursors=new Map([[s,cursor(s)],[h,cursor(h)]]);
+ const credited=()=>ess(s)===amount&&ess(h)===0;
+ const complete=()=>craft?craftAt!==undefined&&ess(s)===0&&ess(h)===0&&craft.complete():credited();
+ const accepted=()=>[s,h].every(a=>messages(a).some(m=>m.type===0&&m.sender===''&&m.text==='Accepted trade.'&&(m.observationId??0)>acceptedCursors.get(a)!));
  const tickWaits=new Map<Session,Promise<void>>();
  const nextTick=(actor:Session)=>{
   let pending=tickWaits.get(actor);
@@ -34,7 +39,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
  }):()=>{});
  try{
  observe('begin');
- while(s.tick()-at<35&&ess(s)!==amount&&!stop()){
+ while(s.tick()-at<35&&(craft?!complete():ess(s)!==amount)&&!stop()){
   {
    mark('event-loop-yield');
    await new Promise<void>(resolve=>setImmediate(resolve));
@@ -43,7 +48,13 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
    mark('control');
   }
   if(stop())break;
-  if(ess(s)===amount&&ess(h)===0)break;
+  if(!craft&&credited())break;
+  if(craft&&craftAt===undefined&&confirmed.size===2&&(accepted()||credited())){
+   // Both exact confirmations were sent. The fresh pair of server messages precedes
+   // synchronous movement; success still requires the combined craft's exact effects.
+   if(stop())break;craftAt=s.tick();await craft.send();
+  }
+  if(complete())break;
   const snapshot=JSON.stringify([s,h].map(a=>({name:a.name,open:trade(a)?.isOpen,screen:trade(a)?.screen,partner:trade(a)?.partner,
    my:trade(a)?.myOffer?.reduce((n,i)=>n+i.count,0),their:trade(a)?.theirOffer?.reduce((n,i)=>n+i.count,0),accepted:trade(a)?.myAccepted})));
   if(snapshot!==last){console.log('RC_TRADE_STATE '+JSON.stringify({at:Date.now(),tick:s.tick(),actors:JSON.parse(snapshot)}));last=snapshot;}
@@ -114,8 +125,8 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
   mark('next-publication');await Promise.race([nextTick(s),nextTick(h),Bun.sleep(20)]);mark('loop-condition');
  }
  observe('loop-exit');mark('inventory-reconciliation');
- if(!await waitUntil(s,()=>ess(s)===amount&&ess(h)===0,{timeoutTicks:5}))throw Error('essence transfer did not reconcile');
- return s.tick()-at;
+ if(!await waitUntil(s,complete,{timeoutTicks:5}))throw Error(craft?'combined essence handoff and craft did not reconcile':'essence transfer did not reconcile');
+ return (craftAt??s.tick())-at;
  }finally{observe('end');for(const off of observers)off();}
 }
 
