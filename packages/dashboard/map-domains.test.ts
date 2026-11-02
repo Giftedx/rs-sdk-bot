@@ -30,3 +30,20 @@ test('practice selection cannot open or retain the live-only 3D viewer',async()=
  const update=new Function('S','sel','viewerUnavailable',`const mode='3d',window={},VIEWER={url:null},$=()=>({}),showViewerStatus=()=>{};${sync};return syncWorld;`)({bots},'Practice',(s:string)=>reasons.push(s));
  update();expect(reasons).toHaveLength(2);
 });
+
+function squareHarness(){
+ const code=shell.slice(shell.indexOf('  const squares=new Map()'),shell.indexOf('  // The 2D camera'));
+ const images:any[]=[];let time=100;
+ class Tile {complete=false;naturalWidth=0;src='';onload=()=>{};onerror=()=>{};constructor(){images.push(this);}}
+ const api=new Function('window','Image','Date','minimap','drawMap',code+';return window.atlasSquare;')({},Tile,{now:()=>time},()=>{},()=>{});
+ return {api,images,advance:()=>time+=30001};
+}
+test('a missing first map square does not disable other squares',()=>{
+ const h=squareHarness();h.api(1,1);h.images[0].onerror();h.api(2,2);
+ expect(h.images).toHaveLength(2);h.images[1].complete=true;h.images[1].naturalWidth=256;h.images[1].onload();
+ expect(h.api(2,2)).toBe(h.images[1]);
+});
+test('failed map squares retry after a cooldown without a request on every redraw',()=>{
+ const h=squareHarness();h.api(1,1);h.images[0].onerror();h.api(1,1);expect(h.images).toHaveLength(1);
+ h.advance();h.api(1,1);expect(h.images).toHaveLength(2);
+});
