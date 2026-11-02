@@ -10,3 +10,14 @@ test('pending or failed lookups do not assert that a player is offline',()=>{
  }
  expect(card({name:'Worker',rows:null,online:false},String,String)).toContain('not seen online');
 });
+
+test('an older lookup cannot overwrite a newer request for the same player',async()=>{
+ const code=shell.slice(shell.indexOf('  let worldLookup=null'),shell.indexOf('  // Info'))+shell.slice(shell.indexOf('  function lookup(name){'),shell.indexOf('  window.atlasLookup=lookup;'));
+ const pending:Array<(r:Response)=>void>=[];
+ const run=new Function('fetch','body',`const selectedPlugin='world',lookupCard=JSON.stringify;${code};return {lookup,value:()=>worldLookup};`)(()=>new Promise<Response>(r=>pending.push(r)),{querySelector:()=>({innerHTML:''})});
+ run.lookup('Worker');run.lookup('Other');run.lookup('Worker');
+ pending[2]!(Response.json({name:'Worker',marker:'new'}));await Bun.sleep(0);
+ pending[0]!(Response.json({name:'Worker',marker:'old'}));await Bun.sleep(0);
+ expect(run.value().marker).toBe('new');
+ pending[1]!(Response.json({name:'Other'}));await Bun.sleep(0);
+});

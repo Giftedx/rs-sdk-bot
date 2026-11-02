@@ -139,7 +139,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     return `<div class="xp-box"><div class="xp-head"><span>Overtake · ${E(safeName(o.account))}</span><span class="xp-gain">#${nf(o.rank)} · level ${o.level}</span></div>${o.targets.length?o.targets.map(line).join(''):'<span class="xp-muted">Already #1 on this board.</span>'}</div>`;
   }
   // World plugin: who stands at the spots our bots claim, and a lookup of any player (hiscores and where they are).
-  let worldLookup=null,worldLookupName='';
+  let worldLookup=null,worldLookupName='',worldLookupRequest=0;
   // Info (RuneLite info): what this page is, how fresh its data is, what the marks mean, and where the data comes from.
   function infoPanel(){
     const fleet=S.bots.filter(b=>!b.practice&&!b.reserved),playing=fleet.filter(b=>b.operation==='observed'),sides=S.fleetSides?.sides||[],hosted=S.hosted?.kind==='public';
@@ -184,9 +184,9 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
       (l.at?`<p class="xp-muted">Hiscores read ${age(l.at)} ago.</p>`:'')+(l.online?`<button class="game-control" data-world-go="${l.x},${l.z}">Show on the map</button><button class="game-control" data-world-follow="${E(l.name)}">Follow in 3D</button>`:'')+'</div>';
   }
   function lookup(name){
-    name=String(name||'').trim();if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return;worldLookupName=name;worldLookup={name,rows:null,note:'Looking up…'};
+    name=String(name||'').trim();if(!/^[A-Za-z0-9_ -]{1,12}$/.test(name))return;const request=++worldLookupRequest;worldLookupName=name;worldLookup={name,rows:null,note:'Looking up…'};
     if(selectedPlugin!=='world')showPlugin('world');else{const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(worldLookup);}
-    fetch('/api/player?name='+encodeURIComponent(name)).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error||'Player service returned HTTP '+r.status);return j;}).then(j=>{if(worldLookupName!==name)return;worldLookup=j;const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(j);}).catch(e=>{if(worldLookupName!==name)return;worldLookup={name,rows:null,note:'Lookup failed: '+(e?.message||e)};const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(worldLookup);});
+    fetch('/api/player?name='+encodeURIComponent(name)).then(async r=>{const j=await r.json();if(!r.ok)throw Error(j.error||'Player service returned HTTP '+r.status);return j;}).then(j=>{if(worldLookupRequest!==request)return;worldLookup=j;const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(j);}).catch(e=>{if(worldLookupRequest!==request)return;worldLookup={name,rows:null,note:'Lookup failed: '+(e?.message||e)};const el=body.querySelector('#wp-result');if(el)el.innerHTML=lookupCard(worldLookup);});
   }
   window.atlasLookup=lookup;
   // Infoboxes (RuneLite): the watched account's session and time to target, or one box per playing bot.
@@ -387,10 +387,10 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function screens(){const loading=hud.querySelector('#game-loading'),lost=hud.querySelector('#game-lost');if(loading&&S)loading.hidden=true;if(lost)lost.hidden=!(S&&(typeof connected!=='undefined'&&!connected||typeof lastReceived!=='undefined'&&Date.now()-lastReceived>10000));}
   setInterval(screens,2000);
   // Map squares (map-squares/<mx>_<mz>.png, 4 px a tile): loaded as the view needs them, drawn when ready.
-  const squares=new Map();let squaresMissing=false;
+  const squares=new Map(),squareRetryAt=new Map();
   window.atlasSquare=(mx,mz)=>{
-    if(squaresMissing)return null;const key=mx+'_'+mz;let img=squares.get(key);
-    if(!img){img=new Image();img.onload=()=>{if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{if(!squares.size||[...squares.values()].every(i=>!i.complete||!i.naturalWidth))squaresMissing=true;};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
+    const key=mx+'_'+mz;if(Date.now()<(squareRetryAt.get(key)||0))return null;let img=squares.get(key);
+    if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,Date.now()+30000);};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
     return img.complete&&img.naturalWidth?img:null;
   };
   // The 2D camera, the game's view: it follows the watched account at FOLLOW_PX a tile and flies to a new target;
