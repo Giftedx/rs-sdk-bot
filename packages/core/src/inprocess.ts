@@ -22,6 +22,7 @@ export interface ClientLike {
     executeBotAction(action: unknown): unknown | Promise<unknown>;
     setOnGameTickCallback(cb: (() => void) | null): void;
     pumpPackets?(): Promise<void>;
+    flush?(): void;
     getMaxMessageLength?(): number;
     ifMutable?(id: number): unknown;
     ptype0?: number;
@@ -106,7 +107,17 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     };
     const execute = (action: unknown) => {
         const refusal = guard?.(action);
-        return refusal ? { success: false, reason: 'unowned_partner', message: refusal } : client.executeBotAction(action);
+        if (refusal) return { success: false, reason: 'unowned_partner', message: refusal };
+        const dispatched = (result: unknown) => {
+            const reply = result as { success?: unknown; phase?: unknown } | null;
+            // Protocol actions append bytes synchronously. Send them before a
+            // promise continuation or a busy packet pump can delay the flush.
+            if (!stopped && reply?.success === true && reply.phase === 'dispatch') client.flush?.();
+            return result;
+        };
+        const result = client.executeBotAction(action);
+        return result && typeof (result as { then?: unknown }).then === 'function'
+            ? Promise.resolve(result).then(dispatched) : dispatched(result);
     };
 
     const originalPacketPump = client.pumpPackets;
