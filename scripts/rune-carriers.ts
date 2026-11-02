@@ -26,12 +26,23 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
  };
  const fail=(s:Session,detail:string)=>{failure=Error(s.name+': '+detail);cancel.abort(failure);stopCarriers();};
  const open=async(name:string)=>{const s=await openBot(name,{onStop:async(s,d)=>fail(s,d),onSessionEnd:async(s,d)=>fail(s,d)});opened.push(s);if(opened.length===1)monitor=s.onTick(()=>{stop();});return s;};
+ const openTogether=async(list:readonly string[],ready:(s:Session)=>Promise<void>=async()=>{})=>{
+  let firstFailure:{reason:unknown}|undefined;
+  const results=await Promise.allSettled(list.map(async name=>{
+   try{if(stop())throw Error('carrier opening stopped');const s=await open(name);await ready(s);if(stop())throw Error('carrier opening stopped');return s;}
+   catch(reason){firstFailure??={reason};cancel.abort(reason);stopCarriers();throw reason;}
+  }));
+  // A rejected open cannot leave another connection arriving after cleanup.
+  if(firstFailure)throw firstFailure.reason;
+  return results.map(r=>(r as PromiseFulfilledResult<Session>).value);
+ };
  const launchRefill=(d:Carrier)=>{d.flight=restock(d.s).then(t=>{d.refills.push(t);d.ready=true;}).catch(e=>{if(!done){failure=e;cancel.abort(e);stopCarriers();}});};
  try{
   await getWorld();
   if(options.bodyContinuation){
-   for(const n of names){if(stop())throw Error('continuation opening stopped');await open(n);}
-   const result=await continueRuneBody(opened[0]!,opened.slice(1),stop);
+   if(stop())throw Error('continuation opening stopped');const s=await open(names[0]!);
+   const helpers=await openTogether(names.slice(1));
+   const result=await continueRuneBody(s,helpers,stop);
    if(stop())throw Error('continuation stopped before logout');
    done=true;const logout=await settle(opened,true,'persisted body Runecraft99 banked');return {ok:logout,...result,logout};
   }
@@ -42,12 +53,12 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
   const prefix=await freshBodyStart(s,donor,stop,async()=>{
    // Same-address player turns follow login order. Open carriers after the
    // crafter, during its travel, so its expired craft delay clears first.
-   for(const n of names.slice(2)){
-    if(stop())throw Error('carrier setup stopped');const h=await open(n);await waitTicks(h,3);
+   const helpers=await openTogether(names.slice(2),async h=>{
+    await waitTicks(h,3);
     if(!inside(h)||ess(h)!==27||h.sdk.getInventory().filter(i=>i.id===1446).reduce((sum,i)=>sum+i.count,0)!==1)throw Error('staged carrier not observed');
     if(stop()||cap-h.tick()<2300)throw Error('helper warmup leaves insufficient fresh route budget');
-    crew.push({s:h,ready:true,deliveries:0,refills:[]});
-   }
+   });
+   crew.push(...helpers.map(s=>({s,ready:true,deliveries:0,refills:[]})));
    console.log('RUNE_CARRIER_READY '+JSON.stringify({masterTick:s.tick(),actors:crew.map(h=>({name:h.s.name,tick:h.s.tick(),remaining:cap-h.s.tick()}))}));
   },cancel);
   const initial:Carrier={s:donor,ready:false,deliveries:1,refills:[]};crew.push(initial);launchRefill(initial);
