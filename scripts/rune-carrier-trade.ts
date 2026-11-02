@@ -6,17 +6,38 @@ const state=(s:Session)=>s.sdk.getState()!,trade=(s:Session)=>state(s).trade;
 const index=(s:Session,n:string)=>state(s).nearbyPlayers.find(p=>p.name.toLowerCase()===n.toLowerCase())?.index;
 const messages=(s:Session)=>state(s).gameMessages??[];
 const cursor=(s:Session)=>Math.max(0,...messages(s).map(m=>m.observationId??0));
-async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
+async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27){
+ if(!Number.isSafeInteger(amount)||amount<1||amount>27)throw Error('carrier transfer amount must be1..27');
  const at=s.tick();
- if(!await waitUntil(s,()=>ess(h)===27&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
- let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,levelupDismissed=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>();
- while(s.tick()-at<35&&ess(s)!==27&&!stop()){
+ if(!await waitUntil(s,()=>ess(h)===amount&&ess(s)===0,{timeoutTicks:10}))throw Error('handoff stock unobserved');
+ let opened=false,offerSent=false,last='',requestPending=false,responseSent=false,levelupDismissed=false,incomingCursor=0,busyCursor=0;const confirmed=new Set<Session>(),offerAccepted=new Set<Session>();
+ // Read-only scheduling evidence: publications can continue while an awaited control step cannot resume.
+ const observationCursors=new Map([[s,cursor(s)],[h,cursor(h)]]);
+ let phase='loop',phaseAt=s.tick(),phaseTime=performance.now();
+ const mark=(next:string)=>{phase=next;phaseAt=s.tick();phaseTime=performance.now();};
+ const observe=(event:string)=>console.log('RC_TRADE_WAIT '+JSON.stringify({event,crafter:s.name,helper:h.name,
+  tick:s.tick(),helperTick:h.tick(),elapsed:s.tick()-at,phase,phaseAt,phaseMs:Math.round(performance.now()-phaseTime),
+  requestPending,responseSent,opened,incomingCursor,busyCursor,
+  actors:[s,h].map(a=>({name:a.name,revision:state(a).revision,modal:state(a).dialog?.isOpen,
+   open:trade(a)?.isOpen,screen:trade(a)?.screen,essence:ess(a),
+   messages:messages(a).filter(m=>(m.observationId??0)>Math.max(observationCursors.get(a)!,a===s?incomingCursor:busyCursor))
+    .filter(m=>m.type===4||m.type===0&&(/busy at the moment\.|Sending trade offer/.test(m.text)))
+    .map(m=>({type:m.type,sender:m.sender,text:m.text,observationId:m.observationId,tick:m.tick}))}))}));
+ const observers=[s,h].map(a=>typeof a.onTick==='function'?a.onTick(()=>{
+  if(s.tick()-phaseAt>=3)observe('publication:'+a.name);
+ }):()=>{});
+ try{
+ observe('begin');
+ while(s.tick()-at<35&&ess(s)!==amount&&!stop()){
   {
+   mark('event-loop-yield');
    await new Promise<void>(resolve=>setImmediate(resolve));
+   mark('ground-scans');
    await Promise.all([s.sdk.scanGroundItems(0),h.sdk.scanGroundItems(0)]);
+   mark('control');
   }
   if(stop())break;
-  if(ess(s)===27&&ess(h)===0)break;
+  if(ess(s)===amount&&ess(h)===0)break;
   const snapshot=JSON.stringify([s,h].map(a=>({name:a.name,open:trade(a)?.isOpen,screen:trade(a)?.screen,partner:trade(a)?.partner,
    my:trade(a)?.myOffer?.reduce((n,i)=>n+i.count,0),their:trade(a)?.theirOffer?.reduce((n,i)=>n+i.count,0),accepted:trade(a)?.myAccepted})));
   if(snapshot!==last){console.log('RC_TRADE_STATE '+JSON.stringify({at:Date.now(),tick:s.tick(),actors:JSON.parse(snapshot)}));last=snapshot;}
@@ -25,7 +46,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
    const dialog=state(s).dialog;
    if(!levelupDismissed&&dialog?.isOpen&&dialog.allComponents?.some(c=>/^(@dbl@)?Congratulations, you just advanced a runecraft level\.$/i.test(c.text))){
     // This modal keeps the crafter busy, so an incoming trade request cannot arrive until it closes.
-    await s.direct({type:'closeModal',reason:'SDK'});levelupDismissed=true;
+    mark('close-modal');await s.direct({type:'closeModal',reason:'SDK'});mark('control');levelupDismissed=true;
    }
    const incoming=()=>messages(s).some(m=>m.type===4&&m.sender?.toLowerCase()===h.name.toLowerCase()
     &&m.text==='wishes to trade with you.'&&(m.observationId??0)>incomingCursor);
@@ -36,40 +57,42 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
     const si=index(h,s.name),hi=index(s,h.name);
     if(si!==undefined&&hi!==undefined){
      incomingCursor=cursor(s);busyCursor=cursor(h);
-     await h.direct({type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});requestPending=true;
+     mark('helper-request');await h.direct({type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});mark('control');requestPending=true;
     }
    }
    if(requestPending&&incoming()&&!stop()){
     const hi=index(s,h.name);
-    if(hi!==undefined){await s.direct({type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});responseSent=true;}
+    if(hi!==undefined){mark('crafter-response');await s.direct({type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
    }
   }
   for(const actor of [h,s]){
+   mark('offer-or-accept:'+actor.name);
    const t=trade(actor);if(!t?.isOpen)continue;
    if(t.partner&&t.partner.toLowerCase()!==(actor===s?h.name:s.name).toLowerCase())throw Error('unexpected carrier trade partner');
    if(t.myAccepted||confirmed.has(actor))continue;
    const giver=actor===h?t.myOffer:t.theirOffer,receiver=actor===h?t.theirOffer:t.myOffer;
-   if(receiver?.length||(giver??[]).some(i=>i.id!==1436)||(giver??[]).reduce((n,i)=>n+i.count,0)>27)throw Error('unexpected carrier trade stock');
-   if(t.screen==='confirm'&&(giver??[]).reduce((n,i)=>n+i.count,0)!==27)throw Error('incomplete carrier confirmation');
+   if(receiver?.length||(giver??[]).some(i=>i.id!==1436)||(giver??[]).reduce((n,i)=>n+i.count,0)>amount)throw Error('unexpected carrier trade stock');
+   if(t.screen==='confirm'&&(giver??[]).reduce((n,i)=>n+i.count,0)!==amount)throw Error('incomplete carrier confirmation');
    if(t.screen==='offer'){
+    if(offerAccepted.has(actor))continue;
     if(actor===h&&(t.myOffer?.length??0)===0&&!offerSent){
      const e=inv(h).find(i=>i.id===1436);
      if(!e)continue;
      const result=await h.sdk.sendOfferItem(e.slot,-1);
      if(!result.success)throw Error('helper offer refused '+result.message);
      offerSent=true;
-     if(eager)await h.sdk.sendAcceptTrade();
+     if(eager){const accepted=await h.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(h);}
      continue;
     }
     const offer=actor===s?t.theirOffer:t.myOffer;
     if((offer??[]).some(i=>i.id!==1436))throw Error('unexpected item in owned handoff');
     const total=(offer??[]).reduce((n,i)=>n+i.count,0);
-    // The giver has exclusively staged 27 essence and queued Offer-All before its accept.
+    // The giver has exclusively staged amount essence and queued Offer-All before its accept.
     // The recipient gives nothing. Final success still requires both inventory publications.
-    const pendingOwnedOffer=actor===s&&eager&&offerSent&&total===0&&trade(h)?.myOffer?.reduce((n,i)=>n+i.count,0)===27;
+    const pendingOwnedOffer=actor===s&&eager&&offerSent&&total===0&&trade(h)?.myOffer?.reduce((n,i)=>n+i.count,0)===amount;
     if(!pendingOwnedOffer&&total===0)continue;
-    if(!pendingOwnedOffer&&total!==27)throw Error('unexpected essence offer '+total);
-    if(!t.myAccepted)await actor.sdk.sendAcceptTrade();
+    if(!pendingOwnedOffer&&total!==amount)throw Error('unexpected essence offer '+total);
+    if(!t.myAccepted){const accepted=await actor.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(actor);}
    }else if(t.screen==='confirm'&&!t.myAccepted){
     const accepted=await actor.sdk.sendAcceptTrade();
     if(!accepted.success)throw Error('carrier confirmation refused '+accepted.message);
@@ -77,10 +100,15 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false){
     confirmed.add(actor);
    }
   }
-  await Promise.race([waitTicks(s,1),waitTicks(h,1)]);
+  // Remote interface packets can arrive after PLAYER_INFO in another pump.
+  // The next scans publish current client state without sending game packets.
+  // Keep the server-tick deadline, but do not hold a ready handshake for a tick.
+  mark('next-publication');await Promise.race([waitTicks(s,1),waitTicks(h,1),Bun.sleep(20)]);mark('loop-condition');
  }
- if(!await waitUntil(s,()=>ess(s)===27&&ess(h)===0,{timeoutTicks:5}))throw Error('essence transfer did not reconcile');
+ observe('loop-exit');mark('inventory-reconciliation');
+ if(!await waitUntil(s,()=>ess(s)===amount&&ess(h)===0,{timeoutTicks:5}))throw Error('essence transfer did not reconcile');
  return s.tick()-at;
+ }finally{observe('end');for(const off of observers)off();}
 }
 
 export {transfer,ess,state};
