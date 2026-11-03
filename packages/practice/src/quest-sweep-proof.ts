@@ -150,7 +150,7 @@ async function run(dir:string){
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice free memory below floor');
    const stamp=statSync(save).mtimeMs,t=Date.now();
    const record:CaseRecord={id:c.id,exit:-1,timedOut:false,saveMatched:false,seconds:0};cases.push(record);retain();
-   const p=Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints),stdout:'pipe',stderr:'pipe'});
+   const p=Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints),windowsHide:true,stdout:'pipe',stderr:'pipe'});
    let termination:Promise<void>|undefined;
    const kill=setTimeout(()=>{record.timedOut=true;termination=killTree(p.pid);},300000);
    try{
