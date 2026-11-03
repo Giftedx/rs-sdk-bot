@@ -34,8 +34,9 @@ export function selectQuestSweepProofEndpoints(bind:typeof canBind=canBind,rando
  throw Error('owned practice ports unavailable');
 }
 export function questSweepProofAccountEnv(text:string,p:ProofEndpoints){
- if(!/^SERVER=localhost:8888\r?$/m.test(text)||!/^GATEWAY_URL=ws:\/\/localhost:7780\r?$/m.test(text))throw Error('new practice account required');
- return text.replace(/^SERVER=.*$/gm,`SERVER=${p.server}`).replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=${p.gateway}`);
+ if(!/^SERVER=localhost(?::8888)?\r?$/m.test(text)||/^GATEWAY_URL=/m.test(text)&&!/^GATEWAY_URL=ws:\/\/localhost:7780\r?$/m.test(text))throw Error('new practice account required');
+ const server=text.replace(/^SERVER=[^\r\n]*/gm,`SERVER=${p.server}`);
+ return /^GATEWAY_URL=/m.test(server)?server.replace(/^GATEWAY_URL=[^\r\n]*/gm,`GATEWAY_URL=${p.gateway}`):server.trimEnd()+`\nGATEWAY_URL=${p.gateway}\n`;
 }
 export async function startQuestSweepProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
  const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
@@ -58,16 +59,28 @@ const sameAssets=(a:Save,b:Save,cost:Record<number,number>)=>{
 };
 
 export function questSweepChecks(id:string,before:Save,after:Save,log:string,record:CaseRecord){
- const success=id==='bank-stage',boats=lines(log,'QUEST_SWEEP_BOAT');
+ const success=id==='bank-stage',ghost=id==='retained-ghost'||id==='banked-ghost',banked=id==='banked-ghost',boats=lines(log,'QUEST_SWEEP_BOAT');
  const checks={
-  child:!record.timedOut&&record.exit===(success?0:1),
+  child:!record.timedOut&&record.exit===(success||ghost?0:1),
   saved:record.saveMatched,
   oneLogin:(log.match(/^START /gm)??[]).length===1,
   logout:(log.match(/^LOGOUT logged-out$/gm)??[]).length===1&&!/^WARN .*?(?:logout|session close)/m.test(log),
   alive:after.skills[3]!.level>0&&!/\bdied=true\b|^RESULT fail .*died/m.test(log),
-  entryHp:before.skills[3]!.level===10,
-  assets:sameAssets(before,after,success?{1759:-20,995:0}:{}),
-  unrelatedXp:before.skills.every((s,i)=>success&&i===12||s.rawExperience===after.skills[i]!.rawExperience),
+  entryHp:before.skills[3]!.level===(ghost?26:10),
+  assets:sameAssets(before,after,ghost?{553:-1}:success?{1759:-20,995:0}:{}),
+  unrelatedXp:before.skills.every((s,i)=>success&&i===12||ghost&&i===5||s.rawExperience===after.skills[i]!.rawExperience),
+ };
+ if(ghost)return{...checks,
+  entry:before.position.x===(banked?3094:3113)&&before.position.z===(banked?3491:9555)&&before.position.level===0&&before.vars[107]===4&&total(before,553)===1&&(before.inventories[94]??[]).some(i=>i.id===552)&&before.skills[6]!.level===1&&total(before,563)===0,
+  result:/^RESULT ok(?: |$)/m.test(log),
+  retained:lines(log,'QUEST_SWEEP_RETAINED_SKULL').length===1&&lines(log,'GHOST_RETAINED_SKULL').length===1&&!/^MILESTONE [1-4](?:\s|$)/m.test(log),
+  bankedSkull:!banked||(before.inventories[95]??[]).some(i=>i.id===553&&i.count===1)&&lines(log,'QUEST_SWEEP_WITHDRAW').some(r=>r.id===553&&r.count===1&&r.before===0&&r.after===1&&r.bankBefore===1&&r.bankAfter===0&&r.observed),
+  quest:after.vars[107]===5&&(after.vars[101]??0)===(before.vars[101]??0)+1,
+  questList:lines(log,'QUEST_SWEEP_FLAG').some(q=>q.name==='The Restless Ghost'&&q.state==='complete'),
+  reward:after.skills[5]!.rawExperience===before.skills[5]!.rawExperience+281250,
+  skull:total(after,553)===0,
+  amulet:(after.inventories[94]??[]).some(i=>i.id===552),
+  location:after.position.level===0&&Math.max(Math.abs(after.position.x-3249),Math.abs(after.position.z-3192))<=6,
  };
  if(success)return{...checks,
   entry:before.position.x===2459&&before.position.z===3385&&before.position.level===0&&total(before,1759)===20&&(before.vars[179]??0)===0,
@@ -94,14 +107,14 @@ function verify(dir:string){
  const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8')) as {source:string;cases:CaseRecord[];endpoints:ProofEndpoints};
  const endpoints=questSweepProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
  if(meta.endpoints.server!==endpoints.server||meta.endpoints.gateway!==endpoints.gateway)throw Error('retained practice endpoints mismatch');
- const results=['bank-stage','missing'].map(id=>{
+ const results=['bank-stage','missing','retained-ghost','banked-ghost'].map(id=>{
   const record=meta.cases.find(c=>c.id===id);
   if(!record)throw Error(`missing retained case ${id}`);
   const checks=questSweepChecks(id,readPracticeSave(join(dir,id+'-before.sav')),readPracticeSave(join(dir,id+'-after.sav')),readFileSync(join(dir,id+'.log'),'utf8'),record);
   return{...record,ok:Object.values(checks).every(Boolean),checks};
  });
  const source=meta.source===workerSourceRevision();
- const report={ok:source&&results.every(r=>r.ok),source,results,scope:'Native practice at 150ms and 25x XP. One Sheep Shearer from HP10 Gnome entry, two boat fares, and missing-item refusal. No live or unattended claim.'};
+ const report={ok:source&&results.every(r=>r.ok),source,results,scope:'Native practice at150ms/25xXP: existing HP10 Gnome Sheep Shearer/two boat fares, missing-item refusal, and HP26/Magic1 Ghost completion from held-cellar and banked-surface skull entries with no law rune. Exact quest rewards/assets and logout. No live or unattended claim.'};
  writeFileSync(join(dir,'results.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 
@@ -124,12 +137,13 @@ async function run(dir:string){
  try{
   endpoints=selectQuestSweepProofEndpoints();
   stack=await startQuestSweepProofStack(endpoints);
-  for(const c of [{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},{id:'missing',quest:'doric',bank:[]}]){
+  for(const c of [{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},{id:'missing',quest:'doric',bank:[]},...['retained-ghost','banked-ghost'].map(id=>({id,quest:'priest',bank:[{id:995,count:1127309},{id:1436,count:243},{id:1446,count:1},...(id==='banked-ghost'?[{id:553,count:1}]:[])]}))]){
    const name=runBotName('qsw',cases.length);
    if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('fresh quest-sweep practice account required');
    const {envPath}=await createBot(name);
    writeFileSync(envPath,questSweepProofAccountEnv(readFileSync(envPath,'utf8'),endpoints));
-   const save=await applyPreset(name,{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[{id:995,count:362},{id:1351,count:1}]});
+   const ghost=c.quest==='priest',banked=c.id==='banked-ghost';
+   const save=await applyPreset(name,ghost?{position:banked?{x:3094,z:3491,level:0}:{x:3113,z:9555,level:0},skills:{Hitpoints:26,Attack:37,Magic:1,Prayer:1},varps:{107:4},equipment:[{id:552,count:1,slot:2}],bank:c.bank,inventory:[...(!banked?[{id:553,count:1}]:[]),{id:556,count:3},{id:557,count:1}]}:{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[{id:995,count:362},{id:1351,count:1}]});
    const before=join(dir,c.id+'-before.sav');
    if(existsSync(before))throw Error(`preserve before snapshot: ${before}`);
    copyFileSync(save,before);
@@ -143,7 +157,7 @@ async function run(dir:string){
     const [out,err]=await Promise.all([new Response(p.stdout).text(),new Response(p.stderr).text()]);
     record.exit=await p.exited;clearTimeout(kill);await termination;
     writeFileSync(join(dir,c.id+'.log'),out+'\n--stderr--\n'+err);
-    const saved=await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(c.id==='missing'||s.vars[179]===22),{timeoutMs:6000});
+    const saved=await waitPracticeSave(save,s=>statSync(save).mtimeMs>stamp&&(c.id==='missing'||(ghost?s.vars[107]===5:s.vars[179]===22)),{timeoutMs:6000});
     record.saveMatched=saved.matched;
    }finally{
     clearTimeout(kill);copyFileSync(save,join(dir,c.id+'-after.sav'));record.seconds=Math.round((Date.now()-t)/1000);retain();
