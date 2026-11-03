@@ -2,7 +2,10 @@
 import {openSync,writeFileSync,rmSync,closeSync,mkdirSync,readFileSync,copyFileSync,existsSync,statSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {freemem} from 'node:os';
-import {startStack} from './stack';
+import {randomUUID} from 'node:crypto';
+import {startStack,type StackOptions} from './stack';
+import {canBind} from './ports';
+import {rsSdkRoot} from './paths';
 import {applyPreset} from './presets';
 import {createBot} from './bots';
 import {runBotName} from './prove';
@@ -14,6 +17,35 @@ import {PRACTICE_STARTUP_GB,FREE_FLOOR_GB} from '../../core/src/memory';
 type Save=ReturnType<typeof readPracticeSave>;
 type CaseRecord={id:string;exit:number;timedOut:boolean;saveMatched:boolean;seconds:number};
 const root=resolve(import.meta.dir,'../../..');
+export function questSweepProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
+ const values=[ports?.engine,ports?.gateway,ports?.management,ports?.tcp];
+ if(!values.every(p=>Number.isSafeInteger(p)&&p>=1024&&p<=65535&&![8888,7780,8898,43594].includes(p))
+  ||new Set(values).size!==4||!/^quest-sweep-[a-z0-9]{20}$/.test(instance))throw Error('owned practice endpoints required');
+ const server=`127.0.0.1:${ports.engine}`,gateway=`ws://127.0.0.1:${ports.gateway}`;
+ return{ports:{...ports},instance,server,gateway,env:{AGENT_PORT:String(ports.gateway),GATEWAY_URL:`http://127.0.0.1:${ports.gateway}`,
+  WEB_MANAGEMENT_PORT:String(ports.management),NODE_PORT:String(ports.tcp),GE_DATABASE:`data/market-${instance}.sqlite`}};
+}
+type ProofEndpoints=ReturnType<typeof questSweepProofEndpoints>;
+export function selectQuestSweepProofEndpoints(bind:typeof canBind=canBind,random:()=>number=Math.random){
+ for(let i=0;i<100;i++){
+  const engine=20000+Math.floor(random()*20000),ports={engine,gateway:engine+1,management:engine+2,tcp:engine+3};
+  if(Object.values(ports).every(bind))return questSweepProofEndpoints(ports,'quest-sweep-'+randomUUID().replaceAll('-','').slice(0,20));
+ }
+ throw Error('owned practice ports unavailable');
+}
+export function questSweepProofAccountEnv(text:string,p:ProofEndpoints){
+ if(!/^SERVER=localhost:8888\r?$/m.test(text)||!/^GATEWAY_URL=ws:\/\/localhost:7780\r?$/m.test(text))throw Error('new practice account required');
+ return text.replace(/^SERVER=.*$/gm,`SERVER=${p.server}`).replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=${p.gateway}`);
+}
+export async function startQuestSweepProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
+ const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+ try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:150,readyTimeoutMs:60000});}
+ finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
+}
+export function questSweepChildConfiguration(name:string,quest:string,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
+ return{cmd:['bun','scripts/quest-sweep.ts',name,quest],cwd:root,windowsHide:true,
+  env:{...inherited,...p.env,GATEWAY_URL:p.gateway,QUEST_SWEEP_OBSERVE_BANK:'',RANDOM_EVENTS:'0'}};
+}
 const lines=(log:string,prefix:string)=>log.split(/\r?\n/).filter(l=>l.startsWith(prefix+' ')).map(l=>JSON.parse(l.slice(prefix.length+1)));
 const total=(s:Save,id:number)=>[93,95].reduce((n,t)=>n+(s.inventories[t]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),0);
 // The server writes an empty worn row (94) on first logout; an empty row and an absent row hold the same items.
@@ -59,7 +91,9 @@ export function questSweepChecks(id:string,before:Save,after:Save,log:string,rec
 }
 
 function verify(dir:string){
- const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8')) as {source:string;cases:CaseRecord[]};
+ const meta=JSON.parse(readFileSync(join(dir,'native.json'),'utf8')) as {source:string;cases:CaseRecord[];endpoints:ProofEndpoints};
+ const endpoints=questSweepProofEndpoints(meta.endpoints?.ports,meta.endpoints?.instance??'');
+ if(meta.endpoints.server!==endpoints.server||meta.endpoints.gateway!==endpoints.gateway)throw Error('retained practice endpoints mismatch');
  const results=['bank-stage','missing'].map(id=>{
   const record=meta.cases.find(c=>c.id===id);
   if(!record)throw Error(`missing retained case ${id}`);
@@ -84,12 +118,17 @@ async function run(dir:string){
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory:dir,task:'quest-sweep'}));closeSync(fd);
  mkdirSync(dir,{recursive:true});
  const cases:CaseRecord[]=[],source=workerSourceRevision();
- const retain=()=>writeFileSync(join(dir,'native.json'),JSON.stringify({source,tickMs:150,xpRate:25,cases},null,2));
+ let endpoints:ProofEndpoints|undefined;
+ const retain=()=>writeFileSync(join(dir,'native.json'),JSON.stringify({source,tickMs:150,xpRate:25,endpoints,cases},null,2));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
-  stack=await startStack({tickMs:150,readyTimeoutMs:60000});
+  endpoints=selectQuestSweepProofEndpoints();
+  stack=await startQuestSweepProofStack(endpoints);
   for(const c of [{id:'bank-stage',quest:'sheep',bank:[{id:1759,count:20}]},{id:'missing',quest:'doric',bank:[]}]){
-   const name=runBotName('qsw',cases.length);await createBot(name);
+   const name=runBotName('qsw',cases.length);
+   if(existsSync(join(rsSdkRoot(),'bots',name)))throw Error('fresh quest-sweep practice account required');
+   const {envPath}=await createBot(name);
+   writeFileSync(envPath,questSweepProofAccountEnv(readFileSync(envPath,'utf8'),endpoints));
    const save=await applyPreset(name,{position:c.id==='bank-stage'?{x:2459,z:3385,level:0}:{x:2965,z:3380,level:0},skills:{Hitpoints:10},bank:c.bank,inventory:[{id:995,count:362},{id:1351,count:1}]});
    const before=join(dir,c.id+'-before.sav');
    if(existsSync(before))throw Error(`preserve before snapshot: ${before}`);
@@ -97,8 +136,7 @@ async function run(dir:string){
    if(freemem()/2**30<FREE_FLOOR_GB)throw Error('practice free memory below floor');
    const stamp=statSync(save).mtimeMs,t=Date.now();
    const record:CaseRecord={id:c.id,exit:-1,timedOut:false,saveMatched:false,seconds:0};cases.push(record);retain();
-   const p=Bun.spawn(['bun','scripts/quest-sweep.ts',name,c.quest],{cwd:root,stdout:'pipe',stderr:'pipe',windowsHide:true,
-    env:{...process.env,QUEST_SWEEP_OBSERVE_BANK:'',RANDOM_EVENTS:'0'}});
+   const p=Bun.spawn({...questSweepChildConfiguration(name,c.quest,endpoints),stdout:'pipe',stderr:'pipe'});
    let termination:Promise<void>|undefined;
    const kill=setTimeout(()=>{record.timedOut=true;termination=killTree(p.pid);},300000);
    try{
