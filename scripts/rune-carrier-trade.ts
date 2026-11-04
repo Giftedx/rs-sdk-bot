@@ -21,8 +21,28 @@ export function runeConfirmation(value=process.env.RUNE_CONFIRM_AFTER??'causal')
  if(value!=='observed'&&value!=='causal')throw Error('RUNE_CONFIRM_AFTER must be observed or causal');
  return value;
 }
+export function createRuneTradeRefresh(mode=process.env.RUNE_TRADE_REFRESH??'packets'){
+ if(mode!=='packets'&&mode!=='poll')throw Error('RUNE_TRADE_REFRESH must be packets or poll');
+ const seen=new WeakMap<Session,{packets:number;mutation:number}>(),dirty=new WeakMap<Session,number>();
+ let scanned=0,skipped=0;
+ return {
+  dirty:(actor:Session)=>{dirty.set(actor,(dirty.get(actor)??0)+1);},
+  refresh:async(actor:Session)=>{
+   const packets=(actor.client as {packetsReceived?:number}|undefined)?.packetsReceived,mutation=dirty.get(actor)??0,last=seen.get(actor);
+   if(mode==='packets'&&Number.isSafeInteger(packets)&&last?.packets===packets&&last.mutation===mutation){skipped++;return;}
+   await actor.sdk.scanGroundItems(0);scanned++;
+   // Retain the pre-scan stamp: an arrival or local action during the await must be read again.
+   if(Number.isSafeInteger(packets))seen.set(actor,{packets:packets!,mutation});
+  },
+  stats:()=>({mode,scanned,skipped}),
+ };
+}
 async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27,craft?:{send:()=>Promise<void>;complete:()=>boolean},pipeline?:{boundary?:CraftBoundary}){
  const opening=runeOpening(),confirmation=runeConfirmation();
+ const refresh=createRuneTradeRefresh();
+ const mutate=<T>(actor:Session,work:()=>Promise<T>)=>{refresh.dirty(actor);return work();};
+ const direct=(actor:Session,action:Parameters<Session['direct']>[0])=>mutate(actor,()=>actor.direct(action));
+ const accept=(actor:Session)=>mutate(actor,()=>actor.sdk.sendAcceptTrade());
  if(!Number.isSafeInteger(amount)||amount<1||amount>27)throw Error('carrier transfer amount must be1..27');
  if(pipeline&&(!craft||!pipeline.boundary))throw Error('pipeline handoff needs the previous exact craft boundary and combined crafting');
  const at=s.tick();
@@ -62,7 +82,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
    mark('event-loop-yield');
    await new Promise<void>(resolve=>setImmediate(resolve));
    mark('ground-scans');
-   await Promise.all([s.sdk.scanGroundItems(0),h.sdk.scanGroundItems(0)]);
+   await Promise.all([refresh.refresh(s),refresh.refresh(h)]);
    mark('control');
   }
   if(stop())break;
@@ -70,7 +90,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
   if(craft&&craftAt===undefined&&[s,h].every(a=>confirmed.has(a)||earlyConfirmed.has(a))&&(accepted()||credited())){
    // Both exact confirmations were sent. The fresh pair of server messages precedes
    // synchronous movement; success still requires the combined craft's exact effects.
-   if(stop())break;craftAt=s.tick();await craft.send();
+   if(stop())break;craftAt=s.tick();await mutate(s,()=>craft.send());
   }
   if(complete())break;
   const snapshot=JSON.stringify([s,h].map(a=>({name:a.name,open:trade(a)?.isOpen,screen:trade(a)?.screen,partner:trade(a)?.partner,
@@ -86,7 +106,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
      if(dialog?.isOpen&&!runeDialog||state(h).dialog?.isOpen)throw Error('pipeline handoff preserves unrelated dialogs');
      if(main&&helper&&si!==undefined&&hi!==undefined&&main.level===helper.level&&Math.max(Math.abs(main.worldX-helper.worldX),Math.abs(main.worldZ-helper.worldZ))<=1){
       if(ess(s)!==0||ess(h)!==amount)throw Error('pipeline opening stock changed');
-      const send=(a:Session,playerIndex:number)=>{if(stop())throw Error('pipeline opening stopped');return a.direct({type:'interactPlayer',playerIndex,optionIndex:4,reason:'SDK'});};
+      const send=(a:Session,playerIndex:number)=>{if(stop())throw Error('pipeline opening stopped');return direct(a,{type:'interactPlayer',playerIndex,optionIndex:4,reason:'SDK'});};
       mark('reciprocal-request');const sent=await Promise.all([send(h,si),send(s,hi)]);mark('control');
       if(sent.some(r=>!(r as {success?:boolean})?.success))throw Error('pipeline reciprocal request refused');
       requestPending=true;responseSent=true;
@@ -96,7 +116,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
    const dialog=state(s).dialog;
    if(!levelupDismissed&&dialog?.isOpen&&dialog.allComponents?.some(c=>/^(@dbl@)?Congratulations, you just advanced a runecraft level\.$/i.test(c.text))){
     // This modal keeps the crafter busy, so an incoming trade request cannot arrive until it closes.
-    mark('close-modal');await s.direct({type:'closeModal',reason:'SDK'});mark('control');levelupDismissed=true;
+    mark('close-modal');await direct(s,{type:'closeModal',reason:'SDK'});mark('control');levelupDismissed=true;
    }
    const incoming=()=>messages(s).some(m=>m.type===4&&m.sender?.toLowerCase()===h.name.toLowerCase()
     &&m.text==='wishes to trade with you.'&&(m.observationId??0)>incomingCursor);
@@ -111,12 +131,12 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
     const si=index(h,s.name),hi=index(s,h.name);
     if(si!==undefined&&hi!==undefined){
      incomingCursor=cursor(s);busyCursor=cursor(h);
-     mark('helper-request');await h.direct({type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});mark('control');requestPending=true;
+     mark('helper-request');await direct(h,{type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});mark('control');requestPending=true;
     }
    }
    if(requestPending&&ready()&&!stop()){
     const hi=index(s,h.name);
-    if(hi!==undefined){mark('crafter-response');await s.direct({type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
+    if(hi!==undefined){mark('crafter-response');await direct(s,{type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
    }
    }
   }
@@ -134,17 +154,17 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
      // retry is idempotent on trademain and invisible after confirmation opens.
      if(pipeline&&actor===s&&receiverEarly&&!receiverRetry&&trade(h)?.screen==='offer'&&trade(h)?.myAccepted
       &&exactCarrierOffer(t,false,h.name,amount)&&exactCarrierOffer(trade(h)!,true,s.name,amount)){
-      if(stop())break;const accepted=await s.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer retry refused '+accepted.message);receiverRetry=true;
+      if(stop())break;const accepted=await accept(s);if(!accepted.success)throw Error('carrier offer retry refused '+accepted.message);receiverRetry=true;
      }
      continue;
     }
     if(actor===h&&(t.myOffer?.length??0)===0&&!offerSent){
      const e=inv(h).find(i=>i.id===1436);
      if(!e)continue;
-     const result=await h.sdk.sendOfferItem(e.slot,-1);
+     const result=await mutate(h,()=>h.sdk.sendOfferItem(e.slot,-1));
      if(!result.success)throw Error('helper offer refused '+result.message);
      offerSent=true;
-     if(eager){const accepted=await h.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(h);}
+     if(eager){const accepted=await accept(h);if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(h);}
      continue;
     }
     const offer=actor===s?t.theirOffer:t.myOffer;
@@ -158,10 +178,10 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
     if(!pendingOwnedOffer&&total===0)continue;
     if(!pendingOwnedOffer&&total!==amount)throw Error('unexpected essence offer '+total);
     if(!t.myAccepted){
-     const accepted=await actor.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(actor);if(pipeline&&actor===s&&total===0)receiverEarly=true;
+     const accepted=await accept(actor);if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(actor);if(pipeline&&actor===s&&total===0)receiverEarly=true;
     }
    }else if(t.screen==='confirm'&&!t.myAccepted){
-    const accepted=await actor.sdk.sendAcceptTrade();
+    const accepted=await accept(actor);
     if(!accepted.success)throw Error('carrier confirmation refused '+accepted.message);
     // Interface text and offers may clear before the modal and inventory credit.
     confirmed.add(actor);
@@ -175,7 +195,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
    &&receiverTrade?.isOpen&&receiverTrade.screen==='offer'&&receiverTrade.partner?.toLowerCase()===h.name.toLowerCase()&&(receiverTrade.myOffer??[]).length===0){
    for(const peer of [s,h])if(!earlyConfirmed.has(peer)&&!confirmed.has(peer)){
     if(stop())break;earlyConfirmed.add(peer);
-    const result=await peer.direct({type:'clickComponent',componentId:3546,reason:'SDK'});
+    const result=await direct(peer,{type:'clickComponent',componentId:3546,reason:'SDK'});
     if(!(result as {success?:boolean})?.success)throw Error('causal carrier confirmation dispatch refused');
    }
   }
@@ -185,7 +205,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
    // offer mutations. A premature confirmation can be ignored by the server;
    // keep the exact observed-confirm fallback instead of treating dispatch as ACK.
    for(const actor of [s,h])if(!earlyConfirmed.has(actor)&&!confirmed.has(actor)){
-    if(stop())break;const result=await actor.direct({type:'clickComponent',componentId:3546,reason:'SDK'});
+    if(stop())break;const result=await direct(actor,{type:'clickComponent',componentId:3546,reason:'SDK'});
     if(!(result as {success?:boolean})?.success)throw Error('early carrier confirmation dispatch refused');earlyConfirmed.add(actor);
    }
   }
@@ -197,7 +217,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
  observe('loop-exit');mark('inventory-reconciliation');
  if(!await waitUntil(s,complete,{timeoutTicks:5}))throw Error(craft?'combined essence handoff and craft did not reconcile':'essence transfer did not reconcile');
  return (craftAt??s.tick())-at;
- }finally{observe('end');for(const off of observers)off();}
+ }finally{observe('end');for(const off of observers)off();console.log('RC_TRADE_REFRESH '+JSON.stringify(refresh.stats()));}
 }
 
 export {transfer,ess,state};
