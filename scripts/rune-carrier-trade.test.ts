@@ -2,6 +2,30 @@ import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {levelForXp} from '../packages/planner/src/curve';
 
+test('confirmation mode is explicit and rejects unknown controls',async()=>{
+ const {runeConfirmation}=await import('./rune-carrier-trade');
+ expect(runeConfirmation('observed')).toBe('observed');expect(runeConfirmation('causal')).toBe('causal');expect(()=>runeConfirmation('optimistic')).toThrow('RUNE_CONFIRM_AFTER');
+});
+
+test('causal confirmation reaches the server before confirmation publication and falls back after an invisible click',()=>{
+ for(const order of ['receiver','helper'])for(const quota of [1,5])for(const mode of ['observed','causal']){
+  const code=`import{mock}from'bun:test';import{resolve}from'node:path';process.env.RUNE_CONFIRM_AFTER='${mode}';
+  let tick=0,pending,settled=false,offered=false,early=0,ignored=0;const queues=[[],[]],server=[{screen:'offer',accepted:false},{screen:'offer',accepted:false}],cache=[];
+  const pack=()=>Array.from({length:27},(_,slot)=>({id:1436,count:1,slot}));const actors=[{name:'Crafter'},{name:'Carrier'}];
+  const publish=()=>actors.forEach((a,i)=>{const p=server[i];cache[i]={trade:{isOpen:!settled,screen:p.screen,partner:actors[1-i].name,myAccepted:p.accepted,myOffer:i===1&&offered&&(p.accepted||p.screen==='confirm')?pack():[],theirOffer:i===0&&offered&&(server[1].accepted||p.screen==='confirm')?pack():[]},gameMessages:[]};});publish();
+  const enqueue=(i,component)=>{if(component===3546&&cache[i].trade.screen==='offer')early++;queues[i].push(component);return{success:true};};
+  actors.forEach((a,i)=>{a.tick=()=>tick;a.direct=async(x)=>enqueue(i,x.componentId);a.sdk={getInventory:()=>i===1?(settled?[]:pack()):(settled?pack():[]),getState:()=>cache[i],scanGroundItems:async()=>{},sendOfferItem:async()=>{queues[i].push('offer');return{success:true}},sendAcceptTrade:async()=>enqueue(i,cache[i].trade.screen==='confirm'?3546:3420)};});
+  const advance=()=>{tick++;for(const i of ${order==='receiver'?'[0,1]':'[1,0]'})for(const c of queues[i].splice(0,${quota})){const p=server[i],other=server[1-i];if(c==='offer'){offered=true;server.forEach(x=>x.accepted=false);}else if(c===3420&&p.screen==='offer'){p.accepted=true;if(other.accepted)server.forEach(x=>{x.screen='confirm';x.accepted=false;});}else if(c===3546&&p.screen==='confirm'){p.accepted=true;if(other.accepted)settled=true;}else ignored++;}
+   // First-screen accepted state is immediate; confirmation is deliberately one publication late.
+   if(settled||server[0].screen==='offer'||tick%2===0)publish();};
+  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{if(!pending)pending=new Promise(r=>queueMicrotask(()=>{advance();pending=undefined;r();}));return pending;}}));
+  const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(actors[0],actors[1]);}catch(e){error=String(e)}console.log(JSON.stringify({error,early,ignored,settled}));`;
+  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:3000});
+  if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+  expect(r.error).toBe('');expect(r.settled).toBe(true);expect(r.early).toBe(mode==='causal'?2:0);if(mode==='causal'&&order==='helper')expect(r.ignored).toBeGreaterThan(0);
+ }
+});
+
 test('helper-ready acknowledgement answers once before delayed incoming publication',()=>{
  for(const mode of ['fresh','stale','spoofed','busy-then-ready','stop','opened']){
   const code=`import{mock}from'bun:test';import{resolve}from'node:path';
@@ -163,7 +187,7 @@ test('delayed carrier transfer opening avoids cancellation and reconciles27 esse
  const s={name:'Crafter',pack:[],trade:closed(),messages:[]},h={name:'Carrier',pack:Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})),trade:closed(),messages:[]};
  const essence=a=>a.pack.filter(i=>i.id===1436).reduce((n,i)=>n+i.count,0),before=[essence(s),essence(h)];
  for(const [a,other]of [[s,h],[h,s]]){
-  a.tick=()=>phase;a.direct=async()=>{if(requests.some(r=>r.name===a.name))duplicate=true;requests.push({name:a.name,tick:phase});return{success:true}};
+  a.tick=()=>phase;a.direct=async(action)=>{if(action.type==='clickComponent'){if(a.trade.screen==='confirm')a.trade.myAccepted=true;return{success:true}}if(requests.some(r=>r.name===a.name))duplicate=true;requests.push({name:a.name,tick:phase});return{success:true}};
   a.sdk={getInventory:()=>a.pack,getState:()=>({trade:a.trade,gameMessages:a.messages,nearbyPlayers:[{name:other.name,index:1}]}),scanGroundItems:async()=>{},sendOfferItem:async(slot,amount)=>{
    if(a!==h||amount!==-1||!a.pack.some(i=>i.slot===slot))throw Error('unexpected offer');
    a.trade.myOffer=a.pack.map(i=>({...i}));other.trade.theirOffer=a.trade.myOffer.map(i=>({...i}));a.trade.myAccepted=false;other.trade.myAccepted=false;return{success:true};
@@ -201,6 +225,7 @@ function acknowledgedTransfer(busyUntil:number,mode:'fresh'|'missing'|'stop'|'le
  const message=(a,type,sender,text)=>a.messages.push({type,sender,text,observationId:++a.seq});
  for(const[a,other]of [[s,h],[h,s]]){
   a.tick=()=>phase;a.direct=async(action)=>{
+   if(action.type==='clickComponent'){if(a.trade.screen==='confirm')a.trade.myAccepted=true;return{success:true}}
    if(action.type==='closeModal'){
     if(a!==s)throw Error('wrong actor closed');closes++;events.push({at:phase+1,run:()=>{modal=false;}});return{success:true};
    }
