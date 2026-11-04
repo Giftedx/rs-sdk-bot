@@ -15,11 +15,20 @@ export const QUEST_NAMES: Record<string, string> = {
     cook: "Cook's Assistant", sheep: 'Sheep Shearer', rj: 'Romeo & Juliet', runemysteries: 'Rune Mysteries Quest',
     druid: 'Druidic Ritual', gobdip: 'Goblin Diplomacy', doric: "Doric's Quest", fluffs: "Gertrude's Cat",
     sheepherder: 'Sheep Herder', hazeelcult: 'Hazeel Cult', prince: 'Prince Ali Rescue', imp: 'Imp Catcher',
-    hetty: "Witch's Potion", haunted: 'The Restless Ghost', blackknight: "Black Knight's Fortress", demon: 'Demon Slayer',
+    hetty: "Witch's Potion", haunted: 'Ernest the Chicken', blackknight: "Black Knight's Fortress", demon: 'Demon Slayer',
     dig: 'Digsite Quest', drunkmonk: "Monk's Friend", fishingcompo: 'Fishing Contest', elemental: 'Elemental Workshop',
-    priest: 'Priest in Peril', vampire: 'Vampire Slayer', squire: "The Knight's Sword", arrav: 'Shield of Arrav',
+    priest: 'The Restless Ghost', vampire: 'Vampire Slayer', squire: "The Knight's Sword", arrav: 'Shield of Arrav',
     murder: 'Murder Mystery', death: 'Death Plateau', tree: 'Tree Gnome Village', grandtree: 'The Grand Tree',
     junglepotion: 'Jungle Potion', merlin: "Merlin's Crystal", seaslug: 'Sea Slug Quest', scorpion: 'Scorpion Catcher',
+    arena: "Fight Arena", ball: "Witch's House", biohazard: "Biohazard", chompybird: "Big Chompy Bird Hunting",
+    cog: "Clock Tower", crest: "Family Crest", desertrescue: "The Tourist Trap", dragon: "Dragon Slayer",
+    druidspirit: "Nature Spirit", eadgar: "Eadgar's Ruse", elena: "Plague City", grail: "Holy Grail",
+    hauntedmine: "Haunted Mine", hero: "Hero's Quest", horror: "Horror from the Deep", hunt: "Pirate's Treasure",
+    ikov: "Temple of Ikov", itgronigen: "Observatory Quest", itwatchtower: "Watch Tower",
+    misc: "Throne of Miscellania", mm: "Monkey Madness", mortton: "Shades of Mortton",
+    priestperil: "Priest in Peril", regicide: "Regicide", routequest: "In Search of the Myreque",
+    tbwt: "Tai Bwo Wannai Trio", totem: "Tribal Totem", troll: "Troll Stronghold", trolllove: "Troll Romance",
+    upass: "Underground Pass", viking: "The Fremennik Trials", zanaris: "Lost City", zombiequeen: "Shilo Village",
 };
 
 // Skill levels a quest checks before it can finish. Sea Slug: the dry sticks light only at Firemaking 30
