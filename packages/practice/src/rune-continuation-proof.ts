@@ -137,7 +137,7 @@ async function run(dir:string){
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
   const launch=async(prefix:string,mode='--body-continuation',craftAfter='inventory')=>{
-   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CRAFT_AFTER:craftAfter,RUNE_HANDOFF_PIPELINE:craftAfter==='trade-message'?'1':'0'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
+   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CRAFT_AFTER:craftAfter,RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:craftAfter==='trade-message'?'helper-ack':'incoming'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},CAP*TICK_MS+60000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);

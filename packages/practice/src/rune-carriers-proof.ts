@@ -52,7 +52,7 @@ async function run(dir:string){
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
   const freshAbsent=!existsSync(paths[0]!);if(!freshAbsent)throw Error('master save exists before first login');
-  const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,'--carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(WORKER_CAP),RUNE_CRAFT_AFTER:'trade-message',RUNE_HANDOFF_PIPELINE:'1',BODY_XP_RATE:'25'},windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
+  const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,'--carriers'],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(WORKER_CAP),RUNE_CRAFT_AFTER:'trade-message',RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:'helper-ack',BODY_XP_RATE:'25'},windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
   let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
   const stop=()=>{termination??=killTree(child.pid);};
   const timer=setTimeout(()=>{timedOut=true;stop();},WORKER_TIMEOUT_MS),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);

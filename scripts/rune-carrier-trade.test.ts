@@ -1,6 +1,28 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {levelForXp} from '../packages/planner/src/curve';
+
+test('helper-ready acknowledgement answers once before delayed incoming publication',()=>{
+ for(const mode of ['fresh','stale','spoofed','busy-then-ready','stop','opened']){
+  const code=`import{mock}from'bun:test';import{resolve}from'node:path';
+  process.env.RUNE_OPEN_AFTER='helper-ack';let tick=0,pending,requests=0,response=-1;
+  const s={name:'Crafter',messages:[]},h={name:'Carrier',messages:[{type:0,sender:'',text:'Sending trade offer...',observationId:1}]};
+  for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>tick;a.direct=async()=>{if(a===h)requests++;else response=tick;return{success:true}};
+   a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],
+    getState:()=>({trade:{isOpen:'${mode}'==='opened'&&tick>=2},gameMessages:a.messages,nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{}};}
+  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{if(!pending)pending=new Promise(r=>queueMicrotask(()=>{
+   tick++;if(tick===1&&'${mode}'==='busy-then-ready')h.messages.push({type:0,sender:'',text:'Crafter is busy at the moment.',observationId:2});
+   if(tick===2&&'${mode}'!=='stale')h.messages.push({type:'${mode}'==='spoofed'?2:0,sender:'${mode}'==='spoofed'?'Stranger':'',text:'Sending trade offer...',observationId:3});
+   if(tick===5)s.messages.push({type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1});
+   pending=undefined;r();}));return pending;}}));
+  const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>response>=0||tick>=('${mode}'==='stop'?2:6));}catch{}
+  console.log(JSON.stringify({requests,response}));`;
+  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:3000});
+  if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+  expect(r.requests).toBe(mode==='busy-then-ready'?2:1);
+  expect(r.response).toBe(['stop','opened'].includes(mode)?-1:['stale','spoofed'].includes(mode)?5:2);
+ }
+});
 test('polling preserves tick-stall failure with at most one wait per actor',()=>{
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';let active=0,peak=0,requests=0;

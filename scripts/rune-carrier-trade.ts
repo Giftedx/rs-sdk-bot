@@ -13,6 +13,8 @@ export function exactCarrierOffer(t:ReturnType<Session['sdk']['getTradeState']>,
   &&(offered??[]).every(i=>i.id===1436&&Number.isSafeInteger(i.count)&&i.count>0)&&(offered??[]).reduce((n,i)=>n+i.count,0)===amount;
 }
 async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27,craft?:{send:()=>Promise<void>;complete:()=>boolean},pipeline?:{boundary?:CraftBoundary}){
+ const opening=process.env.RUNE_OPEN_AFTER??'incoming';
+ if(opening!=='incoming'&&opening!=='helper-ack')throw Error('RUNE_OPEN_AFTER must be incoming or helper-ack');
  if(!Number.isSafeInteger(amount)||amount<1||amount>27)throw Error('carrier transfer amount must be1..27');
  if(pipeline&&(!craft||!pipeline.boundary))throw Error('pipeline handoff needs the previous exact craft boundary and combined crafting');
  const at=s.tick();
@@ -90,8 +92,12 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
    }
    const incoming=()=>messages(s).some(m=>m.type===4&&m.sender?.toLowerCase()===h.name.toLowerCase()
     &&m.text==='wishes to trade with you.'&&(m.observationId??0)>incomingCursor);
+   // This exact server message follows the target's busy check. Only this owner
+   // issues the helper's one outstanding request, so its fresh ACK is attributable.
+   const ready=()=>incoming()||opening==='helper-ack'&&messages(h).some(m=>m.type===0&&m.sender===''
+    &&m.text==='Sending trade offer...'&&(m.observationId??0)>busyCursor);
    // Retry only a server-refused request. The incoming request acknowledges acceptance after the craft delay.
-   if(requestPending&&!incoming()&&messages(h).some(m=>m.type===0&&m.sender===''
+   if(requestPending&&!ready()&&messages(h).some(m=>m.type===0&&m.sender===''
     &&m.text.toLowerCase()===s.name.toLowerCase()+' is busy at the moment.'&&(m.observationId??0)>busyCursor))requestPending=false;
    if(!requestPending&&!stop()){
     const si=index(h,s.name),hi=index(s,h.name);
@@ -100,7 +106,7 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
      mark('helper-request');await h.direct({type:'interactPlayer',playerIndex:si,optionIndex:4,reason:'SDK'});mark('control');requestPending=true;
     }
    }
-   if(requestPending&&incoming()&&!stop()){
+   if(requestPending&&ready()&&!stop()){
     const hi=index(s,h.name);
     if(hi!==undefined){mark('crafter-response');await s.direct({type:'interactPlayer',playerIndex:hi,optionIndex:4,reason:'SDK'});mark('control');responseSent=true;}
    }
