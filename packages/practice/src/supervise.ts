@@ -51,6 +51,13 @@ export function isPrerequisiteFailure(result: string): boolean {
         || /\b(?:cow prerequisite:|cow kit equip failed (?:1277|1171):|oak PREPARE requires known Draynor bank start\b|cow needs positive CAP and MAX_KILLS1\.\.5\b|oak needs CAP>0 and MAX_MAKE1\.\.25\b|TRAIN_SKILL must be Attack, Strength or Defence\b|TARGET_LEVEL must be1\.\.99\b|missing shears\b|low HP during tool bootstrap\b|worker ended or cap\b)/.test(result);
 }
 
+// A TickStallError (packages/core/src/tick-stream.ts) is the game connection going quiet, the same loss as a
+// disconnect: a fresh login repairs it. Such a run retries within maxRestarts even when the worker also reports
+// no progress, because the stalled stream is what stopped the progress.
+export function isTransportStall(result: string): boolean {
+    return /^RESULT fail\b/.test(result) && /tick stream stalled: no new game tick for \d+ms/.test(result);
+}
+
 export function isEntryRefusal(result: string): boolean {
     return /^RESULT fail\b/.test(result) && /\bticks=0\b/.test(result) && !/died=true/.test(result);
 }
@@ -71,7 +78,7 @@ export async function supervise(d: SuperviseDeps): Promise<{ reason: 'done' | 's
         if (isWorkerReleaseHold(result)) return { reason: 'release-paused', runs };
         // A worker that refuses before it acts (no game ticks) changed nothing: the account is free for its next job.
         if (isEntryRefusal(result)) return { reason: 'refused', runs };
-        if (isNoProgressFailure(result) || isPrerequisiteFailure(result)) return { reason: 'blocked', runs };
+        if (!isTransportStall(result) && (isNoProgressFailure(result) || isPrerequisiteFailure(result))) return { reason: 'blocked', runs };
         if (++fails > d.maxRestarts) return { reason: 'gave-up', runs };
         await d.pause(10_000);
     }

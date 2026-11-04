@@ -8,7 +8,7 @@
 // to host.ts as given, except that a restart passes only the env of the accounts it runs.
 // Prints `SUPERVISE-HOST account <name> <reason> after <n> runs` once per account, then `SUPERVISE-HOST end`.
 
-import { isNoProgressFailure, isPrerequisiteFailure } from './supervise';
+import { isNoProgressFailure, isPrerequisiteFailure, isTransportStall } from './supervise';
 import {assertWorkerRelease,isWorkerReleaseHold} from '../../core/src/worker-release';
 
 export type AccountEnd = 'done' | 'stopped' | 'died' | 'blocked' | 'gave-up' | 'release-paused';
@@ -23,7 +23,7 @@ export function classify(result: string | undefined, stopFile: boolean): Account
     // Out of food: a restart only logs in again and finds the same empty bank.
     if (/RESULT fail no food/.test(r)) return 'stopped';
     if (isWorkerReleaseHold(r)) return 'release-paused';
-    if (isNoProgressFailure(r) || isPrerequisiteFailure(r)) return 'blocked';
+    if (!isTransportStall(r) && (isNoProgressFailure(r) || isPrerequisiteFailure(r))) return 'blocked';
     return null;
 }
 
