@@ -442,14 +442,20 @@ try {
     };
     const trialsBack = async () => {
         // A death wing hit closes every gate page, and each leaf answers only from its own tile.
-        for (let k = 0; k < 8 && z() < 9314; k++) {
+        const wings = () => npcsOf([NPC.deathwing]).filter(w => w.distance <= 5 && w.z < 9314);
+        for (let k = 0; k < 14 && z() < 9314; k++) {
             await q.guard('str gate back');
-            const near = () => npcsOf([NPC.deathwing]).filter(w => w.distance <= 3 && w.z < 9314);
-            // A cowardly wing flees: hit it only while it hits the bot, and never fail on it.
-            for (let t = 0; t < 30 && near().length && tick() - lastHit < 8; t++) { if (t % 4 === 0) await attack(near()[0]); await q.waitTicks(1); }
+            // Every wing hit, even a 0, closes the page chain (7 pages), so a wing that hits the bot dies first.
+            let wing = -1;
+            for (let t = 0; t < 120 && wings().length && tick() - lastHit < 10; t++) {
+                await q.guard('death wing');
+                const w = wings().find(k2 => k2.index === wing) ?? wings()[0]!;
+                if (w.index !== wing || t % 4 === 0) { wing = w.index; await attack(w); }
+                await q.waitTicks(1);
+            }
             const [leaf, tile] = k % 2 ? [LOC.strGate, { x: 2809, z: 9313 }] : [LOC.strGateL, { x: 2810, z: 9313 }];
-            await walk('str gate back', tile, 0);
-            await drive('str gate back', [/^Yes, I'm very strong, I'll force them open\.$/], () => z() >= 9314 && !open(), 50, () => opL(leaf, 1), 8);
+            if (q.cheb(tile.x, tile.z) > 0) await q.dash('str gate tile', tile.x, tile.z, 1, 15);
+            await drive('str gate back', [/^Yes, I'm very strong, I'll force them open\.$/], () => (z() >= 9314 && !open()) || (tick() - lastHit < 2 && wings().length > 0), 40, () => opL(leaf, 1), 8);
         }
         if (z() < 9314) await q.fail('str gate back');
         for (const [b, zz] of [[LOC.boulder3, 9321], [LOC.boulder2, 9325], [LOC.boulder1, 9329]] as Array<[L, number]>) await opUntil('boulder back', b, 1, () => z() >= zz, [/^Yes, I'll try to climb out\.$/], 60, 6);
