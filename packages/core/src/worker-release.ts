@@ -112,7 +112,7 @@ function stringLiterals(file:string,text:string):string[]{
 // A literal names a release path when, read from the file's folder or from the repository root, it is an existing
 // file under releaseDataRoots or vendor (a wasm a vendored module loads), or a folder under releaseDataRoots.
 // Folders count from knowledge, scripts/<dir> and packages/<pkg>/<dir>.
-function literalPaths(base:string,file:string,literal:string):{path:string;dir:boolean}[]{
+function literalPaths(base:string,file:string,literal:string,memo:ReleaseMemo):{path:string;dir:boolean}[]{
     if(literal.length>300||!/^[\w@.\/\\-]+$/.test(literal)||/^[./\\]*$/.test(literal))return [];
     const s=posix(literal);let fromRoot=s;
     for(let next=fromRoot.replace(/^(?:\.\.?\/|\/)/,'');next!==fromRoot;next=fromRoot.replace(/^(?:\.\.?\/|\/)/,''))fromRoot=next;
@@ -120,6 +120,11 @@ function literalPaths(base:string,file:string,literal:string):{path:string;dir:b
     for(const p of new Set([repoPath(base,resolve(base,dirname(file),s)),repoPath(base,resolve(base,fromRoot))])){
         if(!p)continue;const parts=p.split('/'),top=parts[0]!;
         if(!releaseDataRoots.includes(top)&&top!=='vendor')continue;
+        // A literal that does not exist can become release input when created. Watch its nearest existing
+        // parent too, including an empty folder that contributes no current source file.
+        let parent=dirname(p);
+        while(kind(base,parent)!=='dir'&&parent!=='.')parent=dirname(parent);
+        memo.set('dirs:literal:'+p,[parent]);
         const k=kind(base,p);
         if(k==='file'&&releaseFile.test(p)&&!p.endsWith('.test.ts'))out.push({path:p,dir:false});
         else if(k==='dir'&&releaseDataRoots.includes(top)&&(top==='knowledge'||top==='scripts'&&parts.length>=2||top==='packages'&&parts.length>=3))out.push({path:p,dir:true});
@@ -133,7 +138,7 @@ function fileLinks(base:string,file:string,memo:ReleaseMemo):{files:string[];dir
         if(spec.startsWith('.'))files.push(...resolveImport(base,file,spec));
         else if(spec.startsWith('@rsbot/'))throw Error('no worker progress: release workspace import unsupported: '+file+' -> '+spec);
     }
-    if(!hashOnly.has(file))for(const literal of stringLiterals(file,text))for(const p of literalPaths(base,file,literal))(p.dir?dirs:files).push(p.path);
+    if(!hashOnly.has(file))for(const literal of stringLiterals(file,text))for(const p of literalPaths(base,file,literal,memo))(p.dir?dirs:files).push(p.path);
     const links={files,dirs};memo.set(key,links);return links;
 }
 const inRuntimeTree=(p:string)=>runtimeTrees.some(t=>p===t||p.startsWith(t+'/'));

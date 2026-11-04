@@ -9,7 +9,8 @@ test('cached admission keeps entry closures separate and rejects changed bytes, 
  try{
   mkdirSync(join(root,'vendor/rs-sdk/sdk/empty/nested'),{recursive:true});
   mkdirSync(join(root,'knowledge/empty/nested'),{recursive:true});
-  writeFileSync(join(root,'scripts/worker.ts'),readFileSync(join(root,'scripts/worker.ts'),'utf8')+"export const folder='knowledge/empty';\n");
+  mkdirSync(join(root,'knowledge/optional'),{recursive:true});
+  writeFileSync(join(root,'scripts/worker.ts'),readFileSync(join(root,'scripts/worker.ts'),'utf8')+"export const folder='knowledge/empty';\nexport const optional='knowledge/optional/new.json';\n");
   const pin=capabilityRevision(entry,root),env={WORKER_ENTRY:entry[0],WORKER_RELEASE:pin};
   for(let i=0;i<17;i++)expect(cachedReleaseFor(entry,root)).toBe(pin);
   expect(cachedReleaseFor(['scripts/other.ts'],root)).toBe(capabilityRevision(['scripts/other.ts'],root));
@@ -17,6 +18,8 @@ test('cached admission keeps entry closures separate and rejects changed bytes, 
   writeFileSync(file,'export const shared=2;\n');utimesSync(file,stamp.atime,stamp.mtime);
   expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
   expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('release source changed');
+  writeFileSync(join(root,'knowledge/optional/new.json'),'[]');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
   writeFileSync(join(root,'knowledge/empty/nested/added.json'),'[]');
   expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
   writeFileSync(join(root,'scripts/worker.ts'),"export * from './new-helper';\n");
