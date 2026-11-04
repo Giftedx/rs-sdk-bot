@@ -158,23 +158,25 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
     if(!pendingOwnedOffer&&total===0)continue;
     if(!pendingOwnedOffer&&total!==amount)throw Error('unexpected essence offer '+total);
     if(!t.myAccepted){
-     const causal=confirmation==='causal'&&amount===27&&actor===s&&offerSent&&offerAccepted.has(h)
-      &&helperTrade?.screen==='offer'&&helperTrade.myAccepted&&exactCarrierOffer(helperTrade,true,s.name,amount)
-      &&t.partner?.toLowerCase()===h.name.toLowerCase()&&(t.myOffer??[]).length===0;
      const accepted=await actor.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(actor);if(pipeline&&actor===s&&total===0)receiverEarly=true;
-     // The helper's server acceptance binds both immutable offers. Invisible
-     // confirmation clicks are ignored; dispatch never replaces observed fallback.
-     if(causal)for(const peer of [s,h])if(!earlyConfirmed.has(peer)&&!confirmed.has(peer)){
-      if(stop())break;earlyConfirmed.add(peer);
-      const result=await peer.direct({type:'clickComponent',componentId:3546,reason:'SDK'});
-      if(!(result as {success?:boolean})?.success)throw Error('causal carrier confirmation dispatch refused');
-     }
     }
    }else if(t.screen==='confirm'&&!t.myAccepted){
     const accepted=await actor.sdk.sendAcceptTrade();
     if(!accepted.success)throw Error('carrier confirmation refused '+accepted.message);
     // Interface text and offers may clear before the modal and inventory credit.
     confirmed.add(actor);
+   }
+  }
+  const receiverTrade=trade(s),helperTrade=trade(h);
+  // Remote exact-offer publication can follow the receiver's acceptance latch.
+  // Recheck the same server-accepted offer without sending another first accept.
+  if(confirmation==='causal'&&amount===27&&offerSent&&offerAccepted.has(s)&&offerAccepted.has(h)
+   &&helperTrade?.isOpen&&helperTrade.screen==='offer'&&helperTrade.myAccepted&&exactCarrierOffer(helperTrade,true,s.name,amount)
+   &&receiverTrade?.isOpen&&receiverTrade.screen==='offer'&&receiverTrade.partner?.toLowerCase()===h.name.toLowerCase()&&(receiverTrade.myOffer??[]).length===0){
+   for(const peer of [s,h])if(!earlyConfirmed.has(peer)&&!confirmed.has(peer)){
+    if(stop())break;earlyConfirmed.add(peer);
+    const result=await peer.direct({type:'clickComponent',componentId:3546,reason:'SDK'});
+    if(!(result as {success?:boolean})?.success)throw Error('causal carrier confirmation dispatch refused');
    }
   }
   if(pipeline&&offerAccepted.size===2&&trade(s)?.screen==='offer'&&trade(h)?.screen==='offer'

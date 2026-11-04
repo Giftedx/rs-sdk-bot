@@ -100,10 +100,10 @@ test('an offer acceptance is sent once while its published flag is delayed',()=>
 });
 function delayedOffer(mode:'valid'|'empty'|'wrong-item'|'partial'){
  const code=`
- import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,offered=false,receiverAt=-1,confirms=0;
+ import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,offered=false,receiverAt=-1,confirms=0;const early=[];
  const pack=(n=27,id=1436)=>Array.from({length:n},(_,slot)=>({id,count:1,slot}));
  const s={name:'Crafter'},h={name:'Carrier'};
- for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>phase;a.trade={isOpen:true,screen:'offer',partner:o.name,myAccepted:false,myOffer:[],theirOffer:[]};
+ for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>phase;a.trade={isOpen:true,screen:'offer',partner:o.name,myAccepted:false,myOffer:[],theirOffer:[]};a.direct=async command=>{early.push({name:a.name,phase,component:command.componentId});return{success:true}};
  a.sdk={getInventory:()=>a===h?(phase<4?pack():[]):(phase>=4?pack():[]),getState:()=>({trade:a.trade,nearbyPlayers:[]}),scanGroundItems:async()=>{},
  sendOfferItem:async()=>{offered=true;return{success:true}},sendAcceptTrade:async()=>{if(a.trade.screen==='confirm')confirms++;else if(a===s)receiverAt=phase;return{success:true}}};}
  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
@@ -112,15 +112,21 @@ function delayedOffer(mode:'valid'|'empty'|'wrong-item'|'partial'){
  if(phase===2){const stock='${mode}'==='empty'?[]:pack('${mode}'==='partial'?26:27,'${mode}'==='wrong-item'?995:1436);h.trade.myOffer=stock;s.trade.theirOffer=stock;}
  if(phase===3)for(const a of[s,h]){a.trade.screen='confirm';a.trade.myAccepted=false;}
  if(phase===4)for(const a of[s,h])a.trade={isOpen:false};pending=undefined;r();}));return pending;}}));
- const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,receiverAt,confirms}));`;
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,receiverAt,confirms,early}));`;
  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
  if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
 }
 test('a fresh server acceptance acknowledges the owned offer before item publication',()=>{
  const r=delayedOffer('valid');expect(r.error).toBe('');expect(r.receiverAt).toBe(1);expect(r.confirms).toBe(2);
 });
+
+test('causal confirmation rechecks the exact accepted offer after receiver acceptance is latched',()=>{
+ const r=delayedOffer('valid');expect(r.error).toBe('');expect(r.receiverAt).toBe(1);
+ expect(r.early).toEqual([{name:'Crafter',phase:2,component:3546},{name:'Carrier',phase:2,component:3546}]);
+ expect(r.confirms).toBe(2);
+});
 test('early owned-offer acceptance cannot accept empty, partial or wrong-item confirmation',()=>{
- for(const mode of ['empty','partial','wrong-item'] as const){const r=delayedOffer(mode);expect(r.error).not.toBe('');expect(r.confirms).toBe(0);}
+ for(const mode of ['empty','partial','wrong-item'] as const){const r=delayedOffer(mode);expect(r.error).not.toBe('');expect(r.confirms).toBe(0);expect(r.early).toEqual([]);}
 });
 
 function acceptedCraftCase(mode:'fresh'|'stale'|'spoofed'|'no-movement'|'refused'|'stop'){
