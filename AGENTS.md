@@ -22,7 +22,7 @@ On Windows every background subprocess uses `windowsHide:true`. Run only the ser
 
 Several agents work at once: sessions on this PC (Claude Code, Codex) and cloud sessions (Codex, Claude Code). Each takes work from the lane the [plan](docs/plans/joined-plan.md) Lanes table gives it.
 
-- One change, one branch `<agent>/<topic>`, one PR to `master`. Before work, check `gh pr list` and open a draft PR, so two agents never edit the same files. Merge when `bun run typecheck` and `bun test ./scripts ./packages` pass; never force-push `master`.
+- One change, one branch `<agent>/<topic>`, one PR to `master`. Before work, check `gh pr list` and open a draft PR, so two agents never edit the same files. Merge when `bun run typecheck` and `bun test ./scripts ./packages` pass; never force-push `master`. The hosted `linux` check proves this; if it stays queued (hosted minutes used up), `bun scripts/ci-gate.ts --post` runs the same checks on the PC and posts `local-gate`, which counts the same.
 - A local agent works in its own worktree (`git worktree add ../rs-sdk-bot-<agent> -b <agent>/<topic>`). Only the main checkout runs the local swarm, coordinator and fleet agent.
 - Each machine runs bots only for its own fleet side (Accounts, below). Cross-side resources move through fleet orders, never by logging in another side's account.
 
