@@ -55,6 +55,38 @@ test('skills and holdings gate templates; coins pick a shop; a retired pair pick
     expect(ids(plan(inputs([acct('Fletch', {}, { 'arrow shaft': 1000, feather: 1000 })]))).Fletch).toBe('fletch-headless');
 });
 
+test('a shop blocked only by coins is funded by the richest free donor above its reserve', () => {
+    const knights = Object.fromEntries(['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'].map(s => [`knight:${s}`, 1]));
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const poor = acct('Poor', {}, { coin: 500 });
+    const out = plan(inputs([poor], { templates: shops, taken: knights, donors: [{ name: 'Small', coins: 51_000 }, { name: 'Big', coins: 900_000 }] }));
+    expect(out[0]!.template?.id).toBe('shop-feathers');
+    expect(out[0]!.fund).toEqual({ from: 'Big', to: 'Poor', coins: 1_500, template: 'shop-feathers' });
+    // No donor holds the need above FUND_RESERVE (50,000): the account stays vacant and nothing is funded.
+    const none = plan(inputs([poor], { templates: shops, donors: [{ name: 'Small', coins: 51_000 }] }));
+    expect(none[0]!.template).toBeUndefined();
+    // Without donors the old rule stands: the coin need gates the shop.
+    expect(plan(inputs([poor], { templates: shops }))[0]!.template).toBeUndefined();
+});
+
+test('a donor that gives stays free that pass; an account that holds the coins needs no fund', () => {
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const show = (out: ReturnType<typeof plan>) => Object.fromEntries(out.map(x => [x.account, x.fund ? `funded by ${x.fund.from}` : x.template?.id ?? x.reason]));
+    const opts = (donor: string) => ({ templates: shops, capacity: { 'shop:sarim': 2 }, donors: [{ name: donor, coins: 900_000 }] });
+    // Equal values go in name order. Poor comes first: Zed funds it and takes no job.
+    expect(show(plan(inputs([acct('Poor'), acct('Zed', {}, { coin: 900_000 })], opts('Zed'))))).toEqual({ Poor: 'funded by Zed', Zed: 'vacant: gives coins this pass' });
+    // Big comes first and takes the job itself: an assigned account never gives.
+    expect(show(plan(inputs([acct('Poor'), acct('Big', {}, { coin: 900_000 })], opts('Big'))))).toEqual({ Poor: expect.stringMatching(/^vacant: no template/), Big: 'shop-feathers' });
+    expect(plan(inputs([acct('Rich', {}, { coin: 5_000 })], { templates: shops, donors: [{ name: 'Big', coins: 900_000 }] }))[0]!.fund).toBeUndefined();
+});
+
+test('an account with an enabled job is never funded, so no running job is removed for a trade', () => {
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const out = plan(inputs([acct('Poor', {}, { coin: 500 })], { templates: shops, donors: [{ name: 'Big', coins: 900_000 }], unfundable: new Set(['poor']) }));
+    expect(out[0]!.fund).toBeUndefined();
+    expect(out[0]!.template).toBeUndefined();
+});
+
 test('an account with nothing useful is vacant with its constraint', () => {
     const out = plan(inputs([acct('Idle')], { templates: catalogue().filter(t => t.id === 'lobster-chain') }));
     expect(out).toEqual([{ account: 'Idle', value: 0, resources: [], reason: expect.stringMatching(/^vacant: /) }]);

@@ -150,11 +150,14 @@ export async function buyFishingSupplies(s: Session, feathers: number): Promise<
     return Math.max(0, countItems(s, /^feather$/i) - before);
 }
 
-export type FiniteFoodProfile={target:number;netCap:number;flyCap:number;catchCap:number;noProgressTicks:number};
-export function finiteFoodProfile(raw:string|undefined):FiniteFoodProfile|undefined{
- if(raw===undefined)return undefined;const target=Number(raw);
+export type FiniteFoodProfile={target:number;netCap:number;flyCap:number;catchCap:number;noProgressTicks:number;singleKind?:true};
+export function finiteFoodProfile(raw:string|undefined,singleRaw?:string):FiniteFoodProfile|undefined{
+ if(singleRaw!==undefined&&!['0','1'].includes(singleRaw))throw Error('FOOD_SINGLE_KIND must be0 or1');
+ if(raw===undefined){if(singleRaw==='1')throw Error('FOOD_SINGLE_KIND needs FOOD_TARGET');return undefined;}const target=Number(raw);
  if(!Number.isSafeInteger(target)||target<1||target>28)throw Error('FOOD_TARGET must be1..28 new banked trout/salmon');
- return {target,netCap:16,flyCap:target*2,catchCap:16+target*2,noProgressTicks:240};
+ if(singleRaw==='1'&&target>16)throw Error('single-kind FOOD_TARGET must be1..16');
+ const flyCap=singleRaw==='1'?Math.max(3,target*3):target*2;
+ return {target,netCap:16,flyCap,catchCap:16+flyCap,noProgressTicks:240,...(singleRaw==='1'?{singleKind:true as const}:{})};
 }
 export function finiteFoodEntryPosition(p:{worldX:number;worldZ:number;level:number}|null|undefined){
  return !!p&&p.level===0&&(Math.max(Math.abs(p.worldX-3092),Math.abs(p.worldZ-3243))<=4||p.worldX>=3217&&p.worldX<=3253&&p.worldZ>=3190&&p.worldZ<=3255);
@@ -163,13 +166,37 @@ export function finiteFoodWork(profile:FiniteFoodProfile,banked:number,packCooke
  const needed=Math.max(0,profile.target-banked-packCooked);
  return {needed,cook:needed>0&&raw>0,fish:raw<needed,done:banked===profile.target};
 }
+export type FoodKinds={trout:number;salmon:number};
+export function finiteFoodKindsWork(profile:FiniteFoodProfile,bank:FoodKinds,pack:FoodKinds,raw:FoodKinds){
+ if(!profile.singleKind)return finiteFoodWork(profile,bank.trout+bank.salmon,pack.trout+pack.salmon,raw.trout+raw.salmon);
+ const trout=bank.trout+pack.trout,salmon=bank.salmon+pack.salmon,progress=Math.max(trout,salmon);
+ return {needed:Math.max(0,profile.target-progress),cook:progress<profile.target&&raw.trout+raw.salmon>0,
+  fish:progress<profile.target&&trout+raw.trout<profile.target&&salmon+raw.salmon<profile.target,
+  done:Math.max(bank.trout,bank.salmon)>=profile.target};
+}
+export function finiteFoodPreferredRaw(profile:FiniteFoodProfile,bank:FoodKinds,pack:FoodKinds,raw:FoodKinds):number|undefined{
+ if(!profile.singleKind||Math.max(bank.trout+pack.trout,bank.salmon+pack.salmon)>=profile.target)return undefined;
+ const candidates=([{kind:'trout',rawId:335},{kind:'salmon',rawId:331}] as const).map(k=>({...k,need:profile.target-bank[k.kind]-pack[k.kind]}))
+  .filter(k=>k.need>0&&raw[k.kind]>=k.need).sort((a,b)=>a.need-b.need||a.rawId-b.rawId);
+ return candidates[0]?.rawId;
+}
+const FINITE_RIVER_TILES=new Set(['3239,3241','3239,3242','3239,3243','3239,3244','3238,3251','3238,3252','3238,3254','3238,3255']);
+export function finiteFoodSpotAllowed(n:any,finite=false):boolean{
+ if(!n||!/fishing spot/i.test(n.name)||WHIRLPOOL.has(n.id)||!n.optionsWithIndex?.some((o:any)=>/^lure$/i.test(o.text)))return false;
+ // Only the finite profile admits the southern tiles: entry already requires fullHP27/combat29;
+ // NPC59 cowardly hunting excludes non-Wilderness players above combat4 (Npc.ts1011).
+ return finite?n.id===329&&n.reachable===true&&FINITE_RIVER_TILES.has(`${n.x},${n.z}`):n.z>=3248;
+}
 export function finiteFoodCanCatch(profile:FiniteFoodProfile,net:number,fly:number,phase:'net'|'fly'){
  // Reserve one accepted in-flight catch before movement cancels the interaction.
  return net+fly<profile.catchCap-1&&(phase==='net'?net<profile.netCap-1:fly<profile.flyCap-1);
 }
+export function finiteFoodExitReady(profile:FiniteFoodProfile,done:boolean,net:number,fly:number,blocked:boolean,p:{worldX:number;worldZ:number;level:number}|null|undefined){
+ return done&&!blocked&&net<=profile.netCap&&fly<=profile.flyCap&&net+fly<=profile.catchCap&&!!p&&p.level===0&&Math.max(Math.abs(p.worldX-3092),Math.abs(p.worldZ-3243))<=4;
+}
 type Tile = { x: number; z: number };
 type Pt = [number, number, number];
-const FINITE=finiteFoodProfile(process.env.FOOD_TARGET);
+const FINITE=finiteFoodProfile(process.env.FOOD_TARGET,process.env.FOOD_SINGLE_KIND);
 const TICKS = Number(process.env.TICKS ?? 1500);
 if(FINITE&&(!Number.isSafeInteger(TICKS)||TICKS<1||TICKS>6000||process.env.GIVE_TO||process.env.HANDOFF_ONLY==='1'||process.env.EXTERNAL_REFILL==='1'))throw Error('finite food needs TICKS1..6000 and no handoff/external refill');
 const MAX_CATCHES = Number(process.env.MAX_CATCHES ?? Number.MAX_SAFE_INTEGER);
@@ -250,7 +277,7 @@ try {
     const make1 = componentId('skill_multi3:make1_a');
 
     let died = false, hpMin = hp(), lastFail = '';
-    const initialHp=hp(),initialLife=pos()?.lifeId,initialRespawns=pos()?.respawnCount;let finiteHurt=false,netCaught=0,flyCaught=0,lastRawNet=0,lastRawFly=0,lastCatchTick=s.tick();
+    const initialHp=hp(),initialLife=pos()?.lifeId,initialRespawns=pos()?.respawnCount;let finiteHurt=false,netCaught=0,flyCaught=0,lastRawNet=0,lastRawFly=0,lastCatchTick=s.tick();let activeFishingIndex:number|undefined;
     const rawIds=(ids:number[])=>inv().filter(i=>ids.includes(i.id)).reduce((n,i)=>n+i.count,0);
     lastRawNet=rawIds([317,321]);lastRawFly=rawIds([335,331]);
     let last = pos();
@@ -261,7 +288,9 @@ try {
          finiteHurt ||= hp()<initialHp||p?.isDead===true||p?.lifeId!==initialLife||p?.respawnCount!==initialRespawns;
          const net=rawIds([317,321]),fly=rawIds([335,331]);
          const a=Math.max(0,net-lastRawNet),b=Math.max(0,fly-lastRawFly);netCaught+=a;flyCaught+=b;
-         if(a+b>0)lastCatchTick=s.tick();lastRawNet=net;lastRawFly=fly;
+         if(a+b>0)lastCatchTick=s.tick();
+         if(b>0){const state=st();console.log('FINITE_CATCH '+JSON.stringify({tick:s.tick(),delta:b,player:p,spot:state?.nearbyNpcs.find(n=>n.index===activeFishingIndex)??null,spiders:state?.nearbyNpcs.filter(n=>n.id===59).slice(0,8)}));}
+         lastRawNet=net;lastRawFly=fly;
         }
         if ((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 0) > 0 && hp() <= 0) died = true;
         if (p && last && cheb({ x: last.worldX, z: last.worldZ }, p) > 20 && cheb({ x: 3222, z: 3218 }, p) <= 3) died = true;
@@ -273,13 +302,21 @@ try {
     let noSpot = 0, spotWaits = 0, reclicks = 0;
     let caught = 0, cooked = 0, burnt = 0, banked = 0, bankFish = 0, packs = 0, cycles = 0, kills = 0, feathersGot = 0, given = 0, events = 0, eats = 0;
     const cook0 = cook(), fishXp0 = fishXp();
+    const newBankKinds:FoodKinds={trout:0,salmon:0},packKinds=():FoodKinds=>({trout:rawIds([333]),salmon:rawIds([329])}),rawKinds=():FoodKinds=>({trout:rawIds([335]),salmon:rawIds([331])});
+    const finiteWork=()=>finiteFoodKindsWork(FINITE!,newBankKinds,packKinds(),rawKinds());
+    let noSpotLogs=0;
+    const logNoSpot=(reason:string,final=false)=>{
+     if(!FINITE||noSpotLogs>=(final?2:1))return;noSpotLogs++;
+     console.log('FINITE_NO_SPOT '+JSON.stringify({reason,tick:s.tick(),player:pos(),hp:hp(),newBankKinds,
+      npcs:(st()?.nearbyNpcs??[]).slice(0,32).map(n=>({id:n.id,index:n.index,name:n.name,x:n.x,z:n.z,distance:n.distance,reachable:n.reachable,options:n.optionsWithIndex?.slice(0,6),eligible:finiteFoodSpotAllowed(n,true)}))}));
+    };
 
     const end = async (ok: boolean, why: string): Promise<never> => {
         off();
         const ticks = now();
         const p = pos();
         const tries = cooked + burnt;
-        const detail = (FINITE?`foodTarget=${FINITE.target} netCaught=${netCaught} flyCaught=${flyCaught} catchCap=${FINITE.catchCap} `:'')+`ticks=${ticks} caught=${caught} cooked=${cooked} burnt=${burnt} burnPct=${(100 * burnt / Math.max(1, tries)).toFixed(1)} banked=${banked} bankFish=${bankFish} given=${given} `
+        const detail = (FINITE?`foodTarget=${FINITE.target} singleKind=${FINITE.singleKind??false} bankedTrout=${newBankKinds.trout} bankedSalmon=${newBankKinds.salmon} netCaught=${netCaught} flyCaught=${flyCaught} catchCap=${FINITE.catchCap} `:'')+`ticks=${ticks} caught=${caught} cooked=${cooked} burnt=${burnt} burnPct=${(100 * burnt / Math.max(1, tries)).toFixed(1)} banked=${banked} bankFish=${bankFish} given=${given} `
             + `foodPerKTicks=${(1000 * banked / Math.max(1, ticks)).toFixed(1)} cooking=${cook0}->${cook()} fishXp=${fishXp() - fishXp0} packs=${packs} cycles=${cycles} kills=${kills} feathersGot=${feathersGot} `
             + `fishTicks=${fishTicks} cookTicks=${cookTicks} walkTicks=${walkTicks} bankTicks=${bankTicks} chickenTicks=${chickenTicks} giveTicks=${giveTicks} idleTicks=${idleTicks} spotWaits=${spotWaits} reclicks=${reclicks} `
             + `events=${events} eats=${eats} feathers=${countItems(s, FEATHER)} packCooked=${cookedInPack()} hp=${hp()} hpMin=${hpMin} died=${died} at=${p?.worldX},${p?.worldZ},${p?.level}`;
@@ -305,7 +342,7 @@ try {
     };
     const go = async (points: Pt[], where: string) => {
         // Banking may finish after the work budget. Keep the output at its handoff point.
-        if (points === BANK_TO_FLY && (over()||FINITE&&banked>=FINITE.target)) return;
+        if (points === BANK_TO_FLY && (over()||FINITE&&finiteWork().done)) return;
         if (!(await walk(points))) await end(false, `walk ${where}`);
         if(FINITE&&(points===BANK_TO_FLY||points===BANK_TO_NET))lastCatchTick=s.tick();
     };
@@ -346,12 +383,13 @@ try {
             let stall = 0;
             const raw0 = countItems(s, RAW_ANY), burnt0 = countItems(s, BURNT);
             let rawPrev = raw0;
-            while (cookable().length > 0 && stall < 12 && !died && !(FINITE&&over()) && (!FINITE||finiteFoodWork(FINITE,banked,cookedInPack(),countItems(s,RAW_FISH)).cook)) {
+            while (cookable().length > 0 && stall < 12 && !died && !(FINITE&&over()) && (!FINITE||finiteWork().cook)) {
                 if (randomEventsOf(s)?.busy()) { await waitTicks(s, 1); continue; }
                 const fire = (st()?.nearbyLocs ?? []).find((l: any) => /^fireplace$/i.test(l.name) && l.x === FIREPLACE.x && l.z === FIREPLACE.z) as any;
                 if (!fire) { lastFail = 'no fireplace'; stall++; await waitTicks(s, 1); continue; }
                 // The best item the level allows first (salmon, trout, then chicken).
-                const items = cookable().sort((a, b) => (NEED[b.name.toLowerCase()] ?? 0) - (NEED[a.name.toLowerCase()] ?? 0));
+                const preferred=FINITE?finiteFoodPreferredRaw(FINITE,newBankKinds,packKinds(),rawKinds()):undefined;
+                const items = cookable().sort((a,b)=>(preferred===undefined?0:Number(b.id===preferred)-Number(a.id===preferred))||(NEED[b.name.toLowerCase()]??0)-(NEED[a.name.toLowerCase()]??0));
                 const item = items[0]!;
                 if (s.sdk.getDialog()?.isOpen || st()?.interface?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
                 await s.direct({ type: 'useItemOnLoc', itemSlot: item.slot, x: fire.x, z: fire.z, locId: fire.id, reason: 'SDK' });
@@ -430,7 +468,7 @@ try {
                 if (before === 0) continue;
                 if (COOKED.test(name)) {
                     const ids = [...new Set(inv().filter(i => re.test(i.name)).map(i => i.id))];
-                    for (const id of ids) banked += await depositObserved(s, { id, name });
+                    for (const id of ids) {const deposited=await depositObserved(s,{id,name});banked+=deposited;if(id===333)newBankKinds.trout+=deposited;if(id===329)newBankKinds.salmon+=deposited;}
                 } else {
                     const d = await s.bot.depositItem(re, -1);
                     if (!d.success) lastFail = `deposit ${name}:${d.message}`;
@@ -742,13 +780,13 @@ try {
         if (!GIVE_TO || s.tick() - lastCourierTrip < 600) return false;
         return cookCourierReady(readCourierStatus(), GIVE_TO, s.name, Date.now(), TARGETED_COLLECTION);
     };
-    while (!over() && caught < MAX_CATCHES && (!FINITE||!finiteFoodWork(FINITE,banked,cookedInPack(),countItems(s,RAW_FISH)).done)) {
+    while (!over() && caught < MAX_CATCHES && (!FINITE||!finiteWork().done)) {
         if(FINITE){
-         if(s.tick()-lastCatchTick>FINITE.noProgressTicks)await end(false,'finite fly no progress');
-         const work=finiteFoodWork(FINITE,banked,cookedInPack(),countItems(s,RAW_FISH));
+         if(s.tick()-lastCatchTick>FINITE.noProgressTicks){logNoSpot('finite fly no progress',true);await end(false,'finite fly no progress');}
+         const work=finiteWork();
          if(!work.fish||!finiteFoodCanCatch(FINITE,netCaught,flyCaught,'fly')){
           await cookAll();await bankTrip();lastCatchTick=s.tick();
-          if(banked===FINITE.target)break;
+          if(finiteWork().done)break;
           if(!finiteFoodCanCatch(FINITE,netCaught,flyCaught,'fly'))break;
           await go(BANK_TO_FLY,'finite refill trip');chain=null;lastCatchTick=s.tick();continue;
          }
@@ -787,9 +825,9 @@ try {
         // Fly fishing. Spots south of z 3248 sit on the spider bank (fishing30.ts).
         const f0 = s.tick();
         const raw0 = countItems(s, RAW_FISH);
-        const sp = (st()?.nearbyNpcs ?? []).filter((n: any) => /fishing spot/i.test(n.name) && !WHIRLPOOL.has(n.id) && n.z >= 3248
-            && n.optionsWithIndex?.some((o: any) => LURE.test(o.text))).sort((a: any, b: any) => a.distance - b.distance)[0] as any;
+        const sp = (st()?.nearbyNpcs ?? []).filter((n: any) => finiteFoodSpotAllowed(n,!!FINITE)).sort((a: any, b: any) => a.distance - b.distance)[0] as any;
         if (!sp) {
+            logNoSpot('no allowed lure NPC');
             const p = pos();
             if (!p || cheb(FLY_SPOT, p) > 3) await walk([[FLY_SPOT.x, FLY_SPOT.z, 1]]);
             else if (++noSpot > 5 && countItems(s, RAW_FISH) > 0) {
@@ -812,6 +850,7 @@ try {
         noSpot = 0;
         const lure = sp.optionsWithIndex.find((o: any) => LURE.test(o.text)).opIndex;
         if (sp.distance > 1) {
+            activeFishingIndex=sp.index;
             await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
             await waitUntil(s, () => ((st()?.nearbyNpcs ?? []).find((n: any) => n.index === sp.index)?.distance ?? 99) <= 1, { timeoutTicks: 10 });
             chain = { index: sp.index };
@@ -821,6 +860,7 @@ try {
             if (TICK3 && knife !== undefined && log !== undefined) {
                 await s.direct({ type: 'useItemOnItem', sourceSlot: knife, targetSlot: log, reason: 'SDK' });
                 await s.direct({ type: 'clickComponent', componentId: make1, reason: 'SDK' });
+                activeFishingIndex=sp.index;
                 await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
                 cycles++;
                 await waitTicks(s, 3);
@@ -830,6 +870,7 @@ try {
                 // spot that did not move (practice; live Mightyrod 456 ticks at 3239,3254).
                 stillAnim = (pos()?.animId ?? -1) === -1 ? stillAnim + 1 : 0;
                 if (chain?.index !== sp.index || stillAnim >= 2) {
+                    activeFishingIndex=sp.index;
                     await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
                     chain = { index: sp.index }; stillAnim = 0; reclicks++;
                 }
@@ -839,7 +880,7 @@ try {
         caught += Math.max(0, countItems(s, RAW_FISH) - raw0);
         fishTicks += s.tick() - f0;
     }
-    if(FINITE&&banked===FINITE.target)await end(!over()&&netCaught<=FINITE.netCap&&flyCaught<=FINITE.flyCap&&netCaught+flyCaught<=FINITE.catchCap&&!!pos()&&cheb(BANK,pos()!)<=4,'finite exact food output');
+    if(FINITE&&finiteWork().done)await end(finiteFoodExitReady(FINITE,finiteWork().done,netCaught,flyCaught,over(),pos()),'finite exact food output');
     if (died) await end(false, 'died');
     if(FINITE&&over())await end(false,finiteHurt?'finite damage/death guard':'finite tick/stop budget');
     if (existsSync(stopFile)) await end(false, 'stopped');
@@ -851,7 +892,7 @@ try {
         await cookAll();
     }
     await bankTrip();
-    if(FINITE)await end(banked===FINITE.target&&netCaught<=FINITE.netCap&&flyCaught<=FINITE.flyCap&&netCaught+flyCaught<=FINITE.catchCap,'finite food target/catch budget');
+    if(FINITE)await end(finiteFoodExitReady(FINITE,finiteWork().done,netCaught,flyCaught,over(),pos()),'finite food target/catch budget');
     await end(true, 'ticks');
 } catch (e) { await finish([s], false, String(e)); }
 }
