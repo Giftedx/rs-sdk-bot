@@ -58,3 +58,9 @@ test('the activity journal merges one cause on several accounts within two minut
  expect((html.match(/class="op-task"/g)||[]).length).toBe(3);
  expect(html).toContain('<strong>D</strong>');expect(html).toContain('<strong>E</strong>');
 });
+
+test('a public result keeps its outcome: a finished and a stopped run of one goal stay two rows',()=>{
+ const html=activity([{name:'A',ok:true,text:'Ranged training',at:100_000},{name:'B',ok:false,text:'Ranged training',at:99_000},{name:'C',ok:false,text:'Ranged training',at:98_000}]);
+ expect((html.match(/class="op-task"/g)||[]).length).toBe(2);
+ expect(html).toContain('<strong>A</strong>');expect(html).toContain('2 accounts · B, C');
+});
