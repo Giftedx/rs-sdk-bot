@@ -1,6 +1,17 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('./operations.js',import.meta.url),'utf8');
+
+test('the running-jobs card opens running claims and a stale queue cannot imply current work',()=>{
+ const code=source.slice(source.indexOf(' function operations(){'),source.indexOf(' function jobs(){'));
+ const button=source.slice(source.indexOf(' const button='),source.indexOf(' const tasks='));
+ const run=new Function('S','meta',`const E=String,age=()=>'1m',page=x=>x,title=()=>'',bots=()=>[],issues=()=>[],badge=(_s,label)=>label;let metaError='',message='';${button}${code};return operations();`);
+ const html=run({coordination:{available:true,fresh:false,counts:{running:2,pending:3},agents:[]}},{paused:false,coordinatorRunning:true});
+ expect(html).toMatch(/data-op="jobs-open" data-value="running"/);
+ expect(html).not.toContain('AI jobs working');expect(html).toContain('Running');
+ expect(html).not.toContain('No planner running');
+ expect(run({coordination:{}},{paused:false})).toContain('Unknown');
+});
 const commandSource=source.slice(source.indexOf(' async function command('),source.indexOf(' function draftFromForm()'));
 function commandHarness(rotates=true){
  const calls:any[]=[];const fetch=async(_url:string,input:any)=>{calls.push(input);return calls.length===1?Response.json({error:'Reload the local dashboard'},{status:403}):Response.json({status:'plan-requested'});};
