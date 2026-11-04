@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793817053009,
+ "at": 1793820094043,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -140,6 +140,22 @@
    "standing": true,
    "repeat": true,
    "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
