@@ -1,4 +1,4 @@
-import{trioMonkeyApproach}from'./quest-tbwt-owned';
+import{trioTinsayDoorExit,trioMonkeyApproach}from'./quest-tbwt-owned';
 import {runNpcMagic,nativeNpcSpell} from '../microbot-magic-npc';
 import {readFileSync} from 'node:fs';
 import {describe,test,expect} from 'bun:test';
@@ -124,3 +124,10 @@ test('quest completion UI close followed by fresh queued terminal and Continue i
 test('Trio modal closure reconciles lost ACK but never repeats a failed or asset-changing close',async()=>{for(const mode of ['lost','ineffective','debit']){let tick=0,sends=0;const ui={isOpen:true,interfaceId:1741},inventory=[{id:995,count:2000}],s:any={tick:()=>tick,onTick:(f:any)=>{const h=setInterval(()=>{tick++;f();},1);return()=>clearInterval(h);},sdk:{getState:()=>({interface:ui,skills:[]}),getInventory:()=>inventory,sendClickComponent:async()=>{throw Error('missing Native button');},sendCloseModal:async()=>{sends++;if(mode!=='ineffective')ui.isOpen=false;if(mode==='debit')inventory[0]!.count--;throw Error('lost acknowledgement');}}};if(mode==='lost')await trioCompleteScreen(s,()=>true,()=>{},12);else await expect(trioCompleteScreen(s,()=>true,()=>{},12)).rejects.toThrow('close unknown');expect(sends).toBe(1);}});
 
 test('fleeing original Monkey is approached before a new child anchors its ten-tile leash',async()=>{for(const mode of ['far','near','moved','replaced','stopped']){const p:any={worldX:mode==='near'?2824:2835,worldZ:3030,level:0},n:any={index:1996,id:132,x:2821,z:3036},native:any={type:{id:132}},client:any={npc:{1996:native}},s:any={client,sdk:{getState:()=>({player:p,nearbyNpcs:[n]})}};let walks=0;const q:any={walk:async(_:any,[to]:any)=>{walks++;expect(to).toEqual({x:2821,z:3036,tol:3});p.worldX=2824;p.worldZ=3036;if(mode==='moved')n.x=2800;if(mode==='replaced')client.npc[1996]={type:{id:132}};}};const run=trioMonkeyApproach(s,q,1996,()=>{if(mode==='stopped')throw Error('stopped');});if(['moved','replaced','stopped'].includes(mode))await expect(run).rejects.toThrow();else await run;expect(walks).toBe(mode==='near'||mode==='stopped'?0:1);}});
+
+test('Tinsay closed doorway exits once and waits out Native inviswall before the next reward',async()=>{
+ for(const mode of ['closed','away','missing','debit','stopped']){let tick=0,inputs=0;const player={level:0,worldX:mode==='away'?2793:2792,worldZ:3054},inventory=[{id:995,count:2000}],door={id:779,x:2792,z:3054,optionsWithIndex:[{opIndex:1,text:'Open'}]};const s:any={tick:()=>tick,onTick:(f:any)=>{const h=setInterval(()=>{tick++;f();},1);return()=>clearInterval(h);},sdk:{getState:()=>({player,nearbyLocs:mode==='missing'?[]:[door]}),getInventory:()=>inventory}},q:any={opLoc:async()=>{inputs++;player.worldZ++;if(mode==='debit')inventory[0]!.count--;},step:async(_label:any,send:any,ok:any,_cap:any,tries:any)=>{expect(tries).toBe(1);await send();expect(ok()).toBe(true);}},guard=()=>{if(mode==='stopped')throw Error('stop');};
+ if(['missing','debit','stopped'].includes(mode))await expect(trioTinsayDoorExit(s,q,guard)).rejects.toThrow();else await trioTinsayDoorExit(s,q,guard);
+ expect(inputs).toBe(mode==='closed'||mode==='debit'?1:0);if(inputs)expect(tick).toBeGreaterThanOrEqual(4);
+ }
+});

@@ -105,6 +105,15 @@ export function trioDialogReceipt(read:()=>Pick<BotWorldState,'recentDialogs'|'d
  return(re:RegExp)=>{const st=read();if(!st)return false;if(st.recentDialogs.some(d=>Number.isSafeInteger(d.observationId)&&d.observationId!>cursor&&d.tick>=start&&re.test(d.text.join(' '))))return true;
   const d=st.dialog;return d.isOpen&&!!d.pageId&&d.pageId!==page&&tick()>=start&&re.test([d.text??'',...(d.allComponents??[]).map(c=>c.text)].join(' '));};
 }
+export async function trioTinsayDoorExit(s:Session,q:Pick<Awaited<ReturnType<typeof openQuest>>,'step'|'opLoc'>,guard:()=>void){
+ guard();const state=s.sdk.getState(),p=state?.player;if(!p||p.level!==0||p.worldX!==2792||p.worldZ!==3054)return;
+ const door=state.nearbyLocs.find(l=>l.id===779&&l.x===2792&&l.z===3054&&l.optionsWithIndex?.some(o=>o.opIndex===1&&/^open$/i.test(o.text)));
+ if(!door)throw Error('Trio Tinsay doorway crossing unobserved');const before=pack(s);
+ const landed=()=>{guard();const p=s.sdk.getState()?.player;return p?.level===0&&Math.abs(p.worldX-2792)+Math.abs(p.worldZ-3054)===1;};
+ await q.step('Tinsay bamboo door exit',()=>{guard();return q.opLoc(door,1);},landed,8,1);
+ // Native open_and_close_door leaves an inviswall for three ticks.
+ await waitTicks(s,4);guard();if(!landed()||!trioPackEffect(before,pack(s),{}))throw Error('Trio Tinsay door exit receipt changed');
+}
 export async function trioMonkeyApproach(s:Session,q:Pick<Awaited<ReturnType<typeof openQuest>>,'walk'>,index:number,guard:()=>void){
  guard();const native=(s.client as any).npc?.[index],read=()=>{guard();const st=s.sdk.getState(),n=st?.nearbyNpcs.find(n=>n.index===index&&n.id===132),p=st?.player;if(!native||(s.client as any).npc?.[index]!==native||native.type?.id!==132||!n||!p||p.level!==0)throw Error('Trio original Monkey approach context changed');return{n,distance:Math.max(Math.abs(n.x-p.worldX),Math.abs(n.z-p.worldZ))};};
  const first=read();if(first.distance>8)await q.walk('original Monkey spell stand',[{x:first.n.x,z:first.n.z,tol:3}]);const after=read();if(after.distance<1||after.distance>8)throw Error('Trio original Monkey bounded spell stand unobserved');
@@ -209,7 +218,7 @@ export async function runTaiBwoWannaiTrio(raw:Session,o:TrioOrder,requestStop:()
   await crossLog(true);await hand('Tiadeche manual',3161,1163,TIADECHE,{3161:-1},[],()=>progress(321)===6);if(progress(320)!==4)throw Error('Trio native brothers/Lubufu completion unconfirmed');await crossLog(false);
   await move('Timfraku return',HOME.x,HOME.z,2);await hut(true);const gold=pack(s);await talk('Timfraku quest reward',/^Timfraku$/i,HOME,[/rather have some gold/i],()=>progress(320)===6&&client.var[101]-questPoints0===2&&trioPackEffect(gold,pack(s),{995:2000})&&questFlags(client)?.some(q=>q.name==='Tai Bwo Wannai Trio'&&q.state==='complete')===true,TRIO_TIMFRAKU_TERMINAL);add({995:2000});await hut(false);
   const rew=async(label:string,name:RegExp,home:{x:number;z:number},expected:Record<string,number>,delta:Record<number,number>={})=>{const x=xp(s),b=pack(s);await talk(label,name,home,[],()=>Object.entries(expected).every(([k,n])=>(xp(s)[k]??0)-(x[k]??0)===n*o.xpRate)&&trioPackEffect(b,pack(s),delta));add(delta);};
-  await rew('Tamayu final reward',/^Tamayu$/i,{x:2800,z:3057},{Attack:2500,Strength:2500},{3175:1});await rew('Tinsay final reward',/^Tinsay$/i,{x:2790,z:3054},{Cooking:5000});await rew('Tiadeche final reward',/^Tiadeche$/i,{x:2781,z:3057},{Fishing:5000});
+  await rew('Tamayu final reward',/^Tamayu$/i,{x:2800,z:3057},{Attack:2500,Strength:2500},{3175:1});await rew('Tinsay final reward',/^Tinsay$/i,{x:2790,z:3054},{Cooking:5000});await trioTinsayDoorExit(s,q,guard);await rew('Tiadeche final reward',/^Tiadeche$/i,{x:2781,z:3057},{Fishing:5000});
   guard();if(q.stats.eats)throw Error('Trio unexpected food use outside declared ledger');if(!trioPackEffect(initial,pack(s),ledger))throw Error('Trio final whole owned inventory audit failed');if(q.xp('Fishing')-baseline.Fishing!==6500*o.xpRate||q.xp('Cooking')-baseline.Cooking!==5100*o.xpRate||q.xp('Attack')-baseline.Attack!==2500*o.xpRate||q.xp('Strength')-baseline.Strength!==2500*o.xpRate)throw Error('Trio final reward XP failed');
   const bridgeBalances=q.msgCount(/you manage to keep your balance on the bridge/i),logXP=logCrossings.reduce((n,r)=>n+r.agilityXP,0);if(logCrossings.length!==4||q.xp('Agility')-baseline.Agility!==(2+10*bridgeBalances)*o.xpRate+logXP)throw Error('Trio native rock climbs/Cairn bridge/river log XP mismatch');
   for(const [name,value]of Object.entries(xp(s)))if(!['Attack','Strength','Fishing','Cooking','Agility','Magic','Hitpoints'].includes(name)&&value!==baseline[name])throw Error('Trio unrelated XP changed '+name);
