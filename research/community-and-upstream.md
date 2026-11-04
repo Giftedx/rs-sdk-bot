@@ -496,7 +496,7 @@ Rejected: `babaali131718-spec/rs2b0t-quest-forge` (no license, only an HTML page
 
 Our four quest folders with no script are all in the toolkit: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts` is the first port.
 
-**Claim:** the toolkit's TBWT route completes in 1468-1509 ticks. Conditions: their lockstep sim, seeded world and random doors, agility 60, magic 50. Evidence: `run-tai-bwo-wannai-trio.share.md`. Gap: not measured on our practice server.
+**Claim:** `quest-tbwt.ts` completes Tai Bwo Wannai Trio in 1,462, 1,483 and 1,469 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_tbwt` (every skill 99), the practice server, `0e2ea7d1`. Evidence: `.practice/tbwt-port/run4.log`, `run5.log` (`RESULT ok qp=2`, "Congratulations! Quest complete!"). The toolkit reports 1,468-1,509 ticks in its lockstep sim at agility 60 and magic 50. Gap: not run live; at agility below 99 the log bridge and the stones drop the bot more often.
 
 ### 9.3 Protocol rules from the toolkit guide that our docs do not state
 
