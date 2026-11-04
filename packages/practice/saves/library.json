@@ -1,0 +1,233 @@
+{
+  "entries": [
+    {
+      "name": "magic-9-wind-strike-runes",
+      "file": "magic-9-wind-strike-runes.sav",
+      "sha256": "b1fdbc5d546ac385e1b2e74cdec631f1e01f3475c56306a0664096be5848d04a",
+      "source": {
+        "account": "rhmagxn9111",
+        "via": "endpoint",
+        "tick": 840
+      },
+      "segment": "Magic 9 mid wind strike in south Varrock, 33 air and 27 mind runes held (route boundary start -> rings, Magic 8+)",
+      "engine": {
+        "rsSdk": "b565f2d920bf6f5ec427bc6f66dc6fd64a2e15c1",
+        "saveVersion": 9
+      },
+      "summary": {
+        "position": {
+          "x": 3237,
+          "z": 3407,
+          "level": 0
+        },
+        "skills": {
+          "Attack": {
+            "level": 2,
+            "xp": 100
+          },
+          "Hitpoints": {
+            "level": 9,
+            "xp": 1207
+          },
+          "Magic": {
+            "level": 9,
+            "xp": 850
+          }
+        },
+        "inventory": {
+          "333": 3,
+          "556": 33,
+          "558": 27,
+          "995": 200,
+          "1351": 1
+        },
+        "worn": {},
+        "bank": {
+          "995": 200,
+          "1511": 5
+        },
+        "varps": 10
+      }
+    },
+    {
+      "name": "smithing-50-alkharid-iron-bars",
+      "file": "smithing-50-alkharid-iron-bars.sav",
+      "sha256": "cb43e1806ab57e48c6707ea6f7e3690061590232556ea3038ea5a25af83aa62e",
+      "source": {
+        "account": "rhseex19b01",
+        "via": "endpoint",
+        "tick": 121
+      },
+      "segment": "Smithing 50+ at the Al Kharid furnace mid smelt: iron bars and iron ore held, more ore banked (bar supply for the anvil step)",
+      "engine": {
+        "rsSdk": "b565f2d920bf6f5ec427bc6f66dc6fd64a2e15c1",
+        "saveVersion": 9
+      },
+      "summary": {
+        "position": {
+          "x": 3275,
+          "z": 3186,
+          "level": 0
+        },
+        "skills": {
+          "Hitpoints": {
+            "level": 10,
+            "xp": 980
+          },
+          "Smithing": {
+            "level": 50,
+            "xp": 34181
+          }
+        },
+        "inventory": {
+          "440": 17,
+          "2351": 5
+        },
+        "worn": {},
+        "bank": {
+          "440": 200
+        },
+        "varps": 9
+      }
+    }
+  ],
+  "segments": [
+    {
+      "id": "seed-smithing-alkharid",
+      "start": {
+        "preset": "smelt_bars_alkharid"
+      },
+      "script": "scripts/smelt-bars.ts",
+      "args": [
+        "600",
+        "iron"
+      ],
+      "expect": {
+        "skills": {
+          "Smithing": 50
+        },
+        "items": {
+          "2351": {
+            "min": 1
+          }
+        }
+      },
+      "capture": {
+        "name": "smithing-50-alkharid-iron-bars",
+        "segment": "Smithing 50+ at the Al Kharid furnace mid smelt: iron bars and iron ore held, more ore banked (bar supply for the anvil step)",
+        "when": {
+          "items": {
+            "2351": {
+              "min": 5,
+              "in": "inventory"
+            }
+          }
+        }
+      },
+      "timeoutMs": 240000
+    },
+    {
+      "id": "magic-chain-1-15",
+      "route": {
+        "file": "packages/planner/src/cairn-route.json",
+        "step": "rings"
+      },
+      "start": {
+        "save": {
+          "position": {
+            "x": 3185,
+            "z": 3436,
+            "level": 0
+          },
+          "inventory": [
+            {
+              "id": 333,
+              "count": 1
+            },
+            {
+              "id": 333,
+              "count": 1
+            },
+            {
+              "id": 333,
+              "count": 1
+            },
+            {
+              "id": 1351,
+              "count": 1
+            }
+          ],
+          "bank": [
+            {
+              "id": 556,
+              "count": 37
+            },
+            {
+              "id": 558,
+              "count": 31
+            },
+            {
+              "id": 995,
+              "count": 400
+            },
+            {
+              "id": 1511,
+              "count": 5
+            }
+          ]
+        }
+      },
+      "script": "scripts/magic-order.ts",
+      "env": {
+        "TARGET_LEVEL": "15",
+        "RUNE_BUDGET": "200",
+        "CASH_RESERVE": "100",
+        "MAX_CASTS": "200",
+        "CAP": "1500"
+      },
+      "expect": {
+        "skills": {
+          "Magic": 15
+        }
+      },
+      "capture": {
+        "name": "magic-9-wind-strike-runes",
+        "segment": "Magic 8+ mid wind strike, air and mind runes held (route boundary start -> rings, Magic 8+)",
+        "when": {
+          "skills": {
+            "Magic": 8
+          }
+        }
+      },
+      "timeoutMs": 300000
+    },
+    {
+      "id": "magic-9-15",
+      "route": {
+        "file": "packages/planner/src/cairn-route.json",
+        "step": "rings"
+      },
+      "start": {
+        "snapshot": "magic-9-wind-strike-runes"
+      },
+      "script": "scripts/magic-order.ts",
+      "env": {
+        "TARGET_LEVEL": "15",
+        "RUNE_BUDGET": "200",
+        "CASH_RESERVE": "100",
+        "MAX_CASTS": "200",
+        "CAP": "1500"
+      },
+      "plan": {
+        "ticks": 131,
+        "source": "magic-chain-1-15 practice run: ticks from the Magic 9 capture (tick 840) to logout (tick 971)"
+      },
+      "expect": {
+        "skills": {
+          "Magic": 15
+        }
+      },
+      "timeoutMs": 300000
+    }
+  ]
+}

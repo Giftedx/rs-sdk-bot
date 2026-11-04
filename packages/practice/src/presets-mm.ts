@@ -13,7 +13,7 @@ import type { SaveConfig } from './presets';
 // of wool 1759, monkey bones 3183 (a Karamja monkey's, quest_tbwt/scripts/monkey.rs2:73); 7 prayer potions 2434;
 // 1 super antipoison 2448 (Karamja jungle spiders, Ape Atoll wildlife: the plain one ran out); 12 sharks 385 (26 slots: the seal and the orders fill the pack in chapter 1). No bananas: the child's garden has
 // banana trees (2741-2746,2792-2797) and the script picks 5 there (banana_tree.rs2). The full run at HP 35 with
-// 4 potions and 10 sharks died in the dungeon (practice, 2026-10-23).
+// 4 potions and 10 sharks died in the dungeon (practice).
 const MM_SKILLS = {
     Attack: 99, Hitpoints: 35, Magic: 99, Prayer: 43, Agility: 57, Thieving: 43, Smithing: 99, Cooking: 35,
     Fletching: 99, Crafting: 99, Herblore: 99, Firemaking: 99, Runecraft: 99,

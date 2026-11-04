@@ -1,21 +1,22 @@
 import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from 'node:fs';
-import {join,dirname,resolve} from 'node:path';
-import {tmpdir} from 'node:os';
+import {join,dirname,resolve,relative} from 'node:path';
 import {createHash} from 'node:crypto';
-import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
-import {beginSessionAttempt,readLogoutProof} from '../src/session-lifecycle';
+import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
+import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir} from '../src/session-lifecycle';
 import {installJob} from '../../router/src/coordinator-live';
 import {readMergedPlan,coordinatorJobsPath} from '../src/coordinator-jobs';
 import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
 import {recoveryHeldDiagnostic,recoveryBoundary,recoveryDiagnosticFromLog} from '../src/session-recovery';
 import {missionSignature} from '../src/session-admission';
 const source='a'.repeat(64),runner='b'.repeat(64),now=1793258000000;
+const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
+mkdirSync(fixtureRoot,{recursive:true});
 test('the controller launches the core recovery worker inside the gameplay ownership scope',()=>{
  expect(RECOVERY_SCRIPT).toBe('packages/core/src/session-recovery.ts');
 });
 test('private fixtures honour every repository and fixture stop flag',()=>{
- const base=mkdtempSync(join(tmpdir(),'recovery-stop-')),repo=resolve(import.meta.dir,'../../..');
+ const base=mkdtempSync(join(fixtureRoot,'recovery-stop-')),repo=resolve(import.meta.dir,'../../..');
  for(const root of [base,repo])for(const flag of ['stop-coordinator','stop-swarm','stop-Rod']){
   const stopped=join(root,'.practice',flag),observed:string[]=[];
   expect(()=>assertRecoveryNotStopped('Rod',base,path=>{observed.push(path);return path===stopped;})).toThrow('owner stopped');
@@ -24,7 +25,7 @@ test('private fixtures honour every repository and fixture stop flag',()=>{
  expect(()=>assertRecoveryNotStopped('Rod',base,()=>false)).not.toThrow();
 });
 function fixture(){
- const base=mkdtempSync(join(tmpdir(),'recovery-permit-'));
+ const base=mkdtempSync(join(fixtureRoot,'recovery-permit-'));
  const put=(path:string,value:any)=>{mkdirSync(dirname(join(base,path)),{recursive:true});writeFileSync(join(base,path),JSON.stringify(value));};
  const ref=(path:string)=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')});
  put(RECOVERY_SCRIPT,'fixture runner');
@@ -47,7 +48,7 @@ function fixture(){
   detail:JSON.stringify({stdout:join(base,'.practice/deliveries/fixture/gate.out.log')})}]});
  const request:any={schema:'session-recovery/1',kind:'session-recovery',account:'Rod',server:'localhost:8888',runId:'task-run',nonce:'one',endedAt:100,source,
   qualification:{delivery:ref('.practice/deliveries/fixture/report.json'),proof:ref('.practice/deliveries/fixture/recovery.json')}};
- const options={now:()=>now,matches:(_pid:number,_marker:string)=>true,source:()=>source};
+ const options={now:()=>now,matches:(_pid:number,_marker:string)=>true,source:()=>source,capability:(c:unknown)=>c==='shark-supply-order'?source:undefined};
  return {base,put,request,options,runnerHash};
 }
 
@@ -96,10 +97,21 @@ test('completed permit pins the exact successful end and actual mission through 
   expect(readFileSync(paths.lease,'utf8')).toBe(lease);expect(existsSync(paths.used)).toBe(false);expect(existsSync(paths.completed)).toBe(false);
  }
 });
-test('completed cleanup accepts only its fresh consumed producer and releases only the cleanup lease',()=>{
- const f=completedFixture();issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);const guard=consumeRecoveryPermit(f.request,f.base,f.options);
+test('completed cleanup retains a ready disconnected live producer and binds only its fresh recovery child',()=>{
+ for(const history of [false,true]){
+ const f=completedFixture();f.request.server='rs-sdk-demo.fly.dev';
+ const root=join(f.base,'.practice/session-lifecycle'),dir=accountDir('Rod',f.request.server,root),id='0000000000010-2147483647-0000000001';
+ if(history){
+  f.put(relative(f.base,join(dir,'attempts',id+'.json')),{schema:'session-lifecycle/1',attemptId:id,account:'Rod',server:f.request.server,domain:'live',
+   owner:{pid:2147483647,coordinatorRunId:null,workerRelease:runner,script:'scripts/goldfarm.ts',role:'supply',participants:null},config:{members:null},createdAt:10,updatedAt:95,
+   events:[{at:10,kind:'connecting'},{at:15,kind:'connected'},{at:20,kind:'ready'},{at:90,kind:'ended',detail:'disconnected'},{at:93,kind:'logout',detail:'disconnected'},{at:95,kind:'closed'}]});
+  f.put(relative(f.base,join(dir,'latest.json')),{schema:'session-lifecycle/1',account:'Rod',server:f.request.server,domain:'live',attemptId:id,at:10});
+  expect(readLogoutProof('Rod',f.request.server,{root}).state).toBe('held');
+ }
+ const retained=listAttempts('Rod',f.request.server,{root});
+ issueRecoveryPermit(f.request,f.base,f.options);bindRecoveryChild(f.request,process.pid,f.base,f.options);const guard=consumeRecoveryPermit(f.request,f.base,f.options);
  const ends=readFileSync(join(f.base,'.practice/swarm-deaths.json'),'utf8'),holds=readFileSync(join(f.base,'.practice/swarm-script-holds.json'),'utf8');
- const root=join(f.base,'.practice/session-lifecycle'),attempt=beginSessionAttempt({account:'Rod',server:f.request.server},{root,now:()=>now+5,
+ const attempt=beginSessionAttempt({account:'Rod',server:f.request.server},{root,now:()=>now+5,
   owner:{pid:process.pid,coordinatorRunId:f.request.runId,workerRelease:source,script:RECOVERY_SCRIPT,role:'recovery',participants:null}});
  expect(()=>guard()).not.toThrow();attempt.record('ended','logged-out');
  const proof=readLogoutProof('Rod',f.request.server,{root});if(proof.state!=='confirmed')throw Error('fixture');
@@ -113,6 +125,14 @@ test('completed cleanup accepts only its fresh consumed producer and releases on
  const ended=new Map(Object.entries(JSON.parse(ends))) as Map<string,any>;
  expect(applyEndRepair({account:'Rod',endedAt:100,server:f.request.server,proof:{kind:'producer',attemptId:attempt.attemptId}},ended,[],{readProof:()=>proof,verifyLegacy:()=>({state:'refused',reason:'unused'})},[])).toEqual({changed:false,reason:'completed work needs a new mission'});
  expect(JSON.stringify(Object.fromEntries(ended))).toBe(ends);
+ expect(listAttempts('Rod',f.request.server,{root}).slice(0,retained.length)).toEqual(retained);
+ if(history){
+  const old=readFileSync(join(dir,'attempts',id+'.json'),'utf8');
+  writeFileSync(join(dir,'attempts',id+'.json'),old+' ');
+  // Retained records remain pinned even after the new producer has confirmed logout.
+  expect(()=>guard()).toThrow('producer ownership changed');writeFileSync(join(dir,'attempts',id+'.json'),old);
+ }
+ }
 });
 test('a diagnostic file cannot replace missing consumption or a missing producer receipt; original lease stays held',()=>{
  for(const consumed of [false,true]){
@@ -200,14 +220,14 @@ test('completion indexes only the exact child/producer, releases its lease, and 
    // An old status without RESULT must be covered by the exact indexed recovery before the old end clears.
    f.put('.practice/status/Rod.json',{name:'Rod',server:f.request.server,started:1,at:1,result:''});
    const task:any={id:'pilot',goal:'gear',kind:'run',capability:'shark-supply-order',account:'Rod',sessionRecovery:{account:'Rod',endedAt:100},repairs:[{account:'Rod',endedAt:100}]};
-   expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base,preflight:true})).not.toThrow();
+   expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base,preflight:true,freeGB:20})).not.toThrow();
    const ended=new Map(Object.entries(JSON.parse(ends))) as Map<string,any>,holds:ScriptHold[]=[];
    const repaired=applyEndRepair({account:'Rod',endedAt:100,server:f.request.server,proof:{kind:'producer',attemptId:attempt.attemptId}},ended,[],{
     readProof:(a,s)=>readLogoutProof(a,s,{root}),verifyLegacy:()=>({state:'refused',reason:'not used'})},holds);
    expect(repaired.changed).toBe(true);expect(holds).toEqual([]);
    f.put('.practice/swarm-deaths.json',Object.fromEntries(ended));f.put('.practice/swarm-script-holds.json',holds);
    const owner=readFileSync(join(f.base,'swarm.json'),'utf8');
-   expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base})).not.toThrow();
+   expect(()=>installJob(task,'Rod','scripts/new.ts',f.request.runId,source,{}, {base:f.base,freeGB:20})).not.toThrow();
    // The installed job is the coordinator's file's; it shadows the retired swarm.json job, whose bytes stay.
    const jobs=readMergedPlan(f.base).jobs;expect(jobs).toHaveLength(1);expect(jobs[0]).toMatchObject({account:'Rod',script:'scripts/new.ts',enabled:true,coordinatorOwner:'coordinator'});
    expect(readFileSync(join(f.base,'swarm.json'),'utf8')).toBe(owner);expect(JSON.parse(readFileSync(coordinatorJobsPath(f.base),'utf8')).jobs).toHaveLength(1);
@@ -258,6 +278,25 @@ test('a heartbeat published during the slow owner and source checks admits the v
  const {guard}=consumeRecoveryConnection(f.request,f.base,f.options);expect(()=>guard()).not.toThrow();
  expect(()=>consumeRecoveryConnection(f.request,f.base,f.options)).toThrow('consumed');
  const paths=recoveryPermitPaths(f.request,f.base);expect(existsSync(paths.lease)).toBe(true);expect(existsSync(join(paths.output,'receipt.json'))).toBe(false);
+});
+test('a completed launch binds its child although each process lookup ages the blocked controller heartbeat',()=>{
+ // Issue and binding run synchronously in the controller, so its heartbeat cannot advance between them. Repeated
+ // process lookups at binding must not age that heartbeat past FLEET_HEARTBEAT_MAX_MS.
+ for(const shared of [false,true]){
+  const f=completedFixture();let clock=now;
+  f.options.now=()=>clock;
+  f.options.matches=()=>{clock+=3000;return true;};
+  const checks=shared?launchObservations(f.options):f.options;
+  issueRecoveryPermit(f.request,f.base,checks);
+  const paths=recoveryPermitPaths(f.request,f.base);
+  if(shared){bindRecoveryChild(f.request,process.pid,f.base,checks);expect(existsSync(paths.child)).toBe(true);}
+  else{expect(()=>bindRecoveryChild(f.request,process.pid,f.base,checks)).toThrow('recovery fleet ownership unresolved: stale');expect(existsSync(paths.child)).toBe(false);}
+  expect(existsSync(paths.lease)).toBe(true);expect(existsSync(paths.used)).toBe(false);
+ }
+ // The shared observations never outlive the launch: a fresh launch looks the processes up again.
+ const f=completedFixture();let calls=0;f.options.matches=()=>{calls++;return true;};
+ const first=launchObservations(f.options);first.matches!(1,'a');first.matches!(1,'a');launchObservations(f.options).matches!(1,'a');
+ expect(calls).toBe(2);
 });
 const fleetFaults:Record<string,[string,(f:ReturnType<typeof fixture>)=>void]>={
  missing:['missing',f=>rmSync(join(f.base,'.practice/swarm-state.json'))],
@@ -320,4 +359,35 @@ test('authenticated cleanup admits a stopped end and still honours owner stops a
   else expect(()=>issueRecoveryPermit(f.request,f.base,f.options)).toThrow(fault==='stop'?'owner stopped':fault==='changed-end'?'exact failure changed':'assignment is active');
   expect(readFileSync(join(f.base,'.practice/swarm-deaths.json'),'utf8')).toBe(before);
  }
+});
+test('the delivery binds to its capability release while the request binds to the launch release',()=>{
+ const f=fixture(),capability='c'.repeat(64);
+ try{
+  const report=JSON.parse(readFileSync(join(f.base,'.practice/deliveries/fixture/report.json'),'utf8'));
+  f.put('.practice/deliveries/fixture/report.json',{...report,runtimeRevision:capability});
+  f.request.qualification.delivery={path:'.practice/deliveries/fixture/report.json',sha256:createHash('sha256').update(readFileSync(join(f.base,'.practice/deliveries/fixture/report.json'))).digest('hex')};
+  const options={...f.options,capability:()=>capability};
+  expect(()=>issueRecoveryPermit(f.request,f.base,{...options,capability:()=>source})).toThrow('controller-native qualification');
+  expect(()=>issueRecoveryPermit(f.request,f.base,{...options,capability:()=>undefined})).toThrow('controller-native qualification');
+  expect(()=>issueRecoveryPermit(f.request,f.base,options)).not.toThrow();
+ }finally{rmSync(f.base,{recursive:true,force:true});}
+});
+test('a held retired producer gets a permit only from a delivery at its capability release',()=>{
+ const f=completedFixture(),capability='c'.repeat(64);f.request.server='rs-sdk-demo.fly.dev';
+ try{
+  const root=join(f.base,'.practice/session-lifecycle'),dir=accountDir('Rod',f.request.server,root),id='0000000000010-2147483647-0000000001';
+  f.put(relative(f.base,join(dir,'attempts',id+'.json')),{schema:'session-lifecycle/1',attemptId:id,account:'Rod',server:f.request.server,domain:'live',
+   owner:{pid:2147483647,coordinatorRunId:null,workerRelease:runner,script:'scripts/goldfarm.ts',role:'supply',participants:null},config:{members:null},createdAt:10,updatedAt:95,
+   events:[{at:10,kind:'connecting'},{at:15,kind:'connected'},{at:20,kind:'ready'},{at:90,kind:'ended',detail:'disconnected'},{at:93,kind:'logout',detail:'disconnected'},{at:95,kind:'closed'}]});
+  f.put(relative(f.base,join(dir,'latest.json')),{schema:'session-lifecycle/1',account:'Rod',server:f.request.server,domain:'live',attemptId:id,at:10});
+  const report=JSON.parse(readFileSync(join(f.base,'.practice/deliveries/fixture/report.json'),'utf8'));
+  f.put('.practice/deliveries/fixture/report.json',{...report,runtimeRevision:capability});
+  f.request.qualification.delivery={path:'.practice/deliveries/fixture/report.json',sha256:createHash('sha256').update(readFileSync(join(f.base,'.practice/deliveries/fixture/report.json'))).digest('hex')};
+  // The delivery records the capability release; the launch release (source) must not stand in for it.
+  expect(()=>issueRecoveryPermit(f.request,f.base,{...f.options,capability:()=>source})).toThrow('controller-native qualification');
+  expect(existsSync(recoveryPermitPaths(f.request,f.base).lease)).toBe(false);
+  const permit=issueRecoveryPermit(f.request,f.base,{...f.options,capability:()=>capability});
+  expect(permit.producerHistory).toEqual(listAttempts('Rod',f.request.server,{root}).map(({attemptId,sha256})=>({attemptId,sha256})));
+  expect(permit.producerHistory?.map(p=>p.attemptId)).toEqual([id]);
+ }finally{rmSync(f.base,{recursive:true,force:true});}
 });

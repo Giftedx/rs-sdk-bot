@@ -3,7 +3,7 @@
 // Server truth: vendor/rs-sdk/server/content/scripts/quests/quest_waterfall/scripts/*.rs2 (%waterfall_quest 0..10).
 // Loc origins come from the maps (m39_53, m39_54, m39_149, m39_153, m40_154 .jm2); ids from pack/loc.pack and obj.pack.
 // The SDK state has no varps, so each MILESTONE is printed on the observed effect of the step that sets the varp.
-// Route notes (bun research/route-danger.ts, 2026-10-23): the gnome cellar (hobgoblins), Glarial's tomb (skeletons,
+// Route notes (bun research/route-danger.ts): the gnome cellar (hobgoblins), Glarial's tomb (skeletons,
 // zombies, moss giants) and the falls (shadow spiders, skeletons, fire giants max hit about 7) have aggressive NPCs
 // with hunt range 1-2. The bot never fights; it eats a lobster at 7 HP or less.
 import type { Session } from '../../packages/core/src/inprocess';
@@ -354,7 +354,7 @@ try {
         for (const [x, z, tol] of pts.slice(next)) if (!(await walkPt(x, z, tol))) await fail(`walk ${label} ${x},${z}`);
     };
     // Client-routed run through waypoints: one walk click per leg, sent again when the bot stands still for 2 ticks or
-    // an eat landed. bot.walkTo stalled 26 ticks at 2581,9875 among the falls spiders (MEASURED practice 2026-10-23).
+    // an eat landed. bot.walkTo stalled 26 ticks at 2581,9875 among the falls spiders (MEASURED practice).
     // Falls back to bot.walkTo for a leg the client cannot route.
     const dash = async (label: string, pts: [number, number][]): Promise<void> => {
         const end = pts[pts.length - 1]!;
@@ -569,7 +569,7 @@ try {
     // 6. Key from the crate in the east room, through the fire giant room, key on the puzzle-room door sets 6.
     await dash('falls crate', [[2574, 9873], [2584, 9876], [2589, 9887]]);
     await step('falls crate', () => opLoc(LOC.baxCrate), () => has(ITEM.baxKey), 12, 3);
-    // Cause of the 8 failed runs (MEASURED practice 2026-10-23, quest_waterfall_falls preset): the fire giant room is
+    // Cause of the 8 failed runs (MEASURED practice, quest_waterfall_falls preset): the fire giant room is
     // shut by a closed large double door (loc 1516/1519 at 2564-2565,9881, maps/m40_154.jm2). The SDK collision masks
     // doors, so bot.walkTo plans through it, but the client route stops at it: a key use from the south room gets
     // "I can't reach that!" and a walk click is client_rejected. The bot then stood in the south room until the shadow

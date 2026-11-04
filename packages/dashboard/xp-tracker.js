@@ -27,5 +27,26 @@
         }).filter(r => r.gained > 0 || r.rate > 0).sort((a, b) => b.gained - a.gained || b.rate - a.rate);
     }
     const total = list => list.reduce((n, r) => n + r.gained, 0);
-    global.atlasXp = { TABLE, xpForLevel, levelForXp, baseline, rows, total };
+    // Combat level and the levels each style needs for the next one (RuneLite's combatlevel plugin). The base is
+    // a quarter of Defence + Hitpoints + half Prayer; the best of melee (Attack + Strength), Ranged x 1.5 or
+    // Magic x 1.5 adds 0.325 of itself.
+    function combat(lv) {
+        const g = k => Math.max(1, Number(lv[k]) || 1);
+        const base = 0.25 * (g('Defence') + g('Hitpoints') + Math.floor(g('Prayer') / 2));
+        const melee = 0.325 * (g('Attack') + g('Strength')), range = 0.325 * Math.floor(g('Ranged') * 1.5), mage = 0.325 * Math.floor(g('Magic') * 1.5);
+        const level = Math.floor(base + Math.max(melee, range, mage));
+        if (level >= 126) return { level, next: null };
+        const goal = level + 1, top = Math.max(melee, range, mage);
+        // Each answer is the fewest levels of that kind alone that reach the next combat level, or null when 99 is not enough.
+        const need = (fn, cap) => { for (let n = 1; n <= cap; n++) if (Math.floor(fn(n)) >= goal) return n; return null; };
+        const next = {
+            melee: need(n => base + Math.max(0.325 * (g('Attack') + g('Strength') + n), top), 198 - g('Attack') - g('Strength')),
+            defence: need(n => base + 0.25 * n + top, 198 - g('Defence') - g('Hitpoints')),
+            prayer: need(n => 0.25 * (g('Defence') + g('Hitpoints') + Math.floor((g('Prayer') + n) / 2)) + top, 99 - g('Prayer')),
+            ranged: need(n => base + Math.max(0.325 * Math.floor((g('Ranged') + n) * 1.5), top), 99 - g('Ranged')),
+            magic: need(n => base + Math.max(0.325 * Math.floor((g('Magic') + n) * 1.5), top), 99 - g('Magic')),
+        };
+        return { level, next };
+    }
+    global.atlasXp = { TABLE, xpForLevel, levelForXp, baseline, rows, total, combat };
 })(globalThis);

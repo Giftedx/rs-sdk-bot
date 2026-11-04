@@ -1,9 +1,11 @@
-// Method ladders for the 19 skills, built only from knowledge/*.json, plus the worker that performs each rung.
+// Method ladders for the 19 skills, built from knowledge/*.json and the pinned game content, plus the worker that performs each rung.
 // Usage: bun packages/knowledge/src/ladders.ts   writes knowledge/ladders.json and knowledge/ladder-gaps.md.
-// xpPerAction is base content XP (the server multiplier is not applied). xpPerTick comes only from rates.json.
+// xpPerAction is base content XP per action (the server multiplier is not applied). xpPerTick comes only from rates.json.
+// ticksPerAction and modelXpPerTick come from the content model in method-model.ts and are never measured rates.
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { knowledgeDir } from './paths';
+import { coordTile, loadContent, modelBands, modelRung, modelXpPerTickAt, statRandomChance, ticksPerSuccess, XP_RATE, XP_RATE_SRC, type Band, type Content, type Row, type Timing } from './method-model';
 
 export const SKILLS = ['attack', 'defence', 'strength', 'hitpoints', 'ranged', 'prayer', 'magic', 'cooking', 'woodcutting',
     'fletching', 'fishing', 'firemaking', 'crafting', 'smithing', 'mining', 'herblore', 'agility', 'thieving', 'runecraft'] as const;
@@ -11,7 +13,8 @@ export type SkillName = typeof SKILLS[number];
 
 interface SkillAction { skill: string; table: string; row: string; level: number; xp: number | null; inputs: string[]; outputs: string[]; at: { locs?: string[]; npcs?: string[] }; src: Record<string, string> }
 interface Item { id: number; name: string; debugname: string; members?: boolean; src: string }
-interface Npc { id: number; name: string; debugname: string; combat: number; src: string; spawns: unknown[] }
+interface Spawn { x: number; z: number; level: number; src: string }
+interface Npc { id: number; name: string; debugname: string; combat: number; src: string; spawns: Spawn[] }
 interface Shop { inv: string; stock: { item: string }[] }
 interface DbRow { name: string; data: Record<string, string[][]>; src: Record<string, string[]>; def: string }
 interface DbTable { table: string; rows: DbRow[] }
@@ -21,14 +24,19 @@ interface Capability { id: string; goal?: string; entry: string; consumer?: stri
 
 export interface Data {
     skills: SkillAction[]; items: Item[]; npcs: Npc[]; shops: Shop[]; dbtables: DbTable[]; quests: Quest[]; rates: Rate[]; drops: unknown[];
-    capabilities: Capability[]; readFile: (repoPath: string) => string | null;
+    capabilities: Capability[]; readFile: (repoPath: string) => string | null; content: Content;
 }
 
 export interface ItemRef { id: number | null; debugname: string | null; name: string; count: number | null; shops: string[] }
 export interface Method {
     id: string; skill: SkillName; level: number; kind: string; label: string;
     xpPerAction: number | null; inputs: ItemRef[]; outputs: ItemRef[]; requires: ItemRef[];
-    where: { locs: string[]; npcs: string[] } | null;
+    where: { locs: string[]; npcs: string[]; tiles?: { npc: string; spawns: number; sample: Spawn[] }[] } | null;
+    tools: ItemRef[];
+    xpSrc: string | null; xpNote: string | null;
+    ticksPerAction: number | null; timing: Timing | null;
+    modelXpPerTick: number | null; modelXpPerTick99: number | null; modelBands: Band[];
+    enables: { feeds: string[]; teleport: { x: number; z: number; level: number; src: string } | null };
     inputsBuyable: boolean | null; members: boolean | null;
     quest: { name: string; varp: string | null; src: string } | null;
     xpPerTick: number | null; rateMethod: string | null;
@@ -118,6 +126,7 @@ const RULES: Rule[] = [
     { worker: 'scripts/gather-ranged.ts', evidence: 'BOW=841', methods: /^(ranged\/bow-gear-standard-bows|ranged\/target-chicken)$/ },
 ];
 
+const round = (v: number | null) => v === null ? null : Math.round(v * 100) / 100;
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const clean = (s: string) => s.replace(/\\n\s*/g, ' ').replace(/\s+/g, ' ').trim();
 const cell = (row: DbRow | undefined, col: string) => row?.data[col]?.[0];
@@ -149,6 +158,8 @@ export function buildLadders(d: Data) {
     const buyable = (inputs: ItemRef[]) => inputs.length === 0 ? null : inputs.every(i => i.shops.length > 0);
     const base = (o: Partial<Method> & Pick<Method, 'id' | 'skill' | 'level' | 'kind' | 'label' | 'source' | 'src'>): Method => ({
         xpPerAction: null, inputs: [], outputs: [], requires: [], where: null, inputsBuyable: null, members: null, quest: null,
+        tools: [], xpSrc: null, xpNote: null, ticksPerAction: null, timing: null, modelXpPerTick: null, modelXpPerTick99: null, modelBands: [],
+        enables: { feeds: [], teleport: null },
         xpPerTick: null, rateMethod: null, worker: null, workers: [], workerEvidence: null, pendingCapability: null, gaps: [], ...o,
     });
     const methods: Method[] = [];
@@ -174,13 +185,11 @@ export function buildLadders(d: Data) {
         if (a.table === 'runecraft_table') {
             const t = cell(row, 'talisman')?.[0];
             if (t && t !== 'null') requires.push(ref(t));
-            gaps.push('essence input not listed in runecraft_table');
         }
-        if (a.xp === null) gaps.push('XP per action not in knowledge/skills.json (smithing XP lives in structs)');
         const where = { locs: a.at.locs ?? [], npcs: a.at.npcs ?? [] };
         methods.push(base({
             id: `${a.skill}/${a.row}`, skill: a.skill as SkillName, level: Math.max(1, a.level), kind: a.table, label: a.row.replace(/_/g, ' '),
-            xpPerAction: a.xp, inputs, outputs: a.outputs.map(n => ref(n)), requires,
+            xpPerAction: a.xp, xpSrc: a.src.xp ?? null, inputs, outputs: a.outputs.map(n => ref(n)), requires,
             where: where.locs.length || where.npcs.length ? where : null,
             inputsBuyable: buyable(inputs), members: bool(cell(row, 'members')?.[0]),
             source: 'knowledge/skills.json', src: a.src.row ?? a.src.level ?? Object.values(a.src)[0] ?? '', gaps,
@@ -205,7 +214,7 @@ export function buildLadders(d: Data) {
             if (level < 1 || !body || (g.skip && g.skip.test(body))) return;
             let head = body.split(/ - |\. Ammo:|\.$/)[0]!.replace(/\.$/, '').trim();
             let inputs: ItemRef[] = [], outputs: ItemRef[] = [];
-            const gaps = ['XP per action not in knowledge (skill guide gives the level only)'];
+            const gaps: string[] = [];
             if (g.kind === 'catch') outputs = [refByName([`Raw ${head}`, `Raw ${head}s`, head], head)];
             else if (g.kind === 'burn') inputs = [refByName([head, head.replace(/^Normal /, '')], head)];
             else if (g.kind === 'smelt') outputs = [refByName([`${head} bar`, `${head.replace(/^Adamant$/, 'Adamantite')} bar`], `${head} bar`)];
@@ -218,7 +227,7 @@ export function buildLadders(d: Data) {
                 const parts = body.slice(name.length).replace(/\.$/, '').split('&').map(s => s.trim()).filter(Boolean);
                 head = name;
                 // "Ground X" is the ground form: try "X dust" only, never the unground item.
-                inputs = parts.map(p => refByName(/^Ground /.test(p) ? [p, `${p.replace(/^Ground /, '')} dust`] : [p], p));
+                inputs = parts.map(p => refByName(/^Ground /.test(p) ? [p, `${p.replace(/^Ground /, '')} dust`, `${p.replace(/^Ground (blue |green |red |black )?/, '')} dust`] : [p], p));
                 outputs = [refByName([`${name}(3)`, name], name)];
             } else if (g.kind === 'identify') {
                 const herb = refByName([head], head);
@@ -262,7 +271,7 @@ export function buildLadders(d: Data) {
             id: `prayer/bury-${it.debugname}`, skill: 'prayer', level: 1, kind: 'bury', label: `bury ${it.name}`, inputs: [input],
             inputsBuyable: buyable([input]), members: it.members ?? null, where: drops.length ? { locs: [], npcs: drops.slice(0, 12) } : null,
             source: 'knowledge/items.json', src: it.src,
-            gaps: ['bury XP not in knowledge (bones.obj XP is not extracted)', 'no level requirement in data; level 1 assumed by absence'],
+            gaps: [],
         }));
     }
 
@@ -280,12 +289,80 @@ export function buildLadders(d: Data) {
     for (const skill of TARGET_SKILLS) for (const { npc, basis } of targets.values()) methods.push(base({
         id: `${skill}/target-${npc.debugname}`, skill, level: 1, kind: 'target', label: `fight ${npc.name} (combat ${npc.combat})`,
         where: { locs: [], npcs: [npc.debugname] }, source: 'knowledge/npcs.json', src: npc.src, combat: npc.combat, spawns: npc.spawns.length, targetBasis: basis,
-        gaps: ['XP per kill unknown: npc hitpoints not in knowledge/npcs.json', 'no skill gate; level 1 means no requirement in data'],
+        gaps: [],
     }));
     notes.push('Strength and Hitpoints have no skill guide gear rows; their ladders hold only combat targets.');
     notes.push('Magic combat spells need a target; pick one from the Attack ladder targets.');
     notes.push('Prayer prayers (prayers dbtable) are unlocks, not XP methods, and are left out.');
-    notes.push('Cutting logs into shafts and unstrung bows (fletch_bow_table) has no level or XP column in knowledge and is left out.');
+    notes.push('Prayer bones and combat targets have no level gate in the content; their rungs start at level 1.');
+
+    // 4b. Knife on logs: arrow shafts and unstrung bows (fletch_bow_table: level and XP per product).
+    for (const row of table('fletch_bow_table')?.rows ?? []) {
+        const log = cell(row, 'log')?.[0];
+        if (!log) continue;
+        const shafts = Number(cell(row, 'shafts')?.[0] ?? 0);
+        const choices: { level: number; xp: number; product: string; count: number; src: string }[] = [];
+        if (shafts > 0) choices.push({ level: 1, xp: shafts * 5 / 10, product: 'arrow_shaft', count: shafts, src: row.src.shafts![0]! });
+        for (const k of ['shortbow', 'longbow']) {
+            const v = cell(row, k);
+            if (v) choices.push({ level: Number(v[1]), xp: Number(v[2]) / 10, product: v[0]!, count: 1, src: row.src[k]![0]! });
+        }
+        for (const ch of choices) {
+            const inputs = [ref(log, 1)];
+            methods.push(base({
+                id: `fletching/cut-${ch.product}`, skill: 'fletching', level: ch.level, kind: 'fletch_bow', label: `cut ${ref(log).name} into ${ref(ch.product).name}`,
+                xpPerAction: ch.xp, xpSrc: ch.src, xpNote: ch.product === 'arrow_shaft' ? `${ch.count} shafts x 0.5 XP (scripts/skill_fletching/scripts/cut_logs.rs2 multiply($shaft_count, 5))` : null,
+                inputs, outputs: [ref(ch.product, ch.count)], tools: [ref('knife')], inputsBuyable: buyable(inputs),
+                source: 'knowledge/dbtables.json#fletch_bow_table', src: row.def,
+            }));
+        }
+    }
+
+    // 4c. Content model: XP, timing, items and tools per action (method-model.ts).
+    const rowOf = (t: string, r: string): Row | undefined => dbRow(t, r);
+    const skillRow = new Map(d.skills.map(a => [`${a.skill}/${a.row}`, a]));
+    for (const m of methods) {
+        const a = skillRow.get(m.id);
+        const f = modelRung(d.content, {
+            id: m.id, skill: m.skill, kind: m.kind, level: m.level, label: m.label, row: a ? rowOf(a.table, a.row) ?? null : null,
+            outputs: m.outputs.map(o => o.debugname).filter((x): x is string => !!x), inputs: m.inputs.map(i => i.debugname).filter((x): x is string => !!x),
+            npc: m.kind === 'target' ? m.where?.npcs[0] : undefined,
+        });
+        if (f.xpPerAction !== null) { m.xpPerAction = f.xpPerAction; m.xpSrc = f.xpSrc; }
+        m.xpNote = f.xpNote ?? m.xpNote;
+        if (f.inputs && m.kind !== 'magic_spell_table') { m.inputs = f.inputs.map(i => ref(i.debugname, i.count)); m.inputsBuyable = buyable(m.inputs); }
+        if (f.outputs) m.outputs = f.outputs.map(o => ref(o.debugname, o.count));
+        if (f.tools.length) m.tools = f.tools.map(t => ref(t));
+        m.timing = f.timing;
+        m.ticksPerAction = f.timing ? round(ticksPerSuccess(f.timing, m.level)) : null;
+        m.modelXpPerTick = modelXpPerTickAt(m.xpPerAction, f.timing, m.level);
+        m.modelXpPerTick99 = modelXpPerTickAt(m.xpPerAction, f.timing, 99);
+        m.modelBands = modelBands(m.xpPerAction, f.timing, m.level);
+        // Chance per roll at the unlock level and at 99 (null where the tool is not usable yet).
+        if (m.timing) m.timing.rolls = m.timing.rolls.map(r => {
+            const at = (l: number) => r.toolLevel > l ? null : round(r.fixedChance ?? statRandomChance(l, r.low!, r.high!));
+            return { ...r, chanceAtUnlock: at(m.level), chanceAt99: at(99) };
+        });
+        if (a?.table === 'magic_spell_table') {
+            const tc = cell(rowOf(a.table, a.row) as DbRow | undefined, 'tele_coord')?.[0], tile = tc ? coordTile(tc) : null;
+            if (tile) m.enables.teleport = { ...tile, src: (rowOf(a.table, a.row) as DbRow).src.tele_coord![0]! };
+        }
+        // Item gaps are re-derived from the items the rung holds after the model.
+        m.gaps = m.gaps.filter(g => !/^item ".*" not resolved/.test(g));
+        for (const it of [...m.inputs, ...m.outputs]) if (it.id === null) m.gaps.push(`item "${it.name}" not resolved in knowledge/items.json`);
+        m.gaps.push(...f.gaps);
+        if (m.xpPerAction === null && !/gear$/.test(m.kind) && !f.gaps.some(g => /XP/.test(g))) m.gaps.push('XP per action unknown: no content value mapped for this rung');
+        if (m.ticksPerAction === null && !f.gaps.some(g => /ticks/.test(g)) && !/gear$/.test(m.kind)) m.gaps.push('ticks per action unknown: no timing model for this rung');
+        if (m.where?.npcs.length) {
+            m.where.tiles = m.where.npcs.map(n => d.npcs.find(x => x.debugname === n)).filter((n): n is Npc => !!n && n.spawns.length > 0)
+                .map(n => ({ npc: n.debugname, spawns: n.spawns.length, sample: n.spawns.slice(0, 3) }));
+        }
+    }
+
+    // 4d. What each rung enables: rungs that consume its outputs as inputs or tools.
+    const usedBy = new Map<string, string[]>();
+    for (const m of methods) for (const it of [...m.inputs, ...m.tools, ...m.requires]) if (it.debugname) usedBy.set(it.debugname, [...(usedBy.get(it.debugname) ?? []), m.id]);
+    for (const m of methods) m.enables.feeds = [...new Set(m.outputs.flatMap(o => o.debugname ? usedBy.get(o.debugname) ?? [] : []))].filter(id => id !== m.id).sort();
 
     // 5. Rates.
     const byId = new Map(methods.map(m => [m.id, m]));
@@ -321,21 +398,43 @@ export function buildLadders(d: Data) {
     const ladders = {} as Record<SkillName, Method[]>;
     for (const s of SKILLS) ladders[s] = methods.filter(m => m.skill === s)
         .sort((a, b) => a.level - b.level || a.kind.localeCompare(b.kind) || a.id.localeCompare(b.id));
-    const counts = Object.fromEntries(SKILLS.map(s => [s, { methods: ladders[s].length, withWorker: ladders[s].filter(m => m.worker).length }]));
-    return { generatedBy: 'bun packages/knowledge/src/ladders.ts', xpNote: 'xpPerAction is base content XP; the server multiplier is not applied. xpPerTick is set only from knowledge/rates.json.', counts, notes, ladders };
+    const counts = Object.fromEntries(SKILLS.map(s => [s, {
+        methods: ladders[s].length, withWorker: ladders[s].filter(m => m.worker).length,
+        withXp: ladders[s].filter(m => m.xpPerAction !== null).length, withTicks: ladders[s].filter(m => m.ticksPerAction !== null).length,
+        withGaps: ladders[s].filter(m => m.gaps.length).length,
+    }]));
+    return {
+        generatedBy: 'bun packages/knowledge/src/ladders.ts',
+        xpNote: 'xpPerAction is base content XP per action (one script run; arrows make 15, runecraft uses 27 essence); the server multiplier is not applied. xpPerTick is set only from knowledge/rates.json (measured).',
+        modelNote: `ticksPerAction is the expected ticks per successful action at the unlock level, from script timing and success rolls (timing.src). modelXpPerTick = xpPerAction x ${XP_RATE} (${XP_RATE_SRC}) / ticksPerAction at the unlock level; modelXpPerTick99 is the same at level 99; modelBands gives the model from the unlock level to 99, split every 10 levels and where the best tool changes, and timing.rolls[].chanceAtUnlock / chanceAt99 give each stat_random chance. All are derived, never measured, and exclude banking, walking, resupply and level-up dialogs.`,
+        enablesNote: 'enables.feeds lists rungs that use this rung output as an input, tool or requirement; enables.teleport is the spell destination (magic_spell_table tele_coord). Tool tiers are the toolLevel of each roll in timing.rolls.',
+        counts, notes, ladders,
+    };
 }
 
 export function gapsMarkdown(out: ReturnType<typeof buildLadders>): string {
+    const all = SKILLS.flatMap(s => out.ladders[s]);
     const lines = ['# Ladder gaps', '',
-        'Generated by `bun packages/knowledge/src/ladders.ts` from `knowledge/*.json`. Do not edit by hand.',
-        'Each line is a rung with no worker: unlock level, method, base XP per action, source. A pending capability has a definition and no entry script.', ''];
+        'Generated by `bun packages/knowledge/src/ladders.ts` from `knowledge/*.json` and `vendor/rs-sdk/server/content`. Do not edit by hand.', '',
+        `## Method data gaps (${all.filter(m => m.gaps.length).length} of ${all.length} rungs)`, '',
+        'Each line is a rung that misses a method fact, and names the missing fact. A rung not listed has XP per action, ticks per action, items and a source line for each.', ''];
+    for (const s of SKILLS) {
+        const rungs = out.ladders[s], missing = rungs.filter(m => m.gaps.length);
+        lines.push(`### ${s[0]!.toUpperCase()}${s.slice(1)} (${missing.length} of ${rungs.length} rungs)`, '');
+        for (const m of missing) lines.push(`- L${m.level} ${m.label} \`${m.id}\`: ${m.gaps.join('; ')}`);
+        lines.push('');
+    }
+    lines.push(`## Rungs with no worker (${all.filter(m => !m.worker).length} of ${all.length})`, '',
+        'Each line: unlock level, method, base XP per action, ticks per action, model XP per tick at the unlock level (25x, derived), source. A pending capability has a definition and no entry script.', '');
     for (const s of SKILLS) {
         const rungs = out.ladders[s], gaps = rungs.filter(m => !m.worker);
-        lines.push(`## ${s[0]!.toUpperCase()}${s.slice(1)} (${gaps.length} of ${rungs.length} rungs have no worker)`, '');
+        lines.push(`### ${s[0]!.toUpperCase()}${s.slice(1)} (${gaps.length} of ${rungs.length} rungs have no worker)`, '');
         for (const m of gaps) {
             const xp = m.xpPerAction === null ? 'XP unknown' : `${m.xpPerAction} XP`;
+            const ticks = m.ticksPerAction === null ? 'ticks unknown' : `${m.ticksPerAction} ticks`;
+            const model = m.modelXpPerTick === null ? '' : `; model ${m.modelXpPerTick} XP/tick`;
             const pend = m.pendingCapability ? `; pending capability \`${m.pendingCapability}\`` : '';
-            lines.push(`- L${m.level} ${m.label} \`${m.id}\` has no worker; ${xp}${pend}; \`${m.source}\` \`${m.src}\``);
+            lines.push(`- L${m.level} ${m.label} \`${m.id}\`; ${xp}; ${ticks}${model}${pend}; \`${m.source}\` \`${m.src}\``);
         }
         lines.push('');
     }
@@ -350,7 +449,7 @@ export function loadData(): Data {
         .map(f => JSON.parse(readFileSync(join(tasksDir, f), 'utf8')) as Capability);
     return {
         skills: k('skills.json'), items: k('items.json'), npcs: k('npcs.json'), shops: k('shops.json'), dbtables: k('dbtables.json'),
-        quests: k('quests.json'), rates: k('rates.json'), drops: k('drops.json'), capabilities,
+        quests: k('quests.json'), rates: k('rates.json'), drops: k('drops.json'), capabilities, content: loadContent(),
         readFile: p => { const f = join(repoRoot, p); return existsSync(f) ? readFileSync(f, 'utf8') : null; },
     };
 }
