@@ -159,7 +159,7 @@ async function run(directory:string){
    const account=await createBot(name);
    writeFileSync(account.envPath,ironProofAccountEnv(readFileSync(account.envPath,'utf8'),endpoints));
    const c=CASES[id],path=await applyPreset(name,c.preset);copyFileSync(path,join(dir,'before.sav'));
-   const child=Bun.spawn({...childConfiguration(name,id,process.env,endpoints),stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
+   const child=Bun.spawn({...childConfiguration(name,id,process.env,endpoints),windowsHide:true,stdout:Bun.file(join(dir,'worker.log')),stderr:Bun.file(join(dir,'worker.err'))});
    let timedOut=false,termination:Promise<void>|undefined;const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid)},c.timeoutMs);
    const code=await child.exited;clearTimeout(timer);await termination;
    const before=readPracticeSave(join(dir,'before.sav'));
