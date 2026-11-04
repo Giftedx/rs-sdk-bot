@@ -1,3 +1,5 @@
+import{legendsSurfaceJourney}from'./quest-legends';
+import{legendsJungleTarget}from'./quest-legends';
 import{test,expect}from'bun:test';
 import{readFileSync}from'node:fs';
 import{parseJm2}from'../../packages/knowledge/src/jm2';
@@ -47,3 +49,7 @@ test('mapping consumer never reissues an unknown conversion and validates exact 
   if(kind==='failure')expect(await attempt).toBe(false);else await expect(attempt).rejects.toThrow();expect(paid).toBe(1);
  }
 });
+test('Native jungle selection refuses the unreachable straight plant behind a blocked tile',()=>{const p={x:2863,z:2939},blocked={id:2893,x:2863,z:2937,reachable:false,optionsWithIndex:[{opIndex:1}]},adjacent={id:2889,x:2864,z:2938,reachable:true,optionsWithIndex:[{opIndex:1}]};expect(legendsJungleTarget([blocked,adjacent],p,-1)).toBe(adjacent);for(const bad of [{...adjacent,reachable:undefined},{...adjacent,optionsWithIndex:[]},{...adjacent,z:2940},{...adjacent,x:2866}])expect(legendsJungleTarget([blocked,bad],p,-1)).toBeUndefined();});
+
+test('Legends surface travel uses only ordered ground legs and one explicit ferry per continent crossing',async()=>{for(const inbound of [true,false]){const calls:any[]=[],from=inbound?{x:3185,z:3436,level:0}:{x:2864,z:2942,level:0},to=inbound?{x:2864,z:2942,level:0}:{x:3185,z:3436,level:0};await legendsSurfaceJourney(from,to,{ground:async p=>{calls.push(['ground',p]);},boat:async b=>{calls.push(['boat',b]);}});expect(calls).toEqual([['ground',inbound?{x:3028,z:3216}:{x:2955,z:3146}],['boat',inbound],['ground',to]]);}});
+test('Legends ground travel stops before boat payment after a failed approach and refuses underground routing',async()=>{let boats=0,grounds=0;const drive={ground:async()=>{grounds++;throw Error('route stopped');},boat:async()=>{boats++;}};await expect(legendsSurfaceJourney({x:3185,z:3436,level:0},{x:2864,z:2942,level:0},drive)).rejects.toThrow('route stopped');expect(boats).toBe(0);await expect(legendsSurfaceJourney({x:2800,z:9300,level:0},{x:3185,z:3436,level:0},drive)).rejects.toThrow('surface');expect(grounds).toBe(1);});
