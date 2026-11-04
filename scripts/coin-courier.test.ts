@@ -70,3 +70,46 @@ test('both bank deltas must match, with original pocket coins retained', () => {
     expect(exactCoinDelta(before, [after[0]!, { bank: 1051, pack: 6 }], 1000)).toBe(false);
     expect(exactCoinDelta(before, [], 1000)).toBe(false);
 });
+
+test('owned coin endpoints reach the stack, new profiles, registration and every worker child',async()=>{
+ const {selectCoinProofEndpoints,coinProofAccountEnv,startCoinProofStack,coinChildConfiguration,coinRegistrationArgs}=await import('../packages/practice/src/coin-courier-proof');
+ const checked:number[]=[],samples=[0,0.01];
+ const p=selectCoinProofEndpoints(port=>{checked.push(port);return port!==20003;},()=>samples.shift()!);
+ expect(checked).toEqual([20000,20001,20002,20003,20200,20201,20202,20203]);
+ expect(p.ports).toEqual({engine:20200,gateway:20201,management:20202,tcp:20203});
+ expect(p.instance).toMatch(/^coin-[a-z0-9-]{1,25}$/);
+ const original='SERVER=localhost:8888\r\nGATEWAY_URL=ws://localhost:7780\r\nPASSWORD=fixture\r\n';
+ const configured=coinProofAccountEnv(original,p);
+ expect(configured).toContain(`SERVER=${p.server}\r\n`);
+ expect(configured).toContain(`GATEWAY_URL=${p.gateway}\r\n`);
+ expect(configured).toContain('PASSWORD=fixture\r\n');
+ expect(()=>coinProofAccountEnv(original.replace('localhost:8888','rs-sdk-demo.fly.dev'),p)).toThrow('new practice account required');
+ const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+ let stops=0;
+ const owned={logs:{engine:'',gateway:''},stop:async()=>{stops++;}};
+ const stack=await startCoinProofStack(p,async opts=>{
+  expect(opts).toEqual({ports:p.ports,instance:p.instance,tickMs:150,xpRate:25,readyTimeoutMs:60000});
+  for(const [k,v] of Object.entries(p.env))expect(process.env[k]).toBe(v);
+  return owned;
+ });
+ expect(stack).toBe(owned);await stack.stop();expect(stops).toBe(1);
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ await expect(startCoinProofStack(p,async()=>{throw Error('startup refused');})).rejects.toThrow('startup refused');
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ const registration=coinRegistrationArgs('fixture',p);
+ expect(registration[0]).toBe('--eval');
+ expect(registration[1]).toContain(JSON.stringify(`SERVER=${p.server}`));
+ expect(registration[1]).toContain(JSON.stringify(`GATEWAY_URL=${p.gateway}`));
+ expect(registration[1]).toContain('openBot(');
+ expect(registration[1]).toContain('finish([session]');
+ for(const args of [registration,['scripts/coin-courier.ts','donor','receiver','12345']]){
+  const child=coinChildConfiguration(args,{CAP:'1600'},p,{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',ENGINE_MANAGEMENT_URL:'http://localhost:8898',NODE_PORT:'43594',GE_DATABASE:'data/market.sqlite'});
+  expect(child.cmd).toEqual(['bun',...args]);
+  expect(child.env).toMatchObject({...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',CAP:'1600'});
+  expect(child.env.GE_DATABASE).toBe(`data/market-${p.instance}.sqlite`);
+  expect(child.env.ENGINE_MANAGEMENT_URL).toBe(`http://127.0.0.1:${p.ports.management}`);
+  expect(child.windowsHide).toBe(true);
+ }
+ expect(()=>selectCoinProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
+});
+
