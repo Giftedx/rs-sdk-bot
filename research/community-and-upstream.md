@@ -551,3 +551,26 @@ No public source was found for any top-15 hiscore name (202 names checked as Git
 | A quest list takes only canary-passed quests; `noteProgress` against `showIntent` stall handling | [jackgolding/rs-sdk](https://github.com/jackgolding/rs-sdk) (MIT) branch `quest/demon` `quest-lab/` | Not checked | quest sweep | idea only |
 
 Checked with no gain: rs2b0t's 76 scripts for Magic, Thieving, Runecraft and Smithing; all 17 UberMouse training pages against our rows, where only 4-rock iron is higher and already recorded; questbench `src/save/` against our save library. Do not open `jabobster/jabobster-rs-sdk` `bots/localman1/bot.env`: it is a committed credential file.
+
+### 9.7 Projects found by web search
+
+Web search found these repos; GitHub search had missed them. Checked with `gh api` and page reads. None holds a route or rate that beats a row of ours. No downloaded code was run.
+
+| Source (license, last push) | What it holds | Decision | Gap |
+|---|---|---|---|
+| [Acquiredl/rs-sdk](https://github.com/Acquiredl/rs-sdk) (MIT, branch `acquiredl`) | Scripts for early quests, per-area quest fact sheets (`bots/acquiredl/quests/facts/`), run logs (`runs-*.jsonl`), `plans/guild-funnel.md`, ADRs | reject for scripts: we hold these quests; read a fact sheet if one of those quests fails | fact sheets and plans not read |
+| [CornThatLefty/OSRSBot](https://github.com/CornThatLefty/OSRSBot) (MIT) | An LLM agent loop on any OpenRouter model, a dashboard, model benchmarks | reject: no game routes; we use subscriptions, not paid APIs | source not read |
+| [ken12321/rs-sdk](https://github.com/ken12321/rs-sdk) (MIT, 3 commits ahead) | `bots/_shared/` helpers, `learnings/problems.md` | lead: read `learnings/problems.md` | not read |
+| [Kudretg/rs-sdk](https://github.com/Kudretg/rs-sdk) (MIT, 1 commit ahead) | A change to `LoginThread.ts` and `server/PATCHES.md` | lead: compare with upstream login changes | not read |
+| [oldschoola/rs-sdk-fleet](https://github.com/oldschoola/rs-sdk-fleet) (no license) | A fork of TestingPurposes/rs-sdk-fleet | reject: rs-stun-toolkit is the MIT source | none |
+| [2004sp/2004sp-progressive](https://github.com/2004sp/2004sp-progressive) (no license) | Engine-side bots in a single-player server; the README describes door and toll handling | ideas only: bots run in the engine, not through a client | source not read |
+| [99-cooking/rs-sdk](https://github.com/99-cooking/rs-sdk) (MIT) | A separate 25x server, loot.xyz, with its own hiscores | reject: another server, last push in March | none |
+| [MaxBittker/runebench](https://github.com/MaxBittker/runebench) (no license found) | Team tasks not in `research/runebench-and-harbor.md`: smith team, dragon team, Arrav duo, with watchers and a kill ledger | ideas only: team coordination tests | source not read |
+| [gr8monk3ys/rs-sdk](https://github.com/gr8monk3ys/rs-sdk), Milbaxter/rs-sdk | gr8monk3ys is 0 commits ahead; Milbaxter's compare returned 404 | reject gr8monk3ys; Milbaxter not checked | Milbaxter branches |
+
+Other leads:
+
+- HN user `_vertigo` reports that Claude plays through to Legends' Quest with code it wrote under coaching ([Agents in the Wild case 524](https://agentsinthewildai.com/cases/524-coached-for-hours-claude-now-plays-2004scape-fully-on-its-ow/), unverified). No repo is named.
+- The [RuneScape Bench talk transcript](https://delve.town/profile/did:plc:wmhp7mubpgafjggwvaxeozmu/post/3my3qbw3ifk2k) says the server has 2,000 slots, and that its owner is working out how to share them. A slot limit can affect fleet size. Not checked against live behaviour.
+- The rs-sdk Discord is linked from the upstream README and was not read.
+- The public `worldfeed` is already used by `packages/dashboard/server.ts` and `research/leader-forensics.md`.
