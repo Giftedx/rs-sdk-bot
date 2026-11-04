@@ -38,6 +38,13 @@ test('the visible observations bar cannot label a failed state build live',()=>{
  expect(status.innerHTML).toContain('State error');expect(status.innerHTML).not.toContain('Observations live');
 });
 
+test('a delivered state whose clock is far behind reads FROZEN, not LIVE',()=>{
+ const code=html.slice(html.indexOf('function connectionState(){'),html.indexOf("$('#inspector').addEventListener"));
+ const hidden={textContent:'',className:'',title:''},visible={textContent:'',className:'connection',title:''};
+ new Function('connected','lastReceived','S','document','$',code+';connectionState();')(true,Date.now(),{now:Date.now()-20*60000},{body:{classList:{toggle:()=>{}}},querySelector:()=>visible},()=>hidden);
+ expect(visible.textContent).toBe('FROZEN');
+});
+
 test('the hosted page labels a published file as a snapshot and gives its real age',()=>{
  const source=readFileSync(new URL('./operations.js',import.meta.url),'utf8');
  const code=source.slice(source.indexOf(' function statusBar(){'),source.indexOf(' const oldRender=render;'));
