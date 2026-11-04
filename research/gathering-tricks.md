@@ -13,7 +13,7 @@ account. A preset run is not a fresh-account run and not a live run.
 |---|---|---|---|
 | (b) Delayed-click 3-tick fishing (knife at T, spot click at T+2) on lobster and harpoon spots | **WORKS** | Lobster from 70: 228.8 / 143.5 / 35.7 / 153.5 / 108.0 vs 101.3 / 89.6 / 101.3 (mean 133.9 vs 97.4, +37%; the 2 runs with clean timing 191.2, +96%). Harpoon at Catherby from 80: 193.8 / 164.3 / 103.6 vs 59.1 / 56.5 / 63.7 (mean 153.9 vs 59.8, +157%). Harpoon from 55: 133.7 / 193.5 / 178.9 vs 74.6 / 84.3 / 60.5 (mean 168.7 vs 73.1, +131%). Lobster from 40: 145.0 / 169.9 / 98.3 vs 101.3 / 74.6 / 74.6 | MEASURED practice |
 | (b) Same-tick knife + click on a lobster spot (the fly-fishing method) | **FAILS** | 0 XP in 152 ticks, 49 cycles | MEASURED practice (1 run) + CODE-READ |
-| (a) Flinch 2-tick (two attackers, rapid shortbow, no ammo) | **FAILS on this server for every gathering board** | Not reachable: no place has two aggressive 4-tick attackers next to a resource (see below). One-attacker flinch at Barbarian Village oaks: 53.1 / 0.0 / 59.4 vs knife 3-tick 62.1 / 64.1 / 62.1 (same oak, same preset) | CODE-READ + MEASURED practice |
+| (a) Flinch 2-tick (two attackers, rapid shortbow, no ammo) | **FAILS on this server for every gathering board** | Not reachable: no place has two 4-tick attackers next to a resource. Aggressive ones do not exist there, and the two rats near the south Falador oaks cannot leave their pen (see below). One-attacker flinch at Barbarian Village oaks: 53.1 / 0.0 / 59.4 vs knife 3-tick 62.1 / 64.1 / 62.1 (same oak, same preset) | CODE-READ + MEASURED practice |
 
 ## (b) Delayed-click 3-tick: code
 
@@ -97,9 +97,26 @@ What stops it:
      `RESULT fail mode=flinch res=fish ... attackers=0 hitTicks=0 ... prayer=19/99 lvl=80` (Protect from Melee drained
      80 prayer points in that time). Ape Atoll also needs Monkey Madness.
    - Multiway oaks, willows, a Falador yew (2996,3311), coal and the Barbarian Village fly spots have only
-     non-aggressive NPCs nearby. Barbarians have attackrate 5 (`_unpack/225/all.npc:446`), jail guards 5
+     non-aggressive NPCs nearby (the south Falador rats and imps are item 4). Barbarians have attackrate 5 (`_unpack/225/all.npc:446`), jail guards 5
      (`areas/area_draynor/configs/draynor.npc:183`), goblins and barbarian women 6. Non-aggressive NPCs stop
      attacking after the bot stops fighting back.
+
+4. **The two rats near the south Falador oaks cannot reach a multiway tile.** The rats suit the method: attackrate 4 (the
+   default), max hit 0 (`strengthbonus,-53`, `_unpack/225/all.npc:1197`), and one Strength 1 punch leaves a 2-hitpoint rat
+   alive. The method still fails on position:
+   - The rats spawn at 3015,3295 and 3019,3296 in a closed 82-tile area (x 3014-3020, z 3282-3296, collision flood with the
+     doors shut). The oaks are in the multiway zone x <= 3007, z >= 3304 (`maps/multiway.csv`, "falador"; the zone at
+     x >= 3008 is commented out).
+   - With every door open, the rats still reach 0 multiway tiles. Maxrange is wanderrange 15 + 2 (`NpcType.ts:119-120`), and
+     an NPC step must stay within it (`Npc.ts:812`). Inside that limit the rats reach 415 and 523 tiles, west to x 3014 only:
+     their only way out is north through the cow field gate at 3031,3313, and the fence x = 3021 keeps them east of it.
+   - The pen is single-way, so two rats cannot both attack there (`npc_combat.rs2:382-390`).
+   - Practice pilot from the road north of the pen: 10 punch tries, every one `cant_reach` with `no route`, rats seen only at
+     z 3291-3296: `RESULT fail mode=flinch ... attackers=0 hitTicks=0 clicks=0 ...`
+     (`.practice/flinch-rats/pilot-open-tile.log`, reach counts in `rat-reach.txt`). The doors-open limit is CODE-READ plus the
+     flood; a lure through the doors was not run. Lost City Labs and rs2b0t issue 160 describe another server.
+   - Imps spawn beside the oaks (3009,3307) and have the default attackrate, but their timer clears their mode every 50-200
+     ticks (`npc/scripts/imp.rs2:1-7`), so each imp stops attacking and needs a new punch. Not measured.
 
 Measured one-attacker flinch, `scripts/measure/flinch.ts`, preset `flinch_oak_15` (Barbarian Village oak, Woodcutting 15,
 steel axe, HP 40, Defence 20), 300 ticks:
@@ -110,7 +127,7 @@ steel axe, HP 40, Defence 20), 300 ticks:
 In every run only one barbarian kept attacking, every 5 ticks, so the bot rolled every 5 ticks: the click on hit
 tick + 1 rolled (clicks about equal to hit ticks). Cost: 25-41 HP lost per 300 ticks, 4 lobsters, 49-128 setup ticks.
 Knife 3-tick on the same oak and preset (`wc-3tick.ts 3tick`): 62.1 / 64.1 / 62.1 XP/tick (`RESULT ok mode=3tick xp0=1860 gained=17812 ticks=278 perTick=64.1 cycles=68 ...`). One-attacker flinch is slower than the knife (5 ticks per roll
-against 3) and costs food. Verdict: FAILS for every board.
+against 3) and costs food. Verdict: FAILS for every board. The two-rat form cannot start here, so no two-rat rate exists to compare with the knife.
 
 ## Best method per gathering board
 
