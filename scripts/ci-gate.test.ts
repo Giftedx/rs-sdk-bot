@@ -1,7 +1,14 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {gateSteps,statusBody} from './ci-gate';
+import {gateSteps,statusBody,checkoutProblem} from './ci-gate';
+
+test('a posted status needs the SDK patch and no changed or untracked files',()=>{
+ expect(checkoutProblem('',true,true)).toBeNull();
+ expect(checkoutProblem('?? scripts/new-helper.ts\n',true,true)).toContain('scripts/new-helper.ts');
+ expect(checkoutProblem(' M scripts/a.ts\n',true,false)).toBeNull();
+ expect(checkoutProblem('',false,false)).toContain('rs-sdk-working.patch');
+});
 
 test('the gate runs exactly the workflow\'s one-line bun checks, with their env',()=>{
  const steps=gateSteps(readFileSync(join(import.meta.dir,'..','.github','workflows','ci.yml'),'utf8'));
