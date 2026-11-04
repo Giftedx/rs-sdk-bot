@@ -43,6 +43,16 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // Fire Strikes (31 fire, 1 nature, 18 air, 9 mind); an amulet of glory (4) (1712); 100 coins. No food: falls and the
     // jungle spider hit take a share of current hitpoints.
     quest_tbwt: rest({ x: 2782, z: 3086 }, [3142, 3142, 3142, 3142, 233, 1239, 3032, 303, 3125, 401, 3162, 3159, [554, 31], [561, 1], [556, 18], [558, 9], 1712], 0, 100, { 175: 12 }),
+    // Watch Tower: north of the Yanille watchtower's climbing rocks (2549,3120, maps/m39_48.jm2). Helper items (tradeable,
+    // the rs-stun-toolkit kit): 2 ropes (954) for the two swings onto Grew's island, dragon bones (536), a gold bar (2357),
+    // a death rune (560), a lit candle (33), a guam leaf (249), a vial of water (227), ground bat bones (2391),
+    // jangerberries (247), a rune pickaxe (1275); 100 coins (20 for the chasm jump); 8 lobsters. The anti-dragon shield
+    // (1540, from Dragon Slayer) is worn for the enclave's blue dragons. Fingernails, relic, cake, map, nightshade and
+    // crystals are quest items from the run.
+    quest_itwatchtower: {
+        ...rest({ x: 2549, z: 3120 }, [954, 954, 536, 2357, 560, 33, 249, 227, 2391, 247, 1275], 8, 100),
+        equipment: [...COMBAT_SET.filter(e => e.slot !== 5), { id: 1540, count: 1, slot: 5 }],
+    },
     // Elemental Workshop: in the Seers' Village house beside the bookcase (2716,3481, maps/m42_54.jm2). Helper items
     // (tradeable): knife (946) for the book's spine, needle (1733), leather (1741) and thread (1734) for the bellows,
     // hammer (2347), rune pickaxe (1275), 4 coal (453); 6 lobsters. The book, key, bowl, ore and bar are quest items.
