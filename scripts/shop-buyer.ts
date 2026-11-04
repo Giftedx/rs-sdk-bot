@@ -15,6 +15,13 @@ export const PROFILES: Record<string, {
     bankSpot: { x: number; z: number };
     items: { re: RegExp; buyPerTick: number }[];
 }> = {
+    // khazardshop: NPC555 at2641,3171, swamp paste1941 stock500/restock20; actual observed price governs buys.
+    khazard_paste: {
+        npc: /^shop keeper$/i,
+        npcSpot: { x: 2641, z: 3171 },
+        bankSpot: { x: 2654, z: 3283 },
+        items: [{ re: /^swamp paste$/i, buyPerTick: 1 }],
+    },
     ardy: {
         npc: /^aemad$/i,
         npcSpot: { x: 2613, z: 3294 },

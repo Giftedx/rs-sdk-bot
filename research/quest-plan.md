@@ -1127,6 +1127,30 @@ in the pack (7, Firemaking 30, `quest_seaslug.rs2:42-63`); Kennith (8); kick the
 (11); Holgart to the shore; Caroline (`caroline.rs2:33-48`, 71,750 Fishing x25 = 179,375). The dry sticks come from
 damp sticks (1467, spawn 2784,3289) and broken glass (1469, spawns 2765,3278 and 2765,3289, `maps/m43_51.jm2` OBJ).
 
+Normal prepared entry needs Firemaking 30 and swamp paste 1941, not a helper-supplied torch. Pinned
+`area_fishing_platform/scripts/bailey.rs2` gives unlit torch 596 at stage 6; NPC 695 spawns at 2763,3276,0
+(`maps/m43_51.jm2`). The existing worker adapts this dialogue after returning from Kent only when neither torch
+is held, observes receipt, and keeps the six-attempt lighting bound. Rubbing without a torch can advance stage 7
+without producing lit torch 594 (`quest_seaslug.rs2`), so receipt precedes rubbing. Focused check:
+`scripts/quest-seaslug-torch.test.ts`. Conditional normal entry qualifies on combined source `6c962ad7b90603ea43f443b4f1334962fc226f2ba1cbefb801a9a4c5c5eab064`
+in `../rs-sdk-bot-cloud-next`: genuine Firemaking31/8000XP and finite-food output supplies the exact low profile
+Hitpoints27/Prayer47/Fishing50/35000XP. Only position is prepared at Ardougne south bank; neither paste nor torch
+is preset. Real shop CLI buys/banks one paste for42GP in192 ledger ticks; real Sea Slug CLI withdraws it and
+acquires Bailey's torch, completing in540 ledger ticks with saved159=12, QP+1, Fishing+179375 to76/214375XP,
+HP27 unchanged, unrelated assets retained, oyster pearls413+1, no death and both confirmed logouts. Proof:
+`.practice/seaslug-normal/native-1793507462043/proof.json` in that candidate workspace. One native chain proves
+conditional behavior, not speed or batch readiness; actual live prerequisite staging/travel and matched entry remain open.
+The `khazard_paste` profile in `scripts/shop-buyer.ts` reuses observed purchase, banking and budget logic for
+swamp paste1941 only: keeper555 at2641,3171; stock500/restock20 (`port_khazard.inv`), base30
+(`skill_cooking/configs/cooking_generic/cooking.obj`), sell multiplier1400 (`port_khazard.npc`). Nominal full-stock
+price is42; observed price controls spending. Finite caller: `ITEMS='swamp paste' MAX_ITEMS=1 STOCK_TARGET=1
+BANK_AT=1 MAX_SPEND=252 FLOAT=452 COIN_RESERVE=200 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1`.
+It returns paste banked at Ardougne south2654,3283; Sea Slug accepts that entry by withdrawing exactly one
+unnoted with a fresh bank debit and pack credit receipt. Missing paste elsewhere refuses before travel. This path
+has the conditional low-HP route proof above; actual account entry must match before live use. Eight normal logs
+from zero produce8000XP, Firemaking31; qualification uses genuine produced skills/assets and separately purchased paste.
+
+
 ### Cause of "I can't reach that!" at the broken glass (test runs t1-t13)
 
 The engine collision is correct. The platform tiles are bridged: the level-1 map flag of each tile has LinkBelow
