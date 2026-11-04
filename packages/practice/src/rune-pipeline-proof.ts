@@ -22,6 +22,7 @@ export function runePipelineChecks(raw:any){
   &&z?.length===2&&count(z[0],1436)===0&&count(z[1],1436)===27&&z.every((p:any)=>p.main===-1&&p.offer.length===0)
   &&z.every((p:any,i:number)=>count(p,995)===count(actors(name+':opened')[i],995));};
  return {binding:JSON.stringify(raw.binding)===JSON.stringify(binding()),components:JSON.stringify(raw.components)===JSON.stringify({first:3420,confirm:3546,offer:3322}),
+  causal:['helper-first','master-first'].every(order=>[1,5].every(quota=>finished('causal-'+order+'-'+quota+':finished'))),
   helperFirst:finished('helper-first:finished'),masterFirst:finished('master-first:finished'),
   reset:actors('master-first:empty-accepted')?.[0].status===2&&actors('master-first:offer-reset')?.[0].status===0,
   premature:step('master-first:premature-confirm')?.accepted===false&&same('master-first:offer-reset','master-first:premature-confirm'),
@@ -65,6 +66,22 @@ export async function runRunePipeline(dir:string){
    if(order==='helper-first'){offer(h);click(h,ids.first);click(s,ids.first);snapshot(order+':confirm',s,h);click(s,ids.confirm);click(h,ids.confirm);}
    else{click(s,ids.first);snapshot(order+':empty-accepted',s,h);offer(h);click(h,ids.first);snapshot(order+':offer-reset',s,h);snapshot(order+':premature-confirm',s,h,click(h,ids.confirm));click(s,ids.first);click(s,ids.confirm);click(h,ids.confirm);}
    snapshot(order+':finished',s,h);snapshot(order+':duplicate-confirm',s,h,click(h,ids.confirm));snapshot(order+':duplicate-first',s,h,click(s,ids.first));
+  }
+  // Only the helper's accepted, exact offer is published before this burst.
+  // A quota split or helper-first processing may ignore its early final click.
+  for(const order of ['helper-first','master-first'])for(const quota of [1,5]){
+   const{s,h}=pair();offer(h);click(h,ids.first);const name='causal-'+order+'-'+quota;
+   snapshot(name+':accepted',s,h);const observed=steps.at(-1).actors;
+   if(observed[1].status!==2||!exactCarrierOffer(sdkTrade(observed,1) as any,true,'receiver',27))throw Error('Causal fixture lacks accepted owned offer');
+   const actors=[s,h],queues=[[ids.first,ids.confirm],[ids.confirm]],sequence=order==='helper-first'?[1,0]:[0,1];
+   for(let turn=0;turn<2;turn++)for(const i of sequence)for(const id of queues[i]!.splice(0,quota))click(actors[i],id);
+   snapshot(name+':burst',s,h);
+   for(const p of actors)if(p.modalMain===3443){
+    const current=actors.map(a=>({name:a.username,uid:a.uid,main:a.modalMain,partner:a.getVar(Varp.getId('tradepartner')),offer:items(a,Inv.getId('tradeoffer'))}));
+    const i=actors.indexOf(p);if(!exactCarrierOffer(sdkTrade(current,i) as any,i===1,actors[1-i].username,27))throw Error('Causal fallback lost exact offer');
+    click(p,ids.confirm);
+   }
+   snapshot(name+':finished',s,h);
   }
   {const{s,h}=pair();offer(h);click(h,ids.first);s.closeModal();snapshot('cancelled:finished',s,h);snapshot('cancelled:late-confirm',s,h,click(h,ids.confirm));}
   for(const name of ['partial','wrong-item']){

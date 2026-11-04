@@ -5,7 +5,7 @@ import type {Session} from '../packages/core/src/inprocess';
 import {assertSideOwns} from '../packages/core/src/fleet';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
-import {transfer,ownedSwap,ess,state,runeOpening} from './rune-carrier-trade';
+import {transfer,ownedSwap,ess,state,runeOpening,runeConfirmation} from './rune-carrier-trade';
 import {restock,inside,stopCarriers,bankCarrier,withdrawCarrier,closeCarrierBank,stageCarrier} from './rune-carrier-bank';
 import {freshBodyStart} from './rune-carrier-start';
 import {runeCarrierRoster,assertFreshRuneSkills,assertRuneDonor} from './rune-carrier-roster';
@@ -31,7 +31,7 @@ function bodyCraft(s:Session,n:number,previousXp:number,level:number,runes:numbe
 // worker-release and server admission for each session.
 export async function runRuneCarriers(roster:readonly string[],cap=2800,options:{bodyContinuation?:boolean;measurePacks?:number}={}){
  if(options.bodyContinuation&&options.measurePacks!==undefined)throw Error('choose one body mode');
- const craftAfter=runeCraftAfter(),pipeline=runeHandoffPipeline(undefined,craftAfter);
+ const confirmation=runeConfirmation(),craftAfter=runeCraftAfter(),pipeline=runeHandoffPipeline(undefined,craftAfter);
  const names=runeCarrierRoster([...roster,options.measurePacks!==undefined?'--body-measure='+options.measurePacks:options.bodyContinuation?'--body-continuation':'--carriers']),root=resolve(import.meta.dir,'..');
  if(!Number.isSafeInteger(cap)||cap<1||cap>10000)throw Error('carrier tick budget must be1..10000');
  const servers=names.map(n=>{assertSideOwns(n);return serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',n,'bot.env'),'utf8'));});
@@ -97,9 +97,9 @@ export async function runRuneCarriers(roster:readonly string[],cap=2800,options:
    if(previousCraft){previousCraft.dispose();crafts.delete(previousCraft);}previousCraft=craft;
   }
   const levelTick=s.tick();done=true;stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));
-  const result={craftAfter,pipeline,opening:runeOpening(),prefix,batches,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,levelTick,masterTicks:s.tick(),bodyLoopTicks:levelTick-start,waiting,rows,crew:crew.map(h=>({name:h.s.name,deliveries:h.deliveries,refills:h.refills}))};
+  const result={craftAfter,pipeline,opening:runeOpening(),confirmation,prefix,batches,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,levelTick,masterTicks:s.tick(),bodyLoopTicks:levelTick-start,waiting,rows,crew:crew.map(h=>({name:h.s.name,deliveries:h.deliveries,refills:h.refills}))};
   const logout=await settle(opened,true,'fresh Runecraft99 with carrier banks');return {ok:logout,...result,logout};
- }catch(error){for(const craft of crafts)craft.dispose();const reason=failure??error;done=true;cancel.abort(reason);stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));const logout=await settle(opened,false,String(reason));return {ok:false,failure:String(reason),logout};}finally{for(const craft of crafts)craft.dispose();monitor?.();}
+ }catch(error){for(const craft of crafts)craft.dispose();const reason=failure??error;done=true;cancel.abort(reason);stopCarriers();await Promise.allSettled(crew.map(h=>h.flight));const logout=await settle(opened,false,String(reason));return {ok:false,confirmation,failure:String(reason),logout};}finally{for(const craft of crafts)craft.dispose();monitor?.();}
 }
 
 function measurementNeed(xp:number,rate:number,packs:number){
@@ -127,7 +127,7 @@ export function continuationLoads(xp:number,stocks:readonly number[],xpPerEssenc
 // The session owner retains cleanup. This path never calls the tutorial or starter swaps.
 export async function continueRuneBody(s:Session,helpers:readonly Session[],stop:()=>boolean,options:{measurePacks?:number;craftAfter?:'inventory'|'trade-message';pipeline?:boolean}={}){
  if(helpers.length!==16)throw Error('body continuation requires16 helpers');
- const craftAfter=runeCraftAfter(options.craftAfter),pipeline=runeHandoffPipeline(options.pipeline===undefined?undefined:options.pipeline?'1':'0',craftAfter);
+ const confirmation=runeConfirmation(),craftAfter=runeCraftAfter(options.craftAfter),pipeline=runeHandoffPipeline(options.pipeline===undefined?undefined:options.pipeline?'1':'0',craftAfter);
  const all=[s,...helpers],check=()=>{if(stop())throw Error('body continuation stopped or over budget');};
  const xp=()=>s.sdk.getSkillXp('Runecraft')??0;
  if(!await waitUntil(s,()=>stop()||!!state(s)?.player&&!!s.sdk.getSkill('Runecraft'),{timeoutTicks:20}))throw Error('continuation entry unobserved');check();
@@ -195,6 +195,6 @@ export async function continueRuneBody(s:Session,helpers:readonly Session[],stop
    if((all[i]!.sdk.getSkill('Hitpoints')?.level??0)<(health[i]??1)||ess(all[i]!)!==0||JSON.stringify(all[i]!.sdk.getEquipment())!==equipment[i])throw Error('continuation health, equipment or pack mismatch');
   }
   await Promise.all(all.map(a=>closeCarrierBank(a)));check();
-  return {mode:measure?'body-measure':'body-continuation',craftAfter,pipeline,opening:runeOpening(),requestedPacks:options.measurePacks,xp0,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,batches,consumed,crafted,plan,before,after,rows,masterTicks:s.tick(),accountTicks:all.map(a=>({name:a.name,ticks:a.tick()}))};
+  return {mode:measure?'body-measure':'body-continuation',craftAfter,pipeline,opening:runeOpening(),confirmation,requestedPacks:options.measurePacks,xp0,xp:xp(),level:s.sdk.getSkill('Runecraft')?.baseLevel,batches,consumed,crafted,plan,before,after,rows,masterTicks:s.tick(),accountTicks:all.map(a=>({name:a.name,ticks:a.tick()}))};
  }catch(error){for(const craft of crafts)craft.dispose();stopCarriers();throw error;}finally{for(const craft of crafts)craft.dispose();await Promise.allSettled(crew.map(d=>d.flight));}
 }

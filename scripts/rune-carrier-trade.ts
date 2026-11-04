@@ -17,8 +17,12 @@ export function runeOpening(){
  if(opening!=='incoming'&&opening!=='helper-ack')throw Error('RUNE_OPEN_AFTER must be incoming or helper-ack');
  return opening;
 }
+export function runeConfirmation(value=process.env.RUNE_CONFIRM_AFTER??'causal'){
+ if(value!=='observed'&&value!=='causal')throw Error('RUNE_CONFIRM_AFTER must be observed or causal');
+ return value;
+}
 async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27,craft?:{send:()=>Promise<void>;complete:()=>boolean},pipeline?:{boundary?:CraftBoundary}){
- const opening=runeOpening();
+ const opening=runeOpening(),confirmation=runeConfirmation();
  if(!Number.isSafeInteger(amount)||amount<1||amount>27)throw Error('carrier transfer amount must be1..27');
  if(pipeline&&(!craft||!pipeline.boundary))throw Error('pipeline handoff needs the previous exact craft boundary and combined crafting');
  const at=s.tick();
@@ -153,7 +157,19 @@ async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27
     const pendingOwnedOffer=actor===s&&eager&&offerSent&&total===0&&(helperTrade?.myOffer?.reduce((n,i)=>n+i.count,0)===amount||acknowledgedOwnedOffer||!!pipeline&&offerAccepted.has(h));
     if(!pendingOwnedOffer&&total===0)continue;
     if(!pendingOwnedOffer&&total!==amount)throw Error('unexpected essence offer '+total);
-    if(!t.myAccepted){const accepted=await actor.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(actor);if(pipeline&&actor===s&&total===0)receiverEarly=true;}
+    if(!t.myAccepted){
+     const causal=confirmation==='causal'&&amount===27&&actor===s&&offerSent&&offerAccepted.has(h)
+      &&helperTrade?.screen==='offer'&&helperTrade.myAccepted&&exactCarrierOffer(helperTrade,true,s.name,amount)
+      &&t.partner?.toLowerCase()===h.name.toLowerCase()&&(t.myOffer??[]).length===0;
+     const accepted=await actor.sdk.sendAcceptTrade();if(!accepted.success)throw Error('carrier offer acceptance refused '+accepted.message);offerAccepted.add(actor);if(pipeline&&actor===s&&total===0)receiverEarly=true;
+     // The helper's server acceptance binds both immutable offers. Invisible
+     // confirmation clicks are ignored; dispatch never replaces observed fallback.
+     if(causal)for(const peer of [s,h])if(!earlyConfirmed.has(peer)&&!confirmed.has(peer)){
+      if(stop())break;earlyConfirmed.add(peer);
+      const result=await peer.direct({type:'clickComponent',componentId:3546,reason:'SDK'});
+      if(!(result as {success?:boolean})?.success)throw Error('causal carrier confirmation dispatch refused');
+     }
+    }
    }else if(t.screen==='confirm'&&!t.myAccepted){
     const accepted=await actor.sdk.sendAcceptTrade();
     if(!accepted.success)throw Error('carrier confirmation refused '+accepted.message);

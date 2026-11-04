@@ -85,7 +85,7 @@ export function verifyRuneContinuation(dir:string){
   xp:after[0].skills[20].rawExperience===(793125+consumed*187.5)*10&&after[0].skills[20].level===99,
   essence:before.reduce((n:number,s:any)=>n+total(s,1436),0)-after.reduce((n:number,s:any)=>n+total(s,1436),0)===consumed,
   output:total(after[0],559)-total(before[0],559)===crafted&&pack(after[0],559)===0&&pack(after[0],1436)===0,
-  assets:preserved,accounting:r?.ok===true&&r.consumed===consumed&&r.crafted===crafted&&r.batches===41,
+  assets:preserved,accounting:r?.ok===true&&r.confirmation==='causal'&&r.consumed===consumed&&r.crafted===crafted&&r.batches===41,
   budget:meta.publications?.length===17&&meta.publications.every((p:any)=>p.matched&&p.ticks<=CAP)&&r.accountTicks?.every((p:any)=>p.ticks<=CAP),
   clocks:meta.names.every((_:string,i:number)=>readFileSync(join(dir,i+'-after.sav')).readInt32BE(24)>readFileSync(join(dir,i+'-before.sav')).readInt32BE(24)),
   logout:r?.logout===true&&logouts(log)===17,
@@ -102,7 +102,7 @@ export function verifyRuneContinuation(dir:string){
   });
   const masterBefore=readFileSync(join(dir,'0-'+m.prefix+'-before.sav')),masterAfter=readFileSync(join(dir,'0-'+m.prefix+'-after.sav'));
   const checks={exit:m.execution.code===0&&!m.execution.timedOut&&!m.execution.lowMemory,
-   result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.pipeline===false&&rr.opening===(m.craftAfter==='trade-message'?'helper-ack':'incoming')&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
+   result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.pipeline===false&&rr.confirmation==='causal'&&rr.opening===(m.craftAfter==='trade-message'?'helper-ack':'incoming')&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
    entry:b[0].skills[20].level===99&&a[0].skills[20].level===99,assets:preserved,
    bankedOutput:runeMeasurementBankedOutput(b[0],a[0],972),
    effects:b.reduce((n:number,s:any)=>n+total(s,1436),0)-a.reduce((n:number,s:any)=>n+total(s,1436),0)===324&&total(a[0],559)-total(b[0],559)===972,
@@ -137,7 +137,7 @@ async function run(dir:string){
    copyFileSync(paths[i]!,join(dir,i+'-before.sav'));
   }
   const launch=async(prefix:string,mode='--body-continuation',craftAfter='inventory')=>{
-   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CRAFT_AFTER:craftAfter,RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:craftAfter==='trade-message'?'helper-ack':'incoming'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
+   const started=Date.now(),child=Bun.spawn(['bun','--smol','scripts/rune-bank-craft.ts',...names,mode],{cwd:root,env:{...process.env,DEMO_OK:'',RANDOM_EVENTS:'1',CAP:String(CAP),BODY_XP_RATE:'25',RUNE_CONFIRM_AFTER:'causal',RUNE_CRAFT_AFTER:craftAfter,RUNE_HANDOFF_PIPELINE:'0',RUNE_OPEN_AFTER:craftAfter==='trade-message'?'helper-ack':'incoming'},windowsHide:true,stdout:Bun.file(join(dir,prefix+'.log')),stderr:Bun.file(join(dir,prefix+'.err'))});
    let timedOut=false,lowMemory=false,termination:Promise<void>|undefined;
    const stop=()=>{termination??=killTree(child.pid);};
    const timer=setTimeout(()=>{timedOut=true;stop();},CAP*TICK_MS+60000),floor=setInterval(()=>{if(freemem()/2**30<FREE_FLOOR_GB){lowMemory=true;stop();}},1000);
