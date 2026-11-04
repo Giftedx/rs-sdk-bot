@@ -159,6 +159,13 @@ test('a cast counts only on a debit of each rune plus a Magic XP rise',()=>{
  expect(classifyCast(b,{air:10,mind:9,xp:237.5},0)).toBe('cast');
  expect(classifyCast(b,{air:10,mind:9,xp:237.5})).toBe('partial');
 });
+test('an NPC attacking our player remains selectable after the player target clears',()=>{
+ const mugger={index:2965,name:'Mugger',x:3246,z:3401,distance:6,hp:null,inCombat:true,targetIndex:32769,reachable:true,optionsWithIndex:[{text:'Attack',opIndex:2}]};
+ expect(pickTarget([mugger],-1,new Set(),1)?.index).toBe(2965);
+ expect(pickTarget([mugger],-1,new Set(),2)).toBeUndefined();
+ expect(pickTarget([mugger],-1,new Set())).toBeUndefined();
+ expect(pickTarget([{...mugger,x:3254}],-1,new Set(),1)).toBeUndefined();
+});
 test('targets are attackable men, women or muggers in the cast area, engaged first',()=>{
  const npc=(index:number,name:string,x:number,z:number,distance:number,extra:Record<string,unknown>={})=>
   ({index,name,x,z,distance,hp:null,inCombat:false,optionsWithIndex:[{text:'Attack',opIndex:2}],...extra});

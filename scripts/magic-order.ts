@@ -179,13 +179,13 @@ export function classifyCast(before:{air:number;mind:number;xp:number},after:{ai
  if(air<0||mind<0||air>airCost||mind>WIND_STRIKE.mind)return 'invalid';
  return 'partial';
 }
-type Npc={index:number;name:string;x:number;z:number;distance:number;hp:number|null;inCombat:boolean;reachable?:boolean;optionsWithIndex?:{text:string;opIndex:number}[]};
+type Npc={index:number;name:string;x:number;z:number;distance:number;hp:number|null;inCombat:boolean;targetIndex?:number;reachable?:boolean;optionsWithIndex?:{text:string;opIndex:number}[]};
 // The engaged NPC first (single-way combat refuses any other), then the nearest free man or woman, then a mugger.
-export function pickTarget(npcs:readonly Npc[],engaged:number,avoid:ReadonlySet<number>){
+export function pickTarget(npcs:readonly Npc[],engaged:number,avoid:ReadonlySet<number>,ownPlayer?:number){
  const A=TARGET_AREA;
  const fit=(n:Npc)=>TARGET_NAMES.test(n.name)&&(n.hp===null||n.hp>0)&&n.reachable!==false
   &&n.x>=A.x0&&n.x<=A.x1&&n.z>=A.z0&&n.z<=A.z1&&(n.optionsWithIndex??[]).some(o=>/^attack$/i.test(o.text));
- const own=npcs.find(n=>n.index===engaged&&fit(n));
+ const own=npcs.find(n=>(n.index===engaged||Number.isSafeInteger(ownPlayer)&&n.inCombat&&n.targetIndex===32768+ownPlayer!)&&fit(n));
  if(own)return own;
  const free=npcs.filter(n=>fit(n)&&!n.inCombat&&!avoid.has(n.index)).sort((a,b)=>a.distance-b.distance);
  return free.find(n=>PREFERRED_TARGETS.test(n.name))??free[0];
@@ -533,7 +533,7 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
    const p=at()!;if(d8(p,CAST_SITE)>8)await walk([CAST_SITE],'return to cast site');
    if(state()?.dialog?.isOpen)await s.direct({type:'closeModal',reason:'SDK'});
    const combat=pos()?.combat,engaged=combat?.targetType==='npc'?combat.targetIndex:-1;
-   const target=pickTarget((state()?.nearbyNpcs??[]) as Npc[],engaged,new Set(avoid.keys()));
+   const target=pickTarget((state()?.nearbyNpcs??[]) as Npc[],engaged,new Set(avoid.keys()),(s.client as {selfSlot?:number})?.selfSlot);
    if(!target){if(++idle>=CAST.targetWaitTicks)throw Object.assign(Error('combat stall: no safe target near the cast site'),{stop:'combat stall'});await waitTicks(s,1);return;}
    idle=0;
    if(await fed())return;
