@@ -1,0 +1,436 @@
+{
+ "side": "local",
+ "at": 1793812186751,
+ "jobs": [
+  {
+   "account": "FishAndChips",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/shop-buyer.ts harry 600 MAX_ITEMS=1 MAX_SPEND=500 NO_BUY_TICKS=25 BANK_PACK=1",
+    "scripts/gather-fish.ts cage 3000",
+    "scripts/cook-food.ts 1500 lobster"
+   ],
+   "env": {
+    "ROUNDS": "0",
+    "RUN": "2"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "mmtha0205",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "aubury",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "fire rune|earth rune",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "fire runes (2000 short) and earth runes (1193 short) from Aubury",
+   "role": "supply"
+  },
+  {
+   "accounts": [
+    "NabTheKnob"
+   ],
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "runemysteries",
+    "murder",
+    "sheep",
+    "cook",
+    "rj"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
+   "role": "quests"
+  },
+  {
+   "accounts": [
+    "Swordinhand"
+   ],
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "runemysteries",
+    "murder",
+    "sheep",
+    "cook",
+    "rj"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
+   "role": "quests"
+  },
+  {
+   "accounts": [
+    "Abracadickra"
+   ],
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "runemysteries",
+    "murder",
+    "sheep",
+    "cook",
+    "rj"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
+   "role": "quests"
+  },
+  {
+   "accounts": [
+    "Woodenstaff"
+   ],
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "runemysteries",
+    "murder",
+    "sheep",
+    "cook",
+    "rj"
+   ],
+   "enabled": true,
+   "standing": true,
+   "repeat": false,
+   "goal": "quests in one host: runemysteries, murder, sheep, cook, rj",
+   "role": "quests"
+  },
+  {
+   "account": "PickpockDick",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2653,3302"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketpython",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "Pocketrocket",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "catherby",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "arrowtips",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "rune, adamant, mithril and steel arrowtips from Hickton",
+   "role": "supply"
+  },
+  {
+   "account": "mmsmk1232",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "mmthv2350",
+   "script": "scripts/shop-buyer.ts",
+   "args": [
+    "betty",
+    "6000"
+   ],
+   "env": {
+    "ITEMS": "fire rune|earth rune",
+    "BANK_PACK": "1",
+    "MAX_SPEND": "200000",
+    "COIN_RESERVE": "10000",
+    "FLOAT": "210000",
+    "NO_BUY_TICKS": "50"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "fire and earth runes from Betty",
+   "role": "supply"
+  },
+  {
+   "account": "Moneyshot",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2652,3318",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2652,3318",
+   "role": "thieving",
+   "template": "goldfarm@2652,3318",
+   "autopilot": "local",
+   "resources": [
+    "knight:2652,3318"
+   ]
+  },
+  {
+   "account": "Billionaire",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2582,3297",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2582,3297",
+   "role": "thieving",
+   "template": "goldfarm@2582,3297",
+   "autopilot": "local",
+   "resources": [
+    "knight:2582,3297"
+   ]
+  },
+  {
+   "account": "Swordinhand",
+   "script": "scripts/gather-combat.ts",
+   "env": {
+    "TARGET": "cow",
+    "CAP": "1000",
+    "MAX_KILLS": "5",
+    "TRAIN_SKILL": "Attack",
+    "TARGET_LEVEL": "20"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "Cow combat: Attack to 20",
+   "role": "combat"
+  },
+  {
+   "account": "Hocuspokeus",
+   "script": "scripts/quest-cook-job.ts",
+   "args": [
+    "hetty"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-ed6935b8-b246-4f22-b3c5-de6fad74778c"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-quest-items-hetty-first-live [task-ed6935b8-b246-4f22-b3c5-de6fad74778c]",
+   "role": "helper"
+  },
+  {
+   "account": "BowBeforeMe",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "bigchopper-ranged40-maple",
+    "ITEM_ID": "853",
+    "QUANTITY": "1",
+    "LIMIT_PRICE": "5000",
+    "CASH_RESERVE": "30000",
+    "ORDER_MS": "900000",
+    "FILL_WAIT_TICKS": "50",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ce47490c-e3f8-45ae-be05-a9fa81c83fa2"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-bowbeforeme-maple-for-ranged40 [task-ce47490c-e3f8-45ae-be05-a9fa81c83fa2]",
+   "role": "supply"
+  },
+  {
+   "account": "Masterbaiter",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-c17a9ed2-cf72-4b43-bd2f-f335e8188be6"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-session-recovery-masterbaiter-11 [task-c17a9ed2-cf72-4b43-bd2f-f335e8188be6]",
+   "role": "supply"
+  },
+  {
+   "account": "Bigpackage",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "haggis-route-bigpackage-cannonball1700",
+    "ITEM_ID": "2",
+    "QUANTITY": "1700",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "30",
+    "CASH_RESERVE": "160000",
+    "ORDER_MS": "900000",
+    "FILL_WAIT_TICKS": "50",
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-b0490357-5b25-46dd-b8e5-d741b58a80dd"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-bigpackage-main-cannonball1700 [task-b0490357-5b25-46dd-b8e5-d741b58a80dd]",
+   "role": "supply"
+  },
+  {
+   "account": "MineYourBiz",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "mineyourbiz-cat-milk",
+    "ITEM_ID": "1927",
+    "QUANTITY": "1",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "1000",
+    "CASH_RESERVE": "170000",
+    "ORDER_MS": "600000",
+    "FILL_WAIT_TICKS": "50",
+    "CAP": "2400",
+    "COORDINATOR_RUN_ID": "task-6025ab3d-1027-4143-a962-170b6d19ba85"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-mineyourbiz-cat-milk [task-6025ab3d-1027-4143-a962-170b6d19ba85]",
+   "role": "supply"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "oreelse-death-bread10",
+    "ITEM_ID": "2309",
+    "QUANTITY": "10",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "300",
+    "CASH_RESERVE": "50000",
+    "ORDER_MS": "600000",
+    "FILL_WAIT_TICKS": "50",
+    "CAP": "2400",
+    "COORDINATOR_RUN_ID": "task-b9e59b8c-7aad-40d9-b6a8-e8ce20664596"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-oreelse-death-bread10 [task-b9e59b8c-7aad-40d9-b6a8-e8ce20664596]",
+   "role": "smithing"
+  },
+  {
+   "account": "Bigchopper",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ITEM_ID": "526",
+    "QUANTITY": "218",
+    "EXPECTED_OWNED": "137",
+    "LIMIT_PRICE": "100",
+    "CASH_RESERVE": "300000",
+    "ORDER_KEY": "bigchopper-prayer70-bones218",
+    "ORDER_MS": "600000",
+    "FILL_WAIT_TICKS": "200",
+    "CAP": "2400",
+    "COORDINATOR_RUN_ID": "task-a19eb255-0af8-4afd-803b-084b0b1eac89"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-bigchopper-prayer70-bones218 [task-a19eb255-0af8-4afd-803b-084b0b1eac89]",
+   "role": "firemaking"
+  },
+  {
+   "account": "Shaftmaker",
+   "script": "scripts/buy-owned-ge-item.ts",
+   "args": [],
+   "env": {
+    "ORDER_KEY": "shaftmaker-magic75-nature34",
+    "ITEM_ID": "561",
+    "QUANTITY": "34",
+    "EXPECTED_OWNED": "0",
+    "LIMIT_PRICE": "350",
+    "CASH_RESERVE": "14000",
+    "ORDER_MS": "900000",
+    "FILL_WAIT_TICKS": "50",
+    "CAP": "2400",
+    "COORDINATOR_RUN_ID": "task-36060dfb-8e00-423d-a467-2926c47156b1"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-ge-shaftmaker-magic75-nature34 [task-36060dfb-8e00-423d-a467-2926c47156b1]",
+   "role": "firemaking"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "vampire"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-0617be17-b4bc-4e2b-ba09-53f71dc849c1"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "run-vampire-mightyrod-shared-recovery [task-0617be17-b4bc-4e2b-ba09-53f71dc849c1]",
+   "role": "combat"
+  }
+ ]
+}
