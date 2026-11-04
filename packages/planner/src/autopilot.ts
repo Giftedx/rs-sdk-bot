@@ -80,9 +80,11 @@ export function plan(inp: Inputs): Assignment[] {
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
-// A producing job repeats. A training job does not: its ok RESULT means the target level is met (a tick cap short of
-// it is a fail RESULT, which the supervisor retries), so the swarm leaves the ended trainer alone until the next pass
-// hands the account its next template, whose changed mission starts. finishedTrainers() brings that pass forward.
+// A training job does not repeat: its ok RESULT means the target level is met, and a rerun would log in, find the level
+// met and log out (a scored login for nothing). The swarm keeps the account's `done` end until the next pass hands it
+// a job with a different mission, which the met level unlocks. A run that ends short of the target is a fail RESULT,
+// which the supervisor retries and the swarm's standing retry resumes, with or without repeat.
+// finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
     return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: !t.trains, standing: true,
@@ -206,18 +208,24 @@ export function plannableAccounts(jobs: readonly any[], side: string, listed: re
     return listed.filter(n => { const k = n.toLowerCase(); return !hard.has(k) && !paused.has(k) && (optIn.has(k) || !named.has(k)); });
 }
 
+const jobNames = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean) as string[];
+
 // Resources the jobs in the file hold against this side's planning: every enabled unmarked job, and every enabled
 // marked job whose account is paused (a stop file; mergeJobs keeps that job as it is, so its pen or spot stays its own).
-// ownHeld is the part held by this side's own accounts, which goes into this side's fleet claim.
-export function reservedResources(jobs: readonly any[], side: string, paused: ReadonlySet<string>, sideOf: (account: string) => string): { taken: Record<string, number>; ownHeld: string[] } {
-    const taken: Record<string, number> = {}, ownHeld: string[] = [];
-    const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean) as string[];
-    const holds = (j: any) => j?.enabled !== false && (j?.autopilot !== side || names(j).some(a => paused.has(a.toLowerCase())));
-    for (const j of jobs) if (holds(j)) for (const r of jobResources(j)) {
-        taken[r] = (taken[r] ?? 0) + 1;
-        if (names(j).every(a => sideOf(a) === side)) ownHeld.push(r);
-    }
-    return { taken, ownHeld };
+export function reservedResources(jobs: readonly any[], side: string, paused: ReadonlySet<string>): Record<string, number> {
+    const taken: Record<string, number> = {};
+    const holds = (j: any) => j?.enabled !== false && (j?.autopilot !== side || jobNames(j).some(a => paused.has(a.toLowerCase())));
+    for (const j of jobs) if (holds(j)) for (const r of jobResources(j)) taken[r] = (taken[r] ?? 0) + 1;
+    return taken;
+}
+
+// This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
+// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs. scripts/fleet-sync.ts
+// writes it on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side ignores a
+// claim older than its CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now()): { side: string; at: number; resources: string[] } {
+    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side)).flatMap(jobResources);
+    return { side, at: now, resources: [...new Set(held)].sort() };
 }
 
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat

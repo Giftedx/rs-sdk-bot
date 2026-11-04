@@ -2,12 +2,15 @@
 // Default location: Al Kharid furnace (3274, 3186) and bank (3269, 3167).
 // Usage: bun scripts/smelt-bars.ts <bot> [CAP ticks, default 15000] [BAR_TYPE: iron | bronze | steel | gold | mithril]
 // Nonbronze: MAX_MAKE=28, ORE_RESERVE=1, ORDER_MODE=best-effort|exact. Al Kharid or Varrock East bank entry (10gp toll).
+// ORDER_ACTION=smith: anvil order on owned bars. PRODUCT_ID, MAX_MAKE (exact count) and BAR_RESERVE are required;
+// BAR_TYPE is unused. Stages from Al Kharid (10gp toll), Varrock East or Varrock West bank to the Varrock West anvils.
 // Environment: DEMO_OK=1 for live server.
 import { openBot, finish } from '../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../packages/core/src/ticks';
 import { walkPath, sessionWalker } from '../packages/core/src/walk';
 import { productionBatch } from '../packages/planner/src/production-batch';
 import {runSmeltBatch} from './smelt-batch';
+import {runSmithBatch,smithRecipe} from './smith-batch';
 
 const FURNACE_SPOT = { x: 3274, z: 3186 }; // Al Kharid Furnace
 const BANK_SPOT = { x: 3269, z: 3167 };    // Al Kharid Bank
@@ -82,14 +85,31 @@ const botName = process.argv[2];
 const BAR_TYPE = (process.argv[4] ?? process.env.BAR_TYPE ?? 'iron').toLowerCase();
 const CAP = Number(process.argv[3] ?? process.env.CAP ?? 15000);
 
+const ACTION=(process.env.ORDER_ACTION??'smelt').toLowerCase();
+
 if (!botName) {
     console.error('Usage: bun scripts/smelt-bars.ts <botName> [CAP] [BAR_TYPE]');
     process.exit(1);
 }
+let smith:{product:number;maximum:number;reserve:number}|undefined;
+if(ACTION==='smith'){
+    // Refuse a malformed or unsupported order before login.
+    const env=(k:string)=>process.env[k]===undefined||process.env[k]===''?NaN:Number(process.env[k]);
+    smith={product:env('PRODUCT_ID'),maximum:env('MAX_MAKE'),reserve:env('BAR_RESERVE')};
+    try{
+        if(![CAP,smith.product,smith.maximum,smith.reserve].every(Number.isSafeInteger)||CAP<1||smith.maximum<1||smith.reserve<0)throw Error('smith refused: integer CAP>=1, PRODUCT_ID, MAX_MAKE>=1 and BAR_RESERVE>=0 required');
+        smithRecipe(smith.product);
+    }catch(e){console.error(String(e));process.exit(1);}
+}else if(ACTION!=='smelt'){console.error('ORDER_ACTION must be smelt or smith');process.exit(1);}
 
 let stopped=false;
-const s = await openBot(botName,BAR_TYPE==='bronze'?{}:{onStop:async()=>{stopped=true;}}).catch(e => finish([], false, `login: ${String(e)}`));
+const s = await openBot(botName,BAR_TYPE==='bronze'&&!smith?{}:{onStop:async()=>{stopped=true;}}).catch(e => finish([], false, `login: ${String(e)}`));
 try {
+    if(smith){
+        const result=await runSmithBatch(s,{...smith,cap:CAP,stop:()=>stopped});
+        console.log('SMITH_RESULT '+JSON.stringify(result));
+        await finish([s],result.ok,`mode=smith ${JSON.stringify(result)}`);return;
+    }
     if(BAR_TYPE==='bronze'){const result=await runBronze(s,{maximum:Number(process.env.MAX_MAKE??8),reserve:Number(process.env.ORE_RESERVE??1),cap:CAP});await finish([s],result.ok,`mode=bronze ${JSON.stringify(result)}`);return;}
     const result=await runSmeltBatch(s,{
         bar:BAR_TYPE,cap:CAP,maximum:Number(process.env.MAX_MAKE??28),reserve:Number(process.env.ORE_RESERVE??1),

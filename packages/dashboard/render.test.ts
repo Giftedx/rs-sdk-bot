@@ -1,6 +1,28 @@
 import {test,expect} from 'bun:test';
 import {readFileSync} from 'node:fs';
 const html=readFileSync(process.env.DASH_PAGE || new URL('./index.html',import.meta.url),'utf8');
+
+test('Free camera intent is replayed when the 3D frame becomes ready',()=>{
+ const code=html.slice(html.indexOf("window.addEventListener('message',e=>{"),html.indexOf('function syncWorld(){'));
+ const sent:any[]=[];let handler:any;const frame={postMessage:(m:any)=>sent.push(m)},window:any={atlasFreeCamera:true,addEventListener:(_t:string,f:any)=>handler=f};
+ new Function('window','$','viewerMessage','viewerCanReveal',`let VIEWER={origin:'http://test',state:'loading'},VIEWER_TIMER,sel=null;const mode='3d',showViewerStatus=()=>{},viewerUnavailable=()=>{};${code}`)(window,()=>({contentWindow:frame}),()=>({state:'ready',privacyReady:true,renderReady:true}),()=>true);
+ handler({source:frame,origin:'http://test',data:{}});expect(sent).toEqual([{atlasFreeCamera:true}]);
+});
+
+test('a chosen camera destination stays labelled as the destination, not the selected account position',()=>{
+ const code=html.slice(html.indexOf('function syncWorld(){'),html.indexOf('function chainHud(){'));
+ const follow={textContent:''};
+ new Function('$',`const S={bots:[{name:'Worker',at:1}]},sel='Worker',mode='2d',VIEWER={url:null},window={atlasFreeCamera:true,atlasDestination:{x:3200,z:3450}},age=()=>'old',showViewerStatus=()=>{};${code};syncWorld();`)(()=>follow);
+ expect(follow.textContent).toContain('3200, 3450');expect(follow.textContent).not.toContain('Worker');
+});
+test('following a visitor clears the free camera destination before rendering',()=>{
+ const code=html.slice(html.indexOf('window.atlasFollow3d='),html.indexOf('\n',html.indexOf('window.atlasFollow3d=')));
+ const sent:any[]=[];const window:any={atlasFreeCamera:true,atlasDestination:{x:3200,z:3450}};let rendered:any;
+ new Function('window','$','render',`const mode='3d',VIEWER={state:'ready',origin:'http://viewer'};${code}`)(window,()=>({contentWindow:{postMessage:(m:any)=>sent.push(m)}}),()=>rendered={free:window.atlasFreeCamera,destination:window.atlasDestination,following:window.atlasFollowOther});
+ expect(window.atlasFollow3d('Visitor')).toBe(true);
+ expect(rendered).toEqual({free:false,destination:null,following:'Visitor'});
+ expect(sent).toEqual([{follow:'Visitor'}]);
+});
 const source=html.slice(html.indexOf('function chainHud(){'),html.indexOf("$('#chain').addEventListener"));
 for(const chain of [null,{cook:null,courier:null,farmers:[]},
     {cook:{name:'Cook',fresh:false,at:10},courier:null,farmers:[]},
@@ -66,10 +88,12 @@ function rosterFunctions(){return new Function('S','E','ago','sel','ocIcon',rost
 const stopProof={kind:'host-stop-cleanup',outcome:'proved',level:'local-native',workerOutcome:'fail',goalMet:false,scope:'four sent inputs settled; assets banked'};
 
 test('goal cards use current plan actions while preserving evidence metrics and unknown-plan fallback',()=>{
- const code=html.slice(html.indexOf('function goalMetrics(){'),html.indexOf('function goalCards(){'));
- const progress=Array.from({length:6},(_,i)=>({metric:`evidence${i}`,next:'historical action'}));
+ const code=html.slice(html.indexOf('function goalPlanFor('),html.indexOf('function goalCards(){'));
+ const titles=['Fleet & wealth','Collection & gear','Quests · unlocks · 99s','Specialist hiscores','Main Overall','Tick efficiency'];
+ const planTitles=['Wealth / logistics / GE','Gear / collection','Coverage','Specialist hiscores','Main Overall','Efficiency / visibility'];
+ const progress=titles.map((title,i)=>({title,metric:`evidence${i}`,next:'historical action'}));
  const run=new Function('S',code+';return goalMetrics();');
- const state={objectives:{available:true,progress,lanes:progress.map((_,i)=>({next:`current${i}`}))}};
+ const state={objectives:{available:true,progress,lanes:planTitles.map((title,i)=>({title,next:`current${i}`}))}};
  expect(run(state).map((g:any)=>g.next)).toEqual(progress.map((_,i)=>`current${i}`));
  expect(run(state).map((g:any)=>g.metric)).toEqual(progress.map(g=>g.metric));
  state.objectives.available=false;expect(run(state)[0].next).toBe('historical action');
@@ -78,6 +102,15 @@ test('goal cards use current plan actions while preserving evidence metrics and 
 
 test('dashboard commerce policy matches authorized GE use',()=>{
  expect(html).toContain('GE ENABLED · LIMIT ORDERS');expect(html).not.toContain('OWNED ONLY · NO GE');
+});
+
+test('host resources keep missing capacity and RAM headroom unknown',()=>{
+ const code=html.slice(html.indexOf('function inspect(){'),html.indexOf('function connectionState(){'));
+ const end=code.indexOf('\nfunction ',1),inspectCode=end<0?code:code.slice(0,end);
+ const run=new Function('S',`let view='machine',detailPages=1,detailPage=0,captured;const innerWidth=1280,document={querySelectorAll:()=>[]},box={},world={parentElement:null},$=s=>s==='#inspector'?box:s==='#world-panel'?world:{},machine=()=>S.sys,row=(label,value,tone)=>({label,value,tone}),pagedRows=rows=>{captured=rows},age=()=>'',observedAt=()=>false;${inspectCode};inspect();return captured;`);
+ const rows=run({capacity:{active:null,cap:null,fresh:false,headroomGB:null},sys:{freeGB:8,totalGB:32}});
+ expect(rows.find((r:any)=>r.label==='Bots running').value).toBe('? / ?');
+ expect(rows.find((r:any)=>r.label==='RAM headroom')).toEqual({label:'RAM headroom',value:'?',tone:'warn'});
 });
 
 test('dashboard inline JavaScript parses without running browser or making requests',()=>{
@@ -132,6 +165,7 @@ test('3D embed accepts only its same-origin viewer route and checks both message
     const src=html.slice(html.indexOf('function viewerFrameUrl('),html.indexOf('function showViewerStatus(){'));
     const f=new Function(src+';return{viewerFrameUrl,viewerMessage,viewerStatusText,viewerCanReveal};')(),frame={};
     expect(f.viewerFrameUrl('/viewer/','http://127.0.0.1:3102').href).toBe('http://127.0.0.1:3102/viewer/');
+    expect(f.viewerFrameUrl('viewer/','https://owner.github.io/rs-fleet-command/').href).toBe('https://owner.github.io/rs-fleet-command/viewer/');
     expect(()=>f.viewerFrameUrl('http://localhost:3000/','http://127.0.0.1:3102')).toThrow();
     expect(()=>f.viewerFrameUrl('/api/state','http://127.0.0.1:3102')).toThrow();
     const message={source:frame,origin:'http://127.0.0.1:3102',data:{viewerState:{state:'ready',renderReady:true,privacyReady:true}}};
