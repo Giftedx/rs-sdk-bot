@@ -8,6 +8,7 @@ import { openQuest } from './quest-lib';
 import {waitUntil} from '../../packages/core/src/ticks';
 import {leaveGhostBasement,retainedGhostSkull} from '../ghost-basement-exit';
 import {questFlags} from '../../packages/core/src/quest-status';
+import {readSkullResume,validateSkullResume,SKULL_WAIT_TICKS} from '../ghost-skull-entry';
 
 const AERECK = { x: 3244, z: 3206 };
 const URHNEY = { x: 3235, z: 3153 };
@@ -36,7 +37,14 @@ try {
     };
     if(retained)console.log('GHOST_RETAINED_SKULL '+JSON.stringify({state:state(),position:q.pos()&&{x:q.pos().worldX,z:q.pos().worldZ,level:q.pos().level}}));
     else{
-
+    const resume=process.env.GHOST_ENTRY;
+    if(resume&&resume!=='skull-pickup')throw Error('unsupported GHOST_ENTRY');
+    if(resume){
+        if(!process.env.GHOST_PRIOR_RUN)throw Error('skull resume needs GHOST_PRIOR_RUN');
+        const proof=readSkullResume(process.env.GHOST_PRIOR_RUN),p=q.pos();
+        validateSkullResume(proof.prior,proof.log,proof.logout,{name:process.argv[2]!,x:p?.worldX??-1,z:p?.worldZ??-1,level:p?.level??-1,inventory:q.s.sdk.getInventory(),equipment:q.s.sdk.getEquipment()});
+        q.milestone(3);
+    }else{
     // 1. Aereck: "I'm looking for a quest!" sets 1.
     await q.talk('aereck', /^father aereck$/i, [/looking for a quest/i], () => q.sawText(/father urhney is an expert/i), AERECK);
     q.milestone(1);
@@ -66,7 +74,9 @@ try {
     await q.dash('corridor', 3109, 9560, 1);
     await q.openDoor('skull door', 3111, 9559);
     await q.walk('to skull', [{ x: SKULL_AT.x, z: SKULL_AT.z, tol: 1 }]);
+    }
     const skullOnGround = (): any => (q.st()?.groundItems ?? []).find((g: any) => g.id === ITEM.skull);
+    if(!await q.waitUntil(()=>!!skullOnGround(),SKULL_WAIT_TICKS))throw Error('shared skull unavailable within '+SKULL_WAIT_TICKS+' ticks');
     await q.step('take skull', () => { const g = skullOnGround(); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.skull), 10, 5);
     q.milestone(4);
     }

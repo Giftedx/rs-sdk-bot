@@ -46,3 +46,13 @@ test('a gathering cycle can request its knife banked so it regains all25 log slo
   expect(f.bank.find(i=>i.id===946)?.count).toBe(1);expect(r.preserved).toBe(true);
  }finally{f.close();}
 });
+test('an owner pause permits no further bank action: no withdrawal, and no cleanup deposit after crafting',async()=>{
+ const before=fixture();try{
+  const r=await runShafts(before.s,{cap:1000,maximum:25,reserve:0,pause:()=>true});expect(r.ok).toBe(false);expect(before.calls()).toBe(0);
+  expect(before.inv().some(i=>[946,1511].includes(i.id))).toBe(false);expect(before.bank.find(i=>i.id===1511)?.count).toBe(25);
+ }finally{before.close();}
+ const during=fixture('stop');try{
+  const r=await runShafts(during.s,{cap:1000,maximum:25,reserve:0,pause:during.stop});expect(r.ok).toBe(false);expect(r.stop).toBe('stopped');expect(during.calls()).toBe(1);
+  expect(during.inv().find(i=>i.id===52)?.count).toBe(15);expect(during.bank.some(i=>i.id===52)).toBe(false);
+ }finally{during.close();}
+});
