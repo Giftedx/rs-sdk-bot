@@ -38,6 +38,28 @@ test('the visible observations bar cannot label a failed state build live',()=>{
  expect(status.innerHTML).toContain('State error');expect(status.innerHTML).not.toContain('Observations live');
 });
 
+test('a delivered state whose clock is far behind reads FROZEN, not LIVE',()=>{
+ const code=html.slice(html.indexOf('function connectionState(){'),html.indexOf("$('#inspector').addEventListener"));
+ const hidden={textContent:'',className:'',title:''},visible={textContent:'',className:'connection',title:''};
+ new Function('connected','lastReceived','S','document','$',code+';connectionState();')(true,Date.now(),{now:Date.now()-20*60000},{body:{classList:{toggle:()=>{}}},querySelector:()=>visible},()=>hidden);
+ expect(visible.textContent).toBe('FROZEN');
+});
+
+test('the hosted page labels a published file as a snapshot and gives its real age',()=>{
+ const source=readFileSync(new URL('./operations.js',import.meta.url),'utf8');
+ const code=source.slice(source.indexOf(' function statusBar(){'),source.indexOf(' const oldRender=render;'));
+ const status={innerHTML:'',classList:{toggle:()=>{}}},now=Date.now();
+ new Function('S','status','E','age',`${code};statusBar();`)({now,hostedAge:420000},status,String,(t:number)=>String(now-t));
+ expect(status.innerHTML).toContain('Published snapshot');expect(status.innerHTML).toContain('420000 old');
+});
+
+test('an account in the world whose last action is idle reads idle, not playing',()=>{
+ const line=html.split('\n').find(l=>l.includes('const st=b=>'))!;
+ const st=new Function(line.trim()+';return st;')();
+ expect(st({inWorld:true,fresh:true,action:'idle'})).toEqual(['wd','idle']);
+ expect(st({inWorld:true,fresh:true,action:'xp'})).toEqual(['on','playing']);
+});
+
 test('state-build failures keep retained data private even when an exception names the protected account',()=>{
  const code=server.slice(server.indexOf('function current() {'),server.indexOf('setInterval(() => {',server.indexOf('function current() {')));
  const run=new Function('buildState','console',`const SECRET_RE=/Haggis/gi,SECRET_MARK='⟦MAIN⟧',MAP={};let latest={at:0,json:''};${code};return current;`)(()=>{throw Error('Haggis invalid status');},{error:()=>{}});
