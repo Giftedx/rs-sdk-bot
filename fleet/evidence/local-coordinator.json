@@ -1,23 +1,23 @@
 {
   "schema": "coordinator-progress/1",
   "side": "local",
-  "exportedAt": 1793520510114,
+  "exportedAt": 1793520750638,
   "sources": {
     "state": {
       "observedAt": 1793520490597.7598,
-      "ageMs": 19516.240234375,
-      "stale": false,
+      "ageMs": 260040.240234375,
+      "stale": true,
       "error": null
     },
     "swarm": {
-      "observedAt": 1793520509584,
-      "ageMs": 530,
+      "observedAt": 1793520750526,
+      "ageMs": 112,
       "stale": false,
       "error": null
     },
     "owner": {
       "observedAt": 1793505425293.7166,
-      "ageMs": 15084820.283447266,
+      "ageMs": 15325344.283447266,
       "stale": true,
       "error": null
     }
@@ -4251,7 +4251,7 @@
   "swarm": {
     "controllerPid": 12824,
     "processState": "alive",
-    "reportedRunning": 3,
+    "reportedRunning": 2,
     "observationStale": false,
     "jobs": [
       {
@@ -4367,7 +4367,7 @@
       {
         "account": "Billionaire",
         "script": "scripts/goldfarm.ts",
-        "state": "running; updated mission queued"
+        "state": "waiting: projected 2.0 GB free after 1 GB startup reserve < 4 GB floor"
       },
       {
         "account": "Wandwaver",
