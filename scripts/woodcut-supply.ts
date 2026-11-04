@@ -35,7 +35,7 @@ export async function takeOwnedSupplyKnife(s:Session,check:()=>void):Promise<'he
 }
 export async function runWoodSupply(s:Session,logs:number,headless:number,cap:number){
  const plan=supplyPlan(logs,headless,cap),start=s.tick(),hp=s.sdk.getSkill('Hitpoints')?.level??0;
- let hpMin=hp;const damage:any[]=[];const off=s.onTick(()=>{const now=s.sdk.getSkill('Hitpoints')?.level??0;if(now<hpMin){const p=s.sdk.getState()?.player;damage.push({tick:s.tick()-start,hp:now,pos:p&&{x:p.worldX,z:p.worldZ,level:p.level},combat:p?.combat,npcs:s.sdk.getState()?.nearbyNpcs.map(n=>({name:n.name,x:n.x,z:n.z,distance:n.distance}))});console.log('WOOD_SUPPLY_DAMAGE '+JSON.stringify(damage.at(-1)));hpMin=now;}});
+ let hpMin=hp,last=hp;const damage:any[]=[];const off=s.onTick(()=>{const now=s.sdk.getSkill('Hitpoints')?.level??0;const hit=now<last;last=now;if(hit){const p=s.sdk.getState()?.player;damage.push({tick:s.tick()-start,hp:now,pos:p&&{x:p.worldX,z:p.worldZ,level:p.level},combat:p?.combat,npcs:s.sdk.getState()?.nearbyNpcs.map(n=>({name:n.name,x:n.x,z:n.z,distance:n.distance}))});console.log('WOOD_SUPPLY_DAMAGE '+JSON.stringify(damage.at(-1)));}hpMin=Math.min(hpMin,now);});
  const stop=()=>existsSync('.practice/stop-'+s.name),held=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  // Damage latches: a later heal does not clear it. Every guard, including the helpers' stop callbacks and active travel, reads halt().
  const halt=()=>stop()||s.tick()-start>=cap||damage.length>0||(s.sdk.getSkill('Hitpoints')?.level??0)<hp||!!s.sdk.getState()?.player?.isDead;
@@ -84,9 +84,9 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
    }
    await bank();await deposit();
   }
-  check();shafts=await runShafts(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:logs,reserve:0,bankKnife:true,stop:halt});check();
+  check();shafts=await runShafts(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:logs,reserve:0,bankKnife:true,stop:halt,pause:stop});check();
   if(!shafts.ok)throw Error('supply shafts '+JSON.stringify(shafts));
-  if(headless){check();arrows=await runHeadless(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:headless,shaftReserve:200,featherReserve:100,stop:halt});check();if(!arrows.ok||!arrows.targetMet)throw Error('supply headless '+JSON.stringify(arrows));}
+  if(headless){check();arrows=await runHeadless(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:headless,shaftReserve:200,featherReserve:100,stop:halt,pause:stop});check();if(!arrows.ok||!arrows.targetMet)throw Error('supply headless '+JSON.stringify(arrows));}
   return {ok:true,gathered,shafts,arrows,ticks:s.tick()-start,hpMin,damage};
  }catch(error){return {ok:false,gathered,shafts,arrows,ticks:s.tick()-start,error:String(error),hpMin,damage};}finally{off();}
 }
