@@ -70,3 +70,12 @@ test('a stop received while the initial bank opens prevents knife withdrawal and
   expect(opens).toBe(1);expect(f.calls).toEqual([]);expect(f.bank[0]!.count).toBe(1);expect(f.pack.some(i=>i.id===946)).toBe(false);
  }finally{if(existsSync(file))unlinkSync(file);}
 });
+test('a stop that lands while the bank opens permits no deposit',async()=>{
+ const file='.practice/stop-Supplybank';mkdirSync('.practice',{recursive:true});if(existsSync(file))unlinkSync(file);
+ let deposits=0;
+ const inventory=[{id:1351,name:'Bronze axe',count:1,slot:0},{id:946,name:'Knife',count:1,slot:1}];
+ const session:any={name:'Supplybank',tick:()=>0,onTick:()=>()=>{},sdk:{getSkill:()=>({level:54}),getInventory:()=>inventory,getState:()=>({player:{worldX:3092,worldZ:3243,level:0,isDead:false},bank:{isOpen:true,items:[]}})},
+  bot:{openBank:async()=>{writeFileSync(file,'unit-owned stop',{flag:'wx'});return {success:true};},depositItem:async()=>{deposits++;return {success:true};},closeBank:async()=>({success:true})}};
+ try{const r=await runWoodSupply(session,1,0,3000);expect(r.ok).toBe(false);expect(r).toHaveProperty('error','Error: supply stopped, capped or damaged');expect(deposits).toBe(0);}
+ finally{if(existsSync(file))unlinkSync(file);}
+});
