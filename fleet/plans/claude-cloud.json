@@ -1,13 +1,13 @@
 {
  "side": "claude-cloud",
- "at": 1793812550332,
+ "at": 1793813758299,
  "jobs": [
   {
    "account": "UnderMyKilt",
    "script": "scripts/ranged-train.ts",
    "args": [
-    "80",
-    "25000"
+    "85",
+    "30000"
    ],
    "env": {
     "FOOD": "2",
@@ -21,7 +21,7 @@
    },
    "enabled": true,
    "repeat": true,
-   "goal": "Ranged board gap: Ranged 75 to 80 (~260 chicken kills)",
+   "goal": "Ranged board gap: Ranged 80 to 85 (~300 chicken kills)",
    "role": "ranged"
   },
   {
