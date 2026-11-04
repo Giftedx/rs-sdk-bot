@@ -1,7 +1,6 @@
 import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from 'node:fs';
 import {join,dirname,resolve,relative} from 'node:path';
-import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {FLEET_HEARTBEAT_MAX_MS,RECOVERY_BINDING_MS,RECOVERY_SCRIPT,issueRecoveryPermit,bindRecoveryChild,consumeRecoveryPermit,consumeRecoveryConnection,spendRecoveryConnection,assertNoRecoveryLease,recoveryPermitPaths,finishRecoveryPermit,launchPermittedRecovery,launchObservations,recoveredSessionForRun,heldRecoveryOwners,assertRecoveryNotStopped,verifyNativeRecoveryProof,NATIVE_RECOVERY_CHECKS} from '../src/session-recovery-permit';
 import {beginSessionAttempt,readLogoutProof,listAttempts,accountDir} from '../src/session-lifecycle';
@@ -11,11 +10,13 @@ import {applyEndRepair,type ScriptHold} from '../../../scripts/swarm';
 import {recoveryHeldDiagnostic,recoveryBoundary,recoveryDiagnosticFromLog} from '../src/session-recovery';
 import {missionSignature} from '../src/session-admission';
 const source='a'.repeat(64),runner='b'.repeat(64),now=1793258000000;
+const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
+mkdirSync(fixtureRoot,{recursive:true});
 test('the controller launches the core recovery worker inside the gameplay ownership scope',()=>{
  expect(RECOVERY_SCRIPT).toBe('packages/core/src/session-recovery.ts');
 });
 test('private fixtures honour every repository and fixture stop flag',()=>{
- const base=mkdtempSync(join(tmpdir(),'recovery-stop-')),repo=resolve(import.meta.dir,'../../..');
+ const base=mkdtempSync(join(fixtureRoot,'recovery-stop-')),repo=resolve(import.meta.dir,'../../..');
  for(const root of [base,repo])for(const flag of ['stop-coordinator','stop-swarm','stop-Rod']){
   const stopped=join(root,'.practice',flag),observed:string[]=[];
   expect(()=>assertRecoveryNotStopped('Rod',base,path=>{observed.push(path);return path===stopped;})).toThrow('owner stopped');
@@ -24,7 +25,7 @@ test('private fixtures honour every repository and fixture stop flag',()=>{
  expect(()=>assertRecoveryNotStopped('Rod',base,()=>false)).not.toThrow();
 });
 function fixture(){
- const base=mkdtempSync(join(tmpdir(),'recovery-permit-'));
+ const base=mkdtempSync(join(fixtureRoot,'recovery-permit-'));
  const put=(path:string,value:any)=>{mkdirSync(dirname(join(base,path)),{recursive:true});writeFileSync(join(base,path),JSON.stringify(value));};
  const ref=(path:string)=>({path,sha256:createHash('sha256').update(readFileSync(join(base,path))).digest('hex')});
  put(RECOVERY_SCRIPT,'fixture runner');
