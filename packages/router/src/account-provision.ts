@@ -56,9 +56,11 @@ export async function provisionAccount(request:AccountProvisionRequest,deps:Acco
 }
 
 /** No calls run until the returned dependency methods are invoked. Serialize provisioning per job. */
+// workerRelease is the capability release of REGISTRATION_SCRIPT (packages/core/src/worker-release.ts).
+export const REGISTRATION_SCRIPT='scripts/claim-account.ts';
 export function registrationEnvironment(server:string,workerRelease:string|undefined){
  if(server==='rs-sdk-demo.fly.dev'&&(!workerRelease||! /^[a-f0-9]{64}$/.test(workerRelease)))throw Error('live registration needs its qualified runtime release');
- return {...process.env,DEMO_OK:server==='rs-sdk-demo.fly.dev'?'1':'',...(workerRelease?{WORKER_RELEASE:workerRelease}:{})};
+ return {...process.env,DEMO_OK:server==='rs-sdk-demo.fly.dev'?'1':'',...(workerRelease?{WORKER_RELEASE:workerRelease,WORKER_ENTRY:REGISTRATION_SCRIPT}:{})};
 }
 export function createAccountProvisionDeps(options:{timeoutMs?:number;workerRelease?:string}={}):AccountProvisionDeps {
     const root=resolve(import.meta.dir,'../../..'),timeoutMs=options.timeoutMs??60_000;
@@ -68,7 +70,7 @@ export function createAccountProvisionDeps(options:{timeoutMs?:number;workerRele
         createLocalAccount:createAccount,
         async registerAccount(name,server) {
             if(!/^[A-Za-z0-9]{1,12}$/.test(name)||!allowedServer(server))throw Error('invalid registration target');
-            const child=Bun.spawn([process.execPath,'scripts/claim-account.ts',name],{
+            const child=Bun.spawn([process.execPath,REGISTRATION_SCRIPT,name],{
                 cwd:root,env:registrationEnvironment(server,options.workerRelease??process.env.WORKER_RELEASE),stdout:'pipe',stderr:'ignore',
             windowsHide:true});
             let timedOut=false,termination:Promise<void>|undefined;

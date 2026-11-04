@@ -41,7 +41,7 @@ export function settleSharkOrder(path:string,r:{ok:boolean;banked:number;caught:
 }
 export const SHARK_BANK={x:2809,z:3441}, WEST_BANK={x:2619,z:3332};
 const d8=(a:PathTile,b:PathTile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
-// Ardougne west bank to Catherby, west of White Wolf Mountain. Pinned findLongPath legs stay inside (2026-10-29).
+// Ardougne west bank to Catherby, west of White Wolf Mountain. Pinned findLongPath legs stay inside.
 export const sharkCorridor=(p:PathTile)=>p.x>=2600&&p.x<=2865&&p.z>=3320&&p.z<=3460;
 // walkPath takes an empty plan (rs-sdk can call the actor's own tile blocked) and stops within the point tol.
 // Refuse a plan that ends outside that tol or leaves the corridor.

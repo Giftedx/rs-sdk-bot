@@ -4,7 +4,7 @@ import {resolve,join,dirname,relative} from 'node:path';
 import ts from 'typescript';
 import {existsSync} from 'node:fs';
 import {freemem} from 'node:os';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision} from '../../core/src/worker-release';
 import {killTree} from '../../practice/src/proc';
 import {recoverProofLock,withPracticeTurn} from '../../practice/src/proof-lock';
 import {deliver,validateDelivery,type DeliveryTask} from './delivery';
@@ -56,6 +56,8 @@ export function importClosure(starts:readonly string[],base=root):string[]{
  }
  return [...seen].sort();
 }
+// The capability release of the entry (packages/core/src/worker-release.ts); null when the entry cannot be released.
+function runtimeRevision(task:DeliveryTask):string|null{try{return capabilityRevision([task.entry],root);}catch{return null;}}
 export function deliveryFingerprint(t:DeliveryTask,base=root){
  // Entry, scope and acceptance commands are part of the qualified contract.
  const scripts=t.checks.flatMap(c=>c.command.filter(a=>/\.(?:ts|tsx)$/.test(a)));
@@ -100,7 +102,7 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
                 }}));
         },
     },diagnosticCheck);
-    const report={...result,...nativeDeferralEvidence(result.reason),id:task.id,goal:task.goal,at:Date.now(),runtimeRevision:workerSourceRevision(root),directory,files:task.files.map(path=>{
+    const report={...result,...nativeDeferralEvidence(result.reason),id:task.id,goal:task.goal,at:Date.now(),runtimeRevision:runtimeRevision(task),directory,files:task.files.map(path=>{
         try{return{path,sha256:createHash('sha256').update(readFileSync(join(root,path))).digest('hex')};}
         catch{return{path,sha256:null};}
     })};

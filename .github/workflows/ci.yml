@@ -29,3 +29,5 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=6144
       - run: bun test ./scripts ./packages
+      # The dashboard tests alone too: in the full run another test's globals (window) can hide a missing stub.
+      - run: bun test ./packages/dashboard

@@ -1,4 +1,4 @@
-// MEASURED (2026-10-24): 3/3 on practice in 449-455 ticks, see research/quest-plan.md section 1n.
+// MEASURED: 3/3 on practice in 449-455 ticks, see research/quest-plan.md section 1n.
 // Sea Slug from preset quest_seaslug (beside Caroline), at the planner's state for the rival-seaslug row (tick
 // 24,985; Firemaking 99, Fishing 1). Reward: 71,750 Fishing (x25: 179,375), 1 QP (caroline.rs2:33-48).
 // Varp %seaslugquest (159, quest_seaslug.constant): 1 Caroline; 2 Holgart wants swamp paste; 3 the paste (helper item

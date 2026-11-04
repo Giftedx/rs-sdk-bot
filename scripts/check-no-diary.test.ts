@@ -1,6 +1,13 @@
 import { test, expect } from 'bun:test';
 import { resolve } from 'node:path';
-import { flag, check } from './check-no-diary';
+import { flag, flagComments, check } from './check-no-diary';
+
+test('dates in code comments are flagged; dates in code, URLs and paths are not', () => {
+    const d = ['2026', '10', '29'].join('-'); // built here, so this file's own comments scan clean
+    const t = [`// Measured on ${d}.`, `const at = "${d}"; // a fixture day`, ` * seen ${d}: a death`, `fetch("https://x.test/${d}")`,
+        `// Reads research/hiscores-${d}.json.`, `run(); // logged out ${d}`].join('\n');
+    expect(flagComments(t).map(f => f.line)).toEqual([1, 3, 6]);
+});
 
 test('history in prose is flagged; paths, code, quotes and plain facts are not', () => {
     const t = ['Superheat gives 412 XP per tick.', 'Measured on 2026-10-29.', 'The row (was 45,570) is faster.', 'This replaced the old loop and was replaced by V2.',
