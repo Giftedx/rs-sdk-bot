@@ -40,3 +40,8 @@ test('native staff table supports both lava elements and gates member staff on F
  for(const id of [3053,3054])for(const rune of [554,557]){expect(elementalRuneCost(rune,10,[{id,slot:3}],true)).toBe(0);expect(elementalRuneCost(rune,10,[{id,slot:3}],false)).toBe(10);}
  expect(elementalRuneCost(556,5,[{id:1397,slot:3}],false)).toBe(5);expect(elementalRuneCost(556,5,[{id:1397,slot:3}],true)).toBe(0);expect(elementalRuneCost(556,5,[{id:1381,slot:3}],false)).toBe(0);
 });
+test('an elemental staff removes spell runes but never the alchemy target debit',()=>{
+ const r=itemMagicRecipe('high-alch','airrune');
+ expect(r.inputs[r.target]).toBe(1);
+ expect(itemSpellCosts(r,[{id:1381,slot:3}])[r.target]).toBe(1);
+});
