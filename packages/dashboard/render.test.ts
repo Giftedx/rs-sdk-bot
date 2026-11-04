@@ -106,11 +106,13 @@ test('dashboard commerce policy matches authorized GE use',()=>{
 
 test('host resources keep missing capacity and RAM headroom unknown',()=>{
  const code=html.slice(html.indexOf('function inspect(){'),html.indexOf('function connectionState(){'));
- const end=code.indexOf('\nfunction ',1),inspectCode=end<0?code:code.slice(0,end);
- const run=new Function('S',`let view='machine',detailPages=1,detailPage=0,captured;const innerWidth=1280,document={querySelectorAll:()=>[]},box={},world={parentElement:null},$=s=>s==='#inspector'?box:s==='#world-panel'?world:{},machine=()=>S.sys,row=(label,value,tone)=>({label,value,tone}),pagedRows=rows=>{captured=rows},age=()=>'',observedAt=()=>false;${inspectCode};inspect();return captured;`);
+ const end=code.indexOf('\nfunction ',1),inspectCode=end<0?code:code.slice(0,end),procAt=html.indexOf('function procGroups('),procCode=html.slice(procAt,html.indexOf('\n',procAt));
+ const run=new Function('S',`${procCode};let view='machine',detailPages=1,detailPage=0,captured;const innerWidth=1280,document={querySelectorAll:()=>[]},box={},world={parentElement:null},$=s=>s==='#inspector'?box:s==='#world-panel'?world:{},machine=()=>S.sys,row=(label,value,tone)=>({label,value,tone}),pagedRows=rows=>{captured=rows},age=()=>'',observedAt=()=>false;${inspectCode};inspect();return captured;`);
  const rows=run({capacity:{active:null,cap:null,fresh:false,headroomGB:null},sys:{freeGB:8,totalGB:32}});
  expect(rows.find((r:any)=>r.label==='Bots running').value).toBe('? / ?');
  expect(rows.find((r:any)=>r.label==='RAM headroom')).toEqual({label:'RAM headroom',value:'?',tone:'warn'});
+ const procs=run({capacity:null,sys:{freeGB:8,totalGB:32,procs:[{pid:7,script:'app.ts',mb:1380},{pid:8,script:'coordinator-cli.ts',mb:1000},{pid:9,script:'coordinator-cli.ts',mb:1048}]}}).slice(-2);
+ expect(procs.map((r:any)=>[r.label,r.value])).toEqual([['coordinator-cli.ts ×2','2,048 MB · 6.3%'],['app.ts','1,380 MB · 4.2% · 7']]);
 });
 
 test('dashboard inline JavaScript parses without running browser or making requests',()=>{
