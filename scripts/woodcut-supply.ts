@@ -12,9 +12,30 @@ export function supplyPlan(logs:number,headless:number,cap:number){
  if(!Number.isSafeInteger(logs)||logs<1||logs>25||!Number.isSafeInteger(headless)||headless<0||headless%15||headless>Math.floor(Math.max(0,logs*15-200)/15)*15||!Number.isSafeInteger(cap)||cap<100||cap>10000)throw Error('supply requires LOGS1..25, HEADLESS multiple15 within shaft reserve200, CAP100..10000');
  return {logs,headless,shafts:logs*15};
 }
+// Called only at an observed, guarded owned bank. A failed withdrawal is not missing stock.
+export async function takeOwnedSupplyKnife(s:Session,check:()=>void):Promise<'held'|'withdrawn'|'missing'>{
+ const held=()=>s.sdk.getInventory().filter(i=>i.id===946).reduce((n,i)=>n+i.count,0);
+ check();if(held()>0)return'held';
+ const before=s.bankObservation?.();
+ if(!before||!s.sdk.getState()?.bank?.isOpen)throw Error('supply owned knife bank unobserved');
+ const bankBefore=before.items.filter(i=>i.id===946).reduce((n,i)=>n+i.count,0),generationBefore=before.generation,packBefore=held();
+ if(bankBefore===0)return'missing';
+ const knife=s.sdk.getState()!.bank.items.find(i=>i.id===946);
+ if(!knife)throw Error('supply owned knife slot unobserved');
+ check();
+ if(!(await s.bot.withdrawItem(knife,1,{asNote:false})).success)throw Error('supply owned knife withdrawal refused');
+ check();
+ const observed=await waitUntil(s,()=>{
+  const bank=s.bankObservation?.();
+  return !!bank&&bank.generation>generationBefore&&bank.items.filter(i=>i.id===946).reduce((n,i)=>n+i.count,0)===bankBefore-1&&held()===packBefore+1;
+ },{timeoutTicks:5});
+ check();if(!observed)throw Error('supply owned knife withdrawal unobserved');
+ console.log('WOOD_SUPPLY_KNIFE_RECEIPT '+JSON.stringify({account:s.name,itemId:946,amount:1,bankBefore,bankAfter:bankBefore-1,packBefore,packAfter:held(),generationBefore,generationAfter:s.bankObservation!()!.generation,tick:s.tick()}));
+ return'withdrawn';
+}
 export async function runWoodSupply(s:Session,logs:number,headless:number,cap:number){
  const plan=supplyPlan(logs,headless,cap),start=s.tick(),hp=s.sdk.getSkill('Hitpoints')?.level??0;
- let hpMin=hp;const damage:any[]=[];const off=s.onTick(()=>{const now=s.sdk.getSkill('Hitpoints')?.level??0;if(now<hpMin){const p=s.sdk.getState()?.player;damage.push({tick:s.tick()-start,hp:now,pos:p&&{x:p.worldX,z:p.worldZ,level:p.level},combat:p?.combat,npcs:s.sdk.getState()?.nearbyNpcs.map(n=>({name:n.name,x:n.x,z:n.z,distance:n.distance}))});console.log('WOOD_SUPPLY_DAMAGE '+JSON.stringify(damage.at(-1)));hpMin=now;}});
+ let hpMin=hp,last=hp;const damage:any[]=[];const off=s.onTick(()=>{const now=s.sdk.getSkill('Hitpoints')?.level??0;const hit=now<last;last=now;if(hit){const p=s.sdk.getState()?.player;damage.push({tick:s.tick()-start,hp:now,pos:p&&{x:p.worldX,z:p.worldZ,level:p.level},combat:p?.combat,npcs:s.sdk.getState()?.nearbyNpcs.map(n=>({name:n.name,x:n.x,z:n.z,distance:n.distance}))});console.log('WOOD_SUPPLY_DAMAGE '+JSON.stringify(damage.at(-1)));}hpMin=Math.min(hpMin,now);});
  const stop=()=>existsSync('.practice/stop-'+s.name),held=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  // Damage latches: a later heal does not clear it. Every guard, including the helpers' stop callbacks and active travel, reads halt().
  const halt=()=>stop()||s.tick()-start>=cap||damage.length>0||(s.sdk.getSkill('Hitpoints')?.level??0)<hp||!!s.sdk.getState()?.player?.isDead;
@@ -31,7 +52,7 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
   await walk(t);
  };
  // An owner stop can land while the bank opens, so recheck before every bank mutation.
- const bank=async()=>{await travel(BANK);if(!(await s.bot.openBank()).success)throw Error('supply bank unavailable');check();};
+ const bank=async()=>{await travel(BANK);check();if(!(await s.bot.openBank()).success)throw Error('supply bank unavailable');check();};
  const deposit=async()=>{for(const id of [1511,946]){check();const item=s.sdk.getInventory().find(i=>i.id===id);if(item)await depositObserved(s,item);}await s.bot.closeBank();};
  let gathered=0,shafts:any,arrows:any;
  try{
@@ -40,9 +61,12 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
   }
   // Feather holders can carry a full starter kit. Only logs and the knife move into the bank; trees stay inside the existing Lumbridge safe box.
   if(!held(946)){
-   await travel(KNIFE);
-   for(let n=0;n<8&&!held(946);n++){check();const k=s.sdk.findGroundItem(/^knife$/i);if(k)await s.bot.pickupItem(k);await waitTicks(s,2);}
-   if(!held(946))throw Error('supply knife spawn unavailable');
+   await bank();const owned=await takeOwnedSupplyKnife(s,check);check();await s.bot.closeBank();check();
+   if(owned==='missing'){
+    await travel(KNIFE);
+    for(let n=0;n<8&&!held(946);n++){check();const k=s.sdk.findGroundItem(/^knife$/i);if(k)await s.bot.pickupItem(k);await waitTicks(s,2);}
+    if(!held(946))throw Error('supply knife spawn unavailable');
+   }
   }
   await bank();await deposit();
   let lastGain=s.tick();
@@ -60,9 +84,9 @@ export async function runWoodSupply(s:Session,logs:number,headless:number,cap:nu
    }
    await bank();await deposit();
   }
-  check();shafts=await runShafts(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:logs,reserve:0,bankKnife:true,stop:halt});check();
+  check();shafts=await runShafts(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:logs,reserve:0,bankKnife:true,stop:halt,pause:stop});check();
   if(!shafts.ok)throw Error('supply shafts '+JSON.stringify(shafts));
-  if(headless){check();arrows=await runHeadless(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:headless,shaftReserve:200,featherReserve:100,stop:halt});check();if(!arrows.ok||!arrows.targetMet)throw Error('supply headless '+JSON.stringify(arrows));}
+  if(headless){check();arrows=await runHeadless(s,{cap:Math.max(1,cap-(s.tick()-start)),maximum:headless,shaftReserve:200,featherReserve:100,stop:halt,pause:stop});check();if(!arrows.ok||!arrows.targetMet)throw Error('supply headless '+JSON.stringify(arrows));}
   return {ok:true,gathered,shafts,arrows,ticks:s.tick()-start,hpMin,damage};
  }catch(error){return {ok:false,gathered,shafts,arrows,ticks:s.tick()-start,error:String(error),hpMin,damage};}finally{off();}
 }

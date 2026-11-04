@@ -4,6 +4,52 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync} from
 import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
+import {parseHeadlessOrder,runOwnedHeadless} from './handoff-inputs';
+
+test('headless CLI validates exact arguments before login and preserves two-account parsing',()=>{
+ expect(parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'1600')).toEqual({account:'Bigchopper',maximum:135,logsToCut:14,cap:1600});
+ for(const args of [['Haggis','--headless-order','135','14'],['Bigchopper','--headless-order','129','14'],['Bigchopper','--headless-order','135','26'],['Bigchopper','--headless-order','135','14','extra'],['Bigchopper','--headless-order','NaN','14']])expect(()=>parseHeadlessOrder(args)).toThrow();
+ expect(()=>parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'0')).toThrow();
+ expect(parseHandoff(['Donor','Receiver','90:Iron arrowtips']).items).toEqual([{name:'Iron arrowtips',count:90}]);
+});
+
+function headlessFixture(feathers=5705){
+ let tick=0,xp=100,opened=false,generation=0,cuts=0;
+ const listeners=new Set<()=>void>();
+ const names=new Map([[1511,'Logs'],[52,'Arrow shaft'],[53,'Headless arrow'],[314,'Feather'],[946,'Knife'],[995,'Coins']]);
+ const bank=new Map([[1511,15],[52,35],[53,300],[314,feathers],[946,1],[995,331135]]),pack=new Map<number,number>([[1985,3]]);
+ const rows=(m:Map<number,number>)=>[...m].filter(([,count])=>count>0).map(([id,count],slot)=>({id,count,slot,name:names.get(id)??'Cheese'}));
+ const timer=setInterval(()=>{tick++;for(const cb of [...listeners])cb();},1);
+ const s:any={name:'Bigchopper',tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),direct:async()=>{},
+ bankObservation:()=>opened?{generation,items:rows(bank)}:undefined,
+ sdk:{getInventory:()=>rows(pack),getEquipment:()=>[],getSkill:()=>({level:69,baseLevel:69}),getSkillXp:()=>xp,getDialog:()=>({isOpen:false}),
+ getState:()=>({player:{worldX:3185,worldZ:3436,level:0,lifeId:1,respawnCount:0},bank:{isOpen:opened,items:rows(bank)},interface:{isOpen:opened}}),
+ sendUseItemOnItem:async()=>{pack.set(52,pack.get(52)!-15);pack.set(314,pack.get(314)!-15);pack.set(53,(pack.get(53)??0)+15);xp+=15;}},
+ bot:{openBank:async()=>{opened=true;generation++;return{success:true};},closeBank:async()=>{opened=false;return{success:true};},
+ withdrawItem:async(i:any,n:number)=>{bank.set(i.id,bank.get(i.id)!-n);pack.set(i.id,(pack.get(i.id)??0)+n);return{success:true};},
+ depositItem:async(i:any)=>{bank.set(i.id,(bank.get(i.id)??0)+pack.get(i.id)!);pack.delete(i.id);generation++;return{success:true};},
+ fletchLogs:async()=>{cuts++;pack.set(1511,pack.get(1511)!-1);pack.set(52,(pack.get(52)??0)+15);xp+=125;return{success:true};}}};
+ return{s,bank,pack,cuts:()=>cuts,close:()=>clearInterval(timer)};
+}
+test('owned composition makes135 new headless and conserves exact stock and unrelated assets',async()=>{
+ const f=headlessFixture();try{
+  const r=await runOwnedHeadless(f.s,parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'1600'),()=>{});
+  expect(r.ok).toBe(true);expect(r.shafts.logsUsed).toBe(14);expect(r.headless.made).toBe(135);expect(r.preserved).toBe(true);
+  for(const [id,n]of [[53,435],[52,110],[314,5570],[1511,1],[946,1],[995,331135]])expect(f.bank.get(id!)).toBe(n);
+  expect(f.pack.get(1985)).toBe(3);
+ }finally{f.close();}
+});
+test('missing feathers refuses before cutting owned logs',async()=>{
+ const f=headlessFixture(100);try{
+  await expect(runOwnedHeadless(f.s,parseHeadlessOrder(['Bigchopper','--headless-order','135','14']),()=>{})).rejects.toThrow('missing owned inputs');
+  expect(f.cuts()).toBe(0);expect(f.bank.get(1511)).toBe(15);
+ }finally{f.close();}
+});
+test('one CAP covers both production stages',async()=>{
+ const f=headlessFixture();try{
+  await expect(runOwnedHeadless(f.s,parseHeadlessOrder(['Bigchopper','--headless-order','135','14'],'2'),()=>{})).rejects.toThrow('CAP exhausted');
+ }finally{f.close();}
+});
 
 test('shared account lease API excludes overlapping orders and unwinds partial acquisition',()=>{
  const base=mkdtempSync(join(tmpdir(),'account-leases-'));
