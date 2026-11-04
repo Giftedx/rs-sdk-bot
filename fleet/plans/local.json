@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793826174847,
+ "at": 1793826782568,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -130,6 +130,35 @@
    "role": "quests"
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2670,3306"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
+   "account": "Magicwanda",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1",
+    "RUN": "2"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
+   "role": "supply"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -208,6 +237,22 @@
    "standing": true,
    "repeat": true,
    "goal": "fire and earth runes from Betty",
+   "role": "supply"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -431,6 +476,22 @@
    "repeat": false,
    "goal": "run-vampire-mightyrod-shared-recovery [task-0617be17-b4bc-4e2b-ba09-53f71dc849c1]",
    "role": "combat"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/rune-bank-craft.ts",
+   "args": [
+    "--rune-opening"
+   ],
+   "env": {
+    "CAP": "2800",
+    "RUNE_STAGE_PURPOSE": "fresh",
+    "COORDINATOR_RUN_ID": "task-bb70f314-0705-45d9-b21b-474ed4ad33c0"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "ready99-opening [task-bb70f314-0705-45d9-b21b-474ed4ad33c0]",
+   "role": "runecraft"
   }
  ]
 }
