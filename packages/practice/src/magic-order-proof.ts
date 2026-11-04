@@ -233,7 +233,7 @@ async function child(directory:string,label:string,args:string[],env:Record<stri
  if(freemem()/2**30<ADMISSION.floorGb)throw Error('practice memory floor reached before child');
  const log=join(directory,label+'.log');writeFileSync(log,'');
  const proc=Bun.spawn({...magicChildConfiguration(args,{...CHILD_ENV,...env},endpoints),
-  stdout:Bun.file(log),stderr:Bun.file(join(directory,label+'.err'))});
+  windowsHide:true,stdout:Bun.file(log),stderr:Bun.file(join(directory,label+'.err'))});
  let timedOut=false,termination:Promise<void>|undefined;
  const timer=setTimeout(()=>{timedOut=true;termination=killTree(proc.pid);},CONFIG.childTimeoutMs);
  const memory=setInterval(()=>{if(freemem()/2**30<ADMISSION.floorGb&&!termination){timedOut=true;termination=killTree(proc.pid);}},1000);
