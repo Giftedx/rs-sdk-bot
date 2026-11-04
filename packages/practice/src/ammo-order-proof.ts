@@ -110,7 +110,7 @@ async function run(directory:string){
     let stack:Awaited<ReturnType<typeof startStack>>|undefined;
     const command=async(args:string[],env:Record<string,string>,label:string):Promise<Run>=>{
         const out=join(directory,label+'.log'),err=join(directory,label+'.err');
-        const child=Bun.spawn({...ammoChildConfiguration(args,env,endpoints),stdout:Bun.file(out),stderr:Bun.file(err)});
+        const child=Bun.spawn({...ammoChildConfiguration(args,env,endpoints),windowsHide:true,stdout:Bun.file(out),stderr:Bun.file(err)});
         let expired=false;const timer=setTimeout(()=>{expired=true;void killTree(child.pid);},180000);
         const code=await child.exited;clearTimeout(timer);
         return{code:expired?-1:code,log:readFileSync(out,'utf8')+readFileSync(err,'utf8')};
