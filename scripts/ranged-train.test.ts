@@ -1,6 +1,8 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart} from './ranged-train';
 import * as walking from '../packages/core/src/walk';
+import * as bot from '../packages/core/src/bot';
+import {setEquipmentObserved} from '../packages/core/src/container-observation';
 import * as trips from '../packages/core/src/route-plan';
 import type {Session} from '../packages/core/src/inprocess';
 import {rangedProofSource,rangedChildConfiguration,rangedMemoryFloor,rangedSaveSettled,rangedStackOptions} from '../packages/practice/src/ranged-train-proof';
@@ -87,6 +89,42 @@ test('options keep defaults, accept argv target and cap, and refuse unbounded in
  expect(o).toMatchObject({target:10,cap:3000,minArrows:30,buyArrowId:882,maxSpend:500,foodId:329,killsPerTrip:5,maxTrips:10});
  expect(rangedTrainOptions({TARGET_LEVEL:'20'},['bun','s','Bot','12','4000'])).toMatchObject({target:12,cap:4000});
  for(const env of [{CAP:'100'},{BUY_ARROW_ID:'888'},{FOOD_ID:'315'},{MAX_TRIPS:'0'},{AMMO:'x'},{MAX_SPEND:'-1'}])expect(()=>rangedTrainOptions(env,['bun','s','Bot'])).toThrow('bounded options');
+});
+test('recovery runs only off a supported entry or with the bow or quiver worn',()=>{
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:0},[])).toBe(false);
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:0},[1171])).toBe(false);
+ expect(needsRangedRecovery({worldX:3231,worldZ:3299,level:0},[])).toBe(true);
+ expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:1},[])).toBe(true);
+ expect(needsRangedRecovery({worldX:3254,worldZ:3420,level:0},[841,884])).toBe(true);
+});
+test('the recovery walk plans with no Magic, items, worn gear or coins, so it can spend nothing',()=>{
+ const w=recoveryWalker({skills:{magic:55,ranged:70},varps:{a:1},items:['law_rune'],counts:{law_rune:9},worn:['staff_of_air'],coins:90000});
+ expect(w).toEqual({skills:{magic:0,ranged:70},varps:{a:1},items:[],counts:{},worn:[],coins:0});
+});
+function recoverySession(){
+ const client={};setEquipmentObserved(client,true);
+ let tick=0;const callbacks=new Set<()=>void>(),unequipped:number[]=[];
+ const equipment=[{id:841,name:'Shortbow',count:1},{id:884,name:'Iron arrow',count:50}];
+ const s={name:'unit',client,tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>{callbacks.delete(cb);};},
+  sdk:{getState:()=>({player:{worldX:3236,worldZ:3296,level:0}}),getEquipment:()=>equipment},
+  bot:{unequipItem:async(i:{id:number})=>{unequipped.push(i.id);equipment.splice(equipment.findIndex(e=>e.id===i.id),1);}}};
+ const timer=setInterval(()=>{tick++;for(const cb of [...callbacks])cb();},1);
+ return{s:s as unknown as Session,unequipped,stop:()=>clearInterval(timer)};
+}
+test('a stop before recovery starts no route and leaves the kit worn',async()=>{
+ const f=recoverySession(),go=spyOn(walking,'goTo').mockImplementation(async()=>({ok:true} as any));
+ try{const r=await recoverRangedStart(f.s,()=>true);expect(r).toEqual({from:{x:3236,z:3296,level:0},stopped:true});expect(go).not.toHaveBeenCalled();expect(f.unequipped).toEqual([]);}
+ finally{go.mockRestore();f.stop();}
+});
+test('a stop during the recovery walk aborts the route and skips the unwield',async()=>{
+ const f=recoverySession();let stop=false,actor:any,signal:AbortSignal|undefined;
+ const world=spyOn(bot,'getWorld').mockImplementation(async()=>({} as any)),acct=spyOn(bot,'accountOf').mockImplementation(()=>({skills:{magic:40},varps:{},items:['law_rune'],coins:500} as any));
+ const go=spyOn(walking,'goTo').mockImplementation(async(_s,_w,_to,a,o)=>{actor=a;signal=o?.signal;stop=true;
+  await new Promise<void>(res=>o!.signal!.addEventListener('abort',()=>res()));return{ok:false,reason:'aborted'} as any;});
+ try{
+  const r=await recoverRangedStart(f.s,()=>stop);
+  expect(r?.stopped).toBe(true);expect(signal?.aborted).toBe(true);expect(actor).toMatchObject({items:[],coins:0,skills:{magic:0}});expect(f.unequipped).toEqual([]);
+ }finally{go.mockRestore();world.mockRestore();acct.mockRestore();f.stop();}
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.

@@ -3,16 +3,17 @@
 // Env: MIN_ARROWS, BUY_ARROWS, BUY_ARROW_ID, MAX_SPEND, COIN_RESERVE, AMMO, FOOD, FOOD_ID, KILLS_PER_TRIP, MAX_TRIPS.
 // MAX_SPEND includes food, arrows and fares. COIN_RESERVE protects total owned coins.
 // Missing trout/salmon falls back to observed Wydin cheese stock; FOOD remains the per-trip meal target.
-import {openBot,finish,accountOf} from '../packages/core/src/bot';
+import {openBot,finish,accountOf,getWorld} from '../packages/core/src/bot';
+import {equipmentObserved} from '../packages/core/src/container-observation';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
-import {sessionWalker,walkPath,walkRoute,expandPath,type PathPoint} from '../packages/core/src/walk';
+import {sessionWalker,walkPath,walkRoute,expandPath,goTo,type PathPoint} from '../packages/core/src/walk';
 import {rangedCredit,selectRangedTarget} from './gather-ranged';
 import {startQuestSustain} from './quest-sustain';
 import {buyWithBudget} from './shop-buyer';
 import {planTripOffThread} from '../packages/core/src/route-plan';
-import {routeFares} from '../packages/core/src/world';
+import {routeFares,type Account} from '../packages/core/src/world';
 type Item={id:number;count:number};
 // levelrequire from server/content/scripts/skill_combat/configs/ranged/{bows,arrows}.obj.
 // player_ranged.rs2 refuses arrows whose levelrequire exceeds the bow's levelrequire.
@@ -253,9 +254,38 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
   bow:bowUsed,arrow:arrowUsed,trips,kills,shots,picked,arrowsSpent:arrows.spent,arrowsBought:bought,coinsSpent,coinDebit,foodId,foodBought,foodSpent,foodPurchases,foodConsumed,travelSpent,shopVisits,eaten,hpMin,hp:hp(),died,
   ticks:s.tick()-start,preserved,accounting,equipmentRestored,failure:failure||'-'};
 }
+// A disconnect mid-trip leaves the account on the route or in the coop with the bow and quiver worn. Walk back to
+// Varrock East bank and take them off first, so the bounded run starts from a supported entry instead of refusing every retry.
+export function needsRangedRecovery(p:{worldX:number;worldZ:number;level:number},worn:readonly number[]){
+ return !rangedEntry(p)||worn.some(id=>BOW_IDS.includes(id)||ARROW_IDS.includes(id));
+}
+// The recovery leg runs before the run's budget and asset snapshot exist, so it is walk-only: no Magic, carried or
+// banked items, worn gear or coins, hence no teleport, supply withdrawal or fare. A stop request aborts the route.
+export function recoveryWalker(actor:Account):Account{return{...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:0};}
+export async function recoverRangedStart(s:Session,stop:()=>boolean=()=>false){
+ const st=()=>s.sdk.getState(),eq=()=>s.sdk.getEquipment();
+ if(!await waitUntil(s,()=>!!st()?.player&&!!s.client&&equipmentObserved(s.client),{timeoutTicks:20}))throw Error('ranged-train prerequisite: position/equipment unobserved');
+ const p=st()!.player!;if(!needsRangedRecovery(p,eq().map(i=>i.id)))return null;
+ const from={x:p.worldX,z:p.worldZ,level:p.level};
+ if(stop())return{from,stopped:true};
+ if(!rangedEntry(p)){
+  const abort=new AbortController(),off=s.onTick(()=>{if(stop()&&!abort.signal.aborted)abort.abort('stop requested');});
+  let r:Awaited<ReturnType<typeof goTo>>;
+  try{r=await goTo(s,await getWorld(),{...BANK,level:0},recoveryWalker(accountOf(s)),{legTimeoutTicks:100,signal:abort.signal});}finally{off();}
+  if(stop())return{from,stopped:true};
+  if(!r.ok)throw Error('ranged-train recovery walk failed '+JSON.stringify(r));
+ }
+ for(const item of eq().filter(i=>BOW_IDS.includes(i.id)||ARROW_IDS.includes(i.id))){
+  await s.bot.unequipItem(item);if(!await waitUntil(s,()=>!eq().some(i=>i.id===item.id),{timeoutTicks:10}))throw Error('ranged-train recovery unequip unobserved '+item.id);
+ }
+ console.log('RANGED_TRAIN_RECOVERY '+JSON.stringify({from,to:st()?.player?{x:st()!.player!.worldX,z:st()!.player!.worldZ}:null,tick:s.tick()}));
+ return{from,stopped:false};
+}
 if(import.meta.main){
  let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}});
- try{const r=await runRangedTrain(s,{...rangedTrainOptions(process.env,process.argv),stop:()=>stopped});console.log('RANGED_TRAIN_RESULT '+JSON.stringify(r));
+ try{const recovery=await recoverRangedStart(s,()=>stopped);
+  if(recovery?.stopped){await finish([s],false,'stop file during ranged-train recovery from '+JSON.stringify(recovery.from));}
+  const r=await runRangedTrain(s,{...rangedTrainOptions(process.env,process.argv),stop:()=>stopped});console.log('RANGED_TRAIN_RESULT '+JSON.stringify(r));
   await finish([s],r.ok,(r.ok?'mode=ranged-train ':r.stop==='stop-file'?'stop file ':'no Ranged progress: ')+JSON.stringify(r));}
  catch(e){await finish([s],false,'no Ranged progress: '+String(e));}
 }
