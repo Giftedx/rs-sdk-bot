@@ -91,7 +91,7 @@ async function run(directory: string) {
     writeFileSync(fd, JSON.stringify({ pid: process.pid, task: 'coin-courier', directory }));
     let stack: Awaited<ReturnType<typeof startStack>> | undefined;
     const command = async (args: string[], label: string, env: Record<string, string> = {}) => {
-        const child = Bun.spawn({ ...coinChildConfiguration(args, env, endpoints), stdout: Bun.file(join(directory, label + '.log')), stderr: Bun.file(join(directory, label + '.err')) });
+        const child = Bun.spawn({ ...coinChildConfiguration(args, env, endpoints), windowsHide: true, stdout: Bun.file(join(directory, label + '.log')), stderr: Bun.file(join(directory, label + '.err')) });
         let timedOut = false;
         const timer = setTimeout(() => { timedOut = true; void killTree(child.pid); }, 240000);
         try { const code = await child.exited; return timedOut ? -1 : code; } finally { clearTimeout(timer); }
