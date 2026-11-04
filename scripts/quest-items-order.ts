@@ -1,6 +1,6 @@
 // bun scripts/quest-items-order.ts <account> <quest> --save=<own-save>
 // CAP bounds game ticks (default 2400). Server comes from the account's existing configuration.
-// 2026-10-28: pinned pickables.rs2 op2, cow_milking.rs2 and windmills.rs2
+// pinned pickables.rs2 op2, cow_milking.rs2 and windmills.rs2
 // -> Cook pack -> adapt observed item transitions -> saved pack and quest-order consumer checks.
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';

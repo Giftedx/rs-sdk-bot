@@ -1,7 +1,7 @@
 # Gap closers for Haggis's single clock
 
-Goal: Haggis has rank 1 on all 24 boards from one run. Every skill board stamps Haggis's total playtime when the level
-is reached, so all boards share one clock. Overall #1 (`stunbaron`) has all 19 skills at 99 at **35,916** ticks.
+Goal: Haggis has rank 1 on the Overall board under the record (`AGENTS.md`). Every skill board stamps Haggis's total
+playtime when the level is reached, so all boards share one clock. Overall #1 (`stunbaron`) has all 19 skills at 99 at **35,916** ticks.
 
 Model: `packages/planner/src/haggis.ts` and `packages/planner/src/haggis-boards.json`. To reprint every number in this
 file, run:
@@ -18,33 +18,47 @@ and each one takes its inputs from the rows named below.
 
 | Overall finish (ticks) | Floor (best case) | Realistic |
 |---|---|---|
-| Before this work (`haggis-run.md` table a) | 40,263 (gap 4,347) | 68,214 (gap 32,298) |
-| **All safe levers** | **30,580 (slack +5,336, WIN)** | 46,252 (gap 10,336) |
-| Safe levers + all owner levers + all tricks | 27,709 (slack +8,207) | 44,285 (gap 8,369) |
-| Safe levers + wild-iron only + all tricks (best realistic) | 28,527 (slack +7,389) | **43,703 (gap 7,787)** |
+| No levers | 66,833 (gap 30,917) | 75,766 (gap 39,850) |
+| **All safe levers** | **41,436 (slack -5,520, LATE)** | 44,031 (gap 8,115) |
+| All safe levers + all owner levers + all tricks | 41,158 (slack -5,242, LATE) | 43,726 (gap 7,810) |
 
-Boards that flip: **Overall flips to WIN at floor rates** with the safe levers alone. Crafting and Herblore still win at
-floor rates. At realistic rates, no clock board wins yet. The 18 other skill boards stay late in both modes: their
-early deadlines (38 to 7,974 ticks) are before the work that comes ahead of them on the one clock.
+Boards that flip: none on the clock. Overall is late at floor and at realistic rates. Quest Points is the only board
+that wins. The 19 skill boards stay late in both modes: their early deadlines (38 to 17,058 ticks) are before the work
+that comes ahead of them on the one clock. Agility is the last 99 in every scenario. `--order` prints the blocks in
+clock order.
 
-At realistic rates the gap fell from 32,298 to 10,336 ticks (safe), or to 7,787 with the Wilderness iron spot. The
-largest realistic blocks left are Mining 6,351, Thieving 6,169, Agility 5,754, Defence top-up 3,994, Fishing 3,130,
-Runecraft 2,976 and Woodcutting 2,957 (CLI `--order`, realistic).
+The levers close about 25,000 floor ticks against no levers, but not the last 5,242. On the 21 steps of Cairn's
+recorded route that the model can price, the model is 11,554 ticks above Cairn's planned times; the largest row is the
+cannon and shortbow step at +4,383 (`bun packages/planner/src/cairn-cli.ts`). Walking is 8,210 of the realistic
+43,726. A rate or walk error of that size is larger than the gap, so the next gain is to calibrate the rows against
+Cairn's steps before more route work.
 
 ## Levers, ranked by ticks saved on the Overall deadline
 
 "Alone" means only that lever is on. "Last" means the saving when this lever is added after all the other safe levers.
 The numbers come from the `--levers` table.
 
-| # | Lever | Class | Saved alone, floor / realistic | Saved last, floor / realistic | Boards flipped |
-|---|---|---|---|---|---|
-| 1 | `combat-hp-bound` | safe (order effect) | 5,395 / 17,033 | 6,480 / 18,640 | Overall at floor (with the others: margin +5,336) |
-| 2 | `wild-iron` | OWNER DECISION (Wilderness PvP risk) | 2,053 / 2,548 | 2,053 / 2,548 | none alone |
-| 3 | `flinch-gather` | safe (accepted tick-manipulation class) | 1,700 / 913 | 1,700 / 913 | none alone |
-| 4 | `stun-guests` | safe | 1,500 / 2,407 | 1,500 / 2,407 | none alone |
-| 5 | `cannon-melee` | safe | 3 / 2 | 1,088 / 1,609 | none alone (it needs lever 1) |
-| 6 | `charge-spam` | OWNER DECISION (no recast check) | 818 / 28 | 818 / -582 | none |
-| - | login wine, stun relog, sacred oil (existing tricks) | OWNER DECISION | 0-1 | 0-1 | none |
+The CLI marks every lever safe: `AGENTS.md` authorizes all gameplay techniques. No lever flips a clock board.
+
+| Lever | Saved alone, floor / realistic | Saved last, floor / realistic |
+|---|---|---|
+| `combat-hp-bound` | 11,717 / 12,060 | 9,350 / 9,581 |
+| `rival-monkey-madness` | 9,226 / 10,021 | 6,016 / 6,489 |
+| `rival-sea-slug` | 1,275 / 2,310 | 1,638 / 2,673 |
+| `rival-stun-pack` | 976 / 3,096 | 1,504 / 3,573 |
+| `charge-spam` | 1,110 / 732 | 1,110 / 732 |
+| `rival-knife-mine` | 3,023 / 3,887 | 970 / 1,339 |
+| `rival-altar-room-rc` | 622 / 2,208 | 643 / 2,229 |
+| `waterfall-late` | -52 / -53 | 417 / 365 |
+| `rival-bury-in-knife-wc` | 1,024 / 1,125 | 384 / 550 |
+| `def-at-ranged-spot` | 0 / 0 | 97 / 192 |
+| `stun-guests` | 1,230 / 1,230 | -85 / -84 |
+| `wild-iron` | 2,053 / 2,548 | 0 / 0 |
+| `magic-enchant` | 838 / 883 | 0 / 0 |
+| `rival-dialogue-burst` | 444 / 485 | 0 / 0 |
+| `rival-grandtree-agility` | -50 / -50 | 0 / 0 |
+| `cannon-melee`, `flinch-gather`, `rival-agility-lap`, `rival-dragon-combat` | 0 / 0 | 0 / 0 |
+| all owner levers and tricks (login wine, stun relog, sacred oil), on top of all safe levers | | 278 / 305 |
 
 ### 1. `combat-hp-bound`: combat is limited by Hitpoints, so the melee quests move after Overall
 
@@ -65,12 +79,12 @@ The numbers come from the `--levers` table.
   Overall (quest ticks are ESTIMATE, 600-7,200 each). This lever is a correction of the schedule more than a game
   trick. Its size depends on those unmeasured quest times.
 
-### 2. `wild-iron` (OWNER DECISION): the 5-rock iron tile
+### 2. `wild-iron`: the 5-rock iron tile
 
 - Mechanism: the iron floor rate of 120 XP per tick is the 3-rock respawn cap (`mine.dbrow:72`, row `mine`). The only
   tile next to 5 iron rocks is (3100,3767), in the Wilderness (`research/iron-spots.ts`). Rates are scaled by 5/3 to
   200 / 162 XP per tick (ESTIMATE).
-- It is not an exploit. It is a risk decision: PvP death in the Wilderness (owner decision 3 in `haggis-run.md`).
+- Risk: PvP death in the Wilderness. It saves 2,053 ticks alone and 0 after the other safe levers.
 
 ### 3. `flinch-gather`: 2-tick woodcutting and fishing
 
@@ -80,7 +94,8 @@ The numbers come from the `--levers` table.
 - Rows: woodcutting 2,900 / 3,400 changes to 2,071 / 2,957. Fishing 3,050 / 3,600 changes to 2,179 / 3,130 (divided
   by 1.4 floor and 1.15 realistic, ESTIMATE).
 - Class: OSRS tick manipulation, which is in the accepted class (owner rule R10). It is UNVERIFIED live, and it needs 2
-  aggressive NPCs with a 4-tick attack next to the tree or spot.
+  aggressive NPCs with a 4-tick attack next to the tree or spot. The `--levers` table gives it 0 ticks saved, alone
+  and last.
 - Mining gets no gain: its floor rate is limited by respawn, not by the roll.
 
 ### 4. `stun-guests`: Prayer and Magic inside the pickpocket stun
@@ -94,9 +109,8 @@ The numbers come from the `--levers` table.
   `research/live-thieving-2026-10-23.md:74`). Usable share 0.75 x 0.9 = 0.675 (eating, and one helper trade per 10
   stuns to refill bones and jewellery: ESTIMATE). This gives a capacity of 1,509 ticks at floor and 2,419 realistic.
 - Prayer (1,169 / 1,300) fits in full. Magic fills the rest. The overflow runs after Thieving.
-- New scheduler feature: `deadTicks` on the host and `inside` on the guest (`haggis.ts`, tests in `haggis.test.ts`).
-  When the guests use more ticks than stun relog saves, the scheduler does not use stun relog. That is why the stun
-  relog trick is now worth 0.
+- The scheduler models this with `deadTicks` on the host and `inside` on the guest (`haggis.ts`, tests in
+  `haggis.test.ts`). When the guests use more ticks than stun relog saves, the scheduler does not use stun relog.
 
 ### 5. `cannon-melee`: Ranged XP from the cannon during every melee top-up
 
@@ -109,9 +123,9 @@ The numbers come from the `--levers` table.
   fight, so use a multiway area.
 - Modelled as side XP on `att-top`, `str-top` and `def-top` (0.6 Ranged per style XP) and on `hp-top` (1.8). This is
   150 Ranged XP per tick at the realistic melee rate (ESTIMATE). The same ratio is used at floor, which is conservative.
-- It saves little alone, because the old route had almost no melee ticks before Overall.
+- The `--levers` table gives it 0 ticks saved, alone and last.
 
-### 6. `charge-spam` (OWNER DECISION)
+### 6. `charge-spam`
 
 - Mechanism (CODE-READ): the Charge spell is an `if_button` with no `p_delay` (`C/skill_magic/scripts/spells/charge.rs2:1-26`).
   The recast check is commented out with the note "added sometime in 2005" (lines 7-12).
@@ -121,9 +135,7 @@ The numbers come from the `--levers` table.
   (`E/network/game/client/ClientGameProtCategory.ts:5-8`). So the cap is 22,500 XP per tick (floor) or 4,500 with 1
   cast per tick (realistic).
 - Modelled as enchants to 80, then the Mage Arena (400 / 1,200 ticks, ESTIMATE, Wilderness), then Charge to 99.
-- At realistic rates the Mage Arena costs more than the lever saves (-582). About 2,100 blood runes are needed.
-- It is marked OWNER DECISION because the 2004 rule (no recast check) plus the 5-per-tick button rate makes this an
-  XP source that no 2004 player used. Owner: decide whether it is in the accepted class.
+- It saves 1,110 floor and 732 realistic ticks after the other safe levers. About 2,100 blood runes are needed.
 
 ## Searched and not found (CODE-READ)
 
@@ -149,7 +161,7 @@ The numbers come from the `--levers` table.
 
 | Claim A | Claim B | What settles it |
 |---|---|---|
-| "Rank 1 on all 24 boards at once is not possible"; Overall late by at least 3,788 at floor (`research/haggis-run.md:9-16`) | Overall wins at floor by +5,336 with safe levers (this file, CLI `--levers`). The old floor schedule did melee quests before Overall that make no Hitpoints XP | Time Waterfall, Witch's House, Dwarf Cannon and the Dig Site, and measure melee damage per tick (measurements 1 and 4) |
+| The model prices Overall at 41,158 floor and 43,726 realistic, with all levers and tricks (CLI `--levers`) | Cairn finished the route in 35,787. On the 21 steps the model can price, it is 11,554 ticks above Cairn's plan (`cairn-cli.ts`) | Measure the rows that disagree most: cannon and shortbow +4,383, Monkey Madness +938, the four short quests +859, Gnome course and Grand Tree +851 |
 | Ranged row: side Hitpoints 0.2 per Ranged XP (`haggis-boards.json`, row `ranged`) | Own ranged shots give 1.33 Hitpoints per 4 Ranged (0.33); the cannon gives 0 (`combat.rs2:143-167`, `cannon_fire.rs2:119`). The 0.2 mixes the two at an unmeasured split | Measure the cannon Ranged XP per tick (measurement 2) |
 
 ## The 5 measurements that matter most next
@@ -164,4 +176,4 @@ The numbers come from the `--levers` table.
 4. **Durations of the quests before Overall**: Waterfall, Witch's House, Dwarf Cannon, The Dig Site, each from a
    prepared test account (not Haggis), 3 runs each. These are 2,100-4,800 ESTIMATE ticks on the clock.
 5. **Flinch 2-tick rate** for woodcutting and fishing in practice, 3 runs each. Use 2 aggressive 4-tick NPCs and a
-   rapid shortbow with no ammo. This sets the 1.4 / 1.15 factors (1,700 / 913 ticks).
+   rapid shortbow with no ammo. This sets the 1.4 / 1.15 factors.

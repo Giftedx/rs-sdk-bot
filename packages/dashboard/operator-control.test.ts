@@ -22,6 +22,18 @@ test('read-only dashboards expose metadata but refuse every command before writi
   expect(existsSync(join(f.root,'.practice/dashboard-controls'))).toBe(false);
  }finally{f.close();}
 });
+
+test('coordinator process presence is independent of queue freshness',async()=>{
+ const f=fixture();try{
+  const handler=createOperatorControl({root:f.root,alive:pid=>pid===42});
+  const meta=async()=>await(await handler(new Request('http://127.0.0.1:3100/api/control'),'127.0.0.1')).json() as any;
+  expect((await meta()).coordinatorRunning).toBe(false);
+  writeFileSync(join(f.dir,'owner.json'),JSON.stringify({pid:42,at:1}));
+  expect((await meta()).coordinatorRunning).toBe(true);
+  writeFileSync(join(f.dir,'owner.json'),JSON.stringify({pid:43,at:1}));
+  expect((await meta()).coordinatorRunning).toBe(false);
+ }finally{f.close();}
+});
 test('operator controls require loopback, same origin and the current session nonce',async()=>{
  const f=fixture();try{expect((await f.handler(new Request('http://127.0.0.1:3100/api/control'),'10.0.0.1')).status).toBe(403);
  expect((await f.handler(new Request('http://rebound.invalid:3100/api/control'),'127.0.0.1')).status).toBe(403);

@@ -24,22 +24,24 @@ async function airExitModel(mode:string,run:(s:any,calls:string[],logs:string[])
  let tick=0,dispatch=-1;
  const callbacks=new Set<()=>void>(),calls:string[]=[],logs:string[]=[];
  const portal={id:2465,x:2841,z:4828,name:'Portal',optionsWithIndex:[{text:'Use',opIndex:1}]};
- const state:any={player:{worldX:2843,worldZ:4832,level:0,animId:791,spotanimId:186},gameMessages:[],opFeedback:{opRejectedCount:0}};
+ const state:any={player:{worldX:2843,worldZ:4832,level:0,animId:791,spotanimId:186},dialog:{isOpen:false},interface:{isOpen:false},modalOpen:false,gameMessages:[],opFeedback:{opRejectedCount:0}};
  let essence=1,air=26,xp=3250;
  Object.defineProperty(state,'inventory',{get:()=>[{id:1436,name:'Rune essence',count:essence},{id:556,name:'Air rune',count:air}]});
  const s:any={tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},
   sdk:{getState:()=>state,findNearbyLoc:(pattern:RegExp)=>pattern.test('Altar')?{id:2478,name:'Altar'}:portal,
    getInventory:()=>[{id:1436,name:'Rune essence',count:essence},{id:556,name:'Air rune',count:air}],
    getSkill:()=>({level:20}),getSkillXp:()=>xp,
+   sendWalk:async(x:number,z:number)=>{calls.push('walk');expect([x,z]).toEqual([2841,4829]);
+    if(mode!=='walk-unobserved')Object.assign(state.player,{worldX:x,worldZ:z});return{success:true};},
    findPath:(x:number,z:number)=>({success:true,reachedDestination:mode!=='partial',waypoints:[{x,z,level:0}]}),
    sendInteractLoc:async(x:number,z:number,id:number,op:number)=>{calls.push('use');expect([x,z,id,op]).toEqual([2841,4828,2465,1]);
     expect(state.player.worldX).toBe(2841);expect(state.player.worldZ).toBe(4829);
     dispatch=tick;return{success:mode!=='refused',message:'dispatch'};}},
-  bot:{dismissBlockingUI:async()=>{},walkTo:async(x:number,z:number,tolerance:number)=>{calls.push('walk');expect(tolerance).toBe(0);
-   if(mode!=='walk-unobserved')Object.assign(state.player,{worldX:x,worldZ:z});return{success:true};},
+  bot:{dismissBlockingUI:async()=>{},walkTo:async()=>{throw Error('portal approach must use the observed raw walk');},
    interactLoc:async(loc:any)=>{if(loc.name==='Altar'){calls.push('craft');essence=0;air=28;xp=3375;}
     else{calls.push('old-interact');dispatch=tick;}return{success:true};}}};
  const timer=setInterval(()=>{tick++;
+  if(tick===3)state.player.animId=-1;
   if(dispatch>=0&&tick===dispatch+2){
    if(mode==='arrived')Object.assign(state.player,{worldX:2983,worldZ:3288});
    if(mode==='delayed-refusal')state.gameMessages.push({text:"I can't reach that!",tick,observationId:tick+100});
@@ -76,7 +78,7 @@ test('cancelled air exit sends no action',async()=>{
  await airExitModel('unresolved',async(s,calls)=>{await expect(exitAirAltar(s,()=>true)).rejects.toThrow('air exit stopped');expect(calls).toEqual([]);});
 });
 test('cancellation during observed portal wait cleans its observers',async()=>{
- await airExitModel('unresolved',async(s,calls)=>{await expect(exitAirAltar(s,()=>s.tick()>=2)).rejects.toThrow('air exit stopped');expect(calls).toEqual(['walk','use']);});
+ await airExitModel('unresolved',async(s,calls)=>{let stopAt=Infinity;await expect(exitAirAltar(s,()=>{if(calls.includes('use')&&stopAt===Infinity)stopAt=s.tick()+2;return s.tick()>=stopAt;})).rejects.toThrow('air exit stopped');expect(calls).toEqual(['walk','use']);});
 });
 
 test('finite targets include20 and50; invalid inputs fail before login',()=>{
