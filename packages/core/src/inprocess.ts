@@ -21,6 +21,8 @@ export interface ClientLike {
     collectBotState(tick: number): unknown;
     executeBotAction(action: unknown): unknown | Promise<unknown>;
     setOnGameTickCallback(cb: (() => void) | null): void;
+    pumpPackets?(): Promise<void>;
+    flush?(): void;
     getMaxMessageLength?(): number;
     ifMutable?(id: number): unknown;
     ptype0?: number;
@@ -105,10 +107,22 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
     };
     const execute = (action: unknown) => {
         const refusal = guard?.(action);
-        return refusal ? { success: false, reason: 'unowned_partner', message: refusal } : client.executeBotAction(action);
+        if (refusal) return { success: false, reason: 'unowned_partner', message: refusal };
+        const dispatched = (result: unknown) => {
+            const reply = result as { success?: unknown; phase?: unknown } | null;
+            // Protocol actions append bytes synchronously. Send them before a
+            // promise continuation or a busy packet pump can delay the flush.
+            if (!stopped && reply?.success === true && reply.phase === 'dispatch') client.flush?.();
+            return result;
+        };
+        const result = client.executeBotAction(action);
+        return result && typeof (result as { then?: unknown }).then === 'function'
+            ? Promise.resolve(result).then(dispatched) : dispatched(result);
     };
 
-    const onGameTick = () => {
+    const originalPacketPump = client.pumpPackets;
+    let pumpingPackets = false, pendingTicks = 0;
+    const publishTick = () => {
         if (stopped) return;
         try {
             tick++;
@@ -121,6 +135,21 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             console.error('[inprocess] tick handler error', e);
         }
     };
+    const onGameTick = () => {
+        // PLAYER_INFO can precede interface packets in the same socket batch.
+        // LiteClient also snaps authoritative positions only after draining it.
+        if (pumpingPackets) pendingTicks++;
+        else publishTick();
+    };
+    const drainPacketBatch = originalPacketPump ? async () => {
+        pumpingPackets = true;
+        try { await originalPacketPump.call(client); }
+        catch (error) { pendingTicks = 0; throw error; }
+        finally { pumpingPackets = false; }
+        const count = pendingTicks;
+        pendingTicks = 0;
+        for (let i = 0; i < count && !stopped; i++) publishTick();
+    } : undefined;
 
     const pump = async () => {
         if (running || stopped) return;
@@ -164,6 +193,7 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             };
             const max = client.getMaxMessageLength?.();
             if (max) deliver({ type: 'sdk_info', maxMessageLength: max });
+            if (drainPacketBatch) client.pumpPackets = drainPacketBatch;
             client.setOnGameTickCallback(onGameTick);
         },
         stop(reason: string) {
@@ -172,6 +202,8 @@ export function createShim(client: ClientLike, sdk: BotSDK, guard?: (action: unk
             setEquipmentObserved(client, false);
             if (trackedMutable && client.ifMutable === trackedMutable) client.ifMutable = originalMutable;
             client.setOnGameTickCallback(null);
+            pendingTicks = 0;
+            if (drainPacketBatch && client.pumpPackets === drainPacketBatch) client.pumpPackets = originalPacketPump;
             queue.length = 0;
             recorder?.end(tick, reason);
             recorder = null;

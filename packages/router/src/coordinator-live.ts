@@ -206,12 +206,36 @@ export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly st
  });
  return{...own,jobs};
 }
+type RetiredRecoveryCohort={accounts:string[];runId:string;taskId:string};
+function retiredRecoveryCohort(task:CoordTask,account:string,base:string):RetiredRecoveryCohort|undefined{
+ if(task.sessionRecovery?.account!==account||!task.repairs?.some(r=>r.account===account&&r.endedAt===task.sessionRecovery!.endedAt))return;
+ const job=readCoordinatorJobs(base).jobs.find(j=>j.orchestrate&&jobAccounts(j).some(n=>n.toLowerCase()===account.toLowerCase()));
+ if(!job)return;
+ const accounts=jobAccounts(job),runId=job.env?.COORDINATOR_RUN_ID,taskId=job.coordinatorTask;
+ const refuse=()=>{throw Error('authenticated recovery cohort is not retired and idle');};
+ if(job.enabled!==false||job.coordinatorOwner!=='coordinator'||accounts.length<2||typeof runId!=='string'||!/^task-[-a-z0-9]+$/.test(runId)||typeof taskId!=='string')refuse();
+ let receipt:any,runs:any;
+ try{receipt=JSON.parse(readFileSync(join(base,'.practice/coordinator/runs',runId,'receipt.json'),'utf8'));runs=JSON.parse(readFileSync(join(base,'.practice/swarm-runs.json'),'utf8'));}catch{refuse();}
+ if(typeof receipt?.ok!=='boolean'||receipt.runId!==runId||receipt.taskId!==taskId||!Array.isArray(runs)||runs.some((r:any)=>(r.accounts??[]).some((n:string)=>accounts.some(a=>a.toLowerCase()===n.toLowerCase()))))refuse();
+ const end=loadEnded(join(base,'.practice/swarm-deaths.json')).get(account);
+ if(!end||end.at!==task.sessionRecovery.endedAt||failedScript(end)!==scriptKey(job.script))refuse();
+ const ownerFile=join(base,'.practice/coordinator/runs',runId,'owner.json');
+ if(existsSync(ownerFile)){const owner=JSON.parse(readFileSync(ownerFile,'utf8'));if(!Number.isSafeInteger(owner.pid)||owner.pid<1||processMatches(owner.pid,runId))refuse();}
+ for(const name of accounts){
+  if(['haggis','shaftshooter','polevaulter'].includes(name.toLowerCase())||['stop-coordinator','stop-swarm','stop-'+name].some(f=>existsSync(join(base,'.practice',f))))refuse();
+  assertNoRecoveryLease(name,base);
+  if(liveRows(base).some(s=>s.name?.toLowerCase()===name.toLowerCase()&&s.server===LIVE_SERVER&&!s.result))refuse();
+ }
+ return{accounts,runId,taskId};
+}
 export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean;launch?:string}={}){
  // `source` is the run's capability release; a recovery session binds to the launch release (default: the same value).
  const base=options.base??projectRoot,rows=liveRows(base),launch=options.launch??source;
  if(options.recoveryPreflight&&(!options.preflight||!task.sessionRecovery||task.account!==account||task.sessionRecovery.account!==account))throw Error('authenticated recovery can only preflight its exact account');
  const pendingRepair=(name:string,end:any)=>options.preflight&&task.repairs?.some(r=>r.account.toLowerCase()===name.toLowerCase()&&r.endedAt===end.at);
- const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
+ const retained=options.recoveryPreflight?retiredRecoveryCohort(task,account,base):undefined;
+ if(retained)recoveryQualification(task,dependencies,source,base);
+ const accounts=retained?.accounts??task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  if(accounts.some(n=>typeof n!=='string'||! /^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw Error('participant binding unavailable');
  const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownRaw=existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null;
  // Release first: the merged-plan split check and the overlay replacement below both read this result.
@@ -221,10 +245,12 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  const sameScriptRepairPreflight=(name:string,end:any)=>!task.sessionRecovery&&end&&!/^died\b/.test(end.reason)&&failedScript(end)===scriptKey(script)&&pendingRepair(name,end);
  const settledOwnerJob=(job:any,name:string,end:any)=>job?.coordinatorOwner!=='coordinator'&&job?.enabled===false&&(!end||!persistentEnd(end.reason)||sameScriptRepairPreflight(name,end))&&readLogoutProof(name,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed';
  for(const participant of accounts){
-  if(!(options.recoveryPreflight&&participant===task.sessionRecovery?.account))liveLogoutRef(participant,base);
+  if(!(options.recoveryPreflight&&(retained||participant===task.sessionRecovery?.account)))liveLogoutRef(participant,base);
   if(openHold(holds,participant,script))throw Error('failed script still held for '+participant+': '+script);
  }
  for(const participant of accounts.filter(n=>n.toLowerCase()!==account.toLowerCase())){
+  // This is a read-only ownership preflight, not an authorization to log peers in.
+  if(retained)continue;
   const occupied=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===participant.toLowerCase()));
   const ended=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===participant.toLowerCase())?.[1];
   if(occupied&&(!occupied.script||/fresh.clock|24 boards|main simultaneous/i.test(occupied.goal??'')))throw Error('participant has a protected reservation: '+participant);
@@ -280,7 +306,8 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
 }
 /** Check admission while the failure still holds, then park its old assignment before the controller can clear it. */
 export function prepareLiveRecovery(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot,launch=source){
- const participants=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
+ const retained=retiredRecoveryCohort(task,account,base);
+ const participants=retained?.accounts??task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  for(const repair of task.repairs??[]){
   if(!participants.some(n=>n?.toLowerCase()===repair.account.toLowerCase()))throw Error('repair must name a participant');
   assertNoRecoveryLease(repair.account,base);
@@ -317,6 +344,7 @@ export function prepareLiveRecovery(task:CoordTask,account:string,script:string,
  atomicJson(join(base,'.practice/coordinator/runs',runId,'recovery-before.json'),{at:Date.now(),repairs:task.repairs,ended:JSON.parse(readFileSync(join(base,'.practice/swarm-deaths.json'),'utf8')),assignments:before});
  if(readFileSync(path,'utf8')!==raw||(existsSync(ownFile)?readFileSync(ownFile,'utf8'):null)!==ownRaw)throw Error('assignment plan changed before recovery');
  writeCoordinatorJobs(base,own);
+ return retained;
 }
 export function recoveryQualification(task:CoordTask,dependencies:Record<string,any>,source:string,base=projectRoot):ControlledRecoveryRequest['qualification']{
  const endedAt=task.sessionRecovery?.endedAt??0,now=Date.now();
@@ -336,14 +364,23 @@ export function recoveryQualification(task:CoordTask,dependencies:Record<string,
  return{delivery:{path:reportPath,sha256:createHash('sha256').update(bytes).digest('hex')},proof};
 }
 // `source` is the capability release its delivery proved; the request binds to the controller's launch release.
-export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source){
+async function acquireRecoverySlot(lease:string,owner:{pid:number;runId:string;nonce:string},account:string,base:string,limit:number){
+ while(true){
+  if(['stop-coordinator','stop-swarm','stop-'+account].some(f=>existsSync(join(base,'.practice',f))))throw Error('recovery owner stopped');
+  try{writeFileSync(lease,JSON.stringify(owner),{flag:'wx'});return;}catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
+  if(Date.now()>=limit)throw Error('recovery repair slot timed out; existing owner preserved');
+  await Bun.sleep(Math.min(100,Math.max(1,limit-Date.now())));
+ }
+}
+export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source,beforeRequest?:()=>Promise<unknown>){
  const authorization=task.sessionRecovery;if(!authorization)throw Error('authenticated recovery task flag missing');
  const request:ControlledRecoveryRequest={schema:RECOVERY_SCHEMA,kind:'session-recovery',...authorization,server:LIVE_SERVER,runId,nonce:randomUUID(),source:launch,
   qualification:recoveryQualification(task,dependencies,source,base)};
  const file=join(base,'.practice/swarm-repair.json'),lease=file+'.lease';
- writeFileSync(lease,JSON.stringify({pid:process.pid,runId,nonce:request.nonce}),{flag:'wx'});
  const raw=JSON.stringify(request),limit=Date.now()+timeoutMs;
+ await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},request.account,base,limit);
  try{
+  await beforeRequest?.();
   if(existsSync(file+'.processing'))throw Error('another exact recovery owns the repair slot');
   writeFileSync(file,raw,{flag:'wx'});
   while(Date.now()<limit){
@@ -367,9 +404,11 @@ export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:R
 export async function requestLiveRecovery(repair:{account:string;endedAt:number},runId:string,base=projectRoot,timeoutMs=15000){
  const proof=liveLogoutRef(repair.account,base,true)!;
  const file=join(base,'.practice/swarm-repair.json'),request={...repair,server:LIVE_SERVER,proof,runId,nonce:randomUUID()};
- const lease=file+'.lease';writeFileSync(lease,JSON.stringify({pid:process.pid,runId,nonce:request.nonce}),{flag:'wx'});
+ const lease=file+'.lease';
  const limit=Date.now()+timeoutMs;
+ await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},repair.account,base,limit);
  try{
+  request.proof=liveLogoutRef(repair.account,base,true)!;
   if(existsSync(file+'.processing'))throw Error('another exact recovery owns the repair slot');
   writeFileSync(file,JSON.stringify(request),{flag:'wx'});
   while(Date.now()<limit){
@@ -410,6 +449,20 @@ export async function disableOwnJob(runId:string,base=projectRoot){return withPl
  for(const job of own.jobs)if(job.coordinatorOwner==='coordinator'&&job.env?.COORDINATOR_RUN_ID===runId&&job.enabled!==false){job.enabled=false;changed=true;}
  if(changed)writeCoordinatorJobs(base,own);
 },join(base,'.practice/coordinator'));}
+export async function awaitRecoveryInstallPreflight(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,retained:RetiredRecoveryCohort|undefined,base=projectRoot,launch=source,timeoutMs=180000){
+ const limit=Date.now()+timeoutMs;
+ while(true){
+  if(['stop-coordinator','stop-swarm',...(retained?.accounts??[account]).map(n=>'stop-'+n)].some(f=>existsSync(join(base,'.practice',f))))throw Error('recovery owner stopped');
+  try{return await withPlanWrite(()=>installJob(task,account,script,runId,source,dependencies,{base,preflight:true,launch}),join(base,'.practice/coordinator'));}
+  catch(error){
+   if(!retained||String(error)!=='Error: a composed assignment needs all its participants; do not split its ownership')throw error;
+   const job=readCoordinatorJobs(base).jobs.find(j=>j.coordinatorTask===retained.taskId&&j.env?.COORDINATOR_RUN_ID===retained.runId);
+   if(!job||job.enabled!==false||!job.orchestrate||JSON.stringify(jobAccounts(job))!==JSON.stringify(retained.accounts))throw Error('retired recovery cohort owner changed');
+   if(Date.now()>=limit)throw Error('retired recovery cohort still lacks confirmed logout; assignment preserved');
+   await Bun.sleep(Math.min(100,Math.max(1,limit-Date.now())));
+  }
+ }
+}
 export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>,definition:{entry:string},runId:string,startedAt:number){
  const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n);
  const account=accounts?.[0]??accountFor(task,dependencies),target=accounts?.[task.acceptIndex??0]??account;
@@ -420,12 +473,14 @@ export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>
  if((accounts??[account]).some(a=>existsSync(join(projectRoot,'.practice/stop-'+a))))throw Error('live account owner stopped before controller setup');
  await ensureSwarm(launch);
  if(task.repairs?.length){
-  await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch));
   if(task.sessionRecovery){
-   await requestAuthenticatedRecovery(task,dependencies,capability,runId,projectRoot,180000,launch);
+   let retained:RetiredRecoveryCohort|undefined;
+   await requestAuthenticatedRecovery(task,dependencies,capability,runId,projectRoot,180000,launch,()=>withPlanWrite(()=>{
+    retained=prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch);
+   }));
    // Check the indexed cleanup and every ordinary install condition before consuming the old end.
-   await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{preflight:true,launch}));
-  }
+   await awaitRecoveryInstallPreflight(task,account,definition.entry,runId,source,dependencies,retained,projectRoot,launch);
+  }else await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch));
   for(const repair of task.repairs)if(!preserveCompletedLiveEnd(task,repair,definition.entry,runId,source,dependencies,projectRoot,launch))await requestLiveRecovery(repair,runId);
  }
  const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{launch})),deadline=Date.now()+(task.timeoutMs??Math.min(86400000,Math.max(900000,task.estimatedMs*1.5)));
