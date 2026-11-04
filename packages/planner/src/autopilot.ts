@@ -5,7 +5,8 @@
 // Value is an estimate in coins per game tick: each output's rate times its unit value, minus coin spend, times the
 // script family's measured work share (1 - idle - move, scripts/tick-waste.ts). A training template is worth a share
 // of the best job it unlocks, and reserves that job's resource. assess() reads a job's recent log lines and retires
-// it after repeated fail RESULTs or a run that was nearly all idle and walking. scripts/autopilot.ts applies it.
+// it after repeated fail RESULTs or a run that was nearly all idle and walking. finishedTrainers() names the accounts
+// whose trainer reached its target, so the next pass needs no timer. scripts/autopilot.ts applies it.
 import type { BillRow } from './supply-bill';
 
 export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number> };
@@ -109,10 +110,20 @@ export function plan(inp: Inputs): Assignment[] {
 // met and log out (a scored login for nothing). The swarm keeps the account's `done` end until the next pass hands it
 // a job with a different mission, which the met level unlocks. A run that ends short of the target is a fail RESULT,
 // which the supervisor retries and the swarm's standing retry resumes, with or without repeat.
+// finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
     return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: !t.trains, standing: true,
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
+}
+
+// Accounts whose planner trainer has reached its target: the job's template trains, the state still assigns that
+// template, and the job's log since the assignment holds an ok RESULT. The daemon re-plans these accounts at once.
+export function finishedTrainers(jobs: readonly any[], side: string, assigned: Readonly<Record<string, { template: string; offset: number }>>, templates: readonly Template[],
+    linesSince: (account: string, offset: number) => readonly string[]): string[] {
+    const trains = new Set(templates.filter(t => t.trains).map(t => t.id));
+    return jobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && trains.has(j.template) && assigned[j.account]?.template === j.template
+        && assess(linesSince(j.account, assigned[j.account]!.offset)).ok > 0).map(j => j.account);
 }
 
 // Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail, a

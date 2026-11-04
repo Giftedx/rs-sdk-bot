@@ -1,25 +1,35 @@
 import { expect, test } from 'bun:test';
-import { catalogue, jobFor, plan, type Acct } from '../packages/planner/src/autopilot';
+import { catalogue, finishedTrainers, jobFor, mergeJobs, plan, type Acct, type Inputs } from '../packages/planner/src/autopilot';
 import { missionSignature, startable } from './swarm';
 import { coinOrder, fundOrders, inOpenOrder } from './autopilot';
 
 const side = 'claude-cloud';
-const acct = (name: string, skills: Record<string, number> = {}): Acct => ({ name, side, skills: { Hitpoints: 10, ...skills }, items: {} });
-const inputs = (accounts: Acct[]) => ({ side, accounts, owners: new Map(accounts.map(a => [a.name.toLowerCase(), { side }])), bill: [], templates: catalogue(), prices: {} });
+const inputs = (a: Acct): Inputs => ({ side, accounts: [a], owners: new Map([[a.name.toLowerCase(), { side }]]), bill: [], templates: catalogue(), prices: {} });
+const settled = () => 60_000;
 
-test('a finished training job is not restarted by the swarm; the job its level unlocks starts', () => {
-    const [train] = plan(inputs([acct('Fresh')]));
-    const trainer = jobFor(train!, side);
-    expect(trainer).toMatchObject({ template: 'thieving55', repeat: false, standing: true });
-    // The supervisor's end for the trainer's ok RESULT, recorded against the trainer's mission.
-    const ended = new Map([['Fresh', { at: 1000, reason: 'done after 1 runs', revision: missionSignature(trainer as any) }]]);
-    const settled = () => 60_000;
-    expect(startable(['Fresh'], trainer.repeat, ended, settled, undefined, missionSignature(trainer as any))).toEqual({ start: [], blocked: { Fresh: 'ended: done after 1 runs' } });
-    // The next pass sees Thieving 55 in the status file and hands the account a knight spot: a changed mission starts.
-    const [next] = plan(inputs([acct('Fresh', { Thieving: 55 })]));
-    const goldfarm = jobFor(next!, side);
-    expect(goldfarm).toMatchObject({ script: 'scripts/goldfarm.ts', repeat: true });
-    expect(startable(['Fresh'], goldfarm.repeat, ended, settled, undefined, missionSignature(goldfarm as any))).toEqual({ start: ['Fresh'], blocked: {} });
+test('a trainer at its target stays ended for the swarm, and the next pass starts the account on its next template', () => {
+    const fresh: Acct = { name: 'TrouserSnake', side, skills: { Hitpoints: 10 }, items: {} };
+    const [first] = plan(inputs(fresh));
+    const trainer = jobFor(first!, side);
+    expect(trainer).toMatchObject({ template: 'thieving55', enabled: true, repeat: false, standing: true });
+
+    // The trainer's ok RESULT: the supervisor ends done, and a job that does not repeat is blocked on that end.
+    const ended = new Map([['TrouserSnake', { reason: 'done after 1 runs', at: 1000, revision: missionSignature(trainer) }]]);
+    expect(startable(['TrouserSnake'], trainer.repeat, ended, settled, undefined, missionSignature(trainer)))
+        .toEqual({ start: [], blocked: { TrouserSnake: 'ended: done after 1 runs' } });
+    // The daemon sees the finish in the job's log since its assignment and passes without waiting for the timer.
+    const assigned = { TrouserSnake: { template: 'thieving55', offset: 0 } };
+    expect(finishedTrainers([trainer], side, assigned, catalogue(), () => ['RESULT ok thieving=55 xp=16000 ticks=1736 died=false'])).toEqual(['TrouserSnake']);
+
+    // That pass reads the status at the target level: the trainer is skipped, a knight spot replaces it, and the new
+    // mission starts although the account's last end is done.
+    const [next] = plan(inputs({ ...fresh, skills: { ...fresh.skills, Thieving: 55 } }));
+    expect(next!.template!.id).toMatch(/^goldfarm@/);
+    const merged = mergeJobs([trainer], side, [next!]);
+    expect(merged.fresh).toEqual(['TrouserSnake']);
+    expect(merged.jobs).toEqual([jobFor(next!, side)]);
+    expect(merged.jobs[0].repeat).toBe(true);
+    expect(startable(['TrouserSnake'], merged.jobs[0].repeat, ended, settled, undefined, missionSignature(merged.jobs[0])).start).toEqual(['TrouserSnake']);
 });
 
 
