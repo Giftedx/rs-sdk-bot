@@ -4,6 +4,7 @@ import {join,resolve,dirname,relative} from 'node:path';
 import ts from 'typescript';
 import {isLocalServer} from './localserver';
 import {readLogoutProof,listAttempts,type LogoutProof} from './session-lifecycle';
+import {commandLine} from '../../practice/src/proc';
 
 const root=resolve(import.meta.dir,'../../..');
 // One fleet revision includes helpers and both host/single launch paths, not
@@ -274,14 +275,23 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
 export const LOST_SESSION_DROP_MS=200_000;
 // A live status row without a result is a closed session only when the account's own producer lifecycle says so:
 // its newest attempt (the row's attempt or a later one) confirmed logout, or the row's own attempt is still the newest,
-// its owner process is gone and the row is older than the server's lost-session drop.
-export function closedSessionRow(row:any,server:string,opts:{root?:string}={},alive:(pid:number)=>boolean=pidAlive,now=Date.now()):boolean {
+// its owner process is gone (including a PID reused by a different script) and the row is older than the server's
+// lost-session drop. An unreadable command line or missing producer script cannot prove a live PID changed owner.
+export function closedSessionRow(row:any,server:string,opts:{root?:string;commandLine?:(pid:number)=>string|null}={},alive:(pid:number)=>boolean=pidAlive,now=Date.now()):boolean {
     if(typeof row?.name!=='string'||typeof row.sessionAttemptId!=='string'||!row.sessionAttemptId)return false;
     let latest:LogoutProof;try{latest=readLogoutProof(row.name,server,opts);}catch{return false;}
     if(latest.state==='confirmed')return latest.attemptId>=row.sessionAttemptId;
     if(latest.state!=='held'||latest.attemptId!==row.sessionAttemptId||!Number.isFinite(row.at)||now-row.at<LOST_SESSION_DROP_MS)return false;
-    let pid:unknown;try{pid=listAttempts(row.name,server,opts).find(a=>a.attemptId===latest.attemptId)?.receipt?.owner.pid;}catch{return false;}
-    return Number.isSafeInteger(pid)&&(pid as number)>0&&!alive(pid as number);
+    try{
+        const owner=listAttempts(row.name,server,opts).find(a=>a.attemptId===latest.attemptId)?.receipt?.owner,pid=owner?.pid;
+        if(!Number.isSafeInteger(pid)||!pid||pid<1)return false;
+        if(!alive(pid))return true;
+        if(typeof owner?.script!=='string'||!owner.script.endsWith('.ts'))return false;
+        const line=(opts.commandLine??commandLine)(pid);
+        if(!line?.trim())return false;
+        const normalize=(s:string)=>s.replaceAll('\\','/').toLowerCase();
+        return !normalize(line).includes(normalize(owner.script));
+    }catch{return false;}
 }
 function pidAlive(pid:number):boolean{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException).code!=='ESRCH';}}
 
