@@ -1,6 +1,7 @@
 // One exact owned handoff. HANDOFF_ORDER is mandatory; saved bank/pack totals govern recovery.
 // HANDOFF_ORDER=order-key bun scripts/handoff-inputs.ts <donor> <receiver> 153:Flax --notes --keep='food|tool' --bank-x=2725 --bank-z=3493
 // Both jobs must already be paused externally. Existing stop files are never cleared.
+// Owned production: CAP=1600 bun scripts/handoff-inputs.ts <account> --headless-order 135 14
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ownedAccounts } from '../packages/core/src/tradeguard';
@@ -11,6 +12,88 @@ import {depositObserved} from '../packages/core/src/deposit';
 import {preparePayout} from './banker';
 import {exactOrder,acquireExclusiveLease,ownerAlive} from './payout-order';
 import {reconcileOrder, type OrderSnapshot} from './courier-handoff';
+import {runShafts} from './fletch-shafts';
+import {runHeadless} from './fletch-arrows';
+import {abortable, executionContext} from '../vendor/rs-sdk/sdk/execution-context';
+
+export function parseHeadlessOrder(args:string[],cap=process.env.CAP??'1600') {
+    const [account,mode,output,logs]=args;
+    if(args.length!==4||mode!=='--headless-order'||!account||account.trim()!==account||!ACCOUNT.test(account)||/^(main|haggis)$/i.test(account))
+        throw Error('headless-order requires one non-reserved account, new output count and logs to cut');
+    if(![output,logs,cap].every(n=>typeof n==='string'&&/^\d+$/.test(n)))throw Error('invalid headless-order counts/CAP');
+    const maximum=Number(output),logsToCut=Number(logs),budget=Number(cap);
+    if(![maximum,logsToCut,budget].every(Number.isSafeInteger)||maximum<15||maximum%15||logsToCut<1||logsToCut>25||budget<1)
+        throw Error('headless-order requires output multiple15, logs1..25 and positive CAP');
+    return {account,maximum,logsToCut,cap:budget};
+}
+
+// One budget covers bank entry, both helpers and final reconciliation. The entry owns logout.
+export async function runOwnedHeadless(s:Session,c:ReturnType<typeof parseHeadlessOrder>,check:()=>void) {
+    const start=s.tick(),controller=new AbortController(),parent=executionContext.getStore();
+    const parentAbort=()=>controller.abort(parent?.signal.reason);
+    parent?.signal.addEventListener('abort',parentAbort,{once:true});
+    if(parent?.signal.aborted)parentAbort();
+    const guard=()=>{try{check();if(s.tick()-start>=c.cap)throw Error('headless-order CAP exhausted');}catch(e){controller.abort(e);}};
+    const off=s.onTick(guard);
+    const remaining=()=>{guard();controller.signal.throwIfAborted();return c.cap-(s.tick()-start);};
+    try{return await executionContext.run({...parent,signal:controller.signal},()=>abortable((async()=>{
+        remaining();
+        if(!await waitUntil(s,()=>!!s.sdk.getState()?.player&&(s.sdk.getSkill('Hitpoints')?.level??0)>0&&(s.sdk.getSkill('Fletching')?.baseLevel??0)>0,{timeoutTicks:15}))throw Error('headless-order entry not observed');
+        const generation=s.bankObservation?.()?.generation??0;
+        if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>!!s.sdk.getState()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:15}))throw Error('headless-order fresh bank unavailable');
+        const totals=()=>{
+            const bank=s.bankObservation?.();if(!bank)throw Error('headless-order bank unknown');
+            const counts=new Map<number,number>();
+            for(const i of [...bank.items,...s.sdk.getInventory(),...s.sdk.getEquipment()])counts.set(i.id,(counts.get(i.id)??0)+i.count);
+            return counts;
+        };
+        const before=totals(),qty=(id:number)=>before.get(id)??0,xp=s.sdk.getSkillXp('Fletching')??0;
+        // Equipment is protected, never an input source. Helpers use only pack and bank stock.
+        const available=(id:number)=>qty(id)-s.sdk.getEquipment().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
+        if(available(1511)<c.logsToCut||available(946)<1||available(52)+15*c.logsToCut-c.maximum<100||available(314)-c.maximum<100)
+            throw Error('headless-order missing owned inputs: logs, knife, shafts or feathers with100 reserves required');
+        const shafts=await runShafts(s,{cap:remaining(),maximum:c.logsToCut,reserve:available(1511)-c.logsToCut,bankKnife:true});
+        console.log('SHAFT_BANK '+JSON.stringify(shafts));
+        if(!shafts.ok||!shafts.targetMet)throw Error('headless-order shafts incomplete: '+JSON.stringify(shafts));
+        const headless=await runHeadless(s,{cap:remaining(),maximum:c.maximum,shaftReserve:100,featherReserve:100});
+        console.log('HEADLESS_BANK '+JSON.stringify(headless));
+        remaining();
+        const after=totals(),changes=new Map([[1511,-c.logsToCut],[52,15*c.logsToCut-c.maximum],[314,-c.maximum],[53,c.maximum]]);
+        const preserved=[...new Set([...before.keys(),...after.keys(),...changes.keys()])].every(id=>(after.get(id)??0)===(before.get(id)??0)+(changes.get(id)??0));
+        const bank=s.bankObservation?.();if(!bank)throw Error('headless-order final bank unknown');
+        const banked=bank.items.filter(i=>i.id===53).reduce((n,i)=>n+i.count,0);
+        const ok=headless.ok&&headless.targetMet&&preserved&&banked===qty(53)+c.maximum&&(s.sdk.getSkillXp('Fletching')??0)>xp;
+        return {ok,phase:'headless-order',reason:ok?'exact new headless output banked; assets reconciled':'headless-order final output/assets/XP incomplete',shafts,headless,preserved,ticks:s.tick()-start};
+    })()));}finally{off();parent?.signal.removeEventListener('abort',parentAbort);controller.abort(Error('headless-order ended'));}
+}
+
+async function headlessMain(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts}) {
+    const c=parseHeadlessOrder(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
+    const host=serverFromEnv(readFileSync(join(root,'vendor/rs-sdk/bots',c.account,'bot.env'),'utf8'));assertServerAllowed(host);
+    const owned=(io.ownedAccounts??ownedAccounts)(host),sessions:Session[]=[];
+    const runId=process.env.COORDINATOR_RUN_ID??(process.env.BOT_GOAL??'').match(/\[(task-[a-z0-9-]+)\]/)?.[1]??'';
+    let cancelled=false,release:(()=>void)|undefined;
+    const cancel=()=>{cancelled=true;};
+    const read=(p:string,fallback:any)=>existsSync(p)?JSON.parse(readFileSync(p,'utf8')):fallback;
+    const check=()=>{
+        if(cancelled)throw Error('headless-order cancelled');
+        assertAccountOwnership([c.account],read(join(dir,'coordinator/state.json'),null),read(join(root,'swarm.json'),{}).jobs,n=>existsSync(join(dir,'stop-'+n)),runId);
+        if(!owned.has(c.account.toLowerCase()))throw Error('not authenticated owned: '+c.account);
+        if(!sessions.length)assertRecoverableStatus(read(join(dir,'status',c.account+'.json'),null),null,ownerAlive);
+    };
+    let out:any={ok:false,phase:'headless-order',reason:''};
+    try{
+        check();release=acquireAccountLeases([c.account],runId,join(dir,'account-leases'));check();
+        process.on('SIGINT',cancel);process.on('SIGTERM',cancel);
+        sessions.push(await (io.openBot??openBot)(c.account,{onStop:async()=>cancel(),onSessionEnd:async()=>cancel()}));
+        out=await runOwnedHeadless(sessions[0]!,c,check);
+    }catch(e){out.reason=String(e);}
+    finally{
+        try{if(sessions.length)out.ok=await (io.settle??settle)(sessions,out.ok,out.reason)&&out.ok;}
+        finally{process.off('SIGINT',cancel);process.off('SIGTERM',cancel);release?.();}
+    }
+    console.log('HANDOFF_RESULT '+JSON.stringify(out));process.exitCode=out.ok?0:1;
+}
 
 type Item = { name: string; count: number };
 export type Handoff = { donor: string; receiver: string; items: Item[]; notes: boolean; keep?: string;
@@ -262,6 +345,7 @@ export async function runExactHandoff(c:Handoff,donor:Session,receiver:Session,o
 // Injectable I/O lets process-level regressions exercise this entry without
 // credentials or a game server. The real CLI always uses the production defaults.
 export async function main(io:{root?:string;openBot?:typeof openBot;settle?:typeof settle;ownedAccounts?:typeof ownedAccounts}={}) {
+    if(process.argv[3]==='--headless-order')return headlessMain(io);
     const c=parseHandoff(process.argv.slice(2)),root=io.root??resolve(import.meta.dir,'..'),dir=join(root,'.practice');
     // Key and duplicate checks precede even opening credentials or sessions.
     const key=process.env.HANDOFF_ORDER??'';
