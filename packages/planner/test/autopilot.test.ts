@@ -70,6 +70,10 @@ test('planner jobs carry the marker, repeat and standing, and the merge keeps un
     const [x] = plan(inputs([acct('ThiefA', { Thieving: 80 })]));
     const job = jobFor(x!, side);
     expect(job).toMatchObject({ account: 'ThiefA', script: 'scripts/goldfarm.ts', enabled: true, repeat: true, standing: true, autopilot: side, template: x!.template!.id });
+    // A training job runs once: its ok RESULT is the target met, so a repeat would be a no-op login.
+    const [fresh] = plan(inputs([acct('Fresh')]));
+    expect(fresh!.template!.id).toBe('thieving55');
+    expect(jobFor(fresh!, side)).toMatchObject({ script: 'scripts/generated/thieving60.ts', repeat: false, standing: true });
     const human = { account: 'Other', script: 'scripts/goldfarm.ts', enabled: true }, theirs = { account: 'Far', script: 'x', enabled: true, autopilot: 'cloud' };
     const stale = { account: 'Gone', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side, template: 'feathers@3229,3298' };
     const kept = { ...job, note: 'kept as is' };
