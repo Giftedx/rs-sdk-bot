@@ -6,7 +6,7 @@ import { startStack } from '../src/stack';
 // Run with PRACTICE_IT=1 (RUNS defaults to 10; ONLY=gather,bank limits the set; PARALLEL=5 runs 5 at once).
 const RUNS = Number(process.env.RUNS ?? 10);
 // shared: the script uses world things other runs also use (trees, monsters). Its runs go one at a time:
-// 5 at once measured gather 3/10, bank 8/10, fight 9/10 (2026-10-22). The scripts themselves run side by side.
+// 5 at once measured gather 3/10, bank 8/10, fight 9/10. The scripts themselves run side by side.
 const ALL: { name: string; bot: string; preset: string; shared?: boolean; companions?: { suffix: string; preset: string }[] }[] = [
     { name: 'gather', bot: 'gath', preset: 'wc_lumbridge', shared: true },
     { name: 'bank', bot: 'bank', preset: 'bank_draynor', shared: true },

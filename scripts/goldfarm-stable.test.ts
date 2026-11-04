@@ -96,7 +96,7 @@ test('logout reports once but cannot refresh a frozen client cache, and failed l
  }
 });
 
-test('installed farmWalk uses shared walkPath from both recorded house interiors to the bank', () => {
+test('installed farmWalk uses shared walkPath from both recorded house interiors to the bank', async () => {
     // Isolate the adapter mock in a child. The worker and shared walkPath are the installed source.
     // Native --door-repro separately checks the real adapter, client movement and saved bank effects.
     const code = `
@@ -147,10 +147,11 @@ for(const startX of [2650,2651])for(const blocked of [false,true]){
  }
 }
 console.log('shared farm route checked');`;
-    const child = Bun.spawnSync([process.execPath, '-e', code], { timeout: 8000, windowsHide: true });
-    expect(child.stderr.toString()).toBe('');
-    expect(child.exitCode).toBe(0);
-    expect(child.stdout.toString()).toContain('shared farm route checked');
+    const child = Bun.spawn([process.execPath, '-e', code], { timeout: 8000, windowsHide: true, stdout:'pipe', stderr:'pipe' });
+    const [exitCode,stdout,stderr]=await Promise.all([child.exited,new Response(child.stdout).text(),new Response(child.stderr).text()]);
+    expect(stderr).toBe('');
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('shared farm route checked');
 });
 
 test('error cleanup preserves the original failure and attempts supported recovery only once',async()=>{
@@ -313,7 +314,7 @@ test('a thief at the knights answers the courier only when it is in view, once p
     expect(courierCheckDue(1000, 1000 - COURIER_COOLDOWN, 'Bigpackage', here)).toBe(true);
     expect(courierCheckDue(1000, -100_000, 'Bigpackage', [{ name: 'Bigpackage2' }, {}])).toBe(false);
     expect(courierCheckDue(1000, -100_000, '', here)).toBe(false);
-    // A fed thief (26 food on 2026-10-25) keeps picking; the wait is for one that is running short.
+    // A fed thief (26 food) keeps picking; the wait is for one that is running short.
     expect(COURIER_WANT_BELOW).toBeGreaterThan(2);
     expect(COURIER_WANT_BELOW).toBeLessThan(26);
 });

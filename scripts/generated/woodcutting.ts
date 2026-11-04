@@ -2,7 +2,7 @@
 // under CAP game ticks (default 3000). Preset wc_fresh.
 // Plan: coins from Lumbridge men, knife (ground spawn 3224,3202), a better axe from Bob (3232,3203), then 3-tick
 // woodcutting north of the castle: normal trees, then willows from 30 (castle river pair 3233,3244 and 3234,3238).
-// Code-read facts (2026-10-23):
+// Code-read facts:
 // - The server gives 25x XP: a normal log is 625 XP, oak 937.5, willow 1687.5 (skill_woodcutting/configs/trees.dbrow).
 // - The best axe in the pack or worn is used, with no level check (woodcut.rs2 woodcutting_axe_checker).
 // - A pickpocket fail on a man hits for 1 and stuns 8 ticks (pickpocket.dbrow; success 180-240 of 256). With 10 HP

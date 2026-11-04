@@ -41,10 +41,20 @@ test('source/stop/admission refusals occur before launch; post-issuance failure 
  for(const fault of ['build','stop','admission','issued']){
   const f=fixture();if(fault==='build')writeFileSync(join(f.base,'.practice/coordinator/build-lock.json'),'source owner');
   if(fault==='stop')writeFileSync(join(f.base,'.practice/stop-swarm'),'owner stop');
-  if(fault==='admission')f.options.admit=()=>{throw Error('maxBots');};
+  if(fault==='admission')f.options.admit=()=>{throw Error('recovery admission waiting: maxBots');};
   if(fault==='issued')f.options.launch=()=>{const p=join(f.base,'.practice/coordinator/session-recovery/accounts/rod/lease.json');mkdirSync(dirname(p),{recursive:true});writeFileSync(p,'issued');throw Error('spawn failed');};
   const controller=createRecoveryDispatch(f.options);f.claim();controller.handle(f.raw);
   expect(f.calls()).toBe(0);expect(existsSync(f.file)).toBe(false);expect(f.results()[0].result.reason).toContain(fault==='issued'?'account lease held':'no lease issued');
+  expect(f.results()[0].result.setup).toEqual({phase:{build:'source-owner',stop:'stop',admission:'admission',issued:'launch'}[fault]!,
+   cause:{build:'recovery waits for runtime source owner',stop:'recovery owner stopped',admission:'recovery admission waiting: maxBots',issued:'unclassified setup error'}[fault]!});
+ }
+});
+
+test('setup refusals retain bounded permit causes without exposing arbitrary exception text',()=>{
+ for(const cause of ['recovery completed account already has producer history','recovery fleet ownership unresolved: stale','PASSWORD=private']){
+  const f=fixture();f.options.launch=()=>{throw Error(cause);};f.claim();createRecoveryDispatch(f.options).handle(f.raw);
+  expect(f.results()[0].result.setup).toEqual({phase:'launch',cause:cause==='PASSWORD=private'?'unclassified setup error':cause});
+  expect(JSON.stringify(f.results())).not.toContain('PASSWORD=private');expect(f.calls()).toBe(0);
  }
 });
 test('failed child keeps the old failure; malformed or ordinary JSON is not consumed as a recovery',async()=>{

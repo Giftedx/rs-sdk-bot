@@ -195,7 +195,7 @@ export function startStatus(s: { name: string; client?: unknown; sdk: { getState
         const resultNow = own ? own.result : lastResult;
         const doc = {
             name: s.name, server, role: roleOf(s.name), goal: process.env.BOT_GOAL ?? process.argv[1]?.split(/[\\/]/).pop() ?? '',
-            phase: phaseNow, result: resultNow, at: Date.now(), started, tick: s.tick(), workRevision: process.env.WORKER_RELEASE ?? null,
+            phase: phaseNow, result: resultNow, at: Date.now(), started, tick: s.tick(), workRevision: process.env.WORKER_RELEASE ?? null, workEntry: process.env.WORKER_ENTRY || null,
             coordinatorRunId: process.env.COORDINATOR_RUN_ID ?? null,
             // The producer's lifecycle attempt for this exact session (session-lifecycle.ts); null when absent.
             sessionAttemptId: (s as { lifecycle?: { attemptId?: unknown } }).lifecycle?.attemptId ?? null,

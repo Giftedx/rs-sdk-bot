@@ -14,6 +14,7 @@ Use the [current plan](../docs/plans/joined-plan.md) for priorities and the [res
 | Skill rates and combat | [skill-rows-measured](skill-rows-measured.md), [combat-measure](combat-measure.md), [agility](agility.md), [supply-floors](supply-floors.md) |
 | Quest prerequisites and routes | [quest-plan](quest-plan.md), [quest-route](quest-route.md), [quest-xp](quest-xp.md), [heroes-partner](heroes-partner.md) |
 | Runtime and host capacity | [bot-host](bot-host.md), [random-events](random-events.md), [rs-sdk-deep-dive](rs-sdk-deep-dive.md) |
+| How does each dashboard part compare with RuneLite? | [runelite-parity](runelite-parity.md): RuneLite source, copy/adapt/reject and open gap per part; `packages/dashboard/parity.test.ts` keeps it complete |
 | Which external work should we use? | [Project use map](project-use-map.md#find-and-port-a-solution) — exact source entry points, local consumers, saved commits and porting recipe; grouped inventory below; [ecosystem evidence](botting-ecosystem-2026-10-23.md), [local upstream review](community-and-upstream.md) |
 | Measured waste and open owner requests | [learning-report](learning-report.md) (generated), [owner-requests](owner-requests.md) |
 

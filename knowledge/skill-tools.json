@@ -4014,7 +4014,10 @@
      "potion"
     ],
     "idPattern": null,
-    "rungs": []
+    "rungs": [
+     "herblore/potion-weapon-poison",
+     "herblore/potion-anti-firebreath-potion"
+    ]
    },
    "minLevel": null,
    "levelSrc": null,

@@ -182,7 +182,7 @@ const TARGETED_COLLECTION = process.env.TARGETED_COLLECTION === '1';
 const HANDOFF_ONLY = process.env.HANDOFF_ONLY === '1';
 const WAIT = Number(process.env.WAIT ?? 900);
 // TICK3=0: no knife-on-logs 3-tick step; the first bank visit banks the knife and logs (3 more fish per pack).
-// Measured worse (practice 2026-10-23, 3 x 2,500 ticks: 36.6, 48.1, 24.0 food per 1,000 ticks against 34.2, 52.0, 39.5).
+// Measured worse (practice, 3 x 2,500 ticks: 36.6, 48.1, 24.0 food per 1,000 ticks against 34.2, 52.0, 39.5).
 const TICK3 = !FINITE && process.env.TICK3 !== '0';
 // A financed courier owns replenishment in this mode. Finish the useful batch
 // instead of spending the producer's clock gathering replacement feathers.
@@ -736,7 +736,7 @@ try {
     let chain: { index: number } | null = null;
     let stillAnim = 0;
     // The courier waits at Draynor bank (its fresh status file says so): hand over now, not at the next full pack
-    // (2026-10-24 live: the courier waited there while the cook had 186 fish banked and three farmers waited for food).
+    // (live: the courier waited there while the cook had 186 fish banked and three farmers waited for food).
     let lastCourierTrip = -1e9;
     const courierWaiting = () => {
         if (!GIVE_TO || s.tick() - lastCourierTrip < 600) return false;
@@ -827,7 +827,7 @@ try {
             } else {
                 // No knife or logs: click the spot once, and again when the player stops fishing (2 ticks with no
                 // animation). A level-up dialog stops fishing; before this check the bot stood 317 ticks next to a
-                // spot that did not move (practice 2026-10-23; live Mightyrod 456 ticks at 3239,3254).
+                // spot that did not move (practice; live Mightyrod 456 ticks at 3239,3254).
                 stillAnim = (pos()?.animId ?? -1) === -1 ? stillAnim + 1 : 0;
                 if (chain?.index !== sp.index || stillAnim >= 2) {
                     await s.direct({ type: 'interactNpc', npcIndex: sp.index, optionIndex: lure, reason: 'SDK' });
