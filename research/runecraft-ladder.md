@@ -6,7 +6,8 @@ Sources:
   XP = essence count x altar experience. Rune count does not change XP. All altars take the same `blankrune`.
 - Measured cycle: 19 ticks per pack (rates.json `craft_air_runes_trade_loop`).
 
-Every pack costs the same 19 ticks at any altar, so the crafter always uses the highest altar it can.
+The table assumes 19 ticks per pack at every altar. A switch must save more crafting time than its travel,
+entry and helper restocking cost. This assumption does not prove a sustained route rate.
 XP per essence (x25): air 125, fire 175, body 187.5, chaos 212.5, nature 225, law 237.5.
 
 | Altars used | Ticks to 99 | Minutes at 600 ms |
@@ -36,7 +37,11 @@ Talisman sources (game scripts):
 - Nature and chaos talismans: only from the shared rare drop table
   (`vendor/lostcity-content/scripts/drop tables/scripts/shared_droptables.rs2:71-74`). A monster
   underground (z above 6400) drops chaos. A monster on the surface drops nature. Rare: plan to buy them.
-- Law talisman: Troll Stronghold quest reward (`quests/quest_troll/scripts/quest_troll.rs2:368`), or buy.
+- Law talisman: each crafter and helper needs its own Troll Stronghold reward
+  (`vendor/rs-sdk/server/content/scripts/quests/quest_troll/scripts/quest_troll.rs2:368`).
+  `skill_runecraft/configs/runecraft.obj` sets `tradeable=no` on `law_talisman`; an owned partner cannot
+  supply it by trade. The public market item endpoint for 1458 returns 404, consistent with that config.
+  A law route needs each participant's observed quest reward and altar access; those route checks are open.
 - So the order is: free altars first (3,749 ticks to 99). Add nature and law only when a talisman is in hand.
 
 Helper rotation estimate (not measured):

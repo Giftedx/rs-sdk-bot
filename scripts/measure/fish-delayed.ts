@@ -2,7 +2,7 @@
 // Env: OPT = spot option regex (default "cage"; "harpoon" for tuna/swordfish/shark), FISH = raw fish regex to drop,
 // GAP = ticks from the knife to the spot click (default 2), CLICKOP = op index to click (default: the visible option).
 // Presets: lobster_delayed_40, lobster_delayed_70 (Musa Point), harpoon_delayed_55, shark_delayed_80 (Catherby).
-// Mechanism (code-read 2026-10-23):
+// Mechanism (code-read):
 // - The visible spot op runs the "attempt" label. With %action_delay < map_clock it sets clock + 4 (lobster,
 //   rarefish.rs2:60-63) or clock + 5 (harpoon, rarefish.rs2:164-167; shark, memberfish.rs2:30-33). With
 //   %action_delay = map_clock it rolls at once and does not re-op (rarefish.rs2:70-73, :173-179; memberfish.rs2:40-43).

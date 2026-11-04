@@ -316,6 +316,70 @@ test('worker buys only one missing earth then completes five casts and banks the
   expect(f.bank.find(i=>i.id===590)?.count).toBe(1);
  }finally{route.mockRestore();walker.mockRestore();f.stop();}
 });
+for(const scenario of ['delayed','missing','depleted','over-budget','reserve','stop','cap'] as const)test(`Falador shop quote ${scenario} preserves the finite purchase and asset bounds`,async()=>{
+ const entry={x:3185,z:3436,magic:{level:37,xp:13250},pack:[{id:590,count:1}],
+  bank:[{id:AIR,count:10},{id:555,count:6},{id:563,count:8},{id:COINS,count:7027}]};
+ const f=fakeSession(entry),s=f.s as any,oldState=s.sdk.getState,oldDirect=s.direct;
+ let shopOpen=false,openedAt=-1,closedAt=-1,opens=0;
+ const rows=[{id:AIR,name:'Air rune',count:2000,baseCost:4},{id:555,name:'Water rune',count:2000,baseCost:4}];
+ const stock=()=>scenario==='missing'?[]:rows.slice(0,s.tick()-openedAt>=3?2:s.tick()-openedAt>=1?1:0);
+ if(scenario==='depleted')rows[1]!.count=1;
+ if(scenario==='over-budget')rows[1]!.baseCost=100;
+ const walker=spyOn(walking,'sessionWalker').mockResolvedValue({} as any);
+ const route=spyOn(walking,'walkPath').mockImplementation(async(_deps,points)=>{
+  const p=points.at(-1)!;entry.x=p.x;entry.z=p.z;return{ok:true,ticks:1,still:0,clicks:1,repaths:0,doors:0,next:points.length};
+ });
+ const logs:string[]=[];
+ const log=spyOn(console,'log').mockImplementation((line)=>{logs.push(String(line));});
+ const held=(id:number)=>f.inventory.find(i=>i.id===id)!;
+ const purchases:number[]=[];
+ s.sdk.getState=()=>({...oldState(),player:{...oldState().player,animId:-1},nearbyNpcs:[{name:'Aubury'}],
+  shop:{isOpen:shopOpen,shopItems:stock(),shopConfig:{sellMultiplier:1000}}});
+ s.bot.openShop=async()=>{opens++;shopOpen=true;openedAt=s.tick();return{success:true};};
+ s.bot.closeShop=async()=>{closedAt=s.tick();shopOpen=false;return{success:true};};
+ for(const item of f.bank){const row=rows.find(i=>i.id===item.id);if(row)item.name=row.name;}
+ s.bot.buyFromShop=async(name:RegExp,amount:number)=>{
+  expect(s.tick()-openedAt).toBeGreaterThanOrEqual(3);
+  const row=rows.find(i=>name.test(i.name))!;purchases.push(row.id);
+  held(row.id).count+=amount;held(COINS).count-=4*amount;row.count-=amount;return{success:true};
+ };
+ s.direct=async(action:any)=>{
+  if(action.type!=='clickComponent')return oldDirect(action);
+  expect(shopOpen).toBe(false);
+  const t=TELEPORTS.find(t=>t.name==='falador')!;
+  for(const [k,id] of Object.entries(TELE_RUNE_IDS))if(t.costs[k as keyof RuneCounts])held(id).count-=t.costs[k as keyof RuneCounts];
+  for(let i=f.inventory.length-1;i>=0;i--)if(f.inventory[i]!.count===0)f.inventory.splice(i,1);
+  const magic=s.sdk.getSkill('Magic');magic.experience+=1200;
+  while(magic.baseLevel<99&&magic.experience>=magicXpForLevel(magic.baseLevel+1))magic.baseLevel++;
+  magic.level=magic.baseLevel;entry.x=t.to.x;entry.z=t.to.z;return{success:true};
+ };
+ try{
+  const r=await runMagicOrder(f.s,{target:45,maxCasts:8,cap:scenario==='cap'?2:6000,budget:500,reserve:scenario==='reserve'?6700:5000},
+   ()=>scenario==='stop'&&openedAt>=0&&s.tick()-openedAt>=2);
+  expect(opens).toBe(1);expect(shopOpen).toBe(false);
+  expect(closedAt-openedAt).toBeLessThanOrEqual(10);
+  const quote=JSON.parse(logs.find(l=>l.startsWith('MAGIC_ORDER_QUOTE '))?.slice('MAGIC_ORDER_QUOTE '.length)??'null');
+  if(scenario==='delayed'){
+   expect(r.ok).toBe(true);expect(r.level).toBe(45);expect(r.casts).toBe(8);expect(r.coinsSpent).toBe(64);
+   expect(r.teleportRunesBought).toMatchObject({air:14,water:2});
+   expect(r.teleportRunesUsed).toMatchObject({air:24,water:8,law:8});expect(purchases).toEqual([AIR,555]);
+   expect(quote).toMatchObject({cost:384,allowance:500,missing:{air:14,water:2}});
+  }else{
+   expect(r.ok).toBe(false);expect(r.casts).toBe(0);expect(r.coinsSpent).toBe(0);expect(purchases).toEqual([]);
+   if(scenario==='stop'||scenario==='cap')expect(r.stop).toBe(scenario==='stop'?'stop requested':'cap');
+   else{
+    expect(closedAt-openedAt).toBe(10);expect(r.failure).toContain('Aubury teleport stock or budget shortfall');
+    expect(quote).toMatchObject({cost:null,allowance:scenario==='reserve'?327:500,missing:{air:14,water:2}});
+    expect(quote.shelf).toEqual(stock());
+   }
+  }
+  expect(f.inventory).toHaveLength(0);expect(f.bank.find(i=>i.id===590)?.count).toBe(1);
+  expect(f.bank.find(i=>i.id===COINS)?.count).toBe(7027-r.coinsSpent);
+  for(const [id,n] of [[AIR,10],[555,6],[563,8]])expect(f.bank.find(i=>i.id===id)?.count).toBe(scenario==='delayed'?0:n);
+  expect(s.sdk.getSkill('Hitpoints').level).toBe(10);
+ }finally{log.mockRestore();route.mockRestore();walker.mockRestore();f.stop();}
+});
+
 test('teleport entry banks duplicate food slots and quest cargo once, then honors stop before casting',async()=>{
  const f=fakeSession({x:3185,z:3436,magic:{level:31,xp:8125},pack:[{id:333,count:1},{id:333,count:1},{id:333,count:1},{id:431,count:1}],
   bank:[{id:AIR,count:25},{id:557,count:5},{id:563,count:5}]});

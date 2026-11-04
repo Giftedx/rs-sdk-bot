@@ -256,7 +256,19 @@ export async function runRuneBankCraft(s:Session,target=99,options:{cap?:number;
  }catch(error){return {ok:false,...summary(),stopReason:stopReason(),failure:String(error)};}
 }
 
-if(import.meta.main){
+async function runeBankCli(){
+ if(['--rune-carriers','--rune-opening'].includes(process.argv.at(-1)??'')){
+  const {mainRuneStage}=await import('./rune-carrier-stage');await mainRuneStage(process.argv.slice(2));return;
+ }
+ if(process.argv.includes('--carriers')||process.argv.includes('--body-continuation')||process.argv.some(a=>a.startsWith('--body-measure'))){
+  try{
+   const {runeCarrierRoster,runeCarrierMeasurePacks}=await import('./rune-carrier-roster');
+   const {runRuneCarriers}=await import('./rune-carriers');
+   const roster=runeCarrierRoster(process.argv.slice(2)),r=await runRuneCarriers(roster,Number(process.env.CAP??2800),{bodyContinuation:process.argv.includes('--body-continuation'),measurePacks:runeCarrierMeasurePacks(process.argv.at(-1))});
+   console.log('RUNE_CARRIERS_RESULT '+JSON.stringify(r));
+   await finish([],r.ok,'failure' in r?r.failure??'carrier route failed':`runecraft=${r.level} batches=${r.batches}`);return;
+  }catch(error){await finish([],false,String(error));}
+ }
  const target=runeBankTarget(Number(process.argv[3]??99));
  if(!process.argv[2])throw Error('account argument required');
  let stopped=false;const s=await openBot(process.argv[2],{onStop:async()=>{stopped=true;}});
@@ -266,3 +278,4 @@ if(import.meta.main){
   await finish([s],r.ok,`runecraft=${r.level} trips=${r.trips} consumed=${r.consumed} crafted=${r.crafted}${'failure' in r?' '+r.failure:''}`);
  }catch(error){await finish([s],false,String(error));}
 }
+if(import.meta.main)void runeBankCli().catch(error=>finish([],false,String(error)));

@@ -1,5 +1,6 @@
 import {test, expect} from 'bun:test';
 import {deliver, type DeliveryTask, type DeliveryDeps} from '../src/delivery';
+import {readFileSync} from 'node:fs';
 
 const task:DeliveryTask={id:'ammo',goal:'Bank arrows from supplied tips',entry:'scripts/fletch-arrows.ts',files:['scripts/fletch-arrows.ts'],consumer:'Ranged supply',checks:[
     {id:'regression',phase:'regression',command:['bun','test'],timeoutMs:1000},
@@ -15,6 +16,14 @@ test('delivery reaches the consumer after regressions and native work',async()=>
     const h=harness(),r=await deliver(task,h.deps);
     expect(r).toMatchObject({ok:true,stage:'delivered',consumer:'Ranged supply',evidence:'native'});
     expect(h.calls).toEqual(['regression','native','banked']);
+});
+test('the 400ms carrier proof fits a finite check budget while excessive budgets run nothing',async()=>{
+    const carrier=JSON.parse(readFileSync(new URL('../tasks/rune-bank-craft.json',import.meta.url),'utf8')) as DeliveryTask;
+    const h=harness();expect((await deliver(carrier,h.deps)).ok).toBe(true);
+    expect(h.calls).toEqual(carrier.checks.map(c=>c.id));
+    const refused=harness();
+    expect((await deliver({...carrier,checks:carrier.checks.map(c=>({...c,timeoutMs:1800001}))},refused.deps)).ok).toBe(false);
+    expect(refused.calls).toEqual([]);
 });
 test('producer success cannot hide a failed consumer',async()=>{
     const h=harness();h.deps.run=async c=>({exitCode:c.phase==='consumer'?1:0,detail:c.id});

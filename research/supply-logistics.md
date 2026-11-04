@@ -266,6 +266,8 @@ Herblore replacement detail (CODE-READ `shared_droptables.rs2:2-34`, XP from `su
 | Equipment set | Shops: dragon battleaxe 200,000 and right shield half 750,000 (Heroes', Legends' quests). Drops or GE asks for the helm, chainbody, platelegs, left half: about 754M | out of reach (owner decision E1) | CODE-READ + MEASURED live (`boards-special.md:56-81`) |
 | Bank value | 16.2B of base cost | out of reach (owner decision B1) | `boards-special.md:134-150` |
 
+Owned Earth production uses the pinned `drop tables/scripts/man.rs2` Earth-talisman table (2/128) and ordinary `goblin.rs2` Air-talisman table (1/128), then `skill_runecraft/scripts/runecraft.rs2` and its altar rows. These sources feed `scripts/earth-production.ts` through the existing refunded Earth-order entry. Reuse the Air actions and observed bank, food and travel helpers; keep the separate crafting and carrier workers unchanged. The source calculation uses the server's flat level curve, 25x XP and each batch's actual rune multiplier. Random access drops, saved conservation, bounded food, altar entry/exit and the final live bank remain distinct checks; practice fixture inputs do not prove procurement.
+
 ## 3. Job list
 
 Order: earliest "needed at" first, then the longest job first. **CP** marks a critical-path job: it finishes

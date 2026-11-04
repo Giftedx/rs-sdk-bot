@@ -1,9 +1,10 @@
 import {test,expect} from 'bun:test';
 import {initialState,addTasks,startTask,finishTask,chooseTask,compactState,type CoordTask,type CoordinatorState} from '../src/coordinator';
-import {applyRules,nextBand,retarget,type RuleDeps} from '../src/coordinator-rules';
+import {applyRules,nextBand,retarget,type RuleDeps,type RuleSkip} from '../src/coordinator-rules';
 
 const NOW=10_000_000;
-const deps=(extra:Partial<RuleDeps>={}):RuleDeps=>({fingerprint:()=>'src-a',unlocks:()=>[20,30,31,40,50],level:()=>undefined,paused:()=>false,maxOpen:4,...extra});
+const deps=(extra:Partial<RuleDeps>={}):RuleDeps=>({fingerprint:()=>'src-a',unlocks:()=>[20,30,31,40,50],level:()=>undefined,paused:()=>false,maxOpen:4,
+ side:'local',fleetBest:()=>({best:30,account:'Bigchopper',side:'local'}),...extra});
 const finish=(s:CoordinatorState,id:string,ok:boolean,output:any,at:number)=>{startTask(s,id,at-10,'run-'+id);finishTask(s,{taskId:id,runId:'run-'+id,ok,at,output});};
 const band=(id:string,level:number,extra:Partial<CoordTask>={}):CoordTask=>({id,goal:'skills',kind:'run',capability:'ranged-train',account:'Bigchopper',dependsOn:['qualify-ranged'],priority:40,estimatedMs:600000,
  why:'Ranged band',args:[String(level),'10000'],env:{CAP:'10000',MIN_ARROWS:'200'},accept:{skills:{Ranged:level}},...extra});
@@ -28,8 +29,7 @@ test('with the planner failed, a band that reached its target queues the next ba
  // The normal dispatcher picks it up; nothing waits for a model round.
  expect(chooseTask(s,NOW)?.id).toBe(t.id);
 });
-test('no task without a fresh approved qualification',()=>{
- expect(applyRules(chain(),deps({fingerprint:()=>'src-b'}),NOW)).toEqual([]);
+test('no task without a readable source and an approved review',()=>{
  expect(applyRules(chain(),deps({fingerprint:()=>{throw Error('source missing');}}),NOW)).toEqual([]);
  const rejected=chain();addTasks(rejected,[{id:'review-ranged-2',goal:'skills',kind:'review',capability:'ranged-train',dependsOn:[],priority:15,estimatedMs:1000,why:'Review ranged'}],NOW);
  finish(rejected,'review-ranged-2',true,{review:{approved:false,reason:'scripts/ranged-train.ts:10 death risk'},evidence:'source-review'},NOW-1000);
@@ -37,6 +37,46 @@ test('no task without a fresh approved qualification',()=>{
  const noReview=chain();noReview.tasks=noReview.tasks.filter(r=>r.spec.kind!=='review');
  expect(applyRules(noReview,deps(),NOW)).toEqual([]);
  expect(applyRules(chain(),deps(),NOW+25*60*60*1000)).toEqual([]);
+});
+test('a stale qualification after a successful band queues one refresh qualify and the next band behind it',()=>{
+ const s=chain(),added=applyRules(s,deps({fingerprint:()=>'src-b'}),NOW);
+ expect(added.map(t=>[t.id,t.kind])).toEqual([['refresh-ranged-train-src-b','qualify'],['chain-ranged-train-bigchopper-ranged40','run']]);
+ expect(added[0]).toMatchObject({capability:'ranged-train',dependsOn:[]});
+ expect(added[1]).toMatchObject({rule:'next-band',accept:{skills:{Ranged:40}},dependsOn:['refresh-ranged-train-src-b','run-ranged-30']});
+ // The qualify runs first; the band waits for it.
+ expect(chooseTask(s,NOW)?.id).toBe('refresh-ranged-train-src-b');
+ expect(applyRules(s,deps({fingerprint:()=>'src-b'}),NOW+1)).toEqual([]);
+ // A refresh already queued for another consumer is reused, never duplicated.
+ const queued=chain();addTasks(queued,[{id:'refresh-ranged-train-src-b',goal:'skills',kind:'qualify',capability:'ranged-train',dependsOn:[],priority:15,estimatedMs:240000,why:'Refresh'}],NOW);
+ expect(applyRules(queued,deps({fingerprint:()=>'src-b'}),NOW).map(t=>[t.id,t.dependsOn])).toEqual([['chain-ranged-train-bigchopper-ranged40',['refresh-ranged-train-src-b','run-ranged-30']]]);
+});
+test('a current qualification queues only the run',()=>{
+ expect(applyRules(chain(),deps(),NOW).map(t=>t.kind)).toEqual(['run']);
+});
+test('a failed refresh stops the rule',()=>{
+ const s=chain(),[refresh]=applyRules(s,deps({fingerprint:()=>'src-b'}),NOW);
+ finish(s,refresh!.id,false,{delivery:{ok:false,source:'src-b'},error:'native qualification failed'},NOW+1000);
+ expect(applyRules(s,deps({fingerprint:()=>'src-b'}),NOW+1500)).toEqual([]);
+ // The blocked band stays pending until the planner clears it; the failed refresh still stops the rule after that.
+ s.tasks.find(r=>r.spec.rule)!.status='superseded';
+ expect(applyRules(s,deps({fingerprint:()=>'src-b'}),NOW+2000)).toEqual([]);
+});
+test('the fleet leader of a skill continues its chain',()=>{
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:30,account:'bigchopper',side:'local'})}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
+});
+test('a band far below a 99 held by another account is skipped and reported',()=>{
+ const skips:RuleSkip[]=[];
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:99,account:'Shaftshooter',side:'local'}),skipped:s=>skips.push(s)}),NOW)).toEqual([]);
+ expect(skips).toEqual([{capability:'ranged-train',account:'Bigchopper',skill:'Ranged',next:40,reason:'fleet best Ranged 99 is held by Shaftshooter (local); Bigchopper band to 40 does not reach it'}]);
+ // The same account name on another side is not this account.
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:99,account:'Bigchopper',side:'cloud'})}),NOW)).toEqual([]);
+ expect(applyRules(chain(),deps({fleetBest:()=>undefined}),NOW)).toEqual([]);
+ // A skipped band adds no refresh qualify either.
+ expect(applyRules(chain(),deps({fingerprint:()=>'src-b',fleetBest:()=>({best:99,account:'Shaftshooter',side:'cloud'})}),NOW)).toEqual([]);
+});
+test('a non-leader whose next band reaches the fleet best continues',()=>{
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:40,account:'Shaftshooter',side:'cloud'})}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
+ expect(applyRules(chain(),deps({fleetBest:()=>({best:35,account:'Shaftshooter',side:'local'})}),NOW).map(t=>t.accept)).toEqual([{skills:{Ranged:40}}]);
 });
 test('no duplicate run for the same account and capability',()=>{
  const s=chain();expect(applyRules(s,deps(),NOW)).toHaveLength(1);

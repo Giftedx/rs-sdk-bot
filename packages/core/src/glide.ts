@@ -1,7 +1,7 @@
 // Continuous walking along a precomputed tile path, the way a player clicks ahead on the minimap.
 // bot.walkTo sends one walk per path corner and waits to arrive before the next, which costs a tick at each
 // corner. glide clicks `lookahead` tiles ahead of the bot and clicks again before it gets there, so the bot keeps
-// running. Measured 2026-10-23 (scripts/measure/walk-bench.ts, Lumbridge to Port Sarim, 287 tiles): walkTo
+// running. Measured (scripts/measure/walk-bench.ts, Lumbridge to Port Sarim, 287 tiles): walkTo
 // 159 ticks, glide 144 (running is 2 tiles per tick, so 144 is the floor).
 
 export interface GlideDeps {

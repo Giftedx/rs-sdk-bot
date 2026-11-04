@@ -416,11 +416,21 @@ export async function runMagicOrder(s:Session,o:MagicOptions,stopRequested:()=>b
     check();
     const npc=state()?.nearbyNpcs.find(n=>AUBURY.npc.test(n.name));
     const opened=npc?await s.bot.openShop(npc):undefined;
-    if(!opened?.success||!await waitUntil(s,()=>!!state()?.shop?.isOpen,{timeoutTicks:10}))throw Error('Aubury shop unavailable');
+    if(!opened?.success)throw Error('Aubury shop unavailable');
     try{
-     check();const shop=state()!.shop!;
+     // Shop visibility can precede its inventory rows. Observe one usable quote within the open deadline.
+     await waitUntil(s,st=>{
+      check();
+      return over()||!!st.shop?.isOpen&&teleportPurchaseCost(missing,st.shop.shopItems,st.shop.shopConfig,
+       spendAllowance(o.budget,spent,entryCoins-spent,o.reserve))!==null;
+     },{timeoutTicks:10});
+     check();const shop=state()?.shop;
      const allowance=spendAllowance(o.budget,spent,entryCoins-spent,o.reserve);
-     if(teleportPurchaseCost(missing,shop.shopItems,shop.shopConfig,allowance)===null)
+     const cost=shop?.isOpen?teleportPurchaseCost(missing,shop.shopItems,shop.shopConfig,allowance):null;
+     console.log('MAGIC_ORDER_QUOTE '+JSON.stringify({tick:s.tick(),missing,allowance,cost,isOpen:!!shop?.isOpen,
+      shelf:shop?.shopItems??[],shopConfig:shop?.shopConfig}));
+     if(over())throw Object.assign(Error(reason()??'stopped'),{stop:reason()});
+     if(cost===null)
       throw Error('Aubury teleport stock or budget shortfall');
      for(const k of SHOP_RUNES){
       const amount=missing[k];if(amount<=0)continue;check();
