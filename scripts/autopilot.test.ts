@@ -24,6 +24,17 @@ test('a funded assignment becomes a coin order and a vacant account; an account 
     expect(r.log[1]).toContain('waits for an open order');
 });
 
+test('a party to an open order takes no normal job until the order closes', () => {
+    const out = [
+        { account: 'Big', template: { id: 'shop-runes' } as any, value: 9, resources: ['shop:aubury'], reason: 'rune' },
+        { account: 'Poor', template: { id: 'goldfarm@2652,3318' } as any, value: 5, resources: [], reason: 'coins' },
+        { account: 'Farmer', template: { id: 'goldfarm@2653,3300' } as any, value: 5, resources: [], reason: 'coins' },
+    ];
+    const r = fundOrders(out, new Set(['big', 'poor']), make);
+    expect(r.orders).toEqual([]);
+    expect(r.assignments.map(x => x.template?.id ?? x.reason)).toEqual(['vacant: in an open fleet order', 'vacant: in an open fleet order', 'goldfarm@2653,3300']);
+});
+
 test('a coin order opens in 15 minutes for 40 and fits the fleet order format', () => {
     const o = coinOrder('Pocketpython', 'YewFirst', 18_000, 'rs-sdk-demo.fly.dev', 1_000);
     expect(o).toEqual({ id: '901000-pocketpython-yewfirst', server: 'rs-sdk-demo.fly.dev', from: 'Pocketpython', to: 'YewFirst', item: 'coins', count: 18_000, start: 901_000, end: 3_301_000 });

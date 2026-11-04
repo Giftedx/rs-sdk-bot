@@ -55,11 +55,12 @@ export function inOpenOrder(orders: readonly Order[], receipts: readonly Receipt
     return new Set(open.flatMap(o => [o.from, o.to]).map(n => n.toLowerCase()));
 }
 // A funded assignment becomes a coin order now and the job on a later pass, once the coins are in the account. Until
-// then the account is vacant, so the fleet agent can log it in for the trade. An account already in an open order waits.
+// then the account is vacant, so the fleet agent can log it in for the trade. Every party to an open order, donor or
+// recipient, stays vacant until the order closes: the fleet agent trades only for accounts with no enabled job.
 export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>, order: (from: string, to: string, coins: number) => Order) {
     const orders: Order[] = [], log: string[] = [];
     const assignments = out.map(x => {
-        if (!x.fund) return x;
+        if (!x.fund) return open.has(x.account.toLowerCase()) ? { account: x.account, value: 0, resources: [], reason: 'vacant: in an open fleet order' } : x;
         const f = x.fund, busy = [f.from, f.to].some(n => open.has(n.toLowerCase()));
         if (!busy) orders.push(order(f.from, f.to, f.coins));
         log.push(`AUTOPILOT fund ${f.to} ${f.coins} coins from ${f.from} for ${f.template}${busy ? ': waits for an open order' : ''}`);
@@ -114,7 +115,7 @@ export function pass(planFile: string, dry: boolean): string[] {
         const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
         return { name: n, coins: accountFrom(n, side, f ? readJson(join(statusDir, f), null) : null, id => byId.get(id)).items.coin ?? 0 };
     }).filter(d => d.coins > 0);
-    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, donors });
+    const planned = plan({ side, accounts, owners, bill: routeBill(items), templates: catalogue(), prices, waste: wasteShare(tickWaste(join(prac, 'swarm-logs'))), taken, retired: new Set(Object.keys(state.retired)), capacity: { 'catherby:lobster': 3 }, unfundable: busy, donors });
     const funding = fundOrders(planned, open, (from, to, coins) => coinOrder(from, to, coins, owners.get(to.toLowerCase())?.server ?? 'rs-sdk-demo.fly.dev', now));
     const out = funding.assignments;
     log.push(...funding.log);

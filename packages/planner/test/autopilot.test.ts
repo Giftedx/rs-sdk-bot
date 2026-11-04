@@ -80,6 +80,13 @@ test('a donor that gives stays free that pass; an account that holds the coins n
     expect(plan(inputs([acct('Rich', {}, { coin: 5_000 })], { templates: shops, donors: [{ name: 'Big', coins: 900_000 }] }))[0]!.fund).toBeUndefined();
 });
 
+test('an account with an enabled job is never funded, so no running job is removed for a trade', () => {
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const out = plan(inputs([acct('Poor', {}, { coin: 500 })], { templates: shops, donors: [{ name: 'Big', coins: 900_000 }], unfundable: new Set(['poor']) }));
+    expect(out[0]!.fund).toBeUndefined();
+    expect(out[0]!.template).toBeUndefined();
+});
+
 test('an account with nothing useful is vacant with its constraint', () => {
     const out = plan(inputs([acct('Idle')], { templates: catalogue().filter(t => t.id === 'lobster-chain') }));
     expect(out).toEqual([{ account: 'Idle', value: 0, resources: [], reason: expect.stringMatching(/^vacant: /) }]);

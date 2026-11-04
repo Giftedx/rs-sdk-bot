@@ -26,6 +26,9 @@ export type Inputs = {
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
     // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
     donors?: readonly { name: string; coins: number }[];
+    // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
+    // scripts/swarm.ts writes for it would block the trade, so such an account is never funded.
+    unfundable?: ReadonlySet<string>;
 };
 export const FUND_RESERVE = 50_000;
 
@@ -75,7 +78,7 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (meets(a, t.needs)) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+') });
-        } else if (inp.donors?.length && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
+        } else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
