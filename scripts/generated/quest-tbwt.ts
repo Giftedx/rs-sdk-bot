@@ -100,7 +100,8 @@ try {
     // Stepping stones south bank (2925,2947) -> north bank (z >= 2951), one stone per Cross (shortcuts.rs2:228-271).
     const stonesNorth = async () => {
         const across = () => z() >= 2951 && z() <= 2960 && x() >= 2918 && x() <= 2936;
-        if (across() || z() > 2960) return;
+        // Already in Tiadeche's part: within 40 tiles of him and north of the river (the Holy Lake is north too, but not his part).
+        if (across() || (q.cheb(T.tiadeche.x, T.tiadeche.z) <= 40 && z() > 2960)) return;
         await q.walk('to stones', [{ x: 2925, z: 2947, tol: 0 }]);
         for (let i = 0; i < 16 && !across(); i++) {
             await q.guard('stones');
@@ -121,9 +122,15 @@ try {
         if (!across()) await q.fail('stones');
     };
     // Cairn Isle: the climbing rocks from the east, the log bridge west (an Agility roll can drop the bot on the shore).
+    // On Cairn Isle: set by the climb west, cleared by the climb back or a fall off the log bridge (the fall washes the
+    // bot onto the main shore). Position alone does not tell: the mainland at 2781,2982 and the fire (2789,3047) are
+    // west of the rocks too.
+    let cairn = false;
+    q.s.onTick(() => { if ((q.st()?.gameMessages ?? []).some((m: any) => m.tick === q.s.tick() && /you fall|fall and hurt/i.test(m.text))) cairn = false; });
+    const onCairn = () => cairn;
     const toCairn = async (to: { x: number; z: number }) => {
         for (let k = 0; k < 4 && !q.near(to.x, to.z, 2); k++) {
-            if (x() > 2791) {
+            if (!onCairn()) {
                 await q.walk('to cairn rocks', [{ x: CLIMB.x + 2, z: CLIMB.z, tol: 0 }]);
                 for (let i = 0; i < 8 && x() > 2791; i++) {
                     await q.guard('cairn climb');
@@ -134,13 +141,14 @@ try {
                     await q.waitTicks(1);
                 }
                 if (x() > 2791) await q.fail('cairn climb');
+                cairn = true;
             }
             await q.walk('cairn bridge', [{ x: 2770, z: 2979, tol: 1 }, { ...to, tol: 2 }]);
         }
         if (!q.near(to.x, to.z, 2)) await q.fail('cairn walk');
     };
     const fromCairn = async () => {
-        if (x() > 2791) return;
+        if (!onCairn()) return;
         await q.walk('cairn bridge back', [{ x: 2770, z: 2979, tol: 1 }, { x: 2791, z: 2979, tol: 0 }]);
         for (let i = 0; i < 6 && x() < 2795; i++) {
             await q.guard('cairn climb back');
@@ -151,6 +159,7 @@ try {
             await q.waitTicks(1);
         }
         if (x() < 2795) await q.fail('cairn climb back');
+        cairn = false;
     };
     const timfraku = async (label: string, pats: RegExp[], ok: () => boolean) => {
         if (q.lvl() !== 1) {
@@ -259,7 +268,8 @@ try {
     await stonesNorth();
     await q.walk('to tiadeche', [{ ...T.tiadeche, tol: 3 }]);
     m = mark();
-    await q.talk('tiadeche 1', tia, [], () => seen(/return only when i have caught a karambwan/i, m) && !q.dialogOpen(), T.tiadeche, 40);
+    // The intro ends on a 4-way menu (tbwt_tiadeche.rs2:113-126); every answer is a dead end that closes the dialogue.
+    await q.talk('tiadeche 1', tia, [/what is a karambwan/i], () => seen(/return only when i have caught a karambwan/i, m) && !q.dialogOpen(), T.tiadeche, 40);
     m = mark();
     await give('tiadeche vessel', ITEM.loaded, tia, T.tiadeche, [/^no$/i], () => !q.has(ITEM.loaded) && seen(/never mind/i, m), 80);
     q.milestone('tiadeche asks');
