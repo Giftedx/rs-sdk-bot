@@ -95,13 +95,27 @@ try {
     // 8. The Rehnison door with Ted inside takes the book (21, doors.rs2:97-117); Ted (22); Milli upstairs (23)
     // (rehnisons.rs2).
     await q.walk('to rehnisons', [{ x: REHNISON_DOOR.x, z: REHNISON_DOOR.z, tol: 0 }]);
-    await q.step('rehnison door', () => q.opLoc(q.findLoc(l => l.x === REHNISON_DOOR.x && l.z === REHNISON_DOOR.z && /door/i.test(l.name)) ?? { id: 2537, ...REHNISON_DOOR }, 1), () => !q.has(ITEM.book), 10, 4);
+    // The door does nothing unless Ted is within 7 tiles of the player (doors.rs2:101-103), and the book goes only after
+    // the dialogue pages (:104-114): a second click would close them, so each try answers the pages first.
+    for (let i = 0; i < 15 && q.has(ITEM.book); i++) {
+        await q.guard('rehnison door');
+        if (i > 0) q.stats.retries++;
+        await q.opLoc(q.findLoc(l => l.x === REHNISON_DOOR.x && l.z === REHNISON_DOOR.z && /door/i.test(l.name)) ?? { id: 2537, ...REHNISON_DOOR }, 1);
+        await q.waitUntil(() => q.dialogOpen() || !q.has(ITEM.book), 6);
+        await q.converse([], () => !q.dialogOpen(), 30);
+        if (q.has(ITEM.book)) await q.waitTicks(3);
+    }
+    if (q.has(ITEM.book)) await q.fail('rehnison door');
     await q.converse([], () => !q.dialogOpen(), 6);
     await q.talk('ted', /^(ted|martha) rehnison$/i, [], () => q.sawText(/milli is upstairs/i) && !q.dialogOpen(), TED, 60);
     await q.climb('stairs up', () => q.locAt(STAIRS.x, STAIRS.z), /walk-up|climb|up/i, () => q.lvl() === 1);
     await q.talk('milli', /^milli rehnison$/i, [], () => q.sawText(/mossy windowless building/i) && !q.dialogOpen(), MILLI, 60);
     q.milestone(23);
     await q.climb('stairs down', () => q.findLoc(l => /stair/i.test(l.name) && l.distance <= 5), /walk-down|climb|down/i, () => q.lvl() === 0);
+    // The door shuts behind the bot; from the book stage on it opens for anyone (doors.rs2:97-100).
+    await q.walk('to rehnison door', [{ x: REHNISON_DOOR.x, z: REHNISON_DOOR.z + 1, tol: 0 }]);
+    await q.step('rehnison door out', () => q.opLoc(q.findLoc(l => l.x === REHNISON_DOOR.x && l.z === REHNISON_DOOR.z && /door/i.test(l.name)) ?? { id: 2537, ...REHNISON_DOOR }, 1),
+        () => (q.pos()?.worldZ ?? 9999) <= REHNISON_DOOR.z, 8, 5);
     // 9. The plague house door with a mourner near: "I fear not a mere plague." (24, doors.rs2:11-19,51-67).
     await q.walk('to plague house', [{ x: PLAGUE_DOOR.x, z: PLAGUE_DOOR.z + 1, tol: 1 }]);
     await q.step('plague door 1', () => q.opLoc(q.locAt(PLAGUE_DOOR.x, PLAGUE_DOOR.z) ?? PLAGUE_DOOR, 1), () => q.dialogOpen(), 10, 4);
@@ -110,18 +124,17 @@ try {
     q.milestone(24);
     // 10. The clerk: "I need permission to enter a plague house.", "This is urgent though!" (25, clerk.rs2:1-60);
     // Bravek: "This is really important though!", "Do you know what is in the cure?" (26, bravek.rs2).
-    // "This is urgent though!" sets 25 only with Bravek within 7 tiles of the player (clerk.rs2:48-55). The clerk is
-    // talked to from the west side of his desk (from the east side the talk is rejected), 9 tiles from Bravek's spawn
-    // (2536,3314), so the bot holds the option page until Bravek walks within 6 tiles.
+    // Bravek must be within 7 tiles of the player when the clerk's "really needs to" page is continued (clerk.rs2:48-55).
+    // He wanders x 2531-2541 behind the wall, so the bot stands at the east end of the office (2529,3317), answers
+    // "This is urgent though!", and holds that page until he is within 6 tiles (rs-stun-toolkit `q-plague-city.ts`, MIT,
+    // research/stun-toolkit-LICENSE.txt).
     const bravekNear = () => { const b = q.npc(/^bravek$/i); return !!b && q.cheb(b.x, b.z) <= 6; };
-    const urgentPage = () => { const d: any = q.s.sdk.getDialog(); return !!d?.isOpen && (d.options ?? []).some((o: any) => /this is urgent though/i.test(o.text)); };
+    const callPage = () => { const d: any = q.s.sdk.getDialog(); return !!d?.isOpen && /really needs to/i.test([d.text ?? '', ...(d.allComponents ?? []).map((c: any) => c.text ?? '')].join(' ')); };
     for (let tryN = 0; tryN < 4 && !q.sawText(/if they keep it short/i); tryN++) {
-        await q.talk('clerk', /^clerk$/i, [/need permission to enter a plague house/i], urgentPage, CLERK, 60, true);
-        await q.waitUntil(bravekNear, 120);
-        const d: any = q.s.sdk.getDialog();
-        const opt = (d?.options ?? []).find((o: any) => /this is urgent though/i.test(o.text));
-        if (opt && d?.isOpen) void q.s.sdk.sendClickDialog(opt.index);
-        await q.converse([], () => !q.dialogOpen(), 20);
+        await q.walk('clerk stand', [{ x: 2529, z: 3317, tol: 0 }]);
+        await q.talk('clerk', /^clerk$/i, [/need permission to enter a plague house/i, /this is urgent though/i], callPage, CLERK, 60, true);
+        await q.waitUntil(bravekNear, 150);
+        await q.converse([/i'll try asking them then/i], () => !q.dialogOpen(), 20);
     }
     if (!q.sawText(/if they keep it short/i)) await q.fail('clerk');
     q.milestone(25);

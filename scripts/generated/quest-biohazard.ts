@@ -170,6 +170,31 @@ try {
     // 2932,3213, north edge, maps/m45_50.jm2); "It's ok, I'm Elena's friend.", "I just need some touch paper for a guy
     // called Guidor." (12, chemist.rs2:50-62,76-91). The errand boys: Hops the broline, Chancy the honey, DeVinci the
     // ethenea (hops.rs2, chancy.rs2:32-43, devinci.rs2:21-33).
+    // Ships keep the sample (p_telejump, not a teleport), and the land walk is 697 tiles with no planned path, so the bot
+    // sails: Captain Barnaby to Brimhaven, a walk to Musa Point, the customs officer there to Port Sarim (the officer at
+    // Brimhaven sails back to Ardougne, customs_officer.rs2:81-85), then 98 tiles. Route from rs-stun-toolkit `q-biohazard.ts`
+    // (MIT, research/stun-toolkit-LICENSE.txt).
+    const disembark = async (label: string) => {
+        for (let i = 0; i < 6 && q.lvl() !== 0; i++) {
+            await q.guard(label);
+            if (q.dialogOpen()) { await q.converse([], () => !q.dialogOpen(), 4); continue; }
+            const plank = q.findLoc(l => /^gangplank$/i.test(l.name));
+            if (!plank) { await q.waitTicks(2); continue; }
+            await q.opLoc(plank, q.opIndex(plank, /cross/i));
+            await q.waitUntil(() => q.lvl() === 0, 10);
+        }
+        if (q.lvl() !== 0) await q.fail(label);
+    };
+    await outOfElena('elena door out 2');
+    await q.walk('to barnaby', [{ x: 2679, z: 3275, tol: 3 }]);
+    await q.talk('barnaby', /^captain barnaby$/i, [/^yes please/i], () => q.lvl() === 1 && q.near(2775, 3234, 8), { x: 2679, z: 3275 }, 60, true);
+    await q.converse([], () => !q.dialogOpen(), 10);
+    await disembark('brimhaven gangplank');
+    await q.walk('to musa customs', [{ x: 2953, z: 3148, tol: 3 }]);
+    await q.talk('customs', /^customs officer$/i, [/can i journey on this ship/i, /search away, i have nothing to hide/i, /^ok\.?$/i], () => q.lvl() === 1 && q.near(3032, 3217, 8), { x: 2954, z: 3147 }, 80, true);
+    await q.converse([], () => !q.dialogOpen(), 10);
+    await disembark('sarim gangplank');
+    q.milestone('sarim');
     await q.walk('to rimmington', [{ x: 2932, z: 3214, tol: 1 }]);
     await q.openDoor('chemist door', 2932, 3213);
     await q.talk('chemist', /^chemist$/i, [/i'm elena's friend/i, /touch paper for a guy called guidor/i], () => q.has(ITEM.paper), CHEMIST, 120);

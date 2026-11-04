@@ -500,8 +500,24 @@ Our four quest folders with no script are all in the toolkit: Tai Bwo Wannai Tri
 
 ### 9.3 Protocol rules from the toolkit guide that our docs do not state
 
-Their claims (`GUIDE.md` "Pitfalls and practices"), not checked here:
+Their claims (`GUIDE.md` "Pitfalls and practices"):
 
-- Op 1 on a door that is already open closes many doors again. Track door state before a click.
-- Withdraw-X requests sent in one tick can be merged by the server. Prefer the fixed bank buttons.
-- An opened door can swing onto the next tile, and static collision assumes it is closed.
+- Op 1 on a door that is already open closes many doors again. Track door state before a click. Confirmed: `[oploc1,_door_open_and_close]` runs the same toggle for both states (`doors/scripts/open_and_close_doors.rs2`).
+- Withdraw-X requests sent in one tick can be merged by the server. Prefer the fixed bank buttons. Not checked; the fixed buttons are confirmed (section 9.4).
+- An opened door can swing onto the next tile, and static collision assumes it is closed. Not checked.
+
+### 9.4 Facts from the second source pass
+
+Each row was checked against the pinned engine or content, unless the row says otherwise.
+
+| Claim | Source | Evidence | Local consumer | Decision |
+|---|---|---|---|---|
+| The first trade offer can go out with obj 0, because `tradeside` has not arrived; the server refuses it silently and the offer times out | Supalosa `02dd934c` (MIT, leases branch) | `InvButtonHandler.ts:44` refuses on `!hasAt` | `serveTrades` in `scripts/fleet-trade.ts` | lead: no local log shows this timeout; patch only after a receipt shows it |
+| Bank amounts can use the fixed 10, 5, 1 and All buttons with no count dialog | CraziedAres `sdk/processing.ts` (MIT) | `bank.rs2:1-5,41` | `withdrawN` in `scripts/measure/floor-lib.ts`; `trip.ts` uses X | candidate: needs three matched runs on a bank-bound skill |
+| A rise in `opRejectedCount` does not always mean refused: `p_stopaction` raises it for accepted ops | CraziedAres `processing.ts`, Supalosa `4536c573` | `PlayerOps.ts:430`, `Player.ts:1079-1081`, `StateCollector.ts:217-223` | `packages/core/src/act.ts` | applied as a comment; callers already opt out |
+| `drop` has no delay, so 5 drops fit in one tick | CraziedAres `processing.ts` | `drop.rs2:1-25` | `fishing30.ts`, `gather.ts` | low: early fishing only |
+| 26 shape 10 doors and gates are not in `knowledge/doors.json`; `pathcache.ts` opens only shape 9 | StechWasTaken `b0e743f9` (MIT) | their data; not checked in the engine | `packages/core/src/pathcache.ts` | lead: check when a walk stops at one |
+| `HINT_ARROW` carries the agility arena's active pillar | Supalosa `d0cea1ff` | `agilityarena.rs2:22,47` | none | wait for a consumer |
+| The kebab seller sells by dialogue for 1 gp | Spenny12 `learnings/` | `kebab_seller.rs2:20-25` | `research/supply-logistics.md` | low: we use sharks |
+
+Do not copy: CraziedAres says Withdraw-All shifts later bank slots, but `Inventory.remove` only nulls the slot and compaction runs on bank open and close (`Inventory.ts:152-204`, `bank.rs2:18-31`). Spenny12 calls furnace 2785 inert, but `category=smithing_furnace` accepts item-on-loc (`smelting.loc:12-18`).

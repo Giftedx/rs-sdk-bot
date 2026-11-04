@@ -170,7 +170,17 @@ try {
         // sailing?"; "the cut of your jib" distracts him; the chest opens with the key while he is distracted
         // (captain_siad.rs2:43-81, quest_desertrescue.rs2:308-351) (12).
         await gateIn();
-        await q.walk('to ladder', [{ x: LADDER.x, z: LADDER.z - 1, tol: 0 }]);
+        // The curtain (loc_1528 at 3291,3031) closes Siad's building and the planner treats it as open (rs-stun-toolkit
+        // `q-the-tourist-trap.ts`, MIT, research/stun-toolkit-LICENSE.txt).
+        const curtain = async () => {
+            if (!q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031)) return;
+            await q.step('curtain', () => { const c = q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031); return c ? q.opLoc(c, 1) : q.waitTicks(1); },
+                () => !q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031), 12, 4);
+        };
+        await q.walk('to curtain', [{ x: 3291, z: 3030, tol: 0 }]);   // the curtain is on the south edge of its tile (maps/m51_47.jm2 `0 27 23: 1528 0 3`)
+        await curtain();
+        await q.dash('through curtain', 3291, 3032, 0, 8);
+        await q.dash('to ladder', LADDER.x, LADDER.z - 1, 1, 12);
         await q.climb('ladder up', () => q.locAt(LADDER.x, LADDER.z) ?? LADDER, /climb-up|^climb/i, () => q.lvl() === 1);
         await q.walk('to bookcase', [{ x: 3285, z: 3032, tol: 0 }]);
         await locTalk('bookcase', () => { const b = loc(BOOKCASE); return q.opLoc(b, q.opIndex(b, /search/i) === 1 ? 2 : q.opIndex(b, /search/i)); }, [], () => q.sawText(/subject of sailing/i));
@@ -182,6 +192,9 @@ try {
         q.milestone(12);
         await q.walk('to ladder top', [{ x: LADDER_TOP.x, z: LADDER_TOP.z - 1, tol: 0 }]);
         await q.climb('ladder down', () => q.locAt(LADDER_TOP.x, LADDER_TOP.z) ?? LADDER_TOP, /climb-down|^climb/i, () => q.lvl() === 0);
+        await q.dash('to curtain inside', 3291, 3031, 0, 14);
+        await curtain();
+        await q.dash('out of curtain', 3291, 3029, 1, 8);
         await gateOut();
         // 8. Al Shabim sees the plans; the bar and 10 feathers in the pack lead to "Yes, I'm kind of curious." (13).
         await shabim('shabim plans', [/yes, i'm very interested/i, /kind of curious/i], () => q.sawText(/anvil in the other tent/i));
