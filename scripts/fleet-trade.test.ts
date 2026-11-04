@@ -39,6 +39,18 @@ test('a snapshot holds only this side’s accounts and no credentials', () => {
     expect(snap.accounts[0]!.skills).toEqual([{ name: 'Fishing', level: 99 }]);
 });
 
+test('a snapshot lists completed quests and leaves an unread journal unknown', () => {
+    const owners = new Map(['read', 'none', 'unread', 'blank'].map(n => [n, { side: 'local' as const, server: 's' }]));
+    const accounts = snapshot([
+        { name: 'Read', server: 's', quests: [{ name: 'Cook', state: 'complete' }, { name: 'Imp', state: 'started' }] },
+        { name: 'None', server: 's', quests: [{ name: 'Imp', state: 'not started' }] },
+        { name: 'Unread', server: 's', quests: null },
+        { name: 'Blank', server: 's', quests: [{ name: 'Imp', state: 'unknown' }] },
+    ], 'local', owners, 7).accounts;
+    expect(accounts.map(a => (a as { quests?: string[] }).quests)).toEqual([['Cook'], [], undefined, undefined]);
+    expect(accounts.filter(a => 'quests' in a).map(a => a.name)).toEqual(['Read', 'None']);
+});
+
 test('the agent acts only for its own side, skips busy and running accounts, and frees the rest', async () => {
     const { dueTrades, swarmBusy } = await import('./fleet-agent');
     const owners = new Map([['giver', { side: 'local' as const, server: 's' }], ['taker', { side: 'cloud' as const, server: 's' }], ['busyone', { side: 'local' as const, server: 's' }]]);

@@ -2,8 +2,8 @@ import { test, expect } from 'bun:test';
 import { domainOf } from '../../knowledge/src/actions';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, sideSnapshots, fleetSkills } from '../src/coverage';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, sideSnapshots, fleetSkills, practicePasses } from '../src/coverage';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { questDefinitions } from '../../core/src/quest-status';
@@ -60,6 +60,37 @@ test('live completion outranks practice and scripts without promoting incomplete
     expect(summary.quests.named).toEqual(['imp']);
     expect(summary.quests.none).toEqual(['tree']);
     expect(summary.quests.liveComplete).toHaveLength(3);
+});
+
+test('practice passes come from every results log and need a finished quest', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'practice-'));
+    const rows = (...r: unknown[]) => r.map(x => JSON.stringify(x)).join('\n') + '\n{"cut';
+    writeFileSync(join(dir, 'results.jsonl'), rows(
+        { goal: 'quest-cook', ok: true, text: 'ok qp=1 xp=cooking=300' },
+        { goal: 'waterfall', ok: true, text: 'ok attackXp=9' },
+        { goal: 'quest-mm', ok: true, text: 'ok stage=70 (stages 80-160 not scripted)' },
+        { goal: 'quest-tree', ok: true, text: 'ok stopped at 40' },
+        { goal: 'quest-imp', ok: true, text: 'ok qp=0 xp=' },
+        { goal: 'quest-doric', ok: false, text: 'fail Error: x' },
+        { goal: 'ball', ok: true, text: 'ok' }));
+    mkdirSync(join(dir, 'sweep'));
+    writeFileSync(join(dir, 'sweep', 'results.jsonl'), rows({ quest: 'ball', ok: true, result: 'RESULT ok qp=4' }, { quest: 'quest-rj.ts', ok: true, result: 'RESULT ok qp=5' }, { quest: 'mm', ok: true, result: 'RESULT ok stage=70' }));
+    const byScript = new Map(['quest_cook', 'quest_waterfall', 'quest_mm', 'quest_tree', 'quest_imp', 'quest_doric', 'quest_ball', 'quest_romeojuliet'].map(f => [questScript(f), f]));
+    expect([...practicePasses(dir, byScript)].sort()).toEqual(['quest_ball', 'quest_cook', 'quest_romeojuliet', 'quest_waterfall']);
+    expect(practicePasses(join(dir, 'missing'), byScript).size).toBe(0);
+});
+
+test('a side snapshot carries quests only when the side shared them', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'fleet-quests-'));
+    const acct = (name: string, extra = {}) => ({ name, server: 'rs-sdk-demo.fly.dev', at: 1_800_000_000_000, skills: [], ...extra });
+    writeFileSync(join(dir, 'claude-cloud.json'), JSON.stringify({ side: 'claude-cloud', accounts: [acct('Kilt', { quests: ["Cook's Assistant"] }), acct('Haggis', { quests: ['Dragon Slayer'] }), acct('Old')] }));
+    const { accounts } = sideSnapshots(dir, 'local', 1_800_000_000_000);
+    expect(accounts.map(a => [a.name, a.quests])).toEqual([['Kilt', ["Cook's Assistant"]], ['Old', undefined]]);
+    const quests = [{ folder: 'quest_cook', varp: 'cookquest', name: "Cook's Assistant", questPoints: 1 }];
+    const local = questStages([], new Set(), new Set(), quests), shared = questStages(accounts.map(a => ({ quests: (a.quests ?? []).map(name => ({ name, state: 'complete' })) })), new Set(), new Set(), quests);
+    expect(local.folders[0]!.stage).toBe('none');
+    expect(shared.folders[0]!.stage).toBe('live');
+    expect(shared.liveComplete).toEqual(["Cook's Assistant"]);
 });
 
 test('an unmapped journal label cannot imply a folder completion', () => {
