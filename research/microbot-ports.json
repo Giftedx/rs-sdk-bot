@@ -2246,7 +2246,7 @@
             "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/util/worldmap/WorldPointWithWorldMapArea.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot/tree/13b518350c4c81d64e4cfbb45b3d5d2f38488825/runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper",
-          "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs are not executable native steps. Watchtower passes its complete zero-progress Native route through reward and teleport-scroll learning. Heroes Quest, Legends Quest and Tai Bwo Wannai Trio have real native handlers and local source implementations, but full CLI completion/reward/logout qualification remains open; these are supported integration gaps, not content exclusions. Source, per-quest Native receipts and live/repeat acceptance remain distinct.",
+          "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full CLI completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct.",
           "review": {
             "name": "questhelper",
             "decision": "partial",
@@ -2297,25 +2297,24 @@
               }
             ],
             "blockers": [
-              "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs are not executable native steps. Watchtower passes its complete zero-progress Native route through reward and teleport-scroll learning. Heroes Quest, Legends Quest and Tai Bwo Wannai Trio have real native handlers and local source implementations, but full CLI completion/reward/logout qualification remains open; these are supported integration gaps, not content exclusions. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+              "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full CLI completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
             ],
             "scriptDecisions": [
               {
                 "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestScript.java",
                 "decision": "partial",
                 "consumer": "scripts/generated/quest-lib.ts, scripts/quest-order.ts, packages/core/src/quest-status.ts",
-                "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs are not executable native steps. Watchtower passes its complete zero-progress Native route through reward and teleport-scroll learning. Heroes Quest, Legends Quest and Tai Bwo Wannai Trio have real native handlers and local source implementations, but full CLI completion/reward/logout qualification remains open; these are supported integration gaps, not content exclusions. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+                "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full CLI completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
               }
             ],
             "proof": {
-              "level": "Source-traced quest reuse and one full Native Watchtower completion; three other supported quest ports retain integration/qualification work.",
+              "level": "Source-traced quest reuse and complete Native Watchtower and Trio routes; two other supported quest ports retain integration/qualification work.",
               "nativeQuestCount": 68,
               "missingSupported": [
                 "Heroes Quest",
-                "Legends Quest",
-                "Tai Bwo Wannai Trio"
+                "Legends Quest"
               ],
-              "scope": "Existing quest workers retain their own source/receipt scope. Watchtower has one complete owned Native practice route. Heroes, Legends and Trio source implementations require complete actual-CLI qualification; their failed receipts remain failures. No blanket Native or live qualification of all68 quests is claimed.",
+              "scope": "Existing quest workers retain their own source/receipt scope. Watchtower and Trio have complete owned Native practice routes. Heroes and Legends require complete actual-CLI qualification. No blanket Native or live qualification of all68 quests is claimed.",
               "watchtower": {
                 "evidence": ".practice/microbot-ports/watchtower-native-1793681609878/result.json",
                 "sourceCheck": ".practice/microbot-ports/watchtower-native-1793681609878/source-check.json",
@@ -2341,6 +2340,39 @@
                 "compiledCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/compiled-cache-ready-check.json",
                 "runtimeSha256": "fc61cb67f1d195357e6bbbedc5e62758bb462b5362d7bae4de725516020f2f12",
                 "scope": "Six production helper crossings: panel, keyed side door and keyed treasure door, both directions. Two CLI0/logouts and independent saved position, inventory and zero-XP audits. Staged keys and Heroes progress4/11; no full quest, Grip combat, rewards, live or repeat claim. Source11441 and server-ready42 unchanged."
+              },
+              "trio": {
+                "evidence": ".practice/microbot-ports/tbwt-native-1793832071961/result.json",
+                "sourceCheck": ".practice/microbot-ports/tbwt-native-1793832071961/source-check.json",
+                "compiledCheck": ".practice/microbot-ports/tbwt-native-1793832071961/compiled-cache-check.json",
+                "runtimeSha256": "9018cefc2fb26c059a6389d6db357d272493c87c4bed6ed59b5ef5f04cc4fa2c",
+                "fixtureSha256": "53b4b0e51df5f7fb475dbdd9e97299e44296351dcb25cce061224cdca941e15e",
+                "scope": "Actual fresh quest0 through6, Tiadeche7 and all three brother rewards; QP+2, coins+2000, exact whole assets/gear/controls and logout. Owned post-start Monkey kill/corpse, both hunt cutscenes, cooking, log and bridge receipts. Independent CRC and full raw audit pass. Native100ms/XP25; Combat99/Agility99 and staged ordinary prequest supplies. No Trio progress/corpse/manual/vessel staged. Source11529 unchanged, server-ready42 and compiled57 contents unchanged; ZIP metadata excluded. Live, repeat and lower-level conditions remain unqualified.",
+                "ticks": 1362,
+                "casts": 8,
+                "rawXP": {
+                  "Attack": 625000,
+                  "Defence": 0,
+                  "Strength": 625000,
+                  "Hitpoints": 1950,
+                  "Ranged": 0,
+                  "Prayer": 0,
+                  "Magic": 14000,
+                  "Cooking": 1275000,
+                  "Woodcutting": 0,
+                  "Fletching": 0,
+                  "Fishing": 1625000,
+                  "Firemaking": 0,
+                  "Crafting": 0,
+                  "Smithing": 0,
+                  "Mining": 0,
+                  "Herblore": 0,
+                  "Agility": 7000,
+                  "Thieving": 0,
+                  "Runecraft": 0,
+                  "Slayer": 0,
+                  "Farming": 0
+                }
               }
             }
           }
