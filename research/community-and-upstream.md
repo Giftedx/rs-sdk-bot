@@ -502,8 +502,52 @@ The toolkit holds four quests our folders lacked: Tai Bwo Wannai Trio (`qp/south
 
 ### 9.3 Protocol rules from the toolkit guide that our docs do not state
 
-Their claims (`GUIDE.md` "Pitfalls and practices"), not checked here:
+Their claims (`GUIDE.md` "Pitfalls and practices"):
 
-- Op 1 on a door that is already open closes many doors again. Track door state before a click.
-- Withdraw-X requests sent in one tick can be merged by the server. Prefer the fixed bank buttons.
-- An opened door can swing onto the next tile, and static collision assumes it is closed.
+- Op 1 on a door that is already open closes many doors again. Track door state before a click. Confirmed: `[oploc1,_door_open_and_close]` runs the same toggle for both states (`doors/scripts/open_and_close_doors.rs2`).
+- Withdraw-X requests sent in one tick can be merged by the server. Prefer the fixed bank buttons. Not checked; the fixed buttons are confirmed (section 9.4).
+- An opened door can swing onto the next tile, and static collision assumes it is closed. Not checked.
+
+### 9.4 Facts from the second source pass
+
+Each row was checked against the pinned engine or content, unless the row says otherwise.
+
+| Claim | Source | Evidence | Local consumer | Decision |
+|---|---|---|---|---|
+| The first trade offer can go out with obj 0, because `tradeside` has not arrived; the server refuses it silently and the offer times out | Supalosa `02dd934c` (MIT, leases branch) | `InvButtonHandler.ts:44` refuses on `!hasAt` | `serveTrades` in `scripts/fleet-trade.ts` | lead: no local log shows this timeout; patch only after a receipt shows it |
+| Bank amounts can use the fixed 10, 5, 1 and All buttons with no count dialog | CraziedAres `sdk/processing.ts` (MIT) | `bank.rs2:1-5,41` | `withdrawN` in `scripts/measure/floor-lib.ts`; `trip.ts` uses X | candidate: needs three matched runs on a bank-bound skill |
+| A rise in `opRejectedCount` does not always mean refused: `p_stopaction` raises it for accepted ops | CraziedAres `processing.ts`, Supalosa `4536c573` | `PlayerOps.ts:430`, `Player.ts:1079-1081`, `StateCollector.ts:217-223` | `packages/core/src/act.ts` | applied as a comment; callers already opt out |
+| `drop` has no delay, so 5 drops fit in one tick | CraziedAres `processing.ts` | `drop.rs2:1-25` | `fishing30.ts`, `gather.ts` | low: early fishing only |
+| 26 shape 10 doors and gates are not in `knowledge/doors.json`; `pathcache.ts` opens only shape 9 | StechWasTaken `b0e743f9` (MIT) | their data; not checked in the engine | `packages/core/src/pathcache.ts` | lead: check when a walk stops at one |
+| `HINT_ARROW` carries the agility arena's active pillar | Supalosa `d0cea1ff` | `agilityarena.rs2:22,47` | none | wait for a consumer |
+| The kebab seller sells by dialogue for 1 gp | Spenny12 `learnings/` | `kebab_seller.rs2:20-25` | `research/supply-logistics.md` | low: we use sharks |
+
+Do not copy: CraziedAres says Withdraw-All shifts later bank slots, but `Inventory.remove` only nulls the slot and compaction runs on bank open and close (`Inventory.ts:152-204`, `bank.rs2:18-31`). Spenny12 calls furnace 2785 inert, but `category=smithing_furnace` accepts item-on-loc (`smelting.loc:12-18`).
+
+### 9.5 Quest failures closed with toolkit routes
+
+Each quest failed the full practice batch. Conditions: the quest's preset (every skill 99), practice server. Evidence: `.practice/tbwt-port/proof-<quest>.log`. Gap: not run live.
+
+| Quest | Cause | Fix | Ticks, 3 of 3 |
+|---|---|---|---|
+| Plague City | The Rehnison door needs Ted within 7 tiles and answered pages; the door shuts behind the bot; Bravek must be within 7 tiles when the clerk's "really needs to" page is continued | Answer the pages, open the door to leave, hold the clerk page at 2529,3317 | 418, 434, 434 |
+| Biohazard | The bot stayed inside Elena's house, whose door shuts behind it | Leave by the door, then sail to Port Sarim (ships keep the sample; 60 coins) | 1,389, 1,300, 1,279 |
+| Family Crest | Three crossings planned as open: the double gate at 3105,9944, Chronozon's gate at 3089,9945, Varrock's east gate at 3264,3405 | Op each gate; short legs round the rock | 1,097, 1,039, 1,058 |
+| The Tourist Trap | The curtain at 3291,3031 closes Siad's building from the south; the anvil loop could click during the 8-tick forge | Open the curtain from 3291,3030 both ways; wait for the roll; 5 bars | 1,187, 1,215, 1,226 |
+
+The anvil cause is inferred: 2 of 3 runs failed before the change and 3 of 3 passed after it, with two more bars in the same change. The Clock Tower failure (`walk to trough`) is not addressed here.
+
+### 9.6 Rival repos and published scripts
+
+No public source was found for any top-15 hiscore name (202 names checked as GitHub logins; code search on the 18 most unique names). The items below are public tools and write-ups.
+
+| Claim | Source | Check | Our row | Decision |
+|---|---|---|---|---|
+| Two rats 2 ticks apart give a Woodcutting roll every 2 ticks at the south Falador oaks | [Lost City Labs](https://www.lostcitylabs.com/skillrates) (another server), rs2b0t issue 160 | Partly confirmed: rats spawn at 3015,3295 and 3019,3296 with wanderrange 15 and 2 hitpoints. Our flinch verdict in `gathering-tricks.md` covers only aggressive attackers. How to start both rats, multiway tiles and tree supply are not checked | `woodcut` 3,356 / 3,467 against the 3,152 board | test first: `scripts/measure/flinch.ts` takes `ATTACKER` |
+| Edgeville monkey bars train Agility 15-52 at about 54 XP per tick | rs2b0t PR 492 (another server) | Confirmed: 500 XP a crossing at 25x (`shortcuts.rs2:193`), no fall on this loc. Rate not measured here | `agility-52` 33 XP per tick | candidate: three practice runs; earth warriors and spiders are near |
+| Legends Guild mine has iron rocks for 4-tick mining | Lost City Labs | Map scan: 11 rocks at 2691-2715,3328-3334. Tick pattern and stand tiles not checked | `mine` 120 / 97 | site option beside the zoo |
+| Deposit, withdraw, close and use can go in one pass at predicted slots | rs2b0t PR 874 (open) | Confirmed by reading `InvButtonHandler.ts:58` | Prayer 6 bank ticks a trip | low: 20-54 ticks on two boards (ESTIMATE) |
+| Hero's Quest and Legends' Quest modules with live harnesses | [rs2b2t/rs2b0t](https://github.com/rs2b2t/rs2b0t) `8b7db422` (MIT) `src/bot/api/ai/quests/defs/heroquest/`, `defs/legends/` | Folders confirmed. Harnesses seed varps; no pass record seen | no script | second source for the ports |
+| A quest list takes only canary-passed quests; `noteProgress` against `showIntent` stall handling | [jackgolding/rs-sdk](https://github.com/jackgolding/rs-sdk) (MIT) branch `quest/demon` `quest-lab/` | Not checked | quest sweep | idea only |
+
+Checked with no gain: rs2b0t's 76 scripts for Magic, Thieving, Runecraft and Smithing; all 17 UberMouse training pages against our rows, where only 4-rock iron is higher and already recorded; questbench `src/save/` against our save library. Do not open `jabobster/jabobster-rs-sdk` `bots/localman1/bot.env`: it is a committed credential file.
