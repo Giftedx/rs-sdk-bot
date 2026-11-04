@@ -1,5 +1,74 @@
 {
  "side": "claude-cloud",
- "at": 1793835887139,
- "jobs": []
+ "at": 1793836390867,
+ "jobs": [
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "90",
+    "35000"
+   ],
+   "env": {
+    "FOOD": "2",
+    "BUY_ARROW_ID": "884",
+    "BUY_ARROWS": "200",
+    "MAX_SPEND": "3000",
+    "AMMO": "100",
+    "MIN_ARROWS": "40",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50"
+   },
+   "enabled": true,
+   "repeat": true,
+   "goal": "Ranged board gap: Ranged 85 to 90 (~200 chicken kills at ~12k XP per level)",
+   "role": "ranged"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/ranged-train.ts",
+   "args": [
+    "90",
+    "35000"
+   ],
+   "env": {
+    "FOOD": "3",
+    "BUY_ARROW_ID": "884",
+    "BUY_ARROWS": "200",
+    "MAX_SPEND": "3000",
+    "AMMO": "100",
+    "MIN_ARROWS": "40",
+    "KILLS_PER_TRIP": "8",
+    "MAX_TRIPS": "50"
+   },
+   "enabled": true,
+   "repeat": true,
+   "goal": "Ranged board gap: Ranged 85 to 90 (~200 chicken kills at ~12k XP per level)",
+   "role": "ranged"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "cook,sheep,rj,runemysteries,doric,gobdip,hetty,imp,squire,prince,blackknight,druid"
+   ],
+   "env": {},
+   "enabled": true,
+   "repeat": false,
+   "goal": "Quest Points (fleet best 19) and the Druidic Ritual unlock for Herblore: low-combat quests bought with own coins",
+   "role": "quest"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "cook,sheep,rj,runemysteries,doric,gobdip,hetty,imp,squire,prince,blackknight,druid"
+   ],
+   "env": {},
+   "enabled": true,
+   "repeat": false,
+   "goal": "Quest Points (fleet best 19) and the Druidic Ritual unlock for Herblore: low-combat quests bought with own coins",
+   "role": "quest"
+  }
+ ]
 }
