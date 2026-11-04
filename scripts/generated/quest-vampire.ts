@@ -22,7 +22,7 @@ try {
 
     // 1. Morgan: "Ok, I'm up for an adventure." sets 1 (morgan.rs2:11-26).
     const state = () => questFlags(q.s.client)?.find(f => f.name === 'Vampire Slayer')?.state;
-    if (!await q.waitUntil(() => !!state(), 20)) await q.fail('Vampire Slayer journal unobserved');
+    if (!await q.waitUntil(() => ['not started', 'started', 'complete'].includes(state() ?? ''), 20)) await q.fail('Vampire Slayer journal unobserved');
     if (state() === 'complete') await q.fail('Vampire Slayer already complete');
     if (state() === 'not started')
         await q.talk('morgan', /^morgan$/i, [/up for an adventure/i], () => q.sawText(/look him up then|dr\. harlow/i), MORGAN);
