@@ -1,4 +1,6 @@
 import {readFileSync} from 'node:fs';
+import Module from 'node:module';
+import {resolve} from 'node:path';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {walkPath,sessionWalker,expandPath} from '../packages/core/src/walk';
@@ -11,7 +13,6 @@ import {elementalRuneCost} from './microbot-magic-items';
 import {CollisionFlag as NativeCollisionFlag} from '../vendor/rs-sdk/server/engine/src/engine/routefinder/flags';
 import {ClientProt} from '../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 const mageAnim=Number(readFileSync('vendor/rs-sdk/server/content/pack/seq.pack','utf8').split(/\r?\n/).find(l=>l.endsWith('=human_casting'))?.split('=')[0]);
-const saraRange=Number(readFileSync('vendor/rs-sdk/server/content/scripts/minigames/game_trail/configs/trail.npc','utf8').split('[trail_hard2]')[1]?.split('\n[')[0]?.match(/^attackrange=(\d+)/m)?.[1]);
 export const guardianMagePose=(npc:{animId?:number}|undefined)=>Number.isInteger(mageAnim)&&npc?.animId===mageAnim;
 type Policy={fatal:()=>boolean;stop:()=>boolean};
 const hp=(s:Session)=>s.sdk.getSkill('Hitpoints')?.level??0;
@@ -42,74 +43,121 @@ export async function guardianWalk(s:Session,to:{x:number;z:number},p:Policy,max
  const result=await walkPath(await sessionWalker(s),[{...to,tol:0}],{maxTicks,stop:()=>p.fatal()||p.stop()||hp(s)<35});
  if(!result.ok||p.fatal()||hp(s)<35)throw Error('guardian movement '+(result.detail??'life/HP floor'));await guardianHeal(s,p);
 }
-export function guardianSeparationGoals(dig:{x:number;z:number},player:{worldX:number;worldZ:number;level:number},npc:{x:number;z:number},plan:(level:number,from:{x:number;z:number},to:{x:number;z:number})=>{x:number;z:number}[],reach?:(to:{x:number;z:number})=>boolean|null,sight?:(to:{x:number;z:number})=>boolean){
- const from={x:player.worldX,z:player.worldZ};
- const candidates:{x:number;z:number}[]=[];for(let dx=-8;dx<=8;dx++)for(let dz=-8;dz<=8;dz++)if(Math.max(Math.abs(dx),Math.abs(dz))>=4)candidates.push({x:dig.x+dx,z:dig.z+dz});
- return candidates.filter(to=>{
-  // A retreat endpoint can lie outside casting range: the pursuing wizard moves during the walk.
-  // Dispatch separately requires the received native head tiles to be exactly five tiles apart.
-  const separation=Math.max(Math.abs(to.x-npc.x),Math.abs(to.z-npc.z));if(!Number.isSafeInteger(saraRange)||separation<saraRange||separation>16||reach?.(to)===false||sight?.(to)===false)return false;
-  const corners=plan(player.level,from,to),end=corners.at(-1);
-  return !!end&&end.x===to.x&&end.z===to.z&&expandPath(from,corners).every(t=>Math.max(Math.abs(t.x-npc.x),Math.abs(t.z-npc.z))<=16);
- }).sort((a,b)=>Math.max(Math.abs(b.x-npc.x),Math.abs(b.z-npc.z))-Math.max(Math.abs(a.x-npc.x),Math.abs(a.z-npc.z)));
+export function guardianEmptyCrossbowSpec(){
+ const path='vendor/rs-sdk/server/content/',id=Number(readFileSync(path+'pack/obj.pack','utf8').split(/\r?\n/).find(l=>l.endsWith('=crossbow'))?.split('=')[0]),block=readFileSync(path+'scripts/skill_combat/configs/ranged/crossbows.obj','utf8').split('[crossbow]')[1]?.split('\n[')[0]?.replace(/\r/g,'')??'',field=(key:string)=>Number(block.match(new RegExp('^param='+key+',([0-9]+)$','m'))?.[1]),quiver=Number(readFileSync(path+'scripts/player/configs/equip.constant','utf8').match(/\^wearpos_quiver\s*=\s*(\d+)/)?.[1]);
+ const range=Math.min(field('attackrange'),10),cooldown=field('attackrate');if(id!==837||range!==10||cooldown!==6||quiver!==13)throw Error('native empty-crossbow recipe changed');
+ return{item:id,range,cooldown,quiver,noAmmo:'There is no ammo left in your quiver.'};
 }
-type SaraSight=(from:{x:number;z:number;level:number},to:{x:number;z:number;size:number})=>boolean;
-export function installGuardianSaraBridge(s:Session,index:number,npcId:number,p:Policy,sight:SaraSight){
- const c=s.client as any,first=s.sdk.getState()?.player,life=first?.lifeId,respawns=first?.respawnCount??0,health=hp(s),original=c?.executeBotAction;
- if(!Number.isSafeInteger(life)||!Number.isSafeInteger(c?.selfSlot)||c.selfSlot<0||c.selfSlot>2047||typeof original!=='function'||typeof c.writeOpcode!=='function'||typeof c.out?.p1!=='function'||typeof c.out?.p2!=='function')throw Error('guardian Sara native packet owner unavailable');
- let attackedAt:number|undefined,held=false;
- const observed=()=>{const st=s.sdk.getState(),me=st?.player,n=st?.nearbyNpcs.find(n=>n.id===npcId&&n.index===index),native=c.npc?.[index],local=c.localPlayer;
-  if(p.fatal()||p.stop()||s.sdk.getStateAge()>5000||!c.isInGame()||!me||me.isDead||me.lifeId!==life||(me.respawnCount??0)!==respawns||hp(s)!==health||!s.sdk.isPrayerActive(12)||st!.nearbyPlayers.length||!n||n.targetIndex!==32768+c.selfSlot||n.hp!==null&&n.hp!==undefined&&n.hp<=0||!n.optionsWithIndex.some(o=>o.opIndex===2&&/^Attack$/i.test(o.text))||native?.type?.id!==npcId||!local||c.minusedlevel!==me.level)throw Error('guardian Sara fresh private target/life/prayer changed');
-  const from={x:c.mapBuildBaseX+local.routeX[0],z:c.mapBuildBaseZ+local.routeZ[0],level:me.level},to={x:c.mapBuildBaseX+native.routeX[0],z:c.mapBuildBaseZ+native.routeZ[0],size:n.size??1};
-  if(![from.x,from.z,to.x,to.z].every(v=>Number.isSafeInteger(v)&&v>=0&&v<=65535)||to.size!==1||!sight(from,to))throw Error('guardian Sara native head tiles/line of sight unavailable');return{from,to,distance:Math.max(Math.abs(from.x-to.x),Math.abs(from.z-to.z))};
- };
- const bridge=function(this:unknown,a:any){
-  if(a?.type!=='guardianSaraAttack'&&a?.type!=='guardianSaraHold')return original.call(c,a);
-  if(a.index!==index||a.npcId!==npcId)throw Error('guardian Sara packet target differs');const at=observed();
-  if(a.type==='guardianSaraAttack'){
-   if(attackedAt!==undefined||at.distance!==saraRange||saraRange!==5)throw Error('guardian Sara requires exactly five native tiles before one AP input');
-   // Lite opNpc prepends MOVE_OPCLICK. Native can then run AP, move two tiles,
-   // and run OP in the same cycle; OP changes the wizard back to melee mode.
-   attackedAt=s.tick();c.writeOpcode(ClientProt.OPNPC2);c.out.p2(index);return{success:true};
+export function guardianSaraMeleeLimit(){
+ const base='vendor/rs-sdk/server/content/scripts/',npc=readFileSync(base+'minigames/game_trail/configs/trail.npc','utf8').split('[trail_hard2]')[1]?.split('\n[')[0]??'',strength=Number(npc.match(/^strength=(\d+)/m)?.[1]),bonus=Number(npc.match(/^param=strengthbonus,(\d+)/m)?.[1]);
+ const melee=readFileSync(base+'skill_combat/scripts/npc/npc_combat_melee.rs2','utf8').replace(/\s/g,''),combat=readFileSync(base+'skill_combat/scripts/combat.rs2','utf8').replace(/\s/g,'');
+ if(!melee.includes('~combat_effective_stat(npc_stat(strength),100)')||!melee.includes('$effective_strength=add($effective_strength,9);')||!combat.includes('return(scale(max(100,$prayerbonus),100,$stat_level));')||!combat.includes('return(calc($effective_stat*($bonus+64)));')||!combat.includes('return(calc(($combat_stat+320)/640));'))throw Error('native Sara melee formula changed');
+ const maximum=Math.floor(((strength+9)*(bonus+64)+320)/640);if(strength!==80||bonus!==40||maximum!==14)throw Error('native Sara melee envelope changed');return{strength,bonus,maximum,floor:70};
+}
+export function guardianSaraLandingTail(){
+ const base='vendor/rs-sdk/server/content/scripts/',row=readFileSync(base+'skill_combat/configs/magic/magic_combat_spells.dbrow','utf8').split('[magic_spell_saradomin_strike_npc]')[1]?.split('\n[')[0]??'',source=readFileSync(base+'skill_combat/scripts/npc/npc_combat_magic.rs2','utf8').replace(/\s/g,'');
+ if(!row||/^data=spotanim_proj,/m.test(row)||!source.includes('def_int$duration=64;')||!source.includes('queue(combat_damage_player,calc($duration/30),$damage);'))throw Error('native Sara projectile tail changed');return Math.floor(64/30)+1;
+}
+// Sara AP sets mage-only mode before the generic ranged handler. Empty quiver
+// then stops the player's action before damage/XP; its attack-rate cooldown still applies.
+export function guardianSaraAttackRange(){
+ const row=readFileSync('vendor/rs-sdk/server/content/scripts/minigames/game_trail/configs/trail.npc','utf8').split('[trail_hard2]')[1]?.split('\n[')[0]??'',range=Number(row.match(/^attackrange=(\d+)/m)?.[1]);if(range!==5)throw Error('native Sara AP attack range changed');return range;
+}
+export function guardianCrossbowGoals(from:{x:number;z:number;level:number},npc:{x:number;z:number;size:number},plan:(level:number,from:{x:number;z:number},to:{x:number;z:number})=>{x:number;z:number}[],reach:(to:{x:number;z:number})=>boolean|null,sight:(from:{x:number;z:number},to:{x:number;z:number;size:number})=>boolean){
+ // Intersect the safe pre-OP minimum with the native Sara cast range. A
+ // crossbow-safe lane beyond this range can strand a chasing NPC behind a loc.
+ const maximum=guardianSaraAttackRange(),points:{x:number;z:number;length:number;clearance:number}[]=[];for(let dx=-maximum;dx<=maximum;dx++)for(let dz=-maximum;dz<=maximum;dz++){
+  const gap=Math.max(Math.abs(dx),Math.abs(dz)),to={x:npc.x+dx,z:npc.z+dz};if(gap<5||gap>maximum||reach(to)===false||!sight(to,npc))continue;
+  const path=plan(from.level,from,to),end=path.at(-1)??from;if(end.x!==to.x||end.z!==to.z)continue;const tiles=expandPath(from,path);if(tiles.some(t=>Math.max(Math.abs(t.x-npc.x),Math.abs(t.z-npc.z))>16))continue;points.push({...to,length:tiles.length,clearance:gap-Math.ceil(tiles.length/2)});
+ }return points.sort((a,b)=>a.length-b.length||a.x-b.x||a.z-b.z);
+}
+export function guardianLoadedSight(c:any){
+ // The SDK walking export omits projectile flags. Keep the native ray algorithm
+ // in a private grid populated from the received client's loaded collision scene.
+ const file=resolve('vendor/rs-sdk/server/vendor/rsmod-pathfinder/rsmod-pathfinder.js'),module:any=new Module(file);
+ module.filename=file;module._compile(readFileSync(file,'utf8'),file);const ray=module.exports;
+ return(a:{x:number;z:number;level:number},b:{x:number;z:number;size:number})=>{
+  if(typeof c.ensureCollision!=='function'||![a.x,a.z,a.level,b.x,b.z,b.size,c.mapBuildBaseX,c.mapBuildBaseZ].every(Number.isSafeInteger)||a.level!==c.minusedlevel||b.size!==1)return false;
+  c.ensureCollision();const flags=c.collision?.[a.level]?.flags;if(!(flags instanceof Int32Array)||flags.length!==104*104)return false;
+  const from={x:a.x-c.mapBuildBaseX,z:a.z-c.mapBuildBaseZ},to={x:b.x-c.mapBuildBaseX,z:b.z-c.mapBuildBaseZ};
+  const minX=Math.min(from.x,to.x),maxX=Math.max(from.x,to.x),minZ=Math.min(from.z,to.z),maxZ=Math.max(from.z,to.z);
+  if(minX<1||minZ<1||maxX>102||maxZ>102)return false;
+  for(let x=minX;x<=maxX;x++)for(let z=minZ;z<=maxZ;z++){
+   const raw=flags[x*104+z]!;if(raw&0x1000000)return false; // client UNLOADED
+   // Client V_* / VIS_SCENERY have the native projectile bit values. Its
+   // BLOCK_NPCS_AND_PLAYERS is 0x80000; native uses 0x100000 (client ROOF).
+   const native=(raw&0x3fe00)|((raw&0x80000)?NativeCollisionFlag.BLOCK_NPC_AND_PLAYERS:0);
+   ray.allocateIfAbsent(x,z,0);ray.__set(x,z,0,native);
   }
-  if(attackedAt===undefined||held||s.tick()!==attackedAt+1||at.distance<2||at.distance>saraRange)throw Error('guardian Sara stationary cancel needs exactly one fresh native cycle');
-  // Lite same-tile walk can emit no packet. This native normal click always
-  // clears pending interaction. ctrl=0 does not disable persistent run mode.
-  held=true;c.writeOpcode(ClientProt.MOVE_GAMECLICK);c.out.p1(5);c.out.p1(0);c.out.p2(at.from.x);c.out.p2(at.from.z);return{success:true};
+  return ray.hasLineOfSight(0,from.x,from.z,to.x,to.z,1,1,1,1,NativeCollisionFlag.BLOCK_NPC_AND_PLAYERS);
  };
- c.executeBotAction=bridge;return Object.assign(()=>{if(c.executeBotAction===bridge)c.executeBotAction=original;},{owns:()=>c.executeBotAction===bridge});
 }
-export async function requestGuardianSaraAP(s:Session,index:number,npcId:number,p:Policy,sight:SaraSight){
- const before=s.tick(),health=hp(s),owner=32768+(s.client as any).selfSlot;
- const pack=()=>JSON.stringify(s.sdk.getInventory().map(i=>({id:i.id,count:i.count,slot:i.slot})).sort((a,b)=>a.slot-b.slot)),initialPack=pack(),skills=['Attack','Strength','Defence','Ranged','Magic','Hitpoints'],xp=skills.map(k=>s.sdk.getSkillXp(k));
- const restore=installGuardianSaraBridge(s,index,npcId,p,sight);
- const unchanged=()=>{const n=s.sdk.getState()?.nearbyNpcs.find(n=>n.id===npcId&&n.index===index);if(!restore.owns()||!n||n.targetIndex!==owner||s.sdk.getState()!.nearbyPlayers.length||hp(s)!==health||pack()!==initialPack||skills.some((k,i)=>s.sdk.getSkillXp(k)!==xp[i]))throw Error('guardian Sara AP input owner, target, HP, stock or player XP changed before mage pose');};
+export async function setupSaradominMage(s:Session,index:number,npcId:number,_dig:{x:number;z:number},p:Policy,deps:{walker?:typeof sessionWalker;sight?:(a:{x:number;z:number;level:number},b:{x:number;z:number;size:number})=>boolean}={}){
+ const c=s.client as any,spec=guardianEmptyCrossbowSpec(),saraRange=guardianSaraAttackRange(),meleeLimit=guardianSaraMeleeLimit(),state=()=>s.sdk.getState(),first=state()?.player,life=first?.lifeId,respawns=first?.respawnCount??0,plane=first?.level;
+ const capturedNpc=c.npc?.[index],sessionExecutor=c.executeBotAction;let ended=false,ready=false,setupReceipt:any;void s.ended.then(()=>{ended=true;});
+ const fatal=()=>{const me=state()?.player;return s.client!==c||ended||p.fatal()||!c.localPlayer||!c.isInGame?.()||c.minusedlevel!==plane||!me||me.isDead||me.lifeId!==life||(me.respawnCount??0)!==respawns||me.level!==plane||hp(s)<1;},stop=()=>fatal()||p.stop();
+ const inv=()=>s.sdk.getInventory(),gear=()=>s.sdk.getEquipment(),held=(id:number)=>inv().filter(i=>i.id===id).reduce((a,i)=>a+i.count,0),same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
+ const gearView=()=>gear().map(i=>({id:i.id,slot:i.slot,count:i.count})).sort((a,b)=>a.slot-b.slot),totals=()=>{const out:Record<number,number>={};for(const i of [...inv(),...gear()])out[i.id]=(out[i.id]??0)+i.count;return out;};
+ const originalGear=gearView(),originalStyle=JSON.parse(JSON.stringify(state()?.combatStyle??null)),styleEqual=()=>same(state()?.combatStyle,originalStyle);
+ const head=()=>({x:c.mapBuildBaseX+c.localPlayer.routeX[0],z:c.mapBuildBaseZ+c.localPlayer.routeZ[0],level:c.minusedlevel});
+ const fresh=()=>!fatal()&&s.sdk.getStateAge()<=5000&&[head().x,head().z].every(Number.isSafeInteger);
+ const ownedFace=()=>state()?.nearbyNpcs.find(n=>n.id===npcId&&n.index===index&&n.targetIndex===32768+c.selfSlot);
+ // FACE_ENTITY is a render target; the native aggressive-player UID survives mode changes.
+ // Admit continuity only after the initial private-owner witness and on the identical client NPC.
+ const bound=(_index:number)=>s.client===c&&c.npc?.[index]===capturedNpc&&capturedNpc?.type?.id===npcId?state()?.nearbyNpcs.find(n=>n.id===npcId&&n.index===index&&(n.targetIndex===32768+c.selfSlot||n.targetIndex===-1)):undefined,target=()=>ownedFace();
+ const enemyHead=(_index:number)=>{const n=c.npc?.[index];if(n!==capturedNpc||n?.type?.id!==npcId)return null;const at={x:c.mapBuildBaseX+n.routeX[0],z:c.mapBuildBaseZ+n.routeZ[0],size:n.type?.size??1};return [at.x,at.z,at.size].every(Number.isSafeInteger)&&at.size===1?at:null;};
+ const sight=deps.sight??guardianLoadedSight(c);
+ const coherent=()=>{const me=head(),to=enemyHead(index),local=c.localPlayer,published=state()?.player;return !!to&&!!published&&published.worldX===me.x&&published.worldZ===me.z&&Math.floor(local.x/128)+c.mapBuildBaseX===me.x&&Math.floor(local.z/128)+c.mapBuildBaseZ===me.z;};
+ const rangedKnown=()=>{const style=state()?.combatStyle;return !!style?.known&&/^ranged$/i.test(style.styles[style.currentStyle]?.damageType??'');},emptyQuiver=()=>!gear().some(i=>i.slot===spec.quiver&&i.count>0);
+ const equip=async(id:number,cleanup=false)=>{
+  if(fatal()||!cleanup&&stop()||!fresh()||c.executeBotAction!==sessionExecutor)throw Error('guardian owned weapon original life/stop/fresh input owner');if(gear().some(i=>i.slot===3&&i.id===id))return;
+  const row=inv().find(i=>i.id===id);if(!row||row.count!==1)throw Error('guardian exact owned weapon missing');const before=totals(),old=gear().find(i=>i.slot===3)?.id;
+  let reply='';try{const sent=await s.bot.equipItem(row);reply=sent.success?'acknowledged':sent.message;}catch(error){reply=String(error);}
+  if(!await waitUntil(s,()=>{if(fatal()||!fresh()||c.executeBotAction!==sessionExecutor||!cleanup&&(stop()||!enemyHead(index)||!bound(index)||!s.sdk.isPrayerActive(12)||state()!.nearbyPlayers.length))throw Error('guardian weapon settlement observation/input owner changed');return gear().some(i=>i.slot===3&&i.id===id)&&held(id)===0&&same(totals(),before)&&(!old||held(old)>=1);},{timeoutTicks:12})||fatal()||!gear().some(i=>i.slot===3&&i.id===id)||!same(totals(),before))throw Error('guardian paired owned weapon swap unconfirmed: '+reply);
+ };
+
+ const npc=target();if(!npc||!c.localPlayer||!c.isInGame?.()||c.minusedlevel!==plane||!Number.isSafeInteger(life)||!Number.isSafeInteger(c.selfSlot)||!enemyHead(index)||!s.sdk.isPrayerActive(12)||state()!.nearbyPlayers.length||!fresh()||typeof sessionExecutor!=='function'||typeof c.writeOpcode!=='function'||typeof c.out?.p1!=='function'||typeof c.out?.p2!=='function'||!emptyQuiver()||held(837)!==1||!gear().some(i=>i.slot===3&&i.id===1381)||!originalStyle?.known)throw Error('guardian empty-crossbow requires bound Sara, owned Crossbow837, empty quiver, original observed AirStaff style');
+ const used=new Set<string>();let staffRestoreAttempted=false,attempts=0;
  try{
-  const attack=await s.direct({type:'guardianSaraAttack',index,npcId,reason:'fresh owned Sara AP without client melee route'})as{success?:boolean};if(!attack?.success)throw Error('guardian Sara AP packet unconfirmed; no retry');
-  // Session tick advances only on native PLAYER_INFO, not client animation frames.
-  if(!await waitUntil(s,()=>{if(p.fatal()||p.stop())return true;unchanged();return s.tick()>before;},{timeoutTicks:1})||p.fatal()||p.stop())throw Error('guardian Sara AP native cycle unavailable');
-  unchanged();const hold=await s.direct({type:'guardianSaraHold',index,npcId,reason:'received native head-tile normal click cancels player melee approach'})as{success?:boolean};if(!hold?.success)throw Error('guardian Sara stationary packet unconfirmed; no retry');const heldAt=s.tick();
-  const pose=()=>s.tick()>heldAt&&s.sdk.getState()?.player?.combat.targetType==='none'&&guardianMagePose(s.sdk.getState()?.nearbyNpcs.find(n=>n.id===npcId&&n.index===index));
-  return !!await waitUntil(s,()=>{if(p.fatal()||p.stop())return true;unchanged();return pose()&&s.sdk.isPrayerActive(12);},{timeoutTicks:12})&&pose()&&!p.fatal()&&!p.stop();
- }finally{restore();}
-}
-export async function setupSaradominMage(s:Session,index:number,npcId:number,dig:{x:number;z:number},p:Policy){
- const state=()=>s.sdk.getState(),target=()=>state()?.nearbyNpcs.find(n=>n.index===index&&n.id===npcId),start=s.tick(),used=new Set<string>();
- const reach=clientReach(s.client,()=>{const at=state()?.player;return at?{x:at.worldX,z:at.worldZ,level:at.level}:null;});
- for(let attempt=0;attempt<2;attempt++){
-  const n=target(),player=state()?.player;if(!n||!player||p.stop()||p.fatal())throw Error('guardian Sara setup target/life');
-  const walker=await sessionWalker(s),rsmod=await import('../vendor/rs-sdk/server/vendor/rsmod-pathfinder'),sight=(to:{x:number;z:number})=>rsmod.hasLineOfSight(player.level,to.x,to.z,n.tileX??n.x,n.tileZ??n.z,1,1,n.size??1,n.size??1,NativeCollisionFlag.BLOCK_NPC_AND_PLAYERS),goal=guardianSeparationGoals(dig,player,n,walker.plan,to=>reach?.({...to,level:player.level},{maxSteps:4096})??null,sight).find(to=>!used.has(`${to.x},${to.z}`));
-  if(!goal)throw Error('guardian Sara reachable separation unavailable');used.add(`${goal.x},${goal.z}`);
-  await guardianWalk(s,goal,p,18);
-  const current=target(),at=state()?.player,c=s.client as any;if(!current||!at||!c.localPlayer)continue;
-  const from={x:c.mapBuildBaseX+c.localPlayer.routeX[0],z:c.mapBuildBaseZ+c.localPlayer.routeZ[0]},native=c.npc?.[index];if(!native)continue;
-  const separation=Math.max(Math.abs(from.x-c.mapBuildBaseX-native.routeX[0]),Math.abs(from.z-c.mapBuildBaseZ-native.routeZ[0]));if(separation!==saraRange)continue;
-  const liveSight:SaraSight=(a,n)=>rsmod.hasLineOfSight(a.level,a.x,a.z,n.x,n.z,1,1,n.size,n.size,NativeCollisionFlag.BLOCK_NPC_AND_PLAYERS);
-  if(await requestGuardianSaraAP(s,index,npcId,p,liveSight)){
-   await guardianHeal(s,p);console.log('GUARDIAN_SARA_AP '+JSON.stringify({index,attempt:attempt+1,ticks:s.tick()-start,hp:hp(s),anim:target()?.animId}));return;
+  await equip(spec.item);if(!await waitUntil(s,()=>{if(stop()||!fresh()||!bound(index)||!enemyHead(index)||!s.sdk.isPrayerActive(12)||state()!.nearbyPlayers.length||c.executeBotAction!==sessionExecutor)throw Error('guardian empty-crossbow setup observation/input owner changed');return rangedKnown();},{timeoutTicks:8})||stop()||!rangedKnown()||!emptyQuiver())throw Error('guardian empty-crossbow ranged style/quiver not observed');
+  for(let attempt=0;attempt<2&&!ready;attempt++){
+   await guardianHeal(s,{fatal,stop});const walker=await(deps.walker??sessionWalker)(s),from=head(),n=enemyHead(index);if(!n||!bound(index)||stop()||state()!.nearbyPlayers.length||c.executeBotAction!==sessionExecutor)throw Error('guardian empty-crossbow private target/life/input owner changed');
+   const admitted=()=>{const me=head(),to=enemyHead(index),d=to&&Math.max(Math.abs(me.x-to.x),Math.abs(me.z-to.z));return !stop()&&fresh()&&!!to&&!!bound(index)&&d!==null&&d>=5&&d<=Math.min(spec.range,saraRange)&&coherent()&&sight(me,to)&&emptyQuiver()&&rangedKnown()&&s.sdk.isPrayerActive(12)&&state()!.nearbyPlayers.length===0;};
+   const walkedAt=s.tick(),cycleAt=c.getClientCycle?.();if(!Number.isSafeInteger(cycleAt))throw Error('guardian native client cycle unavailable');let arrived=false;
+   while(!arrived&&s.tick()-walkedAt<18){
+    const current=head(),enemy=enemyHead(index);if(!enemy||!bound(index)||stop()||c.executeBotAction!==sessionExecutor)throw Error('guardian retreat original target/input owner changed');
+    const reach=clientReach(c,()=>head()),goal=guardianCrossbowGoals(current,enemy,walker.plan,to=>reach?.({...to,level:current.level},{maxSteps:4096})??null,(a,b)=>sight({...a,level:current.level},b)).find(to=>!used.has(`${to.x},${to.z}`)&&(attempt===0||to.x!==from.x||to.z!==from.z));
+    if(!goal)break;used.add(`${goal.x},${goal.z}`);const legTick=s.tick(),legCycle=c.getClientCycle();
+    const settled=()=>{const me=head();return me.x===goal.x&&me.z===goal.z&&s.tick()>legTick&&c.getClientCycle()>legCycle&&admitted();};
+    await walkPath(walker,[{x:goal.x,z:goal.z,tol:0}],{maxTicks:Math.max(1,18-(s.tick()-walkedAt)),stop:()=>stop()||c.executeBotAction!==sessionExecutor||hp(s)<70||settled()||s.tick()-walkedAt>=18});
+    if(!settled()&&s.tick()===legTick)await waitUntil(s,()=>stop()||c.executeBotAction!==sessionExecutor||s.tick()>legTick&&c.getClientCycle()>legCycle,{timeoutTicks:Math.max(1,18-(s.tick()-walkedAt))});
+    arrived=settled();
+   }
+   if(stop()||hp(s)<70||c.executeBotAction!==sessionExecutor)throw Error('guardian empty-crossbow lane life/HP/stop/input owner');if(!arrived||!admitted()||c.getClientCycle()<=cycleAt)continue;
+   const health=hp(s),assets=totals(),skills=['Attack','Strength','Defence','Ranged','Magic','Hitpoints'],xp=skills.map(k=>s.sdk.getSkillXp(k)),at=s.tick(),cursor=Math.max(0,...(state()?.gameMessages??[]).map(m=>m.observationId??0));let lowest=health;
+   if(health<meleeLimit.floor)throw Error('guardian Sara AP HP below70');
+   const original=c.executeBotAction;let authorized=false;
+   const bridge=function(this:unknown,a:any){if(a?.type!=='guardianEmptyCrossbowAttack')return original.call(c,a);if(a.index!==index||stop()||!admitted()||hp(s)!==health||!same(totals(),assets)||authorized||c.executeBotAction!==bridge)throw Error('guardian empty-crossbow no-ammo AP admission changed');authorized=true;const me=head();console.log('GUARDIAN_SARA_AP_ADMISSION '+JSON.stringify({tick:s.tick(),cycle:c.getClientCycle(),received:me,target:enemyHead(index),published:state()?.player&&{x:state()!.player!.worldX,z:state()!.player!.worldZ},coherent:coherent(),minimumGap:5,nativeMaximum:spec.range,nativeSaraMaximum:saraRange}));c.writeOpcode(ClientProt.MOVE_GAMECLICK);c.out.p1(5);c.out.p1(0);c.out.p2(me.x);c.out.p2(me.z);c.writeOpcode(ClientProt.OPNPC2);c.out.p2(index);return{success:true};};
+   let noAmmo:any,reachRefusal:any,mageTick:number|undefined,installed=false;const check=()=>{const message=(text:string)=>(state()?.gameMessages??[]).find(m=>m.type===0&&m.sender===''&&m.fromSelf===false&&Number.isSafeInteger(m.observationId)&&m.observationId!>cursor&&m.tick>=at&&m.tick<=s.tick()&&m.text===text);noAmmo=message(spec.noAmmo);reachRefusal=message("I can't reach that!");const now=hp(s);if(stop()||!fresh()||!enemyHead(index)||!bound(index)||state()!.nearbyPlayers.length||!s.sdk.isPrayerActive(12)||(installed?c.executeBotAction!==bridge:c.executeBotAction!==original)||!emptyQuiver()||now<meleeLimit.floor||now>lowest||health-now>meleeLimit.maximum||!same(totals(),assets)||skills.some((k,i)=>s.sdk.getSkillXp(k)!==xp[i]))throw Error('guardian empty-crossbow AP stock/HP/XP/private target changed');lowest=Math.min(lowest,now);const n=ownedFace();if(s.tick()>at&&guardianMagePose(n))mageTick??=s.tick();return (!!noAmmo&&mageTick!==undefined||!!reachRefusal)&&state()?.player?.combat.targetType==='none';};
+   if(original!==sessionExecutor||c.executeBotAction!==sessionExecutor)throw Error('guardian empty-crossbow AP input owner changed before bridge');
+   c.executeBotAction=bridge;installed=true;let dispatch='';try{attempts++;try{const result=await s.direct({type:'guardianEmptyCrossbowAttack',index,reason:'guardian empty-crossbow owned empty crossbow AP; no client melee route'})as any;dispatch=result?.success?'acknowledged':'unknown';}catch(error){dispatch=String(error);}if(!authorized)throw Error('guardian empty-crossbow AP input not authorized: '+dispatch);await waitUntil(s,check,{timeoutTicks:12});}
+   finally{if(c.executeBotAction===bridge)c.executeBotAction=original;installed=false;}
+   check();const accepted=!!noAmmo&&!!ownedFace()&&mageTick!==undefined&&state()?.player?.combat.targetType==='none';
+   const refused=dispatch==='acknowledged'&&!!reachRefusal&&!noAmmo&&mageTick===undefined&&hp(s)===health&&state()?.player?.combat.targetType==='none';
+   if(refused){console.log('GUARDIAN_SARA_REACH_REFUSED '+JSON.stringify({attempt:attempts,at,reachRefusal,head:head(),target:enemyHead(index),outcome:'known native reach refusal; exact assets/HP/XP retained'}));continue;}
+   if(!noAmmo||state()?.player?.combat.targetType!=='none')throw Error('guardian empty-crossbow unknown no-ammo outcome; no second attack');
+   const cooldownEnd=noAmmo.tick+spec.cooldown;if(s.tick()<cooldownEnd)await waitUntil(s,()=>{check();return s.tick()>=cooldownEnd;},{timeoutTicks:cooldownEnd-s.tick()});check();
+   console.log('GUARDIAN_SARA_EMPTY_AP '+JSON.stringify({attempt:attempts,at,noAmmo,mageTick,accepted,dispatch,head:head(),target:enemyHead(index),nativeCooldown:spec.cooldown,setupHPBefore:health,setupHPLowest:lowest,setupHPLoss:health-lowest,maxSource:meleeLimit.maximum}));
+   if(accepted){staffRestoreAttempted=true;await equip(1381);if(!await waitUntil(s,()=>{check();return styleEqual();},{timeoutTicks:12})||stop()||!styleEqual())throw Error('guardian empty-crossbow original AirStaff combat style not restored');if(!same(gearView(),originalGear)||held(837)!==1)throw Error('guardian empty-crossbow exact original gear/crossbow pack not restored');check();if(!ownedFace()||mageTick===undefined||mageTick<=at||state()?.player?.combat.targetType!=='none')throw Error('guardian final private mage owner unconfirmed');ready=true;setupReceipt={attempts,noAmmo,mageTick,gearRestored:true,styleRestored:true,noPlayerXP:true,setupHPBefore:health,setupHPLowest:lowest,setupHPLoss:health-lowest,maxSource:meleeLimit.maximum};}
   }
+  if(!ready)throw Error('guardian two bounded empty-crossbow attempts did not observe mage mode');
+ }finally{
+  if(!fatal()&&!gear().some(i=>i.slot===3&&i.id===1381)&&!staffRestoreAttempted){staffRestoreAttempted=true;await equip(1381,true);}
+  if(!fatal()&&!styleEqual())await waitUntil(s,()=>{if(!fresh()||c.executeBotAction!==sessionExecutor)throw Error('guardian original style fresh observation/input owner changed');return styleEqual();},{timeoutTicks:12});
+  if(!fatal()&&(!same(gearView(),originalGear)||held(837)!==1||!styleEqual()))throw Error('guardian empty-crossbow finally gear/control restoration unconfirmed');
  }
- throw Error('guardian Sara mage-only AP mode unobserved');
+
+ if(ready)console.log('GUARDIAN_SARA_AP '+JSON.stringify({...setupReceipt,hp:hp(s)}));
 }
 export function guardianExitCandidates(walkable:(to:{x:number;z:number})=>boolean){
  const points:{x:number;z:number}[]=[];
@@ -130,9 +178,11 @@ export function guardianExtractionStep(player:{worldX:number;worldZ:number;level
  }
  return best?{target:best[Math.min(23,best.length-1)]!,exit:best.at(-1)!}:null;
 }
-export async function recoverGuardian(s:Session,tele:NativeTeleport,p:{fatal:()=>boolean},budget=500){
- const start=s.tick(),state=()=>s.sdk.getState(),over=()=>p.fatal()||s.tick()-start>=budget;
+export async function recoverGuardian(s:Session,tele:NativeTeleport,p:{fatal:()=>boolean;landingTail?:number},budget=500){
+ const start=s.tick(),state=()=>s.sdk.getState(),client=s.client,initial=state()?.player,owner=(client as any).executeBotAction,life=initial?.lifeId,respawns=initial?.respawnCount??0,original=()=>{const me=state()?.player;return Number.isSafeInteger(life)&&hp(s)>0&&s.client===client&&(client as any).executeBotAction===owner&&typeof owner==='function'&&!!me&&!me.isDead&&me.lifeId===life&&(me.respawnCount??0)===respawns;},over=()=>p.fatal()||!original()||s.tick()-start>=budget;
  let exit:{x:number;z:number}|undefined;let player=state()?.player;if(!player||over())return{ok:false,failure:'guardian recovery life/session'};
+ const tail=p.landingTail??0;
+ if(tail!==0&&tail!==guardianSaraLandingTail())throw Error('guardian unsupported landing settlement tail');
  while(!combatTeleportAllowed(player)){
   if(over())return{ok:false,failure:'guardian extraction budget'};
   const walker=await sessionWalker(s),pf=await import('../vendor/rs-sdk/sdk/pathfinding'),at=player;const reach=clientReach(s.client,()=>{const p=state()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:null;});const route=guardianExtractionStep(player,walker.plan,exit,to=>pf.isTileWalkable(at.level,to.x,to.z),to=>reach?.({...to,level:at.level},{maxSteps:4096})??null);if(!route)return{ok:false,failure:`guardian legal extraction path unavailable from ${player.worldX},${player.worldZ} to ${exit?.x},${exit?.z}`};exit=route.exit;
@@ -143,9 +193,27 @@ export async function recoverGuardian(s:Session,tele:NativeTeleport,p:{fatal:()=
  const before=new Map(s.sdk.getInventory().map(i=>[i.id,s.sdk.getInventory().filter(j=>j.id===i.id).reduce((n,j)=>n+j.count,0)])),xp=s.sdk.getSkillXp('Magic')??0;
  const costs=Object.fromEntries(Object.entries(tele.runes).map(([id,n])=>[id,elementalRuneCost(Number(id),n,s.sdk.getEquipment(),true)]));
  if(Object.entries(costs).some(([id,n])=>(before.get(Number(id))??0)<n))return{ok:false,failure:'guardian reserved escape runes missing'};
- await s.sdk.sendCloseModal();await s.direct({type:'clickComponent',componentId:componentId(tele.component),reason:'guardian legal bounded recovery'});
+ // CLOSE_MODAL only requests an engine close; its dispatch ACK does not release
+ // the casket objbox's protected PAUSEBUTTON in this same input cycle.
+ if(budget-(s.tick()-start)-tail<2)return{ok:false,failure:'guardian recovery cannot reserve native landing tail before payment'};
+ const closeAt=s.tick(),closed=()=>state()?.dialog?.isOpen===false&&state()?.interface.isOpen===false&&state()?.bank.isOpen===false;
+ if(over())return{ok:false,failure:'guardian recovery owner/life before modal close'};
+ await s.direct({type:'closeModal',reason:'guardian bounded recovery modal retirement'});
+ const closeBudget=Math.min(8,budget-(s.tick()-start)-tail-1);if(closeBudget<1)return{ok:false,failure:'guardian modal settlement cannot reserve native landing tail'};
+ if(!await waitUntil(s,()=>over()||s.tick()>closeAt&&closed(),{timeoutTicks:closeBudget})||over()||s.tick()<=closeAt||!closed())return{ok:false,failure:'guardian modal closure/owner settlement unobserved before payment'};
+ const landingBudget=Math.min(20,budget-(s.tick()-start)-tail);if(landingBudget<1)return{ok:false,failure:'guardian recovery cannot reserve native landing tail before payment'};
+ if(over())return{ok:false,failure:'guardian recovery owner/life before payment'};
+ await s.direct({type:'clickComponent',componentId:componentId(tele.component),reason:'guardian legal bounded recovery'});
  const landed=()=>{const at=state()?.player;return !!at&&at.level===tele.to.level&&Math.max(Math.abs(at.worldX-tele.to.x),Math.abs(at.worldZ-tele.to.z))<=2;};
- await waitUntil(s,()=>landed()||over(),{timeoutTicks:Math.max(1,Math.min(20,budget-(s.tick()-start)))});
+ await waitUntil(s,()=>landed()||over(),{timeoutTicks:landingBudget});
  const count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),paid=Object.entries(costs).every(([id,n])=>(before.get(Number(id))??0)-count(Number(id))===n);
- return{ok:landed()&&!p.fatal()&&paid&&(s.sdk.getSkillXp('Magic')??0)>xp,failure:landed()?'':'guardian legal Varrock landing unobserved',ticks:s.tick()-start};
+ let tailSettled=tail===0;if(tail&&landed()&&paid&&!over()){
+  const snapshot=()=>JSON.stringify([...s.sdk.getInventory(),...s.sdk.getEquipment()].map(i=>({id:i.id,count:i.count,slot:i.slot}))),stock=snapshot(),tailAt=s.tick(),magicXp=s.sdk.getSkillXp('Magic');
+  const original=()=>{const me=state()?.player;return !p.fatal()&&!!me&&!me.isDead&&me.lifeId===life&&(me.respawnCount??0)===respawns&&(s.client as any).executeBotAction===owner&&s.sdk.getStateAge()<=5000&&hp(s)>=35&&landed()&&s.sdk.isPrayerActive(12)&&snapshot()===stock&&s.sdk.getSkillXp('Magic')===magicXp;};
+  if(!original())throw Error('guardian protected landing tail initial state changed');
+  if(budget-(s.tick()-start)<tail)return{ok:false,failure:'guardian landing tail budget unavailable'};
+  await waitUntil(s,()=>{if(!original())throw Error('guardian protected landing tail life/owner/HP/stock/prayer changed');return s.tick()-tailAt>=tail;},{timeoutTicks:tail});
+  if(!original()||s.tick()-tailAt<tail)throw Error('guardian protected landing tail unconfirmed');tailSettled=true;console.log('GUARDIAN_SARA_LANDING_TAIL '+JSON.stringify({ticks:tail,hp:hp(s),protected:true}));
+ }
+ return{ok:landed()&&!p.fatal()&&paid&&tailSettled&&s.tick()-start<=budget&&(s.sdk.getSkillXp('Magic')??0)>xp,failure:landed()?'':'guardian legal Varrock landing unobserved',ticks:s.tick()-start};
 }

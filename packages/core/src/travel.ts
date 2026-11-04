@@ -18,7 +18,7 @@ export type TravelNeed =
     | { held: string; count: number }            // item debugname held in the pack
     | { worn: string };
 export type TravelRun =
-    | { how: 'npc'; npc: string; op: number; options: string[]; deck?: boolean }
+    | { how: 'npc'; npc: string; op: number; options: string[]; deck?: boolean; button?: { component: string } }
     | { how: 'spell'; component: string }
     | { how: 'rub'; items: string[]; option: string | null }
     | { how: 'loc'; loc: string; op: number; option: string | null; id?: number; at?: Tile }
@@ -48,7 +48,7 @@ function mapAngle(src: string): number | null {
     try { return Number(readFileSync(join(content, m[1]!), 'utf8').split(/\r?\n/)[Number(m[2]) - 1]!.trim().split(/\s+/)[5]); } catch { return null; }
 }
 
-type NpcRecord = { id: string; kind: string; destination: string; npc: { name: string; debugname: string }; op: { index: number }; options: { text: string }[];
+type NpcRecord = { id: string; kind: string; destination: string; npc: { name: string; debugname: string }; op: { index: number }; options: { text: string }[]; button?: { component: string; src?: string };
     from: (Tile & { src: string })[]; to: (Tile & { src: string }) | null; fare?: { coins: number | null; rule?: string }; items?: { item: string; use: string }[];
     requires: { varp: string; op: string; value: number }[]; deck?: { onDeck: boolean; gangplank?: Tile & { src: string } } };
 export function npcTravel(records: NpcRecord[]): Travel[] {
@@ -67,7 +67,7 @@ export function npcTravel(records: NpcRecord[]): Travel[] {
         for (const f of r.from) out.push({
             id: `npc:${r.id}@${f.x},${f.z}`, kind: r.kind, name: `${r.npc.name} to ${r.destination}`, from: { x: f.x, z: f.z, level: f.level }, to, coins,
             needs: [...r.requires.map(q => ({ varp: q.varp, op: q.op, value: q.value })), ...held], runes: [],
-            run: { how: 'npc', npc: r.npc.name, op: r.op.index, options: r.options.map(o => o.text), ...(deck ? { deck } : {}) },
+            run: { how: 'npc', npc: r.npc.name, op: r.op.index, options: r.options.map(o => o.text), ...(r.button ? { button: { component: r.button.component } } : {}), ...(deck ? { deck } : {}) },
             cost: r.kind === 'boat' ? BOAT_COST : NPC_COST,
         });
     }
@@ -174,7 +174,13 @@ export function travelAllowed(t: Travel, a: Account): boolean {
     if ((a.coins ?? 0) < t.coins) return false;
     const count = (item: string) => a.counts?.[item] ?? (a.items.includes(item) ? 1 : 0);
     for (const n of t.needs) {
-        if ('varp' in n) { const v = a.questStages?.[n.varp] ?? a.varps[n.varp]; if (v === undefined || !compare(v, n.op, n.value)) return false; }
+        if ('varp' in n) {
+            const v = a.questStages?.[n.varp] ?? a.varps[n.varp];
+            const publicGlider = v === undefined && n.varp === 'grandtree' && n.op === '=' && n.value === 160
+                && t.kind === 'glider' && t.id.startsWith('npc:gnomepilot:') && t.run.how === 'npc' && t.run.npc === 'Gnome pilot'
+                && /^glidermap:com_2[1-5]$/.test(t.run.button?.component ?? '') && a.unlocks?.includes('grandtree-glider') === true;
+            if (!publicGlider && (v === undefined || !compare(v, n.op, n.value))) return false;
+        }
         else if ('skill' in n) { if ((a.skills[n.skill] ?? 1) < n.level) return false; }
         else if ('held' in n) { if (count(n.held) < n.count) return false; }
         else if (!a.worn?.includes(n.worn)) return false;

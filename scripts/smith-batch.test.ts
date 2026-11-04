@@ -35,22 +35,22 @@ test('Al Kharid staging reverses the toll corridor to the Varrock West bank',()=
  expect(()=>smithStageRoute({worldX:3269,worldZ:3167,level:1})).toThrow();
 });
 
-const NAMES:Record<number,string>={995:'Coins',2351:'Iron bar',2349:'Bronze bar',1115:'Iron platebody',2347:'Hammer',440:'Iron ore',946:'Knife'};
-function fake(o:{bank?:{id:number;count:number}[];pack?:{id:number;count:number}[];level?:number;at?:[number,number];effect?:boolean}={}){
- const recipe=smithRecipe(1115);
+const NAMES:Record<number,string>={995:'Coins',2351:'Iron bar',2349:'Bronze bar',1115:'Iron platebody',2347:'Hammer',440:'Iron ore',946:'Knife',820:'Iron dart tip',3095:'Bronze claws'};
+function fake(o:{bank?:{id:number;count:number}[];pack?:{id:number;count:number}[];level?:number;at?:[number,number];effect?:boolean;product?:number;questColour?:number}={}){
+ const recipe=smithRecipe(o.product??1115);
  let tick=0,generation=1,xp=369042,open=false,iface=false,dialog:any=null;
  const held:{id:number;name:string;count:number;slot:number}[]=[];
  const bank=(o.bank??[{id:2351,count:349},{id:2349,count:1641},{id:HAMMER,count:1},{id:995,count:396828},{id:440,count:1}]).map(i=>({...i,name:NAMES[i.id]!}));
  const listeners=new Set<()=>void>(),player={worldX:o.at?.[0]??3269,worldZ:o.at?.[1]??3166,level:0,lifeId:1,respawnCount:0};
  const count=(id:number)=>held.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const reslot=()=>held.forEach((v,n)=>v.slot=n);
- const add=(id:number,n:number)=>{const stack=id===995&&held.find(i=>i.id===995);if(stack){stack.count+=n;return;}if(id===995){held.push({id,name:NAMES[id]!,count:n,slot:0});reslot();return;}for(let a=0;a<n;a++)held.push({id,name:NAMES[id]!,count:1,slot:0});reslot();};
- const take=(id:number,n:number)=>{if(id===995){held.find(i=>i.id===995)!.count-=n;if(!count(995))held.splice(held.findIndex(i=>i.id===995),1);reslot();return;}for(let a=0;a<n;a++){const at=held.findIndex(i=>i.id===id);if(at<0)throw Error('mock input short');held.splice(at,1);}reslot();};
+ const add=(id:number,n:number)=>{const stack=(id===995||id===820)&&held.find(i=>i.id===id);if(stack){stack.count+=n;return;}if(id===995||id===820){held.push({id,name:NAMES[id]!,count:n,slot:0});reslot();return;}for(let a=0;a<n;a++)held.push({id,name:NAMES[id]!,count:1,slot:0});reslot();};
+ const take=(id:number,n:number)=>{if(id===995||id===820){held.find(i=>i.id===id)!.count-=n;if(!count(id))held.splice(held.findIndex(i=>i.id===id),1);reslot();return;}for(let a=0;a<n;a++){const at=held.findIndex(i=>i.id===id);if(at<0)throw Error('mock input short');held.splice(at,1);}reslot();};
  for(const i of o.pack??[{id:995,count:7340}])add(i.id,i.count);
  const levelOf=()=>o.level??84;
  const state=()=>({tick,player,inventory:held,equipment:[],gameMessages:[],bank:{isOpen:open,items:bank},interface:{isOpen:iface,interfaceId:iface?994:-1,options:[]},
   skills:[{name:'Hitpoints',level:35,baseLevel:35},{name:'Smithing',level:levelOf(),baseLevel:levelOf(),experience:xp}]});
- const s:any={name:'fixture',tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},ended:new Promise(()=>{}),
+ const s:any={name:'fixture',client:{ingame:true,ifType:()=>({colour:o.questColour??0xff0000})},tick:()=>tick,onTick:(f:()=>void)=>{listeners.add(f);return()=>listeners.delete(f);},ended:new Promise(()=>{}),
   direct:async()=>{dialog=null;iface=false;return{success:true};},
   bankObservation:()=>open?{generation,at:Date.now(),items:bank.map(i=>({...i}))}:null,
   sdk:{getState:state,getInventory:()=>held,getEquipment:()=>[],getDialog:()=>dialog,getSkill:(k:string)=>state().skills.find(v=>v.name===k),getSkillXp:()=>xp,
@@ -61,8 +61,8 @@ function fake(o:{bank?:{id:number;count:number}[];pack?:{id:number;count:number}
    sendClickDialog:async()=>{dialog=null;return{success:true};},
    sendUseItemOnLoc:async()=>{if(count(HAMMER))iface=true;return{success:true};},
    sendClickComponentWithOption:async(component:number,option:number,slot:number)=>{
-    expect([component,option,slot]).toEqual([1121,1,3]);iface=false;
-    if(o.effect!==false){take(2351,recipe.bars);add(1115,1);xp+=3125;}return{success:true};
+    expect([component,option,slot]).toEqual([recipe.component,1,recipe.slot]);iface=false;
+    if(o.effect!==false){take(recipe.bar,recipe.bars);add(recipe.product,recipe.amount);xp+=recipe.bars*recipe.xpPerBar/10*25;}return{success:true};
    }},
   bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};},
    depositItem:async(item:{id:number})=>{const n=count(item.id);take(item.id,n);const row=bank.find(i=>i.id===item.id);if(row)row.count+=n;else bank.push({id:item.id,name:NAMES[item.id]!,count:n});generation++;return{success:true};},
@@ -72,6 +72,10 @@ function fake(o:{bank?:{id:number;count:number}[];pack?:{id:number;count:number}
  return {s,bank,held:()=>held,walks,stop:()=>clearInterval(timer),walk:async(x:number,z:number)=>{walks.push([x,z]);player.worldX=x;player.worldZ=z;return true;}};
 }
 const ORDER={product:1115,cap:1600,maximum:3,reserve:334};
+test('native claws resolve separate interface and darts retain their quest-gated column',()=>{expect(smithRecipe(3095)).toMatchObject({bar:2349,bars:2,amount:1,component:8430,slot:0,quest:'Death Plateau'});expect(smithRecipe(820)).toMatchObject({bar:2351,bars:1,amount:10,component:1123,slot:0,quest:'The Tourist Trap'});});
+test('gated smithing refuses unknown and incomplete quest flags before bank or input',async()=>{for(const product of [820,3095])for(const questColour of [0xff0000,0xf80000,0xf8f800]){const g=fake({product,questColour,at:[3185,3436]});try{const r=await runSmithBatch(g.s,{...ORDER,product,maximum:1,reserve:0},{walk:g.walk});expect(r).toMatchObject({ok:false,made:0,attempts:0,stop:'refused'});expect(r.failure).toContain('quest');expect(g.walks).toEqual([]);expect(g.bank.find(i=>i.id===2351)?.count).toBe(349);}finally{g.stop();}}});
+test('completed quest flags enable native dart tips and claws with conserved bars and outputs',async()=>{for(const product of [820,3095]){const r=smithRecipe(product),g=fake({product,questColour:0x00f800,at:[3185,3436]});try{const result=await runSmithBatch(g.s,{...ORDER,product,maximum:1,reserve:0},{walk:g.walk});expect(result).toMatchObject({ok:true,made:1,banked:r.amount,conserved:true,coinsSpent:0,baseXpPerProduct:r.bars*r.xpPerBar/10});}finally{g.stop();}}});
+test('explicit native dart admission credits its one intended product or stops after one unpaid refusal',async()=>{for(const effect of [true,false]){const g=fake({product:820,questColour:0xf8f800,at:[3185,3436],effect});try{const r=await runSmithBatch(g.s,{...ORDER,product:820,maximum:1,reserve:0,allowNativeQuestProbe:true},{walk:g.walk});expect(r).toMatchObject({ok:effect,made:effect?1:0,banked:effect?10:0,attempts:1,conserved:true});if(!effect)expect(r.failure).toContain('native dart admission');}finally{g.stop();}}});
 
 test('Al Kharid entry pays the east toll, smiths three platebodies and banks them with assets reconciled',async()=>{
  const g=fake();

@@ -53,3 +53,42 @@ test('the written ladders.json matches a fresh build', () => {
     const written = JSON.parse(readFileSync(join(knowledgeDir(), 'ladders.json'), 'utf8'));
     expect(written.counts).toEqual(out.counts);
 });
+
+test('all eight native smelting rungs name both existing workers', () => {
+    const metals = ['bronze', 'iron', 'silver', 'steel', 'gold', 'mithril', 'adamant', 'runite'];
+    for (const metal of metals) {
+        const rung = all.find(m => m.id === `smithing/smelt-${metal}`);
+        expect(rung).toBeDefined();
+        expect(rung!.workers).toContain('scripts/smelt-bars.ts');
+        expect(rung!.workers).toContain('scripts/smelt-batch.ts');
+    }
+    // The native guide labels this rung Adamant; the CLI recipe is Adamantite.
+    expect(all.some(m => m.id === 'smithing/smelt-adamantite')).toBe(false);
+    expect(data.readFile('scripts/smelt-bars.ts')).toContain('adamantite | runite');
+});
+
+test('unsupported guide metals do not inherit a smelting worker', () => {
+    const changed = {
+        ...data,
+        dbtables: data.dbtables.map(t => t.table !== 'skill_guides' ? t : {
+            ...t, rows: t.rows.map(r => r.name !== 'skill_guide_smithing_smelting' ? r : {
+                ...r, data: { ...r.data, unlock: r.data.unlock!.map(u => u.map(v => v.replace('Silver', 'Blurite'))) },
+            }),
+        }),
+    };
+    const unsupported = Object.values(buildLadders(changed).ladders).flat()
+        .find(m => m.id === 'smithing/smelt-blurite');
+    expect(unsupported).toBeDefined();
+    expect(unsupported!.workers).toEqual([]);
+    expect(unsupported!.worker).toBeNull();
+});
+
+test('native CLI recipe names resolve the rung products without accepting the guide alias', async () => {
+    const { smeltRecipe } = await import('../../../scripts/smelt-batch');
+    for (const metal of ['bronze', 'iron', 'silver', 'steel', 'gold', 'mithril', 'adamant', 'runite']) {
+        const rung = all.find(m => m.id === `smithing/smelt-${metal}`)!;
+        expect(smeltRecipe(metal === 'adamant' ? 'adamantite' : metal).product).toBe(rung.outputs[0]!.id!);
+    }
+    expect(() => smeltRecipe('adamant')).toThrow('unsupported smelt recipe: adamant');
+    expect(() => smeltRecipe('blurite')).toThrow('unsupported smelt recipe: blurite');
+});

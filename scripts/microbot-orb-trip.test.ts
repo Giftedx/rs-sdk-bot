@@ -21,3 +21,75 @@ test('Glory landing without exact charge or with foreign assets cannot pass',()=
 test('actual Glory consumer refuses landing with an unconfirmed native charge without a second dispatch',async()=>{const f=orbOptionSession();try{f.setClick(async()=>{f.s.sdk.getState=()=>({player:{worldX:3087,worldZ:3496,level:0},inventory:[],dialog:{isOpen:false,isWaiting:false,options:[]},bank:{isOpen:false},interface:{isOpen:false}});return{success:true};});await expect(returnOrbGlory(f.s,()=>true)).rejects.toThrow('charge/landing receipt');expect(f.actions).toHaveLength(1);expect(f.stock[1712]).toBe(1);expect(f.stock[1710]??0).toBe(0);}finally{clearInterval(f.timer)}});
 
 test('energy exact debit and restored energy cannot use stale system or player-chat completion',async()=>{const f=orbOptionSession();try{const state=f.s.sdk.getState;f.s.sdk.getState=()=>({...state(),gameMessages:[...state().gameMessages,{type:2,text:'You have 3 doses of potion left.',tick:3,observationId:999}]});f.setSip(async()=>{f.stock[3008]!--;f.stock[3010]=1;f.setEnergy(50);return{success:true};});await expect(drinkOrbEnergy(f.s,3008,()=>true)).rejects.toThrow('receipt unconfirmed');}finally{clearInterval(f.timer)}});
+
+import{orbPeerEquipment,classifyOrbPeer,orbPlayerDetection}from'./microbot-orb-trip';
+
+const detectionPolicy={radius:14,unknownAppearance:'escape' as const};
+const detectionOwn={worldX:3088,worldZ:3571,level:0,combatLevel:100};
+const detectionPeer={kind:'player' as const,index:3,name:'OwnedPeer',combatLevel:100,x:3089,z:3571,distance:1};
+test('orb Wilderness classification uses both native combat ranges and observed air-staff exclusion',()=>{
+ expect(classifyOrbPeer(detectionOwn,detectionPeer,[],detectionPolicy)).toBe('danger');
+ for(const id of[1381,1397,1405])expect(classifyOrbPeer(detectionOwn,detectionPeer,[id],detectionPolicy)).toBe('air-staff');
+ expect(classifyOrbPeer(detectionOwn,{...detectionPeer,combatLevel:108},[],detectionPolicy)).toBe('ignore');
+ expect(classifyOrbPeer(detectionOwn,{...detectionPeer,combatLevel:102,z:3520},[],detectionPolicy)).toBe('ignore');
+ expect(classifyOrbPeer({...detectionOwn,worldZ:3436},detectionPeer,[],detectionPolicy)).toBe('ignore');
+ expect(classifyOrbPeer(detectionOwn,detectionPeer,undefined,detectionPolicy)).toBe('unknown');expect(classifyOrbPeer(detectionOwn,detectionPeer,undefined,{...detectionPolicy,unknownAppearance:'ignore'})).toBe('ignore');
+});
+test('public appearance equipment requires received ready identity and decodes native IDs rather than kit models',()=>{
+ const appearance=new Uint16Array(12);appearance[3]=512+1381;appearance[4]=256+18;const player={name:'OwnedPeer',ready:true,combatLevel:100,appearance},c:any={players:{3:player}};
+ expect(orbPeerEquipment(c,detectionPeer)).toEqual([1381]);player.ready=false;expect(orbPeerEquipment(c,detectionPeer)).toBeUndefined();player.ready=true;player.name='Replacement';expect(orbPeerEquipment(c,detectionPeer)).toBeUndefined();
+});
+test('same-session detector latches after observed dangerous arrival and never clears on later loss of visibility',()=>{
+ const state:any={player:{...detectionOwn,worldZ:3436},nearbyPlayers:[detectionPeer]},s:any={name:'actor',tick:()=>9,client:{players:{3:{ready:true,name:'OwnedPeer',combatLevel:100,appearance:new Uint16Array(12)}}},sdk:{getState:()=>state,getStateAge:()=>0}};
+ const monitor=orbPlayerDetection(s,detectionPolicy);expect(monitor.check()).toBe(false);state.player.worldZ=3571;expect(monitor.check()).toBe(true);expect(monitor.trigger).toMatchObject({index:3,name:'OwnedPeer',reason:'danger',publicEquipment:[]});state.nearbyPlayers=[];state.player.worldZ=3436;expect(monitor.check()).toBe(true);
+});
+test('orb player options are opt-in and reject unknown policies before gameplay',()=>{
+ expect(orbOptions({})).toEqual({});expect(orbOptions({ORB_PLAYER_DETECTION:'1'})).toEqual({playerDetection:{radius:14,unknownAppearance:'escape'}});expect(()=>orbOptions({ORB_PLAYER_UNKNOWN:'ignore'})).toThrow('need');expect(()=>validateOrbOptions({playerDetection:{radius:15,unknownAppearance:'escape'}})).toThrow('policy');
+});
+
+import{orbInputOwner}from'./microbot-orb-trip';
+test('scoped orb floor owner never adopts a foreign executor or restores over its replacement',()=>{
+ const original=()=>({success:true}),foreign=()=>({success:true}),client:any={executeBotAction:original,isInGame:()=>true,localPlayer:{routeX:[0],routeZ:[0]},toSceneTile:()=>({x:0,z:0}),locSceneInfo:()=>({shape:22}),writeOpcode:()=>{},out:{p2:()=>{}}},s:any={client},owner=orbInputOwner(s);
+ const restore=owner.scoped(()=>installOrbFloorBridge(client,{x:3097,z:3468}));expect(owner.valid()).toBe(true);client.executeBotAction=foreign;expect(owner.valid()).toBe(false);restore();expect(client.executeBotAction).toBe(foreign);expect(()=>owner.scoped(()=>{throw Error('must not install')})).toThrow('owner replaced');client.executeBotAction=original;expect(owner.valid()).toBe(false);
+});
+test('scoped orb bridge restoration returns only its own exact executor and rejects client replacement',()=>{
+ const original=()=>({success:true}),client:any={executeBotAction:original},s:any={client},owner=orbInputOwner(s);const restore=owner.scoped(()=>{const bridge=()=>({success:true});client.executeBotAction=bridge;return()=>{if(client.executeBotAction===bridge)client.executeBotAction=original;};});expect(owner.valid()).toBe(true);restore();expect(client.executeBotAction).toBe(original);expect(owner.valid()).toBe(true);s.client={executeBotAction:original};expect(owner.valid()).toBe(false);
+});
+
+test('actual orb trip stops bank and final control inputs when executor changes during interface settlement',async()=>{
+ const original=()=>({success:true}),foreign=()=>({success:true}),client:any={executeBotAction:original},calls:string[]=[],state:any={player:{worldX:3185,worldZ:3436,level:0,lifeId:1,respawnCount:0,isDead:false},autoRetaliateEnabled:false,prayers:{prayerPoints:99,activePrayers:{}},interface:{isOpen:false},bank:{isOpen:false}};
+ const s:any={client,ended:new Promise(()=>{}),tick:()=>0,sdk:{getState:()=>state,getSkill:()=>({level:99,baseLevel:99}),getInventory:()=>[],getEquipment:()=>[],sendCloseModal:async()=>{calls.push('close');client.executeBotAction=foreign;}},bot:{openBank:async()=>{calls.push('bank');return{success:true};}},direct:async()=>{calls.push('control');return{success:true};}};
+ const{runOrbTrips}=await import('./microbot-orb-trip'),{orbRecipes}=await import('./microbot-c-orbs');const result=await runOrbTrips(s,'air',orbRecipes.air,async()=>{calls.push('charge');return{ok:true,made:1,detail:''};},{target:1,batch:1,cap:100,stop:()=>false});expect(result.ok).toBe(false);expect(result.inputOwnershipLost).toBe(true);expect(result.banked).toBe(false);expect(calls).toEqual(['close']);expect(client.executeBotAction).toBe(foreign);
+});
+
+import{orbOwnedActions}from'./microbot-orb-trip';
+test('real BotActions equip and unequip continuations refuse dispatch after owner replacement during UI dismissal',async()=>{
+ for(const mode of['equip','unequip']){const client:any={executeBotAction:()=>({success:true})},s:any={client},owner=orbInputOwner(s),calls:string[]=[],row:any={id:1381,name:'Staff of air',slot:3,count:1,optionsWithIndex:[{text:'Wield',opIndex:2}]},state:any={dialog:{isOpen:true,options:[]},inventory:[row],equipment:[row]};
+ s.sdk={getState:()=>state,getInventory:()=>state.inventory,getEquipment:()=>state.equipment,sendClickDialog:async()=>{calls.push('dismiss');return{success:true};},waitForStateChange:async()=>{state.dialog.isOpen=false;client.executeBotAction=()=>({success:true});return state;},sendUseItem:async()=>{calls.push('equip');return{success:true};},sendUseEquipmentItem:async()=>{calls.push('remove');return{success:true};}};
+ const bound=orbOwnedActions(s,owner.valid);await expect(mode==='equip'?bound.bot.equipItem(row):bound.bot.unequipItem(row)).rejects.toThrow('input owner absent');expect(calls).toEqual(['dismiss']);expect(owner.valid()).toBe(false);
+ }
+});
+test('real BotActions withdrawal refuses paid dispatch after owner replacement during note-mode synchronization',async()=>{
+ const client:any={executeBotAction:()=>({success:true})},s:any={client},owner=orbInputOwner(s),calls:string[]=[],row:any={id:567,name:'Unpowered orb',slot:0,count:2},state:any={interface:{isOpen:true},bank:{noteMode:true,items:[row]},inventory:[]};
+ s.sdk={getState:()=>state,sendClickComponent:async()=>{calls.push('note-mode');return{success:true};},waitForCondition:async()=>{state.bank.noteMode=false;client.executeBotAction=()=>({success:true});return state;},sendBankWithdraw:async()=>{calls.push('withdraw');return{success:true};}};
+ await expect(orbOwnedActions(s,owner.valid).bot.withdrawItem(row,1,{asNote:false})).rejects.toThrow('input owner absent');expect(calls).toEqual(['note-mode']);expect(owner.valid()).toBe(false);
+});
+test('local SDK receiver also checks a send resumed after an internal connection wait',async()=>{
+ let owned=true,wire=0;const sdk:any={sendUseItem:async function(){await Promise.resolve();owned=false;return this.sendAction();},sendAction:function(){return this.send();},send:()=>{wire++;return{success:true};}},bound=orbOwnedActions({sdk},()=>owned);await expect(bound.sdk.sendUseItem(0,1)).rejects.toThrow('input owner absent');expect(wire).toBe(0);
+});
+
+import{drinkOrbSupplyPotion}from'./microbot-orb-trip';
+function supplyPotionFixture(id:number,mode='normal'){
+ const families=[[2448,181,183,185],[2434,139,141,143]],family=families.find(f=>f.includes(id))!,index=family.indexOf(id),next=family[index+1]??229,remaining=3-index,completion=remaining===0?'You have finished your potion.':`You have ${remaining} dose${remaining===1?'':'s'} of potion left.`,stock:Record<number,number>={[id]:1,995:37},messages:any[]=[{type:0,text:completion,tick:-1,observationId:1}],client:any={executeBotAction:()=>({success:true})},player={lifeId:1,respawnCount:0,isDead:false};let tick=0,calls=0,prayer=10;const callbacks=new Set<()=>void>(),actions:any[]=[],events:any[]=[];
+ const timer=setInterval(()=>{tick++;if(tick===2&&mode!=='stale'){messages.push({type:mode==='chat'?2:0,text:completion,tick,observationId:3});events.push({kind:'completion',tick});}if(tick===3&&mode==='owner')client.executeBotAction=()=>({success:true});for(const cb of[...callbacks])cb();},4);
+ const s:any={client,tick:()=>tick,onTick:(f:()=>void)=>{callbacks.add(f);return()=>callbacks.delete(f);},sdk:{getStateAge:()=>0,getInventory:()=>Object.entries(stock).filter(([,n])=>n>0).map(([key,count],slot)=>({id:Number(key),count,slot})),getState:()=>({player,prayers:{prayerPoints:prayer},gameMessages:messages}),sendUseItem:async()=>{calls++;events.push({kind:'sip',tick});stock[id]!--;stock[next]=(stock[next]??0)+1;if(family[0]===2434&&mode!=='no-prayer')prayer=41;messages.push({type:0,text:'You drink some of your potion.',tick,observationId:2});if(mode==='foreign-stock')stock[995]++;if(mode==='lost')throw Error('lost reply after native debit');return{success:true,phase:'dispatch'};}},direct:async(a:any)=>{actions.push({...a,tick});return{success:true};}};return{s,timer,stock,actions,events,calls:()=>calls,tick:()=>tick,next};
+}
+test('actual orb supply potion waits fresh delayed completion and three ticks before another protected input',async()=>{
+ for(const id of[2448,181,183,185,2434,139,141,143]){const f=supplyPotionFixture(id);try{expect(await drinkOrbSupplyPotion(f.s,id,()=>true)).toEqual({[id]:-1,[f.next]:1});await f.s.direct({type:'togglePrayer',prayerIndex:14});expect(f.calls()).toBe(1);expect(f.actions[0].tick).toBeGreaterThanOrEqual(5);expect(f.events.find(e=>e.kind==='completion').tick).toBe(2);expect(f.stock[995]).toBe(37);}finally{clearInterval(f.timer);}}
+});
+test('orb supply potion unknown completion, missing prayer restoration and foreign stock do not retry',async()=>{
+ for(const mode of['stale','chat','no-prayer','foreign-stock']){const f=supplyPotionFixture(mode==='no-prayer'?2434:2448,mode);try{await expect(drinkOrbSupplyPotion(f.s,mode==='no-prayer'?2434:2448,()=>true)).rejects.toThrow('unconfirmed');expect(f.calls()).toBe(1);expect(f.actions).toEqual([]);}finally{clearInterval(f.timer);}}
+});
+test('orb supply potion reconciles one lost reply but owner replacement during settlement prevents following inputs',async()=>{
+ const lost=supplyPotionFixture(2448,'lost');try{expect(await drinkOrbSupplyPotion(lost.s,2448,()=>true)).toEqual({2448:-1,181:1});expect(lost.calls()).toBe(1);}finally{clearInterval(lost.timer);}const foreign=supplyPotionFixture(2448,'owner');try{await expect(drinkOrbSupplyPotion(foreign.s,2448,()=>true)).rejects.toThrow('owner/life/stock');expect(foreign.calls()).toBe(1);expect(foreign.actions).toEqual([]);}finally{clearInterval(foreign.timer);}
+});

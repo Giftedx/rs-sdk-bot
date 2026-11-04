@@ -142,7 +142,7 @@ Each line is a rung that misses a method fact, and names the missing fact. A run
 ### Runecraft (0 of 11 rungs)
 
 
-## Rungs with no worker (516 of 595)
+## Rungs with no worker (513 of 595)
 
 Each line: unlock level, method, base XP per action, ticks per action, model XP per tick at the unlock level (25x, derived), source. A pending capability has a definition and no entry script.
 
@@ -482,7 +482,7 @@ Each line: unlock level, method, base XP per action, ticks per action, model XP 
 - L82 craft dragonhide chaps black `crafting/craft_dragonhide_chaps_black`; 172 XP; 3 ticks; model 1433.33 XP/tick; `knowledge/skills.json` `scripts/skill_crafting/configs/leather/leather.dbrow:145`
 - L84 craft dragonhide body black `crafting/craft_dragonhide_body_black`; 258 XP; 3 ticks; model 2150 XP/tick; `knowledge/skills.json` `scripts/skill_crafting/configs/leather/leather.dbrow:172`
 
-### Smithing (132 of 137 rungs have no worker)
+### Smithing (129 of 137 rungs have no worker)
 
 - L1 bronze axe `smithing/bronze_axe`; 12.5 XP; 5 ticks; model 62.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:331`
 - L1 bronze dagger `smithing/bronze_dagger`; 12.5 XP; 5 ticks; model 62.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:1`
@@ -512,7 +512,6 @@ Each line: unlock level, method, base XP per action, ticks per action, model XP 
 - L18 iron med helm `smithing/iron_med_helm`; 25 XP; 5 ticks; model 125 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:870`
 - L19 iron dart tip `smithing/iron_dart_tip`; 25 XP; 5 ticks; model 125 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:1134`
 - L19 iron sword `smithing/iron_sword`; 25 XP; 5 ticks; model 125 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:78`
-- L20 Silver `smithing/smelt-silver`; 13.7 XP; 5 ticks; model 68.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:490`
 - L20 iron arrowheads `smithing/iron_arrowheads`; 25 XP; 5 ticks; model 125 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:1200`
 - L20 iron scimitar `smithing/iron_scimitar`; 50 XP; 5 ticks; model 250 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:144`
 - L21 iron longsword `smithing/iron_longsword`; 50 XP; 5 ticks; model 250 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:210`
@@ -572,7 +571,6 @@ Each line: unlock level, method, base XP per action, ticks per action, model XP 
 - L66 mithril platelegs `smithing/mithril_platelegs`; 150 XP; 5 ticks; model 750 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:694`
 - L66 mithril plateskirt `smithing/mithril_plateskirt`; 150 XP; 5 ticks; model 750 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:760`
 - L68 mithril platebody `smithing/mithril_platebody`; 250 XP; 5 ticks; model 1250 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:826`
-- L70 Adamant `smithing/smelt-adamant`; 37.5 XP; 5 ticks; model 187.5 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:495`
 - L70 adamant dagger `smithing/adamant_dagger`; 62.5 XP; 5 ticks; model 312.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:45`
 - L71 adamant axe `smithing/adamant_axe`; 62.5 XP; 5 ticks; model 312.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:375`
 - L72 adamant mace `smithing/adamant_mace`; 62.5 XP; 5 ticks; model 312.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:441`
@@ -591,7 +589,6 @@ Each line: unlock level, method, base XP per action, ticks per action, model XP 
 - L82 adamant kiteshield `smithing/adamant_kiteshield`; 187.5 XP; 5 ticks; model 937.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:1101`
 - L83 adamant claws `smithing/adamant_claws`; 125 XP; 5 ticks; model 625 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:1398`
 - L84 adamant 2h sword `smithing/adamant_2h_sword`; 187.5 XP; 5 ticks; model 937.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:309`
-- L85 Runite `smithing/smelt-runite`; 50 XP; 5 ticks; model 250 XP/tick; `knowledge/dbtables.json#skill_guides` `scripts/player/configs/skill_guide.dbrow:496`
 - L85 rune dagger `smithing/rune_dagger`; 75 XP; 5 ticks; model 375 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:56`
 - L86 adamant platelegs `smithing/adamant_platelegs`; 187.5 XP; 5 ticks; model 937.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:705`
 - L86 adamant plateskirt `smithing/adamant_plateskirt`; 187.5 XP; 5 ticks; model 937.5 XP/tick; `knowledge/skills.json` `scripts/skill_smithing/configs/smithing/smithing.dbrow:771`

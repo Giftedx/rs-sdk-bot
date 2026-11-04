@@ -1,9 +1,11 @@
 import {expect,test,spyOn} from 'bun:test';
 import * as coreBot from '../packages/core/src/bot';
 import * as walking from '../packages/core/src/walk';
+import * as ticks from '../packages/core/src/ticks';
+import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {firemakingOptions,firemakingPreflight,xpForLevel,levelForXp,logShortfall,lineTiles,nextFreeTile,rowStart,packWant,
  tinderboxPlan,tinderboxUnitMax,runFiremaking,freeRouteAccount,routeDebits,entryBudget,BURN_ROWS,DRAYNOR_BANK,TINDERBOX,
- firemakingSite,CATHERBY_SITE,DRAYNOR_SITE} from './firemaking-order';
+ firemakingSite,CATHERBY_SITE,DRAYNOR_SITE,LOGS,progressiveFiremakingLog} from './firemaking-order';
 import type {Leg} from '../packages/core/src/world';
 import type {Travel} from '../packages/core/src/travel';
 
@@ -12,8 +14,42 @@ test('options need a target and validate every bound',()=>{
  expect(firemakingOptions({TARGET_LEVEL:'30'})).toEqual({target:30,maxLogs:10000,cap:20000,log:'normal',toolBudget:50,cashReserve:0});
  expect(firemakingOptions({TARGET_LEVEL:'45',LOG:'Willow',MAX_LOGS:'27',CAP:'900',TOOL_BUDGET:'0',CASH_RESERVE:'100'}))
   .toEqual({target:45,maxLogs:27,cap:900,log:'willow',toolBudget:0,cashReserve:100});
- for(const bad of [{TARGET_LEVEL:'1'},{TARGET_LEVEL:'100'},{TARGET_LEVEL:'30',LOG:'yew'},{TARGET_LEVEL:'30',CAP:'0'},{TARGET_LEVEL:'30',MAX_LOGS:'1.5'},{TARGET_LEVEL:'30',TOOL_BUDGET:'-1'}])
+ for(const bad of [{TARGET_LEVEL:'1'},{TARGET_LEVEL:'100'},{TARGET_LEVEL:'30',LOG:'redwood'},{TARGET_LEVEL:'30',CAP:'0'},{TARGET_LEVEL:'30',MAX_LOGS:'1.5'},{TARGET_LEVEL:'30',TOOL_BUDGET:'-1'}])
   expect(()=>firemakingOptions(bad)).toThrow();
+});
+test('all six native logs have exact level admission, while progressive selects highest level without a stock fallback',()=>{
+ for(const [log,id,level]of [['maple',1517,45],['yew',1515,60],['magic',1513,75]]as const){
+  expect(LOGS[log]).toMatchObject({id,level});const o=firemakingOptions({TARGET_LEVEL:'99',LOG:log});
+  expect(firemakingPreflight(o,{plane:0,baseLevel:level,level})).toBeNull();
+  expect(firemakingPreflight(o,{plane:0,baseLevel:level-1,level:level-1})).toContain('need Firemaking');
+ }
+ for(const[level,log]of [[1,'normal'],[14,'normal'],[15,'oak'],[30,'willow'],[44,'willow'],[45,'maple'],[60,'yew'],[75,'magic'],[99,'magic']]as const)expect(progressiveFiremakingLog(level)).toBe(log);
+ expect(()=>progressiveFiremakingLog(0)).toThrow();
+ expect(firemakingOptions({TARGET_LEVEL:'99',PROGRESSIVE:'1',BATCH:'1'})).toMatchObject({progressive:true,batch:1});
+ expect(()=>firemakingOptions({TARGET_LEVEL:'99',PROGRESSIVE:'1',BATCH:'28'})).toThrow();
+});
+test('actual progressive burn loop reselects after the bounded paid batch; unavailable next tier never burns a lower log',async()=>{
+ const run=async(maple:number,replace=false,bad:'none'|'stock'|'unknown'='none',burnOnly=false)=>{
+  let tick=0,generation=0,open=false,pending=0;const burns:number[]=[],withdrawals:number[]=[];
+  const player={worldX:2809,worldZ:3441,level:0,lifeId:1,respawnCount:0,isDead:false};
+  const skill={name:'Firemaking',level:burnOnly?99:44,baseLevel:burnOnly?99:44,experience:xpForLevel(burnOnly?99:45)-1},health={name:'Hitpoints',level:99,baseLevel:99,experience:10000};
+  const bank=[{id:1519,count:2,name:'Willow logs'},...maple?[{id:1517,count:maple,name:'Maple logs'}]:[]],inv:any[]=[{id:590,count:1,slot:0,name:'Tinderbox'}];
+  const client={executeBotAction:async()=>{},membersAccount:true};
+  const state=()=>({player,inventory:inv,equipment:[],skills:[skill,health],gameMessages:[],nearbyLocs:[],bank:{isOpen:open,items:bank},dialog:{isOpen:false},interface:{isOpen:false}});
+  const s:any={name:'progressivefixture',client,tick:()=>tick,onTick:()=>()=>{},ended:new Promise(()=>{}),bankObservation:()=>({generation,items:bank}),
+   sdk:{getState:state,getInventory:()=>inv,getSkill:(n:string)=>n==='Firemaking'?skill:health,getSkillXp:(n:string)=>n==='Firemaking'?skill.experience:health.experience,
+    sendUseItemOnItem:async(_a:number,b:number)=>{pending=inv.find(i=>i.slot===b).id;burns.push(pending);return{success:true};}},
+   bot:{openBank:async()=>{open=true;generation++;return{success:true};},closeBank:async()=>{open=false;return{success:true};},withdrawItem:async(row:any,n:number)=>{withdrawals.push(row.id);row.count-=n;for(let i=0;i<n;i++)inv.push({id:row.id,count:1,name:row.name,slot:inv.length});generation++;return{success:true};}}};
+  const advance=()=>{tick++;if(pending&&bad!=='unknown'){const index=inv.findIndex(i=>i.id===pending);inv.splice(index,1);skill.experience+=pending===1519?90:135;skill.baseLevel=skill.level=burnOnly?99:45;pending=0;if(bad==='stock')inv.push({id:995,count:1,name:'Coins',slot:2});if(replace)client.executeBotAction=async()=>{};}};
+  const spies=[spyOn(BotActions.prototype,'openBank').mockImplementation(s.bot.openBank),spyOn(BotActions.prototype,'closeBank').mockImplementation(s.bot.closeBank),spyOn(BotActions.prototype,'withdrawItem').mockImplementation(s.bot.withdrawItem),spyOn(ticks,'waitTicks').mockImplementation(async()=>{advance();}),spyOn(ticks,'waitUntil').mockImplementation(async(_s,test)=>{for(let i=0;i<4;i++){if(test(undefined))return true;advance();}return false;}),spyOn(walking,'sessionWalker').mockResolvedValue({}as any),spyOn(walking,'walkPath').mockImplementation(async(_d,points)=>{const p=points.at(-1)!;player.worldX=p.x;player.worldZ=p.z;return{ok:true}as any;})];
+  try{return{result:await runFiremaking(s,firemakingOptions({TARGET_LEVEL:'99',MAX_LOGS:'2',PROGRESSIVE:burnOnly?'0':'1',LOG:burnOnly?'willow':'normal',BURN_ONLY:burnOnly?'1':'0',BATCH:'1',TOOL_BUDGET:'0'})),burns,withdrawals,bank};}finally{for(const spy of spies)spy.mockRestore();}
+ };
+ const at99=await run(0,false,'none',true);expect(at99.result.ok).toBe(true);expect(at99.burns).toEqual([1519,1519]);expect(at99.result.level).toBe(99);
+ const good=await run(1);expect(good.result.ok).toBe(true);expect(good.burns).toEqual([1519,1517]);expect(good.withdrawals).toEqual([1519,1517]);expect(good.result.ticks).toBe(6);
+ const missing=await run(0);expect(missing.result.ok).toBe(false);expect(missing.burns).toEqual([1519]);expect(missing.bank.find(i=>i.id===1519)!.count).toBe(1);
+ const foreign=await run(1,true);expect(foreign.result.ok).toBe(false);expect(foreign.burns).toEqual([1519]);expect(foreign.withdrawals).toEqual([1519]);
+ const drift=await run(1,false,'stock');expect(drift.result.ok).toBe(false);expect(drift.result.failure).toContain('whole-pack');expect(drift.burns).toEqual([1519]);
+ const unknown=await run(1,false,'unknown');expect(unknown.result.ok).toBe(false);expect(unknown.result.failure).toContain('light effect unobserved');expect(unknown.burns).toEqual([1519]);
 });
 test('XP table matches the server curve (Player.ts levelExperience)',()=>{
  expect([2,10,30,48].map(xpForLevel)).toEqual([80,980,7345,28266]);
