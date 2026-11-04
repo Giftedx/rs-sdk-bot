@@ -696,7 +696,7 @@ export const TRICKS: Trick[] = ['loginWine', 'stunRelog', 'sacredOil'];
 export const LEVERS: { id: string; owner: boolean; label: string; retired?: boolean }[] = [
     { id: 'magic-enchant', owner: false, label: 'Enchant ladder rather than teleport ladder; compare by disabling this option' },
     { id: 'combat-hp-bound', owner: false, label: "Melee by combat (HP-bound); melee-only quests after Overall; Witch's House split out" },
-    // Retired 2026-10-23: measured, it slows Defence to 86.7 style XP/tick and loses ticks in every table
+    // Retired: measured, it slows Defence to 86.7 style XP/tick and loses ticks in every table
     // (research/combat-measure.md section 6); bow + cannon carries Ranged instead.
     { id: 'cannon-melee', owner: false, retired: true, label: 'Cannon fires for Ranged XP during every melee top-up (RETIRED: loses ticks)' },
     { id: 'stun-guests', owner: false, label: 'Prayer and Magic inside the pickpocket stuns' },
@@ -714,12 +714,12 @@ export const LEVERS: { id: string; owner: boolean; label: string; retired?: bool
     { id: 'rival-dialogue-burst', owner: false, label: 'Dialogue bursts (several continue clicks in one tick)' },
     { id: 'rival-grandtree-agility', owner: false, label: 'Grand Tree first, then agility laps' },
     { id: 'rival-bury-in-knife-wc', owner: false, label: 'Bury bones inside the knife woodcutting loop' },
-    // Retired 2026-10-23: our measured laps (research/agility.md) replace the rival's estimate.
+    // Retired: our measured laps (research/agility.md) replace the rival's estimate.
     { id: 'rival-agility-lap', owner: false, retired: true, label: '66-74 tick agility laps (RETIRED: measured rates used)' },
     { id: 'rival-stun-pack', owner: false, label: 'Stun pack: skill actions inside pickpocket stuns' },
     { id: 'rival-monkey-madness', owner: false, label: 'Monkey Madness before melee and thieving' },
     { id: 'rival-sea-slug', owner: false, label: 'Sea Slug for early Fishing' },
-    // Retired 2026-10-29: Cairn's order (research/community-and-upstream.md section 7) loses 628 ticks in our model.
+    // Retired: Cairn's order (research/community-and-upstream.md section 7) loses 628 ticks in our model.
     // Dragon Slayer replaces the Strength and Defence top-ups, but Hitpoints then needs Witch's House at the end.
     { id: 'rival-dragon-combat', owner: false, retired: true, label: 'Dragon Slayer before the melee top-ups, Doric for the 32 QP (RETIRED: loses ticks in the model)' },
 ];

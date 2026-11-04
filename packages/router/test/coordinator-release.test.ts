@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {beginSessionAttempt} from '../../core/src/session-lifecycle';
@@ -31,10 +31,21 @@ test('a completed composed job releases the run account; the unused partner stay
  expect(readMergedPlan(f.base).jobs.find((j:any)=>j.script==='bow.ts')).toBeUndefined();
 });
 
-test('the composed job keeps its ownership when the task failed, a participant still runs or a logout is unconfirmed',()=>{
- for(const cause of ['failed','other-task','running','runs-unreadable','logout','active']){
+test('a failed but settled composed job releases its run account; a missing receipt still refuses',()=>{
+ const released=fixture();
+ atomicJson(join(released.prac,'coordinator/runs/run-1/receipt.json'),{taskId:'run-handoff',runId:'run-1',ok:false,at:1});
+ released.install();
+ const jobs=readCoordinatorJobs(released.base).jobs;
+ expect(jobs[0]).toEqual({accounts:['BowBeforeMe'],script:'handoff.ts',enabled:false,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:'run-handoff',env:{COORDINATOR_RUN_ID:'run-1'}});
+ expect(jobs[1]).toMatchObject({account:'Shaftmaker',script:'magic.ts',enabled:true,coordinatorTask:'run-magic',env:{COORDINATOR_RUN_ID:'run-2'}});
+ const missing=fixture();
+ rmSync(join(missing.prac,'coordinator/runs/run-1/receipt.json'));
+ expect(missing.install).toThrow('a composed assignment needs all its participants');
+});
+
+test('the composed job keeps its ownership when the receipt is missing or unreadable, a participant still runs or a logout is unconfirmed',()=>{
+ for(const cause of ['other-task','running','runs-unreadable','logout','active']){
   const f=fixture();
-  if(cause==='failed')atomicJson(join(f.prac,'coordinator/runs/run-1/receipt.json'),{taskId:'run-handoff',runId:'run-1',ok:false,at:1});
   if(cause==='other-task')atomicJson(join(f.prac,'coordinator/runs/run-1/receipt.json'),{taskId:'other',runId:'run-1',ok:true,at:1});
   if(cause==='running')atomicJson(join(f.prac,'swarm-runs.json'),[{key:'k',accounts:['BowBeforeMe'],log:'x',offset:0}]);
   if(cause==='runs-unreadable')atomicJson(join(f.prac,'swarm-runs.json'),{not:'a list'});

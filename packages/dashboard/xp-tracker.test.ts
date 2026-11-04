@@ -41,3 +41,19 @@ describe('xp tracker',()=>{
   expect(rows[0].ttl).toBeNull();expect(rows[0].progress).toBe(1);expect(rows[0].level).toBe(99);
  });
 });
+
+test('combat level and next-level needs match the 2004 formula and the world feed',()=>{
+ const X=(globalThis as any).atlasXp;
+ // Live accounts: the world feed's combat level beside the levels from their status files.
+ expect(X.combat({Attack:72,Strength:1,Defence:1,Hitpoints:56,Ranged:1,Prayer:1,Magic:1}).level).toBe(37);
+ expect(X.combat({Attack:65,Strength:11,Defence:10,Hitpoints:56,Ranged:57,Prayer:1,Magic:1}).level).toBe(44);
+ expect(X.combat({Attack:5,Strength:1,Defence:1,Hitpoints:10,Ranged:1,Prayer:1,Magic:37}).level).toBe(20);
+ expect(X.combat({Attack:1,Strength:1,Defence:1,Hitpoints:10,Ranged:1,Prayer:1,Magic:1}).level).toBe(3);
+ const c=X.combat({Attack:72,Strength:1,Defence:1,Hitpoints:56,Ranged:1,Prayer:1,Magic:1});
+ for(const [k,n] of Object.entries(c.next) as [string,number][]){
+  const lv:any={Attack:72,Strength:1,Defence:1,Hitpoints:56,Ranged:1,Prayer:1,Magic:1};
+  const key={melee:'Strength',defence:'Defence',prayer:'Prayer',ranged:'Ranged',magic:'Magic'}[k]!;
+  expect(X.combat({...lv,[key]:lv[key]+n}).level).toBe(38);expect(X.combat({...lv,[key]:lv[key]+n-1}).level).toBe(37);
+ }
+ expect(X.combat({Attack:99,Strength:99,Defence:99,Hitpoints:99,Ranged:99,Prayer:99,Magic:99})).toEqual({level:126,next:null});
+});

@@ -91,6 +91,15 @@ test('Hetty proof rejects injected entry and reconciles saved effects independen
  expect(hettyLiveJobSavedChecks(b,{...a,vars:{67:3}},r).questPoints).toBe(false);
  expect(hettyLiveJobSavedChecks(b,{...a,skills:b.skills},r).reward).toBe(false);
  expect(hettyLiveJobSavedChecks(b,{...a,inventories:b.inventories},r).coins).toBe(false);
+ const travel=[{id:'npc:captain_barnaby:brimhaven@2679,3275',coins:30,packBefore:80,packAfter:50},
+  {id:'npc:customs_officer:port-sarim@2953,3147',coins:30,packBefore:50,packAfter:20}];
+ const report=JSON.parse(r.log.split('QUEST_COOK_JOB_RESULT ')[1]!);report.gather.travel=travel;
+ const paid={...a,inventories:{...a.inventories,95:[{slot:0,id:995,count:41}]}};
+ const funded={...b,inventories:{...b.inventories,95:[{slot:0,id:995,count:105}]}};
+ const worker={...r,log:'LOGOUT logged-out\nQUEST_COOK_JOB_RESULT '+JSON.stringify(report)};
+ expect(Object.values(hettyLiveJobSavedChecks(funded,paid,worker)).every(Boolean)).toBe(true);
+ expect(hettyLiveJobSavedChecks(funded,paid,r).coins).toBe(false);
+
  expect(hettyLiveJobSavedChecks(b,{...a,inventories:{93:[],95:a.inventories[95]}},r).assets).toBe(false);
  expect(hettyLiveJobSavedChecks(b,a,{...r,log:r.log.replace('LOGOUT logged-out','LOGOUT timeout')}).worker).toBe(false);
 });
@@ -109,20 +118,20 @@ test('pinned tutorial_complete grant is the reconciled tutorial kit',()=>{
 test('native fixture matches the retained populated quest entry before travel and coin deposit',()=>{
  const skills=Array.from({length:21},(_,index)=>({index,level:index===3?10:index===7?30:1,rawExperience:index===3?9800:index===7?75000:0,xp:index===3?980:index===7?7500:0}));
  const slots=(rows:{id:number;count:number}[])=>rows.map((i,slot)=>({slot,...i}));
- const entry={version:6,position:{x:3209,z:3214,level:0},skills,vars:{281:1000,29:2,63:6,179:22,192:2,67:0,101:6},inventories:{
+ const entry={version:6,position:{x:2863,z:3428,level:0},skills,vars:{281:1000,29:2,63:6,179:22,192:2,67:0,101:6},inventories:{
   93:slots(HETTY_MATCHED_ENTRY.inventory!),94:HETTY_MATCHED_ENTRY.equipment!,95:slots(HETTY_MATCHED_ENTRY.bank!)}};
  expect(hettyCarriedEntry(entry)).toBe(true);
- expect(entry.inventories[93]).toHaveLength(21);expect(entry.inventories[95]).toHaveLength(29);
- expect(entry.inventories[93][0]).toEqual({slot:0,id:995,count:1902});
- expect(entry.inventories[95][0]).toEqual({slot:0,id:995,count:15606});
- expect(entry.inventories[93][10]).toEqual({slot:10,id:2132,count:1});
- expect(entry.inventories[94]).toEqual([{id:284,count:1,slot:4},{id:285,count:1,slot:7}]);
+ expect(entry.inventories[93]).toHaveLength(4);expect(entry.inventories[95]).toHaveLength(29);
+ expect(entry.inventories[93][0]).toEqual({slot:0,id:995,count:80});
+ expect(entry.inventories[95][0]).toEqual({slot:0,id:995,count:19895});
+ expect(entry.inventories[93].slice(1)).toEqual([1,2,3].map(slot=>({slot,id:1933,count:1})));
+ expect(entry.inventories[94]).toEqual([]);
  for(const position of [{x:3092,z:3243,level:0},{x:3209,z:3215,level:0}])expect(hettyCarriedEntry({...entry,position})).toBe(false);
  for(const [container,count] of [[93,5],[95,20]] as const){
   expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,[container]:entry.inventories[container].map(i=>i.id===995?{...i,count}:i)}})).toBe(false);
  }
- expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,93:entry.inventories[93].filter(i=>i.id!==2132)}})).toBe(false);
- expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,94:[]}})).toBe(false);
+ expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,93:entry.inventories[93].filter(i=>i.id!==1933)}})).toBe(false);
+ expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,94:[{slot:0,id:284,count:1}]}})).toBe(false);
  expect(hettyCarriedEntry({...entry,inventories:{...entry.inventories,93:[...entry.inventories[93]].reverse()}})).toBe(false);
  expect(hettyCarriedEntry({...entry,vars:{...entry.vars,67:3}})).toBe(false);
  expect(hettyCarriedEntry({...entry,vars:{...entry.vars,101:0}})).toBe(false);
@@ -140,7 +149,7 @@ test('registration login recount keeps the staged six quest points',()=>{
  expect(recount({29:2})).toBe(1);
  const skills=Array.from({length:21},(_,index)=>({index,level:index===3?10:index===7?30:1,rawExperience:index===3?9800:index===7?75000:0,xp:index===3?980:index===7?7500:0}));
  const slots=(rows:{id:number;count:number}[])=>rows.map((i,slot)=>({slot,...i}));
- const entry={version:9,position:{x:3209,z:3214,level:0},skills,vars:{...vars},inventories:{
+ const entry={version:9,position:{x:2863,z:3428,level:0},skills,vars:{...vars},inventories:{
   93:slots(HETTY_MATCHED_ENTRY.inventory!),94:HETTY_MATCHED_ENTRY.equipment!,95:slots(HETTY_MATCHED_ENTRY.bank!)}};
  expect(hettyCarriedEntry({...entry,vars:{...vars,101:recount(vars)}})).toBe(true);
  expect(hettyCarriedEntry({...entry,vars:{281:1000,29:2,101:1}})).toBe(false);

@@ -1,17 +1,20 @@
 {
   "id": "iron-progress-order",
-  "goal": "Convert owned iron ore into a finite exact banked iron-bar order and Smithing XP, including current ordinary entry staging and logout.",
+  "goal": "Convert owned ore into exact banked bars or owned bars into exact banked smithing products, with Smithing XP, finite ordinary entry, asset reconciliation and logout.",
   "entry": "scripts/smelt-bars.ts",
   "files": [
     "scripts/smelt-bars.ts",
     "scripts/smelt-bars.test.ts",
     "scripts/smelt-batch.ts",
     "scripts/smelt-batch.test.ts",
+    "scripts/smith-batch.ts",
+    "scripts/smith-batch.test.ts",
     "packages/planner/src/travel.ts",
+    "packages/planner/src/production-batch.ts",
     "packages/practice/src/iron-progress-order-proof.ts",
     "packages/practice/test/iron-progress-order-proof.test.ts"
   ],
-  "consumer": "Actual installed iron worker from representative Varrock East entry reaches Al Kharid, smelts/banks exact iron bars with new SmithingXP, accounts for failed-smelt ore consumption and toll/travel expenses, retains ore reserve/other assets/life and confirms logout.",
+  "consumer": "Preserve existing finite smelting CLI callers and their acceptance. Add ORDER_ACTION=smith to the same account-parameterized entry. The first live anvil consumer is OreElse Smithing84->85: PRODUCT_ID=1115, MAX_MAKE=3, BAR_RESERVE=334, CAP=1600. Consume15 owned iron bars, gain9375 XP and bank three new iron platebodies. Retain the hammer, reserved bars, coins and unrelated assets. Refuse unsupported recipes, insufficient levels or inputs clearly and confirm logout. Live admission requires the standing owner's release and settled session. The next consumer prices rune production at85.",
   "checks": [
     {
       "id": "iron-progress-order-regressions",
@@ -21,6 +24,7 @@
         "test",
         "scripts/smelt-bars.test.ts",
         "scripts/smelt-batch.test.ts",
+        "scripts/smith-batch.test.ts",
         "packages/practice/test/iron-progress-order-proof.test.ts",
         "--timeout",
         "10000"

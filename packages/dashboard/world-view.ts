@@ -8,6 +8,22 @@ export const ONLINE_MS = 30_000, SPOT_RADIUS = 10, RIVALS_PER_BOARD = 10;
 const NAME = /^[A-Za-z0-9_ -]{1,12}$/;
 
 // Skill rows of a hiscore player page, as server.ts reads it: "<Board> <rank> <level> <time>" after tags are removed.
+// A value board page (Equipment, Bank, Runite): its top 50, one table row each with the rank, the player link and
+// the value cell (exact gp in a title when the cell shows a short value, "1366K"; a plain count for Runite).
+// Only the first table counts.
+export type ValueRow = { rank: number; name: string; value: number | null; text: string };
+export function valueBoardRows(html: string): ValueRow[] {
+    const rows: ValueRow[] = [];
+    for (const tr of html.split(/<tr[\s>]/).slice(1)) {
+        const rank = /<td align="right">(\d+)<\/td>/.exec(tr), name = /href="\/hiscores\/player\/([^?"]+)\?/.exec(tr), cell = /<td align="right" class="yellow"(?: title="([\d,]+) gp")?>([^<]+)<\/td>/.exec(tr);
+        if (!rank || !name || !cell) continue;
+        // Runite's page adds This week and Today tables after All time: the board is the first table.
+        if (rows.length && Number(rank[1]) <= rows[rows.length - 1]!.rank) break;
+        const exact = (cell[1] ?? cell[2]!).replace(/,/g, '');
+        rows.push({ rank: Number(rank[1]), name: decodeURIComponent(name[1]!), value: /^\d+$/.test(exact) ? Number(exact) : null, text: cell[2]!.trim() });
+    }
+    return rows;
+}
 export function hiscoreRows(html: string, boards: readonly string[]): HiscoreRow[] {
     const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
     const rows: HiscoreRow[] = [];
@@ -54,9 +70,10 @@ export function contentionView(claims: any[], roster: ReadonlyMap<string, Seen &
 }
 
 // One looked-up player: hiscore rows (or null when not fetched), and where the world feed last saw them.
-export function lookupView(name: string, rows: HiscoreRow[] | null, at: number | null, seen: Seen | undefined, now: number) {
+// worn: the player's worn items read from the world feed when the lookup ran (online players only).
+export function lookupView(name: string, rows: HiscoreRow[] | null, at: number | null, seen: Seen | undefined, now: number, worn: { slot: string; name: string }[] | null = null, wornAt: number | null = null) {
     const online = !!seen && now - seen.seen < ONLINE_MS;
-    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null };
+    return { name, at, rows, online, x: seen?.x ?? null, z: seen?.z ?? null, plane: seen?.level ?? null, combat: seen?.combat ?? null, lastSeen: seen?.seen ?? null, worn, wornAt };
 }
 
 // Bot farms: other players whose names follow one pattern, online now. A numbered series ("Money 01" … "Money 43",

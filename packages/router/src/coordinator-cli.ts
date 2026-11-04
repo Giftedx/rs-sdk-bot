@@ -14,6 +14,8 @@ import {assignedWorker} from './model-worker';
 import {processMatches,killTree} from '../../practice/src/proc';
 import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
+import {processDeliveryPrs} from './delivery-pr';
+import {freshScoreboard} from './coverage';
 
 const cli='packages/router/src/coordinator-cli.ts';
 const json=(file:string)=>JSON.parse(readFileSync(file,'utf8'));
@@ -146,21 +148,40 @@ function clearFocus(capability:string){
 // Rules (coordinator-rules.ts) run before any model round and whatever the planner's state. A fingerprint reads each
 // candidate's import closure, so a pass runs on a new receipt or every RULE_RECHECK_MS, not every loop.
 const RULE_RECHECK_MS=5*60*1000;
+// The rule reads the fleet best from the scoreboard file; it rebuilds the scoreboard only when the file is older than this.
+const RULE_BOARD_MAX_AGE_MS=60*60*1000;
 let rulePass={at:0,receipts:-1};
 let unlocks:((skill:string)=>number[])|undefined;
+// A skipped chain is reported once per reason, not on every pass.
+const ruleSkips=new Set<string>();
 function runRules(state:CoordinatorState,liveLimit:number){
  const receipts=state.tasks.filter(r=>r.receipt).length,now=Date.now();
  if(receipts===rulePass.receipts&&now-rulePass.at<RULE_RECHECK_MS)return;
  rulePass={at:now,receipts};
  try{
+  let board:any;try{board=freshScoreboard(projectRoot,RULE_BOARD_MAX_AGE_MS);}catch{board=null;}
+  const fleetSkills:any[]|undefined=Array.isArray(board?.fleetSkills)?board.fleetSkills:undefined;
   const added=applyRules(state,{fingerprint:cap=>deliveryFingerprint(deliveryTask(cap)),unlocks:unlocks??=skillUnlocks(projectRoot),maxOpen:liveLimit,
+   side:board?.fleet?.side??process.env.FLEET_SIDE??'local',
+   fleetBest:skill=>fleetSkills?.find(r=>String(r.skill).toLowerCase()===skill.toLowerCase()),
+   skipped:skip=>{const key=JSON.stringify(skip);if(!ruleSkips.has(key)){ruleSkips.add(key);event('rule-skipped',{rule:'next-band',...skip});}},
    paused:account=>existsSync(join(projectRoot,'.practice','stop-'+account)),
    level:(account,skill)=>{try{return json(join(projectRoot,'.practice/status',account+'.json')).skills?.find((v:any)=>v.name===skill)?.level;}catch{return undefined;}}},now);
   if(added.length){saveState(state);event('rule-tasks-added',{tasks:added.map(t=>({id:t.id,rule:t.rule,account:t.account,accept:t.accept}))});}
  }catch(error){event('rule-pass-failed',String(error));}
 }
+// Opens staged delivery PRs (delivery-pr.ts) beside the loop: git and gh never hold dispatch or live delivery.
+let deliveryPrs:Promise<void>|undefined;
+function openDeliveryPrs(){
+ deliveryPrs??=processDeliveryPrs(coordinationDir,projectRoot).then(({opened,failed,conflicts})=>{
+  for(const pr of opened)event('delivery-pr-opened',{task:pr.taskId,branch:pr.branch,state:pr.state,url:pr.url});
+  for(const pr of failed)event('delivery-pr-failed',{task:pr.taskId,branch:pr.branch,attempts:pr.attempts,nextAt:pr.nextAt,error:pr.lastError});
+  for(const pr of conflicts)event('delivery-pr-conflict',{task:pr.taskId,branch:pr.branch,error:pr.lastError});
+ }).catch(error=>event('delivery-pr-failed',String(error))).finally(()=>{deliveryPrs=undefined;});
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
+ openDeliveryPrs();
  // Adopt before reconciliation: even a just-finished failed build keeps its
  // delivery focus while the planner prepares its exact repair.
  const focus=!config.focusCapability&&activeBuildFocus(state);
@@ -212,9 +233,11 @@ async function tick(state:CoordinatorState,config:any){
   try{await ensureSwarm(currentRevision(),{currentSource:()=>currentRevision()},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
+ const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
  for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
-  const freeGB=freemem()/2**30;
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(join(coordinationDir,'publish-request.json'))});
+  const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
+  let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
+  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children
   // can race to create it. Controller startup does not log accounts in.

@@ -2,7 +2,7 @@ import {existsSync,mkdirSync,readFileSync,writeFileSync,linkSync,realpathSync,un
 import {join,resolve,dirname,sep} from 'node:path';
 import {createHash} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
-import {capabilityRevision,launchRevision} from './worker-release';
+import {capabilityRevision,cachedLaunchRevision} from './worker-release';
 import {processMatchesRecent,safeKill} from '../../practice/src/proc';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
 import {isLocalServer} from './localserver';
@@ -13,7 +13,8 @@ export const RECOVERY_SCHEMA='session-recovery/1';
 export const RECOVERY_BINDING_MS=45000;
 // The controller heartbeat (.practice/swarm-state.json, written every 2 s) counts as current for this long. A heartbeat
 // older than this means the controller stalled or died, so the window stays short; the checks between a fleet read and
-// its use must stay fast (processMatchesRecent reuses its PowerShell lookups for that reason).
+// its use must stay fast. The controller's own heartbeat cannot advance while it issues and binds synchronously, so
+// the launch reuses the issue-time process observations at binding (launchObservations) and the source check is cached.
 export const FLEET_HEARTBEAT_MAX_MS=10000;
 export const RECOVERY_SCRIPT='packages/core/src/session-recovery.ts';
 export type RecoveryRequest={schema:typeof RECOVERY_SCHEMA;account:string;server:string;runId:string;nonce:string;endedAt:number;source:string};
@@ -21,7 +22,8 @@ type EvidenceRef={path:string;sha256:string};
 export type ControlledRecoveryRequest=RecoveryRequest&{kind:'session-recovery';qualification:{delivery:EvidenceRef;proof:EvidenceRef}};
 export type RecoveryPermitChecks={now?:()=>number;matches?:(pid:number,marker:string)=>boolean;source?:()=>string;capability?:(capability:unknown)=>string|undefined;nativeFixture?:boolean};
 type Checks=RecoveryPermitChecks;
-type Permit={schema:'session-recovery-permit/1';request:ControlledRecoveryRequest;controller:{pid:number;nonce:string;source:string};issuedAt:number;expiresAt:number;runnerSha256:string;nativeFixture:boolean;completedEnd?:unknown;missionRevision?:string};
+type ProducerRef={attemptId:string;sha256:string|null};
+type Permit={schema:'session-recovery-permit/1';request:ControlledRecoveryRequest;controller:{pid:number;nonce:string;source:string};issuedAt:number;expiresAt:number;runnerSha256:string;nativeFixture:boolean;completedEnd?:unknown;missionRevision?:string;producerHistory?:ProducerRef[]};
 const sha=(b:string|Buffer)=>createHash('sha256').update(b).digest('hex');
 const json=(p:string)=>JSON.parse(readFileSync(p,'utf8'));
 const same=(a:unknown,b:unknown)=>typeof a==='string'&&typeof b==='string'&&a.toLowerCase()===b.toLowerCase();
@@ -114,7 +116,7 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
  const owner=json(join(base,'.practice/coordinator/swarm-owner.json'));
  if(!Number.isSafeInteger(owner.pid)||owner.pid<1||typeof owner.nonce!=='string'||!owner.nonce
   ||owner.source!==r.source||!matches(owner.pid,owner.nonce)||(issuing&&owner.pid!==process.pid))throw Error('recovery controller owner changed');
- if((options.source??(()=>launchRevision(base)))()!==r.source)throw Error('recovery source changed');
+ if((options.source??(()=>cachedLaunchRevision(base)))()!==r.source)throw Error('recovery source changed');
  assertRecoveryNotStopped(r.account,base);
  const record=json(join(base,'.practice/coordinator/state.json')).tasks?.find((t:any)=>t.status==='running'&&t.runId===r.runId);
  const spec=record?.spec,authorization=spec?.sessionRecovery;
@@ -187,10 +189,22 @@ function capabilityRelease(capability:unknown,base:string):string|undefined{
 // A crash, malformed marker or failed child leaves its lease held. This module never clears an end or retries.
 export function issueRecoveryPermit(r:ControlledRecoveryRequest,base:string,options:Checks={}):Permit{
  const checked=authority(r,base,options,true),paths=recoveryPermitPaths(r,base);
- if(checked.completedEnd&&(checked.latest.state!=='none'||listAttempts(r.account,r.server,{root:join(base,'.practice/session-lifecycle')}).length))throw Error('recovery completed account already has producer history');
+ let producerHistory:ProducerRef[]|undefined;
+ if(checked.completedEnd){
+  const attempts=listAttempts(r.account,r.server,{root:join(base,'.practice/session-lifecycle')}),last=attempts.at(-1),a=last?.receipt;
+  // A retired producer that reached START but disconnected needs cleanup, not a new owner for its history.
+  // authority already checks that its owner is gone. Partial intents and confirmed histories stay refused.
+  const held=checked.latest.state==='held'&&checked.latest.attemptId===last?.attemptId&&a
+   &&attempts.every(t=>t.receipt&&same(t.receipt.account,r.account)&&t.receipt.server===r.server&&t.receipt.attemptId===t.attemptId)
+   &&a.createdAt<=a.updatedAt&&a.updatedAt<=r.endedAt
+   &&a.events.some(e=>e.kind==='ready')&&a.events.find(e=>e.kind==='ended')?.detail==='disconnected'
+   &&a.events.filter(e=>e.kind==='logout').at(-1)?.detail==='disconnected';
+  if(!(checked.latest.state==='none'&&attempts.length===0)&&!held)throw Error('recovery completed account already has producer history');
+  producerHistory=attempts.map(({attemptId,sha256})=>({attemptId,sha256}));
+ }
  assertNoRecoveryLease(r.account,base);
  const permit:Permit={schema:'session-recovery-permit/1',request:r,controller:checked.owner,issuedAt:checked.now,expiresAt:checked.now+150000,runnerSha256:checked.runnerSha256,nativeFixture:!!options.nativeFixture,
-  ...(checked.completedEnd?{completedEnd:checked.completedEnd,missionRevision:checked.missionRevision}:{})};
+  ...(checked.completedEnd?{completedEnd:checked.completedEnd,missionRevision:checked.missionRevision,producerHistory}:{})};
  mkdirSync(dirname(paths.permit),{recursive:true});writeFileSync(paths.permit,JSON.stringify(permit),{flag:'wx'});linkSync(paths.permit,paths.lease);return permit;
 }
 function current(r:ControlledRecoveryRequest,base:string,options:Checks,controller=false,ownedChild=false):Permit{
@@ -198,12 +212,16 @@ function current(r:ControlledRecoveryRequest,base:string,options:Checks,controll
  if(!isDeepStrictEqual(p.completedEnd,checked.completedEnd)||p.missionRevision!==checked.missionRevision)throw Error('recovery completed end or mission changed');
  if(p.completedEnd){
   const attempts=listAttempts(r.account,r.server,{root:join(base,'.practice/session-lifecycle')});
-  if(attempts.length){
-   const child=existsSync(paths.child)?json(paths.child):null,used=existsSync(paths.used)?json(paths.used):null,a=attempts[0]?.receipt;
-   if(attempts.length!==1||!a||child?.pid!==used?.pid||used?.nonce!==r.nonce||a.createdAt<p.issuedAt
+  const history:ProducerRef[]=p.producerHistory??[],retained=attempts.slice(0,history.length).map(({attemptId,sha256})=>({attemptId,sha256}));
+  if(!isDeepStrictEqual(history,retained))throw Error('recovery completed producer ownership changed');
+  const fresh=attempts.slice(history.length);
+  if(fresh.length){
+   const child=existsSync(paths.child)?json(paths.child):null,used=existsSync(paths.used)?json(paths.used):null,a=fresh[0]?.receipt;
+   if(fresh.length!==1||!a||child?.pid!==used?.pid||used?.nonce!==r.nonce||a.createdAt<p.issuedAt
+    ||!('attemptId' in checked.latest)||checked.latest.attemptId!==fresh[0]?.attemptId
     ||a.owner.pid!==child.pid||a.owner.coordinatorRunId!==r.runId||a.owner.workerRelease!==r.source||a.owner.script!==RECOVERY_SCRIPT)
     throw Error('recovery completed producer ownership changed');
-  }else if(checked.latest.state!=='none')throw Error('recovery completed producer ownership changed');
+  }else if(history.length?checked.latest.state!=='held'||checked.latest.attemptId!==history.at(-1)?.attemptId:checked.latest.state!=='none')throw Error('recovery completed producer ownership changed');
  }
  if(p.schema!=='session-recovery-permit/1'||p.nativeFixture!==!!options.nativeFixture||!isDeepStrictEqual(p.request,r)||!isDeepStrictEqual(p.controller,checked.owner)
   ||p.runnerSha256!==checked.runnerSha256||!Number.isFinite(p.issuedAt)||p.issuedAt>checked.now||p.expiresAt!==p.issuedAt+150000||checked.now>=p.expiresAt
@@ -300,17 +318,25 @@ export function finishRecoveryPermit(r:ControlledRecoveryRequest,exitCode:number
  unlinkSync(paths.lease);return completed;
 }
 
+// Issue and binding run in one synchronous controller call, which blocks the controller's heartbeat writer. Each
+// PowerShell command-line lookup costs over 1 s under load, so repeating the lookups at binding can age the heartbeat
+// past FLEET_HEARTBEAT_MAX_MS. Binding reuses the issue observations of this one call; it still re-reads every file and the
+// source stamp, and the child's consumeRecoveryConnection observes both processes again in its own process.
+export function launchObservations(options:Checks):Checks{
+ const lookup=options.matches??processMatchesRecent,seen=new Map<string,boolean>();
+ return {...options,matches:(pid,marker)=>{const key=pid+' '+marker;let hit=seen.get(key);if(hit===undefined){hit=lookup(pid,marker);seen.set(key,hit);}return hit;}};
+}
 export function launchPermittedRecovery(r:ControlledRecoveryRequest,base:string,options:Checks={}){
  // Remote issuance requires the current same-capability delivered native proof (authority); a fixture is local-only.
  if(!isLocalServer(r.server)&&(options.nativeFixture||resolve(base)!==resolve(import.meta.dir,'../../..')))throw Error('recovery remote launch outside the repository controller; no lease issued');
  const repo=resolve(import.meta.dir,'../../..'),runner=join(repo,RECOVERY_SCRIPT);
- const permit=issueRecoveryPermit(r,base,options),paths=recoveryPermitPaths(r,base);
+ const launch=launchObservations(options),permit=issueRecoveryPermit(r,base,launch),paths=recoveryPermitPaths(r,base);
  if(sha(readFileSync(runner))!==permit.runnerSha256)throw Error('recovery runner differs from permit');
  writeFileSync(paths.input,JSON.stringify(r),{flag:'wx'});mkdirSync(paths.output,{recursive:true});
  const child=Bun.spawn([process.execPath,runner,paths.input,paths.output,...(options.nativeFixture?['--permit-base='+base]:[])],{
   cwd:repo,env:{...process.env,WORKER_RELEASE:r.source,WORKER_ENTRY:''},windowsHide:true,stdin:'pipe',
   stdout:Bun.file(join(dirname(paths.input),'worker.log')),stderr:Bun.file(join(dirname(paths.input),'worker.err'))});
- let bindError:unknown;try{bindRecoveryChild(r,child.pid,base,options);}catch(error){bindError=error;}
+ let bindError:unknown;try{bindRecoveryChild(r,child.pid,base,launch);}catch(error){bindError=error;}
  const completion=(async()=>{
   let timedOut=false;
   const timer=setTimeout(()=>{timedOut=true;void safeKill(child.pid,r.nonce);},125000);timer.unref();

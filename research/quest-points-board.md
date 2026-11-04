@@ -2008,3 +2008,31 @@ Swensen's maze, the Reveller, Sigli (the draugen), Thorvald (combat with no weap
 `viking_journal.rs2:7-8`), Peer the Seer (his house is entered with no items or worn items, `viking_peer.rs2:36,293`;
 he banks them, `:195-213`) and Olaf and Sigmund (trade chains). `%viking` stages and the `%viking_bits` bits are in
 `configs/quest_viking.constant`. Horror from the Deep is CLAIMED by long-quest helper 3.
+
+### Koschei victory for full boss completion
+
+The completion account must defeat Koschei's fourth form before it completes Thorvald's trial. The ladder refuses
+entry after either the trial or the quest is complete
+([viking_thorvald.rs2:133](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L133)).
+An honourable loss also completes the trial, so the vote and the quest flag do not prove this boss win
+([viking_thorvald.rs2:399](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L399)).
+
+The fourth-form victory queue emits the unique defeat dialogue and grants `viking_sword`
+([viking_thorvald.rs2:304](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L304)).
+Use the account's fight record, the victory dialogue and the reward grant from that fight as evidence. A blade in
+inventory alone does not prove victory. The generated worker attacks all four forms but accepts the return from the arena without
+checking which outcome caused it
+([quest-viking.ts:409](../scripts/generated/quest-viking.ts#L409)). A complete-quest result from that worker must
+remain separate from a verified fourth-form victory. Native qualification and live victory evidence for this
+boss remain open; check this outcome before the completion account takes Thorvald's trial.
+
+Code-read candidate: stage food and spare rings of recoil after Peer banks the account's items. The entry check
+does not exclude food or the ring's `category_656`
+([entry check](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L435),
+[ring config](../vendor/rs-sdk/server/content/scripts/skill_magic/configs/enchanted_jewelry.obj#L1)). On a members map,
+the fourth-form damage queue explicitly applies recoil and consumes ring charges
+([damage queue](../vendor/rs-sdk/server/content/scripts/quests/quest_viking/scripts/viking_thorvald.rs2#L383)).
+A ring shatters at 40 reflected damage
+([charge rule](../vendor/rs-sdk/server/content/scripts/general/scripts/enchanted_jewellry/ring_of_recoil.rs2#L1)).
+Entry with these supplies, ring replacement, food use, the victory and the connected full quest route need native
+proof before this candidate can support a live assignment.

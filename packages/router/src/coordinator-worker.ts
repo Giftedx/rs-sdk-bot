@@ -11,6 +11,7 @@ import {runLiveTask,liveRows,swarmProcesses} from './coordinator-live';
 import {projectRoot,coordinationDir,atomicJson} from './coordinator-store';
 import {isWorkspace,publishWorkspace,workspaceChanges,prepareReplayRoot,removeReplayRoot} from './build-workspace';
 import {recentRecords} from '../../core/src/tick-record';
+import {stageDeliveryPr,deliverySourceSet} from './delivery-pr';
 
 // A drained fleet for a publish: finite live runs end within their own timeouts (at most 30 minutes in practice).
 const PUBLISH_WAIT_MS=45*60*1000;
@@ -126,7 +127,11 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
     }
    }
    const out=publishWorkspace(mainRoot!,definition.id,definition.files);atomicJson(join(directory,'publish.json'),{...out,at:Date.now(),from:projectRoot,to:mainRoot});
-   return{...result,published:out};
+   // The coordinator opens the PR later (delivery-pr.ts); a staging failure never fails the delivered build.
+   let deliveryPr:any=null;
+   try{const pr=stageDeliveryPr({workspace:projectRoot,runDir:directory,coordinationDir,taskId:task.id,capability:definition.id,files:out.published,sourceSet:deliverySourceSet(definition.entry,definition.files,projectRoot),result:{...result,published:out}});deliveryPr=pr&&{branch:pr.branch,state:pr.state};}
+   catch(error){deliveryPr={error:String(error)};}
+   return{...result,published:out,deliveryPr};
   }finally{if(existsSync(request)&&JSON.parse(readFileSync(request,'utf8')).runId===runId)unlinkSync(request);}
  };
  const owned=()=>existsSync(lock)&&JSON.parse(readFileSync(lock,'utf8')).runId===runId;
@@ -141,7 +146,8 @@ export async function executeTask(task:CoordTask,dependencies:Record<string,any>
   const response=await runModel(agent,prompt,Math.max(1,authorDeadline-Date.now()),false);
   atomicJson(join(directory,`author-response-${attempt}.json`),response);return response;
  };
- let prepared:any=null;try{prepared=preparedNativeDelivery(loadState(),definition.id,deliveryFingerprint(definition));}catch{/* incomplete or changed source needs the ordinary author */}
+ let prepared:any=null;try{prepared=preparedNativeDelivery(loadState(),definition.id,deliveryFingerprint(definition),task.resumeSource);}catch{/* incomplete or changed source needs the ordinary author */}
+ if(task.resumeSource&&!prepared)throw Error('explicit prepared source continuation no longer matches a native delivery');
  const built=await finishBuildDelivery(definition.id,prepared,{fingerprint:()=>deliveryFingerprint(definition),
  author:()=>authorLoop({id:definition.id,goal:definition.goal+'\n'+buildWorkOrder(task,dependencies,directory),preset:'',delivery:definition},{maxFixes:2,proveRuns:1,repairRegressions:true},{runModel:authorModel,exists:fileExists,prove:async()=>{throw Error('delivery required');},deliver:runDeliveryTask,diagnose:runDiagnosticTask}),
  deliver:()=>runDeliveryTask(definition),record:result=>atomicJson(join(directory,'author.json'),result),

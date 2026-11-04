@@ -1,7 +1,7 @@
 // Swarm dashboard server. Usage: bun packages/dashboard/server.ts  ->  http://localhost:3100
 // Sources: the status files every bot writes (.practice/status/<name>.json, packages/core/src/status.ts), the live
 // accounts in vendor/rs-sdk/bots (SERVER = the demo), the swarm controller (.practice/swarm-state.json), the world feed
-// (who is in the world, server tick, player count), our live hiscore ranks (cached 5 min), the 2026-10-22 board
+// (who is in the world, server tick, player count), our live hiscore ranks (cached 5 min), the board
 // snapshot (each skill board's #1), the live Equipment, Bank and Runite boards, Grand Exchange prices
 // (/api/market/items), research/owner-requests.md (the owner's request queue), the Haggis plan (research/haggis-run.md
 // when it has a board table, else haggis-plan.json here), and this machine (memory, CPU, bun processes).
@@ -18,13 +18,15 @@ import {goalPlan,goalProgress,GOAL_RECEIPTS,type GoalInputs} from './goals';
 import { VIEWER_MANIFEST_SHA256, viewerAssetRoute, viewerBridgeSource } from './viewer';
 import {coordinationView} from './coordination';
 import {fleetSidesView,remoteBots,scoreboardView} from './fleet-view';
-import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow} from './world-view';
+import {contentionView,farmsView,hiscoreRows,lookupView,overtakeView,rivalsView,rosterView,valueBoardRows,ONLINE_MS,RIVALS_PER_BOARD,type BoardRow,type HiscoreRow,type ValueRow} from './world-view';
+import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
+import { isLocalServer } from '../core/src/localserver';
 import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, suppliesFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
-const operatorControl=createOperatorControl({root});
+const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
 const practice = join(root, '.practice');
 const statusDir = join(practice, 'status');
 const botsDir = join(root, 'vendor', 'rs-sdk', 'bots');
@@ -141,12 +143,18 @@ function readStatuses(): Map<string, Status> {
             const mtime = statSync(p).mtimeMs;
             let hit = statusCache.get(p);
             if (!hit || hit.mtime !== mtime) {
-                hit = { mtime, doc: JSON.parse(readFileSync(p, 'utf8')) };
-                statusCache.set(p, hit);
+                const doc = JSON.parse(readFileSync(p, 'utf8'));
+                if (!doc || typeof doc.name !== 'string' || !doc.name || typeof doc.server !== 'string'
+                    || !Number.isFinite(doc.at) || doc.at < 0
+                    || ['phase','role','goal','result','timeline'].some(k => doc[k] != null && typeof doc[k] !== 'string')
+                    || ['skills','inventory','bank','equipment','quests'].some(k => doc[k] != null && !Array.isArray(doc[k]))
+                    || (doc.skills ?? []).some((k: any) => !k || typeof k.name !== 'string')) continue;
+                hit = { mtime, doc };
                 track(hit.doc);
+                statusCache.set(p, hit);
             }
             const s = hit.doc;
-            if (/^localhost/.test(s.server) && Date.now() - s.at > 30 * 60_000) continue; // stale practice bots
+            if (isLocalServer(s.server) && Date.now() - s.at > 30 * 60_000) continue; // stale practice bots
             out.set(s.name, s);
         } catch { /* being written */ }
     }
@@ -163,6 +171,7 @@ const foodOf = (l: any[] | null | undefined) => (l ?? []).filter((i: any) => i?.
 // Coins at the first status of each run (name + started), so "made this run" survives a dashboard restart only
 // within one process; it restarts from the next status after that.
 const runStartCoins = new Map<string, number>();
+const sampleSessions = new Map<string, string>();
 const samples = new Map<string, Sample[]>();
 const spark = new Map<string, number[]>();
 type Ev = { at: number; name: string; text: string };
@@ -171,6 +180,12 @@ const lastPhase = new Map<string, string>();
 const phaseSince = new Map<string, { at: number; exact: boolean }>();
 for (const e of [...events].reverse()) phaseSince.set(e.name + NL + e.text, { at: e.at, exact: true });
 function track(s: Status) {
+    const session = JSON.stringify([s.server, s.started ?? null]);
+    if (sampleSessions.get(s.name) !== session) {
+        samples.delete(s.name);
+        spark.delete(s.name);
+        sampleSessions.set(s.name, session);
+    }
     const xp = (s.skills ?? []).reduce((n: number, k: any) => n + (k.xp ?? 0), 0);
     const sk: Record<string, number> = {};
     for (const k of s.skills ?? []) sk[k.name] = k.xp ?? 0;
@@ -230,7 +245,7 @@ const allResults = tailJsonl<Res>(FILES.results, 100_000);
 const results: Res[] = allResults.slice(-300).reverse();
 const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test(text);
 // Per account, the newest result and the newest death. They do not drop out of the 300-row list when practice runs
-// fill it (2026-10-23: three live farmer deaths vanished from the page that way).
+// fill it (three live farmer deaths vanished from the page that way).
 const lastResult = new Map<string, string>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
 const noteRes = (r: Res) => { lastResult.set(r.name, r.text); newestRes.set(r.name, r); if (died(r.text)) newestDeath.set(r.name, r); };
 for (const r of allResults) noteRes(r);
@@ -356,15 +371,18 @@ function connectFeed() {
                 const now = Date.now();
                 if (m.t === 'hello') { world.players = m.players ?? world.players; world.tick = m.tick ?? world.tick; world.tickAt = now; world.tickMs = m.tickMs ?? 400; world.rev = m.rev ?? 0; }
                 if (m.t !== 'roster') return;
-                if (!Array.isArray(m.p)) return;
+                if (!Array.isArray(m.p) || !m.p.every((p:any)=>Array.isArray(p)&&p.length>=6&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite))) return;
                 world.players = m.p.length;
                 if (m.k) { world.tick = m.k; world.tickAt = now; }
+                const present=new Set<string>();
                 for (const p of m.p) {
-                    if (!Array.isArray(p) || p.length < 6) continue;
                     const n = String(p[1]).toLowerCase();
+                    present.add(n);
                     if (!firstSeen.has(n)) firstSeen.set(n, now);
                     roster.set(n, { name: String(p[1]), x: p[2], z: p[3], level: p[4], combat: p[5], seen: now });
                 }
+                // Each roster packet is the full visible player set, not a delta.
+                for(const name of roster.keys())if(!present.has(name))roster.delete(name);
             } catch (err) {
                 console.error(`world feed message failed: ${String(err)}`);
             }
@@ -387,12 +405,18 @@ const ranks = new Map<string, { at: number; rows: Row[] }>();
 type RankRec = { at: number; name: string; board: string; rank: number; level: number };
 const rankHist = new Map<string, RankRec[]>(); // name|board -> history, oldest first
 for (const r of tailJsonl<RankRec>(FILES.ranks, 5000)) { const k = r.name + '|' + r.board; const l = rankHist.get(k) ?? []; l.push(r); rankHist.set(k, l); }
+let ranksRefreshing = false;
 async function refreshRanks() {
+    if (ranksRefreshing) return;
+    ranksRefreshing = true;
+    try {
     for (const name of [...liveAccounts(), ...remoteNames()]) {
         const r = ranks.get(name);
         if (r && Date.now() - r.at < 300_000) continue;
         try {
-            const rows: Row[] = hiscoreRows(await (await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`)).text(), SKILL_BOARDS);
+            const response = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(name.toLowerCase())}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Player ranks HTTP ${response.status}`);
+            const rows: Row[] = hiscoreRows(await response.text(), SKILL_BOARDS);
             ranks.set(name, { at: Date.now(), rows });
             for (const row of rows) {
                 const k = name + '|' + row.board, l = rankHist.get(k) ?? [], last = l[l.length - 1];
@@ -404,6 +428,7 @@ async function refreshRanks() {
         } catch { /* next round */ }
         await Bun.sleep(1200);
     }
+    } finally { ranksRefreshing = false; }
 }
 setInterval(() => void refreshRanks(), 60_000);
 void refreshRanks();
@@ -414,7 +439,7 @@ function rankDelta(name: string, board: string) {
     return { delta: base.rank - now.rank, since: base.at, hist: l.slice(-30).map(r => r.rank) };
 }
 // Live #1 per skill board (category = skill index + 1, Quest Points 100: packages/planner/src/scout-cli.ts),
-// refreshed hourly, one request a second. The 2026-10-22 snapshot is only the fallback, with its age shown.
+// refreshed hourly, one request a second. The snapshot is only the fallback, with its age shown.
 const CATEGORY: Record<string, number> = { Overall: 0, 'Quest Points': 100 };
 ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', null, null, 'Runecraft']
     .forEach((b, i) => { if (b) CATEGORY[b] = i + 1; });
@@ -433,7 +458,9 @@ const boardTops = new Map<string, { at: number; rows: BoardRow[] }>();
 async function refreshLiveTops() {
     for (const b of SKILL_BOARDS) {
         try {
-            const rows = parseBoard(await (await fetch(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`, { signal: AbortSignal.timeout(15_000) })).text());
+            const response = await fetch(`${DEMO}/hiscores?category=${CATEGORY[b]}&profile=main`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Board HTTP ${response.status}`);
+            const rows = parseBoard(await response.text());
             if (rows[0]) { liveTop.set(b, { name: rows[0].name, level: rows[0].level, ticks: rows[0].ticks, at: Date.now() }); boardTops.set(b, { at: Date.now(), rows: rows.slice(0, RIVALS_PER_BOARD) }); }
         } catch { /* keep the last value */ }
         await Bun.sleep(1000);
@@ -449,11 +476,16 @@ function topOf(board: string): { name: string; level: number; ticks: number; at:
 }
 const snapshot = (() => { try { return JSON.parse(readFileSync(join(root, 'research', 'hiscores-2026-10-22.json'), 'utf8')); } catch { return null; } })();
 // Player lookups (World plugin): any player's hiscore page, one request every 1.2 s, each kept 30 minutes. The page
-// asks through /api/player; in the background the top 3 of each board and the strangers at our spots are kept fresh,
-// because the hosted page cannot reach the hiscores itself (no CORS) and reads these from its published state.
-const lookups = new Map<string, { name: string; at: number; rows: HiscoreRow[] }>();
+// asks through /api/player; in the background each board's 10 rivals and the strangers at our spots (about 200
+// names, 10 a minute against the 30-minute cache) are kept fresh, because the hosted page cannot reach the hiscores
+// itself (no CORS) and reads these from its published state.
+type Lookup = { name: string; at: number; rows: HiscoreRow[]; worn: { slot: string; name: string }[] | null; wornAt: number | null };
+const lookups = new Map<string, Lookup>();
+// Worn items of an online player (appearance.ts readWorn); lookups run one at a time, so this holds one feed slot.
+const OBJS = loadContentTable(join(root, 'vendor', 'rs-sdk', 'server', 'content'), 'obj');
+const wornOf = (name: string, seen: { x: number; z: number } | undefined) => seen && OBJS.size ? readWorn(DEMO.replace(/^http/, 'ws') + '/worldfeed', name, seen, OBJS) : Promise.resolve(null);
 let lookupChain: Promise<unknown> = Promise.resolve();
-function lookupPlayer(name: string): Promise<{ name: string; at: number; rows: HiscoreRow[] } | null> {
+function lookupPlayer(name: string): Promise<Lookup | null> {
     const key = name.toLowerCase(), hit = lookups.get(key);
     if (hit && Date.now() - hit.at < 1_800_000) return Promise.resolve(hit);
     const job = lookupChain.then(async () => {
@@ -461,7 +493,10 @@ function lookupPlayer(name: string): Promise<{ name: string; at: number; rows: H
         if (again && Date.now() - again.at < 1_800_000) return again;
         try {
             const r = await fetch(`${DEMO}/hiscores/player/${encodeURIComponent(key)}?profile=main`, { signal: AbortSignal.timeout(15_000) });
-            const entry = { name, at: Date.now(), rows: r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [] };
+            if (!r.ok && r.status !== 404) return null;
+            const rows = r.ok ? hiscoreRows(await r.text(), SKILL_BOARDS) : [], seen = roster.get(key), online = !!seen && Date.now() - seen.seen < ONLINE_MS;
+            const worn = online ? await wornOf(name, seen) : null;
+            const entry: Lookup = { name, at: Date.now(), rows, worn, wornAt: worn ? Date.now() : null };
             lookups.set(key, entry);
             if (lookups.size > 400) lookups.delete(lookups.keys().next().value!);
             return entry;
@@ -474,23 +509,29 @@ let lookupWanted: string[] = [];
 // Fresh entries are skipped first, so the next ten that need a lookup get one, however long the list is.
 setInterval(() => { for (const n of lookupWanted.filter(n => { const hit = lookups.get(n.toLowerCase()); return !hit || Date.now() - hit.at >= 1_800_000; }).slice(0, 10)) void lookupPlayer(n); }, 60_000);
 
-// Equipment, Bank and Runite boards: #1 holder and value, scraped every 10 min.
-const extraTop = new Map<string, { name: string; value: string; at: number } | null>();
+// Equipment, Bank and Runite boards: each page's top 50, read every 10 min, for the #1 holder, our accounts' ranks
+// (a value board has no per-player page) and the value at the page's last rank.
+const extraBoards = new Map<string, { at: number; rows: ValueRow[] }>();
 async function refreshExtra() {
     for (const e of EXTRA) {
         try {
-            const text = (await (await fetch(`${DEMO}/hiscores/${e.path}?profile=main`)).text()).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
-            const m = text.match(/(?:# Name [A-Za-z ]*?|All time) 1 (\S+) ([0-9.,]+[KMB]?)/);
-            extraTop.set(e.board, m ? { name: m[1]!, value: m[2]!, at: Date.now() } : null);
+            const response = await fetch(`${DEMO}/hiscores/${e.path}?profile=main`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Value board HTTP ${response.status}`);
+            const rows = valueBoardRows(await response.text());
+            if (rows.length) extraBoards.set(e.board, { at: Date.now(), rows });
         } catch { /* next round */ }
     }
 }
+// An account's rows on the value boards, in the shape of its skill rows (the value as the time text), with the
+// board read's own time (`at`): the account's ranksAt is the time of its skill page. A read older than 30 minutes
+// (the page has failed since) is not shown.
+const valueRanks = (name: string): (Row & { at: number })[] => EXTRA.flatMap(e => { const t = extraBoards.get(e.board), r = t && Date.now() - t.at < 1_800_000 ? t.rows.find(x => x.name.toLowerCase() === name.toLowerCase()) : undefined; return r ? [{ board: e.board, rank: r.rank, level: 0, time: r.text, at: t!.at }] : []; });
 setInterval(() => void refreshExtra(), 600_000);
 void refreshExtra();
 
 // ---------- Grand Exchange prices and item icons ----------
-// Icons: items.png is the 32x32 sprite sheet (64 per row, index = item id) copied from
-// vendor/lostcity-markets/storage/app/private/items-274.png; items.json maps lower-case names to ids (its obj.json).
+// Icons: export-item-icons.ts renders items.png from the installed game config and models.
+// The sheet has 64 32x32 cells per row, indexed by item id; items.json maps lower-case names to ids.
 // The live market API ids win over items.json when both know a name.
 const itemIds = new Map<string, number>(Object.entries((() => { try { return JSON.parse(readFileSync(join(import.meta.dir, 'items.json'), 'utf8')) as Record<string, number>; } catch { return {}; } })()));
 const marketIds = new Map<string, number>();
@@ -503,19 +544,26 @@ const keySupplyIds = () => cached<number[]>(KEY_SUPPLY_FILE, t => Object.values(
 let pricesAt = 0;
 async function refreshPrices() {
     try {
+        const nextIds = new Map<string, number>(), nextMarket = new Map<number, typeof marketById extends Map<number, infer T> ? T : never>(), nextPrices = new Map<string, number>();
         // 100 items per page (the API refuses more); about 15 pages.
         for (let offset = 0, total = 1; offset < total; offset += 100) {
-            const j = await (await fetch(`${DEMO}/api/market/items?limit=100&offset=${offset}`, { signal: AbortSignal.timeout(15_000) })).json() as { items: any[]; total: number };
+            const response = await fetch(`${DEMO}/api/market/items?limit=100&offset=${offset}`, { signal: AbortSignal.timeout(15_000) });
+            if (!response.ok) throw Error(`Market HTTP ${response.status}`);
+            const j = await response.json() as { items: any[]; total: number };
+            if (!Number.isSafeInteger(j.total) || j.total < 0 || !Array.isArray(j.items)) throw Error('Invalid market page');
             total = Math.min(j.total ?? 0, 5000);
             // The market is thin: one trade set Bread's lastPrice to 1,000,000. Use the 7-day VWAP when the item
             // traded at least 3 times, else the shop base price.
             for (const i of j.items ?? []) {
-                if (i.id != null) { marketIds.set(String(i.name).toLowerCase(), Number(i.id)); marketById.set(Number(i.id), { name: i.name, ask: i.ask ?? null, bid: i.bid ?? null, stock: i.sellQuantity ?? 0, vwap: i.vwap ?? null, base: i.basePrice ?? null }); }
+                if (i.id != null) { nextIds.set(String(i.name).toLowerCase(), Number(i.id)); nextMarket.set(Number(i.id), { name: i.name, ask: i.ask ?? null, bid: i.bid ?? null, stock: i.sellQuantity ?? 0, vwap: i.vwap ?? null, base: i.basePrice ?? null }); }
                 const p = i.vwap != null && (i.trades ?? 0) >= 3 ? i.vwap : i.basePrice;
-                if (p != null) prices.set(String(i.name).toLowerCase(), Number(p));
+                if (p != null) nextPrices.set(String(i.name).toLowerCase(), Number(p));
             }
             await Bun.sleep(500); // 2 requests a second at most
         }
+        marketIds.clear();for (const [key,value] of nextIds) marketIds.set(key,value);
+        marketById.clear();for (const [key,value] of nextMarket) marketById.set(key,value);
+        prices.clear();for (const [key,value] of nextPrices) prices.set(key,value);
         pricesAt = Date.now();
     } catch { /* next round */ }
 }
@@ -546,7 +594,7 @@ type Transfer = { at: number; from: string; to: string; items: Item[] };
 const keyName = (n: string) => n.toLowerCase();
 function vault(bots: any[], now: number) {
     const log = cached<Transfer[]>(FILES.vault, t => t.split(NL).filter(Boolean).flatMap(l => { try { return [JSON.parse(l) as Transfer]; } catch { return []; } }), []);
-    const live = bots.filter(b => !/^localhost/.test(b.server));
+    const live = bots.filter(b => !isLocalServer(b.server));
     const byKey = new Map(live.map(b => [keyName(b.name), b]));
     const names = new Set<string>([...live.filter(b => b.at).map(b => keyName(b.name))]);
     for (const t of log) { names.add(keyName(t.from)); names.add(keyName(t.to)); }
@@ -737,7 +785,7 @@ function haggisPlan() {
 type Alert = { at: number; name: string; kind: 'death' | 'failure' | 'blocked' | 'stuck' | 'idle' | 'logout' | 'efficiency'; text: string; practice?: boolean };
 const productionReviews=new Map<string,{at:number;texts:string[]}>();
 // Practice bots: every status file that ever named a localhost server, including ones too old for the roster.
-const practiceNames = () => new Set([...statusCache.values()].filter(c => /^localhost/.test(c.doc.server)).map(c => c.doc.name));
+const practiceNames = () => new Set([...statusCache.values()].filter(c => isLocalServer(c.doc.server)).map(c => c.doc.name));
 function alerts(bots: any[], now: number): Alert[] {
     const out: Alert[] = [];
     const prac = practiceNames();
@@ -882,7 +930,7 @@ const vaultTrend: { at: number; value: number; coins: number }[] = [];
 // Food chain card (research/food-chain.md): the newest fish cook, courier and gold farmers in the live status files
 // of the last 6 hours. A courier that last ran give-to-banker.ts with fish still counts as the courier.
 function foodChain(st: Map<string, Status>, now: number) {
-    const recent = [...st.values()].filter(s => now - s.at < 6 * 3_600_000 && !/^localhost/.test(s.server) && s.name !== MAIN);
+    const recent = [...st.values()].filter(s => now - s.at < 6 * 3_600_000 && !isLocalServer(s.server) && s.name !== MAIN);
     const newest = (f: (s: Status) => boolean) => recent.filter(f).sort((a, b) => b.at - a.at)[0] ?? null;
     const n = (l: any[] | null | undefined, re: RegExp) => (l ?? []).filter((i: any) => re.test(i?.name ?? '')).reduce((k: number, i: any) => k + i.count, 0);
     const FISH = /^(trout|salmon)$/i, fresh = (s: Status) => now - s.at < 20_000;
@@ -935,9 +983,9 @@ function buildState() {
         const fresh = now - s0.at < 20_000;
         const mine = accountJobs.filter(j => j.account.toLowerCase() === name.toLowerCase());
         // Running by hand: a fresh status from a known script while the swarm has no enabled job for the account.
-        const byHand = fresh && !/^localhost/.test(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
+        const byHand = fresh && !isLocalServer(s0.server) && !mine.some(j => j.enabled && j.script) ? SCRIPT_ROLE[String(s0.goal ?? '')] : undefined;
         const s = byHand ? { ...s0, role: byHand.role, goal: byHand.goal } : s0;
-        const rankRows = ranks.get(name)?.rows ?? [];
+        const rankRows = [...(ranks.get(name)?.rows ?? []), ...valueRanks(name)];
         const guess = NO_ROLE.has(s.role) && name !== MAIN ? inferRole(s, rankRows) : null;
         const skill = byHand ? byHand.skill ?? null : ROLE_SKILL[s.role] ?? (guess && (s.skills ?? []).some((k: any) => k.name === guess) ? guess : null);
         const sk = skill ? (s.skills ?? []).find((k: any) => k.name === skill) : null;
@@ -971,7 +1019,7 @@ function buildState() {
         return {
             ...s, name, fresh, inWorld, processActive, currentGoal, production, operation: operationState({ ...s, inWorld, processActive, planJob:job, reserved: name === MAIN }, now), live: inWorld ? live : null, ranksAt:ranks.get(name)?.at??null, ranks: rankRows.map(x => ({ ...x, ...rankDelta(name, x.board) })),
             role: guess ? guess.toLowerCase() + '*' : s.role, roleInferred: !!guess, seenInFeed: firstSeen.has(name.toLowerCase()),
-            practice: /^localhost/.test(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
+            practice: isLocalServer(s.server), lastSeen: Math.max(s.at || 0, live?.seen ?? 0) || null,
             goalSkill: skill, goalLevel: target, goalNow: sk?.level ?? null, goalXp: sk?.xp ?? null, xpPerTick: r,
             xpPerHour: r != null ? r * 3_600_000 / world.tickMs : null, spark: spark.get(name) ?? [], rateSkill: skill ?? "all skills", xpLeft,
             eta: ticksLeft != null ? fmtTicks(ticksLeft) : null, finish: finish != null ? fmtTicks(finish) : null,
@@ -993,7 +1041,7 @@ function buildState() {
     // The other sides' accounts (Codex cloud, Claude cloud): snapshot items and levels, world-feed position, hiscore ranks.
     const local = new Set(bots.map(b => b.name.toLowerCase()));
     for (const r of remoteBots(snapshotFiles(), local, roster, firstSeen, now, process.env.FLEET_SIDE ?? 'local'))
-        (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: (ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), spark: [], rateSkill: 'all skills' });
+        (bots as any[]).push({ ...r, ranksAt: ranks.get(r.name)?.at ?? null, ranks: [...(ranks.get(r.name)?.rows ?? []).map(x => ({ ...x, ...rankDelta(r.name, x.board) })), ...valueRanks(r.name)], spark: [], rateSkill: 'all skills' });
     // In the world now, then fresh status, then the rest (seen in the feed, live accounts, practice bots); Haggis last.
     const tier = (b: typeof bots[number]) => b.reserved ? 5 : b.inWorld ? 0 : b.fresh ? 1 : b.seenInFeed ? 2 : b.practice ? 4 : 3;
     bots.sort((a, b) => tier(a) - tier(b) || (b.at ?? 0) - (a.at ?? 0) || a.name.localeCompare(b.name));
@@ -1009,8 +1057,8 @@ function buildState() {
             : { kind: 'level', ahead: false, text: `-${top.level - best.level} lvl`, close: Math.max(0, best.level / top.level) * 0.8 }) : null;
         return { board: b, top: top ? { name: top.name, level: top.level, time: fmtTicks(top.ticks), ticks: top.ticks, live: top.live, at: top.at } : null, best, gap, kind: 'skill' };
     }), ...EXTRA.map(e => {
-        const t = extraTop.get(e.board);
-        return { board: e.board, top: t ? { name: t.name, level: null, time: t.value, ticks: null } : null, best: null, gap: null, kind: 'value' };
+        const t = extraBoards.get(e.board), first = t?.rows[0], last = t?.rows[t.rows.length - 1];
+        return { board: e.board, top: first ? { name: first.name, level: null, time: first.text, ticks: null } : null, best: null, gap: null, kind: 'value', cutoff: last ? { rank: last.rank, text: last.text } : null };
     })];
     const v = vault(bots, now);
     const cargoDir = join(practice, 'cargo');
@@ -1026,10 +1074,16 @@ function buildState() {
         trend: vaultTrend.map(t => t.value),
         supplies: keySupplyIds().map(id => ({ id, ...(marketById.get(id) ?? { name: '?', ask: null, bid: null, stock: 0, vwap: null, base: null }) })).filter(x => x.name !== '?'),
         pricesAt,
+        // One value per item a fleet account holds, the same value the vault total uses (7-day VWAP after 3 trades,
+        // else the shop base price), for the page's item prices and bank value.
+        // The game's examine text of each held item (obj configs), for the page's Examine option.
+        itemExamine: (() => { const out: Record<string, string> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const d = Number.isInteger(i?.id) ? OBJS.get(i.id)?.desc : undefined; if (d && i.name) out[i.name] = d; } return out; })(),
+        itemValues: (() => { const out: Record<string, number> = {}; for (const b of bots as any[]) for (const l of [b.inventory, b.bank, b.equipment]) for (const i of l ?? []) { const p = i?.name ? prices.get(String(i.name).toLowerCase()) : undefined; if (p != null) out[i.name] = p; } return out; })(),
     };
     const icons: Record<string, number | null> = {};
     const see = (l: any) => { for (const i of l ?? []) if (i?.name && !(i.name in icons)) icons[i.name] = iconId(i.name); };
     for (const b of bots as any[]) { see(b.inventory); see(b.bank); }
+    for (const l of lookups.values()) see(l.worn);
     see(v.items); see([{ name: 'Coins' }]); for (const t of v.log) see(t.items); for (const f of v.flow) see(f.items);
     const prac = practiceNames();
     const sys = {
@@ -1061,8 +1115,8 @@ function buildState() {
             const best = new Map(SKILL_BOARDS.map(b => { let top: { rank: number; name: string } | null = null; for (const bot of bots as any[]) for (const r of bot.ranks ?? []) if (r.board === b && (!top || r.rank < top.rank)) top = { rank: r.rank, name: bot.name }; return [b, top] as const; }));
             const rivals = rivalsView(boardTops, roster, fleet, best, now);
             const contention = contentionView(fleetList(join(FILES.fleet, 'claims')), roster, fleet, now);
-            lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).slice(0, 3).map(x => x.name)), ...contention.flatMap(s => s.others)])];
-            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 120).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now)]));
+            lookupWanted = [...new Set([...rivals.flatMap(r => r.rows.filter(x => !x.fleet).map(x => x.name)), ...contention.flatMap(s => s.others)])];
+            const looked = Object.fromEntries([...lookups.values()].sort((a, b) => b.at - a.at).slice(0, 250).map(l => [l.name.toLowerCase(), lookupView(l.name, l.rows, l.at, roster.get(l.name.toLowerCase()), now, l.worn, l.wornAt)]));
             return { roster: rosterView(roster, now), rivals, contention, lookups: looked, farms: farmsView(roster, fleet, contention, now), overtake: overtakeView(boardTops, bots as any, xpForLevel) };
         })(),
         prs: prRows,
@@ -1098,7 +1152,7 @@ function current() {
             if (latest.json) {
                 try {
                     const stale = JSON.parse(latest.json);
-                    stale.stateError = String(e);
+                    stale.stateError = String(e).replace(SECRET_RE, SECRET_MARK);
                     latest = { at: Date.now(), json: JSON.stringify(stale) };
                 } catch {
                     // If the previous state cannot be parsed, fall through to a minimal error state.
@@ -1106,7 +1160,7 @@ function current() {
             }
             if (!latest.json) {
                 latest = { at: Date.now(), json: JSON.stringify({
-                    now: Date.now(), stateError: String(e), bots: [], boards: [], events: [], results: [],
+                    now: Date.now(), stateError: String(e).replace(SECRET_RE, SECRET_MARK), bots: [], boards: [], events: [], results: [],
                     scripts: [], alerts: [], requests: [], mainPlan: null, capacity: null, swarm: null,
                     viewerTimings: [], race: null, gates: [], chain: null, gapHistory: [], economy: null,
                     pageVersion: 0, icons: {}, vault: null, collection: null, map: { ...MAP, ready: false },
@@ -1159,7 +1213,7 @@ Bun.serve({
         if(['/map-shell.css','/map-shell.js','/client-shell.css','/client-shell.js','/client-viewer.css','/operations.css','/operations.js','/xp-tracker.js'].includes(url.pathname))return new Response(Bun.file(join(import.meta.dir,url.pathname.slice(1))),{headers:{'content-type':url.pathname.endsWith('.css')?'text/css':'text/javascript','cache-control':'no-store'}});
         if(url.pathname.startsWith('/client-assets/')) {
             const name=url.pathname.slice('/client-assets/'.length);
-            if(!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
+            if(name!=='npc-names.json'&&!/^[a-zA-Z0-9_-]+\.(png|ttf|txt)$/.test(name))return new Response('Invalid asset',{status:400});
             const file=Bun.file(join(import.meta.dir,'client-assets',name));
             return new Response(file,{headers:{'cache-control':'public,max-age=3600'}});
         }
@@ -1167,7 +1221,7 @@ Bun.serve({
             const name = url.searchParams.get('name') ?? '';
             if (!/^[A-Za-z0-9_ -]{1,12}$/.test(name)) return Response.json({ error: 'a player name is 1-12 letters, digits, spaces, - or _' }, { status: 400 });
             if (name.toLowerCase() === MAIN.toLowerCase()) return Response.json({ error: 'not available' }, { status: 404 });
-            return lookupPlayer(name).then(hit => Response.json(lookupView(name, hit?.rows ?? null, hit?.at ?? null, roster.get(name.toLowerCase()), Date.now())));
+            return lookupPlayer(name).then(hit => hit ? Response.json(lookupView(name, hit.rows, hit.at, roster.get(name.toLowerCase()), Date.now(), hit.worn, hit.wornAt)) : Response.json({error:'Player service unavailable; try again'},{status:502}));
         }
         if (url.pathname === '/api/viewer-health') {const available=viewerAvailable();return Response.json({available,url:'/viewer/',reason:available?null:'Reviewed 3D viewer assets/cache are unavailable or the build version is unsupported; 2D remains available.'},{headers:{'cache-control':'no-store'}});}
         if(url.pathname==='/api/viewer-bridge.js')return viewerAvailable()?new Response(viewerBridgeSource(),{headers:{...VIEWER_ISO,'content-type':'text/javascript;charset=utf-8','cache-control':'no-store'}}):new Response('Unsupported viewer build',{status:503});
