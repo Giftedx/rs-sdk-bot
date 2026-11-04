@@ -34,7 +34,7 @@ export interface FleetAccount {
 
 export interface FleetPlan { maxBots: number; minFreeGB: number; jobs: Job[]; }
 
-// Every member meets the knight requirement. mmsmk1232 reached 55 in its live training run on 2026-10-25
+// Every member meets the knight requirement. mmsmk1232 reached 55 in its live training run
 // (788 ticks, hpMin=5, died=false); the farm still checks the skill before any walk.
 const THIEVES = ['Pocketrocket', 'mmtha0205', 'mmthv2350', 'Pocketpython', 'mmsmk1232'];
 

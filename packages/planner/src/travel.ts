@@ -49,18 +49,42 @@ export interface TravelModel { places: Record<string, Place>; cache: TravelCache
 export const ANYWHERE = 'anywhere';
 export const BANK = 'bank';
 
-// 2026-10-28: reuse relocate-bank's east road and fleet-al-kharid-entry's
-// Lumbridge toll approach. These are corridor points, not a measured speed claim.
+// Reuse the east road and Lumbridge toll approach. These are corridor
+// points, not a measured speed claim.
 // Each segment still uses sessionWalker collision/door planning. Avoid the
 // Varrock south wizard circle and the Al Kharid mine/scorpions.
+// Varrock East bank to the west side of the Al Kharid toll gate.
+const TOLL_CORRIDOR=[
+    // m51_52.jm2 places giant rats at 3292,3377 and a bear at 3296,3347.
+    // Stay east of their spawns, then cross west below the mine.
+    [3290,3404],[3308,3404],[3308,3370],[3308,3330],[3265,3330],[3255,3330],
+    // South past the cow field, east of the giant spiders' reach (SPIDER_REACH).
+    [3262,3250],[3262,3232],[3266,3227],
+].map(([x,z])=>({x:x!,z:z!}));
+// m50_50.jm2 giant spiders (npc 59) at 3243,3236 and 3245,3232: huntmode=cowardly attacks a player of
+// combat level 4 or lower from 1 tile, and wanderrange=10 lets them stand anywhere in this box.
+export const SPIDER_REACH={minX:3233,maxX:3255,minZ:3222,maxZ:3246,huntRange:1};
+const nearBank=(p:{worldX:number;worldZ:number;level:number},x:number,z:number)=>p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=5;
+
 export function smeltEntryRoute(p:{worldX:number;worldZ:number;level:number}) {
-    const near=(x:number,z:number)=>p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=5;
-    if(near(3269,3167))return {name:'al-kharid-bank',fare:0,points:[] as {x:number;z:number}[]};
-    if(!near(3253,3420))throw Error('smelt entry requires Varrock East or Al Kharid bank');
-    return {name:'varrock-east-toll',fare:10,points:[
-        [3290,3404],[3295,3370],[3265,3370],[3265,3350],[3255,3330],
-        [3255,3295],[3242,3248],[3256,3228],[3266,3227],
-    ].map(([x,z])=>({x:x!,z:z!}))};
+    if(nearBank(p,3269,3167))return {name:'al-kharid-bank',fare:0,points:[] as {x:number;z:number}[]};
+    if(!nearBank(p,3253,3420))throw Error('smelt entry requires Varrock East or Al Kharid bank');
+    return {name:'varrock-east-toll',fare:10,points:TOLL_CORRIDOR.map(t=>({...t}))};
+}
+
+// Anvil staging: Varrock West bank and the smithy anvils (m49_53.jm2 loc 2783 at 3188,3421/3424/3426),
+// the pair scripts/measure/floor-smithing.ts uses. Al Kharid has no anvil. From Al Kharid the route reverses
+// the toll corridor: the east-side guard (borderguard2, npc 926) passes the player to 3267,3227.
+export const SMITH_BANK={x:3185,z:3436},SMITH_ANVIL={x:3189,z:3422};
+export function smithStageRoute(p:{worldX:number;worldZ:number;level:number}) {
+    const tiles=(a:number[][])=>a.map(([x,z])=>({x:x!,z:z!}));
+    if(nearBank(p,SMITH_BANK.x,SMITH_BANK.z))return {name:'varrock-west-bank',fare:0,toll:[] as {x:number;z:number}[],points:[] as {x:number;z:number}[]};
+    if(nearBank(p,3253,3420))return {name:'varrock-east-walk',fare:0,toll:[] as {x:number;z:number}[],points:tiles([[3254,3428],[SMITH_BANK.x,SMITH_BANK.z]])};
+    if(!nearBank(p,3269,3167))throw Error('smith staging requires Al Kharid, Varrock East or Varrock West bank');
+    return {name:'al-kharid-toll',fare:10,
+        // The smelt destination corridor, reversed, to the east side of the gate.
+        toll:tiles([[3273,3194],[3275,3212],[3272,3227]]),
+        points:[...TOLL_CORRIDOR.slice(0,-1).reverse().map(t=>({...t})),...tiles([[3254,3428],[SMITH_BANK.x,SMITH_BANK.z]])]};
 }
 
 const key = (a: string, b: string) => (a < b ? `${a}>${b}` : `${b}>${a}`);
