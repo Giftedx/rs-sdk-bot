@@ -29,7 +29,7 @@ export function createRuneTradeRefresh(mode=process.env.RUNE_TRADE_REFRESH??'pac
   dirty:(actor:Session)=>{dirty.set(actor,(dirty.get(actor)??0)+1);},
   refresh:async(actor:Session)=>{
    const packets=(actor.client as {packetsReceived?:number}|undefined)?.packetsReceived,mutation=dirty.get(actor)??0,last=seen.get(actor);
-   if(mode==='packets'&&Number.isSafeInteger(packets)&&last?.packets===packets&&last.mutation===mutation){skipped++;return;}
+   if(mode==='packets'&&Number.isSafeInteger(packets)&&last&&last.packets===packets&&last.mutation===mutation){skipped++;return;}
    await actor.sdk.scanGroundItems(0);scanned++;
    // Retain the pre-scan stamp: an arrival or local action during the await must be read again.
    if(Number.isSafeInteger(packets))seen.set(actor,{packets:packets!,mutation});
