@@ -16,7 +16,7 @@ try {
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const eatAt = Math.ceil((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10) / 2);
     const xp0 = xp();
-    // EATSTUN=1: top up inside the 8-tick stun after each fail, so eating costs no pickpocket ticks.
+    // EATSTUN=1: top up inside the 8-tick stun after each fail. Each eat adds 3 to %action_delay (consume.rs2:129-130), so it is not free.
     const eatStun = process.env.EATSTUN === "1";
     const maxHp = s.sdk.getSkill("Hitpoints")?.baseLevel ?? 10;
     const onFail = async () => {

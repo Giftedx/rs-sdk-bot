@@ -574,3 +574,18 @@ Other leads:
 - The [RuneScape Bench talk transcript](https://delve.town/profile/did:plc:wmhp7mubpgafjggwvaxeozmu/post/3my3qbw3ifk2k) says the server has 2,000 slots, and that its owner is working out how to share them. A slot limit can affect fleet size. Not checked against live behaviour.
 - The rs-sdk Discord is linked from the upstream README and was not read.
 - The public `worldfeed` is already used by `packages/dashboard/server.ts` and `research/leader-forensics.md`.
+
+### 9.8 Forums, guides and rate sites
+
+No new XP-per-tick method was found for Magic, Thieving, Runecraft, Smithing, Mining or Woodcutting. Sources repeat 12 methods we hold. Gains below are code reads and ESTIMATES; nothing here was run.
+
+| Claim | Source | Check | Our row | Decision |
+|---|---|---|---|---|
+| Legends' Quest gives four training picks of 7,650 XP, and one skill can take all four: 191,250 XP a pick at 25x, 765,000 in total | [LostHQ guide](https://2004.losthq.rs/?oldurl=&p=questguides&quest=legends) | Confirmed: `quest_legends/scripts/radimus_erkle.rs2:79-122` has `stat_advance($skill, 76500)` and no repeat check | none in `haggis-boards.json` | candidate for Haggis: ESTIMATE about 3,880 ticks on Agility or 1,650 on Thieving; the quest chain cost is not priced |
+| Eating inside a stun costs 3 ticks per eat | [Autumn Elegy guide](https://www.youtube.com/watch?v=2QYqNvLwB1g) | Confirmed: `consume.rs2:129-130`. Fits the measured `EATSTUN` loss | `thieving60.ts` eats inside the stun on the live route | change the eat timing, then three matched runs: ESTIMATE 68-162 ticks |
+| The stun cycle is 11 ticks, not the fitted 12.8 | Same guide, corrected by a code read | Not measured: `thieving.rs2:49-50` sets an 8-tick stun; the T+3 start is from reading `p_delay(0)` calls | F=12.8, 55-99 model 2,061 ticks | measure with `scripts/measure/pick-cycle.ts`: ESTIMATE -163 ticks |
+| A knight can be trapped in the north-east market house | Same guide | Partly: `Npc.ts:730` has a 500-tick stuck counter; house and spawn not checked | 611 `walkTicks` on the live 6,169 run | lead for the live route |
+| Running is free, so the Runecraft walking trip is shorter | Forum threads [6748](https://lostcity.rs/t/whats-the-stance-on-the-old-journal-infinite-run-energy-exploit/6748), [17237](https://lostcity.rs/t/energy-stalls-with-ring-of-dueling-etc/17237) | `NODE_INFINITE_RUN` defaults true (`Environment.ts:47`); agility runs show `energyMin=100`; live config not verified | `runecraft-ladder.md` assumes a 150-tick walk and 8 helpers | check the ladder: ESTIMATE an 82-tick trip and 5 helpers; no board ticks |
+| A 3-tick willow cycle with one farmer | [Lost City Labs](https://www.lostcitylabs.com/skillrates) (another server) | Partly: roll pattern holds if the NPC attacks every 6 ticks; farmer attackrate not read | `woodcut` 3,356 | low: no XP gain over the knife |
+
+Wrong or absent, do not use: double rolls on moving up to a rock (`Player.ts:1405`), 2-tick eating (`consume.rs2:38`), granite and sandstone (no `mine.dbrow` rows). Not reached: 2004tracker.xyz, the 4-tick mining video (no transcript). No RS2 speedrun records were found.
