@@ -51,7 +51,7 @@ same tick unless a count-class gap says otherwise.
   farm rates, not with tiny-playtime mint stacks. The deployment's own `fly.toml` (upstream
   `main`) sets `NODE_RANDOM_EVENTS = "false"`, so the pack's one lamp item (`2528,
   macro_genilamp`, whose single grant site is `macro_event_genie.rs2:70`) never spawns there.
-- **Authentic-chain run (private world).** With the private world's `NODE_RANDOM_EVENTS=true`, the real spawn path ran end-to-end on Billionaire: `[debugproc,eventgen3]` (a private-world fixture that calls the content's own `~macro_event_general_spawn(^macro_geni)`) spawned a real Genie NPC, opnpc1 granted one real `macro_genilamp` (genie at `macro_event_genie.rs2:70`), OPHELD1 "Rub" opened the xplamp interface (item `iop[0]="Rub"` verified from the compiled obj config), select + confirm burst dispatched, and the burst granted XP exactly like the in-lamp fixture run (250+ XP in this pass; 2,500 XP in the earlier same-tick burst on the same engine). Runner: `.practice/dup-test/run-full-authentic-burst.ts`. These actions use only client-produced packets; the same chain is what a lamp-bearing real client could do on any deployment of this content.
+- **Authentic chain (private world).** With the private world's `NODE_RANDOM_EVENTS=true`, the real spawn path completes end to end on Billionaire: `[debugproc,eventgen3]` (a private-world fixture that calls the content's own `~macro_event_general_spawn(^macro_geni)`) spawns a real Genie NPC, opnpc1 grants one real `macro_genilamp` (genie at `macro_event_genie.rs2:70`), OPHELD1 "Rub" opens the xplamp interface (item `iop[0]="Rub"` verified from the compiled obj config), and a select + confirm burst grants XP as the in-lamp fixture does (250+ XP from the authentic-chain burst; 2,500 XP from a same-tick burst on the same engine). Runner: `.practice/dup-test/run-full-authentic-burst.ts`. These actions use only client-produced packets; the same chain is what a lamp-bearing real client could do on any deployment of this content.
 
 ## Finding 2: blind `inv_del` in deferred production queues
 
@@ -72,8 +72,7 @@ same tick unless a count-class gap says otherwise.
   `smithing.rs2:271-301`, gold jewellery `jewellery.rs2:181-272`, glass/leather both recheck inside
   the queue body.
 - **Gap.** The defences depend purely on engine cancellation. Rechecking totals inside each queue body
-  immediately before `inv_del` removes that dependency. **The one assumed gate is now engine-read
-  in person:** death/toxin/agility deaths all route through `[proc,player_death]` (`death.rs2:1-8`),
+  immediately before `inv_del` removes that dependency. **Death cancels the queue (engine source):** death/toxin/agility deaths all route through `[proc,player_death]` (`death.rs2:1-8`),
   whose `p_stopaction` (`death.rs2:4`) runs `stopAction()` -> `clearPendingAction()` ->
   `closeModal()` -> `weakQueue.clear()` (`Player.ts:875-877`, `:1085-1088`) before item loss, so a
   pending `weakqueue*` batch is purged rather than left to fire with empty inventories. A blind
