@@ -301,7 +301,7 @@ export function watchRandomEvents(s: Session, opts: RandomEventOptions = {}): Ra
                 const engaged = npc ? targetsMe(npc) : false;
                 // Phase 2: the NPC dropped the target; walk back to where the flight began (the NPC wanders near
                 // its spawn and never takes the target again), so the script resumes where it was and the bot
-                // does not stand at a strange tile (seen 2026-10-23: a swarm flight ended next to dark wizards).
+                // does not stand at a strange tile (seen: a swarm flight ended next to dark wizards).
                 if (backSince >= 0) {
                     if (engaged) { backSince = -1; dest = null; say(h.name, 'flee-again'); }
                     else {
