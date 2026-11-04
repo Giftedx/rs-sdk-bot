@@ -1,6 +1,126 @@
 import {test,expect} from 'bun:test';
 import {resolve} from 'node:path';
 import {levelForXp} from '../packages/planner/src/curve';
+
+test('helper-ready acknowledgement answers once before delayed incoming publication',()=>{
+ for(const mode of ['fresh','stale','spoofed','busy-then-ready','stop','opened']){
+  const code=`import{mock}from'bun:test';import{resolve}from'node:path';
+  process.env.RUNE_OPEN_AFTER='helper-ack';let tick=0,pending,requests=0,response=-1;
+  const s={name:'Crafter',messages:[]},h={name:'Carrier',messages:[{type:0,sender:'',text:'Sending trade offer...',observationId:1}]};
+  for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>tick;a.direct=async()=>{if(a===h)requests++;else response=tick;return{success:true}};
+   a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],
+    getState:()=>({trade:{isOpen:'${mode}'==='opened'&&tick>=2},gameMessages:a.messages,nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{}};}
+  mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{if(!pending)pending=new Promise(r=>queueMicrotask(()=>{
+   tick++;if(tick===1&&'${mode}'==='busy-then-ready')h.messages.push({type:0,sender:'',text:'Crafter is busy at the moment.',observationId:2});
+   if(tick===2&&'${mode}'!=='stale')h.messages.push({type:'${mode}'==='spoofed'?2:0,sender:'${mode}'==='spoofed'?'Stranger':'',text:'Sending trade offer...',observationId:3});
+   if(tick===5)s.messages.push({type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1});
+   pending=undefined;r();}));return pending;}}));
+  const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>response>=0||tick>=('${mode}'==='stop'?2:6));}catch{}
+  console.log(JSON.stringify({requests,response}));`;
+  const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:3000});
+  if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+  expect(r.requests).toBe(mode==='busy-then-ready'?2:1);
+  expect(r.response).toBe(['stop','opened'].includes(mode)?-1:['stale','spoofed'].includes(mode)?5:2);
+ }
+});
+test('polling preserves tick-stall failure with at most one wait per actor',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';let active=0,peak=0,requests=0;
+ const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of [[s,h],[h,s]]){a.tick=()=>0;a.direct=async()=>{requests++;return{success:true}};a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],getState:()=>({trade:{isOpen:false},gameMessages:[],nearbyPlayers:[{name:o.name,index:1}]}),scanGroundItems:async()=>{}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{active++;peak=Math.max(peak,active);return new Promise((_,reject)=>setTimeout(()=>{active--;reject(Error('TickStallError: frozen tick stream'))},100));}}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,peak,requests}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:1500});
+ if(child.exitCode!==0)throw Error('Transfer did not propagate frozen-tick failure: '+child.stderr.toString());
+ const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);expect(r.error).toContain('TickStallError');expect(r.peak).toBe(2);expect(r.requests).toBe(1);
+});
+test('a between-tick owned trade request is answered without waiting for another game tick',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';
+ let tick=0,responseMs=-1,requests=0,raw=[];const started=performance.now();
+ const s={name:'Crafter',messages:[]},h={name:'Carrier',messages:[]};
+ for(const[a,o]of [[s,h],[h,s]]){
+  a.tick=()=>tick;a.direct=async()=>{if(a===h){requests++;setTimeout(()=>raw=[{type:4,sender:'Carrier',text:'wishes to trade with you.',observationId:1}],30);}else responseMs=performance.now()-started;return{success:true}};
+  a.sdk={getInventory:()=>a===h?Array.from({length:27},(_,slot)=>({id:1436,count:1,slot})):[],
+   getState:()=>({trade:{isOpen:false},gameMessages:a.messages,nearbyPlayers:[{name:o.name,index:1}]}),
+   scanGroundItems:async()=>{if(a===s)s.messages=raw;}};
+ }
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>new Promise(r=>setTimeout(()=>{tick++;r()},400))}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');try{await transfer(s,h,()=>responseMs>=0)}catch{}
+ console.log(JSON.stringify({responseMs,requests}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ expect(r.requests).toBe(1);expect(r.responseMs).toBeGreaterThanOrEqual(25);expect(r.responseMs).toBeLessThan(200);
+});
+test('an offer acceptance is sent once while its published flag is delayed',()=>{
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,offerAccepts=0,confirmAccepts=0;
+ const pack=()=>Array.from({length:27},(_,slot)=>({id:1436,count:1,slot}));
+ const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of [[s,h],[h,s]]){
+  a.tick=()=>phase;a.trade={isOpen:true,screen:'offer',partner:o.name,myAccepted:false,myOffer:a===h?pack():[],theirOffer:a===s?pack():[]};
+  a.sdk={getInventory:()=>a===s?(phase>=3?pack():[]):(phase>=3?[]:pack()),getState:()=>({trade:a.trade,nearbyPlayers:[]}),scanGroundItems:async()=>{},
+   sendAcceptTrade:async()=>{if(a.trade.screen==='offer')offerAccepts++;else confirmAccepts++;return{success:true}}};
+ }
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
+  if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;if(phase===2)for(const a of[s,h])a.trade.screen='confirm';if(phase===3)for(const a of[s,h])a.trade={isOpen:false};pending=undefined;r()}));return pending;
+ }}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}
+ console.log(JSON.stringify({error,offerAccepts,confirmAccepts}));
+ `;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());const r=JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+ expect(r.error).toBe('');expect(r.offerAccepts).toBe(2);expect(r.confirmAccepts).toBe(2);
+});
+function delayedOffer(mode:'valid'|'empty'|'wrong-item'|'partial'){
+ const code=`
+ import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,offered=false,receiverAt=-1,confirms=0;
+ const pack=(n=27,id=1436)=>Array.from({length:n},(_,slot)=>({id,count:1,slot}));
+ const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>phase;a.trade={isOpen:true,screen:'offer',partner:o.name,myAccepted:false,myOffer:[],theirOffer:[]};
+ a.sdk={getInventory:()=>a===h?(phase<4?pack():[]):(phase>=4?pack():[]),getState:()=>({trade:a.trade,nearbyPlayers:[]}),scanGroundItems:async()=>{},
+ sendOfferItem:async()=>{offered=true;return{success:true}},sendAcceptTrade:async()=>{if(a.trade.screen==='confirm')confirms++;else if(a===s)receiverAt=phase;return{success:true}}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{
+ if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;
+ if(phase===1&&offered)h.trade.myAccepted=true;
+ if(phase===2){const stock='${mode}'==='empty'?[]:pack('${mode}'==='partial'?26:27,'${mode}'==='wrong-item'?995:1436);h.trade.myOffer=stock;s.trade.theirOffer=stock;}
+ if(phase===3)for(const a of[s,h]){a.trade.screen='confirm';a.trade.myAccepted=false;}
+ if(phase===4)for(const a of[s,h])a.trade={isOpen:false};pending=undefined;r();}));return pending;}}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h)}catch(e){error=String(e)}console.log(JSON.stringify({error,receiverAt,confirms}));`;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+test('a fresh server acceptance acknowledges the owned offer before item publication',()=>{
+ const r=delayedOffer('valid');expect(r.error).toBe('');expect(r.receiverAt).toBe(1);expect(r.confirms).toBe(2);
+});
+test('early owned-offer acceptance cannot accept empty, partial or wrong-item confirmation',()=>{
+ for(const mode of ['empty','partial','wrong-item'] as const){const r=delayedOffer(mode);expect(r.error).not.toBe('');expect(r.confirms).toBe(0);}
+});
+
+function acceptedCraftCase(mode:'fresh'|'stale'|'spoofed'|'no-movement'|'refused'|'stop'){
+ const code=`import{mock}from'bun:test';import{resolve}from'node:path';let phase=0,pending,craftAt=-1,crafts=0;
+ const pack=()=>Array.from({length:27},(_,slot)=>({id:1436,count:1,slot}));const s={name:'Crafter'},h={name:'Carrier'};
+ for(const[a,o]of[[s,h],[h,s]]){a.tick=()=>phase;a.messages=[{type:0,sender:'',text:'Accepted trade.',observationId:1}];a.trade={isOpen:true,screen:'confirm',partner:o.name,myAccepted:false,myOffer:a===h?pack():[],theirOffer:a===s?pack():[]};
+ a.sdk={getInventory:()=>a===h?(phase===0?pack():[]):(phase>=2&&craftAt<0&&'${mode}'!=='no-movement'?pack():[]),getState:()=>({trade:a.trade,gameMessages:a.messages,nearbyPlayers:[]}),scanGroundItems:async()=>{},sendAcceptTrade:async()=>{a.trade.myAccepted=true;return{success:true}}};}
+ mock.module(resolve('packages/core/src/ticks'),()=>({waitUntil:async(_s,p)=>p(),waitTicks:()=>{if(!pending)pending=new Promise(r=>queueMicrotask(()=>{phase++;if(phase===1)for(const a of[s,h]){a.trade={isOpen:false};if('${mode}'!=='stale')a.messages.push({type:'${mode}'==='spoofed'?2:0,sender:'${mode}'==='spoofed'?'Stranger':'',text:'Accepted trade.',observationId:2});}pending=undefined;r();}));return pending;}}));
+ const{transfer}=await import('./scripts/rune-carrier-trade');let error='';try{await transfer(s,h,()=> '${mode}'==='stop'&&phase>=1,27,{send:async()=>{crafts++;craftAt=phase;if('${mode}'==='refused')throw Error('fixture altar refused');},complete:()=>craftAt>=0&&phase>=3&&'${mode}'!=='no-movement'});}catch(e){error=String(e)}console.log(JSON.stringify({error,craftAt,crafts,phase}));`;
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:5000});
+ if(child.exitCode!==0)throw Error(child.stderr.toString());return JSON.parse(child.stdout.toString().trim().split(/\r?\n/).at(-1)!);
+}
+test('combined crafting can start on both fresh server acceptance messages before credit publication',()=>{
+ const r=acceptedCraftCase('fresh');expect(r.error).toBe('');expect(r.craftAt).toBe(1);expect(r.crafts).toBe(1);expect(r.phase).toBeGreaterThanOrEqual(3);
+});
+test('stale or spoofed acceptance cannot start a combined craft before observed credit',()=>{
+ for(const mode of ['stale','spoofed'] as const){const r=acceptedCraftCase(mode);expect(r.error).toBe('');expect(r.craftAt).toBe(2);expect(r.crafts).toBe(1);}
+});
+test('combined handoff refuses missing effects, a refused altar action and stop without blind craft retries',()=>{
+ const missing=acceptedCraftCase('no-movement');expect(missing.error).not.toBe('');expect(missing.crafts).toBe(1);
+ const refused=acceptedCraftCase('refused');expect(refused.error).toContain('fixture altar refused');expect(refused.crafts).toBe(1);
+ const stopped=acceptedCraftCase('stop');expect(stopped.error).not.toBe('');expect(stopped.crafts).toBe(0);
+});
+
 function handoff(mode:'publication'|'reset-publication'|'wrong-item'|'refused'|'no-credit'){
  const code=`
  import{mock}from'bun:test';import{resolve}from'node:path';

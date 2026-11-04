@@ -1,16 +1,16 @@
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
-import {walkPath,sessionWalker} from '../packages/core/src/walk';
+import {walkPath,walkRoute,sessionWalker} from '../packages/core/src/walk';
 import {interactionApproach} from '../packages/core/src/world';
 import {depositObserved} from '../packages/core/src/deposit';
 import {RUNE_ALTARS,ruinTarget,dispatchRuneEntry} from './rune-bank-craft';
 import {ess,state} from './rune-carrier-trade';
-const body=RUNE_ALTARS.find(a=>a.name==='body')!,bank={x:3092,z:3496},staging={x:2523,z:4833};
+const body=RUNE_ALTARS.find(a=>a.name==='body')!,bank={x:3094,z:3491},staging={x:2523,z:4833};
 const events:unknown[]=[];
 const pos=(s:Session)=>state(s).player!;
 const inside=(s:Session)=>pos(s).level===0&&Math.floor(pos(s).worldX/64)===39&&Math.floor(pos(s).worldZ/64)===75;
 const count=(s:Session,id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
-let stopped=false;
+let stopped=false;const cancellation=new AbortController();
 const check=(s:Session)=>{if(stopped||s.tick()>Number(process.env.CAP??2800)||s.sdk.getSkill('Hitpoints')?.level===0)throw Error('carrier stopped or over budget');};
 async function walk(s:Session,p:{x:number;z:number},tol=0){
  check(s);const r=await walkPath(await sessionWalker(s),[{...p,tol}],{maxTicks:150,stop:()=>stopped});
@@ -63,4 +63,49 @@ async function enterBody(s:Session){
 }
 
 export {restock,inside,leaveBody,enterBody};
-export const stopCarriers=()=>{stopped=true;};
+export const stopCarriers=()=>{stopped=true;cancellation.abort();};
+
+export type CarrierAssets=Record<number,number>;
+export const carrierAssets=(items:readonly {id:number;count:number}[])=>{
+ const totals:CarrierAssets={};for(const i of items)totals[i.id]=(totals[i.id]??0)+i.count;return totals;
+};
+// Continuation observes the bank before it allocates retained stock.
+export async function bankCarrier(s:Session):Promise<CarrierAssets>{
+ check(s);if(!s.bankObservation)throw Error('carrier bank observation unavailable');
+ const fromFalador=pos(s).level===0&&pos(s).worldX>=3010&&pos(s).worldX<=3016&&pos(s).worldZ>=3352&&pos(s).worldZ<=3358;
+ if(inside(s))await leaveBody(s);
+ else if(pos(s).level!==0||!((pos(s).worldX>=3035&&pos(s).worldX<=3105&&pos(s).worldZ>=3410&&pos(s).worldZ<=3510)
+  ||fromFalador))throw Error('continuation bank route position unavailable');
+ if(fromFalador){
+  const r=await walkRoute(s,[{kind:'walk',to:{...bank,level:0},tolerance:2}],{signal:cancellation.signal});check(s);
+  if(!r.ok)throw Error('continuation staging walk '+JSON.stringify(r));
+ }else await walk(s,bank,2);
+ // maps/m48_54.jm2:6375 places bankbooth as shape10 angle3; bank_booth.loc is 1x1 with no forceapproach.
+ // Travel tolerance leaves the SDK free to walk at the counter and enter unrelated door recovery.
+ const at={x:3095,z:3491,level:0},q={id:2213,shape:10,angle:3,width:1,height:1,blockAccessFlags:0,
+  src:'maps/m48_54.jm2:6375',configSrc:'scripts/interface_bank/configs/bank_booth.loc'};
+ const face=await interactionApproach(s.sdk,at,q);check(s);
+ if(!face)throw Error(s.name+': continuation bank interaction face unavailable');
+ await walk(s,face);
+ const gen=s.bankObservation()?.generation??0,reply=await s.bot.openBank();
+ check(s);
+ if(!reply.success||!await waitUntil(s,()=>stopped||!!state(s).bank.isOpen&&(s.bankObservation!()?.generation??0)>gen,{timeoutTicks:15}))throw Error(s.name+': continuation bank unobserved '+JSON.stringify({reply,generation:gen,position:pos(s)}));
+ check(s);const before=carrierAssets([...s.sdk.getInventory(),...s.bankObservation()!.items]);
+ for(const id of new Set(s.sdk.getInventory().map(i=>i.id))){check(s);await depositObserved(s,s.sdk.getInventory().find(i=>i.id===id)!);}
+ check(s);const after=carrierAssets(s.bankObservation()!.items);
+ if(s.sdk.getInventory().length||JSON.stringify(Object.entries(before).sort())!==JSON.stringify(Object.entries(after).sort()))throw Error('continuation deposit mismatch');
+ return after;
+}
+export async function withdrawCarrier(s:Session,id:number,n:number){
+ check(s);const held=count(s,id),stock=s.bankObservation!()?.items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0)??0;
+ const item=state(s).bank.items.find(i=>i.id===id);
+ if(!Number.isSafeInteger(n)||n<1||stock<n||!item)throw Error(`continuation supply shortage item${id} needs${n} has${stock}`);
+ if(!(await s.bot.withdrawItem(item,n)).success||!await waitUntil(s,()=>stopped||count(s,id)===held+n&&(s.bankObservation!()?.items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0)??NaN)===stock-n,{timeoutTicks:15}))throw Error('continuation withdrawal mismatch');
+ check(s);
+}
+export async function closeCarrierBank(s:Session){check(s);if(!(await s.bot.closeBank()).success)throw Error('continuation bank close refused');check(s);}
+export async function stageCarrier(s:Session,n:number,fromBank=false){
+ if(!fromBank)await bankCarrier(s);
+ await withdrawCarrier(s,1446,1);if(n>0)await withdrawCarrier(s,1436,n);
+ await closeCarrierBank(s);await enterBody(s);
+}
