@@ -2,7 +2,7 @@
 // Presets: <main> quest_legends (outside the guild gate), <kitB> quest_legends_kit_b, <kitC> quest_legends_kit_c (helpers
 // that wait at the meeting tile 2816,2947 with the tradeable kits; each logs in when the main arrives). Every skill 99.
 // LEG_FROM=B|C|D|E and LEG_TO=A|B|C|D|E run a slice: presets quest_legends_b, _c, _d, _e hold the state before that segment.
-// Reward: 4 QP, 4 x 7,650 XP of the LEG_TRAIN skills (quests/quest_legends/scripts/radimus_erkle.rs2).
+// Reward: 4 QP, 4 x 191,250 XP of the LEG_TRAIN skills (quests/quest_legends/scripts/radimus_erkle.rs2).
 // Route, stages and dialogue answers are adapted from rs-stun-toolkit `legs/legends/seg-a.ts` to `seg-d.ts` (MIT,
 // research/stun-toolkit-LICENSE.txt), which ran only in their lockstep sim, with rs2b0t `defs/legends/` (MIT) as a cross-check.
 // Our SDK reads no varps, so every step gates on items, position and dialogue text.
@@ -12,6 +12,7 @@
 //  D 20->45  Viyeldi stabbed, Nezikchened again, sacred water, out, yommi tree, totem, heroes, final Nezikchened, gilded totem.
 //  E 45->end Camelot teleport, Radimus, the training, quest complete.
 import { openQuest } from './quest-lib';
+import { settle } from '../../packages/core/src/bot';
 import { componentId } from '../../packages/core/src/logout';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 
@@ -259,6 +260,10 @@ try {
         const give = await h.s.bot.trade(exact(MAIN), { give: names.map(n => ({ item: exact(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), amount: -1 })), timeout: 60_000 });
         await serve;
         if (!give.success || h.inv().length > 0) await q.fail(`kit ${who}: trade ${JSON.stringify(give).slice(0, 200)} left ${h.inv().length}/${want}`);
+        // An idle helper trips the 900-tick no-progress stop, so it logs out here.
+        await h.dispose();
+        helpers.splice(helpers.indexOf(h), 1);
+        await settle([h.s], true, 'kit traded', { log: () => undefined });
         q.milestone(`kit ${who}`);
     };
 
@@ -440,7 +445,8 @@ try {
         for (let k = 0; k < 8 && z() < 9314; k++) {
             await q.guard('str gate back');
             const near = () => npcsOf([NPC.deathwing]).filter(w => w.distance <= 3 && w.z < 9314);
-            if (near().length) await fight('death wing', [NPC.deathwing], () => !near().length, 60);
+            // A cowardly wing flees: hit it only while it hits the bot, and never fail on it.
+            for (let t = 0; t < 30 && near().length && tick() - lastHit < 8; t++) { if (t % 4 === 0) await attack(near()[0]); await q.waitTicks(1); }
             const [leaf, tile] = k % 2 ? [LOC.strGate, { x: 2809, z: 9313 }] : [LOC.strGateL, { x: 2810, z: 9313 }];
             await walk('str gate back', tile, 0);
             await drive('str gate back', [/^Yes, I'm very strong, I'll force them open\.$/], () => z() >= 9314 && !open(), 50, () => opL(leaf, 1), 8);
@@ -638,8 +644,6 @@ try {
         await opUntil('wall back', LOC.markOut, 1, () => x() >= 2778, [], 40, 8);
         await walk('jagged back', { x: 2789, z: 9296 }, 0);
         await opUntil('jagged back', LOC.jagged, 2, () => z() <= 9295, [], 40, 10);
-        const wing = npcsOf([NPC.deathwing]).filter(n => n.distance <= 3)[0];
-        if (wing) await fight('death wing', [NPC.deathwing], () => !npcsOf([NPC.deathwing]).some(n => n.distance <= 3), 60);
         await trialsBack();
         await walk('cave exit', { x: 2773, z: 9341 }, 0);
         await opUntil('cave exit', LOC.caveExit, 1, () => z() < 4000, [], 40, 8);
