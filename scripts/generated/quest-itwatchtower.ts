@@ -129,6 +129,8 @@ try {
             }
             let shut = 0;
             await q.converse(pats, () => { shut = q.dialogOpen() ? 0 : shut + 1; return (ok() && !q.dialogOpen()) || shut >= 3; }, 60);
+            // The enclave guard closes the chat, then moves the bot 2 ticks later (enclave_guard.rs2:39-42): no early retry.
+            await q.waitUntil(ok, 6);
         }
         if (!ok()) await q.fail(`give ${label}`);
     };
@@ -254,7 +256,8 @@ try {
             await q.guard('cake');
             if (x() !== stand.x || z() !== stand.z) { await q.dash('cake stand', stand.x, stand.z, 0, 10); continue; }
             const tr = npcOf(N.trader2);
-            if (tr && Math.max(Math.abs(tr.x - stand.x), Math.abs(tr.z - stand.z)) <= 3) { await q.waitTicks(2); continue; }
+            // tileX/tileZ: x/z are a render position, offset by floor(size/2) for this 2x2 npc.
+            if (tr && Math.max(Math.abs((tr.tileX ?? tr.x) - stand.x), Math.abs((tr.tileZ ?? tr.z) - stand.z)) <= 3) { await q.waitTicks(2); continue; }
             await q.opLoc(locOf(L.counter), 1);
             await q.waitUntil(() => q.has(O.cake), 3);
         }
@@ -350,7 +353,11 @@ try {
         await go('enclave guard', 2508, 3038, 2);
         await give('nightshade on guard', O.nightshade, N.enclaveGuard, () => inEnclave());
     };
-    const enclaveOut = async () => { if (inEnclave()) await opLocUntil('enclave exit', L.enclaveExit, () => !inEnclave(), { ticks: 40 }); };
+    const enclaveOut = async () => {
+        if (!inEnclave()) return;
+        await go('enclave exit', 2598, 9467, 1);
+        await opLocUntil('enclave exit', L.enclaveExit, () => !inEnclave());
+    };
     await enclaveIn();
     await enclaveOut();
     q.milestone(8);
@@ -372,7 +379,7 @@ try {
     for (let k = 0; k < 40 && !q.has(O.c3); k++) {
         await q.guard('shamans');
         let sh = npcOf(N.shaman);
-        if (!sh) { await go('shamans', 2592, 9440, 4); sh = npcOf(N.shaman); }
+        if (!sh) { await go('shamans', 2592, 9439, 4); sh = npcOf(N.shaman); }
         if (!sh) { await q.waitTicks(5); continue; }
         if (!q.has(O.magicPotion)) await q.fail('shamans: no magic ogre potion');
         const m0 = mark();
