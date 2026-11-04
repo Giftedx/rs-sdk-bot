@@ -589,3 +589,32 @@ No new XP-per-tick method was found for Magic, Thieving, Runecraft, Smithing, Mi
 | A 3-tick willow cycle with one farmer | [Lost City Labs](https://www.lostcitylabs.com/skillrates) (another server) | Partly: roll pattern holds if the NPC attacks every 6 ticks; farmer attackrate not read | `woodcut` 3,356 | low: no XP gain over the knife |
 
 Wrong or absent, do not use: double rolls on moving up to a rock (`Player.ts:1405`), 2-tick eating (`consume.rs2:38`), granite and sandstone (no `mine.dbrow` rows). Not reached: 2004tracker.xyz, the 4-tick mining video (no transcript). No RS2 speedrun records were found.
+
+### 9.9 Second web round and leftover repos
+
+**`bleugreen/rs-sdk` returns 404** through the API and a direct fetch, so the links in `research/botting-ecosystem-2026-10-23.md` no longer open. Web search still indexes its pull request titles and summaries. These are indexed text, not read source:
+
+| Indexed item | What it says | Our use |
+|---|---|---|
+| PR 102, 79, 76 (`competitors.md`) | A hiscore row stores the tick a level was reached and is published at a clean logout; four early stun accounts show logout values, so those are upper bounds. The rivals' edge was composition, not per-skill speed | check against `research/board-ranking.md` |
+| PR 102 | After a dropped client the character stays 500 ticks if the socket closed, 1,000 if it stays open but silent, and indefinitely while a live client sends keepalives | check against our session recovery |
+| PR 188 | Smithing 1 to 99 in 1,028 lab ticks with a `swap()` trade helper | compare with `smith` rows; lab figure, not a board time |
+| PR 72 | Fastest routes to 99 for Agility, Mining, Woodcutting, Fishing and Thieving (title only) | lead |
+| PR 519, 56 | A tick audit of runner, hand-off, walker, dialogue and relog costs; an engine sweep of packet budget and delay matrix | lead |
+| PR 708, 483 | Attempt 5 measured table and the final row, 35,787 against a 35,467.4 expected value | already in `research/rival-rune-fast.md` where cited |
+
+Other forks: singulocity/rs-sdk (MIT, 2 commits ahead) adds a spectator feed with live inventory, skills and ground items. Kimmo3223 and CakeRepository are 0 ahead. `elizaOS/eliza-2004scape` and `meisenheimere/rs-sdk` return 404. No Reddit thread, dev log or second rival write-up was found.
+
+Leftover repos, checked against the pinned code unless marked:
+
+| Claim | Source | Check | Decision |
+|---|---|---|---|
+| The quest journal shows the stage of varps the client never receives, so a script can resume after a stop | Toolkit `legs/qp/journal.ts` (MIT), jackgolding `quest-lab/journal-reader.ts` (MIT) | Confirmed for one quest: `cog_journal.rs2:1-4` builds text from `~get_cog_progress`; general rule not checked | candidate: `q.journal(key)` in `quest-lib.ts`, then resume in the longest quests |
+| `walkLeg` keeps a 15-tile stuck-door radius, which opens unrelated gates | barthuijgen `15c444f2` (MIT) | Confirmed in `sdk/actions.ts:1143,1152`; `walkPath` is safe | low: patch to radius 3 if a walk shows it |
+| An item-swap loop looks like progress to `stalled()` | lc-headless (no license, idea only) | Confirmed by reading `ledger.ts:83` | low |
+| `route:false` interacts "silently drop" at range | jackgolding `4e1f8348` | Partly wrong: the server walks straight at the NPC (`Player.ts:1184-1199`) and reports "I can't reach that!" at an obstacle | do not port |
+| Priest in Peril can strand an account on temple level 2 | jackgolding `b1ca8a61` (MIT) | Not checked | low: read if that quest fails |
+
+Clock Tower `walk to trough`: gate 37 at 2595,9657 is `kind:"unknown"` in `knowledge/doors.json`, so the walker keeps it blocked after the lever opens it. A client-routed click to 2588,9656 passes it. Evidence: `quest_cog_gates_and_levers.rs2:38-42`, one swarm run `RESULT ok qp=1 ticks=454`. Gap: no three-run practice proof.
+
+Do not copy: jackgolding `97cafdb9` says Aubury's teleport is ungated, but `essence_mine.rs2:2` needs Rune Mysteries. lc-headless says Scavvo does not restock, but the shop has `restock=yes`. No gain: Ghosts branches, LC-roadmap, bleugreenlab/cairn (BSL 1.1, no game planner).
