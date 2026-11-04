@@ -37,8 +37,8 @@ test('idle169/170 cannot settle the queued level-up171 or its rejected approach'
  }
  console.log('LEVEL_RESULT '+JSON.stringify(rows));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
- if(child.exitCode!==0)throw Error(child.stderr.toString());
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:30000});
+ if(child.exitCode!==0)throw Error(child.signalCode?`child killed by ${child.signalCode} (30 s limit)`:child.stderr.toString());
  const rows=JSON.parse(child.stdout.toString().split(/\r?\n/).find(l=>l.startsWith('LEVEL_RESULT '))!.slice(13));
  for(const row of rows){
  expect(row.observations.filter((o:{tick:number})=>o.tick===169||o.tick===170).map((o:any)=>[o.player.animId,o.dialog])).toEqual([[-1,false],[-1,false]]);
@@ -51,7 +51,7 @@ test('idle169/170 cannot settle the queued level-up171 or its rejected approach'
  expect(row.dispatches[0].tick).toBeGreaterThan(row.walks.at(-1).tick+1);
  expect(row.player).toMatchObject({worldX:2983,worldZ:3288});
  }
-},15000);
+},40_000); // The child runs a full simulated session: past 10 s on the loaded Windows PC
 
 test('air exit settles the delayed craft and waypoint trace before one portal dispatch',()=>{
  const code=`
@@ -97,8 +97,8 @@ test('air exit settles the delayed craft and waypoint trace before one portal di
  }
  console.log('TRACE_RESULT '+JSON.stringify(results));
  `;
- const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:10000});
- if(child.exitCode!==0)throw Error(child.stderr.toString());
+ const child=Bun.spawnSync([process.execPath,'-e',code],{cwd:resolve(import.meta.dir,'..'),windowsHide:true,stdout:'pipe',stderr:'pipe',timeout:30000});
+ if(child.exitCode!==0)throw Error(child.signalCode?`child killed by ${child.signalCode} (30 s limit)`:child.stderr.toString());
  expect(child.exitCode).toBe(0);
  const rows=JSON.parse(child.stdout.toString().split(/\r?\n/).find(l=>l.startsWith('TRACE_RESULT '))!.slice(13));
  for(const row of rows){
@@ -113,4 +113,4 @@ test('air exit settles the delayed craft and waypoint trace before one portal di
   else {expect(row.error).toBe('');expect(row.player).toMatchObject({worldX:2983,worldZ:3288});}
  }
  expect(rows.find((r:{mode:string})=>r.mode==='drift').dispatches[0].tick).toBeGreaterThan(rows[0].dispatches[0].tick);
-},15000);
+},40_000); // The child runs a full simulated session: past 10 s on the loaded Windows PC
