@@ -13,7 +13,7 @@ import {rangedCredit,selectRangedTarget} from './gather-ranged';
 import {startQuestSustain} from './quest-sustain';
 import {buyWithBudget} from './shop-buyer';
 import {planTripOffThread} from '../packages/core/src/route-plan';
-import {routeFares} from '../packages/core/src/world';
+import {routeFares,type Account} from '../packages/core/src/world';
 type Item={id:number;count:number};
 // levelrequire from server/content/scripts/skill_combat/configs/ranged/{bows,arrows}.obj.
 // player_ranged.rs2 refuses arrows whose levelrequire exceeds the bow's levelrequire.
@@ -259,23 +259,33 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
 export function needsRangedRecovery(p:{worldX:number;worldZ:number;level:number},worn:readonly number[]){
  return !rangedEntry(p)||worn.some(id=>BOW_IDS.includes(id)||ARROW_IDS.includes(id));
 }
-export async function recoverRangedStart(s:Session){
+// The recovery leg runs before the run's budget and asset snapshot exist, so it is walk-only: no Magic, carried or
+// banked items, worn gear or coins, hence no teleport, supply withdrawal or fare. A stop request aborts the route.
+export function recoveryWalker(actor:Account):Account{return{...actor,skills:{...actor.skills,magic:0},items:[],counts:{},worn:[],coins:0};}
+export async function recoverRangedStart(s:Session,stop:()=>boolean=()=>false){
  const st=()=>s.sdk.getState(),eq=()=>s.sdk.getEquipment();
  if(!await waitUntil(s,()=>!!st()?.player&&!!s.client&&equipmentObserved(s.client),{timeoutTicks:20}))throw Error('ranged-train prerequisite: position/equipment unobserved');
  const p=st()!.player!;if(!needsRangedRecovery(p,eq().map(i=>i.id)))return null;
  const from={x:p.worldX,z:p.worldZ,level:p.level};
+ if(stop())return{from,stopped:true};
  if(!rangedEntry(p)){
-  const r=await goTo(s,await getWorld(),{...BANK,level:0},accountOf(s),{legTimeoutTicks:100});if(!r.ok)throw Error('ranged-train recovery walk failed '+JSON.stringify(r));
+  const abort=new AbortController(),off=s.onTick(()=>{if(stop()&&!abort.signal.aborted)abort.abort('stop requested');});
+  let r:Awaited<ReturnType<typeof goTo>>;
+  try{r=await goTo(s,await getWorld(),{...BANK,level:0},recoveryWalker(accountOf(s)),{legTimeoutTicks:100,signal:abort.signal});}finally{off();}
+  if(stop())return{from,stopped:true};
+  if(!r.ok)throw Error('ranged-train recovery walk failed '+JSON.stringify(r));
  }
  for(const item of eq().filter(i=>BOW_IDS.includes(i.id)||ARROW_IDS.includes(i.id))){
   await s.bot.unequipItem(item);if(!await waitUntil(s,()=>!eq().some(i=>i.id===item.id),{timeoutTicks:10}))throw Error('ranged-train recovery unequip unobserved '+item.id);
  }
  console.log('RANGED_TRAIN_RECOVERY '+JSON.stringify({from,to:st()?.player?{x:st()!.player!.worldX,z:st()!.player!.worldZ}:null,tick:s.tick()}));
- return from;
+ return{from,stopped:false};
 }
 if(import.meta.main){
  let stopped=false;const s=await openBot(process.argv[2]!,{onStop:async()=>{stopped=true;}});
- try{await recoverRangedStart(s);const r=await runRangedTrain(s,{...rangedTrainOptions(process.env,process.argv),stop:()=>stopped});console.log('RANGED_TRAIN_RESULT '+JSON.stringify(r));
+ try{const recovery=await recoverRangedStart(s,()=>stopped);
+  if(recovery?.stopped){await finish([s],false,'stop file during ranged-train recovery from '+JSON.stringify(recovery.from));}
+  const r=await runRangedTrain(s,{...rangedTrainOptions(process.env,process.argv),stop:()=>stopped});console.log('RANGED_TRAIN_RESULT '+JSON.stringify(r));
   await finish([s],r.ok,(r.ok?'mode=ranged-train ':r.stop==='stop-file'?'stop file ':'no Ranged progress: ')+JSON.stringify(r));}
  catch(e){await finish([s],false,'no Ranged progress: '+String(e));}
 }
