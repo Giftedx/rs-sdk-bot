@@ -138,7 +138,7 @@ try {
         console.log(`RATE thieving ${gained} ${ticks}`);
         const p = pos();
         const detail = `thieving=${lvl()} xp=${gained} ticks=${ticks} at=${p?.worldX},${p?.worldZ},${p?.level} hp=${hp()} hpMin=${hpMin} `
-            + `died=${died} relogs=${relogs} relogTicks=${relogTicks} logoutTicks=${logoutTicks} idleTicks=${idleTicks} pickTicks=${pickTicks} shopTicks=${shopTicks} eatTicks=${eatTicks} stunWait=${stunWait} tries=${tries} stuns=${stuns} eaten=${eaten} bought=${bought} waits=${waits} walkTicks=${walkTicks} chases=${chases} coins=${coins()} bread=${bread()} `
+            + `died=${died} relogs=${relogs} relogTicks=${relogTicks} logoutTicks=${logoutTicks} idleTicks=${idleTicks} pickTicks=${pickTicks} shopTicks=${shopTicks} eatTicks=${eatTicks} stunWait=${stunWait} stunMsgs=${stunMsgs} tries=${tries} stuns=${stuns} eaten=${eaten} bought=${bought} waits=${waits} walkTicks=${walkTicks} chases=${chases} coins=${coins()} bread=${bread()} `
             + `milestones=${[...marks].join(',')} jumps=${jumps.join(';')}`;
         return finish([s], ok, ok ? detail : `${why} ${detail} last=${lastFail}`);
     };
@@ -149,10 +149,22 @@ try {
     // Targets wander, so waiting a tick for one to come close beats chasing one across the market.
     // Set in step 3: what to do inside a stun (8 ticks when the bot cannot pickpocket but can walk, shop and eat).
     let onStun: (() => Promise<void>) | null = null;
+    // A fail sets %action_delay to the stun end (thieving.rs2:49); a success does not touch it. An eat adds 3 to that value
+    // (consume.rs2:129-130), and a pick waits on it (pickpocket.rs2:134). Inside the stun the eat delays the next pick by 3
+    // ticks; once the value is 3 ticks old the eat costs nothing, so the bot eats on the spare tick between clicks.
+    // EAT_IN_STUN=1 keeps the old timing for comparison.
+    const EAT_IN_STUN = process.env.EAT_IN_STUN === '1';
+    let delayEnd = -100, stunMsgs = 0, lastStunTick = -1;
+    // The game message counts every stun; an eat on the same tick can hide the HP drop.
+    s.onTick(() => {
+        const m = (s.sdk.getState()?.gameMessages ?? []).some((x: any) => x.tick === s.tick() && /been stunned/i.test(x.text));
+        if (m && lastStunTick !== s.tick()) { lastStunTick = s.tick(); stunMsgs++; delayEnd = s.tick() + 8; }
+    });
+    let eatFree = async (): Promise<void> => {};
     const steal = async (t: Target): Promise<boolean> => {
         const p = pos();
         const near = (s.sdk.getState()?.nearbyNpcs ?? [])
-            .filter((n: any) => t.re.test(n.name) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= t.range))
+            .filter((n: any) => t.re.test(n.name) && n.reachable !== false && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= t.range))
             .sort((a: any, b: any) => a.distance - b.distance);
         const npc = near[0];
         if (!npc) {
@@ -174,7 +186,9 @@ try {
             const op = (npc as any).optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))!.opIndex;
             const hp0 = hp();
             await s.direct({ type: 'interactNpc', npcIndex: (npc as any).index, optionIndex: op, reason: 'SDK' });
-            await waitTicks(s, 2);
+            await waitTicks(s, 1);
+            await eatFree();
+            await waitTicks(s, 1);
             pickTicks += now() - k0;
             if (hp() < hp0) { stuns++; if (onStun) await onStun(); }
             return true;
@@ -327,9 +341,17 @@ try {
     // shopping inside it cannot work.
     const maxHp = () => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
     onStun = async () => {
-        if (food() > 0 && hp() <= maxHp() - 4) { const e0 = now(); if ((await s.bot.eatFood(FOOD)).success) eaten++; eatTicks += now() - e0; return; }
+        if (EAT_IN_STUN && food() > 0 && hp() <= maxHp() - 4) { const e0 = now(); if ((await s.bot.eatFood(FOOD)).success) eaten++; eatTicks += now() - e0; return; }
         stunWait++;
         await waitTicks(s, 1);
+    };
+    if (!EAT_IN_STUN) eatFree = async () => {
+        if (hp() > maxHp() - 4 || delayEnd + 3 > now()) return;
+        const item = s.sdk.getInventory().find(i => FOOD.test(i.name));
+        if (!item) return;
+        const op = item.optionsWithIndex.find(o => /eat/i.test(o.text))?.opIndex ?? 1;
+        const r: any = await s.direct({ type: 'useInventoryItem', slot: item.slot, optionIndex: op, reason: 'SDK' });
+        if (r?.success !== false) { eaten++; delayEnd += 3; }
     };
     if (food() === 0) await stockUp();
     // A file .practice/stop-<bot> asks for a clean in-game logout, so a run can be swapped without the 500-tick linger.
