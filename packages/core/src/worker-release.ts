@@ -66,13 +66,13 @@ function kind(base:string,p:string):'file'|'dir'|undefined{
 }
 function treeFiles(base:string,dir:string,memo:ReleaseMemo):string[]{
     const key='t:'+dir;if(memo.has(key))return memo.get(key) as string[];
-    const out:string[]=[];
-    const walk=(d:string)=>{for(const e of readdirSync(join(base,d),{withFileTypes:true})){
+    const out:string[]=[],dirs:string[]=[];
+    const walk=(d:string)=>{dirs.push(d);for(const e of readdirSync(join(base,d),{withFileTypes:true})){
         if(skipped.has(e.name))continue;const p=d+'/'+e.name;
         if(e.isSymbolicLink())throw Error('no worker progress: linked release source unsupported: '+p);
         if(e.isDirectory())walk(p);else if(releaseFile.test(e.name)&&!e.name.endsWith('.test.ts'))out.push(p);
     }};
-    walk(dir);memo.set(key,out);return out;
+    walk(dir);memo.set('dirs:'+dir,dirs);memo.set(key,out);return out;
 }
 // Bun's relative resolution for the forms this repository uses, with the package.json a folder import reads.
 function resolveImport(base:string,file:string,spec:string):string[]{
@@ -186,17 +186,21 @@ export function releaseFor(entries:readonly string[],base=root,memo:ReleaseMemo=
 // changes it), with no file read: a coordinator loop checks this and hashes the files only when it changes.
 function releaseStamp(base:string,files:readonly string[]):string{
     const hash=createHash('sha256');
-    for(const p of [...files,...new Set(files.map(f=>dirname(f)))]){const s=statSync(join(base,p));hash.update(p+'\0'+s.size+'\0'+s.mtimeMs+'\0');}
+    for(const p of [...files,...new Set(files.map(f=>dirname(f)))]){const s=statSync(join(base,p));hash.update(p+'\0'+s.size+'\0'+s.mtimeMs+'\0'+s.ctimeMs+'\0');}
     return hash.digest('hex');
 }
-const launchByBase=new Map<string,{files:string[];stamp:string;value:string}>();
-// launchRevision for a base whose release files and folders kept their stamps since this process last hashed it.
-export function cachedLaunchRevision(base=root):string{
-    const hit=launchByBase.get(base);
+const releaseByEntries=new Map<string,{files:string[];stamp:string;value:string}>();
+// Group login must keep reading packets while it checks each actor. Reuse parsed release closures only while
+// their files and folders retain their stamps; every network admission still checks the current stamps and peers.
+export function cachedReleaseFor(entries:readonly string[],base=root):string{
+    const fullEntries=entries.length?[...entries,...workerLaunchers]:launchEntries,key=JSON.stringify([resolve(base),fullEntries]);
+    const hit=releaseByEntries.get(key);
     if(hit)try{if(releaseStamp(base,hit.files)===hit.stamp)return hit.value;}catch{/* a missing file recomputes */}
-    const memo:ReleaseMemo=new Map(),files=releaseFiles(launchEntries,base,memo),stamp=releaseStamp(base,files);
-    const value=revisionOf(base,files,memo);launchByBase.set(base,{files,stamp,value});return value;
+    const memo:ReleaseMemo=new Map(),sourceFiles=releaseFiles(fullEntries,base,memo);
+    const files=[...new Set([...sourceFiles,...[...memo].filter(([k])=>k.startsWith('dirs:')).flatMap(([,v])=>v as string[])])],stamp=releaseStamp(base,files);
+    const value=revisionOf(base,sourceFiles,memo);releaseByEntries.set(key,{files,stamp,value});return value;
 }
+export function cachedLaunchRevision(base=root):string{return cachedReleaseFor([],base);}
 
 function importedPath(base:string,file:string,spec:string):string{
     return relative(resolve(base),resolve(base,dirname(file),spec)).replaceAll('\\','/');
@@ -206,7 +210,7 @@ function importedPath(base:string,file:string,spec:string):string{
 export function assertWorkerRelease(env:Record<string,string|undefined>=process.env,base=root,memo:ReleaseMemo=new Map()):string {
     const pin=env.WORKER_RELEASE;
     if(!pin||! /^[a-f0-9]{64}$/.test(pin))throw Error('no worker progress: release pin missing; live starts paused');
-    if(releaseFor(releaseEntries(env.WORKER_ENTRY),base,memo)!==pin)throw Error('no worker progress: release source changed; live starts paused');
+    if(cachedReleaseFor(releaseEntries(env.WORKER_ENTRY),base)!==pin)throw Error('no worker progress: release source changed; live starts paused');
     return pin;
 }
 
@@ -255,7 +259,7 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
     // A peer whose entries are gone or do not resolve has no current release, so it counts as stale.
     const releases=new Map<string,string>(),current=(row:any)=>{
         const key=typeof row?.workEntry==='string'?row.workEntry:'';
-        if(!releases.has(key)){let value='';try{value=releaseFor(releaseEntries(key),base,memo);}catch{/* stale */}releases.set(key,value);}
+        if(!releases.has(key)){let value='';try{value=cachedReleaseFor(releaseEntries(key),base);}catch{/* stale */}releases.set(key,value);}
         return releases.get(key)!;
     };
     assertCompatibleWorkers(pin,server,statuses,Date.now(),row=>closedSessionRow(row,server,{root:join(base,'.practice/session-lifecycle')}),row=>standingPeer(row,owners),current);
