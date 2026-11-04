@@ -1,11 +1,15 @@
-import {test,expect} from 'bun:test';
-import {bulkOrderChecks,ORDER,NORTH_CASE,northEntryCheck,duplicateRefusalCheck,MAGIC_CASE,magicOrderChecks,stageWithStoppedStack,syncPracticeCheckpoint} from '../src/ge-bulk-order-proof';
+import {test,expect,spyOn} from 'bun:test';
+import {bulkOrderChecks,ORDER,NORTH_CASE,northEntryCheck,duplicateRefusalCheck,MAGIC_CASE,magicOrderChecks,stageWithStoppedStack,syncPracticeCheckpoint,geProofEndpoints,geProofAccountEnv,assertGeProofAccount,startGeProofStack,selectGeProofEndpoints} from '../src/ge-bulk-order-proof';
 import {Database} from 'bun:sqlite';
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import type {ItemOrder} from '../../../scripts/buy-owned-ge-item';
+import {verifyCase} from '../src/ge-bulk-order-proof';
+import {capabilityRevision} from '../../core/src/worker-release';
+import {geProofRuntime} from '../src/ge-bulk-order-proof';
+test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/buy-owned-ge-item.ts']));});
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},
  skills:Array.from({length:21},(_,i)=>({index:i,level:i===3?10:1,xp:0,rawExperience:0})),
@@ -17,6 +21,100 @@ const input={before:save([{id:995,count:2000}]),after:save([{id:995,count:1100},
  sell:{code:0,log:'GE_SELL_RESULT {"ok":true,"detail":"x"}\nLOGOUT logged-out\n'},
  buy:{code:0,log:line({ok:true,targetMet:true,conserved:true,banked:true,reserveKept:true,acquired:300,spent:900,phase:'settled',offerId:7})},
  again:{code:0,log:line({ok:true,targetMet:true,conserved:true,banked:true,reserveKept:true,phase:'settled',offerId:7,newItemsThisSession:0,cashDeltaThisSession:0})}};
+
+test('elapsed verification delay alone does not invalidate same-source saved GE effects',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ge-saved-age-')),at=1793520000000;
+ const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-saved-age');
+ const meta={at,source:geProofRuntime(),server:p.server,endpoints:{ports:p.ports,instance:p.instance},buyer:request.actor,orderKey:request.goal,sellCode:0,buyCode:0,againCode:0};
+ const clock=spyOn(Date,'now').mockReturnValue(at);
+ try{
+  for(const label of ['before','after','repeat'] as const){const s=input[label];writeFileSync(join(dir,label+'.sav'),saveBytes(s.position,s.inventories));}
+  for(const label of ['sell','buy','again'] as const){writeFileSync(join(dir,label+'.log'),input[label].log);writeFileSync(join(dir,label+'.err'),'');}
+  writeFileSync(join(dir,'journal.json'),JSON.stringify({...journal,request:{...request,server:p.server}}));
+  const metadata=(changes:object={})=>writeFileSync(join(dir,'native.json'),JSON.stringify({...meta,...changes}));
+  metadata();
+  const immediate=verifyCase(dir);
+  expect(immediate.ok).toBe(true);
+  clock.mockReturnValue(at+86400000);
+  const delayed=verifyCase(dir);
+  expect(delayed.ok).toBe(true);
+  expect(delayed.checks).toEqual(immediate.checks);
+  expect(delayed.ageMs).toBe(86400000);
+  for(const invalid of [null,'1793520000000',at+86400001]){metadata({at:invalid});expect(verifyCase(dir).ok).toBe(false);}
+  metadata({source:'different-source'});expect(verifyCase(dir).checks.source).toBe(false);
+  metadata();writeFileSync(join(dir,'buy.log'),input.buy.log.replace('LOGOUT logged-out','LOGOUT timeout'));
+  expect(verifyCase(dir).checks.logout).toBe(false);
+ }finally{clock.mockRestore();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('owned GE endpoints propagate through starts, account config and child guards; non-practice endpoints refuse',async()=>{
+ const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-test');
+ const configured=geProofAccountEnv('SERVER=localhost:8888\nGATEWAY_URL=ws://localhost:7780\nPASSWORD=fixture\n',p);
+ expect(configured).toContain('PASSWORD=fixture\n');
+ expect(configured).toContain('SERVER=127.0.0.1:28888\n');
+ expect(configured).toContain('GATEWAY_URL=ws://127.0.0.1:27780\n');
+ expect(assertGeProofAccount(configured,p.env)).toBe(p.server);
+ const starts:unknown[]=[];
+ const start=async(opts:any)=>{starts.push({opts,env:{AGENT_PORT:process.env.AGENT_PORT,GATEWAY_URL:process.env.GATEWAY_URL,GE_DATABASE:process.env.GE_DATABASE}});return{logs:{engine:'',gateway:''},stop:async()=>{}};};
+ const old=process.env.GE_DATABASE;
+ await startGeProofStack(p,start);await startGeProofStack(p,start);
+ expect(starts).toEqual(Array.from({length:2},()=>({opts:{ports:p.ports,instance:'ge-test',tickMs:150,readyTimeoutMs:60000},env:{AGENT_PORT:'27780',GATEWAY_URL:'http://127.0.0.1:27780',GE_DATABASE:p.env.GE_DATABASE}})));
+ expect(process.env.GE_DATABASE).toBe(old);
+ expect(()=>assertGeProofAccount(configured.replace(p.server,'rs-sdk-demo.fly.dev'),p.env)).toThrow('owned practice');
+ expect(()=>assertGeProofAccount(configured.replace(p.server,'localhost:8888'),p.env)).toThrow('owned practice');
+ expect(()=>assertGeProofAccount(configured,{...p.env,GE_PROOF_ENGINE:'https://example.com'})).toThrow();
+ expect(()=>geProofEndpoints({engine:8888,gateway:27780,management:28898,tcp:28899},'ge-test')).toThrow();
+});
+
+test('owned management port propagates on initial start and stopped-stack restart, then restores the parent environment',async()=>{
+ const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-management');
+ const previous=process.env.WEB_MANAGEMENT_PORT,events:string[]=[];
+ process.env.WEB_MANAGEMENT_PORT='8898';
+ const start=async()=>{
+  events.push(`start:${process.env.WEB_MANAGEMENT_PORT}`);
+  return{logs:{engine:'',gateway:''},stop:async()=>{events.push('stop');}};
+ };
+ try{
+  expect(p.env.WEB_MANAGEMENT_PORT).toBe('28898');
+  const stack=await startGeProofStack(p,start);
+  expect(process.env.WEB_MANAGEMENT_PORT).toBe('8898');
+  await stageWithStoppedStack('management.sav',()=>stack.stop(),async()=>{events.push('stage');return 'management.sav';},MAGIC_CASE.position,
+   ()=>startGeProofStack(p,start),()=>({...input.before,position:MAGIC_CASE.position}));
+  expect(events).toEqual(['start:28898','stop','stage','start:28898']);
+  expect(process.env.WEB_MANAGEMENT_PORT).toBe('8898');
+  for(const management of [8898,p.ports.engine,p.ports.gateway,NaN,1023,65536])
+   expect(()=>geProofEndpoints({...p.ports,management},p.instance)).toThrow('owned practice endpoints required');
+ }finally{if(previous===undefined)delete process.env.WEB_MANAGEMENT_PORT;else process.env.WEB_MANAGEMENT_PORT=previous;}
+});
+
+test('owned TCP selection rejects an occupied fourth port and propagates NODE_PORT through both starts',async()=>{
+ const checked:number[]=[],samples=[0,0.01];
+ const p=selectGeProofEndpoints(port=>{checked.push(port);return port!==20003;},()=>samples.shift()!);
+ expect(checked).toEqual([20000,20001,20002,20003,20200,20201,20202,20203]);
+ expect(p.ports).toEqual({engine:20200,gateway:20201,management:20202,tcp:20203});
+ const previous=process.env.NODE_PORT,events:string[]=[];
+ process.env.NODE_PORT='43594';
+ const start=async()=>{
+  events.push(`start:${process.env.NODE_PORT}`);
+  return{logs:{engine:'',gateway:''},stop:async()=>{events.push('stop');}};
+ };
+ try{
+  expect(p.env.NODE_PORT).toBe('20203');
+  const stack=await startGeProofStack(p,start);
+  expect(process.env.NODE_PORT).toBe('43594');
+  await stageWithStoppedStack('tcp.sav',()=>stack.stop(),async()=>{events.push('stage');return 'tcp.sav';},MAGIC_CASE.position,
+   ()=>startGeProofStack(p,start),()=>({...input.before,position:MAGIC_CASE.position}));
+  expect(events).toEqual(['start:20203','stop','stage','start:20203']);
+  expect(process.env.NODE_PORT).toBe('43594');
+  const configured=geProofAccountEnv('SERVER=localhost:8888\nGATEWAY_URL=ws://localhost:7780\n',p);
+  expect(assertGeProofAccount(configured,p.env)).toBe(p.server);
+  for(const tcp of [43594,8888,7780,8898,p.ports.engine,p.ports.gateway,p.ports.management,NaN,1023,65536,undefined])
+   expect(()=>geProofEndpoints({...p.ports,tcp:tcp as number},p.instance)).toThrow('owned practice endpoints required');
+  let attempts=0;
+  expect(()=>selectGeProofEndpoints(()=>{attempts++;return false;},()=>0)).toThrow('owned practice ports unavailable');
+  expect(attempts).toBe(100);
+ }finally{if(previous===undefined)delete process.env.NODE_PORT;else process.env.NODE_PORT=previous;}
+});
 
 function magicInput(){
  const before={...save(MAGIC_CASE.bank,MAGIC_CASE.pack),position:MAGIC_CASE.position};
@@ -212,3 +310,4 @@ test('saved exact output accepts cumulative recovery receipts and rejects a reus
  expect(bulkOrderChecks({...input,journal:{...recovered,progress:{...recovered.progress!,quantity:300}}}).journal).toBe(false);
  expect(bulkOrderChecks({...input,journal:{...recovered,progress:{...recovered.progress!,gross:539}}}).journal).toBe(false);
 });
+import './shop-supply-order-proof.test';
