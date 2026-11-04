@@ -6,6 +6,7 @@ import {magicXpForLevel,magicOptions,magicPreflight,startRegion,draynorToVarrock
 import {TELEPORTS,TELE_RUNE_IDS,selectTeleport,teleportCosts,teleportEffect,teleportShortfall,teleportPurchaseCost,purchaseEffect,type RuneCounts} from './magic-order';
 import {chickenTrainingProfile} from './train-chickens';
 import type {Session} from '../packages/core/src/inprocess';
+import {setEquipmentObserved} from '../packages/core/src/container-observation';
 
 const ownedTele=(values:Partial<RuneCounts>={}):RuneCounts=>({air:25,mind:0,earth:5,water:0,fire:0,law:5,...values});
 test('teleport shortfall counts owned stock, law supply, staff and finite cast/target limits',()=>{
@@ -158,6 +159,13 @@ test('a cast counts only on a debit of each rune plus a Magic XP rise',()=>{
  expect(classifyCast(b,{air:10,mind:9,xp:237.5},0)).toBe('cast');
  expect(classifyCast(b,{air:10,mind:9,xp:237.5})).toBe('partial');
 });
+test('an NPC attacking our player remains selectable after the player target clears',()=>{
+ const mugger={index:2965,name:'Mugger',x:3246,z:3401,distance:6,hp:null,inCombat:true,targetIndex:32769,reachable:true,optionsWithIndex:[{text:'Attack',opIndex:2}]};
+ expect(pickTarget([mugger],-1,new Set(),1)?.index).toBe(2965);
+ expect(pickTarget([mugger],-1,new Set(),2)).toBeUndefined();
+ expect(pickTarget([mugger],-1,new Set())).toBeUndefined();
+ expect(pickTarget([{...mugger,x:3254}],-1,new Set(),1)).toBeUndefined();
+});
 test('targets are attackable men, women or muggers in the cast area, engaged first',()=>{
  const npc=(index:number,name:string,x:number,z:number,distance:number,extra:Record<string,unknown>={})=>
   ({index,name,x,z,distance,hp:null,inCombat:false,optionsWithIndex:[{text:'Attack',opIndex:2}],...extra});
@@ -246,14 +254,15 @@ test('logout waits for a retreat and the 16-tick combat window after the last hi
 
 type Item={id:number;count:number};
 const NAMES:Record<number,string>={[AIR]:'Air rune',[MIND]:'Mind rune',[COINS]:'Coins',333:'Trout'};
-function fakeSession(o:{x:number;z:number;level?:number;magic?:{level:number;xp:number};pack?:Item[];bank?:Item[];modal?:boolean}){
+function fakeSession(o:{x:number;z:number;level?:number;magic?:{level:number;xp:number};pack?:Item[];bank?:Item[];modal?:boolean;equipmentObserved?:boolean}){
  let tick=0,bankOpen=false,generation=0,modal=o.modal??false;const callbacks=new Set<()=>void>(),calls:string[]=[];
  const named=(list:Item[])=>list.map((i,slot)=>({slot,id:i.id,count:i.count,name:NAMES[i.id]??`item${i.id}`,optionsWithIndex:[]}));
  const inventory=named(o.pack??[]),bank=named(o.bank??[]),magic=o.magic??{level:1,xp:0};
  const skills=[{name:'Magic',level:magic.level,baseLevel:magic.level,experience:magic.xp},{name:'Hitpoints',level:10,baseLevel:10,experience:1154}];
  const state=()=>({player:{worldX:o.x,worldZ:o.z,level:o.level??0,lifeId:1,respawnCount:0,isDead:false,combat:{inCombat:false,targetIndex:-1,targetType:'none',lastDamageTick:-1}},
   inventory,skills,bank:{isOpen:bankOpen,items:bank,noteMode:false},nearbyNpcs:[],dialog:{isOpen:modal},modalOpen:modal,gameMessages:[]});
- const s={name:'fake',tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>{callbacks.delete(cb);};},ended:new Promise<{reason:string}>(()=>{}),
+ const client={};if(o.equipmentObserved!==false)setEquipmentObserved(client,true);
+ const s={name:'fake',client,tick:()=>tick,onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>{callbacks.delete(cb);};},ended:new Promise<{reason:string}>(()=>{}),
   sdk:{getState:state,getInventory:()=>inventory,getEquipment:()=>[],getSkill:(n:string)=>skills.find(k=>k.name.toLowerCase()===n.toLowerCase())??null,
    getSkillXp:(n:string)=>skills.find(k=>k.name.toLowerCase()===n.toLowerCase())?.experience??null},
   bankObservation:()=>generation?{generation,at:tick,items:bank.map(({id,name,count})=>({id,name,count}))}:null,
@@ -407,6 +416,10 @@ test('a rerun at the target refuses before any bank or game action',async()=>{
   const r=await runMagicOrder(f.s,options);
   expect(r.ok).toBe(false);expect(r.stop).toBe('already at target');expect(r.casts).toBe(0);expect(f.calls).toEqual([]);
  }finally{f.stop();}
+});
+test('entry waits for the equipment packet, so a worn staff is never read as absent',async()=>{
+ const f=fakeSession({x:3253,z:3420,equipmentObserved:false});
+ try{const r=await runMagicOrder(f.s,options);expect(r.stop).toBe('entry');expect(r.failure).toBe('entry state unobserved');expect(f.calls).toEqual([]);}finally{f.stop();}
 });
 test('off plane 0 refuses before any action',async()=>{
  const f=fakeSession({x:3253,z:3420,level:1});

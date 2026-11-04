@@ -23,7 +23,7 @@ test('Rune Mysteries qualification failures block instead of relogging an untrai
  expect(isPrerequisiteFailure('RESULT fail Error: Rune Mysteries prerequisite: combat13 required for guarded route')).toBe(true);
  expect(isPrerequisiteFailure('RESULT ok Rune Mysteries prerequisite: qualified')).toBe(false);
 });
-import { supervise, isPrerequisiteFailure } from '../src/supervise';
+import { supervise, isPrerequisiteFailure, isTransportStall } from '../src/supervise';
 
 const out = (lines: string[], code: number) => async () => ({ stdout: lines.join('\n'), exitCode: code });
 
@@ -76,6 +76,15 @@ test('a death ends supervision: restarting would walk the account into the same 
     expect(r.reason).toBe('died');
 });
 
+
+test('a tick-stream stall retries like a disconnect, even inside a no-progress result, then gives up',async()=>{
+    const stall='RESULT fail no Ranged progress: {"failure":"Error: ranged-train route failed tick stream stalled: no new game tick for 15000ms"}';
+    expect(isTransportStall(stall)).toBe(true);
+    expect(isTransportStall('RESULT fail Error: stalled at bank ticks=999')).toBe(false);
+    expect(isTransportStall('RESULT ok mode=x tick stream stalled: no new game tick for 15000ms')).toBe(false);
+    let calls=0;const result=await supervise({run:async()=>{calls++;return{stdout:stall,exitCode:1};},stopped:()=>false,pause:async()=>{},maxRestarts:2});
+    expect(result).toEqual({reason:'gave-up',runs:3});expect(calls).toBe(3);
+});
 
 for (const detail of ['no ore progress for 220 ticks', 'no wood progress for 220 ticks', 'no training progress: training requires full HP', 'shearing made no progress',
     'spinning made no progress', 'flax spinning made no progress', 'withdraw made no progress', 'cooking made no progress for12 ticks', 'stalled at bank', 'no-progress guard']) {

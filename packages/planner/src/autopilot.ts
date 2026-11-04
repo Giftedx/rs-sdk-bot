@@ -5,7 +5,8 @@
 // Value is an estimate in coins per game tick: each output's rate times its unit value, minus coin spend, times the
 // script family's measured work share (1 - idle - move, scripts/tick-waste.ts). A training template is worth a share
 // of the best job it unlocks, and reserves that job's resource. assess() reads a job's recent log lines and retires
-// it after repeated fail RESULTs or a run that was nearly all idle and walking. scripts/autopilot.ts applies it.
+// it after repeated fail RESULTs or a run that was nearly all idle and walking. finishedTrainers() names the accounts
+// whose trainer reached its target, so the next pass needs no timer. scripts/autopilot.ts applies it.
 import type { BillRow } from './supply-bill';
 
 export type Acct = { name: string; side: string; skills: Record<string, number>; items: Record<string, number> };
@@ -16,12 +17,21 @@ export type Template = {
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
 };
-export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[] };
+// `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
+// places the fleet order), and the account takes the job on the pass after the coins arrive.
+export type Funding = { from: string; to: string; coins: number; template: string };
+export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[]; fund?: Funding };
 export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
+    // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
+    donors?: readonly { name: string; coins: number }[];
+    // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
+    // scripts/swarm.ts writes for it would block the trade, so such an account is never funded.
+    unfundable?: ReadonlySet<string>;
 };
+export const FUND_RESERVE = 50_000;
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
 // is worth half, the price a sale would fetch. A share of a job a training run unlocks counts for the training.
@@ -41,6 +51,9 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }) =>
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+// The coins a template needs beyond what the account holds, and its needs without the coin line.
+const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
+const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
 
 export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste'>): number {
     const gross = t.yields(a).reduce((v, f) => v + f.perTick * unitValue(f.item, inp.bill, inp.prices), 0);
@@ -51,7 +64,7 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string };
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number };
     const cands: Cand[] = [];
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id))) continue;
@@ -66,23 +79,51 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (meets(a, t.needs)) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+') });
+        } else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
+            const value = jobValue(t, a, inp);
+            if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
     }
     cands.sort((x, y) => y.value - x.value || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
+    // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
+    // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
+    const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
     for (const c of cands) {
-        if (done.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
+        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
+        let fund: Funding | undefined;
+        if (c.coins) {
+            const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
+            if (!from) continue;
+            pool.set(from, pool.get(from)! - c.coins); gave.add(from);
+            fund = { from, to: c.account, coins: c.coins, template: c.template.id };
+        }
+        pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
-        done.set(c.account, { account: c.account, template: c.template, value: c.value, reason: c.reason, resources: c.resources });
+        done.set(c.account, { account: c.account, template: c.template, value: c.value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
     }
-    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: 'vacant: no template meets its skills and holdings with a free resource' });
+    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass' : 'vacant: no template meets its skills and holdings with a free resource' });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
+// A training job does not repeat: its ok RESULT means the target level is met, and a rerun would log in, find the level
+// met and log out (a scored login for nothing). The swarm keeps the account's `done` end until the next pass hands it
+// a job with a different mission, which the met level unlocks. A run that ends short of the target is a fail RESULT,
+// which the supervisor retries and the swarm's standing retry resumes, with or without repeat.
+// finishedTrainers() brings that next pass forward.
 export function jobFor(x: Assignment, side: string) {
     const t = x.template!;
-    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: true, standing: true,
+    return { account: x.account, script: t.script, args: t.args ?? [], env: t.env ?? {}, role: t.role, goal: t.goal, enabled: true, repeat: !t.trains, standing: true,
         autopilot: side, template: t.id, resources: x.resources, note: `autopilot ${t.id}: ${x.reason}, ${x.value.toFixed(2)} coins/tick (estimate)` };
+}
+
+// Accounts whose planner trainer has reached its target: the job's template trains, the state still assigns that
+// template, and the job's log since the assignment holds an ok RESULT. The daemon re-plans these accounts at once.
+export function finishedTrainers(jobs: readonly any[], side: string, assigned: Readonly<Record<string, { template: string; offset: number }>>, templates: readonly Template[],
+    linesSince: (account: string, offset: number) => readonly string[]): string[] {
+    const trains = new Set(templates.filter(t => t.trains).map(t => t.id));
+    return jobs.filter(j => j?.autopilot === side && typeof j.account === 'string' && trains.has(j.template) && assigned[j.account]?.template === j.template
+        && assess(linesSince(j.account, assigned[j.account]!.offset)).ok > 0).map(j => j.account);
 }
 
 // Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail, a
@@ -193,18 +234,24 @@ export function plannableAccounts(jobs: readonly any[], side: string, listed: re
     return listed.filter(n => { const k = n.toLowerCase(); return !hard.has(k) && !paused.has(k) && (optIn.has(k) || !named.has(k)); });
 }
 
+const jobNames = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean) as string[];
+
 // Resources the jobs in the file hold against this side's planning: every enabled unmarked job, and every enabled
 // marked job whose account is paused (a stop file; mergeJobs keeps that job as it is, so its pen or spot stays its own).
-// ownHeld is the part held by this side's own accounts, which goes into this side's fleet claim.
-export function reservedResources(jobs: readonly any[], side: string, paused: ReadonlySet<string>, sideOf: (account: string) => string): { taken: Record<string, number>; ownHeld: string[] } {
-    const taken: Record<string, number> = {}, ownHeld: string[] = [];
-    const names = (j: any) => [j?.account, ...(j?.accounts ?? [])].filter(Boolean) as string[];
-    const holds = (j: any) => j?.enabled !== false && (j?.autopilot !== side || names(j).some(a => paused.has(a.toLowerCase())));
-    for (const j of jobs) if (holds(j)) for (const r of jobResources(j)) {
-        taken[r] = (taken[r] ?? 0) + 1;
-        if (names(j).every(a => sideOf(a) === side)) ownHeld.push(r);
-    }
-    return { taken, ownHeld };
+export function reservedResources(jobs: readonly any[], side: string, paused: ReadonlySet<string>): Record<string, number> {
+    const taken: Record<string, number> = {};
+    const holds = (j: any) => j?.enabled !== false && (j?.autopilot !== side || jobNames(j).some(a => paused.has(a.toLowerCase())));
+    for (const j of jobs) if (holds(j)) for (const r of jobResources(j)) taken[r] = (taken[r] ?? 0) + 1;
+    return taken;
+}
+
+// This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
+// of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs. scripts/fleet-sync.ts
+// writes it on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side ignores a
+// claim older than its CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now()): { side: string; at: number; resources: string[] } {
+    const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side)).flatMap(jobResources);
+    return { side, at: now, resources: [...new Set(held)].sort() };
 }
 
 // A marked job whose account is in `keep` (an owner pause: a stop file) stays as it is, with its enabled and repeat

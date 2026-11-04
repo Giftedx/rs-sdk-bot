@@ -2255,7 +2255,14 @@
               "scripts/generated/quest-lib.ts",
               "scripts/quest-order.ts",
               "packages/core/src/quest-status.ts",
-              "scripts/generated/quest-itwatchtower.ts"
+              "scripts/generated/quest-itwatchtower.ts",
+              "scripts/generated/quest-hero.ts",
+              "scripts/generated/quest-hero-owned.ts",
+              "scripts/generated/quest-itwatchtower-owned.ts",
+              "scripts/generated/quest-tbwt.ts",
+              "scripts/generated/quest-tbwt-owned.ts",
+              "scripts/generated/quest-legends.ts",
+              "scripts/quest-sweep.ts"
             ],
             "sourceEvidence": [
               {
@@ -2314,7 +2321,7 @@
                 "Heroes Quest",
                 "Legends Quest"
               ],
-              "scope": "Existing quest workers retain their own source/receipt scope. Watchtower and Trio have complete owned Native practice routes. Heroes and Legends require complete actual-CLI qualification. No blanket Native or live qualification of all68 quests is claimed.",
+              "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Watchtower and Trio Native receipts bind their recorded source; merged dependency closures require renewal. Full owned Heroes and Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
               "watchtower": {
                 "evidence": ".practice/microbot-ports/watchtower-native-1793681609878/result.json",
                 "sourceCheck": ".practice/microbot-ports/watchtower-native-1793681609878/source-check.json",
@@ -2332,14 +2339,20 @@
                   "Herblore": 99,
                   "Thieving": 99,
                   "Agility": 99
-                }
+                },
+                "capturedRuntimePath": "scripts/generated/quest-itwatchtower.ts",
+                "localRuntimePath": "scripts/generated/quest-itwatchtower-owned.ts",
+                "integratedQualification": "pending merged-source Native renewal"
               },
               "heroesCrossings": {
                 "evidence": ".practice/microbot-ports/heroes-crossing-native-1793828591571/result.json",
                 "sourceCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/source-check.json",
                 "compiledCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/compiled-cache-ready-check.json",
                 "runtimeSha256": "fc61cb67f1d195357e6bbbedc5e62758bb462b5362d7bae4de725516020f2f12",
-                "scope": "Six production helper crossings: panel, keyed side door and keyed treasure door, both directions. Two CLI0/logouts and independent saved position, inventory and zero-XP audits. Staged keys and Heroes progress4/11; no full quest, Grip combat, rewards, live or repeat claim. Source11441 and server-ready42 unchanged."
+                "scope": "Six production helper crossings: panel, keyed side door and keyed treasure door, both directions. Two CLI0/logouts and independent saved position, inventory and zero-XP audits. Staged keys and Heroes progress4/11; no full quest, Grip combat, rewards, live or repeat claim. Source11441 and server-ready42 unchanged.",
+                "capturedRuntimePath": "scripts/generated/quest-hero.ts",
+                "localRuntimePath": "scripts/generated/quest-hero-owned.ts",
+                "integratedQualification": "pending merged-source Native renewal"
               },
               "trio": {
                 "evidence": ".practice/microbot-ports/tbwt-native-1793832071961/result.json",
@@ -2372,8 +2385,15 @@
                   "Runecraft": 0,
                   "Slayer": 0,
                   "Farming": 0
-                }
-              }
+                },
+                "capturedRuntimePath": "scripts/generated/quest-tbwt.ts",
+                "localRuntimePath": "scripts/generated/quest-tbwt-owned.ts",
+                "integratedQualification": "pending merged-source Native renewal"
+              },
+              "integrationRenewal": [
+                "owned Watchtower merged dependency closure",
+                "owned Trio merged dependency closure"
+              ]
             }
           }
         },

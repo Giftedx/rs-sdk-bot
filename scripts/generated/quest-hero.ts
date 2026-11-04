@@ -1,178 +1,500 @@
-// Native Heroes' Quest pair; donor behaviour: pinned HeroesQuest.java (BSD notice research/microbot-ports-LICENSE.txt).
-// Owned ice gloves are a supply prerequisite. Fire feather, lava eel, armbands and gang progress are earned here.
-import{readFileSync}from'node:fs';import{join,resolve}from'node:path';
-import{openBot,settle,getWorld,accountOf}from'../../packages/core/src/bot';import type{Session}from'../../packages/core/src/inprocess';
-import{BotActions}from'../../vendor/rs-sdk/sdk/actions';import{waitUntil,waitTicks}from'../../packages/core/src/ticks';import{goTo,sessionWalker,walkPath}from'../../packages/core/src/walk';import{depositObserved}from'../../packages/core/src/deposit';
-import{componentId}from'../../packages/core/src/logout';
-import nativeItems from'../../knowledge/items.json';
-import{parseConfigs}from'../../packages/knowledge/src/config';
-import{questFlags}from'../../packages/core/src/quest-status';import{openQuest}from'./quest-lib';import{productionStopRequested}from'../microbot-c-lifetime';
-import{createHandoff}from'../courier-handoff';import{questFoodDefinitions}from'../quest-sustain';
-import{guardianLoadedSight}from'../microbot-c-clue-guardian-travel';import{nativeNpcSpell,npcCastEffect}from'../microbot-magic-npc';import{elementalRuneCost}from'../microbot-magic-items';
-import{runBankJob,type BankJob}from'../microbot-bank-jobs';import{potionCareRecipe}from'../microbot-potion-care';import{cookingRecipes,nativeHeatSources,runCookingBatch}from'../microbot-b-cooking';
-export type HeroesOrder={blackArm:string;phoenix:string;server:string;goal:string;cap:number;returnTicks:number;xpRate:number;maximumCasts:number;maximumBait:number;coinBudget:number};
-export const HEROES_ITEMS={iceGloves:1580,slime:1581,oil:1582,feather:1583,oilyRod:1585,miscKey:1586,gripKeys:1588,idPapers:1584,candle:1577,armband:1579,rawEel:2148,eel:2149,harralanderUnf:97,rod:307,bait:313,vial:229,food:379,blackBody:1125,blackLegs:1077,blackHelm:1165}as const;
-export const HEROES_REWARDS:Readonly<Record<string,number>>={Attack:30750,Defence:30750,Strength:30750,Hitpoints:30750,Ranged:20750,Fishing:27250,Cooking:28250,Woodcutting:15750,Firemaking:15750,Smithing:22750,Mining:25750,Herblore:13250};
-export function validateHeroesOrder(o:HeroesOrder){if(!o||![o.blackArm,o.phoenix].every(n=>typeof n==='string'&&/^[a-z0-9]{1,12}$/i.test(n))||o.blackArm.toLowerCase()===o.phoenix.toLowerCase()||typeof o.server!=='string'||!o.server||!/^[-a-zA-Z0-9_]{1,48}$/.test(o.goal)||![o.cap,o.returnTicks,o.xpRate,o.maximumCasts,o.maximumBait,o.coinBudget].every(n=>Number.isSafeInteger(n)&&n>0)||o.cap>30000||o.returnTicks<500||o.cap<=o.returnTicks||o.xpRate>1000||o.maximumCasts>50||o.maximumBait<2||o.maximumBait>10||o.coinBudget>10000)throw Error('explicit finite owned Heroes pair/order required');}
-export function heroesPackEffect(b:Record<number,number>,a:Record<number,number>,delta:Record<number,number>){return[...new Set([...Object.keys(b),...Object.keys(a),...Object.keys(delta)])].every(id=>(a[+id]??0)-(b[+id]??0)===(delta[+id]??0));}
-export function heroesRewardEffect(before:Record<string,number>,after:Record<string,number>,rate:number){return[...new Set([...Object.keys(before),...Object.keys(after),...Object.keys(HEROES_REWARDS)])].every(k=>(after[k]??0)-(before[k]??0)===(HEROES_REWARDS[k]??0)*rate/10);}
-export function heroesCoinStage(baseline:number,current:number,budget:number){const spent=baseline-current;if(![baseline,current,budget,spent].every(Number.isSafeInteger)||baseline<budget+37||spent<0||spent>budget)throw Error('Heroes coin baseline/remaining budget unknown');return budget-spent+37;}
-export function heroesRemainingSpellKit(runes:Readonly<Record<number,number>>,maximum:number,used:number){const left=maximum-used;if(!Number.isSafeInteger(left)||left<1)throw Error('Heroes declared remaining spell budget exhausted');return Object.fromEntries(Object.entries(runes).map(([id,n])=>[id,n*left]));}
-type HeroesTile={x:number;z:number;level:number};
-export async function heroesRoute(s:Session,to:HeroesTile,over:()=>boolean,remaining:()=>number,deps:{walker?:typeof sessionWalker;walk?:typeof walkPath;transport?:(signal:AbortSignal)=>Promise<{ok:boolean;detail?:string}>}={},tolerance=1){
- const position=()=>{const p=s.sdk.getState()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:null;},near=(p:HeroesTile|null)=>!!p&&p.level===to.level&&Math.max(Math.abs(p.x-to.x),Math.abs(p.z-to.z))<=tolerance;
- const log=(phase:string,data:object)=>console.log('HEROES_ROUTE '+JSON.stringify({phase,account:s.name,tick:s.tick(),from:position(),to,...data}));
- if(over())throw Error('Heroes route original context unavailable');if(near(position()))return;
- const controller=new AbortController(),off=s.onTick(()=>{if(over())controller.abort('Heroes bounded route');});let branch='transport';log('start',{remaining:remaining()});
- try{
-  const start=position();let walker:Awaited<ReturnType<typeof sessionWalker>>|undefined;
-  if(start?.level===to.level){walker=await(deps.walker??sessionWalker)(s);if(over())throw Error('Heroes route original context changed after walker');}
-  const from=position(),plan=walker&&from?.level===to.level?walker.plan(to.level,from,to):[],last=plan.at(-1),complete=!!last&&Math.max(Math.abs(last.x-to.x),Math.abs(last.z-to.z))<=tolerance;
-  if(over())throw Error('Heroes route original context changed after plan');
-  if(walker&&from&&complete){
-   branch='direct';const budget=Math.min(remaining(),Math.max(120,Math.max(Math.abs(from.x-to.x),Math.abs(from.z-to.z))*3+60));if(!Number.isSafeInteger(budget)||budget<=0)throw Error('Heroes route budget exhausted');
-   let captured=true;const originalPlan=walker.plan;const direct={...walker,plan:(level:number,a:{x:number;z:number},b:{x:number;z:number})=>{if(captured&&level===from.level&&a.x===from.x&&a.z===from.z&&b.x===to.x&&b.z===to.z){captured=false;return plan;}return originalPlan(level,a,b);}};
-   const result=await(deps.walk??walkPath)(direct,[{x:to.x,z:to.z,tol:tolerance}],{maxTicks:budget,stop:over,signal:controller.signal});
-   if(!result.ok)throw Error('Heroes complete route '+result.detail);
-  }else{const world=deps.transport?undefined:await getWorld();if(over())throw Error('Heroes route original context changed before transport');const result=await(deps.transport?deps.transport(controller.signal):goTo(s,world!,to,accountOf(s),{signal:controller.signal,legTimeoutTicks:120,maxRetriesPerLeg:1}));if(!result.ok)throw Error('Heroes route '+result.detail);}
-  if(over()||!near(position()))throw Error('Heroes route original context/arrival unconfirmed');log('result',{branch,ok:true});
- }catch(error){log('result',{branch,ok:false,detail:String(error)});throw error;}finally{off();}
-}
-export async function heroesOwnedPairPhase<T>(actors:readonly T[],work:(actor:T)=>Promise<void>,stopPair:()=>void){
- if(actors.length!==2)throw Error('Heroes phase requires the owned pair');
- let failed=false,firstFailure:unknown;await Promise.allSettled(actors.map(async actor=>{try{await work(actor);}catch(error){if(!failed){failed=true;firstFailure=error;stopPair();}throw error;}}));
- if(failed)throw firstFailure;
-}
-export function heroesQuestSpellReach(s:Session,target:{x:number;z:number;size?:number},sight:(from:{x:number;z:number;level:number},to:{x:number;z:number;size:number})=>boolean){
- const p=s.sdk.getState()?.player;if(!p||p.level!==0)return false;const distance=Math.max(Math.abs(p.worldX-target.x),Math.abs(p.worldZ-target.z));
- // PathingEntity.setInteraction resets AP range to10; inApproachDistance also rejects overlap and blocked sight.
- return distance>0&&distance<=10&&sight({x:p.worldX,z:p.worldZ,level:p.level},{x:target.x,z:target.z,size:target.size??1});
-}
-export async function heroesQuestHitPosition(s:Session,index:number,id:number,guard:()=>void){
- let last:{x:number;z:number}|undefined;const native=(s.client as any).npc?.[index];
- for(let tick=0;tick<8;tick++){await waitTicks(s,1);guard();const n=s.sdk.getState()?.nearbyNpcs.find(n=>n.index===index);if(n){if(n.id!==id||(s.client as any).npc?.[index]!==native)throw Error('Heroes original quest target replaced');last={x:n.x,z:n.z};}}
- return last;
-}
-export async function heroesClearWear(s:Session,open:()=>Promise<void>){for(const item of[...s.sdk.getEquipment()]){if(!(await s.bot.unequipItem(item)).success||!await waitUntil(s,()=>!s.sdk.getEquipment().some(i=>i.id===item.id),{timeoutTicks:8}))throw Error('Heroes kit removal refused or unobserved');}await open();}
-export function heroesEntranaKit(s:Session){
- const root='vendor/rs-sdk/server/content/',body=readFileSync(root+'scripts/areas/area_port_sarim/scripts/monk_of_entrana.rs2','utf8'),forbidden=new Set([...body.matchAll(/inv_totalcat\((?:inv|worn), (\w+)\)/g)].map(m=>m[1]!)),names=new Map(readFileSync(root+'pack/obj.pack','utf8').trim().split(/\r?\n/).map(l=>{const at=l.indexOf('=');return[Number(l.slice(0,at)),l.slice(at+1)]as const;}));
- if(!forbidden.size)throw Error('Heroes Entrana Native categories unknown');
- // Categories are server config, absent from the public client ObjType cache.
- for(const row of[...s.sdk.getInventory(),...s.sdk.getEquipment()]){
-  const item=nativeItems.find(i=>i.id===row.id);if(!item||names.get(row.id)!==item.debugname)throw Error('Heroes Entrana owned kit forbidden or unknown '+row.id);
-  const path=root+item.src.replace(/:\d+$/,''),blocks=parseConfigs(readFileSync(path,'utf8'),path).filter(b=>b.name===item.debugname);if(blocks.length!==1)throw Error('Heroes Entrana owned kit forbidden or unknown '+row.id);
-  const categories=blocks[0]!.props.category??[];if(categories.length>1||categories.some(c=>forbidden.has(c)))throw Error('Heroes Entrana owned kit forbidden or unknown '+row.id);
- }
-}
-export async function heroesEntranaPassage(s:Session,q:Pick<Q,'talkTo'|'converse'|'dialogOpen'|'opLoc'|'walk'>,east:boolean,guard:()=>void,move:(to:HeroesTile)=>Promise<void>,pending:(value:boolean)=>void){
- guard();if(east)heroesEntranaKit(s);const home=east?{x:3047,z:3237,level:0}:{x:2835,z:3336,level:0},deck=east?{x:2834,z:3331,level:1}:{x:3048,z:3231,level:1},plank=east?{id:2415,x:2834,z:3333}:{id:2413,x:3048,z:3232},stand={x:deck.x,z:plank.z-1,level:1},land={x:plank.x,z:plank.z+2,level:0};
- await move(home);guard();const n=s.sdk.getState()?.nearbyNpcs.find(n=>n.id===(east?657:658)&&n.reachable!==false);if(!n)throw Error('Heroes observed exact Entrana monk absent');const native=(s.client as any).npc?.[n.index];if(!native||native.type?.id!==n.id)throw Error('Heroes original Entrana monk unknown');const before=pack(s),beforeXP=xp(s),same=()=>heroesPackEffect(before,pack(s),{})&&JSON.stringify(beforeXP)===JSON.stringify(xp(s)),at=(p:HeroesTile)=>{const a=s.sdk.getState()?.player;return!!a&&a.level===p.level&&a.worldX===p.x&&a.worldZ===p.z;};pending(true);
- try{await q.talkTo(n);}catch{/* Observe this sole attempted passage; never repeat the input. */}
- if(!await q.converse([east?/^Yes, okay, I'm ready to go\.$/i:/^Yes, I'm ready to go\.$/i],()=>{guard();return at(deck)&&same();},80)||!same())throw Error('Heroes Entrana passage unconfirmed; no retry');
- if(!await q.converse([],()=>{guard();return!q.dialogOpen();},12))throw Error('Heroes Entrana arrival dialog unresolved');await q.walk('Entrana deck stand',[{x:stand.x,z:stand.z,tol:0}]);guard();if(!at(stand)||!same())throw Error('Heroes Entrana original deck stand unknown');const l=s.sdk.getState()?.nearbyLocs.find(l=>l.id===plank.id&&l.x===plank.x&&l.z===plank.z&&l.level===1&&l.optionsWithIndex.some(o=>o.opIndex===1));if(!l)throw Error('Heroes observed Entrana gangplank absent');try{await q.opLoc(l,1);}catch{/* Sole disembark may still land. */}if(!await waitUntil(s,()=>{guard();return at(land)&&same();},{timeoutTicks:12})||!same())throw Error('Heroes Entrana disembark unknown; no retry');pending(false);
-}
-export async function heroesKaramjaPassage(s:Session,q:Pick<Q,'talkTo'|'converse'|'dialogOpen'|'opLoc'|'walk'>,outbound:boolean,guard:()=>void,move:(to:HeroesTile)=>Promise<void>,pending:(value:boolean)=>void){
- const home=outbound?{x:3029,z:3217,level:0}:{x:2954,z:3146,level:0},deck=outbound?{x:2956,z:3143,level:1}:{x:3032,z:3217,level:1},plank=outbound?{id:2082,x:2956,z:3144}:{id:2084,x:3031,z:3217},land=outbound?{x:2956,z:3146,level:0}:{x:3029,z:3217,level:0};
- if(outbound&&(s.sdk.getState()?.player?.worldZ??0)>=9000)await move({x:3185,z:3436,level:0});
- await move(home);guard();const n=s.sdk.getState()?.nearbyNpcs.filter(n=>outbound?[376,377,378].includes(n.id):n.id===380).filter(n=>n.reachable!==false).sort((a,b)=>a.distance-b.distance)[0];if(!n)throw Error('Heroes exact Karamja sailor absent');
- const before=pack(s),beforeXP=xp(s);if((before[995]??0)<67)throw Error('Heroes Karamja fare/reserve short');const same=()=>heroesPackEffect(before,pack(s),{995:-30})&&JSON.stringify(beforeXP)===JSON.stringify(xp(s)),at=(p:HeroesTile)=>{const a=s.sdk.getState()?.player;return!!a&&a.worldX===p.x&&a.worldZ===p.z&&a.level===p.level;};pending(true);
- try{await q.talkTo(n);}catch{/* Reconcile this sole paid passage. */}
- if(!await q.converse(outbound?[/^Yes please\.$/i]:[/^Can I journey on this ship\?$/i,/^Search away, I have nothing to hide\.$/i,/^Ok\.$/i],()=>{guard();return at(deck)&&same();},100)||!same())throw Error('Heroes Karamja paid passage unknown; no retry');
- if(!await q.converse([],()=>{guard();return!q.dialogOpen();},12))throw Error('Heroes Karamja arrival dialog unresolved');await q.walk('Karamja deck stand',[{x:deck.x,z:deck.z,tol:0}]);guard();const l=s.sdk.getState()?.nearbyLocs.find(l=>l.id===plank.id&&l.x===plank.x&&l.z===plank.z&&l.level===1);if(!at(deck)||!same()||!l)throw Error('Heroes Karamja original gangplank unknown');try{await q.opLoc(l,1);}catch{/* Reconcile sole crossing. */}if(!await waitUntil(s,()=>{guard();return at(land)&&same();},{timeoutTicks:12}))throw Error('Heroes Karamja disembark unknown; no retry');pending(false);
-}
-export async function heroesRestaurantCrossing(s:Session,q:Pick<Q,'walk'|'opLoc'|'useOnLoc'>,kind:'panel'|'side-door'|'treasure-door',inward:boolean,guard:()=>void){
- const panel=kind==='panel',treasure=kind==='treasure-door',key=panel?undefined:treasure?1588:1586,loc=panel?{id:2629,x:2787,z:3190}:treasure?{id:2621,x:2764,z:3197}:{id:2622,x:2781,z:3197};
- // Native oriented doors: panel enters west; the keyed side door enters north; treasure enters east.
- const stand=panel?{x:inward?2787:2786,z:3190}:treasure?{x:inward?2763:2764,z:3197}:{x:2781,z:inward?3196:3197},land=panel?{x:inward?2786:2787,z:3190}:treasure?{x:inward?2764:2763,z:3197}:{x:2781,z:inward?3197:3196},ready=panel&&!inward?{x:2788,z:3190}:land;
- guard();if(key!==undefined&&!s.sdk.getInventory().some(i=>i.id===key&&i.count===1))throw Error('Heroes door owned key unavailable');const before=pack(s),beforeXP=xp(s),same=()=>heroesPackEffect(before,pack(s),{})&&JSON.stringify(beforeXP)===JSON.stringify(xp(s));
- if(kind==='side-door'&&inward){const p=s.sdk.getState()?.player;if(p&&Math.max(Math.abs(p.worldX-stand.x),Math.abs(p.worldZ-stand.z))>1){await q.walk('side-door garden approach',[{x:2782,z:3196,tol:0}]);guard();if(!same())throw Error('Heroes garden approach assets changed');}}
- const initial=s.sdk.getState()?.player;if(!initial||initial.level!==0)throw Error('Heroes crossing position unavailable');if(initial.worldX!==stand.x||initial.worldZ!==stand.z){const path=s.sdk.findPath(stand.x,stand.z),last=path.waypoints.at(-1);if(!path.success||path.reachedDestination!==true||last?.x!==stand.x||last.z!==stand.z)throw Error('Heroes crossing stand has no complete local path');guard();const moved=await s.sdk.sendWalk(stand.x,stand.z);if(!moved.success)throw Error('Heroes crossing stand walk rejected: '+moved.message);}
- if(!await waitUntil(s,()=>{guard();const p=s.sdk.getState()?.player;return!!p&&p.level===0&&p.worldX===stand.x&&p.worldZ===stand.z&&same();},{timeoutTicks:60}))throw Error('Heroes crossing stand unobserved');await waitTicks(s,2);guard();const start=s.sdk.getState()?.player;if(!start||start.level!==0||start.worldX!==stand.x||start.worldZ!==stand.z||!same())throw Error('Heroes crossing original stand unconfirmed');
- try{if(panel)await q.opLoc(loc);else await q.useOnLoc(key!,loc);}catch{/* Observe this sole crossing; never repeat the input. */}
- if(!await waitUntil(s,()=>{guard();const p=s.sdk.getState()?.player;return!!p&&p.level===0&&p.worldX===land.x&&p.worldZ===land.z&&same();},{timeoutTicks:12})||!same())throw Error('Heroes '+kind+' crossing unknown; no walk or repeat');
- await waitTicks(s,4);guard();if(!same())throw Error('Heroes crossing settling assets changed');
- await q.walk(kind+' landing',[{...ready,tol:0}]);guard();const p=s.sdk.getState()?.player;if(!p||p.level!==0||p.worldX!==ready.x||p.worldZ!==ready.z||!same())throw Error('Heroes '+kind+' landing unconfirmed');
-}
-export async function heroesLureGrip(s:Session,q:Pick<Q,'walk'|'opLoc'|'converse'|'dialogOpen'|'sawText'>,guard:()=>void){
- guard();const candidates=s.sdk.getState()?.nearbyNpcs.filter(n=>n.id===792)??[];if(candidates.length!==1)throw Error('Heroes unique original Grip required');const original=candidates[0]!,native=(s.client as any).npc?.[original.index];if(!native)throw Error('Heroes original Grip cache unavailable');const ready=()=>{guard();if((s.client as any).npc?.[original.index]!==native)throw Error('Heroes original Grip replaced during lure');const n=s.sdk.getState()?.nearbyNpcs.find(n=>n.index===original.index&&n.id===792);return!!n&&n.hp!==0&&n.x===2777&&n.z===3198;};
- if(ready()&&!q.dialogOpen())return;await q.walk('lure cabinet',[{x:2777,z:3196,tol:0}]);guard();await q.opLoc({id:2635,x:2775,z:3196});if(!await q.converse([/won't notice.*quick look/i],()=>q.sawText(/private drinking cabinet/i)&&ready()&&!q.dialogOpen(),60)||!ready())throw Error('Heroes original Grip window arrival unobserved');
-}
-export async function heroesRestaurantFront(s:Session,q:Pick<Q,'walk'|'openDoor'|'opLoc'|'useOnLoc'>,guard:()=>void){
- guard();let p=s.sdk.getState()?.player;if(!p||p.level!==0)throw Error('Heroes restaurant original position unknown');if(p.worldX<2778||p.worldX>2793||p.worldZ<3190||p.worldZ>3200)return;
- if(p.worldX<=2782&&p.worldZ>=3197){await heroesRestaurantCrossing(s,q,'side-door',false,guard);await q.walk('garden return panel',[{x:2786,z:3190,tol:0}]);}
- p=s.sdk.getState()?.player;if(!p)throw Error('Heroes restaurant return position missing');if(p.worldX<=2786){await heroesRestaurantCrossing(s,q,'panel',false,guard);}
- guard();await q.openDoor('kitchen return',2788,3189);await q.walk('restaurant front',[{x:2794,z:3186,tol:0}]);guard();p=s.sdk.getState()?.player;if(!p||p.worldX!==2794||p.worldZ!==3186||p.level!==0)throw Error('Heroes restaurant front arrival unknown');
-}
-export async function heroesRangeHeat(s:Session,slot:number,guard:()=>void){const check=()=>{guard();const p=s.sdk.getState()?.player,c=s.client as any,h=c.localPlayer;if(!p||p.level!==0||p.worldX!==3160||p.worldZ!==3428||c.minusedlevel!==0||c.mapBuildBaseX+h?.routeX?.[0]!==3160||c.mapBuildBaseZ+h?.routeZ?.[0]!==3428||s.sdk.getStateAge()>5000)throw Error('Heroes Native range stand unconfirmed');if(!s.sdk.getState()?.nearbyLocs.some(l=>l.id===2728&&l.x===3160&&l.z===3427&&l.level===0))throw Error('Heroes observed Native range absent');};check();const sdk=new Proxy(s.sdk,{get(t,k,r){const v=Reflect.get(t,k,r);return typeof v==='function'?function(...args:unknown[]){if(String(k).startsWith('send'))check();return v.apply(r,args);}:v;}});return(await sdk.sendUseItemOnLoc(slot,3160,3427,2728)).success;}
+// Hero's Quest as a pair. Usage: bun scripts/generated/quest-hero.ts <blackarm> [phoenix=<blackarm>p]
+// Presets: <blackarm> quest_hero, <phoenix> quest_hero_helper (both outside the Heroes' Guild door; every skill 99; nothing
+// worn: Entrana bans weapons and armour). Reward: 1 QP and the guild (quests/quest_hero/scripts/quest_hero.rs2).
+// Route, order, regions and dialogue answers are adapted from rs-stun-toolkit `q-heros-quest.ts` (MIT,
+// research/stun-toolkit-LICENSE.txt), which ran both accounts in 1745-1803 ticks in their lockstep sim. Our SDK reads no
+// varps, so every step gates on items, position and dialogue text.
+//
+// Why two accounts: only a Phoenix member at stage >= 4 can attack Grip (npcs/grip.rs2:59-65); only a Black Arm member can
+// get the misc key and open the treasure room (grip.rs2:1-17, :48-56, locs/brimhaven_scarface_mansion.rs2:61-72).
+//  - Both: Achietties (start), the Ice Queen's ice gloves (White Wolf Mountain ladder maze behind the hero rockslide), the
+//    Entrana firebird's feather (ice gloves worn, no weapons or armour in the pack), the lava eel (Gerrant's slime, the
+//    harralander potion, a fishing rod, the dusty key gate, the lava, a fire), the armband, Achietties.
+//  - The mansion: Black Arm: Grubor "Four leaved clover", Trobert (ID papers), black armour worn, Garv, Grip (papers, then
+//    "Anything I can do now?": misc key), the key to the Phoenix member outside Garv's door. Phoenix: Alfonse "gherkins",
+//    the kitchen, Charlie, the panel, the garden, the side door with the key. Black Arm opens Grip's drinks cabinet beside
+//    a pirate guard, so Grip walks to 2777,3198 (brimhaven_scarface_mansion.rs2:9-35). The Phoenix member hits him through
+//    the arrow slit of the side room, Black Arm takes his keys, the treasure door, the chest (2 candlesticks).
+//  - Quest doors teleport (doors/scripts/open_and_close_doors.rs2:9-38): on the door tile you go to the far side, from
+//    anywhere else you land on the door tile. So every quest door is used from an exact tile, and blocked for the planner.
+import { openQuest } from './quest-lib';
+import { componentId } from '../../packages/core/src/logout';
 
-export async function heroesDepositPack(s:Session){for(const id of new Set(s.sdk.getInventory().map(i=>i.id))){const row=s.sdk.getInventory().find(i=>i.id===id);if(row)await depositObserved(s,row);}}
-export const heroesSpellComponent=(spell:{component:string})=>componentId(spell.component);
-export async function heroesLavaBank(s:Session,remaining:number,xpRate:number,maximumBait:number,stop:()=>boolean,run:typeof runBankJob=runBankJob,originalFatal:()=>boolean=()=>false){
- if(originalFatal())throw Error('Heroes original context changed before Lava handoff');
- if(!Number.isSafeInteger(remaining)||remaining<1400||!Number.isSafeInteger(maximumBait)||maximumBait<2)throw Error('Heroes Lava requires finite route/return and owned bait reserve');
- const job:BankJob={family:'fishing',recipe:'lava',target:1,batch:1,reserve:1,cap:Math.min(2200,remaining),returnTicks:600,xpRate,members:true,bank:{x:3185,z:3436,level:0},site:{x:2889,z:9765,level:0},fishingProtection:{prayer:14,potionsPerUnit:2,maximumDoses:8,antifire:true}};
- const result=await run(s,job,stop);console.log('HEROES_LAVA '+JSON.stringify({account:s.name,...result}));if(!result.ok||!result.atBank||!('prayerRestored'in result)||result.prayerRestored!==true||!('prayerStateUncertain'in result)||result.prayerStateUncertain!==false||!('potionReceipts'in result)||!Array.isArray(result.potionReceipts))throw Object.assign(Error('Heroes Lava bank trip unresolved '+result.failure),{lavaResult:result});
- const potionReceipts=result.potionReceipts;return{...result,potionReceipts};
+const MAIN = process.argv[2]!;
+const HELPER = process.argv[3] ?? `${MAIN}p`;
+const CAP = Number(process.env.HERO_CAP ?? 7000);
+
+const ITEM = {
+    gloves: 1580, feather: 1583, eel: 2149, rawEel: 2148, armband: 1579, candle: 1577, miscKey: 1586, gripKeys: 1588, papers: 1584,
+    slime: 1581, oil: 1582, oilyRod: 1585, rod: 307, harra: 97, logs: 1511, tinderbox: 590, vial: 229, jailKey: 1591, dusty: 1590,
+    pickaxe: 1265, helm: 1165, body: 1125, legs: 1077,
+};
+const BLACK = [ITEM.helm, ITEM.body, ITEM.legs];
+const GLORY = [1712, 1710, 1708, 1706];
+const PRAYER_POT = [2434, 139, 141, 143];
+const PFM = 14;                                              // protect_from_melee (sdk PRAYER_INDICES)
+const BLAST = componentId('magic:fire_blast');
+const NPC = { queen: 795, firebird: 139, jailer: 201, grip: 792, guard: 799, baby: 52, spot: 800 };
+const ICE_ADDS = [145, 125, 111, 64];                        // ice warrior (both), ice giant, ice spider
+const AT = {
+    achietties: { x: 2903, z: 3510 }, queen: { x: 2866, z: 9952 }, katrine: { x: 3186, z: 3385 }, straven: { x: 3246, z: 9780 },
+    barnaby: { x: 2679, z: 3275 }, alfonse: { x: 2793, z: 3188 }, charlie: { x: 2790, z: 3191 }, trobert: { x: 2806, z: 3174 },
+    garv: { x: 2776, z: 3186 }, grip: { x: 2774, z: 3192 }, meet: { x: 2774, z: 3185 }, gerrant: { x: 3013, z: 3225 },
+    monks: { x: 3046, z: 3235 }, entranaMonk: { x: 2835, z: 3336 }, firebird: { x: 2847, z: 3386 }, lava: { x: 2890, z: 9767 },
+    jailer: { x: 2933, z: 9695 }, velrak: { x: 2931, z: 9685 }, varrockMeet: { x: 3212, z: 3426 },
+};
+const LOC = {
+    rockslide: { id: 2634, x: 2838, z: 3517 },               // herorockslide, op2 Mine (white_wolf_mountain.rs2:5-40)
+    cellar: { id: 1754, x: 3244, z: 3383 },                  // down to the Phoenix HQ
+    kitchen: { id: 2628, x: 2788, z: 3189 },                 // herokitchendoor, north edge (brimhaven_restaurant.rs2:1-6)
+    panel: { id: 2629, x: 2787, z: 3190 },                   // herokitchenpanel, west edge (:8-12)
+    side: { id: 2622, x: 2781, z: 3197 },                    // pete_sidedoor (brimhaven_scarface_mansion.rs2:37-50)
+    grubor: { id: 2626, x: 2811, z: 3170 },                  // grubordoor, west edge (brimhaven_blackarm_hq.rs2:1-6)
+    garv: { id: 2627, x: 2774, z: 3187 },                    // garvdoor
+    cabinet: { id: 2635, x: 2775, z: 3196 },                 // gripcbshut -> gripcbopen 2636, reached from its north tile
+    treasure: { id: 2621, x: 2764, z: 3197 },                // pete_treasuredoor
+    chest: { id: 2632, x: 2766, z: 3199 },                   // shutcandlechest -> opencandlechest 2633
+    tavLadder: { id: 1759, x: 2884, z: 3397 },
+    jail: { id: 2631, x: 2931, z: 9690 },                    // dungeonjail, south wall of the tile
+    gate: { id: 2623, x: 2924, z: 9803 },                    // deepdungeondoor, west wall of the tile
+    baDoor: { id: 2399, x: 3185, z: 3388 },
+};
+type Tile = { x: number; z: number };
+type Door = { id: number; x: number; z: number };
+const exact = (n: string) => new RegExp(`^${n}$`, 'i');
+
+type Q = Awaited<ReturnType<typeof openQuest>>;
+let b: Q | undefined;
+const p: Q = await openQuest({ name: HELPER, cap: CAP, others: () => b ? [b.s] : [] });
+b = await openQuest({ name: MAIN, cap: CAP, others: () => [p.s] });
+const B: Q = b;
+
+// Shared state: each account's script waits on the other's flags.
+const flags = new Set<string>();
+const set = (k: string) => { flags.add(k); console.log(`NOTE flag ${k}`); };
+const waitFlag = async (q: Q, k: string, ticks: number) => { if (!(await q.waitUntil(() => flags.has(k), ticks))) await q.fail(`partner never reached ${k}`); };
+
+const x = (q: Q) => q.pos()?.worldX ?? 0;
+const z = (q: Q) => q.pos()?.worldZ ?? 0;
+const under = (q: Q) => z(q) > 6400;
+const at = (q: Q, t: Tile) => x(q) === t.x && z(q) === t.z;
+const worn = (q: Q, id: number) => (q.st()?.equipment ?? []).some((e: any) => e?.id === id);
+const ground = (q: Q, id: number, r = 14): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === id && g.distance <= r).sort((a: any, c: any) => a.distance - c.distance)[0];
+const npcsOf = (q: Q, ids: number[]): any[] => (q.st()?.nearbyNpcs ?? []).filter((n: any) => ids.includes(n.id)).sort((a: any, c: any) => a.distance - c.distance);
+const liveLoc = (q: Q, l: Door, ids = [l.id]) => q.findLoc((k: any) => k.x === l.x && k.z === l.z && ids.includes(k.id)) ?? l;
+const shut = (q: Q, ticks = 12) => q.converse([], () => !q.dialogOpen(), ticks);
+const questDone = (q: Q) => { let d = false; q.s.onTick(() => { if (q.msgCount(/quest complete|completed the hero/i) > 0) d = true; }); return () => d; };
+const bDone = questDone(B), pDone = questDone(p);
+
+const pfmOn = (q: Q): boolean => !!q.st()?.prayers?.activePrayers?.[PFM];
+const pfm = async (q: Q, on: boolean) => { if (pfmOn(q) !== on) await q.step(`pfm ${on}`, () => q.s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }), () => pfmOn(q) === on, 3, 3); };
+const keepPrayer = async (q: Q) => {
+    if ((q.st()?.prayers?.prayerPoints ?? 99) >= 15) return;
+    const pot = PRAYER_POT.find(id => q.has(id));
+    if (pot) { await q.s.direct({ type: 'useInventoryItem', slot: q.slot(pot)!, optionIndex: 1, reason: 'SDK' }); await q.waitTicks(2); }
+};
+const wear = async (q: Q, id: number) => { if (!worn(q, id)) await q.step(`wear ${id}`, () => q.s.direct({ type: 'useInventoryItem', slot: q.slot(id)!, optionIndex: 2, reason: 'SDK' }), () => worn(q, id), 3, 3); };
+const dropIds = async (q: Q, ids: number[]) => {
+    for (let i = 0; i < 12; i++) {
+        const it = q.inv().find((e: any) => ids.includes(e.id));
+        if (!it) return;
+        await q.guard('drop');
+        await q.s.direct({ type: 'dropItem', slot: it.slot, reason: 'SDK' });
+        await q.waitTicks(1);
+    }
+};
+const pickup = async (q: Q, label: string, id: number) => {
+    await q.step(label, () => { const g = ground(q, id); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: id, reason: 'SDK' }) : undefined; }, () => q.has(id), 15, 4);
+};
+const tele = async (q: Q, label: string, comp: string) => {
+    if (q.dialogOpen()) await shut(q);
+    const x0 = x(q), z0 = z(q);
+    await q.step(label, () => q.s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => Math.max(Math.abs(x(q) - x0), Math.abs(z(q) - z0)) > 20, 8, 4);
+};
+const gloryDraynor = async (q: Q, label: string) => {
+    const g = () => q.inv().find((i: any) => GLORY.includes(i.id));
+    if (!g()) await q.fail(`${label}: no glory`);
+    const op = (g().optionsWithIndex ?? []).find((o: any) => /rub/i.test(o.text))?.opIndex ?? 4;
+    const moved = () => q.near(3105, 3251, 8);
+    await q.step(label, async () => {
+        const h = g();
+        if (h) await q.s.direct({ type: 'useInventoryItem', slot: h.slot, optionIndex: op, reason: 'SDK' });
+        await q.converse([/^draynor/i], moved, 8);
+    }, moved, 10, 3);
+};
+// Cross a quest door from an exact tile. A dialogue (Grubor, Garv) answers the op: the caller handles it.
+const doorFrom = async (q: Q, door: Door, stand: Tile, through: () => boolean, label: string, key?: number) => {
+    for (let k = 0; k < 5 && !through(); k++) {
+        await q.guard(label);
+        if (q.dialogOpen()) await shut(q);
+        if (q.cheb(stand.x, stand.z) > 1) await q.walk(`${label} walk`, [{ ...stand, tol: 0 }]);
+        if (!at(q, stand)) await q.dash(`${label} stand`, stand.x, stand.z, 0, 25);
+        if (key !== undefined) await q.useOnLoc(key, liveLoc(q, door));
+        else await q.opLoc(liveLoc(q, door), 1);
+        await q.waitUntil(() => through() || q.dialogOpen(), 6);
+        if (q.dialogOpen() && !through()) return;
+    }
+    if (!through()) await q.fail(`${label}: not through`);
+};
+// One Fire Blast every `every` ticks on the nearest npc of `ids` until done(). `adds`: an npc that holds the bot in
+// combat ("I'm already under attack!", single-way) dies first. `away`: no Magic XP for 40 ticks with the target in view
+// means a stale npc entry (the toolkit's casts were dropped silently there), so walk out of view and back.
+async function cast(q: Q, label: string, ids: number[], done: () => boolean, o: { ticks: number; anchor?: Tile; adds?: number[]; every?: number; away?: Tile }): Promise<void> {
+    const every = o.every ?? 5;
+    let last = -100, busy = q.msgCount(/already under attack/i), add = -1, xp0 = q.xp('Magic'), xpAt = q.T();
+    for (let t = 0; t < o.ticks && !done(); t++) {
+        await q.guard(label);
+        await keepPrayer(q);
+        const c = q.msgCount(/already under attack/i);
+        if (o.adds && c !== busy) { busy = c; add = npcsOf(q, o.adds).filter(n => n.distance <= 8)[0]?.index ?? -1; }
+        let n = add >= 0 ? npcsOf(q, o.adds ?? []).find(k => k.index === add) : undefined;
+        if (!n) { add = -1; n = npcsOf(q, ids)[0]; }
+        if (q.xp('Magic') !== xp0) { xp0 = q.xp('Magic'); xpAt = q.T(); }
+        if (!n) {
+            if (o.anchor && !q.near(o.anchor.x, o.anchor.z, 5) && t % 10 === 0) await q.walk(`${label} anchor`, [{ ...o.anchor, tol: 3 }]);
+            xpAt = q.T();
+            await q.waitTicks(1);
+            continue;
+        }
+        if (o.away && o.anchor && q.T() - xpAt >= 40) {
+            console.log(`NOTE ${label}: no cast landed in 40 ticks at ${x(q)},${z(q)}, target ${n.index} ${n.x},${n.z}: out of view and back`);
+            await q.walk(`${label} away`, [{ ...o.away, tol: 2 }]);
+            await q.walk(`${label} back`, [{ ...o.anchor, tol: 3 }]);
+            xpAt = q.T(); last = -100;
+            continue;
+        }
+        if (q.T() - last >= every) { last = q.T(); await q.s.direct({ type: 'spellOnNpc', npcIndex: n.index, spellComponent: BLAST, reason: 'SDK' }); }
+        await q.waitTicks(1);
+    }
+    if (!done()) await q.fail(`${label}: not done`);
 }
-export function heroesLavaLedger(before:Record<number,number>,after:Record<number,number>,receipts:readonly {id:number;next:number;kind:string;delta:Record<number,number>}[],fishingXp:number,xpRate:number){
- const caught=(after[2148]??0)-(before[2148]??0);if(!Number.isSafeInteger(caught)||caught<1||caught>2||fishingXp!==60*caught*xpRate)throw Error('Heroes Lava exact catch/XP missing');const delta:Record<number,number>={2148:caught,313:-caught};let antifire=0;
- for(const r of receipts){const native=potionCareRecipe(r.id);if(native.next!==r.next||native.kind!==r.kind||!['prayer','antifire'].includes(r.kind)||r.kind==='prayer'&&![2434,139,141,143].includes(r.id)||r.kind==='antifire'&&![2452,2454,2456,2458].includes(r.id)||!heroesPackEffect({},r.delta,{[r.id]:-1,[r.next]:1}))throw Error('Heroes Lava potion receipt unknown');if(r.kind==='antifire')antifire++;for(const[id,n]of Object.entries(r.delta))delta[+id]=(delta[+id]??0)+n;}
- if(!antifire||receipts.length>8||!heroesPackEffect(before,after,delta))throw Error('Heroes Lava all-owned-assets mismatch');return delta;
+
+// ---- Phases shared by both accounts ----
+async function start(q: Q): Promise<void> {
+    await q.talk('achietties', /^achietties$/i, [/i'm a hero, may i apply/i, /start looking for all those/i], () => q.sawText(/good luck with that/i) && !q.dialogOpen(), AT.achietties, 60);
+    q.milestone('start');
 }
-const pack=(s:Session)=>{const m:Record<number,number>={};for(const i of s.sdk.getInventory())m[i.id]=(m[i.id]??0)+i.count;return m;},xp=(s:Session)=>Object.fromEntries((s.sdk.getState()?.skills??[]).map(k=>[k.name,k.experience]));
-const heroFlag=(s:Session)=>questFlags(s.client)?.find(q=>q.name==="Hero's Quest")?.state;
-export function heroesAdmission(s:Session){const flags=questFlags(s.client);if(!flags||heroFlag(s)!=='not started'||!['Shield of Arrav','Lost City',"Merlin's Crystal",'Dragon Slayer'].every(name=>flags.some(q=>q.name===name&&q.state==='complete')))throw Error('observed fresh Heroes/prerequisite quest flags required');if((s.sdk.getSkill('Prayer')?.baseLevel??0)<43||s.sdk.getState()?.prayers?.activePrayers?.length!==15||s.sdk.getState()?.prayers.activePrayers.some(Boolean)||(s.sdk.getSkill('Magic')?.level??0)<13||(s.sdk.getSkill('Fishing')?.level??0)<53||(s.sdk.getSkill('Cooking')?.level??0)<53||(s.sdk.getSkill('Herblore')?.level??0)<25||(s.sdk.getSkill('Hitpoints')?.level??0)<90||s.sdk.getEquipment().length||s.sdk.getState()?.autoRetaliateEnabled!==false||(s.client as any)?.membersAccount!==1||!Number.isSafeInteger((s.client as any)?.var?.[108])||(s.client as any)?.var?.[108]===3)throw Error('Heroes requires observed skills/HP90, empty worn kit, retaliationOFF and no autocast');if(Object.values(HEROES_ITEMS).filter(id=>[1581,1582,1583,1585,1586,1588,1584,1577,1579,2148,2149].includes(id)).some(id=>(pack(s)[id]??0)>0))throw Error('fresh Heroes must not carry quest progress items');}
-// Capture both actors before either actor waits or travels; the waiting partner cannot donate a replacement owner.
-export function heroesContext(raw:Session,cap:number,server:string){
- const client=raw.client,executor=(client as any)?.executeBotAction,first=raw.sdk.getState()?.player,life=first?.lifeId,respawns=first?.respawnCount??0,start=raw.tick(),initialHp=raw.sdk.getSkill('Hitpoints')?.level??0,style=raw.sdk.getState()?.combatStyle;let lost=false,ended=false;void raw.ended.then(()=>{ended=true;});
- const fatal=()=>{const at=raw.sdk.getState()?.player;if(raw.client!==client||(client as any)?.executeBotAction!==executor)lost=true;return lost||typeof executor!=='function'||raw.lifecycle?.server!==server||ended||life===undefined||!at||at.lifeId!==life||(at.respawnCount??0)!==respawns||at.isDead||(raw.sdk.getSkill('Hitpoints')?.level??0)<70||raw.tick()-start>=cap;};
- return{fatal,start,initialHp,style};
+
+// The lair (x2857-2877 z9917-9964) is the end of White Wolf Mountain's ladder maze: the rockslide from its west side,
+// ladder down at 2848,3513, underground west to 2824,9907, up, down at 2827,3510, underground east to 2857,9917, up into
+// the sealed nook, down at 2859,3519. Each climb keeps the tile (z +- 6400), so the stand tiles are exact.
+async function iceQueen(q: Q): Promise<void> {
+    const ladder = async (id: number, lx: number, lz: number, stand: Tile, label: string) => {
+        const was = under(q);
+        await q.walk(label, [{ ...stand, tol: 0 }]);
+        await q.climb(label, () => q.findLoc((l: any) => l.id === id && l.x === lx && l.z === lz) ?? { id, x: lx, z: lz }, /climb/i, () => under(q) !== was);
+    };
+    await q.walk('rockslide', [{ x: 2837, z: 3517, tol: 0 }]);
+    await q.step('rockslide', () => q.opLoc(liveLoc(q, LOC.rockslide), 2), () => x(q) >= 2839, 12, 4);
+    q.milestone('rockslide');
+    await pfm(q, true);
+    await ladder(1759, 2848, 3513, { x: 2849, z: 3513 }, 'ladder 2848,3513');
+    await ladder(1755, 2824, 9907, { x: 2825, z: 9907 }, 'ladder 2824,9907');
+    await ladder(1759, 2827, 3510, { x: 2828, z: 3510 }, 'ladder 2827,3510');
+    await ladder(1755, 2857, 9917, { x: 2858, z: 9917 }, 'ladder 2857,9917');
+    await ladder(1759, 2859, 3519, { x: 2860, z: 3519 }, 'ladder 2859,3519');
+    q.milestone('lair');
+    await q.walk('ice queen', [{ ...AT.queen, tol: 3 }]);
+    const got = () => !!ground(q, ITEM.gloves) || q.has(ITEM.gloves);
+    await cast(q, 'ice queen', [NPC.queen], got, { ticks: 1100, anchor: AT.queen, adds: ICE_ADDS, every: 5, away: { x: 2860, z: 9921 } });
+    if (!q.has(ITEM.gloves)) await pickup(q, 'ice gloves', ITEM.gloves);
+    await pfm(q, false);
+    await wear(q, ITEM.gloves);
+    await dropIds(q, [ITEM.pickaxe]);                        // weapon_pickaxe is banned on Entrana
+    q.milestone('ice gloves');
 }
-type Q=Awaited<ReturnType<typeof openQuest>>;
-type Actor={s:Session;raw:Session;q:Q;start:number;initialHp:number;fatal:()=>boolean;stop:()=>boolean;ledger:Record<number,number>;baseline:Record<number,number>;casts:number;originalStyle:number;lavaParked:boolean;entranaPending:boolean;bankItems:{id:number;count:number}[]};
-const BANK={x:3185,z:3436,level:0},I=HEROES_ITEMS;
-export async function runHeroesPair(blackRaw:Session,phoenixRaw:Session,o:HeroesOrder,requestStop:()=>boolean=()=>false){
- validateHeroesOrder(o);if(blackRaw.name.toLowerCase()!==o.blackArm.toLowerCase()||phoenixRaw.name.toLowerCase()!==o.phoenix.toLowerCase()||[blackRaw,phoenixRaw].some(s=>s.lifecycle?.server!==o.server))throw Error('Heroes pair account/server identity mismatch');
- for(const s of[blackRaw,phoenixRaw])heroesAdmission(s);
- const contexts=new Map([blackRaw,phoenixRaw].map(s=>[s,heroesContext(s,o.cap,o.server)])),actors:Actor[]=[],handoff=createHandoff([I.miscKey,I.candle],resolve('.practice/quest-heroes',o.goal));let working=true,phaseFailed=false,failure='';
- const pairStop=()=>phaseFailed||[...contexts.values()].some(c=>c.fatal())||productionStopRequested(o.blackArm,requestStop)||productionStopRequested(o.phoenix,requestStop);
- const add=(a:Actor,delta:Record<number,number>)=>{for(const[id,n]of Object.entries(delta))a.ledger[+id]=(a.ledger[+id]??0)+n;};
- const move=async(a:Actor,to:{x:number;z:number;level:number},returning=false,tolerance=1)=>{const over=()=>a.fatal()||!returning&&a.stop();if(over())throw Error('Heroes route original context unavailable');const p=a.s.sdk.getState()?.player,island=(x:number,z:number,level:number)=>level===0&&x>=2700&&x<3000&&z>=3100&&z<=3300;if(p&&island(p.worldX,p.worldZ,p.level)!==island(to.x,to.z,to.level))await karamja(a,island(to.x,to.z,to.level));const at=a.s.sdk.getState()?.player;if(at&&at.level===to.level&&Math.max(Math.abs(at.worldX-to.x),Math.abs(at.worldZ-to.z))<=tolerance)return;await a.s.sdk.sendCloseModal();await waitUntil(a.s,()=>!a.s.sdk.getState()?.interface.isOpen&&!a.s.sdk.getDialog()?.isOpen,{timeoutTicks:8});await waitTicks(a.s,2);await heroesRoute(a.s,to,over,()=>o.cap-(a.s.tick()-a.start)-(returning?0:o.returnTicks),{},tolerance);};
- const openBank=async(a:Actor)=>{if(a.fatal())throw Error('Heroes bank original life/owner missing');if(a.s.sdk.getState()?.bank.isOpen&&a.s.bankObservation?.())return;const generation=a.s.bankObservation?.()?.generation??-1;if(!(await a.s.bot.openBank()).success||!await waitUntil(a.s,()=>!!a.s.sdk.getState()?.bank.isOpen&&(a.s.bankObservation?.()?.generation??-1)>generation,{timeoutTicks:12}))throw Error('Heroes fresh bank unavailable');a.bankItems=a.s.bankObservation!()!.items.map(i=>({id:i.id,count:i.count}));};
- const assets=(a:Actor)=>{const out:Record<number,number>={};const bank=a.s.bankObservation?.()?.items;if(bank)a.bankItems=bank.map(i=>({id:i.id,count:i.count}));for(const i of[...a.s.sdk.getInventory(),...a.s.sdk.getEquipment(),...a.bankItems])out[i.id]=(out[i.id]??0)+i.count;return out;};
- const stage=async(a:Actor,need:Record<number,number>,wear:number[]=[])=>{if(a.s.name.toLowerCase()===o.phoenix.toLowerCase()){const p=a.s.sdk.getState()?.player;if(p?.level===0&&p.worldX>=2778&&p.worldX<=2793&&p.worldZ>=3190&&p.worldZ<=3200)await heroesRestaurantFront(a.s,a.q,()=>{if(a.fatal()||working&&a.stop())throw Error('Heroes restaurant cleanup context stopped');});}if(a.entranaPending)throw Error('Heroes unknown sea passage; cleanup parked');const p=a.s.sdk.getState()?.player;if(p?.level===0&&p.worldX>=2800&&p.worldX<2880&&p.worldZ>=3300&&p.worldZ<3400)await sail(a,false);await move(a,BANK,!working);await heroesClearWear(a.s,()=>openBank(a));if(Object.hasOwn(need,995)){const total=assets(a)[995]??0;need={...need,995:heroesCoinStage(a.baseline[995]??0,total,o.coinBudget)};}await heroesDepositPack(a.s);for(const[id,n]of Object.entries(need)){if(a.fatal()||working&&a.stop())throw Error('Heroes staging stopped');const row=a.s.sdk.getState()?.bank.items.find(i=>i.id===+id);if(!row||row.count<n)throw Error('Heroes owned bank stock missing '+id);const count=pack(a.s)[+id]??0,g=a.s.bankObservation!()!.generation;await a.s.bot.withdrawItem(row,n,{asNote:false});if(!await waitUntil(a.s,()=>((pack(a.s)[+id]??0)===count+n&&(a.s.bankObservation?.()?.generation??-1)>g),{timeoutTicks:10}))throw Error('Heroes withdrawal unresolved');}await a.s.bot.closeBank();if(!await waitUntil(a.s,()=>!a.s.sdk.getState()?.bank.isOpen,{timeoutTicks:8}))throw Error('Heroes bank close unobserved');for(const id of wear){const row=a.s.sdk.getInventory().find(i=>i.id===id);if(!row||!(await a.s.bot.equipItem(row)).success||!await waitUntil(a.s,()=>a.s.sdk.getEquipment().some(i=>i.id===id),{timeoutTicks:8}))throw Error('Heroes owned kit equip unresolved');}};
- const sail=(a:Actor,east:boolean)=>heroesEntranaPassage(a.s,a.q,east,()=>{if(a.fatal()||working&&a.stop())throw Error('Heroes Entrana original context/stop');},to=>move(a,to,!working),value=>{a.entranaPending=value;});
- const karamja=async(a:Actor,outbound:boolean)=>{await heroesKaramjaPassage(a.s,a.q,outbound,()=>{if(a.fatal()||working&&a.stop())throw Error('Heroes Karamja original context/stop');},to=>move(a,to,!working),value=>{a.entranaPending=value;});add(a,{995:-30});};
- const heal=async(a:Actor,target=a.initialHp)=>{for(let food=0;(a.s.sdk.getSkill('Hitpoints')?.level??0)<target&&food<6;food++){const row=a.s.sdk.getInventory().find(i=>i.id===I.food),before=pack(a.s),hp=a.s.sdk.getSkill('Hitpoints')!.level,heal=questFoodDefinitions().get(I.food)?.heal;if(!row||!heal)throw Error('Heroes owned recovery food unavailable');await a.s.bot.eatFood(row);if(!await waitUntil(a.s,()=>a.fatal()||heroesPackEffect(before,pack(a.s),{[I.food]:-1}),{timeoutTicks:8})||a.fatal()||!heroesPackEffect(before,pack(a.s),{[I.food]:-1})||a.s.sdk.getSkill('Hitpoints')!.level!==Math.min(a.s.sdk.getSkill('Hitpoints')!.baseLevel,hp+heal))throw Error('Heroes recovery food unresolved');add(a,{[I.food]:-1});await waitTicks(a.s,3);}if((a.s.sdk.getSkill('Hitpoints')?.level??0)<target)throw Error('Heroes HP restoration incomplete');};
- const paid=async(a:Actor,label:string,delta:Record<number,number>,send:()=>Promise<unknown>,ticks=12)=>{if(a.stop())throw Error('Heroes stopped before '+label);const before=pack(a.s);await send();if(!await waitUntil(a.s,()=>a.fatal()||heroesPackEffect(before,pack(a.s),delta),{timeoutTicks:ticks})||a.fatal()||!heroesPackEffect(before,pack(a.s),delta))throw Error('Heroes paid '+label+' unresolved; no retry');add(a,delta);await waitTicks(a.s,3);};
- const converse=async(a:Actor,label:string,npc:RegExp,patterns:RegExp[],ok:()=>boolean,home:{x:number;z:number})=>{await a.q.talk(label,npc,patterns,ok,home,100);if(a.stop())throw Error('Heroes stopped after '+label);};
- try{
-  for(const raw of[blackRaw,phoenixRaw]){const{fatal,start,initialHp,style}=contexts.get(raw)!;if(fatal())throw Error('Heroes captured pair input context unavailable');heroesAdmission(raw);if(!style?.known||style.weaponName!=='Unarmed'||!Number.isSafeInteger(style.currentStyle)||style.currentStyle!<0||style.currentStyle!>2)throw Error('Heroes known initial unarmed style required');const stop=()=>fatal()||pairStop()||raw.tick()-start>=o.cap-o.returnTicks;
-   const guard=()=>{if(fatal()||working&&stop())throw Error('Heroes original input owner/life/HP/stop unavailable');},sdk=new Proxy(raw.sdk,{get(target,key,receiver){const v=Reflect.get(target,key,receiver);return typeof v==='function'?function(...args:unknown[]){if(typeof key==='string'&&key.startsWith('send'))guard();return v.apply(receiver,args);}:v;}}),s={...raw,sdk,bot:new BotActions(sdk),direct:async(action:Parameters<Session['direct']>[0])=>{guard();return raw.direct(action);}}as Session,q=await openQuest({session:s,stop:()=>fatal()||working&&stop(),cap:o.cap,food:[],eatAt:1,others:()=>actors.map(a=>a.s)}),a:Actor={s,raw,q,start,initialHp,fatal,stop,ledger:{},baseline:{},casts:0,originalStyle:style.currentStyle!,lavaParked:false,entranaPending:false,bankItems:[]};actors.push(a);await move(a,BANK);await openBank(a);a.baseline=assets(a);if([I.slime,I.oil,I.feather,I.oilyRod,I.miscKey,I.gripKeys,I.idPapers,I.candle,I.armband,I.rawEel,I.eel].some(id=>(a.baseline[id]??0)>0))throw Error('Heroes fresh start has owned quest progress in bank');await a.s.bot.closeBank();}
-  const [black,phoenix]=actors as[Actor,Actor],spell=nativeNpcSpell('fire_strike'),spellKit=(a:Actor)=>heroesRemainingSpellKit(spell.runes,o.maximumCasts,a.casts),baseKit={995:o.coinBudget+37,[I.food]:6};
-  for(const a of actors){await stage(a,baseKit);await move(a,{x:2903,z:3510,level:0});await converse(a,'apply Heroes',/^Achietties$/i,[/I'm a hero.*apply/i,/start looking for all those things/i],()=>heroFlag(a.s)==='started',{x:2903,z:3510});a.q.milestone('Heroes-started');}
-  const pairNames=new Set([o.blackArm.toLowerCase(),o.phoenix.toLowerCase()]);
-  const peerFree=(a:Actor)=>!(a.s.sdk.getState()?.nearbyPlayers??[]).some(p=>!pairNames.has(p.name.toLowerCase()));
-  const kill=async(a:Actor,npcId:number,drop:number,picker:Actor,home:{x:number;z:number})=>{const sight=guardianLoadedSight(a.s.client),ground=()=>picker.s.sdk.getState()?.groundItems.filter(g=>g.id===drop)??[];if(ground().length)throw Error('Heroes preexisting quest drop ambiguous');await a.q.walk('owned quest target',[{...home,tol:3}]);if(!await a.q.waitUntil(()=>a.s.sdk.getState()?.nearbyNpcs.some(n=>n.id===npcId)??false,90))throw Error('Heroes native target absent');const candidates=a.s.sdk.getState()!.nearbyNpcs.filter(n=>n.id===npcId);if(candidates.length!==1)throw Error('Heroes unique quest target required');const index=candidates[0]!.index,own=(a.s.client as any).selfSlot;let killed=false,last={x:candidates[0]!.x,z:candidates[0]!.z};for(let attempt=0;attempt<o.maximumCasts&&!a.stop();attempt++){
-    if(!peerFree(a)||!peerFree(picker))throw Error('Heroes quest combat foreign peer');const target=a.s.sdk.getState()?.nearbyNpcs.find(n=>n.index===index&&n.id===npcId);if(!target){killed=true;break;}last={x:target.x,z:target.z};if(target.hp===0){killed=true;break;}if(target.inCombat&&target.targetIndex!==32768+own&&target.targetIndex!==-1)throw Error('Heroes target belongs to another combatant');let p=a.s.sdk.getState()!.player!;if(!heroesQuestSpellReach(a.s,target,sight)){
-     const goals:{x:number;z:number;distance:number}[]=[];for(let dx=-4;dx<=4;dx++)for(let dz=-4;dz<=4;dz++){const r=Math.max(Math.abs(dx),Math.abs(dz));if(r<2||r>4)continue;const goal={x:target.x+dx,z:target.z+dz},path=a.s.sdk.findPath(goal.x,goal.z);if(path.success&&path.reachedDestination===true&&path.waypoints.at(-1)?.x===goal.x&&path.waypoints.at(-1)?.z===goal.z&&sight({...goal,level:p.level},{x:target.x,z:target.z,size:target.size??1}))goals.push({...goal,distance:Math.max(Math.abs(goal.x-p.worldX),Math.abs(goal.z-p.worldZ))});}const goal=goals.sort((a,b)=>a.distance-b.distance)[0];if(!goal||attempt>1)throw Error('Heroes quest target has no bounded range/sight approach');await a.q.walk('quest spell approach',[{x:goal.x,z:goal.z,tol:0}]);p=a.s.sdk.getState()!.player!;const now=a.s.sdk.getState()?.nearbyNpcs.find(n=>n.index===index);if(!now||now.id!==npcId)throw Error('Heroes original quest target absent after approach');if(!heroesQuestSpellReach(a.s,now,sight))continue;
-    }const before=pack(a.s),xp0=a.s.sdk.getSkillXp('Magic')??0,costs=Object.fromEntries(Object.entries(spell.runes).map(([id,n])=>[id,elementalRuneCost(+id,n,a.s.sdk.getEquipment(),true)]));if(Object.entries(costs).some(([id,n])=>(before[+id]??0)<n)||a.casts>=o.maximumCasts)throw Error('Heroes finite owned rune budget exhausted');const reply=await a.s.bot.castSpell(target,heroesSpellComponent(spell),2500);await waitTicks(a.s,1);if(a.fatal()||npcCastEffect(costs,before,pack(a.s),xp0,a.s.sdk.getSkillXp('Magic')??0)!=='cast')throw Error('Heroes paid quest spell unresolved '+reply.message);add(a,Object.fromEntries(Object.entries(costs).map(([id,n])=>[id,-n])));a.casts++;const observed=await heroesQuestHitPosition(a.s,index,npcId,()=>{if(a.fatal()||!peerFree(a)||!peerFree(picker))throw Error('Heroes original quest hit context lost');});if(observed)last=observed;
-   }if(!killed){const n=a.s.sdk.getState()?.nearbyNpcs.find(n=>n.index===index);killed=!n||n.hp===0;}if(!killed||!peerFree(a)||!peerFree(picker))throw Error('Heroes owned quest kill unobserved');if(!await picker.q.waitUntil(()=>ground().length>0,8))throw Error('Heroes fresh owned quest drop absent');const drops=ground().filter(g=>Math.max(Math.abs(g.x-last.x),Math.abs(g.z-last.z))<=2);if(drops.length!==1||drops[0]!.count!==1||ground().length!==1)throw Error('Heroes fresh owned drop footprint ambiguous');const g=drops[0]!;await picker.q.walk('owned quest drop stand',[{x:g.x,z:g.z,tol:0}]);await waitTicks(picker.s,2);const at=picker.s.sdk.getState()?.player;if(picker.fatal()||!peerFree(a)||!peerFree(picker)||!at||at.worldX!==g.x||at.worldZ!==g.z||ground().length!==1||!ground().some(now=>now.x===g.x&&now.z===g.z&&now.count===1))throw Error('Heroes original quest drop stand/ownership unconfirmed');await paid(picker,'quest drop'+drop,{[drop]:1},()=>picker.s.direct({type:'pickupItem',x:g.x,z:g.z,itemId:g.id,reason:'Heroes owned quest kill drop'}));};
-  for(const a of actors){await stage(a,{...baseKit,...spellKit(a),[I.iceGloves]:1},[I.iceGloves]);await sail(a,true);await move(a,{x:2847,z:3386,level:0});await kill(a,139,I.feather,a,{x:2847,z:3386});await sail(a,false);await stage(a,baseKit);}
-  const eelRecipe=cookingRecipes().recipes.find(r=>r.raw===I.rawEel)!;
-  await heroesOwnedPairPhase(actors,async a=>{await stage(a,{...baseKit,[I.harralanderUnf]:1,[I.rod]:1,[I.bait]:o.maximumBait});await move(a,{x:3014,z:3224,level:0});await converse(a,'Gerrant oil',/^Gerrant$/i,[/find out how to catch a lava eel/i],()=>a.q.has(I.slime),{x:3014,z:3224});add(a,{[I.slime]:1});const herb=a.s.sdk.getSkillXp('Herblore')??0;await paid(a,'blamish oil',{[I.slime]:-1,[I.harralanderUnf]:-1,[I.oil]:1},()=>a.q.useOnItem(I.slime,I.harralanderUnf));if((a.s.sdk.getSkillXp('Herblore')??0)-herb!==80*o.xpRate)throw Error('Heroes oil Herblore XP mismatch');await paid(a,'oily rod',{[I.rod]:-1,[I.oil]:-1,[I.oilyRod]:1,[I.vial]:1},()=>a.q.useOnItem(I.oil,I.rod));await stage(a,{...baseKit,[I.oilyRod]:1,1590:1,1540:1,2434:3,2452:2,[I.bait]:o.maximumBait},[1540]);await heal(a,a.s.sdk.getSkill('Hitpoints')!.baseLevel);await openBank(a);const lavaBefore=assets(a),fishingXp=a.s.sdk.getSkillXp('Fishing')??0;await a.s.bot.closeBank();let lava:Awaited<ReturnType<typeof heroesLavaBank>>;try{lava=await heroesLavaBank(a.raw,o.cap-o.returnTicks-(a.s.tick()-a.start),o.xpRate,o.maximumBait,a.stop,undefined,a.fatal);}catch(error){const r=(error as {lavaResult?:{atBank?:boolean;recoveryDeferred?:boolean;prayerStateUncertain?:boolean;prayerParked?:boolean}}).lavaResult;a.lavaParked=!r||r.atBank!==true||r.recoveryDeferred===true||r.prayerStateUncertain===true||r.prayerParked===true;throw error;}await openBank(a);const lavaAfter=assets(a),lavaDelta=heroesLavaLedger(lavaBefore,lavaAfter,lava.potionReceipts,(a.s.sdk.getSkillXp('Fishing')??0)-fishingXp,o.xpRate);add(a,lavaDelta);await stage(a,{...baseKit,[I.rawEel]:1});await move(a,{x:3160,z:3428,level:0},false,0);const cookBefore=pack(a.s),cookingXp=a.s.sdk.getSkillXp('Cooking')??0;await runCookingBatch({state:()=>a.s.sdk.getState(),tick:()=>a.s.tick(),stop:a.stop,close:()=>a.s.sdk.sendCloseModal().then(()=>{}),heat:async(slot,kind)=>{if(nativeHeatSources().get(2728)!==kind)throw Error('Heroes native range kind differs');return heroesRangeHeat(a.s,slot,()=>{if(a.stop())throw Error('Heroes range original context/stop');});},wait:(test,ticks)=>waitUntil(a.s,test,{timeoutTicks:ticks}),step:()=>waitTicks(a.s,1)},eelRecipe,{maximum:1,cap:50,heat:'range'});if(!heroesPackEffect(cookBefore,pack(a.s),{[I.rawEel]:-1,[I.eel]:1})||(a.s.sdk.getSkillXp('Cooking')??0)-cookingXp!==140*o.xpRate)throw Error('Heroes lava eel cooking mismatch');add(a,{[I.rawEel]:-1,[I.eel]:1});await stage(a,baseKit);},()=>{phaseFailed=true;});
-  await stage(black,{...baseKit,[I.blackBody]:1,[I.blackLegs]:1,[I.blackHelm]:1},[I.blackBody,I.blackLegs,I.blackHelm]);await move(black,{x:3186,z:3385,level:0});await converse(black,'Katrine task',/^Katrine$/i,[/rank of master thief/i],()=>black.q.sawText(/four leafed clover/i),{x:3186,z:3385});
-  await stage(phoenix,{...baseKit,...spellKit(phoenix)});await move(phoenix,{x:3246,z:9780,level:0});await converse(phoenix,'Straven task',/^Straven$/i,[],()=>phoenix.q.sawText(/secret word.*gherkin/i),{x:3246,z:9780});
-  await move(black,{x:2810,z:3170,level:0},false,0);await black.q.opLoc({id:2626,x:2811,z:3170},1);await black.q.converse([/four leaved clover/i],()=>black.q.sawText(/door being unbarred/i)&&!black.q.dialogOpen(),80);await black.q.openDoor('Grubor open',2811,3170);await converse(black,'Trobert papers',/^Trobert$/i,[/help.*candlesticks/i,/volunteer.*mission/i],()=>black.q.has(I.idPapers),{x:2806,z:3174});add(black,{[I.idPapers]:1});
-  await move(phoenix,{x:2793,z:3187,level:0});await converse(phoenix,'Alfonse password',/^Alfonse the waiter$/i,[/sell Gherkins/i],()=>phoenix.q.sawText(/Alfonse winks/i),{x:2793,z:3188});await phoenix.q.openDoor('kitchen',2788,3189);await converse(phoenix,'Charlie mission',/^Charlie the cook$/i,[/fellow member.*Phoenix gang/i,/steal Scarface Pete.*candlesticks/i],()=>phoenix.q.sawText(/more minds.*working/i),{x:2790,z:3191});
-  await move(black,{x:2776,z:3186,level:0});await converse(black,'Garv ID',/^Garv$/i,[],()=>black.q.sawText(/Grip will want to talk/i),{x:2776,z:3186});await black.q.openDoor('mansion',2774,3187);await converse(black,'Grip key',/^Grip$/i,[/duties involve/i,/Anything I can do now/i],()=>black.q.has(I.miscKey),{x:2774,z:3192});add(black,{[I.idPapers]:-1,[I.miscKey]:1});
-  await black.q.walk('mansion exit trade',[{x:2794,z:3185,tol:0}]);await heroesRestaurantFront(phoenix.s,phoenix.q,()=>{if(phoenix.stop())throw Error('Heroes restaurant trade stopped');});
-  const trade=async(from:Actor,to:Actor,id:number)=>{const expected=[{id,count:1}],a=pack(from.s),b=pack(to.s),exact=(name:string)=>new RegExp('^'+name+'$','i');const name=id===I.miscKey?'Miscellaneous key':"Pete's candlestick";if(from.s.sdk.getInventory().some(i=>i.name.toLowerCase()===name.toLowerCase()&&i.id!==id))throw Error('Heroes ambiguous named trade input');const receive=handoff.collectHandoff(to.s,from.s.name,o.server,()=>to.s.bot.serveTrades({from:exact(from.s.name),maxTrades:1,timeout:30000,accept:offer=>offer.length===1&&offer[0]!.id===id&&offer[0]!.count===1}));await handoff.sendHandoff(from.s,to.s.name,o.server,expected,()=>from.s.bot.trade(exact(to.s.name),{give:[{item:new RegExp(id===I.miscKey?'^Miscellaneous key$':"^Pete's candlestick$",'i'),amount:1}],timeout:30000,accept:offer=>offer.length===0}));await receive;if(!heroesPackEffect(a,pack(from.s),{[id]:-1})||!heroesPackEffect(b,pack(to.s),{[id]:1}))throw Error('Heroes whole-pack pair handoff mismatch');add(from,{[id]:-1});add(to,{[id]:1});};
-  await trade(black,phoenix,I.miscKey);await phoenix.q.openDoor('kitchen reentry',2788,3189);await heroesRestaurantCrossing(phoenix.s,phoenix.q,'panel',true,()=>{if(phoenix.stop())throw Error('Heroes secret panel stopped');});await heroesRestaurantCrossing(phoenix.s,phoenix.q,'side-door',true,()=>{if(phoenix.stop())throw Error('Heroes side door stopped');});await phoenix.q.walk('Grip window',[{x:2780,z:3198,tol:0}]);
-  await heroesLureGrip(black.s,black.q,()=>{if(black.stop()||phoenix.stop()||!peerFree(black)||!peerFree(phoenix))throw Error('Heroes lure original pair context lost');});await kill(phoenix,792,I.gripKeys,black,{x:2780,z:3198});
-  await heroesRestaurantCrossing(black.s,black.q,'treasure-door',true,()=>{if(black.stop())throw Error('Heroes treasure entry stopped');});await black.q.walk('treasure chest',[{x:2766,z:3200,tol:0}]);await black.q.opLoc({id:2632,x:2766,z:3199});await black.q.waitTicks(2);await black.q.opLoc({id:2633,x:2766,z:3199});await black.q.converse([],()=>black.q.cnt(I.candle)===2&&!black.q.dialogOpen(),40);if(black.q.cnt(I.candle)!==2)throw Error('Heroes actual chest pair candles absent');add(black,{[I.candle]:2});await heroesRestaurantCrossing(black.s,black.q,'treasure-door',false,()=>{if(black.stop())throw Error('Heroes treasure return stopped');});await black.q.walk('pair return trade',[{x:2794,z:3185,tol:0}]);await heroesRestaurantFront(phoenix.s,phoenix.q,()=>{if(phoenix.stop())throw Error('Heroes restaurant return trade stopped');});await trade(black,phoenix,I.candle);
-  for(const a of actors){await stage(a,{...baseKit,[I.candle]:1});const isBlack=a===black,home=isBlack?{x:3186,z:3385}:{x:3246,z:9780};await move(a,{...home,level:0});const before=pack(a.s);await converse(a,'earned armband',isBlack?/^Katrine$/i:/^Straven$/i,[/candlestick now/i],()=>a.q.has(I.armband),home);if(!heroesPackEffect(before,pack(a.s),{[I.candle]:-1,[I.armband]:1}))throw Error('Heroes gang armband effect invalid');add(a,{[I.candle]:-1,[I.armband]:1});await stage(a,{...baseKit,[I.armband]:1,[I.feather]:1,[I.eel]:1});await move(a,{x:2903,z:3510,level:0});const beforePack=pack(a.s),beforeXp=xp(a.s);await converse(a,'Heroes completion',/^Achietties$/i,[],()=>heroFlag(a.s)==='complete',{x:2903,z:3510});await waitUntil(a.s,()=>a.fatal()||heroesRewardEffect(beforeXp,xp(a.s),o.xpRate),{timeoutTicks:8});if(!heroesPackEffect(beforePack,pack(a.s),{[I.armband]:-1,[I.feather]:-1,[I.eel]:-1})||!heroesRewardEffect(beforeXp,xp(a.s),o.xpRate))throw Error('Heroes completion exact trophies/rewards unobserved');add(a,{[I.armband]:-1,[I.feather]:-1,[I.eel]:-1});a.q.milestone('Heroes-complete');}
- }catch(error){failure=String(error);console.log('HEROES_ERROR '+failure);}finally{working=false;for(const a of actors){try{if(a.lavaParked)throw Error('Heroes Lava unknown transition/protection; cleanup parked');if(!a.fatal()){await stage(a,{[I.food]:6});await heal(a);await stage(a,{});await openBank(a);const after=assets(a),coinDelta=(after[995]??0)-(a.baseline[995]??0);if(coinDelta>0||coinDelta<-o.coinBudget||!heroesPackEffect(a.baseline,after,{...a.ledger,995:coinDelta}))throw Error('Heroes all-owned-assets/coin budget mismatch');if(a.s.sdk.getEquipment().length||a.s.sdk.getState()?.autoRetaliateEnabled!==false||a.s.sdk.getState()?.combatStyle?.currentStyle!==a.originalStyle)throw Error('Heroes original kit/control restore failed');}else throw Error('Heroes original input context lost; cleanup parked');}catch(e){failure+='; cleanup '+String(e);}await a.q.dispose();}}
- return{ok:!failure&&actors.length===2&&actors.every(a=>heroFlag(a.s)==='complete'),failure:failure||'-',actors:actors.map(a=>({name:a.s.name,complete:heroFlag(a.s)==='complete',casts:a.casts,ledger:a.ledger,ticks:a.s.tick()-a.start,hp:a.s.sdk.getSkill('Hitpoints')?.level}))};
+
+async function disembark(q: Q, label: string): Promise<void> {
+    for (let i = 0; i < 8 && q.lvl() !== 0; i++) {
+        await q.guard(label);
+        if (q.dialogOpen()) { await shut(q); continue; }
+        const plank = q.findLoc((l: any) => /^gangplank$/i.test(l.name));
+        if (!plank) { await q.waitTicks(2); continue; }
+        await q.opLoc(plank, q.opIndex(plank, /cross/i));
+        await q.waitUntil(() => q.lvl() === 0, 10);
+    }
+    if (q.lvl() !== 0) await q.fail(label);
 }
-if(import.meta.main){const path=process.argv[2];if(!path)throw Error('usage: quest-hero.ts owned-pair-order.json');const o=JSON.parse(readFileSync(path,'utf8'))as HeroesOrder;validateHeroesOrder(o);const sessions:Session[]=[],owners:{s:Session;client:Session['client'];executor:unknown}[]=[];let ok=false,stopped=false;try{sessions.push(await openBot(o.blackArm,{onStop:async(s,detail)=>{console.log('HEROES_STOP '+JSON.stringify({account:s.name,tick:s.tick(),detail}));stopped=true;}}));owners.push({s:sessions[0]!,client:sessions[0]!.client,executor:(sessions[0]!.client as any)?.executeBotAction});sessions.push(await openBot(o.phoenix,{onStop:async(s,detail)=>{console.log('HEROES_STOP '+JSON.stringify({account:s.name,tick:s.tick(),detail}));stopped=true;}}));owners.push({s:sessions[1]!,client:sessions[1]!.client,executor:(sessions[1]!.client as any)?.executeBotAction});if(owners.some(o=>o.s.client!==o.client||(o.s.client as any)?.executeBotAction!==o.executor))throw Error('Heroes original CLI owner changed during partner login');const result=await runHeroesPair(sessions[0]!,sessions[1]!,o,()=>stopped);console.log('HEROES_PAIR '+JSON.stringify(result));ok=result.ok;}finally{const owned=sessions.filter(s=>owners.some(o=>o.s===s&&s.client===o.client&&(s.client as any)?.executeBotAction===o.executor));ok=await settle(owned,ok&&owned.length===sessions.length,'finite owned Heroes pair');}process.exitCode=ok?0:1;}
+
+async function entrana(q: Q): Promise<void> {
+    for (const id of BLACK) {
+        const e = (q.st()?.equipment ?? []).find((k: any) => k?.id === id);
+        if (e) await q.step(`remove ${id}`, () => q.s.direct({ type: 'useEquipmentItem', slot: e.slot, optionIndex: 1, reason: 'SDK' }), () => !worn(q, id), 4, 3);
+    }
+    await dropIds(q, [...BLACK, ITEM.pickaxe]);
+    await gloryDraynor(q, 'glory draynor');
+    await q.walk('to monks', [{ ...AT.monks, tol: 3 }]);
+    await q.talk('ship monk', /^monk of entrana$/i, [/yes, okay, i'm ready to go/i], () => q.lvl() === 1 && q.near(2834, 3331, 6), AT.monks, 60, true);
+    await disembark(q, 'entrana gangplank');
+    q.milestone('entrana');
+    await q.walk('firebird', [{ ...AT.firebird, tol: 4 }]);
+    await cast(q, 'firebird', [NPC.firebird], () => !!ground(q, ITEM.feather) || q.has(ITEM.feather), { ticks: 900, anchor: AT.firebird, away: { x: 2834, z: 3338 } });
+    if (!q.has(ITEM.feather)) await pickup(q, 'feather', ITEM.feather);
+    q.milestone('feather');
+    await q.walk('entrana monk', [{ ...AT.entranaMonk, tol: 3 }]);
+    await q.talk('leave entrana', /^monk of entrana$/i, [/yes,? i'm ready to go/i], () => q.lvl() === 1 && q.near(3048, 3231, 6), AT.entranaMonk, 60, true);
+    await disembark(q, 'sarim gangplank');
+}
+
+async function gerrant(q: Q): Promise<void> {
+    await gloryDraynor(q, 'glory gerrant');
+    await q.walk('to gerrant', [{ x: AT.gerrant.x + 1, z: AT.gerrant.z, tol: 2 }]);
+    await q.talk('gerrant', /^gerrant$/i, [/how to catch a lava eel/i], () => q.has(ITEM.slime) && !q.dialogOpen(), AT.gerrant, 60);
+    await q.step('blamish oil', () => q.useOnItem(ITEM.slime, ITEM.harra), () => q.has(ITEM.oil), 6, 3);
+    await q.step('oily rod', () => q.useOnItem(ITEM.oil, ITEM.rod), () => q.has(ITEM.oilyRod), 6, 3);
+    await dropIds(q, [ITEM.vial]);
+    q.milestone('oily rod');
+}
+
+// Taverley dungeon as in quest-scorpion.ts: the Jailer's key, Velrak's cell, the dusty key, the deep gate; then the lava
+// spot. Baby blue dragons at the spot restart the fishing roll with every hit (lavafish.rs2:46-67), so they die first.
+async function eel(q: Q): Promise<void> {
+    await tele(q, 'falador teleport', 'magic:falador_teleport');
+    await q.walk('taverley ladder', [{ x: LOC.tavLadder.x, z: LOC.tavLadder.z + 1, tol: 1 }]);
+    await q.climb('taverley ladder', () => liveLoc(q, LOC.tavLadder), /climb-down/i, () => under(q));
+    q.blockDoor(0, LOC.gate.x, LOC.gate.z);
+    await pfm(q, true);
+    await q.walk('to jailer', [{ ...AT.jailer, tol: 3 }]);
+    await cast(q, 'jailer', [NPC.jailer], () => !!ground(q, ITEM.jailKey) || q.has(ITEM.jailKey), { ticks: 200, anchor: AT.jailer });
+    if (!q.has(ITEM.jailKey)) await pickup(q, 'jail key', ITEM.jailKey);
+    const inCell = () => z(q) < LOC.jail.z;
+    await q.walk('cell door', [{ x: LOC.jail.x, z: LOC.jail.z, tol: 1 }]);
+    await q.step('cell door', () => q.useOnLoc(ITEM.jailKey, LOC.jail), inCell, 15, 4);
+    await q.talk('velrak', /^velrak/i, [/know anywhere good to explore/i, /yes please/i], () => q.has(ITEM.dusty) && !q.dialogOpen(), AT.velrak, 40);
+    await q.step('leave cell', () => q.opLoc(LOC.jail, 1), () => !inCell(), 15, 4);
+    q.milestone('dusty key');
+    const pastGate = () => x(q) < LOC.gate.x && Math.abs(z(q) - LOC.gate.z) < 40;
+    await q.walk('deep gate', [{ x: LOC.gate.x + 1, z: LOC.gate.z, tol: 1 }]);
+    await q.step('deep gate', () => q.useOnLoc(ITEM.dusty, LOC.gate), pastGate, 15, 4);
+    await q.walk('lava', [{ ...AT.lava, tol: 1 }]);
+    await dropIds(q, [ITEM.jailKey]);
+    let last = -100;
+    const t0 = q.T();
+    while (!q.has(ITEM.rawEel)) {
+        await q.guard('eel');
+        await keepPrayer(q);
+        if (q.T() - t0 > 600) await q.fail('no eel');
+        const near = () => npcsOf(q, [NPC.baby]).filter(n => n.distance <= 3);
+        if (near().length) {
+            await cast(q, 'baby blue dragon', [NPC.baby], () => !near().length, { ticks: 120 });
+            await q.walk('lava back', [{ ...AT.lava, tol: 1 }]);
+            last = -100;
+            continue;
+        }
+        if (q.T() - last >= 8) {
+            const f = npcsOf(q, [NPC.spot])[0];
+            if (!f) await q.fail('no lava fishing spot');
+            last = q.T();
+            await q.s.direct({ type: 'interactNpc', npcIndex: f.index, optionIndex: 1, reason: 'SDK' });
+        }
+        await q.waitTicks(1);
+    }
+    q.milestone('raw eel');
+    await pfm(q, false);
+    await tele(q, 'falador teleport (eel)', 'magic:falador_teleport');
+    const fire = () => q.findLoc((l: any) => /^fire$/i.test(l.name) && l.distance <= 2);
+    for (let k = 0; k < 4 && !q.has(ITEM.eel); k++) {
+        await q.guard('cook eel');
+        if (!fire()) {
+            const logs0 = q.cnt(ITEM.logs);
+            await q.useOnItem(ITEM.tinderbox, ITEM.logs);
+            await q.waitUntil(() => q.cnt(ITEM.logs) < logs0 && !!fire(), 20);
+        }
+        if (!fire()) { await q.dash('fire tile', x(q) + (k % 2 ? -1 : 1), z(q) + (k > 1 ? 1 : 0), 0, 6); continue; }
+        await q.step('cook eel', () => q.useOnLoc(ITEM.rawEel, fire()), () => q.has(ITEM.eel) || q.dialogOpen(), 10, 3);
+        if (q.dialogOpen()) await q.converse([/cook/i], () => q.has(ITEM.eel) && !q.dialogOpen(), 12);
+    }
+    if (!q.has(ITEM.eel)) await q.fail('eel not cooked');
+    q.milestone('eel');
+}
+
+async function toBrimhaven(q: Q): Promise<void> {
+    await tele(q, 'ardougne teleport', 'magic:ardougne_teleport');
+    await q.walk('to barnaby', [{ ...AT.barnaby, tol: 3 }]);
+    await q.talk('barnaby', /^captain barnaby$/i, [/^yes please/i], () => q.lvl() === 1 && q.near(2775, 3234, 8), AT.barnaby, 40, true);
+    await disembark(q, 'brimhaven gangplank');
+    q.milestone('brimhaven');
+}
+
+async function finish(q: Q, done: () => boolean): Promise<void> {
+    if (under(q) || q.cheb(AT.achietties.x, AT.achietties.z) > 150) await tele(q, 'falador teleport (finish)', 'magic:falador_teleport');
+    await q.walk('to achietties', [{ x: 2904, z: 3510, tol: 2 }]);
+    await q.talk('achietties finish', /^achietties$/i, [], done, AT.achietties, 80, true);
+    await shut(q);
+    q.milestone('done');
+}
+
+const downCellar = async (q: Q, label: string) => {
+    if (under(q)) return;
+    await q.walk(`${label} cellar`, [{ x: 3244, z: 3382, tol: 1 }]);
+    await q.climb(`${label} down`, () => liveLoc(q, LOC.cellar), /climb-down/i, () => under(q));
+};
+const blockQuestDoors = (q: Q) => { for (const d of [LOC.kitchen, LOC.panel, LOC.side, LOC.grubor, LOC.garv, LOC.treasure]) q.blockDoor(0, d.x, d.z); };
+
+// Hands `id` from one account to the other: the giver asks, the receiver serves one trade.
+async function hand(from: Q, to: Q, fromName: string, toName: string, item: RegExp, id: number, label: string): Promise<void> {
+    const want = to.cnt(id) + 1;
+    for (let k = 0; k < 4 && to.cnt(id) < want; k++) {
+        await from.guard(label);
+        if (k > 0) await to.dash(`${label} step`, x(to) + (k % 2 ? 2 : -2), z(to), 1, 6).catch(() => undefined);
+        const serve = to.s.bot.serveTrades({ from: exact(fromName), maxTrades: 1, timeout: 30_000 });
+        const give = await from.s.bot.trade(exact(toName), { give: [{ item, amount: 1 }], timeout: 30_000 });
+        await serve;
+        if (!give.success) console.log(`WARN ${label} try ${k + 1}: ${(give as any).message}`);
+    }
+    if (to.cnt(id) < want) await from.fail(`${label}: not traded`);
+}
+
+// ---- The Phoenix account ----
+async function phoenix(q: Q, done: () => boolean): Promise<void> {
+    blockQuestDoors(q);
+    await start(q);
+    await iceQueen(q);
+    await tele(q, 'varrock teleport', 'magic:varrock_teleport');
+    await downCellar(q, 'straven');
+    await q.talk('straven', /^straven$/i, [], () => q.sawText(/secret word 'gherkin'/i) && !q.dialogOpen(), AT.straven, 60);
+    q.milestone('straven');
+    await entrana(q);
+    await toBrimhaven(q);
+    await q.walk('to alfonse', [{ x: AT.alfonse.x, z: AT.alfonse.z - 1, tol: 2 }]);
+    await q.talk('alfonse', /^alfonse/i, [/sell gherkins/i], () => q.sawText(/alfonse winks at you/i) && !q.dialogOpen(), AT.alfonse, 40);
+    const inKitchen = () => z(q) >= 3190 && x(q) >= 2787 && x(q) <= 2799;
+    await doorFrom(q, LOC.kitchen, { x: 2788, z: 3189 }, inKitchen, 'kitchen door');
+    await q.talk('charlie', /^charlie/i, [/looking for a gherkin/i, /steal scarface pete's candlesticks/i], () => q.sawText(/quicker we get that loot/i) && !q.dialogOpen(), AT.charlie, 60);
+    q.milestone('charlie');
+    await doorFrom(q, LOC.kitchen, { x: 2788, z: 3190 }, () => z(q) <= 3189, 'kitchen door out');
+    await q.walk('meet', [{ ...AT.meet, tol: 1 }]);
+    set('p-at-meet');
+    if (!(await q.waitUntil(() => q.has(ITEM.miscKey), 900))) await q.fail('no misc key from the partner');
+    await q.walk('kitchen', [{ x: 2788, z: 3188, tol: 1 }]);
+    await doorFrom(q, LOC.kitchen, { x: 2788, z: 3189 }, inKitchen, 'kitchen door 2');
+    await doorFrom(q, LOC.panel, { x: 2787, z: 3190 }, () => x(q) <= 2786 && z(q) >= 3188 && z(q) <= 3199, 'panel');
+    await doorFrom(q, LOC.side, { x: 2781, z: 3196 }, () => z(q) >= 3197 && x(q) >= 2780 && x(q) <= 2782, 'side door', ITEM.miscKey);
+    await q.dash('arrow slit', 2780, 3198, 0, 10);
+    set('p-ready');
+    q.milestone('side room');
+    await waitFlag(q, 'b-cabinet', 600);
+    // The only line of fire is the arrow slit on the west edge of 2780,3198: cast only while Grip stands in that row. A cast
+    // at Grip elsewhere walks the bot off the slit tile and every later cast is dropped silently.
+    let last = -100;
+    const gripDead = () => flags.has('grip-dead') || (!npcsOf(q, [NPC.grip]).length && !!ground(q, ITEM.gripKeys));
+    for (let t = 0; t < 600 && !gripDead(); t++) {
+        await q.guard('grip');
+        if (!at(q, { x: 2780, z: 3198 })) await q.dash('arrow slit', 2780, 3198, 0, 6);
+        const g = npcsOf(q, [NPC.grip])[0];
+        if (g && g.z === 3198 && g.x >= 2774 && g.x <= 2779 && q.T() - last >= 3) {
+            last = q.T();
+            await q.s.direct({ type: 'spellOnNpc', npcIndex: g.index, spellComponent: BLAST, reason: 'SDK' });
+        }
+        await q.waitTicks(1);
+    }
+    if (!gripDead()) await q.fail('grip not killed from the side room');
+    set('grip-dead');
+    q.milestone('grip');
+    await tele(q, 'varrock teleport 2', 'magic:varrock_teleport');
+    await q.walk('varrock meet', [{ ...AT.varrockMeet, tol: 2 }]);
+    set('p-varrock');
+    if (!(await q.waitUntil(() => q.has(ITEM.candle), 900))) await q.fail('no candlestick from the partner');
+    await downCellar(q, 'armband');
+    await q.talk('straven armband', /^straven$/i, [], () => q.has(ITEM.armband) && !q.dialogOpen(), AT.straven, 60);
+    q.milestone('armband');
+    await gerrant(q);
+    await eel(q);
+    await finish(q, done);
+}
+
+// ---- The Black Arm account ----
+async function blackarm(q: Q, done: () => boolean): Promise<void> {
+    blockQuestDoors(q);
+    await start(q);
+    q.blockDoor(0, LOC.baDoor.x, LOC.baDoor.z);
+    const toKatrine = async (label: string) => {
+        await q.walk(`${label} east door`, [{ x: 3197, z: 3384, tol: 0 }]);
+        await q.openDoor(`${label} door 1`, 3196, 3384);
+        await q.dash(`${label} room`, 3191, 3384, 0, 10);
+        await q.openDoor(`${label} door 2`, 3190, 3384);
+    };
+    await tele(q, 'varrock teleport', 'magic:varrock_teleport');
+    await toKatrine('katrine');
+    await q.talk('katrine', /^katrine$/i, [/rank of master thief/i], () => q.sawText(/four leafed clover/i) && !q.dialogOpen(), { x: 3190, z: 3384 }, 60);
+    q.milestone('katrine');
+    await gerrant(q);
+    await eel(q);
+    await toBrimhaven(q);
+    // Grubor's door: the HQ is east of it. Before the password the op talks to Grubor through it.
+    const inHq = () => (x(q) >= 2811 && x(q) <= 2815 && z(q) >= 3167 && z(q) <= 3178) || (x(q) >= 2805 && x(q) <= 2810 && z(q) >= 3171 && z(q) <= 3178);
+    await q.walk('grubor door', [{ x: 2810, z: 3170, tol: 0 }]);
+    for (let k = 0; k < 6 && !inHq(); k++) {
+        await q.guard('grubor');
+        if (!at(q, { x: 2810, z: 3170 })) await q.dash('grubor stand', 2810, 3170, 0, 15);
+        await q.opLoc(liveLoc(q, LOC.grubor), 1);
+        await q.waitUntil(() => inHq() || q.dialogOpen(), 8);
+        if (q.dialogOpen()) await q.converse([/four leaved clover/i], () => !q.dialogOpen(), 30);
+    }
+    if (!inHq()) await q.fail('not into the Black Arm hideout');
+    q.milestone('grubor');
+    await q.talk('trobert', /^trobert$/i, [/help me get scarface pete's candlesticks/i, /i volunteer/i], () => q.has(ITEM.papers) && !q.dialogOpen(), AT.trobert, 60);
+    q.milestone('trobert');
+    await q.walk('grubor door inside', [{ x: 2811, z: 3170, tol: 0 }]);
+    await doorFrom(q, LOC.grubor, { x: 2811, z: 3170 }, () => !inHq(), 'grubor door out');
+    const inMansion = () => z(q) >= 3188 && x(q) >= 2759 && x(q) <= 2781;
+    for (const id of BLACK) await wear(q, id);
+    await q.walk('to garv', [{ x: AT.garv.x, z: AT.garv.z - 1, tol: 2 }]);
+    await q.talk('garv', /^garv$/i, [], () => q.sawText(/grip will want to talk to you/i) && !q.dialogOpen(), AT.garv, 40);
+    await doorFrom(q, LOC.garv, { x: 2774, z: 3187 }, inMansion, 'garv door');
+    await q.talk('grip', /^grip$/i, [/anything i can do now/i, /what do my duties involve/i], () => q.has(ITEM.miscKey) && !q.dialogOpen(), AT.grip, 60);
+    q.milestone('misc key');
+    await doorFrom(q, LOC.garv, { x: 2774, z: 3188 }, () => z(q) <= 3187, 'garv door out');
+    await waitFlag(q, 'p-at-meet', 1200);
+    await hand(q, p, MAIN, HELPER, /^miscellaneous key$/i, ITEM.miscKey, 'misc key trade');
+    await doorFrom(q, LOC.garv, { x: 2774, z: 3187 }, inMansion, 'garv door 2');
+    await waitFlag(q, 'p-ready', 600);
+    const stand = { x: 2775, z: 3197 };
+    for (let k = 0; k < 8 && !flags.has('grip-dead'); k++) {
+        await q.guard('cabinet');
+        if (!q.near(stand.x, stand.z, 0)) await q.walk('cabinet', [{ ...stand, tol: 0 }]);
+        await q.waitUntil(() => npcsOf(q, [NPC.guard]).some(n => Math.max(Math.abs(n.x - stand.x), Math.abs(n.z - stand.z)) <= 3), 60);
+        await q.opLoc(liveLoc(q, LOC.cabinet, [2635, 2636]), 1);
+        await q.waitUntil(() => q.dialogOpen(), 12);
+        if (q.dialogOpen()) await q.converse([/won't notice me/i], () => !q.dialogOpen(), 20);
+        set('b-cabinet');
+        await q.waitUntil(() => flags.has('grip-dead') || !!ground(q, ITEM.gripKeys), 40);
+        if (ground(q, ITEM.gripKeys)) set('grip-dead');
+    }
+    if (!flags.has('grip-dead')) await q.fail('grip not killed');
+    await q.waitUntil(() => !!ground(q, ITEM.gripKeys), 10);
+    await pickup(q, 'grip keys', ITEM.gripKeys);
+    q.milestone('grip keys');
+    await q.walk('treasure door', [{ x: 2763, z: 3197, tol: 0 }]);
+    await doorFrom(q, LOC.treasure, { x: 2763, z: 3197 }, () => x(q) >= 2764 && x(q) <= 2772 && z(q) >= 3196, 'treasure door', ITEM.gripKeys);
+    for (let k = 0; k < 8 && q.cnt(ITEM.candle) < 2; k++) {
+        await q.guard('chest');
+        const c = liveLoc(q, LOC.chest, [2632, 2633]);
+        await q.opLoc(c, 1);
+        await q.waitUntil(() => q.cnt(ITEM.candle) >= 2 || q.dialogOpen() || liveLoc(q, LOC.chest, [2632, 2633]).id !== c.id, 14);
+        if (q.dialogOpen()) await q.converse([], () => q.cnt(ITEM.candle) >= 2 && !q.dialogOpen(), 8);
+    }
+    if (q.cnt(ITEM.candle) < 2) await q.fail(`candlesticks ${q.cnt(ITEM.candle)}/2`);
+    q.milestone('candlesticks');
+    await tele(q, 'varrock teleport 2', 'magic:varrock_teleport');
+    await q.walk('varrock meet', [{ ...AT.varrockMeet, tol: 2 }]);
+    await waitFlag(q, 'p-varrock', 900);
+    await hand(q, p, MAIN, HELPER, /^pete's candlestick$/i, ITEM.candle, 'candlestick trade');
+    await toKatrine('katrine armband');
+    await q.talk('katrine armband', /^katrine$/i, [/i have a candlestick now/i], () => q.has(ITEM.armband) && !q.dialogOpen(), { x: 3190, z: 3384 }, 60);
+    q.milestone('armband');
+    await tele(q, 'camelot teleport', 'magic:camelot_teleport');
+    await iceQueen(q);
+    await entrana(q);
+    await finish(q, done);
+}
+
+try {
+    const tick0 = B.T();
+    let bTicks = -1, pTicks = -1;
+    await Promise.all([
+        blackarm(B, bDone).then(() => { bTicks = B.T() - tick0; }),
+        phoenix(p, pDone).then(() => { pTicks = p.T(); }),
+    ]);
+    await B.end(bDone() && pDone(), `qp=1 mainTicks=${bTicks} helperTicks=${pTicks} mainDone=${bDone()} helperDone=${pDone()} helperHpMin=${p.stats.hpMin} helperEats=${p.stats.eats}`);
+} catch (e) { await B.fail(String(e)); }

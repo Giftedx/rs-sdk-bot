@@ -19,21 +19,22 @@ const root=resolve(import.meta.dir,'../../..');
 const owned=['scripts/druid-meats.ts','scripts/druid-meats.test.ts','packages/practice/src/druid-meats-proof.ts','packages/practice/test/druid-meats-proof.test.ts'];
 const hash=(path:string)=>createHash('sha256').update(readFileSync(path)).digest('hex');
 const source=()=>({runtime:workerSourceRevision(),files:Object.fromEntries(owned.map(p=>[p,hash(join(root,p))]))});
-export const DRUID_FIXTURE:SaveConfig={position:{x:2572,z:3268,level:1},
+export const DRUID_FIXTURE:SaveConfig={position:{x:3092,z:3242,level:0},
  skills:{Attack:94,Strength:83,Defence:76,Hitpoints:75},
  equipment:[{id:1289,count:1,slot:3},{id:1171,count:1,slot:5}],
  inventory:[{id:954,count:1},{id:329,count:2}],
- bank:[{id:995,count:1000},{id:590,count:1},{id:1511,count:13}]};
+ bank:[{id:995,count:1000},{id:590,count:1},{id:1511,count:13},{id:2132,count:265}]};
 const qty=(s:Save,id:number,container?:number)=> (container===undefined?Object.values(s.inventories).flat():s.inventories[container]??[]).filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
 const totalMap=(s:Save)=>Object.fromEntries([...new Set(Object.values(s.inventories).flat().map(i=>i.id))].sort((a,b)=>a-b).map(id=>[id,qty(s,id)]));
 const equipment=(s:Save)=>JSON.stringify((s.inventories[94]??[]).map(i=>[i.slot,i.id,i.count]));
 export function druidSaveChecks(before:Save,after:Save,r:any){
  const ids=new Set([...Object.values(before.inventories).flat(),...Object.values(after.inventories).flat()].map(i=>i.id));
  const p=after.position,b=nearestMeatBank(p.x,p.z);
+ const missing=MEATS.filter(m=>qty(before,m.item)===0);
  return {
-  entry:before.skills[3]?.level===75&&before.position.x===2572&&before.position.z===3268&&before.position.level===1&&MEATS.every(m=>qty(before,m.item)===0),
-  meats:MEATS.every(m=>qty(after,m.item,95)===1&&qty(after,m.item)===1),
-  kills:r?.ok===true&&r.kills===4&&Array.isArray(r.acquired)&&r.acquired.length===MEATS.length&&MEATS.every(m=>r.acquired.filter((id:number)=>id===m.item).length===1)&&r.skipped?.length===0,
+  entry:before.skills[3]?.level===75&&before.position.x===3092&&before.position.z===3242&&before.position.level===0&&qty(before,2132,95)===265&&qty(before,2132)===265&&MEATS.filter(m=>m.item!==2132).every(m=>qty(before,m.item)===0),
+  meats:MEATS.every(m=>{const expected=Math.max(1,qty(before,m.item));return qty(after,m.item,95)===expected&&qty(after,m.item)===expected;}),
+  kills:r?.ok===true&&r.kills===missing.length&&Array.isArray(r.acquired)&&r.acquired.length===missing.length&&missing.every(m=>r.acquired.filter((id:number)=>id===m.item).length===1)&&r.skipped?.length===1&&r.skipped[0]===2132,
   assets:[...ids].every(id=>MEATS.some(m=>m.item===id)||qty(before,id)===qty(after,id))&&equipment(before)===equipment(after),
   life:r?.died===false&&Number.isFinite(r.hpMin)&&r.hpMin>=35&&(after.skills[3]?.level??0)>0,
   bank:p.level===0&&Math.max(Math.abs(p.x-b.x),Math.abs(p.z-b.z))<=2,
@@ -63,8 +64,8 @@ export function verifyDruid(directory:string){
   persisted:meta.persisted===true,fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
   ...Object.fromEntries(['before.sav','after.sav','rerun.sav','worker.log','rerun.log'].map(p=>['hash_'+p,meta.hashes[p]===hash(join(directory,p))]))};
  const report={ok:Object.values(checks).every(Boolean),checks,source:meta.source,
-  scope:'One HP75 Ardougne fixture, native CLI kill/pickup/bank of four meats, saved assets and life, all-owned rerun refusal and logout. No live or unattended claim.',
-  consumer:'run-druid-meats-mightyrod supplies run-quest-druid-mightyrod and Herblore entry.'};
+  scope:'One HP75 Draynor3092,3242,0 fixture with265 beef banked, native CLI travel/kill/pickup/bank of the three missing meats, saved assets and life, all-owned rerun refusal and logout. No live or unattended claim.',
+  consumer:'run-druid-meats-mightyrod-draynor-consumer supplies run-quest-druid-mightyrod-main and Herblore entry.'};
  writeFileSync(join(directory,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(directory:string){
@@ -95,7 +96,7 @@ async function run(directory:string){
    finally{clearTimeout(timer);clearInterval(floor);await termination;}
   };
   const worker=await child('worker',690000);
-  const saved=await waitPracticeSave(path,s=>MEATS.every(m=>qty(s,m.item,95)===1),{timeoutMs:15000});
+  const saved=await waitPracticeSave(path,s=>MEATS.every(m=>qty(s,m.item,95)===(m.item===2132?265:1)),{timeoutMs:15000});
   copyFileSync(path,join(directory,'after.sav'));
   if(!Object.values(druidChildChecks(worker.code,worker.timedOut,readFileSync(join(directory,'worker.log'),'utf8'))).every(Boolean)||!saved.matched){
    writeFileSync(join(directory,'failed.json'),JSON.stringify({worker,persisted:saved.matched}));throw Error('native worker failed: retain raw logs and snapshots');

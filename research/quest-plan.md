@@ -1038,13 +1038,12 @@ cost Haggis ticks if they are done before Haggis reaches Brimhaven.
 | H6 | Katrine (Varrock): "I have a candlestick now!", the armband | done |
 | H7 | Firebird feather (Entrana firebird drop, `drop tables/scripts/entrana_firebird.rs2:10`; ice gloves worn to pick it up, `objs/fire_feather.rs2:1-13`); lava eel (blamish oil = harralander potion (unf) + blamish snail slime, Herblore 25, `skill_herblore/configs/brewing/brew_potion.struct:207-213`; oil on a fishing rod, `objs/oily_fishing_rod.rs2:4-14`; lava eel spot `skill_fishing/scripts/fishing_spots/lavafish.rs2`; cook it); Achietties with the three items | - |
 
-Open points before a script: the side door rule `coordz(coord) = coordz(loc_coord)` (`brimhaven_scarface_mansion.rs2:
-37-43`) compares z coordinates, so which side opens without `misc_key` must be checked in a run; Grip wanders
-in a guarded house, and the pirate guards' reaction to the attack is not read; the source of the ice gloves in rev
-289 is the Ice Queen's death drop (`_unpack/225/all.npc:5348-5388`), not checked. The feather, the armband, the
-cooked lava eel and the blamish oil are untradeable (`quest_hero.obj`, `skill_cooking/configs/cooking_generic/
-food_cooked.obj`, `skill_herblore/configs/brewing/potions.obj`), so Haggis gets each one itself; the oily fishing
-rod and the ice gloves are not marked untradeable (not found in a non-unpack `.obj` file).
+Script: `scripts/generated/quest-hero.ts` plays both sides in one process (MEASURED practice, 3/3; `research/community-and-upstream.md`
+section 9.2). The Black Arm member trades `misc_key` to the Phoenix member outside Garv's door; the Phoenix member opens the side door with it
+from the garden, then hits Grip through the arrow slit of the side room when the Black Arm member opens his drinks cabinet beside a
+pirate guard. The ice gloves are the Ice Queen's death drop. The feather, the armband, the cooked lava eel and the blamish oil are
+untradeable (`quest_hero.obj`, `skill_cooking/configs/cooking_generic/food_cooked.obj`, `skill_herblore/configs/brewing/potions.obj`), so
+each account gets its own.
 
 Cost: Haggis's Heroes' row stays ESTIMATE inside `quests-rest` (class XL). The real cost is the helper's 55 QP of
 quests, which is not on Haggis's clock but is a full second questing account. Without it, Heroes' Quest (1 QP), Throne of
@@ -1126,6 +1125,30 @@ Kennith shouted to across the wall upstairs (4, `area_fishing_platform/scripts/k
 in the pack (7, Firemaking 30, `quest_seaslug.rs2:42-63`); Kennith (8); kick the panel (9); Kennith (10); the crane
 (11); Holgart to the shore; Caroline (`caroline.rs2:33-48`, 71,750 Fishing x25 = 179,375). The dry sticks come from
 damp sticks (1467, spawn 2784,3289) and broken glass (1469, spawns 2765,3278 and 2765,3289, `maps/m43_51.jm2` OBJ).
+
+Normal prepared entry needs Firemaking 30 and swamp paste 1941, not a helper-supplied torch. Pinned
+`area_fishing_platform/scripts/bailey.rs2` gives unlit torch 596 at stage 6; NPC 695 spawns at 2763,3276,0
+(`maps/m43_51.jm2`). The existing worker adapts this dialogue after returning from Kent only when neither torch
+is held, observes receipt, and keeps the six-attempt lighting bound. Rubbing without a torch can advance stage 7
+without producing lit torch 594 (`quest_seaslug.rs2`), so receipt precedes rubbing. Focused check:
+`scripts/quest-seaslug-torch.test.ts`. Conditional normal entry qualifies on combined source `6c962ad7b90603ea43f443b4f1334962fc226f2ba1cbefb801a9a4c5c5eab064`
+in `../rs-sdk-bot-cloud-next`: genuine Firemaking31/8000XP and finite-food output supplies the exact low profile
+Hitpoints27/Prayer47/Fishing50/35000XP. Only position is prepared at Ardougne south bank; neither paste nor torch
+is preset. Real shop CLI buys/banks one paste for42GP in192 ledger ticks; real Sea Slug CLI withdraws it and
+acquires Bailey's torch, completing in540 ledger ticks with saved159=12, QP+1, Fishing+179375 to76/214375XP,
+HP27 unchanged, unrelated assets retained, oyster pearls413+1, no death and both confirmed logouts. Proof:
+`.practice/seaslug-normal/native-1793507462043/proof.json` in that candidate workspace. One native chain proves
+conditional behavior, not speed or batch readiness; actual live prerequisite staging/travel and matched entry remain open.
+The `khazard_paste` profile in `scripts/shop-buyer.ts` reuses observed purchase, banking and budget logic for
+swamp paste1941 only: keeper555 at2641,3171; stock500/restock20 (`port_khazard.inv`), base30
+(`skill_cooking/configs/cooking_generic/cooking.obj`), sell multiplier1400 (`port_khazard.npc`). Nominal full-stock
+price is42; observed price controls spending. Finite caller: `ITEMS='swamp paste' MAX_ITEMS=1 STOCK_TARGET=1
+BANK_AT=1 MAX_SPEND=252 FLOAT=452 COIN_RESERVE=200 NO_BUY_TICKS=25 STOP_AT_TARGET=1 BANK_PACK=1`.
+It returns paste banked at Ardougne south2654,3283; Sea Slug accepts that entry by withdrawing exactly one
+unnoted with a fresh bank debit and pack credit receipt. Missing paste elsewhere refuses before travel. This path
+has the conditional low-HP route proof above; actual account entry must match before live use. Eight normal logs
+from zero produce8000XP, Firemaking31; qualification uses genuine produced skills/assets and separately purchased paste.
+
 
 ### Cause of "I can't reach that!" at the broken glass (test runs t1-t13)
 

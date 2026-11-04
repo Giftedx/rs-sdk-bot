@@ -4,6 +4,7 @@ import {join,resolve,dirname,relative} from 'node:path';
 import ts from 'typescript';
 import {isLocalServer} from './localserver';
 import {readLogoutProof,listAttempts,type LogoutProof} from './session-lifecycle';
+import {commandLine} from '../../practice/src/proc';
 
 const root=resolve(import.meta.dir,'../../..');
 // One fleet revision includes helpers and both host/single launch paths, not
@@ -66,13 +67,13 @@ function kind(base:string,p:string):'file'|'dir'|undefined{
 }
 function treeFiles(base:string,dir:string,memo:ReleaseMemo):string[]{
     const key='t:'+dir;if(memo.has(key))return memo.get(key) as string[];
-    const out:string[]=[];
-    const walk=(d:string)=>{for(const e of readdirSync(join(base,d),{withFileTypes:true})){
+    const out:string[]=[],dirs:string[]=[];
+    const walk=(d:string)=>{dirs.push(d);for(const e of readdirSync(join(base,d),{withFileTypes:true})){
         if(skipped.has(e.name))continue;const p=d+'/'+e.name;
         if(e.isSymbolicLink())throw Error('no worker progress: linked release source unsupported: '+p);
         if(e.isDirectory())walk(p);else if(releaseFile.test(e.name)&&!e.name.endsWith('.test.ts'))out.push(p);
     }};
-    walk(dir);memo.set(key,out);return out;
+    walk(dir);memo.set('dirs:'+dir,dirs);memo.set(key,out);return out;
 }
 // Bun's relative resolution for the forms this repository uses, with the package.json a folder import reads.
 function resolveImport(base:string,file:string,spec:string):string[]{
@@ -112,7 +113,7 @@ function stringLiterals(file:string,text:string):string[]{
 // A literal names a release path when, read from the file's folder or from the repository root, it is an existing
 // file under releaseDataRoots or vendor (a wasm a vendored module loads), or a folder under releaseDataRoots.
 // Folders count from knowledge, scripts/<dir> and packages/<pkg>/<dir>.
-function literalPaths(base:string,file:string,literal:string):{path:string;dir:boolean}[]{
+function literalPaths(base:string,file:string,literal:string,memo:ReleaseMemo):{path:string;dir:boolean}[]{
     if(literal.length>300||!/^[\w@.\/\\-]+$/.test(literal)||/^[./\\]*$/.test(literal))return [];
     const s=posix(literal);let fromRoot=s;
     for(let next=fromRoot.replace(/^(?:\.\.?\/|\/)/,'');next!==fromRoot;next=fromRoot.replace(/^(?:\.\.?\/|\/)/,''))fromRoot=next;
@@ -120,6 +121,11 @@ function literalPaths(base:string,file:string,literal:string):{path:string;dir:b
     for(const p of new Set([repoPath(base,resolve(base,dirname(file),s)),repoPath(base,resolve(base,fromRoot))])){
         if(!p)continue;const parts=p.split('/'),top=parts[0]!;
         if(!releaseDataRoots.includes(top)&&top!=='vendor')continue;
+        // A literal that does not exist can become release input when created. Watch its nearest existing
+        // parent too, including an empty folder that contributes no current source file.
+        let parent=dirname(p);
+        while(kind(base,parent)!=='dir'&&parent!=='.')parent=dirname(parent);
+        memo.set('dirs:literal:'+p,[parent]);
         const k=kind(base,p);
         if(k==='file'&&releaseFile.test(p)&&!p.endsWith('.test.ts'))out.push({path:p,dir:false});
         else if(k==='dir'&&releaseDataRoots.includes(top)&&(top==='knowledge'||top==='scripts'&&parts.length>=2||top==='packages'&&parts.length>=3))out.push({path:p,dir:true});
@@ -133,7 +139,7 @@ function fileLinks(base:string,file:string,memo:ReleaseMemo):{files:string[];dir
         if(spec.startsWith('.'))files.push(...resolveImport(base,file,spec));
         else if(spec.startsWith('@rsbot/'))throw Error('no worker progress: release workspace import unsupported: '+file+' -> '+spec);
     }
-    if(!hashOnly.has(file))for(const literal of stringLiterals(file,text))for(const p of literalPaths(base,file,literal))(p.dir?dirs:files).push(p.path);
+    if(!hashOnly.has(file))for(const literal of stringLiterals(file,text))for(const p of literalPaths(base,file,literal,memo))(p.dir?dirs:files).push(p.path);
     const links={files,dirs};memo.set(key,links);return links;
 }
 const inRuntimeTree=(p:string)=>runtimeTrees.some(t=>p===t||p.startsWith(t+'/'));
@@ -186,17 +192,21 @@ export function releaseFor(entries:readonly string[],base=root,memo:ReleaseMemo=
 // changes it), with no file read: a coordinator loop checks this and hashes the files only when it changes.
 function releaseStamp(base:string,files:readonly string[]):string{
     const hash=createHash('sha256');
-    for(const p of [...files,...new Set(files.map(f=>dirname(f)))]){const s=statSync(join(base,p));hash.update(p+'\0'+s.size+'\0'+s.mtimeMs+'\0');}
+    for(const p of [...files,...new Set(files.map(f=>dirname(f)))]){const s=statSync(join(base,p));hash.update(p+'\0'+s.size+'\0'+s.mtimeMs+'\0'+s.ctimeMs+'\0');}
     return hash.digest('hex');
 }
-const launchByBase=new Map<string,{files:string[];stamp:string;value:string}>();
-// launchRevision for a base whose release files and folders kept their stamps since this process last hashed it.
-export function cachedLaunchRevision(base=root):string{
-    const hit=launchByBase.get(base);
+const releaseByEntries=new Map<string,{files:string[];stamp:string;value:string}>();
+// Group login must keep reading packets while it checks each actor. Reuse parsed release closures only while
+// their files and folders retain their stamps; every network admission still checks the current stamps and peers.
+export function cachedReleaseFor(entries:readonly string[],base=root):string{
+    const fullEntries=entries.length?[...entries,...workerLaunchers]:launchEntries,key=JSON.stringify([resolve(base),fullEntries]);
+    const hit=releaseByEntries.get(key);
     if(hit)try{if(releaseStamp(base,hit.files)===hit.stamp)return hit.value;}catch{/* a missing file recomputes */}
-    const memo:ReleaseMemo=new Map(),files=releaseFiles(launchEntries,base,memo),stamp=releaseStamp(base,files);
-    const value=revisionOf(base,files,memo);launchByBase.set(base,{files,stamp,value});return value;
+    const memo:ReleaseMemo=new Map(),sourceFiles=releaseFiles(fullEntries,base,memo);
+    const files=[...new Set([...sourceFiles,...[...memo].filter(([k])=>k.startsWith('dirs:')).flatMap(([,v])=>v as string[])])],stamp=releaseStamp(base,files);
+    const value=revisionOf(base,sourceFiles,memo);releaseByEntries.set(key,{files,stamp,value});return value;
 }
+export function cachedLaunchRevision(base=root):string{return cachedReleaseFor([],base);}
 
 function importedPath(base:string,file:string,spec:string):string{
     return relative(resolve(base),resolve(base,dirname(file),spec)).replaceAll('\\','/');
@@ -206,7 +216,7 @@ function importedPath(base:string,file:string,spec:string):string{
 export function assertWorkerRelease(env:Record<string,string|undefined>=process.env,base=root,memo:ReleaseMemo=new Map()):string {
     const pin=env.WORKER_RELEASE;
     if(!pin||! /^[a-f0-9]{64}$/.test(pin))throw Error('no worker progress: release pin missing; live starts paused');
-    if(releaseFor(releaseEntries(env.WORKER_ENTRY),base,memo)!==pin)throw Error('no worker progress: release source changed; live starts paused');
+    if(cachedReleaseFor(releaseEntries(env.WORKER_ENTRY),base)!==pin)throw Error('no worker progress: release source changed; live starts paused');
     return pin;
 }
 
@@ -255,7 +265,7 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
     // A peer whose entries are gone or do not resolve has no current release, so it counts as stale.
     const releases=new Map<string,string>(),current=(row:any)=>{
         const key=typeof row?.workEntry==='string'?row.workEntry:'';
-        if(!releases.has(key)){let value='';try{value=releaseFor(releaseEntries(key),base,memo);}catch{/* stale */}releases.set(key,value);}
+        if(!releases.has(key)){let value='';try{value=cachedReleaseFor(releaseEntries(key),base);}catch{/* stale */}releases.set(key,value);}
         return releases.get(key)!;
     };
     assertCompatibleWorkers(pin,server,statuses,Date.now(),row=>closedSessionRow(row,server,{root:join(base,'.practice/session-lifecycle')}),row=>standingPeer(row,owners),current);
@@ -265,14 +275,23 @@ export function assertLiveWorkerRelease(server:string,env:Record<string,string|u
 export const LOST_SESSION_DROP_MS=200_000;
 // A live status row without a result is a closed session only when the account's own producer lifecycle says so:
 // its newest attempt (the row's attempt or a later one) confirmed logout, or the row's own attempt is still the newest,
-// its owner process is gone and the row is older than the server's lost-session drop.
-export function closedSessionRow(row:any,server:string,opts:{root?:string}={},alive:(pid:number)=>boolean=pidAlive,now=Date.now()):boolean {
+// its owner process is gone (including a PID reused by a different script) and the row is older than the server's
+// lost-session drop. An unreadable command line or missing producer script cannot prove a live PID changed owner.
+export function closedSessionRow(row:any,server:string,opts:{root?:string;commandLine?:(pid:number)=>string|null}={},alive:(pid:number)=>boolean=pidAlive,now=Date.now()):boolean {
     if(typeof row?.name!=='string'||typeof row.sessionAttemptId!=='string'||!row.sessionAttemptId)return false;
     let latest:LogoutProof;try{latest=readLogoutProof(row.name,server,opts);}catch{return false;}
     if(latest.state==='confirmed')return latest.attemptId>=row.sessionAttemptId;
     if(latest.state!=='held'||latest.attemptId!==row.sessionAttemptId||!Number.isFinite(row.at)||now-row.at<LOST_SESSION_DROP_MS)return false;
-    let pid:unknown;try{pid=listAttempts(row.name,server,opts).find(a=>a.attemptId===latest.attemptId)?.receipt?.owner.pid;}catch{return false;}
-    return Number.isSafeInteger(pid)&&(pid as number)>0&&!alive(pid as number);
+    try{
+        const owner=listAttempts(row.name,server,opts).find(a=>a.attemptId===latest.attemptId)?.receipt?.owner,pid=owner?.pid;
+        if(!Number.isSafeInteger(pid)||!pid||pid<1)return false;
+        if(!alive(pid))return true;
+        if(typeof owner?.script!=='string'||!owner.script.endsWith('.ts'))return false;
+        const line=(opts.commandLine??commandLine)(pid);
+        if(!line?.trim())return false;
+        const normalize=(s:string)=>s.replaceAll('\\','/').toLowerCase();
+        return !normalize(line).includes(normalize(owner.script));
+    }catch{return false;}
 }
 function pidAlive(pid:number):boolean{try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException).code!=='ESRCH';}}
 

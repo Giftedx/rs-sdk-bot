@@ -5,6 +5,7 @@
 // Server truth: areas/area_draynor/scripts/morgan.rs2, areas/area_varrock/scripts/harlow.rs2,
 // quests/quest_vampire/scripts/quest_vampire.rs2 (coffin loc_2614 spawns the Count), count_draynor.rs2.
 import { openQuest } from './quest-lib';
+import { questFlags } from '../../packages/core/src/quest-status';
 
 const MORGAN = { x: 3098, z: 3268 };
 const HARLOW = { x: 3277, z: 3492 };
@@ -20,16 +21,21 @@ try {
     const harlow = /^dr harlow$/i;
 
     // 1. Morgan: "Ok, I'm up for an adventure." sets 1 (morgan.rs2:11-26).
-    await q.talk('morgan', /^morgan$/i, [/up for an adventure/i], () => q.sawText(/look him up then|dr\. harlow/i), MORGAN);
+    const state = () => questFlags(q.s.client)?.find(f => f.name === 'Vampire Slayer')?.state;
+    if (!await q.waitUntil(() => ['not started', 'started', 'complete'].includes(state() ?? ''), 20)) await q.fail('Vampire Slayer journal unobserved');
+    if (state() === 'complete') await q.fail('Vampire Slayer already complete');
+    if (state() === 'not started')
+        await q.talk('morgan', /^morgan$/i, [/up for an adventure/i], () => q.sawText(/look him up then|dr\. harlow/i), MORGAN);
     q.milestone(1);
 
     // 2. Varrock teleport; the Jolly Boar Inn. "Morgan needs your help" sets 2; the second talk takes the beer and
     // gives the stake (harlow.rs2:9-55).
     await q.teleport('varrock teleport 1', 'magic:varrock_teleport', 3212, 3424);
     await q.walk('to harlow', [{ x: HARLOW.x, z: HARLOW.z, tol: 3 }]);
-    await q.talk('harlow 1', harlow, [/morgan needs your help/i], () => q.sawText(/buy ush a drink anyway/i), HARLOW);
+    if (!q.has(ITEM.stake))
+        await q.talk('harlow 1', harlow, [/morgan needs your help/i], () => q.has(ITEM.stake) || q.sawText(/buy ush a drink anyway/i), HARLOW);
     q.milestone(2);
-    await q.talk('harlow 2', harlow, [/ok mate/i], () => q.has(ITEM.stake), HARLOW, 60);
+    if (!q.has(ITEM.stake)) await q.talk('harlow 2', harlow, [/ok mate/i], () => q.has(ITEM.stake), HARLOW, 60);
     q.milestone('stake');
 
     // 3. Varrock teleport, the walk to Draynor Manor; the front doors open from the south only (quest_haunted.rs2:4-11).

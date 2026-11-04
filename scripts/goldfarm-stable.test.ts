@@ -314,7 +314,7 @@ test('a thief at the knights answers the courier only when it is in view, once p
     expect(courierCheckDue(1000, 1000 - COURIER_COOLDOWN, 'Bigpackage', here)).toBe(true);
     expect(courierCheckDue(1000, -100_000, 'Bigpackage', [{ name: 'Bigpackage2' }, {}])).toBe(false);
     expect(courierCheckDue(1000, -100_000, '', here)).toBe(false);
-    // A fed thief (26 food on 2026-10-25) keeps picking; the wait is for one that is running short.
+    // A fed thief (26 food) keeps picking; the wait is for one that is running short.
     expect(COURIER_WANT_BELOW).toBeGreaterThan(2);
     expect(COURIER_WANT_BELOW).toBeLessThan(26);
 });

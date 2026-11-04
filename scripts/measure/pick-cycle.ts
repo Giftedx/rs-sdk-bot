@@ -16,7 +16,7 @@ try {
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const eatAt = Math.ceil((s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10) / 2);
     const xp0 = xp();
-    // EATSTUN=1: top up inside the 8-tick stun after each fail, so eating costs no pickpocket ticks.
+    // EATSTUN=1: top up inside the 8-tick stun after each fail. Each eat adds 3 to %action_delay (consume.rs2:129-130), so it is not free.
     const eatStun = process.env.EATSTUN === "1";
     const maxHp = s.sdk.getSkill("Hitpoints")?.baseLevel ?? 10;
     const onFail = async () => {
@@ -30,7 +30,7 @@ try {
         if (hp() <= eatAt && countItems(s, FOOD) > 0) { if ((await s.bot.eatFood(FOOD)).success) eaten++; continue; }
         const npc = s.sdk.findNearbyNpc(TARGET, { reachable: true });
         if (!npc) { await waitTicks(s, 1); continue; }
-        // DIRECT=1: the leader's rhythm (Jackalopett1, recorded 2026-10-23): a pickpocket click every 2 ticks, sent
+        // DIRECT=1: the leader's rhythm (Jackalopett1, recorded): a pickpocket click every 2 ticks, sent
         // straight to the client. The server drops clicks that land in a stun, so no stun tracking is needed.
         if (process.env.DIRECT === '1') {
             const op = (npc as any).optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))!.opIndex;

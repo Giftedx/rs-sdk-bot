@@ -1,8 +1,57 @@
 import {test,expect} from 'bun:test';
 import {totals,lines,unrelatedKept,segmentChecks,progressChecks,refusalChecks,fixtureChecks,
- FIXTURES,CASES,ADMISSION} from '../src/magic-order-proof';
+ FIXTURES,CASES,ADMISSION,magicProofEndpoints,selectMagicProofEndpoints,magicProofAccountEnv,startMagicProofStack,magicChildConfiguration,magicRegistrationArgs,magicSavedEndpoints} from '../src/magic-order-proof';
 import {FREE_FLOOR_GB,PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import type {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
+
+test('owned magic endpoints reach the stack, new profiles, registration and every worker child',async()=>{
+ const checked:number[]=[],samples=[0,0.01];
+ const p=selectMagicProofEndpoints(port=>{checked.push(port);return port!==20003;},()=>samples.shift()!);
+ expect(checked).toEqual([20000,20001,20002,20003,20200,20201,20202,20203]);
+ expect(p.ports).toEqual({engine:20200,gateway:20201,management:20202,tcp:20203});
+ expect(p.instance).toMatch(/^magic-[a-z0-9-]{1,25}$/);
+ const original='SERVER=localhost:8888\r\nGATEWAY_URL=ws://localhost:7780\r\nPASSWORD=fixture\r\n';
+ const configured=magicProofAccountEnv(original,p);
+ expect(configured).toContain(`SERVER=${p.server}\r\n`);
+ expect(configured).toContain(`GATEWAY_URL=${p.gateway}\r\n`);
+ expect(configured).toContain('PASSWORD=fixture\r\n');
+ expect(()=>magicProofAccountEnv(original.replace('localhost:8888','rs-sdk-demo.fly.dev'),p)).toThrow('new practice account required');
+ const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+ let stops=0;
+ const owned={logs:{engine:'',gateway:''},stop:async()=>{stops++;}};
+ const stack=await startMagicProofStack(p,async opts=>{
+  expect(opts).toEqual({ports:p.ports,instance:p.instance,tickMs:150,xpRate:25,readyTimeoutMs:60000});
+  for(const [k,v] of Object.entries(p.env))expect(process.env[k]).toBe(v);
+  return owned;
+ });
+ expect(stack).toBe(owned);await stack.stop();expect(stops).toBe(1);
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ await expect(startMagicProofStack(p,async()=>{throw Error('startup refused');})).rejects.toThrow('startup refused');
+ expect(Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]))).toEqual(previous);
+ const registration=magicRegistrationArgs('fixture',p);
+ expect(registration[0]).toBe('--eval');
+ expect(registration[1]).toContain(JSON.stringify(`SERVER=${p.server}`));
+ expect(registration[1]).toContain(JSON.stringify(`GATEWAY_URL=${p.gateway}`));
+ expect(registration[1]).toContain('openBot(');
+ expect(registration[1]).toContain('finish([session]');
+ for(const args of [registration,['scripts/magic-order.ts','fixture']]){
+  const child=magicChildConfiguration(args,{TARGET_LEVEL:'37',MAX_CASTS:'5',CAP:'1500'},p,{GATEWAY_URL:'ws://localhost:7780',WEB_MANAGEMENT_PORT:'8898',NODE_PORT:'43594'});
+  expect(child.cmd).toEqual(['bun',...args]);
+  expect(child.env).toMatchObject({...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0',TARGET_LEVEL:'37',MAX_CASTS:'5',CAP:'1500'});
+  expect(child.env.GE_DATABASE).toBe(`data/market-${p.instance}.sqlite`);
+  expect(child.windowsHide).toBe(true);
+ }
+ expect(()=>magicProofEndpoints({...p.ports,tcp:8888},p.instance)).toThrow('owned practice endpoints required');
+ expect(()=>magicProofEndpoints({...p.ports,tcp:p.ports.engine},p.instance)).toThrow('owned practice endpoints required');
+ expect(()=>selectMagicProofEndpoints(()=>false,()=>0)).toThrow('owned practice ports unavailable');
+ const meta={endpoints:{ports:p.ports,instance:p.instance},server:p.server,gateway:p.gateway};
+ expect(magicSavedEndpoints(meta)).toEqual(p);
+ expect(()=>magicSavedEndpoints({...meta,server:'localhost:8888'})).toThrow('saved owned practice endpoint mismatch');
+ expect(()=>magicSavedEndpoints({...meta,gateway:'ws://localhost:7780'})).toThrow('saved owned practice endpoint mismatch');
+ expect(()=>magicSavedEndpoints({...meta,endpoints:{...meta.endpoints,ports:{...p.ports,management:8898}}})).toThrow('owned practice endpoints required');
+ expect(()=>magicSavedEndpoints({...meta,endpoints:{...meta.endpoints,ports:{...p.ports,tcp:43594}}})).toThrow('owned practice endpoints required');
+ expect(()=>magicSavedEndpoints({server:p.server,gateway:p.gateway})).toThrow('owned practice endpoints required');
+});
 
 type Save=ReturnType<typeof readPracticeSave>;
 type Item={id:number;count:number};

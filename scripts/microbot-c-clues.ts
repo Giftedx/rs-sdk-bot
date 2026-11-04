@@ -79,7 +79,7 @@ export function nativeClueSearchLocs():SearchLoc[]{
  if(locCache)return locCache;
  const ids=pack('loc.pack'),out:SearchLoc[]=[];
  // Generic handlers read trail_coord+trail_loc at these exact categories.
- const cats:Record<string,{option:number;openOnly:boolean}>={empty_crate:{option:1,openOnly:false},empty_crates:{option:1,openOnly:false},empty_boxes:{option:1,openOnly:false},chest_closed:{option:1,openOnly:false},chest_open:{option:2,openOnly:false},drawer:{option:1,openOnly:true},empty_drawer:{option:2,openOnly:false},bookcase:{option:1,openOnly:false}};
+ const cats:Record<string,{option:number;openOnly:boolean}>={empty_crate:{option:1,openOnly:false},empty_crates:{option:1,openOnly:false},empty_boxes:{option:1,openOnly:false},chest_closed:{option:1,openOnly:true},chest_open:{option:2,openOnly:false},drawer:{option:1,openOnly:true},empty_drawer:{option:2,openOnly:false},bookcase:{option:1,openOnly:false}};
  for(const file of listConfigFiles('.loc'))for(const b of parseConfigs(readFileSync(resolve(content,file),'utf8'),file)){
   const action=cats[b.props.category?.[0]??''],id=ids.get(b.name);if(action&&id!==undefined)out.push({id,...action});
  }
@@ -134,7 +134,7 @@ export async function runNativeClueStep(s:Session,clueId:number,cap:number,stop:
      const target=s.sdk.getState()?.nearbyLocs.find(l=>l.x===step.point!.x&&l.z===step.point!.z&&l.level===step.point!.level&&nativeClueSearchLocs().some(n=>n.id===l.id));
      if(!target)throw Error('native clue search location/category not observed at exact coordinate');
      const rule=nativeClueSearchLocs().find(n=>n.id===target.id)!;
-     if(rule.openOnly&&openedAt!==undefined){if(s.tick()-openedAt>=8)throw Error('native clue drawer open effect unobserved');}
+     if(rule.openOnly&&openedAt!==undefined){if(s.tick()-openedAt>=8)throw Error('native clue container open effect unobserved');}
      else{await s.sdk.sendInteractLoc(target.x,target.z,target.id,rule.option);sent=!rule.openOnly;if(rule.openOnly)openedAt=s.tick();}
     }
    }else if(step.kind==='challenge'&&!challengeReady&&step.challengeItem!==undefined&&count(stock(),step.challengeItem)===1){challengeReady=true;sent=false;}

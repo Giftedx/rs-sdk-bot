@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { accountFrom, assess, catalogue, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { accountFrom, assess, catalogue, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -55,6 +55,38 @@ test('skills and holdings gate templates; coins pick a shop; a retired pair pick
     expect(ids(plan(inputs([acct('Fletch', {}, { 'arrow shaft': 1000, feather: 1000 })]))).Fletch).toBe('fletch-headless');
 });
 
+test('a shop blocked only by coins is funded by the richest free donor above its reserve', () => {
+    const knights = Object.fromEntries(['2652,3318', '2653,3300', '2669,3298', '2671,3313', '2582,3297'].map(s => [`knight:${s}`, 1]));
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const poor = acct('Poor', {}, { coin: 500 });
+    const out = plan(inputs([poor], { templates: shops, taken: knights, donors: [{ name: 'Small', coins: 51_000 }, { name: 'Big', coins: 900_000 }] }));
+    expect(out[0]!.template?.id).toBe('shop-feathers');
+    expect(out[0]!.fund).toEqual({ from: 'Big', to: 'Poor', coins: 1_500, template: 'shop-feathers' });
+    // No donor holds the need above FUND_RESERVE (50,000): the account stays vacant and nothing is funded.
+    const none = plan(inputs([poor], { templates: shops, donors: [{ name: 'Small', coins: 51_000 }] }));
+    expect(none[0]!.template).toBeUndefined();
+    // Without donors the old rule stands: the coin need gates the shop.
+    expect(plan(inputs([poor], { templates: shops }))[0]!.template).toBeUndefined();
+});
+
+test('a donor that gives stays free that pass; an account that holds the coins needs no fund', () => {
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const show = (out: ReturnType<typeof plan>) => Object.fromEntries(out.map(x => [x.account, x.fund ? `funded by ${x.fund.from}` : x.template?.id ?? x.reason]));
+    const opts = (donor: string) => ({ templates: shops, capacity: { 'shop:sarim': 2 }, donors: [{ name: donor, coins: 900_000 }] });
+    // Equal values go in name order. Poor comes first: Zed funds it and takes no job.
+    expect(show(plan(inputs([acct('Poor'), acct('Zed', {}, { coin: 900_000 })], opts('Zed'))))).toEqual({ Poor: 'funded by Zed', Zed: 'vacant: gives coins this pass' });
+    // Big comes first and takes the job itself: an assigned account never gives.
+    expect(show(plan(inputs([acct('Poor'), acct('Big', {}, { coin: 900_000 })], opts('Big'))))).toEqual({ Poor: expect.stringMatching(/^vacant: no template/), Big: 'shop-feathers' });
+    expect(plan(inputs([acct('Rich', {}, { coin: 5_000 })], { templates: shops, donors: [{ name: 'Big', coins: 900_000 }] }))[0]!.fund).toBeUndefined();
+});
+
+test('an account with an enabled job is never funded, so no running job is removed for a trade', () => {
+    const shops = catalogue().filter(t => t.id === 'shop-feathers');
+    const out = plan(inputs([acct('Poor', {}, { coin: 500 })], { templates: shops, donors: [{ name: 'Big', coins: 900_000 }], unfundable: new Set(['poor']) }));
+    expect(out[0]!.fund).toBeUndefined();
+    expect(out[0]!.template).toBeUndefined();
+});
+
 test('an account with nothing useful is vacant with its constraint', () => {
     const out = plan(inputs([acct('Idle')], { templates: catalogue().filter(t => t.id === 'lobster-chain') }));
     expect(out).toEqual([{ account: 'Idle', value: 0, resources: [], reason: expect.stringMatching(/^vacant: /) }]);
@@ -70,6 +102,10 @@ test('planner jobs carry the marker, repeat and standing, and the merge keeps un
     const [x] = plan(inputs([acct('ThiefA', { Thieving: 80 })]));
     const job = jobFor(x!, side);
     expect(job).toMatchObject({ account: 'ThiefA', script: 'scripts/goldfarm.ts', enabled: true, repeat: true, standing: true, autopilot: side, template: x!.template!.id });
+    // A training job runs once: its ok RESULT is the target met, so a repeat would be a no-op login.
+    const [fresh] = plan(inputs([acct('Fresh')]));
+    expect(fresh!.template!.id).toBe('thieving55');
+    expect(jobFor(fresh!, side)).toMatchObject({ script: 'scripts/generated/thieving60.ts', repeat: false, standing: true });
     const human = { account: 'Other', script: 'scripts/goldfarm.ts', enabled: true }, theirs = { account: 'Far', script: 'x', enabled: true, autopilot: 'cloud' };
     const stale = { account: 'Gone', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side, template: 'feathers@3229,3298' };
     const kept = { ...job, note: 'kept as is' };
@@ -80,6 +116,22 @@ test('planner jobs carry the marker, repeat and standing, and the merge keeps un
     // An owner pause on the old template stays on the new one.
     const paused = { ...stale, account: 'ThiefA', enabled: false, repeat: false };
     expect(mergeJobs([paused], side, [x!]).jobs).toEqual([{ ...job, enabled: false, repeat: false }]);
+});
+
+test('a training job does not repeat, and its ok RESULT names the account for an early pass', () => {
+    const [x] = plan(inputs([acct('NewA')]));
+    const trainer = jobFor(x!, side);
+    expect(trainer).toMatchObject({ template: 'thieving55', enabled: true, repeat: false, standing: true });
+    const farm = jobFor(plan(inputs([acct('ThiefA', { Thieving: 80 })]))[0]!, side);
+    const assigned = { NewA: { template: 'thieving55', offset: 10 }, ThiefA: { template: farm.template, offset: 0 } };
+    const logs: Record<string, string[]> = { NewA: ['[x] RESULT ok thieving=55 xp=16000 ticks=1736 died=false'], ThiefA: ['RESULT ok coinsGained=900 died=false banked=900'] };
+    const lines = (a: string, offset: number) => offset === assigned[a as keyof typeof assigned].offset ? logs[a]! : [];
+    // Only a trains template counts; a producing job's ok RESULT is its normal repeat.
+    expect(finishedTrainers([trainer, farm], side, assigned, catalogue(), lines)).toEqual(['NewA']);
+    expect(finishedTrainers([trainer], side, assigned, catalogue(), () => ['RESULT fail thieving 52 < 55 ...'])).toEqual([]);
+    // A job the state no longer assigns, or another side's, is not this planner's trainer.
+    expect(finishedTrainers([trainer], side, { NewA: { template: 'goldfarm@2582,3297', offset: 10 } }, catalogue(), lines)).toEqual([]);
+    expect(finishedTrainers([{ ...trainer, autopilot: 'cloud' }], side, assigned, catalogue(), lines)).toEqual([]);
 });
 
 test('existing jobs hold their resources, chain steps included', () => {
@@ -137,14 +189,28 @@ test('a paused handed-over job stays in the merge with its own settings', () => 
     expect(mergeJobs(jobs, side, []).jobs.map(j => j.account)).toEqual(['Haggis']);
 });
 
-test('a paused handed-over job keeps its pen reserved and claimed', () => {
+test('a paused handed-over job keeps its pen reserved', () => {
     const jobs = [
         { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', env: { PEN: '3017,3288' }, enabled: true, autopilot: side },
         { account: 'Woodpecker', script: 'scripts/gather-feathers.ts', env: { PEN: '3229,3298' }, enabled: true, autopilot: side },
         { account: 'CoinCock', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2670,3306' }, enabled: true },
         { account: 'OreElse', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2671,3313' }, enabled: false },
     ];
-    const r = reservedResources(jobs, side, new Set(['hocuspokeus']), a => a === 'CoinCock' ? 'other' : side);
-    expect(Object.keys(r.taken).sort()).toEqual(['knight:2671,3313', 'pen:3017,3288']);
-    expect(r.ownHeld).toEqual(['pen:3017,3288']);
+    expect(Object.keys(reservedResources(jobs, side, new Set(['hocuspokeus']))).sort()).toEqual(['knight:2671,3313', 'pen:3017,3288']);
+});
+
+test('the claim lists every spot, pen and shop the enabled jobs of this side hold, planner-made or not', () => {
+    const jobs = [
+        { account: 'Pocketpython', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2582,3297' }, enabled: true },
+        { account: 'Shaftsinker', script: 'scripts/chain.ts', args: ['scripts/goldfarm.ts KNIGHT_SPOT=2653,3300'], env: { ROUNDS: '1', RUN: '2' }, enabled: true },
+        { account: 'PickpockDick', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2653,3302' }, enabled: true },
+        { account: 'Hocuspokeus', script: 'scripts/gather-feathers.ts', enabled: true, autopilot: side, template: 'feathers@3017,3288', resources: ['pen:3017,3288'] },
+        { account: 'Woodpecker', script: 'scripts/chain.ts', args: ['scripts/generated/thieving60.ts TARGET=55 CAP=3000', 'scripts/goldfarm.ts KNIGHT_SPOT=2669,3298'], enabled: false },
+        { account: 'Quickhandjob', script: 'scripts/goldfarm.ts', env: { KNIGHT_SPOT: '2652,3318' }, enabled: true },
+        { accounts: ['NabTheKnob', 'Swordinhand'], host: true, script: 'scripts/quest-chain.ts', enabled: true },
+        { account: 'Haggis', script: '', enabled: false },
+    ];
+    const claim = claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234);
+    expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
+    expect(claimFor([], side, () => side, 5).resources).toEqual([]);
 });

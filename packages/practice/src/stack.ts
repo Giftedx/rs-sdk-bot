@@ -11,7 +11,7 @@ export interface Stack {
     logs: Record<'engine' | 'gateway', string>;
 }
 
-// Proof tick. Measured 2026-10-22 on scripts/generated/thieveguards.ts, 3 runs each: 150 ms gives the same tries
+// Proof tick. Measured on scripts/generated/thieveguards.ts, 3 runs each: 150 ms gives the same tries
 // (114-121 vs 118-124) and XP range as 300 ms, in 68 s instead of 108 s per run. 50 ms does not: every run read
 // the same 46209 XP, so the bot loses ticks at that speed.
 export const PROOF_TICK_MS = 150;

@@ -170,7 +170,17 @@ try {
         // sailing?"; "the cut of your jib" distracts him; the chest opens with the key while he is distracted
         // (captain_siad.rs2:43-81, quest_desertrescue.rs2:308-351) (12).
         await gateIn();
-        await q.walk('to ladder', [{ x: LADDER.x, z: LADDER.z - 1, tol: 0 }]);
+        // The curtain (loc_1528 at 3291,3031) closes Siad's building and the planner treats it as open (rs-stun-toolkit
+        // `q-the-tourist-trap.ts`, MIT, research/stun-toolkit-LICENSE.txt).
+        const curtain = async () => {
+            if (!q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031)) return;
+            await q.step('curtain', () => { const c = q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031); return c ? q.opLoc(c, 1) : q.waitTicks(1); },
+                () => !q.findLoc((l: any) => l.id === 1528 && l.x === 3291 && l.z === 3031), 12, 4);
+        };
+        await q.walk('to curtain', [{ x: 3291, z: 3030, tol: 0 }]);   // the curtain is on the south edge of its tile (maps/m51_47.jm2 `0 27 23: 1528 0 3`)
+        await curtain();
+        await q.dash('through curtain', 3291, 3032, 0, 8);
+        await q.dash('to ladder', LADDER.x, LADDER.z - 1, 1, 12);
         await q.climb('ladder up', () => q.locAt(LADDER.x, LADDER.z) ?? LADDER, /climb-up|^climb/i, () => q.lvl() === 1);
         await q.walk('to bookcase', [{ x: 3285, z: 3032, tol: 0 }]);
         await locTalk('bookcase', () => { const b = loc(BOOKCASE); return q.opLoc(b, q.opIndex(b, /search/i) === 1 ? 2 : q.opIndex(b, /search/i)); }, [], () => q.sawText(/subject of sailing/i));
@@ -182,6 +192,9 @@ try {
         q.milestone(12);
         await q.walk('to ladder top', [{ x: LADDER_TOP.x, z: LADDER_TOP.z - 1, tol: 0 }]);
         await q.climb('ladder down', () => q.locAt(LADDER_TOP.x, LADDER_TOP.z) ?? LADDER_TOP, /climb-down|^climb/i, () => q.lvl() === 0);
+        await q.dash('to curtain inside', 3291, 3031, 0, 14);
+        await curtain();
+        await q.dash('out of curtain', 3291, 3029, 1, 8);
         await gateOut();
         // 8. Al Shabim sees the plans; the bar and 10 feathers in the pack lead to "Yes, I'm kind of curious." (13).
         await shabim('shabim plans', [/yes, i'm very interested/i, /kind of curious/i], () => q.sawText(/anvil in the other tent/i));
@@ -189,9 +202,19 @@ try {
         // 9. The Bedabin guard lets a player with the plans into the anvil tent (bedabin_nomad_guard.rs2:187-226).
         await q.talk('bedabin guard', /^bedabin nomad guard$/i, [], () => z() >= 3046, BED_GUARD, 30);
         // 10. A bar on the anvil (14; a failed roll wastes the bar), 10 feathers on the tip (15; a failed roll wastes them).
-        for (let i = 0; i < 3 && !q.has(ITEM.tip); i++) {
+        // The bar goes first and the roll lands about 8 ticks after "Yes" (quest_desertrescue.rs2:608-623), so each try waits
+        // for the tip or the waste message: a click sent while the forge runs burns another bar.
+        for (let i = 0; i < 5 && !q.has(ITEM.tip) && q.has(ITEM.bar); i++) {
             const t0 = q.s.tick();
-            await locTalk('anvil', () => q.useOnLoc(ITEM.bar, loc(ANVIL)), [/yes, i'd like to try/i], () => q.has(ITEM.tip) || msgSince(/waste the bronze bar/i, t0), 2, 60);
+            const rolled = () => q.has(ITEM.tip) || msgSince(/waste the bronze bar/i, t0);
+            await q.guard('anvil');
+            await closeDlg();
+            await q.useOnLoc(ITEM.bar, loc(ANVIL));
+            await q.waitUntil(() => q.dialogOpen() || rolled(), 15);
+            await q.converse([/yes, i'd like to try/i], () => !q.dialogOpen(), 20);
+            await q.waitUntil(rolled, 16);
+            await q.converse([], () => !q.dialogOpen(), 6);
+            console.log(`NOTE anvil try ${i + 1}: tip=${q.has(ITEM.tip)} bars=${q.cnt(ITEM.bar)}`);
         }
         if (!q.has(ITEM.tip)) await q.fail('no dart tip');
         q.milestone(14);

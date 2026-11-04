@@ -31,7 +31,7 @@ export function itemMagicRecipe(mode:string,targetName?:string):Recipe{
  if(!row||!input||!product)throw Error('no native item conversion');
  const inputs:Record<number,number>={[objId(input)]:1};
  const runes=field(row.body,'runesrequired')!.split(',');
- for(let n=0;n<runes.length;n+=2)if(runes[n]!=='null')inputs[objId(runes[n]!)]=Number(runes[n+1]);
+ for(let n=0;n<runes.length;n+=2)if(runes[n]!=='null')inputs[objId(runes[n]!)]=(inputs[objId(runes[n]!)]??0)+Number(runes[n+1]);
  if(secondary)inputs[objId(secondary)]=secondaryCount;
  let output=1;
  if(product==='coins'){
@@ -59,8 +59,9 @@ export function elementalRuneCost(runeId:number,quantity:number,worn:readonly{id
  const id=worn.find(i=>i.slot===3)?.id,staff=id===undefined?undefined:nativeStaffRunes().get(id);
  return staff&&(!staff.members||members)&&staff.runes.has(runeId)?0:quantity;
 }
+// A staff replaces the spell's runes, never the conversion target: an alchemised air rune is still debited once.
 export function itemSpellCosts(recipe:Recipe,worn:readonly{id:number;slot:number}[],members=false){
- return Object.fromEntries(Object.entries(recipe.inputs).map(([id,n])=>[id,elementalRuneCost(Number(id),n,worn,members)]).filter(([,n])=>Number(n)>0)) as Record<number,number>;
+ return Object.fromEntries(Object.entries(recipe.inputs).map(([id,n])=>{const target=Number(id)===recipe.target?1:0;return [id,target+elementalRuneCost(Number(id),n-target,worn,members)];}).filter(([,n])=>Number(n)>0)) as Record<number,number>;
 }
 export function itemSpellEffect(recipe:Recipe,costs:Record<number,number>,before:Record<number,number>,after:Record<number,number>,xpBefore:number,xpAfter:number){
  const ids=new Set([...Object.keys(before),...Object.keys(after),...Object.keys(costs),String(recipe.product)]);

@@ -1,6 +1,6 @@
 export type Service = 'engine' | 'gateway' | 'lite';
 
-// Copied from real runs on 2026-10-22.
+// Copied from real runs.
 const READY: Record<Service, string> = {
     engine: 'World ready',
     gateway: 'Gateway running at',

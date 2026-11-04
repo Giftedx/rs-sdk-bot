@@ -3,9 +3,11 @@
 // Saved-state consumer: the same command with --verify reads the retained .sav files and logs only.
 import {readFileSync,writeFileSync,copyFileSync,existsSync,openSync,closeSync,unlinkSync,statSync} from 'node:fs';
 import {join,resolve} from 'node:path';
-import {createHash} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {freemem} from 'node:os';
-import {startStack} from './stack';
+import {startStack,type StackOptions} from './stack';
+import {canBind} from './ports';
+import {practiceDir,rsSdkRoot} from './paths';
 import {createBot} from './bots';
 import {applyPreset,type SaveConfig} from './presets';
 import {runBotName} from './prove';
@@ -50,6 +52,52 @@ export const CASES=[
  {label:'short',fixture:'short',mode:'refusal',env:{TARGET_LEVEL:'12',RUNE_BUDGET:'0',CASH_RESERVE:'0'}},
 ] as const satisfies readonly {label:string;fixture:Fixture;mode:Mode;env:Record<string,string>}[];
 const CHILD_ENV={RANDOM_EVENTS:'0',MAX_CASTS:'200',CAP:'1500'};
+
+export function magicProofEndpoints(ports:{engine:number;gateway:number;management:number;tcp:number},instance:string){
+    const values=[ports?.engine,ports?.gateway,ports?.management,ports?.tcp];
+    if(!values.every(p=>Number.isSafeInteger(p)&&p>=1024&&p<=65535&&![8888,7780,8898,43594].includes(p))
+        ||new Set(values).size!==4||!/^magic-[a-z0-9-]{1,25}$/.test(instance))throw Error('owned practice endpoints required');
+    const server=`127.0.0.1:${ports.engine}`,gateway=`ws://127.0.0.1:${ports.gateway}`;
+    return{ports:{...ports},instance,server,gateway,env:{AGENT_PORT:String(ports.gateway),GATEWAY_URL:`http://127.0.0.1:${ports.gateway}`,
+        WEB_MANAGEMENT_PORT:String(ports.management),ENGINE_MANAGEMENT_URL:`http://127.0.0.1:${ports.management}`,NODE_PORT:String(ports.tcp),GE_DATABASE:`data/market-${instance}.sqlite`}};
+}
+type ProofEndpoints=ReturnType<typeof magicProofEndpoints>;
+export function magicSavedEndpoints(meta:{endpoints?:{ports:ProofEndpoints['ports'];instance:string};server?:string;gateway?:string}){
+    const p=magicProofEndpoints(meta.endpoints?.ports!,meta.endpoints?.instance??'');
+    if(meta.server!==p.server||meta.gateway!==p.gateway)throw Error('saved owned practice endpoint mismatch');
+    return p;
+}
+export function selectMagicProofEndpoints(bind:typeof canBind=canBind,random:()=>number=Math.random){
+    for(let i=0;i<100;i++){
+        const engine=20000+Math.floor(random()*20000),ports={engine,gateway:engine+1,management:engine+2,tcp:engine+3};
+        if(Object.values(ports).every(bind))return magicProofEndpoints(ports,'magic-'+randomUUID().replaceAll('-','').slice(0,20));
+    }
+    throw Error('owned practice ports unavailable');
+}
+export function magicProofAccountEnv(text:string,p:ProofEndpoints){
+    if(!/^SERVER=localhost:8888\r?$/m.test(text)||!/^GATEWAY_URL=ws:\/\/localhost:7780\r?$/m.test(text))throw Error('new practice account required');
+    return text.replace(/^SERVER=.*$/gm,`SERVER=${p.server}`).replace(/^GATEWAY_URL=.*$/gm,`GATEWAY_URL=${p.gateway}`);
+}
+export async function startMagicProofStack(p:ProofEndpoints,start:(opts:StackOptions)=>ReturnType<typeof startStack>=startStack){
+    const previous=Object.fromEntries(Object.keys(p.env).map(k=>[k,process.env[k]]));
+    try{Object.assign(process.env,p.env);return await start({ports:p.ports,instance:p.instance,tickMs:CONFIG.tickMs,xpRate:CONFIG.xpRate,readyTimeoutMs:60000});}
+    finally{for(const [k,v] of Object.entries(previous)){if(v===undefined)delete process.env[k];else process.env[k]=v;}}
+}
+export function magicChildConfiguration(args:string[],env:Record<string,string>,p:ProofEndpoints,inherited:NodeJS.ProcessEnv=process.env){
+    return{cmd:['bun',...args],cwd:resolve(import.meta.dir,'../../..'),windowsHide:true,
+        env:{...inherited,...env,...p.env,GATEWAY_URL:p.gateway,DEMO_OK:'',RANDOM_EVENTS:'0'}};
+}
+// The shared registration CLI admits only default ports. Keep its session owner
+// and tick wait, with the exact generated profile bound to this proof's endpoints.
+export function magicRegistrationArgs(name:string,p:ProofEndpoints){
+    if(!/^[a-z0-9]{1,12}$/i.test(name))throw Error('invalid practice name');
+    return['--eval',`import {readFileSync} from 'node:fs';
+import {openBot,finish} from './packages/core/src/bot';
+import {waitTicks} from './packages/core/src/ticks';
+const lines=readFileSync(${JSON.stringify(join(rsSdkRoot(),'bots',name,'bot.env'))},'utf8').split(/\\r?\\n/);
+if(!lines.includes(${JSON.stringify('SERVER='+p.server)})||!lines.includes(${JSON.stringify('GATEWAY_URL='+p.gateway)}))throw Error('owned practice account required');
+const session=await openBot(${JSON.stringify(name)});await waitTicks(session,3);await finish([session],true,'practice ownership registered');`];
+}
 
 // Inventory types in the saved player: 93 pack, 94 worn, 95 bank.
 export function totals(s:Save){const out=new Map<number,number>();for(const t of [93,94,95])for(const i of s.inventories[t]??[])out.set(i.id,(out.get(i.id)??0)+i.count);return out;}
@@ -149,6 +197,7 @@ type CaseRecord={label:string;name:string;fixture:Fixture;mode:Mode;env:Record<s
 const sha=(p:string)=>createHash('sha256').update(readFileSync(p)).digest('hex');
 export function verify(directory:string,now=Date.now(),source:unknown=sources()){
  const meta=JSON.parse(readFileSync(join(directory,'native.json'),'utf8'));
+ const endpoints=magicSavedEndpoints(meta);
  const read=(label:string)=>({before:readPracticeSave(join(directory,`${label}-before.sav`)),after:readPracticeSave(join(directory,`${label}-after.sav`)),
   log:readFileSync(join(directory,`${label}.log`),'utf8')});
  const rec=(label:string):CaseRecord=>meta.cases.find((c:CaseRecord)=>c.label===label);
@@ -156,6 +205,7 @@ export function verify(directory:string,now=Date.now(),source:unknown=sources())
   source:JSON.stringify(meta.source)===JSON.stringify(source),
   fresh:Number.isFinite(meta.at)&&meta.at<=now&&now-meta.at<CONFIG.freshMs,
   configuration:meta.tickMs===CONFIG.tickMs&&meta.xpRate===CONFIG.xpRate,
+  endpoints:meta.server===endpoints.server&&meta.gateway===endpoints.gateway,
   cases:JSON.stringify(meta.cases?.map((c:CaseRecord)=>c.label))===JSON.stringify(CASES.map(c=>c.label)),
  };
  const add=(prefix:string,values:Record<string,boolean>)=>{for(const [k,v] of Object.entries(values))checks[`${prefix}.${k}`]=v;};
@@ -179,11 +229,11 @@ export function verify(directory:string,now=Date.now(),source:unknown=sources())
  return report;
 }
 
-async function child(directory:string,label:string,name:string,env:Record<string,string>):Promise<Child>{
+async function child(directory:string,label:string,args:string[],env:Record<string,string>,endpoints:ProofEndpoints):Promise<Child>{
  if(freemem()/2**30<ADMISSION.floorGb)throw Error('practice memory floor reached before child');
  const log=join(directory,label+'.log');writeFileSync(log,'');
- const proc=Bun.spawn(['bun','scripts/magic-order.ts',name],{cwd:root,env:{...process.env,DEMO_OK:'',...CHILD_ENV,...env},
-  stdout:Bun.file(log),stderr:Bun.file(join(directory,label+'.err')),windowsHide:true});
+ const proc=Bun.spawn({...magicChildConfiguration(args,{...CHILD_ENV,...env},endpoints),
+  windowsHide:true,stdout:Bun.file(log),stderr:Bun.file(join(directory,label+'.err'))});
  let timedOut=false,termination:Promise<void>|undefined;
  const timer=setTimeout(()=>{timedOut=true;termination=killTree(proc.pid);},CONFIG.childTimeoutMs);
  const memory=setInterval(()=>{if(freemem()/2**30<ADMISSION.floorGb&&!termination){timedOut=true;termination=killTree(proc.pid);}},1000);
@@ -192,26 +242,33 @@ async function child(directory:string,label:string,name:string,env:Record<string
  }finally{clearTimeout(timer);clearInterval(memory);if(proc.exitCode===null)await killTree(proc.pid);await termination;}
 }
 async function run(directory:string){
+ if(!existsSync(join(practiceDir(),'delivery-native.lock')))throw Error('practice turn required: run through delivery');
  if(freemem()/2**30<ADMISSION.startupGb)throw Error(`insufficient practice startup reserve: ${ADMISSION.startupGb} GiB free required`);
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');
  writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:'magic-order'}));
  let stack:Awaited<ReturnType<typeof startStack>>|undefined;
  try{
+  const endpoints=selectMagicProofEndpoints();
   const source=sources(),records:CaseRecord[]=[],accounts=new Map<Fixture,{name:string;path:string}>();
-  stack=await startStack({tickMs:CONFIG.tickMs,xpRate:CONFIG.xpRate,readyTimeoutMs:60000});
+  stack=await startMagicProofStack(endpoints);
   const account=async(fixture:Fixture)=>{
    const known=accounts.get(fixture);if(known)return known;
    const name=runBotName('flmage',accounts.size+1),botDir=join(root,'vendor/rs-sdk/bots',name);
    if(existsSync(botDir))throw Error('fresh account required');
-   await createBot(name);
-   if(!/^SERVER=localhost:8888\r?$/m.test(readFileSync(join(botDir,'bot.env'),'utf8')))throw Error('local fixture required');
+   const created=await createBot(name);
+   writeFileSync(created.envPath,magicProofAccountEnv(readFileSync(created.envPath,'utf8'),endpoints));
    const a={name,path:await applyPreset(name,FIXTURES[fixture])};
    if(fixture==='varrock'){
     const skills=readPracticeSave(a.path).skills.map(s=>({level:s.level,xp:s.xp}));skills[6]={level:31,xp:8125};setPracticeSkills(a.path,skills);
    }
+   const stamp=statSync(a.path).mtimeMs;
+   const auth=await child(directory,'auth-'+fixture,magicRegistrationArgs(name,endpoints),{},endpoints);
+   if(auth.code!==0||auth.timedOut||!loggedOut(readFileSync(join(directory,'auth-'+fixture+'.log'),'utf8')))throw Error('practice registration failed; see auth logs');
+   const entry=await waitPracticeSave(a.path,s=>statSync(a.path).mtimeMs>stamp&&fixtureChecks(s,fixture),{timeoutMs:CONFIG.saveWaitMs});
+   if(!entry.matched)throw Error('seeded entry state not retained');
    accounts.set(fixture,a);return a;
   };
-  const write=()=>writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,tickMs:CONFIG.tickMs,xpRate:CONFIG.xpRate,cases:records},null,2));
+  const write=()=>writeFileSync(join(directory,'native.json'),JSON.stringify({at:Date.now(),source,tickMs:CONFIG.tickMs,xpRate:CONFIG.xpRate,endpoints:{ports:endpoints.ports,instance:endpoints.instance},server:endpoints.server,gateway:endpoints.gateway,cases:records},null,2));
   for(const c of CASES){
    const a=await account(c.fixture),started=Date.now();
    copyFileSync(a.path,join(directory,`${c.label}-before.sav`));
@@ -219,7 +276,7 @@ async function run(directory:string){
    const record:CaseRecord={label:c.label,name:a.name,fixture:c.fixture,mode:c.mode,env:{...c.env},child:{code:-1,timedOut:false},saveMatched:false,elapsedMs:0};
    records.push(record);
    try{
-    record.child=await child(directory,c.label,a.name,{...c.env});
+    record.child=await child(directory,c.label,['scripts/magic-order.ts',a.name],{...c.env},endpoints);
     // A clean logout saves at once. A progress save must also hold the final effect, so an earlier periodic save
     // never stands in for it.
     const target=Number(c.env.TARGET_LEVEL);

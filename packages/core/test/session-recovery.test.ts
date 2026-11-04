@@ -1,11 +1,12 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
-import {tmpdir} from 'node:os';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {launchRevision} from '../src/worker-release';
 import {beginSessionAttempt,listAttempts} from '../src/session-lifecycle';
 import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,recoverSession,validateRecoveryRequest,recoveryBoundary,recoveryHeldDiagnostic,recoveryDiagnosticFromLog,RECOVERY_SETUP_PHASES,type RecoveryRequest} from '../src/session-recovery';
 const source='a'.repeat(64),server='localhost:8888';
+const fixtureRoot=resolve(import.meta.dir,'../../../.practice');
+mkdirSync(fixtureRoot,{recursive:true});
 test('CLI boundary diagnostics identify every setup phase without copying secrets or publishing authority',async()=>{
  for(const phase of RECOVERY_SETUP_PHASES){
   let observed:unknown;
@@ -36,7 +37,7 @@ test('diagnostic publication cannot create a connection admission or a producer 
  expect(f.counts().connected).toBe(0);expect(listAttempts(f.request.account,server,{root:f.root})).toHaveLength(0);
 });
 test('actual CLI reports safe setup refusals before credentials, producer intent or output publication',async()=>{
- const dir=mkdtempSync(join(tmpdir(),'recovery-cli-refusal-')),repo=resolve(import.meta.dir,'../../..'),source=launchRevision();
+ const dir=mkdtempSync(join(fixtureRoot,'recovery-cli-refusal-')),repo=resolve(import.meta.dir,'../../..'),source=launchRevision();
  const body={schema:RECOVERY_SCHEMA,account:'Recoverme',server:'localhost:8888',runId:'offline-cli-test',nonce:'one',endedAt:1,source};
  const cases=[
   {input:null,phase:'request-read',reason:'io-enoent'},
@@ -58,7 +59,7 @@ test('actual CLI reports safe setup refusals before credentials, producer intent
  }
 },30000);
 function fixture(){
- const root=mkdtempSync(join(tmpdir(),'session-recovery-')),request:RecoveryRequest={schema:RECOVERY_SCHEMA,account:'Recoverme',server,runId:'native-recovery',nonce:'one-attempt',endedAt:1,source};
+ const root=mkdtempSync(join(fixtureRoot,'session-recovery-')),request:RecoveryRequest={schema:RECOVERY_SCHEMA,account:'Recoverme',server,runId:'native-recovery',nonce:'one-attempt',endedAt:1,source};
  let state:any={inGame:true,player:{name:request.account,worldX:2618,worldZ:3332,level:0,hp:43},inventory:[{id:995,count:1200}],equipment:[{id:311,count:1}],skills:[{name:'Fishing',experience:1000,level:99}],bank:{isOpen:false,items:[]},modalOpen:false,modalInterface:-1};
  let connected=0,loggedOut=0,closed=0;const lines:string[]=[];
  let lifecycle:ReturnType<typeof beginSessionAttempt>;

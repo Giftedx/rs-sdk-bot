@@ -59,8 +59,8 @@ export const MEDIUM_PRESETS: Record<string, SaveConfig> = {
     // Biohazard: in Elena's house, East Ardougne (elena2 spawn 2592,3336, maps/m40_52.jm2); Plague City done (165 = 30,
     // quest_elena.constant:21; the Ardougne teleport needs it, teleport.rs2:35); priest gown (426) and robe (428) for
     // Guidor's door; runes for two Ardougne teleports (4 law 563, 4 water 555). A teleport destroys the plague sample
-    // (teleport.rs2:94-97), so Rimmington and Varrock are walked. The quest items are untradeable (quest_biohazard.obj).
-    quest_biohazard: medium({ x: 2591, z: 3336 }, [426, 428, [563, 4], [555, 4]], 2, 0, { 165: 30 }),
+    // (teleport.rs2:94-97), so the bot sails to Port Sarim (60 coins, two fares) and walks to Rimmington and Varrock. The quest items are untradeable (quest_biohazard.obj).
+    quest_biohazard: medium({ x: 2591, z: 3336 }, [426, 428, [563, 4], [555, 4]], 2, 60, { 165: 30 }),
     // Nature Spirit: in the mausoleum under Paterdomus beside Drezel (priestperiltrappedmonk2 spawn 3440,9895,
     // maps/m53_154.jm2); The Restless Ghost done (107 = 5, ^priest_complete) with its amulet of ghostspeak (552) worn
     // (filliman.rs2:4,22); Priest in Peril done (302 = 60; Drezel's barrier talk sets 61, drezel.rs2:8-19,138-147) with

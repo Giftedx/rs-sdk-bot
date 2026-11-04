@@ -15,7 +15,8 @@ import { depositPack } from "../packages/core/src/deposit";
 import { depositObserved } from "../packages/core/src/deposit";
 import {runShafts} from "./fletch-shafts";
 
-export interface HeadlessOptions { cap: number; maximum: number; shaftReserve: number; featherReserve: number; stop?: () => boolean }
+// `stop` ends crafting and still banks the batch. `pause` (an owner stop) permits no further bank action, cleanup included.
+export interface HeadlessOptions { cap: number; maximum: number; shaftReserve: number; featherReserve: number; stop?: () => boolean; pause?: () => boolean }
 const SHAFT = 52, HEADLESS = 53, FEATHER = 314;
 const MATERIALS = new Set([SHAFT, HEADLESS, FEATHER]);
 export function planHeadless(shafts: number, feathers: number, maximum = 390, shaftReserve = 200, featherReserve = 100): number {
@@ -40,7 +41,8 @@ export async function runHeadless(s: Session, options: HeadlessOptions) {
         hpMin = Math.min(hpMin, s.sdk.getSkill('Hitpoints')?.level ?? hpMin);
         if (p?.isDead || hpMin <= 0 || (p?.respawnCount ?? 0) > (player?.respawnCount ?? 0) || (player?.lifeId !== undefined && p?.lifeId !== player.lifeId)) died = true;
     });
-    const over = () => ended || died || options.stop?.() || s.tick() - start >= options.cap;
+    const over = () => ended || died || options.stop?.() || options.pause?.() || s.tick() - start >= options.cap;
+    const hold = () => { if (options.pause?.()) throw new Error('headless owner pause'); };
     const protectedItems = new Map<number, number>();
     for (const item of inv()) if (!MATERIALS.has(item.id)) protectedItems.set(item.id, (protectedItems.get(item.id) ?? 0) + item.count);
     let made = 0, banked = 0, actions = 0, bankTrips = 0, planned = 0, originalOutput: number | undefined;
@@ -58,6 +60,7 @@ export async function runHeadless(s: Session, options: HeadlessOptions) {
     const deposit = async () => {
         // Refresh each slot after every deposit. One deposit per actual item ID, even for many slots.
         for (const id of new Set(inv().filter(i => MATERIALS.has(i.id)).map(i => i.id))) {
+            hold();
             const item = inv().find(i => i.id === id)!;
             await s.bot.depositItem(item, -1);
             if (held(id) > 0) throw new Error(`headless deposit incomplete: ${item.name}`);
@@ -74,6 +77,7 @@ export async function runHeadless(s: Session, options: HeadlessOptions) {
         if (planned > 0 && !over()) {
             if (28 - inv().length < 3) throw new Error('headless needs three free slots; protected kit stays held');
             for (const id of [SHAFT, FEATHER]) {
+                hold();
                 const item = s.sdk.getState()!.bank.items.find(i => i.id === id)!;
                 await s.bot.withdrawItem(item, planned, { asNote: false });
                 if (held(id) !== planned) throw new Error(`no progress: headless withdrawal incomplete for ${item.name}`);
@@ -94,11 +98,11 @@ export async function runHeadless(s: Session, options: HeadlessOptions) {
                     made += gained; misses = 0;
                 } else if (++misses >= 3) { stop = 'no-progress'; throw new Error('no progress: headless item-on-item failed three times'); }
             }
-            stop = made === options.maximum ? 'max-make' : over() ? (options.stop?.() ? 'stopped' : 'cap') : 'input-insufficient';
+            stop = made === options.maximum ? 'max-make' : over() ? (options.stop?.() || options.pause?.() ? 'stopped' : 'cap') : 'input-insufficient';
         }
     } catch (e) { failure = String(e); }
     finally {
-        if (!ended && !died) {
+        if (!ended && !died && !options.pause?.()) {
             try {
                 await open(); await deposit();
                 banked = originalOutput === undefined ? 0 : Math.max(0, bankCount(HEADLESS) - originalOutput);

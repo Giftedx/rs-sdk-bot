@@ -1,6 +1,6 @@
 // bun scripts/quest-items-order.ts <account> <quest> --save=<own-save>
 // CAP bounds game ticks (default 2400). Server comes from the account's existing configuration.
-// 2026-10-28: pinned pickables.rs2 op2, cow_milking.rs2 and windmills.rs2
+// pinned pickables.rs2 op2, cow_milking.rs2 and windmills.rs2
 // -> Cook pack -> adapt observed item transitions -> saved pack and quest-order consumer checks.
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -81,6 +81,25 @@ function hettyRouteAllowed(legs:readonly Leg[]){
 }
 
 type Observe=(pred:()=>boolean,label:string,ticks?:number)=>Promise<void>;
+// food_store.rs2 reserves door2069 for employees. Trade from the public room;
+// SDK openShop's automatic walk must not pursue a wandering keeper into it.
+export async function openHettyFoodShop(s:Session,observe:Observe,check:()=>void){
+ const keeper=()=>(s.sdk.getState()?.nearbyNpcs??[]).find(n=>n.id===557&&/^wydin$/i.test(n.name)
+  &&n.x>3012&&n.reachable===true&&n.optionsWithIndex.some(o=>/^trade$/i.test(o.text)));
+ const evidence=()=>({at:s.sdk.getState()?.player,keepers:(s.sdk.getState()?.nearbyNpcs??[])
+  .filter(n=>n.id===557).map(n=>({id:n.id,index:n.index,x:n.x,z:n.z,reachable:n.reachable,options:n.optionsWithIndex})),dialog:s.sdk.getDialog()});
+ try{
+  await observe(()=>!!keeper(),'Hetty public Wydin',24);check();
+  const npc=keeper();if(!npc)throw Error('public keeper changed');
+  const trade=npc.optionsWithIndex.find(o=>/^trade$/i.test(o.text))!;
+  const result=await s.sdk.sendInteractNpc(npc.index,trade.opIndex);check();
+  if(!result.success)throw Error(`Trade refused: ${result.message}`);
+  await observe(()=>s.sdk.getState()?.shop?.isOpen===true,'Hetty food shop open',24);
+ }catch(error){
+  const info=evidence();console.log('QUEST_HETTY_SHOP_FAIL '+JSON.stringify({reason:String(error),...info}));
+  throw Error(`Hetty food shop refused: ${String(error)} ${JSON.stringify(info)}`);
+ }
+}
 // windmills.rs2 debits grain BEFORE p_arrivedelay/p_delay. The SDK can return on
 // that debit. Wait for the script's final message before sending another action.
 // Publication IDs also distinguish messages first seen in the same game tick.
@@ -221,7 +240,8 @@ export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:
    const purchases:{id:number;coins:number}[]=[],transitions:{from:number;to:number}[]=[];
    const buy=async(id:number,seller:RegExp,x:number,z:number,limit:number)=>{
     await walk(x,z);check();
-    if(!(await s.bot.openShop(seller)).success)throw Error('Hetty shop refused');
+    if(id===2132)await openHettyFoodShop(s,observe,check);
+    else {const opened=await s.bot.openShop(seller);if(!opened.success)throw Error(`Hetty shop refused: ${opened.message}`);}
     try{
      const shelf=s.sdk.getState()?.shop.shopItems.find(i=>i.id===id);
      if(!shelf||shelf.count<1||!Number.isSafeInteger(shelf.buyPrice)||shelf.buyPrice<1||shelf.buyPrice>limit||cnt(995)<shelf.buyPrice)throw Error(`Hetty price/stock refused ${id}`);
@@ -237,7 +257,7 @@ export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:
    // Both shops are on the walking route; no fare, combat or helper is needed for meat.
    await walk(3089,3266);await walk(3050,3266);
    if(eye)await buy(221,/^betty$/i,3013,3258,3);
-   if(meat)await buy(2132,/^wydin$/i,3013,3204,1);
+   if(meat)await buy(2132,/^wydin$/i,3015,3206,1);
    if(!cnt(1957)){
     await walk(2950,3255);
     const onion=s.sdk.findNearbyLoc(/^onion$/i);if(!onion)throw Error('Hetty onion missing');

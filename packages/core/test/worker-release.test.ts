@@ -1,8 +1,38 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
+import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
+
+test('cached admission keeps entry closures separate and rejects changed bytes, new imports and removed files',()=>{
+ const root=fixture(),entry=['scripts/worker.ts'];
+ try{
+  mkdirSync(join(root,'vendor/rs-sdk/sdk/empty/nested'),{recursive:true});
+  mkdirSync(join(root,'knowledge/empty/nested'),{recursive:true});
+  mkdirSync(join(root,'knowledge/optional'),{recursive:true});
+  writeFileSync(join(root,'scripts/worker.ts'),readFileSync(join(root,'scripts/worker.ts'),'utf8')+"export const folder='knowledge/empty';\nexport const optional='knowledge/optional/new.json';\n");
+  const pin=capabilityRevision(entry,root),env={WORKER_ENTRY:entry[0],WORKER_RELEASE:pin};
+  for(let i=0;i<17;i++)expect(cachedReleaseFor(entry,root)).toBe(pin);
+  expect(cachedReleaseFor(['scripts/other.ts'],root)).toBe(capabilityRevision(['scripts/other.ts'],root));
+  const file=join(root,'packages/core/src/shared.ts'),stamp=statSync(file);
+  writeFileSync(file,'export const shared=2;\n');utimesSync(file,stamp.atime,stamp.mtime);
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('release source changed');
+  writeFileSync(join(root,'knowledge/optional/new.json'),'[]');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'knowledge/empty/nested/added.json'),'[]');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'scripts/worker.ts'),"export * from './new-helper';\n");
+  writeFileSync(join(root,'scripts/new-helper.ts'),'export const value=1;');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'vendor/rs-sdk/sdk/added.ts'),'export {};');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'vendor/rs-sdk/sdk/empty/nested/new.ts'),'export {};');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  rmSync(join(root,'scripts/worker.ts'));
+  expect(()=>cachedReleaseFor(entry,root)).toThrow('entry missing');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
 
 // A small repository: one worker with a helper and a knowledge read, an unrelated script and data file, the launch
 // entries and both runtime trees.
@@ -191,6 +221,25 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
   expect(closed({...row(done),name:'Nobody'})).toBe(false);
   expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(dead)],now,closed)).not.toThrow();
   expect(()=>assertCompatibleWorkers(pin,server,[row(done),row(live)],now,closed)).toThrow('peer state unknown');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('a reused PID does not hold an expired peer row; matching or unknown owners still hold',async()=>{
+ const {closedSessionRow,LOST_SESSION_DROP_MS}=await import('../src/worker-release');
+ const {beginSessionAttempt}=await import('../src/session-lifecycle');
+ const root=mkdtempSync(join(tmpdir(),'release-reused-pid-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
+ try{
+  const attempt=beginSessionAttempt({account:'Peer',server},{root,owner:{pid:35376,coordinatorRunId:null,workerRelease:null,script:'scripts/goldfarm.ts',role:null,participants:null}});
+  attempt.record('ready');attempt.record('ended','connection-lost');
+  const now=Date.now(),row={name:'Peer',server,result:'',at:now-LOST_SESSION_DROP_MS,workRevision:pin,sessionAttemptId:attempt.attemptId};
+  const closed=(line:string|null)=>(r:any)=>closedSessionRow(r,server,{root,commandLine:()=>line},()=>true,now);
+  expect(closed('python worker.py')(row)).toBe(true);
+  expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed('python worker.py'))).not.toThrow();
+  for(const line of ['bun scripts/goldfarm.ts Peer',null,'']){
+   expect(closed(line)(row)).toBe(false);
+   expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed(line))).toThrow('peer state unknown');
+  }
+  expect(closed('python worker.py')({...row,at:row.at+1})).toBe(false);
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 

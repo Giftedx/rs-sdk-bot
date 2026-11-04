@@ -3,9 +3,9 @@
 // nearest bank, walks to the start tile and hands its session to the quest script, which owns the quest, the RESULT
 // line and the logout. A missing item ends the run before travel with `missing id:count` (acquisition work).
 // Usage: bun scripts/quest-sweep.ts <account> <quest>      e.g. bun scripts/quest-sweep.ts Mightyrod blackknight
-// tbwt/itwatchtower require a third finite-options JSON path and stage mandatory owned pack/wear kits.
+// tbwt/itwatchtower use owned API staging with finite options; omit options for the preset CLI.
 // Trio stages inside the observed Shilo bank and reuses its protected stockade exit; full28 pack carries no ferry fare.
-// Heroes uses the explicit owned-pair quest-hero.ts CLI/API, never this single-account entry.
+// Heroes uses the explicit owned-pair quest-hero-owned.ts CLI/API, never this single-account entry.
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {openBot,finish,getWorld,accountOf,finishHooks} from '../packages/core/src/bot';
@@ -24,6 +24,7 @@ import {BotActions} from '../vendor/rs-sdk/sdk/actions';
 import {runOwnedLoadout,validateOwnedKit,type OwnedKit} from './microbot-owned-loadout';
 import {productionStopRequested} from './microbot-c-lifetime';
 import {createShiloTransit,NATURE} from './microbot-rune-trip';
+import {retainedGhostSkull,retainedGhostBankSkull} from './ghost-basement-exit';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
@@ -38,7 +39,7 @@ function apiOptions(quest:string,value:unknown):SweepApiOptions{
 async function apiSweep(account:string,quest:'tbwt'|'itwatchtower',fresh:string|undefined,value:unknown,injected:Partial<ApiSweepDeps>){
  const o=apiOptions(quest,value),d:ApiSweepDeps={open:openBot,world:getWorld,go:goTo,loadout:runOwnedLoadout,load:path=>import(path),finish,exists:existsSync,stop:()=>false,transit:createShiloTransit,...injected};
  let signalled=false;const requested=()=>productionStopRequested(account,()=>signalled||d.stop(),d.exists)||d.exists('.practice/stop-quest-sweep');if(requested())throw Error('quest sweep API stopped before login');
- const path=resolve(import.meta.dir,'generated',`quest-${quest}.ts`),m=await d.load(fresh?`${path}?${fresh}`:path),run=m[quest==='tbwt'?'runTaiBwoWannaiTrio':'runWatchtower'];if(typeof run!=='function')throw Error('quest sweep explicit API export missing');
+ const path=resolve(import.meta.dir,'generated',`quest-${quest}-owned.ts`),m=await d.load(fresh?`${path}?${fresh}`:path),run=m[quest==='tbwt'?'runTaiBwoWannaiTrio':'runWatchtower'];if(typeof run!=='function')throw Error('quest sweep explicit API export missing');
  const pack=quest==='tbwt'?Object.entries({3150:21,3032:1,3171:1,3128:1,3164:1,401:1,379:1,558:Math.max(20,o.maximumCasts!)}).map(([id,count])=>({id:Number(id),count})):Object.entries(m.WATCH_SUPPLIES as Record<number,number>).map(([id,count])=>({id:Number(id),count}));
  const wear=(quest==='tbwt'?[[1381,3],[1540,5],[577,4],[1011,7],[579,0]]:[[1289,3],[1540,5],[1127,4],[1079,7],[1163,0]]).map(([id,slot])=>({id:id!,slot:slot!,count:1})),start:Tile=quest==='tbwt'?{x:2781,z:3086,level:0}:{x:2548,z:3118,level:0};
  validateOwnedKit({bank:BANKS[0]!,pack,wear,cap:600,maximumMoves:160});if(requested())throw Error('quest sweep API stopped before login');
@@ -267,9 +268,18 @@ export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>
  return run.then(p=>p);
 }
 
+function observeQuestFlags(s:Session){
+ const seen=new Map<number,string>();
+ const observe=()=>{for(const q of questFlags(s.client)??[])if(seen.get(q.id)!==q.state){seen.set(q.id,q.state);console.log(`QUEST_SWEEP_FLAG ${JSON.stringify(q)}`);}};
+ observe();const off=s.onTick(observe);void s.ended.then(off);
+}
 export async function sweep(account:string,quest:string,fresh?:string,options?:SweepApiOptions,deps:Partial<ApiSweepDeps>={}){
- if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
+ if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
  if(quest==='tbwt'||quest==='itwatchtower')return apiSweep(account,quest,fresh,options,deps);
+ return sweepPreset(account,quest,fresh);
+}
+export async function sweepPreset(account:string,quest:string,fresh?:string){
+ if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero-owned.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
  const script=resolve(import.meta.dir,'generated',`quest-${quest}.ts`);
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
  const preset=presetFor(quest),need=needs(preset),food=needs(preset,true);
@@ -279,6 +289,19 @@ export async function sweep(account:string,quest:string,fresh?:string,options?:S
  try {
  const st=()=>s.sdk.getState();
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
+ const ghostState=()=>questFlags(s.client)?.find(f=>f.name==='The Restless Ghost')?.state??'unknown';
+ const retained=()=>quest==='priest'&&retainedGhostSkull(ghostState(),st()?.inventory??[],s.sdk.getEquipment());
+ const returnSkull=async()=>{
+  console.log('QUEST_SWEEP_RETAINED_SKULL '+JSON.stringify({state:ghostState(),position:st()?.player&&{x:st()!.player!.worldX,z:st()!.player!.worldZ,level:st()!.player!.level}}));
+  observeQuestFlags(s);handed=true;await handOver(s,script,fresh);return;
+ };
+ if(quest==='priest'){
+  await waitUntil(s,()=>ghostState()!=='unknown',{timeoutTicks:20});
+  if((st()?.inventory??[]).some(i=>i.id===553)){
+   if(!retained())return fail('retained skull requires a started journal and worn ghostspeak amulet');
+   return await returnSkull();
+  }
+ }
  const here=():Tile=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:{x:0,z:0,level:-1};};
  const world=await getWorld();
  // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there) climbs down first.
@@ -291,7 +314,8 @@ export async function sweep(account:string,quest:string,fresh?:string,options?:S
   await waitUntil(s,()=>(st()?.player?.level??level)<level,{timeoutTicks:30});
  }
  const pack=():Item[]=>(st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count}));
- if(plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length){
+ const seekGhostSkull=quest==='priest'&&ghostState()==='started'&&s.sdk.getEquipment().some(i=>i.id===552);
+ if(seekGhostSkull||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
   // The nearest bank may be out of reach: try the next three.
@@ -315,6 +339,7 @@ export async function sweep(account:string,quest:string,fresh?:string,options?:S
   const rows=():Item[]=>(st()?.bank?.items??[]).map((i:any)=>({id:i.id,count:i.count}));
   const p=plan(need,pack(),rows()),meal=plan(food,pack(),rows()).withdraw;
   p.withdraw.push(...meal);
+  if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now.
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};},(d,at)=>sellersByDistance(d,at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile})));
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
@@ -348,16 +373,13 @@ export async function sweep(account:string,quest:string,fresh?:string,options?:S
   const left=plan(need,pack(),[]).missing;
   if(left.length)return fail('withdraw short '+left.map(i=>`${i.id}:${i.count}`).join(','));
  }
+ if(retained())return await returnSkull();
  const start=preset.position;
  const exit=await leaveStronghold(s);
  if(!exit.ok)return fail(exit.detail!);
  await reachStart(s,world,start);
  console.log(`MILESTONE quest-sweep ${quest} staged at ${JSON.stringify(here())}`);
- const seen=new Map<number,string>();
- const observe=()=>{for(const q of questFlags(s.client)??[])if(seen.get(q.id)!==q.state){
-  seen.set(q.id,q.state);console.log(`QUEST_SWEEP_FLAG ${JSON.stringify(q)}`);
- }};
- observe();const off=s.onTick(observe);void s.ended.then(off);
+ observeQuestFlags(s);
  handed=true;
  await handOver(s,script,fresh);
  } catch(error) {
@@ -369,12 +391,12 @@ export async function sweep(account:string,quest:string,fresh?:string,options?:S
 async function main(){
  const [account,quest,optionsPath]=process.argv.slice(2);
  if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest> [api-options.json]');
- let options:SweepApiOptions|undefined;if(quest==='tbwt'||quest==='itwatchtower'){if(!optionsPath)throw Error('quest sweep API requires an owned finite options JSON file');const bytes=readFileSync(optionsPath);if(bytes.length>32768)throw Error('quest sweep options file too large');let value:unknown;try{value=JSON.parse(bytes.toString('utf8'));}catch{throw Error('invalid quest sweep options JSON');}options=apiOptions(quest,value);}
+ let options:SweepApiOptions|undefined;if((quest==='tbwt'||quest==='itwatchtower')&&optionsPath){const bytes=readFileSync(optionsPath);if(bytes.length>32768)throw Error('quest sweep options file too large');let value:unknown;try{value=JSON.parse(bytes.toString('utf8'));}catch{throw Error('invalid quest sweep options JSON');}options=apiOptions(quest,value);}
  // As a bot-host entry, the quest module's finish() (plain bot.ts) reports through this entry's own finish, which
  // the host rewrites to the per-bot one; without it the quest's finish would end the whole host.
  if((globalThis as {__rsBotHost?:unknown}).__rsBotHost)finishHooks.set(account.toLowerCase(),(ok,detail)=>{void finish([],ok,detail);});
  // A unique query: in a bot host, each account runs the quest module afresh.
- await sweep(account,quest,`run=${account.toLowerCase()}-${Date.now()}`,options);
+ const fresh=`run=${account.toLowerCase()}-${Date.now()}`;if((quest==='tbwt'||quest==='itwatchtower')&&!optionsPath)await sweepPreset(account,quest,fresh);else await sweep(account,quest,fresh,options);
 }
 
 if(import.meta.main)await main();

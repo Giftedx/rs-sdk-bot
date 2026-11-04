@@ -2,7 +2,7 @@
 // under CAP game ticks (default 3000). Preset wc_fresh.
 // Plan: coins from Lumbridge men, knife (ground spawn 3224,3202), a better axe from Bob (3232,3203), then 3-tick
 // woodcutting north of the castle: normal trees, then willows from 30 (castle river pair 3233,3244 and 3234,3238).
-// Code-read facts (2026-10-23):
+// Code-read facts:
 // - The server gives 25x XP: a normal log is 625 XP, oak 937.5, willow 1687.5 (skill_woodcutting/configs/trees.dbrow).
 // - The best axe in the pack or worn is used, with no level check (woodcut.rs2 woodcutting_axe_checker).
 // - A pickpocket fail on a man hits for 1 and stuns 8 ticks (pickpocket.dbrow; success 180-240 of 256). With 10 HP
@@ -13,6 +13,7 @@
 //   The bot only chops trees in the box x 3214-3239, z 3226-3250 (clear, 0 danger spawns on the checked path).
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks } from '../../packages/core/src/ticks';
+import {runWoodSupply} from '../woodcut-supply';
 import { componentId } from '../../packages/core/src/logout';
 
 const CAP = Number(process.env.CAP ?? 3000);
@@ -36,6 +37,8 @@ const TREES: { re: RegExp; kind: string; level: number; xp: number; logs: number
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 5);
+    if(process.env.SUPPLY_LOGS!==undefined){const r=await runWoodSupply(s,Number(process.env.SUPPLY_LOGS),Number(process.env.SUPPLY_HEADLESS??0),CAP);await finish([s],r.ok,'wood-supply '+JSON.stringify(r));}
+
     // A new live account starts on Tutorial Island (3094,3106); skip it before the clock starts.
     const p0 = s.sdk.getState()?.player;
     if (p0 && p0.worldX < 3160 && p0.worldZ < 3130) {

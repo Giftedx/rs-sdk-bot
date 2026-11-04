@@ -1,7 +1,7 @@
 import Module from 'node:module';import{resolve}from'node:path';
 import{test,expect}from 'bun:test';
 import{readFileSync}from 'node:fs';
-import{WATCH_CAVES,WATCH_ENTRY,WATCH_SUPPLIES,watchtowerEntry,watchtowerNativeBindings,madSkavidReply,runWatchtower,watchtowerOwnContext,finishWatchtowerOwned,watchtowerTowerEntry,watchtowerCakeOpening,watchtowerBridgeLoc,watchtowerCityExit,watchtowerShamanEffect,watchtowerEnchantPotion,WATCH_SHAMAN_ORDINALS}from './quest-itwatchtower';
+import{WATCH_CAVES,WATCH_ENTRY,WATCH_SUPPLIES,watchtowerEntry,watchtowerNativeBindings,madSkavidReply,runWatchtower,watchtowerOwnContext,finishWatchtowerOwned,watchtowerTowerEntry,watchtowerCakeOpening,watchtowerBridgeLoc,watchtowerCityExit,watchtowerShamanEffect,watchtowerEnchantPotion,WATCH_SHAMAN_ORDINALS}from './quest-itwatchtower-owned';
 import{questDefinitions}from '../../packages/core/src/quest-status';
 import type{Session}from '../../packages/core/src/inprocess';
 const base='vendor/rs-sdk/server/content/';
