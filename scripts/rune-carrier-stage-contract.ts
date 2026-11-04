@@ -1,5 +1,11 @@
 import {exitRuneTower} from './rune-mysteries-route';
 
+// Cross to the west while south of the aggressive jail guards near 3107,3242.
+export function runeStageBankApproach(p:{worldX:number;worldZ:number;level:number}){
+ return p.level===0&&p.worldX>=3080&&p.worldZ>=3160&&p.worldZ<3220
+  ?[{x:3070,z:3180},{x:3070,z:3270}]:[];
+}
+
 // --rune-carriers defaults to fresh kits plus the supplier's opening reserve.
 // RUNE_STAGE_PURPOSE=existing-cohort requires only the finite receiver shortfalls.
 export function runeStageRequirement(purpose:string|undefined,shortfalls:readonly {essence:number;talismans:number}[]){

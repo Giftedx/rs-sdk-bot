@@ -1,5 +1,12 @@
 import {test,expect} from 'bun:test';
-import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate,runeStageRequirement,exitRuneStageBasement} from './rune-carrier-stage-contract';
+import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate,runeStageRequirement,exitRuneStageBasement,runeStageBankApproach} from './rune-carrier-stage-contract';
+
+test('tower and Lumbridge staging entries approach the bank west of the jail guards',()=>{
+ for(const p of [{worldX:3109,worldZ:3167,level:0},{worldX:3223,worldZ:3218,level:0},{worldX:3248,worldZ:3193,level:0}])
+  expect(runeStageBankApproach(p)).toEqual([{x:3070,z:3180},{x:3070,z:3270}]);
+ for(const p of [{worldX:3094,worldZ:3491,level:0},{worldX:3050,worldZ:3442,level:0},{worldX:3113,worldZ:9555,level:0},{worldX:3109,worldZ:3167,level:1}])
+  expect(runeStageBankApproach(p)).toEqual([]);
+});
 import {runeCohortAssetsPreserved} from '../packages/practice/src/rune-carrier-stage-proof';
 import {parsePracticeSave} from './measure/fleet-player-save';
 import {createSaveData} from '../vendor/rs-sdk/sdk/test/utils/save-generator';

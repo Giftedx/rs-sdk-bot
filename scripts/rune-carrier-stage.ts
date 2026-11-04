@@ -12,7 +12,7 @@ import {ownedSwap,state} from './rune-carrier-trade';
 import {inside,leaveBody,enterBody,stopCarriers} from './rune-carrier-bank';
 import {leaveRuneStarter,runeSupplyAssets} from './rune-supply';
 import {assertRuneDonor} from './rune-carrier-roster';
-import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate,runeStageRequirement,exitRuneStageBasement} from './rune-carrier-stage-contract';
+import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate,runeStageRequirement,exitRuneStageBasement,runeStageBankApproach} from './rune-carrier-stage-contract';
 import {runeStageStatus} from './rune-carrier-stage-status';
 
 export async function mainRuneStage(args:readonly string[]){
@@ -76,7 +76,9 @@ export async function mainRuneStage(args:readonly string[]){
     if(!(await s.sdk.sendInteractLoc(3103,9576,2148,1)).success||!await waitUntil(s,()=>{const p=state(s).player!;return stop()||p.worldX===3105&&p.worldZ===3162&&p.level===0;},{timeoutTicks:20}))throw Error('Rune staging upward climb unobserved');check();
    },
    waitForLanding:async()=>{const seen=await waitUntil(s,()=>stop()||state(s).nearbyLocs.some(l=>l.id===2147&&l.x===3104&&l.z===3162),{timeoutTicks:15});check();return seen;}
-  });check();await travel(s,3094,3491);
+  });check();
+  for(const point of runeStageBankApproach(state(s).player!))await travel(s,point.x,point.z);
+  await travel(s,3094,3491);
   if(state(s).bank.isOpen){await s.bot.closeBank();check();}
   const generation=s.bankObservation?.()?.generation??0;
   if(!(await s.bot.openBank()).success||!await waitUntil(s,()=>stop()||state(s).bank.isOpen&&(s.bankObservation?.()?.generation??0)>generation,{timeoutTicks:20}))throw Error('Rune staging fresh bank unavailable');check();
