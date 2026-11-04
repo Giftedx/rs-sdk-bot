@@ -29,7 +29,7 @@ export function farmPickTarget<T extends FarmNpc>(npcs: readonly T[], p: { world
         && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= RANGE));
     const npc = candidates.filter(n => n.reachable !== false).sort((a, b) => a.distance - b.distance)[0];
     const away = p ? Math.max(Math.abs(KNIGHT_SPOT.x - p.worldX), Math.abs(KNIGHT_SPOT.z - p.worldZ)) : 0;
-    // 2026-10-28 route-error-restart idled 300 ticks at 2651,3304, 2 tiles from the spot but inside a
+    // route-error-restart idled 300 ticks at 2651,3304, 2 tiles from the spot but inside a
     // shut room with every knight unreachable. Then walk onto the spot itself, through the room door.
     if (!npc && away > 0 && away <= 3 && candidates.length > 0) return { npc, recenter: true, tol: 0 };
     return { npc, recenter: !npc && away > 3, tol: 3 };
@@ -197,7 +197,7 @@ export const calcEatAt = (maxHp: number): number =>
     maxHp <= 10 ? 4 : Math.max(4, Math.min(maxHp - 6, Math.floor(maxHp * 0.4)));
 
 // The farm runs only where it stands: Ardougne market, ground level. A thief that starts elsewhere (a respawn in
-// Lumbridge, a Draynor bank) must not walk here on its own: on 2026-10-25 a 10 HP thief with no food walked from
+// Lumbridge, a Draynor bank) must not walk here on its own: a 10 HP thief with no food walked from
 // Draynor through Taverley toward the bank and died on the way. Cover both storage and roaming knights.
 export const ARDOUGNE_RADIUS = 40;
 export function farmStartProblem(p: { worldX: number; worldZ: number; level: number } | null | undefined, thieving: number): string | null {
@@ -206,7 +206,7 @@ export function farmStartProblem(p: { worldX: number; worldZ: number; level: num
         Math.max(Math.abs(p.worldX - spot.x), Math.abs(p.worldZ - spot.z)) > ARDOUGNE_RADIUS))
         return `no goldfarm progress: start in Ardougne market, not ${p.worldX},${p.worldZ},${p.level}`;
     // The knights need Thieving 55. Below it the farm looks for men and women, and none stand at the market: a
-    // Thieving 1 account idled all 2400 ticks on 2026-10-25 and still reported ok.
+    // Thieving 1 account idled all 2400 ticks and still reported ok.
     if (thieving < 55) return `no goldfarm progress: Thieving ${thieving} is below 55 for the knights`;
     return null;
 }
@@ -242,8 +242,8 @@ export function farmProgressTick(last: number, tick: number, before: FarmProgres
 
 // The courier is in view and the last answer is old enough. Exact name match: a stranger never opens a trade.
 export const COURIER_COOLDOWN = 60;
-// Only a thief that is short of food waits for the courier at the knights: a courier that idles in view (between runs,
-// 2026-10-25) otherwise cost every fed thief a 45 s wait each minute.
+// Only a thief that is short of food waits for the courier at the knights: a courier that idles in view (between runs)
+// would otherwise cost every fed thief a 45 s wait each minute.
 export const COURIER_WANT_BELOW = 8;
 export function courierCheckDue(tick: number, lastCheck: number, courier: string, players: readonly { name?: string }[]): boolean {
     if (!courier || tick - lastCheck < COURIER_COOLDOWN) return false;
@@ -466,7 +466,7 @@ if (import.meta.main) {
             console.log(`COURIER trade check from ${FOOD_FROM} t=${now()}`);
             const re = new RegExp(`^${FOOD_FROM}$`, 'i');
             // Serve while the courier stays in view (up to 45 s): it hands out to each farmer in turn, so a 5 s window
-            // ended before its request came (2026-10-25: every hand-out failed). Leave as soon as it walks off.
+            // ended before its request came (every hand-out failed). Leave as soon as it walks off.
             const inView = () => (st()?.nearbyPlayers ?? []).some((p: any) => re.test(p.name));
             await refill();
             const r = await receiveHandoff(s, FOOD_FROM, farmServer, () => s.bot.serveTrades({ from: re, maxTrades: 1, timeout: 45_000, until: () => !inView() || existsSync(stopFile) }));
@@ -480,7 +480,7 @@ if (import.meta.main) {
         };
 
         // Banked food and the authenticated owned courier are the food supply.
-        // Do not return a food-poor thief to the bakery: mmtha0205 died there with one food on 2026-10-25.
+        // Do not return a food-poor thief to the bakery: mmtha0205 died there with one food.
         const replenishFood = () => replenishFarmFood(refill, foodCount, quickCourierCheck);
 
         // Inside the 8-tick stun after a fail, eat immediately if HP is at or below safe threshold

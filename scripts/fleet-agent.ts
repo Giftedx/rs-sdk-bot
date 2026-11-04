@@ -11,7 +11,7 @@ import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/flee
 import { pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
 import { runSync } from './fleet-sync';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
-import {workerSourceRevision} from '../packages/core/src/worker-release';
+import {capabilityRevision} from '../packages/core/src/worker-release';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
@@ -42,8 +42,10 @@ export function readAgentJobs(file=resolve(process.env.SWARM_PLAN??join(root,'sw
     if(!Array.isArray(plan.jobs))throw Error('fleet agent: invalid swarm plan');
     return plan.jobs;
 }
-export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=workerSourceRevision(root)){
-    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release};
+const TRADE_SCRIPT='scripts/fleet-trade.ts';
+// The trade worker's capability release (packages/core/src/worker-release.ts).
+export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=capabilityRevision([TRADE_SCRIPT],root)){
+    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT};
 }
 
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
@@ -72,7 +74,7 @@ if (import.meta.main) {
             if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
             running.add(t.account.toLowerCase());
             console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
-            const p = Bun.spawn(['bun', 'scripts/fleet-trade.ts', t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
+            const p = Bun.spawn(['bun', TRADE_SCRIPT, t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
             void (async () => {
                 const out = await new Response(p.stdout).text();
                 console.log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);

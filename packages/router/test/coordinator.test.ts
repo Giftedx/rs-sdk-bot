@@ -96,6 +96,20 @@ test('isolated builds overlap live runs; a pending publish holds only new live s
  expect(chooseTask(s,4)).toBeNull(); // without isolation a running build still keeps live work offline
 });
 
+test('an isolated build waits while a build that owns the same files runs or publishes; disjoint builds run in parallel',()=>{
+ const owned:Record<string,string[]>={'iron-progress-order':['scripts/smelt-batch.ts','scripts/smelt-bars.ts'],'smelt-extra':['scripts/smelt-batch.ts'],'wine-order':['scripts/wine.ts']};
+ const opts={isolatedBuilds:true,developmentLimit:4,ownedFiles:(cap:string)=>owned[cap]!};
+ const s=initialState();addTasks(s,[task('repair-1',{kind:'build',capability:'iron-progress-order',priority:90}),task('repair-2',{kind:'build',capability:'iron-progress-order',priority:80}),
+  task('shared',{kind:'build',capability:'smelt-extra',priority:70}),task('wine',{kind:'build',capability:'wine-order',priority:10})],0);
+ expect(chooseTask(s,1,opts)?.id).toBe('repair-1');startTask(s,'repair-1',1,'r1');
+ expect(chooseTask(s,2,opts)?.id).toBe('wine'); // repair-2 shares the capability, shared shares smelt-batch.ts
+ expect(chooseTask(s,2,{...opts,ownedFiles:undefined})?.id).toBe('shared'); // without file lists only the capability serializes
+ startTask(s,'wine',2,'w');expect(chooseTask(s,3,opts)).toBeNull();
+ finishTask(s,{taskId:'repair-1',runId:'r1',ok:true,at:4,output:{}});
+ expect(chooseTask(s,5,{...opts,publishing:'iron-progress-order'})).toBeNull(); // a waiting publish still owns its files
+ expect(chooseTask(s,5,opts)?.id).toBe('repair-2');
+});
+
 test('with isolated builds a qualification for a waiting live run passes a waiting build and another focus',()=>{
  const s=initialState();addTasks(s,[task('build',{kind:'build',capability:'other-order'}),task('q',{kind:'qualify',capability:'quest-sweep',priority:50}),
   task('run',{kind:'run',capability:'quest-sweep',account:'Helper1',dependsOn:['q'],accept:{quests:['Hazeel Cult']}}),task('q-alone',{kind:'qualify',capability:'other-order'})],0);

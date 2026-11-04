@@ -6,10 +6,13 @@
 // and bank modules, shop-buyer.ts planShopPurchases/buyWithBudget. Reject the measurement CLIs (they log in on load).
 // skill_firemaking/scripts/firemaking.rs2: light_logs_inv refuses "You can't light a fire here." before it drops the
 // log; firemaking_success deletes the ground log, then stat_advance. push_player tries west, east, south, north.
-import {openBot,finish} from '../packages/core/src/bot';
+import {openBot,finish,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitTicks,waitUntil} from '../packages/core/src/ticks';
-import {walkPath,sessionWalker,type PathPoint} from '../packages/core/src/walk';
+import {walkPath,sessionWalker,walkRoute,FAR_WALK_TILES,type PathPoint} from '../packages/core/src/walk';
+import {installDoorPolicy,type Account,type Leg} from '../packages/core/src/world';
+import {loadTravel,travelAllowed,type Travel} from '../packages/core/src/travel';
+import {planTripOffThread} from '../packages/core/src/route-plan';
 import {depositObserved} from '../packages/core/src/deposit';
 import {planShopPurchases,buyWithBudget,maximumUnitCost} from './shop-buyer';
 
@@ -18,6 +21,16 @@ export type LogKind=keyof typeof LOGS;
 export const TINDERBOX=590,COINS=995,FIREMAKING='Firemaking';
 export const DRAYNOR_BANK={x:3092,z:3243};
 export const BURN_ROWS=[{z:3248,sx:3098,ex:3072},{z:3250,sx:3105,ex:3077}] as const;
+export type BurnRow={z:number;sx:number;ex:number};
+export interface FiremakingSite{name:string;bank:{x:number;z:number};rows:readonly BurnRow[];localEntry?:boolean}
+export const DRAYNOR_SITE:FiremakingSite={name:'Draynor',bank:DRAYNOR_BANK,rows:BURN_ROWS};
+// Bank: gather-fish.ts and shark-supply.ts. Rows: fm-line-search.ts --from 2809,3441 --safe --need 27 --turns 0.
+// Each 24-tile row passes the active-loc, collision, bank-zone and hunter checks on pinned content.
+export const CATHERBY_SITE:FiremakingSite={name:'Catherby',bank:{x:2809,z:3441},
+ rows:[{z:3433,sx:2812,ex:2789},{z:3436,sx:2829,ex:2806}],localEntry:true};
+// Nearby western entries use the ground walker and its account danger mask. Other entries retain Draynor.
+export const firemakingSite=(p:{x:number;z:number;level:number}):FiremakingSite=>
+ p.level===0&&Math.max(Math.abs(p.x-CATHERBY_SITE.bank.x),Math.abs(p.z-CATHERBY_SITE.bank.z))<=64?CATHERBY_SITE:DRAYNOR_SITE;
 // lumbridge.npc shop_keeper generalshop1 (sell multiplier 1300); lumbridge.inv stock5=tinderbox; tinderbox cost 1.
 // Route legs: the Draynor <-> Lumbridge road used by scripts/gather-yews.ts.
 export const TINDER_SHOP={npc:/^(shopkeeper|shop assistant)$/i,item:/^tinderbox$/i,baseCost:1,sellMultiplier:1300,
@@ -47,7 +60,7 @@ export function firemakingPreflight(o:FiremakingOptions,s:{plane:number;baseLeve
  if(s.level<LOGS[o.log].level)return `${LOGS[o.log].name} need Firemaking ${LOGS[o.log].level}`;
  return null;
 }
-export const lineTiles=()=>BURN_ROWS.flatMap((r,row)=>Array.from({length:r.sx-r.ex+1},(_,i)=>({x:r.sx-i,z:r.z,row})));
+export const lineTiles=(rows:readonly BurnRow[]=BURN_ROWS)=>rows.flatMap((r,row)=>Array.from({length:r.sx-r.ex+1},(_,i)=>({x:r.sx-i,z:r.z,row})));
 // First usable tile from `from`, cyclic over the line. -1 when every tile is on fire or refused.
 export function nextFreeTile(tiles:readonly {x:number;z:number}[],from:number,blocked:(t:{x:number;z:number})=>boolean){
  for(let i=0;i<tiles.length;i++){const k=(from+i)%tiles.length;if(!blocked(tiles[k]!))return k;}
@@ -57,7 +70,7 @@ export function nextFreeTile(tiles:readonly {x:number;z:number}[],from:number,bl
 export function packWant(heldLogs:number,usedSlots:number,remaining:number){
  return Math.max(0,Math.min(PACK_LOGS,28-usedSlots+heldLogs,remaining)-heldLogs);
 }
-export function rowStart(row:number){return BURN_ROWS.slice(0,row%BURN_ROWS.length).reduce((n,r)=>n+r.sx-r.ex+1,0);}
+export function rowStart(row:number,rows:readonly BurnRow[]=BURN_ROWS){return rows.slice(0,row%rows.length).reduce((n,r)=>n+r.sx-r.ex+1,0);}
 // One tinderbox only when none is owned in the pack, bank or equipment.
 export function tinderboxPlan(owned:number,shop:{name:string;count:number;buyPrice:number}[],inventory:{name:string;count:number}[],budget:number){
  if(owned>0)return [];
@@ -65,8 +78,20 @@ export function tinderboxPlan(owned:number,shop:{name:string;count:number;buyPri
 }
 export const tinderboxUnitMax=()=>maximumUnitCost({baseCost:TINDER_SHOP.baseCost},{sellMultiplier:TINDER_SHOP.sellMultiplier});
 export class Refusal extends Error{}
+// The distant bank entry plans with no coins and no consumable travel items (runes, rubbed jewellery, consumed
+// passes), so the planner can pick only free legs. Keys, worn gear, skills, quest stages and danger keep their checks.
+export function freeRouteAccount(a:Account,travel:readonly Travel[]=loadTravel()):Account{
+ const used=new Set(travel.flatMap(t=>[...t.runes.map(r=>r.item),...(t.run.how==='rub'?t.run.items:[]),...t.needs.flatMap(n=>'held' in n?[n.held]:[])]));
+ return{...a,coins:0,counts:Object.fromEntries(Object.entries(a.counts??{}).filter(([i])=>!used.has(i))),items:a.items.filter(i=>!used.has(i))};
+}
+// Travel legs that would take a fare or a consumable from the masked account. Empty for a free route.
+export const routeDebits=(legs:readonly Leg[],free:Account)=>
+ legs.flatMap(l=>l.kind==='travel'&&(l.travel.coins>0||!travelAllowed(l.travel,free))?[l.travel.name]:[]);
+// Estimates in ticks kept back from the entry for one bank stop and the burns of one pack.
+export const ENTRY_BANK_TICKS=40,ENTRY_BURN_TICKS=20;
+export const entryBudget=(o:FiremakingOptions,used:number)=>o.cap-used-ENTRY_BANK_TICKS-ENTRY_BURN_TICKS*Math.min(o.maxLogs,PACK_LOGS);
 
-export async function runFiremaking(s:Session,o:FiremakingOptions){
+export async function runFiremaking(s:Session,o:FiremakingOptions,selectedSite?:FiremakingSite){
  const L=LOGS[o.log],start=s.tick();let ended=false;
  void s.ended.then(()=>{ended=true;});
  const st=()=>s.sdk.getState(),pos=()=>st()!.player!;
@@ -79,6 +104,7 @@ export async function runFiremaking(s:Session,o:FiremakingOptions){
  let hpMin=hp();const off=s.onTick(()=>{const h=s.sdk.getSkill('Hitpoints')?.level;if(h!==undefined)hpMin=Math.min(hpMin,h);});
  const project=(list:{slot:number;id:number;count:number}[]|undefined)=>(list??[]).map(({slot,id,count})=>({slot,id,count}));
  const at=()=>({x:pos().worldX,z:pos().worldZ,level:pos().level});
+ const site=selectedSite??firemakingSite(at()),bank=site.bank;
  const startXp=xp(),startLevel=base();
  console.log('FIREMAKING_INITIAL '+JSON.stringify({name:s.name,options:o,tick:s.tick(),position:at(),hp:hp(),xp:startXp,level:startLevel,
   inventory:project(st()?.inventory),equipment:project(st()?.equipment)}));
@@ -98,7 +124,37 @@ export async function runFiremaking(s:Session,o:FiremakingOptions){
  const banked=(id:number)=>bankItems.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const openBank=async()=>{
   if(st()?.bank?.isOpen&&s.bankObservation?.()){refresh();return;}
-  const p=pos();if(Math.max(Math.abs(p.worldX-DRAYNOR_BANK.x),Math.abs(p.worldZ-DRAYNOR_BANK.z))>3)await walk([{...DRAYNOR_BANK,tol:2}],'walk to Draynor bank');
+  const p=pos(),distance=Math.max(Math.abs(p.worldX-bank.x),Math.abs(p.worldZ-bank.z));
+  if(site.localEntry&&distance>3){
+   const budget=entryBudget(o,s.tick()-start);
+   if(budget<=0)throw new Refusal(`no entry budget: CAP ${o.cap}, used ${s.tick()-start}`);
+   await walk([{...bank,tol:2}],`walk to ${site.name} bank`,budget);
+  }else if(distance>FAR_WALK_TILES){
+   // World routes preserve account access and danger masks across distant region boundaries. goTo replans with
+   // the full observed account (coins, runes, bank fares), so the free route is planned and checked here first.
+   // Keep rebanking and burn-line clicks on the existing local walker.
+   live();const began=s.tick(),budget=entryBudget(o,began-start);
+   if(budget<=0)throw new Refusal(`no entry budget: CAP ${o.cap}, used ${began-start}`);
+   const free=freeRouteAccount(accountOf(s)),world=await getWorld();
+   await installDoorPolicy(s.sdk,s.client);
+   const from={x:p.worldX,z:p.worldZ,level:p.level},to={...bank,level:0};
+   const plan=world.offThread?await planTripOffThread(from,to,free):(()=>{const d=world.route(from,to,free);return d.ok?d:null;})();
+   live();
+   if(!plan)throw new Refusal(`no free route to ${site.name} bank from ${from.x},${from.z}`);
+   const debits=routeDebits(plan.legs,free);
+   if(debits.length)throw new Refusal(`route to ${site.name} bank takes fares or consumables: ${debits.join(', ')}`);
+   if(plan.cost>budget)throw new Refusal(`route to ${site.name} bank estimates ${plan.cost} ticks, entry budget ${budget}`);
+   console.log('FIREMAKING_ENTRY '+JSON.stringify({tick:s.tick(),from,cost:plan.cost,budget,legs:plan.legs.length,fares:0}));
+   const ac=new AbortController();
+   const stop=()=>{if(ended||hp()<=0||s.tick()-began>=budget)ac.abort('bank entry stopped or tick budget reached');};
+   const unwatch=s.onTick(stop);stop();
+   try{
+    const w=await walkRoute(s,plan.legs,{legTimeoutTicks:150,signal:ac.signal});
+    live();const arrived=pos();
+    if(!w.ok||arrived.level!==0||Math.max(Math.abs(arrived.worldX-bank.x),Math.abs(arrived.worldZ-bank.z))>3)
+     throw Error(`walk to ${site.name} bank: route unobserved ${JSON.stringify({outcome:w,at:at()})}`);
+   }finally{unwatch();ac.abort('bank entry finished');}
+  }else if(distance>3)await walk([{...bank,tol:2}],`walk to ${site.name} bank`);
   const g=s.bankObservation?.()?.generation??0,b=await s.bot.openBank();live();
   if(!b.success||!await waitUntil(s,()=>!!st()?.bank?.isOpen&&(s.bankObservation?.()?.generation??0)>g,{timeoutTicks:20}))throw Error(`bank open unobserved: ${b.message}`);
   r.bankTrips++;refresh();
@@ -124,6 +180,7 @@ export async function runFiremaking(s:Session,o:FiremakingOptions){
  const buyTinderbox=async()=>{
   const unit=tinderboxUnitMax(),total=coins()+banked(COINS);
   if(Math.min(o.toolBudget,total-o.cashReserve)<unit)throw new Refusal(`tinderbox unaffordable: budget ${o.toolBudget}, coins ${total}, reserve ${o.cashReserve}, unit max ${unit}`);
+  if(site.localEntry)throw new Refusal(`${site.name} site requires an owned tinderbox`);
   if(coins()<unit)await withdraw(COINS,Math.min(banked(COINS),o.toolBudget));
   const reserve=Math.max(0,o.cashReserve-banked(COINS)),coins0=coins();
   await closeBank();
@@ -139,7 +196,7 @@ export async function runFiremaking(s:Session,o:FiremakingOptions){
   if(bought!==1||held(TINDERBOX)!==1||spent<=0||spent>o.toolBudget||coins0-coins()!==spent)throw Error(`tinderbox purchase effect unobserved ${JSON.stringify({bought,spent,coins:coins(),coins0})}`);
   r.tinderbox={source:'bought',spent};
   console.log('FIREMAKING_PURCHASE '+JSON.stringify({tick:s.tick(),item:'tinderbox',bought,spent,budget:o.toolBudget,coins:coins()}));
-  await walk([...TINDER_SHOP.route].reverse().slice(1).concat([{...DRAYNOR_BANK,tol:2}]),'walk back to Draynor bank',600);
+  await walk([...TINDER_SHOP.route].reverse().slice(1).concat([{...bank,tol:2}]),`walk back to ${site.name} bank`,600);
   await openBank();
  };
  // ---- Light one log on the current tile. Returns the XP gain, or 'blocked' when the tile refuses a fire.
@@ -164,7 +221,7 @@ export async function runFiremaking(s:Session,o:FiremakingOptions){
   }
   throw Error(`light effect unobserved ${JSON.stringify({at:at(),ticks:s.tick()-sent,held:held(L.id),n0})}`);
  };
- const tiles=lineTiles(),refused=new Map<string,number>();
+ const tiles=lineTiles(site.rows),refused=new Map<string,number>();
  const key=(t:{x:number;z:number})=>`${t.x},${t.z}`;
  const fireAt=(t:{x:number;z:number})=>(st()?.nearbyLocs??[]).some(l=>l.x===t.x&&l.z===t.z&&/^fire$/i.test(l.name));
  const blocked=(t:{x:number;z:number})=>fireAt(t)||(refused.get(key(t))??-1)>s.tick();
@@ -189,7 +246,7 @@ export async function runFiremaking(s:Session,o:FiremakingOptions){
    if(want>0&&banked(L.id)>0)await withdraw(L.id,Math.min(want,banked(L.id)));
    if(held(L.id)<1)throw Error('pack has no logs after withdrawal');
    await closeBank();
-   cursor=rowStart(row);row++;
+   cursor=rowStart(row,site.rows);row++;
    while(held(L.id)>0){
     r.stop=stopReason();if(r.stop)break;
     let i=nextFreeTile(tiles,cursor,blocked);
