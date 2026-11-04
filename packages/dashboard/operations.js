@@ -16,6 +16,7 @@
   const c=S?.coordination||{},all=bots(),playing=all.filter(b=>b.operation==='observed').length,attention=issues(),cap=S?.capacity,board=S?.scoreboard,sides=S?.fleetSides?.sides||[],late=sides.filter(x=>x.late);
   const kpi=(n,label,small,op,value,bad)=>'<button class="op-kpi'+(bad?' op-kpi-bad':'')+'" data-op="'+op+'" data-value="'+E(value)+'"><b>'+E(n)+'</b><span>'+E(label)+'</span><small>'+E(small)+'</small></button>';
   return page(title('Operations / live observations','Command centre','Each number opens the plugin that answers it.')+
+   startBlock()+
    '<div class="op-kpis">'+
    kpi(playing,'accounts playing',all.filter(b=>b.inWorld).length+' in the world feed','fleet-open','working')+
    kpi(attention.length,'accounts need attention','stopped, failed or stale','fleet-open','attention',attention.length>0)+
@@ -24,10 +25,58 @@
    kpi(cap?.headroomGB!=null?cap.headroomGB.toFixed(1):'—','GiB RAM headroom',(cap?.active??'—')+' / '+(cap?.cap??'—')+' bots · '+(cap?.freeGB!=null?cap.freeGB.toFixed(1):'—')+' GiB free','open','machine',cap?.headroomGB<0)+
    kpi(board?.available?(board.done?'done':board.remaining.length):'—','board goals left',board?.available?'quests '+(board.quests.live??'—')+' / '+(board.quests.total??'—')+' live':'scoreboard not available','open','boards')+
    kpi(late.length,'fleet sides late',sides.length?sides.map(x=>x.side+' '+(x.at?age(x.at):'never')).join(' · '):'no fleet-data snapshot','fleet-open','all',late.length>0)+
-   '</div>'+
+   '</div>'+incidentCards()+
    '<div class="op-card"><div class="op-card-title"><strong>Coordinator</strong>'+badge(!meta?'pending':meta.paused?'pending':meta.coordinatorRunning===true?'running':meta.coordinatorRunning===false?'failed':'pending',!meta?'Checking':meta.paused?'Paused':meta.coordinatorRunning===true?'Running':meta.coordinatorRunning===false?'Stopped':'Unknown')+'</div><p>'+(c.planner?'Planner claim in queue: '+E(c.planner.agent)+' since '+age(c.planner.startedAt)+' ago':'No planner claim in queue')+'</p><div class="op-actions">'+button('Plan next work','plan','','primary')+button('New job','dispatch')+button(meta?.paused?'Resume coordinator':'Pause coordinator',meta?.paused?'resume':'pause','','danger')+button(meta?.fleetPaused?'Clear fleet stop':'Pause swarm',meta?.fleetPaused?'swarm-resume':'swarm-pause','','danger')+'</div></div>'+
    '<div class="op-eyebrow">Model workers</div>'+['codex','claude'].map(n=>{const a=c.agents?.find(a=>a.name===n),busy=a?.planning||a?.tasks?.length;return '<div class="op-card op-agent"><span class="monogram">'+n[0].toUpperCase()+'</span><div><strong>'+n[0].toUpperCase()+n.slice(1)+'</strong><small>'+(a?.planning?'Planning next work':(a?.tasks?.length||0)+' job claims')+'</small></div>'+badge(!c.fresh?'pending':busy?'running':'pending',!c.fresh?'Queue stale':busy?'Claimed':'No claims')+'</div>';}).join('')+
    (metaError?'<div class="op-notice error">'+E(metaError)+'</div>':'')+(message?'<div class="op-notice">'+E(message)+'</div>':''));
+ }
+ // Why a new bot cannot start now, from the swarm's own admission rule (scripts/swarm.ts admissionDecision):
+ // projected free RAM after the startup reserve must stay above max(8 GiB, minFreeGB).
+ function startBlock(){
+  const cap=S?.capacity;
+  const line=(text,op,value)=>'<button class="op-block" data-op="'+op+'" data-value="'+E(value)+'"><b>Start blocked</b><span>'+E(text)+'</span></button>';
+  if(meta?.fleetPaused)return line('The swarm stop file is set. No bot starts until it is cleared.','open','machine');
+  if(!cap||!cap.fresh||!Number.isFinite(cap.headroomGB))return '';
+  if(cap.headroomGB<0){
+   const big=typeof procGroups==='function'?procGroups(S?.sys?.procs)[0]:null,gib=n=>n.toFixed(1)+' GiB';
+   return line((cap.queued?cap.queued+(cap.queued===1?' account waits':' accounts wait')+' for RAM. ':'A new bot waits for RAM. ')+
+    gib(cap.freeGB)+' free, floor '+gib(cap.floorGB)+(cap.pendingReserveGB?' plus '+gib(cap.pendingReserveGB)+' startup reserve':'')+': '+gib(-cap.headroomGB)+' short.'+
+    (big?' Largest use: '+big.script+(big.n>1?' ×'+big.n:'')+', '+gib(big.mb/1024)+'.':''),'open','machine');
+  }
+  if(cap.cap!=null&&cap.active!=null&&cap.active>=cap.cap&&cap.queued)return line('All '+cap.cap+' bot slots are in use. '+cap.queued+(cap.queued===1?' account waits':' accounts wait')+' for a slot.','fleet-open','working');
+  return '';
+ }
+ // Accounts that stopped for one cause read as one incident: same state, entry script and job, and the same
+ // result text once numbers and the account's own name are masked. A stale account's cause is its side.
+ const OP_LABEL={blocked:'blocked',failed:'stopped',died:'died','active-stale':'no status while running',unobserved:'not observed'};
+ const STOPPED=new Set(['blocked','failed','died']);
+ const jobOf=b=>String(b.goal||'').replace(/\s*\[[^\]]*\]\s*$/,'');
+ function incidents(){
+  const groups=new Map();
+  for(const b of issues()){
+   const stopped=STOPPED.has(b.operation),text=stopped?String(b.result||'').replace(/^(ok|fail)\b\s*/,''):'';
+   const cause=stopped?text.split(b.name).join('@').replace(/\d+/g,'#').slice(0,300):String(b.side||'local');
+   const key=[b.operation,stopped?b.workEntry||'':'',stopped?jobOf(b):'',cause].join('\u0001');
+   let g=groups.get(key);
+   if(!g)groups.set(key,g={operation:b.operation,stopped,entry:stopped?b.workEntry||'':'',job:stopped?jobOf(b):'',side:b.side||'local',text,bots:[],at:0});
+   g.bots.push(b);g.at=Math.max(g.at,Number(b.at)||0);
+  }
+  const open=new Set(['running','pending']);
+  for(const g of groups.values()){const names=new Set(g.bots.map(b=>String(b.name).toLowerCase()));g.recovering=tasks().filter(t=>open.has(t.status)&&t.account&&names.has(String(t.account).toLowerCase())).length;}
+  return [...groups.values()].sort((a,b)=>b.bots.length-a.bots.length||b.at-a.at);
+ }
+ function incidentCards(){
+  const list=incidents();if(!list.length)return '';
+  const operator=window.atlasOperator?.()??true,shownMax=6;
+  return '<div class="op-eyebrow">Incidents<span>'+list.length+(list.length===1?' cause':' causes')+'</span></div>'+list.slice(0,shownMax).map(g=>{
+   const n=g.bots.length,names=g.bots.slice(0,8);
+   const tag=!g.stopped?'':g.recovering?badge('running',g.recovering+(g.recovering===1?' recovery job':' recovery jobs')):badge('failed','No recovery job');
+   const facts=[g.entry&&E(g.entry.replace(/^scripts\//,'')),g.job&&E(g.job),!g.stopped&&E(g.side+' side'),g.at&&age(g.at)+' ago'].filter(Boolean).join(' · ');
+   return '<div class="op-card op-incident"><div class="op-card-title"><strong>'+n+(n===1?' account':' accounts')+' · '+E(OP_LABEL[g.operation]||g.operation)+'</strong>'+tag+'</div>'+
+    (g.text?'<p title="'+E(g.text)+'">'+resultSummary(g.text,6)+'</p>':'')+'<small>'+facts+'</small>'+
+    '<div class="op-names">'+names.map(b=>'<button data-op="account" data-value="'+E(b.name)+'">'+E(safeName(b.name))+'</button>').join('')+(n>names.length?'<span>+'+(n-names.length)+' more</span>':'')+'</div>'+
+    (operator&&g.job&&tasks().some(t=>t.id===g.job)?'<div class="op-actions">'+button('Open job','task',g.job)+'</div>':'')+'</div>';
+  }).join('')+(list.length>shownMax?button((list.length-shownMax)+' more causes in the fleet','fleet-open','attention'):'');
  }
  function jobs(){
   const selected=tasks().find(t=>t.id===taskId);
@@ -67,8 +116,10 @@
    return (head?'<b>'+E(head)+'</b> ':'')+[...first,...rest].slice(0,limit).map(k=>E(word(k))+' '+E(shown(o[k]))).join(' · ');}}
   return readable(t);
  }
- function activity(){const practice=activityFilter==='practice',rows=[];for(const r of (S?.results||[]).filter(r=>!!r.practice===practice).sort((a,b)=>b.at-a.at)){const prev=rows[rows.length-1];if(prev&&prev.r.name===r.name&&prev.r.text===r.text){prev.n++;continue;}rows.push({r,n:1});if(rows.length>=40)break;}
-  return page(title('Events / useful outcomes','Activity journal',(window.atlasOperator?.()??true)?'Finished and stopped game runs. AI jobs are in Agents & jobs.':'Finished and stopped game runs, by goal.')+((window.atlasOperator?.()??true)?'<div class="op-filter">'+[['live','Live'],['practice','Practice']].map(([id,label])=>'<button class="'+((practice?'practice':'live')===id?'active':'')+'" data-op="activity-filter" data-value="'+id+'">'+label+'</button>').join('')+'</div>':'')+rows.map(({r,n})=>{const ok=typeof r.ok==='boolean'?r.ok:/^ok\b/.test(String(r.text));return '<button class="op-task" data-op="account" data-value="'+E(r.name)+'"><div class="op-card-title"><strong>'+E(safeName(r.name))+'</strong>'+badge(ok?'running':'failed',ok?'finished':'stopped')+'</div><p title="'+E(r.text)+'">'+resultSummary(r.text)+'</p><small>'+age(r.at)+' ago'+(n>1?' · '+n+' times in a row':'')+'</small></button>';}).join('')+(!rows.length?'<div class="op-empty">No '+(practice?'practice':'live')+' results retained.</div>':''));}
+ // One row per cause: repeats of one account's result, and the same result on several accounts within two minutes
+ // (one job's cohort failing together), with the account's own name and the numbers masked.
+ function activity(){const causeOf=r=>String(r.text??'').split(String(r.name)).join('@').replace(/\d+/g,'#'),practice=activityFilter==='practice',rows=[];for(const r of (S?.results||[]).filter(r=>!!r.practice===practice).sort((a,b)=>b.at-a.at)){const prev=rows[rows.length-1];if(prev&&prev.r.name===r.name&&prev.r.text===r.text){prev.n++;continue;}if(prev&&prev.r.name!==r.name&&!prev.names.includes(r.name)&&prev.at-r.at<120_000&&causeOf(prev.r)===causeOf(r)){prev.names.push(r.name);prev.at=r.at;continue;}rows.push({r,n:1,names:[r.name],at:r.at});if(rows.length>=40)break;}
+  return page(title('Events / useful outcomes','Activity journal',(window.atlasOperator?.()??true)?'Finished and stopped game runs. AI jobs are in Agents & jobs.':'Finished and stopped game runs, by goal.')+((window.atlasOperator?.()??true)?'<div class="op-filter">'+[['live','Live'],['practice','Practice']].map(([id,label])=>'<button class="'+((practice?'practice':'live')===id?'active':'')+'" data-op="activity-filter" data-value="'+id+'">'+label+'</button>').join('')+'</div>':'')+rows.map(({r,n,names})=>{const ok=typeof r.ok==='boolean'?r.ok:/^ok\b/.test(String(r.text));return '<button class="op-task" data-op="account" data-value="'+E(r.name)+'" title="'+E(names.map(safeName).join(', '))+'"><div class="op-card-title"><strong>'+E(names.length>1?names.length+' accounts · '+names.slice(0,2).map(safeName).join(', ')+(names.length>2?' +'+(names.length-2):''):safeName(r.name))+'</strong>'+badge(ok?'running':'failed',ok?'finished':'stopped')+'</div><p title="'+E(r.text)+'">'+resultSummary(r.text)+'</p><small>'+age(r.at)+' ago'+(n>1?' · '+n+' times in a row':'')+'</small></button>';}).join('')+(!rows.length?'<div class="op-empty">No '+(practice?'practice':'live')+' results retained.</div>':''));}
  function dispatch(){const dep=tasks().filter(t=>t.capability===draft.capability&&t.status==='succeeded'&&t.evidence==='native');return page(title('Coordinator / jobs desk','Create a job','Pick a script below or in the form. Requests enter the shared queue. Submission, acceptance and useful game output are separate states.')+
   (!meta?'<div class="op-notice error">'+E(metaError||'Loading command session…')+'</div>':'')+
   `<form class="op-form" id="op-dispatch"><label>Work type<select name="kind">${[['qualify','Test a capability'],['build','Build / repair a capability'],['review','Review source and proof'],['run','Run on an ordinary account'],['provision','Create a needed account']].map(([v,n])=>`<option value="${v}" ${draft.kind===v?'selected':''}>${n}</option>`).join('')}</select></label>`+

@@ -22,3 +22,13 @@ button.op-kpi{text-align:left;cursor:pointer;font:inherit;color:inherit}
 button.op-kpi:hover{filter:brightness(1.15)}
 .op-late{color:#ff3030!important}
 .op-kpi-bad b{color:#ff6b5b}
+/* Start-blocked line and same-cause incident cards on the Command centre. */
+.op-block{display:block;width:100%;text-align:left;cursor:pointer;font:inherit;margin:0 0 8px;padding:8px 9px;border:1px solid #82534c;border-left:3px solid #dc7970;background:#42312d;color:#e2a49b;font-size:11px;line-height:1.45}
+.op-block b{display:block;font-size:9px;letter-spacing:1.3px;text-transform:uppercase;color:#ff8f82;margin-bottom:2px}
+.op-block:hover{filter:brightness(1.15)}
+.op-incident{border-left:3px solid #dc7970;margin:6px 0}
+.op-incident small{display:block;margin-top:4px;color:#999;font-size:10px;overflow-wrap:anywhere}
+.op-names{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center}
+.op-names button{font:10px Tahoma,Arial;color:#ff981f;background:#232323;border:1px solid #4a4a4a;border-radius:2px;padding:2px 5px;cursor:pointer}
+.op-names button:hover{border-color:#dc8a00}
+.op-names span{font-size:10px;color:#999}
