@@ -381,7 +381,8 @@ try {
         let sh = npcOf(N.shaman);
         if (!sh) { await go('shamans', 2592, 9439, 4); sh = npcOf(N.shaman); }
         if (!sh) { await q.waitTicks(5); continue; }
-        if (!q.has(O.magicPotion)) await q.fail('shamans: no magic ogre potion');
+        // The 6th shaman takes the potion and gives the crystal in one script: the pack can show the first change alone.
+        if (!q.has(O.magicPotion)) { if (await q.waitUntil(() => q.has(O.c3), 6)) break; await q.fail('shamans: no magic ogre potion'); }
         const m0 = mark();
         if (!q.dialogOpen()) await q.useOnNpc(O.magicPotion, sh);
         await q.waitUntil(() => seen(/dissolves/i, m0) || q.has(O.c3), 15);
