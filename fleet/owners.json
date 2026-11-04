@@ -133,71 +133,19 @@
    "server": "rs-sdk-demo.fly.dev"
   },
   "Magicwanda": {
-   "side": "cloud",
+   "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Shaftsinker": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "SporranBulge": {
-   "side": "cloud",
+   "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
   "CoinCock": {
-   "side": "cloud",
+   "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Ballspinner": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Ballbag": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Packhorse": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Heavyload": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "DropMyLoad": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "FullLoad": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "WellHung": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "InTheSack": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Rubmyrunes": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "ChaosInPants": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "Staffstiffy": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "PackageDeal": {
-   "side": "cloud",
-   "server": "rs-sdk-demo.fly.dev"
-  },
-  "BackdoorMan": {
-   "side": "cloud",
+   "side": "local",
    "server": "rs-sdk-demo.fly.dev"
   }
  }
