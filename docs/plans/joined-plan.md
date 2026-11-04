@@ -31,7 +31,7 @@ Main run, coverage and live work run at once, so no lane starves the others. Eve
 
 ## Blockers
 
-- The coordinator is paused by `.practice/stop-coordinator`. Isolated build workspaces, build/live overlap, the focus failure limit, the scoreboard and the smaller planner prompt run when it restarts. The practice server is shared, so the restart waits for the quest screening or stops it.
+- The coordinator runs under `.practice/coordinator/owner.json`; `bun run coordinate --stop` pauses it. A change to the swarm's own code (`scripts/swarm.ts` and its imports) forces a controller rollout that pauses every standing job, so controller fixes ship in one batch. The practice server is shared: one heavy practice qualification at a time.
 - `fresh-rune-supply-order` needs a new practice qualification: its file `scripts/generated/quest-lib.ts` changed.
 - Main launch gates fail: plan wins, rehearsal, staged supplies, fresh targets (`research/hiscores-live.json` predates the record), machine clear. Bank staging is 5/73. The main account stays offline.
 - [Monkey Madness](../../.practice/mm-exit/guard-candidate/full-1793062289389/proof.json) passes 2/3 full runs; installed qualification and rehearsal are open. [Arrav](../../research/heroes-partner.md) needs route, sustain or Magic prerequisites.
