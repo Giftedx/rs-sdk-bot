@@ -10,7 +10,7 @@ import {killTree} from './proc';
 import {workerSourceRevision} from '../../core/src/worker-release';
 import {readPracticeSave,waitPracticeSave,setPracticeSkills} from '../../../scripts/measure/fleet-player-save';
 import {questSpec,questSavedChecks} from '../../../scripts/quest-order';
-import {itemSaveChecks} from '../../../scripts/quest-items-order';
+import {itemSaveChecks,hettyTravelChecks,type HettyTravelDebit} from '../../../scripts/quest-items-order';
 import { FREE_FLOOR_GB, PRACTICE_RESERVE_GB, PRACTICE_STARTUP_GB } from '../../core/src/memory';
 import {applyPreset,type SaveConfig} from './presets';
 type Save=ReturnType<typeof readPracticeSave>;
@@ -88,6 +88,8 @@ export function hettyLiveJobSavedChecks(before:Save,after:Save,worker:Run){
  const ids=new Set([...holdings(before),...holdings(after)].map(i=>i.id));
  const meat=[2146,2142,2132].find(id=>b(id)>0),eye=b(221)?0:1;
  const xp=(s:Save)=>s.skills.find(k=>k.index===6)?.xp;
+ const travel=(result?.gather?.travel??[]) as HettyTravelDebit[];
+ const travelCoins=Array.isArray(travel)?travel.reduce((n,d)=>n+d.coins,0):NaN;
  const prices=result?.gather?.purchases as {id:number;coins:number}[]|undefined;
  return {
   worker:worker.code===0&&result?.ok===true&&result?.questKey==='hetty'&&result?.logout===true&&result?.gather?.ok===true&&result?.quest?.ok===true&&logout(worker),
@@ -98,7 +100,8 @@ export function hettyLiveJobSavedChecks(before:Save,after:Save,worker:Run){
   reward:xp(before)!==undefined&&xp(after)===xp(before)!+8125,
   magic31:before.skills.find(k=>k.index===6)?.level===1&&after.skills.find(k=>k.index===6)?.level===31,
   ingredients:[1957,221,300].every(id=>a(id)===Math.max(0,b(id)-1))&&[2146,2142,2132].every(id=>a(id)===b(id)-(id===meat?1:0)),
-  coins:a(995)===b(995)-eye*3-(meat?0:1),
+  travel:Array.isArray(travel)&&hettyTravelChecks(travel)&&travelCoins<=60&&travelCoins+eye*3+(meat?0:1)<=64,
+  coins:a(995)===b(995)-eye*3-(meat?0:1)-travelCoins,
   purchases:Array.isArray(prices)&&prices.length===eye+(meat?0:1)&&prices.filter(p=>p.id===221&&p.coins===3).length===eye&&prices.filter(p=>p.id===2132&&p.coins===1).length===(meat?0:1),
   transitions:!!meat&&meat===2146||Array.isArray(result?.gather?.transitions)&&(
    JSON.stringify(result.gather.transitions)===JSON.stringify([{from:meat??2132,to:2146}])||
@@ -138,15 +141,15 @@ export function tutorialGrantedSave(s:Save):Save{
 export function hettyTutorialJobSavedChecks(before:Save,after:Save,worker:Run){
  return {tutorialEntry:(before.vars[281]??0)<1000,tutorial:after.vars[281]===1000,...hettyLiveJobSavedChecks(tutorialGrantedSave(before),after,worker)};
 }
-// Retained QUEST_HETTY_ENTRY: exact ordered pack, bank and worn kit. Staging is
+// Western entry: observed80 carried coins and three pots of flour. Staging is
 // confined to a fresh localhost fixture; the worker receives only account + hetty.
 export const HETTY_MATCHED_ENTRY:SaveConfig={
- position:{x:3209,z:3214,level:0},
- inventory:[[995,1902],[1963,1],[1963,1],[1963,1],[1985,1],[1985,1],[1985,1],[556,6],[557,1],[1438,1],[2132,1],[279,1],[1931,1],[1931,1],[1931,1],[952,1],[307,1],[313,2],[1468,1],[596,1],[1469,1]].map(([id,count])=>({id:id!,count:count!})),
- bank:[[995,15606],[1351,4],[590,40],[303,4],[315,3],[1925,3],[1931,4],[1265,40],[1205,4],[1277,3],[1171,3],[841,5],[882,1710],[556,88],[558,60],[555,18],[557,9],[559,8],[1901,4],[1891,1],[333,11],[329,6],[1779,1791],[227,939],[1759,142],[954,143],[970,41],[1349,36],[2309,1]].map(([id,count])=>({id:id!,count:count!})),
- equipment:[{id:284,count:1,slot:4},{id:285,count:1,slot:7}],
+ position:{x:2863,z:3428,level:0},
+ inventory:[[995,80],[1933,1],[1933,1],[1933,1]].map(([id,count])=>({id:id!,count:count!})),
+ bank:[[995,19895],[1351,4],[590,40],[303,4],[315,3],[1925,3],[1931,4],[1265,40],[1205,4],[1277,3],[1171,3],[841,5],[882,1710],[556,88],[558,60],[555,18],[557,9],[559,8],[1901,4],[1891,1],[333,11],[329,6],[1779,1791],[227,939],[1759,142],[954,143],[970,41],[1349,36],[2309,1]].map(([id,count])=>({id:id!,count:count!})),
+ equipment:[],
  // Login runs quests.rs2 ~update_questlist, which recounts %qp(101) from quest varps.
- // Moneyshot's six QP: cookquest29=2, runemysteries63=6, sheep179=22, murderquest192=2 (3QP).
+ // The retained completed-quest set gives six QP: cookquest29=2, runemysteries63=6, sheep179=22, murderquest192=2 (3QP).
  varps:{...COOK_JOB_NATIVE_NULL_VARPS,281:1000,29:2,63:6,179:22,192:2,67:0,101:6},
 };
 const HETTY_COMPLETED_QUEST_VARPS=[29,63,179,192] as const;
@@ -173,14 +176,14 @@ function verify(dir:string){
  const deposits=r.log.split(/\r?\n/).filter(l=>l.startsWith('DEPOSIT_RECEIPT ')).map(l=>JSON.parse(l.slice('DEPOSIT_RECEIPT '.length)));
  const checks={...hettyLiveJobSavedChecks(b,a,r),ordinary:meta.saveAbsent===true&&meta.credentialsAbsent===true&&meta.codes.registration===0&&logout(run('registration')),
   carriedEntry:hettyCarriedEntry(b)&&hettyCarriedEntry(entry),
-  carriedDeposit:deposits.some(d=>d.account.toLowerCase()===meta.name.toLowerCase()&&d.itemId===995&&d.amount===1902&&d.packBefore===1902&&d.packAfter===0&&d.bankBefore===15606&&d.bankAfter===17508&&d.generationAfter>d.generationBefore),
+  carriedDeposit:deposits.some(d=>d.account.toLowerCase()===meta.name.toLowerCase()&&d.itemId===995&&d.amount===20&&d.packBefore===20&&d.packAfter===0&&d.bankBefore===19895&&d.bankAfter===19915&&d.generationAfter>d.generationBefore),
   refusal:refusal.code!==0&&refused?.ok===false&&refused?.logout===true&&/quest already complete/.test(refused?.detail??'')&&logout(refusal),
   refusalAssets:[93,94,95].every(id=>JSON.stringify(a.inventories[id]??[])===JSON.stringify(f.inventories[id]??[])),
   refusalVars:JSON.stringify(vars(a))===JSON.stringify(vars(f)),refusalSkills:JSON.stringify(a.skills)===JSON.stringify(f.skills),
   source:meta.source===workerSourceRevision(),fresh:Number.isFinite(meta.at)&&meta.at<=Date.now()&&Date.now()-meta.at<900000,
   artifacts:Object.entries(meta.hashes as Record<string,string>).every(([file,value])=>hash(join(dir,file))===value)};
  const report={ok:Object.values(checks).every(Boolean),at:Date.now(),source:meta.source,checks,
-  scope:'Native150ms/25x: real quest-cook-job account hetty CLI from an isolated staged ordinary account matching retained pack1902/bank15606, ordered quest inventory, worn kit and entry3209,3214,0; saved Witch Potion/QP+1/Magic+8125 to31, exact costs, retained assets/life, completed refusal and logout. Live acceptance belongs to the connected finite consumer.'};
+  scope:'Native150ms/25x: real quest-cook-job account hetty CLI from an isolated staged ordinary account matching western pack80/three flour, bank19895 and entry2863,3428,0 at HP10; two observed30-coin fares; saved Witch Potion/QP+1/Magic+8125 to31, exact costs, retained assets/life, completed refusal and logout. Live acceptance belongs to the connected finite consumer.'};
  writeFileSync(join(dir,'consumer.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report));return report;
 }
 async function run(dir:string){

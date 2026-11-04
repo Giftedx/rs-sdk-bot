@@ -144,7 +144,7 @@ try {
     };
 
     // One pickpocket step on a target near `spot`. Returns false when it did not try (no target in range).
-    // Movement rules (2026-10-23, owner: "you move like a total moron"): take the closest target, never walk back
+    // Movement rules (owner: "you move like a total moron"): take the closest target, never walk back
     // to a fixed spot, and only walk to the target area when no target is within `range` of where the bot stands.
     // Targets wander, so waiting a tick for one to come close beats chasing one across the market.
     // Set in step 3: what to do inside a stun (8 ticks when the bot cannot pickpocket but can walk, shop and eat).
@@ -166,7 +166,7 @@ try {
         if (npc.distance > 1) chases++;
         tries++;
         const k0 = now();
-        // Leader rhythm (Jackalopett1, recorded 2026-10-23): one click every 2 ticks, sent straight to the client.
+        // Leader rhythm (Jackalopett1, recorded): one click every 2 ticks, sent straight to the client.
         // Measured +22% over bot.pickpocketNpc (scripts/measure/pick-cycle.ts DIRECT=1: 277.5/245.9 vs 254.7/175.6).
         // The server drops clicks inside a stun. An HP drop means a fail: the stun has started, so eat inside it.
         // SLOW_PICK=1 keeps the old SDK path.
@@ -193,7 +193,7 @@ try {
     // Waits for Hitpoints to regenerate when no food and no coins: pickpocketing could kill the bot.
     const rest = async () => { waits++; await waitTicks(s, 10); };
 
-    // A resumed live account is already in Ardougne (seen 2026-10-23: it started the walk to Port Sarim from there).
+    // A resumed live account is already in Ardougne (seen: it started the walk to Port Sarim from there).
     const p1 = pos();
     const inArdougne = !!p1 && cheb(MARKET, p1) <= 80;
     if (inArdougne) mark('ardougne');

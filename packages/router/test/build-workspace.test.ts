@@ -2,7 +2,7 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,lstatSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace} from '../src/build-workspace';
+import {prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText} from '../src/build-workspace';
 
 const mainTree=()=>{
  const main=join(mkdtempSync(join(tmpdir(),'ws-')),'repo');
@@ -19,7 +19,7 @@ test('a build edits its own copy; the main checkout changes only on publish',()=
  expect(readFileSync(join(root,'.practice/state.json'),'utf8')).toBe('{}');
  writeFileSync(join(root,'scripts/worker.ts'),'v2');
  expect(readFileSync(join(main,'scripts/worker.ts'),'utf8')).toBe('v1');
- expect(publishWorkspace(main,'cap',files)).toEqual({published:['scripts/worker.ts'],unchanged:['packages/core/src/shared.ts']});
+ expect(publishWorkspace(main,'cap',files)).toEqual({published:['scripts/worker.ts'],unchanged:['packages/core/src/shared.ts'],merged:[]});
  expect(readFileSync(join(main,'scripts/worker.ts'),'utf8')).toBe('v2');
 });
 
@@ -33,6 +33,43 @@ test('an unpublished attempt carries its declared files into the repair build; a
  writeFileSync(join(main,'scripts/worker.ts'),'main2');
  ({root}=prepareWorkspace(main,'cap',files));
  expect(readFileSync(join(root,'scripts/worker.ts'),'utf8')).toBe('main2');
+});
+
+const lines=(...l:string[])=>l.join('\n')+'\n';
+test('a build merges onto an earlier delivery of the same file and refuses only overlapping lines',()=>{
+ const main=mainTree(),file='scripts/worker.ts',base=lines('a','b','c','d','e');
+ writeFileSync(join(main,file),base);
+ const first=prepareWorkspace(main,'first',[file]).root,second=prepareWorkspace(main,'second',[file]).root,third=prepareWorkspace(main,'third',[file]).root;
+ writeFileSync(join(first,file),lines('A','b','c','d','e'));
+ writeFileSync(join(second,file),lines('a','b','c','d','E'));
+ writeFileSync(join(third,file),lines('x','b','c','d','e'));
+ publishWorkspace(main,'first',[file]);
+ expect(publishWorkspace(main,'second',[file])).toEqual({published:[file],unchanged:[],merged:[file]});
+ expect(readFileSync(join(main,file),'utf8')).toBe(lines('A','b','c','d','E'));
+ expect(()=>publishWorkspace(main,'third',[file])).toThrow('main source changed since the build started: scripts/worker.ts (main lines 1-1, build lines 1-1)');
+ expect(readFileSync(join(main,file),'utf8')).toBe(lines('A','b','c','d','E'));
+});
+
+test('a hand edit of the main checkout is not an earlier delivery, so publish refuses it',()=>{
+ const main=mainTree(),file='scripts/worker.ts';writeFileSync(join(main,file),lines('a','b','c'));
+ const {root}=prepareWorkspace(main,'cap',[file]);writeFileSync(join(root,file),lines('a','b','C'));
+ writeFileSync(join(main,file),lines('A','b','c'));
+ expect(()=>publishWorkspace(main,'cap',[file])).toThrow('main source changed since the build started: scripts/worker.ts');
+});
+
+test('a carried repair attempt merges against the base it started from',()=>{
+ const main=mainTree(),file='scripts/worker.ts';writeFileSync(join(main,file),lines('a','b','c'));
+ let {root}=prepareWorkspace(main,'cap',[file]);writeFileSync(join(root,file),lines('a','b','C'));
+ const other=prepareWorkspace(main,'other',[file]).root;writeFileSync(join(other,file),lines('A','b','c'));publishWorkspace(main,'other',[file]);
+ ({root}=prepareWorkspace(main,'cap',[file]));
+ expect(readFileSync(join(root,file),'utf8')).toBe(lines('a','b','C'));
+ publishWorkspace(main,'cap',[file]);
+ expect(readFileSync(join(main,file),'utf8')).toBe(lines('A','b','C'));
+});
+
+test('mergeText names the conflicting lines on both sides',()=>{
+ expect(mergeText(lines('a','b'),lines('a','b','m'),lines('x','a','b'))).toEqual({ok:true,text:lines('x','a','b','m')});
+ expect(mergeText(lines('a','b','c'),lines('a','M1','M2','c'),lines('a','B','c'))).toEqual({ok:false,conflicts:['main lines 2-3, build lines 2-2']});
 });
 
 test('publish refuses a main checkout that changed a declared file since the build started',()=>{

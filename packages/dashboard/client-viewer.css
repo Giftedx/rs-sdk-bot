@@ -3,3 +3,6 @@
 .worldmap-modal-overlay{z-index:10000!important}
 .worldmap-modal{inset:35px!important}
 [class^="leva-c-kWgxhW"]{display:none!important}
+/* One minimap: the page draws it (client-shell.js) and turns it with the 3D camera; the viewer's stays in the page,
+   hidden, so its compass and world-map buttons can still be pressed for the page. */
+.minimap-container{visibility:hidden!important;pointer-events:none!important}

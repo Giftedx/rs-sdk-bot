@@ -13,6 +13,12 @@ export const MEATS=[
  {item:2136,npc:105,x:3159,z:3233,name:'raw bear meat'},
  {item:2138,npc:41,x:2691,z:3273,name:'raw chicken'},
 ] as const;
+type Meat=Omit<typeof MEATS[number],'x'|'z'>&{x:number;z:number};
+// Pinned knowledge/npcs.json ground-floor spawns. Draynor work stays on the mainland;
+// goTo still checks actual collision, doors and arrival for each outbound and bank leg.
+const DRAYNOR_MEATS:readonly Meat[]=MEATS.map(m=>({...m,...({
+ 2132:{x:3154,z:3325},2134:{x:3192,z:3207},2136:{x:3159,z:3233},2138:{x:3185,z:3277},
+}[m.item])}));
 type SpawnBox=readonly [number,number,number,number];
 export const BEAR_SPAWNS=[[2691,3341],[2692,3333],[2484,3155],[2477,3143],[3159,3233],[3176,3223],[3230,3500]] as const;
 const cheb=(a:{x:number;z:number},b:{x:number;z:number})=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
@@ -29,7 +35,7 @@ export function waypointChain(from:{x:number;z:number},to:{x:number;z:number},hu
  }
 }
 const boxDistance=(x:number,z:number,[x1,z1,x2,z2]:SpawnBox)=>Math.max(x1-x,0,x-x2,z1-z,0,z-z2);
-function spawnApproaches(m:typeof MEATS[number],x:number,z:number){
+function spawnApproaches(m:Meat,x:number,z:number){
  const boxes:readonly SpawnBox[]=[[m.x,m.z,m.x,m.z]];
  return [...boxes].sort((a,b)=>boxDistance(x,z,a)-boxDistance(x,z,b)).flatMap(box=>{
   const [x1,z1,x2,z2]=box,tiles:{x:number;z:number}[]=[];
@@ -47,9 +53,9 @@ export function bearRefusal(hp:number,attack:number,strength:number,defence:numb
  return [hp,attack,strength,defence].every(Number.isFinite)&&hp>=60&&attack>=40&&strength>=40&&defence>=40?null:
   'too-weak-for-bear: requires current HP60, Attack40, Strength40, Defence40';
 }
-const BANKS=[{x:2619,z:3332},{x:2654,z:3283},{x:2612,z:3093}] as const;
-// Hubs are tiles a practice run reached by goTo: the banks and the beef, rat and chicken anchors.
-const HUBS=[...BANKS,...MEATS.filter(m=>m.npc!==105).map(({x,z})=>({x,z}))];
+const BANKS=[{x:2619,z:3332},{x:2654,z:3283},{x:2612,z:3093},{x:3092,z:3243}] as const;
+// Western hubs retain the practice route. Mainland hubs use the pinned Draynor bank and NPC spawns.
+const HUBS=[...BANKS,...MEATS.filter(m=>m.npc!==105).map(({x,z})=>({x,z})),...DRAYNOR_MEATS.map(({x,z})=>({x,z}))];
 type Floor={x:number;z:number;level:number};
 type Transport={from:Floor;to:Floor};
 type ExitLoc={id:number;x:number;z:number;optionsWithIndex:readonly {text:string;opIndex:number}[]};
@@ -178,11 +184,12 @@ export async function runDruidMeats(s:Session,o:{cap?:number;stop?:()=>boolean;t
   // Preserve unrelated pack contents. Secure any already-held quest meat first.
   for(const m of MEATS){const item=inv().find(i=>i.id===m.item);if(item)await depositObserved(s,item);}
   await s.bot.closeBank();
-  const pending=[...missing];
+  const p=state()!.player!,sources=nearestMeatBank(p.worldX,p.worldZ).x===3092?DRAYNOR_MEATS:MEATS;
+  const pending:Meat[]=missing.map(m=>sources.find(source=>source.item===m.item)!);
   while(pending.length){
    // Take the nearest remaining meat from the bank the account stands at. Ties keep MEATS order.
    const here=state()!.player!,at={x:here.worldX,z:here.worldZ};
-   const reach=(m:typeof MEATS[number])=>m.npc===105?Math.min(...BEAR_SPAWNS.map(([x,z])=>cheb(at,{x,z}))):cheb(at,m);
+   const reach=(m:Meat)=>m.npc===105?Math.min(...BEAR_SPAWNS.map(([x,z])=>cheb(at,{x,z}))):cheb(at,m);
    pending.sort((a,b)=>reach(a)-reach(b));
    const m=pending.shift()!;
    check();if(inv().length>=28)throw Error('pack-full: need one meat slot');

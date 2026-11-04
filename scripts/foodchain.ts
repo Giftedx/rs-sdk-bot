@@ -1,5 +1,5 @@
 // Food chain lead (research/food-chain.md): runs the cook, the courier and the gold farmers without a person.
-// Every 15 s it reads the status files and decides, by the rules proved live on 2026-10-23:
+// Every 15 s it reads the status files and decides, by the rules proved live:
 // - the cook (scripts/fishcook.ts, GIVE_TO=<courier>) and each farmer (scripts/goldfarm.ts, FOOD_FROM=<courier>
 //   FOOD_ONLY_TRADE=1) restart when their run ends; a farmer only while it has food or fish wait at the courier;
 // - the courier (scripts/foodcourier.ts) goes when the cook has MIN_FISH cooked fish banked and a farmer's food
@@ -20,12 +20,12 @@ const COOK = process.argv[2] ?? 'Mightyrod';
 const COURIER = process.argv[3] ?? 'Bigpackage';
 let FARMERS = (process.argv[4] ?? 'Pocketrocket,mmtha0205').split(',').map(x => x.trim()).filter(Boolean);
 // .practice/foodchain.json ({"farmers": [...]}) is read every tick: on Windows, stopping this process also stops every
-// bot it started (2026-10-23: Mightyrod stopped mid-run), so a change of farmers must not need a restart.
+// bot it started (Mightyrod stopped mid-run), so a change of farmers must not need a restart.
 const CONF = join(resolve(import.meta.dir, '..'), '.practice', 'foodchain.json');
 const readConf = () => { try { const f = JSON.parse(readFileSync(CONF, 'utf8')).farmers; if (Array.isArray(f) && f.every(x => typeof x === 'string' && /^[A-Za-z0-9 _-]{1,12}$/.test(x) && !/^haggis$/i.test(x))) { if (f.join() !== FARMERS.join()) say(`farmers ${f.join(',')}`); FARMERS = f; } } catch { /* keep */ } };
 const MIN_FISH = Number(process.env.MIN_FISH ?? 100);
 const LOW = Number(process.env.LOW ?? 40);
-// Fewer fish than this are not handed out: the courier fetches more first (2026-10-24: 1-fish hand-outs made farmers
+// Fewer fish than this are not handed out: the courier fetches more first (1-fish hand-outs made farmers
 // log in, eat once and log out again).
 const MIN_GIVE = Number(process.env.MIN_GIVE ?? 8);
 if (process.env.DEMO_OK !== '1') { console.log('foodchain: set DEMO_OK=1 (live server)'); process.exit(2); }
@@ -74,7 +74,7 @@ const farmerFood = (a: string) => { const s = status(a); return count(s?.invento
 const courierFish = () => count(status(COURIER)?.inventory, /^(trout|salmon)$/i);
 const courierCoins = () => count(status(COURIER)?.inventory, /^coins$/i);
 // A farmer waits when the newest progress line of its own log says so. The status `phase` keeps the last MILESTONE
-// after the trade is done (2026-10-23: four failed hand-outs to a farmer that was already farming again), and a
+// after the trade is done (four failed hand-outs to a farmer that was already farming again), and a
 // failed hand-out waits 2 minutes before the next try.
 const lastTry = new Map<string, number>();
 const waitingFarmer = () => FARMERS.find(f => {
@@ -84,7 +84,7 @@ const waitingFarmer = () => FARMERS.find(f => {
     return /waiting for food trade/.test(last);
 });
 
-// An even share for each farmer that is low on food (2026-10-23: the first hand-out gave all 128 fish to one
+// An even share for each farmer that is low on food (the first hand-out gave all 128 fish to one
 // farmer and the other logged out hungry).
 async function giveFish(farmer: string) {
     courierBusy = true;
@@ -142,8 +142,8 @@ async function tick() {
     // Farmers: restart while they have food, or while the courier holds fish for them.
     for (const f of FARMERS) {
         if (running.has(f) || external(f) || dead.has(f)) continue;
-        // At least 5: the status list does not mark bank notes, and a single noted fish is no food (2026-10-23:
-        // mmtha0205 was restarted every 3.5 min with 1 noted salmon and logged out with "no food" each time).
+        // At least 5: the status list does not mark bank notes, and a single noted fish is no food
+        // (mmtha0205 was restarted every 3.5 min with 1 noted salmon and logged out with "no food" each time).
         if (farmerFood(f) >= 5 || courierFish() >= MIN_GIVE) start(f, 'scripts/goldfarm.ts', { FOOD_FROM: COURIER, FOOD_ONLY_TRADE: '1' });
     }
     // Courier trip: fish ready at the cook and a farmer low (or waiting) and the courier holds none.
@@ -152,7 +152,7 @@ async function tick() {
     const low = FARMERS.filter(f => !dead.has(f)).some(f => farmerFood(f) < LOW);
     if (ready < MIN_FISH || !low) return;
     // Fares: four boat fares cost 120. A top-up needs a logged-out farmer, so ask only when a trip cannot be paid
-    // (2026-10-23: under 240 it blocked trips while all farmers were busy).
+    // (under 240 it blocked trips while all farmers were busy).
     if (courierCoins() < 120) { if (!(await topUpFares())) return; }
     courierBusy = true;
     void runOnce(COURIER, 'scripts/foodcourier.ts', { FROM: COOK, FEATHERS: '0', WAIT: '1500' }, 3_600_000).finally(() => { courierBusy = false; });

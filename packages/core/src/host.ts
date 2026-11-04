@@ -275,7 +275,7 @@ function createInstance(name: string, id: string, script: string, args: string[]
         async openBot(botName, o) {
             if (finished || inst.execution.signal.aborted || executionContext.getStore()?.signal.aborted) return never;
             const opening = (async () => {
-                const s = await open(botName, hostedOpenOptions(l => inst.log(l), (s,detail) => inst.finish([s], false, detail), o));
+                const s = await open(botName, { record: { script, argv: inst.argv.slice(2) }, ...hostedOpenOptions(l => inst.log(l), (s,detail) => inst.finish([s], false, detail), o) });
                 if (finished || inst.execution.signal.aborted) {
                     await inst.execution.cleanup(() => settle([s], false, 'session opened after worker stopped', { log: l => inst.log(l) }));
                     throw inst.execution.signal.reason ?? new Error('worker stopped during open');
