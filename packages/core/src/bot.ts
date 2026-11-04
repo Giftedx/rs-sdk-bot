@@ -105,7 +105,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     // Random events (dryad, genie, lost axe...): handled on every tick unless RANDOM_EVENTS=0 (packages/core/src/randomevents.ts).
     if (process.env.RANDOM_EVENTS !== '0') randomEvents.set(s, watchRandomEvents(s));
     // Any bot stops cleanly when .practice/stop-<name> appears (checked every 25 ticks): a script that never checks
-    // it (seen: fishing30 under the supervisor, 2026-10-23) still logs out in game.
+    // it (seen: fishing30 under the supervisor) still logs out in game.
     let stopTicks = 0;
     let stopping = false;
     s.onTick(() => {
@@ -145,7 +145,7 @@ export function logoutSession(s: Session): Promise<string> {
     return logout(adapter, 15_000).catch(e => `error ${String(e)}`).then(out => { s.lifecycle?.record('logout', out); return out; });
 }
 
-// A session close can hang (seen 2026-10-22: one proving run printed RESULT ok, then sat until the 300 s
+// A session close can hang (seen: one proving run printed RESULT ok, then sat until the 300 s
 // kill). Each close gets `ms`; the caller exits either way, and the engine saves on socket close.
 export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number): Promise<{ closed: number; timedOut: number }> {
     let closed = 0;

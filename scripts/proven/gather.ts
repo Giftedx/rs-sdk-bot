@@ -6,7 +6,7 @@ const s = await openBot(process.argv[2]!);
 try {
     const why: Record<string, number> = {};
     const t0 = s.tick();
-    // Bounded by ticks, not tries: back-to-back runs (seen 2026-10-22) start with the nearby trees still felled,
+    // Bounded by ticks, not tries: back-to-back runs (seen) start with the nearby trees still felled,
     // and "No tree found" returns at once. Wait for a respawn instead of burning the loop.
     while (countItems(s, /^logs$/i) < 5 && s.tick() - t0 < 400) {
         const r: any = await s.bot.chopTree(/^tree$/i);

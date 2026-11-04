@@ -429,7 +429,7 @@ try {
         const fails0 = q.msgCount(/fail to pick the lock/i);
         // The only way out is north up the lane (x 2772-2773, z 2796-2802) and west through the guards' room. The
         // patrol (enum mm_jail_patrol_route) holds the lane for points 2-10, then hands over in the rest zone; a pick
-        // only in the handover window (tried 2026-10-24) waited 60-275 ticks a jailing against about 70 for this rule.
+        // only in the handover window (tried) waited 60-275 ticks a jailing against about 70 for this rule.
         const t0 = q.T();
         for (let i = 0; i < 160 && inCell(); i++) {
             await q.guard(`${label} lock`);
@@ -918,7 +918,7 @@ try {
         console.log(`NOTE bananas given at ${gaveAt}`);
         // The toy's 100-tick timer: the bot picks the garden's other bananas while the aunt is away (each tree holds 5,
         // banana_tree.rs2; 2 HP each, eaten on the walks below). Food is the limit at Hitpoints 35: a full pass died in
-        // the 4th dungeon pass with the 12 sharks gone (practice, 2026-10-24).
+        // the 4th dungeon pass with the 12 sharks gone (practice).
         await toOutside();
         let picked = 0;
         for (let i = 0; i < 200 && q.T() - gaveAt < 100; i++) {

@@ -1,4 +1,4 @@
-// PROOF 3/3 on practice (2026-10-24): 937, 910, 942 ticks; the dusty key chain is in the run, research/quest-plan.md 1o.
+// PROOF 3/3 on practice: 937, 910, 942 ticks; the dusty key chain is in the run, research/quest-plan.md 1o.
 // Scorpion Catcher from preset quest_scorpion (beside Thormac, top of the Sorcerer's Tower), at the planner's state
 // for the scorpion row (tick 53,715, every skill 99). Reward: 66,250 Strength (x25: 165,625), 1 QP
 // (quest_scorpcatcher.rs2:55-60). Paths below are under vendor/rs-sdk/server/content/scripts/.

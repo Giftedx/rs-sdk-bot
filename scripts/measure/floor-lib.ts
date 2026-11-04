@@ -40,7 +40,7 @@ export async function send(s: Session, m: Meter, a: Act): Promise<boolean> {
 }
 
 // Throws once the session has ended: waitTicks then resolves at once and the tick counter stops, so a loop bounded
-// by ticks would spin and eat memory (seen 2026-10-23: 2.1 GB in floor-fm-rows.ts).
+// by ticks would spin and eat memory (seen: 2.1 GB in floor-fm-rows.ts).
 const endedSessions = new WeakSet<object>();
 export async function tick(s: Session, n = 1): Promise<void> {
     if (!(s as any).__endWatch) { (s as any).__endWatch = true; void s.ended?.then(() => endedSessions.add(s)); }

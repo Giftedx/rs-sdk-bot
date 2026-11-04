@@ -1,5 +1,5 @@
 // bun scripts/rune-supply.ts <account> [target=20]. One session; finite, observed stages.
-// Reuse decision 2026-10-28: local train-chickens, quest-runemysteries,
+// Reuse decision: local train-chickens, quest-runemysteries,
 // gather-essence and rcair -> this worker. Adapt their session ownership and
 // finite limits. Acceptance belongs to fresh-rune-supply-proof, never a preset.
 import {existsSync} from 'node:fs';

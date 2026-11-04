@@ -1,7 +1,7 @@
 // Swarm dashboard server. Usage: bun packages/dashboard/server.ts  ->  http://localhost:3100
 // Sources: the status files every bot writes (.practice/status/<name>.json, packages/core/src/status.ts), the live
 // accounts in vendor/rs-sdk/bots (SERVER = the demo), the swarm controller (.practice/swarm-state.json), the world feed
-// (who is in the world, server tick, player count), our live hiscore ranks (cached 5 min), the 2026-10-22 board
+// (who is in the world, server tick, player count), our live hiscore ranks (cached 5 min), the board
 // snapshot (each skill board's #1), the live Equipment, Bank and Runite boards, Grand Exchange prices
 // (/api/market/items), research/owner-requests.md (the owner's request queue), the Haggis plan (research/haggis-run.md
 // when it has a board table, else haggis-plan.json here), and this machine (memory, CPU, bun processes).
@@ -245,7 +245,7 @@ const allResults = tailJsonl<Res>(FILES.results, 100_000);
 const results: Res[] = allResults.slice(-300).reverse();
 const died = (text: string) => /\bdied=true\b/.test(text) || /\bdied (?!=)/.test(text);
 // Per account, the newest result and the newest death. They do not drop out of the 300-row list when practice runs
-// fill it (2026-10-23: three live farmer deaths vanished from the page that way).
+// fill it (three live farmer deaths vanished from the page that way).
 const lastResult = new Map<string, string>(), newestRes = new Map<string, Res>(), newestDeath = new Map<string, Res>();
 const noteRes = (r: Res) => { lastResult.set(r.name, r.text); newestRes.set(r.name, r); if (died(r.text)) newestDeath.set(r.name, r); };
 for (const r of allResults) noteRes(r);
@@ -439,7 +439,7 @@ function rankDelta(name: string, board: string) {
     return { delta: base.rank - now.rank, since: base.at, hist: l.slice(-30).map(r => r.rank) };
 }
 // Live #1 per skill board (category = skill index + 1, Quest Points 100: packages/planner/src/scout-cli.ts),
-// refreshed hourly, one request a second. The 2026-10-22 snapshot is only the fallback, with its age shown.
+// refreshed hourly, one request a second. The snapshot is only the fallback, with its age shown.
 const CATEGORY: Record<string, number> = { Overall: 0, 'Quest Points': 100 };
 ['Attack', 'Defence', 'Strength', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', null, null, 'Runecraft']
     .forEach((b, i) => { if (b) CATEGORY[b] = i + 1; });
