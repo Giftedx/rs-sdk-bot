@@ -16,12 +16,21 @@ export type Template = {
     yields: (a: Acct) => Flow[]; spends?: (a: Acct) => Flow[];
     resources?: string[]; trains?: { skill: string; to: number; unlocks: string[] };
 };
-export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[] };
+// `fund`: the template needs coins the account lacks; a donor of this side sends them first (scripts/autopilot.ts
+// places the fleet order), and the account takes the job on the pass after the coins arrive.
+export type Funding = { from: string; to: string; coins: number; template: string };
+export type Assignment = { account: string; template?: Template; value: number; reason: string; resources: string[]; fund?: Funding };
 export type Inputs = {
     side: string; accounts: readonly Acct[]; owners: ReadonlyMap<string, { side: string }>; bill: readonly BillRow[];
     templates: readonly Template[]; prices: Readonly<Record<string, number>>; waste?: Readonly<Record<string, number>>;
     taken?: Readonly<Record<string, number>>; retired?: ReadonlySet<string>; capacity?: Readonly<Record<string, number>>;
+    // Accounts of this side free to trade now (no enabled swarm job), with their coins. Each keeps FUND_RESERVE.
+    donors?: readonly { name: string; coins: number }[];
+    // Lower-case names of accounts with an enabled job. Funding one would remove its running job, and the stop file
+    // scripts/swarm.ts writes for it would block the trade, so such an account is never funded.
+    unfundable?: ReadonlySet<string>;
 };
+export const FUND_RESERVE = 50_000;
 
 // A bill line still short is worth twice its shop value: it is acquisition work the route needs. A unit nobody needs
 // is worth half, the price a sale would fetch. A share of a job a training run unlocks counts for the training.
@@ -41,6 +50,9 @@ export function unitValue(item: string, bill: readonly BillRow[], prices: Readon
 const meets = (a: Acct, needs: Template['needs'], skillOverride?: { skill: string; to: number }) =>
     Object.entries(needs?.skills ?? {}).every(([s, l]) => (skillOverride?.skill === s ? Math.max(skillOverride.to, a.skills[s] ?? 1) : a.skills[s] ?? 1) >= l)
     && Object.entries(needs?.items ?? {}).every(([i, n]) => (a.items[norm(i)] ?? 0) >= n);
+// The coins a template needs beyond what the account holds, and its needs without the coin line.
+const coinShort = (a: Acct, needs: Template['needs']) => Math.max(0, (Object.entries(needs?.items ?? {}).find(([i]) => norm(i) === 'coin')?.[1] ?? 0) - (a.items.coin ?? 0));
+const withoutCoins = (needs: Template['needs']): Template['needs'] => ({ ...needs, items: Object.fromEntries(Object.entries(needs?.items ?? {}).filter(([i]) => norm(i) !== 'coin')) });
 
 export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'prices' | 'waste'>): number {
     const gross = t.yields(a).reduce((v, f) => v + f.perTick * unitValue(f.item, inp.bill, inp.prices), 0);
@@ -51,7 +63,7 @@ export function jobValue(t: Template, a: Acct, inp: Pick<Inputs, 'bill' | 'price
 export function plan(inp: Inputs): Assignment[] {
     const byId = new Map(inp.templates.map(t => [t.id, t]));
     const mine = inp.accounts.filter(a => (inp.owners.get(a.name.toLowerCase())?.side ?? 'local') === inp.side && a.side === inp.side);
-    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string };
+    type Cand = { account: string; template: Template; value: number; resources: string[]; reason: string; coins?: number };
     const cands: Cand[] = [];
     for (const a of mine) for (const t of inp.templates) {
         if (inp.retired?.has(pairKey(a.name, t.id))) continue;
@@ -66,16 +78,30 @@ export function plan(inp: Inputs): Assignment[] {
         } else if (meets(a, t.needs)) {
             const value = jobValue(t, a, inp);
             if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+') });
+        } else if (inp.donors?.length && !inp.unfundable?.has(a.name.toLowerCase()) && coinShort(a, t.needs) > 0 && meets(a, withoutCoins(t.needs))) {
+            const value = jobValue(t, a, inp);
+            if (value > 0) cands.push({ account: a.name, template: t, value, resources: t.resources ?? [], reason: t.yields(a).map(f => f.item).join('+'), coins: coinShort(a, t.needs) });
         }
     }
     cands.sort((x, y) => y.value - x.value || x.account.localeCompare(y.account) || x.template.id.localeCompare(y.template.id));
     const used = new Map(Object.entries(inp.taken ?? {})), done = new Map<string, Assignment>();
+    // Donor coins above the reserve, spent as funded candidates take them; a funded account gives nothing.
+    // A donor that gives stays free this pass, so the fleet agent can log it in for the trade.
+    const pool = new Map((inp.donors ?? []).map(d => [d.name, Math.max(0, d.coins - FUND_RESERVE)])), gave = new Set<string>();
     for (const c of cands) {
-        if (done.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
+        if (done.has(c.account) || gave.has(c.account) || c.resources.some(r => (used.get(r) ?? 0) >= (inp.capacity?.[r] ?? 1))) continue;
+        let fund: Funding | undefined;
+        if (c.coins) {
+            const from = [...pool].filter(([n, left]) => n.toLowerCase() !== c.account.toLowerCase() && !done.has(n) && left >= c.coins!).sort((x, y) => y[1] - x[1])[0]?.[0];
+            if (!from) continue;
+            pool.set(from, pool.get(from)! - c.coins); gave.add(from);
+            fund = { from, to: c.account, coins: c.coins, template: c.template.id };
+        }
+        pool.delete(c.account);
         for (const r of c.resources) used.set(r, (used.get(r) ?? 0) + 1);
-        done.set(c.account, { account: c.account, template: c.template, value: c.value, reason: c.reason, resources: c.resources });
+        done.set(c.account, { account: c.account, template: c.template, value: c.value, reason: fund ? `${c.reason}, funded ${c.coins} coins by ${fund.from}` : c.reason, resources: c.resources, ...(fund ? { fund } : {}) });
     }
-    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: 'vacant: no template meets its skills and holdings with a free resource' });
+    return mine.map(a => done.get(a.name) ?? { account: a.name, value: 0, resources: [], reason: gave.has(a.name) ? 'vacant: gives coins this pass' : 'vacant: no template meets its skills and holdings with a free resource' });
 }
 
 // The swarm job for an assignment. `autopilot` marks it as this side's planner job; the CLI replaces only marked jobs.
