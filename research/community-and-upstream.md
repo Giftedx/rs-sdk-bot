@@ -622,3 +622,33 @@ Clock Tower `walk to trough`: gate 37 at 2595,9657 is `kind:"unknown"` in `knowl
 Do not copy: jackgolding `97cafdb9` says Aubury's teleport is ungated, but `essence_mine.rs2:2` needs Rune Mysteries. lc-headless says Scavvo does not restock, but the shop has `restock=yes`. No gain: Ghosts branches, LC-roadmap, bleugreenlab/cairn (BSL 1.1, no game planner).
 
 Third web round: no copy of `bleugreen/rs-sdk` was found. `gh search code` returned no other repo, and the Wayback Machine has no snapshot of its `RUN-ORDER.md` or any path under the repo. `packages/planner/src/cairn-route.json` and `research/botting-ecosystem-2026-10-23.md` hold what we kept. New low-value items: [Ender's paladin journal](https://lostcity.rs/t/ender-s-paladin-journal-agent-shard/18746) (an agent's public log, combat about 90, 12 quest points), and RuneBench's `dragon-team-60m` task (ten bots on the King Black Dragon, with a kill ledger). No arXiv paper on rs-sdk was found.
+
+### 9.10 GitHub census
+
+Method: a script walked every fork of 12 root repos at every depth, read every branch not shared with its root, and compared each fork's content folders with upstream. Then 30 code searches and 22 repo and topic searches covered 1,336 repos. Result: 162 forks of rs-sdk, 108 repos with their own branches, 92 with content read. Forks are mostly old, so a rate there is not evidence for the current server. No board method beat a row of ours. No credential file was opened.
+
+| Claim | Source | Check | Our state | Decision |
+|---|---|---|---|---|
+| A low-combat miner at the Lava Maze runite rocks (wild 46) can be attacked only by combat 49 or lower, and a pickaxe in the pack is enough | [GoonMachine/rs-sdk](https://github.com/GoonMachine/rs-sdk) `learnings/scarce-goods.md` `9091cd36` (MIT, branch `cloud/ab-a`) | Confirmed: `pvp_combat.rs2:34-41`; not run live. Only the account's own ores count | `boards-special.md` sends Haggis (combat 126) after every stamped board | owner decision: a new option for R1. ESTIMATE 8-14 days for 2,464 ores, uncontested |
+| A fresh account stalls in Waterfall at 10 HP, with deaths in the Golrie cave and at White Wolf; Witch's House first gives 158,125 Hitpoints XP | GoonMachine `learnings/ab-results-a.md` `ba76979e` (MIT) | XP confirmed (`quest_priest.rs2:98`, `quest_vampire.rs2:42`, `quest_ball.rs2:202`); deaths are their log only | presets use every skill at 99 | add a low-level `waterfall.ts` preset before the Haggis rehearsal |
+| Heroes' Guild runite rocks stand at 2937,9882 and 2941,9884 | GoonMachine `scarce-goods.md` | Confirmed: `m45_154.jm2`, `heroes_entrance.rs2:5`. These ores do not count on the board | no plan uses them | rehearsal site and ore income |
+| 25 quest guides with journal progress rules, and 69 rows naming each `journal_script` | [acfrazier/274bot](https://github.com/acfrazier/274bot) `1aa74601` (MIT) `crates/script/paths/289/`, `crates/api/data/game-data/289/quests.json` | One rule confirmed (`cog_journal.rs2:39`); another content commit | no journal code in `quest-lib.ts` | rule data for the reader in 9.9 |
+| Script-gated doors are marked `open` in `knowledge/doors.json` | [marcdubs/2004Scape-AP-Logic](https://github.com/marcdubs/2004Scape-AP-Logic) `3303025b` (MIT by file) `rs2004_logic.json` `gatedAreas` | Confirmed for `tbwt_bamboo_door` and the Mort Myre gate; `zanarisdoor` is a false positive | classifier in `packages/knowledge/src/doors.ts` | low: fix when a walk stops at one |
+| `raw_lava_eel` has a source | Same file | Confirmed: `lavafish.rs2` | `knowledge/item-sources-gaps.md` lists none | low |
+| A script can close the chat, wait, then open the next page | 274bot `docs/scripting/quest-guides.md` | Partly: `IF_CLOSE` then `p_delay` in 39 quest lines | `pagePending` covers text already arrived | low: only if a step ends early |
+| A gift fails on a full pack; one unheld item fails the whole offer | GoonMachine `ab-results-b.md` | Partly: "Item not found" at `sdk/actions.ts:2276` | no space check in `fleet-trade.ts` | low: patch after a receipt shows it |
+
+Discord sample: GoonMachine `learnings/discord-meta-2026-08-15.md` (MIT) is a read-only sample of the rs-sdk Discord: `general`, `99str-contest`, `agent-techniques`, `share-progress` and a `pk` search. Claims are third-party and graded there. Reports worth keeping:
+
+- Quest-based combat bootstrap beat pure grinding; a level-3 Waterfall attempt needed a rat and food fallback.
+- A four-bot LiteClient pilot used deterministic tick policies, no model call in the hot loop, and a 20-stun stop.
+- `1G` used a full browser client for routes with ropes, trees and doors, and a thin client for combat loops.
+- A geofenced defensive script guarded a rune rock area, and bots were killed on bank return routes.
+- Two agents failed to coordinate Shield of Arrav until told to listen to the partner.
+- Medium clues are scripted; hard clues still need help.
+
+Do not copy: GoonMachine King of the Hill formations (replaced by Lava Maze runite upstream), its "no Grand Exchange" note (stale), and "a failed guard pickpocket makes the guard aggro" (the stun path does not). AP-Logic errors: Holy Grail needs `%arthur`, Shilo checks go to Crafting 20, Firemaking 30 is not a hard TBWT gate.
+
+Nothing useful: jrpii/rs-sdk-temporal-planning (two toy tasks, no costs), msalmeida-boomer/runescaper, Dexploarer, saimdlx, nymph-ai, AuburyEssentian, Kimmo3223, Wgelyjr (5x server), jamie-legg, dlhg, maxwelllord/AgentPairRSBench, danmarkmann/runebench, skiller185 (README only), tristinhill26-bit, abuaboud/MoRS (modern OSRS), RecoX/aobench, skulltrick/lclite, DataHoarder6/2004lite, owendirk/runelite-bot-sdk, nrylov/rs2011-ts, rbriphy, halogod35, reclear-io/llmref.
+
+Two-rat flinch is rejected: both rats are penned at x 3014-3020, z 3282-3296, and no tile in their range is multiway (`research/gathering-tricks.md`).
