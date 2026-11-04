@@ -6,7 +6,8 @@
 // quests/quest_priest/scripts/restless_ghost.rs2, quest_priest.rs2.
 import { openQuest } from './quest-lib';
 import {waitUntil} from '../../packages/core/src/ticks';
-import {leaveGhostBasement} from '../ghost-basement-exit';
+import {leaveGhostBasement,retainedGhostSkull} from '../ghost-basement-exit';
+import {questFlags} from '../../packages/core/src/quest-status';
 import {readSkullResume,validateSkullResume,SKULL_WAIT_TICKS} from '../ghost-skull-entry';
 
 const AERECK = { x: 3244, z: 3206 };
@@ -24,7 +25,9 @@ try {
     const off = q.s.onTick(() => { if (q.msgCount(/quest complete/i) > 0) questDone = true; });
     const inBasement = () => (q.pos()?.worldZ ?? 0) > 9000;
     const ghostState = () => q.sawText(/try and get the skull back/i);
-
+    const state=()=>questFlags(q.s.client)?.find(f=>f.name==='The Restless Ghost')?.state??'unknown';
+    await waitUntil(q.s,()=>state()!=='unknown',{timeoutTicks:20});
+    const retained=retainedGhostSkull(state(),q.inv(),q.s.sdk.getEquipment());
     const openCoffin = async (label: string): Promise<void> => {
         await q.walk(`${label} shed`, [{ x: 3246, z: 3193, tol: 1 }]);
         await q.openDoor(`${label} shed door`, 3247, 3193);
@@ -32,6 +35,8 @@ try {
         const open = () => q.findLoc(l => l.x === COFFIN.x && l.z === COFFIN.z && (l.optionsWithIndex ?? []).some((o: any) => /^close$/i.test(o.text)));
         await q.step(`${label} coffin`, () => { const c = shut(); return c ? q.opLoc(c, q.opIndex(c, /^open$/i)) : q.waitTicks(1); }, () => !!open(), 10, 4);
     };
+    if(retained)console.log('GHOST_RETAINED_SKULL '+JSON.stringify({state:state(),position:q.pos()&&{x:q.pos().worldX,z:q.pos().worldZ,level:q.pos().level}}));
+    else{
     const resume=process.env.GHOST_ENTRY;
     if(resume&&resume!=='skull-pickup')throw Error('unsupported GHOST_ENTRY');
     if(resume){
@@ -74,6 +79,7 @@ try {
     if(!await q.waitUntil(()=>!!skullOnGround(),SKULL_WAIT_TICKS))throw Error('shared skull unavailable within '+SKULL_WAIT_TICKS+' ticks');
     await q.step('take skull', () => { const g = skullOnGround(); return g ? q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' }) : q.waitTicks(1); }, () => q.has(ITEM.skull), 10, 5);
     q.milestone(4);
+    }
 
     // 5. Lumbridge teleport, the coffin again (it shuts after 300 ticks, quest_priest.rs2:14), the skull on the open
     // coffin queues the completion (:53-65).

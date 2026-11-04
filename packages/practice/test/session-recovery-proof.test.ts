@@ -877,7 +877,7 @@ test('isolated recovery proof needs no publish lock and still rejects runtime or
  const predicate=text.match(/const proof=\{ok:([^\r\n]+),/)!;
  expect(predicate).not.toBeNull();
  const expression=predicate[1]!.replaceAll('(c:any)','(c)');
- const evaluate=new Function('cases','checks','source','workerSourceRevision','runnerSha256','hash','runner',`return (${expression});`);
+ const evaluate=new Function('cases','checks','source','launchRevision','runnerSha256','hash','runner',`return (${expression});`);
  const valid=(revision:string,runnerHash:string)=>evaluate([{ok:true}],{offline:{ok:true}},'runtime',()=>revision,'runner',()=>runnerHash,'runner.ts');
  expect(valid('runtime','runner')).toBe(true);
  expect(valid('changed','runner')).toBe(false);
@@ -889,7 +889,7 @@ test('native recovery uses the current delivery identity with the shark default'
  expect(recoveryCapability('cow-progress-order')).toBe('cow-progress-order');expect(recoveryCapability('shark-supply-order')).toBe('shark-supply-order');
  expect(()=>recoveryCapability('../cow')).toThrow();expect(()=>recoveryCapability('')).toThrow();
  const text=readFileSync(join(import.meta.dir,'../src/session-recovery-proof.ts'),'utf8');expect(text).toContain('process.env.DELIVERY_ID??deliveryTask?.id');
- expect(CHECK_CASES.completed).toEqual(['completed','completed-refusals']);
+ expect(CHECK_CASES.completed).toEqual(['completed','completed-held-producer','completed-refusals']);
 });
 test('completed router pins fail closed if either actual integration file drifts',()=>{
  const base=mkdtempSync(join(tmpdir(),'completed-router-pins-'));

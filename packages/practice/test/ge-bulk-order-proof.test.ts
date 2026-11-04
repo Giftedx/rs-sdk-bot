@@ -1,6 +1,15 @@
-import {test,expect} from 'bun:test';
-import {bulkOrderChecks,ORDER,NORTH_CASE,northEntryCheck,duplicateRefusalCheck} from '../src/ge-bulk-order-proof';
+import {test,expect,spyOn} from 'bun:test';
+import {bulkOrderChecks,ORDER,NORTH_CASE,northEntryCheck,duplicateRefusalCheck,MAGIC_CASE,magicOrderChecks,stageWithStoppedStack,syncPracticeCheckpoint,geProofEndpoints,geProofAccountEnv,assertGeProofAccount,startGeProofStack,selectGeProofEndpoints} from '../src/ge-bulk-order-proof';
+import {Database} from 'bun:sqlite';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {readPracticeSave} from '../../../scripts/measure/fleet-player-save';
 import type {ItemOrder} from '../../../scripts/buy-owned-ge-item';
+import {verifyCase} from '../src/ge-bulk-order-proof';
+import {capabilityRevision} from '../../core/src/worker-release';
+import {geProofRuntime} from '../src/ge-bulk-order-proof';
+test('native GE proof binds the acquired worker closure',()=>{expect(geProofRuntime()).toBe(capabilityRevision(['scripts/buy-owned-ge-item.ts']));});
 
 const save=(bank:{id:number;count:number}[],pack:{id:number;count:number}[]=[])=>({version:9,position:{x:3185,z:3436,level:0},vars:{},
  skills:Array.from({length:21},(_,i)=>({index:i,level:i===3?10:1,xp:0,rawExperience:0})),
@@ -12,6 +21,196 @@ const input={before:save([{id:995,count:2000}]),after:save([{id:995,count:1100},
  sell:{code:0,log:'GE_SELL_RESULT {"ok":true,"detail":"x"}\nLOGOUT logged-out\n'},
  buy:{code:0,log:line({ok:true,targetMet:true,conserved:true,banked:true,reserveKept:true,acquired:300,spent:900,phase:'settled',offerId:7})},
  again:{code:0,log:line({ok:true,targetMet:true,conserved:true,banked:true,reserveKept:true,phase:'settled',offerId:7,newItemsThisSession:0,cashDeltaThisSession:0})}};
+
+test('elapsed verification delay alone does not invalidate same-source saved GE effects',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ge-saved-age-')),at=1793520000000;
+ const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-saved-age');
+ const meta={at,source:geProofRuntime(),server:p.server,endpoints:{ports:p.ports,instance:p.instance},buyer:request.actor,orderKey:request.goal,sellCode:0,buyCode:0,againCode:0};
+ const clock=spyOn(Date,'now').mockReturnValue(at);
+ try{
+  for(const label of ['before','after','repeat'] as const){const s=input[label];writeFileSync(join(dir,label+'.sav'),saveBytes(s.position,s.inventories));}
+  for(const label of ['sell','buy','again'] as const){writeFileSync(join(dir,label+'.log'),input[label].log);writeFileSync(join(dir,label+'.err'),'');}
+  writeFileSync(join(dir,'journal.json'),JSON.stringify({...journal,request:{...request,server:p.server}}));
+  const metadata=(changes:object={})=>writeFileSync(join(dir,'native.json'),JSON.stringify({...meta,...changes}));
+  metadata();
+  const immediate=verifyCase(dir);
+  expect(immediate.ok).toBe(true);
+  clock.mockReturnValue(at+86400000);
+  const delayed=verifyCase(dir);
+  expect(delayed.ok).toBe(true);
+  expect(delayed.checks).toEqual(immediate.checks);
+  expect(delayed.ageMs).toBe(86400000);
+  for(const invalid of [null,'1793520000000',at+86400001]){metadata({at:invalid});expect(verifyCase(dir).ok).toBe(false);}
+  metadata({source:'different-source'});expect(verifyCase(dir).checks.source).toBe(false);
+  metadata();writeFileSync(join(dir,'buy.log'),input.buy.log.replace('LOGOUT logged-out','LOGOUT timeout'));
+  expect(verifyCase(dir).checks.logout).toBe(false);
+ }finally{clock.mockRestore();rmSync(dir,{recursive:true,force:true});}
+});
+
+test('owned GE endpoints propagate through starts, account config and child guards; non-practice endpoints refuse',async()=>{
+ const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-test');
+ const configured=geProofAccountEnv('SERVER=localhost:8888\nGATEWAY_URL=ws://localhost:7780\nPASSWORD=fixture\n',p);
+ expect(configured).toContain('PASSWORD=fixture\n');
+ expect(configured).toContain('SERVER=127.0.0.1:28888\n');
+ expect(configured).toContain('GATEWAY_URL=ws://127.0.0.1:27780\n');
+ expect(assertGeProofAccount(configured,p.env)).toBe(p.server);
+ const starts:unknown[]=[];
+ const start=async(opts:any)=>{starts.push({opts,env:{AGENT_PORT:process.env.AGENT_PORT,GATEWAY_URL:process.env.GATEWAY_URL,GE_DATABASE:process.env.GE_DATABASE}});return{logs:{engine:'',gateway:''},stop:async()=>{}};};
+ const old=process.env.GE_DATABASE;
+ await startGeProofStack(p,start);await startGeProofStack(p,start);
+ expect(starts).toEqual(Array.from({length:2},()=>({opts:{ports:p.ports,instance:'ge-test',tickMs:150,readyTimeoutMs:60000},env:{AGENT_PORT:'27780',GATEWAY_URL:'http://127.0.0.1:27780',GE_DATABASE:p.env.GE_DATABASE}})));
+ expect(process.env.GE_DATABASE).toBe(old);
+ expect(()=>assertGeProofAccount(configured.replace(p.server,'rs-sdk-demo.fly.dev'),p.env)).toThrow('owned practice');
+ expect(()=>assertGeProofAccount(configured.replace(p.server,'localhost:8888'),p.env)).toThrow('owned practice');
+ expect(()=>assertGeProofAccount(configured,{...p.env,GE_PROOF_ENGINE:'https://example.com'})).toThrow();
+ expect(()=>geProofEndpoints({engine:8888,gateway:27780,management:28898,tcp:28899},'ge-test')).toThrow();
+});
+
+test('owned management port propagates on initial start and stopped-stack restart, then restores the parent environment',async()=>{
+ const p=geProofEndpoints({engine:28888,gateway:27780,management:28898,tcp:28899},'ge-management');
+ const previous=process.env.WEB_MANAGEMENT_PORT,events:string[]=[];
+ process.env.WEB_MANAGEMENT_PORT='8898';
+ const start=async()=>{
+  events.push(`start:${process.env.WEB_MANAGEMENT_PORT}`);
+  return{logs:{engine:'',gateway:''},stop:async()=>{events.push('stop');}};
+ };
+ try{
+  expect(p.env.WEB_MANAGEMENT_PORT).toBe('28898');
+  const stack=await startGeProofStack(p,start);
+  expect(process.env.WEB_MANAGEMENT_PORT).toBe('8898');
+  await stageWithStoppedStack('management.sav',()=>stack.stop(),async()=>{events.push('stage');return 'management.sav';},MAGIC_CASE.position,
+   ()=>startGeProofStack(p,start),()=>({...input.before,position:MAGIC_CASE.position}));
+  expect(events).toEqual(['start:28898','stop','stage','start:28898']);
+  expect(process.env.WEB_MANAGEMENT_PORT).toBe('8898');
+  for(const management of [8898,p.ports.engine,p.ports.gateway,NaN,1023,65536])
+   expect(()=>geProofEndpoints({...p.ports,management},p.instance)).toThrow('owned practice endpoints required');
+ }finally{if(previous===undefined)delete process.env.WEB_MANAGEMENT_PORT;else process.env.WEB_MANAGEMENT_PORT=previous;}
+});
+
+test('owned TCP selection rejects an occupied fourth port and propagates NODE_PORT through both starts',async()=>{
+ const checked:number[]=[],samples=[0,0.01];
+ const p=selectGeProofEndpoints(port=>{checked.push(port);return port!==20003;},()=>samples.shift()!);
+ expect(checked).toEqual([20000,20001,20002,20003,20200,20201,20202,20203]);
+ expect(p.ports).toEqual({engine:20200,gateway:20201,management:20202,tcp:20203});
+ const previous=process.env.NODE_PORT,events:string[]=[];
+ process.env.NODE_PORT='43594';
+ const start=async()=>{
+  events.push(`start:${process.env.NODE_PORT}`);
+  return{logs:{engine:'',gateway:''},stop:async()=>{events.push('stop');}};
+ };
+ try{
+  expect(p.env.NODE_PORT).toBe('20203');
+  const stack=await startGeProofStack(p,start);
+  expect(process.env.NODE_PORT).toBe('43594');
+  await stageWithStoppedStack('tcp.sav',()=>stack.stop(),async()=>{events.push('stage');return 'tcp.sav';},MAGIC_CASE.position,
+   ()=>startGeProofStack(p,start),()=>({...input.before,position:MAGIC_CASE.position}));
+  expect(events).toEqual(['start:20203','stop','stage','start:20203']);
+  expect(process.env.NODE_PORT).toBe('43594');
+  const configured=geProofAccountEnv('SERVER=localhost:8888\nGATEWAY_URL=ws://localhost:7780\n',p);
+  expect(assertGeProofAccount(configured,p.env)).toBe(p.server);
+  for(const tcp of [43594,8888,7780,8898,p.ports.engine,p.ports.gateway,p.ports.management,NaN,1023,65536,undefined])
+   expect(()=>geProofEndpoints({...p.ports,tcp:tcp as number},p.instance)).toThrow('owned practice endpoints required');
+  let attempts=0;
+  expect(()=>selectGeProofEndpoints(()=>{attempts++;return false;},()=>0)).toThrow('owned practice ports unavailable');
+  expect(attempts).toBe(100);
+ }finally{if(previous===undefined)delete process.env.NODE_PORT;else process.env.NODE_PORT=previous;}
+});
+
+function magicInput(){
+ const before={...save(MAGIC_CASE.bank,MAGIC_CASE.pack),position:MAGIC_CASE.position};
+ const bank=(earth:number,coins:number)=>MAGIC_CASE.bank.map(i=>({...i,count:i.id===557?earth:i.id===995?coins:i.count})).concat({id:563,count:5});
+ const law=save(bank(4,14911),MAGIC_CASE.pack),earth=save(bank(5,14891),MAGIC_CASE.pack);
+ const lawJournal:ItemOrder={...journal,request:{...request,item:563,quantity:5,limit:1000,reserve:10000,rescueMode:'npc-respawn-once'},coinsBefore:19911,acquired:5,refund:0,
+  rescue:{phase:'bank-reconciled',lifeId:1,respawnCount:0,targetIndex:7,bank:MAGIC_CASE.bank,bankAt:1}};
+ const earthJournal:ItemOrder={...journal,request:{...request,item:557,quantity:1,expectedOwned:4,limit:20,reserve:10000},coinsBefore:14911,itemsBefore:4,acquired:1,refund:0};
+ const effect=(n:number)=>({ok:true,acquired:n,targetMet:true,conserved:true,unrelated:true,banked:true,reserveKept:true,died:false,damaged:false});
+ const traces='START 2853 3452 0\n'+['rescue-intent','rescue-respawned','rescue-bank-reconciled'].map(stage=>'GE_MARKET_ENTRY '+JSON.stringify({stage,hp:10,position:{x:3221,z:3218,level:0}})+'\n').join('');
+ const refuseBefore={...before,inventories:{...before.inventories,93:[{id:590,count:1,slot:0},{id:995,count:1,slot:1}]}};
+ return{before,law,earth,repeat:law,refuseBefore,refused:refuseBefore,lawJournal,earthJournal,
+  buy:{code:0,log:traces+line(effect(5))},topup:{code:0,log:line(effect(1))},again:{code:0,log:line({ok:true,newItemsThisSession:0,cashDeltaThisSession:0,offerId:7})},
+  refuse:{code:1,log:'RESULT false rescue refused: sole tinderbox590 required\nLOGOUT logged-out\n'}};
+}
+test('pocket staging waits for stack stop completion and the buyer waits for verified staging and restart',async()=>{
+ const bankSave=save(MAGIC_CASE.bank,MAGIC_CASE.pack),pocketSave={...bankSave,position:MAGIC_CASE.position};
+ const stopped=Promise.withResolvers<void>(),starting=Promise.withResolvers<void>(),ready=Promise.withResolvers<void>();
+ const events:string[]=[];let disk=bankSave;
+ const pending=stageWithStoppedStack('x.sav',async()=>{
+  events.push('stop');await stopped.promise;
+  disk=bankSave;events.push('stopped');
+ },async()=>{events.push('stage');disk=pocketSave;return 'x.sav';},MAGIC_CASE.position,
+ async()=>{events.push('restart');starting.resolve();await ready.promise;events.push('ready');return 'owned-stack';},
+ ()=>{events.push('verify');return disk;}).then(stack=>{events.push('buyer');return stack;});
+ expect(events).toEqual(['stop']);
+ stopped.resolve();await starting.promise;
+ expect(events).toEqual(['stop','stopped','stage','verify','restart']);
+ expect(disk.position).toEqual(MAGIC_CASE.position);
+ ready.resolve();expect(await pending).toBe('owned-stack');
+ expect(events).toEqual(['stop','stopped','stage','verify','restart','ready','buyer']);
+ const refused:string[]=[];
+ const stage=async()=>{refused.push('stage');return 'x.sav';},restart=async()=>{refused.push('restart');};
+ await expect(stageWithStoppedStack('x.sav',async()=>{throw Error('stop failed');},stage,MAGIC_CASE.position,restart,()=>pocketSave)).rejects.toThrow('stop failed');
+ expect(refused).toEqual([]);
+ await expect(stageWithStoppedStack('x.sav',async()=>{},stage,MAGIC_CASE.position,restart,()=>bankSave)).rejects.toThrow('unconfirmed at 3185,3436,0');
+ expect(refused).toEqual(['stage']);
+});
+// Minimal v9 save bytes in the layout readPracticeSave decodes.
+function saveBytes(position:{x:number;z:number;level:number},inventories:Record<number,{id:number;count:number}[]>){
+ const b=Buffer.alloc(1024);b.writeUInt16BE(0x2004,0);b.writeUInt16BE(9,2);b.writeUInt16BE(position.x,4);b.writeUInt16BE(position.z,6);b.writeUInt8(position.level,8);
+ for(let i=0;i<21;i++)b.writeUInt8(i===3?10:1,32+i*5);
+ let at=133;b.writeUInt16BE(0,at);at+=2;const types=Object.keys(inventories);b.writeUInt8(types.length,at++);
+ for(const type of types){const items=inventories[Number(type)]!;b.writeUInt16BE(Number(type),at);b.writeUInt16BE(items.length,at+2);at+=4;
+  for(const i of items){b.writeUInt16BE(i.id+1,at);at+=2;if(i.count<255)b.writeUInt8(i.count,at++);else{b.writeUInt8(255,at++);b.writeInt32BE(i.count,at);at+=4;}}}
+ const out=b.subarray(0,at+4);out.writeUInt32BE(Bun.hash.crc32(out.subarray(0,at))>>>0,at);return out;
+}
+test('pocket staging replaces only the buyer bank checkpoint that PlayerLoading prefers over the .sav',()=>{
+ const dir=mkdtempSync(join(tmpdir(),'ge-checkpoint-')),pocketPath=join(dir,'pocket.sav'),evidence=join(dir,'before-checkpoint.sav');
+ const kit={93:MAGIC_CASE.pack,94:[],95:MAGIC_CASE.bank},pocket=saveBytes(MAGIC_CASE.position,kit),bank=saveBytes({x:3185,z:3436,level:0},kit);
+ writeFileSync(pocketPath,pocket);
+ const db=new Database(':memory:');
+ db.exec("CREATE TABLE accounts(owner TEXT PRIMARY KEY, save BLOB NOT NULL);CREATE TABLE offers(id INTEGER PRIMARY KEY, owner TEXT NOT NULL, slot INTEGER NOT NULL, state TEXT NOT NULL DEFAULT 'open')");
+ const other=saveBytes({x:3200,z:3200,level:0},{95:[{id:995,count:7}]});
+ db.query('INSERT INTO accounts VALUES (?,?),(?,?)').run('flgemag1',bank,'other',other);
+ db.query("INSERT INTO offers(owner,slot,state) VALUES ('flgemag1',-1,'done'),('other',0,'open')").run();
+ const row=(owner:string)=>Buffer.from(db.query<{save:Uint8Array},[string]>('SELECT save FROM accounts WHERE owner=?').get(owner)!.save);
+ try{
+  expect(syncPracticeCheckpoint(db,'FlGeMag1',pocketPath,MAGIC_CASE.position,evidence)).toEqual({x:3185,z:3436,level:0});
+  expect(readPracticeSave(evidence).position).toEqual({x:3185,z:3436,level:0});
+  expect(Buffer.compare(row('flgemag1'),pocket)).toBe(0);
+  expect(Buffer.compare(row('other'),other)).toBe(0);
+  // Refusals leave the checkpoint unchanged: open buyer offer, changed assets, wrong pocket position.
+  db.query('UPDATE accounts SET save=? WHERE owner=?').run(bank,'flgemag1');
+  db.query("INSERT INTO offers(owner,slot,state) VALUES ('flgemag1',2,'open')").run();
+  expect(()=>syncPracticeCheckpoint(db,'flgemag1',pocketPath,MAGIC_CASE.position,evidence)).toThrow('1 outstanding GE offers');
+  db.query("DELETE FROM offers WHERE owner='flgemag1' AND slot=2").run();
+  db.query('UPDATE accounts SET save=? WHERE owner=?').run(saveBytes({x:3185,z:3436,level:0},{...kit,95:MAGIC_CASE.bank.slice(1)}),'flgemag1');
+  expect(()=>syncPracticeCheckpoint(db,'flgemag1',pocketPath,MAGIC_CASE.position,evidence)).toThrow('checkpoint assets differ');
+  db.query('UPDATE accounts SET save=? WHERE owner=?').run(bank,'flgemag1');
+  expect(()=>syncPracticeCheckpoint(db,'flgemag1',pocketPath,{x:3185,z:3436,level:0},evidence)).toThrow('pocket save position unconfirmed');
+  expect(Buffer.compare(row('flgemag1'),bank)).toBe(0);
+  expect(syncPracticeCheckpoint(db,'absent',pocketPath,MAGIC_CASE.position,evidence)).toBeNull();
+ }finally{db.close();rmSync(dir,{recursive:true,force:true});}
+});
+test('saved exact pocket rescue, law five and authorized earth four-plus-one reconcile the full kit,5020 cap and10000 reserve',()=>{
+ expect(Object.values(magicOrderChecks(magicInput())).every(Boolean)).toBe(true);
+});
+test('magic consumer rejects missing rescue, repeated intent, missing law, excess earth, lost bank assets and absent logout',()=>{
+ const p=magicInput();
+ expect(magicOrderChecks({...p,buy:{...p.buy,log:line({ok:true})}}).rescue).toBe(false);
+ expect(magicOrderChecks({...p,buy:{...p.buy,log:'GE_MARKET_ENTRY {"stage":"rescue-intent"}\n'+p.buy.log}}).rescue).toBe(false);
+ expect(magicOrderChecks({...p,law:save([{id:995,count:14911}],MAGIC_CASE.pack)}).laws).toBe(false);
+ expect(magicOrderChecks({...p,earth:save([{id:557,count:6},{id:995,count:14891}],MAGIC_CASE.pack)}).topup).toBe(false);
+ expect(magicOrderChecks({...p,law:{...p.law,inventories:{...p.law.inventories,95:p.law.inventories[95].filter(i=>i.id!==1351)}}}).assets).toBe(false);
+ expect(magicOrderChecks({...p,topup:{...p.topup,log:p.topup.log.replace('LOGOUT logged-out','LOGOUT timeout')}}).logout).toBe(false);
+});
+test('magic consumer rejects an unproved top-up baseline, changed refusal assets, repeat mutation and extra spend',()=>{
+ const p=magicInput();
+ expect(magicOrderChecks({...p,earthJournal:{...p.earthJournal,request:{...p.earthJournal.request,expectedOwned:undefined}}}).topup).toBe(false);
+ expect(magicOrderChecks({...p,refused:p.law}).refusal).toBe(false);
+ expect(magicOrderChecks({...p,repeat:p.earth}).restart).toBe(false);
+ const costly={...p.earth,inventories:{...p.earth.inventories,95:p.earth.inventories[95].map(i=>i.id===995?{...i,count:i.count-1}:i)}};
+ expect(magicOrderChecks({...p,earth:costly}).costs).toBe(false);
+ expect(magicOrderChecks({...p,lawJournal:{...p.lawJournal,rescue:undefined}}).rescue).toBe(false);
+});
 
 test('exact banked quantity, bounded spend, kept reserve and resumed rerun pass',()=>{
  expect(bulkOrderChecks(input)).toEqual({entry:true,seller:true,bank:true,assets:true,pack:true,coins:true,journal:true,result:true,logout:true,restart:true,healthy:true});
@@ -111,3 +310,4 @@ test('saved exact output accepts cumulative recovery receipts and rejects a reus
  expect(bulkOrderChecks({...input,journal:{...recovered,progress:{...recovered.progress!,quantity:300}}}).journal).toBe(false);
  expect(bulkOrderChecks({...input,journal:{...recovered,progress:{...recovered.progress!,gross:539}}}).journal).toBe(false);
 });
+import './shop-supply-order-proof.test';

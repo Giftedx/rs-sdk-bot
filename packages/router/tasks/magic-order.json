@@ -14,7 +14,7 @@
     "packages/core/src/inprocess.ts",
     "packages/core/test/inprocess.test.ts"
   ],
-  "consumer": "The connected finite consumer run-magic-woodenstaff-authenticated-13 uses the existing controller-authorized recovery for Woodenstaff's exact endedAt 1793204110260, then runs scripts/magic-order.ts to Magic13 with its existing budgets. Practice invokes the real account-parameterized worker CLI, verifies useful Magic XP and level, reconciles declared rune, coin and food costs, preserves unrelated assets, checks a clear refusal and confirms logout. Retain the existing native recovery gate without adding scenarios. The next useful consumer acquires missing runes and advances the next Magic band using the best unlocked method.",
+  "consumer": "run-magic-shaftmaker-teleport37 advances ordinary Shaftmaker from Magic31 to37 using five funded Lumbridge teleports after exact-session recovery and bounded acquisition of missing runes. Preserve existing low-level callers and recovery checks. Practice invokes the real account-parameterized worker CLI and verifies useful Magic37, declared rune costs, retained unrelated assets, a clear refusal and confirmed logout. The next finite consumer uses the Falador teleport unlock toward45.",
   "checks": [
     {
       "id": "magic-order-regressions",
