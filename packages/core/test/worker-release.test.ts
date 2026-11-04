@@ -224,6 +224,25 @@ test('an empty-result live row is closed only when its own producer lifecycle sh
  }finally{rmSync(root,{recursive:true,force:true});}
 });
 
+test('a reused PID does not hold an expired peer row; matching or unknown owners still hold',async()=>{
+ const {closedSessionRow,LOST_SESSION_DROP_MS}=await import('../src/worker-release');
+ const {beginSessionAttempt}=await import('../src/session-lifecycle');
+ const root=mkdtempSync(join(tmpdir(),'release-reused-pid-')),server='rs-sdk-demo.fly.dev',pin='a'.repeat(64);
+ try{
+  const attempt=beginSessionAttempt({account:'Peer',server},{root,owner:{pid:35376,coordinatorRunId:null,workerRelease:null,script:'scripts/goldfarm.ts',role:null,participants:null}});
+  attempt.record('ready');attempt.record('ended','connection-lost');
+  const now=Date.now(),row={name:'Peer',server,result:'',at:now-LOST_SESSION_DROP_MS,workRevision:pin,sessionAttemptId:attempt.attemptId};
+  const closed=(line:string|null)=>(r:any)=>closedSessionRow(r,server,{root,commandLine:()=>line},()=>true,now);
+  expect(closed('python worker.py')(row)).toBe(true);
+  expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed('python worker.py'))).not.toThrow();
+  for(const line of ['bun scripts/goldfarm.ts Peer',null,'']){
+   expect(closed(line)(row)).toBe(false);
+   expect(()=>assertCompatibleWorkers(pin,server,[row],now,closed(line))).toThrow('peer state unknown');
+  }
+  expect(closed('python worker.py')({...row,at:row.at+1})).toBe(false);
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
 test('the cached launch release rehashes only when a release file or folder changes',()=>{
  const root=fixture();
  try{
