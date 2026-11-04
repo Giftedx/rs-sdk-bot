@@ -3,16 +3,27 @@ import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {createHash} from 'node:crypto';
 import {freemem} from 'node:os';
-import {admissionDecision,activeExternalLive,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
+import {admissionDecision,startReserve,activeExternalLive,loadEnded,persistEnded,persistentEnd,loadHolds,openHold,LIVE_SERVER,failedScript,scriptKey,missionSignature} from '../../../scripts/swarm';
 import {liveLogoutRef} from './coordinator-session';
 import {BOOTSTRAP_STATUS_AGE_MS} from '../../core/src/session-admission';
 import {evaluateLaunch} from '../../../scripts/haggis-gate';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
 import {acceptStatus,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
+import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
+import {readLogoutProof} from '../../core/src/session-lifecycle';
+
+// A controller that wrote .practice/swarm-state.json under this pid and nonce within this window is the saved
+// controller: no PowerShell command-line probe is needed while its pid is alive.
+export const CONTROLLER_STATE_FRESH_MS=10_000;
+export function controllerStateFresh(owner:{pid:number;nonce:string},base=projectRoot,now=Date.now()):boolean{
+ try{const s=JSON.parse(readFileSync(join(base,'.practice/swarm-state.json'),'utf8'));
+  return s.controllerPid===owner.pid&&s.coordinatorOwner===owner.nonce&&Number.isFinite(s.at)&&now-s.at>=0&&now-s.at<CONTROLLER_STATE_FRESH_MS;}
+ catch{return false;}
+}
 
 export function liveRows(base=projectRoot){
  return readdirSync(join(base,'.practice/status')).filter(f=>f.endsWith('.json')).flatMap(f=>{try{return[JSON.parse(readFileSync(join(base,'.practice/status',f),'utf8'))]}catch{return[]}});
@@ -61,7 +72,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
  const swarmSource=closure.digest('hex');
  const stopped=()=>existsSync(join(base,'.practice/stop-coordinator'))||existsSync(join(base,'.practice/stop-swarm'));
  if(stopped())throw Error('controller rollout owner stopped');
- const currentSource=deps.currentSource??(()=>workerSourceRevision(base)),matches=deps.matches??processMatches,now=deps.now??Date.now;
+ const currentSource=deps.currentSource??(()=>launchRevision(base)),matches=deps.matches??processMatches,now=deps.now??Date.now;
  const pidExists=deps.pidExists??((pid:number)=>{try{process.kill(pid,0);return true;}catch(e){return(e as NodeJS.ErrnoException).code!=='ESRCH';}});
  const stop=deps.stop??safeKill,drain=deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerDrain(owner,after,base));
  const ack=deps.ack??deps.drain??((owner:ControllerIdentity,after:number)=>awaitControllerAck(owner,after,base));
@@ -73,22 +84,24 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
   if(held&&Number.isSafeInteger(held.pid)&&!pidExists(held.pid)&&typeof held.runId==='string'&&/^task-[0-9a-f-]+$/.test(held.runId)){const runDir=join(dir,'runs',held.runId);mkdirSync(runDir,{recursive:true});renameSync(lock,join(runDir,'expired-build-lock.json'));}}
  if(existsSync(lock))throw Error('runtime owner or unacknowledged controller remains fenced');
  let owner:any=null;if(existsSync(ownerFile))owner=JSON.parse(readFileSync(ownerFile,'utf8'));
- const alive=owner&&matches(owner.pid,owner.nonce);
+ const alive=owner&&(pidExists(owner.pid)&&controllerStateFresh(owner,base,now())||matches(owner.pid,owner.nonce));
  if(owner&&!alive&&pidExists(owner.pid))throw Error('saved controller is alive but command ownership is unknown; do not start a duplicate');
- // A rollout pauses standing jobs by turning them off in swarm.json (the swarm stops them at their next step) and
- // turns them on once the current controller runs: that off/on is the swarm's own resume path.
+ // A rollout pauses standing jobs by listing their accounts in the coordinator's file (the merged plan shows them
+ // off, so the swarm stops them at their next step) and clears the list once the current controller runs: that
+ // off/on is the swarm's own resume path. swarm.json is not written.
  const pausedFile=join(dir,'rollout-paused.json');
  const paused=():string[]=>{try{return JSON.parse(readFileSync(pausedFile,'utf8'));}catch{return [];}};
- const standing=():string[]=>{try{return (JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')).jobs??[]).filter((j:any)=>j.standing===true&&j.enabled).flatMap((j:any)=>j.accounts??(j.account?[j.account]:[]));}catch{return [];}};
+ const standing=():string[]=>{try{return mergedPlan(JSON.parse(readFileSync(join(base,'swarm.json'),'utf8')),readCoordinatorJobs(base)).jobs.filter((j:any)=>j.standing===true&&j.enabled).flatMap(jobAccounts);}catch{return [];}};
  const setEnabled=(accounts:readonly string[],on:boolean)=>withPlanWrite(()=>{
-  const file=join(base,'swarm.json'),plan=JSON.parse(readFileSync(file,'utf8')),keys=new Set(accounts.map(a=>a.toLowerCase()));
-  for(const j of plan.jobs??[])if(j.standing===true&&(j.accounts??[j.account]).some((a:any)=>keys.has(String(a).toLowerCase())))j.enabled=on;
-  atomicJson(file,plan);
- });
+  const own=readCoordinatorJobs(base),keys=new Set(accounts.map(a=>a.toLowerCase())),held=new Set((own.paused??[]).map(a=>a.toLowerCase()));
+  for(const key of keys)if(on)held.delete(key);else held.add(key);
+  if(held.size)own.paused=[...held];else delete own.paused;
+  writeCoordinatorJobs(base,own);
+ },dir);
  const resume=async()=>{const p=paused();if(p.length){await setEnabled(p,true);unlinkSync(pausedFile);}};
- // A coordinator run needs the whole-runtime pin; standing jobs need only the swarm's own code current.
- // Workers carry the release of the source they start on (swarm.ts), so only the swarm's own code needs a rollout.
- // A run also needs the controller's WORKER_RELEASE to equal its own source: recovery permits bind to it.
+ // `source` is the launch release (worker-release.ts): the swarm, its launchers and the recovery runner. A coordinator
+ // run needs the controller on it, because recovery permits bind to the controller's WORKER_RELEASE; standing jobs need
+ // only the swarm's own code current. Workers carry their own capability release (swarm.ts), so no rollout follows it.
  const runtimeCurrent=!forRun||owner?.source===source;
  if(alive&&owner.swarmSource===swarmSource&&runtimeCurrent){await resume();return;}
  // A standing rollout gets ROLLOUT_DRAIN_MS to drain; then the jobs run again and the next try waits ROLLOUT_BACKOFF_MS.
@@ -128,7 +141,7 @@ export async function ensureSwarm(source:string,deps:SwarmRolloutDeps={},forRun=
    if(pidExists(owner.pid)){retainFence=owner;throw Error('old controller stop unconfirmed; admission remains fenced');}
   }
   if(stopped())throw Error('controller rollout owner stopped');
-  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release})))(source,nonce);
+  const nonce=randomUUID(),pid=(deps.spawn??((release:string,marker:string)=>spawnDetached([process.execPath,'scripts/swarm.ts','swarm.json','--coordinator='+marker],base,join(dir,'swarm.out.log'),join(dir,'swarm.err.log'),{...process.env,DEMO_OK:'1',WORKER_RELEASE:release,WORKER_ENTRY:''})))(source,nonce);
   const next={pid,nonce,source,swarmSource,at:now(),detached:true};
   try{atomicJson(ownerFile,next);await ack(next,next.at);if(stopped())throw Error('controller rollout owner stopped');}catch(error){
    try{await stopOne(pid,nonce);}catch{/* retain the fence unless process death can be confirmed */}
@@ -158,25 +171,92 @@ export function replaceAssignments(jobs:any[],accounts:string[],replacement:any)
   return[{...job,accounts:remaining}];
  }).concat([replacement]);
 }
-export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number}={}){
- const base=options.base??projectRoot,rows=liveRows(base);
+// A finished run leaves its job in the coordinator's file, turned off (disableOwnJob). That job still owns its accounts
+// in the merged plan, and a composed one refuses a later run on one participant. Release the named accounts from a
+// coordinator job when its run holds a terminal receipt for its task, the job is off, no swarm run holds any participant
+// and every participant has a confirmed logout. A failed receipt is terminal: the confirmed logout releases the account,
+// not the outcome of its work, so a dead job cannot shadow an account whose session is already settled. Other
+// participants keep a disabled job, so their owner jobs stay shadowed.
+// Any other job (active, missing receipt, held, owner or unproved) is returned unchanged.
+export function releaseCompletedOwnJobs(own:CoordinatorJobs,accounts:readonly string[],base=projectRoot):CoordinatorJobs{
+ const wanted=new Set(accounts.map(n=>n.toLowerCase()));
+ let running:Set<string>|null|undefined;
+ const swarmRuns=()=>{
+  if(running!==undefined)return running;
+  try{const runs=JSON.parse(readFileSync(join(base,'.practice/swarm-runs.json'),'utf8'));
+   running=Array.isArray(runs)?new Set(runs.flatMap((r:any)=>Array.isArray(r?.accounts)?r.accounts:[null]).map((n:unknown)=>String(n).toLowerCase())):null;}
+  catch(e){running=(e as NodeJS.ErrnoException).code==='ENOENT'?new Set():null;}
+  return running;
+ };
+ const completed=(job:any,names:string[])=>{
+  const runId=job.env?.COORDINATOR_RUN_ID;
+  if(job.coordinatorOwner!=='coordinator'||job.enabled!==false||typeof job.coordinatorTask!=='string'||typeof runId!=='string'||!/^[-a-z0-9]+$/.test(runId))return false;
+  let receipt:any;try{receipt=JSON.parse(readFileSync(join(base,'.practice/coordinator/runs',runId,'receipt.json'),'utf8'));}catch{return false;}
+  if(typeof receipt?.ok!=='boolean'||receipt.runId!==runId||receipt.taskId!==job.coordinatorTask)return false;
+  const active=swarmRuns();if(!active||names.some(n=>active.has(n.toLowerCase())))return false;
+  const root=join(base,'.practice/session-lifecycle');
+  return names.every(n=>readLogoutProof(n,LIVE_SERVER,{root}).state==='confirmed');
+ };
+ const jobs=own.jobs.flatMap(job=>{
+  const names=jobAccounts(job),remaining=names.filter(n=>!wanted.has(n.toLowerCase()));
+  if(remaining.length===names.length||!completed(job,names))return[job];
+  if(!remaining.length)return[];
+  const {account:_account,orchestrate:_orchestrate,...rest}=job;
+  return[{...rest,accounts:remaining,enabled:false}];
+ });
+ return{...own,jobs};
+}
+type RetiredRecoveryCohort={accounts:string[];runId:string;taskId:string};
+function retiredRecoveryCohort(task:CoordTask,account:string,base:string):RetiredRecoveryCohort|undefined{
+ if(task.sessionRecovery?.account!==account||!task.repairs?.some(r=>r.account===account&&r.endedAt===task.sessionRecovery!.endedAt))return;
+ const job=readCoordinatorJobs(base).jobs.find(j=>j.orchestrate&&jobAccounts(j).some(n=>n.toLowerCase()===account.toLowerCase()));
+ if(!job)return;
+ const accounts=jobAccounts(job),runId=job.env?.COORDINATOR_RUN_ID,taskId=job.coordinatorTask;
+ const refuse=()=>{throw Error('authenticated recovery cohort is not retired and idle');};
+ if(job.enabled!==false||job.coordinatorOwner!=='coordinator'||accounts.length<2||typeof runId!=='string'||!/^task-[-a-z0-9]+$/.test(runId)||typeof taskId!=='string')refuse();
+ let receipt:any,runs:any;
+ try{receipt=JSON.parse(readFileSync(join(base,'.practice/coordinator/runs',runId,'receipt.json'),'utf8'));runs=JSON.parse(readFileSync(join(base,'.practice/swarm-runs.json'),'utf8'));}catch{refuse();}
+ if(typeof receipt?.ok!=='boolean'||receipt.runId!==runId||receipt.taskId!==taskId||!Array.isArray(runs)||runs.some((r:any)=>(r.accounts??[]).some((n:string)=>accounts.some(a=>a.toLowerCase()===n.toLowerCase()))))refuse();
+ const end=loadEnded(join(base,'.practice/swarm-deaths.json')).get(account);
+ if(!end||end.at!==task.sessionRecovery.endedAt||failedScript(end)!==scriptKey(job.script))refuse();
+ const ownerFile=join(base,'.practice/coordinator/runs',runId,'owner.json');
+ if(existsSync(ownerFile)){const owner=JSON.parse(readFileSync(ownerFile,'utf8'));if(!Number.isSafeInteger(owner.pid)||owner.pid<1||processMatches(owner.pid,runId))refuse();}
+ for(const name of accounts){
+  if(['haggis','shaftshooter','polevaulter'].includes(name.toLowerCase())||['stop-coordinator','stop-swarm','stop-'+name].some(f=>existsSync(join(base,'.practice',f))))refuse();
+  assertNoRecoveryLease(name,base);
+  if(liveRows(base).some(s=>s.name?.toLowerCase()===name.toLowerCase()&&s.server===LIVE_SERVER&&!s.result))refuse();
+ }
+ return{accounts,runId,taskId};
+}
+export function installJob(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,options:{base?:string;preflight?:boolean;recoveryPreflight?:boolean;freeGB?:number;recovered?:(account:string)=>boolean;launch?:string}={}){
+ // `source` is the run's capability release; a recovery session binds to the launch release (default: the same value).
+ const base=options.base??projectRoot,rows=liveRows(base),launch=options.launch??source;
  if(options.recoveryPreflight&&(!options.preflight||!task.sessionRecovery||task.account!==account||task.sessionRecovery.account!==account))throw Error('authenticated recovery can only preflight its exact account');
  const pendingRepair=(name:string,end:any)=>options.preflight&&task.repairs?.some(r=>r.account.toLowerCase()===name.toLowerCase()&&r.endedAt===end.at);
- const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
+ const retained=options.recoveryPreflight?retiredRecoveryCohort(task,account,base):undefined;
+ if(retained)recoveryQualification(task,dependencies,source,base);
+ const accounts=retained?.accounts??task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  if(accounts.some(n=>typeof n!=='string'||! /^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw Error('participant binding unavailable');
- const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),plan=JSON.parse(raw),now=Date.now();
+ const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownRaw=existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null;
+ // Release first: the merged-plan split check and the overlay replacement below both read this result.
+ const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),accounts,base),plan=mergedPlan(JSON.parse(raw),own),now=Date.now();
  const existing=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===account.toLowerCase()));
  const holds=loadHolds(join(base,'.practice/swarm-script-holds.json'));
+ const sameScriptRepairPreflight=(name:string,end:any)=>!task.sessionRecovery&&end&&!/^died\b/.test(end.reason)&&failedScript(end)===scriptKey(script)&&pendingRepair(name,end);
+ const settledOwnerJob=(job:any,name:string,end:any)=>job?.coordinatorOwner!=='coordinator'&&job?.enabled===false&&(!end||!persistentEnd(end.reason)||sameScriptRepairPreflight(name,end))&&readLogoutProof(name,LIVE_SERVER,{root:join(base,'.practice/session-lifecycle')}).state==='confirmed';
  for(const participant of accounts){
-  if(!(options.recoveryPreflight&&participant===task.sessionRecovery?.account))liveLogoutRef(participant,base);
+  if(!(options.recoveryPreflight&&(retained||participant===task.sessionRecovery?.account)))liveLogoutRef(participant,base);
   if(openHold(holds,participant,script))throw Error('failed script still held for '+participant+': '+script);
  }
  for(const participant of accounts.filter(n=>n.toLowerCase()!==account.toLowerCase())){
+  // This is a read-only ownership preflight, not an authorization to log peers in.
+  if(retained)continue;
   const occupied=plan.jobs.find((j:any)=>(j.accounts??[j.account]).some((n:string)=>n?.toLowerCase()===participant.toLowerCase()));
+  const ended=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===participant.toLowerCase())?.[1];
   if(occupied&&(!occupied.script||/fresh.clock|24 boards|main simultaneous/i.test(occupied.goal??'')))throw Error('participant has a protected reservation: '+participant);
-  if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
+  if(occupied&&occupied.coordinatorOwner!=='coordinator'&&!settledOwnerJob(occupied,participant,ended)&&!rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??'')))throw Error('participant assignment is not confirmed complete: '+participant);
   if(existsSync(join(base,'.practice','stop-'+participant)))throw Error('participant has an owner stop file');
-  const ended=loadEnded(join(base,'.practice/swarm-deaths.json')).get(participant);if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended))throw Error('participant needs verified recovery');
+  if(ended&&persistentEnd(ended.reason)&&!pendingRepair(participant,ended))throw Error('participant needs verified recovery');
   if(rows.some(s=>s.name?.toLowerCase()===participant.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result))throw Error('participant session not settled');
  }
  const reserved=existing&&(!existing.script||/fresh.clock|24 boards|main simultaneous/i.test(existing.goal??''));
@@ -191,29 +271,43 @@ export function installJob(task:CoordTask,account:string,script:string,runId:str
  }
  if(existsSync(join(base,'.practice','stop-'+account)))throw Error('account has a stop file; preserve its owner');
  const unfinished=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&s.server==='rs-sdk-demo.fly.dev'&&!s.result);
- if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,source,base))throw Error('account session ownership is not settled');
+ if(unfinished&&!options.recoveryPreflight&&!recoveredSessionForRun(account,LIVE_SERVER,runId,launch,base))throw Error('account session ownership is not settled');
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===account.toLowerCase())?.[1];
  if(end&&persistentEnd(end.reason)&&!pendingRepair(account,end))throw Error('account recovery needs a verified repair: '+end.reason);
- if(existing?.standing===true&&existing.enabled)throw Error('account runs an owner standing job: '+existing.script);
- if(existing&&!reserved&&existing.coordinatorOwner!=='coordinator'){
+ // The recovery preflight of its own account parks the hand job next (prepareLiveRecovery turns it off), and the
+ // account's last session ended without a result or with a failure: that is what the recovery repairs. The production
+ // install after the recovery applies both checks against the parked job and the recovered status.
+ const handJob=!!existing&&!reserved&&existing.coordinatorOwner!=='coordinator';
+ const parkedForRecovery=!!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob;
+ // After the recovery, the parked hand job is released by this run's confirmed recovery logout: a recovery login writes
+ // no ok result, so the status cannot show one.
+ const recovered=options.recovered??((name:string)=>recoveredSessionForRun(name,LIVE_SERVER,runId,launch,base));
+ const releasedByRecovery=!options.recoveryPreflight&&task.sessionRecovery?.account===account&&handJob&&existing.enabled===false&&recovered(account);
+ // A disabled hand job whose account has no persistent end and a confirmed producer logout is settled: the owner
+ // stopped the work and no session holds the account, so a new mission installs without an ok result or a recovery.
+ const settled=handJob&&settledOwnerJob(existing,account,end);
+ if(existing?.standing===true&&existing.enabled&&!parkedForRecovery)throw Error('account runs an owner standing job: '+existing.script);
+ if(handJob&&!parkedForRecovery&&!releasedByRecovery&&!settled){
   const observed=rows.find(s=>s.name?.toLowerCase()===account.toLowerCase()&&/^ok(?:\s|$)/.test(s.result??''));
   if(!observed)throw Error('existing assignment is not confirmed complete');
  }
- const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:accounts.length,pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
- if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
  const goal=`${task.id} [${runId}]`,job={...(accounts.length>1?{accounts,orchestrate:true}:{account}),args:task.args??[],maxRestarts:0,script,role:task.role??existing?.role??'helper',goal,enabled:true,repeat:false,coordinatorOwner:'coordinator',coordinatorTask:task.id,
   env:{...task.env,CAP:task.env?.CAP??'1600',COORDINATOR_RUN_ID:runId,...(task.launch==='main'?{HAGGIS_RUN:'1'}:{})}};
- const before=plan.jobs;plan.jobs=replaceAssignments(plan.jobs,accounts,job);
+ const decision=admissionDecision({running:activeExternalLive(rows,[],now).length,external:0,starting:accounts.length,startingReserve:startReserve({host:false,job},accounts.length),pending:0,freeGB:options.freeGB??freemem()/2**30,minFreeGB:plan.minFreeGB,maxBots:plan.maxBots});
+ if(!decision.allowed)throw Error('live admission waiting: '+decision.reason);
+ // The merged view checks the split (a composed owner job keeps all its participants); only the coordinator's own
+ // file is written. swarm.json stays the owner's: the controller merges both files (packages/core/src/coordinator-jobs.ts).
+ const before=plan.jobs;replaceAssignments(plan.jobs,accounts,job);
  if(options.preflight)return{goal,source,account,installedAt:now,revision:missionSignature(job)};
  atomicJson(join(base,'.practice/coordinator','runs',runId,'assignments-before.json'),before);
- // Preserve all other assignments and settings. The root plan remains the only
- // execution authority; the coordinator does not maintain a competing plan.
- if(readFileSync(path,'utf8')!==raw)throw Error('assignment plan changed; reconcile before writing');
- atomicJson(path,plan);return{goal,source,account,installedAt:now};
+ own.jobs=replaceAssignments(own.jobs,accounts,job);
+ if(readFileSync(path,'utf8')!==raw||(existsSync(join(base,COORDINATOR_JOBS_FILE))?readFileSync(join(base,COORDINATOR_JOBS_FILE),'utf8'):null)!==ownRaw)throw Error('assignment plan changed; reconcile before writing');
+ writeCoordinatorJobs(base,own);return{goal,source,account,installedAt:now};
 }
 /** Check admission while the failure still holds, then park its old assignment before the controller can clear it. */
-export function prepareLiveRecovery(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot){
- const participants=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
+export function prepareLiveRecovery(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot,launch=source){
+ const retained=retiredRecoveryCohort(task,account,base);
+ const participants=retained?.accounts??task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n)??[account];
  for(const repair of task.repairs??[]){
   if(!participants.some(n=>n?.toLowerCase()===repair.account.toLowerCase()))throw Error('repair must name a participant');
   assertNoRecoveryLease(repair.account,base);
@@ -221,25 +315,42 @@ export function prepareLiveRecovery(task:CoordTask,account:string,script:string,
   if(!Object.values(dependencies).some((d:any)=>d?.delivery?.ok&&d.delivery.stage==='delivered'&&d.delivery.id===task.capability&&d.delivery.at>repair.endedAt&&d.delivery.runtimeRevision===source))throw Error('recovery requires a fresh post-failure same-capability native delivery');
   const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([n])=>n.toLowerCase()===repair.account.toLowerCase())?.[1];
   if(!end||end.at!==repair.endedAt)throw Error('exact failure unavailable before recovery');
-  if(persistentEnd(end.reason)&&failedScript(end)===scriptKey(script))throw Error('same-script recovery needs explicit script qualification before clearing the failure');
+  if(/^died\b/.test(end.reason)&&failedScript(end)===scriptKey(script))throw Error('same-script recovery needs explicit script qualification before clearing the failure');
  }
  if(task.sessionRecovery)recoveryQualification(task,dependencies,source,base);
- installJob(task,account,script,runId,source,dependencies,{base,preflight:true,recoveryPreflight:!!task.sessionRecovery});
- const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),plan=JSON.parse(raw),names=new Set(participants.map(n=>n.toLowerCase()));
+ installJob(task,account,script,runId,source,dependencies,{base,preflight:true,recoveryPreflight:!!task.sessionRecovery,launch});
+ const path=join(base,'swarm.json'),raw=readFileSync(path,'utf8'),ownFile=join(base,COORDINATOR_JOBS_FILE),ownRaw=existsSync(ownFile)?readFileSync(ownFile,'utf8'):null;
+ const own=releaseCompletedOwnJobs(readCoordinatorJobs(base),participants,base),plan=mergedPlan(JSON.parse(raw),own),names=new Set(participants.map(n=>n.toLowerCase()));
  const before=structuredClone(plan.jobs);
- plan.jobs=plan.jobs.flatMap((job:any)=>{
-  const all:string[]=job.accounts??[job.account],held=all.filter(n=>names.has(n?.toLowerCase())),remaining=all.filter(n=>!names.has(n?.toLowerCase()));
+ // Park the held accounts: a disabled copy of their job goes into the coordinator's file, where it shadows the owner
+ // job's accounts in the merged view. An owner job with other accounts keeps those.
+ const split=(job:any)=>{
+  const all=jobAccounts(job),held=all.filter(n=>names.has(n.toLowerCase())),remaining=all.filter(n=>!names.has(n.toLowerCase()));
+  if(held.length&&remaining.length&&job.orchestrate)throw Error('a composed assignment needs all its participants');
+  return{held,remaining};
+ };
+ const ownParked=own.jobs.flatMap((job:any)=>{
+  const {held,remaining}=split(job);
   if(!held.length)return[job];
   if(!remaining.length)return[{...job,enabled:false}];
-  if(job.orchestrate)throw Error('a composed assignment needs all its participants');
   return[{...job,accounts:remaining},{...job,accounts:held,enabled:false}];
  });
+ const ownerParked=shadowAssignments(JSON.parse(raw).jobs??[],own.jobs.flatMap(jobAccounts)).flatMap((job:any)=>{
+  const {held,remaining}=split(job);
+  if(!held.length)return[];
+  return[remaining.length?{...job,accounts:held,enabled:false}:{...job,enabled:false}];
+ });
+ own.jobs=[...ownParked,...ownerParked];
  atomicJson(join(base,'.practice/coordinator/runs',runId,'recovery-before.json'),{at:Date.now(),repairs:task.repairs,ended:JSON.parse(readFileSync(join(base,'.practice/swarm-deaths.json'),'utf8')),assignments:before});
- if(readFileSync(path,'utf8')!==raw)throw Error('assignment plan changed before recovery');
- atomicJson(path,plan);
+ if(readFileSync(path,'utf8')!==raw||(existsSync(ownFile)?readFileSync(ownFile,'utf8'):null)!==ownRaw)throw Error('assignment plan changed before recovery');
+ writeCoordinatorJobs(base,own);
+ return retained;
 }
 export function recoveryQualification(task:CoordTask,dependencies:Record<string,any>,source:string,base=projectRoot):ControlledRecoveryRequest['qualification']{
- const candidate=Object.values(dependencies).find((d:any)=>d?.delivery?.ok&&d.delivery.stage==='delivered'&&d.delivery.id===task.capability&&d.delivery.runtimeRevision===source) as any;
+ const endedAt=task.sessionRecovery?.endedAt??0,now=Date.now();
+ const candidate=Object.values(dependencies).filter((d:any)=>d?.delivery?.ok&&d.delivery.stage==='delivered'&&d.delivery.id===task.capability&&d.delivery.runtimeRevision===source
+  &&Number.isFinite(d.delivery.at)&&d.delivery.at>endedAt&&d.delivery.at<=now)
+  .sort((a:any,b:any)=>b.delivery.at-a.delivery.at)[0];
  const reportPath=candidate?.delivery?.directory&&join(candidate.delivery.directory,'report.json');
  if(!reportPath)throw Error('authenticated recovery requires its current native delivery');
  const bytes=readFileSync(reportPath),report=JSON.parse(bytes.toString('utf8'));
@@ -252,14 +363,24 @@ export function recoveryQualification(task:CoordTask,dependencies:Record<string,
  if(typeof proof.path!=='string'||! /^[a-f0-9]{64}$/.test(proof.sha256??''))throw Error('authenticated recovery native artifact malformed');
  return{delivery:{path:reportPath,sha256:createHash('sha256').update(bytes).digest('hex')},proof};
 }
-export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000){
+// `source` is the capability release its delivery proved; the request binds to the controller's launch release.
+async function acquireRecoverySlot(lease:string,owner:{pid:number;runId:string;nonce:string},account:string,base:string,limit:number){
+ while(true){
+  if(['stop-coordinator','stop-swarm','stop-'+account].some(f=>existsSync(join(base,'.practice',f))))throw Error('recovery owner stopped');
+  try{writeFileSync(lease,JSON.stringify(owner),{flag:'wx'});return;}catch(error){if((error as NodeJS.ErrnoException).code!=='EEXIST')throw error;}
+  if(Date.now()>=limit)throw Error('recovery repair slot timed out; existing owner preserved');
+  await Bun.sleep(Math.min(100,Math.max(1,limit-Date.now())));
+ }
+}
+export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:Record<string,any>,source:string,runId:string,base=projectRoot,timeoutMs=180000,launch=source,beforeRequest?:()=>Promise<unknown>){
  const authorization=task.sessionRecovery;if(!authorization)throw Error('authenticated recovery task flag missing');
- const request:ControlledRecoveryRequest={schema:RECOVERY_SCHEMA,kind:'session-recovery',...authorization,server:LIVE_SERVER,runId,nonce:randomUUID(),source,
+ const request:ControlledRecoveryRequest={schema:RECOVERY_SCHEMA,kind:'session-recovery',...authorization,server:LIVE_SERVER,runId,nonce:randomUUID(),source:launch,
   qualification:recoveryQualification(task,dependencies,source,base)};
  const file=join(base,'.practice/swarm-repair.json'),lease=file+'.lease';
- writeFileSync(lease,JSON.stringify({pid:process.pid,runId,nonce:request.nonce}),{flag:'wx'});
  const raw=JSON.stringify(request),limit=Date.now()+timeoutMs;
+ await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},request.account,base,limit);
  try{
+  await beforeRequest?.();
   if(existsSync(file+'.processing'))throw Error('another exact recovery owns the repair slot');
   writeFileSync(file,raw,{flag:'wx'});
   while(Date.now()<limit){
@@ -283,9 +404,11 @@ export async function requestAuthenticatedRecovery(task:CoordTask,dependencies:R
 export async function requestLiveRecovery(repair:{account:string;endedAt:number},runId:string,base=projectRoot,timeoutMs=15000){
  const proof=liveLogoutRef(repair.account,base,true)!;
  const file=join(base,'.practice/swarm-repair.json'),request={...repair,server:LIVE_SERVER,proof,runId,nonce:randomUUID()};
- const lease=file+'.lease';writeFileSync(lease,JSON.stringify({pid:process.pid,runId,nonce:request.nonce}),{flag:'wx'});
+ const lease=file+'.lease';
  const limit=Date.now()+timeoutMs;
+ await acquireRecoverySlot(lease,{pid:process.pid,runId,nonce:request.nonce},repair.account,base,limit);
  try{
+  request.proof=liveLogoutRef(repair.account,base,true)!;
   if(existsSync(file+'.processing'))throw Error('another exact recovery owns the repair slot');
   writeFileSync(file,JSON.stringify(request),{flag:'wx'});
   while(Date.now()<limit){
@@ -309,38 +432,58 @@ export async function requestLiveRecovery(repair:{account:string;endedAt:number}
  }
 }
 /** Completed work stays recorded. Only its authenticated cleanup may admit a different mission. */
-export function preserveCompletedLiveEnd(task:CoordTask,repair:{account:string;endedAt:number},script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot):boolean{
+export function preserveCompletedLiveEnd(task:CoordTask,repair:{account:string;endedAt:number},script:string,runId:string,source:string,dependencies:Record<string,any>,base=projectRoot,launch=source):boolean{
  const end=[...loadEnded(join(base,'.practice/swarm-deaths.json'))].find(([name])=>name.toLowerCase()===repair.account.toLowerCase())?.[1];
  if(!end||end.at!==repair.endedAt)throw Error('end record changed after session cleanup');
  if(!/^done(?: after \d+ runs)?$/.test(end.reason))return false;
  if(task.account!==repair.account||task.sessionRecovery?.account!==repair.account||task.sessionRecovery.endedAt!==repair.endedAt
   ||!task.repairs?.some(r=>r.account===repair.account&&r.endedAt===repair.endedAt))throw Error('completed end needs exact authenticated cleanup authorization');
- const installed=installJob(task,repair.account,script,runId,source,dependencies,{base,preflight:true});
+ const installed=installJob(task,repair.account,script,runId,source,dependencies,{base,preflight:true,launch});
  if(typeof end.revision!=='string'||!end.revision||end.revision===installed.revision)throw Error('completed work needs a different mission');
  const proof=liveLogoutRef(repair.account,base,true);
- if(proof?.kind!=='producer'||!recoveredSessionForRun(repair.account,LIVE_SERVER,runId,source,base))throw Error('completed end needs current run producer cleanup');
+ if(proof?.kind!=='producer'||!recoveredSessionForRun(repair.account,LIVE_SERVER,runId,launch,base))throw Error('completed end needs current run producer cleanup');
  return true;
 }
-export async function disableOwnJob(runId:string){return withPlanWrite(()=>{
- const file=join(projectRoot,'swarm.json'),raw=readFileSync(file,'utf8'),plan=JSON.parse(raw);let changed=false;
- for(const job of plan.jobs)if(job.coordinatorOwner==='coordinator'&&job.env?.COORDINATOR_RUN_ID===runId){job.enabled=false;changed=true;}
- if(changed&&readFileSync(file,'utf8')===raw)atomicJson(file,plan);
-});}
+export async function disableOwnJob(runId:string,base=projectRoot){return withPlanWrite(()=>{
+ const own=readCoordinatorJobs(base);let changed=false;
+ for(const job of own.jobs)if(job.coordinatorOwner==='coordinator'&&job.env?.COORDINATOR_RUN_ID===runId&&job.enabled!==false){job.enabled=false;changed=true;}
+ if(changed)writeCoordinatorJobs(base,own);
+},join(base,'.practice/coordinator'));}
+export async function awaitRecoveryInstallPreflight(task:CoordTask,account:string,script:string,runId:string,source:string,dependencies:Record<string,any>,retained:RetiredRecoveryCohort|undefined,base=projectRoot,launch=source,timeoutMs=180000){
+ const limit=Date.now()+timeoutMs;
+ while(true){
+  if(['stop-coordinator','stop-swarm',...(retained?.accounts??[account]).map(n=>'stop-'+n)].some(f=>existsSync(join(base,'.practice',f))))throw Error('recovery owner stopped');
+  try{return await withPlanWrite(()=>installJob(task,account,script,runId,source,dependencies,{base,preflight:true,launch}),join(base,'.practice/coordinator'));}
+  catch(error){
+   if(!retained||String(error)!=='Error: a composed assignment needs all its participants; do not split its ownership')throw error;
+   const job=readCoordinatorJobs(base).jobs.find(j=>j.coordinatorTask===retained.taskId&&j.env?.COORDINATOR_RUN_ID===retained.runId);
+   if(!job||job.enabled!==false||!job.orchestrate||JSON.stringify(jobAccounts(job))!==JSON.stringify(retained.accounts))throw Error('retired recovery cohort owner changed');
+   if(Date.now()>=limit)throw Error('retired recovery cohort still lacks confirmed logout; assignment preserved');
+   await Bun.sleep(Math.min(100,Math.max(1,limit-Date.now())));
+  }
+ }
+}
 export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>,definition:{entry:string},runId:string,startedAt:number){
  const accounts=task.participants?.map(n=>n.startsWith('@')?dependencies[n.slice(1)]?.account:n);
- const account=accounts?.[0]??accountFor(task,dependencies),target=accounts?.[task.acceptIndex??0]??account,source=workerSourceRevision();
+ const account=accounts?.[0]??accountFor(task,dependencies),target=accounts?.[task.acceptIndex??0]??account;
+ // Three releases (docs/script-contract.md, Release scope): `capability` is what the entry's delivery recorded,
+ // `source` is what the swarm pins on this job's worker (entry and the code files its arguments name), `launch` is the
+ // controller's and its recovery runner's.
+ const capability=capabilityRevision([definition.entry]),source=capabilityRevision(workerEntries(definition.entry,task.args??[])),launch=launchRevision();
  if((accounts??[account]).some(a=>existsSync(join(projectRoot,'.practice/stop-'+a))))throw Error('live account owner stopped before controller setup');
- await ensureSwarm(source);
+ await ensureSwarm(launch);
  if(task.repairs?.length){
-  await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,source,dependencies));
   if(task.sessionRecovery){
-   await requestAuthenticatedRecovery(task,dependencies,source,runId);
+   let retained:RetiredRecoveryCohort|undefined;
+   await requestAuthenticatedRecovery(task,dependencies,capability,runId,projectRoot,180000,launch,()=>withPlanWrite(()=>{
+    retained=prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch);
+   }));
    // Check the indexed cleanup and every ordinary install condition before consuming the old end.
-   await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{preflight:true}));
-  }
-  for(const repair of task.repairs)if(!preserveCompletedLiveEnd(task,repair,definition.entry,runId,source,dependencies))await requestLiveRecovery(repair,runId);
+   await awaitRecoveryInstallPreflight(task,account,definition.entry,runId,source,dependencies,retained,projectRoot,launch);
+  }else await withPlanWrite(()=>prepareLiveRecovery(task,account,definition.entry,runId,capability,dependencies,projectRoot,launch));
+  for(const repair of task.repairs)if(!preserveCompletedLiveEnd(task,repair,definition.entry,runId,source,dependencies,projectRoot,launch))await requestLiveRecovery(repair,runId);
  }
- const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies)),deadline=Date.now()+(task.timeoutMs??Math.min(86400000,Math.max(900000,task.estimatedMs*1.5)));
+ const installed=await withPlanWrite(()=>installJob(task,account,definition.entry,runId,source,dependencies,{launch})),deadline=Date.now()+(task.timeoutMs??Math.min(86400000,Math.max(900000,task.estimatedMs*1.5)));
  try{
   while(Date.now()<deadline){
    if(existsSync(join(projectRoot,'.practice/stop-coordinator')))throw Error('coordinator stopped');

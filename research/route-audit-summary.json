@@ -1,0 +1,55 @@
+{
+  "proof": "offline collision/portal reachability; no gameplay",
+  "targets": 9549,
+  "starts": 12,
+  "checked": 229176,
+  "unreachable": 165528,
+  "profiles": {
+    "weak": {
+      "checked": 114588,
+      "unreachable": 96108,
+      "reachable": 18480,
+      "fareBlocked": 7368
+    },
+    "strong": {
+      "checked": 114588,
+      "unreachable": 69420,
+      "reachable": 45168,
+      "fareBlocked": 0
+    }
+  },
+  "bundle": "research/route-audit.json.gz",
+  "bundleSha256": "b42bfd812af0b0e62d1f5b5c62b30b65acf3aac0b3f96738d309f3425f59db79",
+  "source": {
+    "scripts/route-audit.ts": "770ad97a3ad26f00a103c07c6556de5cdfa0e64e3f69df5d21feb032d010c450",
+    "scripts/route-audit-components.ts": "d72363b0fcd430608235e6e63e0ab114637ad480eb322bc8ca33acbb8c6a5a10",
+    "scripts/gather-feathers.ts": "40812d9b34b9edc3c15c114cbc2822c075e52d084af4d49aae0f06330afe93f3",
+    "packages/core/src/world.ts": "e22e483c660c2e7c37a60a9a196d8cd78cd03e1901c4650395612ec10029d9d2",
+    "packages/core/src/components.ts": "f62f10eb9eb17807005bd8a377586485ad163bf0a67c67d00af01f00a539b242",
+    "packages/core/src/door-policy.ts": "699c9a09b881e57d3fcf4ef1c77b642b66c2a0b0369a22cc2f7b212493babac5",
+    "packages/core/src/danger.ts": "4b107b88070ff394e13c51747340e104d40f8fe1a19a3eb73b72a01ae8a4a577",
+    "packages/core/src/travel.ts": "59a4dc4d424d8e7a960d91603c4213b3e863a5afe8a91f825f261806ee4fd4d3",
+    "packages/core/src/pathcache.ts": "d471217e22c22d52637cf266afc7c7c902efeccc5c9c117b0f92938c0a3c2438",
+    "packages/planner/src/haggis-travel.json": "4139ff0eafd9b29e7fd723b99c73ee54a2274fc274e940c2005ec66f28ad5b1e",
+    "rs-sdk.pin": "243bf55b92ef6ea660a2a97d8f1547888d1ead2391a8ecd7f46b626eff0111e3",
+    "patches/rs-sdk-working.patch": "bf99a4d789cdbd96d37ca577ea49934fc4774c05e8097a7e02c981844af07cca",
+    "knowledge/transports.json": "20ef63a688c528347c739f7528efbb6c5443e6fb0ded023d41e5353a2df7f49f",
+    "knowledge/doors.json": "66e29e7bbef9fa55bc7ba9c798732d1b409867544a6dfd13819d8a418f9f3b36",
+    "knowledge/npcs.json": "199ecbe17ad25e32353bc587157b154e75c07ab8d8f506fa16318df7792a4c57",
+    "knowledge/shops.json": "c3ee9aa16f3e143f6c8826c9e5af3d11c40e6d2344c5da07374460edcde7262b",
+    "knowledge/npc-travel.json": "f402f0abefa374d189522dc2158a565c185e262b96c69e830179fee193309d9b",
+    "knowledge/teleports.json": "8f366036fc4f6526b2bc54aca67a61901419961bbc7a0f1d8bf1f020d8ebee5c",
+    "knowledge/special-crossings.json": "643c55f853d9f7ccaed495e013af4277041dad1f13818cd76898e6b9d5fd8f1c",
+    "packages/practice/src/presets-dragon.ts": "0fc18285bbc0f5edd665fadf709bae208031253e46badece43251a055f6315e9",
+    "packages/practice/src/presets-filler.ts": "f8b15b83387792fdf91783781a12a86dbb22af4aa9252dcc821169594a210f0c",
+    "packages/practice/src/presets-gang.ts": "e7f4e51f97e93903489bd0b4b2fc8bb87110a3addef62e3656257ee7f0c8c8a3",
+    "packages/practice/src/presets-long.ts": "725f1e5e6fbc40eb5243a3ee7b58e9368af1a56720ccd1f3f7d2e81ba3d14698",
+    "packages/practice/src/presets-medium.ts": "1fe34e7e23f252029a2fa76c76dcad058924329c4ac56605fc3e2462acff6aaa",
+    "packages/practice/src/presets-mm.ts": "8de11b42d4233f1457c15a285881dd5ceaef628b3a79e1df35d22b96431dea65",
+    "packages/practice/src/presets-partner.ts": "acc2a1ccdbcd210514192ebe12dd3c112a228876e52c709e48050268c15822ef",
+    "packages/practice/src/presets-path.ts": "fbe9f7b36534986d625f805917d89095306fd973ff6b30e882bf53ad39c00ee0",
+    "packages/practice/src/presets-rest.ts": "d0ac48a3c16bf83f9a8d7770e240c491db0a87fc1488ed0d5690f5dd4aceb77c",
+    "packages/practice/src/presets-short.ts": "2a308b4b11628dde15f43ca8adcb7afba184fe40aa1a75ac62b2cd8bfcc45949",
+    "packages/practice/src/presets.ts": "3e9350873de62195e56e3af24f106d8636df77e922dde74ebafc0a9e01b70fcb"
+  }
+}

@@ -14,9 +14,17 @@ export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relati
 // A geometry draw followed by a screen present is not a promise that every tile loaded.
 export function installViewerBridge(host:any) {
     let privacyReady=false,renderReady=false,feedConnected:boolean|null=null,failed=false,announced=false;
-    let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false;
+    let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false,publishedCamera='',freeCameraPolls=0;
+    // A hosted page must not hold the hidden name itself: its list carries "h:<FNV-1a of the lower-case name>" entries.
+    // The bridge then renames a matching roster player to HIDDEN_ALIAS before the viewer reads the message, and gives
+    // the viewer that alias to hide. Names keep the one character set the list allows, so a plain loop hashes them.
+    const HIDDEN_ALIAS='Hidden',hiddenHashes=new Set<string>(),learned=new Set<string>();
+    // Feed messages wait until the name filter has loaded, so a roster that arrives first is filtered too.
+    let filterLoaded=false;const held:(()=>void)[]=[];
+    const fnv=(value:string)=>{let h=0x811c9dc5;for(let i=0;i<value.length;i++){h^=value.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0;}return h.toString(16).padStart(8,'0');};
     const undo:(()=>void)[]=[];
-    const emit=(detail='A geometry frame was presented; terrain streaming may continue.')=>{
+    // The loading text names the step still open: the private-name filter, or the first drawn frame.
+    const emit=(detail=!privacyReady?'Loading the 3D world… applying the name filter.':!renderReady?'Loading the 3D world… drawing the first frame.':'3D world ready.')=>{
         if(host.parent===host)return;
         const state=failed?'error':privacyReady&&renderReady?'ready':'loading';
         host.parent.postMessage({viewerState:{state,privacyReady,renderReady,feedConnected,detail}},host.location.origin);
@@ -26,7 +34,7 @@ export function installViewerBridge(host:any) {
     const url=new host.URL(host.location.href),hidden=url.searchParams.get('hideNamesFrom');
     let hiddenUrl:any;
     try{hiddenUrl=new host.URL(hidden,host.location.href);}catch{fail('Private name filter URL is unavailable.');return;}
-    if(!hidden||hiddenUrl.origin!==host.location.origin||hiddenUrl.pathname!=='/api/hidden-names'||hiddenUrl.search){fail('Private name filter must use this dashboard.');return;}
+    if(!hidden||hiddenUrl.origin!==host.location.origin||!hiddenUrl.pathname.endsWith('/api/hidden-names')||hiddenUrl.search){fail('Private name filter must use this dashboard.');return;}
     const glType=host.WebGL2RenderingContext;
     if(!glType){fail('WebGL2 is unavailable; use the 2D map.');return;}
     emit('Loading the private name filter and a rendered geometry frame.');
@@ -41,12 +49,15 @@ export function installViewerBridge(host:any) {
         response.json=async()=>{
             try{
                 const list=await json();
-                if(!Array.isArray(list)||list.length<1||list.length>64||list.some(n=>typeof n!=='string'||!/^[A-Za-z0-9_ -]{1,12}$/.test(n)))throw new Error('invalid name filter');
-                hiddenNames=new Set(list.map(n=>n.toLowerCase()));
+                if(!Array.isArray(list)||list.length<1||list.length>64||list.some(n=>typeof n!=='string'||!/^(?:[A-Za-z0-9_ -]{1,12}|h:[0-9a-f]{8})$/.test(n)))throw new Error('invalid name filter');
+                const names=list.filter(n=>!n.startsWith('h:'));
+                for(const n of list)if(n.startsWith('h:'))hiddenHashes.add(n.slice(2));
+                hiddenNames=new Set([...names.map(n=>n.toLowerCase()),...learned]);
+                filterLoaded=true;for(const deliver of held.splice(0))deliver();
                 // embed.ts applies its hidden Set in the promise continuation.
                 // Two animation turns follow that actual .json() consumption.
                 host.requestAnimationFrame(()=>host.requestAnimationFrame(()=>{if(!failed){privacyReady=true;emit();}}));
-                return list;
+                return hiddenHashes.size?[...names,HIDDEN_ALIAS]:list;
             }catch(e){fail('Private name filter was not applied; the viewer stays hidden.');throw e;}
         };
         return response;
@@ -89,12 +100,42 @@ export function installViewerBridge(host:any) {
                 this.addEventListener('open',()=>{feedConnected=true;emit();});
                 this.addEventListener('close',()=>{feedConnected=false;emit();});
                 this.addEventListener('error',()=>{feedConnected=false;emit();});
+                // The viewer reads the feed through onmessage: it gets each message with hash-listed names renamed.
+                let accessor:any=null;for(let p=Socket.prototype;p&&!accessor;p=Object.getPrototypeOf(p))accessor=Object.getOwnPropertyDescriptor(p,'onmessage');
+                const rename=(event:any)=>{
+                    if(!hiddenHashes.size||typeof event?.data!=='string')return event;
+                    let data:string=event.data;
+                    if(data.includes('"roster"'))try{const m=JSON.parse(data);if(m.t==='roster'&&Array.isArray(m.p))for(const p of m.p)if(Array.isArray(p)&&typeof p[1]==='string'&&/^[A-Za-z0-9_ -]{1,12}$/.test(p[1])&&hiddenHashes.has(fnv(p[1].toLowerCase()))){learned.add(p[1].toLowerCase());hiddenNames.add(p[1].toLowerCase());}}catch{/* not JSON: left as it is */}
+                    for(const name of learned)data=data.replace(new RegExp('\\b'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),HIDDEN_ALIAS);
+                    return data===event.data?event:new host.MessageEvent('message',{data,origin:event.origin});
+                };
+                if(accessor?.set){let handler:any=null;Object.defineProperty(this,'onmessage',{configurable:true,get:()=>handler,set:(fn:any)=>{handler=fn;accessor.set.call(this,typeof fn==='function'?(event:any)=>{if(!filterLoaded){if(held.length<5000)held.push(()=>fn.call(this,rename(event)));return;}fn.call(this,rename(event));}:fn);}});}
                 const names=new Map<number,string>(),seenChat=new Set<string>();
+                // Opponent information (RuneLite opponentinfo): what the followed player faces (fe: an npc nid, or
+                // 32768 + a player slot) and that entity's hitpoints, which the feed sends with each hitmark.
+                const faces=new Map<number,number>(),npcs=new Map<number,{t?:number;hp?:[number,number]}>(),playerHp=new Map<number,[number,number]>();let publishedOpponent='null';
+                const hp=(v:any):[number,number]|undefined=>Array.isArray(v)&&v.length===2&&v.every((n:any)=>Number.isFinite(n))?[v[0],v[1]]:undefined;
                 const mask=(value:string)=>{for(const name of hiddenNames)value=value.replace(new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),'⟦MAIN⟧');return value;};
                 this.addEventListener('message',(event:any)=>{
                     if(typeof event.data!=='string'||event.data.length>2_000_000)return;
                     let message:any;try{message=JSON.parse(event.data);}catch{return;}
                     if(message.t==='roster'&&Array.isArray(message.p))for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
+                    if(message.t==='tick'){
+                        if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
+                        for(const r of Array.isArray(message.p)?message.p:[]){if(typeof r?.i!=='number')continue;if(r.f){faces.delete(r.i);playerHp.delete(r.i);}if(typeof r.fe==='number')r.fe<0?faces.delete(r.i):faces.set(r.i,r.fe);const h=hp(r.hp);if(h)playerHp.set(r.i,h);}
+                        for(const r of Array.isArray(message.n)?message.n:[]){if(typeof r?.i!=='number')continue;const e=r.f?{}:npcs.get(r.i)??{};if(typeof r.t==='number')e.t=r.t;const h=hp(r.hp);if(h)e.hp=h;npcs.set(r.i,e);}
+                        for(const i of Array.isArray(message.rp)?message.rp:[]){faces.delete(i);playerHp.delete(i);}
+                        for(const i of Array.isArray(message.rn)?message.rn:[])npcs.delete(i);
+                        if(privacyReady&&renderReady&&!failed&&host.parent!==host){
+                            const follow=new host.URL(host.location.href).searchParams.get('follow')?.toLowerCase();let slot:number|undefined;
+                            if(follow)for(const [i,n] of names)if(n.toLowerCase()===follow){slot=i;break;}
+                            const fe=slot==null?undefined:faces.get(slot);let opponent:any=null;
+                            // Shown once the target has taken a hit, as RuneLite shows it in combat, not for talk or pickpocketing.
+                            if(fe!=null&&fe>=32768){const h=playerHp.get(fe-32768),n=names.get(fe-32768);if(h&&n)opponent={kind:'player',name:mask(n),hp:h};}
+                            else if(fe!=null){const e=npcs.get(fe);if(e?.hp&&e.t!=null)opponent={kind:'npc',type:e.t,hp:e.hp};}
+                            const key=JSON.stringify(opponent);if(key!==publishedOpponent){publishedOpponent=key;host.parent.postMessage({atlasOpponent:opponent},host.location.origin);}
+                        }
+                    }
                     if(message.t!=='tick'||!Array.isArray(message.p)||!privacyReady||!renderReady||failed||host.parent===host)return;
                     for(const p of message.p){
                         if(typeof p.ch!=='string'||typeof p.i!=='number'||!names.has(p.i))continue;
@@ -106,15 +147,42 @@ export function installViewerBridge(host:any) {
             }}catch{/* Non-feed sockets do not affect readiness. */}
         }
     };
+    // The page's minimap stands in for the viewer's own (hidden by client-viewer.css): its compass and world-map buttons
+    // press the viewer's, which stay in the page for this.
+    const releaseFollow=()=>{
+        const button=host.document?.querySelector('.live-follow button');if(!button)return false;
+        button.click();freeCameraPolls=0;
+        const url=new host.URL(host.location.href);publishedFollow=url.searchParams.get('follow');
+        // Native Stop can leave the URL unchanged until the camera next moves.
+        // Remove the released target before the URL relay can select it again.
+        if(host.history?.replaceState){url.searchParams.delete('follow');host.history.replaceState(host.history.state,'',url.href);publishedFollow=null;}
+        return true;
+    };
+    host.addEventListener('message',(event:any)=>{
+        if(event.origin!==host.location.origin||event.source!==host.parent||!event.data||typeof event.data!=='object')return;
+        if(event.data.atlasCompass===true)host.document?.querySelector('.minimap-container .compass')?.click();
+        if(event.data.atlasOpenWorldMap===true)host.document?.querySelector('.minimap-container .worldmap-icon')?.click();
+        if(typeof event.data.follow==='string'){freeCameraPolls=0;publishedFollow=null;}
+        if(event.data.atlasFreeCamera===true){freeCameraPolls=10;releaseFollow();}
+    });
     host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
     // The pinned viewer publishes its current follow target in its URL. Relay
     // that documented state; do not depend on unbuilt debug globals.
     host.setInterval?.(()=>{
         if(!privacyReady||!renderReady||failed||host.parent===host)return;
+        if(freeCameraPolls){
+            if(releaseFollow())return;
+            if(!new host.URL(host.location.href).searchParams.get('follow'))freeCameraPolls=0;
+            else if(--freeCameraPolls===0)fail('The 3D follow could not stop. Use the 2D map.');
+            return;
+        }
         const worldMap=!!host.document?.querySelector('.worldmap-modal-overlay');
         if(worldMap!==publishedWorldMap){publishedWorldMap=worldMap;host.parent.postMessage({atlasWorldMap:worldMap},host.location.origin);}
-        const follow=new host.URL(host.location.href).searchParams.get('follow');
+        // The viewer keeps its camera in its own URL (cx, cz in tiles, y = yaw 0-2047): the page's minimap turns with it.
+        const params=new host.URL(host.location.href).searchParams,cx=Number(params.get('cx')),cz=Number(params.get('cz')),yaw=Number(params.get('y'));
+        if(params.has('cx')&&Number.isFinite(cx)&&Number.isFinite(cz)&&Number.isFinite(yaw)){const key=cx+','+cz+','+yaw;if(key!==publishedCamera){publishedCamera=key;host.parent.postMessage({atlasCamera3d:{x:cx,z:cz,yaw:yaw&2047}},host.location.origin);}}
+        const follow=params.get('follow');
         if(!follow||follow===publishedFollow||!/^[A-Za-z0-9_ -]{1,12}$/.test(follow))return;
         publishedFollow=follow;
         host.parent.postMessage({atlasFollow:hiddenNames.has(follow.toLowerCase())?'⟦MAIN⟧':follow},host.location.origin);

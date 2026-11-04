@@ -3,7 +3,7 @@ import { dirname, join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 
 // rs-sdk's initPathfinding() costs about 14 s per process: 12.8 s of it is allocateIfAbsent for 136,704 zones in
-// rsmod's wasm memory (measured 2026-10-22). Every proof run and every bot process paid it. This saves that wasm
+// rsmod's wasm memory (measured). Every proof run and every bot process paid it. This saves that wasm
 // memory once after a cold build and copies it back into a fresh instance before initPathfinding() runs. The
 // zones are then already present, so allocateIfAbsent returns at once; __set and the door unmasking are
 // idempotent and rebuild pathfinding.ts's own JS-side door index. The snapshot is keyed on the wasm and

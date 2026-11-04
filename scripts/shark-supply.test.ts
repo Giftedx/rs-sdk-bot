@@ -289,7 +289,7 @@ test('full bank rejects an unobserved deposit; missing owned food stops before t
         }finally{f.stop();}
     }
 });
-// Pinned sessionWalker plan (2026-10-29), recorded west-bank leg 2645,3385 -> 2680,3405. It ends at 2679,3405.
+// Pinned sessionWalker plan, recorded west-bank leg 2645,3385 -> 2680,3405. It ends at 2679,3405.
 const ardougneLeg:PathTile[]=[[2645,3389],[2647,3391],[2658,3391],[2660,3393],[2660,3394],[2661,3394],[2662,3395],[2667,3395],[2668,3396],[2669,3396],
     [2671,3398],[2671,3399],[2674,3399],[2674,3401],[2676,3403],[2677,3403],[2679,3405]].map(([x,z])=>({x:x!,z:z!}));
 test('route accepts an empty plan at the target and a plan that ends beside the target',()=>{

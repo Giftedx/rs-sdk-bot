@@ -10,12 +10,15 @@ import { spawn } from 'node:child_process';
 import { FLEET_DIR, mySide, sideOf, loadOwners } from '../packages/core/src/fleet';
 import { pickOrder, validOrder, type Order, type Receipt } from './fleet-trade';
 import { runSync } from './fleet-sync';
+import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import {capabilityRevision} from '../packages/core/src/worker-release';
 
 const root = resolve(import.meta.dir, '..'), lock = join(root, '.practice', 'fleet-agent.lock');
 const CYCLE = Number(process.env.CYCLE ?? 10) * 60_000, LEAD = Number(process.env.LEAD ?? 15) * 60_000;
 const readJson = (dir: string) => existsSync(dir) ? readdirSync(dir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(dir, f), 'utf8'))]; } catch { return []; } }) : [];
 
-// Accounts with an enabled swarm job belong to the swarm while it runs them.
+// Accounts with an enabled swarm job (the owner's in swarm.json or the coordinator's in .practice/coordinator/jobs.json)
+// belong to the swarm while it runs them.
 export function swarmBusy(jobs: readonly any[]): Set<string> {
     return new Set(jobs.filter(j => j?.enabled).flatMap(j => [j.account, ...(j.accounts ?? [])]).filter((n): n is string => typeof n === 'string').map(n => n.toLowerCase()));
 }
@@ -31,6 +34,18 @@ export function dueTrades(orders: readonly Order[], receipts: readonly Receipt[]
         due.push({ account, order: p.order, busy: busy.has(n) });
     }
     return due;
+}
+
+export function readAgentJobs(file=resolve(process.env.SWARM_PLAN??join(root,'swarm.json'))): readonly any[]{
+    // An unreadable plan cannot grant a trade worker ownership of its accounts.
+    const plan=JSON.parse(readFileSync(file,'utf8'));
+    if(!Array.isArray(plan.jobs))throw Error('fleet agent: invalid swarm plan');
+    return plan.jobs;
+}
+const TRADE_SCRIPT='scripts/fleet-trade.ts';
+// The trade worker's capability release (packages/core/src/worker-release.ts).
+export function tradeEnvironment(dir:string,env:Record<string,string|undefined>=process.env,release=capabilityRevision([TRADE_SCRIPT],root)){
+    return {...env,FLEET_DIR:dir,WORKER_RELEASE:release,WORKER_ENTRY:TRADE_SCRIPT};
 }
 
 const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch { return false; } };
@@ -53,12 +68,13 @@ if (import.meta.main) {
         sync();
         const dir = FLEET_DIR(), now = Date.now();
         const orders = readJson(join(dir, 'orders')).filter(validOrder), receipts = readJson(join(dir, 'receipts'));
-        const busy = swarmBusy((() => { try { return JSON.parse(readFileSync(join(root, 'swarm.json'), 'utf8')).jobs ?? []; } catch { return []; } })());
+        // The owner's jobs plus the coordinator's (.practice/coordinator/jobs.json), as the swarm merges them.
+        const busy = swarmBusy(mergeJobs(readAgentJobs(), readCoordinatorJobs(root).jobs));
         for (const t of dueTrades(orders, receipts, mySide(), loadOwners(), busy, running, now)) {
             if (t.busy) { console.log(`FLEET_AGENT busy ${t.account}: order ${t.order.id} waits (enabled swarm job)`); continue; }
             running.add(t.account.toLowerCase());
             console.log(`FLEET_AGENT start ${t.account} order ${t.order.id}`);
-            const p = Bun.spawn(['bun', 'scripts/fleet-trade.ts', t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: { ...process.env, FLEET_DIR: dir } });
+            const p = Bun.spawn(['bun', TRADE_SCRIPT, t.account, t.order.id], { cwd: root, stdout: 'pipe', stderr: 'inherit', windowsHide: true, env: tradeEnvironment(dir) });
             void (async () => {
                 const out = await new Response(p.stdout).text();
                 console.log(`FLEET_AGENT done ${t.account} ${out.split(/\r?\n/).filter(l => l.startsWith('RESULT')).at(-1) ?? 'no result'}`);

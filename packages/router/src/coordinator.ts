@@ -13,6 +13,12 @@ export interface CoordTask {
  repairs?:{account:string;endedAt:number}[];
  sessionRecovery?:{account:string;endedAt:number};
  agent?:'codex'|'claude';
+ // Explicit continuation only: rerun delivery and review without changing this exact prepared source.
+ resumeSource?:string;
+ // Build only: command types whose replay difference is this build's stated change (model-worker.ts reviewGate).
+ replayAllow?:string[];
+ /** Set when a deterministic rule (coordinator-rules.ts) created the task. */
+ rule?:'next-band';
 }
 export interface Receipt {taskId:string;runId:string;ok:boolean;at:number;output:any;error?:string}
 export interface TaskRecord {
@@ -43,7 +49,10 @@ export function replaceTasks(state:CoordinatorState,replacements:{from:string;to
   if(old.status==='pending')old.status='superseded';old.supersededBy=to;
  }
  const done=new Set<string>(),active=new Set<string>();
- const visit=(id:string)=>{if(active.has(id))throw Error('replacement dependency cycle: '+id);if(done.has(id))return;active.add(id);for(const dep of records.get(id)!.spec.dependsOn){if(!records.has(dep))throw Error('missing replacement dependency');visit(dep);}active.delete(id);done.add(id);};
+ // Only open tasks run again, so only their dependencies must exist. compactState keeps the newest finished task of each
+ // capability and kind, and that task's own dependencies may be archived.
+ const open=(id:string)=>['pending','running'].includes(records.get(id)!.status);
+ const visit=(id:string)=>{if(active.has(id))throw Error('replacement dependency cycle: '+id);if(done.has(id))return;if(!open(id)){done.add(id);return;}active.add(id);for(const dep of records.get(id)!.spec.dependsOn){if(!records.has(dep))throw Error('missing replacement dependency');visit(dep);}active.delete(id);done.add(id);};
  for(const r of state.tasks)visit(r.spec.id);
 }
 
@@ -84,6 +93,8 @@ function provisionRefs(task:CoordTask):string[]{
 }
 export function validateTask(t:CoordTask){
  if(t.agent!==undefined&&!['codex','claude'].includes(t.agent))throw Error('invalid worker agent');
+ if(t.resumeSource!==undefined&&(t.kind!=='build'||typeof t.resumeSource!=='string'||!/^[a-f0-9]{64}$/.test(t.resumeSource)))throw Error('invalid prepared source continuation');
+ if(t.rule!==undefined&&(t.rule!=='next-band'||t.kind!=='run'))throw Error('invalid rule task');
  if(t.repairs!==undefined&&(!Array.isArray(t.repairs)||t.repairs.some(r=>!r||!ACCOUNT.test(r.account)||!Number.isFinite(r.endedAt)||r.endedAt<0)))throw Error('invalid exact recovery request');
  if(t.sessionRecovery!==undefined&&(t.kind!=='run'||t.launch&&t.launch!=='ordinary'||t.account!==t.sessionRecovery?.account
   ||!ACCOUNT.test(t.sessionRecovery.account)||['haggis','shaftshooter','polevaulter'].includes(t.sessionRecovery.account.toLowerCase())
@@ -98,6 +109,7 @@ export function validateTask(t:CoordTask){
  if(t.accountFrom!==undefined&&(typeof t.accountFrom!=='string'||!TASK_ID.test(t.accountFrom)))throw Error('invalid provision task reference');
  if(t.participants!==undefined&&(!Array.isArray(t.participants)||!t.participants.length||t.participants.some(n=>typeof n!=='string'||!(n.startsWith('@')?TASK_ID.test(n.slice(1)):ACCOUNT.test(n)))
   ||new Set(t.participants.map(n=>n.toLowerCase())).size!==t.participants.length))throw Error('invalid participants');
+ if(t.replayAllow!==undefined&&(t.kind!=='build'||!Array.isArray(t.replayAllow)||t.replayAllow.length>16||t.replayAllow.some(a=>typeof a!=='string'||!/^[A-Za-z]{1,40}$/.test(a))))throw Error('invalid replay allowance');
  if(t.args!==undefined&&(!Array.isArray(t.args)||t.args.some(a=>typeof a!=='string'||a.includes('\0'))))throw Error('invalid task args');
  if(t.acceptIndex!==undefined&&(!Number.isSafeInteger(t.acceptIndex)||t.acceptIndex<0||t.acceptIndex>=(t.participants?.length??1)))throw Error('invalid acceptance participant index');
  if(t.kind==='run'){
@@ -114,7 +126,8 @@ export function addTasks(state:CoordinatorState,tasks:CoordTask[],now=Date.now()
  if(!Array.isArray(tasks)||tasks.length>24)throw Error('invalid task batch');
  const all=new Map(state.tasks.map(r=>[r.spec.id,r.spec]));
  for(const task of tasks){validateTask(task);if(all.has(task.id))throw Error('task already exists: '+task.id);all.set(task.id,task);}
- const done=new Set<string>(),active=new Set<string>();
+ // A finished task never runs again, so its own dependencies need not exist: compactState may archive them.
+ const done=new Set<string>(state.tasks.filter(r=>r.status!=='pending'&&r.status!=='running').map(r=>r.spec.id)),active=new Set<string>();
  const visit=(id:string)=>{
   if(active.has(id))throw Error('dependency cycle: '+id);if(done.has(id))return;
   const task=all.get(id);if(!task)throw Error('missing dependency: '+id);active.add(id);
@@ -130,10 +143,16 @@ export function lastBuildOutcome(state:CoordinatorState,capability:string){
  return state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt&&r.receipt.output!=null)
   .sort((a,b)=>b.receipt!.at-a.receipt!.at)[0]?.receipt?.output;
 }
-// A host deferral is neither a qualification nor a request to rewrite prepared source.
-export function preparedNativeDelivery(state:CoordinatorState,capability:string,source:string){
+// Prepared source skips authoring only. The executor reruns delivery and the applicable review before publication.
+export function preparedNativeDelivery(state:CoordinatorState,capability:string,source:string,resumeSource?:string){
+ if(resumeSource!==undefined&&resumeSource!==source)return null;
  const output=lastBuildOutcome(state,capability);
- return output?.hostDeferred===true&&output.sourcePrepared===true&&output.delivery?.hostDeferred===true&&!output.delivery.diagnostic&&output.delivery.source===source?output.delivery:null;
+ if(output?.hostDeferred===true&&output.sourcePrepared===true&&output.delivery?.hostDeferred===true&&!output.delivery.diagnostic&&output.delivery.source===source)return output.delivery;
+ if(resumeSource!==source)return null;
+ return state.tasks.filter(r=>r.spec.kind==='build'&&r.spec.capability===capability&&r.receipt)
+  .sort((a,b)=>b.receipt!.at-a.receipt!.at)
+  .map(r=>r.receipt!.output?.delivery)
+  .find(d=>d?.ok===true&&d.stage==='delivered'&&d.evidence==='native'&&!d.diagnostic&&d.source===source)??null;
 }
 /** Null means a referenced identity is unproved, invalid, or aliases another participant. */
 export function boundAccounts(task:CoordTask,state:CoordinatorState):string[]|null{
@@ -158,10 +177,21 @@ export function activeBuildFocus(state:CoordinatorState):{capability:string;sinc
  const record=state.tasks.find(r=>r.status==='running'&&r.spec.kind==='build'&&r.spec.capability&&failedBuildStreak(state,r.spec.capability)<FOCUS_FAILURE_LIMIT);
  return record?{capability:record.spec.capability!,since:record.startedAt??record.createdAt}:null;
 }
+// Builds that would publish the same file. Two builds of one capability share one workspace, so they always overlap;
+// other capabilities overlap when their owned files (`ownedFiles`) share a path. A publish that waits (`publishing`)
+// counts as a running build. A build that starts beside an overlapping one fails at publish and loses its work.
+export function buildOverlap(capability:string,busy:readonly string[],ownedFiles?:(capability:string)=>readonly string[]):string|null{
+ if(busy.includes(capability))return capability;
+ if(!ownedFiles)return null;
+ let mine:readonly string[];try{mine=ownedFiles(capability);}catch{return null;}
+ for(const other of busy){let theirs:readonly string[];try{theirs=ownedFiles(other);}catch{continue;}if(mine.some(f=>theirs.includes(f)))return other;}
+ return null;
+}
 // isolatedBuilds: builds author and prove in their own workspace (build-workspace.ts), so builds and live runs overlap.
 // Only a publish into the main checkout needs a drained fleet: publishPending holds new live starts until it lands.
-export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean}={}):CoordTask|null{
+export function chooseTask(state:CoordinatorState,now:number,resources:{sourceReady?:boolean;nativeReady?:boolean;liveLimit?:number;developmentLimit?:number;preferLive?:boolean;focusCapability?:string;isolatedBuilds?:boolean;publishPending?:boolean;publishing?:string;ownedFiles?:(capability:string)=>readonly string[]}={}):CoordTask|null{
  const records=new Map(state.tasks.map(r=>[r.spec.id,r])),running=state.tasks.filter(r=>r.status==='running');
+ const busyBuilds=[...new Set([...running.filter(r=>r.spec.kind==='build'&&r.spec.capability).map(r=>r.spec.capability!),...(resources.publishing?[resources.publishing]:[])])];
  const focusCaps=new Set<string>(),visited=new Set<string>();
  const includeFocus=(id:string)=>{
   if(visited.has(id))return;visited.add(id);const record=records.get(id);if(!record)return;
@@ -174,7 +204,7 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  }
  const pending=state.tasks.filter(r=>r.status==='pending'&&[...r.spec.dependsOn,...provisionRefs(r.spec)].every(id=>records.get(id)?.status==='succeeded'));
  const sourceReady=resources.sourceReady??resources.nativeReady;
- const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false);};
+ const canBuild=(r:TaskRecord)=>{const prior=lastBuildOutcome(state,r.spec.capability!);return sourceReady!==false&&!(prior?.hostDeferred===true&&prior.sourcePrepared===true&&resources.nativeReady===false)&&!(resources.isolatedBuilds&&buildOverlap(r.spec.capability!,busyBuilds,resources.ownedFiles));};
  const buildWaiting=pending.some(r=>r.spec.kind==='build'&&canBuild(r)&&(!resources.focusCapability||focusCaps.has(r.spec.capability!)));
  // Give a freshly qualified capability one finite consumer before another
  // build invalidates it. The runtime still verifies source/review/admission.
@@ -226,16 +256,42 @@ export function chooseTask(state:CoordinatorState,now:number,resources:{sourceRe
  return pool.sort((a,b)=>ordered(b)-ordered(a)||(overdue.length?state.goals.find(g=>g.id===a.spec.goal)!.lastStartedAt-state.goals.find(g=>g.id===b.spec.goal)!.lastStartedAt:0)
   ||score(b)-score(a)||a.createdAt-b.createdAt||a.spec.id.localeCompare(b.spec.id))[0]?.spec??null;
 }
+// Finished tasks older than this leave state.json for the archive. Their receipts hold most of the file's bytes.
+export const ARCHIVE_AFTER_MS=2*24*60*60*1000;
+export const finishedAt=(r:TaskRecord)=>r.receipt?.at??r.startedAt??r.createdAt;
+/** Remove old finished tasks from the state and return them, oldest first. Kept: open tasks, every task an open task
+ * names (dependsOn, accountFrom, participants), and the newest finished task of each capability and kind, so
+ * qualifications, the last build outcome and account bindings stay in the state. */
+export function compactState(state:CoordinatorState,now:number,keepMs=ARCHIVE_AFTER_MS):TaskRecord[]{
+ const open=state.tasks.filter(r=>r.status==='pending'||r.status==='running');
+ const named=new Set(open.flatMap(r=>[...r.spec.dependsOn,...provisionRefs(r.spec)]));
+ const newest=new Map<string,TaskRecord>();
+ for(const r of state.tasks){if(r.status==='pending'||r.status==='running')continue;const key=`${r.spec.capability??''}\0${r.spec.kind}`;const held=newest.get(key);if(!held||finishedAt(r)>finishedAt(held))newest.set(key,r);}
+ const keepers=new Set(newest.values());
+ const archived=state.tasks.filter(r=>!(r.status==='pending'||r.status==='running')&&!named.has(r.spec.id)&&!keepers.has(r)&&now-finishedAt(r)>keepMs);
+ if(!archived.length)return [];
+ const gone=new Set(archived);state.tasks=state.tasks.filter(r=>!gone.has(r));
+ return archived.sort((a,b)=>finishedAt(a)-finishedAt(b));
+}
 export function startTask(state:CoordinatorState,id:string,now:number,runId:string):TaskRecord{
  const record=state.tasks.find(r=>r.spec.id===id);if(!record||record.status!=='pending')throw Error('task is not pending');
  record.status='running';record.runId=runId;record.startedAt=now;record.attempts++;
  state.goals.find(g=>g.id===record.spec.goal)!.lastStartedAt=now;state.sequence++;return record;
+}
+// The review task for a build that delivered without waiting. It runs with the other model, on the published source.
+export function deferredReviewTask(build:CoordTask,agent:'codex'|'claude'|undefined,gate:string):CoordTask{
+ return{id:build.id+'-review',goal:build.goal,kind:'review',dependsOn:[build.id],priority:90,estimatedMs:300000,capability:build.capability,
+  agent:agent==='claude'?'codex':'claude',
+  why:'Review of build '+build.id+', which delivered before review ('+gate+'). A rejection stops this capability\'s next runs until a repair build. Build work order: '+build.why.slice(0,1500)};
 }
 export function finishTask(state:CoordinatorState,receipt:Receipt):boolean{
  const record=state.tasks.find(r=>r.spec.id===receipt.taskId);
  if(!record||record.status!=='running'||record.runId!==receipt.runId||!Number.isFinite(receipt.at)||receipt.at<(record.startedAt??Infinity))return false;
  record.receipt=receipt;record.status=receipt.ok?'succeeded':'failed';
  if(receipt.ok){const goal=state.goals.find(g=>g.id===record.spec.goal)!;goal.lastSucceededAt=receipt.at;goal.completedTasks++;}
+ // A build that delivered before review queues that review now (model-worker.ts reviewGate).
+ if(receipt.ok&&record.spec.kind==='build'&&receipt.output?.review?.deferred===true&&!state.tasks.some(r=>r.spec.id===record.spec.id+'-review'))
+  addTasks(state,[deferredReviewTask(record.spec,receipt.output.agent??record.agent,String(receipt.output.review.reason??''))],receipt.at);
  state.sequence++;return true;
 }
 export function acceptStatus(task:CoordTask,s:any,ctx:{account:string;goal:string;source:string;startedAt:number;now:number;runId?:string}):boolean{

@@ -14,7 +14,7 @@ import {RECOVERY_SCRIPT,NATIVE_RECOVERY_CHECKS,assertFleetResolved,launchPermitt
 import {createRecoveryDispatch} from '../../core/src/session-recovery-dispatch';
 import {recoverSession,recoveryDiagnosticFromLog} from '../../core/src/session-recovery';
 import {accountDir,domainOf,readLogoutProof,listAttempts,beginSessionAttempt} from '../../core/src/session-lifecycle';
-import {workerSourceRevision} from '../../core/src/worker-release';
+import {launchRevision,cachedLaunchRevision} from '../../core/src/worker-release';
 import {admitRecovery,startable,applyEndRepair} from '../../../scripts/swarm';
 import {missionSignature} from '../../core/src/session-admission';
 import {readPracticeSave,waitPracticeSave} from '../../../scripts/measure/fleet-player-save';
@@ -92,7 +92,7 @@ export function verifyCompletedRouterPins(base=root){
 export function verifyCompletedRecoveryDelivery(directory:string){
  const proof=JSON.parse(readFileSync(join(directory,'proof.json'),'utf8'));
  if(proof.capability!=='cow-progress-order'||!isDeepStrictEqual(proof.routerPins,verifyCompletedRouterPins()))throw Error('completed recovery delivery integration changed');
- verifyNativeRecoveryProof(proof,directory,{runtimeRevision:workerSourceRevision(),runnerSha256:hash(runner)});
+ verifyNativeRecoveryProof(proof,directory,{runtimeRevision:launchRevision(),runnerSha256:hash(runner)});
  return true;
 }
 
@@ -168,7 +168,7 @@ export const CHECK_CASES:Record<(typeof NATIVE_RECOVERY_CHECKS)[number],string[]
  offline:['offline'],orphan:['orphan'],modal:['modal'],authFailure:['auth-failure'],cooldown:['cooldown'],partial:['partial'],timeout:['timeout'],
  lateCallback:['restart-late-callback'],ownership:['ownership','partial-owner-alive'],stop:['stop'],singleUse:['single-use','restart-late-callback'],
  stock:['offline','orphan','modal','partial','stock-negative-controls'],
- completed:['completed','completed-refusals'],
+ completed:['completed','completed-held-producer','completed-refusals'],
 };
 // Each check is derived from observed cases. A check passes only when every named case was observed and passed.
 export function deriveChecks(cases:{id:string;ok:boolean;level:string;evidence:{path:string;sha256:string}[]}[]){
@@ -413,7 +413,7 @@ export function loginAfterTakeoverWindow(log:string,account:string,since:number,
   const gapMs=next[0]!.requestAt-prior.at;return {ok:gapMs>=windowMs,gapMs};
  }catch{return {ok:false,gapMs:null};}
 }
-// Pinned World.ts:2602 answers a login with 5 ('Account already logged in') while the killed owner's player sits in
+// Pinned World.ts:2635 answers a login with 5 ('Account already logged in') while the killed owner's player sits in
 // logoutRequests, from its idle removal until the login server acknowledges that logout. The orphan's server-side end
 // is the single acknowledged logout requested after the kill.
 export function orphanServerEnd(log:string,account:string,killedAt:number){
@@ -520,7 +520,7 @@ async function run(directory:string){
  // Isolated proof owns only the practice mutex. Runtime revision and runner hash bind its source.
  mkdirSync(directory,{recursive:true});
  const lock=join(root,'.practice/delivery-practice.lock'),fd=openSync(lock,'wx');writeFileSync(fd,JSON.stringify({pid:process.pid,directory,task:capability,mode:'native-session-recovery'}));
- const source=workerSourceRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
+ const source=launchRevision(),runnerSha256=hash(runner),base=join(directory,'control'),workspace=join(directory,'isolated-engine'),lifeRoot=join(base,'.practice/session-lifecycle');
  const children:ReturnType<typeof Bun.spawn>[]=[],recoveryChildren:{pid:number;nonce:string}[]=[],cases:any[]=[],tasks=new Map<string,any>(),ends:Record<string,any>={},jobs:any[]=[];
  const ownedStops:OwnedStop[]=[],junctions:string[]=[];
  const saved={rsan:process.env.LOGIN_RSAN,rsae:process.env.LOGIN_RSAE,release:process.env.WORKER_RELEASE};
@@ -580,10 +580,13 @@ async function run(directory:string){
    },
    // Exactly the dispatcher's native default: same base, source callback and actual launcher.
    launch:r=>observeRecoveryBoundary('launchPermittedRecovery',recoveryAuthorityInputs(base,r),
-    ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>workerSourceRevision()}),observeBoundary)});
+    ()=>launchPermittedRecovery(r,base,{nativeFixture:true,source:()=>cachedLaunchRevision()}),observeBoundary)});
   let fixtureIndex=0;
   const fixture=async(server:string,preset:Parameters<typeof applyPreset>[1],completed=false)=>{
-   const name=runBotName('flrcv',++fixtureIndex);
+   // The name token cycles every 28 minutes (prove.ts runBotName), and fixture folders from earlier proofs stay in
+   // vendor/rs-sdk/bots, so a taken name is skipped: the next index gives a new one.
+   let name=runBotName('flrcv',++fixtureIndex);
+   for(let tries=0;tries<40&&existsSync(join(root,'vendor/rs-sdk/bots',name));tries++)name=runBotName('flrcv',++fixtureIndex);
    if(existsSync(join(root,'vendor/rs-sdk/bots',name)))throw Error('fixture identity exists');
    await createBot(name);const envPath=join(root,'vendor/rs-sdk/bots',name,'bot.env');
    writeFileSync(envPath,readFileSync(envPath,'utf8').replace(/^SERVER=.*$/m,'SERVER='+server));
@@ -721,6 +724,25 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
     holdsRetained:readFileSync(join(base,'.practice/swarm-script-holds.json'),'utf8')===holds,
     assignmentsRetained:readFileSync(join(base,'swarm.json'),'utf8')===assignments,
     noStopCreated:!existsSync(join(base,'.practice','stop-'+C.name)),
+   });
+  }
+  // Saved retired producer setup, then the real controller -> CLI cleanup. No gameplay or interruption scenario.
+  {
+   const C=await fixture(HOST,preset,true),dir=caseDir('completed-held-producer');
+   const retired=Bun.spawn([process.execPath,'-e','process.exit(0)'],{windowsHide:true,stdout:'ignore',stderr:'ignore'});children.push(retired);
+   if(await retired.exited!==0)throw Error('retired producer fixture owner did not exit');
+   const old=beginSessionAttempt({account:C.name,server:C.server},{root:lifeRoot,
+    owner:{pid:retired.pid,coordinatorRunId:null,workerRelease:source,script:'scripts/retired-fixture.ts',role:'supply',participants:null}});
+   old.record('connected');old.record('ready');old.record('ended','disconnected');old.record('logout','disconnected');old.record('closed');
+   C.endedAt=Date.now();ends[C.name].at=C.endedAt;writeState();
+   const retained=listAttempts(C.name,C.server,{root:lifeRoot}),beforeProof=readLogoutProof(C.name,C.server,{root:lifeRoot});
+   writeFileSync(join(dir,'producer-before.json'),JSON.stringify({beforeProof,retained},null,2));
+   const out=await positive('completed-held-producer',C),after=listAttempts(C.name,C.server,{root:lifeRoot});
+   out.record('native-actual-controller-core-cli',{
+    heldReadyProducerBefore:beforeProof.state==='held'&&beforeProof.attemptId===old.attemptId,
+    priorProducerPreserved:isDeepStrictEqual(retained,after.slice(0,retained.length)),
+    singleRecoveryChild:after.length===retained.length+1&&after.at(-1)?.receipt?.owner.script===RECOVERY_SCRIPT,
+    successfulEndRetained:ends[C.name].reason==='done after 1 runs'&&ends[C.name].at===C.endedAt,
    });
   }
   {
@@ -953,7 +975,7 @@ writeFileSync(${JSON.stringify(join(dir,'owner-after.json'))},JSON.stringify({at
   const bindings=Object.fromEntries([RECOVERY_SCRIPT,'packages/core/src/session-recovery-permit.ts','packages/core/src/session-recovery-dispatch.ts','packages/core/src/session-lifecycle.ts','packages/core/src/inprocess.ts','scripts/swarm.ts','packages/practice/src/session-recovery-proof.ts',
    'vendor/rs-sdk/server/engine/src/server/login/LoginServer.ts','vendor/rs-sdk/server/engine/src/engine/World.ts','vendor/rs-sdk/server/content/scripts/tutorial/scripts/tutorial.rs2'].map(p=>[p,hash(join(root,p))]));
   if(routerPins&&!isDeepStrictEqual(routerPins,verifyCompletedRouterPins()))throw Error('completed router integration changed during proof');
-  const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===workerSourceRevision()&&runnerSha256===hash(runner),
+  const proof={ok:cases.every(c=>c.ok)&&Object.values(checks).every((c:any)=>c.ok)&&source===launchRevision()&&runnerSha256===hash(runner),
    level:'native-controller-recovery',at:Date.now(),runtimeRevision:source,runnerSha256,bindings,
    server:{host:HOST,relay:RELAY,loginPort:LOGIN_PORT,tickMs:150,takeoverWindowMs:TAKEOVER_WINDOW_MS,world:sha(JSON.stringify(worldConfig)),observer:hash(observer)},
    starting:{at:startedAt,freeGiB:startFreeGiB,fenceSha256:null},controller:{pid:process.pid,marker:CONTROLLER_MARKER,argv:process.argv.slice(1)},

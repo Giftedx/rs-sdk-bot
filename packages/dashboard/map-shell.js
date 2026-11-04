@@ -113,5 +113,5 @@
   $('#atlas-locate').onclick=()=>{const b=S?.bots?.find(b=>b.name===sel);if(b?.pos){goTo(b.pos);$('#follow').textContent=safeName(b.name)+' · last position '+age(b.at)+' old';}else{$('#follow').textContent='No observed position for the selected account';}};
   window.addEventListener('message',event=>{if(event.source!==$('#rsw').contentWindow||event.origin!==location.origin)return;const name=event.data?.atlasFollow;if(typeof name==='string'&&S?.bots?.some(b=>b.name===name&&!b.practice)&&sel!==name)pick(name);});
   document.addEventListener('visibilitychange',()=>$('#rsw').contentWindow?.postMessage({fps:document.hidden?1:20},location.origin));
-  if(!S?.bots?.some(b=>!b.practice&&b.inWorld))window.atlasFreeCamera=true;if(S)render();markPlugins();request3D();
+  if(S?.bots&&!S.bots.some(b=>!b.practice&&b.inWorld))window.atlasFreeCamera=true;if(S)render();markPlugins();request3D();
 })();

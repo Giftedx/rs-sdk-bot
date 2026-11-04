@@ -8,6 +8,7 @@ import {validateDelivery,type DeliveryTask} from './delivery';
 import {freshScoreboard} from './coverage';
 import {projectRoot,atomicJson} from './coordinator-store';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
+import {readMergedPlan} from '../../core/src/coordinator-jobs';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -21,7 +22,7 @@ export function gameCoverage(methods:any[],quests:any[],statuses:any[],protected
    bestObserved:ordinary.flatMap(s=>(s.skills??[]).filter((v:any)=>v.name?.toLowerCase()===name.toLowerCase()).map((v:any)=>({account:s.name,level:v.level,at:s.at}))).sort((a:any,b:any)=>b.level-a.level)[0]??null})),
   questCount:quests.length,quests:quests.map(q=>({key:q.varp,folder:q.folder,questPoints:q.questPoints,source:q.src})),
   scriptCandidates:scripts,methodCount:methods.length,
-  otherGoals:['wealth and market logistics','quest access and travel unlocks','equipment and combat','items and collection','specialist records','main simultaneous24'],
+  otherGoals:['wealth and market logistics','quest access and travel unlocks','equipment and combat','items and collection','specialist records','main Overall record'],
   unknown:'Catalogue extraction is incomplete. Zero methods means inspect pinned content, not unavailable. Presence, native proof, live pilot and repeat qualification are separate states.'};
 }
 export function queueFacts(state:CoordinatorState){
@@ -39,7 +40,7 @@ export function briefSpec(spec:CoordTask){
  return{...rest,why:clip(why,200),...(env?{env:Object.keys(env)}:{}),...(args?{args:args.length}:{})};
 }
 export function readWorld(){
- const plan=JSON.parse(readFileSync(join(projectRoot,'swarm.json'),'utf8'));
+ const plan=readMergedPlan(projectRoot);
  const dir=join(projectRoot,'.practice/status'),statuses:any[]=[];
  if(existsSync(dir))for(const file of readdirSync(dir)){
   if(!file.endsWith('.json'))continue;
@@ -78,26 +79,38 @@ export function scoreboardSummary(board:any){
  const byStage=(stage:string)=>board.quests.folders.filter((f:any)=>f.stage===stage).map((f:any)=>f.folder.replace(/^quest_/,''));
  return{at:board.at,scope:board.scope,progress:board.progress,totals:board.totals,items:board.items,
   skills:board.skills.map((s:any)=>({skill:s.skill,bestLive:s.bestLive})),
+  ...(board.fleetSkills?{fleetSkills:fleetLeads(board.fleetSkills,board.fleet?.side??'local'),fleet:board.fleet}:{}),
   quests:{liveComplete:board.quests.liveComplete,practice:byStage('practice'),named:byStage('named'),none:byStage('none')},
   weakDomains:board.domains.filter((d:any)=>d.share<50).sort((a:any,b:any)=>b.actions-a.actions).slice(0,40)};
+}
+// Levels another side may lead a skill by before local work on it needs to pass that side's best.
+export const FLEET_BAND=5;
+// Each board-gap skill (fleet best under 99): the fleet best, the side and account that hold it, this side's best, and
+// whether another side leads this side by more than FLEET_BAND.
+export function fleetLeads(rows:any[],side:string){
+ return rows.filter((r:any)=>r.best<99).map((r:any)=>{
+  const mine=r.bySide?.[side]??null;
+  return{skill:r.skill,best:r.best,side:r.side,account:r.account,local:mine,otherSideLeads:r.side!==side&&r.best-(mine?.level??1)>FLEET_BAND};
+ });
 }
 export function plannerPrompt(state:CoordinatorState,world:ReturnType<typeof readWorld>,worldFile=''){
  const compact={...world,coverage:{...world.coverage,quests:undefined,scriptCandidates:world.coverage.scriptCandidates.length},statuses:world.statuses.map((s:any)=>({name:s.name,at:s.at,result:clip(s.result,160),goal:clip(s.goal,120),skills:Object.fromEntries((s.skills??[]).filter((v:any)=>v.level>1).map((v:any)=>[v.name,v.level])),bankAt:s.bankAt})),jobs:world.jobs.map((j:any)=>({account:j.account,accounts:j.accounts,script:j.script,goal:j.goal,enabled:j.enabled})),capabilities:world.capabilities.map((d:any)=>({id:d.id,entry:d.entry,goal:d.goal}))};
  return[
   'You are the autonomous director of this RuneScape project, working with Codex and Claude through one claimed task queue. Return ONLY a JSON object {reason:string,tasks:CoordTask[],capabilities:DeliveryTask[]}. Both tasks and capabilities must be JSON arrays, including when empty: {"reason":"No new work","tasks":[],"capabilities":[]}. Never use {} or null for either collection; capabilities is not a map of existing definitions.',
   'Do not edit files, launch processes or play the game. The coordinator owns execution. Read local sources as needed.',
-  'Goals, all retained: wealth; all19 skills99; all quests/unlocks; best-in-slot/useful/rare items; specialist wins; main rank1 on all24boards simultaneously. Goal IDs: '+GOALS.join(', '),
+  'Goals, all retained: wealth; all19 skills99; all quests/unlocks; every available boss defeated; best-in-slot/useful/rare items; specialists rank1 on every available scoreboard with priced margins; Haggis rank1 Overall under the record. Goal IDs: '+GOALS.join(', ')+'. The main24 ID denotes the main Overall run.',
   'Read AGENTS.md, docs/plans/joined-plan.md, docs/script-contract.md. All game mechanics are authorized. Missing supplies create acquisition tasks, never route exclusions. Preserve all current work, pauses and clocks. No paid APIs.',
   'Own a whole useful outcome through its consumer. Prefer existing workers and trained helpers. Parameterize simple scripts; compose them with dependency IDs. Research only an unresolved decision. Do not create notes/status tools as a substitute for game progress.',
-  'GOAL LOOP: the project ends only when world.scoreboard.progress.done is true; progress.remaining lists what is left. Until then always queue the next best finite task; return no tasks only while queued or running work is about to change the scoreboard, and name it. When a band, quest or capability is done, queue the next one at once. World.stall, when present, means no progress number rose for its hours: drop the approaches tried in that window and choose a different lane, capability or method.',
+  'GOAL LOOP: completion needs current game state and scoreboards proving all requested goals, including one fresh completion account with all19 skills99, every implemented quest complete and every available boss defeated, plus owned rank1 positions on every available scoreboard using specialists. world.scoreboard.progress is fleet-wide coverage, not completion proof; use progress.remaining to choose work. Until then always queue the next best finite task; return no tasks only while queued or running work is about to change the scoreboard, and name it. When a band, quest or capability is done, queue the next one at once. World.stall, when present, means no progress number rose for its hours: drop the approaches tried in that window and choose a different lane, capability or method.',
   'SCOREBOARD (deterministic, .practice/coordinator/scoreboard.json; world.scoreboard): every skill, quest, content domain (5,807 player actions in 154 domains) and item, staged none, named, practice, live. Full game coverage means every entry live, then batch. Each task why must name the scoreboard entries it moves and the expected stage change or size (levels, quests, actions, items, main-run ticks). Rank by that movement per hour of total cost. Prefer one shared or parameterized change that moves many entries, skills with a band at none, quests from named to practice to live, and domains with share 0. Do not propose a small target (for example one helper +10 levels, a handful of items) unless it is the first proof of a new script; size live batches to whole bands. Stock without a named consumer moves nothing.',
   'Choose across the whole coverage catalogue before extending the current prototype. In reason compare the best ready live job, the highest-impact unlock/supply bottleneck, and an uncovered capability. State expected useful output, entry facts, total acquisition/travel/build/test cost, uncertainty, and the next consumer. Prefer the fastest supported gain, not the most familiar script. Finish a qualified live consumer before more unrelated builds. Never repeat a failed build without new evidence and the exact repair in why.',
   'Return optional replacements:[{from,to}] to replace failed/pending tasks with a changed same-kind/capability/goal/account task and reconnect waiting consumers atomically. Failed receipts remain history. Do not add another numbered repair while leaving its consumers behind failed dependencies. Do not replace successful/running work or provision identities. Avoid duplicate open work with the same consumer. Build why is the actual work order sent to its builder; include exact defect, source scope, evidence paths and acceptance.',
   'Expand coverage incrementally: reuse candidate scripts, promote the smallest missing parameterized action, qualify normal entry and recovery, run a useful finite live batch, then pick its next consumer. New accounts require a named absent role or measured capacity need, prepared inputs and a finite first useful job. Never use protected accounts for discovery. Full coverage is a continuing goal across pinned content, not a claim made from filename counts.',
   'For an existing capability whose owned files or entry cannot support the real consumer, return capabilityUpdates:[{expectedSource:<capabilitySources[id]>,definition:<complete DeliveryTask>}] with a same-capability build task and explicit replacements for old pending builds. One update per proposal; no running owner may hold that capability. The daemon preserves the old definition. Expand the existing module scope instead of duplicating it under a new capability name. Entry must be an actual account-parameterized live worker; local --save fixtures and privileged practice commands belong in checks. Native proof must invoke that worker CLI, not only helper functions. Every new/progress build must include a finite live consumer with useful acceptance, inputs and a next goal; never stop at stock or qualification.',
   'THIN ACCEPTANCE (owner order): a consumer and its checks hold only the script contract acceptance bar: unit tests, one practice run of the real CLI showing the useful effect, assets reconciled, a clear refusal and logout. Never add interruption/resume, reseed, independent recompute, raw-file binding or failure-window scenarios, and never widen an existing consumer. A live failure gets the smallest fix of the exact failed step plus one regression test.',
-  'GOALS (owner): Haggis rank 1 Overall under the record, specialist board wins with priced margins, every quest, every useful item and best-in-slot gear. SUPPLY BILL (world.supplyBill): the route supplies Haggis needs minus owned stock. Helper work makes, buys or moves the largest shortfalls first, each run with a finite count; helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
-  'METHOD LADDER (owner order): a worker uses the best method the current level of the account and owned items allow and switches at once when a better one unlocks (Runecraft altars by level and owned talisman, Agility courses, bows and arrows by Ranged level, logs by Firemaking level, monsters by combat). XP is 25x, so a level band takes minutes: give each run the next unlock as its target, not a distant level on a weak method. Never gather or make stock the banks already hold in quantity (world.assets); spend it.',
+  'FLEET SIDES (world.scoreboard.fleetSkills, world.scoreboard.fleet): this side ('+(world.scoreboard?.fleet?.side??'local')+') plans only its own accounts, but the board counts the best account of any side (local, Codex cloud, Claude cloud). Each row gives the fleet best of a skill, the side and account that hold it, and the best of this side (local). bestLive and progress count this side only. For ordinary helper batches, do not queue work on a skill where otherSideLeads is true (another side leads this side by more than '+FLEET_BAND+' levels) unless the planned local account ends above that fleet best; a run that stays under it does not raise the board. Prefer skills this side leads or no side has trained for helper batches. The fresh completion account and scored main/specialist routes follow their own required progression and clocks. Name the fleet best and its side in why when a task targets a skill another side holds.',
+  'SUPPLY BILL (world.supplyBill): the route supplies Haggis needs minus owned stock. Helper work makes, buys or moves the largest shortfalls first, each run with a finite count; helper levels count only when they unlock a shortfall method, a quest, an item or a specialist win.',
+  'METHOD LADDER (owner order): a worker uses the best method the current level of the account and owned items allow and switches at once when a better one unlocks (Runecraft altars by level and owned talisman, Agility courses, bows and arrows by Ranged level, logs by Firemaking level, monsters by combat). XP is 25x, so a level band takes minutes. Ordinary helper batches target the next unlock. Completion and scored routes may span a qualified method-switching ladder; never target a distant level on a weak method. Never gather or make stock the banks already hold in quantity (world.assets); spend it.',
   'MEMORY GATES: a proof imports FREE_FLOOR_GB and PRACTICE_STARTUP_GB from packages/core/src/memory.ts and takes the practice turn through delivery; it never hardcodes a free-memory number (a hardcoded 12 GiB gate failed the Firemaking and Magic builds on a machine with 5 to 10 GB available).',
   'FAST LANE: when a qualified capability needs only a different account, quest or argument, queue the run; do not queue a build. A failed live step that the runtime already handles (for example the quest talk door rule) gets a fresh qualify and a retry run, not a build.',
   'ASSETS (world.assets): the coins and large stacks of every account. Turn owned stock into scoreboard progress before buying or gathering more: banked logs to Firemaking, rune essence to Runecraft, bows, shafts and arrows to Ranged, ores to Smithing, coins to GE and shop purchases (runes, bones, arrows, best-in-slot gear the account can wear now). Move coins and items to the account that will use them with the courier and trade workers.',
@@ -166,7 +179,7 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
  }
  replaceTasks(candidate,[]); // Validate cycles introduced by promotion edges too.
  for(const build of (raw.tasks as CoordTask[]).filter(t=>t.kind==='build')){
-  const reaches=(id:string):boolean=>id===build.id||candidate.tasks.find(r=>r.spec.id===id)!.spec.dependsOn.some(reaches);
+  const reaches=(id:string):boolean=>id===build.id||(candidate.tasks.find(r=>r.spec.id===id)?.spec.dependsOn.some(reaches)??false);
   if(!candidate.tasks.some(r=>r.status==='pending'&&r.spec.kind==='run'&&reaches(r.spec.id)))throw Error('build requires a finite live consumer dependency: '+build.id);
  }
  for(const d of definitions)atomicJson(join(base,'packages/router/tasks',d.id+'.json'),d);
@@ -179,9 +192,21 @@ export function acceptProposal(state:CoordinatorState,raw:any,base=projectRoot){
  }
  Object.assign(state,candidate);state.lastPlanReason=raw.reason;return raw.tasks.length;
 }
+export async function runPlannerModel(agent:ModelWorker,prompt:string,timeoutMs:number,run:typeof runModel=runModel,now:()=>number=Date.now){
+ const start=now(),first=await run(agent,prompt,timeoutMs,true),attempts=[{agent,...first}];
+ if(!first.ok&&/\b(?:you['’]ve hit your (?:weekly|daily|monthly|usage) limit|usage limit reached)\b/i.test(first.text)){
+  const remaining=timeoutMs-(now()-start);
+  if(remaining>0){
+   const fallback:ModelWorker=agent==='claude'?'codex':'claude';let result:Awaited<ReturnType<typeof runModel>>;
+   try{result=await run(fallback,prompt,remaining,true);}catch(error){result={ok:false,text:'planner startup failed: '+String(error),costUsd:0};}
+   attempts.push({agent:fallback,...result});return{...result,attempts};
+  }
+ }
+ return{...first,attempts};
+}
 export async function planWork(state:CoordinatorState,directory:string,timeoutMs:number,agent:ModelWorker='codex'){
  const world=readWorld();atomicJson(join(directory,'world.json'),world);const prompt=plannerPrompt(state,world,join(directory,'world.json'));writeFileSync(join(directory,'prompt.txt'),prompt);
- const result=await runModel(agent,prompt,timeoutMs,true);atomicJson(join(directory,'model.json'),result);
+ const result=await runPlannerModel(agent,prompt,timeoutMs);atomicJson(join(directory,'model.json'),result);
  if(!result.ok)throw Error('subscription planner unavailable: '+result.text.slice(-400));
  return parseModelObject(result.text);
 }

@@ -1,6 +1,6 @@
-// Swarm controller: one place that decides which live account runs what. Reads swarm.json every 2 s (edits apply
-// live), starts each enabled job under packages/practice/src/supervise.ts, and writes .practice/swarm-state.json for
-// the dashboard. Admission counts managed and fresh external live accounts against maxBots. Each new account
+// Swarm controller: one place that decides which live account runs what. Reads swarm.json (the owner's jobs) and
+// .practice/coordinator/jobs.json (the coordinator's jobs) every 2 s as one plan (edits apply live), starts each
+// enabled job under packages/practice/src/supervise.ts, and writes .practice/swarm-state.json for the dashboard. Admission counts managed and fresh external live accounts against maxBots. Each new account
 // reserves 1 GiB for 30 s; projected free RAM must retain max(8 GiB, minFreeGB). It never starts an account whose status file changed in the
 // last 30 s and that it did not start itself: a second login kicks the first session.
 // Successful jobs restart with "repeat": true or a changed work revision. Death, no-progress and exhausted retries stay blocked.
@@ -12,6 +12,8 @@
 // (packages/core/src/host.ts, about 140 MB per bot instead of about 550 MB, research/bot-host.md) under
 // packages/practice/src/supervise-host.ts. The rules apply per account: the external guard and stop files per
 // account, and an account whose RESULT says died is never started again. A host counts as its N bots for maxBots.
+// "envByAccount": {"<account>": {"KEY": "value"}} gives one hosted account its own variables on top of "env". A host
+// job whose script is scripts/chain.ts runs its "args" as chain steps inside the host, one chain per account.
 // Usage: DEMO_OK=1 bun scripts/swarm.ts [swarm.json]
 import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs';
 import { spawn as spawnChild } from 'node:child_process';
@@ -22,15 +24,17 @@ import { payoutWaiting, type DemandNear } from '../packages/core/src/bank-demand
 import { ownedAccounts } from '../packages/core/src/tradeguard';
 import { courierDeliveryWaiting } from './courier-cargo';
 import { deliveryResume, foodDeficit, selectFoodSource } from './courier-route';
-import {assertWorkerRelease,workerSourceRevision} from '../packages/core/src/worker-release';
+import {assertWorkerRelease,capabilityRevision,workerEntries} from '../packages/core/src/worker-release';
 import {withSessionAdmission,missionSignature as sharedMissionSignature,successfulEnd,BOOTSTRAP_STATUS_AGE_MS} from '../packages/core/src/session-admission';
 import {assertNoRecoveryLease,heldRecoveryOwners} from '../packages/core/src/session-recovery-permit';
 import {createRecoveryDispatch} from '../packages/core/src/session-recovery-dispatch';
 import { createHash } from 'node:crypto';
 import { readLogoutProof, listAttempts, verifyLegacyLogout, type LegacyLogoutClaim, type LegacyLogoutProof, type LogoutProof } from '../packages/core/src/session-lifecycle';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
+import { mergedPlan, readCoordinatorJobs, emptyCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
+import { loadOwners, mySide, sideOf, type Owner } from '../packages/core/src/fleet';
 
-export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
+export type Job = { account?: string; accounts?: string[]; host?: boolean; orchestrate?:boolean; args?:string[]; maxRestarts?:number; script: string; role?: string; goal?: string; env?: Record<string, string>; envByAccount?: Record<string, Record<string, string>>; enabled: boolean; repeat?: boolean; note?: string; whenCargoFrom?: string[]; demandNear?: {x:number;z:number;radius:number};whenFoodLowFrom?:string[];foodLowBelow?:number;foodSourceAccount?:string;foodSourceAccounts?:string[];sourceFoodMinimum?:number };
 type Plan = { maxBots: number; minFreeGB: number; jobs: Job[] };
 // A run is a detached supervisor process: it outlives this controller, and a restarted controller adopts it from
 // .practice/swarm-runs.json. Its output goes straight to its log file, which the controller follows from `offset`.
@@ -124,6 +128,13 @@ export function isReservation(job: Job): boolean {
     return !!job && typeof job.account === 'string' && !job.accounts && !job.script;
 }
 
+// The first account of a job that another fleet side owns (fleet/owners.json): this controller never starts it, so one
+// swarm.json can carry every side's jobs.
+export function otherSideAccount(accounts: readonly string[], side: string, owners: ReadonlyMap<string, Owner>): { account: string; side: string } | undefined {
+    for (const a of accounts) { const s = sideOf(a, owners as Map<string, Owner>); if (s !== side) return { account: a, side: s }; }
+    return undefined;
+}
+
 // A host job lists its accounts; a single job names one. Returns an error string for a job the swarm must skip.
 export function parseJob(job: Job): ParsedJob | { error: string } {
     if (!job || typeof job.script !== 'string' || !job.script) return { error: 'no script' };
@@ -145,16 +156,28 @@ export function parseJob(job: Job): ParsedJob | { error: string } {
         if (job.account) return { error: 'host job has both "account" and "accounts"' };
         if (list.some(a => typeof a !== 'string' || !ACCOUNT.test(a))) return { error: 'bad account name in "accounts"' };
         if (new Set(list.map(a => a.toLowerCase())).size !== list.length) return { error: 'account listed twice' };
+        // envByAccount: one env map per listed account, on top of the job's env (host.ts --env).
+        const per = job.envByAccount;
+        if (per !== undefined) {
+            if (typeof per !== 'object' || per === null || Array.isArray(per)) return { error: '"envByAccount" must map an account to its env' };
+            for (const [a, e] of Object.entries(per)) {
+                if (!list.includes(a)) return { error: `envByAccount names ${a}, which is not in "accounts"` };
+                if (typeof e !== 'object' || e === null || Array.isArray(e) || Object.values(e).some(v => typeof v !== 'string')) return { error: `envByAccount for ${a} must map KEY to a string` };
+            }
+        }
         return { key: `host:${list.join('+')}`, accounts: [...list], host: true, job };
     }
     if (job.accounts) return { error: '"accounts" needs "host": true' };
+    if (job.envByAccount) return { error: '"envByAccount" needs "host": true' };
     if (typeof job.account !== 'string' || !ACCOUNT.test(job.account)) return { error: 'no account' };
     return { key: job.account, accounts: [job.account], host: false, job };
 }
 
 export function supervisorCommand(parsed:ParsedJob,accounts:string[]):string[]{
     const job=parsed.job,maxRestarts=String(job.maxRestarts??(job.orchestrate?0:20));
-    return parsed.host?['bun','packages/practice/src/supervise-host.ts',job.script,maxRestarts,...accounts,...(job.args?.length?['--args',job.args.join(',')]:[])]
+    // A host job: one --arg per script argument (values may hold commas) and one --env per account variable.
+    return parsed.host?['bun','packages/practice/src/supervise-host.ts',job.script,maxRestarts,...accounts,...(job.args??[]).flatMap(a=>['--arg',a]),
+            ...accounts.flatMap(a=>Object.entries(job.envByAccount?.[a]??{}).flatMap(([k,v])=>['--env',a,`${k}=${v}`]))]
         :['bun','packages/practice/src/supervise.ts',accounts[0]!,job.script,maxRestarts,...(job.orchestrate?accounts.slice(1):[]),...(job.args??[])];
 }
 
@@ -170,6 +193,13 @@ export function completeJobCandidates(parsed:ParsedJob,selection:{start:string[]
 // Display edits, enabling and repeat policy do not turn completed work into new work.
 export function missionSignature(job:Job):string{return sharedMissionSignature(job);}
 
+// A run that another planned job of the same account started (its mission signature is the run's revision). A job that
+// is off, or whose mission changed, must not stop or re-plan a run it does not own: a coordinator job left off beside a
+// standing job would otherwise stop that standing bot on every tick.
+export function foreignRun(planned: readonly ParsedJob[], p: ParsedJob, run: { revision: string }): boolean {
+    if (run.revision === missionSignature(p.job)) return false;
+    return planned.some(q => q !== p && missionSignature(q.job) === run.revision);
+}
 export function overlappingRun<T extends { accounts: readonly string[] }>(runs: Iterable<T>, accounts: readonly string[]): T | undefined {
     const names = new Set(accounts.map(a => a.toLowerCase()));
     return [...runs].find(r => r.accounts.some(a => names.has(a.toLowerCase())));
@@ -369,6 +399,13 @@ export function persistEnded(file: string, ended: ReadonlyMap<string, EndRecord>
     }
 }
 
+// An account is enabled when any job that names it is enabled. Every job of an account reads the same flag for it, so
+// an account named by one job that is off and one that is on is on, with no change to observe between the two.
+export function enabledByAccount(planned: readonly ParsedJob[]): Map<string, boolean> {
+    const out = new Map<string, boolean>();
+    for (const p of planned) for (const a of p.accounts) { const k = a.toLowerCase(); out.set(k, (out.get(k) ?? false) || p.job.enabled === true); }
+    return out;
+}
 export function observeEnabled(accounts: readonly string[], enabled: boolean, previous: Map<string, boolean>, pending: Set<string>): void {
     for (const a of accounts) {
         const key=a.toLowerCase();
@@ -445,8 +482,11 @@ export function coordinatedAdmission(job:Job,scoped:boolean):boolean{
 if (import.meta.main) {
     const root = resolve(import.meta.dir, '..');
     const planFile = resolve(process.argv[2] ?? join(root, 'swarm.json'));
+    // Windows paths compare without case: the drive letter differs between a shell's cwd and import.meta.dir.
+    const rootPlan = process.platform === 'win32' ? planFile.toLowerCase() === resolve(root, 'swarm.json').toLowerCase() : planFile === resolve(root, 'swarm.json');
     const coordinatorOwner=process.argv.find(a=>a.startsWith('--coordinator='))?.slice('--coordinator='.length);
     const prac = join(root, '.practice');
+    const side = mySide();
     const logDir = join(prac, 'swarm-logs');
     mkdirSync(logDir, { recursive: true });
     if (process.env.DEMO_OK !== '1') { console.log('swarm: set DEMO_OK=1 (live server)'); process.exit(2); }
@@ -551,10 +591,12 @@ if (import.meta.main) {
         const offset = existsSync(logPath) ? statSync(logPath).size : 0, out = openSync(logPath, 'a');
         let child: ReturnType<typeof spawnChild>;
         try {
+            // Each worker carries the release of the files its entries can run (docs/script-contract.md, Release
+            // scope), so a runtime change needs no swarm restart and an edit outside those files leaves it unchanged.
+            const entries = workerEntries(job.script, job.args ?? [], root);
             child = spawnChild(cmd[0]!, cmd.slice(1), {
                 cwd: root, detached: true, windowsHide: true, stdio: ['ignore', out, out],
-                // Each worker carries the release of the source it starts on, so a runtime change needs no swarm restart.
-                env: { ...process.env, ...job.env, WORKER_RELEASE: workerSourceRevision(root), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
+                env: { ...process.env, ...job.env, WORKER_RELEASE: capabilityRevision(entries, root), WORKER_ENTRY: entries.join(','), DEMO_OK: '1', BOT_ROLE: job.role ?? '', BOT_GOAL: job.goal ?? '', STANDING: (job as Job & {standing?:boolean}).standing ? '1' : '',COORDINATOR_PARTICIPANTS:job.orchestrate?JSON.stringify(accounts):'' },
             });
         } finally { closeSync(out); }
         if (!child.pid) throw Error('supervisor did not start');
@@ -567,7 +609,8 @@ if (import.meta.main) {
 
     const tick = () => {
         let plan: Plan;
-        try { plan = JSON.parse(readFileSync(planFile, 'utf8')); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
+        // The coordinator's jobs join the root plan only; a practice plan file given on the command line runs alone.
+        try { plan = mergedPlan(JSON.parse(readFileSync(planFile, 'utf8')), rootPlan ? readCoordinatorJobs(root) : emptyCoordinatorJobs()); } catch (e) { console.log(`SWARM bad plan: ${String(e)}`); return; }
         // An owner edit of the hold file applies live, like swarm.json.
         try { const m = statSync(holdsFile).mtimeMs; if (m !== holdsMtime) { holds.splice(0, holds.length, ...loadHolds(holdsFile).filter(h => /^died\b/.test(h.reason))); holdsMtime = m; } } catch { /* no hold file yet */ }
         if(!Array.isArray(plan.jobs)||!Number.isFinite(plan.maxBots)||plan.maxBots<1||!Number.isFinite(plan.minFreeGB)) { console.log('SWARM bad plan shape'); return; }
@@ -576,6 +619,7 @@ if (import.meta.main) {
         if(stopAll&&recoveryDispatch.active)writeFileSync(stopFile(recoveryDispatch.active.account),'swarm recovery stopped');
         if(stopAll)for(const held of inheritedRecoveries)writeFileSync(stopFile(held.account),'inherited recovery stopped');
         const planned=plan.jobs.flatMap(j=>{ const p=parseJob(j); return 'error' in p?[]:[p]; });
+        const accountEnabled = enabledByAccount(planned);
         if (Date.now() - orphanScanAt >= 60_000) {
             orphanScanAt = Date.now();
             const busy = [...runs.values()].flatMap(r => r.accounts).concat(inheritedRecoveries.map(r => r.account), recoveryDispatch.active ? [recoveryDispatch.active.account] : []);
@@ -634,6 +678,8 @@ if (import.meta.main) {
         } catch (e) { endStateOk = false; console.log(`SWARM repair unavailable; new starts paused: ${String(e)}`); }
         const externalCount = () => activeExternalLive(statuses, [...runs.values()].flatMap(r => r.accounts).concat(recoveryDispatch.active?[recoveryDispatch.active.account]:[],inheritedRecoveries.map(r=>r.account)), Date.now()).length;
         const state: Record<string, unknown>[] = [];
+        let owners: Map<string, Owner>;
+        try { owners = loadOwners(); } catch (e) { console.log(`SWARM owners unreadable; new starts paused: ${String(e)}`); return; }
         for (const raw of plan.jobs) {
             if(!coordinatedAdmission(raw,!!coordinatorOwner)){
                 state.push({account:raw.account,accounts:raw.accounts,script:raw.script,state:'existing assignment; awaiting coordinator qualification'});
@@ -649,18 +695,25 @@ if (import.meta.main) {
                 continue;
             }
             const job = p.job;
+            const foreign = otherSideAccount(p.accounts, side, owners);
+            if (foreign) {
+                state.push({ account: raw.account ?? p.accounts.join('+'), script: raw.script, enabled: raw.enabled, state: `other side: ${foreign.account} belongs to ${foreign.side}` });
+                continue;
+            }
             // A standing job runs the current source, so a publish or rollout lock does not hold it.
             if(!(job as Job & {standing?:boolean}).standing&&existsSync(join(prac,'coordinator/build-lock.json'))){
                 state.push({account:raw.account,accounts:raw.accounts,script:raw.script,standing:false,state:'waiting: coordinator owns runtime build'});
                 continue;
             }
-            observeEnabled(p.accounts, job.enabled, previousEnabled, pendingResume);
+            for (const a of p.accounts) observeEnabled([a], accountEnabled.get(a.toLowerCase()) === true, previousEnabled, pendingResume);
             if(stopAll) for(const a of p.accounts) writeFileSync(stopFile(a),'swarm stopped');
             const r = overlappingRun(runs.values(), p.accounts);
             if (!stopAll && endStateOk && applyResume(p.accounts, !!r, ended, pendingResume, a => rmSync(stopFile(a), {force:true})))
                 persistEnded(deathsFile, ended);
             const st: Record<string, string> = {};
-            if (r) {
+            if (r && foreignRun(planned, p, r) && !stopAll) {
+                for (const a of p.accounts) st[a] = 'waiting: another job of this account is running';
+            } else if (r) {
                 const stop = !job.enabled || stopAll;
                 for (const a of p.accounts) {
                     if (!r.accounts.some(name => name.toLowerCase() === a.toLowerCase())) st[a] = 'waiting: current mission still running';

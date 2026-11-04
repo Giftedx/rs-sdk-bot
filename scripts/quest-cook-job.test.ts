@@ -16,6 +16,68 @@ const snapshot=(overrides:Partial<CookJobSnapshot>={}):CookJobSnapshot=>({
 const before=snapshot(),after=snapshot({quest:'complete',qp:1,cookingXp:300,
  pack:[],bank:[{id:995,count:123},{id:379,count:3}],bankGeneration:5});
 
+test('Hetty keeps its engaged rat when nearest order changes and waits for carried tail after death',async()=>{
+ let tick=0,colour=0xf8f800,pickup=false;
+ const counts=new Map([[1957,1],[221,1],[2146,1],[300,0]]),attacks:number[]=[];
+ const rat={name:'Rat',index:7,hp:2,distance:1},other={name:'Rat',index:8,hp:null,distance:2};
+ const state:any={inventory:[],player:{worldX:2957,worldZ:3204,level:0,hp:10,combat:{inCombat:false,targetType:'none',targetIndex:-1}},nearbyNpcs:[rat,other],groundItems:[]};
+ const q:any={st:()=>state,pos:()=>state.player,cnt:(id:number)=>counts.get(id)??0,has:(id:number)=>(counts.get(id)??0)>0,
+  s:{client:{ingame:true,ifType:()=>({colour})},tick:()=>tick,sdk:{getSkillXp:()=>0},direct:async(action:any)=>{
+   if(action.type==='interactNpc'){
+    attacks.push(action.npcIndex);
+    // A repeated click or a nearer second rat must not interrupt this fight.
+    expect(attacks).toEqual([7]);
+    state.player.combat={inCombat:true,targetType:'npc',targetIndex:7};
+   }else if(action.type==='pickupItem'){expect(tick).toBeGreaterThanOrEqual(10);pickup=true;}
+   return {success:true};
+  }},
+  npc:()=>state.nearbyNpcs[0],guard:async()=>{},openDoor:async()=>{},dash:async()=>{},milestone:()=>{},
+  waitTicks:async()=>{
+   tick++;
+   if(tick===2){rat.hp=1;other.distance=0;state.nearbyNpcs=[other,rat];}
+   if(tick===8)rat.hp=0;
+   if(tick===10){state.nearbyNpcs=[other];state.player.combat={inCombat:true,targetType:'none',targetIndex:-1};state.groundItems=[{id:300,x:2958,z:3203}];}
+   if(pickup&&tick>=12){counts.set(300,1);state.groundItems=[];}
+   if(tick>120)throw Error('rat deadline');
+  },
+  waitUntil:async(pred:()=>boolean)=>pred(),fail:async(why:string)=>{throw Error(why);},
+  talk:async()=>{expect(counts.get(300)).toBe(1);for(const id of counts.keys())counts.set(id,0);},
+  step:async()=>{colour=0x00f800;},converse:async()=>true,dialogOpen:()=>false,
+ };
+ const log=spyOn(console,'log').mockImplementation(()=>{});
+ try{expect((await hetty.executeHetty(q)).ok).toBe(true);expect(attacks).toEqual([7]);expect(pickup).toBe(true);}
+ finally{log.mockRestore();}
+});
+
+test('Hetty rat observer separates nearest selection, own combat, death and actual tail credit without actions',()=>{
+ const combat={inCombat:true,targetType:'npc',targetIndex:7,lastDamageTick:10};
+ const rat={id:47,name:'Rat',index:7,x:2958,z:3203,tileX:2958,tileZ:3203,distance:1,hp:1,maxHp:2,inCombat:true,targetIndex:32769,lastCombatTick:10,animId:1};
+ const state:any={player:{worldX:2958,worldZ:3204,level:0,hp:10,animId:422,combat},
+  nearbyNpcs:[{...rat,index:8,distance:0,hp:null,inCombat:false},rat],groundItems:[],gameMessages:[{type:0,text:"I'm already under attack!"}]};
+ let tail=0,tick=10;
+ const direct=()=>{throw Error('observer cannot act');};
+ const q:any={st:()=>state,cnt:()=>tail,s:{tick:()=>tick,direct,client:{ingame:true,ifType:()=>({colour:0xf8f800})},
+  bankObservation:()=>({items:[]}),sdk:{getSkillXp:(k:string)=>k==='Attack'?100:32}}};
+ const rows:string[]=[];
+ const log=spyOn(console,'log').mockImplementation(line=>{rows.push(String(line));});
+ try{
+  const attack=hetty.observeHettyRat(q,'attack',8);
+  expect(attack).toMatchObject({selectedIndex:8,quest:'started',player:{rootTargetIndex:null,combat},carriedTail:0,bankTail:0,xp:{Attack:100}});
+  expect(attack.rats.map((n:any)=>n.index)).toEqual([8,7]);
+  state.nearbyNpcs[1].hp=0;tick++;
+  expect(hetty.observeHettyRat(q,'tick').rats[1].hp).toBe(0);
+  expect(attack.rats[1].hp).toBe(1);
+  state.nearbyNpcs=[];state.groundItems=[{id:300,x:2958,z:3203,count:1}];tick++;
+  const pickup=hetty.observeHettyRat(q,'pickup-reply',null,{success:true});
+  expect(pickup).toMatchObject({rats:[],tails:[{id:300,x:2958,z:3203,count:1}],carriedTail:0,reply:{success:true}});
+  tail=1;state.groundItems=[];tick++;
+  expect(hetty.observeHettyRat(q,'exit')).toMatchObject({carriedTail:1,tails:[],tick:13});
+  expect(rows).toHaveLength(4);
+  expect(rows.every(row=>row.startsWith('HETTY_RAT_OBSERVATION '))).toBe(true);
+  expect(JSON.parse(rows[0]!.slice('HETTY_RAT_OBSERVATION '.length)).rats[1].hp).toBe(1);
+ }finally{log.mockRestore();}
+});
+
 test('live CLI takes an account and a bounded CAP, with no privileged save argument',()=>{
  expect(parseCookJobArgs(['helper1'],'2400')).toEqual({name:'helper1',cap:2400});
  for(const args of [[],['helper1','--save=private.sav'],['bad-name']])expect(()=>parseCookJobArgs(args,'2400')).toThrow();
@@ -90,6 +152,14 @@ test('Hetty checks exact price-limited purchases, reward, inputs, assets and lif
   expect(Object.values(hettyJobChecks(b,{...a,...change},prices)).every(Boolean)).toBe(false);
  }
  expect(hettyJobChecks(b,a,[...prices,prices[0]!]).purchases).toBe(false);
+ const travel=[{id:'npc:captain_barnaby:brimhaven@2679,3275',coins:30,packBefore:80,packAfter:50},
+  {id:'npc:customs_officer:port-sarim@2953,3147',coins:30,packBefore:50,packAfter:20}];
+ const western=snapshot({...b,pack:[{id:995,count:80},{id:1933,count:3}],bank:[{id:995,count:19895}]});
+ const paid=snapshot({...a,pack:[],bank:[{id:995,count:19911},{id:1933,count:3}]});
+ expect(Object.values(hettyJobChecks(western,paid,prices,travel)).every(Boolean)).toBe(true);
+ expect(hettyJobChecks(western,paid,prices).coins).toBe(false);
+ expect(hettyJobChecks(western,paid,prices,[{...travel[0]!,packAfter:49},travel[1]!]).travel).toBe(false);
+
  const stocked=snapshot({...b,pack:[{id:1277,count:1},{id:300,count:2},{id:2142,count:2},{id:221,count:2},{id:1957,count:2}]});
  const retained=snapshot({...a,pack:[{id:1277,count:1},{id:300,count:1},{id:2142,count:1},{id:221,count:1},{id:1957,count:1}],bank:b.bank});
  expect(Object.values(hettyJobChecks(stocked,retained,[])).every(Boolean)).toBe(true);
@@ -97,7 +167,7 @@ test('Hetty checks exact price-limited purchases, reward, inputs, assets and lif
 
 test('Hetty session leaves Tutorial Island with the bounded starter helper before quest observation and acquisition',async()=>{
  const grant=[[1351,1],[590,1],[303,1],[315,1],[1925,1],[1931,1],[2309,1],[1265,1],[1205,1],[1277,1],[1171,1],[841,1],[882,25],[556,25],[558,15],[555,6],[557,4],[559,2]].map(([id,count])=>({id:id!,count:count!}));
- for(const failure of ['','starter','identity']){
+ for(const failure of ['','starter','identity','quest']){
   // Registration state: Tutorial Island start, empty pack and bank, no quest list.
   let colour:number|undefined,generation=1,magic=0,settlements=0;const calls:string[]=[];
   const client={ingame:true,varServ:{101:0},ifType:()=>colour===undefined?undefined:{colour}};setEquipmentObserved(client,true);
@@ -119,14 +189,27 @@ test('Hetty session leaves Tutorial Island with the bounded starter helper befor
    return {ok:true,ticks:1,pack:state.inventory,purchases:[{id:221,coins:3},{id:2132,coins:1}]} as any;
   });
   const complete=spyOn(hetty,'completeHetty').mockImplementation(async()=>{
+   if(failure==='quest'){
+    Object.assign(state.player,{worldX:2958,worldZ:3203,combat:{inCombat:true,targetType:'npc',targetIndex:7}});
+    throw Error('no rat tail');
+   }
    calls.push('quest');colour=0x00f800;client.varServ[101]=1;magic=8125;
    state.inventory=state.inventory.filter((i:any)=>![1957,221,2146].includes(i.id));
    return {ok:true,detail:'observed'} as any;
   });
   const walker=spyOn(walking,'sessionWalker').mockResolvedValue({} as any);
-  const walk=spyOn(walking,'walkPath').mockResolvedValue({ok:true,ticks:1,detail:'arrived'} as any);
+  const walk=spyOn(walking,'walkPath').mockImplementation(async(_s,points,options)=>{
+   if(state.player.combat?.inCombat){
+    expect(points).toEqual([{x:2956,z:3206,tol:0},{x:2956,z:3214,tol:1}]);
+    expect(options?.maxTicks).toBe(32);calls.push('retreat');
+    state.player.combat={inCombat:false,targetType:'none',targetIndex:-1};
+   }
+   return {ok:true,ticks:1,detail:'arrived'} as any;
+  });
   const settle=spyOn(owner,'settle').mockImplementation(async(_sessions,ok,_detail,options)=>{
-   settlements++;options?.log?.('LOGOUT logged-out');expect(ok).toBe(!failure);return true;
+   settlements++;options?.log?.('LOGOUT logged-out');expect(ok).toBe(!failure);
+   if(failure==='quest')expect(state.player.combat.inCombat).toBe(false);
+   return true;
   });
   try{
    const result=await runQuestHettyJob('helper1',6000);
@@ -137,6 +220,9 @@ test('Hetty session leaves Tutorial Island with the bounded starter helper befor
     expect(result.before?.position).toEqual({x:3222,z:3218,level:0});
     expect(result.before?.bank).toEqual([{id:995,count:25}]);
     expect(Object.values(result.checks!).every(Boolean)).toBe(true);
+   }else if(failure==='quest'){
+    expect(result.ok).toBe(false);expect(result.detail).toBe('Error: no rat tail');
+    expect(result.gather?.ok).toBe(true);expect(calls).toEqual(['starter','gather','retreat']);
    }else{
     expect(result.ok).toBe(false);expect(gather).not.toHaveBeenCalled();expect(complete).not.toHaveBeenCalled();
     expect(calls).toEqual(failure==='starter'?['starter']:[]);

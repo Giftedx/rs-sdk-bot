@@ -1,6 +1,11 @@
-import {expect,test} from 'bun:test';
+import {expect,test,spyOn} from 'bun:test';
+import * as coreBot from '../packages/core/src/bot';
+import * as walking from '../packages/core/src/walk';
 import {firemakingOptions,firemakingPreflight,xpForLevel,levelForXp,logShortfall,lineTiles,nextFreeTile,rowStart,packWant,
- tinderboxPlan,tinderboxUnitMax,runFiremaking,BURN_ROWS,DRAYNOR_BANK,TINDERBOX} from './firemaking-order';
+ tinderboxPlan,tinderboxUnitMax,runFiremaking,freeRouteAccount,routeDebits,entryBudget,BURN_ROWS,DRAYNOR_BANK,TINDERBOX,
+ firemakingSite,CATHERBY_SITE,DRAYNOR_SITE} from './firemaking-order';
+import type {Leg} from '../packages/core/src/world';
+import type {Travel} from '../packages/core/src/travel';
 
 test('options need a target and validate every bound',()=>{
  expect(()=>firemakingOptions({})).toThrow('invalid TARGET_LEVEL');
@@ -95,4 +100,67 @@ test('short log stock refuses after the bank observation with the exact shortfal
  const r=await runFiremaking(s,firemakingOptions({TARGET_LEVEL:'10'}));
  expect(r).toMatchObject({ok:false,stop:'refused',refused:'short log stock: need 1 Logs, own 0, shortfall 1',shortfall:1,ownedLogs:0,bankTrips:1});
  expect(calls).toEqual(['openBank']);
+});
+test('the failed western entry walks to nearby Catherby on the ground without a world route or fare',async()=>{
+ expect(firemakingSite({x:2863,z:3428,level:0})).toBe(CATHERBY_SITE);
+ expect(firemakingSite({...DRAYNOR_BANK,level:0})).toBe(DRAYNOR_SITE);
+ const tiles=lineTiles(CATHERBY_SITE.rows);
+ expect(tiles[0]).toEqual({x:2812,z:3433,row:0});expect(tiles[23]).toEqual({x:2789,z:3433,row:0});
+ expect(tiles[rowStart(1,CATHERBY_SITE.rows)]).toEqual({x:2829,z:3436,row:1});
+ expect(rowStart(2,CATHERBY_SITE.rows)).toBe(0);
+ const entry={x:2863,z:3428,level:0,fm:1,fmXp:0},{s,calls}=fakeSession(entry);
+ const spies=[spyOn(coreBot,'getWorld').mockImplementation(async()=>{throw Error('distant world route forbidden');}),
+  spyOn(walking,'sessionWalker').mockResolvedValue({} as any),
+  spyOn(walking,'walkPath').mockImplementation(async(_deps,points,opts)=>{
+   expect(points).toEqual([{x:2809,z:3441,tol:2}]);expect(opts?.maxTicks).toBe(1920);
+   calls.push('Catherby ground walk');entry.x=2809;entry.z=3441;
+   return{ok:true,ticks:58} as any;
+  })];
+ try{
+  const r=await runFiremaking(s,firemakingOptions({TARGET_LEVEL:'15',MAX_LOGS:'2',CAP:'2000',TOOL_BUDGET:'0'}));
+  expect(r).toMatchObject({stop:'refused',refused:'short log stock: need 1 Logs, own 0, shortfall 1',bankTrips:1,logsBurnt:0});
+  expect(calls).toEqual(['Catherby ground walk','openBank']);
+ }finally{for(const spy of spies)spy.mockRestore();}
+});
+const boat={id:'npc:tobias',kind:'boat',name:'Captain Tobias to Port Sarim',from:{x:2954,z:3147,level:0},to:{x:3029,z:3217,level:0},coins:30,
+ needs:[],runes:[],run:{how:'npc',npc:'Captain Tobias',op:1,options:[]},cost:40} as Travel;
+const tele={id:'tele:falador',kind:'spell',name:'Falador Teleport',from:null,to:{x:2965,z:3378,level:0},coins:0,
+ needs:[],runes:[{item:'law_rune',count:1}],run:{how:'spell',component:'x'},cost:5} as Travel;
+test('the entry account masks coins and consumable travel items, and any fare or consumable leg is a debit',()=>{
+ const a={skills:{Hitpoints:10},varps:{},items:['coins','law_rune','pot_of_flour'],coins:80,counts:{coins:80,law_rune:3,pot_of_flour:3}};
+ const free=freeRouteAccount(a,[boat,tele]);
+ expect(free).toMatchObject({coins:0,items:['coins','pot_of_flour'],counts:{coins:80,pot_of_flour:3}});
+ const walkLeg={kind:'walk',to:{x:3092,z:3243,level:0}} as Leg;
+ expect(routeDebits([walkLeg],free)).toEqual([]);
+ expect(routeDebits([{kind:'travel',travel:boat,at:boat.from,to:boat.to},walkLeg],free)).toEqual([boat.name]);
+ expect(routeDebits([{kind:'travel',travel:tele,at:null,to:tele.to}],free)).toEqual([tele.name]);
+ // Shaftmaker's failed entry: CAP 2000, MAX_LOGS 2 leaves 1920 ticks for the route, not 400.
+ expect(entryBudget(firemakingOptions({TARGET_LEVEL:'15',MAX_LOGS:'2',CAP:'2000'}),0)).toBe(1920);
+});
+test('the default distant entry walks a zero-fare route inside the CAP remainder, and refuses a fare or an over-budget route before travel',async()=>{
+ const o=firemakingOptions({TARGET_LEVEL:'15',MAX_LOGS:'2',TOOL_BUDGET:'0',CAP:'2000'});
+ const account={skills:{Hitpoints:10},varps:{},items:['coins'],coins:80,counts:{coins:80}};
+ const free=[{kind:'walk',to:{x:2934,z:3450,level:0}},{kind:'walk',to:{...DRAYNOR_BANK,level:0}}] as Leg[];
+ const paid=[{kind:'walk',to:{x:2954,z:3147,level:0}},{kind:'travel',travel:boat,at:boat.from,to:boat.to},{kind:'walk',to:{...DRAYNOR_BANK,level:0}}] as Leg[];
+ const run=async(plan:{legs:Leg[];cost:number})=>{
+  const entry={x:2950,z:3400,level:0,fm:1,fmXp:0},{s,calls}=fakeSession(entry),planned:any[]=[];
+  const world={route:(from:any,to:any,acct:any)=>{planned.push({from,to,acct});return{ok:true,...plan};}};
+  const spies=[spyOn(coreBot,'getWorld').mockResolvedValue(world as any),spyOn(coreBot,'accountOf').mockReturnValue(account as any),
+   spyOn(walking,'goTo').mockImplementation(async()=>{throw Error('goTo replans with coins');}),
+   spyOn(walking,'sessionWalker').mockImplementation(async()=>{throw Error('distant walkPath forbidden');}),
+   spyOn(walking,'walkRoute').mockImplementation(async(actor,legs,opts)=>{
+    expect(actor).toBe(s);expect(legs).toBe(plan.legs);expect(opts?.signal?.aborted).toBe(false);calls.push('route');
+    entry.x=DRAYNOR_BANK.x;entry.z=DRAYNOR_BANK.z;return{ok:true,ticks:plan.cost};})];
+  try{return{r:await runFiremaking(s,o),calls,planned};}finally{for(const spy of spies)spy.mockRestore();}
+ };
+ const ok=await run({legs:free,cost:900});
+ expect(ok.planned).toEqual([{from:{x:2950,z:3400,level:0},to:{...DRAYNOR_BANK,level:0},acct:expect.objectContaining({coins:0})}]);
+ expect(ok.calls).toEqual(['route','openBank']);
+ expect(ok.r).toMatchObject({stop:'refused',refused:'short log stock: need 1 Logs, own 0, shortfall 1',bankTrips:1,logsBurnt:0});
+ const fare=await run({legs:paid,cost:500});
+ expect(fare.calls).toEqual([]);
+ expect(fare.r).toMatchObject({stop:'refused',refused:`route to Draynor bank takes fares or consumables: ${boat.name}`,bankTrips:0});
+ const slow=await run({legs:free,cost:1921});
+ expect(slow.calls).toEqual([]);
+ expect(slow.r).toMatchObject({stop:'refused',refused:'route to Draynor bank estimates 1921 ticks, entry budget 1920',bankTrips:0});
 });

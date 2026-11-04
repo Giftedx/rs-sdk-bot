@@ -83,6 +83,7 @@ const PICK_TICKS = Number(process.env.PICK_TICKS ?? 2);
 
 if(import.meta.main){
 console.log(`ERR-TRACE opening ${process.argv[2]}`);
+console.log(`KNIGHT_SPOT ${KNIGHT_SPOT.x},${KNIGHT_SPOT.z}`);
 const s = await openBot(process.argv[2]!).catch(e => finish([], false, `login: ${String(e)}`));
 const foodWake=process.env.CURIER_FOOD_WAKE==='1';
 const farmServer=FOOD_FROM?serverFromEnv(readFileSync(join(import.meta.dir,'../vendor/rs-sdk/bots',s.name,'bot.env'),'utf8')):'';
@@ -155,7 +156,7 @@ try {
         const loss = maxHp() - hp();
         const pick = [...items].reverse().find(i => (HEAL[rank(i)] ?? 99) <= loss) ?? items[0];
         // Every failure waits a tick: callers loop on "HP low and food() > 0", and an instant false return spun the
-        // event loop forever (practice proof hung at t=1003 and grew to 2.6 GB on 2026-10-23).
+        // event loop forever (practice proof hung at t=1003 and grew to 2.6 GB).
         if (!pick) { lastFail = 'eat: no edible item'; await waitTicks(s, 1); return false; }
         const r = await s.bot.eatFood(pick);
         eatTicks += s.tick() - e0;
@@ -278,7 +279,7 @@ try {
                 if (opts.length === 0) {
                     const k = npcs.some(n => KNIGHT.test(n.name) && d({ x: n.x, z: n.z }, here) <= 6);
                     // Keep two failed picks of margin: with no food, a pick at HP 4 left mmtha0205 at 1 and it died
-                    // (live 2026-10-23 09:05, after the shop and the stall both gave 0). The main loop's floor is 6 too.
+                    // (live 09:05, after the shop and the stall both gave 0). The main loop's floor is 6 too.
                     if (k && hp() > 2 * DMG) { const k0 = s.tick(); await steal(6); stallPickTicks += s.tick() - k0; }
                     else { idleTicks++; await waitTicks(s, 1); }
                     continue;
@@ -312,7 +313,7 @@ try {
     // at most 5 per tick (copied from scripts/generated/thieving60.ts).
     const SHOP_FOOD = /^(bread|cake|chocolate slice)$/i;
     // The Baker calls the guards for 1,500 ticks after a stall theft (baker.rs2). The last theft is kept in a file, so a
-    // restart remembers it: three farmers died on 2026-10-23 walking into the shop right after a restart. The live
+    // restart remembers it: three farmers died walking into the shop right after a restart. The live
     // shop was empty on every trip that day (bought=0), so live runs skip it unless SHOP=1.
     const shopOk = () => (process.env.SHOP === '1' || process.env.DEMO_OK !== '1')
         && Date.now() - lastStealAt > (1500 + 20) * 400 && s.tick() - lastSteal > 1500 + 20 && s.tick() >= shopRetryAt && coins() >= 12;
@@ -365,7 +366,7 @@ try {
         const avoid = randomEventsOf(s)?.avoid().npcs;
         const npc = (st()?.nearbyNpcs ?? [])
             // An unreachable target gets no packet at all (vendor/rs-sdk/CLAUDE.md "Everything succeeds and nothing
-            // happens"): seen 2026-10-24 as 93-tick runs of noops at (2650,3300). Skip it, and rest a knight 15 ticks
+            // happens"): seen as 93-tick runs of noops at (2650,3300). Skip it, and rest a knight 15 ticks
             // after 3 noops in a row on it.
             .filter((n: any) => KNIGHT.test(n.name) && n.reachable !== false && (banned.get(n.index) ?? 0) <= s.tick()
                 && !avoid?.has(n.index) && (!p || Math.max(Math.abs(n.x - p.worldX), Math.abs(n.z - p.worldZ)) <= range))
@@ -417,7 +418,7 @@ try {
             await walk(KNIGHT_SPOT, 3);
             continue;
         }
-        // FOOD_ONLY_TRADE: no stall, no shop (both killed farmers live on 2026-10-23). Out of food, serve one more trade
+        // FOOD_ONLY_TRADE: no stall, no shop (both killed farmers live). Out of food, serve one more trade
         // from FOOD_FROM when the last one brought food; else log out with HP to spare.
         if (l < 2 && bankEmpty && FOOD_ONLY_TRADE) {
             if (FOOD_FROM && lastTradeOk && (await foodByTrade())) { await walk(KNIGHT_SPOT, 3); continue; }

@@ -2,20 +2,23 @@ import {existsSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {readLogoutProof,verifyLegacyLogout,listAttempts,type LegacyLogoutClaim} from './session-lifecycle';
 import {assertNoRecoveryLease} from './session-recovery-permit';
+import {serverTakesOver,takeoverRef,pidAlive,type TakeoverLogoutRef} from './session-takeover';
 const LIVE_SERVER='rs-sdk-demo.fly.dev';
 export type ProducerProofRef={kind:'producer';attemptId:string};
 
 // Shared with the controller and cleanup authority. Preserve existing stored revisions.
-export function missionSignature(job:{script:string;host?:boolean;orchestrate?:boolean;accounts?:string[];account?:string;args?:string[];env?:Record<string,string>}):string{
- const fields:unknown[]=[job.script,!!job.host,(job.host||job.orchestrate?job.accounts??[]:[job.account??'']).map(a=>a.toLowerCase()),
-  Object.entries(job.env??{}).sort(([a],[b])=>a<b?-1:a>b?1:0)];
+export function missionSignature(job:{script:string;host?:boolean;orchestrate?:boolean;accounts?:string[];account?:string;args?:string[];env?:Record<string,string>;envByAccount?:Record<string,Record<string,string>>}):string{
+ const sorted=<T,>(e:Record<string,T>)=>Object.entries(e).sort(([a],[b])=>a<b?-1:a>b?1:0);
+ const fields:unknown[]=[job.script,!!job.host,(job.host||job.orchestrate?job.accounts??[]:[job.account??'']).map(a=>a.toLowerCase()),sorted(job.env??{})];
  if(job.orchestrate||job.args?.length)fields.push(!!job.orchestrate,job.args??[]);
+ // Only a job with per-account env carries it, so stored revisions of every other job keep their text.
+ if(job.envByAccount&&Object.keys(job.envByAccount).length)fields.push(sorted(job.envByAccount).map(([a,e])=>[a.toLowerCase(),sorted(e)]));
  return JSON.stringify(fields);
 }
 export function successfulEnd(reason:string):boolean{return /^done(?: after \d+ runs)?$/.test(reason);}
 
 export type BootstrapLogoutRef={kind:'bootstrap';account:string;statusAt:number};
-export type LiveLogoutRef=ProducerProofRef|LegacyLogoutClaim|BootstrapLogoutRef;
+export type LiveLogoutRef=ProducerProofRef|LegacyLogoutClaim|BootstrapLogoutRef|TakeoverLogoutRef;
 // First start for an account with no producer attempts. verifyLegacyLogout refuses every legacy claim, so without
 // this path an account that predates the session producer can never start. A live session rewrites its status every
 // few seconds and the server drops a disconnected session after 500 ticks (200 s), so a status unchanged for 15 min
@@ -24,7 +27,9 @@ export type LiveLogoutRef=ProducerProofRef|LegacyLogoutClaim|BootstrapLogoutRef;
 export const BOOTSTRAP_STATUS_AGE_MS=15*60*1000;
 // No log reconstruction: the producer owns every new connection attempt. Historical sessions need an
 // explicitly sealed legacy claim; a missing status or a RESULT string never proves their logout.
-export function liveLogoutRef(account:string,base:string,required=false,now=Date.now()):LiveLogoutRef|null{
+// A repair (required) keeps the authenticated recovery path: it needs producer proof, never a takeover start.
+export function liveLogoutRef(account:string,base:string,required=false,now=Date.now(),
+ takeover=serverTakesOver(LIVE_SERVER),alive:(pid:number)=>boolean=pidAlive):LiveLogoutRef|null{
  assertNoRecoveryLease(account,base);
  const root=join(base,'.practice/session-lifecycle'),proof=readLogoutProof(account,LIVE_SERVER,{root});
  const statusPath=join(base,'.practice/status',account+'.json');
@@ -37,6 +42,10 @@ export function liveLogoutRef(account:string,base:string,required=false,now=Date
   if(status?.server===LIVE_SERVER&&((Number.isFinite(status.started)&&status.started>proof.loggedOutAt)
    ||(status.sessionAttemptId&&status.sessionAttemptId!==proof.attemptId&&(!Number.isFinite(status.started)||status.started>=latest.createdAt))))throw Error('latest status is not covered by the producer logout: '+account);
   return{kind:'producer',attemptId:proof.attemptId};
+ }
+ if(proof.state==='held'&&takeover&&!required){
+  const ref=takeoverRef(proof,root,alive);
+  if(ref&&!(status?.server===LIVE_SERVER&&status.sessionAttemptId&&status.sessionAttemptId>ref.attemptId))return ref;
  }
  if(proof.state!=='none')throw Error('account logout is not confirmed: '+account+' '+proof.reason);
  const claimPath=join(base,'.practice/coordinator/session-proofs',account.toLowerCase()+'.json');
