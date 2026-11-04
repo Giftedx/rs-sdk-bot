@@ -1,6 +1,6 @@
 {
   "id": "ge-bulk-order",
-  "goal": "Buy an exact bounded item order through the GE with an owned funded actor, supported ordinary entry or explicitly authorized one-shot NPC respawn, authorized existing-stock top-up, reconciled settlement and confirmed logout.",
+  "goal": "Buy or produce an exact bounded owned item order through the existing buyer CLI, reconcile declared costs and assets, and confirm logout.",
   "entry": "scripts/buy-owned-ge-item.ts",
   "files": [
     "scripts/buy-owned-ge-item.ts",
@@ -9,9 +9,15 @@
     "packages/practice/test/ge-bulk-order-proof.test.ts",
     "packages/core/src/trip.ts",
     "packages/core/test/trip.test.ts",
-    "scripts/courier-route.ts"
+    "scripts/courier-route.ts",
+    "scripts/earth-shop.ts",
+    "scripts/earth-shop.test.ts",
+    "scripts/earth-production.ts",
+    "scripts/earth-production.test.ts",
+    "packages/practice/src/shop-supply-order-proof.ts",
+    "packages/practice/test/shop-supply-order-proof.test.ts"
   ],
-  "consumer": "Shaftmaker uses one explicitly authorized NPC respawn from the observed wolf pocket, retains its sole tinderbox and bank assets, acquires five law runes and tops up four owned earth runes to five within5020 purchase coins while retaining10000. Existing run-magic-shaftmaker-teleport37 consumes the inputs for Magic31->37, followed by the Falador teleport band. Practice invokes the actual account-parameterized buyer CLI through the rescue and useful acquisition, then the four-plus-one purchase. Verify saved output, reconcile assets, demonstrate clear refusal and confirm logout. Unknown skull state or changed rescue kit refuses before engagement. Preserve ordinary entry, existing callers and journal compatibility.",
+  "consumer": "Preserve existing ordinary GE entry, authorized rescue, law-rune and Earth top-up consumers. For the connected Haggis Earth order, OreElse acquires and banks both actual talismans1438/1440, buys at most500 essence within36000 coins, then crafts to1139 banked Earth557 while retaining1482 Fire554 and30000 coins. Existing run-earth-oreelse-own-talismans, run-ge-oreelse-earth-input500 and run-earth-oreelse-owned-craft1139 own those finite live steps. Practice invokes the actual buyer CLI for a bounded two-kill hunt and useful crafting. Check assets, a clear refusal and logout. Native hunt proof does not promise random talisman drops. Preserve existing consumer acceptance and journal compatibility.",
   "checks": [
     {
       "id": "ge-bulk-regressions",
@@ -22,6 +28,9 @@
         "scripts/buy-owned-ge-item.test.ts",
         "packages/practice/test/ge-bulk-order-proof.test.ts",
         "packages/core/test/trip.test.ts",
+        "scripts/earth-shop.test.ts",
+        "scripts/earth-production.test.ts",
+        "packages/practice/test/shop-supply-order-proof.test.ts",
         "--timeout",
         "10000"
       ],

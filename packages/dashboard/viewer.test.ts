@@ -169,7 +169,7 @@ test('a roster that arrives before the hash list loads waits, then reaches the v
 test('the 3D camera reaches the page after readiness, and the page presses the hidden minimap buttons', async () => {
  const b=browser();let relay:any;const listeners:any[]=[];const clicked:string[]=[];
  b.host.setInterval=(fn:any)=>{relay=fn;};b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
- b.host.document={querySelector:(q:string)=>q.includes('.minimap-container')?{click:()=>clicked.push(q)}:null};
+ b.host.document={querySelector:(q:string)=>q.includes('.minimap-container')||q==='.live-follow button'?{click:()=>clicked.push(q)}:null};
  installViewerBridge(b.host);
  b.host.location.href+='&cx=3200.50&cz=3210.25&y=512';relay();expect(b.messages.some(m=>m.data.atlasCamera3d)).toBe(false);
  await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();relay();relay();
@@ -177,7 +177,34 @@ test('the 3D camera reaches the page after readiness, and the page presses the h
  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasCompass:true}});
  for(const f of listeners)f({origin:'https://evil.example',source:b.host.parent,data:{atlasOpenWorldMap:true}});
  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasOpenWorldMap:true}});
- expect(clicked).toEqual(['.minimap-container .compass','.minimap-container .worldmap-icon']);
+ for(const f of listeners)f({origin:'https://evil.example',source:b.host.parent,data:{atlasFreeCamera:true}});
+ for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasFreeCamera:true}});
+ expect(clicked).toEqual(['.minimap-container .compass','.minimap-container .worldmap-icon','.live-follow button']);
+});
+
+test('Free camera waits for the native follow control to mount during loading',async()=>{
+ const b=browser();let relay:any,available=false,clicks=0;const listeners:any[]=[];
+ b.host.setInterval=(fn:any)=>{relay=fn;};b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
+ b.host.document={querySelector:(q:string)=>q==='.live-follow button'&&available?{click:()=>clicks++}:null};
+ installViewerBridge(b.host);
+ for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasFreeCamera:true}});
+ relay();expect(clicks).toBe(0);
+ await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();available=true;
+ relay();expect(clicks).toBe(1);
+});
+
+test('native Stop cannot echo a stale follow URL back into the account picker',async()=>{
+ for(const hasHistory of [false,true]){
+  const b=browser();let relay:any;const listeners:any[]=[];
+  b.host.location.href+='&follow=Worker';b.host.setInterval=(fn:any)=>{relay=fn;};
+  b.host.addEventListener=(t:string,fn:any)=>{if(t==='message')listeners.push(fn);};
+  b.host.document={querySelector:(q:string)=>q==='.live-follow button'?{click:()=>{}}:null};
+  if(hasHistory)b.host.history={state:null,replaceState:(_state:any,_title:any,url:string)=>{b.host.location.href=url;}};
+  installViewerBridge(b.host);await b.consume();b.geometry();b.present();b.frame();b.frame();b.frame();
+  for(const f of listeners)f({origin:'http://localhost:3102',source:b.host.parent,data:{atlasFreeCamera:true}});
+  relay();relay();expect(b.messages.filter(m=>m.data.atlasFollow)).toHaveLength(0);
+  if(hasHistory)expect(new URL(b.host.location.href).searchParams.has('follow')).toBe(false);
+ }
 });
 
 test('opponent information: the followed player\'s target after a hit, renamed when hidden, cleared when it stops facing',async()=>{
