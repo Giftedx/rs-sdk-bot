@@ -48,7 +48,7 @@ test('Prayer60 demand uses the server curve and retains384 of973 owned bones',()
 });
 test('owned973bones reach60 with589 exact debits and384reserved',async()=>{
     const f=fixture({bones:973});try{const r=await runPrayer(f.s,{target:60,cap:5000,maximum:600,reserve:384});expect(r).toMatchObject({ok:true,buried:589,consumed:589,boneBank:384,finalLevel:60,finalXp:66262,xpGain:66262,preserved:true,toggledOn:true,toggledOff:true});}finally{f.dispose();}
-});
+},20_000); // 589 simulated burials: about 5 s on the Windows PC, past bun's 5 s default
 test('insufficient stock refuses before the first burial',async()=>{
     const f=fixture({bones:972});try{const r=await runPrayer(f.s,{target:60,cap:5000,maximum:600,reserve:384});expect(r.ok).toBe(false);expect(r.buried).toBe(0);expect(r.preserved).toBe(true);expect(r.failure).toBe('no prayer progress: insufficient owned bones: need 589, available 588');}finally{f.dispose();}
 });
