@@ -1,6 +1,6 @@
 // bun scripts/quest-items-order.ts <account> <quest> --save=<own-save>
 // CAP bounds game ticks (default 2400). Server comes from the account's existing configuration.
-// 2026-10-28: pinned pickables.rs2 op2, cow_milking.rs2 and windmills.rs2
+// pinned pickables.rs2 op2, cow_milking.rs2 and windmills.rs2
 // -> Cook pack -> adapt observed item transitions -> saved pack and quest-order consumer checks.
 import {existsSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -8,8 +8,10 @@ import {openBot,settle,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session,BankObservation} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {depositObserved} from '../packages/core/src/deposit';
-import {goTo,sessionWalker,walkPath,type PathPoint} from '../packages/core/src/walk';
+import {FAR_WALK_TILES,goTo,sessionWalker,walkPath,walkRoute,type PathPoint} from '../packages/core/src/walk';
 import {questFlags} from '../packages/core/src/quest-status';
+import {planTripOffThread} from '../packages/core/src/route-plan';
+import type {Leg} from '../packages/core/src/world';
 import {questSpec,savedQuest} from './quest-order';
 import {readPracticeSave,waitPracticeSave} from './measure/fleet-player-save';
 
@@ -30,7 +32,7 @@ export function itemEntry(key:string,save:Save){
   if(!total(pack,product!)&&!total(save.inventories[95],product!)&&!total(pack,container!)&&!total(save.inventories[95],container!))return `missing container ${container}`;
  return null;
 }
-export function itemSaveChecks(key:string,before:Save,after:Save){
+export function itemSaveChecks(key:string,before:Save,after:Save,travel:HettyTravelDebit[]=[]){
  const r=itemRecipe(key),spec=questSpec(key),pack=after.inventories[93]??[];
  if(key==='hetty'){
   const assets=(s:Save,id:number)=>total(s.inventories[93],id)+total(s.inventories[95],id);
@@ -41,7 +43,8 @@ export function itemSaveChecks(key:string,before:Save,after:Save){
    pack:r.items.every(id=>total(pack,id)===1)&&pack.every(i=>[1957,221,2146,300,995].includes(i.id)),
    quest:savedQuest(after,spec).progress===savedQuest(before,spec).progress&&savedQuest(after,spec).qp===savedQuest(before,spec).qp,
    ingredients:[1957,221].every(id=>assets(after,id)===Math.max(1,assets(before,id)))&&assets(after,2146)===Math.max(1,assets(before,2146))&&[2132,2142].every(id=>assets(after,id)===assets(before,id)-(meat===id?1:0)),
-   coins:assets(after,995)===assets(before,995)-coins,
+   travel:hettyTravelChecks(travel),
+   coins:assets(after,995)===assets(before,995)-coins-travel.reduce((n,d)=>n+d.coins,0),
    assets:[...ids].filter(id=>![1957,221,2146,2142,2132,995].includes(id)).every(id=>assets(before,id)===assets(after,id)),
    equipment:JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]),
    alive:(after.skills.find(s=>s.index===3)?.level??0)>0,
@@ -59,6 +62,22 @@ export function itemSaveChecks(key:string,before:Save,after:Save){
   equipment:JSON.stringify(before.inventories[94]??[])===JSON.stringify(after.inventories[94]??[]),
   alive:(after.skills.find(s=>s.index===3)?.level??0)>0,
  };
+}
+
+// Barnaby uses karamja_sailor_dialogue (sailors.rs2); customs_pay charges 30.
+// Only these two ground-to-ground boats are authorized. Ship-deck walks are refused.
+export type HettyTravelDebit={id:string;coins:number;packBefore:number;packAfter:number};
+const barnaby='npc:captain_barnaby:brimhaven@2679,3275';
+const customs=['npc:customs_officer:port-sarim@2953,3147','npc:customs_officer:port-sarim@2955,3146'];
+export function hettyTravelChecks(debits:readonly HettyTravelDebit[]){
+ return debits.length===0||debits.length===2&&debits[0]!.id===barnaby&&customs.includes(debits[1]!.id)&&
+  debits.every(d=>d.coins===30&&Number.isSafeInteger(d.packBefore)&&d.packBefore>=30&&d.packAfter===d.packBefore-30)&&
+  debits[1]!.packBefore===debits[0]!.packAfter;
+}
+function hettyRouteAllowed(legs:readonly Leg[]){
+ const boats=legs.filter(l=>l.kind==='travel');
+ return legs.every(l=>l.to.level===0&&(l.kind==='walk'||l.kind==='travel'&&l.travel.coins===30&&l.travel.kind==='boat'&&l.travel.run.how==='npc'&&l.travel.run.deck===true))&&
+  (boats.length===0||boats.length===2&&boats[0]!.travel.id===barnaby&&customs.includes(boats[1]!.travel.id));
 }
 
 type Observe=(pred:()=>boolean,label:string,ticks?:number)=>Promise<void>;
@@ -117,10 +136,11 @@ export async function cookHettyMeat(s:Session,observe:Observe){
 export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:number,options:{onBank?:(bank:BankObservation)=>void;stop?:()=>boolean}={}){
  if(key==='hetty'&&(!Number.isSafeInteger(cap)||cap<1||cap>6000))throw Error('Hetty CAP must be 1..6000');
  const r=itemRecipe(key),spec=questSpec(key),deadline=s.tick()+cap,abort=new AbortController();
+ const travel:HettyTravelDebit[]=[];
  let ended=false;
  void s.ended.then(()=>{ended=true;abort.abort();});
  const stopped=()=>ended||s.tick()>=deadline||abort.signal.aborted||options.stop?.()===true;
- const off=s.onTick(()=>{if(s.tick()>=deadline||s.sdk.getState()?.player?.isDead)abort.abort();});
+ const off=s.onTick(()=>{if(s.tick()>=deadline||s.sdk.getState()?.player?.isDead||options.stop?.())abort.abort();});
  const check=()=>{if(stopped())throw Error('quest items stopped/deadline');};
  const inv=()=>s.sdk.getState()?.inventory??[];
  const cnt=(id:number)=>total(inv(),id);
@@ -129,9 +149,33 @@ export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:
  };
  const walk=async(x:number,z:number,level=0)=>{
   check();
-  if(s.sdk.getState()?.player?.level!==level){
+  const p=s.sdk.getState()?.player;
+  if(p?.level!==level){
    const result=await goTo(s,await getWorld(),{x,z,level},accountOf(s),{legTimeoutTicks:Math.min(100,deadline-s.tick()),signal:abort.signal});
    if(!result.ok)throw Error(`route: ${result.detail}`);
+  }else if(Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))>FAR_WALK_TILES){
+   // Use observed carried funds, capped independently of the four-coin ingredients.
+   const from={x:p.worldX,z:p.worldZ,level},to={x,z,level};
+   const remaining=60-travel.reduce((n,d)=>n+d.coins,0);
+   const plan=await planTripOffThread(from,to,{...accountOf(s),coins:key==='hetty'?Math.min(cnt(995),remaining):0});check();
+   if(!plan)throw Error(`route: no funded HP-safe route ${from.x},${from.z} -> ${x},${z}`);
+   if(plan.bank||(key==='hetty'?!hettyRouteAllowed(plan.legs):plan.legs.some(l=>l.kind==='travel')))
+    throw Error(`route: unsupported route ${from.x},${from.z} -> ${x},${z}`);
+   const fares=plan.legs.reduce((n,l)=>n+(l.kind==='travel'?l.travel.coins:0),0);
+   if(fares>remaining||fares>cnt(995))throw Error('Hetty route unfunded');
+   for(const leg of plan.legs){
+    check();
+    const coins=cnt(995),fare=leg.kind==='travel'?leg.travel.coins:0;
+    if(fare&&coins<fare)throw Error('Hetty leg unfunded');
+    // Never retry a charged crossing. Observe its actual debit before continuing.
+    const result=await walkRoute(s,[leg],{maxRetriesPerLeg:fare?1:3,legTimeoutTicks:Math.min(100,deadline-s.tick()),signal:abort.signal});
+    if(fare){
+     await observe(()=>cnt(995)===coins-fare,'travel debit');
+     const debit={id:(leg as Extract<Leg,{kind:'travel'}>).travel.id,coins:fare,packBefore:coins,packAfter:cnt(995)};
+     travel.push(debit);console.log('QUEST_HETTY_TRAVEL '+JSON.stringify(debit));
+    }else if(cnt(995)!==coins)throw Error('unexpected walking coin delta');
+    if(!result.ok)throw Error(`route: ${result.detail}`);
+   }
   }else{
    const result=await walkPath(await sessionWalker(s),[{x,z,tol:1}],{maxTicks:deadline-s.tick(),stop:stopped});
    if(!result.ok)throw Error(`walk: ${result.detail}`);
@@ -203,7 +247,7 @@ export async function gatherQuestItems(s:Session,key:string,start:Save|null,cap:
     await walk(2971,3210);
     transitions.push(...await cookHettyMeat(s,observe));
    }
-   check();return {ok:true,ticks:cap-(deadline-s.tick()),pack:inv().map(i=>({id:i.id,count:i.count})),purchases,transitions};
+   check();return {ok:true,ticks:cap-(deadline-s.tick()),pack:inv().map(i=>({id:i.id,count:i.count})),purchases,transitions,travel};
   }
   if(!cnt(1927))await withdraw(1925);
   if(!cnt(1933))await withdraw(1931);
@@ -280,8 +324,8 @@ export async function runQuestItemsOrder(name:string,key:string,options:{save?:s
  let logout=false;
  const settled=await settle([s],child?.ok===true,detail,{log:line=>{console.log(line);if(line==='LOGOUT logged-out')logout=true;}});
  if(child?.ok!==true||!settled||!logout)return {ok:false,child,logout,detail};
- const saved=await waitPracticeSave(options.save,s=>Object.values(itemSaveChecks(key,before,s)).every(Boolean),{timeoutMs:15000});
- return {ok:saved.matched,child,logout,checks:itemSaveChecks(key,before,saved.save)};
+ const saved=await waitPracticeSave(options.save,s=>Object.values(itemSaveChecks(key,before,s,child.travel??[])).every(Boolean),{timeoutMs:15000});
+ return {ok:saved.matched,child,logout,checks:itemSaveChecks(key,before,saved.save,child.travel??[])};
 }
 if(import.meta.main){
  try{

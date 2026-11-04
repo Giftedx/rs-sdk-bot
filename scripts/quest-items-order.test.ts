@@ -1,6 +1,8 @@
 import {expect,test,spyOn} from 'bun:test';
 import * as sessionOwner from '../packages/core/src/bot';
 import * as saves from './measure/fleet-player-save';
+import * as walking from '../packages/core/src/walk';
+import * as routePlan from '../packages/core/src/route-plan';
 import {itemRecipe,itemEntry,itemSaveChecks,runQuestItemsOrder,gatherQuestItems,operateQuestHopper,probeQuestFlourBin,cookHettyMeat} from './quest-items-order';
 export const fixture=(pack:{id:number;count:number}[]=[],bank:{id:number;count:number}[]=[],vars:Record<number,number>={})=>({version:9,position:{x:3092,z:3247,level:0},skills:[{index:3,level:10,rawExperience:11540,xp:1154}],vars,
  inventories:{93:pack.map((i,slot)=>({...i,slot})),95:bank.map((i,slot)=>({...i,slot}))}});
@@ -131,6 +133,38 @@ test('live bin probe requires a new empty message or an observed flour item',asy
  m.s.bot.interactLoc=async()=>{m.state.inventory=[{id:1933,count:1}];return{success:true};};
  await probeQuestFlourBin(m.s,observe);expect(m.listeners.size).toBe(0);
 });
+test('funded HP10 western entry takes the two bounded fares before its first bank',async()=>{
+ const state:any={inventory:[{id:995,count:80},{id:1933,count:3}],player:{level:0,worldX:2863,worldZ:3428,hp:10}};
+ const s:any={client:{ingame:true,ifType:()=>({colour:0xf80000})},sdk:{getState:()=>state},tick:()=>0,
+  onTick:()=>()=>{},ended:new Promise(()=>{}),bot:{openBank:async()=>({success:false})}};
+ const account=spyOn(sessionOwner,'accountOf').mockReturnValue({skills:{hitpoints:10},coins:80,varps:{},items:[],worn:[],unlocks:[],questStages:{}} as any);
+ const boat=(id:string,to:any)=>({kind:'travel',to,travel:{id,coins:30,kind:'boat',run:{how:'npc',deck:true}}});
+ const legs:any[]=[{kind:'walk',to:{x:2679,z:3275,level:0}},
+  boat('npc:captain_barnaby:brimhaven@2679,3275',{x:2772,z:3230,level:0}),
+  {kind:'walk',to:{x:2953,z:3147,level:0}},
+  boat('npc:customs_officer:port-sarim@2953,3147',{x:3029,z:3216,level:0}),
+  {kind:'walk',to:{x:3092,z:3243,level:0}}];
+ const plan=spyOn(routePlan,'planTripOffThread').mockImplementation(async()=>({cost:760,legs}) as any);
+ const route=spyOn(walking,'walkRoute').mockImplementation(async(_s,ls,opts)=>{
+  const l:any=ls[0];if(l.kind==='travel'){expect(opts?.maxRetriesPerLeg).toBe(1);state.inventory[0].count-=30;}
+  state.player={...state.player,worldX:l.to.x,worldZ:l.to.z};return {ok:true,ticks:1} as any;
+ });
+ const path=spyOn(walking,'walkPath');
+ try{
+  await expect(gatherQuestItems(s,'hetty',null,6000)).rejects.toThrow('bank refused');
+  expect(plan.mock.calls[0]!.slice(0,2)).toEqual([{x:2863,z:3428,level:0},{x:3092,z:3243,level:0}]);
+  expect(plan.mock.calls[0]![2]).toMatchObject({coins:60,skills:{hitpoints:10}});
+  expect(state.inventory).toEqual([{id:995,count:20},{id:1933,count:3}]);
+  expect(route).toHaveBeenCalledTimes(5);expect(path).not.toHaveBeenCalled();
+  state.player={level:0,worldX:2863,worldZ:3428,hp:10};state.inventory[0].count=80;route.mockClear();
+  legs.splice(0,legs.length,{kind:'walk',to:{x:3030,z:3217,level:1}});
+  await expect(gatherQuestItems(s,'hetty',null,6000)).rejects.toThrow('unsupported route');
+  plan.mockImplementation(async()=>null);
+  await expect(gatherQuestItems(s,'hetty',null,6000)).rejects.toThrow('no funded HP-safe route');
+  expect(route).not.toHaveBeenCalled();expect(path).not.toHaveBeenCalled();
+ }finally{account.mockRestore();plan.mockRestore();route.mockRestore();path.mockRestore();}
+});
+
 test('failed gather stays failed even when cleanup and the saved pack would pass',async()=>{
  const s:any={client:{},sdk:{getState:()=>({inventory:[],player:{level:0}})},tick:()=>0,
   onTick:()=>()=>{},ended:Promise.resolve({reason:'logged-out'})};

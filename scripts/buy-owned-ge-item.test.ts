@@ -1,12 +1,60 @@
-import {test,expect} from 'bun:test';import {reconcilePlacement,collectionApplied,collectionRetrySafe,validateRequest,marketTileSafe,observeOrderProgress,terminalOrderClaim,orderAccounting,orderItemMatcher,orderEscrow,placementRetrySafe,type ItemOrder,type OrderView} from './buy-owned-ge-item';
+import {test,expect} from 'bun:test';import {shopFallbackSpent,earthShopFallback,reconcilePlacement,collectionApplied,collectionRetrySafe,validateRequest,marketTileSafe,observeOrderProgress,terminalOrderClaim,orderAccounting,orderItemMatcher,orderEscrow,placementRetrySafe,type ItemOrder,type OrderView} from './buy-owned-ge-item';
 import type {GEOffer} from '../vendor/rs-sdk/sdk/ge-types';
 import {mock,spyOn} from 'bun:test';
 import {mkdtempSync,readFileSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {prepareMarketEntry,marketEntryFailure,northEntryTile,northApproachTile,NORTH_ENTRY,NORTH_APPROACH} from './buy-owned-ge-item';
+import {prepareMarketEntry,marketEntryFailure,northEntryTile,northApproachTile,NORTH_ENTRY,NORTH_APPROACH,rescueMarketEntry,expectedRescueStop,type RescueControl} from './buy-owned-ge-item';
 import type {Session} from '../packages/core/src/inprocess';
 import {expandPath} from '../packages/core/src/walk';
+import {setEquipmentObserved} from '../packages/core/src/container-observation';
+
+async function rescueFixture(mode='ok'){
+ const dir=mkdtempSync(join(tmpdir(),'ge-rescue-')),path=join(dir,'order.json');
+ const bank=[{id:995,count:19911},{id:557,count:4},{id:1351,count:1}],client={};setEquipmentObserved(client,mode!=='unknown-equipment');
+ let tick=0,hp=10,attacks=0,stages=0,generation=0,stopped=false;
+ const callbacks=new Set<()=>void>(),control:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
+ const player={worldX:2853,worldZ:3452,level:0,lifeId:1,respawnCount:0,isDead:false};
+ const state={player,isSkulled:mode==='skulled'?true:mode==='unknown-skull'?undefined:false,equipment:[] as {id:number;count:number}[],
+  inventory:[{id:590,count:1}],bank:{isOpen:false},nearbyNpcs:[{kind:'npc',name:'White wolf',index:7,combatLevel:25,reachable:true,distance:11,optionsWithIndex:[{text:'Attack',opIndex:2}]}]};
+ if(mode==='kit')state.inventory.push({id:995,count:1});
+ if(mode==='equipped')state.equipment.push({id:1277,count:1});
+ if(mode==='wrong-pocket')player.worldX++;
+ if(mode==='unreachable')state.nearbyNpcs[0]!.reachable=false;
+ const s={client,name:'Shaftmaker',tick:()=>tick,ended:new Promise(()=>{}),onTick:(cb:()=>void)=>{callbacks.add(cb);return()=>callbacks.delete(cb);},
+  sdk:{getState:()=>state,getStateAge:()=>mode==='stale'?6000:0,getInventory:()=>state.inventory,getEquipment:()=>state.equipment,getSkill:()=>({level:hp,baseLevel:10}),
+   sendInteractNpc:async(index:number,option:number)=>{expect(index).toBe(7);expect(option).toBe(2);attacks++;expect(JSON.parse(readFileSync(path,'utf8')).rescue.phase).toBe('attempted');if(mode==='throw')throw Error('uncertain attack');return{success:true};}},
+  bot:{openBank:async()=>{generation++;state.bank.isOpen=true;return{success:true};},closeBank:async()=>{state.bank.isOpen=false;}},
+  bankObservation:()=>state.bank.isOpen?{generation,items:mode==='bank-loss'?bank.slice(0,-1):bank}:null} as unknown as Session;
+ const req={...request,actor:'Shaftmaker',item:563,quantity:5,limit:1000,reserve:10000,rescueMode:'npc-respawn-once' as const,createdAt:Date.now(),reviewAt:Date.now()+10000,deadline:Date.now()+60000};
+ if(mode==='prior')writeFileSync(path,JSON.stringify({rescue:{phase:'attempted'}}));
+ const timer=setInterval(()=>{
+  tick++;
+  if(attacks&&mode==='owner-stop')stopped=true;
+  if(attacks&&mode!=='throw'&&mode!=='timeout'&&tick===2){player.isDead=true;hp=0;expect(expectedRescueStop(s,'died',control)).toBe(true);}
+  if(attacks&&mode!=='throw'&&mode!=='timeout'&&tick===3){Object.assign(player,{worldX:3221,worldZ:3218,lifeId:mode==='second-death'?3:2,respawnCount:mode==='second-death'?2:1,isDead:false});hp=mode==='low-respawn'?1:10;}
+  for(const cb of [...callbacks])cb();
+ },1);
+ let error='',journal:any;
+ try{await rescueMarketEntry(s,req,path,()=>stopped,control,{bank,bankAt:1},async signal=>{
+  stages++;expect(control.active).toBe(false);expect(expectedRescueStop(s,'died',control)).toBe(false);
+  Object.assign(player,{worldX:3092,worldZ:3243});
+  if(mode==='stage-death')player.lifeId++;
+  if(mode==='stage-damage')hp=9;
+  return{ok:!signal.aborted};
+ });}catch(e){error=String(e);}finally{clearInterval(timer);journal=existsSync(path)?JSON.parse(readFileSync(path,'utf8')):null;rmSync(dir,{recursive:true,force:true});}
+ return{attacks,stages,error,journal,active:control.active,callbacks:callbacks.size};
+}
+test('exact wolf pocket rescue records one intent, one death, retained kit and Draynor bank reconciliation',async()=>{
+ const r=await rescueFixture();expect(r).toMatchObject({attacks:1,stages:1,error:'',active:false,callbacks:0});
+ expect(r.journal).toMatchObject({phase:'entry',coinsBefore:19911,itemsBefore:0,rescue:{phase:'bank-reconciled',lifeId:1,respawnCount:0,targetIndex:7}});
+});
+for(const mode of ['unknown-skull','skulled','kit','equipped','unknown-equipment','wrong-pocket','unreachable','stale','prior'])test(`rescue refuses ${mode} before engagement`,async()=>{
+ const r=await rescueFixture(mode);expect(r.attacks).toBe(0);expect(r.stages).toBe(0);expect(r.error).not.toBe('');expect(r.active).toBe(false);
+});
+for(const mode of ['throw','timeout','owner-stop','second-death','low-respawn','stage-death','stage-damage','bank-loss'])test(`rescue ${mode} stays uncertain and cannot authorize another death`,async()=>{
+ const r=await rescueFixture(mode);expect(r.attacks).toBe(1);expect(r.error).not.toBe('');expect(r.journal.rescue.phase).not.toBe('bank-reconciled');expect(r.active).toBe(false);expect(r.callbacks).toBe(0);
+});
 
 test('north Varrock entry 3165,3487,0 takes the bounded pinned approach; the market rectangle stays unchanged',async()=>{
  expect(marketEntryFailure({worldX:3165,worldZ:3487,level:0},11)).toContain('unsupported market entry');
@@ -84,6 +132,30 @@ test('market travel: low HP approach and living actor checks precede travel',asy
 const request={actor:'Abracadickra',server:'rs-sdk-demo.fly.dev',goal:'combat-sword',item:1331,limit:45000,reserve:5000,createdAt:1000,reviewAt:2000,deadline:3000};
 const offer=(extra:Partial<GEOffer>={}):GEOffer=>({id:9,slot:0,item:1331,name:'Adamant scimitar',side:'buy',quantity:1,price:45000,remaining:1,filled:0,state:'open',items:0,coins:0,gross:0,tax:0,...extra});
 const journal=():ItemOrder=>({version:1,request,phase:'placing',coinsBefore:50000,itemsBefore:0,previousIds:[2],at:1000});
+test('earth shop fallback preserves an exactly settled zero-fill GE journal and its budget',()=>{
+ const r={...request,item:557,quantity:1136,expectedOwned:3,limit:40,reserve:30000};
+ const j:ItemOrder={...journal(),request:r,phase:'settled',itemsBefore:3,acquired:0,refund:45440};
+ const before=JSON.stringify(j),p=earthShopFallback(r,j,1600);
+ expect(p.args).toEqual(['aubury','1600','2000']);expect(p.env).toMatchObject({ITEMS:'earth rune',MAX_ITEMS:'1136',STOCK_TARGET:'1139',MAX_SPEND:'45440',COIN_RESERVE:'30000',FLOAT:'75440',NO_BUY_TICKS:'25'});
+ expect(JSON.stringify(j)).toBe(before);
+ const spent=shopFallbackSpent({request:r,phase:'settled',spent:1000},r);
+ expect(earthShopFallback(r,j,1600,spent).env.MAX_SPEND).toBe('44440');
+ expect(()=>shopFallbackSpent({request:r,phase:'running',spent:1000},r)).toThrow('unresolved');
+ expect(()=>shopFallbackSpent({request:{...r,item:555},phase:'settled',spent:1000},r)).toThrow('unresolved');
+ expect(()=>earthShopFallback(r,j,1600,45440)).toThrow();
+ for(const bad of [undefined,{...j,phase:'open'},{...j,refund:45439},{...j,acquired:1},{...j,itemsBefore:4}])expect(()=>earthShopFallback(r,bad as any,1600)).toThrow();
+ expect(()=>earthShopFallback({...r,item:555},j,1600)).toThrow();
+ expect(()=>earthShopFallback(r,j,1601)).toThrow();
+ expect(earthShopFallback(r,j,3000,1000,'betty').args).toEqual(['betty','3000','2000']);
+ expect(earthShopFallback(r,j,3000,1000,'betty').env.MAX_SPEND).toBe('44440');
+ expect(()=>earthShopFallback(r,j,3001,0,'betty')).toThrow();
+ expect(earthShopFallback(r,j,16000,1000,'betty-refill')).toMatchObject({entry:'scripts/earth-shop.ts',args:['betty','16000','2000'],env:{MAX_SPEND:'44440',MAX_ITEMS:'1136',STOCK_TARGET:'1139',NO_BUY_TICKS:'25'}});
+ expect(()=>earthShopFallback(r,j,16001,0,'betty-refill')).toThrow();
+ expect(earthShopFallback(r,j,20000,0,'owned-talismans')).toMatchObject({entry:'scripts/earth-production.ts',args:['talismans','20000'],env:{STOCK_TARGET:'1139',MAX_SPEND:'45440'}});
+ expect(earthShopFallback(r,j,20000,0,'owned-craft').args).toEqual(['craft','20000']);
+ expect(()=>earthShopFallback(r,j,20001,0,'owned-craft')).toThrow();
+ expect(()=>earthShopFallback(r,j,1600,0,'unknown')).toThrow();
+});
 const view=(offers:GEOffer[]=[offer()],coins=5000,items=0):OrderView=>({actor:request.actor,server:request.server,offers,coins,items});
 test('bank and exchange approaches share one ground-floor boundary',()=>{
  expect(marketTileSafe({x:3185,z:3436,level:0})).toBe(true);expect(marketTileSafe({x:3181,z:3443,level:0})).toBe(true);
@@ -117,7 +189,8 @@ test('cancelled unfilled order proves full refund and zero acquired items',()=>{
 });
 test('bad quantities,debit overflow and invalid time order are refused',()=>{
  expect(()=>validateRequest(request)).not.toThrow();
- for(const extra of [{item:0},{limit:-1},{limit:2147483648},{reserve:-1},{deadline:1500},{reviewAt:999}])expect(()=>validateRequest({...request,...extra})).toThrow();
+ for(const extra of [{item:0},{limit:-1},{limit:2147483648},{reserve:-1},{deadline:1500},{reviewAt:999},{expectedOwned:-1},{expectedOwned:1.5},{expectedOwned:NaN}])expect(()=>validateRequest({...request,...extra})).toThrow();
+ expect(()=>validateRequest({...request,expectedOwned:4})).not.toThrow();
 });
 test('terminal collection requires conserved cumulative fill cost and an exact refund',()=>{
  const j:ItemOrder={...journal(),phase:'open',offerId:9};
@@ -200,11 +273,12 @@ else{
  }));
  const {runOwnedItem}=await import('./buy-owned-ge-item');
  type Row={id:number;name:string;count:number;slot:number};
- async function fixture(filled:number,phase?:ItemOrder['phase'],applied=false,options:{fillWait?:number;noCollection?:boolean;noDeposit?:boolean;exactBudget?:boolean;lowHp?:boolean;noFood?:boolean;noHeal?:boolean;prepared?:boolean;partialThenFull?:boolean;expireAfterCollect?:boolean;uncertain?:boolean;throwPlacementBefore?:boolean;throwPlacementAfter?:boolean;throwCollectionBefore?:boolean;throwCollectionAfter?:boolean;shortCash?:boolean;ownedStock?:boolean}={}){
+ async function fixture(filled:number,phase?:ItemOrder['phase'],applied=false,options:{fillWait?:number;noCollection?:boolean;noDeposit?:boolean;exactBudget?:boolean;lowHp?:boolean;noFood?:boolean;noHeal?:boolean;prepared?:boolean;partialThenFull?:boolean;expireAfterCollect?:boolean;uncertain?:boolean;throwPlacementBefore?:boolean;throwPlacementAfter?:boolean;throwCollectionBefore?:boolean;throwCollectionAfter?:boolean;shortCash?:boolean;ownedStock?:boolean;topUp?:{owned:number;expected?:number}}={}){
   const dir=mkdtempSync(join(tmpdir(),'ge-worker-')),path=join(dir,'journal.json');
   const originalNow=Date.now;let now=originalNow();Date.now=()=>now;
-  const req={...bulkRequest,createdAt:Date.now(),reviewAt:Date.now()+10000,deadline:Date.now()+20000};
+  const req:ItemOrder['request']={...bulkRequest,createdAt:Date.now(),reviewAt:Date.now()+10000,deadline:Date.now()+20000};
   if(options.exactBudget){req.limit=3;req.reserve=0;}
+  if(options.topUp){req.quantity=1;if(options.topUp.expected!==undefined)req.expectedOwned=options.topUp.expected;}
   const escrow=orderEscrow(req);
   let generation=1,tick=0,placements=0,collections=0,cancels=0,hp=options.lowHp?3:10;
   const callbacks=new Set<()=>void>(),row=(id:number,count:number):Row=>({id,count,name:id===995?'Coins':'Grapes',slot:0});
@@ -212,6 +286,7 @@ else{
   let offers:GEOffer[]=[];
   if(options.shortCash)state.bank.items[0]!.count--;
   if(options.ownedStock)state.bank.items.push(row(1987,1));
+  if(options.topUp)state.bank.items.push(row(1987,options.topUp.owned));
   if(options.lowHp&&!options.noFood)state.bank.items.push({...row(329,2),name:'Salmon'});
   const terminal=()=>bulkOffer({price:req.limit,filled,remaining:0,state:filled===300?'completed':'cancelled',items:filled,gross:filled*3,coins:escrow-filled*3});
   if(phase){
@@ -284,6 +359,17 @@ else{
  });
  for(const flag of ['shortCash','ownedStock'] as const)test(`worker: ${flag} refuses before placing`,async()=>{
   const r=await fixture(300,undefined,false,{[flag]:true});expect(r.first.ok).toBe(false);expect(r.placements).toBe(0);
+ });
+ test('worker: EXPECTED_OWNED four tops up one unit to five banked and the same key reruns without buying',async()=>{
+  const r=await fixture(300,undefined,false,{topUp:{owned:4,expected:4}});
+  expect(r.first).toMatchObject({ok:true,phase:'settled',quantity:1,acquired:1,spent:3,refund:2,conserved:true,banked:true,reserveKept:true,unrelated:true,finalItems:5,finalCoins:102,newItemsThisSession:1,cashDeltaThisSession:-3});
+  expect(r.journal).toMatchObject({itemsBefore:4,acquired:1,request:{quantity:1,expectedOwned:4}});
+  expect(r.second).toMatchObject({ok:true,finalItems:5,newItemsThisSession:0,cashDeltaThisSession:0});expect(r.placements).toBe(1);expect(r.unchanged).toBe(true);
+ });
+ for(const topUp of [{owned:4},{owned:3,expected:4},{owned:5,expected:4}])test(`worker: holding ${topUp.owned} with EXPECTED_OWNED ${topUp.expected??'omitted'} refuses before funding`,async()=>{
+  const r=await fixture(300,undefined,false,{topUp});
+  expect(r.first).toMatchObject({ok:false,phase:'unplaced',newItemsThisSession:0,cashDeltaThisSession:0,finalItems:topUp.owned});expect(r.placements).toBe(0);
+  expect(r.first.failure).toContain(topUp.expected===undefined?'owned item already present':`owned item baseline ${topUp.owned} differs from EXPECTED_OWNED 4`);
  });
  test('worker: an applied collection settles on reconnect without a second collection',async()=>{
   const r=await fixture(300,'collecting',true);expect(r.first.ok).toBe(true);expect(r.collections).toBe(0);expect(r.placements).toBe(0);expect(r.unchanged).toBe(true);

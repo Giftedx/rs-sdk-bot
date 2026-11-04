@@ -1,0 +1,41 @@
+import {test,expect} from 'bun:test';
+import {fleetSidesView,remoteBots,scoreboardView,SIDE_SYNC_MS} from './fleet-view';
+
+test('scoreboard keeps the remaining list, best live level per skill and the coverage counts',()=>{
+ const raw={at:'2026-10-31T11:20:12.643Z',totals:{actions:10,actionsNamed:4},items:{tradeable:20,tradeableHeld:3},
+  skills:[{skill:'Attack',bestLive:94,bands:[{band:'70-99',stage:'live-partial'}]},{skill:'Herblore',bands:[]}],
+  progress:{skillLevels:95,skills99:0,questsLive:9,questTotal:68,done:false,remaining:['Attack 94/99','quests 9/68 live']}};
+ const s:any=scoreboardView(raw);
+ expect(s.available).toBe(true);expect(s.at).toBe(Date.parse(raw.at));expect(s.remaining).toEqual(['Attack 94/99','quests 9/68 live']);
+ expect(s.skills[0]).toEqual({skill:'Attack',bestLive:94,bands:[{band:'70-99',stage:'live-partial'}]});expect(s.skills[1].bestLive).toBeNull();
+ expect(s.quests).toEqual({live:9,total:68});expect(s.items).toEqual({held:3,total:20});expect(s.actions).toEqual({named:4,total:10});
+ expect(scoreboardView(null).available).toBe(false);expect(scoreboardView({skills:[]}).available).toBe(false);
+});
+
+test('fleet sides give each side its sync age, accounts, total levels and coins; late orders and sides are marked; done orders drop out',()=>{
+ const now=10_000_000;
+ const v=fleetSidesView([
+  {side:'cloud',at:now-60_000,accounts:[{name:'Zed',at:now-60_000,skills:[{name:'Attack',level:22},{name:'Overall',level:99}],bank:[{id:995,count:100}],inventory:[{name:'Coins',count:5}]}]},
+  {side:'local',at:now-4*SIDE_SYNC_MS,accounts:[{name:'Bee',at:1},{name:'Ann',at:2,skills:[]}]},
+  {bad:true}],[{id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1},{from:'A'},
+  {id:'o2',from:'A',to:'B',item:'Coins',count:9,start:4,end:now+1},{id:'o3',from:'A',to:'B',item:'Coins',count:9,start:3,end:now+1},{id:'o4',from:'A',to:'B',item:'Coins',count:9,start:2,end:now+1}],now,
+  [{id:'o2',role:'from',ok:true},{id:'o2',role:'to',ok:true},{id:'o3',role:'from',ok:true},{id:'o4',role:'to',ok:false}]);
+ expect(v.sides.map(s=>s.side)).toEqual(['local','cloud']);
+ expect(v.sides[0]!.late).toBe(true);expect(v.sides[1]!.late).toBe(false);expect(v.sides[0]!.accounts.map(a=>a.name)).toEqual(['Ann','Bee']);
+ expect(v.sides[1]!.accounts[0]).toEqual({name:'Zed',at:now-60_000,total:22,coins:105});expect(v.sides[0]!.accounts[1]!.total).toBeNull();
+ expect(v.orders[0]).toEqual({id:'o1',from:'A',to:'B',item:'Air talisman',count:1,start:5,end:now-1,state:'open',late:true});
+ expect(v.orders.map(o=>o.id+':'+o.state)).toEqual(['o1:open','o3:half','o4:failed']);
+});
+
+test('other sides become fleet rows with snapshot levels and items, a world-feed position, and no XP',()=>{
+ const now=1_000_000;
+ const snaps=[{side:'local',at:1,accounts:[{name:'Mine'}]},{side:'cloud',at:now-5000,accounts:[{name:'TossTheCaber',server:'rs-sdk-demo.fly.dev',at:now-6000,skills:[{name:'Attack',level:22}],inventory:[{id:995,name:'Coins',count:5}],bank:[],equipment:[]},{name:'Dup'},{name:'bad name!'}]}];
+ const roster=new Map([['tossthecaber',{x:3200,z:3200,level:0,combat:30,seen:now-1000}]]);
+ const rows=remoteBots(snaps,new Set(['dup']),roster,new Map([['tossthecaber',5]]),now);
+ expect(rows.map(r=>r.name)).toEqual(['TossTheCaber']);
+ const r=rows[0];
+ expect(r.side).toBe('cloud');expect(r.remote).toBe(true);expect(r.fresh).toBe(true);expect(r.operation).toBe('observed');
+ expect(r.pos).toEqual({x:3200,z:3200,level:0});expect(r.combat).toBe(30);expect(r.skills).toEqual([{name:'Attack',level:22,xp:null}]);
+ const late=remoteBots(snaps,new Set(),new Map([['tossthecaber',{x:1,z:2,level:0,combat:3,seen:now-60_000}]]),new Map(),now);
+ expect(late.find(x=>x.name==='TossTheCaber').fresh).toBe(false);expect(late.find(x=>x.name==='TossTheCaber').pos).toEqual({x:1,z:2,level:0});
+});

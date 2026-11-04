@@ -7,6 +7,23 @@ const RATS = { x: 2957, z: 3203 };
 const CAULDRON = { id: 2024, x: 2967, z: 3205 };
 const TAIL = 300;
 
+// Public observations only. A hit/XP gain is not a death or a tail credit.
+export function observeHettyRat(q:Pick<Awaited<ReturnType<typeof openQuest>>, 's'|'st'|'cnt'>,phase:string,selectedIndex:number|null=null,reply?:unknown){
+ const state=q.st(),p=state?.player;
+ const observation={phase,tick:q.s.tick(),quest:questFlags(q.s.client)?.find(f=>f.name==="Witch's Potion")?.state??'unknown',
+  selectedIndex,player:p?{x:p.worldX,z:p.worldZ,level:p.level,hp:p.hp,animId:p.animId,
+   combat:p.combat??null,rootTargetIndex:p.targetIndex??null}:null,
+  rats:(state?.nearbyNpcs??[]).filter((n:any)=>/^rat$/i.test(n.name)).map((n:any)=>({
+   id:n.id,index:n.index,x:n.x,z:n.z,tileX:n.tileX,tileZ:n.tileZ,distance:n.distance,
+   hp:n.hp,maxHp:n.maxHp,inCombat:n.inCombat,targetIndex:n.targetIndex,lastCombatTick:n.lastCombatTick,animId:n.animId})),
+  tails:(state?.groundItems??[]).filter((g:any)=>g.id===TAIL).map((g:any)=>({id:g.id,x:g.x,z:g.z,count:g.count})),
+  carriedTail:q.cnt(TAIL),bankTail:q.s.bankObservation?.()?.items.filter(i=>i.id===TAIL).reduce((n,i)=>n+i.count,0)??null,
+  xp:Object.fromEntries(['Attack','Strength','Defence','Hitpoints'].map(k=>[k,q.s.sdk.getSkillXp(k)])),
+  messages:(state?.gameMessages??[]).filter((m:any)=>m.type===0).slice(-4).map((m:any)=>m.text),reply};
+ console.log('HETTY_RAT_OBSERVATION '+JSON.stringify(observation));
+ return observation;
+}
+
 // The parent passes its session and owns logout. Direct/quest-sweep entry retains openQuest cleanup.
 export async function completeHetty(s:Session,cap:number,stop:()=>boolean=()=>false){
  const q=await openQuest({session:s,cap,stop,food:[],eatAt:0,lumbridgeOk:true});
@@ -33,18 +50,35 @@ export async function executeHetty(q:Awaited<ReturnType<typeof openQuest>>){
     await q.openDoor('rat door', 2956, 3205);
     const attack = (n: any) => q.s.direct({ type: 'interactNpc', npcIndex: n.index, optionIndex: n.optionsWithIndex?.find((o: any) => /attack/i.test(o.text))?.opIndex ?? 2, reason: 'SDK' });
     const tailOnGround = (): any => (q.st()?.groundItems ?? []).find((g: any) => g.id === TAIL);
+    let selectedIndex:number|null=null;
     for (let t = 0; t < 120 && !q.has(TAIL); t++) {
+        observeHettyRat(q,'tick');
         await q.guard('rat');
         const g = tailOnGround();
         if (g) {
-            if (t % 3 === 0) await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
+            if (t % 3 === 0) {
+                observeHettyRat(q,'pickup');
+                const reply=await q.s.direct({ type: 'pickupItem', x: g.x, z: g.z, itemId: g.id, reason: 'SDK' });
+                observeHettyRat(q,'pickup-reply',null,reply);
+            }
         } else {
-            const rat = q.npc(/^rat$/i);
-            if (!rat) { if (t % 10 === 0) await q.dash('to rats', RATS.x, RATS.z, 3); }
-            else if (t % 4 === 0 && q.pos()?.targetIndex !== rat.index) await attack(rat);
+            // The target is nested under combat, not on player. Nearest-NPC order
+            // changes during a fight. Dispatch once and allow death/drop processing
+            // (rat.rs2) within the same budget; neither XP nor HP zero is a tail.
+            const combat=q.pos()?.combat;
+            if(combat?.targetType==='npc'&&combat.targetIndex>=0)selectedIndex??=combat.targetIndex;
+            const rat:any = selectedIndex===null?q.npc(/^rat$/i):null;
+            if (selectedIndex===null&&!rat) { if (t % 10 === 0) await q.dash('to rats', RATS.x, RATS.z, 3); }
+            else if (selectedIndex===null&&rat&&t % 4 === 0) {
+                selectedIndex=rat.index;
+                observeHettyRat(q,'attack',rat.index);
+                const reply=await attack(rat);
+                observeHettyRat(q,'attack-reply',rat.index,reply);
+            }
         }
         await q.waitTicks(1);
     }
+    observeHettyRat(q,'exit');
     if (!q.has(TAIL)) await q.fail('no rat tail');
     q.milestone('tail');
     }

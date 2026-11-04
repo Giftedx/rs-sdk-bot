@@ -88,7 +88,7 @@ test('an unchanged state is not rewritten',()=>{
  expect(saveState(state,dir)).toBe(true);expect(readFileSync(file+'.previous','utf8')).toBe(bytes);
  expect(loadState(dir).tasks).toHaveLength(1);
 });
-import {compactState,ARCHIVE_AFTER_MS,type TaskRecord} from '../src/coordinator';
+import {compactState,replaceTasks,ARCHIVE_AFTER_MS,type TaskRecord} from '../src/coordinator';
 import {archiveFinishedTasks,plannerState} from '../src/coordinator-cli';
 const record=(id:string,status:TaskRecord['status'],at:number,spec:Partial<TaskRecord['spec']>={}):TaskRecord=>({
  spec:{id,goal:'skills',kind:'qualify',capability:'wine-order',dependsOn:[],priority:1,estimatedMs:1,why:'t',...spec},status,createdAt:at,attempts:1,
@@ -125,4 +125,17 @@ test('archived tasks append to the archive file and the state shrinks; a planner
  expect(plannerState({statePath:join(dir,'state.json')}).tasks.map(r=>r.spec.id)).toEqual(['c']);
  expect(plannerState({state}).tasks).toBe(state.tasks);
  expect(()=>plannerState({})).toThrow('names no state');
+});
+test('a replacement plan ignores archived dependencies of finished tasks but still refuses them for open tasks',()=>{
+ const day=24*60*60*1000,now=10*day,state=initialState();
+ state.tasks=[
+  record('kept-build','succeeded',now-1*day,{kind:'build',dependsOn:['archived-build']}),
+  record('old-run','failed',now-1*day,{kind:'run',account:'Rod'}),
+  record('new-run','pending',now,{kind:'run',account:'Rod'}),
+  record('waiter','pending',now,{kind:'run',capability:'ammo-order',dependsOn:['old-run']}),
+ ];
+ expect(()=>replaceTasks(state,[{from:'old-run',to:'new-run'}])).not.toThrow();
+ expect(state.tasks.find(r=>r.spec.id==='waiter')!.spec.dependsOn).toEqual(['new-run']);
+ state.tasks.push(record('broken','pending',now,{kind:'run',capability:'fish-order',dependsOn:['archived-build']}));
+ expect(()=>replaceTasks(state,[])).toThrow('missing replacement dependency');
 });
