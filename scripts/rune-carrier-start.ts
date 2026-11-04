@@ -4,7 +4,7 @@ import {waitUntil} from '../packages/core/src/ticks';
 import {goTo,walkPath,sessionWalker} from '../packages/core/src/walk';
 import {depositObserved} from '../packages/core/src/deposit';
 import {interactionApproach} from '../packages/core/src/world';
-import {leaveRuneStarter,runeSupplyAssets} from './rune-supply';
+import {leaveRuneStarter,runeSupplyAssets} from './rune-starter';
 import {enterAirAltar,craftAirRunes,exitAirAltar} from './generated/rcair';
 import {RUNE_ALTARS,ruinTarget,dispatchRuneEntry} from './rune-bank-craft';
 import {ownedSwap} from './rune-carrier-trade';

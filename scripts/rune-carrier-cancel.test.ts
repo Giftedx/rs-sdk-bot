@@ -53,7 +53,7 @@ function prefixCase(which:'stop-walk'|'prefix-error'){
  '../packages/core/src/walk':{goTo:async a=>{if(a===h){if('${which}'==='stop-walk')stopped=true;else await delay(15);}return{ok:true}},walkPath:async()=>({ok:true}),sessionWalker:async()=>({})},
  '../packages/core/src/deposit':{depositObserved:async()=>{bankActions++}},
  '../packages/core/src/world':{interactionApproach:async()=>({})},
- './rune-supply':{leaveRuneStarter:async()=>{},runeSupplyAssets:()=>({1351:1})},
+ './rune-starter':{leaveRuneStarter:async()=>{},runeSupplyAssets:()=>({1351:1})},
  './generated/rcair':{enterAirAltar:async()=>{},craftAirRunes:async()=>({}),exitAirAltar:async()=>{throw Error('portal rejected')}},
  './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({}),dispatchRuneEntry:async()=>({})},
  './rune-carrier-trade':{runeOpening:()=>process.env.RUNE_OPEN_AFTER??'incoming',ownedSwap:async()=>({}),state:a=>a.state,ess:()=>0}
@@ -90,7 +90,7 @@ test('prefix travel overlaps preparation and the first body craft waits for read
  '../packages/core/src/walk':{goTo:async(a,_w,to)=>{if(a===s&&to.x===3050){travelDuringPreparation=preparing&&!prepared;setTimeout(()=>release(),10)}return{ok:true}},walkPath:async()=>({ok:true}),sessionWalker:async()=>({})},
  '../packages/core/src/deposit':{depositObserved:async()=>{}},
  '../packages/core/src/world':{interactionApproach:async()=>({})},
- './rune-supply':{leaveRuneStarter:async()=>{},runeSupplyAssets:()=>({})},
+ './rune-starter':{leaveRuneStarter:async()=>{},runeSupplyAssets:()=>({})},
  './generated/rcair':{enterAirAltar:async()=>{},craftAirRunes:async()=>({}),exitAirAltar:async()=>{}},
  './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({at:{},q:{}}),dispatchRuneEntry:async()=>({entered:true})},
  './rune-carrier-trade':{runeOpening:()=>process.env.RUNE_OPEN_AFTER??'incoming',state:a=>({...a.state,nearbyLocs:[{id:2483,x:2523,z:4832}]}),ess:()=>0,ownedSwap:async()=>{s.inventory=[{id:1446,count:1,slot:0}];return{}}}

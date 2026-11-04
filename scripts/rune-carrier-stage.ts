@@ -10,7 +10,7 @@ import {depositObserved} from '../packages/core/src/deposit';
 import {assertAccountOwnership,assertRecoverableStatus,acquireAccountLeases} from './handoff-inputs';
 import {ownedSwap,state} from './rune-carrier-trade';
 import {inside,leaveBody,enterBody,stopCarriers} from './rune-carrier-bank';
-import {leaveRuneStarter,runeSupplyAssets} from './rune-supply';
+import {leaveRuneStarter,runeSupplyAssets} from './rune-starter';
 import {assertRuneDonor} from './rune-carrier-roster';
 import {runeStageRoster,runeCarrierShortfall,runeStageAuthenticate,runeStageRequirement,exitRuneStageBasement,runeStageBankApproach} from './rune-carrier-stage-contract';
 import {runeStageStatus} from './rune-carrier-stage-status';

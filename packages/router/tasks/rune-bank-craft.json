@@ -25,7 +25,9 @@
     "scripts/rune-air-exit.test.ts",
     "scripts/rune-pipeline.ts",
     "scripts/rune-pipeline.test.ts",
-    "packages/practice/src/rune-pipeline-proof.ts"
+    "packages/practice/src/rune-pipeline-proof.ts",
+    "scripts/rune-starter.ts",
+    "scripts/rune-starter.test.ts"
   ],
   "consumer": "Ordinary and fresh carrier modes preserve XP/product accounting, fresh entry, starter assets and logout. --body-continuation finishes a supplied existing crafter below99 and still refuses completed99. Explicit --body-measure=12..48 requires an existing99 account with observable XP headroom and16owned helpers; full packs, exact additional XP/runes, all actor assets, increasing playtime, unchanged99 milestone and17confirmed logouts are required. RUNE_CRAFT_AFTER=inventory retains observed-credit timing; trade-message queues one craft after both fresh server completion messages and exact confirmation dispatches, requiring combined transfer/craft effects. Native CLI proves fresh99 on trade-message, existing95->99 and completed-entry refusal, then12-pack measurement on each condition with independent saved balances and clocks. Finite live consumer is completed Magicwanda99 and its retained16helpers, using13packs for one warm-up plus12matched measured packs per trial; three trials per condition must precede a speed conclusion. No fresh profile or rank claim follows from a measurement or source-only proof. RUNE_HANDOFF_PIPELINE=1 additionally gates reciprocal requests on four publications after exact craft completion, pipelines first acceptance and exact-offer confirmation, and preserves observed-confirm fallback. The pinned handler/controller fixture covers both actor orders before the fresh CLI practice run; its saved consumer rechecks source and packed inputs. RUNE_OPEN_AFTER=helper-ack responds once after either the exact fresh incoming request or a fresh empty-sender server Sending trade offer... acknowledgement on the owned helper. Stale and player-chat messages do not qualify. Positive acknowledgement takes precedence over an older busy refusal. Native fresh and existing99 trade-message exercise helper-ack with pipeline0; inventory retains incoming-only opening. The packed fixture separately retains pipeline coverage. Three matched existing-helper live trials per condition remain required before any fresh specialist login.",
   "checks": [
@@ -44,6 +46,7 @@
         "packages/core/test/randomevents.test.ts",
         "scripts/rune-continuation.test.ts",
         "scripts/rune-air-exit.test.ts",
+        "scripts/rune-starter.test.ts",
         "--timeout",
         "10000"
       ],
