@@ -8,6 +8,8 @@ Game sprite strips: existing pinned vendor/rs-sdk/server/content/sprites. Conver
 
 This is an independent spectator dashboard. It is not the RuneLite desktop client and is not affiliated with Jagex or RuneLite.
 
+../items.png: Jagex game artwork rendered from the installed Lost City config and model cache by ../tools/export-item-icons.ts, using the pinned webclient ItemViewer. ../items.json and the page's local item table use the same config names and IDs. The artwork is not covered by the RuneLite BSD license.
+
 Current OSRS tab, orb, prayer and emote PNG artwork: oldschool.runescape.wiki/images/, retrieved 2026-10-28. File names were checked against the Interface and Emotes page image lists. RuneScape artwork copyright Jagex. These assets are not covered by the RuneLite BSD license.
 
 Spell icons: the same OSRS Wiki image source, using names from the Ancient Magicks, Lunar spellbook and Arceuus spellbook image lists, and the named Standard spells. Icons are a visual reference and do not assert account unlocks or cast availability.

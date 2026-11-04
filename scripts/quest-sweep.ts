@@ -17,6 +17,7 @@ import {gatherPlan,gatherItems} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
+import {retainedGhostSkull,retainedGhostBankSkull} from './ghost-basement-exit';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
@@ -220,6 +221,11 @@ export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>
  return run.then(p=>p);
 }
 
+function observeQuestFlags(s:Session){
+ const seen=new Map<number,string>();
+ const observe=()=>{for(const q of questFlags(s.client)??[])if(seen.get(q.id)!==q.state){seen.set(q.id,q.state);console.log(`QUEST_SWEEP_FLAG ${JSON.stringify(q)}`);}};
+ observe();const off=s.onTick(observe);void s.ended.then(off);
+}
 export async function sweep(account:string,quest:string,fresh?:string){
  const script=resolve(import.meta.dir,'generated',`quest-${quest}.ts`);
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
@@ -230,6 +236,19 @@ export async function sweep(account:string,quest:string,fresh?:string){
  try {
  const st=()=>s.sdk.getState();
  if(!await waitUntil(s,()=>!!st()?.player,{timeoutTicks:20}))return fail('entry state unavailable');
+ const ghostState=()=>questFlags(s.client)?.find(f=>f.name==='The Restless Ghost')?.state??'unknown';
+ const retained=()=>quest==='priest'&&retainedGhostSkull(ghostState(),st()?.inventory??[],s.sdk.getEquipment());
+ const returnSkull=async()=>{
+  console.log('QUEST_SWEEP_RETAINED_SKULL '+JSON.stringify({state:ghostState(),position:st()?.player&&{x:st()!.player!.worldX,z:st()!.player!.worldZ,level:st()!.player!.level}}));
+  observeQuestFlags(s);handed=true;await handOver(s,script,fresh);return;
+ };
+ if(quest==='priest'){
+  await waitUntil(s,()=>ghostState()!=='unknown',{timeoutTicks:20});
+  if((st()?.inventory??[]).some(i=>i.id===553)){
+   if(!retained())return fail('retained skull requires a started journal and worn ghostspeak amulet');
+   return await returnSkull();
+  }
+ }
  const here=():Tile=>{const p=st()?.player;return p?{x:p.worldX,z:p.worldZ,level:p.level}:{x:0,z:0,level:-1};};
  const world=await getWorld();
  // The world walker plans from the ground floor: an account left upstairs (Hazeel Cult ends there) climbs down first.
@@ -242,7 +261,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
   await waitUntil(s,()=>(st()?.player?.level??level)<level,{timeoutTicks:30});
  }
  const pack=():Item[]=>(st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count}));
- if(plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length){
+ const seekGhostSkull=quest==='priest'&&ghostState()==='started'&&s.sdk.getEquipment().some(i=>i.id===552);
+ if(seekGhostSkull||plan(need,pack(),[]).missing.length||plan(food,pack(),[]).missing.length){
   const exit=await leaveStronghold(s);
   if(!exit.ok)return fail(exit.detail!);
   // The nearest bank may be out of reach: try the next three.
@@ -266,6 +286,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const rows=():Item[]=>(st()?.bank?.items??[]).map((i:any)=>({id:i.id,count:i.count}));
   const p=plan(need,pack(),rows()),meal=plan(food,pack(),rows()).withdraw;
   p.withdraw.push(...meal);
+  if(seekGhostSkull&&retainedGhostBankSkull(ghostState(),pack(),s.sdk.getEquipment(),rows()))p.withdraw.push({id:553,count:1});
   // A missing item a shop sells is bought after the bank: take coins for it now.
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>{const n=nearestSeller(d,at);return n&&{npc:n.npc,npcId:n.npcId,tile:n.tile};},(d,at)=>sellersByDistance(d,at).map(n=>({npc:n.npc,npcId:n.npcId,tile:n.tile})));
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
@@ -299,16 +320,13 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const left=plan(need,pack(),[]).missing;
   if(left.length)return fail('withdraw short '+left.map(i=>`${i.id}:${i.count}`).join(','));
  }
+ if(retained())return await returnSkull();
  const start=preset.position;
  const exit=await leaveStronghold(s);
  if(!exit.ok)return fail(exit.detail!);
  await reachStart(s,world,start);
  console.log(`MILESTONE quest-sweep ${quest} staged at ${JSON.stringify(here())}`);
- const seen=new Map<number,string>();
- const observe=()=>{for(const q of questFlags(s.client)??[])if(seen.get(q.id)!==q.state){
-  seen.set(q.id,q.state);console.log(`QUEST_SWEEP_FLAG ${JSON.stringify(q)}`);
- }};
- observe();const off=s.onTick(observe);void s.ended.then(off);
+ observeQuestFlags(s);
  handed=true;
  await handOver(s,script,fresh);
  } catch(error) {

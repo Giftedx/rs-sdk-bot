@@ -7,6 +7,7 @@ import type {GEOffer,GEActionResult} from '../vendor/rs-sdk/sdk/ge-types';
 import {marketProgress,type MarketProgress} from '../packages/planner/src/market-progress';
 import {LUMBRIDGE_TO_DRAYNOR,DRAYNOR_BANK} from './courier-route';
 import {equipmentObserved} from '../packages/core/src/container-observation';
+import {productionMode} from './earth-production';
 // quantity is absent in journals written before bulk orders; those orders are quantity 1.
 // expectedOwned (EXPECTED_OWNED) authorizes topping up exactly that many already held units. Absent, any held unit refuses the order.
 export interface ItemRequest {actor:string;server:string;goal:string;item:number;quantity?:number;expectedOwned?:number;rescueMode?:'npc-respawn-once';limit:number;reserve:number;createdAt:number;reviewAt:number;deadline:number}
@@ -55,6 +56,22 @@ export function orderAccounting(journal?:ItemOrder){
  const knownSpent=settled&&valid?spent:prior.spent+(journal.phase==='open'&&valid?(journal.progress?.gross??0):0);
  return{acquired:settled&&valid?a:prior.acquired,refund:settled&&valid?refund:0,spent:knownSpent,
   escrow:unresolved?null:settled?0:prior.escrow-(journal.progress?.gross??0),maximumExposure:settled&&valid?0:prior.escrow,outcomeUnresolved:unresolved};
+}
+// A different finite acquisition method may use a fully refunded zero-fill intent, never an unresolved offer.
+export function earthShopFallback(request:ItemRequest,journal:ItemOrder|undefined,cap:number,spent=0,profile='aubury'){
+ validateRequest(request);const q=orderQuantity(request),a=orderAccounting(journal);
+ const production=productionMode(profile),refill=profile.endsWith('-refill'),shop=refill?profile.slice(0,-7):profile;
+ if(!journal||journal.phase!=='settled'||JSON.stringify(journal.request)!==JSON.stringify(request)
+  ||request.item!==557||request.rescueMode||request.expectedOwned===undefined||journal.itemsBefore!==request.expectedOwned
+  ||a.outcomeUnresolved||a.escrow!==0||a.acquired!==0||a.spent!==0||a.refund!==orderEscrow(request)
+  ||!production&&!['aubury','betty'].includes(shop)||!Number.isSafeInteger(cap)||cap<1||cap>(production?20000:refill?16000:shop==='betty'?3000:1600)||!Number.isSafeInteger(spent)||spent<0||spent>=orderEscrow(request))throw Error('earth shop fallback requires the matching fully refunded zero-fill intent and bounded acquisition cap');
+ return{entry:production?'scripts/earth-production.ts':refill?'scripts/earth-shop.ts':'scripts/shop-buyer.ts',args:production?[production,String(cap)]:[shop,String(cap),'2000'],env:{ITEMS:'earth rune',STOP_AT_TARGET:'1',STOCK_TARGET:String(request.expectedOwned+q),MAX_ITEMS:String(q),
+  MAX_SPEND:String(orderEscrow(request)-spent),COIN_RESERVE:String(request.reserve),FLOAT:String(request.reserve+orderEscrow(request)-spent),NO_BUY_TICKS:'25',BANK_PACK:'1'}};
+}
+export function shopFallbackSpent(state:any,request:ItemRequest){
+ if(state===undefined)return 0;
+ if(state?.phase!=='settled'||JSON.stringify(state.request)!==JSON.stringify(request)||!Number.isSafeInteger(state.spent)||state.spent<0||state.spent>orderEscrow(request))throw Error('shop fallback spend is unresolved; reconcile retained intent before retry');
+ return state.spent as number;
 }
 function roundBaseline(j:ItemOrder){const p=priorRounds(j);return{...p,coins:j.coinsBefore-p.spent,items:j.itemsBefore+p.acquired};}
 function claimSettlement(j:ItemOrder,c:{items:number;coins:number}){
@@ -438,7 +455,26 @@ if(import.meta.main){
   const old=existsSync(journalPath)?JSON.parse(readFileSync(journalPath,'utf8')) as ItemOrder:undefined,now=Date.now(),period=Number(process.env.ORDER_MS??900000),request:ItemRequest=old?.request??{actor,server,goal,item:Number(process.env.ITEM_ID??1331),quantity:Number(process.env.QUANTITY??1),...(process.env.EXPECTED_OWNED?{expectedOwned:Number(process.env.EXPECTED_OWNED)}:{}),...(process.env.RESCUE_MODE?{rescueMode:process.env.RESCUE_MODE as ItemRequest['rescueMode']}:{}),limit:Number(process.env.LIMIT_PRICE??45000),reserve:Number(process.env.CASH_RESERVE??5000),createdAt:now,reviewAt:now+Math.min(300000,Math.max(1,Math.floor(period/3))),deadline:now+period};
   if(process.env.RESCUE_MODE&&process.env.RESCUE_MODE!==request.rescueMode)throw Error('existing rescue mode mismatch');
   if(request.actor.toLowerCase()!==actor.toLowerCase()||request.server!==server||request.goal!==goal||process.env.ITEM_ID&&Number(process.env.ITEM_ID)!==request.item||process.env.QUANTITY&&Number(process.env.QUANTITY)!==orderQuantity(request)||process.env.EXPECTED_OWNED&&Number(process.env.EXPECTED_OWNED)!==request.expectedOwned||process.env.LIMIT_PRICE&&Number(process.env.LIMIT_PRICE)!==request.limit||process.env.CASH_RESERVE&&Number(process.env.CASH_RESERVE)!==request.reserve||process.env.ORDER_MS&&Number(process.env.ORDER_MS)!==request.deadline-request.createdAt)throw Error('existing request identity/budget mismatch');
-  validateRequest(request);const rescue:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
+  validateRequest(request);
+  if(process.env.SHOP_PROFILE){
+   if(process.env.CANCEL==='1')throw Error('shop fallback cannot cancel an order');
+   const fallbackPath=journalPath+'.shop.json',fallback=existsSync(fallbackPath)?JSON.parse(readFileSync(fallbackPath,'utf8')):undefined;
+   const saveFallback=(value:unknown)=>{writeFileSync(fallbackPath+'.tmp',JSON.stringify(value,null,2));renameSync(fallbackPath+'.tmp',fallbackPath);};
+   const spent=shopFallbackSpent(fallback,request),plan=earthShopFallback(request,old,Number(process.env.CAP??1600),spent,process.env.SHOP_PROFILE);
+   const seedUsed=fallback?.seeded??0;if(![0,1].includes(seedUsed))throw Error('earth fallback seed history unknown');
+   console.log('SHOP_FALLBACK '+JSON.stringify({method:process.env.SHOP_PROFILE,originalOfferId:old!.offerId,originalJournalPreserved:true,item:request.item,quantity:orderQuantity(request),target:request.expectedOwned!+orderQuantity(request),maxSpend:orderEscrow(request)-spent,reserve:request.reserve}));
+   saveFallback({request,phase:'running',spent,seeded:seedUsed,at:Date.now()});
+   const child=Bun.spawn([process.execPath,plan.entry,actor,...plan.args],{windowsHide:true,stdout:'pipe',stderr:'pipe',env:{...process.env,...plan.env,EARTH_SEED_USED:String(seedUsed),SHOP_PROFILE:''}});
+   const [out,err,code]=await Promise.all([new Response(child.stdout).text(),new Response(child.stderr).text(),child.exited]);
+   process.stdout.write(out);process.stderr.write(err);
+   const result=out.split(/\r?\n/).filter(l=>l.startsWith('RESULT ')).at(-1),debit=Number(result?.match(/\bspentTotal=(\d+)/)?.[1]??NaN);
+   if(!Number.isSafeInteger(debit)||debit<0||debit>orderEscrow(request)-spent)throw Error('shop fallback spend unconfirmed; retained running intent refuses retry');
+   const seeds=plan.entry==='scripts/earth-shop.ts'?Number(result?.match(/\bseeded=(\d+)/)?.[1]??NaN):0;
+   if(![0,1].includes(seeds)||seedUsed+seeds>1)throw Error('earth fallback seed count unconfirmed; retained running intent refuses retry');
+   saveFallback({request,phase:'settled',spent:spent+debit,seeded:seedUsed+seeds,at:Date.now()});
+   unlinkSync(lock);process.exit(code);
+  }
+  const rescue:RescueControl={active:false,start:0,lifeId:0,respawnCount:0};
   s=await openBot(actor,{onStop:async(session,detail)=>{if(!expectedRescueStop(session,detail,rescue))stopped=true;},onSessionEnd:async()=>{stopped=true;}});
   const stop=()=>stopped||existsSync(resolve('.practice',`stop-${actor}`));
   const result=await runOwnedItem(s,request,journalPath,stop,process.env.CANCEL==='1',fillWaitTicks,rescue);console.log('OWNED_GE_ITEM '+JSON.stringify(result));const ok=await settle([s],result.ok,JSON.stringify(result));unlinkSync(lock);process.exit(ok?0:1);

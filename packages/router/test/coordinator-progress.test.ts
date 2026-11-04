@@ -47,6 +47,14 @@ test('an isolated producer build is rejected until a finite live consumer is inc
  const s=initialState();expect(()=>acceptProposal(s,{reason:'proof only',capabilities:[],tasks:[task('build',{kind:'build'})]})).toThrow('finite live consumer');expect(s.tasks).toHaveLength(0);
  acceptProposal(s,{reason:'whole outcome',capabilities:[],tasks:[task('build',{kind:'build'}),run('consumer',['build'])]});expect(s.tasks).toHaveLength(2);
 });
+
+test('archived prerequisites of finished work do not crash admission of an unrelated finite build',()=>{
+ const s=initialState();addTasks(s,[task('archived'),task('finished',{dependsOn:['archived']}),run('old-consumer',['finished'])],0);
+ complete(s,'archived',true,2);complete(s,'finished',true,4);
+ s.tasks=s.tasks.filter(r=>r.spec.id!=='archived');
+ expect(()=>acceptProposal(s,{reason:'new finite work',capabilities:[],tasks:[task('build',{kind:'build'}),run('new-consumer',['build'])]})).not.toThrow();
+ expect(s.tasks.some(r=>r.spec.id==='new-consumer')).toBe(true);
+});
 test('replacement cycles, identity swaps and successful-work replacements fail atomically',()=>{
  const s=initialState();addTasks(s,[task('old',{kind:'build'})],0);complete(s,'old',false,2);const before=JSON.stringify(s);
  expect(()=>acceptProposal(s,{reason:'bad',capabilities:[],tasks:[task('cycle',{kind:'build',dependsOn:['old']})],replacements:[{from:'old',to:'cycle'}]})).toThrow('cycle');expect(JSON.stringify(s)).toBe(before);
@@ -88,6 +96,7 @@ test('source preparation intentionally drains live writers; a host deferral does
  expect(chooseTask(s,6,resources)?.id).toBe('live');
  expect(chooseTask(s,7,{...resources,nativeReady:true})?.id).toBe('resume');
  expect(preparedNativeDelivery(s,'quest-order','a'.repeat(64))).toBe(delivery);
+ expect(preparedNativeDelivery(s,'quest-order','a'.repeat(64),'b'.repeat(64))).toBeNull();
  expect(preparedNativeDelivery(s,'quest-order','b'.repeat(64))).toBeNull();
  startTask(s,'resume',8,'undrained');finishTask(s,{taskId:'resume',runId:'undrained',ok:false,at:9,output:null,error:'runtime build waits for a fresh actual fleet drain'});
  expect(preparedNativeDelivery(s,'quest-order','a'.repeat(64))).toBe(delivery);
