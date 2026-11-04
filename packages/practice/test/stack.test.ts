@@ -4,6 +4,40 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { engineCommand, MARKERS, startStack, waitReady } from '../src/stack';
 
+test('quest proof carries private endpoints through stack, fresh account and real CLI without changing the parent', async () => {
+    const { selectQuestSweepProofEndpoints, questSweepProofAccountEnv, startQuestSweepProofStack, questSweepChildConfiguration } = await import('../src/quest-sweep-proof');
+    const checked: number[] = [], samples = [0, 0.01];
+    const endpoints = selectQuestSweepProofEndpoints(port => { checked.push(port); return port !== 20003; }, () => samples.shift()!);
+    expect(checked).toEqual([20000, 20001, 20002, 20003, 20200, 20201, 20202, 20203]);
+    expect(endpoints.ports).toEqual({ engine: 20200, gateway: 20201, management: 20202, tcp: 20203 });
+    expect(endpoints.instance).toMatch(/^quest-sweep-[a-z0-9]{20}$/);
+    const original = 'SERVER=localhost:8888\r\nGATEWAY_URL=ws://localhost:7780\r\nTELEMETRY=false\r\n';
+    expect(questSweepProofAccountEnv(original, endpoints)).toBe(`SERVER=${endpoints.server}\r\nGATEWAY_URL=${endpoints.gateway}\r\nTELEMETRY=false\r\n`);
+    expect(() => questSweepProofAccountEnv(original.replace('localhost:8888', 'rs-sdk-demo.fly.dev'), endpoints)).toThrow('new practice account required');
+    const previous = Object.fromEntries(Object.keys(endpoints.env).map(k => [k, process.env[k]]));
+    let stops = 0;
+    const owned = { logs: { engine: '', gateway: '' }, stop: async () => { stops++; } };
+    const stack = await startQuestSweepProofStack(endpoints, async opts => {
+        expect(opts).toEqual({ ports: endpoints.ports, instance: endpoints.instance, tickMs: 150, readyTimeoutMs: 60000 });
+        for (const [k, v] of Object.entries(endpoints.env)) expect(process.env[k]).toBe(v);
+        return owned;
+    });
+    expect(stack).toBe(owned);
+    expect(Object.fromEntries(Object.keys(endpoints.env).map(k => [k, process.env[k]]))).toEqual(previous);
+    await stack.stop();
+    expect(stops).toBe(1);
+    await expect(startQuestSweepProofStack(endpoints, async () => { throw Error('startup refused'); })).rejects.toThrow('startup refused');
+    expect(Object.fromEntries(Object.keys(endpoints.env).map(k => [k, process.env[k]]))).toEqual(previous);
+    const child = questSweepChildConfiguration('qswfixture', 'sheep', endpoints, { GATEWAY_URL: 'ws://localhost:7780', WEB_MANAGEMENT_PORT: '8898', NODE_PORT: '43594' });
+    expect(child.cmd).toEqual(['bun', 'scripts/quest-sweep.ts', 'qswfixture', 'sheep']);
+    expect(child.env).toMatchObject({ ...endpoints.env, GATEWAY_URL: endpoints.gateway, QUEST_SWEEP_OBSERVE_BANK: '', RANDOM_EVENTS: '0' });
+    expect(child.env.GE_DATABASE).toBe(`data/market-${endpoints.instance}.sqlite`);
+    expect(child.windowsHide).toBe(true);
+    let attempts = 0;
+    expect(() => selectQuestSweepProofEndpoints(() => { attempts++; return false; }, () => 0)).toThrow('owned practice ports unavailable');
+    expect(attempts).toBe(100);
+}, 10000);
+
 test('default engine launch has no preload; a diagnostic preload is explicit and keeps the marker', () => {
     expect(engineCommand({}, 8888)).toEqual({ cmd: ['bun', MARKERS.engine], env: { NODE_TICKRATE: '150', NODE_XPRATE: '25', WEB_PORT: '8888' } });
     const module = join(import.meta.dir, '../src/shark-fishing-diagnostic.ts');
