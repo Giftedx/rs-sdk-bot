@@ -19,6 +19,20 @@ function gang(position: { x: number; z: number; level?: number }, items: Array<n
     };
 }
 
+// Hero's Quest as a pair (scripts/generated/quest-hero.ts): both outside the Heroes' Guild door (Achietties 2903,3510,
+// maps/m45_54.jm2). Done on top of DONE: Fight Arena 17 = 14, Lost City 147 = 6, Plague City 165 = 30 with the scroll read
+// (Ardougne teleport, teleport.rs2:22-35), Shield of Arrav in one gang. Nothing worn: Entrana bans weapons and armour
+// (monk_of_entrana.rs2:26-53). Kit (tradeable, the rs-stun-toolkit kit): runes for the teleports and the Fire Blasts
+// (law 563, water 555, death 560, fire 554, air 556), a glory (1712), fishing rod (307), bait (313), a harralander potion
+// (97), tinderbox (590), 2 logs (1511), 2 prayer potions (2434), a bronze pickaxe (1265), 100 coins, 6 lobsters.
+const HERO_KIT: Array<number | [number, number]> = [[563, 10], [555, 6], [560, 150], [554, 700], [556, 650], 1712, 307, [313, 10], 97, 590, 1511, 1511, 2434, 2434, 1265, 379, 379, 379, 379, 379, 379];
+function hero(gangVarp: Record<number, number>, extra: number[] = []): SaveConfig {
+    return {
+        position: { x: 2904, z: 3510, level: 0 }, skills: ALL_99, equipment: [], varps: { ...DONE, 17: 14, 147: 6, 165: 30, ...gangVarp }, coins: 100,
+        inventory: [...HERO_KIT, ...extra].map(e => Array.isArray(e) ? { id: e[0], count: e[1] } : { id: e, count: 1 }),
+    };
+}
+
 export const GANG_PRESETS: Record<string, SaveConfig> = {
     // Main (Black Arm): beside the tramp (tramppg spawn 3208,3391, maps/m50_52.jm2) south of the Blue Moon Inn; runes
     // for one Varrock teleport (1 law 563, 3 air 556, 1 fire 554) from the Black Arm HQ to the museum.
@@ -29,4 +43,8 @@ export const GANG_PRESETS: Record<string, SaveConfig> = {
     // Debug: the helper after its Phoenix part (%phoenixgang 9, weapon store key 759, 2 crossbows 767, the Phoenix
     // half 763), beside the tramp. ARRAV_HELPER_READY=1 skips the helper's part.
     quest_arrav_helper_ready: gang({ x: 3208, z: 3390 }, [759, 767, 767, 763], 0, { 146: 9 }),
+    // Black Arm side, with a black full helm, platebody and platelegs for Garv (quest_hero.rs2:21-25).
+    quest_hero: hero({ 145: 4 }, [1165, 1125, 1077]),
+    // Phoenix side.
+    quest_hero_helper: hero({ 146: 10 }),
 };

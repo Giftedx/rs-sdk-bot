@@ -1038,13 +1038,12 @@ cost Haggis ticks if they are done before Haggis reaches Brimhaven.
 | H6 | Katrine (Varrock): "I have a candlestick now!", the armband | done |
 | H7 | Firebird feather (Entrana firebird drop, `drop tables/scripts/entrana_firebird.rs2:10`; ice gloves worn to pick it up, `objs/fire_feather.rs2:1-13`); lava eel (blamish oil = harralander potion (unf) + blamish snail slime, Herblore 25, `skill_herblore/configs/brewing/brew_potion.struct:207-213`; oil on a fishing rod, `objs/oily_fishing_rod.rs2:4-14`; lava eel spot `skill_fishing/scripts/fishing_spots/lavafish.rs2`; cook it); Achietties with the three items | - |
 
-Open points before a script: the side door rule `coordz(coord) = coordz(loc_coord)` (`brimhaven_scarface_mansion.rs2:
-37-43`) compares z coordinates, so which side opens without `misc_key` must be checked in a run; Grip wanders
-in a guarded house, and the pirate guards' reaction to the attack is not read; the source of the ice gloves in rev
-289 is the Ice Queen's death drop (`_unpack/225/all.npc:5348-5388`), not checked. The feather, the armband, the
-cooked lava eel and the blamish oil are untradeable (`quest_hero.obj`, `skill_cooking/configs/cooking_generic/
-food_cooked.obj`, `skill_herblore/configs/brewing/potions.obj`), so Haggis gets each one itself; the oily fishing
-rod and the ice gloves are not marked untradeable (not found in a non-unpack `.obj` file).
+Script: `scripts/generated/quest-hero.ts` plays both sides in one process (MEASURED practice, 3/3; `research/community-and-upstream.md`
+section 9.2). The Black Arm member trades `misc_key` to the Phoenix member outside Garv's door; the Phoenix member opens the side door with it
+from the garden, then hits Grip through the arrow slit of the side room when the Black Arm member opens his drinks cabinet beside a
+pirate guard. The ice gloves are the Ice Queen's death drop. The feather, the armband, the cooked lava eel and the blamish oil are
+untradeable (`quest_hero.obj`, `skill_cooking/configs/cooking_generic/food_cooked.obj`, `skill_herblore/configs/brewing/potions.obj`), so
+each account gets its own.
 
 Cost: Haggis's Heroes' row stays ESTIMATE inside `quests-rest` (class XL). The real cost is the helper's 55 QP of
 quests, which is not on Haggis's clock but is a full second questing account. Without it, Heroes' Quest (1 QP), Throne of
