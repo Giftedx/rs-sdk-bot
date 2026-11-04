@@ -161,7 +161,7 @@ async function run(directory:string){
    const limit=Math.min(id==='entry'?780000:60000,deadline-Date.now()-15000);
    if(limit<30000)throw Error('practice envelope exhausted');
    if(existsSync(join(root,'.practice',`stop-${name}`)))throw Error('practice identity stop file');
-   const child=Bun.spawn({...childConfiguration(name,process.env,endpoints),stdout:Bun.file(log),stderr:Bun.file(join(dir,'worker.err'))});
+   const child=Bun.spawn({...childConfiguration(name,process.env,endpoints),windowsHide:true,stdout:Bun.file(log),stderr:Bun.file(join(dir,'worker.err'))});
    let timedOut=false,termination:Promise<void>|undefined;
    const timer=setTimeout(()=>{timedOut=true;termination=killTree(child.pid);},limit);
    const code=await child.exited;clearTimeout(timer);await termination;
