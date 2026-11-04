@@ -12,9 +12,13 @@ export function exactCarrierOffer(t:ReturnType<Session['sdk']['getTradeState']>,
  return t.isOpen&&t.partner?.toLowerCase()===partner.toLowerCase()&&(returned??[]).length===0
   &&(offered??[]).every(i=>i.id===1436&&Number.isSafeInteger(i.count)&&i.count>0)&&(offered??[]).reduce((n,i)=>n+i.count,0)===amount;
 }
-async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27,craft?:{send:()=>Promise<void>;complete:()=>boolean},pipeline?:{boundary?:CraftBoundary}){
+export function runeOpening(){
  const opening=process.env.RUNE_OPEN_AFTER??'incoming';
  if(opening!=='incoming'&&opening!=='helper-ack')throw Error('RUNE_OPEN_AFTER must be incoming or helper-ack');
+ return opening;
+}
+async function transfer(s:Session,h:Session,stop:()=>boolean=()=>false,amount=27,craft?:{send:()=>Promise<void>;complete:()=>boolean},pipeline?:{boundary?:CraftBoundary}){
+ const opening=runeOpening();
  if(!Number.isSafeInteger(amount)||amount<1||amount>27)throw Error('carrier transfer amount must be1..27');
  if(pipeline&&(!craft||!pipeline.boundary))throw Error('pipeline handoff needs the previous exact craft boundary and combined crafting');
  const at=s.tick();

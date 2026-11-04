@@ -102,7 +102,7 @@ export function verifyRuneContinuation(dir:string){
   });
   const masterBefore=readFileSync(join(dir,'0-'+m.prefix+'-before.sav')),masterAfter=readFileSync(join(dir,'0-'+m.prefix+'-after.sav'));
   const checks={exit:m.execution.code===0&&!m.execution.timedOut&&!m.execution.lowMemory,
-   result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.pipeline===(m.craftAfter==='trade-message')&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
+   result:rr?.ok===true&&rr.mode==='body-measure'&&rr.requestedPacks===12&&rr.craftAfter===m.craftAfter&&rr.pipeline===false&&rr.opening===(m.craftAfter==='trade-message'?'helper-ack':'incoming')&&rr.batches===12&&rr.consumed===324&&rr.crafted===972&&rr.rows?.every((r:any)=>r.consumed===27),
    entry:b[0].skills[20].level===99&&a[0].skills[20].level===99,assets:preserved,
    bankedOutput:runeMeasurementBankedOutput(b[0],a[0],972),
    effects:b.reduce((n:number,s:any)=>n+total(s,1436),0)-a.reduce((n:number,s:any)=>n+total(s,1436),0)===324&&total(a[0],559)-total(b[0],559)===972,
