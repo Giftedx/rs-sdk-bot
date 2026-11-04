@@ -12,7 +12,8 @@ export function chompyHuntingTile(p:{worldX:number;worldZ:number;level:number}){
 }
 export const CHOMPY={live:1015,dead:1016,toad:1013,bait:2875,bow:2883,arrow:2866,empty:2871,full:2872,one:2874,two:2873,feather:314} as const;
 export function bellowsCharges(rows:readonly{id:number;count:number}[]){return rows.reduce((n,i)=>n+i.count*(i.id===CHOMPY.full?3:i.id===CHOMPY.two?2:i.id===CHOMPY.one?1:0),0);}
-export function ownChompyNotches(messages:readonly{text:string;tick:number;observationId?:number}[],cursor:number){return messages.filter(m=>(m.observationId??m.tick)>cursor&&/^You scratch a notch on your bow for the chompy bird kill\.$/.test(m.text)).length;}
+// Only a native game message (type 0) is the kill receipt; public chat that repeats the text is not.
+export function ownChompyNotches(messages:readonly{text:string;tick:number;type?:number;observationId?:number}[],cursor:number){return messages.filter(m=>m.type===0&&(m.observationId??m.tick)>cursor&&/^You scratch a notch on your bow for the chompy bird kill\.$/.test(m.text)).length;}
 export async function runChompy(s:Session,o:{kills:number;cap:number;maxBaits:number;stop?:()=>boolean}){
  if(![o.kills,o.cap,o.maxBaits].every(Number.isSafeInteger)||o.kills<1||o.kills>5||o.cap<1||o.cap>20000||o.maxBaits<o.kills||o.maxBaits>15)throw Error('invalid finite chompy limits');
  const st=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory(),held=(id:number)=>inv().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0),npcs=()=>s.sdk.getNearbyNpcs();
