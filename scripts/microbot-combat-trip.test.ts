@@ -45,3 +45,5 @@ test('bank staging changes retaliation only after close and keeps fresh bank obs
  expect(result.ok).toBe(false);expect(result.banked).toBe(true);expect(result.assets).toEqual([]);
  expect(withdrawals).toBe(0);expect(dismissWhileBanked).toBe(0);expect(clicks).toEqual([151,150]);expect(current.autoRetaliateEnabled).toBe(true);
 });
+
+test('extracted Blue entry preserves exact waypoints, key transition predicate and settle boundary',async()=>{const{blueDungeonEntry}=await import('./microbot-combat-trip');let p={worldX:0,worldZ:0,level:0};const trace:any[]=[];await blueDungeonEntry({position:()=>p,walk:async(x,z)=>{trace.push([x,z]);p={...p,worldX:x,worldZ:z};},interact:async(id,x,z,arrived,key)=>{trace.push({id,x,z,key});expect(arrived()).toBe(false);p={...p,worldX:id===1759?2884:2923,worldZ:id===1759?9797:9803};expect(arrived()).toBe(true);},settle:async()=>{trace.push('settle3');}});expect(trace).toEqual([[2884,3397],{id:1759,x:2884,z:3397,key:undefined},[2886,9817],[2889,9831],[2910,9830],[2924,9803],{id:2623,x:2924,z:9803,key:1590},'settle3',[2904,9803],[2895,9792]]);});

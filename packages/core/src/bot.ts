@@ -178,12 +178,14 @@ type FinishDetail = string | ((ok: boolean) => string);
 // then settles (RESULT, logout) and reports to the runner instead of exiting the process, which holds other bots.
 export const finishHooks = new Map<string, (ok: boolean, detail: FinishDetail) => void>();
 export const openHooks = new Map<string, (name: string, opts: Parameters<typeof openBot>[1]) => Promise<Session>>();
-export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail): Promise<never> {
+export type SettlementOptions = { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void; logout?: (rawSession: Session) => Promise<string> };
+export async function finish(sessions: Session[], ok: boolean, detail: FinishDetail, opts: Pick<SettlementOptions, 'logout'> = {}): Promise<never> {
     const hook = finishHooks.get(String((sessions[0] as { name?: string } | undefined)?.name ?? '').toLowerCase());
-    if (hook) { const final = await settle(sessions, ok, detail); hook(final, detail); return new Promise<never>(() => {}); }
+    if (hook) { const final = await settle(sessions, ok, detail, opts); hook(final, detail); return new Promise<never>(() => {}); }
     // Inside a bot host other bots share this process: log this one out and stop here, never exit the host.
-    if ((globalThis as { __rsBotHost?: unknown }).__rsBotHost) { await settle(sessions, ok, detail); console.log('WARN finish inside a bot host without a runner hook; this bot stops, the host keeps running'); return new Promise<never>(() => {}); }
+    if ((globalThis as { __rsBotHost?: unknown }).__rsBotHost) { await settle(sessions, ok, detail, opts); console.log('WARN finish inside a bot host without a runner hook; this bot stops, the host keeps running'); return new Promise<never>(() => {}); }
     const final = await settle(sessions, ok, detail, {
+        ...opts,
         // Backstop: two proving runs printed RESULT ok and then sat until the 300 s kill (cause not found).
         // Logout runs first, so the account leaves the world either way; this only bounds the process.
         onReported: okNow => { setTimeout(() => { console.log('WARN finish backstop exit'); process.exit(okNow() ? 0 : 1); }, 30_000).unref?.(); },
@@ -193,7 +195,7 @@ export async function finish(sessions: Session[], ok: boolean, detail: FinishDet
 
 // finish() without the exit: prints RESULT, the ledgers and events, logs every account out, closes every session,
 // and returns the final ok. The bot host (host.ts) calls it once per hosted script.
-export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void } = {}): Promise<boolean> {
+export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, opts: SettlementOptions = {}): Promise<boolean> {
     const unique = [...new Set(sessions)];
     const existing = [...new Set(unique.map(s => settlements.get(s)).filter((p): p is Promise<boolean> => !!p))];
     const fresh = unique.filter(s => !settlements.has(s));
@@ -205,7 +207,7 @@ export function settle(sessions: Session[], ok: boolean, detail: FinishDetail, o
     return result;
 }
 
-async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: { log?: (line: string) => void; onReported?: (okNow: () => boolean) => void }, prior: Promise<boolean>): Promise<boolean> {
+async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail, opts: SettlementOptions, prior: Promise<boolean>): Promise<boolean> {
     for (const s of sessions) settling.add(s);
     const log = opts.log ?? ((l: string) => console.log(l));
     for (const s of sessions) {
@@ -213,7 +215,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
         const e = randomEvents.get(s); if (e) { e.stop(); log(`EVENTS ${JSON.stringify(e.counts())} bot=${s.name}`); }
     }
     opts.onReported?.(() => ok);
-    const outs = await Promise.all(sessions.map(s => logoutSession(s)));
+    const outs = await Promise.all(sessions.map(s => (opts.logout ?? logoutSession)(s)));
     log(`LOGOUT ${outs.join(' ')}`);
     // A session the server did not end keeps adding scored playtime until its 500-tick timeout, so it fails the run.
     if (outs.some(o => o !== 'logged-out')) { log(`WARN logout did not complete: ${outs.join(' ')}`); ok = false; }

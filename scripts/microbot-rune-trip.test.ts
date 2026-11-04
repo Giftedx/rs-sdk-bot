@@ -1,7 +1,13 @@
 import{test,expect}from'bun:test';
 import{readFileSync}from'node:fs';
-import{NATURE,naturePlanComplete,natureRouteJob,natureReceipt,insideNature,requireNatureEligibility,natureProfile,runNatureTrips,type NatureJob}from'./microbot-rune-trip';
+import{NATURE,naturePlanComplete,natureRouteJob,natureReceipt,insideNature,requireNatureEligibility,natureProfile,runNatureTrips,createShiloTransit,type NatureJob}from'./microbot-rune-trip';
 const job=():NatureJob=>({target:4,batch:2,cap:2000,returnTicks:400,reserve:2,members:true});
+
+test('shared actual Shilo gate engine records unknown dispatch until exact landing settles',async()=>{
+ for(const unknown of[false,true]){let tick=0,inputs=0;const player={worldX:2866,worldZ:2953,level:0},listeners=new Set<()=>void>();const s:any={tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},sdk:{getState:()=>({player,modalOpen:false,interface:{isOpen:false},dialog:{isOpen:false},nearbyLocs:[{id:2261,x:2867,z:2953,level:0,optionsWithIndex:[{text:'Open',opIndex:1}]}]}),sendInteractLoc:async()=>{inputs++;if(unknown)throw Error('transport unknown');player.worldX=2868;return{success:true};}}},transit=createShiloTransit(s,{},()=>true),timer=setInterval(()=>{tick++;for(const cb of listeners)cb();},1);
+  try{const action=transit.cross({id:2261,x:2867,z:2953},{x:2866,z:2953},{x:2868,z:2953},()=>false);if(unknown){await expect(action).rejects.toThrow('transport unknown');expect(transit.pending()).toBe(true);}else{await action;expect(transit.pending()).toBe(false);expect(tick).toBeGreaterThanOrEqual(2);}expect(inputs).toBe(1);}finally{clearInterval(timer);}
+ }
+});
 test('Nature rejects the native partial fence endpoint instead of authorizing a straight fallback',()=>{expect(naturePlanComplete({x:2852,z:2955},{x:2865,z:3022},[{x:2859,z:3006}])).toBe(false);expect(naturePlanComplete({x:2880,z:2952},{x:2865,z:3022},[{x:2796,z:2960},{x:2815,z:3002},{x:2865,z:3022}])).toBe(true);expect(naturePlanComplete({x:2852,z:2955},{x:2865,z:3022},[])).toBe(false);});
 test('declared native undead-stockade protection requires real prayer points and base level before staging',()=>{
  const f=consumerFixture();f.s.sdk.getState=()=>({player:f.player,prayers:{prayerPoints:99}});f.s.sdk.getSkill=()=>({level:99,baseLevel:42});expect(()=>requireNatureEligibility(f.s,{...job(),protectMelee:true})).toThrow('protection');f.s.sdk.getSkill=()=>({level:99,baseLevel:99});f.s.sdk.getState=()=>({player:f.player,prayers:{prayerPoints:5}});expect(()=>requireNatureEligibility(f.s,{...job(),protectMelee:true})).toThrow('protection');

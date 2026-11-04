@@ -2248,7 +2248,7 @@
   },
   {
     "name": "mmcaves",
-    "decision": "partial",
+    "decision": "blocked",
     "behaviour": "Travel through Monkey Madness cave route; select empty cave, world hop, ranged/magic combat, supplies and loot",
     "localConsumers": [
       "scripts/gather-combat.ts"
@@ -2303,14 +2303,14 @@
       }
     ],
     "blockers": [
-      "Generic combat exists; donor cave route, occupancy scanning, aggro reset, inventory loadout and prayer transitions lack a finite consumer. Native cave mapping needs coordinate and NPC verification."
+      "The donor targets Maniacal monkeys in Monkey Madness II Kruk's Dungeon: mapped Hole2 loc28772, arrival2509,9173 plane1. Native npc.pack has no Maniacal monkey and loc.pack has no28772. Native NPC1441 mm_kruk is the classic Monkey Madness NPC and does not supply this later dungeon. Generic combat is a reuse candidate, not this cave port."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/mmcaves/MmCavesScript.java",
-        "decision": "partial",
+        "decision": "blocked",
         "consumer": "scripts/gather-combat.ts",
-        "gap": "Generic combat exists; donor cave route, occupancy scanning, aggro reset, inventory loadout and prayer transitions lack a finite consumer. Native cave mapping needs coordinate and NPC verification.",
+        "gap": "The donor targets Maniacal monkeys in Monkey Madness II Kruk's Dungeon: mapped Hole2 loc28772, arrival2509,9173 plane1. Native npc.pack has no Maniacal monkey and loc.pack has no28772. Native NPC1441 mm_kruk is the classic Monkey Madness NPC and does not supply this later dungeon. Generic combat is a reuse candidate, not this cave port.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/mmcaves/MmCavesScript.java",
@@ -2793,10 +2793,8 @@
         "sha256": "7daa263d3f383e0324900c9c0d0b879c27c542cc26ec7ffa3d3eedbea2c1e174"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
-    "supportedWorkQueue": [
-      "Generic combat exists; donor cave route, occupancy scanning, aggro reset, inventory loadout and prayer transitions lack a finite consumer. Native cave mapping needs coordinate and NPC verification."
-    ]
+    "proof": "Pinned DungeonRoute.java:9-13 and MmCavesScript.java:545,651 identify the exact later dungeon and target. Native npc.pack/loc.pack lack that target and entrance. Static content exclusion; no practice or live cave run.",
+    "supportedWorkQueue": []
   },
   {
     "name": "moonlightmoth",
@@ -4825,9 +4823,11 @@
   },
   {
     "name": "nmz",
-    "decision": "blocked",
-    "behaviour": "Purchase/start Nightmare Zone dream, overload/absorption strategy and auxiliary prayer potion/restoration script",
-    "localConsumers": [],
+    "decision": "partial",
+    "behaviour": "Nightmare Zone encounter and an independent Prayer threshold, potion selection and empty-vial helper",
+    "localConsumers": [
+      "scripts/microbot-potion-care.ts"
+    ],
     "sourceEvidence": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/nmz/NmzScript.java",
@@ -4890,16 +4890,33 @@
         "claim": "Rs2Inventory.dropAll(\"Vial\");"
       }
     ],
-    "serverEvidence": [],
+    "serverEvidence": [
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/player/configs/consumption/consume_effects.dbrow",
+        "line": 167,
+        "claim": "[prayer_potion_effect]"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/player/configs/consumption/consume_effects.dbrow",
+        "line": 296,
+        "claim": "[2restore_potion_effect]"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/player/configs/consumption/consume_effects.dbrow",
+        "line": 307,
+        "claim": "data=stat_heal,prayer,8,25"
+      }
+    ],
     "blockers": [
-      "No matching native definition or handler found for nightmare.zone, dominic.onion, absorption.potion. Donor requirement: Purchase/start Nightmare Zone dream, overload/absorption strategy and auxiliary prayer potion/restoration script. Search evidence is embedded; a native implementation and protocol mapping are required before worker qualification."
+      "Nightmare Zone dream entry, Dominic Onion, absorption and overload encounter state have no matching native encounter implementation. The independent potion helper does not supply this encounter.",
+      "Moonlight potion has no matching native item/effect. Independent potion helper has bounded Native23 qualification; full Nightmare Zone encounter and unattended/live release remain excluded."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/nmz/NmzScript.java",
         "decision": "blocked",
         "consumer": null,
-        "gap": "Requires the named native encounter/content and a finite worker.",
+        "gap": "Nightmare Zone dream entry, Dominic Onion, absorption and overload encounter state have no matching native encounter implementation. The independent potion helper does not supply this encounter.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/nmz/NmzScript.java",
@@ -5025,9 +5042,9 @@
       },
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/nmz/PrayerPotionScript.java",
-        "decision": "blocked",
-        "consumer": null,
-        "gap": "Requires the named native encounter/content and a finite worker.",
+        "decision": "reuse",
+        "consumer": "scripts/microbot-potion-care.ts",
+        "gap": "Independent native helper is qualified for explicit Prayer25..30 percent policies, enabled toggle, first owned declared Prayer/Super Restore family and drop-only-after-dose cleanup. Native23 actual CLI cases cover exact thresholds, missing-family fallback, no owned family, complete18-stat Super Restore and5-stat Restore receipts, all13 existing utility cases, negative refusal and logout. Moonlight potion has no native item/effect; Nightmare Zone encounter remains blocked separately. Donor random wall-clock cadence and unattended/live release are outside this finite native adaptation.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/nmz/PrayerPotionScript.java",
@@ -5268,7 +5285,15 @@
         "sha256": "df17b5cd54b778a9d8c0bc2b56b45fa85d78bd3e295aba964aca0733d3609b05"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity."
+    "proof": {
+      "level": "Pinned independent donor helper mapped to existing worker; actual native CLI23 passes with independent CRC saves",
+      "helperSource": "src/main/java/net/runelite/client/plugins/microbot/nmz/PrayerPotionScript.java",
+      "consumer": "scripts/microbot-potion-care.ts",
+      "runtimeSha256": "8cae6782e71f5379bece8c6996639c7fccef76755c0fc93460dff7b0822df6cf",
+      "native": ".practice/microbot-ports/potion-prayer-native-1793651405921/result.json",
+      "sourceCheck": ".practice/microbot-ports/potion-prayer-native-1793651405921/source-check.json",
+      "scope": "All23 actual CLI cases pass, including13 existing potion/pouch cases and10 percentage/vector/selection/refusal cases. Complete18 native Super Restore and5 Restore stats reconcile with exact dose/vial/whole-stock, XP0, HP99, gear/bank/controls/position and logout. Invalid mixed policy refuses before login.11515 captured source/config files unchanged;42 compiled server cache files match before/after readiness and at end through the source manifest. Conditions: members practice,100ms ticks, XP1, owned staged stock and stated current/base skills. No live or NMZ encounter claim."
+    }
   },
   {
     "name": "npctanner",
@@ -5660,8 +5685,8 @@
       }
     ],
     "blockers": [
-      "Finite native four-element bank/refill routes implement default Varrock/Falador spell returns plus explicit owned elemental staff selection, finite ordinary energy doses and charged Glory return to native Edgeville bank. The combined air/staff/finite-energy/Glory case and the five recorded default/staff variants each pass two actual CLI bank trips with exact saved effects and unchanged source. Staff substitution changes orb/return rune costs; energy waits for a fresh native completion message plus dose/restoration, and Glory waits for post-CLOSE_MODAL observation plus exact charge/landing. Other option/site combinations, player-triggered route integration and live repeat release remain unqualified. Donor stamina/Ferox/Dueling-to-Ferox and integrated world hopping are not supplied.",
-      "Standalone player monitoring remains separate from orb trips; no native player-triggered integration receipt or full donor encounter policy claim."
+      "Finite native four-element bank/refill routes implement default Varrock/Falador spell returns plus explicit owned elemental staff selection, finite ordinary energy doses and charged Glory return to native Edgeville bank. The combined air/staff/finite-energy/Glory case and the five recorded default/staff variants each pass two actual CLI bank trips with exact saved effects and unchanged source. Staff substitution changes orb/return rune costs; energy waits for a fresh native completion message plus dose/restoration, and Glory waits for post-CLOSE_MODAL observation plus exact charge/landing. Other option/site combinations and live repeat release remain unqualified. Donor stamina/Ferox/Dueling-to-Ferox and integrated world hopping are not supplied.",
+      "Optional ORB_PLAYER_DETECTION is integrated into the orb-trip CLI with native wilderness combat eligibility and public equipped-staff filtering. Four current-source actual CLI air-route cases pass: eligible owned nonattacking peers arriving during charging or seen while walking interrupt with expected code1, finite escape, owned bank return, restored controls and logout; low-combat and observed AirStaff peers complete. World hopping, hostile attacks, other encounter configurations and live repeat release remain unqualified."
     ],
     "scriptDecisions": [
       {
@@ -5671,7 +5696,7 @@
           "scripts/microbot-c-orbs.ts",
           "scripts/microbot-orb-trip.ts"
         ],
-        "gap": "Finite native four-element bank/refill routes implement default Varrock/Falador spell returns plus explicit owned elemental staff selection, finite ordinary energy doses and charged Glory return to native Edgeville bank. The current combined air/staff/finite-energy/Glory case passes two actual CLI bank trips with exact saved effects and unchanged source; the five recorded default/staff variants pass the linked final-source two-trip native qualification. Staff substitution changes orb/return rune costs; energy waits for a fresh native completion message plus dose/restoration, and Glory waits for post-CLOSE_MODAL observation plus exact charge/landing. Other option/site combinations, player-triggered route integration and live repeat release remain unqualified. Donor stamina/Ferox/Dueling-to-Ferox and integrated world hopping are not supplied.",
+        "gap": "Finite native four-element bank/refill routes implement default Varrock/Falador spell returns plus explicit owned elemental staff selection, finite ordinary energy doses and charged Glory return to native Edgeville bank. The current combined air/staff/finite-energy/Glory case passes two actual CLI bank trips with exact saved effects and unchanged source; the five recorded default/staff variants pass the linked final-source two-trip native qualification. Staff substitution changes orb/return rune costs; energy waits for a fresh native completion message plus dose/restoration, and Glory waits for post-CLOSE_MODAL observation plus exact charge/landing. Four current-source air-route player-detection cases have separate native proof. Other option/site combinations and live repeat release remain unqualified. Donor stamina/Ferox/Dueling-to-Ferox and integrated world hopping are not supplied.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/orbcharger/scripts/AirOrbScript.java",
@@ -5798,8 +5823,12 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/orbcharger/scripts/PlayerDetectionScript.java",
         "decision": "partial",
-        "consumer": "scripts/microbot-c-player-monitor.ts",
-        "gap": "Standalone finite player monitoring supports stop/logout in source and unit checks. It is not integrated into the orb-trip CLI, has no native player-triggered integration receipt and does not hop worlds.",
+        "consumer": [
+          "scripts/microbot-orb-trip.ts",
+          "scripts/microbot-c-orbs.ts",
+          "scripts/microbot-c-player-monitor.ts"
+        ],
+        "gap": "Optional ORB_PLAYER_DETECTION is integrated into the orb-trip CLI with native wilderness combat eligibility and public equipped-staff filtering. Four current-source actual CLI air-route cases pass: eligible owned nonattacking peers arriving during charging or seen while walking interrupt with expected code1, finite escape, owned bank return, restored controls and logout; low-combat and observed AirStaff peers complete. World hopping, hostile attacks, other encounter configurations and live repeat release remain unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/orbcharger/scripts/PlayerDetectionScript.java",
@@ -6028,6 +6057,15 @@
           "savedBankAudit": ".practice/microbot-ports/orb-native-1793590776688/saved-bank-audit.json",
           "sourceCheck": ".practice/microbot-ports/orb-native-1793590776688/source-check.json",
           "scope": "Five bounded native variants each pass2 bank/refill trips: default earth/air/fire/water spell-return routes and owned air-staff/paid-spell-return variant. Each banks2 orbs and retains2 raw orbs and the unrelated gold bar; independent CRC bank assets, exact rune/potion/XP/HP/control accounting, empty final pack/equipment, logout and11427 unchanged source/config entries pass. These five declared option/site configurations are qualified; other combinations and live repeats are not."
+        },
+        "playerDetection": {
+          "receipt": ".practice/microbot-ports/orb-player-native-1793622852196/proof.json",
+          "sourceCheck": ".practice/microbot-ports/orb-player-native-1793622852196/source-check.json",
+          "sourceSha256": {
+            "scripts/microbot-orb-trip.ts": "ae3e39ef0d5b3e4de125d588a5c63e3f2c8f085dcac4f550de06d89cee7904bb",
+            "scripts/microbot-c-orbs.ts": "b512bedeaf159e65710fd39df0cddfba1732227501de3172c972d94060a78e34"
+          },
+          "scope": "Four actual CLI air-route cases pass;11439 source/config entries unchanged. Eligible peer arrives during charging after4 of8 orbs or appears while walking before any charge: expected incomplete code1 and one legal escape. Low-combat and observed AirStaff peers each permit2 target orbs/code0. Independent CRC output/rune/Magic/potion/all-assets, foreign XP0, HP99, gear/controls, final bank/logout and unchanged peer assets/XP/HP checks pass. No hostile attack, world-hop, other route/options or live qualification. This captured closure includes fresh potion completion and its three-tick settlement tail; the74CF player-detection receipt binds its older captured bytes only."
         }
       },
       "sourceBinding": {
@@ -6035,7 +6073,7 @@
         "check": ".practice/microbot-ports/orb-native-finite-energy-1793589741862/source-check.json",
         "entries": 11427,
         "changed": [],
-        "workerBytes": "Current orb entry and trip module match the receipt hashes. This binding qualifies only the recorded finite-energy air/staff/Glory case.",
+        "workerBytes": "Recorded finite-energy air/staff/Glory manifest binds its captured worker bytes only. Current player detection has a separate exact-hash nativePractice.playerDetection receipt; older option/default-route receipts do not qualify the changed player-detection closure.",
         "defaultRoutes": {
           "manifest": ".practice/microbot-ports/orb-native-1793590776688/source-start.json",
           "check": ".practice/microbot-ports/orb-native-1793590776688/source-check.json",
@@ -6049,7 +6087,7 @@
       }
     },
     "supportedWorkQueue": [
-      "Additional option/site combinations, player-monitor integration/native trigger proof and live repeat release remain open."
+      "Other option/site combinations, hostile encounters, world hopping and live repeat release remain open. Four declared air-route player-detection cases have separate current-source native proof."
     ]
   },
   {
@@ -8246,14 +8284,14 @@
       }
     ],
     "blockers": [
-      "Finite monitor supports radius/ignore/new-player policies, native wilderness-zone filtering, confirmed logout and one declared observed inventory-item option with exact expected all-pack delta. The linked native town wilderness-only filter performs no action; the same owned nearby peer then triggers exactly one Attack potion121→123 with Attack20→25. Exact owned stock, XP0,HP99 and both logouts pass with11193 unchanged source/config entries. Global/account/role stop guards have focused unit coverage. This qualifies those filter/item cases, not every map or item; multi-page teleport-jewellery/dialogue/landing behaviour, donor world hopping and GUI flash/sound are not supplied."
+      "Finite monitor supports radius/ignore/new-player policies, native wilderness filtering, confirmed logout and declared exact inventory effects. Charged Glory has nine Native qualification cases: four destinations, last charge, spare owned Glory, wilderness31 refusal, short-budget refusal and escape after Skeleton90 damage99to97 with unchanged life. Each positive sends one Rub and one destination choice; stock, XP, controls, landing and both logouts reconcile. Interrupted-menu reopening has unit/source proof only. Other jewelry, tablets, other maps/items, donor world hopping and GUI flash/sound remain unqualified or unavailable. Live hostile-player escape and repeat release are unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/playermonitor/PlayerMonitorScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-c-player-monitor.ts",
-        "gap": "Finite monitor supports radius/ignore/new-player policies, native wilderness-zone filtering, confirmed logout and one declared observed inventory-item option with exact expected all-pack delta. The linked native town wilderness-only filter performs no action; the same owned nearby peer then triggers exactly one Attack potion121→123 with Attack20→25. Exact owned stock, XP0,HP99 and both logouts pass with11193 unchanged source/config entries. Global/account/role stop guards have focused unit coverage. This qualifies those filter/item cases, not every map or item; multi-page teleport-jewellery/dialogue/landing behaviour, donor world hopping and GUI flash/sound are not supplied.",
+        "gap": "Finite monitor supports radius/ignore/new-player policies, native wilderness filtering, confirmed logout and declared exact inventory effects. Charged Glory has nine Native qualification cases: four destinations, last charge, spare owned Glory, wilderness31 refusal, short-budget refusal and escape after Skeleton90 damage99to97 with unchanged life. Each positive sends one Rub and one destination choice; stock, XP, controls, landing and both logouts reconcile. Interrupted-menu reopening has unit/source proof only. Other jewelry, tablets, other maps/items, donor world hopping and GUI flash/sound remain unqualified or unavailable. Live hostile-player escape and repeat release are unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/playermonitor/PlayerMonitorScript.java",
@@ -8769,9 +8807,9 @@
         "sha256": "e0d1f1a1b8a6db793dc99e11bdcc30b2b76ea038646ed5d11a11243205f6ae50"
       }
     ],
-    "proof": "Source/unit guards plus bounded native filter/item qualification. Evidence .practice/microbot-ports/player-monitor-item-native-1793592083801/result.json; .practice/microbot-ports/player-monitor-item-native-1793592083801/source-check.json:11193 unchanged entries; worker SHA256 ed0dd17e0158a40a7260e77a948a78c71327c02c2060dd522b309a10f5646570. Native town wilderness-only filter sends no input, then same owned peer triggers one potion121→123 and Attack20→25; exact two-actor saved assets, XP0,HP99 and both logouts. No full map/item/teleport-jewellery policy, live or repeat claim.",
+    "proof": "Native .practice/microbot-monitor-helper/native-1793664204953/result.json:9/9 cases, genuine Skeleton90 targeting actor before99to97 hit, Edgeville landing sameLife1/respawns0, complete actor/peer records and logout. source-check.json:11079 unchanged; compiled-cache-ready-check.json:42 unchanged. Runtime5EFDB12EAFE57452F5E72FDBD5AAF82EDA3DC88A1D5E20CB977DF76A0C05BBCA. Exact attack-potion/filter scope is in .practice/microbot-ports/player-monitor-item-native-1793592083801/result.json.",
     "supportedWorkQueue": [
-      "Qualify additional declared filter/item/map combinations and any caller integration separately; retain unsupported world-hop, GUI and multi-page teleport-jewellery boundaries."
+      "Qualify interrupted-menu reopening and other declared items/maps through their actual callers; retain explicit world-hop, GUI and live-release boundaries."
     ]
   },
   {
@@ -9239,7 +9277,10 @@
     "behaviour": "Independent inventory drop, run toggle, camera, idle prevention, potion manager, cannon, special attack, bank PIN, PvP and Wintertodt helpers; loadout and pouch filling",
     "localConsumers": [
       "packages/core/src/reflex.ts",
-      "scripts/microbot-c-qol.ts"
+      "scripts/microbot-c-qol.ts",
+      "scripts/microbot-potion-care.ts",
+      "scripts/microbot-c-care.ts",
+      "scripts/microbot-owned-loadout.ts"
     ],
     "sourceEvidence": [
       {
@@ -9496,14 +9537,20 @@
       }
     ],
     "blockers": [
-      "Finite native specbar activation and owned full-cannon refill exist in microbot-c-qol; finite prayer hold restores original state. Donor weapon swap/loadouts, attack-cycle flicking, automatic cannon repair/continuous triggers, pouch and GUI helpers remain separate gaps. No practice/live qualification."
+      "Finite native spec activation, owned cannon refill, exact bank loadouts and supported special-weapon swaps have separate bounded consumers and receipts. Native cannon decay removes the cannon; modern repair is not a missing native action. Continuous automatic triggers, unsupported pouch variants, attack-cycle policy, graphical helpers and live repeats remain separate scope.",
+      "Finite native potion care and Druid-pouch filling have the exact thirteen-case linked CLI proof; other loadout/special/PvP subclaims retain their separate qualification state. Modern boosters and unsupported pouch types are separate native-content boundaries."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/QoLScript.java",
         "decision": "partial",
-        "consumer": "packages/core/src/reflex.ts",
-        "gap": "Loadout loading, pouch filling and click-menu correction; native loadout consumer incomplete.",
+        "consumer": [
+          "packages/core/src/reflex.ts",
+          "scripts/microbot-c-care.ts",
+          "scripts/generated/quest-druidspirit.ts",
+          "scripts/microbot-owned-loadout.ts"
+        ],
+        "gap": "Native Druid pouch Fill is implemented by scripts/microbot-c-care.ts pouch utility with observed completed Nature Spirit; the staged quest fill remains in scripts/generated/quest-druidspirit.ts. Native2957/2958 consumes three harvests per fill in pear2974→stem2972→mushroom2970 priority for weighted3/2/1 charges. Exact whole-pack/fresh native message, original scalar life/HP/executor/gear/XP, stop/count/tick and unknown-no-retry guards apply. Actual native CLI completes two fills for8+4=12 charges in4 ticks, consumes2 pears/2 stems/2 mushrooms, retains1 mushroom and all unrelated stock; insufficient two-harvest stock produces zero inputs/charges with expected code1 and logout. Donor generic pouch-name handling is not a universal native pouch protocol: native essence, meat and Rune pouch variants are absent from the pinned object/handler mapping; donor explicitly excludes Rune pouch. Finite owned loadout loading is implemented by scripts/microbot-owned-loadout.ts: exact pack/worn targets, native noted withdrawals, stacked thrown weapons, original bank note mode and compatible combat-style restoration. Three actual CLI cases pass, including a full initial pack with style3 restored after the unarmed clamp, missing stock refused before any moves, and noted Logs plus20 Bronze darts. Assets, HP99, all XP, original controls and logout reconcile. RuneLite click-menu correction remains graphical client behavior.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/QoLScript.java",
@@ -9630,8 +9677,8 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/AutoItemDropperScript.java",
         "decision": "partial",
-        "consumer": "packages/core/src/reflex.ts",
-        "gap": "Configured item dropping and drop order; existing gather workers implement product-specific dropping, not this configurable standalone helper.",
+        "consumer": "scripts/microbot-c-qol.ts",
+        "gap": "Finite full-pack configured dropping is implemented with exact item IDs or whole case-insensitive names, listed/except policy, explicit slot/reverse/column order, count/tick caps and exact whole-pack receipts. Original life, executor, HP, gear, XP and stop checks apply; unknown input is not repeated. Donor excludeItems passes a negated predicate to dropAllExcept, so both donor branches drop listed names; the explicit except policy deliberately corrects that ambiguity. Per-name trimming and deterministic order are adaptations, not literal donor random-order parity.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/AutoItemDropperScript.java",
@@ -9653,8 +9700,8 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/AutoRunScript.java",
         "decision": "partial",
-        "consumer": "packages/core/src/reflex.ts",
-        "gap": "Toggle run at energy threshold; reuse session walking controls, no separate perpetual plugin.",
+        "consumer": "scripts/microbot-c-qol.ts",
+        "gap": "Finite run-energy policy uses the existing native component153 control, requires idle ordinary controls and energy strictly above the declared threshold, and confirms fresh transmitted temporary option_run173 with unchanged assets/HP/XP/gear. Already-enabled and threshold misses send no input. This is a finite check, not another perpetual controller; run173 is not claimed as a saved control.",
         "actionEvidence": []
       },
       {
@@ -9716,8 +9763,8 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/PotionManagerScript.java",
         "decision": "partial",
-        "consumer": "packages/core/src/reflex.ts",
-        "gap": "Timed stat/prayer potion use and empty vial dropping; finite loadout/restoration policy incomplete.",
+        "consumer": "scripts/microbot-potion-care.ts",
+        "gap": "scripts/microbot-potion-care.ts implements finite declared native stat/prayer thresholds, ordinary/super antipoison and antifire prevention or fresh native poison-message admission, exact dose-family selection, fresh potion completion, paired whole-pack/stat effects, three-tick settle and optional finite empty-vial229 drops. Metadata is cached before login; healthy one-pass care returns immediately, while explicit monitoring reserves cleanup time. Scalar life/HP, original executor/gear/XP, stop, dose/tick limits and uncertain-no-retry guards apply. Native thirteen-case batch qualifies six stat/prayer effects and three prevention doses, each with one exact vial drop, plus healthy zero-tick skip and preexisting-stop zero-input refusal. Public worker receipts never read private poison/resistance timers; independent CRC saves confirm native immunity -5/-20 and antifire592 ticks remaining in the recorded prevention cases. Fresh poison-episode reaction, prolonged refresh monitoring, other thresholds/dose combinations and autonomous/live use are not blanket-qualified. Goading, blighted and prayer-regeneration/divine modern boosters have no matching native handler established.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/PotionManagerScript.java",
@@ -9830,7 +9877,7 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/QolCannonScript.java",
         "decision": "partial",
         "consumer": "scripts/microbot-c-qol.ts",
-        "gap": "Finite native owned full cannon refill is implemented using cannonball-on-location, exact fresh load message/debit. Donor modern repair/full reload loop is not native parity; native decay removes cannon rather than leaving a repairable full cannon.",
+        "gap": "Owned native assembled-cannon refill has exact10-ball debit/public load message in2ticks, wrong-owner refusal with0debit, and ordinary setup/pickup returning every part and10balls. No Fire input, allXP0, HP99 and both logout audits pass on the linked captured closure. Native decay removes the cannon; modern repair and continuous refill/fire scheduling are not qualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/QolCannonScript.java",
@@ -9847,8 +9894,12 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/SpecialAttackScript.java",
         "decision": "partial",
-        "consumer": "scripts/microbot-c-qol.ts",
-        "gap": "Native explicit specbar/threshold helper implemented; donor gear swapping/loadout and continuous combat trigger are not included. Native state/energy effect requires practice qualification.",
+        "consumer": [
+          "scripts/microbot-special-swap.ts",
+          "scripts/microbot-owned-loadout.ts",
+          "scripts/microbot-c-qol.ts"
+        ],
+        "gap": "Finite caller-declared owned special-weapon swaps, native energy/threshold effects, two-handed shield space and original kit/style restoration reuse microbot-special-swap; exact bank kits use microbot-owned-loadout. Recorded eight-case special proof binds its captured11506-entry closure, not all current dependencies or full weapon identity. Automatic continuous combat triggers and live release remain unqualified; the separate ordinary Rune thrownaxe multiway case passes two actual hits/one projectile/200 energy.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/SpecialAttackScript.java",
@@ -9878,8 +9929,8 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/qualityoflife/scripts/pvp/PvpScript.java",
         "decision": "partial",
-        "consumer": "packages/core/src/reflex.ts",
-        "gap": "PvP-related reactive helper; finite player targeting/ownership admission and exact spell/gear policies require mapping.",
+        "consumer": "scripts/microbot-pvp.ts",
+        "gap": "Finite owned-pair gear/prayer/tank/melee/ranged/native magic/special steps pass the linked seven-case native CLI proof at0CFC, including Wind Strike, Lost City-gated dagger and independently audited private Iban debit. Exact saved assets/XP/restoration/logout reconcile. Walk-under and afterAnimation are source/unit-only pending separate native cases. Lunar Vengeance/hotkeys/hostile PvP/full weapon identity/live remain outside this proof.",
         "actionEvidence": []
       },
       {
@@ -13739,9 +13790,56 @@
         "sha256": "eb777f84881be0edcfa059f7e734d2ba64fca8c3547fae9e5e3e2d122fa6a14f"
       }
     ],
-    "proof": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+    "proof": {
+      "existingHelperScope": "C focused batch:36 tests pass across8 files,115 assertions. Includes public-chat receipt refusal fixes from independent review. Source and unit simulation only; no practice/live accounts or services started.",
+      "potionPouchNative": {
+        "evidence": ".practice/microbot-ports/potion-pouch-native-1793611058511/result.json",
+        "sourceCheck": ".practice/microbot-ports/potion-pouch-native-1793611058511/source-check.json",
+        "sourceSha256": {
+          "scripts/microbot-potion-care.ts": "47F48486C484F9477C8374CD858A86EACC9CF44C7615210BA5314C2865E5A2E8",
+          "scripts/microbot-c-care.ts": "46D9DAF391ECFAC8C6FD6BC2ABC9F7322AD843077DFF2AB8B11B22358A5EF053"
+        },
+        "scope": "Thirteen actual native CLI cases all pass: ATT/STR/DEF20→25,Ranged20→26,Magic20→24,Prayer10→41 at base99; normal/super antipoison and antifire prevention. Each of nine dose cases consumes one owned dose and drops exactly one vial in8 ticks. Healthy skip takes0 ticks/0inputs; preexisting stop returns expectedcode1/0inputs. Two Druid fills yield12charges in4ticks; insufficient harvests return expectedcode1/0fills. Exact independent CRC all-assets,allXP0,HP99,unchanged worn/bank/37coins/gold/retaliation/position and logout checks pass;11467 source/config entries unchanged. Saved private poison/resistance values are an independent fixture oracle, not public worker observations. Conditions: member100ms/XP1,declared owned inventory,observed completed Nature Spirit for pouch,finite one-pass policies; prolonged monitoring/other recipes/sites and live release are not qualified."
+      },
+      "ownedLoadoutNative": {
+        "evidence": ".practice/microbot-ports/owned-loadout-native-1793621632981/result.json",
+        "sourceCheck": ".practice/microbot-ports/owned-loadout-native-1793621632981/source-drift.json",
+        "sourceSha256": "43EB1C0F3032D7B3DB4642B2F6DF7F291146926C06CA618451713368DD39739D",
+        "scope": "Three actual CLI cases pass with independent CRC exact underlying all-assets and raw note/worn identity, original combat style, bank note mode, all XP, HP99 and logout. Two successful jobs use9 moves in24/23ticks; missing stock refuses with0moves and expected code1. Source11214 entries unchanged. Existing bank/equip/withdraw helpers reused; no travel, acquisition, other configuration or live release claim."
+      },
+      "dropRunNative": {
+        "evidence": ".practice/microbot-ports/qol-drop-run-native-1793612016545/result.json",
+        "sourceCheck": ".practice/microbot-ports/qol-drop-run-native-1793612016545/source-check.json",
+        "sourceSha256": "22093E6B8572F3A421A985B199DCA956E7D944E5DAB3A2CD2D29807F5881A341",
+        "scope": "Six actual CLI cases pass: listed2 reverse drops in4ticks; except26 column drops in52ticks retaining coins and Rune pick; non-full pack0input; run enable1tick; threshold skip0input; stop expectedcode1/0input. Exact CRC all-assets, worn/bank, XP0, HP99, position, retaliation and logout pass. Run uses a fresh public temporary-state receipt, not a saved-var oracle. No live or continuous trigger claim."
+      },
+      "cannonNative": {
+        "evidence": ".practice/microbot-ports/qol-cannon-native-1793623165862/result.json",
+        "sourceCheck": ".practice/microbot-ports/qol-cannon-native-1793623165862/source-check.json",
+        "scope": "11466 captured source entries unchanged. Ordinary owned setup,10-ball refill in2ticks, wrong-owner0debit refusal and pickup all pass; every part/10balls restored, never fired, independent CRC all-assets/allXP0/HP99/gear/controls and both logout. The same receipt contains one Miscellania weed approval50→51, raw Herblore+1 tenth/publicXP0 and exact assets; no continuous trigger/live claim."
+      },
+      "specialSwapNative": {
+        "evidence": ".practice/microbot-ports/special-swap-native-1793622341898/result.json",
+        "sourceCheck": ".practice/microbot-ports/special-swap-native-1793622341898/source-check.json",
+        "sourceSha256": "7f5d613ec2f605493daa772d06a8e24ec2929218ad507192f26f7daec17f3c5b",
+        "scope": "Eight native cases pass with11506 captured source entries unchanged: halberd,battleaxe,Excalibur,dagger,shortbow two arrows,solo thrownaxe,preexisting stop and low energy. Exact paid count/ammo/energy, native per-shot XP, original kit/style, HP/escape/logout checks pass. Captured closure only; no full weapon identity, automatic loop or live claim; multi-target has a separate linked two-hit Rune thrownaxe receipt."
+      },
+      "pvpNative": {
+        "evidence": ".practice/microbot-ports/pvp-native-1793626882464/result.json",
+        "sourceCheck": ".practice/microbot-ports/pvp-native-1793626882464/source-check.json",
+        "sourceSha256": "0cfc16a3eaabdb35f0b2db9704065b74d1057f67ade7f1841617d301b2da4ad0",
+        "scope": "All seven actual owned-pair native CLI cases pass: melee/prayer/tank,ranged,Wind Strike,dagger special,Iban private charges,poisoned dagger/declared antidote and preexisting stop.11506 captured source entries unchanged. Exact independent CRC assets/XP/paid effects, both original kit/style/prayer restoration and logout pass; misses remain misses. Dagger requires observed Lost City varp147=6. Independent saved varp288 audits Iban4→2; hidden balance is not a client observation. Walk-under and afterAnimation branches remain source/unit-only pending their separate native cases. No hostile PvP, full weapon identity, AoE, hotkey UI, Lunar Vengeance or live qualification."
+      },
+      "specialSwapMultiNative": {
+        "evidence": ".practice/microbot-ports/special-swap-multi-native-1793624168093/result.json",
+        "sourceCheck": ".practice/microbot-ports/special-swap-multi-native-1793624168093/source-check.json",
+        "sourceSha256": "7f5d613ec2f605493daa772d06a8e24ec2929218ad507192f26f7daec17f3c5b",
+        "scope": "One ordinary multiway Rune thrownaxe CLI attempt passes actual two-hit chain, one owned projectile,200 energy debit, exact native XP/assets/kit/style/HP/escape/logout;11512 captured source entries unchanged. No additional automatic attempt or forced target outcome; other weapon/encounter identities and live release are not qualified."
+      }
+    },
     "supportedWorkQueue": [
-      "Finite native specbar activation and owned full-cannon refill exist in microbot-c-qol; finite prayer hold restores original state. Donor weapon swap/loadouts, attack-cycle flicking, automatic cannon repair/continuous triggers, pouch and GUI helpers remain separate gaps. No practice/live qualification."
+      "Finite native spec activation, owned cannon refill, special-weapon swaps and exact bank loadouts have separate recorded qualification. Continuous triggers, automatic attack-cycle policy, unsupported pouch variants, graphical helpers and live repeats remain outside those finite proofs; native decay removes the cannon rather than exposing repair.",
+      "Finite native potion care and Druid-pouch filling have the exact thirteen-case linked CLI proof; other loadout/special/PvP subclaims retain their separate qualification state. Modern boosters and unsupported pouch types are separate native-content boundaries."
     ]
   },
   {
@@ -16386,7 +16484,8 @@
     "decision": "partial",
     "behaviour": "Shade combat, coffin configuration/storage, key handling, teleport/bank supplies and loot",
     "localConsumers": [
-      "scripts/gather-combat.ts"
+      "scripts/gather-combat.ts",
+      "scripts/microbot-shade-trip.ts"
     ],
     "sourceEvidence": [
       {
@@ -16438,14 +16537,14 @@
       }
     ],
     "blockers": [
-      "Mortton shades exist; donor coffin/key tiers and modern teleports are not mapped. Generic combat is not an end-to-end shade/coffin worker."
+      "Finite Canifis-bank/Fiyr-tomb trips reuse owned loadout, bank profile, potion care and observed loot. Owned key3465, blessed sickle2963 and declared charged pouch2958 stock are prerequisites. Exact automatic pouch debits and same-Ghast morph receipts protect the native26tick return reserve. Original NPC, corpse, attributed damage with bounded1HP/100tick regeneration and fresh3404 remains bind each kill. Source review and31 adapter tests pass; actual repeated Native route/bank refill and live qualification remain pending. Modern coffin storage, other key tiers and modern teleports are outside this classic route."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/shadeskiller/ShadesKillerScript.java",
         "decision": "partial",
-        "consumer": "scripts/gather-combat.ts",
-        "gap": "Mortton shades exist; donor coffin/key tiers and modern teleports are not mapped. Generic combat is not an end-to-end shade/coffin worker.",
+        "consumer": "scripts/microbot-shade-trip.ts",
+        "gap": "Finite Canifis-bank/Fiyr-tomb trips reuse owned loadout, bank profile, potion care and observed loot. Owned key3465, blessed sickle2963 and declared charged pouch2958 stock are prerequisites. Exact automatic pouch debits and same-Ghast morph receipts protect the native26tick return reserve. Original NPC, corpse, attributed damage with bounded1HP/100tick regeneration and fresh3404 remains bind each kill. Source review and31 adapter tests pass; actual repeated Native route/bank refill and live qualification remain pending. Modern coffin storage, other key tiers and modern teleports are outside this classic route.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/shadeskiller/ShadesKillerScript.java",
@@ -16847,7 +16946,17 @@
         "sha256": "ef2f0d4cc9379d18cc1fe4d8e6e1b13f09547975025fe78c11d71c2002d7392b"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": {
+      "level": "Independent source review and31 focused adapter tests/138 assertions; current Native and live qualification pending",
+      "runtime": "955AB354F72BE3841029E4EA123B92EB51E16CDCF5F39B2EE69272AA441D1859",
+      "test": "D36B21481986BB7DD7BD91467A9026D0AA56A380921349CB1A990E117912776D",
+      "nativeRunner": ".practice/microbot-ports/shade-trip-native.ts",
+      "native": "Current three-case fixture is unrun. It declares233 owned charges per trip, derived from6000tick hard cap and native26tick cooldown; unused stock must return exactly.",
+      "counterexample": {
+        "evidence": ".practice/microbot-ports/shade-trip-native-1793644022591/one-kill/result.json",
+        "scope": "A food-only route cannot keep HP99: two observed Ghast food rots leave no working food, then an unprotectable native energy drain removes3HP. No kill or remains delivery qualifies. Charged pouch, bounded known-harm return and care-window repairs need fresh full CLI proof."
+      }
+    },
     "supportedWorkQueue": [
       "Mortton shades exist; donor coffin/key tiers and modern teleports are not mapped. Generic combat is not an end-to-end shade/coffin worker."
     ]
@@ -17998,7 +18107,10 @@
     "behaviour": "Slayer assignment detection, master task/skip/block, supplies/POH restore, combat, dodge, prayer flick and high alchemy auxiliaries",
     "localConsumers": [
       "scripts/gather-combat.ts",
-      "scripts/microbot-magic-items.ts"
+      "scripts/microbot-magic-items.ts",
+      "scripts/microbot-combat-alch.ts",
+      "scripts/microbot-combat-potions.ts",
+      "scripts/microbot-prayer-flick.ts"
     ],
     "sourceEvidence": [
       {
@@ -18117,17 +18229,27 @@
         "path": "vendor/rs-sdk/server/content/scripts/_unpack/274/all.loc",
         "line": 1731,
         "claim": "name=slayertower_door"
+      },
+      {
+        "path": "vendor/rs-sdk/server/engine/src/engine/entity/PlayerStat.ts",
+        "line": 20,
+        "claim": "STAT18 and STAT19 are placeholders, not named Slayer/Farming skills."
+      },
+      {
+        "path": "vendor/rs-sdk/server/engine/src/engine/entity/PlayerStat.ts",
+        "line": 53,
+        "claim": "PlayerStatEnabled disables both placeholder skill slots."
       }
     ],
     "blockers": [
-      "Native slayer task system and modern master/reward data are unverified; generic combat only covers configured NPCs. Dodge/flicker/high-alch scripts lack finite integrated consumer parity."
+      "Native PlayerStat uses disabled STAT18/STAT19 placeholders; the pinned content has no Slayer assignment/master/reward handler. Slayer-tower loc identifiers do not supply that system. Generic configured-NPC combat, combat-loot alchemy and serialized potion upkeep have separate finite consumers; fixed Farmer incoming protection has its own Native scope. These helpers do not create a Slayer assignment controller. Donor projectile dodge requires a source-backed avoidable Native coordinate hazard; movement does not establish evasion of homing damage."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/SlayerScript.java",
         "decision": "partial",
         "consumer": "scripts/gather-combat.ts",
-        "gap": "Native slayer task system and modern master/reward data are unverified; generic combat only covers configured NPCs. Dodge/flicker/high-alch scripts lack finite integrated consumer parity.",
+        "gap": "Native PlayerStat uses disabled STAT18/STAT19 placeholders; the pinned content has no Slayer assignment/master/reward handler. Slayer-tower loc identifiers do not supply that system. Generic configured-NPC combat, combat-loot alchemy and serialized potion upkeep have separate finite consumers; fixed Farmer incoming protection has its own Native scope. These helpers do not create a Slayer assignment controller. Donor projectile dodge requires a source-backed avoidable Native coordinate hazard; movement does not establish evasion of homing damage.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/SlayerScript.java",
@@ -18255,7 +18377,7 @@
         "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/combat/SlayerDodgeScript.java",
         "decision": "partial",
         "consumer": "scripts/gather-combat.ts",
-        "gap": "Native slayer task system and modern master/reward data are unverified; generic combat only covers configured NPCs. Dodge/flicker/high-alch scripts lack finite integrated consumer parity.",
+        "gap": "A donor projectile dodge needs an actually avoidable Native coordinate-targeted hazard. Generic movement is available, but it does not evade a homing hit. No avoidable matching Native encounter is established; Native Slayer assignments are absent.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/combat/SlayerDodgeScript.java",
@@ -18272,8 +18394,8 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/combat/SlayerFlickerScript.java",
         "decision": "partial",
-        "consumer": "scripts/gather-combat.ts",
-        "gap": "Native slayer task system and modern master/reward data are unverified; generic combat only covers configured NPCs. Dodge/flicker/high-alch scripts lack finite integrated consumer parity.",
+        "consumer": "scripts/microbot-prayer-flick.ts",
+        "gap": "Finite offensive prayer resets and opt-in fixed Farmer melee protection have separate native consumers and receipts. Automatic mixed-style prediction and an assignment-driven Slayer controller are not qualified; Native Slayer assignments are absent.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/combat/SlayerFlickerScript.java",
@@ -18360,8 +18482,8 @@
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/combat/SlayerHighAlchScript.java",
         "decision": "partial",
-        "consumer": "scripts/microbot-magic-items.ts",
-        "gap": "Finite native high-alchemy item/rune/product receipt available; donor slayer-combat concurrent alchemy integration and practice proof remain open.",
+        "consumer": "scripts/microbot-combat-alch.ts",
+        "gap": "The existing generic and Ranged loot consumers integrate finite actor/server-priced native alchemy. Generic owned-pickup/alchemy/bank and Ranged negative-policy kill/bank receipts retain their exact recorded scopes. Native Slayer assignments are absent; this does not qualify an assignment-driven Slayer loop or profitable outside trading.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/slayer/combat/SlayerHighAlchScript.java",
@@ -19278,7 +19400,7 @@
     ],
     "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
     "supportedWorkQueue": [
-      "Native slayer task system and modern master/reward data are unverified; generic combat only covers configured NPCs. Dodge/flicker/high-alch scripts lack finite integrated consumer parity."
+      "Native PlayerStat uses disabled STAT18/STAT19 placeholders; the pinned content has no Slayer assignment/master/reward handler. Slayer-tower loc identifiers do not supply that system. Generic configured-NPC combat, combat-loot alchemy and serialized potion upkeep have separate finite consumers; fixed Farmer incoming protection has its own Native scope. These helpers do not create a Slayer assignment controller. Donor projectile dodge requires a source-backed avoidable Native coordinate hazard; movement does not establish evasion of homing damage."
     ]
   },
   {
@@ -19344,14 +19466,14 @@
       }
     ],
     "blockers": [
-      "Native bronze through rune smelting reused; donor coal bag, location list and bank withdrawal heuristics need mapping. Existing workers do not prove all donor variants."
+      "Eight Native bar recipes reuse existing batch and bank workers. Owned goldsmith gauntlets, finite forging-ring replacement, declared local routes, Shilo paid access and opt-in nearest observed furnace/indexed bank selection have scoped Native actual-CLI proofs. Shilo has two20coin entries/free exits and26+2 silver loads; nearest selection has a Falador27+1 silver case without route JSON. Other sites, prerequisites, starting stocks and live repeats retain separate qualification. Donor coal bag and modern smithing uniform gloves have no matching Native item/content."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/smelting/AutoSmeltingScript.java",
         "decision": "partial",
         "consumer": "scripts/smelt-bars.ts,scripts/smelt-batch.ts",
-        "gap": "Native bronze through rune smelting reused; donor coal bag, location list and bank withdrawal heuristics need mapping. Existing workers do not prove all donor variants.",
+        "gap": "Eight Native bar recipes reuse existing batch and bank workers. Owned goldsmith gauntlets, finite forging-ring replacement, declared local routes, Shilo paid access and opt-in nearest observed furnace/indexed bank selection have scoped Native actual-CLI proofs. Shilo has two20coin entries/free exits and26+2 silver loads; nearest selection has a Falador27+1 silver case without route JSON. Other sites, prerequisites, starting stocks and live repeats retain separate qualification. Donor coal bag and modern smithing uniform gloves have no matching Native item/content.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/smelting/AutoSmeltingScript.java",
@@ -19820,9 +19942,60 @@
         "sha256": "0a1f6bc46b3767caf61fdb2e31c9b30d70d95f3ca8b9b696955f1267a811186e"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": {
+      "level": "Source reuse and bounded actual-CLI Native practice",
+      "bonus": {
+        "evidence": ".practice/microbot-ports/smelt-bars-native-1793686058938/result.json",
+        "sourceCheck": ".practice/microbot-ports/smelt-bars-native-1793686058938/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/smelt-bars-native-1793686058938/compiled-end-check.json",
+        "runtimeSha256": "51dd881805b05301f7f750736db04fab03bdd08b91629a7a6dc973b8c90b88b8",
+        "batchSha256": "b45fa652ced9543e1631c4c0d966e9cf13484c1a5f1eb1ac0ddb123de165e965",
+        "scope": "At XP rate25: two gold bars with owned goldsmith gauntlets, 141 iron bars with a natural ring melt after bar140 and bank replacement, and an expected partial stop at140 bars with MAX_RINGS1. Two productive CLI0 runs and one expected CLI1 partial stop. Exact whole assets, ore, reserves, gear restoration, HP99, home bank, foreignXP0 and logout checked against CRC saves and raw actions. Raw Smithing XP28100/440625/437500. Source11483 and compiled57/server42 contents unchanged. Native original ring1635; original forging-ring restoration has unit proof only. The worker never reads the private charge counter. No live or repeat qualification."
+      },
+      "localRoute": {
+        "evidence": ".practice/microbot-ports/smelt-bars-native-1793688250528/result.json",
+        "sourceCheck": ".practice/microbot-ports/smelt-bars-native-1793688250528/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/smelt-bars-native-1793688250528/compiled-end-check.json",
+        "runtimeSha256": "869953fbcc245c7261b6b1fe974035e832b0c3b8a4e28aa033b67aff183bf29b",
+        "batchSha256": "e27133506e016bd72af6434fd811987e0fa79d09faf3b2808f0910782104a01c",
+        "scope": "Actual CLI silver28 in loads27+1 from Falador West bank2945,3369 through ordinary furnace2781 at2975,3368, declared stand2974,3369, plane0. CLI0/208ticks, exact28 paid furnace inputs, two withdrawals and deposits, ore29 to reserve1, rawSmithing95900 at XP25, otherXP0, whole assets/gear/HP99/home/logout verified from raw actions and CRC saves. Source11483 and compiled57/server42 unchanged. Explicit SMELT_ROUTE_JSON validates ordinary Native furnace placement and rotated legal side; no nearest-location discovery. Public Fremennik prerequisite is source/unit checked, not Native qualified. Other ordinary sites, Shilo paid access and live repeats are outside this receipt."
+      },
+      "shilo": {
+        "conditions": {
+          "members": true,
+          "tickMs": 100,
+          "xpRate": 25,
+          "Smithing": 99,
+          "ShiloVillage": "public complete; fixture116=15"
+        },
+        "evidence": ".practice/microbot-ports/smelt-bars-native-1793690721399/result.json",
+        "independentAudit": ".practice/microbot-ports/smelt-bars-native-1793690721399/independent-smelt-access-audit.json",
+        "sourceCheck": ".practice/microbot-ports/smelt-bars-native-1793690721399/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/smelt-bars-native-1793690721399/compiled-end-check.json",
+        "batch": "0b5a32b8817ebd78ca774e06632e0ef293bef14e35a9f6c6d77a6c101f8b1185",
+        "cli": "a4e8dae5a2b26c495260ead8b754197758c5890e00d08834f0ffceb2940f159e",
+        "fixture": "928ee0b03605916a69b3475c12daa51137c9b0065b0f1ea54ae7c2199e35c695",
+        "scope": "Actual CLI Shilo silver28 across26+2 loads,168ticks; two paid20coin entries with fresh Thanks dialogue and exact inside landing, two free exits before bank;77coins to37reserve, ore29 to1, rawSmithing95900/XP25, otherXP0, whole assets/kit/gear/HP99/controls/home/logout. Members, public completed Shilo Village, Smithing99 and owned stock; source11483/compiled57/server42 unchanged. No private access-state reads by worker; fixture stages legitimate quest prerequisite."
+      },
+      "nearest": {
+        "conditions": {
+          "members": true,
+          "tickMs": 100,
+          "xpRate": 25,
+          "Smithing": 99
+        },
+        "evidence": ".practice/microbot-ports/smelt-bars-native-1793691426915/result.json",
+        "independentAudit": ".practice/microbot-ports/smelt-bars-native-1793691426915/independent-smelt-access-audit.json",
+        "sourceCheck": ".practice/microbot-ports/smelt-bars-native-1793691426915/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/smelt-bars-native-1793691426915/compiled-end-check.json",
+        "batch": "0b5a32b8817ebd78ca774e06632e0ef293bef14e35a9f6c6d77a6c101f8b1185",
+        "cli": "a4e8dae5a2b26c495260ead8b754197758c5890e00d08834f0ffceb2940f159e",
+        "fixture": "93844ae71720692203fc6f9e6d822aec72d7b3fbd6e5d06761e8dca74e2810e0",
+        "scope": "Actual CLI SMELT_NEAREST=1 with SMELT_ROUTE_JSON unset from2974,3369 plane0 selects observed ordinary furnace2781 at2975,3368 and indexed bank2947,3368. Silver28 across27+1 loads,228ticks, zero fees; ore29 to1,37coins/knife/gear retained, rawSmithing95900/XP25, otherXP0/HP99/controls/home/logout. Source11484 and compiled57/server42 unchanged. Exact semantic route comparison ignores object key order only. This receipt covers this Falador start, not every furnace or live repeats."
+      }
+    },
     "supportedWorkQueue": [
-      "Native bronze through rune smelting reused; donor coal bag, location list and bank withdrawal heuristics need mapping. Existing workers do not prove all donor variants."
+      "Qualify other ordinary sites and starting conditions when a finite consumer needs them; no all-location or live-repeat claim."
     ]
   },
   {
@@ -28090,7 +28263,7 @@
     "decision": "partial",
     "behaviour": "Varrock west bank/anvil smithing selected bronze-rune bar/product, hammer restock and batch making",
     "localConsumers": [
-      "F:/dev-on-f/osrs-rs-research/rs-sdk-bot/scripts/smith-batch.ts",
+      "scripts/smith-batch.ts",
       "scripts/measure/floor-smithing.ts"
     ],
     "sourceEvidence": [
@@ -28148,14 +28321,14 @@
       }
     ],
     "blockers": [
-      "Existing main-checkout scripts/smith-batch.ts reads native product/bar/XP/interface recipes and runs a finite conserved bank/anvil batch. It is outside this worktree until root integrates the existing dirty source; do not duplicate it. Donor modern Make-X varbit and widget IDs are replaced by native recipe interface. Darts/claws quest-gated recipes are explicitly unsupported by smithRecipe. Practice/live integration is not renewed by static reuse. Existing main source SHA-256: c75383c521ec927ba870a3dac1a1c15c1ad8df752ff2dc4858b0033384b3a40c"
+      "Local scripts/smith-batch.ts reuses the existing finite conserved bank/anvil worker and resolves all129 native smithing.dbrow products, including six native metal claws from smithing:column_claws; the six dart-tip products use the existing native column. Donor modern Make-X widget/varbit IDs are replaced by native interface994 and recipe components. Claws require observed completed Death Plateau; dart tips require completed The Tourist Trap by default. Explicit SMITH_NATIVE_QUEST_PROBE supports native learned stage16 before quest completion through one intended Make1 admission: the native quest check precedes bar cost, exact product/bar/XP counts establish success, and first refusal or unknown effect stops without retry and returns to bank. The four linked native actual-CLI cases pass: completed Tourist Trap and explicit learned16 admission each bank10 iron dart tips820 from one iron bar2351 for25 Smithing XP; completed Death Plateau banks one bronze claws3095 from two bronze bars2349 for25 XP; locked15 performs one intended Make1, produces nothing, spends no bars/XP and returns expected code1 without retry. All four preserve exact CRC assets, reserve, hammer, gold,37 coins, HP99, gear/control, final bank and logout.11471 recorded source/config entries are unchanged. Other recipes, sites, quest states and live/repeat release remain unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/varrockanvil/VarrockAnvilScript.java",
         "decision": "partial",
-        "consumer": "F:/dev-on-f/osrs-rs-research/rs-sdk-bot/scripts/smith-batch.ts",
-        "gap": "Existing main-checkout scripts/smith-batch.ts reads native product/bar/XP/interface recipes and runs a finite conserved bank/anvil batch. It is outside this worktree until root integrates the existing dirty source; do not duplicate it. Donor modern Make-X varbit and widget IDs are replaced by native recipe interface. Darts/claws quest-gated recipes are explicitly unsupported by smithRecipe. Practice/live integration is not renewed by static reuse.",
+        "consumer": "scripts/smith-batch.ts",
+        "gap": "Local scripts/smith-batch.ts reuses the existing finite conserved bank/anvil worker and resolves all129 native smithing.dbrow products, including six native metal claws from smithing:column_claws; the six dart-tip products use the existing native column. Donor modern Make-X widget/varbit IDs are replaced by native interface994 and recipe components. Claws require observed completed Death Plateau; dart tips require completed The Tourist Trap by default. Explicit SMITH_NATIVE_QUEST_PROBE supports native learned stage16 before quest completion through one intended Make1 admission: the native quest check precedes bar cost, exact product/bar/XP counts establish success, and first refusal or unknown effect stops without retry and returns to bank. The four linked native actual-CLI cases pass: completed Tourist Trap and explicit learned16 admission each bank10 iron dart tips820 from one iron bar2351 for25 Smithing XP; completed Death Plateau banks one bronze claws3095 from two bronze bars2349 for25 XP; locked15 performs one intended Make1, produces nothing, spends no bars/XP and returns expected code1 without retry. All four preserve exact CRC assets, reserve, hammer, gold,37 coins, HP99, gear/control, final bank and logout.11471 recorded source/config entries are unchanged. Other recipes, sites, quest states and live/repeat release remain unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/varrockanvil/VarrockAnvilScript.java",
@@ -28648,15 +28821,20 @@
         "sha256": "5488c7c3f4e366b06d6cd14f745204bcc10632f2185b8507c2fc6f51da4283c8"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": {
+      "level": "Local source/native contract review, focused unit checks and four bounded native quest-admission cases; no live or repeat release.",
+      "consumer": "scripts/smith-batch.ts",
+      "sourceSha256": "BAB03A4EEB2A9C420E8AF563D94663B27EA1B427E7B5237B4588304B7DFE5C8E",
+      "testSha256": "24293AE67270C7BCA19930D39325745D95747B69CE770C4519FE5E52D1F14F2B",
+      "focusedChecks": "15 tests pass,127 assertions;129/129 native product recipes resolve.",
+      "preparedFixture": ".practice/microbot-ports/smith-quest-native.ts",
+      "nativeStatus": "The four linked native actual-CLI cases pass: completed Tourist Trap and explicit learned16 admission each bank10 iron dart tips820 from one iron bar2351 for25 Smithing XP; completed Death Plateau banks one bronze claws3095 from two bronze bars2349 for25 XP; locked15 performs one intended Make1, produces nothing, spends no bars/XP and returns expected code1 without retry. All four preserve exact CRC assets, reserve, hammer, gold,37 coins, HP99, gear/control, final bank and logout.11471 recorded source/config entries are unchanged. Other recipes, sites, quest states and live/repeat release remain unqualified.",
+      "evidence": ".practice/microbot-ports/smith-quest-native-1793596534375/result.json",
+      "sourceCheck": ".practice/microbot-ports/smith-quest-native-1793596534375/source-check.json"
+    },
     "supportedWorkQueue": [
-      "Existing main-checkout scripts/smith-batch.ts reads native product/bar/XP/interface recipes and runs a finite conserved bank/anvil batch. It is outside this worktree until root integrates the existing dirty source; do not duplicate it. Donor modern Make-X varbit and widget IDs are replaced by native recipe interface. Darts/claws quest-gated recipes are explicitly unsupported by smithRecipe. Practice/live integration is not renewed by static reuse. Existing main source SHA-256: c75383c521ec927ba870a3dac1a1c15c1ad8df752ff2dc4858b0033384b3a40c"
-    ],
-    "externalReuse": {
-      "path": "F:/dev-on-f/osrs-rs-research/rs-sdk-bot/scripts/smith-batch.ts",
-      "sha256": "c75383c521ec927ba870a3dac1a1c15c1ad8df752ff2dc4858b0033384b3a40c",
-      "status": "reuse integration pending owner; do not duplicate existing worker"
-    }
+      "Qualify other declared smithing recipes, access/quest states and bank/anvil routes separately; retain the exact four-case source/config scope and finite owned stock/reserve/control/logout bounds."
+    ]
   },
   {
     "name": "varrockcleaner",
@@ -31039,7 +31217,8 @@
     "behaviour": "Configured/progressive trees with banking/drop/firemaking/fletching, log basket and forestry events",
     "localConsumers": [
       "scripts/wc-loop.ts",
-      "scripts/gather-yews.ts"
+      "scripts/gather-yews.ts",
+      "scripts/fletch-worker.ts"
     ],
     "sourceEvidence": [
       {
@@ -31146,14 +31325,14 @@
       }
     ],
     "blockers": [
-      "Native legacy log gathering reused; donor forestry events/log basket, modern trees and secondary processing are not full parity. Compare each enum/event in sourceEvidence."
+      "Finite gathered-wood processing composes existing gathering, inventory production, exact drop and firemaking workers. Five actual-CLI Native cases pass under captured BE46 gather source: normal cut/bank, cut/string/drop, gathered normal-log burn at Firemaking99, Seers willow cut/bank and Magic cut/bank. Each gathers two logs; exact final products or intentional drops, bowstring/kit reserves, all CRC assets, native Woodcutting/Fletching/Firemaking XP, other XP0, HP99, gear/retaliation/style, fresh Native bank return and every child logout are independently audited. Opt-in processing-tree approach uses one different valid cardinal target and two fresh exact stand frames before chopping. Conditions: owned staged stock, relevant skills99, 100ms ticks, XP1. Modern forestry events, log baskets and absent modern tree/item families remain excluded; arbitrary donor-location discovery and live repeats remain unqualified."
     ],
     "scriptDecisions": [
       {
         "path": "src/main/java/net/runelite/client/plugins/microbot/woodcutting/AutoWoodcuttingScript.java",
         "decision": "partial",
-        "consumer": "scripts/wc-loop.ts,scripts/gather-yews.ts",
-        "gap": "Native legacy log gathering reused; donor forestry events/log basket, modern trees and secondary processing are not full parity. Compare each enum/event in sourceEvidence.",
+        "consumer": "scripts/fletch-worker.ts",
+        "gap": "Finite gathered-wood processing composes existing gathering, inventory production, exact drop and firemaking workers. Five actual-CLI Native cases pass under captured BE46 gather source: normal cut/bank, cut/string/drop, gathered normal-log burn at Firemaking99, Seers willow cut/bank and Magic cut/bank. Each gathers two logs; exact final products or intentional drops, bowstring/kit reserves, all CRC assets, native Woodcutting/Fletching/Firemaking XP, other XP0, HP99, gear/retaliation/style, fresh Native bank return and every child logout are independently audited. Opt-in processing-tree approach uses one different valid cardinal target and two fresh exact stand frames before chopping. Conditions: owned staged stock, relevant skills99, 100ms ticks, XP1. Modern forestry events, log baskets and absent modern tree/item families remain excluded; arbitrary donor-location discovery and live repeats remain unqualified.",
         "actionEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/woodcutting/AutoWoodcuttingScript.java",
@@ -32030,9 +32209,31 @@
         "sha256": "f52e8c99b94ce4c9390f12dd452d261ebd88b9395e704a64034fb529ff7fa407"
       }
     ],
-    "proof": "Pinned source and native content static review. No practice or live run. Local consumer is a reuse candidate or explicitly bounded partial scope, never donor parity.",
+    "proof": {
+      "level": "Native actual CLI composition with independent raw and CRC-save audit.",
+      "evidence": ".practice/microbot-ports/wood-composition-native-1793689233387/result.json",
+      "independentAudit": ".practice/microbot-ports/wood-composition-native-1793689233387/independent-wood-audit.json",
+      "sourceCheck": ".practice/microbot-ports/wood-composition-native-1793689233387/source-check.json",
+      "compiledCacheCheck": ".practice/microbot-ports/wood-composition-native-1793689233387/compiled-cache-check.json",
+      "capturedSourceSha256": {
+        "scripts/gather-yews.ts": "be46ac9e2e17bebde7a387efbd78c48f1b606816a44959539381124380f7bf06",
+        "scripts/fletch-worker.ts": "4aa9d88cb08af42d026d2bbc65e36596f3431658d8ea36b25eb55fc72ae9878b",
+        "scripts/microbot-production.ts": "b0d348ddc4938d89393ab90c09f1dfbc212b020e95d6a130cbb8ae386b1d1e53",
+        "scripts/firemaking-order.ts": "54111570fcc6002db75a0a6cd8bfe42d4d0da6b6d2c04fade613a53e319bae25",
+        ".practice/microbot-ports/wood-composition-native.ts": "83d29f0692c596d224e525b88cd1b7057618497fa2cc930744502f155e295e88",
+        ".practice/microbot-ports/wood-bank-home.ts": "624d7c1e30d2d0b0d190af352c8e372d509c6c72a9e8c2fd4f47279c6f3b933e"
+      },
+      "diagnosticSourceDelta": {
+        "capturedNativeSourceSha256": "be46ac9e2e17bebde7a387efbd78c48f1b606816a44959539381124380f7bf06",
+        "currentSourceSha256": "b889afba3577f6d6cf6bf756abd12070367e8212f48560c4764d761b95203122",
+        "effect": "Width/length values used for the diagnostic receipt are captured as primitives before awaiting; gameplay edges already used the same pre-await values. This source delta has focused checks, not a new Native run."
+      },
+      "scope": "Five terminal cases;11526capturedsourcefilesunchanged;57compiledcachefilesbyte-identicalincluding42serverfilesandZIPcontents;10CRCsaves/12childlogouts. Diagnosticcached-footprintfields are not used as Native geometry proof; source2x2Magic footprint and actual stand/actions bind the successful route.",
+      "conditions": "Native100ms/XP1;relevantskills99;ownedbankkit/log/bowstringreserves;finite2logjobs.",
+      "gap": "No modern forestry/log basket, arbitrary-site discovery or live-repeat qualification."
+    },
     "supportedWorkQueue": [
-      "Native legacy log gathering reused; donor forestry events/log basket, modern trees and secondary processing are not full parity. Compare each enum/event in sourceEvidence."
+      "Finite Native gathered cut/string/bank/drop/burn composition has five qualified cases; modern forestry/log baskets and absent modern tree families remain separate from arbitrary-site and live-repeat qualification."
     ]
   },
   {

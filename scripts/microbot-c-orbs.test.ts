@@ -40,3 +40,13 @@ test('CLI global stop callback prevents a second real charge action',async()=>{
  const stop=()=>orbStopRequested('fixture',false,path=>path==='.practice/stop-all'&&globalStop,'');
  expect(stop()).toBe(false);const result=await chargeInventory(s,'air',2,80,stop);expect(result.ok).toBe(false);expect(result.made).toBe(1);expect(words).toBe(4);expect(items[0]!.count).toBe(1);expect(stop()).toBe(true);
 });
+
+import{orbInputOwner}from'./microbot-orb-trip';
+test('actual paid orb charge loses input ownership without a second cast or cleanup dispatch',async()=>{
+ const items=[{id:567,count:2},{id:573,count:0},{id:564,count:6},{id:556,count:60}];let xp=100,words=0,foreignInputs=0,tick=0;const foreign=()=>{foreignInputs++;return{success:true};};
+ const client:any={executeBotAction:(_:unknown)=>({success:false}),isInGame:()=>true,localPlayer:{},toSceneTile:()=>({x:1,z:2}),locSceneInfo:()=>({shape:10}),routeToLoc:()=>true,writeOpcode:()=>{},out:{p2:()=>{if(++words%4===0){items[0]!.count--;items[1]!.count++;items[2]!.count-=3;items[3]!.count-=30;xp+=76;client.executeBotAction=foreign;}}}};
+ const s:any={client,direct:(a:unknown)=>client.executeBotAction(a),tick:()=>tick,onTick:(cb:()=>void)=>{let active=true;const next=()=>queueMicrotask(()=>{if(active){tick++;cb();next();}});next();return()=>{active=false;};},sdk:{getInventory:()=>items,getEquipment:()=>[],getSkill:()=>({baseLevel:66,level:66}),getSkillXp:()=>xp,getState:()=>({player:{lifeId:1},nearbyLocs:[{id:2152,x:3000,z:4000}]})}},owner=orbInputOwner(s);
+ const r=await chargeInventory(s,'air',2,80,()=>!owner.valid(),()=>owner.scoped(()=>installSpellLocBridge(client)));expect(r.ok).toBe(false);expect(r.made).toBe(1);expect(words).toBe(4);expect(owner.valid()).toBe(false);expect(client.executeBotAction).toBe(foreign);expect(foreignInputs).toBe(0);
+ // This is the same fatal predicate used by trip finally before TP/bank/control cleanup.
+ if(owner.valid())await s.direct({type:'closeModal'});expect(foreignInputs).toBe(0);
+});

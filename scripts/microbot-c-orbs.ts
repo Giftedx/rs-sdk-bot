@@ -12,7 +12,7 @@ type Assets={raw:number;product:number;cosmic:number;element:number;xp:number};
 export function orbEffect(a:Assets,b:Assets,elementCost=30){return a.raw-b.raw===1&&b.product-a.product===1&&a.cosmic-b.cosmic===3&&a.element-b.element===elementCost&&b.xp>a.xp;}
 // Staged consumer: stand at selected obelisk with unpowered orbs and runes.
 // Native equipped elemental staves substitute their rune at slot 3.
-export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:number,stop:()=>boolean=()=>false){
+export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:number,stop:()=>boolean=()=>false,scopedBridge?:()=>()=>void){
  if(!Object.hasOwn(orbRecipes,kind)||!Number.isSafeInteger(maximum)||maximum<1||!Number.isSafeInteger(cap)||cap<1)throw Error('invalid orb order');
  const r=orbRecipes[kind],start=s.tick(),count=(id:number)=>s.sdk.getInventory().filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
  const assets=():Assets=>({raw:count(567),product:count(r.output),cosmic:count(564),element:count(r.rune),xp:s.sdk.getSkillXp('Magic')??0});
@@ -23,7 +23,7 @@ export async function chargeInventory(s:Session,kind:OrbKind,maximum:number,cap:
  try{
   if((s.sdk.getSkill('Magic')?.baseLevel??0)<r.level)throw Error('orb magic level short');
   if(initial.raw<maximum||initial.cosmic<maximum*3||initial.element<maximum*elementCost())throw Error('staged orb supplies short');
-  restore=installSpellLocBridge(s.client);
+  restore=scopedBridge?scopedBridge():installSpellLocBridge(s.client);
   while(made<maximum&&!over()){
    const loc=s.sdk.getState()?.nearbyLocs.find(l=>l.id===r.loc);
    if(!loc)throw Error('required obelisk not nearby');

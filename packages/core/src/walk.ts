@@ -51,7 +51,7 @@ async function walkRouteInner(s: Walker, legs: Leg[], opts: WalkOptions): Promis
             last = leg.kind === 'walk' ? await (farWalk(s, leg.to) ? walkFar(s, leg.to, opts, leg.tolerance ?? 2) : walkLeg(s, leg.to, opts, leg.tolerance ?? 2))
                 : leg.kind === 'travel' ? await travelLeg(s, leg, opts) : await climbLeg(s, leg, opts);
             total += last.ticks;
-            if (last.ok || last.reason === 'aborted') break;
+            if (last.ok || last.reason === 'aborted' || leg.kind === 'travel' && leg.travel.run.how === 'npc' && leg.travel.run.button) break;
             // Right after a climb the server refuses movement until the arrival delay ends (seen live: 3 quick
             // retries all refused within 11 ticks). Wait a little longer before each retry.
             if (last.reason === 'rejected') await waitTicks(s, 2 * (attempt + 1));
@@ -76,7 +76,7 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
     const stop = () => opts.signal?.aborted === true, st = () => s.sdk.getState() as any;
     const here = () => { const p = st()?.player; return p ? { x: p.worldX, z: p.worldZ, level: p.level } : null; };
     const arrived = () => { const p = st()?.player; return !!p && p.level === t.to.level && cheb(t.to, p) <= 8; };
-    const fail = (reason: 'rejected' | 'timeout' | 'precondition', detail: string): Outcome => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
+    const fail = (reason: 'rejected' | 'timeout' | 'precondition' | 'aborted', detail: string): Outcome => ({ ok: false, reason: stop() ? 'aborted' : reason, detail: `${t.name}: ${detail}`, ticks: s.tick() - start });
     const choices = run.how === 'npc' ? run.options : run.how === 'gate' ? run.choices : run.how === 'rub' || run.how === 'loc' ? (run.option ? [run.option] : []) : [];
     const answer = async (until: () => boolean, ticks: number) => {
         for (let i = 0; i < ticks && !until() && !stop(); i++) {
@@ -93,6 +93,46 @@ async function travelLeg(s: Walker, leg: Extract<Leg, { kind: 'travel' }>, opts:
     if (run.how === 'npc') {
         const npc = (st()?.nearbyNpcs ?? []).filter((n: any) => n.name?.toLowerCase() === run.npc.toLowerCase()).sort((x: any, y: any) => (x.distance ?? 0) - (y.distance ?? 0))[0];
         if (!npc) return fail('precondition', `no ${run.npc} in sight`);
+        if (run.button) {
+            const client = s.client as { executeBotAction?: unknown } | undefined, executor = client?.executeBotAction, sdk = s.sdk;
+            const first = st()?.player, life = first?.lifeId, respawns = first?.respawnCount ?? 0;
+            const unsafe = () => stop() || s.client !== client || s.sdk !== sdk || client?.executeBotAction !== executor || typeof executor !== 'function'
+                || !Number.isSafeInteger(life) || !st()?.player || st().player.isDead || st().player.lifeId !== life || (st().player.respawnCount ?? 0) !== respawns;
+            const button = run.button.component, namespace = button.split(':')[0]!;
+            if (!/^[a-z0-9_]+:[a-z0-9_]+$/.test(button)) return fail('precondition', 'invalid native travel button');
+            let main: number, component: number;
+            try { main = componentId(namespace); component = componentId(button); } catch { return fail('precondition', 'unknown native travel interface/button'); }
+            const mapOpen = () => st()?.modalInterface === main || st()?.interface?.isOpen === true && st()?.interface?.interfaceId === main;
+            const landed = () => { const p = here(); return !!p && p.level === t.to.level && Math.max(Math.abs(p.x-t.to.x),Math.abs(p.z-t.to.z)) <= 1; };
+            if (unsafe()) return fail('aborted', 'original travel input owner/life unavailable');
+            try {
+                await b.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: run.op, reason: 'SDK' });
+                const answered = new Set<string>();
+                for (let i=0;i<60&&!mapOpen()&&!unsafe();i++) {
+                    const d = b.sdk.getDialog();
+                    if (d?.isOpen && !d.isWaiting) {
+                        const key = 'pageId' in d && typeof d.pageId === 'string' ? d.pageId : JSON.stringify(d), norm = (v:string)=>v.toLowerCase().replace(/^[^a-z0-9]+|[^a-z0-9]+$/g,'');
+                        if (!answered.has(key)) {
+                            const option = d.options.find(o=>run.options.some(c=>norm(o.text)===norm(c)));
+                            if (!option && (d.options.length>1 || d.options.length===1 && !/continue/i.test(d.options[0]!.text))) return fail('precondition','unmapped native travel dialogue');
+                            if (unsafe()) return fail('aborted','travel owner changed before dialogue');
+                            answered.add(key);
+                            await b.direct({type:'clickDialogOption',optionIndex:option?.index??d.options[0]?.index??0,reason:'SDK'});
+                        }
+                    }
+                    if (unsafe()) return fail('aborted','travel owner changed after dialogue');
+                    await waitTicks(s,1);
+                }
+                if (unsafe()) return fail('aborted','travel owner changed before button');
+                if (!mapOpen()) return fail('precondition','expected native travel interface unobserved');
+                // This dispatch is not retried: an absent acknowledgement cannot prove non-payment.
+                const sent = await b.direct({type:'clickComponent',componentId:component,reason:'SDK'});
+                if ((sent as {success?:boolean}|undefined)?.success !== true) return fail('rejected','native travel button outcome uncertain');
+                for(let i=0;i<12&&!landed()&&!unsafe();i++)await waitTicks(s,1);
+                if(unsafe())return fail('aborted','travel owner/life changed during landing');
+                return landed()?{ok:true,ticks:s.tick()-start}:fail('timeout','native travel button landing unobserved');
+            } catch(error) { return fail(stop()?'aborted':'rejected',`native travel outcome uncertain: ${String(error)}`); }
+        }
         await b.direct({ type: 'interactNpc', npcIndex: npc.index, optionIndex: run.op, reason: 'SDK' });
         await answer(() => arrived() || (!!run.deck && onDeck()), 60);
         if (run.deck && onDeck()) { const off = await disembark(b, { stop }); if (!off.ok) return fail('timeout', off.detail); }

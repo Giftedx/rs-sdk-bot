@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { planHeadless, runHeadless, planSteel, runSteel, planOakBows, runOakBows } from "./fletch-arrows";
+import { ARROW_METALS,nativeArrowProfile,runNativeArrows,planHeadless, runHeadless, planSteel, runSteel, planOakBows, runOakBows } from "./fletch-arrows";
 import type { Session } from "../packages/core/src/inprocess";
 
 test('headless plan rounds to15 and preserves both input reserves', () => {
@@ -8,7 +8,7 @@ test('headless plan rounds to15 and preserves both input reserves', () => {
     expect(planHeadless(200, 100)).toBe(0);
 });
 
-function fixture(options: { shafts?: number; feathers?: number; stalled?: boolean; partialWithdraw?: boolean; steel?: boolean; level?: number; headless?: number; tips?: number; debitOnly?: boolean; iron?: boolean; unknown?: boolean; staleDeposit?: boolean } = {}) {
+function fixture(options: { shafts?: number; feathers?: number; stalled?: boolean; partialWithdraw?: boolean; steel?: boolean; level?: number; headless?: number; tips?: number; debitOnly?: boolean; iron?: boolean; unknown?: boolean; staleDeposit?: boolean; metal?:typeof ARROW_METALS[number]; afterPaid?:()=>void; foreignItem?:boolean } = {}) {
     let tick = 0, xp = 10000, bankOpen = false, generation = 0;
     const listeners = new Set<() => void>();
     const queued: (() => void)[] = [];
@@ -19,6 +19,7 @@ function fixture(options: { shafts?: number; feathers?: number; stalled?: boolea
     const bank = [{ id: 52, name: 'Arrow shaft', count: options.shafts ?? 720, slot: 0 }, { id: 314, name: 'Feather', count: options.feathers ?? 500, slot: 1 },
         { id: 53, name: 'Headless arrow', count: options.headless ?? 30, slot: 2 },
         { id: 41, name: 'Steel arrowtips', count: options.iron ? 20 : (options.tips ?? 20), slot: 3 }, { id: 886, name: 'Steel arrow', count: 7, slot: 4 }, {id:40,name:'Iron arrowtips',count:options.iron?(options.tips??90):0,slot:5},{id:884,name:'Iron arrow',count:7,slot:6}];
+    const selected=options.metal?nativeArrowProfile(options.metal):undefined;if(selected){bank.push({id:selected.tip,name:selected.tipName,count:options.tips??35,slot:bank.length},{id:selected.product,name:options.metal+' arrow',count:7,slot:bank.length+1});const seen=new Set<number>();for(let i=bank.length-1;i>=0;i--){if(seen.has(bank[i]!.id))bank.splice(i,1);else seen.add(bank[i]!.id);}bank.forEach((i,n)=>i.slot=n);}
     const deposits: number[] = [];
     const state = () => ({ player: { worldX: 3092, worldZ: 3243, level: 0, lifeId: 1, respawnCount: 0 }, bank: { isOpen: bankOpen, items: bank }, inventory, interface: { isOpen: bankOpen } });
     const timer = setInterval(() => { for (const action of queued.splice(0)) action(); tick++; for (const cb of [...listeners]) cb(); }, 1);
@@ -34,10 +35,10 @@ function fixture(options: { shafts?: number; feathers?: number; stalled?: boolea
             getSkill: () => ({ level: options.level ?? 32, baseLevel: 32 }), getSkillXp: () => xp,
             sendUseItemOnItem: async (aSlot:number,bSlot:number) => { const aId=inventory.find(i=>i.slot===aSlot)?.id,bId=inventory.find(i=>i.slot===bSlot)?.id; queued.push(() => {
                 if (options.stalled) return;
-                if (aId===53 && (bId===40||bId===41)) {
+                if (aId===53 && (bId===40||bId===41||bId===selected?.tip)) {
                     inventory.find(i => i.id === 53)!.count -= 15;
                     inventory.find(i => i.id === bId)!.count -= 15;
-                    if (!options.debitOnly) {add(bId===40?884:886,bId===40?'Iron arrow':'Steel arrow',15);xp+=bId===40?937.5:1875;} for(let n=inventory.length-1;n>=0;n--)if(inventory[n]!.count===0)inventory.splice(n,1);
+                    if (!options.debitOnly) {add(selected?.product??(bId===40?884:886),selected?options.metal+' arrow':bId===40?'Iron arrow':'Steel arrow',15);xp+=selected?15*selected.rawXpPerArrow*25/10:bId===40?937.5:1875;} for(let n=inventory.length-1;n>=0;n--)if(inventory[n]!.count===0)inventory.splice(n,1);if(options.foreignItem)add(9999,'foreign',1);options.afterPaid?.();
                     return;
                 }
                 inventory.find(i => i.id === 52)!.count -= 15;
@@ -268,3 +269,19 @@ test('iron unknown bank is not empty stock and withdraws nothing',async()=>{
 test('iron debit without product fails after one action without another consumption attempt',async()=>{
  const f=fixture({iron:true,headless:390,debitOnly:true});try{expect(await(runSteel as any)(f.s,ironOpts,'iron')).toMatchObject({ok:false,made:0,actions:1,headlessUsed:15,tipsUsed:15});}finally{f.stop();}
 });
+
+test('all six exact native arrow profiles use fifteen-unit bank batches and preserve both reserves',async()=>{
+ const expected=[[39,882,1,13],[40,884,15,25],[41,886,30,50],[42,888,45,75],[43,890,60,100],[44,892,75,125]];
+ for(const [index,metal]of ARROW_METALS.entries()){const p=nativeArrowProfile(metal);expect([p.tip,p.product,p.level,p.rawXpPerArrow]).toEqual(expected[index]);expect(p.units).toBe(15);expect(p.tipName).toMatch(/arrowtips/);const f=fixture({metal,headless:230,tips:35,level:99});try{const r=await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,exact:{xpRate:25}},metal);expect(r).toMatchObject({ok:true,targetMet:true,made:30,banked:30,actions:2,headlessBank:200,tipBank:5,arrowBank:37});expect(r.xpGain).toBe(30*p.rawXpPerArrow*25/10);}finally{f.stop();}}
+});
+test('new exact arrow option refuses unknown metal and missing stock; unknown dispatch has one attempt',async()=>{
+ expect(()=>nativeArrowProfile('dragon' as any)).toThrow('unsupported');
+ for(const metal of ARROW_METALS){const f=fixture({metal,headless:230,tips:5,level:99});try{const r=await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,exact:{xpRate:25}},metal);expect(r.actions).toBe(0);expect(r.targetMet).toBe(false);}finally{f.stop();}}
+ const f=fixture({metal:'rune',headless:230,level:99,stalled:true});try{expect(await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,exact:{xpRate:25}},'rune')).toMatchObject({ok:false,actions:1,made:0});}finally{f.stop();}
+});
+
+test('exact arrow ledger rejects unrelated paid-pack mutation and never dispatches again',async()=>{const f=fixture({metal:'rune',headless:230,level:99,foreignItem:true});try{const r=await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,exact:{xpRate:25}},'rune');expect(r.ok).toBe(false);expect(r.actions).toBe(1);expect(r.failure).toContain('whole-pack');expect(r).toMatchObject({uncertain:true});}finally{f.stop();}});
+test('confirmed arrow stop enters bounded cleanup once and banks only the confirmed first batch',async()=>{let stopped=false,cleanup=0;const f=fixture({metal:'bronze',headless:230,level:99,afterPaid:()=>{stopped=true;}});try{const r=await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,stop:()=>stopped,exact:{xpRate:25,enterCleanup:()=>{cleanup++;}}},'bronze');expect(r).toMatchObject({ok:false,actions:1,made:15,banked:15,headlessBank:215,tipBank:20,arrowBank:22,uncertain:false});expect(cleanup).toBe(1);}finally{f.stop();}});
+test('native arrow wrapper refuses missing original ownership before any bank or paid action',async()=>{const f=fixture({metal:'rune',level:99});let calls=0;(f.s as any).client={};(f.s.sdk as any).getEquipment=()=>[];(f.s.sdk as any).getStateAge=()=>0;const original=f.s.sdk.getState;(f.s.sdk as any).getState=()=>({...original(),skills:[]});(f.s.bot as any).openBank=async()=>{calls++;return{success:true};};try{await expect(runNativeArrows(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7},'rune')).rejects.toThrow('original owner');expect(calls).toBe(0);}finally{f.stop();}});
+
+test('wrong declared native XP rate stops after one paid batch without another input or cleanup',async()=>{const f=fixture({metal:'rune',headless:230,level:99});try{const r=await runSteel(f.s,{cap:100,maximum:30,headlessReserve:200,tipReserve:5,outputReserve:7,exact:{xpRate:1}},'rune');expect(r).toMatchObject({ok:false,actions:1,uncertain:true});expect(r.failure).toContain('exact XP');expect(f.count(892)).toBe(15);}finally{f.stop();}});

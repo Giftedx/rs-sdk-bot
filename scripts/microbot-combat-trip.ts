@@ -51,6 +51,13 @@ export async function leaveKbdEntrancePit(d:{position:()=>CombatPosition|undefin
  }
  throw Error('KBD pit cleanup needs observed lever or climb-out ladder');
 }
+export async function blueDungeonEntry(io:{walk:(x:number,z:number)=>Promise<void>;interact:(id:number,x:number,z:number,arrived:()=>boolean,key?:number)=>Promise<void>;position:()=>{worldX:number;worldZ:number;level:number}|null|undefined;settle:()=>Promise<void>}){
+ const near=(x:number,z:number)=>{const p=io.position();return!!p&&p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=3;};
+ await io.walk(2884,3397);await io.interact(1759,2884,3397,()=>near(2884,9797));
+ await io.walk(2886,9817);await io.walk(2889,9831);await io.walk(2910,9830);await io.walk(2924,9803);
+ const gateX=io.position()!.worldX;await io.interact(2623,2924,9803,()=>{const p=io.position();return!!p&&p.worldX!==gateX&&[2923,2924].includes(p.worldX)&&p.worldZ===9803;},1590);
+ await io.settle();await io.walk(2904,9803);await io.walk(2895,9792);
+}
 export async function combatTrip(s:Session,kind:'blue'|'kbd',fight:(stopped:()=>boolean)=>Promise<{ok:boolean;failure:string}>,o:{cap:number;stop:()=>boolean}){
  if(!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>10000)throw Error('invalid combat trip cap');
  const start=s.tick(),state=()=>s.sdk.getState(),p0=state()?.player;
@@ -88,10 +95,7 @@ export async function combatTrip(s:Session,kind:'blue'|'kbd',fight:(stopped:()=>
   for(const item of kit.filter(i=>i.slot!==undefined)){const inv=s.sdk.getInventory().find(i=>i.id===item.id);if(!inv)throw Error('combat kit disappeared');await s.bot.equipItem(inv);if(!await waitUntil(s,()=>s.sdk.getEquipment().some(i=>i.slot===item.slot&&i.id===item.id&&i.count>=item.count),{timeoutTicks:8}))throw Error('combat equip unknown '+item.id);}
   mark('staged');
   if(kind==='blue'){
-   await walk(2884,3397);await interact(1759,2884,3397,()=>near(2884,9797));
-   await walk(2886,9817);await walk(2889,9831);await walk(2910,9830);await walk(2924,9803);
-   const gateX=state()!.player!.worldX;await interact(2623,2924,9803,()=>{const p=state()?.player;return !!p&&p.worldX!==gateX&&[2923,2924].includes(p.worldX)&&p.worldZ===9803;},1590);
-   await waitTicks(s,3);await walk(2904,9803);await walk(2895,9792);
+   await blueDungeonEntry({walk,interact,position:()=>state()?.player,settle:()=>waitTicks(s,3)});
   }else{
    for(const [x,z] of [[3094,3535],[3080,3580],[3055,3625],[3025,3670],[3000,3715],[3000,3760],[3000,3805],[3017,3849]])await walk(x!,z!);if(!state()!.prayers.activePrayers[14]){if(!(await s.sdk.sendTogglePrayer(14)).success||!await waitUntil(s,()=>!!state()?.prayers.activePrayers[14],{timeoutTicks:5}))throw Error('KBD route melee protection unobserved');}await interact(1765,3017,3849,()=>near(3069,10255));
    await walk(3067,10253);await interact(1816,3067,10253,()=>near(2717,9802));

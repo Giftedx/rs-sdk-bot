@@ -2,6 +2,9 @@
 // Usage: bun scripts/gather-combat.ts <bot> [CAP ticks, default 15000] [TARGET: druid | giant]
 // Environment: DEMO_OK=1 for live server.
 import { openBot, finish, countItems } from '../packages/core/src/bot';
+import{combatPotionPolicy,createCombatPotions,combatPotionSession,combatPotionRecovery,type CombatPotionPolicy}from'./microbot-combat-potions';
+import{combatAlchPolicy}from'./microbot-combat-alch';
+import {depositObserved} from '../packages/core/src/deposit';
 import{createCombatLoot,telegrabPolicy}from'./microbot-telegrab';
 import type { Session } from '../packages/core/src/inprocess';
 import {existsSync} from 'node:fs';
@@ -85,7 +88,8 @@ export async function equipCowKit(s:Session, stop:()=>boolean=()=>false) {
             throw new Error(`cow kit equip failed ${id}: ${result.message??'no SDK message'}; equipped item not observed`);
     }
 }
-export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill?:string;targetLevel?:number;bankProfile?:string;foodMode?:string;diagnostics?:boolean;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number)=>Promise<boolean>}) {
+export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill?:string;targetLevel?:number;bankProfile?:string;foodMode?:string;diagnostics?:boolean;noProgress?:number;potions?:CombatPotionPolicy;stop?:()=>boolean;walk?:(x:number,z:number,tol:number)=>Promise<boolean>}) {
+    const potionScope=o.potions?combatPotionSession(s,()=>!!o.stop?.(),o.cap):undefined;if(potionScope)s=potionScope;
     const profile=cowProfile(o.bankProfile,o.foodMode,o.maximum);
     if(!Number.isSafeInteger(o.cap)||o.cap<1) throw new Error('cow needs positive CAP and MAX_KILLS1..5');
     const training=cowTraining(o.trainSkill,o.targetLevel);
@@ -126,6 +130,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
     const offMetrics=s.onTick(()=>{const p=state()?.player;maxPackSlots=Math.max(maxPackSlots,inv().length);if(p){const distance=Math.max(Math.abs(p.worldX-previousPosition.x),Math.abs(p.worldZ-previousPosition.z));if(distance){walkTicks++;walkedTiles+=distance;}previousPosition={x:p.worldX,z:p.worldZ};}});
     const bankDistances:number[]=[],walkLegs:Record<string,unknown>[]=[];
     const over=()=>{observeLife();return ended||died||!!o.stop?.()||s.tick()-start>=o.cap;};
+    const potions=o.potions?createCombatPotions(s,o.potions,[training.skill,'Hitpoints'],over):undefined;
     const eat=async()=>{
         const food=inv().find(i=>i.id===333);
         if(!food){stop='low-hp';throw new Error('no cow progress: low HP retreat, no working food');}
@@ -177,7 +182,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
         retreating=true;
         const p=state()?.player;if(p)bankDistances.push(Math.max(Math.abs(p.worldX-profile.bank.x),Math.abs(p.worldZ-profile.bank.z)));
         if(!await walk(profile.bank.x,profile.bank.z,profile.north?1:2))throw new Error('no cow progress: bank retreat failed');await open();
-        for(const id of ids){const item=inv().find(i=>i.id===id);if(item){const before=bankCount(id),amount=held(id);
+        for(const id of [...ids,...potions?.depositIds??[]]){const item=inv().find(i=>i.id===id);if(item){const before=bankCount(id),amount=held(id);
             if(!(await s.bot.depositItem(item,-1)).success||held(id)>0||!await waitUntil(s,()=>bankCount(id)===before+amount,{timeoutTicks:20}))throw new Error('no cow progress: deposit failed');}}
         const needed=profile.foodBanked?0:Math.max(0,2-held(333));if(needed){const item=state()?.bank.items.find(i=>i.id===333);if(!item||item.count<needed||!(await s.bot.withdrawItem(item,needed,{asNote:false})).success||held(333)<2)throw new Error('no cow progress: working food restock failed');}
     };
@@ -187,7 +192,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
         await equipCowKit(s,over);
         if(profile.foodBanked){
             await open();const food=inv().find(i=>i.id===333);if(food){const before=bankCount(333),amount=held(333);if(!(await s.bot.depositItem(food,-1)).success||!await waitUntil(s,()=>held(333)===0&&bankCount(333)===before+amount,{timeoutTicks:10}))throw new Error('no cow progress: working food secure bank failed');}
-            await s.bot.closeBank();if(inv().length>0)throw new Error('cow prerequisite: banked-food fullpack requires empty inventory after worn kit prep');
+            await s.bot.closeBank();if(inv().some(i=>!potions?.depositIds.includes(i.id)))throw new Error('cow prerequisite: banked-food fullpack requires empty inventory after worn kit prep');
         }
         if(!(await s.sdk.sendSetCombatStyle(training.style)).success||!await waitUntil(s,()=>{
             const c=state()?.combatStyle;return !!c?.known&&c.currentStyle===training.style
@@ -200,6 +205,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             if(healthCutoff)throw new Error('no cow progress: banked-food HP40 cutoff; retreat');
             if(profile.north&&28-inv().length<3)throw new Error('no cow progress: insufficient slots for three cow drops');
             if(hp()<=6)await eat();
+            if(potions)await potions.poll();
             if(s.tick()-lastProgress>=(o.noProgress??200))throw new Error('no cow progress: target/loot timeout');
             const target=state()?.nearbyNpcs.find(n=>n.id===81&&n.x>=2655&&n.x<=2676&&n.z>=3338&&n.z<=3357&&!n.inCombat&&(n.hp==null||n.maxHp==null||n.hp>=n.maxHp));
             if(!target){await waitTicks(s,1);continue;}
@@ -219,6 +225,7 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
             while(!over()){
                 if(healthCutoff)throw new Error('no cow progress: banked-food HP40 cutoff; retreat');
                 if(hp()<=6)await eat();
+                if(potions&&state()?.player?.combat.targetType==='npc'&&state()?.player?.combat.targetIndex===target.index)await potions.poll(target);
                 const current=state()?.nearbyNpcs.find(n=>n.index===target.index);
                 if(current){x=current.tileX??current.x;z=current.tileZ??current.z;}else gone=true;
                 // Own selected-skill XP is productive combat progress. Animation,
@@ -236,17 +243,17 @@ export async function runCows(s:Session, o:{cap:number;maximum:number;trainSkill
         }
         stop=goalReached()?'target-level':creditedKills===o.maximum?'max-kills':died?'died':o.stop?.()?'stop-file':'cap';
     } catch(e){failure=String(e);if(stop==='cap'&&o.stop?.())stop='stop-file';capture('failure');console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);}
-    finally {if(!died&&!ended)try{await bank();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();offMetrics();}
+    finally {if(!died&&!ended)try{if(potionScope)await potionScope.withCombatPotionCleanup(bank);else await bank();}catch(e){failure=[failure,String(e)].filter(Boolean).join('; ');}off();offMetrics();}
     const banked={hide:bankCount(1739)-(baseline[1739]??bankCount(1739)),bones:bankCount(526)-(baseline[526]??bankCount(526)),beef:bankCount(2132)-(baseline[2132]??bankCount(2132))};
-    const finalAssets=profile.foodBanked?assetTotals():undefined;
-    const preserved=profile.foodBanked?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):[...kit].every(([id,n])=>count(allKit(),id)===n)&&held(333)>=2;
+    const finalAssets=profile.foodBanked||potions?assetTotals():undefined;
+    const preserved=potions?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)+(potions.delta[id]??0)-(id===333?eaten:0)):profile.foodBanked?!!initialAssets&&!!finalAssets&&[...new Set([...initialAssets.keys(),...finalAssets.keys()])].every(id=>ids.includes(id)||(finalAssets.get(id)??0)===(initialAssets!.get(id)??0)):[...kit].every(([id,n])=>count(allKit(),id)===n)&&held(333)>=2;
     // Owned Trout in pack and bank change only by observed eating.
     const finalFood=ownedFood(),foodAccounted=initialFood!==undefined&&finalFood===initialFood-eaten;
     const targetMet=(training.targetLevel!==undefined?goalReached():creditedKills===o.maximum)&&Object.values(banked).every(n=>n===creditedKills);
     const partial=training.targetLevel!==undefined&&!targetMet&&creditedKills>0&&['max-kills','cap'].includes(stop)
         &&Object.values(banked).every(n=>n===creditedKills)&&!failure&&!died&&!ended&&preserved&&foodAccounted;
     if(o.diagnostics&&!failure)console.log(`COW_DIAGNOSTIC ${JSON.stringify(diagnostics)}`);
-    return {ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,trainSkill:training.skill,targetLevel:training.targetLevel??null,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,attackXp:xp()-initialXp,damageXp,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?'no cow progress: bounded target unmet':'-'),diagnostics:failure||o.diagnostics?diagnostics:[],bankProfile:profile.north?'north':'south',foodMode:profile.foodBanked?'banked':'held',healthCutoff,walkTicks,walkedTiles,detourTiles,doorInteractions,houseInteractions,maxPackSlots,bankDistances,walkLegs};
+    return {...potions?{potions:{doses:potions.doses,delta:potions.delta,receipts:potions.receipts,blocked:potions.blocked,resumes:potions.resumes}}:{},ok:!failure&&!died&&!ended&&(targetMet||partial)&&preserved&&foodAccounted,creditedKills,banked,trainSkill:training.skill,targetLevel:training.targetLevel??null,startLevel,finalLevel:level(),selectedXp:selectedXp()-initialSelectedXp,attackXp:xp()-initialXp,damageXp,eaten,initialFood:initialFood??null,finalFood:finalFood??null,foodAccounted,bankTrips,hpMin,died,lifeId:state()?.player?.lifeId,respawns:state()?.player?.respawnCount,ticks:s.tick()-start,preserved,targetMet,partial,stop,failure:failure||(!targetMet&&!partial?'no cow progress: bounded target unmet':'-'),diagnostics:failure||o.diagnostics?diagnostics:[],bankProfile:profile.north?'north':'south',foodMode:profile.foodBanked?'banked':'held',healthCutoff,walkTicks,walkedTiles,detourTiles,doorInteractions,houseInteractions,maxPackSlots,bankDistances,walkLegs};
 }
 
 if(import.meta.main){
@@ -275,7 +282,9 @@ const CONFIGS: Record<string, {
 
 if(TARGET_KEY!=='cow'&&!Object.prototype.hasOwnProperty.call(CONFIGS,TARGET_KEY))
     await finish([],false,`no combat progress: unsupported target ${TARGET_KEY}`);
-const conf = CONFIGS[TARGET_KEY] ?? CONFIGS.druid!;
+const potionPolicy=combatPotionPolicy();if(potionPolicy&&(!Number.isSafeInteger(CAP)||CAP<=200))throw Error('combat potion job reserves200ticks for owned bank return');
+const alch=combatAlchPolicy();if(alch&&TARGET_KEY==='cow')throw Error('owned alchemy hook requires generic combat loot path');
+const baseConf = CONFIGS[TARGET_KEY] ?? CONFIGS.druid!,conf=alch?.route?{...baseConf,spot:alch.route.site,bankSpot:alch.route.bank}:baseConf;
 const botName = process.argv[2];
 const telegrab=telegrabPolicy();if(telegrab&&TARGET_KEY==='cow')throw Error('Telegrab loot option applies to generic druid/giant or Ranged; cow ownership receipt remains unchanged');
 
@@ -285,18 +294,21 @@ if (!botName) {
 }
 
 const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)));
-const s = await openBot(botName,cowStop.options).catch(e => finish([], false, `login: ${String(e)}`));
+let s = await openBot(botName,cowStop.options).catch(e => finish([], false, `login: ${String(e)}`));
+const potionScope=potionPolicy&&TARGET_KEY!=='cow'?combatPotionSession(s,cowStop.stop,CAP):undefined;if(potionScope)s=potionScope;
 if(TARGET_KEY==='cow'){
-    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
+    try{const r=await runCows(s,{cap:CAP,maximum:Number(process.env.MAX_KILLS??5),trainSkill:process.env.TRAIN_SKILL,targetLevel:process.env.TARGET_LEVEL===undefined?undefined:Number(process.env.TARGET_LEVEL),bankProfile:process.env.COW_BANK_PROFILE,foodMode:process.env.COW_FOOD_MODE,potions:potionPolicy,diagnostics:process.env.COW_DIAGNOSTICS==='1',stop:cowStop.stop});console.log(`COW_RESULT ${JSON.stringify(r)}`);await finish([s],r.ok&&cowStop.reason()!=='died',`mode=cow ${Object.entries(r).map(([k,v])=>`${k}=${typeof v==='object'?JSON.stringify(v):v}`).join(' ')}`);}
     catch(e){await finish([s],false,String(e));}
 }
+let potionRecovery:(()=>Promise<void>)|undefined;
 try {
     const pos = () => s.sdk.getState()?.player;
     const hp = () => s.sdk.getSkill('Hitpoints')?.level ?? 0;
     const t0 = s.tick();
     const used = () => s.tick() - t0;
-    const over = () => used() >= CAP;
-    const loot=createCombatLoot(s,telegrab?{...telegrab,stop:()=>over()||cowStop.stop()}:undefined);
+    let recoveringPotions=false;const over = () => used() >= (potionPolicy&&!recoveringPotions?CAP-200:CAP);
+    const potions=potionPolicy?createCombatPotions(s,potionPolicy,['Attack','Strength','Defence','Hitpoints'],()=>over()||cowStop.stop()):undefined;
+    const loot=createCombatLoot(s,telegrab?{...telegrab,stop:()=>over()||cowStop.stop()}:undefined,alch?{...alch,stop:()=>over()||cowStop.stop()}:undefined);
 
     let kills = 0, itemsLooted = 0, bankTrips = 0, walkTicks = 0;
 
@@ -319,7 +331,7 @@ try {
     };
 
     const bank = async () => {
-        await walk(conf.bankSpot.x, conf.bankSpot.z, 2);
+        const arrived=await walk(conf.bankSpot.x, conf.bankSpot.z, 2);if(potions&&!arrived)throw Error('combat potion bank return unavailable');
         const b = await s.bot.openBank();
         if (!b.success) {
             await waitTicks(s, 2);
@@ -328,7 +340,10 @@ try {
 
         // Deposit all looted items
         await s.bot.depositItem(conf.drops, -1);
+        if(alch){const coin=s.sdk.getInventory().find(i=>i.id===995);if(coin)await depositObserved(s,coin);}
         await waitTicks(s, 1);
+
+        if(potions)for(const id of potions.depositIds){const row=s.sdk.getInventory().find(i=>i.id===id);if(row)await depositObserved(s,row);}
 
         // Ensure we have food in inventory (e.g. 5 lobsters)
         if (countItems(s, /lobster|swordfish|trout/i) < 3) {
@@ -340,9 +355,12 @@ try {
         await waitTicks(s, 1);
     };
 
+    if(potions&&potionScope)potionRecovery=combatPotionRecovery(potionScope,()=>potions.blocked,bank,active=>{recoveringPotions=active;});
+
     console.log(`START combat gatherer ${botName} target=${TARGET_KEY} at=${pos()?.worldX},${pos()?.worldZ}`);
 
-    while (!over()) {
+    while (!over()&&(!potions||!cowStop.stop())) {
+        if(potions)await potions.poll();
         const invSpace = 28 - s.sdk.getInventory().length;
         if (invSpace <= 1) {
             await bank();
@@ -365,10 +383,11 @@ try {
 
         // Check for ground loot
         if (invSpace > 0) {
-            const candidate=telegrab?s.sdk.getState()?.groundItems.filter(i=>conf.drops.test(i.name)).sort((a,b)=>a.distance-b.distance)[0]:undefined;
-            const r = telegrab?(candidate?await loot.pickup(candidate):{success:false}):await s.bot.pickupItem(conf.drops);
+            const candidate=telegrab||alch?s.sdk.getState()?.groundItems.filter(i=>conf.drops.test(i.name)).sort((a,b)=>a.distance-b.distance)[0]:undefined;
+            const r = telegrab||alch?(candidate?await loot.pickup(candidate):{success:false}):await s.bot.pickupItem(conf.drops);
             if (r.success) {
                 itemsLooted++;
+                if(alch&&itemsLooted>=alch.maximum)break;
                 await waitTicks(s, 1);
                 continue;
             }
@@ -384,7 +403,8 @@ try {
         const a = await s.bot.attack(monster);
         if (a.success) {
             // Wait until dead or out of combat
-            const dead = await waitUntil(s, st => !(st?.nearbyNpcs ?? []).some((n: any) => n.index === monster.index), { timeoutTicks: 100 });
+            let dead:boolean;
+            if(potions){const began=s.tick();while(!over()&&!cowStop.stop()&&s.tick()-began<100&&s.sdk.getState()?.nearbyNpcs.some(n=>n.index===monster.index)){if(s.sdk.getState()?.player?.combat.targetType==='npc'&&s.sdk.getState()?.player?.combat.targetIndex===monster.index)await potions.poll(monster);await waitTicks(s,1);}dead=!s.sdk.getState()?.nearbyNpcs.some(n=>n.index===monster.index);}else dead = await waitUntil(s, st => !(st?.nearbyNpcs ?? []).some((n: any) => n.index === monster.index), { timeoutTicks: 100 });
             if (dead) {
                 kills++;
                 // Wait 1 tick for loot to appear on ground
@@ -395,10 +415,13 @@ try {
         }
     }
 
+    if(potions){await potionRecovery!();console.log('COMBAT_POTIONS_RESULT '+JSON.stringify({doses:potions.doses,delta:potions.delta,receipts:potions.receipts,blocked:potions.blocked,resumes:potions.resumes}));}
+    if(alch){if(!potions)await bank();if(s.sdk.getInventory().some(i=>i.id===995||conf.drops.test(i.name)))throw Error('owned alchemy bank return unconfirmed');console.log('COMBAT_ALCH_RESULT '+JSON.stringify({casts:loot.alch!.casts,coins:loot.alch!.coins,consumed:loot.alch!.consumed,runes:loot.alch!.runes,receipts:loot.alch!.receipts,blocked:loot.alch!.blocked,itemsLooted,bankTrips,scope:'exact owned pickup and native alchemy; generic loot does not assert kill attribution'}));}
     const total = kills + itemsLooted;
     const perK = (total * 1000 / Math.max(1, used())).toFixed(2);
     await finish([s], total > 0, `ticks=${used()} ${counters()} actionsPer1kTicks=${perK}`);
 } catch (e) {
-    await finish([s], false, String(e));
+    let detail=String(e);if(potionRecovery)try{await potionRecovery();}catch(recovery){detail+='; cleanup '+String(recovery);}
+    await finish([s], false, detail);
 }
 }

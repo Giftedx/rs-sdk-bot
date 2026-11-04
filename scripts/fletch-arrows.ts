@@ -1,3 +1,6 @@
+import {readFileSync} from 'node:fs';
+import {BotActions} from '../vendor/rs-sdk/sdk/actions';
+import {productionStopRequested} from './microbot-c-lifetime';
 // Fletching worker: bounded headless-arrow processing; other modes retain the legacy behavior.
 // Operates with zero travel at bank or staged buffer.
 // Usage: bun scripts/fletch-arrows.ts <bot> [CAP ticks, default 15000] [MODE: arrows | headless | steel | shafts | bows] [TIP_TYPE: rune | adamant | mithril | steel]
@@ -116,18 +119,27 @@ export async function runHeadless(s: Session, options: HeadlessOptions) {
 }
 
 // Revision289 arrows.dbrow: steel_arrowheads41 + headless_arrow53 -> steel_arrow886,15; level30; experience50 (tenths).
-export interface SteelOptions { cap: number; maximum: number; headlessReserve: number; tipReserve: number; outputReserve: number; stop?: () => boolean }
+export const ARROW_METALS=['bronze','iron','steel','mithril','adamant','rune']as const;
+export type ArrowMetal=typeof ARROW_METALS[number];
+type ArrowProfile={metal:ArrowMetal;tip:number;product:number;units:number;level:number;rawXpPerArrow:number;tipName:string};
+const arrowProfiles=new Map<ArrowMetal,ArrowProfile>();
+export function nativeArrowProfile(metal:ArrowMetal):ArrowProfile{
+ if(!ARROW_METALS.includes(metal))throw Error('unsupported arrow metal');const cached=arrowProfiles.get(metal);if(cached)return cached;
+ const base='vendor/rs-sdk/server/content/',text=readFileSync(base+'scripts/skill_fletching/configs/arrows/arrows.dbrow','utf8'),body=text.split('[fletching_'+metal+'_arrow]')[1]?.split('\n[')[0];if(!body)throw Error('native arrow recipe absent');
+ const field=(key:string)=>body.match(new RegExp('^data='+key+',(.+)$','m'))?.[1]?.trim(),item=field('item')!,[product,units]=field('product')!.split(','),ids=new Map(readFileSync(base+'pack/obj.pack','utf8').split(/\r?\n/).map(l=>{const i=l.indexOf('=');return[l.slice(i+1),Number(l.slice(0,i))];})),obj=readFileSync(base+'scripts/skill_fletching/configs/arrows/arrows.obj','utf8').split('['+item+']')[1]?.split('\n[')[0],tipName=obj?.match(/^name=(.+)$/m)?.[1]?.trim();
+ const r={metal,tip:ids.get(item)!,product:ids.get(product!)!,units:Number(units),level:Number(field('level')),rawXpPerArrow:Number(field('experience')),tipName:tipName!};if(![r.tip,r.product,r.level,r.rawXpPerArrow].every(n=>Number.isSafeInteger(n)&&n>0)||r.units!==15||!tipName)throw Error('native arrow mapping invalid');arrowProfiles.set(metal,Object.freeze(r));return r;
+}
+export interface SteelOptions { cap: number; maximum: number; headlessReserve: number; tipReserve: number; outputReserve: number; stop?: () => boolean; exact?:{xpRate:number; enterCleanup?:()=>void} }
 const STEEL_TIP = 41, STEEL_ARROW = 886;
 const STEEL_MATERIALS = new Set([HEADLESS, STEEL_TIP, STEEL_ARROW]);
 export function planSteel(headless: number, tips: number, maximum = 15, headlessReserve = 200, tipReserve = 5): number {
     return Math.max(0, Math.floor(Math.min(maximum, headless - headlessReserve, tips - tipReserve) / 15) * 15);
 }
 
-export async function runSteel(s: Session, options: SteelOptions, metal: 'steel' | 'iron' = 'steel') {
-    if (metal !== 'steel' && metal !== 'iron') throw Error('unsupported arrow metal');
-    const STEEL_TIP = metal === 'iron' ? 40 : 41, STEEL_ARROW = metal === 'iron' ? 884 : 886;
+export async function runSteel(s: Session, options: SteelOptions, metal: ArrowMetal = 'steel') {
+    const profile=nativeArrowProfile(metal);if(options.exact&&(!Number.isSafeInteger(options.exact.xpRate)||options.exact.xpRate<1||options.exact.xpRate>1000))throw Error('invalid arrow XP rate');const STEEL_TIP=profile.tip,STEEL_ARROW=profile.product;
     const STEEL_MATERIALS = new Set([HEADLESS, STEEL_TIP, STEEL_ARROW]);
-    const requiredLevel = metal === 'iron' ? 15 : 30;
+    const requiredLevel = profile.level;
     for (const [name, value] of Object.entries({ cap: options.cap, maximum: options.maximum, headlessReserve: options.headlessReserve, tipReserve: options.tipReserve, outputReserve: options.outputReserve }))
         if (!Number.isSafeInteger(value) || value < 0) throw new Error(`invalid steel ${name}`);
     if (options.cap <= 0 || options.maximum <= 0 || options.maximum % 15 || options.headlessReserve < 0 || options.tipReserve < 0)
@@ -152,7 +164,9 @@ export async function runSteel(s: Session, options: SteelOptions, metal: 'steel'
     for (const item of inv()) if (!STEEL_MATERIALS.has(item.id)) protectedItems.set(item.id, (protectedItems.get(item.id) ?? 0) + item.count);
     let headlessUsed = 0, tipsUsed = 0;
     let made = 0, banked = 0, actions = 0, bankTrips = 0, planned = 0, originalOutput: number | undefined;
-    let stop = 'input-insufficient', failure = '';
+    let stop = 'input-insufficient', failure = '', uncertain=false;
+    let initialAssets:Map<number,number>|undefined;
+    const assets=()=>{const rows=[...(bankSnapshot??[]),...inv()],out=new Map<number,number>();for(const i of rows)out.set(i.id,(out.get(i.id)??0)+i.count);return out;};
     let bankSnapshot: { id: number; count: number }[] | undefined;
     const capture = () => {
         const observation = s.bankObservation?.();
@@ -184,6 +198,7 @@ export async function runSteel(s: Session, options: SteelOptions, metal: 'steel'
         await open();
         await deposit();
         originalOutput = bankCount(STEEL_ARROW);
+        if(options.exact)initialAssets=assets();
         planned = qualified() ? planSteel(bankCount(HEADLESS), bankCount(STEEL_TIP), options.maximum, options.headlessReserve, options.tipReserve) : 0;
         if (!qualified()) stop = 'skill-required';
         if (planned > 0 && !over()) {
@@ -199,8 +214,10 @@ export async function runSteel(s: Session, options: SteelOptions, metal: 'steel'
                 if (!qualified()) { stop = 'skill-required'; break; }
                 const headless = inv().find(i => i.id === HEADLESS), tips = inv().find(i => i.id === STEEL_TIP);
                 if (!headless || !tips || held(HEADLESS) < 15 || held(STEEL_TIP) < 15) throw new Error('steel input accounting shortfall');
+                const beforePack=options.exact?new Map(inv().map(i=>[i.id,held(i.id)])):undefined;
                 const beforeOutput = held(STEEL_ARROW), beforeHeadless = held(HEADLESS), beforeTip = held(STEEL_TIP);
                 if (s.sdk.getDialog()?.isOpen || s.sdk.getState()?.interface?.isOpen) await s.direct({ type: 'closeModal', reason: 'SDK' });
+                uncertain=!!options.exact;
                 await s.sdk.sendUseItemOnItem(headless.slot, tips.slot);
                 actions++;
                 await waitUntil(s, () => held(STEEL_ARROW) > beforeOutput || over(), { timeoutTicks: 5 });
@@ -209,15 +226,18 @@ export async function runSteel(s: Session, options: SteelOptions, metal: 'steel'
                 headlessUsed += usedHeadless; tipsUsed += usedTips;
                 if (gained > 0) {
                     if (gained !== 15 || usedHeadless !== gained || usedTips !== gained) throw new Error('steel input/output accounting mismatch');
-                    made += gained; misses = 0;
+                    if(beforePack){const ids=new Set([...beforePack.keys(),...inv().map(i=>i.id)]);if([...ids].some(id=>held(id)-(beforePack.get(id)??0)!==(id===STEEL_ARROW?15:id===HEADLESS||id===STEEL_TIP?-15:0)))throw Error('native arrows whole-pack effect differs');}
+                    if(options.exact){const raw=(made+gained)*profile.rawXpPerArrow*options.exact.xpRate,gain=xp()-initialXp;if(gain<Math.floor(raw/10)||gain>Math.ceil(raw/10))throw Error('native arrows exact XP differs');}
+                    uncertain=false; made += gained; misses = 0;
                 } else if (usedHeadless !== 0 || usedTips !== 0) throw new Error('steel inputs debited without output');
-                else if (++misses >= 3) { stop = 'no-progress'; throw new Error('no progress: steel item-on-item failed three times'); }
+                else if (options.exact || ++misses >= 3) { stop = 'no-progress'; throw new Error('no progress: steel item-on-item failed three times'); }
             }
             stop = stop === 'skill-required' ? stop : made === options.maximum ? 'max-make' : over() ? (options.stop?.() ? 'stopped' : 'cap') : 'input-insufficient';
         }
     } catch (e) { failure = String(e); }
     finally {
-        if (!ended && !died) {
+        if (!ended && !died && !uncertain) {
+            options.exact?.enterCleanup?.();
             try {
                 await open(); await deposit();
                 banked = originalOutput === undefined ? 0 : Math.max(0, bankCount(STEEL_ARROW) - originalOutput);
@@ -225,9 +245,11 @@ export async function runSteel(s: Session, options: SteelOptions, metal: 'steel'
         }
         off();
     }
+    if(initialAssets&&!uncertain){const finalAssets=assets(),ids=new Set([...initialAssets.keys(),...finalAssets.keys()]);if([...ids].some(id=>(finalAssets.get(id)??0)-(initialAssets!.get(id)??0)!==(id===STEEL_ARROW?made:id===HEADLESS||id===STEEL_TIP?-made:0)))failure ||= 'native arrows whole-bank assets differ';}
     const preserved = [...protectedItems].every(([id, count]) => held(id) >= count);
     const reserveMet = !!bankSnapshot && bankCount(HEADLESS) >= options.headlessReserve && bankCount(STEEL_TIP) >= options.tipReserve;
     const xpGain = xp() - initialXp;
+    if(options.exact){const raw=made*profile.rawXpPerArrow*options.exact.xpRate;if(xpGain<Math.floor(raw/10)||xpGain>Math.ceil(raw/10))failure ||= 'native arrows exact XP differs';}
     if (!preserved) failure ||= 'steel protected asset shortfall';
     if (made > 0 && (!reserveMet || banked !== made || xpGain <= 0)) failure ||= 'steel final bank/reserve/XP proof failed';
     if (held(STEEL_ARROW) > 0) failure ||= 'steel output remains unbanked';
@@ -236,7 +258,15 @@ export async function runSteel(s: Session, options: SteelOptions, metal: 'steel'
     const targetMet = made === options.maximum && banked === made && reserveMet && outputReserveMet;
     return { ok: !failure && !died && !ended && stop !== 'stopped', ticks: s.tick() - start, made, banked, planned, actions, bankTrips,
         xpGain, headlessUsed, tipsUsed, outputReserveMet, headlessBank: bankCount(HEADLESS), tipBank: bankCount(STEEL_TIP), arrowBank: bankCount(STEEL_ARROW), heldArrows: held(STEEL_ARROW),
-        reserveMet, preserved, targetMet, stop, hpMin, died, failure: failure || '-' };
+        reserveMet, preserved, targetMet, stop, hpMin, died, ...(options.exact?{uncertain}:{}), failure: failure || '-' };
+}
+
+export async function runNativeArrows(original:Session,options:SteelOptions & {xpRate?:number},metal:ArrowMetal){
+ const profile=nativeArrowProfile(metal),client=original.client as any,owner=client.executeBotAction,p=original.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,plane=p?.level,hp=original.sdk.getSkill('Hitpoints')?.level??0,start=original.tick();let ended=false,cleanup=false;void original.ended.then(()=>{ended=true;});
+ const gear=JSON.stringify(original.sdk.getEquipment()),otherXP=()=>JSON.stringify(original.sdk.getState()?.skills.filter(k=>k.name!=='Fletching').map(k=>[k.name,k.experience])),initialXP=otherXP();
+ const guard=()=>{const now=original.sdk.getState()?.player;if(ended||original.client!==client||client.executeBotAction!==owner||typeof owner!=='function'||!Number.isSafeInteger(life)||!now||now.isDead||now.lifeId!==life||(now.respawnCount??0)!==respawns||now.level!==plane||hp<1||original.sdk.getSkill('Hitpoints')?.level!==hp||original.sdk.getStateAge()>5000||JSON.stringify(original.sdk.getEquipment())!==gear||otherXP()!==initialXP||(!cleanup&&productionStopRequested(original.name,options.stop))||original.tick()-start>=options.cap)throw Error('native arrows original owner/life/HP/XP/stop/cap');};guard();
+ const sdk=new Proxy(original.sdk,{get(t,k,r){const v=Reflect.get(t,k,r);return typeof v==='function'?function(...a:unknown[]){if(typeof k==='string'&&k.startsWith('send'))guard();return v.apply(r,a);}:v;}}),s={...original,sdk,bot:new BotActions(sdk),direct:async(a:Parameters<Session['direct']>[0])=>{guard();return original.direct(a);}}as Session;
+ const result=await runSteel(s,{...options,exact:{xpRate:options.xpRate??25,enterCleanup:()=>{cleanup=true;}},stop:()=>{try{guard();return false;}catch{return true;}}},metal);guard();return{...result,ok:result.ok&&result.targetMet,metal,profile};
 }
 
 // rev289 cut_logs.dbrow + stringing/bows.dbrow: each step level25,250 tenths XP.
@@ -400,8 +430,12 @@ if (!botName) {
     process.exit(1);
 }
 
+if(MODE==='native-arrows')nativeArrowProfile(TIP_TYPE as ArrowMetal);
 let stopped = false;
-const s = await openBot(botName, (MODE === 'headless' || MODE === 'iron' || MODE === 'steel' || MODE === 'oak-bows' || MODE === 'shafts') ? { onStop: async () => { stopped = true; } } : {}).catch(e => finish([], false, `login: ${String(e)}`));
+const s = await openBot(botName, (MODE === 'native-arrows' || MODE === 'headless' || MODE === 'iron' || MODE === 'steel' || MODE === 'oak-bows' || MODE === 'shafts') ? { onStop: async () => { stopped = true; } } : {}).catch(e => finish([], false, `login: ${String(e)}`));
+if(MODE==='native-arrows'){
+ try{const r=await runNativeArrows(s,{cap:CAP,maximum:Number(process.env.MAX_MAKE??30),headlessReserve:Number(process.env.HEADLESS_RESERVE??200),tipReserve:Number(process.env.TIP_RESERVE??5),outputReserve:Number(process.env.OUTPUT_RESERVE??0),xpRate:Number(process.env.FLETCHING_XP_RATE??25),stop:()=>stopped},TIP_TYPE as ArrowMetal);console.log('NATIVE_ARROW_BANK '+JSON.stringify(r));await finish([s],r.ok,JSON.stringify(r));}catch(e){await finish([s],false,String(e));}
+}
 if (MODE === 'shafts') {
     try {
         const r=await runShafts(s,{cap:CAP,maximum:Number(process.env.MAX_MAKE??25),reserve:Number(process.env.LOG_RESERVE??0),bankKnife:process.env.BANK_KNIFE==='1',stop:()=>stopped});

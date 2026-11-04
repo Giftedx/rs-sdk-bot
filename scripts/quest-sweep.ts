@@ -3,6 +3,9 @@
 // nearest bank, walks to the start tile and hands its session to the quest script, which owns the quest, the RESULT
 // line and the logout. A missing item ends the run before travel with `missing id:count` (acquisition work).
 // Usage: bun scripts/quest-sweep.ts <account> <quest>      e.g. bun scripts/quest-sweep.ts Mightyrod blackknight
+// tbwt/itwatchtower require a third finite-options JSON path and stage mandatory owned pack/wear kits.
+// Trio stages inside the observed Shilo bank and reuses its protected stockade exit; full28 pack carries no ferry fare.
+// Heroes uses the explicit owned-pair quest-hero.ts CLI/API, never this single-account entry.
 import {existsSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {openBot,finish,getWorld,accountOf,finishHooks} from '../packages/core/src/bot';
@@ -17,10 +20,54 @@ import {gatherPlan,gatherItems} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
+import {BotActions} from '../vendor/rs-sdk/sdk/actions';
+import {runOwnedLoadout,validateOwnedKit,type OwnedKit} from './microbot-owned-loadout';
+import {productionStopRequested} from './microbot-c-lifetime';
+import {createShiloTransit,NATURE} from './microbot-rune-trip';
 
 type Item={id:number;count:number};
 type Tile={x:number;z:number;level:number};
 const BANKS:Tile[]=Object.values((travel as unknown as {banks:Record<string,Tile>}).banks);
+
+export type SweepApiOptions={cap:number;prepareTicks:number;xpRate:number;maximumCasts?:number};
+type ApiSweepDeps={open:typeof openBot;world:typeof getWorld;go:typeof goTo;loadout:typeof runOwnedLoadout;load:(path:string)=>Promise<Record<string,unknown>>;finish:(sessions:Session[],ok:boolean,detail:string)=>Promise<unknown>;exists:(path:string)=>boolean;stop:()=>boolean;transit:typeof createShiloTransit};
+function apiOptions(quest:string,value:unknown):SweepApiOptions{
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('quest sweep API requires explicit bounded options');const o=value as SweepApiOptions;
+ if(Object.keys(o).some(k=>!['cap','prepareTicks','xpRate','maximumCasts'].includes(k))||![o.cap,o.prepareTicks,o.xpRate].every(Number.isSafeInteger)||o.cap<1000||o.cap>(quest==='tbwt'?15000:12000)||o.prepareTicks<200||o.prepareTicks>4000||o.xpRate<1||o.xpRate>1000||quest==='tbwt'&&(!Number.isSafeInteger(o.maximumCasts)||o.maximumCasts!<1||o.maximumCasts!>40)||quest==='itwatchtower'&&o.maximumCasts!==undefined)throw Error('quest sweep API invalid finite options');return{...o};
+}
+async function apiSweep(account:string,quest:'tbwt'|'itwatchtower',fresh:string|undefined,value:unknown,injected:Partial<ApiSweepDeps>){
+ const o=apiOptions(quest,value),d:ApiSweepDeps={open:openBot,world:getWorld,go:goTo,loadout:runOwnedLoadout,load:path=>import(path),finish,exists:existsSync,stop:()=>false,transit:createShiloTransit,...injected};
+ let signalled=false;const requested=()=>productionStopRequested(account,()=>signalled||d.stop(),d.exists)||d.exists('.practice/stop-quest-sweep');if(requested())throw Error('quest sweep API stopped before login');
+ const path=resolve(import.meta.dir,'generated',`quest-${quest}.ts`),m=await d.load(fresh?`${path}?${fresh}`:path),run=m[quest==='tbwt'?'runTaiBwoWannaiTrio':'runWatchtower'];if(typeof run!=='function')throw Error('quest sweep explicit API export missing');
+ const pack=quest==='tbwt'?Object.entries({3150:21,3032:1,3171:1,3128:1,3164:1,401:1,379:1,558:Math.max(20,o.maximumCasts!)}).map(([id,count])=>({id:Number(id),count})):Object.entries(m.WATCH_SUPPLIES as Record<number,number>).map(([id,count])=>({id:Number(id),count}));
+ const wear=(quest==='tbwt'?[[1381,3],[1540,5],[577,4],[1011,7],[579,0]]:[[1289,3],[1540,5],[1127,4],[1079,7],[1163,0]]).map(([id,slot])=>({id:id!,slot:slot!,count:1})),start:Tile=quest==='tbwt'?{x:2781,z:3086,level:0}:{x:2548,z:3118,level:0};
+ validateOwnedKit({bank:BANKS[0]!,pack,wear,cap:600,maximumMoves:160});if(requested())throw Error('quest sweep API stopped before login');
+ const raw=await d.open(account,{onStop:async()=>{signalled=true;}}),client=raw.client as any,owner=client?.executeBotAction,self=client?.selfSlot,initial=raw.sdk.getState()?.player,life=initial?.lifeId,respawns=initial?.respawnCount??0,began=raw.tick();let ended=false,preparing=true,ok=false,detail='quest sweep API incomplete',transit:ReturnType<typeof createShiloTransit>|undefined,departed=false,recoveryDeferred=false;const cleanupReserve=quest==='tbwt'?Math.min(600,Math.floor(o.prepareTicks/2)):0;void raw.ended.then(()=>{ended=true;});
+ const own=()=>{const p=raw.sdk.getState()?.player;return !ended&&!!initial&&typeof owner==='function'&&raw.client===client&&client.executeBotAction===owner&&client.selfSlot===self&&!!p&&!p.isDead&&p.lifeId===life&&(p.respawnCount??0)===respawns;};
+ const stop=()=>!own()||requested()||preparing&&raw.tick()-began>=o.prepareTicks-cleanupReserve,guard=()=>{if(!own()||raw.sdk.getStateAge()>5000)throw Error('quest sweep original client/life/input owner unavailable');};
+ // Keep the receiver through SDK reconnect and BotActions door/UI awaits.
+ // Helpers retain their own ordinary-stop and owned-cleanup distinction.
+ const sdk=new Proxy(raw.sdk,{get(target,key,receiver){const v=Reflect.get(target,key,receiver);return typeof v==='function'?function(...args:unknown[]){if(String(key).startsWith('send'))guard();return v.apply(receiver,args);}:v;}}),s=Object.create(raw)as Session;
+ Object.defineProperties(s,{sdk:{value:sdk},bot:{value:new BotActions(sdk)},direct:{value:(action:Parameters<Session['direct']>[0])=>{guard();return raw.direct(action);}}});
+ const controller=new AbortController(),off=raw.onTick(()=>{if(stop())controller.abort('quest sweep preparation stop/owner/budget');});
+ const position=()=>{const p=s.sdk.getState()?.player;return p&&{x:p.worldX,z:p.worldZ,level:p.level};},near=(to:Tile,tol=3)=>{const p=position();return !!p&&p.level===to.level&&Math.max(Math.abs(p.x-to.x),Math.abs(p.z-to.z))<=tol;};
+ const move=async(world:World,to:Tile)=>{guard();if(stop())throw Error('quest sweep preparation stopped');const r=await d.go(s,world,to,accountOf(s),{signal:controller.signal,legTimeoutTicks:120,maxRetriesPerLeg:1});guard();if(stop()||!r.ok||!near(to))throw Error('quest sweep preparation route unconfirmed '+(r.ok?'arrival/stop':r.detail));};
+ try{
+  guard();if(stop())throw Error('quest sweep preparation stopped');const flags=questFlags(client),journal=flags?.find(f=>f.name===(quest==='tbwt'?'Tai Bwo Wannai Trio':'Watch Tower'));if(journal?.state!=='not started'||quest==='tbwt'&&!flags?.some(f=>f.name==='Jungle Potion'&&f.state==='complete')||client.membersAccount!==1)throw Error('quest sweep observed member/journal/prerequisite unavailable');
+  if(quest==='tbwt'&&(!flags?.some(f=>f.name==='Shilo Village'&&f.state==='complete')||(s.sdk.getSkill('Prayer')?.baseLevel??0)<43||(s.sdk.getState()?.prayers.prayerPoints??0)<40||s.sdk.getSkill('Hitpoints')?.level!==s.sdk.getSkill('Hitpoints')?.baseLevel||s.sdk.getState()?.autoRetaliateEnabled!==false||s.sdk.getState()?.prayers.activePrayers.some(Boolean)))throw Error('Trio sweep requires observed Shilo access, full health, Prayer43/40 points and original all-off controls');
+  const world=await d.world();guard();if(stop())throw Error('quest sweep preparation stopped');
+  const exit=await leaveStronghold(s,async to=>{await move(world,to);return{ok:true};});guard();if(!exit.ok||stop())throw Error('quest sweep observed Stronghold exit unavailable');
+  const at=position();if(!at)throw Error('quest sweep initial position unknown');let bank:Tile|undefined,last='';for(const candidate of (quest==='tbwt'?[NATURE.bank]:nearestBanks({...at,level:0}).slice(0,4))){try{await move(world,candidate);bank=candidate;break;}catch(e){last=String(e);if(stop()||!own())throw e;}}if(!bank)throw Error('quest sweep reachable owned bank unavailable '+last);
+  const remaining=o.prepareTicks-(s.tick()-began);if(remaining<120)throw Error('quest sweep owned kit preparation budget');const kit:OwnedKit={bank,pack,wear,cap:Math.min(600,remaining),maximumMoves:160},staged=await d.loadout(s,kit,stop);guard();if(staged.ok!==true||stop())throw Error('quest sweep mandatory owned kit unconfirmed '+staged.failure);
+  const totals=(rows:readonly{id:number;count:number}[])=>Object.entries(rows.reduce((a,r)=>(a[r.id]=(a[r.id]??0)+r.count,a),{}as Record<number,number>)).sort(([a],[b])=>Number(a)-Number(b));
+  if(JSON.stringify(totals(s.sdk.getInventory()))!==JSON.stringify(totals(pack))||JSON.stringify(s.sdk.getEquipment().map(i=>[i.slot,i.id,i.count]).sort((a,b)=>a[0]!-b[0]!))!==JSON.stringify(wear.map(i=>[i.slot,i.id,i.count]).sort((a,b)=>a[0]!-b[0]!)))throw Error('quest sweep mandatory observed pack/wear differs');
+  if(quest==='tbwt'){transit=d.transit(s,{protectMelee:true},()=>own()&&(s.sdk.getSkill('Hitpoints')?.level??0)===(s.sdk.getSkill('Hitpoints')?.baseLevel??-1));departed=true;await transit.outbound(stop);guard();if(stop())throw Error('Trio Shilo departure unconfirmed');}
+  await move(world,start);guard();if(stop())throw Error('quest sweep stopped before API dispatch');off();preparing=false;
+  console.log('QUEST_SWEEP_API '+JSON.stringify({quest,phase:'dispatch',start,options:o}));const result=quest==='tbwt'?await run(s,{cap:o.cap,xpRate:o.xpRate,maximumCasts:o.maximumCasts},stop):await run(s,{cap:o.cap,xpRate:o.xpRate,stop});guard();
+  if(!result||typeof result.ok!=='boolean'||result.complete!==true)throw Error('quest sweep API completion unknown');ok=result.ok&&!requested();detail=JSON.stringify({quest,scope:'explicit API on mandatory owned bank kit',result});
+ }catch(error){detail=`quest-sweep ${quest} ${String(error)}`;if(preparing&&departed&&transit&&own()){if(transit.pending()){recoveryDeferred=true;detail+='; Shilo crossing outcome unknown; no repeat or bank movement';}else{const cleanupStop=()=>!own()||raw.tick()-began>=o.prepareTicks||(s.sdk.getSkill('Hitpoints')?.level??0)!==(s.sdk.getSkill('Hitpoints')?.baseLevel??-1);try{await transit.returnVillage(cleanupStop);guard();if(cleanupStop()||!near(NATURE.bank,0)||s.sdk.getState()?.prayers.activePrayers[14]!==false)throw Error('Shilo bank/protection restoration unconfirmed');}catch(cleanup){recoveryDeferred=true;detail+='; Shilo cleanup '+String(cleanup);}}}}finally{off();preparing=false;}
+ if(recoveryDeferred||!own()){console.log('QUEST_SWEEP_SETTLEMENT_DEFERRED '+detail);return{ok:false,recoveryDeferred:true,detail};}return d.finish([s],ok,detail);
+}
 
 export function presetFor(quest:string):SaveConfig&{position:Tile}{
  const p=PRESETS['quest_'+quest];
@@ -220,7 +267,9 @@ export function handOver(s:Session,script:string,fresh?:string):Promise<unknown>
  return run.then(p=>p);
 }
 
-export async function sweep(account:string,quest:string,fresh?:string){
+export async function sweep(account:string,quest:string,fresh?:string,options?:SweepApiOptions,deps:Partial<ApiSweepDeps>={}){
+ if(quest==='hero'||quest==='heroes')throw Error('Heroes requires the explicit owned pair CLI quest-hero.ts or runHeroesPair(original sessions, validated order); no single-actor partner login');
+ if(quest==='tbwt'||quest==='itwatchtower')return apiSweep(account,quest,fresh,options,deps);
  const script=resolve(import.meta.dir,'generated',`quest-${quest}.ts`);
  if(!existsSync(script))throw Error(`quest sweep: no script ${script}`);
  const preset=presetFor(quest),need=needs(preset),food=needs(preset,true);
@@ -318,13 +367,14 @@ export async function sweep(account:string,quest:string,fresh?:string){
 }
 
 async function main(){
- const [account,quest]=process.argv.slice(2);
- if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest>');
+ const [account,quest,optionsPath]=process.argv.slice(2);
+ if(!account||!quest)throw Error('usage: bun scripts/quest-sweep.ts <account> <quest> [api-options.json]');
+ let options:SweepApiOptions|undefined;if(quest==='tbwt'||quest==='itwatchtower'){if(!optionsPath)throw Error('quest sweep API requires an owned finite options JSON file');const bytes=readFileSync(optionsPath);if(bytes.length>32768)throw Error('quest sweep options file too large');let value:unknown;try{value=JSON.parse(bytes.toString('utf8'));}catch{throw Error('invalid quest sweep options JSON');}options=apiOptions(quest,value);}
  // As a bot-host entry, the quest module's finish() (plain bot.ts) reports through this entry's own finish, which
  // the host rewrites to the per-bot one; without it the quest's finish would end the whole host.
  if((globalThis as {__rsBotHost?:unknown}).__rsBotHost)finishHooks.set(account.toLowerCase(),(ok,detail)=>{void finish([],ok,detail);});
  // A unique query: in a bot host, each account runs the quest module afresh.
- await sweep(account,quest,`run=${account.toLowerCase()}-${Date.now()}`);
+ await sweep(account,quest,`run=${account.toLowerCase()}-${Date.now()}`,options);
 }
 
 if(import.meta.main)await main();

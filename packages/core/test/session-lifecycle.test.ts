@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join,resolve } from 'node:path';
 import { BotSDK } from '../../../vendor/rs-sdk/sdk/index';
 import { startInProcessSession, connectInProcess, type Session } from '../src/inprocess';
-import { awaitBotReady, settle } from '../src/bot';
+import { watchUnexpectedEnd, logoutSession, awaitBotReady, settle } from '../src/bot';
 import { beginSessionAttempt, readLogoutProof, listAttempts, accountDir, DEFAULT_LIFECYCLE_ROOT,lifecycleOwner } from '../src/session-lifecycle';
 
 test('producer script identity comes from the actual CLI entry, never a descriptive goal',()=>{
@@ -180,4 +180,19 @@ test('practice and live identities stay in separate trees; crossed or malformed 
         writeFileSync(join(bobDir, 'latest.json'), pointer);
         expect(readLogoutProof('Bob', 'localhost:8888', { root })).toMatchObject({ state: 'held', reason: expect.stringMatching(/^newer attempt .* is not the latest pointer$/) });
     } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+
+test('custom settlement owns original raw bookkeeping before logout ends the session', async () => {
+ const root=mkdtempSync(join(tmpdir(),'lifecycle-owned-settle-')),lines:string[]=[];
+ try{const s=await open(root,'Ana');await ready(s);let settling=false,unexpected=0,paid=0;
+ watchUnexpectedEnd(s,()=>settling,()=>false,async()=>{unexpected++;});
+ const ok=await settle([s],true,'owned work',{log:l=>lines.push(l),onReported:()=>{settling=true;},logout:async raw=>{expect(raw).toBe(s);expect(settling).toBe(true);paid++;return logoutSession(raw);}});
+ expect(ok).toBe(true);expect(unexpected).toBe(0);expect(paid).toBe(1);expect(lines.filter(l=>l.startsWith('RESULT '))).toEqual(['RESULT ok owned work']);expect(readLogoutProof('Ana','localhost:8888',{root}).state).toBe('confirmed');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
+
+test('rejected guarded logout never falls back to raw logout or close',async()=>{
+ let closes=0,inputs=0;const s={name:'guard-reject',close:async()=>{closes++;},direct:async()=>{inputs++;return{success:true};},tick:()=>0}as unknown as Session;
+ await expect(settle([s],true,'foreign',{log:()=>{},logout:async()=>{throw Error('owner replaced');}})).rejects.toThrow('owner replaced');expect(inputs).toBe(0);expect(closes).toBe(0);
 });

@@ -1,5 +1,11 @@
 import {test,expect} from 'bun:test';
-import {inventoryRecipes,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
+import {createHash} from 'node:crypto';
+import {inventoryRecipes,productionInputReserves,productionEffect,runInventoryProduction,runInventoryBank,type ProductionIO} from './microbot-production';
+test('native chicken stew variants append without changing any of the qualified178 descriptors',()=>{
+ const recipes=inventoryRecipes();expect(recipes).toHaveLength(180);expect(createHash('sha256').update(JSON.stringify(recipes.slice(0,178))).digest('hex')).toBe('725b9e6775940ce8edbd2e73b083fc6db37d6c7832be746d12895920a138a126');
+ expect(recipes.slice(178).map(r=>r.name)).toEqual(['prepare:chicken-stew','prepare:uncooked-stew-chicken']);
+ for(const[name,raw,product]of[['prepare:chicken-stew',1921,1999],['prepare:uncooked-stew-chicken',1997,2001]]as const){const r=recipes.find(r=>r.name===name)!;expect(r.inputs).toEqual([{id:raw===1921?2140:1997,units:1},{id:raw===1921?1921:2140,units:1}]);expect(r.level).toBe(25);const b={items:{[raw]:1,2140:1,995:37},xp:100},a={items:{[product]:1,995:37},xp:100};expect(productionEffect(r,b,a)).toBe('made');expect(productionEffect(r,b,{...a,items:{...a.items,995:38}})).toBe('invalid');}
+});
 test('every inventory recipe resolves native IDs and preserves tools in its receipt',()=>{
  const recipes=inventoryRecipes();expect(recipes.length).toBeGreaterThanOrEqual(20);
  expect(new Set(recipes.map(r=>r.name)).size).toBe(recipes.length);
@@ -62,10 +68,12 @@ test('finite recipe runner stops at target, banks products and bounds failed act
  expect((await runInventoryProduction(io,r,{maximum:3,cap:20,maxAttempts:3})).ok).toBe(false);
  expect(stored).toBe(3);
 });
-for(const name of ['pie-shell','glass:stafforb','leather:leather_gloves','identify:guam_leaf','darts:bronze_dart','dough:bread:jug_water','prepare:cake','pie-shell-stale-modal'])test('SDK adapter: '+name,async()=>{
- const r=inventoryRecipes().find(r=>r.name===name.replace('-stale-modal',''))!,units=r.productUnits??1;
+for(const name of ['pie-shell','glass:stafforb','leather:leather_gloves','identify:guam_leaf','darts:bronze_dart','dough:bread:jug_water','prepare:cake','pie-shell-stale-modal','bow-string:shortbow','bow-string:shortbow-mutable-reserve'])test('SDK adapter: '+name,async()=>{
+ const r=inventoryRecipes().find(r=>r.name===name.replace('-stale-modal','').replace('-mutable-reserve',''))!,units=r.productUnits??1;
  let pack:{id:number;slot:number;name:string;count:number}[]=[],generation=1,tick=0,xp=100,modal=name.endsWith('-stale-modal'),bankOpen=false;
+ const stringJob=name.startsWith('bow-string:shortbow');
  const stock=new Map([...r.inputs.map(i=>[i.id,i.units*2] as [number,number]),...r.tools.map(id=>[id,1] as [number,number]),...(r.optionalInputs??[]).map(id=>[id,2] as [number,number])]);
+ if(stringJob)stock.set(1777,3);
  const bankItems=()=>[...stock].map(([id,count],slot)=>({id,count,slot,name:'item-'+id}));
  const add=(id:number,n:number)=>{const p=pack.find(i=>i.id===id);if(p)p.count+=n;else pack.push({id,count:n,slot:pack.length,name:'item-'+id});};
  const effect=()=>{tick++;for(const i of r.inputs)add(i.id,-i.units);add(r.product,units);for(const i of r.byproducts??[])add(i.id,i.units);if(r.xp)xp+=25;modal=false;};
@@ -80,9 +88,11 @@ for(const name of ['pie-shell','glass:stafforb','leather:leather_gloves','identi
    withdrawItem:async(target:{id:number;slot:number},n:number,o:{asNote:boolean})=>{expect(bankOpen).toBe(true);expect(o.asNote).toBe(false);expect(Number.isInteger(target.slot)).toBe(true);expect(bankItems()[target.slot]?.id).toBe(target.id);stock.set(target.id,stock.get(target.id)!-n);add(target.id,n);generation++;return{success:true};},
    depositItem:async(item:{id:number})=>{const p=pack.find(i=>i.id===item.id)!;stock.set(p.id,(stock.get(p.id)??0)+p.count);p.count=0;generation++;return{success:true};}},
   direct:async()=>{modal=false;return{success:true};}};
- const result=await runInventoryBank(s as any,r,{maximum:units,cap:40,maxAttempts:1,members:true});
- expect(result).toMatchObject({ok:true,made:units,banked:units,attempts:1});
- expect(stock.get(r.product)).toBe(units);for(const i of r.inputs)expect(stock.get(i.id)).toBe(i.units);
+ const inputReserves:Record<number,number>={50:0};const pending=runInventoryBank(s as any,r,{maximum:stringJob?2:units,cap:40,maxAttempts:stringJob?2:1,members:true,...stringJob?{reserve:1,inputReserves}:{}});
+ if(name.endsWith('-mutable-reserve')){inputReserves[50]=99;inputReserves[1777]=99;}
+ const result=await pending;
+ expect(result).toMatchObject({ok:true,made:stringJob?2:units,banked:stringJob?2:units,attempts:stringJob?2:1});
+ expect(stock.get(r.product)).toBe(stringJob?2:units);for(const i of r.inputs)expect(stock.get(i.id)).toBe(stringJob?(i.id===50?0:1):i.units);
 });
 test('cached bank rows without a fresh open generation never authorize a withdrawal',async()=>{
  const r=inventoryRecipes().find(r=>r.name==='pie-shell')!;let tick=0,bankOpen=false,withdrawals=0;const callbacks=new Set<()=>void>();
@@ -95,3 +105,18 @@ test('dough checks the actual 28 occupied inventory slots before native menu dis
  const s:any={tick:()=>0,ended:new Promise(()=>{}),sdk:{getInventory:()=>pack,getSkill:()=>({level:99}),getSkillXp:()=>0,getState:()=>({player:{lifeId:1},inventory:pack,bank:{isOpen:open,noteMode:false,items:[]},interface:{isOpen:open}}),sendUseItemOnItem:async()=>{uses++;return{success:true}}},bankObservation:()=>({generation:1,items:[]}),bot:{closeBank:async()=>{open=false}}};
  const result=await runInventoryBank(s,r,{maximum:1,cap:40,maxAttempts:1});expect(result.ok).toBe(false);expect(result.failure).toContain('inputs unavailable');expect(uses).toBe(0);
 });
+
+import{mkdtempSync,writeFileSync,rmSync}from'node:fs';import{resolve,join,dirname,basename}from'node:path';import{pathToFileURL}from'node:url';
+test('actual inventory bank consumer observes a declared role stop before every bank or production input in an isolated cwd',()=>{
+ const base=resolve(import.meta.dir,'../.practice/microbot-ports'),dir=mkdtempSync(join(base,'production-role-unit-')),role=join(dir,'owned-role.stop'),url=pathToFileURL(resolve(import.meta.dir,'microbot-production.ts')).href;writeFileSync(role,'isolated owned unit stop');
+ const code=`import{runInventoryBank}from${JSON.stringify(url)};import assert from'node:assert/strict';let inputs=0;const input=async()=>{inputs++;throw Error('stopped consumer dispatched');};const s={name:'Owned',tick:()=>0,ended:new Promise(()=>{}),sdk:{getState:()=>({player:{lifeId:1,respawnCount:0},inventory:[],bank:{isOpen:false,items:[]},interface:{isOpen:false}}),getInventory:()=>[],getSkill:()=>({level:99}),getSkillXp:()=>0},bot:new Proxy({},{get:()=>input}),direct:input};const r=await runInventoryBank(s,{name:'unit',inputs:[{id:1,units:1},{id:2,units:1}],tools:[],product:3,skill:'Crafting',level:1,xp:false,members:false,source:'unit'},{maximum:1,cap:20,maxAttempts:1});assert.equal(r.ok,false);assert.equal(r.attempts,0);assert.equal(inputs,0);assert.equal(r.failure,'production session stopped');console.log('PRODUCTION_ROLE_STOP_ZERO_INPUT');`;
+ try{const p=Bun.spawnSync(['bun','-e',code],{cwd:dir,env:{...process.env,STOP_FILE:role},stdout:'pipe',stderr:'pipe',timeout:30000,windowsHide:true});expect(p.exitCode).toBe(0);expect(p.stderr.toString()).toBe('');expect(p.stdout.toString()).toContain('PRODUCTION_ROLE_STOP_ZERO_INPUT');}finally{if(dirname(resolve(dir))!==base||!basename(dir).startsWith('production-role-unit-'))throw Error('unexpected own test directory');rmSync(dir,{recursive:true,force:true});}
+});
+
+test('actual inventory adapter rejects a mutable player life or respawn replacement after one paid effect',()=>{
+ const base=resolve(import.meta.dir,'../.practice/microbot-ports'),dir=mkdtempSync(join(base,'production-life-unit-')),url=pathToFileURL(resolve(import.meta.dir,'microbot-production.ts')).href;
+ const code=`import{runInventoryBank,inventoryRecipes}from${JSON.stringify(url)};import assert from'node:assert/strict';for(const field of['none','lifeId','respawnCount']){const r=inventoryRecipes().find(r=>r.name==='pie-shell'),player={lifeId:1,respawnCount:0},stock=new Map;let slot=0,pack=r.inputs.flatMap(i=>Array.from({length:i.units*2},()=>({id:i.id,count:1,slot:slot++,name:'item-'+i.id}))),bankOpen=false,generation=0,tick=0,uses=0,changed=false,afterReplacement=0;const event=()=>{if(changed)afterReplacement++;},bankItems=()=>[...stock].map(([id,count],slot)=>({id,count,slot,name:'item-'+id})),s={name:'Owned',tick:()=>tick,ended:new Promise(()=>{}),sdk:{getInventory:()=>pack.filter(i=>i.count>0),getSkill:()=>({level:99}),getSkillXp:()=>0,getDialog:()=>({isOpen:false}),getState:()=>({player,inventory:pack.filter(i=>i.count>0),bank:{isOpen:bankOpen,items:bankItems()},interface:{isOpen:bankOpen}}),sendUseItemOnItem:async()=>{event();uses++;tick++;for(const i of r.inputs){let left=i.units;for(const row of pack.filter(p=>p.id===i.id&&p.count>0)){const n=Math.min(left,row.count);row.count-=n;left-=n;}}pack.push({id:r.product,count:1,slot:slot++,name:'item-'+r.product});if(uses===1&&field!=='none'){player[field]++;changed=true;}return{success:true};}},bankObservation:()=>({generation,items:bankItems()}),bot:{openBank:async()=>{event();bankOpen=true;generation++;return{success:true};},closeBank:async()=>{event();bankOpen=false;},depositItem:async(item)=>{event();const rows=pack.filter(i=>i.id===item.id&&i.count>0),count=rows.reduce((n,i)=>n+i.count,0);stock.set(item.id,(stock.get(item.id)??0)+count);for(const row of rows)row.count=0;generation++;return{success:true};}},direct:async()=>{event();return{success:true};}};const result=await runInventoryBank(s,r,{maximum:2,cap:40,maxAttempts:2});if(field==='none'){assert.equal(result.ok,true);assert.equal(uses,2);assert.equal(result.banked,2);}else{assert.equal(result.ok,false,field+' replacement accepted');assert.equal(uses,1,field+' dispatched another production action');assert.equal(afterReplacement,0,field+' performed bank/control input after replacement');assert.equal(result.attempts,1);}}console.log('INVENTORY_SCALAR_LIFE_OK');`;
+ try{const p=Bun.spawnSync(['bun','-e',code],{cwd:dir,env:{...process.env,STOP_FILE:''},stdout:'pipe',stderr:'pipe',timeout:30000,windowsHide:true});if(p.exitCode!==0)throw Error(p.stderr.toString()||p.stdout.toString());expect(p.exitCode).toBe(0);expect(p.stderr.toString()).toBe('');expect(p.stdout.toString()).toContain('INVENTORY_SCALAR_LIFE_OK');}finally{if(dirname(resolve(dir))!==base||!basename(dir).startsWith('production-life-unit-'))throw Error('unexpected own test directory');rmSync(dir,{recursive:true,force:true});}
+});
+
+test('per-input reserve overrides are explicit canonical inputs; default reserve remains uniform',()=>{const r=inventoryRecipes().find(r=>r.name==='bow-string:shortbow')!;expect(productionInputReserves(r,1)).toEqual({50:1,1777:1});expect(productionInputReserves(r,1,{50:0})).toEqual({50:0,1777:1});for(const bad of[{841:0},{50:-1},{50:0.5}] as Record<number,number>[])expect(()=>productionInputReserves(r,1,bad)).toThrow();});

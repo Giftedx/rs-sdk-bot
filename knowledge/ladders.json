@@ -97,7 +97,7 @@
   },
   "smithing": {
    "methods": 137,
-   "withWorker": 5,
+   "withWorker": 8,
    "withXp": 137,
    "withTicks": 137,
    "withGaps": 0
@@ -144,7 +144,8 @@
   "Magic combat spells need a target; pick one from the Attack ladder targets.",
   "Prayer prayers (prayers dbtable) are unlocks, not XP methods, and are left out.",
   "Prayer bones and combat targets have no level gate in the content; their rungs start at level 1.",
-  "worker rule unused: cap:magic-order: evidence \"casts wind strike\" not found"
+  "worker rule unused: cap:magic-order: evidence \"casts wind strike\" not found",
+  "worker rule unused: cap:ranged-train: evidence \"Lumbridge chickens\" not found"
  ],
  "ladders": {
   "attack": [
@@ -3976,12 +3977,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "ranged-train",
+    "worker": "scripts/train-chickens.ts",
     "workers": [
-     "ranged-train",
      "scripts/train-chickens.ts"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"Lumbridge chickens\"",
+    "workerEvidence": "scripts/train-chickens.ts contains \"Train on Lumbridge chickens\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -5066,12 +5066,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "ranged-train",
+    "worker": "scripts/gather-ranged.ts",
     "workers": [
-     "ranged-train",
      "scripts/gather-ranged.ts"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"Lumbridge chickens\"",
+    "workerEvidence": "scripts/gather-ranged.ts contains \"BOW=841\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -34845,9 +34844,10 @@
     "rateMethod": null,
     "worker": "scripts/smelt-bars.ts",
     "workers": [
-     "scripts/smelt-bars.ts"
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-bronze",
@@ -38316,9 +38316,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/smelt-bars.ts",
+    "workers": [
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
+    ],
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-silver",
@@ -39775,7 +39778,7 @@
      "scripts/smelt-bars.ts",
      "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-steel",
@@ -41875,7 +41878,7 @@
      "scripts/smelt-bars.ts",
      "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-gold",
@@ -42872,7 +42875,7 @@
      "scripts/smelt-bars.ts",
      "scripts/smelt-batch.ts"
     ],
-    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril\"",
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-mithril",
@@ -45310,9 +45313,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/smelt-bars.ts",
+    "workers": [
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
+    ],
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-adamant",
@@ -47410,9 +47416,12 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": null,
-    "workers": [],
-    "workerEvidence": null,
+    "worker": "scripts/smelt-bars.ts",
+    "workers": [
+     "scripts/smelt-bars.ts",
+     "scripts/smelt-batch.ts"
+    ],
+    "workerEvidence": "scripts/smelt-bars.ts contains \"BAR_TYPE: iron | bronze | steel | gold | mithril | silver | adamantite | runite\"",
     "pendingCapability": null,
     "gaps": [],
     "id": "smithing/smelt-runite",

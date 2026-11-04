@@ -707,10 +707,12 @@
   {
     "name": "inventorysetups",
     "decision": "partial",
-    "behaviour": "Loadout persistence and item alternatives map to native preparation requirements. OSRS presets and cache IDs require translation.",
+    "behaviour": "Donor compact and portable inventory setups compile through explicit donor-to-native item bindings into the existing finite owned-kit validator and loadout worker.",
     "localConsumers": [
       "packages/planner/src/requirements.ts",
-      "scripts/preparation-report.ts"
+      "scripts/preparation-report.ts",
+      "scripts/microbot-loadout-import.ts",
+      "scripts/microbot-owned-loadout.ts"
     ],
     "sourceEvidence": [
       {
@@ -722,14 +724,30 @@
         "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/ConfigInventorySetupDataManager.java",
         "line": 19,
         "claim": "Loadout persistence and item alternatives map to native preparation requirements. OSRS presets and cache IDs require translation."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/serialization/InventorySetupItemSerializableTypeAdapter.java",
+        "line": 25,
+        "claim": "Compact serialization writes explicit id, optional quantity, fuzzy/comparator/locked fields and slot; native compilation requires explicit item bindings and supported exact-count semantics."
+      },
+      {
+        "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/inventorysetups/serialization/InventorySetupSerializable.java",
+        "line": 20,
+        "claim": "inv and eq are separate item lists; rp, bp, qv, afi and spellbook semantics are explicit unsupported boundaries for this native compiler."
       }
     ],
     "serverEvidence": [],
     "blockers": [
-      "OSRS inventory-setup JSON item IDs and equipment presets cannot be imported as native IDs. Resolve each setup against pinned obj.pack before use."
+      "Every donor item still requires an explicit native-ID binding validated against pinned native metadata; unknown and implicit identity mappings refuse. Nonempty rune/bolt pouches, quivers, additional-filtered items, nonstandard spellbooks, fuzzy/locked/inequality matching and unknown fields refuse. GUI layout and bank tags are outside the exact-counts preparation policy. Offline compilation does not prove gameplay execution of every imported setup; that uses the existing owned-loadout qualification and per-job Native/live acceptance."
     ],
     "scriptDecisions": [],
-    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+    "proof": {
+      "level": "offline actual CLI and existing consumer validation; no new gameplay qualification",
+      "consumer": "scripts/microbot-loadout-import.ts",
+      "runtimeSha256": "3d4747f73a3aeb58ac3e5bfd47816fd69dded62735deed6f83fe10fff4950a2a",
+      "result": ".practice/microbot-loadout-import/result-1793655669101.json",
+      "scope": "26 tests and122 assertions pass across importer and existing owned-loadout consumer. Actual CLI compiles pinned donor IDs385/563/1171/1277 through explicit bindings and its emitted JSON passes validateOwnedKit. Source review confirms native slots, capacity, two-hand conflicts, exact list selection and refusals. Full typecheck pending integration; no new Native or live claim."
+    }
   },
   {
     "name": "mouserecorder",
@@ -802,7 +820,8 @@
     "localConsumers": [
       "scripts/generated/quest-lib.ts",
       "scripts/quest-order.ts",
-      "packages/core/src/quest-status.ts"
+      "packages/core/src/quest-status.ts",
+      "scripts/generated/quest-itwatchtower.ts"
     ],
     "sourceEvidence": [
       {
@@ -821,19 +840,75 @@
         "claim": "QuestHelper dynamic steps map to existing native quest handlers, requirements and flags."
       }
     ],
-    "serverEvidence": [],
+    "serverEvidence": [
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_hero/scripts/quest_hero.rs2",
+        "line": 42,
+        "claim": "Native Heroes quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_itwatchtower/scripts/quest_itwatchtower.rs2",
+        "line": 564,
+        "claim": "Native Watchtower quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_legends/scripts/quest_legends.rs2",
+        "line": 2102,
+        "claim": "Native Legends quest completion handler"
+      },
+      {
+        "path": "vendor/rs-sdk/server/content/scripts/quests/quest_tbwt/scripts/quest_tbwt.rs2",
+        "line": 268,
+        "claim": "Native Tai Bwo Wannai Trio completion handler"
+      }
+    ],
     "blockers": [
-      "Donor QuestScript consumes Java QuestHelper step classes, OSRS quest IDs and modern quest data. Native generated quest scripts cover the server quest set, not those client objects. Each unsupported quest needs native content, not a copied Java step."
+      "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs are not executable native steps. Watchtower passes its complete zero-progress Native route through reward and teleport-scroll learning. Heroes Quest, Legends Quest and Tai Bwo Wannai Trio have real native handlers and local source implementations, but full CLI completion/reward/logout qualification remains open; these are supported integration gaps, not content exclusions. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
     ],
     "scriptDecisions": [
       {
         "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestScript.java",
         "decision": "partial",
         "consumer": "scripts/generated/quest-lib.ts, scripts/quest-order.ts, packages/core/src/quest-status.ts",
-        "gap": "Donor QuestScript consumes Java QuestHelper step classes, OSRS quest IDs and modern quest data. Native generated quest scripts cover the server quest set, not those client objects. Each unsupported quest needs native content, not a copied Java step."
+        "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs are not executable native steps. Watchtower passes its complete zero-progress Native route through reward and teleport-scroll learning. Heroes Quest, Legends Quest and Tai Bwo Wannai Trio have real native handlers and local source implementations, but full CLI completion/reward/logout qualification remains open; these are supported integration gaps, not content exclusions. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
       }
     ],
-    "proof": "source-traced reuse or explicit gap; no new native/live qualification claimed"
+    "proof": {
+      "level": "Source-traced quest reuse and one full Native Watchtower completion; three other supported quest ports retain integration/qualification work.",
+      "nativeQuestCount": 68,
+      "missingSupported": [
+        "Heroes Quest",
+        "Legends Quest",
+        "Tai Bwo Wannai Trio"
+      ],
+      "scope": "Existing quest workers retain their own source/receipt scope. Watchtower has one complete owned Native practice route. Heroes, Legends and Trio source implementations require complete actual-CLI qualification; their failed receipts remain failures. No blanket Native or live qualification of all68 quests is claimed.",
+      "watchtower": {
+        "evidence": ".practice/microbot-ports/watchtower-native-1793681609878/result.json",
+        "sourceCheck": ".practice/microbot-ports/watchtower-native-1793681609878/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/watchtower-native-1793681609878/compiled-cache-check.json",
+        "runtimeSha256": "a94e1509222038d9de92ac96cba5c13032c160f1f3e152d3ae75c093311146a6",
+        "fixtureSha256": "4742801249759644c82cdcc83acecc6ea4fdc30c237113f16a61c0371b2e790d",
+        "scope": "Actual fresh quest0 through reward13 and read-scroll14, QP+4; all quest items earned from ordinary staged ingredients and the listed skill levels and owned kit. CLI0 in2084ticks, sameLife1/no death, HPmin94/saved96, food unchanged, exact coins+4980 and all owned assets/gear/controls/logout. RawXP Magic3825000/Agility41500/Attack80000/HP26525/Herblore5000/Thieving1625; foreignXP0. Exact five wall climbs, two return swings and one paid bridge. Source11521 unchanged; server-ready42 and compiled-end57 contents unchanged, ZIP metadata excluded. Independent CRC/raw/source review agrees. Live, repeat and other starting conditions remain unqualified.",
+        "skills": {
+          "Attack": 99,
+          "Strength": 99,
+          "Defence": 99,
+          "Hitpoints": 99,
+          "Magic": 99,
+          "Mining": 99,
+          "Herblore": 99,
+          "Thieving": 99,
+          "Agility": 99
+        }
+      },
+      "heroesCrossings": {
+        "evidence": ".practice/microbot-ports/heroes-crossing-native-1793828591571/result.json",
+        "sourceCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/source-check.json",
+        "compiledCheck": ".practice/microbot-ports/heroes-crossing-native-1793828591571/compiled-cache-ready-check.json",
+        "runtimeSha256": "fc61cb67f1d195357e6bbbedc5e62758bb462b5362d7bae4de725516020f2f12",
+        "scope": "Six production helper crossings: panel, keyed side door and keyed treasure door, both directions. Two CLI0/logouts and independent saved position, inventory and zero-XP audits. Staged keys and Heroes progress4/11; no full quest, Grip combat, rewards, live or repeat claim. Source11441 and server-ready42 unchanged."
+      }
+    }
   },
   {
     "name": "recovery",

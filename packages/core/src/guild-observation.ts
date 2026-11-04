@@ -29,6 +29,8 @@ export function guildActorFacts(client: any, state?: any): GuildActorFacts {
     const qp = client.varServ?.[101];
     if (Number.isInteger(qp) && qp > 0) facts.varps.qp = qp;
     for (const q of questFlags(client) ?? []) {
+        // Green is completion, not an exact private stage. The native map is the final glider admission.
+        if (q.id === 7361 && q.state === 'complete' && client.membersAccount === 1 && state?.inGame !== false) facts.unlocks.push('grandtree-glider');
         const key = q.id === 7363 ? 'heroquest' : q.id === 7366 ? 'legendsquest' : q.id === 7356 ? 'mcannon' : undefined;
         if (!key) continue;
         const bound = q.state === 'complete' ? (key === 'heroquest' ? 15 : key === 'legendsquest' ? 75 : 11)

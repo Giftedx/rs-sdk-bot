@@ -3,6 +3,7 @@ import type {GroundItem} from '../vendor/rs-sdk/sdk/types';
 import {componentId} from '../packages/core/src/logout';
 import {waitUntil} from '../packages/core/src/ticks';
 import {elementalRuneCost} from './microbot-magic-items';
+import {createCombatAlch,combatAlchCounts,combatLootReceipt,type PreparedCombatAlch} from './microbot-combat-alch';
 export type TelegrabPolicy={maximum:number;cap:number;xpMultiplier?:number;stop?:()=>boolean};
 export function telegrabPolicy(env:Record<string,string|undefined>=process.env):TelegrabPolicy|undefined{
  if(env.TELEGRAB_MAX===undefined)return;
@@ -13,11 +14,11 @@ const counts=(items:readonly{id:number;count:number}[])=>{const out:Record<numbe
 export function telegrabReceipt(item:{id:number;count:number},costs:Record<number,number>,before:Record<number,number>,after:Record<number,number>,xp:number,expectedXp:number){return xp===expectedXp&&[...new Set([...Object.keys(before),...Object.keys(after),...Object.keys(costs),String(item.id)])].every(key=>{const id=Number(key);return(after[id]??0)-(before[id]??0)===(id===item.id?item.count:0)-(costs[id]??0);});}
 export function telegrabCapacity(item:{id:number;count:number},pack:readonly{id:number;count:number}[],stackable:boolean){if(!Number.isSafeInteger(item.count)||item.count<1||item.count>2147483647||pack.length>28)return false;const held=pack.filter(i=>i.id===item.id).reduce((n,i)=>n+i.count,0);return stackable?held+item.count<=2147483647&&(held>0||pack.length<28):item.count<=28-pack.length;}
 // The caller keeps its existing wanted-loot/kill-credit filters. The server resolves the observed pile with player.hash64.
-export function createCombatLoot(s:Session,policy?:TelegrabPolicy){
+export function createCombatLoot(s:Session,policy?:TelegrabPolicy,alchPolicy?:PreparedCombatAlch){
  if(policy)validate(policy);const start=s.tick(),first=s.sdk.getState()?.player,life=first?.lifeId,respawns=first?.respawnCount??0,plane=first?.level;
  let casts=0,blocked=false,busy=false;const runesUsed:Record<number,number>={556:0,563:0};
  const fatal=()=>{const p=s.sdk.getState()?.player;return life===undefined||!p||p.isDead||p.lifeId!==life||(p.respawnCount??0)!==respawns||p.level!==plane||(s.sdk.getSkill('Hitpoints')?.level??0)<1;};
- const pickup=async(item:GroundItem):Promise<{success:boolean;telegrab:boolean;skipped?:boolean}>=>{
+ const basePickup=async(item:GroundItem):Promise<{success:boolean;telegrab:boolean;skipped?:boolean}>=>{
   if(!policy||item.reachable!==false)return{success:(await s.bot.pickupItem(item)).success,telegrab:false};
   if(busy||blocked)throw Error('Telegrab prior attempted outcome unresolved');
   const state=s.sdk.getState(),p=state?.player,fresh=state?.groundItems.find(i=>i.id===item.id&&i.x===item.x&&i.z===item.z&&i.count===item.count);
@@ -38,5 +39,15 @@ export function createCombatLoot(s:Session,policy?:TelegrabPolicy){
    blocked=false;console.log('COMBAT_TELEGRAB '+JSON.stringify({id:item.id,x:item.x,z:item.z,count:item.count,costs,xp:43*(policy.xpMultiplier??1),casts,tick:s.tick()}));return{success:true,telegrab:true};
   }finally{busy=false;}
  };
- return{pickup,get casts(){return casts;},runesUsed};
+ const alch=alchPolicy?createCombatAlch(s,alchPolicy):undefined;let alchPickupBlocked=false;
+ const pickup=async(item:GroundItem):Promise<{success:boolean;telegrab:boolean;skipped?:boolean;acquired?:number;alched?:number}>=>{
+  if(!alch)return basePickup(item);
+  if(alchPickupBlocked||alch.stopped())throw Error('owned loot alchemy stopped before pickup');alchPickupBlocked=true;
+  const before=combatAlchCounts(s.sdk.getInventory()),used={...runesUsed},reply=await basePickup(item);
+  const debit=Object.fromEntries(Object.entries(runesUsed).map(([id,n])=>[id,n-(used[+id]??0)])),paid=()=>combatLootReceipt(before,combatAlchCounts(s.sdk.getInventory()),item,debit);
+  if(reply.skipped){alchPickupBlocked=false;return reply;}
+  if(!await waitUntil(s,()=>alch.stopped()||paid(),{timeoutTicks:8})||alch.stopped()||!paid())throw Error('owned pickup whole-pack receipt unconfirmed; no alchemy');
+  const alched=await alch.afterPickup(item);alchPickupBlocked=false;return{...reply,success:true,acquired:item.count,alched};
+ };
+ return{pickup,get casts(){return casts;},runesUsed,alch};
 }
