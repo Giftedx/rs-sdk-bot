@@ -1,4 +1,4 @@
-import{runCows}from'./gather-combat';
+import{runCows,cowStopControl}from'./gather-combat';
 import{test,expect}from'bun:test';
 import{createCombatPotions,prepareCombatPotions,combatPrayerLoss,combatPotionSession,combatPotionRecovery}from'./microbot-combat-potions';
 function actor(mode='paid',id=125){
@@ -33,3 +33,12 @@ test('actual cow consumer stop after credited paid kill still banks all owned lo
 test('explicit stopped cleanup permits owned movement but refuses new attack/potion and never a new life',async()=>{const a=actor();let stopped=false;const view=combatPotionSession(a.s,()=>stopped,100);stopped=true;expect(()=>view.direct({type:'walk',x:1,z:1,reason:'outside cleanup'})).toThrow();await view.withCombatPotionCleanup(async()=>{expect(()=>view.direct({type:'interactNpc',npcIndex:7,optionIndex:2,reason:'new attack'})).toThrow('new paid');expect(()=>view.direct({type:'useInventoryItem',slot:0,optionIndex:1,reason:'new potion'})).toThrow('new paid');await view.direct({type:'walk',x:1,z:1,reason:'owned cleanup'});a.player.lifeId++;expect(()=>view.direct({type:'walk',x:1,z:1,reason:'new life'})).toThrow('original owner');});});
 
 test('generic recovery callback banks once after stop, parks unknown consumption, and never retries failed recovery',async()=>{for(const mode of ['known','unknown','foreign']){const a=actor();let stopped=false,banks=0,recovering=false;const scope=combatPotionSession(a.s,()=>stopped,100),recover=combatPotionRecovery(scope,()=>mode==='unknown',async()=>{banks++;if(mode==='foreign')a.player.lifeId++;await scope.direct({type:'walk',x:1,z:1,reason:'bounded bank recovery'});},active=>{recovering=active;});stopped=true;if(mode==='known'){await recover();await recover();expect(banks).toBe(1);}else{await expect(recover()).rejects.toThrow();if(mode==='foreign')await recover();expect(banks).toBe(mode==='unknown'?0:1);}expect(recovering).toBe(false);}});
+
+test('generic potion job owns the core stop callback until its bounded bank recovery settles',async()=>{
+ const a=actor(),control=cowStopControl('druid',()=>false,true),onStop=(control.options as {onStop?:(s:unknown,why:string)=>Promise<unknown>}).onStop;
+ expect(typeof onStop).toBe('function');const scope=combatPotionSession(a.s,control.stop,100);let banks=0;
+ const recover=combatPotionRecovery(scope,()=>false,async()=>{banks++;await scope.direct({type:'walk',x:1,z:1,reason:'owned stop bank recovery'});},()=>{});
+ await onStop!(a.s,'stop file');expect(control.stop()).toBe(true);expect(control.reason()).toBe('stop file');
+ expect(()=>scope.direct({type:'interactNpc',npcIndex:7,optionIndex:2,reason:'late attack'})).toThrow('original owner/life/stop');
+ await recover();await recover();expect(banks).toBe(1);await onStop!(a.s,'died');expect(control.reason()).toBe('stop file');
+});

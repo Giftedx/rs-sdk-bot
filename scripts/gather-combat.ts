@@ -57,11 +57,11 @@ export function guardCowWalker(base:PathDeps,safety:()=>string|null){
     return {deps,reason:check};
 }
 
-// The cow loop owns stop/death cleanup on every bank profile. Without onStop,
-// core finish closes the session while the bank retreat is still running.
-export function cowStopControl(target:string,stopFile:()=>boolean){
+// Workers with owned bank recovery retain the stop callback until cleanup ends.
+// Otherwise core finish can close the session during the bank retreat.
+export function cowStopControl(target:string,stopFile:()=>boolean,ownedRecovery=false){
     let reason:string|undefined;
-    const options=target==='cow'?{onStop:async(_s:unknown,why:string)=>{if(reason===undefined){reason=why;console.log(`COW_STOP_OWNER ${why}`);}}}:{};
+    const options=target==='cow'||ownedRecovery?{onStop:async(_s:unknown,why:string)=>{if(reason===undefined){reason=why;console.log(`${target==='cow'?'COW':'COMBAT'}_STOP_OWNER ${why}`);}}}:{};
     return {options,stop:()=>reason!==undefined||stopFile(),reason:()=>reason};
 }
 export const cowCredit=(gone:boolean,selectedXp:number,newDrops:readonly number[])=>gone&&selectedXp>0&&newDrops.length===3&&newDrops.every(n=>n>=1);
@@ -293,7 +293,7 @@ if (!botName) {
     process.exit(1);
 }
 
-const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)));
+const cowStop=cowStopControl(TARGET_KEY,()=>existsSync(resolve(import.meta.dir,'../.practice',`stop-${botName}`)),!!potionPolicy);
 let s = await openBot(botName,cowStop.options).catch(e => finish([], false, `login: ${String(e)}`));
 const potionScope=potionPolicy&&TARGET_KEY!=='cow'?combatPotionSession(s,cowStop.stop,CAP):undefined;if(potionScope)s=potionScope;
 if(TARGET_KEY==='cow'){
