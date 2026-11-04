@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793812186751,
+ "at": 1793816444110,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -130,6 +130,19 @@
    "role": "quests"
   },
   {
+   "account": "CoinCock",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2670,3306"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "coins for route supplies: Ardougne knights",
+   "role": "supply"
+  },
+  {
    "account": "PickpockDick",
    "script": "scripts/goldfarm.ts",
    "args": [],
@@ -208,6 +221,37 @@
    "standing": true,
    "repeat": true,
    "goal": "fire and earth runes from Betty",
+   "role": "supply"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/rune-bank-craft.ts",
+   "args": [
+    "99"
+   ],
+   "env": {
+    "CAP": "60000"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Runecraft 99 from 20022 banked rune essence",
+   "role": "runecraft"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
