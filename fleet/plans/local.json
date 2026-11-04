@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793816444110,
+ "at": 1793817053009,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -222,21 +222,6 @@
    "repeat": true,
    "goal": "fire and earth runes from Betty",
    "role": "supply"
-  },
-  {
-   "account": "Shaftsinker",
-   "script": "scripts/rune-bank-craft.ts",
-   "args": [
-    "99"
-   ],
-   "env": {
-    "CAP": "60000"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Runecraft 99 from 20022 banked rune essence",
-   "role": "runecraft"
   },
   {
    "account": "Ballspinner",
@@ -475,6 +460,22 @@
    "repeat": false,
    "goal": "run-vampire-mightyrod-shared-recovery [task-0617be17-b4bc-4e2b-ba09-53f71dc849c1]",
    "role": "combat"
+  },
+  {
+   "account": "Shaftsinker",
+   "script": "scripts/rune-bank-craft.ts",
+   "args": [
+    "--rune-opening"
+   ],
+   "env": {
+    "CAP": "2800",
+    "RUNE_STAGE_PURPOSE": "fresh",
+    "COORDINATOR_RUN_ID": "task-bb70f314-0705-45d9-b21b-474ed4ad33c0"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "ready99-opening [task-bb70f314-0705-45d9-b21b-474ed4ad33c0]",
+   "role": "runecraft"
   }
  ]
 }
