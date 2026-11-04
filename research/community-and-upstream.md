@@ -475,3 +475,33 @@ Not ranked because it is already in the plan: a us-east run host (Cairn's larges
 | Rehearse a record route's early segments on practice | confirmed; merged into change 3 |
 | Measure overlapping skills against standalone runs | not in this list: in-game method measurement for the in-game session; the contract already requires three matched runs per condition |
 | Deterministic qualified job transitions so a model outage does not stop proven chains | confirmed; change 2 |
+
+## 9. Further community sources
+
+Checked with `gh api` (forks of MaxBittker/rs-sdk with commits ahead of upstream, `gh search repos`, commit lists). No downloaded code was run.
+
+### 9.1 What to fold in
+
+| Source (license, commit) | What it holds | Local consumer | Decision | Check |
+|---|---|---|---|---|
+| [TestingPurposes/rs-stun-toolkit](https://github.com/TestingPurposes/rs-stun-toolkit) (MIT, `4e40de3d`) | 69 quest launchers with notes (`run-<quest>.share.md`: prerequisites, kit, sim ticks, limits); a browserless rev-289 client; an offline brain sim; a lockstep engine with seeded chaos switches; a navgrid with door tables | `scripts/generated/quest-<name>.ts`, `packages/practice/src/presets-*.ts` | adapt: port the quest logic into `quest-lib.ts`, one quest at a time; reject the client and engine overlay (they patch upstream files we pin) | a practice run per port, then the coverage row |
+| [UberMouse/rs-sdk](https://github.com/UberMouse/rs-sdk) (MIT, `9df2d4c9`) `wiki/quests/`, `wiki/training/` | 51 of 61 quests marked promoted; per-quest run times from a save; training floors per skill | quest scripts in the `named` stage; `haggis-boards.json` floors | adapt: read the page before fixing a failing quest | the quest's practice run |
+| [Spenny12/rs-sdk](https://github.com/Spenny12/rs-sdk) (MIT, `c257bd88`) `learnings/quest-route-combat.md` | A combat-quest order for a fresh account (Vampire Slayer, Priest in Peril, Waterfall, Merlin's Crystal, Holy Grail), dialogue lines, drained shops | Haggis route rehearsal | adapt as a cross-check | route rehearsal on practice |
+| [CraziedAres/rs-sdk](https://github.com/CraziedAres/rs-sdk) (MIT) `sdk/processing.ts`, `sdk/tick-clock.ts` | Item-on-item and drop helpers that send up to 5 actions per tick; spell periods (alchemy 5, superheat and enchant 3) | `research/xp-per-tick.md` | check first: our burst rules are in `xp-per-tick.md`; take only what is missing | a unit test against our tick model |
+| MaxBittker/rs-sdk upstream `42739f45`, `09679918` (MIT) | `42739f45`: the server checks that a used item is still in its slot before an item-on-X op, and clamps count-dialog input. `09679918`: 1 gp alchemy value on quest items an NPC gives again for free | our pin `db0cc51e` has neither | check whether the live server runs them before a plan depends on the old rules | a read-only live check |
+
+Rejected: `babaali131718-spec/rs2b0t-quest-forge` (no license, only an HTML page and generated commits: treat as a lure); `index-rs/LC-bankvalue`, `ineedbots/lc-headless` (no license); joshualparris, bogocat, Pursche forks (nothing we lack).
+
+### 9.2 Quest coverage the toolkit closes
+
+Our four quest folders with no script are all in the toolkit: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts` is the first port.
+
+**Claim:** `quest-tbwt.ts` completes Tai Bwo Wannai Trio in 1,462, 1,483 and 1,469 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_tbwt` (every skill 99), the practice server, `0e2ea7d1`. Evidence: `.practice/tbwt-port/run4.log`, `run5.log` (`RESULT ok qp=2`, "Congratulations! Quest complete!"). The toolkit reports 1,468-1,509 ticks in its lockstep sim at agility 60 and magic 50. Gap: not run live; at agility below 99 the log bridge and the stones drop the bot more often.
+
+### 9.3 Protocol rules from the toolkit guide that our docs do not state
+
+Their claims (`GUIDE.md` "Pitfalls and practices"), not checked here:
+
+- Op 1 on a door that is already open closes many doors again. Track door state before a click.
+- Withdraw-X requests sent in one tick can be merged by the server. Prefer the fixed bank buttons.
+- An opened door can swing onto the next tile, and static collision assumes it is closed.
