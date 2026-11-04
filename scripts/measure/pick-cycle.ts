@@ -30,7 +30,7 @@ try {
         if (hp() <= eatAt && countItems(s, FOOD) > 0) { if ((await s.bot.eatFood(FOOD)).success) eaten++; continue; }
         const npc = s.sdk.findNearbyNpc(TARGET, { reachable: true });
         if (!npc) { await waitTicks(s, 1); continue; }
-        // DIRECT=1: the leader's rhythm (Jackalopett1, recorded 2026-10-23): a pickpocket click every 2 ticks, sent
+        // DIRECT=1: the leader's rhythm (Jackalopett1, recorded): a pickpocket click every 2 ticks, sent
         // straight to the client. The server drops clicks that land in a stun, so no stun tracking is needed.
         if (process.env.DIRECT === '1') {
             const op = (npc as any).optionsWithIndex.find((o: any) => /pickpocket/i.test(o.text))!.opIndex;

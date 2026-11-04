@@ -20,7 +20,7 @@ try {
     if (!p || Math.max(Math.abs(p.worldX - BANK_SPOT.x), Math.abs(p.worldZ - 3300)) > 80) {
         await finish([s], false, `not in Ardougne (${p?.worldX},${p?.worldZ})`);
     }
-    // Up to 3 tries, as in goldfarm.ts: from the knights' spot the first walk can stop at a door (2026-10-23 live:
+    // Up to 3 tries, as in goldfarm.ts: from the knights' spot the first walk can stop at a door (live:
     // "cant_reach ... loc 376 - no route" and no trade).
     for (let i = 0; i < 3; i++) {
         const q = s.sdk.getState()?.player;
