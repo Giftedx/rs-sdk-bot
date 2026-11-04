@@ -1,7 +1,7 @@
 // Shares fleet state between the two machines through git, on the fleet-data branch in its own worktree
 // (.practice/fleet-data), never in the code checkout: pulls the other side's orders, receipts and snapshot, writes
-// this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn and skill levels of this
-// side's listed accounts from .practice/status, never practice bots or credentials), this side's claim
+// this side's bank snapshot (fleet/snapshots/<side>.json: name, server, bank, pack, worn, skill levels and completed quests of
+// this side's listed accounts from .practice/status, never practice bots or credentials), this side's claim
 // (fleet/claims/<side>.json: the knight spots, pens and shops the enabled jobs of this side's plan hold, SWARM_PLAN or
 // swarm.json merged with the coordinator's jobs, so other sides' planners stay off them) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
@@ -20,6 +20,7 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
     return { side, at: now, accounts: statuses.filter(s => typeof s?.name === 'string' && owners.get(s.name.toLowerCase())?.side === side && owners.get(s.name.toLowerCase())?.server === String(s.server).toLowerCase()).map(s => ({
         name: s.name, server: s.server, at: s.at, bank: rows(s.bank), inventory: rows(s.inventory), equipment: rows(s.equipment),
         skills: (s.skills ?? []).map((k: any) => ({ name: k.name, level: k.level })),
+        quests: (s.quests ?? []).filter((q: any) => q.state === 'complete').map((q: any) => q.name),
     })) };
 }
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
