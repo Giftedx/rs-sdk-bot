@@ -202,9 +202,19 @@ try {
         // 9. The Bedabin guard lets a player with the plans into the anvil tent (bedabin_nomad_guard.rs2:187-226).
         await q.talk('bedabin guard', /^bedabin nomad guard$/i, [], () => z() >= 3046, BED_GUARD, 30);
         // 10. A bar on the anvil (14; a failed roll wastes the bar), 10 feathers on the tip (15; a failed roll wastes them).
-        for (let i = 0; i < 3 && !q.has(ITEM.tip); i++) {
+        // The bar goes first and the roll lands about 8 ticks after "Yes" (quest_desertrescue.rs2:608-623), so each try waits
+        // for the tip or the waste message: a click sent while the forge runs burns another bar.
+        for (let i = 0; i < 5 && !q.has(ITEM.tip) && q.has(ITEM.bar); i++) {
             const t0 = q.s.tick();
-            await locTalk('anvil', () => q.useOnLoc(ITEM.bar, loc(ANVIL)), [/yes, i'd like to try/i], () => q.has(ITEM.tip) || msgSince(/waste the bronze bar/i, t0), 2, 60);
+            const rolled = () => q.has(ITEM.tip) || msgSince(/waste the bronze bar/i, t0);
+            await q.guard('anvil');
+            await closeDlg();
+            await q.useOnLoc(ITEM.bar, loc(ANVIL));
+            await q.waitUntil(() => q.dialogOpen() || rolled(), 15);
+            await q.converse([/yes, i'd like to try/i], () => !q.dialogOpen(), 20);
+            await q.waitUntil(rolled, 16);
+            await q.converse([], () => !q.dialogOpen(), 6);
+            console.log(`NOTE anvil try ${i + 1}: tip=${q.has(ITEM.tip)} bars=${q.cnt(ITEM.bar)}`);
         }
         if (!q.has(ITEM.tip)) await q.fail('no dart tip');
         q.milestone(14);
