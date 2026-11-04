@@ -1,15 +1,16 @@
 import {test,expect} from 'bun:test';
-import {runPrayer,planPrayer} from './train-prayer';
+import {runPrayer,planPrayer,prayerOptions,prayerBank} from './train-prayer';
 import {levelForXp,xpForLevel} from '../packages/planner/src/curve';
 import type {Session} from '../packages/core/src/inprocess';
 
-function fixture(options:{bones?:number;rawXp?:number;rate?:number;missingOption?:boolean;stalled?:boolean;stopAfter?:number;offFails?:boolean;queuedStopLateUi?:boolean;queuedStopAt?:number}={}){
+function fixture(options:{position?:{worldX:number;worldZ:number;level:number};bones?:number;rawXp?:number;rate?:number;missingOption?:boolean;stalled?:boolean;stopAfter?:number;offFails?:boolean;queuedStopLateUi?:boolean;queuedStopAt?:number}={}){
     let tick=0,rawXp=options.rawXp??0,generation=0,open=false,active=false,burials=0,requests=0,toggles=0,stopRequested=false,inFlight=false,lateUi=false,uiAt=Infinity,applyAt=Infinity,applyPending:(()=>void)|undefined,uiDismissals=0,blockedBankAttempts=0;
     const listeners=new Set<()=>void>(),queued:(()=>void)[]=[];
     const inventory:any[]=[{id:995,name:'Coins',count:178,slot:0},{id:333,name:'Trout',count:1,slot:1},{id:333,name:'Trout',count:1,slot:2},{id:946,name:'Knife',count:1,slot:3}];
     const equipment:any[]=[{id:1277,name:'Bronze sword',count:1,slot:3},{id:1171,name:'Wooden shield',count:1,slot:5}];
     const bank:any[]=[{id:526,name:'Bones',count:options.bones??222,slot:0},{id:527,name:'Bones',count:100,slot:1},{id:329,name:'Salmon',count:378,slot:2}];
-    const state=()=>({player:{worldX:2655,worldZ:3283,level:0,lifeId:1,respawnCount:0},bank:{isOpen:open,items:bank},dialog:{isOpen:lateUi,options:lateUi?[{index:1,text:'Continue'}]:[]},interface:{isOpen:open||lateUi},inventory,equipment,prayers:{activePrayers:Array.from({length:15},(_,i)=>i===14&&active),prayerPoints:Math.max(1,levelForXp(rawXp/10)),prayerLevel:levelForXp(rawXp/10)}});
+    const player={worldX:2655,worldZ:3283,level:0,...options.position,lifeId:1,respawnCount:0};
+    const state=()=>({player,bank:{isOpen:open,items:bank},dialog:{isOpen:lateUi,options:lateUi?[{index:1,text:'Continue'}]:[]},interface:{isOpen:open||lateUi},inventory,equipment,prayers:{activePrayers:Array.from({length:15},(_,i)=>i===14&&active),prayerPoints:Math.max(1,levelForXp(rawXp/10)),prayerLevel:levelForXp(rawXp/10)}});
     const timer=setInterval(()=>{tick++;if(tick>=applyAt){applyPending?.();applyAt=Infinity;inFlight=false;uiAt=tick+1;}if(tick>=uiAt){lateUi=true;uiAt=Infinity;}for(const q of queued.splice(0))q();for(const cb of listeners)cb();},1);
     const s={tick:()=>tick,onTick:(cb:()=>void)=>{listeners.add(cb);return()=>listeners.delete(cb);},ended:new Promise(()=>{}),
         bankObservation:()=>open?{generation,at:tick,items:bank}:null,
@@ -20,9 +21,37 @@ function fixture(options:{bones?:number;rawXp?:number;rate?:number;missingOption
             withdrawItem:async(item:any,n:number)=>{expect(item.id).toBe(526);item.count-=n;for(let i=0;i<n;i++)inventory.push({id:526,name:'Bones',count:1,slot:Math.max(...inventory.map(i=>i.slot),-1)+1,optionsWithIndex:options.missingOption?[]:[{text:'Bury',opIndex:1}]});generation++;return{success:true};},
             depositItem:async(item:any)=>{expect(item.id).toBe(526);const n=inventory.filter(i=>i.id===526).length;bank[0].count+=n;for(let i=inventory.length-1;i>=0;i--)if(inventory[i].id===526)inventory.splice(i,1);generation++;return{success:true};}}
     } as unknown as Session;
-    return{s,inventory,bank,equipment,rawXp:()=>rawXp,burials:()=>burials,toggles:()=>toggles,uiDismissals:()=>uiDismissals,blockedBankAttempts:()=>blockedBankAttempts,dispose:()=>clearInterval(timer),stop:()=>stopRequested||options.stopAfter!==undefined&&burials>=options.stopAfter};
+    return{s,player,inventory,bank,equipment,rawXp:()=>rawXp,burials:()=>burials,toggles:()=>toggles,uiDismissals:()=>uiDismissals,blockedBankAttempts:()=>blockedBankAttempts,dispose:()=>clearInterval(timer),stop:()=>stopRequested||options.stopAfter!==undefined&&burials>=options.stopAfter};
 }
 const options={cap:1500,maximum:175,reserve:6};
+test('CLI target is optional and existing43 callers retain their defaults',()=>{
+    expect(prayerOptions(['bun','script','any'],{})).toEqual({target:43,cap:1500,maximum:175,reserve:6});
+    expect(prayerOptions(['bun','script','Bigchopper','60'],{CAP:'5000',MAX_BURY:'600',BONE_RESERVE:'384'})).toEqual({target:60,cap:5000,maximum:600,reserve:384});
+    expect(prayerOptions(['bun','script','any'],{TARGET_LEVEL:'60'}).target).toBe(60);
+    expect(prayerBank({worldX:3237,worldZ:3296,level:0})).toEqual({x:3092,z:3243});
+    expect(()=>prayerBank({worldX:3237,worldZ:3296,level:1})).toThrow('unsupported ordinary bank entry');
+});
+test('ordinary entry uses bounded travel and requires observed bank arrival before spending',async()=>{
+    const f=fixture({rawXp:196000,position:{worldX:3237,worldZ:3296,level:0}});
+    try{let calls=0;const r=await runPrayer(f.s,options,async(s,points,cap,stop)=>{
+        calls++;expect(s).toBe(f.s);expect(cap).toBe(400);expect(stop()).toBe(false);expect(f.burials()).toBe(0);
+        expect(points.at(-1)).toEqual({x:3092,z:3243,tol:1});f.player.worldX=3092;f.player.worldZ=3243;return true;
+    });expect(calls).toBe(1);expect(r).toMatchObject({ok:true,buried:1,preserved:true});}finally{f.dispose();}
+});
+test('a travel success reply without arrival refuses with zero consumption',async()=>{
+    const f=fixture({position:{worldX:3237,worldZ:3296,level:0}});
+    try{const r=await runPrayer(f.s,options,async()=>true);expect(r.ok).toBe(false);expect(r.attempts).toBe(0);expect(r.failure).toContain('ordinary bank travel failed');}finally{f.dispose();}
+});
+test('Prayer60 demand uses the server curve and retains384 of973 owned bones',()=>{
+    expect(planPrayer(973,0,600,384,60)).toBe(589);
+    expect(planPrayer(973,xpForLevel(60),600,384,60)).toBe(0);
+});
+test('owned973bones reach60 with589 exact debits and384reserved',async()=>{
+    const f=fixture({bones:973});try{const r=await runPrayer(f.s,{target:60,cap:5000,maximum:600,reserve:384});expect(r).toMatchObject({ok:true,buried:589,consumed:589,boneBank:384,finalLevel:60,finalXp:66262,xpGain:66262,preserved:true,toggledOn:true,toggledOff:true});}finally{f.dispose();}
+});
+test('insufficient stock refuses before the first burial',async()=>{
+    const f=fixture({bones:972});try{const r=await runPrayer(f.s,{target:60,cap:5000,maximum:600,reserve:384});expect(r.ok).toBe(false);expect(r.buried).toBe(0);expect(r.preserved).toBe(true);expect(r.failure).toBe('no prayer progress: insufficient owned bones: need 589, available 588');}finally{f.dispose();}
+});
 test('stop during fourth queued Bury settles450XP, clears later Continue and banks all leftovers without a fifth Bury',async()=>{
     const f=fixture({queuedStopLateUi:true,queuedStopAt:4});try{const r=await runPrayer(f.s,{...options,stop:f.stop});expect(r).toMatchObject({ok:false,targetMet:false,buried:4,attempts:4,consumed:4,boneBank:218,heldBones:0,xpGain:450,preserved:true,stop:'stop-file'});expect(f.burials()).toBe(4);expect(f.rawXp()).toBe(4500);expect(f.uiDismissals()).toBe(1);expect(f.blockedBankAttempts()).toBe(1);}finally{f.dispose();}
 });

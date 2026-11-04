@@ -128,7 +128,7 @@ function authority(r:ControlledRecoveryRequest,base:string,options:Checks,issuin
  if(requestLease.pid!==taskOwner.pid||requestLease.runId!==r.runId||requestLease.nonce!==r.nonce)throw Error('recovery request lease changed');
  const end=Object.entries(json(join(base,'.practice/swarm-deaths.json'))).find(([a])=>same(a,r.account))?.[1] as any;
  const completed=successfulEnd(end?.reason??'');
- if(end?.at!==r.endedAt||!completed&&! /^(?:blocked|died|gave-up|exit|no-progress)(?:\b| )/.test(end.reason??''))throw Error('recovery exact failure changed');
+ if(end?.at!==r.endedAt||!completed&&! /^(?:blocked|died|gave-up|exit|no-progress|stopped)(?:\b| )/.test(end.reason??''))throw Error('recovery exact failure changed');
  const assignments=readMergedPlan(base).jobs.filter((j:any)=>(j.accounts??[j.account]).some((a:any)=>same(a,r.account)));
  if(assignments.some((j:any)=>j.enabled||!j.script||/fresh.clock|24 boards|main simultaneous/i.test(j.goal??'')))throw Error('recovery assignment is active or reserved');
  let missionRevision:string|undefined;
