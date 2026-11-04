@@ -63,6 +63,66 @@ test('installation checks every participant and the durable failed-script histor
  expect(readFileSync(path,'utf8')).toBe(JSON.stringify(plan));
 });
 
+test('a disabled owner job with a confirmed logout and no persistent end admits a new mission',()=>{
+ const f=fixture(),path=join(f.base,'swarm.json');
+ writeFileSync(path,JSON.stringify({maxBots:17,minFreeGB:0,jobs:[{account:'Rod',script:'old.ts',enabled:false,repeat:false}]}));
+ f.status('Rod',{result:'fail old work'});
+ f.attempt('Rod').record('ended','logged-out');
+ const task:any={id:'test',goal:'gear',account:'Rod'};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).not.toThrow();
+});
+
+test('a settled disabled helper can join a composed mission after its prior job failed',()=>{
+ const f=fixture(),path=join(f.base,'swarm.json');
+ const plan={maxBots:17,minFreeGB:0,jobs:[{account:'Partner',script:'old.ts',enabled:false,repeat:false}]};
+ writeFileSync(path,JSON.stringify(plan));
+ f.status('Partner',{result:'fail old work'});f.attempt('Partner').record('ended','logged-out');
+ const task:any={id:'test',goal:'specialists',participants:['Rod','Partner']};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).not.toThrow();
+ expect(readFileSync(path,'utf8')).toBe(JSON.stringify(plan));
+});
+
+for(const constraint of ['enabled','unspecified enabled','stop','persistent end','script hold','reservation','unfinished session','unconfirmed logout'])test('settled helper admission preserves '+constraint,()=>{
+ const f=fixture(),path=join(f.base,'swarm.json');
+ const job:any={account:'Partner',script:'old.ts',enabled:false,repeat:false};
+ f.status('Partner',{result:'fail old work'});f.attempt('Partner').record('ended','logged-out');
+ if(constraint==='enabled')job.enabled=true;
+ if(constraint==='unspecified enabled')delete job.enabled;
+ if(constraint==='stop')writeFileSync(join(f.base,'.practice/stop-Partner'),'owner');
+ if(constraint==='persistent end')writeFileSync(join(f.base,'.practice/swarm-deaths.json'),JSON.stringify({Partner:{at:1,reason:'gave-up after 1 runs'}}));
+ if(constraint==='script hold')writeFileSync(join(f.base,'.practice/swarm-script-holds.json'),JSON.stringify([{account:'Partner',script:'new.ts',at:1,reason:'blocked',heldAt:2}]));
+ if(constraint==='reservation')job.goal='fresh clock specialist';
+ if(constraint==='unfinished session')f.status('Partner',{result:'',at:Date.now()});
+ if(constraint==='unconfirmed logout')f.attempt('Partner');
+ const plan=JSON.stringify({maxBots:17,minFreeGB:0,jobs:[job]});writeFileSync(path,plan);
+ const task:any={id:'test',goal:'specialists',participants:['Rod','Partner']};
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).toThrow();
+ expect(readFileSync(path,'utf8')).toBe(plan);
+});
+
+test('composed admission reserves one process while retaining every account slot and the memory floor',()=>{
+ const f=fixture(),path=join(f.base,'swarm.json'),plan={maxBots:17,minFreeGB:4,jobs:[]};writeFileSync(path,JSON.stringify(plan));
+ const task:any={id:'test',goal:'skills',participants:['Crafter',...Array.from({length:16},(_,i)=>'Carrier'+i)]};
+ expect(()=>installJob(task,'Crafter','worker.ts','test','source',{}, {base:f.base,preflight:true,freeGB:6})).not.toThrow();
+ expect(()=>installJob(task,'Crafter','worker.ts','test','source',{}, {base:f.base,preflight:true,freeGB:4.5})).toThrow('live admission waiting: memory');
+ writeFileSync(path,JSON.stringify({...plan,maxBots:16}));
+ expect(()=>installJob(task,'Crafter','worker.ts','test','source',{}, {base:f.base,preflight:true,freeGB:64})).toThrow('live admission waiting: maxBots');
+ expect(JSON.parse(readFileSync(path,'utf8')).jobs).toEqual([]);
+});
+
+test('a persistent end or an enabled owner job still blocks that install',()=>{
+ const f=fixture(),path=join(f.base,'swarm.json');
+ writeFileSync(path,JSON.stringify({maxBots:17,minFreeGB:0,jobs:[{account:'Rod',script:'old.ts',enabled:false,repeat:false}]}));
+ f.status('Rod',{result:'fail old work'});
+ f.attempt('Rod').record('ended','logged-out');
+ const task:any={id:'test',goal:'gear',account:'Rod'};
+ writeFileSync(join(f.base,'.practice/swarm-deaths.json'),JSON.stringify({Rod:{at:1,reason:'gave-up after 1 runs'}}));
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).toThrow('account recovery needs a verified repair');
+ writeFileSync(join(f.base,'.practice/swarm-deaths.json'),JSON.stringify({}));
+ writeFileSync(path,JSON.stringify({maxBots:17,minFreeGB:0,jobs:[{account:'Rod',script:'old.ts',enabled:true,repeat:false}]}));
+ expect(()=>installJob(task,'Rod','new.ts','test','source',{},{base:f.base,preflight:true,freeGB:64})).toThrow('existing assignment is not confirmed complete');
+});
+
 test('an account with no producer attempts may start once its live status is 15 minutes old; repairs still need producer proof',()=>{
  const f=fixture(),now=Date.now();
  f.status('Rod',{result:'ok old work',at:now-14*60_000});expect(()=>liveLogoutRef('Rod',f.base,false,now)).toThrow('legacy');

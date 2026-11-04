@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { openBot, finish } from '../packages/core/src/bot';
 import { waitUntil } from '../packages/core/src/ticks';
 import { RECOVERY_SCRIPT, verifyNativeRecoveryProof } from '../packages/core/src/session-recovery-permit';
-import { workerSourceRevision } from '../packages/core/src/worker-release';
+import { launchRevision } from '../packages/core/src/worker-release';
 
 export const CAPABILITY = 'session-recovery-only';
 
@@ -21,7 +21,7 @@ export function verifyDelivery(directory: string, root = resolve(import.meta.dir
     const proof = JSON.parse(readFileSync(join(directory, 'proof.json'), 'utf8'));
     if (proof.capability !== CAPABILITY) throw new Error('session check: proof names another capability');
     const runnerSha256 = createHash('sha256').update(readFileSync(join(root, RECOVERY_SCRIPT))).digest('hex');
-    verifyNativeRecoveryProof(proof, directory, { runtimeRevision: workerSourceRevision(root), runnerSha256 });
+    verifyNativeRecoveryProof(proof, directory, { runtimeRevision: launchRevision(root), runnerSha256 });
     return true;
 }
 

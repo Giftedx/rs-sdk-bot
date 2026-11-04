@@ -138,6 +138,13 @@ Assumptions: members world, 25x XP rate, 99 = 998,458 XP, helpers supply all tra
 - XP lamps give level x 10 XP (`general/scripts/xplamp/xplamp.rs2:110-111`), but the lamp is `tradeable=no` (`general/configs/xplamp.obj:12`).
 - Big Chompy Bird Hunting: a one-time 750,000 ranged at **4,000 kills** (`quest_chompybird/scripts/chompy_bird.rs2:211-212`).
 
+## Content model per rung (`knowledge/ladders.json`)
+
+- Claim: the per-action model is an upper bound on measured XP per tick. Each of the six measured rates is below the model at the unlock level. Copper 26.35 of 31.49, man 19.33 of 32.55, guard 73.85 of 94.99 and knight 206.9 of 247.47 are 59-84% of the model. Air runes 177.6 of 675 and dragonstone 4,884.8 of 17,187.5 are 26% and 28%, because trade resupply takes most ticks.
+- Conditions: `modelXpPerTick` = `xpPerAction` x 25 / `ticksPerAction` at the unlock level, best tool usable at that level, no banking, walking, resupply, eating or level-up dialogs (`packages/knowledge/src/method-model.ts`).
+- Evidence: `knowledge/ladders.json` (`timing.src` per rung), `knowledge/rates.json`, `packages/knowledge/test/method-model.test.ts`.
+- Gap: combat ticks per kill (max hit and hit chance), agility lap ticks, Fishing Trawler catches. `knowledge/ladder-gaps.md` lists each missing fact.
+
 ## Open checks before you build on these numbers
 1. Measure the bank cycle (Herblore, Crafting) in game: ticks per 14 and per 27 actions.
 2. Test the login wine timer: noted deposit, then fire at tick 20 with no modal open.

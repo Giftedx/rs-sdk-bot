@@ -1,5 +1,12 @@
 import {exitRuneTower} from './rune-mysteries-route';
 
+export function retainedGhostSkull(state:string,pack:readonly {id:number;count:number}[],worn:readonly {id:number;count:number}[]){
+ return state==='started'&&pack.filter(i=>i.id===553).reduce((n,i)=>n+i.count,0)===1&&worn.some(i=>i.id===552&&i.count===1);
+}
+export function retainedGhostBankSkull(state:string,pack:readonly {id:number;count:number}[],worn:readonly {id:number;count:number}[],bank:readonly {id:number;count:number}[]){
+ return state==='started'&&!pack.some(i=>i.id===553&&i.count>0)&&worn.some(i=>i.id===552&&i.count===1)&&bank.some(i=>i.id===553&&i.count>0);
+}
+
 type Position={worldX:number;worldZ:number;level:number};
 export interface GhostBasementExit {
  pos:()=>Position|null|undefined;

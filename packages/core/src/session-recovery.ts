@@ -5,7 +5,7 @@ import {connectInProcess,clientTransportState,observeClientTransport,inProcessRu
 import {logoutSession,closeWithin,serverFromEnv} from './bot';
 import {isLocalServer} from './localserver';
 import {readLogoutProof,listAttempts} from './session-lifecycle';
-import {workerSourceRevision} from './worker-release';
+import {launchRevision} from './worker-release';
 import {waitUntil} from './ticks';
 
 import {RECOVERY_SCHEMA,RECOVERY_SCRIPT,validateRecoveryRequest,recoveryStatePreserved,consumeRecoveryConnection,spendRecoveryConnection,recoveryPermitPaths,waitForRecoveryChildBinding,assertNativeFixtureRoot,assertRecoveryNotStopped,FLEET_REFUSALS,type RecoveryRequest,type ControlledRecoveryRequest,type RecoveryConnectionAdmission} from './session-recovery-permit';
@@ -258,8 +258,8 @@ async function cli(){
  const controlled='kind' in request&&request.kind==='session-recovery';
  // Only a controller-issued, native-qualified permit admits a nonlocal connection.
  await recoveryBoundary('remote-authority',()=>{if(!controlled&&!isLocalServer(request.server))throw Error('live authenticated recovery is not qualified; no connection attempted');});
- await recoveryBoundary('source',()=>{if(request.source!==workerSourceRevision())throw Error('recovery source changed');});
- process.env.BOT_GOAL=RECOVERY_SCRIPT;process.env.BOT_ROLE='recovery';process.env.COORDINATOR_RUN_ID=request.runId;process.env.WORKER_RELEASE=request.source;
+ await recoveryBoundary('source',()=>{if(request.source!==launchRevision())throw Error('recovery source changed');});
+ process.env.BOT_GOAL=RECOVERY_SCRIPT;process.env.BOT_ROLE='recovery';process.env.COORDINATOR_RUN_ID=request.runId;process.env.WORKER_RELEASE=request.source;delete process.env.WORKER_ENTRY;
  let guard=()=>assertRecoveryNotStopped(request.account,repo),admission:RecoveryConnectionAdmission|undefined;
  let lifecycleRoot=join(repo,'.practice/session-lifecycle');
  if(controlled){
@@ -272,7 +272,7 @@ async function cli(){
   await recoveryBoundary('child-binding',()=>waitForRecoveryChildBinding(request as ControlledRecoveryRequest,base,Bun.stdin.stream()));
   const permit=await recoveryBoundary('permit-read',()=>JSON.parse(readFileSync(paths.permit,'utf8')));
   await recoveryBoundary('fixture-root',()=>{if(permit.nativeFixture===true){assertNativeFixtureRoot(base,request.server);lifecycleRoot=join(base,'.practice/session-lifecycle');}});
-  ({guard,admission}=await recoveryBoundary('permit-consumption',()=>consumeRecoveryConnection(request as ControlledRecoveryRequest,base,{source:()=>workerSourceRevision(),nativeFixture:permit.nativeFixture===true})));
+  ({guard,admission}=await recoveryBoundary('permit-consumption',()=>consumeRecoveryConnection(request as ControlledRecoveryRequest,base,{source:()=>launchRevision(),nativeFixture:permit.nativeFixture===true})));
  }
  await recoveryBoundary('stop',guard);
  const env=await recoveryBoundary('credentials-read',()=>readFileSync(join(repo,'vendor/rs-sdk/bots',request.account,'bot.env'),'utf8'));
