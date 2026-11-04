@@ -1,5 +1,5 @@
 // Keeps a live bot run going: restarts it when it ends without "RESULT ok", stops for good on a stop file, a death
-// no progress or too many failures in a row. Live runs were lost on 2026-10-23 to tick caps, a stop-and-restart by hand, and
+// no progress or too many failures in a row. Live runs were lost to tick caps, a stop-and-restart by hand, and
 // Claude Code ending background jobs. Each restart logs in again, so it costs a few playtime ticks.
 // CLI: bun packages/practice/src/supervise.ts <bot> <script> [maxRestarts=20] [scriptArgs...] (env passes through)
 

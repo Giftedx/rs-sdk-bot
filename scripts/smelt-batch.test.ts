@@ -49,10 +49,78 @@ test('Varrock entry pays the observed toll and includes travel in asset reconcil
  g.s.sdk.sendInteractNpc=async()=>{dialog=true;return{success:true};};
  g.s.sdk.getDialog=()=>dialog?{isOpen:true,isWaiting:false,options:[{text:'Yes, ok.',index:3}]}:null;
  g.s.sdk.clickDialogByText=async()=>{const coins=g.held().filter(i=>i.id===995);expect(coins.length).toBe(10);for(const coin of coins)g.held().splice(g.held().indexOf(coin),1);dialog=false;paid=true;p.worldX=3268;p.worldZ=3227;return{success:true};};
- const points:number[][]=[];
- try{const r=await runSmeltBatch(g.s,{bar:'iron',cap:500,maximum:6,reserve:1,mode:'exact'},{walk:async(x,z)=>{points.push([x,z]);return g.walk(x,z);}});
+ const points:number[][]=[],retries:number[][]=[];let first=true;
+ try{const r=await runSmeltBatch(g.s,{bar:'iron',cap:500,maximum:6,reserve:1,mode:'exact'},{walk:async(x,z)=>{points.push([x,z]);if(first){first=false;throw Error('transient corridor plan');}return g.walk(x,z);},recover:async(x,z)=>{retries.push([x,z]);return g.walk(x,z);}});
   expect(r).toMatchObject({ok:true,made:6,banked:6,consumedOre:8,losses:2,coinsSpent:10,initialCoins:24,finalCoins:14,conserved:true,entry:'varrock-east-toll'});
-  expect(paid).toBe(true);expect(points).toContainEqual([3295,3370]);expect(points).toContainEqual([3266,3227]);
+  expect(paid).toBe(true);expect(points).toContainEqual([3308,3370]);expect(points).toContainEqual([3266,3227]);
+  expect(retries).toEqual([[3290,3404]]);
+ }finally{g.stop();}
+});
+
+test('a failed entry point retries once from observed position, then retreats with coins accounted',async()=>{
+ const g=fake('iron',[{id:440,count:30},{id:995,count:24}]);
+ const p=g.s.sdk.getState().player;p.worldX=3252;p.worldZ=3420;
+ const recovered:number[][]=[];let calls=0;
+ try{
+  const r=await runSmeltBatch(g.s,{bar:'iron',cap:500,maximum:6,reserve:1,mode:'exact'},{
+   walk:async(x,z)=>{calls++;if(calls===1)return g.walk(x,z);return false;},
+   recover:async(x:number,z:number)=>{recovered.push([x,z]);return recovered.length===1?false:g.walk(x,z);},
+  });
+  expect(recovered[0]).toEqual([3308,3404]);
+  expect(recovered.at(-1)).toEqual([3252,3420]);
+  expect(r).toMatchObject({ok:false,attempts:0,initialCoins:24,finalCoins:24,coinsSpent:0,conserved:true});
+  expect(r.failure).toContain('entry corridor incomplete');
+  expect(p).toMatchObject({worldX:3252,worldZ:3420});
+ }finally{g.stop();}
+});
+
+test('entry failure without a final bank still retains the observed bank coins in the ledger',async()=>{
+ const g=fake('iron',[{id:440,count:30},{id:995,count:24}]);
+ const p=g.s.sdk.getState().player;p.worldX=3252;p.worldZ=3420;
+ try{
+  const r=await runSmeltBatch(g.s,{bar:'iron',cap:500,maximum:6,reserve:1,mode:'exact'},{walk:async()=>{p.worldX=3290;p.worldZ=3404;return false;},recover:async()=>false});
+  expect(g.s.bankObservation()).toBeNull();
+  expect(r).toMatchObject({ok:false,attempts:0,banked:null,initialCoins:24,finalCoins:24,coinsSpent:0,conserved:true});
+ }finally{g.stop();}
+});
+
+test('every worker leg plans to within one tile on the pinned collision map, outside the spiders reach',async()=>{
+ const pf:any=await import('../vendor/rs-sdk/sdk/pathfinding'),{smeltEntryRoute,SPIDER_REACH:r}=await import('../packages/planner/src/travel');
+ pf.initPathfinding();
+ const d8=(a:{x:number;z:number},b:{x:number;z:number})=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
+ const tiles=(a:number[][])=>a.map(([x,z])=>({x:x!,z:z!}));
+ const exposed=(t:{x:number;z:number})=>t.x>=r.minX-r.huntRange&&t.x<=r.maxX+r.huntRange&&t.z>=r.minZ-r.huntRange&&t.z<=r.maxZ+r.huntRange;
+ const chains=[
+  [{x:3252,z:3420},...smeltEntryRoute({worldX:3252,worldZ:3420,level:0}).points],
+  tiles([[3268,3227],[3272,3227],[3275,3212],[3273,3194],[3269,3167],[3274,3186],[3269,3167]]),
+  tiles([[3269,3167],[3269,3167]]),
+ ];
+ const walked:{x:number;z:number}[]=[];
+ for(const chain of chains){let at=chain[0]!;for(const goal of chain.slice(1)){
+  const path:{x:number;z:number}[]=pf.findLongPath(0,at.x,at.z,goal.x,goal.z,500),end=path.at(-1)??at;
+  // Corners are joined by straight or diagonal steps.
+  for(const c of path){const n=d8(at,c);for(let k=1;k<=n;k++)walked.push({x:at.x+Math.sign(c.x-at.x)*k,z:at.z+Math.sign(c.z-at.z)*k});at={x:c.x,z:c.z};}
+  expect({goal,near:d8(end,goal)<=1}).toEqual({goal,near:true});at={x:end.x,z:end.z};
+ }}
+ expect(walked.length).toBeGreaterThan(100);expect(walked.filter(exposed)).toEqual([]);
+},60000);
+
+test('a failed walk east of the paid gate banks at Al Kharid instead of paying to retreat west',async()=>{
+ const g=fake('iron',[{id:440,count:30},{id:995,count:24}]);
+ const p=g.s.sdk.getState().player;p.worldX=3252;p.worldZ=3420;
+ let dialog=false;
+ g.s.sdk.getNearbyNpcs=()=>[{id:925,index:1,distance:1}];
+ g.s.sdk.sendInteractNpc=async()=>{dialog=true;return{success:true};};
+ g.s.sdk.getDialog=()=>dialog?{isOpen:true,isWaiting:false,options:[{text:'Yes, ok.',index:3}]}:null;
+ g.s.sdk.clickDialogByText=async()=>{for(const coin of g.held().filter(i=>i.id===995))g.held().splice(g.held().indexOf(coin),1);dialog=false;p.worldX=3268;p.worldZ=3227;return{success:true};};
+ const walks:number[][]=[],recovered:number[][]=[];
+ try{const r=await runSmeltBatch(g.s,{bar:'iron',cap:500,maximum:6,reserve:1,mode:'exact'},{
+   walk:async(x,z)=>{walks.push([x,z]);return x===3272&&z===3227?false:g.walk(x,z);},
+   recover:async(x,z)=>{recovered.push([x,z]);return g.walk(x,z);}});
+  expect(r).toMatchObject({ok:false,made:0,attempts:0,banked:0,coinsSpent:10,initialCoins:24,finalCoins:14,conserved:true});
+  expect(r.failure).toContain('destination corridor incomplete');expect(r.failure).not.toContain('final bank');
+  expect(recovered).toEqual([]);expect(walks.at(-1)).toEqual([3269,3167]);expect(p).toMatchObject({worldX:3269,worldZ:3167});
+  expect(g.bank.find(i=>i.id===995)?.count).toBe(14);expect(g.bank.find(i=>i.id===440)?.count).toBe(30);
  }finally{g.stop();}
 });
 

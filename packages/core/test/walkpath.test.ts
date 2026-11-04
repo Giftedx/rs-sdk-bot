@@ -279,7 +279,7 @@ test('empty-planner straight fallback cannot assume a blocked wall anchor is saf
     expect(r.ok).toBe(false);expect(r.ticks).toBe(0);expect(w.inputs).toHaveLength(0);
 });
 
-// Ardougne knight house, pinned findLongPath output (2026-10-28). Door 1530 at 2650,3305 has its wall on the
+// Ardougne knight house, pinned findLongPath output. Door 1530 at 2650,3305 has its wall on the
 // south edge, so the room tiles 2650,3304 and 2651,3304 leave only through it. Each path folds back past the
 // door, so several later tiles are as near as the door tile itself.
 const HOUSE_CORNERS: Record<string, { x: number; z: number }[]> = {

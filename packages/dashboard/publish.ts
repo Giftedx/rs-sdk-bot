@@ -13,7 +13,7 @@
 import {existsSync,mkdirSync,readdirSync,readFileSync,writeFileSync,renameSync,rmSync,cpSync,openSync,closeSync} from 'node:fs';
 import {join,resolve} from 'node:path';
 import {spawn} from 'node:child_process';
-import {controlView,publicView,withSides,MAIN_ACCOUNT} from './publish-relay';
+import {controlView,publicView,stateWarm,withSides,MAIN_ACCOUNT} from './publish-relay';
 import {FLEET_WORKTREE,loadOwners} from '../core/src/fleet';
 import {validateCommand,authorizeCommand,applyCommand,receiptPath,writeReceipt,ACTIONS,ID_RE,MAX_AGE_MS} from './publish-commands';
 
@@ -144,7 +144,7 @@ async function pollCommands(now:number,nonce:string|null):Promise<number>{
  return applied;
 }
 
-let lastSitePush=0,lastPublic='',lastControl='';
+let lastSitePush=0,lastPublic='',lastControl='',coldSince=0;
 async function cycle(){
  const now=Date.now();
  let {state,meta,map}=await collect();
@@ -160,7 +160,10 @@ async function cycle(){
  if(REPO){
   const main=join(DIR,'repo');
   if(control!==lastControl){writeAtomic(join(DIR,'data','control.json'),control);note+=` data=${pushSingleCommit(join(DIR,'data'),'data','fleet control state')}`;lastControl=control;}
-  if(pub!==lastPublic&&now-lastSitePush>=PUBLIC_MS){
+  // A server that has just started has no market prices or board tops yet; that thin file would stay live for a
+  // whole push period, so the push waits for a warm state, at most three periods from the first cold cycle.
+  const warm=stateWarm(state);if(warm)coldSince=0;else if(!coldSince)coldSince=now;
+  if(pub!==lastPublic&&now-lastSitePush>=PUBLIC_MS&&(warm||now-coldSince>=3*PUBLIC_MS)){
    const site=join(DIR,'site');
    for(const n of readdirSync(site))if(n!=='.git')rmSync(join(site,n),{recursive:true,force:true});
    if(existsSync(join(main,'site')))cpSync(join(main,'site'),site,{recursive:true});

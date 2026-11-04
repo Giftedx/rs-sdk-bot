@@ -1,14 +1,23 @@
 {
   "id": "ge-bulk-order",
-  "goal": "Buy an exact quantity of one item through the GE with an owned funded actor, within a limit price and a cash reserve. Bank the filled items, refund any unfilled part, reconcile coins and items against the journal, and confirm logout. A rerun with the same order key must resume, not buy a second time.",
+  "goal": "Buy or produce an exact bounded owned item order through the existing buyer CLI, reconcile declared costs and assets, and confirm logout.",
   "entry": "scripts/buy-owned-ge-item.ts",
   "files": [
     "scripts/buy-owned-ge-item.ts",
     "scripts/buy-owned-ge-item.test.ts",
     "packages/practice/src/ge-bulk-order-proof.ts",
-    "packages/practice/test/ge-bulk-order-proof.test.ts"
+    "packages/practice/test/ge-bulk-order-proof.test.ts",
+    "packages/core/src/trip.ts",
+    "packages/core/test/trip.test.ts",
+    "scripts/courier-route.ts",
+    "scripts/earth-shop.ts",
+    "scripts/earth-shop.test.ts",
+    "scripts/earth-production.ts",
+    "scripts/earth-production.test.ts",
+    "packages/practice/src/shop-supply-order-proof.ts",
+    "packages/practice/test/shop-supply-order-proof.test.ts"
   ],
-  "consumer": "The buyer's saved bank shows the exact purchased quantity of the item (for example grapes 1987 or jug of water 1937). Coins went down by no more than quantity x limit. The reserve is kept and the logout is clean. Those stock rows are the input for wine-order staging.",
+  "consumer": "Preserve existing ordinary GE entry, authorized rescue, law-rune and Earth top-up consumers. For the connected Haggis Earth order, OreElse acquires and banks both actual talismans1438/1440, buys at most500 essence within36000 coins, then crafts to1139 banked Earth557 while retaining1482 Fire554 and30000 coins. Existing run-earth-oreelse-own-talismans, run-ge-oreelse-earth-input500 and run-earth-oreelse-owned-craft1139 own those finite live steps. Practice invokes the actual buyer CLI for a bounded two-kill hunt and useful crafting. Check assets, a clear refusal and logout. Native hunt proof does not promise random talisman drops. Preserve existing consumer acceptance and journal compatibility.",
   "checks": [
     {
       "id": "ge-bulk-regressions",
@@ -18,6 +27,10 @@
         "test",
         "scripts/buy-owned-ge-item.test.ts",
         "packages/practice/test/ge-bulk-order-proof.test.ts",
+        "packages/core/test/trip.test.ts",
+        "scripts/earth-shop.test.ts",
+        "scripts/earth-production.test.ts",
+        "packages/practice/test/shop-supply-order-proof.test.ts",
         "--timeout",
         "10000"
       ],
