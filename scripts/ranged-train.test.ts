@@ -1,5 +1,5 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart,openShopWithDoor} from './ranged-train';
 import * as walking from '../packages/core/src/walk';
 import * as bot from '../packages/core/src/bot';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
@@ -97,6 +97,19 @@ test('recovery runs only off a supported entry or with the bow or quiver worn',(
  expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:1},[])).toBe(true);
  expect(needsRangedRecovery({worldX:3254,worldZ:3420,level:0},[841,884])).toBe(true);
 });
+test('bones another player takes lose only the item; the kill and accounting stand',async()=>{
+ const f=trainingFixture(['kill','kill'],false,false,false,'bones-taken');
+ try{const r=await f.run();expect(r).toMatchObject({ok:true,targetMet:true,kills:2,bonesPicked:0,chickenPicked:2,accounting:true,preserved:true});}finally{f.close();}
+});
+test('a shut shop door is opened once before the keeper is asked again',async()=>{
+ const run=async(shopResults:boolean[],door:boolean)=>{const calls:string[]=[];
+  const bot={openShop:async()=>{calls.push('shop');return{success:shopResults.shift()??false};},openDoor:async()=>{calls.push('door');return{success:door};}};
+  return{ok:await openShopWithDoor(bot,/^lowe$/i,async()=>true),calls};};
+ expect(await run([true],true)).toEqual({ok:true,calls:['shop']});
+ expect(await run([false,true],true)).toEqual({ok:true,calls:['shop','door','shop']});
+ expect(await run([false,false],true)).toEqual({ok:false,calls:['shop','door','shop']});
+ expect(await run([false],false)).toEqual({ok:false,calls:['shop','door']});
+});
 test('the recovery walk plans with no Magic, items, worn gear or coins, so it can spend nothing',()=>{
  const w=recoveryWalker({skills:{magic:55,ranged:70},varps:{a:1},items:['law_rune'],counts:{law_rune:9},worn:['staff_of_air'],coins:90000});
  expect(w).toEqual({skills:{magic:0,ranged:70},varps:{a:1},items:[],counts:{},worn:[],coins:0});
@@ -128,7 +141,7 @@ test('a stop during the recovery walk aborts the route and skips the unwield',as
 });
 
 // Only travel is stubbed. The worker observes tick, XP, target, loot and bank effects.
-function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'){
+function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],catherby=false,upgrade=false,underground=false,ammoRace?:'foreign'|'own-missing'|'bones-taken'){
  type Item={id:number;name:string;count:number};
  const item=(id:number,count:number):Item=>({id,name:id===995?'Coins':id===1985?'Cheese':String(id),count});
  let tick=0,xp=0,level=7,generation=0,trip=0,active=-1,attempt=0,firstAttack=0,respawnAt:number|undefined;
@@ -171,7 +184,7 @@ function trainingFixture(outcomes:('lost'|'kill'|'retry'|'stalled'|'noloot')[],c
     if(outcomes[active]==='noloot'&&attempt===1){xp+=300;state.nearbyNpcs=[];respawnAt=tick+3;}
     if(outcomes[active]==='kill'||outcomes[active]==='retry'&&attempt===4||outcomes[active]==='noloot'&&attempt===2)kill();
     return{success:true};},
-   pickupItem:async(i:Item)=>{if(!(ammoRace==='own-missing'&&i.id===882))add(pack,i.id,i.count);state.groundItems=state.groundItems.filter((g:Item)=>g!==i&&!(ammoRace==='foreign'&&i.id===882&&g.id===884));}},
+   pickupItem:async(i:Item)=>{if(!(ammoRace==='own-missing'&&i.id===882)&&!(ammoRace==='bones-taken'&&i.id===526))add(pack,i.id,i.count);state.groundItems=state.groundItems.filter((g:Item)=>g!==i&&!(ammoRace==='foreign'&&i.id===882&&g.id===884));}},
  }as unknown as Session;
  const walker=spyOn(walking,'sessionWalker').mockImplementation(async()=>({} as any));
  const planner=spyOn(trips,'planTripOffThread').mockImplementation(async(from,to)=>({cost:1,legs:from.x===to.x&&from.z===to.z?[]:[{kind:'travel',to,travel:{coins:30,runes:[],needs:[]}}]} as any));

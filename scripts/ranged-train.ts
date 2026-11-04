@@ -48,6 +48,13 @@ export function rangedEntry(p:{worldX:number;worldZ:number;level:number}|null|un
  return null;
 }
 export function preparationFunds(total:number,spent:number,maxSpend:number,reserve:number){return Math.max(0,Math.min(maxSpend-spent,total-reserve));}
+// A shut shop door leaves the keeper unroutable: the client reports cant_reach and sends nothing. Open the nearest
+// door once and ask again; a second refusal stays a failure.
+export async function openShopWithDoor(bot:{openShop(t:RegExp):Promise<{success:boolean}>;openDoor(t?:RegExp):Promise<{success:boolean}>},keeper:RegExp,opened:()=>Promise<boolean>){
+ if((await bot.openShop(keeper)).success&&await opened())return true;
+ if(!(await bot.openDoor(/door/i)).success)return false;
+ return (await bot.openShop(keeper)).success&&await opened();
+}
 // Units for one shop packet group within the remaining budget; the margin covers price rise as stock falls.
 export function buyChunk(want:number,stock:number,unitPrice:number,budget:number,wallet:number,reserve:number){
  if(![want,stock,unitPrice,budget,wallet,reserve].every(Number.isFinite)||unitPrice<=0)return 0;
@@ -81,6 +88,9 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  if(originalEquipment.some(id=>BOW_IDS.includes(id)||ARROW_IDS.includes(id)))throw Error('ranged-train prerequisite: bow and arrows must start unequipped');
  let ended=false,died=false,cleanup=false,armed=false,lastAmmo=0,hpMin=hp(),kills=0,trips=0,eaten=0,picked=0,shots=0,bought=0,coinsSpent=0,coinsWithdrawn=0,shopVisits=0,failure='',stop='cap';
  let bowUsed=0,arrowUsed=0,foodId=o.foodId,foodBought=0,foodSpent=0,travelSpent=0;let bankReady=false;
+ // Bones and raw chicken are by-products: the kill is already credited on XP and the loot drop, so a pickup another
+ // player wins or that misses its window loses only the item. Accounting counts what was actually picked up.
+ let bonesPicked=0,chickenPicked=0;
  const foodConsumed:Record<number,number>={},foodPurchases:Record<number,number>={};
  void s.ended.then(()=>{ended=true;});
  const off=s.onTick(()=>{const p=st()?.player;hpMin=Math.min(hpMin,hp());if(armed){const a=sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS);shots+=Math.max(0,lastAmmo-a);lastAmmo=a;}
@@ -146,7 +156,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
   const funds=Math.min(stored(COINS),preparationFunds(sum(owned(),[COINS]),coinsSpent,o.maxSpend,o.coinReserve));if(funds<=0)return;
   const before=coins();await withdraw(COINS,funds);coinsWithdrawn+=coins()-before;await close();
   shopVisits++;await walk([{...LOWE,tol:2}]);
-  if(!(await s.bot.openShop(/^lowe$/i)).success||!await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10}))throw Error('ranged-train Lowe shop unavailable');
+  if(!await openShopWithDoor(s.bot,/^lowe$/i,()=>waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10})))throw Error('ranged-train Lowe shop unavailable');
   let got=0;
   for(let round=0;round<30&&got<wanted&&!over();round++){
    const shelf=st()?.shop?.shopItems.find(i=>i.id===arrow.id);if(!shelf)throw Error('ranged-train Lowe stock line missing '+arrow.id);
@@ -217,7 +227,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
      if(s.tick()-lastProgress>120)throw Error('ranged-train combat/credit stalled');await waitTicks(s,1);
     }
     if(!credited){lostTargets++;continue;}
-    await pickup(BONES,x,z);await pickup(CHICKEN,x,z);kills++;tripKills++;lastProgress=s.tick();
+    bonesPicked+=await pickup(BONES,x,z,false);chickenPicked+=await pickup(CHICKEN,x,z,false);kills++;tripKills++;lastProgress=s.tick();
     if(ground().some(i=>i.id===FEATHER&&i.x===x&&i.z===z))await pickup(FEATHER,x,z,false);
     for(const item of ground().filter(i=>i.id===arrow.id&&i.distance<=7&&i.x>=3220&&i.x<=3248&&i.z>=3280&&i.z<=3310).slice(0,4))picked+=await pickup(item.id,item.x,item.z,false);
     console.log('RANGED_TRAIN_KILL '+JSON.stringify({kills,level:level(),xp:xp()-startXp,ammo:sum(inv(),ARROW_IDS)+sum(eq(),ARROW_IDS),picked,hp:hp(),tick:s.tick()}));
@@ -248,10 +258,10 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
  const loot=new Set([BONES,CHICKEN,FEATHER,329,333,1985,COINS,...ARROW_IDS]);
  const preserved=!!initial&&[...new Set([...initial.map(i=>i.id),...final.map(i=>i.id)])].every(id=>loot.has(id)||total(initial,id)===total(final,id));
  const equipmentRestored=JSON.stringify(eq().map(i=>i.id).sort())===JSON.stringify([...originalEquipment].sort());
- const accounting=!!initial&&arrows.ok&&coinDebit===coinsSpent&&coinsSpent<=o.maxSpend&&total(final,COINS)>=o.coinReserve&&[329,333,1985].every(id=>total(final,id)===total(initial,id)+(foodPurchases[id]??0)-(foodConsumed[id]??0))&&total(final,BONES)-total(initial,BONES)===kills&&total(final,CHICKEN)-total(initial,CHICKEN)===kills;
+ const accounting=!!initial&&arrows.ok&&coinDebit===coinsSpent&&coinsSpent<=o.maxSpend&&total(final,COINS)>=o.coinReserve&&[329,333,1985].every(id=>total(final,id)===total(initial,id)+(foodPurchases[id]??0)-(foodConsumed[id]??0))&&total(final,BONES)-total(initial,BONES)===bonesPicked&&total(final,CHICKEN)-total(initial,CHICKEN)===chickenPicked;
  const targetMet=level()>=o.target;
  return{ok:!failure&&!died&&!ended&&targetMet&&preserved&&accounting&&equipmentRestored,targetMet,stop,targetLevel:o.target,startLevel,finalLevel:level(),xpGain:xp()-startXp,
-  bow:bowUsed,arrow:arrowUsed,trips,kills,shots,picked,arrowsSpent:arrows.spent,arrowsBought:bought,coinsSpent,coinDebit,foodId,foodBought,foodSpent,foodPurchases,foodConsumed,travelSpent,shopVisits,eaten,hpMin,hp:hp(),died,
+  bow:bowUsed,arrow:arrowUsed,trips,kills,bonesPicked,chickenPicked,shots,picked,arrowsSpent:arrows.spent,arrowsBought:bought,coinsSpent,coinDebit,foodId,foodBought,foodSpent,foodPurchases,foodConsumed,travelSpent,shopVisits,eaten,hpMin,hp:hp(),died,
   ticks:s.tick()-start,preserved,accounting,equipmentRestored,failure:failure||'-'};
 }
 // A disconnect mid-trip leaves the account on the route or in the coop with the bow and quiver worn. Walk back to

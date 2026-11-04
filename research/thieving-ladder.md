@@ -117,4 +117,4 @@ writes it. It is a temporary varp (not saved), so a relog clears it.
 - Thieving boosts: only the poison chalice (+1, random). Trapped chests near the market (50 coins at 2671,3299
   level 1, 3,125 XP, respawn 150; castle chests at 2588,3291 and 2588,3302 level 1, 12,500 XP, respawn 800):
   side income only.
-- Inside a stun the bot can still eat (kept).
+- Inside a stun the bot can still eat, but each eat adds 3 ticks to `%action_delay` (`consume.rs2:129-130`), so the eat costs pick time.

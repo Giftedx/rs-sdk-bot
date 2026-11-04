@@ -494,11 +494,13 @@ Rejected: `babaali131718-spec/rs2b0t-quest-forge` (no license, only an HTML page
 
 ### 9.2 Quest coverage the toolkit closes
 
-The toolkit holds four quests our folders lacked: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts` and `quest-itwatchtower.ts` are ported. Hero's Quest and Legends' Quest have no port.
+The toolkit holds four quests our folders lacked: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts`, `quest-itwatchtower.ts` and `quest-hero.ts` are ported. Legends' Quest has no port.
 
 **Claim:** `quest-tbwt.ts` completes Tai Bwo Wannai Trio in 1,462, 1,483 and 1,469 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_tbwt` (every skill 99), the practice server, `0e2ea7d1`. Evidence: `.practice/tbwt-port/run4.log`, `run5.log` (`RESULT ok qp=2`, "Congratulations! Quest complete!"). The toolkit reports 1,468-1,509 ticks in its lockstep sim at agility 60 and magic 50. Gap: not run live; at agility below 99 the log bridge and the stones drop the bot more often.
 
 **Claim:** `quest-itwatchtower.ts` completes Watch Tower in 1,953, 1,998 and 1,970 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_itwatchtower` (every skill 99, rune set with the anti-dragon shield, jangerberries and 2 ropes in the kit), the practice server, `f141e461`. Evidence: `.practice/watchtower-port/proof-1.log`, `proof-2.log`, `proof-3.log` (`RESULT ok qp=4`, "Congratulations! Quest complete!"; lowest hitpoints 72, no food eaten). Gap: not run live; not run at the quest's minimum levels; the shield and combat 126 stand in for their Protect from Magic and pinning-ogre handling, so a weaker account needs both checked.
+
+**Claim:** `quest-hero.ts` completes Hero's Quest on both accounts in one process: Black Arm 1,641, 1,643 and 1,645 ticks, Phoenix 1,532, 1,580 and 1,535 ticks (3 of 3, MEASURED practice). Conditions: presets `quest_hero` and `quest_hero_helper` (every skill 99, nothing worn, both outside the guild door, the toolkit kit with 6 lobsters), the practice server, `ad432a5d`. Evidence: `.practice/hero-port/proof-1.log`, `proof-2.log`, `proof-3.log` (`RESULT ok qp=1 ... mainDone=true helperDone=true`; no food eaten; lowest hitpoints 43, at the Ice Queen, in one run). The toolkit reports 1,745-1,803 ticks in its lockstep sim. Gap: not run live; not run at the quest's minimum levels; magic 99 stands in for their 150-cast rune stock and retries; the Phoenix side needs a second account with 55 QP in the Phoenix Gang.
 
 ### 9.3 Protocol rules from the toolkit guide that our docs do not state
 
@@ -543,7 +545,7 @@ No public source was found for any top-15 hiscore name (202 names checked as Git
 
 | Claim | Source | Check | Our row | Decision |
 |---|---|---|---|---|
-| Two rats 2 ticks apart give a Woodcutting roll every 2 ticks at the south Falador oaks | [Lost City Labs](https://www.lostcitylabs.com/skillrates) (another server), rs2b0t issue 160 | Partly confirmed: rats spawn at 3015,3295 and 3019,3296 with wanderrange 15 and 2 hitpoints. Our flinch verdict in `gathering-tricks.md` covers only aggressive attackers. How to start both rats, multiway tiles and tree supply are not checked | `woodcut` 3,356 / 3,467 against the 3,152 board | test first: `scripts/measure/flinch.ts` takes `ATTACKER` |
+| Two rats 2 ticks apart give a Woodcutting roll every 2 ticks at the south Falador oaks | [Lost City Labs](https://www.lostcitylabs.com/skillrates) (another server), rs2b0t issue 160 | Rejected for this server: both rats are penned at x 3014-3020, z 3282-3296, and with every door open their 17-tile maxrange reaches 0 multiway tiles (`gathering-tricks.md`, flinch section) | `woodcut` 3,356 / 3,467 against the 3,152 board | reject; knife 3-tick stays |
 | Edgeville monkey bars train Agility 15-52 at about 54 XP per tick | rs2b0t PR 492 (another server) | Confirmed: 500 XP a crossing at 25x (`shortcuts.rs2:193`), no fall on this loc. Rate not measured here | `agility-52` 33 XP per tick | candidate: three practice runs; earth warriors and spiders are near |
 | Legends Guild mine has iron rocks for 4-tick mining | Lost City Labs | Map scan: 11 rocks at 2691-2715,3328-3334. Tick pattern and stand tiles not checked | `mine` 120 / 97 | site option beside the zoo |
 | Deposit, withdraw, close and use can go in one pass at predicted slots | rs2b0t PR 874 (open) | Confirmed by reading `InvButtonHandler.ts:58` | Prayer 6 bank ticks a trip | low: 20-54 ticks on two boards (ESTIMATE) |
@@ -551,3 +553,102 @@ No public source was found for any top-15 hiscore name (202 names checked as Git
 | A quest list takes only canary-passed quests; `noteProgress` against `showIntent` stall handling | [jackgolding/rs-sdk](https://github.com/jackgolding/rs-sdk) (MIT) branch `quest/demon` `quest-lab/` | Not checked | quest sweep | idea only |
 
 Checked with no gain: rs2b0t's 76 scripts for Magic, Thieving, Runecraft and Smithing; all 17 UberMouse training pages against our rows, where only 4-rock iron is higher and already recorded; questbench `src/save/` against our save library. Do not open `jabobster/jabobster-rs-sdk` `bots/localman1/bot.env`: it is a committed credential file.
+
+### 9.7 Projects found by web search
+
+Web search found these repos; GitHub search had missed them. Checked with `gh api` and page reads. None holds a route or rate that beats a row of ours. No downloaded code was run.
+
+| Source (license, last push) | What it holds | Decision | Gap |
+|---|---|---|---|
+| [Acquiredl/rs-sdk](https://github.com/Acquiredl/rs-sdk) (MIT, branch `acquiredl`) | Scripts for early quests, per-area quest fact sheets (`bots/acquiredl/quests/facts/`), run logs (`runs-*.jsonl`), `plans/guild-funnel.md`, ADRs | reject for scripts: we hold these quests; read a fact sheet if one of those quests fails | fact sheets and plans not read |
+| [CornThatLefty/OSRSBot](https://github.com/CornThatLefty/OSRSBot) (MIT) | An LLM agent loop on any OpenRouter model, a dashboard, model benchmarks | reject: no game routes; we use subscriptions, not paid APIs | source not read |
+| [ken12321/rs-sdk](https://github.com/ken12321/rs-sdk) (MIT, 3 commits ahead) | `bots/_shared/` helpers, `learnings/problems.md` | lead: read `learnings/problems.md` | not read |
+| [Kudretg/rs-sdk](https://github.com/Kudretg/rs-sdk) (MIT, 1 commit ahead) | A change to `LoginThread.ts` and `server/PATCHES.md` | lead: compare with upstream login changes | not read |
+| [oldschoola/rs-sdk-fleet](https://github.com/oldschoola/rs-sdk-fleet) (no license) | A fork of TestingPurposes/rs-sdk-fleet | reject: rs-stun-toolkit is the MIT source | none |
+| [2004sp/2004sp-progressive](https://github.com/2004sp/2004sp-progressive) (no license) | Engine-side bots in a single-player server; the README describes door and toll handling | ideas only: bots run in the engine, not through a client | source not read |
+| [99-cooking/rs-sdk](https://github.com/99-cooking/rs-sdk) (MIT) | A separate 25x server, loot.xyz, with its own hiscores | reject: another server, last push in March | none |
+| [MaxBittker/runebench](https://github.com/MaxBittker/runebench) (no license found) | Team tasks not in `research/runebench-and-harbor.md`: smith team, dragon team, Arrav duo, with watchers and a kill ledger | ideas only: team coordination tests | source not read |
+| [gr8monk3ys/rs-sdk](https://github.com/gr8monk3ys/rs-sdk), Milbaxter/rs-sdk | gr8monk3ys is 0 commits ahead; Milbaxter's compare returned 404 | reject gr8monk3ys; Milbaxter not checked | Milbaxter branches |
+
+Other leads:
+
+- HN user `_vertigo` reports that Claude plays through to Legends' Quest with code it wrote under coaching ([Agents in the Wild case 524](https://agentsinthewildai.com/cases/524-coached-for-hours-claude-now-plays-2004scape-fully-on-its-ow/), unverified). No repo is named.
+- The [RuneScape Bench talk transcript](https://delve.town/profile/did:plc:wmhp7mubpgafjggwvaxeozmu/post/3my3qbw3ifk2k) says the server has 2,000 slots, and that its owner is working out how to share them. A slot limit can affect fleet size. Not checked against live behaviour.
+- The rs-sdk Discord is linked from the upstream README and was not read.
+- The public `worldfeed` is already used by `packages/dashboard/server.ts` and `research/leader-forensics.md`.
+
+### 9.8 Forums, guides and rate sites
+
+No new XP-per-tick method was found for Magic, Thieving, Runecraft, Smithing, Mining or Woodcutting. Sources repeat 12 methods we hold. Gains below are code reads and ESTIMATES; nothing here was run.
+
+| Claim | Source | Check | Our row | Decision |
+|---|---|---|---|---|
+| Legends' Quest gives four training picks of 7,650 XP, and one skill can take all four: 191,250 XP a pick at 25x, 765,000 in total | [LostHQ guide](https://2004.losthq.rs/?oldurl=&p=questguides&quest=legends) | Confirmed: `quest_legends/scripts/radimus_erkle.rs2:79-122` has `stat_advance($skill, 76500)` and no repeat check | none in `haggis-boards.json` | candidate for Haggis: ESTIMATE about 3,880 ticks on Agility or 1,650 on Thieving; the quest chain cost is not priced |
+| Eating inside a stun costs 3 ticks per eat | [Autumn Elegy guide](https://www.youtube.com/watch?v=2QYqNvLwB1g) | Confirmed: `consume.rs2:129-130`. Fits the measured `EATSTUN` loss | `thieving60.ts` eats inside the stun on the live route | change the eat timing, then three matched runs: ESTIMATE 68-162 ticks |
+| The stun cycle is 11 ticks, not the fitted 12.8 | Same guide, corrected by a code read | Not measured: `thieving.rs2:49-50` sets an 8-tick stun; the T+3 start is from reading `p_delay(0)` calls | F=12.8, 55-99 model 2,061 ticks | measure with `scripts/measure/pick-cycle.ts`: ESTIMATE -163 ticks |
+| A knight can be trapped in the north-east market house | Same guide | Partly: `Npc.ts:730` has a 500-tick stuck counter; house and spawn not checked | 611 `walkTicks` on the live 6,169 run | lead for the live route |
+| Running is free, so the Runecraft walking trip is shorter | Forum threads [6748](https://lostcity.rs/t/whats-the-stance-on-the-old-journal-infinite-run-energy-exploit/6748), [17237](https://lostcity.rs/t/energy-stalls-with-ring-of-dueling-etc/17237) | `NODE_INFINITE_RUN` defaults true (`Environment.ts:47`); agility runs show `energyMin=100`; live config not verified | `runecraft-ladder.md` assumes a 150-tick walk and 8 helpers | check the ladder: ESTIMATE an 82-tick trip and 5 helpers; no board ticks |
+| A 3-tick willow cycle with one farmer | [Lost City Labs](https://www.lostcitylabs.com/skillrates) (another server) | Partly: roll pattern holds if the NPC attacks every 6 ticks; farmer attackrate not read | `woodcut` 3,356 | low: no XP gain over the knife |
+
+Wrong or absent, do not use: double rolls on moving up to a rock (`Player.ts:1405`), 2-tick eating (`consume.rs2:38`), granite and sandstone (no `mine.dbrow` rows). Not reached: 2004tracker.xyz, the 4-tick mining video (no transcript). No RS2 speedrun records were found.
+
+### 9.9 Second web round and leftover repos
+
+**`bleugreen/rs-sdk` returns 404** through the API and a direct fetch, so the links to it in `research/botting-ecosystem-2026-10-23.md` fail. Web search still indexes its pull request titles and summaries. These are indexed text, not read source:
+
+| Indexed item | What it says | Our use |
+|---|---|---|
+| PR 102, 79, 76 (`competitors.md`) | A hiscore row stores the tick a level was reached and is published at a clean logout; four early stun accounts show logout values, so those are upper bounds. The rivals' edge was composition, not per-skill speed | check against `research/board-ranking.md` |
+| PR 102 | After a dropped client the character stays 500 ticks if the socket closed, 1,000 if it stays open but silent, and indefinitely while a live client sends keepalives | check against our session recovery |
+| PR 188 | Smithing 1 to 99 in 1,028 lab ticks with a `swap()` trade helper | compare with `smith` rows; lab figure, not a board time |
+| PR 72 | Fastest routes to 99 for Agility, Mining, Woodcutting, Fishing and Thieving (title only) | lead |
+| PR 519, 56 | A tick audit of runner, hand-off, walker, dialogue and relog costs; an engine sweep of packet budget and delay matrix | lead |
+| PR 708, 483 | Attempt 5 measured table and the final row, 35,787 against a 35,467.4 expected value | already in `research/rival-rune-fast.md` where cited |
+
+Other forks: singulocity/rs-sdk (MIT, 2 commits ahead) adds a spectator feed with live inventory, skills and ground items. Kimmo3223 and CakeRepository are 0 ahead. `elizaOS/eliza-2004scape` and `meisenheimere/rs-sdk` return 404. No Reddit thread, dev log or second rival write-up was found.
+
+Leftover repos, checked against the pinned code unless marked:
+
+| Claim | Source | Check | Decision |
+|---|---|---|---|
+| The quest journal shows the stage of varps the client never receives, so a script can resume after a stop | Toolkit `legs/qp/journal.ts` (MIT), jackgolding `quest-lab/journal-reader.ts` (MIT) | Confirmed for one quest: `cog_journal.rs2:1-4` builds text from `~get_cog_progress`; general rule not checked | candidate: `q.journal(key)` in `quest-lib.ts`, then resume in the longest quests |
+| `walkLeg` keeps a 15-tile stuck-door radius, which opens unrelated gates | barthuijgen `15c444f2` (MIT) | Confirmed in `sdk/actions.ts:1143,1152`; `walkPath` is safe | low: patch to radius 3 if a walk shows it |
+| An item-swap loop looks like progress to `stalled()` | lc-headless (no license, idea only) | Confirmed by reading `ledger.ts:83` | low |
+| `route:false` interacts "silently drop" at range | jackgolding `4e1f8348` | Partly wrong: the server walks straight at the NPC (`Player.ts:1184-1199`) and reports "I can't reach that!" at an obstacle | do not port |
+| Priest in Peril can strand an account on temple level 2 | jackgolding `b1ca8a61` (MIT) | Not checked | low: read if that quest fails |
+
+Clock Tower `walk to trough`: gate 37 at 2595,9657 is `kind:"unknown"` in `knowledge/doors.json`, so the walker keeps it blocked after the lever opens it. A client-routed click to 2588,9656 passes it. Evidence: `quest_cog_gates_and_levers.rs2:38-42`, one swarm run `RESULT ok qp=1 ticks=454`. Gap: no three-run practice proof.
+
+Do not copy: jackgolding `97cafdb9` says Aubury's teleport is ungated, but `essence_mine.rs2:2` needs Rune Mysteries. lc-headless says Scavvo does not restock, but the shop has `restock=yes`. No gain: Ghosts branches, LC-roadmap, bleugreenlab/cairn (BSL 1.1, no game planner).
+
+Third web round: no copy of `bleugreen/rs-sdk` was found. `gh search code` returned no other repo, and the Wayback Machine has no snapshot of its `RUN-ORDER.md` or any path under the repo. `packages/planner/src/cairn-route.json` and `research/botting-ecosystem-2026-10-23.md` hold what we kept. New low-value items: [Ender's paladin journal](https://lostcity.rs/t/ender-s-paladin-journal-agent-shard/18746) (an agent's public log, combat about 90, 12 quest points), and RuneBench's `dragon-team-60m` task (ten bots on the King Black Dragon, with a kill ledger). No arXiv paper on rs-sdk was found.
+
+### 9.10 GitHub census
+
+Method: a script walked every fork of 12 root repos at every depth, read every branch not shared with its root, and compared each fork's content folders with upstream. Then 30 code searches and 22 repo and topic searches covered 1,336 repos. Result: 162 forks of rs-sdk, 108 repos with their own branches, 92 with content read. Forks are mostly old, so a rate there is not evidence for the current server. No board method beat a row of ours. No credential file was opened.
+
+| Claim | Source | Check | Our state | Decision |
+|---|---|---|---|---|
+| A low-combat miner at the Lava Maze runite rocks (wild 46) can be attacked only by combat 49 or lower, and a pickaxe in the pack is enough | [GoonMachine/rs-sdk](https://github.com/GoonMachine/rs-sdk) `learnings/scarce-goods.md` `9091cd36` (MIT, branch `cloud/ab-a`) | Confirmed: `pvp_combat.rs2:34-41`; not run live. Only the account's own ores count | `boards-special.md` sends Haggis (combat 126) after every stamped board | owner decision: a new option for R1. ESTIMATE 8-14 days for 2,464 ores, uncontested |
+| A fresh account stalls in Waterfall at 10 HP, with deaths in the Golrie cave and at White Wolf; Witch's House first gives 158,125 Hitpoints XP | GoonMachine `learnings/ab-results-a.md` `ba76979e` (MIT) | XP confirmed (`quest_priest.rs2:98`, `quest_vampire.rs2:42`, `quest_ball.rs2:202`); deaths are their log only | presets use every skill at 99 | add a low-level `waterfall.ts` preset before the Haggis rehearsal |
+| Heroes' Guild runite rocks stand at 2937,9882 and 2941,9884 | GoonMachine `scarce-goods.md` | Confirmed: `m45_154.jm2`, `heroes_entrance.rs2:5`. These ores do not count on the board | no plan uses them | rehearsal site and ore income |
+| 25 quest guides with journal progress rules, and 69 rows naming each `journal_script` | [acfrazier/274bot](https://github.com/acfrazier/274bot) `1aa74601` (MIT) `crates/script/paths/289/`, `crates/api/data/game-data/289/quests.json` | One rule confirmed (`cog_journal.rs2:39`); another content commit | no journal code in `quest-lib.ts` | rule data for the reader in 9.9 |
+| Script-gated doors are marked `open` in `knowledge/doors.json` | [marcdubs/2004Scape-AP-Logic](https://github.com/marcdubs/2004Scape-AP-Logic) `3303025b` (MIT by file) `rs2004_logic.json` `gatedAreas` | Confirmed for `tbwt_bamboo_door` and the Mort Myre gate; `zanarisdoor` is a false positive | classifier in `packages/knowledge/src/doors.ts` | low: fix when a walk stops at one |
+| `raw_lava_eel` has a source | Same file | Confirmed: `lavafish.rs2` | `knowledge/item-sources-gaps.md` lists none | low |
+| A script can close the chat, wait, then open the next page | 274bot `docs/scripting/quest-guides.md` | Partly: `IF_CLOSE` then `p_delay` in 39 quest lines | `pagePending` covers text already arrived | low: only if a step ends early |
+| A gift fails on a full pack; one unheld item fails the whole offer | GoonMachine `ab-results-b.md` | Partly: "Item not found" at `sdk/actions.ts:2276` | no space check in `fleet-trade.ts` | low: patch after a receipt shows it |
+
+Discord sample: GoonMachine `learnings/discord-meta-2026-08-15.md` (MIT) is a read-only sample of the rs-sdk Discord: `general`, `99str-contest`, `agent-techniques`, `share-progress` and a `pk` search. Claims are third-party and graded there. Reports worth keeping:
+
+- Quest-based combat bootstrap beat pure grinding; a level-3 Waterfall attempt needed a rat and food fallback.
+- A four-bot LiteClient pilot used deterministic tick policies, no model call in the hot loop, and a 20-stun stop.
+- `1G` used a full browser client for routes with ropes, trees and doors, and a thin client for combat loops.
+- A geofenced defensive script guarded a rune rock area, and bots were killed on bank return routes.
+- Two agents failed to coordinate Shield of Arrav until told to listen to the partner.
+- Medium clues are scripted; hard clues still need help.
+
+Do not copy: GoonMachine King of the Hill formations (replaced by Lava Maze runite upstream), its "no Grand Exchange" note (stale), and "a failed guard pickpocket makes the guard aggro" (the stun path does not). AP-Logic errors: Holy Grail needs `%arthur`, Shilo checks go to Crafting 20, Firemaking 30 is not a hard TBWT gate.
+
+Nothing useful: jrpii/rs-sdk-temporal-planning (two toy tasks, no costs), msalmeida-boomer/runescaper, Dexploarer, saimdlx, nymph-ai, AuburyEssentian, Kimmo3223, Wgelyjr (5x server), jamie-legg, dlhg, maxwelllord/AgentPairRSBench, danmarkmann/runebench, skiller185 (README only), tristinhill26-bit, abuaboud/MoRS (modern OSRS), RecoX/aobench, skulltrick/lclite, DataHoarder6/2004lite, owendirk/runelite-bot-sdk, nrylov/rs2011-ts, rbriphy, halogod35, reclear-io/llmref.
+
+Two-rat flinch is rejected: both rats are penned at x 3014-3020, z 3282-3296, and no tile in their range is multiway (`research/gathering-tricks.md`).
