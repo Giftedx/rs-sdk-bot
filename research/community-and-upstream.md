@@ -592,7 +592,7 @@ Wrong or absent, do not use: double rolls on moving up to a rock (`Player.ts:140
 
 ### 9.9 Second web round and leftover repos
 
-**`bleugreen/rs-sdk` returns 404** through the API and a direct fetch, so the links in `research/botting-ecosystem-2026-10-23.md` no longer open. Web search still indexes its pull request titles and summaries. These are indexed text, not read source:
+**`bleugreen/rs-sdk` returns 404** through the API and a direct fetch, so the links to it in `research/botting-ecosystem-2026-10-23.md` fail. Web search still indexes its pull request titles and summaries. These are indexed text, not read source:
 
 | Indexed item | What it says | Our use |
 |---|---|---|
