@@ -1,8 +1,28 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync,utimesSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
+import {workerSourceRoots,workerSourceRevision,runtimeTrees,releaseFiles,releaseEntries,workerEntries,capabilityRevision,launchRevision,cachedLaunchRevision,cachedReleaseFor,assertWorkerRelease,assertCompatibleWorkers,assertLiveWorkerRelease,standingPeer} from '../src/worker-release';
+
+test('cached admission keeps entry closures separate and rejects changed bytes, new imports and removed files',()=>{
+ const root=fixture(),entry=['scripts/worker.ts'];
+ try{
+  const pin=capabilityRevision(entry,root),env={WORKER_ENTRY:entry[0],WORKER_RELEASE:pin};
+  for(let i=0;i<17;i++)expect(cachedReleaseFor(entry,root)).toBe(pin);
+  expect(cachedReleaseFor(['scripts/other.ts'],root)).toBe(capabilityRevision(['scripts/other.ts'],root));
+  const file=join(root,'packages/core/src/shared.ts'),stamp=statSync(file);
+  writeFileSync(file,'export const shared=2;\n');utimesSync(file,stamp.atime,stamp.mtime);
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  expect(()=>assertLiveWorkerRelease('rs-sdk-demo.fly.dev',env,root)).toThrow('release source changed');
+  writeFileSync(join(root,'scripts/worker.ts'),"export * from './new-helper';\n");
+  writeFileSync(join(root,'scripts/new-helper.ts'),'export const value=1;');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  writeFileSync(join(root,'vendor/rs-sdk/sdk/added.ts'),'export {};');
+  expect(cachedReleaseFor(entry,root)).toBe(capabilityRevision(entry,root));
+  rmSync(join(root,'scripts/worker.ts'));
+  expect(()=>cachedReleaseFor(entry,root)).toThrow('entry missing');
+ }finally{rmSync(root,{recursive:true,force:true});}
+});
 
 // A small repository: one worker with a helper and a knowledge read, an unrelated script and data file, the launch
 // entries and both runtime trees.
