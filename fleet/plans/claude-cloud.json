@@ -1,5 +1,66 @@
 {
  "side": "claude-cloud",
- "at": 1793832161061,
- "jobs": []
+ "at": 1793832461161,
+ "jobs": [
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "74"
+   ],
+   "env": {
+    "MAX_BURY": "1600",
+    "CAP": "12000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Prayer board gap (fleet best 43): bury own banked chicken bones to Prayer 74",
+   "role": "prayer"
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/train-prayer.ts",
+   "args": [
+    "72"
+   ],
+   "env": {
+    "MAX_BURY": "1600",
+    "CAP": "12000"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "Prayer board gap (fleet best 43): bury own banked chicken bones to Prayer 72",
+   "role": "prayer"
+  },
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/magic-order.ts",
+   "env": {
+    "TARGET_LEVEL": "40",
+    "RUNE_BUDGET": "10000",
+    "CASH_RESERVE": "30000",
+    "MAX_CASTS": "1000",
+    "CAP": "6000"
+   },
+   "enabled": false,
+   "repeat": true,
+   "goal": "Magic board gap: Magic 1 to 40, then steps of 10",
+   "role": "magic"
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/magic-order.ts",
+   "env": {
+    "TARGET_LEVEL": "60",
+    "RUNE_BUDGET": "20000",
+    "CASH_RESERVE": "30000",
+    "MAX_CASTS": "1000",
+    "CAP": "6000"
+   },
+   "enabled": false,
+   "repeat": true,
+   "goal": "Magic board gap: Magic 50 to 60",
+   "role": "magic"
+  }
+ ]
 }
