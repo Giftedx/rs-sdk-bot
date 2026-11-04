@@ -101,6 +101,8 @@ export const PRESETS: Record<string, SaveConfig> = {
     thieve_knights: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55, Hitpoints: 50 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })) },
     // Same as thieve_knights but with a fresh account's 10 HP: isolates the cost of a low HP cap at knights.
     thieve_knights_hp10: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 }, inventory: Array.from({ length: 20 }, () => ({ id: 379, count: 1 })) },
+    // Eat-timing tests for thieving60.ts, whose food list has bread and no lobsters: a fresh account's 10 HP, 20 bread (2309).
+    thieve_knights_bread: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55 }, inventory: Array.from({ length: 20 }, () => ({ id: 2309, count: 1 })) },
     // Cycle tests only: HP 99 and 27 lobsters, so food never runs out in a 1,500-tick knight run.
     thieve_knights_hp99: { position: { x: 2654, z: 3304, level: 0 }, skills: { Thieving: 55, Hitpoints: 99 }, inventory: Array.from({ length: 27 }, () => ({ id: 379, count: 1 })) },
     // Ardougne baker's stall food test: Thieving 5 (stall level), HP 10, next to the west stall (loc touches 2654,3310).
