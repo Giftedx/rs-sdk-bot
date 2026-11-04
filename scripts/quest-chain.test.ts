@@ -1,5 +1,18 @@
 import { expect, test } from 'bun:test';
-import { questsLeft, questShortfall } from './quest-chain';
+import { readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { QUEST_NAMES, questsLeft, questShortfall } from './quest-chain';
+import { questJournalNames, questScript } from '../packages/router/src/coverage';
+
+test('every quest script has its journal name, so a finished quest is skipped', () => {
+    const root = resolve(import.meta.dir, '..'), journal = questJournalNames(root);
+    const folders = new Map(readdirSync(resolve(root, 'vendor/rs-sdk/server/content/scripts/quests')).filter(f => f.startsWith('quest_')).map(f => [questScript(f), f]));
+    const scripts = readdirSync(resolve(root, 'scripts/generated')).filter(f => /^quest-.+\.ts$/.test(f) && f !== 'quest-lib.ts' && !f.endsWith('.test.ts'));
+    // Alcohol Barcrawl is a miniquest with no journal row.
+    const rows = scripts.filter(f => f !== 'quest-barcrawl.ts').map(f => [QUEST_NAMES[f.slice(6, -3)], journal.get(folders.get(f)!)]);
+    expect(rows.length).toBeGreaterThan(60);
+    for (const [table, game] of rows) expect(table).toBe(game!);
+});
 
 test('a quest the status shows complete is skipped; unknown names pass through', () => {
     const status = [{ name: "Cook's Assistant", state: 'complete' }, { name: 'Sheep Shearer', state: 'started' }];
