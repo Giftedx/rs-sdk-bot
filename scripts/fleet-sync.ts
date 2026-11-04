@@ -20,7 +20,8 @@ export function snapshot(statuses: readonly any[], side = mySide(), owners = loa
     return { side, at: now, accounts: statuses.filter(s => typeof s?.name === 'string' && owners.get(s.name.toLowerCase())?.side === side && owners.get(s.name.toLowerCase())?.server === String(s.server).toLowerCase()).map(s => ({
         name: s.name, server: s.server, at: s.at, bank: rows(s.bank), inventory: rows(s.inventory), equipment: rows(s.equipment),
         skills: (s.skills ?? []).map((k: any) => ({ name: k.name, level: k.level })),
-        quests: (s.quests ?? []).filter((q: any) => q.state === 'complete').map((q: any) => q.name),
+        // No field when the journal was never read, so readers see unknown and not zero completed.
+        ...(Array.isArray(s.quests) && s.quests.some((q: any) => q.state !== 'unknown') ? { quests: s.quests.filter((q: any) => q.state === 'complete').map((q: any) => q.name) } : {}),
     })) };
 }
 // The jobs of this side's own accounts, without the main account and without job notes. The swarm plan file stays
