@@ -13,7 +13,7 @@ function prewarmCase(late:boolean,connectFailure=false,watchdogStop=false){
  '../packages/core/src/ticks':{waitTicks:async()=>{},waitUntil:async(_s,p)=>p()},
  './rune-carrier-roster':{runeCarrierRoster:a=>a.filter(n=>!n.startsWith('--')),assertRuneDonor:()=>{},assertFreshRuneSkills:()=>{}},
  './rune-carrier-start':{freshBodyStart:async(_s,_h,_stop,prepare)=>{prefix=true;prefixOpened=[...opened];await prepare();if(${watchdogStop})for(const label of['Helper0','Helper1']){const r=stoppers.find(r=>role(r.actor.name)===label);await r.opts.onStop(r.actor,'fixture no progress900')}throw Error('fixture prefix stopped')}},
- './rune-carrier-trade':{state:a=>a.sdk.getState(),ess:()=>27,transfer:async()=>0,ownedSwap:async()=>({ticks:0})},
+ './rune-carrier-trade':{runeOpening:()=>process.env.RUNE_OPEN_AFTER??'incoming',state:a=>a.sdk.getState(),ess:()=>27,transfer:async()=>0,ownedSwap:async()=>({ticks:0})},
  './rune-carrier-bank':{inside:()=>true,stopCarriers:()=>{},restock:async()=>0,bankCarrier:async()=>({}),withdrawCarrier:async()=>{},closeCarrierBank:async()=>{},stageCarrier:async()=>{}}
  };
  for(const[p,m]of Object.entries(modules))mock.module(resolve('scripts',p),()=>m);
@@ -56,7 +56,7 @@ function prefixCase(which:'stop-walk'|'prefix-error'){
  './rune-supply':{leaveRuneStarter:async()=>{},runeSupplyAssets:()=>({1351:1})},
  './generated/rcair':{enterAirAltar:async()=>{},craftAirRunes:async()=>({}),exitAirAltar:async()=>{throw Error('portal rejected')}},
  './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({}),dispatchRuneEntry:async()=>({})},
- './rune-carrier-trade':{ownedSwap:async()=>({}),state:a=>a.state,ess:()=>0}
+ './rune-carrier-trade':{runeOpening:()=>process.env.RUNE_OPEN_AFTER??'incoming',ownedSwap:async()=>({}),state:a=>a.state,ess:()=>0}
  };
  for(const [path,value]of Object.entries(modules))mock.module(resolve('scripts',path),()=>value);
  const {freshBodyStart}=await import('./scripts/rune-carrier-start');
@@ -93,7 +93,7 @@ test('prefix travel overlaps preparation and the first body craft waits for read
  './rune-supply':{leaveRuneStarter:async()=>{},runeSupplyAssets:()=>({})},
  './generated/rcair':{enterAirAltar:async()=>{},craftAirRunes:async()=>({}),exitAirAltar:async()=>{}},
  './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({at:{},q:{}}),dispatchRuneEntry:async()=>({entered:true})},
- './rune-carrier-trade':{state:a=>({...a.state,nearbyLocs:[{id:2483,x:2523,z:4832}]}),ess:()=>0,ownedSwap:async()=>{s.inventory=[{id:1446,count:1,slot:0}];return{}}}
+ './rune-carrier-trade':{runeOpening:()=>process.env.RUNE_OPEN_AFTER??'incoming',state:a=>({...a.state,nearbyLocs:[{id:2483,x:2523,z:4832}]}),ess:()=>0,ownedSwap:async()=>{s.inventory=[{id:1446,count:1,slot:0}];return{}}}
  };
  for(const[p,m]of Object.entries(mods))mock.module(resolve('scripts',p),()=>m);
  const{freshBodyStart}=await import('./scripts/rune-carrier-start');

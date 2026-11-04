@@ -48,7 +48,7 @@ function bankApproach(mode:'far'|'near'|'cancel'){
  '../packages/core/src/world':{interactionApproach:async(_sdk,at,q)=>{approaches++;if(at.x!==3095||at.z!==3491||at.level!==0||q.id!==2213||q.shape!==10||q.angle!==3||q.width!==1||q.height!==1||q.blockAccessFlags!==0)throw Error('wrong booth geometry');return {x:3094,z:3491,level:0};}},
  '../packages/core/src/deposit':{depositObserved:async(_s,item)=>{if(!open||generation<=7)throw Error('stale bank');const held=inventory.find(i=>i.id===item.id);const bank=items.find(i=>i.id===item.id);if(bank)bank.count+=held.count;else items.push({...held});inventory=inventory.filter(i=>i.id!==item.id);generation++;}},
  './rune-bank-craft':{RUNE_ALTARS:[{name:'body',outside:{x:3050,z:3442}}],ruinTarget:()=>({}),dispatchRuneEntry:async()=>({})},
- './rune-carrier-trade':{state:a=>a.sdk.getState(),ess:()=>0}
+ './rune-carrier-trade':{runeOpening:()=>process.env.RUNE_OPEN_AFTER??'incoming',state:a=>a.sdk.getState(),ess:()=>0}
  };
  for(const [p,m]of Object.entries(modules))mock.module(resolve('scripts',p),()=>m);
  const {bankCarrier,stopCarriers}=await import('./scripts/rune-carrier-bank');
@@ -103,7 +103,7 @@ function continuationCase(measurePacks?:number,craftAfter='inventory'){
  './rune-carrier-start':{freshBodyStart:async()=>{starterCalls++;throw Error('tutorial prohibited');}},
  './rune-carrier-bank':{bankCarrier:bank,withdrawCarrier:withdraw,closeCarrierBank:async()=>{},inside:a=>a.position==='altar',enterBody:async a=>{a.position='altar';},stopCarriers:()=>{stopped=true;},restock:async()=>{throw Error('fresh refill prohibited');},
   stageCarrier:async(a,n,fromBank)=>{if(!fromBank)await bank(a);await withdraw(a,1446,1);await withdraw(a,1436,n);a.position='altar';}},
- './rune-carrier-trade':{ess:a=>sum(a,1436),state:a=>a.sdk.getState(),ownedSwap:async(a,b,giveA,giveB)=>{swaps++;move(a,b,giveA);move(b,a,giveB);return{ticks:1};},transfer:async(a,b,_stop,n=27,craft)=>{move(b,a,{1436:n});tick+=10;if(craft)await craft.send();return 10;}}
+ './rune-carrier-trade':{runeOpening:()=>process.env.RUNE_OPEN_AFTER??'incoming',ess:a=>sum(a,1436),state:a=>a.sdk.getState(),ownedSwap:async(a,b,giveA,giveB)=>{swaps++;move(a,b,giveA);move(b,a,giveB);return{ticks:1};},transfer:async(a,b,_stop,n=27,craft)=>{move(b,a,{1436:n});tick+=10;if(craft)await craft.send();return 10;}}
  };
  for(const [p,m]of Object.entries(modules))mock.module(resolve('scripts',p),()=>m);
  const {continueRuneBody}=await import('./scripts/rune-carriers');
