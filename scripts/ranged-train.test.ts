@@ -1,5 +1,5 @@
 import {test,expect,spyOn} from 'bun:test';
-import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart} from './ranged-train';
+import {bestBow,usableArrows,chooseArrow,buyChunk,arrowAccount,rangedTrainOptions,runRangedTrain,rangedEntry,preparationFunds,needsRangedRecovery,recoveryWalker,recoverRangedStart,openShopWithDoor} from './ranged-train';
 import * as walking from '../packages/core/src/walk';
 import * as bot from '../packages/core/src/bot';
 import {setEquipmentObserved} from '../packages/core/src/container-observation';
@@ -96,6 +96,15 @@ test('recovery runs only off a supported entry or with the bow or quiver worn',(
  expect(needsRangedRecovery({worldX:3231,worldZ:3299,level:0},[])).toBe(true);
  expect(needsRangedRecovery({worldX:3253,worldZ:3421,level:1},[])).toBe(true);
  expect(needsRangedRecovery({worldX:3254,worldZ:3420,level:0},[841,884])).toBe(true);
+});
+test('a shut shop door is opened once before the keeper is asked again',async()=>{
+ const run=async(shopResults:boolean[],door:boolean)=>{const calls:string[]=[];
+  const bot={openShop:async()=>{calls.push('shop');return{success:shopResults.shift()??false};},openDoor:async()=>{calls.push('door');return{success:door};}};
+  return{ok:await openShopWithDoor(bot,/^lowe$/i,async()=>true),calls};};
+ expect(await run([true],true)).toEqual({ok:true,calls:['shop']});
+ expect(await run([false,true],true)).toEqual({ok:true,calls:['shop','door','shop']});
+ expect(await run([false,false],true)).toEqual({ok:false,calls:['shop','door','shop']});
+ expect(await run([false],false)).toEqual({ok:false,calls:['shop','door']});
 });
 test('the recovery walk plans with no Magic, items, worn gear or coins, so it can spend nothing',()=>{
  const w=recoveryWalker({skills:{magic:55,ranged:70},varps:{a:1},items:['law_rune'],counts:{law_rune:9},worn:['staff_of_air'],coins:90000});

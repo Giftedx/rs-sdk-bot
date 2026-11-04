@@ -48,6 +48,13 @@ export function rangedEntry(p:{worldX:number;worldZ:number;level:number}|null|un
  return null;
 }
 export function preparationFunds(total:number,spent:number,maxSpend:number,reserve:number){return Math.max(0,Math.min(maxSpend-spent,total-reserve));}
+// A shut shop door leaves the keeper unroutable: the client reports cant_reach and sends nothing. Open the nearest
+// door once and ask again; a second refusal stays a failure.
+export async function openShopWithDoor(bot:{openShop(t:RegExp):Promise<{success:boolean}>;openDoor(t?:RegExp):Promise<{success:boolean}>},keeper:RegExp,opened:()=>Promise<boolean>){
+ if((await bot.openShop(keeper)).success&&await opened())return true;
+ if(!(await bot.openDoor(/door/i)).success)return false;
+ return (await bot.openShop(keeper)).success&&await opened();
+}
 // Units for one shop packet group within the remaining budget; the margin covers price rise as stock falls.
 export function buyChunk(want:number,stock:number,unitPrice:number,budget:number,wallet:number,reserve:number){
  if(![want,stock,unitPrice,budget,wallet,reserve].every(Number.isFinite)||unitPrice<=0)return 0;
@@ -146,7 +153,7 @@ export async function runRangedTrain(s:Session,o:RangedTrainOptions){
   const funds=Math.min(stored(COINS),preparationFunds(sum(owned(),[COINS]),coinsSpent,o.maxSpend,o.coinReserve));if(funds<=0)return;
   const before=coins();await withdraw(COINS,funds);coinsWithdrawn+=coins()-before;await close();
   shopVisits++;await walk([{...LOWE,tol:2}]);
-  if(!(await s.bot.openShop(/^lowe$/i)).success||!await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10}))throw Error('ranged-train Lowe shop unavailable');
+  if(!await openShopWithDoor(s.bot,/^lowe$/i,()=>waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10})))throw Error('ranged-train Lowe shop unavailable');
   let got=0;
   for(let round=0;round<30&&got<wanted&&!over();round++){
    const shelf=st()?.shop?.shopItems.find(i=>i.id===arrow.id);if(!shelf)throw Error('ranged-train Lowe stock line missing '+arrow.id);
