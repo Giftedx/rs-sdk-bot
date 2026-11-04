@@ -494,11 +494,13 @@ Rejected: `babaali131718-spec/rs2b0t-quest-forge` (no license, only an HTML page
 
 ### 9.2 Quest coverage the toolkit closes
 
-The toolkit holds four quests our folders lacked: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts` and `quest-itwatchtower.ts` are ported. Hero's Quest and Legends' Quest have no port.
+The toolkit holds four quests our folders lacked: Tai Bwo Wannai Trio (`qp/south/`), Watch Tower (`qp/west/`), Hero's Quest (`qp/spine/`, two accounts) and Legends' Quest (`legends/`, sim only, not run live by its authors). `quest-tbwt.ts`, `quest-itwatchtower.ts` and `quest-hero.ts` are ported. Legends' Quest has no port.
 
 **Claim:** `quest-tbwt.ts` completes Tai Bwo Wannai Trio in 1,462, 1,483 and 1,469 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_tbwt` (every skill 99), the practice server, `0e2ea7d1`. Evidence: `.practice/tbwt-port/run4.log`, `run5.log` (`RESULT ok qp=2`, "Congratulations! Quest complete!"). The toolkit reports 1,468-1,509 ticks in its lockstep sim at agility 60 and magic 50. Gap: not run live; at agility below 99 the log bridge and the stones drop the bot more often.
 
 **Claim:** `quest-itwatchtower.ts` completes Watch Tower in 1,953, 1,998 and 1,970 ticks (3 of 3, MEASURED practice). Conditions: preset `quest_itwatchtower` (every skill 99, rune set with the anti-dragon shield, jangerberries and 2 ropes in the kit), the practice server, `f141e461`. Evidence: `.practice/watchtower-port/proof-1.log`, `proof-2.log`, `proof-3.log` (`RESULT ok qp=4`, "Congratulations! Quest complete!"; lowest hitpoints 72, no food eaten). Gap: not run live; not run at the quest's minimum levels; the shield and combat 126 stand in for their Protect from Magic and pinning-ogre handling, so a weaker account needs both checked.
+
+**Claim:** `quest-hero.ts` completes Hero's Quest on both accounts in one process: Black Arm 1,641, 1,643 and 1,645 ticks, Phoenix 1,532, 1,580 and 1,535 ticks (3 of 3, MEASURED practice). Conditions: presets `quest_hero` and `quest_hero_helper` (every skill 99, nothing worn, both outside the guild door, the toolkit kit with 6 lobsters), the practice server, `ad432a5d`. Evidence: `.practice/hero-port/proof-1.log`, `proof-2.log`, `proof-3.log` (`RESULT ok qp=1 ... mainDone=true helperDone=true`; no food eaten; lowest hitpoints 43, at the Ice Queen, in one run). The toolkit reports 1,745-1,803 ticks in its lockstep sim. Gap: not run live; not run at the quest's minimum levels; magic 99 stands in for their 150-cast rune stock and retries; the Phoenix side needs a second account with 55 QP in the Phoenix Gang.
 
 ### 9.3 Protocol rules from the toolkit guide that our docs do not state
 
