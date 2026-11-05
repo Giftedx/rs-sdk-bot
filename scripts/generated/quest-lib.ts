@@ -370,6 +370,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                 await s.bot.interactLoc(down, down.optionsWithIndex.find((o: any) => /climb-down/i.test(o.text)).opIndex);
                 await waitUntil(s, () => lvl() < from, { timeoutTicks: 30 });
             }
+            const refusal = teleportRefusal(comp, magic(), cnt(563)) ?? 'short of a rune';
             await walk(`${label} (walk, ${refusal})`, [{ x, z, tol: 4 }]); return;
         }
         await step(label, () => s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => near(x, z, 6), 8, 3);

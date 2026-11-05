@@ -615,7 +615,8 @@ export function pickInstead(buys:readonly Buy[],from:Tile,end:Tile,fields:(id:nu
 let itemCatalog:Map<number,{debugname:string;name:string;cost:number}>|undefined;
 const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(resolve(import.meta.dir,'../knowledge/items.json'),'utf8')) as {id:number;debugname:string;name:string;cost:number}[]).map(i=>[i.id,i])) ).get(id);
 
-export function questGatherPlan(quest:string,missing:readonly Item[],at:Tile,seller:(id:number)=>number,...rest:Parameters<typeof gatherPlan> extends [any,any,any,any,...infer R]?R:never){
+type GatherArgs=Parameters<typeof gatherPlan>;
+export function questGatherPlan(quest:string,missing:readonly Item[],at:Tile,seller:(id:number)=>number,...rest:[GatherArgs[4]?,GatherArgs[5]?,GatherArgs[6]?,GatherArgs[7]?,GatherArgs[8]?,GatherArgs[9]?]){
  // Wydin's apron spawn is behind wydindoor: employment and a worn apron are required (food_store.rs2).
  // Hunt stages its first apron through the existing clotheshop purchase path.
  return gatherPlan(missing,at,(id,tile)=>quest==='hunt'&&id===1005||WORN_KIT[quest]?.some(i=>i.required&&i.id===id)?[]:spawnsByDistance(id,tile),seller,...rest);
