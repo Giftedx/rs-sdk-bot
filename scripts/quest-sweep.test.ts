@@ -6,8 +6,6 @@ import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
 
 // Retained bank-stage.log: goTo reported "no route to 2850,3175,0" after Brimhaven. The courier walks that tile
 // as a tolerance-5 pass-by point of one walkPath call.
-});
-
 test('the Karamja corridor keeps courier waypoint tolerances and resumes from the unpassed point',async()=>{
  let pos={x:2800,z:3200,level:0};
  const calls:PathPoint[][]=[];
