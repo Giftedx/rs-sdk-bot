@@ -37,6 +37,16 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Rune Mysteries resumed mid-quest with every quest item lost, as a parked live account resumes it: at the Varrock
     // East bank, low combat (Hitpoints 17, Magic 29), no runes, so the runner walks. Varp 63 is the quest stage
     // (quest_runemysteries.constant): 1 started, 2 given talisman, 3 received package, 4 given package, 5 received notes.
+    // The quest item sits in the bank, as a sweep's unneeded-item deposit left it: stage 5 with the notes banked at the
+    // Varrock East bank (TheFullMonty, live), and stage 3 with the package banked.
+    quest_runemysteries_banked5: {
+        position: { x: 3253, z: 3421, level: 0 }, skills: { Hitpoints: 17, Magic: 29 }, varps: { ...DONE, 63: 5 }, bank: [{ id: 291, count: 1 }],
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig,
+    quest_runemysteries_banked3: {
+        position: { x: 3253, z: 3421, level: 0 }, skills: { Hitpoints: 17, Magic: 29 }, varps: { ...DONE, 63: 3 }, bank: [{ id: 290, count: 1 }],
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig,
     // The same account where quest-sweep stages the quest: the Duke's room on castle level 1, package lost (stage 3).
     quest_runemysteries_lost_duke: {
         position: { x: 3209, z: 3222, level: 1 }, skills: { Hitpoints: 17, Magic: 29 }, varps: { ...DONE, 63: 3 },

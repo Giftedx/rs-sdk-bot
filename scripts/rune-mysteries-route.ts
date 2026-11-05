@@ -19,12 +19,24 @@ export function runeMysteriesDecision(state:QuestFlag['state'],items:readonly nu
 // stage 1 without the talisman: "Come back again when you have found it." (the Duke re-issues it, duke_horacio.rs2);
 // stage 4, or stage 5 without the notes: "speak to him again" / "speak to Aubury once more" (Aubury gives or re-issues them);
 // stage 2 or 3: the package is in the pack when the talk ends.
-export type SedridorOutcome='package'|'duke'|'aubury'|'unknown';
+// stage 5 with the notes in the bank: "Sure, I'll go and get them from the bank." (the server counts banked items,
+// obj_gettotal, so Sedridor re-issues nothing); stage 3 with the package banked says only "Have you delivered".
+export type SedridorOutcome='package'|'duke'|'aubury'|'bank'|'unknown';
 export function sedridorOutcome(hasPackage:boolean,sawText:(re:RegExp)=>boolean):SedridorOutcome{
     if(hasPackage)return 'package';
     if(sawText(/speak to him again|speak to aubury once more/i))return 'aubury';
     if(sawText(/come back again when you have found it/i))return 'duke';
+    if(sawText(/get them from the bank/i))return 'bank';
     return 'unknown';
+}
+
+// The quest items a started Rune Mysteries may hold, in the pack or the bank.
+export const RUNE_MYSTERIES_ITEMS=[1438,290,291];
+// The nearest bank tile on the ground floor (packages/planner/src/haggis-travel.json banks).
+export function nearestBankTile<B extends {x:number;z:number;level:number}>(at:{x:number;z:number},banks:readonly B[]):B{
+    const ground=banks.filter(b=>b.level===0);
+    if(!ground.length)throw Error('no ground-floor bank known');
+    return ground.reduce((best,b)=>Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z))<Math.max(Math.abs(best.x-at.x),Math.abs(best.z-at.z))?b:best);
 }
 
 // Any combat level may start: below 13 the walk skips the guarded corridors (walkRuneMysteries).

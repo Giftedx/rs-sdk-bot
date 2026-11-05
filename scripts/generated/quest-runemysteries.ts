@@ -4,7 +4,8 @@
 // areas/area_varrock/scripts/aubury.rs2.
 import { openQuest } from './quest-lib';
 import type {Session} from '../../packages/core/src/inprocess';
-import {walkRuneMysteries,runeMysteriesStartProblem,exitRuneTower,runeMysteriesDecision,sedridorOutcome} from '../rune-mysteries-route';
+import {walkRuneMysteries,runeMysteriesStartProblem,exitRuneTower,runeMysteriesDecision,sedridorOutcome,nearestBankTile,RUNE_MYSTERIES_ITEMS} from '../rune-mysteries-route';
+import travel from '../../packages/planner/src/haggis-travel.json';
 import {waitUntil} from '../../packages/core/src/ticks';
 import {questFlags} from '../../packages/core/src/quest-status';
 
@@ -20,7 +21,7 @@ const q = await openQuest({ session:s, cap:options.cap??4000, stop:options.stop,
 try {
     const questState=()=>questFlags((q.s as any).client)?.find(f=>f.name==='Rune Mysteries Quest')?.state??'unknown';
     await waitUntil(q.s,()=>questState()!=='unknown',{timeoutTicks:15});
-    const decision=runeMysteriesDecision(questState(),q.inv().filter(i=>i.count>0).map(i=>i.id));
+    let decision=runeMysteriesDecision(questState(),q.inv().filter(i=>i.count>0).map(i=>i.id));
     if(decision==='observe')throw Error('Rune Mysteries journal unknown; cannot infer quest stage from talisman');
     const problem=runeMysteriesStartProblem(q.pos()?.combatLevel);
     if(problem&&decision!=='complete')throw Error(problem);
@@ -79,12 +80,32 @@ try {
             await q.walk('recover to stairs', [{ x: 3206, z: 3210, tol: 1 }]);
             await q.climb('recover castle stairs down', stairs(/climb-down/i), /climb-down/i, levelIs(0));
         }
+        // A quest item in the bank counts as held for the server (obj_gettotal): Sedridor and the Duke then re-issue
+        // nothing and Sedridor sends the bot "to get them from the bank". Take the quest's items out first.
+        const bank = nearestBankTile({ x: q.pos()?.worldX ?? 0, z: q.pos()?.worldZ ?? 0 }, Object.values((travel as unknown as { banks: Record<string, { x: number; z: number; level: number }> }).banks));
+        await q.walk('recover to bank', [{ x: bank.x, z: bank.z, tol: 3 }]);
+        const opened: any = await q.s.bot.openBank();
+        if (!opened?.success) throw Error('Rune Mysteries recovery: bank did not open');
+        await q.waitUntil(() => (q.st()?.bank?.items?.length ?? 0) > 0, 10);
+        const rows = (): any[] => q.st()?.bank?.items ?? [];
+        for (const id of RUNE_MYSTERIES_ITEMS) {
+            const row = rows().find((i: any) => i.id === id);
+            if (!row || q.has(id)) continue;
+            await q.s.bot.withdrawItem(row, 1);
+            const got = await q.waitUntil(() => q.has(id), 10);
+            console.log(`NOTE rune mysteries recovery: withdrew ${id} ${got ? 'ok' : 'unobserved'}`);
+        }
+        await q.s.bot.closeBank();
+        decision = runeMysteriesDecision(questState(), q.inv().filter(i => i.count > 0).map(i => i.id));
+        console.log(`NOTE rune mysteries recovery: after the bank ${decision}`);
+    }
+    if (decision==='sedridor') {
         await toSedridor('recover');
         const outcome = () => sedridorOutcome(q.has(ITEM.pack), q.sawText);
         await q.talk('sedridor recover', sed, [/looking for the head wizard/i, /ok, here you are/i, /yes, certainly/i], () => outcome() !== 'unknown', SEDRIDOR, 120);
         const next = outcome();
         console.log(`NOTE rune mysteries recovery: sedridor says ${next}`);
-        if (next === 'unknown') throw Error('Rune Mysteries recovery: Sedridor named no stage');
+        if (next === 'unknown' || next === 'bank') throw Error(`Rune Mysteries recovery: Sedridor named ${next === 'bank' ? 'a banked item the bank trip did not find' : 'no stage'}`);
         if (next === 'aubury') toAubury = true;
         if (next === 'duke') { needTalisman = true; await leaveSedridor('recover talisman'); }
         q.milestone('recover');
