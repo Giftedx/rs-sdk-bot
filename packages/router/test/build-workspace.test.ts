@@ -1,8 +1,9 @@
 import {test,expect} from 'bun:test';
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,lstatSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,lstatSync,unlinkSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText} from '../src/build-workspace';
+import {BASE_DIR,prepareWorkspace,publishWorkspace,workspaceRoot,isWorkspace,mergeText} from '../src/build-workspace';
+import {stageDeliveryPr} from '../src/delivery-pr';
 
 const mainTree=()=>{
  const main=join(mkdtempSync(join(tmpdir(),'ws-')),'repo');
@@ -65,6 +66,21 @@ test('a carried repair attempt merges against the base it started from',()=>{
  expect(readFileSync(join(root,file),'utf8')).toBe(lines('a','b','C'));
  publishWorkspace(main,'cap',[file]);
  expect(readFileSync(join(main,file),'utf8')).toBe(lines('A','b','C'));
+});
+
+test('publish keeps the exact base for delivery when a carried repair has lost its snapshot',()=>{
+ const main=mainTree(),file='scripts/worker.ts';
+ let {root}=prepareWorkspace(main,'cap',[file]);
+ writeFileSync(join(root,file),'carried edit');
+ unlinkSync(join(root,BASE_DIR,file));
+ ({root}=prepareWorkspace(main,'cap',[file]));
+ expect(existsSync(join(root,BASE_DIR,file))).toBe(false);
+ const out=publishWorkspace(main,'cap',[file]);
+ const coordinationDir=join(main,'.practice','coordinator');
+ const pr=stageDeliveryPr({workspace:root,runDir:join(coordinationDir,'runs','repair'),coordinationDir,
+  taskId:'repair',capability:'cap',files:out.published,sourceSet:[file],result:{}})!;
+ expect(readFileSync(join(pr.base,file),'utf8')).toBe('v1');
+ expect(readFileSync(join(pr.snapshot,file),'utf8')).toBe('carried edit');
 });
 
 test('mergeText names the conflicting lines on both sides',()=>{
