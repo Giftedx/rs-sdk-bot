@@ -20,6 +20,14 @@ test('parseBoard reads rank, name, level and exact ticks from the title attribut
     ]);
 });
 
+test('target snapshots require a readable leader and explicit matching tick units', () => {
+    const normalized = PAGE.replaceAll(' ticks"', ' ticks normalized to 400 ms per tick"');
+    expect(parseBoard(normalized, 400)).toEqual(parseBoard(PAGE));
+    expect(() => parseBoard(PAGE, 400)).toThrow('400 ms');
+    expect(() => parseBoard(normalized.replace('400 ms', '300 ms'), 400)).toThrow('400 ms');
+    expect(() => parseBoard(normalized.replace('>1<br>', '>2<br>'), 400)).toThrow('leader');
+    expect(() => parseBoard('<html>Board unavailable</html>', 400)).toThrow('leader');
+});
 test('boardGaps ranks boards by how much faster our plan is than the current #1', () => {
     const gaps = boardGaps([
         { board: 'fishing', leader: { rank: 1, name: 'a', level: 99, ticks: 20_000 }, ourTicks: 10_000 },

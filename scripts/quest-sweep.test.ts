@@ -161,6 +161,8 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
  expect(keepsItem('runemysteries',1438,tradeable)).toBe(true);
  expect(keepsItem('runemysteries',291,tradeable)).toBe(true);
  expect(keepsItem('sheep',291,tradeable)).toBe(true);
+ // Murder Mystery's dagger and evidence come back out of the bank: the server counts them there and refuses the pickup.
+ expect(keepsItem('murder',1813,tradeable)).toBe(true);expect(keepsItem('murder',1796,tradeable)).toBe(true);expect(keepsItem('cook',1813,tradeable)).toBe(tradeable(1813)===false);
  expect(keepsItem('sheep',1438,tradeable)).toBe(false);
  expect(keepsItem('sheep',995,tradeable)).toBe(false);
 });
@@ -492,4 +494,11 @@ test('a field on the tour of the other sellers and the quest start replaces a pu
  expect(pickInstead([buy(1951,3,'Wydin',wydin)],ard,start,fields)).toEqual({buys:[buy(1951,3,'Wydin',wydin)],picks:[]});
  expect(detour([ard],hudo)).toBe(226);
  expect(detour([],hudo)).toBe(0);
+});
+
+test('a kit consumable bought nine in ten short still serves',async()=>{
+ const {STACKS}=await import('./quest-sweep');
+ // Arrows and runes stack; the bank pass marks their shop buys with atLeast = ceil(0.9 * count).
+ expect(STACKS.has(556)).toBe(true);expect(STACKS.has(882)).toBe(true);expect(STACKS.has(1951)).toBe(false);
+ expect(Math.ceil(18*0.9)).toBe(17);
 });

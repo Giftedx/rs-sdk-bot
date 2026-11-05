@@ -1,7 +1,7 @@
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {createHash} from 'node:crypto';
-import {haggisActivities,haggisTravel,loadSnapshot,overallRequirementsFor,schedule,TRICKS} from '../packages/planner/src/haggis';
+import {haggisActivities,haggisTravel,loadSnapshot,overallRequirementsFor,scheduleOverall,TRICKS} from '../packages/planner/src/haggis';
 import {supplyRoute,routeGateRequirements,type SupplyRouteRequest} from '../packages/planner/src/supply-route';
 import type {TravelModel} from '../packages/planner/src/travel';
 import {FLEET} from './fleet';
@@ -153,7 +153,7 @@ if(import.meta.main){
  const out=resolve(process.argv[3]??join(root,'.practice/joined-plan/preparation.json'));
  if(out===join(root,'.practice/haggis-supplies.json')||out===join(root,'.practice/haggis-go.json'))throw Error('Advisory output cannot replace a launch gate');
  const opts={mode:'realistic' as const,tricks:new Set(TRICKS),travel:haggisTravel()};
- const activities=haggisActivities(),planResult=schedule(loadSnapshot(snapshot),activities,opts);
+ const activities=haggisActivities(),planResult=scheduleOverall(loadSnapshot(snapshot),activities,opts);
  const goals=overallRequirementsFor(activities,opts,planResult);
  const requirements=goals.supplies;
  const plan=JSON.parse(readFileSync(join(root,'swarm.json'),'utf8')) as {jobs:GearJob[]};

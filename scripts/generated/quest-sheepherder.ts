@@ -95,11 +95,14 @@ try {
         const via = n === 1 ? [[2611, 3366], [2613, 3353]] : [];
         if (!sheep(n) || n === 1) for (const [wx, wz] of [...via, [SPAWN[n]!.x, SPAWN[n]!.z]]) await q.dash(`to sheep ${n}`, wx!, wz!, 3, 40);
         const j0 = jumps();
-        let pushes = 0, stuck = 0, lastAt = '', noPath = 0;
+        let pushes = 0, stuck = 0, lastAt = '', noPath = 0, noSheep = 0;
         while (jumps() === j0) {
             await q.guard(`sheep ${n}`);
             const m = sheep(n);
-            if (!m) { await q.dash(`find sheep ${n}`, SPAWN[n]!.x, SPAWN[n]!.z, 3, 40); continue; }
+            // No copy of the sheep in reach after five searches at its spawn (every copy banned as boxed in, or none in
+            // sight) ends the quest rather than searching for ever.
+            if (!m) { if (++noSheep >= 5) await q.fail(`sheep ${n}: no copy in reach after ${noSheep} searches (${banned.size} banned)`); await q.dash(`find sheep ${n}`, SPAWN[n]!.x, SPAWN[n]!.z, 3, 40); continue; }
+            noSheep = 0;
             const at = `${m.x},${m.z}`;
             stuck = at === lastAt ? stuck + 1 : 0;
             lastAt = at;

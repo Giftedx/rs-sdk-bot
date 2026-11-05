@@ -9,6 +9,8 @@ The coordinator plans Overall supplies from the route bill's demand and the late
 
 Source -> local consumer -> adapt -> check: the bank observation time in status, the preparation report's five-minute window, and Microbot's bank freshness pattern in the project use map -> the coordinator's supply summary -> preserve bank time through fleet sync and keep unverified holdings visible -> a planner test reads local and published snapshots with recent, stale and absent bank times. A read-only live-data comparison is in `.practice/planner-supply-freshness/summary.json`. A verified balance still needs a transfer and consumer receipt.
 
+Source -> local consumer -> reuse -> check: the status producer's equipment observation flag, the route preparation reader, and Iron Compass's explicit requirement facts in the project use map -> preparation unlock facts -> leave unobserved equipment unknown and reject bank or journal evidence dated after its status row -> the preparation fixture checks observed empty equipment, unknown equipment, a known bank alternative and date order. The read-only replay in `.practice/goal-readiness-observations/replay.json` compares retained status rows at their observation times and at replay time.
+
 
 The Overall supply bill, Autopilot demand, preparation report, dashboard and launch manifest use the route rows that start before the modeled last 99. The full route remains available for later quest, gear and bank goals. If the model has no Overall finish, it cannot produce an Overall supply bill.
 
