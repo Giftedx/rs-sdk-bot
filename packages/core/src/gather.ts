@@ -7,6 +7,7 @@ import { accountOf } from './bot';
 import type { Session } from './inprocess';
 import { waitTicks, waitUntil } from './ticks';
 import { goTo } from './walk';
+import { componentId } from './logout';
 import type { World } from './world';
 import { spawnsByDistance, locsByDistance } from './spawn-index';
 
@@ -19,7 +20,7 @@ export const MILK=1927,BUCKET=1925,COW=81;
 // Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
-export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine';kit?:'ranged'};
+export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine';kit?:'ranged'|'magic'};
 // A plant picked for its item: onions are loc 3366 with the Pick option (general_use/scripts/pickables.rs2:31-39; the
 // plant stands again 50 ticks after a pick).
 export const PICK_SOURCES:Record<number,{loc:number;option:RegExp}>={1957:{loc:3366,option:/^pick$/i}};
@@ -39,6 +40,35 @@ export const NPC_SOURCES:Record<number,NpcSource>={
 export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765]};
 // A bow and arrows the account owns: shortbow or longbow, bronze, iron or steel arrows (the kinds the fleet's banks hold).
 export const BOWS=[841,839,843,845],ARROWS=[884,886,882],ARROWS_PER_KILL=6;
+// The strike spells (skill_combat/configs/magic/magic_combat_spells.dbrow): level, runes per cast and max hit. A worn
+// elemental staff stands in for its rune (skill_magic/configs/magic_staff.dbrow). Fire Strike's 8 kills a goblin in one
+// cast and a bear in four.
+export const SPELLS=[
+ {component:'magic:wind_strike',level:1,runes:{558:1,556:1},maxhit:2},
+ {component:'magic:water_strike',level:5,runes:{558:1,555:1,556:1},maxhit:4},
+ {component:'magic:earth_strike',level:9,runes:{558:1,557:2,556:1},maxhit:6},
+ {component:'magic:fire_strike',level:13,runes:{558:1,554:3,556:2},maxhit:8},
+] as const;
+export const STAFF_RUNE:Record<number,number>={1381:556,1397:556,1383:555,1395:555,1385:557,1399:557,1387:554,1393:554};
+export const CASTS_MIN=6;
+export type MagicKit={staff?:number;component:string;level:number;maxhit:number;runes:Record<number,number>};
+// The strongest strike the Magic level allows whose runes, less the one a staff owned covers, are owned for CASTS_MIN casts
+// (TheFullMonty: Magic 99, a staff of fire, air and mind runes: Fire Strike at 2 air and 1 mind a cast).
+export function magicKit(owned:readonly Item[],magic:number):MagicKit|null{
+ const have=(id:number)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0);
+ const staffs=Object.keys(STAFF_RUNE).map(Number).filter(id=>have(id)>=1);
+ for(const sp of [...SPELLS].reverse()){
+  if(sp.level>magic)continue;
+  for(const staff of [...staffs,undefined]){
+   const runes:Record<number,number>=Object.fromEntries(Object.entries(sp.runes).filter(([id])=>staff===undefined||STAFF_RUNE[staff]!==Number(id)).map(([id,n])=>[Number(id),n]));
+   if(Object.entries(runes).every(([id,n])=>have(Number(id))>=n*CASTS_MIN))return{staff,component:sp.component,level:sp.level,maxhit:sp.maxhit,runes};
+  }
+ }
+ return null;
+}
+// Casts for the kills: an easy animal dies to one hit, two casts each; otherwise the animal's combat level stands for
+// its hitpoints and three casts in five land.
+export const castsFor=(id:number,count:number,maxhit:number)=>{const src=KILL_SOURCES[id];if(!src)return 0;const kills=src.chance<1?killAttempts(id,count):count;return kills*(src.combat<=EASY_KILL?2:Math.ceil(src.combat/maxhit/0.6)+1);};
 // The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
 // series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
@@ -61,23 +91,25 @@ export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number
 export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
 // The style that beats the animal. An easy animal that drops every kill (a chicken, a rat) dies to bare hands and costs
-// no arrows. Otherwise the stronger style: the bow when the Ranged level is the higher and beats the animal (ranged is 1
-// without a kit), else melee below the Attack level, else the bow below the Ranged level. The sweep's melee is
-// bare-handed, so an Attack level above a bear's combat level does not beat the bear when Ranged is higher still; a
-// drop by chance (goblin mail) is a series of kills and takes the stronger style even against an easy animal.
-export function killStyle(id:number,attack:number,ranged=1):'melee'|'ranged'|null{
+// no arrows or runes. Otherwise the highest level that beats the animal's combat level wins: melee by the Attack level,
+// the bow by Ranged, the strike spell by Magic (Ranged and Magic are 1 without a kit). The sweep's melee is bare-handed,
+// so it also needs a Strength level at or above the animal's combat level: an Attack level in the sixties with Strength
+// near 1 does not beat a bear or a series of goblins. A drop by chance (goblin mail) is a series of kills and takes the
+// stronger style even against an easy animal.
+export type KillStyle='melee'|'ranged'|'magic';
+export function killStyle(id:number,attack:number,ranged=1,magic=1,strength=attack):KillStyle|null{
  const src=KILL_SOURCES[id];
  if(!src)return null;
  const c=src.combat;
  if(c<=EASY_KILL&&src.chance===1)return 'melee';
- if(ranged>attack&&c<ranged)return 'ranged';
- if(c<attack)return 'melee';
- return c<ranged?'ranged':null;
+ const styles:[KillStyle,number][]=[['melee',c<attack&&strength>=c?attack:0],['ranged',c<ranged?ranged:0],['magic',c<magic?magic:0]];
+ const best=styles.filter(([,level])=>level>0).sort((a,b)=>b[1]-a[1])[0];
+ return best?best[0]:null;
 }
 // Arrows for the kills: ARROWS_PER_KILL for each drop that comes every kill (a bear's 27 hitpoints), two for each attempt
 // of a series of kills whose animal dies to one arrow (a goblin's 5).
 export const arrowsFor=(id:number,count:number)=>(KILL_SOURCES[id]?.chance??1)<1?2*killAttempts(id,count):ARROWS_PER_KILL*count;
-export const canKill=(id:number,attack:number,ranged=1)=>killStyle(id,attack,ranged)!==null;
+export const canKill=(id:number,attack:number,ranged=1,magic=1,strength=attack)=>killStyle(id,attack,ranged,magic,strength)!==null;
 let npcRows:{id:number;spawns?:Tile[]}[]|undefined;
 const npcSpawns=(ids:readonly number[]):Tile[]=>(npcRows??=JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>ids.includes(n.id)).flatMap(n=>n.spawns??[]);
 export const killSpawns=(id:number):Tile[]=>KILL_SOURCES[id]?npcSpawns(KILL_SOURCES[id]!.npcs):[];
@@ -86,7 +118,7 @@ export const killSpawns=(id:number):Tile[]=>KILL_SOURCES[id]?npcSpawns(KILL_SOUR
 // A recipe's ingredients are planned like any missing item (a spawn, a plant, a shop, a kill, another recipe) and its
 // own step follows them, so the gathers run ingredients first. `coins` is what the recipes cost; `still` is what no
 // source covers and the shop plan takes.
-export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns,attack=99,ranged=1,picks:(loc:number,at:Tile)=>Tile[]=locsByDistance){
+export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns,attack=99,ranged=1,picks:(loc:number,at:Tile)=>Tile[]=locsByDistance,magic=1,strength=attack){
  const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];let coins=0;
  const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
  const place=(m:Item,depth:number):void=>{
@@ -97,7 +129,7 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   else if(pick&&d(pick)<sold)gathers.push({...m,how:'pick'});
   // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles
   // from Ardougne and behind Priest in Peril, while cows graze beside the Ardougne banks.
-  else if(canKill(m.id,attack,ranged)&&kills(m.id).some(t=>t.level===at.level&&d(t)<sold))gathers.push({...m,how:'kill',...(killStyle(m.id,attack,ranged)==='ranged'?{kit:'ranged' as const}:{})});
+  else if(canKill(m.id,attack,ranged,magic,strength)&&kills(m.id).some(t=>t.level===at.level&&d(t)<sold)){const style=killStyle(m.id,attack,ranged,magic,strength)!;gathers.push({...m,how:'kill',...(style==='melee'?{}:{kit:style})});}
   else if(sold<Infinity)still.push(m);
   else if(NPC_SOURCES[m.id]&&depth<4){
    const r=NPC_SOURCES[m.id]!,units=Math.ceil(m.count/r.yields);
@@ -184,14 +216,27 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
        await s.bot.equipItem(item);await waitUntil(s,()=>worn().includes(item.id),{timeoutTicks:5});
       }
      }
+     // A magic kill wields the staff from the pack and casts the strongest strike the pack's runes allow at the target
+     // every five ticks (the cast rate, player_magic.rs2) until it dies or drops; without the runes the fight is not taken.
+     let spell:MagicKit|null=null;
+     if(g.kit==='magic'){
+      const worn=()=>s.sdk.getEquipment().map((i:any)=>i.id);
+      const magic=st()?.skills?.find((k:any)=>k.name==='Magic')?.baseLevel??1;
+      spell=magicKit([...(st()?.inventory??[]),...s.sdk.getEquipment()].map((i:any)=>({id:i.id,count:i.count})),magic);
+      if(!spell)return `magic kill of ${npc.name} needs a strike spell's runes in the pack`;
+      const staff=spell.staff===undefined?undefined:(st()?.inventory??[]).find((i:any)=>i.id===spell!.staff);
+      if(staff&&!worn().includes(spell.staff!)){await s.bot.equipItem(staff);await waitUntil(s,()=>worn().includes(spell!.staff!),{timeoutTicks:5});}
+     }
      const seen=new Map<string,number>();for(const i of lying())seen.set(`${i.x},${i.z}`,(seen.get(`${i.x},${i.z}`)??0)+1);
-     const r:any=await s.bot.attack(npc);
+     const cast=()=>s.direct({type:'spellOnNpc',npcIndex:npc.index,spellComponent:componentId(spell!.component),reason:'SDK'});
+     const r:any=spell?await cast():await s.bot.attack(npc);
      if(!r?.success){await waitTicks(s,2);continue;}
      const gone=()=>!(st()?.nearbyNpcs??[]).some((n:any)=>n.index===npc.index);
      const drop=()=>{const now=new Map<string,number>();for(const i of lying())now.set(`${i.x},${i.z}`,(now.get(`${i.x},${i.z}`)??0)+1);return lying().find((i:any)=>(now.get(`${i.x},${i.z}`)??0)>(seen.get(`${i.x},${i.z}`)??0));};
      // A fight that reaches the hitpoint floor is abandoned: the bot walks away and the sweep fails short of the item.
      const hp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints'),floor=Math.max(5,Math.ceil((hp()?.baseLevel??10)*0.25)),low=()=>(hp()?.level??99)<=floor;
-     await waitUntil(s,()=>gone()||!!drop()||low(),{timeoutTicks:150});
+     if(spell){for(let t=0;t<30&&!(gone()||drop()||low());t++){await waitTicks(s,5);if(!(gone()||drop()||low()))await cast();}}
+     else await waitUntil(s,()=>gone()||!!drop()||low(),{timeoutTicks:150});
      if(low()){
       const p=here(),dx=Math.sign(p.x-npc.x)||1,dz=Math.sign(p.z-npc.z);
       await s.direct({type:'walkTo',x:p.x+dx*20,z:p.z+dz*20,running:true,reason:'SDK'});

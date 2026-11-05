@@ -400,3 +400,25 @@ test('arrows stack in the slot count, and a destination east of Ardougne adds th
  expect(fares(ardougne,[hudo])).toBe(0);
  expect(fares({x:3092,z:3243,level:0},[wyson,aggie])).toBe(0);
 });
+
+test('a strike spell kit is the strongest strike the runes allow, and the highest level that beats the animal picks the style',async()=>{
+ const {magicKit,castsFor,killStyle,gatherPlan,killAttempts}=await import('../packages/core/src/gather');
+ // TheFullMonty: Magic 99, a staff of fire, 500 air and 500 mind runes: Fire Strike at 2 air and 1 mind a cast.
+ const monty=[{id:1387,count:1},{id:556,count:500},{id:558,count:500}];
+ expect(magicKit(monty,99)).toEqual({staff:1387,component:'magic:fire_strike',level:13,maxhit:8,runes:{558:1,556:2}});
+ // Without the staff the fire runes are missing: Wind Strike from air and mind alone; nothing below six casts' worth.
+ expect(magicKit([{id:556,count:500},{id:558,count:500}],99)?.component).toBe('magic:wind_strike');
+ expect(magicKit([{id:556,count:5},{id:558,count:5}],99)).toBeNull();
+ expect(magicKit(monty,12)?.component).toBe('magic:wind_strike');
+ // Attack 69 with Strength 1 and Ranged 1 does not beat a goblin series bare-handed; Magic 99 does. A rat stays melee.
+ expect(killStyle(288,69,1,1,1)).toBeNull();
+ expect(killStyle(288,69,1,99,1)).toBe('magic');
+ expect(killStyle(2134,69,1,99,1)).toBe('melee');
+ expect(killStyle(2136,68,97,99,68)).toBe('magic');
+ expect(killStyle(2136,68,97,1,68)).toBe('ranged');
+ // Casts: two a goblin for the series, a bear's 21 over 8 at three in five, plus one.
+ expect(castsFor(288,3,8)).toBe(2*killAttempts(288,3));
+ expect(castsFor(2136,1,8)).toBe(Math.ceil(21/8/0.6)+1);
+ const plan=gatherPlan([{id:288,count:3}],{x:3014,z:3204,level:0},()=>[],()=>Infinity,undefined,69,1,undefined,99,1);
+ expect(plan.gathers).toEqual([{id:288,count:3,how:'kill',kit:'magic'}]);
+});
