@@ -4,7 +4,7 @@
 import { openBot, finish } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { startQuestSustain } from '../quest-sustain';
+import { startQuestSustain, questFoodDefinitions } from '../quest-sustain';
 import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
@@ -119,6 +119,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if(!reply||typeof reply!=='object'||!('success' in reply)||typeof reply.success!=='boolean')throw Error('quest consume reply unknown');
         return{success:reply.success,message:'message' in reply?String(reply.message):undefined};
     }},{food:FOOD,eatAt:EAT_AT,reserved:opts.reservedFood,onConsumed:()=>{stats.eats++;}});
+    let lastHp = hp();
     const off = s.onTick(() => {
         const p = pos();
         const h = hp();
@@ -126,6 +127,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             stats.hpMin = h;
             if (h <= 50) console.log(`WARN hp ${h} at ${T()} ${p?.worldX},${p?.worldZ},${p?.level}`);
         }
+        if (h > 0 && h < lastHp) lastHitAt = T();
+        lastHp = h;
+        if (h > 0 && h <= RETREAT_AT && !retreating && !foodLeft()) { retreating = true; console.log(`WARN retreat: hp ${h} of ${maxHp()}, no food, at ${T()}`); }
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) stats.died = true;
         if (p && last && Math.max(Math.abs(p.worldX - last.worldX), Math.abs(p.worldZ - last.worldZ)) > 20) {
             jumps.push(`${T()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
@@ -152,9 +156,32 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const all = (): Session[] => [s, ...(opts.others?.() ?? []).filter(o => o !== s)];
     const dispose = async () => { await sustain.settle(); off(); };
     const fail = async (why: string): Promise<never> => { await dispose(); const message=`${why} ${sustain.failure()??''} xp=${gains()} ${detail()}`; if(opts.session)throw Error(message); return finish(all(), false, message); };
+    // A fight the account cannot win ends the quest before it ends the account: at the hitpoint floor (a quarter of the
+    // base level, at least 5) with no food left to eat, the bot walks RETREAT_TILES away from whatever hits it, waits for
+    // the server's 16 ticks after combat (logout.rs2 p_preventlogout), and the run fails with the retreat. Demon Slayer on
+    // an 81-hitpoint, Attack 6 account went from 81 to 0 over 300 ticks at Delrith with no food and no such rule.
+    const maxHp = (): number => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
+    const RETREAT_AT = Math.max(5, Math.ceil(maxHp() * 0.25)), RETREAT_TILES = 30, COMBAT_LOGOUT_TICKS = 17;
+    const reservedNow = (): Readonly<Record<number, number>> => (typeof opts.reservedFood === 'function' ? opts.reservedFood() : opts.reservedFood) ?? {};
+    const foodLeft = (): boolean => { const defs = questFoodDefinitions(), r = reservedNow(); return inv().some(i => defs.has(i.id) && cnt(i.id) > (r[i.id] ?? 0)); };
+    let retreating = false, lastHitAt = -1;
+    const retreat = async (label: string): Promise<never> => {
+        const p = pos(), npcs: any[] = st()?.nearbyNpcs ?? [];
+        const foe = npcs.filter(n => n.combatTargetType === 'player' || n.inCombat).sort((a, b) => a.distance - b.distance)[0] ?? npcs.sort((a, b) => a.distance - b.distance)[0];
+        let dx = foe ? Math.sign(p.worldX - foe.x) : 1, dz = foe ? Math.sign(p.worldZ - foe.z) : 0;
+        if (!dx && !dz) dx = 1;
+        const to = { x: p.worldX + dx * RETREAT_TILES, z: p.worldZ + dz * RETREAT_TILES };
+        console.log(`RETREAT hp ${hp()} of ${maxHp()} at ${T()} ${p.worldX},${p.worldZ},${p.level} foe=${foe ? `${foe.name}@${foe.x},${foe.z}` : '-'} to=${to.x},${to.z}`);
+        for (let i = 0; i < 3 && !stats.died; i++) {
+            await s.direct({ type: 'walkTo', x: to.x, z: to.z, running: true, reason: 'SDK' });
+            if (await waitUntil(s, () => stats.died || (!pos()?.combat?.inCombat && T() - lastHitAt > COMBAT_LOGOUT_TICKS), { timeoutTicks: 40 })) break;
+        }
+        return fail(`retreat during ${label}: hp ${hp()} of ${maxHp()}, no food`);
+    };
     const guard = async (label: string): Promise<void> => {
         if(opts.stop?.())await fail(`stopped during ${label}`);
         if (stats.died) await fail(`died during ${label}`);
+        if (retreating) await retreat(label);
         if (sustain.failure()) await fail(`${sustain.failure()} during ${label}`);
         if (T() > CAP) await fail(`tick cap during ${label}`);
     };
