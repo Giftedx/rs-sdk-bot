@@ -889,6 +889,20 @@
       ],
       "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Native receipts bind their recorded source and starting conditions. Full owned Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
       "legendsComponents": {
+        "lowerCaveLedges": {
+          "evidence": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-lower-cave-native-1793879435919/source-check.json",
+          "sourceSha256": "8f12a74fc4ad93c0bba904a91e8bd45e2353ba31c4075eb4bab940574e421ae0",
+          "fixtureWorkerSha256": "feb893ae35d7ff2174822133e9f59ff7c984e4c1253a6490ccffc64212bf35de",
+          "scope": "Seeded rope landing. All six forward and six reverse production ledges pass in 128 ticks. The fixture bypasses the return barrier and rope. The save confirms (2378, 4717), exact stock and gear, no XP change, declared controls and logout."
+        },
+        "gujuoRetreat": {
+          "evidence": ".practice/microbot-ports/legends-gujuo-native-1793882251303/result.json",
+          "sourceCheck": ".practice/microbot-ports/legends-gujuo-native-1793882251303/source-check.json",
+          "sourceSha256": "cb17820c8e8e7d2f5cbc666f26bb25c460393c1667ea1894429a7e89be4e22e1",
+          "fixtureWorkerSha256": "8fc737d1ee0135e2e48b132155dc54d456161c76ad82617eb7d58ef0b8cdbbc1",
+          "scope": "Seeded jungle clearing with bullroarer and ordinary supplies. Real bullroarer aggro triggers a sustained Savage pursuit. The production map-route retreat clears it and Gujuo appears after return. The 113-tick run preserves stock, XP, gear and controls and logs out. The disappear-and-reacquire branch is outside this capture."
+        },
         "strengthReturn": {
           "evidence": ".practice/microbot-ports/legends-strength-native-1793877363687/saved-corridor-audit.json",
           "sourceCheck": ".practice/microbot-ports/legends-strength-native-1793877363687/source-check.json",
