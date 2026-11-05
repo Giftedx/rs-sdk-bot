@@ -10,7 +10,7 @@ test('generic combat uses native transitions rather than a surface-to-dungeon wa
   expect(out.at(-1)).toMatchObject({kind:'walk',...site});expect(back.at(-1)).toMatchObject({kind:'walk',...bank});
   expect(out.filter(l=>l.kind==='walk').every(l=>l.z<9000||out.indexOf(l)>out.findIndex(l=>l.kind==='enter'))).toBe(true);
   expect(back.filter(l=>l.kind==='walk').every(l=>l.z>=9000||back.indexOf(l)>back.findIndex(l=>l.kind==='exit'))).toBe(true);
-  const gate=out.filter(l=>l.kind==='walk'&&l.x===3131).map(l=>l.z);expect(gate).toEqual(target==='druid'?[9916,9921]:[]);
+  const gate=out.flatMap(l=>l.kind==='walk'&&l.x===3131?[l.z]:[]);expect(gate).toEqual(target==='druid'?[9916,9921]:[]);
  }
 });
 test('same-region travel keeps explicit custom routes, while unknown dungeon crossings reject before input',()=>{
