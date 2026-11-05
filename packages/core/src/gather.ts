@@ -194,15 +194,19 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(!npc)return `${r.name} not in sight at ${r.tile.x},${r.tile.z}`;
      const talked:any=await s.bot.talkTo(npc);
      if(!talked?.success)return `${r.name} did not talk: ${talked?.message??''}`;
-     // One dialogue page per tick: the next choice when its option shows, else continue, until the item arrives.
-     let next=0;
+     // One dialogue page per tick: the next choice when its option shows, else continue, until the item arrives. The page
+     // just clicked can stay on screen a tick before the server's next page arrives, so a page that repeats the one
+     // clicked waits, a menu shown again (an earlier choice) is clicked again, and an option page that matches no
+     // choice is a failure only when it stays five ticks.
+     let next=0,clicked='',stale=0;
      for(let t=0;t<60&&held(g.id)<before+r.yields;t++){
       const dlg:any=s.sdk.getDialog();
       if(dlg?.isOpen&&!dlg.isWaiting){
-       const opts:any[]=dlg.options??[],choice=next<r.choices.length?opts.find(o=>r.choices[next]!.test(o.text)):undefined;
-       if(choice){await s.sdk.clickDialogByText(r.choices[next]!);next++;}
-       else if(opts.length&&!opts.some(o=>/click here to continue/i.test(o.text))&&next<r.choices.length)return `${r.name}: no option for ${r.choices[next]} among ${opts.map(o=>o.text).join(' | ')}`;
-       else await s.sdk.sendClickDialog(0);
+       const opts:any[]=dlg.options??[],sig=opts.map(o=>o.text).join(' | ');
+       const idx=sig&&sig===clicked?undefined:[next,...Array.from({length:next},(_,i)=>next-1-i)].find(i=>i<r.choices.length&&opts.some(o=>r.choices[i]!.test(o.text)));
+       if(idx!==undefined){await s.sdk.clickDialogByText(r.choices[idx]!);next=idx+1;clicked=sig;stale=0;}
+       else if(opts.length&&!opts.some(o=>/click here to continue/i.test(o.text))&&next<r.choices.length){if(++stale>5)return `${r.name}: no option for ${r.choices[next]} among ${sig}`;}
+       else{await s.sdk.sendClickDialog(0);clicked='';stale=0;}
       }
       await waitTicks(s,1);
      }
