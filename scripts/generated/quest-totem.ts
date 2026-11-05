@@ -72,6 +72,8 @@ try {
     // The label and the totem each need a free slot: a full pack drops them under the bot (InvOps INV_ADD overflow). Bank
     // the surplus first at the nearest bank (the Ardougne south bank from the depot), then take anything already dropped.
     const surplus = () => surplusForSlots(q.inv().filter((i: any) => i.count > 0).map((i: any) => ({ id: i.id, count: i.count })), 2, new Set([ITEM.label, ITEM.totem]));
+    await q.waitUntil(() => q.inv().length > 0, 10);
+    console.log(`NOTE tribal totem pack ${q.inv().length} of 28 slots, banking ${surplus().length} for the label and totem`);
     if (surplus().length) {
         const bank = nearestBankTile({ x: q.pos()?.worldX ?? 0, z: q.pos()?.worldZ ?? 0 }, Object.values((travelData as unknown as { banks: Record<string, { x: number; z: number; level: number }> }).banks));
         await q.walk('to bank for slots', [{ x: bank.x, z: bank.z, tol: 3 }]);
@@ -82,7 +84,7 @@ try {
         console.log(`NOTE tribal totem freed slots: ${28 - q.inv().length} free`);
         if (surplus().length) await q.fail(`pack full: ${q.inv().length} of 28 slots after banking`);
     }
-    const dropped = (id: number): any => (q.st()?.groundItems ?? []).filter((g: any) => g.id === id && g.distance <= 1).sort((a: any, b: any) => a.distance - b.distance)[0];
+    const dropped = (id: number): any => { const g = (q.st()?.groundItems ?? []).filter((g: any) => g.id === id && g.distance <= 1).sort((a: any, b: any) => a.distance - b.distance)[0]; if (g) console.log(`NOTE tribal totem picks up dropped ${id}`); return g; };
     await q.walk('to depot', [{ x: 2649, z: 3272, tol: 1 }]);
     await q.step('take label', () => { const g = dropped(ITEM.label); return g ? q.s.bot.pickupItem(g) : q.opLoc(q.locAt(HORNCRATE.x, HORNCRATE.z) ?? HORNCRATE, 2); }, () => q.has(ITEM.label), 10, 4);
     await q.converse([], () => !q.dialogOpen(), 6);
