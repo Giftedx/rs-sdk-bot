@@ -33,7 +33,11 @@ export function objSpawns(): Map<number, Tile[]> {
 // search judges the walk, and the far walk takes the hubs toward the ground beneath an upstairs spawn). Ernest the
 // Chicken's fish food lies upstairs in Draynor Manor (3108,3356,1) and nowhere on the ground.
 export const LEVEL_STEP = 40;
+// Karamja: the island south of Brimhaven and west of Port Sarim. A spawn across its water ranks SEA tiles farther: a
+// bot standing by the Musa Point beer spawn saw the Falador hammer spawn nearer than Ardougne's, by straight line.
+export const SEA = 1000;
+export const onKaramja = (p: { x: number; z: number }): boolean => p.z <= 3260 && p.x >= 2690 && p.x <= 2960;
 export function spawnsByDistance(id: number, at: Tile, list = objSpawns()): Tile[] {
-    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level);
+    const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level) + (onKaramja(t) !== onKaramja(at) ? SEA : 0);
     return [...(list.get(id) ?? [])].sort((a, b) => d(a) - d(b));
 }

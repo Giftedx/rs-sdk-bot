@@ -13,12 +13,12 @@ import type {World} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
-import {gatherPlan,gatherItems} from '../packages/core/src/gather';
+import {gatherPlan,gatherItems,rangedKit,ARROWS_PER_KILL} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
-import {onKaramja} from './tribal-totem-route';
+import {onKaramja} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
 
 type Item={id:number;count:number};
@@ -139,10 +139,10 @@ export function eatAtFor(maxHp:number):number{return Math.max(10,Math.floor(maxH
 // Straight-line distance plus a boat: a seller across the water (Hamab in Tai Bwo Wannai, 488 tiles from Al Kharid as the
 // crow flies) ranks behind one on the same landmass (Kortan in Ardougne, 654), since the world router's search for the
 // crossing idles hundreds of ticks.
-export const SEA=1000;
+export {SEA} from '../packages/core/src/spawn-index';
 // The farthest seller a sweep walks to: Al Kharid to Ardougne is 654 tiles; a crossing costs SEA on top.
 export const FAR_SELLER=800;
-export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(onKaramja(from)!==onKaramja(to)?SEA:0);}
+export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(onKaramja(from)!==onKaramja(to)?1000:0);}
 export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile):S[]{
  return [...sellers].sort((a,b)=>travelDistance(at,a.tile)-travelDistance(at,b.tile));
 }
@@ -443,9 +443,18 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const shops=(items:readonly Item[])=>shopPlan(items,here(),catalogItem,(d,at)=>ranked(d,at)[0]??null,ranked);
   // What no shop sells is gathered after the shops; a gather tool comes from the bank or a shop.
   const sellerAt=(id:number)=>{const it=catalogItem(id),n=it&&id!==COINS?ranked(it.debugname,here())[0]:null;return n?travelDistance(here(),n.tile):Infinity;};
-  const attack=st()?.skills?.find((k:any)=>k.name==='Attack')?.baseLevel??1;
-  const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt,undefined,attack),tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),pack(),rows());
+  const skill=(name:string)=>st()?.skills?.find((k:any)=>k.name===name)?.baseLevel??1;
+  // A bow and arrows owned (pack, bank or worn) let the Ranged level count against an animal; the kit is withdrawn
+  // with the gather's tools and wielded before the kill (UnderMyKilt: Ranged 97, Attack 6, a shortbow and iron arrows).
+  const worn=():Item[]=>s.sdk.getEquipment().map((i:any)=>({id:i.id,count:i.count}));
+  const owned=[...pack(),...rows(),...worn()];
+  const kit=rangedKit(owned);
+  const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt,undefined,skill('Attack'),kit?skill('Ranged'):1);
+  if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:ARROWS_PER_KILL*gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+g.count,0)});
+  // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
+  const tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),[...pack(),...worn()],rows());
   p.withdraw.push(...tools.withdraw);
+  const toolIds=new Set(gather.tools.map(t=>t.id));
   const shop=shops([...p.missing.filter(m=>!gather.gathers.some(g=>g.id===m.id)),...tools.missing]);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
@@ -457,7 +466,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
   }
   // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
   // quest does not use first, one deposit per kind, then food beyond the allowance.
-  const keep=(id:number)=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
+  const keep=(id:number)=>need.has(id)||toolIds.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable);
   const slots=slotNeed(slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack()),staysCount(pack(),keep));
   for(const d of depositPlan(pack(),slots,keep)){
    const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
