@@ -207,6 +207,12 @@ export function jobResources(job: { script?: string; args?: string[]; env?: Reco
     return [...new Set(out)];
 }
 
+// The freshest of an account's observations by `at`: its status file and its row in the side's fleet snapshot. A fresh
+// cloud container has no status files, so without the snapshot every account would plan as a level-1 start.
+export function freshest(...observations: readonly any[]): any {
+    return observations.filter(o => o && typeof o === 'object').reduce((best, o) => (Number(o.at) || 0) > (Number(best?.at) || 0) ? o : best, null);
+}
+
 // An account as the planner sees it, from its status file (.practice/status/<name>.json) or a fleet snapshot row:
 // base levels, and pack, bank and worn counts by item name. No status: a fresh account at level 1 (Hitpoints 10).
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
@@ -248,7 +254,8 @@ export function reservedResources(jobs: readonly any[], side: string, paused: Re
 // This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
 // of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs. scripts/fleet-sync.ts
 // writes it on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side ignores a
-// claim older than its CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+// claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+export const CLAIM_MAX_AGE_MS = 2 * 3600_000;
 export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now()): { side: string; at: number; resources: string[] } {
     const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side)).flatMap(jobResources);
     return { side, at: now, resources: [...new Set(held)].sort() };
