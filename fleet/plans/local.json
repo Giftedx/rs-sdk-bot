@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793884918871,
+ "at": 1793886747249,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -410,21 +410,6 @@
    "role": "firemaking"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "vampire"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-0617be17-b4bc-4e2b-ba09-53f71dc849c1"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-vampire-mightyrod-shared-recovery [task-0617be17-b4bc-4e2b-ba09-53f71dc849c1]",
-   "role": "combat"
-  },
-  {
    "accounts": [
     "Shaftsinker"
    ],
@@ -495,6 +480,19 @@
    "repeat": false,
    "goal": "run-observatory-oreelse-first-live [task-4bdac771-2481-434a-b8a1-4e6677707fe5]",
    "role": "smithing"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-96099972-6e70-4964-a633-f68d54726246"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "recover-mightyrod-kbd-headroom-1793880863830 [task-96099972-6e70-4964-a633-f68d54726246]",
+   "role": "combat"
   }
  ]
 }
