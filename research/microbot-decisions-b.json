@@ -23864,7 +23864,7 @@
       }
     ],
     "blockers": [
-      "Native Varrock bank and regular fire lines support the donor cycle through the bounded GE cooking CLI. The four donor GE work quadrants require the modern map. One Native owned-stock run at Cooking99, Firemaking98 and XP25 lit one regular fire, withdrew raw shrimp in batches of two and one, banked three cooked shrimp, and logged out in 92 ticks. Other recipes, stock shortages, live and repeat runs remain unqualified."
+      "Native Varrock bank and regular fire lines support the donor cycle through the bounded GE cooking CLI. The four donor GE work quadrants require the modern map. Two Native owned-stock runs at Cooking99, Firemaking98 and XP25 each lit one regular fire, withdrew raw food in batches of two and one, banked all three cooked items, and logged out. Shrimp used a carried tinderbox and normal log (92 ticks). Lobster used a banked tinderbox and magic log (93 ticks) and retained one raw lobster in the bank. Other recipes, stock shortages, live and repeat runs remain unqualified."
     ],
     "scriptDecisions": [
       {
@@ -23874,7 +23874,7 @@
           "scripts/microbot-ge-cooking.ts",
           "scripts/microbot-bank-jobs.ts"
         ],
-        "gap": "Native Varrock bank and regular fire lines support the donor cycle through the bounded GE cooking CLI. The four donor GE work quadrants require the modern map. One Native owned-stock run at Cooking99, Firemaking98 and XP25 lit one regular fire, withdrew raw shrimp in batches of two and one, banked three cooked shrimp, and logged out in 92 ticks. Other recipes, stock shortages, live and repeat runs remain unqualified.",
+        "gap": "Native Varrock bank and regular fire lines support the donor cycle through the bounded GE cooking CLI. The four donor GE work quadrants require the modern map. Two Native owned-stock runs at Cooking99, Firemaking98 and XP25 each lit one regular fire, withdrew raw food in batches of two and one, banked all three cooked items, and logged out. Shrimp used a carried tinderbox and normal log (92 ticks). Lobster used a banked tinderbox and magic log (93 ticks) and retained one raw lobster in the bank. Other recipes, stock shortages, live and repeat runs remain unqualified.",
         "sourceEvidence": [
           {
             "path": "src/main/java/net/runelite/client/plugins/microbot/gecooker/GECookerScript.java",
@@ -24070,7 +24070,7 @@
       }
     ],
     "proof": {
-      "level": "Native CLI with independent raw-action and CRC-save checks, plus focused TypeScript refusal checks. Evidence .practice/microbot-ports/ge-cooking-native-1793901747734/result.json, action-audit.json, source-check.json, compiled-cache-ready-check.json. CLI SHA-256 6a57459b6d44c493a2d759fedecc07ef42fa31f6da5cd95945ea5272d6440895. 11589 source entries and 42 on-disk cache entries match. Live and repeat release pending.",
+      "level": "Native CLI with independent raw-action and CRC-save checks, plus focused TypeScript refusal checks. Evidence .practice/microbot-ports/ge-cooking-native-1793901747734/result.json, and .practice/microbot-ports/ge-cooking-lobster-native-1793902576410/result.json, with action-audit.json, source-check.json, and compiled-cache-ready-check.json in each run directory. CLI SHA-256 6a57459b6d44c493a2d759fedecc07ef42fa31f6da5cd95945ea5272d6440895. 11589 source entries and 42 on-disk cache entries match. Live and repeat release pending.",
       "donorRevision": "cd648f48d536c01c58aa82aa4d353fb31ce6e102",
       "nativeSearch": {
         "root": "vendor/rs-sdk/server/content/scripts",
