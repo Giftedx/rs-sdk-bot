@@ -19,6 +19,24 @@ const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
     .split(/\r?\n/).map(l => l.split('=')).filter(([, n]) => n && CHAT_NAMES.test(n.trim())).map(([id]) => Number(id)));
 const RESUME = ClientProt.RESUME_PAUSEBUTTON;
+// Magic level per spell: skill_magic/scripts/magic.rs2 refuses a cast while stat(magic) < levelrequired.
+export const parseSpellLevels = (dbrow: string): Map<string, number> => {
+    const levels = new Map<string, number>();
+    for (const row of dbrow.split(/^\[/m)) {
+        const spell = /^data=spell,\^(\w+)/m.exec(row)?.[1], level = /^data=levelrequired,(\d+)/m.exec(row)?.[1];
+        if (spell && level) levels.set(spell, Number(level));
+    }
+    return levels;
+};
+const SPELL_LEVELS = parseSpellLevels(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'scripts', 'skill_magic', 'configs', 'magic_spells.dbrow'), 'utf8'));
+// Why a teleport component cannot be cast (the caller walks instead), or undefined when it can. Every teleport here costs one law rune.
+export const teleportRefusal = (comp: string, magic: number, laws: number, levels: ReadonlyMap<string, number> = SPELL_LEVELS): string | undefined => {
+    const need = levels.get(comp.replace(/^magic:/, ''));
+    if (need === undefined) return `no pinned level for ${comp}`;
+    if (magic < need) return `Magic ${magic} < ${need}`;
+    if (laws < 1) return 'no law rune';
+    return undefined;
+};
 export let bursts = 0;
 export let recorded = 0;
 // Q_BURST=1: blind dialogue bursts (research/quest-plan.md "Dialogue burst"); off by default.
@@ -352,7 +370,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
                 await s.bot.interactLoc(down, down.optionsWithIndex.find((o: any) => /climb-down/i.test(o.text)).opIndex);
                 await waitUntil(s, () => lvl() < from, { timeoutTicks: 30 });
             }
-            await walk(`${label} (walk, no law rune)`, [{ x, z, tol: 4 }]); return;
+            await walk(`${label} (walk, ${refusal})`, [{ x, z, tol: 4 }]); return;
         }
         await step(label, () => s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => near(x, z, 6), 8, 3);
     };
