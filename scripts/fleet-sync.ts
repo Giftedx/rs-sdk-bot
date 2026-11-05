@@ -7,15 +7,17 @@
 // swarm.json merged with the coordinator's jobs, so other sides' planners stay off them) and this side's live
 // assignments (fleet/plans/<side>.json: the same merged plan, as scripts/swarm.ts runs it, so other machines and audits
 // see what runs), commits fleet/ and pushes.
+// The side's lease (fleet/leases/<side>.json) is this machine's live controller heartbeat (.practice/swarm-state.json,
+// written every swarm tick) while no other machine holds a fresh one; scripts/swarm.ts refuses to start against it.
 // Usage: bun scripts/fleet-sync.ts [--no-push]
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { FLEET_WORKTREE, loadOwners, mySide } from '../packages/core/src/fleet';
+import { FLEET_WORKTREE, loadOwners, mySide, nextLease, readLease, leaseHeldElsewhere, thisHost, type Lease } from '../packages/core/src/fleet';
 import { CLAIM_MAX_AGE_MS, claimFor } from '../packages/planner/src/autopilot';
 import { mergeJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 
 const root = resolve(import.meta.dir, '..');
-const BRANCH = 'fleet-data';
+const BRANCH = 'fleet-data', HEARTBEAT_MAX_AGE_MS = 60_000;
 const rows = (r: any[] | undefined) => (r ?? []).map((i: any) => ({ id: i.baseId ?? i.id, name: i.name, count: i.count }));
 // `prior` is the side's published snapshot rows: a row stays when its account has no local status or a staler one.
 export function snapshot(statuses: readonly any[], side = mySide(), owners = loadOwners(), now = Date.now(), prior: readonly any[] = []) {
@@ -96,12 +98,19 @@ export function runSync(push = true): string {
         const was = JSON.stringify(published(out)?.jobs ?? '');
         if (was !== JSON.stringify(view.jobs)) writeFileSync(out, JSON.stringify(view, null, 1) + '\n');
     }
+    // A controller heartbeat older than HEARTBEAT_MAX_AGE_MS is a dead controller's last write, not a running one.
+    const state = published(join(root, '.practice', 'swarm-state.json'));
+    const mine: Lease | null = state && Number.isFinite(state.at) && Date.now() - state.at < HEARTBEAT_MAX_AGE_MS && Number.isSafeInteger(state.controllerPid)
+        ? { side: snap.side, host: thisHost(), pid: state.controllerPid, at: state.at } : null;
+    const current = readLease(snap.side, join(dir, 'fleet')), lease = nextLease(current, mine);
+    if (lease) { mkdirSync(join(dir, 'fleet', 'leases'), { recursive: true }); writeFileSync(join(dir, 'fleet', 'leases', `${snap.side}.json`), JSON.stringify(lease) + '\n'); }
+    const leaseNote = lease ? 'ours' : leaseHeldElsewhere(current, thisHost()) ? `held by ${current!.host}` : 'none';
     git(dir, 'add', '--', 'fleet');
     const staged = !git(dir, 'diff', '--cached', '--quiet').ok;
     if (staged) { const c = git(dir, 'commit', '-m', `fleet: ${snap.side} sync (${snap.accounts.length} accounts)`); if (!c.ok) throw Error(`commit: ${c.out}`); }
     const ahead = !hasRemote || git(dir, 'rev-list', '--count', `origin/${BRANCH}..HEAD`).out !== '0';
     if (push && ahead) { const p = git(dir, 'push', '-u', 'origin', BRANCH); if (!p.ok) throw Error(`push: ${p.out}`); }
-    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} committed=${staged} pushed=${push && ahead}`;
+    return `side=${snap.side} accounts=${snap.accounts.length} claims=${claim ? claim.resources.length : jobs ? 'kept: published by the session running this side' : 'unreadable plan'} lease=${leaseNote} committed=${staged} pushed=${push && ahead}`;
 }
 
 if (import.meta.main) {
