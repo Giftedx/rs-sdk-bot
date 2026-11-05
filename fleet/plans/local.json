@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793882486808,
+ "at": 1793884918871,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -18,6 +18,22 @@
    "standing": true,
    "repeat": true,
    "goal": "cooked lobsters (607 short): pot, fish, cook at Catherby",
+   "role": "supply"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/chain.ts",
+   "args": [
+    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
+    "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
+   ],
+   "env": {
+    "ROUNDS": "1"
+   },
+   "enabled": false,
+   "standing": true,
+   "repeat": true,
+   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -449,21 +465,6 @@
    "resources": [
     "knight:2652,3318"
    ]
-  },
-  {
-   "account": "Wandwaver",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "blackknight"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-230debbe-273c-476f-a7e9-00361daa209a"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-blackknight-wandwaver-finish [task-230debbe-273c-476f-a7e9-00361daa209a]",
-   "role": "supply"
   },
   {
    "account": "CoinCock",
