@@ -174,6 +174,8 @@ Tick = Haggis playtime. "Walk" rows are travel legs (`walk A -> B` in `--order`)
 
 ## Travel model
 
+Source -> local consumer -> reuse -> check: the scheduler's existing deadline relaxation and route search -> the Overall planner, supply bill and launch check -> compare the usual order with a six-board relaxation and retain the earlier Overall finish -> a fixture checks both start locations and keeps the actual skill record deadlines. The bounded search in `.practice/hiscore-target/priority-beam.json` evaluates 999 deadline sets against a hashed snapshot and route model. The selected order is a model result.
+
 - Each row of `haggis-boards.json` has `at` (a place, `anywhere`, or `bank` = the nearest bank), and may have
   `endAt`, `via` and `bankTrips`. The scheduler adds the walk from the player's place to the next row.
 - Leg price: world.json `nearest.bank` run ticks (UberMouse, MIT, format 21) where the place has a site; else a

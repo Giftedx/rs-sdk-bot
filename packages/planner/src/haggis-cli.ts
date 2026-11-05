@@ -1,7 +1,7 @@
 // Prints the Haggis 24-board schedule for the three trick scenarios.
 // Usage: bun packages/planner/src/haggis-cli.ts [path/to/hiscores.json] [--order] [--supplies] [--evidence] [--levers] [--travel] [--no-travel]
 import { join, resolve } from 'node:path';
-import { bestSet as rawBestSet, haggisActivities, haggisTravel, LEVERS, loadSnapshot, schedule as rawSchedule, SCENARIOS, suppliesFor, TRICKS, type Activity, type Board, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
+import { bestSet as rawBestSet, haggisActivities, haggisTravel, LEVERS, loadSnapshot, schedule as rawSchedule, scheduleOverall, SCENARIOS, suppliesFor, TRICKS, type Activity, type Board, type BoardResult, type Mode, type ScheduleOptions } from './haggis';
 import { MEASURED_LEGS, RUN_TICKS_PER_TILE, START_TICKS } from './travel';
 
 const args = process.argv.slice(2);
@@ -18,7 +18,7 @@ const sl = (r: BoardResult) => (r.slack === null ? (r.status === 'NO-CLOCK' ? 'n
 
 for (const sc of SCENARIOS) {
     const tricks = new Set(sc.tricks);
-    const run = (mode: Mode) => schedule(boards, activities, { mode, tricks });
+    const run = (mode: Mode) => scheduleOverall(boards, activities, { mode, tricks, travel });
     const floor = run('floor');
     const real = run('realistic');
     console.log(`\n## Scenario ${sc.id}: ${sc.label}\n`);
@@ -32,6 +32,7 @@ for (const sc of SCENARIOS) {
     const route = (r: typeof real) => Object.entries(r.route).map(([g, o]) => `${g}=${o}`).join(', ');
     console.log(`\nOverall finish: floor ${fmt(floor.overallFinish)} (last 99: ${floor.lastSkill ?? '-'}; route ${route(floor)}); realistic ${fmt(real.overallFinish)} (last 99: ${real.lastSkill ?? '-'}; route ${route(real)})`);
     console.log(`QP at end ${real.qp}; idle ${real.idle}; travel ${fmt(floor.travel)} floor / ${fmt(real.travel)} realistic; blocked ${real.blocked.join(', ') || 'none'}`);
+    console.log(`Relaxed scheduling deadlines (realistic): ${real.boards.filter(b => b.sacrificed).map(b => b.id).join(', ') || 'none'}`);
     for (const mode of ['floor', 'realistic'] as Mode[]) {
         const best = bestSet(boards, activities, { mode, tricks });
         const won = best.result.boards.filter(b => b.status === 'WIN').map(b => b.id);
@@ -48,7 +49,7 @@ for (const sc of SCENARIOS) {
     if (args.includes('--supplies')) {
         console.log('\nSupplies of the realistic route (items Haggis makes during the run are left out):\n\n| Supply | Count |');
         console.log('|---|---|');
-        for (const s of suppliesFor(activities, { mode: 'realistic', tricks, travel }, boards)) console.log(`| ${s.item} | ${fmt(s.count)} |`);
+        for (const s of suppliesFor(activities, { mode: 'realistic', tricks, travel, force: real.route })) console.log(`| ${s.item} | ${fmt(s.count)} |`);
     }
 }
 

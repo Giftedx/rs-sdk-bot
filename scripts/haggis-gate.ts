@@ -2,7 +2,7 @@
 // Only --authorize can issue login permission after all evidence passes.
 import {readFileSync,readdirSync,existsSync,writeFileSync,renameSync,mkdirSync} from 'node:fs';
 import {join,resolve,relative} from 'node:path';
-import {haggisActivities,haggisTravel,loadSnapshot,schedule,overallRequirementsFor,TRICKS,type Activity,type ScheduleResult} from '../packages/planner/src/haggis';
+import {haggisActivities,haggisTravel,loadSnapshot,scheduleOverall,overallRequirementsFor,TRICKS,type Activity,type ScheduleResult} from '../packages/planner/src/haggis';
 import {FLEET} from './fleet';
 import {launchContext,readBound,sha,fresh,validateSupplies,validateRehearsals,type Binding} from '../packages/core/src/launch-evidence';
 import { FREE_FLOOR_GB } from '../packages/core/src/memory';
@@ -30,7 +30,7 @@ export function evaluateLaunch(root:string,snapshot:string,now=Date.now(),author
  check('plan wins',()=>{
   const c=launchContext(root,snapshot);context=c.context;bindings.push(...c.bindings);
   const opts={travel:haggisTravel(),mode:'realistic' as const,tricks:new Set(TRICKS)};
-  const activities=haggisActivities(),targets=loadSnapshot(join(root,snapshot)),plan=schedule(targets,activities,opts);
+  const activities=haggisActivities(),targets=loadSnapshot(join(root,snapshot)),plan=scheduleOverall(targets,activities,opts);
   read('packages/planner/src/haggis-boards.json');
   const detail=overallWins(plan,activities);
   for(const b of plan.boards)if(b.deadline!==null&&typeof b.finish==='number'&&Number.isFinite(b.finish)&&b.finish>0)expected[b.id]=b.finish;

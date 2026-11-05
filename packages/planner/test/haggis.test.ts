@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test';
-import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, overallRequirementsFor, schedule, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
+import { applyLevers, bestSet, haggisActivities, haggisTravel, haggisUnsourceable, LEVERS, loadSnapshot, overallRequirementsFor, schedule, scheduleOverall, SCENARIOS, suppliesFor, TRICKS, XP99, type Activity, type Board } from '../src/haggis';
 import { leg, place, resolve, RUN_TICKS_PER_TILE, START_TICKS, type TravelModel } from '../src/travel';
 import { join } from 'node:path';
 import { xpForLevel } from '../src/curve';
@@ -306,6 +306,22 @@ const travelModel = (): TravelModel => ({
         nearestBank: { b: { bank: 'bank:x', runTicks: 7, method: 'world.json' } },
         banks: { 'bank:x': { x: 3265, z: 3205 } },
     },
+});
+
+test('the Overall plan uses the faster order and keeps actual skill record deadlines', () => {
+    const boards = [clock('hitpoints', 100), clock('mining', 200), clock('overall', 1000)];
+    const startXp = Object.fromEntries(['attack', 'defence', 'strength', 'ranged', 'prayer', 'magic', 'cooking',
+        'woodcutting', 'fletching', 'fishing', 'firemaking', 'crafting', 'smithing', 'herblore', 'agility', 'thieving', 'runecraft'].map(s => [s, XP99]));
+    const acts = [job('combat', 'hitpoints', 10, { at: 'b' }), job('mine', 'mining', 10, { at: 'a' })];
+    const options = { ...opts, startXp, travel: { ...travelModel(), start: 'a' } };
+    const baseline = schedule(boards, acts, options);
+    const overall = scheduleOverall(boards, acts, options);
+    expect(baseline.order.map(p => p.id)).toEqual(['combat', 'mine']);
+    expect(overall.order.map(p => p.id)).toEqual(['mine', 'combat']);
+    expect(overall.overallFinish!).toBeLessThan(baseline.overallFinish!);
+    expect(finish(overall, 'hitpoints')).toMatchObject({ deadline: 100, sacrificed: true });
+    const opposite = { ...options, travel: { ...options.travel, start: 'b' } };
+    expect(scheduleOverall(boards, acts, opposite)).toEqual(schedule(boards, acts, opposite));
 });
 
 test('travel: the walk between two places is added before the second activity', () => {

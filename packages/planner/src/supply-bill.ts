@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { FLEET_DIR, mySide } from '../../core/src/fleet';
 import { join, resolve } from 'node:path';
-import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, schedule, TRICKS } from './haggis';
+import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, scheduleOverall, TRICKS } from './haggis';
 
 const root = resolve(import.meta.dir, '../../..');
 export type BillRow = { item: string; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[]; aliases?: string[] };
@@ -86,7 +86,7 @@ if (import.meta.main) {
     const snapshot = process.argv[2] ?? join(root, 'research/hiscores-live.json');
     const activities = haggisActivities(), boards = loadSnapshot(snapshot);
     const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
-    const plan = schedule(boards, activities, options);
+    const plan = scheduleOverall(boards, activities, options);
     const { supplies } = overallRequirementsFor(activities, options, plan);
     const items = JSON.parse(readFileSync(join(root, 'knowledge/items.json'), 'utf8'));
     const bill = supplyBill(supplies, items, liveHelperStatuses());
