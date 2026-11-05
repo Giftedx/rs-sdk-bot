@@ -828,7 +828,8 @@
       "scripts/generated/quest-tbwt.ts",
       "scripts/generated/quest-tbwt-owned.ts",
       "scripts/generated/quest-legends.ts",
-      "scripts/quest-sweep.ts"
+      "scripts/quest-sweep.ts",
+      "scripts/generated/quest-legends-owned.ts"
     ],
     "sourceEvidence": [
       {
@@ -870,14 +871,14 @@
       }
     ],
     "blockers": [
-      "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full CLI completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+      "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full owned API completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
     ],
     "scriptDecisions": [
       {
         "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestScript.java",
         "decision": "partial",
         "consumer": "scripts/generated/quest-lib.ts, scripts/quest-order.ts, packages/core/src/quest-status.ts",
-        "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full CLI completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+        "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full owned API completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
       }
     ],
     "proof": {
@@ -959,7 +960,21 @@
       "integrationRenewal": [
         "owned Watchtower merged dependency closure",
         "owned Trio merged dependency closure"
-      ]
+      ],
+      "stagedLegends": {
+        "entry": "scripts/generated/quest-legends.ts",
+        "mergeCommit": "68688262c029274a2010e9bcacdf05af34dbf275",
+        "currentGitBlob": "4333d8b36ec9213ba7efe8fd1c18b8ad4c0aedda",
+        "reportedProofCommit": "16161109",
+        "reportedProofGitBlob": "cb7ae67603f588df110c66e49e78a66818f9c744",
+        "peerReport": "https://github.com/Giftedx/rs-sdk-bot/pull/214",
+        "reportedNativeTicks": [
+          3996,
+          3878,
+          4221
+        ],
+        "scope": "Peer reports three complete staged Native routes at all99 with two owned supply helpers. Current source adds a required helper logout-result check. Native receipt/source delta is explicit; this integration has not independently qualified the strengthened helper gate, whole assets, live, minimum levels or helper staging."
+      }
     }
   },
   {

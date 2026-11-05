@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { accountFrom, assess, catalogue, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
+import { accountFrom, assess, catalogue, freshest, claimFor, finishedTrainers, jobFor, jobResources, knightCoinsPerTick, mergeJobs, pairKey, plan, plannableAccounts, reservedResources, unitValue, type Acct, type Inputs } from '../src/autopilot';
 
 const side = 'claude-cloud';
 const acct = (name: string, skills: Record<string, number> = {}, items: Record<string, number> = {}, s = side): Acct => ({ name, side: s, skills: { Hitpoints: 10, ...skills }, items });
@@ -213,4 +213,13 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
     const claim = claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234);
     expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
+});
+
+test('the freshest observation wins by its time stamp; nothing observed is null', () => {
+    const status = { at: 10, skills: [{ name: 'Thieving', level: 1 }] }, snapshotRow = { at: 20, skills: [{ name: 'Thieving', level: 99 }] };
+    expect(freshest(status, snapshotRow)).toBe(snapshotRow);
+    expect(freshest(snapshotRow, status)).toBe(snapshotRow);
+    expect(freshest(null, snapshotRow)).toBe(snapshotRow);
+    expect(freshest(undefined, null)).toBeNull();
+    expect(accountFrom('Quickhandjob', 'claude-cloud', freshest(null, snapshotRow), () => undefined).skills.Thieving).toBe(99);
 });
