@@ -4,7 +4,7 @@
 import { openBot, finish } from '../../packages/core/src/bot';
 import type { Session } from '../../packages/core/src/inprocess';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
-import { startQuestSustain, questFoodDefinitions } from '../quest-sustain';
+import { startQuestSustain, selectQuestFood } from '../quest-sustain';
 import { walkQuestCorridor } from '../quest-walk';
 import { sessionWalker, walkPath, type PathPoint } from '../../packages/core/src/walk';
 import { componentId } from '../../packages/core/src/logout';
@@ -163,7 +163,9 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const maxHp = (): number => s.sdk.getSkill('Hitpoints')?.baseLevel ?? 10;
     const RETREAT_AT = Math.max(5, Math.ceil(maxHp() * 0.25)), RETREAT_TILES = 30, COMBAT_LOGOUT_TICKS = 17;
     const reservedNow = (): Readonly<Record<number, number>> => (typeof opts.reservedFood === 'function' ? opts.reservedFood() : opts.reservedFood) ?? {};
-    const foodLeft = (): boolean => { const defs = questFoodDefinitions(), r = reservedNow(); return inv().some(i => defs.has(i.id) && cnt(i.id) > (r[i.id] ?? 0)); };
+    // Food is what the eater would eat: the quest's food list and its later forms, beyond the reserved counts. A shrimp in
+    // the pack of a lobster-only quest is not food and does not hold the retreat back.
+    const foodLeft = (): boolean => !!selectQuestFood(st(), { food: FOOD, eatAt: Number.MAX_SAFE_INTEGER, reserved: reservedNow() });
     let retreating = false, lastHitAt = -1;
     const retreat = async (label: string): Promise<never> => {
         const p = pos(), npcs: any[] = st()?.nearbyNpcs ?? [];
@@ -205,7 +207,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             if (ok()) return;
             if (i > 0) stats.retries++;
             await send();
-            await waitUntil(s, () => ok() || stats.died || !!sustain.failure(), { timeoutTicks: ticks });
+            await waitUntil(s, () => ok() || stats.died || retreating || !!sustain.failure(), { timeoutTicks: ticks });
             await guard(label);
             if (ok()) return;
             const d: any = s.sdk.getDialog();
@@ -250,7 +252,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     // log: walkPath's input and re-plan lines and each attempt's result, for a walk under diagnosis.
     const walk = async (label: string, pts: PathPoint[], log?: (line: string) => void): Promise<void> => {
         await guard(label);
-        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||!!sustain.failure(),
+        const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||retreating||!!sustain.failure(),
             near:(point,tolerance)=>near(point.x,point.z,tolerance),walk:(points,options)=>walkPath(walker,points,log?{...options,log}:options),
             onAttempt:(attempt,result)=>{stats.walkTicks+=result.ticks;if(attempt>0)stats.retries++;log?.(`attempt ${attempt} ${JSON.stringify(result)}`);},
         },pts,t0+CAP);
@@ -348,7 +350,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
         step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash,
-        waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
-        waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
+        waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||retreating||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
+        waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||retreating||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };
 }
