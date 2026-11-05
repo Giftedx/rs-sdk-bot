@@ -12,6 +12,8 @@ Offline integration: [preparation](../.practice/shared-supply/preparation.json) 
 
 Coverage reuses the pinned `questlist.if` journal labels to map observed completion to quest folders, including `fortress` → `quest_blackknight`. The coordinator's quest frontier consumes these stages: live completion outranks practice and script presence; unknown or missing journal flags do not promote a folder. `packages/router/test/coverage.test.ts` checks all 68 mappings and the planner frontier. This classification proves no additional quest completion.
 
+Source -> local consumer -> reuse -> check: the existing chain's step boundary and the supervisor's terminal result markers -> quest-chain dispatch -> check the account stop before each step and keep stop, death and disconnect in the final result -> tests cover a stop before any worker opens, terminal results after a success and continuation after a quest-specific failure. The chain keeps successful quest names in its terminal summary.
+
 ## 1. Measured: Waterfall Quest
 
 Script `scripts/generated/waterfall.ts`, preset `quest_waterfall` (beside Almera, 10 HP, 2 ropes, 6 air, earth and
