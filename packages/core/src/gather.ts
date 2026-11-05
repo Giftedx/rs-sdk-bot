@@ -271,7 +271,12 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(!await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>n.id===COW),{timeoutTicks:20}))break;
      const cow=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===COW).sort((a:any,b:any)=>a.distance-b.distance)[0],bucket=(st()?.inventory??[]).find((i:any)=>i.id===BUCKET);
      if(!bucket)return `milk needs an empty bucket (${BUCKET})`;
+     const buckets=held(BUCKET);
      await s.bot.useItemOnNpc(bucket,cow);
+     // The server exchanges one empty bucket for one milk. Wait for both observations before using another bucket.
+     if(await waitUntil(s,()=>held(MILK)===before+1&&held(BUCKET)===buckets-1,{timeoutTicks:15}))continue;
+     if(held(MILK)!==before||held(BUCKET)!==buckets)return 'milk conversion unconfirmed: need one milk credit and one empty bucket debit';
+     continue;
     }else if(g.how==='loc'){
      const src=LOC_SOURCES[g.id]!,ops=(l:any)=>(l.optionsWithIndex??[]).map((o:any)=>o.text as string);
      const loc=()=>(st()?.nearbyLocs??[]).filter((l:any)=>l.x===src.tile.x&&l.z===src.tile.z).find((l:any)=>ops(l).some((o:string)=>src.open.test(o)||src.take.test(o)));
