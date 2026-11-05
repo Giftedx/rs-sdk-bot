@@ -63,16 +63,24 @@ export function slotsFor(withdraw:readonly Item[],pack:readonly Item[]):number{
  const stack=(id:number)=>STACKS.has(id)||pack.some(i=>i.id===id&&i.count>1);
  return withdraw.reduce((n,w)=>n+(stack(w.id)?(pack.some(i=>i.id===w.id)?0:1):w.count),0);
 }
-// The ids to deposit, whole stacks each, so the pack has `need` free slots: never coins, food or runes (the quest eats and
-// teleports with them), the quest's own items, or what the preset needs. One deposit per id: depositing one unit of a
-// kind banks the whole kind, and a second deposit of the same kind from a stale slot waits out its timeout.
-export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean):number[]{
+// What to deposit so the pack has `need` free slots: first whole kinds the quest does not use (count -1: one deposit
+// banks the kind; a second deposit of the same kind from a stale slot waits out its timeout), never coins, runes, the
+// quest's own items or what the preset needs; then food units beyond a KEEP_FOOD allowance, as many as still needed.
+export const KEEP_FOOD=8;
+export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean):Item[]{
  let free=28-pack.length;
- const out:number[]=[];
+ const out:Item[]=[];
  for(const id of [...new Set(pack.map(i=>i.id))]){
   if(free>=need)break;
   if(id===COINS||FOOD.has(id)||keep(id))continue;
-  out.push(id);free+=pack.filter(i=>i.id===id).length;
+  out.push({id,count:-1});free+=pack.filter(i=>i.id===id).length;
+ }
+ let allowance=KEEP_FOOD;
+ for(const id of [...new Set(pack.filter(i=>FOOD.has(i.id)&&!STACKS.has(i.id)).map(i=>i.id))]){
+  if(free>=need)break;
+  const held=pack.filter(i=>i.id===id).length,kept=Math.min(held,allowance);allowance-=kept;
+  const bank=Math.min(held-kept,need-free);
+  if(bank>0){out.push({id,count:bank});free+=bank;}
  }
  return out;
 }
@@ -353,13 +361,14 @@ export async function sweep(account:string,quest:string,fresh?:string){
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
   }
-  // Free the slots the withdrawals need: bank whole kinds the quest does not use, one deposit per kind.
-  const slots=slotsFor(p.withdraw,pack());
-  for(const id of depositPlan(pack(),slots,id=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))){
-   const item=(st()?.inventory??[]).find((i:any)=>i.id===id);
+  // Free the slots the withdrawals, the shop purchases and the gathered items need: whole kinds the quest does not use
+  // first, one deposit per kind, then food beyond the allowance.
+  const slots=slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack());
+  for(const d of depositPlan(pack(),slots,id=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))){
+   const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
    if(!item)continue;
-   const r:any=await s.bot.depositItem(item,-1);
-   console.log(`QUEST_SWEEP_DEPOSIT ${JSON.stringify({id,success:r?.success,message:r?.message,free:28-(st()?.inventory?.length??0)})}`);
+   const r:any=await s.bot.depositItem(item,d.count);
+   console.log(`QUEST_SWEEP_DEPOSIT ${JSON.stringify({id:d.id,count:d.count,success:r?.success,message:r?.message,free:28-(st()?.inventory?.length??0)})}`);
   }
   for(const w of p.withdraw){
    const row=(st()?.bank?.items??[]).find((i:any)=>i.id===w.id);

@@ -174,8 +174,14 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  expect(depositPlan(pack,3,keep)).toEqual([]);
  const full=[{id:995,count:500},...Array.from({length:20},()=>({id:385,count:1})),...Array.from({length:6},()=>({id:1351,count:1})),{id:1438,count:1}];
  expect(full.length).toBe(28);
- expect(depositPlan(full,3,keep)).toEqual([1351]);
- expect(depositPlan(full,10,keep)).toEqual([1351]);
+ expect(depositPlan(full,3,keep)).toEqual([{id:1351,count:-1}]);
+ // Six axes free six slots; the seventh to tenth come from food beyond the allowance of eight.
+ expect(depositPlan(full,10,keep)).toEqual([{id:1351,count:-1},{id:385,count:4}]);
+ // A pack of 27 sharks and coins: only food can go, and only as much as the slots need.
+ const sharks=[{id:995,count:30},...Array.from({length:27},()=>({id:385,count:1}))];
+ expect(depositPlan(sharks,3,keep)).toEqual([{id:385,count:3}]);
+ // The allowance holds eight food units back whatever the need.
+ expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:19}]);
 });
 
 test('a far start walks hub to hub in hops of at most 150 tiles that each bring the goal nearer; a near start has no hops',async()=>{
