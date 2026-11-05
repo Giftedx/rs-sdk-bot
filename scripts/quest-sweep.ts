@@ -9,16 +9,16 @@ import {openBot,finish,getWorld,accountOf,finishHooks} from '../packages/core/sr
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil,waitTicks} from '../packages/core/src/ticks';
 import {goTo,sessionWalker,walkPath,walkRoute,type PathDeps} from '../packages/core/src/walk';
-import type {World} from '../packages/core/src/world';
+import type {World,Transport} from '../packages/core/src/world';
 import {loadTravel} from '../packages/core/src/travel';
 import {sellersByDistance,shopSellers} from '../packages/core/src/shop-index';
 import {spawnsByDistance} from '../packages/core/src/spawn-index';
-import {gatherPlan,gatherItems,rangedKit,ARROWS_PER_KILL} from '../packages/core/src/gather';
+import {gatherPlan,gatherItems,rangedKit,arrowsFor,ARROWS,BOWS,NPC_SOURCES} from '../packages/core/src/gather';
 import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
-import {onKaramja} from '../packages/core/src/spawn-index';
+import {crossesSea} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
 
 type Item={id:number;count:number};
@@ -62,7 +62,8 @@ export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|
 }
 // Pack slots a withdrawal list needs: a stack (coins, runes, anything the pack already holds as a stack) takes one slot
 // whatever its count; everything else one slot per unit.
-export const STACKS=new Set([COINS,554,555,556,557,558,559,560,561,562,563,564,565,566]);
+// Coins, runes and arrows stack: 238 bronze arrows for a goblin series take one slot, not 238.
+export const STACKS=new Set([COINS,554,555,556,557,558,559,560,561,562,563,564,565,566,...ARROWS]);
 export function slotsFor(withdraw:readonly Item[],pack:readonly Item[]):number{
  const stack=(id:number)=>STACKS.has(id)||pack.some(i=>i.id===id&&i.count>1);
  return withdraw.reduce((n,w)=>n+(stack(w.id)?(pack.some(i=>i.id===w.id)?0:1):w.count),0);
@@ -137,12 +138,13 @@ export function nearestBanks(at:Tile):Tile[]{
 // sweep logs in there: Restless Ghost's skull skeleton killed a 37-hitpoint account on the bank walk.
 export function eatAtFor(maxHp:number):number{return Math.max(10,Math.floor(maxHp*0.6));}
 // Straight-line distance plus a boat: a seller across the water (Hamab in Tai Bwo Wannai, 488 tiles from Al Kharid as the
-// crow flies) ranks behind one on the same landmass (Kortan in Ardougne, 654), since the world router's search for the
-// crossing idles hundreds of ticks.
-export {SEA} from '../packages/core/src/spawn-index';
+// crow flies; the Miscellania food shop, 581 from Ardougne) ranks behind one on the same landmass (Kortan in Ardougne,
+// 654), since the world router's search for the crossing idles hundreds of ticks.
+import {SEA} from '../packages/core/src/spawn-index';
+export {SEA};
 // The farthest seller a sweep walks to: Al Kharid to Ardougne is 654 tiles; a crossing costs SEA on top.
 export const FAR_SELLER=800;
-export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(onKaramja(from)!==onKaramja(to)?1000:0);}
+export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(crossesSea(from,to)?SEA:0);}
 export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile):S[]{
  return [...sellers].sort((a,b)=>travelDistance(at,a.tile)-travelDistance(at,b.tile));
 }
@@ -197,27 +199,55 @@ export type Walked={ok:boolean;reason?:string;detail?:string;ticks?:number};
 // 150 ms ticks on practice (135 s), so three 45 s searches for one unreachable spawn cluster ended a run.
 export const SWEEP_PLAN_BUDGET_MS=15_000;
 export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150):Promise<Walked>{
- const at=():Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+ const from=at(s);
+ const r=await walkFarLegs(s,world,to,legTimeoutTicks);
+ if(!r.ok)console.log(`QUEST_SWEEP_WALK_FAIL ${JSON.stringify({from,to,at:at(s),reason:r.reason,detail:r.detail})}`);
+ return r;
+}
+const at=(s:Session):Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number):Promise<Walked>{
  const router=(t:Tile)=>goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
  const ground=async(t:Tile):Promise<Walked>=>{
-  const r=at().level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
+  const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
- if(eastOfArdougne(at(),to)){const r=await crossEast(s,world);if(!r.ok)return r;}
+ // A far walk that starts upstairs (Hudo's shop on the Grand Tree's first floor, bound for Port Sarim) first comes down by
+ // the nearest way down: the boats and hubs are ground legs, and asked from the first floor the world router found no route.
+ for(let i=0;i<3&&at(s).level!==0&&cheb(at(s),to)>MAX_HOP;i++){
+  const down=wayDown(world.navigationGraph?.().transports??[],at(s));
+  console.log(`QUEST_SWEEP_DOWN ${JSON.stringify({from:at(s),to:down})}`);
+  const r=await router(down);if(!r.ok)return r;
+ }
+ if(eastOfArdougne(at(s),to)){const r=await crossEast(s,world,to);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the ground beneath it;
  // only the last leg, with its stairs, is the world router's.
- for(const hop of at().level===0?hopsTo(at(),{x:to.x,z:to.z,level:0}):[]){
-  console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);
+ const beneath={x:to.x,z:to.z,level:0};
+ for(const hop of at(s).level===0?hopsTo(at(s),beneath):[]){
+  console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(s),to:hop})}`);
   const r=await ground(hop);if(!r.ok)return r;
  }
- return to.level===0&&at().level===0&&cheb(at(),to)>30?ground(to):router(to);
+ // A far upstairs target with no hub on the way (Hudo's shop on the Grand Tree's first floor, 226 tiles from the Ardougne
+ // bank) is still approached by the ground beneath it: asked from Ardougne, the world router took an Ardougne staircase
+ // and a 240-tile walk on the first floor, where no floor lies, and the search ran out the plan budget.
+ if(to.level!==0&&at(s).level===0&&cheb(at(s),beneath)>MAX_HOP){const r=await ground(beneath);if(!r.ok)return r;}
+ return to.level===0&&at(s).level===0&&cheb(at(s),to)>30?ground(to):router(to);
+}
+// The landing of the nearest way down from this floor (the Grand Tree ladder, 2466,3495): the tile beneath an upstairs shop
+// is a wall as often as a floor (under Hudo's counter, 2449,3508, the router found no route).
+export function wayDown(transports:readonly Transport[],at:Tile):Tile{
+ const downs=transports.filter(t=>t.from.level===at.level&&t.to.level<at.level&&cheb(t.from,at)<=80).sort((a,b)=>cheb(a.from,at)-cheb(b.from,at));
+ return downs[0]?.to??{x:at.x,z:at.z,level:0};
 }
 // From the Ardougne side (x under 2800, z 3270 and up) to anywhere east of x 2950 the way is the two boats, Brimhaven and
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
 // the world router's search for the land way round idles out the budget. Two fares of 30 coins.
 export const eastOfArdougne=(from:Tile,to:Tile)=>from.level===0&&from.x<2800&&from.z>=3270&&to.x>=2950;
-async function crossEast(s:Session,world:World):Promise<Walked>{
- if(count(s.sdk.getState()?.inventory??[],COINS)<60)return{ok:false,reason:'precondition',detail:'missing 995:60 for safe boat route'};
+export const BOAT_FARES=60;
+export const fares=(from:Tile,targets:readonly Tile[])=>targets.some(t=>eastOfArdougne(from,t))?BOAT_FARES:0;
+// The Port Sarim landing: a target in the town itself (Wydin's shop, 3014,3204) needs no walk north past the jail.
+export const SARIM_LANDING:Tile={x:3029,z:3217,level:0};
+async function crossEast(s:Session,world:World,to:Tile):Promise<Walked>{
+ if(count(s.sdk.getState()?.inventory??[],COINS)<BOAT_FARES)return{ok:false,reason:'precondition',detail:`missing 995:${BOAT_FARES} for safe boat route`};
  const walk=(to:Tile)=>goTo(s,world,to,accountOf(s),{legTimeoutTicks:150,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
  const corridor=async(points:readonly Pt[]):Promise<Walked>=>{
   const r=await walkCorridor(await sessionWalker(s),points);
@@ -235,10 +265,10 @@ async function crossEast(s:Session,world:World):Promise<Walked>{
   console.log(`QUEST_SWEEP_BOAT ${JSON.stringify({id,coins:t.coins})}`);
   return{ok:true};
  };
- for(const leg of [()=>sail('npc:captain_barnaby:brimhaven@2679,3275'),()=>corridor(KARAMJA),()=>sail('npc:customs_officer:port-sarim@2953,3147'),()=>corridor(SARIM_NORTH)]){
+ for(const leg of [()=>sail('npc:captain_barnaby:brimhaven@2679,3275'),()=>corridor(KARAMJA),()=>sail('npc:customs_officer:port-sarim@2953,3147')]){
   const r=await leg();if(!r.ok)return r;
  }
- return{ok:true};
+ return cheb(to,SARIM_LANDING)<=60?{ok:true}:corridor(SARIM_NORTH);
 }
 async function reachStart(s:Session,world:World,start:Tile){
  const r=await walkFar(s,world,start);
@@ -264,7 +294,12 @@ const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(r
 // Walk to each seller, open its shop and buy. Ok when the pack holds the bought counts.
 async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
- for(const b of buys){
+ // Purchases go nearest seller first from wherever the bot stands (onions from Hudo in the Gnome Stronghold before
+ // redberries from Wydin in Port Sarim, from Ardougne), so a walk east by boat is not followed by a walk back west.
+ const here=():Tile=>{const q=st()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+ const left=[...buys];
+ while(left.length){
+  const b=left.sort((x,y)=>travelDistance(here(),x.tile)-travelDistance(here(),y.tile)).shift()!;
   // The nearest seller may be out of reach (a quest area, deadly ground) or short (Kortan holds 14 balls of wool, the
   // quest wants 20): the next sellers take over, nearest first, for the rest.
   const before=held(b.id),target=before+b.count,sellers=[b,...(b.alts??[])];
@@ -272,7 +307,6 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
   for(const [k,c] of sellers.entries()){
    if(held(b.id)>=target)break;
    // A seller across the sea or the map is not worth the search: the sweep fails fast and the shortfall is acquisition work.
-   const here=():Tile=>{const q=st()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
    if(travelDistance(here(),c.tile)>FAR_SELLER){console.log(`QUEST_SWEEP_SELLER_FAR ${JSON.stringify({npc:c.npc,tile:c.tile,from:here()})}`);continue;}
    walked=await walkFar(s,world,c.tile,100);
    if(!walked.ok)continue;
@@ -371,6 +405,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
  // An edible quest ingredient (Family Crest's cooked fish, The Knight's Sword's redberry pie) is reserved, never eaten.
  }},{food:[...questFoodDefinitions().keys()],eatAt:eatAtFor(maxHp()),reserved:reservedEdible(need)});
  void s.ended.then(()=>sustain.stop());
+ sustain.aborted.addEventListener('abort',()=>console.log(`QUEST_SWEEP_SUSTAIN_FAIL ${JSON.stringify({failure:sustain.failure(),hp:st()?.player?.hp,at:at(s)})}`));
  const danger=()=>{const p=st()?.player;return!!p&&(p.combat?.inCombat||p.hp<=eatAtFor(maxHp()));};
  if(danger())console.log(`QUEST_SWEEP_DANGER ${JSON.stringify({hp:st()?.player?.hp,inCombat:st()?.player?.combat?.inCombat,at:{x:st()?.player?.worldX,z:st()?.player?.worldZ,level:st()?.player?.level}})}`);
  // The skull basement has no walk out that the world router plans: take its door, corridor and ladder first.
@@ -449,15 +484,23 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const worn=():Item[]=>s.sdk.getEquipment().map((i:any)=>({id:i.id,count:i.count}));
   const owned=[...pack(),...rows(),...worn()];
   const kit=rangedKit(owned);
+  // What the kit decision saw: live, UnderMyKilt's plan for the Druidic Ritual bear had no kit although its bank held a
+  // shortbow and 19 iron arrows by the last receipt, and the log could not say which of the three containers was read.
+  const seen=(ids:readonly number[])=>Object.fromEntries(ids.filter(id=>owned.some(i=>i.id===id)).map(id=>[id,count(owned,id)]));
+  console.log(`QUEST_SWEEP_KIT ${JSON.stringify({kit,bows:seen(BOWS),arrows:seen(ARROWS),bank:rows().length,pack:pack().length,worn:worn().length,ranged:skill('Ranged'),attack:skill('Attack')})}`);
   const gather=gatherPlan(p.missing,here(),spawnsByDistance,sellerAt,undefined,skill('Attack'),kit?skill('Ranged'):1);
-  if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:ARROWS_PER_KILL*gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+g.count,0)});
+  if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)});
   // A tool already worn (the bow, the arrows) counts as held; the gather's tools are kept by the deposit pass.
   const tools=plan(new Map(gather.tools.map(t=>[t.id,t.count])),[...pack(),...worn()],rows());
   p.withdraw.push(...tools.withdraw);
   const toolIds=new Set(gather.tools.map(t=>t.id));
-  const shop=shops([...p.missing.filter(m=>!gather.gathers.some(g=>g.id===m.id)),...tools.missing]);
+  const shop=shops([...gather.still,...tools.missing]);
   if(gather.gathers.length)console.log(`QUEST_SWEEP_GATHER_PLAN ${JSON.stringify(gather)}`);
   if(shop.unsold.length){await s.bot.closeBank();return fail('missing '+shop.unsold.map(i=>`${i.id}:${i.count}`).join(',')+(shop.buys.length?' (unsold; others in shops)':''));}
+  // Recipes paid in dialogue (Aggie's dyes, Wyson's woad leaves) take their coins out with the shop money, and so do the
+  // two boat fares when a destination lies east of Ardougne: a plan of Wyson's woad and Aggie's blue dye alone budgets 25
+  // coins, and crossEast refuses the crossing below 60.
+  shop.coins+=gather.coins+fares(here(),[...shop.buys.map(b=>b.tile),preset.position,...gather.gathers.flatMap(g=>g.how==='npc'&&NPC_SOURCES[g.id]?[NPC_SOURCES[g.id]!.tile]:[])]);
   if(shop.coins){
    const take=Math.max(0,shop.coins-count(pack(),COINS)-(p.withdraw.find(w=>w.id===COINS)?.count??0));
    if(count(rows(),COINS)<take){await s.bot.closeBank();return fail(`missing ${COINS}:${take} to buy ${shop.buys.map(b=>b.id).join(',')}`);}
@@ -474,6 +517,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
    const r:any=await s.bot.depositItem(item,d.count);
    console.log(`QUEST_SWEEP_DEPOSIT ${JSON.stringify({id:d.id,count:d.count,success:r?.success,message:r?.message,free:28-(st()?.inventory?.length??0)})}`);
   }
+  console.log(`QUEST_SWEEP_BANK_PASS ${JSON.stringify({withdraw:p.withdraw,slots,free:28-pack().length})}`);
   for(const w of p.withdraw){
    const row=(st()?.bank?.items??[]).find((i:any)=>i.id===w.id);
    const before=count(pack(),w.id),bankBefore=count(rows(),w.id);
@@ -484,6 +528,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
    if(!observed)return fail(`withdraw debit unobserved ${w.id}:${w.count}`);
   }
   await s.bot.closeBank();
+  console.log(`QUEST_SWEEP_BANK_DONE ${JSON.stringify({at:here(),buys:shop.buys.map(b=>b.id),gathers:gather.gathers.map(g=>g.id)})}`);
   if(shop.buys.length){const why=await buyFromShops(s,world,shop.buys);if(why)return fail(why);}
   if(gather.gathers.length){const why=await gatherItems(s,world,gather.gathers,(to)=>walkFar(s,world,to,100));if(why)return fail(why);}
   const left=plan(need,pack(),[]).missing;

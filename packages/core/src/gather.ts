@@ -8,7 +8,7 @@ import type { Session } from './inprocess';
 import { waitTicks, waitUntil } from './ticks';
 import { goTo } from './walk';
 import type { World } from './world';
-import { spawnsByDistance } from './spawn-index';
+import { spawnsByDistance, locsByDistance } from './spawn-index';
 
 type Item = { id: number; count: number };
 type Tile = { x: number; z: number; level: number };
@@ -19,12 +19,31 @@ export const MILK=1927,BUCKET=1925,COW=81;
 // Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
-export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill';kit?:'ranged'};
+export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'|'pick'|'npc'|'combine';kit?:'ranged'};
+// A plant picked for its item: onions are loc 3366 with the Pick option (general_use/scripts/pickables.rs2:31-39; the
+// plant stands again 50 ticks after a pick).
+export const PICK_SOURCES:Record<number,{loc:number;option:RegExp}>={1957:{loc:3366,option:/^pick$/i}};
+// An item an NPC hands over in dialogue for ingredients and coins: Aggie in Draynor makes red dye from 3 redberries,
+// yellow from 2 onions and blue from 2 woad leaves, 5 coins each (area_draynor/scripts/aggie.rs2:71-115); Wyson the
+// gardener in Falador park sells 2 woad leaves for 20 coins (area_falador/scripts/wyson_the_gardener.rs2:26-35).
+// `choices` are the dialogue options taken in order; a page with no matching option is continued.
+export type NpcSource={npc:number;name:string;tile:Tile;needs:Item[];coins:number;yields:number;choices:RegExp[]};
+const AGGIE={npc:922,name:'Aggie',tile:{x:3086,z:3259,level:0}},WYSON={npc:36,name:'Wyson the gardener',tile:{x:3027,z:3379,level:0}};
+export const NPC_SOURCES:Record<number,NpcSource>={
+ 1793:{...WYSON,needs:[],coins:20,yields:2,choices:[/looking for woad leaves/i,/how about 20 coins/i]},
+ 1763:{...AGGIE,needs:[{id:1951,count:3}],coins:5,yields:1,choices:[/make dyes for me/i,/make red dye/i,/^okay, make me some red dye/i]},
+ 1765:{...AGGIE,needs:[{id:1957,count:2}],coins:5,yields:1,choices:[/make dyes for me/i,/make yellow dye/i,/^okay, make me some yellow dye/i]},
+ 1767:{...AGGIE,needs:[{id:1793,count:2}],coins:5,yields:1,choices:[/make dyes for me/i,/make blue dye/i,/^okay, make me some blue dye/i]},
+};
+// Two items used on each other: orange dye is red on yellow (skill_crafting/scripts/dye_mixing.rs2).
+export const COMBINE_SOURCES:Record<number,[number,number]>={1769:[1763,1765]};
 // A bow and arrows the account owns: shortbow or longbow, bronze, iron or steel arrows (the kinds the fleet's banks hold).
 export const BOWS=[841,839,843,845],ARROWS=[884,886,882],ARROWS_PER_KILL=6;
+// The arrows are the kind owned in the greatest number (UnderMyKilt: 21 bronze, 19 iron): the shortfall for a long kill
+// series is bought, and bronze arrows are the kind most shops sell.
 export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
- const has=(id:number,n=1)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0)>=n;
- const bow=BOWS.find(id=>has(id)),arrows=ARROWS.find(id=>has(id,ARROWS_PER_KILL));
+ const have=(id:number)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0);
+ const bow=BOWS.find(id=>have(id)>=1),arrows=[...ARROWS].filter(id=>have(id)>=ARROWS_PER_KILL).sort((a,b)=>have(b)-have(a))[0];
  return bow!==undefined&&arrows!==undefined?{bow,arrows}:null;
 }
 export const CLUSTER=20;
@@ -42,32 +61,54 @@ export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number
 export const killAttempts=(id:number,count:number)=>Math.ceil(count/(KILL_SOURCES[id]?.chance??1)*1.5)+3;
 export const EASY_KILL=6;
 // The style that beats the animal: melee below the Attack level, else a bow below the Ranged level (ranged is 1 without a kit).
+// A drop by chance means a series of kills (3 goblin mails: 77 goblins expected), so the stronger style: at Attack 6 with
+// bare hands, 15 goblins took 60 of an 81-hitpoint account's hitpoints and the fight was abandoned.
 export function killStyle(id:number,attack:number,ranged=1):'melee'|'ranged'|null{
- const c=KILL_SOURCES[id]?.combat;
- if(c===undefined)return null;
+ const src=KILL_SOURCES[id];
+ if(!src)return null;
+ const c=src.combat;
+ if(src.chance<1&&ranged>attack&&c<ranged)return 'ranged';
  if(c<=EASY_KILL||c<attack)return 'melee';
  return c<ranged?'ranged':null;
 }
+// Arrows for the kills: ARROWS_PER_KILL for each drop that comes every kill (a bear's 27 hitpoints), two for each attempt
+// of a series of kills whose animal dies to one arrow (a goblin's 5).
+export const arrowsFor=(id:number,count:number)=>(KILL_SOURCES[id]?.chance??1)<1?2*killAttempts(id,count):ARROWS_PER_KILL*count;
 export const canKill=(id:number,attack:number,ranged=1)=>killStyle(id,attack,ranged)!==null;
 let npcRows:{id:number;spawns?:Tile[]}[]|undefined;
 const npcSpawns=(ids:readonly number[]):Tile[]=>(npcRows??=JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>ids.includes(n.id)).flatMap(n=>n.spawns??[]);
 export const killSpawns=(id:number):Tile[]=>KILL_SOURCES[id]?npcSpawns(KILL_SOURCES[id]!.npcs):[];
 // A spawn wins over a shop when it is nearer: eggs lie by Lumbridge, while the only egg seller is in Rellekka.
 // `seller` gives the straight-line distance to the nearest seller (Infinity when no shop sells the item).
-export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns,attack=99,ranged=1){
- const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];
+// A recipe's ingredients are planned like any missing item (a spawn, a plant, a shop, a kill, another recipe) and its
+// own step follows them, so the gathers run ingredients first. `coins` is what the recipes cost; `still` is what no
+// source covers and the shop plan takes.
+export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns,attack=99,ranged=1,picks:(loc:number,at:Tile)=>Tile[]=locsByDistance){
+ const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];let coins=0;
  const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
- for(const m of missing){
-  const sold=seller(m.id),spot=spawns(m.id,at)[0];
+ const place=(m:Item,depth:number):void=>{
+  const sold=seller(m.id),spot=spawns(m.id,at)[0],pick=PICK_SOURCES[m.id]?picks(PICK_SOURCES[m.id]!.loc,at)[0]:undefined;
   if(m.id===MILK&&sold===Infinity){gathers.push({...m,how:'milk'});tools.push({id:BUCKET,count:m.count});}
   else if(spot&&d(spot)<sold)gathers.push({...m,how:'spawn'});
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
+  else if(pick&&d(pick)<sold)gathers.push({...m,how:'pick'});
   // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles
   // from Ardougne and behind Priest in Peril, while cows graze beside the Ardougne banks.
   else if(canKill(m.id,attack,ranged)&&kills(m.id).some(t=>t.level===at.level&&d(t)<sold))gathers.push({...m,how:'kill',...(killStyle(m.id,attack,ranged)==='ranged'?{kit:'ranged' as const}:{})});
+  else if(sold<Infinity)still.push(m);
+  else if(NPC_SOURCES[m.id]&&depth<4){
+   const r=NPC_SOURCES[m.id]!,units=Math.ceil(m.count/r.yields);
+   for(const n of r.needs)place({id:n.id,count:n.count*units},depth+1);
+   coins+=r.coins*units;gathers.push({id:m.id,count:units*r.yields,how:'npc'});
+  }
+  else if(COMBINE_SOURCES[m.id]&&depth<4){
+   for(const id of COMBINE_SOURCES[m.id]!)place({id,count:m.count},depth+1);
+   gathers.push({...m,how:'combine'});
+  }
   else still.push(m);
- }
- return{gathers,still,tools};
+ };
+ for(const m of missing)place(m,0);
+ return{gathers,still,tools,coins};
 }
 let cowTiles:Tile[]|undefined;
 const cows=()=>cowTiles??=(JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>n.id===COW).flatMap(n=>n.spawns??[]);
@@ -79,7 +120,7 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
  const here=():Tile=>{const p=st()?.player;return{x:p?.worldX??0,z:p?.worldZ??0,level:p?.level??0};};
  for(const g of gathers){
-  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest(killSpawns(g.id),here()):spawnsByDistance(g.id,here())).slice(0,6);
+  const target=held(g.id)+g.count,sources=(g.how==='milk'?nearest(cows(),here()):g.how==='loc'?[LOC_SOURCES[g.id]!.tile]:g.how==='kill'?nearest(killSpawns(g.id),here()):g.how==='pick'?locsByDistance(PICK_SOURCES[g.id]!.loc,here()):g.how==='npc'?[NPC_SOURCES[g.id]!.tile]:g.how==='combine'?[here()]:spawnsByDistance(g.id,here())).slice(0,6);
   // Spawns lie in clusters (three egg spawns within 4 tiles beyond White Wolf Mountain): one with no route rules out
   // the rest of its cluster, so the walk moves on to the next place rather than searching the same ground again.
   const unreachable:Tile[]=[];
@@ -91,7 +132,38 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
    if(!walked.ok){unreachable.push(at);continue;}
    for(let tries=0;tries<(g.how==='kill'?killAttempts(g.id,g.count):g.count+3)&&held(g.id)<target;tries++){
     const before=held(g.id);
-    if(g.how==='kill'){
+    if(g.how==='combine'){
+     const [a,b]=COMBINE_SOURCES[g.id]!,inv=st()?.inventory??[],ia=inv.find((i:any)=>i.id===a),ib=inv.find((i:any)=>i.id===b);
+     if(!ia||!ib)return `combining ${g.id} needs ${a} and ${b} in the pack`;
+     await s.direct({type:'useItemOnItem',sourceSlot:ia.slot,targetSlot:ib.slot,reason:'SDK'});
+    }else if(g.how==='pick'){
+     const src=PICK_SOURCES[g.id]!,plant=(st()?.nearbyLocs??[]).filter((l:any)=>l.id===src.loc&&(l.optionsWithIndex??[]).some((o:any)=>src.option.test(o.text))).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     // A picked plant stands again after 50 ticks; the field has several.
+     if(!plant){if(!await waitUntil(s,()=>(st()?.nearbyLocs??[]).some((l:any)=>l.id===src.loc),{timeoutTicks:60}))break;continue;}
+     await s.bot.interactLoc(plant,src.option);
+    }else if(g.how==='npc'){
+     const r=NPC_SOURCES[g.id]!,have=(id:number)=>held(id);
+     const short=r.needs.find(n=>have(n.id)<n.count);
+     if(short)return `${r.name} needs ${short.count} of ${short.id} for ${g.id}, pack has ${have(short.id)}`;
+     if(have(995)<r.coins)return `${r.name} needs ${r.coins} coins for ${g.id}`;
+     const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===r.npc).sort((a:any,b:any)=>a.distance-b.distance)[0];
+     if(!npc)return `${r.name} not in sight at ${r.tile.x},${r.tile.z}`;
+     const talked:any=await s.bot.talkTo(npc);
+     if(!talked?.success)return `${r.name} did not talk: ${talked?.message??''}`;
+     // One dialogue page per tick: the next choice when its option shows, else continue, until the item arrives.
+     let next=0;
+     for(let t=0;t<60&&held(g.id)<before+r.yields;t++){
+      const dlg:any=s.sdk.getDialog();
+      if(dlg?.isOpen&&!dlg.isWaiting){
+       const opts:any[]=dlg.options??[],choice=next<r.choices.length?opts.find(o=>r.choices[next]!.test(o.text)):undefined;
+       if(choice){await s.sdk.clickDialogByText(r.choices[next]!);next++;}
+       else if(opts.length&&!opts.some(o=>/click here to continue/i.test(o.text))&&next<r.choices.length)return `${r.name}: no option for ${r.choices[next]} among ${opts.map(o=>o.text).join(' | ')}`;
+       else await s.sdk.sendClickDialog(0);
+      }
+      await waitTicks(s,1);
+     }
+     console.log(`QUEST_SWEEP_NPC ${JSON.stringify({item:g.id,npc:r.name,held:held(g.id),coins:have(995)})}`);
+    }else if(g.how==='kill'){
      // The nearest free one in sight; its drop lands on its tile when it dies, and another player's kill drops nothing for us.
      const ids=KILL_SOURCES[g.id]!.npcs,lying=()=>(st()?.groundItems??[]).filter((i:any)=>i.id===g.id&&i.distance<=12).sort((a:any,b:any)=>a.distance-b.distance);
      // A drop already on the ground (an earlier kill, another player's) is taken before the next fight, so the fight's
@@ -123,7 +195,8 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
       await waitUntil(s,()=>!(st()?.player?.combat?.inCombat),{timeoutTicks:40});
       return `kill of ${npc.name} abandoned at ${hp()?.level} of ${hp()?.baseLevel} hitpoints`;
      }
-     if(!await waitUntil(s,()=>!!drop(),{timeoutTicks:10}))continue;
+     // The drop lands as the animal dies; a kill without one (123 of 128 goblins) moves on after three ticks.
+     if(!await waitUntil(s,()=>!!drop(),{timeoutTicks:3}))continue;
      await s.bot.pickupItem(drop());
      console.log(`QUEST_SWEEP_KILL ${JSON.stringify({item:g.id,npc:npc.name,at:{x:npc.x,z:npc.z},held:held(g.id)})}`);
     }else if(g.how==='milk'){

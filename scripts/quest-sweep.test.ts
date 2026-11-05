@@ -228,6 +228,10 @@ test('a seller across the water ranks behind one on the same landmass, and sword
  expect(travelDistance(alKharid,hamab)).toBe(488+SEA);
  expect(travelDistance(alKharid,kortan)).toBe(654);
  expect(sellersByTravel([{npc:'Hamab',tile:hamab},{npc:'Kortan',tile:kortan}],alKharid).map(s=>s.npc)).toEqual(['Kortan','Hamab']);
+ // The Miscellania and Etceteria food shops lie across the water from Ardougne, past the seller limit; Rellekka does not.
+ const ardougne={x:2655,z:3283,level:0},miscellania={x:2516,z:3864,level:0},etceteria={x:2602,z:3876,level:0},rellekka={x:2644,z:3680,level:0};
+ expect(travelDistance(ardougne,miscellania)).toBe(581+SEA);expect(travelDistance(ardougne,etceteria)).toBe(593+SEA);
+ expect(travelDistance(ardougne,rellekka)).toBe(397);expect(travelDistance(miscellania,etceteria)).toBe(86);
  expect(isEdible(373)).toBe(true);expect(isEdible(1895)).toBe(true);expect(isEdible(1387)).toBe(false);
  // TheFullMonty's pack: the staff, pots and talisman go; the allowance keeps five swordfish and two of four cake slices.
  const pack=[{id:995,count:17400},{id:1387,count:1},{id:1931,count:1},{id:1931,count:1},{id:1931,count:1},{id:1438,count:1},...Array.from({length:5},()=>({id:373,count:1})),...Array.from({length:4},()=>({id:1895,count:1}))];
@@ -309,6 +313,12 @@ test('a bow and arrows let the Ranged level count against an animal, and the pla
  expect(killStyle(2136,6,97)).toBe('ranged');       // bear, Ranged 97 with a kit
  expect(killStyle(2134,6,97)).toBe('melee');        // a giant rat dies to anyone
  expect(killStyle(2136,22,97)).toBe('melee');       // melee first when it suffices
+ // A series of goblin kills for their mail takes the bow when Ranged beats Attack, and melee without a kit.
+ expect(killStyle(288,6,97)).toBe('ranged');expect(killStyle(288,6,1)).toBe('melee');expect(killStyle(288,40,30)).toBe('melee');
+ const {arrowsFor,killAttempts:attempts}=await import('../packages/core/src/gather');
+ expect(arrowsFor(288,3)).toBe(2*attempts(288,3));expect(arrowsFor(2136,1)).toBe(6);
+ // The arrow kind owned in the greatest number: UnderMyKilt's 21 bronze over 19 iron.
+ expect(rangedKit([{id:841,count:1},{id:884,count:19},{id:882,count:21}])).toEqual({bow:841,arrows:882});
  expect(rangedKit([{id:841,count:1},{id:884,count:19}])).toEqual({bow:841,arrows:884});
  expect(rangedKit([{id:841,count:1},{id:882,count:3}])).toBeNull();   // too few arrows
  expect(rangedKit([{id:884,count:50}])).toBeNull();                   // no bow
@@ -334,4 +344,57 @@ test('a spawn across the Karamja water ranks a sea farther',async()=>{
  const list2=new Map([[1917,[{x:2970,z:3150,level:0},{x:2800,z:3180,level:0}]]]);
  expect(spawnsByDistance(1917,{x:2940,z:3150,level:0},list2)[0]).toEqual({x:2800,z:3180,level:0});
  expect(SEA).toBe(1000);
+});
+
+test('a dye is a recipe: its ingredients are planned first, its dialogue step follows, and its coins are counted',async()=>{
+ const {NPC_SOURCES,COMBINE_SOURCES,PICK_SOURCES}=await import('../packages/core/src/gather');
+ const draynor={x:3092,z:3243,level:0};
+ const spawns=(id:number)=>id===1951?[{x:3267,z:3371,level:0}]:[];           // redberries lie near Varrock
+ const seller=(id:number)=>id===1957?300:Infinity;                           // onions from Hudo's shop
+ const plan=gatherPlan([{id:1769,count:1},{id:1767,count:1}],draynor,spawns,seller,()=>[],6,1,()=>[]);
+ expect(plan.gathers).toEqual([
+  {id:1951,count:3,how:'spawn'},          // red dye's berries
+  {id:1763,count:1,how:'npc'},            // red dye at Aggie
+  {id:1765,count:1,how:'npc'},            // yellow dye at Aggie (onions come from the shop)
+  {id:1769,count:1,how:'combine'},        // orange = red on yellow
+  {id:1793,count:2,how:'npc'},            // 2 woad leaves from Wyson
+  {id:1767,count:1,how:'npc'},            // blue dye at Aggie
+ ]);
+ expect(plan.still).toEqual([{id:1957,count:2}]);
+ expect(plan.coins).toBe(5+5+20+5);
+ expect(NPC_SOURCES[1763]!.needs).toEqual([{id:1951,count:3}]);expect(COMBINE_SOURCES[1769]).toEqual([1763,1765]);expect(PICK_SOURCES[1957]!.loc).toBe(3366);
+ // A plant nearer than any seller is picked.
+ const picked=gatherPlan([{id:1957,count:2}],{x:2600,z:3000,level:0},()=>[],()=>Infinity,()=>[],6,1,()=>[{x:2581,z:2968,level:0}]);
+ expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
+});
+
+test('plant tiles come from the knowledge and rank by distance',async()=>{
+ const {locsByDistance,pickableTiles}=await import('../packages/core/src/spawn-index');
+ const m=new Map([[3366,[{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]]]);
+ expect(locsByDistance(3366,{x:2584,z:2980,level:0},m)[0]).toEqual({x:2583,z:2981,level:0});
+ expect(pickableTiles(3366).length).toBeGreaterThan(0);   // onions
+ expect(pickableTiles(1161).length).toBeGreaterThan(0);   // cabbages
+ expect(pickableTiles(999999)).toEqual([]);
+});
+
+test('the way down from an upstairs shop is the nearest descending transport, and the tile beneath when there is none',async()=>{
+ const {wayDown}=await import('./quest-sweep');
+ const t=(name:string,from:{x:number;z:number;level:number},to:{x:number;z:number;level:number})=>({locName:name,option:'op1',from,to,exact:false,src:'',toSrc:'',handler:''}) as any;
+ // Hudo's counter on the Grand Tree's first floor: the ladder at 2466,3495 (knowledge/transports.json), not the wall
+ // beneath; a ladder up, one on another floor and one 100 tiles away do not count.
+ const transports=[t('ladder',{x:2466,z:3495,level:1},{x:2466,z:3495,level:0}),t('grandtree_laddermiddle',{x:2466,z:3495,level:1},{x:2466,z:3495,level:2}),
+  t('ladder',{x:2466,z:3495,level:2},{x:2466,z:3495,level:1}),t('stairs',{x:2549,z:3508,level:1},{x:2549,z:3508,level:0})];
+ expect(wayDown(transports,{x:2449,z:3508,level:1})).toEqual({x:2466,z:3495,level:0});
+ expect(wayDown([],{x:2449,z:3508,level:1})).toEqual({x:2449,z:3508,level:0});
+});
+
+test('arrows stack in the slot count, and a destination east of Ardougne adds the boat fares to the coin budget',async()=>{
+ const {slotsFor,fares,BOAT_FARES}=await import('./quest-sweep');
+ // 238 bronze arrows with none in the pack: one slot; a pack stack of them: none.
+ expect(slotsFor([{id:882,count:238}],[])).toBe(1);
+ expect(slotsFor([{id:882,count:217}],[{id:882,count:21}])).toBe(0);
+ const ardougne={x:2655,z:3283,level:0},wyson={x:3027,z:3379,level:0},aggie={x:3086,z:3259,level:0},hudo={x:2448,z:3509,level:1};
+ expect(fares(ardougne,[wyson,aggie])).toBe(BOAT_FARES);
+ expect(fares(ardougne,[hudo])).toBe(0);
+ expect(fares({x:3092,z:3243,level:0},[wyson,aggie])).toBe(0);
 });
