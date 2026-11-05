@@ -88,7 +88,7 @@ export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>b
  }
  // The allowance gives way to the supplies: 20 balls of wool, the coins and the pickup reserve leave one slot for food.
  let allowance=Math.max(0,Math.min(KEEP_FOOD,28-need));
- for(const id of [...new Set(pack.filter(i=>isEdible(i.id)&&!STACKS.has(i.id)).map(i=>i.id))]){
+ for(const id of [...new Set(pack.filter(i=>isEdible(i.id)&&!STACKS.has(i.id)&&!keep(i.id)).map(i=>i.id))]){
   if(free>=need)break;
   const held=pack.filter(i=>i.id===id).length,kept=Math.min(held,allowance);allowance-=kept;
   const bank=Math.min(held-kept,need-free);
@@ -351,7 +351,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
  const maxHp=()=>st()?.skills?.find((k:any)=>k.name==='Hitpoints')?.baseLevel??10;
  const sustain=startQuestSustain({sdk:s.sdk,tick:()=>s.tick(),onTick:cb=>s.onTick(cb),ended:s.ended,direct:async action=>{
   const reply:any=await s.direct(action);return{success:!!reply?.success,message:reply?.message===undefined?undefined:String(reply.message)};
- }},{food:[...questFoodDefinitions().keys()],eatAt:eatAtFor(maxHp())});
+ // An edible quest ingredient (Family Crest's cooked fish, The Knight's Sword's redberry pie) is reserved, never eaten.
+ }},{food:[...questFoodDefinitions().keys()],eatAt:eatAtFor(maxHp()),reserved:Object.fromEntries([...need].filter(([id])=>isEdible(id)))});
  void s.ended.then(()=>sustain.stop());
  const danger=()=>{const p=st()?.player;return!!p&&(p.combat?.inCombat||p.hp<=eatAtFor(maxHp()));};
  if(danger())console.log(`QUEST_SWEEP_DANGER ${JSON.stringify({hp:st()?.player?.hp,inCombat:st()?.player?.combat?.inCombat,at:{x:st()?.player?.worldX,z:st()?.player?.worldZ,level:st()?.player?.level}})}`);
