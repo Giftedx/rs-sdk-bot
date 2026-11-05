@@ -59,6 +59,18 @@ test('a master edit that overlaps the build change stops the PR as a conflict in
  expect((await processDeliveryPrs(s.coord,s.main,stub().run,retryDelayMs(10),s.base)).opened).toEqual([]); // no retry
 });
 
+test('a Windows delivery keeps unrelated master edits when the snapshots use CRLF',async()=>{
+ const s=setup();
+ writeFileSync(join(s.main,FILE),'a\r\nb\r\nc\r\n');
+ const root=s.build('iron-progress-order','a\r\nb\r\nC\r\n');
+ stage(s,root,'build-windows');
+ const git=stub({master:lines('A','b','c')});
+ const out=await processDeliveryPrs(s.coord,s.main,git.run,1000,s.base);
+ expect(out.conflicts).toEqual([]);
+ expect(out.opened.map(p=>p.taskId)).toEqual(['build-windows']);
+ expect(git.committed[FILE]).toBe(lines('A','b','C'));
+});
+
 test('a build that started on an earlier unmerged delivery opens its PR after that delivery merges',async()=>{
  const s=setup(),first=s.build('first',lines('a','B','c'));publishWorkspace(s.main,'first',[FILE]);stage(s,first,'build-first',[FILE],10);
  const second=s.build('second',lines('a','B','C'));publishWorkspace(s.main,'second',[FILE]);
