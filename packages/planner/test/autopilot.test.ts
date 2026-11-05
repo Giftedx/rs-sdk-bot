@@ -255,3 +255,10 @@ test('on a value tie an account keeps the template it holds, so a level change d
     // A held spot another side now claims is taken: the account moves, the other keeps its own.
     expect(ids(plan(inputs([a, b], { current, taken: { 'knight:2669,3298': 1 } })))).toEqual({ TheFullMonty: 'goldfarm@2671,3313', UnderMyKilt: 'goldfarm@2582,3297' });
 });
+
+test('a run the gateway dropped is a drain, not a failure: two drains keep the job, two real fails after them retire it', () => {
+    const drain = 'RESULT fail session ended: disconnected';
+    expect(assess([drain, drain])).toMatchObject({ retire: false, ok: 0, fail: 0, drains: 2 });
+    expect(assess(['RESULT fail no chickens', drain, 'RESULT fail no chickens'])).toMatchObject({ retire: true, fail: 2, drains: 1 });
+    expect(assess(['RESULT fail no chickens', drain, 'RESULT ok feathers=30 gained=30'])).toMatchObject({ retire: false, ok: 1, fail: 1, drains: 1 });
+});
