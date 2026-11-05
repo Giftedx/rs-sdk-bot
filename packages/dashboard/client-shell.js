@@ -392,6 +392,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   // Map squares (map-squares/<mx>_<mz>.png, 4 px a tile): loaded as the view needs them, drawn when ready.
   const squares=new Map(),squareRetryAt=new Map();
   window.atlasSquare=(mx,mz)=>{
+    // The export covers the surface only: an underground square (z 6400 and up) has no file to ask for.
+    if(mz>=100)return null;
     const key=mx+'_'+mz;if(Date.now()<(squareRetryAt.get(key)||0))return null;let img=squares.get(key);
     if(!img){img=new Image();img.onload=()=>{squareRetryAt.delete(key);if(typeof drawMap==='function')drawMap();minimap();};img.onerror=()=>{squares.delete(key);squareRetryAt.set(key,Date.now()+30000);};img.src='/map-squares/'+key+'.png';squares.set(key,img);}
     return img.complete&&img.naturalWidth?img:null;
