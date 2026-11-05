@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793892827131,
+ "at": 1793895259958,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -212,18 +212,6 @@
    "repeat": true,
    "goal": "fire and earth runes from Betty",
    "role": "supply"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
-   ],
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
-   "role": "combat"
   },
   {
    "account": "Ballspinner",
@@ -506,6 +494,25 @@
    "repeat": false,
    "goal": "run-ge-pocketpython-cat-sardine [task-45830d52-1185-4eb9-b586-6da0803b41e6]",
    "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/gather-combat.ts",
+   "args": [
+    "18000",
+    "giant"
+   ],
+   "env": {
+    "TRAIN_SKILL": "Hitpoints",
+    "TARGET_LEVEL": "99",
+    "GIANT_KILLS": "700",
+    "CAP": "18000",
+    "COORDINATOR_RUN_ID": "task-6d83a7f7-505c-4d59-ab88-0a98a0e6121f"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-herbs-mightyrod-giant-kills [task-6d83a7f7-505c-4d59-ab88-0a98a0e6121f]",
+   "role": "combat"
   }
  ]
 }
