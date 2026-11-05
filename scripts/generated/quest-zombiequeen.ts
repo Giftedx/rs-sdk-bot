@@ -147,26 +147,47 @@ try {
     };
     // Cairn Isle: the climbing rocks from the east (2 columns, x 2794 and 2792), the log bridge west along z 2979
     // (a timer rolls Agility every 20 ticks on it, :561-608), the stacked rocks; "Yes Please" crawls to 2760,9389.
-    const toBervirius = async () => {
-        await q.walk('to cairn rocks', [{ x: CLIMB.x + 2, z: CLIMB.z, tol: 0 }]);
-        for (let i = 0; i < 8 && x() > 2791; i++) {
-            await q.guard('cairn climb');
-            const t0 = q.s.tick();
-            const lx = x() > 2794 ? 2794 : 2792;
-            const r = q.findLoc((l: any) => l.id === CLIMB.id && l.x === lx && l.z === z()) ?? q.findLoc((l: any) => l.id === CLIMB.id && l.x === lx) ?? { id: CLIMB.id, x: lx, z: CLIMB.z };
-            await q.opLoc(r, 1);
-            await q.waitUntil(() => x() <= lx - 1 || msgSince(/fall and hurt/i, t0), 12);
+    // A fall (:563-605) drags the bot to the east bank near 2782,2971, on the far side of the climbing rocks, so a walk
+    // to the bridge's far end has no route: false means it fell and is on that bank.
+    const crossBridge = async (tx: number, tz: number, tol: number): Promise<boolean> => {
+        const t0 = q.s.tick();
+        for (let i = 0; i < 40 && !q.near(tx, tz, tol); i++) {
+            await q.guard('cairn bridge');
+            if (msgSince(/^you fall!/i, t0)) {
+                await q.waitUntil(() => msgSince(/nearly drowned/i, t0), 30);
+                await q.waitTicks(2);
+                return false;
+            }
+            if (i % 5 === 0) await q.s.direct({ type: 'walkTo', x: tx, z: tz, running: true, reason: 'SDK' });
             await q.waitTicks(1);
         }
-        if (x() > 2791) await q.fail('cairn climb');
-        await q.walk('cairn bridge', [{ x: 2770, z: 2979, tol: 1 }]);
+        if (!q.near(tx, tz, tol + 1)) await q.fail('cairn bridge');
+        return true;
+    };
+    const toBervirius = async () => {
+        for (let crossed = false, k = 0; !crossed; k++) {
+            if (k >= 5) await q.fail('cairn bridge falls');
+            await q.walk('to cairn rocks', [{ x: CLIMB.x + 2, z: CLIMB.z, tol: 0 }]);
+            for (let i = 0; i < 8 && x() > 2791; i++) {
+                await q.guard('cairn climb');
+                const t0 = q.s.tick();
+                const lx = x() > 2794 ? 2794 : 2792;
+                const r = q.findLoc((l: any) => l.id === CLIMB.id && l.x === lx && l.z === z()) ?? q.findLoc((l: any) => l.id === CLIMB.id && l.x === lx) ?? { id: CLIMB.id, x: lx, z: CLIMB.z };
+                await q.opLoc(r, 1);
+                await q.waitUntil(() => x() <= lx - 1 || msgSince(/fall and hurt/i, t0), 12);
+                await q.waitTicks(1);
+            }
+            if (x() > 2791) await q.fail('cairn climb');
+            crossed = await crossBridge(2770, 2979, 1);
+        }
         await q.walk('to stacked rocks', [{ x: 2762, z: 2989, tol: 1 }]);
         await act('crawl', () => q.opLoc(loc(CAIRN), 2), [/yes please/i], () => z() > 9000, 25, 6);
     };
 
     // Off Cairn Isle: the bridge east, then the climbing rocks from the west side jump 4 tiles east (:544-558).
     const fromCairn = async () => {
-        await q.walk('cairn bridge back', [{ x: 2770, z: 2979, tol: 1 }, { x: 2791, z: 2979, tol: 0 }]);
+        await q.walk('cairn bridge back', [{ x: 2770, z: 2979, tol: 1 }]);
+        if (!await crossBridge(2791, 2979, 0)) return;   // the bank is already east of the rocks
         for (let i = 0; i < 6 && x() < 2795; i++) {
             await q.guard('cairn climb back');
             if (x() !== 2791 || z() !== 2979) await q.walk('cairn rocks west', [{ x: 2791, z: 2979, tol: 0 }]);
@@ -324,13 +345,32 @@ try {
             if (q.sawText(/something appear on the dolmen/i) || msgSince(/something appear on the dolmen/i, 0)) break;
         }
         await q.converse([], () => !q.dialogOpen(), 10);
-        await act('remains', () => q.opLoc(dol(), 2), [], () => q.has(ITEM.corpse), 15, 4);
+        // After the fight the bot can stand outside the door on 2893,9480 (2 of 3 runs), where the dolmen answers "I can't
+        // reach that!": the door moves it back in (:1359-1364). No undead chase here: that is a way out of the room.
+        for (let i = 0; i < 8 && !q.has(ITEM.corpse); i++) {
+            await q.guard('remains');
+            if (z() <= 9480) {
+                const d = q.findLoc((l: any) => l.id >= 2246 && l.id <= 2251 && l.z === 9480);
+                if (d) await q.opLoc(d, 1);
+                await q.waitUntil(() => z() > 9480, 6);
+                continue;
+            }
+            await q.opLoc(dol(), 2);
+            await answer([], () => q.has(ITEM.corpse), 15);
+        }
+        if (!q.has(ITEM.corpse)) await q.fail('remains');
+        await answer([], () => !q.dialogOpen(), 8);
         await pfm(false);
         q.milestone(14);
         // 9. Out: the rocks up, the gate from the south, the bone key on the exit doors (2928,9527) to 2916,3093
         // (:201-240).
+        // The room has one way out: the tomb door moves the player from inside onto its south tile 2892,9480 (:1359-1364).
+        // The planner takes the door for shut and stops at 2896,9489, inside the room.
+        await q.walk('to tomb door inside', [{ x: 2892, z: 9481, tol: 1 }]);
+        await act('tomb door out', () => { const d = q.findLoc((l: any) => l.id >= 2246 && l.id <= 2251 && l.z === 9480); return d ? q.opLoc(d, 1) : q.waitTicks(1); }, [], () => z() <= 9480, 12, 4);
         await q.walk('to rocks up', [{ x: 2928, z: 9510, tol: 1 }]);
-        await act('rocks up', () => { const r = q.findLoc((l: any) => l.id === 2257); return r ? q.opLoc(r, 1) : q.waitTicks(1); }, [], () => z() >= 9513, 12, 4);
+        // A climb passes 2928,9513, and a fall goes on from there back to 2928,9511 (:1486-1501): only 2929,9515 is the top.
+        await act('rocks up', () => { const r = q.findLoc((l: any) => l.id === 2257); return r ? q.opLoc(r, 1) : q.waitTicks(1); }, [], () => z() >= 9515, 12, 6);
         await act('gate out', () => { const g = gate(); return g ? q.opLoc(g, 1) : q.waitTicks(1); }, [], () => z() >= 9517, 12, 4);
         await q.walk('to exit', [{ x: 2929, z: 9525, tol: 1 }]);
         await act('exit', () => { const d = q.findLoc((l: any) => l.id === 2242 || l.id === 2243); return d ? q.useOnLoc(ITEM.key, d) : q.waitTicks(1); }, [], () => z() < 4000, 12, 4);

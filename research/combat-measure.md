@@ -243,6 +243,80 @@ foodUsed=0`.
 - Logout: `combat-melee.ts` now walks 18 tiles away and waits until 17 ticks pass with no hit before logout. All 27
   runs in this section ended `exit=0`.
 
+## 6a. Ranged: bow plus cannon at the Wilderness poison spiders
+
+Claim: rapid bow plus cannon at the poison spiders takes Ranged 55 to 99 in about 2,000 ticks (476.7 XP per tick) at
+Attack 99, 3 of 3 runs. The Attack 1 specialist time is preliminary: 2 valid runs (2,046 and 1,973 ticks), not 3. The
+cannon roll follows the worn weapon, so a code read says Attack does not matter while a bow is worn.
+
+Conditions: MEASURED practice, one bot at the site, 150 ms tick, presets `cannon_spiders_*` (start tile 3287,3810,
+Wilderness level 37, multiway `maps/multiway.csv` `0_51_59_16_32`), `CANNON=1 TARGET='^poison spider$' STYLE=1 NEAR=8
+RELOAD=25 STOP_LEVEL=99`, `PROTECT=1` keeps Protect from Melee on. Script `scripts/measure/combat-melee.ts`. Kit: magic
+shortbow, 700 rune arrows, coif, amulet of power, green d'hide, cannon, 1,500 cannonballs. Set-up is 11-12 ticks,
+outside the window. Raw logs: `.practice/cannon-spiders/` in the measuring worktree (not in git).
+
+Evidence, Ranged 55 to 99 or death. Balls are balls loaded after the first 30. Potions and antipoisons are doses.
+
+| Run | Set | Ticks | Ranged XP | XP/tick | Balls | Arrows | Sharks | Prayer | Antipoison | HP min | Deaths |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| h1 | Haggis, bow, Protect | 1,964 | 952,100 | 484.8 | 1,044 | 605 | 10 | 10 | 4 | 34 | 0 |
+| h2 | Haggis, bow, Protect | 1,976 | 951,900 | 481.7 | 1,013 | 608 | 15 | 10 | 1 | 33 | 0 |
+| h3 | Haggis, bow, Protect | 2,052 | 952,050 | 464.0 | 993 | 632 | 15 | 10 | 1 | 33 | 0 |
+| q5 | Specialist, bow, Protect | 2,046 | 952,550 | 465.6 | 992 | 613 | 6 | 22 | 8 | 18 | 0 |
+| q6 | Specialist, bow, Protect | 1,973 | 952,650 | 482.8 | 1,019 | 592 | 5 | 21 | 8 | 18 | 0 |
+| q1 | Specialist, bow, Protect | 1,636 | 814,900 | 498.1 | 882 | 498 | 12 | 17 | 0 | 0 | 1 at Ranged 96 |
+| s1 | Specialist, bow, no prayer | 586 | 252,150 | 430.3 | 285 | 169 | 18 | 0 | 0 | 0 | 1 at Ranged 81 |
+| s2 | Specialist, bow, no prayer | 534 | 215,500 | 403.6 | 271 | 151 | 18 | 0 | 4 | 0 | 1 |
+| s3 | Specialist, bow, no prayer | 888 | 380,450 | 428.4 | 449 | 256 | 18 | 0 | 6 | 0 | 1 |
+
+Sets: Haggis = Attack 99, Strength 99, Defence 89, Hitpoints 97, Prayer 99 (`cannon_spiders_h`). Specialist = Attack 1,
+Strength 1, Defence 40, Hitpoints 55, with Prayer 43, 12 sharks and 9 prayer potions (`cannon_spiders_sp`) or Prayer 1,
+18 sharks and 3 prayer potions (`cannon_spiders_s`). q1 never drank its antipoison: the poison message came in set-up,
+before the script looked for it, and 12 sharks ran out. q5, q6, s2 and s3 run the fixed check; h1-h3, q1 and s1 do not.
+
+XP per tick by band, pooled, with the rival's rate from `route-log.json` levels (run 9, S27 start 214):
+
+| Band | Haggis (h1-h3) ticks | Haggis XP/tick | Specialist (q5, q6) ticks | Specialist XP/tick | Rival XP/tick |
+|---|---|---|---|---|---|
+| 55-60 | 30 / 36 / 57 | 465.0 | 45 / 35 | 495.6 | 289.1 (includes set-up) |
+| 60-70 | 144 / 158 / 193 | 404.3 | 188 / 178 | 366.7 | 345.6 |
+| 70-80 | 308 / 286 / 307 | 446.3 | 339 / 287 | 428.5 | 513.2 |
+| 80-90 | 545 / 541 / 569 | 485.3 | 582 / 556 | 469.4 | 561.3 |
+| 90-95 | 452 / 487 / 462 | 474.3 | 427 / 448 | 507.8 | 599.3 |
+| 95-99 | 484 / 467 / 463 | 513.8 | 464 / 468 | 519.8 | 548.4 |
+
+Cannon roll, 300-tick runs with a scimitar and no bow, cannon XP only (`cannon_spiders_h_sci`, `cannon_spiders_s_sci`):
+
+| Weapon, Attack | Ranged XP/tick (runs) | Mean | Computed hit chance |
+|---|---|---|---|
+| Rune scimitar, Attack 99 | 281.5 / 293.0 / 258.5 | 277.7 | 0.80 |
+| Iron scimitar, Attack 1 | 35.8 / 20.2 / 23.7 | 26.6 | 0.07 |
+
+- The roll is `~player_npc_hit_roll(%damagetype)` (`quests/quest_mcannon/scripts/cannon_fire.rs2:116`): the worn weapon
+  and style decide it. With a bow it is `%com_rangeattack`, Ranged level times ranged bonus (108 in this kit), so the
+  chance rises 0.78 at Ranged 55 to 0.87 at Ranged 99 (computed, spider defence roll 4,758).
+- Attack level needed: none with a bow. With a rune scimitar, computed against defence roll 4,941 with slash bonus 51
+  and armour penalties left out: Attack 40 = 0.55, 60 = 0.68, 87 = 0.77 (equal to the bow at Ranged 55), 94 = 0.79,
+  99 = 0.80. A gate at Attack 99 buys 1 point of hit chance over 94.
+- Prayer decides survival for a low-Defence account: 3 of 3 runs without it died with 18 sharks eaten. With Protect
+  from Melee and antipoison, 2 of 2 reached 99 on 5-6 sharks.
+- Projections (ESTIMATE): Haggis 1,997 ticks for 55-99 + 11 set-up. Ranged 1-55 is 46,534 XP, 143 ticks at section 6
+  band 40 (325.2): 1-99 about 2,151 ticks. A specialist adds Dwarf Cannon 888-925 (`research/quest-plan.md`), a walk
+  (rival leg 188) and the unpriced Prayer 43 and Defence 40: about 3,250 ticks before those two, against board #1 5,595.
+- The planner row is 309.4 realistic, about 3,227 ticks for 1-99. This site saves about 1,076 ticks gross (ESTIMATE),
+  gives up the row's side Defence (0.18 per Ranged XP, about 180,000) and adds the Wilderness walk. Row not changed.
+- Supply, Haggis mean for 55-99: 1,047 balls loaded, 615 arrows, 13.3 sharks, 10 prayer doses, 2 antipoison doses.
+  Specialist mean: 1,036 balls, 603 arrows, 5.5 sharks, 21.5 prayer doses, 8 antipoison doses (all it held).
+  Coins (ESTIMATE, `research/supply-costs.md` first-unit quotes 376, 203, 390): about 524,000 for Haggis without
+  potions, which have no quote. A cannon set is 750,000 (ESTIMATE). The rival kit of 1,500 balls and 700 arrows covers this.
+
+Gap: practice has no rival players at Wilderness level 37, so player-killer risk and spider competition are not
+measured. Runs start at the site, so the walk, arrival poison and set-up under attack are not priced. Only 2 specialist
+runs with the fixed poison check reached 99. The third slot went to q4, void because a dead run's cannon took the
+set-up (bow only, 142.2 XP per tick). A death leaves `%ownedmcannon` set and the next set-up refused. The rival is 7-26%
+faster from Ranged 70, and the cause is not known. Our cannon loads 0.53 balls per tick. The archive does not show how
+many of the rival's 1,500 balls it fired.
+
 ## 7. Why Defence finished last, and two levers that fix it
 
 Planner run: `bun packages/planner/src/haggis-cli.ts research/hiscores-live.json --levers --order`, scenario a.

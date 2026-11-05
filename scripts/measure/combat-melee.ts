@@ -12,11 +12,14 @@
 //   (cannon_fire.rs2:1-91), 2 Ranged XP per damage (line 119), so cannon damage = Ranged XP / 50. Holds 30 balls.
 // - Eating and item-on-loc clear the NPC interaction (OpHeld/OpLocU), so the bot re-attacks on the next tick.
 // Prints RATE lines per skill and a RESULT line with damage per tick and the share of ticks in combat.
+// The wilderness spider run (presets cannon_spiders_*) adds: CAP = ticks when no argument gives them; PROTECT=1 keeps
+// Protect from Melee on and drinks a prayer potion at 10 points; an antipoison goes down on "poisoned", at most once per
+// 150 ticks; STOP_LEVEL ends the run at that Ranged level; each Ranged level and each 100 ticks print a SAMPLE line.
 import { openBot, finish, countItems } from '../../packages/core/src/bot';
 import { waitTicks, waitUntil } from '../../packages/core/src/ticks';
 
 const [bot, tArg] = process.argv.slice(2);
-const CAP = Number(tArg ?? 300);
+const CAP = Number(tArg ?? process.env.CAP ?? 300);
 const TARGET = new RegExp(process.env.TARGET ?? '^white knight$', 'i');
 const STYLE = Number(process.env.STYLE ?? 1);
 const CANNON = process.env.CANNON === '1';
@@ -25,8 +28,14 @@ const RELOAD = Number(process.env.RELOAD ?? 30);
 // waits until the bot stands next to the cannon (Chebyshev <= 2 from the centre) or is between targets.
 const NEAR = Number(process.env.NEAR ?? 10);
 const TOPUP_ADJ = process.env.TOPUP_ADJ === '1';
+const PROTECT = process.env.PROTECT === '1';
+const STOP_LEVEL = Number(process.env.STOP_LEVEL ?? 100);
+const PFM = 14; // protect_from_melee (sdk PRAYER_INDICES)
 const FOOD = /^(lobster|swordfish|shark)$/i;
-const s = await openBot(bot!).catch(e => finish([], false, `login: ${String(e)}`));
+let stopped = '', measuring = false;
+// Inside the measured window a stop ends the loop, so the cannon is picked up and the result is still reported as failed.
+// In set-up and cleanup a stop or death fails the run at once.
+const s = await openBot(bot!, { onStop: async (session, detail) => { if (measuring) stopped = detail; else await finish([session], false, detail); } }).catch(e => finish([], false, `login: ${String(e)}`));
 try {
     await waitTicks(s, 3);
     const st = () => s.sdk.getState()!;
@@ -54,6 +63,8 @@ try {
     const cs = st().combatStyle;
     console.log(`NOTE style=${cs?.currentStyle} weapon=${cs?.weaponName} autoRetaliate=${st().autoRetaliateEnabled} hp=${hp()}/${maxHp}`);
 
+    const pfmOn = () => !!st().prayers?.activePrayers?.[PFM];
+    if (PROTECT && !pfmOn()) { await s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' }); await waitTicks(s, 1); }
     // ---- Cannon setup (outside the measured window) ----
     let cannon: { x: number; z: number; id: number } | null = null;
     let setupTicks = 0;
@@ -119,16 +130,22 @@ try {
     const balls = () => countItems(s, /^cannonball$/i);
     const arrows0 = arrows(), food0 = countItems(s, FOOD);
     let balls0 = balls();
-    const t0 = s.tick();
+    const t0 = s.tick(), wall0 = Date.now();
     let inCombat = 0, attacks = 0, eats = 0, reloads = 0, refires = 0, kills = 0, idle = 0;
     let lastReload = t0, target = -1, ammoMsgAt = msgs.length, loadPending = -1, loadMsgAt = 0, needFire = false, firePending = -1;
     let dmgTaken = 0, lastStyleXp = xp('Hitpoints'), lastGain = -99, attackAt = -99;
+    let hpMin = hp(), potions = 0, antis = 0, antiAt = -999, poisonAt = 0, lastLevel = 0, lastSample = t0;
+    const sample = (now: number) => console.log(`SAMPLE t=${now - t0} lv=${s.sdk.getSkill('Ranged')?.baseLevel} ranged=${xp('Ranged') - x0.Ranged!} balls=${balls0 - balls()} arrows=${arrows0 - arrows()} food=${food0 - countItems(s, FOOD)} hp=${hp()} prayer=${s.sdk.getSkill('Prayer')?.level}`);
     const bad = new Map<number, number>();
     const seenHit = new Set<string>();
+    measuring = true;
     await new Promise<void>(resolve => {
         const off = s.onTick(() => {
             const now = s.tick();
-            if (now - t0 >= CAP || hp() <= 0) { off(); resolve(); return; }
+            hpMin = Math.min(hpMin, hp());
+            const rl = s.sdk.getSkill('Ranged')?.baseLevel ?? 0;
+            if (rl !== lastLevel || now - lastSample >= 100) { lastLevel = rl; lastSample = now; sample(now); }
+            if (now - t0 >= CAP || hp() <= 0 || stopped || rl >= STOP_LEVEL) { off(); resolve(); return; }
             for (const e of (st().combatEvents ?? []) as any[]) {
                 const k = `${e.observationId ?? ''}:${e.tick}:${e.type}:${e.sourceIndex}:${e.targetIndex}:${e.damage}`;
                 if (seenHit.has(k)) continue;
@@ -149,6 +166,16 @@ try {
             if (hp() <= Math.max(Math.floor(maxHp * 0.4), Math.min(maxHp - 12, 8))) {
                 const f = slotOf(FOOD);
                 if (f) { void s.direct({ type: 'useInventoryItem', slot: f.slot, optionIndex: 1, reason: 'SDK' }); eats++; target = -1; return; }
+            }
+            if (PROTECT) {
+                const pray = s.sdk.getSkill('Prayer')?.level ?? 0;
+                const pot = pray <= 10 ? slotOf(/^prayer potion/i) : undefined;
+                if (pot) { void s.direct({ type: 'useInventoryItem', slot: pot.slot, optionIndex: 1, reason: 'SDK' }); potions++; target = -1; return; }
+                if (pray > 0 && !pfmOn()) void s.direct({ type: 'togglePrayer', prayerIndex: PFM, reason: 'SDK' });
+            }
+            if (sawMsg(/poisoned/i, poisonAt)) {
+                const a = now - antiAt >= 150 ? slotOf(/^antipoison/i) : undefined;
+                if (a) { poisonAt = msgs.length; void s.direct({ type: 'useInventoryItem', slot: a.slot, optionIndex: 1, reason: 'SDK' }); antis++; antiAt = now; target = -1; return; }
             }
             // 2. Cannon (fixed handling): a load is pending until "You load the cannon" / "already full" or 8 ticks;
             //    no attack click in that time (an attack click replaces the walk to the cannon). After "out of ammo",
@@ -191,7 +218,12 @@ try {
         });
         void s.ended.then(() => { off(); resolve(); });
     });
+    measuring = false;
     const ticks = s.tick() - t0;
+    const died = hp() <= 0 || /died/.test(stopped);
+    sample(s.tick());
+    console.log(`SPIDERS ticks=${ticks} ranged=${xp('Ranged') - x0.Ranged!} balls=${balls0 - balls()} arrows=${arrows0 - arrows()} food=${food0 - countItems(s, FOOD)} potions=${potions} antis=${antis} hpMin=${hpMin} deaths=${died ? 1 : 0} kills=${kills} stop=${stopped || 'cap'} msPerTick=${((Date.now() - wall0) / Math.max(1, ticks)).toFixed(0)}`);
+    if (died || stopped) await finish([s], false, `stopped ${stopped || 'died'} after ${ticks} ticks`);
     const g: Record<string, number> = Object.fromEntries(skills.map(k => [k, xp(k) - x0[k]!]));
     const ballsEnd = balls(), arrowsEnd = arrows(), foodEnd = countItems(s, FOOD);
     if (cannon) { await s.direct({ type: 'interactLoc', x: cannon.x, z: cannon.z, locId: cannon.id, optionIndex: 2, reason: 'SDK' }); await waitTicks(s, 6); }

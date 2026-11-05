@@ -111,17 +111,11 @@
     },
     {
       "account": "CoinCock",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "role": "supply",
-      "goal": "coins for route supplies: Ardougne knights",
+      "script": "",
+      "role": "thieving",
+      "goal": "planner opt-in: goldfarm knights at the first free spot (Thieving 99)",
       "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "KNIGHT_SPOT": "2670,3306"
-      }
+      "autopilot": "local"
     },
     {
       "account": "PickpockDick",
@@ -203,20 +197,11 @@
     },
     {
       "account": "Magicwanda",
-      "script": "scripts/chain.ts",
-      "args": [
-        "scripts/goldfarm.ts KNIGHT_SPOT=2669,3298"
-      ],
-      "role": "supply",
-      "goal": "Thieving 55, then coins from Ardougne knights",
+      "script": "",
+      "role": "thieving",
+      "goal": "planner opt-in: goldfarm knights at the first free spot (Thieving 99)",
       "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "ROUNDS": "1",
-        "RUN": "2"
-      }
+      "autopilot": "local"
     },
     {
       "account": "OreElse",
@@ -337,17 +322,11 @@
     },
     {
       "account": "mmsmk1232",
-      "script": "scripts/goldfarm.ts",
-      "args": [],
-      "role": "supply",
-      "goal": "coins for route supplies: Ardougne knights",
+      "script": "",
+      "role": "thieving",
+      "goal": "planner opt-in: goldfarm knights at the first free spot (Thieving 99)",
       "enabled": true,
-      "repeat": true,
-      "standing": true,
-      "maxRestarts": 0,
-      "env": {
-        "KNIGHT_SPOT": "2671,3313"
-      }
+      "autopilot": "local"
     },
     {
       "account": "Woodpecker",
