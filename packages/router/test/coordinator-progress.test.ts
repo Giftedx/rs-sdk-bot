@@ -239,7 +239,7 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
  complete(state,'failed-proof',false,6);
  const world:Parameters<typeof plannerPrompt>[1]={
   at:0,scoreboard:null,stall:null,assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
-  capacity:{maxBots:0,minFreeGB:0,freeGB:0,nativeStartupGB:0,maxLive:0,preferLive:false},
+  capacity:{maxBots:0,minFreeGB:0,freeGB:0,nativeStartupGB:0,diskFreeGB:100,maxLive:0,preferLive:false},
   protectedNames:[],jobs:[],statuses:[],ended:{},capabilities:[],capabilitySources:{},coverage:gameCoverage([],[],[],[],[])
  };
  const prompt=plannerPrompt(state,world);
