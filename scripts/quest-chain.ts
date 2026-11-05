@@ -23,7 +23,7 @@ export const QUEST_NAMES: Record<string, string> = {
     arena: "Fight Arena", ball: "Witch's House", biohazard: "Biohazard", chompybird: "Big Chompy Bird Hunting",
     cog: "Clock Tower", crest: "Family Crest", desertrescue: "The Tourist Trap", dragon: "Dragon Slayer",
     druidspirit: "Nature Spirit", eadgar: "Eadgar's Ruse", elena: "Plague City", grail: "Holy Grail",
-    hauntedmine: "Haunted Mine", hero: "Hero's Quest", horror: "Horror from the Deep", hunt: "Pirate's Treasure",
+    hauntedmine: "Haunted Mine", hero: "Hero's Quest", horror: "Horror from the Deep", hunt: "Pirate's Treasure", legends: "Legends Quest",
     ikov: "Temple of Ikov", itgronigen: "Observatory Quest", itwatchtower: "Watch Tower",
     misc: "Throne of Miscellania", mm: "Monkey Madness", mortton: "Shades of Mortton",
     priestperil: "Priest in Peril", regicide: "Regicide", routequest: "In Search of the Myreque",
