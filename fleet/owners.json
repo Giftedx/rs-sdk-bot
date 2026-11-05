@@ -97,19 +97,19 @@
    "server": "rs-sdk-demo.fly.dev"
   },
   "BraveHardon": {
-   "side": "claude-cloud-b",
+   "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "TossTheCaber": {
-   "side": "claude-cloud-b",
+   "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Swordswallow": {
-   "side": "claude-cloud-b",
+   "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Unsheathed": {
-   "side": "claude-cloud-b",
+   "side": "cloud",
    "server": "rs-sdk-demo.fly.dev"
   },
   "Quickhandjob": {
