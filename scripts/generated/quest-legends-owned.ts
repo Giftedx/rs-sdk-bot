@@ -165,7 +165,25 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
    gujuoSpot = 1 - gujuoSpot;
    await reachClearing();
    await upkeep();
-   await wait(gujuoClearingQuiet, 16);
+   const pursuitCleared = async () => {
+    await waitUntil(s, () => fatal() || gujuoClearingQuiet(), { timeoutTicks: 16 });
+    guard();
+    return gujuoClearingQuiet();
+   };
+   if (!await pursuitCleared()) {
+    // Jungle savages can follow across both Gujuo clearings. The map route spans their leash.
+    const east = { x: 2910, z: 2916 }, west = { x: 2791, z: 2917 };
+    const escape = gujuoSpot === 1 ? [east, west] : [west, east];
+    for (const tile of escape) {
+     await walk(tile.x, tile.z, 0);
+     await upkeep();
+     if (await pursuitCleared()) break;
+    }
+    if (!gujuoClearingQuiet()) throw Error('Legends wildlife pursuit did not clear on the map route');
+    await reachClearing();
+    await upkeep();
+    await wait(gujuoClearingQuiet, 16);
+   }
    const lastHit = sdk.getState()?.player?.combat?.lastDamageTick;
    await waitTicks(s, 8);
    guard();
