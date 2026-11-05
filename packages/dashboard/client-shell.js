@@ -394,7 +394,8 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     el.style.setProperty('--p',Math.round(p*100)+'%');const b=account(),rate=b&&b.goalSkill===skill&&b.xpPerHour>0?b.xpPerHour:null;el.title=`${skill}: ${Math.round(p*100)}% to level ${Math.min(99,lvl+1)} (${nf(Math.max(0,ceil-xp))} xp left)${rate?` · ${nf(Math.round(rate))} XP/hr`:''}`;
     clearTimeout(globeTimers.get(skill));globeTimers.set(skill,setTimeout(()=>{el.remove();globeTimers.delete(skill);},10000));
   }
-  function screens(){const loading=hud.querySelector('#game-loading'),lost=hud.querySelector('#game-lost');if(loading&&S)loading.hidden=true;if(lost)lost.hidden=!(S&&(typeof connected!=='undefined'&&!connected||typeof lastReceived!=='undefined'&&Date.now()-lastReceived>10000));}
+  // The hosted page's stale bar already reports old data, and the 3D view keeps its own live world feed.
+  function screens(){const loading=hud.querySelector('#game-loading'),lost=hud.querySelector('#game-lost');if(loading&&S)loading.hidden=true;if(lost)lost.hidden=!(S&&!document.documentElement.classList.contains('fleet-stale')&&(typeof connected!=='undefined'&&!connected||typeof lastReceived!=='undefined'&&Date.now()-lastReceived>10000));}
   setInterval(screens,2000);
   // Map squares (map-squares/<mx>_<mz>.png, 4 px a tile): loaded as the view needs them, drawn when ready.
   const squares=new Map(),squareRetryAt=new Map();

@@ -143,3 +143,16 @@ test('infoboxes: a reached goal has no goal box', () => {
  run(()=>({name:'Worker',goalSkill:'Thieving',goalLevel:99,goalNow:99,eta:'0m 0s',skills:[]}),...stubs);expect(el.innerHTML).not.toContain('Thieving');
  run(()=>({name:'Worker',goalSkill:'Thieving',goalLevel:99,goalNow:60,eta:'2h',skills:[]}),...stubs);expect(el.innerHTML).toContain('Thieving 60 → 99 in 2h');
 });
+
+test('Connection lost stays off the 3D view while the hosted stale bar reports old data',()=>{
+ const line=shell.split('\n').find(l=>l.startsWith('  function screens()'))!;
+ const lostFor=(stale:boolean,age:number)=>{
+  const lost={hidden:true},hud={querySelector:(s:string)=>s==='#game-lost'?lost:null};
+  const document={documentElement:{classList:{contains:(c:string)=>stale&&c==='fleet-stale'}}};
+  new Function('hud','document','S','connected','lastReceived',`${line};screens();`)(hud,document,{},true,Date.now()-age);
+  return !lost.hidden;
+ };
+ expect(lostFor(false,60_000)).toBe(true);
+ expect(lostFor(false,1000)).toBe(false);
+ expect(lostFor(true,60_000)).toBe(false);
+});
