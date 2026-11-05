@@ -23,7 +23,7 @@ import {loadContentTable,readWorn} from './appearance';
 import {createOperatorControl} from './operator-control';
 import { xpForLevel } from '../planner/src/curve';
 import { isLocalServer } from '../core/src/localserver';
-import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, schedule, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
+import { applyLevers, haggisActivities, haggisTravel, loadSnapshot, scheduleOverall, overallRequirementsFor, TRICKS } from '../planner/src/haggis';
 
 const root = resolve(import.meta.dir, '..', '..');
 const operatorControl=createOperatorControl({root,readOnly:process.env.DASH_READ_ONLY==='1'});
@@ -891,7 +891,7 @@ function race() {
     try {
         const boards = loadSnapshot(LIVE_HISCORES);
         const acts = haggisActivities(), travel = haggisTravel();
-        const run = (mode: 'floor' | 'realistic') => schedule(boards, acts, { travel, mode, tricks: new Set(TRICKS) });
+        const run = (mode: 'floor' | 'realistic') => scheduleOverall(boards, acts, { travel, mode, tricks: new Set(TRICKS) });
         const fl = run('floor'), re = run('realistic');
         // Evidence of the inputs behind each board: the activities (levers applied) that serve it. Overall: all of them.
         const live = applyLevers(acts, {});
@@ -919,7 +919,7 @@ function race() {
             qpEnd: { realistic: re.qp, floor: fl.qp },
             last: lastB ? { board: lastB.label, finish: lastB.real.finish, slack: lastB.real.slack, activity: lastAct?.label ?? null } : null,
             at: Date.now(), source: 'research/hiscores-live.json', sourceAt: Date.parse(JSON.parse(readFileSync(LIVE_HISCORES,'utf8')).takenAt)||0,
-            options: 'planner CLI scenario a: all techniques eligible, travel on; supplies require acquisition',
+            options: 'Planner CLI scenario a. Travel on. Supplies require acquisition. Relaxed scheduling deadlines: ' + (re.boards.filter(b => b.sacrificed).map(b => b.id).join(', ') || 'none'),
         };
         raceCache = { key, value };
         const last = gapHistory[gapHistory.length - 1];

@@ -8,7 +8,7 @@ Every task names the scoreboard entries it moves and by how much.
 
 | Scoreboard | Now | Source |
 |---|---|---|
-| Main run gap | 43,676 modelled ticks against the 34,056 record (`kingstun`), a gap of 9,620 | `bun packages/planner/src/haggis-cli.ts` |
+| Main run gap | 42,767 modelled ticks against the 34,056 record (`kingstun`), a gap of 8,711 | `bun packages/planner/src/haggis-cli.ts` |
 | Boards held | 0 of 24 | `bun packages/planner/src/scout-cli.ts` |
 | Coverage | skills 7/19 at 99; quests 3/68 live; items 94/2,756 held; actions 2,325/5,807 named | `bun packages/router/src/coverage.ts` |
 | Useful capacity | 75,500 coins and 125 sharks banked with no consumer | delivery receipts |

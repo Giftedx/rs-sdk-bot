@@ -20,7 +20,7 @@ import { CLAIM_MAX_AGE_MS, accountFrom, assess, catalogue, finishedTrainers, fre
 import { jobAccounts, mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
 import type { Order, Receipt } from './fleet-trade';
 import { liveHelperStatuses, supplyBill, type BillRow } from '../packages/planner/src/supply-bill';
-import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, schedule, TRICKS } from '../packages/planner/src/haggis';
+import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, scheduleOverall, TRICKS } from '../packages/planner/src/haggis';
 import { tickWaste, wasteShare } from './tick-waste';
 
 const root = resolve(import.meta.dir, '..'), prac = join(root, '.practice');
@@ -45,7 +45,7 @@ function routeBill(items: any[]): BillRow[] {
     try {
         const activities = haggisActivities(), boards = loadSnapshot(join(root, 'research/hiscores-live.json'));
         const options = { mode: 'realistic' as const, tricks: new Set(TRICKS), travel: haggisTravel() };
-        const { supplies } = overallRequirementsFor(activities, options, schedule(boards, activities, options));
+        const { supplies } = overallRequirementsFor(activities, options, scheduleOverall(boards, activities, options));
         return supplyBill(supplies, items, liveHelperStatuses());
     } catch (e) {
         const bill = readJson(join(prac, 'coordinator/supply-bill.json'), null);
