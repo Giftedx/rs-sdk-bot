@@ -139,7 +139,11 @@ try {
     await q.walk('to dusty gate', [{ x: GATE.x + 1, z: GATE.z, tol: 1 }]);
     await q.step('dusty gate', () => q.useOnLoc(ITEM.dusty, GATE), pastGate, 15, 4);
     q.milestone('gate');
-    await q.walk('to wall', [{ x: WALL.x, z: WALL.z, tol: 1 }]);
+    // Black Demon spawns near 2860,9776 close the only corridor (x 2877-2879, z 9769-9788) to the danger guard
+    // (packages/core/src/danger.ts), so planned walks pace in the dragon room. Client-routed clicks do not use that guard.
+    await q.dash('to south cave', 2894, 9776, 2, 30);
+    await q.dash('to wall corridor', 2877, 9788, 2, 34);
+    await q.dash('to wall', WALL.x, WALL.z, 1, 24);
     await q.step('secret wall', () => q.opLoc(WALL, 1), () => (q.pos()?.worldZ ?? 9999) < WALL.z, 10, 4);
     await catchScorp('a', SCORP_A);
 
