@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793886747249,
+ "at": 1793888570195,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -225,6 +225,18 @@
    "repeat": true,
    "goal": "fire and earth runes from Betty",
    "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/quest-chain.ts",
+   "args": [
+    "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
+   ],
+   "enabled": false,
+   "standing": true,
+   "repeat": false,
+   "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
+   "role": "combat"
   },
   {
    "account": "Ballspinner",
@@ -480,19 +492,6 @@
    "repeat": false,
    "goal": "run-observatory-oreelse-first-live [task-4bdac771-2481-434a-b8a1-4e6677707fe5]",
    "role": "smithing"
-  },
-  {
-   "account": "Mightyrod",
-   "script": "scripts/session-check.ts",
-   "args": [],
-   "env": {
-    "CAP": "1600",
-    "COORDINATOR_RUN_ID": "task-96099972-6e70-4964-a633-f68d54726246"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "recover-mightyrod-kbd-headroom-1793880863830 [task-96099972-6e70-4964-a633-f68d54726246]",
-   "role": "combat"
   }
  ]
 }
