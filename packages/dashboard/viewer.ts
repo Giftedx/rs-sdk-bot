@@ -10,6 +10,55 @@ export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relati
     return {root,relative};
 }
 
+export const once = (text: string, from: string | RegExp, to: string, what: string) => {
+    const count = typeof from === 'string' ? text.split(from).length - 1 : (text.match(new RegExp(from.source, from.flags.includes('g') ? from.flags : from.flags + 'g')) ?? []).length;
+    if (count !== 1) throw Error(`${what}: expected one match, found ${count}`);
+    return text.replace(from, () => to.replace(/\$1/g, () => (typeof from === 'string' ? '$1' : text.match(from)![1]!)));
+};
+
+// The area a swap waits for around the new account, and the area a prewarm loads: a prewarmed account needs no load.
+export const WARM_RADIUS = 56;
+// The account swap in the pinned viewer. It holds the old view while the squares around the new account load, then
+// moves. A hop up to 64 tiles flies straight across. A longer hop blurs for 300 ms and settles into the orbit.
+// It loads nothing around the old account: those squares only served a climb that this flight does not make.
+// Jc is the bundle's ease function.
+const FLIGHT_STEP = 'step(e,t,n){const i=performance.now(),s=e=>Math.min(1,(i-this.phaseStart)/e),o=e=>{this.phase=e,this.phaseStart=i};t&&t.prefetch(this.toX,this.toZ,' + WARM_RADIUS + ');switch(this.phase){'
+    + 'case"prep":this.apply(e,this.from),(!t||t.ready(this.toX,this.toZ,' + WARM_RADIUS + ')||i-this.phaseStart>6e3)&&o(this.glide?"glide":"warp");break;'
+    + 'case"glide":{const t=Jc(s(Math.min(1400,500+6*this.distance))),n=this.mix(this.from,this.end,t);if(n.y-=Math.sin(Math.PI*t)*Math.min(10,.1*this.distance),this.apply(e,n),t>=1)return this.done=!0,!0;break}'
+    + 'case"warp":{const t=s(300),n=14*Math.sin(Math.PI*t);this.near=this.near||{...this.end,x:this.toX+1.35*(this.end.x-this.toX),y:1.35*this.end.y,z:this.toZ+1.35*(this.end.z-this.toZ)},this.canvas&&(this.canvas.style.filter=n>.2?"blur("+n.toFixed(1)+"px) brightness("+(1+n/40).toFixed(2)+")":""),this.apply(e,t>=.5?this.near:this.from),t>=1&&(this.canvas&&(this.canvas.style.filter=""),o("descend"));break}'
+    + 'case"descend":{const t=Jc(s(450));if(this.apply(e,this.mix(this.near,this.end,t)),t>=1)return this.done=!0,!0;break}'
+    + '}return!1}cancel(){';
+// Idle work: when nothing is loading, the renderer loads the squares around the next place the page listed.
+const WARM_STEP = 'warmStep(e){const t=this.warmTiles,n=this.mapManager;if(!t||!t.length||e.flight||n.loadingMapIds.size||this.mapsToLoad.length||n.blankOnScreen)return;this.warmNext=((this.warmNext??-1)+1)%t.length;n.prefetch(t[this.warmNext][0],t[this.warmNext][1],' + WARM_RADIUS + ')}isValidMapData(e){';
+
+// Changes to the reviewed main bundle. Every anchor must match, so a different bundle stops the export.
+export function viewerBundle(text: string) {
+    // Roof removal: ?ml=<floor> sets the highest floor drawn at the start, a {maxLevel} message changes it.
+    text = once(text, /this\.maxLevel=([A-Za-z_$][\w$]*)\.MAX_LEVELS-1/, 'this.maxLevel=(e=>e>=0&&e<=3?e:$1.MAX_LEVELS-1)(parseInt(new URLSearchParams(location.search).get("ml")))', 'first floor limit');
+    // {warm:[[x,z],...]} lists the places the page may swap to next.
+    text = once(text, '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale)', '"number"===typeof t.scale&&t.scale>0&&(s.resolutionScale=t.scale),Number.isInteger(t.maxLevel)&&t.maxLevel>=0&&t.maxLevel<=3&&s.setMaxLevel&&s.setMaxLevel(t.maxLevel),Array.isArray(t.warm)&&(s.warmTiles=t.warm.filter((e=>Array.isArray(e)&&Number.isFinite(e[0])&&Number.isFinite(e[1]))).slice(0,16),s.warmNext=-1)', 'floor limit message');
+    // Every square holds all floors and the shader hides those above the limit, so a floor change reloads nothing.
+    // The bundle's own setMaxLevel deletes every loaded square.
+    text = once(text, 'setMaxLevel(e){const t=this.maxLevel!==e;this.maxLevel=e,t&&this.clearMaps()}', 'setMaxLevel(e){this.maxLevel=e}', 'floor change');
+    text = once(text, 'maxLevel:this.maxLevel,', 'maxLevel:3,', 'square floors');
+    text = once(text, 'e.maxLevel===this.maxLevel&&', '3===e.maxLevel&&', 'square floor check');
+    text = once(text, 'TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT])', 'TE.FLOAT_VEC2,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT,TE.FLOAT])', 'scene uniforms');
+    text = once(text, '.set(10,this.mapViewer.isNewTextureAnim)', '.set(10,this.mapViewer.isNewTextureAnim).set(11,this.maxLevel)', 'floor uniform');
+    if (!text.includes('float u_isNewTextureAnim;')) throw Error('scene uniform block: not found');
+    text = text.replaceAll('float u_isNewTextureAnim;', String.raw`float u_isNewTextureAnim;\r\n    float u_maxPlane;`);
+    text = once(text, String.raw`float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n}`, String.raw`float(modelInfo.priority)) * 0.0007;\n    gl_Position = u_projectionMatrix * gl_Position;\n    if (float(modelInfo.plane) > u_maxPlane) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);\n}`, 'floor cut');
+    // A hosted page has no shared memory, and the bundle then uses one worker. Each worker there holds its own cache
+    // copy, so it gets two: with prewarm they swap as fast as four, for 70 MB more memory, not 660 MB.
+    text = once(text, 'II.create(ee||!J?1:te?2:4)', 'II.create(ee?1:!J||te?2:4)', 'worker count');
+    // The bundle adds one square per frame, which limits a swap to 20 squares a second at 20 frames a second.
+    text = once(text, 'const F=this.mapsToLoad.shift();F&&this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),', 'for(const e=performance.now();;){const F=this.mapsToLoad.shift();if(!F)break;if(this.isValidMapData(F)&&this.loadMap(this.mainProgram,this.mainAlphaProgram,this.npcProgram,this.textureArray,this.textureMaterials,this.sceneUniformBuffer,F,a),performance.now()-e>6)break}', 'square uploads');
+    text = once(text, 't.maps=this.mapManager,t.canvas=this.canvas,', 't.maps=this.mapManager,this.warmStep(t),t.canvas=this.canvas,', 'warm call');
+    text = once(text, 'isValidMapData(e){', WARM_STEP, 'warm step');
+    // A swap from free camera flies too, once the scene has squares to hold on screen.
+    text = once(text, 'i&&Gc&&void 0!==this.followName&&this.followName.toLowerCase()!==e.toLowerCase()', 'i&&Gc&&(void 0===this.followName?this.maps&&this.maps.visibleMapCount>0:this.followName.toLowerCase()!==e.toLowerCase())', 'flight from free camera');
+    return once(text, /step\(e,t,n\)\{const r=Math\.min\(128,n\)\+32,[\s\S]*?\}cancel\(\)\{/, FLIGHT_STEP, 'flight step');
+}
+
 // Kept self-contained: only this function is serialized into the /viewer/ entry.
 // A geometry draw followed by a screen present is not a promise that every tile loaded.
 export function installViewerBridge(host:any) {

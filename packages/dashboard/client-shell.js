@@ -459,7 +459,7 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
     const q=new URLSearchParams({p:selectedPlugin});if(sel)q.set('a',sel);
     const hash='#'+q;if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
   }
-  function refresh(){if(!S)return;followLink();writeLink();syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(account());overlay();chatFeed();idleNotifier(account());levelUps();deaths();if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();}if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account();focusPaint();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
+  function refresh(){if(!S)return;followLink();writeLink();syncNotifyControls();$('#client-more').hidden=!window.atlasOperator();hud.querySelector('.game-bank')?.refreshObservation?.();camUpdate();screens();minimap();xpDrops(account());overlay();chatFeed();idleNotifier(account());levelUps();deaths();if(selectedPlugin==='xp'&&body.dataset.plugin==='xp'){const top=body.scrollTop;body.innerHTML=xpTracker();body.scrollTop=top;}if(selectedPlugin==='boards'&&body.dataset.plugin==='boards'){const head=body.querySelector('.progress-head');if(head)head.innerHTML=boardSummary()+progressPanel();const rw=body.querySelector('.rivals-wrap');if(rw&&!rw.contains(document.activeElement))rw.innerHTML=rivalsPanel();}if(selectedPlugin==='world'&&body.dataset.plugin==='world'&&!(body.contains(document.activeElement)&&document.activeElement.matches('input,select,textarea'))){const top=body.scrollTop;body.innerHTML=worldPanel();body.scrollTop=top;}infoboxes();title.querySelector('.connection').textContent=$('#connection').textContent;const b=account();focusPaint();warmPlaces();$('#chat-name').textContent=(b?safeName(b.name):'Spectator')+':';
     const orbBox=hud.querySelector('.game-orbs');orbBox.innerHTML=[['hp','Hitpoints',b?.hp?.now,b?.hp?.max],['prayer','Prayer',level('Prayer')?.currentLevel,level('Prayer')?.level]].map(([id,label,value,max])=>`<div class="game-orb orb-${id}" title="${label}: ${value??'not reported'}${max?' / '+max:''}"><span class="orb-num" style="color:${orbColour(value,max)}">${value??'—'}</span><canvas class="orb-art" data-orb="${id}" data-frac="${value!=null&&max?Math.max(0,Math.min(1,value/max)):0}"></canvas></div>`).join('');orbBox.querySelectorAll('canvas').forEach(drawOrb);if(!(selectedTab==='settings'&&$('#game-panel').contains(document.activeElement)))gamePanel();}
   const previousRender=render;render=function(){previousRender();refresh();};
   const previousDrawMap=drawMap;drawMap=function(){previousDrawMap();minimap();};
@@ -498,23 +498,35 @@ const skills=['Attack','Hitpoints','Mining','Strength','Agility','Smithing','Def
   function focusOpen(open){focus.classList.toggle('open',open);focusNow.setAttribute('aria-expanded',String(open));if(open){focusFind.value='';focusRows();focusList.querySelector('.on')?.scrollIntoView({block:'nearest'});focusFind.focus({preventScroll:true});}else focusList.querySelector('.hot')?.classList.remove('hot');}
   function focusSay(text,ms){clearTimeout(focusNoteTimer);focusNote.textContent=text;focusNote.classList.add('on');focusNoteTimer=setTimeout(()=>{focusNote.classList.remove('on','flying');focus.classList.remove('flying');flightTo=null;},ms);}
   function focusLanded(){if(!flightTo)return;const name=flightTo;flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');focusSay('Now watching '+name,1400);}
-  // The viewer flies the camera between two followed players. It jumps from free camera, so the page fades that cut in.
+  // The viewer holds the old view until the new place has loaded, then moves the camera.
   function focusMoved(from,name){
     if(mode!=='3d'||VIEWER.state!=='ready')return;
     const to=focusTarget(),shown=safeName(to||name);
     if(!to){flightTo=null;focus.classList.remove('flying');focusNote.classList.remove('flying');focusSay(shown+' is not in the world. The camera stays here.',2600);return;}
     if(to===from)return;
-    if(from){flightTo=shown;focus.classList.add('flying');focusNote.classList.add('flying');focusSay('Flying to '+shown,15000);return;}
-    const frame=$('#rsw');frame.classList.remove('focus-cut');void frame.offsetWidth;frame.classList.add('focus-cut');focusSay('Now watching '+shown,1400);
+    flightTo=shown;focus.classList.add('flying');focusNote.classList.add('flying');focusSay('Flying to '+shown,15000);
   }
   const focusFree=()=>{sel=null;picked=true;window.atlasFreeCamera=true;window.atlasFollowOther=null;window.atlasDestination=null;rswFor=null;$('#rsw')?.contentWindow?.postMessage({atlasFreeCamera:true},location.origin);render();};
+  // The viewer loads these places while it is idle, so a swap to them has nothing to wait for. The [ and ] neighbours come
+  // first, and a row under the pointer goes before them. One place stands for the accounts in the same 32-tile cell.
+  let warmSent='';
+  function warmPlaces(first){
+    if(mode!=='3d'||VIEWER.state!=='ready')return;
+    const live=focusLive(),now=focusTarget()||sel,i=live.findIndex(b=>b.name===now),order=[];
+    if(first)order.push(live.find(b=>b.name===first));
+    for(let d=1;d<=live.length;d++)order.push(live[(i+d)%live.length],live[(i-d+live.length*2)%live.length]);
+    const cells=new Set(),places=[];
+    for(const b of order){const p=b&&b.name!==now&&(b.live||b.pos);if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.z))continue;const cell=(p.x>>5)+','+(p.z>>5);if(!cells.has(cell)){cells.add(cell);places.push([p.x,p.z]);}}
+    const key=[...cells].join(' ');if(key===warmSent)return;warmSent=key;
+    $('#rsw').contentWindow?.postMessage({warm:places.slice(0,12)},location.origin);
+  }
   function focusStep(step){const live=focusLive();if(!live.length)return;const i=live.findIndex(b=>b.name===(focusTarget()||sel));pick(live[i<0?(step>0?0:live.length-1):(i+step+live.length)%live.length].name);}
   function focusChoose(name){focusOpen(false);focusNow.focus({preventScroll:true});if(name)pick(name);else{const from=focusTarget();focusFree();if(from)focusSay('Free camera',1400);}}
   focus.addEventListener('click',e=>{const s=e.target.closest('[data-focus-step]');if(s){focusOpen(false);focusStep(Number(s.dataset.focusStep));return;}if(e.target.closest('.focus-now')){focusOpen(!focus.classList.contains('open'));return;}const r=e.target.closest('[data-focus]');if(r&&!r.disabled)focusChoose(r.dataset.focus);});
   focusFind.addEventListener('input',focusRows);
+  focusList.addEventListener('pointerover',e=>{const r=e.target.closest('[data-focus]');if(r&&r.dataset.focus&&!r.disabled)warmPlaces(r.dataset.focus);});
   focusFind.addEventListener('keydown',e=>{const rows=[...focusList.querySelectorAll('.focus-row:not([disabled])')],hot=focusList.querySelector('.hot');if(e.key==='Escape'){e.stopPropagation();focusOpen(false);focusNow.focus({preventScroll:true});}else if(e.key==='Enter'){e.preventDefault();const r=hot||rows[0];if(r)focusChoose(r.dataset.focus);}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!rows.length)return;const i=rows.indexOf(hot),next=rows[i<0?(e.key==='ArrowDown'?0:rows.length-1):(i+(e.key==='ArrowDown'?1:-1)+rows.length)%rows.length];hot?.classList.remove('hot');next.classList.add('hot');next.scrollIntoView({block:'nearest'});}});
   document.addEventListener('pointerdown',e=>{if(!focus.contains(e.target))focusOpen(false);});
-  $('#rsw').addEventListener('animationend',e=>e.currentTarget.classList.remove('focus-cut'));
   function toast(text){hud.querySelector('.game-toast')?.remove();const el=document.createElement('div');el.className='game-toast';el.textContent=text;hud.append(el);setTimeout(()=>el.remove(),5000);}
   hud.addEventListener('input',e=>{if(!e.target.matches('[data-quest-search]'))return;questQuery=e.target.value;gamePanel();});
   body.addEventListener('click',e=>{if(e.target.closest('[data-notify-test]'))testNotify();if(e.target.closest('[data-notify-cancel]'))void setNotify(false);});

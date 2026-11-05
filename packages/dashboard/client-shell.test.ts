@@ -39,9 +39,9 @@ function focusMoves(from:string|null,to:string|null,state='ready'){
  return {said,classes};
 }
 
-test('a switch shows a flight, a faded cut, or that the account is not in the world',()=>{
+test('a switch shows a flight, also from free camera, or that the account is not in the world',()=>{
  expect(focusMoves('Ann','Zed').said).toEqual(['Flying to Zed']);expect(focusMoves('Ann','Zed').classes.has('flying')).toBe(true);
- const cut=focusMoves(null,'Zed');expect(cut.said).toEqual(['Now watching Zed']);expect(cut.classes.has('focus-cut')).toBe(true);
+ expect(focusMoves(null,'Zed').said).toEqual(['Flying to Zed']);
  expect(focusMoves('Ann',null).said).toEqual(['Away is not in the world. The camera stays here.']);
  expect(focusMoves('Ann','Ann').said).toEqual([]);expect(focusMoves('Ann','Zed','loading').said).toEqual([]);
 });
