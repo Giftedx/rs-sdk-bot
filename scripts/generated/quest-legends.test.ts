@@ -135,3 +135,32 @@ test('mapping reconciles the wrapped Native ruined-paper page before another att
   else await expect(outcome).rejects.toThrow('map outcome unknown');
  }
 });
+
+
+test('blessing restores Prayer from 37 to 42 with one observed owned dose', async () => {
+ const a = liveActor();
+ a.state.inventory = [{id: 2434, slot: 0, count: 1}];
+ a.state.prayers.prayerLevel = 42;
+ a.state.prayers.prayerPoints = 37;
+ let inputs = 0;
+ a.s.direct = async () => {
+  inputs++;
+  a.state.inventory = [{id: 139, slot: 0, count: 1}];
+  a.state.prayers.prayerPoints = 42;
+  a.state.gameMessages = [{type: 0, tick: a.s.tick(), observationId: 1, text: 'You have 3 doses of potion left.'}];
+  return {success: true, message: 'fixture dose'};
+ };
+ const care = legendsPotionWindows(a.s, 1, () => true, () => false);
+ const timer = setInterval(() => a.advance(), 1);
+ try {
+  await care.poll();
+  expect(inputs).toBe(0);
+  await care.poll(42);
+  expect(inputs).toBe(1);
+  expect(care.doses).toBe(1);
+  expect(a.state.prayers.prayerPoints).toBe(42);
+  a.state.prayers.prayerPoints = 37;
+  await care.poll(42);
+  expect(inputs).toBe(1);
+ } finally { clearInterval(timer); }
+});

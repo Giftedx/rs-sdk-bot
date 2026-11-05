@@ -98,7 +98,30 @@ export function legendsLoginOwner(s:Session){const client=s.client as {executeBo
 export async function finishLegendsOwned(s:Session,owns:()=>boolean,ok:boolean,detail:string,finish:typeof settle=settle){if(!owns()){console.error('LEGENDS_SETTLEMENT original login owner/life unavailable; no logout input');return false;}return finish([s],ok,detail);}
 // Only Native Prayer restoration is used here; it has zero prevention cooldown.
 // Keep their total dose budget and unknown-outcome latch across bounded primitive windows.
-export function legendsPotionWindows(s:Session,maximum:number,observation:()=>boolean,stop:()=>boolean,create= createPotionCareSession){let doses=0,window:ReturnType<typeof createPotionCareSession>|undefined,windowStart=0,blocked=false;return{get doses(){return doses;},async poll(){if(blocked)throw Error('Legends potion outcome unresolved');if(doses>=maximum)return;try{if(window?.blocked)throw Error('Legends prior potion window unresolved');if(!window||s.tick()-windowStart>=900){window=create(s,{policies:[{id:2434,below:35}],maximumDoses:Math.min(40,maximum-doses),maximumVials:0,cap:1000},observation,stop);windowStart=s.tick();}const before=window.doses;await window.poll();doses+=window.doses-before;if(window.blocked)throw Error('Legends potion window unresolved');}catch(error){blocked=true;throw error;}}};}
+export function legendsPotionWindows(s: Session, maximum: number, observation: () => boolean, stop: () => boolean, create = createPotionCareSession) {
+ let doses = 0, windowStart = 0, blocked = false;
+ let window: ReturnType<typeof createPotionCareSession> | undefined;
+ let windowFloor: 35 | 42 | undefined;
+ return {
+  get doses() { return doses; },
+  async poll(prayerFloor: 35 | 42 = 35) {
+   if (blocked) throw Error('Legends potion outcome unresolved');
+   if (doses >= maximum) return;
+   try {
+    if (window?.blocked) throw Error('Legends prior potion window unresolved');
+    if (!window || s.tick() - windowStart >= 900 || windowFloor !== prayerFloor) {
+     window = create(s, {policies: [{id: 2434, below: prayerFloor}], maximumDoses: Math.min(40, maximum - doses), maximumVials: 0, cap: 1000}, observation, stop);
+     windowStart = s.tick();
+     windowFloor = prayerFloor;
+    }
+    const before = window.doses;
+    await window.poll();
+    doses += window.doses - before;
+    if (window.blocked) throw Error('Legends potion window unresolved');
+   } catch (error) { blocked = true; throw error; }
+  },
+ };
+}
 
 const pack=(s:Session)=>{const m:Record<number,number>={};for(const row of s.sdk.getInventory())m[row.id]=(m[row.id]??0)+row.count;return m;};
 const flag=(s:Session)=>questFlags(s.client)?.find(q=>/legends/i.test(q.name))?.state;
@@ -136,7 +159,7 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
  const trials=async(label:string,send:()=>Promise<unknown>,success:()=>boolean,knownFailure:RegExp,choices:RegExp[]=[],ticks=80)=>{for(let n=0;n<o.maximumTrials;n++){guard();if(success())return;const mark=cursor(s),pages=pageMark(),before=pack(s);await step(label,send,()=>success()||fresh(s,mark,knownFailure)||sawSince(pages,knownFailure),choices,ticks);if(success())return;if(!legendsPackEffect(before,pack(s),{}))throw Error('Legends '+label+' unexpected trial stock change');await upkeep();}throw Error('Legends '+label+' declared trial budget exhausted');};
  const prayer=async(on:boolean)=>{if(prayerUnknown||fatal())throw Error('Legends prayer original context unavailable');if(sdk.isPrayerActive(14)===on)return;guard();prayerUnknown=true;try{await sdk.sendTogglePrayer(14);}catch{}try{await wait(()=>sdk.isPrayerActive(14)===on,8);prayerUnknown=false;}catch(error){throw Error('Legends prayer transition uncertain; no toggle retry '+error);}};
  const potions=legendsPotionWindows(s,o.maximumDoses,()=>!fatal(),stop);
- const upkeep=async()=>{guard();while((sdk.getSkill('Hitpoints')?.level??0)<75){if(food>=o.maximumFood||!has(385))throw Error('Legends declared food budget exhausted');const before=pack(s),hp=sdk.getSkill('Hitpoints')!.level;await paid('owned shark', {385:-1},()=>held(385),[],12);const after=sdk.getSkill('Hitpoints')!.level;if(after<=hp||after>Math.min(maximumHp,hp+20))throw Error('Legends shark HP receipt differs');food++;if(!legendsPackEffect(before,pack(s),{385:-1}))throw Error('Legends shark stock differs');}await potions.poll();};
+ const upkeep=async(prayerFloor:35|42=35)=>{guard();while((sdk.getSkill('Hitpoints')?.level??0)<75){if(food>=o.maximumFood||!has(385))throw Error('Legends declared food budget exhausted');const before=pack(s),hp=sdk.getSkill('Hitpoints')!.level;await paid('owned shark', {385:-1},()=>held(385),[],12);const after=sdk.getSkill('Hitpoints')!.level;if(after<=hp||after>Math.min(maximumHp,hp+20))throw Error('Legends shark HP receipt differs');food++;if(!legendsPackEffect(before,pack(s),{385:-1}))throw Error('Legends shark stock differs');}await potions.poll(prayerFloor);};
  let bankRows:{id:number;count:number}[]=[],baseline:Record<number,number>={};
  const allAssets=()=>{const m={...pack(s)};for(const row of[...sdk.getEquipment(),...bankRows])m[row.id]=(m[row.id]??0)+row.count;return m;};
  const openBank=async()=>{guard();const generation=s.bankObservation?.()?.generation??-1;if(!sdk.getState()?.bank.isOpen||!s.bankObservation?.()){await s.bot.openBank();await wait(()=>!!sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??-1)>generation,12);}bankRows=s.bankObservation!()!.items.map(r=>({id:r.id,count:r.count}));};
@@ -235,7 +258,7 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
   await crossing(true);await walk(2867,2942);const forester=sdk.getState()?.nearbyNpcs.find(n=>/Jungle forester/i.test(n.name));if(!forester)throw Error('Legends native forester absent');await paid('forester map copy',{[I.bull]:1},()=>q!.useOnNpc(I.map,forester),[/Yes, go ahead make a copy/i]);await bank({...basic()},[I.map,I.bull]);
   await jungle();await gujuo([/hoping to attract/i,/develop friendly relations/i,/get your people together/i,/What can we do instead/i,/How do we make/i,/I will release Ungadulu/i],()=>q!.sawText(/release Ungadulu|find.*cave|good luck/i));await cave();await step('Ungadulu pure-water clue',()=>interact('lqfirewall_straight',2790,9333,2),()=>q!.sawText(/from the above lands/i),[/Who are you/i,/Where do I get pure water/i]);await exitCave();await gujuo([/Ungadulu looks a little strange/i,/pure water to douse/i,/What kind of a vessel/i,/Ok thanks for your help/i],()=>has(I.picture));
   await bank({...basic(),2347:1,2357:6},[I.map,I.bull,I.picture]);await move(3187,3425);for(let n=0;n<o.maximumTrials&&!has(I.bowl);n++){const before=pack(s),mark=cursor(s);await step('forge gold bowl',()=>useLoc(2357,'anvil',3188,3426),()=>has(I.bowl)||fresh(s,mark,/make a mistake forging/),[/^Yes$/]);const lost=(before[2357]??0)-count(2357);if(has(I.bowl)){if(!legendsPackEffect(before,pack(s),{2357:-2,[I.bowl]:1}))throw Error('Legends forged bowl whole-pack differs');}else if(![1,2].includes(lost)||!legendsPackEffect(before,pack(s),{2357:-lost}))throw Error('Legends forge failure debit unknown');}if(!has(I.bowl))throw Error('Legends finite forge budget exhausted');
-  await bank({...basic(),[I.bowl]:1},[I.map,I.bull,I.picture]);await jungle();for(let n=0;n<o.maximumTrials&&!has(I.blessed);n++){await upkeep();started=s.tick();await summon();const native=q.npc(/^Gujuo$/i);if(!native)throw Error('Legends bowl blessing native absent');const mark=pageMark();await legendsBlessBowlAttempt({pack:()=>pack(s),prayer:()=>sdk.getSkill('Prayer')?.level??0,sawFailure:()=>sawSince(mark,/not able to go into a deep enough trance/i),send:async()=>{if(!gujuoClearingQuiet())throw Error('Legends wildlife targets the bowl bearer');if(!q!.dialogOpen())await q!.useOnNpc(I.bowl,native);},step:(send,done,choices)=>step('one bowl blessing attempt',send,done,choices,100)});}if(!has(I.blessed))throw Error('Legends bounded bowl blessing failed');
+  await bank({...basic(),[I.bowl]:1},[I.map,I.bull,I.picture]);await jungle();for(let n=0;n<o.maximumTrials&&!has(I.blessed);n++){await upkeep(42);started=s.tick();await summon();const native=q.npc(/^Gujuo$/i);if(!native)throw Error('Legends bowl blessing native absent');const mark=pageMark();await legendsBlessBowlAttempt({pack:()=>pack(s),prayer:()=>sdk.getSkill('Prayer')?.level??0,sawFailure:()=>sawSince(mark,/not able to go into a deep enough trance/i),send:async()=>{if(!gujuoClearingQuiet())throw Error('Legends wildlife targets the bowl bearer');if(!q!.dialogOpen())await q!.useOnNpc(I.bowl,native);},step:(send,done,choices)=>step('one bowl blessing attempt',send,done,choices,100)});}if(!has(I.blessed))throw Error('Legends bounded bowl blessing failed');
   await surface();await bank({...basic(),385:2,2434:1,1265:1,1523:1,566:1,558:1,557:1,563:2,1609:1,1611:1,1613:1,1607:1,1601:1,1603:1,1605:1},[I.map,I.bull,I.blessed]);await jungle();await cave();
   // The first traversal pays SMELL and the seven gems once; later traversals use the observed doors.
   await enterTrials(true);if(sdk.getState()?.groundItems.some(g=>g.id===I.book))throw Error('Legends preexisting Book of Binding pile ambiguous');for(const [item,x,z]of[[1609,2764,9309],[1611,2771,9303],[1613,2772,9295],[1607,2781,9291],[1601,2774,9287],[1603,2767,9289],[1605,2757,9297]]){await walk(x!,z!,1);await paid('bind gem '+item,{[item!]:-1},()=>useLoc(item!,'lg_gemplacerock',x!,z!));}await walk(2765,9297,1);await wait(()=>!!sdk.getState()?.groundItems.some(g=>g.id===I.book),60);const books=sdk.getState()!.groundItems.filter(g=>g.id===I.book);if(books.length!==1||books[0]!.count!==1||sdk.getState()!.nearbyPlayers.length)throw Error('Legends fresh Book of Binding ownership ambiguous');const book=books[0]!;await paid('owned Book of Binding',{[I.book]:1},()=>s.direct({type:'pickupItem',x:book.x,z:book.z,itemId:I.book,reason:'fresh seven-gem quest reward'}));
