@@ -94,7 +94,7 @@ test('a fresh live roster overrules the published snapshot, and a stale one does
 test('a follow is asked again once the feed has the account, and only once',()=>{
  const code=html.slice(html.indexOf('function liveRosterIn('),html.indexOf('window.atlasRosterIn='));
  const sent:any[]=[];const frame={contentWindow:{postMessage:(m:any)=>sent.push(m)}};
- const run=new Function('$','window',`let LIVE_ROSTER=null,followedLive=null,rswFor=null,sel='Worker';const mode='3d',VIEWER={state:'ready',origin:'o'};${code};return liveRosterIn;`)(()=>frame,{});
+ const run=new Function('$','window',`let LIVE_ROSTER=null,followedLive=null,rswFor=null,sel='Worker',SNAPSHOT=null;const STATIC=false,mode='3d',VIEWER={state:'ready',origin:'o'};${code};return liveRosterIn;`)(()=>frame,{});
  run({players:[['Other',1,2,0,3]]});expect(sent).toEqual([]);
  run({players:[['Worker',1,2,0,3]]});run({players:[['Worker',1,3,0,3]]});expect(sent).toEqual([{follow:'Worker'}]);
  run({players:[]});run({players:[['worker',1,2,0,3]]});expect(sent).toHaveLength(2);
@@ -106,4 +106,12 @@ test('fleet filters count each account once and the total level leaves out unnam
  const line=ops.slice(ops.indexOf('const totalLevel='),ops.indexOf('\n',ops.indexOf('const totalLevel=')));
  const total=new Function(line+';return totalLevel;')();
  expect(total({skills:[{name:'Attack',level:99},{name:'Stat18',level:1},{name:'Overall',level:100}]})).toBe(99);
+});
+
+test('a static page applies each roster, because it reads its state only once',()=>{
+ const code=html.slice(html.indexOf('function withLiveRoster('),html.indexOf('window.atlasLiveRoster='))+html.slice(html.indexOf('function liveRosterIn('),html.indexOf('window.atlasRosterIn='));
+ let rendered=0;const snapshot={bots:[{name:'Gone',operation:'observed',inWorld:true}]};
+ const run=new Function('$','window','render','snapshot',`const LIVE_ROSTER_MS=30000,STATIC=true,mode='2d',VIEWER={};let LIVE_ROSTER=null,followedLive=null,rswFor=null,sel=null,SNAPSHOT=snapshot,S=snapshot;${code};return r=>{liveRosterIn(r);return S;};`)(()=>null,{},()=>rendered++,snapshot);
+ const shown=run({players:[['Other',1,2,0,3]]});
+ expect(shown.bots[0].inWorld).toBe(false);expect(shown.worldPlayers).toBe(1);expect(rendered).toBe(1);expect(snapshot.bots[0]!.inWorld).toBe(true);
 });

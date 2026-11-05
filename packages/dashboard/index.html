@@ -436,7 +436,7 @@ $('#board-mode').onclick=()=>{boardMode=boardMode==='model'?'specialists':'model
 window.addEventListener('resize',()=>{if(S)render()});window.onerror=m=>{$('#connection').textContent='DISPLAY ERROR';$('#connection').className='bad';$('#notice').textContent=String(m)};
 // Live presence: the published state can be 10 minutes old, and the 3D viewer relays the world feed's roster every 10
 // ticks. While that roster is fresh it decides who is online, where they stand and how many players the world holds.
-const LIVE_ROSTER_MS=30000;let LIVE_ROSTER=null,followedLive=null;
+const LIVE_ROSTER_MS=30000;let LIVE_ROSTER=null,followedLive=null,SNAPSHOT=null;
 function withLiveRoster(j,live,now){
   if(!j||!live||now-live.at>LIVE_ROSTER_MS)return j;
   const seen=new Map(live.players.map(p=>[String(p[0]).toLowerCase(),p]));
@@ -454,12 +454,15 @@ window.atlasLiveRoster=()=>!!LIVE_ROSTER&&Date.now()-LIVE_ROSTER.at<=LIVE_ROSTER
 function liveRosterIn(r){
   if(!Array.isArray(r?.players))return;
   LIVE_ROSTER={at:Date.now(),players:r.players};
+  // A static page reads its state once, so nothing else would apply the roster.
+  if(STATIC&&SNAPSHOT){S=withLiveRoster(SNAPSHOT,LIVE_ROSTER,Date.now());render();}
   const here=!!sel&&r.players.some(p=>String(p[0]).toLowerCase()===sel.toLowerCase());
   if(!here)followedLive=null;
   else if(followedLive!==sel&&mode==='3d'&&VIEWER.state==='ready'&&!window.atlasFreeCamera&&!window.atlasFollowOther){followedLive=sel;rswFor=sel;$('#rsw').contentWindow?.postMessage({follow:sel},VIEWER.origin);}
 }
 window.atlasRosterIn=liveRosterIn;
-function receive(j){S=withLiveRoster(j,LIVE_ROSTER,Date.now());lastReceived=Date.now();connected=true;render()}
+function receive(j){SNAPSHOT=j;S=withLiveRoster(j,LIVE_ROSTER,Date.now());lastReceived=Date.now();connected=true;render()}
+if(STATIC)setInterval(()=>{if(SNAPSHOT&&LIVE_ROSTER&&!window.atlasLiveRoster()){LIVE_ROSTER=null;S=SNAPSHOT;render();}},5000);
 if(STATIC)fetch('/api/state').then(r=>r.json()).then(receive);else{let version=null;const es=new EventSource('/events');es.onmessage=e=>{const j=JSON.parse(e.data);if(version&&j.pageVersion!==version){location.reload();return}version=j.pageVersion;receive(j)};es.onerror=()=>{connected=false;connectionState()};setInterval(connectionState,2000)}
 
 </script><script src="/map-shell.js"></script><script src="/xp-tracker.js"></script><script src="/client-shell.js"></script><script src="/operations.js"></script></body></html>
