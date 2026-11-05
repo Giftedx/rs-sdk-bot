@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1793842956376,
+ "at": 1793843559061,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -53,7 +53,7 @@
     "runemysteries,murder,cog,hazeelcult,sheepherder,totem,sheep"
    ],
    "env": {},
-   "enabled": false,
+   "enabled": true,
    "repeat": false,
    "goal": "Quest Points: no-item quests after Magic 99",
    "role": "quest"
