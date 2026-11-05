@@ -149,13 +149,23 @@ export function domainStages(actions: GameAction[], text: string, fired: Set<str
     return [...by].map(([domain, d]) => ({ domain, actions: d.total, named: d.named, fired: d.fired, share: Math.round(100 * d.named / d.total) })).sort((a, b) => a.share - b.share || b.actions - a.actions);
 }
 
+// The accounts whose live statuses count: the PC's verified-login registry (packages/core/src/tradeguard.ts writes it after
+// a live login), without the protected main account. A machine with no registry yet (a fresh cloud container) counts none,
+// and the scoreboard still reads the shared side snapshots.
+export function ownedNames(file: string): Set<string> {
+    let entries: Record<string, unknown> = {};
+    try { entries = JSON.parse(readFileSync(file, 'utf8')); } catch { /* no verified login on this machine */ }
+    const owned = new Set(Object.keys(entries).map(n => n.toLowerCase()));
+    owned.delete('haggis');
+    return owned;
+}
+
 export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..')) {
     const actions: GameAction[] = JSON.parse(readFileSync(join(root, 'knowledge', 'actions.json'), 'utf8'));
     const text = corpus(root);
-    const owned = new Set(Object.keys(JSON.parse(readFileSync(join(root, '.practice', 'owned-accounts.json'), 'utf8'))).map(n => n.toLowerCase()));
-    owned.delete('haggis'); // the protected main account is not a coverage account
+    const owned = ownedNames(join(root, '.practice', 'owned-accounts.json'));
     const statusDir = join(root, '.practice', 'status');
-    const statuses: Status[] = readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } })
+    const statuses: Status[] = (existsSync(statusDir) ? readdirSync(statusDir) : []).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } })
         .filter((s: Status) => s.server === 'rs-sdk-demo.fly.dev' && owned.has((s.name ?? '').toLowerCase()));
     // The 68 quest folders of the content are the quest list (knowledge/quests.json lacks 4 folders).
     const known = new Map<string, number>((JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')) as { folder: string | null; varp: string; questPoints: number }[])
