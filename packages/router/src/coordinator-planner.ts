@@ -10,7 +10,7 @@ import {projectRoot,atomicJson,capabilitySource} from './coordinator-store';
 import {diskFreeGB,heldRuns,type HeldRuns} from './coordinator-decisions';
 import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 import {readMergedPlan} from '../../core/src/coordinator-jobs';
-import {liveHelperStatuses,observedStock,supplyBill} from '../../planner/src/supply-bill';
+import {liveHelperStatuses,observedStock,overallSupplyDemand,supplyBill} from '../../planner/src/supply-bill';
 
 export function parseModelObject(text:string):any{
  const trimmed=text.trim(),fence=trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
@@ -116,15 +116,16 @@ export function readWorld(){
  const coverage=gameCoverage(JSON.parse(readFileSync(join(projectRoot,'knowledge/skills.json'),'utf8')),JSON.parse(readFileSync(join(projectRoot,'knowledge/quests.json'),'utf8')),statuses,protectedNames,scripts.sort());
  let scoreboard:any=null;try{scoreboard=scoreboardSummary(freshScoreboard(projectRoot));}catch(error){scoreboard={error:String(error)};}
  let stall:any=null;try{const f=join(projectRoot,'.practice/coordinator/stall.json');if(existsSync(f))stall=JSON.parse(readFileSync(f,'utf8'));}catch{/* no stall note */}
- return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses),supplyBill:supplyBillSummary(),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
+ return{at:Date.now(),scoreboard,stall,assets:assetSummary(statuses),supplyBill:supplyBillSummary({source:'route'}),executionDirective:plan.coordination?.directive??'',deliveryFocus:plan.coordination?.focusCapability??null,capacity:{maxBots:plan.maxBots,minFreeGB:plan.minFreeGB,freeGB:freemem()/2**30,nativeStartupGB:PRACTICE_STARTUP_GB,diskFreeGB:diskFreeGB(projectRoot),maxLive:plan.coordination?.maxLive??plan.maxBots,preferLive:plan.coordination?.preferLive===true},protectedNames,jobs:plan.jobs,statuses,ended,capabilities,capabilitySources,coverage};
 }
-// Reprice the saved route demand against one set of current observations. The bill's write time does not refresh its stock.
-export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side}:{
- base?:string; now?:number; fleetDir?:string; side?:string;
+// Reprice current route demand or an explicitly inspected saved bill. Demand time does not refresh stock.
+export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side,source='saved'}:{
+ base?:string; now?:number; fleetDir?:string; side?:string; source?:'route'|'saved';
 }={}){
  try{
-  const bill=JSON.parse(readFileSync(join(base,'.practice/coordinator/supply-bill.json'),'utf8'));
-  const demands=bill.rows.map((row:{item:string;itemId?:number;need:number;aliases?:string[]})=>({item:row.item,itemId:row.itemId,count:row.need,aliases:row.aliases}));
+  const current=source==='route'?overallSupplyDemand(join(base,'research/hiscores-live.json')):null;
+  const bill=current?null:JSON.parse(readFileSync(join(base,'.practice/coordinator/supply-bill.json'),'utf8'));
+  const demands=current?.supplies??bill.rows.map((row:{item:string;itemId?:number;need:number;aliases?:string[]})=>({item:row.item,itemId:row.itemId,count:row.need,aliases:row.aliases}));
   const items=JSON.parse(readFileSync(join(base,'knowledge/items.json'),'utf8'));
   const statuses=liveHelperStatuses(base,fleetDir,side).filter(s=>!s.practice);
   // Use the same five-minute window as the preparation report. A fresh status does not make an older bank recent.
@@ -147,9 +148,10 @@ export function supplyBillSummary({base=projectRoot,now=Date.now(),fleetDir,side
    return [{item:row.item,...(row.itemId===undefined?{}:{itemId:row.itemId}),need:row.need,recent:current.owned,toVerify,holders,...(row.aliases?{aliases:row.aliases}:{})}];
   });
   return {
-   at:bill.at,
-   scope:bill.scope==='overall'?'overall':'unknown',
-   overallFinish:bill.scope==='overall'?bill.overallFinish:null,
+   at:current?now:bill.at,
+   snapshotAt:current?current.snapshotAt:bill.snapshotAt??null,
+   scope:current||bill.scope==='overall'?'overall':'unknown',
+   overallFinish:current?current.overallFinish:bill.scope==='overall'?bill.overallFinish:null,
    observedAt:now,
    recentlyCovered:recent.filter(r=>r.ids.length>0&&r.short===0).length,
    unmapped:observed.filter(r=>!r.ids.length).map(r=>r.item),

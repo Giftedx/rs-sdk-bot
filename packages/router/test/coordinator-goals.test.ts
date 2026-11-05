@@ -2,13 +2,29 @@ import {test,expect} from 'bun:test';
 import {initialState} from '../src/coordinator';
 import {plannerPrompt,gameCoverage,supplyBillSummary} from '../src/coordinator-planner';
 
-import {mkdirSync,mkdtempSync,writeFileSync} from 'node:fs';
+import {copyFileSync,mkdirSync,mkdtempSync,writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {snapshot} from '../../../scripts/fleet-sync';
 import {supplyBill} from '../../planner/src/supply-bill';
 
 const world={coverage:{scriptCandidates:[]},statuses:[],jobs:[],capabilities:[]} as any;
+
+test('the live planner gets current route demand even when a legacy bill is present',()=>{
+ const base=mkdtempSync(join(tmpdir(),'planner-current-demand-')),fleetDir=join(base,'snapshots');
+ for(const dir of ['knowledge','research','.practice/coordinator','snapshots'])mkdirSync(join(base,dir),{recursive:true});
+ const root=join(import.meta.dir,'../../..');
+ copyFileSync(join(root,'knowledge/items.json'),join(base,'knowledge/items.json'));
+ writeFileSync(join(base,'.practice/coordinator/supply-bill.json'),JSON.stringify({at:10,rows:[{item:'Old composite kit',need:1}]}));
+ const options={base,fleetDir,source:'route' as const,now:1_000_000};
+ expect(supplyBillSummary(options)).toBeNull();
+ copyFileSync(join(root,'research/hiscores-live.json'),join(base,'research/hiscores-live.json'));
+ const summary=supplyBillSummary(options);
+ expect(summary).toMatchObject({at:options.now,scope:'overall',unmapped:[]});
+ expect(summary?.snapshotAt).toEqual(expect.any(String));
+ expect(summary?.overallFinish).toBeGreaterThan(0);
+ expect(summary?.short.some(r=>r.item==='Old composite kit')).toBe(false);
+});
 
 test('planner separates the main Overall record from specialist board wins',()=>{
  const prompt=plannerPrompt(initialState(),world);
