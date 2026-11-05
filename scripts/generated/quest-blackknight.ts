@@ -123,7 +123,9 @@ try {
         await climb('hall ladder down', { id: 1749, x: 3022, z: 3518 }, lvlIs(0));
         await q.step('door2 out', () => q.opLoc(L.door2), () => q.dialogOpen() || x() <= 3019, 12, 4);
         if (q.dialogOpen()) await q.converse([], () => x() <= 3019 && !q.dialogOpen(), 20);
-        await q.step('door1 out', () => q.opLoc(L.door1), () => z() <= 3513, 12, 4);
+        // The guards' door opens from inside without moving the bot; the step through follows while it stands open.
+        await q.step('door1 out', () => q.opLoc(L.door1), () => z() <= 3513 || !q.shutAt(3016, 3514), 12, 4);
+        if (z() > 3513) await q.dash('out of the gate', 3016, 3512, 1);
         console.log(`NOTE outside ${where()} ${q.T()}`);
     }
     await q.teleport('falador teleport 2', 'magic:falador_teleport', 2965, 3378);
