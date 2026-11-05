@@ -1,6 +1,6 @@
 {
  "side": "claude-cloud",
- "at": 1793844162072,
+ "at": 1793845970376,
  "jobs": [
   {
    "account": "UnderMyKilt",
@@ -50,7 +50,7 @@
    "account": "TheFullMonty",
    "script": "scripts/quest-chain.ts",
    "args": [
-    "sheepherder,totem,sheep,runemysteries"
+    "murder,fluffs,runemysteries"
    ],
    "env": {},
    "enabled": true,
