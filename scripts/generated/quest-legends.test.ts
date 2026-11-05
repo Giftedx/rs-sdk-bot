@@ -118,6 +118,28 @@ test('Gujuo blessing accepts both Native prompts and declines the retry after on
 });
 
 
+test('Gujuo distinguishes a late verified messenger grant from an unknown stock change', async () => {
+ for (const variant of ['observed', 'unobserved', 'extra']) {
+  let pack: Record<number, number> = {721: 1};
+  let prayer = 49;
+  let failed = false;
+  const result = legendsBlessBowlAttempt({
+   pack: () => pack, prayer: () => prayer, sawFailure: () => failed,
+   saw: pattern => variant !== 'unobserved' && pattern.test('Kings messenger King Lathas sent this message for you.'),
+   send: async () => {},
+   step: async (send, done) => {
+    await send();
+    prayer -= 5;
+    failed = true;
+    expect(done()).toBe(true);
+    pack = {721: 1, 3206: 1, ...(variant === 'extra' ? {995: 1} : {})};
+   },
+  });
+  if (variant === 'observed') expect(await result).toBe(false);
+  else await expect(result).rejects.toThrow('bowl blessing outcome differs');
+ }
+});
+
 test('mapping reconciles the wrapped Native ruined-paper page before another attempt', async () => {
  for (const debit of [0, 1, 2]) {
   let stock = {714: 1, 970: 4, 973: 3};

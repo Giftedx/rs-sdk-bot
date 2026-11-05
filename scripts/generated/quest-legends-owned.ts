@@ -49,16 +49,16 @@ export async function legendsSummonAttempt(io: {
 }
 export function legendsPackEffect(before:Readonly<Record<number,number>>,after:Readonly<Record<number,number>>,delta:Readonly<Record<number,number>>){return [...new Set([...Object.keys(before),...Object.keys(after),...Object.keys(delta)])].every(k=>(after[+k]??0)-(before[+k]??0)===(delta[+k]??0));}
 export function legendsMapEffect(before:Record<number,number>,after:Record<number,number>,complete:boolean){return legendsPackEffect(before,after,{[obj('papyrus')]:-1,...(complete?{[I.notes]:-1,[I.map]:1}:{})})&&(!complete||(after[I.map]??0)===1);}
+function withoutObservedSummons(before: Readonly<Record<number, number>>, after: Record<number, number>, saw: (pattern: RegExp) => boolean) {
+ const summons = obj('regicide_quest_kings_summons');
+ if (before[summons] || after[summons] !== 1 || !saw(/Kings messenger.*King Lathas sent this message for you/i)) return after;
+ const current = { ...after };
+ delete current[summons];
+ return current;
+}
 export async function legendsMapAttempt(io:{pack:()=>Record<number,number>;saw:(pattern:RegExp)=>boolean;step:(send:()=>Promise<unknown>,done:()=>boolean)=>Promise<void>;send:()=>Promise<unknown>},complete:boolean){
  const before={...io.pack()},success=()=>io.saw(/neatly add a new section/i);
- const summons = obj('regicide_quest_kings_summons');
- const mappingStock = () => {
-  const current = { ...io.pack() };
-  if (!before[summons] && current[summons] === 1 && io.saw(/Kings messenger.*King Lathas sent this message for you/i)) {
-   delete current[summons];
-  }
-  return current;
- };
+ const mappingStock = () => withoutObservedSummons(before, io.pack(), io.saw);
  // The client can enumerate wrapped object-box lines in reverse display order.
  const ruinedPaper = () => io.saw(/(?=.*the paper is totally)(?=.*ruined\.)/i);
  const brokenCharcoal = () => io.saw(/snap your stick/i);
@@ -76,20 +76,22 @@ export async function legendsBlessBowlAttempt(io: {
  pack: () => Record<number, number>;
  prayer: () => number;
  sawFailure: () => boolean;
+ saw?: (pattern: RegExp) => boolean;
  send: () => Promise<unknown>;
  step: (send: () => Promise<unknown>, done: () => boolean, choices: RegExp[]) => Promise<void>;
 }) {
  const before = { ...io.pack() }, prayerBefore = io.prayer();
  if (prayerBefore < 42 || before[I.bowl] !== 1 || before[I.blessed]) throw Error('Legends bowl blessing inputs unavailable');
  const choices = [/^Yes, I'd like (?:you )?to bless my gold bowl\.$/i];
- const blessed = () => legendsPackEffect(before, io.pack(), { [I.bowl]: -1, [I.blessed]: 1 });
+ const stock = () => withoutObservedSummons(before, io.pack(), io.saw ?? (() => false));
+ const blessed = () => legendsPackEffect(before, stock(), { [I.bowl]: -1, [I.blessed]: 1 });
  await io.step(io.send, () => {
   if (!blessed() && !io.sawFailure()) return false;
   choices.splice(0, choices.length, /^No thanks, I'll wait\.$/i, /^No thanks, I need help with something else\.$/i, /^Ok thanks for your help\.$/i);
   return true;
  }, choices);
  if (blessed() && io.prayer() === prayerBefore) return true;
- if (io.sawFailure() && io.prayer() === prayerBefore - 5 && legendsPackEffect(before, io.pack(), {})) return false;
+ if (io.sawFailure() && io.prayer() === prayerBefore - 5 && legendsPackEffect(before, stock(), {})) return false;
  throw Error('Legends bowl blessing outcome differs');
 }
 export function legendsContext(raw:Session,cap:number,hpFloor=25){const client=raw.client,executor=(client as any).executeBotAction,server=raw.lifecycle?.server,p=raw.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,start=raw.tick();let ended=false,lost=false;void raw.ended.then(()=>{ended=true;});return{start,alive(){const now=raw.sdk.getState()?.player;if(raw.client!==client||(client as any).executeBotAction!==executor)lost=true;return raw.lifecycle?.server===server&&!lost&&!ended&&typeof executor==='function'&&life!==undefined&&!!now&&!now.isDead&&now.lifeId===life&&(now.respawnCount??0)===respawns&&(raw.sdk.getSkill('Hitpoints')?.level??0)>=hpFloor&&raw.tick()-start<cap;}};}
@@ -288,7 +290,7 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
   await crossing(true);await walk(2867,2942);const forester=sdk.getState()?.nearbyNpcs.find(n=>/Jungle forester/i.test(n.name));if(!forester)throw Error('Legends native forester absent');await paid('forester map copy',{[I.bull]:1},()=>q!.useOnNpc(I.map,forester),[/Yes, go ahead make a copy/i]);await bank({...basic()},[I.map,I.bull]);
   await jungle();await gujuo([/hoping to attract/i,/develop friendly relations/i,/get your people together/i,/What can we do instead/i,/How do we make/i,/I will release Ungadulu/i],()=>q!.sawText(/release Ungadulu|find.*cave|good luck/i));await cave();await step('Ungadulu pure-water clue',()=>interact('lqfirewall_straight',2790,9333,2),()=>q!.sawText(/from the above lands/i),[/Who are you/i,/Where do I get pure water/i]);await exitCave();await gujuo([/Ungadulu looks a little strange/i,/pure water to douse/i,/What kind of a vessel/i,/Ok thanks for your help/i],()=>has(I.picture));
   await bank({...basic(),2347:1,2357:6},[I.map,I.bull,I.picture]);await move(3187,3425);for(let n=0;n<o.maximumTrials&&!has(I.bowl);n++){const before=pack(s),mark=cursor(s);await step('forge gold bowl',()=>useLoc(2357,'anvil',3188,3426),()=>has(I.bowl)||fresh(s,mark,/make a mistake forging/),[/^Yes$/]);const lost=(before[2357]??0)-count(2357);if(has(I.bowl)){if(!legendsPackEffect(before,pack(s),{2357:-2,[I.bowl]:1}))throw Error('Legends forged bowl whole-pack differs');}else if(![1,2].includes(lost)||!legendsPackEffect(before,pack(s),{2357:-lost}))throw Error('Legends forge failure debit unknown');}if(!has(I.bowl))throw Error('Legends finite forge budget exhausted');
-  await bank({...basic(),[I.bowl]:1},[I.map,I.bull,I.picture]);await jungle();for(let n=0;n<o.maximumTrials&&!has(I.blessed);n++){await upkeep(42);started=s.tick();await summon();const native=q.npc(/^Gujuo$/i);if(!native)throw Error('Legends bowl blessing native absent');const mark=pageMark();await legendsBlessBowlAttempt({pack:()=>pack(s),prayer:()=>sdk.getSkill('Prayer')?.level??0,sawFailure:()=>sawSince(mark,/not able to go into a deep enough trance/i),send:async()=>{if(!gujuoClearingQuiet())throw Error('Legends wildlife targets the bowl bearer');if(!q!.dialogOpen())await q!.useOnNpc(I.bowl,native);},step:(send,done,choices)=>step('one bowl blessing attempt',send,done,choices,100)});}if(!has(I.blessed))throw Error('Legends bounded bowl blessing failed');
+  await bank({...basic(),[I.bowl]:1},[I.map,I.bull,I.picture]);await jungle();for(let n=0;n<o.maximumTrials&&!has(I.blessed);n++){await upkeep(42);started=s.tick();await summon();const native=q.npc(/^Gujuo$/i);if(!native)throw Error('Legends bowl blessing native absent');const mark=pageMark();await legendsBlessBowlAttempt({pack:()=>pack(s),prayer:()=>sdk.getSkill('Prayer')?.level??0,sawFailure:()=>sawSince(mark,/not able to go into a deep enough trance/i),saw:pattern=>sawSince(mark,pattern),send:async()=>{if(!gujuoClearingQuiet())throw Error('Legends wildlife targets the bowl bearer');if(!q!.dialogOpen())await q!.useOnNpc(I.bowl,native);},step:(send,done,choices)=>step('one bowl blessing attempt',send,done,choices,100)});}if(!has(I.blessed))throw Error('Legends bounded bowl blessing failed');
   await surface();await bank({...basic(),385:2,2434:1,1265:1,1523:1,566:1,558:1,557:1,563:2,1609:1,1611:1,1613:1,1607:1,1601:1,1603:1,1605:1},[I.map,I.bull,I.blessed]);await jungle();await cave();
   // The first traversal pays SMELL and the seven gems once; later traversals use the observed doors.
   await enterTrials(true);if(sdk.getState()?.groundItems.some(g=>g.id===I.book))throw Error('Legends preexisting Book of Binding pile ambiguous');for(const [item,x,z]of[[1609,2764,9309],[1611,2771,9303],[1613,2772,9295],[1607,2781,9291],[1601,2774,9287],[1603,2767,9289],[1605,2757,9297]]){await walk(x!,z!,1);await paid('bind gem '+item,{[item!]:-1},()=>useLoc(item!,'lg_gemplacerock',x!,z!));}await walk(2765,9297,1);await wait(()=>!!sdk.getState()?.groundItems.some(g=>g.id===I.book),60);const books=sdk.getState()!.groundItems.filter(g=>g.id===I.book);if(books.length!==1||books[0]!.count!==1||sdk.getState()!.nearbyPlayers.length)throw Error('Legends fresh Book of Binding ownership ambiguous');const book=books[0]!;await paid('owned Book of Binding',{[I.book]:1},()=>s.direct({type:'pickupItem',x:book.x,z:book.z,itemId:I.book,reason:'fresh seven-gem quest reward'}));
