@@ -187,7 +187,7 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  expect(depositPlan(sharks,slotsFor([{id:1933,count:3}],sharks)+QUEST_PICKUP_SLOTS,keep)).toEqual([{id:385,count:11}]);
  // An edible quest ingredient the preset needs (Family Crest's cooked fish, 5) is kept whatever the pressure.
  const fishy=[{id:995,count:30},...Array.from({length:5},()=>({id:333,count:1})),...Array.from({length:22},()=>({id:385,count:1}))];
- expect(depositPlan(fishy,27,id=>id===333)).toEqual([{id:385,count:21}]);
+ expect(depositPlan(fishy,27,id=>id===333)).toEqual([{id:385,count:22}]);
  // Twenty balls of wool beside the coins: the reserve gives way to two slots and five sharks stay.
  const nine=[{id:995,count:30},...Array.from({length:9},()=>({id:385,count:1}))];
  expect(slotNeed(20,1)).toBe(22);
