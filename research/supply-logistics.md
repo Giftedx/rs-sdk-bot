@@ -13,6 +13,8 @@ Source -> local consumer -> reuse -> check: the status producer's equipment obse
 
 Source -> local consumer -> reuse -> check: the pinned item catalog and the measured Ranged preset's black dragonhide IDs -> Overall supplies, planner, dashboard and launch staging -> split the cannon and ranged kit into eight pinned item IDs -> fixtures reject a different colour with the same display name, and the CLI readback in `.practice/exact-overall-kit/readback.json` checks the bill and preparation report. The IDs are procurement requirements. They need bank and transfer evidence for staging.
 
+Source -> local consumer -> reuse -> check: the route bill's selected Overall schedule and Autopilot's current demand calculation -> coordinator planning prompt -> compute the same current requirements and report the hiscore observation time separately -> a fixture leaves a legacy bill beside the current input and verifies the planner uses the route. If the route is unavailable, the live prompt has no supply bill. Saved bills remain readable for historical inspection.
+
 
 The Overall supply bill, Autopilot demand, preparation report, dashboard and launch manifest use the route rows that start before the modeled last 99. The full route remains available for later quest, gear and bank goals. If the model has no Overall finish, it cannot produce an Overall supply bill.
 
