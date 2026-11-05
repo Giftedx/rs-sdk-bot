@@ -107,9 +107,11 @@ function applyChange(pr:DeliveryPr,tree:string){
  // A request staged before base snapshots existed holds whole files only; copying them could revert master.
  if(typeof pr.base!=='string')throw new DeliveryConflict('delivery was staged without base snapshots; commit '+pr.snapshot+' by hand against origin/master');
  const conflicts:string[]=[];
+ // Match the repository's LF checkout policy before git compares lines in Windows snapshots.
+ const readText=(path:string)=>readFileSync(path,'utf8').replaceAll('\r\n','\n');
  const merged=pr.files.map(f=>{
-  const target=join(tree,f),master=existsSync(target)?readFileSync(target,'utf8'):'';
-  const basePath=join(pr.base,f),base=existsSync(basePath)?readFileSync(basePath,'utf8'):'',build=readFileSync(join(pr.snapshot,f),'utf8');
+  const target=join(tree,f),master=existsSync(target)?readText(target):'';
+  const basePath=join(pr.base,f),base=existsSync(basePath)?readText(basePath):'',build=readText(join(pr.snapshot,f));
   if(master===base)return[f,build] as const;
   const out=mergeText(base,master,build);
   if(!out.ok){conflicts.push(f+' ('+out.conflicts.join('; ').replaceAll('main lines','master lines')+')');return[f,''] as const;}
