@@ -1,5 +1,6 @@
 import {test,expect,spyOn} from 'bun:test';
 import * as walking from '../packages/core/src/walk';
+import {loadPathfinding} from '../packages/core/src/pathcache';
 import {magicXpForLevel,magicOptions,magicPreflight,startRegion,draynorToVarrock,spendAllowance,baseXpEstimate,castsNeeded,
  runeShortfall,affordablePurchase,classifyCast,pickTarget,eatBetweenCasts,logoutQuiet,awaitLogoutQuiet,LOGOUT_QUIET_TICKS,runMagicOrder,
  AIR,MIND,COINS,CAST_SITE,BANKS,TARGET_AREA,HEALTH,CAST} from './magic-order';
@@ -160,18 +161,33 @@ test('a cast counts only on a debit of each rune plus a Magic XP rise',()=>{
  expect(classifyCast(b,{air:10,mind:9,xp:237.5})).toBe('partial');
 });
 test('an NPC attacking our player remains selectable after the player target clears',()=>{
- const mugger={index:2965,name:'Mugger',x:3246,z:3401,distance:6,hp:null,inCombat:true,targetIndex:32769,reachable:true,optionsWithIndex:[{text:'Attack',opIndex:2}]};
+ const mugger={index:2965,name:'Mugger',x:3225,z:3401,distance:6,hp:null,inCombat:true,targetIndex:32769,reachable:true,optionsWithIndex:[{text:'Attack',opIndex:2}]};
  expect(pickTarget([mugger],-1,new Set(),1)?.index).toBe(2965);
  expect(pickTarget([mugger],-1,new Set(),2)).toBeUndefined();
  expect(pickTarget([mugger],-1,new Set())).toBeUndefined();
  expect(pickTarget([{...mugger,x:3254}],-1,new Set(),1)).toBeUndefined();
 });
+// Regression: the men east of x 3235 stand behind shut doors. Their reachable:false rows leave no target.
+test('the cast site routes to a pinned Man and Woman with every door shut',async()=>{
+ await loadPathfinding();
+ const pf=await import('../vendor/rs-sdk/sdk/pathfinding');
+ const doors:NonNullable<ReturnType<typeof pf.getDoorAt>>[]=[];
+ for(let x=3150;x<=3300;x++)for(let z=3370;z<=3460;z++){const d=pf.getDoorAt(0,x,z);if(d)doors.push(d);}
+ expect(doors.length).toBeGreaterThan(0);
+ const end=(x:number,z:number)=>pf.findLongPath(0,CAST_SITE.x,CAST_SITE.z,x,z,500,doors).at(-1);
+ for(const spawn of [{x:3223,z:3398},{x:3223,z:3401}])expect(end(spawn.x,spawn.z)).toMatchObject(spawn);
+ for(const shut of [{x:3237,z:3406},{x:3238,z:3406},{x:3245,z:3395}])expect(end(shut.x,shut.z)).not.toMatchObject(shut);
+ const row={index:1,name:'Man',distance:2,hp:null,inCombat:false,optionsWithIndex:[{text:'Attack',opIndex:2}]};
+ expect(pickTarget([{...row,x:3223,z:3398,reachable:true}],-1,new Set())?.index).toBe(1);
+ expect(pickTarget([{...row,x:3223,z:3398,reachable:false}],-1,new Set())).toBeUndefined();
+ expect(pickTarget([{...row,x:3237,z:3407,reachable:true}],-1,new Set())).toBeUndefined();
+});
 test('targets are attackable men, women or muggers in the cast area, engaged first',()=>{
  const npc=(index:number,name:string,x:number,z:number,distance:number,extra:Record<string,unknown>={})=>
   ({index,name,x,z,distance,hp:null,inCombat:false,optionsWithIndex:[{text:'Attack',opIndex:2}],...extra});
- const npcs=[npc(1,'Man',3240,3405,4),npc(2,'Woman',3242,3406,2),npc(3,'Mugger',3249,3394,9),
+ const npcs=[npc(1,'Man',3223,3398,4),npc(2,'Woman',3223,3401,2),npc(3,'Mugger',3229,3394,9),
   npc(4,'Man',3260,3405,1),npc(5,'Aubury',3253,3402,3,{optionsWithIndex:[{text:'Trade',opIndex:3}]}),
-  npc(6,'Man',3241,3405,1,{inCombat:true}),npc(7,'Man',3243,3405,1,{hp:0}),npc(8,'Man',3243,3404,1,{reachable:false})];
+  npc(6,'Man',3224,3399,1,{inCombat:true}),npc(7,'Man',3224,3400,1,{hp:0}),npc(8,'Man',3222,3400,1,{reachable:false})];
  expect(pickTarget(npcs,-1,new Set())?.index).toBe(2);
  expect(pickTarget(npcs,-1,new Set([2]))?.index).toBe(1);
  expect(pickTarget(npcs,3,new Set())?.index).toBe(3);
@@ -179,7 +195,7 @@ test('targets are attackable men, women or muggers in the cast area, engaged fir
  expect(pickTarget(npcs,4,new Set([1,2,3]))).toBeUndefined();
  expect(TARGET_AREA.x1).toBeLessThan(3253);
  // A nearer mugger loses to any free man or woman, and is picked only when none is free.
- const near=[...npcs,npc(9,'Mugger',3243,3407,1)];
+ const near=[...npcs,npc(9,'Mugger',3223,3400,1)];
  expect(pickTarget(near,-1,new Set())?.index).toBe(2);
  expect(pickTarget(near,-1,new Set([1,2]))?.index).toBe(9);
  expect(pickTarget(near,9,new Set())?.index).toBe(9);
@@ -282,6 +298,63 @@ function fakeSession(o:{x:number;z:number;level?:number;magic?:{level:number;xp:
  return{s:s as unknown as Session,calls,stop:()=>clearInterval(timer),inventory,bank};
 }
 const options={target:12,maxCasts:100,cap:500,budget:0,reserve:0};
+test('target timeout logs nearby NPC rows once before returning the combat stall',async()=>{
+ const entry={x:CAST_SITE.x,z:CAST_SITE.z,magic:{level:70,xp:magicXpForLevel(70)},
+  bank:[{id:AIR,count:2},{id:MIND,count:1}]};
+ const f=fakeSession(entry),s=f.s as any,oldState=s.sdk.getState;
+ const npcs=[{index:1,name:'Man',x:3237,z:3406,distance:7,hp:7,inCombat:false,reachable:false,
+  optionsWithIndex:[{text:'Attack',opIndex:2}]}];
+ s.sdk.getState=()=>({...oldState(),nearbyNpcs:npcs});
+ const walker=spyOn(walking,'sessionWalker').mockResolvedValue({} as any);
+ const route=spyOn(walking,'walkPath').mockImplementation(async(_deps,points)=>{
+  const p=points.at(-1)!;entry.x=p.x;entry.z=p.z;return{ok:true,ticks:1,still:0,clicks:1,repaths:0,doors:0,next:points.length};
+ });
+ const log=spyOn(console,'log').mockImplementation(()=>{});
+ try{
+  const r=await runMagicOrder(f.s,{...options,target:75});
+  expect(r.stop).toBe('combat stall');expect(r.casts).toBe(0);expect(r.ok).toBe(false);
+  expect(r.failure).toContain('no safe target near the cast site');
+  const rows=log.mock.calls.filter(([line])=>String(line).startsWith('MAGIC_ORDER_TARGET_STALL '));
+  expect(rows).toHaveLength(1);
+  const snapshot=JSON.parse(String(rows[0]![0]).slice('MAGIC_ORDER_TARGET_STALL '.length));
+  expect(snapshot.idle).toBe(CAST.targetWaitTicks);
+  expect(snapshot.position).toEqual({x:CAST_SITE.x,z:CAST_SITE.z,level:0});
+  expect(snapshot.nearbyNpcs).toEqual(npcs.map(({distance,...npc})=>npc));
+  expect(f.calls).not.toContain('direct:spellOnNpc');
+  expect(f.bank.find(i=>i.id===AIR)?.count).toBe(2);
+  expect(f.bank.find(i=>i.id===MIND)?.count).toBe(1);
+ }finally{log.mockRestore();route.mockRestore();walker.mockRestore();f.stop();}
+});
+test('level70 without laws reaches Wind Strike from Draynor and refuses unfunded runes',async()=>{
+ for(const funded of [true,false]){
+  const entry={x:3092,z:3242,magic:{level:70,xp:magicXpForLevel(71)-1},
+   pack:[{id:590,count:1}],bank:[{id:AIR,count:2},{id:COINS,count:300},...(funded?[{id:MIND,count:1}]:[])]};
+  const f=fakeSession(entry),s=f.s as any,oldState=s.sdk.getState,oldDirect=s.direct;
+  const walker=spyOn(walking,'sessionWalker').mockResolvedValue({} as any);
+  const route=spyOn(walking,'walkPath').mockImplementation(async(_deps,points)=>{
+   const p=points.at(-1)!;entry.x=p.x;entry.z=p.z;return{ok:true,ticks:1,still:0,clicks:1,repaths:0,doors:0,next:points.length};
+  });
+  let casts=0;
+  s.sdk.getState=()=>({...oldState(),nearbyNpcs:[{index:1,name:'Man',x:CAST_SITE.x,z:CAST_SITE.z,distance:1,hp:7,inCombat:false,optionsWithIndex:[{text:'Attack',opIndex:2}]}]});
+  s.direct=async(action:any)=>{
+   if(action.type!=='spellOnNpc')return oldDirect(action);
+   casts++;expect(entry.x).toBe(CAST_SITE.x);expect(entry.z).toBe(CAST_SITE.z);
+   for(const id of [AIR,MIND])f.inventory.find(i=>i.id===id)!.count--;
+   for(let i=f.inventory.length-1;i>=0;i--)if(f.inventory[i]!.count===0)f.inventory.splice(i,1);
+   const magic=s.sdk.getSkill('Magic');magic.experience+=137.5;magic.baseLevel=magic.level=71;
+   return{success:true};
+  };
+  try{
+   const r=await runMagicOrder(f.s,{...options,target:71});
+   expect(r.teleportRunesUsed).toBeUndefined();expect(r.failure).toBeUndefined();
+   expect(r.ok).toBe(funded);expect(r.stop).toBe(funded?'target':'short runes');
+   expect(casts).toBe(funded?1:0);expect(r.coinsSpent).toBe(0);
+   expect(f.inventory.find(i=>i.id===590)?.count).toBe(1);
+   if(funded){expect(r.magicXpGained).toBe(137.5);expect(r.runesUsed).toEqual({air:1,mind:1});}
+   else expect(r.missing).toEqual({air:0,mind:1});
+  }finally{route.mockRestore();walker.mockRestore();f.stop();}
+ }
+});
 test('worker buys only one missing earth then completes five casts and banks the remaining assets',async()=>{
  const entry={x:3185,z:3436,magic:{level:31,xp:8125},pack:[{id:590,count:1}],
   bank:[{id:AIR,count:25},{id:557,count:4},{id:563,count:5},{id:COINS,count:14911}]};
