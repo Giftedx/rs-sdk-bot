@@ -10,9 +10,10 @@
 // --daemon: a pass every 10 minutes, and one within TRAINER_POLL_MS of a planner trainer's ok RESULT (its target level
 // is met and its job does not repeat, so the account would otherwise sit ended until the timer).
 // Run beside DEMO_OK=1 bun scripts/swarm.ts and bun scripts/fleet-agent.ts --daemon, with FLEET_SIDE set.
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync, openSync, readSync, closeSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { FLEET_DIR, loadOwners, mySide } from '../packages/core/src/fleet';
+import { swarmWroteStop } from './swarm';
 import { withPlanWrite } from '../packages/core/src/plan-lock';
 import { accountFrom, assess, catalogue, finishedTrainers, mergeJobs, norm, pairKey, plan, plannableAccounts, reservedResources, type Assignment } from '../packages/planner/src/autopilot';
 import { mergeJobs as withCoordinatorJobs, readCoordinatorJobs } from '../packages/core/src/coordinator-jobs';
@@ -73,6 +74,14 @@ export function fundOrders(out: readonly Assignment[], open: ReadonlySet<string>
     return { assignments, orders, log };
 }
 
+// Stop files by account name: the owner's pause the account; the controller's own (scripts/swarm.ts SWARM_STOP) only
+// mark a job that left the plan, so the planner may give that account a job and remove the file.
+export function pauses(stops: ReadonlyMap<string, string>): { paused: Set<string>; swarmStopped: Set<string> } {
+    const paused = new Set<string>(), swarmStopped = new Set<string>();
+    for (const [n, t] of stops) (swarmWroteStop(t) ? swarmStopped : paused).add(n.toLowerCase());
+    return { paused, swarmStopped };
+}
+
 export function pass(planFile: string, dry: boolean): string[] {
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
     if (!swarm || !Array.isArray(swarm.jobs)) throw Error(`autopilot: ${planFile} has no jobs list`);
@@ -93,7 +102,10 @@ export function pass(planFile: string, dry: boolean): string[] {
 
     // Resources other jobs hold: this file's other jobs (paused planner jobs included), and other sides' fresh claims.
     const listedNames = Object.keys(readJson(join(FLEET_DIR(), 'owners.json'), { accounts: {} }).accounts ?? {});
-    const paused = new Set(listedNames.filter(n => existsSync(join(prac, `stop-${n}`))).map(n => n.toLowerCase()));
+    // An owner's stop file pauses its account. One the controller wrote itself (a job that left the plan, stop-swarm)
+    // does not: that account is planned again, and the file goes with the job that replaces it (below).
+    const stopText = (n: string): string | undefined => { try { return readFileSync(join(prac, `stop-${n}`), 'utf8'); } catch { return undefined; } };
+    const { paused, swarmStopped } = pauses(new Map(listedNames.flatMap(n => { const t = stopText(n); return t === undefined ? [] : [[n, t] as const]; })));
     const taken = reservedResources(swarm.jobs, side, paused);
     const claimDir = join(FLEET_DIR(), 'claims');
     if (existsSync(claimDir)) for (const f of readdirSync(claimDir).filter(f => f.endsWith('.json'))) {
@@ -134,6 +146,11 @@ export function pass(planFile: string, dry: boolean): string[] {
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
     writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
+    for (const a of fresh) if (swarmStopped.has(a.toLowerCase())) {
+        const n = listedNames.find(x => x.toLowerCase() === a.toLowerCase()) ?? a;
+        rmSync(join(prac, `stop-${n}`), { force: true });
+        log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
+    }
     mkdirSync(join(prac, 'autopilot'), { recursive: true });
     writeAtomic(stateFile, JSON.stringify(state, null, 1) + '\n');
     if (funding.orders.length) mkdirSync(join(fleetDir, 'orders'), { recursive: true });

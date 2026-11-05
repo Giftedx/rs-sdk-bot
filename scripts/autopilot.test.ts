@@ -73,3 +73,11 @@ test('a coin order opens in 15 minutes for 40 and fits the fleet order format', 
     // The same checks as scripts/fleet-trade.ts validOrder.
     expect(/^[A-Za-z0-9_-]{1,64}$/.test(o.id) && [o.from, o.to].every(n => /^[A-Za-z0-9]{1,12}$/.test(n)) && o.end > o.start).toBe(true);
 });
+
+import { pauses } from './autopilot';
+import { SWARM_STOP } from './swarm';
+test('a stop file pauses an account only when the owner wrote it; the controller\'s own marks an account to plan again', () => {
+    const { paused, swarmStopped } = pauses(new Map([['TrouserSnake', SWARM_STOP.removed], ['UnderMyKilt', 'hold for the trade'], ['Quickhandjob', `${SWARM_STOP.all}\n`]]));
+    expect([...paused]).toEqual(['undermykilt']);
+    expect([...swarmStopped].sort()).toEqual(['quickhandjob', 'trousersnake']);
+});
