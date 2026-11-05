@@ -61,13 +61,13 @@ test('Legends fares cannot spend the bank reserve after a finite round trip and 
 });
 
 
-test('Gujuo summon waits out a known unpaid busy refusal and never retries an unknown or hostile result',async()=>{
- let sends=0,cooldowns=0,message="You're a bit too busy to do that at the moment.";
- const io={present:()=>false,saw:(r:RegExp)=>r.test(message),send:async()=>{sends++;},cooldown:async()=>{cooldowns++;},step:async(send:()=>Promise<unknown>,done:()=>boolean)=>{await send();if(!done())throw Error('unknown effect');}};
+test('Gujuo summon requires retreat after known wildlife and stops on an unknown result',async()=>{
+ let sends=0,cooldowns=0,retreats=0,message="You're a bit too busy to do that at the moment.";
+ const io={present:()=>false,saw:(r:RegExp)=>r.test(message),send:async()=>{sends++;},cooldown:async()=>{cooldowns++;},retreat:async()=>{retreats++;},step:async(send:()=>Promise<unknown>,done:()=>boolean)=>{await send();if(!done())throw Error('unknown effect');}};
  expect(await legendsSummonAttempt(io)).toBe(false);expect(sends).toBe(1);expect(cooldowns).toBe(1);
  message='But nothing much seems to happen.';expect(await legendsSummonAttempt(io)).toBe(false);expect(cooldowns).toBe(1);
- message='A nearby Jungle wolf takes a dislike to the noise you are making.';await expect(legendsSummonAttempt(io)).rejects.toThrow('hostile wildlife');
- message='';await expect(legendsSummonAttempt(io)).rejects.toThrow('unknown effect');expect(sends).toBe(4);expect(cooldowns).toBe(1);
+ message='A nearby Jungle wolf takes a dislike to the noise you are making.';expect(await legendsSummonAttempt(io)).toBe(false);expect(retreats).toBe(1);
+ message='';await expect(legendsSummonAttempt(io)).rejects.toThrow('unknown effect');expect(sends).toBe(4);expect(cooldowns).toBe(1);expect(retreats).toBe(1);
 });
 
 

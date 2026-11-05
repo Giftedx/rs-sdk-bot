@@ -23,14 +23,30 @@ const id=(kind:Map<string,number>,name:string)=>{const n=kind.get(name);if(n===u
 const obj=(name:string)=>id(objects,name),locId=(name:string)=>id(locations,name),npcId=(name:string)=>id(npcs,name);
 export const LEGENDS_ITEMS=Object.freeze({notes:obj('thkaramjamap'),map:obj('thkaramjamapcomp'),bull:obj('bullroarer'),picture:obj('goldbowlpic'),bowl:obj('goldbowl_empty'),blessed:obj('goldbowlbless_empty'),pure:obj('goldbowlbless_pure'),book:obj('book_of_binding'),seed:obj('yommiseeds'),germ:obj('yommiseeds_germ'),mixture:obj('snakeweed_sol'),bravery:obj('bravery_pot'),a:obj('heartcrystal_sectiona'),b:obj('heartcrystal_sectionb'),c:obj('heartcrystal_sectionc'),heart:obj('heartcrystal'),glow:obj('heartcrystal_glow'),dagger:obj('deathdagger'),force:obj('holyforce'),totem:obj('thtotempole'),gift:obj('thtotempolegift'),reed:obj('reed_hollow')});
 const I=LEGENDS_ITEMS,BANK={x:3185,z:3436,level:0};
-const GUJUO_SPOT = { x: 2815, z: 2935 };
+const GUJUO_SPOTS = [{ x: 2815, z: 2935 }, { x: 2840, z: 2925 }] as const;
 export const LEGENDS_SKILLS={Agility:50,Thieving:50,Strength:50,Mining:52,Crafting:50,Prayer:42,Smithing:50,Herblore:45,Woodcutting:50,Magic:60} as const;
 export type LegendsOrder={account:string;server:string;cap:number;returnTicks:number;xpRate:number;maximumTrials:number;maximumFood:number;maximumDoses:number;coinBudget:number;training:[string,string,string,string]};
 const trainingMenus=[['Attack','Defence','Strength'],['Hitpoints','Prayer','Magic'],['Woodcutting','Crafting','Smithing'],['Herblore','Agility','Thieving']];
 export function legendsTrainingOptions(skill:string){const menu=trainingMenus.findIndex(a=>a.includes(skill));if(menu<0)throw Error('unsupported Native Legends training');return[...Array.from({length:menu},(_,i)=>new RegExp('Go to Skill Menu '+(i+2))),new RegExp('^\\* '+skill+' \\*$')];}
 export function validateLegendsOrder(o:LegendsOrder){if(!o||!/^[-a-z0-9]{1,12}$/i.test(o.account)||!o.server||![o.cap,o.returnTicks,o.xpRate,o.maximumTrials,o.maximumFood,o.maximumDoses,o.coinBudget].every(n=>Number.isSafeInteger(n)&&n>0)||o.cap>60000||o.returnTicks<500||o.cap<=o.returnTicks||o.xpRate>1000||o.maximumTrials>20||o.maximumFood>100||o.maximumDoses>60||o.coinBudget>10000||o.training.length!==4)throw Error('explicit finite Legends order required');for(const skill of o.training)legendsTrainingOptions(skill);}
 export function legendsNextFare(budget:number,spent:number,outbound:boolean){if(!Number.isSafeInteger(budget)||budget<1||budget>10000||!Number.isSafeInteger(spent)||spent<0||spent>budget||typeof outbound!=='boolean'||budget-spent<(outbound?60:30))throw Error('Legends fare budget cannot fund journey and return');return spent+30;}
-export async function legendsSummonAttempt(io:{present:()=>boolean;saw:(pattern:RegExp)=>boolean;send:()=>Promise<unknown>;step:(send:()=>Promise<unknown>,done:()=>boolean)=>Promise<void>;cooldown:()=>Promise<void>}){await io.step(io.send,()=>io.present()||io.saw(/nothing much seems to happen|takes a dislike|native cannot get to you|too busy to do that at the moment/i));if(io.present())return true;if(io.saw(/takes a dislike/i))throw Error('Legends bullroarer attracted hostile wildlife');if(io.saw(/too busy to do that at the moment/i))await io.cooldown();return false;}
+export async function legendsSummonAttempt(io: {
+ present: () => boolean;
+ saw: (pattern: RegExp) => boolean;
+ send: () => Promise<unknown>;
+ step: (send: () => Promise<unknown>, done: () => boolean) => Promise<void>;
+ cooldown: () => Promise<void>;
+ retreat: () => Promise<void>;
+}) {
+ await io.step(io.send, () => io.present() || io.saw(/nothing much seems to happen|takes a dislike|native cannot get to you|too busy to do that at the moment/i));
+ if (io.saw(/takes a dislike/i)) {
+  await io.retreat();
+  return false;
+ }
+ if (io.present()) return true;
+ if (io.saw(/too busy to do that at the moment/i)) await io.cooldown();
+ return false;
+}
 export function legendsPackEffect(before:Readonly<Record<number,number>>,after:Readonly<Record<number,number>>,delta:Readonly<Record<number,number>>){return [...new Set([...Object.keys(before),...Object.keys(after),...Object.keys(delta)])].every(k=>(after[+k]??0)-(before[+k]??0)===(delta[+k]??0));}
 export function legendsMapEffect(before:Record<number,number>,after:Record<number,number>,complete:boolean){return legendsPackEffect(before,after,{[obj('papyrus')]:-1,...(complete?{[I.notes]:-1,[I.map]:1}:{})})&&(!complete||(after[I.map]??0)===1);}
 export async function legendsMapAttempt(io:{pack:()=>Record<number,number>;saw:(pattern:RegExp)=>boolean;step:(send:()=>Promise<unknown>,done:()=>boolean)=>Promise<void>;send:()=>Promise<unknown>},complete:boolean){
@@ -128,10 +144,41 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
  const crossing=async(north:boolean)=>{const end=north?2942:2934,direction=north?1:-1;if(north)await walk(2864,2934,0);else{await move(2864,2942);await walk(2864,2942,0);}for(let n=0;n<10;n++){guard();const p={x:pos().worldX,z:pos().worldZ};if(north?p.z>=end:p.z<=end)return;const path=sdk.findPath(2864,end);if(path.success&&path.reachedDestination){await walk(2864,end,0);return;}const candidate=legendsJungleTarget(sdk.getState()?.nearbyLocs??[],p,direction);if(!candidate)throw Error('Legends observed Native jungle crossing target absent');const mark=cursor(s);await step(north?'cut north Native jungle':'cut south Native jungle',()=>q!.opLoc(candidate,1),()=>((pos().worldZ-p.z)*direction>0)||fresh(s,mark,/This way is blocked off/),[],60);if((pos().worldZ-p.z)*direction<=0)throw Error('Legends Native jungle crossing refused');await upkeep();}throw Error('Legends bounded Native jungle crossing exhausted');};
  const jungle=()=>crossing(false);
 
- const summon=async()=>{
-  // Use the existing quest route's jungle clearing before swinging the bullroarer.
-  await walk(GUJUO_SPOT.x, GUJUO_SPOT.z, 0);
-  for(let n=0;n<o.maximumTrials;n++){started=s.tick();guard();if(sdk.getState()?.nearbyNpcs.some(n=>n.id===npcId('gujuo')))return;const mark=cursor(s);if(await legendsSummonAttempt({present:()=>!!sdk.getState()?.nearbyNpcs.some(n=>n.id===npcId('gujuo')),saw:re=>fresh(s,mark,re),send:()=>held(I.bull),step:(send,done)=>step('summon Gujuo',send,done,[],18),cooldown:async()=>{await waitTicks(s,8);guard();}}))return;}throw Error('Legends finite Gujuo summon budget exhausted');};
+ const summon = async () => {
+  let spot = 0;
+  const reachClearing = () => walk(GUJUO_SPOTS[spot]!.x, GUJUO_SPOTS[spot]!.z, 0);
+  await reachClearing();
+  const present = () => !!sdk.getState()?.nearbyNpcs.some(n => n.id === npcId('gujuo'));
+  const retreat = async () => {
+   spot = 1 - spot;
+   await reachClearing();
+   await upkeep();
+   const ownTarget = 32768 + (s.client as any).selfSlot;
+   const clear = () => {
+    const state = sdk.getState();
+    return !!state?.player && !state.nearbyNpcs.some(npc => npc.targetIndex === ownTarget);
+   };
+   await wait(clear, 16);
+   const lastHit = sdk.getState()?.player?.combat?.lastDamageTick;
+   await waitTicks(s, 8);
+   guard();
+   if (lastHit === undefined || !clear() || sdk.getState()?.player?.combat?.lastDamageTick !== lastHit) {
+    throw Error('Legends could not shake hostile wildlife before retrying Gujuo');
+   }
+  };
+  for (let trial = 0; trial < o.maximumTrials; trial++) {
+   started = s.tick();
+   guard();
+   if (present()) return;
+   const mark = cursor(s);
+   if (await legendsSummonAttempt({
+    present, retreat, saw: pattern => fresh(s, mark, pattern), send: () => held(I.bull),
+    step: (send, done) => step('summon Gujuo', send, done, [], 18),
+    cooldown: async () => { await waitTicks(s, 8); guard(); },
+   })) return;
+  }
+  throw Error('Legends finite Gujuo summon budget exhausted');
+ };
  let started=0;
  const gujuo=async(choices:RegExp[],ok:()=>boolean)=>{started=s.tick();if(sdk.getInventory().length>=28)throw Error('Legends Gujuo reward needs an empty inventory slot');await summon();const n=sdk.getState()!.nearbyNpcs.find(n=>n.id===npcId('gujuo'))!;await talk('Gujuo',{x:n.x,z:n.z},choices,ok);};
  const cave=async()=>{await walk(2781,2934);await trials('Shaman cave entrance',()=>interact('lgshamancaverock1',2781,2936),()=>pos().worldZ>9000,/fail|stuck|too small|bang|hurt/i,[/Yes, I'll crawl through/i]);await walk(2790,9334);};
