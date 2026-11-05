@@ -14,6 +14,7 @@ import {cachedLaunchRevision} from '../../core/src/worker-release';
 import {readCoordinatorJobs,writeCoordinatorJobs,readMergedPlan,COORDINATOR_JOBS_FILE} from '../../core/src/coordinator-jobs';
 import {assignedWorker} from './model-worker';
 import {processMatches,killTree} from '../../practice/src/proc';
+import {observePracticeTurn} from '../../practice/src/proof-lock';
 import {prepareWorkspace} from './build-workspace';
 import {applyRules,skillUnlocks} from './coordinator-rules';
 import {processDeliveryPrs} from './delivery-pr';
@@ -186,6 +187,12 @@ function openDeliveryPrs(){
   for(const pr of conflicts)event('delivery-pr-conflict',{task:pr.taskId,branch:pr.branch,error:pr.lastError});
  }).catch(error=>event('delivery-pr-failed',String(error))).finally(()=>{deliveryPrs=undefined;});
 }
+export function nativeDispatchReady(state:Pick<CoordinatorState,'tasks'>,freeGB:number,
+ observe:()=>Pick<ReturnType<typeof observePracticeTurn>,'holder'|'liveWaiters'>=()=>observePracticeTurn(join(projectRoot,'.practice/delivery-native.lock'))){
+ if(!(freeGB>=NATIVE_STARTUP_GB)||state.tasks.some(r=>r.status==='running'&&r.spec.kind==='qualify'))return false;
+ const {holder,liveWaiters}=observe();
+ return holder!=='pid-present'&&(liveWaiters??0)===0;
+}
 async function tick(state:CoordinatorState,config:any){
  recoverPlanWrite();
  openDeliveryPrs();
@@ -263,7 +270,7 @@ async function tick(state:CoordinatorState,config:any){
  for(let dispatch=0;!diskLow&&dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
   let publishing:string|undefined;try{publishing=existsSync(request)?json(request).capability:undefined;}catch{/* a request being written */}
-  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:freeGB>=NATIVE_STARTUP_GB,developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld});
+  const task=chooseTask(state,Date.now(),{sourceReady:freeGB>=SOURCE_STARTUP_GB,nativeReady:nativeDispatchReady(state,freeGB),developmentLimit,liveLimit:liveBlocked?0:liveLimit,preferLive:config.preferLive===true,focusCapability:config.focusCapability,isolatedBuilds:true,publishPending:existsSync(request),publishing,ownedFiles,runHeld});
   if(!task)break;
   // The single dispatcher prepares the controller before parallel live children
   // can race to create it. Controller startup does not log accounts in.

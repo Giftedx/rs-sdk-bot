@@ -2,6 +2,8 @@ import {test,expect} from 'bun:test';
 import {initialState,addTasks,startTask,finishTask,chooseTask,refreshQualifications,qualificationDemand,buildWorkOrder,fleetExpansion,activeBuildFocus,preparedNativeDelivery,type CoordTask} from '../src/coordinator';
 import {acceptProposal,gameCoverage,GAME_SKILLS,plannerPrompt,queueFacts} from '../src/coordinator-planner';
 import {buildBrief} from '../src/author';
+import {nativeDispatchReady} from '../src/coordinator-cli';
+import {PRACTICE_STARTUP_GB} from '../../core/src/memory';
 const task=(id:string,extra:Partial<CoordTask>={}):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],priority:5,estimatedMs:60000,why:'Finish useful quest',...extra});
 const run=(id:string,deps:string[]=[])=>task(id,{kind:'run',account:'Helper',dependsOn:deps,accept:{quests:["Cook's Assistant"]}});
 function complete(s:ReturnType<typeof initialState>,id:string,ok:boolean,at:number,output:any={}){startTask(s,id,at-1,id);finishTask(s,{taskId:id,runId:id,ok,at,output});}
@@ -106,6 +108,19 @@ test('source admission can prepare a build while native admission stays closed',
  finishTask(s,{taskId:'build',runId:'source-owner',ok:false,at:5,output:{}});
  expect(chooseTask(s,6,{sourceReady:true,nativeReady:false})).toBeNull();
  expect(chooseTask(s,7,{sourceReady:true,nativeReady:true})?.id).toBe('native');
+});
+
+test('a busy practice turn keeps qualification queued while independent work can start',()=>{
+ const s=initialState();addTasks(s,[task('proof',{priority:100}),run('consumer',['proof']),run('independent')],0);
+ const free=PRACTICE_STARTUP_GB,open=()=>({holder:'no-lock' as const,liveWaiters:0});
+ const choose=(nativeReady:boolean)=>chooseTask(s,1,{sourceReady:true,nativeReady,isolatedBuilds:true});
+ expect(choose(nativeDispatchReady(s,free,()=>({holder:'pid-present',liveWaiters:0})))?.id).toBe('independent');
+ expect(choose(nativeDispatchReady(s,free,()=>({holder:'pid-gone',liveWaiters:1})))?.id).toBe('independent');
+ expect(s.tasks.every(r=>r.status==='pending')).toBe(true);
+ expect(choose(nativeDispatchReady(s,free,open))?.id).toBe('proof');
+ startTask(s,'proof',2,'proof-owner');
+ expect(nativeDispatchReady(s,free,open)).toBe(false);
+ expect(choose(false)?.id).toBe('independent');
 });
 
 test('source preparation intentionally drains live writers; a host deferral does not strand independent live work',()=>{
