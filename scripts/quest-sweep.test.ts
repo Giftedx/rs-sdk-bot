@@ -228,6 +228,10 @@ test('a seller across the water ranks behind one on the same landmass, and sword
  expect(travelDistance(alKharid,hamab)).toBe(488+SEA);
  expect(travelDistance(alKharid,kortan)).toBe(654);
  expect(sellersByTravel([{npc:'Hamab',tile:hamab},{npc:'Kortan',tile:kortan}],alKharid).map(s=>s.npc)).toEqual(['Kortan','Hamab']);
+ // The Miscellania and Etceteria food shops lie across the water from Ardougne, past the seller limit; Rellekka does not.
+ const ardougne={x:2655,z:3283,level:0},miscellania={x:2516,z:3864,level:0},etceteria={x:2602,z:3876,level:0},rellekka={x:2644,z:3680,level:0};
+ expect(travelDistance(ardougne,miscellania)).toBe(581+SEA);expect(travelDistance(ardougne,etceteria)).toBe(593+SEA);
+ expect(travelDistance(ardougne,rellekka)).toBe(397);expect(travelDistance(miscellania,etceteria)).toBe(86);
  expect(isEdible(373)).toBe(true);expect(isEdible(1895)).toBe(true);expect(isEdible(1387)).toBe(false);
  // TheFullMonty's pack: the staff, pots and talisman go; the allowance keeps five swordfish and two of four cake slices.
  const pack=[{id:995,count:17400},{id:1387,count:1},{id:1931,count:1},{id:1931,count:1},{id:1931,count:1},{id:1438,count:1},...Array.from({length:5},()=>({id:373,count:1})),...Array.from({length:4},()=>({id:1895,count:1}))];

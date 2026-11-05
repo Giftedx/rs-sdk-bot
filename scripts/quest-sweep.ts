@@ -18,7 +18,7 @@ import {questFlags} from '../packages/core/src/quest-status';
 import {PRESETS,type SaveConfig} from '../packages/practice/src/presets';
 import travel from '../packages/planner/src/haggis-travel.json';
 import {retainedGhostSkull,retainedGhostBankSkull,leaveGhostBasement,inGhostBasement} from './ghost-basement-exit';
-import {onKaramja} from '../packages/core/src/spawn-index';
+import {crossesSea} from '../packages/core/src/spawn-index';
 import {startQuestSustain,questFoodDefinitions} from './quest-sustain';
 
 type Item={id:number;count:number};
@@ -137,12 +137,13 @@ export function nearestBanks(at:Tile):Tile[]{
 // sweep logs in there: Restless Ghost's skull skeleton killed a 37-hitpoint account on the bank walk.
 export function eatAtFor(maxHp:number):number{return Math.max(10,Math.floor(maxHp*0.6));}
 // Straight-line distance plus a boat: a seller across the water (Hamab in Tai Bwo Wannai, 488 tiles from Al Kharid as the
-// crow flies) ranks behind one on the same landmass (Kortan in Ardougne, 654), since the world router's search for the
-// crossing idles hundreds of ticks.
-export {SEA} from '../packages/core/src/spawn-index';
+// crow flies; the Miscellania food shop, 581 from Ardougne) ranks behind one on the same landmass (Kortan in Ardougne,
+// 654), since the world router's search for the crossing idles hundreds of ticks.
+import {SEA} from '../packages/core/src/spawn-index';
+export {SEA};
 // The farthest seller a sweep walks to: Al Kharid to Ardougne is 654 tiles; a crossing costs SEA on top.
 export const FAR_SELLER=800;
-export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(onKaramja(from)!==onKaramja(to)?1000:0);}
+export function travelDistance(from:Tile,to:Tile):number{return cheb(from,to)+(crossesSea(from,to)?SEA:0);}
 export function sellersByTravel<S extends {tile:Tile}>(sellers:readonly S[],at:Tile):S[]{
  return [...sellers].sort((a,b)=>travelDistance(at,a.tile)-travelDistance(at,b.tile));
 }
@@ -197,20 +198,31 @@ export type Walked={ok:boolean;reason?:string;detail?:string;ticks?:number};
 // 150 ms ticks on practice (135 s), so three 45 s searches for one unreachable spawn cluster ended a run.
 export const SWEEP_PLAN_BUDGET_MS=15_000;
 export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150):Promise<Walked>{
- const at=():Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+ const from=at(s);
+ const r=await walkFarLegs(s,world,to,legTimeoutTicks);
+ if(!r.ok)console.log(`QUEST_SWEEP_WALK_FAIL ${JSON.stringify({from,to,at:at(s),reason:r.reason,detail:r.detail})}`);
+ return r;
+}
+const at=(s:Session):Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+async function walkFarLegs(s:Session,world:World,to:Tile,legTimeoutTicks:number):Promise<Walked>{
  const router=(t:Tile)=>goTo(s,world,t,accountOf(s),{legTimeoutTicks,planBudgetMs:SWEEP_PLAN_BUDGET_MS});
  const ground=async(t:Tile):Promise<Walked>=>{
-  const r=at().level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
+  const r=at(s).level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
- if(eastOfArdougne(at(),to)){const r=await crossEast(s,world);if(!r.ok)return r;}
+ if(eastOfArdougne(at(s),to)){const r=await crossEast(s,world);if(!r.ok)return r;}
  // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the ground beneath it;
  // only the last leg, with its stairs, is the world router's.
- for(const hop of at().level===0?hopsTo(at(),{x:to.x,z:to.z,level:0}):[]){
-  console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);
+ const beneath={x:to.x,z:to.z,level:0};
+ for(const hop of at(s).level===0?hopsTo(at(s),beneath):[]){
+  console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(s),to:hop})}`);
   const r=await ground(hop);if(!r.ok)return r;
  }
- return to.level===0&&at().level===0&&cheb(at(),to)>30?ground(to):router(to);
+ // A far upstairs target with no hub on the way (Hudo's shop on the Grand Tree's first floor, 226 tiles from the Ardougne
+ // bank) is still approached by the ground beneath it: asked from Ardougne, the world router took an Ardougne staircase
+ // and a 240-tile walk on the first floor, where no floor lies, and the search ran out the plan budget.
+ if(to.level!==0&&at(s).level===0&&cheb(at(s),beneath)>MAX_HOP){const r=await ground(beneath);if(!r.ok)return r;}
+ return to.level===0&&at(s).level===0&&cheb(at(s),to)>30?ground(to):router(to);
 }
 // From the Ardougne side (x under 2800, z 3270 and up) to anywhere east of x 2950 the way is the two boats, Brimhaven and
 // Port Sarim, with the Karamja and Port Sarim corridors between: no hub lies within a hop of Ardougne to the east, and
