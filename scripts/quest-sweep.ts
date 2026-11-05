@@ -28,7 +28,9 @@ const BANKS:Tile[]=Object.values((travel as unknown as {banks:Record<string,Tile
 export function presetFor(quest:string):SaveConfig&{position:Tile}{
  const p=PRESETS['quest_'+quest];
  if(!p?.position)throw Error(`quest sweep: no preset quest_${quest} with a start tile`);
- return{...p,position:{level:0,...p.position},...(quest==='hazeelcult'?{inventory:[{id:385,count:4}]}:{})};
+ // Pirate's Treasure picks its ten bananas from Luthas's plantation (quest-hunt.ts), where the quest already stands.
+ const inventory=quest==='hazeelcult'?[{id:385,count:4}]:quest==='hunt'?(p.inventory??[]).filter(i=>i.id!==1963):p.inventory;
+ return{...p,position:{level:0,...p.position},...(inventory?{inventory}:{})};
 }
 // Preset food (lobster, shark) only feeds the quest's eat-at threshold, and teleport runes (fire, water, air, earth,
 // law) only save walking (quest-lib teleport walks without a law rune): the runner takes what the bank holds of both.
