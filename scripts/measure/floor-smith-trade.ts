@@ -6,7 +6,7 @@
 // request opens it; a busy partner, delayed or in a modal, refuses it), the helper offers All of each bar and
 // accepts, the smither accepts both screens, then uses a bar on the anvil and picks Make 5/10.
 // While the smither works, the helper banks for the next load. The helper's ticks are not on the smither's board.
-// FLOOR_OVERLAP=1: the helper also sends trade requests during the smith delay (does a trade fit inside it?).
+// FLOOR_OVERLAP=1 with FLOOR_TRADE=old: the helper also sends trade requests during the smith delay (does a trade fit inside it?).
 // Default path, burst (research/supply-floors.md): 29 ticks per 5 platebodies.
 // FLOOR_TRADE=old selects the one-screen-at-a-time path. The burst sequence depends on decode order: players from
 // one address share a playerLoop bucket in login order (World.ts:1142), so the helper logs in first and the smither's
@@ -30,6 +30,8 @@ interface Job { bar: number; bars: number; band: string; xp: number; level: numb
 const SPOT = { x: 3189, z: 3427 }; // helper waits here, east of the smither
 
 const BURST = process.env.FLOOR_TRADE !== 'old';
+// The burst path holds helper requests during the smith delay, so an overlap run there would measure nothing.
+if (BURST && process.env.FLOOR_OVERLAP === '1') await finish([], false, 'FLOOR_OVERLAP=1 needs FLOOR_TRADE=old');
 const OFFER_INV = 3322, ACCEPT_OFFER = 3420, ACCEPT_CONFIRM = 3546; // tradeside:inv, trademain:accept, tradeconfirm:accept
 
 const [bot] = process.argv.slice(2);
