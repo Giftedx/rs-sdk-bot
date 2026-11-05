@@ -17,11 +17,13 @@ export interface GhostBasementExit {
  waitForLanding:()=>Promise<boolean>;
 }
 
+// The Wizards' Tower basement with the skull room (quest_priest.rs2): underground on level 0, x 3100-3125, z 9550-9580.
+export const inGhostBasement=(p:Position|null|undefined):boolean=>!!p&&p.level===0&&p.worldX>=3100&&p.worldX<=3125&&p.worldZ>=9550&&p.worldZ<=9580;
 // The ghost skull room is underground on level0. It cannot use a same-floor surface walk.
 export async function leaveGhostBasement(io:GhostBasementExit){
  const p=io.pos();if(!p)throw Error('ghost exit: position unknown');
  if(p.level===0&&p.worldZ<4000)return;
- if(p.level!==0||p.worldX<3100||p.worldX>3125||p.worldZ<9550||p.worldZ>9580)throw Error('ghost exit: unknown basement');
+ if(!inGhostBasement(p))throw Error('ghost exit: unknown basement');
  await io.openDoor('skull exit door',3111,9559);
  await io.dash('skull exit corridor',3109,9560,1);
  await io.dash('skull exit ladder approach',3104,9576,1);

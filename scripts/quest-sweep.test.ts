@@ -180,10 +180,17 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  // A pack of 27 sharks and coins: only food can go, and only as much as the slots need.
  const sharks=[{id:995,count:30},...Array.from({length:27},()=>({id:385,count:1}))];
  expect(depositPlan(sharks,3,keep)).toEqual([{id:385,count:3}]);
- // The allowance holds eight food units back whatever the need.
- expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:19}]);
+ // The allowance holds eight food units back while the need leaves room; a need of 28 leaves none.
+ expect(depositPlan(sharks,20,keep)).toEqual([{id:385,count:19}]);
+ expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:27}]);
  // Three pots of flour plus the pickup reserve: a full pack of sharks banks eleven and keeps sixteen.
  expect(depositPlan(sharks,slotsFor([{id:1933,count:3}],sharks)+QUEST_PICKUP_SLOTS,keep)).toEqual([{id:385,count:11}]);
+ // An edible quest ingredient the preset needs (Family Crest's cooked fish, 5) is kept whatever the pressure.
+ const fishy=[{id:995,count:30},...Array.from({length:5},()=>({id:333,count:1})),...Array.from({length:22},()=>({id:385,count:1}))];
+ expect(depositPlan(fishy,27,id=>id===333)).toEqual([{id:385,count:21}]);
+ // Twenty balls of wool plus the reserve want 27 slots: the allowance gives way and one shark stays.
+ const nine=[{id:995,count:30},...Array.from({length:9},()=>({id:385,count:1}))];
+ expect(depositPlan(nine,Math.min(27,20+QUEST_PICKUP_SLOTS),keep)).toEqual([{id:385,count:8}]);
 });
 
 test('a far start walks hub to hub in hops of at most 150 tiles that each bring the goal nearer; a near start has no hops',async()=>{
@@ -197,4 +204,34 @@ test('a far start walks hub to hub in hops of at most 150 tiles that each bring 
  expect(hopsTo({x:3254,z:3420,level:0},{x:3185,z:3440,level:0})).toEqual([]);
  // A goal on another level gets no ground hubs.
  expect(hopsTo(sarim,{x:3209,z:3222,level:1})).toEqual([]);
+});
+
+test('an account left underground heads for the bank above it, and the sweep eats from 60 percent of its hitpoints',async()=>{
+ const {nearestBanks,surfaceOf,eatAtFor}=await import('./quest-sweep');
+ expect(surfaceOf({x:3120,z:9567,level:0})).toEqual({x:3120,z:3167,level:0});
+ expect(surfaceOf({x:3120,z:3167,level:0})).toEqual({x:3120,z:3167,level:0});
+ // The skull basement under the Wizards' Tower: Draynor, not Seers' Village.
+ expect((nearestBanks({x:3120,z:9567,level:0})[0] as {site?:string})?.site).toBe('bank:draynor-bank:0');
+ expect(eatAtFor(37)).toBe(22);expect(eatAtFor(99)).toBe(59);expect(eatAtFor(10)).toBe(10);
+});
+
+test('a seller across the water ranks behind one on the same landmass, and swordfish is food the deposit plan keeps',async()=>{
+ const {sellersByTravel,travelDistance,SEA,depositPlan,isEdible}=await import('./quest-sweep');
+ const alKharid={x:3269,z:3167,level:0},hamab={x:2781,z:2793,level:0},kortan={x:2615,z:3292,level:0};
+ expect(travelDistance(alKharid,hamab)).toBe(488+SEA);
+ expect(travelDistance(alKharid,kortan)).toBe(654);
+ expect(sellersByTravel([{npc:'Hamab',tile:hamab},{npc:'Kortan',tile:kortan}],alKharid).map(s=>s.npc)).toEqual(['Kortan','Hamab']);
+ expect(isEdible(373)).toBe(true);expect(isEdible(1895)).toBe(true);expect(isEdible(1387)).toBe(false);
+ // TheFullMonty's pack: the staff, pots and talisman go; the allowance keeps five swordfish and three of four cake slices.
+ const pack=[{id:995,count:17400},{id:1387,count:1},{id:1931,count:1},{id:1931,count:1},{id:1931,count:1},{id:1438,count:1},...Array.from({length:5},()=>({id:373,count:1})),...Array.from({length:4},()=>({id:1895,count:1}))];
+ expect(depositPlan(pack,20,()=>false)).toEqual([{id:1387,count:-1},{id:1931,count:-1},{id:1438,count:-1},{id:1895,count:1}]);
+});
+
+test('a preset\'s trout and bread are optional food, its bananas and ale are quest items',async()=>{
+ const {needs}=await import('./quest-sweep');
+ const death={inventory:[...Array(10).fill({id:2309,count:1}),...Array(10).fill({id:333,count:1}),{id:1905,count:1},{id:2064,count:1}]} as any;
+ expect([...needs(death).keys()]).toEqual([1905,2064]);
+ expect(needs(death,true).get(333)).toBe(10);expect(needs(death,true).get(2309)).toBe(10);
+ const hunt={inventory:[...Array(10).fill({id:1963,count:1})]} as any;
+ expect(needs(hunt).get(1963)).toBe(10);
 });

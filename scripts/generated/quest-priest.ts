@@ -83,7 +83,7 @@ try {
 
     // 5. Lumbridge teleport, the coffin again (it shuts after 300 ticks, quest_priest.rs2:14), the skull on the open
     // coffin queues the completion (:53-65).
-    if(q.cnt(563)<1)await leaveGhostBasement({pos:q.pos,openDoor:q.openDoor,dash:q.dash,
+    if(!q.canCast('magic:lumbridge_teleport'))await leaveGhostBasement({pos:q.pos,openDoor:q.openDoor,dash:q.dash,
         waitForLadder:()=>waitUntil(q.s,()=>!!q.locAt(LADDER_UP.x,LADDER_UP.z),{timeoutTicks:15}),
         climbLadder:()=>q.climb('skull ladder up',()=>q.locAt(LADDER_UP.x,LADDER_UP.z),/climb-up|climb/i,()=>!inBasement()),
         waitForLanding:()=>waitUntil(q.s,()=>!!q.locAt(LADDER_TOP.x,LADDER_TOP.z),{timeoutTicks:15})});
