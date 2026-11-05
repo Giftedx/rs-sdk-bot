@@ -159,7 +159,19 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
  const trials=async(label:string,send:()=>Promise<unknown>,success:()=>boolean,knownFailure:RegExp,choices:RegExp[]=[],ticks=80,prepare?:()=>Promise<void>)=>{for(let n=0;n<o.maximumTrials;n++){guard();if(success())return;await prepare?.();const mark=cursor(s),pages=pageMark(),before=pack(s);await step(label,send,()=>success()||fresh(s,mark,knownFailure)||sawSince(pages,knownFailure),choices,ticks);if(success())return;if(!legendsPackEffect(before,pack(s),{}))throw Error('Legends '+label+' unexpected trial stock change');await upkeep();}throw Error('Legends '+label+' declared trial budget exhausted');};
  const prayer=async(on:boolean)=>{if(prayerUnknown||fatal())throw Error('Legends prayer original context unavailable');if(sdk.isPrayerActive(14)===on)return;guard();prayerUnknown=true;try{await sdk.sendTogglePrayer(14);}catch{}try{await wait(()=>sdk.isPrayerActive(14)===on,8);prayerUnknown=false;}catch(error){throw Error('Legends prayer transition uncertain; no toggle retry '+error);}};
  const potions=legendsPotionWindows(s,o.maximumDoses,()=>!fatal(),stop);
- const upkeep=async(prayerFloor:35|42=35)=>{guard();while((sdk.getSkill('Hitpoints')?.level??0)<75){if(food>=o.maximumFood||!has(385))throw Error('Legends declared food budget exhausted');const before=pack(s),hp=sdk.getSkill('Hitpoints')!.level;await paid('owned shark', {385:-1},()=>held(385),[],12);const after=sdk.getSkill('Hitpoints')!.level;if(after<=hp||after>Math.min(maximumHp,hp+20))throw Error('Legends shark HP receipt differs');food++;if(!legendsPackEffect(before,pack(s),{385:-1}))throw Error('Legends shark stock differs');}await potions.poll(prayerFloor);};
+ const upkeep = async (prayerFloor: 35 | 42 = 35) => {
+  guard();
+  while ((sdk.getSkill('Hitpoints')?.level ?? 0) < 75) {
+   if (food >= o.maximumFood || !has(385)) throw Error('Legends declared food budget exhausted');
+   const hp = sdk.getSkill('Hitpoints')!.level;
+   await paid('owned shark', {385: -1}, () => held(385), [], 12);
+   food++;
+   const after = sdk.getSkill('Hitpoints')!.level;
+   // Native can apply the independent one-point health timer on the eating tick.
+   if (after <= hp || after > Math.min(maximumHp, hp + 21)) throw Error('Legends shark HP receipt differs');
+  }
+  await potions.poll(prayerFloor);
+ };
  let bankRows:{id:number;count:number}[]=[],baseline:Record<number,number>={};
  const allAssets=()=>{const m={...pack(s)};for(const row of[...sdk.getEquipment(),...bankRows])m[row.id]=(m[row.id]??0)+row.count;return m;};
  const openBank=async()=>{guard();const generation=s.bankObservation?.()?.generation??-1;if(!sdk.getState()?.bank.isOpen||!s.bankObservation?.()){await s.bot.openBank();await wait(()=>!!sdk.getState()?.bank.isOpen&&(s.bankObservation?.()?.generation??-1)>generation,12);}bankRows=s.bankObservation!()!.items.map(r=>({id:r.id,count:r.count}));};
