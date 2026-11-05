@@ -323,9 +323,11 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             return opLoc(k, opIndex(k, re));
         }, arrived, 15, tries);
     };
-    // Every rune the spell costs, or a worn staff for it (scripts/teleport-runes.ts); short of any, the bot walks
-    // to the same spot instead. Monk's Friend leaves 8 law runes beside 1 air: Lumbridge still needs 3 air.
-    const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id));
+    // Every rune the spell costs, or a worn staff for it, and the spell's Magic level (scripts/teleport-runes.ts); short
+    // of any, the bot walks to the same spot instead. Monk's Friend leaves 8 law runes beside 1 air: Lumbridge still
+    // needs 3 air, and Magic 31, which UnderMyKilt and TrouserSnake (Magic 1) lack.
+    const magic = (): number => s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.level ?? 1;
+    const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id), magic());
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
         if (!canCast(comp)) {
             // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
