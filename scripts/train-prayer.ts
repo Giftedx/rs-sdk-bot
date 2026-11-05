@@ -1,29 +1,34 @@
 // bun scripts/train-prayer.ts <account> [target, default43]
-// Owned Bones526 only. MAX_BURY=175, BONE_RESERVE=6, CAP=1500 ticks by default.
+// Owned Bones526 by default; BONE_ID=532 buries owned big bones. MAX_BURY=175, BONE_RESERVE=6, CAP=1500 ticks by default.
 import {openBot,finish} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {waitUntil} from '../packages/core/src/ticks';
 import {xpForLevel} from '../packages/planner/src/curve';
 import {walkPath,sessionWalker,type PathPoint} from '../packages/core/src/walk';
 
-const BONE=526,PRAYER=14,XP=112.5;
-export interface PrayerOptions{target?:number;cap:number;maximum:number;reserve:number;stop?:()=>boolean}
+const BONE=526,PRAYER=14;
+// Server XP per bury at 25x: bones 4.5, big bones 15 (bury_bone.rs2).
+export const BONE_XP:Record<number,number>={526:112.5,532:375};
+export interface PrayerOptions{target?:number;cap:number;maximum:number;reserve:number;bone?:number;stop?:()=>boolean}
 export function prayerOptions(argv:string[]=process.argv,env:Record<string,string|undefined>=process.env):PrayerOptions{
-    return{target:Number(argv[3]??env.TARGET_LEVEL??43),cap:Number(env.CAP??1500),maximum:Number(env.MAX_BURY??175),reserve:Number(env.BONE_RESERVE??6)};
+    const bone=Number(env.BONE_ID??BONE);
+    return{target:Number(argv[3]??env.TARGET_LEVEL??43),cap:Number(env.CAP??1500),maximum:Number(env.MAX_BURY??175),reserve:Number(env.BONE_RESERVE??6),...bone===BONE?{}:{bone}};
 }
-export function planPrayer(bones:number,xp:number,maximum=175,reserve=6,target=43){return Math.max(0,Math.min(maximum,bones-reserve,Math.ceil((xpForLevel(target)-xp)/XP)));}
+export function planPrayer(bones:number,xp:number,maximum=175,reserve=6,target=43,each=BONE_XP[BONE]!){return Math.max(0,Math.min(maximum,bones-reserve,Math.ceil((xpForLevel(target)-xp)/each)));}
 // The ordinary Lumbridge road uses the shared collision, door and danger-aware walker.
 // Bank service tiles: banking.md / walking.md; the old Ardougne callers stay bank-side.
 export function prayerBank(p:{worldX:number;worldZ:number;level:number}){
     const near=(x:number,z:number,n:number)=>p.level===0&&Math.max(Math.abs(p.worldX-x),Math.abs(p.worldZ-z))<=n;
     if(near(2655,3283,3))return{x:2655,z:3283};
+    if(near(3185,3436,3))return{x:3185,z:3436}; // Varrock West, where GE purchases settle
     if(near(3092,3243,220))return{x:3092,z:3243};
     throw Error('no prayer progress: unsupported ordinary bank entry');
 }
 type Approach=(s:Session,points:PathPoint[],cap:number,stop:()=>boolean)=>Promise<boolean>;
 const approach:Approach=async(s,points,cap,stop)=>(await walkPath(await sessionWalker(s),points,{maxTicks:cap,stop})).ok;
 export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach){
-    const goal=o.target??43,targetXp=xpForLevel(goal);
+    const goal=o.target??43,targetXp=xpForLevel(goal),BONE=o.bone??526,XP=BONE_XP[BONE];
+    if(XP===undefined)throw new Error('no prayer progress: unsupported bone id');
     if(!Number.isSafeInteger(goal)||goal<43||goal>99||!Number.isSafeInteger(o.cap)||o.cap<1||o.cap>1000000||!Number.isSafeInteger(o.maximum)||o.maximum<1||o.maximum>1000000||!Number.isSafeInteger(o.reserve)||o.reserve<6)throw new Error('no prayer progress: invalid bounded limits');
     const state=()=>s.sdk.getState(),inv=()=>s.sdk.getInventory();
     const count=(items:readonly{id:number;count:number}[],id:number)=>items.filter(i=>i.id===id).reduce((n,i)=>n+i.count,0);
@@ -81,7 +86,7 @@ export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach
         const demand=Math.max(0,Math.ceil((targetXp-initialXp)/XP));
         if(bankCount()-o.reserve<demand)throw Error(`no prayer progress: insufficient owned bones: need ${demand}, available ${Math.max(0,bankCount()-o.reserve)}`);
         if(o.maximum<demand)throw Error(`no prayer progress: MAX_BURY ${o.maximum} below demand ${demand}`);
-        const planned=planPrayer(bankCount(),initialXp,o.maximum,o.reserve,goal);
+        const planned=planPrayer(bankCount(),initialXp,o.maximum,o.reserve,goal,XP);
         while(buried<planned&&!goalReached()&&!over()){
             const batch=Math.min(planned-buried,28-inv().length);
             if(batch<1)throw new Error('no prayer progress: protected kit leaves no slots');
@@ -102,7 +107,7 @@ export async function runPrayer(s:Session,o:PrayerOptions,walk:Approach=approach
                 const debit=before-held(),gain=xp()-beforeXp;
                 buried+=Math.max(0,debit);
                 if(!sent.success||debit!==1||gain<=0)throw new Error('no prayer progress: Bury debit/XP unobserved');
-                if(firstBoneXp===undefined){firstBoneXp=gain;if(gain!==112&&gain!==113||initialXp===0&&gain!==112)throw new Error(`no prayer progress: unexpected first bone XP ${gain}`);phase=gain===113?0.5:0;}
+                if(firstBoneXp===undefined){firstBoneXp=gain;const low=Math.floor(XP),high=Math.ceil(XP);if(gain!==low&&gain!==high||initialXp===0&&gain!==low)throw new Error(`no prayer progress: unexpected first bone XP ${gain}`);phase=gain===high&&high!==low?XP-low:0;}
                 // UpdateStatEncoder floors raw tenths. The two25x phases give
                 // 112/113 alternating; never round each bone independently.
                 if(xp()!==initialXp+Math.floor(XP*buried+phase))throw new Error('no prayer progress: unexpected bone XP rate');

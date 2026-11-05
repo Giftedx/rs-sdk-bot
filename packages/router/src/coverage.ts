@@ -1,6 +1,7 @@
 // Game coverage scoreboard: every skill band, quest and content domain of the pinned server, staged by our evidence.
 // Quest stages: none -> named (a script file exists) -> practice (a run finished the quest) -> live (an owned account on
-// any side has it complete). Action counts are a text match of content names against our source, not script coverage:
+// any side has it complete). actionsFired counts actions a practice engine really ran (.practice/action-trace.log, written
+// by the patched ScriptRunner.init). actionsNamed is a text match of content names against our source, not script coverage:
 // actions without a display name rarely match, shared code handles others without naming them, and a word in a comment
 // matches. Batch qualification is not tracked yet. Deterministic: no model calls. `bun packages/router/src/coverage.ts` writes .practice/coordinator/scoreboard.json.
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -130,23 +131,41 @@ export function questStages(statuses: Status[], practicePass: Set<string>, scrip
         folders: quests.map(q => ({ folder: q.folder, qp: q.questPoints, stage: (q.name && done.has(q.name.toLowerCase()) ? 'live' : practicePass.has(q.folder) ? 'practice' : scriptFolders.has(q.folder) ? 'named' : 'none') as Stage })) };
 }
 
-export function domainStages(actions: GameAction[], text: string) {
-    const by = new Map<string, { total: number; named: number }>();
+// Scripts a practice engine ran, as `trigger,subject` keys. Each line of the trace is a script name such as
+// [oploc1,_door]; several engines append to one file, so a key can repeat. A missing file means no data yet.
+export function firedActions(file: string): Set<string> {
+    if (!existsSync(file)) return new Set();
+    return new Set(readFileSync(file, 'utf8').split(/\r?\n/).flatMap(line => line.match(/^\[([^\],]+,[^\]]+)\]$/)?.[1] ?? []));
+}
+export const actionKey = (a: GameAction) => `${a.trigger},${a.subject}`;
+
+export function domainStages(actions: GameAction[], text: string, fired: Set<string> = new Set()) {
+    const by = new Map<string, { total: number; named: number; fired: number }>();
     for (const a of actions) {
-        const d = by.get(a.domain) ?? { total: 0, named: 0 };
-        d.total++; if (named(a, text)) d.named++;
+        const d = by.get(a.domain) ?? { total: 0, named: 0, fired: 0 };
+        d.total++; if (named(a, text)) d.named++; if (fired.has(actionKey(a))) d.fired++;
         by.set(a.domain, d);
     }
-    return [...by].map(([domain, d]) => ({ domain, actions: d.total, named: d.named, share: Math.round(100 * d.named / d.total) })).sort((a, b) => a.share - b.share || b.actions - a.actions);
+    return [...by].map(([domain, d]) => ({ domain, actions: d.total, named: d.named, fired: d.fired, share: Math.round(100 * d.named / d.total) })).sort((a, b) => a.share - b.share || b.actions - a.actions);
+}
+
+// The accounts whose live statuses count: the PC's verified-login registry (packages/core/src/tradeguard.ts writes it after
+// a live login), without the protected main account. A machine with no registry yet (a fresh cloud container) counts none,
+// and the scoreboard still reads the shared side snapshots.
+export function ownedNames(file: string): Set<string> {
+    let entries: Record<string, unknown> = {};
+    try { entries = JSON.parse(readFileSync(file, 'utf8')); } catch { /* no verified login on this machine */ }
+    const owned = new Set(Object.keys(entries).map(n => n.toLowerCase()));
+    owned.delete('haggis');
+    return owned;
 }
 
 export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..')) {
     const actions: GameAction[] = JSON.parse(readFileSync(join(root, 'knowledge', 'actions.json'), 'utf8'));
     const text = corpus(root);
-    const owned = new Set(Object.keys(JSON.parse(readFileSync(join(root, '.practice', 'owned-accounts.json'), 'utf8'))).map(n => n.toLowerCase()));
-    owned.delete('haggis'); // the protected main account is not a coverage account
+    const owned = ownedNames(join(root, '.practice', 'owned-accounts.json'));
     const statusDir = join(root, '.practice', 'status');
-    const statuses: Status[] = readdirSync(statusDir).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } })
+    const statuses: Status[] = (existsSync(statusDir) ? readdirSync(statusDir) : []).filter(f => f.endsWith('.json')).flatMap(f => { try { return [JSON.parse(readFileSync(join(statusDir, f), 'utf8'))]; } catch { return []; } })
         .filter((s: Status) => s.server === 'rs-sdk-demo.fly.dev' && owned.has((s.name ?? '').toLowerCase()));
     // The 68 quest folders of the content are the quest list (knowledge/quests.json lacks 4 folders).
     const known = new Map<string, number>((JSON.parse(readFileSync(join(root, 'knowledge', 'quests.json'), 'utf8')) as { folder: string | null; varp: string; questPoints: number }[])
@@ -158,11 +177,11 @@ export function buildScoreboard(root = resolve(import.meta.dir, '..', '..', '..'
     const scriptFolders = new Set(quests.map(q => q.folder).filter(f => existsSync(join(gen, questScript(f)))));
     const byScript = new Map(quests.map(q => [questScript(q.folder), q.folder]));
     const practicePass = practicePasses(join(root, '.practice'), byScript);
-    const domains = domainStages(actions, text);
+    const domains = domainStages(actions, text, firedActions(join(root, '.practice', 'action-trace.log')));
     const side = mySide(), shared = sideSnapshots(join(root, '.practice', 'fleet-data', 'fleet', 'snapshots'), side);
     const sideQuests: Status[] = shared.accounts.map(a => ({ quests: (a.quests ?? []).map(name => ({ name, state: 'complete' })) }));
-    const board = { at: new Date().toISOString(), scope: 'Pinned rev 289 content; action counts are a text match, not script coverage; batch is not tracked yet.',
-        totals: { actions: actions.length, actionsNamed: domains.reduce((n, d) => n + d.named, 0), domains: domains.length, domainsUntouched: domains.filter(d => d.named === 0).length },
+    const board = { at: new Date().toISOString(), scope: 'Pinned rev 289 content; actionsFired counts actions a practice engine ran, actionsNamed is a text match; batch is not tracked yet.',
+        totals: { actions: actions.length, actionsFired: domains.reduce((n, d) => n + d.fired, 0), actionsNamed: domains.reduce((n, d) => n + d.named, 0), domains: domains.length, domainsUntouched: domains.filter(d => d.named === 0).length },
         items: itemsHeld(statuses, JSON.parse(readFileSync(join(root, 'knowledge', 'items.json'), 'utf8'))),
         skills: skillBands(statuses), quests: questStages([...statuses, ...sideQuests], practicePass, scriptFolders, quests), domains, statuses: statuses.length,
         // skills count this side only and fleetSkills adds the other sides' fresh snapshots; quests count every side.
@@ -203,7 +222,7 @@ export function freshScoreboard(root: string, maxAgeMs = 600_000) {
 if (import.meta.main) {
     const board = buildScoreboard(), statuses = { length: board.statuses };
     const s = board.skills, q = board.quests;
-    console.log(`actions ${board.totals.actions}, text match ${board.totals.actionsNamed} (${Math.round(100 * board.totals.actionsNamed / board.totals.actions)}%); domains ${board.totals.domains}, untouched ${board.totals.domainsUntouched}; owned live statuses ${statuses.length}`);
+    console.log(`actions ${board.totals.actions}, fired in practice ${board.totals.actionsFired} (${Math.round(100 * board.totals.actionsFired / board.totals.actions)}%), text match ${board.totals.actionsNamed} (${Math.round(100 * board.totals.actionsNamed / board.totals.actions)}%); domains ${board.totals.domains}, untouched ${board.totals.domainsUntouched}; owned live statuses ${statuses.length}`);
     console.log(`skills at 99 live: ${s.filter(k => k.bestLive >= 99).length}/19; under 40: ${s.filter(k => k.bestLive < 40).map(k => `${k.skill} ${k.bestLive}`).join(', ')}`);
     console.log(`fleet sides ${board.fleet.sides.join(', ')}: ${board.fleet.sharedAccounts} shared accounts, ${board.fleet.stale.length} stale skipped; other side leads: ${board.fleetSkills.filter(k => k.side !== board.fleet.side).map(k => `${k.skill} ${k.best} (${k.side} ${k.account})`).join(', ') || 'none'}`);
     console.log(`items held now: ${board.items.held}/${board.items.items} (tradeable ${board.items.tradeableHeld}/${board.items.tradeable})`);

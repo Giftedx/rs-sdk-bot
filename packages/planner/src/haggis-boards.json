@@ -985,10 +985,10 @@
     "smithing"
    ],
    "ticks": {
-    "floor": 1312,
-    "realistic": 1316,
+    "floor": 991,
+    "realistic": 992,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
+    "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
    },
    "xp": {
     "smithing": "to99"
@@ -1001,7 +1001,7 @@
     "option": "separate"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)",
+   "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)",
    "supplies": [
     {
      "item": "hammer",
@@ -1023,10 +1023,10 @@
     "smithing"
    ],
    "ticks": {
-    "floor": 1312,
-    "realistic": 1316,
+    "floor": 991,
+    "realistic": 992,
     "evidence": "MEASURED",
-    "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
+    "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)"
    },
    "xp": {
     "smithing": "to99"
@@ -1039,7 +1039,7 @@
     "option": "anvil"
    },
    "evidence": "MEASURED",
-   "source": "research/supply-floors.md: helper trades 25 bars at the anvil, no bank or walk: 1,312, 1,313, 1,316 ticks level 1 -> 99 on practice (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)",
+   "source": "research/supply-floors.md: burst trade at the anvil, no bank or walk: 991, 992, 991 ticks level 1 -> 99 on practice at a 150 ms tick, both clients on one address (scripts/measure/floor-smith-trade.ts; 11-tick trade + 2-tick anvil use + 24-tick smith per 5 platebodies); the bank loop takes 1,572 ticks (x3); a trade cannot open during the smith delay (overlap run: 0 of 31)",
    "supplies": [
     {
      "item": "hammer",
