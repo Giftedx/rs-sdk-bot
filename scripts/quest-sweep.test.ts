@@ -358,11 +358,11 @@ test('a dye is a recipe: its ingredients are planned first, its dialogue step fo
  expect(picked.gathers).toEqual([{id:1957,count:2,how:'pick'}]);
 });
 
-test('the loc index reads a map square\'s LOC section',async()=>{
- const {parseLocSpawns,locsByDistance}=await import('../packages/core/src/spawn-index');
- const text='==== MAP ====\n0 0 0: 1\n==== LOC ====\n0 21 40: 3366 10 0\n0 23 37: 3366 10 2\n1 5 5: 1161 10 0\n==== NPC ====\n0 1 1: 1\n';
- const m=parseLocSpawns('m40_46.jm2',text);
- expect(m.get(3366)).toEqual([{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]);
- expect(m.get(1161)).toEqual([{x:2565,z:2949,level:1}]);
+test('plant tiles come from the knowledge and rank by distance',async()=>{
+ const {locsByDistance,pickableTiles}=await import('../packages/core/src/spawn-index');
+ const m=new Map([[3366,[{x:2581,z:2984,level:0},{x:2583,z:2981,level:0}]]]);
  expect(locsByDistance(3366,{x:2584,z:2980,level:0},m)[0]).toEqual({x:2583,z:2981,level:0});
+ expect(pickableTiles(3366).length).toBeGreaterThan(0);   // onions
+ expect(pickableTiles(1161).length).toBeGreaterThan(0);   // cabbages
+ expect(pickableTiles(999999)).toEqual([]);
 });

@@ -21,34 +21,19 @@ export function parseObjSpawns(file: string, text: string, out = new Map<number,
     return out;
 }
 
-// Where a loc stands: the LOC section of each map square file, `<level> <localX> <localZ>: <loc id> <shape> <angle>`.
-// Pickable plants (an onion is loc 3366) are locs, not ground items.
-export function parseLocSpawns(file: string, text: string, out = new Map<number, Tile[]>()): Map<number, Tile[]> {
-    const square = file.match(/^m(\d+)_(\d+)\.jm2$/);
-    const at = text.indexOf('==== LOC');
-    if (!square || at < 0) return out;
-    const baseX = Number(square[1]) * 64, baseZ = Number(square[2]) * 64;
-    for (const line of text.slice(at).split(/\r?\n/).slice(1)) {
-        if (line.startsWith('====')) break;
-        const m = line.match(/^(\d+) (\d+) (\d+): (\d+)/);
-        if (!m) continue;
-        const id = Number(m[4]), tile = { x: baseX + Number(m[2]), z: baseZ + Number(m[3]), level: Number(m[1]) };
-        out.set(id, [...(out.get(id) ?? []), tile]);
-    }
-    return out;
-}
-let locIndex: Map<number, Tile[]> | undefined;
-export function locSpawns(): Map<number, Tile[]> {
-    if (locIndex) return locIndex;
-    locIndex = new Map();
-    for (const f of readdirSync(maps)) if (f.endsWith('.jm2')) parseLocSpawns(f, readFileSync(join(maps, f), 'utf8'), locIndex);
-    return locIndex;
+// Where a pickable plant stands (knowledge/pickables.json from the knowledge build: potato, wheat, onion, cabbage and
+// flax plants by loc id). Reading every map square's LOC section at run time took 147 s on the bot's own thread and the
+// server dropped the client, so the tiles come from the generated file.
+let pickables: Map<number, Tile[]> | undefined;
+export function pickableTiles(locId: number): Tile[] {
+    pickables ??= new Map(Object.entries(JSON.parse(readFileSync(join(resolve(import.meta.dir, '..', '..', '..'), 'knowledge', 'pickables.json'), 'utf8')) as Record<string, { tiles: Tile[] }>).map(([id, p]) => [Number(id), p.tiles]));
+    return pickables.get(locId) ?? [];
 }
 export const rank = (list: Tile[], at: Tile): Tile[] => {
     const d = (t: Tile) => Math.max(Math.abs(t.x - at.x), Math.abs(t.z - at.z)) + LEVEL_STEP * Math.abs(t.level - at.level) + (onKaramja(t) !== onKaramja(at) ? SEA : 0);
     return [...list].sort((a, b) => d(a) - d(b));
 };
-export const locsByDistance = (locId: number, at: Tile, list = locSpawns()): Tile[] => rank(list.get(locId) ?? [], at);
+export const locsByDistance = (locId: number, at: Tile, list?: Map<number, Tile[]>): Tile[] => rank(list ? list.get(locId) ?? [] : pickableTiles(locId), at);
 
 let index: Map<number, Tile[]> | undefined;
 export function objSpawns(): Map<number, Tile[]> {

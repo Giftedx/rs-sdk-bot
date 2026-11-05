@@ -480,6 +480,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
    const r:any=await s.bot.depositItem(item,d.count);
    console.log(`QUEST_SWEEP_DEPOSIT ${JSON.stringify({id:d.id,count:d.count,success:r?.success,message:r?.message,free:28-(st()?.inventory?.length??0)})}`);
   }
+  console.log(`QUEST_SWEEP_BANK_PASS ${JSON.stringify({withdraw:p.withdraw,slots,free:28-pack().length})}`);
   for(const w of p.withdraw){
    const row=(st()?.bank?.items??[]).find((i:any)=>i.id===w.id);
    const before=count(pack(),w.id),bankBefore=count(rows(),w.id);
@@ -490,6 +491,7 @@ export async function sweep(account:string,quest:string,fresh?:string){
    if(!observed)return fail(`withdraw debit unobserved ${w.id}:${w.count}`);
   }
   await s.bot.closeBank();
+  console.log(`QUEST_SWEEP_BANK_DONE ${JSON.stringify({at:here(),buys:shop.buys.map(b=>b.id),gathers:gather.gathers.map(g=>g.id)})}`);
   if(shop.buys.length){const why=await buyFromShops(s,world,shop.buys);if(why)return fail(why);}
   if(gather.gathers.length){const why=await gatherItems(s,world,gather.gathers,(to)=>walkFar(s,world,to,100));if(why)return fail(why);}
   const left=plan(need,pack(),[]).missing;
