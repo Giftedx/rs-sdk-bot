@@ -241,6 +241,7 @@ test('the freshest observation wins by its time stamp; nothing observed is null'
     expect(freshest(null, snapshotRow)).toBe(snapshotRow);
     expect(freshest(undefined, null)).toBeNull();
     expect(accountFrom('Quickhandjob', 'claude-cloud', freshest(null, snapshotRow), () => undefined).skills.Thieving).toBe(99);
+});
 
 test('on a value tie an account keeps the template it holds, so a level change does not move it to another spot', () => {
     const a = acct('UnderMyKilt', { Thieving: 99 }), b = acct('TheFullMonty', { Thieving: 99 });
