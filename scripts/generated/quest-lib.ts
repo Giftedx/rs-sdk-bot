@@ -45,6 +45,8 @@ if (BURST) process.on('exit', () => console.log(`NOTE bursts=${bursts} recorded=
 
 export interface Loc { id: number; x: number; z: number }
 export const LUMBRIDGE = { x: 3222, z: 3218 };
+// Ticks after a teleport click within which a landing by Lumbridge is the spell's, not a respawn.
+export const TELEPORT_TICKS = 10;
 export const SKILLS = ['Attack', 'Strength', 'Defence', 'Hitpoints', 'Ranged', 'Prayer', 'Magic', 'Cooking', 'Woodcutting', 'Fletching', 'Fishing', 'Firemaking', 'Crafting', 'Smithing', 'Mining', 'Herblore', 'Agility', 'Thieving', 'Runecraft'];
 
 // lumbridgeOk: the script teleports to Lumbridge, so a jump there is not a death (respawn and life id still count).
@@ -127,6 +129,11 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const t0 = s.tick();
     const T = (): number => s.tick() - t0;
     const stats = { died: false, hpMin: hp(), eats: 0, walkTicks: 0, retries: 0 };
+    // The tick of the last teleport click or routed walk: a jump that lands by Lumbridge within TELEPORT_TICKS of it,
+    // or during a routed walk, is the Lumbridge teleport, not a respawn (Pirate's Treasure's Varrock step, uncastable
+    // for want of a fire rune, walked by the router, which cast Lumbridge Teleport; the run read the landing as a death
+    // at full hitpoints). A death still shows as isDead, a respawn count or a new life id.
+    let lastCastAt = -TELEPORT_TICKS, routing = false;
     let last = p0;
     const jumps: string[] = [];
     let lastTrace = '';
@@ -156,7 +163,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
         if (p?.isDead || (p && p.respawnCount > respawn0) || (p && life0 !== undefined && p.lifeId !== life0)) stats.died = true;
         if (p && last && Math.max(Math.abs(p.worldX - last.worldX), Math.abs(p.worldZ - last.worldZ)) > 20) {
             jumps.push(`${T()}:${last.worldX},${last.worldZ}->${p.worldX},${p.worldZ},${p.level}`);
-            if (!opts.lumbridgeOk && Math.max(Math.abs(p.worldX - LUMBRIDGE.x), Math.abs(p.worldZ - LUMBRIDGE.z)) <= 15 && T() > 5) stats.died = true;
+            if (!opts.lumbridgeOk && Math.max(Math.abs(p.worldX - LUMBRIDGE.x), Math.abs(p.worldZ - LUMBRIDGE.z)) <= 15 && T() > 5 && T() - lastCastAt > TELEPORT_TICKS && !routing) stats.died = true;
         }
         if (p) last = p;
         if (TRACE) {
@@ -351,13 +358,15 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             // The world router first: it knows the ladders and doors between an upstairs end (the Black Knights' Fortress's
             // first floor, 3029,3505) and the ground, which a one-floor corridor and a Climb-down loc in view do not.
             // The route runs under the quest's own guards: a death, the retreat threshold, an eater failure or the tick
-            // cap abort it, and guard() then acts on them as after any walk.
+            // cap abort it, and guard() then acts on them as after any walk. The router casts the teleports the account
+            // can (Lumbridge Teleport on the way to Varrock), so a landing by Lumbridge during the route is not a respawn.
             await guard(label);
             const ac = new AbortController();
             const stopOff = s.onTick(() => { if (stats.died || retreating || sustain.failure() || T() > CAP) ac.abort('quest guard'); });
             let routed: { ok: boolean; reason?: string };
+            routing = true;
             try { routed = await goTo(s, await getWorld(), { x, z, level: 0 }, accountOf(s), { legTimeoutTicks: 150, planBudgetMs: 15_000, signal: ac.signal }); }
-            finally { stopOff(); }
+            finally { stopOff(); routing = false; lastCastAt = T(); }
             console.log(`QUEST_TELEPORT_WALK ${JSON.stringify({ label, to: { x, z }, ok: routed.ok, reason: routed.ok ? undefined : routed.reason, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level } })}`);
             await guard(label);
             if (routed.ok && near(x, z, 6)) return;
@@ -373,7 +382,11 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             const refusal = teleportRefusal(comp, magic(), cnt(563)) ?? 'short of a rune';
             await walk(`${label} (walk, ${refusal})`, [{ x, z, tol: 4 }]); return;
         }
-        await step(label, () => s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }), () => near(x, z, 6), 8, 3);
+        const xp0 = s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.experience ?? 0;
+        await step(label, () => { lastCastAt = T(); return s.direct({ type: 'clickComponent', componentId: componentId(comp), reason: 'SDK' }); }, () => near(x, z, 6), 8, 3);
+        // The landing names the spell the click cast: a Magic XP gain with the player elsewhere is another teleport's.
+        const xp1 = s.sdk.getState()?.skills?.find((k: any) => k.name === 'Magic')?.experience ?? 0;
+        console.log(`QUEST_TELEPORT ${JSON.stringify({ label, comp, component: componentId(comp), to: { x, z }, at: pos() && { x: pos()!.worldX, z: pos()!.worldZ, level: pos()!.level }, magicXp: xp1 - xp0 })}`);
     };
     // Opens the shut door on tile (x, z) on the bot's level; nothing if it is open. walkPath does not see every
     // door (a diagonal door, a door the SDK plan never crosses), so a quest names its doors by tile.
