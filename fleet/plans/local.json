@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793904387378,
+ "at": 1793904995766,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -447,7 +447,7 @@
     "CAP": "1600",
     "COORDINATOR_RUN_ID": "task-74bea06a-6cbb-4d85-b1f2-d8dcaea64d13"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-courier-shaftmaker-recovered-band78 [task-74bea06a-6cbb-4d85-b1f2-d8dcaea64d13]",
    "role": "supply"
