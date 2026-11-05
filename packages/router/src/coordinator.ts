@@ -32,6 +32,7 @@ export interface CoordinatorState {
  version:1;sequence:number;tasks:TaskRecord[];
  goals:{id:GoalId;lastStartedAt:number;lastSucceededAt:number;completedTasks:number}[];
  planner?:{runId:string;startedAt:number;pid?:number;agent?:'codex'|'claude'};lastPlanAt:number;lastPlanReason:string;
+ latestReceiptSequence?:number; plannerReceiptSequence?:number;
 }
 export function fleetExpansion(s:{limit:number;demand:number;freeGB:number;reserveGB:number;cpu:number|null;tickMs:number|null;stalled:boolean;usefulResults:number;now:number;lastExpandedAt:number;step?:number}){
  if(!Number.isSafeInteger(s.limit)||s.limit<1||!Number.isSafeInteger(s.demand)||s.demand<=s.limit||s.stalled||s.usefulResults<2
@@ -313,7 +314,8 @@ export function finishTask(state:CoordinatorState,receipt:Receipt):boolean{
  // A build that delivered before review queues that review now (model-worker.ts reviewGate).
  if(receipt.ok&&record.spec.kind==='build'&&receipt.output?.review?.deferred===true&&!state.tasks.some(r=>r.spec.id===record.spec.id+'-review'))
   addTasks(state,[deferredReviewTask(record.spec,receipt.output.agent??record.agent,String(receipt.output.review.reason??''))],receipt.at);
- state.sequence++;return true;
+ state.latestReceiptSequence=++state.sequence;
+ return true;
 }
 export function acceptStatus(task:CoordTask,s:any,ctx:{account:string;goal:string;source:string;startedAt:number;now:number;runId?:string}):boolean{
  if(!s||s.name?.toLowerCase()!==ctx.account.toLowerCase()||s.server!=='rs-sdk-demo.fly.dev'||s.practice
