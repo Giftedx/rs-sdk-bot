@@ -219,11 +219,12 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     const walker = await sessionWalker(s as any);
     // A locked door the SDK plans through (collision treats doors as open) becomes a wall for this session.
     const blockDoor = (level: number, x: number, z: number): boolean => !!(s.sdk as any).blockDoorTemporarily?.(level, x, z, 3_600_000);
-    const walk = async (label: string, pts: PathPoint[]): Promise<void> => {
+    // log: walkPath's input and re-plan lines and each attempt's result, for a walk under diagnosis.
+    const walk = async (label: string, pts: PathPoint[], log?: (line: string) => void): Promise<void> => {
         await guard(label);
         const result=await walkQuestCorridor({tick:()=>s.tick(),stop:()=>stats.died||!!sustain.failure(),
-            near:(point,tolerance)=>near(point.x,point.z,tolerance),walk:(points,options)=>walkPath(walker,points,options),
-            onAttempt:(attempt,result)=>{stats.walkTicks+=result.ticks;if(attempt>0)stats.retries++;},
+            near:(point,tolerance)=>near(point.x,point.z,tolerance),walk:(points,options)=>walkPath(walker,points,log?{...options,log}:options),
+            onAttempt:(attempt,result)=>{stats.walkTicks+=result.ticks;if(attempt>0)stats.retries++;log?.(`attempt ${attempt} ${JSON.stringify(result)}`);},
         },pts,t0+CAP);
         await guard(label);
         if(!result.ok)await fail(`walk ${label}: ${result.detail}`);

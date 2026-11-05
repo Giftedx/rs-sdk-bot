@@ -28,6 +28,17 @@ export function exactCoinDelta(before: CoinState[], after: CoinState[], amount: 
         && before.every((s, i) => s.pack === after[i]!.pack);
 }
 
+// The bank is already open. Keep the item by observing its pack debit and bank credit.
+export async function prepareCoinSlot(s: Session, check: () => void) {
+    check();
+    const pack = s.sdk.getInventory();
+    if (coins(pack) || pack.length < 28) return;
+    const item = pack.find(i => pack.filter(other => other.id === i.id).length === 1) ?? pack.at(-1)!;
+    await depositObserved(s, item);
+    if (!await waitUntil(s, () => { check(); return s.sdk.getInventory().length < 28; }, { timeoutTicks: 20 }))
+        throw Error(`coin pack full: ${s.name}`);
+}
+
 // Varrock West bank: the booths stand at x 3186 and the counter cuts the public floor (x 3180-3185) off from
 // x 3186-3190. The meeting pair is open floor 3 tiles west of the booths, clear of the x 3180 tables.
 // A bank without a known pair keeps its bank tile and still needs the reachability check.
@@ -77,12 +88,8 @@ export async function moveCoins(c: ReturnType<typeof parseCoins>, sessions: Sess
         await observe(s, () => { const p = s.sdk.getState()?.player; return !!p && p.level === 0 && Math.max(Math.abs(p.worldX - c.x), Math.abs(p.worldZ - c.z)) <= 2; }, 'coin bank location unobserved');
         await bank(s);
     }
-    // A full pack with no coin stack has no slot for the coins: bank its last stack while the bank is open.
-    if (!coins(receiver.sdk.getInventory()) && receiver.sdk.getInventory().length >= 28) {
-        guard();
-        await receiver.bot.depositItem(receiver.sdk.getInventory().at(-1)!, -1);
-        await observe(receiver, () => receiver.sdk.getInventory().length < 28, 'coin receiver pack full');
-    }
+    // Both withdrawal and trade receipt need a slot when there is no existing coin stack.
+    for (const s of sessions) await prepareCoinSlot(s, guard);
     const before = sessions.map(state);
     if (before[0]!.bank < c.amount) throw Error('coin bank funds short');
     if (before[0]!.pack + c.amount > 2147483647 || before[1]!.pack + c.amount > 2147483647 || before[1]!.bank + c.amount > 2147483647) throw Error('coin stack overflow');

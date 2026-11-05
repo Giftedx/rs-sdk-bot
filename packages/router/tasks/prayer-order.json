@@ -1,0 +1,46 @@
+{
+  "id": "prayer-order",
+  "goal": "skills",
+  "entry": "scripts/train-prayer.ts",
+  "files": [
+    "scripts/train-prayer.ts",
+    "scripts/train-prayer.test.ts",
+    "packages/practice/src/prayer-order-proof.ts",
+    "packages/practice/test/prayer-order-proof.test.ts"
+  ],
+  "consumer": "Run scripts/train-prayer.ts Bigchopper60 with CAP5000, MAX_BURY600 and BONE_RESERVE384 after exact controller recovery. Use973 owned bones to reachPrayer60, retain at least384bones and all unrelated assets, confirm logout and supply protection access for the next stronger-target Ranged route. Local Prayer best rises43->60 and fleet best47->60. Native proof invokes this account-parameterized worker CLI from the ordinary consumer entry.",
+  "checks": [
+    {
+      "id": "prayer-order-regressions",
+      "phase": "regression",
+      "command": [
+        "bun",
+        "test",
+        "scripts/train-prayer.test.ts",
+        "packages/practice/test/prayer-order-proof.test.ts",
+        "--timeout",
+        "10000"
+      ],
+      "timeoutMs": 60000
+    },
+    {
+      "id": "prayer-order-practice",
+      "phase": "practice",
+      "command": [
+        "bun",
+        "packages/practice/src/prayer-order-proof.ts"
+      ],
+      "timeoutMs": 900000
+    },
+    {
+      "id": "prayer-order-saved",
+      "phase": "consumer",
+      "command": [
+        "bun",
+        "packages/practice/src/prayer-order-proof.ts",
+        "--verify"
+      ],
+      "timeoutMs": 30000
+    }
+  ]
+}
