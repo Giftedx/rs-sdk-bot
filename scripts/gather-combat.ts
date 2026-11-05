@@ -73,9 +73,14 @@ export async function bankCombatLoot(s:Session,drops:RegExp,extraIds:readonly nu
     for(const id of ids){const row=s.sdk.getInventory().find(i=>i.id===id);if(row)await depositObserved(s,row);}
     if(s.sdk.getInventory().some(i=>matches.test(i.name)||extraIds.includes(i.id)))throw Error('combat outputs not banked');
 }
-export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[]):T|undefined{
+export function genericCombatNpc<T extends {id:number;distance:number;reachable?:boolean;inCombat?:boolean;targetIndex?:number}>(target:string,npcs:readonly T[],selfSlot?:number):T|undefined{
     const id=target==='giant'?117:target==='druid'?181:undefined;
-    return npcs.filter(n=>n.id===id&&n.reachable===true&&n.inCombat===false&&n.targetIndex===-1&&Number.isFinite(n.distance)&&n.distance>=0&&n.distance<=15).sort((a,b)=>a.distance-b.distance)[0];
+    const owned = (n:T) => selfSlot !== undefined && Number.isSafeInteger(selfSlot) && selfSlot >= 0 &&
+        n.inCombat === true && n.targetIndex === 32768 + selfSlot;
+    return npcs.filter(n => n.id === id && n.reachable === true &&
+        (owned(n) || n.inCombat === false && n.targetIndex === -1) &&
+        Number.isFinite(n.distance) && n.distance >= 0 && n.distance <= 15)
+        .sort((a,b) => Number(owned(b)) - Number(owned(a)) || a.distance - b.distance)[0];
 }
 export const cowCredit=(gone:boolean,selectedXp:number,newDrops:readonly number[])=>gone&&selectedXp>0&&newDrops.length===3&&newDrops.every(n=>n>=1);
 export function cowGroundCounts(items:readonly {id:number;x:number;z:number;count:number}[]){
@@ -404,7 +409,8 @@ try {
         if(maximum!==undefined&&kills>=maximum)break;
 
         // Find target monster
-        const monster = genericCombatNpc(TARGET_KEY,s.sdk.getState()?.nearbyNpcs??[]);
+        const selfSlot = (s.client as {selfSlot?:number}).selfSlot;
+        const monster = genericCombatNpc(TARGET_KEY,s.sdk.getState()?.nearbyNpcs??[],selfSlot);
         if (!monster) {
             await waitTicks(s, 2);
             continue;

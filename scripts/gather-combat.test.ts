@@ -254,3 +254,11 @@ test('combat bank return requires fresh bank and paired loot debit/credit before
   try{if(mode==='landed'){await bankCombatLoot(s,/big bones/i);expect(pack.map(i=>i.id)).toEqual([379]);expect(bank[0].count).toBe(2);}else await expect(bankCombatLoot(s,/big bones/i)).rejects.toThrow();expect(inputs).toBe(['bank-refused','stale-bank'].includes(mode)?0:1);}finally{clearInterval(timer);}
  }
 });
+
+test('generic combat prefers a native attacker targeting this player over a free NPC', () => {
+    const free = {id:181,distance:1,reachable:true,inCombat:false,targetIndex:-1};
+    const own = {...free,distance:3,inCombat:true,targetIndex:32769};
+    const foreign = {...own,distance:0,targetIndex:32770};
+    expect(genericCombatNpc('druid',[foreign,free,own],1)).toBe(own);
+    expect(genericCombatNpc('druid',[foreign,free,own])).toBe(free);
+});
