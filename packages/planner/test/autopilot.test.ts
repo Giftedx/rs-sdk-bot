@@ -214,3 +214,19 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
     expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
 });
+
+test('a marked reservation opts its account in, and planning replaces it with an enabled job', () => {
+    const jobs = [
+        { account: 'Magicwanda', script: '', enabled: true, autopilot: 'local' },
+        { account: 'Pocketpython', script: 'scripts/goldfarm.ts', enabled: false, env: { KNIGHT_SPOT: '2582,3297' } },
+        { account: 'Moneyshot', script: 'scripts/goldfarm.ts', enabled: true, env: { KNIGHT_SPOT: '2652,3318' } },
+    ];
+    expect(plannableAccounts(jobs, 'local', ['Magicwanda', 'Pocketpython', 'Moneyshot', 'Wandwaver'], new Set())).toEqual(['Magicwanda', 'Wandwaver']);
+    expect(reservedResources(jobs, 'local', new Set())).toEqual({ 'knight:2652,3318': 1 });
+    const t = catalogue().find(x => x.id === 'goldfarm@2669,3298')!;
+    const { jobs: next, fresh } = mergeJobs(jobs, 'local', [{ account: 'Magicwanda', template: t, value: 10, resources: ['knight:2669,3298'], reason: 'best' }]);
+    expect(fresh).toEqual(['Magicwanda']);
+    const made = next.find(j => j.account === 'Magicwanda')!;
+    expect(made.enabled).toBe(true); expect(made.script).toBe('scripts/goldfarm.ts'); expect(made.env.KNIGHT_SPOT).toBe('2669,3298');
+    expect(next.filter(j => j.account === 'Magicwanda')).toHaveLength(1);
+});
