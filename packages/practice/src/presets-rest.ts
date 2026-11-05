@@ -40,6 +40,12 @@ export const REST_PRESETS: Record<string, SaveConfig> = {
     // Tribal Totem resumed as a parked live account resumes it: beside Kangai Mau, Hitpoints 17, Magic 29, Thieving 99
     // for the stairs trap, no Plague City and no runes, so the runner takes the customs officer's boat and Captain
     // Barnaby's back (60 coins). Varp 200 (quest_totem.constant): 1 started at Kangai, 2 the crate label replaced.
+    // Tribal Totem run directly from the mainland (the Draynor bank), as the live account TheFullMonty stands: Hitpoints
+    // 37, Magic 99, no Plague City, no runes, 90 coins for up to three fares. Varp 200: 0 not started, 1 started.
+    ...Object.fromEntries([0, 1].map(stage => [`quest_totem_mainland${stage}`, {
+        position: { x: 3092, z: 3243, level: 0 }, skills: { Hitpoints: 37, Magic: 99, Thieving: 99 }, varps: { ...DONE, 200: stage }, coins: 90,
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig])),
     ...Object.fromEntries([1, 2].map(stage => [`quest_totem_boat${stage}`, {
         position: { x: 2791, z: 3183, level: 0 }, skills: { Hitpoints: 17, Magic: 29, Thieving: 99 }, varps: { ...DONE, 200: stage }, coins: 60,
         inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
