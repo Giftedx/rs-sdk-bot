@@ -177,3 +177,16 @@ test('withdrawal slots count a stack once and nothing for a stack the pack alrea
  expect(depositPlan(full,3,keep)).toEqual([1351]);
  expect(depositPlan(full,10,keep)).toEqual([1351]);
 });
+
+test('a far start walks hub to hub in hops of at most 150 tiles that each bring the goal nearer; a near start has no hops',async()=>{
+ const {hopsTo,MAX_HOP}=await import('./quest-sweep');
+ const mansion={x:2740,z:3577,level:0},sarim={x:3013,z:3207,level:0};
+ const hops=hopsTo(sarim,mansion);
+ expect(hops.length).toBeGreaterThan(0);
+ let at=sarim;
+ for(const h of hops){expect(Math.max(Math.abs(h.x-at.x),Math.abs(h.z-at.z))).toBeLessThanOrEqual(MAX_HOP);at=h;}
+ expect(Math.max(Math.abs(at.x-mansion.x),Math.abs(at.z-mansion.z))).toBeLessThanOrEqual(MAX_HOP);
+ expect(hopsTo({x:3254,z:3420,level:0},{x:3185,z:3440,level:0})).toEqual([]);
+ // A goal on another level gets no ground hubs.
+ expect(hopsTo(sarim,{x:3209,z:3222,level:1})).toEqual([]);
+});

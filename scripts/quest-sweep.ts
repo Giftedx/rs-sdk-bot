@@ -76,6 +76,21 @@ export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>b
  }
  return out;
 }
+// A far start walks hub to hub: each hop is a short route search (a search for a 900-tile route plans for hundreds of
+// ticks before the first step, live and on practice, and the session's status row goes stale meanwhile). Hubs are the
+// known banks and Lumbridge; a hop is at most MAX_HOP tiles (a 150-tile search plans in a few ticks) and must bring
+// the goal nearer by HOP_GAIN.
+export const MAX_HOP=150,HOP_GAIN=50;
+const cheb=(a:Tile,b:Tile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
+export function hopsTo(from:Tile,to:Tile,hubs:readonly Tile[]=[...BANKS,{x:3222,z:3218,level:0}]):Tile[]{
+ const out:Tile[]=[];let at=from;
+ for(let i=0;i<12&&cheb(at,to)>MAX_HOP;i++){
+  const next=hubs.filter(h=>h.level===to.level&&cheb(at,h)<=MAX_HOP&&cheb(h,to)<=cheb(at,to)-HOP_GAIN).sort((a,b)=>(cheb(at,a)+cheb(a,to))-(cheb(at,b)+cheb(b,to)))[0];
+  if(!next)break;
+  out.push(next);at=next;
+ }
+ return out;
+}
 export function nearestBanks(at:Tile):Tile[]{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)));
 }
@@ -149,6 +164,8 @@ async function reachStart(s:Session,world:World,start:Tile){
   await sail('npc:customs_officer:port-sarim@2953,3147');
   await corridor(SARIM_NORTH);
  }
+ const at=():Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+ for(const hop of hopsTo(at(),start)){console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);await walk(hop);}
  await walk(start);
 }
 
