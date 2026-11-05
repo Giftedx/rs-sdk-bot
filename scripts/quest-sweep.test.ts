@@ -160,6 +160,8 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
  expect(keepsItem('runemysteries',1438,tradeable)).toBe(true);
  expect(keepsItem('runemysteries',291,tradeable)).toBe(true);
  expect(keepsItem('sheep',291,tradeable)).toBe(true);
+ // Murder Mystery's dagger and evidence come back out of the bank: the server counts them there and refuses the pickup.
+ expect(keepsItem('murder',1813,tradeable)).toBe(true);expect(keepsItem('murder',1796,tradeable)).toBe(true);expect(keepsItem('cook',1813,tradeable)).toBe(tradeable(1813)===false);
  expect(keepsItem('sheep',1438,tradeable)).toBe(false);
  expect(keepsItem('sheep',995,tradeable)).toBe(false);
 });
