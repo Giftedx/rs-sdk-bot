@@ -10,7 +10,7 @@ import {evaluateLaunch} from '../../../scripts/haggis-gate';
 import {capabilityRevision,launchRevision,workerEntries} from '../../core/src/worker-release';
 import {importClosure} from './delivery-cli';
 import {processMatches,safeKill,safeKillOne} from '../../practice/src/proc';
-import {acceptStatus,type CoordTask} from './coordinator';
+import {acceptStatus,boundedWorkerEndMessage,type CoordTask} from './coordinator';
 import {projectRoot,coordinationDir,atomicJson,spawnDetached,withPlanWrite} from './coordinator-store';
 import {RECOVERY_SCHEMA,assertNoRecoveryLease,recoveredSessionForRun,type ControlledRecoveryRequest} from '../../core/src/session-recovery-permit';
 import {COORDINATOR_JOBS_FILE,readCoordinatorJobs,writeCoordinatorJobs,mergedPlan,jobAccounts,shadowAssignments,type CoordinatorJobs} from '../../core/src/coordinator-jobs';
@@ -488,8 +488,12 @@ export async function runLiveTask(task:CoordTask,dependencies:Record<string,any>
   while(Date.now()<deadline){
    if(existsSync(join(projectRoot,'.practice/stop-coordinator')))throw Error('coordinator stopped');
    const end=loadEnded(join(projectRoot,'.practice/swarm-deaths.json')).get(target);
-   if(end&&end.at>=installed.installedAt&&!/^done(?:\s|$)/.test(end.reason))throw Error('bounded worker ended: '+end.reason);
    const file=join(projectRoot,'.practice/status',target+'.json');
+   if(end&&end.at>=installed.installedAt&&!/^done(?:\s|$)/.test(end.reason)){
+    let status:unknown;
+    try{status=JSON.parse(readFileSync(file,'utf8'));}catch{/* A missing observation leaves the supervisor reason intact. */}
+    throw Error(boundedWorkerEndMessage(end,status,{account:target,goal:installed.goal,source,startedAt:installed.installedAt,now:Date.now(),runId}));
+   }
    if(existsSync(file)){
     const status=JSON.parse(readFileSync(file,'utf8'));
     if(status.coordinatorRunId===runId&&status.at>=installed.installedAt&&status.result){

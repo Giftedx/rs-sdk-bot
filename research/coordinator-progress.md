@@ -19,3 +19,7 @@ Source -> local consumer -> reuse -> check: the coordinator job overlay and Luna
 The swarm writes a hashed job marker at each supervisor start. Autopilot reads complete result lines from matching marked runs. A finite coordinator job, a standing job with different arguments, or old unmarked output does not count as evidence to retire a standing job or advance its trainer.
 
 Source -> local consumer -> reuse -> check: the swarm's mission signature and Luna's stable job identity pattern in the project use map -> the Autopilot result reader -> mark the existing log with a hash of the mission and planner assignment -> a mixed log fixture verifies legacy, foreign, matching and incomplete results. The dry CLI output in `.practice/autopilot-job-log-identity` distinguishes coordinator failures from standing failures. The periodic pass still reads skill observations when a log has no matching marker.
+
+A bounded worker failure receipt keeps the supervisor's terminal reason and the worker's result if the current status matches the same account, server, source and run before that end. If the status is missing or mismatched, the receipt keeps only the supervisor reason.
+
+Source -> local consumer -> reuse -> check: the coordinator's live acceptance identity check and Luna's settled job evidence pattern -> the failure receipt and planner -> reuse the identity check for a bounded diagnostic -> a regression covers the matching failure, another run, an older source and a later observation. The diagnostic does not count as acceptance or authorize a retry.
