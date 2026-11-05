@@ -100,7 +100,7 @@ export function initialState():CoordinatorState{
 }
 const ACCOUNT=/^[A-Za-z0-9_ -]{1,12}$/;
 const TASK_ID=/^[-a-z0-9]+$/;
-function provisionRefs(task:CoordTask):string[]{
+export function provisionRefs(task:CoordTask):string[]{
  return [...(task.accountFrom?[task.accountFrom]:[]),...(task.participants??[]).filter(n=>n.startsWith('@')).map(n=>n.slice(1))];
 }
 export function validateTask(t:CoordTask){
