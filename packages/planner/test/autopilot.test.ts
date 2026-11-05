@@ -216,6 +216,8 @@ test('the claim lists every spot, pen and shop the enabled jobs of this side hol
     const claim = claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234);
     expect(claim).toEqual({ side, at: 1234, resources: ['knight:2582,3297', 'knight:2653,3300', 'pen:3017,3288'] });
     expect(claimFor([], side, () => side, 5).resources).toEqual([]);
+    // Only a job with an active account holds its resources: a parked job's spot is free for the other sides.
+    expect(claimFor(jobs, side, a => a === 'Quickhandjob' ? 'cloud' : side, 1234, a => a === 'Pocketpython' || a === 'Hocuspokeus').resources).toEqual(['knight:2582,3297', 'pen:3017,3288']);
 });
 
 test('a marked reservation opts its account in, and planning replaces it with an enabled job', () => {
