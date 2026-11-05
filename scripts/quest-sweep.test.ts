@@ -788,6 +788,9 @@ test("Merlin's Crystal: the wax comes off a Catherby beehive after its repellent
  // A giant bat takes fifteen arrows a kill (six ran out on practice); a bear keeps the six.
  const {arrowsFor}=await import('../packages/core/src/gather');
  expect(arrowsFor(530,1)).toBe(15);expect(arrowsFor(2136,1)).toBe(6);
+ // The quest's own fight, Sir Mordred, takes forty arrows more from a bow account.
+ const {QUEST_ARROWS}=await import('./quest-sweep');
+ expect(QUEST_ARROWS['merlin']).toBe(40);expect(QUEST_ARROWS['imp']).toBeUndefined();
 });
 
 test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{

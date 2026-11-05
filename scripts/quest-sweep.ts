@@ -128,6 +128,9 @@ export const QUEST_PICKUP_SLOTS=8,MIN_PICKUP_SLOTS=2;
 // What a quest picks up on its way beyond the pickup reserve, counted with the supplies: Pirate's Treasure holds ten
 // bananas off the plantation and Zambo's rum at once before the crate takes them.
 export const QUEST_PICKUPS:Record<string,Item[]>={hunt:[{id:1963,count:10},{id:431,count:1}]};
+// Arrows a quest's own fights take from a bow account, beyond the gathers' kills: Merlin's Crystal's Sir Mordred has 38
+// hitpoints behind Protect from Melee, and the quiver that emptied on him ended a run at Morgan Le Faye's door.
+export const QUEST_ARROWS:Record<string,number>={merlin:40};
 // Fishing Contest wants Fishing 10 (hemenster_fishing.rs2:70). An account short of it nets shrimps first, at the
 // nearest Net spot (Catherby beach beside Harry's shop, where the rod and bait come from): 250 XP a catch at 25x, five
 // catches from level 1. The net is a tool of the bank pass; the catches take pack slots until the quest.
@@ -954,7 +957,8 @@ export async function sweep(account:string,quest:string,fresh?:string){
   const seen=(ids:readonly number[])=>Object.fromEntries(ids.filter(id=>owned.some(i=>i.id===id)).map(id=>[id,count(owned,id)]));
   console.log(`QUEST_SWEEP_KIT ${JSON.stringify({kit,mkit,bows:seen(BOWS),arrows:seen(ARROWS),bank:rows().length,pack:pack().length,worn:worn().length,ranged:skill('Ranged'),magic:skill('Magic'),attack:skill('Attack'),strength:skill('Strength')})}`);
   const gather=questGatherPlan(quest,p.missing,here(),sellerAt,undefined,skill('Attack'),kit?skill('Ranged'):1,undefined,mkit?skill('Magic'):1,skill('Strength'));
-  if(kit&&gather.gathers.some(g=>g.kit==='ranged'))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)});
+  const questArrows=kit?QUEST_ARROWS[quest]??0:0;
+  if(kit&&(gather.gathers.some(g=>g.kit==='ranged')||questArrows))gather.tools.push({id:kit.bow,count:1},{id:kit.arrows,count:gather.gathers.filter(g=>g.kit==='ranged').reduce((n,g)=>n+arrowsFor(g.id,g.count),0)+questArrows});
   // A magic kill takes the staff and the strike's runes for its casts (the staff's own rune costs nothing).
   if(mkit&&gather.gathers.some(g=>g.kit==='magic')){
    const casts=gather.gathers.filter(g=>g.kit==='magic').reduce((n,g)=>n+castsFor(g.id,g.count,mkit.maxhit),0);
