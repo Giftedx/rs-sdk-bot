@@ -56,6 +56,52 @@ export const QUEST_KEEP:Record<string,number[]>={runemysteries:[1438,290,291],to
 export function keepsItem(quest:string,id:number,tradeable:(id:number)=>boolean|undefined):boolean{
  return (QUEST_KEEP[quest]??[]).includes(id)||tradeable(id)===false;
 }
+// Pack slots a withdrawal list needs: a stack (coins, runes, anything the pack already holds as a stack) takes one slot
+// whatever its count; everything else one slot per unit.
+export const STACKS=new Set([COINS,554,555,556,557,558,559,560,561,562,563,564,565,566]);
+export function slotsFor(withdraw:readonly Item[],pack:readonly Item[]):number{
+ const stack=(id:number)=>STACKS.has(id)||pack.some(i=>i.id===id&&i.count>1);
+ return withdraw.reduce((n,w)=>n+(stack(w.id)?(pack.some(i=>i.id===w.id)?0:1):w.count),0);
+}
+// What to deposit so the pack has `need` free slots: first whole kinds the quest does not use (count -1: one deposit
+// banks the kind; a second deposit of the same kind from a stale slot waits out its timeout), never coins, runes, the
+// quest's own items or what the preset needs; then food units beyond a KEEP_FOOD allowance, as many as still needed.
+export const KEEP_FOOD=8;
+// Slots a quest script fills on its own, undeclared by its preset: what it picks up and is handed (Murder Mystery takes
+// the dagger, flypaper, a suspect's item and its dust and print, and a full pack fails its first pickup).
+export const QUEST_PICKUP_SLOTS=8;
+export function depositPlan(pack:readonly Item[],need:number,keep:(id:number)=>boolean):Item[]{
+ let free=28-pack.length;
+ const out:Item[]=[];
+ for(const id of [...new Set(pack.map(i=>i.id))]){
+  if(free>=need)break;
+  if(id===COINS||FOOD.has(id)||keep(id))continue;
+  out.push({id,count:-1});free+=pack.filter(i=>i.id===id).length;
+ }
+ let allowance=KEEP_FOOD;
+ for(const id of [...new Set(pack.filter(i=>FOOD.has(i.id)&&!STACKS.has(i.id)).map(i=>i.id))]){
+  if(free>=need)break;
+  const held=pack.filter(i=>i.id===id).length,kept=Math.min(held,allowance);allowance-=kept;
+  const bank=Math.min(held-kept,need-free);
+  if(bank>0){out.push({id,count:bank});free+=bank;}
+ }
+ return out;
+}
+// A far start walks hub to hub: each hop is a short route search (a search for a 900-tile route plans for hundreds of
+// ticks before the first step, live and on practice, and the session's status row goes stale meanwhile). Hubs are the
+// known banks and Lumbridge; a hop is at most MAX_HOP tiles (a 150-tile search plans in a few ticks) and must bring
+// the goal nearer by HOP_GAIN.
+export const MAX_HOP=150,HOP_GAIN=50;
+const cheb=(a:Tile,b:Tile)=>Math.max(Math.abs(a.x-b.x),Math.abs(a.z-b.z));
+export function hopsTo(from:Tile,to:Tile,hubs:readonly Tile[]=[...BANKS,{x:3222,z:3218,level:0}]):Tile[]{
+ const out:Tile[]=[];let at=from;
+ for(let i=0;i<12&&cheb(at,to)>MAX_HOP;i++){
+  const next=hubs.filter(h=>h.level===to.level&&cheb(at,h)<=MAX_HOP&&cheb(h,to)<=cheb(at,to)-HOP_GAIN).sort((a,b)=>(cheb(at,a)+cheb(a,to))-(cheb(at,b)+cheb(b,to)))[0];
+  if(!next)break;
+  out.push(next);at=next;
+ }
+ return out;
+}
 export function nearestBanks(at:Tile):Tile[]{
  return BANKS.filter(b=>b.level===at.level).sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z)));
 }
@@ -129,7 +175,15 @@ async function reachStart(s:Session,world:World,start:Tile){
   await sail('npc:customs_officer:port-sarim@2953,3147');
   await corridor(SARIM_NORTH);
  }
- await walk(start);
+ // A ground hop walks on rs-sdk collision first (walkPath plans a 450-tile leg in a few ticks; the world router's search
+ // for Falador to Catherby alone idled 920 ticks on practice), and takes the world router only when that walk fails.
+ const at=():Tile=>{const q=s.sdk.getState()?.player;return{x:q?.worldX??0,z:q?.worldZ??0,level:q?.level??0};};
+ const ground=async(to:Tile)=>{
+  const r=at().level===0&&to.level===0?await walkCorridor(await sessionWalker(s),[[to.x,to.z,3]]):{ok:false};
+  if(!r.ok)await walk(to);
+ };
+ for(const hop of hopsTo(at(),start)){console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);await ground(hop);}
+ if(start.level===0&&at().level===0&&cheb(at(),start)>30)await ground(start);else await walk(start);
 }
 
 // Missing quest items a shop sells: the nearest seller of each (shop-index.ts), and the coins to take for them
@@ -310,9 +364,15 @@ export async function sweep(account:string,quest:string,fresh?:string){
    if(take>0){const c=p.withdraw.find(w=>w.id===COINS);if(c)c.count+=take;else p.withdraw.push({id:COINS,count:take});}
    console.log(`QUEST_SWEEP_SHOP_PLAN ${JSON.stringify({buys:shop.buys,coins:shop.coins})}`);
   }
-  // Free the slots the withdrawals need: bank every pack item the quest does not use.
-  const slots=p.withdraw.reduce((n,i)=>n+i.count,0);
-  if(28-(st()?.inventory?.length??0)<slots)for(const i of [...(st()?.inventory??[])])if(!need.has(i.id)&&!keepsItem(quest,i.id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))await s.bot.depositItem(i,-1);
+  // Free the slots the withdrawals, the shop purchases and the gathered items need, plus the pickups: whole kinds the
+  // quest does not use first, one deposit per kind, then food beyond the allowance.
+  const slots=slotsFor([...p.withdraw,...shop.buys.map(b=>({id:b.id,count:b.count})),...gather.gathers.map(g=>({id:g.id,count:g.count}))],pack())+QUEST_PICKUP_SLOTS;
+  for(const d of depositPlan(pack(),slots,id=>need.has(id)||keepsItem(quest,id,id=>(catalogItem(id) as {tradeable?:boolean}|undefined)?.tradeable))){
+   const item=(st()?.inventory??[]).find((i:any)=>i.id===d.id);
+   if(!item)continue;
+   const r:any=await s.bot.depositItem(item,d.count);
+   console.log(`QUEST_SWEEP_DEPOSIT ${JSON.stringify({id:d.id,count:d.count,success:r?.success,message:r?.message,free:28-(st()?.inventory?.length??0)})}`);
+  }
   for(const w of p.withdraw){
    const row=(st()?.bank?.items??[]).find((i:any)=>i.id===w.id);
    const before=count(pack(),w.id),bankBefore=count(rows(),w.id);

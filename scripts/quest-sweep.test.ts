@@ -163,3 +163,38 @@ test('a quest keeps its own items and every untradeable item out of the unneeded
  expect(keepsItem('sheep',1438,tradeable)).toBe(false);
  expect(keepsItem('sheep',995,tradeable)).toBe(false);
 });
+
+test('withdrawal slots count a stack once and nothing for a stack the pack already holds; deposits free whole kinds and spare coins, food and quest items',async()=>{
+ const {slotsFor,depositPlan,QUEST_PICKUP_SLOTS}=await import('./quest-sweep');
+ const pack=[{id:995,count:500},...Array.from({length:5},()=>({id:385,count:1})),{id:1351,count:1},{id:590,count:1},{id:1438,count:1}];
+ expect(slotsFor([{id:995,count:190}],pack)).toBe(0);
+ expect(slotsFor([{id:563,count:1},{id:556,count:5}],pack)).toBe(2);
+ expect(slotsFor([{id:1933,count:3},{id:995,count:190}],pack)).toBe(3);
+ const keep=(id:number)=>id===1438;
+ expect(depositPlan(pack,3,keep)).toEqual([]);
+ const full=[{id:995,count:500},...Array.from({length:20},()=>({id:385,count:1})),...Array.from({length:6},()=>({id:1351,count:1})),{id:1438,count:1}];
+ expect(full.length).toBe(28);
+ expect(depositPlan(full,3,keep)).toEqual([{id:1351,count:-1}]);
+ // Six axes free six slots; the seventh to tenth come from food beyond the allowance of eight.
+ expect(depositPlan(full,10,keep)).toEqual([{id:1351,count:-1},{id:385,count:4}]);
+ // A pack of 27 sharks and coins: only food can go, and only as much as the slots need.
+ const sharks=[{id:995,count:30},...Array.from({length:27},()=>({id:385,count:1}))];
+ expect(depositPlan(sharks,3,keep)).toEqual([{id:385,count:3}]);
+ // The allowance holds eight food units back whatever the need.
+ expect(depositPlan(sharks,28,keep)).toEqual([{id:385,count:19}]);
+ // Three pots of flour plus the pickup reserve: a full pack of sharks banks eleven and keeps sixteen.
+ expect(depositPlan(sharks,slotsFor([{id:1933,count:3}],sharks)+QUEST_PICKUP_SLOTS,keep)).toEqual([{id:385,count:11}]);
+});
+
+test('a far start walks hub to hub in hops of at most 150 tiles that each bring the goal nearer; a near start has no hops',async()=>{
+ const {hopsTo,MAX_HOP}=await import('./quest-sweep');
+ const mansion={x:2740,z:3577,level:0},sarim={x:3013,z:3207,level:0};
+ const hops=hopsTo(sarim,mansion);
+ expect(hops.length).toBeGreaterThan(0);
+ let at=sarim;
+ for(const h of hops){expect(Math.max(Math.abs(h.x-at.x),Math.abs(h.z-at.z))).toBeLessThanOrEqual(MAX_HOP);at=h;}
+ expect(Math.max(Math.abs(at.x-mansion.x),Math.abs(at.z-mansion.z))).toBeLessThanOrEqual(MAX_HOP);
+ expect(hopsTo({x:3254,z:3420,level:0},{x:3185,z:3440,level:0})).toEqual([]);
+ // A goal on another level gets no ground hubs.
+ expect(hopsTo(sarim,{x:3209,z:3222,level:1})).toEqual([]);
+});
