@@ -1,3 +1,4 @@
+import{legendsSummonAttempt}from'./quest-legends-owned';
 import{legendsSurfaceJourney,legendsNextFare}from'./quest-legends-owned';
 import{legendsJungleTarget}from'./quest-legends-owned';
 import{test,expect}from'bun:test';
@@ -56,4 +57,14 @@ test('Legends ground travel stops before boat payment after a failed approach an
 
 test('Legends fares cannot spend the bank reserve after a finite round trip and keep return fare funded',()=>{
  let spent=legendsNextFare(60,0,true);expect(spent).toBe(30);spent=legendsNextFare(60,spent,false);expect(spent).toBe(60);expect(()=>legendsNextFare(60,spent,true)).toThrow('fare budget');expect(()=>legendsNextFare(59,0,true)).toThrow('fare budget');expect(legendsNextFare(30,0,false)).toBe(30);expect(()=>legendsNextFare(29,0,false)).toThrow('fare budget');
+});
+
+
+test('Gujuo summon waits out a known unpaid busy refusal and never retries an unknown or hostile result',async()=>{
+ let sends=0,cooldowns=0,message="You're a bit too busy to do that at the moment.";
+ const io={present:()=>false,saw:(r:RegExp)=>r.test(message),send:async()=>{sends++;},cooldown:async()=>{cooldowns++;},step:async(send:()=>Promise<unknown>,done:()=>boolean)=>{await send();if(!done())throw Error('unknown effect');}};
+ expect(await legendsSummonAttempt(io)).toBe(false);expect(sends).toBe(1);expect(cooldowns).toBe(1);
+ message='But nothing much seems to happen.';expect(await legendsSummonAttempt(io)).toBe(false);expect(cooldowns).toBe(1);
+ message='A nearby Jungle wolf takes a dislike to the noise you are making.';await expect(legendsSummonAttempt(io)).rejects.toThrow('hostile wildlife');
+ message='';await expect(legendsSummonAttempt(io)).rejects.toThrow('unknown effect');expect(sends).toBe(4);expect(cooldowns).toBe(1);
 });
