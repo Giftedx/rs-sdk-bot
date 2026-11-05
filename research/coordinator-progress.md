@@ -41,6 +41,8 @@ Source -> local consumer -> reuse -> check: the progress export's matched useful
 
 ## Planner rounds and dead tasks
 
+Source -> local consumer -> reuse -> check: the native holder file and ticket names -> planner capacity -> count waiters with present PIDs and report the oldest wait, with unknown input separate -> a fixture checks absent, held, stale and invalid records without changing them. The read-only probe in `.practice/planner-native-queue-facts/probe.json` observes a present holder and a live ticket and checks the normal prompt. PID presence does not establish process identity or grant admission.
+
 Source -> local consumer -> reuse -> check: the shared practice ticket queue and exact-source native resume path -> delivery and planner -> classify an expired ticket wait as host deferral and withdraw a paused waiter without touching the holder -> queue and admission fixtures separate wait expiry, owner stop and a started check timeout. The live readback in `.practice/native-turn-deferral/observed.json` records a live ticket behind the native owner and two separate quest proof failures. A ticket deferral carries no native acceptance.
 
 Source -> local consumer -> reuse -> check: the account-plan write lock -> coordinator startup and reload -> claim ownership and read the queue under the same lock after the previous owner exits -> fixtures cover two starters and a predecessor's final save. The Windows probe in `.practice/coordinator-owner-claim/process-race.json` uses two real processes and an isolated queue. One acquires the claim and the other names the active owner in its refusal.

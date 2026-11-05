@@ -251,10 +251,13 @@ test('planner prompt lists a shared prerequisite once and preserves the active d
  complete(state,'failed-proof',false,6);
  const world:Parameters<typeof plannerPrompt>[1]={
   at:0,scoreboard:null,stall:null,assets:[],supplyBill:null,executionDirective:'',deliveryFocus:null,
-  capacity:{maxBots:0,minFreeGB:0,freeGB:0,nativeStartupGB:0,diskFreeGB:100,maxLive:0,preferLive:false},
+  capacity:{maxBots:0,minFreeGB:0,freeGB:7,nativeStartupGB:6.5,
+   nativeTurn:{observedAt:10,holder:'pid-present',liveWaiters:1,oldestWaitMs:5,unknownTickets:0},
+   diskFreeGB:100,maxLive:0,preferLive:false},
   protectedNames:[],jobs:[],statuses:[],ended:{},capabilities:[],capabilitySources:{},coverage:gameCoverage([],[],[],[],[])
  };
  const prompt=plannerPrompt(state,world);
+ expect(prompt).toContain(JSON.stringify(world.capacity.nativeTurn));
  const activeLine=prompt.split('\n').find(line=>line.startsWith('COMPLETE ACTIVE QUEUE'))!;
  const facts=JSON.parse(activeLine.slice(activeLine.indexOf(': ')+2));
  expect(activeLine.split(shared)).toHaveLength(2);
