@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793910472739,
+ "at": 1793915354646,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -412,27 +412,6 @@
    "role": "supply"
   },
   {
-   "account": "OreElse",
-   "script": "scripts/buy-owned-ge-item.ts",
-   "args": [],
-   "env": {
-    "ORDER_KEY": "oreelse-observatory-glass-r20",
-    "ITEM_ID": "1775",
-    "QUANTITY": "1",
-    "EXPECTED_OWNED": "0",
-    "LIMIT_PRICE": "500",
-    "CASH_RESERVE": "20000",
-    "ORDER_MS": "600000",
-    "FILL_WAIT_TICKS": "50",
-    "CAP": "2400",
-    "COORDINATOR_RUN_ID": "task-40e208fd-e9ef-478d-9c2f-b217b529e727"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-ge-oreelse-glass-reserve20k [task-40e208fd-e9ef-478d-9c2f-b217b529e727]",
-   "role": "smithing"
-  },
-  {
    "account": "Pocketpython",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -451,22 +430,6 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-ge-pocketpython-cat-sardine [task-45830d52-1185-4eb9-b586-6da0803b41e6]",
-   "role": "supply"
-  },
-  {
-   "account": "Ballspinner",
-   "script": "scripts/chain.ts",
-   "args": [
-    "scripts/generated/thieving60.ts TARGET=55 CAP=3000",
-    "scripts/goldfarm.ts KNIGHT_SPOT=2652,3318"
-   ],
-   "env": {
-    "ROUNDS": "1"
-   },
-   "enabled": false,
-   "standing": true,
-   "repeat": true,
-   "goal": "Thieving 55, then coins from Ardougne knights",
    "role": "supply"
   },
   {
@@ -501,6 +464,32 @@
    "repeat": false,
    "goal": "run-ge-magicwanda-main-mithril280 [task-2973321d-a062-4e45-bdb5-5c9b021a9a89]",
    "role": "supply"
+  },
+  {
+   "account": "Ballspinner",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-9b4664d5-abfb-4686-ba2c-70b6e8de0482"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "recover-bank-audit-ballspinner-5 [task-9b4664d5-abfb-4686-ba2c-70b6e8de0482]",
+   "role": "supply"
+  },
+  {
+   "account": "OreElse",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-85ee0127-591a-4aea-a135-8fb6b18efa71"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "recover-oreelse-mithril-qualified-entry [task-85ee0127-591a-4aea-a135-8fb6b18efa71]",
+   "role": "smithing"
   }
  ]
 }
