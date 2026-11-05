@@ -4,7 +4,7 @@ import {parseConfigs,listConfigFiles} from '../packages/knowledge/src/config';
 import {openBot,settle,getWorld,accountOf} from '../packages/core/src/bot';
 import type {Session} from '../packages/core/src/inprocess';
 import {goTo} from '../packages/core/src/walk';
-import {waitTicks} from '../packages/core/src/ticks';
+import {waitTicks,waitUntil} from '../packages/core/src/ticks';
 import {componentId} from '../packages/core/src/logout';
 import {watchProductionLife} from './microbot-c-lifetime';
 import {discoverNativeClueNpcHandlers,nativeSpecialClueSearchHandlers} from './microbot-c-clue-handlers';
@@ -125,6 +125,12 @@ export async function runNativeClueStep(s:Session,clueId:number,cap:number,stop:
     }
    }
    if(distance()>2)throw Error('native clue destination unobserved');
+   if(step.kind==='dig'&&distance()>1){
+    if(over())throw Error('native clue approach stopped');
+    if(!(await s.sdk.sendWalk(point.x,point.z)).success)throw Error('native clue dig approach refused');
+    await waitUntil(s,()=>over()||distance()<=1,{timeoutTicks:Math.min(12,Math.max(1,cap-(s.tick()-start)))});
+    if(over()||distance()>1)throw Error('native clue dig approach unobserved');
+   }
   }
   let sent=false,openedAt:number|undefined,challengeReady=step.challengeItem!==undefined&&count(before,step.challengeItem)>0,answered=false,rewardClosed=false;
   while(!over()){

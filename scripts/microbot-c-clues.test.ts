@@ -47,3 +47,20 @@ test('final casket closes the Native reward interface once before accepting queu
  expect(await runNativeClueStep(session,2714,20)).toMatchObject({ok:true,effect:{outcome:'reward',rewards:[{id:563,count:6}]}});
  expect(closes).toBe(1);
 });
+
+test('dig approaches within one tile when the route stops two tiles away', async () => {
+ const items=[{id:2713,count:1,slot:0},{id:952,count:1,slot:1}];
+ let x=3180,tick=0,walks=0;
+ const s:any={
+  tick:()=>tick,
+  onTick:(cb:()=>void)=>{let active=true;const next=()=>queueMicrotask(()=>{if(active){tick++;cb();next();}});next();return()=>{active=false;};},
+  sdk:{
+   getSkill:()=>({level:99}),getInventory:()=>items,getDialog:()=>null,
+   getState:()=>({player:{lifeId:1,worldX:x,worldZ:3360,level:0},gameMessages:[]}),
+   sendWalk:async(target:number,z:number)=>{expect([target,z]).toEqual([3177,3360]);walks++;x=3178;return {success:true};},
+   sendUseItem:async()=>{expect(x).toBe(3178);items[0]={id:2714,count:1,slot:0};return {success:true};}
+  }
+ };
+ expect(await runNativeClueStep(s,2713,20,()=>false,async()=>{x=3179;return true;})).toMatchObject({ok:true,effect:{outcome:'casket'}});
+ expect(walks).toBe(1);
+});
