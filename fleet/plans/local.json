@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793865118083,
+ "at": 1793865728340,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -476,7 +476,7 @@
     "CAP": "6000",
     "COORDINATOR_RUN_ID": "task-615edacc-bed8-440f-8ff9-933548f01e1e"
    },
-   "enabled": true,
+   "enabled": false,
    "repeat": false,
    "goal": "run-prince-wandwaver-released [task-615edacc-bed8-440f-8ff9-933548f01e1e]",
    "role": "supply"
