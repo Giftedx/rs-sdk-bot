@@ -11,6 +11,7 @@ import { componentId } from '../../packages/core/src/logout';
 import { ClientProt } from '../../vendor/rs-sdk/server/webclient/src/io/ClientProt';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { castable } from '../teleport-runes';
 // Root interface ids of every interface interface_chat/scripts/chat.rs2 sets text on, from content/pack/interface.pack.
 const CHAT_NAMES = /^(chat[1-4]|npcchat[1-4]|message[1-5]|multi[2-5]|multiobj[2-4]|multiobj3_close|objbox[1-4]|doubleobjbox|inter_213|skill_multi[2-5])$/;
 const CHAT_ROOTS = new Set(readFileSync(join(import.meta.dir, '..', '..', 'vendor', 'rs-sdk', 'server', 'content', 'pack', 'interface.pack'), 'utf8')
@@ -287,9 +288,11 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
             return opLoc(k, opIndex(k, re));
         }, arrived, 15, tries);
     };
-    // Without a law rune in the pack (every teleport here costs one) the bot walks to the same spot instead.
+    // Every rune the spell costs, or a worn staff for it (scripts/teleport-runes.ts); short of any, the bot walks
+    // to the same spot instead. Monk's Friend leaves 8 law runes beside 1 air: Lumbridge still needs 3 air.
+    const canCast = (comp: string): boolean => castable(comp, cnt, s.sdk.getEquipment().map((i: any) => i.id));
     const teleport = async (label: string, comp: string, x: number, z: number): Promise<void> => {
-        if (cnt(563) < 1) {
+        if (!canCast(comp)) {
             // walkPath keeps to one floor: from upstairs (Juliet's room, 3158,3425,1) take the nearest way down first.
             for (let i = 0; i < 3 && lvl() > 0; i++) {
                 const from = lvl();
@@ -320,7 +323,7 @@ export async function openQuest(opts: { session?: Session; stop?:()=>boolean; ca
     return {
         s, st, pos, inv, hp, xp, cnt, has, slot, cheb, near, lvl, dialogOpen, sawText, msgCount, T, stats, milestone, dispose,
         blockDoor, guard, fail, end, gains, detail, opLoc, locs, findLoc, locAt, opIndex, npc, talkTo, useOnLoc, useOnNpc, useOnItem,
-        step, converse, walk, talk, climb, teleport, openDoor, shutAt, dash,
+        step, converse, walk, talk, climb, teleport, canCast, openDoor, shutAt, dash,
         waitTicks: async (n: number) => { const until=s.tick()+n;if(n>0)await waitUntil(s,()=>s.tick()>=until||stats.died||T()>CAP,{timeoutTicks:n,signal:sustain.aborted});await guard('wait'); },
         waitUntil: async (f: () => boolean, ticks: number) => {const reached=await waitUntil(s, () => f() || stats.died||T()>CAP, { timeoutTicks: ticks,signal:sustain.aborted });await guard('wait condition');return reached;},
     };

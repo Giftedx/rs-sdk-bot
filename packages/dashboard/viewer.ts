@@ -14,6 +14,9 @@ export function viewerAssetRoute(pathname:string):{root:'static'|'caches';relati
 // A geometry draw followed by a screen present is not a promise that every tile loaded.
 export function installViewerBridge(host:any) {
     let privacyReady=false,renderReady=false,feedConnected:boolean|null=null,failed=false,announced=false;
+    // The feed sends the roster about every 30 s: one that arrives while the scene loads waits here for the ready state.
+    // The page takes a roster as new, so one older than the page's 30 s limit is dropped.
+    let heldRoster:(()=>void)|null=null,heldRosterAt=0;
     let hiddenNames=new Set<string>(),publishedFollow:string|null=null,publishedWorldMap=false,publishedCamera='',freeCameraPolls=0;
     // A hosted page must not hold the hidden name itself: its list carries "h:<FNV-1a of the lower-case name>" entries.
     // The bridge then renames a matching roster player to HIDDEN_ALIAS before the viewer reads the message, and gives
@@ -27,6 +30,7 @@ export function installViewerBridge(host:any) {
     const emit=(detail=!privacyReady?'Loading the 3D world… applying the name filter.':!renderReady?'Loading the 3D world… drawing the first frame.':'3D world ready.')=>{
         if(host.parent===host)return;
         const state=failed?'error':privacyReady&&renderReady?'ready':'loading';
+        if(state==='ready'&&heldRoster){const send=heldRoster;heldRoster=null;if(Date.now()-heldRosterAt<30_000)send();}
         host.parent.postMessage({viewerState:{state,privacyReady,renderReady,feedConnected,detail}},host.location.origin);
         if(state==='ready'&&!announced){announced=true;for(const restore of undo.splice(0))restore();}
     };
@@ -122,7 +126,8 @@ export function installViewerBridge(host:any) {
                     if(message.t==='roster'&&Array.isArray(message.p)){
                         for(const p of message.p)if(Array.isArray(p)&&typeof p[0]==='number'&&typeof p[1]==='string')names.set(p[0],p[1]);
                         // The page's own data can be minutes old; each roster is the full list of players online now.
-                        if(privacyReady&&renderReady&&!failed&&host.parent!==host)host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
+                        const sendRoster=()=>host.parent.postMessage({atlasRoster:{players:message.p.filter((p:any)=>Array.isArray(p)&&typeof p[1]==='string'&&[p[2],p[3],p[4],p[5]].every(Number.isFinite)).map((p:any)=>[hiddenHashes.has(fnv(p[1].toLowerCase()))?'⟦MAIN⟧':mask(p[1]),p[2],p[3],p[4],p[5]])}},host.location.origin);
+                        if(host.parent!==host&&!failed){if(privacyReady&&renderReady)sendRoster();else{heldRoster=sendRoster;heldRosterAt=Date.now();}}
                     }
                     if(message.t==='tick'){
                         if(message.reset){faces.clear();npcs.clear();playerHp.clear();}
@@ -177,6 +182,8 @@ export function installViewerBridge(host:any) {
         if(host.parent!==host)host.parent.postMessage({atlasStep:event.key===']'?1:-1},host.location.origin);
     },true);
     host.addEventListener('error',()=>fail('The 3D viewer reported an error; use the 2D map.'));
+    // A graphics reset leaves a black canvas. The page reloads the viewer after this failure. The event does not bubble.
+    host.document?.addEventListener?.('webglcontextlost',()=>fail('The 3D view lost its graphics context.'),true);
     host.addEventListener('unhandledrejection',(event:any)=>{if(event.reason?.name!=='AbortError')fail('The 3D viewer could not finish loading; use the 2D map.');});
     // The pinned viewer publishes its current follow target in its URL. Relay
     // that documented state; do not depend on unbuilt debug globals.
