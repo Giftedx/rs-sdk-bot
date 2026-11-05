@@ -81,6 +81,12 @@ export function pauses(stops: ReadonlyMap<string, string>): { paused: Set<string
     for (const [n, t] of stops) (swarmWroteStop(t) ? swarmStopped : paused).add(n.toLowerCase());
     return { paused, swarmStopped };
 }
+// An account is offline, so the controller's stop file may go: no status row, a RESULT in it, or a row older than the
+// 30 s a live session refreshes within (scripts/swarm.ts statusAge). A live row without a result is a run still ending.
+export const OFFLINE_STATUS_MS = 30_000;
+export function stopClearable(status: any, now: number): boolean {
+    return !status || !!status.result || !(Number.isFinite(status.at) && now - status.at < OFFLINE_STATUS_MS);
+}
 
 export function pass(planFile: string, dry: boolean): string[] {
     const side = mySide(), owners = loadOwners(), swarm = readJson(planFile, null);
@@ -146,8 +152,12 @@ export function pass(planFile: string, dry: boolean): string[] {
     }
     if (dry) return [...log, 'AUTOPILOT dry run: nothing written'];
     writeAtomic(planFile, JSON.stringify({ ...swarm, jobs }, null, 2) + '\n');
-    for (const a of fresh) if (swarmStopped.has(a.toLowerCase())) {
-        const n = listedNames.find(x => x.toLowerCase() === a.toLowerCase()) ?? a;
+    // The controller's own stop file goes once this pass hands the account work (a job, or a coin order the fleet agent
+    // will log it in for) and the account is offline: a run still ending on that file must find it.
+    const handed = new Set([...fresh, ...funding.orders.flatMap(o => [o.from, o.to])].map(a => a.toLowerCase()));
+    for (const n of listedNames) if (handed.has(n.toLowerCase()) && swarmStopped.has(n.toLowerCase())) {
+        const f = statusFiles.find(f => f.toLowerCase() === `${n.toLowerCase()}.json`);
+        if (!stopClearable(f ? readJson(join(statusDir, f), null) : null, now)) { log.push(`AUTOPILOT hold ${n}: its last run is still ending on the controller's stop file`); continue; }
         rmSync(join(prac, `stop-${n}`), { force: true });
         log.push(`AUTOPILOT clear ${n}: the controller's stop file from its removed job`);
     }

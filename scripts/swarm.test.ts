@@ -662,6 +662,11 @@ test('the controller knows its own stop files, and a standing job retries the en
     for (const t of Object.values(SWARM_STOP)) expect(swarmWroteStop(t)).toBe(true);
     expect(swarmWroteStop('hold offline until the GE pilot')).toBe(false);
     expect(swarmWroteStop(undefined)).toBe(false);
-    for (const r of ['blocked: no food', 'gave-up after 3 runs', 'stopped after 3 runs', 'exit unknown']) expect(standingRetryable(r)).toBe(true);
+    for (const r of ['blocked: no food', 'gave-up after 3 runs', 'exit unknown']) expect(standingRetryable(r)).toBe(true);
     for (const r of ['died', 'done after 1 runs', 'exit 1', 'release-paused: pin missing', 'stopped after 3 runs and more']) expect(standingRetryable(r)).toBe(false);
+    // A stopped end is retried only when the account's own RESULT names a stop file; a supervisor also ends stopped on no food.
+    expect(standingRetryable('stopped after 3 runs', 'fail stop file ticks=6888 picks=1550')).toBe(true);
+    expect(standingRetryable('stopped after 3 runs', 'RESULT fail stop file ticks=10')).toBe(true);
+    expect(standingRetryable('stopped after 1 runs', 'fail no food')).toBe(false);
+    expect(standingRetryable('stopped after 1 runs')).toBe(false);
 });

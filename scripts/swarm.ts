@@ -217,11 +217,13 @@ export const SWARM_STOP = { removed: 'swarm plan removed or stopped', all: 'swar
 export function swarmWroteStop(text: string | undefined): boolean {
     return text !== undefined && (Object.values(SWARM_STOP) as string[]).includes(text.trim());
 }
-// The ends a standing job retries by itself once the account is offline: a block or give-up, a stop the plan itself
-// caused (an owner's stop file still blocks the start), or a process the controller lost track of (its own restart).
-// A death waits for a person; done is not a pause.
-export function standingRetryable(reason: string): boolean {
-    return /^(?:blocked|gave-up)\b|^stopped after \d+ runs$|^exit unknown$/.test(reason);
+// The ends a standing job retries by itself once the account is offline: a block or give-up, a stop that a stop file
+// caused (the account's own RESULT says so; an owner's file still blocks the start, the controller's own is gone), or a
+// process the controller lost track of (its own restart). A supervisor also ends `stopped` on `RESULT fail no food`,
+// which only a resupply repairs, so that stop is not retried. A death waits for a person; done is not a pause.
+export function standingRetryable(reason: string, result?: string): boolean {
+    if (/^stopped after \d+ runs$/.test(reason)) return typeof result === 'string' && /^(?:RESULT )?fail stop file\b/.test(result);
+    return /^(?:blocked|gave-up)\b|^exit unknown$/.test(reason);
 }
 export function endedForGood(end: { reason: string } | undefined, repeat: boolean | undefined): boolean {
     return !!end && (!repeat || !successfulEnd(end.reason));
@@ -743,8 +745,9 @@ if (import.meta.main) {
                 // for a person; an owner's stop file still blocks the start below.
                 if ((job as Job & {standing?:boolean}).standing) for (const a of p.accounts) {
                     const key = [...ended.keys()].find(n => n.toLowerCase() === a.toLowerCase()), end = key ? ended.get(key) : undefined;
-                    if (!end || !standingRetryable(end.reason)) continue;
+                    if (!end) continue;
                     let s: any; try { s = JSON.parse(readFileSync(join(prac, 'status', `${a}.json`), 'utf8')); } catch { continue; }
+                    if (!standingRetryable(end.reason, s?.result)) continue;
                     // A host-run account writes no status result; its confirmed producer logout (2 min old) shows it offline.
                     let settled = false;
                     try { const lp = readLogoutProof(a, LIVE_SERVER); settled = lp.state === 'confirmed' && Date.now() - lp.loggedOutAt >= 120_000; } catch { /* unreadable: use the status rule */ }
