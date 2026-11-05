@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793862074492,
+ "at": 1793865118083,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -452,21 +452,6 @@
    ]
   },
   {
-   "account": "Wandwaver",
-   "script": "scripts/quest-sweep.ts",
-   "args": [
-    "blackknight"
-   ],
-   "env": {
-    "CAP": "6000",
-    "COORDINATOR_RUN_ID": "task-8837ab05-57ef-4995-aa9d-879df09fd838"
-   },
-   "enabled": false,
-   "repeat": false,
-   "goal": "run-blackknight-wandwaver-released [task-8837ab05-57ef-4995-aa9d-879df09fd838]",
-   "role": "supply"
-  },
-  {
    "account": "CoinCock",
    "script": "scripts/quest-sweep.ts",
    "args": [
@@ -479,6 +464,21 @@
    "enabled": false,
    "repeat": false,
    "goal": "run-elena-coincock-released [task-6af75f5d-7e34-4b6a-9c3a-4ceb02e2e95c]",
+   "role": "supply"
+  },
+  {
+   "account": "Wandwaver",
+   "script": "scripts/quest-sweep.ts",
+   "args": [
+    "prince"
+   ],
+   "env": {
+    "CAP": "6000",
+    "COORDINATOR_RUN_ID": "task-615edacc-bed8-440f-8ff9-933548f01e1e"
+   },
+   "enabled": true,
+   "repeat": false,
+   "goal": "run-prince-wandwaver-released [task-615edacc-bed8-440f-8ff9-933548f01e1e]",
    "role": "supply"
   }
  ]
