@@ -272,3 +272,32 @@ test('a spawn on another floor is found, after a nearer one on the same floor',a
  const far=new Map([[275,[{x:3097,z:3366,level:0},{x:3097+LEVEL_STEP+1,z:3366,level:1}]]]);
  expect(spawnsByDistance(275,{x:3097,z:3366,level:1},far).map(t=>t.level)).toEqual([0,1]);
 });
+
+test('a bow and arrows let the Ranged level count against an animal, and the plan asks for the kit',async()=>{
+ const {killStyle,rangedKit,BOWS,ARROWS_PER_KILL}=await import('../packages/core/src/gather');
+ expect(killStyle(2136,6,1)).toBeNull();            // bear, Attack 6, no kit
+ expect(killStyle(2136,6,97)).toBe('ranged');       // bear, Ranged 97 with a kit
+ expect(killStyle(2134,6,97)).toBe('melee');        // a giant rat dies to anyone
+ expect(killStyle(2136,22,97)).toBe('melee');       // melee first when it suffices
+ expect(rangedKit([{id:841,count:1},{id:884,count:19}])).toEqual({bow:841,arrows:884});
+ expect(rangedKit([{id:841,count:1},{id:882,count:3}])).toBeNull();   // too few arrows
+ expect(rangedKit([{id:884,count:50}])).toBeNull();                   // no bow
+ expect(BOWS).toContain(841);expect(ARROWS_PER_KILL).toBeGreaterThan(0);
+ const bearSpawn=(id:number)=>id===2136?[{x:2500,z:3160,level:0}]:[];
+ const lumbridge={x:3222,z:3218,level:0};
+ expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,6,97).gathers).toEqual([{id:2136,count:1,how:'kill',kit:'ranged'}]);
+ expect(gatherPlan([{id:2136,count:1}],lumbridge,()=>[],()=>Infinity,bearSpawn,6,1).still).toEqual([{id:2136,count:1}]);
+});
+
+test('a spawn across the Karamja water ranks a sea farther',async()=>{
+ const {spawnsByDistance,onKaramja,SEA}=await import('../packages/core/src/spawn-index');
+ const musaPoint={x:2796,z:3165,level:0};
+ expect(onKaramja(musaPoint)).toBe(true);expect(onKaramja({x:2684,z:3318})).toBe(false);
+ const list=new Map([[2347,[{x:2934,z:3286,level:0},{x:2684,z:3318,level:0}]]]);
+ // From Musa Point both hammer spawns lie across the water: the nearer by straight line still comes first.
+ expect(spawnsByDistance(2347,musaPoint,list)[0]).toEqual({x:2934,z:3286,level:0});
+ // From the Karamja shore a spawn on the island beats one on the mainland that is nearer by straight line.
+ const list2=new Map([[1917,[{x:2970,z:3150,level:0},{x:2800,z:3180,level:0}]]]);
+ expect(spawnsByDistance(1917,{x:2940,z:3150,level:0},list2)[0]).toEqual({x:2800,z:3180,level:0});
+ expect(SEA).toBe(1000);
+});

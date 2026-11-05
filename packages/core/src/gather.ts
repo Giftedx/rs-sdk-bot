@@ -19,7 +19,14 @@ export const MILK=1927,BUCKET=1925,COW=81;
 // Garlic: the cupboard upstairs in Morgan's house, Draynor (general_use/scripts/cupboards.rs2:34, loc 2612 shut,
 // 2613 open: Open, then Search). The only shops are the Greengrocers on Miscellania and in Rellekka.
 export const LOC_SOURCES:Record<number,{tile:Tile;open:RegExp;take:RegExp}>={1550:{tile:{x:3096,z:3268,level:1},open:/^open$/i,take:/^search$/i}};
-export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill'};
+export type Gather={id:number;count:number;how:'spawn'|'milk'|'loc'|'kill';kit?:'ranged'};
+// A bow and arrows the account owns: shortbow or longbow, bronze, iron or steel arrows (the kinds the fleet's banks hold).
+export const BOWS=[841,839,843,845],ARROWS=[884,886,882],ARROWS_PER_KILL=6;
+export function rangedKit(owned:readonly Item[]):{bow:number;arrows:number}|null{
+ const has=(id:number,n=1)=>owned.filter(i=>i.id===id).reduce((c,i)=>c+i.count,0)>=n;
+ const bow=BOWS.find(id=>has(id)),arrows=ARROWS.find(id=>has(id,ARROWS_PER_KILL));
+ return bow!==undefined&&arrows!==undefined?{bow,arrows}:null;
+}
 export const CLUSTER=20;
 // Meats no shop sells drop from animals on death, every kill (drop tables/scripts/cow.rs2, chicken.rs2, giant_rat.rs2,
 // bear.rs2 `always` rows); goblin mail drops from goblins while Goblin Diplomacy asks for it (goblin.rs2:53,119). The
@@ -31,13 +38,20 @@ export const KILL_SOURCES:Record<number,{npcs:number[];name:string;combat:number
  2136:{npcs:[105,106],name:'bear',combat:21},288:{npcs:[100,101,298,299],name:'goblin',combat:5},
 };
 export const EASY_KILL=6;
-export const canKill=(id:number,attack:number)=>!!KILL_SOURCES[id]&&(KILL_SOURCES[id]!.combat<=EASY_KILL||KILL_SOURCES[id]!.combat<attack);
+// The style that beats the animal: melee below the Attack level, else a bow below the Ranged level (ranged is 1 without a kit).
+export function killStyle(id:number,attack:number,ranged=1):'melee'|'ranged'|null{
+ const c=KILL_SOURCES[id]?.combat;
+ if(c===undefined)return null;
+ if(c<=EASY_KILL||c<attack)return 'melee';
+ return c<ranged?'ranged':null;
+}
+export const canKill=(id:number,attack:number,ranged=1)=>killStyle(id,attack,ranged)!==null;
 let npcRows:{id:number;spawns?:Tile[]}[]|undefined;
 const npcSpawns=(ids:readonly number[]):Tile[]=>(npcRows??=JSON.parse(readFileSync(resolve(import.meta.dir,'../../../knowledge/npcs.json'),'utf8')) as {id:number;spawns?:Tile[]}[]).filter(n=>ids.includes(n.id)).flatMap(n=>n.spawns??[]);
 export const killSpawns=(id:number):Tile[]=>KILL_SOURCES[id]?npcSpawns(KILL_SOURCES[id]!.npcs):[];
 // A spawn wins over a shop when it is nearer: eggs lie by Lumbridge, while the only egg seller is in Rellekka.
 // `seller` gives the straight-line distance to the nearest seller (Infinity when no shop sells the item).
-export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns,attack=99){
+export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:Tile)=>Tile[]=spawnsByDistance,seller:(id:number)=>number=()=>Infinity,kills:(id:number)=>Tile[]=killSpawns,attack=99,ranged=1){
  const gathers:Gather[]=[],still:Item[]=[],tools:Item[]=[];
  const d=(t:Tile)=>Math.max(Math.abs(t.x-at.x),Math.abs(t.z-at.z));
  for(const m of missing){
@@ -47,7 +61,7 @@ export function gatherPlan(missing:readonly Item[],at:Tile,spawns:(id:number,at:
   else if(LOC_SOURCES[m.id]&&d(LOC_SOURCES[m.id]!.tile)<sold)gathers.push({...m,how:'loc'});
   // A kill wins over a shop when its animal is nearer, as a spawn does: Rufus in Canifis sells every meat, 850 tiles
   // from Ardougne and behind Priest in Peril, while cows graze beside the Ardougne banks.
-  else if(canKill(m.id,attack)&&kills(m.id).some(t=>t.level===at.level&&d(t)<sold))gathers.push({...m,how:'kill'});
+  else if(canKill(m.id,attack,ranged)&&kills(m.id).some(t=>t.level===at.level&&d(t)<sold))gathers.push({...m,how:'kill',...(killStyle(m.id,attack,ranged)==='ranged'?{kit:'ranged' as const}:{})});
   else still.push(m);
  }
  return{gathers,still,tools};
@@ -82,6 +96,16 @@ export async function gatherItems(s:Session,world:World,gathers:readonly Gather[
      if(lying()[0]){await s.bot.pickupItem(lying()[0]);await waitUntil(s,()=>held(g.id)>before,{timeoutTicks:15});continue;}
      const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15).sort((a:any,b:any)=>a.distance-b.distance)[0];
      if(!npc){if(!await waitUntil(s,()=>(st()?.nearbyNpcs??[]).some((n:any)=>ids.includes(n.id)&&!n.inCombat&&n.distance<=15),{timeoutTicks:30}))break;continue;}
+     // A ranged kill wields the bow and the arrows from the pack first; without them in the pack the fight is not taken.
+     if(g.kit==='ranged'){
+      const worn=()=>s.sdk.getEquipment().map((i:any)=>i.id);
+      for(const ids2 of [BOWS,ARROWS]){
+       if(ids2.some(id=>worn().includes(id)))continue;
+       const item=(st()?.inventory??[]).find((i:any)=>ids2.includes(i.id));
+       if(!item)return `ranged kill of ${npc.name} needs ${ids2===BOWS?'a bow':'arrows'} in the pack`;
+       await s.bot.equipItem(item);await waitUntil(s,()=>worn().includes(item.id),{timeoutTicks:5});
+      }
+     }
      const seen=new Map<string,number>();for(const i of lying())seen.set(`${i.x},${i.z}`,(seen.get(`${i.x},${i.z}`)??0)+1);
      const r:any=await s.bot.attack(npc);
      if(!r?.success){await waitTicks(s,2);continue;}

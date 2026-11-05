@@ -16,9 +16,7 @@ export function totemStartsAtKangai(state:QuestFlag['state']):boolean{
 }
 
 // Brimhaven and Musa Point lie south of z 3260 between x 2690 and 2960; Ardougne's docks are north of that line.
-export function onKaramja(p:{x:number;z:number}):boolean{
-    return p.z<=3260&&p.x>=2690&&p.x<=2960;
-}
+export {onKaramja} from '../packages/core/src/spawn-index';
 
 // Ardougne Teleport needs Plague City, Magic 51, two law and two water runes (magic_spells.dbrow:102-103).
 export const TELEPORT_RUNES={law:2,water:2};
