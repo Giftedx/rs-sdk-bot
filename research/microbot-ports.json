@@ -2246,7 +2246,7 @@
             "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/util/worldmap/WorldPointWithWorldMapArea.java"
           ],
           "sourceUrl": "https://github.com/chsami/Microbot/tree/13b518350c4c81d64e4cfbb45b3d5d2f38488825/runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper",
-          "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full owned API completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct.",
+          "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower, Trio and Heroes pass complete owned Native routes and reward audits. Legends Quest has a Native handler and an owned worker with full-route qualification open. Source, per-quest Native receipts and live/repeat acceptance remain distinct.",
           "review": {
             "name": "questhelper",
             "decision": "partial",
@@ -2305,24 +2305,30 @@
               }
             ],
             "blockers": [
-              "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full owned API completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+              "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower, Trio and Heroes pass complete owned Native routes and reward audits. Legends Quest has a Native handler and an owned worker with full-route qualification open. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
             ],
             "scriptDecisions": [
               {
                 "path": "runelite-client/src/main/java/net/runelite/client/plugins/microbot/questhelper/QuestScript.java",
                 "decision": "partial",
                 "consumer": "scripts/generated/quest-lib.ts, scripts/quest-order.ts, packages/core/src/quest-status.ts",
-                "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower and Trio pass complete owned Native routes and reward audits. Heroes Quest and Legends Quest have native handlers and local implementations; full owned API completion/reward/logout qualification remains open. These are supported integration gaps. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
+                "gap": "Reuse native quest workers and requirements; donor Java step objects and OSRS IDs require native adaptation. Watchtower, Trio and Heroes pass complete owned Native routes and reward audits. Legends Quest has a Native handler and an owned worker with full-route qualification open. Source, per-quest Native receipts and live/repeat acceptance remain distinct."
               }
             ],
             "proof": {
-              "level": "Source-traced quest reuse and complete Native Watchtower and Trio routes; two other supported quest ports retain integration/qualification work.",
+              "level": "Source-traced quest reuse and complete Native Watchtower, Trio and Heroes routes. Owned Legends qualification remains open.",
               "nativeQuestCount": 68,
               "missingSupported": [
-                "Heroes Quest",
                 "Legends Quest"
               ],
-              "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Watchtower and Trio Native receipts bind their recorded source; merged dependency closures require renewal. Full owned Heroes and Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
+              "scope": "Upstream staged CLI workers and owned API workers have distinct entry contracts. Captured Native receipts bind their recorded source and starting conditions. Full owned Legends acceptance remains open. Live, repeat and lower-level conditions remain unqualified.",
+              "heroes": {
+                "evidence": ".practice/microbot-ports/heroes-quest-native-1793857302531/result.json",
+                "sourceCheck": ".practice/microbot-ports/heroes-quest-native-1793857302531/source-check.json",
+                "compiledCheck": ".practice/microbot-ports/heroes-quest-native-1793857302531/compiled-cache-ready-check.json",
+                "runtimeSha256": "9fa547d554b9b1077486bc8df1e2cf6be1a3b3e522861692d46e5fe5f3cdcf27",
+                "scope": "Actual two-actor owned CLI from fresh Heroes stages with ordinary staged supplies and level 99 skills. Both gangs complete in 5604 ticks per actor, gain 12 exact skill rewards, and return to bank at HP99. Each spends 60 coins, one bait and five observed potion doses. Black Arm casts two spells and Phoenix ten. Independent saved assets, controls, raw prayer observations and logout pass. Source11596 and ready-cache42 entries unchanged. Live, repeat and lower-level conditions remain open."
+              },
               "watchtower": {
                 "evidence": ".practice/microbot-ports/watchtower-native-1793681609878/result.json",
                 "sourceCheck": ".practice/microbot-ports/watchtower-native-1793681609878/source-check.json",
