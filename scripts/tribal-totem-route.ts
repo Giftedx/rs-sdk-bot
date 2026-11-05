@@ -13,11 +13,12 @@ export function totemStartsAtKangai(state:QuestFlag['state']):boolean{
     return state==='not started'||state==='unknown';
 }
 
-// Ardougne Teleport needs Plague City, Magic 51, a law and a water rune (magic_spells.dbrow); otherwise the customs
-// officer's boat from Brimhaven (customs_officer.rs2:82) for TOTEM_FARE coins, with Captain Barnaby's fare back.
+// Ardougne Teleport needs Plague City, Magic 51, two law and two water runes (magic_spells.dbrow:102-103); otherwise the
+// customs officer's boat from Brimhaven (customs_officer.rs2:82) for TOTEM_FARE coins, with Captain Barnaby's fare back.
+export const TELEPORT_RUNES={law:2,water:2};
 export type TotemTravel={how:'teleport'}|{how:'boat'}|{how:'missing';detail:string};
 export function totemTravel(a:{plagueCity:QuestFlag['state'];magic:number;law:number;water:number;coins:number}):TotemTravel{
-    if(a.plagueCity==='complete'&&a.magic>=51&&a.law>=1&&a.water>=1)return {how:'teleport'};
+    if(a.plagueCity==='complete'&&a.magic>=51&&a.law>=TELEPORT_RUNES.law&&a.water>=TELEPORT_RUNES.water)return {how:'teleport'};
     if(a.coins<ROUND_TRIP_FARE)return {how:'missing',detail:`missing 995:${ROUND_TRIP_FARE} for the Brimhaven and Ardougne boats`};
     return {how:'boat'};
 }
