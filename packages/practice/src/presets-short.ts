@@ -37,6 +37,11 @@ export const SHORT_PRESETS: Record<string, SaveConfig> = {
     // Rune Mysteries resumed mid-quest with every quest item lost, as a parked live account resumes it: at the Varrock
     // East bank, low combat (Hitpoints 17, Magic 29), no runes, so the runner walks. Varp 63 is the quest stage
     // (quest_runemysteries.constant): 1 started, 2 given talisman, 3 received package, 4 given package, 5 received notes.
+    // The same account where quest-sweep stages the quest: the Duke's room on castle level 1, package lost (stage 3).
+    quest_runemysteries_lost_duke: {
+        position: { x: 3209, z: 3222, level: 1 }, skills: { Hitpoints: 17, Magic: 29 }, varps: { ...DONE, 63: 3 },
+        inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),
+    } satisfies SaveConfig,
     ...Object.fromEntries([1, 2, 3, 4, 5].map(stage => [`quest_runemysteries_lost${stage}`, {
         position: { x: 3252, z: 3420, level: 0 }, skills: { Hitpoints: 17, Magic: 29 }, varps: { ...DONE, 63: stage },
         inventory: Array.from({ length: 4 }, () => ({ id: 379, count: 1 })),

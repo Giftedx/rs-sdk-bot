@@ -73,6 +73,12 @@ try {
     // the talisman lost he asks for it, and the Duke re-issues it (duke_horacio.rs2 duke_rune_mysteries_in_progress).
     let needTalisman = decision==='duke', toAubury = false;
     if (decision==='sedridor') {
+        // quest-sweep stages the quest in the Duke's room (castle level 1); the tower walk needs a surface start.
+        if (q.lvl() === 1) {
+            await q.openDoor('recover duke door leave', 3207, 3222);
+            await q.walk('recover to stairs', [{ x: 3206, z: 3210, tol: 1 }]);
+            await q.climb('recover castle stairs down', stairs(/climb-down/i), /climb-down/i, levelIs(0));
+        }
         await toSedridor('recover');
         const outcome = () => sedridorOutcome(q.has(ITEM.pack), q.sawText);
         await q.talk('sedridor recover', sed, [/looking for the head wizard/i, /ok, here you are/i, /yes, certainly/i], () => outcome() !== 'unknown', SEDRIDOR, 120);
