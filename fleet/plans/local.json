@@ -1,6 +1,6 @@
 {
  "side": "local",
- "at": 1793917181500,
+ "at": 1793922054236,
  "jobs": [
   {
    "account": "FishAndChips",
@@ -466,18 +466,6 @@
    "role": "supply"
   },
   {
-   "account": "Mightyrod",
-   "script": "scripts/quest-chain.ts",
-   "args": [
-    "runemysteries,murder,blackknight,vampire,priest,junglepotion,sheep,fishingcompo,druid,arrav,seaslug,haunted,demon,dig,drunkmonk,elemental,death,grandtree"
-   ],
-   "enabled": false,
-   "standing": true,
-   "repeat": false,
-   "goal": "quests: runemysteries, murder, blackknight, vampire, priest, junglepotion, sheep, fishingcompo, druid, arrav, seaslug, haunted, demon, dig, drunkmonk, elemental, death, grandtree",
-   "role": "combat"
-  },
-  {
    "account": "Magicwanda",
    "script": "scripts/buy-owned-ge-item.ts",
    "args": [],
@@ -497,6 +485,19 @@
    "repeat": false,
    "goal": "run-ge-magicwanda-main-mithril280 [task-2973321d-a062-4e45-bdb5-5c9b021a9a89]",
    "role": "supply"
+  },
+  {
+   "account": "Mightyrod",
+   "script": "scripts/session-check.ts",
+   "args": [],
+   "env": {
+    "CAP": "1600",
+    "COORDINATOR_RUN_ID": "task-ed228171-2067-465b-94c4-b381babc4e34"
+   },
+   "enabled": false,
+   "repeat": false,
+   "goal": "recover-mightyrod-cloud-1793917835320 [task-ed228171-2067-465b-94c4-b381babc4e34]",
+   "role": "combat"
   }
  ]
 }
