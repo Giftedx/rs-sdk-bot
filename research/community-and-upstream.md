@@ -539,6 +539,7 @@ Each quest failed the full practice batch. Conditions: the quest's preset (every
 | Troll Stronghold | `fight` lost its target: the route from the stronghold door to the west hall goes by 2839,10057, 29 tiles from the generals and outside the 15-tile NPC list | Walk to the hall (2826,10086) before the fight; walk back to it when no general is listed | 865, 920, 885 |
 | Underground Pass | The brew hut door (loc 1530, south wall of 2325,9801) planned as open; an NPC can leave the list for a tick, so `kill` left Holthion alive at 34 of 87 damage | Op the door from 2325,9801; a kill with a drop ends on the drop | 2,595, 2,638, 2,655 |
 | Throne of Miscellania | The weed spot 2523,3851 is outside the castle wall, every herb has no route, and each refused click costs about a minute; 3 shut doors planned as open: Sigrid 2615,3870, Brand 2506,3851 and 2504,3853 | Weed from 2527,3852 inside the fence; op each door by tile | 1,354, 1,356, 1,359 |
+| The Fremennik Trials | The stage has no way down to the hall, and its backstage door planned as open; the Draugen hunt spent its 120 hunts in the cliff pocket at 2642,3586 or at a 2-tile hop; Koschei's third form killed the bot from an entry of 46 hp or less | Leave by the backstage door; one hop per axis, a planned walk out of a pocket; eat to 80 hp before Peer banks the food | 2,668, 2,613, 2,841 |
 
 The anvil cause is inferred: 2 of 3 runs failed before the change and 3 of 3 passed after it, with two more bars in the same change. The Clock Tower failure (`walk to trough`) is not addressed here.
 
