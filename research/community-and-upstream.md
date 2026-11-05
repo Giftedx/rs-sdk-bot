@@ -528,7 +528,7 @@ Do not copy: CraziedAres says Withdraw-All shifts later bank slots, but `Invento
 
 ### 9.5 Quest failures closed with toolkit routes
 
-Each quest failed the full practice batch. Conditions: the quest's preset (every skill 99), practice server. Evidence: `.practice/tbwt-port/proof-<quest>.log`. Gap: not run live.
+Each quest failed the full practice batch. Conditions: the quest's preset (every skill 99), practice server. Evidence: `.practice/tbwt-port/proof-<quest>.log`; Troll Stronghold, Underground Pass, Throne of Miscellania and The Fremennik Trials `.practice/fix-b/dbg-<script>proof*.log`. Gap: not run live.
 
 | Quest | Cause | Fix | Ticks, 3 of 3 |
 |---|---|---|---|
@@ -536,6 +536,9 @@ Each quest failed the full practice batch. Conditions: the quest's preset (every
 | Biohazard | The bot stayed inside Elena's house, whose door shuts behind it | Leave by the door, then sail to Port Sarim (ships keep the sample; 60 coins) | 1,389, 1,300, 1,279 |
 | Family Crest | Three crossings planned as open: the double gate at 3105,9944, Chronozon's gate at 3089,9945, Varrock's east gate at 3264,3405 | Op each gate; short legs round the rock | 1,097, 1,039, 1,058 |
 | The Tourist Trap | The curtain at 3291,3031 closes Siad's building from the south; the anvil loop could click during the 8-tick forge | Open the curtain from 3291,3030 both ways; wait for the roll; 5 bars | 1,187, 1,215, 1,226 |
+| Troll Stronghold | `fight` lost its target: the route from the stronghold door to the west hall goes by 2839,10057, 29 tiles from the generals and outside the 15-tile NPC list | Walk to the hall (2826,10086) before the fight; walk back to it when no general is listed | 865, 920, 885 |
+| Underground Pass | The brew hut door (loc 1530, south wall of 2325,9801) planned as open; an NPC can leave the list for a tick, so `kill` left Holthion alive at 34 of 87 damage | Op the door from 2325,9801; a kill with a drop ends on the drop | 2,595, 2,638, 2,655 |
+| Throne of Miscellania | The weed spot 2523,3851 is outside the castle wall, every herb has no route, and each refused click costs about a minute; 3 shut doors planned as open: Sigrid 2615,3870, Brand 2506,3851 and 2504,3853 | Weed from 2527,3852 inside the fence; op each door by tile | 1,354, 1,356, 1,359 |
 
 The anvil cause is inferred: 2 of 3 runs failed before the change and 3 of 3 passed after it, with two more bars in the same change. The Clock Tower failure (`walk to trough`) is not addressed here.
 
