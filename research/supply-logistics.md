@@ -14,6 +14,10 @@ The Overall supply bill, Autopilot demand, preparation report, dashboard and lau
 
 Source -> local consumer -> reuse -> check: the route scheduler's selected variants and last-99 tick, plus the launch gate's start-time boundary -> all Overall supply consumers -> apply the existing requirement tally to the scheduled prefix -> test a row that straddles the finish, a later producer and an unchosen variant. The isolated bill and preparation runs are compared in `.practice/overall-route-supply-scope/scope-proof.json`. The comparison proves bill scope on the modeled route. It does not establish staged items or launch readiness.
 
+The supply bill adds demands with the same resolved base item IDs before checking stock. It preserves the alternate labels for planning and reports partly overlapping matches as unresolved. A combined count covers base stock. The handoff still needs to verify the form each consumer needs.
+
+Source -> local consumer -> adapt -> check: the planner's pinned item resolver and the shared-stock accounting pattern in Iron Compass from the project use map -> supply bill, coordinator and Autopilot -> combine demand before assigning a stock balance -> regressions for 1,200 units of demand against 600 owned, an overlapping match, and a cached bill round trip. These checks do not reserve or transfer stock.
+
 ## Market policy (current)
 
 Owner decision: use GE for progression and wealth whenever it beats other sources. Account ownership and evidence requirements still apply.

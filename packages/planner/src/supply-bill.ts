@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { haggisActivities, haggisTravel, loadSnapshot, overallRequirementsFor, schedule, TRICKS } from './haggis';
 
 const root = resolve(import.meta.dir, '../../..');
-export type BillRow = { item: string; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[] };
+export type BillRow = { item: string; need: number; owned: number; short: number; ids: number[]; holders: { account: string; count: number }[]; aliases?: string[] };
 
 // Item ids whose name matches a bill line: exact name, or the singular of a plural line ("dragon bones" -> "Dragon bones").
 // The pinned names differ for two families: every unfinished potion is "Unfinished potion" (debugname <herb>vial), and
@@ -20,17 +20,56 @@ export function idsFor(item: string, items: readonly { id: number; name: string;
     return items.filter(i => forms.has(String(i.name).toLowerCase())).map(i => i.id);
 }
 
-export function supplyBill(supplies: readonly { item: string; count: number }[], items: readonly { id: number; name: string }[], statuses: readonly any[]): BillRow[] {
-    return supplies.map(({ item, count }) => {
-        const ids = idsFor(item, items), holders: { account: string; count: number }[] = [];
-        for (const s of statuses) {
-            let n = 0;
-            for (const r of [...(s.inventory ?? []), ...(s.equipment ?? []), ...(s.bank ?? [])]) if (ids.includes(r.baseId ?? r.id)) n += r.count ?? 0;
-            if (n > 0) holders.push({ account: s.name, count: n });
+export function supplyBill(
+    supplies: readonly { item: string; count: number; aliases?: readonly string[] }[],
+    items: readonly { id: number; name: string; debugname?: string }[],
+    statuses: readonly any[],
+): BillRow[] {
+    const pools = new Map<string, BillRow>();
+    for (const {item, count, aliases} of supplies) {
+        const ids = [...new Set(idsFor(item, items))].sort((a, b) => a - b);
+        const key = ids.length ? ids.join(',') : 'unmapped:' + item;
+        const row: BillRow = pools.get(key) ?? {item, need: 0, owned: 0, short: 0, ids, holders: []};
+        row.need += count;
+        const otherNames = [...new Set([...(row.aliases ?? []), item, ...(aliases ?? [])])].filter(name => name !== row.item);
+        if (otherNames.length) row.aliases = otherNames;
+        pools.set(key, row);
+    }
+
+    // Partly overlapping matches are not interchangeable. Keep those demands visible until exact IDs are available.
+    const byId = new Map<number, BillRow>();
+    const ambiguous = new Set<BillRow>();
+    for (const row of pools.values()) {
+        for (const id of row.ids) {
+            const other = byId.get(id);
+            if (other) {
+                ambiguous.add(other);
+                ambiguous.add(row);
+            } else byId.set(id, row);
         }
-        const owned = holders.reduce((a, h) => a + h.count, 0);
-        return { item, need: count, owned, short: ids.length ? Math.max(0, count - owned) : count, ids, holders: holders.sort((a, b) => b.count - a.count) };
-    });
+    }
+    for (const row of ambiguous) {
+        for (const id of row.ids) byId.delete(id);
+        row.ids = [];
+    }
+
+    for (const status of statuses) {
+        const holdings = new Map<BillRow, number>();
+        for (const item of [...(status.inventory ?? []), ...(status.equipment ?? []), ...(status.bank ?? [])]) {
+            const row = byId.get(item.baseId ?? item.id);
+            if (row) holdings.set(row, (holdings.get(row) ?? 0) + (item.count ?? 0));
+        }
+        for (const [row, count] of holdings) {
+            if (count <= 0) continue;
+            row.owned += count;
+            row.holders.push({account: status.name, count});
+        }
+    }
+    for (const row of pools.values()) {
+        row.short = Math.max(0, row.need - row.owned);
+        row.holders.sort((a, b) => b.count - a.count);
+    }
+    return [...pools.values()];
 }
 
 // This machine's live statuses, plus the accounts the other fleet side published in fleet/snapshots (scripts/fleet-sync.ts),
