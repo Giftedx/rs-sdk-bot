@@ -1,6 +1,6 @@
 import {test,expect} from 'bun:test';
 import type {PathPoint} from '../packages/core/src/walk';
-import {runeMysteriesWalk,runeMysteriesStartProblem,walkRuneMysteries,exitRuneTower,runeMysteriesDecision,sedridorOutcome} from './rune-mysteries-route';
+import {runeMysteriesWalk,runeMysteriesStartProblem,walkRuneMysteries,exitRuneTower,runeMysteriesDecision,sedridorOutcome,nearestBankTile} from './rune-mysteries-route';
 
 test('starting talisman is not completion; package handoff interruption resumes notes',()=>{
  expect(runeMysteriesDecision('started',[1438])).toBe('talisman');
@@ -17,7 +17,13 @@ test('Sedridor names the stage of a started quest with no items: package in hand
  expect(sedridorOutcome(false,saw('I think perhaps you should go and speak to him again then, adventurer.'))).toBe('aubury');
  expect(sedridorOutcome(false,saw('I suggest you go and speak to Aubury once more, with luck he will have made copies of his research.'))).toBe('aubury');
  expect(sedridorOutcome(false,saw('Hmmm? You are a very odd person. Come back again when you have found it.'))).toBe('duke');
+ expect(sedridorOutcome(false,saw('Sure, I\'ll go and get them from the bank.'))).toBe('bank');
  expect(sedridorOutcome(false,saw('Welcome adventurer, to the world renowned Wizards\' Tower.'))).toBe('unknown');
+});
+test('the nearest ground-floor bank: Draynor from the Wizards\' Tower, Varrock East from Aubury',()=>{
+ const banks=[{x:3092,z:3243,level:0},{x:3254,z:3420,level:0},{x:3185,z:3440,level:0},{x:3208,z:3220,level:2}];
+ expect(nearestBankTile({x:3109,z:3167},banks)).toEqual({x:3092,z:3243,level:0});
+ expect(nearestBankTile({x:3253,z:3401},banks)).toEqual({x:3254,z:3420,level:0});
 });
 test('any combat level may start; below 13 the walk goes straight to the target',async()=>{
  for(const combat of [undefined,3,12,13])expect(runeMysteriesStartProblem(combat)).toBeNull();

@@ -153,3 +153,13 @@ test('garlic comes from the Draynor cupboard when the only seller is far away',(
  const at={x:3092,z:3243,level:0};
  expect(gatherPlan([{id:1550,count:1}],at,()=>[],()=>600).gathers).toEqual([{id:1550,count:1,how:'loc'}]);
 });
+
+test('a quest keeps its own items and every untradeable item out of the unneeded deposit',async()=>{
+ const {keepsItem}=await import('./quest-sweep');
+ const tradeable=(id:number)=>id===1438?true:id===291?false:undefined;
+ expect(keepsItem('runemysteries',1438,tradeable)).toBe(true);
+ expect(keepsItem('runemysteries',291,tradeable)).toBe(true);
+ expect(keepsItem('sheep',291,tradeable)).toBe(true);
+ expect(keepsItem('sheep',1438,tradeable)).toBe(false);
+ expect(keepsItem('sheep',995,tradeable)).toBe(false);
+});
