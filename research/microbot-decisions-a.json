@@ -7383,7 +7383,8 @@
     "decision": "partial",
     "behaviour": "Buy seaweed/sand from charter shop, Lunar Superglass Make, blow selected glass item and sell to shop",
     "localConsumers": [
-      "scripts/microbot-production.ts"
+      "scripts/microbot-production.ts",
+      "scripts/microbot-production-progressive.ts"
     ],
     "sourceEvidence": [
       {
@@ -7476,7 +7477,12 @@
         ]
       }
     ],
-    "proof": "Pinned donor branch and Native menu traced to the existing worker. Inventory recipe and SDK adapter checks cover the orb. No end-to-end charter or Native glassblowing qualification is asserted here."
+    "proof": {
+      "evidence": ".practice/microbot-ports/production-progressive-native-1793879708116/result.json",
+      "sourceCheck": ".practice/microbot-ports/production-progressive-native-1793879708116/source-check.json",
+      "compiledCheck": ".practice/microbot-ports/production-progressive-native-1793879708116/compiled-cache-ready-check.json",
+      "scope": "Actual progressive Native CLI at the 32 to 33 and 45 to 46 Crafting boundaries produces beer glass then empty vial, and empty vial then unpowered orb. The saved output, exact Crafting XP, other XP, stock, gear, HP99, bank return and logout reconcile. Shared server at XP25, 11587 source and 42 cache entries unchanged on disk. Charter trading and Lunar Superglass Make are outside this proof."
+    }
   },
   {
     "name": "chatbot",
