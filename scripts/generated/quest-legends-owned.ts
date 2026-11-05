@@ -332,21 +332,22 @@ export async function runLegends(raw:Session,o:LegendsOrder,requested:()=>boolea
    stageName = 'return strength gate approach';
    await walk(2809, 9313);
    if (pos().worldZ >= 9314) throw Error('Legends return Strength gate south stand unobserved');
+   let remainingWingFights = 3;
    const clearAttacker = async () => {
     // Native melee closes the gate dialogue even on a zero hit.
     const own = 32768 + (s.client as any).selfSlot;
-    const wings = () => sdk.getState()?.nearbyNpcs.filter(n => n.id === npcId('deathwing') && n.targetIndex === own && n.hp !== 0 && n.animId !== 36) ?? [];
-    const attackers = wings();
-    if (attackers.length > 1) throw Error('Legends return gate has multiple Death wing attackers');
-    const wing = attackers[0];
-    if (wing) {
-     const defeated = () => !!sdk.getState()?.nearbyNpcs.some(n => n.id === wing.id && n.index === wing.index && (n.hp === 0 || n.animId === 36)); // Native bat_death
+    const attacker = () => sdk.getState()?.nearbyNpcs
+     .filter(n => n.id === npcId('deathwing') && n.targetIndex === own && n.hp !== 0 && n.animId !== 36)
+     .sort((a, b) => a.distance - b.distance)[0];
+    for (let wing = attacker(); wing; wing = attacker()) {
+     if (remainingWingFights-- === 0) throw Error('Legends return gate Death wing budget exhausted');
+     const index = wing.index;
+     const defeated = () => !!sdk.getState()?.nearbyNpcs.some(n => n.id === npcId('deathwing') && n.index === index && (n.hp === 0 || n.animId === 36)); // Native bat_death
      let observed = false;
-     await combat('deathwing', {x: 2809, z: 9313}, () => observed ||= defeated(), null, wing.index);
+     await combat('deathwing', {x: 2809, z: 9313}, () => observed ||= defeated(), null, index);
      if (!observed) throw Error('Legends Death wing defeat unobserved');
      await walk(2809, 9313);
     }
-    if (wings().length) throw Error('Legends return gate still has a Death wing attacker');
    };
    await trials('return strength trial', () => interact('lgstrengthtrialgatel', 2810, 9314), () => near(2810, 9314, 0), /run out of steam/i, [/Yes, I'm very strong/i, /Yes, I'll try to push through/i], 80, clearAttacker);
   }
