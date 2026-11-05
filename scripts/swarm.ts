@@ -647,7 +647,7 @@ if (import.meta.main) {
             const alive = (pid: number) => { try { process.kill(pid, 0); return true; } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ESRCH'; } };
             const producer = (a: string, id: string) => {
                 const receipt = listAttempts(a, LIVE_SERVER).find(x => x.attemptId === id)?.receipt;
-                return receipt && { pid: receipt.owner.pid, updatedAt: receipt.updatedAt };
+                return receipt ? { pid: receipt.owner.pid, updatedAt: receipt.updatedAt } : undefined;
             };
             const accounts = planned.flatMap(p => p.accounts).concat(lifecycleAccounts(join(prac, 'session-lifecycle/live', LIVE_SERVER)));
             for (const [a, reason] of orphanedSessionEnds(accounts, ended, busy, a => readLogoutProof(a, LIVE_SERVER), producer, alive)) {
