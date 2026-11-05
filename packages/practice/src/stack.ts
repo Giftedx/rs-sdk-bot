@@ -33,6 +33,8 @@ export function engineCommand(opts: StackOptions, port: number): { cmd: string[]
         NODE_TICKRATE: String(opts.tickMs ?? PROOF_TICK_MS),
         NODE_XPRATE: String(opts.xpRate ?? 25),
         WEB_PORT: String(port),
+        // The coverage scoreboard reads this trace (patches/rs-sdk.md item 8).
+        ACTION_TRACE_FILE: join(practiceDir(), 'action-trace.log'),
     };
     const pre = opts.enginePreload;
     if (!pre) return { cmd: ['bun', MARKERS.engine], env };

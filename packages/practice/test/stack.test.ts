@@ -2,10 +2,11 @@ import { test, expect } from 'bun:test';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { practiceDir } from '../src/paths';
 import { engineCommand, MARKERS, startStack, waitReady } from '../src/stack';
 
 test('default engine launch has no preload; a diagnostic preload is explicit and keeps the marker', () => {
-    expect(engineCommand({}, 8888)).toEqual({ cmd: ['bun', MARKERS.engine], env: { NODE_TICKRATE: '150', NODE_XPRATE: '25', WEB_PORT: '8888' } });
+    expect(engineCommand({}, 8888)).toEqual({ cmd: ['bun', MARKERS.engine], env: { NODE_TICKRATE: '150', NODE_XPRATE: '25', WEB_PORT: '8888', ACTION_TRACE_FILE: join(practiceDir(), 'action-trace.log') } });
     const module = join(import.meta.dir, '../src/shark-fishing-diagnostic.ts');
     const r = engineCommand({ tickMs: 150, xpRate: 25, enginePreload: { module, env: { SHARK_FISHING_DIAGNOSTIC_OUT: 'x' } } }, 8888);
     expect(r.cmd).toEqual(['bun', '--preload', module, MARKERS.engine]);

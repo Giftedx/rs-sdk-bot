@@ -2,7 +2,7 @@ import { test, expect } from 'bun:test';
 import { domainOf } from '../../knowledge/src/actions';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, sideSnapshots, fleetSkills, practicePasses } from '../src/coverage';
+import { named, questScript, questJournalNames, questStages, itemsHeld, skillBands, domainStages, firedActions, sideSnapshots, fleetSkills, practicePasses } from '../src/coverage';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -22,7 +22,26 @@ test('named needs a debug name or a 5+ letter display name in our source', () =>
     expect(named({ domain: 'x', trigger: 'opnpc1', subject: 'father_aereck_2', name: 'Father Aereck', src: '' }, text)).toBe(true);
     expect(named({ domain: 'x', trigger: 'oploc1', subject: 'khazzacklowwall', src: '' }, text)).toBe(true);
     expect(named({ domain: 'x', trigger: 'oploc1', subject: 'door1', name: 'Door', src: '' }, 'door')).toBe(false);
-    expect(domainStages([{ domain: 'a', trigger: 'oploc1', subject: 'khazzacklowwall', src: '' }, { domain: 'a', trigger: 'oploc1', subject: 'zzzz', src: '' }], text)).toEqual([{ domain: 'a', actions: 2, named: 1, share: 50 }]);
+    expect(domainStages([{ domain: 'a', trigger: 'oploc1', subject: 'khazzacklowwall', src: '' }, { domain: 'a', trigger: 'oploc1', subject: 'zzzz', src: '' }], text)).toEqual([{ domain: 'a', actions: 2, named: 1, fired: 0, share: 50 }]);
+});
+
+test('firedActions reads script names and drops torn lines', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'trace-'));
+    expect(firedActions(join(dir, 'missing.log')).size).toBe(0);
+    const file = join(dir, 'action-trace.log');
+    writeFileSync(file, '[opnpc1,cook]\r\n[oploc1,_door]\n[opnpc1,cook]\n[if_button,quest_journal:com_1]\n[oploc1,to\ncooks_proc\n');
+    expect([...firedActions(file)].sort()).toEqual(['if_button,quest_journal:com_1', 'opnpc1,cook', 'oploc1,_door'].sort());
+});
+
+test('domainStages counts an action as fired only on its exact trigger and subject', () => {
+    const fired = new Set(['opnpc1,cook', 'oploc1,_door', 'proc,cook', 'opnpc3,other']);
+    const rows = domainStages([
+        { domain: 'q', trigger: 'opnpc1', subject: 'cook', src: '' },
+        { domain: 'q', trigger: 'opnpc2', subject: 'cook', src: '' },
+        { domain: 'r', trigger: 'oploc1', subject: '_door', src: '' },
+    ], '', fired);
+    expect(rows.find(d => d.domain === 'q')).toMatchObject({ actions: 2, fired: 1 });
+    expect(rows.find(d => d.domain === 'r')).toMatchObject({ actions: 1, fired: 1 });
 });
 
 test('quest folders map to our script names', () => {
