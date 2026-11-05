@@ -132,7 +132,8 @@ test('Gujuo distinguishes a late verified messenger grant from an unknown stock 
     prayer -= 5;
     failed = true;
     expect(done()).toBe(true);
-    pack = {721: 1, 3206: 1, ...(variant === 'extra' ? {995: 1} : {})};
+    pack = {721: 1, 3206: 1};
+    if (variant === 'extra') pack[995] = 1;
    },
   });
   if (variant === 'observed') expect(await result).toBe(false);
