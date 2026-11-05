@@ -3,7 +3,7 @@ import { atTile, checked, levelIs, type Outcome } from './act';
 import { waitTicks } from './ticks';
 import { watchTickStream } from './tick-stream';
 import type { TickSource } from './ticks';
-import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World,type DoorBlock } from './world';
+import { blockedDoorsNear,installDoorPolicy,transportAllowed,interactionApproach,canonicalTransportLeg, type Account, type Door, type Leg, type Tile, type World, ROUTE_BUDGET_MS,type DoorBlock } from './world';
 import {accountForSdk,withDoorPolicy} from './door-policy';
 import {guardWalk} from './danger';
 import {disembark,type BoatSession} from './boat';
@@ -25,7 +25,8 @@ export interface Walker extends TickSource {
     };
 }
 
-export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal }
+// planBudgetMs bounds the route search (world.ts ROUTE_BUDGET_MS when absent); a search over budget is 'no route (budget)'.
+export interface WalkOptions { maxRetriesPerLeg?: number; legTimeoutTicks?: number; signal?: AbortSignal; planBudgetMs?: number }
 
 const cheb = (a: Tile, b: { worldX: number; worldZ: number }) => Math.max(Math.abs(a.x - b.worldX), Math.abs(a.z - b.worldZ));
 
@@ -277,10 +278,12 @@ export async function goTo(s: Walker, world: World, to: Tile, acct: Account, opt
     // A session with a bank snapshot may stop at a bank for fares first (trip.ts).
     const name=(s as {name?:string}).name,banker=s as unknown as Parameters<typeof takeItems>[0];
     const stock=name&&typeof (banker.bot as {openBank?:unknown}).openBank==='function'?bankStock(name):undefined;
-    const r = world.offThread?await planTripOffThread(from,to,acct,stock)
-        :stock?planTrip(world,from,to,acct,stock)
-        :(()=>{const d=world.route(from,to,acct);return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
-    if (!r) return { ok: false, reason: 'precondition', detail: `no route to ${to.x},${to.z},${to.level}`, ticks: 0 };
+    const budgetMs=opts.planBudgetMs??ROUTE_BUDGET_MS,deadline=performance.now()+budgetMs;
+    let why='';
+    const r = world.offThread?await planTripOffThread(from,to,acct,stock,budgetMs)
+        :stock?planTrip(world,from,to,acct,stock,undefined,undefined,{deadline})
+        :(()=>{const d=world.route(from,to,acct,{deadline});if(!d.ok)why=d.reason;return d.ok?{cost:d.cost,legs:d.legs} as TripPlan:null;})();
+    if (!r) return { ok: false, reason: 'precondition', detail: `no route${why==='budget'?` (search over ${budgetMs} ms)`:''} to ${to.x},${to.z},${to.level}`, ticks: 0 };
     // Actor prerequisites are synchronous query masks, not long-lived refusal
     // walls: gear/stat changes and allowed exits must be re-evaluated.
     const first = await walkRoute(s, r.legs, opts);
