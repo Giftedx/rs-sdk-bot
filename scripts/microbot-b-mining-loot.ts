@@ -15,6 +15,9 @@ export function lootCapacity(s:BotWorldState,i:GroundItem,definition:LootDefinit
 }
 export function selectGroundLoot(s:BotWorldState,p:LootPolicy,definition:(id:number)=>LootDefinition|undefined,left=p.maximumUnits){
  return s.groundItems.flatMap(i=>{
+  // Native pickup addresses the tile and item ID. Differently sized stacks
+  // at that address cannot be selected individually or bounded by this row.
+  if(s.groundItems.some(other=>other.id===i.id&&other.x===i.x&&other.z===i.z&&other.count!==i.count))return[];
   const d=definition(i.id);if(!d||!Number.isSafeInteger(i.count)||i.count<1||i.count>left||!Number.isSafeInteger(d.cost)||d.cost<0||!Number.isSafeInteger(i.count*d.cost)||i.reachable===false||i.distance>p.radius||!lootCapacity(s,i,d)||s.nearbyPlayers.some(player=>Math.max(Math.abs(player.x-i.x),Math.abs(player.z-i.z))<=1))return[];
   const listed=p.ids.includes(i.id)||p.names.some(name=>name.toLowerCase()===i.name.toLowerCase()),value=i.count*d.cost,valued=value>=p.minimumValue&&value<=p.maximumValue;
   return(p.mode==='list'?listed:p.mode==='value'?valued:listed||valued)?[{item:i,value}]:[];
