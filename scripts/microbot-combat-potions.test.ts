@@ -42,3 +42,14 @@ test('generic potion job owns the core stop callback until its bounded bank reco
  expect(()=>scope.direct({type:'interactNpc',npcIndex:7,optionIndex:2,reason:'late attack'})).toThrow('original owner/life/stop');
  await recover();await recover();expect(banks).toBe(1);await onStop!(a.s,'died');expect(control.reason()).toBe('stop file');
 });
+
+test('actual SDK banker-only bank fallback remains available inside stopped combat cleanup',async()=>{
+ const a=actor();a.player.combat={targetType:'none',targetIndex:-1};let opened=false,inputs=0;const banker={id:494,index:8,name:'Banker',distance:1,optionsWithIndex:[{text:'Bank',opIndex:3}]},state=a.s.sdk.getState;
+ a.client.npc[8]={type:{id:494}};a.s.sdk.getState=()=>({...state(),tick:0,nearbyNpcs:[banker],nearbyLocs:[],dialog:{isOpen:false,options:[]},interface:{isOpen:opened,interfaceId:5292},bank:{isOpen:opened}});a.s.sdk.getNearbyLocs=()=>[];a.s.sdk.findNearbyNpc=()=>banker;
+ a.s.sdk.sendAction=async(action:any)=>{expect(action).toMatchObject({type:'interactNpc',npcIndex:8,optionIndex:3});inputs++;opened=true;return{success:true};};a.s.sdk.sendInteractNpc=function(index:number,op:number){return this.sendAction({type:'interactNpc',npcIndex:index,optionIndex:op});};a.s.sdk.waitForCondition=async(predicate:any)=>{const s=a.s.sdk.getState();if(!predicate(s))throw Error('unexpected bank wait');return s;};
+ let stop=false;const view=combatPotionSession(a.s,()=>stop,100);stop=true;let result:any;await view.withCombatPotionCleanup(async()=>{result=await view.bot.openBank(100);});expect(result.success).toBe(true);expect(inputs).toBe(1);expect(a.inventory[0]!.id).toBe(125);
+});
+
+test('stopped cleanup banker exception rejects combat, unknown types, stale identity and unreachable range',async()=>{
+ for(const mode of ['attack','ordinary','stale','far','unknown-distance','missing-option']){const a=actor(),banker:any={id:494,index:8,distance:1,optionsWithIndex:[{text:'Bank',opIndex:3}]};a.npcs.splice(0,a.npcs.length,banker);a.client.npc[8]={type:{id:494}};if(mode==='ordinary'){banker.id=41;a.client.npc[8].type.id=41;}if(mode==='stale')a.client.npc[8].type.id=495;if(mode==='far')banker.distance=3;if(mode==='unknown-distance')banker.distance=NaN;if(mode==='missing-option')banker.optionsWithIndex=[];const view=combatPotionSession(a.s,()=>false,100);await view.withCombatPotionCleanup(async()=>{expect(()=>view.direct({type:'interactNpc',npcIndex:8,optionIndex:mode==='attack'?2:3,reason:'bank fallback'})).toThrow('new paid');});expect(a.resumes).toBe(0);expect(a.calls).toBe(0);}
+});
