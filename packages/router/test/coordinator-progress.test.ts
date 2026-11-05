@@ -63,6 +63,29 @@ test('replacement cycles, identity swaps and successful-work replacements fail a
  addTasks(s,[task('verified',{kind:'build'}),task('replacement',{kind:'build'})],0);complete(s,'verified',true,2);
  expect(()=>acceptProposal(s,{reason:'bad',capabilities:[],tasks:[],replacements:[{from:'verified',to:'replacement'}]})).toThrow('replacement');
 });
+test('a replacement cannot strand the queue in a cycle through account provisioning', () => {
+ const bindings: Partial<CoordTask>[] = [
+  {accountFrom:'register'},
+  {participants:['@register','Partner']},
+ ];
+ for (const binding of bindings) {
+  const state = initialState();
+  addTasks(state, [
+   task('original-proof'),
+   task('register', {kind:'provision', role:'quests', dependsOn:['original-proof']}),
+   {...run('quest'), account:undefined, ...binding},
+  ], 0);
+  const before = JSON.stringify(state);
+  expect(() => acceptProposal(state, {
+   reason:'Replace the original proof',
+   capabilities:[],
+   tasks:[task('replacement-proof', {dependsOn:['quest']})],
+   replacements:[{from:'original-proof', to:'replacement-proof'}],
+  })).toThrow('replacement dependency cycle');
+  expect(JSON.stringify(state)).toBe(before);
+  expect(chooseTask(state, 1)?.id).toBe('original-proof');
+ }
+});
 test('a freshly qualified finite live consumer gets one turn before an unrelated build, then builders drain it',()=>{
  const s=initialState();addTasks(s,[task('proof'),run('use-proof',['proof']),task('build',{kind:'build',priority:100})],0);
  complete(s,'proof',true,10,{delivery:{ok:true}});expect(chooseTask(s,11)?.id).toBe('use-proof');
