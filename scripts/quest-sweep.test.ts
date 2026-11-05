@@ -3,6 +3,7 @@ import {plan,needs,nearestBank,presetFor,leaveStronghold,walkCorridor,KARAMJA,ga
 import {equipment,questSweepChecks} from '../packages/practice/src/quest-sweep-proof';
 import type {Session} from '../packages/core/src/inprocess';
 import type {PathDeps,PathPoint,PathResult} from '../packages/core/src/walk';
+import type {Tile} from '../packages/core/src/world';
 
 // Retained bank-stage.log: goTo reported "no route to 2850,3175,0" after Brimhaven. The courier walks that tile
 // as a tolerance-5 pass-by point of one walkPath call.
@@ -452,4 +453,43 @@ test('the tool plan keeps the quest its own runes beside the casts',async()=>{
  expect(toolPlan(tools,need,[{id:556,count:3}],[],[{id:556,count:714}],[])).toEqual({withdraw:[{id:556,count:714}],missing:[]});
  // A tool the quest does not need is planned as before, a worn bow counts as held.
  expect(toolPlan([{id:841,count:1},{id:882,count:40}],need,[],[{id:841,count:1}],[{id:882,count:21}],[])).toEqual({withdraw:[{id:882,count:21}],missing:[{id:882,count:19}]});
+});
+
+test('the way up to an upstairs target is the ground foot of the nearest ascending transport, followed down from a middle floor',async()=>{
+ const {wayUp}=await import('./quest-sweep');
+ const t=(from:{x:number;z:number;level:number},to:{x:number;z:number;level:number})=>({locName:'ladder',option:'op1',from,to,exact:false,src:'',toSrc:'',handler:''}) as any;
+ // Hudo's counter on the Grand Tree's first floor: the ladder base at 2466,3495, not the wall beneath the counter; a way
+ // down, one onto another floor and one 100 tiles off do not count. A second-floor target follows the middle ladder down.
+ const transports=[t({x:2466,z:3495,level:0},{x:2466,z:3495,level:1}),t({x:2466,z:3495,level:1},{x:2466,z:3495,level:0}),
+  t({x:2466,z:3495,level:1},{x:2466,z:3495,level:2}),t({x:2549,z:3508,level:0},{x:2549,z:3508,level:1})];
+ expect(wayUp(transports,{x:2448,z:3509,level:1})).toEqual({x:2466,z:3495,level:0});
+ expect(wayUp(transports,{x:2460,z:3500,level:2})).toEqual({x:2466,z:3495,level:0});
+ expect(wayUp([],{x:2448,z:3509,level:1})).toEqual({x:2448,z:3509,level:0});
+ expect(wayUp(transports,{x:3000,z:3000,level:0})).toEqual({x:3000,z:3000,level:0});
+});
+
+test('a field on the tour of the other sellers and the quest start replaces a purchase; a field off it does not',async()=>{
+ const {pickInstead,detour,tourOrder}=await import('./quest-sweep');
+ const ard={x:2655,z:3283,level:0},mso={x:2595,z:3087,level:1},wydin={x:3014,z:3204,level:0},hudo={x:2448,z:3509,level:1},start={x:3047,z:3256,level:0};
+ const lumbridge={x:3188,z:3266,level:0},yanille={x:2581,z:2968,level:0};
+ const fields=(id:number,at:Tile)=>id===1957?[lumbridge,yanille].sort((a,b)=>Math.max(Math.abs(a.x-at.x),Math.abs(a.z-at.z))-Math.max(Math.abs(b.x-at.x),Math.abs(b.z-at.z))):[];
+ const buy=(id:number,count:number,npc:string,tile:Tile)=>({id,count,name:npc,npcId:1,npc,tile});
+ // TheFullMonty's Goblin Diplomacy from the Ardougne bank: an air rune in Yanille, redberries from Wydin, onions from
+ // Hudo. The purchases run Yanille, Port Sarim (419 from Yanille against Hudo's 422), then 566 tiles back west: the
+ // onion field adds far less to the tour, so the onions are picked and the shop list keeps the other two.
+ const buys=[buy(1951,3,'Wydin',wydin),buy(1957,2,'Hudo',hudo),buy(556,1,'Magic store owner',mso)];
+ expect(tourOrder(ard,buys.map(b=>b.tile))).toEqual([mso,wydin,hudo]);
+ const r=pickInstead(buys,ard,start,fields);
+ expect(r.buys.map(b=>b.npc)).toEqual(['Wydin','Magic store owner']);
+ expect(r.picks.map(p=>({id:p.id,count:p.count}))).toEqual([{id:1957,count:2}]);
+ expect(r.picks[0]!.detours.field).toBeLessThan(r.picks[0]!.detours.seller);
+ expect(r.picks[0]!.detours.seller).toBe(detour([ard,mso,wydin,start],hudo));
+ // Onions alone from the Ardougne bank for a quest starting in Ardougne: Hudo is the smaller detour and stays a purchase.
+ const alone=pickInstead([buy(1957,2,'Hudo',hudo)],ard,{x:2662,z:3305,level:0},fields);
+ expect(alone.buys.map(b=>b.npc)).toEqual(['Hudo']);
+ expect(alone.picks).toEqual([]);
+ // An item no field grows is never switched.
+ expect(pickInstead([buy(1951,3,'Wydin',wydin)],ard,start,fields)).toEqual({buys:[buy(1951,3,'Wydin',wydin)],picks:[]});
+ expect(detour([ard],hudo)).toBe(226);
+ expect(detour([],hudo)).toBe(0);
 });
