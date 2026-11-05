@@ -151,14 +151,19 @@ function clearFocus(capability:string){
 const RULE_RECHECK_MS=5*60*1000;
 // The rule reads the fleet best from the scoreboard file; it rebuilds the scoreboard only when the file is older than this.
 const RULE_BOARD_MAX_AGE_MS=60*60*1000;
-let rulePass={at:0,receipts:-1};
+type RulePass={at:number;receiptSequence:number};
+let rulePass:RulePass={at:0,receiptSequence:-1};
+
+export function rulePassDue(state:Pick<CoordinatorState,'latestReceiptSequence'>,previous:RulePass,now:number):boolean{
+ return (state.latestReceiptSequence??0)!==previous.receiptSequence||now-previous.at>=RULE_RECHECK_MS;
+}
 let unlocks:((skill:string)=>number[])|undefined;
 // A skipped chain is reported once per reason, not on every pass.
 const ruleSkips=new Set<string>();
 function runRules(state:CoordinatorState,liveLimit:number){
- const receipts=state.tasks.filter(r=>r.receipt).length,now=Date.now();
- if(receipts===rulePass.receipts&&now-rulePass.at<RULE_RECHECK_MS)return;
- rulePass={at:now,receipts};
+ const now=Date.now();
+ if(!rulePassDue(state,rulePass,now))return;
+ rulePass={at:now,receiptSequence:state.latestReceiptSequence??0};
  try{
   let board:any;try{board=freshScoreboard(projectRoot,RULE_BOARD_MAX_AGE_MS);}catch{board=null;}
   const fleetSkills:any[]|undefined=Array.isArray(board?.fleetSkills)?board.fleetSkills:undefined;
