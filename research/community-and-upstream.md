@@ -540,8 +540,16 @@ Each quest failed the full practice batch. Conditions: the quest's preset (every
 | The Tourist Trap | The curtain at 3291,3031 closes Siad's building from the south; the anvil loop could click during the 8-tick forge | Open the curtain from 3291,3030 both ways; wait for the roll; 5 bars | 1,187, 1,215, 1,226 |
 | Priest in Peril | The SDK sends nothing for a target with no route, so `talk` saw no refusal and never opened the door; the temple's west door shuts the bot in | `talk` reads the `reachable` flag; open the door to leave | 882, 828, 852 |
 | Horror from the Deep | The pipe's north stand is in the yard past the outpost gate; a message from the previous wall item skipped a slot | Go through the gate; count each item | 690, 643, 629 |
+| The Grand Tree | With one far goal off Hazelmere's island the bot paced 2670-2673,3089-3091 until the prayer ran out and the spiders killed it | Leave by the north pier in short legs (evidence: `.practice/fix-a/proof-grandtree.log`) | 1,794, 1,698, 1,702 |
+| Tree Gnome Village | The walk planner closes the battlefield for a weak account (`packages/core/src/danger.ts`) and stopped at 2458,3325 | Client-routed hops by 2492,3254 and 2483,3263 under Protect from Melee (evidence: `.practice/fix-a/proof-tree.log`) | 679, 700, 714 |
 
 The anvil cause is inferred: 2 of 3 runs failed before the change and 3 of 3 passed after it, with two more bars in the same change. The Clock Tower failure (`walk to trough`) is not addressed here.
+
+Two quests pass 2 of 3 and are not closed. Evidence: `.practice/fix-a/proof-mm.log`, `.practice/fix-a/proof-zombiequeen.log`.
+
+- Monkey Madness: 4,971 and 4,432 ticks. The third run failed `zooknock: no enchanted bar` at 2805,9143: Zooknock's pages shut after the mould, so the bar step never ran. The cause of the shut page is not known. A talk about the amulet can run the same check again (not tested).
+- Shilo Village: 2,484 and 2,557 ticks. The second run failed `walk to cairn rocks` at 2910,2992 after a fall on the waterfall path. The cause is not known.
+
 
 ### 9.6 Rival repos and published scripts
 
