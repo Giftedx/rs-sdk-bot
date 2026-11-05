@@ -35,12 +35,20 @@ export function legendsPackEffect(before:Readonly<Record<number,number>>,after:R
 export function legendsMapEffect(before:Record<number,number>,after:Record<number,number>,complete:boolean){return legendsPackEffect(before,after,{[obj('papyrus')]:-1,...(complete?{[I.notes]:-1,[I.map]:1}:{})})&&(!complete||(after[I.map]??0)===1);}
 export async function legendsMapAttempt(io:{pack:()=>Record<number,number>;saw:(pattern:RegExp)=>boolean;step:(send:()=>Promise<unknown>,done:()=>boolean)=>Promise<void>;send:()=>Promise<unknown>},complete:boolean){
  const before={...io.pack()},success=()=>io.saw(/neatly add a new section/i);
+ const summons = obj('regicide_quest_kings_summons');
+ const mappingStock = () => {
+  const current = { ...io.pack() };
+  if (!before[summons] && current[summons] === 1 && io.saw(/Kings messenger.*King Lathas sent this message for you/i)) {
+   delete current[summons];
+  }
+  return current;
+ };
  const failure=()=>io.saw(/make a mess but are able to rescue|snap your stick|paper is totally ruined|destroying them both/i);
  // Native closes the section page, delays, then pauses on completion before converting the notes.
- await io.step(io.send,()=>success()?io.saw(/Mapping the Kharazi Jungle \*\*\*/i)&&legendsMapEffect(before,io.pack(),complete):failure());
- if(success()){if(!legendsMapEffect(before,io.pack(),complete))throw Error('Legends mapping stock conversion differs');return true;}
+ await io.step(io.send,()=>success()?io.saw(/Mapping the Kharazi Jungle \*\*\*/i)&&legendsMapEffect(before,mappingStock(),complete):failure());
+ if(success()){if(!legendsMapEffect(before,mappingStock(),complete))throw Error('Legends mapping stock conversion differs');return true;}
  const paper=io.saw(/paper is totally ruined|destroying them both/i)?-1:0,charcoal=io.saw(/snap your stick|destroying them both/i)?-1:0;
- if(!failure()||!legendsPackEffect(before,io.pack(),{[obj('papyrus')]:paper,[obj('charcoal')]:charcoal}))throw Error('Legends map outcome unknown');
+ if(!failure()||!legendsPackEffect(before,mappingStock(),{[obj('papyrus')]:paper,[obj('charcoal')]:charcoal}))throw Error('Legends map outcome unknown');
  return false;
 }
 export function legendsContext(raw:Session,cap:number,hpFloor=25){const client=raw.client,executor=(client as any).executeBotAction,server=raw.lifecycle?.server,p=raw.sdk.getState()?.player,life=p?.lifeId,respawns=p?.respawnCount??0,start=raw.tick();let ended=false,lost=false;void raw.ended.then(()=>{ended=true;});return{start,alive(){const now=raw.sdk.getState()?.player;if(raw.client!==client||(client as any).executeBotAction!==executor)lost=true;return raw.lifecycle?.server===server&&!lost&&!ended&&typeof executor==='function'&&life!==undefined&&!!now&&!now.isDead&&now.lifeId===life&&(now.respawnCount??0)===respawns&&(raw.sdk.getSkill('Hitpoints')?.level??0)>=hpFloor&&raw.tick()-start<cap;}};}

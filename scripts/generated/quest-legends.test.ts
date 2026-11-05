@@ -68,3 +68,26 @@ test('Gujuo summon waits out a known unpaid busy refusal and never retries an un
  message='A nearby Jungle wolf takes a dislike to the noise you are making.';await expect(legendsSummonAttempt(io)).rejects.toThrow('hostile wildlife');
  message='';await expect(legendsSummonAttempt(io)).rejects.toThrow('unknown effect');expect(sends).toBe(4);expect(cooldowns).toBe(1);
 });
+
+
+test('mapping settles an observed Kings messenger grant during the receipt tail', async () => {
+ for (const variant of ['messenger', 'no-dialogue', 'extra-item', 'extra-letter']) {
+  let stock: Record<number, number> = {714: 1, 970: 4, 973: 3};
+  const pages = ['You neatly add a new section', '*** Mapping the Kharazi Jungle ***'];
+  const outcome = legendsMapAttempt({
+   pack: () => stock,
+   saw: re => pages.some(page => re.test(page)),
+   send: async () => { stock = {714: 1, 970: 3, 973: 3}; },
+   step: async (send, done) => {
+    await send();
+    expect(done()).toBe(true);
+    if (variant !== 'no-dialogue') pages.push('Kings messenger King Lathas sent this message for you.');
+    stock[3206] = variant === 'extra-letter' ? 2 : 1;
+    if (variant === 'extra-item') stock[995] = 1;
+   },
+  }, false);
+  if (variant === 'messenger') expect(await outcome).toBe(true);
+  else await expect(outcome).rejects.toThrow('mapping stock conversion differs');
+  expect(stock[3206]).toBe(variant === 'extra-letter' ? 2 : 1);
+ }
+});
