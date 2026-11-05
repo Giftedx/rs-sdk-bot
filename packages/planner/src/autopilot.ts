@@ -126,9 +126,12 @@ export function finishedTrainers(jobs: readonly any[], side: string, assigned: R
         && assess(linesSince(j.account, assigned[j.account]!.offset)).ok > 0).map(j => j.account);
 }
 
-// Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail, a
-// RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// Retirement from a job's own log lines (since the autopilot assigned it): the last RETIRE_FAILS RESULTs all fail with
+// no progress, a RESULT reports a death, or the last LEDGER spent WASTE_LIMIT or more of its ticks idle or walking.
+// A trainer that hits its tick cap short of the target ends fail with the XP it gained (scripts/generated/thieving60.ts
+// prints xp=<gain>), so the supervisor runs it again; such a fail is progress and does not count toward retirement.
 export const RETIRE_FAILS = 2, WASTE_LIMIT = 0.9;
+export const progressed = (result: string) => /\b(?:xp|gained|coinsGained|banked)=[1-9]\d*\b/.test(result);
 export function assess(lines: readonly string[]): { retire: boolean; reason: string; ok: number; fail: number } {
     const clean = lines.map(l => l.replace(/^\s*(\|\s*)?(\[[^\]]+\]\s*)?/, ''));
     const results = clean.filter(l => /^RESULT (ok|fail)\b/.test(l));
@@ -137,7 +140,7 @@ export function assess(lines: readonly string[]): { retire: boolean; reason: str
     const died = results.find(l => /\b(?:died|death)\b(?!=)|\b(?:died|death)=(?!false\b)/i.test(l));
     if (died) return { retire: true, reason: `death: ${died.slice(0, 120)}`, ok, fail };
     const tail = results.slice(-RETIRE_FAILS);
-    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail'))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail };
+    if (tail.length === RETIRE_FAILS && tail.every(l => l.startsWith('RESULT fail') && !progressed(l))) return { retire: true, reason: `${RETIRE_FAILS} fail RESULTs: ${tail.at(-1)!.slice(0, 120)}`, ok, fail };
     const ledger = clean.filter(l => l.startsWith('LEDGER ')).at(-1)?.match(/^LEDGER ticks=(\d+).* move=(\d+).* idle=(\d+)/);
     if (ledger && +ledger[1]! >= 300 && (+ledger[2]! + +ledger[3]!) / +ledger[1]! >= WASTE_LIMIT)
         return { retire: true, reason: `tick waste ${(100 * (+ledger[2]! + +ledger[3]!) / +ledger[1]!).toFixed(0)}% idle+move`, ok, fail };
@@ -207,6 +210,12 @@ export function jobResources(job: { script?: string; args?: string[]; env?: Reco
     return [...new Set(out)];
 }
 
+// The freshest of an account's observations by `at`: its status file and its row in the side's fleet snapshot. A fresh
+// cloud container has no status files, so without the snapshot every account would plan as a level-1 start.
+export function freshest(...observations: readonly any[]): any {
+    return observations.filter(o => o && typeof o === 'object').reduce((best, o) => (Number(o.at) || 0) > (Number(best?.at) || 0) ? o : best, null);
+}
+
 // An account as the planner sees it, from its status file (.practice/status/<name>.json) or a fleet snapshot row:
 // base levels, and pack, bank and worn counts by item name. No status: a fresh account at level 1 (Hitpoints 10).
 export function accountFrom(name: string, side: string, status: any, itemName: (id: number) => string | undefined): Acct {
@@ -248,7 +257,8 @@ export function reservedResources(jobs: readonly any[], side: string, paused: Re
 // This side's fleet claim (fleet/claims/<side>.json on the fleet-data branch): every exclusive resource an enabled job
 // of this side's own accounts holds, planner-made or hand-made, from the plan the swarm runs. scripts/fleet-sync.ts
 // writes it on every sync, so it never depends on the planner running; scripts/autopilot.ts on every side ignores a
-// claim older than its CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+// claim older than CLAIM_MAX_AGE_MS, so a side that stops syncing releases its spots.
+export const CLAIM_MAX_AGE_MS = 2 * 3600_000;
 export function claimFor(jobs: readonly any[], side: string, sideOf: (account: string) => string, now = Date.now()): { side: string; at: number; resources: string[] } {
     const held = jobs.filter(j => j?.enabled !== false && jobNames(j).length > 0 && jobNames(j).every(a => sideOf(a) === side)).flatMap(jobResources);
     return { side, at: now, resources: [...new Set(held)].sort() };

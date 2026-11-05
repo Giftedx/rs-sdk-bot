@@ -101,7 +101,10 @@ try {
                 await q.s.bot.attack(n as any);
                 await q.waitUntil(() => !alive(), 6);
             }
-            if (!(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index)) break;
+            // An NPC can drop off the list for a tick while it lives (proof run: Holthion left at 34 of 87 damage, no amulet
+            // on the floor), so a kill with a drop ends on the drop and the bot attacks again otherwise.
+            await q.waitTicks(2);
+            if (drop !== undefined ? q.has(drop) || (q.st()?.groundItems ?? []).some((o: any) => o.id === drop) : !(q.st()?.nearbyNpcs ?? []).some((m: any) => m.index === n.index)) break;
         }
         await q.waitTicks(2);
         if (drop !== undefined) await pickup(label, drop);
@@ -394,6 +397,9 @@ try {
         await q.converse([], () => !q.dialogOpen(), 10);
         await q.talk('klank', /^klank$/i, [/what happened to them/i], () => q.has(ITEM.gauntlets), { x: 2323, z: 9803 }, 60);
         // The barrel has forceapproach=south at angle 1, so the bot uses it from the west tile (upass.loc).
+        // The hut door (loc 1530, south wall of 2325,9801) is shut on a fresh server and the planner treats it as open.
+        await q.walk('to brew hut', [{ x: 2325, z: 9801, tol: 0 }]);
+        await q.openDoor('brew hut door', 2325, 9801);
         await q.walk('to barrel', [{ x: 2326, z: 9799, tol: 0 }]);
         await q.step('brew', () => q.useOnLoc(ITEM.bucket, q.findLoc((l: any) => l.id === 3344) ?? { id: 3344, x: 2327, z: 9799 }), () => q.has(ITEM.brew), 10, 3);
         await q.walk('to tomb', [{ x: 2357, z: 9799, tol: 2 }]);

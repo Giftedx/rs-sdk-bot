@@ -19,6 +19,7 @@ const MONTAI = { x: 2523, z: 3211 };
 const WALL = { x: 2509, z: 3253 };                         // khazzacklowwall, climbed from the south side
 const DOOR = { x: 2502, z: 3250 };                         // khazard_stronghold_door, opens from the north side
 const WARLORD = { x: 2457, z: 3302 };
+const BATTLEFIELD: [number, number][] = [[2492, 3254], [2483, 3263]];
 const BALLISTA = { x: 2508, z: 3210 };                     // catabow 3x3 (maps/m39_50.jm2 0 12 10)
 const LADDER = { x: 2503, z: 3252 };                       // ladder up inside the stronghold (m39_50.jm2 0 7 52)
 const CHEST = { x: 2506, z: 3259 };                        // chestclosed_khazard on level 1 (m39_50.jm2 1 10 59)
@@ -156,7 +157,11 @@ try {
         // Prayer on from the south edge of the battlefield: a trooper hit the bot (HP 10 -> 8) at 2468,3270 in a test run.
         await q.walk('to battlefield', [{ x: 2504, z: 3226, tol: 3 }]);
         await setPfm(true);
-        await q.walk('to warlord', [{ x: WARLORD.x + 1, z: WARLORD.z - 6, tol: 2 }]);
+        // The walk planner closes the battlefield for this account (deadly hunters, packages/core/src/danger.ts) and went
+        // round by the north of West Ardougne to 2458,3325. Under the prayer the way is open: client-routed hops, as the
+        // raw pathfinder runs it (corners 2492,3254 and 2483,3263).
+        for (const [hx, hz] of BATTLEFIELD) await q.dash(`battlefield ${hx},${hz}`, hx, hz, 2, 30);
+        await q.dash('to warlord', WARLORD.x + 1, WARLORD.z - 6, 2, 30);
         const wl = () => q.npc(/^khazard warlord$/i);
         if (!wl()) await q.waitUntil(() => !!wl(), 20);
         if (!wl()) await q.fail('no warlord');
@@ -180,7 +185,8 @@ try {
         await q.converse([], () => !q.dialogOpen(), 8);
         console.log(`NOTE warlord down at ${q.T()} casts=${casts} prayer=${points()} potions=${potions}`);
         q.milestone(8);
-        await q.walk('back to battlefield edge', [{ x: 2504, z: 3226, tol: 3 }]);
+        for (const [hx, hz] of [...BATTLEFIELD].reverse()) await q.dash(`back ${hx},${hz}`, hx, hz, 2, 30);
+        await q.dash('back to battlefield edge', 2504, 3226, 3, 30);
         await setPfm(false);
     }
 

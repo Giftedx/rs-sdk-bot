@@ -2,7 +2,7 @@ import {expect,test} from 'bun:test';
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {readAgentJobs,swarmBusy,tradeEnvironment} from './fleet-agent';
+import {readAgentJobs,swarmBusy,syncResult,tradeEnvironment} from './fleet-agent';
 
 test('agent refuses an unreadable custom plan instead of treating its accounts as idle',()=>{
  const dir=mkdtempSync(join(tmpdir(),'fleet-agent-plan-')),file=join(dir,'cloud.json');
@@ -15,4 +15,9 @@ test('agent refuses an unreadable custom plan instead of treating its accounts a
 test('trade launch replaces a stale release pin while preserving fleet side and directory',()=>{
  const env=tradeEnvironment('/fleet',{FLEET_SIDE:'cloud',WORKER_RELEASE:'old'},'current');
  expect(env).toMatchObject({FLEET_SIDE:'cloud',FLEET_DIR:'/fleet',WORKER_RELEASE:'current'});
+});
+
+test('a sync child reports its own RESULT line, or its exit code when it printed none',()=>{
+ expect(syncResult('pulling\nRESULT ok fleet-sync side=claude-cloud accounts=4 lease=none committed=false pushed=false\n',0)).toBe('RESULT ok fleet-sync side=claude-cloud accounts=4 lease=none committed=false pushed=false');
+ expect(syncResult('error: cannot pull\n',1)).toBe('RESULT fail fleet-sync exit 1');
 });

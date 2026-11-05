@@ -7,6 +7,7 @@
 // Cross-side transfers are orders in fleet/orders (scripts/fleet-trade.ts), synced through git (scripts/fleet-sync.ts);
 // scripts/fleet-agent.ts syncs and runs this machine's side of each order.
 import { existsSync, readFileSync } from 'node:fs';
+import { hostname } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const root = resolve(import.meta.dir, '..', '..', '..');
@@ -45,4 +46,28 @@ export function assertSideOwns(name: string, side = mySide(), owners = loadOwner
 // Accounts on `server` that the owners file lists, on either side.
 export function listedAccounts(server: string, owners = loadOwners()): Set<string> {
     return new Set([...owners].filter(([, o]) => o.server === server.toLowerCase()).map(([n]) => n));
+}
+
+// One live controller per side across machines. fleet/leases/<side>.json names the machine whose swarm runs the side's
+// jobs (host and controller pid, from its .practice/swarm-state.json heartbeat); scripts/fleet-sync.ts publishes it, and a
+// swarm on another machine refuses to start while it is fresh (scripts/swarm.ts), so two containers of one side never log
+// the same accounts in. A lease older than LEASE_MAX_AGE_MS has lapsed: the fleet agent syncs every 10 minutes, so a
+// machine that stops syncing frees its side within 15.
+export const LEASE_MAX_AGE_MS = 15 * 60_000;
+export type Lease = { side: Side; host: string; pid: number; at: number };
+export const thisHost = () => hostname();
+export function readLease(side: Side, dir = FLEET_DIR()): Lease | null {
+    try {
+        const l = JSON.parse(readFileSync(join(dir, 'leases', `${side}.json`), 'utf8'));
+        return typeof l?.host === 'string' && Number.isFinite(l.at) ? { side, host: l.host, pid: Number(l.pid), at: l.at } : null;
+    } catch { return null; }
+}
+// The other machine's lease that holds this side now, or null when this machine may run the side.
+export function leaseHeldElsewhere(lease: Lease | null, host: string, now = Date.now()): Lease | null {
+    return lease && lease.host !== host && now - lease.at < LEASE_MAX_AGE_MS ? lease : null;
+}
+// The lease a sync publishes: this machine's controller heartbeat (`mine`) unless another machine holds a fresh lease;
+// null leaves the file as it is, for a machine with no live controller too.
+export function nextLease(current: Lease | null, mine: Lease | null, now = Date.now()): Lease | null {
+    return mine && !leaseHeldElsewhere(current, mine.host, now) ? mine : null;
 }
