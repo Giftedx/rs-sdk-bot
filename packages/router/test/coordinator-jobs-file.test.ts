@@ -5,7 +5,7 @@ import {join} from 'node:path';
 import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,plannerDue,rulePassDue} from '../src/coordinator-cli';
 import {disableOwnJob,ensureSwarm,controllerStateFresh,CONTROLLER_STATE_FRESH_MS} from '../src/coordinator-live';
 import {atomicJson,saveState,loadState} from '../src/coordinator-store';
-import {initialState,addTasks,startTask,finishTask,compactState,type CoordTask} from '../src/coordinator';
+import {initialState,addTasks,startTask,finishTask,type CoordTask} from '../src/coordinator';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,coordinatorJobsPath} from '../../core/src/coordinator-jobs';
 
 const owner=[{account:'Haggis',script:'',goal:'main simultaneous24 fresh clock',enabled:false},{accounts:['A','B'],host:true,script:'host.ts',enabled:true,standing:true}];
