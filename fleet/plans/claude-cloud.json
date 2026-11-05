@@ -1,5 +1,82 @@
 {
  "side": "claude-cloud",
- "at": 1793837784752,
- "jobs": []
+ "at": 1793837617878,
+ "jobs": [
+  {
+   "account": "Quickhandjob",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2669,3298",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2669,3298",
+   "role": "thieving",
+   "template": "goldfarm@2669,3298",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2669,3298"
+   ]
+  },
+  {
+   "account": "TrouserSnake",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3017,3288",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3017,3288",
+   "role": "helper",
+   "template": "feathers@3017,3288",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "pen:3017,3288"
+   ]
+  },
+  {
+   "account": "TheFullMonty",
+   "script": "scripts/goldfarm.ts",
+   "args": [],
+   "env": {
+    "KNIGHT_SPOT": "2671,3313",
+    "TICKS": "9000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "goldfarm knights at 2671,3313",
+   "role": "thieving",
+   "template": "goldfarm@2671,3313",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "knight:2671,3313"
+   ]
+  },
+  {
+   "account": "UnderMyKilt",
+   "script": "scripts/gather-feathers.ts",
+   "args": [],
+   "env": {
+    "PEN": "3187,3277",
+    "TICKS": "3000"
+   },
+   "enabled": true,
+   "standing": true,
+   "repeat": true,
+   "goal": "feathers at the chicken pen 3187,3277",
+   "role": "helper",
+   "template": "feathers@3187,3277",
+   "autopilot": "claude-cloud",
+   "resources": [
+    "pen:3187,3277"
+   ]
+  }
+ ]
 }
