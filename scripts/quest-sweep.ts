@@ -200,7 +200,9 @@ export async function walkFar(s:Session,world:World,to:Tile,legTimeoutTicks=150)
   const r=at().level===0&&t.level===0?await walkCorridor(await sessionWalker(s),[[t.x,t.z,3]]):{ok:false};
   return r.ok?{ok:true}:router(t);
  };
- for(const hop of hopsTo(at(),to)){
+ // An upstairs target (Morgan's garlic cupboard in Draynor) is approached by the hubs toward the ground beneath it;
+ // only the last leg, with its stairs, is the world router's.
+ for(const hop of at().level===0?hopsTo(at(),{x:to.x,z:to.z,level:0}):[]){
   console.log(`QUEST_SWEEP_HOP ${JSON.stringify({from:at(),to:hop})}`);
   const r=await ground(hop);if(!r.ok)return r;
  }

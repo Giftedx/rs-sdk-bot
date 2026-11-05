@@ -242,3 +242,12 @@ test('a preset\'s trout and bread are optional food, its bananas and ale are que
  const hunt={inventory:[...Array(10).fill({id:1963,count:1})]} as any;
  expect(needs(hunt).get(1963)).toBe(10);
 });
+
+test('the hub chain toward an upstairs target is the chain toward the ground beneath it',async()=>{
+ const {hopsTo}=await import('./quest-sweep');
+ const ardougne={x:2684,z:3318,level:0},cupboard={x:3096,z:3268,level:1};
+ expect(hopsTo(ardougne,cupboard)).toEqual([]);
+ const hops=hopsTo(ardougne,{...cupboard,level:0});
+ expect(hops.length).toBeGreaterThan(1);
+ expect(hops.every(h=>h.level===0)).toBe(true);
+});
