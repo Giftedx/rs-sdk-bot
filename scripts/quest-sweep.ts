@@ -238,30 +238,36 @@ const catalogItem=(id:number)=>(itemCatalog??=new Map((JSON.parse(readFileSync(r
 // Walk to each seller, open its shop and buy. Ok when the pack holds the bought counts.
 async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<string|null>{
  const st=()=>s.sdk.getState() as any,held=(id:number)=>count((st()?.inventory??[]).map((i:any)=>({id:i.id,count:i.count})),id);
- for(let b of buys){
-  // The nearest seller may be out of reach (a quest area, deadly ground): try the next ones.
-  let walked:{ok:boolean;reason?:string;detail?:string}={ok:false},via=b;
-  for(const c of [b,...(b.alts??[])]){walked=await walkFar(s,world,c.tile,100);if(walked.ok){via={...b,...c};break;}}
-  if(!walked.ok)return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length??0} more failed: ${walked.reason} ${walked.detail}`;
-  b=via;
-  const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===b.npcId).sort((x:any,y:any)=>x.distance-y.distance)[0];
-  if(!npc)return `${b.npc} not in sight at ${b.tile.x},${b.tile.z}`;
-  if(!(await s.bot.openShop(npc)).success)return `${b.npc} shop did not open`;
-  await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
-  // Another bot may have emptied the shelf: buy what is there, wait for the restock, buy the rest. Small shops
-  // restock one item per 100 ticks (wydinstore: 3 flour), so this waits up to 12 x 50 ticks.
-  const before=held(b.id);
-  for(let i=0;i<12&&held(b.id)<before+b.count;i++){
-   const row=(st()?.shop?.shopItems??[]).find((x:any)=>x.id===b.id);
-   if(!row||row.count<1){await waitTicks(s,50);continue;}
-   const want=Math.min(before+b.count-held(b.id),row.count),had=held(b.id);
-   await s.bot.buyFromShop(row,want);
-   await waitUntil(s,()=>held(b.id)>=had+want,{timeoutTicks:10});
+ for(const b of buys){
+  // The nearest seller may be out of reach (a quest area, deadly ground) or short (Kortan holds 14 balls of wool, the
+  // quest wants 20): the next sellers take over, nearest first, for the rest.
+  const before=held(b.id),target=before+b.count,sellers=[b,...(b.alts??[])];
+  let walked:{ok:boolean;reason?:string;detail?:string}={ok:false},tried=0;
+  for(const [k,c] of sellers.entries()){
+   if(held(b.id)>=target)break;
+   walked=await walkFar(s,world,c.tile,100);
+   if(!walked.ok)continue;
+   tried++;
+   const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===c.npcId).sort((x:any,y:any)=>x.distance-y.distance)[0];
+   if(!npc)return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
+   if(!(await s.bot.openShop(npc)).success)return `${c.npc} shop did not open`;
+   await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
+   // Another bot may have emptied the shelf: buy what is there, wait for the restock, buy the rest. Small shops
+   // restock one item per 100 ticks (wydinstore: 3 flour), so the last seller waits up to 12 x 50 ticks; an earlier
+   // one waits 3 rounds before the next seller is tried.
+   const rounds=k===sellers.length-1?12:3,had0=held(b.id);
+   for(let i=0;i<rounds&&held(b.id)<target;i++){
+    const row=(st()?.shop?.shopItems??[]).find((x:any)=>x.id===b.id);
+    if(!row||row.count<1){await waitTicks(s,50);continue;}
+    const want=Math.min(target-held(b.id),row.count),had=held(b.id);
+    await s.bot.buyFromShop(row,want);
+    await waitUntil(s,()=>held(b.id)>=had+want,{timeoutTicks:10});
+   }
+   console.log(`QUEST_SWEEP_BUY ${JSON.stringify({item:b.id,name:b.name,count:b.count,npc:c.npc,before:had0,after:held(b.id),coins:held(COINS)})}`);
+   await s.bot.closeShop();
   }
-  const got=held(b.id)>=before+b.count;
-  console.log(`QUEST_SWEEP_BUY ${JSON.stringify({item:b.id,name:b.name,count:b.count,npc:b.npc,before,after:held(b.id),coins:held(COINS)})}`);
-  await s.bot.closeShop();
-  if(!got)return `bought ${held(b.id)-before} of ${b.count} ${b.name} from ${b.npc}`;
+  if(!tried)return `shop walk to ${b.npc} at ${b.tile.x},${b.tile.z} and ${b.alts?.length??0} more failed: ${walked.reason} ${walked.detail}`;
+  if(held(b.id)<target)return `bought ${held(b.id)-before} of ${b.count} ${b.name} from ${tried} sellers`;
  }
  return null;
 }
