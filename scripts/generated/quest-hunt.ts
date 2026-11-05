@@ -73,6 +73,22 @@ try {
     // 4. Luthas's job, the rum and 10 bananas in his crate, paid: %crate_rum 1 -> 2 (luthas.rs2:1-27,29-33,
     // banana_crate.rs2:21-68).
     await q.talk('luthas job', /^luthas$/i, [/offer me employment/i], () => q.sawText(/i'll pay you 30 gold/i), LUTHAS, 40);
+    // Bananas short of ten come off the plantation's trees (banana_tree.rs2: Search gives one and steps the tree down a
+    // stage, five a tree, back to full after 500 ticks). A tree that gives nothing is empty and is left for the next;
+    // Wydin's shelf holds three with one back every 100 ticks, so the sweep does not buy them.
+    const trees = () => (q.st()?.nearbyLocs ?? []).filter((l: any) => /^banana tree$/i.test(l.name) && !empty.has(`${l.x},${l.z}`)).sort((a: any, b: any) => a.distance - b.distance);
+    const empty = new Set<string>();
+    for (let i = 0; i < 60 && q.cnt(ITEM.banana) < 10; i++) {
+        await q.guard('bananas');
+        const t = trees()[0];
+        if (!t) { if (empty.size) { empty.clear(); await q.waitTicks(20); } else await q.walk('to trees', [{ x: 2925, z: 3160, tol: 3 }]); continue; }
+        const n = q.cnt(ITEM.banana);
+        if ((q.st()?.inventory?.length ?? 0) >= 28) await q.fail(`bananas: pack full at ${n} of 10`);
+        await q.opLoc(t, 1);
+        if (!await q.waitUntil(() => q.cnt(ITEM.banana) > n, 6)) empty.add(`${t.x},${t.z}`);
+    }
+    if (q.cnt(ITEM.banana) < 10) await q.fail(`bananas: ${q.cnt(ITEM.banana)} of 10 from the plantation`);
+    q.milestone('bananas');
     await q.walk('to crate', [{ x: CRATE.x - 1, z: CRATE.z, tol: 1 }]);
     await q.step('rum in crate', () => q.useOnLoc(ITEM.rum, q.locAt(CRATE.x, CRATE.z) ?? CRATE), () => !q.has(ITEM.rum), 8, 4);
     await q.converse([], () => !q.dialogOpen(), 6);

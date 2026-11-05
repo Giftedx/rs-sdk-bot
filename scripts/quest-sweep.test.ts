@@ -764,6 +764,17 @@ test('garlic comes from the Draynor cupboard when the only seller is far away',(
  expect(gatherPlan([{id:1550,count:1}],at,()=>[],()=>600).gathers).toEqual([{id:1550,count:1,how:'loc'}]);
 });
 
+test("Pirate's Treasure needs no bananas from the sweep: the script picks them on Karamja, and the bank pass keeps their slots",async()=>{
+ const {QUEST_PICKUPS,slotsFor}=await import('./quest-sweep');
+ const hunt=needs(presetFor('hunt')),hazeel=needs(presetFor('hazeelcult'));
+ expect(hunt.has(1963)).toBe(false);expect(hunt.get(1005)).toBe(1);expect(hunt.get(952)).toBe(1);
+ // Ten bananas and the rum are held at once before the crate: eleven slots beyond the supplies, none for other quests.
+ expect(slotsFor([{id:1005,count:1},...(QUEST_PICKUPS['hunt']??[])],[])).toBe(12);
+ expect(QUEST_PICKUPS['imp']).toBeUndefined();
+ expect(hazeel.has(385)).toBe(false);expect(needs(presetFor('hazeelcult'),true).get(385)).toBe(4);   // sharks are food
+ expect(needs(presetFor('imp')).get(1470)).toBe(1);
+});
+
 test('a quest keeps its own items and every untradeable item out of the unneeded deposit',async()=>{
  const {keepsItem}=await import('./quest-sweep');
  const tradeable=(id:number)=>id===1438?true:id===291?false:undefined;
