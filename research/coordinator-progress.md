@@ -12,6 +12,11 @@ Source -> local consumer -> adapt -> check: the coordinator's explicit and accou
 
 Source -> local consumer -> reuse -> check: the coordinator's sequence at worker settlement -> the planner trigger -> keep a receipt watermark at planner launch and a separate completion time for cooldowns -> test a late receipt with an older producer timestamp while the planner runs. The event sample in `.practice/planner-root-blockers/receipt-window.json` counts overlap and the time to the next plan. It does not identify why each plan starts.
 
+The deterministic rules pass uses that same settled-receipt sequence. Archive compaction cannot hide a settlement or trigger a rules pass on its own. The five-minute recheck still covers other changes.
+
+Source -> local consumer -> reuse -> check: the coordinator receipt watermark -> rules dispatch -> compare the watermark rather than retained receipt count -> a fixture archives one receipt and settles one while the count stays at two. It also checks the periodic recheck boundary.
+
+
 Autopilot keeps the standing assignment for an account shadowed by the coordinator, including a parked coordinator job. That account is ineligible for reassignment, coin funding and trainer polling while the overlay holds it.
 
 Source -> local consumer -> reuse -> check: the coordinator job overlay and Luna's stable job ownership pattern in the project use map -> Autopilot -> preserve standing job bytes and exclude held accounts before planning or funding -> a release fixture and an isolated CLI pass preserve the held job and its assignment history while placing a free account. The CLI proof is in `.practice/autopilot-coordinator-ownership/cli-proof.json`. A live handoff needs separate evidence.

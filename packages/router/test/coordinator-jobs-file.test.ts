@@ -2,10 +2,10 @@ import {test,expect} from 'bun:test';
 import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,plannerDue} from '../src/coordinator-cli';
+import {migrateCoordinatorJobs,currentRevision,REVISION_FRESH_MS,plannerDue,rulePassDue} from '../src/coordinator-cli';
 import {disableOwnJob,ensureSwarm,controllerStateFresh,CONTROLLER_STATE_FRESH_MS} from '../src/coordinator-live';
 import {atomicJson,saveState,loadState} from '../src/coordinator-store';
-import {initialState,addTasks,startTask,finishTask} from '../src/coordinator';
+import {initialState,addTasks,startTask,finishTask,compactState,type CoordTask} from '../src/coordinator';
 import {readCoordinatorJobs,readMergedPlan,writeCoordinatorJobs,coordinatorJobsPath} from '../../core/src/coordinator-jobs';
 
 const owner=[{account:'Haggis',script:'',goal:'main simultaneous24 fresh clock',enabled:false},{accounts:['A','B'],host:true,script:'host.ts',enabled:true,standing:true}];
@@ -165,4 +165,27 @@ test('a late receipt triggers a new planning pass even with an older timestamp',
  state.plannerReceiptSequence = state.latestReceiptSequence;
  expect(plannerDue(state, 9000, 0, false)).toBe(false);
  expect(plannerDue(state, 9000, 0, true)).toBe(true);
+});
+
+test('rules notice a new receipt even when archive and settlement leave the same count', () => {
+ const state=initialState();
+ const spec=(id:string):CoordTask=>({id,kind:'qualify',goal:'quests',capability:'quest-order',dependsOn:[],
+  priority:1,estimatedMs:1000,why:'Prove the quest worker'});
+ const settle=(id:string,at:number)=>{
+  addTasks(state,[spec(id)],at-2);
+  startTask(state,id,at-1,id);
+  expect(finishTask(state,{taskId:id,runId:id,ok:true,at,output:null})).toBe(true);
+ };
+ settle('old-proof',2);
+ settle('recent-proof',4);
+ const previous={at:10,receiptSequence:state.latestReceiptSequence!};
+ expect(rulePassDue(state,previous,10)).toBe(false);
+ expect(compactState(state,10,1).map(r=>r.spec.id)).toEqual(['old-proof']);
+ expect(rulePassDue(state,previous,10)).toBe(false);
+ settle('fresh-proof',12);
+ expect(state.tasks.filter(r=>r.receipt)).toHaveLength(2);
+ expect(rulePassDue(state,previous,12)).toBe(true);
+ const current={at:12,receiptSequence:state.latestReceiptSequence!};
+ expect(rulePassDue(state,current,300011)).toBe(false);
+ expect(rulePassDue(state,current,300012)).toBe(true);
 });
