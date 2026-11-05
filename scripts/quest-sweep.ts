@@ -313,8 +313,8 @@ async function buyFromShops(s:Session,world:World,buys:readonly Buy[]):Promise<s
    tried++;
    const npc=(st()?.nearbyNpcs??[]).filter((n:any)=>n.id===c.npcId).sort((x:any,y:any)=>x.distance-y.distance)[0];
    if(!npc)return `${c.npc} not in sight at ${c.tile.x},${c.tile.z}`;
-   // A shut shop door leaves the keeper unroutable (the client reports cant_reach and sends nothing): TrouserSnake stood on
-   // Wydin's tile and the shop did not open. Open the nearest door once and ask again, as ranged-train does at Lowe's.
+   // A shut shop door leaves the keeper unroutable (the client reports cant_reach and sends nothing) even from the
+   // seller's own tile: open the nearest door once and ask again, as ranged-train does at Lowe's.
    const opened=async()=>(await s.bot.openShop(npc)).success&&await waitUntil(s,()=>!!st()?.shop?.isOpen,{timeoutTicks:10});
    if(!await opened()){
     const door=(await s.bot.openDoor(/door/i)).success;
