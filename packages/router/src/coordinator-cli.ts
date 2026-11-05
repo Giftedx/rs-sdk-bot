@@ -2,7 +2,8 @@ import {existsSync,readFileSync,writeFileSync,appendFileSync,unlinkSync,watch,mk
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,compactState,FOCUS_FAILURE_LIMIT,type CoordinatorState} from './coordinator';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,FOCUS_FAILURE_LIMIT,type CoordinatorState} from './coordinator';
+import {buildFault} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite} from './coordinator-store';
 import {planWork,acceptProposal} from './coordinator-planner';
 import {executeTask} from './coordinator-worker';
@@ -133,7 +134,7 @@ async function child(mode:string,runId:string){
  try{
   const input=json(join(dir,'input.json'));
   if(mode==='--planner'){const proposal=await planWork(plannerState(input),dir,input.timeoutMs,input.agent??'claude');atomicJson(join(dir,'proposal.json'),proposal);}
-  else{const output=await executeTask(input.task,input.dependencies,dir,runId,input.startedAt,input.agent??'claude');atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,agent:input.agent??'claude',ok:output.ok===true,at:Date.now(),output});}
+  else{const result=await executeTask(input.task,input.dependencies,dir,runId,input.startedAt,input.agent??'claude'),fault=input.task.kind==='build'?buildFault(result):null,output=fault?{...result,buildFault:fault}:result;atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,agent:input.agent??'claude',ok:output.ok===true,at:Date.now(),output});}
  }catch(error){
   if(mode==='--planner')atomicJson(join(dir,'planner-error.json'),{error:String(error)});
   else{const input=json(join(dir,'input.json'));atomicJson(join(dir,'receipt.json'),{taskId:input.task.id,runId,ok:false,at:Date.now(),output:existsSync(join(dir,'identity.json'))?json(join(dir,'identity.json')):null,error:String(error)});}
@@ -233,6 +234,7 @@ async function tick(state:CoordinatorState,config:any){
   try{await ensureSwarm(currentRevision(),{currentSource:()=>currentRevision()},false);sourceErrors.delete('controller');}
   catch(error){const detail=String(error);if(sourceErrors.get('controller')!==detail)event('live-controller-wait',{error:detail});sourceErrors.set('controller',detail);}
  }
+ for(const held of heldBuilds(state,Date.now())){const key='hold:'+held.capability,seen=held.fault+'@'+held.at;if(sourceErrors.get(key)!==seen){event('build-held',held);sourceErrors.set(key,seen);}}
  const owned=new Map<string,readonly string[]>(),ownedFiles=(cap:string)=>{if(!owned.has(cap))owned.set(cap,deliveryTask(cap).files);return owned.get(cap)!;};
  for(let dispatch=0;dispatch<developmentLimit+liveLimit;dispatch++){
   const freeGB=freemem()/2**30,request=join(coordinationDir,'publish-request.json');
