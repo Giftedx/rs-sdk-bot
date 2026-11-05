@@ -2,7 +2,7 @@ import {existsSync,readFileSync,writeFileSync,appendFileSync,unlinkSync,watch,mk
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {freemem,cpus} from 'node:os';
-import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
+import {addTasks,chooseTask,startTask,finishTask,refreshQualifications,qualificationDemand,boundAccounts,fleetExpansion,activeBuildFocus,failedBuildStreak,heldBuilds,compactState,usefulLiveReceipt,FOCUS_FAILURE_LIMIT,type CoordinatorState,type CoordTask} from './coordinator';
 import {buildFault} from './build-fault';
 import {projectRoot,coordinationDir,loadState,saveState,runDirectory,atomicJson,atomicText,event,spawnDetached,recoverPlanWrite,withPlanWrite,capabilitySource} from './coordinator-store';
 import {DISK_FLOOR_GB,diskFreeGB,finishPlan,plannerDue,retireDeadTasks,reviewHold} from './coordinator-decisions';
@@ -71,7 +71,7 @@ async function expandUsefulFleet(state:CoordinatorState,config:any){
   tickSamples.set(name,{started:row.started,tick:row.tick,at:row.at,latency});if(latency===null)stalled=true;else latencies.push(latency);
  }
  const plan=readPlan(),last=plan.coordination?.lastExpansionAt??0;
- const useful=state.tasks.filter(r=>r.spec.kind==='run'&&r.status==='succeeded'&&r.receipt?.output?.evidence==='live'&&r.receipt.at>last&&now-r.receipt.at<900000).length;
+ const useful=state.tasks.filter(r=>(usefulLiveReceipt(r,now)?.at??0)>Math.max(last,now-900000)).length;
  const target=fleetExpansion({limit:plan.maxBots,demand,freeGB:freemem()/2**30,reserveGB:plan.minFreeGB,cpu:usage,tickMs:latencies.length?Math.max(...latencies):null,stalled,usefulResults:useful,now,lastExpandedAt:last});
  if(target===plan.maxBots)return;
  // The grant lives in the coordinator's file over the owner's current maxBots; an owner edit of maxBots discards it.
@@ -225,7 +225,12 @@ async function tick(state:CoordinatorState,config:any){
  const retired=retireDeadTasks(state,Date.now());
  if(retired.length){saveState(state);event('tasks-retired',{count:retired.length,tasks:retired});}
  // Model/native capacity is independent from finite live account jobs.
- if(config.focusCapability&&state.tasks.some(r=>r.spec.capability===config.focusCapability&&r.spec.kind==='run'&&r.status==='succeeded'&&r.receipt?.output?.evidence==='live'&&r.receipt.at>=(config.focusSince??0))){
+ const focusObservedAt=Date.now();
+ if(config.focusCapability&&state.tasks.some(r=>{
+  if(r.spec.capability!==config.focusCapability)return false;
+  const receipt=usefulLiveReceipt(r,focusObservedAt);
+  return !!receipt&&receipt.at>=(config.focusSince??0);
+ })){
   await withPlanWrite(()=>{clearFocus(config.focusCapability);delete config.focusCapability;delete config.focusSince;event('fleet-focus-delivered',{evidence:'live'});});
  }
  // A focus that failed FOCUS_FAILURE_LIMIT builds in a row releases the other lanes; activeBuildFocus does not re-adopt it.

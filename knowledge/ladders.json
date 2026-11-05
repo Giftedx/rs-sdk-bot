@@ -111,7 +111,7 @@
   },
   "herblore": {
    "methods": 36,
-   "withWorker": 5,
+   "withWorker": 0,
    "withXp": 36,
    "withTicks": 36,
    "withGaps": 0
@@ -144,7 +144,9 @@
   "Magic combat spells need a target; pick one from the Attack ladder targets.",
   "Prayer prayers (prayers dbtable) are unlocks, not XP methods, and are left out.",
   "Prayer bones and combat targets have no level gate in the content; their rungs start at level 1.",
-  "worker rule unused: cap:magic-order: evidence \"casts wind strike\" not found"
+  "worker rule unused: cap:magic-order: evidence \"casts wind strike\" not found",
+  "worker rule unused: cap:ranged-train: evidence \"Lumbridge chickens\" not found",
+  "worker rule unused: scripts/brew-potions.ts: evidence \"super_def:\" not found"
  ],
  "ladders": {
   "attack": [
@@ -3976,12 +3978,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "ranged-train",
+    "worker": "scripts/train-chickens.ts",
     "workers": [
-     "ranged-train",
      "scripts/train-chickens.ts"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"Lumbridge chickens\"",
+    "workerEvidence": "scripts/train-chickens.ts contains \"Train on Lumbridge chickens\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -5066,12 +5067,11 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "ranged-train",
+    "worker": "scripts/gather-ranged.ts",
     "workers": [
-     "ranged-train",
      "scripts/gather-ranged.ts"
     ],
-    "workerEvidence": "scripts/ranged-train.ts contains \"Lumbridge chickens\"",
+    "workerEvidence": "scripts/gather-ranged.ts contains \"BOW=841\"",
     "pendingCapability": null,
     "gaps": [
      "ticks per kill unknown: they need max hit and hit chance (player_melee.rs2, player_ranged.rs2), which depend on levels and gear"
@@ -55798,11 +55798,9 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
-    "workers": [
-     "scripts/brew-potions.ts"
-    ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"super_def:\"",
+    "worker": null,
+    "workers": [],
+    "workerEvidence": null,
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-energy-potion",
@@ -56121,11 +56119,9 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
-    "workers": [
-     "scripts/brew-potions.ts"
-    ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"super_def:\"",
+    "worker": null,
+    "workers": [],
+    "workerEvidence": null,
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-prayer-restore-potion",
@@ -56284,11 +56280,9 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
-    "workers": [
-     "scripts/brew-potions.ts"
-    ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"super_def:\"",
+    "worker": null,
+    "workers": [],
+    "workerEvidence": null,
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-attack-potion",
@@ -56764,11 +56758,9 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
-    "workers": [
-     "scripts/brew-potions.ts"
-    ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"super_def:\"",
+    "worker": null,
+    "workers": [],
+    "workerEvidence": null,
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-strength-potion",
@@ -57162,11 +57154,9 @@
     },
     "xpPerTick": null,
     "rateMethod": null,
-    "worker": "scripts/brew-potions.ts",
-    "workers": [
-     "scripts/brew-potions.ts"
-    ],
-    "workerEvidence": "scripts/brew-potions.ts contains \"super_def:\"",
+    "worker": null,
+    "workers": [],
+    "workerEvidence": null,
     "pendingCapability": null,
     "gaps": [],
     "id": "herblore/potion-super-defence-potion",

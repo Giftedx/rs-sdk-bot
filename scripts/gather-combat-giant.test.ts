@@ -127,6 +127,16 @@ test('giant stop request before departure keeps assets and makes no door or comb
     expect(GIANT.room[1]).toBe(3136);
 });
 
+test('a stop during the walk out cancels that walk, and the retreat still runs',async()=>{
+    const f=giantFixture();let requested=false,cancelled=false,retreats=0;try{
+        const r=await runGiants(f.session,{cap:500,trainSkill:'Strength',targetLevel:90,stop:()=>requested,walk:async(x,z,tol,signal)=>{
+            if(x!==GIANT.spot.x||z!==GIANT.spot.z){retreats++;return f.walk(x,z,tol);}
+            requested=true;await waitTicks(f.session,3);cancelled=signal?.aborted===true;return false;
+        }});
+        expect(cancelled).toBe(true);expect(r.stop).toBe('stop-file');expect(r.ok).toBe(false);expect(f.attacks()).toBe(0);expect(r.failure??'').not.toContain('arrival unobserved');
+    }finally{f.dispose();}
+});
+
 test('Hitpoints accepts every observed weapon style and credits only its own XP and base level',async()=>{
     expect(giantTraining('Hitpoints',76)).toEqual({skill:'Hitpoints',targetLevel:76});
     expect(giantStyle({known:true,weaponName:'Sword',currentStyle:2,styles:SWORD_TAB},'Hitpoints').index).toBe(2);

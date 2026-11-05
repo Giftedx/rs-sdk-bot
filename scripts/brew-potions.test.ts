@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'bun:test';
-import {RECIPES,selectRecipe,supplyPlan,supplyPurchases,reconcile,options,reachSeller,observeHerbloreStep,boundedHerbloreMove,tracedWalker} from './brew-potions';
+import {RECIPES,selectRecipe,supplyPlan,supplyPurchases,reconcile,options,reachSeller,observeHerbloreStep,boundedHerbloreMove,tracedWalker,workingBatch} from './brew-potions';
 import {executionContext,throwIfExecutionAborted} from '../vendor/rs-sdk/sdk/execution-context';
 import type {Session} from '../packages/core/src/inprocess';
 import {sellersByDistance} from '../packages/core/src/shop-index';
@@ -104,4 +104,11 @@ describe('herblore orders',()=>{
   for(const env of [{TARGET_LEVEL:'0'},{VIAL_BUDGET:'1001'},{CAP:'Infinity'}])expect(()=>options(['x'],env)).toThrow();
   expect(options(['x','300','prayer'],{}).recipe).toBe('prayer');
  });
+});
+
+it('the owned secondaries limit the working batch',()=>{
+ expect(workingBatch(0,27,1)).toBe(1);
+ expect(workingBatch(5,0,27)).toBe(5);
+ expect(workingBatch(30,0,40)).toBe(27);
+ expect(workingBatch(3,0,0)).toBe(0);
 });

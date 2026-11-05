@@ -11,6 +11,8 @@ Source -> local consumer -> adapt -> check: the bank observation time in status,
 
 Source -> local consumer -> reuse -> check: the status producer's equipment observation flag, the route preparation reader, and Iron Compass's explicit requirement facts in the project use map -> preparation unlock facts -> leave unobserved equipment unknown and reject bank or journal evidence dated after its status row -> the preparation fixture checks observed empty equipment, unknown equipment, a known bank alternative and date order. The read-only replay in `.practice/goal-readiness-observations/replay.json` compares retained status rows at their observation times and at replay time.
 
+Source -> local consumer -> reuse -> check: the pinned item catalog and the measured Ranged preset's black dragonhide IDs -> Overall supplies, planner, dashboard and launch staging -> split the cannon and ranged kit into eight pinned item IDs -> fixtures reject a different colour with the same display name, and the CLI readback in `.practice/exact-overall-kit/readback.json` checks the bill and preparation report. The IDs are procurement requirements. They need bank and transfer evidence for staging.
+
 
 The Overall supply bill, Autopilot demand, preparation report, dashboard and launch manifest use the route rows that start before the modeled last 99. The full route remains available for later quest, gear and bank goals. If the model has no Overall finish, it cannot produce an Overall supply bill.
 

@@ -23,7 +23,7 @@ export function overallWins(plan:ScheduleResult,activities:Activity[]):string{
 
 export function evaluateLaunch(root:string,snapshot:string,now=Date.now(),authorize=false){
  const bindings:Binding[]=[],gates:{name:string;pass:boolean;detail:string}[]=[];
- let context='',expected:Record<string,number>={},requirements:{item:string;count:number}[]=[],expiresAt=now+600000;
+ let context='',expected:Record<string,number>={},requirements:{item:string;count:number;itemId?:number}[]=[],expiresAt=now+600000;
  const read=(path:string)=>{const raw=readFileSync(join(root,path));bindings.push({path,sha256:sha(raw)});return JSON.parse(raw.toString())};
  const bound=(ref:Binding,json=true)=>readBound(root,ref,bindings,json);
  const check=(name:string,fn:()=>string)=>{try{gates.push({name,pass:true,detail:fn()})}catch(e){gates.push({name,pass:false,detail:String(e).slice(0,300)})}};

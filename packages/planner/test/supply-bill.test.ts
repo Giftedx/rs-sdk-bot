@@ -10,6 +10,12 @@ test('bill lines map to pinned item ids, including unfinished potions and plural
     expect(idsFor('dwarf weed potion (unf)', items)).toEqual([109]);
     expect(idsFor('mort myre fungus', items)).toEqual([2970]);
 });
+test('an exact kit part keeps its identity in the persisted bill and ignores other colours', () => {
+    const catalog=[{id:2503,name:'Dragonhide body'},{id:2501,name:'Dragonhide body'}];
+    const bill=supplyBill([{item:'black dragonhide body',itemId:2503,count:1}],catalog,
+        [{name:'A',bank:[{id:2501,count:20}]}]);
+    expect(bill[0]).toMatchObject({itemId:2503,ids:[2503],owned:0,short:1});
+});
 
 test('the shortfall subtracts stock across helpers and lists the holders', () => {
     const bill = supplyBill([{ item: 'dragon bones', count: 560 }, { item: 'rune armour set', count: 1 }], items,

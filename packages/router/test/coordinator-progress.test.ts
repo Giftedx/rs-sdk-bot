@@ -145,6 +145,18 @@ test('capacity grows only on useful live receipts, real demand and healthy measu
  expect(fleetExpansion(s)).toBe(21);expect(fleetExpansion({...s,demand:19})).toBe(19);
  for(const change of [{usefulResults:0},{demand:17},{freeGB:11},{cpu:null},{cpu:.9},{tickMs:null},{tickMs:1000},{stalled:true},{lastExpandedAt:999999}])expect(fleetExpansion({...s,...change})).toBe(17);
 });
+test('the planner progress clock ignores recovery, refused, future and crossed live receipts',()=>{
+ const s=initialState();
+ const repair={account:'Helper',endedAt:5};
+ addTasks(s,[run('useful'),{...run('recovery'),sessionRecovery:repair,repairs:[repair]},run('refused'),run('future'),run('crossed')],0);
+ complete(s,'useful',true,10,{ok:true,evidence:'live'});
+ complete(s,'recovery',true,20,{ok:true,evidence:'live'});
+ complete(s,'refused',true,30,{ok:false,evidence:'live'});
+ complete(s,'future',true,100,{ok:true,evidence:'live'});
+ complete(s,'crossed',true,40,{ok:true,evidence:'live'});
+ s.tasks.find(r=>r.spec.id==='crossed')!.receipt!.runId='other-run';
+ expect(queueFacts(s,[],50).lastUsefulLiveAt).toBe(10);
+});
 test('registration is a live source boundary and waits for an actual fleet slot',()=>{
  const s=initialState();addTasks(s,[task('claim',{kind:'provision',role:'runecraft'}),task('writer',{kind:'build'})],0);startTask(s,'claim',1,'c');expect(chooseTask(s,2)).toBeNull();
  const full=initialState();addTasks(full,[run('live'),task('claim',{kind:'provision',role:'runecraft'})],0);startTask(full,'live',1,'l');expect(chooseTask(full,2,{liveLimit:1})).toBeNull();

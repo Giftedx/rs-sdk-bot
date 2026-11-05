@@ -292,7 +292,7 @@ export function giantKillLimit(value?:string|number){
     if(!Number.isSafeInteger(maximum)||maximum<1)throw new Error('giant GIANT_KILLS must be a positive safe integer');
     return maximum;
 }
-export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number)=>Promise<boolean>}){
+export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targetLevel?:number;maximum?:number;food?:number;eatAt?:number;noProgress?:number;stop?:()=>boolean;walk?:(x:number,z:number,tol:number,signal?:AbortSignal)=>Promise<boolean>}){
     const maximum=giantKillLimit(o.maximum);
     const training=giantTraining(o.trainSkill,o.targetLevel);
     if(!Number.isSafeInteger(o.cap)||o.cap<1)throw new Error('giant needs positive CAP');
@@ -324,19 +324,24 @@ export async function runGiants(s:Session,o:{cap:number;trainSkill?:string;targe
         if(!healed||held(GIANT.food)>=before||hp()<=beforeHp)throw new Error('no giant progress: shark did not heal');
         return true;
     };
-    const walk=async(x:number,z:number,tol:number)=>{
+    // A stop or the cap cancels only the walk out to the camp: the retreat to the bank always runs.
+    const walk=async(x:number,z:number,tol:number,outbound=false)=>{
         const sustain=startQuestSustain({...s,direct:async a=>await s.direct(a) as {success:boolean;message?:string}},
             {food:[GIANT.food],eatAt,onConsumed:()=>eaten++});
+        const cancel=new AbortController(),offTick=outbound?s.onTick(()=>{if(over())cancel.abort('stop requested');}):undefined;
+        const signal=outbound?AbortSignal.any([sustain.aborted,cancel.signal]):sustain.aborted;
         try{
-            const ok=o.walk?await o.walk(x,z,tol):
-                (await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal:sustain.aborted})).ok;
+            const ok=o.walk?await o.walk(x,z,tol,signal):
+                (await goTo(s,await getWorld(),{x,z,level:0},accountOf(s),{maxRetriesPerLeg:2,legTimeoutTicks:150,signal})).ok;
             await sustain.settle();
             if(sustain.failure())throw new Error(sustain.failure()!);
             return ok&&near(x,z,tol);
-        }finally{await sustain.settle();}
+        }finally{offTick?.();await sustain.settle();}
     };
     const enter=async()=>{
-        if(!await walk(GIANT.spot.x,GIANT.spot.z,3)||!near(GIANT.spot.x,GIANT.spot.z,3))throw new Error('no giant progress: surface camp arrival unobserved');
+        const arrived=await walk(GIANT.spot.x,GIANT.spot.z,3,true);
+        if(over())return;
+        if(!arrived||!near(GIANT.spot.x,GIANT.spot.z,3))throw new Error('no giant progress: surface camp arrival unobserved');
     };
     const leave=async()=>{
         if(!await walk(GIANT.bank.x,GIANT.bank.z,3)||!near(GIANT.bank.x,GIANT.bank.z,3))throw new Error('no giant progress: bank retreat failed');
