@@ -14,7 +14,8 @@ import {assertLiveWorkerRelease} from './worker-release';
 import { createTickRecorder } from './tick-record';
 import { executionContext } from '../../../vendor/rs-sdk/sdk/execution-context';
 
-// Ticks without xp, an item change or dialog before a session counts as stalled and stops (STALL_TICKS=0: never).
+// Ticks without xp, an item change, dialog or a walk of FAR_WALK tiles (ledger.ts) before a session counts as stalled
+// and stops (STALL_TICKS=0: never).
 const STALL_TICKS = Number(process.env.STALL_TICKS ?? 900);
 const repoRoot = resolve(import.meta.dir, '..', '..', '..');
 
@@ -111,7 +112,7 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
     s.onTick(() => {
         lastLife = life(s.sdk.getState()?.player) ?? lastLife;
         const reason = sessionDied(born,lastLife) ? 'died' : ++stopTicks % 25 === 0 && existsSync(join(repoRoot, '.practice', `stop-${name}`)) ? 'stop file'
-            : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items or dialog` : null;
+            : stopTicks % 50 === 0 && stalled(led.rows, STALL_TICKS) ? `no progress: ${STALL_TICKS} ticks without xp, items, dialog or a journey` : null;
         if (!stopping && !settling.has(s) && reason) {
             stopping = true;
             void (opts.onStop ? opts.onStop(s,reason) : finish([s], false, reason));
