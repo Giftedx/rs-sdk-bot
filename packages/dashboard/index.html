@@ -326,7 +326,8 @@ function syncWorld(){
   showViewerStatus();if(mode!=='3d'||!VIEWER.url)return;
   const f=$('#rsw');
   if(!f.getAttribute('src')){
-    const url=viewerCameraUrl(viewerFrameUrl(VIEWER.url,location.origin),window.atlasDestination);
+    // The viewer's default camera is Lumbridge: without a start it loads those map squares before the followed account's.
+    const url=viewerCameraUrl(viewerFrameUrl(VIEWER.url,location.origin),window.atlasDestination||(window.atlasFreeCamera?null:b?.live||b?.pos));
     url.searchParams.set('live','wss://rs-sdk-demo.fly.dev/worldfeed');url.searchParams.set('embed','0');url.searchParams.set('client','1');url.searchParams.set('fps','20');url.searchParams.set('scale',String(window.atlasQuality||1));
     url.searchParams.set('hideNamesFrom',new URL('api/hidden-names',document.baseURI).href);url.searchParams.set('highlightFrom',new URL('api/our-names',document.baseURI).href);
     if(Q.get('flight')==='0')url.searchParams.set('flight','0');if(Q.get('cache')==='0')url.searchParams.set('cache','0');
