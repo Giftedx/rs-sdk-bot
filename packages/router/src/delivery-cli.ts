@@ -18,23 +18,18 @@ export function nativeDeferralEvidence(reason:string):{hostDeferred?:boolean}{
  const message=reason.replace(/^Error: /,'');
  return message.startsWith('HOST_DEFERRED_NATIVE_HEADROOM:')||message===PRACTICE_TURN_WAIT_EXPIRED?{hostDeferred:true}:{};
 }
+type SavedProofPolicy=Readonly<Record<string,readonly string[]>>;
+function readSavedProofPolicy(base:string):SavedProofPolicy{
+ const policy=JSON.parse(readFileSync(join(base,'packages/router/src/saved-proof-verifiers.json'),'utf8'));
+ if(!policy||typeof policy!=='object'||Array.isArray(policy)
+  ||Object.values(policy).some(v=>!Array.isArray(v)||v.some(p=>typeof p!=='string')))throw Error('invalid saved proof verifier policy');
+ return policy;
+}
 // These exact consumer invocations only validate saved files in DELIVERY_DIR.
-const savedProofScripts=new Map([
- ['cow-progress-order-saved',['packages/practice/src/cow-progress-order-proof.ts','packages/practice/src/cow-progress-isolated-proof.ts']],
- ['iron-progress-order-saved',['packages/practice/src/iron-progress-order-proof.ts']],
- ['prayer-order-saved',['packages/practice/src/prayer-order-proof.ts']],
- ['quest-sweep-saved',['packages/practice/src/quest-sweep-proof.ts']],
- ['ranged-train-saved',['packages/practice/src/ranged-train-proof.ts']],
- ['saved-consumer-state',['packages/practice/src/ammo-order-proof.ts']],
- ['saved-druid-meats-consumer',['packages/practice/src/druid-meats-proof.ts']],
- ['saved-magic-order-consumer',['packages/practice/src/magic-order-proof.ts']],
- ['saved-quest-complete',['packages/practice/src/quest-order-proof.ts']],
- ['session-recovery-only-verified',['scripts/session-check.ts']],
-]);
-export function isSavedProofVerifier(check:DeliveryCheck):boolean{
+export function isSavedProofVerifier(check:DeliveryCheck,policy=readSavedProofPolicy(root)):boolean{
  const [bun,script,flag]=check.command;
  return check.phase==='consumer'&&check.command.length===3&&bun==='bun'&&flag==='--verify'
-  &&script!==undefined&&savedProofScripts.get(check.id)?.includes(script)===true;
+  &&script!==undefined&&Object.hasOwn(policy,check.id)&&policy[check.id]!.includes(script);
 }
 type NativeAdmissionDeps={now:()=>number;freeGB:()=>number;stopped:()=>boolean;sleep:(ms:number)=>Promise<void>;progress:(value:{state:string;at:number;freeGB:number;requiredGB:number;deadline:number})=>void};
 export async function withNativeStartup<T>(start:()=>Promise<T>,deps:NativeAdmissionDeps,waitMs=900000):Promise<T>{
@@ -89,10 +84,12 @@ export function importClosure(starts:readonly string[],base=root):string[]{
 }
 // The capability release of the entry (packages/core/src/worker-release.ts); null when the entry cannot be released.
 function runtimeRevision(task:DeliveryTask):string|null{try{return capabilityRevision([task.entry],root);}catch{return null;}}
-export function deliveryFingerprint(t:DeliveryTask,base=root){
+export function deliveryFingerprint(t:DeliveryTask,base=root,policy=readSavedProofPolicy(base)){
  // Entry, scope and acceptance commands are part of the qualified contract.
  const scripts=t.checks.flatMap(c=>c.command.filter(a=>/\.(?:ts|tsx)$/.test(a)));
  const hash=createHash('sha256').update(JSON.stringify(t));
+ // Only admission choices for this task belong to its qualification source.
+ hash.update('\0saved-proof-policy\0').update(JSON.stringify(t.checks.map(c=>isSavedProofVerifier(c,policy))));
  for(const file of importClosure([t.entry,...t.files,...scripts,'packages/router/src/delivery.ts','packages/router/src/delivery-cli.ts'],base))
   hash.update(file+'\0').update(readFileSync(join(base,file))).update('\0');
  return hash.digest('hex');
@@ -109,8 +106,13 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
     const parent=join(root,'.practice/deliveries');mkdirSync(parent,{recursive:true});
     const directory=mkdtempSync(join(parent,`${task.id}-${Date.now()}-`));
     writeFileSync(join(directory,'task.json'),JSON.stringify(task,null,2));
+    let initialPolicy:SavedProofPolicy|undefined;
     const result=await deliver(task,{
-        fingerprint:deliveryFingerprint,
+        fingerprint(task){
+            const policy=readSavedProofPolicy(root);
+            initialPolicy??=policy;
+            return deliveryFingerprint(task,root,policy);
+        },
         async run(check){
             const index=task.checks.indexOf(check),out=join(directory,`${index}.out.log`),err=join(directory,`${index}.err.log`);
             const start=async()=>{
@@ -125,7 +127,7 @@ async function runTask(task:DeliveryTask,diagnosticCheck?:string){
             };
             if(check.phase==='regression')return start();
             const stopped=()=>existsSync(join(root,'.practice/stop-coordinator'))||existsSync(join(root,'.practice/stop-swarm'));
-            if(isSavedProofVerifier(check)){
+            if(isSavedProofVerifier(check,initialPolicy)){
                 if(stopped())throw Error('owner stopped before saved proof verification');
                 return start();
             }
