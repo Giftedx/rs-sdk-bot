@@ -1,4 +1,4 @@
-import{legendsSurfaceJourney}from'./quest-legends-owned';
+import{legendsSurfaceJourney,legendsNextFare}from'./quest-legends-owned';
 import{legendsJungleTarget}from'./quest-legends-owned';
 import{test,expect}from'bun:test';
 import{readFileSync}from'node:fs';
@@ -53,3 +53,7 @@ test('Native jungle selection refuses the unreachable straight plant behind a bl
 
 test('Legends surface travel uses only ordered ground legs and one explicit ferry per continent crossing',async()=>{for(const inbound of [true,false]){const calls:any[]=[],from=inbound?{x:3185,z:3436,level:0}:{x:2864,z:2942,level:0},to=inbound?{x:2864,z:2942,level:0}:{x:3185,z:3436,level:0};await legendsSurfaceJourney(from,to,{ground:async p=>{calls.push(['ground',p]);},boat:async b=>{calls.push(['boat',b]);}});expect(calls).toEqual([['ground',inbound?{x:3028,z:3216}:{x:2955,z:3146}],['boat',inbound],['ground',to]]);}});
 test('Legends ground travel stops before boat payment after a failed approach and refuses underground routing',async()=>{let boats=0,grounds=0;const drive={ground:async()=>{grounds++;throw Error('route stopped');},boat:async()=>{boats++;}};await expect(legendsSurfaceJourney({x:3185,z:3436,level:0},{x:2864,z:2942,level:0},drive)).rejects.toThrow('route stopped');expect(boats).toBe(0);await expect(legendsSurfaceJourney({x:2800,z:9300,level:0},{x:3185,z:3436,level:0},drive)).rejects.toThrow('surface');expect(grounds).toBe(1);});
+
+test('Legends fares cannot spend the bank reserve after a finite round trip and keep return fare funded',()=>{
+ let spent=legendsNextFare(60,0,true);expect(spent).toBe(30);spent=legendsNextFare(60,spent,false);expect(spent).toBe(60);expect(()=>legendsNextFare(60,spent,true)).toThrow('fare budget');expect(()=>legendsNextFare(59,0,true)).toThrow('fare budget');expect(legendsNextFare(30,0,false)).toBe(30);expect(()=>legendsNextFare(29,0,false)).toThrow('fare budget');
+});
