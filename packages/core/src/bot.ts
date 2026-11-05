@@ -6,6 +6,7 @@ import { isLocalServer } from './localserver';
 import { logout } from './logout';
 import { waitUntil } from './ticks';
 import { stalled, startLedger, formatLedger } from './ledger';
+import { startTickStallWatch } from './tick-stall';
 import { assertSideOwns } from './fleet';
 import { startStatus } from './status';
 import { watchRandomEvents, type RandomEventWatch } from './randomevents';
@@ -118,6 +119,12 @@ export async function openBot(name: string, opts: { log?: (line: string) => void
             void (opts.onStop ? opts.onStop(s,reason) : finish([s], false, reason));
         }
     });
+    // A tick stream that stops arriving without a disconnect (tick-stall.ts) ends the session on the clock.
+    stallWatches.set(s, startTickStallWatch(s, reason => {
+        if (stopping || settling.has(s)) return;
+        stopping = true;
+        void (opts.onStop ? opts.onStop(s, reason) : finish([s], false, reason));
+    }));
     // Live status for the dashboard (packages/dashboard).
     statuses.set(s, startStatus(s as any, server, () => { const c: Record<string, number> = {}; for (const r of led.rows) c[r.kind] = (c[r.kind] ?? 0) + 1; return c; }, () => led.rows.slice(-300).map(r => r.kind === 'inventory' ? 'v' : r.kind[0]).join('')));
     // No more game ticks arrive after disconnect. End a script waiting on them
@@ -162,6 +169,7 @@ export async function closeWithin(sessions: Pick<Session, 'close'>[], ms: number
 // session (5 s limit each), and exits with 0 on ok.
 const ledgers = new Map<Session, ReturnType<typeof startLedger>>();
 const statuses = new Map<Session, ReturnType<typeof startStatus>>();
+const stallWatches = new Map<Session, { stop(): void }>();
 const randomEvents = new Map<Session, RandomEventWatch>();
 const records = new Map<Session, NonNullable<ReturnType<typeof createTickRecorder>>>();
 // A record whose file is not complete in this time is left as it is; the exit does not wait longer.
@@ -233,7 +241,7 @@ async function settleOnce(sessions: Session[], ok: boolean, detail: FinishDetail
     try { finalDetail = typeof detail === 'function' ? detail(ok) : detail; }
     catch (error) { ok = false; finalDetail = `final accounting: ${String(error)}`; }
     log(`RESULT ${ok ? 'ok' : 'fail'} ${finalDetail}`);
-    for (const s of sessions) { statuses.get(s)?.stop(); ledgers.delete(s); statuses.delete(s); randomEvents.delete(s); }
+    for (const s of sessions) { statuses.get(s)?.stop(); stallWatches.get(s)?.stop(); stallWatches.delete(s); ledgers.delete(s); statuses.delete(s); randomEvents.delete(s); }
     return ok;
 }
 
